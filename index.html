@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Travel Budget</title>
+  <link rel="icon" href="/favicon.ico">
+
+  <!-- Supabase JS (UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<style>
+    /* =========================
+       Design Tokens
+       ========================= */
+
+    :root{
+      /* Light defaults */
+      --bg:#f8fafc;
+      --panel:#ffffff;
+      --panel2:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+
+      --accent:#2563eb;
+      --accent-soft: rgba(37,99,235,.14);
+
+      --good:#16a34a;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+
+      --border: rgba(15,23,42,.10);
+      --gridline: rgba(15,23,42,.10);
+
+      --shadow: 0 16px 34px rgba(2,6,23,.08);
+      --radius: 16px;
+    }
+
+    body.theme-dark{
+      --bg:#0f172a;
+      --panel:#1e293b;
+      --panel2:#16263a;
+      --text:#f1f5f9;
+      --muted:#94a3b8;
+
+      --accent:#3b82f6;
+      --accent-soft: rgba(59,130,246,.20);
+
+      --good:#22c55e;
+      --warn:#fbbf24;
+      --bad:#f87171;
+
+      --border: rgba(241,245,249,.10);
+      --gridline: rgba(241,245,249,.10);
+
+      --shadow: 0 18px 40px rgba(0,0,0,.35);
+      --radius: 16px;
+    }
+
+    /* =========================
+       Base
+       ========================= */
+
+    body{
+      margin:0;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+      background: radial-gradient(1200px 600px at 10% 0%, rgba(37,99,235,.12), transparent 45%),
+                  radial-gradient(1200px 600px at 90% 0%, rgba(245,158,11,.10), transparent 45%),
+                  var(--bg);
+      color:var(--text);
+    }
+    body.theme-dark{
+      background: radial-gradient(1200px 600px at 10% 0%, rgba(59,130,246,.18), transparent 45%),
+                  radial-gradient(1200px 600px at 90% 0%, rgba(251,191,36,.10), transparent 45%),
+                  var(--bg);
+    }
+
+    .wrap{ max-width:1120px; margin:0 auto; padding:18px; }
+
+    header{
+      display:flex; gap:12px; justify-content:space-between; align-items:center; flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+    .brand{
+      display:flex; flex-direction:column; gap:2px;
+    }
+    .brand h1{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.2px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .brand .sub{ color:var(--muted); font-size:12px; }
+
+    .top-actions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+    .btn{
+      appearance:none;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.70);
+      color:var(--text);
+      padding:9px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:13px;
+      transition: transform .15s ease, box-shadow .15s ease, filter .15s ease, background .15s ease;
+      box-shadow: 0 8px 18px rgba(2,6,23,.06);
+      backdrop-filter: blur(8px);
+    }
+    body.theme-dark .btn{
+      background: rgba(30,41,59,.75);
+      box-shadow: 0 10px 22px rgba(0,0,0,.35);
+    }
+    .btn:hover{ transform:translateY(-1px); }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; transform:none; }
+
+    .btn.primary{
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.05)), var(--accent);
+      border-color: transparent;
+      color:white;
+    }
+    .btn.primary:hover{ filter: brightness(1.04); }
+
+    .btn.danger{
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.05)), var(--bad);
+      border-color: transparent;
+      color:white;
+    }
+
+    .btn.small{ padding:7px 10px; border-radius:10px; font-size:12px; box-shadow:none; }
+
+    .tabs{
+      display:flex; gap:8px; flex-wrap:wrap;
+      margin:10px 0 14px;
+    }
+    .tab{
+      padding:10px 12px;
+      border-radius:12px;
+      background: rgba(255,255,255,.55);
+      border:1px solid var(--border);
+      cursor:pointer;
+      font-weight:800;
+      font-size:13px;
+      box-shadow: 0 10px 20px rgba(2,6,23,.06);
+      backdrop-filter: blur(8px);
+    }
+    body.theme-dark .tab{
+      background: rgba(30,41,59,.70);
+      box-shadow: 0 12px 26px rgba(0,0,0,.35);
+    }
+    .tab.active{
+      outline: 2px solid rgba(37,99,235,.25);
+      outline-offset: 2px;
+    }
+    body.theme-dark .tab.active{
+      outline-color: rgba(59,130,246,.30);
+    }
+
+    .hidden{ display:none !important; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width: 980px){ .grid{ grid-template-columns:1fr; } }
+
+    .card{
+      background: rgba(255,255,255,.75);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      padding:14px;
+      backdrop-filter: blur(10px);
+    }
+    body.theme-dark .card{
+      background: rgba(30,41,59,.78);
+    }
+    .card h2{ margin:0 0 10px; font-size:14px; letter-spacing:.2px; }
+    .muted{ color:var(--muted); }
+
+    /* KPI pills */
+    #kpi{ display:flex; gap:8px; flex-wrap:wrap; }
+    
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 11px;
+      background: var(--accent-soft);
+      border:1px solid rgba(0,0,0,.06);
+      border-radius:999px;
+      font-weight:800;
+      font-size:12px;
+      color: var(--text);
+    }
+    body.theme-dark .pill{
+      border-color: rgba(255,255,255,.10);
+    }
+
+    .dot{ width:8px; height:8px; border-radius:999px; background:var(--accent); display:inline-block; }
+    .pill.good{ background: rgba(22,163,74,.14); }
+    .pill.good .dot{ background: var(--good); }
+    .pill.warn{ background: rgba(245,158,11,.16); }
+    .pill.warn .dot{ background: var(--warn); }
+    .pill.bad{ background: rgba(239,68,68,.16); }
+    .pill.bad .dot{ background: var(--bad); }
+
+    /* micro animation KPI */
+    @keyframes kpiBump {
+      0%   { transform: translateY(0) scale(1); }
+      35%  { transform: translateY(-1px) scale(1.02); }
+      100% { transform: translateY(0) scale(1); }
+    }
+    .pill.bump{
+      animation: kpiBump 420ms ease;
+    }
+
+    .wallet{
+      background: rgba(255,255,255,.75);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      padding:14px;
+      backdrop-filter: blur(10px);
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    body.theme-dark .wallet{ background: rgba(30,41,59,.78); }
+    .wallet:hover{ transform: translateY(-2px); }
+
+    .wallet h3{ margin:0 0 6px; font-size:14px; }
+
+    .bar{
+      height:10px;
+      border-radius:999px;
+      background: rgba(2,6,23,.08);
+      overflow:hidden;
+      border:1px solid rgba(2,6,23,.08);
+    }
+    body.theme-dark .bar{
+      background: rgba(241,245,249,.08);
+      border-color: rgba(241,245,249,.10);
+    }
+    .bar > div{
+      height:100%;
+      background: linear-gradient(90deg, var(--accent), rgba(255,255,255,.20));
+      border-radius:999px;
+    }
+
+    .day{
+      background: rgba(255,255,255,.75);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      padding:12px;
+      backdrop-filter: blur(10px);
+    }
+    body.theme-dark .day{ background: rgba(30,41,59,.78); }
+
+    .day .top{ display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    .details{ margin-top:8px; color:var(--muted); font-size:12px; line-height:1.4; }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .field{
+      display:flex; flex-direction:column; gap:6px;
+      min-width:160px;
+    }
+    .field label{ font-size:12px; color:var(--muted); font-weight:800; letter-spacing:.2px; }
+
+    input, select{
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.70);
+      color:var(--text);
+      outline:none;
+      font-weight:750;
+      box-shadow: 0 10px 20px rgba(2,6,23,.06);
+      backdrop-filter: blur(8px);
+    }
+    body.theme-dark input, body.theme-dark select{
+      background: rgba(30,41,59,.75);
+      box-shadow: 0 12px 22px rgba(0,0,0,.35);
+    }
+
+    .tx{
+      display:flex; justify-content:space-between; gap:12px;
+      padding:12px;
+      border-radius:16px;
+      background: rgba(255,255,255,.70);
+      border:1px solid var(--border);
+      margin-bottom:10px;
+      box-shadow: 0 14px 30px rgba(2,6,23,.06);
+      backdrop-filter: blur(10px);
+      transition: transform .15s ease;
+    }
+    body.theme-dark .tx{
+      background: rgba(30,41,59,.78);
+      box-shadow: 0 16px 34px rgba(0,0,0,.35);
+    }
+    .tx:hover{ transform: translateY(-1px); }
+
+    .tx .meta{ color:var(--muted); font-size:12px; margin-top:2px; }
+    .tags{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+    .tag{
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      background: rgba(2,6,23,.06);
+      border:1px solid rgba(2,6,23,.08);
+      color: var(--muted);
+    }
+    body.theme-dark .tag{
+      background: rgba(241,245,249,.08);
+      border-color: rgba(241,245,249,.10);
+    }
+
+    canvas{ width:100%; border-radius:14px; background: rgba(255,255,255,.55); border:1px solid var(--border); }
+    body.theme-dark canvas{ background: rgba(15,23,42,.18); }
+
+    .legendItem{ display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; margin:6px 0; }
+    .swatch{ width:10px; height:10px; border-radius:999px; display:inline-block; }
+
+    /* Auth overlay */
+    #auth-overlay{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      z-index:50;
+    }
+    .auth-box{
+      max-width:420px;
+      margin:12vh auto 0;
+      background: rgba(255,255,255,.85);
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow: var(--shadow);
+      padding:16px;
+      backdrop-filter: blur(12px);
+    }
+    body.theme-dark .auth-box{
+      background: rgba(30,41,59,.85);
+    }
+    .auth-box h2{ margin:0 0 10px; font-size:16px; }
+    .auth-msg{ color:var(--muted); font-size:12px; margin-bottom:10px; }
+
+    /* Modal */
+    #overlay{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      z-index:60;
+    }
+    #modal{
+      position:fixed;
+      left:50%; top:50%;
+      transform:translate(-50%,-50%);
+      width:min(520px, calc(100vw - 24px));
+      background: rgba(255,255,255,.88);
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow: var(--shadow);
+      padding:16px;
+      display:none;
+      z-index:70;
+      backdrop-filter: blur(12px);
+    }
+    body.theme-dark #modal{
+      background: rgba(30,41,59,.88);
+    }
+    #modal h3{ margin:0 0 10px; font-size:16px; }
+    .modal-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    @media (max-width:560px){ .modal-grid{ grid-template-columns:1fr; } }
+    .modal-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; flex-wrap:wrap; }
+
+    /* Palette section */
+    .palette-grid{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(140px, 1fr));
+      gap:10px;
+      align-items:end;
+    }
+    @media (max-width: 980px){
+      .palette-grid{ grid-template-columns:1fr 1fr; }
+    }
+    .colorchip{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.60);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 22px rgba(2,6,23,.06);
+    }
+    body.theme-dark .colorchip{
+      background: rgba(30,41,59,.70);
+      box-shadow: 0 14px 26px rgba(0,0,0,.35);
+    }
+    .chipdot{ width:14px; height:14px; border-radius:999px; }
+  </style>
+</head>
+
+<body class="theme-dark">
+  <!-- Auth -->
+  <div id="auth-overlay">
+    <div class="auth-box">
+      <h2>Connexion</h2>
+      <div id="auth-msg" class="auth-msg">Connecte-toi pour synchroniser.</div>
+      <div class="row" style="margin-bottom:10px;">
+        <div class="field" style="flex:1;">
+          <label>Email</label>
+          <input id="auth-email" type="email" autocomplete="email" placeholder="you@email.com" />
+        </div>
+      </div>
+      <div class="row" style="margin-bottom:12px;">
+        <div class="field" style="flex:1;">
+          <label>Mot de passe</label>
+          <input id="auth-pass" type="password" autocomplete="current-password" />
+        </div>
+      </div>
+      <div class="row" style="justify-content:flex-end;">
+        <button class="btn" onclick="signUp()">Créer compte</button>
+        <button class="btn primary" onclick="signIn()">Se connecter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Tx -->
+  <div id="overlay" onclick="closeModal()"></div>
+  <div id="modal">
+    <h3 id="modal-title">Nouvelle transaction</h3>
+    <div id="m-lock-note" class="muted" style="display:none; margin:6px 0 10px;"></div>
+
+    <div class="modal-grid">
+      <div class="field">
+        <label>Type</label>
+        <select id="m-type">
+          <option value="expense">Dépense</option>
+          <option value="income">Entrée</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Wallet</label>
+        <select id="m-wallet"></select>
+      </div>
+
+      <div class="field">
+        <label>Montant</label>
+        <input id="m-amount" type="number" step="0.01" placeholder="0" />
+      </div>
+
+      <div class="field">
+        <label>Catégorie</label>
+        <select id="m-category"></select>
+      </div>
+
+      <div class="field">
+        <label>Date début</label>
+        <input id="m-start" type="date" />
+      </div>
+
+      <div class="field">
+        <label>Date fin</label>
+        <input id="m-end" type="date" />
+      </div>
+
+      <div class="field" style="grid-column:1/-1;">
+        <label>Label</label>
+        <input id="m-label" type="text" placeholder="Optionnel" />
+      </div>
+
+      <div class="field">
+        <label>Payé maintenant</label>
+        <input id="m-paynow" type="checkbox" checked />
+      </div>
+
+      <div class="field">
+        <label>Hors budget/jour</label>
+        <input id="m-out" type="checkbox" />
+      </div>
+
+      <div class="field hidden" id="m-night-block">
+        <label>Nuit couverte (Transport)</label>
+        <input id="m-night" type="checkbox" />
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn primary" onclick="saveModal()">Enregistrer</button>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="app-root">
+    <div class="wrap">
+      <header>
+        <div class="brand">
+          <h1>Travel Budget</h1>
+          <div class="sub">Périodes + wallets + budget journalier + sync Supabase</div>
+        </div>
+
+        <div class="top-actions">
+          <button class="btn" onclick="toggleTheme()">🌓 Theme</button>
+          <button class="btn" onclick="refreshFxRates()">↻ Taux ECB</button>
+          <button class="btn" onclick="exportBackup()">⬇ Export</button>
+          <button class="btn" onclick="importBackup()">⬆ Import</button>
+          <button class="btn" onclick="signOut()">⎋ Logout</button>
+        </div>
+      </header>
+
+      <div id="kpi" class="card"></div>
+      <div id="solde-projection-container"></div>
+      <div class="tabs">
+        <div id="tab-dashboard" class="tab active" onclick="showView('dashboard')">Dashboard</div>
+        <div id="tab-transactions" class="tab" onclick="showView('transactions')">Transactions</div>
+        <div id="tab-settings" class="tab" onclick="showView('settings')">Settings</div>
+        <div id="tab-trip" class="tab" onclick="showView('trip')">Trip</div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div id="view-dashboard">
+        <div class="grid">
+          <div class="card">
+            <h2>Wallets</h2>
+            <div id="wallets-container" style="display:flex; flex-direction:column; gap:12px;"></div>
+          </div>
+
+          <div class="card">
+            <h2>Budget journalier</h2>
+            <div id="daily-budget-container" style="display:flex; flex-direction:column; gap:10px;"></div>
+          </div>
+        </div>
+
+        <div class="grid" style="margin-top:12px;">
+          <div class="card">
+            <h2>Budget dispo (par jour)</h2>
+            <canvas id="chart-budget"></canvas>
+          </div>
+          <div class="card">
+            <h2>Dépenses par catégorie</h2>
+            <canvas id="chart-pie"></canvas>
+            <div id="pie-legend" style="margin-top:10px;"></div>
+          </div>
+        </div>
+
+        <!-- FULL WIDTH: Solde projection chart -->
+        <div id="solde-projection-container" style="margin-top:16px;"></div>
+
+      </div>
+
+      <!-- TRANSACTIONS -->
+      <div id="view-transactions" class="hidden">
+        <div class="card" style="margin-bottom:12px;">
+          <h2>Filtres</h2>
+          <div class="row">
+            <div class="field">
+              <label>Du</label>
+              <input id="f-from" type="date" />
+            </div>
+            <div class="field">
+              <label>Au</label>
+              <input id="f-to" type="date" />
+            </div>
+            <div class="field">
+              <label>Wallet</label>
+              <select id="f-wallet"></select>
+            </div>
+            <div class="field">
+              <label>Catégorie</label>
+              <select id="f-category"></select>
+            </div>
+            <div class="field">
+              <label>Type</label>
+              <select id="f-type">
+                <option value="all">Tous</option>
+                <option value="expense">Dépenses</option>
+                <option value="income">Entrées</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Payement</label>
+              <select id="f-pay">
+                <option value="all">Tous</option>
+                <option value="paid">Payés</option>
+                <option value="unpaid">À payer</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Hors budget</label>
+              <select id="f-out">
+                <option value="all">Tous</option>
+                <option value="yes">Oui</option>
+                <option value="no">Non</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Nuit couverte</label>
+              <select id="f-night">
+                <option value="all">Tous</option>
+                <option value="yes">Oui</option>
+                <option value="no">Non</option>
+              </select>
+            </div>
+
+            <div class="field" style="min-width:220px;">
+              <label>Recherche</label>
+              <input id="f-q" type="text" placeholder="Label / catégorie..." />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Liste</h2>
+          <div id="tx-list"></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="view-settings" class="hidden">
+        <div class="card" style="margin-bottom:12px;">
+          <h2>Périodes</h2>
+
+          <div class="row" style="margin-bottom:10px;">
+            <div class="field">
+              <label>Période active</label>
+              <select id="s-period"></select>
+            </div>
+
+            <div class="field">
+              <label>Devise période</label>
+              <select id="s-basecur">
+                <option value="THB">THB</option>
+                <option value="EUR">EUR</option>
+                <option value="VND">VND</option>
+                <option value="USD">USD</option>
+                <option value="JPY">JPY</option>
+                <option value="AUD">AUD</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Début</label>
+              <input id="s-start" type="date" />
+            </div>
+
+            <div class="field">
+              <label>Fin</label>
+              <input id="s-end" type="date" />
+            </div>
+
+            <div class="field">
+              <label>Budget/jour (devise période)</label>
+              <input id="s-daily" type="number" step="0.01" />
+            </div>
+
+            <div class="field">
+              <label>Taux EUR → devise période</label>
+              <input id="s-rate" type="number" step="0.0001" />
+            </div>
+          </div>
+
+          <div class="row" style="justify-content:flex-end;">
+            <button class="btn" onclick="createPeriodPrompt()">+ Nouvelle période</button>
+            <button class="btn danger" onclick="deleteActivePeriod()">Supprimer période</button>
+            <button class="btn primary" onclick="saveSettings()">Enregistrer période</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Palette</h2>
+          <div class="muted" style="margin-bottom:10px;">
+            Accent = boutons + highlights. Good/Warn/Bad = KPI + états. Sauvegardé en local (navigateur).
+          </div>
+
+          <div class="row" style="margin-bottom:10px;">
+            <div class="field" style="min-width:220px;">
+              <label>Preset</label>
+              <select id="p-preset"></select>
+            </div>
+            <div class="field">
+              <label></label>
+              <button class="btn" onclick="resetPalette()">Reset</button>
+            </div>
+          </div>
+
+          <div class="palette-grid">
+            <div class="field">
+              <label>Accent</label>
+              <div class="colorchip">
+                <span class="chipdot" id="chip-accent"></span>
+                <input id="p-accent" type="color" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Success</label>
+              <div class="colorchip">
+                <span class="chipdot" id="chip-good"></span>
+                <input id="p-good" type="color" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Warning</label>
+              <div class="colorchip">
+                <span class="chipdot" id="chip-warn"></span>
+                <input id="p-warn" type="color" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Danger</label>
+              <div class="colorchip">
+                <span class="chipdot" id="chip-bad"></span>
+                <input id="p-bad" type="color" />
+              </div>
+            </div>
+          </div>
+
+          <div class="row" style="justify-content:flex-end; margin-top:12px;">
+            <button class="btn primary" onclick="savePaletteFromUI()">Enregistrer palette</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:12px;">
+          <h2>Catégories</h2>
+          <div class="muted" style="margin-bottom:10px;">
+            Les catégories pilotent les listes côté Budget + Trip. Elles sont sauvegardées sur Supabase.
+          </div>
+
+          <div class="row" style="gap:10px; align-items:flex-end; margin-bottom:12px;">
+            <div class="field" style="min-width:220px;">
+              <label>Nom</label>
+              <input id="cat-name" type="text" placeholder="Ex: Santé" />
+            </div>
+            <div class="field" style="min-width:140px;">
+              <label>Couleur</label>
+              <input id="cat-color" type="color" value="#94a3b8" />
+            </div>
+            <button class="btn primary" onclick="addCategory()">+ Ajouter</button>
+          </div>
+
+          <div id="cat-list"></div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+  <!-- App scripts (split from script.js, order matters) -->
+
+
+
+        <!-- TRIP -->
+      <div id="view-trip" class="hidden">
+        <div id="trip-root"></div>
+      </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
