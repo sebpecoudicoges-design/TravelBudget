@@ -78,15 +78,38 @@
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }
 
-  // Defer render to avoid re-rendering while toggle click is still bubbling
+  // Defer render to avoid re-rendering while the click/change event is still bubbling.
+  // Also handle rapid successive changes without requiring a second click.
   let _renderScheduled = false;
+  let _renderInFlight = false;
+  let _renderWanted = false;
+
+  function _runQueuedRender() {
+    _renderScheduled = false;
+    if (_renderInFlight) {
+      // Apex render/update still in progress; retry as soon as it yields.
+      _renderScheduled = true;
+      setTimeout(_runQueuedRender, 0);
+      return;
+    }
+    _renderWanted = false;
+    _renderInFlight = true;
+
+    Promise.resolve()
+      .then(() => new Promise((resolve) => setTimeout(resolve, 0))) // let DOM/localStorage settle
+      .then(() => renderCashflowChart())
+      .catch(() => {})
+      .finally(() => {
+        _renderInFlight = false;
+        if (_renderWanted) queueRenderCashflow();
+      });
+  }
+
   function queueRenderCashflow() {
+    _renderWanted = true;
     if (_renderScheduled) return;
     _renderScheduled = true;
-    setTimeout(() => {
-      _renderScheduled = false;
-      try { renderCashflowChart(); } catch (_) {}
-    }, 0);
+    setTimeout(_runQueuedRender, 0);
   }
 
   function base() {
@@ -180,6 +203,10 @@
       const cat = (t.category !== undefined && t.category !== null) ? String(t.category) : "";
       const catExcluded = cat && excludedCats.has(cat);
 
+      const label = String(t.label || "");
+      const isTrip = label.includes("[Trip]");
+      const isTripAdvance = isTrip && label.includes("Avance");
+
       const rng = txDateRange(t);
       if (!rng) continue;
 
@@ -196,6 +223,9 @@
       const type = String(t.type || "").toLowerCase();
       if (type !== "expense" && type !== "income") continue;
 
+      const affectsBudget = (t.affectsBudget === undefined || t.affectsBudget === null) ? true : !!t.affectsBudget;
+      const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
+
       const signed = (type === "income") ? +amtBase : -amtBase;
 
       if (isPaid) {
@@ -206,14 +236,35 @@
           if (!catExcluded) addDistributed(paidSpentAll, s, e, +amtBase);
 
           // budget spent per day: only expenses that affect budget and are not out_of_budget
-          const affectsBudget = (t.affectsBudget === undefined) ? true : !!t.affectsBudget;
-          const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
           if (!catExcluded && affectsBudget && !outOfBudget) addDistributed(paidSpentBudget, s, e, +amtBase);
         }
       } else {
-        // pending only impacts forecast if toggles enabled
-        if (type === "expense") addDistributed(pendingNetExp, s, e, -amtBase);
-        else addDistributed(pendingNetInc, s, e, +amtBase);
+        // Unpaid items:
+        // - By default they impact *forecast cash* (pendingNet*).
+        // - Some items are *budget-only* (e.g. Trip shares paid by someone else): they must impact
+        //   the "budget used" column, but NOT wallet cash nor forecast cash.
+        const affectsCashRaw = (t.affectsCash === undefined || t.affectsCash === null) ? null : !!t.affectsCash;
+
+        // Heuristic: Trip expense without "Avance" and payNow=false is a share paid by someone else
+        // (already allocated to me via Trip engine). It should be budget-only by default.
+        const isTripUnpaidShare = isTrip && !isTripAdvance && type === "expense";
+
+        const affectsCash = (affectsCashRaw === null)
+          ? (!isTripUnpaidShare) // default: cash unless it's an unpaid trip share
+          : affectsCashRaw;
+
+        const isBudgetOnly = affectsBudget && !affectsCash;
+
+        if (isBudgetOnly) {
+          if (!outOfBudget && !catExcluded && type === "expense") {
+            addDistributed(paidSpentBudget, s, e, +amtBase);
+          }
+          // no pendingNet impact
+        } else {
+          // pending impacts forecast cash
+          if (type === "expense") addDistributed(pendingNetExp, s, e, -amtBase);
+          else addDistributed(pendingNetInc, s, e, +amtBase);
+        }
       }
     }
 
@@ -239,6 +290,12 @@
     const currentBalance = sumWalletsBase();
 
     const { paidNet, paidSpentAll, paidSpentBudget, pendingNetExp, pendingNetInc } = buildMaps(start, end);
+
+    // Budget spent per day: if the Dashboard helper exists, use it as the source of truth
+    // to avoid mismatches (normalization, distribution over date ranges, rounding).
+    const budgetSpentFn = (typeof window.budgetSpentBaseForDateFromTx === "function")
+      ? window.budgetSpentBaseForDateFromTx
+      : null;
 
     // compute cum net paid from start..today => estimate starting balance
     let cumToToday = 0;
@@ -266,7 +323,7 @@
 
         const spent = safeNum(paidSpentAll[k] || 0);
         spentBars.push({ x: k, y: round2(spent) });
-        const used = safeNum(paidSpentBudget[k] || 0);
+        const used = budgetSpentFn ? safeNum(budgetSpentFn(k)) : safeNum(paidSpentBudget[k] || 0);
         budgetUsedVal.push({ x: k, y: round2(used) });
       } else {
         // forecast starts from last actual balance
@@ -298,7 +355,7 @@
     return { ok:true, b, start, end, tStr, dailyBudget, currentBalance, startBalance, actual, forecast, spentBars, budgetUsedVal, thr500 };
   }
 
-  function renderCashflowChart() {
+  async function renderCashflowChart() {
     // keep in sync with existing navigation
     if (typeof window.activeView !== "undefined" && window.activeView !== "dashboard") return;
 
@@ -537,14 +594,9 @@ dataLabels: { enabled: false },
     const el = document.querySelector("#cashflowCurve");
     if (!el) return;
 
-    try {
-      if (chart) chart.destroy();
-    } catch (_) {}
-
+    try { if (chart) chart.destroy(); } catch (_) {}
     chart = new ApexCharts(el, options);
-    chart.render();
-    window.__cashflowChart = chart;
-
+    await chart.render();
     window.__cashflowChart = chart; // debug contract
 
     const btn = document.getElementById("cf-reset-zoom");
@@ -613,6 +665,14 @@ dataLabels: { enabled: false },
   function _runCashflowInit() {
     try { hookRedrawCharts(); } catch (e) {}
     try { hookRefreshAll(); } catch (e) {}
+    // Re-render when data/state is refreshed.
+    // The app event bus emits both typed events (tb:*) and the legacy 'data:updated'.
+    try {
+      document.addEventListener("data:updated", queueRenderCashflow);
+      document.addEventListener("tb:refresh:done", queueRenderCashflow);
+      document.addEventListener("tb:fx:updated", queueRenderCashflow);
+      document.addEventListener("tb:boot:paint", queueRenderCashflow);
+    } catch (_) {}
     // First render attempt quickly, then retry once (covers late state hydration).
     setTimeout(queueRenderCashflow, 150);
     setTimeout(queueRenderCashflow, 900);

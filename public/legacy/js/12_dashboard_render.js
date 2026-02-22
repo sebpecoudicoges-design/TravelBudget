@@ -65,6 +65,59 @@ function renderWallets() {
   enableWalletsReorderDrag(listEl);
 }
 
+// Budget spent per day (base currency) computed from transactions.
+// Includes Trip shares (payNow=false) because they affect budget; excludes out-of-budget expenses.
+function budgetSpentBaseForDateFromTx(dateStr) {
+  try {
+    const txs = Array.isArray(state.transactions) ? state.transactions : [];
+    const target = String(dateStr || "");
+    if (!target) return 0;
+
+    const _ds = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const da = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${da}`;
+    };
+
+    let sum = 0;
+    for (const t of txs) {
+      const type = String(t?.type || "").toLowerCase();
+      if (type !== "expense") continue;
+
+      const affectsBudget = (t.affectsBudget === undefined || t.affectsBudget === null) ? true : !!t.affectsBudget;
+      if (!affectsBudget) continue;
+
+      const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
+      if (outOfBudget) continue;
+
+      const s = parseISODateOrNull(t.dateStart || t.date_start || t.date || null);
+      const e = parseISODateOrNull(t.dateEnd || t.date_end || t.dateStart || t.date_start || t.date || null);
+      if (!s || !e) continue;
+
+      const sds = _ds(s);
+      const eds = _ds(e);
+      if (target < sds || target > eds) continue;
+
+      const amt = Number(t.amount);
+      if (!isFinite(amt) || amt === 0) continue;
+
+      const amtBase = amountToBase(amt, t.currency);
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const days = Math.max(
+        1,
+        Math.round(
+          (Date.UTC(e.getFullYear(), e.getMonth(), e.getDate()) - Date.UTC(s.getFullYear(), s.getMonth(), s.getDate())) / msPerDay
+        ) + 1
+      );
+      sum += (amtBase / days);
+    }
+    return sum;
+  } catch (_) {
+    return 0;
+  }
+}
+
 
 function renderDailyBudget() {
   const container = document.getElementById("daily-budget-container");
@@ -78,8 +131,8 @@ function renderDailyBudget() {
 
   forEachDateInclusive(start, end, (d) => {
     const dateStr = toLocalISODate(d);
-    const allocated = getAllocatedBaseForDate(dateStr);
-    const budget = state.period.dailyBudgetBase - allocated;
+    const spentBudget = budgetSpentBaseForDateFromTx(dateStr);
+    const budget = state.period.dailyBudgetBase - spentBudget;
     const details = state.allocations.filter((a) => a.dateStr === dateStr);
 
     const div = document.createElement("div");
@@ -88,6 +141,10 @@ function renderDailyBudget() {
       <div class="top">
         <div><strong>${dateStr}</strong></div>
         <div class="pill ${budgetClass(budget)}"><span class="dot"></span>${budget.toFixed(0)} ${base}</div>
+      </div>
+      <div style="margin-top:6px; color:#6b7280; font-size:12px; display:flex; justify-content:space-between; gap:10px;">
+        <div>Budget utilisé : <b style="color:#111827;">${spentBudget.toFixed(0)} ${base}</b></div>
+        <div>Objectif : <b style="color:#111827;">${state.period.dailyBudgetBase.toFixed(0)} ${base}</b></div>
       </div>
       ${details.length
         ? `<div class="details">${details.map((x) => `• ${x.label} : ${x.amountBase.toFixed(0)} ${base}`).join("<br>")}</div>`

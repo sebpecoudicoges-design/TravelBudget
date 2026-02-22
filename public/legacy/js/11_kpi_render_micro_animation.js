@@ -22,6 +22,61 @@ function remainingBudgetBaseFrom(dateStr) {
   return sum;
 }
 
+// Budget spent (base currency) for a given day.
+// - includes Trip shares paid by someone else (payNow=false) because they impact budget
+// - excludes out-of-budget expenses
+// - distributes multi-day expenses evenly across covered days
+function budgetSpentBaseForDate(dateStr) {
+  try {
+    const txs = Array.isArray(window.state?.transactions) ? window.state.transactions : [];
+    const target = String(dateStr || "");
+    if (!target) return 0;
+
+    const _ds = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const da = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${da}`;
+    };
+
+    let sum = 0;
+    for (const t of txs) {
+      const type = String(t?.type || "").toLowerCase();
+      if (type !== "expense") continue;
+
+      const affectsBudget = (t.affectsBudget === undefined || t.affectsBudget === null) ? true : !!t.affectsBudget;
+      if (!affectsBudget) continue;
+
+      const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
+      if (outOfBudget) continue;
+
+      const s = parseISODateOrNull(t.dateStart || t.date_start || t.date || null);
+      const e = parseISODateOrNull(t.dateEnd || t.date_end || t.dateStart || t.date_start || t.date || null);
+      if (!s || !e) continue;
+
+      const sds = _ds(s);
+      const eds = _ds(e);
+      if (target < sds || target > eds) continue;
+
+      const amt = safeNum(t.amount);
+      if (!isFinite(amt) || amt === 0) continue;
+
+      const amtBase = amountToBase(amt, t.currency);
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const days = Math.max(
+        1,
+        Math.round(
+          (Date.UTC(e.getFullYear(), e.getMonth(), e.getDate()) - Date.UTC(s.getFullYear(), s.getMonth(), s.getDate())) / msPerDay
+        ) + 1
+      );
+      sum += (amtBase / days);
+    }
+    return sum;
+  } catch (_) {
+    return 0;
+  }
+}
+
 function projectedEndEUR() {
   const today = toLocalISODate(new Date());
   const remainingBase = remainingBudgetBaseFrom(today);
@@ -405,6 +460,7 @@ function renderKPI() {
 
   const todayDetailsHTML = _renderTodayDetailsHTML(today);
   const todayBudget = getDailyBudgetForDate(today);
+  const todayBudgetSpent = budgetSpentBaseForDate(today);
   const todayPillClass = budgetClass(todayBudget);
 
 
