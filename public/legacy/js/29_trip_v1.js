@@ -142,6 +142,25 @@ function toastOk(msg) {
     return `${Math.round(n * 100) / 100} ${cur || ""}`.trim();
   }
 
+  function _safeFx(amount, from, to) {
+    if (typeof window.safeFxConvert === "function") return window.safeFxConvert(amount, from, to, 0);
+    if (typeof window.fxConvert === "function") {
+      const v = window.fxConvert(amount, from, to);
+      return (v === null || !Number.isFinite(v)) ? 0 : v;
+    }
+    // last-resort fallback: EUR<->BASE using period eurBaseRate when possible
+    const base = String(state?.period?.baseCurrency || "").toUpperCase();
+    const eurBaseRate = Number(state?.period?.eurBaseRate) || 0;
+    const a = Number(amount) || 0;
+    const f = String(from || "").toUpperCase();
+    const t = String(to || "").toUpperCase();
+    if (f === t) return a;
+    if (eurBaseRate > 0 && ((f === "EUR" && t === base) || (f === base && t === "EUR"))) {
+      return (f === "EUR") ? (a * eurBaseRate) : (a / eurBaseRate);
+    }
+    return 0;
+  }
+
   function _round2(n) {
     return Math.round((Number(n) || 0) * 100) / 100;
   }
@@ -564,16 +583,6 @@ return byCurrency;
 
     out.set("THB", mTHB);
     return out;
-  }
-
-  function _thbToEur(thbAmount) {
-    const thb = Number(thbAmount) || 0;
-    const eurBaseRate = Number(state?.period?.eurBaseRate) || 0;
-    if (typeof window.fxConvert === "function") {
-      const v = window.fxConvert(thb, "THB", "EUR");
-      return Number.isFinite(v) ? v : 0;
-    }
-    return eurBaseRate > 0 ? (thb / eurBaseRate) : 0;
   }
 
 
@@ -1651,7 +1660,7 @@ const balancesByCurRaw = _computeBalances();
           parts.push(
             `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
               <span>${escapeHTML(mem.name)}${mem.isMe ? " (moi)" : ""}</span>
-              <strong class="${cls}">${_fmtMoney(v, cur)}${(String(cur).toUpperCase()==="THB" ? ` <span class="muted" style="font-weight:400;">(≈ ${_fmtMoney(_thbToEur(v), "EUR")})</span>` : "")}</strong>
+              <strong class="${cls}">${_fmtMoney(v, cur)}${(String(cur).toUpperCase()==="THB" ? ` <span class="muted" style="font-weight:400;">(≈ ${_fmtMoney(_safeFx(v, "THB", "EUR"), "EUR")})</span>` : "")}</strong>
             </div>`
           );
         }
@@ -1732,7 +1741,7 @@ const balancesByCurRaw = _computeBalances();
             `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
               <span>${escapeHTML(from?.name || "—")} → ${escapeHTML(to?.name || "—")}</span>
               <div style="display:flex; align-items:center; gap:10px;">
-                <strong>${_fmtMoney(t.amount, cur)}${(String(cur).toUpperCase()==="THB" ? ` <span class="muted" style="font-weight:400;">(≈ ${_fmtMoney(_thbToEur(t.amount), "EUR")})</span>` : "")}</strong>
+                <strong>${_fmtMoney(t.amount, cur)}${(String(cur).toUpperCase()==="THB" ? ` <span class="muted" style="font-weight:400;">(≈ ${_fmtMoney(_safeFx(t.amount, "THB", "EUR"), "EUR")})</span>` : "")}</strong>
                 ${actionBtn}${actionOnlyBtn}
               </div>
             </div>`

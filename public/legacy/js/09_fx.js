@@ -61,3 +61,69 @@ const allRates = { ...previous, ...data.rates };
   await refreshFromServer();
   alert(`Taux mis à jour ✅`);
 }
+
+/* =========================
+   FX API (cross-rate via EUR_RATES)
+   - Source of truth: localStorage EUR_RATES (EUR->XXX), + fallback period.eurBaseRate for baseCurrency
+   - Expose: window.fxRate(from,to[,rates]), window.fxConvert(amount,from,to[,rates]), window.safeFxConvert(...)
+   ========================= */
+
+function fxGetEurRates() { return _fxGetEurRates(); }
+
+function _fxNum(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function _fxEurTo(cur, rates) {
+  const c = String(cur || "").toUpperCase();
+  if (!c) return null;
+  if (c === "EUR") return 1;
+
+  const r = _fxNum((rates || {})[c]);
+  if (r && r > 0) return r;
+
+  // Fallback: baseCurrency via eurBaseRate (if available)
+  const base = String(window.state?.period?.baseCurrency || "").toUpperCase();
+  const eurBaseRate = _fxNum(window.state?.period?.eurBaseRate);
+  if (base && c === base && eurBaseRate && eurBaseRate > 0) return eurBaseRate;
+
+  return null;
+}
+
+function fxRate(from, to, ratesOpt) {
+  const f = String(from || "").toUpperCase();
+  const t = String(to || "").toUpperCase();
+  if (!f || !t) return null;
+  if (f === t) return 1;
+
+  const rates = ratesOpt || _fxGetEurRates();
+  const eurToFrom = _fxEurTo(f, rates);
+  const eurToTo   = _fxEurTo(t, rates);
+  if (!eurToFrom || !eurToTo) return null;
+
+  return eurToTo / eurToFrom;
+}
+
+function fxConvert(amount, from, to, ratesOpt) {
+  const a = _fxNum(amount) ?? 0;
+  const r = fxRate(from, to, ratesOpt);
+  if (!r) return null;
+  const out = a * r;
+  return Number.isFinite(out) ? out : null;
+}
+
+// Never returns NaN. If conversion fails, returns fallback (default 0).
+function safeFxConvert(amount, from, to, fallback) {
+  const v = fxConvert(amount, from, to);
+  if (v === null || !Number.isFinite(v)) {
+    const fb = Number(fallback);
+    return Number.isFinite(fb) ? fb : 0;
+  }
+  return v;
+}
+
+window.fxGetEurRates = fxGetEurRates;
+window.fxRate = fxRate;
+window.fxConvert = fxConvert;
+window.safeFxConvert = safeFxConvert;
