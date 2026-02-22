@@ -38,3 +38,25 @@ The production build is generated into `dist/`.
 
 - Supabase and ApexCharts are still loaded via CDN (same as V4.x) to preserve existing globals.
 - Next step (post-V5) is to convert legacy modules incrementally into real ES modules (`src/core`, `src/ui`, `src/infra`).
+
+## Admin / Membres (nouveau)
+
+### Objectif
+Ajouter un onglet **Membres** visible uniquement pour les comptes `profiles.role = 'admin'`.
+
+### Prérequis SQL
+1. Exécuter `sql/patch_members_admin.sql` dans Supabase.
+2. Mettre ton propre user en admin (voir fin du fichier SQL).
+
+### Edge Functions à déployer
+Dans `supabase/functions/` :
+- `admin-invite` (envoi email d'invitation)
+- `admin-list-users` (liste des comptes)
+- `admin-generate-invite-link` (génère un lien d'invitation)
+- `admin-generate-recovery-link` (génère un lien reset mot de passe)
+
+Configurer les variables d'environnement des fonctions :
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SITE_URL` (optionnel, ex: `http://localhost:8000`)

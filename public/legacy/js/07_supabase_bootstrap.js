@@ -40,6 +40,22 @@ async function ensureBootstrap() {
     if (pInsErr) throw pInsErr;
   }
 
+  // ensure profile (role)
+  try {
+    const { data: prof, error: profErr } = await sb.from('profiles').select('role').eq('id', sbUser.id).maybeSingle();
+    if (profErr) throw profErr;
+    if (!prof) {
+      const { error: insPErr } = await sb.from('profiles').insert([{ id: sbUser.id, email: sbUser.email, role: 'member' }]);
+      if (insPErr) throw insPErr;
+      window.sbRole = 'member';
+    } else {
+      window.sbRole = (prof.role || 'member');
+    }
+  } catch (e) {
+    // If RLS blocks profiles, fall back to member
+    window.sbRole = window.sbRole || 'member';
+  }
+
   // ensure wallets
   const { data: wallets, error: wErr } = await sb.from("wallets").select("id").limit(1);
   if (wErr) throw wErr;
@@ -180,6 +196,8 @@ const { data: periods, error: pErr } = await sb.from("periods").select("*").orde
 
   // keep full periods list (needed to map transactions by date)
   state.periods = (periods || []).map((x) => ({ id: x.id, start: x.start_date, end: x.end_date, baseCurrency: x.base_currency }));
+
+  try { if (typeof syncTabsForRole === 'function') syncTabsForRole(); } catch (e) {}
 
   recomputeAllocations();
 }

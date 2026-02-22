@@ -517,6 +517,7 @@
         <div id="tab-transactions" class="tab" onclick="showView('transactions')">Transactions</div>
         <div id="tab-settings" class="tab" onclick="showView('settings')">Settings</div>
         <div id="tab-trip" class="tab" onclick="showView('trip')">Trip</div>
+        <div id="tab-members" class="tab" style="display:none" onclick="showView('members')">Membres</div>
       </div>
 
       <!-- DASHBOARD -->
@@ -750,16 +751,19 @@
 
       </div>
 
-    </div>
-  </div>
-  <!-- App scripts (split from script.js, order matters) -->
-
-
-
-        <!-- TRIP -->
+      <!-- TRIP -->
       <div id="view-trip" class="hidden">
         <div id="trip-root"></div>
       </div>
+
+      <!-- MEMBERS (ADMIN) -->
+      <div id="view-members" class="hidden">
+        <div id="members-root"></div>
+      </div>
+
+    </div>
+  </div>
+
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
