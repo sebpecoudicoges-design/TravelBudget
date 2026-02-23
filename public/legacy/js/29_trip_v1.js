@@ -1594,6 +1594,39 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     if (error) throw error;
   }
 
+  async function _moveExpenseToTrip(expenseId, newTripId) {
+    await _ensureSession();
+    if (!expenseId || !newTripId) throw new Error("[Trip] Déplacement invalide.");
+
+    // 1) Move the expense itself
+    {
+      const { error } = await sb
+        .from("trip_expenses")
+        .update({ trip_id: newTripId })
+        .eq("id", expenseId);
+      if (error) throw error;
+    }
+
+    // 2) Keep shares consistent (shares are queried by trip_id AND expense_id in some flows)
+    {
+      const { error } = await sb
+        .from("trip_expense_shares")
+        .update({ trip_id: newTripId })
+        .eq("expense_id", expenseId);
+      if (error) throw error;
+    }
+
+    // 3) Best-effort: if budget links table exists, align trip_id as well
+    try {
+      await sb
+        .from("trip_expense_budget_links")
+        .update({ trip_id: newTripId })
+        .eq("expense_id", expenseId);
+    } catch (e) {
+      // ignore if table/column doesn't exist in this deployment
+    }
+  }
+
   function _renderUI() {
     const root = _root();
     if (!root) return;
@@ -1795,15 +1828,33 @@ const balancesByCurRaw = _computeBalances();
     const expensesHTML = expenses.length
       ? expenses.map(ex => {
           const payer = members.find(m => m.id === ex.paidByMemberId);
+          const canMove = canWrite && (tripState.trips || []).length > 1;
+
+          const moveOptions = (tripState.trips || [])
+            .filter(t => t.id !== tripState.activeTripId)
+            .map(t => `<option value="${t.id}">${escapeHTML(t.name)}</option>`)
+            .join("");
+
+          const moveUI = canMove ? `
+            <div style="display:flex; gap:8px; align-items:center;">
+              <select class="input" data-move-trip="${ex.id}" style="height:32px; padding:0 8px;">
+                <option value="">Déplacer vers…</option>
+                ${moveOptions}
+              </select>
+              <button class="btn" type="button" data-move-exp="${ex.id}">Déplacer</button>
+            </div>
+          ` : "";
+
           return `
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
-              <div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.04); gap:12px;">
+              <div style="min-width:0;">
                 <div style="font-weight:700;">${escapeHTML(ex.label)}</div>
                 <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${ex.transactionId ? " • lié au budget" : ""}</div>
               </div>
-              <div style="display:flex; gap:10px; align-items:center;">
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
                 <strong>${_fmtMoney(ex.amount, ex.currency)}</strong>
-                <button class="btn danger" data-del-exp="${ex.id}">Supprimer</button>
+                ${moveUI}
+                <button class="btn danger" type="button" data-del-exp="${ex.id}">Supprimer</button>
               </div>
             </div>
           `;
@@ -2344,6 +2395,33 @@ toastOk("Règlement annulé.");
 toastOk("Dépense supprimée.");
         } catch (e) {
           toastWarn(e?.message || String(e));
+        }
+      };
+    });
+
+    // Move expense to another trip
+    root.querySelectorAll("[data-move-exp]").forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          const expenseId = btn.getAttribute("data-move-exp");
+          const sel = root.querySelector(`[data-move-trip="${expenseId}"]`);
+          const newTripId = sel ? (sel.value || "") : "";
+          if (!expenseId) return;
+          if (!newTripId) return toastWarn("Choisis un trip cible.");
+
+          const targetTrip = (tripState.trips || []).find(t => t.id === newTripId);
+          const targetName = targetTrip?.name || "(trip)";
+          const ok = confirm(`Déplacer cette dépense vers : ${targetName} ?`);
+          if (!ok) return;
+
+          btn.disabled = true;
+          await _moveExpenseToTrip(expenseId, newTripId);
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+          toastOk("Dépense déplacée.");
+        } catch (e) {
+          toastWarn(e?.message || String(e));
+        } finally {
+          try { btn.disabled = false; } catch (_) {}
         }
       };
     });

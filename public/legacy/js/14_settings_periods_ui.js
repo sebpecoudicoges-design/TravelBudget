@@ -1,4 +1,4 @@
-/* =========================
+/* ========================= 
    Settings: periods UI
    ========================= */
 async function loadPeriodsListIntoUI() {
@@ -11,43 +11,325 @@ async function loadPeriodsListIntoUI() {
     .order("start_date", { ascending: false });
   if (error) return alert(error.message);
 
-  sel.innerHTML = periods.map((p) => {
-    const label = `${p.start_date} → ${p.end_date} (${p.base_currency})`;
-    return `<option value="${p.id}">${label}</option>`;
-  }).join("");
+  state.periods = (periods || []).map((p) => ({
+    id: p.id,
+    start: p.start_date,
+    end: p.end_date,
+    baseCurrency: p.base_currency,
+  }));
 
-  sel.value = state.period.id;
+  sel.innerHTML = (state.periods || [])
+    .map((p) => {
+      const label = `${p.start} → ${p.end} (${p.baseCurrency})`;
+      const selected = String(p.id) === String(state.period.id) ? "selected" : "";
+      return `<option value="${escapeHTML(p.id)}" ${selected}>${escapeHTML(label)}</option>`;
+    })
+    .join("");
 
-  if (!sel._bound) {
-    sel._bound = true;
-    sel.addEventListener("change", async () => {
-      localStorage.setItem(ACTIVE_PERIOD_KEY, sel.value);
-      await refreshFromServer();
-      showView("dashboard");
+  sel.onchange = async () => {
+    const id = sel.value;
+    await setActivePeriod(id);
+    await refreshFromServer();
+    renderAll();
+  };
+}
+
+async function setActivePeriod(periodId) {
+  if (!periodId) return;
+  const p = (state.periods || []).find((x) => String(x.id) === String(periodId));
+  if (!p) return;
+
+  state.period = {
+    ...state.period,
+    id: p.id,
+    start: p.start,
+    end: p.end,
+    baseCurrency: p.baseCurrency,
+  };
+
+  try {
+    await sb.from("settings").upsert({
+      user_id: sbUser.id,
+      active_period_id: p.id,
+      updated_at: new Date().toISOString(),
     });
-  }
+  } catch (_) {}
 }
 
 function renderSettings() {
-  const elBase = document.getElementById("s-basecur");
-  const elStart = document.getElementById("s-start");
-  const elEnd = document.getElementById("s-end");
-  const elDaily = document.getElementById("s-daily");
-  const elRate = document.getElementById("s-rate");
+  loadPeriodsListIntoUI();
 
-  if (elBase) elBase.value = state.period.baseCurrency;
-  if (elStart) elStart.value = state.period.start;
-  if (elEnd) elEnd.value = state.period.end;
-  if (elDaily) elDaily.value = state.period.dailyBudgetBase;
-  if (elRate) elRate.value = state.exchangeRates["EUR-BASE"];
+  const p = state.period || {};
+  const baseCurEl = document.getElementById("s-basecur");
+  const startEl = document.getElementById("s-start");
+  const endEl = document.getElementById("s-end");
+  const dailyEl = document.getElementById("s-daily");
+  const rateEl = document.getElementById("s-rate");
 
-  loadPeriodsListIntoUI().catch(() => {});
-  initPaletteUI();
-  syncPaletteUI();
-  renderCategories().catch((e) => {
-    console.error("[Categories] render failed", e);
-    const host = document.getElementById("cat-list");
-    if (host) host.innerHTML = `<div class="muted">Erreur affichage catégories : ${escapeHTML(e && e.message ? e.message : e)}</div>`;
+  if (baseCurEl) baseCurEl.value = p.baseCurrency || "EUR";
+  if (startEl) startEl.value = p.start || "";
+  if (endEl) endEl.value = p.end || "";
+  if (dailyEl) dailyEl.value = String(p.dailyBudgetBase || "");
+  if (rateEl) rateEl.value = String(p.eurBaseRate || "");
+
+  // segments UI (V6.4)
+  renderBudgetSegmentsUI();
+
+  // categories UI
+  try { renderCategoriesSettingsUI(); } catch (e) { console.warn('[categories] render failed', e); }
+}
+
+/* =========================
+   Budget Segments UI (V6.4 minimal)
+   ========================= */
+
+function _segRowHTML(seg) {
+  const id = seg.id;
+  const edits = (window.__TB_SEG_EDITS__ && window.__TB_SEG_EDITS__[id]) || {};
+  const start = edits.start ?? seg.start;
+  const end = edits.end ?? seg.end;
+  const baseCurrency = edits.baseCurrency ?? seg.baseCurrency;
+  const dailyBudgetBase = edits.dailyBudgetBase ?? seg.dailyBudgetBase;
+  const fxMode = edits.fxMode ?? seg.fxMode ?? "fixed";
+  const eurBaseRateFixed = (edits.eurBaseRateFixed ?? seg.eurBaseRateFixed) ?? "";
+  const sortOrder = edits.sortOrder ?? seg.sortOrder ?? 0;
+
+  return `
+    <div class="card" style="padding:12px; margin:10px 0;">
+      <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+        <div style="min-width:160px;">
+          <div class="label">Début segment</div>
+          <input class="input" value="${escapeHTML(start || "")}" onchange="_tbSegSet('${id}','start',this.value)" />
+        </div>
+        <div style="min-width:160px;">
+          <div class="label">Fin segment</div>
+          <input class="input" value="${escapeHTML(end || "")}" onchange="_tbSegSet('${id}','end',this.value)" />
+        </div>
+        <div style="min-width:140px;">
+          <div class="label">Devise base</div>
+          <input class="input" value="${escapeHTML(baseCurrency || "")}" onchange="_tbSegSet('${id}','baseCurrency',this.value)" />
+        </div>
+        <div style="min-width:160px;">
+          <div class="label">Budget/jour (base)</div>
+          <input class="input" value="${escapeHTML(String(dailyBudgetBase ?? ""))}" onchange="_tbSegSet('${id}','dailyBudgetBase',this.value)" />
+        </div>
+        <div style="min-width:160px;">
+          <div class="label">FX mode</div>
+          <select class="input" onchange="_tbSegSet('${id}','fxMode',this.value)">
+            <option value="fixed" ${fxMode === "fixed" ? "selected" : ""}>fixed</option>
+            <option value="live_ecb" ${fxMode === "live_ecb" ? "selected" : ""}>live_ecb</option>
+          </select>
+        </div>
+        <div style="min-width:160px;">
+          <div class="label">EUR→BASE (fixed)</div>
+          ${(() => {
+            const cur = String(baseCurrency||"").toUpperCase();
+            const m = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
+            const live = (cur === "EUR") ? 1 : (m && m[cur]);
+            const v = (fxMode === "fixed") ? eurBaseRateFixed : (live || eurBaseRateFixed || "");
+            const dis = (fxMode === "fixed") ? "" : "readonly disabled style=\"opacity:0.7; cursor:not-allowed;\"";
+            const onch = (fxMode === "fixed") ? `_tbSegSet('${id}','eurBaseRateFixed',this.value)` : "";
+            return `<input class="input" value="${escapeHTML(String(v))}" ${dis} onchange="${onch}" />`;
+          })()}
+        </div>
+        <div style="min-width:100px;">
+          <div class="label">Ordre</div>
+          <input class="input" value="${escapeHTML(String(sortOrder))}" readonly disabled style="opacity:0.7; cursor:not-allowed;" />
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center; margin-left:auto;">
+          <button class="btn" onclick="splitBudgetSegmentPrompt('${id}')">Split</button>
+          <button class="btn" onclick="saveBudgetSegment('${id}')">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderBudgetSegmentsUI() {
+  const host = document.getElementById("seg-list");
+  if (!host) return;
+
+  const segs = (state.budgetSegments || []).filter((s) => s && s.periodId === state.period.id);
+  if (!segs.length) {
+    host.innerHTML = `<div class="muted">Aucun segment (il sera auto-créé au refresh si besoin).</div>`;
+    return;
+  }
+
+  // In-memory edits buffer
+  window.__TB_SEG_EDITS__ = window.__TB_SEG_EDITS__ || {};
+
+  host.innerHTML = segs.map(_segRowHTML).join("");
+}
+
+function _tbSegSet(id, key, value) {
+  window.__TB_SEG_EDITS__ = window.__TB_SEG_EDITS__ || {};
+  window.__TB_SEG_EDITS__[id] = window.__TB_SEG_EDITS__[id] || {};
+  window.__TB_SEG_EDITS__[id][key] = value;
+}
+
+async function saveBudgetSegment(id) {
+  await safeCall("Save segment", async () => {
+    const seg = (state.budgetSegments || []).find((s) => String(s.id) === String(id));
+    if (!seg) throw new Error("Segment introuvable.");
+
+    const edits = (window.__TB_SEG_EDITS__ && window.__TB_SEG_EDITS__[id]) || {};
+    const start = (edits.start ?? seg.start) || "";
+    const end = (edits.end ?? seg.end) || "";
+    const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
+    const dailyBudgetBase = Number(edits.dailyBudgetBase ?? seg.dailyBudgetBase);
+    const fxMode = (edits.fxMode ?? seg.fxMode ?? "fixed") || "fixed";
+
+    // NOTE: eurBaseRateFixed is read-only in live_ecb (we display the live value).
+    let eurBaseRateFixedRaw = edits.eurBaseRateFixed ?? seg.eurBaseRateFixed;
+    let eurBaseRateFixed =
+      eurBaseRateFixedRaw === "" || eurBaseRateFixedRaw === null || eurBaseRateFixedRaw === undefined
+        ? null
+        : Number(eurBaseRateFixedRaw);
+
+    const sD = parseISODateOrNull(start);
+    const eD = parseISODateOrNull(end);
+    if (!sD || !eD) throw new Error("Dates invalides.");
+    if (eD < sD) throw new Error("Fin < début.");
+    if (!baseCurrency) throw new Error("Devise vide.");
+    if (!isFinite(dailyBudgetBase) || dailyBudgetBase <= 0) throw new Error("Budget/jour invalide.");
+
+    if (fxMode === "fixed") {
+      const bc = String(baseCurrency || "").toUpperCase();
+
+      // fixed + EUR base => 1
+      if (bc === "EUR") eurBaseRateFixed = 1;
+
+      // fixed + non-EUR => require a positive number; try autofill if missing
+      if (bc !== "EUR" && (eurBaseRateFixed === null || !isFinite(eurBaseRateFixed) || eurBaseRateFixed <= 0)) {
+        let auto = null;
+
+        if (typeof window.fxGetEurRates === "function") {
+          const rates = window.fxGetEurRates() || {};
+          const v = Number(rates[bc]);
+          if (isFinite(v) && v > 0) auto = v;
+        }
+
+        if ((auto === null || !isFinite(auto) || auto <= 0) && String(state?.period?.baseCurrency || "").toUpperCase() === bc) {
+          const v = Number(state?.period?.eurBaseRate || state?.period?.eur_base_rate);
+          if (isFinite(v) && v > 0) auto = v;
+        }
+
+        if (auto !== null && isFinite(auto) && auto > 0) {
+          eurBaseRateFixed = auto;
+        } else {
+          throw new Error("Taux EUR→BASE requis en fixed (ou mets FX mode = live).");
+        }
+      }
+    } else {
+      // live_ecb => we don't store a fixed rate
+      eurBaseRateFixed = null;
+    }
+
+    const { error } = await sb
+      .from("budget_segments")
+      .update({
+        start_date: start,
+        end_date: end,
+        base_currency: baseCurrency,
+        daily_budget_base: dailyBudgetBase,
+        fx_mode: fxMode,
+        eur_base_rate_fixed: eurBaseRateFixed,
+        // sort_order intentionally not updated (order is fixed)
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (error) throw error;
+
+    if (window.__TB_SEG_EDITS__) delete window.__TB_SEG_EDITS__[id];
+
+    await refreshFromServer();
+    renderSettings();
+    renderWallets();
+  });
+}
+
+function _isoDayBeforeUTC(isoDate) {
+  const d = new Date(isoDate + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+async function splitBudgetSegmentPrompt(id) {
+  await safeCall("Split segment", async () => {
+    const seg = (state.budgetSegments || []).find((s) => String(s.id) === String(id));
+    if (!seg) throw new Error("Segment introuvable.");
+
+    const defaultSplit = (function () {
+      const d = new Date(seg.start + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + 1);
+      const candidate = d.toISOString().slice(0, 10);
+      return candidate <= seg.end ? candidate : seg.start;
+    })();
+
+    const split = prompt("Date de split (YYYY-MM-DD) :", defaultSplit);
+    if (!split) return;
+
+    const splitD = parseISODateOrNull(split);
+    const sD = parseISODateOrNull(seg.start);
+    const eD = parseISODateOrNull(seg.end);
+    if (!splitD || !sD || !eD) throw new Error("Dates invalides.");
+    if (split <= seg.start) throw new Error("Split doit être > début.");
+    if (split > seg.end) throw new Error("Split doit être dans le segment.");
+    if (split === seg.end) throw new Error("Split ne peut pas être égal à la fin du segment.");
+
+    const leftEndStr = _isoDayBeforeUTC(split);
+    const oldEnd = seg.end;
+
+    const upd = await sb
+      .from("budget_segments")
+      .update({
+        end_date: leftEndStr,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", seg.id)
+      .select("id,start_date,end_date")
+      .single();
+
+    if (upd.error) throw upd.error;
+    if (!upd.data || upd.data.end_date !== leftEndStr) {
+      throw new Error(`Update segment échoué (end_date=${upd.data?.end_date ?? "null"} au lieu de ${leftEndStr}).`);
+    }
+
+    const ins = await sb
+      .from("budget_segments")
+      .insert([
+        {
+          user_id: sbUser.id,
+          period_id: seg.periodId,
+          start_date: split,
+          end_date: oldEnd,
+          base_currency: seg.baseCurrency,
+          daily_budget_base: seg.dailyBudgetBase,
+          fx_mode: seg.fxMode || "fixed",
+          eur_base_rate_fixed: seg.eurBaseRateFixed,
+          sort_order: (Number(seg.sortOrder) || 0) + 1,
+        },
+      ])
+      .select("id")
+      .single();
+
+    if (ins.error) {
+      await sb
+        .from("budget_segments")
+        .update({
+          end_date: oldEnd,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", seg.id);
+
+      throw ins.error;
+    }
+
+    await refreshFromServer();
+    renderSettings();
+    renderWallets();
   });
 }
 
@@ -63,205 +345,205 @@ async function saveSettings() {
     if (!s || !e) throw new Error("Dates invalides.");
     if (parseISODateOrNull(e) < parseISODateOrNull(s)) throw new Error("Fin < début.");
     if (!isFinite(d) || d <= 0) throw new Error("Budget/jour invalide.");
-    if (!isFinite(r) || r <= 0) throw new Error("Taux invalide.");
-    if (!state.period.id) throw new Error("Aucune période active.");
 
-    const { error: pErr } = await sb.from("periods").update({
-      start_date: s,
-      end_date: e,
-      base_currency: baseCur,
-      eur_base_rate: r,
-      daily_budget_base: d,
-      updated_at: new Date().toISOString(),
-    }).eq("id", state.period.id);
-    if (pErr) throw pErr;
+    const { error } = await sb
+      .from("periods")
+      .update({
+        start_date: s,
+        end_date: e,
+        base_currency: baseCur,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", state.period.id);
 
-    const { error: sErr } = await sb.from("settings").update({
-      period_start: s,
-      period_end: e,
-      theme: localStorage.getItem(THEME_KEY) || "light",
-      updated_at: new Date().toISOString(),
-    }).eq("user_id", sbUser.id);
-    if (sErr) throw sErr;
+    if (error) throw error;
 
-    alert("Période enregistrée ✅");
+    const { error: pErr2 } = await sb
+      .from("periods")
+      .update({
+        eur_base_rate: isFinite(r) ? r : null,
+        daily_budget_base: d,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", state.period.id);
+    if (pErr2) throw pErr2;
+
     await refreshFromServer();
+    renderAll();
   });
 }
 
-async function createPeriodPrompt() {
-  await safeCall("Créer période", async () => {
-    const start = prompt("Début (YYYY-MM-DD) :", toLocalISODate(new Date()));
+async function newPeriod() {
+  await safeCall("Nouvelle période", async () => {
+    const start = prompt("Date début (YYYY-MM-DD)", toLocalISODate(new Date()));
     if (!start) return;
-
-    const end = prompt("Fin (YYYY-MM-DD) :", start);
+    const end = prompt("Date fin (YYYY-MM-DD)", start);
     if (!end) return;
+    const baseCur = prompt("Devise base (ex: THB, EUR)", "EUR") || "EUR";
+    const daily = Number(prompt("Budget/jour (devise base)", "25") || 25);
 
-    if (!parseISODateOrNull(start) || !parseISODateOrNull(end)) throw new Error("Format date invalide.");
-    if (parseISODateOrNull(end) < parseISODateOrNull(start)) throw new Error("Fin < début.");
-
-    const defaultBase = state.period.baseCurrency || "THB";
-    const base = (prompt("Devise période (THB/EUR/VND/USD/JPY/AUD) :", defaultBase) || defaultBase).toUpperCase();
-
-    const defaultRate = Number(state.exchangeRates["EUR-BASE"]) || 35;
-    const rateRaw = prompt(`Taux 1 EUR → ${base} :`, String(defaultRate));
-    if (rateRaw === null) return;
-    const rate = Number(String(rateRaw).replace(",", "."));
-    if (!isFinite(rate) || rate <= 0) throw new Error("Taux invalide.");
-
-    const defaultDaily = Number(state.period.dailyBudgetBase) || 1000;
-    const dailyRaw = prompt(`Budget/jour en ${base} :`, String(defaultDaily));
-    if (dailyRaw === null) return;
-    const daily = Number(String(dailyRaw).replace(",", "."));
+    const sD = parseISODateOrNull(start);
+    const eD = parseISODateOrNull(end);
+    if (!sD || !eD) throw new Error("Dates invalides.");
+    if (eD < sD) throw new Error("Fin < début.");
     if (!isFinite(daily) || daily <= 0) throw new Error("Budget/jour invalide.");
 
     const { data, error } = await sb
       .from("periods")
-      .insert([{
-        user_id: sbUser.id,
-        start_date: start,
-        end_date: end,
-        base_currency: base,
-        eur_base_rate: rate,
-        daily_budget_base: daily
-      }])
-      .select("id")
+      .insert([
+        {
+          user_id: sbUser.id,
+          start_date: start,
+          end_date: end,
+          base_currency: baseCur,
+          daily_budget_base: daily,
+          eur_base_rate: baseCur === "EUR" ? 1 : null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ])
+      .select("id,start_date,end_date,base_currency")
       .single();
 
     if (error) throw error;
 
-    localStorage.setItem(ACTIVE_PERIOD_KEY, data.id);
+    await sb.from("budget_segments").insert([
+      {
+        user_id: sbUser.id,
+        period_id: data.id,
+        start_date: start,
+        end_date: end,
+        base_currency: baseCur,
+        daily_budget_base: daily,
+        fx_mode: "fixed",
+        eur_base_rate_fixed: baseCur === "EUR" ? 1 : null,
+        sort_order: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ]);
+
     await refreshFromServer();
-    showView("dashboard");
+    renderAll();
   });
 }
 
-async function deleteActivePeriod() {
+async function deletePeriod() {
   await safeCall("Supprimer période", async () => {
     if (!state.period.id) throw new Error("Aucune période active.");
+    if (!confirm("Supprimer cette période ?")) return;
 
-    const ok = confirm(`Supprimer la période ${state.period.start} → ${state.period.end} ?`);
-    if (!ok) return;
+    await sb.from("budget_segments").delete().eq("period_id", state.period.id);
 
     const { error } = await sb.from("periods").delete().eq("id", state.period.id);
     if (error) throw error;
 
-    localStorage.removeItem(ACTIVE_PERIOD_KEY);
     await refreshFromServer();
-    showView("dashboard");
+    renderAll();
   });
 }
 
+(function bindSettingsButtons() {
+  const btnSave = document.getElementById("btn-save-period");
+  const btnNew = document.getElementById("btn-new-period");
+  const btnDel = document.getElementById("btn-del-period");
 
+  if (btnSave) btnSave.onclick = saveSettings;
+  if (btnNew) btnNew.onclick = newPeriod;
+  if (btnDel) btnDel.onclick = deletePeriod;
+})();
 
 /* =========================
-   Settings: categories UI
+   Categories UI (Supabase)
+   - Source of truth: public.categories
    ========================= */
-async function renderCategories() {
+
+function renderCategoriesSettingsUI() {
   const host = document.getElementById("cat-list");
   if (!host) return;
 
-  const { data, error } = await sb
-    .from("categories")
-    .select("id,name,color,sort_order,created_at")
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true });
+  const cats = (typeof getCategories === "function") ? getCategories() : (state.categories || []);
+  const colors = (typeof getCategoryColors === "function") ? getCategoryColors() : (state.categoryColors || {});
 
-  if (error) {
-    host.innerHTML = `<div class="muted">Erreur chargement catégories : ${escapeHTML(error.message)}</div>`;
-    return;
-  }
-
-  const rows = data || [];
-  if (!rows.length) {
-    host.innerHTML = `<div class="muted">Aucune catégorie (tu peux en ajouter ci-dessus).</div>`;
-    return;
-  }
-
-  host.innerHTML = rows.map((c) => {
-    const swatch = c.color ? `<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${escapeHTML(c.color)};border:1px solid rgba(255,255,255,.2);margin-right:8px;vertical-align:middle;"></span>` : "";
+  host.innerHTML = (cats || []).map((c) => {
+    const col = colors[c] || "#94a3b8";
     return `
-      <div class="row" style="justify-content:space-between;gap:10px;align-items:center;margin:6px 0;">
-        <div style="display:flex;align-items:center;gap:8px;min-width:220px;">
-          ${swatch}
-          <strong>${escapeHTML(c.name)}</strong>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <input type="color" value="${escapeHTML(c.color || "#94a3b8")}" onchange="updateCategoryColor('${c.id}', this.value)" />
-          <button class="btn" onclick="renameCategoryPrompt('${c.id}', '${escapeHTML(c.name)}')">Renommer</button>
-          <button class="btn danger" onclick="deleteCategoryPrompt('${c.id}', '${escapeHTML(c.name)}')">Supprimer</button>
-        </div>
+      <div class="card" style="padding:10px; margin:8px 0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div style="min-width:180px; font-weight:700;">${escapeHTML(c)}</div>
+        <input type="color" value="${escapeHTML(col)}" onchange="setCategoryColor('${escapeHTML(c)}', this.value)" />
+        <button class="btn" onclick="deleteCategory('${escapeHTML(c)}')">Supprimer</button>
       </div>
     `;
   }).join("");
 
-  // keep state in sync (so other views instantly see it)
-  state.categories = rows.map(r => r.name);
-  state.categoryColors = Object.fromEntries(rows.filter(r => r.color).map(r => [r.name, r.color]));
+  if (!host.innerHTML) host.innerHTML = `<div class="muted">Aucune catégorie. Ajoute-en une ci-dessus.</div>`;
 }
 
-async function addCategory() {
-  await safeCall("Ajouter catégorie", async () => {
-    const nameRaw = document.getElementById("cat-name")?.value || "";
-    const name = nameRaw.trim();
-    const color = document.getElementById("cat-color")?.value || null;
-    if (!name) throw new Error("Nom de catégorie requis.");
-    if (name.length > 40) throw new Error("Nom trop long (max ~40).");
+function addCategory() {
+  safeCall("Add category", async () => {
+    const nameEl = document.getElementById("cat-name");
+    const colorEl = document.getElementById("cat-color");
+    const name = String(nameEl?.value || "").trim();
+    const color = String(colorEl?.value || "#94a3b8");
+    if (!name) throw new Error("Nom de catégorie vide.");
 
-    // insert with next sort_order
-    const { data: maxRows, error: maxErr } = await sb
+    const existing = (state.categories || []).find(c => String(c).toLowerCase() === name.toLowerCase()) || null;
+    if (existing) {
+      const { error: upErr } = await sb
+        .from("categories")
+        .update({ color, updated_at: new Date().toISOString() })
+        .eq("user_id", sbUser.id)
+        .eq("name", existing);
+      if (upErr) throw upErr;
+    } else {
+      const maxSort = (state.categories || []).length;
+      const { error: insErr } = await sb
+        .from("categories")
+        .insert([{ user_id: sbUser.id, name, color, sort_order: maxSort, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
+      if (insErr) throw insErr;
+    }
+
+    if (nameEl) nameEl.value = "";
+    await refreshFromServer();
+    renderSettings();
+  });
+}
+
+function deleteCategory(name) {
+  safeCall("Delete category", async () => {
+    const n = String(name || "").trim();
+    if (!n) return;
+    if (!confirm(`Supprimer la catégorie "${n}" ?`)) return;
+    const existing = (state.categories || []).find(c => String(c).toLowerCase() === n.toLowerCase()) || n;
+    const { error: delErr } = await sb
       .from("categories")
-      .select("sort_order")
-      .order("sort_order", { ascending: false })
-      .limit(1);
-    if (maxErr) throw maxErr;
-    const next = (maxRows?.[0]?.sort_order ?? -1) + 1;
+      .delete()
+      .eq("user_id", sbUser.id)
+      .eq("name", existing);
+    if (delErr) throw delErr;
 
-    const { error } = await sb.from("categories").insert([{ name, color, sort_order: next }]);
-    if (error) throw error;
-
-    document.getElementById("cat-name").value = "";
-    emitDataUpdated("categories:add");
     await refreshFromServer();
-    showView("settings");
+    renderSettings();
   });
 }
 
-async function renameCategoryPrompt(id, currentName) {
-  const next = prompt("Nouveau nom :", currentName || "");
-  if (next === null) return;
-  const name = String(next).trim();
-  if (!name) return alert("Nom invalide.");
-  await safeCall("Renommer catégorie", async () => {
-    const { error } = await sb.from("categories").update({ name }).eq("id", id);
-    if (error) throw error;
-    emitDataUpdated("categories:rename");
+function setCategoryColor(name, color) {
+  safeCall("Set category color", async () => {
+    const n = String(name || "").trim();
+    if (!n) return;
+    const existing = (state.categories || []).find(c => String(c).toLowerCase() === n.toLowerCase()) || n;
+    const { error: upErr } = await sb
+      .from("categories")
+      .update({ color: String(color || "#94a3b8"), updated_at: new Date().toISOString() })
+      .eq("user_id", sbUser.id)
+      .eq("name", existing);
+    if (upErr) throw upErr;
+
     await refreshFromServer();
-    showView("settings");
+    renderSettings();
   });
 }
 
-async function updateCategoryColor(id, color) {
-  await safeCall("Couleur catégorie", async () => {
-    const c = String(color || "").trim();
-    if (!/^#([0-9a-fA-F]{6})$/.test(c)) throw new Error("Couleur invalide.");
-    const { error } = await sb.from("categories").update({ color: c }).eq("id", id);
-    if (error) throw error;
-    emitDataUpdated("categories:color");
-    await refreshFromServer();
-    showView("settings");
-  });
-}
-
-async function deleteCategoryPrompt(id, name) {
-  const ok = confirm(`Supprimer la catégorie "${name}" ?\n\nNote: les transactions existantes garderont le texte "${name}".`);
-  if (!ok) return;
-  await safeCall("Supprimer catégorie", async () => {
-    const { error } = await sb.from("categories").delete().eq("id", id);
-    if (error) throw error;
-    emitDataUpdated("categories:delete");
-    await refreshFromServer();
-    showView("settings");
-  });
-}
-
+window.addCategory = addCategory;
+window.deleteCategory = deleteCategory;
+window.setCategoryColor = setCategoryColor;

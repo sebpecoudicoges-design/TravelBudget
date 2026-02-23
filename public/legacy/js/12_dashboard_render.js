@@ -27,9 +27,10 @@ function renderWallets() {
   container.appendChild(listEl);
 
   const today = toLocalISODate(new Date());
-  const budgetToday = getDailyBudgetForDate(today);
-  const daily = state?.period?.dailyBudgetBase || 1;
-  const base = state?.period?.baseCurrency;
+  const infoToday = (typeof getDailyBudgetInfoForDate === "function") ? getDailyBudgetInfoForDate(today) : { remaining: getDailyBudgetForDate(today), daily: state?.period?.dailyBudgetBase || 1, baseCurrency: state?.period?.baseCurrency };
+  const budgetToday = Number(infoToday.remaining) || 0;
+  const daily = Number(infoToday.daily) || (state?.period?.dailyBudgetBase || 1);
+  const base = String(infoToday.baseCurrency || state?.period?.baseCurrency || "EUR").toUpperCase();
 
   const orderedWallets = (typeof sortWalletsBySavedOrder === "function")
     ? sortWalletsBySavedOrder([...(state.wallets || [])])
@@ -74,18 +75,13 @@ function renderWallets() {
 
 // Budget spent per day (base currency) computed from transactions.
 // Includes Trip shares (payNow=false) because they affect budget; excludes out-of-budget expenses.
+
+// Budget spent per day computed from transactions, expressed in the *segment base currency of that day*.
 function budgetSpentBaseForDateFromTx(dateStr) {
   try {
     const txs = Array.isArray(state.transactions) ? state.transactions : [];
     const target = String(dateStr || "");
     if (!target) return 0;
-
-    const _ds = (d) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const da = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${da}`;
-    };
 
     let sum = 0;
     for (const t of txs) {
@@ -103,22 +99,21 @@ function budgetSpentBaseForDateFromTx(dateStr) {
       const e = parseISODateOrNull(t.dateEnd || t.date_end || t.dateStart || t.date_start || t.date || null);
       if (!s || !e) continue;
 
-      const sds = _ds(s);
-      const eds = _ds(e);
+      const sds = toLocalISODate(s);
+      const eds = toLocalISODate(e);
       if (target < sds || target > eds) continue;
 
       const amt = Number(t.amount);
       if (!isFinite(amt) || amt === 0) continue;
 
-      const amtBase = amountToBase(amt, t.currency);
-      const msPerDay = 24 * 60 * 60 * 1000;
-      const days = Math.max(
-        1,
-        Math.round(
-          (Date.UTC(e.getFullYear(), e.getMonth(), e.getDate()) - Date.UTC(s.getFullYear(), s.getMonth(), s.getDate())) / msPerDay
-        ) + 1
-      );
-      sum += (amtBase / days);
+      const days = dayCountInclusive(s, e);
+      const perDayInTxCur = amt / days;
+
+      const perDayBase = (typeof amountToBudgetBaseForDate === "function")
+        ? amountToBudgetBaseForDate(perDayInTxCur, t.currency, target)
+        : amountToBase(perDayInTxCur, t.currency);
+
+      sum += perDayBase;
     }
     return sum;
   } catch (_) {
@@ -135,27 +130,29 @@ function renderDailyBudget() {
   const end = parseISODateOrNull(state?.period?.end);
   if (!start || !end) return;
 
-  const base = state.period.baseCurrency;
+  // base currency can vary by segment; computed per-day.
 
   forEachDateInclusive(start, end, (d) => {
     const dateStr = toLocalISODate(d);
+    const info = (typeof getDailyBudgetInfoForDate === "function") ? getDailyBudgetInfoForDate(dateStr) : { remaining: state.period.dailyBudgetBase - budgetSpentBaseForDateFromTx(dateStr), daily: state.period.dailyBudgetBase, baseCurrency: state.period.baseCurrency };
+    const baseDay = String(info.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
     const spentBudget = budgetSpentBaseForDateFromTx(dateStr);
-    const budget = state.period.dailyBudgetBase - spentBudget;
-    const details = (state.allocations || []).filter((a) => a.dateStr === dateStr);
+    const budget = Number(info.daily) - spentBudget;
+    const details = (state.allocations || []).filter((a) => a && a.dateStr === dateStr);
 
     const div = document.createElement("div");
     div.className = "day";
     div.innerHTML = `
       <div class="top">
         <div><strong>${dateStr}</strong></div>
-        <div class="pill ${budgetClass(budget)}"><span class="dot"></span>${budget.toFixed(0)} ${base}</div>
+        <div class="pill ${budgetClass(budget)}"><span class="dot"></span>${budget.toFixed(0)} ${baseDay}</div>
       </div>
       <div style="margin-top:6px; color:#6b7280; font-size:12px; display:flex; justify-content:space-between; gap:10px;">
-        <div>Budget utilisé : <b style="color:#111827;">${spentBudget.toFixed(0)} ${base}</b></div>
-        <div>Objectif : <b style="color:#111827;">${state.period.dailyBudgetBase.toFixed(0)} ${base}</b></div>
+        <div>Budget utilisé : <b style="color:#111827;">${spentBudget.toFixed(0)} ${baseDay}</b></div>
+        <div>Objectif : <b style="color:#111827;">${Number(info.daily).toFixed(0)} ${baseDay}</b></div>
       </div>
       ${details.length
-        ? `<div class="details">${details.map((x) => `• ${x.label} : ${x.amountBase.toFixed(0)} ${base}`).join("<br>")}</div>`
+        ? `<div class="details">${details.map((x) => `• ${x.label} : ${Number(x.amountBase).toFixed(0)} ${x.baseCurrency || baseDay}`).join("<br>")}</div>`
         : `<div class="details">Aucune allocation</div>`}
     `;
     container.appendChild(div);

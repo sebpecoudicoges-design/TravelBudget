@@ -3,12 +3,57 @@
    ========================= */
 
 function fillModalSelects() {
-  document.getElementById("m-wallet").innerHTML = state.wallets
+  const elW = document.getElementById("m-wallet");
+  const elC = document.getElementById("m-category");
+  if (!elW || !elC) return;
+
+  const activePid = state?.period?.id || null;
+
+  const wallets = (state.wallets || []).filter((w) => {
+    const pid = w?.periodId || w?.period_id || w?.periodID || null;
+    // If wallet has no period, keep it (legacy). Otherwise, keep only active period wallets.
+    if (!pid) return true;
+    if (!activePid) return true;
+    return String(pid) === String(activePid);
+  });
+
+  elW.innerHTML = wallets
     .map((w) => `<option value="${w.id}">${w.name} (${w.currency})</option>`)
     .join("");
-  document.getElementById("m-category").innerHTML = getCategories()
+
+  elC.innerHTML = getCategories()
     .map((c) => `<option value="${c}">${c}</option>`)
     .join("");
+}
+
+function _ensureSelectValue(el) {
+  if (!el) return;
+  const v = String(el.value || "");
+  const ok = Array.from(el.options || []).some((o) => String(o.value) === v);
+  if (!ok) el.value = el.options && el.options[0] ? el.options[0].value : "";
+}
+
+/**
+ * Given a date, returns the period_id the backend is likely to pick.
+ * IMPORTANT: Your periods currently overlap, so a date can belong to multiple periods.
+ * We mimic a "most recent start_date wins" behavior.
+ */
+function _periodIdForDate(dateStr) {
+  const d = parseISODateOrNull(dateStr);
+  if (!d) return null;
+
+  const periods = Array.isArray(state.periods) ? state.periods : [];
+  const sorted = periods
+    .slice()
+    .sort((a, b) => String(b.start).localeCompare(String(a.start))); // start desc
+
+  for (const p of sorted) {
+    const ps = parseISODateOrNull(p.start);
+    const pe = parseISODateOrNull(p.end);
+    if (!ps || !pe) continue;
+    if (d >= ps && d <= pe) return p.id;
+  }
+  return null;
 }
 
 function wireNightLogic() {
@@ -38,7 +83,11 @@ function openTxModal(type = "expense", walletId = null) {
   const now = toLocalISODate(new Date());
   document.getElementById("modal-title").textContent = "Nouvelle transaction";
   document.getElementById("m-type").value = type;
-  document.getElementById("m-wallet").value = walletId || state.wallets[0]?.id || "";
+
+  const elW = document.getElementById("m-wallet");
+  elW.value = walletId || state.wallets[0]?.id || "";
+  _ensureSelectValue(elW);
+
   document.getElementById("m-amount").value = "";
   document.getElementById("m-category").value = "Autre";
   document.getElementById("m-start").value = now;
@@ -70,7 +119,11 @@ function openTxEditModal(txId) {
 
   document.getElementById("modal-title").textContent = "Modifier transaction";
   document.getElementById("m-type").value = tx.type;
-  document.getElementById("m-wallet").value = tx.walletId;
+
+  const elW = document.getElementById("m-wallet");
+  elW.value = tx.walletId;
+  _ensureSelectValue(elW);
+
   document.getElementById("m-amount").value = tx.amount;
   document.getElementById("m-category").value = tx.category || "Autre";
   document.getElementById("m-start").value = tx.dateStart;
@@ -138,6 +191,20 @@ async function saveModal() {
       if (!wallet) throw new Error("Wallet invalide.");
 
       if (nightCovered) outOfBudget = true;
+
+      // === KEY FIX: periods overlap, RPC derives period_id from date ===
+      // If the wallet belongs to period A but the date falls into period B (derived by start_date),
+      // apply_transaction will reject with period_id mismatch.
+      const walletPid = wallet?.periodId || wallet?.period_id || null;
+      const derivedPid = _periodIdForDate(start);
+
+      if (!editingTxId && derivedPid && walletPid && String(derivedPid) !== String(walletPid)) {
+        throw new Error(
+          `Périodes qui se chevauchent : la date ${start} est résolue sur la période ${derivedPid} (RPC), ` +
+          `mais le wallet appartient à ${walletPid}. ` +
+          `→ Change la date / change de période active / utilise un wallet de la même période.`
+        );
+      }
 
       if (editingTxId) {
         const current = state.transactions.find((t) => t.id === editingTxId);

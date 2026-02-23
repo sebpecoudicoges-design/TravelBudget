@@ -28,32 +28,85 @@ function setPieExcludedCats(setNormCats) {
     localStorage.setItem(PIE_EXCLUDED_CATS_KEY, JSON.stringify(Array.from(setNormCats || [])));
   } catch (_) {}
 }
+
 function getBudgetSeries() {
   const start = parseISODateOrNull(state.period.start);
   const end = parseISODateOrNull(state.period.end);
   if (!start || !end) return [];
   const series = [];
+
+  const segs = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
+  const distinctBases = new Set(segs.map(s => String(s?.baseCurrency || "").toUpperCase()).filter(Boolean));
+  const multiBase = distinctBases.size > 1;
+
+  const outBase = multiBase
+    ? "EUR"
+    : (distinctBases.size === 1 ? Array.from(distinctBases)[0] : (state.period.baseCurrency || "EUR"));
+
+  // Attach metadata to the returned array (used by chart labeling).
+  series.__base = outBase;
+
   forEachDateInclusive(start, end, (d) => {
     const ds = toLocalISODate(d);
-    series.push({ x: ds, y: getDailyBudgetForDate(ds) });
+    const y = (multiBase && typeof getDailyBudgetForDateEUR === "function")
+      ? getDailyBudgetForDateEUR(ds)
+      : getDailyBudgetForDate(ds);
+    series.push({ x: ds, y });
   });
+
   return series;
 }
 
 function getExpenseByCategoryBase() {
+  // Pie = expenses by category within active period.
+  // If segments use multiple base currencies, aggregate in EUR to stay consistent.
   const start = parseISODateOrNull(state.period.start);
   const end = parseISODateOrNull(state.period.end);
   const map = new Map();
   if (!start || !end) return map;
 
+  const segs = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
+  const distinctBases = new Set(segs.map(s => String(s?.baseCurrency || "").toUpperCase()).filter(Boolean));
+  const multiBase = distinctBases.size > 1;
+
+  // Currency used for pie values/labels
+  const outBase = multiBase
+    ? "EUR"
+    : (distinctBases.size === 1 ? Array.from(distinctBases)[0] : (state.period.baseCurrency || "EUR"));
+
+  // Meta used by drawPieChart() for labels
+  map.__base = outBase;
+
   for (const tx of state.transactions) {
     if (tx.type !== "expense") continue;
-    const d = parseISODateOrNull(tx.dateStart);
+
+    // Default: only include paid-now expenses in the pie (cash view).
+    if (tx.payNow === false) continue;
+
+    const dateRaw = tx.dateStart || tx.date || tx.date_end || tx.dateEnd;
+    const d = parseISODateOrNull(dateRaw);
     if (!d || d < start || d > end) continue;
-    const baseAmt = amountToBase(tx.amount, tx.currency);
+
+    let amt;
+
+    if (outBase === "EUR") {
+      // Aggregate to EUR (stable pivot)
+      if (typeof window.fxConvert === "function") {
+        const rates = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
+        const out = window.fxConvert(tx.amount, tx.currency, "EUR", rates);
+        amt = (out !== null && isFinite(out)) ? out : amountToEUR(tx.amount, tx.currency);
+      } else {
+        amt = amountToEUR(tx.amount, tx.currency);
+      }
+    } else {
+      // Aggregate to legacy base
+      amt = amountToBase(tx.amount, tx.currency);
+    }
+
     const k = (tx.category || "Autre").trim();
-    map.set(k, (map.get(k) || 0) + baseAmt);
+    map.set(k, (map.get(k) || 0) + (Number(amt) || 0));
   }
+
   return map;
 }
 
@@ -133,9 +186,11 @@ function drawLineChart(canvasId, series) {
     ctx.fillText(series[i].x.slice(5), x - 16, H - 10);
   });
 
-  const base = state.period.baseCurrency;
+  const segs = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
+  const distinctBases = new Set(segs.map(s => String(s?.baseCurrency || "").toUpperCase()).filter(Boolean));
+  const baseLabel = (distinctBases.size > 1) ? "EUR" : (state.period.baseCurrency || "EUR");
   ctx.fillStyle = "rgba(127,127,127,0.95)";
-  ctx.fillText(`Budget dispo (${base})`, pad.l, 14);
+  ctx.fillText(`Budget dispo (${baseLabel})`, pad.l, 14);
 }
 
 function drawPieChart(canvasId, legendId, mapCat) {
@@ -162,6 +217,17 @@ function drawPieChart(canvasId, legendId, mapCat) {
 
   // Filter UI (checkboxes)
   legend.innerHTML = "";
+
+  // Context line (range + rules)
+  const ctxLine = document.createElement("div");
+  ctxLine.style.margin = "2px 0 8px";
+  ctxLine.style.fontSize = "12px";
+  ctxLine.style.color = "var(--muted)";
+  const s0 = state?.period?.start || "";
+  const e0 = state?.period?.end || "";
+  ctxLine.textContent = `Période: ${s0} → ${e0} · Dépenses payées (payNow)`;
+  legend.appendChild(ctxLine);
+
   const filterWrap = document.createElement("div");
   filterWrap.style.display = "flex";
   filterWrap.style.flexWrap = "wrap";
@@ -229,7 +295,7 @@ function drawPieChart(canvasId, legendId, mapCat) {
   const r = Math.min(cssH * 0.38, cssW * 0.25);
 
   let start = -Math.PI / 2;
-  const base = state.period.baseCurrency;
+  const base = (mapCat && mapCat.__base) ? mapCat.__base : (state.period.baseCurrency || "EUR");
 
   entries.forEach(([cat, val]) => {
     const frac = val / total;
@@ -275,4 +341,3 @@ function redrawCharts() {
     redrawPending = false;
   });
 }
-

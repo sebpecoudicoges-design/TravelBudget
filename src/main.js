@@ -28,6 +28,7 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/08_refresh.js',
   '/legacy/js/19_backup_export_import.js',
   '/legacy/js/25_health_check.js',
+  '/legacy/js/99_doctor.js',
   '/legacy/js/20_boot.js',
   '/legacy/js/21_dashboard_drag.js',
   '/legacy/js/22_budget_consistency_audit.js',

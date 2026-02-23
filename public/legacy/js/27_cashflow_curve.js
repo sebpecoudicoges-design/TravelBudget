@@ -51,6 +51,45 @@
   let includePendingExpenses = (localStorage.getItem("cashflow_include_pending_exp_v1") ?? "1") === "1";
   let includePendingIncomes  = (localStorage.getItem("cashflow_include_pending_inc_v1") ?? "1") === "1";
 
+  // Segment filter (range + display currency for the chart)
+  // - "current": current segment (today)
+  // - "all": full period
+  // - "seg:<i>": explicit segment index in state.budgetSegments
+  const CASHFLOW_SEG_FILTER_KEY = "travelbudget_cashflow_segment_filter_v1";
+  let cashflowSegFilter = String(localStorage.getItem(CASHFLOW_SEG_FILTER_KEY) || "current");
+
+  function getSegments() {
+    return Array.isArray(window.state?.budgetSegments) ? window.state.budgetSegments.filter(Boolean) : [];
+  }
+
+  function getTodaySegment() {
+    if (typeof window.getBudgetSegmentForDate === "function") {
+      return window.getBudgetSegmentForDate(todayStr());
+    }
+    return null;
+  }
+
+  function getSelectedSegment() {
+    if (cashflowSegFilter === "all") return null;
+    if (cashflowSegFilter === "current") return getTodaySegment();
+    if (cashflowSegFilter.startsWith("seg:")) {
+      const idx = Number(String(cashflowSegFilter.split(":")[1] || "").trim());
+      const segs = getSegments();
+      if (Number.isInteger(idx) && idx >= 0 && idx < segs.length) return segs[idx];
+    }
+    // fallback
+    return getTodaySegment();
+  }
+
+  function segLabel(seg) {
+    if (!seg) return "";
+    const s = String(seg.start || "").slice(0, 10);
+    const e = String(seg.end || "").slice(0, 10);
+    const c = String(seg.baseCurrency || "").toUpperCase();
+    const range = (s && e) ? `${s} → ${e}` : (s || e || "");
+    return `${range}${c ? ` (${c})` : ""}`.trim();
+  }
+
   // Category filter (same philosophy as expense pie chart)
   const CASHFLOW_CATS_KEY = "travelbudget_cashflow_excluded_categories_v1";
   let excludedCats = new Set();
@@ -113,6 +152,10 @@
   }
 
   function base() {
+    const seg = getSelectedSegment();
+    if (seg && seg.baseCurrency) return String(seg.baseCurrency || "").toUpperCase();
+    const d = todayStr();
+    if (typeof window.getDisplayCurrency === "function") return String(window.getDisplayCurrency(d) || "").toUpperCase();
     return String(window.state?.period?.baseCurrency || "").toUpperCase();
   }
 
@@ -135,6 +178,22 @@
     const c = String(cur || b).toUpperCase();
 
     if (!b) return a;
+
+    // If a specific segment is selected, convert using that segment's FX overrides
+    // without relying on the global display-currency mechanism.
+    const selSeg = getSelectedSegment();
+    if (selSeg && typeof window.fxConvert === "function") {
+      const rates = (typeof window.fxRatesForSegment === "function")
+        ? window.fxRatesForSegment(selSeg)
+        : (typeof window.fxGetEurRates === "function" ? window.fxGetEurRates() : {});
+      const v = window.fxConvert(a, c, b, rates);
+      return (v === null || !Number.isFinite(v)) ? 0 : v;
+    }
+
+    if (typeof window.amountToDisplayForDate === "function") {
+      const v = window.amountToDisplayForDate(a, c, todayStr());
+      return Number.isFinite(v) ? v : 0;
+    }
     if (typeof window.amountToBase === "function") {
       const v = window.amountToBase(a, c);
       return Number.isFinite(v) ? v : 0;
@@ -275,8 +334,14 @@
     const period = window.state?.period;
     if (!period?.start || !period?.end) return { ok:false, reason:"Aucune période définie." };
 
-    const start = window.parseISODateOrNull?.(period.start);
-    const end = window.parseISODateOrNull?.(period.end);
+    // Date range depends on the selected segment filter.
+    // Note: we keep all computations in the chart "base" currency (selected segment currency or display currency).
+    const selSeg = getSelectedSegment();
+    const rangeStartStr = (selSeg && selSeg.start) ? String(selSeg.start).slice(0, 10) : String(period.start).slice(0, 10);
+    const rangeEndStr   = (selSeg && selSeg.end)   ? String(selSeg.end).slice(0, 10)   : String(period.end).slice(0, 10);
+
+    const start = window.parseISODateOrNull?.(rangeStartStr);
+    const end = window.parseISODateOrNull?.(rangeEndStr);
     if (!start || !end) return { ok:false, reason:"Dates de période invalides." };
 
     const b = base();
@@ -285,7 +350,8 @@
     const tStr = todayStr();
     const tDate = window.parseISODateOrNull?.(tStr);
 
-    const dailyBudget = safeNum(period.dailyBudgetBase || period.daily_budget_base || 0);
+    const infoToday = (typeof window.getDailyBudgetInfoForDate === "function") ? window.getDailyBudgetInfoForDate(tStr) : null;
+    const dailyBudget = safeNum(infoToday?.daily ?? period.dailyBudgetBase ?? period.daily_budget_base ?? 0);
 
     const currentBalance = sumWalletsBase();
 
@@ -352,7 +418,7 @@
       .filter(v => v !== null);
     if (allY.some(v => Number.isNaN(v))) return { ok:false, reason:"Séries invalides (NaN)." };
 
-    return { ok:true, b, start, end, tStr, dailyBudget, currentBalance, startBalance, actual, forecast, spentBars, budgetUsedVal, thr500 };
+    return { ok:true, b, start, end, tStr, dailyBudget, currentBalance, startBalance, actual, forecast, spentBars, budgetUsedVal, thr500, segFilter: cashflowSegFilter, segLabel: selSeg ? segLabel(selSeg) : "Période complète" };
   }
 
   async function renderCashflowChart() {
@@ -421,6 +487,18 @@
           </details>`
       : "";
 
+    // Segment filter UI (range)
+    const segs = getSegments();
+    const segOptions = [
+      `<option value="current" ${cashflowSegFilter === "current" ? "selected" : ""}>Segment courant (défaut)</option>`,
+      `<option value="all" ${cashflowSegFilter === "all" ? "selected" : ""}>Toute la période</option>`,
+      ...segs.map((s, i) => {
+        const val = `seg:${i}`;
+        const lab = segLabel(s) || `Segment ${i+1}`;
+        return `<option value="${val}" ${cashflowSegFilter === val ? "selected" : ""}>${escapeHTML(lab)}</option>`;
+      })
+    ].join("");
+
     // UI
     container.innerHTML = `
       <div class="card">
@@ -433,6 +511,12 @@
           </div>
 
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <label class="muted" style="display:flex; gap:6px; align-items:center;">
+              Segment
+              <select id="cf-seg-filter" class="input" style="padding:6px 8px; border-radius:10px;">
+                ${segOptions}
+              </select>
+            </label>
             <label class="muted" style="display:flex; gap:6px; align-items:center;">
               <input type="checkbox" id="cf-pending-exp" ${includePendingExpenses ? "checked" : ""}/>
               Dépenses à payer
@@ -449,6 +533,7 @@
         <div id="cashflowCurve" style="margin-top:12px;"></div>
 
         <div class="muted" style="margin-top:10px; display:flex; gap:12px; flex-wrap:wrap;">
+          <span>Plage: <b>${escapeHTML(built.segLabel || "—")}</b></span>
           <span>Devise: <b>${built.b}</b></span>
           <span>Budget/jour: <b>${round2(built.dailyBudget)} ${built.b}</b></span>
           <span>Solde actuel (wallets): <b>${round2(built.currentBalance)} ${built.b}</b></span>
@@ -601,6 +686,13 @@ dataLabels: { enabled: false },
 
     const btn = document.getElementById("cf-reset-zoom");
     if (btn) btn.onclick = () => { try { chart.resetZoom(); } catch (_) {} };
+
+    const selSeg = document.getElementById("cf-seg-filter");
+    if (selSeg) selSeg.onchange = (e) => {
+      cashflowSegFilter = String(e.target.value || "current");
+      try { localStorage.setItem(CASHFLOW_SEG_FILTER_KEY, cashflowSegFilter); } catch (_) {}
+      queueRenderCashflow();
+    };
 
     const cbExp = document.getElementById("cf-pending-exp");
     if (cbExp) cbExp.onchange = (e) => {

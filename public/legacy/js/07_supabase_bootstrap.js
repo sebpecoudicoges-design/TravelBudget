@@ -183,6 +183,52 @@ async function loadFromSupabase() {
     .order("created_at", { ascending: true });
   if (tErr) throw tErr;
 
+
+  // budget segments (V6.4)
+  let segRows = [];
+  try {
+    const { data: segs, error: segErr } = await sb
+      .from("budget_segments")
+      .select("*")
+      .eq("user_id", sbUser.id)
+      .eq("period_id", activePeriodId)
+      .order("sort_order", { ascending: true })
+      .order("start_date", { ascending: true });
+
+    if (segErr) throw segErr;
+    segRows = segs || [];
+
+    // Auto-bootstrap a default segment if missing
+    if (!segRows.length) {
+      const { error: insSegErr } = await sb.from("budget_segments").insert([{
+        user_id: sbUser.id,
+        period_id: activePeriodId,
+        start_date: p.start_date,
+        end_date: p.end_date,
+        base_currency: p.base_currency || "EUR",
+        daily_budget_base: Number(p.daily_budget_base) || 0,
+        fx_mode: "fixed",
+        eur_base_rate_fixed: Number(p.eur_base_rate) || null,
+        sort_order: 0,
+      }]);
+      if (insSegErr) throw insSegErr;
+
+      const { data: segs2, error: seg2Err } = await sb
+        .from("budget_segments")
+        .select("*")
+        .eq("user_id", sbUser.id)
+        .eq("period_id", activePeriodId)
+        .order("sort_order", { ascending: true })
+        .order("start_date", { ascending: true });
+      if (seg2Err) throw seg2Err;
+      segRows = segs2 || [];
+    }
+  } catch (e) {
+    // If table not deployed yet, keep empty and let ensureStateIntegrity synthesize a segment.
+    console.warn("[budget_segments] load failed (ignored)", e?.message || e);
+    segRows = [];
+  }
+
   state.period.id = p.id;
   state.period.start = p.start_date;
   state.period.end = p.end_date;
@@ -195,6 +241,7 @@ async function loadFromSupabase() {
 
   state.wallets = (w || []).map((x) => ({
     id: x.id,
+    periodId: x.period_id,
     name: x.name,
     currency: x.currency,
     balance: Number(x.balance),
@@ -228,9 +275,78 @@ async function loadFromSupabase() {
     baseCurrency: x.base_currency,
   }));
 
+  state.budgetSegments = (segRows || []).map((x) => ({
+    id: x.id,
+    periodId: x.period_id,
+    start: x.start_date,
+    end: x.end_date,
+    baseCurrency: x.base_currency,
+    dailyBudgetBase: Number(x.daily_budget_base),
+    fxMode: x.fx_mode || "fixed",
+    eurBaseRateFixed: (x.eur_base_rate_fixed === null || x.eur_base_rate_fixed === undefined) ? null : Number(x.eur_base_rate_fixed),
+    sortOrder: Number(x.sort_order || 0),
+  }));
+
   try {
     if (typeof syncTabsForRole === "function") syncTabsForRole();
   } catch (e) {}
+
+  // categories (Supabase is source of truth)
+  try {
+    const { data: catRows, error: catErr } = await sb
+      .from("categories")
+      .select("id,name,color,sort_order")
+      .eq("user_id", sbUser.id)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+    if (catErr) throw catErr;
+
+    const rows = catRows || [];
+    const dbNames = rows.map(r => String(r.name || "").trim()).filter(Boolean);
+    const txNames = Array.from(new Set((state.transactions || [])
+      .map(t => String(t.category || "").trim())
+      .filter(Boolean)));
+
+    const seen = new Set(dbNames.map(n => n.toLowerCase()));
+    const merged = [...dbNames];
+    for (const n of txNames) {
+      const k = n.toLowerCase();
+      if (!seen.has(k)) {
+        merged.push(n);
+        seen.add(k);
+      }
+    }
+
+    state.categories = merged;
+
+    const m = {};
+    for (const r of rows) {
+      const name = String(r.name || "").trim();
+      if (!name) continue;
+      if (r.color) m[name] = String(r.color);
+    }
+    state.categoryColors = m;
+
+    // Optional: auto-seed categories that exist in transactions but not in DB
+    if (merged.length > dbNames.length) {
+      const maxSort = rows.reduce((mx, r) => Math.max(mx, Number(r.sort_order ?? 0)), 0);
+      const dbLower = new Set(dbNames.map(x => x.toLowerCase()));
+      const toInsert = merged
+        .filter(n => !dbLower.has(n.toLowerCase()))
+        .map((name, idx) => ({
+          user_id: sbUser.id,
+          name,
+          color: null,
+          sort_order: maxSort + 1 + idx,
+        }));
+      if (toInsert.length) {
+        const { error: insCErr } = await sb.from("categories").insert(toInsert);
+        if (insCErr) console.warn("[categories] auto-seed failed (ignored)", insCErr);
+      }
+    }
+  } catch (e) {
+    console.warn("[categories] load failed (fallback to local)", e?.message || e);
+  }
 
   recomputeAllocations();
 }

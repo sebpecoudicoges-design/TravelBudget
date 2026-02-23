@@ -32,13 +32,6 @@ function budgetSpentBaseForDate(dateStr) {
     const target = String(dateStr || "");
     if (!target) return 0;
 
-    const _ds = (d) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const da = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${da}`;
-    };
-
     let sum = 0;
     for (const t of txs) {
       const type = String(t?.type || "").toLowerCase();
@@ -54,23 +47,23 @@ function budgetSpentBaseForDate(dateStr) {
       const e = parseISODateOrNull(t.dateEnd || t.date_end || t.dateStart || t.date_start || t.date || null);
       if (!s || !e) continue;
 
-      const sds = _ds(s);
-      const eds = _ds(e);
+      const sds = toLocalISODate(s);
+      const eds = toLocalISODate(e);
       if (target < sds || target > eds) continue;
 
       const amt = safeNum(t.amount);
       if (!isFinite(amt) || amt === 0) continue;
 
-      const amtBase = amountToBase(amt, t.currency);
-      const msPerDay = 24 * 60 * 60 * 1000;
-      const days = Math.max(
-        1,
-        Math.round(
-          (Date.UTC(e.getFullYear(), e.getMonth(), e.getDate()) - Date.UTC(s.getFullYear(), s.getMonth(), s.getDate())) / msPerDay
-        ) + 1
-      );
-      sum += (amtBase / days);
+      const days = dayCountInclusive(s, e);
+      const perDayInTxCur = amt / days;
+
+      const perDayBase = (typeof amountToBudgetBaseForDate === "function")
+        ? amountToBudgetBaseForDate(perDayInTxCur, t.currency, target)
+        : amountToBase(perDayInTxCur, t.currency);
+
+      sum += perDayBase;
     }
+
     return sum;
   } catch (_) {
     return 0;
@@ -101,17 +94,71 @@ function netPendingEUR() {
   return net;
 }
 
-function projectedEndEURWithOptions(opts) {
-  const includeUnpaid = !!opts?.includeUnpaid;
-  const today = toLocalISODate(new Date());
-  const remainingBase = remainingBudgetBaseFrom(today);
-  const remainingEUR = amountToEUR(remainingBase, state.period.baseCurrency);
+function fmtKPICompact(v) {
+  const n = Number(v);
+  if (!isFinite(n)) return "0";
+  const abs = Math.abs(n);
+  if (abs >= 1e7) {
+    try {
+      return new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(n);
+    } catch (_) {}
+  }
+  return String(Math.round(n));
+}
 
-  const totalNowEUR = totalInEUR();
-  const pendingEUR = includeUnpaid ? netPendingEUR() : 0;
+function projectedEndDisplayWithOptions(opts) {
+  // Projection "fin de période" (dashboard) is now ALWAYS expressed in EUR (pivot).
+  const includeUnpaid = !!opts?.includeUnpaid;
+  const todayISO = (typeof window.getDisplayDateISO === "function") ? window.getDisplayDateISO() : toLocalISODate(new Date());
+
+  function _toEURForDate(amount, cur, dateISO) {
+    const a = Number(amount) || 0;
+    const c = String(cur || "EUR").toUpperCase();
+    if (c === "EUR") return a;
+    // Prefer FX plugin with segment-aware rates (fixed/live)
+    if (typeof window.fxConvert === "function" && typeof getBudgetSegmentForDate === "function") {
+      const seg = getBudgetSegmentForDate(dateISO);
+      const rates = (typeof fxRatesForSegment === "function")
+        ? fxRatesForSegment(seg)
+        : (typeof window.fxGetEurRates === "function" ? window.fxGetEurRates() : {});
+      const out = window.fxConvert(a, c, "EUR", rates);
+      if (out !== null && isFinite(out)) return out;
+    }
+    // Fallback legacy
+    if (typeof amountToEUR === "function") return amountToEUR(a, c);
+    return a;
+  }
+
+  // Total wallets in EUR
+  let totalNowEUR = 0;
+  for (const w of (state.wallets || [])) {
+    const bal = Number(w.balance) || 0;
+    const cur = w.currency || "EUR";
+    totalNowEUR += _toEURForDate(bal, cur, todayISO);
+  }
+
+  // Pending already computed in EUR
+  const pendingEUR = includeUnpaid ? (Number(netPendingEUR()) || 0) : 0;
+
+  // Remaining budget from today to period end, converted day-by-day into EUR
+  let remainingEUR = 0;
+  const start = parseISODateOrNull(todayISO);
+  const end = parseISODateOrNull(state.period.end);
+  if (start && end) {
+    forEachDateInclusive(start, end, (d) => {
+      const ds = toLocalISODate(d);
+      const info = (typeof window.getDailyBudgetInfoForDate === "function")
+        ? window.getDailyBudgetInfoForDate(ds)
+        : { remaining: getDailyBudgetForDate(ds), baseCurrency: state.period.baseCurrency };
+      const rem = Number(info.remaining) || 0;
+      const cur = String(info.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
+      remainingEUR += _toEURForDate(rem, cur, ds);
+    });
+  }
 
   return (totalNowEUR + pendingEUR) - remainingEUR;
 }
+
 
 
 /* =========================
@@ -137,7 +184,7 @@ function _getCashWallets() {
 // - EUR (via EUR-BASE)
 // Otherwise: not convertible (FX missing)
 function _toBaseSafe(amount, currency) {
-  const base = state?.period?.baseCurrency;
+  const base = (typeof window.getDisplayCurrency === 'function') ? window.getDisplayCurrency(window.getDisplayDateISO()) : state?.period?.baseCurrency;
   const cur = String(currency || "");
   const amt = Number(amount) || 0;
 
@@ -163,7 +210,7 @@ function _toBaseSafe(amount, currency) {
 
 
 function _sumCashWalletsBase() {
-  const base = state?.period?.baseCurrency;
+  const base = (typeof window.getDisplayCurrency === 'function') ? window.getDisplayCurrency(window.getDisplayDateISO()) : state?.period?.baseCurrency;
   let totalBase = 0;
   const excluded = []; // {name,currency,balance}
 
@@ -306,9 +353,12 @@ function _daysPill(daysLeft, labelPrefix) {
 
 function _renderTodayDetailsHTML(dateStr) {
   // Reprend la logique "allocations" (ce que tu vois dans Budget journalier)
-  const base = state.period.baseCurrency;
+  const info = (typeof getDailyBudgetInfoForDate === "function")
+    ? getDailyBudgetInfoForDate(dateStr)
+    : { baseCurrency: state?.period?.baseCurrency };
+  const fallbackBase = String(info?.baseCurrency || state?.period?.baseCurrency || "EUR").toUpperCase();
 
-  const details = (state.allocations || []).filter(a => a.dateStr === dateStr);
+  const details = (state.allocations || []).filter(a => a && a.dateStr === dateStr);
 
   if (!details.length) {
     return `<div class="muted" style="margin-top:8px;">Aucun détail</div>`;
@@ -318,7 +368,7 @@ function _renderTodayDetailsHTML(dateStr) {
   return `
     <div style="margin-top:10px; line-height:1.55;">
       ${details.map(x =>
-        `• ${escapeHtml(x.label)} : ${Math.round(x.amountBase)} ${base}`
+        `• ${escapeHtml(x.label)} : ${Math.round(x.amountBase)} ${String(x.baseCurrency || fallbackBase).toUpperCase()}`
       ).join("<br>")}
     </div>
   `;
@@ -334,17 +384,21 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
-function _sumWalletsBase() {
-  const base = state?.period?.baseCurrency;
+function _sumWalletsDisplay(dateStr) {
+  const base = (typeof window.getDisplayCurrency === "function") ? window.getDisplayCurrency(dateStr) : (state?.period?.baseCurrency || "EUR");
   let total = 0;
   for (const w of (state.wallets || [])) {
     const bal = Number(w.balance) || 0;
     const cur = w.currency || base;
-    // amountToBase est déjà patché cross-rate -> parfait
-    total += amountToBase(bal, cur);
+    if (typeof window.amountToDisplayForDate === "function") {
+      total += window.amountToDisplayForDate(bal, cur, dateStr);
+    } else {
+      total += amountToBase(bal, cur);
+    }
   }
   return total;
 }
+
 
 function _addDaysISO(dateStr, days) {
   const d = parseISODateOrNull(dateStr);
@@ -355,8 +409,12 @@ function _addDaysISO(dateStr, days) {
 }
 
 function _pilotageInsights() {
-  const base = state?.period?.baseCurrency;
   const today = toLocalISODate(new Date());
+  const infoToday = (typeof getDailyBudgetInfoForDate === "function")
+    ? getDailyBudgetInfoForDate(today)
+    : { remaining: getDailyBudgetForDate(today), daily: state?.period?.dailyBudgetBase || 0, baseCurrency: state?.period?.baseCurrency || "EUR" };
+
+  const base = String(infoToday.baseCurrency || state?.period?.baseCurrency || "EUR").toUpperCase();
   const end = state?.period?.end;
 
   if (!base || !end) return null;
@@ -368,8 +426,8 @@ function _pilotageInsights() {
   // jours restants incluant aujourd’hui
   const daysRemaining = Math.max(1, dayCountInclusive(clampMidnight(todayD), clampMidnight(endD)));
 
-  const currentDaily = Number(state.period.dailyBudgetBase || 0);
-  const balanceBase = _sumWalletsBase();
+  const currentDaily = Number(infoToday.daily || 0);
+  const balanceBase = _sumWalletsDisplay(today);
 
   // Cible: finir à 0 (on pourra rendre paramétrable plus tard)
   const targetEnd = 0;
@@ -440,13 +498,61 @@ function renderKPI() {
   if (!kpi) return;
 
   const today = toLocalISODate(new Date());
-  const base = state.period.baseCurrency;
+  // Display date can later be driven by UI (state.uiDateISO). If absent, it defaults to today.
+  const displayDateISO = (typeof window.getDisplayDateISO === "function") ? window.getDisplayDateISO() : today;
+  const infoToday = (typeof getDailyBudgetInfoForDate === "function")
+    ? getDailyBudgetInfoForDate(displayDateISO)
+    : { remaining: getDailyBudgetForDate(displayDateISO), daily: state.period.dailyBudgetBase, baseCurrency: state.period.baseCurrency };
+  const base = String(infoToday.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
 
-  const budgetToday = getDailyBudgetForDate(today);
+  const budgetToday = Number(infoToday.remaining) || getDailyBudgetForDate(displayDateISO);
   const includeUnpaid = (localStorage.getItem("travelbudget_kpi_projection_include_unpaid_v1") === "1");
-  const totalEur = totalInEUR() + (includeUnpaid ? netPendingEUR() : 0);
-  const projEndEur = projectedEndEURWithOptions({ includeUnpaid });
-  const pendingEur = includeUnpaid ? netPendingEUR() : 0;
+  const displayCur = base;              // for "Aujourd'hui" / budget KPIs (segment currency of display day)
+  const displayCurPivot = "EUR";        // pivot for Total wallets + Projection
+
+  function _toEUR(amount, cur, dateISO) {
+    const a = Number(amount) || 0;
+    const c = String(cur || "EUR").toUpperCase();
+    if (c === "EUR") return a;
+
+    if (typeof window.fxConvert === "function" && typeof getBudgetSegmentForDate === "function") {
+      const seg = getBudgetSegmentForDate(dateISO || today);
+      const rates = (typeof fxRatesForSegment === "function")
+        ? fxRatesForSegment(seg)
+        : (typeof window.fxGetEurRates === "function" ? window.fxGetEurRates() : {});
+      const out = window.fxConvert(a, c, "EUR", rates);
+      if (out !== null && isFinite(out)) return out;
+    }
+
+    // fallback legacy (only reliable for BASE<->EUR)
+    if (typeof amountToEUR === "function") return amountToEUR(a, c);
+    return a;
+  }
+
+  // Total wallets:
+  // - primary value in EUR (pivot) to keep a stable, comparable figure
+  // - secondary value in the current display segment currency (display date segment)
+  let walletTotalEUR = 0;
+  let walletTotalBase = 0;
+  for (const w of (state.wallets || [])) {
+    const bal = Number(w.balance) || 0;
+    const cur = w.currency || "EUR";
+    walletTotalEUR += _toEUR(bal, cur, displayDateISO);
+
+    // Segment/base view for the current display date
+    if (typeof window.amountToDisplayForDate === "function") {
+      walletTotalBase += window.amountToDisplayForDate(bal, cur, displayDateISO);
+    } else if (typeof window.amountToBudgetBaseForDate === "function") {
+      walletTotalBase += window.amountToBudgetBaseForDate(bal, cur, displayDateISO);
+    } else {
+      walletTotalBase += bal;
+    }
+  }
+
+  const pendingDisplay = includeUnpaid ? (Number(netPendingEUR()) || 0) : 0; // EUR (only for Projection UI)
+  const totalDisplay = walletTotalEUR + (includeUnpaid ? pendingDisplay : 0); // kept for backward compat of internal uses
+
+  const projEndDisplay = projectedEndDisplayWithOptions({ includeUnpaid });
 
   const runway = cashRunwayInfo();        // dépenses cash réelles
   const cover  = cashConservativeInfo();  // burn prudent (budget/alloc)
@@ -460,9 +566,9 @@ function renderKPI() {
   const criticalDays = Math.min(runwayDays, coverDays);
   const driver = (criticalDays === runwayDays) ? "Dépenses" : "Budget";
 
-  const todayDetailsHTML = _renderTodayDetailsHTML(today);
-  const todayBudget = getDailyBudgetForDate(today);
-  const todayBudgetSpent = budgetSpentBaseForDate(today);
+  const todayDetailsHTML = _renderTodayDetailsHTML(displayDateISO);
+  const todayBudget = getDailyBudgetForDate(displayDateISO);
+  const todayBudgetSpent = budgetSpentBaseForDate(displayDateISO);
   const todayPillClass = budgetClass(todayBudget);
 
   let level = "good";
@@ -514,7 +620,7 @@ function renderKPI() {
     <div class="card">
       <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:12px;">
         <h2 style="margin:0;">KPIs</h2>
-        <div class="muted" style="font-size:12px;">${today}</div>
+        <div class="muted" style="font-size:12px;">${displayDateISO}</div>
       </div>
 
       <div class="kpi-layout" style="display:grid; gap:14px; margin-top:12px; align-items:start;">
@@ -534,21 +640,23 @@ function renderKPI() {
             <div style="${miniCardStyle}">
               <div class="muted" style="font-size:12px;">Total wallets</div>
               <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
-                ${Math.round(totalEur)} <span style="font-weight:700; font-size:14px;" class="muted">€</span>
+                ${fmtKPICompact(walletTotalEUR)} <span style="font-weight:700; font-size:14px;" class="muted">${displayCurPivot}</span>
               </div>
-              <div class="muted" style="font-size:12px; margin-top:6px;">Somme convertie</div>
+              <div class="muted" style="font-size:12px; margin-top:6px;">
+                ≈ ${fmtKPICompact(walletTotalBase)} ${displayCur}
+              </div>
             </div>
 
             <div style="${miniCardStyle}">
               <div class="muted" style="font-size:12px;">Fin période</div>
               <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
-                ${Math.round(projEndEur)} <span style="font-weight:700; font-size:14px;" class="muted">€</span>
+                ${fmtKPICompact(projEndDisplay)} <span style="font-weight:700; font-size:14px;" class="muted">${displayCurPivot}</span>
               </div>
               <div class="muted" style="font-size:12px; margin-top:6px;">Projection</div>
               <label class="muted" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;user-select:none;">
                 <input id="kpiIncludeUnpaidToggle" type="checkbox" ${includeUnpaid ? "checked" : ""} />
                 Inclure à recevoir / à payer
-                ${includeUnpaid ? `<span style="margin-left:auto;opacity:.85;">Net: <strong style="color:var(--text);">${Math.round(pendingEur)}€</strong></span>` : ``}
+                ${includeUnpaid ? `<span style="margin-left:auto;opacity:.85;">Net: <strong style="color:var(--text);">${Math.round(pendingDisplay)} ${displayCurPivot}</strong></span>` : ``}
               </label>
             </div>
           </div>
@@ -583,7 +691,7 @@ function renderKPI() {
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
             <div>
               <div style="font-weight:800; font-size:16px; color:var(--text);">Aujourd’hui</div>
-              <div class="muted" style="font-size:12px; margin-top:2px;">${today}</div>
+              <div class="muted" style="font-size:12px; margin-top:2px;">${displayDateISO}</div>
             </div>
             <span class="pill ${todayPillClass}">
               <span class="dot"></span>${todayBudget.toFixed(0)} ${base}
