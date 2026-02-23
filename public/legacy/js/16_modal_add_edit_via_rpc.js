@@ -1,9 +1,14 @@
 /* =========================
    Modal: add/edit via RPC
    ========================= */
+
 function fillModalSelects() {
-  document.getElementById("m-wallet").innerHTML = state.wallets.map((w) => `<option value="${w.id}">${w.name} (${w.currency})</option>`).join("");
-  document.getElementById("m-category").innerHTML = getCategories().map((c) => `<option value="${c}">${c}</option>`).join("");
+  document.getElementById("m-wallet").innerHTML = state.wallets
+    .map((w) => `<option value="${w.id}">${w.name} (${w.currency})</option>`)
+    .join("");
+  document.getElementById("m-category").innerHTML = getCategories()
+    .map((c) => `<option value="${c}">${c}</option>`)
+    .join("");
 }
 
 function wireNightLogic() {
@@ -86,13 +91,12 @@ function closeModal() {
   document.getElementById("modal").style.display = "none";
 }
 
-
 function _txTripExpenseId(tx) {
   return tx?.tripExpenseId || tx?.trip_expense_id || null;
 }
 
 function _setTxModalLock(isLocked, reason) {
-  const ids = ["m-type","m-wallet","m-amount","m-start","m-end","m-paynow","m-out","m-night"];
+  const ids = ["m-type", "m-wallet", "m-amount", "m-start", "m-end", "m-paynow", "m-out", "m-night"];
   for (const id of ids) {
     const el = document.getElementById(id);
     if (el) el.disabled = !!isLocked;
@@ -142,7 +146,8 @@ async function saveModal() {
           // Locked fields for Trip-linked payment transaction: prevent breaking 1:1 coherence.
           if (walletId !== current.walletId) throw new Error("Transaction liée à Trip : changement de wallet interdit.");
           if (type !== current.type) throw new Error("Transaction liée à Trip : changement de type interdit.");
-          if (Math.abs(Number(amount) - Number(current.amount)) > 0.0001) throw new Error("Transaction liée à Trip : changement de montant interdit (modifie la dépense Trip à la place).");
+          if (Math.abs(Number(amount) - Number(current.amount)) > 0.0001)
+            throw new Error("Transaction liée à Trip : changement de montant interdit (modifie la dépense Trip à la place).");
           if (String(start) !== String(current.dateStart) || String(end) !== String(current.dateEnd || current.dateStart)) {
             throw new Error("Transaction liée à Trip : changement de dates interdit.");
           }
@@ -162,7 +167,7 @@ async function saveModal() {
           p_date_end: end,
           p_pay_now: payNow,
           p_out_of_budget: outOfBudget,
-          p_night_covered: (type === "expense" && category === "Transport") ? nightCovered : false,
+          p_night_covered: type === "expense" && category === "Transport" ? nightCovered : false,
         });
         if (error) throw error;
       } else {
@@ -177,7 +182,7 @@ async function saveModal() {
           p_date_end: end,
           p_pay_now: payNow,
           p_out_of_budget: outOfBudget,
-          p_night_covered: (type === "expense" && category === "Transport") ? nightCovered : false,
+          p_night_covered: type === "expense" && category === "Transport" ? nightCovered : false,
         });
         if (error) throw error;
       }
@@ -234,3 +239,19 @@ async function markTxAsPaid(txId) {
   });
 }
 
+/* =========================
+   Expose handlers globally
+   (fix: onclick="deleteTx(...)" etc.)
+   ========================= */
+(function exposeTxHandlersToWindow() {
+  try {
+    window.openTxModal = openTxModal;
+    window.openTxEditModal = openTxEditModal;
+    window.saveModal = saveModal;
+    window.closeModal = closeModal;
+    window.deleteTx = deleteTx;
+    window.markTxAsPaid = markTxAsPaid;
+  } catch (_) {
+    // no-op
+  }
+})();

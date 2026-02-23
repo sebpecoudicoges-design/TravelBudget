@@ -7,135 +7,136 @@ async function ensureBootstrap() {
   const today = toLocalISODate(new Date());
 
   // local defaults
-  const localPalette = getStoredPalette() || PALETTES["Ocean"];
-  const localPreset = getStoredPreset() || findPresetNameForPalette(localPalette);
+  if (!localStorage.getItem(THEME_KEY)) localStorage.setItem(THEME_KEY, "light");
+  if (!localStorage.getItem(PALETTE_KEY)) localStorage.setItem(PALETTE_KEY, JSON.stringify(PALETTES["Ocean"]));
+  if (!localStorage.getItem(PRESET_KEY)) localStorage.setItem(PRESET_KEY, "Ocean");
 
-  // settings legacy NOT NULL + palette defaults
-  const legacyDefaults = {
-    user_id: sbUser.id,
-    period_start: today,
-    period_end: today,
-    daily_budget_thb: 1000,
-    eur_thb_rate: 35,
-    theme: localStorage.getItem(THEME_KEY) || "light",
-    palette_json: localPalette,
-    palette_preset: localPreset,
-    updated_at: new Date().toISOString(),
-  };
-  const { error: setErr } = await sb.from("settings").upsert(legacyDefaults, { onConflict: "user_id" });
-  if (setErr) throw setErr;
+  // 1) Ensure profile row exists (role default: 'user')
+  {
+    const { data: prof, error: profErr } = await sb
+      .from("profiles")
+      .select("id, role")
+      .eq("id", sbUser.id)
+      .maybeSingle();
 
-  // ensure at least one period
-  const { data: p0, error: p0Err } = await sb.from("periods").select("id").limit(1);
-  if (p0Err) throw p0Err;
-  if (!p0 || p0.length === 0) {
-    const { error: pInsErr } = await sb.from("periods").insert([{
-      user_id: sbUser.id,
-      start_date: today,
-      end_date: today,
-      base_currency: "THB",
-      eur_base_rate: 35,
-      daily_budget_base: 1000,
-    }]);
-    if (pInsErr) throw pInsErr;
-  }
-
-  // ensure profile (role)
-  try {
-    const { data: prof, error: profErr } = await sb.from('profiles').select('role').eq('id', sbUser.id).maybeSingle();
     if (profErr) throw profErr;
+
+    // expose role globally for navigation/admin UI
+    window.sbRole = (prof && prof.role) ? String(prof.role) : (window.sbRole || 'user');
+
     if (!prof) {
-      const { error: insPErr } = await sb.from('profiles').insert([{ id: sbUser.id, email: sbUser.email, role: 'member' }]);
-      if (insPErr) throw insPErr;
-      window.sbRole = 'member';
-    } else {
-      window.sbRole = (prof.role || 'member');
+      window.sbRole = 'user';
+      const { error: insErr } = await sb.from("profiles").insert([
+        {
+          id: sbUser.id,
+          email: sbUser.email || null,
+          role: "user",
+        },
+      ]);
+      if (insErr) throw insErr;
     }
-  } catch (e) {
-    // If RLS blocks profiles, fall back to member
-    window.sbRole = window.sbRole || 'member';
   }
 
-  // ensure wallets
-  const { data: wallets, error: wErr } = await sb.from("wallets").select("id").limit(1);
-  if (wErr) throw wErr;
-  if (!wallets || wallets.length === 0) {
-    const initial = [
-      // wallet.type is now used for KPI "Cash cover" and ATM actions
-      { user_id: sbUser.id, name: "Cash", currency: "THB", balance: 0, type: "cash" },
-      { user_id: sbUser.id, name: "Compte bancaire", currency: "EUR", balance: 0, type: "bank" },
-    ];
-    const { error: insErr } = await sb.from("wallets").insert(initial);
-    if (insErr) throw insErr;
+  // 2) Ensure settings row exists (palette persisted server side)
+  {
+    const { data: s, error: sErr } = await sb.from("settings").select("*").eq("user_id", sbUser.id).maybeSingle();
+    if (sErr) throw sErr;
+
+    if (!s) {
+      const p = getStoredPalette() || PALETTES["Ocean"];
+      const preset = getStoredPreset() || findPresetNameForPalette(p);
+
+      const payload = {
+        user_id: sbUser.id,
+        theme: localStorage.getItem(THEME_KEY) || "light",
+        palette_json: p,
+        palette_preset: preset,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: insErr } = await sb.from("settings").insert([payload]);
+      if (insErr) {
+        // schema-cache fallback if palette_preset not deployed yet
+        if ((insErr.message || "").includes("palette_preset") && (insErr.message || "").includes("schema cache")) {
+          const payloadLite = { ...payload };
+          delete payloadLite.palette_preset;
+          const { error: ins2 } = await sb.from("settings").insert([payloadLite]);
+          if (ins2) throw ins2;
+        } else {
+          throw insErr;
+        }
+      }
+    }
+  }
+
+  // 3) Ensure at least one period exists
+  {
+    const { data: periods, error: pErr } = await sb
+      .from("periods")
+      .select("*")
+      .eq("user_id", sbUser.id)
+      .order("start_date", { ascending: false })
+      .limit(1);
+
+    if (pErr) throw pErr;
+
+    if (!periods || periods.length === 0) {
+      // Default: 21 days period starting today, base currency THB
+      const start = today;
+      const end = toLocalISODate(addDays(new Date(), 20));
+
+      const { error: insErr } = await sb.from("periods").insert([
+        {
+          user_id: sbUser.id,
+          start_date: start,
+          end_date: end,
+          base_currency: "THB",
+          eur_base_rate: 36.0,
+          daily_budget_base: 900,
+        },
+      ]);
+      if (insErr) throw insErr;
+    }
   }
 }
 
 function pickActivePeriod(periods) {
+  if (!Array.isArray(periods) || periods.length === 0) return null;
+
   const stored = localStorage.getItem(ACTIVE_PERIOD_KEY);
   if (stored && periods.some((p) => p.id === stored)) return stored;
 
-  const today = toLocalISODate(new Date());
-  const inToday = periods.find((p) => today >= p.start_date && today <= p.end_date);
-  if (inToday) return inToday.id;
-
-  const sorted = periods.slice().sort((a, b) => (a.start_date < b.start_date ? 1 : -1));
-  return sorted[0]?.id || null;
+  // Default = most recent
+  return periods[0].id;
 }
 
 async function loadFromSupabase() {
-  const { data: s, error: sErr } = await sb.from("settings").select("*").single();
-  if (sErr) throw sErr;
+  if (!sbUser) return;
 
-  // theme from server
-  applyTheme(s.theme || (localStorage.getItem(THEME_KEY) || "light"));
+  // settings
+  {
+    const { data: s, error: sErr } = await sb.from("settings").select("*").eq("user_id", sbUser.id).maybeSingle();
+    if (sErr) throw sErr;
 
-  // ✅ palette/preset from server is source of truth
-  const serverPalette = isValidPalette(s.palette_json) ? s.palette_json : null;
-  const serverPreset = (s.palette_preset && String(s.palette_preset).trim()) ? String(s.palette_preset).trim() : null;
+    if (s) {
+      // theme
+      if (s.theme) applyTheme(String(s.theme));
 
-  if (serverPalette) {
-    // apply server palette locally (no remote write)
-    await applyPalette(serverPalette, serverPreset || findPresetNameForPalette(serverPalette), { persistLocal: true, persistRemote: false });
-  } else {
-    // server missing -> push local default to server
-    const localPalette = getStoredPalette() || PALETTES["Ocean"];
-    const localPreset = getStoredPreset() || findPresetNameForPalette(localPalette);
-    await applyPalette(localPalette, localPreset, { persistLocal: true, persistRemote: true });
-  }
+      // palette server wins after login
+      const p = s.palette_json || null;
+      const preset = s.palette_preset || null;
 
-  
-  // ---- categories (server-driven) ----
-  try {
-    const { data: catRows, error: cErr } = await sb
-      .from("categories")
-      .select("name,color,sort_order")
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true });
-    if (!cErr) {
-      const rows = catRows || [];
-      // bootstrap defaults if empty (first run)
-      if (!rows.length) {
-        const defaults = (typeof DEFAULT_CATEGORIES !== "undefined" ? DEFAULT_CATEGORIES : ["Repas","Logement","Transport","Sorties","Caution","Autre"])
-          .map((name, i) => ({ user_id: sbUser.id, name, color: (DEFAULT_CATEGORY_COLORS && DEFAULT_CATEGORY_COLORS[name]) ? DEFAULT_CATEGORY_COLORS[name] : null, sort_order: i }));
-        await sb.from("categories").insert(defaults);
-        const { data: catRows2 } = await sb.from("categories").select("name,color,sort_order").order("sort_order", { ascending: true }).order("name", { ascending: true });
-        state.categories = (catRows2 || []).map(r => r.name);
-        state.categoryColors = Object.fromEntries((catRows2 || []).filter(r => r.color).map(r => [r.name, r.color]));
-      } else {
-        state.categories = rows.map(r => r.name);
-        state.categoryColors = Object.fromEntries(rows.filter(r => r.color).map(r => [r.name, r.color]));
+      if (p && isValidPalette(p)) {
+        await applyPalette(p, preset || findPresetNameForPalette(p), { persistLocal: true, persistRemote: false });
       }
-    } else {
-      // table missing or RLS blocked: fallback to defaults
-      state.categories = [];
-      state.categoryColors = {};
     }
-  } catch (e) {
-    state.categories = [];
-    state.categoryColors = {};
   }
 
-const { data: periods, error: pErr } = await sb.from("periods").select("*").order("start_date", { ascending: false });
+  const { data: periods, error: pErr } = await sb
+    .from("periods")
+    .select("*")
+    .eq("user_id", sbUser.id)
+    .order("start_date", { ascending: false });
   if (pErr) throw pErr;
 
   const activePeriodId = pickActivePeriod(periods);
@@ -145,12 +146,39 @@ const { data: periods, error: pErr } = await sb.from("periods").select("*").orde
   const p = periods.find((x) => x.id === activePeriodId);
   if (!p) throw new Error("Période active introuvable.");
 
-  const { data: w, error: wErr } = await sb.from("wallets").select("*").order("created_at", { ascending: true });
+  const { data: w0, error: wErr } = await sb
+    .from("wallets")
+    .select("*")
+    .eq("user_id", sbUser.id)
+    .eq("period_id", activePeriodId)
+    .order("created_at", { ascending: true });
   if (wErr) throw wErr;
+
+  let w = w0;
+
+  // Auto-bootstrap wallets for this period if missing
+  if (!w || w.length === 0) {
+    const initial = [
+      { user_id: sbUser.id, period_id: activePeriodId, name: "Cash", currency: p.base_currency || "THB", balance: 0, type: "cash" },
+      { user_id: sbUser.id, period_id: activePeriodId, name: "Compte bancaire", currency: "EUR", balance: 0, type: "bank" },
+    ];
+    const { error: insWErr } = await sb.from("wallets").insert(initial);
+    if (insWErr) throw insWErr;
+
+    const { data: w2, error: w2Err } = await sb
+      .from("wallets")
+      .select("*")
+      .eq("user_id", sbUser.id)
+      .eq("period_id", activePeriodId)
+      .order("created_at", { ascending: true });
+    if (w2Err) throw w2Err;
+    w = w2 || [];
+  }
 
   const { data: tx, error: tErr } = await sb
     .from("transactions")
     .select("*")
+    .eq("user_id", sbUser.id)
     .eq("period_id", activePeriodId)
     .order("created_at", { ascending: true });
   if (tErr) throw tErr;
@@ -190,15 +218,19 @@ const { data: periods, error: pErr } = await sb.from("periods").select("*").orde
     outOfBudget: !!x.out_of_budget,
     nightCovered: !!x.night_covered,
     createdAt: new Date(x.created_at).getTime(),
-    // date used by cashflow charts (epoch ms). Prefer date_start if present, else created_at.
-    date: x.date_start ? new Date(String(x.date_start) + 'T00:00:00').getTime() : new Date(x.created_at).getTime(),
+    date: x.date_start ? new Date(String(x.date_start) + "T00:00:00").getTime() : new Date(x.created_at).getTime(),
   }));
 
-  // keep full periods list (needed to map transactions by date)
-  state.periods = (periods || []).map((x) => ({ id: x.id, start: x.start_date, end: x.end_date, baseCurrency: x.base_currency }));
+  state.periods = (periods || []).map((x) => ({
+    id: x.id,
+    start: x.start_date,
+    end: x.end_date,
+    baseCurrency: x.base_currency,
+  }));
 
-  try { if (typeof syncTabsForRole === 'function') syncTabsForRole(); } catch (e) {}
+  try {
+    if (typeof syncTabsForRole === "function") syncTabsForRole();
+  } catch (e) {}
 
   recomputeAllocations();
 }
-
