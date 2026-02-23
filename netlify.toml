@@ -1,12 +1,6 @@
 [build]
-  command = "npm config set registry https://registry.npmjs.org/ && npm ping --registry=https://registry.npmjs.org/ && npm ci --no-audit --no-fund --loglevel=verbose --prefer-online && npm run build"
+  command = "corepack enable && corepack prepare pnpm@9.15.5 --activate && pnpm config set registry https://registry.npmjs.org/ && pnpm install --no-frozen-lockfile --reporter=append-only && pnpm run build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
-  NPM_CONFIG_FETCH_RETRIES = "2"
-  NPM_CONFIG_FETCH_RETRY_MINTIMEOUT = "10000"
-  NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT = "60000"
-  NPM_CONFIG_FETCH_TIMEOUT = "120000"
-  NPM_CONFIG_PREFER_OFFLINE = "false"
-  NPM_CONFIG_PROGRESS = "false"
