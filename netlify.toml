@@ -1,6 +1,10 @@
 [build]
-  command = "npm ci --no-audit --no-fund && npm run build"
+  command = "npm config set registry https://registry.npmjs.org/ && npm ci --no-audit --no-fund --loglevel=info && npm run build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
+  NPM_CONFIG_FETCH_RETRIES = "2"
+  NPM_CONFIG_FETCH_RETRY_MINTIMEOUT = "10000"
+  NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT = "60000"
+  NPM_CONFIG_FETCH_TIMEOUT = "120000"
