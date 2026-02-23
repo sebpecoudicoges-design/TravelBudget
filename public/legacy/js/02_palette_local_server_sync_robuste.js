@@ -70,7 +70,6 @@ async function savePaletteToServer(p, presetName) {
   throw error;
 }
 
-
 /**
  * applyPalette(p, presetName, {persistLocal=true, persistRemote=false})
  * - presetName can be "Ocean"/.../"Custom"
@@ -95,7 +94,11 @@ async function applyPalette(p, presetName, opts = {}) {
 
   syncPaletteUI();
   redrawCharts();
-  renderKPI();
+
+  // ✅ Guard: renderKPI uniquement si le conteneur existe (dashboard monté)
+  if (typeof renderKPI === "function" && document.getElementById("kpi")) {
+    renderKPI();
+  }
 }
 
 function resetPalette() {
@@ -197,6 +200,9 @@ function savePaletteFromUI(persist = true) {
   }
 
   redrawCharts();
-  renderKPI();
-}
 
+  // ✅ Guard: renderKPI uniquement si le conteneur existe (dashboard monté)
+  if (typeof renderKPI === "function" && document.getElementById("kpi")) {
+    renderKPI();
+  }
+}

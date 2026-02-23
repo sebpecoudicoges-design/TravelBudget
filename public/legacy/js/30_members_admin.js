@@ -4,19 +4,22 @@
 
 let __membersCache = { users: [], loadedAt: 0 };
 
-function _ensureMembersAdminDOM(rootId = "view-members") {
-  // rootId doit correspondre au conteneur de la vue "Membres".
-  // Si ton app utilise un autre id, ajuste ici.
-  let root = document.getElementById(rootId);
+/* =========================
+   DOM / UI
+========================= */
 
-  // Fallback: cherche un container générique
-  if (!root) root = document.querySelector("[data-view='members']") || document.querySelector("#view") || document.body;
+function _ensureMembersAdminDOM() {
+  // Essaie plusieurs containers possibles (selon ton app)
+  const root =
+    document.getElementById("view-members") ||
+    document.querySelector("[data-view='members']") ||
+    document.getElementById("view") ||
+    document.body;
 
-  // Si déjà présent, OK
+  // Si déjà injecté, ne rien faire
   if (document.getElementById("admin-users-list")) return;
 
-  const wrap = document.createElement("div");
-  wrap.innerHTML = `
+  root.innerHTML = `
     <div class="page">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <div>
@@ -43,10 +46,6 @@ function _ensureMembersAdminDOM(rootId = "view-members") {
     </div>
   `;
 
-  // Nettoie et injecte
-  root.innerHTML = "";
-  root.appendChild(wrap);
-
   // Bind events
   document.getElementById("admin-users-refresh-btn")?.addEventListener("click", adminRefreshUsers);
 
@@ -69,29 +68,47 @@ function _ensureMembersAdminDOM(rootId = "view-members") {
   });
 }
 
+function _setStatus(txt) {
+  const el = document.getElementById("admin-users-status");
+  if (el) el.textContent = txt;
+}
+
+function _escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+/* =========================
+   Guard
+========================= */
+
 async function guard(label, fn) {
   try {
     return await fn();
   } catch (e) {
     console.error(`[MembersAdmin] ${label} failed`, e);
     const msg = e?.message ? String(e.message) : String(e);
-    const status = document.getElementById("admin-users-status");
-    if (status) status.textContent = `❌ ${label}: ${msg}`;
+    _setStatus(`❌ ${label}: ${msg}`);
     alert(`${label} : ${msg}`);
   }
 }
 
-/* ======================================================
-   DIRECT EDGE CALL (ROBUST)
-====================================================== */
+/* =========================
+   Edge call
+========================= */
 
 async function callEdge(fnName, body) {
   const { data: sess } = await sb.auth.getSession();
   const token = sess?.session?.access_token;
-  if (!token) throw new Error("No session token");
+  if (!token) throw new Error("No session token (not logged in?)");
 
   const url = sb.supabaseUrl;
   const key = sb.supabaseKey;
+  if (!url || !key) throw new Error("Supabase client not initialized");
 
   const res = await fetch(`${url}/functions/v1/${fnName}`, {
     method: "POST",
@@ -107,38 +124,22 @@ async function callEdge(fnName, body) {
   let json;
   try { json = text ? JSON.parse(text) : {}; } catch { json = { raw: text }; }
 
-  if (!res.ok) {
-    throw new Error(json?.error || `HTTP ${res.status}`);
-  }
+  if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
   return json;
 }
 
-/* ======================================================
-   LIST USERS
-====================================================== */
+/* =========================
+   List users
+========================= */
 
 async function adminRefreshUsers() {
   await guard("List users", async () => {
-    const status = document.getElementById("admin-users-status");
-    if (status) status.textContent = "Loading users...";
-
+    _setStatus("Loading users...");
     const data = await callEdge("admin-list-users", {});
     __membersCache.users = data?.users || [];
-    __membersCache.loadedAt = Date.now();
-
     renderUsers();
-
-    if (status) status.textContent = `✅ Loaded ${__membersCache.users.length} user(s)`;
+    _setStatus(`✅ Loaded ${__membersCache.users.length} user(s)`);
   });
-}
-
-function _escapeHtml(s) {
-  return String(s ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 function renderUsers() {
@@ -148,7 +149,7 @@ function renderUsers() {
   const users = __membersCache.users;
 
   if (!users.length) {
-    container.innerHTML = `<div style="opacity:.7;">Aucun compte trouvé (ou aucun résultat renvoyé).</div>`;
+    container.innerHTML = `<div style="opacity:.7;">Aucun compte renvoyé.</div>`;
     return;
   }
 
@@ -161,42 +162,54 @@ function renderUsers() {
   `).join("");
 }
 
-/* ======================================================
-   ACTIONS
-====================================================== */
+/* =========================
+   Actions
+========================= */
 
 async function adminInviteUser(email) {
   await guard("Invite user", async () => {
-    const status = document.getElementById("admin-users-status");
-    if (status) status.textContent = "Inviting...";
-
+    _setStatus("Inviting...");
     await callEdge("admin-invite", { email });
-
-    if (status) status.textContent = "✅ Invitation sent";
+    _setStatus("✅ Invitation sent");
     await adminRefreshUsers();
   });
 }
 
 async function adminGenerateInviteLink(email) {
   await guard("Generate invite link", async () => {
-    const data = await callEdge("admin-generate-invite-link", { email });
-    alert(data?.link || "No link returned");
+    const data = await callEdge("admin-generate-invite-link", {
+      email,
+      redirectTo: window.location.origin,
+    });
+
+    const link = data?.link;
+    if (!link) return alert("No link returned");
+
+    try { await navigator.clipboard?.writeText(link); } catch (_) {}
+    window.open(link, "_blank");
   });
 }
 
 async function adminGenerateRecoveryLink(email) {
   await guard("Generate recovery link", async () => {
-    const data = await callEdge("admin-generate-recovery-link", { email });
-    alert(data?.action_link || "No link returned");
+    const data = await callEdge("admin-generate-recovery-link", {
+      email,
+      redirectTo: window.location.origin,
+    });
+
+    const link = data?.action_link;
+    if (!link) return alert("No link returned");
+
+    try { await navigator.clipboard?.writeText(link); } catch (_) {}
+    window.open(link, "_blank");
   });
 }
 
-/* ======================================================
-   ENTRY POINT (called by navigation)
-====================================================== */
+/* =========================
+   Entry point
+========================= */
 
 function renderMembersAdmin() {
-  // ✅ assure que la vue a du contenu, même si ton HTML est vide
-  _ensureMembersAdminDOM("view-members");
+  _ensureMembersAdminDOM();
   adminRefreshUsers();
 }

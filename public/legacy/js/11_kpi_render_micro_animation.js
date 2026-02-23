@@ -430,12 +430,14 @@ function _signPillClass(v) {
   return "bad";
 }
 
-
 /* =========================
    KPI render
    ========================= */
 function renderKPI() {
   const kpi = document.getElementById("kpi");
+
+  // ✅ GUARD: si la vue n'a pas encore monté le conteneur KPI, on ne fait rien.
+  if (!kpi) return;
 
   const today = toLocalISODate(new Date());
   const base = state.period.baseCurrency;
@@ -463,7 +465,6 @@ function renderKPI() {
   const todayBudgetSpent = budgetSpentBaseForDate(today);
   const todayPillClass = budgetClass(todayBudget);
 
-
   let level = "good";
   if (!isFinite(criticalDays)) level = "good";
   else if (criticalDays <= 2) level = "bad";
@@ -485,6 +486,7 @@ function renderKPI() {
     padding:12px;
     background:rgba(0,0,0,0.015);
   `;
+
   // Inject responsive CSS once
   if (!document.getElementById("kpiResponsiveStyles")) {
     const st = document.createElement("style");
@@ -508,7 +510,7 @@ function renderKPI() {
     document.head.appendChild(st);
   }
 
-    kpi.innerHTML = `
+  kpi.innerHTML = `
     <div class="card">
       <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:12px;">
         <h2 style="margin:0;">KPIs</h2>
@@ -548,7 +550,6 @@ function renderKPI() {
                 Inclure à recevoir / à payer
                 ${includeUnpaid ? `<span style="margin-left:auto;opacity:.85;">Net: <strong style="color:var(--text);">${Math.round(pendingEur)}€</strong></span>` : ``}
               </label>
-
             </div>
           </div>
 
@@ -590,7 +591,7 @@ function renderKPI() {
           </div>
 
           ${todayDetailsHTML}
-                    ${pilot ? `
+          ${pilot ? `
             <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,0,0,0.06);">
               <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px;">
                 <div style="font-weight:800; font-size:16px; color:var(--text);">Pilotage</div>
@@ -624,12 +625,10 @@ function renderKPI() {
               </div>
             </div>
           ` : ``}
-
         </div>
       </div>
     </div>
   `;
-
 
   // Toggle: include unpaid (forecast) in KPI projection
   const _tog = document.getElementById("kpiIncludeUnpaidToggle");
@@ -639,5 +638,4 @@ function renderKPI() {
       renderKPI();
     };
   }
-
 }

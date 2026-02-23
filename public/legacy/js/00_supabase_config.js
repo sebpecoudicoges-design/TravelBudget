@@ -1,14 +1,20 @@
 /* =========================
    Supabase config
    ========================= */
+
 const SUPABASE_URL = "https://obznbrzarhvmlbprcfie.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_xMHxyW0Cs9oRpGQsdatnyA_JIaaAC0D";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    detectSessionInUrl: true,
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
 
 let sbUser = null;
 let activeView = "dashboard";
-// ---- expose for plugins (do not remove) ----
-
 let redrawPending = false;
 
 const THEME_KEY = "travelbudget_theme_v1";
@@ -31,3 +37,94 @@ const PALETTES = {
 
 let editingTxId = null;
 
+
+/* =========================
+   Auth redirect handler
+   (Invite / Recovery flow)
+   ========================= */
+
+async function handleAuthRedirectFlow() {
+
+  const hash = window.location.hash || "";
+  const search = window.location.search || "";
+
+  const isAuthFlow =
+    hash.includes("type=recovery") ||
+    hash.includes("type=invite") ||
+    hash.includes("access_token=") ||
+    search.includes("type=recovery") ||
+    search.includes("type=invite");
+
+  if (!isAuthFlow) return;
+
+  const { data: sessionData } = await sb.auth.getSession();
+  if (!sessionData?.session) return;
+
+  // Affiche écran set password
+  document.body.innerHTML = `
+    <div style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;">
+      <div style="max-width:420px;width:100%;">
+        <h2>Définir un nouveau mot de passe</h2>
+
+        <input id="new-password" type="password"
+          placeholder="Nouveau mot de passe (min 8 caractères)"
+          style="width:100%;padding:10px;margin-top:14px;" />
+
+        <input id="new-password-2" type="password"
+          placeholder="Confirmer le mot de passe"
+          style="width:100%;padding:10px;margin-top:10px;" />
+
+        <button id="save-password"
+          style="margin-top:14px;padding:10px;width:100%;">
+          Valider
+        </button>
+
+        <div id="pwd-status" style="margin-top:10px;"></div>
+      </div>
+    </div>
+  `;
+
+  const statusEl = document.getElementById("pwd-status");
+  const btn = document.getElementById("save-password");
+
+  btn.onclick = async () => {
+    const p1 = document.getElementById("new-password").value || "";
+    const p2 = document.getElementById("new-password-2").value || "";
+
+    if (p1.length < 8) {
+      statusEl.textContent = "Mot de passe trop court.";
+      return;
+    }
+
+    if (p1 !== p2) {
+      statusEl.textContent = "Les mots de passe ne correspondent pas.";
+      return;
+    }
+
+    statusEl.textContent = "Mise à jour...";
+
+    const { error } = await sb.auth.updateUser({ password: p1 });
+
+    if (error) {
+      statusEl.textContent = "Erreur : " + error.message;
+      return;
+    }
+
+    // Marque qu’on sort d’un flow auth
+    sessionStorage.setItem("tb_post_auth_redirect", "1");
+
+    // Nettoie URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 800);
+  };
+}
+
+
+/* =========================
+   BOOT INTERCEPT
+   ========================= */
+
+handleAuthRedirectFlow();
