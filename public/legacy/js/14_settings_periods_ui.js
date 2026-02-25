@@ -90,7 +90,8 @@ function _segRowHTML(seg) {
   const end = edits.end ?? seg.end;
   const baseCurrency = edits.baseCurrency ?? seg.baseCurrency;
   const dailyBudgetBase = edits.dailyBudgetBase ?? seg.dailyBudgetBase;
-  const fxMode = edits.fxMode ?? seg.fxMode ?? "fixed";
+  const fxModeRaw = edits.fxMode ?? seg.fxMode ?? "auto";
+  const fxMode = (String(fxModeRaw) === "live_ecb") ? "auto" : fxModeRaw;
   const eurBaseRateFixed = (edits.eurBaseRateFixed ?? seg.eurBaseRateFixed) ?? "";
   const sortOrder = edits.sortOrder ?? seg.sortOrder ?? 0;
 
@@ -98,11 +99,11 @@ function _segRowHTML(seg) {
     <div class="card" style="padding:12px; margin:10px 0;">
       <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-end;">
         <div style="min-width:160px;">
-          <div class="label">Début segment</div>
+          <div class="label">Début période</div>
           <input class="input" value="${escapeHTML(start || "")}" onchange="_tbSegSet('${id}','start',this.value)" />
         </div>
         <div style="min-width:160px;">
-          <div class="label">Fin segment</div>
+          <div class="label">Fin période</div>
           <input class="input" value="${escapeHTML(end || "")}" onchange="_tbSegSet('${id}','end',this.value)" />
         </div>
         <div style="min-width:140px;">
@@ -114,22 +115,28 @@ function _segRowHTML(seg) {
           <input class="input" value="${escapeHTML(String(dailyBudgetBase ?? ""))}" onchange="_tbSegSet('${id}','dailyBudgetBase',this.value)" />
         </div>
         <div style="min-width:160px;">
-          <div class="label">FX mode</div>
+          <div class="label">Taux FX</div>
           <select class="input" onchange="_tbSegSet('${id}','fxMode',this.value)">
-            <option value="fixed" ${fxMode === "fixed" ? "selected" : ""}>fixed</option>
-            <option value="live_ecb" ${fxMode === "live_ecb" ? "selected" : ""}>live_ecb</option>
+            <option value="auto" ${fxMode === "auto" ? "selected" : ""}>auto (ECB si dispo)</option>
+            <option value="fixed" ${fxMode === "fixed" ? "selected" : ""}>fixe (manuel)</option>
           </select>
         </div>
         <div style="min-width:160px;">
-          <div class="label">EUR→BASE (fixed)</div>
+          <div class="label">EUR→BASE</div>
           ${(() => {
             const cur = String(baseCurrency||"").toUpperCase();
             const m = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
             const live = (cur === "EUR") ? 1 : (m && m[cur]);
-            const v = (fxMode === "fixed") ? eurBaseRateFixed : (live || eurBaseRateFixed || "");
-            const dis = (fxMode === "fixed") ? "" : "readonly disabled style=\"opacity:0.7; cursor:not-allowed;\"";
-            const onch = (fxMode === "fixed") ? `_tbSegSet('${id}','eurBaseRateFixed',this.value)` : "";
-            return `<input class="input" value="${escapeHTML(String(v))}" ${dis} onchange="${onch}" />`;
+
+            // FX behavior:
+            // - fixed: user must provide eurBaseRateFixed
+            // - auto: use ECB live if available, else require manual fallback (eurBaseRateFixed)
+            const needsManual = (fxMode === "fixed") || (fxMode === "auto" && !live && cur !== "EUR");
+            const v = (fxMode === "auto" && live) ? live : (eurBaseRateFixed || "");
+            const dis = needsManual ? "" : "readonly disabled style=\"opacity:0.7; cursor:not-allowed;\"";
+            const onch = needsManual ? `_tbSegSet('${id}','eurBaseRateFixed',this.value)` : "";
+            const ph = needsManual ? "placeholder=\"ex: 36.57\"" : "";
+            return `<input class="input" value="${escapeHTML(String(v))}" ${ph} ${dis} onchange="${onch}" />`;
           })()}
         </div>
         <div style="min-width:100px;">
@@ -152,7 +159,7 @@ function renderBudgetSegmentsUI() {
 
   const segs = (state.budgetSegments || []).filter((s) => s && s.periodId === state.period.id);
   if (!segs.length) {
-    host.innerHTML = `<div class="muted">Aucun segment (il sera auto-créé au refresh si besoin).</div>`;
+    host.innerHTML = `<div class="muted">Aucun période (il sera auto-créé au refresh si besoin).</div>`;
     return;
   }
 
@@ -169,14 +176,24 @@ function _tbSegSet(id, key, value) {
 }
 
 async function saveBudgetSegment(id) {
-  await safeCall("Save segment", async () => {
+  await safeCall("Save période", async () => {
     const seg = (state.budgetSegments || []).find((s) => String(s.id) === String(id));
     if (!seg) throw new Error("Segment introuvable.");
 
     const edits = (window.__TB_SEG_EDITS__ && window.__TB_SEG_EDITS__[id]) || {};
     const start = (edits.start ?? seg.start) || "";
     const end = (edits.end ?? seg.end) || "";
-    const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
+
+    // Force last segment end to follow the voyage end (auto-adapt when the voyage end changes)
+    let endFixed = end;
+    try {
+      const segsAll = (state.budgetSegments || []).filter(s => s && String(s.periodId || s.period_id) === String(state.period.id));
+      const last = [...segsAll].sort((a,b) => Number(a.sortOrder ?? a.sort_order ?? 0) - Number(b.sortOrder ?? b.sort_order ?? 0)).pop();
+      if (last && String(last.id) === String(id)) {
+        endFixed = String(state?.period?.end || endFixed || "");
+      }
+    } catch (_) {}
+const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
     const dailyBudgetBase = Number(edits.dailyBudgetBase ?? seg.dailyBudgetBase);
     const fxMode = (edits.fxMode ?? seg.fxMode ?? "fixed") || "fixed";
 
@@ -188,7 +205,7 @@ async function saveBudgetSegment(id) {
         : Number(eurBaseRateFixedRaw);
 
     const sD = parseISODateOrNull(start);
-    const eD = parseISODateOrNull(end);
+    const eD = parseISODateOrNull(endFixed);
     if (!sD || !eD) throw new Error("Dates invalides.");
     if (eD < sD) throw new Error("Fin < début.");
     if (!baseCurrency) throw new Error("Devise vide.");
@@ -230,7 +247,7 @@ async function saveBudgetSegment(id) {
       .from("budget_segments")
       .update({
         start_date: start,
-        end_date: end,
+        end_date: endFixed,
         base_currency: baseCurrency,
         daily_budget_base: dailyBudgetBase,
         fx_mode: fxMode,
@@ -242,7 +259,10 @@ async function saveBudgetSegment(id) {
 
     if (error) throw error;
 
-    if (window.__TB_SEG_EDITS__) delete window.__TB_SEG_EDITS__[id];
+    
+
+    await _syncLastSegmentEndToPeriod(state.period.id, String(state?.period?.end || ""));
+if (window.__TB_SEG_EDITS__) delete window.__TB_SEG_EDITS__[id];
 
     await refreshFromServer();
     renderSettings();
@@ -257,7 +277,7 @@ function _isoDayBeforeUTC(isoDate) {
 }
 
 async function splitBudgetSegmentPrompt(id) {
-  await safeCall("Split segment", async () => {
+  await safeCall("Split période", async () => {
     const seg = (state.budgetSegments || []).find((s) => String(s.id) === String(id));
     if (!seg) throw new Error("Segment introuvable.");
 
@@ -276,8 +296,8 @@ async function splitBudgetSegmentPrompt(id) {
     const eD = parseISODateOrNull(seg.end);
     if (!splitD || !sD || !eD) throw new Error("Dates invalides.");
     if (split <= seg.start) throw new Error("Split doit être > début.");
-    if (split > seg.end) throw new Error("Split doit être dans le segment.");
-    if (split === seg.end) throw new Error("Split ne peut pas être égal à la fin du segment.");
+    if (split > seg.end) throw new Error("Split doit être dans le période.");
+    if (split === seg.end) throw new Error("Split ne peut pas être égal à la fin du période.");
 
     const leftEndStr = _isoDayBeforeUTC(split);
     const oldEnd = seg.end;
@@ -294,7 +314,7 @@ async function splitBudgetSegmentPrompt(id) {
 
     if (upd.error) throw upd.error;
     if (!upd.data || upd.data.end_date !== leftEndStr) {
-      throw new Error(`Update segment échoué (end_date=${upd.data?.end_date ?? "null"} au lieu de ${leftEndStr}).`);
+      throw new Error(`Update période échoué (end_date=${upd.data?.end_date ?? "null"} au lieu de ${leftEndStr}).`);
     }
 
     const ins = await sb
@@ -333,8 +353,48 @@ async function splitBudgetSegmentPrompt(id) {
   });
 }
 
+
+async function _syncLastSegmentEndToPeriod(periodId, periodEndISO) {
+  try {
+    const pid = periodId || state?.period?.id;
+    const pend = periodEndISO || state?.period?.end;
+    if (!pid || !pend) return;
+
+    const segs = (state.budgetSegments || []).filter(s => s && String(s.periodId || s.period_id) === String(pid));
+    if (!segs.length) return;
+
+    const last = [...segs].sort((a,b) => {
+      const ao = Number(a.sortOrder ?? a.sort_order ?? 0);
+      const bo = Number(b.sortOrder ?? b.sort_order ?? 0);
+      if (ao !== bo) return ao - bo;
+      return String(a.end||a.end_date||"").localeCompare(String(b.end||b.end_date||""));
+    }).pop();
+
+    if (!last) return;
+    const lastId = last.id;
+    const currentEnd = String(last.end || last.end_date || "");
+    if (currentEnd === String(pend)) return;
+
+    const { error } = await sb
+      .from("budget_segments")
+      .update({ end_date: pend, updated_at: new Date().toISOString() })
+      .eq("id", lastId);
+
+    if (error) throw error;
+
+    for (const s of (state.budgetSegments || [])) {
+      if (String(s.id) === String(lastId)) {
+        s.end = pend;
+        s.end_date = pend;
+      }
+    }
+  } catch (e) {
+    console.warn("[Settings] sync last période end failed", e);
+  }
+}
+
 async function saveSettings() {
-  await safeCall("Enregistrer période", async () => {
+  await safeCall("Enregistrer voyage", async () => {
     const baseCur = document.getElementById("s-basecur")?.value;
     const s = document.getElementById("s-start")?.value;
     const e = document.getElementById("s-end")?.value;
@@ -368,6 +428,10 @@ async function saveSettings() {
       .eq("id", state.period.id);
     if (pErr2) throw pErr2;
 
+    // Ensure the last budget segment always ends on the voyage end date
+    await _syncLastSegmentEndToPeriod(state.period.id, String(state?.period?.end || ""));
+
+
     await refreshFromServer();
     renderAll();
   });
@@ -383,7 +447,7 @@ async function newPeriod() {
     const daily = Number(prompt("Budget/jour (devise base)", "25") || 25);
 
     const sD = parseISODateOrNull(start);
-    const eD = parseISODateOrNull(end);
+    const eD = parseISODateOrNull(endFixed);
     if (!sD || !eD) throw new Error("Dates invalides.");
     if (eD < sD) throw new Error("Fin < début.");
     if (!isFinite(daily) || daily <= 0) throw new Error("Budget/jour invalide.");
@@ -394,7 +458,7 @@ async function newPeriod() {
         {
           user_id: sbUser.id,
           start_date: start,
-          end_date: end,
+          end_date: endFixed,
           base_currency: baseCur,
           daily_budget_base: daily,
           eur_base_rate: baseCur === "EUR" ? 1 : null,
@@ -412,7 +476,7 @@ async function newPeriod() {
         user_id: sbUser.id,
         period_id: data.id,
         start_date: start,
-        end_date: end,
+        end_date: endFixed,
         base_currency: baseCur,
         daily_budget_base: daily,
         fx_mode: "fixed",
@@ -470,7 +534,17 @@ function renderCategoriesSettingsUI() {
     return `
       <div class="card" style="padding:10px; margin:8px 0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <div style="min-width:180px; font-weight:700;">${escapeHTML(c)}</div>
-        <input type="color" value="${escapeHTML(col)}" onchange="setCategoryColor('${escapeHTML(c)}', this.value)" />
+
+        <span title="${escapeHTML(col)}" style="display:inline-block;width:18px;height:18px;border-radius:5px;background:${escapeHTML(col)};border:1px solid rgba(0,0,0,.20);"></span>
+        <div class="muted" style="min-width:84px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px;">
+          ${escapeHTML(col)}
+        </div>
+
+        <input type="color"
+               value="${escapeHTML(col)}"
+               style="width:44px;height:30px;padding:0;border:none;background:transparent;cursor:pointer;"
+               onchange="setCategoryColor('${escapeHTML(c)}', this.value)" />
+
         <button class="btn" onclick="deleteCategory('${escapeHTML(c)}')">Supprimer</button>
       </div>
     `;

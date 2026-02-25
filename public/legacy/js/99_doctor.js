@@ -9,9 +9,9 @@ window.TB_DOCTOR = function TB_DOCTOR() {
     ["recomputeAllocations"],
     ["fxConvert"],
     // segments helpers (name changed across versions)
-    ["getSegmentForDate", "getBudgetSegmentForDate", "getBudgetSegmentForISODate"],
+    ["getPériodeForDate", "getBudgetPériodeForDate", "getBudgetPériodeForISODate"],
     // settings panels
-    ["renderBudgetSegmentsUI"],
+    ["renderBudgetPériodesUI"],
     ["renderCategoriesUI", "renderCategoriesSettingsUI"],
   ];
 

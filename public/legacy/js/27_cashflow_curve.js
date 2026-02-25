@@ -490,11 +490,11 @@
     // Segment filter UI (range)
     const segs = getSegments();
     const segOptions = [
-      `<option value="current" ${cashflowSegFilter === "current" ? "selected" : ""}>Segment courant (défaut)</option>`,
+      `<option value="current" ${cashflowSegFilter === "current" ? "selected" : ""}>Période courante (défaut)</option>`,
       `<option value="all" ${cashflowSegFilter === "all" ? "selected" : ""}>Toute la période</option>`,
       ...segs.map((s, i) => {
         const val = `seg:${i}`;
-        const lab = segLabel(s) || `Segment ${i+1}`;
+        const lab = segLabel(s) || `Période ${i+1}`;
         return `<option value="${val}" ${cashflowSegFilter === val ? "selected" : ""}>${escapeHTML(lab)}</option>`;
       })
     ].join("");
@@ -512,7 +512,7 @@
 
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
             <label class="muted" style="display:flex; gap:6px; align-items:center;">
-              Segment
+              Période
               <select id="cf-seg-filter" class="input" style="padding:6px 8px; border-radius:10px;">
                 ${segOptions}
               </select>

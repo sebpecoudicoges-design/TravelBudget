@@ -1,7 +1,6 @@
 [build]
-  command = "corepack enable && corepack prepare pnpm@9.15.5 --activate && pnpm config set registry https://registry.npmjs.org/ && pnpm install --no-frozen-lockfile --reporter=append-only && pnpm run build"
+  command = "npm run build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
-  NETLIFY_SKIP_INSTALL = "true"

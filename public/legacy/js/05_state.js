@@ -417,11 +417,26 @@ function fxRatesForSegments(segA, segB) {
   function apply(seg) {
     if (!seg) return;
     const base = String(seg?.baseCurrency || "").toUpperCase();
-    const mode = String(seg?.fxMode || "fixed");
+    const mode = String(seg?.fxMode || "auto");
+
+    // fixed: always override with manual EUR->BASE
     if (mode === "fixed") {
       const r = Number(seg?.eurBaseRateFixed);
       if (base && isFinite(r) && r > 0) out[base] = r;
+      return;
     }
+
+    // auto: use ECB if available, otherwise fall back to fixed if provided
+    if (mode === "auto") {
+      const hasLive = base && isFinite(Number(out[base])) && Number(out[base]) > 0;
+      if (!hasLive) {
+        const r = Number(seg?.eurBaseRateFixed);
+        if (base && isFinite(r) && r > 0) out[base] = r;
+      }
+      return;
+    }
+
+    // live_ecb: do nothing (relies on EUR_RATES). If missing, conversion may be null.
   }
 
   apply(segA);

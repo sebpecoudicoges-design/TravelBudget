@@ -279,7 +279,7 @@ async function markTxAsPaid(txId) {
   await safeCall("Marquer comme payé", async () => {
     const tx = state.transactions.find((t) => t.id === txId);
     if (!tx) throw new Error("Transaction introuvable.");
-    if (tx.type !== "expense") throw new Error("Seules les dépenses sont concernées.");
+    if (tx.type !== "expense" && tx.type !== "income") throw new Error("Seules les dépenses et les recettes sont concernées.");
     if (tx.payNow) return;
 
     const wallet = findWallet(tx.walletId);

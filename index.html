@@ -397,7 +397,42 @@
       box-shadow: 0 14px 26px rgba(0,0,0,.35);
     }
     .chipdot{ width:14px; height:14px; border-radius:999px; }
-  </style>
+  
+
+    /* Restore native color picker (we use appearance:none globally) */
+    input[type="color"]{
+      -webkit-appearance: auto;
+      appearance: auto;
+      padding: 0;
+      width: 40px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="color"]::-webkit-color-swatch-wrapper{ padding:0; }
+    input[type="color"]::-webkit-color-swatch{ border:1px solid rgba(0,0,0,.15); border-radius:6px; }
+    body.theme-dark input[type="color"]::-webkit-color-swatch{ border:1px solid rgba(255,255,255,.25); }
+
+
+
+
+    /* Restore native color picker (we use appearance:none globally) */
+    input[type="color"]{
+      -webkit-appearance: auto;
+      appearance: auto;
+      padding: 0;
+      width: 40px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="color"]::-webkit-color-swatch-wrapper{ padding:0; }
+    input[type="color"]::-webkit-color-swatch{ border:1px solid rgba(0,0,0,.15); border-radius:6px; }
+    body.theme-dark input[type="color"]::-webkit-color-swatch{ border:1px solid rgba(255,255,255,.25); }
+
+</style>
 </head>
 
 <body class="theme-dark">
@@ -498,7 +533,7 @@
       <header>
         <div class="brand">
           <h1>Travel Budget</h1>
-          <div class="sub">Périodes + wallets + budget journalier + sync Supabase</div>
+          <div class="sub">Voyages + wallets + budget journalier + sync Supabase</div>
         </div>
 
         <div class="top-actions">
@@ -624,11 +659,11 @@
       <!-- SETTINGS -->
       <div id="view-settings" class="hidden">
         <div class="card" style="margin-bottom:12px;">
-          <h2>Périodes</h2>
+          <h2>Voyages</h2>
 
           <div class="row" style="margin-bottom:10px;">
             <div class="field">
-              <label>Période active</label>
+              <label>Voyage active</label>
               <select id="s-period"></select>
             </div>
 
@@ -673,10 +708,10 @@
         </div>
 
         <div class="card" style="margin-bottom:12px;">
-          <h2>Segments de budget (6.4)</h2>
+          <h2>Périodes du voyage (6.4)</h2>
           <div class="muted" style="margin-bottom:10px;">
-            Chaque segment définit une tranche de dates avec une devise + un budget/jour propres.
-            Pour commencer : "Split" pour créer un segment B, puis modifie les champs et sauvegarde.
+            Chaque période définit une tranche de dates avec une devise + un budget/jour propres.
+            Pour commencer : "Split" pour créer une période B, puis modifie les champs et sauvegarde.
           </div>
 
           <div id="seg-list"></div>

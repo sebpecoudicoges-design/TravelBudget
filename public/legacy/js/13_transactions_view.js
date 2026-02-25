@@ -98,7 +98,7 @@ function _txEnsureShortcutsUI() {
     setRange(toLocalISODate(start), toLocalISODate(end));
   }));
 
-  wrap.appendChild(mkBtn("Période", () => {
+  wrap.appendChild(mkBtn("Voyage", () => {
     setRange(state?.period?.start || "", state?.period?.end || "");
   }));
 
@@ -164,6 +164,22 @@ function fillFilterSelects() {
 
   if (prevWallet && [...fWallet.options].some(o => o.value === prevWallet)) fWallet.value = prevWallet;
   if (prevCat && [...fCat.options].some(o => o.value === prevCat)) fCat.value = prevCat;
+}
+
+
+function _txCatColor(cat) {
+  try {
+    const key = String(cat || '').trim().toLowerCase();
+    const c = state?.categoryColors?.[key];
+    if (c && typeof c === 'string') return c;
+  } catch (_) {}
+  return null;
+}
+function _txCatBadge(cat) {
+  const name = String(cat || '');
+  const color = _txCatColor(name);
+  if (!color) return escapeHTML(name);
+  return `<span style="background:${color}; padding:2px 8px; border-radius:999px; font-size:12px;">${escapeHTML(name)}</span>`;
 }
 
 function renderTransactions() {
@@ -253,14 +269,14 @@ function renderTransactions() {
         <div><strong>${tx.type === "expense" ? "Dépense" : "Entrée"}</strong> — ${tx.amount} ${tx.currency}</div>
         <div class="meta">
           ${tx.dateStart}${tx.dateEnd && tx.dateEnd !== tx.dateStart ? " → " + tx.dateEnd : ""}
-          • ${w ? w.name : "Wallet"} • ${tx.category} ${tx.label ? " • " + tx.label : ""}
+          • ${w ? w.name : "Wallet"} • ${_txCatBadge(tx.category)} ${tx.label ? " • " + escapeHTML(tx.label) : ""}
         </div>
         <div class="tags">${tags.map((t) => `<span class="tag">${t}</span>`).join("")}</div>
       </div>
 
       <div style="display:flex; gap:8px; align-items:center;">
-        ${(!tx.payNow && tx.type === "expense")
-          ? `<button class="btn small primary" onclick="markTxAsPaid('${tx.id}')">✓ Payer</button>`
+        ${(!tx.payNow && (tx.type === "expense" || tx.type === "income"))
+          ? `<button class="btn small primary" onclick="markTxAsPaid(\'${tx.id}\')">✓ ${tx.type === "income" ? "Reçu" : "Payer"}</button>`
           : ""
         }
         <button class="btn small" onclick="openTxEditModal('${tx.id}')">✏️</button>

@@ -121,6 +121,38 @@ function budgetSpentBaseForDateFromTx(dateStr) {
   }
 }
 
+const DAILY_BUDGET_VIEW_KEY = "travelbudget_daily_budget_view_v1";
+const DAILY_BUDGET_WINDOW_DAYS = 7;
+
+function _dbParseISO(iso) { return (typeof parseISODateOrNull === "function") ? parseISODateOrNull(iso) : null; }
+function _dbISO(d){ return (typeof toLocalISODate === "function") ? toLocalISODate(d) : ""; }
+function _dbAddDays(dateISO, delta){
+  const d = _dbParseISO(dateISO);
+  if (!d) return dateISO;
+  const x = new Date(d);
+  x.setDate(x.getDate() + (Number(delta)||0));
+  return _dbISO(x);
+}
+function _dbClampISO(dateISO, minISO, maxISO){
+  const d=_dbParseISO(dateISO), mi=_dbParseISO(minISO), ma=_dbParseISO(maxISO);
+  if(!d||!mi||!ma) return dateISO;
+  if(d<mi) return minISO;
+  if(d>ma) return maxISO;
+  return dateISO;
+}
+function _dbLoadView(){
+  try{
+    const raw=localStorage.getItem(DAILY_BUDGET_VIEW_KEY);
+    if(!raw) return null;
+    const o=JSON.parse(raw);
+    if(o && typeof o.startISO==="string") return o;
+  }catch(_){}
+  return null;
+}
+function _dbSaveView(view){
+  try{ localStorage.setItem(DAILY_BUDGET_VIEW_KEY, JSON.stringify(view||{})); }catch(_){}
+}
+
 function renderDailyBudget() {
   const container = document.getElementById("daily-budget-container");
   if (!container) return; // page reset / dom partiel
@@ -132,7 +164,107 @@ function renderDailyBudget() {
 
   // base currency can vary by segment; computed per-day.
 
-  forEachDateInclusive(start, end, (d) => {
+  
+  // --- Pagination / fenêtre glissante (7 jours) ---
+  const periodStartISO = state?.period?.start;
+  const periodEndISO = state?.period?.end;
+
+  const todayISO = toLocalISODate(new Date());
+  let segStartISO = periodStartISO;
+  let segEndISO = periodEndISO;
+
+  try {
+    if (typeof getBudgetSegmentForDate === "function") {
+      const seg = getBudgetSegmentForDate(todayISO);
+      if (seg) {
+        segStartISO = String(seg.start || seg.start_date || segStartISO);
+        segEndISO = String(seg.end || seg.end_date || segEndISO);
+      }
+    }
+  } catch (_) {}
+
+  let view = _dbLoadView();
+  if (!view || !view.startISO) {
+    const baseStart = _dbAddDays(todayISO, -3);
+    const minISO = segStartISO || periodStartISO;
+    const maxISO = segEndISO || periodEndISO;
+    const clampedStart = _dbClampISO(baseStart, minISO, maxISO);
+    view = { mode: (segStartISO && segEndISO) ? "segment" : "voyage", startISO: clampedStart };
+    _dbSaveView(view);
+  }
+
+  const boundMinISO = (view.mode === "voyage") ? periodStartISO : (segStartISO || periodStartISO);
+  const boundMaxISO = (view.mode === "voyage") ? periodEndISO : (segEndISO || periodEndISO);
+
+  let viewStartISO = _dbClampISO(view.startISO, boundMinISO, boundMaxISO);
+  let viewEndISO = _dbAddDays(viewStartISO, DAILY_BUDGET_WINDOW_DAYS - 1);
+  viewEndISO = _dbClampISO(viewEndISO, boundMinISO, boundMaxISO);
+
+  // Controls
+  const ctrl = document.createElement("div");
+  ctrl.className = "card";
+  ctrl.style.marginBottom = "10px";
+  ctrl.style.padding = "10px";
+  ctrl.innerHTML = `
+    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between;">
+      <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+        <button class="btn" id="db-prev">← Avant</button>
+        <button class="btn" id="db-today">Aujourd'hui</button>
+        <button class="btn" id="db-next">Après →</button>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+        <span class="muted" style="font-size:12px;">Affichage :</span>
+        <select class="input" id="db-mode" style="min-width:170px;">
+          <option value="segment">Période courante</option>
+          <option value="voyage">Tout le voyage</option>
+        </select>
+        <span class="muted" style="font-size:12px;">${viewStartISO} → ${viewEndISO}</span>
+      </div>
+    </div>
+  `;
+  container.appendChild(ctrl);
+
+  const modeSel = ctrl.querySelector("#db-mode");
+  if (modeSel) {
+    modeSel.value = (view.mode === "voyage") ? "voyage" : "segment";
+    modeSel.onchange = () => {
+      const v = (modeSel.value === "voyage") ? "voyage" : "segment";
+      const baseStart = _dbAddDays(todayISO, -3);
+      const minISO = (v === "voyage") ? periodStartISO : (segStartISO || periodStartISO);
+      const maxISO = (v === "voyage") ? periodEndISO : (segEndISO || periodEndISO);
+      const clampedStart = _dbClampISO(baseStart, minISO, maxISO);
+      _dbSaveView({ mode: v, startISO: clampedStart });
+      renderDailyBudget();
+    };
+  }
+
+  const prevBtn = ctrl.querySelector("#db-prev");
+  const nextBtn = ctrl.querySelector("#db-next");
+  const todayBtn = ctrl.querySelector("#db-today");
+  if (prevBtn) prevBtn.onclick = () => {
+    const newStart = _dbAddDays(viewStartISO, -DAILY_BUDGET_WINDOW_DAYS);
+    _dbSaveView({ mode: view.mode, startISO: newStart });
+    renderDailyBudget();
+  };
+  if (nextBtn) nextBtn.onclick = () => {
+    const newStart = _dbAddDays(viewStartISO, DAILY_BUDGET_WINDOW_DAYS);
+    _dbSaveView({ mode: view.mode, startISO: newStart });
+    renderDailyBudget();
+  };
+  if (todayBtn) todayBtn.onclick = () => {
+    const baseStart = _dbAddDays(todayISO, -3);
+    const minISO = (view.mode === "voyage") ? periodStartISO : (segStartISO || periodStartISO);
+    const maxISO = (view.mode === "voyage") ? periodEndISO : (segEndISO || periodEndISO);
+    const clampedStart = _dbClampISO(baseStart, minISO, maxISO);
+    _dbSaveView({ mode: view.mode, startISO: clampedStart });
+    renderDailyBudget();
+  };
+
+  const dStart = _dbParseISO(viewStartISO);
+  const dEnd = _dbParseISO(viewEndISO);
+  if (!dStart || !dEnd) return;
+
+  forEachDateInclusive(dStart, dEnd, (d) => {
     const dateStr = toLocalISODate(d);
     const info = (typeof getDailyBudgetInfoForDate === "function") ? getDailyBudgetInfoForDate(dateStr) : { remaining: state.period.dailyBudgetBase - budgetSpentBaseForDateFromTx(dateStr), daily: state.period.dailyBudgetBase, baseCurrency: state.period.baseCurrency };
     const baseDay = String(info.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
@@ -158,7 +290,6 @@ function renderDailyBudget() {
     container.appendChild(div);
   });
 }
-
 /* =========================
    Wallet CRUD
    ========================= */

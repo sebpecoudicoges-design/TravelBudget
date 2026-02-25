@@ -415,7 +415,16 @@ function _pilotageInsights() {
     : { remaining: getDailyBudgetForDate(today), daily: state?.period?.dailyBudgetBase || 0, baseCurrency: state?.period?.baseCurrency || "EUR" };
 
   const base = String(infoToday.baseCurrency || state?.period?.baseCurrency || "EUR").toUpperCase();
-  const end = state?.period?.end;
+  let end = state?.period?.end;
+
+  // If a budget segment exists for the display day, use its end as the projection horizon
+  try {
+    if (typeof getBudgetSegmentForDate === "function") {
+      const seg = getBudgetSegmentForDate(today);
+      if (seg && (seg.end || seg.end_date)) end = String(seg.end || seg.end_date);
+    }
+  } catch (_) {}
+
 
   if (!base || !end) return null;
 

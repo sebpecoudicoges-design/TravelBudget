@@ -25,6 +25,39 @@ async function refreshFxRates() {
 const previous = _fxGetEurRates();
 const allRates = { ...previous, ...data.rates };
 
+  // 2) Collect all currencies needed by budget periods (segments) that rely on live/auto FX
+  const segs = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
+  const needed = new Set();
+  segs.forEach((s) => {
+    if (!s) return;
+    const mode = String(s.fxMode || "auto");
+    const cur = String(s.baseCurrency || "").toUpperCase();
+    if (!cur || cur === "EUR") return;
+    if (mode === "fixed") return; // manual rate is stored in segment
+    // auto / live_ecb: we'd like EUR->CUR to exist; if missing and no fixed fallback, we'll prompt
+    needed.add(cur);
+  });
+
+  // Ensure all needed currencies have an EUR->CUR rate available,
+  // otherwise ask once for a manual rate and store it in EUR_RATES.
+  for (const cur of Array.from(needed)) {
+    let r = Number(allRates[cur]);
+    if (!r) {
+      // Try fixed fallback from any segment using this currency
+      const seg = segs.find(x => String(x?.baseCurrency || "").toUpperCase() === cur);
+      const fixed = Number(seg?.eurBaseRateFixed);
+      if (fixed && fixed > 0) {
+        allRates[cur] = fixed;
+        continue;
+      }
+      const manual = prompt(`ECB ne fournit pas ${cur} (ou taux indisponible). Entre le taux EUR→${cur} (ex: 30800.25) :`);
+      const v = Number(String(manual || "").replace(",", "."));
+      if (!v || v <= 0) continue;
+      allRates[cur] = v;
+    }
+  }
+
+
 
   // 2) Si la devise de période n'existe pas (ex: VND), on demande EUR->BASE en manuel
   if (base !== "EUR") {

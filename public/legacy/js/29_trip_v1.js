@@ -974,7 +974,19 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
 
 
     // Access control: register owner participant (RLS)
-    await sb.from("trip_participants").insert([{ trip_id: data.id, auth_user_id: uid, role: "owner" }]);
+    // Some schemas/triggers may already create this row; ignore unique/409 conflicts.
+    {
+      const { error: pErr } = await sb.from("trip_participants").insert([{ trip_id: data.id, auth_user_id: uid, role: "owner" }]);
+      if (pErr) {
+        const status = pErr.status || pErr.statusCode;
+        const code = pErr.code;
+        if (status === 409 || code === "23505") {
+          console.warn("[Trip] owner participant already exists (ignored)");
+        } else {
+          throw pErr;
+        }
+      }
+    }
 
     // default member: Me
     const memPayload = { user_id: uid, trip_id: data.id, name: "Moi", is_me: true };
