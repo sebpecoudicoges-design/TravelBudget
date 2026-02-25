@@ -118,6 +118,11 @@ function openTxEditModal(txId) {
   }
 
   document.getElementById("modal-title").textContent = "Modifier transaction";
+
+  const _btnResnap = document.getElementById("m-resnap");
+  if (_btnResnap) {
+    _btnResnap.style.display = (_isDebugMode() && !window.TB_FREEZE && !tx.pay_now) ? "inline-block" : "none";
+  }
   document.getElementById("m-type").value = tx.type;
 
   const elW = document.getElementById("m-wallet");
@@ -196,26 +201,61 @@ async function _ensureTxSnapshotById(txId, txCurrency, txDateStart) {
   if (window.TB_FREEZE) return;
   if (typeof window.fxBuildTxSnapshot !== "function") return;
 
-  const baseCur = _snapshotBaseCurrencyForTxDate(txDateStart);
-  const ds = String(txDateStart || "").slice(0, 10);
-  const snap = window.fxBuildTxSnapshot(txCurrency, baseCur, ds);
+  // Read current row to avoid overwriting immutable snapshots
+  const { data: rows, error: rerr } = await sb
+    .from(TB_CONST.TABLES.transactions)
+    .select("id, period_id, currency, date_start, fx_rate_snapshot, fx_source_snapshot, fx_snapshot_at, fx_base_currency_snapshot, fx_tx_currency_snapshot")
+    .eq("id", txId)
+    .limit(1);
 
-  const payload = {
-    fx_rate_snapshot: snap.fx_rate_snapshot,
-    fx_source_snapshot: snap.fx_source_snapshot,
-    fx_snapshot_at: snap.fx_snapshot_at,
-    fx_base_currency_snapshot: snap.fx_base_currency_snapshot,
-    fx_tx_currency_snapshot: snap.fx_tx_currency_snapshot,
-    updated_at: new Date().toISOString(),
-  };
+  if (rerr) throw rerr;
+  const cur = Array.isArray(rows) ? rows[0] : null;
+  if (!cur) return;
+
+  const complete =
+    cur.fx_rate_snapshot != null &&
+    cur.fx_source_snapshot != null &&
+    cur.fx_snapshot_at != null &&
+    cur.fx_base_currency_snapshot != null &&
+    cur.fx_tx_currency_snapshot != null;
+
+  if (complete) return;
+
+  // Resolve base currency by period_id when possible
+  let baseCur = null;
+  try {
+    const pid = cur.period_id;
+    if (pid && Array.isArray(state?.periods)) {
+      const p = state.periods.find((x) => String(x.id) === String(pid));
+      baseCur = p?.baseCurrency || p?.base_currency || p?.currency || null;
+    }
+  } catch (_) {}
+
+  if (!baseCur) baseCur = _snapshotBaseCurrencyForTxDate(txDateStart);
+  baseCur = String(baseCur || "EUR").toUpperCase();
+
+  const txCur = String(cur.currency || txCurrency || "").toUpperCase();
+  const ds = String(cur.date_start || txDateStart || "").slice(0, 10);
+
+  const snap = window.fxBuildTxSnapshot(txCur, baseCur, ds);
+
+  const payload = { updated_at: new Date().toISOString() };
+  if (cur.fx_rate_snapshot == null) payload.fx_rate_snapshot = snap.fx_rate_snapshot;
+  if (cur.fx_source_snapshot == null) payload.fx_source_snapshot = snap.fx_source_snapshot;
+  if (cur.fx_snapshot_at == null) payload.fx_snapshot_at = snap.fx_snapshot_at;
+  if (cur.fx_base_currency_snapshot == null) payload.fx_base_currency_snapshot = snap.fx_base_currency_snapshot;
+  if (cur.fx_tx_currency_snapshot == null) payload.fx_tx_currency_snapshot = snap.fx_tx_currency_snapshot;
+
+  // Nothing to do
+  if (Object.keys(payload).length <= 1) return;
 
   const { error } = await sb
     .from(TB_CONST.TABLES.transactions)
     .update(payload)
     .eq("id", txId);
+
   if (error) throw error;
 }
-
 async function saveModal() {
   if (_savingTx) return;
   _savingTx = true;
@@ -333,6 +373,94 @@ async function saveModal() {
     _savingTx = false;
     if (btn) btn.disabled = false;
   }
+}
+
+
+function _isDebugMode() {
+  try { return new URLSearchParams(location.search).get("debug") === "1"; } catch (_) { return false; }
+}
+
+async function resnapshotModal() {
+  if (window.TB_FREEZE) {
+    alert("Mode freeze actif : aucune écriture autorisée.");
+    return;
+  }
+  if (!editingTxId) {
+    alert("Aucune transaction à re-snapshot.");
+    return;
+  }
+  const tx = state.transactions.find((t) => t.id === editingTxId);
+  if (!tx) throw new Error("Transaction introuvable.");
+
+  // Normalize fields (depending on load path, tx can be snake_case or camelCase)
+  const txPayNow = (tx.pay_now !== undefined) ? !!tx.pay_now : !!tx.payNow;
+  const txOutOfBudget = (tx.out_of_budget !== undefined) ? !!tx.out_of_budget : !!tx.outOfBudget;
+  const txNightCovered = (tx.night_covered !== undefined) ? !!tx.night_covered : !!tx.nightCovered;
+  const txDateStart = tx.date_start || tx.dateStart;
+  const txDateEnd = tx.date_end || tx.dateEnd;
+  const txCurrency = String(tx.currency || "").toUpperCase();
+
+  // Recommended: allow only for unpaid (pay_now=false)
+  if (txPayNow) {
+    alert("Cette transaction est déjà payée. Re-snapshot = supprimer + recréer manuellement si nécessaire.");
+    return;
+  }
+
+  const ok = confirm("Re-snapshot : recréer la transaction (nouveau taux) puis supprimer l'ancienne. Continuer ?");
+  if (!ok) return;
+
+  await safeCall("Re-snapshot", async () => {
+    const walletId = tx.wallet_id || tx.walletId;
+    const wallet = findWallet(walletId);
+    if (!wallet) throw new Error("Wallet introuvable.");
+
+    const { data, error } = await sb.rpc("apply_transaction", {
+      p_wallet_id: walletId,
+      p_type: tx.type,
+      p_amount: Number(tx.amount),
+      // Preserve original tx currency (do not auto-switch to wallet currency)
+      p_currency: (txCurrency || String(wallet.currency || '').toUpperCase()),
+      p_category: tx.category,
+      p_label: tx.label,
+      p_date_start: txDateStart,
+      p_date_end: txDateEnd,
+      // Preserve flags exactly (critical: avoid flipping paid/unpaid state)
+      p_pay_now: txPayNow,
+      p_out_of_budget: txOutOfBudget,
+      p_night_covered: txNightCovered,
+    });
+    if (error) throw error;
+
+    let createdId = null;
+    if (typeof data === "string") createdId = data;
+    if (!createdId) {
+      // fallback: try find by label + dates + amount recently created
+      const start = String(tx.date_start || tx.dateStart || "").slice(0,10);
+      const { data: rows, error: ferr } = await sb
+        .from(TB_CONST.TABLES.transactions)
+        .select("id, created_at")
+        .eq("wallet_id", walletId)
+        .eq("label", tx.label)
+        .eq("date_start", start)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (ferr) throw ferr;
+      createdId = rows && rows[0] ? rows[0].id : null;
+    }
+
+    if (!createdId) throw new Error("Impossible de retrouver la transaction recréée.");
+
+    // Freeze snapshot for the created tx (best-effort)
+    await _ensureTxSnapshotById(createdId, wallet.currency, tx.date_start || tx.dateStart);
+
+    // Delete old tx
+    const { error: derr } = await sb.rpc("delete_transaction", { p_tx_id: editingTxId });
+    if (derr) throw derr;
+
+    closeModal();
+    editingTxId = null;
+    await refreshFromServer();
+  });
 }
 
 async function deleteTx(txId) {
