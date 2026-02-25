@@ -1,5 +1,5 @@
 [build]
-  command = "npm ci --include=dev --no-audit --no-fund && npm run build"
+  command = "corepack enable && corepack prepare npm@10.9.0 --activate && npm --version && npm ci --include=dev --no-audit --no-fund && npm run build"
   publish = "dist"
 
 [build.environment]
