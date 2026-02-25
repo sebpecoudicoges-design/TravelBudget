@@ -313,7 +313,7 @@ async function createWallet() {
     const periodId = state?.period?.id || localStorage.getItem(ACTIVE_PERIOD_KEY);
     if (!periodId) return alert("Aucune période active (period_id introuvable).");
 
-    const { error } = await sb.from("wallets").insert([{
+    const { error } = await sb.from(TB_CONST.TABLES.wallets).insert([{
       user_id: sbUser.id,
       period_id: periodId,
       name,
@@ -336,7 +336,7 @@ async function deleteWallet(walletId) {
     if (!w) return;
 
     const { data: tx, error: tErr } = await sb
-      .from("transactions")
+      .from(TB_CONST.TABLES.transactions)
       .select("id")
       .eq("wallet_id", walletId)
       .limit(1);
@@ -348,7 +348,7 @@ async function deleteWallet(walletId) {
 
     if (!confirm(`Supprimer le wallet "${w.name} (${w.currency})" ?`)) return;
 
-    const { error } = await sb.from("wallets").delete().eq("id", walletId);
+    const { error } = await sb.from(TB_CONST.TABLES.wallets).delete().eq("id", walletId);
     if (error) throw error;
 
     await refreshFromServer();

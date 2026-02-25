@@ -13,6 +13,46 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
+
+
+/* =========================
+   Freeze mode (V6.5)
+   - Enable with ?freeze=1 to prevent any write to Supabase from the browser
+   ========================= */
+(function () {
+  try {
+    const qs = new URLSearchParams(location.search || "");
+    const freeze = qs.get("freeze") === "1" || qs.get("freeze") === "true";
+    window.TB_FREEZE = freeze;
+
+    if (!freeze) return;
+
+    console.warn("[TB_FREEZE] Write operations are disabled (read-only mode).");
+
+    const _origRpc = sb.rpc.bind(sb);
+    sb.rpc = function (fnName, args, options) {
+      const name = String(fnName || "");
+      // Allow read-only RPCs if you ever add them; block everything by default.
+      return Promise.reject(new Error(`[TB_FREEZE] RPC blocked: ${name}`));
+    };
+
+    const _origFrom = sb.from.bind(sb);
+    sb.from = function (table) {
+      const q = _origFrom(table);
+      const wrap = (method) => {
+        if (typeof q[method] !== "function") return;
+        const _orig = q[method].bind(q);
+        q[method] = function () {
+          return Promise.reject(new Error(`[TB_FREEZE] ${method} blocked on ${String(table)}`));
+        };
+      };
+      ["insert","update","delete","upsert"].forEach(wrap);
+      return q;
+    };
+  } catch (e) {
+    console.warn("[TB_FREEZE] init failed", e);
+  }
+})();
 let sbUser = null;
 let activeView = "dashboard";
 let redrawPending = false;

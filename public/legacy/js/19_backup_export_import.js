@@ -127,7 +127,7 @@ async function importBackup() {
     const theme = normalized.theme || localStorage.getItem(THEME_KEY) || "light";
     localStorage.setItem(THEME_KEY, theme);
 
-    const { error: setErr } = await sb.from("settings").upsert({
+    const { error: setErr } = await sb.from(TB_CONST.TABLES.settings).upsert({
       user_id: sbUser.id,
       period_start: normalized.period.start_date,
       period_end: normalized.period.end_date,
@@ -138,7 +138,7 @@ async function importBackup() {
     }, { onConflict: "user_id" });
     if (setErr) throw setErr;
 
-    const { error: pErr } = await sb.from("periods").update({
+    const { error: pErr } = await sb.from(TB_CONST.TABLES.periods).update({
       start_date: normalized.period.start_date,
       end_date: normalized.period.end_date,
       base_currency: normalized.period.base_currency,
@@ -148,7 +148,7 @@ async function importBackup() {
     }).eq("id", state.period.id);
     if (pErr) throw pErr;
 
-    const { data: srvWallets, error: wErr } = await sb.from("wallets").select("*").order("created_at", { ascending: true });
+    const { data: srvWallets, error: wErr } = await sb.from(TB_CONST.TABLES.wallets).select("*").order("created_at", { ascending: true });
     if (wErr) throw wErr;
 
     const keyToId = new Map();
@@ -160,10 +160,10 @@ async function importBackup() {
       if (!keyToId.has(key)) toCreate.push({ user_id: sbUser.id, name: bw.name, currency: bw.currency, balance: 0 });
     }
     if (toCreate.length) {
-      const { error: cErr } = await sb.from("wallets").insert(toCreate);
+      const { error: cErr } = await sb.from(TB_CONST.TABLES.wallets).insert(toCreate);
       if (cErr) throw cErr;
 
-      const { data: srvWallets2, error: wErr2 } = await sb.from("wallets").select("*").order("created_at", { ascending: true });
+      const { data: srvWallets2, error: wErr2 } = await sb.from(TB_CONST.TABLES.wallets).select("*").order("created_at", { ascending: true });
       if (wErr2) throw wErr2;
 
       keyToId.clear();
@@ -173,11 +173,11 @@ async function importBackup() {
     for (const bw of normalized.wallets || []) {
       const id = keyToId.get(`${bw.name}__${bw.currency}`);
       if (!id) continue;
-      const { error } = await sb.from("wallets").update({ balance: Number(bw.balance) }).eq("id", id);
+      const { error } = await sb.from(TB_CONST.TABLES.wallets).update({ balance: Number(bw.balance) }).eq("id", id);
       if (error) throw error;
     }
 
-    const { error: delErr } = await sb.from("transactions").delete().eq("period_id", state.period.id);
+    const { error: delErr } = await sb.from(TB_CONST.TABLES.transactions).delete().eq("period_id", state.period.id);
     if (delErr) throw delErr;
 
     const txs = (normalized.transactions || []).map((t) => {
@@ -204,7 +204,7 @@ async function importBackup() {
       const chunkSize = 200;
       for (let i = 0; i < txs.length; i += chunkSize) {
         const chunk = txs.slice(i, i + chunkSize);
-        const { error: insErr } = await sb.from("transactions").insert(chunk);
+        const { error: insErr } = await sb.from(TB_CONST.TABLES.transactions).insert(chunk);
         if (insErr) throw insErr;
       }
     }

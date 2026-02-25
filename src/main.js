@@ -4,8 +4,11 @@ import './app/bridge.js';
 // This preserves the original global-script semantics while removing fragile <script> ordering in index.html.
 
 const LEGACY_SCRIPTS = [
+  '/legacy/js/00_constants.js',
+  '/legacy/js/98_error_bus.js',
   '/legacy/js/00_supabase_config.js',
   '/legacy/js/01_helpers.js',
+  '/legacy/js/97_ui_errors.js',
   '/legacy/js/02_palette_local_server_sync_robuste.js',
   '/legacy/js/03_ui_auth.js',
   '/legacy/js/04_theme.js',
@@ -14,6 +17,7 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/07_supabase_bootstrap.js',
   '/legacy/js/09_fx.js',
   '/legacy/js/26_fx_crossrate.js',
+  '/legacy/js/24_tx_fx_snapshot.js',
   '/legacy/js/28_data_updated_bus.js',
   '/legacy/js/27_cashflow_curve.js',
   '/legacy/js/10_navigation.js',

@@ -51,7 +51,7 @@ async function savePaletteToServer(p, presetName) {
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await sb.from("settings").update(payloadFull).eq("user_id", sbUser.id);
+  const { error } = await sb.from(TB_CONST.TABLES.settings).update(payloadFull).eq("user_id", sbUser.id);
 
   if (!error) return;
 
@@ -62,7 +62,7 @@ async function savePaletteToServer(p, presetName) {
       palette_json: p,
       updated_at: new Date().toISOString(),
     };
-    const { error: error2 } = await sb.from("settings").update(payloadLite).eq("user_id", sbUser.id);
+    const { error: error2 } = await sb.from(TB_CONST.TABLES.settings).update(payloadLite).eq("user_id", sbUser.id);
     if (error2) throw error2;
     return;
   }

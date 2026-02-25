@@ -4,6 +4,30 @@
 async function ensureBootstrap() {
   if (!sbUser) return;
 
+  // === Schema version guard (V6.5) ===
+  // Prevent silent breakage when UI code and DB migrations are out of sync.
+  try {
+    const expected = (window.TB_CONST && TB_CONST.EXPECTED_SCHEMA_VERSION) ? TB_CONST.EXPECTED_SCHEMA_VERSION : null;
+    if (expected) {
+      const { data: sv, error: svErr } = await sb
+        .from(TB_CONST.TABLES.schema_version)
+        .select("key, version")
+        .eq("key", "travelbudget")
+        .maybeSingle();
+      if (svErr) {
+        // table missing / RLS / other
+        window.__errorBus && __errorBus.push && __errorBus.push({ type: "schema_version_check", error: __errorBus.toPlain(svErr) });
+        // don't hard crash: Doctor will surface it; UI stays usable in degraded mode
+      } else if (sv && (sv.version !== null && sv.version !== undefined) && Number(sv.version) !== Number(expected)) {
+        throw new Error(`DB schema_version=${sv.version} != UI expected=${expected}. Migration requise.`);
+      }
+    }
+  } catch (e) {
+    if (typeof renderErrorBox === "function") renderErrorBox("Schema", e, "view-dashboard");
+    throw e;
+  }
+
+
   const today = toLocalISODate(new Date());
 
   // local defaults
@@ -14,7 +38,7 @@ async function ensureBootstrap() {
   // 1) Ensure profile row exists (role default: 'user')
   {
     const { data: prof, error: profErr } = await sb
-      .from("profiles")
+      .from(TB_CONST.TABLES.profiles)
       .select("id, role")
       .eq("id", sbUser.id)
       .maybeSingle();
@@ -26,7 +50,7 @@ async function ensureBootstrap() {
 
     if (!prof) {
       window.sbRole = 'user';
-      const { error: insErr } = await sb.from("profiles").insert([
+      const { error: insErr } = await sb.from(TB_CONST.TABLES.profiles).insert([
         {
           id: sbUser.id,
           email: sbUser.email || null,
@@ -39,7 +63,7 @@ async function ensureBootstrap() {
 
   // 2) Ensure settings row exists (palette persisted server side)
   {
-    const { data: s, error: sErr } = await sb.from("settings").select("*").eq("user_id", sbUser.id).maybeSingle();
+    const { data: s, error: sErr } = await sb.from(TB_CONST.TABLES.settings).select("*").eq("user_id", sbUser.id).maybeSingle();
     if (sErr) throw sErr;
 
     if (!s) {
@@ -54,13 +78,13 @@ async function ensureBootstrap() {
         updated_at: new Date().toISOString(),
       };
 
-      const { error: insErr } = await sb.from("settings").insert([payload]);
+      const { error: insErr } = await sb.from(TB_CONST.TABLES.settings).insert([payload]);
       if (insErr) {
         // schema-cache fallback if palette_preset not deployed yet
         if ((insErr.message || "").includes("palette_preset") && (insErr.message || "").includes("schema cache")) {
           const payloadLite = { ...payload };
           delete payloadLite.palette_preset;
-          const { error: ins2 } = await sb.from("settings").insert([payloadLite]);
+          const { error: ins2 } = await sb.from(TB_CONST.TABLES.settings).insert([payloadLite]);
           if (ins2) throw ins2;
         } else {
           throw insErr;
@@ -72,7 +96,7 @@ async function ensureBootstrap() {
   // 3) Ensure at least one period exists
   {
     const { data: periods, error: pErr } = await sb
-      .from("periods")
+      .from(TB_CONST.TABLES.periods)
       .select("*")
       .eq("user_id", sbUser.id)
       .order("start_date", { ascending: false })
@@ -85,7 +109,7 @@ async function ensureBootstrap() {
       const start = today;
       const end = toLocalISODate(addDays(new Date(), 20));
 
-      const { error: insErr } = await sb.from("periods").insert([
+      const { error: insErr } = await sb.from(TB_CONST.TABLES.periods).insert([
         {
           user_id: sbUser.id,
           start_date: start,
@@ -115,7 +139,7 @@ async function loadFromSupabase() {
 
   // settings
   {
-    const { data: s, error: sErr } = await sb.from("settings").select("*").eq("user_id", sbUser.id).maybeSingle();
+    const { data: s, error: sErr } = await sb.from(TB_CONST.TABLES.settings).select("*").eq("user_id", sbUser.id).maybeSingle();
     if (sErr) throw sErr;
 
     if (s) {
@@ -133,7 +157,7 @@ async function loadFromSupabase() {
   }
 
   const { data: periods, error: pErr } = await sb
-    .from("periods")
+    .from(TB_CONST.TABLES.periods)
     .select("*")
     .eq("user_id", sbUser.id)
     .order("start_date", { ascending: false });
@@ -147,7 +171,7 @@ async function loadFromSupabase() {
   if (!p) throw new Error("Période active introuvable.");
 
   const { data: w0, error: wErr } = await sb
-    .from("wallets")
+    .from(TB_CONST.TABLES.wallets)
     .select("*")
     .eq("user_id", sbUser.id)
     .eq("period_id", activePeriodId)
@@ -162,11 +186,11 @@ async function loadFromSupabase() {
       { user_id: sbUser.id, period_id: activePeriodId, name: "Cash", currency: p.base_currency || "THB", balance: 0, type: "cash" },
       { user_id: sbUser.id, period_id: activePeriodId, name: "Compte bancaire", currency: "EUR", balance: 0, type: "bank" },
     ];
-    const { error: insWErr } = await sb.from("wallets").insert(initial);
+    const { error: insWErr } = await sb.from(TB_CONST.TABLES.wallets).insert(initial);
     if (insWErr) throw insWErr;
 
     const { data: w2, error: w2Err } = await sb
-      .from("wallets")
+      .from(TB_CONST.TABLES.wallets)
       .select("*")
       .eq("user_id", sbUser.id)
       .eq("period_id", activePeriodId)
@@ -176,7 +200,7 @@ async function loadFromSupabase() {
   }
 
   const { data: tx, error: tErr } = await sb
-    .from("transactions")
+    .from(TB_CONST.TABLES.transactions)
     .select("*")
     .eq("user_id", sbUser.id)
     .eq("period_id", activePeriodId)
@@ -188,7 +212,7 @@ async function loadFromSupabase() {
   let segRows = [];
   try {
     const { data: segs, error: segErr } = await sb
-      .from("budget_segments")
+      .from(TB_CONST.TABLES.budget_segments)
       .select("*")
       .eq("user_id", sbUser.id)
       .eq("period_id", activePeriodId)
@@ -200,7 +224,7 @@ async function loadFromSupabase() {
 
     // Auto-bootstrap a default segment if missing
     if (!segRows.length) {
-      const { error: insSegErr } = await sb.from("budget_segments").insert([{
+      const { error: insSegErr } = await sb.from(TB_CONST.TABLES.budget_segments).insert([{
         user_id: sbUser.id,
         period_id: activePeriodId,
         start_date: p.start_date,
@@ -214,7 +238,7 @@ async function loadFromSupabase() {
       if (insSegErr) throw insSegErr;
 
       const { data: segs2, error: seg2Err } = await sb
-        .from("budget_segments")
+        .from(TB_CONST.TABLES.budget_segments)
         .select("*")
         .eq("user_id", sbUser.id)
         .eq("period_id", activePeriodId)
@@ -294,7 +318,7 @@ async function loadFromSupabase() {
   // categories (Supabase is source of truth)
   try {
     const { data: catRows, error: catErr } = await sb
-      .from("categories")
+      .from(TB_CONST.TABLES.categories)
       .select("id,name,color,sort_order")
       .eq("user_id", sbUser.id)
       .order("sort_order", { ascending: true })
@@ -340,7 +364,7 @@ async function loadFromSupabase() {
           sort_order: maxSort + 1 + idx,
         }));
       if (toInsert.length) {
-        const { error: insCErr } = await sb.from("categories").insert(toInsert);
+        const { error: insCErr } = await sb.from(TB_CONST.TABLES.categories).insert(toInsert);
         if (insCErr) console.warn("[categories] auto-seed failed (ignored)", insCErr);
       }
     }

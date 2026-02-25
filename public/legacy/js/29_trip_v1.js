@@ -13,7 +13,7 @@
   async function _getMyTripRole(tripId) {
     try {
       const { data, error } = await sb
-        .from("trip_participants")
+        .from(TB_CONST.TABLES.trip_participants)
         .select("role")
         .eq("trip_id", tripId)
         .eq("auth_user_id", state.user.id)
@@ -300,7 +300,7 @@ async function _findMatchingTransactions({ date, amount, currency }) {
     const uid = await _ensureSession();
     // Heuristic match: same day, same amount/currency, expense type, and not already linked to a trip expense.
     const { data, error } = await sb
-      .from("transactions")
+      .from(TB_CONST.TABLES.transactions)
       .select("id,label,category,wallet_id,trip_expense_id,date_start,date_end,amount,currency,pay_now,out_of_budget")
       
       .eq("type", "expense")
@@ -321,7 +321,7 @@ async function _findMatchingTransactions({ date, amount, currency }) {
     // Enforce 1 transaction = 1 expense (and 1 expense = 1 transaction)
     // Defensive re-check on server to avoid races / stale state.
     const { data: exRow, error: exErr } = await sb
-      .from("trip_expenses")
+      .from(TB_CONST.TABLES.trip_expenses)
       .select("id,transaction_id")
       .eq("id", expenseId)
       .maybeSingle();
@@ -331,7 +331,7 @@ async function _findMatchingTransactions({ date, amount, currency }) {
     }
 
     const { data: txRow, error: txErr } = await sb
-      .from("transactions")
+      .from(TB_CONST.TABLES.transactions)
       .select("id,trip_expense_id")
       .eq("id", transactionId)
       .maybeSingle();
@@ -342,19 +342,19 @@ async function _findMatchingTransactions({ date, amount, currency }) {
 
     // Best-effort 2-step link; rollback on partial failure.
     const { error: e1 } = await sb
-      .from("trip_expenses")
+      .from(TB_CONST.TABLES.trip_expenses)
       .update({ transaction_id: transactionId })
       
       .eq("id", expenseId);
     if (e1) throw e1;
 
     const { error: e2 } = await sb
-      .from("transactions")
+      .from(TB_CONST.TABLES.transactions)
       .update({ trip_expense_id: expenseId })
       
       .eq("id", transactionId);
     if (e2) {
-      await sb.from("trip_expenses").update({ transaction_id: null }).eq("id", expenseId);
+      await sb.from(TB_CONST.TABLES.trip_expenses).update({ transaction_id: null }).eq("id", expenseId);
       throw e2;
     }
   }
@@ -364,8 +364,8 @@ async function _findMatchingTransactions({ date, amount, currency }) {
     if (!expense?.transactionId) return;
     const txId = expense.transactionId;
 
-    await sb.from("transactions").update({ trip_expense_id: null }).eq("id", txId);
-    await sb.from("trip_expenses").update({ transaction_id: null }).eq("id", expense.id);
+    await sb.from(TB_CONST.TABLES.transactions).update({ trip_expense_id: null }).eq("id", txId);
+    await sb.from(TB_CONST.TABLES.trip_expenses).update({ transaction_id: null }).eq("id", expense.id);
   }
 
 
@@ -424,7 +424,7 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
   async function _loadTrips() {
     const uid = await _ensureSession();
     const { data, error } = await sb
-      .from("trip_groups")
+      .from(TB_CONST.TABLES.trip_groups)
       .select("*")
       
       .order("created_at", { ascending: false });
@@ -464,8 +464,8 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
     tripState.myRole = await _getMyTripRole(tripId);
 
     const [{ data: m, error: mErr }, { data: e, error: eErr }, { data: s, error: sErr }, { data: se, error: seErr }] = await Promise.all([
-      sb.from("trip_members").select("*").eq("trip_id", tripId).order("created_at", { ascending: true }),
-      sb.from("trip_expenses").select("*").eq("trip_id", tripId).order("date", { ascending: false }),
+      sb.from(TB_CONST.TABLES.trip_members).select("*").eq("trip_id", tripId).order("created_at", { ascending: true }),
+      sb.from(TB_CONST.TABLES.trip_expenses).select("*").eq("trip_id", tripId).order("date", { ascending: false }),
       sb.from("trip_expense_shares").select("*").eq("trip_id", tripId),
       sb.from("trip_settlement_events").select("*").eq("trip_id", tripId).is("cancelled_at", null),
     ]);
@@ -833,7 +833,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
   // 3) Best-effort link tx id back to settlement event
   try {
     const { data: txRow } = await sb
-      .from("transactions")
+      .from(TB_CONST.TABLES.transactions)
       .select("id")
       .eq("user_id", uid)
       .eq("label", label)
@@ -922,7 +922,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
       // Update settlement event with transaction_id (best-effort)
       try {
         const { data: txRow, error: txErr } = await sb
-          .from("transactions")
+          .from(TB_CONST.TABLES.transactions)
           .select("id")
           .eq("user_id", uid)
           .eq("label", label)
@@ -966,31 +966,24 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
 
     // trip_groups has base_currency NOT NULL in your schema
     const { data, error } = await sb
-      .from("trip_groups")
+      .from(TB_CONST.TABLES.trip_groups)
       .insert([{ user_id: uid, name, base_currency: baseCur }])
       .select("*")
       .single();
     if (error) throw error;
 
 
-    // Access control: register owner participant (RLS)
-    // Some schemas/triggers may already create this row; ignore unique/409 conflicts.
+    // Access control: register owner participant (RLS) — idempotent upsert (V6.5)
     {
-      const { error: pErr } = await sb.from("trip_participants").insert([{ trip_id: data.id, auth_user_id: uid, role: "owner" }]);
-      if (pErr) {
-        const status = pErr.status || pErr.statusCode;
-        const code = pErr.code;
-        if (status === 409 || code === "23505") {
-          console.warn("[Trip] owner participant already exists (ignored)");
-        } else {
-          throw pErr;
-        }
-      }
+      const { error: pErr } = await sb
+        .from(TB_CONST.TABLES.trip_participants)
+        .upsert([{ trip_id: data.id, auth_user_id: uid, role: "owner" }], { onConflict: "trip_id,auth_user_id" });
+      if (pErr) throw pErr;
     }
 
     // default member: Me
     const memPayload = { user_id: uid, trip_id: data.id, name: "Moi", is_me: true };
-    const { error: mErr } = await sb.from("trip_members").insert([memPayload]);
+    const { error: mErr } = await sb.from(TB_CONST.TABLES.trip_members).insert([memPayload]);
     if (mErr) throw mErr;
 
     tripState.activeTripId = data.id;
@@ -1002,24 +995,24 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
     // defensive delete children first (avoids 409 even if cascade isn't present)
     // 1) unlink budget transactions that reference trip expenses (if enabled)
     try {
-      const { data: exIds } = await sb.from("trip_expenses").select("id,transaction_id").eq("trip_id", tripId);
+      const { data: exIds } = await sb.from(TB_CONST.TABLES.trip_expenses).select("id,transaction_id").eq("trip_id", tripId);
       const linkedTx = (exIds || []).map(x => x.transaction_id).filter(Boolean);
       const expIds = (exIds || []).map(x => x.id);
       if (linkedTx.length) {
-        await sb.from("transactions").update({ trip_expense_id: null }).in("id", linkedTx);
+        await sb.from(TB_CONST.TABLES.transactions).update({ trip_expense_id: null }).in("id", linkedTx);
       }
       if (expIds.length) {
-        await sb.from("trip_expenses").update({ transaction_id: null }).in("id", expIds);
+        await sb.from(TB_CONST.TABLES.trip_expenses).update({ transaction_id: null }).in("id", expIds);
       }
     } catch (e) {
       console.warn("Trip unlink before delete failed:", e);
     }
 
     await sb.from("trip_expense_shares").delete().eq("trip_id", tripId);
-    await sb.from("trip_expenses").delete().eq("trip_id", tripId);
-    await sb.from("trip_members").delete().eq("trip_id", tripId);
+    await sb.from(TB_CONST.TABLES.trip_expenses).delete().eq("trip_id", tripId);
+    await sb.from(TB_CONST.TABLES.trip_members).delete().eq("trip_id", tripId);
 
-    const { error } = await sb.from("trip_groups").delete().eq("id", tripId);
+    const { error } = await sb.from(TB_CONST.TABLES.trip_groups).delete().eq("id", tripId);
     if (error) throw error;
 
     if (tripState.activeTripId === tripId) tripState.activeTripId = null;
@@ -1031,11 +1024,11 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
     if (!tripId) return;
 
     if (isMe) {
-      await sb.from("trip_members").update({ is_me: false }).eq("trip_id", tripId);
+      await sb.from(TB_CONST.TABLES.trip_members).update({ is_me: false }).eq("trip_id", tripId);
     }
 
     const payload = { user_id: uid, trip_id: tripId, name, is_me: !!isMe };
-    const { error } = await sb.from("trip_members").insert([payload]);
+    const { error } = await sb.from(TB_CONST.TABLES.trip_members).insert([payload]);
     if (error) throw error;
   }
 
@@ -1052,7 +1045,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
       return;
     }
 
-    const { error } = await sb.from("trip_members").delete().eq("trip_id", tripId).eq("id", memberId);
+    const { error } = await sb.from(TB_CONST.TABLES.trip_members).delete().eq("trip_id", tripId).eq("id", memberId);
     if (error) throw error;
   }
 
@@ -1096,7 +1089,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           if (link) {
             // Create trip expense first, then link.
             const { data: ex, error: exErr } = await sb
-              .from("trip_expenses")
+              .from(TB_CONST.TABLES.trip_expenses)
               .insert([{
                 user_id: uid,
                 trip_id: tripId,
@@ -1139,7 +1132,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                if (isFinite(myShare) && myShare > 0 && Math.abs(myShare - amt) >= 0.005) {
                  const looksLikePayment2 = (m0 && m0.pay_now === true && Math.abs(Number(m0.amount) - amt) < 0.005);
                  if (looksLikePayment2 && m0.out_of_budget !== true) {
-                   await sb.from("transactions").update({ out_of_budget: true }).eq("id", m0.id);
+                   await sb.from(TB_CONST.TABLES.transactions).update({ out_of_budget: true }).eq("id", m0.id);
                  }
                }
              } catch (e) {
@@ -1185,7 +1178,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                     if (rpcErrB) throw rpcErrB;
 
                     const { data: txRowsB, error: txErrB } = await sb
-                      .from("transactions")
+                      .from(TB_CONST.TABLES.transactions)
                       .select("id,period_id")
                       .eq("wallet_id", walletId)
                       .eq("type", "expense")
@@ -1204,10 +1197,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
                     const txB = txRowsB?.[0] || null;
                     if (txB) {
-              await sb.from("transactions").update({ is_internal: true }).eq("id", txB.id);
+              await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", txB.id);
                       const targetPeriodId = _findPeriodIdForDate(date);
                       if (targetPeriodId && (!txB.period_id || txB.period_id !== targetPeriodId)) {
-                        await sb.from("transactions").update({ period_id: targetPeriodId }).eq("id", txB.id);
+                        await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", txB.id);
                       }
                       await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: txB.id });
                     }
@@ -1233,7 +1226,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
     // 1) Create Trip expense + shares
     const { data: ex, error: exErr } = await sb
-      .from("trip_expenses")
+      .from(TB_CONST.TABLES.trip_expenses)
       .insert([{
         user_id: uid,
         trip_id: tripId,
@@ -1297,7 +1290,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       // Update settlement event with transaction_id (best-effort)
       try {
         const { data: txRow, error: txErr } = await sb
-          .from("transactions")
+          .from(TB_CONST.TABLES.transactions)
           .select("id")
           .eq("user_id", uid)
           .eq("label", label)
@@ -1318,7 +1311,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
 
         const { data: txRows, error: txErr } = await sb
-          .from("transactions")
+          .from(TB_CONST.TABLES.transactions)
           .select("id,period_id")
           
           .eq("wallet_id", walletId)
@@ -1339,7 +1332,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
         const tx = txRows?.[0] || null;
         if (tx) {
           if (targetPeriodId && (!tx.period_id || tx.period_id !== targetPeriodId)) {
-            await sb.from("transactions").update({ period_id: targetPeriodId }).eq("id", tx.id);
+            await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", tx.id);
           }
           await _linkExpenseToTransaction(ex.id, tx.id);
         } else {
@@ -1368,7 +1361,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
         if (rpcErrA) throw rpcErrA;
 
         const { data: txRowsA, error: txErrA } = await sb
-          .from("transactions")
+          .from(TB_CONST.TABLES.transactions)
           .select("id,period_id")
           
           .eq("wallet_id", walletId)
@@ -1389,7 +1382,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
         const txA = txRowsA?.[0] || null;
         if (txA) {
           if (targetPeriodId && (!txA.period_id || txA.period_id !== targetPeriodId)) {
-            await sb.from("transactions").update({ period_id: targetPeriodId }).eq("id", txA.id);
+            await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", txA.id);
           }
           await _linkExpenseToTransaction(ex.id, txA.id);
         } else {
@@ -1417,7 +1410,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
             if (rpcErrB) throw rpcErrB;
 
             const { data: txRowsB, error: txErrB } = await sb
-              .from("transactions")
+              .from(TB_CONST.TABLES.transactions)
               .select("id,period_id")
               
               .eq("wallet_id", walletId)
@@ -1437,9 +1430,9 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
             const txB = txRowsB?.[0] || null;
             if (txB) {
-              await sb.from("transactions").update({ is_internal: true }).eq("id", txB.id);
+              await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", txB.id);
               if (targetPeriodId && (!txB.period_id || txB.period_id !== targetPeriodId)) {
-                await sb.from("transactions").update({ period_id: targetPeriodId }).eq("id", txB.id);
+                await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", txB.id);
               }
               await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: txB.id });
             }
@@ -1489,7 +1482,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
               // Fetch created tx and link via trip_expense_budget_links
               const { data: txRows2, error: txErr2 } = await sb
-                .from("transactions")
+                .from(TB_CONST.TABLES.transactions)
                 .select("id,period_id")
                 
                 .eq("wallet_id", wId)
@@ -1508,9 +1501,9 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
               const tx2 = txRows2?.[0] || null;
               if (tx2) {
-                await sb.from("transactions").update({ is_internal: true }).eq("id", tx2.id);
+                await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", tx2.id);
                 if (targetPeriodId && (!tx2.period_id || tx2.period_id !== targetPeriodId)) {
-                  await sb.from("transactions").update({ period_id: targetPeriodId }).eq("id", tx2.id);
+                  await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", tx2.id);
                 }
                 await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: tx2.id });
               }
@@ -1571,8 +1564,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       const txId = ex.transactionId;
 
       // Clear references on both sides (safe even if one column doesn't exist / RLS blocks some updates)
-      await sb.from("trip_expenses").update({ transaction_id: null }).eq("id", expenseId);
-      await sb.from("transactions").update({ trip_expense_id: null }).eq("id", txId);
+      await sb.from(TB_CONST.TABLES.trip_expenses).update({ transaction_id: null }).eq("id", expenseId);
+      await sb.from(TB_CONST.TABLES.transactions).update({ trip_expense_id: null }).eq("id", txId);
 
       const { error: derr } = await sb.rpc("delete_transaction", { p_tx_id: txId });
       if (derr) throw derr;
@@ -1583,7 +1576,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     //     (prevents FK violations like: transactions_trip_expense_fk / transactions_trip_expense_id_fk)
     try {
       const { data: txRefs, error: txRefErr } = await sb
-        .from("transactions")
+        .from(TB_CONST.TABLES.transactions)
         .select("id")
         
         .eq("trip_expense_id", expenseId);
@@ -1602,7 +1595,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
 // 3) Delete shares and the expense itself
     await sb.from("trip_expense_shares").delete().eq("expense_id", expenseId);
-    const { error } = await sb.from("trip_expenses").delete().eq("id", expenseId);
+    const { error } = await sb.from(TB_CONST.TABLES.trip_expenses).delete().eq("id", expenseId);
     if (error) throw error;
   }
 
@@ -1613,7 +1606,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     // 1) Move the expense itself
     {
       const { error } = await sb
-        .from("trip_expenses")
+        .from(TB_CONST.TABLES.trip_expenses)
         .update({ trip_id: newTripId })
         .eq("id", expenseId);
       if (error) throw error;

@@ -9,6 +9,7 @@ async function refreshFromServer() {
 
   try {
     await loadFromSupabase();
+    if (typeof ensureTxFxSnapshots === "function") await ensureTxFxSnapshots();
     if (typeof ensureStateIntegrity === "function") ensureStateIntegrity();
     renderAll();
     if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("render:done");

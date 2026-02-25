@@ -12,7 +12,7 @@ async function adjustWalletBalance(walletId) {
     const val = parseFloat(String(raw).replace(",", "."));
     if (!isFinite(val)) throw new Error("Nombre invalide.");
 
-    const { error } = await sb.from("wallets").update({ balance: val }).eq("id", walletId);
+    const { error } = await sb.from(TB_CONST.TABLES.wallets).update({ balance: val }).eq("id", walletId);
     if (error) throw error;
 
     await refreshFromServer();

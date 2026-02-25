@@ -6,7 +6,7 @@ async function loadPeriodsListIntoUI() {
   if (!sel) return;
 
   const { data: periods, error } = await sb
-    .from("periods")
+    .from(TB_CONST.TABLES.periods)
     .select("id,start_date,end_date,base_currency")
     .order("start_date", { ascending: false });
   if (error) return alert(error.message);
@@ -48,7 +48,7 @@ async function setActivePeriod(periodId) {
   };
 
   try {
-    await sb.from("settings").upsert({
+    await sb.from(TB_CONST.TABLES.settings).upsert({
       user_id: sbUser.id,
       active_period_id: p.id,
       updated_at: new Date().toISOString(),
@@ -243,14 +243,60 @@ const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
       eurBaseRateFixed = null;
     }
 
+
+    // === Validations (V6.5) ===
+    const _norm = (d) => {
+      const s = String(d || "").trim();
+      if (!s) return "";
+      // already YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      const dt = new Date(s);
+      if (!Number.isFinite(dt.getTime())) throw new Error(`Date invalide: ${s}`);
+      return toLocalISODate(dt);
+    };
+
+    const startN = _norm(start);
+    const endN = _norm(endFixed);
+
+    if (startN && endN && startN > endN) throw new Error("start ≤ end requis.");
+
+    // block overlaps within same period
+    const segsSame = (state.budgetSegments || []).filter(s => s && String(s.periodId || s.period_id) === String(state.period.id));
+    const edited = segsSame.map(s => {
+      if (String(s.id) !== String(id)) return s;
+      return { ...s, start: startN, end: endN, start_date: startN, end_date: endN };
+    });
+
+    // sort by start date then order
+    const ranges = edited
+      .map(s => ({
+        id: s.id,
+        start: String(s.start_date || s.start || ""),
+        end: String(s.end_date || s.end || ""),
+      }))
+      .filter(r => r.start && r.end)
+      .sort((a,b) => a.start.localeCompare(b.start));
+
+    for (let i=1;i<ranges.length;i++){
+      const prev = ranges[i-1], cur = ranges[i];
+      if (cur.start <= prev.end) {
+        throw new Error(`Overlap interdit: ${cur.id} (${cur.start}) chevauche ${prev.id} (${prev.end}).`);
+      }
+    }
+
     const { error } = await sb
-      .from("budget_segments")
+      .from(TB_CONST.TABLES.budget_segments)
       .update({
-        start_date: start,
-        end_date: endFixed,
+        start_date: startN,
+        end_date: endN,
         base_currency: baseCurrency,
         daily_budget_base: dailyBudgetBase,
         fx_mode: fxMode,
+        // V6.5 FX storage
+        fx_rate_eur_to_base: (fxMode === "fixed" ? eurBaseRateFixed : null),
+        fx_source: (fxMode === "fixed" ? "manual" : "ecb"),
+        fx_last_updated_at: (fxMode === "fixed" ? new Date().toISOString() : new Date().toISOString()),
+        // legacy compat (kept while DB migration is rolling)
         eur_base_rate_fixed: eurBaseRateFixed,
         // sort_order intentionally not updated (order is fixed)
         updated_at: new Date().toISOString(),
@@ -303,7 +349,7 @@ async function splitBudgetSegmentPrompt(id) {
     const oldEnd = seg.end;
 
     const upd = await sb
-      .from("budget_segments")
+      .from(TB_CONST.TABLES.budget_segments)
       .update({
         end_date: leftEndStr,
         updated_at: new Date().toISOString(),
@@ -318,7 +364,7 @@ async function splitBudgetSegmentPrompt(id) {
     }
 
     const ins = await sb
-      .from("budget_segments")
+      .from(TB_CONST.TABLES.budget_segments)
       .insert([
         {
           user_id: sbUser.id,
@@ -337,7 +383,7 @@ async function splitBudgetSegmentPrompt(id) {
 
     if (ins.error) {
       await sb
-        .from("budget_segments")
+        .from(TB_CONST.TABLES.budget_segments)
         .update({
           end_date: oldEnd,
           updated_at: new Date().toISOString(),
@@ -376,7 +422,7 @@ async function _syncLastSegmentEndToPeriod(periodId, periodEndISO) {
     if (currentEnd === String(pend)) return;
 
     const { error } = await sb
-      .from("budget_segments")
+      .from(TB_CONST.TABLES.budget_segments)
       .update({ end_date: pend, updated_at: new Date().toISOString() })
       .eq("id", lastId);
 
@@ -407,7 +453,7 @@ async function saveSettings() {
     if (!isFinite(d) || d <= 0) throw new Error("Budget/jour invalide.");
 
     const { error } = await sb
-      .from("periods")
+      .from(TB_CONST.TABLES.periods)
       .update({
         start_date: s,
         end_date: e,
@@ -419,7 +465,7 @@ async function saveSettings() {
     if (error) throw error;
 
     const { error: pErr2 } = await sb
-      .from("periods")
+      .from(TB_CONST.TABLES.periods)
       .update({
         eur_base_rate: isFinite(r) ? r : null,
         daily_budget_base: d,
@@ -453,7 +499,7 @@ async function newPeriod() {
     if (!isFinite(daily) || daily <= 0) throw new Error("Budget/jour invalide.");
 
     const { data, error } = await sb
-      .from("periods")
+      .from(TB_CONST.TABLES.periods)
       .insert([
         {
           user_id: sbUser.id,
@@ -471,7 +517,7 @@ async function newPeriod() {
 
     if (error) throw error;
 
-    await sb.from("budget_segments").insert([
+    await sb.from(TB_CONST.TABLES.budget_segments).insert([
       {
         user_id: sbUser.id,
         period_id: data.id,
@@ -497,9 +543,9 @@ async function deletePeriod() {
     if (!state.period.id) throw new Error("Aucune période active.");
     if (!confirm("Supprimer cette période ?")) return;
 
-    await sb.from("budget_segments").delete().eq("period_id", state.period.id);
+    await sb.from(TB_CONST.TABLES.budget_segments).delete().eq("period_id", state.period.id);
 
-    const { error } = await sb.from("periods").delete().eq("id", state.period.id);
+    const { error } = await sb.from(TB_CONST.TABLES.periods).delete().eq("id", state.period.id);
     if (error) throw error;
 
     await refreshFromServer();
@@ -564,7 +610,7 @@ function addCategory() {
     const existing = (state.categories || []).find(c => String(c).toLowerCase() === name.toLowerCase()) || null;
     if (existing) {
       const { error: upErr } = await sb
-        .from("categories")
+        .from(TB_CONST.TABLES.categories)
         .update({ color, updated_at: new Date().toISOString() })
         .eq("user_id", sbUser.id)
         .eq("name", existing);
@@ -572,7 +618,7 @@ function addCategory() {
     } else {
       const maxSort = (state.categories || []).length;
       const { error: insErr } = await sb
-        .from("categories")
+        .from(TB_CONST.TABLES.categories)
         .insert([{ user_id: sbUser.id, name, color, sort_order: maxSort, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
       if (insErr) throw insErr;
     }
@@ -590,7 +636,7 @@ function deleteCategory(name) {
     if (!confirm(`Supprimer la catégorie "${n}" ?`)) return;
     const existing = (state.categories || []).find(c => String(c).toLowerCase() === n.toLowerCase()) || n;
     const { error: delErr } = await sb
-      .from("categories")
+      .from(TB_CONST.TABLES.categories)
       .delete()
       .eq("user_id", sbUser.id)
       .eq("name", existing);
@@ -607,7 +653,7 @@ function setCategoryColor(name, color) {
     if (!n) return;
     const existing = (state.categories || []).find(c => String(c).toLowerCase() === n.toLowerCase()) || n;
     const { error: upErr } = await sb
-      .from("categories")
+      .from(TB_CONST.TABLES.categories)
       .update({ color: String(color || "#94a3b8"), updated_at: new Date().toISOString() })
       .eq("user_id", sbUser.id)
       .eq("name", existing);

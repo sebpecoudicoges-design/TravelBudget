@@ -5,10 +5,10 @@
    ========================= */
 
 function _fxSetEurRates(rates) {
-  try { localStorage.setItem("EUR_RATES", JSON.stringify(rates || {})); } catch (_) {}
+  try { localStorage.setItem(TB_CONST.LS_KEYS.eur_rates, JSON.stringify(rates || {})); } catch (_) {}
 }
 function _fxGetEurRates() {
-  try { return JSON.parse(localStorage.getItem("EUR_RATES") || "{}"); } catch (_) { return {}; }
+  try { return JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates) || "{}"); } catch (_) { return {}; }
 }
 
 async function refreshFxRates() {
@@ -30,8 +30,8 @@ const allRates = { ...previous, ...data.rates };
   const needed = new Set();
   segs.forEach((s) => {
     if (!s) return;
-    const mode = String(s.fxMode || "auto");
-    const cur = String(s.baseCurrency || "").toUpperCase();
+    const mode = String(s.fx_mode || s.fxMode || "auto");
+    const cur = String(s.base_currency || s.baseCurrency || "").toUpperCase();
     if (!cur || cur === "EUR") return;
     if (mode === "fixed") return; // manual rate is stored in segment
     // auto / live_ecb: we'd like EUR->CUR to exist; if missing and no fixed fallback, we'll prompt
@@ -45,7 +45,7 @@ const allRates = { ...previous, ...data.rates };
     if (!r) {
       // Try fixed fallback from any segment using this currency
       const seg = segs.find(x => String(x?.baseCurrency || "").toUpperCase() === cur);
-      const fixed = Number(seg?.eurBaseRateFixed);
+      const fixed = Number(seg?.fx_rate_eur_to_base ?? seg?.eurBaseRateFixed ?? seg?.eur_base_rate_fixed);
       if (fixed && fixed > 0) {
         allRates[cur] = fixed;
         continue;
@@ -85,7 +85,7 @@ const allRates = { ...previous, ...data.rates };
 
   // 5) Persist côté DB (comme avant)
   const { error: upErr } = await sb
-    .from("periods")
+    .from(TB_CONST.TABLES.periods)
     .update({ eur_base_rate: eurToBaseNow, updated_at: new Date().toISOString() })
     .eq("id", state.period.id);
 

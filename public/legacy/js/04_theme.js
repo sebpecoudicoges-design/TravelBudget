@@ -15,6 +15,6 @@ function toggleTheme() {
   if (sbUser) saveThemeToServer(next).catch(() => {});
 }
 async function saveThemeToServer(theme) {
-  await sb.from("settings").update({ theme, updated_at: new Date().toISOString() }).eq("user_id", sbUser.id);
+  await sb.from(TB_CONST.TABLES.settings).update({ theme, updated_at: new Date().toISOString() }).eq("user_id", sbUser.id);
 }
 
