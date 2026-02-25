@@ -8,9 +8,8 @@ async function ensureTxFxSnapshots() {
     if (!sbUser) return;
     if (window.TB_FREEZE) return;
 
-    const base = String(state?.period?.baseCurrency || state?.period?.base_currency || "EUR").toUpperCase();
     const txs = Array.isArray(state.transactions) ? state.transactions : [];
-    const pending = txs.filter(t => t && !t.fx_rate_snapshot && !t.fxRateSnapshot && String(t.currency || "").toUpperCase() !== base);
+    const pending = txs.filter(t => t && !t.fx_rate_snapshot && !t.fxRateSnapshot);
 
     if (!pending.length) return;
 
@@ -18,13 +17,31 @@ async function ensureTxFxSnapshots() {
     const batch = pending.slice(0, 20);
 
     for (const tx of batch) {
+      const ds = String(tx.dateStart || tx.date_start || "").slice(0, 10);
+      const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(ds) : null;
+      const base = String(seg?.baseCurrency || state?.period?.baseCurrency || state?.period?.base_currency || "EUR").toUpperCase();
       const from = String(tx.currency || "").toUpperCase();
-      const rate = (typeof fxRate === "function") ? fxRate(from, base) : null;
-      if (!rate || !Number.isFinite(rate)) continue;
+      if (!from || from === base) {
+        // identity snapshot
+      }
+
+      let snap = null;
+      try {
+        if (typeof window.fxBuildTxSnapshot === "function") {
+          snap = window.fxBuildTxSnapshot(from || base, base, ds);
+        }
+      } catch (_) {
+        snap = null;
+      }
+
+      if (!snap) continue;
 
       const payload = {
-        fx_rate_snapshot: rate,
-        fx_source_snapshot: "ecb_or_manual",
+        fx_rate_snapshot: snap.fx_rate_snapshot,
+        fx_source_snapshot: snap.fx_source_snapshot,
+        fx_snapshot_at: snap.fx_snapshot_at,
+        fx_base_currency_snapshot: snap.fx_base_currency_snapshot,
+        fx_tx_currency_snapshot: snap.fx_tx_currency_snapshot,
         updated_at: new Date().toISOString(),
       };
 

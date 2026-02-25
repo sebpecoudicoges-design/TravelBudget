@@ -168,3 +168,14 @@ async function handleAuthRedirectFlow() {
    ========================= */
 
 handleAuthRedirectFlow();
+
+// Debug-only: expose env to console checks
+try {
+  const isDebug = new URLSearchParams(location.search).get("debug") === "1";
+  if (isDebug) {
+    window.__TB_ENV = {
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
+    };
+  }
+} catch (_) {}

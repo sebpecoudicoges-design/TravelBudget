@@ -163,6 +163,59 @@ function _setTxModalLock(isLocked, reason) {
 
 let _savingTx = false;
 
+async function _findLikelyCreatedTxId({ walletId, type, amount, start, end, label }) {
+  try {
+    const { data, error } = await sb
+      .from(TB_CONST.TABLES.transactions)
+      .select("id,label,amount,type,wallet_id,date_start,date_end,created_at")
+      .eq("wallet_id", walletId)
+      .eq("type", type)
+      .eq("date_start", start)
+      .order("created_at", { ascending: false })
+      .limit(10);
+    if (error) return null;
+    const arr = Array.isArray(data) ? data : [];
+    // Match by amount + label when possible
+    const best = arr.find(x => Math.abs(Number(x.amount) - Number(amount)) < 0.0001 && String(x.label||"") === String(label||""))
+      || arr.find(x => Math.abs(Number(x.amount) - Number(amount)) < 0.0001)
+      || arr[0];
+    return best?.id || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function _snapshotBaseCurrencyForTxDate(dateStr) {
+  const ds = String(dateStr || "").slice(0, 10);
+  const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(ds) : null;
+  return String(seg?.baseCurrency || state?.period?.baseCurrency || state?.period?.base_currency || "EUR").toUpperCase();
+}
+
+async function _ensureTxSnapshotById(txId, txCurrency, txDateStart) {
+  if (!txId) return;
+  if (window.TB_FREEZE) return;
+  if (typeof window.fxBuildTxSnapshot !== "function") return;
+
+  const baseCur = _snapshotBaseCurrencyForTxDate(txDateStart);
+  const ds = String(txDateStart || "").slice(0, 10);
+  const snap = window.fxBuildTxSnapshot(txCurrency, baseCur, ds);
+
+  const payload = {
+    fx_rate_snapshot: snap.fx_rate_snapshot,
+    fx_source_snapshot: snap.fx_source_snapshot,
+    fx_snapshot_at: snap.fx_snapshot_at,
+    fx_base_currency_snapshot: snap.fx_base_currency_snapshot,
+    fx_tx_currency_snapshot: snap.fx_tx_currency_snapshot,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await sb
+    .from(TB_CONST.TABLES.transactions)
+    .update(payload)
+    .eq("id", txId);
+  if (error) throw error;
+}
+
 async function saveModal() {
   if (_savingTx) return;
   _savingTx = true;
@@ -222,7 +275,7 @@ async function saveModal() {
           if (!!outOfBudget !== !!current.outOfBudget) throw new Error("Transaction liée à Trip : flag out_of_budget géré automatiquement.");
         }
 
-        const { error } = await sb.rpc("update_transaction", {
+        const { data, error } = await sb.rpc("update_transaction", {
           p_tx_id: editingTxId,
           p_wallet_id: walletId,
           p_type: type,
@@ -237,8 +290,11 @@ async function saveModal() {
           p_night_covered: type === "expense" && category === "Transport" ? nightCovered : false,
         });
         if (error) throw error;
+
+        // Immutable FX snapshot (Option B): refresh snapshot after update
+        await _ensureTxSnapshotById(editingTxId, wallet.currency, start);
       } else {
-        const { error } = await sb.rpc("apply_transaction", {
+        const { data, error } = await sb.rpc("apply_transaction", {
           p_wallet_id: walletId,
           p_type: type,
           p_amount: amount,
@@ -252,6 +308,21 @@ async function saveModal() {
           p_night_covered: type === "expense" && category === "Transport" ? nightCovered : false,
         });
         if (error) throw error;
+
+        // Immutable FX snapshot (Option B): try to locate the created tx and freeze its rate
+        let createdId = null;
+        try {
+          if (typeof data === "string") createdId = data;
+          else if (data && typeof data === "object") createdId = data.id || data.tx_id || data.transaction_id || null;
+          else if (Array.isArray(data) && data[0]) createdId = data[0].id || data[0].tx_id || null;
+        } catch (_) {}
+
+        if (!createdId) {
+          createdId = await _findLikelyCreatedTxId({ walletId, type, amount, start, end, label });
+        }
+        if (createdId) {
+          await _ensureTxSnapshotById(createdId, wallet.currency, start);
+        }
       }
 
       closeModal();

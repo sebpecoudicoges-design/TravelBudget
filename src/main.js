@@ -16,6 +16,7 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/06_allocations.js',
   '/legacy/js/07_supabase_bootstrap.js',
   '/legacy/js/09_fx.js',
+  '/legacy/js/09_fx_snapshot.js',
   '/legacy/js/26_fx_crossrate.js',
   '/legacy/js/24_tx_fx_snapshot.js',
   '/legacy/js/28_data_updated_bus.js',
