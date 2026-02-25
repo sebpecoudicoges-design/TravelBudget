@@ -17,6 +17,13 @@
     trip_participants: "trip_participants",
     trip_members: "trip_members",
     schema_version: "schema_version",
+
+    trip_invites: "trip_invites",
+    trip_expense_shares: "trip_expense_shares",
+    trip_expense_budget_links: "trip_expense_budget_links",
+    trip_settlements: "trip_settlements",
+    trip_settlement_events: "trip_settlement_events",
+    v_trip_user_net_balances: "v_trip_user_net_balances",
   });
 
   const COLS = Object.freeze({
