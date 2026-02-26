@@ -1,0 +1,638 @@
+{
+  "generated_at": "2026-02-26T16:34:31.603437Z",
+  "note": "UI-ish strings detected in legacy/js. Use as a checklist to translate/clean. Not all are user-facing.",
+  "strings": [
+    {
+      "string": "Wallet introuvable.",
+      "count": 5
+    },
+    {
+      "string": "Budget/jour invalide.",
+      "count": 4
+    },
+    {
+      "string": "Non connecté.",
+      "count": 3
+    },
+    {
+      "string": "Fin < début.",
+      "count": 3
+    },
+    {
+      "string": "Aucune période active.",
+      "count": 3
+    },
+    {
+      "string": "Transaction introuvable.",
+      "count": 3
+    },
+    {
+      "string": "Erreur inconnue",
+      "count": 2
+    },
+    {
+      "string": "Session expirée. Reconnecte-toi.",
+      "count": 2
+    },
+    {
+      "string": "Aligné",
+      "count": 2
+    },
+    {
+      "string": "Wallet invalide.",
+      "count": 2
+    },
+    {
+      "string": "Règlement enregistré (sans wallet).",
+      "count": 2
+    },
+    {
+      "string": "Aucun règlement en cours.",
+      "count": 2
+    },
+    {
+      "string": "[Trip] Crée d’abord un lien.",
+      "count": 2
+    },
+    {
+      "string": "Règlement invalide.",
+      "count": 2
+    },
+    {
+      "string": "Période",
+      "count": 1
+    },
+    {
+      "string": "Périodes",
+      "count": 1
+    },
+    {
+      "string": "Total (ms):",
+      "count": 1
+    },
+    {
+      "string": "Nouveau mot de passe (min 8 caractères)",
+      "count": 1
+    },
+    {
+      "string": "Mise à jour...",
+      "count": 1
+    },
+    {
+      "string": "Erreur : ",
+      "count": 1
+    },
+    {
+      "string": "Compte créé. Si confirmation email activée, confirme puis connecte-toi.",
+      "count": 1
+    },
+    {
+      "string": "Déconnecté.",
+      "count": 1
+    },
+    {
+      "string": "La date de fin doit être >= début.",
+      "count": 1
+    },
+    {
+      "string": "Devise invalide (3 lettres).",
+      "count": 1
+    },
+    {
+      "string": "Aucune période trouvée.",
+      "count": 1
+    },
+    {
+      "string": "Période active introuvable.",
+      "count": 1
+    },
+    {
+      "string": "Réponse taux invalide.",
+      "count": 1
+    },
+    {
+      "string": "Fin période",
+      "count": 1
+    },
+    {
+      "string": "Budget/j invalide",
+      "count": 1
+    },
+    {
+      "string": "Réduire",
+      "count": 1
+    },
+    {
+      "string": "Dépenses",
+      "count": 1
+    },
+    {
+      "string": "1) Crée un <b>wallet</b> (ex: Cash THB).",
+      "count": 1
+    },
+    {
+      "string": "2) Configure ta <b>période</b> et ta devise principale.",
+      "count": 1
+    },
+    {
+      "string": "3) Ajoute 1 première transaction (exemple : <i>Déjeuner 120 THB</i>).",
+      "count": 1
+    },
+    {
+      "string": "Devise ? (ex: EUR, THB, VND)",
+      "count": 1
+    },
+    {
+      "string": "Aucune période active (period_id introuvable).",
+      "count": 1
+    },
+    {
+      "string": "Erreur création wallet",
+      "count": 1
+    },
+    {
+      "string": "Erreur suppression wallet",
+      "count": 1
+    },
+    {
+      "string": "7 jours",
+      "count": 1
+    },
+    {
+      "string": "Payé",
+      "count": 1
+    },
+    {
+      "string": "À payer",
+      "count": 1
+    },
+    {
+      "string": "payé",
+      "count": 1
+    },
+    {
+      "string": "à payer",
+      "count": 1
+    },
+    {
+      "string": "entrée",
+      "count": 1
+    },
+    {
+      "string": "Dépense",
+      "count": 1
+    },
+    {
+      "string": "Entrée",
+      "count": 1
+    },
+    {
+      "string": "Reçu",
+      "count": 1
+    },
+    {
+      "string": "Devise utilisée pour le budget/jour et les courbes sur ce segment.",
+      "count": 1
+    },
+    {
+      "string": "Taux de conversion EUR→Devise base. En auto, ce champ est verrouillé si ECB fournit le taux.",
+      "count": 1
+    },
+    {
+      "string": "Save période",
+      "count": 1
+    },
+    {
+      "string": "Devise vide.",
+      "count": 1
+    },
+    {
+      "string": "Split période",
+      "count": 1
+    },
+    {
+      "string": "Split doit être > début.",
+      "count": 1
+    },
+    {
+      "string": "Split doit être dans le période.",
+      "count": 1
+    },
+    {
+      "string": "Split ne peut pas être égal à la fin du période.",
+      "count": 1
+    },
+    {
+      "string": "[Settings] sync last période end failed",
+      "count": 1
+    },
+    {
+      "string": "Enregistrer voyage",
+      "count": 1
+    },
+    {
+      "string": "UI settings non à jour.",
+      "count": 1
+    },
+    {
+      "string": "Nouvelle période",
+      "count": 1
+    },
+    {
+      "string": "Date début (YYYY-MM-DD)",
+      "count": 1
+    },
+    {
+      "string": "Devise base (ex: THB, EUR)",
+      "count": 1
+    },
+    {
+      "string": "Budget/jour (devise base)",
+      "count": 1
+    },
+    {
+      "string": "Supprimer période",
+      "count": 1
+    },
+    {
+      "string": "Supprimer cette période ?",
+      "count": 1
+    },
+    {
+      "string": "Nom de catégorie vide.",
+      "count": 1
+    },
+    {
+      "string": "Transaction liée à une dépense Trip : édition verrouillée (seuls libellé/catégorie restent modifiables).",
+      "count": 1
+    },
+    {
+      "string": "Cette transaction est verrouillée.",
+      "count": 1
+    },
+    {
+      "string": "Date début invalide.",
+      "count": 1
+    },
+    {
+      "string": "Date fin < date début.",
+      "count": 1
+    },
+    {
+      "string": "Transaction liée à Trip : changement de wallet interdit.",
+      "count": 1
+    },
+    {
+      "string": "Transaction liée à Trip : changement de type interdit.",
+      "count": 1
+    },
+    {
+      "string": "Transaction liée à Trip : changement de montant interdit (modifie la dépense Trip à la place).",
+      "count": 1
+    },
+    {
+      "string": "Transaction liée à Trip : changement de dates interdit.",
+      "count": 1
+    },
+    {
+      "string": "Transaction liée à Trip : changement pay_now interdit.",
+      "count": 1
+    },
+    {
+      "string": "Transaction liée à Trip : flag out_of_budget géré automatiquement.",
+      "count": 1
+    },
+    {
+      "string": "Mode freeze actif : aucune écriture autorisée.",
+      "count": 1
+    },
+    {
+      "string": "Aucune transaction à re-snapshot.",
+      "count": 1
+    },
+    {
+      "string": "Cette transaction est déjà payée. Re-snapshot = supprimer + recréer manuellement si nécessaire.",
+      "count": 1
+    },
+    {
+      "string": "Re-snapshot : recréer la transaction (nouveau taux) puis supprimer l'ancienne. Continuer ?",
+      "count": 1
+    },
+    {
+      "string": "Impossible de retrouver la transaction recréée.",
+      "count": 1
+    },
+    {
+      "string": "Supprimer cette transaction ? (solde wallet ajusté automatiquement)",
+      "count": 1
+    },
+    {
+      "string": "Marquer comme payé",
+      "count": 1
+    },
+    {
+      "string": "Seules les dépenses et les recettes sont concernées.",
+      "count": 1
+    },
+    {
+      "string": "Aucune donnée",
+      "count": 1
+    },
+    {
+      "string": "Aucune dépense (filtre actif)",
+      "count": 1
+    },
+    {
+      "string": "Budget journalier",
+      "count": 1
+    },
+    {
+      "string": "Backup exporté ✅ (fichier téléchargé + clipboard si possible)",
+      "count": 1
+    },
+    {
+      "string": "Backup invalide : dates de période manquantes.",
+      "count": 1
+    },
+    {
+      "string": "⚠️ Import = écrase la période active :\\n",
+      "count": 1
+    },
+    {
+      "string": "- met à jour dates/devise/taux/budget de la période active\\n",
+      "count": 1
+    },
+    {
+      "string": "- remplace toutes les transactions de la période active\\n",
+      "count": 1
+    },
+    {
+      "string": "- met à jour les soldes des wallets (par name+currency)\\n\\n",
+      "count": 1
+    },
+    {
+      "string": "Import terminé ✅",
+      "count": 1
+    },
+    {
+      "string": "Budget OK",
+      "count": 1
+    },
+    {
+      "string": "Aucune incohérence détectée.",
+      "count": 1
+    },
+    {
+      "string": "Budget audit warnings:",
+      "count": 1
+    },
+    {
+      "string": "Devise période invalide",
+      "count": 1
+    },
+    {
+      "string": "Période: dates manquantes",
+      "count": 1
+    },
+    {
+      "string": "Wallet sans nom",
+      "count": 1
+    },
+    {
+      "string": "✅ Données OK",
+      "count": 1
+    },
+    {
+      "string": "pas de données",
+      "count": 1
+    },
+    {
+      "string": "Dépensé/jour",
+      "count": 1
+    },
+    {
+      "string": "Budget dépensé/jour",
+      "count": 1
+    },
+    {
+      "string": "Aucune période définie.",
+      "count": 1
+    },
+    {
+      "string": "Dates de période invalides.",
+      "count": 1
+    },
+    {
+      "string": "Devise de base manquante.",
+      "count": 1
+    },
+    {
+      "string": "Séries invalides (NaN).",
+      "count": 1
+    },
+    {
+      "string": "Période complète",
+      "count": 1
+    },
+    {
+      "string": "<div class=\"card\"><h2>Trésorerie</h2><div class=\"muted\">ApexCharts non chargé.</div></div>",
+      "count": 1
+    },
+    {
+      "string": "Toute la période",
+      "count": 1
+    },
+    {
+      "string": "[Trip] Invitation acceptée.",
+      "count": 1
+    },
+    {
+      "string": "[Trip] Invitation invalide/expirée.",
+      "count": 1
+    },
+    {
+      "string": "[Trip] Copié (partage non supporté ici).",
+      "count": 1
+    },
+    {
+      "string": "Répartition en % invalide : renseigne des pourcentages (>0).",
+      "count": 1
+    },
+    {
+      "string": "Répartition en montants invalide : la somme doit égaler le total.",
+      "count": 1
+    },
+    {
+      "string": "Montant dépense invalide.",
+      "count": 1
+    },
+    {
+      "string": "Répartition invalide.",
+      "count": 1
+    },
+    {
+      "string": "Répartition invalide (NaN).",
+      "count": 1
+    },
+    {
+      "string": "Répartition invalide (valeur négative).",
+      "count": 1
+    },
+    {
+      "string": "Cette dépense Trip est déjà liée à une transaction.",
+      "count": 1
+    },
+    {
+      "string": "Cette transaction Budget est déjà liée à une autre dépense Trip.",
+      "count": 1
+    },
+    {
+      "string": "Session non prête. Connecte-toi puis recharge.",
+      "count": 1
+    },
+    {
+      "string": "Aucun règlement nécessaire.",
+      "count": 1
+    },
+    {
+      "string": "Règlement enregistré.",
+      "count": 1
+    },
+    {
+      "string": "Aucun participant 'moi' défini dans ce trip.",
+      "count": 1
+    },
+    {
+      "string": "Tu ne peux enregistrer qu’un règlement qui te concerne (payer ou recevoir).",
+      "count": 1
+    },
+    {
+      "string": "Aucune wallet disponible. Crée/sélectionne une wallet.",
+      "count": 1
+    },
+    {
+      "string": "Impossible de supprimer ce participant : il est lié à des dépenses (payeur et/ou parts). Réassigne ou supprime d'abord les dépenses concernées.",
+      "count": 1
+    },
+    {
+      "string": "Date, libellé et montant (>0) requis.",
+      "count": 1
+    },
+    {
+      "string": "Sélectionne qui a payé.",
+      "count": 1
+    },
+    {
+      "string": "Choisis une wallet (pour décompter le paiement).",
+      "count": 1
+    },
+    {
+      "string": "(sans libellé)",
+      "count": 1
+    },
+    {
+      "string": "[Trip] Lien fait, mais la transaction sélectionnée ne ressemble ni au paiement complet ni à ta part. Vérifie le cashflow et ajoute la transaction Budget de ta part si besoin.",
+      "count": 1
+    },
+    {
+      "string": "Budget tx created but not found for linking.",
+      "count": 1
+    },
+    {
+      "string": "[Trip] Impossible de déterminer ta part pour le budget (participant 'moi' manquant).",
+      "count": 1
+    },
+    {
+      "string": "[Trip] Déplacement invalide.",
+      "count": 1
+    },
+    {
+      "string": "Rien à régler pour l'instant",
+      "count": 1
+    },
+    {
+      "string": " • lié au budget",
+      "count": 1
+    },
+    {
+      "string": "Ex: Thaïlande",
+      "count": 1
+    },
+    {
+      "string": "Ex: Dîner",
+      "count": 1
+    },
+    {
+      "string": "Trip créé.",
+      "count": 1
+    },
+    {
+      "string": "[Trip] Sélectionne un trip d\\'abord.",
+      "count": 1
+    },
+    {
+      "string": "Supprimer ce trip ?",
+      "count": 1
+    },
+    {
+      "string": "Trip supprimé.",
+      "count": 1
+    },
+    {
+      "string": "[Trip] Sélectionne un trip d'abord.",
+      "count": 1
+    },
+    {
+      "string": "[Trip] Lien créé.",
+      "count": 1
+    },
+    {
+      "string": "[Trip] Lien copié.",
+      "count": 1
+    },
+    {
+      "string": "Participant ajouté.",
+      "count": 1
+    },
+    {
+      "string": "Supprimer ce participant ?",
+      "count": 1
+    },
+    {
+      "string": "Dépense ajoutée.",
+      "count": 1
+    },
+    {
+      "string": "Annuler ce règlement ?\\n\\nNote: cela ne supprime PAS la transaction wallet associée (si elle existe).",
+      "count": 1
+    },
+    {
+      "string": "Règlement annulé.",
+      "count": 1
+    },
+    {
+      "string": "Copié.",
+      "count": 1
+    },
+    {
+      "string": "Copié (partage non supporté ici).",
+      "count": 1
+    },
+    {
+      "string": "Supprimer cette dépense ?",
+      "count": 1
+    },
+    {
+      "string": "Dépense supprimée.",
+      "count": 1
+    },
+    {
+      "string": "Dépense déplacée.",
+      "count": 1
+    },
+    {
+      "string": "Copié ✅",
+      "count": 1
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import './app/bridge.js';
 
 const LEGACY_SCRIPTS = [
   '/legacy/js/00_constants.js',
+  '/legacy/js/00_i18n.js',
   '/legacy/js/00_perf.js',
   '/legacy/js/98_error_bus.js',
   '/legacy/js/00_supabase_config.js',
@@ -42,6 +43,8 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/30_members_admin.js'
 ];
 
+const OPTIONAL_SCRIPTS = new Set(['/legacy/js/00_perf.js']);
+
 function loadScript(src) {
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
@@ -61,7 +64,15 @@ async function boot() {
 
   for (const src of LEGACY_SCRIPTS) {
     // eslint-disable-next-line no-await-in-loop
-    await loadScript(src);
+    try {
+      await loadScript(src);
+    } catch (e) {
+      if (OPTIONAL_SCRIPTS.has(src)) {
+        console.warn('[TB] Optional legacy script missing:', src);
+        continue;
+      }
+      throw e;
+    }
   }
 }
 

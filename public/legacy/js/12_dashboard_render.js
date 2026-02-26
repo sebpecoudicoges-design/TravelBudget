@@ -28,9 +28,9 @@ function renderOnboardingPanel() {
   const hasSettings = !!(window.state && Array.isArray(state.settings) && state.settings.length);
 
   const steps = [];
-  if (!wallets.length) steps.push("1) Crée un <b>wallet</b> (ex: Cash THB).");
-  if (!hasSegments && !hasSettings) steps.push("2) Configure ta <b>période</b> et ta devise principale.");
-  if (!txs.length) steps.push("3) Ajoute 1 première transaction (exemple : <i>Déjeuner 120 THB</i>).");
+  if (!wallets.length) steps.push(tbT ? tbT("onboarding.step.wallet") : "1) Crée un <b>wallet</b> (ex : Cash THB).");
+  if (!hasSegments && !hasSettings) steps.push(tbT ? tbT("onboarding.step.period") : "2) Configure ta <b>période</b> et ta devise principale.");
+  if (!txs.length) steps.push(tbT ? tbT("onboarding.step.tx") : "3) Ajoute une première transaction (ex : <i>Déjeuner 120 THB</i>).");
 
   if (!steps.length) {
     panel.style.display = "none";
@@ -40,7 +40,7 @@ function renderOnboardingPanel() {
   panel.style.display = "block";
   body.innerHTML = `
     <div>${steps.join("<br/>")}</div>
-    <div style="margin-top:6px; opacity:.8;">Astuce : sur chaque champ sensible, clique sur le <b>?</b> pour une explication.</div>
+    <div style="margin-top:6px; opacity:.8;">${tbT ? tbT("onboarding.tip") : "Astuce : sur chaque champ sensible, clique sur le <b>?</b> pour une explication."}</div>
   `;
 }
 
@@ -80,8 +80,8 @@ if (!wallets.length) {
   empty.style.borderRadius = "10px";
   empty.style.background = "rgba(0,0,0,.02)";
   empty.innerHTML = `
-    <b>Aucun wallet.</b><br/>
-    Crée au moins 1 wallet pour suivre ton solde (ex: Cash THB, Banque EUR).
+    <b>${tbT ? tbT("wallet.empty.title") : "Aucun wallet."}</b><br/>
+    ${tbT ? tbT("wallet.empty.body") : "Crée au moins 1 wallet pour suivre ton solde (ex : Cash THB, Banque EUR)."}
   `;
   container.appendChild(empty);
 }
