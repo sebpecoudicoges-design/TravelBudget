@@ -488,6 +488,16 @@ function buildSeries() {
   async function renderCashflowChart() {
     // keep in sync with existing navigation
     if (typeof window.activeView !== "undefined" && window.activeView !== "dashboard") return;
+// Dedup guard: avoid double render on first load / refresh if called twice rapidly with same scope
+try {
+  const __k = _cashflowCacheKey();
+  const __now = Date.now();
+  if (renderCashflowChart.__lastKey === __k && (__now - (renderCashflowChart.__lastTs || 0)) < 1200) {
+    return;
+  }
+  renderCashflowChart.__lastKey = __k;
+  renderCashflowChart.__lastTs = __now;
+} catch (_) {}
 
     // Load category filter from localStorage (idempotent)
     if (!renderCashflowChart.__catsLoaded) {
