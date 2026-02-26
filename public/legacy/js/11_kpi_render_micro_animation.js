@@ -255,17 +255,7 @@ if (start && end) {
   });
 }
 
-// Convert ONCE from BASE -> EUR
-let remainingEUR = remainingBase;
-const base = String(state?.period?.baseCurrency || "EUR").toUpperCase();
-if (base !== "EUR") {
-  const rBase = _eurRateForDate(base, todayISO);
-  if (rBase) remainingEUR = remainingBase / rBase;
-  else remainingEUR = 0; // no reliable rate => don't explode
-}
-
-return (totalNowEUR + pendingEUR) - remainingEUR;
-}
+// NOTE: orphaned projection snippet removed (was causing Illegal return statement at top-level).
 
 
 
