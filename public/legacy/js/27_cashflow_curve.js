@@ -882,3 +882,49 @@ dataLabels: { enabled: false },
     _runCashflowInit();
   }
 })();
+
+// =========================
+// Cashflow Curve render scheduler (coalesce + dedup)
+// =========================
+(function () {
+  const KEY = "__TB_CASHFLOW_CURVE_SCHED";
+  if (window[KEY]) return;
+
+  let scheduled = false;
+  let lastKey = "";
+
+  function _scopeKey() {
+    const rev = String(window.__TB_DATA_REV || 0);
+    const seg = String(window.__TB_ACTIVE_SEGMENT_ID || "");
+    const start = String(window.__TB_ACTIVE_START || "");
+    const end = String(window.__TB_ACTIVE_END || "");
+    return rev + "|" + seg + "|" + start + "|" + end;
+  }
+
+  window.tbRequestCashflowCurveRender = function tbRequestCashflowCurveRender(reason) {
+    if (window.__TB_BOOTING) {
+      window.__TB_BOOT_NEEDS_CASHFLOW_CURVE = true;
+      return;
+    }
+
+    const k = _scopeKey();
+    if (k === lastKey) return;
+    if (scheduled) return;
+    scheduled = true;
+
+    requestAnimationFrame(() => {
+      scheduled = false;
+      const k2 = _scopeKey();
+      if (k2 === lastKey) return;
+      lastKey = k2;
+
+      try {
+        if (typeof renderCashflowCurve === "function") renderCashflowCurve();
+      } catch (e) {
+        console.error("CashflowCurve render failed:", e);
+      }
+    });
+  };
+
+  window[KEY] = true;
+})();
