@@ -374,8 +374,25 @@ function getBudgetSegmentForDate(dateStr) {
   const ds = String(dateStr || "");
   if (!ds) return null;
   const segs = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
+  const activePeriodId = state && state.period && state.period.id ? String(state.period.id) : "";
+
+  // Pass 1: prefer segments explicitly linked to the active period
+  if (activePeriodId) {
+    for (const seg of segs) {
+      if (!seg) continue;
+      const pid = seg.periodId != null ? String(seg.periodId) : "";
+      if (pid && pid !== activePeriodId) continue;
+      const s = String(seg.start || "");
+      const e = String(seg.end || "");
+      if (s && e && ds >= s && ds <= e) return seg;
+    }
+  }
+
+  // Pass 2: legacy fallback (segments without periodId)
   for (const seg of segs) {
     if (!seg) continue;
+    const pid = seg.periodId != null ? String(seg.periodId) : "";
+    if (activePeriodId && pid && pid !== activePeriodId) continue;
     const s = String(seg.start || "");
     const e = String(seg.end || "");
     if (s && e && ds >= s && ds <= e) return seg;

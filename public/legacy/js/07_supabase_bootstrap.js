@@ -1,6 +1,14 @@
 /* =========================
    Supabase bootstrap
    ========================= */
+
+// Date helper (bootstrap local)
+function addDays(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + Number(days || 0));
+  return d;
+}
+
 async function ensureBootstrap() {
   if (!sbUser) return;
 
