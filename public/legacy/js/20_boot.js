@@ -1,4 +1,4 @@
-window.__TB_BUILD = "6.6.27";
+window.__TB_BUILD = "6.6.28";
 /* =========================
    Boot
    ========================= */
@@ -69,5 +69,12 @@ window.onload = async function () {
     });
   } catch (e) {
     safeShowAuth(true, `Erreur init: ${e?.message || e}`);
+  } finally {
+    try {
+      if (window.TB_PERF && TB_PERF.enabled) {
+        TB_PERF.end("boot:onload");
+        TB_PERF.flush("boot");
+      }
+    } catch (_) {}
   }
 };
