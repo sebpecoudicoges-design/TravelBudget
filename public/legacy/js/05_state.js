@@ -373,44 +373,26 @@ function periodContains(dateStr) {
 function getBudgetSegmentForDate(dateStr) {
   const ds = String(dateStr || "");
   if (!ds) return null;
+  const segs = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
+  const activePeriodId = state && state.period && state.period.id ? String(state.period.id) : "";
 
-  const segsAll = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
-  const activePeriodId = (state && state.period && state.period.id) ? String(state.period.id) : "";
-
-  // Normalize + stable sort (important: mobile/desktop determinism)
-  const segs = segsAll
-    .filter(Boolean)
-    .slice()
-    .sort((a, b) => {
-      const ao = Number(a.sortOrder ?? a.sort_order ?? 0);
-      const bo = Number(b.sortOrder ?? b.sort_order ?? 0);
-      if (ao !== bo) return ao - bo;
-      const as = String(a.start || "");
-      const bs = String(b.start || "");
-      if (as !== bs) return as < bs ? -1 : 1;
-      const ae = String(a.end || "");
-      const be = String(b.end || "");
-      if (ae !== be) return ae < be ? -1 : 1;
-      const aid = String(a.id || "");
-      const bid = String(b.id || "");
-      return aid < bid ? -1 : (aid > bid ? 1 : 0);
-    });
-
+  // Pass 1: prefer segments explicitly linked to the active period
   if (activePeriodId) {
-    const linked = segs.filter(s => String(s.periodId ?? s.period_id ?? "") === activePeriodId);
-    // If any segments are linked to the active period, we ONLY consider those.
-    if (linked.length) {
-      for (const seg of linked) {
-        const s = String(seg.start || "");
-        const e = String(seg.end || "");
-        if (s && e && ds >= s && ds <= e) return seg;
-      }
-      return null;
+    for (const seg of segs) {
+      if (!seg) continue;
+      const pid = seg.periodId != null ? String(seg.periodId) : "";
+      if (pid && pid !== activePeriodId) continue;
+      const s = String(seg.start || "");
+      const e = String(seg.end || "");
+      if (s && e && ds >= s && ds <= e) return seg;
     }
   }
 
-  // Legacy fallback only when there are no linked segments at all.
+  // Pass 2: legacy fallback (segments without periodId)
   for (const seg of segs) {
+    if (!seg) continue;
+    const pid = seg.periodId != null ? String(seg.periodId) : "";
+    if (activePeriodId && pid && pid !== activePeriodId) continue;
     const s = String(seg.start || "");
     const e = String(seg.end || "");
     if (s && e && ds >= s && ds <= e) return seg;

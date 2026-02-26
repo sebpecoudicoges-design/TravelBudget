@@ -9,181 +9,6 @@ function addDays(date, days) {
   return d;
 }
 
-
-// --- First-time onboarding wizard (V6.7+) ---
-// ECB is NOT CORS-enabled; we fetch through a Netlify function proxy.
-async function fetchEcbDailyXml() {
-  const url = "/.netlify/functions/ecb";
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error("ECB fetch failed (" + res.status + ")");
-  return await res.text();
-}
-
-function parseEcbXmlToRates(xmlText) {
-  const out = {};
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, "text/xml");
-  const nodes = doc.querySelectorAll("Cube[currency][rate]");
-  nodes.forEach((n) => {
-    const c = String(n.getAttribute("currency") || "").toUpperCase();
-    const r = Number(n.getAttribute("rate"));
-    if (c && Number.isFinite(r) && r > 0) out[c] = r;
-  });
-  out.EUR = 1;
-  return out;
-}
-
-async function getEcbEurTo(cur) {
-  const c = String(cur || "").toUpperCase();
-  if (!c) return null;
-  if (c === "EUR") return 1;
-  const xml = await fetchEcbDailyXml();
-  const rates = parseEcbXmlToRates(xml);
-  const r = Number(rates[c]);
-  return (Number.isFinite(r) && r > 0) ? r : null;
-}
-
-function _wizEscapeHTML(str) {
-  if (str === null || str === undefined) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function showFirstTimeWizardModal(defaults) {
-  const d = defaults || {};
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.style.position = "fixed";
-    overlay.style.inset = "0";
-    overlay.style.zIndex = "999999";
-    overlay.style.background = "rgba(0,0,0,.55)";
-    overlay.style.display = "flex";
-    overlay.style.alignItems = "center";
-    overlay.style.justifyContent = "center";
-    overlay.style.padding = "16px";
-
-    const card = document.createElement("div");
-    card.style.width = "min(560px, 100%)";
-    card.style.background = "#fff";
-    card.style.borderRadius = "14px";
-    card.style.boxShadow = "0 10px 30px rgba(0,0,0,.25)";
-    card.style.padding = "14px";
-
-    card.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-        <div style="font-weight:800;font-size:16px;">Créer ton 1er voyage</div>
-        <button id="wizClose" style="border:0;background:#eee;border-radius:10px;padding:8px 10px;cursor:pointer;">Annuler</button>
-      </div>
-
-      <div style="margin-top:10px;font-size:13px;opacity:.85;">
-        Choisis les dates, la devise, puis on crée automatiquement la période et le 1er segment.
-      </div>
-
-      <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
-          Début
-          <input id="wizStart" type="date" style="padding:10px;border:1px solid #ddd;border-radius:10px;" value="${_wizEscapeHTML(d.start || "")}">
-        </label>
-        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
-          Fin
-          <input id="wizEnd" type="date" style="padding:10px;border:1px solid #ddd;border-radius:10px;" value="${_wizEscapeHTML(d.end || "")}">
-        </label>
-
-        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
-          Devise (base)
-          <input id="wizCur" placeholder="THB" style="padding:10px;border:1px solid #ddd;border-radius:10px;text-transform:uppercase;" value="${_wizEscapeHTML(d.baseCurrency || "THB")}">
-        </label>
-        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
-          Budget / jour (base)
-          <input id="wizDaily" type="number" step="0.01" style="padding:10px;border:1px solid #ddd;border-radius:10px;" value="${_wizEscapeHTML(String(d.dailyBudgetBase ?? 900))}">
-        </label>
-      </div>
-
-      <div style="margin-top:12px;padding:10px;border:1px solid #eee;border-radius:12px;">
-        <div style="font-weight:700;font-size:13px;">FX (1 EUR = X BASE)</div>
-        <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <button id="wizFetchEcb" style="border:0;background:#111;color:#fff;border-radius:10px;padding:10px 12px;cursor:pointer;">Auto (ECB)</button>
-          <input id="wizRate" type="number" step="0.000001" placeholder="Ex: 36.642" style="flex:1;min-width:180px;padding:10px;border:1px solid #ddd;border-radius:10px;" value="${_wizEscapeHTML(d.eurBaseRate ? String(d.eurBaseRate) : "")}">
-        </div>
-        <div id="wizFxHint" style="margin-top:6px;font-size:12px;opacity:.8;"></div>
-      </div>
-
-      <div style="margin-top:14px;display:flex;gap:10px;justify-content:flex-end;">
-        <button id="wizCreate" style="border:0;background:#0b74ff;color:#fff;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;">Créer</button>
-      </div>
-    `;
-
-    overlay.appendChild(card);
-    document.body.appendChild(overlay);
-
-    const $ = (sel) => card.querySelector(sel);
-
-    $("#wizClose").addEventListener("click", () => {
-      overlay.remove();
-      resolve(null);
-    });
-
-    $("#wizFetchEcb").addEventListener("click", async () => {
-      const cur = String($("#wizCur").value || "").trim().toUpperCase();
-      $("#wizFxHint").textContent = "Recherche ECB…";
-      try {
-        const r = await getEcbEurTo(cur);
-        if (!r) {
-          $("#wizFxHint").textContent = "ECB: taux introuvable pour " + cur + " → saisie manuelle.";
-          return;
-        }
-        $("#wizRate").value = String(r);
-        $("#wizFxHint").textContent = "ECB OK: 1 EUR = " + r + " " + cur;
-      } catch (e) {
-        console.warn(e);
-        $("#wizFxHint").textContent = "ECB inaccessible → saisie manuelle.";
-      }
-    });
-
-    $("#wizCreate").addEventListener("click", () => {
-      const start = String($("#wizStart").value || "").trim();
-      const end = String($("#wizEnd").value || "").trim();
-      const baseCurrency = String($("#wizCur").value || "").trim().toUpperCase();
-      const dailyBudgetBase = Number($("#wizDaily").value);
-      const eurBaseRate = Number($("#wizRate").value);
-
-      if (!start || !end) return alert("Dates obligatoires.");
-      if (end < start) return alert("La date de fin doit être >= début.");
-      if (!baseCurrency || baseCurrency.length !== 3) return alert("Devise invalide (3 lettres).");
-      if (!(Number.isFinite(dailyBudgetBase) && dailyBudgetBase >= 0)) return alert("Budget/jour invalide.");
-
-      if (baseCurrency !== "EUR") {
-        if (!(Number.isFinite(eurBaseRate) && eurBaseRate > 0)) return alert("FX requis: 1 EUR = X " + baseCurrency);
-      }
-
-      overlay.remove();
-      resolve({
-        start,
-        end,
-        baseCurrency,
-        eurBaseRate: baseCurrency === "EUR" ? 1 : eurBaseRate,
-        dailyBudgetBase,
-      });
-    });
-  });
-}
-
-async function runFirstTimeWizard() {
-  const today = toLocalISODate(new Date());
-  const defaults = {
-    start: today,
-    end: toLocalISODate(addDays(new Date(), 20)),
-    baseCurrency: "THB",
-    dailyBudgetBase: 900,
-    eurBaseRate: "",
-  };
-  return await showFirstTimeWizardModal(defaults);
-}
-// --- end onboarding wizard ---
 async function ensureBootstrap() {
   if (!sbUser) return;
 
@@ -288,48 +113,21 @@ async function ensureBootstrap() {
     if (pErr) throw pErr;
 
     if (!periods || periods.length === 0) {
-      // First-time onboarding wizard (dates/currency + ECB auto FX with manual fallback)
-      let cfg = null;
-      try { cfg = await runFirstTimeWizard(); } catch (e) { console.warn(e); }
+      // Default: 21 days period starting today, base currency THB
+      const start = today;
+      const end = toLocalISODate(addDays(new Date(), 20));
 
-      const start = cfg?.start || today;
-      const end = cfg?.end || toLocalISODate(addDays(new Date(), 20));
-      const baseCur = String((cfg?.baseCurrency || "THB")).toUpperCase();
-      const eurBaseRate = Number.isFinite(cfg?.eurBaseRate) ? cfg.eurBaseRate : (baseCur === "EUR" ? 1 : 36.0);
-      const daily = Number.isFinite(cfg?.dailyBudgetBase) ? cfg.dailyBudgetBase : 900;
-
-      const { data: p1, error: insErr } = await sb
-        .from(TB_CONST.TABLES.periods)
-        .insert([{
+      const { error: insErr } = await sb.from(TB_CONST.TABLES.periods).insert([
+        {
           user_id: sbUser.id,
           start_date: start,
           end_date: end,
-          base_currency: baseCur,
-          eur_base_rate: eurBaseRate,
-          daily_budget_base: daily,
-        }])
-        .select("*")
-        .single();
+          base_currency: "THB",
+          eur_base_rate: 36.0,
+          daily_budget_base: 900,
+        },
+      ]);
       if (insErr) throw insErr;
-
-      // Create first segment aligned with the period (fixed)
-      try {
-        const { error: segErr } = await sb.from(TB_CONST.TABLES.budget_segments).insert([{
-          user_id: sbUser.id,
-          period_id: p1.id,
-          start_date: start,
-          end_date: end,
-          base_currency: baseCur,
-          daily_budget_base: daily,
-          fx_mode: "fixed",
-          eur_base_rate_fixed: eurBaseRate,
-          sort_order: 0,
-        }]);
-        if (segErr) throw segErr;
-      } catch (e) {
-        // if table not deployed, ignore (loadFromSupabase will synthesize)
-        console.warn("[bootstrap] budget_segments insert failed (ignored)", e?.message || e);
-      }
     }
   }
 }

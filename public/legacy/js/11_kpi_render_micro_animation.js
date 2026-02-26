@@ -151,7 +151,14 @@ function projectedEndDisplayWithOptions(opts) {
         ? window.getDailyBudgetInfoForDate(ds)
         : { remaining: getDailyBudgetForDate(ds), baseCurrency: state.period.baseCurrency };
       const rem = Number(info.remaining) || 0;
-      const cur = String(info.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
+      let cur = String(info.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
+      // Mobile safety: some stale/legacy dailyBudgetInfo may report a wrong currency (e.g. VND).
+      // If segment currency exists, prefer it (remaining is computed in segment/period base).
+      if (typeof getBudgetSegmentForDate === "function") {
+        const seg = getBudgetSegmentForDate(ds);
+        const segCur = String(seg?.baseCurrency || state.period.baseCurrency || "").toUpperCase();
+        if (segCur && cur && cur !== segCur) cur = segCur;
+      }
       remainingEUR += _toEURForDate(rem, cur, ds);
     });
   }
@@ -641,19 +648,6 @@ function renderKPI() {
   }
 
   // #kpi container is already a .card in index.html; avoid nesting cards.
-  // Expose last KPI values for debugging (mobile/desktop parity checks)
-  try {
-    window.__kpiLast = {
-      displayDateISO,
-      baseCurrency: base,
-      walletTotalEUR,
-      walletTotalBase,
-      includeUnpaid,
-      projectedEndEUR: projEndDisplay,
-      fxRateText
-    };
-  } catch (_) {}
-
   kpi.innerHTML = `
       <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:12px;">
         <h2 style="margin:0;">KPIs</h2>
@@ -687,7 +681,7 @@ function renderKPI() {
             <div style="${miniCardStyle}">
               <div class="muted" style="font-size:12px;">Fin période</div>
               <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
-                <span id="kpiProjectedEndValue">${fmtKPICompact(projEndDisplay)}</span> <span style="font-weight:700; font-size:14px;" class="muted">${displayCurPivot}</span>
+                ${fmtKPICompact(projEndDisplay)} <span style="font-weight:700; font-size:14px;" class="muted">${displayCurPivot}</span>
               </div>
               <div class="muted" style="font-size:12px; margin-top:6px;">Projection</div>
               <label class="muted" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;user-select:none;">
