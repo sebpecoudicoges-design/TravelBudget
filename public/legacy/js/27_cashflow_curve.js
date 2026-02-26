@@ -55,8 +55,9 @@
   // - "current": current segment (today)
   // - "all": full period
   // - "seg:<i>": explicit segment index in state.budgetSegments
-  const CASHFLOW_SEG_FILTER_KEY = "travelbudget_cashflow_segment_filter_v1";
-  let cashflowSegFilter = String(localStorage.getItem(CASHFLOW_SEG_FILTER_KEY) || "current");
+  // Cashflow horizon is controlled by the KPI header scope filter (single source of truth)
+  const KPI_SCOPE_KEY = "travelbudget_kpi_projection_scope_v1";
+  let cashflowSegFilter = (String(localStorage.getItem(KPI_SCOPE_KEY) || "segment").toLowerCase() === "period") ? "all" : "current";
 
   function getSegments() {
     return Array.isArray(window.state?.budgetSegments) ? window.state.budgetSegments.filter(Boolean) : [];
@@ -66,6 +67,13 @@
     if (typeof window.getBudgetSegmentForDate === "function") {
       return window.getBudgetSegmentForDate(todayStr());
     }
+
+  function _syncScopeFromKPI() {
+    try {
+      const s = String(localStorage.getItem(KPI_SCOPE_KEY) || "segment").toLowerCase();
+      cashflowSegFilter = (s === "period") ? "all" : "current";
+    } catch (_) {}
+  }
     return null;
   }
 
@@ -422,6 +430,7 @@
   }
 
   async function renderCashflowChart() {
+    _syncScopeFromKPI();
     // keep in sync with existing navigation
     if (typeof window.activeView !== "undefined" && window.activeView !== "dashboard") return;
 
@@ -511,13 +520,7 @@
           </div>
 
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-            <label class="muted" style="display:flex; gap:6px; align-items:center;">
-              Période
-              <select id="cf-seg-filter" class="input" style="padding:6px 8px; border-radius:10px;">
-                ${segOptions}
-              </select>
-            </label>
-            <label class="muted" style="display:flex; gap:6px; align-items:center;">
+<label class="muted" style="display:flex; gap:6px; align-items:center;">
               <input type="checkbox" id="cf-pending-exp" ${includePendingExpenses ? "checked" : ""}/>
               Dépenses à payer
             </label>
@@ -686,13 +689,6 @@ dataLabels: { enabled: false },
 
     const btn = document.getElementById("cf-reset-zoom");
     if (btn) btn.onclick = () => { try { chart.resetZoom(); } catch (_) {} };
-
-    const selSeg = document.getElementById("cf-seg-filter");
-    if (selSeg) selSeg.onchange = (e) => {
-      cashflowSegFilter = String(e.target.value || "current");
-      try { localStorage.setItem(CASHFLOW_SEG_FILTER_KEY, cashflowSegFilter); } catch (_) {}
-      queueRenderCashflow();
-    };
 
     const cbExp = document.getElementById("cf-pending-exp");
     if (cbExp) cbExp.onchange = (e) => {
