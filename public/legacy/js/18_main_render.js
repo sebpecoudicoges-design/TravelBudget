@@ -10,7 +10,7 @@ function renderAll() {
     try { if (typeof renderWallets === "function") renderWallets(); } catch (e) { console.warn("[renderAll] renderWallets failed", e); }
     try { if (typeof renderDailyBudget === "function") renderDailyBudget(); } catch (e) { console.warn("[renderAll] renderDailyBudget failed", e); }
     try { if (typeof renderKPI === "function") renderKPI(); } catch (e) { console.warn("[renderAll] renderKPI failed", e); }
-    try { if (typeof tbRequestCashflowCurveRender === "function") tbRequestCashflowCurveRender("renderAll"); else if (typeof tbRequestCashflowCurveRender === "function") tbRequestCashflowCurveRender("renderAll"); else if (typeof renderCashflowCurve === "function") renderCashflowCurve(); } catch (e) { console.warn("[renderAll] renderCashflowCurve failed", e); }
+    try { if (typeof tbRequestCashflowCurveRender === "function") tbRequestCashflowCurveRender("renderAll"); else if (typeof renderCashflowCurve === "function") renderCashflowCurve(); } catch (e) { console.warn("[renderAll] renderCashflowCurve failed", e); }
     try { if (typeof renderCharts === "function") renderCharts(); } catch (e) { console.warn("[renderAll] renderCharts failed", e); }
     try { if (typeof renderTransactions === "function") renderTransactions(); } catch (e) { console.warn("[renderAll] renderTransactions failed", e); }
     try { if (typeof renderSettings === "function") renderSettings(); } catch (e) { console.warn("[renderAll] renderSettings failed", e); }
@@ -23,7 +23,10 @@ function renderAll() {
   safeCall("Wallets", () => { if (typeof renderWallets === "function") return renderWallets(); }, { containerId: "wallets-container" });
   safeCall("Budget journalier", () => { if (typeof renderDailyBudget === "function") return renderDailyBudget(); }, { containerId: "daily-budget-container" });
   safeCall("Dashboard KPIs", () => { if (typeof renderKPI === "function") return renderKPI(); }, { containerId: "kpi" });
-  safeCall("Cashflow curve", () => { if (typeof renderCashflowCurve === "function") return renderCashflowCurve(); }, { containerId: "view-dashboard" });
+  safeCall("Cashflow curve", () => {
+    if (typeof tbRequestCashflowCurveRender === "function") return tbRequestCashflowCurveRender("renderAll");
+    if (typeof renderCashflowCurve === "function") return renderCashflowCurve();
+  }, { containerId: "view-dashboard" });
   safeCall("Charts", () => { if (typeof renderCharts === "function") return renderCharts(); }, { containerId: "view-dashboard" });
   safeCall("Transactions", () => { if (typeof renderTransactions === "function") return renderTransactions(); }, { containerId: "view-transactions" });
   safeCall("Settings", () => { if (typeof renderSettings === "function") return renderSettings(); }, { containerId: "view-settings" });

@@ -17,7 +17,6 @@
 function ensureCashflowChartAlias() {
   try {
     const curveEl = document.getElementById("cashflowCurve");
-  ensureCashflowChartAlias();
 
     if (!curveEl) return;
     if (document.getElementById("cashflowChart")) return;
