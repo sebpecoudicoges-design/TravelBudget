@@ -924,8 +924,9 @@ function renderKPI() {
       selS.addEventListener("change", (e) => {
         const v = String(e?.target?.value || "segment");
         try { localStorage.setItem("travelbudget_kpi_projection_scope_v1", v); } catch (_) {}
-        if (typeof renderKPI === "function") renderKPI();
-        if (typeof window.renderCashflowChart === "function") { try { window.renderCashflowChart(); } catch(_) {} }
+        try { if (typeof renderKPI === "function") renderKPI(); } catch (_) {}
+        // Keep curve aligned with KPI scope (no separate curve filter)
+        try { if (typeof window.renderCashflowChart === "function") window.renderCashflowChart(); } catch (_) {}
       });
     }
   } catch (e) {
