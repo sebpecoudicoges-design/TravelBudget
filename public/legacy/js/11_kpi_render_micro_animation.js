@@ -140,30 +140,96 @@ function projectedEndDisplayWithOptions(opts) {
   // Pending already computed in EUR
   const pendingEUR = includeUnpaid ? (Number(netPendingEUR()) || 0) : 0;
 
-  // Remaining budget from today to period end, converted day-by-day into EUR
-  let remainingEUR = 0;
-  const start = parseISODateOrNull(todayISO);
-  const end = parseISODateOrNull(state.period.end);
-  if (start && end) {
-    forEachDateInclusive(start, end, (d) => {
-      const ds = toLocalISODate(d);
-      const info = (typeof window.getDailyBudgetInfoForDate === "function")
-        ? window.getDailyBudgetInfoForDate(ds)
-        : { remaining: getDailyBudgetForDate(ds), baseCurrency: state.period.baseCurrency };
-      const rem = Number(info.remaining) || 0;
-      let cur = String(info.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
-      // Mobile safety: some stale/legacy dailyBudgetInfo may report a wrong currency (e.g. VND).
-      // If segment currency exists, prefer it (remaining is computed in segment/period base).
-      if (typeof getBudgetSegmentForDate === "function") {
-        const seg = getBudgetSegmentForDate(ds);
-        const segCur = String(seg?.baseCurrency || state.period.baseCurrency || "").toUpperCase();
-        if (segCur && cur && cur !== segCur) cur = segCur;
-      }
-      remainingEUR += _toEURForDate(rem, cur, ds);
-    });
+  // Remaining budget from today to period end.
+// IMPORTANT: we normalize daily remaining into PERIOD BASE currency first, then convert ONCE to EUR.
+// This prevents multi-segment / multi-currency projections from exploding when a currency rate is missing.
+let remainingBase = 0;
+const start = parseISODateOrNull(todayISO);
+const end = parseISODateOrNull(state.period.end);
+
+function _eurRateForDate(cur, dateISO) {
+  const c = String(cur || "EUR").toUpperCase();
+  if (c === "EUR") return 1;
+
+  // Period base currency: prefer period eurBaseRate
+  const periodBase = String(state?.period?.baseCurrency || "").toUpperCase();
+  const periodRate = Number(state?.period?.eurBaseRate);
+  if (periodBase && c === periodBase && Number.isFinite(periodRate) && periodRate > 0) return periodRate;
+
+  // Segment override (fixed)
+  if (typeof getBudgetSegmentForDate === "function") {
+    const seg = getBudgetSegmentForDate(dateISO);
+    const segCur = String(seg?.baseCurrency || "").toUpperCase();
+    const segMode = String(seg?.fxMode || "").toLowerCase();
+    const segRate = Number(seg?.eurBaseRateFixed);
+    if (segCur && c === segCur && segMode === "fixed" && Number.isFinite(segRate) && segRate > 0) return segRate;
   }
 
-  return (totalNowEUR + pendingEUR) - remainingEUR;
+  // Live rates (ECB cache / fx module)
+  if (typeof window.fxGetEurRates === "function") {
+    const rates = window.fxGetEurRates() || {};
+    const r = Number(rates[c]);
+    if (Number.isFinite(r) && r > 0) return r;
+  }
+
+  return null;
+}
+
+function _toBaseForDate(amount, cur, dateISO) {
+  const a = Number(amount) || 0;
+  const from = String(cur || "EUR").toUpperCase();
+  const base = String(state?.period?.baseCurrency || "EUR").toUpperCase();
+  if (from === base) return a;
+
+  const rFrom = _eurRateForDate(from, dateISO);
+  const rBase = _eurRateForDate(base, dateISO);
+
+  // If we can't convert reliably, return 0 (better than exploding projections).
+  if (!(rFrom && rBase)) {
+    // Optional debug hook (throttled)
+    try {
+      window.__kpiFxMiss = window.__kpiFxMiss || {};
+      const k = from + "->" + base;
+      window.__kpiFxMiss[k] = (window.__kpiFxMiss[k] || 0) + 1;
+    } catch (_) {}
+    return 0;
+  }
+
+  // EUR pivot: amount(from) / (EUR->from) = EUR, then * (EUR->base)
+  return (a / rFrom) * rBase;
+}
+
+if (start && end) {
+  forEachDateInclusive(start, end, (d) => {
+    const ds = toLocalISODate(d);
+    const info = (typeof window.getDailyBudgetInfoForDate === "function")
+      ? window.getDailyBudgetInfoForDate(ds)
+      : { remaining: getDailyBudgetForDate(ds), baseCurrency: state.period.baseCurrency };
+
+    const rem = Number(info.remaining) || 0;
+
+    // Remaining is computed in the active segment/period base; on mobile stale info may report wrong baseCurrency.
+    let cur = String(state?.period?.baseCurrency || "EUR").toUpperCase();
+    if (typeof getBudgetSegmentForDate === "function") {
+      const seg = getBudgetSegmentForDate(ds);
+      const segCur = String(seg?.baseCurrency || "").toUpperCase();
+      if (segCur) cur = segCur;
+    }
+
+    remainingBase += _toBaseForDate(rem, cur, ds);
+  });
+}
+
+// Convert ONCE from BASE -> EUR
+let remainingEUR = remainingBase;
+const base = String(state?.period?.baseCurrency || "EUR").toUpperCase();
+if (base !== "EUR") {
+  const rBase = _eurRateForDate(base, todayISO);
+  if (rBase) remainingEUR = remainingBase / rBase;
+  else remainingEUR = 0; // no reliable rate => don't explode
+}
+
+return (totalNowEUR + pendingEUR) - remainingEUR;
 }
 
 

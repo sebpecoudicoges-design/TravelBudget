@@ -9,6 +9,227 @@ function addDays(date, days) {
   return d;
 }
 
+
+
+// --- First-time onboarding wizard (V6.6.14) ---
+function _wizEsc(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+async function fetchEcbDailyXml() {
+  // Use Netlify function proxy (avoids browser CORS)
+  const url = "/.netlify/functions/ecb";
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error("ECB proxy fetch failed (" + res.status + ")");
+  return await res.text();
+}
+
+function parseEcbXmlToRates(xmlText) {
+  // Returns map: { USD: 1.08, ... } for 1 EUR = rate CURRENCY
+  const out = { EUR: 1 };
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(String(xmlText || ""), "text/xml");
+  const nodes = doc.querySelectorAll("Cube[currency][rate]");
+  nodes.forEach(function (n) {
+    const c = String(n.getAttribute("currency") || "").toUpperCase();
+    const r = Number(n.getAttribute("rate"));
+    if (c && Number.isFinite(r) && r > 0) out[c] = r;
+  });
+  return out;
+}
+
+async function getEcbEurTo(cur) {
+  const c = String(cur || "").toUpperCase();
+  if (!c) return null;
+  if (c === "EUR") return 1;
+  const xml = await fetchEcbDailyXml();
+  const rates = parseEcbXmlToRates(xml);
+  const r = Number(rates[c]);
+  return (Number.isFinite(r) && r > 0) ? r : null;
+}
+
+function showFirstTimeWizardModal(defaults) {
+  const d = defaults || {};
+  return new Promise(function (resolve) {
+    const overlay = document.createElement("div");
+    overlay.style.position = "fixed";
+    overlay.style.inset = "0";
+    overlay.style.zIndex = "999999";
+    overlay.style.background = "rgba(0,0,0,.55)";
+    overlay.style.display = "flex";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.padding = "16px";
+
+    const card = document.createElement("div");
+    card.style.width = "min(560px, 100%)";
+    card.style.background = "#fff";
+    card.style.borderRadius = "14px";
+    card.style.boxShadow = "0 10px 30px rgba(0,0,0,.25)";
+    card.style.padding = "14px";
+
+    card.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">' +
+        '<div style="font-weight:800;font-size:16px;">Créer ton 1er voyage</div>' +
+        '<button id="wizClose" style="border:0;background:#eee;border-radius:10px;padding:8px 10px;cursor:pointer;">Annuler</button>' +
+      '</div>' +
+      '<div style="margin-top:10px;font-size:13px;opacity:.85;">Dates, devise, FX (ECB auto si possible), puis wallets.</div>' +
+
+      '<div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+        '<label style="display:flex;flex-direction:column;gap:6px;font-size:12px;">Début' +
+          '<input id="wizStart" type="date" style="padding:10px;border:1px solid #ddd;border-radius:10px;" value="' + _wizEsc(d.start || "") + '">' +
+        '</label>' +
+        '<label style="display:flex;flex-direction:column;gap:6px;font-size:12px;">Fin' +
+          '<input id="wizEnd" type="date" style="padding:10px;border:1px solid #ddd;border-radius:10px;" value="' + _wizEsc(d.end || "") + '">' +
+        '</label>' +
+        '<label style="display:flex;flex-direction:column;gap:6px;font-size:12px;">Devise (base)' +
+          '<input id="wizCur" placeholder="THB" style="padding:10px;border:1px solid #ddd;border-radius:10px;text-transform:uppercase;" value="' + _wizEsc(d.baseCurrency || "THB") + '">' +
+        '</label>' +
+        '<label style="display:flex;flex-direction:column;gap:6px;font-size:12px;">Budget / jour (base)' +
+          '<input id="wizDaily" type="number" step="0.01" style="padding:10px;border:1px solid #ddd;border-radius:10px;" value="' + _wizEsc(String((d.dailyBudgetBase !== undefined) ? d.dailyBudgetBase : 900)) + '">' +
+        '</label>' +
+      '</div>' +
+
+      '<div style="margin-top:12px;padding:10px;border:1px solid #eee;border-radius:12px;">' +
+        '<div style="font-weight:700;font-size:13px;">FX (1 EUR = X BASE)</div>' +
+        '<div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
+          '<button id="wizFetchEcb" style="border:0;background:#111;color:#fff;border-radius:10px;padding:10px 12px;cursor:pointer;">Auto (ECB)</button>' +
+          '<input id="wizRate" type="number" step="0.000001" placeholder="Ex: 36.642" style="flex:1;min-width:180px;padding:10px;border:1px solid #ddd;border-radius:10px;" value="' + _wizEsc(d.eurBaseRate ? String(d.eurBaseRate) : "") + '">' +
+        '</div>' +
+        '<div id="wizFxHint" style="margin-top:6px;font-size:12px;opacity:.8;"></div>' +
+      '</div>' +
+
+      '<div style="margin-top:12px;padding:10px;border:1px solid #eee;border-radius:12px;">' +
+        '<div style="font-weight:700;font-size:13px;">Wallets init</div>' +
+
+        '<label style="margin-top:8px;display:flex;align-items:center;gap:8px;font-size:13px;">' +
+          '<input id="wizHasCash" type="checkbox" ' + (d.hasCash ? "checked" : "") + '>J’ai du cash' +
+        '</label>' +
+        '<div id="wizCashRow" style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:10px;opacity:.55;">' +
+          '<input id="wizCashAmt" type="number" step="0.01" placeholder="Montant cash" style="padding:10px;border:1px solid #ddd;border-radius:10px;" value="' + _wizEsc(String((d.cashAmount !== undefined) ? d.cashAmount : "")) + '">' +
+          '<input id="wizCashCur" placeholder="Devise cash (ex: THB)" style="padding:10px;border:1px solid #ddd;border-radius:10px;text-transform:uppercase;" value="' + _wizEsc(d.cashCurrency || "") + '">' +
+        '</div>' +
+
+        '<label style="margin-top:10px;display:flex;align-items:center;gap:8px;font-size:13px;">' +
+          '<input id="wizHasBank" type="checkbox" ' + (d.hasBank ? "checked" : "") + '>J’ai un compte bancaire' +
+        '</label>' +
+        '<div id="wizBankRow" style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:10px;opacity:.55;">' +
+          '<input id="wizBankAmt" type="number" step="0.01" placeholder="Solde banque" style="padding:10px;border:1px solid #ddd;border-radius:10px;" value="' + _wizEsc(String((d.bankAmount !== undefined) ? d.bankAmount : "")) + '">' +
+          '<input id="wizBankCur" placeholder="Devise banque (ex: EUR)" style="padding:10px;border:1px solid #ddd;border-radius:10px;text-transform:uppercase;" value="' + _wizEsc(d.bankCurrency || "EUR") + '">' +
+        '</div>' +
+      '</div>' +
+
+      '<div style="margin-top:14px;display:flex;gap:10px;justify-content:flex-end;">' +
+        '<button id="wizCreate" style="border:0;background:#0b74ff;color:#fff;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;">Créer</button>' +
+      '</div>';
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    function $(sel) { return card.querySelector(sel); }
+
+    function syncWalletRows() {
+      const cashOn = !!$("#wizHasCash").checked;
+      const bankOn = !!$("#wizHasBank").checked;
+
+      $("#wizCashRow").style.opacity = cashOn ? "1" : ".55";
+      $("#wizBankRow").style.opacity = bankOn ? "1" : ".55";
+      $("#wizCashAmt").disabled = !cashOn;
+      $("#wizCashCur").disabled = !cashOn;
+      $("#wizBankAmt").disabled = !bankOn;
+      $("#wizBankCur").disabled = !bankOn;
+    }
+    syncWalletRows();
+    $("#wizHasCash").addEventListener("change", syncWalletRows);
+    $("#wizHasBank").addEventListener("change", syncWalletRows);
+
+    $("#wizClose").addEventListener("click", function () {
+      overlay.remove();
+      resolve(null);
+    });
+
+    $("#wizFetchEcb").addEventListener("click", async function () {
+      const cur = String($("#wizCur").value || "").trim().toUpperCase();
+      $("#wizFxHint").textContent = "Recherche ECB…";
+      try {
+        const r = await getEcbEurTo(cur);
+        if (!r) {
+          $("#wizFxHint").textContent = "ECB: taux introuvable pour " + cur + " → saisie manuelle.";
+          return;
+        }
+        $("#wizRate").value = String(r);
+        $("#wizFxHint").textContent = "ECB OK: 1 EUR = " + r + " " + cur;
+      } catch (e) {
+        console.warn(e);
+        $("#wizFxHint").textContent = "ECB inaccessible → saisie manuelle.";
+      }
+    });
+
+    $("#wizCreate").addEventListener("click", function () {
+      const start = String($("#wizStart").value || "").trim();
+      const end = String($("#wizEnd").value || "").trim();
+      const baseCurrency = String($("#wizCur").value || "").trim().toUpperCase();
+      const dailyBudgetBase = Number($("#wizDaily").value);
+      const eurBaseRate = Number($("#wizRate").value);
+
+      if (!start || !end) return alert("Dates obligatoires.");
+      if (end < start) return alert("La date de fin doit être >= début.");
+      if (!baseCurrency || baseCurrency.length !== 3) return alert("Devise invalide (3 lettres).");
+      if (!(Number.isFinite(dailyBudgetBase) && dailyBudgetBase >= 0)) return alert("Budget/jour invalide.");
+      if (baseCurrency !== "EUR" && !(Number.isFinite(eurBaseRate) && eurBaseRate > 0)) {
+        return alert("FX requis: 1 EUR = X " + baseCurrency);
+      }
+
+      const hasCash = !!$("#wizHasCash").checked;
+      const cashAmount = Number($("#wizCashAmt").value);
+      const cashCurrency = String($("#wizCashCur").value || "").trim().toUpperCase() || baseCurrency;
+
+      const hasBank = !!$("#wizHasBank").checked;
+      const bankAmount = Number($("#wizBankAmt").value);
+      const bankCurrency = String($("#wizBankCur").value || "").trim().toUpperCase() || "EUR";
+
+      overlay.remove();
+      resolve({
+        start: start,
+        end: end,
+        baseCurrency: baseCurrency,
+        eurBaseRate: (baseCurrency === "EUR") ? 1 : eurBaseRate,
+        dailyBudgetBase: dailyBudgetBase,
+        fxMode: (baseCurrency === "EUR") ? "fixed" : (Number.isFinite(eurBaseRate) ? "live" : "fixed"),
+        wallets: {
+          cash: hasCash ? { name: "Cash", type: "cash", currency: cashCurrency, balance: Number.isFinite(cashAmount) ? cashAmount : 0 } : null,
+          bank: hasBank ? { name: "Compte bancaire", type: "bank", currency: bankCurrency, balance: Number.isFinite(bankAmount) ? bankAmount : 0 } : null
+        }
+      });
+    });
+  });
+}
+
+async function runFirstTimeWizard() {
+  const today = toLocalISODate(new Date());
+  const defaults = {
+    start: today,
+    end: toLocalISODate(addDays(new Date(), 20)),
+    baseCurrency: "THB",
+    dailyBudgetBase: 900,
+    eurBaseRate: "",
+    hasCash: true,
+    cashAmount: 0,
+    cashCurrency: "THB",
+    hasBank: true,
+    bankAmount: 0,
+    bankCurrency: "EUR"
+  };
+  return await showFirstTimeWizardModal(defaults);
+}
+// --- end onboarding wizard ---
+
 async function ensureBootstrap() {
   if (!sbUser) return;
 
@@ -113,22 +334,62 @@ async function ensureBootstrap() {
     if (pErr) throw pErr;
 
     if (!periods || periods.length === 0) {
-      // Default: 21 days period starting today, base currency THB
-      const start = today;
-      const end = toLocalISODate(addDays(new Date(), 20));
+  // First-time onboarding wizard
+  let cfg = null;
+  try { cfg = await runFirstTimeWizard(); } catch (e) { console.warn(e); }
 
-      const { error: insErr } = await sb.from(TB_CONST.TABLES.periods).insert([
-        {
-          user_id: sbUser.id,
-          start_date: start,
-          end_date: end,
-          base_currency: "THB",
-          eur_base_rate: 36.0,
-          daily_budget_base: 900,
-        },
-      ]);
-      if (insErr) throw insErr;
+  // If user cancels: keep minimal defaults
+  const start = (cfg && cfg.start) ? cfg.start : today;
+  const end = (cfg && cfg.end) ? cfg.end : toLocalISODate(addDays(new Date(), 20));
+  const baseCur = String((cfg && cfg.baseCurrency) ? cfg.baseCurrency : "THB").toUpperCase();
+  const eurBaseRate = (cfg && Number.isFinite(cfg.eurBaseRate)) ? cfg.eurBaseRate : (baseCur === "EUR" ? 1 : 36.0);
+  const daily = (cfg && Number.isFinite(cfg.dailyBudgetBase)) ? cfg.dailyBudgetBase : 900;
+  const fxMode = (cfg && cfg.fxMode) ? String(cfg.fxMode) : "fixed";
+
+  const { data: p1, error: insErr } = await sb
+    .from(TB_CONST.TABLES.periods)
+    .insert([{
+      user_id: sbUser.id,
+      start_date: start,
+      end_date: end,
+      base_currency: baseCur,
+      eur_base_rate: eurBaseRate,
+      daily_budget_base: daily
+    }])
+    .select("*")
+    .single();
+  if (insErr) throw insErr;
+
+  // Create first segment aligned with the period (if table exists)
+  try {
+    const segPayload = {
+      user_id: sbUser.id,
+      period_id: p1.id,
+      start_date: start,
+      end_date: end,
+      base_currency: baseCur,
+      daily_budget_base: daily,
+      fx_mode: (fxMode === "live" ? "live" : "fixed"),
+      eur_base_rate_fixed: eurBaseRate,
+      sort_order: 0
+    };
+    const { error: segErr } = await sb.from(TB_CONST.TABLES.budget_segments).insert([segPayload]);
+    if (segErr) throw segErr;
+  } catch (e) {
+    console.warn("[budget_segments] bootstrap failed (ignored)", e && e.message ? e.message : e);
+  }
+
+  // Create wallets from wizard choices
+  if (cfg && cfg.wallets) {
+    const initial = [];
+    if (cfg.wallets.cash) initial.push(Object.assign({ user_id: sbUser.id, period_id: p1.id }, cfg.wallets.cash));
+    if (cfg.wallets.bank) initial.push(Object.assign({ user_id: sbUser.id, period_id: p1.id }, cfg.wallets.bank));
+    if (initial.length > 0) {
+      const { error: wErr2 } = await sb.from(TB_CONST.TABLES.wallets).insert(initial);
+      if (wErr2) throw wErr2;
     }
+  }
+}
   }
 }
 
