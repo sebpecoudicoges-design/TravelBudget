@@ -107,73 +107,108 @@ function fmtKPICompact(v) {
 }
 
 function projectedEndDisplayWithOptions(opts) {
-  // Projection "fin de période" (dashboard) is now ALWAYS expressed in EUR (pivot).
+  // KPI "Fin période":
+  //   trésorerie actuelle (wallets) - prévision quotidienne (budget/jour) jusqu'à la fin
+  //   + optionnel: inclure les entrées/dépenses non payées/reçues (toggle)
+  // Par défaut, l'horizon = segment courant. opts.scope='period' => horizon = fin de période.
+
   const includeUnpaid = !!opts?.includeUnpaid;
+  const scope = String(opts?.scope || "segment").toLowerCase();
   const todayISO = (typeof window.getDisplayDateISO === "function") ? window.getDisplayDateISO() : toLocalISODate(new Date());
 
-  function _toEURForDate(amount, cur, dateISO) {
+  function _eurRateForDate(cur, dateISO) {
+    const c = String(cur || "EUR").toUpperCase();
+    if (c === "EUR") return 1;
+
+    // Period base currency: prefer period eurBaseRate (1 EUR = X BASE)
+    const periodBase = String(state?.period?.baseCurrency || "").toUpperCase();
+    const periodRate = Number(state?.period?.eurBaseRate);
+    if (periodBase && c === periodBase && Number.isFinite(periodRate) && periodRate > 0) return periodRate;
+
+    // Segment override (fixed)
+    if (typeof getBudgetSegmentForDate === "function") {
+      const seg = getBudgetSegmentForDate(dateISO);
+      const segCur = String(seg?.baseCurrency || "").toUpperCase();
+      const segMode = String(seg?.fxMode || "").toLowerCase();
+      const segRate = Number(seg?.eurBaseRateFixed);
+      if (segCur && c === segCur && segMode === "fixed" && Number.isFinite(segRate) && segRate > 0) return segRate;
+    }
+
+    // Live ECB cache
+    if (typeof window.fxGetEurRates === "function") {
+      const rates = window.fxGetEurRates() || {};
+      const r = Number(rates[c]);
+      if (Number.isFinite(r) && r > 0) return r;
+    }
+
+    return null;
+  }
+
+  function _toEURSafe(amount, cur, dateISO) {
     const a = Number(amount) || 0;
     const c = String(cur || "EUR").toUpperCase();
     if (c === "EUR") return a;
-    // Prefer FX plugin with segment-aware rates (fixed/live)
-    if (typeof window.fxConvert === "function" && typeof getBudgetSegmentForDate === "function") {
-      const seg = getBudgetSegmentForDate(dateISO);
-      const rates = (typeof fxRatesForSegment === "function")
-        ? fxRatesForSegment(seg)
-        : (typeof window.fxGetEurRates === "function" ? window.fxGetEurRates() : {});
-      const out = window.fxConvert(a, c, "EUR", rates);
-      if (out !== null && isFinite(out)) return out;
+    const r = _eurRateForDate(c, dateISO);
+    if (!(Number.isFinite(r) && r > 0)) {
+      try {
+        window.__kpiFxMiss = window.__kpiFxMiss || {};
+        const k = c + "->EUR";
+        window.__kpiFxMiss[k] = (window.__kpiFxMiss[k] || 0) + 1;
+      } catch (_) {}
+      return 0;
     }
-    // Fallback legacy
-    if (typeof amountToEUR === "function") return amountToEUR(a, c);
-    return a;
+    // 1 EUR = r CUR => CUR -> EUR = / r
+    return a / r;
   }
 
-  // Total wallets in EUR
+  // Total wallets now in EUR
   let totalNowEUR = 0;
   for (const w of (state.wallets || [])) {
     const bal = Number(w.balance) || 0;
     const cur = w.currency || "EUR";
-    totalNowEUR += _toEURForDate(bal, cur, todayISO);
+    totalNowEUR += _toEURSafe(bal, cur, todayISO);
   }
 
-  // Pending already computed in EUR
+  // Pending (unpaid/unreceived) in EUR
   const pendingEUR = includeUnpaid ? (Number(netPendingEUR()) || 0) : 0;
 
-  // Remaining budget from today to period end.
-// IMPORTANT: we normalize daily remaining into PERIOD BASE currency first, then convert ONCE to EUR.
-// This prevents multi-segment / multi-currency projections from exploding when a currency rate is missing.
-let remainingBase = 0;
-const start = parseISODateOrNull(todayISO);
-const end = parseISODateOrNull(state.period.end);
+  // Horizon end
+  let horizonEndISO = state?.period?.end;
+  try {
+    if (scope !== "period" && typeof getBudgetSegmentForDate === "function") {
+      const seg0 = getBudgetSegmentForDate(todayISO);
+      if (seg0 && (seg0.end || seg0.end_date)) horizonEndISO = String(seg0.end || seg0.end_date);
+    }
+  } catch (_) {}
 
-function _eurRateForDate(cur, dateISO) {
-  const c = String(cur || "EUR").toUpperCase();
-  if (c === "EUR") return 1;
+  // Forecast daily budget (sum of daily budgets) in EUR
+  let forecastEUR = 0;
+  const start = parseISODateOrNull(todayISO);
+  const end = parseISODateOrNull(horizonEndISO);
+  if (start && end) {
+    forEachDateInclusive(start, end, (d) => {
+      const ds = toLocalISODate(d);
+      let cur = String(state?.period?.baseCurrency || "EUR").toUpperCase();
+      let daily = Number(state?.period?.dailyBudgetBase || 0);
+      try {
+        if (typeof getBudgetSegmentForDate === "function") {
+          const seg = getBudgetSegmentForDate(ds);
+          if (seg) {
+            const segCur = String(seg?.baseCurrency || seg?.base_currency || "").toUpperCase();
+            const segDaily = Number(seg?.dailyBudgetBase ?? seg?.daily_budget_base);
+            if (segCur) cur = segCur;
+            if (Number.isFinite(segDaily)) daily = segDaily;
+          }
+        }
+      } catch (_) {}
 
-  // Period base currency: prefer period eurBaseRate
-  const periodBase = String(state?.period?.baseCurrency || "").toUpperCase();
-  const periodRate = Number(state?.period?.eurBaseRate);
-  if (periodBase && c === periodBase && Number.isFinite(periodRate) && periodRate > 0) return periodRate;
-
-  // Segment override (fixed)
-  if (typeof getBudgetSegmentForDate === "function") {
-    const seg = getBudgetSegmentForDate(dateISO);
-    const segCur = String(seg?.baseCurrency || "").toUpperCase();
-    const segMode = String(seg?.fxMode || "").toLowerCase();
-    const segRate = Number(seg?.eurBaseRateFixed);
-    if (segCur && c === segCur && segMode === "fixed" && Number.isFinite(segRate) && segRate > 0) return segRate;
+      forecastEUR += _toEURSafe(daily, cur, ds);
+    });
   }
 
-  // Live rates (ECB cache / fx module)
-  if (typeof window.fxGetEurRates === "function") {
-    const rates = window.fxGetEurRates() || {};
-    const r = Number(rates[c]);
-    if (Number.isFinite(r) && r > 0) return r;
-  }
-
-  return null;
+  return (totalNowEUR + pendingEUR) - forecastEUR;
 }
+
 
 function _toBaseForDate(amount, cur, dateISO) {
   const a = Number(amount) || 0;

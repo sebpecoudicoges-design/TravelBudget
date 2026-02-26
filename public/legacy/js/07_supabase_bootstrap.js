@@ -369,7 +369,7 @@ async function ensureBootstrap() {
       end_date: end,
       base_currency: baseCur,
       daily_budget_base: daily,
-      fx_mode: (fxMode === "live" ? "live" : "fixed"),
+      fx_mode: (fxMode === "live_ecb" ? "live_ecb" : "fixed"),
       eur_base_rate_fixed: eurBaseRate,
       sort_order: 0
     };
