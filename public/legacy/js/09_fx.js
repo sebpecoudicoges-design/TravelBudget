@@ -123,6 +123,13 @@ function _fxEurTo(cur, rates) {
       const prod = r * eurBaseRate;
       if (Number.isFinite(prod) && Math.abs(prod - 1) < 0.02) return eurBaseRate;
     }
+    // ✅ added safety: fallback to exchangeRates if eurBaseRate not ready
+    const ex = _fxNum(window.state?.exchangeRates?.["EUR-BASE"]);
+    if (base && c === base && ex && ex > 0) {
+      const prod2 = r * ex;
+      if (Number.isFinite(prod2) && Math.abs(prod2 - 1) < 0.02) return ex;
+    }
+
     return r;
   }
 

@@ -474,14 +474,28 @@ window.amountToDisplayForDate = amountToDisplayForDate;
 // Build a EUR_RATES-like dict for a given segment (override EUR->base when fxMode=fixed)
 function fxRatesForSegment(seg) {
   const base = String(seg?.baseCurrency || "").toUpperCase();
-  const fxMode = String(seg?.fxMode || "fixed");
+  const fxMode = String(seg?.fxMode || "fixed").toLowerCase();
   const rates = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
+
+  // Only fixed segments should override EUR->BASE
   if (fxMode === "fixed") {
-    const r = Number(seg?.eurBaseRateFixed);
+    let r = Number(seg?.eurBaseRateFixed);
+
+    // HARD fallback for safety: if fixed segment rate is missing, fallback to period eurBaseRate / exchangeRates
+    if (!(isFinite(r) && r > 0)) {
+      const periodBase = String(window.state?.period?.baseCurrency || "").toUpperCase();
+      if (base && periodBase && base === periodBase) {
+        const pr = Number(window.state?.period?.eurBaseRate);
+        const er = Number(window.state?.exchangeRates?.["EUR-BASE"]);
+        r = (isFinite(pr) && pr > 0) ? pr : ((isFinite(er) && er > 0) ? er : r);
+      }
+    }
+
     if (base && isFinite(r) && r > 0) {
       return { ...(rates || {}), [base]: r };
     }
   }
+
   return rates || {};
 }
 
