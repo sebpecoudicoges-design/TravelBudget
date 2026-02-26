@@ -234,26 +234,6 @@ function _toBaseForDate(amount, cur, dateISO) {
   return (a / rFrom) * rBase;
 }
 
-if (start && end) {
-  forEachDateInclusive(start, end, (d) => {
-    const ds = toLocalISODate(d);
-    const info = (typeof window.getDailyBudgetInfoForDate === "function")
-      ? window.getDailyBudgetInfoForDate(ds)
-      : { remaining: getDailyBudgetForDate(ds), baseCurrency: state.period.baseCurrency };
-
-    const rem = Number(info.remaining) || 0;
-
-    // Remaining is computed in the active segment/period base; on mobile stale info may report wrong baseCurrency.
-    let cur = String(state?.period?.baseCurrency || "EUR").toUpperCase();
-    if (typeof getBudgetSegmentForDate === "function") {
-      const seg = getBudgetSegmentForDate(ds);
-      const segCur = String(seg?.baseCurrency || "").toUpperCase();
-      if (segCur) cur = segCur;
-    }
-
-    remainingBase += _toBaseForDate(rem, cur, ds);
-  });
-}
 
 // NOTE: orphaned projection snippet removed (was causing Illegal return statement at top-level).
 

@@ -16,3 +16,8 @@
   [headers.values]
     Cache-Control = "no-store"
 
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "no-store"
