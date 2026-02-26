@@ -114,9 +114,19 @@ function _fxEurTo(cur, rates) {
   if (c === "EUR") return 1;
 
   const r = _fxNum((rates || {})[c]);
-  if (r && r > 0) return r;
+  if (r && r > 0) {
+    // If localStorage rates are accidentally inverted (BASE->EUR) for the period base currency,
+    // prefer the authoritative eurBaseRate (1 EUR = X BASE) when it looks like an exact reciprocal.
+    const base = String(window.state?.period?.baseCurrency || "").toUpperCase();
+    const eurBaseRate = _fxNum(window.state?.period?.eurBaseRate);
+    if (base && c === base && eurBaseRate && eurBaseRate > 0) {
+      const prod = r * eurBaseRate;
+      if (Number.isFinite(prod) && Math.abs(prod - 1) < 0.02) return eurBaseRate;
+    }
+    return r;
+  }
 
-  // Fallback: baseCurrency via eurBaseRate (if available)
+  // Fallback: baseCurrency via eurBaseRate (if available) (if available)
   const base = String(window.state?.period?.baseCurrency || "").toUpperCase();
   const eurBaseRate = _fxNum(window.state?.period?.eurBaseRate);
   if (base && c === base && eurBaseRate && eurBaseRate > 0) return eurBaseRate;
