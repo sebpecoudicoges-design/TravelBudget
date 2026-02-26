@@ -22,73 +22,104 @@ function _baseCurrencyForTx(tx) {
   } catch (_) {}
   return "EUR";
 }
-async function ensureTxFxSnapshots() {
+let _txFxSnapInFlight = false;
+let _txFxSnapLastSig = null;
+
+function _txFxSnapSig() {
+  try {
+    // tie snapshot work to data rev + tx count to avoid repeating in the same session
+    const rev = window.__TB_DATA_REV || 0;
+    const n = Array.isArray(state?.transactions) ? state.transactions.length : 0;
+    return `${rev}:${n}`;
+  } catch (_) { return null; }
+}
+
+async function ensureTxFxSnapshots(options) {
   try {
     if (!sbUser) return;
     if (window.TB_FREEZE) return;
+    if (_txFxSnapInFlight) return;
 
     const txs = Array.isArray(state.transactions) ? state.transactions : [];
-    const pending = txs.filter(t => t && !t.fx_rate_snapshot && !t.fxRateSnapshot);
+    const pendingAll = txs.filter(t => t && !t.fx_rate_snapshot && !t.fxRateSnapshot);
+    if (!pendingAll.length) return;
 
-    if (!pending.length) return;
+    const sig = _txFxSnapSig();
+    if (sig && sig === _txFxSnapLastSig && !(options && options.force)) return;
+    _txFxSnapLastSig = sig;
 
-    // avoid hammering the API
-    const batch = pending.slice(0, 20);
+    _txFxSnapInFlight = true;
 
-    for (const tx of batch) {
+    // Keep boot responsive: do small batches. We'll reschedule if still pending.
+    const batchSize = Math.max(5, Math.min(15, Number(options?.batchSize) || 10));
+    const batch = pendingAll.slice(0, batchSize);
+
+    // Build payloads upfront
+    const tasks = batch.map(async (tx) => {
       const ds = String(tx.dateStart || tx.date_start || "").slice(0, 10);
       const base = _baseCurrencyForTx(tx);
-      const from = String(tx.currency || "").toUpperCase();
-      if (!from || from === base) {
-        // identity snapshot
-      }
+      const from = String(tx.currency || base || "").toUpperCase();
 
       let snap = null;
       try {
         if (typeof window.fxBuildTxSnapshot === "function") {
           snap = window.fxBuildTxSnapshot(from || base, base, ds);
         }
-      } catch (_) {
-        snap = null;
-      }
+      } catch (_) { snap = null; }
+      if (!snap) return { tx, ok: false, reason: "no_snapshot" };
 
-      if (!snap) continue;
+      const payload = {
+        fx_rate_snapshot: snap.fx_rate_snapshot,
+        fx_source_snapshot: snap.fx_source_snapshot,
+        fx_snapshot_at: snap.fx_snapshot_at,
+        fx_base_currency_snapshot: snap.fx_base_currency_snapshot,
+        fx_tx_currency_snapshot: snap.fx_tx_currency_snapshot,
+        updated_at: new Date().toISOString(),
+      };
 
-      // Fetch current snapshot fields from DB to avoid overwriting when state is missing columns
-      let current = tx;
-      try {
-        const { data: cur, error: curErr } = await sb
-          .from(TB_CONST.TABLES.transactions)
-          .select("fx_rate_snapshot,fx_source_snapshot,fx_snapshot_at,fx_base_currency_snapshot,fx_tx_currency_snapshot")
-          .eq("id", tx.id)
-          .maybeSingle();
-        if (!curErr && cur) current = { ...tx, ...cur };
-      } catch (_) {}
-
-      const payload = { updated_at: new Date().toISOString() };
-      // Only fill missing snapshot fields; do NOT overwrite once set (DB enforces immutability)
-      if (current.fx_rate_snapshot == null) payload.fx_rate_snapshot = snap.fx_rate_snapshot;
-      if (current.fx_source_snapshot == null) payload.fx_source_snapshot = snap.fx_source_snapshot;
-      if (current.fx_snapshot_at == null) payload.fx_snapshot_at = snap.fx_snapshot_at;
-      if (current.fx_base_currency_snapshot == null) payload.fx_base_currency_snapshot = snap.fx_base_currency_snapshot;
-      if (current.fx_tx_currency_snapshot == null) payload.fx_tx_currency_snapshot = snap.fx_tx_currency_snapshot;
-
-      // Nothing to do
-      const keys = Object.keys(payload);
-      if (keys.length <= 1) continue;
-
-      // eslint-disable-next-line no-await-in-loop
+      // Update only if snapshot is still missing (avoid overwriting / avoid a read-before-write)
       const { error } = await sb
         .from(TB_CONST.TABLES.transactions)
         .update(payload)
-        .eq("id", tx.id);
+        .eq("id", tx.id)
+        .is("fx_rate_snapshot", null);
 
       if (error) {
-        // don't break the app; surface in doctor/logs
         __errorBus && __errorBus.push && __errorBus.push({ type: "fx_snapshot_update", tx_id: tx.id, error: __errorBus.toPlain(error) });
+        return { tx, ok: false, reason: "update_error" };
       }
+      return { tx, ok: true };
+    });
+
+    // Parallelize to reduce total wall time
+    await Promise.allSettled(tasks);
+
+    // If there are still pending snapshots, schedule the next batch in idle time.
+    const stillPending = (Array.isArray(state.transactions) ? state.transactions : []).some(t => t && !t.fx_rate_snapshot && !t.fxRateSnapshot);
+    if (stillPending && window.TB_DEFER && typeof TB_DEFER.coalesceIdle === "function") {
+      TB_DEFER.coalesceIdle("fx:snapshots:continue", () => ensureTxFxSnapshots({ batchSize }), 300);
     }
   } catch (e) {
     __errorBus && __errorBus.push && __errorBus.push({ type: "fx_snapshot_exception", error: __errorBus.toPlain(e) });
+  } finally {
+    _txFxSnapInFlight = false;
   }
+}
+
+// Run snapshots in background, never block UI/boot.
+function ensureTxFxSnapshotsDeferred() {
+  try {
+    if (!sbUser) return;
+    if (window.TB_FREEZE) return;
+    if (window.TB_DEFER && typeof TB_DEFER.coalesceIdle === "function") {
+      TB_DEFER.coalesceIdle("fx:snapshots", async () => {
+        try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("fx:snapshots"); } catch (_) {}
+        await ensureTxFxSnapshots({ batchSize: 10 });
+        try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("fx:snapshots"); } catch (_) {}
+      }, 200);
+    } else {
+      // fallback
+      setTimeout(() => { ensureTxFxSnapshots({ batchSize: 10 }); }, 0);
+    }
+  } catch (_) {}
 }

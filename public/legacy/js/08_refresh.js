@@ -11,10 +11,12 @@ async function refreshFromServer() {
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("supabase:load"); } catch (_) {}
     await loadFromSupabase();
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("supabase:load"); } catch (_) {}
-    if (typeof ensureTxFxSnapshots === "function") {
-      try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("fx:snapshots"); } catch (_) {}
-      await ensureTxFxSnapshots();
-      try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("fx:snapshots"); } catch (_) {}
+    // FX snapshots: run in background (do not block refresh/boot)
+    if (typeof ensureTxFxSnapshotsDeferred === "function") {
+      ensureTxFxSnapshotsDeferred();
+    } else if (typeof ensureTxFxSnapshots === "function") {
+      // Fallback: fire-and-forget
+      try { ensureTxFxSnapshots(); } catch (_) {}
     }
     if (typeof ensureStateIntegrity === "function") ensureStateIntegrity();
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("render:all"); } catch (_) {}
@@ -28,4 +30,3 @@ async function refreshFromServer() {
     _refreshInFlight = false;
   }
 }
-
