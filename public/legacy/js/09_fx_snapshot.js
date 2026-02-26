@@ -76,3 +76,32 @@ function fxTryConvertWithSnapshot(amount, tx, targetBaseCurrency) {
 
 window.fxBuildTxSnapshot = fxBuildTxSnapshot;
 window.fxTryConvertWithSnapshot = fxTryConvertWithSnapshot;
+
+
+// Convenience helper for RPC writes (V6.6):
+// Returns a plain object containing snapshot fields suitable for RPC params.
+function fxSnapshotArgsForWrite(dateISO, txCurrency, baseCurrencyOpt) {
+  const ds = String(dateISO || "").slice(0, 10);
+  const txC = String(txCurrency || "").trim().toUpperCase();
+  let baseC = String(baseCurrencyOpt || "").trim().toUpperCase();
+
+  if (!baseC) {
+    try {
+      const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(ds) : null;
+      baseC = String(seg?.base_currency || seg?.baseCurrency || seg?.currency || "EUR").toUpperCase();
+    } catch (_) {
+      baseC = "EUR";
+    }
+  }
+
+  const snap = fxBuildTxSnapshot(txC, baseC, ds);
+  return {
+    fx_rate_snapshot: snap.fx_rate_snapshot,
+    fx_source_snapshot: snap.fx_source_snapshot,
+    fx_snapshot_at: snap.fx_snapshot_at,
+    fx_base_currency_snapshot: snap.fx_base_currency_snapshot,
+    fx_tx_currency_snapshot: snap.fx_tx_currency_snapshot
+  };
+}
+
+window.fxSnapshotArgsForWrite = fxSnapshotArgsForWrite;

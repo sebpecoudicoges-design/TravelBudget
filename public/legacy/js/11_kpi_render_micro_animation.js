@@ -514,6 +514,21 @@ function renderKPI() {
     : { remaining: getDailyBudgetForDate(displayDateISO), daily: state.period.dailyBudgetBase, baseCurrency: state.period.baseCurrency };
   const base = String(infoToday.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
 
+  // FX KPI: 1€ expressed in current base currency (of display date segment)
+  let fxRateText = "—";
+  try {
+    const rates = (typeof fxRatesForSegment === "function" && typeof getBudgetSegmentForDate === "function")
+      ? fxRatesForSegment(getBudgetSegmentForDate(displayDateISO))
+      : (typeof window.fxGetEurRates === "function" ? window.fxGetEurRates() : {});
+    if (base === "EUR") {
+      fxRateText = "1€ = 1.00 EUR";
+    } else if (typeof window.fxConvert === "function") {
+      const v = window.fxConvert(1, "EUR", base, rates);
+      if (v !== null && isFinite(v)) fxRateText = `1€ = ${Number(v).toFixed(3)} ${base}`;
+    }
+  } catch (_) {}
+
+
   const budgetToday = Number(infoToday.remaining) || getDailyBudgetForDate(displayDateISO);
   const includeUnpaid = (localStorage.getItem("travelbudget_kpi_projection_include_unpaid_v1") === "1");
   const displayCur = base;              // for "Aujourd'hui" / budget KPIs (segment currency of display day)
@@ -598,7 +613,7 @@ function renderKPI() {
   const miniCardStyle = `
     border:1px solid rgba(0,0,0,0.06);
     border-radius:16px;
-    padding:12px;
+    padding:14px;
     background:rgba(0,0,0,0.015);
   `;
 
@@ -607,15 +622,15 @@ function renderKPI() {
     const st = document.createElement("style");
     st.id = "kpiResponsiveStyles";
     st.textContent = `
-      .kpi-layout { grid-template-columns: 420px 1fr; }
-      .kpi-mini-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .kpi-layout { grid-template-columns: 520px 1fr; }
+      .kpi-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; }
 
       @media (max-width: 1100px) {
         .kpi-layout { grid-template-columns: 1fr; }
       }
 
       @media (max-width: 720px) {
-        .kpi-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .kpi-mini-grid { grid-template-columns: 1fr; }
       }
 
       @media (max-width: 480px) {
@@ -625,19 +640,19 @@ function renderKPI() {
     document.head.appendChild(st);
   }
 
+  // #kpi container is already a .card in index.html; avoid nesting cards.
   kpi.innerHTML = `
-    <div class="card">
       <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:12px;">
         <h2 style="margin:0;">KPIs</h2>
         <div class="muted" style="font-size:12px;">${displayDateISO}</div>
       </div>
 
-      <div class="kpi-layout" style="display:grid; gap:14px; margin-top:12px; align-items:start;">
+      <div class="kpi-layout" style="display:grid; gap:16px; margin-top:14px; align-items:start;">
 
         <!-- LEFT: KPIs -->
         <div>
           <!-- KPI mini-cards -->
-          <div class="kpi-mini-grid" style="display:grid; gap:12px;">
+          <div class="kpi-mini-grid" style="display:grid; gap:14px;">
             <div style="${miniCardStyle}">
               <div class="muted" style="font-size:12px;">Budget dispo</div>
               <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
@@ -651,10 +666,10 @@ function renderKPI() {
               <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
                 ${fmtKPICompact(walletTotalEUR)} <span style="font-weight:700; font-size:14px;" class="muted">${displayCurPivot}</span>
               </div>
-              <div class="muted" style="font-size:12px; margin-top:6px;">
-                ≈ ${fmtKPICompact(walletTotalBase)} ${displayCur}
-              </div>
-            </div>
+	              <div class="muted" style="font-size:12px; margin-top:6px;">
+	                ≈ ${fmtKPICompact(walletTotalBase)} ${displayCur}
+	              </div>
+	            </div>
 
             <div style="${miniCardStyle}">
               <div class="muted" style="font-size:12px;">Fin période</div>
@@ -668,10 +683,16 @@ function renderKPI() {
                 ${includeUnpaid ? `<span style="margin-left:auto;opacity:.85;">Net: <strong style="color:var(--text);">${Math.round(pendingDisplay)} ${displayCurPivot}</strong></span>` : ``}
               </label>
             </div>
+
+	            <div style="${miniCardStyle}">
+	              <div class="muted" style="font-size:12px;">FX (période)</div>
+	              <div style="font-weight:800; font-size:18px; line-height:1.2; margin-top:6px; color:var(--text);">${escapeHTML(fxRateText)}</div>
+	              <div class="muted" style="font-size:12px; margin-top:6px;">1€ en devise de période</div>
+	            </div>
           </div>
 
           <!-- CASH card -->
-          <div style="${miniCardStyle} margin-top:12px;">
+          <div style="${miniCardStyle} margin-top:14px;">
             <div class="muted" style="font-size:12px;">Cash</div>
 
             <div style="display:flex; align-items:baseline; gap:10px; margin-top:8px;">
@@ -744,7 +765,6 @@ function renderKPI() {
           ` : ``}
         </div>
       </div>
-    </div>
   `;
 
   // Toggle: include unpaid (forecast) in KPI projection

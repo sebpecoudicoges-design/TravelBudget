@@ -176,6 +176,21 @@ function _isoToday() {
   return `${y}-${m}-${day}`;
 }
 
+// FX snapshot args for RPC writes (Trip)
+// Uses global fxSnapshotArgsForWrite() if available.
+function _rpcFxSnapshotArgs(dateISO, txCurrency) {
+  if (typeof window.fxSnapshotArgsForWrite !== "function") return {};
+  const snap = window.fxSnapshotArgsForWrite(dateISO, txCurrency);
+  return {
+    p_fx_rate_snapshot: snap.fx_rate_snapshot,
+    p_fx_source_snapshot: snap.fx_source_snapshot,
+    p_fx_snapshot_at: snap.fx_snapshot_at,
+    p_fx_base_currency_snapshot: snap.fx_base_currency_snapshot,
+    p_fx_tx_currency_snapshot: snap.fx_tx_currency_snapshot
+  };
+}
+
+
 function _normalizeCurrency(cur) {
     const fallback = (state?.period?.baseCurrency || "THB");
     const c = String(cur || fallback || "").trim().toUpperCase();
@@ -812,7 +827,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
   const date = _isoToday();
   const txType = isOut ? "expense" : "income";
 
-  const { error: rpcErr } = await sb.rpc("apply_transaction", {
+  const { error: rpcErr } = await sb.rpc("apply_transaction_v2", {
     p_user_id: uid,
     p_wallet_id: walletId,
     p_type: txType,
@@ -827,6 +842,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     p_out_of_budget: true,
     p_trip_expense_id: null,
     p_trip_share_link_id: null,
+    ..._rpcFxSnapshotArgs(date, walletCurrency)
   });
   if (rpcErr) throw rpcErr;
 
@@ -904,7 +920,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
   
       // Create transaction affecting wallet only (out_of_budget = true)
       const txType = isOut ? "expense" : "income";
-      const { error: rpcErr } = await sb.rpc("apply_transaction", {
+      const { error: rpcErr } = await sb.rpc("apply_transaction_v2", {
         p_wallet_id: walletId,
         p_type: txType,
         p_amount: amt,
@@ -916,7 +932,8 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
         p_pay_now: true,
         p_out_of_budget: true,
         p_night_covered: false,
-      });
+    ..._rpcFxSnapshotArgs(date, cur)
+  });
       if (rpcErr) throw rpcErr;
 
       // Update settlement event with transaction_id (best-effort)
@@ -1162,7 +1179,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                     await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: m0.id });
                   } else if (looksLikePayment) {
                     const consLabel = `[Trip] ${label}`;
-                    const { error: rpcErrB } = await sb.rpc("apply_transaction", {
+                    const { error: rpcErrB } = await sb.rpc("apply_transaction_v2", {
                       p_wallet_id: walletId,
                       p_type: "expense",
                       p_amount: myShare2,
@@ -1174,7 +1191,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                       p_pay_now: false,
                       p_out_of_budget: out,
                       p_night_covered: false,
-                    });
+    ..._rpcFxSnapshotArgs(date, cur)
+  });
                     if (rpcErrB) throw rpcErrB;
 
                     const { data: txRowsB, error: txErrB } = await sb
@@ -1272,7 +1290,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       const isFullShare = isFinite(myShare) && Math.abs(myShare - amt) < 0.005;
 
       if (isFullShare) {
-        const { error: rpcErr } = await sb.rpc("apply_transaction", {
+        const { error: rpcErr } = await sb.rpc("apply_transaction_v2", {
           p_wallet_id: walletId,
           p_type: "expense",
           p_amount: amt,
@@ -1284,7 +1302,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           p_pay_now: true,
           p_out_of_budget: out,
           p_night_covered: false,
-        });
+    ..._rpcFxSnapshotArgs(date, cur)
+  });
         if (rpcErr) throw rpcErr;
 
       // Update settlement event with transaction_id (best-effort)
@@ -1345,7 +1364,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
         // A) Cashflow advance (decrement wallet, NOT in budget)
         const advanceLabel = `[Trip] Avance - ${label}`;
-        const { error: rpcErrA } = await sb.rpc("apply_transaction", {
+        const { error: rpcErrA } = await sb.rpc("apply_transaction_v2", {
           p_wallet_id: walletId,
           p_type: "expense",
           p_amount: amt,
@@ -1357,7 +1376,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           p_pay_now: true,
           p_out_of_budget: true, // key: do NOT count this advance in budget/allocations
           p_night_covered: false,
-        });
+    ..._rpcFxSnapshotArgs(date, cur)
+  });
         if (rpcErrA) throw rpcErrA;
 
         const { data: txRowsA, error: txErrA } = await sb
@@ -1394,7 +1414,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           const existing = await _getShareBudgetLink(ex.id, me.id);
           if (!existing) {
             const consLabel = `[Trip] ${label}`;
-            const { error: rpcErrB } = await sb.rpc("apply_transaction", {
+            const { error: rpcErrB } = await sb.rpc("apply_transaction_v2", {
               p_wallet_id: walletId,
               p_type: "expense",
               p_amount: myShare,
@@ -1406,7 +1426,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
               p_pay_now: false,
               p_out_of_budget: out,
               p_night_covered: false,
-            });
+    ..._rpcFxSnapshotArgs(date, cur)
+  });
             if (rpcErrB) throw rpcErrB;
 
             const { data: txRowsB, error: txErrB } = await sb
@@ -1465,7 +1486,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
               const targetPeriodId = _findPeriodIdForDate(date);
               const budgetLabel = `[Trip] ${label}`;
 
-              const { error: rpcErr2 } = await sb.rpc("apply_transaction", {
+              const { error: rpcErr2 } = await sb.rpc("apply_transaction_v2", {
                 p_wallet_id: wId,
                 p_type: "expense",
                 p_amount: myShare,
@@ -1477,7 +1498,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                 p_pay_now: false,
                 p_out_of_budget: out,
                 p_night_covered: false,
-              });
+    ..._rpcFxSnapshotArgs(date, cur)
+  });
               if (rpcErr2) throw rpcErr2;
 
               // Fetch created tx and link via trip_expense_budget_links

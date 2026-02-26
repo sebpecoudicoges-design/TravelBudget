@@ -56,6 +56,40 @@ function _periodIdForDate(dateStr) {
   return null;
 }
 
+
+// Build FX snapshot args for RPC writes (V6.6 RPC wrapper)
+// Ensures server receives immutable snapshot fields atomically with the write.
+function _txResolveBaseCurrencyForDate(dateISO) {
+  const ds = String(dateISO || "").slice(0, 10);
+  try {
+    if (typeof window.getBudgetSegmentForDate === "function") {
+      const seg = window.getBudgetSegmentForDate(ds);
+      const bc = seg?.base_currency || seg?.baseCurrency || seg?.currency || seg?.baseCurrencyCode;
+      if (bc) return String(bc).toUpperCase();
+    }
+  } catch (_) {}
+  return String(state?.period?.baseCurrency || state?.period?.base_currency || "EUR").toUpperCase();
+}
+
+function _txBuildFxSnapshotArgs(dateISO, txCurrency) {
+  const ds = String(dateISO || "").slice(0, 10);
+  const txC = (String(txCurrency || "").trim().toUpperCase() || "EUR");
+  const baseC = _txResolveBaseCurrencyForDate(ds);
+
+  if (typeof window.fxBuildTxSnapshot !== "function") {
+    throw new Error("fxBuildTxSnapshot() not found (09_fx_snapshot.js not loaded?)");
+  }
+
+  const snap = window.fxBuildTxSnapshot(txC, baseC, ds);
+  return {
+    p_fx_rate_snapshot: snap.fx_rate_snapshot,
+    p_fx_source_snapshot: snap.fx_source_snapshot,
+    p_fx_snapshot_at: snap.fx_snapshot_at,
+    p_fx_base_currency_snapshot: snap.fx_base_currency_snapshot,
+    p_fx_tx_currency_snapshot: snap.fx_tx_currency_snapshot
+  };
+}
+
 function wireNightLogic() {
   const updateNightVisibility = () => {
     const t = document.getElementById("m-type").value;
@@ -315,7 +349,7 @@ async function saveModal() {
           if (!!outOfBudget !== !!current.outOfBudget) throw new Error("Transaction liée à Trip : flag out_of_budget géré automatiquement.");
         }
 
-        const { data, error } = await sb.rpc("update_transaction", {
+        const { data, error } = await sb.rpc("update_transaction_v2", {
           p_tx_id: editingTxId,
           p_wallet_id: walletId,
           p_type: type,
@@ -328,13 +362,13 @@ async function saveModal() {
           p_pay_now: payNow,
           p_out_of_budget: outOfBudget,
           p_night_covered: type === "expense" && category === "Transport" ? nightCovered : false,
+          // FX snapshot is computed for the transaction date + transaction currency.
+          // (Use local variables here; `form` is not in scope.)
+          ..._txBuildFxSnapshotArgs(start, wallet.currency)
         });
         if (error) throw error;
-
-        // Immutable FX snapshot (Option B): refresh snapshot after update
-        await _ensureTxSnapshotById(editingTxId, wallet.currency, start);
       } else {
-        const { data, error } = await sb.rpc("apply_transaction", {
+        const { data, error } = await sb.rpc("apply_transaction_v2", {
           p_wallet_id: walletId,
           p_type: type,
           p_amount: amount,
@@ -346,23 +380,11 @@ async function saveModal() {
           p_pay_now: payNow,
           p_out_of_budget: outOfBudget,
           p_night_covered: type === "expense" && category === "Transport" ? nightCovered : false,
+          // FX snapshot is computed for the transaction date + transaction currency.
+          // (Use local variables here; `form` is not in scope.)
+          ..._txBuildFxSnapshotArgs(start, wallet.currency)
         });
         if (error) throw error;
-
-        // Immutable FX snapshot (Option B): try to locate the created tx and freeze its rate
-        let createdId = null;
-        try {
-          if (typeof data === "string") createdId = data;
-          else if (data && typeof data === "object") createdId = data.id || data.tx_id || data.transaction_id || null;
-          else if (Array.isArray(data) && data[0]) createdId = data[0].id || data[0].tx_id || null;
-        } catch (_) {}
-
-        if (!createdId) {
-          createdId = await _findLikelyCreatedTxId({ walletId, type, amount, start, end, label });
-        }
-        if (createdId) {
-          await _ensureTxSnapshotById(createdId, wallet.currency, start);
-        }
       }
 
       closeModal();
@@ -414,7 +436,7 @@ async function resnapshotModal() {
     const wallet = findWallet(walletId);
     if (!wallet) throw new Error("Wallet introuvable.");
 
-    const { data, error } = await sb.rpc("apply_transaction", {
+    const { data, error } = await sb.rpc("apply_transaction_v2", {
       p_wallet_id: walletId,
       p_type: tx.type,
       p_amount: Number(tx.amount),
@@ -428,6 +450,7 @@ async function resnapshotModal() {
       p_pay_now: txPayNow,
       p_out_of_budget: txOutOfBudget,
       p_night_covered: txNightCovered,
+      ..._txBuildFxSnapshotArgs(txDateStart, (txCurrency || String(wallet.currency || '').toUpperCase() || 'EUR'))
     });
     if (error) throw error;
 
@@ -484,7 +507,7 @@ async function markTxAsPaid(txId) {
     const wallet = findWallet(tx.walletId);
     if (!wallet) throw new Error("Wallet introuvable.");
 
-    const { error } = await sb.rpc("update_transaction", {
+    const { error } = await sb.rpc("update_transaction_v2", {
       p_tx_id: tx.id,
       p_wallet_id: tx.walletId,
       p_type: tx.type,
@@ -497,6 +520,7 @@ async function markTxAsPaid(txId) {
       p_pay_now: true,
       p_out_of_budget: !!tx.outOfBudget,
       p_night_covered: !!tx.nightCovered,
+      ..._txBuildFxSnapshotArgs(tx.dateStart, String(wallet.currency || '').toUpperCase())
     });
 
     if (error) throw error;
