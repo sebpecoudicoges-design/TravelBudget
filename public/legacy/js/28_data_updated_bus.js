@@ -18,6 +18,10 @@
   }
 
   function emit(name, detail) {
+    try {
+      window.__TB_DATA_REV = (Number(window.__TB_DATA_REV || 0) + 1);
+      window.__TB_DATA_UPDATED_AT = Date.now();
+    } catch (_) {}
     const full = name.startsWith(PREFIX) ? name : (PREFIX + name);
     pushTrace(full, detail);
     document.dispatchEvent(new CustomEvent(full, { detail: detail || {} }));

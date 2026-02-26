@@ -362,7 +362,40 @@ function ensureCashflowChartAlias() {
     return { paidNet, paidSpentAll, paidSpentBudget, pendingNetExp, pendingNetInc };
   }
 
-  function buildSeries() {
+  
+  // =========================
+  // Cache (V6.6) - avoids heavy recompute on reload
+  // =========================
+  function _cashflowCacheKey() {
+    try {
+      const rev = Number(window.__TB_DATA_REV || 0);
+      const scope = (typeof getKpiScope === "function" ? getKpiScope() : {});
+      const seg = (scope && (scope.segId || scope.seg_id)) || "";
+      const start = (scope && scope.start) || "";
+      const end = (scope && scope.end) || "";
+      const baseCur = String((scope && (scope.segBase || scope.seg_base)) || (state && state.period && (state.period.baseCurrency || state.period.base_currency)) || "").toUpperCase();
+      return `tb_cashflow_cache_v1|${rev}|${seg}|${start}|${end}|${baseCur}`;
+    } catch (_) {
+      return "tb_cashflow_cache_v1|0";
+    }
+  }
+  function _cashflowCacheGet() {
+    try {
+      const k = _cashflowCacheKey();
+      const raw = localStorage.getItem(k);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== "object") return null;
+      return obj;
+    } catch (_) { return null; }
+  }
+  function _cashflowCacheSet(obj) {
+    try {
+      const k = _cashflowCacheKey();
+      localStorage.setItem(k, JSON.stringify(obj));
+    } catch (_) {}
+  }
+function buildSeries() {
     const period = window.state?.period;
     if (!period?.start || !period?.end) return { ok:false, reason:"Aucune période définie." };
 
@@ -473,7 +506,14 @@ function ensureCashflowChartAlias() {
 
     let built = null;
     try {
-      built = buildSeries();
+      if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("cashflow:render");
+      const __cached = _cashflowCacheGet();
+      if (__cached && __cached.ok && __cached.series && __cached.options) {
+        built = __cached;
+      } else {
+        built = buildSeries();
+        if (built && built.ok) _cashflowCacheSet(built);
+      }
     } catch (err) {
       window.__cashflowChart = null;
       container.innerHTML = `
@@ -483,6 +523,8 @@ function ensureCashflowChartAlias() {
         </div>`;
       return;
     }
+
+    if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("cashflow:render");
 
     if (!built.ok) {
       container.innerHTML = `

@@ -1,8 +1,10 @@
-window.__TB_BUILD = "6.6.25";
+window.__TB_BUILD = "6.6.26";
 /* =========================
    Boot
    ========================= */
 window.onload = async function () {
+  try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:onload"); } catch (_) {}
+
 
   // ✅ Post invite/recovery: laisse la page se stabiliser
   const postAuth = sessionStorage.getItem("tb_post_auth_redirect") === "1";

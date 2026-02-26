@@ -30,6 +30,11 @@ function setPieExcludedCats(setNormCats) {
 }
 
 function getBudgetSeries() {
+  const __k = TB_CHART_CACHE.key("line");
+  const __cached = TB_CHART_CACHE.get(__k);
+  if (__cached) return __cached;
+  const __out = (function(){
+
   const start = parseISODateOrNull(state.period.start);
   const end = parseISODateOrNull(state.period.end);
   if (!start || !end) return [];
@@ -55,9 +60,17 @@ function getBudgetSeries() {
   });
 
   return series;
+
+  })();
+  return TB_CHART_CACHE.set(__k, __out);
 }
 
 function getExpenseByCategoryBase() {
+  const __k = TB_CHART_CACHE.key("pie");
+  const __cached = TB_CHART_CACHE.get(__k);
+  if (__cached) return __cached;
+  const __out = (function(){
+
   // Pie = expenses by category within active period.
   // If segments use multiple base currencies, aggregate in EUR to stay consistent.
   const start = parseISODateOrNull(state.period.start);
@@ -108,6 +121,9 @@ function getExpenseByCategoryBase() {
   }
 
   return map;
+
+  })();
+  return TB_CHART_CACHE.set(__k, __out);
 }
 
 function drawLineChart(canvasId, series) {
@@ -335,9 +351,24 @@ function redrawCharts() {
   if (redrawPending) return;
   redrawPending = true;
 
-  requestAnimationFrame(() => {
-    drawLineChart("chart-budget", getBudgetSeries());
-    drawPieChart("chart-pie", "pie-legend", getExpenseByCategoryBase());
-    redrawPending = false;
-  });
+  const _do = () => {
+    // Run on next frame to keep UI responsive
+    requestAnimationFrame(() => {
+      try {
+        if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("charts:redraw");
+        drawLineChart("chart-budget", getBudgetSeries());
+        drawPieChart("chart-pie", "pie-legend", getExpenseByCategoryBase());
+        if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("charts:redraw");
+      } finally {
+        redrawPending = false;
+      }
+    });
+  };
+
+  // Heavy charts => idle coalescing (keeps TTI low)
+  if (window.TB_DEFER && typeof TB_DEFER.coalesceIdle === "function") {
+    TB_DEFER.coalesceIdle(_do, 900);
+  } else {
+    _do();
+  }
 }

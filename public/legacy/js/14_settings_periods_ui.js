@@ -107,22 +107,28 @@ function _segRowHTML(seg) {
           <input class="input" value="${escapeHTML(end || "")}" onchange="_tbSegSet('${id}','end',this.value)" />
         </div>
         <div style="min-width:140px;">
-          <div class="label">Devise base</div>
-          <input class="input" value="${escapeHTML(baseCurrency || "")}" onchange="_tbSegSet('${id}','baseCurrency',this.value)" />
+          <div class="label">Devise base ${typeof tbHelp==="function" ? tbHelp("Devise utilisée pour le budget/jour et les courbes sur ce segment.") : ""}</div>
+          <select class="input" onchange="_tbSegSet('${id}','baseCurrency',this.value)">
+            ${(() => {
+              const cur = String(baseCurrency || "").toUpperCase();
+              const list = (typeof tbGetAvailableCurrencies === "function") ? tbGetAvailableCurrencies() : ["EUR","USD","THB"];
+              return list.map(c => `<option value="${c}" ${c === cur ? "selected" : ""}>${c}</option>`).join("");
+            })()}
+          </select>
         </div>
         <div style="min-width:160px;">
           <div class="label">Budget/jour (base)</div>
           <input class="input" value="${escapeHTML(String(dailyBudgetBase ?? ""))}" onchange="_tbSegSet('${id}','dailyBudgetBase',this.value)" />
         </div>
         <div style="min-width:160px;">
-          <div class="label">Taux FX</div>
+          <div class="label">Taux FX ${typeof tbHelp==="function" ? tbHelp("Auto = utilise le taux ECB si disponible. Fixe = tu fournis un taux manuel pour EUR→BASE.") : ""}</div>
           <select class="input" onchange="_tbSegSet('${id}','fxMode',this.value)">
             <option value="auto" ${fxMode === "auto" ? "selected" : ""}>auto (ECB si dispo)</option>
             <option value="fixed" ${fxMode === "fixed" ? "selected" : ""}>fixe (manuel)</option>
           </select>
         </div>
         <div style="min-width:160px;">
-          <div class="label">EUR→BASE</div>
+          <div class="label">EUR→BASE ${typeof tbHelp==="function" ? tbHelp("Taux de conversion EUR→Devise base. En auto, ce champ est verrouillé si ECB fournit le taux.") : ""}</div>
           ${(() => {
             const cur = String(baseCurrency||"").toUpperCase();
             const m = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};

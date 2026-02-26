@@ -177,3 +177,21 @@ window.fxGetEurRates = fxGetEurRates;
 window.fxRate = fxRate;
 window.fxConvert = fxConvert;
 window.safeFxConvert = safeFxConvert;
+
+
+// =========================
+// Currency helpers (V6.6)
+// - Used by Settings UI to avoid free-text currencies
+// =========================
+function tbGetAvailableCurrencies() {
+  try {
+    const rates = _fxGetEurRates() || {};
+    const keys = Object.keys(rates || {}).map(k => String(k||"").toUpperCase()).filter(Boolean);
+    const set = new Set(["EUR", ...keys]);
+    // common travel currencies fallback (in case ECB not fetched yet)
+    ["USD","GBP","CHF","THB","AUD","CAD","NZD","JPY","SEK","NOK","DKK","BRL","MXN","MAD","XOF"].forEach(c => set.add(c));
+    return Array.from(set).sort();
+  } catch (_) {
+    return ["EUR","USD","GBP","CHF","THB"].sort();
+  }
+}

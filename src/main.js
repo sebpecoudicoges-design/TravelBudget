@@ -5,6 +5,7 @@ import './app/bridge.js';
 
 const LEGACY_SCRIPTS = [
   '/legacy/js/00_constants.js',
+  '/legacy/js/00_perf.js',
   '/legacy/js/98_error_bus.js',
   '/legacy/js/00_supabase_config.js',
   '/legacy/js/01_helpers.js',

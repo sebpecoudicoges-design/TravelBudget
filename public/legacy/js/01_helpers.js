@@ -140,3 +140,13 @@ function moneyAdd(a,b,decimals=2){
     }
   };
 })();
+
+
+/* =========================
+   UI helpers (V6.6)
+   ========================= */
+function tbHelp(text) {
+  // Lightweight tooltip using title attribute
+  const t = escapeHTML(String(text || ""));
+  return `<span class="tb-help" title="${t}" aria-label="${t}">?</span>`;
+}

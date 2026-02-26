@@ -605,6 +605,9 @@ function _signPillClass(v) {
    KPI render
    ========================= */
 function renderKPI() {
+  try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("kpi:render"); } catch (_) {}
+  const __out = (function(){
+
   const kpi = document.getElementById("kpi");
 
   // ✅ GUARD: si la vue n'a pas encore monté le conteneur KPI, on ne fait rien.
@@ -941,4 +944,8 @@ function renderKPI() {
       renderKPI();
     };
   }
+
+  })();
+  try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("kpi:render"); } catch (_) {}
+  return __out;
 }
