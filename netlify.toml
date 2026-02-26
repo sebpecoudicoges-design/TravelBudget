@@ -5,3 +5,14 @@
 [build.environment]
   NODE_VERSION = "20"
   NETLIFY_SKIP_INSTALL = "true"
+
+[[headers]]
+  for = "/legacy/js/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/legacy/css/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
