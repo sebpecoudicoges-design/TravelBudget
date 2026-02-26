@@ -77,9 +77,6 @@
     if (scope === "period") return null; // whole period
     return getTodaySegment(); // current segment
   }
-// fallback
-    return getTodaySegment();
-  }
 
   function segLabel(seg) {
     if (!seg) return "";
