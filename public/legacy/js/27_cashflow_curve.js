@@ -1,52 +1,52 @@
 /* =========================
-   Cashflow Curve (Unified Scope)
+   Cashflow Curve (Full Projection Engine)
    ========================= */
-
-function _cashflowResolveHorizon(scope, todayISO) {
-  let startISO = state?.period?.start;
-  let endISO   = state?.period?.end;
-
-  try {
-    if (String(scope || "segment").toLowerCase() !== "period" &&
-        typeof getBudgetSegmentForDate === "function") {
-
-      const seg = getBudgetSegmentForDate(todayISO);
-      if (seg) {
-        if (seg.start || seg.start_date)
-          startISO = String(seg.start || seg.start_date);
-
-        if (seg.end || seg.end_date)
-          endISO = String(seg.end || seg.end_date);
-      }
-    }
-  } catch (_) {}
-
-  return { startISO, endISO };
-}
 
 function renderCashflowChart() {
 
-  const container = document.getElementById("cashflowChart");
-  if (!container) return;
+  const el = document.getElementById("cashflowChart");
+  if (!el) return;
 
   const todayISO = (typeof window.getDisplayDateISO === "function")
     ? window.getDisplayDateISO()
     : toLocalISODate(new Date());
 
-  const scope = localStorage.getItem("travelbudget_kpi_projection_scope_v1") || "segment";
-  const { startISO, endISO } = _cashflowResolveHorizon(scope, todayISO);
+  const includeUnpaid =
+    localStorage.getItem("travelbudget_kpi_projection_include_unpaid_v1") === "1";
 
-  const start = parseISODateOrNull(startISO);
-  const end   = parseISODateOrNull(endISO);
+  const scope =
+    localStorage.getItem("travelbudget_kpi_projection_scope_v1") || "segment";
+
+  // ---- Horizon resolve (same as KPI)
+  let horizonStartISO = state?.period?.start;
+  let horizonEndISO   = state?.period?.end;
+
+  try {
+    if (scope !== "period" && typeof getBudgetSegmentForDate === "function") {
+      const seg = getBudgetSegmentForDate(todayISO);
+      if (seg) {
+        if (seg.start || seg.start_date)
+          horizonStartISO = String(seg.start || seg.start_date);
+        if (seg.end || seg.end_date)
+          horizonEndISO = String(seg.end || seg.end_date);
+      }
+    }
+  } catch (_) {}
+
+  const start = parseISODateOrNull(horizonStartISO);
+  const end   = parseISODateOrNull(horizonEndISO);
   if (!start || !end) return;
 
-  const points = [];
+  const labels = [];
+  const data = [];
+
   let runningEUR = 0;
 
   forEachDateInclusive(start, end, (d) => {
+
     const ds = toLocalISODate(d);
 
-    // Wallet total (pivot EUR)
+    // ---- Wallet total
     let totalEUR = 0;
     for (const w of (state.wallets || [])) {
       const bal = Number(w.balance) || 0;
@@ -57,27 +57,51 @@ function renderCashflowChart() {
       }
     }
 
-    runningEUR = totalEUR;
-    points.push({ x: ds, y: runningEUR });
+    // ---- Forecast daily budget
+    let forecastEUR = 0;
+
+    let daily = Number(state?.period?.dailyBudgetBase || 0);
+    let cur   = String(state?.period?.baseCurrency || "EUR").toUpperCase();
+
+    try {
+      if (typeof getBudgetSegmentForDate === "function") {
+        const seg = getBudgetSegmentForDate(ds);
+        if (seg) {
+          const segDaily = Number(seg.dailyBudgetBase ?? seg.daily_budget_base);
+          const segCur   = String(seg.baseCurrency || seg.base_currency || cur);
+          if (Number.isFinite(segDaily)) daily = segDaily;
+          if (segCur) cur = segCur.toUpperCase();
+        }
+      }
+    } catch (_) {}
+
+    if (typeof window.amountToDisplayForDate === "function") {
+      forecastEUR = window.amountToDisplayForDate(daily, cur, ds);
+    } else {
+      forecastEUR = daily;
+    }
+
+    // ---- Unpaid
+    let pendingEUR = 0;
+    if (includeUnpaid) {
+      pendingEUR = Number(netPendingEUR(ds, ds)) || 0;
+    }
+
+    runningEUR = totalEUR + pendingEUR - forecastEUR;
+
+    labels.push(ds);
+    data.push(runningEUR);
   });
 
-  if (!points.length) return;
-
-  container.innerHTML = `
-    <div style="height:280px;">
-      <canvas id="cashflowCanvas"></canvas>
-    </div>
-  `;
-
+  el.innerHTML = `<canvas id="cashflowCanvas" height="260"></canvas>`;
   const ctx = document.getElementById("cashflowCanvas").getContext("2d");
 
   new Chart(ctx, {
     type: "line",
     data: {
-      labels: points.map(p => p.x),
+      labels,
       datasets: [{
-        label: "Trésorerie",
-        data: points.map(p => p.y),
+        data,
         borderWidth: 2,
         tension: 0.3,
         fill: false
@@ -86,16 +110,10 @@ function renderCashflowChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
+      plugins: { legend: { display: false } },
       scales: {
-        x: {
-          ticks: { maxTicksLimit: 8 }
-        },
-        y: {
-          beginAtZero: false
-        }
+        x: { ticks: { maxTicksLimit: 8 } },
+        y: { beginAtZero: false }
       }
     }
   });
