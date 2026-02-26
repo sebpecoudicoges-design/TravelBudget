@@ -5,7 +5,7 @@
    ========================= */
 (function () {
   const qs = new URLSearchParams(location.search || "");
-  const enabled = qs.get("perf") === "1" || qs.get("perf") === "true";
+  const enabled = (qs.get("perf") === "1" || qs.get("perf") === "true" || qs.get("perfect") === "1" || qs.get("perfect") === "true");
 
   const marks = Object.create(null);
   const spans = [];

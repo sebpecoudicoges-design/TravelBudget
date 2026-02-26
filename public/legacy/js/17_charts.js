@@ -7,6 +7,36 @@
 // - User can toggle categories directly from the pie legend UI
 const PIE_EXCLUDED_CATS_KEY = "travelbudget_pie_excluded_categories_v1";
 
+// In-memory chart cache (scoped by data revision + period inputs).
+// Note: __TB_DATA_REV is incremented on any state change (see 28_data_updated_bus.js).
+(function(){
+  if (window.TB_CHART_CACHE) return;
+  function _rev(){ return Number(window.__TB_DATA_REV || 0) || 0; }
+  function _s(v){ return String(v == null ? "" : v); }
+  window.TB_CHART_CACHE = {
+    _m: new Map(),
+    key: function(name){
+      try {
+        const p = (window.state && window.state.period) ? window.state.period : (typeof state !== "undefined" ? state.period : null);
+        const segN = (window.state && Array.isArray(window.state.budgetSegments)) ? window.state.budgetSegments.length : (typeof state !== "undefined" && Array.isArray(state.budgetSegments) ? state.budgetSegments.length : 0);
+        const txN = (window.state && Array.isArray(window.state.transactions)) ? window.state.transactions.length : (typeof state !== "undefined" && Array.isArray(state.transactions) ? state.transactions.length : 0);
+        const wN  = (window.state && Array.isArray(window.state.wallets)) ? window.state.wallets.length : (typeof state !== "undefined" && Array.isArray(state.wallets) ? state.wallets.length : 0);
+        const base = p ? _s(p.baseCurrency) : "";
+        const start = p ? _s(p.start) : "";
+        const end = p ? _s(p.end) : "";
+        const pid = p ? _s(p.id) : "";
+        return `${_s(name)}|rev=${_rev()}|pid=${pid}|${start}:${end}|base=${base}|segN=${segN}|txN=${txN}|wN=${wN}`;
+      } catch (_) {
+        return `${_s(name)}|rev=${_rev()}`;
+      }
+    },
+    get: function(k){ return this._m.get(k); },
+    set: function(k,v){ this._m.set(k,v); return v; },
+    clear: function(){ this._m.clear(); }
+  };
+})();
+
+
 function _normCat(s) {
   return String(s || "").trim().toLowerCase();
 }
