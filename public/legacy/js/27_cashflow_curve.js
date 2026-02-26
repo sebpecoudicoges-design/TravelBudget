@@ -51,13 +51,16 @@
   let includePendingExpenses = (localStorage.getItem("cashflow_include_pending_exp_v1") ?? "1") === "1";
   let includePendingIncomes  = (localStorage.getItem("cashflow_include_pending_inc_v1") ?? "1") === "1";
 
-  // Segment filter (range + display currency for the chart)
-  // - "current": current segment (today)
-  // - "all": full period
-  // - "seg:<i>": explicit segment index in state.budgetSegments
-  // Cashflow horizon is controlled by the KPI header scope filter (single source of truth)
-  const KPI_SCOPE_KEY = "travelbudget_kpi_projection_scope_v1";
-  let cashflowSegFilter = (String(localStorage.getItem(KPI_SCOPE_KEY) || "segment").toLowerCase() === "period") ? "all" : "current";
+  // Range scope for the chart is driven by the KPI header scope selector.
+  // It reuses the same storage key:
+  //   localStorage['travelbudget_kpi_projection_scope_v1'] in {'segment','period'}
+  // - 'segment': current budget segment (today)
+  // - 'period' : full active period
+  function getGlobalScope() {
+    try { return String(localStorage.getItem("travelbudget_kpi_projection_scope_v1") || "segment").toLowerCase(); }
+    catch (_) { return "segment"; }
+  }
+
 
   function getSegments() {
     return Array.isArray(window.state?.budgetSegments) ? window.state.budgetSegments.filter(Boolean) : [];
@@ -67,24 +70,15 @@
     if (typeof window.getBudgetSegmentForDate === "function") {
       return window.getBudgetSegmentForDate(todayStr());
     }
-
-  function _syncScopeFromKPI() {
-    try {
-      const s = String(localStorage.getItem(KPI_SCOPE_KEY) || "segment").toLowerCase();
-      cashflowSegFilter = (s === "period") ? "all" : "current";
-    } catch (_) {}
-  }
     return null;
   }
 
   function getSelectedSegment() {
-    if (cashflowSegFilter === "all") return null;
-    if (cashflowSegFilter === "current") return getTodaySegment();
-    if (cashflowSegFilter.startsWith("seg:")) {
-      const idx = Number(String(cashflowSegFilter.split(":")[1] || "").trim());
-      const segs = getSegments();
-      if (Number.isInteger(idx) && idx >= 0 && idx < segs.length) return segs[idx];
-    }
+    const scope = getGlobalScope();
+    if (scope === "period") return null; // full period
+    // default: segment scope
+    return getTodaySegment();
+  }
     // fallback
     return getTodaySegment();
   }
@@ -426,11 +420,10 @@
       .filter(v => v !== null);
     if (allY.some(v => Number.isNaN(v))) return { ok:false, reason:"Séries invalides (NaN)." };
 
-    return { ok:true, b, start, end, tStr, dailyBudget, currentBalance, startBalance, actual, forecast, spentBars, budgetUsedVal, thr500, segFilter: cashflowSegFilter, segLabel: selSeg ? segLabel(selSeg) : "Période complète" };
+    return { ok:true, b, start, end, tStr, dailyBudget, currentBalance, startBalance, actual, forecast, spentBars, budgetUsedVal, thr500, segLabel: selSeg ? segLabel(selSeg) : "Période complète" };
   }
 
   async function renderCashflowChart() {
-    _syncScopeFromKPI();
     // keep in sync with existing navigation
     if (typeof window.activeView !== "undefined" && window.activeView !== "dashboard") return;
 
@@ -496,19 +489,7 @@
           </details>`
       : "";
 
-    // Segment filter UI (range)
-    const segs = getSegments();
-    const segOptions = [
-      `<option value="current" ${cashflowSegFilter === "current" ? "selected" : ""}>Période courante (défaut)</option>`,
-      `<option value="all" ${cashflowSegFilter === "all" ? "selected" : ""}>Toute la période</option>`,
-      ...segs.map((s, i) => {
-        const val = `seg:${i}`;
-        const lab = segLabel(s) || `Période ${i+1}`;
-        return `<option value="${val}" ${cashflowSegFilter === val ? "selected" : ""}>${escapeHTML(lab)}</option>`;
-      })
-    ].join("");
-
-    // UI
+        // UI
     container.innerHTML = `
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap;">
@@ -520,7 +501,7 @@
           </div>
 
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-<label class="muted" style="display:flex; gap:6px; align-items:center;">
+            <label class="muted" style="display:flex; gap:6px; align-items:center;">
               <input type="checkbox" id="cf-pending-exp" ${includePendingExpenses ? "checked" : ""}/>
               Dépenses à payer
             </label>
@@ -689,7 +670,6 @@ dataLabels: { enabled: false },
 
     const btn = document.getElementById("cf-reset-zoom");
     if (btn) btn.onclick = () => { try { chart.resetZoom(); } catch (_) {} };
-
     const cbExp = document.getElementById("cf-pending-exp");
     if (cbExp) cbExp.onchange = (e) => {
       includePendingExpenses = !!e.target.checked;
