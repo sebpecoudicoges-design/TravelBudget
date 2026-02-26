@@ -77,15 +77,39 @@ function projectedEndEUR() {
   return totalInEUR() - remainingEUR;
 }
 
-function netPendingEUR() {
-  // Net of unpaid items (pay_now=false):
+function netPendingEUR(rangeStartISO, rangeEndISO) {
+  // Net of unpaid items (pay_now=false) within an optional date range:
   // + unpaid incomes, - unpaid expenses
   // Excludes internal/shadow rows (isInternal=true)
+  //
+  // A tx is included if its [dateStart,dateEnd] overlaps [rangeStartISO,rangeEndISO].
+  // If no range is provided, includes all unpaid tx in the active period.
+  const rs = rangeStartISO ? parseISODateOrNull(rangeStartISO) : null;
+  const re = rangeEndISO ? parseISODateOrNull(rangeEndISO) : null;
+
+  function _txOverlaps(tx) {
+    if (!rs && !re) return true;
+    const ds = parseISODateOrNull(tx.dateStart) || (tx.date ? new Date(Number(tx.date)) : null);
+    const de = parseISODateOrNull(tx.dateEnd) || ds;
+    if (!ds) return false;
+
+    const a = clampMidnight(ds);
+    const b = clampMidnight(de || ds);
+
+    const r0 = rs ? clampMidnight(rs) : null;
+    const r1 = re ? clampMidnight(re) : null;
+
+    if (r0 && b < r0) return false;
+    if (r1 && a > r1) return false;
+    return true;
+  }
+
   let net = 0;
   for (const tx of (state.transactions || [])) {
     if (!tx) continue;
     if (tx.isInternal) continue;
     if (tx.payNow) continue;
+    if (!_txOverlaps(tx)) continue;
 
     const v = amountToEUR(Number(tx.amount) || 0, tx.currency);
     if (tx.type === "income") net += v;
@@ -170,7 +194,8 @@ function projectedEndDisplayWithOptions(opts) {
   }
 
   // Pending (unpaid/unreceived) in EUR
-  const pendingEUR = includeUnpaid ? (Number(netPendingEUR()) || 0) : 0;
+  const horizonStartISO = todayISO;
+  const pendingEUR = includeUnpaid ? (Number(netPendingEUR(horizonStartISO, horizonEndISO)) || 0) : 0;
 
   // Horizon end
   let horizonEndISO = state?.period?.end;
@@ -609,6 +634,7 @@ function renderKPI() {
 
   const budgetToday = Number(infoToday.remaining) || getDailyBudgetForDate(displayDateISO);
   const includeUnpaid = (localStorage.getItem("travelbudget_kpi_projection_include_unpaid_v1") === "1");
+  const kpiScope = (localStorage.getItem("travelbudget_kpi_projection_scope_v1") || "segment");
   const displayCur = base;              // for "Aujourd'hui" / budget KPIs (segment currency of display day)
   const displayCurPivot = "EUR";        // pivot for Total wallets + Projection
 
@@ -651,10 +677,21 @@ function renderKPI() {
     }
   }
 
-  const pendingDisplay = includeUnpaid ? (Number(netPendingEUR()) || 0) : 0; // EUR (only for Projection UI)
+  function _kpiResolveHorizonEndISO(scope, todayISO) {
+    let endISO = state?.period?.end;
+    try {
+      if (String(scope||"segment").toLowerCase() !== "period" && typeof getBudgetSegmentForDate === "function") {
+        const seg0 = getBudgetSegmentForDate(todayISO);
+        if (seg0 && (seg0.end || seg0.end_date)) endISO = String(seg0.end || seg0.end_date);
+      }
+    } catch (_) {}
+    return endISO;
+  }
+  const _kpiHorizonEndISO = _kpiResolveHorizonEndISO(kpiScope, displayDateISO);
+  const pendingDisplay = includeUnpaid ? (Number(netPendingEUR(displayDateISO, _kpiHorizonEndISO)) || 0) : 0; // EUR (only for Projection UI)
   const totalDisplay = walletTotalEUR + (includeUnpaid ? pendingDisplay : 0); // kept for backward compat of internal uses
 
-  const projEndDisplay = projectedEndDisplayWithOptions({ includeUnpaid });
+  const projEndDisplay = projectedEndDisplayWithOptions({ includeUnpaid, scope: kpiScope });
 
   const runway = cashRunwayInfo();        // dépenses cash réelles
   const cover  = cashConservativeInfo();  // burn prudent (budget/alloc)
@@ -722,7 +759,16 @@ function renderKPI() {
   kpi.innerHTML = `
       <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:12px;">
         <h2 style="margin:0;">KPIs</h2>
-        <div class="muted" style="font-size:12px;">${displayDateISO}</div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+  <select id="kpiPeriodSelect" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;">
+    ${ (state.periods || []).map(pp => `<option value="${pp.id}" ${pp.id===state.period.id?"selected":""}>${pp.start} → ${pp.end} (${pp.baseCurrency||""})</option>`).join("") }
+  </select>
+  <select id="kpiScopeSelect" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;">
+    <option value="segment">Segment courant</option>
+    <option value="period">Toute la période</option>
+  </select>
+  <div class="muted" style="font-size:12px;">${displayDateISO}</div>
+</div>
       </div>
 
       <div class="kpi-layout" style="display:grid; gap:16px; margin-top:14px; align-items:start;">
