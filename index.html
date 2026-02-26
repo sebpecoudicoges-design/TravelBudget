@@ -486,7 +486,7 @@
 
     <div class="modal-grid">
       <div class="field">
-        <label>Type</label>
+        <label>Type <span class="tb-help" title="Dépense = sort du wallet. Entrée = ajoute au wallet.">?</span></label>
         <select id="m-type">
           <option value="expense">Dépense</option>
           <option value="income">Entrée</option>
@@ -494,7 +494,7 @@
       </div>
 
       <div class="field">
-        <label>Wallet</label>
+        <label>Wallet <span class="tb-help" title="Le wallet concerné par la transaction.">?</span></label>
         <select id="m-wallet"></select>
       </div>
 
@@ -504,7 +504,7 @@
       </div>
 
       <div class="field">
-        <label>Catégorie</label>
+        <label>Catégorie <span class="tb-help" title="Sert aux stats (camembert). Choisis 'Autre' si tu hésites.">?</span></label>
         <select id="m-category"></select>
       </div>
 
@@ -524,12 +524,12 @@
       </div>
 
       <div class="field">
-        <label>Payé maintenant</label>
+        <label>Payé maintenant <span class="tb-help" title="Coché : impact immédiat sur le solde. Décoché : c'est à payer/recevoir plus tard (prévision).">?</span></label>
         <input id="m-paynow" type="checkbox" checked />
       </div>
 
       <div class="field">
-        <label>Hors budget/jour</label>
+        <label>Hors budget/jour <span class="tb-help" title="Coché : n'impacte pas le budget quotidien (ex: dépense exceptionnelle).">?</span></label>
         <input id="m-out" type="checkbox" />
       </div>
 
@@ -579,6 +579,14 @@
         <div class="grid">
           <div class="card">
             <h2>Wallets</h2>
+            <div id="onboarding-panel" class="card" style="display:none; margin:10px 0; border:1px dashed rgba(0,0,0,.25); background:rgba(0,0,0,.02);">
+              <h3 style="margin:0 0 6px 0;">Démarrer en 1 minute</h3>
+              <div id="onboarding-panel-body" style="font-size:13px; line-height:1.35;"></div>
+              <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                <button class="btn primary" onclick="showView('settings')">Configurer</button>
+                <button class="btn" onclick="hideOnboardingPanel()">Masquer</button>
+              </div>
+            </div>
             <div id="wallets-container" style="display:flex; flex-direction:column; gap:12px;"></div>
           </div>
 

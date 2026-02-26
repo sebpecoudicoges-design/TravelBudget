@@ -1,10 +1,60 @@
 /* =========================
+   Onboarding / Empty states
+   ========================= */
+function hideOnboardingPanel() {
+  try { localStorage.setItem("tb_onboarding_hide_v1", "1"); } catch (_) {}
+  const el = document.getElementById("onboarding-panel");
+  if (el) el.style.display = "none";
+}
+
+function renderOnboardingPanel() {
+  const panel = document.getElementById("onboarding-panel");
+  const body = document.getElementById("onboarding-panel-body");
+  if (!panel || !body) return;
+
+  // User can hide it.
+  try {
+    if (localStorage.getItem("tb_onboarding_hide_v1") === "1") {
+      panel.style.display = "none";
+      return;
+    }
+  } catch (_) {}
+
+  const wallets = (window.state && Array.isArray(state.wallets)) ? state.wallets : [];
+  const txs = (window.state && Array.isArray(state.transactions)) ? state.transactions : [];
+
+  // "Periods" heuristic: we consider segments/settings present if we have at least one segment or at least one setting row.
+  const hasSegments = !!(window.state && Array.isArray(state.segments) && state.segments.length);
+  const hasSettings = !!(window.state && Array.isArray(state.settings) && state.settings.length);
+
+  const steps = [];
+  if (!wallets.length) steps.push("1) Crée un <b>wallet</b> (ex: Cash THB).");
+  if (!hasSegments && !hasSettings) steps.push("2) Configure ta <b>période</b> et ta devise principale.");
+  if (!txs.length) steps.push("3) Ajoute 1 première transaction (exemple : <i>Déjeuner 120 THB</i>).");
+
+  if (!steps.length) {
+    panel.style.display = "none";
+    return;
+  }
+
+  panel.style.display = "block";
+  body.innerHTML = `
+    <div>${steps.join("<br/>")}</div>
+    <div style="margin-top:6px; opacity:.8;">Astuce : sur chaque champ sensible, clique sur le <b>?</b> pour une explication.</div>
+  `;
+}
+
+/* =========================
    Dashboard render
    ========================= */
 function renderWallets() {
   // Sur certaines pages (reset/recovery), le DOM dashboard n'existe pas.
   const container = document.getElementById("wallets-container");
   if (!container) return;
+
+
+  // Onboarding panel / empty states
+  renderOnboardingPanel();
 
   
   container.innerHTML = "";
@@ -19,6 +69,22 @@ function renderWallets() {
     <button class="btn primary" onclick="createWallet()">+ Wallet</button>
   `;
   container.appendChild(actions);
+
+
+const wallets = Array.isArray(state.wallets) ? state.wallets : [];
+if (!wallets.length) {
+  const empty = document.createElement("div");
+  empty.className = "hint";
+  empty.style.padding = "10px";
+  empty.style.border = "1px dashed rgba(0,0,0,.25)";
+  empty.style.borderRadius = "10px";
+  empty.style.background = "rgba(0,0,0,.02)";
+  empty.innerHTML = `
+    <b>Aucun wallet.</b><br/>
+    Crée au moins 1 wallet pour suivre ton solde (ex: Cash THB, Banque EUR).
+  `;
+  container.appendChild(empty);
+}
 
   // Wallets list (draggable reorder)
   const listEl = document.createElement("div");
