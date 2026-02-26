@@ -195,7 +195,6 @@ function projectedEndDisplayWithOptions(opts) {
 
   // Pending (unpaid/unreceived) in EUR
   const horizonStartISO = todayISO;
-  const pendingEUR = includeUnpaid ? (Number(netPendingEUR(horizonStartISO, horizonEndISO)) || 0) : 0;
 
   // Horizon end
   let horizonEndISO = state?.period?.end;
@@ -224,6 +223,8 @@ function projectedEndDisplayWithOptions(opts) {
             if (segCur) cur = segCur;
             if (Number.isFinite(segDaily)) daily = segDaily;
           }
+
+  const pendingEUR = includeUnpaid ? (Number(netPendingEUR(horizonStartISO, horizonEndISO)) || 0) : 0;
         }
       } catch (_) {}
 
@@ -890,6 +891,38 @@ function renderKPI() {
         </div>
       </div>
   `;
+
+  // Bind KPI selects (period + scope) once per render
+  try {
+    const selP = kpi.querySelector("#kpiPeriodSelect");
+    const selS = kpi.querySelector("#kpiScopeSelect");
+
+    if (selP && !selP.dataset.bound) {
+      selP.dataset.bound = "1";
+      selP.addEventListener("change", async (e) => {
+        const v = String(e.target.value || "");
+        if (!v) return;
+        try { localStorage.setItem(ACTIVE_PERIOD_KEY, v); } catch(_) {}
+        // Full refresh to load wallets/tx/segments for the selected period
+        if (typeof refreshFromServer === "function") {
+          await refreshFromServer();
+        } else if (typeof loadFromSupabase === "function") {
+          await loadFromSupabase();
+          if (typeof renderAll === "function") renderAll();
+        }
+      });
+    }
+
+    if (selS && !selS.dataset.bound) {
+      selS.dataset.bound = "1";
+      selS.addEventListener("change", () => {
+        try { localStorage.setItem("travelbudget_kpi_projection_scope_v1", String(selS.value || "segment")); } catch(_) {}
+        if (typeof renderKPI === "function") renderKPI();
+      });
+    }
+  } catch(e) { console.warn(e); }
+
+
 
   // Toggle: include unpaid (forecast) in KPI projection
   const _tog = document.getElementById("kpiIncludeUnpaidToggle");
