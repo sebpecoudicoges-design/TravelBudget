@@ -196,6 +196,13 @@ async function saveBudgetSegment(id) {
 const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
     const dailyBudgetBase = Number(edits.dailyBudgetBase ?? seg.dailyBudgetBase);
     const fxMode = (edits.fxMode ?? seg.fxMode ?? "fixed") || "fixed";
+    // Normalize to DB-accepted values (avoid check constraint errors)
+    const fxModeDb = (() => {
+      const v = String(fxMode || "").toLowerCase().trim();
+      if (v === "fixed" || v === "manual") return "fixed";
+      if (v === "live" || v === "auto" || v === "live_ecb" || v === "ecb") return "live";
+      return "fixed";
+    })();
 
     // NOTE: eurBaseRateFixed is read-only in live_ecb (we display the live value).
     let eurBaseRateFixedRaw = edits.eurBaseRateFixed ?? seg.eurBaseRateFixed;
@@ -291,7 +298,7 @@ const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
         end_date: endN,
         base_currency: baseCurrency,
         daily_budget_base: dailyBudgetBase,
-        fx_mode: fxMode,
+        fx_mode: fxModeDb,
         // V6.5 FX storage
         fx_rate_eur_to_base: (fxMode === "fixed" ? eurBaseRateFixed : null),
         fx_source: (fxMode === "fixed" ? "manual" : "ecb"),

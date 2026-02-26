@@ -641,6 +641,19 @@ function renderKPI() {
   }
 
   // #kpi container is already a .card in index.html; avoid nesting cards.
+  // Expose last KPI values for debugging (mobile/desktop parity checks)
+  try {
+    window.__kpiLast = {
+      displayDateISO,
+      baseCurrency: base,
+      walletTotalEUR,
+      walletTotalBase,
+      includeUnpaid,
+      projectedEndEUR: projEndDisplay,
+      fxRateText
+    };
+  } catch (_) {}
+
   kpi.innerHTML = `
       <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:12px;">
         <h2 style="margin:0;">KPIs</h2>
@@ -674,7 +687,7 @@ function renderKPI() {
             <div style="${miniCardStyle}">
               <div class="muted" style="font-size:12px;">Fin période</div>
               <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
-                ${fmtKPICompact(projEndDisplay)} <span style="font-weight:700; font-size:14px;" class="muted">${displayCurPivot}</span>
+                <span id="kpiProjectedEndValue">${fmtKPICompact(projEndDisplay)}</span> <span style="font-weight:700; font-size:14px;" class="muted">${displayCurPivot}</span>
               </div>
               <div class="muted" style="font-size:12px; margin-top:6px;">Projection</div>
               <label class="muted" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;user-select:none;">

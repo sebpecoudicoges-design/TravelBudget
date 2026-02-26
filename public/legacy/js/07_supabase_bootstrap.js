@@ -10,27 +10,16 @@ function addDays(date, days) {
 }
 
 
-// --- First-time onboarding wizard (V6.7) ---
-function _wizEscapeHTML(str) {
-  if (str === null || str === undefined) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-// Collect period dates + base currency + FX (ECB auto, manual fallback) + initial wallets.
+// --- First-time onboarding wizard (V6.7+) ---
+// ECB is NOT CORS-enabled; we fetch through a Netlify function proxy.
 async function fetchEcbDailyXml() {
-  const url = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
+  const url = "/.netlify/functions/ecb";
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error("ECB fetch failed (" + res.status + ")");
   return await res.text();
 }
 
 function parseEcbXmlToRates(xmlText) {
-  // Returns map: { USD: 1.08, ... } for 1 EUR = rate CURRENCY
   const out = {};
   const parser = new DOMParser();
   const doc = parser.parseFromString(xmlText, "text/xml");
@@ -40,7 +29,6 @@ function parseEcbXmlToRates(xmlText) {
     const r = Number(n.getAttribute("rate"));
     if (c && Number.isFinite(r) && r > 0) out[c] = r;
   });
-  // ECB does not include EUR (implicit 1)
   out.EUR = 1;
   return out;
 }
@@ -53,6 +41,16 @@ async function getEcbEurTo(cur) {
   const rates = parseEcbXmlToRates(xml);
   const r = Number(rates[c]);
   return (Number.isFinite(r) && r > 0) ? r : null;
+}
+
+function _wizEscapeHTML(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function showFirstTimeWizardModal(defaults) {
@@ -82,7 +80,7 @@ function showFirstTimeWizardModal(defaults) {
       </div>
 
       <div style="margin-top:10px;font-size:13px;opacity:.85;">
-        Choisis les dates, la devise, puis on crée automatiquement la période, le 1er segment et tes wallets.
+        Choisis les dates, la devise, puis on crée automatiquement la période et le 1er segment.
       </div>
 
       <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -114,28 +112,6 @@ function showFirstTimeWizardModal(defaults) {
         <div id="wizFxHint" style="margin-top:6px;font-size:12px;opacity:.8;"></div>
       </div>
 
-      <div style="margin-top:12px;padding:10px;border:1px solid #eee;border-radius:12px;">
-        <div style="font-weight:700;font-size:13px;">Wallets init</div>
-
-        <label style="margin-top:8px;display:flex;align-items:center;gap:8px;font-size:13px;">
-          <input id="wizHasCash" type="checkbox" ${d.hasCash ? "checked" : ""}>
-          J’ai du cash
-        </label>
-        <div id="wizCashRow" style="margin-top:8px;display:none;grid-template-columns:1fr 1fr;gap:10px;">
-          <input id="wizCashAmt" type="number" step="0.01" placeholder="Montant cash" style="padding:10px;border:1px solid #ddd;border-radius:10px;" value="${_wizEscapeHTML(String(d.cashAmount ?? ""))}">
-          <input id="wizCashCur" placeholder="Devise cash (ex: THB)" style="padding:10px;border:1px solid #ddd;border-radius:10px;text-transform:uppercase;" value="${_wizEscapeHTML(d.cashCurrency || "")}">
-        </div>
-
-        <label style="margin-top:10px;display:flex;align-items:center;gap:8px;font-size:13px;">
-          <input id="wizHasBank" type="checkbox" ${d.hasBank ? "checked" : ""}>
-          J’ai un compte bancaire
-        </label>
-        <div id="wizBankRow" style="margin-top:8px;display:none;grid-template-columns:1fr 1fr;gap:10px;">
-          <input id="wizBankAmt" type="number" step="0.01" placeholder="Solde banque" style="padding:10px;border:1px solid #ddd;border-radius:10px;" value="${_wizEscapeHTML(String(d.bankAmount ?? ""))}">
-          <input id="wizBankCur" placeholder="Devise banque (ex: EUR)" style="padding:10px;border:1px solid #ddd;border-radius:10px;text-transform:uppercase;" value="${_wizEscapeHTML(d.bankCurrency || "EUR")}">
-        </div>
-      </div>
-
       <div style="margin-top:14px;display:flex;gap:10px;justify-content:flex-end;">
         <button id="wizCreate" style="border:0;background:#0b74ff;color:#fff;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;">Créer</button>
       </div>
@@ -144,17 +120,7 @@ function showFirstTimeWizardModal(defaults) {
     overlay.appendChild(card);
     document.body.appendChild(overlay);
 
-    const $ = (id) => card.querySelector(id);
-
-    function syncWalletRows() {
-      const cashOn = !!$("#wizHasCash").checked;
-      const bankOn = !!$("#wizHasBank").checked;
-      $("#wizCashRow").style.display = cashOn ? "grid" : "none";
-      $("#wizBankRow").style.display = bankOn ? "grid" : "none";
-    }
-    syncWalletRows();
-    $("#wizHasCash").addEventListener("change", syncWalletRows);
-    $("#wizHasBank").addEventListener("change", syncWalletRows);
+    const $ = (sel) => card.querySelector(sel);
 
     $("#wizClose").addEventListener("click", () => {
       overlay.remove();
@@ -174,7 +140,7 @@ function showFirstTimeWizardModal(defaults) {
         $("#wizFxHint").textContent = "ECB OK: 1 EUR = " + r + " " + cur;
       } catch (e) {
         console.warn(e);
-        $("#wizFxHint").textContent = "ECB inaccessible (réseau/CORS) → saisie manuelle.";
+        $("#wizFxHint").textContent = "ECB inaccessible → saisie manuelle.";
       }
     });
 
@@ -190,18 +156,9 @@ function showFirstTimeWizardModal(defaults) {
       if (!baseCurrency || baseCurrency.length !== 3) return alert("Devise invalide (3 lettres).");
       if (!(Number.isFinite(dailyBudgetBase) && dailyBudgetBase >= 0)) return alert("Budget/jour invalide.");
 
-      // FX: if base != EUR we need a valid rate
       if (baseCurrency !== "EUR") {
         if (!(Number.isFinite(eurBaseRate) && eurBaseRate > 0)) return alert("FX requis: 1 EUR = X " + baseCurrency);
       }
-
-      const hasCash = !!$("#wizHasCash").checked;
-      const cashAmount = Number($("#wizCashAmt").value);
-      const cashCurrency = String($("#wizCashCur").value || "").trim().toUpperCase() || baseCurrency;
-
-      const hasBank = !!$("#wizHasBank").checked;
-      const bankAmount = Number($("#wizBankAmt").value);
-      const bankCurrency = String($("#wizBankCur").value || "").trim().toUpperCase() || "EUR";
 
       overlay.remove();
       resolve({
@@ -210,10 +167,6 @@ function showFirstTimeWizardModal(defaults) {
         baseCurrency,
         eurBaseRate: baseCurrency === "EUR" ? 1 : eurBaseRate,
         dailyBudgetBase,
-        wallets: {
-          cash: hasCash ? { name: "Cash", type: "cash", currency: cashCurrency, balance: Number.isFinite(cashAmount) ? cashAmount : 0 } : null,
-          bank: hasBank ? { name: "Compte bancaire", type: "bank", currency: bankCurrency, balance: Number.isFinite(bankAmount) ? bankAmount : 0 } : null,
-        },
       });
     });
   });
@@ -227,19 +180,10 @@ async function runFirstTimeWizard() {
     baseCurrency: "THB",
     dailyBudgetBase: 900,
     eurBaseRate: "",
-    hasCash: true,
-    cashAmount: 0,
-    cashCurrency: "THB",
-    hasBank: true,
-    bankAmount: 0,
-    bankCurrency: "EUR",
   };
-
-  const cfg = await showFirstTimeWizardModal(defaults);
-  return cfg;
+  return await showFirstTimeWizardModal(defaults);
 }
 // --- end onboarding wizard ---
-
 async function ensureBootstrap() {
   if (!sbUser) return;
 
@@ -344,18 +288,13 @@ async function ensureBootstrap() {
     if (pErr) throw pErr;
 
     if (!periods || periods.length === 0) {
-      // First-time onboarding: ask user for dates/currency + FX + initial wallets
+      // First-time onboarding wizard (dates/currency + ECB auto FX with manual fallback)
       let cfg = null;
-      try {
-        cfg = await runFirstTimeWizard();
-      } catch (e) {
-        console.warn(e);
-      }
+      try { cfg = await runFirstTimeWizard(); } catch (e) { console.warn(e); }
 
-      // Fallback if user cancels
       const start = cfg?.start || today;
       const end = cfg?.end || toLocalISODate(addDays(new Date(), 20));
-      const baseCur = (cfg?.baseCurrency || "THB").toUpperCase();
+      const baseCur = String((cfg?.baseCurrency || "THB")).toUpperCase();
       const eurBaseRate = Number.isFinite(cfg?.eurBaseRate) ? cfg.eurBaseRate : (baseCur === "EUR" ? 1 : 36.0);
       const daily = Number.isFinite(cfg?.dailyBudgetBase) ? cfg.dailyBudgetBase : 900;
 
@@ -371,36 +310,25 @@ async function ensureBootstrap() {
         }])
         .select("*")
         .single();
-
       if (insErr) throw insErr;
 
-      // Create first segment aligned with the period
-      const { error: segErr } = await sb.from(TB_CONST.TABLES.budget_segments).insert([{
-        user_id: sbUser.id,
-        period_id: p1.id,
-        start_date: start,
-        end_date: end,
-        base_currency: baseCur,
-        daily_budget_base: daily,
-        fx_mode: "fixed",
-        eur_base_rate_fixed: baseCur === "EUR" ? 1 : eurBaseRate,
-        sort_order: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }]);
-      if (segErr) throw segErr;
-
-           // Create wallets based on wizard answers (if any). If user canceled wizard,
-      // we keep legacy defaults (Cash + bank) in loadFromSupabase wallet bootstrap.
-      if (cfg && cfg.wallets) {
-        const initial = [];
-        if (cfg.wallets.cash) initial.push({ user_id: sbUser.id, period_id: p1.id, ...cfg.wallets.cash });
-        if (cfg.wallets.bank) initial.push({ user_id: sbUser.id, period_id: p1.id, ...cfg.wallets.bank });
-
-        if (initial.length > 0) {
-          const { error: wErr2 } = await sb.from(TB_CONST.TABLES.wallets).insert(initial);
-          if (wErr2) throw wErr2;
-        }
+      // Create first segment aligned with the period (fixed)
+      try {
+        const { error: segErr } = await sb.from(TB_CONST.TABLES.budget_segments).insert([{
+          user_id: sbUser.id,
+          period_id: p1.id,
+          start_date: start,
+          end_date: end,
+          base_currency: baseCur,
+          daily_budget_base: daily,
+          fx_mode: "fixed",
+          eur_base_rate_fixed: eurBaseRate,
+          sort_order: 0,
+        }]);
+        if (segErr) throw segErr;
+      } catch (e) {
+        // if table not deployed, ignore (loadFromSupabase will synthesize)
+        console.warn("[bootstrap] budget_segments insert failed (ignored)", e?.message || e);
       }
     }
   }

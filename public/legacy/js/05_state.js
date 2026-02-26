@@ -374,57 +374,48 @@ function getBudgetSegmentForDate(dateStr) {
   const ds = String(dateStr || "");
   if (!ds) return null;
 
-  const segs = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
-  const activePeriodId = state && state.period && state.period.id ? String(state.period.id) : "";
-  const activeBase = String(state?.period?.baseCurrency || state?.period?.base_currency || "").toUpperCase();
+  const segsAll = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
+  const activePeriodId = (state && state.period && state.period.id) ? String(state.period.id) : "";
 
-  // Normalize and keep only segments that actually cover ds
-  const covering = segs.filter((seg) => {
-    if (!seg) return false;
-    const s = String(seg.start || "");
-    const e = String(seg.end || "");
-    return !!(s && e && ds >= s && ds <= e);
-  });
+  // Normalize + stable sort (important: mobile/desktop determinism)
+  const segs = segsAll
+    .filter(Boolean)
+    .slice()
+    .sort((a, b) => {
+      const ao = Number(a.sortOrder ?? a.sort_order ?? 0);
+      const bo = Number(b.sortOrder ?? b.sort_order ?? 0);
+      if (ao !== bo) return ao - bo;
+      const as = String(a.start || "");
+      const bs = String(b.start || "");
+      if (as !== bs) return as < bs ? -1 : 1;
+      const ae = String(a.end || "");
+      const be = String(b.end || "");
+      if (ae !== be) return ae < be ? -1 : 1;
+      const aid = String(a.id || "");
+      const bid = String(b.id || "");
+      return aid < bid ? -1 : (aid > bid ? 1 : 0);
+    });
 
-  if (covering.length === 0) return null;
-
-  // If we have an active period AND at least one segment explicitly linked to it,
-  // we MUST ignore any other segments (prevents mobile-only ordering bugs / legacy bleed).
-  let candidates = covering;
   if (activePeriodId) {
-    const linked = covering.filter((seg) => String(seg.periodId || "") === activePeriodId);
-    if (linked.length > 0) candidates = linked;
+    const linked = segs.filter(s => String(s.periodId ?? s.period_id ?? "") === activePeriodId);
+    // If any segments are linked to the active period, we ONLY consider those.
+    if (linked.length) {
+      for (const seg of linked) {
+        const s = String(seg.start || "");
+        const e = String(seg.end || "");
+        if (s && e && ds >= s && ds <= e) return seg;
+      }
+      return null;
+    }
   }
 
-  // Deterministic ordering:
-  // 1) prefer baseCurrency matching active period (if known)
-  // 2) prefer the most recent segment (latest start date)
-  const normStart = (seg) => String(seg?.start || "");
-  const normCur = (seg) => String(seg?.baseCurrency || seg?.base_currency || "").toUpperCase();
-
-  candidates = candidates.slice().sort((a, b) => {
-    const aCur = normCur(a);
-    const bCur = normCur(b);
-
-    const aMatch = activeBase && aCur === activeBase ? 1 : 0;
-    const bMatch = activeBase && bCur === activeBase ? 1 : 0;
-    if (aMatch !== bMatch) return bMatch - aMatch;
-
-    const as = normStart(a);
-    const bs = normStart(b);
-    // latest start first
-    if (as < bs) return 1;
-    if (as > bs) return -1;
-
-    // stable fallback: id string
-    const aid = String(a.id || "");
-    const bid = String(b.id || "");
-    if (aid < bid) return -1;
-    if (aid > bid) return 1;
-    return 0;
-  });
-
-  return candidates[0] || null;
+  // Legacy fallback only when there are no linked segments at all.
+  for (const seg of segs) {
+    const s = String(seg.start || "");
+    const e = String(seg.end || "");
+    if (s && e && ds >= s && ds <= e) return seg;
+  }
+  return null;
 }
 /* =========================
    Display currency (V6.4)
