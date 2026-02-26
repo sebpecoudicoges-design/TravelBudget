@@ -7,6 +7,33 @@
    - Robustesse: jamais de NaN, message "pas de données" si besoin
    - Globals: window.renderCashflowChart, window.__cashflowChart
    ========================= */
+
+
+/**
+ * Alias container for regression checks:
+ * - Keep existing engine container id="cashflowCurve" (used by JS)
+ * - Ensure a stable wrapper id="cashflowChart" exists for diagnostics
+ */
+function ensureCashflowChartAlias() {
+  try {
+    const curveEl = document.getElementById("cashflowCurve");
+  ensureCashflowChartAlias();
+
+    if (!curveEl) return;
+    if (document.getElementById("cashflowChart")) return;
+
+    const wrapper = document.createElement("div");
+    wrapper.id = "cashflowChart";
+
+    // Preserve layout by inserting wrapper where curveEl currently sits
+    const parent = curveEl.parentNode;
+    if (!parent) return;
+
+    parent.insertBefore(wrapper, curveEl);
+    wrapper.appendChild(curveEl);
+  } catch (_) {}
+}
+
 (function () {
 
   // --- local fallbacks (avoid hard dependency on other helpers) ---
