@@ -376,23 +376,22 @@ function getBudgetSegmentForDate(dateStr) {
   const segs = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
   const activePeriodId = state && state.period && state.period.id ? String(state.period.id) : "";
 
-  // Pass 1: prefer segments explicitly linked to the active period
+  // If we have segments linked to the active period, ONLY use them.
   if (activePeriodId) {
-    for (const seg of segs) {
-      if (!seg) continue;
-      const pid = seg.periodId != null ? String(seg.periodId) : "";
-      if (pid && pid !== activePeriodId) continue;
-      const s = String(seg.start || "");
-      const e = String(seg.end || "");
-      if (s && e && ds >= s && ds <= e) return seg;
+    const linked = segs.filter(seg => seg && seg.periodId != null && String(seg.periodId) === activePeriodId);
+    if (linked.length) {
+      for (const seg of linked) {
+        const s = String(seg.start || "");
+        const e = String(seg.end || "");
+        if (s && e && ds >= s && ds <= e) return seg;
+      }
+      return null;
     }
   }
 
-  // Pass 2: legacy fallback (segments without periodId)
+  // Legacy fallback (no periodId data in DB) — use any segment matching the date range
   for (const seg of segs) {
     if (!seg) continue;
-    const pid = seg.periodId != null ? String(seg.periodId) : "";
-    if (activePeriodId && pid && pid !== activePeriodId) continue;
     const s = String(seg.start || "");
     const e = String(seg.end || "");
     if (s && e && ds >= s && ds <= e) return seg;
