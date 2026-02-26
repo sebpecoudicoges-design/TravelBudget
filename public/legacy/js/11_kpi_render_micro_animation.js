@@ -765,8 +765,8 @@ function renderKPI() {
     ${ (state.periods || []).map(pp => `<option value="${pp.id}" ${pp.id===state.period.id?"selected":""}>${pp.start} → ${pp.end} (${pp.baseCurrency||""})</option>`).join("") }
   </select>
   <select id="kpiScopeSelect" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;">
-    <option value="segment">Segment courant</option>
-    <option value="period">Toute la période</option>
+    <option value="segment" ${kpiScope === "segment" ? "selected" : ""}>Segment courant</option>
+    <option value="period" ${kpiScope === "period" ? "selected" : ""}>Toute la période</option>
   </select>
   <div class="muted" style="font-size:12px;">${displayDateISO}</div>
 </div>
