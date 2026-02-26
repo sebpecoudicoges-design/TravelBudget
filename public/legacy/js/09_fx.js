@@ -12,9 +12,12 @@ function _fxGetEurRates() {
 }
 
 async function refreshFxRates() {
+  try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("fx:refresh"); } catch (_) {}
   if (!sbUser) return alert("Non connecté.");
 
+  try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("fx:invoke"); } catch (_) {}
   const { data, error } = await sb.functions.invoke("fx-latest");
+  try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("fx:invoke"); } catch (_) {}
   if (error) return alert(error.message);
   if (!data?.rates) return alert("Réponse taux invalide.");
 

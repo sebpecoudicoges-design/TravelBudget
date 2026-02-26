@@ -1,4 +1,4 @@
-window.__TB_BUILD = "6.6.28";
+window.__TB_BUILD = "6.6.29";
 /* =========================
    Boot
    ========================= */
@@ -26,11 +26,14 @@ window.onload = async function () {
 
   // theme (local first)
   applyTheme(localStorage.getItem(THEME_KEY) || "light");
+  try { if (window.TB_PERF && TB_PERF.enabled) { TB_PERF.mark("boot:theme"); TB_PERF.end("boot:theme"); } } catch (_) {}
 
   // palette (local preview first, server will override after login)
   const storedPalette = getStoredPalette() || PALETTES["Ocean"];
   const storedPreset = getStoredPreset() || findPresetNameForPalette(storedPalette);
+  try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:palette"); } catch (_) {}
   await applyPalette(storedPalette, storedPreset, { persistLocal: true, persistRemote: false });
+  try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:palette"); } catch (_) {}
 
   sb.auth.onAuthStateChange((_event, session) => {
     sbUser = session?.user || null;
@@ -48,16 +51,22 @@ window.onload = async function () {
   }
 
   try {
+    try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:ensureBootstrap"); } catch (_) {}
     await ensureBootstrap();
+    try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:ensureBootstrap"); } catch (_) {}
 
     // ✅ IMPORTANT: afficher la vue AVANT refreshFromServer(),
     // sinon renderKPI peut chercher des nodes qui n’existent pas encore
+    try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:showView"); } catch (_) {}
     showView("dashboard");
+    try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:showView"); } catch (_) {}
 
     // Laisse le DOM de la vue se poser
     await new Promise(r => setTimeout(r, 0));
 
+    try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:refreshFromServer"); } catch (_) {}
     await refreshFromServer(); // -> loadFromSupabase applies server palette + preset
+    try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:refreshFromServer"); } catch (_) {}
 
     safeShowAuth(false);
 
