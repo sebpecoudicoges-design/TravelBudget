@@ -929,7 +929,7 @@ function renderKPI() {
         try { localStorage.setItem("travelbudget_kpi_projection_scope_v1", v); } catch (_) {}
         try { if (typeof renderKPI === "function") renderKPI(); } catch (_) {}
         // Keep curve aligned with KPI scope (no separate curve filter)
-        try { if (typeof window.renderCashflowChart === "function") window.renderCashflowChart(); } catch (_) {}
+        try { if (typeof window.renderCashflowChart === "function") window.if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("auto"); else renderCashflowChart(); } catch (_) {}
       });
     }
   } catch (e) {

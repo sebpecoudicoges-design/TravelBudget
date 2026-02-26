@@ -1,4 +1,4 @@
-window.__TB_BUILD = "6.6.32";
+window.__TB_BUILD = "6.6.33";
 /* =========================
    Boot
    ========================= */
@@ -83,6 +83,14 @@ window.onload = async function () {
     // Release coalesced renders scheduled during boot
     window.__TB_BOOTING = false;
     try { if (typeof window.tbReleaseBootRenders === "function") window.tbReleaseBootRenders(); } catch (_) {}
+
+    // Release deferred cashflow render scheduled during boot
+    try {
+      if (window.__TB_BOOT_NEEDS_CASHFLOW && typeof window.tbRequestCashflowRender === "function") {
+        window.__TB_BOOT_NEEDS_CASHFLOW = false;
+        window.tbRequestCashflowRender("boot-release");
+      }
+    } catch (_) {}
     try {
       if (window.TB_PERF && TB_PERF.enabled) {
         TB_PERF.end("boot:onload");

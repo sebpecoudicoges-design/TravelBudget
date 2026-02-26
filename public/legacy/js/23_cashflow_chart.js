@@ -191,7 +191,7 @@
     const original = window.redrawCharts;
     window.redrawCharts = function () {
       original();
-      renderCashflowChart();
+      if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("auto"); else renderCashflowChart();
     };
   }
 
@@ -201,7 +201,7 @@
     const original = window.refreshAll;
     window.refreshAll = async function () {
       await original();
-      renderCashflowChart();
+      if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("auto"); else renderCashflowChart();
     };
   }
 

@@ -792,6 +792,57 @@ dataLabels: { enabled: false },
   // expose for checks
   window.renderCashflowChart = renderCashflowChart;
 
+  // =========================
+  // Cashflow render scheduler (coalesce + dedup)
+  // - prevents double render on first load/refresh
+  // =========================
+  (function () {
+    const KEY = "__TB_CASHFLOW_SCHED";
+    if (window[KEY]) return;
+
+    let scheduled = false;
+    let lastKey = "";
+
+    function scopeKey() {
+      const rev = String(window.__TB_DATA_REV || 0);
+      const view = String(window.activeView || "");
+      const seg = String(window.__TB_ACTIVE_SEGMENT_ID || "");
+      const start = String(window.__TB_ACTIVE_START || "");
+      const end = String(window.__TB_ACTIVE_END || "");
+      return rev + "|" + view + "|" + seg + "|" + start + "|" + end;
+    }
+
+    window.tbRequestCashflowRender = function tbRequestCashflowRender(reason) {
+      // Boot gating: never block on cashflow during boot
+      if (window.__TB_BOOTING) {
+        window.__TB_BOOT_NEEDS_CASHFLOW = true;
+        return;
+      }
+
+      const k = scopeKey();
+      if (k === lastKey) return;
+
+      if (scheduled) return;
+      scheduled = true;
+
+      requestAnimationFrame(() => {
+        scheduled = false;
+        const k2 = scopeKey();
+        if (k2 === lastKey) return;
+        lastKey = k2;
+
+        try {
+          if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
+        } catch (e) {
+          console.error("Cashflow render failed:", e);
+        }
+      });
+    };
+
+    window[KEY] = true;
+  })();
+
+
   // Hooks: redrawCharts / refreshAll / dataUpdated bus
   function hook(name) {
     const fn = window[name];
