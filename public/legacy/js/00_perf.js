@@ -103,30 +103,70 @@
   // Coalesced render helpers (lightweight, safe if called before modules are loaded)
   (function(){
     let _renderReq = false;
+    let _chartsReq = false;
+
+    // "Boot gating": during the initial onload flow, we accumulate render requests and release once.
+    let _bootPendingRender = false;
+    let _bootPendingCharts = false;
+
+    function _now(){ return (window.performance && performance.now) ? performance.now() : Date.now(); }
+
+    // Simple duplicate-call guard (same data rev + same view) within a short window
+    let _lastRenderKey = "";
+    let _lastRenderAt = 0;
+    let _lastChartsKey = "";
+    let _lastChartsAt = 0;
+
+    function _makeKey(){
+      const rev = (window.__TB_DATA_REV == null) ? "0" : String(window.__TB_DATA_REV);
+      const hash = String(window.location && window.location.hash || "");
+      const path = String(window.location && window.location.pathname || "");
+      return rev + "|" + path + "|" + hash;
+    }
+
     window.tbRequestRenderAll = window.tbRequestRenderAll || function(reason){
+      // If we're booting, defer everything to the end of boot.
+      if (window.__TB_BOOTING) { _bootPendingRender = true; return; }
+
+      const k = _makeKey();
+      const t = _now();
+      if (k === _lastRenderKey && (t - _lastRenderAt) < 200) return;
+      _lastRenderKey = k; _lastRenderAt = t;
+
       if (_renderReq) return;
       _renderReq = true;
       const sched = window.requestAnimationFrame || function(cb){ return setTimeout(cb, 0); };
       sched(function(){
         _renderReq = false;
-        try {
-          if (typeof window.renderAll === "function") return window.renderAll();
-        } catch (e) { console.warn("[TB] renderAll failed", e); }
+        try { if (typeof window.renderAll === "function") return window.renderAll(); }
+        catch (e) { console.warn("[TB] renderAll failed", e); }
       });
     };
 
-    let _chartsReq = false;
     window.tbRequestRedrawCharts = window.tbRequestRedrawCharts || function(reason){
+      if (window.__TB_BOOTING) { _bootPendingCharts = true; return; }
+
+      const k = _makeKey();
+      const t = _now();
+      if (k === _lastChartsKey && (t - _lastChartsAt) < 200) return;
+      _lastChartsKey = k; _lastChartsAt = t;
+
       if (_chartsReq) return;
       _chartsReq = true;
       window.TB_DEFER.coalesceIdle(function(){
         _chartsReq = false;
-        try {
-          if (typeof window.redrawCharts === "function") return window.redrawCharts();
-        } catch (e) { console.warn("[TB] redrawCharts failed", e); }
+        try { if (typeof window.redrawCharts === "function") return window.redrawCharts(); }
+        catch (e) { console.warn("[TB] redrawCharts failed", e); }
       }, 500);
     };
+
+    // Called once at the end of boot to release accumulated requests (if any).
+    window.tbReleaseBootRenders = window.tbReleaseBootRenders || function(){
+      if (_bootPendingRender) { _bootPendingRender = false; window.tbRequestRenderAll("boot:release"); }
+      if (_bootPendingCharts) { _bootPendingCharts = false; window.tbRequestRedrawCharts("boot:release"); }
+    };
   })();
+
 
   // mark as early as possible
   mark("boot:script_start");

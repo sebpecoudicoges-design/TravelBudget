@@ -1,9 +1,10 @@
-window.__TB_BUILD = "6.6.31";
+window.__TB_BUILD = "6.6.32";
 /* =========================
    Boot
    ========================= */
 window.onload = async function () {
   try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:onload"); } catch (_) {}
+  window.__TB_BOOTING = true;
 
 
   // ✅ Post invite/recovery: laisse la page se stabiliser
@@ -74,11 +75,14 @@ window.onload = async function () {
     window.addEventListener("resize", () => {
       if (activeView !== "dashboard") return;
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(redrawCharts, 150);
+      resizeTimer = setTimeout(function(){ if (window.tbRequestRedrawCharts) tbRequestRedrawCharts("resize"); else if (typeof redrawCharts==="function") redrawCharts(); }, 150);
     });
   } catch (e) {
     safeShowAuth(true, `Erreur init: ${e?.message || e}`);
   } finally {
+    // Release coalesced renders scheduled during boot
+    window.__TB_BOOTING = false;
+    try { if (typeof window.tbReleaseBootRenders === "function") window.tbReleaseBootRenders(); } catch (_) {}
     try {
       if (window.TB_PERF && TB_PERF.enabled) {
         TB_PERF.end("boot:onload");

@@ -941,7 +941,7 @@ function renderKPI() {
   if (_tog) {
     _tog.onchange = () => {
       localStorage.setItem("travelbudget_kpi_projection_include_unpaid_v1", _tog.checked ? "1" : "0");
-      renderKPI();
+      if (window.tbRequestRenderAll) tbRequestRenderAll("kpi:toggle"); else renderKPI();
     };
   }
 

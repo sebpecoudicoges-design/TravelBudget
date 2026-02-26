@@ -6,8 +6,7 @@ function renderWallets() {
   const container = document.getElementById("wallets-container");
   if (!container) return;
 
-  try { if (typeof renderKPI === "function") renderKPI(); } catch (e) { console.warn("[renderWallets] renderKPI failed", e); }
-
+  
   container.innerHTML = "";
 
   // Actions
