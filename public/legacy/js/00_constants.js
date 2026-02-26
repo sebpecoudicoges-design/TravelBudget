@@ -1,4 +1,4 @@
-window.__TB_BUILD = "6.6.39";
+window.__TB_BUILD = "6.6.40";
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels

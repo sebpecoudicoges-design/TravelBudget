@@ -450,6 +450,11 @@
   user-select:none;
 }
 .tb-help:hover{ opacity:1; }
+
+    .lang-switch{display:inline-flex;gap:6px;align-items:center;margin-left:8px;}
+    .btn-lang{padding:6px 10px;opacity:.75}
+    .btn-lang.is-active{opacity:1;outline:2px solid rgba(255,255,255,.25)}
+
 </style>
 </head>
 
@@ -556,6 +561,11 @@
         </div>
 
         <div class="top-actions">
+          <div class="lang-switch" title="Language">
+            <button class="btn btn-lang" id="tbLangFr" type="button" data-lang="fr">FR</button>
+            <button class="btn btn-lang" id="tbLangEn" type="button" data-lang="en">EN</button>
+          </div>
+
           <button class="btn" onclick="toggleTheme()">🌓 Theme</button>
           <button class="btn" onclick="refreshFxRates()">↻ Taux ECB</button>
           <button class="btn" onclick="exportBackup()">⬇ Export</button>

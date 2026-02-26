@@ -103,6 +103,32 @@
   }
 
   window.TB_I18N = DICTS;
+  
+  function applyLangSwitchUI() {
+    try {
+      const lang = getLang();
+      const fr = document.getElementById("tbLangFr");
+      const en = document.getElementById("tbLangEn");
+      if (fr) fr.classList.toggle("is-active", lang === "fr");
+      if (en) en.classList.toggle("is-active", lang === "en");
+    } catch (_) {}
+  }
+
+  function bindLangSwitch() {
+    try {
+      const fr = document.getElementById("tbLangFr");
+      const en = document.getElementById("tbLangEn");
+      if (fr && !fr.__tbBound) {
+        fr.__tbBound = true;
+        fr.addEventListener("click", () => window.tbSetLang && window.tbSetLang("fr"));
+      }
+      if (en && !en.__tbBound) {
+        en.__tbBound = true;
+        en.addEventListener("click", () => window.tbSetLang && window.tbSetLang("en"));
+      }
+    } catch (_) {}
+  }
+
   window.TB_LANG = getLang();
   window.tbT = t;
   window.tbSetLang = function (lang) {
@@ -111,7 +137,12 @@
     try { if (typeof refreshAll === "function") refreshAll(); } catch (_) {}
     try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
     try { applyDom(); } catch (_) {}
+    try { bindLangSwitch(); } catch (_) {}
+    try { applyLangSwitchUI(); } catch (_) {}
   };
   window.tbGetLang = getLang;
   window.tbApplyI18nDom = applyDom;
+  // Bind global language switch (if present)
+  try { bindLangSwitch(); } catch (_) {}
+  try { applyLangSwitchUI(); } catch (_) {}
 })();
