@@ -19,7 +19,7 @@ function showView(view) {
   setActiveTab(view);
   if (view === "transactions") renderTransactions();
   if (view === "settings") { renderSettings(); initPaletteUI(); }
-  if (view === "dashboard") redrawCharts();
+  if (view === "dashboard") if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("10_navigation.js"); else redrawCharts();
   if (view === "trip") renderTrip();
   if (view === "members") renderMembersAdmin();
 }

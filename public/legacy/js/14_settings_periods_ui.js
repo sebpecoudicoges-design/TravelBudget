@@ -30,8 +30,8 @@ async function loadPeriodsListIntoUI() {
     const id = sel.value;
     await setActivePeriod(id);
     await refreshFromServer();
-    renderAll();
-  };
+    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("14_settings_periods_ui.js"); else if (typeof renderAll === "function") renderAll();
+};
 }
 
 async function setActivePeriod(periodId) {
@@ -485,8 +485,8 @@ async function saveSettings() {
 
 
     await refreshFromServer();
-    renderAll();
-  });
+    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("14_settings_periods_ui.js"); else if (typeof renderAll === "function") renderAll();
+});
 }
 
 async function newPeriod() {
@@ -540,8 +540,8 @@ async function newPeriod() {
     ]);
 
     await refreshFromServer();
-    renderAll();
-  });
+    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("14_settings_periods_ui.js"); else if (typeof renderAll === "function") renderAll();
+});
 }
 
 async function deletePeriod() {
@@ -555,8 +555,8 @@ async function deletePeriod() {
     if (error) throw error;
 
     await refreshFromServer();
-    renderAll();
-  });
+    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("14_settings_periods_ui.js"); else if (typeof renderAll === "function") renderAll();
+});
 }
 
 (function bindSettingsButtons() {

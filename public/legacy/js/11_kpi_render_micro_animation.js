@@ -917,7 +917,7 @@ function renderKPI() {
           await refreshFromServer();
         } else if (typeof loadFromSupabase === "function") {
           await loadFromSupabase();
-          if (typeof renderAll === "function") renderAll();
+          if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("kpi-micro"); else if (typeof renderAll === "function") renderAll();
         }
       });
     }

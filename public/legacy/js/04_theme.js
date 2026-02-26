@@ -6,7 +6,7 @@ function applyTheme(theme) {
   body.classList.remove("theme-light", "theme-dark");
   body.classList.add(theme === "dark" ? "theme-dark" : "theme-light");
   localStorage.setItem(THEME_KEY, theme);
-  redrawCharts();
+  if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("04_theme.js"); else redrawCharts();
 }
 function toggleTheme() {
   const current = localStorage.getItem(THEME_KEY) || "light";

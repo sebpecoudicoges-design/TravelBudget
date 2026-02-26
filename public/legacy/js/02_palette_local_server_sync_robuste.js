@@ -93,12 +93,11 @@ async function applyPalette(p, presetName, opts = {}) {
   }
 
   syncPaletteUI();
-  redrawCharts();
-
-  // ✅ Guard: renderKPI uniquement si le conteneur existe (dashboard monté)
+  if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("palette"); else if (typeof redrawCharts === "function") redrawCharts();
+// ✅ Guard: renderKPI uniquement si le conteneur existe (dashboard monté)
   if (typeof renderKPI === "function" && document.getElementById("kpi")) {
-    renderKPI();
-  }
+    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("palette"); else if (typeof renderKPI === "function") renderKPI();
+}
 }
 
 function resetPalette() {
@@ -199,10 +198,9 @@ function savePaletteFromUI(persist = true) {
     }
   }
 
-  redrawCharts();
-
-  // ✅ Guard: renderKPI uniquement si le conteneur existe (dashboard monté)
+  if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("palette"); else if (typeof redrawCharts === "function") redrawCharts();
+// ✅ Guard: renderKPI uniquement si le conteneur existe (dashboard monté)
   if (typeof renderKPI === "function" && document.getElementById("kpi")) {
-    renderKPI();
-  }
+    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("palette"); else if (typeof renderKPI === "function") renderKPI();
+}
 }

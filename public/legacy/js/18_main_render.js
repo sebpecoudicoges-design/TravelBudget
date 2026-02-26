@@ -14,7 +14,8 @@ function renderAll() {
     try { if (typeof renderCharts === "function") renderCharts(); } catch (e) { console.warn("[renderAll] renderCharts failed", e); }
     try { if (typeof renderTransactions === "function") renderTransactions(); } catch (e) { console.warn("[renderAll] renderTransactions failed", e); }
     try { if (typeof renderSettings === "function") renderSettings(); } catch (e) { console.warn("[renderAll] renderSettings failed", e); }
-    try { if (typeof redrawCharts === "function") redrawCharts(); } catch (e) { console.warn("[renderAll] redrawCharts failed", e); }
+    try { if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("renderAll");
+    else if (typeof redrawCharts === "function") redrawCharts(); } catch (e) { console.warn("[renderAll] redrawCharts failed", e); }
     return;
   }
 
@@ -26,5 +27,6 @@ function renderAll() {
   safeCall("Charts", () => { if (typeof renderCharts === "function") return renderCharts(); }, { containerId: "view-dashboard" });
   safeCall("Transactions", () => { if (typeof renderTransactions === "function") return renderTransactions(); }, { containerId: "view-transactions" });
   safeCall("Settings", () => { if (typeof renderSettings === "function") return renderSettings(); }, { containerId: "view-settings" });
-  safeCall("Redraw charts", () => { if (typeof redrawCharts === "function") return redrawCharts(); }, { containerId: "view-dashboard" });
+  safeCall("Redraw charts", () => { if (typeof tbRequestRedrawCharts === "function") return tbRequestRedrawCharts("renderAll");
+      if (typeof redrawCharts === "function") return redrawCharts(); }, { containerId: "view-dashboard" });
 }

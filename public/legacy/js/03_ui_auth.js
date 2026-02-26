@@ -25,8 +25,8 @@ async function signIn() {
     await refreshFromServer();
     showAuth(false);
     showView("dashboard");
-    renderAll();
-  } catch (e) {
+    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("03_ui_auth.js"); else if (typeof renderAll === "function") renderAll();
+} catch (e) {
     showAuth(true, `Erreur init: ${e?.message || e}`);
   }
 }

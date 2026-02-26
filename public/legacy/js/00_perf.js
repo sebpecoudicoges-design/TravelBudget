@@ -100,6 +100,34 @@
     coalesceIdle
   };
 
+  // Coalesced render helpers (lightweight, safe if called before modules are loaded)
+  (function(){
+    let _renderReq = false;
+    window.tbRequestRenderAll = window.tbRequestRenderAll || function(reason){
+      if (_renderReq) return;
+      _renderReq = true;
+      const sched = window.requestAnimationFrame || function(cb){ return setTimeout(cb, 0); };
+      sched(function(){
+        _renderReq = false;
+        try {
+          if (typeof window.renderAll === "function") return window.renderAll();
+        } catch (e) { console.warn("[TB] renderAll failed", e); }
+      });
+    };
+
+    let _chartsReq = false;
+    window.tbRequestRedrawCharts = window.tbRequestRedrawCharts || function(reason){
+      if (_chartsReq) return;
+      _chartsReq = true;
+      window.TB_DEFER.coalesceIdle(function(){
+        _chartsReq = false;
+        try {
+          if (typeof window.redrawCharts === "function") return window.redrawCharts();
+        } catch (e) { console.warn("[TB] redrawCharts failed", e); }
+      }, 500);
+    };
+  })();
+
   // mark as early as possible
   mark("boot:script_start");
 })();
