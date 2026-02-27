@@ -349,7 +349,7 @@ async function ensureBootstrap() {
       base_currency: baseCur,
       daily_budget_base: daily,
       // Single FX source: auto when possible, with eur_base_rate_fixed kept as fallback
-      fx_mode: (baseCur === "EUR") ? "fixed" : "auto",
+      fx_mode: (baseCur === "EUR") ? "fixed" : "live_ecb",
       eur_base_rate_fixed: eurBaseRate,
       sort_order: 0
     };

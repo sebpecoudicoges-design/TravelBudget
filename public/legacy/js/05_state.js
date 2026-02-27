@@ -434,7 +434,8 @@ function fxRatesForSegments(segA, segB) {
   function apply(seg) {
     if (!seg) return;
     const base = String(seg?.baseCurrency || "").toUpperCase();
-    const mode = String(seg?.fxMode || "auto");
+    let mode = String(seg?.fxMode || "live_ecb");
+    if (mode === "auto") mode = "live_ecb";
 
     // fixed: always override with manual EUR->BASE
     if (mode === "fixed") {
@@ -444,7 +445,7 @@ function fxRatesForSegments(segA, segB) {
     }
 
     // auto: use provider rate if available, otherwise fall back to fixed if provided
-    if (mode === "auto") {
+    if (mode === "live_ecb") {
       const hasLive = base && isFinite(Number(out[base])) && Number(out[base]) > 0;
       if (!hasLive) {
         const r = Number(seg?.eurBaseRateFixed);

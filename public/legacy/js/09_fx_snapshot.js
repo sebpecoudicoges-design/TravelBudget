@@ -54,7 +54,7 @@ if (!rate || !Number.isFinite(rate) || rate <= 0) {
   // overwrite local var via return object below
   return {
     fx_rate_snapshot: rate2,
-    fx_source_snapshot: (String(seg?.fxMode || seg?.fx_mode || "auto") === "fixed") ? "manual" : "fx",
+    fx_source_snapshot: (String(seg?.fxMode || seg?.fx_mode || "live_ecb") === "fixed") ? "manual" : "fx",
     fx_snapshot_at: new Date().toISOString(),
     fx_base_currency_snapshot: baseC,
     fx_tx_currency_snapshot: txC,
@@ -64,7 +64,7 @@ if (!rate || !Number.isFinite(rate) || rate <= 0) {
   // Best-effort source detection
   let source = "fx";
   try {
-    const mode = String(seg?.fxMode || seg?.fx_mode || "auto");
+    const mode = String(seg?.fxMode || seg?.fx_mode || "live_ecb");
     if (mode === "fixed") source = "manual";
     // auto: if rate ultimately depends on EUR_RATES, treat as provider
   } catch (_) {}

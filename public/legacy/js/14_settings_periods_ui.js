@@ -93,10 +93,10 @@ function _segRowHTML(seg, idx, total) {
   const end = edits.end ?? seg.end;
   const baseCurrency = edits.baseCurrency ?? seg.baseCurrency;
   const _autoOk = (typeof tbFxIsAutoAvailable === "function") ? tbFxIsAutoAvailable(baseCurrency) : false;
-  const fxModeForced = _autoOk ? "auto" : "fixed";
+  const fxModeForced = _autoOk ? "live_ecb" : "fixed";
   const dailyBudgetBase = edits.dailyBudgetBase ?? seg.dailyBudgetBase;
     // FX mode is forced by provider availability (no user selection)
-  const fxModeRaw = edits.fxMode ?? seg.fxMode ?? "auto";
+  const fxModeRaw = edits.fxMode ?? seg.fxMode ?? "live_ecb";
   const fxMode = fxModeForced;
   const eurBaseRateFixed = (edits.eurBaseRateFixed ?? seg.eurBaseRateFixed) ?? "";
   const sortOrder = edits.sortOrder ?? seg.sortOrder ?? 0;
@@ -126,7 +126,7 @@ function _segRowHTML(seg, idx, total) {
         <div style="min-width:160px;">
           <div class="label">Taux FX ${typeof tbHelp==="function" ? tbHelp("Auto = utilise le taux FX si disponible. Fixe = tu fournis un taux manuel pour EUR→BASE.") : ""}</div>
           <select class="input" disabled title="Automatique: FX si dispo, sinon manuel">
-            <option value="auto" ${fxMode === "auto" ? "selected" : ""}>auto (FX si dispo)</option>
+            <option value="live_ecb" ${fxMode === "live_ecb" ? "selected" : ""}>auto (FX si dispo)</option>
             <option value="fixed" ${fxMode === "fixed" ? "selected" : ""}>fixe (manuel)</option>
           </select>
         </div>
@@ -140,8 +140,8 @@ function _segRowHTML(seg, idx, total) {
             // FX behavior:
             // - fixed: user must provide eurBaseRateFixed
             // - auto: use provider live if available, else require manual fallback (eurBaseRateFixed)
-            const needsManual = (fxMode === "fixed") || (fxMode === "auto" && !live && cur !== "EUR");
-            const v = (fxMode === "auto" && live) ? live : (eurBaseRateFixed || "");
+            const needsManual = (fxMode === "fixed") || (fxMode === "live_ecb" && !live && cur !== "EUR");
+            const v = (fxMode === "live_ecb" && live) ? live : (eurBaseRateFixed || "");
             const dis = needsManual ? "" : "readonly disabled style=\"opacity:0.7; cursor:not-allowed;\"";
             const onch = needsManual ? `_tbSegSet('${id}','eurBaseRateFixed',this.value)` : "";
             const ph = needsManual ? "placeholder=\"ex: 36.57\"" : "";

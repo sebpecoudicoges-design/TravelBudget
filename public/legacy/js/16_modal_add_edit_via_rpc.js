@@ -389,6 +389,19 @@ async function saveModal() {
           if (!!outOfBudget !== !!current.outOfBudget) throw new Error("Transaction liée à Trip : flag out_of_budget géré automatiquement.");
         }
 
+        // Ensure FX rates are available for tx currency and segment/base currency (fallback to manual prompt).
+        try {
+          const txCur = String(wallet?.currency || "").trim().toUpperCase();
+          const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(start) : null;
+          const baseCur = String(seg?.baseCurrency || state?.period?.baseCurrency || "EUR").trim().toUpperCase();
+          if (typeof window.tbFxEnsureEurRatesInteractive === "function") {
+            const res = window.tbFxEnsureEurRatesInteractive([txCur, baseCur], "Taux requis pour enregistrer la transaction");
+            if (!res || res.ok !== true) throw new Error("FX manquant : opération annulée");
+          }
+        } catch (e) {
+          throw e;
+        }
+
         const { data, error } = await tbRpcWithRetry("update_transaction_v2", {
           p_tx_id: editingTxId,
           p_wallet_id: walletId,
@@ -408,6 +421,19 @@ async function saveModal() {
         });
         if (error) throw error;
       } else {
+        // Ensure FX rates are available for tx currency and segment/base currency (fallback to manual prompt).
+        try {
+          const txCur = String(wallet?.currency || "").trim().toUpperCase();
+          const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(start) : null;
+          const baseCur = String(seg?.baseCurrency || state?.period?.baseCurrency || "EUR").trim().toUpperCase();
+          if (typeof window.tbFxEnsureEurRatesInteractive === "function") {
+            const res = window.tbFxEnsureEurRatesInteractive([txCur, baseCur], "Taux requis pour enregistrer la transaction");
+            if (!res || res.ok !== true) throw new Error("FX manquant : opération annulée");
+          }
+        } catch (e) {
+          throw e;
+        }
+
         const { data, error } = await tbRpcWithRetry("apply_transaction_v2", {
           p_wallet_id: walletId,
           p_type: type,
