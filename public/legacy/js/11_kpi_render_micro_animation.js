@@ -336,7 +336,7 @@ function _sumCashWalletsBase() {
 }
 
 /* =========================
-   Cash runway (UX): based on real cash expenses
+   Cash runway (UX): cash stock / total real burn (fallback if bank/card down)
    ========================= */
 function cashRunwayInfo(windowDays = 7) {
   const cashWallets = _getCashWallets();
@@ -344,8 +344,6 @@ function cashRunwayInfo(windowDays = 7) {
 
   const { totalBase, excluded } = _sumCashWalletsBase();
   const base = state.period.baseCurrency;
-
-  const cashWalletIds = new Set(cashWallets.map(w => w.id));
 
   const today = clampMidnight(new Date());
 
@@ -372,7 +370,7 @@ function cashRunwayInfo(windowDays = 7) {
   }
 
   function _isInternalMovement(tx) {
-    // Exclude internal transfers from "burn" (cash runway), e.g. cash↔bank moves.
+    // Exclude internal transfers from burn (cash runway)
     const cat = _normStr(tx?.category);
     const label = _normStr(tx?.label);
     if (cat === "mouvement interne" || cat === "internal movement") return true;
@@ -380,16 +378,15 @@ function cashRunwayInfo(windowDays = 7) {
     return false;
   }
 
-
   for (const tx of (state.transactions || [])) {
     if (!tx) continue;
     if (tx.type !== "expense") continue;
     if (_isInternalMovement(tx)) continue;
+
+    // paid default = true (absent => paid)
     const _p2 = (tx.payNow ?? tx.pay_now);
     const _paid2 = (_p2 === undefined) ? true : !!_p2;
-    if (!_paid2) continue; // runway = real cash out
-    const txWid = String(tx.walletId ?? tx.wallet_id ?? "");
-    if (!cashWalletIds.has(txWid)) continue;
+    if (!_paid2) continue; // only real paid outflows
 
     const d = parseISODateOrNull(tx.dateStart);
     if (!d) continue;
@@ -403,15 +400,14 @@ function cashRunwayInfo(windowDays = 7) {
 
   const days = Math.max(1, dayCountInclusive(start, today));
   const burnPerDay = sumExpenseBase / days;
-
   const daysLeft = (burnPerDay > 0) ? (totalBase / burnPerDay) : Infinity;
 
   return {
-    totalBase,
-    burnPerDay,
-    daysLeft,
+    totalBase,     // cash stock
+    burnPerDay,    // total burn (all wallets)
+    daysLeft,      // cash-only fallback runway
     excluded,
-    windowDays: days,
+    windowDays: days, // (note: this is actually the computed day span)
   };
 }
 
