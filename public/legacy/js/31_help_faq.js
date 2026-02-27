@@ -88,7 +88,26 @@
 
   function tbSearchFaq(query, limit) {
     const qn = _norm(query);
-    if (!qn) return [];
+    if (!qn) return [,
+    {
+      id: "wallet_balance",
+      tags: ["wallet", "solde", "balance", "cash"],
+      q: { fr: "Pourquoi le solde du wallet ne correspond pas à ma banque ?", en: "Why does my wallet balance differ from my bank?" },
+      a: {
+        fr: "Le solde affiché = solde de base du wallet + transactions payées ("Payé maintenant"). Les dépenses "à payer" n'impactent pas le cash. Utilise "Ajuster solde" pour recaler une fois le solde de base.",
+        en: "Displayed balance = wallet base balance + paid transactions ("Pay now"). Future/unpaid items do not impact cash. Use "Adjust balance" once to recalibrate the base balance."
+      }
+    },
+    {
+      id: "fx_auto_fixed",
+      tags: ["fx", "ecb", "taux", "auto", "fixed", "manuel"],
+      q: { fr: "Taux FX : auto ou fixe, comment ça marche ?", en: "FX rate: auto or fixed—how does it work?" },
+      a: {
+        fr: "Si la devise est disponible chez l'ECB, l'app utilise automatiquement le taux (mode auto). Sinon, le mode passe en fixe et te demande un taux EUR→BASE. Objectif: éviter les erreurs de saisie.",
+        en: "If the currency is available from the ECB, the app uses it automatically (auto mode). Otherwise it switches to fixed and asks for an EUR→BASE rate. Goal: prevent input mistakes."
+      }
+    }
+];
     const tokens = qn.split(" ").filter(Boolean);
     const lang = _lang();
 

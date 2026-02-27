@@ -186,6 +186,21 @@ window.safeFxConvert = safeFxConvert;
 // Currency helpers (V6.6)
 // - Used by Settings UI to avoid free-text currencies
 // =========================
+
+// Return true if ECB provides a EUR-><cur> rate (i.e., we can do auto FX).
+function tbFxIsAutoAvailable(cur) {
+  try {
+    const c = String(cur || "").toUpperCase();
+    if (!c) return false;
+    if (c === "EUR") return true;
+    const rates = _fxGetEurRates() || {};
+    return Object.prototype.hasOwnProperty.call(rates, c);
+  } catch (_) {
+    return false;
+  }
+}
+window.tbFxIsAutoAvailable = tbFxIsAutoAvailable;
+
 function tbGetAvailableCurrencies() {
   try {
     const rates = _fxGetEurRates() || {};

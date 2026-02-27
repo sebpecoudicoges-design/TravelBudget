@@ -83,15 +83,20 @@ function renderSettings() {
    Budget Segments UI (V6.4 minimal)
    ========================= */
 
-function _segRowHTML(seg) {
+function _segRowHTML(seg, idx, total) {
   const id = seg.id;
+  const isLast = (idx === (total - 1));
+  const splitBtn = isLast ? `<button class="btn" onclick="splitBudgetSegmentPrompt(\'${id}\')">Split</button>` : "";
   const edits = (window.__TB_SEG_EDITS__ && window.__TB_SEG_EDITS__[id]) || {};
   const start = edits.start ?? seg.start;
   const end = edits.end ?? seg.end;
   const baseCurrency = edits.baseCurrency ?? seg.baseCurrency;
+  const _autoOk = (typeof tbFxIsAutoAvailable === "function") ? tbFxIsAutoAvailable(baseCurrency) : false;
+  const fxModeForced = _autoOk ? "auto" : "fixed";
   const dailyBudgetBase = edits.dailyBudgetBase ?? seg.dailyBudgetBase;
+    // FX mode is forced by ECB availability (no user selection)
   const fxModeRaw = edits.fxMode ?? seg.fxMode ?? "auto";
-  const fxMode = (String(fxModeRaw) === "live_ecb") ? "auto" : fxModeRaw;
+  const fxMode = fxModeForced;
   const eurBaseRateFixed = (edits.eurBaseRateFixed ?? seg.eurBaseRateFixed) ?? "";
   const sortOrder = edits.sortOrder ?? seg.sortOrder ?? 0;
 
@@ -122,7 +127,7 @@ function _segRowHTML(seg) {
         </div>
         <div style="min-width:160px;">
           <div class="label">Taux FX ${typeof tbHelp==="function" ? tbHelp("Auto = utilise le taux ECB si disponible. Fixe = tu fournis un taux manuel pour EUR→BASE.") : ""}</div>
-          <select class="input" onchange="_tbSegSet('${id}','fxMode',this.value)">
+          <select class="input" disabled title="Automatique: ECB si dispo, sinon manuel">
             <option value="auto" ${fxMode === "auto" ? "selected" : ""}>auto (ECB si dispo)</option>
             <option value="fixed" ${fxMode === "fixed" ? "selected" : ""}>fixe (manuel)</option>
           </select>
@@ -151,7 +156,7 @@ function _segRowHTML(seg) {
         </div>
 
         <div style="display:flex; gap:8px; align-items:center; margin-left:auto;">
-          <button class="btn" onclick="splitBudgetSegmentPrompt('${id}')">Split</button>
+          ${splitBtn}
           <button class="btn" onclick="saveBudgetSegment('${id}')">Enregistrer</button>
         </div>
       </div>
@@ -172,7 +177,7 @@ function renderBudgetSegmentsUI() {
   // In-memory edits buffer
   window.__TB_SEG_EDITS__ = window.__TB_SEG_EDITS__ || {};
 
-  host.innerHTML = segs.map(_segRowHTML).join("");
+  host.innerHTML = segs.map((seg, idx) => _segRowHTML(seg, idx, segs.length)).join("");
 }
 
 function _tbSegSet(id, key, value) {

@@ -753,17 +753,17 @@
       <!-- SETTINGS -->
       <div id="view-settings" class="hidden">
         <div class="card" style="margin-bottom:12px;">
-          <h2>Voyages</h2>
+          <h2>Voyage</h2>
 
           <div class="row" style="margin-bottom:10px;">
             <div class="field">
-              <label>Voyage active</label>
+              <label>Période active</label>
               <select id="s-period"></select>
             </div>
 
             <div class="field">
               <label>Devise période</label>
-              <select id="s-basecur">
+              <select id="s-basecur" disabled>
                 <option value="THB">THB</option>
                 <option value="EUR">EUR</option>
                 <option value="VND">VND</option>
@@ -775,24 +775,18 @@
 
             <div class="field">
               <label>Début</label>
-              <input id="s-start" type="date" />
+              <input id="s-start" type="date"  disabled />
             </div>
 
             <div class="field">
               <label>Fin</label>
-              <input id="s-end" type="date" />
+              <input id="s-end" type="date"  disabled />
             </div>
 
             <div class="field">
               <label>Budget/jour (devise période)</label>
               <input id="s-daily" type="number" step="0.01" />
-            </div>
-
-            <div class="field">
-              <label>Taux EUR → devise période</label>
-              <input id="s-rate" type="number" step="0.0001" />
-            </div>
-          </div>
+            </div></div>
 
           <div class="row" style="justify-content:flex-end;">
             <button class="btn" onclick="createPeriodPrompt()">+ Nouvelle période</button>
