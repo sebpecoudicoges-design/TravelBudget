@@ -194,6 +194,10 @@ window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(wallet
     const txWid = String(tx.walletId ?? tx.wallet_id ?? "");
     if (txWid !== wid) continue;
 
+    // Wallet effective balance should only reflect paid ("pay now") movements.
+    const paid = !!(tx.payNow ?? tx.pay_now);
+    if (!paid) continue;
+
     const amt = _tbTxAmountInCurrency(tx, wCur);
     if (!isFinite(amt) || amt === 0) continue;
 

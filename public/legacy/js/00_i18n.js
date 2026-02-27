@@ -42,7 +42,7 @@
 "help.subtitle": "Réponses rapides, exemples concrets, et mini-assistant.",
 "help.search_label": "Rechercher dans la FAQ",
 "help.search_placeholder": "Ex: taux de change, hors budget, à payer…",
-"help.no_results": "Aucun résultat. Essaie avec d’autres mots (ex: "budget", "courbe", "devise").",
+    "help.no_results": "Aucun résultat. Essaie avec d’autres mots (ex: budget, courbe, devise).",
 "help.top_results": "Résultats",
 "help.open_faq": "Ouvrir la FAQ",
 "assistant.title": "Assistant",
