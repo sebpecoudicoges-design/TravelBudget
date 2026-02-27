@@ -72,6 +72,15 @@ function renderWallets() {
 
 
 const wallets = Array.isArray(state.wallets) ? state.wallets : [];
+// If some wallets are missing a type, propose a guided fix (soft migration).
+const missingType = wallets.filter(w => !String(w?.type || "").trim());
+if (missingType.length) {
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = `⚙ Corriger types (${missingType.length})`;
+  btn.onclick = () => openWalletTypesFix();
+  actions.appendChild(btn);
+}
 if (!wallets.length) {
   const empty = document.createElement("div");
   empty.className = "hint";
@@ -120,6 +129,7 @@ if (!wallets.length) {
         <div style="display:flex; flex-direction:column; gap:8px; min-width:190px;">
           <button class="btn primary" onclick="openTxModal('expense','${w.id}')">+ Dépense</button>
           <button class="btn" onclick="openTxModal('income','${w.id}')">+ Entrée</button>
+          <button class="btn" onclick="editWallet('${w.id}')">✏️ Modifier</button>
           <button class="btn" onclick="adjustWalletBalance('${w.id}')">⚙ Ajuster solde</button>
           ${(((w.type || "") === "cash" || /\bCash\b/i.test(w.name)) ? `<button class="btn" onclick="openAtmWithdrawModal('${w.id}')">🏧 Retrait</button>` : ``)}
           <button class="btn" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" onclick="deleteWallet('${w.id}')">🗑 Supprimer</button>
@@ -479,6 +489,254 @@ function tbOpenWalletDialog() {
     // focus first input
     setTimeout(() => { try { nameEl.focus(); } catch (_) {} }, 0);
   });
+}
+
+
+/* =========================
+   Wallet Type (soft migration) + Edit Dialog
+   ========================= */
+
+function tbEscHTML(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function tbInferWalletTypeFromName(name) {
+  const raw = String(name || "");
+  let s = raw.toLowerCase();
+  try {
+    s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  } catch (_) {}
+  s = s.replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+
+  const has = (w) => s.includes(w);
+
+  // cash
+  if (has("cash") || has("espece") || has("especes") || has("liquide") || has("billet") || has("poche")) return "cash";
+  // bank
+  if (has("bank") || has("banque") || has("compte") || has("rib") || has("bnp") || has("revolut") || has("wise") || has("n26")) return "bank";
+  // card
+  if (has("card") || has("carte") || has("cb") || has("visa") || has("mastercard")) return "card";
+  // savings
+  if (has("savings") || has("epargne") || has("livret") || has("saving")) return "savings";
+
+  return "other";
+}
+
+function tbWalletTypeLabel(t) {
+  const x = String(t || "").toLowerCase();
+  if (window.tbT) {
+    // optional i18n keys if you add them later
+    const k = "wallet.type." + x;
+    const tr = tbT(k);
+    if (tr && tr !== k) return tr;
+  }
+  if (x === "cash") return "Cash (espèces)";
+  if (x === "bank") return "Banque";
+  if (x === "card") return "Carte";
+  if (x === "savings") return "Épargne";
+  return "Autre";
+}
+
+function tbOpenWalletEditDialog(wallet) {
+  return new Promise((resolve) => {
+    const w = wallet || {};
+    // reuse styles from create dialog
+    if (!document.getElementById("tbWalletDlgStyles")) {
+      // if create dialog hasn't injected it yet, call it once to ensure styles exist
+      // (no-op resolve)
+      tbOpenWalletDialog().then(() => {});
+    }
+
+    const back = document.createElement("div");
+    back.className = "tb-dlg-backdrop";
+
+    const dlg = document.createElement("div");
+    dlg.className = "tb-dlg";
+
+    dlg.innerHTML = `
+      <div class="tb-dlg-h">Modifier wallet</div>
+      <div class="tb-dlg-b">
+        <div class="tb-dlg-row">
+          <label>Nom</label>
+          <input id="tbWEditName" type="text" value="${tbEscHTML(w.name || "")}" />
+        </div>
+
+        <div class="tb-dlg-row">
+          <label>Devise</label>
+          <input type="text" value="${tbEscHTML(w.currency || "")}" disabled />
+          <div class="hint">La devise n'est pas modifiable ici (évite les incohérences).</div>
+        </div>
+
+        <div class="tb-dlg-row">
+          <label>Type</label>
+          <select id="tbWEditType">
+            <option value="cash">Cash (espèces)</option>
+            <option value="bank">Banque</option>
+            <option value="card">Carte</option>
+            <option value="savings">Épargne</option>
+            <option value="other">Autre</option>
+          </select>
+        </div>
+      </div>
+      <div class="tb-dlg-f">
+        <button class="tb-dlg-btn" id="tbWEditCancel">Annuler</button>
+        <button class="tb-dlg-btn primary" id="tbWEditOk">Enregistrer</button>
+      </div>
+    `;
+
+    back.appendChild(dlg);
+    document.body.appendChild(back);
+
+    const $ = (id) => dlg.querySelector(id);
+
+    // default selection
+    const sel = $("#tbWEditType");
+    sel.value = String(w.type || "other").toLowerCase();
+
+    function close(val) {
+      try { document.body.removeChild(back); } catch (_) {}
+      resolve(val);
+    }
+
+    $("#tbWEditCancel").onclick = () => close(null);
+    back.onclick = (e) => { if (e.target === back) close(null); };
+
+    $("#tbWEditOk").onclick = () => {
+      const name = String($("#tbWEditName").value || "").trim();
+      const type = String($("#tbWEditType").value || "").toLowerCase();
+
+      const allowed = ["cash", "bank", "card", "savings", "other"];
+      if (!name) return alert("Nom requis.");
+      if (!allowed.includes(type)) return alert("Type invalide.");
+
+      close({ name, type });
+    };
+  });
+}
+
+function openWalletTypesFix() {
+  const wallets = Array.isArray(state.wallets) ? state.wallets : [];
+  const missing = wallets.filter(w => !String(w?.type || "").trim());
+  if (!missing.length) return alert("Tous les wallets ont déjà un type.");
+
+  // ensure styles
+  if (!document.getElementById("tbWalletDlgStyles")) {
+    tbOpenWalletDialog().then(() => {});
+  }
+
+  const back = document.createElement("div");
+  back.className = "tb-dlg-backdrop";
+
+  const dlg = document.createElement("div");
+  dlg.className = "tb-dlg";
+
+  const rowsHtml = missing.map((w, i) => {
+    const sug = tbInferWalletTypeFromName(w.name);
+    return `
+      <div class="tb-dlg-row" style="display:grid; grid-template-columns: 1fr 170px; gap:10px; align-items:center;">
+        <div>
+          <div style="font-weight:700;">${tbEscHTML(w.name || "")}</div>
+          <div class="hint">${tbEscHTML(w.currency || "")} • suggestion : <b>${tbEscHTML(tbWalletTypeLabel(sug))}</b></div>
+        </div>
+        <select data-wid="${tbEscHTML(w.id)}">
+          <option value="cash">Cash (espèces)</option>
+          <option value="bank">Banque</option>
+          <option value="card">Carte</option>
+          <option value="savings">Épargne</option>
+          <option value="other">Autre</option>
+        </select>
+      </div>
+    `;
+  }).join("");
+
+  dlg.innerHTML = `
+    <div class="tb-dlg-h">Corriger les types de wallets</div>
+    <div class="tb-dlg-b">
+      <div class="hint" style="margin-bottom:12px;">
+        On a détecté des wallets sans type. Sélectionne le bon type (pré-suggéré) puis “Appliquer”.
+      </div>
+      ${rowsHtml}
+    </div>
+    <div class="tb-dlg-f">
+      <button class="tb-dlg-btn" id="tbWFixCancel">Annuler</button>
+      <button class="tb-dlg-btn primary" id="tbWFixApply">Appliquer</button>
+    </div>
+  `;
+
+  back.appendChild(dlg);
+  document.body.appendChild(back);
+
+  // set suggestions as default selection
+  dlg.querySelectorAll("select[data-wid]").forEach(sel => {
+    const wid = sel.getAttribute("data-wid");
+    const w = missing.find(x => String(x.id) === String(wid));
+    const sug = tbInferWalletTypeFromName(w?.name);
+    sel.value = sug;
+  });
+
+  function close() {
+    try { document.body.removeChild(back); } catch (_) {}
+  }
+
+  dlg.querySelector("#tbWFixCancel").onclick = () => close();
+  back.onclick = (e) => { if (e.target === back) close(); };
+
+  dlg.querySelector("#tbWFixApply").onclick = async () => {
+    try {
+      const updates = [];
+      dlg.querySelectorAll("select[data-wid]").forEach(sel => {
+        const wid = sel.getAttribute("data-wid");
+        const type = String(sel.value || "").toLowerCase();
+        updates.push({ wid, type });
+      });
+
+      const allowed = ["cash", "bank", "card", "savings", "other"];
+      for (const u of updates) {
+        if (!allowed.includes(u.type)) throw new Error("Type invalide pour " + u.wid);
+      }
+
+      for (const u of updates) {
+        const { error } = await sb
+          .from(TB_CONST.TABLES.wallets)
+          .update({ type: u.type })
+          .eq("id", u.wid);
+        if (error) throw error;
+      }
+
+      close();
+      await refreshFromServer();
+    } catch (e) {
+      console.error(e);
+      alert("Erreur mise à jour types : " + (e?.message || e));
+    }
+  };
+}
+
+async function editWallet(walletId) {
+  try {
+    const w = (state.wallets || []).find(x => String(x.id) === String(walletId));
+    if (!w) return;
+
+    const data = await tbOpenWalletEditDialog(w);
+    if (!data) return;
+
+    const { error } = await sb
+      .from(TB_CONST.TABLES.wallets)
+      .update({ name: data.name, type: data.type })
+      .eq("id", walletId);
+    if (error) throw error;
+
+    await refreshFromServer();
+  } catch (e) {
+    console.error(e);
+    alert("Erreur modification wallet : " + (e?.message || e));
+  }
 }
 
 /* =========================

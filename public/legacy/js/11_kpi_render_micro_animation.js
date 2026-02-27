@@ -278,13 +278,8 @@ function _toBaseForDate(amount, cur, dateISO) {
 // - Fallback: name contains "cash" (legacy)
 function _getCashWallets() {
   const ws = (state.wallets || []);
-  const hasType = ws.some(w => typeof w?.type === "string" && w.type.length > 0);
-
-  if (hasType) {
-    return ws.filter(w => (w?.type || "other") === "cash");
-  }
-
-  return ws.filter(w => String(w?.name || "").toLowerCase().includes("cash"));
+  // Strict and deterministic: cash KPI = wallets explicitly typed as cash.
+  return ws.filter(w => String(w?.type || "").toLowerCase() === "cash");
 }
 
 // Amount convertible to BASE with current engine:
@@ -364,9 +359,32 @@ function cashRunwayInfo(windowDays = 7) {
 
   let sumExpenseBase = 0;
 
+  function _normStr(s) {
+    try {
+      return String(s || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+    } catch (_) {
+      return String(s || "").toLowerCase().trim();
+    }
+  }
+
+  function _isInternalMovement(tx) {
+    // Exclude internal transfers from "burn" (cash runway), e.g. cash↔bank moves.
+    const cat = _normStr(tx?.category);
+    const label = _normStr(tx?.label);
+    if (cat === "mouvement interne" || cat === "internal movement") return true;
+    if (label.includes("[internal]") || label.includes("mouvement interne")) return true;
+    return false;
+  }
+
+
   for (const tx of (state.transactions || [])) {
     if (!tx) continue;
     if (tx.type !== "expense") continue;
+    if (_isInternalMovement(tx)) continue;
     const _p2 = (tx.payNow ?? tx.pay_now);
     const _paid2 = (_p2 === undefined) ? true : !!_p2;
     if (!_paid2) continue; // runway = real cash out
