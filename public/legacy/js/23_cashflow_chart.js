@@ -27,7 +27,8 @@
       if (!d) continue;
       if (!periodContains(d)) continue;
 
-      const isPaid = (tx.payNow === undefined) ? true : !!tx.payNow;
+      const _p = (tx.payNow ?? tx.pay_now);
+      const isPaid = (_p === undefined) ? true : !!_p;
       if (!isPaid) continue;
 
       const amtBase = amountToBase(tx.amount || 0, tx.currency || state.period.baseCurrency);

@@ -108,7 +108,9 @@ function netPendingEUR(rangeStartISO, rangeEndISO) {
   for (const tx of (state.transactions || [])) {
     if (!tx) continue;
     if (tx.isInternal) continue;
-    if (tx.payNow) continue;
+    const _p = (tx.payNow ?? tx.pay_now);
+    const _paid = (_p === undefined) ? true : !!_p;
+    if (_paid) continue;
     if (!_txOverlaps(tx)) continue;
 
     const v = amountToEUR(Number(tx.amount) || 0, tx.currency);
@@ -322,7 +324,9 @@ function _sumCashWalletsBase() {
 
   for (const w of _getCashWallets()) {
     const cur = w.currency || base;
-    const bal = Number(w.balance) || 0;
+    const bal = (typeof window.tbGetWalletEffectiveBalance === "function")
+      ? Number(window.tbGetWalletEffectiveBalance(w.id) || 0)
+      : (Number(w.balance) || 0);
 
     // If the wallet is empty, don't surface it as "FX exclu"
     if (!bal) continue;
@@ -363,8 +367,11 @@ function cashRunwayInfo(windowDays = 7) {
   for (const tx of (state.transactions || [])) {
     if (!tx) continue;
     if (tx.type !== "expense") continue;
-    if (!tx.payNow) continue; // runway = real cash out
-    if (!cashWalletIds.has(tx.walletId)) continue;
+    const _p2 = (tx.payNow ?? tx.pay_now);
+    const _paid2 = (_p2 === undefined) ? true : !!_p2;
+    if (!_paid2) continue; // runway = real cash out
+    const txWid = String(tx.walletId ?? tx.wallet_id ?? "");
+    if (!cashWalletIds.has(txWid)) continue;
 
     const d = parseISODateOrNull(tx.dateStart);
     if (!d) continue;
@@ -494,7 +501,9 @@ function _sumWalletsDisplay(dateStr) {
   const base = (typeof window.getDisplayCurrency === "function") ? window.getDisplayCurrency(dateStr) : (state?.period?.baseCurrency || "EUR");
   let total = 0;
   for (const w of (state.wallets || [])) {
-    const bal = Number(w.balance) || 0;
+    const bal = (typeof window.tbGetWalletEffectiveBalance === "function")
+      ? Number(window.tbGetWalletEffectiveBalance(w.id) || 0)
+      : (Number(w.balance) || 0);
     const cur = w.currency || base;
     if (typeof window.amountToDisplayForDate === "function") {
       total += window.amountToDisplayForDate(bal, cur, dateStr);
@@ -669,7 +678,9 @@ function renderKPI() {
   let walletTotalEUR = 0;
   let walletTotalBase = 0;
   for (const w of (state.wallets || [])) {
-    const bal = Number(w.balance) || 0;
+    const bal = (typeof window.tbGetWalletEffectiveBalance === "function")
+      ? Number(window.tbGetWalletEffectiveBalance(w.id) || 0)
+      : (Number(w.balance) || 0);
     const cur = w.currency || "EUR";
     walletTotalEUR += _toEUR(bal, cur, displayDateISO);
 
