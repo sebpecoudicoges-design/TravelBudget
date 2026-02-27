@@ -27,6 +27,7 @@ function tbFxSetManualRate(cur, rate) {
   const map = _fxGetManualRates();
   map[c] = r;
   _fxSetManualRates(map);
+  _fxManualMarkToday(c);
   return map;
 }
 function tbFxDeleteManualRate(cur) {
@@ -36,6 +37,76 @@ function tbFxDeleteManualRate(cur) {
   _fxSetManualRates(map);
   return map;
 }
+
+function _fxGetManualAsof() {
+  try {
+    const raw = localStorage.getItem(TB_CONST.LS_KEYS.fx_manual_asof);
+    if (raw) {
+      const obj = JSON.parse(raw);
+      if (obj && typeof obj === "object") return obj;
+    }
+  } catch (_) {}
+  return {};
+}
+
+function _fxSetManualAsof(map) {
+  try { localStorage.setItem(TB_CONST.LS_KEYS.fx_manual_asof, JSON.stringify(map || {})); } catch (_) {}
+}
+
+function _fxManualMarkToday(cur) {
+  const c = String(cur || "").trim().toUpperCase();
+  if (!c) return;
+  const m = _fxGetManualAsof();
+  m[c] = new Date().toISOString().slice(0,10);
+  _fxSetManualAsof(m);
+}
+
+function tbFxManualAsof(cur) {
+  const c = String(cur || "").trim().toUpperCase();
+  const m = _fxGetManualAsof();
+  return m[c] || null;
+}
+
+function tbFxPromptManualRate(cur, reason) {
+  const c = String(cur || "").trim().toUpperCase();
+  if (!c || c === "EUR") return null;
+  const why = reason ? `\n(${reason})` : "";
+  const existing = (_fxGetManualRates() || {})[c];
+  const hint = existing ? ` (actuel: ${existing})` : "";
+  const raw = prompt(`Taux requis : EUR → ${c}${hint}${why}\n\nEntre le taux (ex: 17000) :`);
+  if (raw === null) return null; // user cancelled
+  const r = Number(String(raw).replace(",", "."));
+  tbFxSetManualRate(c, r);
+  _fxManualMarkToday(c);
+  return r;
+}
+
+function _fxPromptUpdateManualIfNeeded() {
+  try {
+    const manual = _fxGetManualRates() || {};
+    const asof = _fxGetManualAsof() || {};
+    const today = new Date().toISOString().slice(0,10);
+    const stale = Object.keys(manual).filter(c => c && c !== "EUR" && asof[c] !== today);
+    if (!stale.length) return;
+
+    const dayKey = TB_CONST?.LS_KEYS?.fx_manual_prompted_day;
+    let last = null;
+    try { last = dayKey ? localStorage.getItem(dayKey) : null; } catch (_) {}
+    if (last === today) return;
+
+    // Ask once per day max
+    const ok = confirm(`Taux manuels: ${stale.join(", ")}\n\nMettre à jour les taux manuels aujourd'hui ?`);
+    try { if (dayKey) localStorage.setItem(dayKey, today); } catch (_) {}
+    if (!ok) return;
+
+    for (const c of stale) {
+      const r = tbFxPromptManualRate(c, "Mise à jour quotidienne");
+      if (!r) break;
+    }
+  } catch (_) {}
+}
+
+
 function tbFxGetManualRates() { return _fxGetManualRates(); }
 
 // Merge auto rates + manual rates (manual only fills missing currencies)
@@ -159,6 +230,7 @@ async function tbFxEnsureDaily(opts) {
 
       // Apply to state immediately (no DB write)
       if (typeof tbFxApplyToState === "function") tbFxApplyToState();
+      _fxPromptUpdateManualIfNeeded();
 
       return { refreshed: true, date: data.date || null };
     } catch (e) {
@@ -174,14 +246,31 @@ async function tbFxEnsureDaily(opts) {
 }
 window.tbFxEnsureDaily = tbFxEnsureDaily;
 
-function tbFxApplyToState() {
+function tbFxApplyToState(opts = {}) {
   try {
     if (!window.state || !window.state.period) return;
     const base = String(window.state.period.baseCurrency || "").toUpperCase();
     if (!base) return;
 
-    const rates = _fxGetEurRates() || {};
-    const eurToBase = (base === "EUR") ? 1 : Number(rates[base]);
+    const ratesMerged = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : (_fxGetEurRates() || {});
+    let eurToBase = (base === "EUR") ? 1 : Number(ratesMerged[base]);
+
+    // If missing, allow a one-shot prompt (at most once per day) to register a manual fallback.
+    if ((!eurToBase || !Number.isFinite(eurToBase) || eurToBase <= 0) && base !== "EUR") {
+      const allowPrompt = !!opts.allowPrompt;
+      if (allowPrompt) {
+        const dayKey = TB_CONST?.LS_KEYS?.fx_manual_prompted_day;
+        const today = new Date().toISOString().slice(0,10);
+        let last = null;
+        try { last = dayKey ? localStorage.getItem(dayKey) : null; } catch (_) {}
+        if (last !== today) {
+          try { if (dayKey) localStorage.setItem(dayKey, today); } catch (_) {}
+          const r = tbFxPromptManualRate(base, "Devise de base — taux auto indisponible");
+          if (r) eurToBase = Number(r);
+        }
+      }
+    }
+
     if (!eurToBase || !Number.isFinite(eurToBase) || eurToBase <= 0) return;
 
     window.state.exchangeRates = window.state.exchangeRates || {};

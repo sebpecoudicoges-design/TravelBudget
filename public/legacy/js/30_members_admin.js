@@ -174,7 +174,7 @@ function renderUsers() {
 ========================= */
 
 
-async function adminWipeUser(userId, email) {
+async function adminWipeUser(userId, email, mode = "all") {
   await guard("Wipe user", async () => {
     const { data: u } = await sb.auth.getUser();
     const me = u?.user?.id;
@@ -183,15 +183,37 @@ async function adminWipeUser(userId, email) {
     }
 
     const label = (email ? `${email} (${userId})` : userId);
-    const ok1 = confirm(`⚠️ Vider le compte :\n${label}\n\nCette action supprime périodes, wallets, transactions, trips, catégories, settings.\nLe login restera.\n\nContinuer ?`);
-    if (!ok1) return;
+    const isAll = (mode === "all");
+    const word = isAll ? "WIPE" : "RESET";
 
-    const token = prompt(`Tape EXACTEMENT WIPE pour confirmer la suppression de données pour :\n${label}`);
-    if (token !== "WIPE") throw new Error("Annulé (confirmation incorrecte).");
+    const explain = isAll
+      ? "Supprime : périodes, wallets, transactions, trips, settings, catégories.
+Le login reste."
+      : "Supprime : périodes, wallets, transactions, trips, settings.
+Conserve : catégories.
+Le login reste.";
 
-    _setStatus("Wiping user data...");
-    await callEdge("admin-wipe-user", { userId });
-    _setStatus("✅ Compte vidé");
+    const token = prompt(
+      `⚠️ Action admin : ${isAll ? "VIDER COMPTE" : "RESET TRAVEL"}
+${label}
+
+${explain}
+
+Tape EXACTEMENT ${word} pour confirmer :`
+    );
+    if (token !== word) throw new Error("Annulé (confirmation incorrecte).");
+
+    _setStatus(isAll ? "Wiping user data..." : "Resetting travel data...");
+
+    const out = await callEdge("admin-wipe-user", { userId, mode });
+
+    const msg = out?.ok
+      ? (isAll ? "Compte vidé." : "Données Travel reset (catégories conservées).")
+      : "Action terminée.";
+    _setStatus(msg);
+
+    // refresh list
+    __membersCache.loadedAt = 0;
     await adminRefreshUsers();
   });
 }

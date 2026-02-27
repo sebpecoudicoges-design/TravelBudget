@@ -18,7 +18,7 @@ async function refreshFromServer() {
 
     // FX: apply cached daily rates to current period base
     if (typeof tbFxApplyToState === "function") {
-      try { tbFxApplyToState(); } catch (_) {}
+      try { tbFxApplyToState({ allowPrompt: true }); } catch (_) {}
     }
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("supabase:load"); } catch (_) {}
     // FX snapshots: run in background (do not block refresh/boot)

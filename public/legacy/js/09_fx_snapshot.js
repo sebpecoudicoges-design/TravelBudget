@@ -30,10 +30,36 @@ function fxBuildTxSnapshot(txCurrency, baseCurrency, dateStr) {
     : ((typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {});
 
   if (typeof window.fxRate !== "function") throw new Error("[FX] snapshot: fxRate() missing");
-  const rate = window.fxRate(txC, baseC, rates);
-  if (!rate || !Number.isFinite(rate) || rate <= 0) {
+  
+const rate = window.fxRate(txC, baseC, rates);
+if (!rate || !Number.isFinite(rate) || rate <= 0) {
+  // Try to self-heal by prompting for missing manual EUR->XXX rates (only on interactive write-path)
+  try {
+    const merged = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : (rates || {});
+    const miss = [];
+    if (txC !== "EUR" && !(Number(merged?.[txC]) > 0)) miss.push(txC);
+    if (baseC !== "EUR" && !(Number(merged?.[baseC]) > 0)) miss.push(baseC);
+    if (miss.length && typeof window.tbFxPromptManualRate === "function") {
+      for (const c of miss) {
+        const r = window.tbFxPromptManualRate(c, `Nécessaire pour convertir ${txC} → ${baseC}`);
+        if (!r) break;
+      }
+    }
+  } catch (_) {}
+
+  const rate2 = window.fxRate(txC, baseC, (typeof window.fxRatesForSegments === "function") ? window.fxRatesForSegments(seg, seg) : rates);
+  if (!rate2 || !Number.isFinite(rate2) || rate2 <= 0) {
     throw new Error(`[FX] snapshot: cannot compute rate ${txC}->${baseC} for ${ds}`);
   }
+  // overwrite local var via return object below
+  return {
+    fx_rate_snapshot: rate2,
+    fx_source_snapshot: (String(seg?.fxMode || seg?.fx_mode || "auto") === "fixed") ? "manual" : "fx",
+    fx_snapshot_at: new Date().toISOString(),
+    fx_base_currency_snapshot: baseC,
+    fx_tx_currency_snapshot: txC,
+  };
+}
 
   // Best-effort source detection
   let source = "fx";
