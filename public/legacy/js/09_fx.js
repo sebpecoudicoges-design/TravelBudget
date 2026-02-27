@@ -12,6 +12,42 @@ function _fxGetEurRates() {
   try { return JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates) || "{}"); } catch (_) { return {}; }
 }
 
+// Manual EUR->XXX rates (fallback for currencies not provided by Auto FX provider)
+function _fxGetManualRates() {
+  try { return JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.fx_manual_rates) || "{}"); } catch (_) { return {}; }
+}
+function _fxSetManualRates(map) {
+  try { localStorage.setItem(TB_CONST.LS_KEYS.fx_manual_rates, JSON.stringify(map || {})); } catch (_) {}
+}
+function tbFxSetManualRate(cur, rate) {
+  const c = String(cur || "").trim().toUpperCase();
+  const r = Number(rate);
+  if (!c || !/^[A-Z]{3}$/.test(c)) throw new Error("Code devise invalide (ISO3 attendu)");
+  if (!Number.isFinite(r) || r <= 0) throw new Error("Taux invalide (doit être > 0)");
+  const map = _fxGetManualRates();
+  map[c] = r;
+  _fxSetManualRates(map);
+  return map;
+}
+function tbFxDeleteManualRate(cur) {
+  const c = String(cur || "").trim().toUpperCase();
+  const map = _fxGetManualRates();
+  delete map[c];
+  _fxSetManualRates(map);
+  return map;
+}
+function tbFxGetManualRates() { return _fxGetManualRates(); }
+
+// Merge auto rates + manual rates (manual only fills missing currencies)
+function fxGetEurRatesMerged() {
+  const autoRates = _fxGetEurRates();
+  const manual = _fxGetManualRates();
+  // manual first, auto overrides (so auto stays source of truth when available)
+  return Object.assign({}, manual || {}, autoRates || {});
+}
+
+
+
 async function refreshFxRates() {
   try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("fx:refresh"); } catch (_) {}
   if (!sbUser) return alert("Non connecté.");
@@ -166,7 +202,7 @@ window.tbFxApplyToState = tbFxApplyToState;
    - Expose: window.fxRate(from,to[,rates]), window.fxConvert(amount,from,to[,rates]), window.safeFxConvert(...)
    ========================= */
 
-function fxGetEurRates() { return _fxGetEurRates(); }
+function fxGetEurRates() { return fxGetEurRatesMerged(); }
 
 function _fxNum(v) {
   const n = Number(v);
@@ -242,6 +278,9 @@ window.fxGetEurRates = fxGetEurRates;
 window.fxRate = fxRate;
 window.fxConvert = fxConvert;
 window.safeFxConvert = safeFxConvert;
+window.tbFxSetManualRate = tbFxSetManualRate;
+window.tbFxDeleteManualRate = tbFxDeleteManualRate;
+window.tbFxGetManualRates = tbFxGetManualRates;
 
 
 // =========================

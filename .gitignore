@@ -1,8 +1,0 @@
-# large artifacts
-public/supabase-schema-*.svg
-
-# node / vite
-node_modules/
-dist/
-.vite/
-

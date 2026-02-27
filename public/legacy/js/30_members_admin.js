@@ -155,9 +155,16 @@ function renderUsers() {
 
   container.innerHTML = users.map(u => `
     <div class="card" style="margin-bottom:8px;">
-      <div><b>${_escapeHtml(u.email || "(no email)")}</b></div>
-      <div style="font-size:12px;opacity:.6;">ID: ${_escapeHtml(u.id)}</div>
-      <div style="font-size:12px;opacity:.6;">Created: ${_escapeHtml(u.created_at || "")}</div>
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+        <div>
+          <div><b>${_escapeHtml(u.email || "(no email)")}</b></div>
+          <div style="font-size:12px;opacity:.6;">ID: ${_escapeHtml(u.id)}</div>
+          <div style="font-size:12px;opacity:.6;">Created: ${_escapeHtml(u.created_at || "")}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn danger" onclick="adminWipeUser('${_escapeHtml(u.id)}','${_escapeHtml(u.email || "")}')">Vider compte</button>
+        </div>
+      </div>
     </div>
   `).join("");
 }
@@ -165,6 +172,29 @@ function renderUsers() {
 /* =========================
    Actions
 ========================= */
+
+
+async function adminWipeUser(userId, email) {
+  await guard("Wipe user", async () => {
+    const { data: u } = await sb.auth.getUser();
+    const me = u?.user?.id;
+    if (me && String(me) === String(userId)) {
+      throw new Error("Refusé : tu ne peux pas vider ton compte courant via cette action.");
+    }
+
+    const label = (email ? `${email} (${userId})` : userId);
+    const ok1 = confirm(`⚠️ Vider le compte :\n${label}\n\nCette action supprime périodes, wallets, transactions, trips, catégories, settings.\nLe login restera.\n\nContinuer ?`);
+    if (!ok1) return;
+
+    const token = prompt(`Tape EXACTEMENT WIPE pour confirmer la suppression de données pour :\n${label}`);
+    if (token !== "WIPE") throw new Error("Annulé (confirmation incorrecte).");
+
+    _setStatus("Wiping user data...");
+    await callEdge("admin-wipe-user", { userId });
+    _setStatus("✅ Compte vidé");
+    await adminRefreshUsers();
+  });
+}
 
 async function adminInviteUser(email) {
   await guard("Invite user", async () => {

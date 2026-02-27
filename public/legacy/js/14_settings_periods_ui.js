@@ -74,6 +74,7 @@ function renderSettings() {
 
   // segments UI (V6.4)
   renderBudgetSegmentsUI();
+  try { renderManualFxBox(); } catch (e) { console.warn('[manual fx] render failed', e); }
 
   // categories UI
   try { renderCategoriesSettingsUI(); } catch (e) { console.warn('[categories] render failed', e); }
@@ -113,13 +114,10 @@ function _segRowHTML(seg, idx, total) {
         </div>
         <div style="min-width:140px;">
           <div class="label">Devise base ${typeof tbHelp==="function" ? tbHelp("Devise utilisée pour le budget/jour et les courbes sur ce segment.") : ""}</div>
-          <select class="input" onchange="_tbSegSet('${id}','baseCurrency',this.value)">
-            ${(() => {
-              const cur = String(baseCurrency || "").toUpperCase();
-              const list = (typeof tbGetAvailableCurrencies === "function") ? tbGetAvailableCurrencies() : ["EUR","USD","THB"];
-              return list.map(c => `<option value="${c}" ${c === cur ? "selected" : ""}>${c}</option>`).join("");
-            })()}
-          </select>
+          <input class="input" list="tbCurrencyList" value="${escapeHTML(String(baseCurrency || '').toUpperCase())}"
+            oninput="_tbSegSet('${id}','baseCurrency',this.value)"
+            onchange="_tbSegSet('${id}','baseCurrency',this.value)" />
+          <div class="hint">Tu peux saisir un code ISO3 non listé (ex: IDR, PHP). Si Auto FX ne le supporte pas, ajoute un taux manuel ci-dessous.</div>
         </div>
         <div style="min-width:160px;">
           <div class="label">Budget/jour (base)</div>
@@ -165,6 +163,18 @@ function _segRowHTML(seg, idx, total) {
 }
 
 function renderBudgetSegmentsUI() {
+  // Ensure a shared datalist for currency inputs
+  try {
+    if (!document.getElementById("tbCurrencyList")) {
+      const dl = document.createElement("datalist");
+      dl.id = "tbCurrencyList";
+      document.body.appendChild(dl);
+    }
+    const dl = document.getElementById("tbCurrencyList");
+    const list = (typeof tbGetAvailableCurrencies === "function") ? tbGetAvailableCurrencies() : ["EUR","USD","THB"];
+    dl.innerHTML = list.map(c => `<option value="${String(c||"").toUpperCase()}"></option>`).join("");
+  } catch (_) {}
+
   const host = document.getElementById("seg-list");
   if (!host) return;
 
@@ -678,3 +688,69 @@ function setCategoryColor(name, color) {
 window.addCategory = addCategory;
 window.deleteCategory = deleteCategory;
 window.setCategoryColor = setCategoryColor;
+
+/* =========================
+   Manual FX UI (fallback rates EUR->XXX)
+   ========================= */
+
+function renderManualFxBox() {
+  const host = document.getElementById("manual-fx-box");
+  if (!host) return;
+
+  const rates = (typeof tbFxGetManualRates === "function") ? tbFxGetManualRates() : {};
+  const entries = Object.entries(rates || {}).sort((a,b)=>a[0].localeCompare(b[0]));
+
+  host.innerHTML = `
+    <div class="card" style="padding:12px;">
+      <h3 style="margin:0 0 8px 0;">Taux manuels (fallback)</h3>
+      <div class="muted" style="margin-bottom:10px;">
+        Utilisés uniquement si la source Auto FX ne fournit pas EUR→DEV.
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
+        <div style="min-width:120px;">
+          <div class="label">Devise</div>
+          <input id="tbManualFxCur" class="input" placeholder="ex: IDR" maxlength="3" />
+        </div>
+        <div style="min-width:180px;">
+          <div class="label">Taux EUR → Devise</div>
+          <input id="tbManualFxRate" class="input" placeholder="ex: 17000" inputmode="decimal" />
+        </div>
+        <button class="btn" onclick="tbManualFxAdd()">Ajouter</button>
+      </div>
+
+      <div id="tbManualFxList">
+        ${entries.length ? entries.map(([c,r]) => `
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border);">
+            <div><b>${escapeHTML(c)}</b> : 1 EUR = ${escapeHTML(String(r))} ${escapeHTML(c)}</div>
+            <button class="btn" onclick="tbManualFxDel('${escapeHTML(c)}')">Supprimer</button>
+          </div>
+        `).join("") : `<div class="muted">Aucun taux manuel.</div>`}
+      </div>
+    </div>
+  `;
+}
+
+function tbManualFxAdd() {
+  try {
+    const curEl = document.getElementById("tbManualFxCur");
+    const rateEl = document.getElementById("tbManualFxRate");
+    const c = String(curEl?.value || "").trim().toUpperCase();
+    const r = Number(String(rateEl?.value || "").replace(",", "."));
+    if (typeof tbFxSetManualRate !== "function") throw new Error("FX manual not available");
+    tbFxSetManualRate(c, r);
+    renderManualFxBox();
+  } catch (e) {
+    alert(e?.message || e);
+  }
+}
+
+function tbManualFxDel(c) {
+  try {
+    if (typeof tbFxDeleteManualRate !== "function") throw new Error("FX manual not available");
+    tbFxDeleteManualRate(c);
+    renderManualFxBox();
+  } catch (e) {
+    alert(e?.message || e);
+  }
+}
+
