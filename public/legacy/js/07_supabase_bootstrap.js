@@ -292,7 +292,7 @@ async function ensureBootstrap() {
 
   // 2) Ensure settings row exists (palette persisted server side)
   {
-    const { data: s, error: sErr } = await sb.from(TB_CONST.TABLES.settings).select("*").eq("user_id", sbUser.id).maybeSingle();
+    const { data: s, error: sErr } = await sb.from(TB_CONST.TABLES.settings).select("theme,palette_json,palette_preset").eq("user_id", sbUser.id).maybeSingle();
     if (sErr) throw sErr;
 
     if (!s) {
@@ -326,7 +326,7 @@ async function ensureBootstrap() {
   {
     const { data: periods, error: pErr } = await sb
       .from(TB_CONST.TABLES.periods)
-      .select("*")
+    .select("id,start_date,end_date,base_currency,eur_base_rate,daily_budget_base,updated_at")
       .eq("user_id", sbUser.id)
       .order("start_date", { ascending: false })
       .limit(1);
@@ -408,7 +408,7 @@ async function loadFromSupabase() {
 
   // settings
   {
-    const { data: s, error: sErr } = await sb.from(TB_CONST.TABLES.settings).select("*").eq("user_id", sbUser.id).maybeSingle();
+    const { data: s, error: sErr } = await sb.from(TB_CONST.TABLES.settings).select("theme,palette_json,palette_preset").eq("user_id", sbUser.id).maybeSingle();
     if (sErr) throw sErr;
 
     if (s) {
@@ -427,7 +427,7 @@ async function loadFromSupabase() {
 
   const { data: periods, error: pErr } = await sb
     .from(TB_CONST.TABLES.periods)
-    .select("*")
+    .select("id,start_date,end_date,base_currency,eur_base_rate,daily_budget_base,updated_at")
     .eq("user_id", sbUser.id)
     .order("start_date", { ascending: false });
   if (pErr) throw pErr;
@@ -441,7 +441,7 @@ async function loadFromSupabase() {
 
   const { data: w0, error: wErr } = await sb
     .from(TB_CONST.TABLES.wallets)
-    .select("*")
+    .select("id,period_id,name,currency,balance,type,created_at")
     .eq("user_id", sbUser.id)
     .eq("period_id", activePeriodId)
     .order("created_at", { ascending: true });
@@ -460,7 +460,7 @@ async function loadFromSupabase() {
 
     const { data: w2, error: w2Err } = await sb
       .from(TB_CONST.TABLES.wallets)
-      .select("*")
+    .select("id,period_id,name,currency,balance,type,created_at")
       .eq("user_id", sbUser.id)
       .eq("period_id", activePeriodId)
       .order("created_at", { ascending: true });
@@ -470,7 +470,7 @@ async function loadFromSupabase() {
 
   const { data: tx, error: tErr } = await sb
     .from(TB_CONST.TABLES.transactions)
-    .select("*")
+    .select("id,wallet_id,type,amount,currency,category,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,pay_now,out_of_budget,night_covered,created_at")
     .eq("user_id", sbUser.id)
     .eq("period_id", activePeriodId)
     .order("created_at", { ascending: true });
@@ -482,7 +482,7 @@ async function loadFromSupabase() {
   try {
     const { data: segs, error: segErr } = await sb
       .from(TB_CONST.TABLES.budget_segments)
-      .select("*")
+      .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,fx_mode,eur_base_rate_fixed,sort_order")
       .eq("user_id", sbUser.id)
       .eq("period_id", activePeriodId)
       .order("sort_order", { ascending: true })
@@ -508,7 +508,7 @@ async function loadFromSupabase() {
 
       const { data: segs2, error: seg2Err } = await sb
         .from(TB_CONST.TABLES.budget_segments)
-        .select("*")
+      .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,fx_mode,eur_base_rate_fixed,sort_order")
         .eq("user_id", sbUser.id)
         .eq("period_id", activePeriodId)
         .order("sort_order", { ascending: true })

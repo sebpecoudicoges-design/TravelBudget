@@ -98,6 +98,97 @@ const allRates = { ...previous, ...data.rates };
   alert(`Taux mis à jour ✅`);
 }
 
+
+
+/* =========================
+   Daily FX refresh (V6.6.54)
+   - Single source of truth: Edge Function "fx-latest" -> EUR->XXX
+   - Auto-refresh at most once per local day
+   - Silent mode: never prompts the user (uses last known manual rates as fallback)
+   ========================= */
+
+function _fxTodayKey() {
+  // Local day (same basis as the rest of the app)
+  try { return toLocalISODate(new Date()); } catch (_) {
+    const d = new Date();
+    return d.toISOString().slice(0,10);
+  }
+}
+
+function _fxGetLastDaily() {
+  try { return String(localStorage.getItem(TB_CONST.LS_KEYS.fx_last_daily) || ""); } catch (_) { return ""; }
+}
+
+function _fxSetLastDaily(v) {
+  try { localStorage.setItem(TB_CONST.LS_KEYS.fx_last_daily, String(v || "")); } catch (_) {}
+}
+
+async function tbFxEnsureDaily(opts) {
+  const o = opts || {};
+  const blockingIfEmpty = (o.blockingIfEmpty !== false);
+
+  const today = _fxTodayKey();
+  const last = _fxGetLastDaily();
+  const haveAnyRates = Object.keys(_fxGetEurRates() || {}).length > 0;
+
+  // Up-to-date already
+  if (last === today && haveAnyRates) return { refreshed: false, reason: "already_today" };
+
+  // If we already have rates, do not block UI boot.
+  const shouldBlock = blockingIfEmpty && !haveAnyRates;
+
+  const run = async () => {
+    try {
+      const { data, error } = await sb.functions.invoke("fx-latest");
+      if (error) throw error;
+      if (!data?.rates) throw new Error("Réponse taux invalide.");
+
+      // Merge: keep previous manual rates when provider doesn't give them
+      const previous = _fxGetEurRates();
+      const merged = { ...previous, ...data.rates, EUR: 1 };
+
+      _fxSetEurRates(merged);
+      _fxSetLastDaily(today);
+
+      // Apply to state immediately (no DB write)
+      if (typeof tbFxApplyToState === "function") tbFxApplyToState();
+
+      return { refreshed: true, date: data.date || null };
+    } catch (e) {
+      console.warn("[fx] daily refresh failed (kept cached rates):", e?.message || e);
+      return { refreshed: false, error: e?.message || String(e) };
+    }
+  };
+
+  if (shouldBlock) return await run();
+  // fire-and-forget
+  try { run(); } catch (_) {}
+  return { refreshed: false, reason: "deferred" };
+}
+window.tbFxEnsureDaily = tbFxEnsureDaily;
+
+function tbFxApplyToState() {
+  try {
+    if (!window.state || !window.state.period) return;
+    const base = String(window.state.period.baseCurrency || "").toUpperCase();
+    if (!base) return;
+
+    const rates = _fxGetEurRates() || {};
+    const eurToBase = (base === "EUR") ? 1 : Number(rates[base]);
+    if (!eurToBase || !Number.isFinite(eurToBase) || eurToBase <= 0) return;
+
+    window.state.exchangeRates = window.state.exchangeRates || {};
+    window.state.exchangeRates["EUR-BASE"] = eurToBase;
+    window.state.exchangeRates["BASE-EUR"] = 1 / eurToBase;
+
+    // Keep period.eurBaseRate aligned in-memory (DB stays as-is unless user explicitly updates)
+    window.state.period.eurBaseRate = eurToBase;
+  } catch (e) {
+    console.warn("[fx] applyToState failed:", e?.message || e);
+  }
+}
+window.tbFxApplyToState = tbFxApplyToState;
+
 /* =========================
    FX API (cross-rate via EUR_RATES)
    - Source of truth: localStorage EUR_RATES (EUR->XXX), + fallback period.eurBaseRate for baseCurrency

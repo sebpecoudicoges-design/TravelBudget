@@ -1,3 +1,36 @@
+## MAJ - Suivi (à cocher à chaque itération)
+
+> Règles de travail (toujours vraies)
+- [ ] Je reçois **soit** un ZIP complet (sans `.git`) **soit** uniquement le/les fichiers modifiés à remplacer.
+- [ ] Je reçois les **commandes git** pour `add/commit/push`.
+- [ ] **Zéro régression** : si un bug est corrigé, il ne revient pas.
+
+### Roadmap (ordre imposé)
+
+#### 1) Flux applicatifs (auth / sessions / chargement / FX)
+- [ ] Réduire le temps de chargement (requêtes Supabase + rendu)
+- [ ] Stabiliser auth + session (post-invite/recovery inclus)
+- [ ] **FX source unique** (Edge `fx-latest`) + **MAJ quotidienne** (silent)
+
+#### 2) Modèle de données (SQL)
+- [ ] Recevoir le SQL manquant : **RLS policies**, **indexes**, **functions/RPC**, **schema_version** réel
+- [ ] Corriger proprement : devises (checks), indexes perf, cohérence settings/periods
+
+#### 3) Edge Functions (admin + fx)
+- [ ] Durcir CORS (allowlist)
+- [ ] Valider `redirectTo` (allowlist) sur les liens invite/recovery
+- [ ] Logging minimal + rate-limit (si nécessaire)
+
+#### 4) Points durs legacy (risques + conventions)
+- [ ] Burn = **dépenses payées/jour** uniquement (définition unique)
+- [ ] Séparer clairement Burn réel vs Burn budget (si affiché)
+
+#### 5) Maintenance / Core extraction
+- [ ] Mettre à jour cette checklist au fil des versions
+- [ ] Extraire progressivement `Core.money` et `Core.tripRules` (testés)
+
+---
+
 # TravelBudget — Smoke checklist (à chaque zip)
 
 ## 0) Boot

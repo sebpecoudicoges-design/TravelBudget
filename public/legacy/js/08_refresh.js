@@ -9,7 +9,17 @@ async function refreshFromServer() {
 
   try {
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("supabase:load"); } catch (_) {}
+    // FX: ensure daily rates (blocks only if no cached rates yet)
+    if (typeof tbFxEnsureDaily === "function") {
+      try { await tbFxEnsureDaily({ blockingIfEmpty: true }); } catch (_) {}
+    }
+
     await loadFromSupabase();
+
+    // FX: apply cached daily rates to current period base
+    if (typeof tbFxApplyToState === "function") {
+      try { tbFxApplyToState(); } catch (_) {}
+    }
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("supabase:load"); } catch (_) {}
     // FX snapshots: run in background (do not block refresh/boot)
     if (typeof ensureTxFxSnapshotsDeferred === "function") {

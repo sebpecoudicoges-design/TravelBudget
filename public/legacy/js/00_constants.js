@@ -54,6 +54,7 @@ window.__TB_BUILD = '6.6.53';
     palette: "travelbudget_palette_v1",
     preset: "travelbudget_palette_preset_v1",
     eur_rates: "EUR_RATES",
+    fx_last_daily: "travelbudget_fx_last_daily_v1",
     pie_excluded_cats: "travelbudget_pie_excluded_categories_v1",
     debug: "travelbudget_debug_v1",
   });

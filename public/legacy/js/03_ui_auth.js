@@ -45,6 +45,18 @@ async function signUp() {
 async function signOut() {
   await sb.auth.signOut();
   sbUser = null;
+
+  // Clear in-memory state to avoid showing stale data while logged out
+  try {
+    if (window.state) {
+      state.wallets = [];
+      state.transactions = [];
+      state.allocations = [];
+      state.periods = [];
+      state.budgetSegments = [];
+    }
+  } catch (_) {}
+
   showAuth(true, "Déconnecté.");
 }
 
