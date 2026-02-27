@@ -579,7 +579,12 @@ function getDailyBudgetForDateEUR(dateStr) {
 }
 function totalInEUR() {
   let total = 0;
-  for (const w of state.wallets) total += amountToEUR(w.balance, w.currency);
+  for (const w of state.wallets) {
+    const bal = (typeof window.tbGetWalletEffectiveBalance === "function")
+      ? window.tbGetWalletEffectiveBalance(w.id)
+      : (w.balance || 0);
+    total += amountToEUR(bal, w.currency);
+  }
   return total;
 }
 function sumsPaidCommittedEUR() {

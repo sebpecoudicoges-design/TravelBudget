@@ -112,7 +112,7 @@ if (!wallets.length) {
       <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap;">
         <div>
           <h3>${w.name} (${w.currency})</h3>
-          <p>Solde : <strong style="color:var(--text);">${fmtMoney((typeof tbGetWalletEffectiveBalance==="function"?tbGetWalletEffectiveBalance(w.id):w.balance), w.currency)}</strong></p>
+          <p>Solde : <strong style="color:var(--text);">${fmtMoney((typeof window.tbGetWalletEffectiveBalance === "function" ? window.tbGetWalletEffectiveBalance(w.id) : w.balance), w.currency)}</strong></p>
           ${isBase
             ? `<p class="muted">Aujourd’hui (${today}) : budget dispo <strong>${budgetToday.toFixed(2)} ${base}</strong></p>`
             : `<p class="muted">Budget/jour calculé (${base})</p>`}

@@ -152,37 +152,58 @@ function tbHelp(text) {
 }
 
 /* =========================
-   Wallet computed balance (V6.6.42)
-   - Wallet table `balance` is treated as a baseline (manual adjustments)
-   - Paid transactions (pay_now=true) impact the effective balance
+   Wallet effective balance (V6.6.43)
+   - Some deployments do not persist wallet.balance adjustments on tx create.
+   - We compute an "effective" balance as: wallet.balance + sum(paid tx deltas on this wallet)
+   - Delta sign uses tx.type: income=+amount, expense=-amount.
+   - Only payNow=true impacts cash.
    ========================= */
-function tbGetWalletEffectiveBalance(walletId) {
+
+function _tbTxAmountInCurrency(tx, toCur) {
+  const amt = Number(tx?.amount || 0);
+  const fromCur = String(tx?.currency || toCur || "").toUpperCase();
+  const target = String(toCur || fromCur || "").toUpperCase();
+  if (!isFinite(amt) || !target) return 0;
+  if (fromCur === target) return amt;
+
+  // Prefer FX engine if available
   try {
-    const wid = String(walletId || "");
-    const w = (typeof findWallet === "function") ? findWallet(wid) : (state?.wallets || []).find(x => String(x.id) === wid);
-    const base = Number(w?.balance || 0) || 0;
-
-    const txs = Array.isArray(state?.transactions) ? state.transactions : [];
-    let delta = 0;
-
-    for (const t of txs) {
-      const tWid = String(t.wallet_id ?? t.walletId ?? "");
-      if (tWid !== wid) continue;
-
-      const payNow = (t.pay_now !== undefined) ? !!t.pay_now : !!t.payNow;
-      if (!payNow) continue;
-
-      const type = String(t.type || "").toLowerCase();
-      const amt = Number(t.amount || 0) || 0;
-
-      if (type === "expense") delta -= amt;
-      else if (type === "income") delta += amt;
+    if (typeof window.fxConvert === "function") {
+      const rates = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
+      const out = window.fxConvert(amt, fromCur, target, rates);
+      if (out !== null && isFinite(out)) return Number(out) || 0;
     }
-    return base + delta;
-  } catch (_) {
-    // Fallback: baseline only
-    const w = (typeof findWallet === "function") ? findWallet(walletId) : null;
-    return Number(w?.balance || 0) || 0;
-  }
+  } catch (_) {}
+
+  // Fallback: no conversion available -> keep raw amount
+  return amt;
 }
 
+function tbGetWalletEffectiveBalance(walletId) {
+  const wid = String(walletId || "");
+  if (!wid || !window.state) return 0;
+  const w = (state.wallets || []).find(x => String(x?.id || "") === wid);
+  if (!w) return 0;
+
+  const baseBal = Number(w.balance || 0);
+  const wCur = String(w.currency || state?.period?.baseCurrency || "EUR").toUpperCase();
+
+  let delta = 0;
+  for (const tx of (state.transactions || [])) {
+    if (!tx) continue;
+    const txWid = String(tx.walletId ?? tx.wallet_id ?? "");
+    if (txWid !== wid) continue;
+
+    const isPaid = (tx.payNow === undefined) ? true : !!tx.payNow;
+    if (!isPaid) continue;
+
+    const amt = _tbTxAmountInCurrency(tx, wCur);
+    if (!isFinite(amt) || amt === 0) continue;
+
+    const t = String(tx.type || "").toLowerCase();
+    if (t === "income") delta += +amt;
+    else if (t === "expense") delta += -amt;
+  }
+
+  return moneyRound(baseBal + delta, 2);
+}

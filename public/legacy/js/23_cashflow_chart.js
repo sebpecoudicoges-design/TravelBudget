@@ -9,7 +9,7 @@
     const base = state.period.baseCurrency;
     let total = 0;
     for (const w of (state.wallets || [])) {
-      total += amountToBase(w.balance || 0, w.currency || base);
+      total += amountToBase(((typeof window.tbGetWalletEffectiveBalance === "function") ? window.tbGetWalletEffectiveBalance(w.id) : (w.balance || 0)), w.currency || base);
     }
     return total;
   }
