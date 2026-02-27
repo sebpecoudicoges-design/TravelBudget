@@ -151,12 +151,13 @@ function tbHelp(text) {
   return `<span class="tb-help" title="${t}" aria-label="${t}">?</span>`;
 }
 
-/* =========================
-   Wallet effective balance (V6.6.43)
-   - Some deployments do not persist wallet.balance adjustments on tx create.
-   - We compute an "effective" balance as: wallet.balance + sum(paid tx deltas on this wallet)
-   - Delta sign uses tx.type: income=+amount, expense=-amount.
-   - Only payNow=true impacts cash.
+
+;/* =========================
+   Wallet effective balance (V1)
+   - Display wallet balance as baseline + sum of wallet transactions
+   - Conservative: does not mutate DB, only affects UI display/derived totals.
+   - IMPORTANT: we intentionally ignore payNow here because users expect wallet balance
+     to reflect any transaction created "from a wallet".
    ========================= */
 
 function _tbTxAmountInCurrency(tx, toCur) {
@@ -169,17 +170,16 @@ function _tbTxAmountInCurrency(tx, toCur) {
   // Prefer FX engine if available
   try {
     if (typeof window.fxConvert === "function") {
-      const rates = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
-      const out = window.fxConvert(amt, fromCur, target, rates);
-      if (out !== null && isFinite(out)) return Number(out) || 0;
+      // fxConvert(amount, from, to, dateISO?) — date optional depending on implementation
+      return Number(window.fxConvert(amt, fromCur, target));
     }
   } catch (_) {}
 
-  // Fallback: no conversion available -> keep raw amount
-  return amt;
+  return amt; // fallback: no conversion
 }
 
-function tbGetWalletEffectiveBalance(walletId) {
+// Expose helper globally for other modules
+window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(walletId) {
   const wid = String(walletId || "");
   if (!wid || !window.state) return 0;
   const w = (state.wallets || []).find(x => String(x?.id || "") === wid);
@@ -194,16 +194,13 @@ function tbGetWalletEffectiveBalance(walletId) {
     const txWid = String(tx.walletId ?? tx.wallet_id ?? "");
     if (txWid !== wid) continue;
 
-    const isPaid = (tx.payNow === undefined) ? true : !!tx.payNow;
-    if (!isPaid) continue;
-
     const amt = _tbTxAmountInCurrency(tx, wCur);
     if (!isFinite(amt) || amt === 0) continue;
 
     const t = String(tx.type || "").toLowerCase();
-    if (t === "income") delta += +amt;
-    else if (t === "expense") delta += -amt;
+    if (t === "income") delta += amt;
+    else if (t === "expense") delta -= amt;
   }
 
-  return moneyRound(baseBal + delta, 2);
-}
+  return baseBal + delta;
+};
