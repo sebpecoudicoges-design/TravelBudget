@@ -144,15 +144,53 @@ async function refreshFxRates() {
     if (fixed && fixed > 0 && !Number(allRates[cur])) allRates[cur] = fixed;
   });
 
-  // 3) Ensure base currency rate exists (or abort gracefully)
-  if (base !== "EUR") {
-    const eurToBase = Number(allRates[base]);
-    if (!eurToBase || eurToBase <= 0) {
-      return alert(
-        `Taux auto indisponible pour ${base}.\n` +
-        `→ Garde un taux fixe (EUR→${base}) dans le segment/période.`
+  // 3) If some required currencies are missing, offer to capture manual fallbacks now.
+  try {
+    const required = new Set();
+    if (base) required.add(String(base).toUpperCase());
+    (Array.isArray(state.wallets) ? state.wallets : []).forEach(w => {
+      const c = String(w?.currency || "").toUpperCase();
+      if (c) required.add(c);
+    });
+    (Array.isArray(state.budgetSegments) ? state.budgetSegments : []).forEach(s => {
+      const c = String(s?.base_currency || s?.baseCurrency || "").toUpperCase();
+      if (c) required.add(c);
+    });
+
+    const manual = _fxGetManualRates();
+    const effective = Object.assign({}, manual || {}, allRates || {});
+    const missing = Array.from(required).filter(c => c && c !== "EUR" && !(Number(effective?.[c]) > 0));
+    if (missing.length) {
+      const ok = confirm(
+        `Certaines devises n'ont pas de taux auto aujourd'hui : ${missing.join(", ")}.\n\n` +
+        `Souhaites-tu renseigner un taux manuel (fallback) maintenant ?`
       );
+      if (ok && typeof window.tbFxEnsureEurRatesInteractive === "function") {
+        const out = window.tbFxEnsureEurRatesInteractive(missing, "Taux du jour manquant — fallback manuel");
+        if (out && out.ok) {
+          const manual2 = _fxGetManualRates();
+          Object.assign(effective, manual2 || {});
+        }
+      }
     }
+
+    // Recompute base rate using effective rates (auto + manual fallbacks)
+    if (base && String(base).toUpperCase() !== "EUR") {
+      const b = String(base).toUpperCase();
+      const eurToBase = Number(effective?.[b]);
+      if (!eurToBase || eurToBase <= 0) {
+        return alert(
+          `Taux indisponible pour ${b}.\n` +
+          `→ Renseigne un taux manuel EUR→${b} (fallback), ou choisis une devise supportée.`
+        );
+      }
+      // keep local rates store: provider rates only, manual is stored separately
+      state.exchangeRates["EUR-BASE"] = eurToBase;
+      state.exchangeRates["BASE-EUR"] = 1 / eurToBase;
+      // continue below and persist eur_base_rate with eurToBase
+    }
+  } catch (e) {
+    console.warn("[fx] missing-required prompt failed:", e?.message || e);
   }
 
   // 4) Stockage local (utilisé par le plugin cross-rate)
@@ -160,7 +198,7 @@ async function refreshFxRates() {
   try { _fxSetLastDaily(_fxTodayKey()); } catch (_) {}
 
   // 5) On continue à alimenter ton moteur actuel EUR<->BASE
-  const eurToBaseNow = (base === "EUR") ? 1 : Number(allRates[base]);
+  const eurToBaseNow = (base === "EUR") ? 1 : Number(state.exchangeRates["EUR-BASE"] || allRates[base]);
   state.exchangeRates["EUR-BASE"] = eurToBaseNow;
   state.exchangeRates["BASE-EUR"] = 1 / eurToBaseNow;
 
@@ -204,6 +242,7 @@ function _fxSetLastDaily(v) {
 async function tbFxEnsureDaily(opts) {
   const o = opts || {};
   const blockingIfEmpty = (o.blockingIfEmpty !== false);
+  const promptMissingRequired = !!o.promptMissingRequired;
 
   const today = _fxTodayKey();
   const last = _fxGetLastDaily();
@@ -231,6 +270,33 @@ async function tbFxEnsureDaily(opts) {
       // Apply to state immediately (no DB write)
       if (typeof tbFxApplyToState === "function") tbFxApplyToState();
       _fxPromptUpdateManualIfNeeded();
+
+      // Optional: after a successful daily refresh, prompt for missing required currencies.
+      // Disabled by default to avoid prompts during boot; enable from explicit user actions.
+      if (promptMissingRequired) {
+        try {
+          const base = String(window.state?.period?.baseCurrency || "").toUpperCase();
+          const required = new Set();
+          if (base) required.add(base);
+          (Array.isArray(window.state?.wallets) ? window.state.wallets : []).forEach(w => {
+            const c = String(w?.currency || "").toUpperCase();
+            if (c) required.add(c);
+          });
+          (Array.isArray(window.state?.budgetSegments) ? window.state.budgetSegments : []).forEach(s => {
+            const c = String(s?.base_currency || s?.baseCurrency || "").toUpperCase();
+            if (c) required.add(c);
+          });
+          const merged = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : (_fxGetEurRates() || {});
+          const missing = Array.from(required).filter(c => c && c !== "EUR" && !(Number(merged?.[c]) > 0));
+          if (missing.length && typeof window.tbFxEnsureEurRatesInteractive === "function") {
+            const ok = confirm(
+              `Certaines devises n'ont pas de taux auto aujourd'hui : ${missing.join(", ")}.\n\n` +
+              `Souhaites-tu renseigner un taux manuel (fallback) maintenant ?`
+            );
+            if (ok) window.tbFxEnsureEurRatesInteractive(missing, "Taux du jour manquant — fallback manuel");
+          }
+        } catch (_) {}
+      }
 
       return { refreshed: true, date: data.date || null };
     } catch (e) {
@@ -284,6 +350,40 @@ function tbFxApplyToState(opts = {}) {
   }
 }
 window.tbFxApplyToState = tbFxApplyToState;
+
+/* =========================
+   Interactive helpers
+   - Ensure required EUR->XXX rates exist before critical write paths.
+   ========================= */
+
+function tbFxEnsureEurRatesInteractive(currencies, reason) {
+  const list = Array.isArray(currencies) ? currencies : [currencies];
+  const why = String(reason || "Taux requis");
+  const merged = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : (_fxGetEurRates() || {});
+  const miss = [];
+
+  for (const cRaw of list) {
+    const c = String(cRaw || "").trim().toUpperCase();
+    if (!c || c === "EUR") continue;
+    const v = Number(merged?.[c]);
+    if (!(v > 0) || !Number.isFinite(v)) miss.push(c);
+  }
+
+  if (!miss.length) return { ok: true, missing: [] };
+  if (typeof window.tbFxPromptManualRate !== "function") {
+    return { ok: false, missing: miss, error: "tbFxPromptManualRate() missing" };
+  }
+
+  for (const c of miss) {
+    const r = window.tbFxPromptManualRate(c, why);
+    if (!r) return { ok: false, missing: miss, cancelled: true };
+  }
+
+  // Apply immediately (may affect baseCurrency conversions)
+  try { if (typeof window.tbFxApplyToState === "function") window.tbFxApplyToState({ allowPrompt: false }); } catch (_) {}
+  return { ok: true, missing: [] };
+}
+window.tbFxEnsureEurRatesInteractive = tbFxEnsureEurRatesInteractive;
 
 /* =========================
    FX API (cross-rate via EUR_RATES)

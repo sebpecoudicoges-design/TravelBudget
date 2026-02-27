@@ -76,6 +76,20 @@ function _txBuildFxSnapshotArgs(dateISO, txCurrency) {
   const txC = (String(txCurrency || "").trim().toUpperCase() || "EUR");
   const baseC = _txResolveBaseCurrencyForDate(ds);
 
+  // Interactive safeguard: if we can't compute FX because EUR->XXX is missing, ask once now.
+  // This is intentionally placed on the write-path to avoid prompting during boot.
+  try {
+    if (txC !== baseC && typeof window.tbFxEnsureEurRatesInteractive === "function") {
+      const out = window.tbFxEnsureEurRatesInteractive([txC, baseC], `Nécessaire pour convertir ${txC} → ${baseC}`);
+      if (out && out.cancelled) {
+        throw new Error("Sauvegarde annulée (taux manquant).");
+      }
+    }
+  } catch (e) {
+    // propagate a clean error message
+    throw (e instanceof Error) ? e : new Error(String(e));
+  }
+
   if (typeof window.fxBuildTxSnapshot !== "function") {
     throw new Error("fxBuildTxSnapshot() not found (09_fx_snapshot.js not loaded?)");
   }

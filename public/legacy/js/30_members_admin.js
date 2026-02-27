@@ -187,11 +187,8 @@ async function adminWipeUser(userId, email, mode = "all") {
     const word = isAll ? "WIPE" : "RESET";
 
     const explain = isAll
-      ? "Supprime : périodes, wallets, transactions, trips, settings, catégories.
-Le login reste."
-      : "Supprime : périodes, wallets, transactions, trips, settings.
-Conserve : catégories.
-Le login reste.";
+      ? `Supprime : périodes, wallets, transactions, trips, settings, catégories.\nLe login reste.`
+      : `Supprime : périodes, wallets, transactions, trips, settings.\nConserve : catégories.\nLe login reste.`;
 
     const token = prompt(
       `⚠️ Action admin : ${isAll ? "VIDER COMPTE" : "RESET TRAVEL"}
