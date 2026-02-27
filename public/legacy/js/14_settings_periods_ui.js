@@ -196,6 +196,17 @@ function _tbSegSet(id, key, value) {
   window.__TB_SEG_EDITS__[id][key] = value;
 }
 
+// Parse numbers from UI inputs (handles comma decimals)
+function _tbParseNum(v) {
+  if (v === null || v === undefined) return NaN;
+  if (typeof v === "number") return v;
+  let s = String(v).trim();
+  if (!s) return NaN;
+  // remove spaces (including NBSP) and normalize decimal comma
+  s = s.replace(/[\s\u00A0]/g, "").replace(",", ".");
+  return Number(s);
+}
+
 async function saveBudgetSegment(id) {
   await safeCall("Save période", async () => {
     const seg = (state.budgetSegments || []).find((s) => String(s.id) === String(id));
@@ -215,7 +226,7 @@ async function saveBudgetSegment(id) {
       }
     } catch (_) {}
 const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
-    const dailyBudgetBase = Number(edits.dailyBudgetBase ?? seg.dailyBudgetBase);
+	const dailyBudgetBase = _tbParseNum(edits.dailyBudgetBase ?? seg.dailyBudgetBase);
     const fxMode = (edits.fxMode ?? seg.fxMode ?? "fixed") || "fixed";
 
     // NOTE: eurBaseRateFixed is read-only in auto (we display the live value).
@@ -223,7 +234,7 @@ const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
     let eurBaseRateFixed =
       eurBaseRateFixedRaw === "" || eurBaseRateFixedRaw === null || eurBaseRateFixedRaw === undefined
         ? null
-        : Number(eurBaseRateFixedRaw);
+		: _tbParseNum(eurBaseRateFixedRaw);
 
     const sD = parseISODateOrNull(start);
     const eD = parseISODateOrNull(endFixed);
@@ -462,13 +473,14 @@ async function _syncLastSegmentEndToPeriod(periodId, periodEndISO) {
 
 async function saveSettings() {
   await safeCall("Enregistrer voyage", async () => {
-    const baseCur = document.getElementById("s-basecur")?.value;
+    const baseCurEl = document.getElementById("s-basecur");
+    const baseCur = (baseCurEl && baseCurEl.value) ? baseCurEl.value : (state?.period?.baseCurrency || state?.period?.base_currency || "");
     const s = document.getElementById("s-start")?.value;
     const e = document.getElementById("s-end")?.value;
-    const d = parseFloat(document.getElementById("s-daily")?.value);
-    const r = parseFloat(document.getElementById("s-rate")?.value);
+    const d = _tbParseNum(document.getElementById("s-daily")?.value);
+    const r = _tbParseNum(document.getElementById("s-rate")?.value);
 
-    if (!baseCur) throw new Error("UI settings non à jour.");
+    if (!baseCur) throw new Error("UI settings non à jour (devise base introuvable). ");
     if (!s || !e) throw new Error("Dates invalides.");
     if (parseISODateOrNull(e) < parseISODateOrNull(s)) throw new Error("Fin < début.");
     if (!isFinite(d) || d <= 0) throw new Error("Budget/jour invalide.");
