@@ -13,7 +13,7 @@
 - [ ] **FX source unique** (Edge `fx-latest`) + **MAJ quotidienne** (silent)
 
 #### 2) Modèle de données (SQL)
-- [ ] Recevoir le SQL manquant : **RLS policies**, **indexes**, **functions/RPC**, **schema_version** réel
+- [x] Recevoir le SQL manquant : **RLS policies**, **indexes**, **functions/RPC**
 - [ ] Corriger proprement : devises (checks), indexes perf, cohérence settings/periods
 
 #### 3) Edge Functions (admin + fx)
@@ -28,6 +28,13 @@
 #### 5) Maintenance / Core extraction
 - [ ] Mettre à jour cette checklist au fil des versions
 - [ ] Extraire progressivement `Core.money` et `Core.tripRules` (testés)
+
+---
+
+## Journal des MAJ (à cocher quand c'est déployé/testé)
+
+- [x] **6.6.55** — Retry RPC (stabilité réseau) + aucune régression
+- [ ] **6.6.56** — Patch DB : devises ISO3 + verrouillage `profiles.role` (anti self-admin)
 
 ---
 

@@ -303,7 +303,8 @@ async function tbRpcWithRetry(fnName, args, opts) {
   let lastErr = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      return await sb.rpc(fnName, args);
+      const res = await sb.rpc(fnName, args);
+      return res;
     } catch (e) {
       lastErr = e;
       const msg = String(e?.message || e || '');
@@ -532,7 +533,7 @@ async function markTxAsPaid(txId) {
     const wallet = findWallet(tx.walletId);
     if (!wallet) throw new Error("Wallet introuvable.");
 
-    const { error } = await tbRpcWithRetry("update_transaction_v2", {
+    const { error } = await sb.rpc("update_transaction_v2", {
       p_tx_id: tx.id,
       p_wallet_id: tx.walletId,
       p_type: tx.type,
