@@ -729,14 +729,17 @@ function renderKPI() {
   const runway = cashRunwayInfo();        // dépenses cash réelles
   const cover  = cashConservativeInfo();  // burn prudent (budget/alloc)
 
-  const cashTotalBase = cover ? cover.totalBase : (runway ? runway.totalBase : 0);
-  const cashBurnBase  = cover ? cover.burnPerDay : (runway ? runway.burnPerDay : 0);
+ // 🔥 Cash fallback model (bank unavailable scenario)
+// Stock = cash only
+// Burn = total real expenses (runway)
 
-  const runwayDays = runway ? runway.daysLeft : Infinity;
-  const coverDays  = cover  ? cover.daysLeft  : Infinity;
+const cashTotalBase = runway ? runway.totalBase : 0;
+const cashBurnBase  = (runway && isFinite(runway.burnPerDay))
+  ? runway.burnPerDay
+  : 0;
 
-  const criticalDays = Math.min(runwayDays, coverDays);
-  const driver = (criticalDays === runwayDays) ? "Dépenses" : "Budget";
+const criticalDays = runway ? runway.daysLeft : Infinity;
+const driver = "Dépenses";
 
   const todayDetailsHTML = _renderTodayDetailsHTML(displayDateISO);
   const todayBudget = getDailyBudgetForDate(displayDateISO);
