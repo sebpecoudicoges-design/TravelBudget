@@ -355,24 +355,144 @@ function renderDailyBudget() {
     container.appendChild(div);
   });
 }
+
+/* =========================
+   Wallet Create Dialog (UI)
+   - Lightweight modal (no external deps)
+   ========================= */
+function tbOpenWalletDialog() {
+  return new Promise((resolve) => {
+    // inject styles once
+    if (!document.getElementById("tbWalletDlgStyles")) {
+      const st = document.createElement("style");
+      st.id = "tbWalletDlgStyles";
+      st.textContent = `
+        .tb-dlg-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;}
+        .tb-dlg{background:#fff;border-radius:14px;max-width:520px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden;}
+        .tb-dlg-h{padding:14px 16px;border-bottom:1px solid rgba(0,0,0,.08);font-weight:700;}
+        .tb-dlg-b{padding:16px;}
+        .tb-dlg-row{margin-bottom:12px;}
+        .tb-dlg-row label{display:block;font-size:12px;opacity:.75;margin-bottom:6px;}
+        .tb-dlg-row input,.tb-dlg-row select{width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,.18);border-radius:10px;outline:none;}
+        .tb-dlg-row .hint{font-size:12px;opacity:.7;margin-top:6px;}
+        .tb-dlg-f{display:flex;gap:10px;justify-content:flex-end;padding:14px 16px;border-top:1px solid rgba(0,0,0,.08);}
+        .tb-dlg-btn{padding:10px 14px;border-radius:10px;border:1px solid rgba(0,0,0,.18);background:#fff;cursor:pointer;}
+        .tb-dlg-btn.primary{background:#111;color:#fff;border-color:#111;}
+        .tb-dlg-err{color:#b00020;font-size:12px;margin-top:8px;display:none;}
+      `;
+      document.head.appendChild(st);
+    }
+
+    const backdrop = document.createElement("div");
+    backdrop.className = "tb-dlg-backdrop";
+    backdrop.innerHTML = `
+      <div class="tb-dlg" role="dialog" aria-modal="true" aria-label="Créer un wallet">
+        <div class="tb-dlg-h">Créer un wallet</div>
+        <div class="tb-dlg-b">
+          <div class="tb-dlg-row">
+            <label>Nom</label>
+            <input id="tbWName" type="text" placeholder="ex: Cash (THB), Banque EUR" />
+          </div>
+          <div class="tb-dlg-row">
+            <label>Devise</label>
+            <input id="tbWCur" type="text" placeholder="ex: EUR, THB, VND" maxlength="6" />
+            <div class="hint">Code devise (ISO) — ex: EUR, THB.</div>
+          </div>
+          <div class="tb-dlg-row">
+            <label>Type</label>
+            <select id="tbWType">
+              <option value="cash">Espèces (cash)</option>
+              <option value="bank">Banque (bank)</option>
+              <option value="card">Carte (card)</option>
+              <option value="savings">Épargne (savings)</option>
+              <option value="other">Autre (other)</option>
+            </select>
+            <div class="hint">Le type sert au calcul du KPI “Cash” et du runway (burn).</div>
+          </div>
+          <div class="tb-dlg-row">
+            <label>Solde initial</label>
+            <input id="tbWBal" type="text" inputmode="decimal" placeholder="0" value="0" />
+          </div>
+          <div id="tbWErr" class="tb-dlg-err"></div>
+        </div>
+        <div class="tb-dlg-f">
+          <button class="tb-dlg-btn" id="tbWCancel" type="button">Annuler</button>
+          <button class="tb-dlg-btn primary" id="tbWCreate" type="button">Créer</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(backdrop);
+
+    const $ = (id) => backdrop.querySelector(id);
+    const nameEl = $("#tbWName");
+    const curEl = $("#tbWCur");
+    const typeEl = $("#tbWType");
+    const balEl = $("#tbWBal");
+    const errEl = $("#tbWErr");
+
+    function close(val) {
+      try { backdrop.remove(); } catch (_) {}
+      resolve(val);
+    }
+
+    function showErr(msg) {
+      errEl.textContent = msg;
+      errEl.style.display = msg ? "block" : "none";
+    }
+
+    function validateAndReturn() {
+      const name = String(nameEl.value || "").trim();
+      if (!name) return showErr("Nom requis.");
+
+      const currency = String(curEl.value || "").trim().toUpperCase();
+      if (!currency) return showErr("Devise requise.");
+      if (!/^[A-Z]{3,6}$/.test(currency)) return showErr("Devise invalide (ex: EUR, THB).");
+
+      const type = String(typeEl.value || "").trim().toLowerCase();
+      const allowed = ["cash", "bank", "card", "savings", "other"];
+      if (!allowed.includes(type)) return showErr("Type invalide.");
+
+      const balStr = String(balEl.value || "0").replace(",", ".").trim();
+      const balance = Number(balStr);
+      if (!isFinite(balance)) return showErr("Solde invalide.");
+
+      showErr("");
+      close({ name, currency, type, balance });
+    }
+
+    // close on backdrop click (outside)
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) close(null);
+    });
+    $("#tbWCancel").addEventListener("click", () => close(null));
+    $("#tbWCreate").addEventListener("click", validateAndReturn);
+
+    // Enter key
+    backdrop.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") return close(null);
+      if (e.key === "Enter") {
+        e.preventDefault();
+        validateAndReturn();
+      }
+    });
+
+    // focus first input
+    setTimeout(() => { try { nameEl.focus(); } catch (_) {} }, 0);
+  });
+}
+
 /* =========================
    Wallet CRUD
    ========================= */
 async function createWallet() {
   try {
-    const name = (prompt("Nom du wallet ? (ex: Cash (VND), Banque EUR)") || "").trim();
-    if (!name) return;
+    const data = await tbOpenWalletDialog();
+    if (!data) return;
 
-    const currency = (prompt("Devise ? (ex: EUR, THB, VND)") || "").trim().toUpperCase();
-    if (!currency) return;
-
-    const typeRaw = (prompt("Type ? (cash, bank, card, savings, other)", "cash") || "").trim().toLowerCase();
-    const allowed = ["cash", "bank", "card", "savings", "other"];
-    if (!allowed.includes(typeRaw)) return alert("Type invalide. Valeurs: cash, bank, card, savings, other.");
-
-    const balanceStr = (prompt("Solde initial ?", "0") || "0").replace(",", ".");
-    const balance = Number(balanceStr);
-    if (!isFinite(balance)) return alert("Solde invalide.");
+    const name = data.name;
+    const currency = data.currency;
+    const typeRaw = data.type;
+    const balance = data.balance;
 
     // ✅ period_id requis (wallets.period_id NOT NULL)
     const periodId = state?.period?.id || localStorage.getItem(ACTIVE_PERIOD_KEY);
@@ -383,15 +503,15 @@ async function createWallet() {
       period_id: periodId,
       name,
       currency,
-      balance,
       type: typeRaw,
+      balance
     }]);
     if (error) throw error;
 
     await refreshFromServer();
   } catch (e) {
     console.error(e);
-    alert(e?.message || "Erreur création wallet");
+    alert("Erreur création wallet : " + (e?.message || e));
   }
 }
 
