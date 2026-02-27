@@ -22,35 +22,14 @@ function _wizEsc(str) {
     .replace(/'/g, "&#039;");
 }
 
-async function fetchEcbDailyXml() {
-  // Use Netlify function proxy (avoids browser CORS)
-  const url = "/.netlify/functions/ecb";
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error("ECB proxy fetch failed (" + res.status + ")");
-  return await res.text();
-}
-
-function parseEcbXmlToRates(xmlText) {
-  // Returns map: { USD: 1.08, ... } for 1 EUR = rate CURRENCY
-  const out = { EUR: 1 };
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(String(xmlText || ""), "text/xml");
-  const nodes = doc.querySelectorAll("Cube[currency][rate]");
-  nodes.forEach(function (n) {
-    const c = String(n.getAttribute("currency") || "").toUpperCase();
-    const r = Number(n.getAttribute("rate"));
-    if (c && Number.isFinite(r) && r > 0) out[c] = r;
-  });
-  return out;
-}
-
-async function getEcbEurTo(cur) {
-  const c = String(cur || "").toUpperCase();
+async function getAutoFxEurTo(cur) {
+  const c = String(cur || "").trim().toUpperCase();
   if (!c) return null;
   if (c === "EUR") return 1;
-  const xml = await fetchEcbDailyXml();
-  const rates = parseEcbXmlToRates(xml);
-  const r = Number(rates[c]);
+  // Single source of truth: Edge Function fx-latest
+  const { data, error } = await sb.functions.invoke("fx-latest");
+  if (error) throw error;
+  const r = Number(data?.rates?.[c]);
   return (Number.isFinite(r) && r > 0) ? r : null;
 }
 
@@ -79,7 +58,7 @@ function showFirstTimeWizardModal(defaults) {
         '<div style="font-weight:800;font-size:16px;">Créer ton 1er voyage</div>' +
         '<button id="wizClose" style="border:0;background:#eee;border-radius:10px;padding:8px 10px;cursor:pointer;">Annuler</button>' +
       '</div>' +
-      '<div style="margin-top:10px;font-size:13px;opacity:.85;">Dates, devise, FX (ECB auto si possible), puis wallets.</div>' +
+      '<div style="margin-top:10px;font-size:13px;opacity:.85;">Dates, devise, FX (auto si disponible), puis wallets.</div>' +
 
       '<div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
         '<label style="display:flex;flex-direction:column;gap:6px;font-size:12px;">Début' +
@@ -99,7 +78,7 @@ function showFirstTimeWizardModal(defaults) {
       '<div style="margin-top:12px;padding:10px;border:1px solid #eee;border-radius:12px;">' +
         '<div style="font-weight:700;font-size:13px;">FX (1 EUR = X BASE)</div>' +
         '<div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
-          '<button id="wizFetchEcb" style="border:0;background:#111;color:#fff;border-radius:10px;padding:10px 12px;cursor:pointer;">Auto (ECB)</button>' +
+          '<button id="wizFetchEcb" style="border:0;background:#111;color:#fff;border-radius:10px;padding:10px 12px;cursor:pointer;">Auto (FX)</button>' +
           '<input id="wizRate" type="number" step="0.000001" placeholder="Ex: 36.642" style="flex:1;min-width:180px;padding:10px;border:1px solid #ddd;border-radius:10px;" value="' + _wizEsc(d.eurBaseRate ? String(d.eurBaseRate) : "") + '">' +
         '</div>' +
         '<div id="wizFxHint" style="margin-top:6px;font-size:12px;opacity:.8;"></div>' +
@@ -156,18 +135,18 @@ function showFirstTimeWizardModal(defaults) {
 
     $("#wizFetchEcb").addEventListener("click", async function () {
       const cur = String($("#wizCur").value || "").trim().toUpperCase();
-      $("#wizFxHint").textContent = "Recherche ECB…";
+      $("#wizFxHint").textContent = "Recherche FX…";
       try {
-        const r = await getEcbEurTo(cur);
+        const r = await getAutoFxEurTo(cur);
         if (!r) {
-          $("#wizFxHint").textContent = "ECB: taux introuvable pour " + cur + " → saisie manuelle.";
+          $("#wizFxHint").textContent = "FX: taux introuvable pour " + cur + " → saisie manuelle.";
           return;
         }
         $("#wizRate").value = String(r);
-        $("#wizFxHint").textContent = "ECB OK: 1 EUR = " + r + " " + cur;
+        $("#wizFxHint").textContent = "FX OK: 1 EUR = " + r + " " + cur;
       } catch (e) {
         console.warn(e);
-        $("#wizFxHint").textContent = "ECB inaccessible → saisie manuelle.";
+        $("#wizFxHint").textContent = "FX inaccessible → saisie manuelle.";
       }
     });
 
@@ -369,7 +348,8 @@ async function ensureBootstrap() {
       end_date: end,
       base_currency: baseCur,
       daily_budget_base: daily,
-      fx_mode: (fxMode === "live_ecb" ? "live_ecb" : "fixed"),
+      // Single FX source: auto when possible, with eur_base_rate_fixed kept as fallback
+      fx_mode: (baseCur === "EUR") ? "fixed" : "auto",
       eur_base_rate_fixed: eurBaseRate,
       sort_order: 0
     };

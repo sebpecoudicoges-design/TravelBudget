@@ -160,7 +160,7 @@ function projectedEndDisplayWithOptions(opts) {
       if (segCur && c === segCur && segMode === "fixed" && Number.isFinite(segRate) && segRate > 0) return segRate;
     }
 
-    // Live ECB cache
+    // Live FX cache
     if (typeof window.fxGetEurRates === "function") {
       const rates = window.fxGetEurRates() || {};
       const r = Number(rates[c]);

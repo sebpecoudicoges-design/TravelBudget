@@ -1,7 +1,8 @@
 /* =========================
-   FX (ECB)
-   - stocke tous les taux ECB (EUR->XXX) en localStorage
-   - garde ton eur_base_rate pour la période
+   FX (Auto)
+   - Source unique: Edge Function `fx-latest`
+   - Stocke les taux EUR->XXX en localStorage
+   - Pas de prompt: si une devise manque, on garde le cache existant / les taux fixes des segments
    ========================= */
 
 function _fxSetEurRates(rates) {
@@ -23,70 +24,40 @@ async function refreshFxRates() {
 
   const base = state.period.baseCurrency;
 
-  // 1) On récupère tous les taux ECB EUR->XXX
-  // Merge: keep previously stored manual rates (ex: VND) when ECB doesn't provide them
-const previous = _fxGetEurRates();
-const allRates = { ...previous, ...data.rates };
+  // 1) Merge provider rates with previous cache (non-destructive)
+  const previous = _fxGetEurRates();
+  const allRates = { ...previous, ...data.rates, EUR: 1 };
 
-  // 2) Collect all currencies needed by budget periods (segments) that rely on live/auto FX
+  // 2) Non-destructive fallback: inject fixed segment rates if missing (no prompts)
   const segs = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
-  const needed = new Set();
   segs.forEach((s) => {
-    if (!s) return;
-    const mode = String(s.fx_mode || s.fxMode || "auto");
-    const cur = String(s.base_currency || s.baseCurrency || "").toUpperCase();
+    const cur = String(s?.base_currency || s?.baseCurrency || "").toUpperCase();
     if (!cur || cur === "EUR") return;
-    if (mode === "fixed") return; // manual rate is stored in segment
-    // auto / live_ecb: we'd like EUR->CUR to exist; if missing and no fixed fallback, we'll prompt
-    needed.add(cur);
+    const fixed = Number(s?.fx_rate_eur_to_base ?? s?.eurBaseRateFixed ?? s?.eur_base_rate_fixed);
+    if (fixed && fixed > 0 && !Number(allRates[cur])) allRates[cur] = fixed;
   });
 
-  // Ensure all needed currencies have an EUR->CUR rate available,
-  // otherwise ask once for a manual rate and store it in EUR_RATES.
-  for (const cur of Array.from(needed)) {
-    let r = Number(allRates[cur]);
-    if (!r) {
-      // Try fixed fallback from any segment using this currency
-      const seg = segs.find(x => String(x?.baseCurrency || "").toUpperCase() === cur);
-      const fixed = Number(seg?.fx_rate_eur_to_base ?? seg?.eurBaseRateFixed ?? seg?.eur_base_rate_fixed);
-      if (fixed && fixed > 0) {
-        allRates[cur] = fixed;
-        continue;
-      }
-      const manual = prompt(`ECB ne fournit pas ${cur} (ou taux indisponible). Entre le taux EUR→${cur} (ex: 30800.25) :`);
-      const v = Number(String(manual || "").replace(",", "."));
-      if (!v || v <= 0) continue;
-      allRates[cur] = v;
-    }
-  }
-
-
-
-  // 2) Si la devise de période n'existe pas (ex: VND), on demande EUR->BASE en manuel
+  // 3) Ensure base currency rate exists (or abort gracefully)
   if (base !== "EUR") {
-    let eurToBase = Number(allRates[base]);
-    if (!eurToBase) {
-      const manual = prompt(
-        `ECB ne fournit pas ${base}. Entre le taux EUR→${base} (ex: 30800.25) :`
+    const eurToBase = Number(allRates[base]);
+    if (!eurToBase || eurToBase <= 0) {
+      return alert(
+        `Taux auto indisponible pour ${base}.\n` +
+        `→ Garde un taux fixe (EUR→${base}) dans le segment/période.`
       );
-      const v = Number(String(manual || "").replace(",", "."));
-      if (!v || v <= 0) return alert(`Taux invalide. Mise à jour annulée.`);
-      eurToBase = v;
-      allRates[base] = v; // on l'injecte dans la table EUR->XXX
     }
-  } else {
-    allRates["EUR"] = 1;
   }
 
-  // 3) Stockage local (utilisé par le plugin cross-rate)
+  // 4) Stockage local (utilisé par le plugin cross-rate)
   _fxSetEurRates(allRates);
+  try { _fxSetLastDaily(_fxTodayKey()); } catch (_) {}
 
-  // 4) On continue à alimenter ton moteur actuel EUR<->BASE
+  // 5) On continue à alimenter ton moteur actuel EUR<->BASE
   const eurToBaseNow = (base === "EUR") ? 1 : Number(allRates[base]);
   state.exchangeRates["EUR-BASE"] = eurToBaseNow;
   state.exchangeRates["BASE-EUR"] = 1 / eurToBaseNow;
 
-  // 5) Persist côté DB (comme avant)
+  // 6) Persist côté DB (comme avant)
   const { error: upErr } = await sb
     .from(TB_CONST.TABLES.periods)
     .update({ eur_base_rate: eurToBaseNow, updated_at: new Date().toISOString() })
@@ -278,7 +249,7 @@ window.safeFxConvert = safeFxConvert;
 // - Used by Settings UI to avoid free-text currencies
 // =========================
 
-// Return true if ECB provides a EUR-><cur> rate (i.e., we can do auto FX).
+// Return true if the FX provider cache contains a EUR-><cur> rate (i.e., auto FX available).
 function tbFxIsAutoAvailable(cur) {
   try {
     const c = String(cur || "").toUpperCase();
@@ -297,7 +268,7 @@ function tbGetAvailableCurrencies() {
     const rates = _fxGetEurRates() || {};
     const keys = Object.keys(rates || {}).map(k => String(k||"").toUpperCase()).filter(Boolean);
     const set = new Set(["EUR", ...keys]);
-    // common travel currencies fallback (in case ECB not fetched yet)
+    // common travel currencies fallback (in case rates not fetched yet)
     ["USD","GBP","CHF","THB","AUD","CAD","NZD","JPY","SEK","NOK","DKK","BRL","MXN","MAD","XOF"].forEach(c => set.add(c));
     return Array.from(set).sort();
   } catch (_) {

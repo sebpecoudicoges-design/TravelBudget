@@ -35,6 +35,7 @@
 
 - [x] **6.6.55** — Retry RPC (stabilité réseau) + aucune régression
 - [ ] **6.6.56** — Patch DB : devises ISO3 + verrouillage `profiles.role` (anti self-admin)
+- [ ] **6.6.58** — FX Option A : source unique `fx-latest` (UI + onboarding), refresh quotidien silencieux, suppression des prompts, guard idle
 
 ---
 

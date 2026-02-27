@@ -443,7 +443,7 @@ function fxRatesForSegments(segA, segB) {
       return;
     }
 
-    // auto: use ECB if available, otherwise fall back to fixed if provided
+    // auto: use provider rate if available, otherwise fall back to fixed if provided
     if (mode === "auto") {
       const hasLive = base && isFinite(Number(out[base])) && Number(out[base]) > 0;
       if (!hasLive) {
@@ -453,7 +453,7 @@ function fxRatesForSegments(segA, segB) {
       return;
     }
 
-    // live_ecb: do nothing (relies on EUR_RATES). If missing, conversion may be null.
+    // auto: do nothing (relies on EUR_RATES). If missing, conversion may be null.
   }
 
   apply(segA);

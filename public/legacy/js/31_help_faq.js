@@ -37,7 +37,7 @@
     },
     {
       id: "fx_live_vs_fixed",
-      tags: ["taux", "fx", "devise", "exchange", "ecb"],
+      tags: ["taux", "fx", "devise", "exchange", "auto"],
       q: { fr: "Taux live vs taux fixe : lequel choisir ?", en: "Live vs fixed FX rate: which one?" },
       a: {
         fr: "Live : tu veux une estimation à jour. Fixe : tu veux figer le taux (ex: budget planifié, frais déjà payés). En pratique : fixe si tu dois être exact, live si tu veux suivre la tendance.",
@@ -74,11 +74,11 @@
     },
     {
       id: "fx_auto_fixed",
-      tags: ["fx", "ecb", "taux", "auto", "fixed", "manuel"],
+      tags: ["fx", "taux", "auto", "fixed", "manuel"],
       q: { fr: "Taux FX : auto ou fixe, comment ça marche ?", en: "FX rate: auto or fixed—how does it work?" },
       a: {
-        fr: "Si la devise est disponible chez l'ECB, l'app utilise automatiquement le taux (mode auto). Sinon, le mode passe en fixe et te demande un taux EUR→BASE. Objectif : éviter les erreurs de saisie.",
-        en: "If the currency is available from the ECB, the app uses it automatically (auto mode). Otherwise it switches to fixed and asks for an EUR→BASE rate. Goal: prevent input mistakes."
+        fr: "Si la devise est disponible via la source FX auto, l'app utilise automatiquement le taux (mode auto). Sinon, le mode passe en fixe et te demande un taux EUR→BASE. Objectif : éviter les erreurs de saisie.",
+        en: "If the currency is available from the auto FX provider, the app uses it automatically (auto mode). Otherwise it switches to fixed and asks for an EUR→BASE rate. Goal: prevent input mistakes."
       }
     }
   ];

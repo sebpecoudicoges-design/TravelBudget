@@ -94,7 +94,7 @@ function _segRowHTML(seg, idx, total) {
   const _autoOk = (typeof tbFxIsAutoAvailable === "function") ? tbFxIsAutoAvailable(baseCurrency) : false;
   const fxModeForced = _autoOk ? "auto" : "fixed";
   const dailyBudgetBase = edits.dailyBudgetBase ?? seg.dailyBudgetBase;
-    // FX mode is forced by ECB availability (no user selection)
+    // FX mode is forced by provider availability (no user selection)
   const fxModeRaw = edits.fxMode ?? seg.fxMode ?? "auto";
   const fxMode = fxModeForced;
   const eurBaseRateFixed = (edits.eurBaseRateFixed ?? seg.eurBaseRateFixed) ?? "";
@@ -126,14 +126,14 @@ function _segRowHTML(seg, idx, total) {
           <input class="input" value="${escapeHTML(String(dailyBudgetBase ?? ""))}" onchange="_tbSegSet('${id}','dailyBudgetBase',this.value)" />
         </div>
         <div style="min-width:160px;">
-          <div class="label">Taux FX ${typeof tbHelp==="function" ? tbHelp("Auto = utilise le taux ECB si disponible. Fixe = tu fournis un taux manuel pour EUR→BASE.") : ""}</div>
-          <select class="input" disabled title="Automatique: ECB si dispo, sinon manuel">
-            <option value="auto" ${fxMode === "auto" ? "selected" : ""}>auto (ECB si dispo)</option>
+          <div class="label">Taux FX ${typeof tbHelp==="function" ? tbHelp("Auto = utilise le taux FX si disponible. Fixe = tu fournis un taux manuel pour EUR→BASE.") : ""}</div>
+          <select class="input" disabled title="Automatique: FX si dispo, sinon manuel">
+            <option value="auto" ${fxMode === "auto" ? "selected" : ""}>auto (FX si dispo)</option>
             <option value="fixed" ${fxMode === "fixed" ? "selected" : ""}>fixe (manuel)</option>
           </select>
         </div>
         <div style="min-width:160px;">
-          <div class="label">EUR→BASE ${typeof tbHelp==="function" ? tbHelp("Taux de conversion EUR→Devise base. En auto, ce champ est verrouillé si ECB fournit le taux.") : ""}</div>
+          <div class="label">EUR→BASE ${typeof tbHelp==="function" ? tbHelp("Taux de conversion EUR→Devise base. En auto, ce champ est verrouillé si FX fournit le taux.") : ""}</div>
           ${(() => {
             const cur = String(baseCurrency||"").toUpperCase();
             const m = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
@@ -141,7 +141,7 @@ function _segRowHTML(seg, idx, total) {
 
             // FX behavior:
             // - fixed: user must provide eurBaseRateFixed
-            // - auto: use ECB live if available, else require manual fallback (eurBaseRateFixed)
+            // - auto: use provider live if available, else require manual fallback (eurBaseRateFixed)
             const needsManual = (fxMode === "fixed") || (fxMode === "auto" && !live && cur !== "EUR");
             const v = (fxMode === "auto" && live) ? live : (eurBaseRateFixed || "");
             const dis = needsManual ? "" : "readonly disabled style=\"opacity:0.7; cursor:not-allowed;\"";
@@ -208,7 +208,7 @@ const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
     const dailyBudgetBase = Number(edits.dailyBudgetBase ?? seg.dailyBudgetBase);
     const fxMode = (edits.fxMode ?? seg.fxMode ?? "fixed") || "fixed";
 
-    // NOTE: eurBaseRateFixed is read-only in live_ecb (we display the live value).
+    // NOTE: eurBaseRateFixed is read-only in auto (we display the live value).
     let eurBaseRateFixedRaw = edits.eurBaseRateFixed ?? seg.eurBaseRateFixed;
     let eurBaseRateFixed =
       eurBaseRateFixedRaw === "" || eurBaseRateFixedRaw === null || eurBaseRateFixedRaw === undefined
@@ -250,7 +250,7 @@ const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
         }
       }
     } else {
-      // live_ecb => we don't store a fixed rate
+      // auto => we don't require a fixed rate
       eurBaseRateFixed = null;
     }
 
@@ -305,7 +305,7 @@ const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
         fx_mode: fxMode,
         // V6.5 FX storage
         fx_rate_eur_to_base: (fxMode === "fixed" ? eurBaseRateFixed : null),
-        fx_source: (fxMode === "fixed" ? "manual" : "ecb"),
+        fx_source: (fxMode === "fixed" ? "manual" : "fx"),
         fx_last_updated_at: (fxMode === "fixed" ? new Date().toISOString() : new Date().toISOString()),
         // legacy compat (kept while DB migration is rolling)
         eur_base_rate_fixed: eurBaseRateFixed,

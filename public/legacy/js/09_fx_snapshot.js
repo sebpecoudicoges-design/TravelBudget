@@ -23,7 +23,7 @@ function fxBuildTxSnapshot(txCurrency, baseCurrency, dateStr) {
     };
   }
 
-  // Use the segment FX rules for that day (fixed/auto/live_ecb)
+  // Use the segment FX rules for that day (fixed/auto)
   const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(ds) : null;
   const rates = (typeof window.fxRatesForSegment === "function")
     ? window.fxRatesForSegment(seg)
@@ -36,11 +36,11 @@ function fxBuildTxSnapshot(txCurrency, baseCurrency, dateStr) {
   }
 
   // Best-effort source detection
-  let source = "ecb";
+  let source = "fx";
   try {
     const mode = String(seg?.fxMode || seg?.fx_mode || "auto");
     if (mode === "fixed") source = "manual";
-    // auto/live_ecb: if rate ultimately depends on EUR_RATES, treat as ecb
+    // auto: if rate ultimately depends on EUR_RATES, treat as provider
   } catch (_) {}
 
   return {
