@@ -188,7 +188,9 @@ function projectedEndDisplayWithOptions(opts) {
   // Total wallets now in EUR
   let totalNowEUR = 0;
   for (const w of (state.wallets || [])) {
-    const bal = Number(w.balance) || 0;
+    const bal = (typeof window.tbGetWalletEffectiveBalance === "function")
+  ? Number(window.tbGetWalletEffectiveBalance(w.id) || 0)
+  : (Number(w.balance) || 0);
     const cur = w.currency || "EUR";
     totalNowEUR += _toEURSafe(bal, cur, todayISO);
   }

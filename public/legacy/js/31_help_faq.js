@@ -61,6 +61,25 @@
         fr: "La courbe projette ton solde futur à partir de ton budget/jour et des éléments “à payer/à recevoir”. Si ton budget/jour est négatif (ou tes paiements à venir importants), la courbe baisse.",
         en: "The curve projects future balance from your daily budget and “to pay/to receive”. If daily budget is negative (or upcoming payments are large), the curve goes down."
       }
+    },
+
+    {
+      id: "wallet_balance",
+      tags: ["wallet", "solde", "balance", "cash"],
+      q: { fr: "Pourquoi le solde du wallet ne correspond pas à ma banque ?", en: "Why does my wallet balance differ from my bank?" },
+      a: {
+        fr: 'Le solde affiché = solde de base du wallet + transactions payées ("Payé maintenant"). Les dépenses "à payer" n\'impactent pas le cash. Utilise "Ajuster solde" pour recaler une fois le solde de base.',
+        en: 'Displayed balance = wallet base balance + paid transactions ("Pay now"). Future/unpaid items do not impact cash. Use "Adjust balance" once to recalibrate the base balance.'
+      }
+    },
+    {
+      id: "fx_auto_fixed",
+      tags: ["fx", "ecb", "taux", "auto", "fixed", "manuel"],
+      q: { fr: "Taux FX : auto ou fixe, comment ça marche ?", en: "FX rate: auto or fixed—how does it work?" },
+      a: {
+        fr: "Si la devise est disponible chez l'ECB, l'app utilise automatiquement le taux (mode auto). Sinon, le mode passe en fixe et te demande un taux EUR→BASE. Objectif : éviter les erreurs de saisie.",
+        en: "If the currency is available from the ECB, the app uses it automatically (auto mode). Otherwise it switches to fixed and asks for an EUR→BASE rate. Goal: prevent input mistakes."
+      }
     }
   ];
 
@@ -88,124 +107,33 @@
 
   function tbSearchFaq(query, limit) {
     const qn = _norm(query);
-    if (!qn) return [,
-    {
-      id: "wallet_balance",
-      tags: ["wallet", "solde", "balance", "cash"],
-      q: { fr: "Pourquoi le solde du wallet ne correspond pas à ma banque ?", en: "Why does my wallet balance differ from my bank?" },
-      a: {
-        fr: "Le solde affiché = solde de base du wallet + transactions payées ("Payé maintenant"). Les dépenses "à payer" n'impactent pas le cash. Utilise "Ajuster solde" pour recaler une fois le solde de base.",
-        en: "Displayed balance = wallet base balance + paid transactions ("Pay now"). Future/unpaid items do not impact cash. Use "Adjust balance" once to recalibrate the base balance."
-      }
-    },
-    {
-      id: "fx_auto_fixed",
-      tags: ["fx", "ecb", "taux", "auto", "fixed", "manuel"],
-      q: { fr: "Taux FX : auto ou fixe, comment ça marche ?", en: "FX rate: auto or fixed—how does it work?" },
-      a: {
-        fr: "Si la devise est disponible chez l'ECB, l'app utilise automatiquement le taux (mode auto). Sinon, le mode passe en fixe et te demande un taux EUR→BASE. Objectif: éviter les erreurs de saisie.",
-        en: "If the currency is available from the ECB, the app uses it automatically (auto mode). Otherwise it switches to fixed and asks for an EUR→BASE rate. Goal: prevent input mistakes."
-      }
-    }
-];
+    if (!qn) return [];
     const tokens = qn.split(" ").filter(Boolean);
     const lang = _lang();
 
     const scored = FAQ.map(item => {
-      const text = _norm((item.q && item.q[lang]) || "") + " " + _norm((item.a && item.a[lang]) || "") + " " + _norm((item.tags || []).join(" "));
+      const text =
+        _norm((item.q && item.q[lang]) || "") +
+        " " +
+        _norm((item.a && item.a[lang]) || "") +
+        " " +
+        _norm((item.tags || []).join(" "));
+
       let score = 0;
       for (const t of tokens) {
         if (!t) continue;
         if (text.includes(t)) score += (t.length >= 5 ? 3 : 2);
       }
-      // bonus for exact phrase
-      if (text.includes(qn)) score += 4;
       return { item, score };
-    }).filter(x => x.score > 0);
+    })
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score);
 
-    scored.sort((a,b) => b.score - a.score);
-    return scored.slice(0, limit || 3).map(x => x.item);
+    const out = scored.slice(0, Math.max(1, Number(limit) || 6)).map(x => x.item);
+    return out;
   }
 
-  function renderHelpFaq() {
-    const root = document.getElementById("help-root");
-    if (!root) return;
-
-    const lang = _lang();
-    const t = (k) => (window.tbT ? tbT(k) : k);
-
-    const qEl = document.getElementById("help-search");
-    const resultsEl = document.getElementById("help-results");
-    const listEl = document.getElementById("help-list");
-    const emptyEl = document.getElementById("help-empty");
-
-    // Render full list (collapsed)
-    if (listEl && !listEl.__renderedOnce) {
-      listEl.__renderedOnce = true;
-      const frag = document.createDocumentFragment();
-      for (const f of FAQ) {
-        const details = document.createElement("details");
-        details.className = "help-item";
-        const summary = document.createElement("summary");
-        summary.textContent = (f.q && f.q[lang]) || "";
-        const p = document.createElement("p");
-        p.className = "help-answer";
-        p.textContent = (f.a && f.a[lang]) || "";
-        details.appendChild(summary);
-        details.appendChild(p);
-        frag.appendChild(details);
-      }
-      listEl.innerHTML = "";
-      listEl.appendChild(frag);
-    }
-
-    function showResults(items) {
-      if (!resultsEl || !emptyEl) return;
-      if (!items || items.length === 0) {
-        resultsEl.innerHTML = "";
-        emptyEl.classList.remove("hidden");
-        return;
-      }
-      emptyEl.classList.add("hidden");
-      const frag = document.createDocumentFragment();
-      for (const f of items) {
-        const div = document.createElement("div");
-        div.className = "help-result";
-        const q = document.createElement("div");
-        q.className = "help-q";
-        q.textContent = (f.q && f.q[lang]) || "";
-        const a = document.createElement("div");
-        a.className = "help-a";
-        a.textContent = (f.a && f.a[lang]) || "";
-        div.appendChild(q);
-        div.appendChild(a);
-        frag.appendChild(div);
-      }
-      resultsEl.innerHTML = "";
-      resultsEl.appendChild(frag);
-    }
-
-    function onSearch() {
-      const q = (qEl && qEl.value) || "";
-      const items = tbSearchFaq(q, 5);
-      showResults(items);
-    }
-
-    if (qEl && !qEl.__bound) {
-      qEl.__bound = true;
-      qEl.placeholder = t("help.search_placeholder");
-      qEl.addEventListener("input", () => {
-        // small debounce without timers
-        requestAnimationFrame(onSearch);
-      });
-    }
-
-    // initial state
-    showResults([]);
-  }
-
-  // Expose
+  // Expose globally
   window.tbGetFaqEntries = tbGetFaqEntries;
   window.tbSearchFaq = tbSearchFaq;
-  window.renderHelpFaq = renderHelpFaq;
 })();
