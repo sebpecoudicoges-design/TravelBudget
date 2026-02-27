@@ -385,6 +385,48 @@ function tbFxEnsureEurRatesInteractive(currencies, reason) {
 }
 window.tbFxEnsureEurRatesInteractive = tbFxEnsureEurRatesInteractive;
 
+// Ensure a FX pair can be converted (from -> to). If missing, prompt manual EUR rates.
+// This is more reliable than only checking presence in eurRates, because it mirrors the real conversion path.
+function tbFxEnsurePairInteractive(fromCur, toCur, reason) {
+  const from = String(fromCur || "").trim().toUpperCase();
+  const to = String(toCur || "").trim().toUpperCase();
+  if (!from || !to || from === to) return { ok: true, missing: [] };
+  if (typeof window.fxRate !== "function") {
+    // fallback: best-effort on EUR rates
+    return tbFxEnsureEurRatesInteractive([from, to], reason);
+  }
+
+  const why = String(reason || "Taux requis");
+  const rates = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : fxGetEurRatesMerged();
+  const r = window.fxRate(from, to, rates);
+  if (Number.isFinite(r) && r > 0) return { ok: true, missing: [] };
+
+  // Try to determine which EUR legs are missing.
+  const miss = [];
+  const eur = rates || {};
+  const need = [from, to];
+  for (const c of need) {
+    if (!c || c === "EUR") continue;
+    const v = Number(eur?.[c]);
+    if (!(v > 0) || !Number.isFinite(v)) miss.push(c);
+  }
+
+  if (!miss.length) {
+    // Conversion failed even though legs exist; ask user to confirm/update both.
+    miss.push(from, to);
+  }
+
+  const out = tbFxEnsureEurRatesInteractive(miss, why);
+  if (!out || out.ok !== true) return out || { ok: false, missing: miss };
+
+  // Re-test
+  const rates2 = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : fxGetEurRatesMerged();
+  const r2 = window.fxRate(from, to, rates2);
+  if (Number.isFinite(r2) && r2 > 0) return { ok: true, missing: [] };
+  return { ok: false, missing: miss, error: "FX conversion still unavailable" };
+}
+window.tbFxEnsurePairInteractive = tbFxEnsurePairInteractive;
+
 /* =========================
    FX API (cross-rate via EUR_RATES)
    - Source of truth: localStorage EUR_RATES (EUR->XXX), + fallback period.eurBaseRate for baseCurrency
