@@ -236,7 +236,10 @@ function ensureCashflowChartAlias() {
     if (!b) return 0;
     let total = 0;
     for (const w of (window.state?.wallets || [])) {
-      total += toBase(w?.balance || 0, w?.currency || b);
+      const eff = (typeof window.tbGetWalletEffectiveBalance === "function")
+        ? (window.tbGetWalletEffectiveBalance(w?.id) || 0)
+        : (w?.balance || 0);
+      total += toBase(eff || 0, w?.currency || b);
     }
     return round2(total);
   }
@@ -305,7 +308,8 @@ function ensureCashflowChartAlias() {
       const e = (rng.end > periodEnd) ? periodEnd : rng.end;
       if (e < periodStart || s > periodEnd) continue;
 
-      const isPaid = (t.payNow === undefined) ? true : !!t.payNow;
+      const p = (t.payNow ?? t.pay_now);
+      const isPaid = (p === undefined) ? true : !!p;
 
       const amtBase = toBase(t.amount || 0, t.currency || b);
       if (!Number.isFinite(amtBase)) continue;
