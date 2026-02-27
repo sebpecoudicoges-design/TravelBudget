@@ -290,6 +290,31 @@ async function _ensureTxSnapshotById(txId, txCurrency, txDateStart) {
 
   if (error) throw error;
 }
+
+
+/* =========================
+   RPC helper: retry on transient network failure
+   - Handles "TypeError: Failed to fetch" / ERR_CONNECTION_CLOSED
+   ========================= */
+async function tbRpcWithRetry(fnName, args, opts) {
+  const retries = Math.max(0, Number(opts?.retries ?? 2));
+  const baseDelayMs = Math.max(50, Number(opts?.baseDelayMs ?? 500));
+
+  let lastErr = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await sb.rpc(fnName, args);
+    } catch (e) {
+      lastErr = e;
+      const msg = String(e?.message || e || '');
+      const isNet = (e instanceof TypeError) || /failed to fetch/i.test(msg) || /network/i.test(msg);
+      if (!isNet || attempt >= retries) break;
+      const delay = baseDelayMs * Math.pow(2, attempt);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
 async function saveModal() {
   if (_savingTx) return;
   _savingTx = true;
@@ -349,7 +374,7 @@ async function saveModal() {
           if (!!outOfBudget !== !!current.outOfBudget) throw new Error("Transaction liée à Trip : flag out_of_budget géré automatiquement.");
         }
 
-        const { data, error } = await sb.rpc("update_transaction_v2", {
+        const { data, error } = await tbRpcWithRetry("update_transaction_v2", {
           p_tx_id: editingTxId,
           p_wallet_id: walletId,
           p_type: type,
@@ -368,7 +393,7 @@ async function saveModal() {
         });
         if (error) throw error;
       } else {
-        const { data, error } = await sb.rpc("apply_transaction_v2", {
+        const { data, error } = await tbRpcWithRetry("apply_transaction_v2", {
           p_wallet_id: walletId,
           p_type: type,
           p_amount: amount,
@@ -436,7 +461,7 @@ async function resnapshotModal() {
     const wallet = findWallet(walletId);
     if (!wallet) throw new Error("Wallet introuvable.");
 
-    const { data, error } = await sb.rpc("apply_transaction_v2", {
+    const { data, error } = await tbRpcWithRetry("apply_transaction_v2", {
       p_wallet_id: walletId,
       p_type: tx.type,
       p_amount: Number(tx.amount),
@@ -507,7 +532,7 @@ async function markTxAsPaid(txId) {
     const wallet = findWallet(tx.walletId);
     if (!wallet) throw new Error("Wallet introuvable.");
 
-    const { error } = await sb.rpc("update_transaction_v2", {
+    const { error } = await tbRpcWithRetry("update_transaction_v2", {
       p_tx_id: tx.id,
       p_wallet_id: tx.walletId,
       p_type: tx.type,
