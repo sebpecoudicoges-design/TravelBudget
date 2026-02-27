@@ -75,6 +75,7 @@
     clearTimeout(id);
   }
   function coalesceIdle(fn, timeoutMs) {
+    if (typeof fn !== "function") return;
     if (!enabled) {
       // even without perf flag, we still prefer not to block UI for heavy charts:
       // keep coalescing behavior (but without logs)
