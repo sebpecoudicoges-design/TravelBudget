@@ -150,3 +150,39 @@ function tbHelp(text) {
   const t = escapeHTML(String(text || ""));
   return `<span class="tb-help" title="${t}" aria-label="${t}">?</span>`;
 }
+
+/* =========================
+   Wallet computed balance (V6.6.42)
+   - Wallet table `balance` is treated as a baseline (manual adjustments)
+   - Paid transactions (pay_now=true) impact the effective balance
+   ========================= */
+function tbGetWalletEffectiveBalance(walletId) {
+  try {
+    const wid = String(walletId || "");
+    const w = (typeof findWallet === "function") ? findWallet(wid) : (state?.wallets || []).find(x => String(x.id) === wid);
+    const base = Number(w?.balance || 0) || 0;
+
+    const txs = Array.isArray(state?.transactions) ? state.transactions : [];
+    let delta = 0;
+
+    for (const t of txs) {
+      const tWid = String(t.wallet_id ?? t.walletId ?? "");
+      if (tWid !== wid) continue;
+
+      const payNow = (t.pay_now !== undefined) ? !!t.pay_now : !!t.payNow;
+      if (!payNow) continue;
+
+      const type = String(t.type || "").toLowerCase();
+      const amt = Number(t.amount || 0) || 0;
+
+      if (type === "expense") delta -= amt;
+      else if (type === "income") delta += amt;
+    }
+    return base + delta;
+  } catch (_) {
+    // Fallback: baseline only
+    const w = (typeof findWallet === "function") ? findWallet(walletId) : null;
+    return Number(w?.balance || 0) || 0;
+  }
+}
+

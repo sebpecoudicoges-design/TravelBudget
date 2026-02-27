@@ -8,6 +8,7 @@ function setActiveTab(view) {
     ["settings", "tab-settings", "view-settings"],
     ["trip", "tab-trip", "view-trip"],
     ["members", "tab-members", "view-members"],
+    ["help", "tab-help", "view-help"],
   ];
   for (const [name, tabId, viewId] of tabs) {
     document.getElementById(tabId).classList.toggle("active", name === view);
@@ -22,6 +23,7 @@ function showView(view) {
   if (view === "dashboard") if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("10_navigation.js"); else redrawCharts();
   if (view === "trip") renderTrip();
   if (view === "members") renderMembersAdmin();
+  if (view === "help") { if (typeof renderHelpFaq === "function") renderHelpFaq(); }
 }
 
 

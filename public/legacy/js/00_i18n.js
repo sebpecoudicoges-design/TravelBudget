@@ -34,6 +34,25 @@
       "tx.help.paid": "Payé maintenant = l’argent est déjà sorti/entré du wallet.",
       "tx.help.oob": "Hors budget/jour : n’affecte pas l’objectif quotidien (ex : dépôt, transfert, achat exceptionnel).",
     },
+
+
+// Help / FAQ
+"nav.help": "Aide",
+"help.title": "Aide & FAQ",
+"help.subtitle": "Réponses rapides, exemples concrets, et mini-assistant.",
+"help.search_label": "Rechercher dans la FAQ",
+"help.search_placeholder": "Ex: taux de change, hors budget, à payer…",
+"help.no_results": "Aucun résultat. Essaie avec d’autres mots (ex: "budget", "courbe", "devise").",
+"help.top_results": "Résultats",
+"help.open_faq": "Ouvrir la FAQ",
+"assistant.title": "Assistant",
+"assistant.placeholder": "Pose une question… (ex: “Pourquoi ma courbe baisse ?”)",
+"assistant.send": "Envoyer",
+"assistant.hint": "Je cherche dans la FAQ et te propose la meilleure réponse.",
+"assistant.no_match": "Je n’ai pas trouvé de réponse exacte. Essaie avec d’autres mots clés.",
+"assistant.suggest_faq": "Voir la FAQ",
+"assistant.close": "Fermer",
+"assistant.minimize": "Réduire",
     en: {
       // Generic
       "app.lang": "Language",
@@ -131,6 +150,8 @@
 
   window.TB_LANG = getLang();
   window.tbT = t;
+  window.tbOnLangChange = window.tbOnLangChange || [];
+
   window.tbSetLang = function (lang) {
     setLang(lang);
     // Re-render: safest approach in this legacy app

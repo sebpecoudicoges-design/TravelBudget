@@ -455,7 +455,63 @@
     .btn-lang{padding:6px 10px;opacity:.75}
     .btn-lang.is-active{opacity:1;outline:2px solid rgba(255,255,255,.25)}
 
+
+  /* Help / FAQ */
+  #help-root .help-item { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  #help-root .help-item summary { cursor: pointer; font-weight: 600; }
+  #help-root .help-answer { margin: 8px 0 4px; opacity: 0.95; }
+  .help-result { padding: 10px; border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; margin-bottom: 10px; }
+  .help-q { font-weight: 700; margin-bottom: 6px; }
+  .help-a { opacity: 0.95; }
+
+  /* Assistant */
+  .tb-assist-btn {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 9999;
+    width: 48px;
+    height: 48px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.16);
+    background: rgba(20,20,22,0.92);
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+  }
+  .tb-assist-panel {
+    position: fixed;
+    right: 18px;
+    bottom: 74px;
+    z-index: 9999;
+    width: min(360px, calc(100vw - 36px));
+    max-height: min(520px, calc(100vh - 120px));
+    overflow: hidden;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.16);
+    background: rgba(18,18,20,0.96);
+    color: #fff;
+    box-shadow: 0 18px 38px rgba(0,0,0,0.45);
+    display: flex;
+    flex-direction: column;
+  }
+  .tb-assist-head { display:flex; align-items:center; justify-content:space-between; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.10); }
+  .tb-assist-title { font-weight: 800; }
+  .tb-assist-actions { display:flex; align-items:center; gap: 10px; }
+  .tb-assist-x { background: transparent; border: none; color: #fff; cursor: pointer; font-size: 16px; opacity: 0.9; }
+  .tb-assist-link { background: transparent; border: none; color: #9cd6ff; cursor: pointer; font-size: 12px; text-decoration: underline; opacity: 0.95; }
+  .tb-assist-body { padding: 10px 12px; overflow: auto; flex: 1; }
+  .tb-assist-hint { opacity: 0.75; font-size: 12px; margin-bottom: 10px; }
+  .tb-assist-thread { display:flex; flex-direction:column; gap: 8px; }
+  .tb-assist-msg { padding: 8px 10px; border-radius: 12px; line-height: 1.25; white-space: pre-wrap; }
+  .tb-assist-msg.user { align-self: flex-end; background: rgba(156,214,255,0.18); border: 1px solid rgba(156,214,255,0.25); }
+  .tb-assist-msg.bot { align-self: flex-start; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.10); }
+  .tb-assist-foot { padding: 10px 12px; border-top: 1px solid rgba(255,255,255,0.10); display:flex; gap: 8px; }
+  .tb-assist-input { flex: 1; padding: 8px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.14); background: rgba(0,0,0,0.18); color: #fff; outline: none; }
+  .tb-assist-send { padding: 8px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.10); color: #fff; cursor: pointer; }
 </style>
+
 </head>
 
 <body class="theme-dark">
@@ -580,6 +636,7 @@
         <div id="tab-dashboard" class="tab active" onclick="showView('dashboard')">Dashboard</div>
         <div id="tab-transactions" class="tab" onclick="showView('transactions')">Transactions</div>
         <div id="tab-settings" class="tab" onclick="showView('settings')">Settings</div>
+        <div id="tab-help" class="tab" onclick="showView('help')" data-i18n="nav.help">Aide</div>
         <div id="tab-trip" class="tab" onclick="showView('trip')">Trip</div>
         <div id="tab-members" class="tab" style="display:none" onclick="showView('members')">Membres</div>
       </div>
@@ -831,6 +888,26 @@
           <div id="cat-list"></div>
         </div>
 
+      </div>
+
+      <!-- HELP / FAQ -->
+      <div id="view-help" class="hidden">
+        <div id="help-root" class="card">
+          <h2 id="help-title" data-i18n="help.title">Aide & FAQ</h2>
+          <div class="muted" id="help-subtitle" data-i18n="help.subtitle">Réponses rapides, exemples concrets, et mini-assistant.</div>
+
+          <div class="form-row" style="margin-top:12px;">
+            <label for="help-search" style="min-width:180px;" data-i18n="help.search_label">Recherche</label>
+            <input id="help-search" type="text" style="flex:1;" />
+          </div>
+
+          <div id="help-empty" class="muted hidden" style="margin-top:10px;" data-i18n="help.no_results">Aucun résultat.</div>
+          <div id="help-results" style="margin-top:10px;"></div>
+
+          <hr style="margin:16px 0; opacity:0.35;" />
+          <div class="muted" style="margin-bottom:8px;">FAQ</div>
+          <div id="help-list"></div>
+        </div>
       </div>
 
       <!-- TRIP -->

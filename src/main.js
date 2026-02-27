@@ -24,6 +24,8 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/28_data_updated_bus.js',
   '/legacy/js/27_cashflow_curve.js',
   '/legacy/js/10_navigation.js',
+  '/legacy/js/31_help_faq.js',
+  '/legacy/js/32_help_assistant.js',
   '/legacy/js/11_kpi_render_micro_animation.js',
   '/legacy/js/12_dashboard_render.js',
   '/legacy/js/16_modal_add_edit_via_rpc.js',
