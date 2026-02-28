@@ -20,7 +20,7 @@ async function loadPeriodsListIntoUI() {
 
   sel.innerHTML = (state.periods || [])
     .map((p) => {
-      const label = `${p.start} → ${p.end} (${p.baseCurrency})`;
+      const label = `Voyage ${p.start} → ${p.end}`;
       const selected = String(p.id) === String(state.period.id) ? "selected" : "";
       return `<option value="${escapeHTML(p.id)}" ${selected}>${escapeHTML(label)}</option>`;
     })
@@ -60,16 +60,56 @@ function renderSettings() {
   loadPeriodsListIntoUI();
 
   const p = state.period || {};
-  const baseCurEl = document.getElementById("s-basecur");
   const startEl = document.getElementById("s-start");
   const endEl = document.getElementById("s-end");
-  const dailyEl = document.getElementById("s-daily");
   const rateEl = document.getElementById("s-rate");
 
-  if (baseCurEl) baseCurEl.value = p.baseCurrency || "EUR";
-  if (startEl) startEl.value = p.start || "";
-  if (endEl) endEl.value = p.end || "";
-  if (dailyEl) dailyEl.value = String(p.dailyBudgetBase || "");
+  // Compute voyage bounds from first/last segment (bi-directional sync)
+  let voyageStart = p.start || "";
+  let voyageEnd = p.end || "";
+
+  try {
+    const pid = String(p.id || "");
+    const segs = (state.budgetSegments || [])
+      .filter(s => s && String(s.periodId || s.period_id) === pid)
+      .slice()
+      .sort((a,b) => String(a.start||"").localeCompare(String(b.start||"")));
+
+    if (segs.length) {
+      const edits = window.__TB_SEG_EDITS__ || {};
+      const first = segs[0];
+      const last = segs[segs.length - 1];
+      const eFirst = edits[first.id] || {};
+      const eLast = edits[last.id] || {};
+      voyageStart = (eFirst.start ?? first.start) || voyageStart;
+      voyageEnd = (eLast.end ?? last.end) || voyageEnd;
+
+      // Bind once: editing voyage dates updates first/last segment dates
+      if (startEl && !startEl.dataset.tbVoyageBound) {
+        startEl.dataset.tbVoyageBound = "1";
+        startEl.addEventListener("change", () => {
+          const v = startEl.value || "";
+          state.period.start = v;
+          _tbVoyageSyncBoundsToSegments({ start: v, end: null });
+        });
+      }
+      if (endEl && !endEl.dataset.tbVoyageBound) {
+        endEl.dataset.tbVoyageBound = "1";
+        endEl.addEventListener("change", () => {
+          const v = endEl.value || "";
+          state.period.end = v;
+          _tbVoyageSyncBoundsToSegments({ start: null, end: v });
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("[settings] voyage bounds compute failed", e);
+  }
+
+  if (startEl) startEl.value = voyageStart || "";
+  if (endEl) endEl.value = voyageEnd || "";
+
+  // keep rate visible if present (read-only in UI)
   if (rateEl) rateEl.value = String(p.eurBaseRate || "");
 
   // segments UI (V6.4)
@@ -78,6 +118,24 @@ function renderSettings() {
 
   // categories UI
   try { renderCategoriesSettingsUI(); } catch (e) { console.warn('[categories] render failed', e); }
+}
+
+/** Update first/last segment dates in local UI edits (does NOT write DB). */
+function _tbVoyageSyncBoundsToSegments({ start, end }) {
+  const p = state.period || {};
+  const pid = String(p.id || "");
+  const segs = (state.budgetSegments || [])
+    .filter(s => s && String(s.periodId || s.period_id) === pid)
+    .slice()
+    .sort((a,b) => String(a.start||"").localeCompare(String(b.start||"")));
+
+  if (!segs.length) return;
+
+  const first = segs[0];
+  const last = segs[segs.length - 1];
+
+  if (start !== null && start !== undefined) _tbSegSet(String(first.id), "start", start);
+  if (end !== null && end !== undefined) _tbSegSet(String(last.id), "end", end);
 }
 
 /* =========================
@@ -473,47 +531,66 @@ async function _syncLastSegmentEndToPeriod(periodId, periodEndISO) {
 
 async function saveSettings() {
   await safeCall("Enregistrer voyage", async () => {
-    const baseCurEl = document.getElementById("s-basecur");
-    const baseCur = (baseCurEl && baseCurEl.value) ? baseCurEl.value : (state?.period?.baseCurrency || state?.period?.base_currency || "");
-    const s = document.getElementById("s-start")?.value;
-    const e = document.getElementById("s-end")?.value;
-    const d = _tbParseNum(document.getElementById("s-daily")?.value);
-    const r = _tbParseNum(document.getElementById("s-rate")?.value);
+    const startEl = document.getElementById("s-start");
+    const endEl = document.getElementById("s-end");
 
-    if (!baseCur) throw new Error("UI settings non à jour (devise base introuvable). ");
-    if (!s || !e) throw new Error("Dates invalides.");
-    if (parseISODateOrNull(e) < parseISODateOrNull(s)) throw new Error("Fin < début.");
-    if (!isFinite(d) || d <= 0) throw new Error("Budget/jour invalide.");
+    const p = state.period || {};
+    const pid = p.id;
+    if (!pid) throw new Error("UI settings non à jour.");
 
+    const start = (startEl && startEl.value) ? String(startEl.value) : (p.start || "");
+    const end = (endEl && endEl.value) ? String(endEl.value) : (p.end || "");
+
+    if (!start || !end) throw new Error("Dates invalides.");
+
+    // Patch voyage dates only (periods) — do NOT touch eur_base_rate/base_currency/etc.
+    const patch = { start_date: start, end_date: end };
     const { error } = await sb
       .from(TB_CONST.TABLES.periods)
-      .update({
-        start_date: s,
-        end_date: e,
-        base_currency: baseCur,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", state.period.id);
+      .update(patch)
+      .eq("id", pid);
 
     if (error) throw error;
 
-    const { error: pErr2 } = await sb
-      .from(TB_CONST.TABLES.periods)
-      .update({
-        eur_base_rate: isFinite(r) ? r : null,
-        daily_budget_base: d,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", state.period.id);
-    if (pErr2) throw pErr2;
+    // Also persist bounds to first/last segment (bi-directional sync contract)
+    try {
+      const segs = (state.budgetSegments || [])
+        .filter(s => s && String(s.periodId || s.period_id) === String(pid))
+        .slice()
+        .sort((a,b) => String(a.start||"").localeCompare(String(b.start||"")));
 
-    // Ensure the last budget segment always ends on the voyage end date
-    await _syncLastSegmentEndToPeriod(state.period.id, String(state?.period?.end || ""));
+      if (segs.length) {
+        const first = segs[0];
+        const last = segs[segs.length - 1];
 
+        // update first.start_date if needed
+        if (String(first.start || "") !== String(start || "")) {
+          const { error: e1 } = await sb
+            .from(TB_CONST.TABLES.budget_segments)
+            .update({ start_date: start })
+            .eq("id", first.id)
+            .eq("user_id", authUserId());
+          if (e1) throw e1;
+        }
 
+        // update last.end_date if needed
+        if (String(last.end || "") !== String(end || "")) {
+          const { error: e2 } = await sb
+            .from(TB_CONST.TABLES.budget_segments)
+            .update({ end_date: end })
+            .eq("id", last.id)
+            .eq("user_id", authUserId());
+          if (e2) throw e2;
+        }
+      }
+    } catch (e) {
+      console.warn("[settings] bounds sync segments failed", e);
+    }
+
+    // Refresh local state
     await refreshFromServer();
-    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("14_settings_periods_ui.js"); else if (typeof renderAll === "function") renderAll();
-});
+    toast("Voyage enregistré.");
+  });
 }
 
 async function newPeriod() {

@@ -757,41 +757,22 @@
 
           <div class="row" style="margin-bottom:10px;">
             <div class="field">
-              <label>Période active</label>
+              <label>Voyage actif</label>
               <select id="s-period"></select>
-            </div>
-
-            <div class="field">
-              <label>Devise période</label>
-              <select id="s-basecur" disabled>
-                <option value="THB">THB</option>
-                <option value="EUR">EUR</option>
-                <option value="VND">VND</option>
-                <option value="USD">USD</option>
-                <option value="JPY">JPY</option>
-                <option value="AUD">AUD</option>
-              </select>
-            </div>
-
-            <div class="field">
+            </div><div class="field">
               <label>Début</label>
-              <input id="s-start" type="date"  disabled />
+              <input id="s-start" type="date" />
             </div>
 
             <div class="field">
               <label>Fin</label>
-              <input id="s-end" type="date"  disabled />
-            </div>
-
-            <div class="field">
-              <label>Budget/jour (devise période)</label>
-              <input id="s-daily" type="number" step="0.01" />
+              <input id="s-end" type="date" />
             </div></div>
 
           <div class="row" style="justify-content:flex-end;">
             <button class="btn" onclick="createPeriodPrompt()">+ Nouvelle période</button>
             <button class="btn danger" onclick="deleteActivePeriod()">Supprimer période</button>
-            <button class="btn primary" onclick="saveSettings()">Enregistrer période</button>
+            <button class="btn primary" onclick="saveSettings()">Enregistrer voyage</button>
           </div>
         </div>
 
