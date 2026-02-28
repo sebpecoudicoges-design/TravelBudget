@@ -9,7 +9,30 @@ function _fxSetEurRates(rates) {
   try { localStorage.setItem(TB_CONST.LS_KEYS.eur_rates, JSON.stringify(rates || {})); } catch (_) {}
 }
 function _fxGetEurRates() {
-  try { return JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates) || "{}"); } catch (_) { return {}; }
+  try {
+    const rates = JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates) || "{}") || {};
+    // Optional: filter by last provider keys to avoid "phantom" stale/incorrect currencies.
+    let keys = null;
+    try {
+      const rawKeys = localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_keys);
+      if (rawKeys) {
+        const arr = JSON.parse(rawKeys);
+        if (Array.isArray(arr) && arr.length) keys = arr.map(x => String(x||"").toUpperCase()).filter(Boolean);
+      }
+    } catch (_) {}
+    if (keys && keys.length) {
+      const out = {};
+      for (const k of keys) {
+        if (k === "EUR") { out.EUR = 1; continue; }
+        const v = Number(rates[k]);
+        if (Number.isFinite(v) && v > 0) out[k] = v;
+      }
+      return out;
+    }
+    return rates;
+  } catch (_) { return {}; }
+}
+"); } catch (_) { return {}; }
 }
 
 // Manual EUR->XXX rates (fallback for currencies not provided by Auto FX provider)
@@ -76,6 +99,22 @@ function tbFxPromptManualRate(cur, reason) {
   const raw = prompt(`Taux requis : EUR → ${c}${hint}${why}\n\nEntre le taux (ex: 17000) :`);
   if (raw === null) return null; // user cancelled
   const r = Number(String(raw).replace(",", "."));
+  // Sanity check: if an auto rate exists, warn when the manual rate differs wildly (common typo: wrong currency / inverted).
+  try {
+    const autoRates = _fxGetEurRates();
+    const auto = Number(autoRates?.[c]);
+    if (Number.isFinite(auto) && auto > 0 && Number.isFinite(r) && r > 0) {
+      const ratio = r / auto;
+      if (ratio > 5 || ratio < 0.2) {
+        const ok = confirm(
+          `⚠️ Ce taux manuel semble très différent du taux auto connu pour EUR→${c}.\n` +
+          `Auto: ${auto}\nManuel: ${r}\n\nConfirmer l'enregistrement ?`
+        );
+        if (!ok) return null;
+      }
+    }
+  } catch (_) {}
+
   tbFxSetManualRate(c, r);
   _fxManualMarkToday(c);
   return r;
@@ -128,6 +167,16 @@ async function refreshFxRates() {
   try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("fx:invoke"); } catch (_) {}
   if (error) return alert(error.message);
   if (!data?.rates) return alert("Réponse taux invalide.");
+
+  // Store provider metadata to prevent reusing stale/phantom currencies from cache.
+  try {
+    const asof = String(data?.asof || data?.date || "").slice(0,10) || new Date().toISOString().slice(0,10);
+    const keys = Object.keys(data.rates || {}).map(k => String(k||"").toUpperCase()).filter(Boolean);
+    if (!keys.includes("EUR")) keys.push("EUR");
+    localStorage.setItem(TB_CONST.LS_KEYS.eur_rates_asof, asof);
+    localStorage.setItem(TB_CONST.LS_KEYS.eur_rates_keys, JSON.stringify(keys));
+  } catch (_) {}
+
 
   const base = state.period.baseCurrency;
 
@@ -479,7 +528,7 @@ function fxRate(from, to, ratesOpt) {
   if (!f || !t) return null;
   if (f === t) return 1;
 
-  const rates = ratesOpt || _fxGetEurRates();
+  const rates = ratesOpt || fxGetEurRatesMerged();
   const eurToFrom = _fxEurTo(f, rates);
   const eurToTo   = _fxEurTo(t, rates);
   if (!eurToFrom || !eurToTo) return null;

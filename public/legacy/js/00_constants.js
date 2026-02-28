@@ -1,4 +1,4 @@
-window.__TB_BUILD = '6.6.78';
+window.__TB_BUILD = '6.6.79';
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -53,9 +53,14 @@ window.__TB_BUILD = '6.6.78';
     theme: "travelbudget_theme_v1",
     palette: "travelbudget_palette_v1",
     preset: "travelbudget_palette_preset_v1",
+    // Auto FX (EUR→XXX) cache
     eur_rates: "EUR_RATES",
+    eur_rates_asof: "travelbudget_fx_eur_rates_asof_v1",
+    eur_rates_keys: "travelbudget_fx_eur_rates_keys_v1",
     fx_last_daily: "travelbudget_fx_last_daily_v1",
+    // Manual FX fallbacks (EUR→XXX)
     fx_manual_rates: "travelbudget_fx_manual_rates_v1",
+    fx_manual_asof: "travelbudget_fx_manual_asof_v1",
     pie_excluded_cats: "travelbudget_pie_excluded_categories_v1",
     debug: "travelbudget_debug_v1",
   });
