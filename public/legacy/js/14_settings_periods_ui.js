@@ -569,7 +569,7 @@ async function saveSettings() {
             .from(TB_CONST.TABLES.budget_segments)
             .update({ start_date: start })
             .eq("id", first.id)
-            .eq("user_id", authUserId());
+            ;
           if (e1) throw e1;
         }
 
@@ -579,7 +579,7 @@ async function saveSettings() {
             .from(TB_CONST.TABLES.budget_segments)
             .update({ end_date: end })
             .eq("id", last.id)
-            .eq("user_id", authUserId());
+            ;
           if (e2) throw e2;
         }
       }
@@ -589,7 +589,7 @@ async function saveSettings() {
 
     // Refresh local state
     await refreshFromServer();
-    toast("Voyage enregistré.");
+    (function(msg){ if (typeof toastOk === "function") return toastOk(msg); if (typeof toastInfo === "function") return toastInfo(msg); try { alert(msg); } catch(_) { console.log(msg); } })("Voyage enregistré.");
   });
 }
 
