@@ -189,6 +189,17 @@ function renderSettings(){
         const wrap = document.createElement("div");
         wrap.className = "card";
         wrap.style.marginBottom = "10px";
+        const cur = String(seg.baseCurrency||"").toUpperCase();
+        const autoAvail = (typeof window.tbFxIsAutoAvailable==="function") ? window.tbFxIsAutoAvailable(cur) : false;
+        let manualRate = null; let manualAsof = null;
+        try { if (typeof window.tbFxGetManualRates==="function") manualRate = (window.tbFxGetManualRates()||{})[cur] ?? null; } catch(_) {}
+        try { if (typeof window.tbFxManualAsof==="function") manualAsof = window.tbFxManualAsof(cur); } catch(_) {}
+        let autoAsof = null; try { autoAsof = localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_asof) || null; } catch(_) {}
+        const usedRate = (seg.fxMode === "fixed") ? (seg.eurBaseRateFixed ?? null) : (typeof window.fxRate==="function" ? window.fxRate("EUR", cur) : null);
+        const rateDisplay = (usedRate!==null && usedRate!==undefined && Number.isFinite(Number(usedRate))) ? String(usedRate) : "";
+        const rateRO = (seg.fxMode !== "fixed");
+        const srcLabel = (seg.fxMode === "fixed") ? "Manuel (segment)" : (autoAvail ? "Auto" : (manualRate ? "Fallback manuel" : "Manquant"));
+        const srcMeta = (seg.fxMode === "fixed") ? "" : (autoAvail ? (autoAsof?` • date: ${autoAsof}`:"") : (manualAsof?` • date: ${manualAsof}`:""));
         wrap.innerHTML = `
           <div class="row" style="align-items:flex-end;">
             <div class="field">
@@ -207,21 +218,32 @@ function renderSettings(){
               <label>Budget/jour</label>
               <input data-k="daily_budget_base" value="${seg.dailyBudgetBase ?? ""}" />
             </div>
-            <div class="field" style="min-width:160px;">
+            <div class="field" style="min-width:180px;">
               <label>Taux EUR→Devise</label>
-              <input data-k="eur_base_rate_fixed" value="${seg.eurBaseRateFixed ?? ""}" placeholder="auto si dispo" />
+              <input data-k="eur_base_rate_fixed" value="${seg.fxMode === "fixed" ? (seg.eurBaseRateFixed ?? "") : rateDisplay}" placeholder="${seg.fxMode === "fixed" ? "" : (autoAvail ? "auto" : (manualRate ? "fallback manuel" : "manquant"))}" ${rateRO ? "readonly" : ""} />
             </div>
+            ${(!rateRO && (seg.fxMode === "fixed")) ? "" : ""}
+            ${(!autoAvail && seg.fxMode !== "fixed") ? `<button class="btn" data-act="fx" title="Définir un taux manuel pour cette devise">Saisir taux</button>` : ""}
             <div style="flex:1"></div>
             <button class="btn primary" data-act="save">Enregistrer</button>
             <button class="btn danger" data-act="del">Supprimer</button>
           </div>
           <div class="muted" style="margin-top:6px;">
             FX: <b>${seg.fxMode === "fixed" ? "Manuel" : "Auto"}</b>
+            • Taux: <b>${(seg.fxMode === "fixed" ? (seg.eurBaseRateFixed ?? "") : (rateDisplay || "")) || "—"}</b>
+            • Source: <b>${srcLabel}</b>${srcMeta}
             ${seg.fx_last_updated_at ? ` • maj: ${String(seg.fx_last_updated_at).slice(0,10)}` : ""}
           </div>
         `;
         // handlers
         wrap.querySelector('[data-act="save"]').onclick = ()=>safeCall("Save période", ()=>saveBudgetSegment(seg.id, wrap));
+        const fxBtn = wrap.querySelector('[data-act="fx"]');
+        if(fxBtn){
+          fxBtn.onclick = ()=>safeCall("Taux manuel", ()=>{ 
+            if(typeof window.tbFxPromptManualRate === "function") window.tbFxPromptManualRate(cur, "Devise non fournie par les taux auto");
+            renderSettings();
+          });
+        }
         wrap.querySelector('[data-act="del"]').onclick = ()=>safeCall("Supprimer période", ()=>deleteBudgetSegment(seg.id));
         host.appendChild(wrap);
       });
@@ -591,8 +613,24 @@ async function saveBudgetSegment(segId, wrapEl){
   const newRate = _tbParseNum(getVal("eur_base_rate_fixed"));
 
   if(!newStart||!newEnd||newStart>newEnd) throw new Error("Dates invalides.");
-  if(!newCur) throw new Error("Devise requise.");
+    if(!newCur) throw new Error("Devise requise.");
   if(!Number.isFinite(newBud) || newBud < 0) throw new Error("Budget/jour invalide.");
+
+  // FX Option A: if currency not provided by auto FX and segment is not fixed, ensure a manual fallback exists
+  const wantsFixed = (Number.isFinite(newRate) && newRate > 0);
+  if(!wantsFixed){
+    const autoOk = (typeof window.tbFxIsAutoAvailable==="function") ? window.tbFxIsAutoAvailable(newCur) : false;
+    let man = null;
+    try { if (typeof window.tbFxGetManualRates==="function") man = (window.tbFxGetManualRates()||{})[newCur]; } catch(_) {}
+    if(!autoOk && !(Number.isFinite(Number(man)) && Number(man) > 0)){
+      if(typeof window.tbFxPromptManualRate === "function"){
+        const r = window.tbFxPromptManualRate(newCur, "Devise non fournie par les taux auto. Un taux manuel est requis.");
+        if(!r) throw new Error("Taux manuel requis pour cette devise.");
+      }else{
+        throw new Error("Taux manuel requis pour cette devise.");
+      }
+    }
+  }
 
   // neighbors
   const prev = idx>0 ? segs[idx-1] : null;
