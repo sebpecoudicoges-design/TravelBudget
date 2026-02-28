@@ -25,6 +25,39 @@ function _tbISO(d){
   try{ return new Date(d).toISOString().slice(0,10); }catch(_){ return null; }
 }
 
+// Normalize a budget segment row coming either from:
+// - state.budgetSegments (already normalized by loadFromSupabase)
+// - raw Supabase rows (snake_case)
+function _tbNormSeg(row){
+  const r = row || {};
+  const start = _tbISO(r.start || r.start_date || r.startDate);
+  const end   = _tbISO(r.end   || r.end_date   || r.endDate);
+  const baseCurrencyRaw = (r.baseCurrency || r.base_currency || r.base || r.currency || "");
+  const dailyRaw = (r.dailyBudgetBase !== undefined) ? r.dailyBudgetBase : r.daily_budget_base;
+  const fxMode = (r.fxMode || r.fx_mode || r.fx || "fixed");
+  const rateRaw = (r.eurBaseRateFixed !== undefined) ? r.eurBaseRateFixed : r.eur_base_rate_fixed;
+  const sortRaw = (r.sortOrder !== undefined) ? r.sortOrder : r.sort_order;
+
+  const out = Object.assign({}, r);
+  out.periodId = r.periodId || r.period_id || out.periodId || null;
+  out.start = start;
+  out.end = end;
+  // keep snake_case mirrors too (some helpers still expect them)
+  out.start_date = start;
+  out.end_date = end;
+  out.baseCurrency = String(baseCurrencyRaw || "").trim().toUpperCase();
+  out.base_currency = out.baseCurrency;
+  out.dailyBudgetBase = Number.isFinite(Number(dailyRaw)) ? Number(dailyRaw) : (dailyRaw ?? 0);
+  out.daily_budget_base = out.dailyBudgetBase;
+  out.fxMode = String(fxMode || "fixed");
+  out.fx_mode = out.fxMode;
+  out.eurBaseRateFixed = (rateRaw === null || rateRaw === undefined || rateRaw === "") ? null : Number(rateRaw);
+  out.eur_base_rate_fixed = out.eurBaseRateFixed;
+  out.sortOrder = Number.isFinite(Number(sortRaw)) ? Number(sortRaw) : 0;
+  out.sort_order = out.sortOrder;
+  return out;
+}
+
 function _tbAddDays(iso, n){
   const dt = new Date(iso+"T00:00:00Z");
   dt.setUTCDate(dt.getUTCDate()+n);
@@ -117,7 +150,7 @@ async function refreshSegmentsForActivePeriod(){
     .order("sort_order", { ascending: true });
 
   if(error) throw error;
-  state.budgetSegments = data || [];
+  state.budgetSegments = (data || []).map(_tbNormSeg);
 }
 
 /* ---------- render ---------- */
@@ -131,11 +164,11 @@ function renderSettings(){
   if(h2) h2.textContent = "Voyage";
 
   const p = state.period;
-  const segs = (state.budgetSegments || []).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
+  const segs = (state.budgetSegments || []).map(_tbNormSeg).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
 
   // voyage dates reflect real bounds from segments when available
-  const startISO = segs.length ? _tbISO(segs[0].start_date) : _tbISO(p && p.start);
-  const endISO   = segs.length ? _tbISO(segs[segs.length-1].end_date) : _tbISO(p && p.end);
+  const startISO = segs.length ? _tbISO(segs[0].start) : _tbISO(p && p.start);
+  const endISO   = segs.length ? _tbISO(segs[segs.length-1].end) : _tbISO(p && p.end);
 
   const inStart = document.getElementById("s-start");
   const inEnd   = document.getElementById("s-end");
