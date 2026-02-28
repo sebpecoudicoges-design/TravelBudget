@@ -37,6 +37,12 @@
 - [ ] **6.6.56** — Patch DB : devises ISO3 + verrouillage `profiles.role` (anti self-admin)
 - [ ] **6.6.58** — FX Option A : source unique `fx-latest` (UI + onboarding), refresh quotidien silencieux, suppression des prompts, guard idle
 
+- [ ] **6.6.67** — Périodes (segments) :
+  - [ ] Bouton **Ajouter une période** → modal d’insertion (découpe automatique)
+  - [ ] **Zéro trou** : la modification des dates d’un segment adapte les voisins (continuité)
+  - [ ] Suppression UI du **Split** (workflow unique)
+  - [ ] `sort_order` recalculé automatiquement après modifications
+
 ---
 
 # TravelBudget — Smoke checklist (à chaque zip)
