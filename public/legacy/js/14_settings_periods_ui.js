@@ -1,23 +1,16 @@
 /* =========================
    Settings – Voyages (periods) / Périodes (budget_segments)
-   FULL STABLE (no window.sb dependency)
+   STABLE + Voyage dropdown + segments bootstrap
    ========================= */
 
 (function () {
-  /* --------------------------------------------------
-     Safe access to global Supabase client
-     In this codebase, supabase client is declared as:
-       const sb = supabase.createClient(...)
-     which is NOT window.sb (const doesn't attach to window).
-  -------------------------------------------------- */
   function _getSB() {
     try {
-      // global lexical binding from another script (00_supabase_config.js)
       if (typeof sb !== "undefined" && sb && typeof sb.from === "function") return sb;
     } catch (_) {}
-    // fallback (if later you expose it)
     if (window.sb && typeof window.sb.from === "function") return window.sb;
     if (window.supabaseClient && typeof window.supabaseClient.from === "function") return window.supabaseClient;
+    if (window.supabase && typeof window.supabase.from === "function") return window.supabase;
     return null;
   }
 
@@ -42,8 +35,7 @@
   }
 
   function _iso(d) {
-    // accepts Date or string(yyyy-mm-dd)
-    if (!d) return null;
+    if (!d) return "";
     if (typeof d === "string") return d.slice(0, 10);
     return new Date(d).toISOString().slice(0, 10);
   }
@@ -52,7 +44,8 @@
     return new Date(a.start_date) - new Date(b.start_date);
   }
 
-  // Always define renderSettings so navigation never crashes
+  const ACTIVE_PERIOD_KEY = "tb_active_period_id_v1";
+
   window.renderSettings = async function renderSettings() {
     const sbClient = _getSB();
     const root = document.getElementById("settings-container");
@@ -62,8 +55,8 @@
       root.innerHTML =
         `<div style="padding:12px">
            <b>Settings</b><br/>
-           Supabase client indisponible (sb). Recharge la page (Ctrl+F5).<br/>
-           Si ça persiste, vérifie que <code>00_supabase_config.js</code> est bien chargé.
+           Supabase client indisponible. (sb)<br/>
+           Hard refresh (Ctrl+F5).
          </div>`;
       return;
     }
@@ -73,12 +66,11 @@
       root.innerHTML =
         `<div style="padding:12px">
            <b>Settings</b><br/>
-           Non authentifié. Connecte-toi puis reviens ici.
+           Non authentifié. Connecte-toi puis reviens.
          </div>`;
       return;
     }
 
-    // Load voyages (periods)
     const { data: periods, error: eP } = await sbClient
       .from("periods")
       .select("id,start_date,end_date,base_currency,eur_base_rate,created_at")
@@ -99,10 +91,10 @@
       return;
     }
 
-    // Active voyage = first (you can later wire a true "active" selector)
-    const active = periods[0];
+    // Choose active voyage (from localStorage if valid, else first)
+    const savedId = localStorage.getItem(ACTIVE_PERIOD_KEY);
+    const active = periods.find(p => p.id === savedId) || periods[0];
 
-    // Load segments for active voyage
     const { data: segs, error: eS } = await sbClient
       .from("budget_segments")
       .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,fx_mode,eur_base_rate_fixed,sort_order")
@@ -118,10 +110,22 @@
     const segStart = segments.length ? segments[0].start_date : active.start_date;
     const segEnd = segments.length ? segments[segments.length - 1].end_date : active.end_date;
 
-    // UI
+    // Build voyage dropdown
+    const voyageOptions = periods.map(p => {
+      const label = `${_iso(p.start_date)} → ${_iso(p.end_date)} (${(p.base_currency||"").toUpperCase() || "?"})`;
+      const sel = p.id === active.id ? "selected" : "";
+      return `<option value="${p.id}" ${sel}>${label}</option>`;
+    }).join("");
+
     let html = `
       <h2>Voyage actif</h2>
+
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+        <div>
+          <label>Voyage</label><br/>
+          <select id="voyage-select" style="min-width:260px">${voyageOptions}</select>
+        </div>
+
         <div>
           <label>Début</label><br/>
           <input type="date" id="voyage-start" value="${_iso(segStart)}" />
@@ -130,6 +134,7 @@
           <label>Fin</label><br/>
           <input type="date" id="voyage-end" value="${_iso(segEnd)}" />
         </div>
+
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button onclick="saveSettings()">Enregistrer dates</button>
           <button onclick="createVoyage()">+ Nouveau voyage</button>
@@ -137,11 +142,16 @@
         </div>
       </div>
 
+      <div style="margin-top:6px;font-size:12px;opacity:.75">
+        Voyages: <b>${periods.length}</b> • Segments: <b>${segments.length}</b>
+      </div>
+
       <hr/>
 
       <h3>Périodes (segments)</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <button onclick="newPeriod()">+ Ajouter période</button>
+        ${segments.length ? "" : `<button onclick="bootstrapSegments()">Recréer 1 segment pour ce voyage</button>`}
       </div>
 
       <div id="segments-list" style="display:flex;flex-direction:column;gap:10px">
@@ -182,19 +192,21 @@
     html += `</div>`;
     root.innerHTML = html;
 
-    // Cache active period id for actions
+    // Cache
     window.__TB_ACTIVE_PERIOD_ID = active.id;
     window.__TB_ACTIVE_UID = uid;
-  };
 
-  /* --------------------------------------------------
-     Voyage actions
-  -------------------------------------------------- */
+    // Attach select handler
+    const sel = document.getElementById("voyage-select");
+    sel.onchange = () => {
+      localStorage.setItem(ACTIVE_PERIOD_KEY, sel.value);
+      window.renderSettings();
+    };
+  };
 
   window.saveSettings = async function saveSettings() {
     const sbClient = _getSB();
     if (!sbClient) return _toastErr("Supabase non prêt.");
-
     const uid = await _authUid(sbClient);
     if (!uid) return _toastErr("Not authenticated.");
 
@@ -205,7 +217,6 @@
     const end = document.getElementById("voyage-end")?.value;
     if (!start || !end) return _toastErr("Dates invalides.");
 
-    // Update period (dates only)
     const { error: eU } = await sbClient
       .from("periods")
       .update({ start_date: start, end_date: end })
@@ -213,7 +224,7 @@
 
     if (eU) return _toastErr(eU.message || "Erreur save voyage.");
 
-    // Sync segments bounds if any
+    // Sync first+last segment
     const { data: segs } = await sbClient
       .from("budget_segments")
       .select("id,start_date,end_date")
@@ -221,25 +232,56 @@
       .order("start_date");
 
     if (segs && segs.length) {
-      const first = segs[0];
-      const last = segs[segs.length - 1];
-
-      await sbClient.from("budget_segments").update({ start_date: start }).eq("id", first.id);
-      await sbClient.from("budget_segments").update({ end_date: end }).eq("id", last.id);
+      await sbClient.from("budget_segments").update({ start_date: start }).eq("id", segs[0].id);
+      await sbClient.from("budget_segments").update({ end_date: end }).eq("id", segs[segs.length - 1].id);
     }
 
     _toastOk("Voyage mis à jour.");
     window.renderSettings();
   };
 
-  window.createVoyage = async function createVoyage() {
+  window.bootstrapSegments = async function bootstrapSegments() {
     const sbClient = _getSB();
     if (!sbClient) return _toastErr("Supabase non prêt.");
-
     const uid = await _authUid(sbClient);
     if (!uid) return _toastErr("Not authenticated.");
 
-    // Find last voyage end_date to avoid overlap
+    const periodId = window.__TB_ACTIVE_PERIOD_ID;
+    if (!periodId) return _toastErr("Voyage actif introuvable.");
+
+    const { data: p, error: eP } = await sbClient
+      .from("periods")
+      .select("id,start_date,end_date,base_currency")
+      .eq("id", periodId)
+      .single();
+
+    if (eP) return _toastErr(eP.message || "Erreur lecture voyage.");
+
+    const { error: eI } = await sbClient
+      .from("budget_segments")
+      .insert({
+        user_id: uid,
+        period_id: p.id,
+        start_date: p.start_date,
+        end_date: p.end_date,
+        base_currency: (p.base_currency || "EUR").toUpperCase(),
+        daily_budget_base: 0,
+        fx_mode: "live_ecb",
+        sort_order: 1
+      });
+
+    if (eI) return _toastErr(eI.message || "Erreur création segment.");
+
+    _toastOk("1 segment recréé pour ce voyage.");
+    window.renderSettings();
+  };
+
+  window.createVoyage = async function createVoyage() {
+    const sbClient = _getSB();
+    if (!sbClient) return _toastErr("Supabase non prêt.");
+    const uid = await _authUid(sbClient);
+    if (!uid) return _toastErr("Not authenticated.");
+
     const { data: periods } = await sbClient
       .from("periods")
       .select("id,end_date")
@@ -248,8 +290,7 @@
 
     let start = new Date();
     if (periods && periods.length) {
-      const lastEnd = new Date(periods[0].end_date);
-      start = new Date(lastEnd);
+      start = new Date(periods[0].end_date);
       start.setDate(start.getDate() + 1);
     }
     const end = new Date(start);
@@ -258,7 +299,6 @@
     const startStr = _iso(start);
     const endStr = _iso(end);
 
-    // Create period (voyage)
     const { data: pNew, error: eP } = await sbClient
       .from("periods")
       .insert({
@@ -273,7 +313,6 @@
 
     if (eP) return _toastErr(eP.message || "Erreur ajout voyage.");
 
-    // Create default 1 segment covering the voyage (fx_mode must satisfy check)
     const { error: eS } = await sbClient
       .from("budget_segments")
       .insert({
@@ -289,6 +328,7 @@
 
     if (eS) return _toastErr(eS.message || "Erreur init segment voyage.");
 
+    localStorage.setItem(ACTIVE_PERIOD_KEY, pNew.id);
     _toastOk("Voyage créé.");
     window.renderSettings();
   };
@@ -296,7 +336,6 @@
   window.deleteVoyage = async function deleteVoyage() {
     const sbClient = _getSB();
     if (!sbClient) return _toastErr("Supabase non prêt.");
-
     const uid = await _authUid(sbClient);
     if (!uid) return _toastErr("Not authenticated.");
 
@@ -305,32 +344,25 @@
 
     if (!confirm("Supprimer le voyage actif ? (segments inclus)")) return;
 
-    // Delete segments then voyage
     await sbClient.from("budget_segments").delete().eq("period_id", periodId);
     const { error: eD } = await sbClient.from("periods").delete().eq("id", periodId);
     if (eD) return _toastErr(eD.message || "Erreur suppression voyage.");
 
+    localStorage.removeItem(ACTIVE_PERIOD_KEY);
     _toastOk("Voyage supprimé.");
     window.renderSettings();
   };
 
-  /* --------------------------------------------------
-     Segment actions (simple stable version)
-     Note: This does NOT yet enforce "no holes" auto-adjust.
-     We stabilize UI first; then we reintroduce smart normalization safely.
-  -------------------------------------------------- */
-
   window.newPeriod = async function newPeriod() {
     const sbClient = _getSB();
     if (!sbClient) return _toastErr("Supabase non prêt.");
-
     const uid = await _authUid(sbClient);
     if (!uid) return _toastErr("Not authenticated.");
 
     const periodId = window.__TB_ACTIVE_PERIOD_ID;
     if (!periodId) return _toastErr("Voyage actif introuvable.");
 
-    // Simple prompts (stable). We'll re-add proper modal after data is consistent.
+    // Simple prompts for now (stable). We'll reintroduce modal after data is consistent.
     const start = prompt("Date début (YYYY-MM-DD)");
     const end = prompt("Date fin (YYYY-MM-DD)");
     if (!start || !end) return;
@@ -395,7 +427,4 @@
     _toastOk("Période supprimée.");
     window.renderSettings();
   };
-
-  // Optionally trigger initial render if already on Settings view
-  // (navigation usually calls renderSettings itself)
-})(); 
+})();
