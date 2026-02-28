@@ -231,7 +231,7 @@ function renderSettings(){
 
 /* ---------- voyage save / create / delete ---------- */
 
-async function saveSettings(){
+async function _saveSettingsImpl(){
   const s = _tbGetSB();
   if(!s) throw new Error("Supabase non prêt.");
   const pid = state.period && state.period.id;
@@ -732,7 +732,7 @@ async function _syncVoyageBoundsToSegments(pid, start, end){
 /* ---------- legacy globals expected by index.html ---------- */
 
 window.renderSettings = renderSettings;
-window.saveSettings = ()=>safeCall("Enregistrer voyage", saveSettings);
+window.saveSettings = ()=>safeCall("Enregistrer voyage", _saveSettingsImpl);
 window.createPeriodPrompt = ()=>safeCall("Ajouter période", createPeriodPrompt);
 window.deleteActivePeriod = ()=>_tbToastOk("Suppression de période: utilise le bouton Supprimer sur une période.");
 window.createVoyagePrompt = ()=>safeCall("Ajouter voyage", createVoyagePrompt);
