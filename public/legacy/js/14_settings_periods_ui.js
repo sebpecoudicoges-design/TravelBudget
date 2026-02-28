@@ -75,13 +75,13 @@ async function loadPeriodsListIntoUI(){
   if(!sel) return;
 
   sel.innerHTML = "";
-  const periods = (state.periods || []).slice().sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+  const periods = (state.periods || []).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
   periods.forEach(p=>{
     const opt = document.createElement("option");
     opt.value = p.id;
     opt.textContent = (p.name && String(p.name).trim())
       ? String(p.name).trim()
-      : `Voyage ${_tbISO(p.start_date)} → ${_tbISO(p.end_date)}`;
+      : `Voyage ${_tbISO(p.start)} → ${_tbISO(p.end)}`;
     sel.appendChild(opt);
   });
 
@@ -131,11 +131,11 @@ function renderSettings(){
   if(h2) h2.textContent = "Voyage";
 
   const p = state.period;
-  const segs = (state.budgetSegments || []).slice().sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+  const segs = (state.budgetSegments || []).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
 
   // voyage dates reflect real bounds from segments when available
-  const startISO = segs.length ? _tbISO(segs[0].start_date) : _tbISO(p && p.start_date);
-  const endISO   = segs.length ? _tbISO(segs[segs.length-1].end_date) : _tbISO(p && p.end_date);
+  const startISO = segs.length ? _tbISO(segs[0].start_date) : _tbISO(p && p.start);
+  const endISO   = segs.length ? _tbISO(segs[segs.length-1].end_date) : _tbISO(p && p.end);
 
   const inStart = document.getElementById("s-start");
   const inEnd   = document.getElementById("s-end");
@@ -160,30 +160,30 @@ function renderSettings(){
           <div class="row" style="align-items:flex-end;">
             <div class="field">
               <label>Début</label>
-              <input type="date" data-k="start_date" value="${_tbISO(seg.start_date)||""}" />
+              <input type="date" data-k="start_date" value="${_tbISO(seg.start)||""}" />
             </div>
             <div class="field">
               <label>Fin</label>
-              <input type="date" data-k="end_date" value="${_tbISO(seg.end_date)||""}" />
+              <input type="date" data-k="end_date" value="${_tbISO(seg.end)||""}" />
             </div>
             <div class="field">
               <label>Devise</label>
-              <input data-k="base_currency" value="${(seg.base_currency||"").toUpperCase()}" />
+              <input data-k="base_currency" value="${(seg.baseCurrency||"").toUpperCase()}" />
             </div>
             <div class="field">
               <label>Budget/jour</label>
-              <input data-k="daily_budget_base" value="${seg.daily_budget_base ?? ""}" />
+              <input data-k="daily_budget_base" value="${seg.dailyBudgetBase ?? ""}" />
             </div>
             <div class="field" style="min-width:160px;">
               <label>Taux EUR→Devise</label>
-              <input data-k="eur_base_rate_fixed" value="${seg.eur_base_rate_fixed ?? ""}" placeholder="auto si dispo" />
+              <input data-k="eur_base_rate_fixed" value="${seg.eurBaseRateFixed ?? ""}" placeholder="auto si dispo" />
             </div>
             <div style="flex:1"></div>
             <button class="btn primary" data-act="save">Enregistrer</button>
             <button class="btn danger" data-act="del">Supprimer</button>
           </div>
           <div class="muted" style="margin-top:6px;">
-            FX: <b>${seg.fx_mode === "fixed" ? "Manuel" : "Auto"}</b>
+            FX: <b>${seg.fxMode === "fixed" ? "Manuel" : "Auto"}</b>
             ${seg.fx_last_updated_at ? ` • maj: ${String(seg.fx_last_updated_at).slice(0,10)}` : ""}
           </div>
         `;
@@ -228,7 +228,7 @@ async function createVoyagePrompt(){
   if(!uid) throw new Error("Not authenticated.");
 
   // Suggest non-overlapping dates after last voyage
-  const periods = (state.periods || []).slice().sort((a,b)=>String(a.end_date).localeCompare(String(b.end_date)));
+  const periods = (state.periods || []).slice().sort((a,b)=>String(a.end).localeCompare(String(b.end)));
   const lastEnd = periods.length ? _tbISO(periods[periods.length-1].end_date) : _tbISO(new Date());
   const sugStart = _tbAddDays(lastEnd, 1);
   const sugEnd = _tbAddDays(sugStart, 30);
@@ -251,7 +251,7 @@ async function createVoyagePrompt(){
       // local overlap check (client-side) to avoid periods_no_overlap
       const existing = (state.periods||[]).filter(p=>p.user_id===uid);
       for(const p of existing){
-        const ps=_tbISO(p.start_date), pe=_tbISO(p.end_date);
+        const ps=_tbISO(p.start), pe=_tbISO(p.end);
         if(!ps||!pe) continue;
         if(!(end < ps || start > pe)) throw new Error("Chevauchement avec un voyage existant.");
       }
@@ -296,7 +296,7 @@ async function deleteActiveVoyage(){
   const pid = state.period && state.period.id;
   if(!pid) throw new Error("Voyage non sélectionné.");
 
-  const label = `Voyage ${_tbISO(state.period.start_date)} → ${_tbISO(state.period.end_date)}`;
+  const label = `Voyage ${_tbISO(state.period.start)} → ${_tbISO(state.period.end)}`;
   if(!confirm(`Supprimer ${label} ?\n\nRefusé si des données y sont liées.`)) return;
 
   const { error } = await s.from("periods").delete().eq("id", pid);
@@ -360,7 +360,7 @@ async function createPeriodPrompt(){
   const pid = state.period && state.period.id;
   if(!pid) throw new Error("Voyage non sélectionné.");
 
-  const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+  const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
   if(!segs.length) throw new Error("Aucune période existante à découper.");
 
   const vStart = _tbISO(segs[0].start_date);
@@ -410,7 +410,7 @@ async function _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud){
   // - any segment fully inside => deleted
   // - any segment overlapping left/right => trimmed
   // - any segment spanning across => split (update left part + insert right part)
-  const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+  const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
 
   if(!segs.length) throw new Error("Aucune période existante.");
 
@@ -423,8 +423,8 @@ async function _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud){
   const toUpdate = [];
 
   for(const seg of segs){
-    const s0 = _tbISO(seg.start_date);
-    const e0 = _tbISO(seg.end_date);
+    const s0 = _tbISO(seg.start);
+    const e0 = _tbISO(seg.end);
     if(!s0 || !e0) continue;
 
     // no overlap
@@ -451,10 +451,10 @@ async function _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud){
           period_id: pid,
           start_date: rightStart,
           end_date: e0,
-          base_currency: seg.base_currency || "EUR",
-          daily_budget_base: seg.daily_budget_base ?? 0,
-          fx_mode: seg.fx_mode || "fixed",
-          eur_base_rate_fixed: seg.eur_base_rate_fixed ?? null,
+          base_currency: seg.baseCurrency || "EUR",
+          daily_budget_base: seg.dailyBudgetBase ?? 0,
+          fx_mode: seg.fxMode || "fixed",
+          eur_base_rate_fixed: seg.eurBaseRateFixed ?? null,
           sort_order: 0
         });
       }
@@ -527,7 +527,7 @@ async function saveBudgetSegment(segId, wrapEl){
   const pid = state.period && state.period.id;
   if(!pid) throw new Error("Voyage non sélectionné.");
 
-  const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+  const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
   const idx = segs.findIndex(x=>x.id===segId);
   if(idx<0) throw new Error("Période introuvable.");
 
@@ -550,7 +550,7 @@ async function saveBudgetSegment(segId, wrapEl){
 
   // phase A: shrink neighbors if we expand into them
   if(prev){
-    const prevEnd = _tbISO(prev.end_date);
+    const prevEnd = _tbISO(prev.end);
     if(prevEnd >= newStart){
       const newPrevEnd = _tbAddDays(newStart, -1);
       const { error } = await s.from("budget_segments").update({ end_date: newPrevEnd }).eq("id", prev.id);
@@ -558,7 +558,7 @@ async function saveBudgetSegment(segId, wrapEl){
     }
   }
   if(next){
-    const nextStart = _tbISO(next.start_date);
+    const nextStart = _tbISO(next.start);
     if(nextStart <= newEnd){
       const newNextStart = _tbAddDays(newEnd, 1);
       const { error } = await s.from("budget_segments").update({ start_date: newNextStart }).eq("id", next.id);
@@ -618,14 +618,14 @@ async function deleteBudgetSegment(segId){
   const pid = state.period && state.period.id;
   if(!pid) throw new Error("Voyage non sélectionné.");
 
-  const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+  const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
   if(segs.length<=1) throw new Error("Impossible: au moins 1 période requise.");
 
   const idx = segs.findIndex(x=>x.id===segId);
   if(idx<0) throw new Error("Période introuvable.");
 
   const seg = segs[idx];
-  if(!confirm(`Supprimer la période ${_tbISO(seg.start_date)} → ${_tbISO(seg.end_date)} ?`)) return;
+  if(!confirm(`Supprimer la période ${_tbISO(seg.start)} → ${_tbISO(seg.end)} ?`)) return;
 
   const prev = idx>0 ? segs[idx-1] : null;
   const next = idx<segs.length-1 ? segs[idx+1] : null;
@@ -637,7 +637,7 @@ async function deleteBudgetSegment(segId){
   // merge gap to neighbor (prefer prev)
   if(prev && next){
     // extend prev to cover until next.start-1, then shift next.start if needed
-    const newPrevEnd = _tbAddDays(_tbISO(next.start_date), -1);
+    const newPrevEnd = _tbAddDays(_tbISO(next.start), -1);
     const { error: e1 } = await s.from("budget_segments").update({ end_date: newPrevEnd }).eq("id", prev.id);
     if(e1) throw e1;
   }else if(prev && !next){
@@ -685,11 +685,11 @@ async function _syncVoyageBoundsToSegments(pid, start, end){
   const first = rows[0];
   const last = rows[rows.length-1];
 
-  if(_tbISO(first.start_date) !== start){
+  if(_tbISO(first.start) !== start){
     const { error: e1 } = await s.from("budget_segments").update({ start_date:start }).eq("id", first.id);
     if(e1) throw e1;
   }
-  if(_tbISO(last.end_date) !== end){
+  if(_tbISO(last.end) !== end){
     const { error: e2 } = await s.from("budget_segments").update({ end_date:end }).eq("id", last.id);
     if(e2) throw e2;
   }

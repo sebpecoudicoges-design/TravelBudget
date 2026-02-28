@@ -131,7 +131,6 @@ if (!wallets.length) {
           <button class="btn" onclick="openTxModal('income','${w.id}')">+ Entrée</button>
           <button class="btn" onclick="editWallet('${w.id}')">✏️ Modifier</button>
           <button class="btn" onclick="adjustWalletBalance('${w.id}')">⚙ Ajuster solde</button>
-          ${(((w.type || "") === "cash" || /\bCash\b/i.test(w.name)) ? `<button class="btn" onclick="openAtmWithdrawModal('${w.id}')">🏧 Retrait</button>` : ``)}
           <button class="btn" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" onclick="deleteWallet('${w.id}')">🗑 Supprimer</button>
         </div>
       </div>
