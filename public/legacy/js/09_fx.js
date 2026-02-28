@@ -32,8 +32,6 @@ function _fxGetEurRates() {
     return rates;
   } catch (_) { return {}; }
 }
-"); } catch (_) { return {}; }
-}
 
 // Manual EUR->XXX rates (fallback for currencies not provided by Auto FX provider)
 function _fxGetManualRates() {
