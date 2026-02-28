@@ -163,11 +163,11 @@ function _segRowHTML(seg, idx, total) {
       <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-end;">
         <div style="min-width:160px;">
           <div class="label">Début période</div>
-          <input class="input" value="${escapeHTML(start || "")}" onchange="_tbSegSet('${id}','start',this.value)" />
+          <input class="input" type="date" value="${escapeHTML(start || "")}" onchange="_tbSegSet('${id}','start',this.value)" />
         </div>
         <div style="min-width:160px;">
           <div class="label">Fin période</div>
-          <input class="input" value="${escapeHTML(end || "")}" onchange="_tbSegSet('${id}','end',this.value)" />
+          <input class="input" type="date" value="${escapeHTML(end || "")}" onchange="_tbSegSet('${id}','end',this.value)" />
         </div>
         <div style="min-width:140px;">
           <div class="label">Devise base ${typeof tbHelp==="function" ? tbHelp("Devise utilisée pour le budget/jour et les courbes sur ce segment.") : ""}</div>
@@ -372,37 +372,71 @@ const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
 
 
 
-    const { error } = await sb
-      .from(TB_CONST.TABLES.budget_segments)
-      .update({
-        start_date: startN,
-        end_date: endN,
-        base_currency: baseCurrency,
-        daily_budget_base: dailyBudgetBase,
-        fx_mode: fxMode,
-        // V6.5 FX storage
-        fx_rate_eur_to_base: (fxMode === "fixed" ? eurBaseRateFixed : null),
-        fx_source: (fxMode === "fixed" ? "manual" : "fx"),
-        fx_last_updated_at: (fxMode === "fixed" ? new Date().toISOString() : new Date().toISOString()),
-        // legacy compat (kept while DB migration is rolling)
-        eur_base_rate_fixed: eurBaseRateFixed,
-        // sort_order intentionally not updated (order is fixed)
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
+    
+    // === Write changes without violating the no-overlap constraint ===
+    const oldStart = String(seg.start_date || seg.start || "");
+    const oldEnd = String(seg.end_date || seg.end || "");
 
-    if (error) throw error;
+    // Determine interim shrink (never expands beyond old bounds)
+    let interimStart = (startN > oldStart) ? startN : oldStart;
+    let interimEnd = (endN < oldEnd) ? endN : oldEnd;
+    if (interimStart > interimEnd) { interimStart = startN; interimEnd = endN; } // fallback
 
+    // Helper to update current segment (common payload)
+    const _updCurrent = async (sISO, eISO) => {
+      const { error } = await sb
+        .from(TB_CONST.TABLES.budget_segments)
+        .update({
+          start_date: sISO,
+          end_date: eISO,
+          base_currency: baseCurrency,
+          daily_budget_base: dailyBudgetBase,
+          fx_mode: fxMode,
+          // V6.5 FX storage
+          fx_rate_eur_to_base: (fxMode === "fixed" ? eurBaseRateFixed : null),
+          fx_source: (fxMode === "fixed" ? "manual" : "fx"),
+          fx_last_updated_at: new Date().toISOString(),
+          // legacy compat (kept while DB migration is rolling)
+          eur_base_rate_fixed: eurBaseRateFixed,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+      if (error) throw error;
+    };
 
-    // Adapt neighbors to keep continuous coverage (no holes)
-    if (prev && prevEnd) {
+    // Step A: shrink current if needed (safe)
+    if (interimStart !== oldStart || interimEnd !== oldEnd) {
+      await _updCurrent(interimStart, interimEnd);
+    }
+
+    // Step B: shrink neighbors if current expands into them
+    if (prev && prevEnd && startN < oldStart) {
       const { error: pe } = await sb
         .from(TB_CONST.TABLES.budget_segments)
         .update({ end_date: prevEnd, updated_at: new Date().toISOString() })
         .eq("id", prev.id);
       if (pe) throw pe;
     }
-    if (next && nextStart) {
+    if (next && nextStart && endN > oldEnd) {
+      const { error: ne } = await sb
+        .from(TB_CONST.TABLES.budget_segments)
+        .update({ start_date: nextStart, updated_at: new Date().toISOString() })
+        .eq("id", next.id);
+      if (ne) throw ne;
+    }
+
+    // Step C: set current to final bounds
+    await _updCurrent(startN, endN);
+
+    // Step D: expand neighbors into gaps if current shrank away from them
+    if (prev && prevEnd && startN > oldStart) {
+      const { error: pe } = await sb
+        .from(TB_CONST.TABLES.budget_segments)
+        .update({ end_date: prevEnd, updated_at: new Date().toISOString() })
+        .eq("id", prev.id);
+      if (pe) throw pe;
+    }
+    if (next && nextStart && endN < oldEnd) {
       const { error: ne } = await sb
         .from(TB_CONST.TABLES.budget_segments)
         .update({ start_date: nextStart, updated_at: new Date().toISOString() })
@@ -411,6 +445,7 @@ const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
     }
 
     await _tbRecalcSortOrders(state.period.id);
+
 
 
     
@@ -458,11 +493,166 @@ async function _tbRecalcSortOrders(periodId) {
 function _tbDateAddDays(iso, deltaDays) {
   try {
     const d = new Date(String(iso) + "T00:00:00");
-    d.setDate(d.getDate() + Number(deltaDays||0));
-    return d.toISOString().slice(0,10);
-  } catch (_) { return iso; }
+    d.setDate(d.getDate() + Number(deltaDays || 0));
+    return d.toISOString().slice(0, 10);
+  } catch (e) {
+    // fallback: return original (best-effort)
+    return String(iso || "").slice(0, 10);
+  }
+}
+// === Add segment modal (insert a new period inside an existing segment) ===
+function _tbEnsureInsertModal() {
+  if (document.getElementById("tbInsertSegModal")) return;
+  const wrap = document.createElement("div");
+  wrap.id = "tbInsertSegModal";
+  wrap.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:center; justify-content:center; z-index:9999;";
+  wrap.innerHTML = `
+    <div style="background:#fff; border-radius:14px; padding:16px; width:min(520px,92vw); box-shadow:0 10px 40px rgba(0,0,0,.25);">
+      <div style="font-weight:700; font-size:18px; margin-bottom:10px;">Ajouter une période</div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:160px;">
+          <div class="label">Début</div>
+          <input id="tbInsStart" class="input" type="date" />
+        </div>
+        <div style="flex:1; min-width:160px;">
+          <div class="label">Fin</div>
+          <input id="tbInsEnd" class="input" type="date" />
+        </div>
+        <div style="flex:1; min-width:160px;">
+          <div class="label">Devise base</div>
+          <input id="tbInsCur" class="input" placeholder="ex: THB" />
+          <div class="muted" style="margin-top:6px;">Code ISO3 (ex: IDR). Auto FX si dispo, sinon manuel.</div>
+        </div>
+        <div style="flex:1; min-width:160px;">
+          <div class="label">Budget/jour (base)</div>
+          <input id="tbInsDaily" class="input" inputmode="decimal" placeholder="ex: 900" />
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+        <button class="btn" id="tbInsCancel">Annuler</button>
+        <button class="btn primary" id="tbInsOk">Ajouter</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+
+  document.getElementById("tbInsCancel").onclick = () => { wrap.style.display = "none"; };
+  document.getElementById("tbInsOk").onclick = async () => {
+    await safeCall("Ajouter période", async () => {
+      const start = String(document.getElementById("tbInsStart").value || "").trim();
+      const end = String(document.getElementById("tbInsEnd").value || "").trim();
+      const cur = String(document.getElementById("tbInsCur").value || "").trim().toUpperCase();
+      const daily = _tbParseNum(document.getElementById("tbInsDaily").value);
+      if (!start || !end) throw new Error("Dates requises.");
+      if (end < start) throw new Error("Fin < début.");
+      if (!cur) throw new Error("Devise requise.");
+      if (!isFinite(daily) || daily <= 0) throw new Error("Budget/jour invalide.");
+
+      await _tbInsertSegmentInsideExisting(start, end, cur, daily);
+      wrap.style.display = "none";
+      await refreshFromServer();
+      renderSettings();
+      renderWallets();
+    });
+  };
 }
 
+async function _tbInsertSegmentInsideExisting(startISO, endISO, baseCur, dailyBudgetBase) {
+  const sb = window.sb;
+  if (!sb) throw new Error("Supabase non prêt.");
+  const pid = String(state?.period?.id || "");
+  if (!pid) throw new Error("Aucun voyage actif.");
+
+  const segs = (state.budgetSegments || [])
+    .filter(s => String(s.periodId || s.period_id) === pid)
+    .slice()
+    .sort((a,b) => String(a.start_date||a.start||"").localeCompare(String(b.start_date||b.start||"")));
+
+  // find host segment that fully contains the requested range
+  const host = segs.find(s => {
+    const s0 = String(s.start_date || s.start || "");
+    const e0 = String(s.end_date || s.end || "");
+    return s0 <= startISO && endISO <= e0;
+  });
+  if (!host) throw new Error("La nouvelle période doit être incluse dans une période existante.");
+
+  const hostStart = String(host.start_date || host.start || "");
+  const hostEnd = String(host.end_date || host.end || "");
+
+  // Prepare 3 ranges: before / new / after
+  const beforeEnd = _tbDayBefore(startISO);
+  const afterStart = _tbDayAfter(endISO);
+
+  // Update host to become "before" if there is room, else it will become "after"
+  // We'll do it in safe steps to satisfy no-overlap.
+  // 1) shrink host to the left part (or right part if no left part)
+  if (hostStart <= beforeEnd) {
+    const { error: e1 } = await sb.from(TB_CONST.TABLES.budget_segments).update({ end_date: beforeEnd, updated_at: new Date().toISOString() }).eq("id", host.id);
+    if (e1) throw e1;
+    // Create "after" if needed
+    if (afterStart <= hostEnd) {
+      const { error: e2 } = await sb.from(TB_CONST.TABLES.budget_segments).insert({
+        user_id: host.user_id,
+        period_id: pid,
+        start_date: afterStart,
+        end_date: hostEnd,
+        base_currency: String(host.base_currency || host.baseCurrency || baseCur),
+        daily_budget_base: Number(host.daily_budget_base || host.dailyBudgetBase || dailyBudgetBase),
+        fx_mode: String(host.fx_mode || host.fxMode || "live_ecb"),
+        eur_base_rate_fixed: host.eur_base_rate_fixed ?? host.eurBaseRateFixed ?? null,
+        updated_at: new Date().toISOString(),
+      });
+      if (e2) throw e2;
+    }
+  } else if (afterStart <= hostEnd) {
+    // no left part: host becomes the "after" part
+    const { error: e1 } = await sb.from(TB_CONST.TABLES.budget_segments).update({ start_date: afterStart, updated_at: new Date().toISOString() }).eq("id", host.id);
+    if (e1) throw e1;
+  } else {
+    throw new Error("Insertion invalide (intervalle couvre toute la période).");
+  }
+
+  // 2) insert the new segment
+  const { error: e3 } = await sb.from(TB_CONST.TABLES.budget_segments).insert({
+    user_id: host.user_id,
+    period_id: pid,
+    start_date: startISO,
+    end_date: endISO,
+    base_currency: baseCur,
+    daily_budget_base: dailyBudgetBase,
+    fx_mode: "live_ecb",
+    eur_base_rate_fixed: null,
+    updated_at: new Date().toISOString(),
+  });
+  if (e3) throw e3;
+
+  await _tbRecalcSortOrders(pid);
+}
+
+async function newPeriod() {
+  _tbEnsureInsertModal();
+  const modal = document.getElementById("tbInsertSegModal");
+  // prefill with a safe default: inside the last segment by 1 day
+  try {
+    const segs = (state.budgetSegments || []).filter(s => String(s.periodId || s.period_id) === String(state?.period?.id || "")).slice()
+      .sort((a,b)=>String(a.start_date||a.start||"").localeCompare(String(b.start_date||b.start||"")));
+    const host = segs[segs.length-1];
+    if (host) {
+      const hs = String(host.start_date||host.start||"");
+      const he = String(host.end_date||host.end||"");
+      const start = _tbDayBefore(he);
+      const end = he;
+      const sEl = document.getElementById("tbInsStart");
+      const eEl = document.getElementById("tbInsEnd");
+      if (sEl) sEl.value = (start >= hs ? start : hs);
+      if (eEl) eEl.value = end;
+      const cEl = document.getElementById("tbInsCur");
+      if (cEl) cEl.value = String(host.base_currency || host.baseCurrency || state?.period?.baseCurrency || "").toUpperCase();
+      const dEl = document.getElementById("tbInsDaily");
+      if (dEl) dEl.value = String(host.daily_budget_base || host.dailyBudgetBase || "");
+    }
+  } catch (_) {}
+  if (modal) modal.style.display = "flex";
+}
 async function deletePeriod() {
   await safeCall("Supprimer période", async () => {
     if (!state.period.id) throw new Error("Aucune période active.");
@@ -684,3 +874,11 @@ function tbManualFxDel(c) {
     alert(e?.message || e);
   }
 }
+
+// Legacy global hooks (HTML onclick attributes)
+try {
+  window.createPeriodPrompt = newPeriod;
+  window.deleteActivePeriod = deletePeriod;
+  window.saveSettings = saveSettings;
+  window.renderSettings = renderSettings;
+} catch (_) {}
