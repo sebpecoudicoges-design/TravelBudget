@@ -188,19 +188,20 @@ function _segRowHTML(seg, idx, total) {
           <div class="label">EUR→BASE ${typeof tbHelp==="function" ? tbHelp("Taux de conversion EUR→Devise base. En auto, ce champ est verrouillé si FX fournit le taux.") : ""}</div>
           ${(() => {
             const cur = String(baseCurrency||"").toUpperCase();
-            const m = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
-            const live = (cur === "EUR") ? 1 : (m && m[cur]);
+            const auto = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
+            const manual = (typeof tbFxGetManualRates === "function") ? tbFxGetManualRates() : {};
+            const live = (cur === "EUR") ? 1 : (auto && auto[cur]);
+            const manualRate = (cur === "EUR") ? 1 : (manual && manual[cur]);
 
-            // FX behavior:
-            // - fixed: user must provide eurBaseRateFixed
-            // - auto: use provider live if available, else require manual fallback (eurBaseRateFixed)
+            // Auto if available, else require manual. If a manual rate exists, prefill it.
             const needsManual = (!live && cur !== "EUR");
-            const v = (fxMode === "live_ecb" && live) ? live : (eurBaseRateFixed || "");
-            const dis = needsManual ? "" : "readonly disabled style=\"opacity:0.7; cursor:not-allowed;\"";
-            const onch = needsManual ? `_tbSegSet('${id}','eurBaseRateFixed',this.value)` : "";
+            const v = (live ? live : (eurBaseRateFixed || manualRate || ""));
+
+            // Always editable: if user changes, store fixed and set fxMode=fixed
+            const onch = `_tbSegSet('${id}','eurBaseRateFixed',this.value);_tbSegSet('${id}','fxMode','fixed')`;
             const ph = needsManual ? "placeholder=\"ex: 36.57\"" : "";
-            return `<input class="input" value="${escapeHTML(String(v))}" ${ph} ${dis} onchange="${onch}" />`;
-          })()}
+            const hint = live ? `<div class="muted" style="font-size:12px;margin-top:4px;">Auto FX détecté. Tu peux modifier pour forcer un taux manuel.</div>` : "";
+            return `<div><input class="input" value="${escapeHTML(String(v))}" ${ph} onchange="${onch}" />${hint}</div>`;          })()}
         </div>
         <div style="display:flex; gap:8px; align-items:center; margin-left:auto;">
           ${splitBtn}
@@ -967,7 +968,7 @@ function renderManualFxBox() {
   if (!host) return;
 
   const rates = (typeof tbFxGetManualRates === "function") ? tbFxGetManualRates() : {};
-  const entries = Object.entries(rates || {}).sort((a,b)=>a[0].localeCompare(b[0]));
+  const entries = Object.entries(rates || {}).sort((a, b) => a[0].localeCompare(b[0]));
 
   host.innerHTML = `
     <div class="card" style="padding:12px;">
@@ -988,15 +989,28 @@ function renderManualFxBox() {
       </div>
 
       <div id="tbManualFxList">
-        ${entries.length ? entries.map(([c,r]) => `
+        ${
+          entries.length
+            ? entries.map(([c, r]) => `
           <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border);">
-            <div><b>${escapeHTML(c)}</b> : 1 EUR = ${escapeHTML(String(r))} ${escapeHTML(c)} ${(() => { try { const d = (typeof tbFxManualAsof==="function") ? tbFxManualAsof(c) : null; return d ? '<span class="muted" style="font-size:12px;">(' + escapeHTML(String(d)) + ')</span>' : ''; } catch(_) { return ''; } })()}</div>
+            <div><b>${escapeHTML(c)}</b> : 1 EUR = ${escapeHTML(String(r))} ${escapeHTML(c)}
+              ${(() => { 
+                try { 
+                  const d = (typeof tbFxManualAsof === "function") ? tbFxManualAsof(c) : null; 
+                  return d ? `<span class="muted" style="font-size:12px;">(${escapeHTML(String(d))})</span>` : ""; 
+                } catch(_) { return ""; } 
+              })()}
+            </div>
             <button class="btn" onclick="tbManualFxDel('${escapeHTML(c)}')">Supprimer</button>
           </div>
-        `).join("") : `<div class="muted">Aucun taux manuel.</div>`}
+        `).join("")
+            : `<div class="muted">Aucun taux manuel.</div>`
+        }
       </div>
     </div>
+  `;
 
+  // Prefill rate from Auto FX when user types a currency
   try {
     const curEl = document.getElementById("tbManualFxCur");
     const rateEl = document.getElementById("tbManualFxRate");
@@ -1012,9 +1026,7 @@ function renderManualFxBox() {
       });
     }
   } catch (_) {}
-  `;
 }
-
 function tbManualFxAdd() {
   try {
     const curEl = document.getElementById("tbManualFxCur");
@@ -1023,7 +1035,7 @@ function tbManualFxAdd() {
     const r = Number(String(rateEl?.value || "").replace(",", "."));
     if (typeof tbFxSetManualRate !== "function") throw new Error("FX manual not available");
     tbFxSetManualRate(c, r);
-    renderManualFxBox();
+    if (typeof renderSettings === "function") renderSettings(); else renderManualFxBox();
   } catch (e) {
     alert(e?.message || e);
   }
@@ -1033,7 +1045,7 @@ function tbManualFxDel(c) {
   try {
     if (typeof tbFxDeleteManualRate !== "function") throw new Error("FX manual not available");
     tbFxDeleteManualRate(c);
-    renderManualFxBox();
+    if (typeof renderSettings === "function") renderSettings(); else renderManualFxBox();
   } catch (e) {
     alert(e?.message || e);
   }
