@@ -78,3 +78,9 @@
 
 ## 5) Trip
 - [ ] L’onglet s’ouvre et n’affiche pas d’erreur console
+
+
+## MAJ 6.6.68
+- [ ] Settings voyages/segments: calendrier + modal + RLS/constraints fixes
+- [ ] Ajouter voyage: dates non chevauchantes
+- [ ] Ajouter période: split + fx_mode live_ecb

@@ -1,816 +1,668 @@
-/* ========================= 
-   Settings: periods UI
-   ========================= */
-async function loadPeriodsListIntoUI() {
-  const sel = document.getElementById("s-period");
-  if (!sel) return;
-
-  const { data: periods, error } = await sb
-    .from(TB_CONST.TABLES.periods)
-    .select("id,start_date,end_date,base_currency")
-    .order("start_date", { ascending: false });
-  if (error) return alert(error.message);
-
-  state.periods = (periods || []).map((p) => ({
-    id: p.id,
-    start: p.start_date,
-    end: p.end_date,
-    baseCurrency: p.base_currency,
-  }));
-
-  sel.innerHTML = (state.periods || [])
-    .map((p) => {
-      const label = `Voyage ${p.start} → ${p.end}`;
-      const selected = String(p.id) === String(state.period.id) ? "selected" : "";
-      return `<option value="${escapeHTML(p.id)}" ${selected}>${escapeHTML(label)}</option>`;
-    })
-    .join("");
-
-  sel.onchange = async () => {
-    const id = sel.value;
-    await setActivePeriod(id);
-    await refreshFromServer();
-    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("14_settings_periods_ui.js"); else if (typeof renderAll === "function") renderAll();
-};
-}
-
-async function setActivePeriod(periodId) {
-  if (!periodId) return;
-  const p = (state.periods || []).find((x) => String(x.id) === String(periodId));
-  if (!p) return;
-
-  state.period = {
-    ...state.period,
-    id: p.id,
-    start: p.start,
-    end: p.end,
-    baseCurrency: p.baseCurrency,
-  };
-
-  try {
-    await sb.from(TB_CONST.TABLES.settings).upsert({
-      user_id: sbUser.id,
-      active_period_id: p.id,
-      updated_at: new Date().toISOString(),
-    });
-  } catch (_) {}
-}
-
-function renderSettings() {
-  loadPeriodsListIntoUI();
-
-  const p = state.period || {};
-  const startEl = document.getElementById("s-start");
-  const endEl = document.getElementById("s-end");
-  const rateEl = document.getElementById("s-rate");
-
-  // Compute voyage bounds from first/last segment (bi-directional sync)
-  let voyageStart = p.start || "";
-  let voyageEnd = p.end || "";
-
-  try {
-    const pid = String(p.id || "");
-    const segs = (state.budgetSegments || [])
-      .filter(s => s && String(s.periodId || s.period_id) === pid)
-      .slice()
-      .sort((a,b) => String(a.start||"").localeCompare(String(b.start||"")));
-
-    if (segs.length) {
-      const edits = window.__TB_SEG_EDITS__ || {};
-      const first = segs[0];
-      const last = segs[segs.length - 1];
-      const eFirst = edits[first.id] || {};
-      const eLast = edits[last.id] || {};
-      voyageStart = (eFirst.start ?? first.start) || voyageStart;
-      voyageEnd = (eLast.end ?? last.end) || voyageEnd;
-
-      // Bind once: editing voyage dates updates first/last segment dates
-      if (startEl && !startEl.dataset.tbVoyageBound) {
-        startEl.dataset.tbVoyageBound = "1";
-        startEl.addEventListener("change", () => {
-          const v = startEl.value || "";
-          state.period.start = v;
-          _tbVoyageSyncBoundsToSegments({ start: v, end: null });
-        });
-      }
-      if (endEl && !endEl.dataset.tbVoyageBound) {
-        endEl.dataset.tbVoyageBound = "1";
-        endEl.addEventListener("change", () => {
-          const v = endEl.value || "";
-          state.period.end = v;
-          _tbVoyageSyncBoundsToSegments({ start: null, end: v });
-        });
-      }
-    }
-  } catch (e) {
-    console.warn("[settings] voyage bounds compute failed", e);
-  }
-
-  if (startEl) startEl.value = voyageStart || "";
-  if (endEl) endEl.value = voyageEnd || "";
-
-  // keep rate visible if present (read-only in UI)
-  if (rateEl) rateEl.value = String(p.eurBaseRate || "");
-
-  // segments UI
-  renderBudgetSegmentsUI();
-  try { renderManualFxBox(); } catch (e) { console.warn('[manual fx] render failed', e); }
-
-  // categories UI
-  try { renderCategoriesSettingsUI(); } catch (e) { console.warn('[categories] render failed', e); }
-}
-
-/** Update first/last segment dates in local UI edits (does NOT write DB). */
-function _tbVoyageSyncBoundsToSegments({ start, end }) {
-  const p = state.period || {};
-  const pid = String(p.id || "");
-  const segs = (state.budgetSegments || [])
-    .filter(s => s && String(s.periodId || s.period_id) === pid)
-    .slice()
-    .sort((a,b) => String(a.start||"").localeCompare(String(b.start||"")));
-
-  if (!segs.length) return;
-
-  const first = segs[0];
-  const last = segs[segs.length - 1];
-
-  if (start !== null && start !== undefined) _tbSegSet(String(first.id), "start", start);
-  if (end !== null && end !== undefined) _tbSegSet(String(last.id), "end", end);
-}
-
 /* =========================
-   Budget Segments UI (V6.4 minimal)
+   Settings: voyages + segments UI
+   - Voyage = row in periods (dates only editable in UI)
+   - Segments = budget_segments (daily budget + base currency + FX)
    ========================= */
 
-function _segRowHTML(seg, idx, total) {
-  const id = seg.id;
-  const isLast = (idx === (total - 1));
-  const edits = (window.__TB_SEG_EDITS__ && window.__TB_SEG_EDITS__[id]) || {};
-  const start = edits.start ?? seg.start;
-  const end = edits.end ?? seg.end;
-  const baseCurrency = edits.baseCurrency ?? seg.baseCurrency;
-  const _autoOk = (typeof tbFxIsAutoAvailable === "function") ? tbFxIsAutoAvailable(baseCurrency) : false;
-  const fxModeForced = _autoOk ? "live_ecb" : "fixed";
-  const dailyBudgetBase = edits.dailyBudgetBase ?? seg.dailyBudgetBase;
-    // FX mode is forced by provider availability (no user selection)
-  const fxModeRaw = edits.fxMode ?? seg.fxMode ?? "live_ecb";
-  const fxMode = fxModeForced;
-  const eurBaseRateFixed = (edits.eurBaseRateFixed ?? seg.eurBaseRateFixed) ?? "";
-  const sortOrder = edits.sortOrder ?? seg.sortOrder ?? 0;
+/* ---------- helpers ---------- */
 
-  return `
-    <div class="card" style="padding:12px; margin:10px 0;">
-      <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-end;">
-        <div style="min-width:160px;">
-          <div class="label">Début période</div>
-          <input class="input" value="${escapeHTML(start || "")}" onchange="_tbSegSet('${id}','start',this.value)" />
-        </div>
-        <div style="min-width:160px;">
-          <div class="label">Fin période</div>
-          <input class="input" value="${escapeHTML(end || "")}" onchange="_tbSegSet('${id}','end',this.value)" />
-        </div>
-        <div style="min-width:140px;">
-          <div class="label">Devise base ${typeof tbHelp==="function" ? tbHelp("Devise utilisée pour le budget/jour et les courbes sur ce segment.") : ""}</div>
-          <input class="input" list="tbCurrencyList" value="${escapeHTML(String(baseCurrency || '').toUpperCase())}"
-            oninput="_tbSegSet('${id}','baseCurrency',this.value)"
-            onchange="_tbSegSet('${id}','baseCurrency',this.value)" />
-          <div class="hint">Tu peux saisir un code ISO3 non listé (ex: IDR, PHP). Si Auto FX ne le supporte pas, ajoute un taux manuel ci-dessous.</div>
-        </div>
-        <div style="min-width:160px;">
-          <div class="label">Budget/jour (base)</div>
-          <input class="input" value="${escapeHTML(String(dailyBudgetBase ?? ""))}" onchange="_tbSegSet('${id}','dailyBudgetBase',this.value)" />
-        </div>
-        <div style="min-width:160px;">
-          <div class="label">Taux FX ${typeof tbHelp==="function" ? tbHelp("Auto = utilise le taux FX si disponible. Fixe = tu fournis un taux manuel pour EUR→BASE.") : ""}</div>
-          <div class="muted" style="font-size:12px; line-height:1.2;">Auto (FX) si disponible, sinon manuel requis.</div>
-        <div style="min-width:160px;">
-          <div class="label">EUR→BASE ${typeof tbHelp==="function" ? tbHelp("Taux de conversion EUR→Devise base. En auto, ce champ est verrouillé si FX fournit le taux.") : ""}</div>
-          ${(() => {
-            const cur = String(baseCurrency||"").toUpperCase();
-            const auto = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
-            const manual = (typeof tbFxGetManualRates === "function") ? tbFxGetManualRates() : {};
-            const live = (cur === "EUR") ? 1 : (auto && auto[cur]);
-            const manualRate = (cur === "EUR") ? 1 : (manual && manual[cur]);
-
-            // Auto if available, else require manual. If a manual rate exists, prefill it.
-            const needsManual = (!live && cur !== "EUR");
-            const v = (live ? live : (eurBaseRateFixed || manualRate || ""));
-
-            // Always editable: if user changes, store fixed and set fxMode=fixed
-            const onch = `_tbSegSet('${id}','eurBaseRateFixed',this.value);_tbSegSet('${id}','fxMode','fixed')`;
-            const ph = needsManual ? "placeholder=\"ex: 36.57\"" : "";
-            const hint = live ? `<div class="muted" style="font-size:12px;margin-top:4px;">Auto FX détecté. Tu peux modifier pour forcer un taux manuel.</div>` : "";
-            return `<div><input class="input" value="${escapeHTML(String(v))}" ${ph} onchange="${onch}" />${hint}</div>`;          })()}
-        </div>
-        <div style="display:flex; gap:8px; align-items:center; margin-left:auto;">
-          <button class="btn" onclick="saveBudgetSegment('${id}')">Enregistrer</button>
-        </div>
-      </div>
-    </div>
-  `;
+function _tbToastOk(msg){ try{ if(typeof toastOk==="function") return toastOk(msg); }catch(_){}
+  try{ if(typeof toastInfo==="function") return toastInfo(msg); }catch(_){}
+  try{ if(typeof toastWarn==="function") return toastWarn(msg); }catch(_){}
+  try{ alert(msg); }catch(_){}
 }
 
-function renderBudgetSegmentsUI() {
-  // Ensure a shared datalist for currency inputs
-  try {
-    if (!document.getElementById("tbCurrencyList")) {
-      const dl = document.createElement("datalist");
-      dl.id = "tbCurrencyList";
-      document.body.appendChild(dl);
-    }
-    const dl = document.getElementById("tbCurrencyList");
-    const list = (typeof tbGetAvailableCurrencies === "function") ? tbGetAvailableCurrencies() : ["EUR","USD","THB"];
-    dl.innerHTML = list.map(c => `<option value="${String(c||"").toUpperCase()}"></option>`).join("");
-  } catch (_) {}
-
-  const host = document.getElementById("seg-list");
-  if (!host) return;
-
-  const segs = (state.budgetSegments || []).filter((s) => s && s.periodId === state.period.id);
-  if (!segs.length) {
-    host.innerHTML = `<div class="muted">Aucun période (il sera auto-créé au refresh si besoin).</div>`;
-    return;
-  }
-
-  // In-memory edits buffer
-  window.__TB_SEG_EDITS__ = window.__TB_SEG_EDITS__ || {};
-
-  host.innerHTML = segs.map((seg, idx) => _segRowHTML(seg, idx, segs.length)).join("");
+function _tbParseNum(v){
+  if(v===null||v===undefined) return NaN;
+  const s = String(v).replace(/\u00A0/g,' ').trim().replace(/\s+/g,'');
+  if(!s) return NaN;
+  return Number(s.replace(',', '.'));
 }
 
-function _tbSegSet(id, key, value) {
-  window.__TB_SEG_EDITS__ = window.__TB_SEG_EDITS__ || {};
-  window.__TB_SEG_EDITS__[id] = window.__TB_SEG_EDITS__[id] || {};
-  window.__TB_SEG_EDITS__[id][key] = value;
+function _tbISO(d){
+  if(!d) return null;
+  if(typeof d==="string") return d.slice(0,10);
+  try{ return new Date(d).toISOString().slice(0,10); }catch(_){ return null; }
 }
 
-// Parse numbers from UI inputs (handles comma decimals)
-function _tbParseNum(v) {
-  if (v === null || v === undefined) return NaN;
-  if (typeof v === "number") return v;
-  let s = String(v).trim();
-  if (!s) return NaN;
-  // remove spaces (including NBSP) and normalize decimal comma
-  s = s.replace(/[\s\u00A0]/g, "").replace(",", ".");
-  return Number(s);
+function _tbAddDays(iso, n){
+  const dt = new Date(iso+"T00:00:00Z");
+  dt.setUTCDate(dt.getUTCDate()+n);
+  return dt.toISOString().slice(0,10);
 }
 
-async function saveBudgetSegment(id) {
-  await safeCall("Save période", async () => {
-    const seg = (state.budgetSegments || []).find((s) => String(s.id) === String(id));
-    if (!seg) throw new Error("Segment introuvable.");
-
-    const edits = (window.__TB_SEG_EDITS__ && window.__TB_SEG_EDITS__[id]) || {};
-    const start = (edits.start ?? seg.start) || "";
-    const end = (edits.end ?? seg.end) || "";
-
-    // Force last segment end to follow the voyage end (auto-adapt when the voyage end changes)
-    let endFixed = end;
-    try {
-      const segsAll = (state.budgetSegments || []).filter(s => s && String(s.periodId || s.period_id) === String(state.period.id));
-      const last = [...segsAll].sort((a,b) => Number(a.sortOrder ?? a.sort_order ?? 0) - Number(b.sortOrder ?? b.sort_order ?? 0)).pop();
-      if (last && String(last.id) === String(id)) {
-        endFixed = String(state?.period?.end || endFixed || "");
-      }
-    } catch (_) {}
-const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
-	const dailyBudgetBase = _tbParseNum(edits.dailyBudgetBase ?? seg.dailyBudgetBase);
-    // NOTE: eurBaseRateFixed is read-only in auto (we display the live value).
-    let eurBaseRateFixedRaw = edits.eurBaseRateFixed ?? seg.eurBaseRateFixed;
-    let eurBaseRateFixed =
-      eurBaseRateFixedRaw === "" || eurBaseRateFixedRaw === null || eurBaseRateFixedRaw === undefined
-        ? null
-		: _tbParseNum(eurBaseRateFixedRaw);
-
-    // fx_mode is automatic: use "fixed" only when a manual EUR→BASE rate is provided.
-    let fxMode = (eurBaseRateFixed !== null && isFinite(eurBaseRateFixed) && eurBaseRateFixed > 0) ? "fixed" : "live_ecb";
-
-    const sD = parseISODateOrNull(start);
-    const eD = parseISODateOrNull(endFixed);
-    if (!sD || !eD) throw new Error("Dates invalides.");
-    if (eD < sD) throw new Error("Fin < début.");
-    if (!baseCurrency) throw new Error("Devise vide.");
-    if (!isFinite(dailyBudgetBase) || dailyBudgetBase <= 0) throw new Error("Budget/jour invalide.");
-
-    if (fxMode === "fixed") {
-      const bc = String(baseCurrency || "").toUpperCase();
-
-      // fixed + EUR base => 1
-      if (bc === "EUR") eurBaseRateFixed = 1;
-
-      // fixed + non-EUR => require a positive number; try autofill if missing
-      if (bc !== "EUR" && (eurBaseRateFixed === null || !isFinite(eurBaseRateFixed) || eurBaseRateFixed <= 0)) {
-        let auto = null;
-
-        if (typeof window.fxGetEurRates === "function") {
-          const rates = window.fxGetEurRates() || {};
-          const v = Number(rates[bc]);
-          if (isFinite(v) && v > 0) auto = v;
-        }
-
-        if ((auto === null || !isFinite(auto) || auto <= 0) && String(state?.period?.baseCurrency || "").toUpperCase() === bc) {
-          const v = Number(state?.period?.eurBaseRate || state?.period?.eur_base_rate);
-          if (isFinite(v) && v > 0) auto = v;
-        }
-
-        if (auto !== null && isFinite(auto) && auto > 0) {
-          eurBaseRateFixed = auto;
-        } else {
-          throw new Error("Taux EUR→BASE requis en fixed (ou mets FX mode = live).");
-        }
-      }
-    } else {
-      // auto => we don't require a fixed rate
-      eurBaseRateFixed = null;
-    }
-    // === Normalisation & auto-adaptation (no holes) ===
-    const _norm = (d) => {
-      const s = String(d || "").trim();
-      if (!s) return "";
-      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-      const dt = new Date(s);
-      if (!Number.isFinite(dt.getTime())) throw new Error(`Date invalide: ${s}`);
-      return toLocalISODate(dt);
-    };
-
-    let startN = _norm(start);
-    let endN = _norm(endFixed);
-
-    if (startN && endN && startN > endN) throw new Error("start ≤ end requis.");
-
-    // Clamp first/last to voyage bounds (prevents holes at edges)
-    const voyageStart = String(state?.period?.start || state?.period?.start_date || "").trim();
-    const voyageEnd = String(state?.period?.end || state?.period?.end_date || "").trim();
-
-    // Determine neighbors in chronological order
-    const segsSame = (state.budgetSegments || [])
-      .filter(s => s && String(s.periodId || s.period_id) === String(state.period.id))
-      .slice()
-      .sort((a,b) => String(a.start_date || a.start || "").localeCompare(String(b.start_date || b.start || "")));
-
-    const idx = segsSame.findIndex(s => String(s.id) === String(id));
-    const isFirst = idx === 0;
-    const isLast = idx === segsSame.length - 1;
-
-    if (isFirst && voyageStart) startN = voyageStart;
-    if (isLast && voyageEnd) endN = voyageEnd;
-
-    // Compute desired neighbor bounds so there are no gaps
-    const prev = (idx > 0) ? segsSame[idx - 1] : null;
-    const next = (idx >= 0 && idx < segsSame.length - 1) ? segsSame[idx + 1] : null;
-
-    let prevEnd = prev ? _tbDayBefore(startN) : null;
-    let nextStart = next ? _tbDayAfter(endN) : null;
-
-    // prevent invalid ranges on neighbors
-    if (prev && prevEnd && prevEnd < String(prev.start_date || prev.start || "")) {
-      prevEnd = String(prev.start_date || prev.start || "");
-    }
-    if (next && nextStart && nextStart > String(next.end_date || next.end || "")) {
-      nextStart = String(next.end_date || next.end || "");
-    }
-
-
-
-    // Safe ordering to satisfy budget_segments_no_overlap exclusion constraint
-    const curSeg = (idx >= 0) ? segsSame[idx] : null;
-    const oldStart = curSeg ? String(curSeg.start_date || curSeg.start || "").slice(0,10) : startN;
-    const oldEnd = curSeg ? String(curSeg.end_date || curSeg.end || "").slice(0,10) : endN;
-
-    // If expanding into prev/next, shrink neighbors FIRST
-    if (prev && prevEnd && startN < oldStart) {
-      const { error: pe0 } = await sb
-        .from(TB_CONST.TABLES.budget_segments)
-        .update({ end_date: prevEnd, updated_at: new Date().toISOString() })
-        .eq("id", prev.id);
-      if (pe0) throw pe0;
-    }
-    if (next && nextStart && endN > oldEnd) {
-      const { error: ne0 } = await sb
-        .from(TB_CONST.TABLES.budget_segments)
-        .update({ start_date: nextStart, updated_at: new Date().toISOString() })
-        .eq("id", next.id);
-      if (ne0) throw ne0;
-    }
-
-    const { error } = await sb
-      .from(TB_CONST.TABLES.budget_segments)
-      .update({
-        start_date: startN,
-        end_date: endN,
-        base_currency: baseCurrency,
-        daily_budget_base: dailyBudgetBase,
-        fx_mode: fxMode,
-        // V6.5 FX storage
-        fx_rate_eur_to_base: (fxMode === "fixed" ? eurBaseRateFixed : null),
-        fx_source: (fxMode === "fixed" ? "manual" : "fx"),
-        fx_last_updated_at: (fxMode === "fixed" ? new Date().toISOString() : new Date().toISOString()),
-        // legacy compat (kept while DB migration is rolling)
-        eur_base_rate_fixed: eurBaseRateFixed,
-        // sort_order intentionally not updated (order is fixed)
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-
-    if (error) throw error;
-
-    // If shrinking, extend neighbors AFTER (fills the gap without overlapping)
-    if (prev && prevEnd && startN > oldStart) {
-      const { error: pe } = await sb
-        .from(TB_CONST.TABLES.budget_segments)
-        .update({ end_date: prevEnd, updated_at: new Date().toISOString() })
-        .eq("id", prev.id);
-      if (pe) throw pe;
-    }
-    if (next && nextStart && endN < oldEnd) {
-      const { error: ne } = await sb
-        .from(TB_CONST.TABLES.budget_segments)
-        .update({ start_date: nextStart, updated_at: new Date().toISOString() })
-        .eq("id", next.id);
-      if (ne) throw ne;
-    }
-
-    await _tbRecalcSortOrders(state.period.id);
-
-
-    
-
-    await _syncLastSegmentEndToPeriod(state.period.id);
-    await _syncFirstSegmentStartToPeriod(state.period.id);
-if (window.__TB_SEG_EDITS__) delete window.__TB_SEG_EDITS__[id];
-
-    await refreshFromServer();
-    renderSettings();
-    renderWallets();
-  });
-}
-
-
-
-
-async function _syncFirstSegmentStartToPeriod(periodId) {
-  try {
-    const sbx = _tbGetSB ? _tbGetSB() : (typeof sb !== "undefined" ? sb : null);
-    if (!sbx) return;
-    const pid = String(periodId || state?.period?.id || "");
-    if (!pid) return;
-
-    const { data, error } = await sbx
-      .from(TB_CONST.TABLES.budget_segments)
-      .select("start_date")
-      .eq("period_id", pid)
-      .order("start_date", { ascending: true })
-      .limit(1);
-
-    if (error) throw error;
-    const first = Array.isArray(data) && data[0] ? String(data[0].start_date || "").slice(0,10) : null;
-    if (!first) return;
-
-    await sbx.from(TB_CONST.TABLES.periods).update({ start_date: first, updated_at: new Date().toISOString() }).eq("id", pid);
-  } catch (e) {
-    console.warn("[settings] bounds sync first segment failed", e);
-  }
-}
-
-async function _syncLastSegmentEndToPeriod(periodId) {
-  try {
-    const sbx = _tbGetSB ? _tbGetSB() : (typeof sb !== "undefined" ? sb : null);
-    if (!sbx) return;
-    const pid = String(periodId || state?.period?.id || "");
-    if (!pid) return;
-
-    const { data, error } = await sbx
-      .from(TB_CONST.TABLES.budget_segments)
-      .select("end_date")
-      .eq("period_id", pid)
-      .order("end_date", { ascending: false })
-      .limit(1);
-
-    if (error) throw error;
-    const last = Array.isArray(data) && data[0] ? String(data[0].end_date || "").slice(0,10) : null;
-    if (!last) return;
-
-    await sbx.from(TB_CONST.TABLES.periods).update({ end_date: last, updated_at: new Date().toISOString() }).eq("id", pid);
-  } catch (e) {
-    console.warn("[settings] bounds sync last segment failed", e);
-  }
-}
-
-
-// helpers
-function _tbDayBefore(iso) { return _tbDateAddDays(iso, -1); }
-function _tbDayAfter(iso) { return _tbDateAddDays(iso, 1); }
-
-async function _tbRecalcSortOrders(periodId) {
-  try {
-    const sb = window.sb;
-    const pid = String(periodId || "");
-    if (!sb || !pid) return;
-
-    const { data, error } = await sb
-      .from(TB_CONST.TABLES.budget_segments)
-      .select("id,start_date")
-      .eq("period_id", pid)
-      .order("start_date", { ascending: true });
-
-    if (error) throw error;
-    const rows = Array.isArray(data) ? data : [];
-    for (let i = 0; i < rows.length; i++) {
-      const id = rows[i].id;
-      await sb
-        .from(TB_CONST.TABLES.budget_segments)
-        .update({ sort_order: i, updated_at: new Date().toISOString() })
-        .eq("id", id);
-    }
-  } catch (e) {
-    console.warn("[segments] recalc sort_order failed", e);
-  }
-}
-function _tbDateAddDays(iso, deltaDays) {
-  try {
-    const d = new Date(String(iso) + "T00:00:00");
-    d.setDate(d.getDate() + Number(deltaDays||0));
-    return d.toISOString().slice(0,10);
-  } catch (_) { return iso; }
-}
-
-
-/* =========================
-   Voyage / Segments actions (V6.6.67c+)
-   - saveSettings: voyage dates only (periods table)
-   - newPeriod: add/insert segment (budget_segments) inside existing segment (no holes)
-   - createVoyagePrompt: add voyage (period) + default first segment
-   ========================= */
-
-async function _tbAuthUid() {
-  try {
-    // Prefer state
-    const sid = state?.session?.user?.id || state?.auth?.user?.id || state?.user?.id;
-    if (sid) return sid;
-
-    // Supabase client global 'sb' exists in this project
-    if (typeof sb !== "undefined" && sb?.auth) {
-      // Newer supabase-js
-      if (typeof sb.auth.getUser === "function") {
-        const { data } = await sb.auth.getUser();
-        const uid = data?.user?.id;
-        if (uid) return uid;
-      }
-      // Legacy supabase-js
-      if (typeof sb.auth.session === "function") {
-        const s = sb.auth.session();
-        const uid = s?.user?.id;
-        if (uid) return uid;
-      }
-    }
-  } catch (_) {}
+function _tbGetSB(){
+  try{ if(typeof sb!=="undefined" && sb && typeof sb.from==="function") return sb; }catch(_){}
+  try{ if(window.sb && typeof window.sb.from==="function") return window.sb; }catch(_){}
+  try{ if(window.supabase && typeof window.supabase.from==="function") return window.supabase; }catch(_){}
+  try{ if(window.supabaseClient && typeof window.supabaseClient.from==="function") return window.supabaseClient; }catch(_){}
   return null;
 }
 
-function _tbGetSB() {
-  try {
-    if (typeof sb !== "undefined" && sb && typeof sb.from === "function") return sb;
-  } catch (_) {}
-  return (window && window.sb && typeof window.sb.from === "function") ? window.sb : null;
+async function _tbAuthUid(){
+  try{
+    if(window.state && state.session && state.session.user && state.session.user.id) return state.session.user.id;
+  }catch(_){}
+  const s = _tbGetSB();
+  if(!s) return null;
+  try{
+    if(s.auth && typeof s.auth.getUser==="function"){
+      const r = await s.auth.getUser();
+      const u = r && r.data && r.data.user;
+      if(u && u.id) return u.id;
+    }
+  }catch(_){}
+  try{
+    if(s.auth && typeof s.auth.getSession==="function"){
+      const r = await s.auth.getSession();
+      const ss = r && r.data && r.data.session;
+      if(ss && ss.user && ss.user.id) return ss.user.id;
+    }
+  }catch(_){}
+  try{
+    if(s.auth && typeof s.auth.session==="function"){
+      const ss = s.auth.session();
+      if(ss && ss.user && ss.user.id) return ss.user.id;
+    }
+  }catch(_){}
+  return null;
 }
 
-// Save only voyage dates; keep DB-required fields untouched (eur_base_rate, base_currency, etc.)
-async function saveSettings() {
-  await safeCall("Enregistrer voyage", async () => {
-    const sbx = _tbGetSB();
-    if (!sbx) throw new Error("Supabase non prêt.");
-    const pid = state?.period?.id;
-    if (!pid) throw new Error("Aucun voyage actif.");
+/* ---------- data loaders ---------- */
 
-    const startEl = document.getElementById("s-start");
-    const endEl = document.getElementById("s-end");
-    const voyageStart = String(startEl?.value || state.period.start || state.period.start_date || "").slice(0,10);
-    const voyageEnd = String(endEl?.value || state.period.end || state.period.end_date || "").slice(0,10);
-    if (!voyageStart || !voyageEnd) throw new Error("Dates voyage invalides.");
-    if (voyageEnd < voyageStart) throw new Error("La fin du voyage doit être ≥ début.");
+async function loadPeriodsListIntoUI(){
+  const sel = document.getElementById("s-period");
+  if(!sel) return;
 
-    // Patch voyage dates only
-    const { error } = await sbx
-      .from(TB_CONST.TABLES.periods)
-      .update({ start_date: voyageStart, end_date: voyageEnd, updated_at: new Date().toISOString() })
-      .eq("id", pid);
-    if (error) throw error;
-
-    // Clamp first/last segments to voyage bounds (no holes at edges)
-    await _syncFirstSegmentStartToPeriod(pid);
-    await _syncLastSegmentEndToPeriod(pid);
-
-    await refreshFromServer();
-    if (typeof renderSettings === "function") renderSettings();
-    if (typeof renderWallets === "function") renderWallets();
+  sel.innerHTML = "";
+  const periods = (state.periods || []).slice().sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+  periods.forEach(p=>{
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = (p.name && String(p.name).trim())
+      ? String(p.name).trim()
+      : `Voyage ${_tbISO(p.start_date)} → ${_tbISO(p.end_date)}`;
+    sel.appendChild(opt);
   });
-}
 
-// Insert a new segment inside an existing one (no holes). Requires new range fully inside one existing segment.
-async function _tbInsertSegmentInsideExisting(startIso, endIso, baseCurrency, dailyBudgetBase) {
-  const sbx = _tbGetSB();
-  if (!sbx) throw new Error("Supabase non prêt.");
-  const uid = await _tbAuthUid();
-  if (!uid) throw new Error("Not authenticated.");
-  const pid = state?.period?.id;
-  if (!pid) throw new Error("Aucun voyage actif.");
-
-  const startN = String(startIso || "").slice(0,10);
-  const endN = String(endIso || "").slice(0,10);
-  if (!startN || !endN || endN < startN) throw new Error("Dates invalides.");
-
-  // Find hosting segment (must fully contain)
-  const segs = (state.budgetSegments || []).filter(s => String(s.periodId || s.period_id) === String(pid));
-  const host = segs.find(s => {
-    const s0 = String(s.start_date || s.start || "").slice(0,10);
-    const e0 = String(s.end_date || s.end || "").slice(0,10);
-    return s0 && e0 && s0 <= startN && endN <= e0;
-  });
-  if (!host) throw new Error("La nouvelle période doit être incluse dans une période existante.");
-
-  const hostStart = String(host.start_date || host.start || "").slice(0,10);
-  const hostEnd = String(host.end_date || host.end || "").slice(0,10);
-
-  // Compute split ranges
-  const beforeStart = hostStart;
-  const beforeEnd = _tbDayBefore(startN);
-  const afterStart = _tbDayAfter(endN);
-  const afterEnd = hostEnd;
-
-  // Phase 1: shrink host to 'before' (or delete if empty)
-  if (beforeEnd < beforeStart) {
-    // no before part
-    const { error: delErr } = await sbx.from(TB_CONST.TABLES.budget_segments).delete().eq("id", host.id);
-    if (delErr) throw delErr;
-  } else {
-    const { error: upErr } = await sbx
-      .from(TB_CONST.TABLES.budget_segments)
-      .update({ start_date: beforeStart, end_date: beforeEnd, updated_at: new Date().toISOString() })
-      .eq("id", host.id);
-    if (upErr) throw upErr;
+  const active = state.period && state.period.id ? state.period.id : (periods[0] ? periods[0].id : "");
+  if(active){
+    sel.value = active;
+    if(!state.period || state.period.id!==active){
+      const p = periods.find(x=>x.id===active);
+      if(p) state.period = p;
+    }
   }
 
-  // Phase 2: insert new middle segment (must include user_id for RLS)
-  const segPayload = {
+  sel.onchange = async ()=>{
+    const id = sel.value;
+    const p = (state.periods||[]).find(x=>x.id===id);
+    if(p) state.period = p;
+    await refreshSegmentsForActivePeriod();
+    renderSettings();
+  };
+}
+
+async function refreshSegmentsForActivePeriod(){
+  const s = _tbGetSB();
+  if(!s) throw new Error("Supabase non prêt.");
+  const pid = state.period && state.period.id;
+  if(!pid) return;
+
+  const { data, error } = await s
+    .from("budget_segments")
+    .select("*")
+    .eq("period_id", pid)
+    .order("start_date", { ascending: true })
+    .order("sort_order", { ascending: true });
+
+  if(error) throw error;
+  state.budgetSegments = data || [];
+}
+
+/* ---------- render ---------- */
+
+function renderSettings(){
+  const view = document.getElementById("view-settings");
+  if(!view) return;
+
+  // labels
+  const h2 = view.querySelector('h2');
+  if(h2) h2.textContent = "Voyage";
+
+  const p = state.period;
+  const segs = (state.budgetSegments || []).slice().sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+
+  // voyage dates reflect real bounds from segments when available
+  const startISO = segs.length ? _tbISO(segs[0].start_date) : _tbISO(p && p.start_date);
+  const endISO   = segs.length ? _tbISO(segs[segs.length-1].end_date) : _tbISO(p && p.end_date);
+
+  const inStart = document.getElementById("s-start");
+  const inEnd   = document.getElementById("s-end");
+  if(inStart){ inStart.type="date"; inStart.value = startISO || ""; }
+  if(inEnd){ inEnd.type="date"; inEnd.value = endISO || ""; }
+
+  // ensure periods list
+  loadPeriodsListIntoUI();
+
+  // segments area
+  const host = document.getElementById("seg-list");
+  if(host){
+    host.innerHTML = "";
+    if(!segs.length){
+      host.innerHTML = '<div class="muted">Aucune période (segment) pour ce voyage.</div>';
+    }else{
+      segs.forEach((seg, idx)=>{
+        const wrap = document.createElement("div");
+        wrap.className = "card";
+        wrap.style.marginBottom = "10px";
+        wrap.innerHTML = `
+          <div class="row" style="align-items:flex-end;">
+            <div class="field">
+              <label>Début</label>
+              <input type="date" data-k="start_date" value="${_tbISO(seg.start_date)||""}" />
+            </div>
+            <div class="field">
+              <label>Fin</label>
+              <input type="date" data-k="end_date" value="${_tbISO(seg.end_date)||""}" />
+            </div>
+            <div class="field">
+              <label>Devise</label>
+              <input data-k="base_currency" value="${(seg.base_currency||"").toUpperCase()}" />
+            </div>
+            <div class="field">
+              <label>Budget/jour</label>
+              <input data-k="daily_budget_base" value="${seg.daily_budget_base ?? ""}" />
+            </div>
+            <div class="field" style="min-width:160px;">
+              <label>Taux EUR→Devise</label>
+              <input data-k="eur_base_rate_fixed" value="${seg.eur_base_rate_fixed ?? ""}" placeholder="auto si dispo" />
+            </div>
+            <div style="flex:1"></div>
+            <button class="btn primary" data-act="save">Enregistrer</button>
+            <button class="btn danger" data-act="del">Supprimer</button>
+          </div>
+          <div class="muted" style="margin-top:6px;">
+            FX: <b>${seg.fx_mode === "fixed" ? "Manuel" : "Auto"}</b>
+            ${seg.fx_last_updated_at ? ` • maj: ${String(seg.fx_last_updated_at).slice(0,10)}` : ""}
+          </div>
+        `;
+        // handlers
+        wrap.querySelector('[data-act="save"]').onclick = ()=>safeCall(()=>saveBudgetSegment(seg.id, wrap));
+        wrap.querySelector('[data-act="del"]').onclick = ()=>safeCall(()=>deleteBudgetSegment(seg.id));
+        host.appendChild(wrap);
+      });
+    }
+  }
+}
+
+/* ---------- voyage save / create / delete ---------- */
+
+async function saveSettings(){
+  const s = _tbGetSB();
+  if(!s) throw new Error("Supabase non prêt.");
+  const pid = state.period && state.period.id;
+  if(!pid) throw new Error("Voyage non sélectionné.");
+
+  const start = document.getElementById("s-start")?.value;
+  const end   = document.getElementById("s-end")?.value;
+  if(!start || !end) throw new Error("Dates invalides.");
+  if(start > end) throw new Error("Date de début > date de fin.");
+
+  // Patch period dates only
+  const { error } = await s.from("periods").update({ start_date:start, end_date:end }).eq("id", pid);
+  if(error) throw error;
+
+  // Ensure first/last segments align to voyage bounds (no holes overall)
+  await _syncVoyageBoundsToSegments(pid, start, end);
+
+  // reload
+  await bootRefreshFromServer?.();
+  _tbToastOk("Dates du voyage enregistrées.");
+}
+
+async function createVoyagePrompt(){
+  const s = _tbGetSB();
+  if(!s) throw new Error("Supabase non prêt.");
+  const uid = await _tbAuthUid();
+  if(!uid) throw new Error("Not authenticated.");
+
+  // Suggest non-overlapping dates after last voyage
+  const periods = (state.periods || []).slice().sort((a,b)=>String(a.end_date).localeCompare(String(b.end_date)));
+  const lastEnd = periods.length ? _tbISO(periods[periods.length-1].end_date) : _tbISO(new Date());
+  const sugStart = _tbAddDays(lastEnd, 1);
+  const sugEnd = _tbAddDays(sugStart, 30);
+
+  const modal = _tbEnsureModal();
+  modal.setTitle("Nouveau voyage");
+  modal.setBody(`
+    <div class="row">
+      <div class="field"><label>Début</label><input id="tb-vstart" type="date" value="${sugStart}" /></div>
+      <div class="field"><label>Fin</label><input id="tb-vend" type="date" value="${sugEnd}" /></div>
+    </div>
+    <div class="muted" style="margin-top:8px;">Le voyage doit être non chevauchant.</div>
+  `);
+  modal.setActions([
+    { label:"Annuler", className:"btn", onClick:()=>modal.close() },
+    { label:"Créer", className:"btn primary", onClick:async ()=>{
+      const start = document.getElementById("tb-vstart")?.value;
+      const end = document.getElementById("tb-vend")?.value;
+      if(!start||!end||start>end) throw new Error("Dates invalides.");
+      // local overlap check (client-side) to avoid periods_no_overlap
+      const existing = (state.periods||[]).filter(p=>p.user_id===uid || true);
+      for(const p of existing){
+        const ps=_tbISO(p.start_date), pe=_tbISO(p.end_date);
+        if(!ps||!pe) continue;
+        if(!(end < ps || start > pe)) throw new Error("Chevauchement avec un voyage existant.");
+      }
+
+
+      // insert period (defaults for base_currency/eur_base_rate/daily_budget_base ok)
+      const ins = { user_id: uid, start_date:start, end_date:end };
+      const { data, error } = await s.from("periods").insert(ins).select("id").single();
+      if(error) throw error;
+      const newPid = data.id;
+
+      // create one default segment covering whole voyage
+      const segIns = {
+        user_id: uid,
+        period_id: newPid,
+        start_date: start,
+        end_date: end,
+        base_currency: "EUR",
+        daily_budget_base: 0,
+        fx_mode: "live_ecb",
+        sort_order: 0
+      };
+      const { error: e2 } = await s.from("budget_segments").insert(segIns);
+      if(e2) throw e2;
+
+      modal.close();
+      await bootRefreshFromServer?.();
+      // activate new voyage
+      const p = (state.periods||[]).find(x=>x.id===newPid);
+      if(p) state.period = p;
+      await refreshSegmentsForActivePeriod();
+      renderSettings();
+      _tbToastOk("Voyage créé.");
+    }}
+  ]);
+  modal.open();
+}
+
+async function deleteActiveVoyage(){
+  const s = _tbGetSB();
+  if(!s) throw new Error("Supabase non prêt.");
+  const pid = state.period && state.period.id;
+  if(!pid) throw new Error("Voyage non sélectionné.");
+
+  const label = `Voyage ${_tbISO(state.period.start_date)} → ${_tbISO(state.period.end_date)}`;
+  if(!confirm(`Supprimer ${label} ?\n\nRefusé si des données y sont liées.`)) return;
+
+  const { error } = await s.from("periods").delete().eq("id", pid);
+  if(error) throw error;
+  await bootRefreshFromServer?.();
+  _tbToastOk("Voyage supprimé.");
+}
+
+/* ---------- segments create / update / delete ---------- */
+
+function _tbEnsureModal(){
+  // very small modal helper (no dependency)
+  let el = document.getElementById("tb-modal");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "tb-modal";
+    el.style.position="fixed";
+    el.style.left="0"; el.style.top="0"; el.style.right="0"; el.style.bottom="0";
+    el.style.background="rgba(0,0,0,0.45)";
+    el.style.display="none";
+    el.style.zIndex="9999";
+    el.innerHTML = `
+      <div style="max-width:520px;margin:10vh auto;background:#fff;border-radius:12px;padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <h3 id="tb-modal-title" style="margin:0;font-size:18px;">Modal</h3>
+          <button class="btn" id="tb-modal-x">X</button>
+        </div>
+        <div id="tb-modal-body"></div>
+        <div id="tb-modal-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"></div>
+      </div>`;
+    document.body.appendChild(el);
+    el.querySelector("#tb-modal-x").onclick = ()=>{ el.style.display="none"; };
+    el.addEventListener("click", (e)=>{ if(e.target===el) el.style.display="none"; });
+  }
+  return {
+    open(){ el.style.display="block"; },
+    close(){ el.style.display="none"; },
+    setTitle(t){ el.querySelector("#tb-modal-title").textContent = t; },
+    setBody(html){ el.querySelector("#tb-modal-body").innerHTML = html; },
+    setActions(btns){
+      const host = el.querySelector("#tb-modal-actions");
+      host.innerHTML="";
+      (btns||[]).forEach(b=>{
+        const bt = document.createElement("button");
+        bt.className = b.className || "btn";
+        bt.textContent = b.label;
+        bt.onclick = async ()=>{
+          try{ await b.onClick?.(); }catch(err){ console.error(err); _tbToastOk(err.message||String(err)); }
+        };
+        host.appendChild(bt);
+      });
+    }
+  };
+}
+
+async function createPeriodPrompt(){
+  const s = _tbGetSB();
+  if(!s) throw new Error("Supabase non prêt.");
+  const uid = await _tbAuthUid();
+  if(!uid) throw new Error("Not authenticated.");
+  const pid = state.period && state.period.id;
+  if(!pid) throw new Error("Voyage non sélectionné.");
+
+  const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+  if(!segs.length) throw new Error("Aucune période existante à découper.");
+
+  const vStart = _tbISO(segs[0].start_date);
+  const vEnd   = _tbISO(segs[segs.length-1].end_date);
+
+  const modal = _tbEnsureModal();
+  modal.setTitle("Ajouter une période");
+  modal.setBody(`
+    <div class="row">
+      <div class="field"><label>Début</label><input id="tb-pstart" type="date" value="${vStart}" min="${vStart}" max="${vEnd}" /></div>
+      <div class="field"><label>Fin</label><input id="tb-pend" type="date" value="${vEnd}" min="${vStart}" max="${vEnd}" /></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Devise</label><input id="tb-pcur" value="${(segs[0].base_currency||"EUR").toUpperCase()}" /></div>
+      <div class="field"><label>Budget/jour</label><input id="tb-pbud" value="${segs[0].daily_budget_base ?? 0}" /></div>
+    </div>
+    <div class="muted" style="margin-top:8px;">La nouvelle période doit être incluse dans une période existante (split automatique).</div>
+  `);
+  modal.setActions([
+    { label:"Annuler", className:"btn", onClick:()=>modal.close() },
+    { label:"Ajouter", className:"btn primary", onClick:async ()=>{
+      const start = document.getElementById("tb-pstart")?.value;
+      const end = document.getElementById("tb-pend")?.value;
+      const cur = (document.getElementById("tb-pcur")?.value || "").trim().toUpperCase();
+      const bud = _tbParseNum(document.getElementById("tb-pbud")?.value);
+      if(!start||!end||start>end) throw new Error("Dates invalides.");
+      if(start < vStart || end > vEnd) throw new Error("Hors bornes du voyage.");
+      if(!cur) throw new Error("Devise requise.");
+      if(!Number.isFinite(bud) || bud < 0) throw new Error("Budget/jour invalide.");
+
+      await _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud);
+
+      modal.close();
+      await refreshSegmentsForActivePeriod();
+      renderSettings();
+      _tbToastOk("Période ajoutée.");
+    }}
+  ]);
+  modal.open();
+}
+
+async function _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud){
+  const s = _tbGetSB();
+  if(!s) throw new Error("Supabase non prêt.");
+  const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+
+  const host = segs.find(x=>_tbISO(x.start_date) <= start && _tbISO(x.end_date) >= end);
+  if(!host) throw new Error("Aucune période existante ne couvre cet intervalle.");
+
+  const hostStart = _tbISO(host.start_date);
+  const hostEnd   = _tbISO(host.end_date);
+
+  // compute before/after
+  const beforeEnd = _tbAddDays(start, -1);
+  const afterStart = _tbAddDays(end, 1);
+
+  // shrink host to "before" if needed
+  if(hostStart <= beforeEnd){
+    const { error } = await s.from("budget_segments")
+      .update({ end_date: beforeEnd })
+      .eq("id", host.id);
+    if(error) throw error;
+  }else{
+    // host has no room before; we will delete host and recreate after if needed
+    const { error } = await s.from("budget_segments").delete().eq("id", host.id);
+    if(error) throw error;
+  }
+
+  // insert new segment
+  const newSeg = {
     user_id: uid,
     period_id: pid,
-    start_date: startN,
-    end_date: endN,
-    base_currency: String(baseCurrency || host.base_currency || "EUR").toUpperCase(),
-    daily_budget_base: Number(dailyBudgetBase || host.daily_budget_base || 0),
-    fx_mode: "auto",
-    sort_order: 9999,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    start_date: start,
+    end_date: end,
+    base_currency: cur,
+    daily_budget_base: bud,
+    fx_mode: "live_ecb",
+    sort_order: 0
   };
+  const { error: e2 } = await s.from("budget_segments").insert(newSeg);
+  if(e2) throw e2;
 
-  const { data: insData, error: insErr } = await sbx
-    .from(TB_CONST.TABLES.budget_segments)
-    .insert([segPayload])
-    .select("id");
-  if (insErr) throw insErr;
-
-  // Phase 3: create 'after' part if needed (new row) — also needs user_id
-  if (afterStart <= afterEnd) {
-    const afterPayload = {
+  // insert after segment if needed
+  if(afterStart <= hostEnd){
+    const afterSeg = {
       user_id: uid,
       period_id: pid,
       start_date: afterStart,
-      end_date: afterEnd,
-      base_currency: String(host.base_currency || "EUR").toUpperCase(),
-      daily_budget_base: Number(host.daily_budget_base || 0),
-      fx_mode: host.fx_mode || "auto",
-      sort_order: 9999,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      end_date: hostEnd,
+      base_currency: host.base_currency || "EUR",
+      daily_budget_base: host.daily_budget_base ?? 0,
+      fx_mode: host.fx_mode || "live_ecb",
+      eur_base_rate_fixed: host.eur_base_rate_fixed ?? null,
+      sort_order: 0
     };
-    const { error: aErr } = await sbx.from(TB_CONST.TABLES.budget_segments).insert([afterPayload]);
-    if (aErr) throw aErr;
+    const { error: e3 } = await s.from("budget_segments").insert(afterSeg);
+    if(e3) throw e3;
   }
 
-  await _tbRecalcSortOrders(pid);
-  await _syncFirstSegmentStartToPeriod(pid);
-  await _syncLastSegmentEndToPeriod(pid);
+  await _tbRecalcSegmentSortOrder(pid);
+  await _syncSegmentsBoundsToPeriod(pid);
 }
 
-async function newPeriod() {
-  await safeCall("Ajouter période", async () => {
-    // Basic prompt-based modal fallback (keeps dependencies low)
-    const start = prompt("Début de la nouvelle période (YYYY-MM-DD) ?");
-    if (!start) return;
-    const end = prompt("Fin de la nouvelle période (YYYY-MM-DD) ?");
-    if (!end) return;
+async function saveBudgetSegment(segId, wrapEl){
+  const s = _tbGetSB();
+  if(!s) throw new Error("Supabase non prêt.");
+  const uid = await _tbAuthUid();
+  if(!uid) throw new Error("Not authenticated.");
+  const pid = state.period && state.period.id;
+  if(!pid) throw new Error("Voyage non sélectionné.");
 
-    const base = prompt("Devise de la période (ISO3, ex: EUR, THB, IDR) ?", "EUR");
-    if (!base) return;
+  const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+  const idx = segs.findIndex(x=>x.id===segId);
+  if(idx<0) throw new Error("Période introuvable.");
 
-    const daily = prompt("Budget/jour (dans la devise de la période) ?", "0");
-    const dailyN = Number(String(daily||"").replace(",", "."));
-    if (!Number.isFinite(dailyN) || dailyN < 0) throw new Error("Budget/jour invalide.");
+  const seg = segs[idx];
+  const getVal = (k)=>wrapEl.querySelector(`[data-k="${k}"]`)?.value;
 
-    await _tbInsertSegmentInsideExisting(start, end, base, dailyN);
+  const newStart = getVal("start_date");
+  const newEnd = getVal("end_date");
+  const newCur = (getVal("base_currency")||"").trim().toUpperCase();
+  const newBud = _tbParseNum(getVal("daily_budget_base"));
+  const newRate = _tbParseNum(getVal("eur_base_rate_fixed"));
 
-    await refreshFromServer();
-    if (typeof renderSettings === "function") renderSettings();
-  });
+  if(!newStart||!newEnd||newStart>newEnd) throw new Error("Dates invalides.");
+  if(!newCur) throw new Error("Devise requise.");
+  if(!Number.isFinite(newBud) || newBud < 0) throw new Error("Budget/jour invalide.");
+
+  // neighbors
+  const prev = idx>0 ? segs[idx-1] : null;
+  const next = idx<segs.length-1 ? segs[idx+1] : null;
+
+  // phase A: shrink neighbors if we expand into them
+  if(prev){
+    const prevEnd = _tbISO(prev.end_date);
+    if(prevEnd >= newStart){
+      const newPrevEnd = _tbAddDays(newStart, -1);
+      const { error } = await s.from("budget_segments").update({ end_date: newPrevEnd }).eq("id", prev.id);
+      if(error) throw error;
+    }
+  }
+  if(next){
+    const nextStart = _tbISO(next.start_date);
+    if(nextStart <= newEnd){
+      const newNextStart = _tbAddDays(newEnd, 1);
+      const { error } = await s.from("budget_segments").update({ start_date: newNextStart }).eq("id", next.id);
+      if(error) throw error;
+    }
+  }
+
+  // phase B: update current
+  const patch = {
+    start_date: newStart,
+    end_date: newEnd,
+    base_currency: newCur,
+    daily_budget_base: newBud,
+    fx_mode: (Number.isFinite(newRate) && newRate>0) ? "fixed" : "live_ecb",
+    eur_base_rate_fixed: (Number.isFinite(newRate) && newRate>0) ? newRate : null,
+    user_id: uid,
+    period_id: pid
+  };
+  const { error: e2 } = await s.from("budget_segments").update(patch).eq("id", segId);
+  if(e2) throw e2;
+
+  // phase C: fill gaps created by shrinking current (only immediate neighbors)
+  if(prev){
+    const prevEndNew = _tbISO((await _tbFetchSeg(prev.id)).end_date);
+    const desiredPrevEnd = _tbAddDays(newStart, -1);
+    if(prevEndNew < desiredPrevEnd){
+      const { error } = await s.from("budget_segments").update({ end_date: desiredPrevEnd }).eq("id", prev.id);
+      if(error) throw error;
+    }
+  }
+  if(next){
+    const nextStartNew = _tbISO((await _tbFetchSeg(next.id)).start_date);
+    const desiredNextStart = _tbAddDays(newEnd, 1);
+    if(nextStartNew > desiredNextStart){
+      const { error } = await s.from("budget_segments").update({ start_date: desiredNextStart }).eq("id", next.id);
+      if(error) throw error;
+    }
+  }
+
+  await _tbRecalcSegmentSortOrder(pid);
+  await _syncSegmentsBoundsToPeriod(pid);
+  await refreshSegmentsForActivePeriod();
+  renderSettings();
+  _tbToastOk("Période enregistrée.");
 }
 
-// Add voyage (period) + one default segment covering whole range.
-// Note: periods table has NOT NULL eur_base_rate; we set base_currency='EUR' and eur_base_rate=1 by default.
-async function createVoyagePrompt() {
-  await safeCall("Ajouter voyage", async () => {
-    const sbx = _tbGetSB();
-    if (!sbx) throw new Error("Supabase non prêt.");
-    const uid = await _tbAuthUid();
-    if (!uid) throw new Error("Not authenticated.");
-
-    const start = prompt("Début du voyage (YYYY-MM-DD) ?");
-    if (!start) return;
-    const end = prompt("Fin du voyage (YYYY-MM-DD) ?");
-    if (!end) return;
-    const startN = String(start).slice(0,10);
-    const endN = String(end).slice(0,10);
-    if (!startN || !endN || endN < startN) throw new Error("Dates invalides.");
-
-    // Create period (voyage)
-    const periodPayload = {
-      user_id: uid,
-      start_date: startN,
-      end_date: endN,
-      base_currency: "EUR",
-      daily_budget_base: 0,
-      eur_base_rate: 1,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const { data: pData, error: pErr } = await sbx
-      .from(TB_CONST.TABLES.periods)
-      .insert([periodPayload])
-      .select("id")
-      .single();
-
-    if (pErr) throw pErr;
-    const periodId = pData?.id;
-    if (!periodId) throw new Error("Création voyage échouée.");
-
-    // Create a single default segment covering full voyage
-    const segPayload = {
-      user_id: uid,
-      period_id: periodId,
-      start_date: startN,
-      end_date: endN,
-      base_currency: "EUR",
-      daily_budget_base: 0,
-      fx_mode: "auto",
-      sort_order: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const { error: sErr } = await sbx.from(TB_CONST.TABLES.budget_segments).insert([segPayload]);
-    if (sErr) throw sErr;
-
-    await refreshFromServer();
-    await setActivePeriod(periodId);
-    await refreshFromServer();
-    if (typeof renderSettings === "function") renderSettings();
-    if (typeof renderWallets === "function") renderWallets();
-  });
+async function _tbFetchSeg(id){
+  const s = _tbGetSB();
+  const { data, error } = await s.from("budget_segments").select("*").eq("id", id).single();
+  if(error) throw error;
+  return data;
 }
 
-// Backward-compat globals used by index.html
-window.saveSettings = saveSettings;
-window.newPeriod = newPeriod;
-window.createPeriodPrompt = newPeriod;
-window.createVoyagePrompt = createVoyagePrompt;
-window.deleteActivePeriod = deletePeriod;
+async function deleteBudgetSegment(segId){
+  const s = _tbGetSB();
+  if(!s) throw new Error("Supabase non prêt.");
+  const pid = state.period && state.period.id;
+  if(!pid) throw new Error("Voyage non sélectionné.");
 
+  const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+  if(segs.length<=1) throw new Error("Impossible: au moins 1 période requise.");
 
-async function deletePeriod() {
-  await safeCall("Supprimer période", async () => {
-    if (!state.period.id) throw new Error("Aucune période active.");
-    if (!confirm("Supprimer cette période ?")) return;
+  const idx = segs.findIndex(x=>x.id===segId);
+  if(idx<0) throw new Error("Période introuvable.");
 
-    await sb.from(TB_CONST.TABLES.budget_segments).delete().eq("period_id", state.period.id);
+  const seg = segs[idx];
+  if(!confirm(`Supprimer la période ${_tbISO(seg.start_date)} → ${_tbISO(seg.end_date)} ?`)) return;
 
-    const { error } = await sb.from(TB_CONST.TABLES.periods).delete().eq("id", state.period.id);
-    if (error) throw error;
+  const prev = idx>0 ? segs[idx-1] : null;
+  const next = idx<segs.length-1 ? segs[idx+1] : null;
 
-    await refreshFromServer();
-    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("14_settings_periods_ui.js"); else if (typeof renderAll === "function") renderAll();
-});
+  // delete
+  const { error } = await s.from("budget_segments").delete().eq("id", segId);
+  if(error) throw error;
+
+  // merge gap to neighbor (prefer prev)
+  if(prev && next){
+    // extend prev to cover until next.start-1, then shift next.start if needed
+    const newPrevEnd = _tbAddDays(_tbISO(next.start_date), -1);
+    const { error: e1 } = await s.from("budget_segments").update({ end_date: newPrevEnd }).eq("id", prev.id);
+    if(e1) throw e1;
+  }else if(prev && !next){
+    // extend prev to voyage end (will sync)
+  }else if(!prev && next){
+    // extend next backward to voyage start (will sync)
+  }
+
+  await _tbRecalcSegmentSortOrder(pid);
+  await _syncSegmentsBoundsToPeriod(pid);
+  await refreshSegmentsForActivePeriod();
+  renderSettings();
+  _tbToastOk("Période supprimée.");
 }
 
-(function bindSettingsButtons() {
-  const btnSave = document.getElementById("btn-save-period");
-  const btnNew = document.getElementById("btn-new-period");
-  const btnDel = document.getElementById("btn-del-period");
+async function _tbRecalcSegmentSortOrder(pid){
+  const s = _tbGetSB();
+  const { data, error } = await s.from("budget_segments").select("id,start_date").eq("period_id", pid).order("start_date", {ascending:true});
+  if(error) throw error;
+  const rows = data || [];
+  for(let i=0;i<rows.length;i++){
+    await s.from("budget_segments").update({ sort_order:i }).eq("id", rows[i].id);
+  }
+}
 
-  if (btnSave) btnSave.onclick = saveSettings;
-  if (btnNew) btnNew.onclick = newPeriod;
-  if (btnDel) btnDel.onclick = deletePeriod;
+async function _syncSegmentsBoundsToPeriod(pid){
+  const s = _tbGetSB();
+  const { data, error } = await s.from("budget_segments").select("start_date,end_date").eq("period_id", pid).order("start_date",{ascending:true});
+  if(error) throw error;
+  const rows = data || [];
+  if(!rows.length) return;
+  const start = _tbISO(rows[0].start_date);
+  const end = _tbISO(rows[rows.length-1].end_date);
+  const { error: e2 } = await s.from("periods").update({ start_date:start, end_date:end }).eq("id", pid);
+  if(e2) throw e2;
+}
+
+async function _syncVoyageBoundsToSegments(pid, start, end){
+  const s = _tbGetSB();
+  const { data, error } = await s.from("budget_segments").select("id,start_date,end_date").eq("period_id", pid).order("start_date",{ascending:true});
+  if(error) throw error;
+  const rows = data || [];
+  if(!rows.length) return;
+
+  const first = rows[0];
+  const last = rows[rows.length-1];
+
+  if(_tbISO(first.start_date) !== start){
+    const { error: e1 } = await s.from("budget_segments").update({ start_date:start }).eq("id", first.id);
+    if(e1) throw e1;
+  }
+  if(_tbISO(last.end_date) !== end){
+    const { error: e2 } = await s.from("budget_segments").update({ end_date:end }).eq("id", last.id);
+    if(e2) throw e2;
+  }
+  await _tbRecalcSegmentSortOrder(pid);
+}
+
+/* ---------- legacy globals expected by index.html ---------- */
+
+window.renderSettings = renderSettings;
+window.saveSettings = ()=>safeCall(saveSettings);
+window.createPeriodPrompt = ()=>safeCall(createPeriodPrompt);
+window.deleteActivePeriod = ()=>_tbToastOk("Suppression de période: utilise le bouton Supprimer sur une période.");
+window.createVoyagePrompt = ()=>safeCall(createVoyagePrompt);
+window.deleteActiveVoyage = ()=>safeCall(deleteActiveVoyage);
+
+// initial boot hook
+(async function _tbSettingsInit(){
+  try{
+    // only run after supabase load is done (state.periods etc)
+    if(typeof window.addEventListener==="function"){
+      window.addEventListener("tb:afterLoad", async ()=>{
+        try{ await refreshSegmentsForActivePeriod(); }catch(_){}
+        renderSettings();
+      });
+    }
+  }catch(_){}
 })();
+
 
 /* =========================
    Categories UI (Supabase)
