@@ -227,6 +227,9 @@ function renderSettings(){
       });
     }
   }
+
+  // Categories (Settings)
+  try { renderCategoriesSettingsUI(); } catch (_) {}
 }
 
 /* ---------- voyage save / create / delete ---------- */
