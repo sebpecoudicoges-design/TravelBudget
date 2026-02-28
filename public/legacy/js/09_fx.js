@@ -166,19 +166,33 @@ function tbFxEnsureManualRateToday(cur, reason) {
   }
 
   if (asOf !== today) {
-    const ok = confirm(
-      `Taux manuel EUR→${c} daté du ${asOf || "—"} : ${existing}\n\n` +
-      `Saisir un nouveau taux pour aujourd'hui (${today}) ?\n\n` +
-      `OK = nouveau taux • Annuler = conserver le même`
+    // Single-dialog UX: prompt with current rate prefilled.
+    // - Cancel or empty => keep same rate, but mark asOf=today (explicit confirmation).
+    // - New value => store new rate for today.
+    const raw = prompt(
+      `Taux manuel EUR→${c} (dernier: ${existing} le ${asOf || "—"})\n\n` +
+      `Entrez le taux pour aujourd'hui (${today})\n` +
+      `• OK + valeur = nouveau taux\n` +
+      `• OK vide ou Annuler = conserver le même`,
+      String(existing)
     );
-    if (ok) {
-      const r = tbFxPromptManualRate(c, reason || "Mise à jour du taux manuel");
-      if (!r) return { ok: false, cur: c, cancelled: true };
-      return { ok: true, cur: c, rate: Number(r), used: "manual_new" };
+    if (raw === null) {
+      tbFxSetManualRate(c, existing, today);
+      return { ok: true, cur: c, rate: Number(existing), used: "manual_kept" };
     }
-    // keep same, but mark asOf=today (explicit choice)
-    tbFxSetManualRate(c, existing, today);
-    return { ok: true, cur: c, rate: Number(existing), used: "manual_kept" };
+    const cleaned = String(raw || "").trim();
+    if (!cleaned) {
+      tbFxSetManualRate(c, existing, today);
+      return { ok: true, cur: c, rate: Number(existing), used: "manual_kept" };
+    }
+    const r = Number(cleaned);
+    if (!Number.isFinite(r) || r <= 0) {
+      // invalid entry -> keep previous, but still mark today to avoid loops
+      tbFxSetManualRate(c, existing, today);
+      return { ok: true, cur: c, rate: Number(existing), used: "manual_kept" };
+    }
+    tbFxSetManualRate(c, r, today);
+    return { ok: true, cur: c, rate: r, used: "manual_new" };
   }
 
   return { ok: true, cur: c, rate: Number(existing), used: "manual_today" };
