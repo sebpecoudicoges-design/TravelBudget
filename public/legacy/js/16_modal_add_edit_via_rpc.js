@@ -616,3 +616,34 @@ async function markTxAsPaid(txId) {
     // no-op
   }
 })();
+
+
+/* =========================
+   Cash: ATM withdraw shortcut
+   - Some UI buttons call openAtmWithdrawModal(walletId)
+   ========================= */
+(function(){
+  if (typeof window.openAtmWithdrawModal === "function") return;
+
+  window.openAtmWithdrawModal = function(walletId){
+    try{
+      if (typeof window.openTxModal !== "function") throw new Error("openTxModal() missing");
+      window.openTxModal("expense", walletId);
+
+      // Best-effort prefill
+      const labelEl = document.getElementById("tx-label");
+      if (labelEl && !labelEl.value) labelEl.value = "Retrait ATM";
+
+      const catEl = document.getElementById("tx-category");
+      if (catEl && !catEl.value) catEl.value = "Autre";
+
+      const payEl = document.getElementById("tx-pay-now");
+      if (payEl) payEl.checked = true;
+
+      // Amount left empty on purpose
+    }catch(e){
+      console.warn("[ATM] openAtmWithdrawModal failed", e);
+      alert(e?.message || e);
+    }
+  };
+})();
