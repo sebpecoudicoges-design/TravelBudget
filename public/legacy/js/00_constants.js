@@ -1,4 +1,4 @@
-window.__TB_BUILD = '6.6.81';
+window.__TB_BUILD = '6.6.82';
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -61,6 +61,7 @@ window.__TB_BUILD = '6.6.81';
     // Manual FX fallbacks (EUR→XXX)
     fx_manual_rates: "travelbudget_fx_manual_rates_v1",
     fx_manual_asof: "travelbudget_fx_manual_asof_v1",
+    fx_manual_prompted_day: "travelbudget_fx_manual_prompted_day_v1",
     pie_excluded_cats: "travelbudget_pie_excluded_categories_v1",
     debug: "travelbudget_debug_v1",
   });

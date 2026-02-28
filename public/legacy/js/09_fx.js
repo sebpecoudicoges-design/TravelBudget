@@ -33,33 +33,12 @@ function _fxGetEurRates() {
   } catch (_) { return {}; }
 }
 
-// Manual EUR->XXX rates (fallback for currencies not provided by Auto FX provider)
-function _fxGetManualRates() {
+// Manual EUR->XXX rates (fallback when Auto FX provider doesn't provide the currency)
+// Stored as: { "LAK": { rate: 30769.41, asOf: "YYYY-MM-DD" }, ... }
+function _fxGetManualRatesRaw() {
   try { return JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.fx_manual_rates) || "{}"); } catch (_) { return {}; }
 }
-function _fxSetManualRates(map) {
-  try { localStorage.setItem(TB_CONST.LS_KEYS.fx_manual_rates, JSON.stringify(map || {})); } catch (_) {}
-}
-function tbFxSetManualRate(cur, rate) {
-  const c = String(cur || "").trim().toUpperCase();
-  const r = Number(rate);
-  if (!c || !/^[A-Z]{3}$/.test(c)) throw new Error("Code devise invalide (ISO3 attendu)");
-  if (!Number.isFinite(r) || r <= 0) throw new Error("Taux invalide (doit être > 0)");
-  const map = _fxGetManualRates();
-  map[c] = r;
-  _fxSetManualRates(map);
-  _fxManualMarkToday(c);
-  return map;
-}
-function tbFxDeleteManualRate(cur) {
-  const c = String(cur || "").trim().toUpperCase();
-  const map = _fxGetManualRates();
-  delete map[c];
-  _fxSetManualRates(map);
-  return map;
-}
-
-function _fxGetManualAsof() {
+function _fxGetManualAsofLegacy() {
   try {
     const raw = localStorage.getItem(TB_CONST.LS_KEYS.fx_manual_asof);
     if (raw) {
@@ -69,35 +48,86 @@ function _fxGetManualAsof() {
   } catch (_) {}
   return {};
 }
-
-function _fxSetManualAsof(map) {
-  try { localStorage.setItem(TB_CONST.LS_KEYS.fx_manual_asof, JSON.stringify(map || {})); } catch (_) {}
+function _fxNormalizeManualRates(raw) {
+  const out = {};
+  const legacyAsof = _fxGetManualAsofLegacy();
+  const obj = raw && typeof raw === "object" ? raw : {};
+  for (const [k, v] of Object.entries(obj)) {
+    const c = String(k || "").trim().toUpperCase();
+    if (!c || c === "EUR") continue;
+    if (v && typeof v === "object") {
+      const r = Number(v.rate);
+      const asOf = v.asOf ? String(v.asOf).slice(0,10) : (legacyAsof[c] || null);
+      if (Number.isFinite(r) && r > 0) out[c] = { rate: r, asOf: asOf || null };
+    } else {
+      const r = Number(v);
+      const asOf = legacyAsof[c] || null;
+      if (Number.isFinite(r) && r > 0) out[c] = { rate: r, asOf: asOf || null };
+    }
+  }
+  return out;
+}
+function _fxGetManualRates() {
+  return _fxNormalizeManualRates(_fxGetManualRatesRaw());
+}
+function _fxSetManualRates(mapObj) {
+  try { localStorage.setItem(TB_CONST.LS_KEYS.fx_manual_rates, JSON.stringify(mapObj || {})); } catch (_) {}
+}
+function _fxTodayISO() {
+  try { return toLocalISODate(new Date()); } catch (_) { return new Date().toISOString().slice(0,10); }
 }
 
-function _fxManualMarkToday(cur) {
+function tbFxSetManualRate(cur, rate, asOf) {
   const c = String(cur || "").trim().toUpperCase();
-  if (!c) return;
-  const m = _fxGetManualAsof();
-  m[c] = new Date().toISOString().slice(0,10);
-  _fxSetManualAsof(m);
+  const r = Number(rate);
+  if (!c || !/^[A-Z]{3}$/.test(c)) throw new Error("Code devise invalide (ISO3 attendu)");
+  if (!Number.isFinite(r) || r <= 0) throw new Error("Taux invalide (doit être > 0)");
+  const today = String(asOf || _fxTodayISO()).slice(0,10);
+  const map = _fxGetManualRates();
+  map[c] = { rate: r, asOf: today };
+  _fxSetManualRates(map);
+
+  // Keep legacy asOf map in sync (safe migration)
+  try {
+    const legacy = _fxGetManualAsofLegacy();
+    legacy[c] = today;
+    localStorage.setItem(TB_CONST.LS_KEYS.fx_manual_asof, JSON.stringify(legacy));
+  } catch (_) {}
+
+  return map;
+}
+function tbFxDeleteManualRate(cur) {
+  const c = String(cur || "").trim().toUpperCase();
+  const map = _fxGetManualRates();
+  delete map[c];
+  _fxSetManualRates(map);
+  try {
+    const legacy = _fxGetManualAsofLegacy();
+    delete legacy[c];
+    localStorage.setItem(TB_CONST.LS_KEYS.fx_manual_asof, JSON.stringify(legacy));
+  } catch (_) {}
+  return map;
 }
 
 function tbFxManualAsof(cur) {
   const c = String(cur || "").trim().toUpperCase();
-  const m = _fxGetManualAsof();
-  return m[c] || null;
+  const m = _fxGetManualRates();
+  return m?.[c]?.asOf || null;
 }
 
+// Prompt user for a manual rate (EUR -> CUR). Returns number or null if cancelled.
 function tbFxPromptManualRate(cur, reason) {
   const c = String(cur || "").trim().toUpperCase();
   if (!c || c === "EUR") return null;
   const why = reason ? `\n(${reason})` : "";
-  const existing = (_fxGetManualRates() || {})[c];
+  const existingObj = (_fxGetManualRates() || {})[c];
+  const existing = existingObj ? existingObj.rate : null;
   const hint = existing ? ` (actuel: ${existing})` : "";
   const raw = prompt(`Taux requis : EUR → ${c}${hint}${why}\n\nEntre le taux (ex: 17000) :`);
   if (raw === null) return null; // user cancelled
   const r = Number(String(raw).replace(",", "."));
-  // Sanity check: if an auto rate exists, warn when the manual rate differs wildly (common typo: wrong currency / inverted).
+
+  // Sanity check: if an auto rate exists, warn when the manual rate differs wildly.
   try {
     const autoRates = _fxGetEurRates();
     const auto = Number(autoRates?.[c]);
@@ -113,43 +143,60 @@ function tbFxPromptManualRate(cur, reason) {
     }
   } catch (_) {}
 
-  tbFxSetManualRate(c, r);
-  _fxManualMarkToday(c);
+  tbFxSetManualRate(c, r, _fxTodayISO());
   return r;
 }
 
-function _fxPromptUpdateManualIfNeeded() {
-  try {
-    const manual = _fxGetManualRates() || {};
-    const asof = _fxGetManualAsof() || {};
-    const today = new Date().toISOString().slice(0,10);
-    const stale = Object.keys(manual).filter(c => c && c !== "EUR" && asof[c] !== today);
-    if (!stale.length) return;
+// Option A: prompt only when the currency is actually needed.
+// If a manual rate exists but is stale (asOf < today), ask:
+// - OK: enter new rate for today
+// - Cancel: keep same rate and mark asOf=today (explicit user confirmation)
+function tbFxEnsureManualRateToday(cur, reason) {
+  const c = String(cur || "").trim().toUpperCase();
+  if (!c || c === "EUR") return { ok: true, cur: c, rate: 1, used: "auto" };
+  const today = _fxTodayISO();
+  const m = _fxGetManualRates();
+  const existing = m?.[c]?.rate || null;
+  const asOf = m?.[c]?.asOf || null;
 
-    const dayKey = TB_CONST?.LS_KEYS?.fx_manual_prompted_day;
-    let last = null;
-    try { last = dayKey ? localStorage.getItem(dayKey) : null; } catch (_) {}
-    if (last === today) return;
+  if (!existing) {
+    const r = tbFxPromptManualRate(c, reason || "Taux du jour manquant");
+    if (!r) return { ok: false, cur: c, cancelled: true };
+    return { ok: true, cur: c, rate: Number(r), used: "manual_new" };
+  }
 
-    // Ask once per day max
-    const ok = confirm(`Taux manuels: ${stale.join(", ")}\n\nMettre à jour les taux manuels aujourd'hui ?`);
-    try { if (dayKey) localStorage.setItem(dayKey, today); } catch (_) {}
-    if (!ok) return;
-
-    for (const c of stale) {
-      const r = tbFxPromptManualRate(c, "Mise à jour quotidienne");
-      if (!r) break;
+  if (asOf !== today) {
+    const ok = confirm(
+      `Taux manuel EUR→${c} daté du ${asOf || "—"} : ${existing}\n\n` +
+      `Saisir un nouveau taux pour aujourd'hui (${today}) ?\n\n` +
+      `OK = nouveau taux • Annuler = conserver le même`
+    );
+    if (ok) {
+      const r = tbFxPromptManualRate(c, reason || "Mise à jour du taux manuel");
+      if (!r) return { ok: false, cur: c, cancelled: true };
+      return { ok: true, cur: c, rate: Number(r), used: "manual_new" };
     }
-  } catch (_) {}
-}
+    // keep same, but mark asOf=today (explicit choice)
+    tbFxSetManualRate(c, existing, today);
+    return { ok: true, cur: c, rate: Number(existing), used: "manual_kept" };
+  }
 
+  return { ok: true, cur: c, rate: Number(existing), used: "manual_today" };
+}
 
 function tbFxGetManualRates() { return _fxGetManualRates(); }
 
 // Merge auto rates + manual rates (manual only fills missing currencies)
 function fxGetEurRatesMerged() {
   const autoRates = _fxGetEurRates();
-  const manual = _fxGetManualRates();
+  const manualObj = _fxGetManualRates();
+  const manual = {};
+  try {
+    for (const [c, v] of Object.entries(manualObj || {})) {
+      const r = Number(v?.rate);
+      if (Number.isFinite(r) && r > 0) manual[String(c).toUpperCase()] = r;
+    }
+  } catch (_) {}
   // manual first, auto overrides (so auto stays source of truth when available)
   return Object.assign({}, manual || {}, autoRates || {});
 }
@@ -182,16 +229,9 @@ async function refreshFxRates() {
   const previous = _fxGetEurRates();
   const allRates = { ...previous, ...data.rates, EUR: 1 };
 
-  // 2) Non-destructive fallback: inject fixed segment rates if missing (no prompts)
-  const segs = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
-  segs.forEach((s) => {
-    const cur = String(s?.base_currency || s?.baseCurrency || "").toUpperCase();
-    if (!cur || cur === "EUR") return;
-    const fixed = Number(s?.fx_rate_eur_to_base ?? s?.eurBaseRateFixed ?? s?.eur_base_rate_fixed);
-    if (fixed && fixed > 0 && !Number(allRates[cur])) allRates[cur] = fixed;
-  });
+  // 2) No segment-fixed injection: Auto is source of truth; manual fallback is global-only (Option A)
 
-  // 3) If some required currencies are missing, offer to capture manual fallbacks now.
+// 3) If some required currencies are missing, offer to capture manual fallbacks now.
   try {
     const required = new Set();
     if (base) required.add(String(base).toUpperCase());
@@ -316,7 +356,7 @@ async function tbFxEnsureDaily(opts) {
 
       // Apply to state immediately (no DB write)
       if (typeof tbFxApplyToState === "function") tbFxApplyToState();
-      _fxPromptUpdateManualIfNeeded();
+      // Option A: no global daily prompt; prompts happen only when needed.
 
       // Optional: after a successful daily refresh, prompt for missing required currencies.
       // Disabled by default to avoid prompts during boot; enable from explicit user actions.
@@ -378,8 +418,10 @@ function tbFxApplyToState(opts = {}) {
         try { last = dayKey ? localStorage.getItem(dayKey) : null; } catch (_) {}
         if (last !== today) {
           try { if (dayKey) localStorage.setItem(dayKey, today); } catch (_) {}
-          const r = tbFxPromptManualRate(base, "Devise de base — taux auto indisponible");
-          if (r) eurToBase = Number(r);
+          const out = (typeof window.tbFxEnsureManualRateToday === "function")
+            ? window.tbFxEnsureManualRateToday(base, "Devise de base — taux auto indisponible")
+            : null;
+          if (out && out.ok === true && Number(out.rate) > 0) eurToBase = Number(out.rate);
         }
       }
     }
@@ -422,8 +464,10 @@ function tbFxEnsureEurRatesInteractive(currencies, reason) {
   }
 
   for (const c of miss) {
-    const r = window.tbFxPromptManualRate(c, why);
-    if (!r) return { ok: false, missing: miss, cancelled: true };
+    const out = (typeof window.tbFxEnsureManualRateToday === "function")
+      ? window.tbFxEnsureManualRateToday(c, why)
+      : { ok: false, cancelled: true };
+    if (!out || out.ok !== true) return { ok: false, missing: miss, cancelled: true };
   }
 
   // Apply immediately (may affect baseCurrency conversions)

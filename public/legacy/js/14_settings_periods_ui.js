@@ -34,7 +34,7 @@ function _tbNormSeg(row){
   const end   = _tbISO(r.end   || r.end_date   || r.endDate);
   const baseCurrencyRaw = (r.baseCurrency || r.base_currency || r.base || r.currency || "");
   const dailyRaw = (r.dailyBudgetBase !== undefined) ? r.dailyBudgetBase : r.daily_budget_base;
-  const fxMode = (r.fxMode || r.fx_mode || r.fx || "fixed");
+  const fxModeRaw = (r.fxMode || r.fx_mode || r.fx || "");
   const rateRaw = (r.eurBaseRateFixed !== undefined) ? r.eurBaseRateFixed : r.eur_base_rate_fixed;
   const sortRaw = (r.sortOrder !== undefined) ? r.sortOrder : r.sort_order;
 
@@ -49,10 +49,15 @@ function _tbNormSeg(row){
   out.base_currency = out.baseCurrency;
   out.dailyBudgetBase = Number.isFinite(Number(dailyRaw)) ? Number(dailyRaw) : (dailyRaw ?? 0);
   out.daily_budget_base = out.dailyBudgetBase;
-  out.fxMode = String(fxMode || "fixed");
+    // FX policy: Auto always wins; segment-fixed rates are deprecated.
+  // Keep legacy values only for debugging/migration visibility.
+  out._legacyFxMode = String(fxModeRaw || "").trim();
+  out._legacyEurBaseRateFixed = (rateRaw === null || rateRaw === undefined || rateRaw === "") ? null : Number(rateRaw);
+
+  out.fxMode = "live_ecb";
   out.fx_mode = out.fxMode;
-  out.eurBaseRateFixed = (rateRaw === null || rateRaw === undefined || rateRaw === "") ? null : Number(rateRaw);
-  out.eur_base_rate_fixed = out.eurBaseRateFixed;
+  out.eurBaseRateFixed = null;
+  out.eur_base_rate_fixed = null;
   out.sortOrder = Number.isFinite(Number(sortRaw)) ? Number(sortRaw) : 0;
   out.sort_order = out.sortOrder;
   return out;
@@ -191,15 +196,18 @@ function renderSettings(){
         wrap.style.marginBottom = "10px";
         const cur = String(seg.baseCurrency||"").toUpperCase();
         const autoAvail = (typeof window.tbFxIsAutoAvailable==="function") ? window.tbFxIsAutoAvailable(cur) : false;
-        let manualRate = null; let manualAsof = null;
-        try { if (typeof window.tbFxGetManualRates==="function") manualRate = (window.tbFxGetManualRates()||{})[cur] ?? null; } catch(_) {}
-        try { if (typeof window.tbFxManualAsof==="function") manualAsof = window.tbFxManualAsof(cur); } catch(_) {}
+        let manualObj = null; let manualRate = null; let manualAsof = null;
+        try { if (typeof window.tbFxGetManualRates==="function") manualObj = (window.tbFxGetManualRates()||{})[cur] ?? null; } catch(_) {}
+        manualRate = manualObj && typeof manualObj === 'object' ? Number(manualObj.rate) : null;
+        manualAsof = manualObj && typeof manualObj === 'object' ? (manualObj.asOf || null) : null;
         let autoAsof = null; try { autoAsof = localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_asof) || null; } catch(_) {}
-        const usedRate = (seg.fxMode === "fixed") ? (seg.eurBaseRateFixed ?? null) : (typeof window.fxRate==="function" ? window.fxRate("EUR", cur) : null);
-        const rateDisplay = (usedRate!==null && usedRate!==undefined && Number.isFinite(Number(usedRate))) ? String(usedRate) : "";
-        const rateRO = (seg.fxMode !== "fixed");
-        const srcLabel = (seg.fxMode === "fixed") ? "Manuel (segment)" : (autoAvail ? "Auto" : (manualRate ? "Fallback manuel" : "Manquant"));
-        const srcMeta = (seg.fxMode === "fixed") ? "" : (autoAvail ? (autoAsof?` • date: ${autoAsof}`:"") : (manualAsof?` • date: ${manualAsof}`:""));
+const todayISO = (typeof toLocalISODate === "function") ? toLocalISODate(new Date()) : new Date().toISOString().slice(0,10);
+const ratesMerged = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : null;
+const usedRate = (typeof window.fxRate==="function" && ratesMerged) ? window.fxRate("EUR", cur, ratesMerged) : null;
+const rateDisplay = (usedRate!==null && usedRate!==undefined && Number.isFinite(Number(usedRate))) ? String(Number(usedRate).toFixed(2)) : "";
+const srcLabel = autoAvail ? "Auto" : (manualRate ? "Manuel fallback" : "Manquant");
+const stale = (!autoAvail && manualRate && manualAsof && manualAsof !== todayISO);
+const srcMeta = autoAvail ? (autoAsof?` • date: ${autoAsof}`:"") : (manualRate ? (` • date: ${manualAsof || "—"}${stale ? " (à confirmer)" : ""}`) : "");
         wrap.innerHTML = `
           <div class="row" style="align-items:flex-end;">
             <div class="field">
@@ -220,17 +228,16 @@ function renderSettings(){
             </div>
             <div class="field" style="min-width:180px;">
               <label>Taux EUR→Devise</label>
-              <input data-k="eur_base_rate_fixed" value="${seg.fxMode === "fixed" ? (seg.eurBaseRateFixed ?? "") : rateDisplay}" placeholder="${seg.fxMode === "fixed" ? "" : (autoAvail ? "auto" : (manualRate ? "fallback manuel" : "manquant"))}" ${rateRO ? "readonly" : ""} />
+              <input value="${rateDisplay}" placeholder="${autoAvail ? "auto" : (manualRate ? "manuel fallback" : "manquant")}" readonly />
             </div>
-            ${(!rateRO && (seg.fxMode === "fixed")) ? "" : ""}
-            ${(!autoAvail && seg.fxMode !== "fixed") ? `<button class="btn" data-act="fx" title="Définir un taux manuel pour cette devise">Saisir taux</button>` : ""}
+            ${(!autoAvail) ? `<button class="btn" data-act="fx" title="Définir/mettre à jour un taux manuel fallback pour cette devise">${manualRate ? "Mettre à jour" : "Saisir taux"}</button>` : ""}
             <div style="flex:1"></div>
             <button class="btn primary" data-act="save">Enregistrer</button>
             <button class="btn danger" data-act="del">Supprimer</button>
           </div>
           <div class="muted" style="margin-top:6px;">
-            FX: <b>${seg.fxMode === "fixed" ? "Manuel" : "Auto"}</b>
-            • Taux: <b>${(seg.fxMode === "fixed" ? (seg.eurBaseRateFixed ?? "") : (rateDisplay || "")) || "—"}</b>
+            FX: <b>Auto</b>
+            • Taux: <b>${(rateDisplay || "") || "—"}</b>
             • Source: <b>${srcLabel}</b>${srcMeta}
             ${seg.fx_last_updated_at ? ` • maj: ${String(seg.fx_last_updated_at).slice(0,10)}` : ""}
           </div>
@@ -240,7 +247,7 @@ function renderSettings(){
         const fxBtn = wrap.querySelector('[data-act="fx"]');
         if(fxBtn){
           fxBtn.onclick = ()=>safeCall("Taux manuel", ()=>{ 
-            if(typeof window.tbFxPromptManualRate === "function") window.tbFxPromptManualRate(cur, "Devise non fournie par les taux auto");
+            if(typeof window.tbFxEnsureManualRateToday === "function") window.tbFxEnsureManualRateToday(cur, "Devise non fournie par les taux auto");
             renderSettings();
           });
         }
@@ -525,8 +532,8 @@ async function _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud){
           end_date: e0,
           base_currency: seg.baseCurrency || "EUR",
           daily_budget_base: seg.dailyBudgetBase ?? 0,
-          fx_mode: seg.fxMode || "fixed",
-          eur_base_rate_fixed: seg.eurBaseRateFixed ?? null,
+          fx_mode: "live_ecb",
+          eur_base_rate_fixed: null,
           sort_order: 0
         });
       }
@@ -574,7 +581,7 @@ async function _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud){
     end_date: end,
     base_currency: cur,
     daily_budget_base: bud,
-    fx_mode: "fixed", // safe default; user can toggle by leaving rate empty or editing
+    fx_mode: "live_ecb", // Auto only (manual segment deprecated)
     sort_order: 0
   };
   const { error: eNew } = await s.from(TB_CONST.TABLES.budget_segments).insert(newSeg);
@@ -610,27 +617,24 @@ async function saveBudgetSegment(segId, wrapEl){
   const newEnd = getVal("end_date");
   const newCur = (getVal("base_currency")||"").trim().toUpperCase();
   const newBud = _tbParseNum(getVal("daily_budget_base"));
-  const newRate = _tbParseNum(getVal("eur_base_rate_fixed"));
 
   if(!newStart||!newEnd||newStart>newEnd) throw new Error("Dates invalides.");
     if(!newCur) throw new Error("Devise requise.");
   if(!Number.isFinite(newBud) || newBud < 0) throw new Error("Budget/jour invalide.");
 
-  // FX Option A: if currency not provided by auto FX and segment is not fixed, ensure a manual fallback exists
-  const wantsFixed = (Number.isFinite(newRate) && newRate > 0);
-  if(!wantsFixed){
-    const autoOk = (typeof window.tbFxIsAutoAvailable==="function") ? window.tbFxIsAutoAvailable(newCur) : false;
-    let man = null;
-    try { if (typeof window.tbFxGetManualRates==="function") man = (window.tbFxGetManualRates()||{})[newCur]; } catch(_) {}
-    if(!autoOk && !(Number.isFinite(Number(man)) && Number(man) > 0)){
-      if(typeof window.tbFxPromptManualRate === "function"){
-        const r = window.tbFxPromptManualRate(newCur, "Devise non fournie par les taux auto. Un taux manuel est requis.");
-        if(!r) throw new Error("Taux manuel requis pour cette devise.");
-      }else{
-        throw new Error("Taux manuel requis pour cette devise.");
-      }
-    }
+// FX Option A: Auto is source of truth. If currency is not provided by auto FX, require a manual fallback.
+const autoOk = (typeof window.tbFxIsAutoAvailable==="function") ? window.tbFxIsAutoAvailable(newCur) : false;
+if(!autoOk){
+  if(typeof window.tbFxEnsureManualRateToday === "function"){
+    const out = window.tbFxEnsureManualRateToday(newCur, "Devise non fournie par les taux auto. Un taux manuel (fallback) est requis.");
+    if(!out || out.ok !== true) throw new Error("Taux manuel requis pour cette devise.");
+  }else if(typeof window.tbFxPromptManualRate === "function"){
+    const r = window.tbFxPromptManualRate(newCur, "Devise non fournie par les taux auto. Un taux manuel est requis.");
+    if(!r) throw new Error("Taux manuel requis pour cette devise.");
+  }else{
+    throw new Error("Taux manuel requis pour cette devise.");
   }
+}
 
   // neighbors
   const prev = idx>0 ? segs[idx-1] : null;
@@ -660,8 +664,8 @@ async function saveBudgetSegment(segId, wrapEl){
     end_date: newEnd,
     base_currency: newCur,
     daily_budget_base: newBud,
-    fx_mode: (Number.isFinite(newRate) && newRate>0) ? "fixed" : "live_ecb",
-    eur_base_rate_fixed: (Number.isFinite(newRate) && newRate>0) ? newRate : null,
+    fx_mode: "live_ecb",
+    eur_base_rate_fixed: null,
     user_id: uid,
     period_id: pid
   };
@@ -1007,19 +1011,23 @@ function renderManualFxBox() {
       <div id="tbManualFxList">
         ${
           entries.length
-            ? entries.map(([c, r]) => `
+            ? entries.map(([c, r]) => {
+            const rate = (r && typeof r === 'object') ? r.rate : r;
+            const asOf = (r && typeof r === 'object') ? r.asOf : ((typeof tbFxManualAsof === "function") ? tbFxManualAsof(c) : null);
+            return `
           <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border);">
-            <div><b>${escapeHTML(c)}</b> : 1 EUR = ${escapeHTML(String(r))} ${escapeHTML(c)}
+            <div><b>${escapeHTML(c)}</b> : 1 EUR = ${escapeHTML(String(rate))} ${escapeHTML(c)}
               ${(() => { 
                 try { 
-                  const d = (typeof tbFxManualAsof === "function") ? tbFxManualAsof(c) : null; 
+                  const d = asOf; 
                   return d ? `<span class="muted" style="font-size:12px;">(${escapeHTML(String(d))})</span>` : ""; 
                 } catch(_) { return ""; } 
               })()}
             </div>
             <button class="btn" onclick="tbManualFxDel('${escapeHTML(c)}')">Supprimer</button>
           </div>
-        `).join("")
+        `;
+          }).join("")
             : `<div class="muted">Aucun taux manuel.</div>`
         }
       </div>
