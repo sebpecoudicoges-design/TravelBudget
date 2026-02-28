@@ -112,7 +112,7 @@ function renderSettings() {
   // keep rate visible if present (read-only in UI)
   if (rateEl) rateEl.value = String(p.eurBaseRate || "");
 
-  // segments UI (V6.4)
+  // segments UI
   renderBudgetSegmentsUI();
   try { renderManualFxBox(); } catch (e) { console.warn('[manual fx] render failed', e); }
 
@@ -183,11 +183,7 @@ function _segRowHTML(seg, idx, total) {
         </div>
         <div style="min-width:160px;">
           <div class="label">Taux FX ${typeof tbHelp==="function" ? tbHelp("Auto = utilise le taux FX si disponible. Fixe = tu fournis un taux manuel pour EUR→BASE.") : ""}</div>
-          <select class="input" disabled title="Automatique: FX si dispo, sinon manuel">
-            <option value="live_ecb" ${fxMode === "live_ecb" ? "selected" : ""}>auto (FX si dispo)</option>
-            <option value="fixed" ${fxMode === "fixed" ? "selected" : ""}>fixe (manuel)</option>
-          </select>
-        </div>
+          <div class="muted" style="font-size:12px; line-height:1.2;">Auto (FX) si disponible, sinon manuel requis.</div>
         <div style="min-width:160px;">
           <div class="label">EUR→BASE ${typeof tbHelp==="function" ? tbHelp("Taux de conversion EUR→Devise base. En auto, ce champ est verrouillé si FX fournit le taux.") : ""}</div>
           ${(() => {
@@ -198,7 +194,7 @@ function _segRowHTML(seg, idx, total) {
             // FX behavior:
             // - fixed: user must provide eurBaseRateFixed
             // - auto: use provider live if available, else require manual fallback (eurBaseRateFixed)
-            const needsManual = (fxMode === "fixed") || (fxMode === "live_ecb" && !live && cur !== "EUR");
+            const needsManual = (!live && cur !== "EUR");
             const v = (fxMode === "live_ecb" && live) ? live : (eurBaseRateFixed || "");
             const dis = needsManual ? "" : "readonly disabled style=\"opacity:0.7; cursor:not-allowed;\"";
             const onch = needsManual ? `_tbSegSet('${id}','eurBaseRateFixed',this.value)` : "";
@@ -206,11 +202,6 @@ function _segRowHTML(seg, idx, total) {
             return `<input class="input" value="${escapeHTML(String(v))}" ${ph} ${dis} onchange="${onch}" />`;
           })()}
         </div>
-        <div style="min-width:100px;">
-          <div class="label">Ordre</div>
-          <input class="input" value="${escapeHTML(String(sortOrder))}" readonly disabled style="opacity:0.7; cursor:not-allowed;" />
-        </div>
-
         <div style="display:flex; gap:8px; align-items:center; margin-left:auto;">
           ${splitBtn}
           <button class="btn" onclick="saveBudgetSegment('${id}')">Enregistrer</button>
@@ -285,7 +276,9 @@ async function saveBudgetSegment(id) {
     } catch (_) {}
 const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
 	const dailyBudgetBase = _tbParseNum(edits.dailyBudgetBase ?? seg.dailyBudgetBase);
-    const fxMode = (edits.fxMode ?? seg.fxMode ?? "fixed") || "fixed";
+    let fxMode = "live_ecb";
+    // fx_mode is automatic: use "fixed" only when a manual EUR→BASE rate is provided.
+    if (eurBaseRateFixed) fxMode = "fixed";
 
     // NOTE: eurBaseRateFixed is read-only in auto (we display the live value).
     let eurBaseRateFixedRaw = edits.eurBaseRateFixed ?? seg.eurBaseRateFixed;
@@ -595,57 +588,246 @@ async function saveSettings() {
 
 async function newPeriod() {
   await safeCall("Nouvelle période", async () => {
-    const start = prompt("Date début (YYYY-MM-DD)", toLocalISODate(new Date()));
-    if (!start) return;
-    const end = prompt("Date fin (YYYY-MM-DD)", start);
-    if (!end) return;
-    const baseCur = prompt("Devise base (ex: THB, EUR)", "EUR") || "EUR";
-    const daily = Number(prompt("Budget/jour (devise base)", "25") || 25);
+    _tbOpenNewSegmentModal();
+  });
+}
 
-    const sD = parseISODateOrNull(start);
-    const eD = parseISODateOrNull(endFixed);
-    if (!sD || !eD) throw new Error("Dates invalides.");
-    if (eD < sD) throw new Error("Fin < début.");
-    if (!isFinite(daily) || daily <= 0) throw new Error("Budget/jour invalide.");
+function _tbOpenNewSegmentModal() {
+  const pid = String(state?.period?.id || "");
+  if (!pid) throw new Error("Voyage introuvable.");
+  const segs = (state.budgetSegments || [])
+    .filter(s => s && String(s.periodId || s.period_id) === pid)
+    .slice()
+    .sort((a,b)=>String(a.start||"").localeCompare(String(b.start||"")));
 
-    const { data, error } = await sb
-      .from(TB_CONST.TABLES.periods)
-      .insert([
-        {
-          user_id: sbUser.id,
-          start_date: start,
-          end_date: endFixed,
-          base_currency: baseCur,
-          daily_budget_base: daily,
-          eur_base_rate: baseCur === "EUR" ? 1 : null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ])
-      .select("id,start_date,end_date,base_currency")
-      .single();
+  if (!segs.length) throw new Error("Aucune période/segment existant.");
 
-    if (error) throw error;
+  // Build modal
+  const existing = document.getElementById("tbNewSegModal");
+  if (existing) existing.remove();
 
-    await sb.from(TB_CONST.TABLES.budget_segments).insert([
-      {
-        user_id: sbUser.id,
-        period_id: data.id,
-        start_date: start,
-        end_date: endFixed,
-        base_currency: baseCur,
-        daily_budget_base: daily,
-        fx_mode: "fixed",
-        eur_base_rate_fixed: baseCur === "EUR" ? 1 : null,
-        sort_order: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ]);
+  const opts = segs.map((s,i)=>{
+    const sid = String(s.id);
+    const label = `${String(s.start)} → ${String(s.end)} (${String(s.baseCurrency||s.base_currency||"").toUpperCase()})`;
+    return `<option value="${escapeHTML(sid)}">${escapeHTML(label)}</option>`;
+  }).join("");
 
-    await refreshFromServer();
-    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("14_settings_periods_ui.js"); else if (typeof renderAll === "function") renderAll();
-});
+  const first = segs[0];
+  const html = `
+    <div id="tbNewSegModal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px;">
+      <div class="card" style="max-width:720px;width:100%;padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <h3 style="margin:0;">Ajouter une période</h3>
+          <button class="btn" onclick="_tbCloseNewSegmentModal()">Fermer</button>
+        </div>
+        <div class="muted" style="margin:8px 0 12px 0;">
+          Cette période s'insère dans une période existante (elle la découpe automatiquement).
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="min-width:260px;flex:1;">
+            <div class="label">Insérer dans</div>
+            <select id="tbNewSegIn" class="input">${opts}</select>
+          </div>
+          <div style="min-width:160px;">
+            <div class="label">Début</div>
+            <input id="tbNewSegStart" class="input" type="date" value="${escapeHTML(String(first.start||""))}" />
+          </div>
+          <div style="min-width:160px;">
+            <div class="label">Fin</div>
+            <input id="tbNewSegEnd" class="input" type="date" value="${escapeHTML(String(first.end||""))}" />
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:flex-end;">
+          <div style="min-width:180px;">
+            <div class="label">Devise base</div>
+            <input id="tbNewSegCur" class="input" list="tbCurrencyList" placeholder="ex: THB" value="${escapeHTML(String(first.baseCurrency||first.base_currency||"").toUpperCase())}" />
+          </div>
+          <div style="min-width:200px;">
+            <div class="label">Budget/jour (base)</div>
+            <input id="tbNewSegDaily" class="input" inputmode="decimal" placeholder="ex: 900" value="${escapeHTML(String(first.dailyBudgetBase||first.daily_budget_base||""))}" />
+          </div>
+          <div style="min-width:220px;">
+            <div class="label">EUR→BASE (manuel si nécessaire)</div>
+            <input id="tbNewSegFx" class="input" inputmode="decimal" placeholder="ex: 36.57" />
+            <div class="muted" style="font-size:12px;margin-top:4px;">Si Auto FX fournit le taux, laisse vide.</div>
+          </div>
+
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button class="btn" onclick="_tbCreateNewSegmentFromModal()">Créer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML("beforeend", html);
+
+  // Wire defaults and constraints
+  const inEl = document.getElementById("tbNewSegIn");
+  const sEl = document.getElementById("tbNewSegStart");
+  const eEl = document.getElementById("tbNewSegEnd");
+  const curEl = document.getElementById("tbNewSegCur");
+  const dailyEl = document.getElementById("tbNewSegDaily");
+  const fxEl = document.getElementById("tbNewSegFx");
+
+  function applyBounds() {
+    const sid = String(inEl.value||"");
+    const seg = segs.find(x=>String(x.id)===sid) || segs[0];
+    if (!seg) return;
+    // default to full range of chosen segment
+    if (!sEl.value) sEl.value = String(seg.start||"");
+    if (!eEl.value) eEl.value = String(seg.end||"");
+    // clamp if out
+    if (sEl.value < String(seg.start)) sEl.value = String(seg.start);
+    if (eEl.value > String(seg.end)) eEl.value = String(seg.end);
+    // defaults
+    if (curEl && !curEl.value) curEl.value = String(seg.baseCurrency||seg.base_currency||"").toUpperCase();
+    if (dailyEl && !dailyEl.value) dailyEl.value = String(seg.dailyBudgetBase||seg.daily_budget_base||"");
+    // prefill fx from auto if empty
+    try {
+      const c = String(curEl.value||"").trim().toUpperCase();
+      if (fxEl && !fxEl.value && c) {
+        const m = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
+        const live = (c === "EUR") ? 1 : (m && m[c]);
+        if (live && c !== "EUR") fxEl.placeholder = `auto: ${live}`;
+      }
+    } catch (_) {}
+  }
+  inEl.addEventListener("change", applyBounds);
+  sEl.addEventListener("change", applyBounds);
+  eEl.addEventListener("change", applyBounds);
+  applyBounds();
+}
+
+function _tbCloseNewSegmentModal() {
+  const el = document.getElementById("tbNewSegModal");
+  if (el) el.remove();
+}
+
+async function _tbCreateNewSegmentFromModal() {
+  const pid = String(state?.period?.id || "");
+  const sb = window.sb;
+  if (!sb) throw new Error("Supabase non prêt.");
+
+  const inEl = document.getElementById("tbNewSegIn");
+  const sEl = document.getElementById("tbNewSegStart");
+  const eEl = document.getElementById("tbNewSegEnd");
+  const curEl = document.getElementById("tbNewSegCur");
+  const dailyEl = document.getElementById("tbNewSegDaily");
+  const fxEl = document.getElementById("tbNewSegFx");
+
+  const segs = (state.budgetSegments || [])
+    .filter(s => s && String(s.periodId || s.period_id) === pid)
+    .slice()
+    .sort((a,b)=>String(a.start||"").localeCompare(String(b.start||"")));
+
+  const sid = String(inEl?.value || "");
+  const hostSeg = segs.find(s=>String(s.id)===sid);
+  if (!hostSeg) throw new Error("Segment cible introuvable.");
+
+  const start = String(sEl?.value || "").trim();
+  const end = String(eEl?.value || "").trim();
+  if (!start || !end) throw new Error("Dates requises.");
+  if (end < start) throw new Error("Fin < début.");
+
+  const hostStart = String(hostSeg.start);
+  const hostEnd = String(hostSeg.end);
+  if (start < hostStart || end > hostEnd) {
+    throw new Error("La nouvelle période doit être incluse dans la période sélectionnée.");
+  }
+
+  const baseCur = String(curEl?.value || "").trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(baseCur)) throw new Error("Devise invalide (ISO3).");
+
+  const daily = _tbParseNum(dailyEl?.value);
+  if (!Number.isFinite(daily) || daily <= 0) throw new Error("Budget/jour invalide.");
+
+  // FX auto vs manual
+  const m = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
+  const live = (baseCur === "EUR") ? 1 : (m && m[baseCur]);
+  const eurFixed = _tbParseNum(fxEl?.value);
+  const needsManual = (!live && baseCur !== "EUR");
+  if (needsManual && !(Number.isFinite(eurFixed) && eurFixed > 0)) {
+    // ask once
+    const ask = prompt(`Taux EUR→${baseCur} requis (auto indisponible).`, "");
+    const v = _tbParseNum(ask);
+    if (!(Number.isFinite(v) && v > 0)) throw new Error("Taux FX requis invalide.");
+    fxEl.value = String(v);
+  }
+  const eurFixedFinal = _tbParseNum(fxEl?.value);
+  const fxMode = (Number.isFinite(eurFixedFinal) && eurFixedFinal > 0) ? "fixed" : "live_ecb";
+
+  const { data: u } = await sb.auth.getUser();
+  const sbUser = u?.user;
+  if (!sbUser) throw new Error("Not authenticated");
+
+  // split host segment into before + after
+  const beforeEnd = (start > hostStart) ? _tbDateAddDays(start, -1) : null;
+  const afterStart = (end < hostEnd) ? _tbDateAddDays(end, 1) : null;
+
+  // update/delete host
+  if (beforeEnd && beforeEnd >= hostStart) {
+    await sb.from(TB_CONST.TABLES.budget_segments).update({
+      start_date: hostStart,
+      end_date: beforeEnd,
+      updated_at: new Date().toISOString(),
+    }).eq("id", hostSeg.id);
+  } else {
+    await sb.from(TB_CONST.TABLES.budget_segments).delete().eq("id", hostSeg.id);
+  }
+
+  // insert new segment
+  await sb.from(TB_CONST.TABLES.budget_segments).insert({
+    user_id: sbUser.id,
+    period_id: pid,
+    start_date: start,
+    end_date: end,
+    base_currency: baseCur,
+    daily_budget_base: daily,
+    fx_mode: fxMode,
+    fx_rate_eur_to_base: (fxMode === "fixed" ? eurFixedFinal : null),
+    fx_source: (fxMode === "fixed" ? "manual" : "fx"),
+    fx_last_updated_at: new Date().toISOString(),
+    sort_order: 0,
+  });
+
+  // insert after segment if needed (copy from host)
+  if (afterStart && afterStart <= hostEnd) {
+    const oCur = String(hostSeg.baseCurrency||hostSeg.base_currency||"").toUpperCase();
+    const oDaily = Number(hostSeg.dailyBudgetBase||hostSeg.daily_budget_base||0) || daily;
+    const oFxMode = String(hostSeg.fxMode||hostSeg.fx_mode||"live_ecb");
+    const oFixed = Number(hostSeg.eurBaseRateFixed||hostSeg.eur_base_rate_fixed||hostSeg.fx_rate_eur_to_base||0) || null;
+
+    await sb.from(TB_CONST.TABLES.budget_segments).insert({
+      user_id: sbUser.id,
+      period_id: pid,
+      start_date: afterStart,
+      end_date: hostEnd,
+      base_currency: oCur,
+      daily_budget_base: oDaily,
+      fx_mode: oFxMode,
+      fx_rate_eur_to_base: (oFxMode === "fixed" ? oFixed : null),
+      fx_source: (oFxMode === "fixed" ? "manual" : "fx"),
+      fx_last_updated_at: new Date().toISOString(),
+      sort_order: 0,
+    });
+  }
+
+  _tbCloseNewSegmentModal();
+  await refreshFromServer();
+  try { if (typeof toastOk==="function") toastOk("Période ajoutée."); } catch (_) {}
+}
+
+// helpers
+function _tbDateAddDays(iso, deltaDays) {
+  try {
+    const d = new Date(String(iso) + "T00:00:00");
+    d.setDate(d.getDate() + Number(deltaDays||0));
+    return d.toISOString().slice(0,10);
+  } catch (_) { return iso; }
+}
+);
 }
 
 async function deletePeriod() {
@@ -810,12 +992,28 @@ function renderManualFxBox() {
       <div id="tbManualFxList">
         ${entries.length ? entries.map(([c,r]) => `
           <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border);">
-            <div><b>${escapeHTML(c)}</b> : 1 EUR = ${escapeHTML(String(r))} ${escapeHTML(c)}</div>
+            <div><b>${escapeHTML(c)}</b> : 1 EUR = ${escapeHTML(String(r))} ${escapeHTML(c)} ${(() => { try { const d = (typeof tbFxManualAsof==="function") ? tbFxManualAsof(c) : null; return d ? '<span class="muted" style="font-size:12px;">(' + escapeHTML(String(d)) + ')</span>' : ''; } catch(_) { return ''; } })()}</div>
             <button class="btn" onclick="tbManualFxDel('${escapeHTML(c)}')">Supprimer</button>
           </div>
         `).join("") : `<div class="muted">Aucun taux manuel.</div>`}
       </div>
     </div>
+
+  try {
+    const curEl = document.getElementById("tbManualFxCur");
+    const rateEl = document.getElementById("tbManualFxRate");
+    if (curEl && rateEl) {
+      curEl.addEventListener("input", () => {
+        const c = String(curEl.value || "").trim().toUpperCase();
+        if (!c || rateEl.value) return;
+        try {
+          const m = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
+          const live = (c === "EUR") ? 1 : (m && m[c]);
+          if (live) rateEl.value = String(live);
+        } catch (_) {}
+      });
+    }
+  } catch (_) {}
   `;
 }
 
