@@ -72,10 +72,9 @@
     }
 
     const { data: periods, error: eP } = await sbClient
-      .from("periods")
-      .select("id,start_date,end_date,base_currency,eur_base_rate,created_at")
-      .eq("user_id", uid)
-      .order("start_date");
+  .from("periods")
+  .select("id,start_date,end_date,base_currency,eur_base_rate,created_at")
+  .order("start_date");
 
     if (eP) {
       root.innerHTML = `<pre style="white-space:pre-wrap">Erreur periods: ${JSON.stringify(eP, null, 2)}</pre>`;
@@ -283,10 +282,9 @@
     if (!uid) return _toastErr("Not authenticated.");
 
     const { data: periods } = await sbClient
-      .from("periods")
-      .select("id,end_date")
-      .eq("user_id", uid)
-      .order("end_date", { ascending: false });
+  .from("periods")
+  .select("id,end_date")
+  .order("end_date", { ascending: false });
 
     let start = new Date();
     if (periods && periods.length) {
