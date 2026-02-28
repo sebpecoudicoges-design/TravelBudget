@@ -411,8 +411,9 @@ async function _createPeriodPromptImpl(){
   const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
   if(!segs.length) throw new Error("Aucune période existante à découper.");
 
-  const vStart = _tbISO(segs[0].start_date);
-  const vEnd   = _tbISO(segs[segs.length-1].end_date);
+  const vStart = _tbISO(segs[0].start || segs[0].start_date || segs[0].startDate);
+  const vEnd   = _tbISO(segs[segs.length-1].end || segs[segs.length-1].end_date || segs[segs.length-1].endDate);
+  if(!vStart || !vEnd) throw new Error("Bornes voyage invalides (start/end).");
 
   const modal = _tbEnsureModal();
   modal.setTitle("Ajouter une période");
@@ -462,8 +463,9 @@ async function _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud){
 
   if(!segs.length) throw new Error("Aucune période existante.");
 
-  const vStart = _tbISO(segs[0].start_date);
-  const vEnd   = _tbISO(segs[segs.length-1].end_date);
+  const vStart = _tbISO(segs[0].start || segs[0].start_date || segs[0].startDate);
+  const vEnd   = _tbISO(segs[segs.length-1].end || segs[segs.length-1].end_date || segs[segs.length-1].endDate);
+  if(!vStart || !vEnd) throw new Error("Bornes voyage invalides (start/end).");
   if(start < vStart || end > vEnd) throw new Error("Hors bornes du voyage.");
 
   const rightPieces = [];
