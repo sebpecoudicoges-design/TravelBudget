@@ -827,8 +827,6 @@ function _tbDateAddDays(iso, deltaDays) {
     return d.toISOString().slice(0,10);
   } catch (_) { return iso; }
 }
-);
-}
 
 async function deletePeriod() {
   await safeCall("Supprimer période", async () => {
@@ -1040,4 +1038,3 @@ function tbManualFxDel(c) {
     alert(e?.message || e);
   }
 }
-
