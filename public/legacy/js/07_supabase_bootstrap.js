@@ -590,6 +590,16 @@ async function loadFromSupabase() {
       }
     }
 
+    // Ensure default system categories exist (even if no transactions yet)
+    const REQUIRED_DEFAULT_CATS = ["Mouvement interne"];
+    for (const n of REQUIRED_DEFAULT_CATS) {
+      const k = String(n).toLowerCase();
+      if (!seen.has(k)) {
+        merged.push(n);
+        seen.add(k);
+      }
+    }
+
     state.categories = merged;
 
     const m = {};

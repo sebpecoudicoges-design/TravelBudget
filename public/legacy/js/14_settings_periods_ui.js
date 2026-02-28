@@ -400,7 +400,7 @@ function _tbEnsureModal(){
   };
 }
 
-async function createPeriodPrompt(){
+async function _createPeriodPromptImpl(){
   const s = _tbGetSB();
   if(!s) throw new Error("Supabase non prêt.");
   const uid = await _tbAuthUid();
@@ -748,7 +748,7 @@ async function _syncVoyageBoundsToSegments(pid, start, end){
 
 window.renderSettings = renderSettings;
 window.saveSettings = ()=>safeCall("Enregistrer voyage", _saveSettingsImpl);
-window.createPeriodPrompt = ()=>safeCall("Ajouter période", createPeriodPrompt);
+window.createPeriodPrompt = ()=>safeCall("Ajouter période", _createPeriodPromptImpl);
 window.deleteActivePeriod = ()=>_tbToastOk("Suppression de période: utilise le bouton Supprimer sur une période.");
 window.createVoyagePrompt = ()=>safeCall("Ajouter voyage", createVoyagePrompt);
 window.deleteActiveVoyage = ()=>safeCall("Supprimer voyage", deleteActiveVoyage);
