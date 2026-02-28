@@ -1,4 +1,4 @@
-window.__TB_BUILD = '6.6.73';
+window.__TB_BUILD = '6.6.74';
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -77,4 +77,11 @@ window.__TB_BUILD = '6.6.73';
     UI_LABELS,
     EXPECTED_SCHEMA_VERSION,
   });
+
+  // Convenience aliases (avoid raw strings in code):
+  // - Prefer TB_CONST.TABLES / TB_CONST.LS_KEYS directly.
+  // - TB_TABLES / TB_KEYS are provided for readability in legacy files.
+  window.TB_TABLES = window.TB_CONST.TABLES;
+  window.TB_COLS   = window.TB_CONST.COLS;
+  window.TB_KEYS   = window.TB_CONST.LS_KEYS;
 })();

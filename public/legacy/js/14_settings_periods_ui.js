@@ -143,7 +143,7 @@ async function refreshSegmentsForActivePeriod(){
   if(!pid) return;
 
   const { data, error } = await s
-    .from("budget_segments")
+    .from(TB_CONST.TABLES.budget_segments)
     .select("*")
     .eq("period_id", pid)
     .order("start_date", { ascending: true })
@@ -243,7 +243,7 @@ async function _saveSettingsImpl(){
   if(start > end) throw new Error("Date de début > date de fin.");
 
   // Patch period dates only
-  const { error } = await s.from("periods").update({ start_date:start, end_date:end }).eq("id", pid);
+  const { error } = await s.from(TB_CONST.TABLES.periods).update({ start_date:start, end_date:end }).eq("id", pid);
   if(error) throw error;
 
   // Ensure first/last segments align to voyage bounds (no holes overall)
@@ -296,7 +296,7 @@ async function createVoyagePrompt(){
 
       // insert period (defaults for base_currency/eur_base_rate/daily_budget_base ok)
       const ins = { user_id: uid, start_date:start, end_date:end };
-      const { data, error } = await s.from("periods").insert(ins).select("id").single();
+      const { data, error } = await s.from(TB_CONST.TABLES.periods).insert(ins).select("id").single();
       if(error) throw error;
       const newPid = data.id;
 
@@ -311,7 +311,7 @@ async function createVoyagePrompt(){
         fx_mode: "live_ecb",
         sort_order: 0
       };
-      const { error: e2 } = await s.from("budget_segments").insert(segIns);
+      const { error: e2 } = await s.from(TB_CONST.TABLES.budget_segments).insert(segIns);
       if(e2) throw e2;
 
       modal.close();
@@ -340,7 +340,7 @@ async function deleteActiveVoyage(){
   const label = `Voyage ${_tbISO(state.period.start)} → ${_tbISO(state.period.end)}`;
   if(!confirm(`Supprimer ${label} ?\n\nRefusé si des données y sont liées.`)) return;
 
-  const { error } = await s.from("periods").delete().eq("id", pid);
+  const { error } = await s.from(TB_CONST.TABLES.periods).delete().eq("id", pid);
   if(error) throw error;
   if (typeof window.refreshFromServer === "function") {
     await window.refreshFromServer();
@@ -531,11 +531,11 @@ async function _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud){
 
   // Apply updates/deletes first (avoid exclusion conflicts)
   for(const u of toUpdate){
-    const { error } = await s.from("budget_segments").update(u.patch).eq("id", u.id);
+    const { error } = await s.from(TB_CONST.TABLES.budget_segments).update(u.patch).eq("id", u.id);
     if(error) throw error;
   }
   for(const id of toDelete){
-    const { error } = await s.from("budget_segments").delete().eq("id", id);
+    const { error } = await s.from(TB_CONST.TABLES.budget_segments).delete().eq("id", id);
     if(error) throw error;
   }
 
@@ -550,12 +550,12 @@ async function _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud){
     fx_mode: "fixed", // safe default; user can toggle by leaving rate empty or editing
     sort_order: 0
   };
-  const { error: eNew } = await s.from("budget_segments").insert(newSeg);
+  const { error: eNew } = await s.from(TB_CONST.TABLES.budget_segments).insert(newSeg);
   if(eNew) throw eNew;
 
   // Insert any right pieces from splits
   for(const rp of rightPieces){
-    const { error } = await s.from("budget_segments").insert(rp);
+    const { error } = await s.from(TB_CONST.TABLES.budget_segments).insert(rp);
     if(error) throw error;
   }
 
@@ -598,7 +598,7 @@ async function saveBudgetSegment(segId, wrapEl){
     const prevEnd = _tbISO(prev.end);
     if(prevEnd >= newStart){
       const newPrevEnd = _tbAddDays(newStart, -1);
-      const { error } = await s.from("budget_segments").update({ end_date: newPrevEnd }).eq("id", prev.id);
+      const { error } = await s.from(TB_CONST.TABLES.budget_segments).update({ end_date: newPrevEnd }).eq("id", prev.id);
       if(error) throw error;
     }
   }
@@ -606,7 +606,7 @@ async function saveBudgetSegment(segId, wrapEl){
     const nextStart = _tbISO(next.start);
     if(nextStart <= newEnd){
       const newNextStart = _tbAddDays(newEnd, 1);
-      const { error } = await s.from("budget_segments").update({ start_date: newNextStart }).eq("id", next.id);
+      const { error } = await s.from(TB_CONST.TABLES.budget_segments).update({ start_date: newNextStart }).eq("id", next.id);
       if(error) throw error;
     }
   }
@@ -622,7 +622,7 @@ async function saveBudgetSegment(segId, wrapEl){
     user_id: uid,
     period_id: pid
   };
-  const { error: e2 } = await s.from("budget_segments").update(patch).eq("id", segId);
+  const { error: e2 } = await s.from(TB_CONST.TABLES.budget_segments).update(patch).eq("id", segId);
   if(e2) throw e2;
 
   // phase C: fill gaps created by shrinking current (only immediate neighbors)
@@ -630,7 +630,7 @@ async function saveBudgetSegment(segId, wrapEl){
     const prevEndNew = _tbISO((await _tbFetchSeg(prev.id)).end_date);
     const desiredPrevEnd = _tbAddDays(newStart, -1);
     if(prevEndNew < desiredPrevEnd){
-      const { error } = await s.from("budget_segments").update({ end_date: desiredPrevEnd }).eq("id", prev.id);
+      const { error } = await s.from(TB_CONST.TABLES.budget_segments).update({ end_date: desiredPrevEnd }).eq("id", prev.id);
       if(error) throw error;
     }
   }
@@ -638,7 +638,7 @@ async function saveBudgetSegment(segId, wrapEl){
     const nextStartNew = _tbISO((await _tbFetchSeg(next.id)).start_date);
     const desiredNextStart = _tbAddDays(newEnd, 1);
     if(nextStartNew > desiredNextStart){
-      const { error } = await s.from("budget_segments").update({ start_date: desiredNextStart }).eq("id", next.id);
+      const { error } = await s.from(TB_CONST.TABLES.budget_segments).update({ start_date: desiredNextStart }).eq("id", next.id);
       if(error) throw error;
     }
   }
@@ -652,7 +652,7 @@ async function saveBudgetSegment(segId, wrapEl){
 
 async function _tbFetchSeg(id){
   const s = _tbGetSB();
-  const { data, error } = await s.from("budget_segments").select("*").eq("id", id).single();
+  const { data, error } = await s.from(TB_CONST.TABLES.budget_segments).select("*").eq("id", id).single();
   if(error) throw error;
   return data;
 }
@@ -676,14 +676,14 @@ async function deleteBudgetSegment(segId){
   const next = idx<segs.length-1 ? segs[idx+1] : null;
 
   // delete
-  const { error } = await s.from("budget_segments").delete().eq("id", segId);
+  const { error } = await s.from(TB_CONST.TABLES.budget_segments).delete().eq("id", segId);
   if(error) throw error;
 
   // merge gap to neighbor (prefer prev)
   if(prev && next){
     // extend prev to cover until next.start-1, then shift next.start if needed
     const newPrevEnd = _tbAddDays(_tbISO(next.start), -1);
-    const { error: e1 } = await s.from("budget_segments").update({ end_date: newPrevEnd }).eq("id", prev.id);
+    const { error: e1 } = await s.from(TB_CONST.TABLES.budget_segments).update({ end_date: newPrevEnd }).eq("id", prev.id);
     if(e1) throw e1;
   }else if(prev && !next){
     // extend prev to voyage end (will sync)
@@ -700,29 +700,29 @@ async function deleteBudgetSegment(segId){
 
 async function _tbRecalcSegmentSortOrder(pid){
   const s = _tbGetSB();
-  const { data, error } = await s.from("budget_segments").select("id,start_date").eq("period_id", pid).order("start_date", {ascending:true});
+  const { data, error } = await s.from(TB_CONST.TABLES.budget_segments).select("id,start_date").eq("period_id", pid).order("start_date", {ascending:true});
   if(error) throw error;
   const rows = data || [];
   for(let i=0;i<rows.length;i++){
-    await s.from("budget_segments").update({ sort_order:i }).eq("id", rows[i].id);
+    await s.from(TB_CONST.TABLES.budget_segments).update({ sort_order:i }).eq("id", rows[i].id);
   }
 }
 
 async function _syncSegmentsBoundsToPeriod(pid){
   const s = _tbGetSB();
-  const { data, error } = await s.from("budget_segments").select("start_date,end_date").eq("period_id", pid).order("start_date",{ascending:true});
+  const { data, error } = await s.from(TB_CONST.TABLES.budget_segments).select("start_date,end_date").eq("period_id", pid).order("start_date",{ascending:true});
   if(error) throw error;
   const rows = data || [];
   if(!rows.length) return;
   const start = _tbISO(rows[0].start_date);
   const end = _tbISO(rows[rows.length-1].end_date);
-  const { error: e2 } = await s.from("periods").update({ start_date:start, end_date:end }).eq("id", pid);
+  const { error: e2 } = await s.from(TB_CONST.TABLES.periods).update({ start_date:start, end_date:end }).eq("id", pid);
   if(e2) throw e2;
 }
 
 async function _syncVoyageBoundsToSegments(pid, start, end){
   const s = _tbGetSB();
-  const { data, error } = await s.from("budget_segments").select("id,start_date,end_date").eq("period_id", pid).order("start_date",{ascending:true});
+  const { data, error } = await s.from(TB_CONST.TABLES.budget_segments).select("id,start_date,end_date").eq("period_id", pid).order("start_date",{ascending:true});
   if(error) throw error;
   const rows = data || [];
   if(!rows.length) return;
@@ -731,11 +731,11 @@ async function _syncVoyageBoundsToSegments(pid, start, end){
   const last = rows[rows.length-1];
 
   if(_tbISO(first.start) !== start){
-    const { error: e1 } = await s.from("budget_segments").update({ start_date:start }).eq("id", first.id);
+    const { error: e1 } = await s.from(TB_CONST.TABLES.budget_segments).update({ start_date:start }).eq("id", first.id);
     if(e1) throw e1;
   }
   if(_tbISO(last.end) !== end){
-    const { error: e2 } = await s.from("budget_segments").update({ end_date:end }).eq("id", last.id);
+    const { error: e2 } = await s.from(TB_CONST.TABLES.budget_segments).update({ end_date:end }).eq("id", last.id);
     if(e2) throw e2;
   }
   await _tbRecalcSegmentSortOrder(pid);
