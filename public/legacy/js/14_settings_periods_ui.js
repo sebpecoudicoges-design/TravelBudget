@@ -651,6 +651,7 @@ async function saveBudgetSegment(segId, wrapEl){
   await _tbRecalcSegmentSortOrder(pid);
   await _syncSegmentsBoundsToPeriod(pid);
   await refreshSegmentsForActivePeriod();
+  _tbAssertSegmentsIntegrity("after refreshSegmentsForActivePeriod");
   renderSettings();
   _tbToastOk("Période enregistrée.");
 }
@@ -685,20 +686,26 @@ async function deleteBudgetSegment(segId){
   if(error) throw error;
 
   // merge gap to neighbor (prefer prev)
+  // merge: always fuse into previous when possible; if first segment, fuse into next
   if(prev && next){
-    // extend prev to cover until next.start-1, then shift next.start if needed
     const newPrevEnd = _tbAddDays(_tbISO(next.start), -1);
     const { error: e1 } = await s.from(TB_CONST.TABLES.budget_segments).update({ end_date: newPrevEnd }).eq("id", prev.id);
     if(e1) throw e1;
   }else if(prev && !next){
-    // extend prev to voyage end (will sync)
+    // deleting last: extend prev to deleted end (typically voyage end)
+    const { error: e1 } = await s.from(TB_CONST.TABLES.budget_segments).update({ end_date: _tbISO(seg.end) }).eq("id", prev.id);
+    if(e1) throw e1;
   }else if(!prev && next){
-    // extend next backward to voyage start (will sync)
+    // deleting first: extend next back to deleted start (typically voyage start)
+    const { error: e1 } = await s.from(TB_CONST.TABLES.budget_segments).update({ start_date: _tbISO(seg.start) }).eq("id", next.id);
+    if(e1) throw e1;
   }
+
 
   await _tbRecalcSegmentSortOrder(pid);
   await _syncSegmentsBoundsToPeriod(pid);
   await refreshSegmentsForActivePeriod();
+  _tbAssertSegmentsIntegrity("after refreshSegmentsForActivePeriod");
   renderSettings();
   _tbToastOk("Période supprimée.");
 }
@@ -724,6 +731,62 @@ async function _syncSegmentsBoundsToPeriod(pid){
   const { error: e2 } = await s.from(TB_CONST.TABLES.periods).update({ start_date:start, end_date:end }).eq("id", pid);
   if(e2) throw e2;
 }
+
+function _tbIsDebug(){
+  try{
+    const v = localStorage.getItem(TB_CONST.LS_KEYS.debug);
+    return v === "1" || v === "true" || v === "on";
+  }catch(_){ return false; }
+}
+
+// Dev-only integrity checks (segments continuity, bounds vs voyage)
+function _tbAssertSegmentsIntegrity(ctx=""){
+  if(!_tbIsDebug()) return true;
+  try{
+    const pid = state.period && state.period.id;
+    const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
+    if(!pid){ console.warn("[TB][segments] no active voyage", ctx); return false; }
+    if(!segs.length){ console.warn("[TB][segments] no segments", ctx, pid); return false; }
+
+    for(let i=0;i<segs.length;i++){
+      const s = segs[i];
+      if(!_tbISO(s.start) || !_tbISO(s.end)){
+        console.warn("[TB][segments] invalid dates", ctx, s);
+        return false;
+      }
+      if(_tbISO(s.end) < _tbISO(s.start)){
+        console.warn("[TB][segments] end<start", ctx, s);
+        return false;
+      }
+      if(i>0){
+        const prev = segs[i-1];
+        const expected = _tbAddDays(_tbISO(prev.end), 1);
+        if(_tbISO(s.start) !== expected){
+          console.warn("[TB][segments] continuity break", ctx, {prev:[prev.start,prev.end], cur:[s.start,s.end], expected});
+          return false;
+        }
+      }
+    }
+
+    // bounds vs voyage (if available)
+    if(state.period && state.period.start && state.period.end){
+      if(_tbISO(segs[0].start) !== _tbISO(state.period.start)){
+        console.warn("[TB][segments] first.start != voyage.start", ctx, {seg:segs[0].start, voyage:state.period.start});
+        return false;
+      }
+      if(_tbISO(segs[segs.length-1].end) !== _tbISO(state.period.end)){
+        console.warn("[TB][segments] last.end != voyage.end", ctx, {seg:segs[segs.length-1].end, voyage:state.period.end});
+        return false;
+      }
+    }
+    console.log("[TB][segments] integrity OK", ctx, {count:segs.length});
+    return true;
+  }catch(e){
+    console.warn("[TB][segments] integrity check failed", ctx, e);
+    return false;
+  }
+}
+
 
 async function _syncVoyageBoundsToSegments(pid, start, end){
   const s = _tbGetSB();
