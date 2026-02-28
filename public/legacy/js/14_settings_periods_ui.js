@@ -250,7 +250,11 @@ async function _saveSettingsImpl(){
   await _syncVoyageBoundsToSegments(pid, start, end);
 
   // reload
-  await bootRefreshFromServer?.();
+  if (typeof window.refreshFromServer === "function") {
+    await window.refreshFromServer();
+  } else if (typeof refreshFromServer === "function") {
+    await refreshFromServer();
+  }
   _tbToastOk("Dates du voyage enregistrées.");
 }
 
@@ -311,7 +315,11 @@ async function createVoyagePrompt(){
       if(e2) throw e2;
 
       modal.close();
-      await bootRefreshFromServer?.();
+      if (typeof window.refreshFromServer === "function") {
+    await window.refreshFromServer();
+  } else if (typeof refreshFromServer === "function") {
+    await refreshFromServer();
+  }
       // activate new voyage
       const p = (state.periods||[]).find(x=>x.id===newPid);
       if(p) state.period = p;
@@ -334,7 +342,11 @@ async function deleteActiveVoyage(){
 
   const { error } = await s.from("periods").delete().eq("id", pid);
   if(error) throw error;
-  await bootRefreshFromServer?.();
+  if (typeof window.refreshFromServer === "function") {
+    await window.refreshFromServer();
+  } else if (typeof refreshFromServer === "function") {
+    await refreshFromServer();
+  }
   _tbToastOk("Voyage supprimé.");
 }
 
