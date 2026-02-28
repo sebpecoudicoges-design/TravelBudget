@@ -514,6 +514,9 @@ function _tbDateAddDays(iso, deltaDays) {
 }
 // Supabase accessor (robust across builds)
 function _tbGetSB() {
+  try {
+    if (typeof sb !== "undefined" && sb && typeof sb.from === "function") return sb;
+  } catch (_) {}
   const cand = window.sb || window.supabaseClient || window.supabase || window._sb;
   if (cand && typeof cand.from === "function") return cand;
   return null;
@@ -940,10 +943,103 @@ function tbManualFxDel(c) {
   }
 }
 
+
+
+// =========================
+// Voyage controls (index.html onclick handlers)
+// =========================
+async function saveSettings() {
+  await safeCall("Enregistrer voyage", async () => {
+    const pid = String(state?.period?.id || "");
+    if (!pid) throw new Error("Aucun voyage actif.");
+    const start = String(document.getElementById("s-start")?.value || "").slice(0,10);
+    const end = String(document.getElementById("s-end")?.value || "").slice(0,10);
+    if (!start || !end) throw new Error("Dates invalides.");
+    if (end < start) throw new Error("Fin < début.");
+    const sbx = _tbGetSB();
+    if (!sbx) throw new Error("Supabase non prêt.");
+
+    // Update voyage bounds (dates only)
+    const { error: upErr } = await sbx
+      .from(TB_CONST.TABLES.periods)
+      .update({ start_date: start, end_date: end, updated_at: new Date().toISOString() })
+      .eq("id", pid);
+    if (upErr) throw upErr;
+
+    // Align first/last segment to voyage bounds (best-effort; avoids holes at edges)
+    const segs = (state.budgetSegments || [])
+      .filter(s => String(s.periodId || s.period_id) === pid)
+      .slice()
+      .sort((a,b)=>String(a.start_date||a.start||"").localeCompare(String(b.start_date||b.start||"")));
+    if (segs.length) {
+      const first = segs[0];
+      const last = segs[segs.length-1];
+      const firstId = String(first.id || "");
+      const lastId = String(last.id || "");
+      if (firstId) {
+        await sbx.from(TB_CONST.TABLES.budget_segments)
+          .update({ start_date: start, updated_at: new Date().toISOString() })
+          .eq("id", firstId);
+      }
+      if (lastId) {
+        await sbx.from(TB_CONST.TABLES.budget_segments)
+          .update({ end_date: end, updated_at: new Date().toISOString() })
+          .eq("id", lastId);
+      }
+    }
+
+    await refreshFromServer();
+    if (typeof renderSettings === "function") renderSettings();
+  });
+}
+
+async function createVoyagePrompt() {
+  await safeCall("Ajouter voyage", async () => {
+    const sbx = _tbGetSB();
+    if (!sbx) throw new Error("Supabase non prêt.");
+    if (!window.sbUser || !sbUser.id) throw new Error("Not authenticated.");
+
+    const defStart = _tbTodayISO();
+    const defEnd = _tbTodayISO();
+    const start = String(prompt("Début du voyage (YYYY-MM-DD)", defStart) || "").slice(0,10);
+    const end = String(prompt("Fin du voyage (YYYY-MM-DD)", defEnd) || "").slice(0,10);
+    if (!start || !end) return;
+    if (end < start) throw new Error("Fin < début.");
+
+    const baseCur = String(prompt("Devise base (ISO3)", String(state?.period?.baseCurrency || "THB")) || "THB").trim().toUpperCase().slice(0,6);
+    const daily = Number(String(prompt("Budget/jour (devise base)", "0") || "0").replace(",", "."));
+    if (!Number.isFinite(daily) || daily < 0) throw new Error("Budget/jour invalide.");
+
+    // Create voyage (period)
+    const { data: pData, error: pErr } = await sbx
+      .from(TB_CONST.TABLES.periods)
+      .insert([{ user_id: sbUser.id, start_date: start, end_date: end, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), eur_base_rate: 1 }])
+      .select("id")
+      .single();
+    if (pErr) throw pErr;
+    const pid = String(pData?.id || "");
+    if (!pid) throw new Error("Création voyage échouée.");
+
+    // Create initial segment covering full voyage
+    const { error: sErr } = await sbx
+      .from(TB_CONST.TABLES.budget_segments)
+      .insert([{ user_id: sbUser.id, period_id: pid, start_date: start, end_date: end, base_currency: baseCur, daily_budget_base: daily, fx_mode: "auto", sort_order: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
+    if (sErr) throw sErr;
+
+    await refreshFromServer();
+    state.period.id = pid;
+    if (typeof renderSettings === "function") renderSettings();
+  });
+}
+
+async function deleteVoyage() {
+  return deletePeriod();
+}
+
 // Legacy global hooks (HTML onclick attributes)
-try {
-  window.createPeriodPrompt = newPeriod;
-  window.deleteActivePeriod = deletePeriod;
-  window.saveSettings = saveSettings;
-  window.renderSettings = renderSettings;
-} catch (_) {}
+window.createPeriodPrompt = newPeriod;
+window.deleteActivePeriod = deletePeriod;
+window.deleteVoyage = deleteVoyage;
+window.createVoyagePrompt = createVoyagePrompt;
+window.saveSettings = saveSettings;
+window.renderSettings = renderSettings;
