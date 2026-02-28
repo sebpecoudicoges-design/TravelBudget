@@ -374,29 +374,59 @@ const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
 
     
     // === Write changes without violating the no-overlap constraint ===
+    const sb = _tbGetSB();
+    if (!sb) throw new Error("Supabase non prêt.");
+
     const oldStart = String(seg.start_date || seg.start || "");
     const oldEnd = String(seg.end_date || seg.end || "");
 
-    // Determine interim shrink (never expands beyond old bounds)
-    let interimStart = (startN > oldStart) ? startN : oldStart;
-    let interimEnd = (endN < oldEnd) ? endN : oldEnd;
-    if (interimStart > interimEnd) { interimStart = startN; interimEnd = endN; } // fallback
+    // Desired neighbor anchors for "no holes"
+    const desiredPrevEnd = prev ? _tbDayBefore(startN) : null;
+    const desiredNextStart = next ? _tbDayAfter(endN) : null;
 
-    // Helper to update current segment (common payload)
-    const _updCurrent = async (sISO, eISO) => {
+    const prevStart0 = prev ? String(prev.start_date || prev.start || "") : null;
+    const prevEnd0 = prev ? String(prev.end_date || prev.end || "") : null;
+    const nextStart0 = next ? String(next.start_date || next.start || "") : null;
+    const nextEnd0 = next ? String(next.end_date || next.end || "") : null;
+
+    // Helper to update/delete neighbor safely
+    const _maybeUpdatePrev = async (endISO) => {
+      if (!prev) return;
+      if (!endISO || !prevStart0) return;
+      if (endISO < prevStart0) {
+        // prev becomes empty -> delete (current expands over it)
+        const { error } = await sb.from(TB_CONST.TABLES.budget_segments).delete().eq("id", prev.id);
+        if (error) throw error;
+        return;
+      }
+      const { error } = await sb.from(TB_CONST.TABLES.budget_segments).update({ end_date: endISO, updated_at: new Date().toISOString() }).eq("id", prev.id);
+      if (error) throw error;
+    };
+
+    const _maybeUpdateNext = async (startISO) => {
+      if (!next) return;
+      if (!startISO || !nextEnd0) return;
+      if (startISO > nextEnd0) {
+        const { error } = await sb.from(TB_CONST.TABLES.budget_segments).delete().eq("id", next.id);
+        if (error) throw error;
+        return;
+      }
+      const { error } = await sb.from(TB_CONST.TABLES.budget_segments).update({ start_date: startISO, updated_at: new Date().toISOString() }).eq("id", next.id);
+      if (error) throw error;
+    };
+
+    const _updCurrent = async () => {
       const { error } = await sb
         .from(TB_CONST.TABLES.budget_segments)
         .update({
-          start_date: sISO,
-          end_date: eISO,
+          start_date: startN,
+          end_date: endN,
           base_currency: baseCurrency,
           daily_budget_base: dailyBudgetBase,
           fx_mode: fxMode,
-          // V6.5 FX storage
           fx_rate_eur_to_base: (fxMode === "fixed" ? eurBaseRateFixed : null),
           fx_source: (fxMode === "fixed" ? "manual" : "fx"),
           fx_last_updated_at: new Date().toISOString(),
-          // legacy compat (kept while DB migration is rolling)
           eur_base_rate_fixed: eurBaseRateFixed,
           updated_at: new Date().toISOString(),
         })
@@ -404,45 +434,26 @@ const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
       if (error) throw error;
     };
 
-    // Step A: shrink current if needed (safe)
-    if (interimStart !== oldStart || interimEnd !== oldEnd) {
-      await _updCurrent(interimStart, interimEnd);
+    // Phase 1: shrink neighbors BEFORE expanding current into them (avoids overlaps)
+    if (prev && desiredPrevEnd && prevEnd0 && desiredPrevEnd < prevEnd0) {
+      await _maybeUpdatePrev(desiredPrevEnd);
+    }
+    if (next && desiredNextStart && nextStart0 && desiredNextStart > nextStart0) {
+      await _maybeUpdateNext(desiredNextStart);
     }
 
-    // Step B: shrink neighbors if current expands into them
-    if (prev && prevEnd && startN < oldStart) {
-      const { error: pe } = await sb
-        .from(TB_CONST.TABLES.budget_segments)
-        .update({ end_date: prevEnd, updated_at: new Date().toISOString() })
-        .eq("id", prev.id);
-      if (pe) throw pe;
+    // Phase 2: update current (now space is free)
+    await _updCurrent();
+
+    // Phase 3: expand neighbors AFTER current shrinks away (fills gaps, still no overlap)
+    // (prev end may move right; next start may move left)
+    if (prev && desiredPrevEnd && prevEnd0 && desiredPrevEnd > prevEnd0) {
+      await _maybeUpdatePrev(desiredPrevEnd);
     }
-    if (next && nextStart && endN > oldEnd) {
-      const { error: ne } = await sb
-        .from(TB_CONST.TABLES.budget_segments)
-        .update({ start_date: nextStart, updated_at: new Date().toISOString() })
-        .eq("id", next.id);
-      if (ne) throw ne;
+    if (next && desiredNextStart && nextStart0 && desiredNextStart < nextStart0) {
+      await _maybeUpdateNext(desiredNextStart);
     }
 
-    // Step C: set current to final bounds
-    await _updCurrent(startN, endN);
-
-    // Step D: expand neighbors into gaps if current shrank away from them
-    if (prev && prevEnd && startN > oldStart) {
-      const { error: pe } = await sb
-        .from(TB_CONST.TABLES.budget_segments)
-        .update({ end_date: prevEnd, updated_at: new Date().toISOString() })
-        .eq("id", prev.id);
-      if (pe) throw pe;
-    }
-    if (next && nextStart && endN < oldEnd) {
-      const { error: ne } = await sb
-        .from(TB_CONST.TABLES.budget_segments)
-        .update({ start_date: nextStart, updated_at: new Date().toISOString() })
-        .eq("id", next.id);
-      if (ne) throw ne;
-    }
 
     await _tbRecalcSortOrders(state.period.id);
 
@@ -450,7 +461,8 @@ const baseCurrency = (edits.baseCurrency ?? seg.baseCurrency) || "";
 
     
 
-    await _syncLastSegmentEndToPeriod(state.period.id, String(state?.period?.end || ""));
+    await await _syncFirstSegmentStartToPeriod(state.period.id);
+    await _syncLastSegmentEndToPeriod(state.period.id);
 if (window.__TB_SEG_EDITS__) delete window.__TB_SEG_EDITS__[id];
 
     await refreshFromServer();
@@ -467,7 +479,7 @@ function _tbDayAfter(iso) { return _tbDateAddDays(iso, 1); }
 
 async function _tbRecalcSortOrders(periodId) {
   try {
-    const sb = window.sb;
+    const sb = _tbGetSB();
     const pid = String(periodId || "");
     if (!sb || !pid) return;
 
@@ -500,6 +512,54 @@ function _tbDateAddDays(iso, deltaDays) {
     return String(iso || "").slice(0, 10);
   }
 }
+// Supabase accessor (robust across builds)
+function _tbGetSB() {
+  const cand = window.sb || window.supabaseClient || window.supabase || window._sb;
+  if (cand && typeof cand.from === "function") return cand;
+  return null;
+}
+
+// Keep periods bounds aligned with first/last segment (best-effort, never blocks UI)
+async function _syncFirstSegmentStartToPeriod(periodId) {
+  try {
+    const sb = _tbGetSB();
+    const pid = String(periodId || "");
+    if (!sb || !pid) return;
+    const { data, error } = await sb
+      .from(TB_CONST.TABLES.budget_segments)
+      .select("start_date")
+      .eq("period_id", pid)
+      .order("start_date", { ascending: true })
+      .limit(1);
+    if (error) throw error;
+    const start = data && data[0] ? String(data[0].start_date || "") : "";
+    if (!start) return;
+    await sb.from(TB_CONST.TABLES.periods).update({ start_date: start, updated_at: new Date().toISOString() }).eq("id", pid);
+  } catch (e) {
+    console.warn("[settings] bounds sync (start) failed", e);
+  }
+}
+
+async function _syncLastSegmentEndToPeriod(periodId) {
+  try {
+    const sb = _tbGetSB();
+    const pid = String(periodId || "");
+    if (!sb || !pid) return;
+    const { data, error } = await sb
+      .from(TB_CONST.TABLES.budget_segments)
+      .select("end_date")
+      .eq("period_id", pid)
+      .order("end_date", { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    const end = data && data[0] ? String(data[0].end_date || "") : "";
+    if (!end) return;
+    await sb.from(TB_CONST.TABLES.periods).update({ end_date: end, updated_at: new Date().toISOString() }).eq("id", pid);
+  } catch (e) {
+    console.warn("[settings] bounds sync (end) failed", e);
+  }
+}
+
 // === Add segment modal (insert a new period inside an existing segment) ===
 function _tbEnsureInsertModal() {
   if (document.getElementById("tbInsertSegModal")) return;
@@ -557,7 +617,7 @@ function _tbEnsureInsertModal() {
 }
 
 async function _tbInsertSegmentInsideExisting(startISO, endISO, baseCur, dailyBudgetBase) {
-  const sb = window.sb;
+  const sb = _tbGetSB();
   if (!sb) throw new Error("Supabase non prêt.");
   const pid = String(state?.period?.id || "");
   if (!pid) throw new Error("Aucun voyage actif.");
@@ -656,7 +716,12 @@ async function newPeriod() {
 async function deletePeriod() {
   await safeCall("Supprimer période", async () => {
     if (!state.period.id) throw new Error("Aucune période active.");
-    if (!confirm("Supprimer cette période ?")) return;
+    const vs = String(state?.period?.start || state?.period?.start_date || "");
+    const ve = String(state?.period?.end || state?.period?.end_date || "");
+    const label = `Supprimer le voyage actif ${vs} → ${ve} ?
+
+⚠️ Refusé si des transactions existent. Utilise plutôt "vider compte" pour les tests.`;
+    if (!confirm(label)) return;
 
     await sb.from(TB_CONST.TABLES.budget_segments).delete().eq("period_id", state.period.id);
 
