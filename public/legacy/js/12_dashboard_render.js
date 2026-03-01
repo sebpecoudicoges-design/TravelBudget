@@ -93,6 +93,32 @@ if (!wallets.length) {
     ${tbT ? tbT("wallet.empty.body") : "Crée au moins 1 wallet pour suivre ton solde (ex : Cash THB, Banque EUR)."}
   `;
   container.appendChild(empty);
+
+  // Quick onboarding block
+  const ob = document.createElement("div");
+  ob.className = "hint";
+  ob.style.padding = "10px";
+  ob.style.border = "1px solid rgba(0,0,0,.08)";
+  ob.style.borderRadius = "12px";
+  ob.style.background = "rgba(0,0,0,.02)";
+  ob.style.marginTop = "10px";
+  const T = (window.tbT ? tbT : (k)=>k);
+  ob.innerHTML = `
+    <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
+      <div style="font-weight:600;">${T("onboarding.title")}</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" type="button" onclick="showView('settings')">Settings</button>
+        <button class="btn" type="button" onclick="showView('help')">${T("nav.help")}</button>
+      </div>
+    </div>
+    <div style="margin-top:8px;" class="muted">
+      <div>${T("onboarding.step.wallet")}</div>
+      <div>${T("onboarding.step.period")}</div>
+      <div>${T("onboarding.step.tx")}</div>
+      <div style="margin-top:6px;">${T("onboarding.tip")}</div>
+    </div>
+  `;
+  container.appendChild(ob);
 }
 
   // Wallets list (draggable reorder)

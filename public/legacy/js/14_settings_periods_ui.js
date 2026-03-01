@@ -166,10 +166,35 @@ function renderSettings(){
 
   // labels
   const h2 = view.querySelector('h2');
-  if(h2) h2.textContent = "Voyage";
+  if(h2) h2.textContent = (window.tbT ? tbT("settings.title") : "Voyage");
 
   const p = state.period;
   const segs = (state.budgetSegments || []).map(_tbNormSeg).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
+
+  // Inject lightweight tooltips into the static Settings header labels (once)
+  try {
+    if (!view.__tbHelpInjected && typeof tbHelp === "function") {
+      view.__tbHelpInjected = true;
+      const labels = Array.from(view.querySelectorAll("label"));
+      const helpDates = (window.tbT ? tbT("settings.help.trip_dates") : "");
+      const helpSegs = (window.tbT ? tbT("settings.help.segments") : "");
+
+      labels.forEach((lab) => {
+        const txt = String(lab.textContent || "").trim();
+        if (!txt) return;
+        if ((txt === "Début" || txt === "Fin") && helpDates) {
+          lab.innerHTML = `${escapeHTML(txt)} ${tbHelp(helpDates)}`;
+        }
+      });
+
+      // Add a hint in the "Périodes du voyage" card title
+      const h2s = Array.from(view.querySelectorAll("h2"));
+      const periodsH2 = h2s.find(h => String(h.textContent||"").trim() === "Périodes du voyage");
+      if (periodsH2 && helpSegs) {
+        periodsH2.innerHTML = `${escapeHTML(periodsH2.textContent)} ${tbHelp(helpSegs)}`;
+      }
+    }
+  } catch(_) {}
 
   // voyage dates reflect real bounds from segments when available
   const startISO = segs.length ? _tbISO(segs[0].start) : _tbISO(p && p.start);
@@ -192,11 +217,11 @@ function renderSettings(){
     // --- FX status (ECB) + Manual fallback panel (audit) ---
 
 
-    const _fxHelp = [
+    const _fxHelp = (window.tbT ? tbT("settings.help.fx") : [
       "Auto (ECB) : taux officiel BCE, date = refDay (jour de publication, week-end ok).",
       "Manuel fallback : utilisé uniquement si l'ECB ne fournit pas la devise.",
       "Manquant : taux requis non disponible → saisie requise."
-    ].join("\n");
+    ].join("\n"));
 
 
     const fxStatus = (typeof window.tbFxAutoStatus === "function") ? window.tbFxAutoStatus() : null;
@@ -219,7 +244,7 @@ function renderSettings(){
         <div>
           <b>FX (ECB)</b>
           <span class="muted">• asOf <b>${ecbAsof || "—"}</b> • <b>${ecbCount}</b> devises • refDay <b>${refDay || "—"}</b>
-            <span title="${escapeHTML(_fxHelp)}" style="cursor:help; user-select:none; padding-left:6px;">(?)</span>
+            ${typeof tbHelp === 'function' ? tbHelp(_fxHelp) : `<span title="${escapeHTML(_fxHelp)}" style="cursor:help; user-select:none; padding-left:6px;">(?)</span>`}
           </span>
         </div>
       </div>

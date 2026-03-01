@@ -80,6 +80,42 @@
         fr: "Si la devise est disponible via la source FX auto, l'app utilise automatiquement le taux (mode auto). Sinon, le mode passe en fixe et te demande un taux EUR→BASE. Objectif : éviter les erreurs de saisie.",
         en: "If the currency is available from the auto FX provider, the app uses it automatically (auto mode). Otherwise it switches to fixed and asks for an EUR→BASE rate. Goal: prevent input mistakes."
       }
+    },
+    {
+      id: "fx_refday_weekend",
+      tags: ["fx", "ecb", "weekend", "refday", "asof"],
+      q: { fr: "FX (ECB) : c’est quoi refDay / asOf ?", en: "FX (ECB): what are refDay / asOf?" },
+      a: {
+        fr: "Les taux ECB ont une date de publication (asOf). refDay = le jour de référence choisi par l’app pour éviter les trous (week-ends / jours fériés). En bref : tu vois la date utilisée pour le calcul.",
+        en: "ECB rates have a publication date (asOf). refDay is the reference day chosen to avoid gaps (weekends/holidays). In short: you see which date is used for calculations."
+      }
+    },
+    {
+      id: "fx_manual_fallback",
+      tags: ["fx", "manuel", "fallback", "taux", "audit"],
+      q: { fr: "Quand dois-je saisir un taux manuel ?", en: "When do I need to enter a manual rate?" },
+      a: {
+        fr: "Seulement si l’ECB ne fournit pas ta devise base. Dans ce cas, l’app te demande un taux EUR→DEV daté (fallback). Si l’ECB couvre la devise : aucune saisie, le taux est verrouillé.",
+        en: "Only if ECB doesn’t provide your base currency. Then the app requests a dated EUR→CUR fallback rate. If ECB covers the currency: no input, the rate is locked."
+      }
+    },
+    {
+      id: "segments_no_gaps",
+      tags: ["périodes", "segments", "overlap", "trou", "dates"],
+      q: { fr: "Pourquoi je ne peux pas avoir de trou / overlap entre les périodes ?", en: "Why can’t I have gaps/overlaps between periods?" },
+      a: {
+        fr: "Pour garder un calcul cohérent (budget/j, courbes, FX), l’app garantit une continuité parfaite : aucune journée manquante et aucune journée comptée deux fois. Quand tu modifies une borne, les autres périodes s’ajustent.",
+        en: "To keep calculations consistent (daily budget, charts, FX), the app enforces perfect continuity: no missing day and no day counted twice. When you change a boundary, other periods are adjusted."
+      }
+    },
+    {
+      id: "wallet_negative",
+      tags: ["wallet", "négatif", "découvert", "balance"],
+      q: { fr: "Un wallet peut-il être négatif ?", en: "Can a wallet be negative?" },
+      a: {
+        fr: "Oui. Un wallet représente une poche (cash, banque). Si tu es à découvert ou si tu avances des frais, un solde négatif est possible. L’important est de bien tagger “Payé maintenant” vs “À payer”.",
+        en: "Yes. A wallet is a pocket (cash, bank). If you’re overdrafted or fronting costs, a negative balance is possible. The key is using “Paid now” vs “To pay” correctly."
+      }
     }
   ];
 
@@ -136,4 +172,105 @@
   // Expose globally
   window.tbGetFaqEntries = tbGetFaqEntries;
   window.tbSearchFaq = tbSearchFaq;
+
+  /* =========================
+     Help page renderer (V1)
+     - Uses #help-root DOM from index.html
+     - Keeps it dependency-free
+     ========================= */
+
+  function _t(k){ return (window.tbT ? tbT(k) : k); }
+
+  function renderHelpFaq() {
+    const root = document.getElementById("help-root");
+    if (!root) return;
+
+    // i18n static nodes
+    try { if (window.tbApplyI18nDom) tbApplyI18nDom(root); } catch (_) {}
+
+    const input = document.getElementById("help-search");
+    if (input && !input.__tbBound) {
+      input.__tbBound = true;
+      input.placeholder = _t("help.search_placeholder");
+      input.addEventListener("input", () => doSearch());
+    } else if (input) {
+      input.placeholder = _t("help.search_placeholder");
+    }
+
+    // Guides block (top)
+    let guides = document.getElementById("help-guides");
+    if (!guides) {
+      guides = document.createElement("div");
+      guides.id = "help-guides";
+      guides.style.marginTop = "12px";
+      guides.style.marginBottom = "12px";
+      root.insertBefore(guides, root.querySelector(".form-row"));
+    }
+
+    guides.innerHTML = `
+      <div style="font-weight:600; margin-bottom:8px;">${_t("help.guides.title")}</div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px;">
+        ${[
+          ["help.guide.create_trip.title", "help.guide.create_trip.body"],
+          ["help.guide.create_periods.title", "help.guide.create_periods.body"],
+          ["help.guide.fx.title", "help.guide.fx.body"],
+          ["help.guide.wallets.title", "help.guide.wallets.body"],
+          ["help.guide.trip.title", "help.guide.trip.body"],
+        ].map(([kt, kb]) => `
+          <div class="hint" style="padding:10px; border:1px solid rgba(0,0,0,.08); border-radius:12px; background:rgba(0,0,0,.02);">
+            <div style="font-weight:600; margin-bottom:6px;">${_t(kt)}</div>
+            <div class="muted">${_t(kb)}</div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+
+    // Full list
+    const list = document.getElementById("help-list");
+    if (list) list.innerHTML = FAQ.map(item => _renderFaqItem(item)).join("");
+
+    // initial state
+    doSearch(true);
+  }
+
+  function _renderFaqItem(item) {
+    const l = _lang();
+    const q = (item.q && item.q[l]) || "";
+    const a = (item.a && item.a[l]) || "";
+    return `
+      <div class="card" style="padding:10px; margin:10px 0;">
+        <div style="font-weight:600;">${escapeHTML(q)}</div>
+        <div class="muted" style="margin-top:6px; white-space:pre-wrap;">${escapeHTML(a)}</div>
+      </div>
+    `;
+  }
+
+  function doSearch(isInit) {
+    const input = document.getElementById("help-search");
+    const q = String(input && input.value || "").trim();
+    const results = document.getElementById("help-results");
+    const empty = document.getElementById("help-empty");
+    if (!results || !empty) return;
+
+    if (!q) {
+      // nothing typed: hide top results
+      results.innerHTML = "";
+      empty.classList.add("hidden");
+      return;
+    }
+
+    const hits = tbSearchFaq(q, 6);
+    if (!hits.length) {
+      results.innerHTML = "";
+      empty.classList.remove("hidden");
+      return;
+    }
+    empty.classList.add("hidden");
+    results.innerHTML = `
+      <div class="muted" style="margin:8px 0;">${_t("help.top_results")}</div>
+      ${hits.map(item => _renderFaqItem(item)).join("")}
+    `;
+  }
+
+  window.renderHelpFaq = renderHelpFaq;
 })();
