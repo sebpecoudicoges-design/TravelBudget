@@ -201,13 +201,15 @@ function renderSettings(){
         manualRate = manualObj && typeof manualObj === 'object' ? Number(manualObj.rate) : null;
         manualAsof = manualObj && typeof manualObj === 'object' ? (manualObj.asOf || null) : null;
         let autoAsof = null; try { autoAsof = localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_asof) || null; } catch(_) {}
+        let autoCount = 0; try { autoCount = JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_keys) || "[]").length || 0; } catch(_) {}
+        const ecbStatus = autoAsof ? ` • ECB asOf ${autoAsof} • ${autoCount} devises` : "";
 const todayISO = (typeof toLocalISODate === "function") ? toLocalISODate(new Date()) : new Date().toISOString().slice(0,10);
 const ratesMerged = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : null;
 const usedRate = (typeof window.fxRate==="function" && ratesMerged) ? window.fxRate("EUR", cur, ratesMerged) : null;
 const rateDisplay = (usedRate!==null && usedRate!==undefined && Number.isFinite(Number(usedRate))) ? String(Number(usedRate).toFixed(2)) : "";
 const srcLabel = autoAvail ? "Auto" : (manualRate ? "Manuel fallback" : "Manquant");
 const refDay = (autoAsof || todayISO);
-const stale = (!autoAvail && manualRate && (manualAsof || "") !== refDay);
+const stale = (!autoAvail && manualRate && (!manualAsof || String(manualAsof).slice(0,10) < String(refDay).slice(0,10)));
 const srcMeta = autoAvail ? (autoAsof?` • date: ${autoAsof}`:"") : (manualRate ? (` • date: ${manualAsof || "—"}${stale ? " (à confirmer)" : ""}`) : "");
         wrap.innerHTML = `
           <div class="row" style="align-items:flex-end;">
@@ -231,7 +233,7 @@ const srcMeta = autoAvail ? (autoAsof?` • date: ${autoAsof}`:"") : (manualRate
               <label>Taux EUR→Devise</label>
               <input value="${rateDisplay}" placeholder="${autoAvail ? "auto" : (manualRate ? "manuel fallback" : "manquant")}" readonly />
             </div>
-            ${(!autoAvail) ? `<button class="btn" data-act="fx" title="Définir/mettre à jour un taux manuel fallback pour cette devise">${manualRate ? "Mettre à jour" : "Saisir taux"}</button>` : ""}
+            ${(!autoAvail) ? `<button class="btn" data-act="fx" title="Définir/mettre à jour un taux manuel fallback pour cette devise">${manualRate ? "Mettre à jour taux" : "Saisir taux"}</button>` : ""}
             <div style="flex:1"></div>
             <button class="btn primary" data-act="save">Enregistrer</button>
             <button class="btn danger" data-act="del">Supprimer</button>

@@ -86,6 +86,22 @@ function _fxRefISO() {
   } catch (_) {}
   return _fxTodayISO();
 }
+function tbFxRefDay() {
+  return _fxRefISO();
+}
+function tbFxAutoStatus() {
+  const asOf = (function(){ try { return String(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_asof) || "").slice(0,10) || null; } catch(_) { return null; } })();
+  let count = 0;
+  try {
+    const rawKeys = localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_keys);
+    if (rawKeys) {
+      const arr = JSON.parse(rawKeys);
+      if (Array.isArray(arr)) count = arr.length;
+    }
+  } catch (_) {}
+  return { asOf, count };
+}
+
 
 function tbFxSetManualRate(cur, rate, asOf) {
   const c = String(cur || "").trim().toUpperCase();
@@ -175,7 +191,7 @@ function tbFxEnsureManualRateToday(cur, reason) {
     return { ok: true, cur: c, rate: Number(r), used: "manual_new" };
   }
 
-  if (asOf !== refDay) {
+  if (!asOf || String(asOf).slice(0,10) < String(refDay).slice(0,10)) {
     // Single-dialog UX: prompt with current rate prefilled.
     // - Cancel or empty => keep same rate, but mark asOf=refDay (explicit confirmation).
     // - New value => store new rate for refDay.
