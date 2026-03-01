@@ -183,12 +183,136 @@ function renderSettings(){
   // ensure periods list
   loadPeriodsListIntoUI();
 
+
   // segments area
   const host = document.getElementById("seg-list");
   if(host){
     host.innerHTML = "";
+
+    // --- FX status (ECB) + Manual fallback panel (audit) ---
+    const _fxHelp = "Auto (ECB) : taux officiel BCE, date = refDay (jour de publication, week-end ok).
+"+
+                    "Manuel fallback : utilisé uniquement si l'ECB ne fournit pas la devise.
+"+
+                    "Manquant : taux requis non disponible → saisie requise.";
+
+    const fxStatus = (typeof window.tbFxAutoStatus === "function") ? window.tbFxAutoStatus() : null;
+    const refDay = (typeof window.tbFxRefDay === "function") ? window.tbFxRefDay() : (function(){
+      try {
+        const asof = String(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_asof) || "").slice(0,10);
+        if (asof) return asof;
+      } catch(_){ }
+      return (typeof toLocalISODate === "function") ? toLocalISODate(new Date()) : new Date().toISOString().slice(0,10);
+    })();
+
+    const ecbAsof = fxStatus ? fxStatus.asOf : (function(){ try { return String(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_asof) || "").slice(0,10) || null; } catch(_){ return null; } })();
+    const ecbCount = fxStatus ? (fxStatus.count||0) : (function(){ try { return JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_keys) || "[]").length || 0; } catch(_){ return 0; } })();
+
+    const fxTop = document.createElement("div");
+    fxTop.className = "card";
+    fxTop.style.marginBottom = "10px";
+    fxTop.innerHTML = `
+      <div class="row" style="align-items:center; justify-content:space-between;">
+        <div>
+          <b>FX (ECB)</b>
+          <span class="muted">• asOf <b>${ecbAsof || "—"}</b> • <b>${ecbCount}</b> devises • refDay <b>${refDay || "—"}</b>
+            <span title="${escapeHTML(_fxHelp)}" style="cursor:help; user-select:none; padding-left:6px;">(?)</span>
+          </span>
+        </div>
+      </div>
+    `;
+    host.appendChild(fxTop);
+
+    // Manual fallback audit panel
+    const manualPanel = document.createElement("div");
+    manualPanel.className = "card";
+    manualPanel.style.marginBottom = "10px";
+
+    let manualRates = {};
+    try { manualRates = (typeof window.tbFxGetManualRates === "function") ? (window.tbFxGetManualRates() || {}) : {}; } catch(_) { manualRates = {}; }
+
+    const manualList = Object.entries(manualRates || {})
+      .map(([c,v]) => ({ c:String(c||"").toUpperCase(), rate:Number(v && v.rate), asOf: (v && v.asOf ? String(v.asOf).slice(0,10) : null) }))
+      .filter(x => x.c && x.c !== "EUR" && Number.isFinite(x.rate) && x.rate > 0)
+      .sort((a,b)=>a.c.localeCompare(b.c));
+
+    manualPanel.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <div>
+          <b>Manuels fallback</b>
+          <span class="muted">• audit/edit • utilisés seulement si la devise est absente de l'ECB</span>
+        </div>
+        <button class="btn" data-act="mf-add" title="Ajouter/mettre à jour un taux manuel fallback">Ajouter</button>
+      </div>
+      <div style="margin-top:8px; overflow:auto;">
+        ${manualList.length ? `
+          <table class="table" style="width:100%; min-width:520px;">
+            <thead><tr>
+              <th>Devise</th><th>Taux EUR→Devise</th><th>Date</th><th style="text-align:right;">Actions</th>
+            </tr></thead>
+            <tbody>
+              ${manualList.map(x => `
+                <tr>
+                  <td><b>${escapeHTML(x.c)}</b></td>
+                  <td>${escapeHTML(String(Number(x.rate).toFixed(6)).replace(/\.0+$/,''))}</td>
+                  <td>${escapeHTML(x.asOf || "—")}</td>
+                  <td style="text-align:right; white-space:nowrap;">
+                    <button class="btn" data-act="mf-edit" data-cur="${escapeHTML(x.c)}">Modifier</button>
+                    <button class="btn danger" data-act="mf-del" data-cur="${escapeHTML(x.c)}">Supprimer</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : `<div class="muted">Aucun taux manuel fallback enregistré.</div>`}
+      </div>
+    `;
+    host.appendChild(manualPanel);
+
+    const _mfAskCur = () => {
+      const raw = prompt("Devise (ISO3) ?", "");
+      if (raw === null) return null;
+      const c = String(raw||"").trim().toUpperCase();
+      if (!c || !/^[A-Z]{3}$/.test(c) || c === "EUR") {
+        alert("Devise invalide (ISO3, ex: LAK, VND). EUR interdit.");
+        return null;
+      }
+      return c;
+    };
+
+    manualPanel.querySelector('[data-act="mf-add"]').onclick = ()=>safeCall("Ajouter taux manuel", ()=>{
+      if (typeof window.tbFxPromptManualRate !== "function") throw new Error("tbFxPromptManualRate() manquant");
+      const c = _mfAskCur();
+      if (!c) return;
+      window.tbFxPromptManualRate(c, "Ajout/MAJ manuel fallback");
+      renderSettings();
+    });
+
+    manualPanel.querySelectorAll('[data-act="mf-edit"]').forEach(btn=>{
+      btn.onclick = ()=>safeCall("Modifier taux manuel", ()=>{
+        const c = btn.getAttribute('data-cur');
+        if (!c) return;
+        if (typeof window.tbFxPromptManualRate !== "function") throw new Error("tbFxPromptManualRate() manquant");
+        window.tbFxPromptManualRate(c, "MAJ manuel fallback");
+        renderSettings();
+      });
+    });
+
+    manualPanel.querySelectorAll('[data-act="mf-del"]').forEach(btn=>{
+      btn.onclick = ()=>safeCall("Supprimer taux manuel", ()=>{
+        const c = btn.getAttribute('data-cur');
+        if (!c) return;
+        const ok = confirm(`Supprimer le taux manuel fallback EUR→${c} ?`);
+        if (!ok) return;
+        if (typeof window.tbFxDeleteManualRate !== "function") throw new Error("tbFxDeleteManualRate() manquant");
+        window.tbFxDeleteManualRate(c);
+        renderSettings();
+      });
+    });
+
+    // --- Segments (period slices) ---
     if(!segs.length){
-      host.innerHTML = '<div class="muted">Aucune période (segment) pour ce voyage.</div>';
+      host.innerHTML += '<div class="muted">Aucune période (segment) pour ce voyage.</div>';
     }else{
       segs.forEach((seg, idx)=>{
         const wrap = document.createElement("div");
@@ -200,17 +324,22 @@ function renderSettings(){
         try { if (typeof window.tbFxGetManualRates==="function") manualObj = (window.tbFxGetManualRates()||{})[cur] ?? null; } catch(_) {}
         manualRate = manualObj && typeof manualObj === 'object' ? Number(manualObj.rate) : null;
         manualAsof = manualObj && typeof manualObj === 'object' ? (manualObj.asOf || null) : null;
-        let autoAsof = null; try { autoAsof = localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_asof) || null; } catch(_) {}
-        let autoCount = 0; try { autoCount = JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_keys) || "[]").length || 0; } catch(_) {}
-        const ecbStatus = autoAsof ? ` • ECB asOf ${autoAsof} • ${autoCount} devises` : "";
-const todayISO = (typeof toLocalISODate === "function") ? toLocalISODate(new Date()) : new Date().toISOString().slice(0,10);
-const ratesMerged = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : null;
-const usedRate = (typeof window.fxRate==="function" && ratesMerged) ? window.fxRate("EUR", cur, ratesMerged) : null;
-const rateDisplay = (usedRate!==null && usedRate!==undefined && Number.isFinite(Number(usedRate))) ? String(Number(usedRate).toFixed(2)) : "";
-const srcLabel = autoAvail ? "Auto" : (manualRate ? "Manuel fallback" : "Manquant");
-const refDay = (autoAsof || todayISO);
-const stale = (!autoAvail && manualRate && (!manualAsof || String(manualAsof).slice(0,10) < String(refDay).slice(0,10)));
-const srcMeta = autoAvail ? (autoAsof?` • date: ${autoAsof}`:"") : (manualRate ? (` • date: ${manualAsof || "—"}${stale ? " (à confirmer)" : ""}`) : "");
+        let autoAsof2 = null; try { autoAsof2 = localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_asof) || null; } catch(_) {}
+        const todayISO = (typeof toLocalISODate === "function") ? toLocalISODate(new Date()) : new Date().toISOString().slice(0,10);
+        const ratesMerged = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : null;
+        const usedRate = (typeof window.fxRate==="function" && ratesMerged) ? window.fxRate("EUR", cur, ratesMerged) : null;
+        const rateDisplay = (usedRate!==null && usedRate!==undefined && Number.isFinite(Number(usedRate))) ? String(Number(usedRate).toFixed(2)) : "";
+
+        const refDay2 = (typeof window.tbFxRefDay === "function") ? window.tbFxRefDay() : (autoAsof2 || todayISO);
+        const stale = (!autoAvail && manualRate && (!manualAsof || String(manualAsof).slice(0,10) < String(refDay2).slice(0,10)));
+        const srcLabel = autoAvail ? "ECB Auto" : (manualRate ? "Manuel fallback" : "Manquant");
+        const srcMeta = autoAvail
+          ? (autoAsof2?` • asOf: ${autoAsof2}`: "")
+          : (manualRate ? (` • asOf: ${manualAsof || "—"}${stale ? " (à confirmer)" : ""}`) : "");
+        const fxLineHelp = `Auto (ECB) : taux officiel BCE. Date de référence (refDay) = ${refDay2}.\n`+
+                           `Manuel fallback : utilisé uniquement si l'ECB ne fournit pas la devise.\n`+
+                           `"à confirmer" : le manuel est plus ancien que refDay (asOf < refDay).`;
+
         wrap.innerHTML = `
           <div class="row" style="align-items:flex-end;">
             <div class="field">
@@ -239,12 +368,15 @@ const srcMeta = autoAvail ? (autoAsof?` • date: ${autoAsof}`:"") : (manualRate
             <button class="btn danger" data-act="del">Supprimer</button>
           </div>
           <div class="muted" style="margin-top:6px;">
-            FX: <b>Auto</b>
+            FX: <b>${srcLabel}</b>
+            <span title="${escapeHTML(fxLineHelp)}" style="cursor:help; user-select:none; padding-left:6px;">(?)</span>
             • Taux: <b>${(rateDisplay || "") || "—"}</b>
             • Source: <b>${srcLabel}</b>${srcMeta}
+            • refDay: <b>${escapeHTML(String(refDay2||"—").slice(0,10))}</b>
             ${seg.fx_last_updated_at ? ` • maj: ${String(seg.fx_last_updated_at).slice(0,10)}` : ""}
           </div>
         `;
+
         // handlers
         wrap.querySelector('[data-act="save"]').onclick = ()=>safeCall("Save période", ()=>saveBudgetSegment(seg.id, wrap));
         const fxBtn = wrap.querySelector('[data-act="fx"]');
