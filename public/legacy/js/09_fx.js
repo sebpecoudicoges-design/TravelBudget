@@ -77,6 +77,16 @@ function _fxTodayISO() {
   try { return toLocalISODate(new Date()); } catch (_) { return new Date().toISOString().slice(0,10); }
 }
 
+// Reference day for manual fallback freshness.
+// If ECB auto provides an asOf date, use it (avoid weekend/holiday false prompts).
+function _fxRefISO() {
+  try {
+    const asof = String(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_asof) || "").slice(0,10);
+    if (asof) return asof;
+  } catch (_) {}
+  return _fxTodayISO();
+}
+
 function tbFxSetManualRate(cur, rate, asOf) {
   const c = String(cur || "").trim().toUpperCase();
   const r = Number(rate);
@@ -154,7 +164,7 @@ function tbFxPromptManualRate(cur, reason) {
 function tbFxEnsureManualRateToday(cur, reason) {
   const c = String(cur || "").trim().toUpperCase();
   if (!c || c === "EUR") return { ok: true, cur: c, rate: 1, used: "auto" };
-  const today = _fxTodayISO();
+  const refDay = _fxRefISO();
   const m = _fxGetManualRates();
   const existing = m?.[c]?.rate || null;
   const asOf = m?.[c]?.asOf || null;
@@ -165,37 +175,37 @@ function tbFxEnsureManualRateToday(cur, reason) {
     return { ok: true, cur: c, rate: Number(r), used: "manual_new" };
   }
 
-  if (asOf !== today) {
+  if (asOf !== refDay) {
     // Single-dialog UX: prompt with current rate prefilled.
-    // - Cancel or empty => keep same rate, but mark asOf=today (explicit confirmation).
-    // - New value => store new rate for today.
+    // - Cancel or empty => keep same rate, but mark asOf=refDay (explicit confirmation).
+    // - New value => store new rate for refDay.
     const raw = prompt(
       `Taux manuel EUR→${c} (dernier: ${existing} le ${asOf || "—"})\n\n` +
-      `Entrez le taux pour aujourd'hui (${today})\n` +
+      `Entrez le taux pour aujourd'hui (${refDay})\n` +
       `• OK + valeur = nouveau taux\n` +
       `• OK vide ou Annuler = conserver le même`,
       String(existing)
     );
     if (raw === null) {
-      tbFxSetManualRate(c, existing, today);
+      tbFxSetManualRate(c, existing, refDay);
       return { ok: true, cur: c, rate: Number(existing), used: "manual_kept" };
     }
     const cleaned = String(raw || "").trim();
     if (!cleaned) {
-      tbFxSetManualRate(c, existing, today);
+      tbFxSetManualRate(c, existing, refDay);
       return { ok: true, cur: c, rate: Number(existing), used: "manual_kept" };
     }
     const r = Number(cleaned);
     if (!Number.isFinite(r) || r <= 0) {
-      // invalid entry -> keep previous, but still mark today to avoid loops
-      tbFxSetManualRate(c, existing, today);
+      // invalid entry -> keep previous, but still mark refDay to avoid loops
+      tbFxSetManualRate(c, existing, refDay);
       return { ok: true, cur: c, rate: Number(existing), used: "manual_kept" };
     }
-    tbFxSetManualRate(c, r, today);
+    tbFxSetManualRate(c, r, refDay);
     return { ok: true, cur: c, rate: r, used: "manual_new" };
   }
 
-  return { ok: true, cur: c, rate: Number(existing), used: "manual_today" };
+  return { ok: true, cur: c, rate: Number(existing), used: "manual_refDay" };
 }
 
 function tbFxGetManualRates() { return _fxGetManualRates(); }
@@ -245,54 +255,8 @@ async function refreshFxRates() {
 
   // 2) No segment-fixed injection: Auto is source of truth; manual fallback is global-only (Option A)
 
-// 3) If some required currencies are missing, offer to capture manual fallbacks now.
-  try {
-    const required = new Set();
-    if (base) required.add(String(base).toUpperCase());
-    (Array.isArray(state.wallets) ? state.wallets : []).forEach(w => {
-      const c = String(w?.currency || "").toUpperCase();
-      if (c) required.add(c);
-    });
-    (Array.isArray(state.budgetSegments) ? state.budgetSegments : []).forEach(s => {
-      const c = String(s?.base_currency || s?.baseCurrency || "").toUpperCase();
-      if (c) required.add(c);
-    });
 
-    const manual = _fxGetManualRates();
-    const effective = Object.assign({}, manual || {}, allRates || {});
-    const missing = Array.from(required).filter(c => c && c !== "EUR" && !(Number(effective?.[c]) > 0));
-    if (missing.length) {
-      const ok = confirm(
-        `Certaines devises n'ont pas de taux auto aujourd'hui : ${missing.join(", ")}.\n\n` +
-        `Souhaites-tu renseigner un taux manuel (fallback) maintenant ?`
-      );
-      if (ok && typeof window.tbFxEnsureEurRatesInteractive === "function") {
-        const out = window.tbFxEnsureEurRatesInteractive(missing, "Taux du jour manquant — fallback manuel");
-        if (out && out.ok) {
-          const manual2 = _fxGetManualRates();
-          Object.assign(effective, manual2 || {});
-        }
-      }
-    }
-
-    // Recompute base rate using effective rates (auto + manual fallbacks)
-    if (base && String(base).toUpperCase() !== "EUR") {
-      const b = String(base).toUpperCase();
-      const eurToBase = Number(effective?.[b]);
-      if (!eurToBase || eurToBase <= 0) {
-        return alert(
-          `Taux indisponible pour ${b}.\n` +
-          `→ Renseigne un taux manuel EUR→${b} (fallback), ou choisis une devise supportée.`
-        );
-      }
-      // keep local rates store: provider rates only, manual is stored separately
-      state.exchangeRates["EUR-BASE"] = eurToBase;
-      state.exchangeRates["BASE-EUR"] = 1 / eurToBase;
-      // continue below and persist eur_base_rate with eurToBase
-    }
-  } catch (e) {
-    console.warn("[fx] missing-required prompt failed:", e?.message || e);
-  }
+  // 3) No prompt here: Auto refresh never triggers manual capture.
 
   // 4) Stockage local (utilisé par le plugin cross-rate)
   _fxSetEurRates(allRates);
@@ -300,6 +264,9 @@ async function refreshFxRates() {
 
   // 5) On continue à alimenter ton moteur actuel EUR<->BASE
   const eurToBaseNow = (base === "EUR") ? 1 : Number(state.exchangeRates["EUR-BASE"] || allRates[base]);
+  if (base !== "EUR" && (!eurToBaseNow || eurToBaseNow <= 0)) {
+    return alert(`Taux auto indisponible pour ${base} (ECB).\n\n→ Utilise un taux manuel fallback pour EUR→${base} via Settings.`);
+  }
   state.exchangeRates["EUR-BASE"] = eurToBaseNow;
   state.exchangeRates["BASE-EUR"] = 1 / eurToBaseNow;
 
