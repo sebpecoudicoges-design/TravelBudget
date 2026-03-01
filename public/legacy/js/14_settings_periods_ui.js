@@ -190,11 +190,14 @@ function renderSettings(){
     host.innerHTML = "";
 
     // --- FX status (ECB) + Manual fallback panel (audit) ---
-    const _fxHelp = "Auto (ECB) : taux officiel BCE, date = refDay (jour de publication, week-end ok).
-"+
-                    "Manuel fallback : utilisé uniquement si l'ECB ne fournit pas la devise.
-"+
-                    "Manquant : taux requis non disponible → saisie requise.";
+
+
+    const _fxHelp = [
+      "Auto (ECB) : taux officiel BCE, date = refDay (jour de publication, week-end ok).",
+      "Manuel fallback : utilisé uniquement si l'ECB ne fournit pas la devise.",
+      "Manquant : taux requis non disponible → saisie requise."
+    ].join("\n");
+
 
     const fxStatus = (typeof window.tbFxAutoStatus === "function") ? window.tbFxAutoStatus() : null;
     const refDay = (typeof window.tbFxRefDay === "function") ? window.tbFxRefDay() : (function(){
