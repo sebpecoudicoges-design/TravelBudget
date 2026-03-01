@@ -206,7 +206,8 @@ const ratesMerged = (typeof window.fxGetEurRates === "function") ? window.fxGetE
 const usedRate = (typeof window.fxRate==="function" && ratesMerged) ? window.fxRate("EUR", cur, ratesMerged) : null;
 const rateDisplay = (usedRate!==null && usedRate!==undefined && Number.isFinite(Number(usedRate))) ? String(Number(usedRate).toFixed(2)) : "";
 const srcLabel = autoAvail ? "Auto" : (manualRate ? "Manuel fallback" : "Manquant");
-const stale = (!autoAvail && manualRate && manualAsof && manualAsof !== todayISO);
+const refDay = (autoAsof || todayISO);
+const stale = (!autoAvail && manualRate && (manualAsof || "") !== refDay);
 const srcMeta = autoAvail ? (autoAsof?` • date: ${autoAsof}`:"") : (manualRate ? (` • date: ${manualAsof || "—"}${stale ? " (à confirmer)" : ""}`) : "");
         wrap.innerHTML = `
           <div class="row" style="align-items:flex-end;">
