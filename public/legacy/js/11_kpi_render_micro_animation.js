@@ -738,6 +738,66 @@ function renderKPI() {
 
   const projEndDisplay = projectedEndDisplayWithOptions({ includeUnpaid, scope: kpiScope });
 
+  // =========================
+  // KPI scope selector (V6.6.91)
+  // - fixes ReferenceError: scopeOptionsHTML is not defined
+  // - supports: segment / period / seg:<id> / range:<start>:<end>
+  // =========================
+  function _kpiParseScope(raw) {
+    const s = String(raw || "segment");
+    const low = s.toLowerCase();
+    if (low === "segment" || low === "period") return { kind: low, raw: s };
+    if (s.startsWith("seg:")) return { kind: "seg", segId: s.slice(4), raw: s };
+    if (s.startsWith("range:")) {
+      const p = s.split(":");
+      return { kind: "range", startISO: p[1] || "", endISO: p[2] || "", raw: s };
+    }
+    if (low === "range") return { kind: "range", startISO: "", endISO: "", raw: s };
+    return { kind: "segment", raw: s };
+  }
+
+  function _kpiResolveRange(parsed, refISO) {
+    // Default custom range = current segment of ref date, or period bounds.
+    let startISO = String(parsed?.startISO || "");
+    let endISO = String(parsed?.endISO || "");
+    if (startISO && endISO) return { startISO, endISO };
+    try {
+      if (typeof getBudgetSegmentForDate === "function") {
+        const seg = getBudgetSegmentForDate(refISO);
+        if (seg) {
+          startISO = String(seg.start || seg.start_date || "").slice(0,10);
+          endISO = String(seg.end || seg.end_date || "").slice(0,10);
+        }
+      }
+    } catch (_) {}
+    if (!startISO) startISO = String(state?.period?.start || "").slice(0,10);
+    if (!endISO) endISO = String(state?.period?.end || "").slice(0,10);
+    return { startISO, endISO };
+  }
+
+  const _parsedScope = _kpiParseScope(kpiScope);
+  const _scopeValForSelect = (_parsedScope.kind === "seg")
+    ? `seg:${_parsedScope.segId}`
+    : (_parsedScope.kind === "range")
+      ? "range"
+      : _parsedScope.kind;
+
+  // Build scope options HTML once per render
+  const _segs = Array.isArray(state?.budgetSegments) ? state.budgetSegments.slice() : [];
+  _segs.sort((a,b) => String(a.start||a.start_date||"").localeCompare(String(b.start||b.start_date||"")));
+  const scopeOptionsHTML = [
+    `<option value="segment">Segment courant</option>`,
+    `<option value="period">Toute la période</option>`,
+    ..._segs.map((s, idx) => {
+      const id = String(s.id || "");
+      const ss = String(s.start || s.start_date || "").slice(0,10);
+      const ee = String(s.end || s.end_date || "").slice(0,10);
+      const label = `Periode ${idx+1} : ${ss} → ${ee}`;
+      return `<option value="seg:${id}">${label}</option>`;
+    }),
+    `<option value="range">Date à date…</option>`
+  ].join("");
+
   const runway = cashRunwayInfo();        // dépenses cash réelles
   const cover  = cashConservativeInfo();  // burn prudent (budget/alloc)
 

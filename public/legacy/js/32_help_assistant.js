@@ -115,6 +115,7 @@
           <div id="tb-assist-context-lines" class="muted" style="font-size:12px; line-height:1.35;"></div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
             <button type="button" class="btn" id="tb-assist-go-settings" style="padding:6px 10px; font-size:12px;">Settings</button>
+            <button type="button" class="btn" id="tb-assist-go-wallets" style="padding:6px 10px; font-size:12px;">Wallets</button>
             <button type="button" class="btn" id="tb-assist-go-help" style="padding:6px 10px; font-size:12px;">Aide</button>
             <button type="button" class="btn" id="tb-assist-go-tx" style="padding:6px 10px; font-size:12px;">Transactions</button>
           </div>
@@ -166,6 +167,17 @@
     });
 
     panel.querySelector("#tb-assist-go-settings")?.addEventListener("click", () => { try { if (typeof showView === "function") showView("settings"); } catch (_) {} });
+    panel.querySelector("#tb-assist-go-wallets")?.addEventListener("click", () => {
+      try {
+        if (typeof showView === "function") showView("settings");
+        setTimeout(() => {
+          try {
+            const el = document.getElementById("wallets-container");
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+          } catch (_) {}
+        }, 50);
+      } catch (_) {}
+    });
     panel.querySelector("#tb-assist-go-help")?.addEventListener("click", () => { try { if (typeof showView === "function") showView("help"); } catch (_) {} });
     panel.querySelector("#tb-assist-go-tx")?.addEventListener("click", () => { try { if (typeof showView === "function") showView("transactions"); } catch (_) {} });
 
@@ -199,6 +211,18 @@
       if (!q) return;
       if (input) input.value = "";
       appendMsg("user", q);
+
+      // Lightweight intent routing (offline, no AI)
+      // Wallet creation is a common action: don't rely on FAQ fuzzy search.
+      try {
+        const qq = q.toLowerCase();
+        const wantsWallet = (qq.includes("wallet") || qq.includes("portefeuille")) && (qq.includes("ajout") || qq.includes("ajouter") || qq.includes("créer") || qq.includes("creer") || qq.includes("nouveau") || qq.includes("nouvelle"));
+        if (wantsWallet) {
+          appendMsg("bot",
+            "Pour ajouter une wallet :\n1) Va dans Settings\n2) Section Wallets\n3) Clique + Ajouter wallet\n4) Choisis la devise (ex: LAK) et enregistre.\n\nAstuce : clique sur le bouton Wallets juste au-dessus pour y aller directement.");
+          return;
+        }
+      } catch (_) {}
 
       const hits = (window.tbSearchFaq ? tbSearchFaq(q, 1) : []);
       const l = lang();
