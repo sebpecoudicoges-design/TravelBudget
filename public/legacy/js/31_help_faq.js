@@ -225,25 +225,50 @@
       root.insertBefore(guides, root.querySelector(".form-row"));
     }
 
+    const guideDefs = [
+      { kt: "help.guide.create_trip.title", kb: "help.guide.create_trip.body", action: "settings", target: "#s-period-name" },
+      { kt: "help.guide.create_periods.title", kb: "help.guide.create_periods.body", action: "settings", target: "#seg-list" },
+      { kt: "help.guide.rename_voyage.title", kb: "help.guide.rename_voyage.body", action: "settings", target: "#s-period-name" },
+      { kt: "help.guide.fx.title", kb: "help.guide.fx.body", action: "settings", target: "#manual-fx-box" },
+      { kt: "help.guide.wallets.title", kb: "help.guide.wallets.body", action: "settings", target: "#wallets-container" },
+      { kt: "help.guide.dashboard_scope.title", kb: "help.guide.dashboard_scope.body", action: "dashboard", target: "#kpiScopeSelect" },
+      { kt: "help.guide.trip.title", kb: "help.guide.trip.body", action: "trip", target: "#trip-root" },
+    ];
+
+    function _btnLabel(action) {
+      if (action === "settings") return _t("help.action.open_settings");
+      if (action === "dashboard") return _t("help.action.open_dashboard");
+      if (action === "trip") return _t("help.action.open_trip");
+      return _t("help.action.open_settings");
+    }
+
     guides.innerHTML = `
       <div style="font-weight:600; margin-bottom:8px;">${_t("help.guides.title")}</div>
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px;">
-        ${[
-          ["help.guide.create_trip.title", "help.guide.create_trip.body"],
-          ["help.guide.create_periods.title", "help.guide.create_periods.body"],
-          ["help.guide.rename_voyage.title", "help.guide.rename_voyage.body"],
-          ["help.guide.fx.title", "help.guide.fx.body"],
-          ["help.guide.wallets.title", "help.guide.wallets.body"],
-          ["help.guide.dashboard_scope.title", "help.guide.dashboard_scope.body"],
-          ["help.guide.trip.title", "help.guide.trip.body"],
-        ].map(([kt, kb]) => `
+        ${guideDefs.map(g => `
           <div class="hint" style="padding:10px; border:1px solid rgba(0,0,0,.08); border-radius:12px; background:rgba(0,0,0,.02);">
-            <div style="font-weight:600; margin-bottom:6px;">${_t(kt)}</div>
-            <div class="muted">${_t(kb)}</div>
+            <div style="font-weight:600; margin-bottom:6px;">${_t(g.kt)}</div>
+            <div class="muted" style="margin-bottom:10px;">${_t(g.kb)}</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn" style="padding:6px 10px; font-size:12px;" data-help-action="${escapeHTML(g.action)}" data-help-target="${escapeHTML(g.target)}">${escapeHTML(_btnLabel(g.action))}</button>
+            </div>
           </div>
         `).join("")}
       </div>
     `;
+
+    // Click delegation: make guides actionable
+    if (!guides.__tbBound) {
+      guides.__tbBound = true;
+      guides.addEventListener("click", (ev) => {
+        const btn = ev.target && ev.target.closest && ev.target.closest("[data-help-action]");
+        if (!btn) return;
+        ev.preventDefault();
+        const action = btn.getAttribute("data-help-action") || "";
+        const target = btn.getAttribute("data-help-target") || "";
+        _runHelpAction(action, target);
+      });
+    }
 
     // Full list
     const list = document.getElementById("help-list");
@@ -293,4 +318,43 @@
   }
 
   window.renderHelpFaq = renderHelpFaq;
+
+  // =========================
+  // Actions (clickable mini-guides)
+  // - navigates to view + scroll + highlight
+  // =========================
+  function _runHelpAction(action, targetSel) {
+    try {
+      if (typeof window.showView === "function") {
+        if (action === "settings") showView("settings");
+        else if (action === "dashboard") showView("dashboard");
+        else if (action === "trip") showView("trip");
+        else if (action === "help") showView("help");
+      }
+    } catch (_) {}
+
+    // Wait for view render, then scroll.
+    _scrollAndHighlight(targetSel);
+  }
+
+  function _scrollAndHighlight(sel) {
+    const selector = String(sel || "").trim();
+    const maxTries = 18;
+    let tries = 0;
+    const tick = () => {
+      tries++;
+      const el = selector ? document.querySelector(selector) : null;
+      if (el) {
+        try { el.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (_) { try { el.scrollIntoView(); } catch (_) {} }
+        try { el.focus && el.focus({ preventScroll: true }); } catch (_) {}
+        try {
+          el.classList.add("tb-highlight");
+          setTimeout(() => { try { el.classList.remove("tb-highlight"); } catch (_) {} }, 1200);
+        } catch (_) {}
+        return;
+      }
+      if (tries < maxTries) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
 })();
