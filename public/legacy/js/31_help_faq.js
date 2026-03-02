@@ -231,8 +231,10 @@
         ${[
           ["help.guide.create_trip.title", "help.guide.create_trip.body"],
           ["help.guide.create_periods.title", "help.guide.create_periods.body"],
+          ["help.guide.rename_voyage.title", "help.guide.rename_voyage.body"],
           ["help.guide.fx.title", "help.guide.fx.body"],
           ["help.guide.wallets.title", "help.guide.wallets.body"],
+          ["help.guide.dashboard_scope.title", "help.guide.dashboard_scope.body"],
           ["help.guide.trip.title", "help.guide.trip.body"],
         ].map(([kt, kb]) => `
           <div class="hint" style="padding:10px; border:1px solid rgba(0,0,0,.08); border-radius:12px; background:rgba(0,0,0,.02);">

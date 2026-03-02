@@ -214,6 +214,7 @@ function renderSettings(){
       view.__tbHelpInjected = true;
       const labels = Array.from(view.querySelectorAll("label"));
       const helpDates = (window.tbT ? tbT("settings.help.trip_dates") : "");
+      const helpName = (window.tbT ? tbT("settings.help.period_name") : "");
       const helpSegs = (window.tbT ? tbT("settings.help.segments") : "");
 
       labels.forEach((lab) => {
@@ -223,6 +224,16 @@ function renderSettings(){
           lab.innerHTML = `${escapeHTML(txt)} ${tbHelp(helpDates)}`;
         }
       });
+
+      // Add tooltip to the period name field label (robust: by element id, not label text)
+      try {
+        const nameInput = document.getElementById("s-period-name");
+        const nameLabel = nameInput ? nameInput.closest(".field")?.querySelector("label") : null;
+        if (nameLabel && helpName) {
+          const baseTxt = String(nameLabel.textContent || "").trim() || "Nom";
+          nameLabel.innerHTML = `${escapeHTML(baseTxt)} ${tbHelp(helpName)}`;
+        }
+      } catch (_) {}
 
       // Add a hint in the "Périodes du voyage" card title
       const h2s = Array.from(view.querySelectorAll("h2"));

@@ -84,8 +84,18 @@
       // Settings tooltips (Voyage / Périodes / FX)
       "settings.title": "Voyage",
       "settings.help.trip_dates": "Les dates du voyage se synchronisent avec la 1ère et la dernière période (dans les deux sens).",
+      "settings.help.period_name": "Donne un nom simple à ton voyage (ex: Asie 2026). Si la base SQL n’a pas de colonne name sur periods, le nom est stocké localement (par navigateur).",
       "settings.help.segments": "Les périodes (segments) définissent tes phases de voyage : dates + budget/j + devise base.",
       "settings.help.fx": "FX Option A : ECB auto prioritaire. Le manuel est un fallback daté, demandé uniquement si nécessaire.",
+
+      // Dashboard tooltips
+      "dashboard.help.scope": "Le périmètre pilote les KPIs et la courbe : segment courant, toute la période, une période précise, ou une plage date à date.",
+
+      // Guides
+      "help.guide.dashboard_scope.title": "Dashboard : filtrer KPIs / courbe",
+      "help.guide.dashboard_scope.body": "En haut du Dashboard, choisis <b>Segment</b>, <b>Toute la période</b>, une <b>Période N</b>, ou <b>Date à date</b>. Le filtre s’applique aux KPIs et à la courbe.",
+      "help.guide.rename_voyage.title": "Renommer le voyage",
+      "help.guide.rename_voyage.body": "Dans <b>Settings → Voyage</b>, utilise le champ <b>Nom</b>. C’est sauvegardé automatiquement (local si pas de colonne DB).",
     },
     en: {
       // Generic
@@ -162,8 +172,18 @@
       // Settings tooltips
       "settings.title": "Trip",
       "settings.help.trip_dates": "Trip dates are synced with the first and last period (both ways).",
+      "settings.help.period_name": "Give your trip a simple name (e.g., Asia 2026). If your SQL schema has no name column on periods, the name is stored locally (per browser).",
       "settings.help.segments": "Periods (segments) define your trip phases: dates + daily budget + base currency.",
       "settings.help.fx": "FX Option A: ECB auto is authoritative. Manual is a dated fallback, requested only when needed.",
+
+      // Dashboard tooltips
+      "dashboard.help.scope": "Scope drives KPIs and the curve: current segment, whole period, a specific period, or a custom date range.",
+
+      // Guides
+      "help.guide.dashboard_scope.title": "Dashboard: filter KPIs / curve",
+      "help.guide.dashboard_scope.body": "At the top of the Dashboard, pick <b>Segment</b>, <b>Whole period</b>, a <b>Period N</b>, or <b>Date range</b>. The filter applies to KPIs and the curve.",
+      "help.guide.rename_voyage.title": "Rename the trip",
+      "help.guide.rename_voyage.body": "In <b>Settings → Trip</b>, use the <b>Name</b> field. It auto-saves (local if no DB column).",
     }
   };
 

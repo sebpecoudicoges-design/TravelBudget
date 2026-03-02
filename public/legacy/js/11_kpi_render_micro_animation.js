@@ -785,17 +785,22 @@ function renderKPI() {
   // Build scope options HTML once per render
   const _segs = Array.isArray(state?.budgetSegments) ? state.budgetSegments.slice() : [];
   _segs.sort((a,b) => String(a.start||a.start_date||"").localeCompare(String(b.start||b.start_date||"")));
+  const _lang = (window.tbGetLang && tbGetLang()) || "fr";
+  const _labSeg = (_lang === "en") ? "Current segment" : "Segment courant";
+  const _labPeriod = (_lang === "en") ? "Whole period" : "Toute la période";
+  const _labRange = (_lang === "en") ? "Date range…" : "Date à date…";
+  const _labPer = (_lang === "en") ? "Period" : "Periode";
   const scopeOptionsHTML = [
-    `<option value="segment">Segment courant</option>`,
-    `<option value="period">Toute la période</option>`,
+    `<option value="segment">${_labSeg}</option>`,
+    `<option value="period">${_labPeriod}</option>`,
     ..._segs.map((s, idx) => {
       const id = String(s.id || "");
       const ss = String(s.start || s.start_date || "").slice(0,10);
       const ee = String(s.end || s.end_date || "").slice(0,10);
-      const label = `Periode ${idx+1} : ${ss} → ${ee}`;
+      const label = `${_labPer} ${idx+1} : ${ss} → ${ee}`;
       return `<option value="seg:${id}">${label}</option>`;
     }),
-    `<option value="range">Date à date…</option>`
+    `<option value="range">${_labRange}</option>`
   ].join("");
 
   const runway = cashRunwayInfo();        // dépenses cash réelles
@@ -878,6 +883,7 @@ const driver = "Dépenses";
   <select id="kpiScopeSelect" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;">
     ${scopeOptionsHTML}
   </select>
+  ${ (typeof window.tbHelp === "function" && window.tbT) ? tbHelp(tbT("dashboard.help.scope")) : "" }
   <div id="kpiRangeBox" style="display:${String(_scopeValForSelect)==="range" ? "flex" : "none"}; gap:6px; align-items:center;">
     <input id="kpiRangeStart" type="date" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;" />
     <span class="muted" style="font-size:12px;">→</span>
