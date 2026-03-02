@@ -1,4 +1,4 @@
-window.__TB_BUILD = '6.6.89';
+window.__TB_BUILD = '6.6.90';
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -53,17 +53,35 @@ window.__TB_BUILD = '6.6.89';
     theme: "travelbudget_theme_v1",
     palette: "travelbudget_palette_v1",
     preset: "travelbudget_palette_preset_v1",
+
     // Auto FX (EUR→XXX) cache
     eur_rates: "EUR_RATES",
     eur_rates_asof: "travelbudget_fx_eur_rates_asof_v1",
     eur_rates_keys: "travelbudget_fx_eur_rates_keys_v1",
     fx_last_daily: "travelbudget_fx_last_daily_v1",
+
     // Manual FX fallbacks (EUR→XXX)
     fx_manual_rates: "travelbudget_fx_manual_rates_v1",
     fx_manual_asof: "travelbudget_fx_manual_asof_v1",
     fx_manual_prompted_day: "travelbudget_fx_manual_prompted_day_v1",
+
+    // Charts filtering
     pie_excluded_cats: "travelbudget_pie_excluded_categories_v1",
+
+    // Debug
     debug: "travelbudget_debug_v1",
+
+    // KPIs scope (single source of truth for scope across KPI + cashflow curve)
+    kpi_projection_scope: "travelbudget_kpi_projection_scope_v1",
+    kpi_projection_include_unpaid: "travelbudget_kpi_projection_include_unpaid_v1",
+
+    // Period names (local fallback, since DB periods table has no name column)
+    period_names: "travelbudget_period_names_v1",
+
+    // Assistant (offline) persistence
+    assist_thread: "travelbudget_assist_thread_v1",
+    assist_open: "travelbudget_assist_open_v1",
+    assist_ctx_open: "travelbudget_assist_ctx_open_v1",
   });
 
   const UI_LABELS = Object.freeze({

@@ -117,8 +117,8 @@ async function loadPeriodsListIntoUI(){
   periods.forEach(p=>{
     const opt = document.createElement("option");
     opt.value = p.id;
-    opt.textContent = (p.name && String(p.name).trim())
-      ? String(p.name).trim()
+    opt.textContent = (typeof window.tbFormatPeriodLabel === "function")
+      ? window.tbFormatPeriodLabel(p, periods.indexOf(p))
       : `Voyage ${_tbISO(p.start)} → ${_tbISO(p.end)}`;
     sel.appendChild(opt);
   });
@@ -129,13 +129,50 @@ async function loadPeriodsListIntoUI(){
     if(!state.period || state.period.id!==active){
       const p = periods.find(x=>x.id===active);
       if(p) state.period = p;
+    try {
+      const inp = document.getElementById("s-period-name");
+      if (inp && typeof window.tbGetPeriodName === "function") inp.value = window.tbGetPeriodName(id) || "";
+      else if (inp) inp.value = "";
+    } catch (_) {}
     }
+
+// Sync period name input (local)
+try {
+  const inp = document.getElementById("s-period-name");
+  if (inp) {
+    const nm = (typeof window.tbGetPeriodName === "function") ? window.tbGetPeriodName(active) : "";
+    inp.value = nm || "";
+    // Debounced save
+    if (!inp.__tbBound) {
+      inp.__tbBound = true;
+      let tmr = null;
+      const save = () => {
+        const pid = String((document.getElementById("s-period") || {}).value || "");
+        if (!pid) return;
+        const val = String(inp.value || "").trim();
+        if (typeof window.tbSetPeriodName === "function") window.tbSetPeriodName(pid, val);
+        // Re-render select labels
+        try { loadPeriodsListIntoUI(); } catch (_) {}
+      };
+      inp.addEventListener("input", () => {
+        if (tmr) clearTimeout(tmr);
+        tmr = setTimeout(save, 350);
+      });
+      inp.addEventListener("blur", save);
+    }
+  }
+} catch (_) {}
   }
 
   sel.onchange = async ()=>{
     const id = sel.value;
     const p = (state.periods||[]).find(x=>x.id===id);
     if(p) state.period = p;
+    try {
+      const inp = document.getElementById("s-period-name");
+      if (inp && typeof window.tbGetPeriodName === "function") inp.value = window.tbGetPeriodName(id) || "";
+      else if (inp) inp.value = "";
+    } catch (_) {}
     await refreshSegmentsForActivePeriod();
     renderSettings();
   };
@@ -518,6 +555,11 @@ async function createVoyagePrompt(){
       // activate new voyage
       const p = (state.periods||[]).find(x=>x.id===newPid);
       if(p) state.period = p;
+    try {
+      const inp = document.getElementById("s-period-name");
+      if (inp && typeof window.tbGetPeriodName === "function") inp.value = window.tbGetPeriodName(id) || "";
+      else if (inp) inp.value = "";
+    } catch (_) {}
       await refreshSegmentsForActivePeriod();
       renderSettings();
       _tbToastOk("Voyage créé.");

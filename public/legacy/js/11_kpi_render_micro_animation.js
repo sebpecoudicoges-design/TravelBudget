@@ -139,8 +139,9 @@ function projectedEndDisplayWithOptions(opts) {
   // Par défaut, l'horizon = segment courant. opts.scope='period' => horizon = fin de période.
 
   const includeUnpaid = !!opts?.includeUnpaid;
-  const scope = String(opts?.scope || "segment").toLowerCase();
-  const todayISO = (typeof window.getDisplayDateISO === "function") ? window.getDisplayDateISO() : toLocalISODate(new Date());
+const scopeRaw = String(opts?.scope || "segment");
+const scope = scopeRaw.toLowerCase();
+const todayISO = (typeof window.getDisplayDateISO === "function") ? window.getDisplayDateISO() : toLocalISODate(new Date());
 
   function _eurRateForDate(cur, dateISO) {
     const c = String(cur || "EUR").toUpperCase();
@@ -198,16 +199,27 @@ function projectedEndDisplayWithOptions(opts) {
   }
 
   // Pending (unpaid/unreceived) in EUR
-  const horizonStartISO = todayISO;
+const horizonStartISO = String(opts?.rangeStartISO || todayISO);
 
-  // Horizon end
-  let horizonEndISO = state?.period?.end;
-  try {
-    if (scope !== "period" && typeof getBudgetSegmentForDate === "function") {
+// Horizon end (default: provided range end; else resolve from scope)
+let horizonEndISO = String(opts?.rangeEndISO || (state?.period?.end || todayISO));
+try {
+  if (!opts?.rangeEndISO) {
+    if (scope === "period") {
+      horizonEndISO = String(state?.period?.end || todayISO);
+    } else if (scopeRaw.startsWith("seg:")) {
+      const segId = scopeRaw.slice(4);
+      const seg = (state.budgetSegments || []).find(s => String(s.id) === String(segId));
+      if (seg && (seg.end || seg.end_date)) horizonEndISO = String(seg.end || seg.end_date);
+    } else if (scopeRaw.startsWith("range:")) {
+      const parts = scopeRaw.split(":");
+      if (parts[2]) horizonEndISO = String(parts[2]);
+    } else if (typeof getBudgetSegmentForDate === "function") {
       const seg0 = getBudgetSegmentForDate(todayISO);
       if (seg0 && (seg0.end || seg0.end_date)) horizonEndISO = String(seg0.end || seg0.end_date);
     }
-  } catch (_) {}
+  }
+} catch (_) {}
 
   const pendingEUR = includeUnpaid ? (Number(netPendingEUR(horizonStartISO, horizonEndISO)) || 0) : 0;
 
@@ -797,12 +809,20 @@ const driver = "Dépenses";
         <h2 style="margin:0;">KPIs</h2>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
   <select id="kpiPeriodSelect" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;">
-    ${ (state.periods || []).map(pp => `<option value="${pp.id}" ${pp.id===state.period.id?"selected":""}>${pp.start} → ${pp.end} (${pp.baseCurrency||""})</option>`).join("") }
+    ${ (state.periods || []).map((pp,idx) => {
+      const nm = (typeof window.tbGetPeriodName === "function") ? window.tbGetPeriodName(pp.id) : "";
+      const label = nm ? `${nm} — ${pp.start} → ${pp.end}` : `Voyage ${pp.start} → ${pp.end}`;
+      return `<option value="${pp.id}" ${pp.id===state.period.id?"selected":""}>${label}</option>`;
+    }).join("") }
   </select>
   <select id="kpiScopeSelect" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;">
-    <option value="segment" ${kpiScope === "segment" ? "selected" : ""}>Segment courant</option>
-    <option value="period" ${kpiScope === "period" ? "selected" : ""}>Toute la période</option>
+    ${scopeOptionsHTML}
   </select>
+  <div id="kpiRangeBox" style="display:${String(_scopeValForSelect)==="range" ? "flex" : "none"}; gap:6px; align-items:center;">
+    <input id="kpiRangeStart" type="date" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;" />
+    <span class="muted" style="font-size:12px;">→</span>
+    <input id="kpiRangeEnd" type="date" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;" />
+  </div>
   <div class="muted" style="font-size:12px;">${displayDateISO}</div>
 </div>
       </div>
@@ -934,8 +954,43 @@ const driver = "Dépenses";
 
     // Keep UI aligned with persisted values after each render
     if (selS) {
-      try { selS.value = String(kpiScope || "segment"); } catch (_) {}
+      try { selS.value = String((_scopeValForSelect || "segment")); } catch (_) {}
     }
+
+// Range UI setup
+try {
+  const box = kpi.querySelector("#kpiRangeBox");
+  const aEl = kpi.querySelector("#kpiRangeStart");
+  const bEl = kpi.querySelector("#kpiRangeEnd");
+  if (box && aEl && bEl) {
+    const si = _kpiParseScope(kpiScope);
+    const rr = _kpiResolveRange(si, displayDateISO);
+    aEl.value = rr.startISO || "";
+    bEl.value = rr.endISO || "";
+    box.style.display = (String((_scopeValForSelect||"")) === "range") ? "flex" : "none";
+
+    if (!box.dataset.bound) {
+      box.dataset.bound = "1";
+      const saveRange = () => {
+        const SCOPE_KEY = (TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.kpi_projection_scope) || "travelbudget_kpi_projection_scope_v1";
+        const a = String(aEl.value || "");
+        const b = String(bEl.value || "");
+        if (a && b) {
+          const vv = `range:${a}:${b}`;
+          try { localStorage.setItem(SCOPE_KEY, vv); } catch (_) {}
+          try { if (typeof renderKPI === "function") renderKPI(); } catch (_) {}
+          try {
+            if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("kpi-range-change");
+            else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
+            else if (typeof renderCashflowChart === "function") renderCashflowChart();
+          } catch (_) {}
+        }
+      };
+      aEl.addEventListener("change", saveRange);
+      bEl.addEventListener("change", saveRange);
+    }
+  }
+} catch (_) {}
 
     if (selP && !selP.dataset.bound) {
       selP.dataset.bound = "1";
@@ -958,7 +1013,22 @@ const driver = "Dépenses";
       selS.dataset.bound = "1";
       selS.addEventListener("change", (e) => {
         const v = String(e?.target?.value || "segment");
-        try { localStorage.setItem("travelbudget_kpi_projection_scope_v1", v); } catch (_) {}
+        try {
+          const box = document.getElementById("kpiRangeBox");
+          if (box) box.style.display = (v === "range") ? "flex" : "none";
+        } catch (_) {}
+        const SCOPE_KEY = (TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.kpi_projection_scope) || "travelbudget_kpi_projection_scope_v1";
+        // Range mode stores as "range:YYYY-MM-DD:YYYY-MM-DD"
+        if (v === "range") {
+          try {
+            const a = String((document.getElementById("kpiRangeStart")||{}).value || "");
+            const b = String((document.getElementById("kpiRangeEnd")||{}).value || "");
+            const vv = (a && b) ? `range:${a}:${b}` : "range";
+            localStorage.setItem(SCOPE_KEY, vv);
+          } catch (_) {}
+        } else {
+          try { localStorage.setItem(SCOPE_KEY, v); } catch (_) {}
+        }
         try { if (typeof renderKPI === "function") renderKPI(); } catch (_) {}
         // Keep curve aligned with KPI scope (no separate curve filter)
         try {
@@ -976,7 +1046,7 @@ const driver = "Dépenses";
   const _tog = document.getElementById("kpiIncludeUnpaidToggle");
   if (_tog) {
     _tog.onchange = () => {
-      localStorage.setItem("travelbudget_kpi_projection_include_unpaid_v1", _tog.checked ? "1" : "0");
+      localStorage.setItem((TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.kpi_projection_include_unpaid) || "travelbudget_kpi_projection_include_unpaid_v1", _tog.checked ? "1" : "0");
       if (window.tbRequestRenderAll) tbRequestRenderAll("kpi:toggle"); else renderKPI();
     };
   }

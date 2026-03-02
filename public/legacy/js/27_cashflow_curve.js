@@ -82,11 +82,51 @@ function ensureCashflowChartAlias() {
   // - "all": full period
   // - "seg:<i>": explicit segment index in state.budgetSegments
   // Curve scope follows KPI scope (single source of truth)
-  const KPI_SCOPE_KEY = "travelbudget_kpi_projection_scope_v1";
-  function getKpiScope() {
-    try { return String(localStorage.getItem(KPI_SCOPE_KEY) || "segment").toLowerCase(); } catch (_) { return "segment"; }
-  }
 
+// Curve scope follows KPI scope (single source of truth)
+const KPI_SCOPE_KEY = (window.TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.kpi_projection_scope) || "travelbudget_kpi_projection_scope_v1";
+
+function getKpiScope() {
+  try {
+    const raw = String(localStorage.getItem(KPI_SCOPE_KEY) || "segment");
+    const low = raw.toLowerCase();
+    const segs = getSegments();
+    const todaySeg = getTodaySegment();
+
+    if (low === "period") {
+      return { mode: "period", start: String(state?.period?.start || ""), end: String(state?.period?.end || ""), segId: null, segBase: null };
+    }
+
+    if (raw.startsWith("seg:")) {
+      const id = raw.slice(4);
+      const seg = segs.find(s => String(s.id) === String(id));
+      if (seg) {
+        return { mode: "seg", start: String(seg.start || ""), end: String(seg.end || ""), segId: String(seg.id), segBase: String(seg.baseCurrency || "") };
+      }
+      // fallback
+      if (todaySeg) return { mode: "segment", start: String(todaySeg.start || ""), end: String(todaySeg.end || ""), segId: String(todaySeg.id || ""), segBase: String(todaySeg.baseCurrency || "") };
+      return { mode: "period", start: String(state?.period?.start || ""), end: String(state?.period?.end || ""), segId: null, segBase: null };
+    }
+
+    if (raw.startsWith("range:")) {
+      const parts = raw.split(":");
+      const a = parts[1] || "";
+      const b = parts[2] || "";
+      if (a && b) return { mode: "range", start: String(a), end: String(b), segId: null, segBase: null };
+      return { mode: "range", start: String(state?.period?.start || ""), end: String(state?.period?.end || ""), segId: null, segBase: null };
+    }
+
+    if (low === "range") {
+      return { mode: "range", start: String(state?.period?.start || ""), end: String(state?.period?.end || ""), segId: null, segBase: null };
+    }
+
+    // Default: current segment (today)
+    if (todaySeg) return { mode: "segment", start: String(todaySeg.start || ""), end: String(todaySeg.end || ""), segId: String(todaySeg.id || ""), segBase: String(todaySeg.baseCurrency || "") };
+    return { mode: "period", start: String(state?.period?.start || ""), end: String(state?.period?.end || ""), segId: null, segBase: null };
+  } catch (_) {
+    return { mode: "segment" };
+  }
+}
   function getSegments() {
     return Array.isArray(window.state?.budgetSegments) ? window.state.budgetSegments.filter(Boolean) : [];
   }
@@ -98,10 +138,14 @@ function ensureCashflowChartAlias() {
     return null;
   }
 
-  function getSelectedSegment() {
-    const scope = getKpiScope();
-    if (scope === "period") return null; // whole period
-    return getTodaySegment(); // current segment
+  function getSelectedSegment(scopeObj) {
+    const s = scopeObj || getKpiScope();
+    if (!s) return null;
+    if (s.mode === "period" || s.mode === "range") return null;
+    if (s.mode === "seg" && s.segId) {
+      return getSegments().find(x => String(x.id) === String(s.segId)) || null;
+    }
+    return getTodaySegment();
   }
 
   function segLabel(seg) {
@@ -404,9 +448,10 @@ function buildSeries() {
 
     // Date range depends on the selected segment filter.
     // Note: we keep all computations in the chart "base" currency (selected segment currency or display currency).
-    const selSeg = getSelectedSegment();
-    const rangeStartStr = (selSeg && selSeg.start) ? String(selSeg.start).slice(0, 10) : String(period.start).slice(0, 10);
-    const rangeEndStr   = (selSeg && selSeg.end)   ? String(selSeg.end).slice(0, 10)   : String(period.end).slice(0, 10);
+    const scope = getKpiScope();
+    const selSeg = getSelectedSegment(scope);
+    const rangeStartStr = (scope && scope.start) ? String(scope.start).slice(0, 10) : String(period.start).slice(0, 10);
+    const rangeEndStr   = (scope && scope.end)   ? String(scope.end).slice(0, 10)   : String(period.end).slice(0, 10);
 
     const start = window.parseISODateOrNull?.(rangeStartStr);
     const end = window.parseISODateOrNull?.(rangeEndStr);

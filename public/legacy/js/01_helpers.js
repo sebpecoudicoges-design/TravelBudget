@@ -209,3 +209,60 @@ window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(wallet
 
   return baseBal + delta;
 };
+
+/* =========================
+   Period names (V6.6.90)
+   - DB table "periods" has no name column (per SQL schema)
+   - Store user-defined names locally (localStorage) keyed by period_id
+   - Used for Settings + Dashboard labels
+   ========================= */
+(function () {
+  function _lsKey() {
+    try { return (window.TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.period_names) ? TB_CONST.LS_KEYS.period_names : "travelbudget_period_names_v1"; } catch (_) {}
+    return "travelbudget_period_names_v1";
+  }
+
+  function _load() {
+    try {
+      const raw = localStorage.getItem(_lsKey());
+      if (!raw) return {};
+      const obj = JSON.parse(raw);
+      return (obj && typeof obj === "object") ? obj : {};
+    } catch (_) { return {}; }
+  }
+
+  function _save(map) {
+    try { localStorage.setItem(_lsKey(), JSON.stringify(map || {})); } catch (_) {}
+  }
+
+  window.tbGetPeriodName = function (periodId) {
+    const id = String(periodId || "");
+    if (!id) return "";
+    const map = _load();
+    const v = map[id];
+    return (v && String(v).trim()) ? String(v).trim() : "";
+  };
+
+  window.tbSetPeriodName = function (periodId, name) {
+    const id = String(periodId || "");
+    if (!id) return false;
+    const nm = String(name || "").trim();
+    const map = _load();
+    if (!nm) delete map[id];
+    else map[id] = nm;
+    _save(map);
+    try { if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("periods:changed", { period_id: id }); } catch (_) {}
+    return true;
+  };
+
+  window.tbFormatPeriodLabel = function (p, idx) {
+    const start = (p && (p.start || p.start_date)) ? String(p.start || p.start_date).slice(0,10) : "";
+    const end   = (p && (p.end || p.end_date)) ? String(p.end || p.end_date).slice(0,10) : "";
+    const pid   = p && p.id ? String(p.id) : "";
+    const nm = pid ? window.tbGetPeriodName(pid) : "";
+    if (nm) return nm;
+    const range = (start && end) ? `${start} → ${end}` : (start || end || "");
+    if (idx !== undefined && idx !== null) return `Voyage ${Number(idx)+1} : ${range}`.trim();
+    return (`Voyage ${range}`.trim()) || "Voyage";
+  };
+})();
