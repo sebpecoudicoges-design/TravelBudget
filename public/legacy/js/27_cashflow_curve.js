@@ -94,17 +94,20 @@ function getKpiScope() {
     const todaySeg = getTodaySegment();
 
     if (low === "period") {
-      return { mode: "period", start: String(state?.period?.start || ""), end: String(state?.period?.end || ""), segId: null, segBase: null };
+      return { mode: "period", start: String(state?.period?.start || "").slice(0,10), end: String(state?.period?.end || "").slice(0,10), segId: null, segBase: null };
     }
 
     if (raw.startsWith("seg:")) {
       const id = raw.slice(4);
       const seg = segs.find(s => String(s.id) === String(id));
       if (seg) {
-        return { mode: "seg", start: String(seg.start || ""), end: String(seg.end || ""), segId: String(seg.id), segBase: String(seg.baseCurrency || "") };
+        const ss = String(seg.start || seg.start_date || seg.startDate || "").slice(0,10);
+        const ee = String(seg.end || seg.end_date || seg.endDate || "").slice(0,10);
+        const bb = String(seg.baseCurrency || seg.base_currency || seg.base || "").toUpperCase();
+        return { mode: "seg", start: ss, end: ee, segId: String(seg.id), segBase: bb };
       }
       // fallback
-      if (todaySeg) return { mode: "segment", start: String(todaySeg.start || ""), end: String(todaySeg.end || ""), segId: String(todaySeg.id || ""), segBase: String(todaySeg.baseCurrency || "") };
+      if (todaySeg) return { mode: "segment", start: String(todaySeg.start || todaySeg.start_date || todaySeg.startDate || ""), end: String(todaySeg.end || todaySeg.end_date || todaySeg.endDate || ""), segId: String(todaySeg.id || ""), segBase: String(todaySeg.baseCurrency || todaySeg.base_currency || todaySeg.base || "") };
       return { mode: "period", start: String(state?.period?.start || ""), end: String(state?.period?.end || ""), segId: null, segBase: null };
     }
 
@@ -121,7 +124,7 @@ function getKpiScope() {
     }
 
     // Default: current segment (today)
-    if (todaySeg) return { mode: "segment", start: String(todaySeg.start || ""), end: String(todaySeg.end || ""), segId: String(todaySeg.id || ""), segBase: String(todaySeg.baseCurrency || "") };
+    if (todaySeg) return { mode: "segment", start: String(todaySeg.start || todaySeg.start_date || todaySeg.startDate || ""), end: String(todaySeg.end || todaySeg.end_date || todaySeg.endDate || ""), segId: String(todaySeg.id || ""), segBase: String(todaySeg.baseCurrency || todaySeg.base_currency || todaySeg.base || "") };
     return { mode: "period", start: String(state?.period?.start || ""), end: String(state?.period?.end || ""), segId: null, segBase: null };
   } catch (_) {
     return { mode: "segment" };
@@ -150,9 +153,9 @@ function getKpiScope() {
 
   function segLabel(seg) {
     if (!seg) return "";
-    const s = String(seg.start || "").slice(0, 10);
-    const e = String(seg.end || "").slice(0, 10);
-    const c = String(seg.baseCurrency || "").toUpperCase();
+    const s = String(seg.start || seg.start_date || seg.startDate || "").slice(0, 10);
+    const e = String(seg.end || seg.end_date || seg.endDate || "").slice(0, 10);
+    const c = String(seg.baseCurrency || seg.base_currency || seg.base || "").toUpperCase();
     const range = (s && e) ? `${s} → ${e}` : (s || e || "");
     return `${range}${c ? ` (${c})` : ""}`.trim();
   }
@@ -220,7 +223,7 @@ function getKpiScope() {
 
   function base() {
     const seg = getSelectedSegment();
-    if (seg && seg.baseCurrency) return String(seg.baseCurrency || "").toUpperCase();
+    if (seg && (seg.baseCurrency || seg.base_currency)) return String(seg.baseCurrency || seg.base_currency || "").toUpperCase();
     const d = todayStr();
     if (typeof window.getDisplayCurrency === "function") return String(window.getDisplayCurrency(d) || "").toUpperCase();
     return String(window.state?.period?.baseCurrency || "").toUpperCase();
@@ -621,7 +624,11 @@ try {
 
     // Segment filter UI (range)
     const segs = getSegments();
-    const scopeLabel = (getKpiScope() === "period") ? "Toute la période" : "Segment courant";
+    const __sc = getKpiScope();
+    const scopeLabel = (__sc && __sc.mode === "period") ? "Toute la période"
+      : (__sc && __sc.mode === "range") ? "Date à date"
+      : (__sc && __sc.mode === "seg") ? "Période sélectionnée"
+      : "Segment courant";
 
     // UI
     container.innerHTML = `
