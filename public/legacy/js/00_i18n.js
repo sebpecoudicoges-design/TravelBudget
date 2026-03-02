@@ -16,6 +16,13 @@
       "app.lang_en": "English",
       "app.reload_hint": "Astuce : recharger la page applique tout immédiatement.",
 
+      // Navigation
+      "nav.dashboard": "Tableau",
+      "nav.transactions": "Transactions",
+      "nav.settings": "Settings",
+      "nav.trip": "Trip",
+      "nav.members": "Membres",
+
       // Onboarding
       "onboarding.title": "Démarrer en 1 minute",
       "onboarding.step.wallet": "1) Crée un <b>wallet</b> (ex : Cash THB).",
@@ -57,6 +64,7 @@
 
       // Assistant
       "assistant.title": "Assistant",
+      "assistant.context_title": "Contexte",
       "assistant.placeholder": "Pose une question… (ex: “Pourquoi ma courbe baisse ?”) ",
       "assistant.send": "Envoyer",
       "assistant.hint": "Je cherche dans la FAQ et te propose la meilleure réponse.",
@@ -64,6 +72,14 @@
       "assistant.suggest_faq": "Voir la FAQ",
       "assistant.close": "Fermer",
       "assistant.minimize": "Réduire",
+
+      "assistant.action.settings": "Settings",
+      "assistant.action.wallets": "Wallets",
+      "assistant.action.help": "Aide",
+      "assistant.action.transactions": "Transactions",
+
+      "assistant.intent.wallet_create": "Pour ajouter une wallet :\n1) Va dans Settings\n2) Section Wallets\n3) Clique + Ajouter wallet\n4) Choisis la devise (ex: LAK) et enregistre.\n\nAstuce : clique sur le bouton Wallets juste au-dessus pour y aller directement.",
+      "assistant.intent.voyage_rename": "Pour renommer ton voyage :\n1) Va dans Settings\n2) Section Voyage\n3) Champ “Nom du voyage”\n4) Modifie puis valide (auto-save).",
 
       // Settings tooltips (Voyage / Périodes / FX)
       "settings.title": "Voyage",
@@ -77,6 +93,13 @@
       "app.lang_fr": "Français",
       "app.lang_en": "English",
       "app.reload_hint": "Tip: reloading applies everything immediately.",
+
+      // Navigation
+      "nav.dashboard": "Dashboard",
+      "nav.transactions": "Transactions",
+      "nav.settings": "Settings",
+      "nav.trip": "Trip",
+      "nav.members": "Members",
 
       // Onboarding
       "onboarding.title": "Get started in 1 minute",
@@ -119,6 +142,7 @@
 
       // Assistant
       "assistant.title": "Assistant",
+      "assistant.context_title": "Context",
       "assistant.placeholder": "Ask a question… (e.g., “Why is my curve going down?”)",
       "assistant.send": "Send",
       "assistant.hint": "I search the FAQ and suggest the best answer.",
@@ -126,6 +150,14 @@
       "assistant.suggest_faq": "See FAQ",
       "assistant.close": "Close",
       "assistant.minimize": "Minimize",
+
+      "assistant.action.settings": "Settings",
+      "assistant.action.wallets": "Wallets",
+      "assistant.action.help": "Help",
+      "assistant.action.transactions": "Transactions",
+
+      "assistant.intent.wallet_create": "To add a wallet:\n1) Go to Settings\n2) Wallets section\n3) Click + Add wallet\n4) Pick the currency (e.g., LAK) and save.\n\nTip: click the Wallets button above to jump there.",
+      "assistant.intent.voyage_rename": "To rename your trip period:\n1) Go to Settings\n2) Trip section\n3) “Trip name” field\n4) Edit and confirm (auto-save).",
 
       // Settings tooltips
       "settings.title": "Trip",
@@ -221,4 +253,6 @@
   // Bind global language switch (if present)
   try { bindLangSwitch(); } catch (_) {}
   try { applyLangSwitchUI(); } catch (_) {}
+  // Apply i18n to initial static DOM (legacy views may render later; tbSetLang reruns this)
+  try { applyDom(); } catch (_) {}
 })();

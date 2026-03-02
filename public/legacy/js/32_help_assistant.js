@@ -111,13 +111,13 @@
 
       <div class="tb-assist-body">
         <div id="tb-assist-context" style="margin-bottom:10px; padding:10px; border:1px solid rgba(0,0,0,0.08); border-radius:14px; background:rgba(0,0,0,0.02);">
-          <div class="muted" style="font-size:12px; font-weight:700; margin-bottom:6px;">Contexte</div>
+          <div class="muted" style="font-size:12px; font-weight:700; margin-bottom:6px;">${t("assistant.context_title")}</div>
           <div id="tb-assist-context-lines" class="muted" style="font-size:12px; line-height:1.35;"></div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-            <button type="button" class="btn" id="tb-assist-go-settings" style="padding:6px 10px; font-size:12px;">Settings</button>
-            <button type="button" class="btn" id="tb-assist-go-wallets" style="padding:6px 10px; font-size:12px;">Wallets</button>
-            <button type="button" class="btn" id="tb-assist-go-help" style="padding:6px 10px; font-size:12px;">Aide</button>
-            <button type="button" class="btn" id="tb-assist-go-tx" style="padding:6px 10px; font-size:12px;">Transactions</button>
+            <button type="button" class="btn" id="tb-assist-go-settings" style="padding:6px 10px; font-size:12px;">${t("assistant.action.settings")}</button>
+            <button type="button" class="btn" id="tb-assist-go-wallets" style="padding:6px 10px; font-size:12px;">${t("assistant.action.wallets")}</button>
+            <button type="button" class="btn" id="tb-assist-go-help" style="padding:6px 10px; font-size:12px;">${t("assistant.action.help")}</button>
+            <button type="button" class="btn" id="tb-assist-go-tx" style="padding:6px 10px; font-size:12px;">${t("assistant.action.transactions")}</button>
           </div>
         </div>
 
@@ -218,8 +218,13 @@
         const qq = q.toLowerCase();
         const wantsWallet = (qq.includes("wallet") || qq.includes("portefeuille")) && (qq.includes("ajout") || qq.includes("ajouter") || qq.includes("créer") || qq.includes("creer") || qq.includes("nouveau") || qq.includes("nouvelle"));
         if (wantsWallet) {
-          appendMsg("bot",
-            "Pour ajouter une wallet :\n1) Va dans Settings\n2) Section Wallets\n3) Clique + Ajouter wallet\n4) Choisis la devise (ex: LAK) et enregistre.\n\nAstuce : clique sur le bouton Wallets juste au-dessus pour y aller directement.");
+          appendMsg("bot", t("assistant.intent.wallet_create"));
+          return;
+        }
+
+        const wantsRename = (qq.includes("renomm") || qq.includes("rename") || qq.includes("nom")) && (qq.includes("voyage") || qq.includes("periode") || qq.includes("période") || qq.includes("trip") || qq.includes("period"));
+        if (wantsRename) {
+          appendMsg("bot", t("assistant.intent.voyage_rename"));
           return;
         }
       } catch (_) {}

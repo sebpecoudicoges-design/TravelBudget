@@ -116,6 +116,24 @@
         fr: "Oui. Un wallet représente une poche (cash, banque). Si tu es à découvert ou si tu avances des frais, un solde négatif est possible. L’important est de bien tagger “Payé maintenant” vs “À payer”.",
         en: "Yes. A wallet is a pocket (cash, bank). If you’re overdrafted or fronting costs, a negative balance is possible. The key is using “Paid now” vs “To pay” correctly."
       }
+    },
+    {
+      id: "create_wallet",
+      tags: ["wallet", "ajouter", "créer", "nouveau", "portefeuille", "add", "create"],
+      q: { fr: "Comment créer une nouvelle wallet ?", en: "How do I create a new wallet?" },
+      a: {
+        fr: "Va dans <b>Settings</b> → section <b>Wallets</b> → <b>+ Ajouter wallet</b>. Donne un nom (ex: Cash LAK), choisis la devise (LAK) et enregistre. Si tu changes de devise de base de segment, le FX est géré automatiquement (Option A).",
+        en: "Go to <b>Settings</b> → <b>Wallets</b> → <b>+ Add wallet</b>. Give it a name (e.g., Cash LAK), pick the currency (LAK) and save. If your segment base currency changes, FX is handled automatically (Option A)."
+      }
+    },
+    {
+      id: "rename_trip_period",
+      tags: ["voyage", "période", "periode", "nom", "renommer", "rename", "title", "name"],
+      q: { fr: "Comment renommer un voyage ?", en: "How do I rename a trip period?" },
+      a: {
+        fr: "Dans <b>Settings</b> → <b>Voyage</b>, utilise le champ <b>Nom du voyage</b>. C’est enregistré automatiquement. Si ta base n’a pas de colonne name côté periods, le nom est stocké localement sur ton navigateur.",
+        en: "In <b>Settings</b> → <b>Trip</b>, use the <b>Trip name</b> field. It auto-saves. If your DB has no name column on periods, the name is stored locally in your browser."
+      }
     }
   ];
 
