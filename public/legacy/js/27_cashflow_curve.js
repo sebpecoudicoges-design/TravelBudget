@@ -874,7 +874,15 @@ dataLabels: { enabled: false },
       const seg = String(window.__TB_ACTIVE_SEGMENT_ID || "");
       const start = String(window.__TB_ACTIVE_START || "");
       const end = String(window.__TB_ACTIVE_END || "");
-      return rev + "|" + view + "|" + seg + "|" + start + "|" + end;
+      // IMPORTANT: the curve scope can be driven by the KPI scope selector (segment/period/seg:<id>/range:...).
+      // That selector persists its value in localStorage. The globals above are updated during a render,
+      // so without including the persisted scope here, we can miss subsequent scope changes (needs manual refresh).
+      let kpiScope = "";
+      try {
+        const SCOPE_KEY = (window.TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.kpi_projection_scope) || "travelbudget_kpi_projection_scope_v1";
+        kpiScope = String(localStorage.getItem(SCOPE_KEY) || "");
+      } catch (_) {}
+      return rev + "|" + view + "|" + seg + "|" + start + "|" + end + "|" + kpiScope;
     }
 
     window.tbRequestCashflowRender = function tbRequestCashflowRender(reason) {
