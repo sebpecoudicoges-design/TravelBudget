@@ -935,6 +935,20 @@ const driver = "Dépenses";
 	              <div style="font-weight:800; font-size:18px; line-height:1.2; margin-top:6px; color:var(--text);">${escapeHTML(fxRateText)}</div>
 	              <div class="muted" style="font-size:12px; margin-top:6px;">1€ en devise de période</div>
 	            </div>
+
+	            <!-- FX calculator (quick) -->
+	            <div style="${miniCardStyle}">
+	              <div class="muted" style="font-size:12px;">${tbT ? tbT("kpi.fxcalc.title") : "Convertisseur"}</div>
+	              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+	                <input id="kpiFxCalcAmount" type="number" inputmode="decimal" placeholder="0" style="width:120px; padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;" />
+	                <select id="kpiFxCalcFrom" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;"></select>
+	                <span class="muted" style="font-size:12px;">→</span>
+	                <select id="kpiFxCalcTo" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;"></select>
+	              </div>
+	              <div class="muted" style="font-size:12px; margin-top:8px;">
+	                <span id="kpiFxCalcOut">—</span>
+	              </div>
+	            </div>
           </div>
 
           <!-- CASH card -->
@@ -1050,6 +1064,7 @@ try {
             else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
             else if (typeof renderCashflowChart === "function") renderCashflowChart();
           } catch (_) {}
+          try { if (typeof window.redrawCharts === "function") window.redrawCharts(); } catch (_) {}
         }
       };
       aEl.addEventListener("change", saveRange);
@@ -1102,8 +1117,83 @@ try {
           else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
           else if (typeof renderCashflowChart === "function") renderCashflowChart();
         } catch (_) {}
+
+        // Keep pie chart aligned too, if charts exist.
+        try { if (typeof window.redrawCharts === "function") window.redrawCharts(); } catch (_) {}
 });
     }
+
+    // FX calculator binding
+    try {
+      const aEl = kpi.querySelector("#kpiFxCalcAmount");
+      const fEl = kpi.querySelector("#kpiFxCalcFrom");
+      const tEl = kpi.querySelector("#kpiFxCalcTo");
+      const oEl = kpi.querySelector("#kpiFxCalcOut");
+      if (aEl && fEl && tEl && oEl && !aEl.dataset.bound) {
+        aEl.dataset.bound = "1";
+        const AKEY = (TB_CONST?.LS_KEYS?.fx_calc_amount) || "travelbudget_fx_calc_amount_v1";
+        const FKEY = (TB_CONST?.LS_KEYS?.fx_calc_from) || "travelbudget_fx_calc_from_v1";
+        const TKEY = (TB_CONST?.LS_KEYS?.fx_calc_to) || "travelbudget_fx_calc_to_v1";
+
+        const rates = (typeof window.fxGetEurRates === "function") ? (window.fxGetEurRates() || {}) : {};
+        const curSet = new Set(["EUR"]);
+        try { Object.keys(rates || {}).forEach(k => curSet.add(String(k || "").toUpperCase())); } catch (_) {}
+        try { (state.wallets || []).forEach(w => curSet.add(String(w?.currency || "").toUpperCase())); } catch (_) {}
+        try { (state.budgetSegments || state.segments || []).forEach(s => curSet.add(String(s?.baseCurrency || s?.base_currency || "").toUpperCase())); } catch (_) {}
+        curSet.add(String(state?.period?.baseCurrency || state?.period?.base_currency || "").toUpperCase());
+        const curs = Array.from(curSet).filter(Boolean).sort();
+
+        const optHTML = curs.map(c => `<option value="${c}">${c}</option>`).join("");
+        fEl.innerHTML = optHTML;
+        tEl.innerHTML = optHTML;
+
+        // Defaults: from = current segment base, to = period base
+        const segBase = String((window.__TB_ACTIVE_SEG && (__TB_ACTIVE_SEG.baseCurrency || __TB_ACTIVE_SEG.base_currency)) || base || "EUR").toUpperCase();
+        const perBase = String(base || state?.period?.baseCurrency || state?.period?.base_currency || "EUR").toUpperCase();
+
+        const savedA = (localStorage.getItem(AKEY) || "").trim();
+        const savedF = (localStorage.getItem(FKEY) || "").trim().toUpperCase();
+        const savedT = (localStorage.getItem(TKEY) || "").trim().toUpperCase();
+
+        aEl.value = savedA || "";
+        fEl.value = curs.includes(savedF) ? savedF : (curs.includes(segBase) ? segBase : "EUR");
+        tEl.value = curs.includes(savedT) ? savedT : (curs.includes(perBase) ? perBase : "EUR");
+
+        const fmtOut = (x, cur) => {
+          const n = Number(x);
+          if (!isFinite(n)) return "—";
+          const s = (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
+          return `${s} ${cur}`;
+        };
+
+        const compute = () => {
+          const amt = Number(aEl.value);
+          const from = String(fEl.value || "EUR");
+          const to = String(tEl.value || "EUR");
+          if (!isFinite(amt)) { oEl.textContent = "—"; return; }
+          let out = null;
+          try {
+            if (typeof window.fxConvert === "function") out = window.fxConvert(amt, from, to, rates);
+          } catch (_) {}
+          // Fallbacks using existing pivots
+          if (out === null || !isFinite(out)) {
+            try {
+              if (to === "EUR") out = amountToEUR(amt, from);
+              else if (from === "EUR") out = eurToAmount(amt, to);
+            } catch (_) {}
+          }
+          oEl.textContent = fmtOut(out, to);
+
+          try { localStorage.setItem(AKEY, String(aEl.value || "")); } catch (_) {}
+          try { localStorage.setItem(FKEY, from); } catch (_) {}
+          try { localStorage.setItem(TKEY, to); } catch (_) {}
+        };
+
+        [aEl, fEl, tEl].forEach(el => el.addEventListener("input", compute));
+        [aEl, fEl, tEl].forEach(el => el.addEventListener("change", compute));
+        compute();
+      }
+    } catch (_) {}
   } catch (e) {
     console.warn(e);
   }

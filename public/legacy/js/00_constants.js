@@ -1,4 +1,4 @@
-window.__TB_BUILD = '6.6.96';
+window.__TB_BUILD = '6.6.97';
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -68,6 +68,9 @@ window.__TB_BUILD = '6.6.96';
     // Charts filtering
     pie_excluded_cats: "travelbudget_pie_excluded_categories_v1",
 
+    // Dashboard wallets order
+    wallet_order: "travelbudget_wallet_order_v2",
+
     // Debug
     debug: "travelbudget_debug_v1",
 
@@ -82,6 +85,11 @@ window.__TB_BUILD = '6.6.96';
     assist_thread: "travelbudget_assist_thread_v1",
     assist_open: "travelbudget_assist_open_v1",
     assist_ctx_open: "travelbudget_assist_ctx_open_v1",
+
+    // KPI FX calculator (local-only)
+    fx_calc_amount: "travelbudget_fx_calc_amount_v1",
+    fx_calc_from: "travelbudget_fx_calc_from_v1",
+    fx_calc_to: "travelbudget_fx_calc_to_v1",
   });
 
   const UI_LABELS = Object.freeze({

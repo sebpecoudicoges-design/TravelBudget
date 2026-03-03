@@ -513,10 +513,16 @@
 
   /* V6.6.96 - onboarding highlight helper (mini-guides) */
   .tb-highlight{
-    outline: 3px solid var(--accent);
-    outline-offset: 3px;
+    /* Use box-shadow + soft bg pulse to remain visible even in overflow/clip containers */
+    box-shadow: 0 0 0 3px var(--accent), 0 0 0 6px rgba(255,255,255,0.10);
     border-radius: 12px;
-    transition: outline 0.6s ease;
+    animation: tbHighlightPulse 1.4s ease-out 1;
+  }
+
+  @keyframes tbHighlightPulse {
+    0% { background: transparent; }
+    20% { background: var(--accent-soft); }
+    100% { background: transparent; }
   }
 </style>
 

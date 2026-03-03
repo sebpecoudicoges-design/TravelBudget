@@ -230,7 +230,8 @@
       { kt: "help.guide.create_periods.title", kb: "help.guide.create_periods.body", action: "settings", target: "#seg-list" },
       { kt: "help.guide.rename_voyage.title", kb: "help.guide.rename_voyage.body", action: "settings", target: "#s-period-name" },
       { kt: "help.guide.fx.title", kb: "help.guide.fx.body", action: "settings", target: "#manual-fx-box" },
-      { kt: "help.guide.wallets.title", kb: "help.guide.wallets.body", action: "settings", target: "#wallets-container" },
+      // Wallets are managed from Dashboard
+      { kt: "help.guide.wallets.title", kb: "help.guide.wallets.body", action: "dashboard", target: "#wallets-container" },
       { kt: "help.guide.dashboard_scope.title", kb: "help.guide.dashboard_scope.body", action: "dashboard", target: "#kpiScopeSelect" },
       { kt: "help.guide.trip.title", kb: "help.guide.trip.body", action: "trip", target: "#trip-root" },
     ];
@@ -341,15 +342,25 @@
     const selector = String(sel || "").trim();
     const maxTries = 18;
     let tries = 0;
+    const pickHighlightEl = (el) => {
+      if (!el) return null;
+      const tag = String(el.tagName || "").toUpperCase();
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") {
+        return el.closest(".field") || el.closest(".row") || el;
+      }
+      return el;
+    };
+
     const tick = () => {
       tries++;
       const el = selector ? document.querySelector(selector) : null;
       if (el) {
-        try { el.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (_) { try { el.scrollIntoView(); } catch (_) {} }
+        const hEl = pickHighlightEl(el);
+        try { (hEl || el).scrollIntoView({ behavior: "smooth", block: "center" }); } catch (_) { try { (hEl || el).scrollIntoView(); } catch (_) {} }
         try { el.focus && el.focus({ preventScroll: true }); } catch (_) {}
         try {
-          el.classList.add("tb-highlight");
-          setTimeout(() => { try { el.classList.remove("tb-highlight"); } catch (_) {} }, 1200);
+          (hEl || el).classList.add("tb-highlight");
+          setTimeout(() => { try { (hEl || el).classList.remove("tb-highlight"); } catch (_) {} }, 1500);
         } catch (_) {}
         return;
       }

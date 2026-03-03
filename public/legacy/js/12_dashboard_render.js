@@ -171,6 +171,10 @@ if (!wallets.length) {
 
   // Enable drag & drop reorder
   try { if (typeof enableWalletsReorderDrag === "function") enableWalletsReorderDrag(listEl); } catch (e) {}
+
+  // Notify reorder script (and any listeners) that wallets have been rendered.
+  try { window.dispatchEvent(new CustomEvent("wallets:rendered")); } catch (_) {}
+  try { if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("wallets:rendered", null); } catch (_) {}
 }
 
 // Budget spent per day (base currency) computed from transactions.

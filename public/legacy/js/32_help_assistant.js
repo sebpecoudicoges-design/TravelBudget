@@ -167,15 +167,16 @@
     });
 
     panel.querySelector("#tb-assist-go-settings")?.addEventListener("click", () => { try { if (typeof showView === "function") showView("settings"); } catch (_) {} });
+    // Wallets are managed from Dashboard.
     panel.querySelector("#tb-assist-go-wallets")?.addEventListener("click", () => {
       try {
-        if (typeof showView === "function") showView("settings");
+        if (typeof showView === "function") showView("dashboard");
         setTimeout(() => {
           try {
             const el = document.getElementById("wallets-container");
             if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
           } catch (_) {}
-        }, 50);
+        }, 80);
       } catch (_) {}
     });
     panel.querySelector("#tb-assist-go-help")?.addEventListener("click", () => { try { if (typeof showView === "function") showView("help"); } catch (_) {} });

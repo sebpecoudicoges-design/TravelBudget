@@ -81,8 +81,11 @@
       "assistant.action.help": "Aide",
       "assistant.action.transactions": "Transactions",
 
-      "assistant.intent.wallet_create": "Pour ajouter une wallet :\n1) Va dans Settings\n2) Section Wallets\n3) Clique + Ajouter wallet\n4) Choisis la devise (ex: LAK) et enregistre.\n\nAstuce : clique sur le bouton Wallets juste au-dessus pour y aller directement.",
+      "assistant.intent.wallet_create": "Pour ajouter une wallet :\n1) Va dans Dashboard\n2) Bloc Wallets\n3) Clique + Wallet\n4) Choisis la devise (ex: LAK) et enregistre.",
       "assistant.intent.voyage_rename": "Pour renommer ton voyage :\n1) Va dans Settings\n2) Section Voyage\n3) Champ “Nom du voyage”\n4) Modifie puis valide (auto-save).",
+
+      // KPI
+      "kpi.fxcalc.title": "Convertisseur",
 
       // Settings tooltips (Voyage / Périodes / FX)
       "settings.title": "Voyage",
@@ -172,8 +175,11 @@
       "assistant.action.help": "Help",
       "assistant.action.transactions": "Transactions",
 
-      "assistant.intent.wallet_create": "To add a wallet:\n1) Go to Settings\n2) Wallets section\n3) Click + Add wallet\n4) Pick the currency (e.g., LAK) and save.\n\nTip: click the Wallets button above to jump there.",
+      "assistant.intent.wallet_create": "To add a wallet:\n1) Go to Dashboard\n2) Wallets block\n3) Click + Wallet\n4) Pick the currency (e.g., LAK) and save.",
       "assistant.intent.voyage_rename": "To rename your trip period:\n1) Go to Settings\n2) Trip section\n3) “Trip name” field\n4) Edit and confirm (auto-save).",
+
+      // KPI
+      "kpi.fxcalc.title": "Converter",
 
       // Settings tooltips
       "settings.title": "Trip",

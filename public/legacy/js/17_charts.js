@@ -96,15 +96,69 @@ function getBudgetSeries() {
 }
 
 function getExpenseByCategoryBase() {
-  const __k = TB_CHART_CACHE.key("pie");
+  // Pie should follow the same scope as KPIs/curve (segment / voyage / seg / range)
+  const SCOPE_KEY = (window.TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.kpi_projection_scope) || "travelbudget_kpi_projection_scope_v1";
+  let scopeVal = "segment";
+  try { scopeVal = String(localStorage.getItem(SCOPE_KEY) || "segment"); } catch (_) {}
+  const __k = TB_CHART_CACHE.key("pie:" + scopeVal);
   const __cached = TB_CHART_CACHE.get(__k);
   if (__cached) return __cached;
   const __out = (function(){
 
-  // Pie = expenses by category within active period.
+  // Pie = expenses by category within the KPI scope.
   // If segments use multiple base currencies, aggregate in EUR to stay consistent.
-  const start = parseISODateOrNull(state.period.start);
-  const end = parseISODateOrNull(state.period.end);
+  const _allSegs = () => (Array.isArray(state.budgetSegments) ? state.budgetSegments : (Array.isArray(state.segments) ? state.segments : []));
+  const _pickActiveSeg = (todayISO) => {
+    const segs = _allSegs();
+    if (!segs.length) return null;
+    // Prefer explicit active id if present
+    const activeId = state.activeBudgetSegmentId || state.active_segment_id || null;
+    if (activeId) {
+      const hit = segs.find(s => String(s?.id) === String(activeId));
+      if (hit) return hit;
+    }
+    // Else pick segment containing today
+    for (const s of segs) {
+      const a = (s.start || s.start_date || s.startDate);
+      const b = (s.end || s.end_date || s.endDate);
+      if (a && b && String(todayISO) >= String(a) && String(todayISO) <= String(b)) return s;
+    }
+    return segs[0] || null;
+  };
+
+  const _rangeFromScope = () => {
+    const todayISO = toLocalISODate(new Date());
+    const perStart = state?.period?.start;
+    const perEnd = state?.period?.end;
+
+    // range:YYYY-MM-DD:YYYY-MM-DD
+    if (scopeVal.startsWith("range:")) {
+      const parts = scopeVal.split(":");
+      const a = parts[1] || "";
+      const b = parts[2] || "";
+      return { startISO: a || perStart, endISO: b || perEnd };
+    }
+    // seg:<id>
+    if (scopeVal.startsWith("seg:")) {
+      const id = scopeVal.slice(4);
+      const seg = _allSegs().find(s => String(s?.id) === String(id));
+      const a = seg && (seg.start || seg.start_date || seg.startDate);
+      const b = seg && (seg.end || seg.end_date || seg.endDate);
+      return { startISO: a || perStart, endISO: b || perEnd };
+    }
+    // "period" = whole voyage
+    if (scopeVal === "period") return { startISO: perStart, endISO: perEnd };
+
+    // default "segment" = active segment
+    const seg = _pickActiveSeg(todayISO);
+    const a = seg && (seg.start || seg.start_date || seg.startDate);
+    const b = seg && (seg.end || seg.end_date || seg.endDate);
+    return { startISO: a || perStart, endISO: b || perEnd };
+  };
+
+  const rr = _rangeFromScope();
+  const start = parseISODateOrNull(rr.startISO);
+  const end = parseISODateOrNull(rr.endISO);
   const map = new Map();
   if (!start || !end) return map;
 
