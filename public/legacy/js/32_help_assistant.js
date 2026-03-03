@@ -202,8 +202,6 @@
     // Restore thread
     if (threadData.length) {
       threadData.forEach(m => appendMsg(m.role, m.text, false));
-    } else {
-      appendMsg("bot", t("assistant.hint"), true);
     }
 
     function handleSend() {

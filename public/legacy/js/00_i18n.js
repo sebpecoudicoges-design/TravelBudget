@@ -14,7 +14,7 @@
       "app.lang": "Langue",
       "app.lang_fr": "Français",
       "app.lang_en": "English",
-      "app.reload_hint": "Astuce : recharger la page applique tout immédiatement.",
+      "app.reload_hint": "Astuce : un refresh applique tout.",
 
       // Navigation
       "nav.dashboard": "Tableau",
@@ -26,28 +26,28 @@
       // Onboarding
       "onboarding.title": "Démarrer en 1 minute",
       "onboarding.step.wallet": "1) Crée un <b>wallet</b> (ex : Cash THB).",
-      "onboarding.step.period": "2) Configure ta <b>période</b> et ta devise principale.",
-      "onboarding.step.tx": "3) Ajoute une première transaction (ex : <i>Déjeuner 120 THB</i>).",
-      "onboarding.tip": "Astuce : sur chaque champ sensible, clique sur le <b>?</b> pour une explication.",
+      "onboarding.step.period": "2) Vérifie tes <b>périodes</b> (dates + budget/j).",
+      "onboarding.step.tx": "3) Ajoute une transaction (ex : <i>Déjeuner 120 THB</i>).",
+      "onboarding.tip": "Besoin d’aide ? Clique sur <b>?</b>.",
 
       // Wallet empty state
       "wallet.empty.title": "Aucun wallet.",
       "wallet.empty.body": "Crée au moins 1 wallet pour suivre ton solde (ex : Cash THB, Banque EUR).",
 
       // Transaction modal tooltips (microcopy)
-      "tx.help.type": "Le type définit l’impact budget. Exemple : Dépense = diminue ton budget, Revenu = augmente.",
-      "tx.help.wallet": "Choisis le wallet impacté (cash, banque…).",
-      "tx.help.category": "Une catégorie sert à lire tes dépenses. Garde-la simple.",
-      "tx.help.paid": "Payé maintenant = l’argent est déjà sorti/entré du wallet.",
-      "tx.help.oob": "Hors budget/jour : n’affecte pas l’objectif quotidien (ex : dépôt, transfert, achat exceptionnel).",
+      "tx.help.type": "Type = impact. Dépense ↓ / Revenu ↑.",
+      "tx.help.wallet": "Choisis la poche (cash, banque…).",
+      "tx.help.category": "Catégorie = lecture. Reste simple.",
+      "tx.help.paid": "Payé maintenant = l’argent a bougé.",
+      "tx.help.oob": "Hors budget/j : n’impacte pas l’objectif quotidien.",
 
       // Help / FAQ
       "nav.help": "Aide",
       "help.title": "Aide & FAQ",
-      "help.subtitle": "Réponses rapides, exemples concrets, et mini-assistant.",
+      "help.subtitle": "Réponses rapides + actions.",
       "help.search_label": "Rechercher dans la FAQ",
-      "help.search_placeholder": "Ex: taux de change, hors budget, à payer…",
-      "help.no_results": "Aucun résultat. Essaie avec d’autres mots (ex: budget, courbe, devise).",
+      "help.search_placeholder": "Ex: change, wallet, à payer…",
+      "help.no_results": "Aucun résultat. Essaie d’autres mots.",
       "help.top_results": "Résultats",
       "help.open_faq": "Ouvrir la FAQ",
       "help.guides.title": "Guides rapides",
@@ -55,22 +55,22 @@
       "help.action.open_dashboard": "Ouvrir Dashboard",
       "help.action.open_trip": "Ouvrir Trip",
       "help.guide.create_trip.title": "Créer ton voyage",
-      "help.guide.create_trip.body": "Va dans <b>Settings → Voyage</b>, définis les dates, puis crée tes périodes (segments).",
+      "help.guide.create_trip.body": "Settings → Voyage : dates, puis périodes.",
       "help.guide.create_periods.title": "Créer / ajuster tes périodes",
-      "help.guide.create_periods.body": "Ajoute une période, puis ajuste début/fin. Zéro overlap et zéro trou : l’app recale automatiquement.",
+      "help.guide.create_periods.body": "Ajoute/ajuste. L’app évite trous et chevauchements.",
       "help.guide.fx.title": "FX : auto ECB vs manuel",
-      "help.guide.fx.body": "Par défaut : <b>Auto ECB</b>. Si une devise n’est pas fournie par l’ECB, un <b>fallback manuel</b> daté est requis.",
+      "help.guide.fx.body": "Par défaut : auto ECB. Sinon : taux manuel daté.",
       "help.guide.wallets.title": "Wallets : cash / banque",
-      "help.guide.wallets.body": "Crée un wallet par <i>poche</i> (Cash, Banque). Le solde affiché = base + transactions payées.",
+      "help.guide.wallets.body": "1 wallet par poche (cash/banque).",
       "help.guide.trip.title": "Trip : partager les dépenses",
-      "help.guide.trip.body": "Crée un trip, ajoute les membres, puis les dépenses. Les parts se calculent (V1) à parts égales.",
+      "help.guide.trip.body": "Trip : membres + dépenses (V1 : parts égales).",
 
       // Assistant
       "assistant.title": "Assistant",
       "assistant.context_title": "Contexte",
-      "assistant.placeholder": "Pose une question… (ex: “Pourquoi ma courbe baisse ?”) ",
+      "assistant.placeholder": "Pose une question… (ex: “Pourquoi la courbe baisse ?”)",
       "assistant.send": "Envoyer",
-      "assistant.hint": "Je cherche dans la FAQ et te propose la meilleure réponse.",
+      "assistant.hint": "Je cherche une réponse…",
       "assistant.no_match": "Je n’ai pas trouvé de réponse exacte. Essaie avec d’autres mots clés.",
       "assistant.suggest_faq": "Voir la FAQ",
       "assistant.close": "Fermer",
@@ -81,8 +81,8 @@
       "assistant.action.help": "Aide",
       "assistant.action.transactions": "Transactions",
 
-      "assistant.intent.wallet_create": "Pour ajouter une wallet :\n1) Va dans Dashboard\n2) Bloc Wallets\n3) Clique + Wallet\n4) Choisis la devise (ex: LAK) et enregistre.",
-      "assistant.intent.voyage_rename": "Pour renommer ton voyage :\n1) Va dans Settings\n2) Section Voyage\n3) Champ “Nom du voyage”\n4) Modifie puis valide (auto-save).",
+      "assistant.intent.wallet_create": "Ajouter une wallet :\n• Dashboard → Wallets\n• + Wallet\n• Devise (ex: LAK) → Enregistrer",
+      "assistant.intent.voyage_rename": "Renommer :\n• Settings → Voyage\n• Nom du voyage → modifier",
 
       // KPI
       "kpi.fxcalc.title": "Convertisseur",
@@ -90,25 +90,25 @@
       // Settings tooltips (Voyage / Périodes / FX)
       "settings.title": "Voyage",
       "settings.help.trip_dates": "Les dates du voyage se synchronisent avec la 1ère et la dernière période (dans les deux sens).",
-      "settings.help.period_name": "Donne un nom simple à ton voyage (ex: Asie 2026). Si la base SQL n’a pas de colonne name sur periods, le nom est stocké localement (par navigateur).",
-      "settings.help.segments": "Les périodes (segments) définissent tes phases de voyage : dates + budget/j + devise base.",
-      "settings.help.fx": "FX Option A : ECB auto prioritaire. Le manuel est un fallback daté, demandé uniquement si nécessaire.",
+      "settings.help.period_name": "Nom simple (ex: Asie 2026). Si non stockable en DB, c’est local au navigateur.",
+      "settings.help.segments": "Périodes = phases : dates + budget/j + devise.",
+      "settings.help.fx": "Change : ECB auto. Si absent : taux manuel daté.",
 
       // Dashboard tooltips
-      "dashboard.help.scope": "Le périmètre pilote les KPIs et la courbe : segment courant, toute la période, une période précise, ou une plage date à date.",
+      "dashboard.help.scope": "Filtre = KPIs + courbe (segment, période, ou dates).",
 
       // Guides
       "help.guide.dashboard_scope.title": "Dashboard : filtrer KPIs / courbe",
-      "help.guide.dashboard_scope.body": "En haut du Dashboard, choisis <b>Segment</b>, <b>Toute la période</b>, une <b>Période N</b>, ou <b>Date à date</b>. Le filtre s’applique aux KPIs et à la courbe.",
+      "help.guide.dashboard_scope.body": "Choisis un filtre en haut : KPIs + courbe suivent.",
       "help.guide.rename_voyage.title": "Renommer le voyage",
-      "help.guide.rename_voyage.body": "Dans <b>Settings → Voyage</b>, utilise le champ <b>Nom</b>. C’est sauvegardé automatiquement (local si pas de colonne DB).",
+      "help.guide.rename_voyage.body": "Settings → Voyage : champ Nom.",
     },
     en: {
       // Generic
       "app.lang": "Language",
       "app.lang_fr": "Français",
       "app.lang_en": "English",
-      "app.reload_hint": "Tip: reloading applies everything immediately.",
+      "app.reload_hint": "Tip: refresh applies everything.",
 
       // Navigation
       "nav.dashboard": "Dashboard",
@@ -120,20 +120,20 @@
       // Onboarding
       "onboarding.title": "Get started in 1 minute",
       "onboarding.step.wallet": "1) Create a <b>wallet</b> (e.g., Cash THB).",
-      "onboarding.step.period": "2) Set up your <b>period</b> and main currency.",
-      "onboarding.step.tx": "3) Add your first transaction (e.g., <i>Lunch 120 THB</i>).",
-      "onboarding.tip": "Tip: on sensitive fields, click the <b>?</b> for a quick explanation.",
+      "onboarding.step.period": "2) Check your <b>periods</b> (dates + daily budget).",
+      "onboarding.step.tx": "3) Add a transaction (e.g., <i>Lunch 120 THB</i>).",
+      "onboarding.tip": "Need help? Click <b>?</b>.",
 
       // Wallet empty state
       "wallet.empty.title": "No wallets yet.",
       "wallet.empty.body": "Create at least one wallet to track your balance (e.g., Cash THB, Bank EUR).",
 
       // Transaction modal tooltips
-      "tx.help.type": "Type controls budget impact. Example: Expense decreases budget, Income increases it.",
-      "tx.help.wallet": "Pick the wallet impacted (cash, bank…).",
-      "tx.help.category": "Categories help you read your spending. Keep it simple.",
-      "tx.help.paid": "Paid now = money already left/entered the wallet.",
-      "tx.help.oob": "Out of daily budget: does not affect the daily objective (e.g., deposit, transfer, exceptional purchase).",
+      "tx.help.type": "Type = impact. Expense ↓ / Income ↑.",
+      "tx.help.wallet": "Pick the pocket (cash, bank…).",
+      "tx.help.category": "Category = reading. Keep it simple.",
+      "tx.help.paid": "Paid now = money moved.",
+      "tx.help.oob": "Out of daily budget: does not change the daily target.",
 
       // Help / FAQ
       "nav.help": "Help",
@@ -164,7 +164,7 @@
       "assistant.context_title": "Context",
       "assistant.placeholder": "Ask a question… (e.g., “Why is my curve going down?”)",
       "assistant.send": "Send",
-      "assistant.hint": "I search the FAQ and suggest the best answer.",
+      "assistant.hint": "Searching…",
       "assistant.no_match": "I didn’t find an exact match. Try different keywords.",
       "assistant.suggest_faq": "See FAQ",
       "assistant.close": "Close",
@@ -175,8 +175,8 @@
       "assistant.action.help": "Help",
       "assistant.action.transactions": "Transactions",
 
-      "assistant.intent.wallet_create": "To add a wallet:\n1) Go to Dashboard\n2) Wallets block\n3) Click + Wallet\n4) Pick the currency (e.g., LAK) and save.",
-      "assistant.intent.voyage_rename": "To rename your trip period:\n1) Go to Settings\n2) Trip section\n3) “Trip name” field\n4) Edit and confirm (auto-save).",
+      "assistant.intent.wallet_create": "Add a wallet:\n• Dashboard → Wallets\n• + Wallet\n• Currency (e.g., LAK) → Save",
+      "assistant.intent.voyage_rename": "Rename:\n• Settings → Trip\n• Name field → edit",
 
       // KPI
       "kpi.fxcalc.title": "Converter",
@@ -184,18 +184,18 @@
       // Settings tooltips
       "settings.title": "Trip",
       "settings.help.trip_dates": "Trip dates are synced with the first and last period (both ways).",
-      "settings.help.period_name": "Give your trip a simple name (e.g., Asia 2026). If your SQL schema has no name column on periods, the name is stored locally (per browser).",
-      "settings.help.segments": "Periods (segments) define your trip phases: dates + daily budget + base currency.",
-      "settings.help.fx": "FX Option A: ECB auto is authoritative. Manual is a dated fallback, requested only when needed.",
+      "settings.help.period_name": "Simple name (e.g., Asia 2026). If not in DB, it’s local to this browser.",
+      "settings.help.segments": "Periods = phases: dates + daily budget + currency.",
+      "settings.help.fx": "FX: ECB auto. If missing: dated manual rate.",
 
       // Dashboard tooltips
-      "dashboard.help.scope": "Scope drives KPIs and the curve: current segment, whole period, a specific period, or a custom date range.",
+      "dashboard.help.scope": "Filter = KPIs + curve (segment, period, or dates).",
 
       // Guides
       "help.guide.dashboard_scope.title": "Dashboard: filter KPIs / curve",
-      "help.guide.dashboard_scope.body": "At the top of the Dashboard, pick <b>Segment</b>, <b>Whole period</b>, a <b>Period N</b>, or <b>Date range</b>. The filter applies to KPIs and the curve.",
+      "help.guide.dashboard_scope.body": "Pick a filter at the top: KPIs + curve follow.",
       "help.guide.rename_voyage.title": "Rename the trip",
-      "help.guide.rename_voyage.body": "In <b>Settings → Trip</b>, use the <b>Name</b> field. It auto-saves (local if no DB column).",
+      "help.guide.rename_voyage.body": "Settings → Trip: Name field.",
     }
   };
 
