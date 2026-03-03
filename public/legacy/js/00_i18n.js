@@ -58,8 +58,8 @@
       "help.guide.create_trip.body": "Settings → Voyage : dates, puis périodes.",
       "help.guide.create_periods.title": "Créer / ajuster tes périodes",
       "help.guide.create_periods.body": "Ajoute/ajuste. L’app évite trous et chevauchements.",
-      "help.guide.fx.title": "FX : auto ECB vs manuel",
-      "help.guide.fx.body": "Par défaut : auto ECB. Sinon : taux manuel daté.",
+      "help.guide.fx.title": "Taux auto vs taux perso",
+      "help.guide.fx.body": "Automatique si possible. Sinon, tu peux saisir un taux perso.",
       "help.guide.wallets.title": "Wallets : cash / banque",
       "help.guide.wallets.body": "1 wallet par poche (cash/banque).",
       "help.guide.trip.title": "Trip : partager les dépenses",
@@ -92,7 +92,7 @@
       "settings.help.trip_dates": "Les dates du voyage se synchronisent avec la 1ère et la dernière période (dans les deux sens).",
       "settings.help.period_name": "Nom simple (ex: Asie 2026). Si non stockable en DB, c’est local au navigateur.",
       "settings.help.segments": "Périodes = phases : dates + budget/j + devise.",
-      "settings.help.fx": "Change : ECB auto. Si absent : taux manuel daté.",
+      "settings.help.fx": "Taux automatique si disponible. Sinon, tu peux saisir un taux perso.",
 
       // Dashboard tooltips
       "dashboard.help.scope": "Filtre = KPIs + courbe (segment, période, ou dates).",
@@ -152,8 +152,8 @@
       "help.guide.create_trip.body": "Go to <b>Settings → Trip</b>, set dates, then create your periods (segments).",
       "help.guide.create_periods.title": "Create / adjust periods",
       "help.guide.create_periods.body": "Add a period, then adjust start/end. No overlaps and no gaps: the app re-aligns automatically.",
-      "help.guide.fx.title": "FX: ECB auto vs manual",
-      "help.guide.fx.body": "Default: <b>ECB auto</b>. If a currency is not provided by ECB, a dated <b>manual fallback</b> is required.",
+      "help.guide.fx.title": "Taux auto vs taux perso",
+      "help.guide.fx.body": "Automatic when available. If a currency is missing, you can set a dated <b>custom rate</b>.",
       "help.guide.wallets.title": "Wallets: cash / bank",
       "help.guide.wallets.body": "Create one wallet per <i>pocket</i> (Cash, Bank). Displayed balance = base + paid transactions.",
       "help.guide.trip.title": "Trip: split expenses",
@@ -186,7 +186,7 @@
       "settings.help.trip_dates": "Trip dates are synced with the first and last period (both ways).",
       "settings.help.period_name": "Simple name (e.g., Asia 2026). If not in DB, it’s local to this browser.",
       "settings.help.segments": "Periods = phases: dates + daily budget + currency.",
-      "settings.help.fx": "FX: ECB auto. If missing: dated manual rate.",
+      "settings.help.fx": "Automatic rate when available. Otherwise, you can set a custom rate.",
 
       // Dashboard tooltips
       "dashboard.help.scope": "Filter = KPIs + curve (segment, period, or dates).",

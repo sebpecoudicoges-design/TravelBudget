@@ -281,7 +281,7 @@ async function refreshFxRates() {
   // 5) On continue à alimenter ton moteur actuel EUR<->BASE
   const eurToBaseNow = (base === "EUR") ? 1 : Number(state.exchangeRates["EUR-BASE"] || allRates[base]);
   if (base !== "EUR" && (!eurToBaseNow || eurToBaseNow <= 0)) {
-    return alert(`Taux auto indisponible pour ${base} (ECB).\n\n→ Utilise un taux manuel fallback pour EUR→${base} via Settings.`);
+    return alert(`Taux automatique indisponible pour ${base}.\n\n→ Utilise un taux perso EUR→${base} via Settings.`);
   }
   state.exchangeRates["EUR-BASE"] = eurToBaseNow;
   state.exchangeRates["BASE-EUR"] = 1 / eurToBaseNow;

@@ -262,13 +262,13 @@ function renderSettings(){
   if(host){
     host.innerHTML = "";
 
-    // --- FX status (ECB) + Manual fallback panel (audit) ---
+    // --- FX status + custom rates ---
 
 
     const _fxHelp = (window.tbT ? tbT("settings.help.fx") : [
-      "Auto (ECB) : taux officiel BCE, date = refDay (jour de publication, week-end ok).",
-      "Manuel fallback : utilisé uniquement si l'ECB ne fournit pas la devise.",
-      "Manquant : taux requis non disponible → saisie requise."
+      "Taux automatique : mis à jour régulièrement (week-end ok).",
+      "Taux perso : utilisé seulement si le taux auto est indisponible.",
+      "Si aucun taux dispo : saisie requise."
     ].join("\n"));
 
 
@@ -290,16 +290,14 @@ function renderSettings(){
     fxTop.innerHTML = `
       <div class="row" style="align-items:center; justify-content:space-between;">
         <div>
-          <b>FX (ECB)</b>
-          <span class="muted">• asOf <b>${ecbAsof || "—"}</b> • <b>${ecbCount}</b> devises • refDay <b>${refDay || "—"}</b>
-            ${typeof tbHelp === 'function' ? tbHelp(_fxHelp) : `<span title="${escapeHTML(_fxHelp)}" style="cursor:help; user-select:none; padding-left:6px;">(?)</span>`}
-          </span>
+          <b>Taux de change</b>
+          <span class="muted">Automatique ${typeof tbHelp === 'function' ? tbHelp(_fxHelp) : `<span title="${escapeHTML(_fxHelp)}" style="cursor:help; user-select:none; padding-left:6px;">(?)</span>`}</span>
         </div>
       </div>
     `;
     host.appendChild(fxTop);
 
-    // Manual fallback audit panel
+    // Taux perso (avancé)
     const manualPanel = document.createElement("div");
     manualPanel.className = "card";
     manualPanel.style.marginBottom = "10px";
@@ -315,16 +313,16 @@ function renderSettings(){
     manualPanel.innerHTML = `
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
         <div>
-          <b>Manuels fallback</b>
-          <span class="muted">• audit/edit • utilisés seulement si la devise est absente de l'ECB</span>
+          <b>Taux perso</b>
+          <span class="muted">• optionnel</span>
         </div>
-        <button class="btn" data-act="mf-add" title="Ajouter/mettre à jour un taux manuel fallback">Ajouter</button>
+        <button class="btn" data-act="mf-add" title="Ajouter/mettre à jour un taux perso">Ajouter</button>
       </div>
       <div style="margin-top:8px; overflow:auto;">
         ${manualList.length ? `
           <table class="table" style="width:100%; min-width:520px;">
             <thead><tr>
-              <th>Devise</th><th>Taux EUR→Devise</th><th>Date</th><th style="text-align:right;">Actions</th>
+              <th>Devise</th><th>Taux</th><th>Date</th><th style="text-align:right;">Actions</th>
             </tr></thead>
             <tbody>
               ${manualList.map(x => `
@@ -340,7 +338,7 @@ function renderSettings(){
               `).join('')}
             </tbody>
           </table>
-        ` : `<div class="muted">Aucun taux manuel fallback enregistré.</div>`}
+        ` : `<div class="muted">Aucun taux perso enregistré.</div>`}
       </div>
     `;
     host.appendChild(manualPanel);
@@ -360,7 +358,7 @@ function renderSettings(){
       if (typeof window.tbFxPromptManualRate !== "function") throw new Error("tbFxPromptManualRate() manquant");
       const c = _mfAskCur();
       if (!c) return;
-      window.tbFxPromptManualRate(c, "Ajout/MAJ manuel fallback");
+      window.tbFxPromptManualRate(c, "Taux perso");
       renderSettings();
     });
 
@@ -369,7 +367,7 @@ function renderSettings(){
         const c = btn.getAttribute('data-cur');
         if (!c) return;
         if (typeof window.tbFxPromptManualRate !== "function") throw new Error("tbFxPromptManualRate() manquant");
-        window.tbFxPromptManualRate(c, "MAJ manuel fallback");
+        window.tbFxPromptManualRate(c, "Taux perso");
         renderSettings();
       });
     });
@@ -378,7 +376,7 @@ function renderSettings(){
       btn.onclick = ()=>safeCall("Supprimer taux manuel", ()=>{
         const c = btn.getAttribute('data-cur');
         if (!c) return;
-        const ok = confirm(`Supprimer le taux manuel fallback EUR→${c} ?`);
+        const ok = confirm(`Supprimer le taux perso EUR→${c} ?`);
         if (!ok) return;
         if (typeof window.tbFxDeleteManualRate !== "function") throw new Error("tbFxDeleteManualRate() manquant");
         window.tbFxDeleteManualRate(c);
@@ -408,13 +406,13 @@ function renderSettings(){
 
         const refDay2 = (typeof window.tbFxRefDay === "function") ? window.tbFxRefDay() : (autoAsof2 || todayISO);
         const stale = (!autoAvail && manualRate && (!manualAsof || String(manualAsof).slice(0,10) < String(refDay2).slice(0,10)));
-        const srcLabel = autoAvail ? "ECB Auto" : (manualRate ? "Manuel fallback" : "Manquant");
+        const srcLabel = autoAvail ? "Auto" : (manualRate ? "Taux perso" : "Manquant");
         const srcMeta = autoAvail
           ? (autoAsof2?` • asOf: ${autoAsof2}`: "")
           : (manualRate ? (` • asOf: ${manualAsof || "—"}${stale ? " (à confirmer)" : ""}`) : "");
-        const fxLineHelp = `Auto (ECB) : taux officiel BCE. Date de référence (refDay) = ${refDay2}.\n`+
-                           `Manuel fallback : utilisé uniquement si l'ECB ne fournit pas la devise.\n`+
-                           `"à confirmer" : le manuel est plus ancien que refDay (asOf < refDay).`;
+        const fxLineHelp = `Taux automatique si disponible. Sinon, tu peux saisir un taux perso.`;
+        const fxUiMode = autoAvail ? "Taux automatique" : (manualRate ? "Taux perso" : "Taux");
+        const fxUiStatus = autoAvail ? "À jour" : (manualRate ? (stale ? "Mise à jour recommandée" : "À jour") : "À renseigner");
 
         wrap.innerHTML = `
           <div class="row" style="align-items:flex-end;">
@@ -435,21 +433,16 @@ function renderSettings(){
               <input data-k="daily_budget_base" value="${seg.dailyBudgetBase ?? ""}" />
             </div>
             <div class="field" style="min-width:180px;">
-              <label>Taux EUR→Devise</label>
-              <input value="${rateDisplay}" placeholder="${autoAvail ? "auto" : (manualRate ? "manuel fallback" : "manquant")}" readonly />
+              <label>Taux</label>
+              <input value="${rateDisplay}" placeholder="${autoAvail ? "auto" : (manualRate ? "taux perso" : "à renseigner")}" readonly />
             </div>
-            ${(!autoAvail) ? `<button class="btn" data-act="fx" title="Définir/mettre à jour un taux manuel fallback pour cette devise">${manualRate ? "Mettre à jour taux" : "Saisir taux"}</button>` : ""}
+            ${(!autoAvail) ? `<button class="btn" data-act="fx" title="Définir/mettre à jour un taux perso pour cette devise">${manualRate ? "Modifier taux perso" : "Utiliser un taux perso"}</button>` : ""}
             <div style="flex:1"></div>
             <button class="btn primary" data-act="save">Enregistrer</button>
             <button class="btn danger" data-act="del">Supprimer</button>
           </div>
           <div class="muted" style="margin-top:6px;">
-            FX: <b>${srcLabel}</b>
-            <span title="${escapeHTML(fxLineHelp)}" style="cursor:help; user-select:none; padding-left:6px;">(?)</span>
-            • Taux: <b>${(rateDisplay || "") || "—"}</b>
-            • Source: <b>${srcLabel}</b>${srcMeta}
-            • refDay: <b>${escapeHTML(String(refDay2||"—").slice(0,10))}</b>
-            ${seg.fx_last_updated_at ? ` • maj: ${String(seg.fx_last_updated_at).slice(0,10)}` : ""}
+            ${fxUiMode}: <b>${(rateDisplay || "") || "—"}</b> • ${fxUiStatus}
           </div>
         `;
 
@@ -1208,9 +1201,9 @@ function renderManualFxBox() {
 
   host.innerHTML = `
     <div class="card" style="padding:12px;">
-      <h3 style="margin:0 0 8px 0;">Taux manuels (fallback)</h3>
+      <h3 style="margin:0 0 8px 0;">Taux perso</h3>
       <div class="muted" style="margin-bottom:10px;">
-        Utilisés uniquement si la source Auto FX ne fournit pas EUR→DEV.
+        Utilisé seulement si le taux automatique est indisponible.
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
         <div style="min-width:120px;">
@@ -1218,7 +1211,7 @@ function renderManualFxBox() {
           <input id="tbManualFxCur" class="input" placeholder="ex: IDR" maxlength="3" />
         </div>
         <div style="min-width:180px;">
-          <div class="label">Taux EUR → Devise</div>
+          <div class="label">Taux</div>
           <input id="tbManualFxRate" class="input" placeholder="ex: 17000" inputmode="decimal" />
         </div>
         <button class="btn" onclick="tbManualFxAdd()">Ajouter</button>

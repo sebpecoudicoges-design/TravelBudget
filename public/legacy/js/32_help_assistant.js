@@ -75,7 +75,7 @@
       const segStr = seg ? `${String(seg.start||"").slice(0,10)} → ${String(seg.end||"").slice(0,10)} (${String(seg.baseCurrency||"").toUpperCase()})` : "—";
 
       const stale = (eurAsOf && refDay) ? (String(eurAsOf) < String(refDay)) : false;
-      const fxLine = eurAsOf ? `ECB: ${eurAsOf}${stale ? " (stale)" : ""} • ${count} devises • refDay ${refDay || "—"}` : `ECB: — • refDay ${refDay || "—"}`;
+            const fxLine = eurAsOf ? (stale ? "Taux : mise à jour recommandée" : "Taux : à jour") : "Taux : indisponible";
 
       return [
         { k: "Voyage", v: `${name}${(start&&end)?` • ${start} → ${end}`:""}` },

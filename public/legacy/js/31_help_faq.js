@@ -84,10 +84,10 @@
     {
       id: "fx_refday_weekend",
       tags: ["fx", "ecb", "weekend", "refday", "asof"],
-      q: { fr: "FX (ECB) : c’est quoi refDay / asOf ?", en: "FX (ECB): what are refDay / asOf?" },
+      q: { fr: "Taux auto : c’est à jour ?", en: "Auto rate: is it up to date?" },
       a: {
-        fr: "Les taux ECB ont une date de publication (asOf). refDay = le jour de référence choisi par l’app pour éviter les trous (week-ends / jours fériés). En bref : tu vois la date utilisée pour le calcul.",
-        en: "ECB rates have a publication date (asOf). refDay is the reference day chosen to avoid gaps (weekends/holidays). In short: you see which date is used for calculations."
+        fr: "L’app utilise un taux automatique avec une date de référence. Si ce n’est pas à jour, tu verras “Mise à jour recommandée”.",
+        en: "The app uses an automatic rate with a reference date. If it’s not up to date, you’ll see “Update recommended”."
       }
     },
     {
@@ -95,8 +95,8 @@
       tags: ["fx", "manuel", "fallback", "taux", "audit"],
       q: { fr: "Quand dois-je saisir un taux manuel ?", en: "When do I need to enter a manual rate?" },
       a: {
-        fr: "Seulement si l’ECB ne fournit pas ta devise base. Dans ce cas, l’app te demande un taux EUR→DEV daté (fallback). Si l’ECB couvre la devise : aucune saisie, le taux est verrouillé.",
-        en: "Only if ECB doesn’t provide your base currency. Then the app requests a dated EUR→CUR fallback rate. If ECB covers the currency: no input, the rate is locked."
+        fr: "Seulement si le taux automatique ne couvre pas ta devise. Dans ce cas, l’app te demande un taux EUR→DEV (taux perso).",
+        en: "Only if the automatic rate doesn’t cover your currency. Then the app asks for a EUR→CUR custom rate."
       }
     },
     {

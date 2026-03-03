@@ -561,7 +561,7 @@ try {
     if (!container) return;
 
     if (typeof ApexCharts !== "function") {
-      container.innerHTML = '<div class="card"><h2>Trésorerie</h2><div class="muted">ApexCharts non chargé.</div></div>';
+      container.innerHTML = '<div class="card"><h2>Solde</h2><div class="muted">ApexCharts non chargé.</div></div>';
       return;
     }
 
@@ -579,7 +579,7 @@ try {
       window.__cashflowChart = null;
       container.innerHTML = `
         <div class="card">
-          <h2>Trésorerie (réel + prévision)</h2>
+          <h2>Solde</h2>
           <div class="muted" style="margin-top:6px;">Erreur cashflow: ${escapeHTML(err && err.message ? err.message : String(err))}</div>
         </div>`;
       return;
@@ -590,7 +590,7 @@ try {
     if (!built.ok) {
       container.innerHTML = `
         <div class="card">
-          <h2>Trésorerie (réel + prévision)</h2>
+          <h2>Solde</h2>
           <div class="muted" style="margin-top:6px;">Pas de données : ${escapeHTML(built.reason || "—")}</div>
         </div>`;
       return;
@@ -635,9 +635,9 @@ try {
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap;">
           <div>
-            <h2>Trésorerie (réel + prévision)</h2>
+            <h2>Solde</h2>
             <div class="muted" style="margin-top:4px;">
-              Réel jusqu’au <b>${built.tStr}</b>, puis prévision = réel − budget/jour + (impayés / à recevoir).
+              Projection basée sur ton budget journalier.
             </div>
           </div>
 
@@ -668,7 +668,7 @@ try {
     `;
 
     const series = [
-      { name: `Trésorerie réel (${built.b})`, data: built.actual, type: "line" },
+      { name: `Solde réel (${built.b})`, data: built.actual, type: "line" },
       { name: `Prévision (${built.b})`, data: built.forecast, type: "line" },
       { name: `Dépensé/jour (${built.b})`, data: built.spentBars, type: "column" },
       { name: `Budget dépensé/jour (${built.b})`, data: built.budgetUsedVal, type: "column" }
