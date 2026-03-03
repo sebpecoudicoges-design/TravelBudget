@@ -162,6 +162,34 @@ function getExpenseByCategoryBase() {
   const map = new Map();
   if (!start || !end) return map;
 
+  // Attach scope metadata for UI (legend context line).
+  // This makes the pie clearly follow the same scope as KPIs/curve.
+  try {
+    const segsAll = _allSegs();
+    const normStart = rr.startISO || (state?.period?.start || "");
+    const normEnd = rr.endISO || (state?.period?.end || "");
+    let scopeLabel = "";
+    if (scopeVal === "segment") {
+      scopeLabel = "Segment courant";
+    } else if (scopeVal === "period") {
+      scopeLabel = "Toute la période";
+    } else if (scopeVal.startsWith("seg:")) {
+      const id = scopeVal.slice(4);
+      const seg = segsAll.find(s => String(s?.id) === String(id));
+      if (seg) {
+        const sorted = segsAll.slice().sort((a,b) => String((a.start||a.start_date||a.startDate)||"").localeCompare(String((b.start||b.start_date||b.startDate)||"")));
+        const idx = sorted.findIndex(s => String(s?.id) === String(id));
+        const n = (idx >= 0) ? (idx + 1) : "";
+        scopeLabel = `Periode ${n || ""}`.trim();
+      } else {
+        scopeLabel = "Période";
+      }
+    } else if (scopeVal.startsWith("range:")) {
+      scopeLabel = "Date à date";
+    }
+    map.__scope = { label: scopeLabel, startISO: normStart, endISO: normEnd };
+  } catch (_) {}
+
   const segs = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
   const distinctBases = new Set(segs.map(s => String(s?.baseCurrency || "").toUpperCase()).filter(Boolean));
   const multiBase = distinctBases.size > 1;
@@ -323,9 +351,12 @@ function drawPieChart(canvasId, legendId, mapCat) {
   ctxLine.style.margin = "2px 0 8px";
   ctxLine.style.fontSize = "12px";
   ctxLine.style.color = "var(--muted)";
-  const s0 = state?.period?.start || "";
-  const e0 = state?.period?.end || "";
-  ctxLine.textContent = `Période: ${s0} → ${e0} · Dépenses payées (payNow)`;
+  const meta = (mapCat && mapCat.__scope) ? mapCat.__scope : null;
+  const s0 = (meta && meta.startISO) ? meta.startISO : (state?.period?.start || "");
+  const e0 = (meta && meta.endISO) ? meta.endISO : (state?.period?.end || "");
+  const lab = (meta && meta.label) ? meta.label : "";
+  const head = lab ? `${lab} : ` : "Période : ";
+  ctxLine.textContent = `${head}${s0} → ${e0} · Dépenses payées (payNow)`;
   legend.appendChild(ctxLine);
 
   const filterWrap = document.createElement("div");
