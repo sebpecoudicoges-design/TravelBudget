@@ -59,6 +59,8 @@
       const cleaned = hash.replace(/([#&?])invite=[^&]+&?/g, "$1").replace(/[#&?]$/, "");
       window.location.hash = cleaned || "#trip";
       toastOk("[Trip] Invitation acceptée.");
+      // New membership/visibility: reload trip list on next refresh
+      try { tripState._tripsLoaded = false; } catch (_) {}
       return true;
     } catch (e) {
       toastWarn("[Trip] Invitation invalide/expirée.");
@@ -132,6 +134,7 @@ function toastOk(msg) {
     shares: [],
     myRole: null,
     lastInviteUrl: null,
+    _tripsLoaded: false,
   };
 
   function _el(id) { return document.getElementById(id); }
@@ -465,6 +468,8 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
     } else {
       tripState.activeTripId = tripState.trips[0]?.id || null;
     }
+
+    tripState._tripsLoaded = true;
   }
 
   async function _loadActiveData() {
@@ -794,7 +799,7 @@ async function _persistSettlementEventOnly() {
     created_by: uid,
   }]);
   if (seInsErr) throw seInsErr;
-  if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+  if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 }
 
 async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAmount }) {
@@ -868,7 +873,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     console.warn("[Trip] settlement tx link failed", e);
   }
 
-  if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+  if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 }
 
 async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
@@ -2043,7 +2048,7 @@ const balancesByCurRaw = _computeBalances();
       sel.onchange = async () => {
         tripState.activeTripId = sel.value || null;
         localStorage.setItem(TRIP_ACTIVE_KEY, tripState.activeTripId || "");
-        if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+        if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 };
     }
 
@@ -2054,7 +2059,7 @@ const balancesByCurRaw = _computeBalances();
           const name = _el("trip-new-name").value.trim();
           if (!name) return toastWarn("Nom de trip requis.");
           await _createTrip(name);
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 toastOk("Trip créé.");
         } catch (e) {
           toastWarn(e?.message || String(e));
@@ -2070,7 +2075,7 @@ toastOk("Trip créé.");
           if (!confirm("Supprimer ce trip ?")) return;
           const id = tripState.activeTripId;
           await _deleteTrip(id);
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 toastOk("Trip supprimé.");
         } catch (e) {
           toastWarn(e?.message || String(e));
@@ -2134,7 +2139,7 @@ if (btnInviteCopy) {
           const isMe = _el("trip-member-me").value === "yes";
           if (!name) return toastWarn("Nom requis.");
           await _addMember(name, isMe);
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 toastOk("Participant ajouté.");
         } catch (e) {
           toastWarn(e?.message || String(e));
@@ -2148,7 +2153,7 @@ toastOk("Participant ajouté.");
           const id = btn.getAttribute("data-del-member");
           if (!confirm("Supprimer ce participant ?")) return;
           await _deleteMember(id);
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 } catch (e) {
           toastWarn(e?.message || String(e));
         }
@@ -2289,7 +2294,7 @@ toastOk("Participant ajouté.");
             return { mode, percents, amounts };
           })();
           await _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 toastOk("Dépense ajoutée.");
         } catch (e) {
           toastWarn(e?.message || String(e));
@@ -2343,7 +2348,7 @@ toastOk("Dépense ajoutée.");
           await _persistSettlementEventOnly();
           _settleModalState = null;
 
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
           toastOk("Règlement enregistré (sans wallet).");
         } catch (e) {
           toastWarn("[Trip] " + normalizeSbError(e));
@@ -2365,7 +2370,7 @@ toastOk("Dépense ajoutée.");
             .update({ cancelled_at: new Date().toISOString() })
             .eq("id", id);
           if (error) throw error;
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 toastOk("Règlement annulé.");
         } catch (e) {
           toastWarn("[Trip] " + normalizeSbError(e));
@@ -2418,7 +2423,7 @@ toastOk("Règlement annulé.");
           const id = btn.getAttribute("data-del-exp");
           if (!confirm("Supprimer cette dépense ?")) return;
           await _deleteExpense(id);
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 toastOk("Dépense supprimée.");
         } catch (e) {
           toastWarn(e?.message || String(e));
@@ -2443,7 +2448,7 @@ toastOk("Dépense supprimée.");
 
           btn.disabled = true;
           await _moveExpenseToTrip(expenseId, newTripId);
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
           toastOk("Dépense déplacée.");
         } catch (e) {
           toastWarn(e?.message || String(e));
@@ -2454,8 +2459,25 @@ toastOk("Dépense supprimée.");
     });
   }
 
-  async function refresh() {
-    await _loadTrips();
+  // refresh options:
+  // - activeOnly: skip reloading trip list if already loaded (faster after mutations)
+  // - forceTrips: force reload trip list
+  async function refresh(opts) {
+    const o = opts || {};
+    const needTrips = !!o.forceTrips || !tripState._tripsLoaded || !(tripState.trips || []).length;
+
+    if (!o.activeOnly || needTrips) {
+      await _loadTrips();
+    }
+
+    // Ensure activeTripId remains valid (even in activeOnly mode)
+    if (tripState.activeTripId && !(tripState.trips || []).some(t => t.id === tripState.activeTripId)) {
+      tripState.activeTripId = tripState.trips[0]?.id || null;
+    }
+    if (!tripState.activeTripId && (tripState.trips || []).length) {
+      tripState.activeTripId = tripState.trips[0]?.id || null;
+    }
+
     if (tripState.activeTripId) localStorage.setItem(TRIP_ACTIVE_KEY, tripState.activeTripId);
     await _loadActiveData();
     _renderUI();
@@ -2473,7 +2495,7 @@ toastOk("Dépense supprimée.");
     try {
       await _ensureSession();
       await _acceptInviteFromURL();
-      if (typeof window.__tripRefresh === "function") await window.__tripRefresh();
+      if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 } catch (e) {
       root.innerHTML = `
         <div class="card">
