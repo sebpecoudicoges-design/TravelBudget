@@ -551,35 +551,38 @@ function _addDaysISO(dateStr, days) {
   return toLocalISODate(x);
 }
 
-function _pilotageInsights() {
+function _pilotageInsights(scopeMeta) {
   const today = toLocalISODate(new Date());
-  const infoToday = (typeof getDailyBudgetInfoForDate === "function")
-    ? getDailyBudgetInfoForDate(today)
-    : { remaining: getDailyBudgetForDate(today), daily: state?.period?.dailyBudgetBase || 0, baseCurrency: state?.period?.baseCurrency || "EUR" };
+  const kind = String(scopeMeta?.kind || "segment");
+  const startISO = String(scopeMeta?.startISO || "").slice(0,10);
+  const endISO = String(scopeMeta?.endISO || "").slice(0,10);
 
-  const base = String(infoToday.baseCurrency || state?.period?.baseCurrency || "EUR").toUpperCase();
-  let end = state?.period?.end;
+  // Anchor day for calculations:
+  // - default: today
+  // - if scope starts in the future, anchor = scope start
+  // - if scope ended in the past, nothing useful to show
+  let anchorISO = today;
+  const tD = parseISODateOrNull(today);
+  const sD = parseISODateOrNull(startISO);
+  const eD = parseISODateOrNull(endISO);
+  if (!tD || !eD) return null;
+  if (sD && clampMidnight(sD) > clampMidnight(tD)) anchorISO = startISO;
+  const aD = parseISODateOrNull(anchorISO);
+  if (!aD) return null;
+  if (clampMidnight(aD) > clampMidnight(eD)) return null;
 
-  // If a budget segment exists for the display day, use its end as the projection horizon
-  try {
-    if (typeof getBudgetSegmentForDate === "function") {
-      const seg = getBudgetSegmentForDate(today);
-      if (seg && (seg.end || seg.end_date)) end = String(seg.end || seg.end_date);
-    }
-  } catch (_) {}
+  const info = (typeof getDailyBudgetInfoForDate === "function")
+    ? getDailyBudgetInfoForDate(anchorISO)
+    : { remaining: getDailyBudgetForDate(anchorISO), daily: state?.period?.dailyBudgetBase || 0, baseCurrency: state?.period?.baseCurrency || "EUR" };
 
+  const base = String(info.baseCurrency || state?.period?.baseCurrency || "EUR").toUpperCase();
+  if (!base) return null;
 
-  if (!base || !end) return null;
+  // Remaining horizon (inclusive)
+  const daysRemaining = Math.max(1, dayCountInclusive(clampMidnight(aD), clampMidnight(eD)));
 
-  const todayD = parseISODateOrNull(today);
-  const endD = parseISODateOrNull(end);
-  if (!todayD || !endD) return null;
-
-  // jours restants incluant aujourd’hui
-  const daysRemaining = Math.max(1, dayCountInclusive(clampMidnight(todayD), clampMidnight(endD)));
-
-  const currentDaily = Number(infoToday.daily || 0);
-  const balanceBase = _sumWalletsDisplay(today);
+  const currentDaily = Number(info.daily || 0);
+  const balanceBase = _sumWalletsDisplay(anchorISO);
 
   // Cible: finir à 0 (on pourra rendre paramétrable plus tard)
   const targetEnd = 0;
@@ -592,7 +595,7 @@ function _pilotageInsights() {
   // Jusqu’à quand tu tiens avec le budget actuel (date estimée)
   const daysAtCurrent = (currentDaily > 0) ? Math.floor(balanceBase / currentDaily) : Infinity;
   const zeroDate = isFinite(daysAtCurrent)
-    ? _addDaysISO(today, Math.max(0, daysAtCurrent))
+    ? _addDaysISO(anchorISO, Math.max(0, daysAtCurrent))
     : "—";
 
   // Décision courte
@@ -618,9 +621,11 @@ function _pilotageInsights() {
   }
 
   return {
+    kind,
     base,
-    today,
-    end,
+    today: anchorISO,
+    end: endISO,
+    start: startISO,
     daysRemaining,
     balanceBase,
     currentDaily,
@@ -776,6 +781,7 @@ function renderKPI() {
   }
 
   const _parsedScope = _kpiParseScope(kpiScope);
+  const _rrPilot = _kpiResolveRange(_parsedScope, displayDateISO);
   const _scopeValForSelect = (_parsedScope.kind === "seg")
     ? `seg:${_parsedScope.segId}`
     : (_parsedScope.kind === "range")
@@ -836,7 +842,7 @@ const driver = "Dépenses";
   const excluded = (cover?.excluded?.length ? cover.excluded : (runway?.excluded || []));
   const exclCurrencies = [...new Set(excluded.map(x => x.currency).filter(Boolean))];
   const fxNote = exclCurrencies.length ? `FX exclu : ${exclCurrencies.join(", ")}` : "";
-  const pilot = _pilotageInsights();
+  const pilot = _pilotageInsights({ kind: _parsedScope.kind, startISO: _rrPilot.startISO, endISO: _rrPilot.endISO });
 
   const miniCardStyle = `
     border:1px solid rgba(0,0,0,0.06);
@@ -873,21 +879,21 @@ const driver = "Dépenses";
       <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:12px;">
         <h2 style="margin:0;">KPIs</h2>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
-  <select id="kpiPeriodSelect" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;">
+  <select id="kpiPeriodSelect" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);">
     ${ (state.periods || []).map((pp,idx) => {
       const nm = (typeof window.tbGetPeriodName === "function") ? window.tbGetPeriodName(pp.id) : "";
       const label = nm ? `${nm} — ${pp.start} → ${pp.end}` : `Voyage ${pp.start} → ${pp.end}`;
       return `<option value="${pp.id}" ${pp.id===state.period.id?"selected":""}>${label}</option>`;
     }).join("") }
   </select>
-  <select id="kpiScopeSelect" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;">
+  <select id="kpiScopeSelect" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);">
     ${scopeOptionsHTML}
   </select>
   ${ (typeof window.tbHelp === "function" && window.tbT) ? tbHelp(tbT("dashboard.help.scope")) : "" }
   <div id="kpiRangeBox" style="display:${String(_scopeValForSelect)==="range" ? "flex" : "none"}; gap:6px; align-items:center;">
-    <input id="kpiRangeStart" type="date" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;" />
+    <input id="kpiRangeStart" type="date" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);" />
     <span class="muted" style="font-size:12px;">→</span>
-    <input id="kpiRangeEnd" type="date" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;" />
+    <input id="kpiRangeEnd" type="date" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);" />
   </div>
   <div class="muted" style="font-size:12px;">${displayDateISO}</div>
 </div>
@@ -1000,24 +1006,26 @@ const driver = "Dépenses";
 
               <div class="muted" style="font-size:12px; margin-top:8px;">
                 <div style="display:flex; justify-content:space-between; gap:10px;">
-                  <span>Budget recommandé</span>
+                  <span>${pilot.kind === "range" ? "Budget conseillé (plage)" : "Budget conseillé"}</span>
                   <strong style="color:var(--text);">${fmtMoney(pilot.recommendedDaily, pilot.base)}/j</strong>
                 </div>
 
                 <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
-                  <span>Fin période (si budget actuel)</span>
+                  <span>${pilot.kind === "range" ? "Solde fin de plage" : "Solde fin"}</span>
                   <span class="pill ${_signPillClass(pilot.projectedEndBalance)}" style="padding:4px 10px;">
                     <span class="dot"></span>${fmtMoney(pilot.projectedEndBalance, pilot.base)}
                   </span>
                 </div>
 
-                <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
-                  <span>Date “0” (budget actuel)</span>
-                  <strong style="color:var(--text);">${pilot.zeroDate}</strong>
-                </div>
+                ${pilot.kind === "range" ? `` : `
+                  <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
+                    <span>Rupture estimée</span>
+                    <strong style="color:var(--text);">${pilot.zeroDate}</strong>
+                  </div>
+                `}
 
                 <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
-                  <span>Jours restants</span>
+                  <span>${pilot.kind === "range" ? "Jours (plage)" : "Jours restants"}</span>
                   <strong style="color:var(--text);">${pilot.daysRemaining}</strong>
                 </div>
               </div>

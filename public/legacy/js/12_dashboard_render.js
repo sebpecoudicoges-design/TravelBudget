@@ -402,25 +402,7 @@ function renderDailyBudget() {
 function tbOpenWalletDialog() {
   return new Promise((resolve) => {
     // inject styles once
-    if (!document.getElementById("tbWalletDlgStyles")) {
-      const st = document.createElement("style");
-      st.id = "tbWalletDlgStyles";
-      st.textContent = `
-        .tb-dlg-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;}
-        .tb-dlg{background:#fff;border-radius:14px;max-width:520px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden;}
-        .tb-dlg-h{padding:14px 16px;border-bottom:1px solid rgba(0,0,0,.08);font-weight:700;}
-        .tb-dlg-b{padding:16px;}
-        .tb-dlg-row{margin-bottom:12px;}
-        .tb-dlg-row label{display:block;font-size:12px;opacity:.75;margin-bottom:6px;}
-        .tb-dlg-row input,.tb-dlg-row select{width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,.18);border-radius:10px;outline:none;}
-        .tb-dlg-row .hint{font-size:12px;opacity:.7;margin-top:6px;}
-        .tb-dlg-f{display:flex;gap:10px;justify-content:flex-end;padding:14px 16px;border-top:1px solid rgba(0,0,0,.08);}
-        .tb-dlg-btn{padding:10px 14px;border-radius:10px;border:1px solid rgba(0,0,0,.18);background:#fff;cursor:pointer;}
-        .tb-dlg-btn.primary{background:#111;color:#fff;border-color:#111;}
-        .tb-dlg-err{color:#b00020;font-size:12px;margin-top:8px;display:none;}
-      `;
-      document.head.appendChild(st);
-    }
+    tbEnsureWalletDlgStyles();
 
     const backdrop = document.createElement("div");
     backdrop.className = "tb-dlg-backdrop";
@@ -572,15 +554,36 @@ function tbWalletTypeLabel(t) {
   return "Autre";
 }
 
+// Inject wallet dialog styles once, without opening any dialog.
+function tbEnsureWalletDlgStyles() {
+  try {
+    if (document.getElementById("tbWalletDlgStyles")) return;
+    const st = document.createElement("style");
+    st.id = "tbWalletDlgStyles";
+    // Use CSS variables so dialogs remain readable in dark theme.
+    st.textContent = `
+      .tb-dlg-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;}
+      .tb-dlg{background:var(--panel);color:var(--text);border-radius:14px;max-width:520px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden;border:1px solid var(--border);}
+      .tb-dlg-h{padding:14px 16px;border-bottom:1px solid var(--border);font-weight:800;}
+      .tb-dlg-b{padding:16px;}
+      .tb-dlg-row{margin-bottom:12px;}
+      .tb-dlg-row label{display:block;font-size:12px;color:var(--muted);font-weight:800;letter-spacing:.2px;margin-bottom:6px;}
+      .tb-dlg-row input,.tb-dlg-row select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;outline:none;background:var(--panel2);color:var(--text);}
+      .tb-dlg-row .hint{font-size:12px;color:var(--muted);margin-top:6px;}
+      .tb-dlg-f{display:flex;gap:10px;justify-content:flex-end;padding:14px 16px;border-top:1px solid var(--border);}
+      .tb-dlg-btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--text);cursor:pointer;font-weight:800;}
+      .tb-dlg-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+      .tb-dlg-err{color:var(--bad);font-size:12px;margin-top:8px;display:none;}
+    `;
+    document.head.appendChild(st);
+  } catch (_) {}
+}
+
 function tbOpenWalletEditDialog(wallet) {
   return new Promise((resolve) => {
     const w = wallet || {};
-    // reuse styles from create dialog
-    if (!document.getElementById("tbWalletDlgStyles")) {
-      // if create dialog hasn't injected it yet, call it once to ensure styles exist
-      // (no-op resolve)
-      tbOpenWalletDialog().then(() => {});
-    }
+    // ensure styles exist without opening the create dialog
+    tbEnsureWalletDlgStyles();
 
     const back = document.createElement("div");
     back.className = "tb-dlg-backdrop";
