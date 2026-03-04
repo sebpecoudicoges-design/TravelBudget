@@ -869,6 +869,7 @@ dataLabels: { enabled: false },
     let lastKey = "";
 
     function scopeKey() {
+      const theme = (document.body && document.body.classList.contains("theme-dark")) ? "dark" : "light";
       const rev = String(window.__TB_DATA_REV || 0);
       const view = String(window.activeView || "");
       const seg = String(window.__TB_ACTIVE_SEGMENT_ID || "");
@@ -882,7 +883,7 @@ dataLabels: { enabled: false },
         const SCOPE_KEY = (window.TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.kpi_projection_scope) || "travelbudget_kpi_projection_scope_v1";
         kpiScope = String(localStorage.getItem(SCOPE_KEY) || "");
       } catch (_) {}
-      return rev + "|" + view + "|" + seg + "|" + start + "|" + end + "|" + kpiScope;
+      return rev + "|" + view + "|" + seg + "|" + start + "|" + end + "|" + kpiScope + "|" + theme;
     }
 
     window.tbRequestCashflowRender = function tbRequestCashflowRender(reason) {
