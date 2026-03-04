@@ -1,4 +1,4 @@
-window.__TB_BUILD = '6.7.01';
+window.__TB_BUILD = '6.7.02';
 /* =========================
    Boot
    ========================= */
@@ -67,10 +67,26 @@ window.onload = async function () {
     // Laisse le DOM de la vue se poser
     await new Promise(r => setTimeout(r, 0));
 
+    // Perf (A2): do not block UI on network refresh.
+    // Show the dashboard immediately and refresh in background.
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:refreshFromServer"); } catch (_) {}
-    await refreshFromServer(); // -> loadFromSupabase applies server palette + preset
-    try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:refreshFromServer"); } catch (_) {}
+    const _refreshPromise = (typeof refreshFromServer === "function")
+      ? refreshFromServer()
+      : Promise.resolve();
+    try {
+      _refreshPromise
+        .catch((e) => {
+          // Avoid hard crash during boot; refreshFromServer already logs/alerts.
+          console.warn("[Boot] refreshFromServer failed:", e?.message || e);
+        })
+        .finally(() => {
+          try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:refreshFromServer"); } catch (_) {}
+        });
+    } catch (_) {
+      try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:refreshFromServer"); } catch (_) {}
+    }
 
+    // Hide auth overlay right away; data hydrates in background.
     safeShowAuth(false);
 
     let resizeTimer = null;

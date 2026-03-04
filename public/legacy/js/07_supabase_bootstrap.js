@@ -419,88 +419,117 @@ async function loadFromSupabase() {
   const p = periods.find((x) => x.id === activePeriodId);
   if (!p) throw new Error("Période active introuvable.");
 
-  const { data: w0, error: wErr } = await sb
-    .from(TB_CONST.TABLES.wallets)
-    .select("id,period_id,name,currency,balance,type,created_at")
-    .eq("user_id", sbUser.id)
-    .eq("period_id", activePeriodId)
-    .order("created_at", { ascending: true });
-  if (wErr) throw wErr;
+  // Perf (A3): fetch independent tables in parallel.
+  // - wallets may auto-bootstrap (insert) if missing.
+  // - transactions / segments / categories do not depend on wallets.
 
-  let w = w0;
-
-  // Auto-bootstrap wallets for this period if missing
-  if (!w || w.length === 0) {
-    const initial = [
-      { user_id: sbUser.id, period_id: activePeriodId, name: "Cash", currency: p.base_currency || "THB", balance: 0, type: "cash" },
-      { user_id: sbUser.id, period_id: activePeriodId, name: "Compte bancaire", currency: "EUR", balance: 0, type: "bank" },
-    ];
-    const { error: insWErr } = await sb.from(TB_CONST.TABLES.wallets).insert(initial);
-    if (insWErr) throw insWErr;
-
-    const { data: w2, error: w2Err } = await sb
+  const walletsPromise = (async () => {
+    const { data: w0, error: wErr } = await sb
       .from(TB_CONST.TABLES.wallets)
-    .select("id,period_id,name,currency,balance,type,created_at")
+      .select("id,period_id,name,currency,balance,type,created_at")
       .eq("user_id", sbUser.id)
       .eq("period_id", activePeriodId)
       .order("created_at", { ascending: true });
-    if (w2Err) throw w2Err;
-    w = w2 || [];
-  }
+    if (wErr) throw wErr;
 
-  const { data: tx, error: tErr } = await sb
+    let w = w0;
+
+    // Auto-bootstrap wallets for this period if missing
+    if (!w || w.length === 0) {
+      const initial = [
+        { user_id: sbUser.id, period_id: activePeriodId, name: "Cash", currency: p.base_currency || "THB", balance: 0, type: "cash" },
+        { user_id: sbUser.id, period_id: activePeriodId, name: "Compte bancaire", currency: "EUR", balance: 0, type: "bank" },
+      ];
+      const { error: insWErr } = await sb.from(TB_CONST.TABLES.wallets).insert(initial);
+      if (insWErr) throw insWErr;
+
+      const { data: w2, error: w2Err } = await sb
+        .from(TB_CONST.TABLES.wallets)
+        .select("id,period_id,name,currency,balance,type,created_at")
+        .eq("user_id", sbUser.id)
+        .eq("period_id", activePeriodId)
+        .order("created_at", { ascending: true });
+      if (w2Err) throw w2Err;
+      w = w2 || [];
+    }
+    return w || [];
+  })();
+
+  const txPromise = sb
     .from(TB_CONST.TABLES.transactions)
     .select("id,wallet_id,type,amount,currency,category,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,pay_now,out_of_budget,night_covered,created_at")
     .eq("user_id", sbUser.id)
     .eq("period_id", activePeriodId)
     .order("created_at", { ascending: true });
-  if (tErr) throw tErr;
 
-
-  // budget segments (V6.4)
-  let segRows = [];
-  try {
-    const { data: segs, error: segErr } = await sb
-      .from(TB_CONST.TABLES.budget_segments)
-      .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,fx_mode,eur_base_rate_fixed,sort_order")
-      .eq("user_id", sbUser.id)
-      .eq("period_id", activePeriodId)
-      .order("sort_order", { ascending: true })
-      .order("start_date", { ascending: true });
-
-    if (segErr) throw segErr;
-    segRows = segs || [];
-
-    // Auto-bootstrap a default segment if missing
-    if (!segRows.length) {
-      const { error: insSegErr } = await sb.from(TB_CONST.TABLES.budget_segments).insert([{
-        user_id: sbUser.id,
-        period_id: activePeriodId,
-        start_date: p.start_date,
-        end_date: p.end_date,
-        base_currency: p.base_currency || "EUR",
-        daily_budget_base: Number(p.daily_budget_base) || 0,
-        fx_mode: "fixed",
-        eur_base_rate_fixed: Number(p.eur_base_rate) || null,
-        sort_order: 0,
-      }]);
-      if (insSegErr) throw insSegErr;
-
-      const { data: segs2, error: seg2Err } = await sb
+  const segPromise = (async () => {
+    // budget segments (V6.4)
+    let segRows = [];
+    try {
+      const { data: segs, error: segErr } = await sb
         .from(TB_CONST.TABLES.budget_segments)
-      .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,fx_mode,eur_base_rate_fixed,sort_order")
+        .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,fx_mode,eur_base_rate_fixed,sort_order")
         .eq("user_id", sbUser.id)
         .eq("period_id", activePeriodId)
         .order("sort_order", { ascending: true })
         .order("start_date", { ascending: true });
-      if (seg2Err) throw seg2Err;
-      segRows = segs2 || [];
+
+      if (segErr) throw segErr;
+      segRows = segs || [];
+
+      // Auto-bootstrap a default segment if missing
+      if (!segRows.length) {
+        const { error: insSegErr } = await sb.from(TB_CONST.TABLES.budget_segments).insert([{
+          user_id: sbUser.id,
+          period_id: activePeriodId,
+          start_date: p.start_date,
+          end_date: p.end_date,
+          base_currency: p.base_currency || "EUR",
+          daily_budget_base: Number(p.daily_budget_base) || 0,
+          fx_mode: "fixed",
+          eur_base_rate_fixed: Number(p.eur_base_rate) || null,
+          sort_order: 0,
+        }]);
+        if (insSegErr) throw insSegErr;
+
+        const { data: segs2, error: seg2Err } = await sb
+          .from(TB_CONST.TABLES.budget_segments)
+          .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,fx_mode,eur_base_rate_fixed,sort_order")
+          .eq("user_id", sbUser.id)
+          .eq("period_id", activePeriodId)
+          .order("sort_order", { ascending: true })
+          .order("start_date", { ascending: true });
+        if (seg2Err) throw seg2Err;
+        segRows = segs2 || [];
+      }
+    } catch (e) {
+      // If table not deployed yet, keep empty and let ensureStateIntegrity synthesize a segment.
+      console.warn("[budget_segments] load failed (ignored)", e?.message || e);
+      segRows = [];
     }
-  } catch (e) {
-    // If table not deployed yet, keep empty and let ensureStateIntegrity synthesize a segment.
-    console.warn("[budget_segments] load failed (ignored)", e?.message || e);
-    segRows = [];
-  }
+    return segRows || [];
+  })();
+
+  const catPromise = (async () => {
+    try {
+      const { data: catRows, error: catErr } = await sb
+        .from(TB_CONST.TABLES.categories)
+        .select("id,name,color,sort_order")
+        .eq("user_id", sbUser.id)
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+      if (catErr) throw catErr;
+      return { rows: (catRows || []), error: null };
+    } catch (e) {
+      return { rows: [], error: e };
+    }
+  })();
+
+  const w = await walletsPromise;
+  const { data: tx, error: tErr } = await txPromise;
+  if (tErr) throw tErr;
+  const segRows = await segPromise;
+  const { rows: catRows, error: catLoadErr } = await catPromise;
 
   state.period.id = p.id;
   state.period.start = p.start_date;
@@ -566,13 +595,7 @@ async function loadFromSupabase() {
 
   // categories (Supabase is source of truth)
   try {
-    const { data: catRows, error: catErr } = await sb
-      .from(TB_CONST.TABLES.categories)
-      .select("id,name,color,sort_order")
-      .eq("user_id", sbUser.id)
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true });
-    if (catErr) throw catErr;
+    if (catLoadErr) throw catLoadErr;
 
     const rows = catRows || [];
     const dbNames = rows.map(r => String(r.name || "").trim()).filter(Boolean);
