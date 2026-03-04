@@ -211,31 +211,6 @@ async function runFirstTimeWizard() {
 
 async function ensureBootstrap() {
   if (!sbUser) return;
-
-  // === Schema version guard (V6.5) ===
-  // Prevent silent breakage when UI code and DB migrations are out of sync.
-  try {
-    const expected = (window.TB_CONST && TB_CONST.EXPECTED_SCHEMA_VERSION) ? TB_CONST.EXPECTED_SCHEMA_VERSION : null;
-    if (expected) {
-      const { data: sv, error: svErr } = await sb
-        .from(TB_CONST.TABLES.schema_version)
-        .select("key, version")
-        .eq("key", "travelbudget")
-        .maybeSingle();
-      if (svErr) {
-        // table missing / RLS / other
-        window.__errorBus && __errorBus.push && __errorBus.push({ type: "schema_version_check", error: __errorBus.toPlain(svErr) });
-        // don't hard crash: Doctor will surface it; UI stays usable in degraded mode
-      } else if (sv && (sv.version !== null && sv.version !== undefined) && Number(sv.version) !== Number(expected)) {
-        throw new Error(`DB schema_version=${sv.version} != UI expected=${expected}. Migration requise.`);
-      }
-    }
-  } catch (e) {
-    if (typeof renderErrorBox === "function") renderErrorBox("Schema", e, "view-dashboard");
-    throw e;
-  }
-
-
   const today = toLocalISODate(new Date());
 
   // local defaults
@@ -243,75 +218,103 @@ async function ensureBootstrap() {
   if (!localStorage.getItem(PALETTE_KEY)) localStorage.setItem(PALETTE_KEY, JSON.stringify(PALETTES["Ocean"]));
   if (!localStorage.getItem(PRESET_KEY)) localStorage.setItem(PRESET_KEY, "Ocean");
 
-  // 1) Ensure profile row exists (role default: 'user')
-  {
-    const { data: prof, error: profErr } = await sb
-      .from(TB_CONST.TABLES.profiles)
-      .select("id, role")
-      .eq("id", sbUser.id)
-      .maybeSingle();
+  // === Fast bootstrap: fetch the few required rows in parallel ===
+  // Goal: reduce boot latency without changing any business logic.
+  const expectedSchema = (window.TB_CONST && TB_CONST.EXPECTED_SCHEMA_VERSION) ? TB_CONST.EXPECTED_SCHEMA_VERSION : null;
+  const schemaP = expectedSchema ? sb
+    .from(TB_CONST.TABLES.schema_version)
+    .select("key, version")
+    .eq("key", "travelbudget")
+    .maybeSingle()
+    : Promise.resolve({ data: null, error: null });
 
-    if (profErr) throw profErr;
+  const profP = sb
+    .from(TB_CONST.TABLES.profiles)
+    .select("id, role")
+    .eq("id", sbUser.id)
+    .maybeSingle();
 
-    // expose role globally for navigation/admin UI
-    window.sbRole = (prof && prof.role) ? String(prof.role) : (window.sbRole || 'user');
+  const settingsP = sb
+    .from(TB_CONST.TABLES.settings)
+    .select("theme,palette_json,palette_preset")
+    .eq("user_id", sbUser.id)
+    .maybeSingle();
 
-    if (!prof) {
-      window.sbRole = 'user';
-      const { error: insErr } = await sb.from(TB_CONST.TABLES.profiles).insert([
-        {
-          id: sbUser.id,
-          email: sbUser.email || null,
-          role: "user",
-        },
-      ]);
-      if (insErr) throw insErr;
+  const periodsP = sb
+    .from(TB_CONST.TABLES.periods)
+    .select("id,start_date,end_date,base_currency,eur_base_rate,daily_budget_base,updated_at")
+    .eq("user_id", sbUser.id)
+    .order("start_date", { ascending: false })
+    .limit(1);
+
+  const [schemaRes, profRes, settingsRes, periodsRes] = await Promise.all([schemaP, profP, settingsP, periodsP]);
+
+  // Schema guard (non-blocking unless mismatch)
+  try {
+    if (schemaRes && schemaRes.error) {
+      window.__errorBus && __errorBus.push && __errorBus.push({ type: "schema_version_check", error: __errorBus.toPlain(schemaRes.error) });
+    } else if (expectedSchema && schemaRes && schemaRes.data && (schemaRes.data.version !== null && schemaRes.data.version !== undefined)) {
+      if (Number(schemaRes.data.version) !== Number(expectedSchema)) {
+        throw new Error(`DB schema_version=${schemaRes.data.version} != UI expected=${expectedSchema}. Migration requise.`);
+      }
     }
+  } catch (e) {
+    if (typeof renderErrorBox === "function") renderErrorBox("Schema", e, "view-dashboard");
+    throw e;
+  }
+
+  if (profRes && profRes.error) throw profRes.error;
+  if (settingsRes && settingsRes.error) throw settingsRes.error;
+  if (periodsRes && periodsRes.error) throw periodsRes.error;
+
+  const prof = profRes ? profRes.data : null;
+  const s = settingsRes ? settingsRes.data : null;
+  const periods = periodsRes ? periodsRes.data : null;
+
+  // 1) Ensure profile row exists (role default: 'user')
+  // expose role globally for navigation/admin UI
+  window.sbRole = (prof && prof.role) ? String(prof.role) : (window.sbRole || 'user');
+  if (!prof) {
+    window.sbRole = 'user';
+    const { error: insErr } = await sb.from(TB_CONST.TABLES.profiles).insert([
+      {
+        id: sbUser.id,
+        email: sbUser.email || null,
+        role: "user",
+      },
+    ]);
+    if (insErr) throw insErr;
   }
 
   // 2) Ensure settings row exists (palette persisted server side)
-  {
-    const { data: s, error: sErr } = await sb.from(TB_CONST.TABLES.settings).select("theme,palette_json,palette_preset").eq("user_id", sbUser.id).maybeSingle();
-    if (sErr) throw sErr;
+  if (!s) {
+    const p = getStoredPalette() || PALETTES["Ocean"];
+    const preset = getStoredPreset() || findPresetNameForPalette(p);
 
-    if (!s) {
-      const p = getStoredPalette() || PALETTES["Ocean"];
-      const preset = getStoredPreset() || findPresetNameForPalette(p);
+    const payload = {
+      user_id: sbUser.id,
+      theme: localStorage.getItem(THEME_KEY) || "light",
+      palette_json: p,
+      palette_preset: preset,
+      updated_at: new Date().toISOString(),
+    };
 
-      const payload = {
-        user_id: sbUser.id,
-        theme: localStorage.getItem(THEME_KEY) || "light",
-        palette_json: p,
-        palette_preset: preset,
-        updated_at: new Date().toISOString(),
-      };
-
-      const { error: insErr } = await sb.from(TB_CONST.TABLES.settings).insert([payload]);
-      if (insErr) {
-        // schema-cache fallback if palette_preset not deployed yet
-        if ((insErr.message || "").includes("palette_preset") && (insErr.message || "").includes("schema cache")) {
-          const payloadLite = { ...payload };
-          delete payloadLite.palette_preset;
-          const { error: ins2 } = await sb.from(TB_CONST.TABLES.settings).insert([payloadLite]);
-          if (ins2) throw ins2;
-        } else {
-          throw insErr;
-        }
+    const { error: insErr } = await sb.from(TB_CONST.TABLES.settings).insert([payload]);
+    if (insErr) {
+      // schema-cache fallback if palette_preset not deployed yet
+      if ((insErr.message || "").includes("palette_preset") && (insErr.message || "").includes("schema cache")) {
+        const payloadLite = { ...payload };
+        delete payloadLite.palette_preset;
+        const { error: ins2 } = await sb.from(TB_CONST.TABLES.settings).insert([payloadLite]);
+        if (ins2) throw ins2;
+      } else {
+        throw insErr;
       }
     }
   }
 
   // 3) Ensure at least one period exists
   {
-    const { data: periods, error: pErr } = await sb
-      .from(TB_CONST.TABLES.periods)
-    .select("id,start_date,end_date,base_currency,eur_base_rate,daily_budget_base,updated_at")
-      .eq("user_id", sbUser.id)
-      .order("start_date", { ascending: false })
-      .limit(1);
-
-    if (pErr) throw pErr;
-
     if (!periods || periods.length === 0) {
   // First-time onboarding wizard
   let cfg = null;

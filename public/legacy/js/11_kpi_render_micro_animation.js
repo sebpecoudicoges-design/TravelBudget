@@ -946,10 +946,10 @@ const driver = "Dépenses";
 	            <div style="${miniCardStyle}">
 	              <div class="muted" style="font-size:12px;">${tbT ? tbT("kpi.fxcalc.title") : "Convertisseur"}</div>
 	              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
-	                <input id="kpiFxCalcAmount" type="number" inputmode="decimal" placeholder="0" style="width:120px; padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;" />
-	                <select id="kpiFxCalcFrom" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;"></select>
+	                <input id="kpiFxCalcAmount" type="number" inputmode="decimal" placeholder="0" style="width:120px; padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);" />
+	                <select id="kpiFxCalcFrom" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);"></select>
 	                <span class="muted" style="font-size:12px;">→</span>
-	                <select id="kpiFxCalcTo" style="padding:6px 8px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;font-size:12px;background:#fff;"></select>
+	                <select id="kpiFxCalcTo" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);"></select>
 	              </div>
 	              <div class="muted" style="font-size:12px; margin-top:8px;">
 	                <span id="kpiFxCalcOut">—</span>
@@ -1024,10 +1024,13 @@ const driver = "Dépenses";
                   </div>
                 `}
 
-                <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
-                  <span>${pilot.kind === "range" ? "Jours (plage)" : "Jours restants"}</span>
-                  <strong style="color:var(--text);">${pilot.daysRemaining}</strong>
-                </div>
+
+	                ${pilot.kind === "range" ? `` : `
+	                  <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
+	                    <span>Jours restants</span>
+	                    <strong style="color:var(--text);">${pilot.daysRemaining}</strong>
+	                  </div>
+	                `}
               </div>
             </div>
           ` : ``}
