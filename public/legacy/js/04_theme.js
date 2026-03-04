@@ -6,7 +6,12 @@ function applyTheme(theme) {
   body.classList.remove("theme-light", "theme-dark");
   body.classList.add(theme === "dark" ? "theme-dark" : "theme-light");
   localStorage.setItem(THEME_KEY, theme);
+  // Redraw charts + cashflow curve on theme change so colors/contrast update immediately.
   if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("04_theme.js"); else redrawCharts();
+  try {
+    if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("theme");
+    else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
+  } catch (_) {}
 }
 function toggleTheme() {
   const current = localStorage.getItem(THEME_KEY) || "light";

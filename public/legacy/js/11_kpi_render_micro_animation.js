@@ -557,6 +557,10 @@ function _pilotageInsights(scopeMeta) {
   const startISO = String(scopeMeta?.startISO || "").slice(0,10);
   const endISO = String(scopeMeta?.endISO || "").slice(0,10);
 
+  // Pilotage should align with the user's projection toggle.
+  // If enabled, we include pending amounts (to pay / to receive) in the balance.
+  const includePending = (localStorage.getItem("travelbudget_kpi_projection_include_unpaid_v1") === "1");
+
   // Anchor day for calculations:
   // - default: today
   // - if scope starts in the future, anchor = scope start
@@ -581,16 +585,114 @@ function _pilotageInsights(scopeMeta) {
   // Remaining horizon (inclusive)
   const daysRemaining = Math.max(1, dayCountInclusive(clampMidnight(aD), clampMidnight(eD)));
 
-  const currentDaily = Number(info.daily || 0);
-  const balanceBase = _sumWalletsDisplay(anchorISO);
+  // --- FX helpers (pilotage must be stable even when the scope spans multiple segments/currencies)
+  function _pilotRatesForDate(dateISO) {
+    try {
+      if (typeof getBudgetSegmentForDate === "function" && typeof fxRatesForSegment === "function") {
+        const seg = getBudgetSegmentForDate(dateISO);
+        return fxRatesForSegment(seg);
+      }
+    } catch (_) {}
+    return (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : {};
+  }
+
+  function _toEUR(amount, cur, dateISO) {
+    const a = Number(amount) || 0;
+    const c = String(cur || "EUR").toUpperCase();
+    if (c === "EUR") return a;
+    try {
+      if (typeof window.fxConvert === "function") {
+        const rates = _pilotRatesForDate(dateISO || today);
+        const out = window.fxConvert(a, c, "EUR", rates);
+        if (out !== null && isFinite(out)) return out;
+      }
+    } catch (_) {}
+    if (typeof amountToEUR === "function") return amountToEUR(a, c);
+    return a;
+  }
+
+  function _fromEUR(amountEUR, toCur, dateISO) {
+    const a = Number(amountEUR) || 0;
+    const c = String(toCur || "EUR").toUpperCase();
+    if (c === "EUR") return a;
+    try {
+      if (typeof window.fxConvert === "function") {
+        const rates = _pilotRatesForDate(dateISO || today);
+        const out = window.fxConvert(a, "EUR", c, rates);
+        if (out !== null && isFinite(out)) return out;
+      }
+    } catch (_) {}
+    // fallback legacy: if only EUR<->BASE is supported, this may be approximate.
+    if (typeof eurToAmount === "function") return eurToAmount(a, c);
+    return a;
+  }
+
+  // Balance in EUR (pivot), optionally including pending.
+  let walletTotalEUR = 0;
+  for (const w of (state.wallets || [])) {
+    const bal = (typeof window.tbGetWalletEffectiveBalance === "function")
+      ? Number(window.tbGetWalletEffectiveBalance(w.id) || 0)
+      : (Number(w.balance) || 0);
+    const cur = String(w.currency || "EUR").toUpperCase();
+    walletTotalEUR += _toEUR(bal, cur, anchorISO);
+  }
+
+  let pendingEUR = 0;
+  try {
+    if (includePending && typeof netPendingEUR === "function") {
+      pendingEUR = Number(netPendingEUR(anchorISO, endISO)) || 0;
+    }
+  } catch (_) {}
+
+  const balanceEUR = walletTotalEUR + pendingEUR;
+  const balanceBase = _fromEUR(balanceEUR, base, anchorISO);
+
+  // Planned spend over the horizon (uses the daily budgets of each segment, converted to EUR).
+  let plannedSpendEUR = 0;
+  try {
+    const segs = Array.isArray(state?.budgetSegments) ? state.budgetSegments.slice() : [];
+    segs.sort((a,b) => String(a.start||a.start_date||"").localeCompare(String(b.start||b.start_date||"")));
+    const a0 = clampMidnight(aD);
+    const e0 = clampMidnight(eD);
+    for (const seg of segs) {
+      const ss = String(seg.start || seg.start_date || "").slice(0,10);
+      const ee = String(seg.end || seg.end_date || "").slice(0,10);
+      const sDt = parseISODateOrNull(ss);
+      const eDt = parseISODateOrNull(ee);
+      if (!sDt || !eDt) continue;
+      const sM = clampMidnight(sDt);
+      const eM = clampMidnight(eDt);
+      // overlap with [anchor, end]
+      const lo = (sM > a0) ? sM : a0;
+      const hi = (eM < e0) ? eM : e0;
+      if (lo > hi) continue;
+      const days = Math.max(1, dayCountInclusive(lo, hi));
+      const segBase = String(seg.baseCurrency || seg.base_currency || base).toUpperCase();
+      const segDaily = Number(seg.dailyBudgetBase || seg.daily_budget_base || seg.daily || seg.daily_budget || 0) || 0;
+      const dailyEUR = _toEUR(segDaily, segBase, ss || anchorISO);
+      plannedSpendEUR += dailyEUR * days;
+    }
+  } catch (_) {}
+
+  // If we couldn't compute from segments (unexpected state), fallback to current daily * days.
+  const fallbackDaily = Number(info.daily || 0);
+  if (!(plannedSpendEUR > 0)) {
+    plannedSpendEUR = _toEUR(fallbackDaily, base, anchorISO) * daysRemaining;
+  }
+
+  const avgPlannedDailyEUR = plannedSpendEUR / daysRemaining;
+  const currentDaily = _fromEUR(avgPlannedDailyEUR, base, anchorISO);
 
   // Cible: finir à 0 (on pourra rendre paramétrable plus tard)
   const targetEnd = 0;
 
+  // Recommended daily (average) to reach target at end of horizon.
   const recommendedDaily = (balanceBase - targetEnd) / daysRemaining;
 
   // Si tu gardes ton budget actuel, où tu finis ?
-  const projectedEndBalance = balanceBase - (currentDaily * daysRemaining);
+  // Projected end balance if we follow the planned daily budgets across segments.
+  const projectedEndEUR = balanceEUR - plannedSpendEUR;
+  const projectedEndBalance = _fromEUR(projectedEndEUR, base, anchorISO);
 
   // Jusqu’à quand tu tiens avec le budget actuel (date estimée)
   const daysAtCurrent = (currentDaily > 0) ? Math.floor(balanceBase / currentDaily) : Infinity;
