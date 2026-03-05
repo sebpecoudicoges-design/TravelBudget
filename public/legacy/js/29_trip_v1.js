@@ -2565,8 +2565,8 @@ toastOk("Règlement annulé.");
               lines.push(`- ${(m?.name || '—')}: ${_fmtMoney(Number(sh.shareAmount)||0, ex.currency)}`);
             }
           }
-          alert(lines.join('
-'));
+	          // Keep this super simple (MVP): show split detail in a single alert.
+	          alert(lines.join("\n"));
         } catch (e) {
           toastWarn(e?.message || String(e));
         }
