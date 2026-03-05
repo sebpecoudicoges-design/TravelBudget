@@ -2229,7 +2229,9 @@ return `
             <div class="field" style="align-self:flex-end;">
               <button class="btn danger" id="trip-delete" ${trip ? "" : "disabled"}>Supprimer</button>
             </div>
-<h2 style="margin-top:14px;">Participants</h2>
+          </div>
+
+          <h2 style="margin-top:14px;">Participants</h2>
           <div class="row" style="margin-bottom:10px;">
             <div class="field" style="flex:1;">
               <label>Nom</label>
