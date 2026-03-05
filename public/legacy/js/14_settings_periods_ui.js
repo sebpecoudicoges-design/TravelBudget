@@ -269,7 +269,20 @@ function renderSettings(){
     if (box) {
       const cur = String((state?.user?.baseCurrency) || "EUR").toUpperCase();
       const opts = (typeof window.tbGetAvailableCurrencies === "function") ? window.tbGetAvailableCurrencies() : ["EUR","USD","THB"];
-      const email = String(window.sbUser?.email || "").trim();
+
+      // Cashflow threshold stored as EUR reference so it auto-adjusts when base currency changes.
+      // (Account-level preference; we keep it in localStorage for now to avoid a SQL migration.)
+      const THR_KEY = (TB_CONST?.LS_KEYS?.cashflow_threshold_eur || "travelbudget_cashflow_threshold_eur_v1");
+      let thrEur = 500;
+      try {
+        const raw = localStorage.getItem(THR_KEY);
+        const n = Number(raw);
+        if (Number.isFinite(n) && n > 0) thrEur = n;
+      } catch(_) {}
+      const thrInBase = (typeof window.safeFxConvert === "function")
+        ? window.safeFxConvert(thrEur, "EUR", cur, null)
+        : (typeof window.fxConvert === "function" ? window.fxConvert(thrEur, "EUR", cur) : null);
+      const thrDisp = (thrInBase === null || !Number.isFinite(thrInBase)) ? "" : String(Math.round(thrInBase));
 
       box.innerHTML = `
         <div class="muted" style="margin-bottom:10px;">Paramètres du compte (affichage + sécurité).</div>
@@ -277,7 +290,7 @@ function renderSettings(){
         <div class="row" style="gap:12px; align-items:end; flex-wrap:wrap;">
           <div class="field" style="min-width:260px;">
             <label>Email</label>
-            <input type="text" value="${escapeHTML(email || "—")}" disabled />
+            <input id="tb-account-email" type="text" value="—" disabled />
           </div>
 
           <div class="field" style="min-width:160px;">
@@ -289,6 +302,15 @@ function renderSettings(){
 
           <button class="btn" id="tb-user-basecur-save" type="button">Enregistrer</button>
           <button class="btn" id="tb-user-resetpwd" type="button">Reset mot de passe</button>
+        </div>
+
+        <div class="row" style="gap:12px; align-items:end; flex-wrap:wrap; margin-top:10px;">
+          <div class="field" style="min-width:220px;">
+            <label>Seuil courbe trésorerie</label>
+            <input id="tb-user-cfthr" type="number" min="1" step="1" value="${escapeHTML(thrDisp || "")}" />
+          </div>
+          <div class="muted" style="padding-bottom:6px;">(référence: ${escapeHTML(String(Math.round(thrEur)))} EUR — ajusté automatiquement si tu changes la devise de base)</div>
+          <button class="btn" id="tb-user-cfthr-save" type="button">Enregistrer seuil</button>
         </div>
       `;
 
@@ -307,7 +329,8 @@ function renderSettings(){
           const s = _getSb();
           const v = String(box.querySelector("#tb-user-basecur")?.value || "").trim().toUpperCase();
           if (!v || !/^[A-Z]{3}$/.test(v)) throw new Error("Devise invalide (ISO3 attendu)");
-          const uid = (window.sbUser && window.sbUser.id) ? window.sbUser.id : (await s.auth.getUser()).data?.user?.id;
+          const u = (await s.auth.getUser()).data?.user;
+          const uid = u?.id;
           if (!uid) throw new Error("Non authentifié");
           await s.from(TB_CONST.TABLES.settings).upsert({ user_id: uid, base_currency: v }, { onConflict: "user_id" });
           if (!state.user) state.user = {};
@@ -320,10 +343,37 @@ function renderSettings(){
       if (btnReset) {
         btnReset.onclick = () => safeCall("Reset mot de passe", async () => {
           const s = _getSb();
-          const em = String(window.sbUser?.email || "").trim();
+          const u = (await s.auth.getUser()).data?.user;
+          const em = String(u?.email || "").trim();
           if (!em) throw new Error("Email introuvable");
           await s.auth.resetPasswordForEmail(em);
           alert("Email de réinitialisation envoyé.");
+        });
+      }
+
+      // Fill email asynchronously (sbUser is not guaranteed on window)
+      (async () => {
+        try {
+          const s = _getSb();
+          const u = (await s.auth.getUser()).data?.user;
+          const em = String(u?.email || "—");
+          const inp = box.querySelector("#tb-account-email");
+          if (inp) inp.value = em;
+        } catch(_) {}
+      })();
+
+      // Save cashflow threshold (EUR reference)
+      const btnThr = box.querySelector("#tb-user-cfthr-save");
+      if (btnThr) {
+        btnThr.onclick = () => safeCall("Enregistrer seuil trésorerie", async () => {
+          const v = Number(box.querySelector("#tb-user-cfthr")?.value);
+          if (!Number.isFinite(v) || v <= 0) throw new Error("Seuil invalide");
+          const eur = (typeof window.safeFxConvert === "function")
+            ? window.safeFxConvert(v, cur, "EUR", null)
+            : (typeof window.fxConvert === "function" ? window.fxConvert(v, cur, "EUR") : null);
+          if (eur === null || !Number.isFinite(eur) || eur <= 0) throw new Error("Conversion FX impossible");
+          try { localStorage.setItem(THR_KEY, String(Math.round(eur))); } catch(_) {}
+          if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("settings:cashflow_threshold"); else renderAll();
         });
       }
     }

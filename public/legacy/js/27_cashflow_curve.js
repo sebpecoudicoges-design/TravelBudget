@@ -222,6 +222,11 @@ function getKpiScope() {
   }
 
   function base() {
+    // Dashboard charts should follow the account base currency (display), not the period/segment currency.
+    const uBase = String(window.state?.user?.baseCurrency || window.state?.user?.base_currency || "").toUpperCase();
+    if (uBase && /^[A-Z]{3}$/.test(uBase)) return uBase;
+
+    // Fallbacks (legacy)
     const seg = getSelectedSegment();
     if (seg && (seg.baseCurrency || seg.base_currency)) return String(seg.baseCurrency || seg.base_currency || "").toUpperCase();
     const d = todayStr();
@@ -423,7 +428,7 @@ function getKpiScope() {
       const seg = (scope && (scope.segId || scope.seg_id)) || "";
       const start = (scope && scope.start) || "";
       const end = (scope && scope.end) || "";
-      const baseCur = String((scope && (scope.segBase || scope.seg_base)) || (state && state.period && (state.period.baseCurrency || state.period.base_currency)) || "").toUpperCase();
+      const baseCur = String((state && state.user && (state.user.baseCurrency || state.user.base_currency)) || (scope && (scope.segBase || scope.seg_base)) || (state && state.period && (state.period.baseCurrency || state.period.base_currency)) || "").toUpperCase();
       return `tb_cashflow_cache_v1|${rev}|${seg}|${start}|${end}|${baseCur}`;
     } catch (_) {
       return "tb_cashflow_cache_v1|0";
@@ -521,10 +526,18 @@ function buildSeries() {
       }
     });
 
-    // thresholds
+    // thresholds (EUR reference, user can override in Account settings; stored in localStorage)
+    let thrEur = 500;
+    try {
+      const THR_KEY = (window.TB_CONST?.LS_KEYS?.cashflow_threshold_eur || "travelbudget_cashflow_threshold_eur_v1");
+      const raw = localStorage.getItem(THR_KEY);
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > 0) thrEur = n;
+    } catch (_) {}
+
     const threshold500 = (typeof window.safeFxConvert === "function")
-      ? window.safeFxConvert(500, "EUR", b, null)
-      : (typeof window.fxConvert === "function" ? window.fxConvert(500, "EUR", b) : null);
+      ? window.safeFxConvert(thrEur, "EUR", b, null)
+      : (typeof window.fxConvert === "function" ? window.fxConvert(thrEur, "EUR", b) : null);
 
     const thr500 = (threshold500 === null || !Number.isFinite(threshold500)) ? null : round2(threshold500);
 

@@ -1,4 +1,4 @@
-window.__TB_BUILD = "6.7.14";
+window.__TB_BUILD = "6.7.15";
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -78,6 +78,9 @@ window.__TB_BUILD = "6.7.14";
 
     // Charts filtering
     pie_excluded_cats: "travelbudget_pie_excluded_categories_v1",
+
+    // Cashflow chart threshold (stored as EUR reference, converted to account base currency)
+    cashflow_threshold_eur: "travelbudget_cashflow_threshold_eur_v1",
 
     // Dashboard wallets order
     wallet_order: "travelbudget_wallet_order_v2",
