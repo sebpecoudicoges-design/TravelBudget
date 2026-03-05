@@ -2202,31 +2202,7 @@ return `
             <div class="field" style="align-self:flex-end;">
               <button class="btn danger" id="trip-delete" ${trip ? "" : "disabled"}>Supprimer</button>
             </div>
-            <div class="field" style="align-self:flex-end; min-width:220px;">
-              <label>Nom invité</label>
-              <input id="trip-invitee-name" placeholder="Ex: Paul" />
-            </div>
-            <div class="field" style="align-self:flex-end; min-width:260px;">
-              <label>Email invité (optionnel)</label>
-              <input id="trip-invitee-email" placeholder="ex: paul@email.com" />
-            </div>
-            <div class="field" style="align-self:flex-end;">
-              <button class="btn" id="trip-invite" ${trip && canWrite ? "" : "disabled"}>Lien</button>
-            </div>
-            <div class="field" style="align-self:flex-end;">
-                <div class="field" style="flex:1;min-width:260px;">
-    <input id="tripInviteUrl" class="input" style="width:100%;" readonly placeholder="Lien d'invitation…"/>
-  </div>
-  <div class="field" style="align-self:flex-end;">
-    <button class="btn" id="trip-invite-share" ${trip ? "" : "disabled"}>Partager</button>
-  </div>
-  <div class="field" style="align-self:flex-end;">
-<button class="btn" id="trip-invite-copy" ${trip ? "" : "disabled"}>Copier</button>
-            </div>
-            </div>
-          </div>
-
-          <h2 style="margin-top:14px;">Participants</h2>
+<h2 style="margin-top:14px;">Participants</h2>
           <div class="row" style="margin-bottom:10px;">
             <div class="field" style="flex:1;">
               <label>Nom</label>
@@ -2375,57 +2351,6 @@ toastOk("Trip supprimé.");
           toastWarn(e?.message || String(e));
         }
       };
-
-    // Invite link (requires login)
-    const btnInvite = _el("trip-invite");
-    const btnInviteCopy = _el("trip-invite-copy");
-    if (btnInvite) {
-btnInvite.onclick = async () => {
-      try {
-        const tripId = tripState.activeTripId;
-        if (!tripId) return toastWarn("[Trip] Sélectionne un trip d'abord.");
-        // Role selection removed for now (UX simplification). Default to member.
-        const role = (TB_CONST?.TRIP?.ROLES?.member || "member");
-        const inviteeName = (_el("trip-invitee-name")?.value || "").trim();
-        const inviteeEmail = (_el("trip-invitee-email")?.value || "").trim();
-        const url = await _createInviteLink(tripId, role, inviteeName, inviteeEmail);
-        tripState.inviteUrl = url;
-        const el = document.getElementById("tripInviteUrl");
-        if (el) el.value = url || "";
-        toastInfo("[Trip] Lien créé.");
-      } catch (e) {
-        toastWarn("[Trip] " + normalizeSbError(e));
-      }
-    };
-
-    }
-    
-    const btnInviteShare = _el("trip-invite-share");
-    if (btnInviteShare) {
-      btnInviteShare.onclick = async () => {
-        try {
-          const url = tripState.inviteUrl;
-          if (!url) return toastWarn("[Trip] Crée d’abord un lien.");
-          await _shareText("Rejoins mon trip : " + url);
-        } catch (e) {
-          toastWarn("[Trip] " + normalizeSbError(e));
-        }
-      };
-    }
-if (btnInviteCopy) {
-      btnInviteCopy.onclick = async () => {
-        try {
-          const url = tripState.inviteUrl;
-          if (!url) return toastWarn("[Trip] Crée d’abord un lien.");
-          _copyToClipboard(url);
-          toastInfo("[Trip] Lien copié.");
-        } catch (e) {
-          toastWarn("[Trip] " + normalizeSbError(e));
-        }
-      };
-    }
-
-    }
 
     const btnAddMem = _el("trip-add-member");
     if (btnAddMem) {
