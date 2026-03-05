@@ -767,6 +767,23 @@ return byCurrency;
     }
   }
 
+  async function _fetchSettlementSuggestionsFromDb(tripId, useNetRaw = true) {
+    try {
+      if (!tripId || !sb?.rpc) return null;
+      if (!TB_CONST?.RPCS?.trip_suggest_settlements_v1) return null;
+
+      const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_suggest_settlements_v1, {
+        p_trip_id: tripId,
+        p_use_net_raw: !!useNetRaw,
+      });
+      if (error) return null;
+      if (!Array.isArray(data)) return null;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
 
   // Unify balances into the user's display currency.
   // Goal: the UI follows the account base currency (or period base if missing), instead of forcing THB.
@@ -2054,6 +2071,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     const balancesByCurRaw = (await _fetchBalancesFromDb(tripState.activeTripId)) || _computeBalances();
     const balancesByCur = _unifyBalancesToDisplayCurrency(balancesByCurRaw);
     const settlementsByCur = _computeSettlements(balancesByCur);
+    const settlementSuggestionsRaw = (await _fetchSettlementSuggestionsFromDb(tripState.activeTripId, true)) || [];
 
     const balHTML = (() => {
       if (!members.length) return `<div class="muted">Ajoute des participants.</div>`;
@@ -2084,6 +2102,29 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       const me = members.find(x => x.isMe);
       const tripName = (tripState.trips.find(t => t.id === tripState.activeTripId)?.name) || "Trip";
       const parts = [];
+
+      function _memName(id) {
+        return (members.find(x => x.id === id)?.name) || "—";
+      }
+
+      // NEW (V8.2.0): optimized suggestions from DB (net_raw)
+      if (Array.isArray(settlementSuggestionsRaw) && settlementSuggestionsRaw.length) {
+        parts.push(`<div class="muted" style="margin-top:10px;">Règlements optimisés (net brut)</div>`);
+        for (const row of settlementSuggestionsRaw) {
+          const cur = String(row.out_currency || row.currency || "").toUpperCase();
+          const fromId = row.from_member_id || row.fromMemberId;
+          const toId = row.to_member_id || row.toMemberId;
+          const amt = Number(row.amount || 0);
+          if (!cur || !fromId || !toId || !(amt > 0)) continue;
+          parts.push(
+            `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
+              <span>${escapeHTML(_memName(fromId))} → ${escapeHTML(_memName(toId))}</span>
+              <strong>${_fmtMoney(amt, cur)}</strong>
+            </div>`
+          );
+        }
+        parts.push(`<div class="muted" style="margin-top:6px; font-size:12px;">Basé sur les parts (avant règlements enregistrés). Les boutons ci-dessous restent basés sur le solde courant.</div>`);
+      }
 
       const hasAny = (() => {
         for (const [, transfers] of settlementsByCur.entries()) if (transfers?.length) return true;
