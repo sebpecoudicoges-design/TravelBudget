@@ -784,12 +784,12 @@ dataLabels: { enabled: false },
             borderColor: window.cssVar?.("--muted", "#94a3b8") || "#94a3b8",
             label: { text: "0", style: { background: window.cssVar?.("--muted", "#94a3b8") || "#94a3b8" } }
           },
-          {
-            y: built.thr500,
-            borderColor: "#ef4444",
-            strokeDashArray: 6,
-            label: { text: "500€", style: { background: "#ef4444" } }
-          }
+	          {
+	            y: built.thr500,
+	            borderColor: "#ef4444",
+	            strokeDashArray: 6,
+	            label: { text: `${built.thr500} ${String(built.b || "").toUpperCase()}`, style: { background: "#ef4444" } }
+	          }
         ] : [
           {
             y: 0,

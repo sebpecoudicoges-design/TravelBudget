@@ -786,7 +786,8 @@ function renderKPI() {
   const includeUnpaid = (localStorage.getItem("travelbudget_kpi_projection_include_unpaid_v1") === "1");
   const kpiScope = (localStorage.getItem("travelbudget_kpi_projection_scope_v1") || "segment");
   const displayCur = base;              // for "Aujourd'hui" / budget KPIs (segment currency of display day)
-  const displayCurPivot = "EUR";        // pivot for Total wallets + Projection
+  // Account base currency: controls display for Total wallets + Projection (not segment-dependent)
+  const displayCurPivot = String((state?.user?.baseCurrency) || "EUR").toUpperCase();
 
   function _toEUR(amount, cur, dateISO) {
     const a = Number(amount) || 0;
@@ -807,17 +808,47 @@ function renderKPI() {
     return a;
   }
 
+  function _toPivot(amount, cur, dateISO) {
+    const a = Number(amount) || 0;
+    const from = String(cur || "EUR").toUpperCase();
+    const to = String(displayCurPivot || "EUR").toUpperCase();
+    if (from === to) return a;
+
+    // Prefer cross FX engine (supports non-EUR cross via EUR pivot)
+    if (typeof window.fxConvert === "function" && typeof getBudgetSegmentForDate === "function") {
+      const seg = getBudgetSegmentForDate(dateISO || today);
+      const rates = (typeof fxRatesForSegment === "function")
+        ? fxRatesForSegment(seg)
+        : (typeof window.fxGetEurRates === "function" ? window.fxGetEurRates() : {});
+      const out = window.fxConvert(a, from, to, rates);
+      if (out !== null && isFinite(out)) return out;
+    }
+
+    // Fallback: go through EUR
+    const eur = _toEUR(a, from, dateISO);
+    if (to === "EUR") return eur;
+    try {
+      const seg = (typeof getBudgetSegmentForDate === "function") ? getBudgetSegmentForDate(dateISO || today) : null;
+      const rates = (typeof fxRatesForSegment === "function")
+        ? fxRatesForSegment(seg)
+        : (typeof window.fxGetEurRates === "function" ? window.fxGetEurRates() : {});
+      const out2 = (typeof window.fxConvert === "function") ? window.fxConvert(eur, "EUR", to, rates) : null;
+      if (out2 !== null && isFinite(out2)) return out2;
+    } catch (_) {}
+    return eur;
+  }
+
   // Total wallets:
-  // - primary value in EUR (pivot) to keep a stable, comparable figure
+  // - primary value in account base currency (pivot)
   // - secondary value in the current display segment currency (display date segment)
-  let walletTotalEUR = 0;
+  let walletTotalEUR = 0; // kept name for backward compat in template
   let walletTotalBase = 0;
   for (const w of (state.wallets || [])) {
     const bal = (typeof window.tbGetWalletEffectiveBalance === "function")
       ? Number(window.tbGetWalletEffectiveBalance(w.id) || 0)
       : (Number(w.balance) || 0);
     const cur = w.currency || "EUR";
-    walletTotalEUR += _toEUR(bal, cur, displayDateISO);
+    walletTotalEUR += _toPivot(bal, cur, displayDateISO);
 
     // Segment/base view for the current display date
     if (typeof window.amountToDisplayForDate === "function") {
@@ -840,10 +871,12 @@ function renderKPI() {
     return endISO;
   }
   const _kpiHorizonEndISO = _kpiResolveHorizonEndISO(kpiScope, displayDateISO);
-  const pendingDisplay = includeUnpaid ? (Number(netPendingEUR(displayDateISO, _kpiHorizonEndISO)) || 0) : 0; // EUR (only for Projection UI)
+  const pendingEUR = includeUnpaid ? (Number(netPendingEUR(displayDateISO, _kpiHorizonEndISO)) || 0) : 0; // EUR
+  const pendingDisplay = includeUnpaid ? _toPivot(pendingEUR, "EUR", displayDateISO) : 0; // pivot
   const totalDisplay = walletTotalEUR + (includeUnpaid ? pendingDisplay : 0); // kept for backward compat of internal uses
 
-  const projEndDisplay = projectedEndDisplayWithOptions({ includeUnpaid, scope: kpiScope });
+  const projEndEUR = projectedEndDisplayWithOptions({ includeUnpaid, scope: kpiScope });
+  const projEndDisplay = _toPivot(projEndEUR, "EUR", displayDateISO);
 
   // =========================
   // KPI scope selector (V6.6.91)

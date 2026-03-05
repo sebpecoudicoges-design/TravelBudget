@@ -202,8 +202,13 @@ function renderSettings(){
   if(!view) return;
 
   // labels
-  const h2 = view.querySelector('h2');
-  if(h2) h2.textContent = (window.tbT ? tbT("settings.title") : "Voyage");
+  // Settings view now has multiple cards (Compte + Voyage + ...).
+  // Ensure we only rename the Voyage card title.
+  try {
+    const h2s = Array.from(view.querySelectorAll('h2'));
+    const voyageH2 = h2s.find(x => String(x.textContent||'').trim().toLowerCase() === 'voyage');
+    if (voyageH2) voyageH2.textContent = (window.tbT ? tbT("settings.title") : "Voyage");
+  } catch(_) {}
 
   const p = state.period;
   const segs = (state.budgetSegments || []).map(_tbNormSeg).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
@@ -256,51 +261,51 @@ function renderSettings(){
   // ensure periods list
   loadPeriodsListIntoUI();
 
-
-  // segments area
-  const host = document.getElementById("seg-list");
-  if(host){
-    host.innerHTML = "";
-
-    // --- Account preferences (base currency) ---
-    try {
-      const card = document.createElement("div");
-      card.className = "card";
-      card.style.marginBottom = "10px";
+  // =========================
+  // Account section (email + base currency + reset password)
+  // =========================
+  try {
+    const box = document.getElementById("tb-account-box");
+    if (box) {
       const cur = String((state?.user?.baseCurrency) || "EUR").toUpperCase();
       const opts = (typeof window.tbGetAvailableCurrencies === "function") ? window.tbGetAvailableCurrencies() : ["EUR","USD","THB"];
-      card.innerHTML = `
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <div>
-            <b>Compte</b>
-            <div class="muted" style="font-size:12px;">Devise de base (affichage)</div>
+      const email = String(window.sbUser?.email || "").trim();
+
+      box.innerHTML = `
+        <div class="muted" style="margin-bottom:10px;">Paramètres du compte (affichage + sécurité).</div>
+
+        <div class="row" style="gap:12px; align-items:end; flex-wrap:wrap;">
+          <div class="field" style="min-width:260px;">
+            <label>Email</label>
+            <input type="text" value="${escapeHTML(email || "—")}" disabled />
           </div>
-        </div>
-        <div class="row" style="margin-top:10px; align-items:end; gap:10px; flex-wrap:wrap;">
+
           <div class="field" style="min-width:160px;">
-            <label>Devise</label>
+            <label>Devise de base</label>
             <select id="tb-user-basecur">
               ${opts.map(c=>`<option value="${escapeHTML(c)}" ${String(c).toUpperCase()===cur?"selected":""}>${escapeHTML(c)}</option>`).join("")}
             </select>
           </div>
+
           <button class="btn" id="tb-user-basecur-save" type="button">Enregistrer</button>
+          <button class="btn" id="tb-user-resetpwd" type="button">Reset mot de passe</button>
         </div>
       `;
-      host.appendChild(card);
-      const btn = card.querySelector("#tb-user-basecur-save");
-      if (btn) {
-        btn.onclick = () => safeCall("Enregistrer devise de base", async () => {
-          // Robust supabase getter (avoid _tbSb undefined)
-          const s = (function(){
-            try {
-              if (typeof window._tbSb === 'function') return window._tbSb();
-              if (window.__TB_SB__) return window.__TB_SB__;
-              if (window.sb) return window.sb;
-            } catch(_){ }
-            throw new Error('Supabase client not found');
-          })();
-          if (!s) throw new Error("Supabase non prêt.");
-          const v = String(card.querySelector("#tb-user-basecur")?.value || "").trim().toUpperCase();
+
+      const _getSb = () => {
+        try {
+          if (typeof window._tbSb === "function") return window._tbSb();
+          if (window.__TB_SB__) return window.__TB_SB__;
+          if (window.sb) return window.sb;
+        } catch(_){ }
+        throw new Error("Supabase client not found");
+      };
+
+      const btnSave = box.querySelector("#tb-user-basecur-save");
+      if (btnSave) {
+        btnSave.onclick = () => safeCall("Enregistrer devise de base", async () => {
+          const s = _getSb();
+          const v = String(box.querySelector("#tb-user-basecur")?.value || "").trim().toUpperCase();
           if (!v || !/^[A-Z]{3}$/.test(v)) throw new Error("Devise invalide (ISO3 attendu)");
           const uid = (window.sbUser && window.sbUser.id) ? window.sbUser.id : (await s.auth.getUser()).data?.user?.id;
           if (!uid) throw new Error("Non authentifié");
@@ -310,7 +315,25 @@ function renderSettings(){
           if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("settings:base_currency"); else renderAll();
         });
       }
-    } catch (_) {}
+
+      const btnReset = box.querySelector("#tb-user-resetpwd");
+      if (btnReset) {
+        btnReset.onclick = () => safeCall("Reset mot de passe", async () => {
+          const s = _getSb();
+          const em = String(window.sbUser?.email || "").trim();
+          if (!em) throw new Error("Email introuvable");
+          await s.auth.resetPasswordForEmail(em);
+          alert("Email de réinitialisation envoyé.");
+        });
+      }
+    }
+  } catch (_) {}
+
+
+  // segments area
+  const host = document.getElementById("seg-list");
+  if(host){
+    host.innerHTML = "";
 
     // --- FX status + custom rates ---
 
