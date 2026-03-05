@@ -25,24 +25,64 @@
     }
   }
 
-  async function _createInviteLink(tripId, role) {
-    // role: 'member' | 'viewer'
-    const token = (crypto?.randomUUID ? crypto.randomUUID() : (Date.now() + "-" + Math.random()).replace(/\./g, ""));
-    const expiresAt = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString(); // 14 days
-    const payload = {
-      token,
-      trip_id: tripId,
-      role: role || "member",
-      created_by: await _ensureSession(),
-      expires_at: expiresAt,
-    };
-    const { error } = await sb.from(TB_CONST.TABLES.trip_invites).insert(payload);
-    if (error) throw error;
+  async function _createInviteLink(tripId, role, inviteeName, inviteeEmail) {
+  // role: 'member' | 'viewer'
+  const token = (crypto?.randomUUID ? crypto.randomUUID() : (Date.now() + "-" + Math.random()).replace(/\./g, ""));
+  const expiresAt = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString(); // 14 days
+  const createdBy = await _ensureSession();
 
-    const base = window.location.origin + window.location.pathname;
-    const url = base + "#trip&invite=" + encodeURIComponent(token);
-    return url;
+  // Create (optional) placeholder member for this invite, to keep a stable "who is who" mapping.
+  // If trip_members.email column doesn't exist yet, we retry without it (backward compatible).
+  let memberId = null;
+  try {
+    const name = String(inviteeName || "").trim() || "Invité";
+    const email = String(inviteeEmail || "").trim() || null;
+
+    const memberPayload = {
+      trip_id: tripId,
+      name,
+      is_me: false,
+      auth_user_id: null,
+      user_id: null,
+    };
+    if (email) memberPayload.email = email;
+
+    let { data: mData, error: mErr } = await sb
+      .from(TB_CONST.TABLES.trip_members)
+      .insert([memberPayload])
+      .select("id")
+      .single();
+
+    if (mErr && String(mErr.message || "").toLowerCase().includes("column") && String(mErr.message || "").toLowerCase().includes("email")) {
+      // Retry if email column not present yet
+      delete memberPayload.email;
+      const retry = await sb.from(TB_CONST.TABLES.trip_members).insert([memberPayload]).select("id").single();
+      mData = retry.data;
+      mErr = retry.error;
+    }
+    if (mErr) throw mErr;
+    memberId = mData?.id || null;
+  } catch (e) {
+    console.warn("[Trip] placeholder member creation failed (non-blocking):", e);
+    memberId = null;
   }
+
+  const payload = {
+    token,
+    trip_id: tripId,
+    role: role || "member",
+    created_by: createdBy,
+    expires_at: expiresAt,
+  };
+  if (memberId) payload.member_id = memberId;
+
+  const { error } = await sb.from(TB_CONST.TABLES.trip_invites).insert(payload);
+  if (error) throw error;
+
+  const base = window.location.origin + window.location.pathname;
+  const url = base + "#trip&invite=" + encodeURIComponent(token);
+  return url;
+}
 
   async function _acceptInviteFromURL() {
     const hash = window.location.hash || "";
@@ -52,8 +92,7 @@
     if (!token) return false;
 
     try {
-      const { error } = await sb.rpc("trip_accept_invite", { p_token: token });
-      if (error) throw error;
+      await _rpcAcceptInvite(token);
 
       // remove invite param from hash (avoid re-accept on reload)
       const cleaned = hash.replace(/([#&?])invite=[^&]+&?/g, "$1").replace(/[#&?]$/, "");
@@ -67,6 +106,35 @@
       return false;
     }
   }
+
+async function _rpcAcceptInvite(token) {
+  // Prefer new RPC names, fallback to legacy if DB not migrated.
+  const rpcName = TB_CONST?.RPCS?.accept_trip_invite || "accept_trip_invite";
+  const legacy = TB_CONST?.RPCS?.trip_accept_invite || "trip_accept_invite";
+  let { error } = await sb.rpc(rpcName, { p_token: token });
+  if (error) {
+    // fallback
+    const res2 = await sb.rpc(legacy, { p_token: token });
+    if (res2.error) throw res2.error;
+  }
+}
+
+async function _rpcBindMe(tripId) {
+  const rpcName = TB_CONST?.RPCS?.bind_trip_member_to_auth || "bind_trip_member_to_auth";
+  const legacy = TB_CONST?.RPCS?.trip_bind_member_to_auth || "trip_bind_member_to_auth";
+  try {
+    let { error } = await sb.rpc(rpcName, { p_trip_id: tripId });
+    if (error) {
+      const res2 = await sb.rpc(legacy, { p_trip_id: tripId });
+      if (res2.error) throw res2.error;
+    }
+    return true;
+  } catch (e) {
+    // Non-blocking: trip can still load, but "me" won't be binded.
+    console.warn("[Trip] bind member RPC failed:", e);
+    return false;
+  }
+}
 
   function escapeHTML(str) {
     if (str === null || str === undefined) return "";
@@ -483,6 +551,9 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
 
     tripState.myRole = await _getMyTripRole(tripId);
 
+    // Ensure my member row exists/bound for this trip (identity = auth.uid)
+    await _rpcBindMe(tripId);
+
     const [{ data: m, error: mErr }, { data: e, error: eErr }, { data: s, error: sErr }, { data: se, error: seErr }] = await Promise.all([
       sb.from(TB_CONST.TABLES.trip_members).select("*").eq("trip_id", tripId).order("created_at", { ascending: true }),
       sb.from(TB_CONST.TABLES.trip_expenses).select("*").eq("trip_id", tripId).order("date", { ascending: false }),
@@ -496,10 +567,14 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
     if (seErr) throw seErr;
 
     tripState.members = (m || []).map(x => ({
-      id: x.id,
-      name: x.name,
-      isMe: !!x.is_me,
-    }));
+  id: x.id,
+  name: x.name,
+  email: x.email || null,
+  authUserId: x.auth_user_id || null,
+  // Legacy fallback: some rows may still have user_id set to auth uid
+  userId: x.user_id || null,
+  isMe: ((x.auth_user_id || x.user_id) && (String(x.auth_user_id || x.user_id) === String(uid))),
+}));
 
     tripState.expenses = (e || []).map(x => ({
       id: x.id,
@@ -1003,10 +1078,20 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
       if (pErr) throw pErr;
     }
 
-    // default member: Me
-    const memPayload = { user_id: uid, trip_id: data.id, name: "Moi", is_me: true };
-    const { error: mErr } = await sb.from(TB_CONST.TABLES.trip_members).insert([memPayload]);
-    if (mErr) throw mErr;
+    // default member (bound to auth user)
+try {
+  const meEmail = (sbUser && sbUser.email) ? sbUser.email : null;
+  const memPayload = { trip_id: data.id, name: "Moi", is_me: false, auth_user_id: uid, user_id: uid };
+  if (meEmail) memPayload.email = meEmail;
+  let { error: mErr } = await sb.from(TB_CONST.TABLES.trip_members).insert([memPayload]);
+  if (mErr && String(mErr.message || "").toLowerCase().includes("email")) {
+    delete memPayload.email;
+    mErr = (await sb.from(TB_CONST.TABLES.trip_members).insert([memPayload])).error;
+  }
+  if (mErr) throw mErr;
+} catch (e) {
+  console.warn("[Trip] default member insert failed (non-blocking):", e);
+}
 
     tripState.activeTripId = data.id;
     localStorage.setItem(TRIP_ACTIVE_KEY, data.id);
@@ -1040,19 +1125,25 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
     if (tripState.activeTripId === tripId) tripState.activeTripId = null;
   }
 
-  async function _addMember(name, isMe) {
-    const uid = await _ensureSession();
-    const tripId = tripState.activeTripId;
-    if (!tripId) return;
+  async function _addMember(name, email) {
+  await _ensureSession();
+  const tripId = tripState.activeTripId;
+  if (!tripId) return;
 
-    if (isMe) {
-      await sb.from(TB_CONST.TABLES.trip_members).update({ is_me: false }).eq("trip_id", tripId);
-    }
+  const cleanName = String(name || "").trim();
+  if (!cleanName) throw new Error("Nom requis.");
 
-    const payload = { user_id: uid, trip_id: tripId, name, is_me: !!isMe };
-    const { error } = await sb.from(TB_CONST.TABLES.trip_members).insert([payload]);
-    if (error) throw error;
+  const payload = { trip_id: tripId, name: cleanName, is_me: false, auth_user_id: null, user_id: null };
+  const cleanEmail = String(email || "").trim();
+  if (cleanEmail) payload.email = cleanEmail;
+
+  let { error } = await sb.from(TB_CONST.TABLES.trip_members).insert([payload]);
+  if (error && String(error.message || "").toLowerCase().includes("email")) {
+    delete payload.email;
+    error = (await sb.from(TB_CONST.TABLES.trip_members).insert([payload])).error;
   }
+  if (error) throw error;
+}
 
   async function _deleteMember(memberId) {
     const uid = await _ensureSession();
@@ -1846,7 +1937,11 @@ const balancesByCurRaw = _computeBalances();
       .join("");
 
     const memberOptions = members
-      .map(m => `<option value="${m.id}">${escapeHTML(m.name)}${m.isMe ? " (moi)" : ""}</option>`)
+      .map(m => {
+        const meTag = m.isMe ? " (moi)" : "";
+        const emailTag = m.email ? ` — ${escapeHTML(m.email)}` : "";
+        return `<option value="${m.id}">${escapeHTML(m.name)}${meTag}${emailTag}</option>`;
+      })
       .join("");
 
     const walletOptions = (state.wallets || [])
@@ -1913,7 +2008,16 @@ const balancesByCurRaw = _computeBalances();
             <div class="field" style="align-self:flex-end;">
               <button class="btn danger" id="trip-delete" ${trip ? "" : "disabled"}>Supprimer</button>
             </div>
+            <div class="field" style="align-self:flex-end; min-width:220px;">
+              <label>Nom invité</label>
+              <input id="trip-invitee-name" placeholder="Ex: Paul" />
+            </div>
+            <div class="field" style="align-self:flex-end; min-width:260px;">
+              <label>Email invité (optionnel)</label>
+              <input id="trip-invitee-email" placeholder="ex: paul@email.com" />
+            </div>
             <div class="field" style="align-self:flex-end;">
+              <label>Rôle</label>
               <select id="trip-invite-role" style="height:38px;">
                 <option value="member">Inviter (membre)</option>
                 <option value="viewer">Inviter (lecture)</option>
@@ -1941,12 +2045,9 @@ const balancesByCurRaw = _computeBalances();
               <label>Nom</label>
               <input id="trip-member-name" placeholder="Ex: Paul" />
             </div>
-            <div class="field" style="min-width:140px;">
-              <label>Moi</label>
-              <select id="trip-member-me">
-                <option value="no">Non</option>
-                <option value="yes">Oui</option>
-              </select>
+            <div class="field" style="min-width:240px;">
+              <label>Email (optionnel)</label>
+              <input id="trip-member-email" placeholder="ex: paul@email.com" />
             </div>
             <div class="field" style="align-self:flex-end;">
               <button class="btn" id="trip-add-member" ${trip ? "" : "disabled"}>Ajouter</button>
@@ -1955,10 +2056,15 @@ const balancesByCurRaw = _computeBalances();
 
           <div id="trip-members-list">
             ${members.length ? members.map(m => `
-              <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
-                <div>
-                  <strong>${escapeHTML(m.name)}</strong>
-                  <span class="muted" style="font-size:12px;">${m.isMe ? " (moi)" : ""}</span>
+              <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.04); gap:12px;">
+                <div style="min-width:0;">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <strong>${escapeHTML(m.name)}</strong>
+                    ${m.isMe ? `<span class="pill" style="font-size:12px;">Moi</span>` : ``}
+                  </div>
+                  <div class="muted" style="font-size:12px; ${m.isMe ? "font-weight:600;" : ""}">
+                    ${m.email ? escapeHTML(m.email) : `<em>invitation en attente</em>`}
+                  </div>
                 </div>
                 <button class="btn danger" data-del-member="${m.id}">Supprimer</button>
               </div>
@@ -2092,7 +2198,9 @@ btnInvite.onclick = async () => {
         if (!tripId) return toastWarn("[Trip] Sélectionne un trip d'abord.");
         const roleSel = _el("trip-invite-role");
         const role = roleSel ? roleSel.value : "member";
-        const url = await _createInviteLink(tripId, role);
+        const inviteeName = (_el("trip-invitee-name")?.value || "").trim();
+        const inviteeEmail = (_el("trip-invitee-email")?.value || "").trim();
+        const url = await _createInviteLink(tripId, role, inviteeName, inviteeEmail);
         tripState.inviteUrl = url;
         const el = document.getElementById("tripInviteUrl");
         if (el) el.value = url || "";
@@ -2136,9 +2244,9 @@ if (btnInviteCopy) {
       btnAddMem.onclick = async () => {
         try {
           const name = _el("trip-member-name").value.trim();
-          const isMe = _el("trip-member-me").value === "yes";
+          const email = (_el("trip-member-email")?.value || "").trim();
           if (!name) return toastWarn("Nom requis.");
-          await _addMember(name, isMe);
+          await _addMember(name, email);
           if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 toastOk("Participant ajouté.");
         } catch (e) {
@@ -2323,7 +2431,7 @@ toastOk("Dépense ajoutée.");
           const amt = Number(btn.getAttribute("data-settle-amt") || 0);
 
           if (!fromId || !toId || !cur || !(amt > 0)) throw new Error("Règlement invalide.");
-          const me = members.find(x => x.is_me);
+          const me = members.find(x => x.isMe);
           const isOut = me && (fromId === me.id);
 
           _openSettlementModal({ fromId, toId, currency: cur, amount: amt, isOut, members });

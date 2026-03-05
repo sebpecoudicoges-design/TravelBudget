@@ -1,4 +1,4 @@
-window.__TB_BUILD = "6.7.07";
+window.__TB_BUILD = "6.7.08";
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -47,6 +47,14 @@ window.__TB_BUILD = "6.7.07";
     fx_last_updated_at: "fx_last_updated_at",
     fx_rate_snapshot: "fx_rate_snapshot",
     fx_source_snapshot: "fx_source_snapshot",
+  });
+
+  const RPCS = Object.freeze({
+    accept_trip_invite: \"accept_trip_invite\",
+    bind_trip_member_to_auth: \"bind_trip_member_to_auth\",
+    // legacy fallback (older DB)
+    trip_accept_invite: \"trip_accept_invite\",
+    trip_bind_member_to_auth: \"trip_bind_member_to_auth\",
   });
 
   const LS_KEYS = Object.freeze({
@@ -106,6 +114,7 @@ window.__TB_BUILD = "6.7.07";
     TABLES,
     COLS,
     LS_KEYS,
+    RPCS,
     UI_LABELS,
     EXPECTED_SCHEMA_VERSION,
   });
