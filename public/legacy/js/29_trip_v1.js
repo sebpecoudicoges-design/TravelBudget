@@ -200,6 +200,7 @@ function toastOk(msg) {
   }
 
   const TRIP_ACTIVE_KEY = "travelbudget_trip_active_id_v1";
+  const TRIP_TAB_KEY = "travelbudget_trip_tab_v1";
 
   let tripState = {
     trips: [],
@@ -732,6 +733,32 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
 
 return byCurrency;
   }
+
+  async function _fetchBalancesFromDb(tripId) {
+    try {
+      if (!tripId || !sb?.rpc) return null;
+      if (!TB_CONST?.RPCS?.trip_get_balances_v1) return null;
+
+      const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_get_balances_v1, { p_trip_id: tripId });
+      if (error) return null;
+      if (!Array.isArray(data)) return null;
+
+      const out = new Map(); // cur -> Map(memberId -> net)
+      for (const row of data) {
+        const cur = String(row.currency || "").toUpperCase();
+        const memberId = row.member_id || row.memberId;
+        const net = Number(row.net || 0);
+        if (!cur || !memberId) continue;
+        if (!out.has(cur)) out.set(cur, new Map());
+        const m = out.get(cur);
+        m.set(memberId, (m.get(memberId) || 0) + net);
+      }
+      return out;
+    } catch (e) {
+      return null;
+    }
+  }
+
 
   // Unify balances into the user's display currency.
   // Goal: the UI follows the account base currency (or period base if missing), instead of forcing THB.
@@ -2006,7 +2033,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     }
   }
 
-  function _renderUI() {
+  async function _renderUI() {
     const root = _root();
     if (!root) return;
 
@@ -2021,7 +2048,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     const globalNetHTML = "";// removed: global net to avoid confusion
 
 
-    const balancesByCurRaw = _computeBalances();
+    const balancesByCurRaw = (await _fetchBalancesFromDb(tripState.activeTripId)) || _computeBalances();
     const balancesByCur = _unifyBalancesToDisplayCurrency(balancesByCurRaw);
     const settlementsByCur = _computeSettlements(balancesByCur);
 
@@ -2299,17 +2326,33 @@ return `
           <div class="row" style="justify-content:flex-end; margin-top:10px;">
             <button class="btn primary" id="trip-add-exp" ${canWrite ? "" : "disabled"} ${trip ? "" : "disabled"}>Ajouter dépense</button>
           </div>
-
-          <h2 style="margin-top:16px;">Balances</h2>
-          ${balHTML}
-          <div style="margin-top:14px;"></div>
-          ${settlementsHTML}
         </div>
       </div>
 
       <div class="card" style="margin-top:12px;">
-        <h2>Historique</h2>
-        ${expensesHTML}
+        <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+          <h2 style="margin:0;">Récap / Historique</h2>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="btn" id="trip-tab-recap" type="button">Récap</button>
+            <button class="btn" id="trip-tab-history" type="button" style="background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);">Historique</button>
+          </div>
+        </div>
+
+        <div id="trip-tab-content-recap" style="margin-top:10px;">
+          <div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">
+            <div style="flex:1 1 260px; min-width:260px;">
+              <h3 style="margin:0 0 8px 0;">Balances</h3>
+              ${balHTML}
+            </div>
+            <div style="flex:2 1 320px; min-width:320px;">
+              ${settlementsHTML}
+            </div>
+          </div>
+        </div>
+
+        <div id="trip-tab-content-history" style="margin-top:10px; display:none;">
+          ${expensesHTML}
+        </div>
       </div>
     `;
 
@@ -2321,6 +2364,39 @@ return `
         if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 };
     }
+
+
+    // Tabs: Récap / Historique (balances on left, settlements on right)
+    const btnTabRecap = _el("trip-tab-recap");
+    const btnTabHist = _el("trip-tab-history");
+    const boxRecap = _el("trip-tab-content-recap");
+    const boxHist = _el("trip-tab-content-history");
+
+    function _setTripTab(tab) {
+      const t = (tab === "history") ? "history" : "recap";
+      try { localStorage.setItem(TRIP_TAB_KEY, t); } catch (_) {}
+      if (boxRecap) boxRecap.style.display = (t === "recap") ? "" : "none";
+      if (boxHist) boxHist.style.display = (t === "history") ? "" : "none";
+
+      // simple visual state
+      if (btnTabRecap) {
+        btnTabRecap.classList.toggle("primary", t === "recap");
+        if (t === "recap") btnTabRecap.style.cssText = "";
+        else btnTabRecap.style.cssText = "background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);";
+      }
+      if (btnTabHist) {
+        btnTabHist.classList.toggle("primary", t === "history");
+        if (t === "history") btnTabHist.style.cssText = "";
+        else btnTabHist.style.cssText = "background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);";
+      }
+    }
+
+    if (btnTabRecap) btnTabRecap.onclick = () => _setTripTab("recap");
+    if (btnTabHist) btnTabHist.onclick = () => _setTripTab("history");
+
+    let initialTab = "recap";
+    try { initialTab = localStorage.getItem(TRIP_TAB_KEY) || "recap"; } catch (_) {}
+    _setTripTab(initialTab);
 
     const btnCreate = _el("trip-create");
     if (btnCreate) {
@@ -2740,7 +2816,7 @@ toastOk("Dépense supprimée.");
 
     if (tripState.activeTripId) localStorage.setItem(TRIP_ACTIVE_KEY, tripState.activeTripId);
     await _loadActiveData();
-    _renderUI();
+    await _renderUI();
   }
     // Expose for modal callbacks
     window.__tripRefresh = refresh;
