@@ -1,4 +1,4 @@
-window.__TB_BUILD = "6.7.09";
+window.__TB_BUILD = "6.7.10";
 /* =========================
    Boot
    ========================= */
@@ -40,6 +40,7 @@ window.onload = async function () {
 
   sb.auth.onAuthStateChange((_event, session) => {
     sbUser = session?.user || null;
+    try { if (typeof window.tbAuthScopeSync === "function") window.tbAuthScopeSync(sbUser?.id || ""); } catch (_) {}
     if (!sbUser) safeShowAuth(true, "Session expirée. Reconnecte-toi.");
   });
 
@@ -47,6 +48,7 @@ window.onload = async function () {
   if (error) { safeShowAuth(true, error.message); return; }
 
   sbUser = data.session?.user || null;
+  try { if (typeof window.tbAuthScopeSync === "function") window.tbAuthScopeSync(sbUser?.id || ""); } catch (_) {}
 
   if (!sbUser) {
     safeShowAuth(true, "Connecte-toi pour synchroniser.");

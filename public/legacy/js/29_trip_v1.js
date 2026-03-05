@@ -210,6 +210,21 @@ function toastOk(msg) {
     _tripsLoaded: false,
   };
 
+  // Reset Trip state on auth account switch (prevents cross-account UI bleed)
+  try {
+    window.addEventListener("tb:auth_scope_changed", () => {
+      try { localStorage.removeItem(TRIP_ACTIVE_KEY); } catch (_) {}
+      tripState.trips = [];
+      tripState.activeTripId = null;
+      tripState.members = [];
+      tripState.expenses = [];
+      tripState.shares = [];
+      tripState.myRole = null;
+      tripState.lastInviteUrl = null;
+      tripState._tripsLoaded = false;
+    });
+  } catch (_) {}
+
   function _el(id) { return document.getElementById(id); }
   function _root() { return document.getElementById("trip-root"); }
 

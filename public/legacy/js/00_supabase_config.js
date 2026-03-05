@@ -16,6 +16,52 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 window.sb = sb;
 window.__TB_SB__ = sb;
 
+/* =========================
+   Auth scope guard (Trip)
+   - Prevent cross-account leakage from localStorage caches
+   ========================= */
+(function () {
+  const LAST_UID_KEY = "travelbudget_last_auth_uid_v1";
+  const TRIP_PREFIX = "travelbudget_trip_";
+  const TRIP_ACTIVE_KEY = "travelbudget_trip_active_id_v1";
+
+  function _lsSafeGet(k) {
+    try { return localStorage.getItem(k); } catch (_) { return null; }
+  }
+  function _lsSafeSet(k, v) {
+    try { localStorage.setItem(k, v); } catch (_) {}
+  }
+
+  function tbClearTripLocalState() {
+    try {
+      const toRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (k === TRIP_ACTIVE_KEY || k.startsWith(TRIP_PREFIX)) toRemove.push(k);
+      }
+      toRemove.forEach((k) => { try { localStorage.removeItem(k); } catch (_) {} });
+    } catch (_) {}
+  }
+
+  // Expose for debugging/manual recovery
+  window.tbClearTripLocalState = tbClearTripLocalState;
+
+  // Call this whenever auth user changes (login/logout/switch account)
+  window.tbAuthScopeSync = function tbAuthScopeSync(currentUid) {
+    const uid = currentUid || "";
+    const prev = _lsSafeGet(LAST_UID_KEY) || "";
+    if (prev !== uid) {
+      tbClearTripLocalState();
+      _lsSafeSet(LAST_UID_KEY, uid);
+      try {
+        window.dispatchEvent(new CustomEvent("tb:auth_scope_changed", { detail: { prev, uid } }));
+      } catch (_) {}
+      try { console.warn("[AuthScope] user changed -> cleared Trip local state", { prev, uid }); } catch (_) {}
+    }
+  };
+})();
+
 
 
 
