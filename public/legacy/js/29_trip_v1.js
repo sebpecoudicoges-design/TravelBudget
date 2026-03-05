@@ -43,8 +43,9 @@
       name,
       is_me: false,
       auth_user_id: null,
-      user_id: null,
+      user_id: createdBy,
     };
+
     if (email) memberPayload.email = email;
 
     let { data: mData, error: mErr } = await sb
@@ -573,11 +574,11 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
     tripState.members = (m || []).map(x => ({
   id: x.id,
   name: x.name,
-  email: x.email || null,
+  email: x.email || (((x.auth_user_id && (String(x.auth_user_id) === String(uid))) && (sbUser && sbUser.email)) ? sbUser.email : null),
   authUserId: x.auth_user_id || null,
   // Legacy fallback: some rows may still have user_id set to auth uid
   userId: x.user_id || null,
-  isMe: ((x.auth_user_id || x.user_id) && (String(x.auth_user_id || x.user_id) === String(uid))),
+  isMe: (x.auth_user_id && (String(x.auth_user_id) === String(uid))),
 }));
 
     tripState.expenses = (e || []).map(x => ({
@@ -1130,14 +1131,14 @@ try {
   }
 
   async function _addMember(name, email) {
-  await _ensureSession();
+  const uid = await _ensureSession();
   const tripId = tripState.activeTripId;
   if (!tripId) return;
 
   const cleanName = String(name || "").trim();
   if (!cleanName) throw new Error("Nom requis.");
 
-  const payload = { trip_id: tripId, name: cleanName, is_me: false, auth_user_id: null, user_id: null };
+  const payload = { trip_id: tripId, name: cleanName, is_me: false, auth_user_id: null, user_id: uid };
   const cleanEmail = String(email || "").trim();
   if (cleanEmail) payload.email = cleanEmail;
 
