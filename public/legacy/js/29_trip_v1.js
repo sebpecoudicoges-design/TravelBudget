@@ -641,10 +641,17 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
     if (sErr) throw sErr;
     if (seErr) throw seErr;
 
+    // Determine *exactly one* "me" member row.
+    // Rationale: legacy data may have multiple rows with user_id == auth.uid() (because user_id was used as NOT NULL placeholder).
+    // We prefer auth_user_id match, then is_me flag, then a single (first) user_id match.
+    const _meRow = (m || []).find(r => r.auth_user_id && (String(r.auth_user_id) === String(uid)))
+      || (m || []).find(r => r.is_me === true)
+      || (m || []).find(r => r.user_id && (String(r.user_id) === String(uid)))
+      || null;
+    const _meId = _meRow ? _meRow.id : null;
+
     tripState.members = (m || []).map(x => {
-      const authMatch = (x.auth_user_id && (String(x.auth_user_id) === String(uid)));
-      const userMatch = (x.user_id && (String(x.user_id) === String(uid)));
-      const isMe = !!(authMatch || userMatch);
+      const isMe = !!(_meId && (String(x.id) === String(_meId)));
       return {
         id: x.id,
         name: x.name,
@@ -1923,27 +1930,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       }
 
 
-      // Persisted settlements history (affects balances)
-      const histRows = (tripState.settlementEvents || []).filter(x => !x.cancelledAt);
-      if (histRows.length) {
-        parts.push(`<div class="muted" style="margin-top:14px;">Historique règlements</div>`);
-        const byDate = histRows.slice().sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
-        for (const ev of byDate) {
-          const from = members.find(x => x.id === ev.fromMemberId);
-          const to = members.find(x => x.id === ev.toMemberId);
-          const canCancel = canWrite && (myRole === "owner" || (sbUser && ev.createdBy === sbUser.id));
-          const btn = canCancel ? `<button class="btn" type="button" data-cancel-settle="${ev.id}">Annuler</button>` : "";
-          parts.push(
-            `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
-              <span class="muted">${escapeHTML(from?.name || "—")} → ${escapeHTML(to?.name || "—")}</span>
-              <div style="display:flex; align-items:center; gap:10px;">
-                <strong>${_fmtMoney(ev.amount, ev.currency)}</strong>
-                ${btn}
-              </div>
-            </div>`
-          );
-        }
-      }
+      // NOTE: settlements history is rendered once below the suggested settlements section
+      // to avoid duplicate "Historique règlements" blocks.
 
       return parts.join("");
     })();
