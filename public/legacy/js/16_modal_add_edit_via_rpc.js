@@ -439,7 +439,7 @@ async function saveModal() {
           }
         }
 
-        const { data, error } = await tbRpcWithRetry("apply_transaction_v2", {
+        const { data, error } = await tbRpcWithRetry(TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2", {
           p_wallet_id: walletId,
           p_type: type,
           p_amount: amount,
@@ -507,7 +507,7 @@ async function resnapshotModal() {
     const wallet = findWallet(walletId);
     if (!wallet) throw new Error("Wallet introuvable.");
 
-    const { data, error } = await tbRpcWithRetry("apply_transaction_v2", {
+    const { data, error } = await tbRpcWithRetry(TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2", {
       p_wallet_id: walletId,
       p_type: tx.type,
       p_amount: Number(tx.amount),

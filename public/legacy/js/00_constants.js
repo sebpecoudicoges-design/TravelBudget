@@ -1,4 +1,4 @@
-window.__TB_BUILD = "7.0.6";
+window.__TB_BUILD = "7.0.7";
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -55,9 +55,17 @@ window.__TB_BUILD = "7.0.6";
   const RPCS = Object.freeze({
     accept_trip_invite: "accept_trip_invite",
     bind_trip_member_to_auth: "bind_trip_member_to_auth",
+    apply_transaction_v2: "apply_transaction_v2",
+    apply_transaction: "apply_transaction",
+    delete_transaction: "delete_transaction",
     // legacy fallback (older DB)
     trip_accept_invite: "trip_accept_invite",
     trip_bind_member_to_auth: "trip_bind_member_to_auth",
+  });
+
+  const TRIP = Object.freeze({
+    ROLES: Object.freeze({ owner: 'owner', admin: 'admin', member: 'member', viewer: 'viewer' }),
+    SETTLEMENT_METHODS: Object.freeze({ cash: 'cash', revolut: 'revolut', paypal: 'paypal', lydia: 'lydia', other: 'other' }),
   });
 
   const LS_KEYS = Object.freeze({

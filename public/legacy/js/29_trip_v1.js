@@ -319,7 +319,7 @@ async function _rpcApplyTransactionV2(sb, rawArgs) {
     }
   }
 
-  return sb.rpc("apply_transaction_v2", payload);
+  return sb.rpc(TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2", payload);
 }
 
 // FX snapshot args for RPC writes (Trip)
