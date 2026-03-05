@@ -1,4 +1,4 @@
-window.__TB_BUILD = "7.0.7";
+window.__TB_BUILD = "7.0.9";
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -68,6 +68,13 @@ window.__TB_BUILD = "7.0.7";
     SETTLEMENT_METHODS: Object.freeze({ cash: 'cash', revolut: 'revolut', paypal: 'paypal', lydia: 'lydia', other: 'other' }),
   });
 
+  // Common category labels used by legacy flows (keep centralized: no magic strings)
+  const CATS = Object.freeze({
+    internal_movement: 'Mouvement interne',
+    trip: 'Trip',
+    other: 'Autre',
+  });
+
   const LS_KEYS = Object.freeze({
     theme: "travelbudget_theme_v1",
     palette: "travelbudget_palette_v1",
@@ -129,6 +136,8 @@ window.__TB_BUILD = "7.0.7";
     COLS,
     LS_KEYS,
     RPCS,
+    TRIP,
+    CATS,
     UI_LABELS,
     EXPECTED_SCHEMA_VERSION,
   });

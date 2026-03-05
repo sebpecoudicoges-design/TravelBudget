@@ -104,6 +104,42 @@ function _txBuildFxSnapshotArgs(dateISO, txCurrency) {
   };
 }
 
+// Build a payload that matches the SECURITY DEFINER `apply_transaction_v2` signature(s).
+// IMPORTANT: PostgREST resolves overloads by parameter names. Our DB currently has multiple
+// apply_transaction_v2 overloads; missing required params leads to PGRST202 (404 schema cache).
+// This helper always sends the full argument set with explicit NULLs/defaults.
+function _txBuildApplyV2Args(core, fxOverride) {
+  const uid = (window.sbUser && sbUser.id) ? sbUser.id : null;
+  const fxDate = fxOverride?.fxDate || core.dateStart;
+  const fxCur = fxOverride?.fxCurrency || core.currency;
+  const fxArgs = _txBuildFxSnapshotArgs(fxDate, fxCur);
+
+  const cat = String(core.category || "").trim() || (TB_CONST?.CATS?.other || "Autre");
+
+  return {
+    p_wallet_id: core.walletId,
+    p_type: core.type,
+    p_label: core.label,
+    p_amount: core.amount,
+    p_currency: core.currency,
+    p_date_start: core.dateStart,
+    p_date_end: core.dateEnd,
+    p_category: cat,
+    // optional
+    p_subcategory: (core.subcategory !== undefined ? core.subcategory : null),
+    p_pay_now: !!core.payNow,
+    p_out_of_budget: !!core.outOfBudget,
+    p_night_covered: !!core.nightCovered,
+    p_affects_budget: (core.affectsBudget !== undefined ? !!core.affectsBudget : !core.outOfBudget),
+    p_trip_expense_id: core.tripExpenseId || null,
+    p_trip_share_link_id: core.tripShareLinkId || null,
+    // fx snapshot
+    ...fxArgs,
+    // keep at end
+    p_user_id: uid
+  };
+}
+
 function wireNightLogic() {
   const updateNightVisibility = () => {
     const t = document.getElementById("m-type").value;
@@ -439,22 +475,26 @@ async function saveModal() {
           }
         }
 
-        const { data, error } = await tbRpcWithRetry(TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2", {
-          p_wallet_id: walletId,
-          p_type: type,
-          p_amount: amount,
-          p_currency: wallet.currency,
-          p_category: category,
-          p_label: label,
-          p_date_start: start,
-          p_date_end: end,
-          p_pay_now: payNow,
-          p_out_of_budget: outOfBudget,
-          p_night_covered: type === "expense" && category === "Transport" ? nightCovered : false,
-          // FX snapshot is computed for the transaction date + transaction currency.
-          // (Use local variables here; `form` is not in scope.)
-          ..._txBuildFxSnapshotArgs(start, wallet.currency)
-        });
+        const { data, error } = await tbRpcWithRetry(
+          TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2",
+          _txBuildApplyV2Args({
+            walletId,
+            type,
+            label,
+            amount,
+            currency: wallet.currency,
+            category,
+            subcategory: null,
+            dateStart: start,
+            dateEnd: end,
+            payNow,
+            outOfBudget,
+            nightCovered: (type === "expense" && category === "Transport") ? nightCovered : false,
+            affectsBudget: !outOfBudget,
+            tripExpenseId: null,
+            tripShareLinkId: null
+          })
+        );
         if (error) throw error;
       }
 
@@ -507,22 +547,28 @@ async function resnapshotModal() {
     const wallet = findWallet(walletId);
     if (!wallet) throw new Error("Wallet introuvable.");
 
-    const { data, error } = await tbRpcWithRetry(TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2", {
-      p_wallet_id: walletId,
-      p_type: tx.type,
-      p_amount: Number(tx.amount),
-      // Preserve original tx currency (do not auto-switch to wallet currency)
-      p_currency: (txCurrency || String(wallet.currency || '').toUpperCase()),
-      p_category: tx.category,
-      p_label: tx.label,
-      p_date_start: txDateStart,
-      p_date_end: txDateEnd,
-      // Preserve flags exactly (critical: avoid flipping paid/unpaid state)
-      p_pay_now: txPayNow,
-      p_out_of_budget: txOutOfBudget,
-      p_night_covered: txNightCovered,
-      ..._txBuildFxSnapshotArgs(txDateStart, (txCurrency || String(wallet.currency || '').toUpperCase() || 'EUR'))
-    });
+    const { data, error } = await tbRpcWithRetry(
+      TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2",
+      _txBuildApplyV2Args({
+        walletId,
+        type: tx.type,
+        label: tx.label,
+        amount: Number(tx.amount),
+        // Preserve original tx currency (do not auto-switch to wallet currency)
+        currency: (txCurrency || String(wallet.currency || '').toUpperCase()),
+        category: tx.category,
+        subcategory: tx.subcategory || null,
+        dateStart: txDateStart,
+        dateEnd: txDateEnd,
+        // Preserve flags exactly (critical: avoid flipping paid/unpaid state)
+        payNow: txPayNow,
+        outOfBudget: txOutOfBudget,
+        nightCovered: txNightCovered,
+        affectsBudget: (tx.affects_budget !== undefined) ? !!tx.affects_budget : (tx.affectsBudget !== undefined ? !!tx.affectsBudget : !txOutOfBudget),
+        tripExpenseId: tx.trip_expense_id || tx.tripExpenseId || null,
+        tripShareLinkId: tx.trip_share_link_id || tx.tripShareLinkId || null
+      }, { fxDate: txDateStart, fxCurrency: (txCurrency || String(wallet.currency || '').toUpperCase() || 'EUR') })
+    );
     if (error) throw error;
 
     let createdId = null;

@@ -1006,7 +1006,8 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     p_currency: walletCurrency,
     p_date_start: date,
     p_date_end: date,
-    p_category: null,
+    // category is NOT NULL in transactions; settlement wallet tx is an internal movement
+    p_category: (TB_CONST?.CATS?.internal_movement || "Mouvement interne"),
     p_subcategory: null,
     p_pay_now: true,
     p_out_of_budget: true,
@@ -1103,7 +1104,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
         p_currency: cur,
         p_date_start: date,
         p_date_end: date,
-        p_category: "Trip",
+        p_category: (TB_CONST?.CATS?.trip || "Trip"),
         p_subcategory: null,
         p_pay_now: true,
         p_out_of_budget: true,
@@ -2097,13 +2098,7 @@ return `
               <label>Email invité (optionnel)</label>
               <input id="trip-invitee-email" placeholder="ex: paul@email.com" />
             </div>
-            <div class="field" style="align-self:flex-end;">
-              <label>Rôle</label>
-              <select id="trip-invite-role" style="height:38px;">
-                <option value="member">Inviter (membre)</option>
-                <option value="viewer">Inviter (lecture)</option>
-              </select>
-            </div>
+            <!-- Rôle invite : masqué temporairement (inutile pour l'instant) -->
             <div class="field" style="align-self:flex-end;">
               <button class="btn" id="trip-invite" ${trip && canWrite ? "" : "disabled"}>Lien</button>
             </div>
@@ -2278,8 +2273,8 @@ btnInvite.onclick = async () => {
       try {
         const tripId = tripState.activeTripId;
         if (!tripId) return toastWarn("[Trip] Sélectionne un trip d'abord.");
-        const roleSel = _el("trip-invite-role");
-        const role = roleSel ? roleSel.value : "member";
+        // Role selection removed for now (UX simplification). Default to member.
+        const role = (TB_CONST?.TRIP?.ROLES?.member || "member");
         const inviteeName = (_el("trip-invitee-name")?.value || "").trim();
         const inviteeEmail = (_el("trip-invitee-email")?.value || "").trim();
         const url = await _createInviteLink(tripId, role, inviteeName, inviteeEmail);
