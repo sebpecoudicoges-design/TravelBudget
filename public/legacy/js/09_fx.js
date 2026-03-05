@@ -110,14 +110,22 @@ function tbFxAutoStatus() {
 
 async function _fxUpsertManualRateSB(cur, rate, asOf) {
   try {
-    if (!window.sb || !window.sbUser) return;
+    const sb = window.sb || window.__TB_SB__;
+    if (!sb) return;
+
+    // Do NOT rely on a global sbUser: it's scoped in bootstrap.
+    const { data } = await sb.auth.getUser();
+    const uid = data?.user?.id || null;
+    if (!uid) return;
+
     const c = String(cur || "").trim().toUpperCase();
     const r = Number(rate);
     const day = String(asOf || _fxTodayISO()).slice(0, 10);
     if (!c || c === "EUR" || !/^[A-Z]{3}$/.test(c)) return;
     if (!Number.isFinite(r) || r <= 0) return;
-    await window.sb.from(TB_CONST.TABLES.fx_manual_rates).upsert({
-      user_id: window.sbUser.id,
+
+    await sb.from(TB_CONST.TABLES.fx_manual_rates).upsert({
+      user_id: uid,
       currency: c,
       rate_to_eur: r,
       as_of: day,
@@ -129,12 +137,19 @@ async function _fxUpsertManualRateSB(cur, rate, asOf) {
 
 async function _fxDeleteManualRateSB(cur) {
   try {
-    if (!window.sb || !window.sbUser) return;
+    const sb = window.sb || window.__TB_SB__;
+    if (!sb) return;
+
+    const { data } = await sb.auth.getUser();
+    const uid = data?.user?.id || null;
+    if (!uid) return;
+
     const c = String(cur || "").trim().toUpperCase();
     if (!c || c === "EUR" || !/^[A-Z]{3}$/.test(c)) return;
-    await window.sb.from(TB_CONST.TABLES.fx_manual_rates)
+
+    await sb.from(TB_CONST.TABLES.fx_manual_rates)
       .delete()
-      .eq("user_id", window.sbUser.id)
+      .eq("user_id", uid)
       .eq("currency", c);
   } catch (e) {
     console.warn("[fx_manual_rates] delete failed", e?.message || e);
@@ -178,17 +193,6 @@ function tbFxDeleteManualRate(cur) {
   } catch (_) {}
   // DB delete (fire-and-forget)
   try { _fxDeleteManualRateSB(c); } catch (_) {}
-}
-function tbFxDeleteManualRate(cur) {
-  const c = String(cur || "").trim().toUpperCase();
-  const map = _fxGetManualRates();
-  delete map[c];
-  _fxSetManualRates(map);
-  try {
-    const legacy = _fxGetManualAsofLegacy();
-    delete legacy[c];
-    localStorage.setItem(TB_CONST.LS_KEYS.fx_manual_asof, JSON.stringify(legacy));
-  } catch (_) {}
   return map;
 }
 
