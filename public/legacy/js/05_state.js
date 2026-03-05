@@ -4,6 +4,14 @@
 let state = {
   exchangeRates: { "EUR-BASE": 35, "BASE-EUR": 1 / 35 },
   period: { id: null, start: "2026-02-10", end: "2026-02-28", baseCurrency: "THB", eurBaseRate: 35, dailyBudgetBase: 1000 },
+  // User/account-level preferences loaded from `settings`
+  user: {
+    baseCurrency: "EUR",
+  },
+  // FX state (manual rates are a DB-backed fallback; auto rates are in localStorage)
+  fx: {
+    manualRates: {}, // { CUR: { rate:number, asOf:"YYYY-MM-DD" } }
+  },
   wallets: [],
   transactions: [],
   allocations: [],

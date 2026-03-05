@@ -262,6 +262,46 @@ function renderSettings(){
   if(host){
     host.innerHTML = "";
 
+    // --- Account preferences (base currency) ---
+    try {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.style.marginBottom = "10px";
+      const cur = String((state?.user?.baseCurrency) || "EUR").toUpperCase();
+      const opts = (typeof window.tbGetAvailableCurrencies === "function") ? window.tbGetAvailableCurrencies() : ["EUR","USD","THB"];
+      card.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <div>
+            <b>Compte</b>
+            <div class="muted" style="font-size:12px;">Devise de base (affichage)</div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px; align-items:end; gap:10px; flex-wrap:wrap;">
+          <div class="field" style="min-width:160px;">
+            <label>Devise</label>
+            <select id="tb-user-basecur">
+              ${opts.map(c=>`<option value="${escapeHTML(c)}" ${String(c).toUpperCase()===cur?"selected":""}>${escapeHTML(c)}</option>`).join("")}
+            </select>
+          </div>
+          <button class="btn" id="tb-user-basecur-save" type="button">Enregistrer</button>
+        </div>
+      `;
+      host.appendChild(card);
+      const btn = card.querySelector("#tb-user-basecur-save");
+      if (btn) {
+        btn.onclick = () => safeCall("Enregistrer devise de base", async () => {
+          const s = _tbSb();
+          if (!s) throw new Error("Supabase non prêt.");
+          const v = String(card.querySelector("#tb-user-basecur")?.value || "").trim().toUpperCase();
+          if (!v || !/^[A-Z]{3}$/.test(v)) throw new Error("Devise invalide (ISO3 attendu)");
+          await s.from(TB_CONST.TABLES.settings).upsert({ user_id: sbUser.id, base_currency: v }, { onConflict: "user_id" });
+          if (!state.user) state.user = {};
+          state.user.baseCurrency = v;
+          if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("settings:base_currency"); else renderAll();
+        });
+      }
+    } catch (_) {}
+
     // --- FX status + custom rates ---
 
 

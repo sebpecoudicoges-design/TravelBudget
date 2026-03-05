@@ -667,36 +667,40 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
 return byCurrency;
   }
 
-  // Unify balances into a single THB view (for readability).
-  // Shows EUR equivalent (≈) using fxConvert if available, otherwise period eurBaseRate.
-  function _unifyBalancesToTHB(balancesByCurRaw) {
+  // Unify balances into the user's display currency.
+  // Goal: the UI follows the account base currency (or period base if missing), instead of forcing THB.
+  function _unifyBalancesToDisplayCurrency(balancesByCurRaw) {
     const out = new Map();
-    const mTHB = new Map();
+    const displayCur = String(state?.user?.baseCurrency || state?.period?.baseCurrency || "EUR").toUpperCase();
+    const m = new Map();
     const eurBaseRate = Number(state?.period?.eurBaseRate) || 0;
 
-    function toTHB(amount, cur) {
+    function convert(amount, fromCur) {
       const amt = Number(amount) || 0;
-      const c = String(cur || "").toUpperCase();
-      if (!c) return 0;
-      if (c === "THB") return amt;
+      const from = String(fromCur || "").toUpperCase();
+      if (!from) return 0;
+      if (from === displayCur) return amt;
       if (typeof window.fxConvert === "function") {
-        const v = window.fxConvert(amt, c, "THB");
+        const v = window.fxConvert(amt, from, displayCur);
         return Number.isFinite(v) ? v : 0;
       }
-      // fallback: only EUR<->THB supported via period rate
-      if (c === "EUR" && eurBaseRate > 0) return amt * eurBaseRate;
+      // last-resort fallback: support EUR<->BASE using period eurBaseRate when displayCur or from is EUR
+      if (eurBaseRate > 0) {
+        if (from === "EUR" && displayCur === "THB") return amt * eurBaseRate;
+        if (from === "THB" && displayCur === "EUR") return amt / eurBaseRate;
+      }
       return 0;
     }
 
-    for (const [cur, m] of (balancesByCurRaw || new Map()).entries()) {
-      for (const [memberId, v] of m.entries()) {
-        const thb = toTHB(v, cur);
-        if (!thb) continue;
-        mTHB.set(memberId, (mTHB.get(memberId) || 0) + thb);
+    for (const [cur, mm] of (balancesByCurRaw || new Map()).entries()) {
+      for (const [memberId, v] of (mm || new Map()).entries()) {
+        const cv = convert(v, cur);
+        if (!cv) continue;
+        m.set(memberId, (m.get(memberId) || 0) + cv);
       }
     }
 
-    out.set("THB", mTHB);
+    out.set(displayCur, m);
     return out;
   }
 
@@ -1805,7 +1809,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
         if (Math.abs(net) < 1e-9) continue;
         tripLines.push(`<div style="display:flex;justify-content:space-between;gap:12px;">
           <div class="muted">${escapeHTML(r.trip_name || "Trip")}</div>
-          <div>${escapeHTML(_fmtMoney(_round2(net), r.currency))} <span class="muted">${escapeHTML(r.currency)}</span></div>
+          <div>${escapeHTML(_fmtMoney(_round2(net), r.currency))}</div>
         </div>`);
       }
 
@@ -1821,8 +1825,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       `;
     })();
 
-const balancesByCurRaw = _computeBalances();
-    const balancesByCur = _unifyBalancesToTHB(balancesByCurRaw);
+    const balancesByCurRaw = _computeBalances();
+    const balancesByCur = _unifyBalancesToDisplayCurrency(balancesByCurRaw);
     const settlementsByCur = _computeSettlements(balancesByCur);
 
     const balHTML = (() => {
@@ -1836,7 +1840,7 @@ const balancesByCurRaw = _computeBalances();
           parts.push(
             `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
               <span>${escapeHTML(mem.name)}${mem.isMe ? " (moi)" : ""}</span>
-              <strong class="${cls}">${_fmtMoney(v, cur)}${(String(cur).toUpperCase()==="THB" ? ` <span class="muted" style="font-weight:400;">(≈ ${_fmtMoney(_safeFx(v, "THB", "EUR"), "EUR")})</span>` : "")}</strong>
+              <strong class="${cls}">${_fmtMoney(v, cur)}</strong>
             </div>`
           );
         }

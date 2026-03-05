@@ -36,6 +36,12 @@ function _fxGetEurRates() {
 // Manual EUR->XXX rates (fallback when Auto FX provider doesn't provide the currency)
 // Stored as: { "LAK": { rate: 30769.41, asOf: "YYYY-MM-DD" }, ... }
 function _fxGetManualRatesRaw() {
+  // Prefer DB-backed cache loaded into state.fx.manualRates
+  try {
+    const m = state?.fx?.manualRates;
+    if (m && typeof m === "object") return m;
+  } catch (_) {}
+  // Fallback (legacy/local only)
   try { return JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.fx_manual_rates) || "{}"); } catch (_) { return {}; }
 }
 function _fxGetManualAsofLegacy() {
@@ -71,6 +77,12 @@ function _fxGetManualRates() {
   return _fxNormalizeManualRates(_fxGetManualRatesRaw());
 }
 function _fxSetManualRates(mapObj) {
+  // Update in-memory cache
+  try {
+    if (!state.fx) state.fx = {};
+    state.fx.manualRates = mapObj || {};
+  } catch (_) {}
+  // Legacy/local mirror (offline fallback)
   try { localStorage.setItem(TB_CONST.LS_KEYS.fx_manual_rates, JSON.stringify(mapObj || {})); } catch (_) {}
 }
 function _fxTodayISO() {
@@ -103,6 +115,39 @@ function tbFxAutoStatus() {
 }
 
 
+async function _fxUpsertManualRateSB(cur, rate, asOf) {
+  try {
+    if (!window.sb || !window.sbUser) return;
+    const c = String(cur || "").trim().toUpperCase();
+    const r = Number(rate);
+    const day = String(asOf || _fxTodayISO()).slice(0, 10);
+    if (!c || c === "EUR" || !/^[A-Z]{3}$/.test(c)) return;
+    if (!Number.isFinite(r) || r <= 0) return;
+    await window.sb.from(TB_CONST.TABLES.fx_manual_rates).upsert({
+      user_id: window.sbUser.id,
+      currency: c,
+      rate_to_eur: r,
+      as_of: day,
+    }, { onConflict: "user_id,currency" });
+  } catch (e) {
+    console.warn("[fx_manual_rates] upsert failed", e?.message || e);
+  }
+}
+
+async function _fxDeleteManualRateSB(cur) {
+  try {
+    if (!window.sb || !window.sbUser) return;
+    const c = String(cur || "").trim().toUpperCase();
+    if (!c || c === "EUR" || !/^[A-Z]{3}$/.test(c)) return;
+    await window.sb.from(TB_CONST.TABLES.fx_manual_rates)
+      .delete()
+      .eq("user_id", window.sbUser.id)
+      .eq("currency", c);
+  } catch (e) {
+    console.warn("[fx_manual_rates] delete failed", e?.message || e);
+  }
+}
+
 function tbFxSetManualRate(cur, rate, asOf) {
   const c = String(cur || "").trim().toUpperCase();
   const r = Number(rate);
@@ -113,6 +158,9 @@ function tbFxSetManualRate(cur, rate, asOf) {
   map[c] = { rate: r, asOf: today };
   _fxSetManualRates(map);
 
+  // DB-backed persistence (fire-and-forget)
+  try { _fxUpsertManualRateSB(c, r, today); } catch (_) {}
+
   // Keep legacy asOf map in sync (safe migration)
   try {
     const legacy = _fxGetManualAsofLegacy();
@@ -121,6 +169,22 @@ function tbFxSetManualRate(cur, rate, asOf) {
   } catch (_) {}
 
   return map;
+}
+
+function tbFxDeleteManualRate(cur) {
+  const c = String(cur || "").trim().toUpperCase();
+  if (!c || !/^[A-Z]{3}$/.test(c) || c === "EUR") return;
+  const map = _fxGetManualRates();
+  delete map[c];
+  _fxSetManualRates(map);
+  // legacy asOf
+  try {
+    const legacy = _fxGetManualAsofLegacy();
+    delete legacy[c];
+    localStorage.setItem(TB_CONST.LS_KEYS.fx_manual_asof, JSON.stringify(legacy));
+  } catch (_) {}
+  // DB delete (fire-and-forget)
+  try { _fxDeleteManualRateSB(c); } catch (_) {}
 }
 function tbFxDeleteManualRate(cur) {
   const c = String(cur || "").trim().toUpperCase();

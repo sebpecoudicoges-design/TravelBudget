@@ -391,7 +391,7 @@ async function loadFromSupabase() {
 
   // settings
   {
-    const { data: s, error: sErr } = await sb.from(TB_CONST.TABLES.settings).select("theme,palette_json,palette_preset").eq("user_id", sbUser.id).maybeSingle();
+    const { data: s, error: sErr } = await sb.from(TB_CONST.TABLES.settings).select("theme,palette_json,palette_preset,base_currency").eq("user_id", sbUser.id).maybeSingle();
     if (sErr) throw sErr;
 
     if (s) {
@@ -405,7 +405,39 @@ async function loadFromSupabase() {
       if (p && isValidPalette(p)) {
         await applyPalette(p, preset || findPresetNameForPalette(p), { persistLocal: true, persistRemote: false });
       }
+
+      // account base currency (fallback only; segments/periods still drive budgeting)
+      try {
+        const bc = String(s.base_currency || "").trim().toUpperCase();
+        if (bc && /^[A-Z]{3}$/.test(bc)) {
+          if (!state.user) state.user = {};
+          state.user.baseCurrency = bc;
+        }
+      } catch (_) {}
     }
+  }
+
+  // FX manual fallback (DB-backed)
+  try {
+    const { data: fxm, error: fxmErr } = await sb
+      .from(TB_CONST.TABLES.fx_manual_rates)
+      .select("currency,rate_to_eur,as_of")
+      .eq("user_id", sbUser.id);
+    if (fxmErr) throw fxmErr;
+    const out = {};
+    for (const r of (fxm || [])) {
+      const c = String(r.currency || "").trim().toUpperCase();
+      const rate = Number(r.rate_to_eur);
+      const asOf = r.as_of ? String(r.as_of).slice(0, 10) : null;
+      if (c && c !== "EUR" && /^[A-Z]{3}$/.test(c) && Number.isFinite(rate) && rate > 0) {
+        out[c] = { rate, asOf };
+      }
+    }
+    if (!state.fx) state.fx = {};
+    state.fx.manualRates = out;
+  } catch (e) {
+    // Non-blocking (table may not exist yet in some environments)
+    console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
   }
 
   const { data: periods, error: pErr } = await sb

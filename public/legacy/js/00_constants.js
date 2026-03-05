@@ -1,4 +1,4 @@
-window.__TB_BUILD = "6.7.10";
+window.__TB_BUILD = "6.7.11";
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -25,6 +25,8 @@ window.__TB_BUILD = "6.7.10";
     trip_settlements: "trip_settlements",
     trip_settlement_events: "trip_settlement_events",
     v_trip_user_net_balances: "v_trip_user_net_balances",
+
+    fx_manual_rates: "fx_manual_rates",
   });
 
   const COLS = Object.freeze({
@@ -37,6 +39,7 @@ window.__TB_BUILD = "6.7.10";
     period_id: "period_id",
     wallet_id: "wallet_id",
     currency: "currency",
+    base_currency: "base_currency",
     amount: "amount",
     type: "type",
     category: "category",
