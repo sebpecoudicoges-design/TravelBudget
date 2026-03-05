@@ -222,16 +222,17 @@ function getKpiScope() {
   }
 
   function base() {
-    // Dashboard charts should follow the account base currency (display), not the period/segment currency.
-    const uBase = String(window.state?.user?.baseCurrency || window.state?.user?.base_currency || "").toUpperCase();
-    if (uBase && /^[A-Z]{3}$/.test(uBase)) return uBase;
-
-    // Fallbacks (legacy)
+    // Cashflow curve should follow the period/segment display currency (legacy behavior).
     const seg = getSelectedSegment();
     if (seg && (seg.baseCurrency || seg.base_currency)) return String(seg.baseCurrency || seg.base_currency || "").toUpperCase();
     const d = todayStr();
     if (typeof window.getDisplayCurrency === "function") return String(window.getDisplayCurrency(d) || "").toUpperCase();
     return String(window.state?.period?.baseCurrency || "").toUpperCase();
+  }
+
+  function accountBase() {
+    const uBase = String(window.state?.user?.baseCurrency || window.state?.user?.base_currency || "").toUpperCase();
+    return (uBase && /^[A-Z]{3}$/.test(uBase)) ? uBase : "";
   }
 
   function todayStr() {
@@ -526,7 +527,10 @@ function buildSeries() {
       }
     });
 
-    // thresholds (EUR reference, user can override in Account settings; stored in localStorage)
+    // thresholds
+    // - Stored as EUR reference (so when account base currency changes, the displayed base threshold changes automatically)
+    // - The curve y-axis stays in period currency `b`.
+    // - We plot the threshold line converted into `b`, but label it in account base currency.
     let thrEur = 500;
     try {
       const THR_KEY = (window.TB_CONST?.LS_KEYS?.cashflow_threshold_eur || "travelbudget_cashflow_threshold_eur_v1");
@@ -535,11 +539,19 @@ function buildSeries() {
       if (Number.isFinite(n) && n > 0) thrEur = n;
     } catch (_) {}
 
-    const threshold500 = (typeof window.safeFxConvert === "function")
-      ? window.safeFxConvert(thrEur, "EUR", b, null)
-      : (typeof window.fxConvert === "function" ? window.fxConvert(thrEur, "EUR", b) : null);
+    const uBase = accountBase();
 
-    const thr500 = (threshold500 === null || !Number.isFinite(threshold500)) ? null : round2(threshold500);
+    // 1) Convert EUR ref -> account base (for label)
+    const thrBase = (uBase && typeof window.safeFxConvert === "function")
+      ? window.safeFxConvert(thrEur, "EUR", uBase, null)
+      : (uBase && typeof window.fxConvert === "function" ? window.fxConvert(thrEur, "EUR", uBase) : null);
+    const thrBaseVal = (thrBase === null || !Number.isFinite(thrBase)) ? null : round2(thrBase);
+
+    // 2) Convert account base -> curve currency (for the plotted line)
+    const thrLine = (thrBaseVal !== null && typeof window.safeFxConvert === "function")
+      ? window.safeFxConvert(thrBaseVal, uBase || "EUR", b, null)
+      : (thrBaseVal !== null && typeof window.fxConvert === "function" ? window.fxConvert(thrBaseVal, uBase || "EUR", b) : null);
+    const thr500 = (thrLine === null || !Number.isFinite(thrLine)) ? null : round2(thrLine);
 
     // validate: no NaN in series
     const allY = []
@@ -547,7 +559,8 @@ function buildSeries() {
       .filter(v => v !== null);
     if (allY.some(v => Number.isNaN(v))) return { ok:false, reason:"Séries invalides (NaN)." };
 
-    return { ok:true, b, start, end, tStr, dailyBudget, currentBalance, startBalance, actual, forecast, spentBars, budgetUsedVal, thr500, segFilter: getKpiScope(), segLabel: selSeg ? segLabel(selSeg) : "Période complète" };
+    const thrLabel = (thrBaseVal !== null && uBase) ? `${thrBaseVal} ${uBase}` : null;
+    return { ok:true, b, start, end, tStr, dailyBudget, currentBalance, startBalance, actual, forecast, spentBars, budgetUsedVal, thr500, thrLabel, segFilter: getKpiScope(), segLabel: selSeg ? segLabel(selSeg) : "Période complète" };
   }
 
   async function renderCashflowChart() {
@@ -801,7 +814,7 @@ dataLabels: { enabled: false },
 	            y: built.thr500,
 	            borderColor: "#ef4444",
 	            strokeDashArray: 6,
-	            label: { text: `${built.thr500} ${String(built.b || "").toUpperCase()}`, style: { background: "#ef4444" } }
+	            label: { text: (built.thrLabel || `${built.thr500} ${String(built.b || "").toUpperCase()}`), style: { background: "#ef4444" } }
 	          }
         ] : [
           {
