@@ -188,16 +188,31 @@ window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(wallet
   const baseBal = Number(w.balance || 0);
   const wCur = String(w.currency || state?.period?.baseCurrency || "EUR").toUpperCase();
 
+  // Option A (rebasing): only count paid movements AFTER the last balance snapshot.
+  // If the column does not exist yet, we fallback to counting all transactions.
+  const snapRaw = w.balance_snapshot_at ?? w.balanceSnapshotAt ?? null;
+  const snapTs = snapRaw ? Date.parse(String(snapRaw)) : null;
+
   let delta = 0;
   for (const tx of (state.transactions || [])) {
     if (!tx) continue;
     const txWid = String(tx.walletId ?? tx.wallet_id ?? "");
     if (txWid !== wid) continue;
 
+    if (snapTs) {
+      const txCreated = tx.createdAt ?? tx.created_at ?? null;
+      const txTs = txCreated ? Date.parse(String(txCreated)) : null;
+      if (!txTs || txTs < snapTs) continue;
+    }
+
     // Wallet effective balance should only reflect paid ("pay now") movements.
     const p = (tx.payNow ?? tx.pay_now);
     const paid = (p === undefined) ? true : !!p;
     if (!paid) continue;
+
+    // Ignore internal transfers (they should not change net cash across wallets).
+    const isInternal = !!(tx.isInternal ?? tx.is_internal);
+    if (isInternal) continue;
 
     const amt = _tbTxAmountInCurrency(tx, wCur);
     if (!isFinite(amt) || amt === 0) continue;
