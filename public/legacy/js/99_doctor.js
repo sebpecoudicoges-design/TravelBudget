@@ -14,7 +14,8 @@
     ["budget_segments", ["id","user_id","period_id","start_date","end_date"]],
     ["categories", ["id","user_id","name"]],
     ["trip_groups", ["id","user_id"]],
-    ["trip_participants", ["trip_id","user_id"]],
+    // trip_participants uses auth_user_id (not user_id)
+    ["trip_participants", ["trip_id","auth_user_id","role"]],
   ];
 
   function classify(err) {
