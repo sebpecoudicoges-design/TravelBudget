@@ -12,6 +12,10 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     autoRefreshToken: true,
   },
 });
+// Expose Supabase client for Doctor/debug
+window.sb = sb;
+window.__TB_SB__ = sb;
+
 
 
 

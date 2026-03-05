@@ -120,6 +120,10 @@ async function _rpcAcceptInvite(token) {
 }
 
 async function _rpcBindMe(tripId) {
+  if (!tripId || typeof tripId !== "string") return;
+  // basic UUID sanity check to avoid 400 on RPC
+  if (!/^[0-9a-fA-F-]{36}$/.test(tripId)) return;
+
   const rpcName = TB_CONST?.RPCS?.bind_trip_member_to_auth || "bind_trip_member_to_auth";
   const legacy = TB_CONST?.RPCS?.trip_bind_member_to_auth || "trip_bind_member_to_auth";
   try {
