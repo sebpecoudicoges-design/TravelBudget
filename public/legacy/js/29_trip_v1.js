@@ -934,6 +934,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
   const txType = isOut ? "expense" : "income";
 
   const { error: rpcErr } = await sb.rpc("apply_transaction_v2", {
+    // NOTE: apply_transaction_v2 has defaults for p_user_id, but we keep it explicit for clarity
     p_user_id: uid,
     p_wallet_id: walletId,
     p_type: txType,
@@ -946,6 +947,10 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     p_subcategory: null,
     p_pay_now: true,
     p_out_of_budget: true,
+    // REQUIRED by apply_transaction_v2 overloads
+    p_night_covered: false,
+    // settlement wallet tx should NOT impact budgets
+    p_affects_budget: false,
     p_trip_expense_id: null,
     p_trip_share_link_id: null,
     ..._rpcFxSnapshotArgs(date, walletCurrency)
@@ -973,6 +978,24 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
   } catch (e) {
     console.warn("[Trip] settlement tx link failed", e);
   }
+
+  if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+}
+
+// Rename a trip member (participant) — minimal UX (prompt)
+async function _renameMember(memberId, currentName) {
+  await _ensureSession();
+  const m = (tripState.members || []).find(x => x.id === memberId);
+  const oldName = String(currentName || m?.name || "").trim();
+  const next = prompt("Nouveau nom du participant :", oldName);
+  const name = String(next || "").trim();
+  if (!name || name === oldName) return;
+
+  const { error } = await sb
+    .from(TB_CONST.TABLES.trip_members)
+    .update({ name })
+    .eq("id", memberId);
+  if (error) throw error;
 
   if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 }
@@ -1038,6 +1061,8 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
         p_pay_now: true,
         p_out_of_budget: true,
         p_night_covered: false,
+        // settlement wallet tx should NOT impact budgets
+        p_affects_budget: false,
     ..._rpcFxSnapshotArgs(date, cur)
   });
       if (rpcErr) throw rpcErr;
@@ -1330,6 +1355,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                       p_pay_now: false,
                       p_out_of_budget: out,
                       p_night_covered: false,
+                      p_affects_budget: !out,
     ..._rpcFxSnapshotArgs(date, cur)
   });
                     if (rpcErrB) throw rpcErrB;
@@ -1441,6 +1467,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           p_pay_now: true,
           p_out_of_budget: out,
           p_night_covered: false,
+          p_affects_budget: !out,
     ..._rpcFxSnapshotArgs(date, cur)
   });
         if (rpcErr) throw rpcErr;
@@ -1515,6 +1542,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           p_pay_now: true,
           p_out_of_budget: true, // key: do NOT count this advance in budget/allocations
           p_night_covered: false,
+          p_affects_budget: false,
     ..._rpcFxSnapshotArgs(date, cur)
   });
         if (rpcErrA) throw rpcErrA;
@@ -1565,6 +1593,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
               p_pay_now: false,
               p_out_of_budget: out,
               p_night_covered: false,
+              p_affects_budget: !out,
     ..._rpcFxSnapshotArgs(date, cur)
   });
             if (rpcErrB) throw rpcErrB;
@@ -1637,6 +1666,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                 p_pay_now: false,
                 p_out_of_budget: out,
                 p_night_covered: false,
+                p_affects_budget: !out,
     ..._rpcFxSnapshotArgs(date, cur)
   });
               if (rpcErr2) throw rpcErr2;
