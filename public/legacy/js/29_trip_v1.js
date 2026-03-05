@@ -2352,6 +2352,8 @@ toastOk("Trip supprimé.");
         }
       };
 
+    }
+
     const btnAddMem = _el("trip-add-member");
     if (btnAddMem) {
       btnAddMem.onclick = async () => {
