@@ -12,11 +12,13 @@
   // ---------- participants / sharing ----------
   async function _getMyTripRole(tripId) {
     try {
+      const uid = await _ensureSession();
+      if (!uid) return null;
       const { data, error } = await sb
         .from(TB_CONST.TABLES.trip_participants)
         .select("role")
         .eq("trip_id", tripId)
-        .eq("auth_user_id", state.user.id)
+        .eq("auth_user_id", uid)
         .maybeSingle();
       if (error) return null;
       return data?.role || null;

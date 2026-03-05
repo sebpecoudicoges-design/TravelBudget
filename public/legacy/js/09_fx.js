@@ -11,26 +11,19 @@ function _fxSetEurRates(rates) {
 function _fxGetEurRates() {
   try {
     const rates = JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates) || "{}") || {};
-    // Optional: filter by last provider keys to avoid "phantom" stale/incorrect currencies.
-    let keys = null;
-    try {
-      const rawKeys = localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_keys);
-      if (rawKeys) {
-        const arr = JSON.parse(rawKeys);
-        if (Array.isArray(arr) && arr.length) keys = arr.map(x => String(x||"").toUpperCase()).filter(Boolean);
-      }
-    } catch (_) {}
-    if (keys && keys.length) {
-      const out = {};
-      for (const k of keys) {
-        if (k === "EUR") { out.EUR = 1; continue; }
-        const v = Number(rates[k]);
-        if (Number.isFinite(v) && v > 0) out[k] = v;
-      }
-      return out;
+    // Sanitize only (do not depend on eur_rates_keys which can be incomplete and wrongly exclude currencies like THB)
+    const out = { EUR: 1 };
+    for (const [k, vv] of Object.entries(rates || {})) {
+      const code = String(k || "").trim().toUpperCase();
+      if (!code || code === "EUR") continue;
+      if (!/^[A-Z]{3}$/.test(code)) continue;
+      const v = Number(vv);
+      if (Number.isFinite(v) && v > 0) out[code] = v;
     }
-    return rates;
-  } catch (_) { return {}; }
+    return out;
+  } catch (_) {
+    return { EUR: 1 };
+  }
 }
 
 // Manual EUR->XXX rates (fallback when Auto FX provider doesn't provide the currency)

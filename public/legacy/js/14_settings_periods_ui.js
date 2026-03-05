@@ -290,11 +290,21 @@ function renderSettings(){
       const btn = card.querySelector("#tb-user-basecur-save");
       if (btn) {
         btn.onclick = () => safeCall("Enregistrer devise de base", async () => {
-          const s = _tbSb();
+          // Robust supabase getter (avoid _tbSb undefined)
+          const s = (function(){
+            try {
+              if (typeof window._tbSb === 'function') return window._tbSb();
+              if (window.__TB_SB__) return window.__TB_SB__;
+              if (window.sb) return window.sb;
+            } catch(_){ }
+            throw new Error('Supabase client not found');
+          })();
           if (!s) throw new Error("Supabase non prêt.");
           const v = String(card.querySelector("#tb-user-basecur")?.value || "").trim().toUpperCase();
           if (!v || !/^[A-Z]{3}$/.test(v)) throw new Error("Devise invalide (ISO3 attendu)");
-          await s.from(TB_CONST.TABLES.settings).upsert({ user_id: sbUser.id, base_currency: v }, { onConflict: "user_id" });
+          const uid = (window.sbUser && window.sbUser.id) ? window.sbUser.id : (await s.auth.getUser()).data?.user?.id;
+          if (!uid) throw new Error("Non authentifié");
+          await s.from(TB_CONST.TABLES.settings).upsert({ user_id: uid, base_currency: v }, { onConflict: "user_id" });
           if (!state.user) state.user = {};
           state.user.baseCurrency = v;
           if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("settings:base_currency"); else renderAll();
