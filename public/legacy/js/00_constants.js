@@ -50,11 +50,11 @@ window.__TB_BUILD = "6.7.08";
   });
 
   const RPCS = Object.freeze({
-    accept_trip_invite: \"accept_trip_invite\",
-    bind_trip_member_to_auth: \"bind_trip_member_to_auth\",
+    accept_trip_invite: "accept_trip_invite",
+    bind_trip_member_to_auth: "bind_trip_member_to_auth",
     // legacy fallback (older DB)
-    trip_accept_invite: \"trip_accept_invite\",
-    trip_bind_member_to_auth: \"trip_bind_member_to_auth\",
+    trip_accept_invite: "trip_accept_invite",
+    trip_bind_member_to_auth: "trip_bind_member_to_auth",
   });
 
   const LS_KEYS = Object.freeze({
