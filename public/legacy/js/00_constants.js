@@ -1,4 +1,4 @@
-window.__TB_BUILD = "8.0.1";
+window.__TB_BUILD = "8.1.0";
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -59,6 +59,7 @@ window.__TB_BUILD = "8.0.1";
     apply_transaction: "apply_transaction",
     delete_transaction: "delete_transaction",
     trip_get_balances_v1: "trip_get_balances_v1",
+    trip_apply_expense_v1: "trip_apply_expense_v1",
     // legacy fallback (older DB)
     trip_accept_invite: "trip_accept_invite",
     trip_bind_member_to_auth: "trip_bind_member_to_auth",

@@ -338,6 +338,14 @@ function _rpcFxSnapshotArgs(dateISO, txCurrency) {
 }
 
 
+// Trip Split: atomic expense+shares (V8.1 DB-first)
+async function _rpcTripApplyExpenseV1(sb, tripId, payload) {
+  await _ensureSession();
+  const fn = (TB_CONST && TB_CONST.RPCS && TB_CONST.RPCS.trip_apply_expense_v1) ? TB_CONST.RPCS.trip_apply_expense_v1 : "trip_apply_expense_v1";
+  return sb.rpc(fn, { p_trip_id: tripId, p_payload: payload });
+}
+
+
 function _normalizeCurrency(cur) {
     const fallback = (state?.period?.baseCurrency || "THB");
     const c = String(cur || fallback || "").trim().toUpperCase();
@@ -1459,34 +1467,32 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           const link = confirm(msg);
           if (link) {
             // Create trip expense first, then link.
-            const { data: ex, error: exErr } = await sb
-              .from(TB_CONST.TABLES.trip_expenses)
-              .insert([{
-                user_id: uid,
-                trip_id: tripId,
-                date,
-                label,
-                amount: amt,
-                currency: cur,
-                paid_by_member_id: paidByMemberId,
-              }])
-              .select("*")
-              .single();
-            if (exErr) throw exErr;
-
-            // Shares
+            // Create trip expense + shares atomically (DB-first V8.1)
             const memberIds = members.map(m => m.id);
             const parts = _computeSplitParts(amt, members, split);
             _validateSplitParts(amt, parts);
-            const shares = members.map((m, i) => ({
-              user_id: uid,
-              trip_id: tripId,
-              expense_id: ex.id,
-              member_id: m.id,
-              share_amount: parts[i] ?? 0,
-            }));
-            const { error: sErr } = await sb.from(TB_CONST.TABLES.trip_expense_shares).insert(shares);
-            if (sErr) throw sErr;
+
+            const payloadExp = {
+              expense_id: null,
+              date,
+              label,
+              amount: amt,
+              currency: cur,
+              paid_by_member_id: paidByMemberId,
+              shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
+            };
+
+            const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpenseV1(sb, tripId, payloadExp);
+            if (rpcErr) throw rpcErr;
+            const expId = (Array.isArray(rpcRows) ? rpcRows[0]?.expense_id : rpcRows?.expense_id) || null;
+            if (!expId) throw new Error("Trip: RPC trip_apply_expense_v1 n'a pas renvoyé expense_id.");
+
+            const { data: ex, error: exErr } = await sb
+              .from(TB_CONST.TABLES.trip_expenses)
+              .select("*")
+              .eq("id", expId)
+              .single();
+            if (exErr) throw exErr;
 
             await _linkExpenseToTransaction(ex.id, m0.id);
 
@@ -1601,36 +1607,33 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       }
     }
 
-    // 1) Create Trip expense + shares
+    // 1) Create Trip expense + shares (DB-first V8.1)
+    const memberIds = members.map(m => m.id);
+    const parts = _computeSplitParts(amt, members, split);
+    _validateSplitParts(amt, parts);
+
+    const payloadExp = {
+      expense_id: null,
+      date,
+      label,
+      amount: amt,
+      currency: cur,
+      paid_by_member_id: paidByMemberId,
+      shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
+    };
+
+    const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpenseV1(sb, tripId, payloadExp);
+    if (rpcErr) throw rpcErr;
+    const expId = (Array.isArray(rpcRows) ? rpcRows[0]?.expense_id : rpcRows?.expense_id) || null;
+    if (!expId) throw new Error("Trip: RPC trip_apply_expense_v1 n'a pas renvoyé expense_id.");
+
     const { data: ex, error: exErr } = await sb
       .from(TB_CONST.TABLES.trip_expenses)
-      .insert([{
-        user_id: uid,
-        trip_id: tripId,
-        date,
-        label,
-        amount: amt,
-        currency: cur,
-        paid_by_member_id: paidByMemberId,
-      }])
       .select("*")
+      .eq("id", expId)
       .single();
     if (exErr) throw exErr;
 
-    const memberIds = members.map(m => m.id);
-            const parts = _computeSplitParts(amt, members, split);
-
-    _validateSplitParts(amt, parts);
-
-    const shares = members.map((m, i) => ({
-      user_id: uid,
-      trip_id: tripId,
-      expense_id: ex.id,
-      member_id: m.id,
-      share_amount: parts[i] ?? 0,
-    }));
-    const { error: sErr } = await sb.from(TB_CONST.TABLES.trip_expense_shares).insert(shares);
-    if (sErr) throw sErr;
 
 
     // 2) Budget integration
