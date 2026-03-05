@@ -948,6 +948,118 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
 
   modal.style.display = "flex";
 }
+// =========================
+// Expense detail modal (UX)
+// =========================
+let _expDetailModalState = null;
+
+function _ensureExpenseDetailModal() {
+  let modal = document.getElementById("tripExpenseDetailModal");
+  if (modal) return modal;
+  modal = document.createElement("div");
+  modal.id = "tripExpenseDetailModal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px;";
+  modal.innerHTML = `
+    <div style="background:#fff;max-width:620px;width:100%;border-radius:14px;padding:14px 14px 12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.2);">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <h3 style="margin:0;">Détail dépense</h3>
+        <button id="tripExpDetailClose" class="btn" type="button">✕</button>
+      </div>
+      <div class="muted" id="tripExpDetailMeta" style="margin-top:6px;"></div>
+      <div id="tripExpDetailBody" style="margin-top:12px;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:flex-end;">
+        <button id="tripExpDetailOk" class="btn" type="button">OK</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const close = () => {
+    modal.style.display = "none";
+    _expDetailModalState = null;
+  };
+  modal.querySelector("#tripExpDetailClose").onclick = close;
+  modal.querySelector("#tripExpDetailOk").onclick = close;
+  modal.onclick = (e) => { if (e.target === modal) close(); };
+  return modal;
+}
+
+function _openExpenseDetailModal({ ex, shares, members }) {
+  const modal = _ensureExpenseDetailModal();
+  _expDetailModalState = { expenseId: ex?.id || null };
+
+  const payer = members.find(m => m.id === ex.paidByMemberId) || null;
+  const payerName = payer ? payer.name : "—";
+  const linked = ex.transactionId ? "• lié au budget" : "";
+
+  modal.querySelector("#tripExpDetailMeta").textContent =
+    `${ex.date || "—"} • payé par ${payerName} ${linked}`.trim();
+
+  const amt = Number(ex.amount) || 0;
+  const cur = ex.currency;
+
+  let sum = 0;
+  const rows = (shares || []).map(sh => {
+    const m = members.find(mm => mm.id === sh.memberId);
+    const shareAmt = Number(sh.shareAmount) || 0;
+    sum += shareAmt;
+    const pct = (amt > 0) ? (shareAmt / amt * 100) : 0;
+    return `
+      <tr>
+        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${escapeHTML(m?.name || "—")}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);text-align:right;white-space:nowrap;">${_fmtMoney(shareAmt, cur)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);text-align:right;white-space:nowrap;">${_round2(pct)}%</td>
+      </tr>
+    `;
+  }).join("");
+
+  const diff = _round2(sum - amt);
+  const warn = (Math.abs(diff) >= 0.01)
+    ? `<div class="muted" style="margin-top:10px;padding:10px;border-radius:10px;background:rgba(255,165,0,.12);">
+         ⚠ Somme des parts = ${_fmtMoney(sum, cur)} (écart ${_fmtMoney(diff, cur)}). Vérifie la répartition.
+       </div>`
+    : "";
+
+  const body = `
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+      <div style="min-width:0;">
+        <div style="font-weight:700;font-size:16px;">${escapeHTML(ex.label || "Dépense")}</div>
+        <div class="muted" style="font-size:12px;margin-top:2px;">${escapeHTML(ex.category || "—")}</div>
+      </div>
+      <div style="font-weight:800;font-size:18px;white-space:nowrap;">${_fmtMoney(amt, cur)}</div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <div class="muted" style="font-size:12px;margin-bottom:6px;">Répartition</div>
+      <div style="overflow:auto;border:1px solid rgba(0,0,0,.08);border-radius:12px;">
+        <table style="width:100%;border-collapse:collapse;min-width:420px;">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Participant</th>
+              <th style="text-align:right;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Part</th>
+              <th style="text-align:right;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">%</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || `<tr><td colspan="3" class="muted" style="padding:10px;">Aucune répartition trouvée.</td></tr>`}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td style="padding:8px;font-weight:700;">Total</td>
+              <td style="padding:8px;text-align:right;font-weight:700;white-space:nowrap;">${_fmtMoney(sum || 0, cur)}</td>
+              <td style="padding:8px;text-align:right;font-weight:700;">${amt > 0 ? _round2((sum/amt)*100) : 0}%</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      ${warn}
+    </div>
+  `;
+
+  modal.querySelector("#tripExpDetailBody").innerHTML = body;
+  modal.style.display = "flex";
+}
+
 
 async function _persistSettlementEventOnly() {
   if (!_settleModalState) throw new Error("Aucun règlement en cours.");
@@ -2098,7 +2210,6 @@ return `
               <label>Email invité (optionnel)</label>
               <input id="trip-invitee-email" placeholder="ex: paul@email.com" />
             </div>
-            <!-- Rôle invite : masqué temporairement (inutile pour l'instant) -->
             <div class="field" style="align-self:flex-end;">
               <button class="btn" id="trip-invite" ${trip && canWrite ? "" : "disabled"}>Lien</button>
             </div>
@@ -2626,33 +2737,20 @@ toastOk("Règlement annulé.");
 
 
     root.querySelectorAll('[data-exp-detail]').forEach(btn => {
-      btn.onclick = async () => {
-        try {
-          const id = btn.getAttribute('data-exp-detail');
-          const ex = (tripState.expenses || []).find(e => e.id === id);
-          if (!ex) return;
-          const members = tripState.members || [];
-          const shares = (tripState.shares || []).filter(s => s.expenseId === id);
-          const lines = [];
-          lines.push(`${ex.label || 'Dépense'} • ${_fmtMoney(ex.amount, ex.currency)} • ${ex.date}`);
-          lines.push('');
-          if (!shares.length) {
-            lines.push('Aucune répartition trouvée.');
-          } else {
-            lines.push('Répartition :');
-            for (const sh of shares) {
-              const m = members.find(mm => mm.id === sh.memberId);
-              lines.push(`- ${(m?.name || '—')}: ${_fmtMoney(Number(sh.shareAmount)||0, ex.currency)}`);
-            }
-          }
-	          // Keep this super simple (MVP): show split detail in a single alert.
-	          alert(lines.join("\n"));
-        } catch (e) {
-          toastWarn(e?.message || String(e));
-        }
-      };
-    });
-    root.querySelectorAll("[data-del-exp]").forEach(btn => {
+  btn.onclick = async () => {
+    try {
+      const id = btn.getAttribute('data-exp-detail');
+      const ex = (tripState.expenses || []).find(e => e.id === id);
+      if (!ex) return;
+      const members = tripState.members || [];
+      const shares = (tripState.shares || []).filter(s => s.expenseId === id);
+      _openExpenseDetailModal({ ex, shares, members });
+    } catch (e) {
+      toastWarn(e?.message || String(e));
+    }
+  };
+});
+root.querySelectorAll("[data-del-exp]").forEach(btn => {
       btn.onclick = async () => {
         try {
           const id = btn.getAttribute("data-del-exp");
