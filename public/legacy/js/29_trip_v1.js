@@ -983,22 +983,6 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
 }
 
 // Rename a trip member (participant) — minimal UX (prompt)
-async function _renameMember(memberId, currentName) {
-  await _ensureSession();
-  const m = (tripState.members || []).find(x => x.id === memberId);
-  const oldName = String(currentName || m?.name || "").trim();
-  const next = prompt("Nouveau nom du participant :", oldName);
-  const name = String(next || "").trim();
-  if (!name || name === oldName) return;
-
-  const { error } = await sb
-    .from(TB_CONST.TABLES.trip_members)
-    .update({ name })
-    .eq("id", memberId);
-  if (error) throw error;
-
-  if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
-}
 
 async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
       const uid = await _ensureSession();
@@ -1177,49 +1161,54 @@ try {
   }
 
   async function _addMember(name, email) {
-  const uid = await _ensureSession();
-  const tripId = tripState.activeTripId;
-  if (!tripId) return;
-
-  const cleanName = String(name || "").trim();
-  if (!cleanName) throw new Error("Nom requis.");
-
-  const payload = { trip_id: tripId, name: cleanName, is_me: false, auth_user_id: null, user_id: uid };
-  const cleanEmail = String(email || "").trim();
-  if (cleanEmail) payload.email = cleanEmail;
-
-  let { error } = await sb.from(TB_CONST.TABLES.trip_members).insert([payload]);
-  if (error && String(error.message || "").toLowerCase().includes("email")) {
-    delete payload.email;
-    error = (await sb.from(TB_CONST.TABLES.trip_members).insert([payload])).error;
-  }
-  if (error) throw error;
-}
-
-  async function _deleteMember(memberId) {
     const uid = await _ensureSession();
     const tripId = tripState.activeTripId;
     if (!tripId) return;
 
+    const cleanName = String(name || "").trim();
+    if (!cleanName) throw new Error("Nom requis.");
+
+    const payload = { trip_id: tripId, name: cleanName, is_me: false, auth_user_id: null, user_id: uid };
+    const cleanEmail = String(email || "").trim();
+    if (cleanEmail) payload.email = cleanEmail;
+
+    let { error } = await sb.from(TB_CONST.TABLES.trip_members).insert([payload]);
+    if (error && String(error.message || "").toLowerCase().includes("email")) {
+      // tolerate unique/email constraints by inserting without email
+      delete payload.email;
+      error = (await sb.from(TB_CONST.TABLES.trip_members).insert([payload])).error;
+    }
+    if (error) throw error;
+  }
+
+  async function _deleteMember(memberId) {
+    await _ensureSession();
+    const tripId = tripState.activeTripId;
+    if (!tripId) return;
+
     // Block deletion if the member is referenced by an expense payer or any share.
-    const usedAsPayer = tripState.expenses.some(e => e.paidByMemberId === memberId);
-    const usedInShares = tripState.shares.some(s => s.memberId === memberId);
+    const usedAsPayer = (tripState.expenses || []).some(e => e.paidByMemberId === memberId);
+    const usedInShares = (tripState.shares || []).some(s => s.memberId === memberId);
     if (usedAsPayer || usedInShares) {
       toastWarn("Impossible de supprimer ce participant : il est lié à des dépenses (payeur et/ou parts). Réassigne ou supprime d'abord les dépenses concernées.");
       return;
     }
 
-    const { error } = await sb.from(TB_CONST.TABLES.trip_members).delete().eq("trip_id", tripId).eq("id", memberId);
+    const { error } = await sb
+      .from(TB_CONST.TABLES.trip_members)
+      .delete()
+      .eq("trip_id", tripId)
+      .eq("id", memberId);
     if (error) throw error;
+  }
 
   async function _renameMember(memberId, newName) {
-    const uid = await _ensureSession();
+    await _ensureSession();
     const tripId = tripState.activeTripId;
     if (!tripId) return;
     const name = String(newName || "").trim();
     if (!name) throw new Error("Nom invalide.");
 
-    // Never rename the DB-bound 'me' label automatically; but user can still rename if they want.
     const { error } = await sb
       .from(TB_CONST.TABLES.trip_members)
       .update({ name })
@@ -1227,9 +1216,6 @@ try {
       .eq("id", memberId);
     if (error) throw error;
   }
-
-  }
-
     async function _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
     const uid = await _ensureSession();
     const tripId = tripState.activeTripId;
@@ -2290,30 +2276,34 @@ toastOk("Participant ajouté.");
       btn.onclick = async () => {
         try {
           const id = btn.getAttribute("data-del-member");
+          if (!id) return;
           if (!confirm("Supprimer ce participant ?")) return;
           await _deleteMember(id);
           if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
-} catch (e) {
-          toastWarn(e?.message || String(e));
-        }
-      };
-
-
-    root.querySelectorAll('[data-rename-member]').forEach(btn => {
-      btn.onclick = async () => {
-        try {
-          const id = btn.getAttribute('data-rename-member');
-          const current = (tripState.members || []).find(m => m.id === id)?.name || '';
-          const name = prompt('Nouveau nom :', current);
-          if (name === null) return;
-          await _renameMember(id, name);
-          if (typeof window.__tripRefresh === 'function') await window.__tripRefresh({ activeOnly: true });
-          toastOk('Participant renommé.');
+          toastOk("Participant supprimé.");
         } catch (e) {
           toastWarn(e?.message || String(e));
         }
       };
     });
+
+    root.querySelectorAll("[data-rename-member]").forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          const id = btn.getAttribute("data-rename-member");
+          if (!id) return;
+          const current = (tripState.members || []).find(m => m.id === id)?.name || "";
+          const next = prompt("Nouveau nom du participant :", current);
+          if (next === null) return;
+          const name = String(next || "").trim();
+          if (!name || name === String(current || "").trim()) return;
+          await _renameMember(id, name);
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+          toastOk("Participant renommé.");
+        } catch (e) {
+          toastWarn(e?.message || String(e));
+        }
+      };
     });
 
 
