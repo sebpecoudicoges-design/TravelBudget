@@ -20,7 +20,7 @@
       "nav.dashboard": "Tableau",
       "nav.transactions": "Transactions",
       "nav.settings": "Settings",
-      "nav.trip": "Trip",
+      "nav.trip": "Partage",
       "nav.members": "Membres",
 
       // Onboarding
@@ -53,7 +53,7 @@
       "help.guides.title": "Guides rapides",
       "help.action.open_settings": "Ouvrir Settings",
       "help.action.open_dashboard": "Ouvrir Dashboard",
-      "help.action.open_trip": "Ouvrir Trip",
+      "help.action.open_trip": "Ouvrir Partage",
       "help.guide.create_trip.title": "Créer ton voyage",
       "help.guide.create_trip.body": "Settings → Voyage : dates, puis périodes.",
       "help.guide.create_periods.title": "Créer / ajuster tes périodes",
@@ -62,8 +62,8 @@
       "help.guide.fx.body": "Automatique si possible. Sinon, tu peux saisir un taux perso.",
       "help.guide.wallets.title": "Wallets : cash / banque",
       "help.guide.wallets.body": "1 wallet par poche (cash/banque).",
-      "help.guide.trip.title": "Trip : partager les dépenses",
-      "help.guide.trip.body": "Trip : membres + dépenses (V1 : parts égales).",
+      "help.guide.trip.title": "Partage : partager les dépenses",
+      "help.guide.trip.body": "Partage : membres + dépenses (V1 : parts égales).",
 
       // Assistant
       "assistant.title": "Assistant",
@@ -114,7 +114,7 @@
       "nav.dashboard": "Dashboard",
       "nav.transactions": "Transactions",
       "nav.settings": "Settings",
-      "nav.trip": "Trip",
+      "nav.trip": "Partage",
       "nav.members": "Members",
 
       // Onboarding
@@ -147,7 +147,7 @@
       "help.guides.title": "Quick guides",
       "help.action.open_settings": "Open Settings",
       "help.action.open_dashboard": "Open Dashboard",
-      "help.action.open_trip": "Open Trip",
+      "help.action.open_trip": "Open Split",
       "help.guide.create_trip.title": "Create your trip",
       "help.guide.create_trip.body": "Go to <b>Settings → Trip</b>, set dates, then create your periods (segments).",
       "help.guide.create_periods.title": "Create / adjust periods",

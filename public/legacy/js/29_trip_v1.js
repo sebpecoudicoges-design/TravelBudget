@@ -1186,6 +1186,23 @@ try {
 
     const { error } = await sb.from(TB_CONST.TABLES.trip_members).delete().eq("trip_id", tripId).eq("id", memberId);
     if (error) throw error;
+
+  async function _renameMember(memberId, newName) {
+    const uid = await _ensureSession();
+    const tripId = tripState.activeTripId;
+    if (!tripId) return;
+    const name = String(newName || "").trim();
+    if (!name) throw new Error("Nom invalide.");
+
+    // Never rename the DB-bound 'me' label automatically; but user can still rename if they want.
+    const { error } = await sb
+      .from(TB_CONST.TABLES.trip_members)
+      .update({ name })
+      .eq("trip_id", tripId)
+      .eq("id", memberId);
+    if (error) throw error;
+  }
+
   }
 
     async function _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
@@ -1788,44 +1805,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
     
 
-    const globalNetHTML = (() => {
-      const rows = (tripState.globalNetRows || []);
-      if (!rows.length) return "";
-      // Aggregate totals by currency
-      const totals = new Map(); // cur -> net
-      for (const r of rows) {
-        const cur = r.currency;
-        const net = Number(r.net) || 0;
-        totals.set(cur, (totals.get(cur) || 0) + net);
-      }
-      const totalLines = [];
-      for (const [cur, net] of totals.entries()) {
-        const label = net < -1e-9 ? "Net (je dois)" : (net > 1e-9 ? "Net (on me doit)" : "Net");
-        totalLines.push(`<div><b>${escapeHTML(cur)}</b> : ${escapeHTML(_fmtMoney(_round2(net), cur))}</div>`);
-      }
+    const globalNetHTML = "";// removed: global net to avoid confusion
 
-      // Per-trip breakdown (only show trips with non-zero net)
-      const tripLines = [];
-      for (const r of rows) {
-        const net = Number(r.net) || 0;
-        if (Math.abs(net) < 1e-9) continue;
-        tripLines.push(`<div style="display:flex;justify-content:space-between;gap:12px;">
-          <div class="muted">${escapeHTML(r.trip_name || "Trip")}</div>
-          <div>${escapeHTML(_fmtMoney(_round2(net), r.currency))}</div>
-        </div>`);
-      }
-
-      return `
-        <div class="card" style="margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-            <h3 style="margin:0;">Solde global</h3>
-            <div class="muted" style="font-size:12px;">(tous trips)</div>
-          </div>
-          <div style="margin-top:8px;">${totalLines.join("") || `<div class="muted">0</div>`}</div>
-          ${tripLines.length ? `<div style="margin-top:10px;border-top:1px solid rgba(0,0,0,.08);padding-top:10px;">${tripLines.join("")}</div>` : ""}
-        </div>
-      `;
-    })();
 
     const balancesByCurRaw = _computeBalances();
     const balancesByCur = _unifyBalancesToDisplayCurrency(balancesByCurRaw);
@@ -1904,6 +1885,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           const isMeInvolved = !!me && (t.fromId === me.id || t.toId === me.id);
           let actionBtn = "";
           let actionOnlyBtn = "";
+
+          // Wallet-based settlement only makes sense when I am involved (it creates a Budget transaction in MY wallets).
           if (isMeInvolved) {
             const actionLabel = (t.fromId === me.id) ? `Je paie ${escapeHTML(to?.name || "—")}` : `Je reçois de ${escapeHTML(from?.name || "—")}`;
             actionBtn = `<button class="btn" type="button"
@@ -1911,12 +1894,18 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                           data-settle-to="${t.toId}"
                           data-settle-cur="${escapeHTML(cur)}"
                           data-settle-amt="${t.amount}">${actionLabel}</button>`;
+          }
+
+          // NEW: allow recording a manual settlement even when neither side is "me" (tiers ↔ tiers).
+          // This only records a trip_settlement_event, and does NOT touch wallets.
+          if (canWrite) {
+            const labelOnly = isMeInvolved ? "Solder (sans wallet)" : "Marquer comme réglé";
             actionOnlyBtn = `<button class="btn" type="button" style="background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);"
                           data-settle-only="1"
                           data-settle-from="${t.fromId}"
                           data-settle-to="${t.toId}"
                           data-settle-cur="${escapeHTML(cur)}"
-                          data-settle-amt="${t.amount}">Solder (sans wallet)</button>`;
+                          data-settle-amt="${t.amount}">${labelOnly}</button>`;
           }
 
           parts.push(
@@ -1981,24 +1970,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     const expensesHTML = expenses.length
       ? expenses.map(ex => {
           const payer = members.find(m => m.id === ex.paidByMemberId);
-          const canMove = canWrite && (tripState.trips || []).length > 1;
-
-          const moveOptions = (tripState.trips || [])
-            .filter(t => t.id !== tripState.activeTripId)
-            .map(t => `<option value="${t.id}">${escapeHTML(t.name)}</option>`)
-            .join("");
-
-          const moveUI = canMove ? `
-            <div style="display:flex; gap:8px; align-items:center;">
-              <select class="input" data-move-trip="${ex.id}" style="height:32px; padding:0 8px;">
-                <option value="">Déplacer vers…</option>
-                ${moveOptions}
-              </select>
-              <button class="btn" type="button" data-move-exp="${ex.id}">Déplacer</button>
-            </div>
-          ` : "";
-
-          return `
+          const moveUI = ""; // removed move between trips
+return `
             <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.04); gap:12px;">
               <div style="min-width:0;">
                 <div style="font-weight:700;">${escapeHTML(ex.label)}</div>
@@ -2007,6 +1980,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
               <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
                 <strong>${_fmtMoney(ex.amount, ex.currency)}</strong>
                 ${moveUI}
+                <button class="btn" type="button" data-exp-detail="${ex.id}">Détail</button>
                 <button class="btn danger" type="button" data-del-exp="${ex.id}">Supprimer</button>
               </div>
             </div>
@@ -2018,15 +1992,15 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       ${globalNetHTML}
       <div class="grid">
         <div class="card">
-          <h2>Voyage</h2>
+          <h2>Partage</h2>
           <div class="row" style="margin-bottom:10px;">
             <div class="field" style="min-width:260px;">
-              <label>Trip actif</label>
+              <label>Partage actif</label>
               <select id="trip-active">${tripOptions || ""}</select>
             </div>
             <div class="field" style="flex:1;">
-              <label>Nouveau trip</label>
-              <input id="trip-new-name" placeholder="Ex: Thaïlande" />
+              <label>Nouveau partage</label>
+              <input id="trip-new-name" placeholder="Ex: Laos" />
             </div>
             <div class="field" style="align-self:flex-end;">
               <button class="btn primary" id="trip-create">Créer</button>
@@ -2092,6 +2066,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                     ${m.email ? escapeHTML(m.email) : `<em>invitation en attente</em>`}
                   </div>
                 </div>
+                ${canWrite ? `<button class="btn" type="button" data-rename-member="${m.id}">Renommer</button>` : ``}
                 <button class="btn danger" data-del-member="${m.id}">Supprimer</button>
               </div>
             `).join("") : `<div class="muted">Aucun participant.</div>`}
@@ -2292,6 +2267,23 @@ toastOk("Participant ajouté.");
           toastWarn(e?.message || String(e));
         }
       };
+
+
+    root.querySelectorAll('[data-rename-member]').forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          const id = btn.getAttribute('data-rename-member');
+          const current = (tripState.members || []).find(m => m.id === id)?.name || '';
+          const name = prompt('Nouveau nom :', current);
+          if (name === null) return;
+          await _renameMember(id, name);
+          if (typeof window.__tripRefresh === 'function') await window.__tripRefresh({ activeOnly: true });
+          toastOk('Participant renommé.');
+        } catch (e) {
+          toastWarn(e?.message || String(e));
+        }
+      };
+    });
     });
 
 
@@ -2551,6 +2543,35 @@ toastOk("Règlement annulé.");
       };
     }
 
+
+
+    root.querySelectorAll('[data-exp-detail]').forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          const id = btn.getAttribute('data-exp-detail');
+          const ex = (tripState.expenses || []).find(e => e.id === id);
+          if (!ex) return;
+          const members = tripState.members || [];
+          const shares = (tripState.shares || []).filter(s => s.expenseId === id);
+          const lines = [];
+          lines.push(`${ex.label || 'Dépense'} • ${_fmtMoney(ex.amount, ex.currency)} • ${ex.date}`);
+          lines.push('');
+          if (!shares.length) {
+            lines.push('Aucune répartition trouvée.');
+          } else {
+            lines.push('Répartition :');
+            for (const sh of shares) {
+              const m = members.find(mm => mm.id === sh.memberId);
+              lines.push(`- ${(m?.name || '—')}: ${_fmtMoney(Number(sh.shareAmount)||0, ex.currency)}`);
+            }
+          }
+          alert(lines.join('
+'));
+        } catch (e) {
+          toastWarn(e?.message || String(e));
+        }
+      };
+    });
     root.querySelectorAll("[data-del-exp]").forEach(btn => {
       btn.onclick = async () => {
         try {
