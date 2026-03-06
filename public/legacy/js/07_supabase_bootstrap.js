@@ -583,6 +583,8 @@ async function loadFromSupabase() {
     currency: x.currency,
     balance: Number(x.balance),
     type: x.type || "other",
+    balance_snapshot_at: x.balance_snapshot_at || null,
+    balanceSnapshotAt: x.balance_snapshot_at || null,
   }));
 
   state.transactions = (tx || []).map((x) => ({

@@ -1113,21 +1113,65 @@ function _openExpenseDetailModal({ ex, shares, members }) {
 }
 
 
-async function _persistSettlementEventOnly() {
-  if (!_settleModalState) throw new Error("Aucun règlement en cours.");
+async function _createSettlementEventOnly({ tripId, currency, amount, fromId, toId }) {
+  const cur = String(currency || "").trim().toUpperCase();
+  const amt = _round2(Number(amount) || 0);
+  if (!tripId || !fromId || !toId || !cur || !(amt > 0)) throw new Error("Règlement invalide.");
+
+  if (sb?.rpc && TB_CONST?.RPCS?.trip_create_settlement_v1) {
+    const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_create_settlement_v1, {
+      p_trip_id: tripId,
+      p_currency: cur,
+      p_amount: amt,
+      p_from_member_id: fromId,
+      p_to_member_id: toId,
+    });
+    if (!error) return data;
+    console.warn("[Trip] trip_create_settlement_v1 fallback", error);
+  }
+
   const uid = await _ensureSession();
-  const { fromId, toId, currency, amount } = _settleModalState;
   const eventId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(16).slice(2);
   const { error: seInsErr } = await sb.from(TB_CONST.TABLES.trip_settlement_events).insert([{
     id: eventId,
-    trip_id: tripState.activeTripId,
-    currency: String(currency || "").trim().toUpperCase(),
-    amount: _round2(Number(amount) || 0),
+    trip_id: tripId,
+    currency: cur,
+    amount: amt,
     from_member_id: fromId,
     to_member_id: toId,
     created_by: uid,
   }]);
   if (seInsErr) throw seInsErr;
+  return eventId;
+}
+
+async function _cancelSettlementEvent(settlementEventId) {
+  const id = String(settlementEventId || "").trim();
+  if (!id) throw new Error("Règlement introuvable.");
+
+  if (sb?.rpc && TB_CONST?.RPCS?.trip_cancel_settlement_v1) {
+    const { error } = await sb.rpc(TB_CONST.RPCS.trip_cancel_settlement_v1, { p_event_id: id });
+    if (!error) return;
+    console.warn("[Trip] trip_cancel_settlement_v1 fallback", error);
+  }
+
+  const { error } = await sb
+    .from(TB_CONST.TABLES.trip_settlement_events)
+    .update({ cancelled_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+async function _persistSettlementEventOnly() {
+  if (!_settleModalState) throw new Error("Aucun règlement en cours.");
+  const { fromId, toId, currency, amount } = _settleModalState;
+  await _createSettlementEventOnly({
+    tripId: tripState.activeTripId,
+    currency,
+    amount,
+    fromId,
+    toId,
+  });
   if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 }
 
@@ -2731,11 +2775,7 @@ toastOk("Dépense ajoutée.");
           if (!id) return;
           const ok = confirm("Annuler ce règlement ?\n\nNote: cela ne supprime PAS la transaction wallet associée (si elle existe).");
           if (!ok) return;
-          const { error } = await sb
-            .from(TB_CONST.TABLES.trip_settlement_events)
-            .update({ cancelled_at: new Date().toISOString() })
-            .eq("id", id);
-          if (error) throw error;
+          await _cancelSettlementEvent(id);
           if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 toastOk("Règlement annulé.");
         } catch (e) {
