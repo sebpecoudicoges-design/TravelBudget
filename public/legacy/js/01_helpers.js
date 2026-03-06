@@ -178,52 +178,60 @@ function _tbTxAmountInCurrency(tx, toCur) {
   return amt; // fallback: no conversion
 }
 
-// Expose helper globally for other modules
-window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(walletId) {
-  const wid = String(walletId || "");
-  if (!wid || !window.state) return 0;
-  const w = (state.wallets || []).find(x => String(x?.id || "") === wid);
-  if (!w) return 0;
+// --- helper robuste pour convertir en timestamp ---
+function _tbTs(v) {
+  if (v === null || v === undefined || v === "") return null;
 
-  const baseBal = Number(w.balance || 0);
-  const wCur = String(w.currency || state?.period?.baseCurrency || "EUR").toUpperCase();
-
-  // Option A (rebasing): only count paid movements AFTER the last balance snapshot.
-  // If the column does not exist yet, we fallback to counting all transactions.
-  const snapRaw = w.balance_snapshot_at ?? w.balanceSnapshotAt ?? null;
-  const snapTs = snapRaw ? Date.parse(String(snapRaw)) : null;
-
-  let delta = 0;
-  for (const tx of (state.transactions || [])) {
-    if (!tx) continue;
-    const txWid = String(tx.walletId ?? tx.wallet_id ?? "");
-    if (txWid !== wid) continue;
-
-    if (snapTs) {
-      const txCreated = tx.createdAt ?? tx.created_at ?? null;
-      const txTs = txCreated ? Date.parse(String(txCreated)) : null;
-      if (!txTs || txTs < snapTs) continue;
-    }
-
-    // Wallet effective balance should only reflect paid ("pay now") movements.
-    const p = (tx.payNow ?? tx.pay_now);
-    const paid = (p === undefined) ? true : !!p;
-    if (!paid) continue;
-
-    // Ignore internal transfers (they should not change net cash across wallets).
-    const isInternal = !!(tx.isInternal ?? tx.is_internal);
-    if (isInternal) continue;
-
-    const amt = _tbTxAmountInCurrency(tx, wCur);
-    if (!isFinite(amt) || amt === 0) continue;
-
-    const t = String(tx.type || "").toLowerCase();
-    if (t === "income") delta += amt;
-    else if (t === "expense") delta -= amt;
+  // déjà un nombre (timestamp ms)
+  if (typeof v === "number") {
+    return Number.isFinite(v) ? v : null;
   }
 
-  return baseBal + delta;
-};
+  // string pouvant être un nombre
+  const n = Number(v);
+  if (Number.isFinite(n) && String(v).trim() !== "") {
+    if (n > 1e11) return n; // epoch ms
+  }
+
+  const ts = Date.parse(String(v));
+  return Number.isFinite(ts) ? ts : null;
+}
+
+
+// --- calcul du solde effectif d'une wallet ---
+function tbGetWalletEffectiveBalance(walletId) {
+
+  const w = state.wallets.find(x => x.id === walletId);
+  if (!w) return 0;
+
+  const base = Number(w.balance || 0);
+
+  const snapRaw = w.balance_snapshot_at ?? w.balanceSnapshotAt ?? null;
+  const snapTs = _tbTs(snapRaw);
+
+  let delta = 0;
+
+  const txs = state.transactions || [];
+
+  for (const tx of txs) {
+
+    if (tx.walletId !== walletId) continue;
+
+    if (tx.payNow === false) continue;
+    if (tx.isInternal === true) continue;
+
+    const txTs = _tbTs(tx.createdAt ?? tx.created_at ?? null);
+
+    if (snapTs && txTs && txTs < snapTs) continue;
+
+    const amount = Number(tx.amount || 0);
+
+    if (tx.type === "income") delta += amount;
+    else if (tx.type === "expense") delta -= amount;
+  }
+
+  return base + delta;
+}
 
 /* =========================
    Period names (V6.6.90)
