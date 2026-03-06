@@ -461,7 +461,7 @@ async function loadFromSupabase() {
   const walletsPromise = (async () => {
     const { data: w0, error: wErr } = await sb
       .from(TB_CONST.TABLES.wallets)
-      .select("id,period_id,name,currency,balance,type,created_at")
+      .select("id,period_id,name,currency,balance,type,created_at,balance_snapshot_at")
       .eq("user_id", sbUser.id)
       .eq("period_id", activePeriodId)
       .order("created_at", { ascending: true });
@@ -480,7 +480,7 @@ async function loadFromSupabase() {
 
       const { data: w2, error: w2Err } = await sb
         .from(TB_CONST.TABLES.wallets)
-        .select("id,period_id,name,currency,balance,type,created_at")
+        .select("id,period_id,name,currency,balance,type,created_at,balance_snapshot_at")
         .eq("user_id", sbUser.id)
         .eq("period_id", activePeriodId)
         .order("created_at", { ascending: true });
