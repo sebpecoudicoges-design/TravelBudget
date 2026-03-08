@@ -2530,8 +2530,9 @@ return `
           </div>
           <div id="trip-split-box" style="margin-top:6px;"></div>
           <div class="muted" style="margin-top:6px;">Si tu payes pour plusieurs, la wallet est débitée du total mais le budget ne comptera que ta part.</div>
-          <div class="row" style="justify-content:flex-end; margin-top:10px;">
-            <button class="btn primary" id="trip-add-exp" ${canWrite ? "" : "disabled"} ${trip ? "" : "disabled"}>Ajouter dépense</button>
+          <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
+            ${editingExpenseId ? `<button class="btn" type="button" id="trip-cancel-edit-exp">Annuler modification</button>` : ``}
+            <button class="btn primary" id="trip-add-exp" ${canWrite ? "" : "disabled"} ${trip ? "" : "disabled"}>${editingExpenseId ? "Enregistrer modifications" : "Ajouter dépense"}</button>
           </div>
         </div>
       </div>
@@ -2562,6 +2563,19 @@ return `
         </div>
       </div>
     `;
+
+    if (editingDraft) {
+      const paidSelInit = _el("trip-exp-paidby");
+      if (paidSelInit && editingDraft.paidByMemberId) paidSelInit.value = editingDraft.paidByMemberId;
+      const walletSelInit = _el("trip-exp-wallet");
+      if (walletSelInit && editingDraft.walletId) walletSelInit.value = editingDraft.walletId;
+      const catSelInit = _el("trip-exp-category");
+      if (catSelInit && editingDraft.category) catSelInit.value = editingDraft.category;
+      const outSelInit = _el("trip-exp-out");
+      if (outSelInit) outSelInit.value = editingDraft.outOfBudget ? "yes" : "no";
+      const splitModeInit = _el("trip-split-mode");
+      if (splitModeInit && editingDraft.split?.mode) splitModeInit.value = editingDraft.split.mode;
+    }
 
     const sel = _el("trip-active");
     if (sel) {
@@ -2717,7 +2731,8 @@ toastOk("Participant ajouté.");
       if (mode === "percent") {
         const def = members.length ? (100 / members.length) : 0;
         members.forEach(m => {
-          const v = (prevPct[m.id] ?? def).toString();
+          const seedPct = editingDraft?.split?.percents?.[m.id];
+          const v = (prevPct[m.id] ?? seedPct ?? def).toString();
           rows += `<tr>
             <td style="padding:6px 8px;">${escapeHTML(m.name || "—")}${m.isMe ? " <span class='muted'>(moi)</span>" : ""}</td>
             <td style="padding:6px 8px; text-align:right;">
@@ -2739,7 +2754,8 @@ toastOk("Participant ajouté.");
       if (mode === "amount") {
         const def = members.length ? (amt / members.length) : 0;
         members.forEach(m => {
-          const v = (prevAmt[m.id] ?? (def ? def.toFixed(2) : "")).toString();
+          const seedAmt = editingDraft?.split?.amounts?.[m.id];
+          const v = (prevAmt[m.id] ?? seedAmt ?? (def ? def.toFixed(2) : "")).toString();
           rows += `<tr>
             <td style="padding:6px 8px;">${escapeHTML(m.name || "—")}${m.isMe ? " <span class='muted'>(moi)</span>" : ""}</td>
             <td style="padding:6px 8px; text-align:right;">
@@ -2979,6 +2995,10 @@ root.querySelectorAll("[data-edit-exp]").forEach(btn => {
           const id = btn.getAttribute("data-edit-exp");
           if (!id) return;
           await _beginEditExpense(id);
+          try {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            setTimeout(() => { try { _el("trip-exp-label")?.focus(); } catch(_) {} }, 50);
+          } catch(_) {}
           toastOk("Mode modification activé.");
         } catch (e) {
           toastWarn(e?.message || String(e));
