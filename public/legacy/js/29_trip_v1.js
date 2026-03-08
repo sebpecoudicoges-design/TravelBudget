@@ -338,10 +338,12 @@ function _rpcFxSnapshotArgs(dateISO, txCurrency) {
 }
 
 
-// Trip Split: atomic expense+shares (V8.1 DB-first)
-async function _rpcTripApplyExpenseV1(sb, tripId, payload) {
+// Trip Split: atomic expense+shares (prefer V8.3.1 DB-first, fallback V8.1)
+async function _rpcTripApplyExpense(sb, tripId, payload) {
   await _ensureSession();
-  const fn = (TB_CONST && TB_CONST.RPCS && TB_CONST.RPCS.trip_apply_expense_v1) ? TB_CONST.RPCS.trip_apply_expense_v1 : "trip_apply_expense_v1";
+  const fn = (TB_CONST && TB_CONST.RPCS && TB_CONST.RPCS.trip_apply_expense_v2)
+    ? TB_CONST.RPCS.trip_apply_expense_v2
+    : ((TB_CONST && TB_CONST.RPCS && TB_CONST.RPCS.trip_apply_expense_v1) ? TB_CONST.RPCS.trip_apply_expense_v1 : "trip_apply_expense_v1");
   return sb.rpc(fn, { p_trip_id: tripId, p_payload: payload });
 }
 
@@ -1543,10 +1545,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
               shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
             };
 
-            const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpenseV1(sb, tripId, payloadExp);
+            const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpense(sb, tripId, payloadExp);
             if (rpcErr) throw rpcErr;
             const expId = (Array.isArray(rpcRows) ? rpcRows[0]?.expense_id : rpcRows?.expense_id) || null;
-            if (!expId) throw new Error("Trip: RPC trip_apply_expense_v1 n'a pas renvoyé expense_id.");
+            if (!expId) throw new Error("Trip: RPC trip_apply_expense n'a pas renvoyé expense_id.");
 
             const { data: ex, error: exErr } = await sb
               .from(TB_CONST.TABLES.trip_expenses)
@@ -1681,12 +1683,13 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       currency: cur,
       paid_by_member_id: paidByMemberId,
       shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
+      wallet_tx: { enabled: false },
     };
 
-    const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpenseV1(sb, tripId, payloadExp);
+    const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpense(sb, tripId, payloadExp);
     if (rpcErr) throw rpcErr;
     const expId = (Array.isArray(rpcRows) ? rpcRows[0]?.expense_id : rpcRows?.expense_id) || null;
-    if (!expId) throw new Error("Trip: RPC trip_apply_expense_v1 n'a pas renvoyé expense_id.");
+    if (!expId) throw new Error("Trip: RPC trip_apply_expense n'a pas renvoyé expense_id.");
 
     const { data: ex, error: exErr } = await sb
       .from(TB_CONST.TABLES.trip_expenses)
