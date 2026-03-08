@@ -210,6 +210,8 @@ function toastOk(msg) {
     shares: [],
     myRole: null,
     lastInviteUrl: null,
+    editingExpenseId: null,
+    editingExpenseDraft: null,
     _tripsLoaded: false,
   };
 
@@ -224,6 +226,8 @@ function toastOk(msg) {
       tripState.shares = [];
       tripState.myRole = null;
       tripState.lastInviteUrl = null;
+      tripState.editingExpenseId = null;
+      tripState.editingExpenseDraft = null;
       tripState._tripsLoaded = false;
     });
   } catch (_) {}
@@ -1491,7 +1495,114 @@ try {
       .eq("id", memberId);
     if (error) throw error;
   }
-    async function _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
+  
+  async function _expenseHasBudgetLinks(expenseId) {
+    try {
+      const { data, error } = await sb
+        .from(TB_CONST.TABLES.trip_expense_budget_links)
+        .select("id")
+        .eq("expense_id", expenseId)
+        .limit(1);
+      if (error) return false;
+      return !!(data && data.length);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function _buildEditDraftForExpense(expenseId) {
+    const ex = (tripState.expenses || []).find(x => x.id === expenseId);
+    if (!ex) return null;
+    const shares = (tripState.shares || []).filter(s => s.expenseId === expenseId);
+    const amounts = {};
+    shares.forEach(s => { amounts[s.memberId] = Number(s.shareAmount || 0); });
+    return {
+      expenseId: ex.id,
+      date: ex.date || _isoToday(),
+      label: ex.label || "",
+      amount: Number(ex.amount || 0),
+      currency: ex.currency || (state?.period?.baseCurrency || "EUR"),
+      paidByMemberId: ex.paidByMemberId || "",
+      walletId: "",
+      category: "Autre",
+      outOfBudget: false,
+      split: {
+        mode: "amount",
+        percents: {},
+        amounts,
+      },
+    };
+  }
+
+  async function _beginEditExpense(expenseId) {
+    const ex = (tripState.expenses || []).find(x => x.id === expenseId);
+    if (!ex) throw new Error("Dépense introuvable.");
+    if (ex.transactionId) {
+      throw new Error("Modification non supportée pour une dépense déjà liée au budget/wallet. Supprime-la puis recrée-la si besoin.");
+    }
+    const hasLinks = await _expenseHasBudgetLinks(expenseId);
+    if (hasLinks) {
+      throw new Error("Modification non supportée pour une dépense déjà liée au budget. Supprime-la puis recrée-la si besoin.");
+    }
+    tripState.editingExpenseId = expenseId;
+    tripState.editingExpenseDraft = _buildEditDraftForExpense(expenseId);
+    await _renderUI();
+  }
+
+  async function _cancelEditExpense() {
+    tripState.editingExpenseId = null;
+    tripState.editingExpenseDraft = null;
+    await _renderUI();
+  }
+
+  async function _updateExpense({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
+    const uid = await _ensureSession();
+    const tripId = tripState.activeTripId;
+    if (!tripId || !expenseId) throw new Error("Édition invalide.");
+
+    const members = tripState.members || [];
+    if (!members.length) throw new Error("Ajoute au moins un participant.");
+
+    const amt = Number(amount);
+    if (!date || !label || !isFinite(amt) || amt <= 0) throw new Error("Date, libellé et montant (>0) requis.");
+    if (!paidByMemberId) throw new Error("Sélectionne qui a payé.");
+
+    const currentEx = (tripState.expenses || []).find(x => x.id === expenseId);
+    if (!currentEx) throw new Error("Dépense introuvable.");
+    if (currentEx.transactionId) {
+      throw new Error("Modification non supportée pour une dépense déjà liée au budget/wallet. Supprime-la puis recrée-la si besoin.");
+    }
+    const hasLinks = await _expenseHasBudgetLinks(expenseId);
+    if (hasLinks) {
+      throw new Error("Modification non supportée pour une dépense déjà liée au budget. Supprime-la puis recrée-la si besoin.");
+    }
+
+    const cur = _normalizeCurrency(currency);
+    const parts = _computeSplitParts(amt, members, split);
+    _validateSplitParts(amt, parts);
+
+    const payloadExp = {
+      expense_id: expenseId,
+      date,
+      label,
+      amount: amt,
+      currency: cur,
+      paid_by_member_id: paidByMemberId,
+      shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
+      wallet_tx: { enabled: false },
+    };
+
+    const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpense(sb, tripId, payloadExp);
+    if (rpcErr) throw rpcErr;
+    const updatedExpenseId = (Array.isArray(rpcRows) ? rpcRows[0]?.expense_id : rpcRows?.expense_id) || null;
+    if (!updatedExpenseId) throw new Error("Trip: RPC trip_apply_expense_v2 n'a pas renvoyé expense_id.");
+
+    tripState.editingExpenseId = null;
+    tripState.editingExpenseDraft = null;
+    return updatedExpenseId;
+  }
+
+  async function _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
     const uid = await _ensureSession();
     const tripId = tripState.activeTripId;
     if (!tripId) return;
@@ -2109,6 +2220,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     const canWrite = (myRole !== 'viewer');
     const members = tripState.members;
     const expenses = tripState.expenses;
+    const editingExpenseId = tripState.editingExpenseId || null;
+    const editingDraft = tripState.editingExpenseDraft || null;
 
     
 
@@ -2293,6 +2406,7 @@ return `
                 <strong>${_fmtMoney(ex.amount, ex.currency)}</strong>
                 ${moveUI}
                 <button class="btn" type="button" data-exp-detail="${ex.id}">Détail</button>
+                <button class="btn" type="button" data-edit-exp="${ex.id}">Modifier</button>
                 <button class="btn danger" type="button" data-del-exp="${ex.id}">Supprimer</button>
               </div>
             </div>
@@ -2361,7 +2475,7 @@ return `
           <div class="row">
             <div class="field">
               <label>Date</label>
-              <input id="trip-exp-date" type="date" value="${toLocalISODate(new Date())}" />
+              <input id="trip-exp-date" type="date" value="${escapeHTML(editingDraft?.date || toLocalISODate(new Date()))}" />
             </div>
             <div class="field" style="min-width:220px;">
               <label>Payé par</label>
@@ -2393,15 +2507,15 @@ return `
           <div class="row">
             <div class="field" style="flex:1;">
               <label>Libellé</label>
-              <input id="trip-exp-label" placeholder="Ex: Dîner" />
+              <input id="trip-exp-label" placeholder="Ex: Dîner" value="${escapeHTML(editingDraft?.label || "")}" />
             </div>
             <div class="field" style="max-width:160px;">
               <label>Montant</label>
-              <input id="trip-exp-amount" type="number" step="0.01" placeholder="0" />
+              <input id="trip-exp-amount" type="number" step="0.01" placeholder="0" value="${editingDraft?.amount ?? ""}" />
             </div>
             <div class="field" style="max-width:160px;">
               <label>Devise</label>
-              <input id="trip-exp-currency" value="${escapeHTML(trip?.base_currency || state?.period?.baseCurrency || "THB")}" />
+              <input id="trip-exp-currency" value="${escapeHTML(editingDraft?.currency || trip?.base_currency || state?.period?.baseCurrency || "THB")}" />
             </div>
           </div>
           <div class="row" style="align-items:flex-end; gap:12px; margin-top:6px;">
@@ -2706,9 +2820,26 @@ toastOk("Participant ajouté.");
             }
             return { mode, percents, amounts };
           })();
-          await _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
-toastOk("Dépense ajoutée.");
+          if (editingExpenseId) {
+            await _updateExpense({ expenseId: editingExpenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
+            if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+            toastOk("Dépense modifiée.");
+          } else {
+            await _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
+            if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+            toastOk("Dépense ajoutée.");
+          }
+        } catch (e) {
+          toastWarn(e?.message || String(e));
+        }
+      };
+    }
+
+    const btnCancelEditExp = _el("trip-cancel-edit-exp");
+    if (btnCancelEditExp) {
+      btnCancelEditExp.onclick = async () => {
+        try {
+          await _cancelEditExpense();
         } catch (e) {
           toastWarn(e?.message || String(e));
         }
@@ -2842,6 +2973,18 @@ toastOk("Règlement annulé.");
     }
   };
 });
+root.querySelectorAll("[data-edit-exp]").forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          const id = btn.getAttribute("data-edit-exp");
+          if (!id) return;
+          await _beginEditExpense(id);
+          toastOk("Mode modification activé.");
+        } catch (e) {
+          toastWarn(e?.message || String(e));
+        }
+      };
+    });
 root.querySelectorAll("[data-del-exp]").forEach(btn => {
       btn.onclick = async () => {
         try {
