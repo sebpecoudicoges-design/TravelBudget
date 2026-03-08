@@ -1537,13 +1537,8 @@ try {
   async function _beginEditExpense(expenseId) {
     const ex = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!ex) throw new Error("Dépense introuvable.");
-    if (ex.transactionId) {
-      throw new Error("Modification non supportée pour une dépense déjà liée au budget/wallet. Supprime-la puis recrée-la si besoin.");
-    }
-    const hasLinks = await _expenseHasBudgetLinks(expenseId);
-    if (hasLinks) {
-      throw new Error("Modification non supportée pour une dépense déjà liée au budget. Supprime-la puis recrée-la si besoin.");
-    }
+    
+    
     tripState.editingExpenseId = expenseId;
     tripState.editingExpenseDraft = _buildEditDraftForExpense(expenseId);
     await _renderUI();
@@ -1569,13 +1564,8 @@ try {
 
     const currentEx = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!currentEx) throw new Error("Dépense introuvable.");
-    if (currentEx.transactionId) {
-      throw new Error("Modification non supportée pour une dépense déjà liée au budget/wallet. Supprime-la puis recrée-la si besoin.");
-    }
-    const hasLinks = await _expenseHasBudgetLinks(expenseId);
-    if (hasLinks) {
-      throw new Error("Modification non supportée pour une dépense déjà liée au budget. Supprime-la puis recrée-la si besoin.");
-    }
+    
+    
 
     const cur = _normalizeCurrency(currency);
     const parts = _computeSplitParts(amt, members, split);
