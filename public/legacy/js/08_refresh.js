@@ -102,7 +102,10 @@ async function _runRefreshFromServer(opts) {
     await loadFromSupabase();
 
     try {
-      if (typeof recomputeAllocations === "function") recomputeAllocations();
+      const currentView = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
+      if (currentView !== "dashboard" && typeof window.tbRefreshFinancialState === "function") {
+        window.tbRefreshFinancialState("refreshFromServer", { cashflow: false });
+      }
     } catch (_) {}
 
     // FX: apply cached daily rates to current period base
@@ -124,8 +127,6 @@ async function _runRefreshFromServer(opts) {
       if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("08_refresh.js"); else if (typeof renderAll === "function") renderAll();
       try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("render:all"); } catch (_) {}
       if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("render:done");
-    } else if (typeof window.tbRefreshFinancialState === "function") {
-      window.tbRefreshFinancialState({ wallets: true, kpi: true, cashflow: false, reason: "refreshFromServer:skipRender" });
     }
     _tbRefreshLog("refreshFromServer:done", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
   } catch (e) {

@@ -16,26 +16,26 @@ function _tbRenderLog() {
 }
 
 
-window.tbRefreshFinancialState = function tbRefreshFinancialState(opts) {
-  const o = opts || {};
+window.tbRefreshFinancialState = function tbRefreshFinancialState(reason, opts) {
+  const options = opts || {};
   try {
-    if (o.wallets !== false && typeof renderWallets === "function") renderWallets();
-  } catch (e) { console.warn("[tbRefreshFinancialState] renderWallets failed", e); }
+    if (typeof renderWallets === "function") renderWallets();
+  } catch (_) {}
   try {
-    if (o.kpi !== false && typeof renderKPI === "function") renderKPI();
-  } catch (e) { console.warn("[tbRefreshFinancialState] renderKPI failed", e); }
+    if (typeof renderKPI === "function") renderKPI();
+  } catch (_) {}
   try {
-    if (o.cashflow && typeof tbRequestCashflowCurveRender === "function") tbRequestCashflowCurveRender(o.reason || "tbRefreshFinancialState");
-  } catch (e) { console.warn("[tbRefreshFinancialState] cashflow failed", e); }
+    const view = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
+    if (options.cashflow !== false && view === "dashboard" && typeof tbRequestCashflowCurveRender === "function") {
+      tbRequestCashflowCurveRender(reason || "financialState");
+    }
+  } catch (_) {}
 };
 
 // Centralised main render entry point.
 // Goal: a single broken widget must not take down the whole page.
 function renderAll() {
   _tbRenderLog("renderAll", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
-  try {
-    if (typeof recomputeWalletBalances === "function") recomputeWalletBalances();
-  } catch (_) {}
   const view = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
 
   // If safeCall isn't loaded for some reason, fall back to best-effort legacy behaviour.

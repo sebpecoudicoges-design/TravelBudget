@@ -1760,8 +1760,18 @@ try {
     try { if (typeof window.tbBusyStart === "function") window.tbBusyStart("Mise à jour en cours…"); } catch (_) {}
     try {
       if (typeof refreshFromServer === "function") {
-        await refreshFromServer();
+        await refreshFromServer({ skipRender: _isTripViewActive() });
       }
+
+      // Keep financial widgets (wallet + KPI) in sync even outside dashboard.
+      try {
+        if (typeof window.tbRefreshFinancialState === "function") {
+          window.tbRefreshFinancialState(reason || "tripMutation", { cashflow: false });
+        } else {
+          if (typeof renderWallets === "function") renderWallets();
+          if (typeof renderKPI === "function") renderKPI();
+        }
+      } catch (_) {}
 
       if (_isTripViewActive()) {
         await _reloadActiveTripDataWithRetry(meta || null);
