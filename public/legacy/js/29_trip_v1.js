@@ -1658,12 +1658,28 @@ try {
     return await _expenseHasBudgetLinks(ex.id);
   }
 
-  function _buildEditDraftForExpense(expenseId) {
+  async function _buildEditDraftForExpense(expenseId) {
     const ex = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!ex) return null;
     const shares = (tripState.shares || []).filter(s => s.expenseId === expenseId);
     const amounts = {};
     shares.forEach(s => { amounts[s.memberId] = Number(s.shareAmount || 0); });
+
+    let walletId = "";
+    let category = "Autre";
+    let outOfBudget = false;
+    try {
+      const audit = await _fetchExpenseAuditDetails(expenseId);
+      const tx = audit?.walletTransaction
+        || (audit?.myShareLink ? audit.budgetTransactionsById.get(audit.myShareLink.transactionId) : null)
+        || null;
+      if (tx) {
+        walletId = tx.walletId || "";
+        category = tx.category || category;
+        outOfBudget = tx.outOfBudget === true;
+      }
+    } catch (_) {}
+
     return {
       expenseId: ex.id,
       date: ex.date || _isoToday(),
@@ -1671,9 +1687,9 @@ try {
       amount: Number(ex.amount || 0),
       currency: ex.currency || (state?.period?.baseCurrency || "EUR"),
       paidByMemberId: ex.paidByMemberId || "",
-      walletId: "",
-      category: "Autre",
-      outOfBudget: false,
+      walletId,
+      category,
+      outOfBudget,
       split: {
         mode: "amount",
         percents: {},
@@ -1686,13 +1702,8 @@ try {
     const ex = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!ex) throw new Error("Dépense introuvable.");
 
-    const isLocked = await _expenseIsEditLocked(ex);
-    if (isLocked) {
-      throw new Error("Édition rollbackée : cette dépense est liée au budget/wallet. Supprime-la puis recrée-la si besoin.");
-    }
-
     tripState.editingExpenseId = expenseId;
-    tripState.editingExpenseDraft = _buildEditDraftForExpense(expenseId);
+    tripState.editingExpenseDraft = await _buildEditDraftForExpense(expenseId);
     await _renderUI();
   }
 
@@ -1701,9 +1712,296 @@ try {
     tripState.editingExpenseDraft = null;
     await _renderUI();
   }
+  async function _cleanupExpenseBudgetLinksBeforeEdit(expenseId) {
+    if (!expenseId) return;
+    const ex = (tripState.expenses || []).find(x => x.id === expenseId) || null;
+    const mainTxId = ex?.transactionId || null;
+    const txIdsToDelete = [];
+
+    try {
+      const { data: links, error } = await sb
+        .from(TB_CONST.TABLES.trip_expense_budget_links)
+        .select("id,transaction_id")
+        .eq("expense_id", expenseId);
+      if (error) throw error;
+      for (const row of (links || [])) {
+        const txId = row?.transaction_id || null;
+        if (txId && txId !== mainTxId) txIdsToDelete.push(txId);
+      }
+    } catch (_) {}
+
+    try {
+      await sb.from(TB_CONST.TABLES.trip_expense_budget_links).delete().eq("expense_id", expenseId);
+    } catch (_) {}
+
+    for (const txId of txIdsToDelete) {
+      try {
+        const { error } = await sb.rpc(TB_CONST.RPCS.delete_transaction || "delete_transaction", { p_tx_id: txId });
+        if (error) throw error;
+      } catch (e) {
+        console.warn("[Trip] cleanup budget link tx failed", txId, e);
+      }
+    }
+  }
+
+  async function _integrateExpenseBudgetSideEffects({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
+    const uid = await _ensureSession();
+    const members = tripState.members || [];
+    const memberIds = members.map(m => m.id);
+    const amt = Number(amount);
+    const cur = _normalizeCurrency(currency);
+    const cat = (category || "Autre");
+    const out = !!outOfBudget;
+    const payer = members.find(m => m.id === paidByMemberId) || null;
+    const paidByMe = !!payer?.isMe;
+    const parts = _computeSplitParts(amt, members, split);
+    _validateSplitParts(amt, parts);
+
+    const { data: ex, error: exErr } = await sb
+      .from(TB_CONST.TABLES.trip_expenses)
+      .select("*")
+      .eq("id", expenseId)
+      .single();
+    if (exErr) throw exErr;
+
+    if (paidByMe) {
+      if (!walletId) throw new Error("Choisis une wallet (pour décompter le paiement).");
+      const w = findWallet(walletId);
+      if (!w) throw new Error("Wallet invalide.");
+      if (String(w.currency || "").toUpperCase() !== cur) {
+        throw new Error(`Devise wallet (${w.currency}) différente de la dépense (${cur}). Choisis une wallet dans la même devise.`);
+      }
+
+      const targetPeriodId = _findPeriodIdForDate(date);
+      const me = members.find(m => m.isMe) || null;
+      const myIdx = me ? memberIds.indexOf(me.id) : -1;
+      const myShare = (myIdx >= 0) ? Number(parts[myIdx] ?? 0) : NaN;
+      const isFullShare = isFinite(myShare) && Math.abs(myShare - amt) < 0.005;
+
+      if (isFullShare) {
+        const { error: rpcErr } = await _rpcApplyTransactionV2(sb, {
+          p_user_id: uid,
+          p_wallet_id: walletId,
+          p_type: "expense",
+          p_label: `[Trip] ${label}`,
+          p_amount: amt,
+          p_currency: cur,
+          p_date_start: date,
+          p_date_end: date,
+          p_category: cat,
+          p_subcategory: null,
+          p_pay_now: true,
+          p_out_of_budget: out,
+          p_night_covered: false,
+          p_affects_budget: !out,
+          p_trip_expense_id: null,
+          p_trip_share_link_id: null,
+          ..._rpcFxSnapshotArgs(date, cur)
+        });
+        if (rpcErr) throw rpcErr;
+
+        const { data: txRows, error: txErr } = await sb
+          .from(TB_CONST.TABLES.transactions)
+          .select("id,period_id")
+          .eq("wallet_id", walletId)
+          .eq("type", "expense")
+          .eq("amount", amt)
+          .eq("currency", cur)
+          .eq("category", cat)
+          .eq("label", `[Trip] ${label}`)
+          .eq("date_start", date)
+          .eq("date_end", date)
+          .eq("pay_now", true)
+          .eq("out_of_budget", out)
+          .is("trip_expense_id", null)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (txErr) throw txErr;
+
+        const tx = txRows?.[0] || null;
+        if (tx) {
+          if (targetPeriodId && (!tx.period_id || tx.period_id !== targetPeriodId)) {
+            await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", tx.id);
+          }
+          await _linkExpenseToTransaction(ex.id, tx.id);
+        }
+      } else {
+        if (!me) {
+          toastWarn("[Trip] Impossible de déterminer ta part pour le budget (participant 'moi' manquant).");
+        }
+
+        const advanceLabel = `[Trip] Avance - ${label}`;
+        const { error: rpcErrA } = await _rpcApplyTransactionV2(sb, {
+          p_user_id: uid,
+          p_wallet_id: walletId,
+          p_type: "expense",
+          p_label: advanceLabel,
+          p_amount: amt,
+          p_currency: cur,
+          p_date_start: date,
+          p_date_end: date,
+          p_category: cat,
+          p_subcategory: null,
+          p_pay_now: true,
+          p_out_of_budget: true,
+          p_night_covered: false,
+          p_affects_budget: false,
+          p_trip_expense_id: null,
+          p_trip_share_link_id: null,
+          ..._rpcFxSnapshotArgs(date, cur)
+        });
+        if (rpcErrA) throw rpcErrA;
+
+        const { data: txRowsA, error: txErrA } = await sb
+          .from(TB_CONST.TABLES.transactions)
+          .select("id,period_id")
+          .eq("wallet_id", walletId)
+          .eq("type", "expense")
+          .eq("amount", amt)
+          .eq("currency", cur)
+          .eq("category", cat)
+          .eq("label", advanceLabel)
+          .eq("date_start", date)
+          .eq("date_end", date)
+          .eq("pay_now", true)
+          .eq("out_of_budget", true)
+          .is("trip_expense_id", null)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (txErrA) throw txErrA;
+
+        const txA = txRowsA?.[0] || null;
+        if (txA) {
+          if (targetPeriodId && (!txA.period_id || txA.period_id !== targetPeriodId)) {
+            await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", txA.id);
+          }
+          await _linkExpenseToTransaction(ex.id, txA.id);
+        }
+
+        if (me && myIdx >= 0 && isFinite(myShare) && myShare > 0) {
+          const consLabel = `[Trip] ${label}`;
+          const { error: rpcErrB } = await _rpcApplyTransactionV2(sb, {
+            p_user_id: uid,
+            p_wallet_id: walletId,
+            p_type: "expense",
+            p_label: consLabel,
+            p_amount: myShare,
+            p_currency: cur,
+            p_date_start: date,
+            p_date_end: date,
+            p_category: cat,
+            p_subcategory: null,
+            p_pay_now: false,
+            p_out_of_budget: out,
+            p_night_covered: false,
+            p_affects_budget: !out,
+            p_trip_expense_id: null,
+            p_trip_share_link_id: null,
+            ..._rpcFxSnapshotArgs(date, cur)
+          });
+          if (rpcErrB) throw rpcErrB;
+
+          const { data: txRowsB, error: txErrB } = await sb
+            .from(TB_CONST.TABLES.transactions)
+            .select("id,period_id")
+            .eq("wallet_id", walletId)
+            .eq("type", "expense")
+            .eq("amount", myShare)
+            .eq("currency", cur)
+            .eq("category", cat)
+            .eq("label", consLabel)
+            .eq("date_start", date)
+            .eq("date_end", date)
+            .eq("pay_now", false)
+            .eq("out_of_budget", out)
+            .is("trip_expense_id", null)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          if (txErrB) throw txErrB;
+
+          const txB = txRowsB?.[0] || null;
+          if (txB) {
+            await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", txB.id);
+            if (targetPeriodId && (!txB.period_id || txB.period_id !== targetPeriodId)) {
+              await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", txB.id);
+            }
+            await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: txB.id });
+          }
+        }
+      }
+    } else {
+      const me = members.find(m => m.isMe) || null;
+      if (me) {
+        const myIdx = memberIds.indexOf(me.id);
+        const myShare = Number(parts[myIdx] ?? 0);
+        if (isFinite(myShare) && myShare > 0) {
+          let wId = walletId || null;
+          let w = wId ? findWallet(wId) : null;
+          if (!w) {
+            w = state.wallets.find(x => String(x.currency || "").toUpperCase() === cur) || null;
+            wId = w?.id || null;
+          }
+          if (!wId || !w) {
+            toastWarn(`[Trip] Aucune wallet en ${cur} : impossible d'enregistrer ta part au budget.`);
+          } else if (String(w.currency || "").toUpperCase() !== cur) {
+            toastWarn(`[Trip] Devise wallet (${w.currency}) différente de ta part (${cur}). Choisis une wallet ${cur}.`);
+          } else {
+            const targetPeriodId = _findPeriodIdForDate(date);
+            const budgetLabel = `[Trip] ${label}`;
+            const { error: rpcErr2 } = await _rpcApplyTransactionV2(sb, {
+              p_user_id: uid,
+              p_wallet_id: wId,
+              p_type: "expense",
+              p_label: budgetLabel,
+              p_amount: myShare,
+              p_currency: cur,
+              p_date_start: date,
+              p_date_end: date,
+              p_category: cat,
+              p_subcategory: null,
+              p_pay_now: false,
+              p_out_of_budget: out,
+              p_night_covered: false,
+              p_affects_budget: !out,
+              p_trip_expense_id: null,
+              p_trip_share_link_id: null,
+              ..._rpcFxSnapshotArgs(date, cur)
+            });
+            if (rpcErr2) throw rpcErr2;
+
+            const { data: txRows2, error: txErr2 } = await sb
+              .from(TB_CONST.TABLES.transactions)
+              .select("id,period_id")
+              .eq("wallet_id", wId)
+              .eq("type", "expense")
+              .eq("amount", myShare)
+              .eq("currency", cur)
+              .eq("category", cat)
+              .eq("label", budgetLabel)
+              .eq("date_start", date)
+              .eq("date_end", date)
+              .eq("pay_now", false)
+              .is("trip_expense_id", null)
+              .order("created_at", { ascending: false })
+              .limit(1);
+            if (txErr2) throw txErr2;
+
+            const tx2 = txRows2?.[0] || null;
+            if (tx2) {
+              await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", tx2.id);
+              if (targetPeriodId && (!tx2.period_id || tx2.period_id !== targetPeriodId)) {
+                await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", tx2.id);
+              }
+              await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: tx2.id });
+            }
+          }
+        }
+      }
+    }
+  }
 
   async function _updateExpense({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
-    const uid = await _ensureSession();
+    await _ensureSession();
     const tripId = tripState.activeTripId;
     if (!tripId || !expenseId) throw new Error("Édition invalide.");
 
@@ -1717,14 +2015,11 @@ try {
     const currentEx = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!currentEx) throw new Error("Dépense introuvable.");
 
-    const isLocked = await _expenseIsEditLocked(currentEx);
-    if (isLocked) {
-      throw new Error("Édition rollbackée : cette dépense est liée au budget/wallet. Supprime-la puis recrée-la si besoin.");
-    }
-
     const cur = _normalizeCurrency(currency);
     const parts = _computeSplitParts(amt, members, split);
     _validateSplitParts(amt, parts);
+
+    await _cleanupExpenseBudgetLinksBeforeEdit(expenseId);
 
     const payloadExp = {
       expense_id: expenseId,
@@ -1741,6 +2036,8 @@ try {
     if (rpcErr) throw rpcErr;
     const updatedExpenseId = (Array.isArray(rpcRows) ? rpcRows[0]?.expense_id : rpcRows?.expense_id) || null;
     if (!updatedExpenseId) throw new Error("Trip: RPC trip_apply_expense_v2 n'a pas renvoyé expense_id.");
+
+    await _integrateExpenseBudgetSideEffects({ expenseId: updatedExpenseId, date, label, amount: amt, currency: cur, paidByMemberId, walletId, category, outOfBudget, split });
 
     tripState.editingExpenseId = null;
     tripState.editingExpenseDraft = null;
@@ -2529,11 +2826,9 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       ? await Promise.all(expenses.map(async ex => {
           const payer = members.find(m => m.id === ex.paidByMemberId);
           const moveUI = ""; // removed move between trips
-          const isEditLocked = await _expenseIsEditLocked(ex);
-          const linkedLabel = isEditLocked ? " • lié au budget/wallet" : (ex.transactionId ? " • lié au budget" : "");
-          const editBtn = isEditLocked
-            ? `<button class="btn" type="button" disabled title="Édition rollbackée pour les dépenses liées au budget/wallet">Modification bloquée</button>`
-            : `<button class="btn" type="button" data-edit-exp="${ex.id}">Modifier</button>`;
+          const isLinked = await _expenseIsEditLocked(ex);
+          const linkedLabel = isLinked ? " • lié au budget/wallet" : (ex.transactionId ? " • lié au budget" : "");
+          const editBtn = `<button class="btn" type="button" data-edit-exp="${ex.id}" title="${isLinked ? "Édition complète (wallet/budget inclus)" : "Modifier"}">Modifier</button>`;
 return `
             <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.04); gap:12px;">
               <div style="min-width:0;">
