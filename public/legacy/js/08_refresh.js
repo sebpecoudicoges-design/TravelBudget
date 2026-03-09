@@ -101,9 +101,14 @@ async function _runRefreshFromServer(opts) {
 
     await loadFromSupabase();
 
+    // Keep wallet UI in sync even when the active view is not the dashboard.
+    // The displayed wallet balance is derived from tbGetWalletEffectiveBalance()
+    // using state.walletBalanceMap loaded by loadFromSupabase().
     try {
-      if (typeof recomputeWalletBalances === 'function') recomputeWalletBalances();
-      else if (typeof recomputeAllocations === 'function') recomputeAllocations();
+      const currentView = (typeof activeView === 'string' && activeView) ? activeView : 'dashboard';
+      if (currentView !== 'dashboard' && typeof renderWallets === 'function') {
+        renderWallets();
+      }
     } catch (_) {}
 
     // FX: apply cached daily rates to current period base

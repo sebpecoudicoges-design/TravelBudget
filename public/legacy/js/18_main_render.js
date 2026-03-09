@@ -19,12 +19,14 @@ function _tbRenderLog() {
 // Goal: a single broken widget must not take down the whole page.
 function renderAll() {
   _tbRenderLog("renderAll", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
-  try {
-    if (typeof renderWallets === "function") {
-      renderWallets();
-    }
-  } catch (_) {}
   const view = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
+
+  // Wallet effective balances are rendered from tbGetWalletEffectiveBalance().
+  // Outside the dashboard view, refresh the hidden dashboard wallet cards too so
+  // Trip mutations are reflected immediately when the user comes back.
+  if (view !== "dashboard") {
+    try { if (typeof renderWallets === "function") renderWallets(); } catch (_) {}
+  }
 
   // If safeCall isn't loaded for some reason, fall back to best-effort legacy behaviour.
   if (typeof safeCall !== "function") {
