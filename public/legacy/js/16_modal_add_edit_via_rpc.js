@@ -608,6 +608,7 @@ async function deleteTx(txId) {
   if (!ok) return;
 
   await safeCall("Suppression", async () => {
+    try { if (typeof window.tbBusyStart === "function") window.tbBusyStart("Suppression en cours…"); } catch (_) {}
     const { error } = await sb.rpc("delete_transaction", { p_tx_id: txId });
     if (error) {
       const code = String(error.code || "");
@@ -630,6 +631,9 @@ async function deleteTx(txId) {
       throw error;
     }
     await refreshFromServer();
+  } finally {
+    try { if (typeof window.tbBusyEnd === "function") window.tbBusyEnd(); } catch (_) {}
+  }
   });
 }
 

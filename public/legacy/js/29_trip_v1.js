@@ -1714,6 +1714,7 @@ try {
   }
 
   async function _refreshAfterTripMutation(reason) {
+    try { if (typeof window.tbBusyStart === "function") window.tbBusyStart("Mise à jour en cours…"); } catch (_) {}
     if (typeof refreshFromServer === "function") {
       try { await refreshFromServer(); } catch (_) {}
     }
@@ -1725,6 +1726,10 @@ try {
       else if (typeof renderAll === "function") renderAll();
     } catch (_) {}
     if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+    try { if (typeof renderWallets === "function") renderWallets(); } catch (_) {}
+    try { if (typeof renderDailyBudget === "function") renderDailyBudget(); } catch (_) {}
+    try { if (typeof renderKPI === "function") renderKPI(); } catch (_) {}
+    try { if (typeof window.tbBusyEnd === "function") window.tbBusyEnd(); } catch (_) {}
   }
   async function _cleanupExpenseBudgetLinksBeforeEdit(expenseId) {
     if (!expenseId) return;

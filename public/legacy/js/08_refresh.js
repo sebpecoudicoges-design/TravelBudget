@@ -4,6 +4,7 @@
 let _refreshInFlight = false;
 let _refreshPending = false;
 let _refreshPromise = null;
+let _tbBusyCounter = 0;
 
 function _tbEnsureLoadingBadge() {
   let el = document.getElementById("tb-loading-badge");
@@ -45,6 +46,21 @@ function _tbSetLoadingBadge(active, text) {
   } catch (_) {}
 }
 
+
+function _tbApplyBusyState() {
+  _tbSetLoadingBadge((_refreshInFlight || _tbBusyCounter > 0), _tbBusyCounter > 0 ? "Traitement en cours…" : "Chargement en cours…");
+}
+
+window.tbBusyStart = function tbBusyStart(text) {
+  try { _tbBusyCounter += 1; } catch (_) { _tbBusyCounter = 1; }
+  _tbSetLoadingBadge(true, text || "Traitement en cours…");
+};
+
+window.tbBusyEnd = function tbBusyEnd() {
+  try { _tbBusyCounter = Math.max(0, Number(_tbBusyCounter || 0) - 1); } catch (_) { _tbBusyCounter = 0; }
+  _tbApplyBusyState();
+};
+
 async function _runRefreshFromServer() {
   if (!sbUser) return;
 
@@ -70,6 +86,7 @@ async function _runRefreshFromServer() {
       try { ensureTxFxSnapshots(); } catch (_) {}
     }
     if (typeof ensureStateIntegrity === "function") ensureStateIntegrity();
+    try { if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("refresh:data_loaded", { source: "refreshFromServer" }); } catch (_) {}
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("render:all"); } catch (_) {}
     if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("08_refresh.js"); else if (typeof renderAll === "function") renderAll();
 try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("render:all"); } catch (_) {}
@@ -89,7 +106,7 @@ async function refreshFromServer() {
 
   _refreshInFlight = true;
   _refreshPending = false;
-  _tbSetLoadingBadge(true, "Chargement en cours…");
+  _tbApplyBusyState();
 
   _refreshPromise = (async () => {
     try {
@@ -99,7 +116,7 @@ async function refreshFromServer() {
       } while (_refreshPending);
     } finally {
       _refreshInFlight = false;
-      _tbSetLoadingBadge(false);
+      _tbApplyBusyState();
     }
   })();
 
