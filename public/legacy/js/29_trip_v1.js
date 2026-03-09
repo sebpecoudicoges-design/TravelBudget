@@ -2555,12 +2555,35 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     const tripId = tripState.activeTripId;
     if (!tripId || !expenseId) throw new Error("Suppression invalide.");
 
-    // Temporary front-first path:
-    // remote SQL trip_delete_expense_v1 currently deletes budget links before deleting
-    // the linked budget transactions, which can leave orphan budget tx visible in UI.
-    // Keep the legacy flow until the SQL RPC is patched and revalidated.
+    // DB-first path restored once trip_delete_expense_v1 is patched server-side.
+    // Keep the former front-first deletion flow only as a backward-compatible fallback
+    // for older environments where the RPC is missing or not yet deployed.
+    try {
+      const { error } = await sb.rpc(
+        TB_CONST.RPCS.trip_delete_expense_v1 || "trip_delete_expense_v1",
+        { p_trip_id: tripId, p_expense_id: expenseId }
+      );
+      if (!error) return;
 
-    // Fallback legacy si la RPC n'est pas disponible côté DB
+      const msg = String(error?.message || error?.details || "").toLowerCase();
+      const code = String(error?.code || "");
+      const fallbackAllowed =
+        code === "PGRST202" ||
+        msg.includes("could not find the function") ||
+        msg.includes("function public.trip_delete_expense_v1") ||
+        msg.includes("trip_delete_expense_v1");
+
+      if (!fallbackAllowed) throw error;
+    } catch (rpcErr) {
+      const msg = String(rpcErr?.message || rpcErr?.details || rpcErr || "").toLowerCase();
+      const fallbackAllowed =
+        msg.includes("trip_delete_expense_v1") ||
+        msg.includes("could not find the function") ||
+        msg.includes("function public.trip_delete_expense_v1");
+      if (!fallbackAllowed) throw rpcErr;
+    }
+
+    // Legacy fallback (older DB only)
     const ex = tripState.expenses.find(x => x.id === expenseId);
 
     try {
