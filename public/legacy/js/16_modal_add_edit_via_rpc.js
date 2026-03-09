@@ -620,7 +620,12 @@ async function deleteTx(txId) {
         details.includes("trip_expenses_transaction_fk")
       );
       if (isTripLinked) {
-        throw new Error("Suppression bloquée : cette transaction est liée à une dépense Partage. Supprime d'abord la dépense depuis l'onglet Trip.");
+        const friendly = "Suppression bloquée : cette transaction est liée à une dépense Partage. Supprime d'abord la dépense depuis l'onglet Trip.";
+        try {
+          if (typeof toastWarn === "function") toastWarn(friendly);
+          else alert(friendly);
+        } catch (_) {}
+        return;
       }
       throw error;
     }

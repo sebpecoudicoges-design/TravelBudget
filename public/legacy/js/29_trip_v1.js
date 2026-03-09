@@ -2244,14 +2244,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     const tripId = tripState.activeTripId;
     if (!tripId || !expenseId) throw new Error("Suppression invalide.");
 
-    if (sb?.rpc && TB_CONST?.RPCS?.trip_delete_expense_v1) {
-      const { error } = await sb.rpc(TB_CONST.RPCS.trip_delete_expense_v1, {
-        p_trip_id: tripId,
-        p_expense_id: expenseId,
-      });
-      if (!error) return;
-      console.warn("[Trip] trip_delete_expense_v1 fallback", error);
-    }
+    // Temporary front-first path:
+    // remote SQL trip_delete_expense_v1 currently deletes budget links before deleting
+    // the linked budget transactions, which can leave orphan budget tx visible in UI.
+    // Keep the legacy flow until the SQL RPC is patched and revalidated.
 
     // Fallback legacy si la RPC n'est pas disponible côté DB
     const ex = tripState.expenses.find(x => x.id === expenseId);
@@ -3166,6 +3162,13 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
           if (typeof refreshFromServer === "function") {
             try { await refreshFromServer(); } catch (_) {}
           }
+          try {
+            if (typeof recomputeAllocations === "function") recomputeAllocations();
+          } catch (_) {}
+          try {
+            if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("trip:delete_expense");
+            else if (typeof renderAll === "function") renderAll();
+          } catch (_) {}
           if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
           toastOk("Dépense supprimée.");
         } catch (e) {
