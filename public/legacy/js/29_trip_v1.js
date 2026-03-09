@@ -1713,16 +1713,60 @@ try {
     await _renderUI();
   }
 
-  async function _refreshAfterTripMutation(reason) {
+  function _isTripViewActive() {
+    try {
+      if (typeof activeView === "string") return activeView === "trip";
+      if (typeof window !== "undefined" && typeof window.activeView === "string") return window.activeView === "trip";
+    } catch (_) {}
+    return false;
+  }
+
+  function _sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms || 0));
+  }
+
+  function _tripMutationLooksSettled(meta) {
+    const expenses = Array.isArray(tripState?.expenses) ? tripState.expenses : [];
+    if (meta?.expectDeletedExpenseId) {
+      return !expenses.some(ex => ex && ex.id === meta.expectDeletedExpenseId);
+    }
+    if (meta?.expectExpenseId) {
+      return expenses.some(ex => ex && ex.id === meta.expectExpenseId);
+    }
+    return true;
+  }
+
+  async function _reloadActiveTripDataWithRetry(meta) {
+    const attempts = [0, 120, 260, 420];
+    let lastErr = null;
+    for (let i = 0; i < attempts.length; i++) {
+      if (attempts[i] > 0) await _sleep(attempts[i]);
+      try {
+        await _loadActiveData();
+        if (_tripMutationLooksSettled(meta) || i === attempts.length - 1) {
+          await _renderUI();
+          return;
+        }
+      } catch (e) {
+        lastErr = e;
+        if (i === attempts.length - 1) throw e;
+      }
+    }
+    if (lastErr) throw lastErr;
+    await _renderUI();
+  }
+
+  async function _refreshAfterTripMutation(reason, meta) {
     try { if (typeof window.tbBusyStart === "function") window.tbBusyStart("Mise à jour en cours…"); } catch (_) {}
     try {
-      if (typeof window.tbAfterMutationRefresh === "function") {
-        await window.tbAfterMutationRefresh(reason || "trip:mutation", { trip: true });
-      } else if (typeof refreshFromServer === "function") {
+      if (typeof refreshFromServer === "function") {
         await refreshFromServer();
-        if ((typeof activeView === "string" && activeView === "trip") && typeof window.__tripRefresh === "function") {
-          await window.__tripRefresh({ activeOnly: true });
-        }
+      }
+
+      if (_isTripViewActive()) {
+        await _reloadActiveTripDataWithRetry(meta || null);
+      } else if (typeof window.__tripRefresh === "function") {
+        await window.__tripRefresh({ activeOnly: true });
       }
     } finally {
       try { if (typeof window.tbBusyEnd === "function") window.tbBusyEnd(); } catch (_) {}
@@ -2550,6 +2594,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       }
 
     }
+
+    return ex.id;
   }
 
   async function _deleteExpense(expenseId) {
@@ -3320,12 +3366,12 @@ toastOk("Participant ajouté.");
             return { mode, percents, amounts };
           })();
           if (editingExpenseId) {
-            await _updateExpense({ expenseId: editingExpenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
-            await _refreshAfterTripMutation("trip:update_expense");
+            const updatedExpenseId = await _updateExpense({ expenseId: editingExpenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
+            await _refreshAfterTripMutation("trip:update_expense", { expectExpenseId: updatedExpenseId || editingExpenseId });
             toastOk("Dépense modifiée.");
           } else {
-            await _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
-            await _refreshAfterTripMutation("trip:add_expense");
+            const createdExpenseId = await _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
+            await _refreshAfterTripMutation("trip:add_expense", { expectExpenseId: createdExpenseId });
             toastOk("Dépense ajoutée.");
           }
         } catch (e) {
@@ -3523,7 +3569,7 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
             : "Supprimer cette dépense ?";
           if (!confirm(confirmMsg)) return;
           await _deleteExpense(id);
-          await _refreshAfterTripMutation("trip:delete_expense");
+          await _refreshAfterTripMutation("trip:delete_expense", { expectDeletedExpenseId: id });
           toastOk("Dépense supprimée.");
         } catch (e) {
           toastWarn(e?.message || String(e));
