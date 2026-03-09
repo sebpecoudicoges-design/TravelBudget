@@ -2809,6 +2809,37 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       </div>`;
   }
 
+
+  function _renderTripContextHelp(root) {
+    try {
+      if (!root) return;
+      if (root.querySelector('[data-tb-help="trip-overview"]')) return;
+      if (window.tbUxIsDismissed && window.tbUxIsDismissed('trip_overview')) return;
+      const card = document.createElement('div');
+      card.setAttribute('data-tb-help', 'trip-overview');
+      card.className = 'card';
+      card.style.marginBottom = '12px';
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+          <div style="min-width:280px; flex:1;">
+            <h2 style="margin:0 0 8px 0;">Bien utiliser Partage</h2>
+            <div class="muted">
+              <div>• <b>Payé par moi</b> : la wallet peut être débitée du total.</div>
+              <div>• <b>Budget</b> : seule ta part doit rester dans ton budget journalier.</div>
+              <div>• <b>Règlement</b> : sert à solder entre participants ; avec wallet, il crée aussi un vrai mouvement.</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn" type="button" onclick="showView('help')">Aide</button>
+            <button class="btn" type="button" data-trip-help-close="1">Masquer</button>
+          </div>
+        </div>`;
+      root.prepend(card);
+      const close = card.querySelector('[data-trip-help-close]');
+      if (close) close.onclick = () => { try { if (window.tbUxDismiss) window.tbUxDismiss('trip_overview'); } catch(_) {} card.remove(); };
+    } catch (_) {}
+  }
+
   async function _renderUI() {
     const root = _root();
     if (!root) return;
@@ -3109,6 +3140,8 @@ return `
       </div>
       ${editExpenseModalHTML}
     `;
+
+    _renderTripContextHelp(root);
 
     if (editingDraft) {
       const paidSelInit = _el("trip-exp-paidby");

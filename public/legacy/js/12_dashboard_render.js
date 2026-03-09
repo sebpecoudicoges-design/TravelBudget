@@ -45,6 +45,64 @@ function renderOnboardingPanel() {
 }
 
 /* =========================
+   UX contextual help
+   ========================= */
+function _tbUxDismissedMap() {
+  try {
+    const key = (window.TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.ux_help_dismissed) || "travelbudget_ux_help_dismissed_v1";
+    const raw = localStorage.getItem(key);
+    const obj = raw ? JSON.parse(raw) : {};
+    return (obj && typeof obj === "object") ? obj : {};
+  } catch (_) { return {}; }
+}
+function _tbUxIsDismissed(id) {
+  try { return !!_tbUxDismissedMap()[String(id || "")]; } catch (_) { return false; }
+}
+function _tbUxDismiss(id) {
+  try {
+    const key = (window.TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.ux_help_dismissed) || "travelbudget_ux_help_dismissed_v1";
+    const map = _tbUxDismissedMap();
+    map[String(id || "")] = 1;
+    localStorage.setItem(key, JSON.stringify(map));
+  } catch (_) {}
+}
+window.tbUxDismiss = window.tbUxDismiss || _tbUxDismiss;
+window.tbUxIsDismissed = window.tbUxIsDismissed || _tbUxIsDismissed;
+
+function renderDashboardContextHelp(container) {
+  if (!container) return;
+  if ((window.tbUxIsDismissed || _tbUxIsDismissed)("dashboard_overview")) return;
+  if (container.querySelector('[data-tb-help="dashboard-overview"]')) return;
+  const box = document.createElement('div');
+  box.setAttribute('data-tb-help', 'dashboard-overview');
+  box.className = 'hint';
+  box.style.padding = '12px';
+  box.style.border = '1px solid rgba(0,0,0,.10)';
+  box.style.borderRadius = '14px';
+  box.style.background = 'rgba(0,0,0,.03)';
+  box.style.marginBottom = '12px';
+  box.innerHTML = `
+    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+      <div style="min-width:260px; flex:1;">
+        <div style="font-weight:700; margin-bottom:6px;">Comprendre le tableau de bord</div>
+        <div class="muted">
+          <div>• <b>Wallets</b> = ta trésorerie réelle, mise à jour avec les mouvements payés.</div>
+          <div>• <b>Budget journalier</b> = ton pilotage par jour, distinct du cash réel.</div>
+          <div>• <b>Partage</b> : si tu avances une dépense, la wallet prend le total, mais le budget ne garde que ta part.</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" type="button" onclick="showView('help')">Aide</button>
+        <button class="btn" type="button" onclick="showView('trip')">Partage</button>
+        <button class="btn" type="button" data-tb-help-close="dashboard_overview">Masquer</button>
+      </div>
+    </div>`;
+  container.prepend(box);
+  const close = box.querySelector('[data-tb-help-close]');
+  if (close) close.onclick = () => { try { (window.tbUxDismiss || _tbUxDismiss)('dashboard_overview'); } catch(_) {} box.remove(); };
+}
+
+/* =========================
    Dashboard render
    ========================= */
 function renderWallets() {
@@ -56,8 +114,8 @@ function renderWallets() {
   // Onboarding panel / empty states
   renderOnboardingPanel();
 
-  
   container.innerHTML = "";
+  renderDashboardContextHelp(container);
 
   // Actions
   const actions = document.createElement("div");

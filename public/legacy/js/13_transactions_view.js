@@ -135,6 +135,44 @@ function _txEnsureShortcutsUI() {
   }
 }
 
+
+function _txEnsureHelpUI() {
+  const anchor = _txEl("f-from") || _txEl("f-wallet") || _txEl("tx-list");
+  if (!anchor) return;
+  const host = anchor.closest(".card") || anchor.parentElement;
+  if (!host) return;
+  if (host.querySelector('[data-tb-help="transactions-overview"]')) return;
+  try { if (window.tbUxIsDismissed && window.tbUxIsDismissed('transactions_overview')) return; } catch (_) {}
+  const wrap = document.createElement('div');
+  wrap.setAttribute('data-tb-help', 'transactions-overview');
+  wrap.className = 'hint';
+  wrap.style.padding = '10px';
+  wrap.style.border = '1px solid rgba(0,0,0,.10)';
+  wrap.style.borderRadius = '12px';
+  wrap.style.background = 'rgba(0,0,0,.03)';
+  wrap.style.marginBottom = '10px';
+  wrap.innerHTML = `
+    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+      <div style="min-width:260px; flex:1;">
+        <div style="font-weight:700; margin-bottom:6px;">Comment lire les transactions</div>
+        <div class="muted">
+          <div>• <b>Payé</b> impacte la wallet tout de suite.</div>
+          <div>• <b>À payer</b> reste planifié, sans sortir du cash pour l’instant.</div>
+          <div>• <b>Hors budget</b> n’alimente pas le budget/jour, mais peut quand même toucher la wallet.</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" type="button" onclick="showView('help')">Aide</button>
+        <button class="btn" type="button" data-tx-help-close="1">Masquer</button>
+      </div>
+    </div>`;
+  const firstField = anchor.closest('.row') || anchor.closest('.field') || anchor;
+  if (firstField && firstField.parentElement) firstField.parentElement.insertBefore(wrap, firstField);
+  else host.insertBefore(wrap, host.firstChild);
+  const close = wrap.querySelector('[data-tx-help-close]');
+  if (close) close.onclick = () => { try { if (window.tbUxDismiss) window.tbUxDismiss('transactions_overview'); } catch(_) {} wrap.remove(); };
+}
+
 function _txInitFiltersOnce() {
   const list = _txEl("tx-list");
   if (!list || list._filtersInit) return;
@@ -145,6 +183,7 @@ function _txInitFiltersOnce() {
   if (stored) _txSetFilters(stored);
 
   _txEnsureShortcutsUI();
+  _txEnsureHelpUI();
 }
 
 /* =========================

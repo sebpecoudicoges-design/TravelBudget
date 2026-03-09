@@ -215,6 +215,32 @@
       input.placeholder = _t("help.search_placeholder");
     }
 
+
+    // Quick start / current setup block
+    let setup = document.getElementById("help-quick-setup");
+    if (!setup) {
+      setup = document.createElement("div");
+      setup.id = "help-quick-setup";
+      setup.style.marginTop = "12px";
+      setup.style.marginBottom = "12px";
+      root.insertBefore(setup, root.firstChild);
+    }
+
+    const wallets = Array.isArray(window.state?.wallets) ? window.state.wallets : [];
+    const txs = Array.isArray(window.state?.transactions) ? window.state.transactions.filter(x => !x?.isInternal) : [];
+    const trips = Array.isArray(window.state?.trips) ? window.state.trips : [];
+    const segs = Array.isArray(window.state?.budgetSegments) ? window.state.budgetSegments : [];
+    const step = (ok, label, action) => `<div style="display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,0,0,.05);"><span>${ok ? "✅" : "⬜"} ${label}</span>${action || ""}</div>`;
+    setup.innerHTML = `
+      <div class="hint" style="padding:12px; border:1px solid rgba(0,0,0,.08); border-radius:14px; background:rgba(0,0,0,.02);">
+        <div style="font-weight:700; margin-bottom:8px;">Démarrage rapide</div>
+        <div class="muted" style="margin-bottom:8px;">L’app est plus facile à lire si tu avances dans cet ordre.</div>
+        ${step(wallets.length > 0, "Créer au moins une wallet", `<button class="btn" type="button" onclick="showView('dashboard')">Dashboard</button>`)}
+        ${step(segs.length > 0, "Vérifier la période et le budget journalier", `<button class="btn" type="button" onclick="showView('settings')">Settings</button>`)}
+        ${step(txs.length > 0, "Saisir une première transaction", `<button class="btn" type="button" onclick="showView('transactions')">Transactions</button>`)}
+        ${step(trips.length > 0, "Utiliser Partage si tu dépenses pour plusieurs", `<button class="btn" type="button" onclick="showView('trip')">Partage</button>`)}
+      </div>`;
+
     // Guides block (top)
     let guides = document.getElementById("help-guides");
     if (!guides) {

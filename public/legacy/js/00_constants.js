@@ -1,4 +1,4 @@
-window.__TB_BUILD = "8.6.1";
+window.__TB_BUILD = "8.7.0";
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -128,6 +128,9 @@ window.__TB_BUILD = "8.6.1";
     fx_calc_amount: "travelbudget_fx_calc_amount_v1",
     fx_calc_from: "travelbudget_fx_calc_from_v1",
     fx_calc_to: "travelbudget_fx_calc_to_v1",
+
+    // UX contextual help / onboarding dismiss state
+    ux_help_dismissed: "travelbudget_ux_help_dismissed_v1",
   });
 
   const UI_LABELS = Object.freeze({
