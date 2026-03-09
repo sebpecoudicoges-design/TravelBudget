@@ -608,32 +608,33 @@ async function deleteTx(txId) {
   if (!ok) return;
 
   await safeCall("Suppression", async () => {
-    try { if (typeof window.tbBusyStart === "function") window.tbBusyStart("Suppression en cours…"); } catch (_) {}
-    const { error } = await sb.rpc("delete_transaction", { p_tx_id: txId });
-    if (error) {
-      const code = String(error.code || "");
-      const msg = String(error.message || "").toLowerCase();
-      const details = String(error.details || "").toLowerCase();
-      const isTripLinked = code === "23503" && (
-        msg.includes("trip_expenses") ||
-        details.includes("trip_expenses") ||
-        msg.includes("trip_expenses_transaction_fk") ||
-        details.includes("trip_expenses_transaction_fk")
-      );
-      if (isTripLinked) {
-        const friendly = "Suppression bloquée : cette transaction est liée à une dépense Partage. Supprime d'abord la dépense depuis l'onglet Trip.";
-        try {
-          if (typeof toastWarn === "function") toastWarn(friendly);
-          else alert(friendly);
-        } catch (_) {}
-        return;
+    try {
+      try { if (typeof window.tbBusyStart === "function") window.tbBusyStart("Suppression en cours…"); } catch (_) {}
+      const { error } = await sb.rpc("delete_transaction", { p_tx_id: txId });
+      if (error) {
+        const code = String(error.code || "");
+        const msg = String(error.message || "").toLowerCase();
+        const details = String(error.details || "").toLowerCase();
+        const isTripLinked = code === "23503" && (
+          msg.includes("trip_expenses") ||
+          details.includes("trip_expenses") ||
+          msg.includes("trip_expenses_transaction_fk") ||
+          details.includes("trip_expenses_transaction_fk")
+        );
+        if (isTripLinked) {
+          const friendly = "Suppression bloquée : cette transaction est liée à une dépense Partage. Supprime d'abord la dépense depuis l'onglet Trip.";
+          try {
+            if (typeof toastWarn === "function") toastWarn(friendly);
+            else alert(friendly);
+          } catch (_) {}
+          return;
+        }
+        throw error;
       }
-      throw error;
+      await refreshFromServer();
+    } finally {
+      try { if (typeof window.tbBusyEnd === "function") window.tbBusyEnd(); } catch (_) {}
     }
-    await refreshFromServer();
-  } finally {
-    try { if (typeof window.tbBusyEnd === "function") window.tbBusyEnd(); } catch (_) {}
-  }
   });
 }
 
