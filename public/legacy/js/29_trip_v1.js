@@ -1011,6 +1011,83 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
 // =========================
 let _expDetailModalState = null;
 
+async function _fetchExpenseAuditDetails(expenseId) {
+  const out = {
+    walletTransaction: null,
+    budgetLinks: [],
+    budgetTransactionsById: new Map(),
+    myShareLink: null,
+  };
+
+  if (!expenseId) return out;
+
+  const ex = (tripState.expenses || []).find(x => x.id === expenseId) || null;
+  const txIds = new Set();
+  if (ex?.transactionId) txIds.add(ex.transactionId);
+
+  try {
+    const { data, error } = await sb
+      .from(TB_CONST.TABLES.trip_expense_budget_links)
+      .select("id,member_id,transaction_id,created_at")
+      .eq("expense_id", expenseId)
+      .order("created_at", { ascending: true });
+    if (!error && Array.isArray(data)) {
+      out.budgetLinks = data.map(row => ({
+        id: row.id,
+        memberId: row.member_id,
+        transactionId: row.transaction_id,
+        createdAt: row.created_at || null,
+      }));
+      out.budgetLinks.forEach(row => { if (row.transactionId) txIds.add(row.transactionId); });
+
+      const me = (tripState.members || []).find(m => m.isMe) || null;
+      if (me) out.myShareLink = out.budgetLinks.find(row => row.memberId === me.id) || null;
+    }
+  } catch (_) {}
+
+  if (txIds.size) {
+    try {
+      const { data, error } = await sb
+        .from(TB_CONST.TABLES.transactions)
+        .select("id,wallet_id,type,amount,currency,category,label,date_start,date_end,pay_now,out_of_budget,affects_budget,is_internal,created_at")
+        .in("id", Array.from(txIds));
+      if (!error && Array.isArray(data)) {
+        for (const row of data) {
+          out.budgetTransactionsById.set(row.id, {
+            id: row.id,
+            walletId: row.wallet_id || null,
+            type: row.type || null,
+            amount: Number(row.amount || 0),
+            currency: row.currency || null,
+            category: row.category || null,
+            label: row.label || null,
+            dateStart: row.date_start || null,
+            dateEnd: row.date_end || null,
+            payNow: row.pay_now === true,
+            outOfBudget: row.out_of_budget === true,
+            affectsBudget: row.affects_budget !== false,
+            isInternal: row.is_internal === true,
+            createdAt: row.created_at || null,
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  if (ex?.transactionId) out.walletTransaction = out.budgetTransactionsById.get(ex.transactionId) || null;
+  return out;
+}
+
+function _walletNameById(walletId) {
+  return (state.wallets || []).find(w => w.id === walletId)?.name || null;
+}
+
+function _yesNoPill(v) {
+  return v
+    ? '<span class="pill" style="font-size:12px;">Oui</span>'
+    : '<span class="pill" style="font-size:12px; background:rgba(0,0,0,0.06); color:#333;">Non</span>';
+}
+
 function _ensureExpenseDetailModal() {
   let modal = document.getElementById("tripExpenseDetailModal");
   if (modal) return modal;
@@ -1042,16 +1119,19 @@ function _ensureExpenseDetailModal() {
   return modal;
 }
 
-function _openExpenseDetailModal({ ex, shares, members }) {
+async function _openExpenseDetailModal({ ex, shares, members }) {
   const modal = _ensureExpenseDetailModal();
   _expDetailModalState = { expenseId: ex?.id || null };
 
   const payer = members.find(m => m.id === ex.paidByMemberId) || null;
   const payerName = payer ? payer.name : "—";
-  const linked = ex.transactionId ? "• lié au budget" : "";
 
-  modal.querySelector("#tripExpDetailMeta").textContent =
-    `${ex.date || "—"} • payé par ${payerName} ${linked}`.trim();
+  modal.querySelector("#tripExpDetailMeta").textContent = `${ex.date || "—"} • payé par ${payerName}`.trim();
+  modal.querySelector("#tripExpDetailBody").innerHTML = `<div class="muted">Chargement du détail…</div>`;
+  modal.style.display = "flex";
+
+  const audit = await _fetchExpenseAuditDetails(ex?.id);
+  if (!_expDetailModalState || _expDetailModalState.expenseId !== ex?.id) return;
 
   const amt = Number(ex.amount) || 0;
   const cur = ex.currency;
@@ -1078,16 +1158,54 @@ function _openExpenseDetailModal({ ex, shares, members }) {
        </div>`
     : "";
 
+  const mainTx = audit.walletTransaction;
+  const mainTxWallet = mainTx?.walletId ? _walletNameById(mainTx.walletId) : null;
+  const budgetRows = (audit.budgetLinks || []).map(link => {
+    const member = members.find(mm => mm.id === link.memberId) || null;
+    const tx = audit.budgetTransactionsById.get(link.transactionId) || null;
+    const walletName = tx?.walletId ? _walletNameById(tx.walletId) : null;
+    return `
+      <tr>
+        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${escapeHTML(member?.name || "—")}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);text-align:right;white-space:nowrap;">${tx ? _fmtMoney(tx.amount, tx.currency) : "—"}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${escapeHTML(tx?.category || "—")}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${escapeHTML(walletName || "—")}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${tx ? `${_yesNoPill(tx.payNow)} / ${_yesNoPill(tx.outOfBudget)}` : "—"}</td>
+      </tr>
+    `;
+  }).join("");
+
   const body = `
     <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
       <div style="min-width:0;">
         <div style="font-weight:700;font-size:16px;">${escapeHTML(ex.label || "Dépense")}</div>
-        <div class="muted" style="font-size:12px;margin-top:2px;">${escapeHTML(ex.category || "—")}</div>
+        <div class="muted" style="font-size:12px;margin-top:2px;">Trip expense</div>
       </div>
       <div style="font-weight:800;font-size:18px;white-space:nowrap;">${_fmtMoney(amt, cur)}</div>
     </div>
 
-    <div style="margin-top:10px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px;">
+      <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;">
+        <div class="muted" style="font-size:12px;margin-bottom:6px;">Lien wallet principal</div>
+        <div style="font-weight:700;">${mainTx ? "Oui" : "Non"}</div>
+        <div class="muted" style="font-size:12px;margin-top:6px;">${mainTx ? `${escapeHTML(mainTxWallet || "Wallet inconnue")} • ${escapeHTML(mainTx.category || "—")}` : "Aucune transaction wallet principale liée."}</div>
+        ${mainTx ? `<div class="muted" style="font-size:12px;margin-top:6px;">${_fmtMoney(mainTx.amount, mainTx.currency)} • pay_now ${mainTx.payNow ? "oui" : "non"} • out_of_budget ${mainTx.outOfBudget ? "oui" : "non"}</div>` : ``}
+      </div>
+
+      <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;">
+        <div class="muted" style="font-size:12px;margin-bottom:6px;">Liens budget de parts</div>
+        <div style="font-weight:700;">${audit.budgetLinks.length}</div>
+        <div class="muted" style="font-size:12px;margin-top:6px;">${audit.myShareLink ? "Ta part budget est liée à une transaction." : "Aucun lien trouvé pour ta part."}</div>
+      </div>
+
+      <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;">
+        <div class="muted" style="font-size:12px;margin-bottom:6px;">Cohérence répartition</div>
+        <div style="font-weight:700;">${Math.abs(diff) < 0.01 ? "OK" : "À vérifier"}</div>
+        <div class="muted" style="font-size:12px;margin-top:6px;">Somme parts ${_fmtMoney(sum || 0, cur)} • total ${_fmtMoney(amt, cur)}</div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;">
       <div class="muted" style="font-size:12px;margin-bottom:6px;">Répartition</div>
       <div style="overflow:auto;border:1px solid rgba(0,0,0,.08);border-radius:12px;">
         <table style="width:100%;border-collapse:collapse;min-width:420px;">
@@ -1111,6 +1229,26 @@ function _openExpenseDetailModal({ ex, shares, members }) {
         </table>
       </div>
       ${warn}
+    </div>
+
+    <div style="margin-top:12px;">
+      <div class="muted" style="font-size:12px;margin-bottom:6px;">Liens budget</div>
+      <div style="overflow:auto;border:1px solid rgba(0,0,0,.08);border-radius:12px;">
+        <table style="width:100%;border-collapse:collapse;min-width:520px;">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Participant</th>
+              <th style="text-align:right;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Montant tx</th>
+              <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Catégorie</th>
+              <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Wallet</th>
+              <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">pay_now / out</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${budgetRows || `<tr><td colspan="5" class="muted" style="padding:10px;">Aucun lien budget enregistré pour cette dépense.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
 
@@ -2102,40 +2240,44 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
   }
 
   async function _deleteExpense(expenseId) {
-    const uid = await _ensureSession();
+    await _ensureSession();
+    const tripId = tripState.activeTripId;
+    if (!tripId || !expenseId) throw new Error("Suppression invalide.");
 
-    // Load expense locally (for transaction links)
+    if (sb?.rpc && TB_CONST?.RPCS?.trip_delete_expense_v1) {
+      const { error } = await sb.rpc(TB_CONST.RPCS.trip_delete_expense_v1, {
+        p_trip_id: tripId,
+        p_expense_id: expenseId,
+      });
+      if (!error) return;
+      console.warn("[Trip] trip_delete_expense_v1 fallback", error);
+    }
+
+    // Fallback legacy si la RPC n'est pas disponible côté DB
     const ex = tripState.expenses.find(x => x.id === expenseId);
 
-    // 1) If there are per-share budget links (unpaid "my share" etc.), remove them and delete their transactions.
-    //    IMPORTANT: delete link rows BEFORE deleting transactions (FK safety).
     try {
       const { data: links, error: lerr } = await sb
         .from(TB_CONST.TABLES.trip_expense_budget_links)
         .select("transaction_id")
-        
         .eq("expense_id", expenseId);
 
-      if (lerr && lerr.code !== "PGRST116") throw lerr; // ignore "relation does not exist" style errors defensively
+      if (lerr && lerr.code !== "PGRST116") throw lerr;
       if (links?.length) {
-        // Delete link rows first
         const { error: dlerr } = await sb
           .from(TB_CONST.TABLES.trip_expense_budget_links)
           .delete()
-          
           .eq("expense_id", expenseId);
         if (dlerr) throw dlerr;
 
-        // Then delete each linked transaction (wallet adjusted by RPC)
         for (const row of links) {
           const txId = row.transaction_id;
           if (!txId) continue;
-          const { error: derr } = await sb.rpc("delete_transaction", { p_tx_id: txId });
+          const { error: derr } = await sb.rpc(TB_CONST.RPCS.delete_transaction || "delete_transaction", { p_tx_id: txId });
           if (derr) throw derr;
         }
       }
     } catch (e) {
-      // If the link table doesn't exist in this deployment, ignore. Otherwise rethrow.
       const msg = (e && (e.message || e.toString())) || "";
       if (!msg.toLowerCase().includes("trip_expense_budget_links") &&
           !msg.toLowerCase().includes("relation") &&
@@ -2144,42 +2286,30 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       }
     }
 
-    // 2) If this expense is linked 1:1 to a budget transaction (paid by me), delete that transaction as well.
-    //    IMPORTANT: clear trip_expenses.transaction_id first (FK safety), then call delete_transaction (which removes the tx and adjusts wallet).
     if (ex?.transactionId) {
       const txId = ex.transactionId;
-
-      // Clear references on both sides (safe even if one column doesn't exist / RLS blocks some updates)
       await sb.from(TB_CONST.TABLES.trip_expenses).update({ transaction_id: null }).eq("id", expenseId);
       await sb.from(TB_CONST.TABLES.transactions).update({ trip_expense_id: null }).eq("id", txId);
 
-      const { error: derr } = await sb.rpc("delete_transaction", { p_tx_id: txId });
+      const { error: derr } = await sb.rpc(TB_CONST.RPCS.delete_transaction || "delete_transaction", { p_tx_id: txId });
       if (derr) throw derr;
     }
 
-    
-    // 2b) Safety net: if ANY transaction still references this expense via trip_expense_id, delete it/them first
-    //     (prevents FK violations like: transactions_trip_expense_fk / transactions_trip_expense_id_fk)
     try {
       const { data: txRefs, error: txRefErr } = await sb
         .from(TB_CONST.TABLES.transactions)
         .select("id")
-        
         .eq("trip_expense_id", expenseId);
       if (txRefErr) throw txRefErr;
       if (txRefs?.length) {
         for (const row of txRefs) {
           if (!row?.id) continue;
-          const { error: derr } = await sb.rpc("delete_transaction", { p_tx_id: row.id });
+          const { error: derr } = await sb.rpc(TB_CONST.RPCS.delete_transaction || "delete_transaction", { p_tx_id: row.id });
           if (derr) throw derr;
         }
       }
-    } catch (e) {
-      // If RLS blocks the select or the column doesn't exist, we can't do more here.
-      // In that case, the delete below may still fail; surface the error to the user.
-    }
+    } catch (_) {}
 
-// 3) Delete shares and the expense itself
     await sb.from(TB_CONST.TABLES.trip_expense_shares).delete().eq("expense_id", expenseId);
     const { error } = await sb.from(TB_CONST.TABLES.trip_expenses).delete().eq("id", expenseId);
     if (error) throw error;
@@ -3024,7 +3154,14 @@ root.querySelectorAll("[data-del-exp]").forEach(btn => {
       btn.onclick = async () => {
         try {
           const id = btn.getAttribute("data-del-exp");
-          if (!confirm("Supprimer cette dépense ?")) return;
+          const ex = (tripState.expenses || []).find(x => x.id === id) || null;
+          const isLocked = ex ? await _expenseIsEditLocked(ex) : false;
+          const confirmMsg = isLocked
+            ? `Supprimer cette dépense ?
+
+Cette suppression retirera aussi les liens budget/wallet associés.`
+            : "Supprimer cette dépense ?";
+          if (!confirm(confirmMsg)) return;
           await _deleteExpense(id);
           if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 toastOk("Dépense supprimée.");

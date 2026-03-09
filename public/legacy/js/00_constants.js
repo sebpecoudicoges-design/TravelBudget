@@ -61,6 +61,7 @@ window.__TB_BUILD = "8.3.6";
     trip_get_balances_v1: "trip_get_balances_v1",
     trip_apply_expense_v1: "trip_apply_expense_v1",
     trip_apply_expense_v2: "trip_apply_expense_v2",
+    trip_delete_expense_v1: "trip_delete_expense_v1",
     trip_suggest_settlements_v1: "trip_suggest_settlements_v1",
     trip_create_settlement_v1: "trip_create_settlement_v1",
     trip_cancel_settlement_v1: "trip_cancel_settlement_v1",

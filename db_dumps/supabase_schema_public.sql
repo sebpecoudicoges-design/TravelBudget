@@ -568,6 +568,375 @@ end $$;
 ALTER FUNCTION "public"."trip_after_group_insert_add_owner"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."trip_apply_expense_v1"("p_trip_id" "uuid", "p_payload" "jsonb") RETURNS TABLE("expense_id" "uuid")
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_uid uuid;
+  v_expense_id uuid;
+  v_date date;
+  v_label text;
+  v_amount numeric;
+  v_currency text;
+  v_paid_by uuid;
+  v_sum numeric;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  if p_trip_id is null then
+    raise exception 'trip_id required';
+  end if;
+
+  if not exists (
+    select 1
+    from public.trip_participants tp
+    where tp.trip_id = p_trip_id
+      and tp.auth_user_id = v_uid
+  ) then
+    raise exception 'not authorized';
+  end if;
+
+  v_expense_id := nullif((p_payload->>'expense_id')::text, '')::uuid;
+  v_date := (p_payload->>'date')::date;
+  v_label := coalesce(p_payload->>'label','');
+  v_amount := (p_payload->>'amount')::numeric;
+  v_currency := coalesce(p_payload->>'currency','');
+  v_paid_by := nullif((p_payload->>'paid_by_member_id')::text, '')::uuid;
+
+  if v_date is null or v_label = '' or v_amount is null or v_currency = '' or v_paid_by is null then
+    raise exception 'missing fields';
+  end if;
+
+  -- Upsert expense
+  if v_expense_id is null then
+    insert into public.trip_expenses (
+      user_id, trip_id, date, label, amount, currency, paid_by_member_id, created_at, transaction_id
+    ) values (
+      v_uid, p_trip_id, v_date, v_label, v_amount, v_currency, v_paid_by, now(), null
+    )
+    returning id into v_expense_id;
+  else
+    update public.trip_expenses e
+    set date = v_date,
+        label = v_label,
+        amount = v_amount,
+        currency = v_currency,
+        paid_by_member_id = v_paid_by
+    where e.id = v_expense_id
+      and e.trip_id = p_trip_id
+    returning e.id into v_expense_id;
+
+    if v_expense_id is null then
+      raise exception 'expense not found';
+    end if;
+
+    delete from public.trip_expense_shares s
+    where s.expense_id = v_expense_id
+      and s.trip_id = p_trip_id;
+  end if;
+
+  -- Insert shares (replace-all)
+  insert into public.trip_expense_shares (
+    user_id, trip_id, expense_id, member_id, share_amount, created_at
+  )
+  select
+    v_uid,
+    p_trip_id,
+    v_expense_id,
+    (x->>'member_id')::uuid,
+    (x->>'share_amount')::numeric,
+    now()
+  from jsonb_array_elements(coalesce(p_payload->'shares','[]'::jsonb)) as x;
+
+  -- Validate shares sum
+  select coalesce(sum(s.share_amount),0) into v_sum
+  from public.trip_expense_shares s
+  where s.expense_id = v_expense_id
+    and s.trip_id = p_trip_id;
+
+  if abs(v_sum - v_amount) > 0.01 then
+    raise exception 'shares_sum_mismatch: sum=% amount=%', v_sum, v_amount;
+  end if;
+
+  return query select v_expense_id;
+
+end;
+$$;
+
+
+ALTER FUNCTION "public"."trip_apply_expense_v1"("p_trip_id" "uuid", "p_payload" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."trip_apply_expense_v2"("p_trip_id" "uuid", "p_payload" "jsonb") RETURNS TABLE("expense_id" "uuid", "transaction_id" "uuid")
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_uid uuid;
+  v_expense_id uuid;
+  v_existing_tx_id uuid;
+  v_tx_id uuid;
+
+  v_date date;
+  v_label text;
+  v_amount numeric;
+  v_currency text;
+  v_paid_by_member_id uuid;
+  v_sum numeric;
+
+  v_wallet_enabled boolean;
+  v_wallet_id uuid;
+  v_tx_type text;
+  v_pay_now boolean;
+  v_out_of_budget boolean;
+  v_night_covered boolean;
+  v_affects_budget boolean;
+  v_category text;
+  v_subcategory text;
+
+  v_fx_rate_snapshot numeric;
+  v_fx_source_snapshot text;
+  v_fx_snapshot_at timestamptz;
+  v_fx_base_currency_snapshot text;
+  v_fx_tx_currency_snapshot text;
+begin
+  v_uid := auth.uid();
+
+  if v_uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  if p_trip_id is null then
+    raise exception 'trip_id required';
+  end if;
+
+  if not exists (
+    select 1
+    from public.trip_participants tp
+    where tp.trip_id = p_trip_id
+      and tp.auth_user_id = v_uid
+  ) then
+    raise exception 'not authorized';
+  end if;
+
+  v_expense_id := nullif(p_payload->>'expense_id', '')::uuid;
+  v_date := (p_payload->>'date')::date;
+  v_label := coalesce(p_payload->>'label', '');
+  v_amount := (p_payload->>'amount')::numeric;
+  v_currency := coalesce(p_payload->>'currency', '');
+  v_paid_by_member_id := nullif(p_payload->>'paid_by_member_id', '')::uuid;
+
+  if v_date is null or v_label = '' or v_amount is null or v_currency = '' or v_paid_by_member_id is null then
+    raise exception 'missing fields';
+  end if;
+
+  if not exists (
+    select 1
+    from public.trip_members tm
+    where tm.id = v_paid_by_member_id
+      and tm.trip_id = p_trip_id
+  ) then
+    raise exception 'paid_by_member_id invalid';
+  end if;
+
+  -- CREATE / UPDATE expense
+  if v_expense_id is null then
+    insert into public.trip_expenses(
+      id,
+      user_id,
+      trip_id,
+      date,
+      label,
+      amount,
+      currency,
+      paid_by_member_id,
+      created_at,
+      transaction_id
+    )
+    values(
+      gen_random_uuid(),
+      v_uid,
+      p_trip_id,
+      v_date,
+      v_label,
+      v_amount,
+      v_currency,
+      v_paid_by_member_id,
+      now(),
+      null
+    )
+    returning trip_expenses.id, trip_expenses.transaction_id
+    into v_expense_id, v_existing_tx_id;
+  else
+    update public.trip_expenses e
+    set
+      date = v_date,
+      label = v_label,
+      amount = v_amount,
+      currency = v_currency,
+      paid_by_member_id = v_paid_by_member_id
+    where e.id = v_expense_id
+      and e.trip_id = p_trip_id
+    returning e.transaction_id
+    into v_existing_tx_id;
+
+    if not found then
+      raise exception 'expense not found';
+    end if;
+
+    delete from public.trip_expense_shares s
+    where s.trip_id = p_trip_id
+      and s.expense_id = v_expense_id;
+
+    delete from public.trip_expense_budget_links l
+    where l.trip_id = p_trip_id
+      and l.expense_id = v_expense_id;
+  end if;
+
+  -- INSERT shares
+  insert into public.trip_expense_shares(
+    id,
+    user_id,
+    expense_id,
+    member_id,
+    share_amount,
+    created_at,
+    trip_id
+  )
+  select
+    gen_random_uuid(),
+    v_uid,
+    v_expense_id,
+    (x->>'member_id')::uuid,
+    (x->>'share_amount')::numeric,
+    now(),
+    p_trip_id
+  from jsonb_array_elements(coalesce(p_payload->'shares', '[]'::jsonb)) as x;
+
+  -- VALIDATE shares sum
+  select coalesce(sum(s.share_amount), 0)
+  into v_sum
+  from public.trip_expense_shares s
+  where s.trip_id = p_trip_id
+    and s.expense_id = v_expense_id;
+
+  if abs(v_sum - v_amount) > 0.01 then
+    raise exception 'shares_sum_mismatch: sum=% amount=%', v_sum, v_amount;
+  end if;
+
+  -- WALLET TX block
+  v_wallet_enabled := coalesce((p_payload->'wallet_tx'->>'enabled')::boolean, false);
+  v_tx_id := null;
+
+  if v_wallet_enabled then
+    v_wallet_id := nullif(p_payload->'wallet_tx'->>'wallet_id', '')::uuid;
+    v_tx_type := coalesce(p_payload->'wallet_tx'->>'type', 'expense');
+    v_pay_now := coalesce((p_payload->'wallet_tx'->>'pay_now')::boolean, true);
+    v_out_of_budget := coalesce((p_payload->'wallet_tx'->>'out_of_budget')::boolean, false);
+    v_night_covered := coalesce((p_payload->'wallet_tx'->>'night_covered')::boolean, false);
+    v_affects_budget := coalesce((p_payload->'wallet_tx'->>'affects_budget')::boolean, true);
+    v_category := coalesce(p_payload->'wallet_tx'->>'category', 'Partage');
+    v_subcategory := nullif(p_payload->'wallet_tx'->>'subcategory', '');
+
+    v_fx_rate_snapshot := nullif(p_payload->'wallet_tx'->>'fx_rate_snapshot', '')::numeric;
+    v_fx_source_snapshot := nullif(p_payload->'wallet_tx'->>'fx_source_snapshot', '');
+    v_fx_snapshot_at := nullif(p_payload->'wallet_tx'->>'fx_snapshot_at', '')::timestamptz;
+    v_fx_base_currency_snapshot := nullif(p_payload->'wallet_tx'->>'fx_base_currency_snapshot', '');
+    v_fx_tx_currency_snapshot := nullif(p_payload->'wallet_tx'->>'fx_tx_currency_snapshot', '');
+
+    if v_wallet_id is null then
+      raise exception 'wallet_id required when wallet_tx.enabled=true';
+    end if;
+
+    -- sécurité minimale : wallet doit appartenir au user courant
+    if not exists (
+      select 1
+      from public.wallets w
+      where w.id = v_wallet_id
+        and w.user_id = v_uid
+    ) then
+      raise exception 'wallet_id invalid';
+    end if;
+
+    -- si update avec ancienne tx liée, on la supprime avant de recréer
+    if v_existing_tx_id is not null then
+      perform public.delete_transaction(v_existing_tx_id);
+      v_existing_tx_id := null;
+    end if;
+
+    select public.apply_transaction_v2(
+      v_wallet_id,
+      v_tx_type,
+      v_label,
+      v_amount,
+      v_currency,
+      v_date,
+      v_date,
+      v_category,
+      v_subcategory,
+      v_pay_now,
+      v_out_of_budget,
+      v_night_covered,
+      v_affects_budget,
+      v_expense_id,
+      null,
+      v_fx_rate_snapshot,
+      v_fx_source_snapshot,
+      v_fx_snapshot_at,
+      v_fx_base_currency_snapshot,
+      v_fx_tx_currency_snapshot,
+      v_uid
+    )
+    into v_tx_id;
+
+    update public.trip_expenses e
+    set transaction_id = v_tx_id
+    where e.id = v_expense_id
+      and e.trip_id = p_trip_id;
+
+    insert into public.trip_expense_budget_links(
+      id,
+      user_id,
+      trip_id,
+      expense_id,
+      member_id,
+      transaction_id,
+      created_at
+    )
+    values(
+      gen_random_uuid(),
+      v_uid,
+      p_trip_id,
+      v_expense_id,
+      v_paid_by_member_id,
+      v_tx_id,
+      now()
+    );
+  else
+    -- si update et wallet désactivée alors qu'une tx existait déjà
+    if v_existing_tx_id is not null then
+      perform public.delete_transaction(v_existing_tx_id);
+
+      update public.trip_expenses e
+      set transaction_id = null
+      where e.id = v_expense_id
+        and e.trip_id = p_trip_id;
+    end if;
+  end if;
+
+  return query
+  select v_expense_id, v_tx_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."trip_apply_expense_v2"("p_trip_id" "uuid", "p_payload" "jsonb") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."trip_bind_member_to_auth"("p_trip_id" "uuid") RETURNS "uuid"
     LANGUAGE "sql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -577,6 +946,202 @@ $$;
 
 
 ALTER FUNCTION "public"."trip_bind_member_to_auth"("p_trip_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."trip_cancel_settlement_v1"("p_event_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_uid uuid;
+  v_trip uuid;
+begin
+  v_uid := auth.uid();
+
+  if v_uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  select trip_id
+  into v_trip
+  from trip_settlement_events
+  where id = p_event_id;
+
+  if not exists (
+    select 1
+    from trip_participants
+    where trip_id = v_trip
+      and auth_user_id = v_uid
+  ) then
+    raise exception 'not participant';
+  end if;
+
+  update trip_settlement_events
+  set cancelled_at = now()
+  where id = p_event_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."trip_cancel_settlement_v1"("p_event_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_event_id uuid;
+  v_uid uuid;
+begin
+  -- utilisateur courant
+  v_uid := auth.uid();
+
+  if v_uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  -- vérifier que l'utilisateur appartient au trip
+  if not exists (
+    select 1
+    from trip_participants tp
+    where tp.trip_id = p_trip_id
+      and tp.auth_user_id = v_uid
+  ) then
+    raise exception 'not participant';
+  end if;
+
+  insert into trip_settlement_events(
+    id,
+    trip_id,
+    currency,
+    amount,
+    from_member_id,
+    to_member_id,
+    created_by,
+    created_at
+  )
+  values (
+    gen_random_uuid(),
+    p_trip_id,
+    p_currency,
+    p_amount,
+    p_from_member_id,
+    p_to_member_id,
+    v_uid,
+    now()
+  )
+  returning id into v_event_id;
+
+  return v_event_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."trip_delete_expense_v1"("p_trip_id" "uuid", "p_expense_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_uid uuid;
+  v_tx_id uuid;
+begin
+  v_uid := auth.uid();
+
+  if v_uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  if not exists (
+    select 1
+    from public.trip_participants tp
+    where tp.trip_id = p_trip_id
+      and tp.auth_user_id = v_uid
+  ) then
+    raise exception 'not authorized';
+  end if;
+
+  select transaction_id
+  into v_tx_id
+  from public.trip_expenses
+  where id = p_expense_id
+  and trip_id = p_trip_id;
+
+  if not found then
+    raise exception 'expense not found';
+  end if;
+
+  -- delete shares
+  delete from public.trip_expense_shares
+  where expense_id = p_expense_id
+  and trip_id = p_trip_id;
+
+  -- delete budget links
+  delete from public.trip_expense_budget_links
+  where expense_id = p_expense_id
+  and trip_id = p_trip_id;
+
+  -- delete wallet transaction if exists
+  if v_tx_id is not null then
+    perform public.delete_transaction(v_tx_id);
+  end if;
+
+  -- delete expense
+  delete from public.trip_expenses
+  where id = p_expense_id
+  and trip_id = p_trip_id;
+
+end;
+$$;
+
+
+ALTER FUNCTION "public"."trip_delete_expense_v1"("p_trip_id" "uuid", "p_expense_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."trip_get_balances_v1"("p_trip_id" "uuid") RETURNS TABLE("currency" "text", "member_id" "uuid", "name" "text", "email" "text", "paid" numeric, "owed" numeric, "net_raw" numeric, "adj" numeric, "net" numeric)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+begin
+  if p_trip_id is null then
+    raise exception 'trip_id required';
+  end if;
+
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+
+  if not exists (
+    select 1
+    from public.trip_participants tp
+    where tp.trip_id = p_trip_id
+      and tp.auth_user_id = auth.uid()
+  ) then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+    select
+      v.currency,
+      v.member_id,
+      v.name,
+      v.email,
+      v.paid,
+      v.owed,
+      v.net_raw,
+      v.adj,
+      v.net
+    from public.v_trip_balances v
+    where v.trip_id = p_trip_id
+    order by v.currency, v.name;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."trip_get_balances_v1"("p_trip_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."trip_role"("p_trip_id" "uuid") RETURNS "text"
@@ -591,6 +1156,84 @@ $$;
 
 
 ALTER FUNCTION "public"."trip_role"("p_trip_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."trip_suggest_settlements_v1"("p_trip_id" "uuid", "p_use_net_raw" boolean DEFAULT true) RETURNS TABLE("out_currency" "text", "from_member_id" "uuid", "to_member_id" "uuid", "amount" numeric)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+
+  if not exists (
+    select 1
+    from public.trip_participants tp
+    where tp.trip_id = p_trip_id
+      and tp.auth_user_id = auth.uid()
+  ) then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  with b as (
+    select
+      v.currency as cur,
+      v.member_id,
+      case when p_use_net_raw then v.net_raw else v.net end as bal
+    from public.v_trip_balances v
+    where v.trip_id = p_trip_id
+  ),
+  creditors as (
+    select cur, member_id, bal
+    from b
+    where bal > 0
+    order by cur, bal desc
+  ),
+  debtors as (
+    select cur, member_id, (-bal) as bal
+    from b
+    where bal < 0
+    order by cur, (-bal) desc
+  ),
+  c as (
+    select cur, member_id, bal,
+           sum(bal) over (partition by cur order by bal desc, member_id) as c_cum
+    from creditors
+  ),
+  d as (
+    select cur, member_id, bal,
+           sum(bal) over (partition by cur order by bal desc, member_id) as d_cum
+    from debtors
+  ),
+  pairs as (
+    select
+      d.cur,
+      d.member_id as from_member_id,
+      c.member_id as to_member_id,
+      greatest(
+        0,
+        least(d.d_cum, c.c_cum)
+        - greatest(d.d_cum - d.bal, c.c_cum - c.bal)
+      ) as amt
+    from d
+    join c on c.cur = d.cur
+  )
+  select
+    pairs.cur::text as out_currency,
+    pairs.from_member_id,
+    pairs.to_member_id,
+    round(pairs.amt::numeric, 2) as amount
+  from pairs
+  where pairs.amt > 0.009
+  order by pairs.cur, pairs.amt desc;
+
+end;
+$$;
+
+
+ALTER FUNCTION "public"."trip_suggest_settlements_v1"("p_trip_id" "uuid", "p_use_net_raw" boolean) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_transaction"("p_tx_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean) RETURNS "void"
@@ -1097,6 +1740,90 @@ CREATE TABLE IF NOT EXISTS "public"."trip_settlements" (
 ALTER TABLE "public"."trip_settlements" OWNER TO "postgres";
 
 
+CREATE OR REPLACE VIEW "public"."v_trip_balances" AS
+ WITH "paid" AS (
+         SELECT "e"."trip_id",
+            "e"."currency",
+            "e"."paid_by_member_id" AS "member_id",
+            "sum"("e"."amount") AS "paid"
+           FROM "public"."trip_expenses" "e"
+          WHERE ("e"."paid_by_member_id" IS NOT NULL)
+          GROUP BY "e"."trip_id", "e"."currency", "e"."paid_by_member_id"
+        ), "owed" AS (
+         SELECT "s"."trip_id",
+            "e"."currency",
+            "s"."member_id",
+            "sum"("s"."share_amount") AS "owed"
+           FROM ("public"."trip_expense_shares" "s"
+             JOIN "public"."trip_expenses" "e" ON (("e"."id" = "s"."expense_id")))
+          GROUP BY "s"."trip_id", "e"."currency", "s"."member_id"
+        ), "settle" AS (
+         SELECT "ev"."trip_id",
+            "ev"."currency",
+            "ev"."from_member_id" AS "member_id",
+            "sum"("ev"."amount") AS "adj"
+           FROM "public"."trip_settlement_events" "ev"
+          WHERE ("ev"."cancelled_at" IS NULL)
+          GROUP BY "ev"."trip_id", "ev"."currency", "ev"."from_member_id"
+        UNION ALL
+         SELECT "ev"."trip_id",
+            "ev"."currency",
+            "ev"."to_member_id" AS "member_id",
+            (- "sum"("ev"."amount")) AS "adj"
+           FROM "public"."trip_settlement_events" "ev"
+          WHERE ("ev"."cancelled_at" IS NULL)
+          GROUP BY "ev"."trip_id", "ev"."currency", "ev"."to_member_id"
+        ), "unioned" AS (
+         SELECT "paid"."trip_id",
+            "paid"."currency",
+            "paid"."member_id",
+            "paid"."paid",
+            (0)::numeric AS "owed",
+            (0)::numeric AS "adj"
+           FROM "paid"
+        UNION ALL
+         SELECT "owed"."trip_id",
+            "owed"."currency",
+            "owed"."member_id",
+            0,
+            "owed"."owed",
+            0
+           FROM "owed"
+        UNION ALL
+         SELECT "settle"."trip_id",
+            "settle"."currency",
+            "settle"."member_id",
+            0,
+            0,
+            "settle"."adj"
+           FROM "settle"
+        ), "agg" AS (
+         SELECT "unioned"."trip_id",
+            "unioned"."currency",
+            "unioned"."member_id",
+            "sum"("unioned"."paid") AS "paid",
+            "sum"("unioned"."owed") AS "owed",
+            "sum"("unioned"."adj") AS "adj"
+           FROM "unioned"
+          GROUP BY "unioned"."trip_id", "unioned"."currency", "unioned"."member_id"
+        )
+ SELECT "a"."trip_id",
+    "a"."currency",
+    "m"."id" AS "member_id",
+    "m"."name",
+    "m"."email",
+    COALESCE("a"."paid", (0)::numeric) AS "paid",
+    COALESCE("a"."owed", (0)::numeric) AS "owed",
+    (COALESCE("a"."paid", (0)::numeric) - COALESCE("a"."owed", (0)::numeric)) AS "net_raw",
+    COALESCE("a"."adj", (0)::numeric) AS "adj",
+    ((COALESCE("a"."paid", (0)::numeric) - COALESCE("a"."owed", (0)::numeric)) + COALESCE("a"."adj", (0)::numeric)) AS "net"
+   FROM ("agg" "a"
+     JOIN "public"."trip_members" "m" ON ((("m"."id" = "a"."member_id") AND ("m"."trip_id" = "a"."trip_id"))));
+
+
+ALTER VIEW "public"."v_trip_balances" OWNER TO "postgres";
+
+
 CREATE OR REPLACE VIEW "public"."v_trip_budget_potential_duplicates" WITH ("security_invoker"='true') AS
  SELECT "te"."id" AS "trip_expense_id",
     "t"."id" AS "transaction_id",
@@ -1425,6 +2152,18 @@ CREATE INDEX "idx_trip_members_trip_id" ON "public"."trip_members" USING "btree"
 
 
 CREATE INDEX "idx_trip_members_user" ON "public"."trip_members" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_trip_settlement_events_trip_active" ON "public"."trip_settlement_events" USING "btree" ("trip_id") WHERE ("cancelled_at" IS NULL);
+
+
+
+CREATE INDEX "idx_trip_settlement_events_trip_from" ON "public"."trip_settlement_events" USING "btree" ("trip_id", "from_member_id") WHERE ("cancelled_at" IS NULL);
+
+
+
+CREATE INDEX "idx_trip_settlement_events_trip_to" ON "public"."trip_settlement_events" USING "btree" ("trip_id", "to_member_id") WHERE ("cancelled_at" IS NULL);
 
 
 
@@ -2534,9 +3273,49 @@ GRANT ALL ON FUNCTION "public"."trip_after_group_insert_add_owner"() TO "service
 
 
 
+REVOKE ALL ON FUNCTION "public"."trip_apply_expense_v1"("p_trip_id" "uuid", "p_payload" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."trip_apply_expense_v1"("p_trip_id" "uuid", "p_payload" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."trip_apply_expense_v1"("p_trip_id" "uuid", "p_payload" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."trip_apply_expense_v1"("p_trip_id" "uuid", "p_payload" "jsonb") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."trip_apply_expense_v2"("p_trip_id" "uuid", "p_payload" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."trip_apply_expense_v2"("p_trip_id" "uuid", "p_payload" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."trip_apply_expense_v2"("p_trip_id" "uuid", "p_payload" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."trip_apply_expense_v2"("p_trip_id" "uuid", "p_payload" "jsonb") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."trip_bind_member_to_auth"("p_trip_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."trip_bind_member_to_auth"("p_trip_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_bind_member_to_auth"("p_trip_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."trip_cancel_settlement_v1"("p_event_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."trip_cancel_settlement_v1"("p_event_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."trip_cancel_settlement_v1"("p_event_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."trip_delete_expense_v1"("p_trip_id" "uuid", "p_expense_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."trip_delete_expense_v1"("p_trip_id" "uuid", "p_expense_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."trip_delete_expense_v1"("p_trip_id" "uuid", "p_expense_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."trip_delete_expense_v1"("p_trip_id" "uuid", "p_expense_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."trip_get_balances_v1"("p_trip_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."trip_get_balances_v1"("p_trip_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."trip_get_balances_v1"("p_trip_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."trip_get_balances_v1"("p_trip_id" "uuid") TO "service_role";
 
 
 
@@ -2544,6 +3323,13 @@ REVOKE ALL ON FUNCTION "public"."trip_role"("p_trip_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."trip_role"("p_trip_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."trip_role"("p_trip_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_role"("p_trip_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."trip_suggest_settlements_v1"("p_trip_id" "uuid", "p_use_net_raw" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."trip_suggest_settlements_v1"("p_trip_id" "uuid", "p_use_net_raw" boolean) TO "anon";
+GRANT ALL ON FUNCTION "public"."trip_suggest_settlements_v1"("p_trip_id" "uuid", "p_use_net_raw" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."trip_suggest_settlements_v1"("p_trip_id" "uuid", "p_use_net_raw" boolean) TO "service_role";
 
 
 
@@ -2676,6 +3462,12 @@ GRANT ALL ON TABLE "public"."trip_settlement_events" TO "service_role";
 GRANT ALL ON TABLE "public"."trip_settlements" TO "anon";
 GRANT ALL ON TABLE "public"."trip_settlements" TO "authenticated";
 GRANT ALL ON TABLE "public"."trip_settlements" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."v_trip_balances" TO "anon";
+GRANT ALL ON TABLE "public"."v_trip_balances" TO "authenticated";
+GRANT ALL ON TABLE "public"."v_trip_balances" TO "service_role";
 
 
 
