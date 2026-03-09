@@ -1,11 +1,17 @@
-window.__TB_BUILD = "8.6.0";
+window.__TB_BUILD = "8.6.1";
 /* =========================
    Boot
    ========================= */
 
 function tbEnsureBootOverlay() {
   let el = document.getElementById("tb-boot-overlay");
-  if (el) return el;
+  if (el) {
+    try {
+      el.style.opacity = '1';
+      el.style.pointerEvents = 'auto';
+    } catch (_) {}
+    return el;
+  }
   try {
     el = document.createElement("div");
     el.id = "tb-boot-overlay";
@@ -17,15 +23,15 @@ function tbEnsureBootOverlay() {
       "display:flex",
       "align-items:center",
       "justify-content:center",
-      "background:rgba(15,23,42,.20)",
+      "background:rgba(15,23,42,.78)",
       "backdrop-filter:blur(10px)",
       "-webkit-backdrop-filter:blur(10px)",
-      "opacity:0",
-      "pointer-events:none",
+      "opacity:1",
+      "pointer-events:auto",
       "transition:opacity .22s ease"
     ].join(";");
     el.innerHTML = `
-      <div style="min-width:240px;max-width:86vw;padding:18px 20px;border-radius:20px;background:rgba(17,24,39,.92);color:#fff;box-shadow:0 18px 48px rgba(0,0,0,.28);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;">
+      <div style="min-width:240px;max-width:86vw;padding:18px 20px;border-radius:20px;background:rgba(17,24,39,.92);color:#fff;box-shadow:0 18px 48px rgba(0,0,0,.28);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;border:1px solid rgba(255,255,255,.08);">
         <div style="width:32px;height:32px;border-radius:999px;border:3px solid rgba(255,255,255,.22);border-top-color:#fff;animation:tbBootSpin .8s linear infinite;"></div>
         <div style="font-weight:700;font-size:15px;">Chargement de ton budget…</div>
         <div id="tb-boot-overlay-text" style="font-size:12px;opacity:.82;">Préparation des données et des vues</div>
@@ -68,7 +74,7 @@ window.onload = async function () {
   try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:onload"); } catch (_) {}
   window.__TB_BOOTING = true;
   const __tbBootStartedAt = Date.now();
-  try { tbShowBootOverlay("Préparation des données et des vues"); } catch (_) {}
+  try { tbShowBootOverlay("Initialisation de l’application"); } catch (_) {}
 
 
   // ✅ Post invite/recovery: laisse la page se stabiliser
@@ -135,7 +141,8 @@ window.onload = async function () {
 
     // Perf (A2): do not block UI on network refresh.
     // Show the dashboard immediately and refresh in background.
-    try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:refreshFromServer"); } catch (_) {}
+    try { tbShowBootOverlay("Chargement des transactions, wallets et graphiques…"); } catch (_) {}
+  try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:refreshFromServer"); } catch (_) {}
     const _refreshPromise = (typeof refreshFromServer === "function")
       ? refreshFromServer()
       : Promise.resolve();

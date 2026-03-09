@@ -1316,7 +1316,11 @@ async function _persistSettlementEventOnly() {
     fromId,
     toId,
   });
-  if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+  if (typeof window.tbAfterMutationRefresh === "function") {
+    await window.tbAfterMutationRefresh("trip:settlement_only", { trip: true });
+  } else if (typeof window.__tripRefresh === "function") {
+    await window.__tripRefresh({ activeOnly: true });
+  }
 }
 
 async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAmount }) {
@@ -1393,7 +1397,11 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     console.warn("[Trip] settlement tx link failed", e);
   }
 
-  if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+  if (typeof window.tbAfterMutationRefresh === "function") {
+    await window.tbAfterMutationRefresh("trip:settlement_wallet", { trip: true });
+  } else if (typeof window.__tripRefresh === "function") {
+    await window.__tripRefresh({ activeOnly: true });
+  }
 }
 
 // Rename a trip member (participant) — minimal UX (prompt)
@@ -3470,7 +3478,6 @@ toastOk("Participant ajouté.");
           await _persistSettlementEventOnly();
           _settleModalState = null;
 
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
           toastOk("Règlement enregistré (sans wallet).");
         } catch (e) {
           toastWarn("[Trip] " + normalizeSbError(e));
@@ -3488,8 +3495,12 @@ toastOk("Participant ajouté.");
           const ok = confirm("Annuler ce règlement ?\n\nNote: cela ne supprime PAS la transaction wallet associée (si elle existe).");
           if (!ok) return;
           await _cancelSettlementEvent(id);
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
-toastOk("Règlement annulé.");
+          if (typeof window.tbAfterMutationRefresh === "function") {
+            await window.tbAfterMutationRefresh("trip:cancel_settlement", { trip: true });
+          } else if (typeof window.__tripRefresh === "function") {
+            await window.__tripRefresh({ activeOnly: true });
+          }
+          toastOk("Règlement annulé.");
         } catch (e) {
           toastWarn("[Trip] " + normalizeSbError(e));
         }
