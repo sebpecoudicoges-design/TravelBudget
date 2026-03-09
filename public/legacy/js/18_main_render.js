@@ -20,7 +20,9 @@ function _tbRenderLog() {
 function renderAll() {
   _tbRenderLog("renderAll", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
   try {
-    if (typeof recomputeWalletBalances === "function") recomputeWalletBalances();
+    if (typeof renderWallets === "function") {
+      renderWallets();
+    }
   } catch (_) {}
   const view = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
 
