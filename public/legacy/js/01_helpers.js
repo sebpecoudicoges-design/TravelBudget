@@ -179,6 +179,25 @@ function _tbTxAmountInCurrency(tx, toCur) {
 }
 
 // Expose helper globally for other modules
+function _tbToTimestamp(value) {
+  if (value == null || value === "") return null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (value instanceof Date) {
+    const ts = value.getTime();
+    return Number.isFinite(ts) ? ts : null;
+  }
+  const s = String(value).trim();
+  if (!s) return null;
+  if (/^\d{10,13}$/.test(s)) {
+    const n = Number(s);
+    if (Number.isFinite(n)) return s.length === 10 ? n * 1000 : n;
+  }
+  const ts = Date.parse(s);
+  return Number.isFinite(ts) ? ts : null;
+}
+
 window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(walletId) {
   const wid = String(walletId || "");
   if (!wid || !window.state) return 0;
@@ -189,9 +208,9 @@ window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(wallet
   const wCur = String(w.currency || state?.period?.baseCurrency || "EUR").toUpperCase();
 
   // Option A (rebasing): only count paid movements AFTER the last balance snapshot.
-  // If the column does not exist yet, we fallback to counting all transactions.
+  // Important: transactions loaded from Supabase are normalized with createdAt as a numeric timestamp.
   const snapRaw = w.balance_snapshot_at ?? w.balanceSnapshotAt ?? null;
-  const snapTs = snapRaw ? Date.parse(String(snapRaw)) : null;
+  const snapTs = _tbToTimestamp(snapRaw);
 
   let delta = 0;
   for (const tx of (state.transactions || [])) {
@@ -199,10 +218,10 @@ window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(wallet
     const txWid = String(tx.walletId ?? tx.wallet_id ?? "");
     if (txWid !== wid) continue;
 
-    if (snapTs) {
+    if (snapTs != null) {
       const txCreated = tx.createdAt ?? tx.created_at ?? null;
-      const txTs = txCreated ? Date.parse(String(txCreated)) : null;
-      if (!txTs || txTs < snapTs) continue;
+      const txTs = _tbToTimestamp(txCreated);
+      if (txTs == null || txTs < snapTs) continue;
     }
 
     // Wallet effective balance should only reflect paid ("pay now") movements.

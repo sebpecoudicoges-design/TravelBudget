@@ -1510,6 +1510,16 @@ try {
     }
   }
 
+  function _expenseIsWalletLinked(ex) {
+    return !!(ex && ex.transactionId);
+  }
+
+  async function _expenseIsEditLocked(ex) {
+    if (!ex?.id) return false;
+    if (_expenseIsWalletLinked(ex)) return true;
+    return await _expenseHasBudgetLinks(ex.id);
+  }
+
   function _buildEditDraftForExpense(expenseId) {
     const ex = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!ex) return null;
@@ -1538,9 +1548,9 @@ try {
     const ex = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!ex) throw new Error("Dépense introuvable.");
 
-    const hasBudgetLinks = await _expenseHasBudgetLinks(expenseId);
-    if (ex.transactionId || hasBudgetLinks) {
-      throw new Error("Cette dépense est liée au budget/wallet. Supprime-la puis recrée-la si besoin.");
+    const isLocked = await _expenseIsEditLocked(ex);
+    if (isLocked) {
+      throw new Error("Édition rollbackée : cette dépense est liée au budget/wallet. Supprime-la puis recrée-la si besoin.");
     }
 
     tripState.editingExpenseId = expenseId;
@@ -1569,9 +1579,9 @@ try {
     const currentEx = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!currentEx) throw new Error("Dépense introuvable.");
 
-    const hasBudgetLinks = await _expenseHasBudgetLinks(expenseId);
-    if (currentEx.transactionId || hasBudgetLinks) {
-      throw new Error("Cette dépense est liée au budget/wallet. Supprime-la puis recrée-la si besoin.");
+    const isLocked = await _expenseIsEditLocked(currentEx);
+    if (isLocked) {
+      throw new Error("Édition rollbackée : cette dépense est liée au budget/wallet. Supprime-la puis recrée-la si besoin.");
     }
 
     const cur = _normalizeCurrency(currency);
@@ -2390,26 +2400,33 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       .join("");
 
     const expensesHTML = expenses.length
-      ? expenses.map(ex => {
+      ? await Promise.all(expenses.map(async ex => {
           const payer = members.find(m => m.id === ex.paidByMemberId);
           const moveUI = ""; // removed move between trips
+          const isEditLocked = await _expenseIsEditLocked(ex);
+          const linkedLabel = isEditLocked ? " • lié au budget/wallet" : (ex.transactionId ? " • lié au budget" : "");
+          const editBtn = isEditLocked
+            ? `<button class="btn" type="button" disabled title="Édition rollbackée pour les dépenses liées au budget/wallet">Modification bloquée</button>`
+            : `<button class="btn" type="button" data-edit-exp="${ex.id}">Modifier</button>`;
 return `
             <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.04); gap:12px;">
               <div style="min-width:0;">
                 <div style="font-weight:700;">${escapeHTML(ex.label)}</div>
-                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${ex.transactionId ? " • lié au budget" : ""}</div>
+                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${linkedLabel}</div>
               </div>
               <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
                 <strong>${_fmtMoney(ex.amount, ex.currency)}</strong>
                 ${moveUI}
                 <button class="btn" type="button" data-exp-detail="${ex.id}">Détail</button>
-                <button class="btn" type="button" data-edit-exp="${ex.id}">Modifier</button>
+                ${editBtn}
                 <button class="btn danger" type="button" data-del-exp="${ex.id}">Supprimer</button>
               </div>
             </div>
           `;
-        }).join("")
-      : `<div class="muted">Aucune dépense.</div>`;
+        }))
+      : [`<div class="muted">Aucune dépense.</div>`];
+
+    const expensesHTMLJoined = Array.isArray(expensesHTML) ? expensesHTML.join("") : expensesHTML;
 
     root.innerHTML = `
       ${globalNetHTML}
@@ -2556,7 +2573,7 @@ return `
         </div>
 
         <div id="trip-tab-content-history" style="margin-top:10px; display:none;">
-          ${expensesHTML}
+          ${expensesHTMLJoined}
         </div>
       </div>
     `;
