@@ -1670,8 +1670,8 @@ try {
     let outOfBudget = false;
     try {
       const audit = await _fetchExpenseAuditDetails(expenseId);
-      const tx = audit?.walletTransaction
-        || (audit?.myShareLink ? audit.budgetTransactionsById.get(audit.myShareLink.transactionId) : null)
+      const tx = (audit?.myShareLink ? audit.budgetTransactionsById.get(audit.myShareLink.transactionId) : null)
+        || audit?.walletTransaction
         || null;
       if (tx) {
         walletId = tx.walletId || "";
