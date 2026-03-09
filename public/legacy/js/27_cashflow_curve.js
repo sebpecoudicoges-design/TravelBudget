@@ -883,65 +883,7 @@ dataLabels: { enabled: false },
   // expose for checks
   window.renderCashflowChart = renderCashflowChart;
 
-  // =========================
-  // Cashflow render scheduler (coalesce + dedup)
-  // - prevents double render on first load/refresh
-  // =========================
-  (function () {
-    const KEY = "__TB_CASHFLOW_SCHED";
-    if (window[KEY]) return;
-
-    let scheduled = false;
-    let lastKey = "";
-
-    function scopeKey() {
-      const theme = (document.body && document.body.classList.contains("theme-dark")) ? "dark" : "light";
-      const rev = String(window.__TB_DATA_REV || 0);
-      const view = String(window.activeView || "");
-      const seg = String(window.__TB_ACTIVE_SEGMENT_ID || "");
-      const start = String(window.__TB_ACTIVE_START || "");
-      const end = String(window.__TB_ACTIVE_END || "");
-      // IMPORTANT: the curve scope can be driven by the KPI scope selector (segment/period/seg:<id>/range:...).
-      // That selector persists its value in localStorage. The globals above are updated during a render,
-      // so without including the persisted scope here, we can miss subsequent scope changes (needs manual refresh).
-      let kpiScope = "";
-      try {
-        const SCOPE_KEY = (window.TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.kpi_projection_scope) || "travelbudget_kpi_projection_scope_v1";
-        kpiScope = String(localStorage.getItem(SCOPE_KEY) || "");
-      } catch (_) {}
-      return rev + "|" + view + "|" + seg + "|" + start + "|" + end + "|" + kpiScope + "|" + theme;
-    }
-
-    window.tbRequestCashflowRender = function tbRequestCashflowRender(reason) {
-      // Boot gating: never block on cashflow during boot
-      if (window.__TB_BOOTING) {
-        window.__TB_BOOT_NEEDS_CASHFLOW = true;
-        return;
-      }
-
-      const k = scopeKey();
-      if (k === lastKey) return;
-
-      if (scheduled) return;
-      scheduled = true;
-
-      requestAnimationFrame(() => {
-        scheduled = false;
-        const k2 = scopeKey();
-        if (k2 === lastKey) return;
-        lastKey = k2;
-
-        try {
-          if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
-        } catch (e) {
-          console.error("Cashflow render failed:", e);
-        }
-      });
-    };
-
-    window[KEY] = true;
-  })();
-
+  
 
   // Hooks: redrawCharts / refreshAll / dataUpdated bus
   function hook(name) {
