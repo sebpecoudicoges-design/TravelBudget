@@ -1537,8 +1537,12 @@ try {
   async function _beginEditExpense(expenseId) {
     const ex = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!ex) throw new Error("Dépense introuvable.");
-    
-    
+
+    const hasBudgetLinks = await _expenseHasBudgetLinks(expenseId);
+    if (ex.transactionId || hasBudgetLinks) {
+      throw new Error("Cette dépense est liée au budget/wallet. Supprime-la puis recrée-la si besoin.");
+    }
+
     tripState.editingExpenseId = expenseId;
     tripState.editingExpenseDraft = _buildEditDraftForExpense(expenseId);
     await _renderUI();
@@ -1564,8 +1568,11 @@ try {
 
     const currentEx = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!currentEx) throw new Error("Dépense introuvable.");
-    
-    
+
+    const hasBudgetLinks = await _expenseHasBudgetLinks(expenseId);
+    if (currentEx.transactionId || hasBudgetLinks) {
+      throw new Error("Cette dépense est liée au budget/wallet. Supprime-la puis recrée-la si besoin.");
+    }
 
     const cur = _normalizeCurrency(currency);
     const parts = _computeSplitParts(amt, members, split);
@@ -2619,6 +2626,7 @@ return `
           if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 toastOk("Trip créé.");
         } catch (e) {
+          console.warn("[Trip] edit blocked", e);
           toastWarn(e?.message || String(e));
         }
       };
