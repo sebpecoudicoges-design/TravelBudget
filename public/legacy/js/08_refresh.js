@@ -101,14 +101,8 @@ async function _runRefreshFromServer(opts) {
 
     await loadFromSupabase();
 
-    // Keep wallet UI in sync even when the active view is not the dashboard.
-    // The displayed wallet balance is derived from tbGetWalletEffectiveBalance()
-    // using state.walletBalanceMap loaded by loadFromSupabase().
     try {
-      const currentView = (typeof activeView === 'string' && activeView) ? activeView : 'dashboard';
-      if (currentView !== 'dashboard' && typeof renderWallets === 'function') {
-        renderWallets();
-      }
+      if (typeof recomputeAllocations === "function") recomputeAllocations();
     } catch (_) {}
 
     // FX: apply cached daily rates to current period base
@@ -130,6 +124,8 @@ async function _runRefreshFromServer(opts) {
       if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("08_refresh.js"); else if (typeof renderAll === "function") renderAll();
       try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("render:all"); } catch (_) {}
       if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("render:done");
+    } else if (typeof window.tbRefreshFinancialState === "function") {
+      window.tbRefreshFinancialState({ wallets: true, kpi: true, cashflow: false, reason: "refreshFromServer:skipRender" });
     }
     _tbRefreshLog("refreshFromServer:done", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
   } catch (e) {

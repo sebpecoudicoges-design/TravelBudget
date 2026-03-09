@@ -15,18 +15,28 @@ function _tbRenderLog() {
   } catch (_) {}
 }
 
+
+window.tbRefreshFinancialState = function tbRefreshFinancialState(opts) {
+  const o = opts || {};
+  try {
+    if (o.wallets !== false && typeof renderWallets === "function") renderWallets();
+  } catch (e) { console.warn("[tbRefreshFinancialState] renderWallets failed", e); }
+  try {
+    if (o.kpi !== false && typeof renderKPI === "function") renderKPI();
+  } catch (e) { console.warn("[tbRefreshFinancialState] renderKPI failed", e); }
+  try {
+    if (o.cashflow && typeof tbRequestCashflowCurveRender === "function") tbRequestCashflowCurveRender(o.reason || "tbRefreshFinancialState");
+  } catch (e) { console.warn("[tbRefreshFinancialState] cashflow failed", e); }
+};
+
 // Centralised main render entry point.
 // Goal: a single broken widget must not take down the whole page.
 function renderAll() {
   _tbRenderLog("renderAll", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
+  try {
+    if (typeof recomputeWalletBalances === "function") recomputeWalletBalances();
+  } catch (_) {}
   const view = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
-
-  // Wallet effective balances are rendered from tbGetWalletEffectiveBalance().
-  // Outside the dashboard view, refresh the hidden dashboard wallet cards too so
-  // Trip mutations are reflected immediately when the user comes back.
-  if (view !== "dashboard") {
-    try { if (typeof renderWallets === "function") renderWallets(); } catch (_) {}
-  }
 
   // If safeCall isn't loaded for some reason, fall back to best-effort legacy behaviour.
   if (typeof safeCall !== "function") {

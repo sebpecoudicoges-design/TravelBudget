@@ -1760,12 +1760,8 @@ try {
     try { if (typeof window.tbBusyStart === "function") window.tbBusyStart("Mise à jour en cours…"); } catch (_) {}
     try {
       if (typeof refreshFromServer === "function") {
-        await refreshFromServer({ skipRender: _isTripViewActive() });
+        await refreshFromServer();
       }
-
-      // Update hidden dashboard wallet cards right away so the effective balance
-      // is already fresh without a full page reload when leaving Trip.
-      try { if (typeof renderWallets === "function") renderWallets(); } catch (_) {}
 
       if (_isTripViewActive()) {
         await _reloadActiveTripDataWithRetry(meta || null);
