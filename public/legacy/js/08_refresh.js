@@ -21,10 +21,11 @@ function _tbRefreshLog() {
 
 window.tbAfterMutationRefresh = async function tbAfterMutationRefresh(reason, opts) {
   const options = opts || {};
-  _tbRefreshLog('afterMutation:start', reason || 'mutation', options);
-  await refreshFromServer();
   const view = (typeof activeView === 'string' && activeView) ? activeView : 'dashboard';
-  if (options.trip && typeof window.__tripRefresh === 'function' && (view === 'trip' || options.forceTrip)) {
+  const tripMode = !!(options.trip && (view === 'trip' || options.forceTrip));
+  _tbRefreshLog('afterMutation:start', reason || 'mutation', options);
+  await refreshFromServer({ skipRender: tripMode });
+  if (tripMode && typeof window.__tripRefresh === 'function') {
     _tbRefreshLog('afterMutation:tripRefresh', reason || 'mutation');
     await window.__tripRefresh({ activeOnly: true });
   }
@@ -86,7 +87,8 @@ window.tbBusyEnd = function tbBusyEnd() {
   _tbApplyBusyState();
 };
 
-async function _runRefreshFromServer() {
+async function _runRefreshFromServer(opts) {
+  const options = opts || {};
   if (!sbUser) return;
 
   try {
@@ -98,6 +100,11 @@ async function _runRefreshFromServer() {
     }
 
     await loadFromSupabase();
+
+    try {
+      if (typeof recomputeWalletBalances === 'function') recomputeWalletBalances();
+      else if (typeof recomputeAllocations === 'function') recomputeAllocations();
+    } catch (_) {}
 
     // FX: apply cached daily rates to current period base
     if (typeof tbFxApplyToState === "function") {
@@ -113,11 +120,12 @@ async function _runRefreshFromServer() {
     }
     if (typeof ensureStateIntegrity === "function") ensureStateIntegrity();
     try { if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("refresh:data_loaded", { source: "refreshFromServer" }); } catch (_) {}
-    try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("render:all"); } catch (_) {}
-    try { if (typeof recomputeWalletBalances==="function") recomputeWalletBalances(); } catch(e) {}
-    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("08_refresh.js"); else if (typeof renderAll === "function") renderAll();
-    try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("render:all"); } catch (_) {}
-    if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("render:done");
+    if (!options.skipRender) {
+      try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("render:all"); } catch (_) {}
+      if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("08_refresh.js"); else if (typeof renderAll === "function") renderAll();
+      try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("render:all"); } catch (_) {}
+      if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("render:done");
+    }
     _tbRefreshLog("refreshFromServer:done", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
   } catch (e) {
     _tbRefreshLog("refreshFromServer:error", e && (e.message || e));
@@ -126,7 +134,8 @@ async function _runRefreshFromServer() {
   }
 }
 
-async function refreshFromServer() {
+async function refreshFromServer(opts) {
+  const options = opts || {};
   if (!sbUser) return;
   if (_refreshInFlight) {
     _refreshPending = true;
@@ -143,7 +152,7 @@ async function refreshFromServer() {
     try {
       do {
         _refreshPending = false;
-        await _runRefreshFromServer();
+        await _runRefreshFromServer(options);
         _tbRefreshLog("refreshFromServer:loop", { pending: _refreshPending });
       } while (_refreshPending);
     } finally {
