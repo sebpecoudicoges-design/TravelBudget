@@ -1712,6 +1712,20 @@ try {
     tripState.editingExpenseDraft = null;
     await _renderUI();
   }
+
+  async function _refreshAfterTripMutation(reason) {
+    if (typeof refreshFromServer === "function") {
+      try { await refreshFromServer(); } catch (_) {}
+    }
+    try {
+      if (typeof recomputeAllocations === "function") recomputeAllocations();
+    } catch (_) {}
+    try {
+      if (typeof tbRequestRenderAll === "function") tbRequestRenderAll(reason || "trip:mutation");
+      else if (typeof renderAll === "function") renderAll();
+    } catch (_) {}
+    if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+  }
   async function _cleanupExpenseBudgetLinksBeforeEdit(expenseId) {
     if (!expenseId) return;
     const ex = (tripState.expenses || []).find(x => x.id === expenseId) || null;
@@ -2641,6 +2655,94 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     }
   }
 
+  function _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal = false }) {
+    const title = editingExpenseId ? "Modifier la dépense" : "Dépense";
+    const subtitle = editingExpenseId
+      ? `<div class="muted" style="margin:4px 0 10px 0;">Édition complète : split, wallet et budget seront recalculés proprement.</div>`
+      : ``;
+    const body = `
+      <div class="row">
+        <div class="field">
+          <label>Date</label>
+          <input id="trip-exp-date" type="date" value="${escapeHTML(editingDraft?.date || toLocalISODate(new Date()))}" />
+        </div>
+        <div class="field" style="min-width:220px;">
+          <label>Payé par</label>
+          <select id="trip-exp-paidby">${memberOptions}</select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="min-width:220px;">
+          <label>Wallet (si payé par moi)</label>
+          <select id="trip-exp-wallet">
+            <option value="">—</option>
+            ${walletOptions}
+          </select>
+        </div>
+        <div class="field" style="min-width:200px;">
+          <label>Catégorie (Budget)</label>
+          <select id="trip-exp-category">
+            ${categoryOptions}
+          </select>
+        </div>
+        <div class="field" style="min-width:180px;">
+          <label>Hors budget</label>
+          <select id="trip-exp-out">
+            <option value="no">Non</option>
+            <option value="yes">Oui</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:1;">
+          <label>Libellé</label>
+          <input id="trip-exp-label" placeholder="Ex: Dîner" value="${escapeHTML(editingDraft?.label || "")}" />
+        </div>
+        <div class="field" style="max-width:160px;">
+          <label>Montant</label>
+          <input id="trip-exp-amount" type="number" step="0.01" placeholder="0" value="${editingDraft?.amount ?? ""}" />
+        </div>
+        <div class="field" style="max-width:160px;">
+          <label>Devise</label>
+          <input id="trip-exp-currency" value="${escapeHTML(editingDraft?.currency || trip?.base_currency || state?.period?.baseCurrency || "THB")}" />
+        </div>
+      </div>
+      <div class="row" style="align-items:flex-end; gap:12px; margin-top:6px;">
+        <div class="field" style="min-width:220px;">
+          <label>Répartition</label>
+          <select id="trip-split-mode">
+            <option value="equal">Égal</option>
+            <option value="percent">%</option>
+            <option value="amount">Montants</option>
+          </select>
+        </div>
+      </div>
+      <div id="trip-split-box" style="margin-top:6px;"></div>
+      <div class="muted" style="margin-top:6px;">Si tu payes pour plusieurs, la wallet est débitée du total mais le budget ne comptera que ta part.</div>
+      <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
+        ${editingExpenseId ? `<button class="btn" type="button" id="trip-cancel-edit-exp">Annuler modification</button>` : ``}
+        <button class="btn primary" id="trip-add-exp" ${canWrite ? "" : "disabled"} ${trip ? "" : "disabled"}>${editingExpenseId ? "Enregistrer modifications" : "Ajouter dépense"}</button>
+      </div>`;
+
+    if (!modal) {
+      return `<div class="card"><h2>${title}</h2>${subtitle}${body}</div>`;
+    }
+
+    return `
+      <div id="trip-edit-exp-overlay" style="position:fixed; inset:0; background:rgba(15,23,42,0.38); z-index:10020; display:flex; align-items:flex-start; justify-content:center; padding:32px 16px; overflow:auto;">
+        <div class="card" style="width:min(920px, 100%); margin:0; box-shadow:0 18px 48px rgba(0,0,0,0.18);">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+            <div>
+              <h2 style="margin:0;">${title}</h2>
+              ${subtitle}
+            </div>
+            <button class="btn" type="button" id="trip-edit-exp-close" aria-label="Fermer">✕</button>
+          </div>
+          ${body}
+        </div>
+      </div>`;
+  }
+
   async function _renderUI() {
     const root = _root();
     if (!root) return;
@@ -2849,6 +2951,10 @@ return `
 
     const expensesHTMLJoined = Array.isArray(expensesHTML) ? expensesHTML.join("") : expensesHTML;
 
+    const editExpenseModalHTML = editingExpenseId
+      ? _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal: true })
+      : "";
+
     root.innerHTML = `
       ${globalNetHTML}
       <div class="grid">
@@ -2905,71 +3011,9 @@ return `
           </div>
         </div>
 
-        <div class="card">
-          <h2>Dépense</h2>
-          <div class="row">
-            <div class="field">
-              <label>Date</label>
-              <input id="trip-exp-date" type="date" value="${escapeHTML(editingDraft?.date || toLocalISODate(new Date()))}" />
-            </div>
-            <div class="field" style="min-width:220px;">
-              <label>Payé par</label>
-              <select id="trip-exp-paidby">${memberOptions}</select>
-            </div>
-          </div>
-          <div class="row">
-            <div class="field" style="min-width:220px;">
-              <label>Wallet (si payé par moi)</label>
-              <select id="trip-exp-wallet">
-                <option value="">—</option>
-                ${walletOptions}
-              </select>
-            </div>
-            <div class="field" style="min-width:200px;">
-              <label>Catégorie (Budget)</label>
-              <select id="trip-exp-category">
-                ${categoryOptions}
-              </select>
-            </div>
-            <div class="field" style="min-width:180px;">
-              <label>Hors budget</label>
-              <select id="trip-exp-out">
-                <option value="no">Non</option>
-                <option value="yes">Oui</option>
-              </select>
-            </div>
-          </div>
-          <div class="row">
-            <div class="field" style="flex:1;">
-              <label>Libellé</label>
-              <input id="trip-exp-label" placeholder="Ex: Dîner" value="${escapeHTML(editingDraft?.label || "")}" />
-            </div>
-            <div class="field" style="max-width:160px;">
-              <label>Montant</label>
-              <input id="trip-exp-amount" type="number" step="0.01" placeholder="0" value="${editingDraft?.amount ?? ""}" />
-            </div>
-            <div class="field" style="max-width:160px;">
-              <label>Devise</label>
-              <input id="trip-exp-currency" value="${escapeHTML(editingDraft?.currency || trip?.base_currency || state?.period?.baseCurrency || "THB")}" />
-            </div>
-          </div>
-          <div class="row" style="align-items:flex-end; gap:12px; margin-top:6px;">
-            <div class="field" style="min-width:220px;">
-              <label>Répartition</label>
-              <select id="trip-split-mode">
-                <option value="equal">Égal</option>
-                <option value="percent">%</option>
-                <option value="amount">Montants</option>
-              </select>
-            </div>
-          </div>
-          <div id="trip-split-box" style="margin-top:6px;"></div>
-          <div class="muted" style="margin-top:6px;">Si tu payes pour plusieurs, la wallet est débitée du total mais le budget ne comptera que ta part.</div>
-          <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
-            ${editingExpenseId ? `<button class="btn" type="button" id="trip-cancel-edit-exp">Annuler modification</button>` : ``}
-            <button class="btn primary" id="trip-add-exp" ${canWrite ? "" : "disabled"} ${trip ? "" : "disabled"}>${editingExpenseId ? "Enregistrer modifications" : "Ajouter dépense"}</button>
-          </div>
-        </div>
+        ${editingExpenseId
+          ? `<div class="card"><h2>Dépense</h2><div class="muted">Ajout rapide disponible hors édition. La modification s’ouvre dans une fenêtre dédiée.</div></div>`
+          : _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal: false })}
       </div>
 
       <div class="card" style="margin-top:12px;">
@@ -2997,6 +3041,7 @@ return `
           ${expensesHTMLJoined}
         </div>
       </div>
+      ${editExpenseModalHTML}
     `;
 
     if (editingDraft) {
@@ -3274,11 +3319,11 @@ toastOk("Participant ajouté.");
           })();
           if (editingExpenseId) {
             await _updateExpense({ expenseId: editingExpenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
-            if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+            await _refreshAfterTripMutation("trip:update_expense");
             toastOk("Dépense modifiée.");
           } else {
             await _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
-            if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+            await _refreshAfterTripMutation("trip:add_expense");
             toastOk("Dépense ajoutée.");
           }
         } catch (e) {
@@ -3290,6 +3335,29 @@ toastOk("Participant ajouté.");
     const btnCancelEditExp = _el("trip-cancel-edit-exp");
     if (btnCancelEditExp) {
       btnCancelEditExp.onclick = async () => {
+        try {
+          await _cancelEditExpense();
+        } catch (e) {
+          toastWarn(e?.message || String(e));
+        }
+      };
+    }
+
+    const btnCloseEditExp = _el("trip-edit-exp-close");
+    if (btnCloseEditExp) {
+      btnCloseEditExp.onclick = async () => {
+        try {
+          await _cancelEditExpense();
+        } catch (e) {
+          toastWarn(e?.message || String(e));
+        }
+      };
+    }
+
+    const editOverlay = _el("trip-edit-exp-overlay");
+    if (editOverlay) {
+      editOverlay.onclick = async (ev) => {
+        if (ev.target !== editOverlay) return;
         try {
           await _cancelEditExpense();
         } catch (e) {
@@ -3432,10 +3500,9 @@ root.querySelectorAll("[data-edit-exp]").forEach(btn => {
           if (!id) return;
           await _beginEditExpense(id);
           try {
-            window.scrollTo({ top: 0, behavior: "smooth" });
             setTimeout(() => { try { _el("trip-exp-label")?.focus(); } catch(_) {} }, 50);
           } catch(_) {}
-          toastOk("Mode modification activé.");
+          toastOk("Fenêtre de modification ouverte.");
         } catch (e) {
           toastWarn(e?.message || String(e));
         }
@@ -3454,17 +3521,7 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
             : "Supprimer cette dépense ?";
           if (!confirm(confirmMsg)) return;
           await _deleteExpense(id);
-          if (typeof refreshFromServer === "function") {
-            try { await refreshFromServer(); } catch (_) {}
-          }
-          try {
-            if (typeof recomputeAllocations === "function") recomputeAllocations();
-          } catch (_) {}
-          try {
-            if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("trip:delete_expense");
-            else if (typeof renderAll === "function") renderAll();
-          } catch (_) {}
-          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+          await _refreshAfterTripMutation("trip:delete_expense");
           toastOk("Dépense supprimée.");
         } catch (e) {
           toastWarn(e?.message || String(e));
