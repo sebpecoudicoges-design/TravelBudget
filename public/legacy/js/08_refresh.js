@@ -2,10 +2,51 @@
    Refresh
    ========================= */
 let _refreshInFlight = false;
-async function refreshFromServer() {
+let _refreshPending = false;
+let _refreshPromise = null;
+
+function _tbEnsureLoadingBadge() {
+  let el = document.getElementById("tb-loading-badge");
+  if (el) return el;
+  try {
+    el = document.createElement("div");
+    el.id = "tb-loading-badge";
+    el.setAttribute("aria-live", "polite");
+    el.style.cssText = [
+      "position:fixed",
+      "right:12px",
+      "bottom:12px",
+      "z-index:9999",
+      "padding:8px 12px",
+      "border-radius:999px",
+      "background:rgba(17,24,39,.92)",
+      "color:#fff",
+      "font-size:12px",
+      "font-weight:600",
+      "box-shadow:0 6px 20px rgba(0,0,0,.25)",
+      "opacity:0",
+      "transform:translateY(6px)",
+      "pointer-events:none",
+      "transition:opacity .18s ease, transform .18s ease"
+    ].join(";");
+    el.textContent = "Chargement en cours…";
+    document.body.appendChild(el);
+  } catch (_) {}
+  return el;
+}
+
+function _tbSetLoadingBadge(active, text) {
+  try {
+    const el = _tbEnsureLoadingBadge();
+    if (!el) return;
+    el.textContent = text || "Chargement en cours…";
+    el.style.opacity = active ? "1" : "0";
+    el.style.transform = active ? "translateY(0)" : "translateY(6px)";
+  } catch (_) {}
+}
+
+async function _runRefreshFromServer() {
   if (!sbUser) return;
-  if (_refreshInFlight) return;
-  _refreshInFlight = true;
 
   try {
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("supabase:load"); } catch (_) {}
@@ -36,7 +77,31 @@ try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("render:all"); } catch 
   } catch (e) {
     (window.log?log.error:console.error)("[refreshFromServer]", e);
     alert("Refresh impossible : " + normalizeSbError(e));
-  } finally {
-    _refreshInFlight = false;
   }
+}
+
+async function refreshFromServer() {
+  if (!sbUser) return;
+  if (_refreshInFlight) {
+    _refreshPending = true;
+    return _refreshPromise;
+  }
+
+  _refreshInFlight = true;
+  _refreshPending = false;
+  _tbSetLoadingBadge(true, "Chargement en cours…");
+
+  _refreshPromise = (async () => {
+    try {
+      do {
+        _refreshPending = false;
+        await _runRefreshFromServer();
+      } while (_refreshPending);
+    } finally {
+      _refreshInFlight = false;
+      _tbSetLoadingBadge(false);
+    }
+  })();
+
+  return _refreshPromise;
 }

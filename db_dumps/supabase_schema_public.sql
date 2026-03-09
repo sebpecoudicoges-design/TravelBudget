@@ -1980,6 +1980,91 @@ CREATE TABLE IF NOT EXISTS "public"."wallets" (
 ALTER TABLE "public"."wallets" OWNER TO "postgres";
 
 
+CREATE OR REPLACE VIEW "public"."v_wallet_transactions_effect" WITH ("security_invoker"='true') AS
+ SELECT "t"."id" AS "transaction_id",
+    "t"."user_id",
+    "t"."period_id",
+    "t"."wallet_id",
+    "w"."name" AS "wallet_name",
+    "w"."currency" AS "wallet_currency",
+    "w"."balance_snapshot_at",
+    "t"."created_at",
+    "t"."date_start",
+    "t"."type",
+    "t"."amount",
+    "t"."currency" AS "tx_currency",
+    COALESCE("t"."pay_now", true) AS "pay_now",
+    COALESCE("t"."is_internal", false) AS "is_internal",
+    "t"."out_of_budget",
+    "t"."affects_budget",
+    "t"."trip_expense_id",
+    "t"."trip_share_link_id",
+        CASE
+            WHEN (NOT COALESCE("t"."pay_now", true)) THEN false
+            WHEN COALESCE("t"."is_internal", false) THEN false
+            WHEN (("w"."balance_snapshot_at" IS NOT NULL) AND ("t"."created_at" < "w"."balance_snapshot_at")) THEN false
+            ELSE true
+        END AS "included_in_wallet_balance",
+        CASE
+            WHEN (NOT COALESCE("t"."pay_now", true)) THEN 'unpaid'::"text"
+            WHEN COALESCE("t"."is_internal", false) THEN 'internal'::"text"
+            WHEN (("w"."balance_snapshot_at" IS NOT NULL) AND ("t"."created_at" < "w"."balance_snapshot_at")) THEN 'pre_snapshot'::"text"
+            ELSE NULL::"text"
+        END AS "exclusion_reason",
+        CASE
+            WHEN ("t"."type" = 'income'::"text") THEN "t"."amount"
+            WHEN ("t"."type" = 'expense'::"text") THEN (- "t"."amount")
+            ELSE (0)::numeric
+        END AS "signed_amount",
+        CASE
+            WHEN (NOT COALESCE("t"."pay_now", true)) THEN (0)::numeric
+            WHEN COALESCE("t"."is_internal", false) THEN (0)::numeric
+            WHEN (("w"."balance_snapshot_at" IS NOT NULL) AND ("t"."created_at" < "w"."balance_snapshot_at")) THEN (0)::numeric
+            WHEN ("t"."type" = 'income'::"text") THEN "t"."amount"
+            WHEN ("t"."type" = 'expense'::"text") THEN (- "t"."amount")
+            ELSE (0)::numeric
+        END AS "effective_signed_amount"
+   FROM ("public"."transactions" "t"
+     JOIN "public"."wallets" "w" ON ((("w"."id" = "t"."wallet_id") AND ("w"."user_id" = "t"."user_id"))))
+  WHERE (("t"."user_id" = "auth"."uid"()) AND ("w"."user_id" = "auth"."uid"()));
+
+
+ALTER VIEW "public"."v_wallet_transactions_effect" OWNER TO "postgres";
+
+
+COMMENT ON VIEW "public"."v_wallet_transactions_effect" IS 'Debug view for wallet balance computation. Shows which transactions are included/excluded from effective wallet balances.';
+
+
+
+CREATE OR REPLACE VIEW "public"."v_wallet_balances" WITH ("security_invoker"='true') AS
+ SELECT "w"."id" AS "wallet_id",
+    "w"."user_id",
+    "w"."period_id",
+    "w"."name" AS "wallet_name",
+    "w"."currency" AS "wallet_currency",
+    "w"."type" AS "wallet_type",
+    "w"."balance" AS "baseline_balance",
+    "w"."balance_snapshot_at",
+    COALESCE("sum"("v"."effective_signed_amount"), (0)::numeric) AS "transactions_delta",
+    ("w"."balance" + COALESCE("sum"("v"."effective_signed_amount"), (0)::numeric)) AS "effective_balance",
+    "count"("v"."transaction_id") FILTER (WHERE "v"."included_in_wallet_balance") AS "included_tx_count",
+    "count"("v"."transaction_id") FILTER (WHERE ("v"."exclusion_reason" = 'internal'::"text")) AS "excluded_internal_count",
+    "count"("v"."transaction_id") FILTER (WHERE ("v"."exclusion_reason" = 'unpaid'::"text")) AS "excluded_unpaid_count",
+    "count"("v"."transaction_id") FILTER (WHERE ("v"."exclusion_reason" = 'pre_snapshot'::"text")) AS "excluded_pre_snapshot_count",
+    "max"("v"."created_at") FILTER (WHERE "v"."included_in_wallet_balance") AS "last_tx_created_at"
+   FROM ("public"."wallets" "w"
+     LEFT JOIN "public"."v_wallet_transactions_effect" "v" ON (("v"."wallet_id" = "w"."id")))
+  WHERE ("w"."user_id" = "auth"."uid"())
+  GROUP BY "w"."id", "w"."user_id", "w"."period_id", "w"."name", "w"."currency", "w"."type", "w"."balance", "w"."balance_snapshot_at";
+
+
+ALTER VIEW "public"."v_wallet_balances" OWNER TO "postgres";
+
+
+COMMENT ON VIEW "public"."v_wallet_balances" IS 'Effective wallet balances = wallet baseline snapshot + included paid non-internal transactions after balance_snapshot_at.';
+
+
+
 ALTER TABLE ONLY "public"."fx_rates" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."fx_rates_id_seq"'::"regclass");
 
 
@@ -3522,6 +3607,18 @@ GRANT ALL ON TABLE "public"."v_trip_user_net_balances" TO "service_role";
 GRANT ALL ON TABLE "public"."wallets" TO "anon";
 GRANT ALL ON TABLE "public"."wallets" TO "authenticated";
 GRANT ALL ON TABLE "public"."wallets" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."v_wallet_transactions_effect" TO "anon";
+GRANT ALL ON TABLE "public"."v_wallet_transactions_effect" TO "authenticated";
+GRANT ALL ON TABLE "public"."v_wallet_transactions_effect" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."v_wallet_balances" TO "anon";
+GRANT ALL ON TABLE "public"."v_wallet_balances" TO "authenticated";
+GRANT ALL ON TABLE "public"."v_wallet_balances" TO "service_role";
 
 
 
