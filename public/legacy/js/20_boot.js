@@ -1,12 +1,74 @@
-window.__TB_BUILD = "8.5.5";
+window.__TB_BUILD = "8.6.0";
 /* =========================
    Boot
    ========================= */
+
+function tbEnsureBootOverlay() {
+  let el = document.getElementById("tb-boot-overlay");
+  if (el) return el;
+  try {
+    el = document.createElement("div");
+    el.id = "tb-boot-overlay";
+    el.setAttribute("aria-live", "polite");
+    el.style.cssText = [
+      "position:fixed",
+      "inset:0",
+      "z-index:10000",
+      "display:flex",
+      "align-items:center",
+      "justify-content:center",
+      "background:rgba(15,23,42,.20)",
+      "backdrop-filter:blur(10px)",
+      "-webkit-backdrop-filter:blur(10px)",
+      "opacity:0",
+      "pointer-events:none",
+      "transition:opacity .22s ease"
+    ].join(";");
+    el.innerHTML = `
+      <div style="min-width:240px;max-width:86vw;padding:18px 20px;border-radius:20px;background:rgba(17,24,39,.92);color:#fff;box-shadow:0 18px 48px rgba(0,0,0,.28);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;">
+        <div style="width:32px;height:32px;border-radius:999px;border:3px solid rgba(255,255,255,.22);border-top-color:#fff;animation:tbBootSpin .8s linear infinite;"></div>
+        <div style="font-weight:700;font-size:15px;">Chargement de ton budget…</div>
+        <div id="tb-boot-overlay-text" style="font-size:12px;opacity:.82;">Préparation des données et des vues</div>
+      </div>`;
+    if (!document.getElementById("tb-boot-overlay-style")) {
+      const style = document.createElement("style");
+      style.id = "tb-boot-overlay-style";
+      style.textContent = '@keyframes tbBootSpin{to{transform:rotate(360deg)}}';
+      document.head.appendChild(style);
+    }
+    document.body.appendChild(el);
+  } catch (_) {}
+  return el;
+}
+
+function tbShowBootOverlay(text) {
+  try {
+    const el = tbEnsureBootOverlay();
+    if (!el) return;
+    const msg = document.getElementById("tb-boot-overlay-text");
+    if (msg && text) msg.textContent = text;
+    el.style.opacity = '1';
+    el.style.pointerEvents = 'auto';
+  } catch (_) {}
+}
+
+function tbHideBootOverlay() {
+  try {
+    const el = document.getElementById("tb-boot-overlay");
+    if (!el) return;
+    el.style.opacity = '0';
+    el.style.pointerEvents = 'none';
+    setTimeout(() => { try { el.remove(); } catch (_) {} }, 260);
+  } catch (_) {}
+}
+
 window.onload = async function () {
   try { if (window.tbApplyI18nDom) tbApplyI18nDom(); } catch (_) {}
 
   try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:onload"); } catch (_) {}
   window.__TB_BOOTING = true;
+  const __tbBootStartedAt = Date.now();
+  try { tbShowBootOverlay("Préparation des données et des vues"); } catch (_) {}
 
 
   // ✅ Post invite/recovery: laisse la page se stabiliser
@@ -45,18 +107,20 @@ window.onload = async function () {
   });
 
   const { data, error } = await sb.auth.getSession();
-  if (error) { safeShowAuth(true, error.message); return; }
+  if (error) { safeShowAuth(true, error.message); try { tbHideBootOverlay(); } catch (_) {} return; }
 
   sbUser = data.session?.user || null;
   try { if (typeof window.tbAuthScopeSync === "function") window.tbAuthScopeSync(sbUser?.id || ""); } catch (_) {}
 
   if (!sbUser) {
     safeShowAuth(true, "Connecte-toi pour synchroniser.");
+    try { tbHideBootOverlay(); } catch (_) {}
     return;
   }
 
   try {
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:ensureBootstrap"); } catch (_) {}
+    try { tbShowBootOverlay("Connexion et synchronisation…"); } catch (_) {}
     await ensureBootstrap();
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:ensureBootstrap"); } catch (_) {}
 
@@ -81,11 +145,18 @@ window.onload = async function () {
           // Avoid hard crash during boot; refreshFromServer already logs/alerts.
           console.warn("[Boot] refreshFromServer failed:", e?.message || e);
         })
-        .finally(() => {
+        .finally(async () => {
           try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:refreshFromServer"); } catch (_) {}
+          try {
+            const elapsed = Date.now() - __tbBootStartedAt;
+            const wait = Math.max(0, 500 - elapsed);
+            if (wait) await new Promise(r => setTimeout(r, wait));
+            tbHideBootOverlay();
+          } catch (_) {}
         });
     } catch (_) {
       try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:refreshFromServer"); } catch (_) {}
+      try { tbHideBootOverlay(); } catch (_) {}
     }
 
     // Hide auth overlay right away; data hydrates in background.
@@ -99,6 +170,7 @@ window.onload = async function () {
     });
   } catch (e) {
     safeShowAuth(true, `Erreur init: ${e?.message || e}`);
+    try { tbHideBootOverlay(); } catch (_) {}
   } finally {
     // Release coalesced renders scheduled during boot
     window.__TB_BOOTING = false;

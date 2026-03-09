@@ -907,13 +907,16 @@ dataLabels: { enabled: false },
     // The app event bus emits both typed events (tb:*) and the legacy 'data:updated'.
     try {
       document.addEventListener("data:updated", queueRenderCashflow);
-      document.addEventListener("tb:refresh:done", queueRenderCashflow);
       document.addEventListener("tb:fx:updated", queueRenderCashflow);
-      document.addEventListener("tb:boot:paint", queueRenderCashflow);
     } catch (_) {}
-    // First render attempt quickly, then retry once (covers late state hydration).
-    setTimeout(queueRenderCashflow, 150);
-    setTimeout(queueRenderCashflow, 900);
+    // Fallback render only if no regular dashboard render has happened yet.
+    setTimeout(() => {
+      try {
+        if (!window.__cashflowChart && (typeof window.activeView === "undefined" || window.activeView === "dashboard")) {
+          queueRenderCashflow();
+        }
+      } catch (_) {}
+    }, 300);
   }
 
   // IMPORTANT: legacy scripts are injected dynamically by /src/main.js.
