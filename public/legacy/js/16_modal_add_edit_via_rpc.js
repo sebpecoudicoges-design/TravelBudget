@@ -609,7 +609,21 @@ async function deleteTx(txId) {
 
   await safeCall("Suppression", async () => {
     const { error } = await sb.rpc("delete_transaction", { p_tx_id: txId });
-    if (error) throw error;
+    if (error) {
+      const code = String(error.code || "");
+      const msg = String(error.message || "").toLowerCase();
+      const details = String(error.details || "").toLowerCase();
+      const isTripLinked = code === "23503" && (
+        msg.includes("trip_expenses") ||
+        details.includes("trip_expenses") ||
+        msg.includes("trip_expenses_transaction_fk") ||
+        details.includes("trip_expenses_transaction_fk")
+      );
+      if (isTripLinked) {
+        throw new Error("Suppression bloquée : cette transaction est liée à une dépense Partage. Supprime d'abord la dépense depuis l'onglet Trip.");
+      }
+      throw error;
+    }
     await refreshFromServer();
   });
 }

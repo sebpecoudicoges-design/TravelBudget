@@ -3163,8 +3163,11 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
             : "Supprimer cette dépense ?";
           if (!confirm(confirmMsg)) return;
           await _deleteExpense(id);
+          if (typeof refreshFromServer === "function") {
+            try { await refreshFromServer(); } catch (_) {}
+          }
           if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
-toastOk("Dépense supprimée.");
+          toastOk("Dépense supprimée.");
         } catch (e) {
           toastWarn(e?.message || String(e));
         }
