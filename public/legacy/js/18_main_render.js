@@ -2,9 +2,23 @@
    Main render
    ========================= */
 
+function _tbDebugRenderEnabled() {
+  try { return !!window.__tbDebugRender; } catch (_) { return false; }
+}
+
+function _tbRenderLog() {
+  try {
+    if (!_tbDebugRenderEnabled()) return;
+    const args = Array.from(arguments);
+    args.unshift("[TB]");
+    console.log.apply(console, args);
+  } catch (_) {}
+}
+
 // Centralised main render entry point.
 // Goal: a single broken widget must not take down the whole page.
 function renderAll() {
+  _tbRenderLog("renderAll", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
   const view = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
 
   // If safeCall isn't loaded for some reason, fall back to best-effort legacy behaviour.

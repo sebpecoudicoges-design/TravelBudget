@@ -500,7 +500,8 @@ async function saveModal() {
 
       closeModal();
       editingTxId = null;
-      await refreshFromServer();
+      if (typeof window.tbAfterMutationRefresh === "function") await window.tbAfterMutationRefresh("tx:delete");
+      else await refreshFromServer();
     });
   } finally {
     _savingTx = false;
@@ -631,7 +632,9 @@ async function deleteTx(txId) {
         }
         throw error;
       }
-      await refreshFromServer();
+      try { if (typeof closeModal === "function") closeModal(); } catch (_) {}
+      if (typeof window.tbAfterMutationRefresh === "function") await window.tbAfterMutationRefresh("tx:delete");
+      else await refreshFromServer();
     } finally {
       try { if (typeof window.tbBusyEnd === "function") window.tbBusyEnd(); } catch (_) {}
     }

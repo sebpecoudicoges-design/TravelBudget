@@ -1019,6 +1019,9 @@ dataLabels: { enabled: false },
       lastKey = k2;
 
       try {
+        try {
+          if (window.__tbDebugRender) console.log("[TB] cashflow:render", { reason: reason || "unknown", key: k2 });
+        } catch (_) {}
         if (typeof renderCashflowCurve === "function") renderCashflowCurve();
       } catch (e) {
         console.error("CashflowCurve render failed:", e);

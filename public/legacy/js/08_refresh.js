@@ -6,6 +6,31 @@ let _refreshPending = false;
 let _refreshPromise = null;
 let _tbBusyCounter = 0;
 
+function _tbDebugRefresh() {
+  try { return !!window.__tbDebugRefresh; } catch (_) { return false; }
+}
+
+function _tbRefreshLog() {
+  try {
+    if (!_tbDebugRefresh()) return;
+    const args = Array.from(arguments);
+    args.unshift('[TB]');
+    console.log.apply(console, args);
+  } catch (_) {}
+}
+
+window.tbAfterMutationRefresh = async function tbAfterMutationRefresh(reason, opts) {
+  const options = opts || {};
+  _tbRefreshLog('afterMutation:start', reason || 'mutation', options);
+  await refreshFromServer();
+  const view = (typeof activeView === 'string' && activeView) ? activeView : 'dashboard';
+  if (options.trip && typeof window.__tripRefresh === 'function' && (view === 'trip' || options.forceTrip)) {
+    _tbRefreshLog('afterMutation:tripRefresh', reason || 'mutation');
+    await window.__tripRefresh({ activeOnly: true });
+  }
+  _tbRefreshLog('afterMutation:done', reason || 'mutation', { view });
+};
+
 function _tbEnsureLoadingBadge() {
   let el = document.getElementById("tb-loading-badge");
   if (el) return el;
@@ -65,6 +90,7 @@ async function _runRefreshFromServer() {
   if (!sbUser) return;
 
   try {
+    _tbRefreshLog("refreshFromServer:start", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("supabase:load"); } catch (_) {}
     // FX: ensure daily rates (blocks only if no cached rates yet)
     if (typeof tbFxEnsureDaily === "function") {
@@ -89,9 +115,11 @@ async function _runRefreshFromServer() {
     try { if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("refresh:data_loaded", { source: "refreshFromServer" }); } catch (_) {}
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("render:all"); } catch (_) {}
     if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("08_refresh.js"); else if (typeof renderAll === "function") renderAll();
-try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("render:all"); } catch (_) {}
+    try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("render:all"); } catch (_) {}
     if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("render:done");
+    _tbRefreshLog("refreshFromServer:done", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
   } catch (e) {
+    _tbRefreshLog("refreshFromServer:error", e && (e.message || e));
     (window.log?log.error:console.error)("[refreshFromServer]", e);
     alert("Refresh impossible : " + normalizeSbError(e));
   }
@@ -101,10 +129,12 @@ async function refreshFromServer() {
   if (!sbUser) return;
   if (_refreshInFlight) {
     _refreshPending = true;
+    _tbRefreshLog("refreshFromServer:queued");
     return _refreshPromise;
   }
 
   _refreshInFlight = true;
+  _tbRefreshLog("refreshFromServer:enter");
   _refreshPending = false;
   _tbApplyBusyState();
 
@@ -113,10 +143,12 @@ async function refreshFromServer() {
       do {
         _refreshPending = false;
         await _runRefreshFromServer();
+        _tbRefreshLog("refreshFromServer:loop", { pending: _refreshPending });
       } while (_refreshPending);
     } finally {
       _refreshInFlight = false;
       _tbApplyBusyState();
+      _tbRefreshLog("refreshFromServer:exit");
     }
   })();
 

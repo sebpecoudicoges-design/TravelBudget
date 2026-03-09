@@ -220,13 +220,9 @@ async function ensureBootstrap() {
 
   // === Fast bootstrap: fetch the few required rows in parallel ===
   // Goal: reduce boot latency without changing any business logic.
-  const expectedSchema = (window.TB_CONST && TB_CONST.EXPECTED_SCHEMA_VERSION) ? TB_CONST.EXPECTED_SCHEMA_VERSION : null;
-  const schemaP = expectedSchema ? sb
-    .from(TB_CONST.TABLES.schema_version)
-    .select("key, version")
-    .eq("key", "travelbudget")
-    .maybeSingle()
-    : Promise.resolve({ data: null, error: null });
+  // Schema version check disabled: some environments do not expose public.schema_version reliably,
+  // which causes noisy connection errors without functional impact.
+  const schemaP = Promise.resolve({ data: null, error: null });
 
   const profP = sb
     .from(TB_CONST.TABLES.profiles)
@@ -248,20 +244,6 @@ async function ensureBootstrap() {
     .limit(1);
 
   const [schemaRes, profRes, settingsRes, periodsRes] = await Promise.all([schemaP, profP, settingsP, periodsP]);
-
-  // Schema guard (non-blocking unless mismatch)
-  try {
-    if (schemaRes && schemaRes.error) {
-      window.__errorBus && __errorBus.push && __errorBus.push({ type: "schema_version_check", error: __errorBus.toPlain(schemaRes.error) });
-    } else if (expectedSchema && schemaRes && schemaRes.data && (schemaRes.data.version !== null && schemaRes.data.version !== undefined)) {
-      if (Number(schemaRes.data.version) !== Number(expectedSchema)) {
-        throw new Error(`DB schema_version=${schemaRes.data.version} != UI expected=${expectedSchema}. Migration requise.`);
-      }
-    }
-  } catch (e) {
-    if (typeof renderErrorBox === "function") renderErrorBox("Schema", e, "view-dashboard");
-    throw e;
-  }
 
   if (profRes && profRes.error) throw profRes.error;
   if (settingsRes && settingsRes.error) throw settingsRes.error;
