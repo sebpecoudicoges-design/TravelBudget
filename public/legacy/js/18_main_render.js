@@ -1,3 +1,12 @@
+
+window.__tbBatchRender = function(fn){
+  if(window.__tbRenderScheduled) return;
+  window.__tbRenderScheduled=true;
+  requestAnimationFrame(()=>{
+    try{ fn(); }finally{ window.__tbRenderScheduled=false; }
+  });
+};
+
 /* =========================
    Main render
    ========================= */
