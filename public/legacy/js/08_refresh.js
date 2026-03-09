@@ -114,6 +114,7 @@ async function _runRefreshFromServer() {
     if (typeof ensureStateIntegrity === "function") ensureStateIntegrity();
     try { if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("refresh:data_loaded", { source: "refreshFromServer" }); } catch (_) {}
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("render:all"); } catch (_) {}
+    try { if (typeof recomputeWalletBalances==="function") recomputeWalletBalances(); } catch(e) {}
     if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("08_refresh.js"); else if (typeof renderAll === "function") renderAll();
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("render:all"); } catch (_) {}
     if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("render:done");
