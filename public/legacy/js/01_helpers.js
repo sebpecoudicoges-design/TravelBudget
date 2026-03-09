@@ -153,11 +153,13 @@ function tbHelp(text) {
 
 
 ;/* =========================
-   Wallet effective balance (V1)
-   - Display wallet balance as baseline + sum of wallet transactions
-   - Conservative: does not mutate DB, only affects UI display/derived totals.
-   - IMPORTANT: we intentionally ignore payNow here because users expect wallet balance
-     to reflect any transaction created "from a wallet".
+   Wallet effective balance (V2)
+   - Prefer SQL view public.v_wallet_balances when available.
+   - Fallback to legacy JS computation if the view is absent/not loaded.
+   - Wallet reflects real cash movements:
+     * include paid movements
+     * exclude internal/shadow rows
+     * apply only rows after balance_snapshot_at
    ========================= */
 
 function _tbTxAmountInCurrency(tx, toCur) {
@@ -170,7 +172,6 @@ function _tbTxAmountInCurrency(tx, toCur) {
   // Prefer FX engine if available
   try {
     if (typeof window.fxConvert === "function") {
-      // fxConvert(amount, from, to, dateISO?) — date optional depending on implementation
       return Number(window.fxConvert(amt, fromCur, target));
     }
   } catch (_) {}
@@ -178,7 +179,6 @@ function _tbTxAmountInCurrency(tx, toCur) {
   return amt; // fallback: no conversion
 }
 
-// Expose helper globally for other modules
 function _tbToTimestamp(value) {
   if (value == null || value === "") return null;
   if (typeof value === "number") {
@@ -198,7 +198,7 @@ function _tbToTimestamp(value) {
   return Number.isFinite(ts) ? ts : null;
 }
 
-window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(walletId) {
+function _tbLegacyWalletEffectiveBalance(walletId) {
   const wid = String(walletId || "");
   if (!wid || !window.state) return 0;
   const w = (state.wallets || []).find(x => String(x?.id || "") === wid);
@@ -206,9 +206,6 @@ window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(wallet
 
   const baseBal = Number(w.balance || 0);
   const wCur = String(w.currency || state?.period?.baseCurrency || "EUR").toUpperCase();
-
-  // Option A (rebasing): only count paid movements AFTER the last balance snapshot.
-  // Important: transactions loaded from Supabase are normalized with createdAt as a numeric timestamp.
   const snapRaw = w.balance_snapshot_at ?? w.balanceSnapshotAt ?? null;
   const snapTs = _tbToTimestamp(snapRaw);
 
@@ -224,12 +221,10 @@ window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(wallet
       if (txTs == null || txTs < snapTs) continue;
     }
 
-    // Wallet effective balance should only reflect paid ("pay now") movements.
     const p = (tx.payNow ?? tx.pay_now);
     const paid = (p === undefined) ? true : !!p;
     if (!paid) continue;
 
-    // Ignore internal transfers (they should not change net cash across wallets).
     const isInternal = !!(tx.isInternal ?? tx.is_internal);
     if (isInternal) continue;
 
@@ -242,6 +237,22 @@ window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(wallet
   }
 
   return baseBal + delta;
+}
+
+window.tbGetWalletBalanceRow = function tbGetWalletBalanceRow(walletId) {
+  const wid = String(walletId || "");
+  if (!wid || !window.state) return null;
+  const map = state.walletBalanceMap || {};
+  const row = map[wid];
+  return row && Number.isFinite(Number(row.effectiveBalance)) ? row : null;
+};
+
+window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(walletId) {
+  const row = (typeof window.tbGetWalletBalanceRow === "function")
+    ? window.tbGetWalletBalanceRow(walletId)
+    : null;
+  if (row) return Number(row.effectiveBalance || 0);
+  return _tbLegacyWalletEffectiveBalance(walletId);
 };
 
 /* =========================

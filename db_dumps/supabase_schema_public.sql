@@ -1047,12 +1047,17 @@ CREATE OR REPLACE FUNCTION "public"."trip_delete_expense_v1"("p_trip_id" "uuid",
     AS $$
 declare
   v_uid uuid;
-  v_tx_id uuid;
+  v_main_tx_id uuid;
+  v_budget_tx_ids uuid[] := '{}';
 begin
   v_uid := auth.uid();
 
   if v_uid is null then
     raise exception 'not authenticated';
+  end if;
+
+  if p_trip_id is null or p_expense_id is null then
+    raise exception 'trip_id and expense_id required';
   end if;
 
   if not exists (
@@ -1064,36 +1069,61 @@ begin
     raise exception 'not authorized';
   end if;
 
-  select transaction_id
-  into v_tx_id
-  from public.trip_expenses
-  where id = p_expense_id
-  and trip_id = p_trip_id;
+  -- 1) lock the expense row and read the main linked tx
+  select te.transaction_id
+    into v_main_tx_id
+  from public.trip_expenses te
+  where te.id = p_expense_id
+    and te.trip_id = p_trip_id
+  for update;
 
   if not found then
     raise exception 'expense not found';
   end if;
 
-  -- delete shares
-  delete from public.trip_expense_shares
-  where expense_id = p_expense_id
-  and trip_id = p_trip_id;
+  -- 2) collect linked budget tx ids (simple array aggregation, no FOR UPDATE here)
+  select coalesce(array_agg(distinct l.transaction_id), '{}')
+    into v_budget_tx_ids
+  from public.trip_expense_budget_links l
+  where l.trip_id = p_trip_id
+    and l.expense_id = p_expense_id
+    and l.transaction_id is not null;
 
-  -- delete budget links
-  delete from public.trip_expense_budget_links
-  where expense_id = p_expense_id
-  and trip_id = p_trip_id;
+  -- 3) break direct links first
+  update public.trip_expenses te
+  set transaction_id = null
+  where te.id = p_expense_id
+    and te.trip_id = p_trip_id;
 
-  -- delete wallet transaction if exists
-  if v_tx_id is not null then
-    perform public.delete_transaction(v_tx_id);
+  update public.transactions t
+  set trip_expense_id = null
+  where t.trip_expense_id = p_expense_id;
+
+  -- 4) delete relational rows first
+  delete from public.trip_expense_budget_links l
+  where l.trip_id = p_trip_id
+    and l.expense_id = p_expense_id;
+
+  delete from public.trip_expense_shares s
+  where s.trip_id = p_trip_id
+    and s.expense_id = p_expense_id;
+
+  delete from public.trip_expenses te
+  where te.id = p_expense_id
+    and te.trip_id = p_trip_id;
+
+  -- 5) delete budget txs
+  if coalesce(array_length(v_budget_tx_ids, 1), 0) > 0 then
+    delete from public.transactions t
+    where t.id = any(v_budget_tx_ids);
   end if;
 
-  -- delete expense
-  delete from public.trip_expenses
-  where id = p_expense_id
-  and trip_id = p_trip_id;
-
+  -- 6) delete main wallet tx last, only if distinct from budget txs
+  if v_main_tx_id is not null
+     and not (v_main_tx_id = any(v_budget_tx_ids)) then
+    delete from public.transactions t
+    where t.id = v_main_tx_id;
+  end if;
 end;
 $$;
 

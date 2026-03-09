@@ -490,6 +490,21 @@ async function loadFromSupabase() {
     return w || [];
   })();
 
+  const walletBalancesPromise = (async () => {
+    try {
+      const { data: rows, error } = await sb
+        .from(TB_CONST.TABLES.v_wallet_balances)
+        .select("wallet_id,period_id,wallet_currency,baseline_balance,balance_snapshot_at,transactions_delta,effective_balance,included_tx_count,excluded_internal_count,excluded_unpaid_count,excluded_pre_snapshot_count,last_tx_created_at")
+        .eq("period_id", activePeriodId)
+        .order("wallet_id", { ascending: true });
+      if (error) throw error;
+      return rows || [];
+    } catch (e) {
+      console.warn("[v_wallet_balances] load failed (fallback to JS)", e?.message || e);
+      return [];
+    }
+  })();
+
   const txPromise = sb
     .from(TB_CONST.TABLES.transactions)
     .select("id,wallet_id,type,amount,currency,category,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,pay_now,out_of_budget,night_covered,created_at")
@@ -561,6 +576,7 @@ async function loadFromSupabase() {
   })();
 
   const w = await walletsPromise;
+  const walletBalanceRows = await walletBalancesPromise;
   const { data: tx, error: tErr } = await txPromise;
   if (tErr) throw tErr;
   const segRows = await segPromise;
@@ -575,6 +591,22 @@ async function loadFromSupabase() {
 
   state.exchangeRates["EUR-BASE"] = Number(p.eur_base_rate);
   state.exchangeRates["BASE-EUR"] = 1 / Number(p.eur_base_rate);
+
+  state.walletBalances = (walletBalanceRows || []).map((x) => ({
+    walletId: x.wallet_id,
+    periodId: x.period_id,
+    walletCurrency: x.wallet_currency,
+    baselineBalance: Number(x.baseline_balance || 0),
+    balanceSnapshotAt: x.balance_snapshot_at || null,
+    transactionsDelta: Number(x.transactions_delta || 0),
+    effectiveBalance: Number(x.effective_balance || 0),
+    includedTxCount: Number(x.included_tx_count || 0),
+    excludedInternalCount: Number(x.excluded_internal_count || 0),
+    excludedUnpaidCount: Number(x.excluded_unpaid_count || 0),
+    excludedPreSnapshotCount: Number(x.excluded_pre_snapshot_count || 0),
+    lastTxCreatedAt: x.last_tx_created_at || null,
+  }));
+  state.walletBalanceMap = Object.fromEntries((state.walletBalances || []).map((x) => [String(x.walletId || ""), x]));
 
   state.wallets = (w || []).map((x) => ({
     id: x.id,

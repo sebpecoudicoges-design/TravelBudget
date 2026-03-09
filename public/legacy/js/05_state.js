@@ -13,6 +13,8 @@ let state = {
     manualRates: {}, // { CUR: { rate:number, asOf:"YYYY-MM-DD" } }
   },
   wallets: [],
+  walletBalances: [],
+  walletBalanceMap: {},
   transactions: [],
   allocations: [],
   periods: [],

@@ -1,4 +1,4 @@
-window.__TB_BUILD = "8.4.3";
+window.__TB_BUILD = "8.5.0";
 /* =========================
    Constants (V6.5)
    - Single source of truth for DB identifiers & UI labels
@@ -25,6 +25,8 @@ window.__TB_BUILD = "8.4.3";
     trip_settlements: "trip_settlements",
     trip_settlement_events: "trip_settlement_events",
     v_trip_user_net_balances: "v_trip_user_net_balances",
+    v_wallet_balances: "v_wallet_balances",
+    v_wallet_transactions_effect: "v_wallet_transactions_effect",
 
     fx_manual_rates: "fx_manual_rates",
   });
