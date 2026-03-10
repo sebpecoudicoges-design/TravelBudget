@@ -67,18 +67,43 @@ function renderAll() {
 
   // Safe renders (each section isolated)
   if (view === "dashboard") {
-    safeCall("Wallets", () => { if (typeof renderWallets === "function") return renderWallets(); }, { containerId: "wallets-container" });
-    safeCall("Budget journalier", () => { if (typeof renderDailyBudget === "function") return renderDailyBudget(); }, { containerId: "daily-budget-container" });
-    safeCall("Dashboard KPIs", () => { if (typeof renderKPI === "function") return renderKPI(); }, { containerId: "kpi" });
-    safeCall("Cashflow curve", () => {
-      if (typeof tbRequestCashflowCurveRender === "function") return tbRequestCashflowCurveRender("renderAll");
-      if (typeof renderCashflowCurve === "function") return renderCashflowCurve();
-    }, { containerId: "view-dashboard" });
-    safeCall("Charts", () => { if (typeof renderCharts === "function") return renderCharts(); }, { containerId: "view-dashboard" });
-    safeCall("Redraw charts", () => { if (typeof tbRequestRedrawCharts === "function") return tbRequestRedrawCharts("renderAll");
-        if (typeof redrawCharts === "function") return redrawCharts(); }, { containerId: "view-dashboard" });
-    return;
-  }
+  safeCall("Wallets", () => {
+    if (typeof renderWallets === "function") return renderWallets();
+  }, { containerId: "wallets-container" });
+
+  safeCall("Budget journalier", () => {
+    if (typeof renderDailyBudget === "function") return renderDailyBudget();
+  }, { containerId: "daily-budget-container" });
+
+  safeCall("Dashboard KPIs", () => {
+    if (typeof renderKPI === "function") return renderKPI();
+  }, { containerId: "kpi" });
+
+  // V8.9: defer non-critical heavy blocks after first useful render
+  setTimeout(() => {
+    try {
+      if ((typeof activeView === "string" ? activeView : "dashboard") !== "dashboard") return;
+
+      safeCall("Cashflow curve", () => {
+        if (typeof tbRequestCashflowCurveRender === "function") return tbRequestCashflowCurveRender("renderAll:deferred");
+        if (typeof renderCashflowCurve === "function") return renderCashflowCurve();
+      }, { containerId: "view-dashboard" });
+
+      safeCall("Charts", () => {
+        if (typeof renderCharts === "function") return renderCharts();
+      }, { containerId: "view-dashboard" });
+
+      safeCall("Redraw charts", () => {
+        if (typeof tbRequestRedrawCharts === "function") return tbRequestRedrawCharts("renderAll:deferred");
+        if (typeof redrawCharts === "function") return redrawCharts();
+      }, { containerId: "view-dashboard" });
+    } catch (e) {
+      console.warn("[renderAll] deferred dashboard blocks failed", e);
+    }
+  }, 0);
+
+  return;
+}
 
   if (view === "transactions") {
     safeCall("Transactions", () => { if (typeof renderTransactions === "function") return renderTransactions(); }, { containerId: "view-transactions" });
