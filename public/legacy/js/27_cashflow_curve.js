@@ -15,13 +15,6 @@
  * - Ensure a stable wrapper id="cashflowChart" exists for diagnostics
  */
 function ensureCashflowChartAlias() {
-
-if (window.__tbCashflowRenderLock) {
-  return;
-}
-window.__tbCashflowRenderLock = true;
-setTimeout(()=>{ window.__tbCashflowRenderLock=false; }, 0);
-
   try {
     const curveEl = document.getElementById("cashflowCurve");
 
