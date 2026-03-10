@@ -202,12 +202,15 @@ Tape exactement ${word} pour confirmer :`
 
     _setStatus(isAll ? "Wiping user data..." : "Resetting travel data...");
 
-    const out = await callEdge("admin-wipe-user", { userId, mode });
+    const out = await callEdge("admin-wipe-user", { targetUserId: userId, mode });
 
-    const msg = out?.ok
-      ? (isAll ? "Compte vidé." : "Données Travel reset (catégories conservées).")
-      : "Action terminée.";
-    _setStatus(msg);
+    const msg = out?.message
+  || (out?.success
+    ? (isAll ? "✅ Compte vidé." : "✅ Données Travel reset (catégories conservées).")
+    : "Action terminée.");
+
+_setStatus(msg);
+alert(msg);
 
     // refresh list
     __membersCache.loadedAt = 0;
