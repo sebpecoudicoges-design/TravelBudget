@@ -371,63 +371,75 @@ function pickActivePeriod(periods) {
 async function loadFromSupabase() {
   if (!sbUser) return;
 
-  // settings
-  {
-    const { data: s, error: sErr } = await sb.from(TB_CONST.TABLES.settings).select("theme,palette_json,palette_preset,base_currency").eq("user_id", sbUser.id).maybeSingle();
-    if (sErr) throw sErr;
+  // V8.9.4: parallelize the 3 independent bootstrap reads
+const settingsPromise = sb
+  .from(TB_CONST.TABLES.settings)
+  .select("theme,palette_json,palette_preset,base_currency")
+  .eq("user_id", sbUser.id)
+  .maybeSingle();
 
-    if (s) {
-      // theme
-      if (s.theme) applyTheme(String(s.theme));
+const fxManualPromise = sb
+  .from(TB_CONST.TABLES.fx_manual_rates)
+  .select("currency,rate_to_eur,as_of")
+  .eq("user_id", sbUser.id);
 
-      // palette server wins after login
-      const p = s.palette_json || null;
-      const preset = s.palette_preset || null;
+const periodsPromise = sb
+  .from(TB_CONST.TABLES.periods)
+  .select("id,start_date,end_date,base_currency,eur_base_rate,daily_budget_base,updated_at")
+  .eq("user_id", sbUser.id)
+  .order("start_date", { ascending: false });
 
-      if (p && isValidPalette(p)) {
-        await applyPalette(p, preset || findPresetNameForPalette(p), { persistLocal: true, persistRemote: false });
-      }
+const [
+  { data: s, error: sErr },
+  { data: fxm, error: fxmErr },
+  { data: periods, error: pErr }
+] = await Promise.all([
+  settingsPromise,
+  fxManualPromise,
+  periodsPromise
+]);
 
-      // account base currency (fallback only; segments/periods still drive budgeting)
-      try {
-        const bc = String(s.base_currency || "").trim().toUpperCase();
-        if (bc && /^[A-Z]{3}$/.test(bc)) {
-          if (!state.user) state.user = {};
-          state.user.baseCurrency = bc;
-        }
-      } catch (_) {}
-    }
+if (sErr) throw sErr;
+if (pErr) throw pErr;
+
+// settings
+if (s) {
+  if (s.theme) applyTheme(String(s.theme));
+
+  const p = s.palette_json || null;
+  const preset = s.palette_preset || null;
+
+  if (p && isValidPalette(p)) {
+    await applyPalette(p, preset || findPresetNameForPalette(p), { persistLocal: true, persistRemote: false });
   }
 
-  // FX manual fallback (DB-backed)
   try {
-    const { data: fxm, error: fxmErr } = await sb
-      .from(TB_CONST.TABLES.fx_manual_rates)
-      .select("currency,rate_to_eur,as_of")
-      .eq("user_id", sbUser.id);
-    if (fxmErr) throw fxmErr;
-    const out = {};
-    for (const r of (fxm || [])) {
-      const c = String(r.currency || "").trim().toUpperCase();
-      const rate = Number(r.rate_to_eur);
-      const asOf = r.as_of ? String(r.as_of).slice(0, 10) : null;
-      if (c && c !== "EUR" && /^[A-Z]{3}$/.test(c) && Number.isFinite(rate) && rate > 0) {
-        out[c] = { rate, asOf };
-      }
+    const bc = String(s.base_currency || "").trim().toUpperCase();
+    if (bc && /^[A-Z]{3}$/.test(bc)) {
+      if (!state.user) state.user = {};
+      state.user.baseCurrency = bc;
     }
-    if (!state.fx) state.fx = {};
-    state.fx.manualRates = out;
-  } catch (e) {
-    // Non-blocking (table may not exist yet in some environments)
-    console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
-  }
+  } catch (_) {}
+}
 
-  const { data: periods, error: pErr } = await sb
-    .from(TB_CONST.TABLES.periods)
-    .select("id,start_date,end_date,base_currency,eur_base_rate,daily_budget_base,updated_at")
-    .eq("user_id", sbUser.id)
-    .order("start_date", { ascending: false });
-  if (pErr) throw pErr;
+// FX manual fallback (DB-backed)
+try {
+  if (fxmErr) throw fxmErr;
+  const out = {};
+  for (const r of (fxm || [])) {
+    const c = String(r.currency || "").trim().toUpperCase();
+    const rate = Number(r.rate_to_eur);
+    const asOf = r.as_of ? String(r.as_of).slice(0, 10) : null;
+    if (c && c !== "EUR" && /^[A-Z]{3}$/.test(c) && Number.isFinite(rate) && rate > 0) {
+      out[c] = { rate, asOf };
+    }
+  }
+  if (!state.fx) state.fx = {};
+  state.fx.manualRates = out;
+} catch (e) {
+  // Non-blocking (table may not exist yet in some environments)
+  console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
+}
 
   const activePeriodId = pickActivePeriod(periods);
   if (!activePeriodId) throw new Error("Aucune période trouvée.");

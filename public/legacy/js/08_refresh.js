@@ -116,11 +116,16 @@ async function _runRefreshFromServer(opts) {
     _tbRefreshLog("refreshFromServer:start", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("supabase:load"); } catch (_) {}
     // FX: ensure daily rates (blocks only if no cached rates yet)
+    let _fxPromise = Promise.resolve();
+
     if (typeof tbFxEnsureDaily === "function") {
-      try { await tbFxEnsureDaily({ blockingIfEmpty: true }); } catch (_) {}
+      try {
+        _fxPromise = tbFxEnsureDaily({ blockingIfEmpty: true });
+      } catch (_) {}
     }
 
-    await loadFromSupabase();
+    const _dataPromise = loadFromSupabase();
+    await Promise.all([_dataPromise, _fxPromise]);
 
     try {
       const currentView = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
