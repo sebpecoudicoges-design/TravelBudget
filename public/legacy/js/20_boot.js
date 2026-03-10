@@ -144,8 +144,6 @@ window.onload = async function () {
     try { tbShowBootOverlay("Chargement des transactions, wallets et graphiques…"); } catch (_) {}
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:refreshFromServer"); } catch (_) {}
 
-    // Bootstrap non bloquant
-    const _bootstrapPromise = ensureBootstrap();
     _bootstrapPromise.catch(e => {
       console.warn("[Boot] ensureBootstrap failed:", e?.message || e);
     });
