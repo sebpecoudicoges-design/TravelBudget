@@ -97,6 +97,17 @@ window.tbBusyEnd = function tbBusyEnd() {
   _tbApplyBusyState();
 };
 
+window.tbWithBusy = async function tbWithBusy(fn, text) {
+  try {
+    if (typeof window.tbBusyStart === "function") window.tbBusyStart(text || "Traitement en cours…");
+    return await fn();
+  } finally {
+    try {
+      if (typeof window.tbBusyEnd === "function") window.tbBusyEnd();
+    } catch (_) {}
+  }
+};
+
 async function _runRefreshFromServer(opts) {
   const options = opts || {};
   if (!sbUser) return;

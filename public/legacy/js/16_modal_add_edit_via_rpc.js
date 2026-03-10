@@ -374,7 +374,8 @@ async function saveModal() {
   if (btn) btn.disabled = true;
 
   try {
-    await safeCall("Sauvegarde", async () => {
+    await window.tbWithBusy(async () => {
+      await safeCall("Sauvegarde", async () => {
       const type = document.getElementById("m-type").value;
       const walletId = document.getElementById("m-wallet").value;
       const amount = parseFloat(document.getElementById("m-amount").value);
@@ -500,9 +501,10 @@ async function saveModal() {
 
       closeModal();
       editingTxId = null;
-      if (typeof window.tbAfterMutationRefresh === "function") await window.tbAfterMutationRefresh("tx:delete");
+      if (typeof window.tbAfterMutationRefresh === "function") await window.tbAfterMutationRefresh("tx:save");
       else await refreshFromServer();
-    });
+      });
+    }, editingTxId ? "Mise à jour en cours…" : "Enregistrement en cours…");
   } finally {
     _savingTx = false;
     if (btn) btn.disabled = false;
