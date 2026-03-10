@@ -126,7 +126,8 @@ window.onload = async function () {
   try {
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:ensureBootstrap"); } catch (_) {}
     try { tbShowBootOverlay("Connexion et synchronisation…"); } catch (_) {}
-    await ensureBootstrap();
+    // Launch bootstrap but do not block first render
+    const _bootstrapPromise = ensureBootstrap();
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:ensureBootstrap"); } catch (_) {}
 
     // ✅ IMPORTANT: afficher la vue AVANT refreshFromServer(),
@@ -141,10 +142,18 @@ window.onload = async function () {
     // Perf (A2): do not block UI on network refresh.
     // Show the dashboard immediately and refresh in background.
     try { tbShowBootOverlay("Chargement des transactions, wallets et graphiques…"); } catch (_) {}
-  try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:refreshFromServer"); } catch (_) {}
+    try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:refreshFromServer"); } catch (_) {}
+
+    // Bootstrap non bloquant
+    const _bootstrapPromise = ensureBootstrap();
+    _bootstrapPromise.catch(e => {
+      console.warn("[Boot] ensureBootstrap failed:", e?.message || e);
+    });
+
+    // Refresh serveur en parallèle
     const _refreshPromise = (typeof refreshFromServer === "function")
       ? refreshFromServer()
-      : Promise.resolve();
+     : Promise.resolve();
     try {
       _refreshPromise
         .catch((e) => {
