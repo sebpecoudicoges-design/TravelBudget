@@ -196,7 +196,7 @@ ${label}
 
 ${explain}
 
-Tape EXACTEMENT ${word} pour confirmer :`
+Tape exactement ${word} pour confirmer :`
     );
     if (token !== word) throw new Error("Annulé (confirmation incorrecte).");
 
