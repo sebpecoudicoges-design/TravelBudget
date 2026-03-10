@@ -757,9 +757,15 @@ return byCurrency;
 if (!sb?.rpc) return null;
       if (!TB_CONST?.RPCS?.trip_get_balances_v1) return null;
 
-      console.debug("[Trip] RPC trip_get_balances_v1:start", { tripId });
+      console.log("[Trip] RPC trip_get_balances_v1:start", { tripId });
 
 const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_get_balances_v1, { p_trip_id: tripId });
+
+console.log("[Trip] RPC trip_get_balances_v1:done", {
+  tripId,
+  rows: Array.isArray(data) ? data.length : null,
+  hasError: !!error
+});
 
 if (error) {
   console.warn("[Trip] RPC trip_get_balances_v1 failed", {
@@ -799,11 +805,17 @@ if (!Array.isArray(data)) return null;
     if (!sb?.rpc) return null;
     if (!TB_CONST?.RPCS?.trip_suggest_settlements_v1) return null;
 
-    console.debug("[Trip] RPC trip_suggest_settlements_v1:start", { tripId, useNetRaw: !!useNetRaw });
+    console.log("[Trip] RPC trip_suggest_settlements_v1:start", { tripId, useNetRaw: !!useNetRaw });
 
     const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_suggest_settlements_v1, {
       p_trip_id: tripId,
       p_use_net_raw: !!useNetRaw,
+    });
+    
+    console.log("[Trip] RPC trip_suggest_settlements_v1:done", {
+      tripId,
+      rows: Array.isArray(data) ? data.length : null,
+      hasError: !!error
     });
 
     if (error) {
