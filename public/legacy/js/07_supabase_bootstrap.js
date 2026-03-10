@@ -574,7 +574,6 @@ try {
   const { data: tx, error: tErr } = await txPromise;
   if (tErr) throw tErr;
   const segRows = await segPromise;
-  const { rows: catRows, error: catLoadErr } = await catPromise;
 
   state.period.id = p.id;
   state.period.start = p.start_date;
@@ -656,8 +655,9 @@ try {
     if (typeof syncTabsForRole === "function") syncTabsForRole();
   } catch (e) {}
 
-  // categories (Supabase is source of truth)
-  try {
+  // categories (Supabase is source of truth) — non-blocking at boot
+Promise.resolve(catPromise)
+  .then(async ({ rows: catRows, error: catLoadErr }) => {
     if (catLoadErr) throw catLoadErr;
 
     const rows = catRows || [];
@@ -668,6 +668,7 @@ try {
 
     const seen = new Set(dbNames.map(n => n.toLowerCase()));
     const merged = [...dbNames];
+
     for (const n of txNames) {
       const k = n.toLowerCase();
       if (!seen.has(k)) {
@@ -676,7 +677,6 @@ try {
       }
     }
 
-    // Ensure default system categories exist (even if no transactions yet)
     const REQUIRED_DEFAULT_CATS = ["Mouvement interne"];
     for (const n of REQUIRED_DEFAULT_CATS) {
       const k = String(n).toLowerCase();
@@ -696,7 +696,6 @@ try {
     }
     state.categoryColors = m;
 
-    // Optional: auto-seed categories that exist in transactions but not in DB
     if (merged.length > dbNames.length) {
       const maxSort = rows.reduce((mx, r) => Math.max(mx, Number(r.sort_order ?? 0)), 0);
       const dbLower = new Set(dbNames.map(x => x.toLowerCase()));
@@ -708,14 +707,22 @@ try {
           color: null,
           sort_order: maxSort + 1 + idx,
         }));
+
       if (toInsert.length) {
         const { error: insCErr } = await sb.from(TB_CONST.TABLES.categories).insert(toInsert);
         if (insCErr) console.warn("[categories] auto-seed failed (ignored)", insCErr);
       }
     }
-  } catch (e) {
+
+    try {
+      if (window.tbBus && typeof window.tbBus.emit === "function") {
+        window.tbBus.emit("categories:updated", { source: "loadFromSupabase" });
+      }
+    } catch (_) {}
+  })
+  .catch((e) => {
     console.warn("[categories] load failed (fallback to local)", e?.message || e);
-  }
+  });
 
   recomputeAllocations();
 }
