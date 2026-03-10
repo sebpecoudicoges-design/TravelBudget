@@ -66,12 +66,22 @@ function _tbSetLoadingBadge(active, text) {
   try {
     const el = _tbEnsureLoadingBadge();
     if (!el) return;
+
+    const canShow = !!active && _tbShouldShowLoadingBadge();
+
     el.textContent = text || "Chargement en cours…";
-    el.style.opacity = active ? "1" : "0";
-    el.style.transform = active ? "translateY(0)" : "translateY(6px)";
+    el.style.opacity = canShow ? "1" : "0";
+    el.style.transform = canShow ? "translateY(0)" : "translateY(6px)";
   } catch (_) {}
 }
 
+function _tbShouldShowLoadingBadge() {
+  try {
+    if (window.__TB_BOOTING) return false;
+    if (window.__TB_BOOT_OVERLAY_ACTIVE) return false;
+  } catch (_) {}
+  return true;
+}
 
 function _tbApplyBusyState() {
   _tbSetLoadingBadge((_refreshInFlight || _tbBusyCounter > 0), _tbBusyCounter > 0 ? "Traitement en cours…" : "Chargement en cours…");

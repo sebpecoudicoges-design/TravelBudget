@@ -750,12 +750,29 @@ return byCurrency;
 
   async function _fetchBalancesFromDb(tripId) {
     try {
-      if (!tripId || !sb?.rpc) return null;
+      if (!tripId) {
+        console.warn("[Trip] trip_get_balances_v1 skipped: missing active trip id");
+        return null;
+      }
+if (!sb?.rpc) return null;
       if (!TB_CONST?.RPCS?.trip_get_balances_v1) return null;
 
-      const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_get_balances_v1, { p_trip_id: tripId });
-      if (error) return null;
-      if (!Array.isArray(data)) return null;
+      console.debug("[Trip] RPC trip_get_balances_v1:start", { tripId });
+
+const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_get_balances_v1, { p_trip_id: tripId });
+
+if (error) {
+  console.warn("[Trip] RPC trip_get_balances_v1 failed", {
+    tripId,
+    message: error.message || null,
+    details: error.details || null,
+    hint: error.hint || null,
+    code: error.code || null,
+  });
+  return null;
+}
+
+if (!Array.isArray(data)) return null;
 
       const out = new Map(); // cur -> Map(memberId -> net)
       for (const row of data) {
@@ -774,21 +791,39 @@ return byCurrency;
   }
 
   async function _fetchSettlementSuggestionsFromDb(tripId, useNetRaw = true) {
-    try {
-      if (!tripId || !sb?.rpc) return null;
-      if (!TB_CONST?.RPCS?.trip_suggest_settlements_v1) return null;
-
-      const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_suggest_settlements_v1, {
-        p_trip_id: tripId,
-        p_use_net_raw: !!useNetRaw,
-      });
-      if (error) return null;
-      if (!Array.isArray(data)) return null;
-      return data;
-    } catch (e) {
+  try {
+    if (!tripId) {
+      console.warn("[Trip] trip_suggest_settlements_v1 skipped: missing active trip id");
       return null;
     }
+    if (!sb?.rpc) return null;
+    if (!TB_CONST?.RPCS?.trip_suggest_settlements_v1) return null;
+
+    console.debug("[Trip] RPC trip_suggest_settlements_v1:start", { tripId, useNetRaw: !!useNetRaw });
+
+    const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_suggest_settlements_v1, {
+      p_trip_id: tripId,
+      p_use_net_raw: !!useNetRaw,
+    });
+
+    if (error) {
+      console.warn("[Trip] RPC trip_suggest_settlements_v1 failed", {
+        tripId,
+        useNetRaw: !!useNetRaw,
+        message: error.message || null,
+        details: error.details || null,
+        hint: error.hint || null,
+        code: error.code || null,
+      });
+      return null;
+    }
+
+    if (!Array.isArray(data)) return null;
+    return data;
+  } catch (e) {
+    return null;
   }
+}
 
 
   // Unify balances into the user's display currency.
