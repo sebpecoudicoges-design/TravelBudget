@@ -89,11 +89,12 @@ function _escapeHtml(s) {
 async function guard(label, fn) {
   try {
     return await fn();
-  } catch (e) {
-    console.error(`[MembersAdmin] ${label} failed`, e);
-    const msg = e?.message ? String(e.message) : String(e);
-    _setStatus(`❌ ${label}: ${msg}`);
-    alert(`${label} : ${msg}`);
+  } catch (err) {
+    console.error(`[MembersAdmin] ${label} failed`, err);
+    const msg = err?.message || String(err);
+    _setStatus(`❌ ${msg}`);
+    alert(`❌ ${label}: ${msg}`);
+    throw err;
   }
 }
 
@@ -176,6 +177,8 @@ function renderUsers() {
 
 async function adminWipeUser(userId, email, mode = "all") {
   await guard("Wipe user", async () => {
+    console.log("[MembersAdmin] adminWipeUser:start", { userId, email, mode });
+
     const { data: u } = await sb.auth.getUser();
     const me = u?.user?.id;
     if (me && String(me) === String(userId)) {
@@ -196,25 +199,40 @@ ${label}
 
 ${explain}
 
-Tape exactement ${word} pour confirmer :`
+Tape EXACTEMENT ${word} pour confirmer :`
     );
-    if (token !== word) throw new Error("Annulé (confirmation incorrecte).");
 
-    _setStatus(isAll ? "Wiping user data..." : "Resetting travel data...");
+    console.log("[MembersAdmin] adminWipeUser:promptResult", { token });
 
-    const out = await callEdge("admin-wipe-user", { targetUserId: userId, mode });
+    if (token !== word) {
+      _setStatus("Action annulée.");
+      return;
+    }
+
+    _setStatus(isAll ? "Wipe en cours..." : "Reset travel en cours...");
+    console.log("[MembersAdmin] adminWipeUser:beforeCallEdge");
+
+    const out = await callEdge("admin-wipe-user", {
+      targetUserId: userId,
+      mode
+    });
+
+    console.log("[MembersAdmin] adminWipeUser:callEdgeResult", out);
 
     const msg = out?.message
-  || (out?.success
-    ? (isAll ? "✅ Compte vidé." : "✅ Données Travel reset (catégories conservées).")
-    : "Action terminée.");
+      || (out?.success
+        ? (isAll ? "✅ Compte vidé avec succès." : "✅ Données Travel réinitialisées avec succès.")
+        : "✅ Action terminée.");
 
-_setStatus(msg);
-alert(msg);
+    _setStatus(msg);
+    alert(msg); // feedback visible immédiat
 
-    // refresh list
+    console.log("[MembersAdmin] adminWipeUser:beforeRefreshUsers");
+
     __membersCache.loadedAt = 0;
     await adminRefreshUsers();
+
+    console.log("[MembersAdmin] adminWipeUser:done");
   });
 }
 
