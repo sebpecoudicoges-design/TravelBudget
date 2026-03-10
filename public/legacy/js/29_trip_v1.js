@@ -2876,6 +2876,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
   }
 
   async function _renderUI() {
+    console.log("[TB TEST] _renderUI called", tripState.activeTripId);
     const root = _root();
     if (!root) return;
 
@@ -2891,7 +2892,11 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
     const globalNetHTML = "";// removed: global net to avoid confusion
 
-
+    console.log("[TB TEST] before balances/suggestions block", {
+      activeTripId: tripState.activeTripId,
+      members: tripState.members?.length,
+      expenses: tripState.expenses?.length
+    });
     const balancesByCurRaw = (await _fetchBalancesFromDb(tripState.activeTripId)) || _computeBalances();
     const balancesByCur = _unifyBalancesToDisplayCurrency(balancesByCurRaw);
     const settlementsByCur = _computeSettlements(balancesByCur);
@@ -3698,6 +3703,7 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
   // - activeOnly: skip reloading trip list if already loaded (faster after mutations)
   // - forceTrips: force reload trip list
   async function refresh(opts) {
+    console.log("[TB TEST] trip refresh called");
     const o = opts || {};
     const needTrips = !!o.forceTrips || !tripState._tripsLoaded || !(tripState.trips || []).length;
 
@@ -3723,6 +3729,7 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
 
   // Exposed function expected by navigation
   window.renderTrip = async function renderTrip() {
+    console.log("[TB TEST] renderTrip called");
     const root = _root();
     if (!root) return;
 
