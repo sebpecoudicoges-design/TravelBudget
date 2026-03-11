@@ -7,14 +7,14 @@ function fillModalSelects() {
   const elC = document.getElementById("m-category");
   if (!elW || !elC) return;
 
-  const activePid = state?.period?.id || null;
+
+  const activeTravelId = state?.activeTravelId || null;
 
   const wallets = (state.wallets || []).filter((w) => {
-    const pid = w?.periodId || w?.period_id || w?.periodID || null;
-    // If wallet has no period, keep it (legacy). Otherwise, keep only active period wallets.
-    if (!pid) return true;
-    if (!activePid) return true;
-    return String(pid) === String(activePid);
+    const tid = w?.travelId || w?.travel_id || null;
+    if (!tid) return true; // legacy
+    if (!activeTravelId) return true;
+    return String(tid) === String(activeTravelId);
   });
 
   elW.innerHTML = wallets
@@ -395,20 +395,6 @@ async function saveModal() {
       if (!wallet) throw new Error("Wallet invalide.");
 
       if (nightCovered) outOfBudget = true;
-
-      // === KEY FIX: periods overlap, RPC derives period_id from date ===
-      // If the wallet belongs to period A but the date falls into period B (derived by start_date),
-      // apply_transaction will reject with period_id mismatch.
-      const walletPid = wallet?.periodId || wallet?.period_id || null;
-      const derivedPid = _periodIdForDate(start);
-
-      if (!editingTxId && derivedPid && walletPid && String(derivedPid) !== String(walletPid)) {
-        throw new Error(
-          `Périodes qui se chevauchent : la date ${start} est résolue sur la période ${derivedPid} (RPC), ` +
-          `mais le wallet appartient à ${walletPid}. ` +
-          `→ Change la date / change de période active / utilise un wallet de la même période.`
-        );
-      }
 
       if (editingTxId) {
         const current = state.transactions.find((t) => t.id === editingTxId);
