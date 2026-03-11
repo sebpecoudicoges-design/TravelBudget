@@ -166,10 +166,12 @@ async function refreshFromServer(opts = {}) {
 
   try {
 
-    if (typeof loadTravelContext === "function") {
+    if (!state?.activeTravelId) {
+      console.warn("[refreshFromServer] skipped: no active travel yet");
+    } else if (typeof loadTravelContext === "function") {
       await loadTravelContext();
     } else {
-      console.warn("[refreshFromServer] loadTravelContext missing, fallback skipped");
+      console.warn("[refreshFromServer] loadTravelContext missing");
     }
 
   } catch (e) {
