@@ -578,12 +578,30 @@ const walletsPromise = (async () => {
     }
   })();
 
-  const txPromise = sb
-    .from(TB_CONST.TABLES.transactions)
-    .select("id,wallet_id,type,amount,currency,category,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,pay_now,out_of_budget,night_covered,created_at")
-    .eq("user_id", sbUser.id)
-    .eq("period_id", activePeriodId)
-    .order("created_at", { ascending: true });
+const txPromise = sb
+  .from(TB_CONST.TABLES.transactions)
+  .select("id,travel_id,period_id,wallet_id,type,amount,currency,category,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,pay_now,out_of_budget,night_covered,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status")
+  .eq("user_id", sbUser.id)
+  .eq("travel_id", activeTravelId)
+  .eq("period_id", activePeriodId)
+  .order("created_at", { ascending: true });
+
+  const recurringRulesPromise = (async () => {
+  try {
+    const { data: rows, error } = await sb
+      .from(TB_CONST.TABLES.recurring_rules)
+      .select("*")
+      .eq("user_id", sbUser.id)
+      .eq("travel_id", activeTravelId)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+    return rows || [];
+  } catch (e) {
+    console.warn("[recurring_rules] load failed (ignored)", e?.message || e);
+    return [];
+  }
+})();
 
   const segPromise = (async () => {
     // budget segments (V6.4)
@@ -648,11 +666,12 @@ const walletsPromise = (async () => {
     }
   })();
 
-  const w = await walletsPromise;
-  const walletBalanceRows = await walletBalancesPromise;
-  const { data: tx, error: tErr } = await txPromise;
-  if (tErr) throw tErr;
-  const segRows = await segPromise;
+const w = await walletsPromise;
+const walletBalanceRows = await walletBalancesPromise;
+const { data: tx, error: tErr } = await txPromise;
+if (tErr) throw tErr;
+const segRows = await segPromise;
+const recurringRuleRows = await recurringRulesPromise;
 
   state.period.id = p.id;
   state.period.start = p.start_date;
@@ -692,31 +711,40 @@ state.wallets = (w || []).map((x) => ({
 }));
 
   state.transactions = (tx || []).map((x) => ({
-    id: x.id,
-    walletId: x.wallet_id,
-    type: x.type,
-    amount: Number(x.amount),
-    currency: x.currency,
-    category: x.category,
-    label: x.label || "",
-    tripExpenseId: x.trip_expense_id || null,
-    tripShareLinkId: x.trip_share_link_id || null,
-    isInternal: !!(x.is_internal ?? x.isInternal),
-    dateStart: x.date_start,
-    dateEnd: x.date_end,
-    payNow: !!x.pay_now,
-    outOfBudget: !!x.out_of_budget,
-    nightCovered: !!x.night_covered,
-    createdAt: new Date(x.created_at).getTime(),
-    date: x.date_start ? new Date(String(x.date_start) + "T00:00:00").getTime() : new Date(x.created_at).getTime(),
-  }));
+  id: x.id,
+  travelId: x.travel_id || null,
+  periodId: x.period_id || null,
+  walletId: x.wallet_id,
+  type: x.type,
+  amount: Number(x.amount),
+  currency: x.currency,
+  category: x.category,
+  label: x.label || "",
+  tripExpenseId: x.trip_expense_id || null,
+  tripShareLinkId: x.trip_share_link_id || null,
+  isInternal: !!(x.is_internal ?? x.isInternal),
+  dateStart: x.date_start,
+  dateEnd: x.date_end,
+  payNow: !!x.pay_now,
+  outOfBudget: !!x.out_of_budget,
+  nightCovered: !!x.night_covered,
+
+  recurringRuleId: x.recurring_rule_id || null,
+  occurrenceDate: x.occurrence_date || null,
+  generatedByRule: !!x.generated_by_rule,
+  recurringInstanceStatus: x.recurring_instance_status || null,
+
+  createdAt: new Date(x.created_at).getTime(),
+  date: x.date_start ? new Date(String(x.date_start) + "T00:00:00").getTime() : new Date(x.created_at).getTime(),
+}));
 
   state.periods = (periods || []).map((x) => ({
-    id: x.id,
-    start: x.start_date,
-    end: x.end_date,
-    baseCurrency: x.base_currency,
-  }));
+  id: x.id,
+  travelId: x.travel_id || null,
+  start: x.start_date,
+  end: x.end_date,
+  baseCurrency: x.base_currency,
+}));
 
   state.budgetSegments = (segRows || []).map((x) => ({
     id: x.id,
@@ -729,6 +757,38 @@ state.wallets = (w || []).map((x) => ({
     eurBaseRateFixed: (x.eur_base_rate_fixed === null || x.eur_base_rate_fixed === undefined) ? null : Number(x.eur_base_rate_fixed),
     sortOrder: Number(x.sort_order || 0),
   }));
+
+  state.recurringRules = (recurringRuleRows || []).map((x) => ({
+  id: x.id,
+  travelId: x.travel_id || null,
+  walletId: x.wallet_id || null,
+  periodId: x.period_id || null,
+
+  name: x.name || x.label || "",
+  label: x.label || x.name || "",
+
+  type: x.type || null,
+  amount: (x.amount === null || x.amount === undefined) ? null : Number(x.amount),
+  currency: x.currency || null,
+  category: x.category || null,
+
+  startDate: x.start_date || null,
+  endDate: x.end_date || null,
+  nextDueAt: x.next_due_at || null,
+
+  isActive: !!x.is_active,
+  archived: !!x.archived,
+  archivedAt: x.archived_at || null,
+
+  frequency: x.frequency || null,
+  intervalCount: x.interval_count || x.interval || null,
+  weekday: x.weekday || null,
+  monthday: x.monthday || null,
+
+  payNow: !!x.pay_now,
+  outOfBudget: !!x.out_of_budget,
+  nightCovered: !!x.night_covered,
+}));
 
   try {
     if (typeof syncTabsForRole === "function") syncTabsForRole();
