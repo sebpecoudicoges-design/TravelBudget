@@ -664,13 +664,18 @@ async function _createVoyagePromptImpl() {
   const uid = await _tbAuthUid();
 
   // Suggest non-overlapping dates after last voyage
-  const periods = (state.periods || [])
-    .slice()
-    .sort((a, b) => String(a.end || a.end_date || "").localeCompare(String(b.end || b.end_date || "")));
+const { data: allPeriods, error: periodsErr } = await s
+  .from(TB_CONST.TABLES.periods)
+  .select("id,start_date,end_date")
+  .eq("user_id", uid)
+  .order("end_date", { ascending: true });
 
-  const lastEnd = periods.length
-    ? _tbISO(periods[periods.length - 1].end || periods[periods.length - 1].end_date)
-    : _tbISO(new Date());
+if (periodsErr) throw periodsErr;
+
+const periods = allPeriods || [];
+const lastEnd = periods.length
+  ? _tbISO(periods[periods.length - 1].end_date)
+  : _tbISO(new Date());
 
   const sugStart = _tbAddDays(lastEnd, 1);
   const sugEnd = _tbAddDays(sugStart, 30);
@@ -696,15 +701,15 @@ async function _createVoyagePromptImpl() {
         if (!start || !end || start > end) throw new Error("Dates invalides.");
 
         // local overlap check
-        const existing = (state.periods || []);
-        for (const p of existing) {
-          const ps = _tbISO(p.start || p.start_date);
-          const pe = _tbISO(p.end || p.end_date);
-          if (!ps || !pe) continue;
-          if (!(end < ps || start > pe)) {
-            throw new Error("Chevauchement avec un voyage existant.");
-          }
-        }
+const existing = allPeriods || [];
+for (const p of existing) {
+  const ps = _tbISO(p.start_date);
+  const pe = _tbISO(p.end_date);
+  if (!ps || !pe) continue;
+  if (!(end < ps || start > pe)) {
+    throw new Error(`Chevauchement avec un voyage existant (${ps} → ${pe}).`);
+  }
+}
 
         const { data: travelData, error: travelErr } = await s
           .from(TB_CONST.TABLES.travels)
