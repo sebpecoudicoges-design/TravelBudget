@@ -242,7 +242,10 @@ function renderTransactions() {
   // Persist filters (UX)
   _txSaveStoredFilters();
 
-  let txs = state.transactions.slice().sort((a, b) => b.createdAt - a.createdAt);
+  let txs = state.transactions
+  .filter(t => t.travel_id === state.activeTravelId)
+  .slice()
+  .sort((a, b) => b.createdAt - a.createdAt);
   const fromD = parseISODateOrNull(from);
   const toD = parseISODateOrNull(to);
 

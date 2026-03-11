@@ -149,9 +149,23 @@ window.onload = async function () {
     });
 
     // Refresh serveur en parallèle
-    const _refreshPromise = (typeof refreshFromServer === "function")
-      ? refreshFromServer()
-     : Promise.resolve();
+const _refreshPromise = (typeof loadTravels === "function")
+  ? (async () => {
+      await loadTravels();
+
+      if (!state.activeTravelId && Array.isArray(state.travels) && state.travels.length) {
+        state.activeTravelId = state.travels[0].id;
+      }
+
+      if (typeof loadTravelContext === "function") {
+        await loadTravelContext();
+      } else if (typeof refreshFromServer === "function") {
+        await refreshFromServer({ skipRender: true });
+      }
+    })()
+  : ((typeof refreshFromServer === "function")
+      ? refreshFromServer({ skipRender: true })
+      : Promise.resolve());
     try {
       _refreshPromise
         .catch((e) => {

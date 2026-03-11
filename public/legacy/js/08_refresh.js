@@ -162,33 +162,20 @@ async function _runRefreshFromServer(opts) {
   }
 }
 
-async function refreshFromServer(opts) {
-  const options = opts || {};
-  if (!sbUser) return;
-  if (_refreshInFlight) {
-    _refreshPending = true;
-    _tbRefreshLog("refreshFromServer:queued");
-    return _refreshPromise;
+async function refreshFromServer(opts = {}) {
+
+  try {
+
+    await loadTravelContext();
+
+  } catch (e) {
+
+    console.error("[refreshFromServer] failed", e);
+
   }
 
-  _refreshInFlight = true;
-  _tbRefreshLog("refreshFromServer:enter");
-  _refreshPending = false;
-  _tbApplyBusyState();
+  if (!opts.skipRender) {
+    renderUI();
+  }
 
-  _refreshPromise = (async () => {
-    try {
-      do {
-        _refreshPending = false;
-        await _runRefreshFromServer(options);
-        _tbRefreshLog("refreshFromServer:loop", { pending: _refreshPending });
-      } while (_refreshPending);
-    } finally {
-      _refreshInFlight = false;
-      _tbApplyBusyState();
-      _tbRefreshLog("refreshFromServer:exit");
-    }
-  })();
-
-  return _refreshPromise;
 }
