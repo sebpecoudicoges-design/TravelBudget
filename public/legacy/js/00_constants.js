@@ -1,6 +1,6 @@
-window.__TB_BUILD = "8.9.5";
+window.__TB_BUILD = "9.0.0";
 /* =========================
-   Constants (V6.5)
+   Constants
    - Single source of truth for DB identifiers & UI labels
    - No raw table/column/localStorage keys in UI code (use TB_CONST.*)
    ========================= */
@@ -8,9 +8,11 @@ window.__TB_BUILD = "8.9.5";
   const TABLES = Object.freeze({
     profiles: "profiles",
     settings: "settings",
+    travels: "travels",
     periods: "periods",
     wallets: "wallets",
     transactions: "transactions",
+    recurring_rules: "recurring_rules",
     categories: "categories",
     budget_segments: "budget_segments",
     trip_groups: "trip_groups",
@@ -36,22 +38,44 @@ window.__TB_BUILD = "8.9.5";
     user_id: "user_id",
     created_at: "created_at",
     updated_at: "updated_at",
+
+    name: "name",
+
     start_date: "start_date",
     end_date: "end_date",
+
+    travel_id: "travel_id",
     period_id: "period_id",
     wallet_id: "wallet_id",
+
     currency: "currency",
     base_currency: "base_currency",
+
     amount: "amount",
     type: "type",
     category: "category",
     label: "label",
+
     fx_mode: "fx_mode",
     fx_rate_eur_to_base: "fx_rate_eur_to_base",
     fx_source: "fx_source",
     fx_last_updated_at: "fx_last_updated_at",
     fx_rate_snapshot: "fx_rate_snapshot",
     fx_source_snapshot: "fx_source_snapshot",
+
+    recurring_rule_id: "recurring_rule_id",
+    occurrence_date: "occurrence_date",
+    generated_by_rule: "generated_by_rule",
+    recurring_instance_status: "recurring_instance_status",
+
+    archived: "archived",
+    archived_at: "archived_at",
+
+    is_active: "is_active",
+    next_due_at: "next_due_at",
+
+    date_start: "date_start",
+    date_end: "date_end",
   });
 
   const RPCS = Object.freeze({
@@ -60,6 +84,7 @@ window.__TB_BUILD = "8.9.5";
     apply_transaction_v2: "apply_transaction_v2",
     apply_transaction: "apply_transaction",
     delete_transaction: "delete_transaction",
+
     trip_get_balances_v1: "trip_get_balances_v1",
     trip_apply_expense_v1: "trip_apply_expense_v1",
     trip_apply_expense_v2: "trip_apply_expense_v2",
@@ -67,21 +92,52 @@ window.__TB_BUILD = "8.9.5";
     trip_suggest_settlements_v1: "trip_suggest_settlements_v1",
     trip_create_settlement_v1: "trip_create_settlement_v1",
     trip_cancel_settlement_v1: "trip_cancel_settlement_v1",
+
+    recurring_generate_all_active: "recurring_generate_all_active",
+    recurring_generate_for_rule: "recurring_generate_for_rule",
+    recurring_delete_rule: "recurring_delete_rule",
+    recurring_delete_rule_admin: "recurring_delete_rule_admin",
+
     // legacy fallback (older DB)
     trip_accept_invite: "trip_accept_invite",
     trip_bind_member_to_auth: "trip_bind_member_to_auth",
   });
 
   const TRIP = Object.freeze({
-    ROLES: Object.freeze({ owner: 'owner', admin: 'admin', member: 'member', viewer: 'viewer' }),
-    SETTLEMENT_METHODS: Object.freeze({ cash: 'cash', revolut: 'revolut', paypal: 'paypal', lydia: 'lydia', other: 'other' }),
+    ROLES: Object.freeze({
+      owner: "owner",
+      admin: "admin",
+      member: "member",
+      viewer: "viewer",
+    }),
+    SETTLEMENT_METHODS: Object.freeze({
+      cash: "cash",
+      revolut: "revolut",
+      paypal: "paypal",
+      lydia: "lydia",
+      other: "other",
+    }),
+  });
+
+  const RECURRING = Object.freeze({
+    INSTANCE_STATUS: Object.freeze({
+      generated: "generated",
+      confirmed: "confirmed",
+      detached: "detached",
+      skipped: "skipped",
+    }),
+    DELETE_MODES: Object.freeze({
+      rule_only: "rule_only",
+      rule_and_future: "rule_and_future",
+      rule_and_future_and_unconfirmed_past: "rule_and_future_and_unconfirmed_past",
+    }),
   });
 
   // Common category labels used by legacy flows (keep centralized: no magic strings)
   const CATS = Object.freeze({
-    internal_movement: 'Mouvement interne',
-    trip: 'Trip',
-    other: 'Autre',
+    internal_movement: "Mouvement interne",
+    trip: "Trip",
+    other: "Autre",
   });
 
   const LS_KEYS = Object.freeze({
@@ -137,11 +193,13 @@ window.__TB_BUILD = "8.9.5";
     voyage: "Voyage",
     periode: "Période",
     segments: "Périodes",
+    travels: "Voyages",
+    recurring_rules: "Échéances périodiques",
   });
 
-  // DB schema_version is stored as an integer in public.schema_version.version (see SQL.sql context)
-  // Convention: 6.5.0 => 650
-  const EXPECTED_SCHEMA_VERSION = 650;
+  // DB schema_version is stored as an integer in public.schema_version.version
+  // Convention: 9.0.0 => 900
+  const EXPECTED_SCHEMA_VERSION = 900;
 
   window.TB_CONST = Object.freeze({
     TABLES,
@@ -149,6 +207,7 @@ window.__TB_BUILD = "8.9.5";
     LS_KEYS,
     RPCS,
     TRIP,
+    RECURRING,
     CATS,
     UI_LABELS,
     EXPECTED_SCHEMA_VERSION,
@@ -158,6 +217,6 @@ window.__TB_BUILD = "8.9.5";
   // - Prefer TB_CONST.TABLES / TB_CONST.LS_KEYS directly.
   // - TB_TABLES / TB_KEYS are provided for readability in legacy files.
   window.TB_TABLES = window.TB_CONST.TABLES;
-  window.TB_COLS   = window.TB_CONST.COLS;
-  window.TB_KEYS   = window.TB_CONST.LS_KEYS;
+  window.TB_COLS = window.TB_CONST.COLS;
+  window.TB_KEYS = window.TB_CONST.LS_KEYS;
 })();

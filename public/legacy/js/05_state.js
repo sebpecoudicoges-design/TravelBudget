@@ -12,15 +12,23 @@ let state = {
   fx: {
     manualRates: {}, // { CUR: { rate:number, asOf:"YYYY-MM-DD" } }
   },
-  wallets: [],
-  walletBalances: [],
-  walletBalanceMap: {},
-  transactions: [],
-  allocations: [],
-  periods: [],
-  budgetSegments: [],
-  categories: [],
-  categoryColors: {},
+wallets: [],
+walletBalances: [],
+walletBalanceMap: {},
+
+transactions: [],
+
+allocations: [],
+
+travels: [],          // V9
+activeTravelId: null, // V9
+recurringRules: [],   // V9
+
+periods: [],
+budgetSegments: [],
+
+categories: [],
+categoryColors: {},
 };
 // ---- expose for plugins (do not remove) ----
 Object.defineProperty(window, "state", { get: () => state, set: (v) => { state = v; } });

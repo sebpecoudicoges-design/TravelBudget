@@ -406,6 +406,36 @@ $$;
 ALTER FUNCTION "public"."enforce_tx_wallet_period_match"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."get_period_for_travel_date"("p_travel_id" "uuid", "p_date" "date") RETURNS "uuid"
+    LANGUAGE "plpgsql" STABLE
+    AS $$
+declare
+  v_period_id uuid;
+begin
+  if p_travel_id is null then
+    return null;
+  end if;
+
+  if p_date is null then
+    return null;
+  end if;
+
+  select p.id
+    into v_period_id
+  from public.periods p
+  where p.travel_id = p_travel_id
+    and p_date between p.start_date and p.end_date
+  order by p.start_date desc
+  limit 1;
+
+  return v_period_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."get_period_for_travel_date"("p_travel_id" "uuid", "p_date" "date") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE
     AS $$
@@ -418,6 +448,45 @@ $$;
 
 
 ALTER FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."nth_weekday_of_month"("p_year" integer, "p_month" integer, "p_weekday" integer, "p_week_of_month" integer) RETURNS "date"
+    LANGUAGE "plpgsql" IMMUTABLE
+    AS $$
+declare
+  v_first_day date;
+  v_first_weekday integer;
+  v_offset integer;
+  v_result date;
+begin
+  if p_month < 1 or p_month > 12 then
+    raise exception 'invalid month %', p_month;
+  end if;
+
+  if p_weekday < 0 or p_weekday > 6 then
+    raise exception 'invalid weekday %', p_weekday;
+  end if;
+
+  if p_week_of_month < 1 or p_week_of_month > 5 then
+    raise exception 'invalid week_of_month %', p_week_of_month;
+  end if;
+
+  v_first_day := make_date(p_year, p_month, 1);
+  v_first_weekday := extract(dow from v_first_day)::integer;
+
+  v_offset := (p_weekday - v_first_weekday + 7) % 7;
+  v_result := v_first_day + v_offset + ((p_week_of_month - 1) * 7);
+
+  if extract(month from v_result)::integer <> p_month then
+    return null;
+  end if;
+
+  return v_result;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."nth_weekday_of_month"("p_year" integer, "p_month" integer, "p_weekday" integer, "p_week_of_month" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."prevent_fx_snapshot_update"() RETURNS "trigger"
@@ -454,6 +523,621 @@ $$;
 
 
 ALTER FUNCTION "public"."prevent_fx_snapshot_update"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."recurring_cleanup_rule_occurrences"("p_rule_id" "uuid", "p_mode" "text") RETURNS TABLE("rule_id" "uuid", "deleted_count" integer)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_rule public.recurring_rules%rowtype;
+  v_deleted integer := 0;
+  v_today date := current_date;
+begin
+  select *
+    into v_rule
+  from public.recurring_rules
+  where id = p_rule_id;
+
+  if not found then
+    raise exception 'recurring rule not found';
+  end if;
+
+  if p_mode not in (
+    'rule_only',
+    'rule_and_future',
+    'rule_and_future_and_unconfirmed_past'
+  ) then
+    raise exception 'invalid cleanup mode %', p_mode;
+  end if;
+
+  -- A) rule only: keep all generated transactions
+  if p_mode = 'rule_only' then
+    return query
+    select v_rule.id, 0;
+    return;
+  end if;
+
+  -- B) delete only future generated/skipped occurrences
+  if p_mode = 'rule_and_future' then
+    delete from public.transactions t
+    where t.recurring_rule_id = v_rule.id
+      and t.occurrence_date >= v_today
+      and t.recurring_instance_status in ('generated', 'skipped');
+
+    get diagnostics v_deleted = row_count;
+
+    return query
+    select v_rule.id, v_deleted;
+    return;
+  end if;
+
+  -- C) delete futures + all non-confirmed past
+  if p_mode = 'rule_and_future_and_unconfirmed_past' then
+    delete from public.transactions t
+    where t.recurring_rule_id = v_rule.id
+      and t.recurring_instance_status in ('generated', 'skipped');
+
+    get diagnostics v_deleted = row_count;
+
+    return query
+    select v_rule.id, v_deleted;
+    return;
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."recurring_cleanup_rule_occurrences"("p_rule_id" "uuid", "p_mode" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."recurring_delete_rule"("p_rule_id" "uuid", "p_mode" "text" DEFAULT 'rule_only'::"text") RETURNS TABLE("rule_id" "uuid", "deleted_occurrences" integer, "deleted_rule" boolean)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_rule public.recurring_rules%rowtype;
+  v_deleted integer := 0;
+begin
+  if v_uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  select *
+    into v_rule
+  from public.recurring_rules r
+  where r.id = p_rule_id
+    and r.user_id = v_uid;
+
+  if not found then
+    raise exception 'recurring rule not found or not owned';
+  end if;
+
+  select deleted_count
+    into v_deleted
+  from public.recurring_cleanup_rule_occurrences(v_rule.id, p_mode);
+
+  update public.recurring_rules r
+  set
+    is_active = false,
+    archived = true,
+    archived_at = now(),
+    updated_at = now()
+  where r.id = v_rule.id
+    and r.user_id = v_uid;
+
+  return query
+  select v_rule.id, coalesce(v_deleted, 0), true;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."recurring_delete_rule"("p_rule_id" "uuid", "p_mode" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."recurring_delete_rule_admin"("p_rule_id" "uuid", "p_mode" "text" DEFAULT 'rule_only'::"text") RETURNS TABLE("rule_id" "uuid", "deleted_occurrences" integer, "deleted_rule" boolean)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_rule public.recurring_rules%rowtype;
+  v_deleted integer := 0;
+begin
+  select *
+    into v_rule
+  from public.recurring_rules r
+  where r.id = p_rule_id;
+
+  if not found then
+    raise exception 'recurring rule not found';
+  end if;
+
+  select deleted_count
+    into v_deleted
+  from public.recurring_cleanup_rule_occurrences(v_rule.id, p_mode);
+
+  update public.recurring_rules r
+  set
+    is_active = false,
+    archived = true,
+    archived_at = now(),
+    updated_at = now()
+  where r.id = v_rule.id;
+
+  return query
+  select v_rule.id, coalesce(v_deleted, 0), true;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."recurring_delete_rule_admin"("p_rule_id" "uuid", "p_mode" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."recurring_generate_all_active"() RETURNS TABLE("rule_id" "uuid", "inserted_count" integer, "skipped_duplicates" integer, "generated_until" "date", "next_due_at" "date")
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  rec record;
+begin
+  if v_uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  for rec in
+    select r.id
+    from public.recurring_rules r
+    where r.user_id = v_uid
+      and r.is_active = true
+      and coalesce(r.archived, false) = false
+    order by r.created_at asc
+  loop
+    return query
+    select *
+    from public.recurring_generate_for_rule(rec.id);
+  end loop;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."recurring_generate_all_active"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") RETURNS TABLE("rule_id" "uuid", "inserted_count" integer, "skipped_duplicates" integer, "generated_until" "date", "next_due_at" "date")
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  r public.recurring_rules%rowtype;
+  v_travel_end date;
+  v_horizon date;
+  v_due date;
+  v_next_due date;
+  v_period_id uuid;
+  v_inserted integer := 0;
+  v_skipped integer := 0;
+begin
+  select *
+    into r
+  from public.recurring_rules
+  where id = p_rule_id;
+
+  if not found then
+    raise exception 'recurring rule not found';
+  end if;
+
+  if not r.is_active or coalesce(r.archived, false) then
+    return query
+    select r.id, 0, 0, r.generated_until, r.next_due_at;
+    return;
+  end if;
+
+  select t.end_date
+    into v_travel_end
+  from public.travels t
+  where t.id = r.travel_id
+    and t.user_id = r.user_id;
+
+  if not found then
+    raise exception 'travel not found for recurring rule';
+  end if;
+
+  if v_travel_end is null then
+    raise exception 'travel.end_date is required to generate recurring occurrences';
+  end if;
+
+  v_horizon := v_travel_end;
+
+  if r.end_date is not null and r.end_date < v_horizon then
+    v_horizon := r.end_date;
+  end if;
+
+  v_due := coalesce(r.next_due_at, r.start_date);
+
+  if v_due < r.start_date then
+    v_due := r.start_date;
+  end if;
+
+  while v_due is not null and v_due <= v_horizon loop
+    v_period_id := public.get_period_for_travel_date(r.travel_id, v_due);
+
+    if v_period_id is null then
+      raise exception 'no period found for travel % at date %', r.travel_id, v_due;
+    end if;
+
+    begin
+      insert into public.transactions (
+        user_id,
+        wallet_id,
+        period_id,
+        travel_id,
+        type,
+        amount,
+        currency,
+        category,
+        subcategory,
+        label,
+        date_start,
+        date_end,
+        pay_now,
+        out_of_budget,
+        night_covered,
+        affects_budget,
+        created_at,
+        updated_at,
+        recurring_rule_id,
+        occurrence_date,
+        generated_by_rule,
+        recurring_instance_status,
+        is_internal
+      ) values (
+        r.user_id,
+        r.wallet_id,
+        v_period_id,
+        r.travel_id,
+        r.type,
+        r.amount,
+        r.currency,
+        coalesce(r.category, case when r.type = 'income' then 'Revenu' else 'Autre' end),
+        r.subcategory,
+        r.label,
+        v_due,
+        v_due,
+        false,
+        false,
+        false,
+        true,
+        now(),
+        now(),
+        r.id,
+        v_due,
+        true,
+        'generated',
+        false
+      );
+
+      v_inserted := v_inserted + 1;
+
+    exception
+      when unique_violation then
+        v_skipped := v_skipped + 1;
+    end;
+
+    v_next_due := public.recurring_next_occurrence(
+      r.rule_type,
+      r.interval_count,
+      r.weekday,
+      r.monthday,
+      r.week_of_month,
+      v_due
+    );
+
+    if v_next_due is null then
+      exit;
+    end if;
+
+    v_due := v_next_due;
+  end loop;
+
+  update public.recurring_rules rr
+  set
+    generated_until = v_horizon,
+    next_due_at = case
+      when v_due is null then rr.next_due_at
+      else v_due
+    end,
+    updated_at = now()
+  where rr.id = r.id;
+
+  return query
+  select
+    r.id,
+    v_inserted,
+    v_skipped,
+    v_horizon,
+    v_due;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."recurring_next_occurrence"("p_rule_type" "text", "p_interval_count" integer, "p_weekday" integer, "p_monthday" integer, "p_week_of_month" integer, "p_current" "date") RETURNS "date"
+    LANGUAGE "plpgsql" IMMUTABLE
+    AS $$
+declare
+  v_current date := p_current;
+  v_candidate date;
+  v_target_month date;
+  v_year integer;
+  v_month integer;
+  v_last_day integer;
+begin
+  if v_current is null then
+    return null;
+  end if;
+
+  if p_interval_count is null or p_interval_count < 1 then
+    raise exception 'interval_count must be >= 1';
+  end if;
+
+  case p_rule_type
+    when 'daily' then
+      return v_current + p_interval_count;
+
+    when 'weekly' then
+      return v_current + (7 * p_interval_count);
+
+    when 'monthly' then
+      v_target_month := (date_trunc('month', v_current)::date
+                        + make_interval(months => p_interval_count))::date;
+      v_last_day := extract(day from ((date_trunc('month', v_target_month)::date + interval '1 month - 1 day')::date))::integer;
+      return make_date(
+        extract(year from v_target_month)::integer,
+        extract(month from v_target_month)::integer,
+        least(extract(day from v_current)::integer, v_last_day)
+      );
+
+    when 'every_x_months' then
+      v_target_month := (date_trunc('month', v_current)::date
+                        + make_interval(months => p_interval_count))::date;
+      v_last_day := extract(day from ((date_trunc('month', v_target_month)::date + interval '1 month - 1 day')::date))::integer;
+      return make_date(
+        extract(year from v_target_month)::integer,
+        extract(month from v_target_month)::integer,
+        least(coalesce(p_monthday, extract(day from v_current)::integer), v_last_day)
+      );
+
+    when 'yearly' then
+      v_year := extract(year from v_current)::integer + p_interval_count;
+      v_month := extract(month from v_current)::integer;
+      v_last_day := extract(day from ((make_date(v_year, v_month, 1) + interval '1 month - 1 day')::date))::integer;
+      return make_date(
+        v_year,
+        v_month,
+        least(extract(day from v_current)::integer, v_last_day)
+      );
+
+    when 'nth_weekday_month' then
+      v_target_month := (date_trunc('month', v_current)::date
+                        + make_interval(months => p_interval_count))::date;
+      v_candidate := public.nth_weekday_of_month(
+        extract(year from v_target_month)::integer,
+        extract(month from v_target_month)::integer,
+        p_weekday,
+        p_week_of_month
+      );
+      return v_candidate;
+
+    else
+      raise exception 'unsupported rule_type %', p_rule_type;
+  end case;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."recurring_next_occurrence"("p_rule_type" "text", "p_interval_count" integer, "p_weekday" integer, "p_monthday" integer, "p_week_of_month" integer, "p_current" "date") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."recurring_pause_rule"("p_rule_id" "uuid") RETURNS TABLE("rule_id" "uuid", "is_active" boolean)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  update public.recurring_rules r
+  set is_active = false,
+      updated_at = now()
+  where r.id = p_rule_id
+    and r.user_id = v_uid
+  returning r.id, r.is_active
+  into p_rule_id, v_uid;
+
+  if not found then
+    raise exception 'recurring rule not found or not owned';
+  end if;
+
+  return query
+  select p_rule_id, false;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."recurring_pause_rule"("p_rule_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."recurring_pause_rule_admin"("p_rule_id" "uuid") RETURNS TABLE("rule_id" "uuid", "is_active" boolean)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_rule public.recurring_rules%rowtype;
+begin
+  select *
+    into v_rule
+  from public.recurring_rules r
+  where r.id = p_rule_id;
+
+  if not found then
+    raise exception 'recurring rule not found';
+  end if;
+
+  update public.recurring_rules r
+  set is_active = false,
+      updated_at = now()
+  where r.id = v_rule.id;
+
+  return query
+  select v_rule.id, false;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."recurring_pause_rule_admin"("p_rule_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."recurring_resume_rule"("p_rule_id" "uuid") RETURNS TABLE("rule_id" "uuid", "is_active" boolean)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_rule public.recurring_rules%rowtype;
+begin
+  if v_uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  select *
+    into v_rule
+  from public.recurring_rules r
+  where r.id = p_rule_id
+    and r.user_id = v_uid;
+
+  if not found then
+    raise exception 'recurring rule not found or not owned';
+  end if;
+
+  update public.recurring_rules r
+  set is_active = true,
+      next_due_at = coalesce(r.next_due_at, r.start_date),
+      updated_at = now()
+  where r.id = v_rule.id
+    and r.user_id = v_uid;
+
+  return query
+  select v_rule.id, true;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."recurring_resume_rule"("p_rule_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."recurring_resume_rule_admin"("p_rule_id" "uuid") RETURNS TABLE("rule_id" "uuid", "is_active" boolean)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_rule public.recurring_rules%rowtype;
+begin
+  select *
+    into v_rule
+  from public.recurring_rules r
+  where r.id = p_rule_id;
+
+  if not found then
+    raise exception 'recurring rule not found';
+  end if;
+
+  update public.recurring_rules r
+  set is_active = true,
+      next_due_at = coalesce(r.next_due_at, r.start_date),
+      updated_at = now()
+  where r.id = v_rule.id;
+
+  return query
+  select v_rule.id, true;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."recurring_resume_rule_admin"("p_rule_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."recurring_rules_consistency_guard"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+declare
+  v_wallet_user_id uuid;
+  v_wallet_travel_id uuid;
+  v_travel_end_date date;
+begin
+  -- wallet must exist and match user/travel
+  select w.user_id, w.travel_id
+    into v_wallet_user_id, v_wallet_travel_id
+  from public.wallets w
+  where w.id = new.wallet_id;
+
+  if v_wallet_user_id is null then
+    raise exception 'recurring_rule.wallet_id invalid';
+  end if;
+
+  if v_wallet_user_id <> new.user_id then
+    raise exception 'recurring_rule wallet user_id mismatch';
+  end if;
+
+  if v_wallet_travel_id <> new.travel_id then
+    raise exception 'recurring_rule wallet travel_id mismatch';
+  end if;
+
+  -- ensure travel exists and optionally cap by travel end
+  select t.end_date
+    into v_travel_end_date
+  from public.travels t
+  where t.id = new.travel_id
+    and t.user_id = new.user_id;
+
+  if not found then
+    raise exception 'recurring_rule travel invalid or not owned';
+  end if;
+
+  if new.end_date is not null and new.end_date < new.start_date then
+    raise exception 'recurring_rule end_date before start_date';
+  end if;
+
+  if new.next_due_at is null then
+    new.next_due_at := new.start_date;
+  end if;
+
+  if new.next_due_at < new.start_date then
+    new.next_due_at := new.start_date;
+  end if;
+
+  -- generation horizon rule:
+  -- if travel has an end_date, generated_until should not exceed it
+  if new.generated_until is not null and v_travel_end_date is not null and new.generated_until > v_travel_end_date then
+    raise exception 'recurring_rule generated_until exceeds travel end_date';
+  end if;
+
+  if new.end_date is not null and v_travel_end_date is not null and new.end_date > v_travel_end_date then
+    raise exception 'recurring_rule end_date exceeds travel end_date';
+  end if;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."recurring_rules_consistency_guard"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."set_updated_at"() RETURNS "trigger"
@@ -521,6 +1205,91 @@ end$$;
 
 
 ALTER FUNCTION "public"."tb_touch_updated_at"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."transactions_travel_consistency_guard"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+declare
+  v_period_travel_id uuid;
+  v_wallet_user_id uuid;
+  v_wallet_travel_id uuid;
+  v_rule_user_id uuid;
+  v_rule_travel_id uuid;
+begin
+  -- period_id is still mandatory in current schema
+  if new.period_id is null then
+    raise exception 'transaction.period_id is required';
+  end if;
+
+  select p.travel_id
+    into v_period_travel_id
+  from public.periods p
+  where p.id = new.period_id;
+
+  if v_period_travel_id is null then
+    raise exception 'transaction.period_id invalid or period.travel_id missing';
+  end if;
+
+  -- auto-fill / validate travel_id from period_id
+  if new.travel_id is null then
+    new.travel_id := v_period_travel_id;
+  elsif new.travel_id <> v_period_travel_id then
+    raise exception 'transaction travel_id mismatch with period_id';
+  end if;
+
+  -- wallet must belong to same user and same travel
+  select w.user_id, w.travel_id
+    into v_wallet_user_id, v_wallet_travel_id
+  from public.wallets w
+  where w.id = new.wallet_id;
+
+  if v_wallet_user_id is null then
+    raise exception 'transaction.wallet_id invalid';
+  end if;
+
+  if new.user_id is not null and v_wallet_user_id <> new.user_id then
+    raise exception 'transaction wallet user_id mismatch';
+  end if;
+
+  if v_wallet_travel_id is null then
+    raise exception 'wallet.travel_id missing';
+  end if;
+
+  if v_wallet_travel_id <> new.travel_id then
+    raise exception 'transaction wallet travel_id mismatch';
+  end if;
+
+  -- if linked to recurring rule, enforce same user + travel
+  if new.recurring_rule_id is not null then
+    select r.user_id, r.travel_id
+      into v_rule_user_id, v_rule_travel_id
+    from public.recurring_rules r
+    where r.id = new.recurring_rule_id;
+
+    if v_rule_user_id is null then
+      raise exception 'transaction.recurring_rule_id invalid';
+    end if;
+
+    if new.user_id is not null and v_rule_user_id <> new.user_id then
+      raise exception 'transaction recurring rule user_id mismatch';
+    end if;
+
+    if v_rule_travel_id <> new.travel_id then
+      raise exception 'transaction recurring rule travel_id mismatch';
+    end if;
+
+    if new.generated_by_rule and new.occurrence_date is null then
+      raise exception 'generated recurring transaction requires occurrence_date';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."transactions_travel_consistency_guard"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."trip_accept_invite"("p_token" "text") RETURNS "void"
@@ -1041,6 +1810,31 @@ $$;
 ALTER FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."trip_debug_auth_v1"("p_trip_id" "uuid") RETURNS TABLE("jwt_uid" "uuid", "has_participant" boolean, "trip_role" "text")
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  select
+    auth.uid() as jwt_uid,
+    exists (
+      select 1
+      from public.trip_participants tp
+      where tp.trip_id = p_trip_id
+        and tp.auth_user_id = auth.uid()
+    ) as has_participant,
+    (
+      select tp.role
+      from public.trip_participants tp
+      where tp.trip_id = p_trip_id
+        and tp.auth_user_id = auth.uid()
+      limit 1
+    ) as trip_role
+$$;
+
+
+ALTER FUNCTION "public"."trip_debug_auth_v1"("p_trip_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."trip_delete_expense_v1"("p_trip_id" "uuid", "p_expense_id" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -1438,6 +2232,39 @@ $$;
 
 ALTER FUNCTION "public"."update_transaction_v2"("p_wallet_id" "uuid", "p_tx_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_user_id" "uuid") OWNER TO "postgres";
 
+
+CREATE OR REPLACE FUNCTION "public"."wallets_travel_consistency_guard"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+declare
+  v_period_travel_id uuid;
+begin
+  if new.period_id is null then
+    raise exception 'wallet.period_id is required';
+  end if;
+
+  select p.travel_id
+    into v_period_travel_id
+  from public.periods p
+  where p.id = new.period_id;
+
+  if v_period_travel_id is null then
+    raise exception 'wallet.period_id invalid or period.travel_id missing';
+  end if;
+
+  if new.travel_id is null then
+    new.travel_id := v_period_travel_id;
+  elsif new.travel_id <> v_period_travel_id then
+    raise exception 'wallet travel_id mismatch with period_id';
+  end if;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."wallets_travel_consistency_guard"() OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -1536,6 +2363,7 @@ CREATE TABLE IF NOT EXISTS "public"."periods" (
     "daily_budget_base" numeric DEFAULT 1000 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "travel_id" "uuid",
     CONSTRAINT "periods_base_currency_iso3_chk" CHECK (("base_currency" ~ '^[A-Z]{3}$'::"text")),
     CONSTRAINT "periods_date_check" CHECK (("end_date" >= "start_date"))
 );
@@ -1553,6 +2381,49 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
 
 
 ALTER TABLE "public"."profiles" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."recurring_rules" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "travel_id" "uuid" NOT NULL,
+    "wallet_id" "uuid" NOT NULL,
+    "label" "text" NOT NULL,
+    "type" "text" NOT NULL,
+    "amount" numeric NOT NULL,
+    "currency" "text" NOT NULL,
+    "category" "text",
+    "subcategory" "text",
+    "rule_type" "text" NOT NULL,
+    "interval_count" integer DEFAULT 1 NOT NULL,
+    "weekday" integer,
+    "monthday" integer,
+    "week_of_month" integer,
+    "start_date" "date" NOT NULL,
+    "end_date" "date",
+    "max_occurrences" integer,
+    "next_due_at" "date",
+    "generated_until" "date",
+    "is_active" boolean DEFAULT true NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "archived" boolean DEFAULT false NOT NULL,
+    "archived_at" timestamp with time zone,
+    CONSTRAINT "recurring_rules_amount_check" CHECK (("amount" > (0)::numeric)),
+    CONSTRAINT "recurring_rules_currency_check" CHECK (("currency" ~ '^[A-Z]{3}$'::"text")),
+    CONSTRAINT "recurring_rules_dates_ok" CHECK ((("end_date" IS NULL) OR ("end_date" >= "start_date"))),
+    CONSTRAINT "recurring_rules_interval_count_check" CHECK (("interval_count" > 0)),
+    CONSTRAINT "recurring_rules_label_nonempty" CHECK (("length"(TRIM(BOTH FROM "label")) > 0)),
+    CONSTRAINT "recurring_rules_max_occurrences_check" CHECK ((("max_occurrences" IS NULL) OR ("max_occurrences" > 0))),
+    CONSTRAINT "recurring_rules_monthday_check" CHECK ((("monthday" >= 1) AND ("monthday" <= 31))),
+    CONSTRAINT "recurring_rules_rule_type_check" CHECK (("rule_type" = ANY (ARRAY['daily'::"text", 'weekly'::"text", 'monthly'::"text", 'every_x_months'::"text", 'yearly'::"text", 'nth_weekday_month'::"text"]))),
+    CONSTRAINT "recurring_rules_type_check" CHECK (("type" = ANY (ARRAY['expense'::"text", 'income'::"text"]))),
+    CONSTRAINT "recurring_rules_week_of_month_check" CHECK ((("week_of_month" >= 1) AND ("week_of_month" <= 5))),
+    CONSTRAINT "recurring_rules_weekday_check" CHECK ((("weekday" >= 0) AND ("weekday" <= 6)))
+);
+
+
+ALTER TABLE "public"."recurring_rules" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."schema_version" (
@@ -1611,9 +2482,15 @@ CREATE TABLE IF NOT EXISTS "public"."transactions" (
     "fx_base_currency_snapshot" "text",
     "fx_tx_currency_snapshot" "text",
     "subcategory" "text",
+    "travel_id" "uuid",
+    "recurring_rule_id" "uuid",
+    "occurrence_date" "date",
+    "generated_by_rule" boolean DEFAULT false NOT NULL,
+    "recurring_instance_status" "text" DEFAULT 'confirmed'::"text",
     CONSTRAINT "transactions_amount_check" CHECK (("amount" > (0)::numeric)),
     CONSTRAINT "transactions_currency_iso3_chk" CHECK (("currency" ~ '^[A-Z]{3}$'::"text")),
     CONSTRAINT "transactions_fx_snapshot_consistency" CHECK (((("fx_rate_snapshot" IS NULL) AND ("fx_source_snapshot" IS NULL)) OR (("fx_rate_snapshot" IS NOT NULL) AND ("fx_source_snapshot" IS NOT NULL)))),
+    CONSTRAINT "transactions_recurring_instance_status_chk" CHECK (("recurring_instance_status" = ANY (ARRAY['generated'::"text", 'confirmed'::"text", 'detached'::"text", 'skipped'::"text"]))),
     CONSTRAINT "transactions_type_check" CHECK (("type" = ANY (ARRAY['expense'::"text", 'income'::"text"])))
 );
 
@@ -1623,6 +2500,25 @@ ALTER TABLE "public"."transactions" OWNER TO "postgres";
 
 COMMENT ON COLUMN "public"."transactions"."is_internal" IS 'True for internal/shadow rows (Trip budget-only allocations). Hidden from main transactions view and excluded from wallet cashflow.';
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."travels" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "base_currency" "text",
+    "start_date" "date",
+    "end_date" "date",
+    "is_default" boolean DEFAULT false NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "travels_base_currency_iso3_chk" CHECK ((("base_currency" IS NULL) OR ("base_currency" ~ '^[A-Z]{3}$'::"text"))),
+    CONSTRAINT "travels_date_check" CHECK ((("end_date" IS NULL) OR ("start_date" IS NULL) OR ("end_date" >= "start_date"))),
+    CONSTRAINT "travels_name_nonempty" CHECK (("length"(TRIM(BOTH FROM "name")) > 0))
+);
+
+
+ALTER TABLE "public"."travels" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."trip_expense_budget_links" (
@@ -1972,6 +2868,7 @@ CREATE TABLE IF NOT EXISTS "public"."wallets" (
     "type" "text" DEFAULT 'cash'::"text" NOT NULL,
     "period_id" "uuid" NOT NULL,
     "balance_snapshot_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "travel_id" "uuid",
     CONSTRAINT "wallets_currency_iso3_chk" CHECK (("currency" ~ '^[A-Z]{3}$'::"text")),
     CONSTRAINT "wallets_type_check" CHECK (("type" = ANY (ARRAY['cash'::"text", 'bank'::"text", 'card'::"text", 'savings'::"text", 'other'::"text"])))
 );
@@ -2109,6 +3006,11 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."recurring_rules"
+    ADD CONSTRAINT "recurring_rules_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."schema_version"
     ADD CONSTRAINT "schema_version_pkey" PRIMARY KEY ("key");
 
@@ -2131,6 +3033,11 @@ ALTER TABLE ONLY "public"."transactions"
 
 ALTER TABLE ONLY "public"."transactions"
     ADD CONSTRAINT "transactions_trip_expense_unique" UNIQUE ("trip_expense_id");
+
+
+
+ALTER TABLE ONLY "public"."travels"
+    ADD CONSTRAINT "travels_pkey" PRIMARY KEY ("id");
 
 
 
@@ -2326,7 +3233,27 @@ CREATE INDEX "periods_dates_idx" ON "public"."periods" USING "btree" ("user_id",
 
 
 
+CREATE INDEX "periods_travel_id_idx" ON "public"."periods" USING "btree" ("travel_id");
+
+
+
 CREATE INDEX "periods_user_idx" ON "public"."periods" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "recurring_rules_active_due_idx" ON "public"."recurring_rules" USING "btree" ("is_active", "next_due_at");
+
+
+
+CREATE INDEX "recurring_rules_travel_idx" ON "public"."recurring_rules" USING "btree" ("travel_id");
+
+
+
+CREATE INDEX "recurring_rules_user_idx" ON "public"."recurring_rules" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "recurring_rules_wallet_idx" ON "public"."recurring_rules" USING "btree" ("wallet_id");
 
 
 
@@ -2346,11 +3273,27 @@ CREATE INDEX "transactions_is_internal_idx" ON "public"."transactions" USING "bt
 
 
 
+CREATE INDEX "transactions_occurrence_date_idx" ON "public"."transactions" USING "btree" ("occurrence_date");
+
+
+
 CREATE INDEX "transactions_period_id_idx" ON "public"."transactions" USING "btree" ("period_id");
 
 
 
 CREATE INDEX "transactions_period_idx" ON "public"."transactions" USING "btree" ("user_id", "period_id");
+
+
+
+CREATE INDEX "transactions_recurring_rule_idx" ON "public"."transactions" USING "btree" ("recurring_rule_id");
+
+
+
+CREATE UNIQUE INDEX "transactions_recurring_rule_occurrence_uidx" ON "public"."transactions" USING "btree" ("recurring_rule_id", "occurrence_date") WHERE (("recurring_rule_id" IS NOT NULL) AND ("occurrence_date" IS NOT NULL));
+
+
+
+CREATE INDEX "transactions_travel_id_idx" ON "public"."transactions" USING "btree" ("travel_id");
 
 
 
@@ -2375,6 +3318,14 @@ CREATE INDEX "transactions_user_visible_idx" ON "public"."transactions" USING "b
 
 
 CREATE INDEX "transactions_wallet_id_idx" ON "public"."transactions" USING "btree" ("wallet_id");
+
+
+
+CREATE UNIQUE INDEX "travels_one_default_per_user_idx" ON "public"."travels" USING "btree" ("user_id") WHERE ("is_default" = true);
+
+
+
+CREATE INDEX "travels_user_idx" ON "public"."travels" USING "btree" ("user_id");
 
 
 
@@ -2470,6 +3421,10 @@ CREATE UNIQUE INDEX "ux_transactions_trip_share_link_id" ON "public"."transactio
 
 
 
+CREATE INDEX "wallets_travel_id_idx" ON "public"."wallets" USING "btree" ("travel_id");
+
+
+
 CREATE INDEX "wallets_user_period_idx" ON "public"."wallets" USING "btree" ("user_id", "period_id");
 
 
@@ -2498,7 +3453,23 @@ CREATE OR REPLACE TRIGGER "trg_prevent_fx_snapshot_update" BEFORE UPDATE ON "pub
 
 
 
+CREATE OR REPLACE TRIGGER "trg_recurring_rules_consistency_guard" BEFORE INSERT OR UPDATE ON "public"."recurring_rules" FOR EACH ROW EXECUTE FUNCTION "public"."recurring_rules_consistency_guard"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_recurring_rules_touch_updated_at" BEFORE UPDATE ON "public"."recurring_rules" FOR EACH ROW EXECUTE FUNCTION "public"."_touch_updated_at"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_tb_profiles_role_guard" BEFORE INSERT OR UPDATE ON "public"."profiles" FOR EACH ROW EXECUTE FUNCTION "public"."tb_profiles_role_guard"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_transactions_travel_consistency_guard" BEFORE INSERT OR UPDATE ON "public"."transactions" FOR EACH ROW EXECUTE FUNCTION "public"."transactions_travel_consistency_guard"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_travels_touch_updated_at" BEFORE UPDATE ON "public"."travels" FOR EACH ROW EXECUTE FUNCTION "public"."_touch_updated_at"();
 
 
 
@@ -2507,6 +3478,10 @@ CREATE OR REPLACE TRIGGER "trg_trip_groups_add_owner_participant" AFTER INSERT O
 
 
 CREATE OR REPLACE TRIGGER "trg_tx_wallet_period_match" BEFORE INSERT OR UPDATE OF "wallet_id", "period_id" ON "public"."transactions" FOR EACH ROW EXECUTE FUNCTION "public"."enforce_tx_wallet_period_match"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_wallets_travel_consistency_guard" BEFORE INSERT OR UPDATE ON "public"."wallets" FOR EACH ROW EXECUTE FUNCTION "public"."wallets_travel_consistency_guard"();
 
 
 
@@ -2531,12 +3506,32 @@ ALTER TABLE ONLY "public"."fx_manual_rates"
 
 
 ALTER TABLE ONLY "public"."periods"
+    ADD CONSTRAINT "periods_travel_id_fkey" FOREIGN KEY ("travel_id") REFERENCES "public"."travels"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."periods"
     ADD CONSTRAINT "periods_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."profiles"
     ADD CONSTRAINT "profiles_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."recurring_rules"
+    ADD CONSTRAINT "recurring_rules_travel_id_fkey" FOREIGN KEY ("travel_id") REFERENCES "public"."travels"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."recurring_rules"
+    ADD CONSTRAINT "recurring_rules_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."recurring_rules"
+    ADD CONSTRAINT "recurring_rules_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "public"."wallets"("id") ON DELETE RESTRICT;
 
 
 
@@ -2547,6 +3542,16 @@ ALTER TABLE ONLY "public"."settings"
 
 ALTER TABLE ONLY "public"."transactions"
     ADD CONSTRAINT "transactions_period_id_fkey" FOREIGN KEY ("period_id") REFERENCES "public"."periods"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."transactions"
+    ADD CONSTRAINT "transactions_recurring_rule_id_fkey" FOREIGN KEY ("recurring_rule_id") REFERENCES "public"."recurring_rules"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."transactions"
+    ADD CONSTRAINT "transactions_travel_id_fkey" FOREIGN KEY ("travel_id") REFERENCES "public"."travels"("id") ON DELETE CASCADE;
 
 
 
@@ -2567,6 +3572,11 @@ ALTER TABLE ONLY "public"."transactions"
 
 ALTER TABLE ONLY "public"."transactions"
     ADD CONSTRAINT "transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "public"."wallets"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."travels"
+    ADD CONSTRAINT "travels_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -2766,6 +3776,11 @@ ALTER TABLE ONLY "public"."wallets"
 
 
 ALTER TABLE ONLY "public"."wallets"
+    ADD CONSTRAINT "wallets_travel_id_fkey" FOREIGN KEY ("travel_id") REFERENCES "public"."travels"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."wallets"
     ADD CONSTRAINT "wallets_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
@@ -2892,6 +3907,25 @@ CREATE POLICY "profiles_write_own" ON "public"."profiles" USING (("auth"."uid"()
 
 
 
+ALTER TABLE "public"."recurring_rules" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "recurring_rules_delete_own" ON "public"."recurring_rules" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "recurring_rules_insert_own" ON "public"."recurring_rules" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "recurring_rules_select_own" ON "public"."recurring_rules" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "recurring_rules_update_own" ON "public"."recurring_rules" FOR UPDATE USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
 ALTER TABLE "public"."schema_version" ENABLE ROW LEVEL SECURITY;
 
 
@@ -2946,6 +3980,25 @@ CREATE POLICY "transactions_select_own" ON "public"."transactions" FOR SELECT US
 
 
 CREATE POLICY "transactions_write_own" ON "public"."transactions" USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+ALTER TABLE "public"."travels" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "travels_delete_own" ON "public"."travels" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "travels_insert_own" ON "public"."travels" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "travels_select_own" ON "public"."travels" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "travels_update_own" ON "public"."travels" FOR UPDATE USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
@@ -3344,6 +4397,12 @@ GRANT ALL ON FUNCTION "public"."enforce_tx_wallet_period_match"() TO "service_ro
 
 
 
+GRANT ALL ON FUNCTION "public"."get_period_for_travel_date"("p_travel_id" "uuid", "p_date" "date") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_period_for_travel_date"("p_travel_id" "uuid", "p_date" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_period_for_travel_date"("p_travel_id" "uuid", "p_date" "date") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") TO "authenticated";
@@ -3351,9 +4410,81 @@ GRANT ALL ON FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") TO "ser
 
 
 
+GRANT ALL ON FUNCTION "public"."nth_weekday_of_month"("p_year" integer, "p_month" integer, "p_weekday" integer, "p_week_of_month" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."nth_weekday_of_month"("p_year" integer, "p_month" integer, "p_weekday" integer, "p_week_of_month" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."nth_weekday_of_month"("p_year" integer, "p_month" integer, "p_weekday" integer, "p_week_of_month" integer) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."prevent_fx_snapshot_update"() TO "anon";
 GRANT ALL ON FUNCTION "public"."prevent_fx_snapshot_update"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."prevent_fx_snapshot_update"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."recurring_cleanup_rule_occurrences"("p_rule_id" "uuid", "p_mode" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."recurring_cleanup_rule_occurrences"("p_rule_id" "uuid", "p_mode" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."recurring_cleanup_rule_occurrences"("p_rule_id" "uuid", "p_mode" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."recurring_delete_rule"("p_rule_id" "uuid", "p_mode" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."recurring_delete_rule"("p_rule_id" "uuid", "p_mode" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."recurring_delete_rule"("p_rule_id" "uuid", "p_mode" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."recurring_delete_rule_admin"("p_rule_id" "uuid", "p_mode" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."recurring_delete_rule_admin"("p_rule_id" "uuid", "p_mode" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."recurring_delete_rule_admin"("p_rule_id" "uuid", "p_mode" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."recurring_generate_all_active"() TO "anon";
+GRANT ALL ON FUNCTION "public"."recurring_generate_all_active"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."recurring_generate_all_active"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."recurring_next_occurrence"("p_rule_type" "text", "p_interval_count" integer, "p_weekday" integer, "p_monthday" integer, "p_week_of_month" integer, "p_current" "date") TO "anon";
+GRANT ALL ON FUNCTION "public"."recurring_next_occurrence"("p_rule_type" "text", "p_interval_count" integer, "p_weekday" integer, "p_monthday" integer, "p_week_of_month" integer, "p_current" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."recurring_next_occurrence"("p_rule_type" "text", "p_interval_count" integer, "p_weekday" integer, "p_monthday" integer, "p_week_of_month" integer, "p_current" "date") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."recurring_pause_rule"("p_rule_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."recurring_pause_rule"("p_rule_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."recurring_pause_rule"("p_rule_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."recurring_pause_rule_admin"("p_rule_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."recurring_pause_rule_admin"("p_rule_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."recurring_pause_rule_admin"("p_rule_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."recurring_resume_rule"("p_rule_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."recurring_resume_rule"("p_rule_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."recurring_resume_rule"("p_rule_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."recurring_resume_rule_admin"("p_rule_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."recurring_resume_rule_admin"("p_rule_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."recurring_resume_rule_admin"("p_rule_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."recurring_rules_consistency_guard"() TO "anon";
+GRANT ALL ON FUNCTION "public"."recurring_rules_consistency_guard"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."recurring_rules_consistency_guard"() TO "service_role";
 
 
 
@@ -3372,6 +4503,12 @@ GRANT ALL ON FUNCTION "public"."tb_profiles_role_guard"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."tb_touch_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."tb_touch_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."tb_touch_updated_at"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."transactions_travel_consistency_guard"() TO "anon";
+GRANT ALL ON FUNCTION "public"."transactions_travel_consistency_guard"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."transactions_travel_consistency_guard"() TO "service_role";
 
 
 
@@ -3417,6 +4554,12 @@ GRANT ALL ON FUNCTION "public"."trip_cancel_settlement_v1"("p_event_id" "uuid") 
 GRANT ALL ON FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."trip_debug_auth_v1"("p_trip_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."trip_debug_auth_v1"("p_trip_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."trip_debug_auth_v1"("p_trip_id" "uuid") TO "service_role";
 
 
 
@@ -3467,6 +4610,12 @@ GRANT ALL ON FUNCTION "public"."update_transaction_v2"("p_wallet_id" "uuid", "p_
 
 
 
+GRANT ALL ON FUNCTION "public"."wallets_travel_consistency_guard"() TO "anon";
+GRANT ALL ON FUNCTION "public"."wallets_travel_consistency_guard"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."wallets_travel_consistency_guard"() TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."budget_segments" TO "anon";
 GRANT ALL ON TABLE "public"."budget_segments" TO "authenticated";
 GRANT ALL ON TABLE "public"."budget_segments" TO "service_role";
@@ -3509,6 +4658,12 @@ GRANT ALL ON TABLE "public"."profiles" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."recurring_rules" TO "anon";
+GRANT ALL ON TABLE "public"."recurring_rules" TO "authenticated";
+GRANT ALL ON TABLE "public"."recurring_rules" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."schema_version" TO "service_role";
 GRANT SELECT ON TABLE "public"."schema_version" TO "authenticated";
 
@@ -3523,6 +4678,12 @@ GRANT ALL ON TABLE "public"."settings" TO "service_role";
 GRANT ALL ON TABLE "public"."transactions" TO "anon";
 GRANT ALL ON TABLE "public"."transactions" TO "authenticated";
 GRANT ALL ON TABLE "public"."transactions" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."travels" TO "anon";
+GRANT ALL ON TABLE "public"."travels" TO "authenticated";
+GRANT ALL ON TABLE "public"."travels" TO "service_role";
 
 
 
