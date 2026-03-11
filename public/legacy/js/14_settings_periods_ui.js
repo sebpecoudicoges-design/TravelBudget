@@ -106,6 +106,35 @@ async function _tbAuthUid(){
   return null;
 }
 
+function _tbGetActiveTravelRow() {
+  const tid = String(state?.activeTravelId || "");
+  return (state.travels || []).find(t => String(t.id) === tid) || null;
+}
+
+async function _tbSaveActiveTravelName(name) {
+  const s = _tbGetSB();
+  if (!s) throw new Error("Supabase non prêt.");
+
+  const tid = String(state?.activeTravelId || "");
+  if (!tid) throw new Error("Aucun voyage actif.");
+
+  const clean = String(name || "").trim();
+  if (!clean) throw new Error("Nom du voyage requis.");
+
+  const { error } = await s
+    .from(TB_CONST.TABLES.travels)
+    .update({
+      name: clean,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", tid);
+
+  if (error) throw error;
+
+  const row = (state.travels || []).find(t => String(t.id) === tid);
+  if (row) row.name = clean;
+}
+
 /* ---------- data loaders ---------- */
 
 async function loadPeriodsListIntoUI(){
@@ -129,36 +158,32 @@ async function loadPeriodsListIntoUI(){
     if(!state.period || state.period.id!==active){
       const p = periods.find(x=>x.id===active);
       if(p) state.period = p;
-    try {
-      const inp = document.getElementById("s-period-name");
-      if (inp && typeof window.tbGetPeriodName === "function") inp.value = window.tbGetPeriodName(id) || "";
-      else if (inp) inp.value = "";
-    } catch (_) {}
     }
 
-// Sync period name input (local)
 try {
   const inp = document.getElementById("s-period-name");
   if (inp) {
-    const nm = (typeof window.tbGetPeriodName === "function") ? window.tbGetPeriodName(active) : "";
-    inp.value = nm || "";
-    // Debounced save
-    if (!inp.__tbBound) {
-      inp.__tbBound = true;
+    const t = _tbGetActiveTravelRow();
+    inp.value = t?.name || "";
+
+    if (!inp.__tbBoundTravelName) {
+      inp.__tbBoundTravelName = true;
       let tmr = null;
-      const save = () => {
-        const pid = String((document.getElementById("s-period") || {}).value || "");
-        if (!pid) return;
+
+      const save = async () => {
         const val = String(inp.value || "").trim();
-        if (typeof window.tbSetPeriodName === "function") window.tbSetPeriodName(pid, val);
-        // Re-render select labels
-        try { loadPeriodsListIntoUI(); } catch (_) {}
+        if (!val) return;
+        await _tbSaveActiveTravelName(val);
       };
+
       inp.addEventListener("input", () => {
         if (tmr) clearTimeout(tmr);
-        tmr = setTimeout(save, 350);
+        tmr = setTimeout(() => { safeCall("Nom du voyage", save); }, 350);
       });
-      inp.addEventListener("blur", save);
+
+      inp.addEventListener("blur", () => {
+        safeCall("Nom du voyage", save);
+      });
     }
   }
 } catch (_) {}
@@ -605,6 +630,21 @@ async function _saveSettingsImpl(){
   const { error } = await s.from(TB_CONST.TABLES.periods).update({ start_date:start, end_date:end }).eq("id", pid);
   if(error) throw error;
 
+  const tid = String(state?.activeTravelId || "");
+if (tid) {
+  const travelName = String(document.getElementById("s-period-name")?.value || "").trim() || "Mon voyage";
+  const { error: tErr } = await s
+    .from(TB_CONST.TABLES.travels)
+    .update({
+      name: travelName,
+      start_date: start,
+      end_date: end,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", tid);
+  if (tErr) throw tErr;
+}
+
   // Ensure first/last segments align to voyage bounds (no holes overall)
   await _syncVoyageBoundsToSegments(pid, start, end);
 
@@ -621,8 +661,6 @@ async function createVoyagePrompt(){
   const s = _tbGetSB();
   if(!s) throw new Error("Supabase non prêt.");
   const uid = await _tbAuthUid();
-  if(!uid) throw new Error("Not authenticated.");
-
   // Suggest non-overlapping dates after last voyage
   const periods = (state.periods || []).slice().sort((a,b)=>String(a.end).localeCompare(String(b.end)));
   const lastEnd = periods.length ? _tbISO(periods[periods.length-1].end_date) : _tbISO(new Date());
@@ -653,11 +691,37 @@ async function createVoyagePrompt(){
       }
 
 
-      // insert period (defaults for base_currency/eur_base_rate/daily_budget_base ok)
-      const ins = { user_id: uid, start_date:start, end_date:end };
-      const { data, error } = await s.from(TB_CONST.TABLES.periods).insert(ins).select("id").single();
-      if(error) throw error;
-      const newPid = data.id;
+      const { data: travelData, error: travelErr } = await s
+  .from(TB_CONST.TABLES.travels)
+  .insert({
+    user_id: uid,
+    name: "Mon voyage",
+    start_date: start,
+    end_date: end,
+    base_currency: "EUR"
+  })
+  .select("id")
+  .single();
+
+if (travelErr) throw travelErr;
+const newTravelId = travelData.id;
+
+const { data, error } = await s
+  .from(TB_CONST.TABLES.periods)
+  .insert({
+    user_id: uid,
+    travel_id: newTravelId,
+    start_date: start,
+    end_date: end,
+    base_currency: "EUR",
+    eur_base_rate: 1,
+    daily_budget_base: 0
+  })
+  .select("id")
+  .single();
+
+if(error) throw error;
+const newPid = data.id;
 
       // create one default segment covering whole voyage
       const segIns = {
@@ -679,6 +743,7 @@ async function createVoyagePrompt(){
   } else if (typeof refreshFromServer === "function") {
     await refreshFromServer();
   }
+  
       // activate new voyage
       const p = (state.periods||[]).find(x=>x.id===newPid);
       if(p) state.period = p;
@@ -698,13 +763,14 @@ async function createVoyagePrompt(){
 async function deleteActiveVoyage(){
   const s = _tbGetSB();
   if(!s) throw new Error("Supabase non prêt.");
-  const pid = state.period && state.period.id;
-  if(!pid) throw new Error("Voyage non sélectionné.");
+  const tid = String(state?.activeTravelId || "");
+  if (!tid) throw new Error("Voyage non sélectionné.");
 
-  const label = `Voyage ${_tbISO(state.period.start)} → ${_tbISO(state.period.end)}`;
+  const t = _tbGetActiveTravelRow();
+  const label = t?.name || `Voyage ${_tbISO(t?.start)} → ${_tbISO(t?.end)}`;
   if(!confirm(`Supprimer ${label} ?\n\nRefusé si des données y sont liées.`)) return;
 
-  const { error } = await s.from(TB_CONST.TABLES.periods).delete().eq("id", pid);
+  const { error } = await s.from(TB_CONST.TABLES.travels).delete().eq("id", tid);
   if(error) throw error;
   if (typeof window.refreshFromServer === "function") {
     await window.refreshFromServer();

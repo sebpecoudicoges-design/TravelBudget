@@ -842,18 +842,17 @@ async function createWallet() {
     const typeRaw = data.type;
     const balance = data.balance;
 
-    // ✅ period_id requis (wallets.period_id NOT NULL)
-    const periodId = state?.period?.id || localStorage.getItem(ACTIVE_PERIOD_KEY);
-    if (!periodId) return alert("Aucune période active (period_id introuvable).");
+    const travelId = state?.activeTravelId || null;
+    if (!travelId) return alert("Aucun voyage actif (travel_id introuvable).");
 
     const { error } = await sb.from(TB_CONST.TABLES.wallets).insert([{
-      user_id: sbUser.id,
-      period_id: periodId,
-      name,
-      currency,
-      type: typeRaw,
+     user_id: sbUser.id,
+     travel_id: travelId,
+     name,
+     currency,
+     type: typeRaw,
       balance
-    }]);
+    }]); 
     if (error) throw error;
 
     await refreshFromServer();

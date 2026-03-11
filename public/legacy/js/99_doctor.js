@@ -8,9 +8,11 @@
   const DEFAULT_TABLE_CHECKS = [
     // [tableKey, columnsToProbe]
     ["settings", ["user_id"]],
-    ["periods", ["id","user_id","start_date","end_date"]],
-    ["wallets", ["id","user_id","period_id","currency"]],
-    ["transactions", ["id","user_id","wallet_id","amount","currency","type","date_start"]],
+    ["travels", ["id","user_id","name","start_date","end_date"]],
+    ["periods", ["id","user_id","travel_id","start_date","end_date"]],
+    ["wallets", ["id","user_id","travel_id","currency"]],
+    ["transactions", ["id","user_id","travel_id","period_id","wallet_id","amount","currency","type","date_start"]],
+    ["recurring_rules", ["id","user_id","travel_id","wallet_id","label","next_due_at"]],
     ["budget_segments", ["id","user_id","period_id","start_date","end_date"]],
     ["categories", ["id","user_id","name"]],
     [TB_CONST.TABLES.trip_groups, ["id","user_id"]],

@@ -373,6 +373,19 @@ function _normalizeCurrency(cur) {
     // fallback: current active period
     return state?.period?.id || null;
   }
+
+  function _findTravelIdForDate(dateStr) {
+    const d = parseISODateOrNull(dateStr);
+    if (!d) return state?.activeTravelId || null;
+
+    const travels = Array.isArray(state?.travels) ? state.travels : [];
+    for (const t of travels) {
+      const s = parseISODateOrNull(t.start);
+      const e = parseISODateOrNull(t.end);
+      if (s && e && d >= s && d <= e) return t.id;
+    }
+    return state?.activeTravelId || null;
+  }
   // Equal split with cent-safe rounding (sum of shares == amount)
   function _splitEqual(amount, memberIds) {
     const amt = Number(amount);
@@ -1927,7 +1940,7 @@ try {
 
         const { data: txRows, error: txErr } = await sb
           .from(TB_CONST.TABLES.transactions)
-          .select("id,period_id")
+          .select("id,travel_id,period_id")
           .eq("wallet_id", walletId)
           .eq("type", "expense")
           .eq("amount", amt)
@@ -1945,8 +1958,18 @@ try {
 
         const tx = txRows?.[0] || null;
         if (tx) {
-          if (targetPeriodId && (!tx.period_id || tx.period_id !== targetPeriodId)) {
-            await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", tx.id);
+          const targetTravelId = _findTravelIdForDate(date);
+          if (
+            (targetTravelId && (!tx.travel_id || tx.travel_id !== targetTravelId)) ||
+            (targetPeriodId && (!tx.period_id || tx.period_id !== targetPeriodId))
+          ) {
+            await sb
+              .from(TB_CONST.TABLES.transactions)
+              .update({
+                travel_id: targetTravelId || tx.travel_id || null,
+                period_id: targetPeriodId || tx.period_id || null
+              })
+              .eq("id", tx.id);
           }
           await _linkExpenseToTransaction(ex.id, tx.id);
         }
@@ -1979,7 +2002,7 @@ try {
 
         const { data: txRowsA, error: txErrA } = await sb
           .from(TB_CONST.TABLES.transactions)
-          .select("id,period_id")
+          .select("id,travel_id,period_id")
           .eq("wallet_id", walletId)
           .eq("type", "expense")
           .eq("amount", amt)
@@ -1997,8 +2020,18 @@ try {
 
         const txA = txRowsA?.[0] || null;
         if (txA) {
-          if (targetPeriodId && (!txA.period_id || txA.period_id !== targetPeriodId)) {
-            await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", txA.id);
+          const targetTravelId = _findTravelIdForDate(date);
+          if (
+            (targetTravelId && (!txA.travel_id || txA.travel_id !== targetTravelId)) ||
+            (targetPeriodId && (!txA.period_id || txA.period_id !== targetPeriodId))
+          ) {
+            await sb
+              .from(TB_CONST.TABLES.transactions)
+              .update({
+                travel_id: targetTravelId || txA.travel_id || null,
+                period_id: targetPeriodId || txA.period_id || null
+              })
+              .eq("id", txA.id);
           }
           await _linkExpenseToTransaction(ex.id, txA.id);
         }
@@ -2028,7 +2061,7 @@ try {
 
           const { data: txRowsB, error: txErrB } = await sb
             .from(TB_CONST.TABLES.transactions)
-            .select("id,period_id")
+            .select("id,travel_id,period_id")
             .eq("wallet_id", walletId)
             .eq("type", "expense")
             .eq("amount", myShare)
@@ -2047,9 +2080,19 @@ try {
           const txB = txRowsB?.[0] || null;
           if (txB) {
             await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", txB.id);
-            if (targetPeriodId && (!txB.period_id || txB.period_id !== targetPeriodId)) {
-              await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", txB.id);
-            }
+            const targetTravelId = _findTravelIdForDate(date);
+          if (
+            (targetTravelId && (!txB.travel_id || txB.travel_id !== targetTravelId)) ||
+            (targetPeriodId && (!txB.period_id || txB.period_id !== targetPeriodId))
+          ) {
+            await sb
+              .from(TB_CONST.TABLES.transactions)
+              .update({
+                travel_id: targetTravelId || txB.travel_id || null,
+                period_id: targetPeriodId || txB.period_id || null
+              })
+              .eq("id", txB.id);
+          }
             await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: txB.id });
           }
         }
@@ -2096,7 +2139,7 @@ try {
 
             const { data: txRows2, error: txErr2 } = await sb
               .from(TB_CONST.TABLES.transactions)
-              .select("id,period_id")
+              .select("id,travel_id,period_id")
               .eq("wallet_id", wId)
               .eq("type", "expense")
               .eq("amount", myShare)
@@ -2114,9 +2157,19 @@ try {
             const tx2 = txRows2?.[0] || null;
             if (tx2) {
               await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", tx2.id);
-              if (targetPeriodId && (!tx2.period_id || tx2.period_id !== targetPeriodId)) {
-                await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", tx2.id);
-              }
+              const targetTravelId = _findTravelIdForDate(date);
+          if (
+            (targetTravelId && (!tx2.travel_id || tx2.travel_id !== targetTravelId)) ||
+            (targetPeriodId && (!tx2.period_id || tx2.period_id !== targetPeriodId))
+          ) {
+            await sb
+              .from(TB_CONST.TABLES.transactions)
+              .update({
+                travel_id: targetTravelId || tx2.travel_id || null,
+                period_id: targetPeriodId || tx2.period_id || null
+              })
+              .eq("id", tx2.id);
+          }
               await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: tx2.id });
             }
           }
@@ -2303,7 +2356,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
                     const { data: txRowsB, error: txErrB } = await sb
                       .from(TB_CONST.TABLES.transactions)
-                      .select("id,period_id")
+                      .select("id,travel_id,period_id")
                       .eq("wallet_id", walletId)
                       .eq("type", "expense")
                       .eq("amount", myShare2)
@@ -2323,9 +2376,19 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                     if (txB) {
               await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", txB.id);
                       const targetPeriodId = _findPeriodIdForDate(date);
-                      if (targetPeriodId && (!txB.period_id || txB.period_id !== targetPeriodId)) {
-                        await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", txB.id);
-                      }
+                      const targetTravelId = _findTravelIdForDate(date);
+          if (
+            (targetTravelId && (!txB.travel_id || txB.travel_id !== targetTravelId)) ||
+            (targetPeriodId && (!txB.period_id || txB.period_id !== targetPeriodId))
+          ) {
+            await sb
+              .from(TB_CONST.TABLES.transactions)
+              .update({
+                travel_id: targetTravelId || txB.travel_id || null,
+                period_id: targetPeriodId || txB.period_id || null
+              })
+              .eq("id", txB.id);
+          }
                       await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: txB.id });
                     }
                   } else {
@@ -2440,7 +2503,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
         const { data: txRows, error: txErr } = await sb
           .from(TB_CONST.TABLES.transactions)
-          .select("id,period_id")
+          .select("id,travel_id,period_id")
           
           .eq("wallet_id", walletId)
           .eq("type", "expense")
@@ -2459,8 +2522,18 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
         const tx = txRows?.[0] || null;
         if (tx) {
-          if (targetPeriodId && (!tx.period_id || tx.period_id !== targetPeriodId)) {
-            await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", tx.id);
+          const targetTravelId = _findTravelIdForDate(date);
+          if (
+            (targetTravelId && (!tx.travel_id || tx.travel_id !== targetTravelId)) ||
+            (targetPeriodId && (!tx.period_id || tx.period_id !== targetPeriodId))
+          ) {
+            await sb
+              .from(TB_CONST.TABLES.transactions)
+              .update({
+                travel_id: targetTravelId || tx.travel_id || null,
+                period_id: targetPeriodId || tx.period_id || null
+              })
+              .eq("id", tx.id);
           }
           await _linkExpenseToTransaction(ex.id, tx.id);
         } else {
@@ -2496,7 +2569,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
         const { data: txRowsA, error: txErrA } = await sb
           .from(TB_CONST.TABLES.transactions)
-          .select("id,period_id")
+          .select("id,travel_id,period_id")
           
           .eq("wallet_id", walletId)
           .eq("type", "expense")
@@ -2515,8 +2588,18 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
         const txA = txRowsA?.[0] || null;
         if (txA) {
-          if (targetPeriodId && (!txA.period_id || txA.period_id !== targetPeriodId)) {
-            await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", txA.id);
+          const targetTravelId = _findTravelIdForDate(date);
+          if (
+            (targetTravelId && (!txA.travel_id || txA.travel_id !== targetTravelId)) ||
+            (targetPeriodId && (!txA.period_id || txA.period_id !== targetPeriodId))
+          ) {
+            await sb
+              .from(TB_CONST.TABLES.transactions)
+              .update({
+                travel_id: targetTravelId || txA.travel_id || null,
+                period_id: targetPeriodId || txA.period_id || null
+              })
+              .eq("id", txA.id);
           }
           await _linkExpenseToTransaction(ex.id, txA.id);
         } else {
@@ -2551,7 +2634,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
             const { data: txRowsB, error: txErrB } = await sb
               .from(TB_CONST.TABLES.transactions)
-              .select("id,period_id")
+              .select("id,travel_id,period_id")
               
               .eq("wallet_id", walletId)
               .eq("type", "expense")
@@ -2571,9 +2654,19 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
             const txB = txRowsB?.[0] || null;
             if (txB) {
               await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", txB.id);
-              if (targetPeriodId && (!txB.period_id || txB.period_id !== targetPeriodId)) {
-                await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", txB.id);
-              }
+              const targetTravelId = _findTravelIdForDate(date);
+          if (
+            (targetTravelId && (!txB.travel_id || txB.travel_id !== targetTravelId)) ||
+            (targetPeriodId && (!txB.period_id || txB.period_id !== targetPeriodId))
+          ) {
+            await sb
+              .from(TB_CONST.TABLES.transactions)
+              .update({
+                travel_id: targetTravelId || txB.travel_id || null,
+                period_id: targetPeriodId || txB.period_id || null
+              })
+              .eq("id", txB.id);
+          }
               await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: txB.id });
             }
           }
@@ -2629,7 +2722,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
               // Fetch created tx and link via trip_expense_budget_links
               const { data: txRows2, error: txErr2 } = await sb
                 .from(TB_CONST.TABLES.transactions)
-                .select("id,period_id")
+                .select("id,travel_id,period_id")
                 
                 .eq("wallet_id", wId)
                 .eq("type", "expense")
@@ -2648,9 +2741,19 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
               const tx2 = txRows2?.[0] || null;
               if (tx2) {
                 await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", tx2.id);
-                if (targetPeriodId && (!tx2.period_id || tx2.period_id !== targetPeriodId)) {
-                  await sb.from(TB_CONST.TABLES.transactions).update({ period_id: targetPeriodId }).eq("id", tx2.id);
-                }
+                const targetTravelId = _findTravelIdForDate(date);
+          if (
+            (targetTravelId && (!tx2.travel_id || tx2.travel_id !== targetTravelId)) ||
+            (targetPeriodId && (!tx2.period_id || tx2.period_id !== targetPeriodId))
+          ) {
+            await sb
+              .from(TB_CONST.TABLES.transactions)
+              .update({
+                travel_id: targetTravelId || tx2.travel_id || null,
+                period_id: targetPeriodId || tx2.period_id || null
+              })
+              .eq("id", tx2.id);
+          }
                 await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: tx2.id });
               }
             }
