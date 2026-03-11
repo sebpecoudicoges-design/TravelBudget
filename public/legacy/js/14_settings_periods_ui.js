@@ -662,8 +662,13 @@ async function createVoyagePrompt(){
   if(!s) throw new Error("Supabase non prêt.");
   const uid = await _tbAuthUid();
   // Suggest non-overlapping dates after last voyage
-  const periods = (state.periods || []).slice().sort((a,b)=>String(a.end).localeCompare(String(b.end)));
-  const lastEnd = periods.length ? _tbISO(periods[periods.length-1].end_date) : _tbISO(new Date());
+  const periods = (state.periods || [])
+   .slice()
+   .sort((a, b) => String(a.end || a.end_date || "").localeCompare(String(b.end || b.end_date || "")));
+
+  const lastEnd = periods.length
+   ? _tbISO(periods[periods.length - 1].end || periods[periods.length - 1].end_date)
+   : _tbISO(new Date());
   const sugStart = _tbAddDays(lastEnd, 1);
   const sugEnd = _tbAddDays(sugStart, 30);
 
@@ -683,12 +688,15 @@ async function createVoyagePrompt(){
       const end = document.getElementById("tb-vend")?.value;
       if(!start||!end||start>end) throw new Error("Dates invalides.");
       // local overlap check (client-side) to avoid periods_no_overlap
-      const existing = (state.periods||[]).filter(p=>p.user_id===uid);
-      for(const p of existing){
-        const ps=_tbISO(p.start), pe=_tbISO(p.end);
-        if(!ps||!pe) continue;
-        if(!(end < ps || start > pe)) throw new Error("Chevauchement avec un voyage existant.");
-      }
+      const existing = (state.periods || []);
+    for (const p of existing) {
+     const ps = _tbISO(p.start || p.start_date);
+     const pe = _tbISO(p.end || p.end_date);
+     if (!ps || !pe) continue;
+     if (!(end < ps || start > pe)) {
+       throw new Error("Chevauchement avec un voyage existant.");
+     }
+    }
 
 
       const { data: travelData, error: travelErr } = await s
@@ -747,10 +755,12 @@ const newPid = data.id;
       // activate new voyage
       const p = (state.periods||[]).find(x=>x.id===newPid);
       if(p) state.period = p;
+      state.activeTravelId = newTravelId;
+const p = (state.periods || []).find(x => x.id === newPid);
+if (p) state.period = p;
     try {
       const inp = document.getElementById("s-period-name");
-      if (inp && typeof window.tbGetPeriodName === "function") inp.value = window.tbGetPeriodName(id) || "";
-      else if (inp) inp.value = "";
+      if (inp && typeof window.tbGetPeriodName === "function") inp.value = window.tbGetPeriodName(newPid) || "";      else if (inp) inp.value = "";
     } catch (_) {}
       await refreshSegmentsForActivePeriod();
       renderSettings();

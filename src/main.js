@@ -1,6 +1,6 @@
 import './app/bridge.js';
 
-// TravelBudget V5 entrypoint (Vite + deterministic legacy loader)
+// TravelBudget V9 entrypoint (Vite + deterministic legacy loader)
 // This preserves the original global-script semantics while removing fragile <script> ordering in index.html.
 
 const LEGACY_SCRIPTS = [
@@ -63,7 +63,7 @@ function loadScript(src) {
 async function boot() {
   // Simple marker for debugging
   window.__TB_BUILD__ = window.__TB_BUILD__ || {};
-  window.__TB_BUILD__.entry = 'v5-vite-legacy-loader';
+  window.__TB_BUILD__.entry = 'v9-vite-legacy-loader';
   window.__TB_BUILD__.loadedAt = new Date().toISOString();
 
   for (const src of LEGACY_SCRIPTS) {
