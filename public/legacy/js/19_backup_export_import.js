@@ -26,10 +26,13 @@ async function exportBackup() {
   const payload = {
     schemaVersion: BACKUP_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
+    travel: {
+      id: state.activeTravelId
+    },
     period: {
-      id: state.period.id,
-      start_date: state.period.start,
-      end_date: state.period.end,
+     id: state.period.id,
+     start_date: state.period.start,
+     end_date: state.period.end,
       base_currency: state.period.baseCurrency,
       eur_base_rate: state.exchangeRates["EUR-BASE"],
       daily_budget_base: state.period.dailyBudgetBase,
@@ -184,9 +187,10 @@ async function importBackup() {
       const wallet_id = t.wallet_key ? keyToId.get(t.wallet_key) : null;
       if (!wallet_id) return null;
       return {
-        user_id: sbUser.id,
-        period_id: state.period.id,
-        wallet_id,
+      user_id: sbUser.id,
+      travel_id: state.activeTravelId,
+      period_id: state.period.id,
+      wallet_id,
         type: t.type,
         amount: Number(t.amount),
         currency: t.currency,
