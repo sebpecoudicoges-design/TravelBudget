@@ -304,7 +304,8 @@ window.tbGetWalletEffectiveBalance = function tbGetWalletEffectiveBalance(wallet
     const start = (p && (p.start || p.start_date)) ? String(p.start || p.start_date).slice(0,10) : "";
     const end   = (p && (p.end || p.end_date)) ? String(p.end || p.end_date).slice(0,10) : "";
     const pid   = p && p.id ? String(p.id) : "";
-    const nm = pid ? window.tbGetPeriodName(pid) : "";
+    const travel = (state?.travels || []).find(t => t.id === state.activeTravelId);
+    const nm = travel?.name || (pid ? window.tbGetPeriodName(pid) : "");
     if (nm) return nm;
     const range = (start && end) ? `${start} → ${end}` : (start || end || "");
     if (idx !== undefined && idx !== null) return `Voyage ${Number(idx)+1} : ${range}`.trim();

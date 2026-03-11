@@ -243,7 +243,7 @@ function renderTransactions() {
   _txSaveStoredFilters();
 
   let txs = state.transactions
-  .filter(t => t.travel_id === state.activeTravelId)
+  .filter(t => (t.travelId || t.travel_id) === state.activeTravelId)
   .slice()
   .sort((a, b) => b.createdAt - a.createdAt);
   const fromD = parseISODateOrNull(from);

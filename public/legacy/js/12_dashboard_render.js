@@ -22,7 +22,7 @@ function renderOnboardingPanel() {
 
   const wallets = (window.state && Array.isArray(state.wallets)) ? state.wallets : [];
   const txs = (window.state && Array.isArray(state.transactions))
-  ? state.transactions.filter(t => t.travel_id === state.activeTravelId)
+  ? state.transactions.filter(t => (t.travelId || t.travel_id) === state.activeTravelId)
   : [];
 
   // "Periods" heuristic: we consider segments/settings present if we have at least one segment or at least one setting row.
@@ -244,7 +244,7 @@ if (!wallets.length) {
 function budgetSpentBaseForDateFromTx(dateStr) {
   try {
     const txs = Array.isArray(state.transactions)
-  ? state.transactions.filter(t => t.travel_id === state.activeTravelId)
+  ? state.transactions.filter(t => (t.travelId || t.travel_id) === state.activeTravelId)
   : [];
     const target = String(dateStr || "");
     if (!target) return 0;
@@ -716,7 +716,7 @@ function tbOpenWalletEditDialog(wallet) {
 
 function openWalletTypesFix() {
   const wallets = Array.isArray(state.wallets)
-  ? state.wallets.filter(w => w.travel_id === state.activeTravelId)
+  ? state.wallets.filter(w => (w.travelId || w.travel_id) === state.activeTravelId)
   : [];
   const missing = wallets.filter(w => !String(w?.type || "").trim());
   if (!missing.length) return alert("Tous les wallets ont déjà un type.");
