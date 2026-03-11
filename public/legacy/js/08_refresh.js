@@ -166,7 +166,11 @@ async function refreshFromServer(opts = {}) {
 
   try {
 
-    await loadTravelContext();
+    if (typeof loadTravelContext === "function") {
+      await loadTravelContext();
+    } else {
+      console.warn("[refreshFromServer] loadTravelContext missing, fallback skipped");
+    }
 
   } catch (e) {
 

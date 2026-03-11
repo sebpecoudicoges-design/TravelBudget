@@ -15,6 +15,7 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/03_ui_auth.js',
   '/legacy/js/04_theme.js',
   '/legacy/js/05_state.js',
+  '/legacy/js/06_travel_context.js',
   '/legacy/js/06_allocations.js',
   '/legacy/js/07_supabase_bootstrap.js',
   '/legacy/js/09_fx.js',
@@ -42,7 +43,8 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/21_dashboard_drag.js',
   '/legacy/js/22_budget_consistency_audit.js',
   '/legacy/js/29_trip_v1.js',
-  '/legacy/js/30_members_admin.js'
+  '/legacy/js/30_members_admin.js',
+  '/legacy/js/31_wallet_balance.js'
 ];
 
 const OPTIONAL_SCRIPTS = new Set(['/legacy/js/00_perf.js']);
