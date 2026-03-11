@@ -308,21 +308,38 @@ async function ensureBootstrap() {
   const baseCur = String((cfg && cfg.baseCurrency) ? cfg.baseCurrency : "THB").toUpperCase();
   const eurBaseRate = (cfg && Number.isFinite(cfg.eurBaseRate)) ? cfg.eurBaseRate : (baseCur === "EUR" ? 1 : 36.0);
   const daily = (cfg && Number.isFinite(cfg.dailyBudgetBase)) ? cfg.dailyBudgetBase : 900;
-  const fxMode = (cfg && cfg.fxMode) ? String(cfg.fxMode) : "fixed";
 
-  const { data: p1, error: insErr } = await sb
-    .from(TB_CONST.TABLES.periods)
-    .insert([{
-      user_id: sbUser.id,
-      start_date: start,
-      end_date: end,
-      base_currency: baseCur,
-      eur_base_rate: eurBaseRate,
-      daily_budget_base: daily
-    }])
-    .select("*")
-    .single();
-  if (insErr) throw insErr;
+// Create travel first
+const { data: travelRow, error: travelErr } = await sb
+  .from(TB_CONST.TABLES.travels)
+  .insert([{
+    user_id: sbUser.id,
+    name: "Mon voyage",
+    start_date: start,
+    end_date: end,
+    base_currency: baseCur
+  }])
+  .select("*")
+  .single();
+
+if (travelErr) throw travelErr;
+
+// Create first period linked to travel
+const { data: p1, error: insErr } = await sb
+  .from(TB_CONST.TABLES.periods)
+  .insert([{
+    user_id: sbUser.id,
+    travel_id: travelRow.id,
+    start_date: start,
+    end_date: end,
+    base_currency: baseCur,
+    eur_base_rate: eurBaseRate,
+    daily_budget_base: daily
+  }])
+  .select("*")
+  .single();
+
+if (insErr) throw insErr;
 
   // Create first segment aligned with the period (if table exists)
   try {
@@ -345,15 +362,41 @@ async function ensureBootstrap() {
   }
 
   // Create wallets from wizard choices
-  if (cfg && cfg.wallets) {
-    const initial = [];
-    if (cfg.wallets.cash) initial.push(Object.assign({ user_id: sbUser.id, period_id: p1.id }, cfg.wallets.cash));
-    if (cfg.wallets.bank) initial.push(Object.assign({ user_id: sbUser.id, period_id: p1.id }, cfg.wallets.bank));
-    if (initial.length > 0) {
-      const { error: wErr2 } = await sb.from(TB_CONST.TABLES.wallets).insert(initial);
-      if (wErr2) throw wErr2;
-    }
+if (cfg && cfg.wallets) {
+  const initial = [];
+
+  if (cfg.wallets.cash) {
+    initial.push(
+      Object.assign(
+        {
+          user_id: sbUser.id,
+          travel_id: travelRow.id,
+        },
+        cfg.wallets.cash
+      )
+    );
   }
+
+  if (cfg.wallets.bank) {
+    initial.push(
+      Object.assign(
+        {
+          user_id: sbUser.id,
+          travel_id: travelRow.id,
+        },
+        cfg.wallets.bank
+      )
+    );
+  }
+
+  if (initial.length > 0) {
+    const { error: wErr2 } = await sb
+      .from(TB_CONST.TABLES.wallets)
+      .insert(initial);
+
+    if (wErr2) throw wErr2;
+  }
+}
 }
   }
 }
