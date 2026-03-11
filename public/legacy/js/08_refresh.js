@@ -163,25 +163,31 @@ async function _runRefreshFromServer(opts) {
 }
 
 async function refreshFromServer(opts = {}) {
+  if (_refreshInFlight) {
+    _refreshPending = true;
+    _tbRefreshLog("refreshFromServer:queued");
+    return _refreshPromise || Promise.resolve();
+  }
 
-  try {
+  _refreshInFlight = true;
+  _refreshPending = false;
+  _tbApplyBusyState();
 
-    if (!state?.activeTravelId) {
-      console.warn("[refreshFromServer] skipped: no active travel yet");
-    } else if (typeof loadTravelContext === "function") {
-      await loadTravelContext();
-    } else {
-      console.warn("[refreshFromServer] loadTravelContext missing");
+  _refreshPromise = (async () => {
+    try {
+      await _runRefreshFromServer(opts);
+    } finally {
+      _refreshInFlight = false;
+      _tbApplyBusyState();
+      const rerun = _refreshPending;
+      _refreshPending = false;
+      _refreshPromise = null;
+      if (rerun) {
+        _tbRefreshLog("refreshFromServer:rerun");
+        return refreshFromServer(opts);
+      }
     }
+  })();
 
-  } catch (e) {
-
-    console.error("[refreshFromServer] failed", e);
-
-  }
-
-  if (!opts.skipRender) {
-    renderUI();
-  }
-
+  return _refreshPromise;
 }
