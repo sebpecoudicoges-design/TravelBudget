@@ -411,6 +411,17 @@ function pickActivePeriod(periods) {
   return periods[0].id;
 }
 
+function pickActiveTravel(travels) {
+  if (!Array.isArray(travels) || travels.length === 0) return null;
+
+  const key = "travelbudget_active_travel_id_v1";
+  const stored = localStorage.getItem(key);
+  if (stored && travels.some((t) => t.id === stored)) return stored;
+
+  // Default = most recent
+  return travels[0].id;
+}
+
 async function loadFromSupabase() {
   if (!sbUser) return;
 
@@ -426,24 +437,33 @@ const fxManualPromise = sb
   .select("currency,rate_to_eur,as_of")
   .eq("user_id", sbUser.id);
 
+const travelsPromise = sb
+  .from(TB_CONST.TABLES.travels)
+  .select("id,name,start_date,end_date,base_currency,created_at")
+  .eq("user_id", sbUser.id)
+  .order("start_date", { ascending: false });
+
 const periodsPromise = sb
   .from(TB_CONST.TABLES.periods)
-  .select("id,start_date,end_date,base_currency,eur_base_rate,daily_budget_base,updated_at")
+  .select("id,travel_id,start_date,end_date,base_currency,eur_base_rate,daily_budget_base,updated_at")
   .eq("user_id", sbUser.id)
   .order("start_date", { ascending: false });
 
 const [
   { data: s, error: sErr },
   { data: fxm, error: fxmErr },
+  { data: travels, error: trErr },
   { data: periods, error: pErr }
 ] = await Promise.all([
   settingsPromise,
   fxManualPromise,
+  travelsPromise,
   periodsPromise
 ]);
 
 if (sErr) throw sErr;
 if (pErr) throw pErr;
+if (trErr) throw trErr;
 
 // settings
 if (s) {
@@ -484,48 +504,64 @@ try {
   console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
 }
 
-  const activePeriodId = pickActivePeriod(periods);
-  if (!activePeriodId) throw new Error("Aucune période trouvée.");
-  localStorage.setItem(ACTIVE_PERIOD_KEY, activePeriodId);
+const activeTravelKey = "travelbudget_active_travel_id_v1";
+const activeTravelId = pickActiveTravel(travels);
+if (!activeTravelId) throw new Error("Aucun voyage trouvé.");
+localStorage.setItem(activeTravelKey, activeTravelId);
 
-  const p = periods.find((x) => x.id === activePeriodId);
-  if (!p) throw new Error("Période active introuvable.");
+state.travels = (travels || []).map((x) => ({
+  id: x.id,
+  name: x.name || "",
+  start: x.start_date,
+  end: x.end_date,
+  baseCurrency: x.base_currency,
+}));
+
+state.activeTravelId = activeTravelId;
+
+const periodsForTravel = (periods || []).filter((x) => x.travel_id === activeTravelId);
+const activePeriodId = pickActivePeriod(periodsForTravel);
+if (!activePeriodId) throw new Error("Aucune période trouvée pour le voyage actif.");
+localStorage.setItem(ACTIVE_PERIOD_KEY, activePeriodId);
+
+const p = periodsForTravel.find((x) => x.id === activePeriodId);
+if (!p) throw new Error("Période active introuvable.");
 
   // Perf (A3): fetch independent tables in parallel.
   // - wallets may auto-bootstrap (insert) if missing.
   // - transactions / segments / categories do not depend on wallets.
 
-  const walletsPromise = (async () => {
-    const { data: w0, error: wErr } = await sb
+const walletsPromise = (async () => {
+  const { data: w0, error: wErr } = await sb
+    .from(TB_CONST.TABLES.wallets)
+    .select("id,travel_id,name,currency,balance,type,created_at,balance_snapshot_at")
+    .eq("user_id", sbUser.id)
+    .eq("travel_id", activeTravelId)
+    .order("created_at", { ascending: true });
+  if (wErr) throw wErr;
+
+  let w = w0;
+
+  // Auto-bootstrap wallets for this travel if missing
+  if (!w || w.length === 0) {
+    const initial = [
+      { user_id: sbUser.id, travel_id: activeTravelId, name: "Cash", currency: p.base_currency || "THB", balance: 0, type: "cash" },
+      { user_id: sbUser.id, travel_id: activeTravelId, name: "Compte bancaire", currency: "EUR", balance: 0, type: "bank" },
+    ];
+    const { error: insWErr } = await sb.from(TB_CONST.TABLES.wallets).insert(initial);
+    if (insWErr) throw insWErr;
+
+    const { data: w2, error: w2Err } = await sb
       .from(TB_CONST.TABLES.wallets)
-      .select("id,period_id,name,currency,balance,type,created_at,balance_snapshot_at")
+      .select("id,travel_id,name,currency,balance,type,created_at,balance_snapshot_at")
       .eq("user_id", sbUser.id)
-      .eq("period_id", activePeriodId)
+      .eq("travel_id", activeTravelId)
       .order("created_at", { ascending: true });
-    if (wErr) throw wErr;
-
-    let w = w0;
-
-    // Auto-bootstrap wallets for this period if missing
-    if (!w || w.length === 0) {
-      const initial = [
-        { user_id: sbUser.id, period_id: activePeriodId, name: "Cash", currency: p.base_currency || "THB", balance: 0, type: "cash" },
-        { user_id: sbUser.id, period_id: activePeriodId, name: "Compte bancaire", currency: "EUR", balance: 0, type: "bank" },
-      ];
-      const { error: insWErr } = await sb.from(TB_CONST.TABLES.wallets).insert(initial);
-      if (insWErr) throw insWErr;
-
-      const { data: w2, error: w2Err } = await sb
-        .from(TB_CONST.TABLES.wallets)
-        .select("id,period_id,name,currency,balance,type,created_at,balance_snapshot_at")
-        .eq("user_id", sbUser.id)
-        .eq("period_id", activePeriodId)
-        .order("created_at", { ascending: true });
-      if (w2Err) throw w2Err;
-      w = w2 || [];
-    }
-    return w || [];
-  })();
+    if (w2Err) throw w2Err;
+    w = w2 || [];
+  }
+  return w || [];
+})();
 
   const walletBalancesPromise = (async () => {
     try {
@@ -644,16 +680,16 @@ try {
   }));
   state.walletBalanceMap = Object.fromEntries((state.walletBalances || []).map((x) => [String(x.walletId || ""), x]));
 
-  state.wallets = (w || []).map((x) => ({
-    id: x.id,
-    periodId: x.period_id,
-    name: x.name,
-    currency: x.currency,
-    balance: Number(x.balance),
-    type: x.type || "other",
-    balance_snapshot_at: x.balance_snapshot_at || null,
-    balanceSnapshotAt: x.balance_snapshot_at || null,
-  }));
+state.wallets = (w || []).map((x) => ({
+  id: x.id,
+  travelId: x.travel_id || null,
+  name: x.name,
+  currency: x.currency,
+  balance: Number(x.balance),
+  type: x.type || "other",
+  balance_snapshot_at: x.balance_snapshot_at || null,
+  balanceSnapshotAt: x.balance_snapshot_at || null,
+}));
 
   state.transactions = (tx || []).map((x) => ({
     id: x.id,
