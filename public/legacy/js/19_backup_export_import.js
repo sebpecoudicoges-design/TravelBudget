@@ -18,6 +18,7 @@ function downloadText(filename, text) {
 
 async function exportBackup() {
   if (!sbUser) return alert("Non connecté.");
+  if (!state.activeTravelId) return alert("Aucun voyage actif.");
   if (!state.period?.id) return alert("Aucune période active.");
 
   const palette = getStoredPalette() || PALETTES["Ocean"];

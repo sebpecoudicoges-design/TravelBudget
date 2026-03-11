@@ -99,7 +99,8 @@ function _txEnsureShortcutsUI() {
   }));
 
   wrap.appendChild(mkBtn("Voyage", () => {
-    setRange(state?.period?.start || "", state?.period?.end || "");
+    const t = (state?.travels || []).find(x => String(x.id) === String(state?.activeTravelId || ""));
+    setRange(t?.start || state?.period?.start || "", t?.end || state?.period?.end || "");
   }));
 
   wrap.appendChild(mkBtn("Tout", () => {
@@ -295,10 +296,20 @@ function renderTransactions() {
 
   for (const tx of txs) {
     const w = findWallet(tx.walletId);
+    const recurringTags = [];
+    if (tx.generatedByRule || tx.recurringRuleId) recurringTags.push("récurrente");
+
+    const st = String(tx.recurringInstanceStatus || "").toLowerCase();
+    if (st === "generated") recurringTags.push("générée");
+    if (st === "confirmed") recurringTags.push("confirmée");
+    if (st === "detached") recurringTags.push("détachée");
+    if (st === "skipped") recurringTags.push("sautée");
+
     const tags = [
       tx.type === "expense" ? (tx.payNow ? "payé" : "à payer") : "entrée",
       tx.outOfBudget ? "hors budget/jour" : null,
-      tx.nightCovered ? "nuit couverte" : null,
+     tx.nightCovered ? "nuit couverte" : null,
+     ...recurringTags,
     ].filter(Boolean);
 
     const div = document.createElement("div");
