@@ -195,7 +195,7 @@ try {
     if(p) state.period = p;
     try {
       const inp = document.getElementById("s-period-name");
-      if (inp && typeof window.tbGetPeriodName === "function") inp.value = window.tbGetPeriodName(id) || "";
+      if (inp && typeof window.tbGetPeriodName === "function") inp.value = window.tbGetPeriodName(newPid) || "";
       else if (inp) inp.value = "";
     } catch (_) {}
     await refreshSegmentsForActivePeriod();
@@ -657,18 +657,21 @@ if (tid) {
   _tbToastOk("Dates du voyage enregistrées.");
 }
 
-async function createVoyagePrompt(){
+async function _createVoyagePromptImpl() {
   const s = _tbGetSB();
-  if(!s) throw new Error("Supabase non prêt.");
+  if (!s) throw new Error("Supabase non prêt.");
+
   const uid = await _tbAuthUid();
+
   // Suggest non-overlapping dates after last voyage
   const periods = (state.periods || [])
-   .slice()
-   .sort((a, b) => String(a.end || a.end_date || "").localeCompare(String(b.end || b.end_date || "")));
+    .slice()
+    .sort((a, b) => String(a.end || a.end_date || "").localeCompare(String(b.end || b.end_date || "")));
 
   const lastEnd = periods.length
-   ? _tbISO(periods[periods.length - 1].end || periods[periods.length - 1].end_date)
-   : _tbISO(new Date());
+    ? _tbISO(periods[periods.length - 1].end || periods[periods.length - 1].end_date)
+    : _tbISO(new Date());
+
   const sugStart = _tbAddDays(lastEnd, 1);
   const sugEnd = _tbAddDays(sugStart, 30);
 
@@ -681,94 +684,107 @@ async function createVoyagePrompt(){
     </div>
     <div class="muted" style="margin-top:8px;">Le voyage doit être non chevauchant.</div>
   `);
+
   modal.setActions([
-    { label:"Annuler", className:"btn", onClick:()=>modal.close() },
-    { label:"Créer", className:"btn primary", onClick:async ()=>{
-      const start = document.getElementById("tb-vstart")?.value;
-      const end = document.getElementById("tb-vend")?.value;
-      if(!start||!end||start>end) throw new Error("Dates invalides.");
-      // local overlap check (client-side) to avoid periods_no_overlap
-      const existing = (state.periods || []);
-    for (const p of existing) {
-     const ps = _tbISO(p.start || p.start_date);
-     const pe = _tbISO(p.end || p.end_date);
-     if (!ps || !pe) continue;
-     if (!(end < ps || start > pe)) {
-       throw new Error("Chevauchement avec un voyage existant.");
-     }
+    { label: "Annuler", className: "btn", onClick: () => modal.close() },
+    {
+      label: "Créer",
+      className: "btn primary",
+      onClick: async () => {
+        const start = document.getElementById("tb-vstart")?.value;
+        const end = document.getElementById("tb-vend")?.value;
+        if (!start || !end || start > end) throw new Error("Dates invalides.");
+
+        // local overlap check
+        const existing = (state.periods || []);
+        for (const p of existing) {
+          const ps = _tbISO(p.start || p.start_date);
+          const pe = _tbISO(p.end || p.end_date);
+          if (!ps || !pe) continue;
+          if (!(end < ps || start > pe)) {
+            throw new Error("Chevauchement avec un voyage existant.");
+          }
+        }
+
+        const { data: travelData, error: travelErr } = await s
+          .from(TB_CONST.TABLES.travels)
+          .insert({
+            user_id: uid,
+            name: "Mon voyage",
+            start_date: start,
+            end_date: end,
+            base_currency: "EUR"
+          })
+          .select("id")
+          .single();
+
+        if (travelErr) throw travelErr;
+        const newTravelId = travelData.id;
+
+        const { data, error } = await s
+          .from(TB_CONST.TABLES.periods)
+          .insert({
+            user_id: uid,
+            travel_id: newTravelId,
+            start_date: start,
+            end_date: end,
+            base_currency: "EUR",
+            eur_base_rate: 1,
+            daily_budget_base: 0
+          })
+          .select("id")
+          .single();
+
+        if (error) throw error;
+        const newPid = data.id;
+
+        // create one default segment covering whole voyage
+        const segIns = {
+          user_id: uid,
+          period_id: newPid,
+          start_date: start,
+          end_date: end,
+          base_currency: "EUR",
+          daily_budget_base: 0,
+          fx_mode: "live_ecb",
+          sort_order: 0
+        };
+        const { error: e2 } = await s.from(TB_CONST.TABLES.budget_segments).insert(segIns);
+        if (e2) throw e2;
+
+        modal.close();
+
+        if (typeof window.refreshFromServer === "function") {
+          await window.refreshFromServer();
+        } else if (typeof refreshFromServer === "function") {
+          await refreshFromServer();
+        }
+
+        // activate new voyage
+        state.activeTravelId = newTravelId;
+        const p = (state.periods || []).find(x => x.id === newPid);
+        if (p) state.period = p;
+
+        try {
+          const inp = document.getElementById("s-period-name");
+          if (inp && typeof window.tbGetPeriodName === "function") {
+            inp.value = window.tbGetPeriodName(newPid) || "";
+          } else if (inp) {
+            inp.value = "";
+          }
+        } catch (_) {}
+
+        await refreshSegmentsForActivePeriod();
+        renderSettings();
+        _tbToastOk("Voyage créé.");
+      }
     }
-
-
-      const { data: travelData, error: travelErr } = await s
-  .from(TB_CONST.TABLES.travels)
-  .insert({
-    user_id: uid,
-    name: "Mon voyage",
-    start_date: start,
-    end_date: end,
-    base_currency: "EUR"
-  })
-  .select("id")
-  .single();
-
-if (travelErr) throw travelErr;
-const newTravelId = travelData.id;
-
-const { data, error } = await s
-  .from(TB_CONST.TABLES.periods)
-  .insert({
-    user_id: uid,
-    travel_id: newTravelId,
-    start_date: start,
-    end_date: end,
-    base_currency: "EUR",
-    eur_base_rate: 1,
-    daily_budget_base: 0
-  })
-  .select("id")
-  .single();
-
-if(error) throw error;
-const newPid = data.id;
-
-      // create one default segment covering whole voyage
-      const segIns = {
-        user_id: uid,
-        period_id: newPid,
-        start_date: start,
-        end_date: end,
-        base_currency: "EUR",
-        daily_budget_base: 0,
-        fx_mode: "live_ecb",
-        sort_order: 0
-      };
-      const { error: e2 } = await s.from(TB_CONST.TABLES.budget_segments).insert(segIns);
-      if(e2) throw e2;
-
-      modal.close();
-      if (typeof window.refreshFromServer === "function") {
-    await window.refreshFromServer();
-  } else if (typeof refreshFromServer === "function") {
-    await refreshFromServer();
-  }
-  
-      // activate new voyage
-      const p = (state.periods||[]).find(x=>x.id===newPid);
-      if(p) state.period = p;
-      state.activeTravelId = newTravelId;
-const p = (state.periods || []).find(x => x.id === newPid);
-if (p) state.period = p;
-    try {
-      const inp = document.getElementById("s-period-name");
-      if (inp && typeof window.tbGetPeriodName === "function") inp.value = window.tbGetPeriodName(newPid) || "";      else if (inp) inp.value = "";
-    } catch (_) {}
-      await refreshSegmentsForActivePeriod();
-      renderSettings();
-      _tbToastOk("Voyage créé.");
-    }}
   ]);
+
   modal.open();
 }
+
+window.createVoyagePrompt = () => safeCall("Ajouter voyage", _createVoyagePromptImpl);
 
 async function deleteActiveVoyage(){
   const s = _tbGetSB();
@@ -1265,7 +1281,7 @@ window.renderSettings = renderSettings;
 window.saveSettings = ()=>safeCall("Enregistrer voyage", _saveSettingsImpl);
 window.createPeriodPrompt = ()=>safeCall("Ajouter période", _createPeriodPromptImpl);
 window.deleteActivePeriod = ()=>_tbToastOk("Suppression de période: utilise le bouton Supprimer sur une période.");
-window.createVoyagePrompt = ()=>safeCall("Ajouter voyage", createVoyagePrompt);
+window.createVoyagePrompt = ()=>safeCall("Ajouter voyage", _createVoyagePromptImpl);
 window.deleteActiveVoyage = ()=>safeCall("Supprimer voyage", deleteActiveVoyage);
 
 // initial boot hook
