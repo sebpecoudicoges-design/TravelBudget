@@ -1,3 +1,13 @@
+## Consignes projet V9
+
+- [ ] Livraison = soit un ZIP complet propre, soit un seul fichier unique corrigé si la modification est légère.
+- [ ] Ne jamais livrer plusieurs fichiers uniques séparés.
+- [ ] Le ZIP ne contient jamais `.git`, `node_modules`, `supabase`, `db_dumps`.
+- [ ] À chaque livraison : commandes `git status`, `git add -A`, `git commit -m "TB <version> - <message>"`, `git push`.
+- [ ] À chaque version : mettre à jour `00_constants.js` / `window.__TB_BUILD`, `package.json`, `src/main.js` si l'étiquette d'entrée dérive, et cette checklist si elle n'est plus alignée.
+- [ ] Debug front : toujours vérifier `window.__TB_BUILD` avant analyse.
+- [ ] Dumps SQL : jamais dans le ZIP ; mise à jour via `supabase db dump --linked`.
+
 ## MAJ - Suivi (à cocher à chaque itération)
 
 > Règles de travail (toujours vraies)
