@@ -1,5 +1,7 @@
 // public/legacy/js/15_recurring_rules_ui.js
 (function(){
+  let _rrSubmitting = false;
+
   function _rrGetSB() {
     if (typeof _tbGetSB === "function") return _tbGetSB();
     return window.supabase || window.sb || null;
@@ -14,11 +16,7 @@
     const s = String(iso || "");
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
     if (!m) return null;
-    return {
-      y: Number(m[1]),
-      m: Number(m[2]),
-      d: Number(m[3])
-    };
+    return { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) };
   }
 
   function _rrDaysInMonth(y, m) {
@@ -35,6 +33,102 @@
     const p = _rrParseISODate(iso);
     if (!p) return null;
     return new Date(Date.UTC(p.y, p.m - 1, p.d));
+  }
+
+  function _rrIsUuid(v) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || "").trim());
+  }
+
+  function _rrReadLocalCategories() {
+    try {
+      if (typeof loadCategoriesFromLocalStorage === "function") {
+        const arr = loadCategoriesFromLocalStorage();
+        if (Array.isArray(arr)) return arr;
+      }
+    } catch (_) {}
+
+    const keys = [
+      "travelbudget_categories_v1",
+      "travelbudget_categories_v2",
+      "travelbudget_categories",
+      "tb_categories",
+      "categories"
+    ];
+
+    for (const key of keys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) continue;
+        return parsed.map((x) => {
+          if (typeof x === "string") return x;
+          return x?.name || x?.label || x?.category || "";
+        }).filter(Boolean);
+      } catch (_) {}
+    }
+
+    return [];
+  }
+
+  function _rrNormalizeCategoryName(v) {
+    return String(v || "").trim();
+  }
+
+  function _rrIsTripLikeCategory(name) {
+    return /^\s*\[\s*trip\s*\]/i.test(String(name || ""));
+  }
+
+  function _rrIsPlaceholderCategory(name) {
+    return /^(cat[ée]gorie|category|choisir une cat[ée]gorie)$/i.test(String(name || "").trim());
+  }
+
+  function _rrShouldKeepTxCategory(tx) {
+    if (!tx) return false;
+    if (tx.tripExpenseId || tx.trip_expense_id) return false;
+    if (tx.tripShareLinkId || tx.trip_share_link_id) return false;
+    const cat = _rrNormalizeCategoryName(tx.category);
+    if (!cat) return false;
+    if (_rrIsTripLikeCategory(cat)) return false;
+    if (_rrIsPlaceholderCategory(cat)) return false;
+    return true;
+  }
+
+  function _rrCategoryOptions() {
+    const out = [];
+    const seen = new Set();
+    const push = (raw) => {
+      const name = _rrNormalizeCategoryName(raw);
+      if (!name) return;
+      if (_rrIsTripLikeCategory(name)) return;
+      if (_rrIsPlaceholderCategory(name)) return;
+      const key = name.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(name);
+    };
+
+    try {
+      if (typeof getCategories === "function") {
+        (getCategories() || []).forEach(push);
+      }
+    } catch (_) {}
+
+    _rrReadLocalCategories().forEach(push);
+
+    (state?.categories || []).forEach((c) => {
+      if (typeof c === "string") return push(c);
+      push(c?.name);
+      push(c?.label);
+      push(c?.category);
+    });
+
+    (state?.transactions || []).forEach((tx) => {
+      if (!_rrShouldKeepTxCategory(tx)) return;
+      push(tx.category);
+    });
+
+    return out.sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
   }
 
   function _rrComputeFirstDueDate(ruleType, startDate, weekday, monthday) {
@@ -60,13 +154,10 @@
       const y = start.getUTCFullYear();
       const m = start.getUTCMonth() + 1;
       const d = start.getUTCDate();
-
       const dim = _rrDaysInMonth(y, m);
       const candidateDay = Math.min(md, dim);
 
-      if (candidateDay >= d) {
-        return _rrISOFromParts(y, m, candidateDay);
-      }
+      if (candidateDay >= d) return _rrISOFromParts(y, m, candidateDay);
 
       const next = new Date(Date.UTC(y, m, 1));
       const ny = next.getUTCFullYear();
@@ -76,14 +167,12 @@
     }
 
     if (ruleType === "yearly") return startDate;
-
     return startDate;
   }
 
   function _rrFreqLabel(rule) {
     const type = String(rule?.ruleType || rule?.rule_type || "").toLowerCase();
     const every = Number(rule?.intervalCount || rule?.interval_count || 1) || 1;
-
     if (type === "daily") return every === 1 ? "Quotidien" : `Tous les ${every} jours`;
     if (type === "weekly") return every === 1 ? "Hebdomadaire" : `Toutes les ${every} semaines`;
     if (type === "monthly") return every === 1 ? "Mensuel" : `Tous les ${every} mois`;
@@ -100,49 +189,7 @@
 
   function _rrWalletOptions() {
     const tid = String(state?.activeTravelId || "");
-    return (state?.wallets || []).filter(w => String(w?.travelId || w?.travel_id || "") === tid);
-  }
-
-  function _rrCategoryOptions() {
-    const rawDb = (typeof getCategories === "function") ? getCategories() : (Array.isArray(state?.categories) ? state.categories : []);
-    const rawLs = (typeof loadCategoriesFromLocalStorage === "function") ? (loadCategoriesFromLocalStorage() || []) : [];
-    const rawTx = Array.isArray(state?.transactions) ? state.transactions : [];
-    const out = [];
-    const seen = new Set();
-
-    const pushName = (value) => {
-      const name = String(typeof value === "string" ? value : (value?.name || value?.label || value?.category || "")).trim();
-      const lower = name.toLowerCase();
-      if (!name) return;
-      if (lower === "catégorie" || lower === "category") return;
-      if (lower === "choisir une catégorie" || lower === "choose a category") return;
-      if (lower.startsWith("[trip]")) return;
-      if (lower === "mouvement interne") return;
-      if (seen.has(lower)) return;
-      seen.add(lower);
-      out.push(name);
-    };
-
-    for (const item of (rawDb || [])) pushName(item);
-    for (const item of (rawLs || [])) pushName(item);
-
-    for (const tx of rawTx) {
-      const isTrip = !!(tx?.tripExpenseId || tx?.tripShareLinkId);
-      const isInternal = !!tx?.isInternal;
-      if (isTrip || isInternal) continue;
-      pushName(tx?.category || "");
-    }
-
-    return out.sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
-  }
-
-  async function _rrRefreshAndRender() {
-    if (typeof window.refreshFromServer === "function") {
-      await window.refreshFromServer();
-    } else if (typeof refreshFromServer === "function") {
-      await refreshFromServer();
-    }
-    window.renderRecurringRules();
+    return (state?.wallets || []).filter((w) => String(w?.travelId || w?.travel_id || "") === tid);
   }
 
   function _rrEnsureSettingsBox() {
@@ -168,22 +215,17 @@
     `;
 
     const paletteCard = document.getElementById("tb-account-card")?.nextElementSibling?.nextElementSibling;
-    if (paletteCard && paletteCard.parentNode === view) {
-      view.insertBefore(card, paletteCard);
-    } else {
-      view.appendChild(card);
-    }
+    if (paletteCard && paletteCard.parentNode === view) view.insertBefore(card, paletteCard);
+    else view.appendChild(card);
 
     const btn = card.querySelector("#tb-recurring-add-btn");
     if (btn) btn.onclick = () => safeCall("Nouvelle échéance", window.openRecurringRuleModal);
-
     return card.querySelector("#tb-recurring-box");
   }
 
   async function _rrCreateRule(payload) {
     const s = _rrGetSB();
     if (!s) throw new Error("Supabase non prêt.");
-
     const uid = await _tbAuthUid();
     const tid = String(state?.activeTravelId || "");
     if (!tid) throw new Error("Voyage actif requis.");
@@ -195,13 +237,10 @@
       label: payload.label,
       amount: payload.amount,
       currency: payload.currency,
-
       type: payload.type,
       rule_type: payload.rule_type,
-
       category: payload.category || null,
       subcategory: payload.subcategory || null,
-
       interval_count: payload.interval_count,
       weekday: payload.weekday,
       monthday: payload.monthday,
@@ -211,98 +250,109 @@
       end_date: payload.end_date || null,
       max_occurrences: payload.max_occurrences,
       is_active: true,
-      archived: false
+      archived: false,
+      out_of_budget: !!payload.out_of_budget
     };
 
-    const { data, error } = await s
-      .from(TB_CONST.TABLES.recurring_rules)
-      .insert(insertPayload)
-      .select("id")
-      .single();
-
+    const { data, error } = await s.from(TB_CONST.TABLES.recurring_rules).insert(insertPayload).select("id").single();
     if (error) throw error;
 
     const newRuleId = String(data?.id || "");
     if (!newRuleId) throw new Error("Règle créée sans id.");
 
-    const rpcName =
-      TB_CONST?.RPCS?.recurring_generate_for_rule ||
-      "recurring_generate_for_rule";
-
+    const rpcName = TB_CONST?.RPCS?.recurring_generate_for_rule || "recurring_generate_for_rule";
     const { error: genErr } = await s.rpc(rpcName, { p_rule_id: newRuleId });
     if (genErr) throw genErr;
-
     return newRuleId;
   }
 
   async function _rrPauseRule(ruleId) {
     const s = _rrGetSB();
     if (!s) throw new Error("Supabase non prêt.");
-
     const rid = String(ruleId || "").trim();
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rid)) {
-      throw new Error("UUID de règle invalide pour la pause.");
-    }
-
+    if (!_rrIsUuid(rid)) throw new Error("UUID de règle invalide.");
     console.log("[RR pause]", { ruleId: rid, typeofRuleId: typeof rid });
     const rpcName = TB_CONST?.RPCS?.recurring_pause_rule || "recurring_pause_rule";
     const { error } = await s.rpc(rpcName, { p_rule_id: rid });
     if (error) throw error;
-    await _rrRefreshAndRender();
+    if (typeof window.refreshFromServer === "function") await window.refreshFromServer();
+    else if (typeof refreshFromServer === "function") await refreshFromServer();
+    window.renderRecurringRules();
   }
 
   async function _rrResumeRule(ruleId) {
     const s = _rrGetSB();
     if (!s) throw new Error("Supabase non prêt.");
-
     const rid = String(ruleId || "").trim();
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rid)) {
-      throw new Error("UUID de règle invalide pour la reprise.");
-    }
-
+    if (!_rrIsUuid(rid)) throw new Error("UUID de règle invalide.");
     console.log("[RR resume]", { ruleId: rid, typeofRuleId: typeof rid });
     const rpcName = TB_CONST?.RPCS?.recurring_resume_rule || "recurring_resume_rule";
     const { error } = await s.rpc(rpcName, { p_rule_id: rid });
     if (error) throw error;
-
-    const genRpcName = TB_CONST?.RPCS?.recurring_generate_for_rule || "recurring_generate_for_rule";
-    const { error: genErr } = await s.rpc(genRpcName, { p_rule_id: rid });
+    const genName = TB_CONST?.RPCS?.recurring_generate_for_rule || "recurring_generate_for_rule";
+    const { error: genErr } = await s.rpc(genName, { p_rule_id: rid });
     if (genErr) throw genErr;
-
-    await _rrRefreshAndRender();
+    if (typeof window.refreshFromServer === "function") await window.refreshFromServer();
+    else if (typeof refreshFromServer === "function") await refreshFromServer();
+    window.renderRecurringRules();
   }
 
   async function _rrArchive(ruleId) {
     const s = _rrGetSB();
     if (!s) throw new Error("Supabase non prêt.");
-
     const rid = String(ruleId || "").trim();
-    if (!rid) throw new Error("Règle introuvable.");
-
-    const rpcName =
-      TB_CONST?.RPCS?.recurring_delete_rule ||
-      "recurring_delete_rule";
-
+    if (!_rrIsUuid(rid)) throw new Error("UUID de règle invalide.");
+    const rpcName = TB_CONST?.RPCS?.recurring_delete_rule || "recurring_delete_rule";
     const { error } = await s.rpc(rpcName, {
       p_rule_id: rid,
-      p_mode: "rule_and_future"
+      p_mode: "rule_and_future_and_unconfirmed_past"
     });
     if (error) throw error;
+    if (typeof window.refreshFromServer === "function") await window.refreshFromServer();
+    else if (typeof refreshFromServer === "function") await refreshFromServer();
+    window.renderRecurringRules();
+  }
 
-    await _rrRefreshAndRender();
+  function _rrBindFrequencyUi() {
+    const ruleType = document.getElementById("rr-rule-type");
+    const interval = document.getElementById("rr-interval-count");
+    const weekdayWrap = document.getElementById("rr-weekday-wrap");
+    const monthdayWrap = document.getElementById("rr-monthday-wrap");
+    const help = document.getElementById("rr-frequency-help");
+    if (!ruleType || !interval || !weekdayWrap || !monthdayWrap || !help) return;
+
+    const apply = () => {
+      const type = String(ruleType.value || "every_x_months");
+      weekdayWrap.style.display = (type === "weekly") ? "" : "none";
+      monthdayWrap.style.display = (type === "every_x_months") ? "" : "none";
+
+      if (type === "daily") {
+        help.textContent = "Tous les X jours.";
+      } else if (type === "weekly") {
+        help.textContent = "Toutes les X semaines, le jour choisi.";
+      } else if (type === "every_x_months") {
+        help.textContent = "Tous les X mois, au jour du mois choisi.";
+      } else if (type === "yearly") {
+        help.textContent = "Tous les X ans, à partir de la date de début.";
+      } else {
+        help.textContent = "";
+      }
+    };
+
+    ruleType.addEventListener("change", apply);
+    interval.addEventListener("input", apply);
+    apply();
   }
 
   window.openRecurringRuleModal = async function openRecurringRuleModal() {
     const wallets = _rrWalletOptions();
     if (!wallets.length) throw new Error("Aucun wallet disponible sur le voyage actif.");
 
-    const activeTravel = (state?.travels || []).find(t => String(t.id) === String(state?.activeTravelId || ""));
+    const activeTravel = (state?.travels || []).find((t) => String(t.id) === String(state?.activeTravelId || ""));
     const baseCur = String(activeTravel?.base_currency || state?.period?.baseCurrency || "EUR").toUpperCase();
     const cats = _rrCategoryOptions();
-
     const modal = (typeof _tbEnsureModal === "function") ? _tbEnsureModal() : null;
     if (!modal) throw new Error("Modal indisponible.");
-
     const today = _tbISO(new Date());
 
     modal.setTitle("Nouvelle échéance périodique");
@@ -312,7 +362,6 @@
           <label>Nom</label>
           <input id="rr-label" type="text" placeholder="Ex: Loyer, Assurance, Netflix" />
         </div>
-
         <div class="field" style="min-width:140px;">
           <label>Type</label>
           <select id="rr-type">
@@ -320,7 +369,6 @@
             <option value="income">Entrée</option>
           </select>
         </div>
-
         <div class="field" style="min-width:140px;">
           <label>Montant</label>
           <input id="rr-amount" type="number" step="0.01" min="0" />
@@ -331,47 +379,42 @@
         <div class="field" style="min-width:220px;">
           <label>Wallet</label>
           <select id="rr-wallet">
-            ${wallets.map(w => `<option value="${escapeHTML(w.id)}" data-cur="${escapeHTML(String(w.currency || "").toUpperCase())}">${escapeHTML(w.name)} — ${escapeHTML(w.currency)}</option>`).join("")}
+            ${wallets.map((w) => `<option value="${escapeHTML(w.id)}" data-cur="${escapeHTML(String(w.currency || "").toUpperCase())}">${escapeHTML(w.name)} — ${escapeHTML(w.currency)}</option>`).join("")}
           </select>
         </div>
-
         <div class="field" style="min-width:120px;">
           <label>Devise</label>
           <input id="rr-currency" type="text" value="${escapeHTML(String(wallets[0]?.currency || baseCur || "EUR").toUpperCase())}" />
         </div>
-
         <div class="field" style="min-width:180px;">
           <label>Catégorie</label>
           <select id="rr-category">
             <option value="" selected disabled hidden>Choisir une catégorie</option>
-            ${cats.map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join("")}
+            ${cats.map((cat) => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join("")}
           </select>
         </div>
-
         <div class="field" style="min-width:180px;">
           <label>Sous-catégorie</label>
           <input id="rr-subcategory" type="text" placeholder="Sous-catégorie" />
         </div>
       </div>
 
-      <div class="row">
+      <div class="row" style="align-items:flex-end;">
         <div class="field" style="min-width:180px;">
           <label>Fréquence</label>
           <select id="rr-rule-type">
-            <option value="daily">Quotidien</option>
-            <option value="weekly">Hebdomadaire</option>
-            <option value="every_x_months" selected>Mensuel</option>
-            <option value="yearly">Annuel</option>
+            <option value="daily">Jour</option>
+            <option value="weekly">Semaine</option>
+            <option value="every_x_months" selected>Mois</option>
+            <option value="yearly">Année</option>
           </select>
         </div>
-
         <div class="field" style="min-width:140px;">
-          <label>Tous les</label>
+          <label>Répéter tous les</label>
           <input id="rr-interval-count" type="number" min="1" step="1" value="1" />
         </div>
-
-        <div class="field" style="min-width:140px;">
-          <label>Jour de semaine</label>
+        <div class="field" id="rr-weekday-wrap" style="min-width:180px; display:none;">
+          <label>Jour de la semaine</label>
           <select id="rr-weekday">
             <option value="1">Lundi</option>
             <option value="2">Mardi</option>
@@ -382,45 +425,42 @@
             <option value="0">Dimanche</option>
           </select>
         </div>
-
-        <div class="field" style="min-width:140px;">
+        <div class="field" id="rr-monthday-wrap" style="min-width:180px;">
           <label>Jour du mois</label>
           <input id="rr-monthday" type="number" min="1" max="31" placeholder="1-31" />
         </div>
       </div>
-
-      <div id="rr-frequency-help" class="muted" style="margin-top:-6px; margin-bottom:10px;">
-        Tous les 1 mois, le jour du mois choisi.
-      </div>
+      <div class="muted" id="rr-frequency-help" style="margin:-4px 0 8px 0;"></div>
 
       <div class="row">
         <div class="field">
           <label>Début</label>
           <input id="rr-start-date" type="date" value="${escapeHTML(today)}" />
         </div>
-
         <div class="field">
           <label>Fin</label>
           <input id="rr-end-date" type="date" />
         </div>
-
         <div class="field">
           <label>Occurrences max</label>
           <input id="rr-max-occurrences" type="number" min="1" step="1" placeholder="Optionnel" />
         </div>
       </div>
+
+      <div class="row">
+        <label style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+          <input id="rr-out-of-budget" type="checkbox" />
+          <span>Hors budget</span>
+        </label>
+      </div>
     `);
+
+    _rrBindFrequencyUi();
 
     const walletSel = document.getElementById("rr-wallet");
     const curInp = document.getElementById("rr-currency");
     let currencyManuallyEdited = false;
-
-    if (curInp) {
-      curInp.addEventListener("input", () => {
-        currencyManuallyEdited = true;
-      });
-    }
-
+    if (curInp) curInp.addEventListener("input", () => { currencyManuallyEdited = true; });
     if (walletSel && curInp) {
       walletSel.addEventListener("change", () => {
         if (currencyManuallyEdited) return;
@@ -430,104 +470,59 @@
       });
     }
 
-    const ruleTypeEl = document.getElementById("rr-rule-type");
-    const everyEl = document.getElementById("rr-interval-count");
-    const weekdayWrap = document.getElementById("rr-weekday")?.closest(".field");
-    const monthdayWrap = document.getElementById("rr-monthday")?.closest(".field");
-    const helpEl = document.getElementById("rr-frequency-help");
-
-    function updateFrequencyUi() {
-      const rt = String(ruleTypeEl?.value || "every_x_months");
-      const every = Math.max(1, Number(everyEl?.value || 1));
-      if (weekdayWrap) weekdayWrap.style.display = (rt === "weekly") ? "" : "none";
-      if (monthdayWrap) monthdayWrap.style.display = (rt === "every_x_months" || rt === "yearly") ? "" : "none";
-      if (helpEl) {
-        if (rt === "daily") helpEl.textContent = `Tous les ${every} jour${every > 1 ? "s" : ""}.`;
-        else if (rt === "weekly") helpEl.textContent = `Toutes les ${every} semaine${every > 1 ? "s" : ""}, le jour sélectionné.`;
-        else if (rt === "yearly") helpEl.textContent = `Tous les ${every} an${every > 1 ? "s" : ""}, au jour du mois choisi.`;
-        else helpEl.textContent = `Tous les ${every} mois, le jour du mois choisi.`;
-      }
-    }
-
-    ruleTypeEl?.addEventListener("change", updateFrequencyUi);
-    everyEl?.addEventListener("input", updateFrequencyUi);
-    updateFrequencyUi();
-
-    let rrSubmitting = false;
-
     modal.setActions([
       { label: "Annuler", className: "btn", onClick: () => modal.close() },
       {
         label: "Créer",
         className: "btn primary",
         onClick: async () => {
-          if (rrSubmitting) return;
-          rrSubmitting = true;
+          if (_rrSubmitting) return;
+          _rrSubmitting = true;
           try {
-          const label = String(document.getElementById("rr-label")?.value || "").trim();
-          const type = String(document.getElementById("rr-type")?.value || "expense");
-          const amount = Number(document.getElementById("rr-amount")?.value || 0);
-          const currency = String(document.getElementById("rr-currency")?.value || "").trim().toUpperCase();
-          const wallet_id = String(document.getElementById("rr-wallet")?.value || "");
-          const category = String(document.getElementById("rr-category")?.value || "").trim();
-          const subcategory = String(document.getElementById("rr-subcategory")?.value || "").trim();
-          const rule_type = String(document.getElementById("rr-rule-type")?.value || "").trim();
-          const interval_count = Math.max(1, Number(document.getElementById("rr-interval-count")?.value || 1));
-          const weekdayRaw = document.getElementById("rr-weekday")?.value;
-          const monthdayRaw = document.getElementById("rr-monthday")?.value;
-          const start_date = String(document.getElementById("rr-start-date")?.value || "");
-          const end_date = String(document.getElementById("rr-end-date")?.value || "");
-          const maxOccRaw = document.getElementById("rr-max-occurrences")?.value;
+            const label = String(document.getElementById("rr-label")?.value || "").trim();
+            const type = String(document.getElementById("rr-type")?.value || "expense");
+            const amount = Number(document.getElementById("rr-amount")?.value || 0);
+            const currency = String(document.getElementById("rr-currency")?.value || "").trim().toUpperCase();
+            const wallet_id = String(document.getElementById("rr-wallet")?.value || "");
+            const category = String(document.getElementById("rr-category")?.value || "").trim();
+            const subcategory = String(document.getElementById("rr-subcategory")?.value || "").trim();
+            const rule_type = String(document.getElementById("rr-rule-type")?.value || "").trim();
+            const interval_count = Math.max(1, Number(document.getElementById("rr-interval-count")?.value || 1));
+            const weekdayRaw = document.getElementById("rr-weekday")?.value;
+            const monthdayRaw = document.getElementById("rr-monthday")?.value;
+            const start_date = String(document.getElementById("rr-start-date")?.value || "");
+            const end_date = String(document.getElementById("rr-end-date")?.value || "");
+            const maxOccRaw = document.getElementById("rr-max-occurrences")?.value;
+            const out_of_budget = !!document.getElementById("rr-out-of-budget")?.checked;
 
-          if (!label) throw new Error("Nom requis.");
-          if (!(amount > 0)) throw new Error("Montant invalide.");
-          if (!currency) throw new Error("Devise requise.");
-          if (!wallet_id) throw new Error("Wallet requis.");
-          if (!start_date) throw new Error("Date de début requise.");
-          if (end_date && end_date < start_date) throw new Error("La date de fin doit être ≥ à la date de début.");
+            if (!label) throw new Error("Nom requis.");
+            if (!(amount > 0)) throw new Error("Montant invalide.");
+            if (!currency) throw new Error("Devise requise.");
+            if (!wallet_id) throw new Error("Wallet requis.");
+            if (!category) throw new Error("Catégorie requise.");
+            if (!start_date) throw new Error("Date de début requise.");
+            if (end_date && end_date < start_date) throw new Error("La date de fin doit être ≥ à la date de début.");
 
-          let weekday = weekdayRaw === "" ? null : Number(weekdayRaw);
-          let monthday = monthdayRaw === "" ? null : Number(monthdayRaw);
+            const weekday = (rule_type === "weekly") ? Number(weekdayRaw) : null;
+            const monthday = (rule_type === "every_x_months") ? Number(monthdayRaw || 0) || null : null;
+            const next_due_at = _rrComputeFirstDueDate(rule_type, start_date, weekday, monthday);
 
-          if (rule_type === "weekly" && weekday == null) {
-            weekday = new Date(`${start_date}T00:00:00`).getDay();
-          }
-          if ((rule_type === "every_x_months" || rule_type === "yearly") && monthday == null) {
-            monthday = new Date(`${start_date}T00:00:00`).getDate();
-          }
-
-          const next_due_at = _rrComputeFirstDueDate(
-            rule_type,
-            start_date,
-            weekday,
-            monthday
-          );
-
-          const payload = {
-            label,
-            type,
-            amount,
-            currency,
-            wallet_id,
-            category: category || null,
-            subcategory: subcategory || null,
-            rule_type,
-            interval_count,
-            weekday,
-            monthday,
-            start_date,
-            next_due_at,
-            end_date: end_date || null,
-            max_occurrences: maxOccRaw === "" ? null : Number(maxOccRaw)
-          };
-
-          await _rrCreateRule(payload);
-          modal.close();
-
-          await _rrRefreshAndRender();
-          _tbToastOk("Échéance créée.");
+            await _rrCreateRule({
+              label, type, amount, currency, wallet_id,
+              category, subcategory: subcategory || null,
+              rule_type, interval_count, weekday, monthday,
+              start_date, next_due_at,
+              end_date: end_date || null,
+              max_occurrences: maxOccRaw === "" ? null : Number(maxOccRaw),
+              out_of_budget
+            });
+            modal.close();
+            if (typeof window.refreshFromServer === "function") await window.refreshFromServer();
+            else if (typeof refreshFromServer === "function") await refreshFromServer();
+            window.renderRecurringRules();
+            _tbToastOk("Échéance créée.");
           } finally {
-            rrSubmitting = false;
+            _rrSubmitting = false;
           }
         }
       }
@@ -539,11 +534,10 @@
   window.renderRecurringRules = function renderRecurringRules() {
     const host = _rrEnsureSettingsBox();
     if (!host) return;
-
     const tid = String(state?.activeTravelId || "");
     const rows = (state?.recurringRules || [])
-      .filter(r => String(r?.travelId || r?.travel_id || "") === tid)
-      .filter(r => !r?.archived)
+      .filter((r) => String(r?.travelId || r?.travel_id || "") === tid)
+      .filter((r) => !r?.archived)
       .slice()
       .sort((a, b) => String(a?.nextDueAt || a?.next_due_at || "").localeCompare(String(b?.nextDueAt || b?.next_due_at || "")));
 
@@ -562,13 +556,16 @@
               <th>Fréquence</th>
               <th>Prochaine</th>
               <th>Statut</th>
-              <th style="width:220px;">Actions</th>
+              <th style="width:240px;">Actions</th>
             </tr>
           </thead>
           <tbody>
-            ${rows.map(r => `
+            ${rows.map((r) => `
               <tr>
-                <td>${escapeHTML(r.label || r.name || "—")}</td>
+                <td>
+                  ${escapeHTML(r.label || r.name || "—")}
+                  ${r.outOfBudget || r.out_of_budget ? `<div class="muted" style="font-size:12px;">Hors budget</div>` : ``}
+                </td>
                 <td>${escapeHTML(fmtMoney(Number(r.amount || 0), r.currency || ""))} ${escapeHTML(r.type || "")}</td>
                 <td>${escapeHTML(_rrFreqLabel(r))}</td>
                 <td>${escapeHTML(_rrFmtDate(r.nextDueAt || r.next_due_at))}</td>
@@ -577,8 +574,7 @@
                   <div class="row" style="gap:8px; justify-content:flex-start;">
                     ${_rrStatus(r) === "active"
                       ? `<button class="btn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">Pause</button>`
-                      : `<button class="btn" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`
-                    }
+                      : `<button class="btn" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`}
                     <button class="btn danger" data-rr-act="delete" data-rr-id="${escapeHTML(r.id)}">Supprimer</button>
                   </div>
                 </td>
@@ -594,7 +590,6 @@
         const el = ev.currentTarget;
         const id = String(el?.dataset?.rrId || "").trim();
         const act = String(el?.dataset?.rrAct || "").trim();
-
         if (!id) throw new Error("Règle introuvable.");
         if (!act) throw new Error("Action introuvable.");
 
@@ -603,20 +598,17 @@
           _tbToastOk("Échéance mise en pause.");
           return;
         }
-
         if (act === "resume") {
           await _rrResumeRule(id);
           _tbToastOk("Échéance reprise.");
           return;
         }
-
         if (act === "delete") {
-          if (!confirm("Supprimer cette échéance périodique ?\n\nLes occurrences non confirmées seront supprimées. Les occurrences déjà payées/confirmées doivent rester conservées.")) return;
+          if (!confirm("Supprimer cette échéance périodique ?\n\nLes occurrences non payées seront supprimées, y compris celles passées non confirmées. Les occurrences payées resteront conservées.")) return;
           await _rrArchive(id);
           _tbToastOk("Échéance supprimée.");
           return;
         }
-
         throw new Error("Action non reconnue.");
       });
     });

@@ -794,37 +794,55 @@ state.wallets = (w || []).map((x) => ({
     if (typeof syncTabsForRole === "function") syncTabsForRole();
   } catch (e) {}
 
-  // categories (Supabase is source of truth) — non-blocking at boot
+  // categories — DB first, then local/state, then filtered transaction fallback
 Promise.resolve(catPromise)
   .then(async ({ rows: catRows, error: catLoadErr }) => {
     if (catLoadErr) throw catLoadErr;
 
     const rows = catRows || [];
-    const dbNames = rows.map(r => String(r.name || "").trim()).filter(Boolean);
-    const lsNames = (typeof loadCategoriesFromLocalStorage === "function") ? (loadCategoriesFromLocalStorage() || []) : [];
-    const currentNames = Array.isArray(state.categories) ? state.categories : [];
-    const seen = new Set();
     const merged = [];
-
-    const pushName = (rawName) => {
-      const name = String(rawName || "").trim();
-      const lower = name.toLowerCase();
+    const seen = new Set();
+    const isTripLike = (name) => /^\s*\[\s*trip\s*\]/i.test(String(name || ""));
+    const isPlaceholder = (name) => /^(cat[ée]gorie|category|choisir une cat[ée]gorie)$/i.test(String(name || "").trim());
+    const push = (raw) => {
+      const name = String(raw || "").trim();
       if (!name) return;
-      if (lower === "catégorie" || lower === "category") return;
-      if (lower === "choisir une catégorie" || lower === "choose a category") return;
-      if (lower.startsWith("[trip]")) return;
-      if (lower === "mouvement interne") return;
-      if (seen.has(lower)) return;
+      if (isTripLike(name)) return;
+      if (isPlaceholder(name)) return;
+      const k = name.toLowerCase();
+      if (seen.has(k)) return;
+      seen.add(k);
       merged.push(name);
-      seen.add(lower);
     };
 
-    for (const rawName of dbNames) pushName(rawName);
-    for (const rawName of lsNames) pushName(rawName);
-    for (const rawName of currentNames) pushName(rawName);
+    const dbNames = rows.map(r => String(r.name || "").trim()).filter(Boolean);
+    dbNames.forEach(push);
+
+    try {
+      if (typeof loadCategoriesFromLocalStorage === "function") {
+        const arr = loadCategoriesFromLocalStorage();
+        if (Array.isArray(arr)) arr.forEach(push);
+      }
+    } catch (_) {}
+
+    (state.categories || []).forEach((c) => {
+      if (typeof c === "string") return push(c);
+      push(c?.name);
+      push(c?.label);
+      push(c?.category);
+    });
+
+    (state.transactions || []).forEach((t) => {
+      const cat = String(t?.category || "").trim();
+      if (!cat) return;
+      if (t?.tripExpenseId || t?.trip_expense_id) return;
+      if (t?.tripShareLinkId || t?.trip_share_link_id) return;
+      push(cat);
+    });
+
+    push("Mouvement interne");
 
     state.categories = merged;
-    try { if (typeof persistCategoriesToLocalStorage === "function") persistCategoriesToLocalStorage(); } catch (_) {}
 
     const m = {};
     for (const r of rows) {
@@ -834,6 +852,9 @@ Promise.resolve(catPromise)
     }
     state.categoryColors = m;
 
+    try {
+      if (typeof persistCategoriesToLocalStorage === "function") persistCategoriesToLocalStorage();
+    } catch (_) {}
 
     try {
       if (window.tbBus && typeof window.tbBus.emit === "function") {

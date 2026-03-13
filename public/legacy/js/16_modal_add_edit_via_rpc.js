@@ -639,9 +639,8 @@ async function markTxAsPaid(txId) {
     const wallet = findWallet(tx.walletId);
     if (!wallet) throw new Error("Wallet introuvable.");
 
-    const txCurrency = String(tx.currency || wallet.currency || '').toUpperCase();
-    const hasFrozenFx = !!(tx.fxSnapshotAt || tx.fx_snapshot_at);
-    const fxArgs = hasFrozenFx
+    const hasLockedFx = !!(tx.fxSnapshotAt || tx.fx_snapshot_at || tx.fxRateSnapshot || tx.fx_rate_snapshot);
+    const fxArgs = hasLockedFx
       ? {
           p_fx_rate_snapshot: null,
           p_fx_source_snapshot: null,
@@ -649,14 +648,14 @@ async function markTxAsPaid(txId) {
           p_fx_base_currency_snapshot: null,
           p_fx_tx_currency_snapshot: null,
         }
-      : _txBuildFxSnapshotArgs(tx.dateStart, txCurrency);
+      : _txBuildFxSnapshotArgs(tx.dateStart, String(tx.currency || wallet.currency || '').toUpperCase());
 
     const { error } = await sb.rpc("update_transaction_v2", {
       p_tx_id: tx.id,
       p_wallet_id: tx.walletId,
       p_type: tx.type,
       p_amount: Number(tx.amount),
-      p_currency: txCurrency,
+      p_currency: tx.currency || wallet.currency,
       p_category: tx.category || "Autre",
       p_label: tx.label || "",
       p_date_start: tx.dateStart,
