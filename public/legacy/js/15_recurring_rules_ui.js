@@ -106,7 +106,11 @@
   function _rrCategoryOptions() {
     const out = new Set();
 
-    (state?.categories || []).forEach((c) => {
+    const seed = (typeof getCategories === "function")
+      ? (getCategories() || [])
+      : (state?.categories || []);
+
+    (seed || []).forEach((c) => {
       if (typeof c === "string") {
         const v = c.trim();
         if (v) out.add(v);
@@ -126,11 +130,14 @@
     });
 
     (state?.transactions || []).forEach((t) => {
-      const s = String(t?.category || "").trim();
-      if (s) out.add(s);
+      const candidates = [t?.category, t?.label];
+      candidates.forEach((v) => {
+        const s = String(v || "").trim();
+        if (s) out.add(s);
+      });
     });
 
-    return Array.from(out).sort((a, b) => a.localeCompare(b));
+    return Array.from(out).sort((a, b) => a.localeCompare(b, "fr"));
   }
 
   function _rrEnsureSettingsBox() {
@@ -147,7 +154,7 @@
     card.innerHTML = `
       <h2>Échéances périodiques</h2>
       <div class="muted" style="margin-bottom:10px;">
-        Crée des règles récurrentes liées au voyage actif. Le moteur SQL génère ensuite les occurrences.
+        Crée des échéances simples pour le voyage actif. Les occurrences sont générées automatiquement à partir de cette règle.
       </div>
       <div class="row" style="justify-content:flex-end; margin-bottom:10px;">
         <button class="btn primary" id="tb-recurring-add-btn">+ Nouvelle échéance</button>
@@ -223,14 +230,31 @@
     return newRuleId;
   }
 
+  function _rrLooksLikeUuid(v) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || "").trim());
+  }
+
   async function _rrSetActive(ruleId, shouldBeActive) {
     const s = _rrGetSB();
     if (!s) throw new Error("Supabase non prêt.");
 
-    const rid = String(ruleId || "").trim();
-    if (!rid) throw new Error("Règle introuvable.");
+    let rid = ruleId;
+    let active = shouldBeActive;
 
-    const rpcName = shouldBeActive
+    // Defensive compatibility: tolerate old reversed calls like _rrSetActive(false, id)
+    if (typeof rid === "boolean" && typeof active !== "boolean") {
+      const tmp = rid;
+      rid = active;
+      active = tmp;
+    }
+
+    rid = String(rid || "").trim();
+    if (!rid) throw new Error("Règle introuvable.");
+    if (!_rrLooksLikeUuid(rid)) {
+      throw new Error(`Identifiant de règle invalide: ${rid}`);
+    }
+
+    const rpcName = active
       ? (TB_CONST?.RPCS?.recurring_resume_rule || "recurring_resume_rule")
       : (TB_CONST?.RPCS?.recurring_pause_rule || "recurring_pause_rule");
 
@@ -338,26 +362,36 @@
         <div class="field" style="min-width:180px;">
           <label>Fréquence</label>
           <select id="rr-rule-type">
-            <option value="daily">Quotidien</option>
-            <option value="weekly">Hebdomadaire</option>
-            <option value="every_x_months" selected>Mensuel</option>
-            <option value="yearly">Annuel</option>
+            <option value="daily">Tous les jours</option>
+            <option value="weekly">Toutes les semaines</option>
+            <option value="every_x_months" selected>Tous les mois</option>
+            <option value="yearly">Tous les ans</option>
           </select>
         </div>
 
-        <div class="field" style="min-width:140px;">
-          <label>Intervalle</label>
+        <div class="field" style="min-width:160px;">
+          <label id="rr-interval-label">Tous les</label>
           <input id="rr-interval-count" type="number" min="1" step="1" value="1" />
+          <div class="muted" id="rr-interval-help" style="font-size:12px; margin-top:4px;">Ex: 1 = chaque mois, 2 = un mois sur deux.</div>
         </div>
 
-        <div class="field" style="min-width:140px;">
-          <label>Jour semaine</label>
-          <input id="rr-weekday" type="number" min="0" max="6" placeholder="0-6" />
+        <div class="field" id="rr-weekday-wrap" style="min-width:180px; display:none;">
+          <label>Jour de la semaine</label>
+          <select id="rr-weekday">
+            <option value="1">Lundi</option>
+            <option value="2">Mardi</option>
+            <option value="3">Mercredi</option>
+            <option value="4">Jeudi</option>
+            <option value="5">Vendredi</option>
+            <option value="6">Samedi</option>
+            <option value="0">Dimanche</option>
+          </select>
         </div>
 
-        <div class="field" style="min-width:140px;">
-          <label>Jour mois</label>
+        <div class="field" id="rr-monthday-wrap" style="min-width:180px;">
+          <label>Jour du mois</label>
           <input id="rr-monthday" type="number" min="1" max="31" placeholder="1-31" />
+          <div class="muted" style="font-size:12px; margin-top:4px;">Ex: 5 = tous les 5 du mois.</div>
         </div>
       </div>
 
@@ -381,6 +415,15 @@
 
     const walletSel = document.getElementById("rr-wallet");
     const curInp = document.getElementById("rr-currency");
+    const ruleTypeSel = document.getElementById("rr-rule-type");
+    const intervalInp = document.getElementById("rr-interval-count");
+    const intervalLabel = document.getElementById("rr-interval-label");
+    const intervalHelp = document.getElementById("rr-interval-help");
+    const weekdayWrap = document.getElementById("rr-weekday-wrap");
+    const weekdaySel = document.getElementById("rr-weekday");
+    const monthdayWrap = document.getElementById("rr-monthday-wrap");
+    const monthdayInp = document.getElementById("rr-monthday");
+    const startDateInp = document.getElementById("rr-start-date");
     let currencyManuallyEdited = false;
 
     if (curInp) {
@@ -397,6 +440,58 @@
         if (cur) curInp.value = cur;
       });
     }
+
+
+
+    function _rrSyncModalFrequencyUI() {
+      const type = String(ruleTypeSel?.value || "every_x_months");
+      const start = _rrDateToUTCDate(String(startDateInp?.value || today));
+      const startWeekday = start ? start.getUTCDay() : 1;
+      const startMonthday = start ? start.getUTCDate() : 1;
+
+      if (weekdaySel && !weekdaySel.value) weekdaySel.value = String(startWeekday);
+      if (monthdayInp && !monthdayInp.value) monthdayInp.value = String(startMonthday);
+
+      if (type === "daily") {
+        if (intervalLabel) intervalLabel.textContent = "Tous les";
+        if (intervalHelp) intervalHelp.textContent = "Ex: 1 = tous les jours, 2 = un jour sur deux.";
+        if (weekdayWrap) weekdayWrap.style.display = "none";
+        if (monthdayWrap) monthdayWrap.style.display = "none";
+      } else if (type === "weekly") {
+        if (intervalLabel) intervalLabel.textContent = "Toutes les";
+        if (intervalHelp) intervalHelp.textContent = "Ex: 1 = chaque semaine, 2 = une semaine sur deux.";
+        if (weekdayWrap) weekdayWrap.style.display = "";
+        if (monthdayWrap) monthdayWrap.style.display = "none";
+        if (weekdaySel && startDateInp?.value) weekdaySel.value = String(startWeekday);
+      } else if (type === "yearly") {
+        if (intervalLabel) intervalLabel.textContent = "Tous les";
+        if (intervalHelp) intervalHelp.textContent = "Ex: 1 = chaque année, 2 = une année sur deux.";
+        if (weekdayWrap) weekdayWrap.style.display = "none";
+        if (monthdayWrap) monthdayWrap.style.display = "none";
+      } else {
+        if (intervalLabel) intervalLabel.textContent = "Tous les";
+        if (intervalHelp) intervalHelp.textContent = "Ex: 1 = chaque mois, 2 = un mois sur deux.";
+        if (weekdayWrap) weekdayWrap.style.display = "none";
+        if (monthdayWrap) monthdayWrap.style.display = "";
+        if (monthdayInp && startDateInp?.value && !monthdayInp.dataset.userEdited) {
+          monthdayInp.value = String(startMonthday);
+        }
+      }
+
+      if (intervalInp) {
+        intervalInp.placeholder = type === "weekly" ? "semaines" : type === "daily" ? "jours" : type === "yearly" ? "ans" : "mois";
+      }
+    }
+
+    if (monthdayInp) {
+      monthdayInp.addEventListener("input", () => {
+        monthdayInp.dataset.userEdited = "1";
+      });
+    }
+
+    if (ruleTypeSel) ruleTypeSel.addEventListener("change", _rrSyncModalFrequencyUI);
+    if (startDateInp) startDateInp.addEventListener("change", _rrSyncModalFrequencyUI);
+    _rrSyncModalFrequencyUI();
 
     modal.setActions([
       { label: "Annuler", className: "btn", onClick: () => modal.close() },
@@ -426,8 +521,20 @@
           if (!start_date) throw new Error("Date de début requise.");
           if (end_date && end_date < start_date) throw new Error("La date de fin doit être ≥ à la date de début.");
 
-          const weekday = weekdayRaw === "" ? null : Number(weekdayRaw);
-          const monthday = monthdayRaw === "" ? null : Number(monthdayRaw);
+          let weekday = weekdayRaw === "" ? null : Number(weekdayRaw);
+          let monthday = monthdayRaw === "" ? null : Number(monthdayRaw);
+
+          if (rule_type === "daily" || rule_type === "yearly") {
+            weekday = null;
+            monthday = null;
+          }
+          if (rule_type === "weekly") {
+            monthday = null;
+          }
+          if (rule_type === "every_x_months" && !(monthday >= 1 && monthday <= 31)) {
+            const start = _rrDateToUTCDate(start_date);
+            monthday = start ? start.getUTCDate() : null;
+          }
 
           const next_due_at = _rrComputeFirstDueDate(
             rule_type,
