@@ -83,6 +83,27 @@
     return /^(cat[ée]gorie|category|choisir une cat[ée]gorie)$/i.test(String(name || "").trim());
   }
 
+
+  async function _rrFetchDbCategories() {
+    const s = _rrGetSB();
+    if (!s) return [];
+    try {
+      const uid = await _tbAuthUid();
+      if (!uid) return [];
+      const { data, error } = await s
+        .from(TB_CONST.TABLES.categories)
+        .select('name')
+        .eq('user_id', uid)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return (data || []).map((r) => String(r?.name || '').trim()).filter(Boolean);
+    } catch (e) {
+      console.warn('[RR categories] db fetch failed', e);
+      return [];
+    }
+  }
+
   function _rrShouldKeepTxCategory(tx) {
     if (!tx) return false;
     if (tx.tripExpenseId || tx.trip_expense_id) return false;
@@ -94,7 +115,7 @@
     return true;
   }
 
-  function _rrCategoryOptions() {
+  async function _rrCategoryOptions() {
     const out = [];
     const seen = new Set();
     const push = (raw) => {
@@ -107,6 +128,8 @@
       seen.add(key);
       out.push(name);
     };
+
+    (await _rrFetchDbCategories()).forEach(push);
 
     try {
       if (typeof getCategories === "function") {
@@ -350,7 +373,7 @@
 
     const activeTravel = (state?.travels || []).find((t) => String(t.id) === String(state?.activeTravelId || ""));
     const baseCur = String(activeTravel?.base_currency || state?.period?.baseCurrency || "EUR").toUpperCase();
-    const cats = _rrCategoryOptions();
+    const cats = await _rrCategoryOptions();
     const modal = (typeof _tbEnsureModal === "function") ? _tbEnsureModal() : null;
     if (!modal) throw new Error("Modal indisponible.");
     const today = _tbISO(new Date());
@@ -448,10 +471,13 @@
       </div>
 
       <div class="row">
-        <label style="display:flex; align-items:center; gap:8px; margin-top:4px;">
-          <input id="rr-out-of-budget" type="checkbox" />
-          <span>Hors budget</span>
-        </label>
+        <div class="field" style="min-width:220px;">
+          <label>Impact budget</label>
+          <select id="rr-budget-mode">
+            <option value="budget" selected>Dans le budget</option>
+            <option value="out">Hors budget</option>
+          </select>
+        </div>
       </div>
     `);
 
@@ -493,7 +519,8 @@
             const start_date = String(document.getElementById("rr-start-date")?.value || "");
             const end_date = String(document.getElementById("rr-end-date")?.value || "");
             const maxOccRaw = document.getElementById("rr-max-occurrences")?.value;
-            const out_of_budget = !!document.getElementById("rr-out-of-budget")?.checked;
+            const budget_mode = String(document.getElementById("rr-budget-mode")?.value || "budget").trim();
+            const out_of_budget = (budget_mode === "out");
 
             if (!label) throw new Error("Nom requis.");
             if (!(amount > 0)) throw new Error("Montant invalide.");
