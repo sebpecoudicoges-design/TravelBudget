@@ -121,6 +121,13 @@ function _tbGetTravelPrimaryPeriod(travelId) {
   return rows[0] || null;
 }
 
+function _tbGetVisibleTravels() {
+  return (state.travels || [])
+    .filter(t => !!_tbGetTravelPrimaryPeriod(t.id))
+    .slice()
+    .sort((a, b) => String(a.start || a.start_date || "").localeCompare(String(b.start || b.start_date || "")));
+}
+
 function _tbFormatTravelOptionLabel(t) {
   const row = t || {};
   const name = String(row.name || "").trim();
@@ -177,7 +184,7 @@ async function loadPeriodsListIntoUI(){
   if(!sel) return;
 
   sel.innerHTML = "";
-  const travels = (state.travels || []).slice().sort((a,b)=>String(a.start || "").localeCompare(String(b.start || "")));
+  const travels = _tbGetVisibleTravels();
   travels.forEach(t=>{
     const opt = document.createElement("option");
     opt.value = t.id;
@@ -185,7 +192,14 @@ async function loadPeriodsListIntoUI(){
     sel.appendChild(opt);
   });
 
-  const activeTravelId = String(state?.activeTravelId || travels[0]?.id || "");
+  let activeTravelId = String(state?.activeTravelId || "");
+  if (!travels.some(t => String(t.id) === activeTravelId)) {
+    activeTravelId = String(travels[0]?.id || "");
+    if (activeTravelId) {
+      const activePeriod = _tbGetTravelPrimaryPeriod(activeTravelId);
+      _tbSetActiveTravelAndPeriod(activeTravelId, activePeriod?.id || "");
+    }
+  }
   if(activeTravelId){
     sel.value = activeTravelId;
     const activePeriod = _tbGetTravelPrimaryPeriod(activeTravelId);
@@ -197,28 +211,6 @@ async function loadPeriodsListIntoUI(){
     if (inp) {
       const t = _tbGetActiveTravelRow();
       inp.value = t?.name || "";
-
-      if (!inp.__tbBoundTravelName) {
-        inp.__tbBoundTravelName = true;
-        let tmr = null;
-
-        const save = async () => {
-          const val = String(inp.value || "").trim();
-          if (!val) return;
-          await _tbSaveActiveTravelName(val);
-          renderSettings();
-          try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
-        };
-
-        inp.addEventListener("input", () => {
-          if (tmr) clearTimeout(tmr);
-          tmr = setTimeout(() => { safeCall("Nom du voyage", save); }, 350);
-        });
-
-        inp.addEventListener("blur", () => {
-          safeCall("Nom du voyage", save);
-        });
-      }
     }
   } catch (_) {}
 
@@ -699,7 +691,7 @@ if (tid) {
   } else if (typeof refreshFromServer === "function") {
     await refreshFromServer();
   }
-  _tbToastOk("Dates du voyage enregistrées.");
+  _tbToastOk("Voyage mis à jour.");
 }
 
 async function _createVoyagePromptImpl(){
@@ -819,7 +811,7 @@ async function _createVoyagePromptImpl(){
   modal.open();
 }
 
-async function deleteActiveVoyage(){
+async function _deleteActiveVoyageImpl(){
   const s = _tbGetSB();
   if(!s) throw new Error("Supabase non prêt.");
   const tid = String(state?.activeTravelId || "");
@@ -827,15 +819,57 @@ async function deleteActiveVoyage(){
 
   const t = _tbGetActiveTravelRow();
   const label = t?.name || `Voyage ${_tbISO(t?.start)} → ${_tbISO(t?.end)}`;
-  if(!confirm(`Supprimer ${label} ?\n\nRefusé si des données y sont liées.`)) return;
+  if(!confirm(`Supprimer ${label} ?
+
+La suppression est refusée si des données sont liées.`)) return;
+
+  const primaryPeriod = _tbGetTravelPrimaryPeriod(tid);
+  const pid = String(primaryPeriod?.id || "");
+
+  const checks = [
+    [TB_CONST.TABLES.wallets, 'travel_id', 'wallets'],
+    [TB_CONST.TABLES.transactions, 'travel_id', 'transactions'],
+    [TB_CONST.TABLES.recurring_rules, 'travel_id', 'échéances périodiques'],
+    [TB_CONST.TABLES.trip_groups, 'travel_id', 'trip groups'],
+    [TB_CONST.TABLES.trip_expenses, 'travel_id', 'dépenses trip']
+  ];
+  for (const [table, col, labelCount] of checks) {
+    const { count, error } = await s.from(table).select('id', { count: 'exact', head: true }).eq(col, tid);
+    if (error) throw error;
+    if (Number(count || 0) > 0) {
+      throw new Error(`Suppression refusée : ${labelCount} liés au voyage.`);
+    }
+  }
+
+  if (pid) {
+    const { error: segErr } = await s.from(TB_CONST.TABLES.budget_segments).delete().eq('period_id', pid);
+    if (segErr) throw segErr;
+    const { error: pErr } = await s.from(TB_CONST.TABLES.periods).delete().eq('id', pid);
+    if (pErr) throw pErr;
+  }
 
   const { error } = await s.from(TB_CONST.TABLES.travels).delete().eq("id", tid);
   if(error) throw error;
+
+  try {
+    localStorage.removeItem("travelbudget_active_travel_id_v1");
+    localStorage.removeItem("travelbudget_active_period_id_v1");
+  } catch (_) {}
+
   if (typeof window.refreshFromServer === "function") {
     await window.refreshFromServer();
   } else if (typeof refreshFromServer === "function") {
     await refreshFromServer();
   }
+
+  const visibleTravels = _tbGetVisibleTravels();
+  const nextTravel = visibleTravels[0] || null;
+  if (nextTravel) {
+    const nextPeriod = _tbGetTravelPrimaryPeriod(nextTravel.id);
+    _tbSetActiveTravelAndPeriod(nextTravel.id, nextPeriod?.id || "");
+  }
+
+  renderSettings();
   _tbToastOk("Voyage supprimé.");
 }
 
@@ -1324,7 +1358,7 @@ window.saveSettings = ()=>safeCall("Enregistrer voyage", _saveSettingsImpl);
 window.createPeriodPrompt = ()=>safeCall("Ajouter période", _createPeriodPromptImpl);
 window.deleteActivePeriod = ()=>_tbToastOk("Suppression de période: utilise le bouton Supprimer sur une période.");
 window.createVoyagePrompt = ()=>safeCall("Ajouter voyage", _createVoyagePromptImpl);
-window.deleteActiveVoyage = ()=>safeCall("Supprimer voyage", deleteActiveVoyage);
+window.deleteActiveVoyage = ()=>safeCall("Supprimer voyage", _deleteActiveVoyageImpl);
 
 // initial boot hook
 (async function _tbSettingsInit(){
