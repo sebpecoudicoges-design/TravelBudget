@@ -105,6 +105,7 @@
 
   function _rrCategoryOptions() {
     const rawDb = (typeof getCategories === "function") ? getCategories() : (Array.isArray(state?.categories) ? state.categories : []);
+    const rawLs = (typeof loadCategoriesFromLocalStorage === "function") ? (loadCategoriesFromLocalStorage() || []) : [];
     const rawTx = Array.isArray(state?.transactions) ? state.transactions : [];
     const out = [];
     const seen = new Set();
@@ -123,6 +124,7 @@
     };
 
     for (const item of (rawDb || [])) pushName(item);
+    for (const item of (rawLs || [])) pushName(item);
 
     for (const tx of rawTx) {
       const isTrip = !!(tx?.tripExpenseId || tx?.tripShareLinkId);
@@ -262,6 +264,11 @@
     const rpcName = TB_CONST?.RPCS?.recurring_resume_rule || "recurring_resume_rule";
     const { error } = await s.rpc(rpcName, { p_rule_id: rid });
     if (error) throw error;
+
+    const genRpcName = TB_CONST?.RPCS?.recurring_generate_for_rule || "recurring_generate_for_rule";
+    const { error: genErr } = await s.rpc(genRpcName, { p_rule_id: rid });
+    if (genErr) throw genErr;
+
     await _rrRefreshAndRender();
   }
 

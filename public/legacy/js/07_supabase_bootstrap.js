@@ -801,22 +801,30 @@ Promise.resolve(catPromise)
 
     const rows = catRows || [];
     const dbNames = rows.map(r => String(r.name || "").trim()).filter(Boolean);
+    const lsNames = (typeof loadCategoriesFromLocalStorage === "function") ? (loadCategoriesFromLocalStorage() || []) : [];
+    const currentNames = Array.isArray(state.categories) ? state.categories : [];
     const seen = new Set();
     const merged = [];
 
-    for (const rawName of dbNames) {
+    const pushName = (rawName) => {
       const name = String(rawName || "").trim();
       const lower = name.toLowerCase();
-      if (!name) continue;
-      if (lower === "catégorie" || lower === "category") continue;
-      if (lower.startsWith("[trip]")) continue;
-      if (lower === "mouvement interne") continue;
-      if (seen.has(lower)) continue;
+      if (!name) return;
+      if (lower === "catégorie" || lower === "category") return;
+      if (lower === "choisir une catégorie" || lower === "choose a category") return;
+      if (lower.startsWith("[trip]")) return;
+      if (lower === "mouvement interne") return;
+      if (seen.has(lower)) return;
       merged.push(name);
       seen.add(lower);
-    }
+    };
+
+    for (const rawName of dbNames) pushName(rawName);
+    for (const rawName of lsNames) pushName(rawName);
+    for (const rawName of currentNames) pushName(rawName);
 
     state.categories = merged;
+    try { if (typeof persistCategoriesToLocalStorage === "function") persistCategoriesToLocalStorage(); } catch (_) {}
 
     const m = {};
     for (const r of rows) {

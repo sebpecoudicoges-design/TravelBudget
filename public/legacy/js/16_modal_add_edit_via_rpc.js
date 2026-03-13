@@ -639,12 +639,24 @@ async function markTxAsPaid(txId) {
     const wallet = findWallet(tx.walletId);
     if (!wallet) throw new Error("Wallet introuvable.");
 
+    const txCurrency = String(tx.currency || wallet.currency || '').toUpperCase();
+    const hasFrozenFx = !!(tx.fxSnapshotAt || tx.fx_snapshot_at);
+    const fxArgs = hasFrozenFx
+      ? {
+          p_fx_rate_snapshot: null,
+          p_fx_source_snapshot: null,
+          p_fx_snapshot_at: null,
+          p_fx_base_currency_snapshot: null,
+          p_fx_tx_currency_snapshot: null,
+        }
+      : _txBuildFxSnapshotArgs(tx.dateStart, txCurrency);
+
     const { error } = await sb.rpc("update_transaction_v2", {
       p_tx_id: tx.id,
       p_wallet_id: tx.walletId,
       p_type: tx.type,
       p_amount: Number(tx.amount),
-      p_currency: wallet.currency,
+      p_currency: txCurrency,
       p_category: tx.category || "Autre",
       p_label: tx.label || "",
       p_date_start: tx.dateStart,
@@ -652,7 +664,7 @@ async function markTxAsPaid(txId) {
       p_pay_now: true,
       p_out_of_budget: !!tx.outOfBudget,
       p_night_covered: !!tx.nightCovered,
-      ..._txBuildFxSnapshotArgs(tx.dateStart, String(wallet.currency || '').toUpperCase())
+      ...fxArgs
     });
 
     if (error) throw error;
