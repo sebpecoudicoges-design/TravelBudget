@@ -228,7 +228,7 @@
 
   const { error } = await s.rpc(rpcName, {
     p_rule_id: rid,
-    p_mode: "rule_and_future_and_unconfirmed_past"
+    p_mode: "rule_only"
   });
   if (error) throw error;
 
@@ -276,26 +276,29 @@
         </div>
       </div>
 
-      <div class="row">
-        <div class="field" style="min-width:120px;">
-          <label>Devise</label>
-          <input id="rr-currency" type="text" value="${escapeHTML(baseCur)}" />
+      <div class="field" style="min-width:220px;">
+        <label>Wallet</label>
+        <select id="rr-wallet">
+         ${wallets.map(w => `<option value="${escapeHTML(w.id)}" data-cur="${escapeHTML(String(w.currency || "").toUpperCase())}">${escapeHTML(w.name)} — ${escapeHTML(w.currency)}</option>`).join("")}
+        </select>
         </div>
 
-        <div class="field" style="min-width:220px;">
-          <label>Wallet</label>
-          <select id="rr-wallet">
-            ${wallets.map(w => `<option value="${escapeHTML(w.id)}">${escapeHTML(w.name)} — ${escapeHTML(w.currency)}</option>`).join("")}
-          </select>
+        <div class="field" style="min-width:120px;">
+         <label>Devise</label>
+         <input id="rr-currency" type="text" value="${escapeHTML(String(wallets[0]?.currency || baseCur || "EUR").toUpperCase())}" />
         </div>
 
         <div class="field" style="min-width:180px;">
-  <label>Catégorie</label>
-  <select id="rr-category">
-    <option value="">Catégorie</option>
-    ${cats.map(c => `<option value="${escapeHTML(c.name || "")}">${escapeHTML(c.name || "")}</option>`).join("")}
-  </select>
-</div>
+        <label>Catégorie</label>
+        <select id="rr-category">
+            <option value="">Catégorie</option>
+         ${Array.from(new Set(
+           cats
+                .map(c => String(c?.name || c?.label || c?.category || "").trim())
+                .filter(Boolean)
+            )).map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join("")}
+        </select>
+        </div>
 
         <div class="field" style="min-width:180px;">
           <label>Sous-catégorie</label>
@@ -419,6 +422,25 @@
       }
     ]);
 
+    const walletSel = document.getElementById("rr-wallet");
+    const curInp = document.getElementById("rr-currency");
+    let currencyManuallyEdited = false;
+
+    if (curInp) {
+      curInp.addEventListener("input", () => {
+       currencyManuallyEdited = true;
+     });
+    }
+
+    if (walletSel && curInp) {
+     walletSel.addEventListener("change", () => {
+       if (currencyManuallyEdited) return;
+       const opt = walletSel.options[walletSel.selectedIndex];
+       const cur = String(opt?.dataset?.cur || "").trim().toUpperCase();
+       if (cur) curInp.value = cur;
+     });
+    }
+
     modal.open();
   };
 
@@ -475,31 +497,36 @@
       </div>
     `;
 
-    host.querySelectorAll("[data-rr-act]").forEach(btn => {
-      btn.onclick = () => safeCall("Échéances périodiques", async () => {
-        const id = String(btn.getAttribute("data-rr-id") || "");
-        const act = String(btn.getAttribute("data-rr-act") || "");
+    host.querySelectorAll("[data-rr-act]").forEach((btn) => {
+    btn.onclick = (ev) => safeCall("Échéances périodiques", async () => {
+     const el = ev.currentTarget;
+     const id = String(el?.dataset?.rrId || "").trim();
+     const act = String(el?.dataset?.rrAct || "").trim();
 
-        if (!id || !act) return;
+     if (!id) throw new Error("Règle introuvable.");
+     if (!act) throw new Error("Action introuvable.");
 
-        if (act === "pause") {
-          await _rrSetActive(id, false);
-          _tbToastOk("Échéance mise en pause.");
-          return;
-        }
+     if (act === "pause") {
+       await _rrSetActive(id, false);
+       _tbToastOk("Échéance mise en pause.");
+       return;
+     }
 
-        if (act === "resume") {
-          await _rrSetActive(id, true);
-          _tbToastOk("Échéance reprise.");
-          return;
-        }
+     if (act === "resume") {
+       await _rrSetActive(id, true);
+       _tbToastOk("Échéance reprise.");
+       return;
+     }
 
-        if (act === "delete") {
-          if (!confirm("Supprimer cette échéance périodique ?")) return;
-          await _rrArchive(id);
-          _tbToastOk("Échéance supprimée.");
-        }
-      });
+     if (act === "delete") {
+       if (!confirm("Supprimer cette échéance périodique ?\n\nLa règle sera archivée, mais les occurrences déjà créées seront conservées.")) return;
+       await _rrArchive(id);
+       _tbToastOk("Échéance supprimée.");
+       return;
+     }
+
+     throw new Error("Action non reconnue.");
+     });
     });
   };
 })();
