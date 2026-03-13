@@ -75,15 +75,19 @@
     if (!tid) throw new Error("Voyage actif requis.");
 
     const insertPayload = {
-      user_id: uid,
-      travel_id: tid,
-      wallet_id: payload.wallet_id,
-      label: payload.label,
-      amount: payload.amount,
-      currency: payload.currency,
+     user_id: uid,
+     travel_id: tid,
+     wallet_id: payload.wallet_id,
+     label: payload.label,
+     amount: payload.amount,
+     currency: payload.currency,
+
+     type: payload.rule_type,          // 🔧 FIX SQL
+     rule_type: payload.rule_type,
+
       category: payload.category || null,
       subcategory: payload.subcategory || null,
-      rule_type: payload.rule_type,
+
       interval_count: payload.interval_count,
       weekday: payload.weekday,
       monthday: payload.monthday,
