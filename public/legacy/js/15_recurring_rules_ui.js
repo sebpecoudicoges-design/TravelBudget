@@ -1,3 +1,4 @@
+// public/legacy/js/15_recurring_rules_ui.js
 (function(){
   function _rrGetSB() {
     if (typeof _tbGetSB === "function") return _tbGetSB();
@@ -102,6 +103,36 @@
     return (state?.wallets || []).filter(w => String(w?.travelId || w?.travel_id || "") === tid);
   }
 
+  function _rrCategoryOptions() {
+    const out = new Set();
+
+    (state?.categories || []).forEach((c) => {
+      if (typeof c === "string") {
+        const v = c.trim();
+        if (v) out.add(v);
+        return;
+      }
+
+      const candidates = [
+        c?.name,
+        c?.label,
+        c?.category
+      ];
+
+      candidates.forEach((v) => {
+        const s = String(v || "").trim();
+        if (s) out.add(s);
+      });
+    });
+
+    (state?.transactions || []).forEach((t) => {
+      const s = String(t?.category || "").trim();
+      if (s) out.add(s);
+    });
+
+    return Array.from(out).sort((a, b) => a.localeCompare(b));
+  }
+
   function _rrEnsureSettingsBox() {
     const view = document.getElementById("view-settings");
     if (!view) return null;
@@ -193,53 +224,53 @@
   }
 
   async function _rrSetActive(ruleId, shouldBeActive) {
-  const s = _rrGetSB();
-  if (!s) throw new Error("Supabase non prêt.");
+    const s = _rrGetSB();
+    if (!s) throw new Error("Supabase non prêt.");
 
-  const rid = String(ruleId || "").trim();
-  if (!rid) throw new Error("Règle introuvable.");
+    const rid = String(ruleId || "").trim();
+    if (!rid) throw new Error("Règle introuvable.");
 
-  const rpcName = shouldBeActive
-    ? (TB_CONST?.RPCS?.recurring_resume_rule || "recurring_resume_rule")
-    : (TB_CONST?.RPCS?.recurring_pause_rule || "recurring_pause_rule");
+    const rpcName = shouldBeActive
+      ? (TB_CONST?.RPCS?.recurring_resume_rule || "recurring_resume_rule")
+      : (TB_CONST?.RPCS?.recurring_pause_rule || "recurring_pause_rule");
 
-  const { error } = await s.rpc(rpcName, { p_rule_id: rid });
-  if (error) throw error;
+    const { error } = await s.rpc(rpcName, { p_rule_id: rid });
+    if (error) throw error;
 
-  if (typeof window.refreshFromServer === "function") {
-    await window.refreshFromServer();
-  } else if (typeof refreshFromServer === "function") {
-    await refreshFromServer();
+    if (typeof window.refreshFromServer === "function") {
+      await window.refreshFromServer();
+    } else if (typeof refreshFromServer === "function") {
+      await refreshFromServer();
+    }
+
+    window.renderRecurringRules();
   }
 
-  window.renderRecurringRules();
-}
+  async function _rrArchive(ruleId) {
+    const s = _rrGetSB();
+    if (!s) throw new Error("Supabase non prêt.");
 
- async function _rrArchive(ruleId) {
-  const s = _rrGetSB();
-  if (!s) throw new Error("Supabase non prêt.");
+    const rid = String(ruleId || "").trim();
+    if (!rid) throw new Error("Règle introuvable.");
 
-  const rid = String(ruleId || "").trim();
-  if (!rid) throw new Error("Règle introuvable.");
+    const rpcName =
+      TB_CONST?.RPCS?.recurring_delete_rule ||
+      "recurring_delete_rule";
 
-  const rpcName =
-    TB_CONST?.RPCS?.recurring_delete_rule ||
-    "recurring_delete_rule";
+    const { error } = await s.rpc(rpcName, {
+      p_rule_id: rid,
+      p_mode: "rule_and_future"
+    });
+    if (error) throw error;
 
-  const { error } = await s.rpc(rpcName, {
-    p_rule_id: rid,
-    p_mode: "rule_only"
-  });
-  if (error) throw error;
+    if (typeof window.refreshFromServer === "function") {
+      await window.refreshFromServer();
+    } else if (typeof refreshFromServer === "function") {
+      await refreshFromServer();
+    }
 
-  if (typeof window.refreshFromServer === "function") {
-    await window.refreshFromServer();
-  } else if (typeof refreshFromServer === "function") {
-    await refreshFromServer();
+    window.renderRecurringRules();
   }
-
-  window.renderRecurringRules();
-}
 
   window.openRecurringRuleModal = async function openRecurringRuleModal() {
     const wallets = _rrWalletOptions();
@@ -247,7 +278,7 @@
 
     const activeTravel = (state?.travels || []).find(t => String(t.id) === String(state?.activeTravelId || ""));
     const baseCur = String(activeTravel?.base_currency || state?.period?.baseCurrency || "EUR").toUpperCase();
-    const cats = Array.isArray(state?.categories) ? state.categories : [];
+    const cats = _rrCategoryOptions();
 
     const modal = (typeof _tbEnsureModal === "function") ? _tbEnsureModal() : null;
     if (!modal) throw new Error("Modal indisponible.");
@@ -276,28 +307,25 @@
         </div>
       </div>
 
-      <div class="field" style="min-width:220px;">
-        <label>Wallet</label>
-        <select id="rr-wallet">
-         ${wallets.map(w => `<option value="${escapeHTML(w.id)}" data-cur="${escapeHTML(String(w.currency || "").toUpperCase())}">${escapeHTML(w.name)} — ${escapeHTML(w.currency)}</option>`).join("")}
-        </select>
+      <div class="row">
+        <div class="field" style="min-width:220px;">
+          <label>Wallet</label>
+          <select id="rr-wallet">
+            ${wallets.map(w => `<option value="${escapeHTML(w.id)}" data-cur="${escapeHTML(String(w.currency || "").toUpperCase())}">${escapeHTML(w.name)} — ${escapeHTML(w.currency)}</option>`).join("")}
+          </select>
         </div>
 
         <div class="field" style="min-width:120px;">
-         <label>Devise</label>
-         <input id="rr-currency" type="text" value="${escapeHTML(String(wallets[0]?.currency || baseCur || "EUR").toUpperCase())}" />
+          <label>Devise</label>
+          <input id="rr-currency" type="text" value="${escapeHTML(String(wallets[0]?.currency || baseCur || "EUR").toUpperCase())}" />
         </div>
 
         <div class="field" style="min-width:180px;">
-        <label>Catégorie</label>
-        <select id="rr-category">
+          <label>Catégorie</label>
+          <select id="rr-category">
             <option value="">Catégorie</option>
-         ${Array.from(new Set(
-           cats
-                .map(c => String(c?.name || c?.label || c?.category || "").trim())
-                .filter(Boolean)
-            )).map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join("")}
-        </select>
+            ${cats.map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join("")}
+          </select>
         </div>
 
         <div class="field" style="min-width:180px;">
@@ -350,6 +378,25 @@
         </div>
       </div>
     `);
+
+    const walletSel = document.getElementById("rr-wallet");
+    const curInp = document.getElementById("rr-currency");
+    let currencyManuallyEdited = false;
+
+    if (curInp) {
+      curInp.addEventListener("input", () => {
+        currencyManuallyEdited = true;
+      });
+    }
+
+    if (walletSel && curInp) {
+      walletSel.addEventListener("change", () => {
+        if (currencyManuallyEdited) return;
+        const opt = walletSel.options[walletSel.selectedIndex];
+        const cur = String(opt?.dataset?.cur || "").trim().toUpperCase();
+        if (cur) curInp.value = cur;
+      });
+    }
 
     modal.setActions([
       { label: "Annuler", className: "btn", onClick: () => modal.close() },
@@ -422,25 +469,6 @@
       }
     ]);
 
-    const walletSel = document.getElementById("rr-wallet");
-    const curInp = document.getElementById("rr-currency");
-    let currencyManuallyEdited = false;
-
-    if (curInp) {
-      curInp.addEventListener("input", () => {
-       currencyManuallyEdited = true;
-     });
-    }
-
-    if (walletSel && curInp) {
-     walletSel.addEventListener("change", () => {
-       if (currencyManuallyEdited) return;
-       const opt = walletSel.options[walletSel.selectedIndex];
-       const cur = String(opt?.dataset?.cur || "").trim().toUpperCase();
-       if (cur) curInp.value = cur;
-     });
-    }
-
     modal.open();
   };
 
@@ -498,35 +526,35 @@
     `;
 
     host.querySelectorAll("[data-rr-act]").forEach((btn) => {
-    btn.onclick = (ev) => safeCall("Échéances périodiques", async () => {
-     const el = ev.currentTarget;
-     const id = String(el?.dataset?.rrId || "").trim();
-     const act = String(el?.dataset?.rrAct || "").trim();
+      btn.onclick = (ev) => safeCall("Échéances périodiques", async () => {
+        const el = ev.currentTarget;
+        const id = String(el?.dataset?.rrId || "").trim();
+        const act = String(el?.dataset?.rrAct || "").trim();
 
-     if (!id) throw new Error("Règle introuvable.");
-     if (!act) throw new Error("Action introuvable.");
+        if (!id) throw new Error("Règle introuvable.");
+        if (!act) throw new Error("Action introuvable.");
 
-     if (act === "pause") {
-       await _rrSetActive(id, false);
-       _tbToastOk("Échéance mise en pause.");
-       return;
-     }
+        if (act === "pause") {
+          await _rrSetActive(id, false);
+          _tbToastOk("Échéance mise en pause.");
+          return;
+        }
 
-     if (act === "resume") {
-       await _rrSetActive(id, true);
-       _tbToastOk("Échéance reprise.");
-       return;
-     }
+        if (act === "resume") {
+          await _rrSetActive(id, true);
+          _tbToastOk("Échéance reprise.");
+          return;
+        }
 
-     if (act === "delete") {
-       if (!confirm("Supprimer cette échéance périodique ?\n\nLa règle sera archivée, mais les occurrences déjà créées seront conservées.")) return;
-       await _rrArchive(id);
-       _tbToastOk("Échéance supprimée.");
-       return;
-     }
+        if (act === "delete") {
+          if (!confirm("Supprimer cette échéance périodique ?\n\nLes occurrences futures générées seront supprimées, mais les occurrences déjà passées resteront conservées.")) return;
+          await _rrArchive(id);
+          _tbToastOk("Échéance supprimée.");
+          return;
+        }
 
-     throw new Error("Action non reconnue.");
-     });
+        throw new Error("Action non reconnue.");
+      });
     });
   };
 })();
