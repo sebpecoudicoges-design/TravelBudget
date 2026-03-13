@@ -103,51 +103,33 @@
     return (state?.wallets || []).filter(w => String(w?.travelId || w?.travel_id || "") === tid);
   }
 
-
-
-  function _rrIsUuid(v) {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || "").trim());
-  }
-
-  function _rrIsUsableCategory(v) {
-    const s = String(v || "").trim();
-    if (!s) return false;
-    const low = s.toLowerCase();
-    if (low === 'catégorie' || low === 'categorie') return false;
-    if (/^\[trip\]/i.test(s)) return false;
-    return true;
-  }
-
   function _rrCategoryOptions() {
-    const out = new Set();
+    const raw = (typeof getCategories === "function") ? getCategories() : (Array.isArray(state?.categories) ? state.categories : []);
+    const out = [];
+    const seen = new Set();
 
-    const addCat = (value) => {
-      const s = String(value || "").trim();
-      if (!_rrIsUsableCategory(s)) return;
-      out.add(s);
-    };
+    for (const item of (raw || [])) {
+      const name = String(typeof item === "string" ? item : (item?.name || item?.label || item?.category || "")).trim();
+      const lower = name.toLowerCase();
+      if (!name) continue;
+      if (lower === "catégorie" || lower === "category") continue;
+      if (lower.startsWith("[trip]")) continue;
+      if (lower === "mouvement interne") continue;
+      if (seen.has(lower)) continue;
+      seen.add(lower);
+      out.push(name);
+    }
 
-    try {
-      if (typeof getCategories === "function") {
-        (getCategories() || []).forEach(addCat);
-      }
-    } catch (_) {}
+    return out.sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+  }
 
-    (state?.categories || []).forEach((c) => {
-      if (typeof c === "string") {
-        addCat(c);
-        return;
-      }
-
-      [c?.name, c?.label, c?.category].forEach(addCat);
-    });
-
-    (state?.transactions || []).forEach((t) => {
-      if (t?.tripExpenseId || t?.tripShareLinkId || t?.isInternal) return;
-      addCat(t?.category);
-    });
-
-    return Array.from(out).sort((a, b) => a.localeCompare(b));
+  async function _rrRefreshAndRender() {
+    if (typeof window.refreshFromServer === "function") {
+      await window.refreshFromServer();
+    } else if (typeof refreshFromServer === "function") {
+      await refreshFromServer();
+    }
+    window.renderRecurringRules();
   }
 
   function _rrEnsureSettingsBox() {
@@ -240,36 +222,36 @@
     return newRuleId;
   }
 
-  async function _rrSetActive(a, b) {
+  async function _rrPauseRule(ruleId) {
     const s = _rrGetSB();
     if (!s) throw new Error("Supabase non prêt.");
 
-    let rid = null;
-    let active = null;
-
-    if (_rrIsUuid(a)) rid = String(a).trim();
-    if (_rrIsUuid(b)) rid = String(b).trim();
-
-    if (typeof a === "boolean") active = a;
-    if (typeof b === "boolean") active = b;
-
-    if (!_rrIsUuid(rid)) throw new Error("Règle introuvable.");
-    if (typeof active !== "boolean") throw new Error("Action invalide sur l'échéance.");
-
-    const rpcName = active
-      ? (TB_CONST?.RPCS?.recurring_resume_rule || "recurring_resume_rule")
-      : (TB_CONST?.RPCS?.recurring_pause_rule || "recurring_pause_rule");
-
-    const { error } = await s.rpc(rpcName, { p_rule_id: rid });
-    if (error) throw error;
-
-    if (typeof window.refreshFromServer === "function") {
-      await window.refreshFromServer();
-    } else if (typeof refreshFromServer === "function") {
-      await refreshFromServer();
+    const rid = String(ruleId || "").trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rid)) {
+      throw new Error("UUID de règle invalide pour la pause.");
     }
 
-    window.renderRecurringRules();
+    console.log("[RR pause]", { ruleId: rid, typeofRuleId: typeof rid });
+    const rpcName = TB_CONST?.RPCS?.recurring_pause_rule || "recurring_pause_rule";
+    const { error } = await s.rpc(rpcName, { p_rule_id: rid });
+    if (error) throw error;
+    await _rrRefreshAndRender();
+  }
+
+  async function _rrResumeRule(ruleId) {
+    const s = _rrGetSB();
+    if (!s) throw new Error("Supabase non prêt.");
+
+    const rid = String(ruleId || "").trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rid)) {
+      throw new Error("UUID de règle invalide pour la reprise.");
+    }
+
+    console.log("[RR resume]", { ruleId: rid, typeofRuleId: typeof rid });
+    const rpcName = TB_CONST?.RPCS?.recurring_resume_rule || "recurring_resume_rule";
+    const { error } = await s.rpc(rpcName, { p_rule_id: rid });
+    if (error) throw error;
+    await _rrRefreshAndRender();
   }
 
   async function _rrArchive(ruleId) {
@@ -285,17 +267,11 @@
 
     const { error } = await s.rpc(rpcName, {
       p_rule_id: rid,
-      p_mode: "rule_and_future_and_unconfirmed_past"
+      p_mode: "rule_and_future"
     });
     if (error) throw error;
 
-    if (typeof window.refreshFromServer === "function") {
-      await window.refreshFromServer();
-    } else if (typeof refreshFromServer === "function") {
-      await refreshFromServer();
-    }
-
-    window.renderRecurringRules();
+    await _rrRefreshAndRender();
   }
 
   window.openRecurringRuleModal = async function openRecurringRuleModal() {
@@ -349,7 +325,7 @@
         <div class="field" style="min-width:180px;">
           <label>Catégorie</label>
           <select id="rr-category">
-            <option value="">Catégorie</option>
+            <option value="" selected disabled hidden>Choisir une catégorie</option>
             ${cats.map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join("")}
           </select>
         </div>
@@ -372,19 +348,31 @@
         </div>
 
         <div class="field" style="min-width:140px;">
-          <label>Intervalle</label>
+          <label>Tous les</label>
           <input id="rr-interval-count" type="number" min="1" step="1" value="1" />
         </div>
 
         <div class="field" style="min-width:140px;">
-          <label>Jour semaine</label>
-          <input id="rr-weekday" type="number" min="0" max="6" placeholder="0-6" />
+          <label>Jour de semaine</label>
+          <select id="rr-weekday">
+            <option value="1">Lundi</option>
+            <option value="2">Mardi</option>
+            <option value="3">Mercredi</option>
+            <option value="4">Jeudi</option>
+            <option value="5">Vendredi</option>
+            <option value="6">Samedi</option>
+            <option value="0">Dimanche</option>
+          </select>
         </div>
 
         <div class="field" style="min-width:140px;">
-          <label>Jour mois</label>
+          <label>Jour du mois</label>
           <input id="rr-monthday" type="number" min="1" max="31" placeholder="1-31" />
         </div>
+      </div>
+
+      <div id="rr-frequency-help" class="muted" style="margin-top:-6px; margin-bottom:10px;">
+        Tous les 1 mois, le jour du mois choisi.
       </div>
 
       <div class="row">
@@ -424,6 +412,29 @@
       });
     }
 
+    const ruleTypeEl = document.getElementById("rr-rule-type");
+    const everyEl = document.getElementById("rr-interval-count");
+    const weekdayWrap = document.getElementById("rr-weekday")?.closest(".field");
+    const monthdayWrap = document.getElementById("rr-monthday")?.closest(".field");
+    const helpEl = document.getElementById("rr-frequency-help");
+
+    function updateFrequencyUi() {
+      const rt = String(ruleTypeEl?.value || "every_x_months");
+      const every = Math.max(1, Number(everyEl?.value || 1));
+      if (weekdayWrap) weekdayWrap.style.display = (rt === "weekly") ? "" : "none";
+      if (monthdayWrap) monthdayWrap.style.display = (rt === "every_x_months" || rt === "yearly") ? "" : "none";
+      if (helpEl) {
+        if (rt === "daily") helpEl.textContent = `Tous les ${every} jour${every > 1 ? "s" : ""}.`;
+        else if (rt === "weekly") helpEl.textContent = `Toutes les ${every} semaine${every > 1 ? "s" : ""}, le jour sélectionné.`;
+        else if (rt === "yearly") helpEl.textContent = `Tous les ${every} an${every > 1 ? "s" : ""}, au jour du mois choisi.`;
+        else helpEl.textContent = `Tous les ${every} mois, le jour du mois choisi.`;
+      }
+    }
+
+    ruleTypeEl?.addEventListener("change", updateFrequencyUi);
+    everyEl?.addEventListener("input", updateFrequencyUi);
+    updateFrequencyUi();
+
     let rrSubmitting = false;
 
     modal.setActions([
@@ -457,8 +468,15 @@
           if (!start_date) throw new Error("Date de début requise.");
           if (end_date && end_date < start_date) throw new Error("La date de fin doit être ≥ à la date de début.");
 
-          const weekday = weekdayRaw === "" ? null : Number(weekdayRaw);
-          const monthday = monthdayRaw === "" ? null : Number(monthdayRaw);
+          let weekday = weekdayRaw === "" ? null : Number(weekdayRaw);
+          let monthday = monthdayRaw === "" ? null : Number(monthdayRaw);
+
+          if (rule_type === "weekly" && weekday == null) {
+            weekday = new Date(`${start_date}T00:00:00`).getDay();
+          }
+          if ((rule_type === "every_x_months" || rule_type === "yearly") && monthday == null) {
+            monthday = new Date(`${start_date}T00:00:00`).getDate();
+          }
 
           const next_due_at = _rrComputeFirstDueDate(
             rule_type,
@@ -488,13 +506,7 @@
           await _rrCreateRule(payload);
           modal.close();
 
-          if (typeof window.refreshFromServer === "function") {
-            await window.refreshFromServer();
-          } else if (typeof refreshFromServer === "function") {
-            await refreshFromServer();
-          }
-
-          window.renderRecurringRules();
+          await _rrRefreshAndRender();
           _tbToastOk("Échéance créée.");
           } finally {
             rrSubmitting = false;
@@ -569,19 +581,19 @@
         if (!act) throw new Error("Action introuvable.");
 
         if (act === "pause") {
-          await _rrSetActive(id, false);
+          await _rrPauseRule(id);
           _tbToastOk("Échéance mise en pause.");
           return;
         }
 
         if (act === "resume") {
-          await _rrSetActive(id, true);
+          await _rrResumeRule(id);
           _tbToastOk("Échéance reprise.");
           return;
         }
 
         if (act === "delete") {
-          if (!confirm("Supprimer cette échéance périodique ?\n\nLes occurrences futures non confirmées seront supprimées, ainsi que les occurrences passées non confirmées. Les occurrences confirmées seront conservées.")) return;
+          if (!confirm("Supprimer cette échéance périodique ?\n\nLes occurrences non confirmées seront supprimées. Les occurrences déjà payées/confirmées doivent rester conservées.")) return;
           await _rrArchive(id);
           _tbToastOk("Échéance supprimée.");
           return;

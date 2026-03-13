@@ -801,29 +801,19 @@ Promise.resolve(catPromise)
 
     const rows = catRows || [];
     const dbNames = rows.map(r => String(r.name || "").trim()).filter(Boolean);
-    const txNames = Array.from(new Set((state.transactions || [])
-      .filter(t => !t?.tripExpenseId && !t?.tripShareLinkId && !t?.isInternal)
-      .map(t => String(t.category || "").trim())
-      .filter((name) => Boolean(name) && !/^\[trip\]/i.test(name) && name.toLowerCase() !== "catégorie")));
+    const seen = new Set();
+    const merged = [];
 
-    const seen = new Set(dbNames.map(n => n.toLowerCase()));
-    const merged = [...dbNames];
-
-    for (const n of txNames) {
-      const k = n.toLowerCase();
-      if (!seen.has(k)) {
-        merged.push(n);
-        seen.add(k);
-      }
-    }
-
-    const REQUIRED_DEFAULT_CATS = ["Mouvement interne"];
-    for (const n of REQUIRED_DEFAULT_CATS) {
-      const k = String(n).toLowerCase();
-      if (!seen.has(k)) {
-        merged.push(n);
-        seen.add(k);
-      }
+    for (const rawName of dbNames) {
+      const name = String(rawName || "").trim();
+      const lower = name.toLowerCase();
+      if (!name) continue;
+      if (lower === "catégorie" || lower === "category") continue;
+      if (lower.startsWith("[trip]")) continue;
+      if (lower === "mouvement interne") continue;
+      if (seen.has(lower)) continue;
+      merged.push(name);
+      seen.add(lower);
     }
 
     state.categories = merged;
@@ -836,23 +826,6 @@ Promise.resolve(catPromise)
     }
     state.categoryColors = m;
 
-    if (merged.length > dbNames.length) {
-      const maxSort = rows.reduce((mx, r) => Math.max(mx, Number(r.sort_order ?? 0)), 0);
-      const dbLower = new Set(dbNames.map(x => x.toLowerCase()));
-      const toInsert = merged
-        .filter(n => !dbLower.has(n.toLowerCase()))
-        .map((name, idx) => ({
-          user_id: sbUser.id,
-          name,
-          color: null,
-          sort_order: maxSort + 1 + idx,
-        }));
-
-      if (toInsert.length) {
-        const { error: insCErr } = await sb.from(TB_CONST.TABLES.categories).insert(toInsert);
-        if (insCErr) console.warn("[categories] auto-seed failed (ignored)", insCErr);
-      }
-    }
 
     try {
       if (window.tbBus && typeof window.tbBus.emit === "function") {
