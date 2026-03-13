@@ -9,13 +9,84 @@
     try { return String(v).slice(0, 10); } catch (_) { return "—"; }
   }
 
+  function _rrParseISODate(iso) {
+    const s = String(iso || "");
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!m) return null;
+    return {
+      y: Number(m[1]),
+      m: Number(m[2]),
+      d: Number(m[3])
+    };
+  }
+
+  function _rrDaysInMonth(y, m) {
+    return new Date(Date.UTC(y, m, 0)).getUTCDate();
+  }
+
+  function _rrISOFromParts(y, m, d) {
+    const mm = String(m).padStart(2, "0");
+    const dd = String(d).padStart(2, "0");
+    return `${y}-${mm}-${dd}`;
+  }
+
+  function _rrDateToUTCDate(iso) {
+    const p = _rrParseISODate(iso);
+    if (!p) return null;
+    return new Date(Date.UTC(p.y, p.m - 1, p.d));
+  }
+
+  function _rrComputeFirstDueDate(ruleType, startDate, weekday, monthday) {
+    const start = _rrDateToUTCDate(startDate);
+    if (!start) return startDate;
+
+    if (ruleType === "daily") return startDate;
+
+    if (ruleType === "weekly") {
+      if (weekday === null || weekday === undefined || weekday === "") return startDate;
+      const target = Number(weekday);
+      const cur = start.getUTCDay();
+      const delta = (target - cur + 7) % 7;
+      const due = new Date(start.getTime());
+      due.setUTCDate(due.getUTCDate() + delta);
+      return _rrISOFromParts(due.getUTCFullYear(), due.getUTCMonth() + 1, due.getUTCDate());
+    }
+
+    if (ruleType === "every_x_months") {
+      const md = Number(monthday || 0);
+      if (!(md >= 1 && md <= 31)) return startDate;
+
+      const y = start.getUTCFullYear();
+      const m = start.getUTCMonth() + 1;
+      const d = start.getUTCDate();
+
+      const dim = _rrDaysInMonth(y, m);
+      const candidateDay = Math.min(md, dim);
+
+      if (candidateDay >= d) {
+        return _rrISOFromParts(y, m, candidateDay);
+      }
+
+      const next = new Date(Date.UTC(y, m, 1));
+      const ny = next.getUTCFullYear();
+      const nm = next.getUTCMonth() + 1;
+      const ndim = _rrDaysInMonth(ny, nm);
+      return _rrISOFromParts(ny, nm, Math.min(md, ndim));
+    }
+
+    if (ruleType === "yearly") return startDate;
+
+    return startDate;
+  }
+
   function _rrFreqLabel(rule) {
-    const type = String(rule?.ruleType || rule?.rule_type || rule?.type || "").toLowerCase();
+    const type = String(rule?.ruleType || rule?.rule_type || "").toLowerCase();
     const every = Number(rule?.intervalCount || rule?.interval_count || 1) || 1;
 
     if (type === "daily") return every === 1 ? "Quotidien" : `Tous les ${every} jours`;
     if (type === "weekly") return every === 1 ? "Hebdomadaire" : `Toutes les ${every} semaines`;
     if (type === "monthly") return every === 1 ? "Mensuel" : `Tous les ${every} mois`;
+    if (type === "every_x_months") return every === 1 ? "Mensuel" : `Tous les ${every} mois`;
     if (type === "yearly") return every === 1 ? "Annuel" : `Tous les ${every} ans`;
     return type || "—";
   }
@@ -75,15 +146,15 @@
     if (!tid) throw new Error("Voyage actif requis.");
 
     const insertPayload = {
-     user_id: uid,
-     travel_id: tid,
-     wallet_id: payload.wallet_id,
-     label: payload.label,
-     amount: payload.amount,
-     currency: payload.currency,
+      user_id: uid,
+      travel_id: tid,
+      wallet_id: payload.wallet_id,
+      label: payload.label,
+      amount: payload.amount,
+      currency: payload.currency,
 
-        type: payload.type,           // expense / income
-        rule_type: payload.rule_type,
+      type: payload.type,
+      rule_type: payload.rule_type,
 
       category: payload.category || null,
       subcategory: payload.subcategory || null,
@@ -93,28 +164,43 @@
       monthday: payload.monthday,
       week_of_month: null,
       start_date: payload.start_date,
+      next_due_at: payload.next_due_at || payload.start_date,
       end_date: payload.end_date || null,
       max_occurrences: payload.max_occurrences,
       is_active: true,
       archived: false
     };
 
-    const { error } = await s
+    const { data, error } = await s
       .from(TB_CONST.TABLES.recurring_rules)
-      .insert(insertPayload);
+      .insert(insertPayload)
+      .select("id")
+      .single();
 
     if (error) throw error;
+
+    const newRuleId = String(data?.id || "");
+    if (!newRuleId) throw new Error("Règle créée sans id.");
+
+    const rpcName =
+      TB_CONST?.RPCS?.recurring_generate_for_rule ||
+      "recurring_generate_for_rule";
+
+    const { error: genErr } = await s.rpc(rpcName, { p_rule_id: newRuleId });
+    if (genErr) throw genErr;
+
+    return newRuleId;
   }
 
   async function _rrSetActive(ruleId, isActive) {
     const s = _rrGetSB();
     if (!s) throw new Error("Supabase non prêt.");
 
-    const { error } = await s
-      .from(TB_CONST.TABLES.recurring_rules)
-      .update({ is_active: !!isActive, updated_at: new Date().toISOString() })
-      .eq("id", ruleId);
+    const rpcName = isActive
+      ? (TB_CONST?.RPCS?.recurring_resume_rule || "recurring_resume_rule")
+      : (TB_CONST?.RPCS?.recurring_pause_rule || "recurring_pause_rule");
 
+    const { error } = await s.rpc(rpcName, { p_rule_id: ruleId });
     if (error) throw error;
 
     if (typeof window.refreshFromServer === "function") {
@@ -130,16 +216,14 @@
     const s = _rrGetSB();
     if (!s) throw new Error("Supabase non prêt.");
 
-    const { error } = await s
-      .from(TB_CONST.TABLES.recurring_rules)
-      .update({
-        archived: true,
-        archived_at: new Date().toISOString(),
-        is_active: false,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", ruleId);
+    const rpcName =
+      TB_CONST?.RPCS?.recurring_delete_rule ||
+      "recurring_delete_rule";
 
+    const { error } = await s.rpc(rpcName, {
+      p_rule_id: ruleId,
+      p_mode: "rule_only"
+    });
     if (error) throw error;
 
     if (typeof window.refreshFromServer === "function") {
@@ -171,27 +255,27 @@
           <label>Nom</label>
           <input id="rr-label" type="text" placeholder="Ex: Loyer, Assurance, Netflix" />
         </div>
+
         <div class="field" style="min-width:140px;">
-        <div class="field" style="min-width:140px;">
-        <label>Type</label>
-        <select id="rr-type">
-          <option value="expense">Dépense</option>
-          <option value="income">Entrée</option>
-              </select>
+          <label>Type</label>
+          <select id="rr-type">
+            <option value="expense">Dépense</option>
+            <option value="income">Entrée</option>
+          </select>
         </div>
 
         <div class="field" style="min-width:140px;">
-         <label>Montant</label>
-         <input id="rr-amount" type="number" step="0.01" min="0" />
-        </div>      
-        </div>
-        <div class="field" style="min-width:120px;">
-          <label>Devise</label>
-          <input id="rr-currency" type="text" value="${escapeHTML(baseCur)}" />
+          <label>Montant</label>
+          <input id="rr-amount" type="number" step="0.01" min="0" />
         </div>
       </div>
 
       <div class="row">
+        <div class="field" style="min-width:120px;">
+          <label>Devise</label>
+          <input id="rr-currency" type="text" value="${escapeHTML(baseCur)}" />
+        </div>
+
         <div class="field" style="min-width:220px;">
           <label>Wallet</label>
           <select id="rr-wallet">
@@ -219,7 +303,7 @@
           <select id="rr-rule-type">
             <option value="daily">Quotidien</option>
             <option value="weekly">Hebdomadaire</option>
-            <option value="monthly" selected>Mensuel</option>
+            <option value="every_x_months" selected>Mensuel</option>
             <option value="yearly">Annuel</option>
           </select>
         </div>
@@ -286,6 +370,16 @@
           if (!start_date) throw new Error("Date de début requise.");
           if (end_date && end_date < start_date) throw new Error("La date de fin doit être ≥ à la date de début.");
 
+          const weekday = weekdayRaw === "" ? null : Number(weekdayRaw);
+          const monthday = monthdayRaw === "" ? null : Number(monthdayRaw);
+
+          const next_due_at = _rrComputeFirstDueDate(
+            rule_type,
+            start_date,
+            weekday,
+            monthday
+          );
+
           const payload = {
             label,
             type,
@@ -296,9 +390,10 @@
             subcategory: subcategory || null,
             rule_type,
             interval_count,
-            weekday: weekdayRaw === "" ? null : Number(weekdayRaw),
-            monthday: monthdayRaw === "" ? null : Number(monthdayRaw),
+            weekday,
+            monthday,
             start_date,
+            next_due_at,
             end_date: end_date || null,
             max_occurrences: maxOccRaw === "" ? null : Number(maxOccRaw)
           };
@@ -354,7 +449,7 @@
             ${rows.map(r => `
               <tr>
                 <td>${escapeHTML(r.label || r.name || "—")}</td>
-                <td>${escapeHTML(fmtMoney(Number(r.amount || 0), r.currency || ""))}</td>
+                <td>${escapeHTML(fmtMoney(Number(r.amount || 0), r.currency || ""))} ${escapeHTML(r.type || "")}</td>
                 <td>${escapeHTML(_rrFreqLabel(r))}</td>
                 <td>${escapeHTML(_rrFmtDate(r.nextDueAt || r.next_due_at))}</td>
                 <td>${escapeHTML(_rrStatus(r))}</td>
