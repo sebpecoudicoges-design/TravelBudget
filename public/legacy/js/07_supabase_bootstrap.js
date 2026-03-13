@@ -802,8 +802,9 @@ Promise.resolve(catPromise)
     const rows = catRows || [];
     const dbNames = rows.map(r => String(r.name || "").trim()).filter(Boolean);
     const txNames = Array.from(new Set((state.transactions || [])
+      .filter(t => !t?.tripExpenseId && !t?.tripShareLinkId && !t?.isInternal)
       .map(t => String(t.category || "").trim())
-      .filter(Boolean)));
+      .filter((name) => Boolean(name) && !/^\[trip\]/i.test(name) && name.toLowerCase() !== "catégorie")));
 
     const seen = new Set(dbNames.map(n => n.toLowerCase()));
     const merged = [...dbNames];

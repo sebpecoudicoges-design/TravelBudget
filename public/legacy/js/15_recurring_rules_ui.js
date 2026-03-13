@@ -103,41 +103,51 @@
     return (state?.wallets || []).filter(w => String(w?.travelId || w?.travel_id || "") === tid);
   }
 
+
+
+  function _rrIsUuid(v) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || "").trim());
+  }
+
+  function _rrIsUsableCategory(v) {
+    const s = String(v || "").trim();
+    if (!s) return false;
+    const low = s.toLowerCase();
+    if (low === 'catégorie' || low === 'categorie') return false;
+    if (/^\[trip\]/i.test(s)) return false;
+    return true;
+  }
+
   function _rrCategoryOptions() {
     const out = new Set();
 
-    const seed = (typeof getCategories === "function")
-      ? (getCategories() || [])
-      : (state?.categories || []);
+    const addCat = (value) => {
+      const s = String(value || "").trim();
+      if (!_rrIsUsableCategory(s)) return;
+      out.add(s);
+    };
 
-    (seed || []).forEach((c) => {
+    try {
+      if (typeof getCategories === "function") {
+        (getCategories() || []).forEach(addCat);
+      }
+    } catch (_) {}
+
+    (state?.categories || []).forEach((c) => {
       if (typeof c === "string") {
-        const v = c.trim();
-        if (v) out.add(v);
+        addCat(c);
         return;
       }
 
-      const candidates = [
-        c?.name,
-        c?.label,
-        c?.category
-      ];
-
-      candidates.forEach((v) => {
-        const s = String(v || "").trim();
-        if (s) out.add(s);
-      });
+      [c?.name, c?.label, c?.category].forEach(addCat);
     });
 
     (state?.transactions || []).forEach((t) => {
-      const candidates = [t?.category, t?.label];
-      candidates.forEach((v) => {
-        const s = String(v || "").trim();
-        if (s) out.add(s);
-      });
+      if (t?.tripExpenseId || t?.tripShareLinkId || t?.isInternal) return;
+      addCat(t?.category);
     });
 
-    return Array.from(out).sort((a, b) => a.localeCompare(b, "fr"));
+    return Array.from(out).sort((a, b) => a.localeCompare(b));
   }
 
   function _rrEnsureSettingsBox() {
@@ -154,7 +164,7 @@
     card.innerHTML = `
       <h2>Échéances périodiques</h2>
       <div class="muted" style="margin-bottom:10px;">
-        Crée des échéances simples pour le voyage actif. Les occurrences sont générées automatiquement à partir de cette règle.
+        Crée des règles récurrentes liées au voyage actif. Le moteur SQL génère ensuite les occurrences.
       </div>
       <div class="row" style="justify-content:flex-end; margin-bottom:10px;">
         <button class="btn primary" id="tb-recurring-add-btn">+ Nouvelle échéance</button>
@@ -230,29 +240,21 @@
     return newRuleId;
   }
 
-  function _rrLooksLikeUuid(v) {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || "").trim());
-  }
-
-  async function _rrSetActive(ruleId, shouldBeActive) {
+  async function _rrSetActive(a, b) {
     const s = _rrGetSB();
     if (!s) throw new Error("Supabase non prêt.");
 
-    let rid = ruleId;
-    let active = shouldBeActive;
+    let rid = null;
+    let active = null;
 
-    // Defensive compatibility: tolerate old reversed calls like _rrSetActive(false, id)
-    if (typeof rid === "boolean" && typeof active !== "boolean") {
-      const tmp = rid;
-      rid = active;
-      active = tmp;
-    }
+    if (_rrIsUuid(a)) rid = String(a).trim();
+    if (_rrIsUuid(b)) rid = String(b).trim();
 
-    rid = String(rid || "").trim();
-    if (!rid) throw new Error("Règle introuvable.");
-    if (!_rrLooksLikeUuid(rid)) {
-      throw new Error(`Identifiant de règle invalide: ${rid}`);
-    }
+    if (typeof a === "boolean") active = a;
+    if (typeof b === "boolean") active = b;
+
+    if (!_rrIsUuid(rid)) throw new Error("Règle introuvable.");
+    if (typeof active !== "boolean") throw new Error("Action invalide sur l'échéance.");
 
     const rpcName = active
       ? (TB_CONST?.RPCS?.recurring_resume_rule || "recurring_resume_rule")
@@ -283,7 +285,7 @@
 
     const { error } = await s.rpc(rpcName, {
       p_rule_id: rid,
-      p_mode: "rule_and_future"
+      p_mode: "rule_and_future_and_unconfirmed_past"
     });
     if (error) throw error;
 
@@ -362,36 +364,26 @@
         <div class="field" style="min-width:180px;">
           <label>Fréquence</label>
           <select id="rr-rule-type">
-            <option value="daily">Tous les jours</option>
-            <option value="weekly">Toutes les semaines</option>
-            <option value="every_x_months" selected>Tous les mois</option>
-            <option value="yearly">Tous les ans</option>
+            <option value="daily">Quotidien</option>
+            <option value="weekly">Hebdomadaire</option>
+            <option value="every_x_months" selected>Mensuel</option>
+            <option value="yearly">Annuel</option>
           </select>
         </div>
 
-        <div class="field" style="min-width:160px;">
-          <label id="rr-interval-label">Tous les</label>
+        <div class="field" style="min-width:140px;">
+          <label>Intervalle</label>
           <input id="rr-interval-count" type="number" min="1" step="1" value="1" />
-          <div class="muted" id="rr-interval-help" style="font-size:12px; margin-top:4px;">Ex: 1 = chaque mois, 2 = un mois sur deux.</div>
         </div>
 
-        <div class="field" id="rr-weekday-wrap" style="min-width:180px; display:none;">
-          <label>Jour de la semaine</label>
-          <select id="rr-weekday">
-            <option value="1">Lundi</option>
-            <option value="2">Mardi</option>
-            <option value="3">Mercredi</option>
-            <option value="4">Jeudi</option>
-            <option value="5">Vendredi</option>
-            <option value="6">Samedi</option>
-            <option value="0">Dimanche</option>
-          </select>
+        <div class="field" style="min-width:140px;">
+          <label>Jour semaine</label>
+          <input id="rr-weekday" type="number" min="0" max="6" placeholder="0-6" />
         </div>
 
-        <div class="field" id="rr-monthday-wrap" style="min-width:180px;">
-          <label>Jour du mois</label>
+        <div class="field" style="min-width:140px;">
+          <label>Jour mois</label>
           <input id="rr-monthday" type="number" min="1" max="31" placeholder="1-31" />
-          <div class="muted" style="font-size:12px; margin-top:4px;">Ex: 5 = tous les 5 du mois.</div>
         </div>
       </div>
 
@@ -415,15 +407,6 @@
 
     const walletSel = document.getElementById("rr-wallet");
     const curInp = document.getElementById("rr-currency");
-    const ruleTypeSel = document.getElementById("rr-rule-type");
-    const intervalInp = document.getElementById("rr-interval-count");
-    const intervalLabel = document.getElementById("rr-interval-label");
-    const intervalHelp = document.getElementById("rr-interval-help");
-    const weekdayWrap = document.getElementById("rr-weekday-wrap");
-    const weekdaySel = document.getElementById("rr-weekday");
-    const monthdayWrap = document.getElementById("rr-monthday-wrap");
-    const monthdayInp = document.getElementById("rr-monthday");
-    const startDateInp = document.getElementById("rr-start-date");
     let currencyManuallyEdited = false;
 
     if (curInp) {
@@ -441,57 +424,7 @@
       });
     }
 
-
-
-    function _rrSyncModalFrequencyUI() {
-      const type = String(ruleTypeSel?.value || "every_x_months");
-      const start = _rrDateToUTCDate(String(startDateInp?.value || today));
-      const startWeekday = start ? start.getUTCDay() : 1;
-      const startMonthday = start ? start.getUTCDate() : 1;
-
-      if (weekdaySel && !weekdaySel.value) weekdaySel.value = String(startWeekday);
-      if (monthdayInp && !monthdayInp.value) monthdayInp.value = String(startMonthday);
-
-      if (type === "daily") {
-        if (intervalLabel) intervalLabel.textContent = "Tous les";
-        if (intervalHelp) intervalHelp.textContent = "Ex: 1 = tous les jours, 2 = un jour sur deux.";
-        if (weekdayWrap) weekdayWrap.style.display = "none";
-        if (monthdayWrap) monthdayWrap.style.display = "none";
-      } else if (type === "weekly") {
-        if (intervalLabel) intervalLabel.textContent = "Toutes les";
-        if (intervalHelp) intervalHelp.textContent = "Ex: 1 = chaque semaine, 2 = une semaine sur deux.";
-        if (weekdayWrap) weekdayWrap.style.display = "";
-        if (monthdayWrap) monthdayWrap.style.display = "none";
-        if (weekdaySel && startDateInp?.value) weekdaySel.value = String(startWeekday);
-      } else if (type === "yearly") {
-        if (intervalLabel) intervalLabel.textContent = "Tous les";
-        if (intervalHelp) intervalHelp.textContent = "Ex: 1 = chaque année, 2 = une année sur deux.";
-        if (weekdayWrap) weekdayWrap.style.display = "none";
-        if (monthdayWrap) monthdayWrap.style.display = "none";
-      } else {
-        if (intervalLabel) intervalLabel.textContent = "Tous les";
-        if (intervalHelp) intervalHelp.textContent = "Ex: 1 = chaque mois, 2 = un mois sur deux.";
-        if (weekdayWrap) weekdayWrap.style.display = "none";
-        if (monthdayWrap) monthdayWrap.style.display = "";
-        if (monthdayInp && startDateInp?.value && !monthdayInp.dataset.userEdited) {
-          monthdayInp.value = String(startMonthday);
-        }
-      }
-
-      if (intervalInp) {
-        intervalInp.placeholder = type === "weekly" ? "semaines" : type === "daily" ? "jours" : type === "yearly" ? "ans" : "mois";
-      }
-    }
-
-    if (monthdayInp) {
-      monthdayInp.addEventListener("input", () => {
-        monthdayInp.dataset.userEdited = "1";
-      });
-    }
-
-    if (ruleTypeSel) ruleTypeSel.addEventListener("change", _rrSyncModalFrequencyUI);
-    if (startDateInp) startDateInp.addEventListener("change", _rrSyncModalFrequencyUI);
-    _rrSyncModalFrequencyUI();
+    let rrSubmitting = false;
 
     modal.setActions([
       { label: "Annuler", className: "btn", onClick: () => modal.close() },
@@ -499,6 +432,9 @@
         label: "Créer",
         className: "btn primary",
         onClick: async () => {
+          if (rrSubmitting) return;
+          rrSubmitting = true;
+          try {
           const label = String(document.getElementById("rr-label")?.value || "").trim();
           const type = String(document.getElementById("rr-type")?.value || "expense");
           const amount = Number(document.getElementById("rr-amount")?.value || 0);
@@ -521,20 +457,8 @@
           if (!start_date) throw new Error("Date de début requise.");
           if (end_date && end_date < start_date) throw new Error("La date de fin doit être ≥ à la date de début.");
 
-          let weekday = weekdayRaw === "" ? null : Number(weekdayRaw);
-          let monthday = monthdayRaw === "" ? null : Number(monthdayRaw);
-
-          if (rule_type === "daily" || rule_type === "yearly") {
-            weekday = null;
-            monthday = null;
-          }
-          if (rule_type === "weekly") {
-            monthday = null;
-          }
-          if (rule_type === "every_x_months" && !(monthday >= 1 && monthday <= 31)) {
-            const start = _rrDateToUTCDate(start_date);
-            monthday = start ? start.getUTCDate() : null;
-          }
+          const weekday = weekdayRaw === "" ? null : Number(weekdayRaw);
+          const monthday = monthdayRaw === "" ? null : Number(monthdayRaw);
 
           const next_due_at = _rrComputeFirstDueDate(
             rule_type,
@@ -572,6 +496,9 @@
 
           window.renderRecurringRules();
           _tbToastOk("Échéance créée.");
+          } finally {
+            rrSubmitting = false;
+          }
         }
       }
     ]);
@@ -654,7 +581,7 @@
         }
 
         if (act === "delete") {
-          if (!confirm("Supprimer cette échéance périodique ?\n\nLes occurrences futures générées seront supprimées, mais les occurrences déjà passées resteront conservées.")) return;
+          if (!confirm("Supprimer cette échéance périodique ?\n\nLes occurrences futures non confirmées seront supprimées, ainsi que les occurrences passées non confirmées. Les occurrences confirmées seront conservées.")) return;
           await _rrArchive(id);
           _tbToastOk("Échéance supprimée.");
           return;

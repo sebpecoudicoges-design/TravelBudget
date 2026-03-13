@@ -692,6 +692,14 @@ if (tid) {
   // Ensure first/last segments align to voyage bounds (no holes overall)
   await _syncVoyageBoundsToSegments(pid, start, end);
 
+  // If voyage horizon changed, regenerate recurring occurrences up to the new bound.
+  try {
+    const recurringGenerateAllRpc = TB_CONST?.RPCS?.recurring_generate_all_active || "recurring_generate_all_active";
+    await s.rpc(recurringGenerateAllRpc);
+  } catch (e) {
+    console.warn("[recurring] regenerate after travel save failed", e);
+  }
+
   // reload
   if (typeof window.refreshFromServer === "function") {
     await window.refreshFromServer();
