@@ -82,8 +82,8 @@
      amount: payload.amount,
      currency: payload.currency,
 
-     type: payload.rule_type,          // 🔧 FIX SQL
-     rule_type: payload.rule_type,
+        type: payload.type,           // expense / income
+        rule_type: payload.rule_type,
 
       category: payload.category || null,
       subcategory: payload.subcategory || null,
@@ -172,8 +172,18 @@
           <input id="rr-label" type="text" placeholder="Ex: Loyer, Assurance, Netflix" />
         </div>
         <div class="field" style="min-width:140px;">
-          <label>Montant</label>
-          <input id="rr-amount" type="number" step="0.01" min="0" />
+        <div class="field" style="min-width:140px;">
+        <label>Type</label>
+        <select id="rr-type">
+          <option value="expense">Dépense</option>
+          <option value="income">Entrée</option>
+              </select>
+        </div>
+
+        <div class="field" style="min-width:140px;">
+         <label>Montant</label>
+         <input id="rr-amount" type="number" step="0.01" min="0" />
+        </div>      
         </div>
         <div class="field" style="min-width:120px;">
           <label>Devise</label>
@@ -255,6 +265,7 @@
         className: "btn primary",
         onClick: async () => {
           const label = String(document.getElementById("rr-label")?.value || "").trim();
+          const type = String(document.getElementById("rr-type")?.value || "expense");
           const amount = Number(document.getElementById("rr-amount")?.value || 0);
           const currency = String(document.getElementById("rr-currency")?.value || "").trim().toUpperCase();
           const wallet_id = String(document.getElementById("rr-wallet")?.value || "");
@@ -277,6 +288,7 @@
 
           const payload = {
             label,
+            type,
             amount,
             currency,
             wallet_id,
