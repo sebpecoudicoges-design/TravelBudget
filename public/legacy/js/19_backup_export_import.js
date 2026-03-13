@@ -164,7 +164,7 @@ async function importBackup() {
       if (!keyToId.has(key)) toCreate.push({ user_id: sbUser.id, name: bw.name, currency: bw.currency, balance: 0 });
     }
     if (toCreate.length) {
-      const { error: cErr } = await sb.from(TB_CONST.TABLES.wallets).insert(toCreate);
+      const { error: cErr } = await sb.from(TB_CONST.TABLES.wallets).insert((toCreate||[]).map(w => ({ ...w, period_id: w.period_id || state?.period?.id || null })));
       if (cErr) throw cErr;
 
       const { data: srvWallets2, error: wErr2 } = await sb.from(TB_CONST.TABLES.wallets).select("*").order("created_at", { ascending: true });

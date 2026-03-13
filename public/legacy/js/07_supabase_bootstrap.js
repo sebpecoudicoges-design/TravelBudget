@@ -545,8 +545,8 @@ const walletsPromise = (async () => {
   // Auto-bootstrap wallets for this travel if missing
   if (!w || w.length === 0) {
     const initial = [
-      { user_id: sbUser.id, travel_id: activeTravelId, name: "Cash", currency: p.base_currency || "THB", balance: 0, type: "cash" },
-      { user_id: sbUser.id, travel_id: activeTravelId, name: "Compte bancaire", currency: "EUR", balance: 0, type: "bank" },
+      { user_id: sbUser.id, travel_id: activeTravelId, period_id: activePeriodId, name: "Cash", currency: p.base_currency || "THB", balance: 0, type: "cash" },
+      { user_id: sbUser.id, travel_id: activeTravelId, period_id: activePeriodId, name: "Compte bancaire", currency: "EUR", balance: 0, type: "bank" },
     ];
     const { error: insWErr } = await sb.from(TB_CONST.TABLES.wallets).insert(initial);
     if (insWErr) throw insWErr;

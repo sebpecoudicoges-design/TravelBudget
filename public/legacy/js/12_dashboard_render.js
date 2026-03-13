@@ -854,6 +854,7 @@ async function createWallet() {
     const { error } = await sb.from(TB_CONST.TABLES.wallets).insert([{
      user_id: sbUser.id,
      travel_id: travelId,
+     period_id: state?.period?.id || null,
      name,
      currency,
      type: typeRaw,
