@@ -192,48 +192,54 @@
     return newRuleId;
   }
 
-  async function _rrSetActive(ruleId, isActive) {
-    const s = _rrGetSB();
-    if (!s) throw new Error("Supabase non prêt.");
+  async function _rrSetActive(ruleId, shouldBeActive) {
+  const s = _rrGetSB();
+  if (!s) throw new Error("Supabase non prêt.");
 
-    const rpcName = isActive
-      ? (TB_CONST?.RPCS?.recurring_resume_rule || "recurring_resume_rule")
-      : (TB_CONST?.RPCS?.recurring_pause_rule || "recurring_pause_rule");
+  const rid = String(ruleId || "").trim();
+  if (!rid) throw new Error("Règle introuvable.");
 
-    const { error } = await s.rpc(rpcName, { p_rule_id: ruleId });
-    if (error) throw error;
+  const rpcName = shouldBeActive
+    ? (TB_CONST?.RPCS?.recurring_resume_rule || "recurring_resume_rule")
+    : (TB_CONST?.RPCS?.recurring_pause_rule || "recurring_pause_rule");
 
-    if (typeof window.refreshFromServer === "function") {
-      await window.refreshFromServer();
-    } else if (typeof refreshFromServer === "function") {
-      await refreshFromServer();
-    }
+  const { error } = await s.rpc(rpcName, { p_rule_id: rid });
+  if (error) throw error;
 
-    window.renderRecurringRules();
+  if (typeof window.refreshFromServer === "function") {
+    await window.refreshFromServer();
+  } else if (typeof refreshFromServer === "function") {
+    await refreshFromServer();
   }
 
-  async function _rrArchive(ruleId) {
-    const s = _rrGetSB();
-    if (!s) throw new Error("Supabase non prêt.");
+  window.renderRecurringRules();
+}
 
-    const rpcName =
-      TB_CONST?.RPCS?.recurring_delete_rule ||
-      "recurring_delete_rule";
+ async function _rrArchive(ruleId) {
+  const s = _rrGetSB();
+  if (!s) throw new Error("Supabase non prêt.");
 
-    const { error } = await s.rpc(rpcName, {
-      p_rule_id: ruleId,
-      p_mode: "rule_only"
-    });
-    if (error) throw error;
+  const rid = String(ruleId || "").trim();
+  if (!rid) throw new Error("Règle introuvable.");
 
-    if (typeof window.refreshFromServer === "function") {
-      await window.refreshFromServer();
-    } else if (typeof refreshFromServer === "function") {
-      await refreshFromServer();
-    }
+  const rpcName =
+    TB_CONST?.RPCS?.recurring_delete_rule ||
+    "recurring_delete_rule";
 
-    window.renderRecurringRules();
+  const { error } = await s.rpc(rpcName, {
+    p_rule_id: rid,
+    p_mode: "rule_and_future_and_unconfirmed_past"
+  });
+  if (error) throw error;
+
+  if (typeof window.refreshFromServer === "function") {
+    await window.refreshFromServer();
+  } else if (typeof refreshFromServer === "function") {
+    await refreshFromServer();
   }
+
+  window.renderRecurringRules();
+}
 
   window.openRecurringRuleModal = async function openRecurringRuleModal() {
     const wallets = _rrWalletOptions();
@@ -284,12 +290,12 @@
         </div>
 
         <div class="field" style="min-width:180px;">
-          <label>Catégorie</label>
-          <input id="rr-category" list="rr-category-list" type="text" placeholder="Catégorie" />
-          <datalist id="rr-category-list">
-            ${cats.map(c => `<option value="${escapeHTML(c.name || "")}"></option>`).join("")}
-          </datalist>
-        </div>
+  <label>Catégorie</label>
+  <select id="rr-category">
+    <option value="">Catégorie</option>
+    ${cats.map(c => `<option value="${escapeHTML(c.name || "")}">${escapeHTML(c.name || "")}</option>`).join("")}
+  </select>
+</div>
 
         <div class="field" style="min-width:180px;">
           <label>Sous-catégorie</label>
