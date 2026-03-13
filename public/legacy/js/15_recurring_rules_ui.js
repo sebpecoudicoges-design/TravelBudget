@@ -104,20 +104,31 @@
   }
 
   function _rrCategoryOptions() {
-    const raw = (typeof getCategories === "function") ? getCategories() : (Array.isArray(state?.categories) ? state.categories : []);
+    const rawDb = (typeof getCategories === "function") ? getCategories() : (Array.isArray(state?.categories) ? state.categories : []);
+    const rawTx = Array.isArray(state?.transactions) ? state.transactions : [];
     const out = [];
     const seen = new Set();
 
-    for (const item of (raw || [])) {
-      const name = String(typeof item === "string" ? item : (item?.name || item?.label || item?.category || "")).trim();
+    const pushName = (value) => {
+      const name = String(typeof value === "string" ? value : (value?.name || value?.label || value?.category || "")).trim();
       const lower = name.toLowerCase();
-      if (!name) continue;
-      if (lower === "catégorie" || lower === "category") continue;
-      if (lower.startsWith("[trip]")) continue;
-      if (lower === "mouvement interne") continue;
-      if (seen.has(lower)) continue;
+      if (!name) return;
+      if (lower === "catégorie" || lower === "category") return;
+      if (lower === "choisir une catégorie" || lower === "choose a category") return;
+      if (lower.startsWith("[trip]")) return;
+      if (lower === "mouvement interne") return;
+      if (seen.has(lower)) return;
       seen.add(lower);
       out.push(name);
+    };
+
+    for (const item of (rawDb || [])) pushName(item);
+
+    for (const tx of rawTx) {
+      const isTrip = !!(tx?.tripExpenseId || tx?.tripShareLinkId);
+      const isInternal = !!tx?.isInternal;
+      if (isTrip || isInternal) continue;
+      pushName(tx?.category || "");
     }
 
     return out.sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
