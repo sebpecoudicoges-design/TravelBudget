@@ -1014,12 +1014,15 @@ const driver = "Dépenses";
       <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:12px;">
         <h2 style="margin:0;">KPIs</h2>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
-  <select id="kpiPeriodSelect" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);">
-    ${ (state.periods || []).map((pp,idx) => {
-      const nm = (typeof window.tbGetPeriodName === "function") ? window.tbGetPeriodName(pp.id) : "";
-      const label = nm ? `${nm} — ${pp.start} → ${pp.end}` : `Voyage ${pp.start} → ${pp.end}`;
-      return `<option value="${pp.id}" ${pp.id===state.period.id?"selected":""}>${label}</option>`;
-    }).join("") }
+  <select id="kpiPeriodSelect" disabled title="Changer de voyage depuis Settings" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);opacity:.9;cursor:not-allowed;min-width:240px;">
+    ${(() => {
+      const t = (state.travels || []).find(x => String(x.id) === String(state?.activeTravelId || "")) || null;
+      const label = t
+        ? String(t.name || "").trim() || `Voyage ${String(t.start || "").slice(0,10)} → ${String(t.end || "").slice(0,10)}`
+        : `Voyage ${String(state?.period?.start || "").slice(0,10)} → ${String(state?.period?.end || "").slice(0,10)}`;
+      const value = String(state?.activeTravelId || state?.period?.id || "");
+      return `<option value="${value}" selected>${label}</option>`;
+    })()}
   </select>
   <select id="kpiScopeSelect" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);">
     ${scopeOptionsHTML}
@@ -1219,21 +1222,8 @@ try {
   }
 } catch (_) {}
 
-    if (selP && !selP.dataset.bound) {
+    if (selP) {
       selP.dataset.bound = "1";
-      selP.addEventListener("change", async (e) => {
-        const v = String(e?.target?.value || "");
-        if (!v) return;
-        try { localStorage.setItem(ACTIVE_PERIOD_KEY, v); } catch (_) {}
-
-        // Full refresh to load wallets/tx/segments for the selected period
-        if (typeof refreshFromServer === "function") {
-          await refreshFromServer();
-        } else if (typeof loadFromSupabase === "function") {
-          await loadFromSupabase();
-          if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("kpi-micro"); else if (typeof renderAll === "function") renderAll();
-        }
-      });
     }
 
     if (selS && !selS.dataset.bound) {

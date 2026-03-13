@@ -111,6 +111,25 @@ function _tbGetActiveTravelRow() {
   return (state.travels || []).find(t => String(t.id) === tid) || null;
 }
 
+function _tbGetTravelPrimaryPeriod(travelId) {
+  const tid = String(travelId || "");
+  if (!tid) return null;
+  const rows = (state.periods || [])
+    .filter(p => String(p.travelId || p.travel_id || "") === tid)
+    .slice()
+    .sort((a, b) => String(a.start || a.start_date || "").localeCompare(String(b.start || b.start_date || "")));
+  return rows[0] || null;
+}
+
+function _tbFormatTravelOptionLabel(t) {
+  const row = t || {};
+  const name = String(row.name || "").trim();
+  const start = _tbISO(row.start || row.start_date);
+  const end = _tbISO(row.end || row.end_date);
+  const range = (start && end) ? `${start} → ${end}` : (start || end || "");
+  return name || (`Voyage ${range}`.trim()) || "Voyage";
+}
+
 function _tbSetActiveTravelAndPeriod(travelId, periodId) {
   const tid = String(travelId || "");
   const pid = String(periodId || "");
@@ -158,59 +177,57 @@ async function loadPeriodsListIntoUI(){
   if(!sel) return;
 
   sel.innerHTML = "";
-  const periods = (state.periods || []).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
-  periods.forEach(p=>{
+  const travels = (state.travels || []).slice().sort((a,b)=>String(a.start || "").localeCompare(String(b.start || "")));
+  travels.forEach(t=>{
     const opt = document.createElement("option");
-    opt.value = p.id;
-    opt.textContent = (typeof window.tbFormatPeriodLabel === "function")
-      ? window.tbFormatPeriodLabel(p, periods.indexOf(p))
-      : `Voyage ${_tbISO(p.start)} → ${_tbISO(p.end)}`;
+    opt.value = t.id;
+    opt.textContent = _tbFormatTravelOptionLabel(t);
     sel.appendChild(opt);
   });
 
-  const active = state.period && state.period.id ? state.period.id : (periods[0] ? periods[0].id : "");
-  if(active){
-    sel.value = active;
-    if(!state.period || state.period.id!==active){
-      const p = periods.find(x=>x.id===active);
-      if(p) state.period = p;
-    }
-
-try {
-  const inp = document.getElementById("s-period-name");
-  if (inp) {
-    const t = _tbGetActiveTravelRow();
-    inp.value = t?.name || "";
-
-    if (!inp.__tbBoundTravelName) {
-      inp.__tbBoundTravelName = true;
-      let tmr = null;
-
-      const save = async () => {
-        const val = String(inp.value || "").trim();
-        if (!val) return;
-        await _tbSaveActiveTravelName(val);
-      };
-
-      inp.addEventListener("input", () => {
-        if (tmr) clearTimeout(tmr);
-        tmr = setTimeout(() => { safeCall("Nom du voyage", save); }, 350);
-      });
-
-      inp.addEventListener("blur", () => {
-        safeCall("Nom du voyage", save);
-      });
-    }
+  const activeTravelId = String(state?.activeTravelId || travels[0]?.id || "");
+  if(activeTravelId){
+    sel.value = activeTravelId;
+    const activePeriod = _tbGetTravelPrimaryPeriod(activeTravelId);
+    if (activePeriod) state.period = activePeriod;
   }
-} catch (_) {}
-  }
+
+  try {
+    const inp = document.getElementById("s-period-name");
+    if (inp) {
+      const t = _tbGetActiveTravelRow();
+      inp.value = t?.name || "";
+
+      if (!inp.__tbBoundTravelName) {
+        inp.__tbBoundTravelName = true;
+        let tmr = null;
+
+        const save = async () => {
+          const val = String(inp.value || "").trim();
+          if (!val) return;
+          await _tbSaveActiveTravelName(val);
+          renderSettings();
+          try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+        };
+
+        inp.addEventListener("input", () => {
+          if (tmr) clearTimeout(tmr);
+          tmr = setTimeout(() => { safeCall("Nom du voyage", save); }, 350);
+        });
+
+        inp.addEventListener("blur", () => {
+          safeCall("Nom du voyage", save);
+        });
+      }
+    }
+  } catch (_) {}
 
   sel.onchange = async ()=>{
-    const id = sel.value;
-    const p = (state.periods || []).find(x => String(x.id) === String(id));
-    if (!p) return;
+    const travelId = String(sel.value || "");
+    const p = _tbGetTravelPrimaryPeriod(travelId);
+    if (!travelId || !p) return;
 
-    _tbSetActiveTravelAndPeriod(p.travelId || p.travel_id, p.id);
+    _tbSetActiveTravelAndPeriod(travelId, p.id);
 
     try {
       const inp = document.getElementById("s-period-name");
