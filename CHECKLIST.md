@@ -91,3 +91,9 @@
 - Réaligner `package.json` quand la version projet évolue.
 - Réaligner le label d'entrée / build dans `src/main.js` si nécessaire.
 - Mettre à jour `CHECKLIST.md` quand elle dérive du socle projet réel.
+- Toujours réaligner ensemble :
+  - `public/legacy/js/00_constants.js` (`window.__TB_BUILD`)
+  - `package.json`
+  - `package-lock.json`
+  - `src/main.js` si le label d’entrée/version dérive
+  - la checklist projet si elle n’est plus alignée

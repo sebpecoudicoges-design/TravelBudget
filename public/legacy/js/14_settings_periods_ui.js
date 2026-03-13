@@ -646,6 +646,13 @@ function renderSettings(){
 
   // Categories (Settings)
   try { renderCategoriesSettingsUI(); } catch (_) {}
+
+  // Recurring rules (Settings)
+  try {
+    if (typeof window.renderRecurringRules === "function") {
+      window.renderRecurringRules();
+    }
+  } catch (_) {}
 }
 
 /* ---------- voyage save / create / delete ---------- */
@@ -814,42 +821,85 @@ async function _createVoyagePromptImpl(){
 async function _deleteActiveVoyageImpl(){
   const s = _tbGetSB();
   if(!s) throw new Error("Supabase non prêt.");
+
   const tid = String(state?.activeTravelId || "");
   if (!tid) throw new Error("Voyage non sélectionné.");
 
+  // sécurité projet : ne jamais supprimer le vrai voyage actif utilisateur
+  if (tid === "d6c3e70a-d31f-4647-91e8-e12830d0c00d") {
+    throw new Error("Suppression refusée : ce voyage est protégé.");
+  }
+
   const t = _tbGetActiveTravelRow();
   const label = t?.name || `Voyage ${_tbISO(t?.start)} → ${_tbISO(t?.end)}`;
+
   if(!confirm(`Supprimer ${label} ?
 
-La suppression est refusée si des données sont liées.`)) return;
+La suppression n'est autorisée que si le voyage n'a ni transactions, ni échéances, ni soldes wallet non nuls.`)) return;
 
   const primaryPeriod = _tbGetTravelPrimaryPeriod(tid);
   const pid = String(primaryPeriod?.id || "");
 
-  const checks = [
-    [TB_CONST.TABLES.wallets, 'travel_id', 'wallets'],
-    [TB_CONST.TABLES.transactions, 'travel_id', 'transactions'],
-    [TB_CONST.TABLES.recurring_rules, 'travel_id', 'échéances périodiques'],
-    [TB_CONST.TABLES.trip_groups, 'travel_id', 'trip groups'],
-    [TB_CONST.TABLES.trip_expenses, 'travel_id', 'dépenses trip']
-  ];
-  for (const [table, col, labelCount] of checks) {
-    const { count, error } = await s.from(table).select('id', { count: 'exact', head: true }).eq(col, tid);
+  // 1) transactions -> bloquant
+  {
+    const { count, error } = await s
+      .from(TB_CONST.TABLES.transactions)
+      .select("id", { count: "exact", head: true })
+      .eq("travel_id", tid);
+
     if (error) throw error;
     if (Number(count || 0) > 0) {
-      throw new Error(`Suppression refusée : ${labelCount} liés au voyage.`);
+      throw new Error("Suppression refusée : transactions liées au voyage.");
     }
   }
 
+  // 2) règles récurrentes -> bloquant
+  {
+    const { count, error } = await s
+      .from(TB_CONST.TABLES.recurring_rules)
+      .select("id", { count: "exact", head: true })
+      .eq("travel_id", tid)
+      .eq("archived", false);
+
+    if (error) throw error;
+    if (Number(count || 0) > 0) {
+      throw new Error("Suppression refusée : échéances périodiques liées au voyage.");
+    }
+  }
+
+  // 3) wallets -> autorisés seulement si soldes tous à 0
+  {
+    const { data: wallets, error } = await s
+      .from(TB_CONST.TABLES.wallets)
+      .select("id,balance")
+      .eq("travel_id", tid);
+
+    if (error) throw error;
+
+    const usedWallet = (wallets || []).some(w => Math.abs(Number(w?.balance || 0)) > 0.0000001);
+    if (usedWallet) {
+      throw new Error("Suppression refusée : wallets liés au voyage avec solde non nul.");
+    }
+  }
+
+  // suppression en cascade manuelle
+  {
+    const { error: wErr } = await s.from(TB_CONST.TABLES.wallets).delete().eq("travel_id", tid);
+    if (wErr) throw wErr;
+  }
+
   if (pid) {
-    const { error: segErr } = await s.from(TB_CONST.TABLES.budget_segments).delete().eq('period_id', pid);
+    const { error: segErr } = await s.from(TB_CONST.TABLES.budget_segments).delete().eq("period_id", pid);
     if (segErr) throw segErr;
-    const { error: pErr } = await s.from(TB_CONST.TABLES.periods).delete().eq('id', pid);
+
+    const { error: pErr } = await s.from(TB_CONST.TABLES.periods).delete().eq("id", pid);
     if (pErr) throw pErr;
   }
 
-  const { error } = await s.from(TB_CONST.TABLES.travels).delete().eq("id", tid);
-  if(error) throw error;
+  {
+    const { error: tErr } = await s.from(TB_CONST.TABLES.travels).delete().eq("id", tid);
+    if (tErr) throw tErr;
+  }
 
   try {
     localStorage.removeItem("travelbudget_active_travel_id_v1");
@@ -860,13 +910,6 @@ La suppression est refusée si des données sont liées.`)) return;
     await window.refreshFromServer();
   } else if (typeof refreshFromServer === "function") {
     await refreshFromServer();
-  }
-
-  const visibleTravels = _tbGetVisibleTravels();
-  const nextTravel = visibleTravels[0] || null;
-  if (nextTravel) {
-    const nextPeriod = _tbGetTravelPrimaryPeriod(nextTravel.id);
-    _tbSetActiveTravelAndPeriod(nextTravel.id, nextPeriod?.id || "");
   }
 
   renderSettings();
