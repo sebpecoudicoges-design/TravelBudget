@@ -543,47 +543,34 @@ begin
     raise exception 'recurring rule not found';
   end if;
 
-  if p_mode not in (
-    'rule_only',
-    'rule_and_future',
-    'rule_and_future_and_unconfirmed_past'
-  ) then
+  if p_mode not in ('rule_only','rule_and_future','rule_and_future_and_unconfirmed_past') then
     raise exception 'invalid cleanup mode %', p_mode;
   end if;
 
-  -- A) rule only: keep all generated transactions
   if p_mode = 'rule_only' then
-    return query
-    select v_rule.id, 0;
+    return query select v_rule.id, 0;
     return;
   end if;
 
-  -- B) delete only future generated/skipped occurrences
   if p_mode = 'rule_and_future' then
     delete from public.transactions t
     where t.recurring_rule_id = v_rule.id
       and t.occurrence_date >= v_today
-      and t.recurring_instance_status in ('generated', 'skipped');
+      and coalesce(t.pay_now, false) = false
+      and coalesce(t.recurring_instance_status, 'generated') in ('generated', 'skipped');
 
     get diagnostics v_deleted = row_count;
-
-    return query
-    select v_rule.id, v_deleted;
+    return query select v_rule.id, v_deleted;
     return;
   end if;
 
-  -- C) delete futures + all non-confirmed past
-  if p_mode = 'rule_and_future_and_unconfirmed_past' then
-    delete from public.transactions t
-    where t.recurring_rule_id = v_rule.id
-      and t.recurring_instance_status in ('generated', 'skipped');
+  delete from public.transactions t
+  where t.recurring_rule_id = v_rule.id
+    and coalesce(t.pay_now, false) = false
+    and coalesce(t.recurring_instance_status, 'generated') in ('generated', 'skipped');
 
-    get diagnostics v_deleted = row_count;
-
-    return query
-    select v_rule.id, v_deleted;
-    return;
-  end if;
+  get diagnostics v_deleted = row_count;
+  return query select v_rule.id, v_deleted;
 end;
 $$;
 
@@ -749,13 +736,11 @@ begin
   end if;
 
   v_horizon := v_travel_end;
-
   if r.end_date is not null and r.end_date < v_horizon then
     v_horizon := r.end_date;
   end if;
 
   v_due := coalesce(r.next_due_at, r.start_date);
-
   if v_due < r.start_date then
     v_due := r.start_date;
   end if;
@@ -806,9 +791,9 @@ begin
         v_due,
         v_due,
         false,
+        coalesce(r.out_of_budget, false),
         false,
-        false,
-        true,
+        not coalesce(r.out_of_budget, false),
         now(),
         now(),
         r.id,
@@ -817,9 +802,7 @@ begin
         'generated',
         false
       );
-
       v_inserted := v_inserted + 1;
-
     exception
       when unique_violation then
         v_skipped := v_skipped + 1;
@@ -842,22 +825,13 @@ begin
   end loop;
 
   update public.recurring_rules rr
-  set
-    generated_until = v_horizon,
-    next_due_at = case
-      when v_due is null then rr.next_due_at
-      else v_due
-    end,
-    updated_at = now()
+  set generated_until = v_horizon,
+      next_due_at = case when v_due is null then rr.next_due_at else v_due end,
+      updated_at = now()
   where rr.id = r.id;
 
   return query
-  select
-    r.id,
-    v_inserted,
-    v_skipped,
-    v_horizon,
-    v_due;
+  select r.id, v_inserted, v_skipped, v_horizon, v_due;
 end;
 $$;
 
@@ -948,6 +922,8 @@ CREATE OR REPLACE FUNCTION "public"."recurring_pause_rule"("p_rule_id" "uuid") R
     AS $$
 declare
   v_uid uuid := auth.uid();
+  v_rule_id uuid;
+  v_is_active boolean;
 begin
   if v_uid is null then
     raise exception 'not authenticated';
@@ -959,14 +935,14 @@ begin
   where r.id = p_rule_id
     and r.user_id = v_uid
   returning r.id, r.is_active
-  into p_rule_id, v_uid;
+  into v_rule_id, v_is_active;
 
   if not found then
     raise exception 'recurring rule not found or not owned';
   end if;
 
   return query
-  select p_rule_id, false;
+  select v_rule_id, v_is_active;
 end;
 $$;
 
@@ -1032,6 +1008,8 @@ begin
       updated_at = now()
   where r.id = v_rule.id
     and r.user_id = v_uid;
+
+  perform public.recurring_generate_for_rule(v_rule.id);
 
   return query
   select v_rule.id, true;
@@ -2181,12 +2159,21 @@ CREATE OR REPLACE FUNCTION "public"."update_transaction_v2"("p_wallet_id" "uuid"
 declare
   v_user_id uuid := auth.uid();
   v_period_id uuid;
+  v_existing public.transactions%rowtype;
+  v_new_status text;
 begin
   if v_user_id is null then
     raise exception 'Not authenticated';
   end if;
 
-  -- period_id depuis wallet (si wallet change)
+  select * into v_existing
+  from public.transactions t
+  where t.id = p_tx_id and t.user_id = v_user_id;
+
+  if not found then
+    raise exception 'Transaction not found or not owned';
+  end if;
+
   select w.period_id into v_period_id
   from public.wallets w
   where w.id = p_wallet_id and w.user_id = v_user_id;
@@ -2195,37 +2182,42 @@ begin
     raise exception 'Wallet not found or not owned';
   end if;
 
-  update public.transactions t
-  set
-    wallet_id = p_wallet_id,
-    period_id = v_period_id,
-    type = p_type,
-    label = p_label,
-    amount = p_amount,
-    currency = p_currency,
-    date_start = p_date_start,
-    date_end = p_date_end,
-    category = p_category,
-    pay_now = p_pay_now,
-    out_of_budget = p_out_of_budget,
-    night_covered = p_night_covered,
-    affects_budget = coalesce(p_affects_budget, t.affects_budget),
-    trip_expense_id = p_trip_expense_id,
-    trip_share_link_id = p_trip_share_link_id,
-    -- snapshot : set ONLY if currently null (immutability friendly)
-    fx_rate_snapshot = coalesce(t.fx_rate_snapshot, p_fx_rate_snapshot),
-    fx_source_snapshot = coalesce(t.fx_source_snapshot, p_fx_source_snapshot),
-    fx_snapshot_at = coalesce(t.fx_snapshot_at, p_fx_snapshot_at),
-    fx_base_currency_snapshot = coalesce(t.fx_base_currency_snapshot, p_fx_base_currency_snapshot),
-    fx_tx_currency_snapshot = coalesce(t.fx_tx_currency_snapshot, p_fx_tx_currency_snapshot),
-    updated_at = now()
-  where
-    t.id = p_tx_id
-    and t.user_id = v_user_id;
-
-  if not found then
-    raise exception 'Transaction not found or not owned';
+  v_new_status := v_existing.recurring_instance_status;
+  if coalesce(v_existing.generated_by_rule, false) then
+    if coalesce(p_pay_now, false) then
+      v_new_status := 'confirmed';
+    elsif coalesce(v_existing.recurring_instance_status, 'generated') = 'confirmed' then
+      v_new_status := 'generated';
+    elsif v_new_status is null then
+      v_new_status := 'generated';
+    end if;
   end if;
+
+  update public.transactions t
+  set wallet_id = p_wallet_id,
+      period_id = v_period_id,
+      type = p_type,
+      label = p_label,
+      amount = p_amount,
+      currency = p_currency,
+      date_start = p_date_start,
+      date_end = p_date_end,
+      category = p_category,
+      pay_now = p_pay_now,
+      out_of_budget = p_out_of_budget,
+      night_covered = p_night_covered,
+      affects_budget = coalesce(p_affects_budget, case when p_out_of_budget then false else t.affects_budget end),
+      trip_expense_id = p_trip_expense_id,
+      trip_share_link_id = p_trip_share_link_id,
+      recurring_instance_status = v_new_status,
+      fx_rate_snapshot = coalesce(t.fx_rate_snapshot, p_fx_rate_snapshot),
+      fx_source_snapshot = coalesce(t.fx_source_snapshot, p_fx_source_snapshot),
+      fx_snapshot_at = coalesce(t.fx_snapshot_at, p_fx_snapshot_at),
+      fx_base_currency_snapshot = coalesce(t.fx_base_currency_snapshot, p_fx_base_currency_snapshot),
+      fx_tx_currency_snapshot = coalesce(t.fx_tx_currency_snapshot, p_fx_tx_currency_snapshot),
+      updated_at = now()
+  where t.id = p_tx_id
+    and t.user_id = v_user_id;
 end;
 $$;
 
@@ -2409,6 +2401,7 @@ CREATE TABLE IF NOT EXISTS "public"."recurring_rules" (
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "archived" boolean DEFAULT false NOT NULL,
     "archived_at" timestamp with time zone,
+    "out_of_budget" boolean DEFAULT false NOT NULL,
     CONSTRAINT "recurring_rules_amount_check" CHECK (("amount" > (0)::numeric)),
     CONSTRAINT "recurring_rules_currency_check" CHECK (("currency" ~ '^[A-Z]{3}$'::"text")),
     CONSTRAINT "recurring_rules_dates_ok" CHECK ((("end_date" IS NULL) OR ("end_date" >= "start_date"))),
@@ -2666,7 +2659,7 @@ CREATE TABLE IF NOT EXISTS "public"."trip_settlements" (
 ALTER TABLE "public"."trip_settlements" OWNER TO "postgres";
 
 
-CREATE OR REPLACE VIEW "public"."v_trip_balances" AS
+CREATE OR REPLACE VIEW "public"."v_trip_balances" WITH ("security_invoker"='true') AS
  WITH "paid" AS (
          SELECT "e"."trip_id",
             "e"."currency",
@@ -2992,7 +2985,7 @@ ALTER TABLE ONLY "public"."fx_rates"
 
 
 ALTER TABLE ONLY "public"."periods"
-    ADD CONSTRAINT "periods_no_overlap" EXCLUDE USING "gist" ("user_id" WITH =, "daterange"("start_date", ("end_date" + 1), '[]'::"text") WITH &&);
+    ADD CONSTRAINT "periods_no_overlap" EXCLUDE USING "gist" ("user_id" WITH =, "daterange"("start_date", "end_date", '[]'::"text") WITH &&);
 
 
 
@@ -4434,8 +4427,6 @@ GRANT ALL ON FUNCTION "public"."recurring_delete_rule"("p_rule_id" "uuid", "p_mo
 
 
 
-GRANT ALL ON FUNCTION "public"."recurring_delete_rule_admin"("p_rule_id" "uuid", "p_mode" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."recurring_delete_rule_admin"("p_rule_id" "uuid", "p_mode" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."recurring_delete_rule_admin"("p_rule_id" "uuid", "p_mode" "text") TO "service_role";
 
 

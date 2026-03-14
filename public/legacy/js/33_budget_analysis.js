@@ -25,10 +25,48 @@
     return out;
   }
   function _fmtMoney(v, cur){ try { return fmtMoney(v, cur); } catch (_) { return `${(_safeNum(v)).toFixed(2)} ${cur || ''}`.trim(); } }
-  function _currency(){
+  function _rangeInputs(){
+    return {
+      start: _el('analysis-range-start'),
+      end: _el('analysis-range-end'),
+      box: _el('analysis-range-box')
+    };
+  }
+  function _allSegments(){
+    return Array.isArray(state?.budgetSegments) ? state.budgetSegments.filter(Boolean) : [];
+  }
+  function _segmentsForTravel(travelId){
+    return _allSegments().filter(s => String(s.travel_id || s.travelId || state?.activeTravelId || '') === String(travelId || state?.activeTravelId || ''));
+  }
+  function _getActivePeriodForTravel(travelId){
+    const list = _periodList(travelId).slice().sort((a,b)=>String(a.start_date || a.start || '').localeCompare(String(b.start_date || b.start || '')));
+    if (!list.length) return null;
+    if (String(state?.activeTravelId || '') === String(travelId || '') && state?.period) return state.period;
+    const today = _iso(new Date());
+    return list.find(p => {
+      const a = _norm(p.start_date || p.start);
+      const b = _norm(p.end_date || p.end);
+      return a && b && today >= a && today <= b;
+    }) || list[0] || null;
+  }
+  function _resolveAnalysisCurrency(startISO, endISO){
     const travel = _getSelectedTravel();
+    const segs = _segmentsForTravel(_getSelectedTravelId());
+    const inRange = segs.filter(s => {
+      const a = _norm(s.start || s.start_date || s.startDate);
+      const b = _norm(s.end || s.end_date || s.endDate);
+      if (!a || !b) return false;
+      return (!startISO || b >= startISO) && (!endISO || a <= endISO);
+    });
+    const bases = new Set(inRange.map(s => _upper(s.baseCurrency || s.base_currency || s.base || '')).filter(Boolean));
+    if (bases.size > 1) return 'EUR';
+    if (bases.size === 1) return Array.from(bases)[0];
     const period = _getSelectedPeriodObj();
     return _upper(period?.base_currency || period?.baseCurrency || travel?.base_currency || travel?.baseCurrency || state?.period?.baseCurrency || state?.user?.baseCurrency || 'EUR');
+  }
+  function _currency(){
+    const r = _analysisRange();
+    return _resolveAnalysisCurrency(r.start, r.end);
   }
   function _travelList(){ return Array.isArray(state?.travels) ? state.travels : []; }
   function _periodList(travelId){
@@ -39,13 +77,25 @@
   function _getSelectedTravel(){ return _travelList().find(t => String(t.id) === String(_getSelectedTravelId())) || _travelList()[0] || null; }
   function _getSelectedPeriodObj(){
     const pid = _getSelectedPeriodId();
-    if (pid === 'all') return null;
-    if (pid === 'active') return state?.period || null;
+    if (pid === 'all' || pid === 'range') return null;
+    if (pid === 'active') return _getActivePeriodForTravel(_getSelectedTravelId());
     return _periodList(_getSelectedTravelId()).find(p => String(p.id) === String(pid)) || null;
   }
   function _analysisRange(){
     const travel = _getSelectedTravel();
+    const pid = _getSelectedPeriodId();
     const period = _getSelectedPeriodObj();
+    if (pid === 'range') {
+      const ri = _rangeInputs();
+      const tStart = _norm(travel?.start_date || travel?.start || state?.period?.start);
+      const tEnd = _norm(travel?.end_date || travel?.end || state?.period?.end);
+      let start = _norm(ri.start?.value || '') || tStart;
+      let end = _norm(ri.end?.value || '') || tEnd;
+      if (tStart && start < tStart) start = tStart;
+      if (tEnd && end > tEnd) end = tEnd;
+      if (start && end && start > end) [start, end] = [end, start];
+      return { start, end };
+    }
     const start = _norm(period?.start_date || period?.start || travel?.start_date || travel?.start || state?.period?.start);
     const end = _norm(period?.end_date || period?.end || travel?.end_date || travel?.end || state?.period?.end);
     return { start, end };
@@ -58,6 +108,8 @@
       localStorage.setItem(LS_KEY, JSON.stringify({
         travelId: _getSelectedTravelId(),
         periodId: _getSelectedPeriodId(),
+        rangeStart: _el('analysis-range-start')?.value || '',
+        rangeEnd: _el('analysis-range-end')?.value || '',
         scope: _el('analysis-scope')?.value || 'budget',
         mode: _el('analysis-mode')?.value || 'expenses'
       }));
@@ -79,39 +131,48 @@
     if (typeof tx?.out_of_budget === 'boolean') return tx.out_of_budget;
     return !!tx?.outOfBudget || !!tx?.out_of_budget;
   }
-  function _convert(amount, cur, dateISO){
-    const base = _currency();
+  function _convert(amount, cur, dateISO, forcedBase){
+    const base = _upper(forcedBase || _currency());
     const a = _safeNum(amount);
     const from = _upper(cur || base);
     if (!a) return 0;
     if (from === base) return a;
+    const seg = (typeof getBudgetSegmentForDate === 'function') ? getBudgetSegmentForDate(dateISO) : null;
     try {
-      if (typeof _toBaseForDate === 'function') return _safeNum(_toBaseForDate(a, from, dateISO));
-    } catch (_) {}
-    try {
-      if (typeof fxConvert === 'function') {
-        const out = fxConvert(a, from, base);
+      if (typeof window.fxConvert === 'function' && seg && typeof window.fxRatesForSegment === 'function') {
+        const rates = window.fxRatesForSegment(seg);
+        const out = window.fxConvert(a, from, base, rates);
         if (out !== null && Number.isFinite(Number(out))) return Number(out);
       }
     } catch (_) {}
-    if (from === 'EUR') {
-      const r = _safeNum(state?.exchangeRates?.['EUR-BASE']);
-      if (r) return a * r;
-    }
-    return 0;
-  }
-  function _dailyBudgetForDate(dateISO){
-    const pid = _getSelectedPeriodId();
-    if (pid !== 'all') {
-      const p = _getSelectedPeriodObj();
-      return _safeNum(p?.daily_budget_base || p?.dailyBudgetBase || state?.period?.dailyBudgetBase || 0);
-    }
     try {
-      if (typeof getBudgetSegmentForDate === 'function') {
-        const seg = getBudgetSegmentForDate(dateISO);
-        if (seg) return _safeNum(seg?.daily_budget_base || seg?.dailyBudgetBase || 0);
+      if (base === 'EUR' && typeof window.amountToBudgetBaseForDate === 'function' && seg) {
+        const inSegBase = window.amountToBudgetBaseForDate(a, from, dateISO);
+        const segBase = _upper(seg.baseCurrency || seg.base_currency || state?.period?.baseCurrency || 'EUR');
+        if (segBase === 'EUR') return _safeNum(inSegBase);
+        if (typeof window.fxConvert === 'function' && typeof window.fxRatesForSegment === 'function') {
+          const rates = window.fxRatesForSegment(seg);
+          const out = window.fxConvert(inSegBase, segBase, 'EUR', rates);
+          if (out !== null && Number.isFinite(Number(out))) return Number(out);
+        }
       }
     } catch (_) {}
+    try {
+      if (base !== 'EUR' && typeof _toBaseForDate === 'function') {
+        return _safeNum(_toBaseForDate(a, from, dateISO));
+      }
+    } catch (_) {}
+    return 0;
+  }
+  function _dailyBudgetForDate(dateISO, analysisBase){
+    const base = _upper(analysisBase || _currency());
+    const seg = (typeof getBudgetSegmentForDate === 'function') ? getBudgetSegmentForDate(dateISO) : null;
+    if (base === 'EUR' && typeof getDailyBudgetForDateEUR === 'function') {
+      return _safeNum(getDailyBudgetForDateEUR(dateISO));
+    }
+    const info = (typeof getDailyBudgetInfoForDate === 'function') ? getDailyBudgetInfoForDate(dateISO) : null;
+    if (info && _upper(info.baseCurrency || '') === base) return _safeNum(info.remaining);
+    if (info) return _convert(_safeNum(info.remaining), info.baseCurrency || base, dateISO, base);
     return _safeNum(state?.period?.dailyBudgetBase || 0);
   }
   function _filteredTransactions(){
@@ -140,7 +201,7 @@
     const travelId = _getSelectedTravelId();
     const txs = _filteredTransactions();
     const { start, end } = _analysisRange();
-    const base = _currency();
+    const base = _resolveAnalysisCurrency(start, end);
     const days = _daysInclusive(start, end);
     const dailyMap = Object.fromEntries(days.map(d => [d, 0]));
     const paidMap = Object.fromEntries(days.map(d => [d, 0]));
@@ -149,7 +210,7 @@
     let paidSpent = 0;
     for (const tx of txs) {
       const ds = _txDate(tx);
-      const amt = _convert(tx?.amount, tx?.currency || base, ds);
+      const amt = _convert(tx?.amount, tx?.currency || base, ds, base);
       spent += amt;
       if (_txPaid(tx)) paidSpent += amt;
       if (dailyMap[ds] == null) dailyMap[ds] = 0;
@@ -158,7 +219,7 @@
       const cat = _norm(tx?.category || 'Autre');
       catMap.set(cat, (catMap.get(cat) || 0) + amt);
     }
-    const targetDaily = days.map(d => _dailyBudgetForDate(d));
+    const targetDaily = days.map(d => _dailyBudgetForDate(d, base));
     const totalBudget = targetDaily.reduce((a,b)=>a+b,0);
     const cumSpent = [];
     const cumTarget = [];
@@ -194,7 +255,7 @@
         if (!_txOut(tx)) return false;
         if (_isTripLinked(tx) || _isInternalMovement(tx)) return false;
         return true;
-      }).reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txDate(tx)), 0)
+      }).reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txDate(tx), base), 0)
     };
   }
 
@@ -352,30 +413,55 @@
     _renderInsights(model);
   }
 
+  function _toggleRangeBox(){
+    const pid = _getSelectedPeriodId();
+    const { box, start, end } = _rangeInputs();
+    if (!box) return;
+    const travel = _getSelectedTravel();
+    const tStart = _norm(travel?.start_date || travel?.start || '');
+    const tEnd = _norm(travel?.end_date || travel?.end || '');
+    box.style.display = (pid === 'range') ? 'grid' : 'none';
+    if (pid === 'range') {
+      if (start && !start.value) start.value = tStart;
+      if (end && !end.value) end.value = tEnd;
+      if (start) { start.min = tStart; start.max = tEnd || ''; }
+      if (end) { end.min = tStart; end.max = tEnd || ''; }
+    }
+  }
   function _fillPeriodSelect(travelId, wanted){
     const sel = _el('analysis-period');
     if (!sel) return;
     const periods = _periodList(travelId).slice().sort((a,b)=>String(a.start_date || a.start || '').localeCompare(String(b.start_date || b.start || '')));
-    const activeLabel = state?.period?.start && state?.period?.end
-      ? `Période active (${state.period.start} → ${state.period.end})`
+    const activePeriod = _getActivePeriodForTravel(travelId);
+    const activeLabel = activePeriod
+      ? `Période active (${_norm(activePeriod.start_date || activePeriod.start)} → ${_norm(activePeriod.end_date || activePeriod.end)})`
       : 'Période active';
-    sel.innerHTML = `<option value="active">${escapeHTML(activeLabel)}</option><option value="all">Tout le voyage</option>` + periods.map(p => {
+    sel.innerHTML = `<option value="active">${escapeHTML(activeLabel)}</option><option value="all">Tout le voyage</option>` + periods.map((p, idx) => {
       const s = _norm(p.start_date || p.start);
       const e = _norm(p.end_date || p.end);
       const base = _upper(p.base_currency || p.baseCurrency || '');
-      return `<option value="${escapeHTML(String(p.id))}">${escapeHTML((p.name || 'Période') + ' • ' + s + ' → ' + e + (base ? ' • ' + base : ''))}</option>`;
-    }).join('');
+      return `<option value="${escapeHTML(String(p.id))}">${escapeHTML(`Période ${idx+1} • ${s} → ${e}${base ? ' • ' + base : ''}`)}</option>`;
+    }).join('') + `<option value="range">Date à date</option>`;
     const candidate = wanted || 'active';
     if ([...sel.options].some(o => o.value === candidate)) sel.value = candidate;
+    _toggleRangeBox();
   }
 
   function _ensureEvents(){
-    ['analysis-travel','analysis-period','analysis-scope','analysis-mode'].forEach(id => {
+    ['analysis-travel','analysis-period','analysis-scope','analysis-mode','analysis-range-start','analysis-range-end'].forEach(id => {
       const el = _el(id);
       if (!el || el._tbBound) return;
       el._tbBound = true;
       el.addEventListener('change', () => {
-        if (id === 'analysis-travel') _fillPeriodSelect(_getSelectedTravelId(), 'active');
+        if (id === 'analysis-travel') {
+          const f = _loadFilters();
+          const rs = _el('analysis-range-start');
+          const re = _el('analysis-range-end');
+          if (rs) rs.value = f.rangeStart || '';
+          if (re) re.value = f.rangeEnd || '';
+          _fillPeriodSelect(_getSelectedTravelId(), 'active');
+        }
+        if (id === 'analysis-period') _toggleRangeBox();
         _renderAll();
       });
     });
@@ -401,6 +487,10 @@
     const wantedTravel = (_isUUID(filters.travelId) && travels.some(t => String(t.id) === String(filters.travelId))) ? filters.travelId : (state?.activeTravelId || travels[0]?.id || '');
     if (wantedTravel && [...travelSel.options].some(o => o.value === String(wantedTravel))) travelSel.value = String(wantedTravel);
     _fillPeriodSelect(travelSel.value, filters.periodId || 'active');
+    const range = _rangeInputs();
+    if (range.start) range.start.value = filters.rangeStart || '';
+    if (range.end) range.end.value = filters.rangeEnd || '';
+    _toggleRangeBox();
     if (_el('analysis-scope')) _el('analysis-scope').value = ['budget','out','all'].includes(filters.scope) ? filters.scope : 'budget';
     if (_el('analysis-mode')) _el('analysis-mode').value = ['expenses','planned'].includes(filters.mode) ? filters.mode : 'expenses';
     _ensureEvents();
