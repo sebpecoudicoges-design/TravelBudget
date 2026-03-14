@@ -115,5 +115,10 @@ function renderAll() {
     return;
   }
 
+  if (view === "analysis") {
+    safeCall("Analyse budget", () => { if (typeof renderBudgetAnalysis === "function") return renderBudgetAnalysis(); }, { containerId: "view-analysis" });
+    return;
+  }
+
   // other views (trip/members/help): their render is triggered by showView()
 }

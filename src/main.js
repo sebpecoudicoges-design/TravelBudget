@@ -35,6 +35,7 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/15_recurring_rules_ui.js',
   '/legacy/js/15_wallet_adjust.js',
   '/legacy/js/17_charts.js',
+  '/legacy/js/33_budget_analysis.js',
   '/legacy/js/18_main_render.js',
   '/legacy/js/08_refresh.js',
   '/legacy/js/19_backup_export_import.js',
@@ -64,7 +65,7 @@ function loadScript(src) {
 async function boot() {
   // Simple marker for debugging
   window.__TB_BUILD__ = window.__TB_BUILD__ || {};
-  window.__TB_BUILD__.entry = 'v9-vite-legacy-loader-9.1.12';
+  window.__TB_BUILD__.entry = 'v9-vite-legacy-loader-9.2.0';
   window.__TB_BUILD__.loadedAt = new Date().toISOString();
 
   for (const src of LEGACY_SCRIPTS) {

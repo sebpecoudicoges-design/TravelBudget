@@ -10,6 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <style>
     /* =========================
        Design Tokens
@@ -548,6 +549,58 @@
   #tb-boot-overlay .tb-boot-text{ font-size:12px; opacity:.82; }
   @keyframes tbBootSpin{to{transform:rotate(360deg)}}
 
+
+
+    /* =========================
+       Budget Analysis View
+       ========================= */
+    .analysis-shell{ display:flex; flex-direction:column; gap:16px; }
+    .analysis-hero{ position:relative; overflow:hidden; border:1px solid var(--border); border-radius:28px; padding:24px; min-height:160px; background:linear-gradient(135deg, rgba(37,99,235,.18), rgba(168,85,247,.16) 45%, rgba(15,23,42,.06) 100%); box-shadow: var(--shadow); }
+    body.theme-dark .analysis-hero{ background:linear-gradient(135deg, rgba(59,130,246,.20), rgba(168,85,247,.22) 45%, rgba(15,23,42,.30) 100%); }
+    .analysis-hero-copy{ position:relative; z-index:2; max-width:700px; }
+    .analysis-kicker,.analysis-card-kicker{ text-transform:uppercase; letter-spacing:.18em; font-size:11px; font-weight:800; color:var(--muted); }
+    .analysis-hero h2{ margin:8px 0 10px; font-size:34px; line-height:1.05; }
+    .analysis-hero p{ margin:0; max-width:620px; font-size:15px; line-height:1.55; color:var(--text); opacity:.88; }
+    .analysis-live-pill{ position:absolute; top:20px; right:20px; z-index:2; display:inline-flex; align-items:center; gap:10px; padding:10px 14px; border-radius:999px; background:rgba(255,255,255,.65); border:1px solid rgba(255,255,255,.30); backdrop-filter:blur(12px); font-weight:800; box-shadow:0 12px 24px rgba(15,23,42,.12); }
+    body.theme-dark .analysis-live-pill{ background:rgba(15,23,42,.58); border-color:rgba(255,255,255,.08); }
+    .analysis-live-pill::before{ content:""; width:10px; height:10px; border-radius:999px; background:linear-gradient(180deg, var(--good), #8bffb1); box-shadow:0 0 0 0 rgba(34,197,94,.55); animation:analysisPulse 1.8s infinite; }
+    @keyframes analysisPulse{ 0%{ box-shadow:0 0 0 0 rgba(34,197,94,.45);} 70%{ box-shadow:0 0 0 12px rgba(34,197,94,0);} 100%{ box-shadow:0 0 0 0 rgba(34,197,94,0);} }
+    .analysis-glow{ position:absolute; border-radius:999px; filter:blur(18px); opacity:.9; pointer-events:none; }
+    .analysis-glow-a{ width:220px; height:220px; right:-60px; top:-40px; background:radial-gradient(circle, rgba(56,189,248,.55) 0%, rgba(56,189,248,.0) 70%); animation:analysisFloat 8s ease-in-out infinite; }
+    .analysis-glow-b{ width:200px; height:200px; left:28%; bottom:-90px; background:radial-gradient(circle, rgba(251,191,36,.45) 0%, rgba(251,191,36,0) 72%); animation:analysisFloat 11s ease-in-out infinite reverse; }
+    @keyframes analysisFloat{ 0%,100%{ transform:translate3d(0,0,0) scale(1);} 50%{ transform:translate3d(0,-8px,0) scale(1.05);} }
+    .analysis-toolbar{ display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:12px; position:sticky; top:10px; z-index:3; }
+    .analysis-filter-group{ display:flex; flex-direction:column; gap:6px; }
+    .analysis-filter-group label{ font-size:12px; color:var(--muted); font-weight:700; }
+    .analysis-filter-group select{ width:100%; }
+    .analysis-summary-grid{ display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:12px; }
+    .analysis-stat{ position:relative; overflow:hidden; border-radius:22px; padding:18px; min-height:122px; border:1px solid var(--border); background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.58)); box-shadow: var(--shadow); backdrop-filter:blur(12px); }
+    body.theme-dark .analysis-stat{ background:linear-gradient(180deg, rgba(30,41,59,.92), rgba(22,38,58,.72)); }
+    .analysis-stat::after{ content:""; position:absolute; inset:auto -18px -18px auto; width:110px; height:110px; border-radius:999px; background:radial-gradient(circle, rgba(255,255,255,.22), rgba(255,255,255,0)); pointer-events:none; }
+    .analysis-stat-label{ color:var(--muted); font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; }
+    .analysis-stat-value{ margin-top:10px; font-size:28px; font-weight:900; letter-spacing:-.03em; }
+    .analysis-stat-meta{ margin-top:8px; color:var(--muted); font-size:13px; line-height:1.35; }
+    .analysis-stat-bar{ margin-top:14px; height:8px; border-radius:999px; background:rgba(148,163,184,.18); overflow:hidden; }
+    .analysis-stat-bar > span{ display:block; height:100%; border-radius:999px; background:linear-gradient(90deg, var(--accent), rgba(168,85,247,.95)); transform-origin:left center; animation:analysisGrow 1s ease; }
+    @keyframes analysisGrow{ from{ transform:scaleX(.1); opacity:.35;} to{ transform:scaleX(1); opacity:1;} }
+    .analysis-main-grid{ display:grid; grid-template-columns: minmax(0,1.5fr) minmax(320px,.9fr); gap:16px; }
+    .analysis-side-stack{ display:grid; grid-template-rows:1fr 1fr; gap:16px; }
+    .analysis-bottom-grid{ display:grid; grid-template-columns: minmax(0,1.25fr) minmax(300px,.75fr); gap:16px; }
+    .analysis-chart-card,.analysis-insights-card{ border-radius:24px; }
+    .analysis-card-head{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:10px; }
+    .analysis-card-head h3{ margin:6px 0 0; font-size:22px; letter-spacing:-.02em; }
+    .analysis-card-meta{ color:var(--muted); font-size:13px; text-align:right; }
+    .analysis-chart{ width:100%; height:340px; }
+    .analysis-chart--lg{ height:420px; }
+    .analysis-chart--heatmap{ height:300px; }
+    .analysis-insight{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border); }
+    .analysis-insight:last-child{ border-bottom:none; padding-bottom:0; }
+    .analysis-insight-badge{ width:34px; height:34px; border-radius:14px; display:grid; place-items:center; font-size:16px; background:rgba(37,99,235,.14); flex:none; }
+    .analysis-insight-title{ font-size:14px; font-weight:800; margin:0 0 4px; }
+    .analysis-insight-body{ margin:0; color:var(--muted); font-size:13px; line-height:1.45; }
+    @media (max-width: 1120px){ .analysis-summary-grid{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-toolbar{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-main-grid,.analysis-bottom-grid{ grid-template-columns:1fr; } .analysis-side-stack{ grid-template-rows:none; grid-template-columns:1fr 1fr; } }
+    @media (max-width: 780px){ .analysis-hero{ padding:18px; min-height:0; } .analysis-hero h2{ font-size:28px; } .analysis-live-pill{ position:relative; top:auto; right:auto; margin-top:16px; width:max-content; } .analysis-summary-grid,.analysis-toolbar,.analysis-side-stack{ grid-template-columns:1fr; } .analysis-chart{ height:280px; } .analysis-chart--lg{ height:320px; } }
+
 </style>
 
 </head>
@@ -683,6 +736,7 @@
         <div id="tab-dashboard" class="tab active" onclick="showView('dashboard')" data-t="nav.dashboard">Dashboard</div>
         <div id="tab-transactions" class="tab" onclick="showView('transactions')" data-t="nav.transactions">Transactions</div>
         <div id="tab-settings" class="tab" onclick="showView('settings')" data-t="nav.settings">Settings</div>
+        <div id="tab-analysis" class="tab" onclick="showView('analysis')">Analyse</div>
         <div id="tab-help" class="tab" onclick="showView('help')" data-t="nav.help">Aide</div>
         <div id="tab-trip" class="tab" onclick="showView('trip')" data-t="nav.trip">Partage</div>
         <div id="tab-members" class="tab" style="display:none" onclick="showView('members')" data-t="nav.members">Membres</div>
@@ -721,6 +775,110 @@
         <!-- FULL WIDTH: Solde projection chart -->
         <div id="solde-projection-container" style="margin-top:16px;"></div>
 
+      </div>
+
+      <!-- ANALYSIS -->
+      <div id="view-analysis" class="hidden">
+        <div class="analysis-shell">
+          <div class="analysis-hero">
+            <div class="analysis-glow analysis-glow-a"></div>
+            <div class="analysis-glow analysis-glow-b"></div>
+            <div class="analysis-hero-copy">
+              <div class="analysis-kicker">Budget intelligence</div>
+              <h2>Analyse budget</h2>
+              <p>Une lecture visuelle et vivante de ton voyage : trajectoire, cadence, catégories et signaux de dérive.</p>
+            </div>
+            <div id="analysis-live-pill" class="analysis-live-pill">Chargement…</div>
+          </div>
+
+          <div class="analysis-toolbar card">
+            <div class="analysis-filter-group">
+              <label for="analysis-travel">Voyage</label>
+              <select id="analysis-travel"></select>
+            </div>
+            <div class="analysis-filter-group">
+              <label for="analysis-period">Période</label>
+              <select id="analysis-period"></select>
+            </div>
+            <div class="analysis-filter-group">
+              <label for="analysis-scope">Périmètre</label>
+              <select id="analysis-scope">
+                <option value="budget">Dans le budget</option>
+                <option value="out">Hors budget</option>
+                <option value="all">Les deux</option>
+              </select>
+            </div>
+            <div class="analysis-filter-group">
+              <label for="analysis-mode">Mode</label>
+              <select id="analysis-mode">
+                <option value="expenses">Dépenses payées</option>
+                <option value="planned">Dépenses payées + à payer</option>
+              </select>
+            </div>
+            <div class="analysis-filter-group">
+              <label>&nbsp;</label>
+              <button id="analysis-refresh" class="btn primary" type="button">Actualiser</button>
+            </div>
+          </div>
+
+          <div id="analysis-summary" class="analysis-summary-grid"></div>
+
+          <div class="analysis-main-grid">
+            <div class="card analysis-chart-card analysis-chart-card--hero">
+              <div class="analysis-card-head">
+                <div>
+                  <div class="analysis-card-kicker">Trajectory</div>
+                  <h3>Budget vs réel</h3>
+                </div>
+                <div id="analysis-trajectory-meta" class="analysis-card-meta"></div>
+              </div>
+              <div id="analysis-trajectory-chart" class="analysis-chart analysis-chart--lg"></div>
+            </div>
+
+            <div class="analysis-side-stack">
+              <div class="card analysis-chart-card">
+                <div class="analysis-card-head">
+                  <div>
+                    <div class="analysis-card-kicker">Category gravity</div>
+                    <h3>Répartition catégories</h3>
+                  </div>
+                </div>
+                <div id="analysis-category-chart" class="analysis-chart"></div>
+              </div>
+
+              <div class="card analysis-chart-card">
+                <div class="analysis-card-head">
+                  <div>
+                    <div class="analysis-card-kicker">Spend velocity</div>
+                    <h3>Cadence quotidienne</h3>
+                  </div>
+                </div>
+                <div id="analysis-velocity-chart" class="analysis-chart"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="analysis-bottom-grid">
+            <div class="card analysis-chart-card">
+              <div class="analysis-card-head">
+                <div>
+                  <div class="analysis-card-kicker">Pattern radar</div>
+                  <h3>Heatmap des dépenses</h3>
+                </div>
+              </div>
+              <div id="analysis-heatmap-chart" class="analysis-chart analysis-chart--heatmap"></div>
+            </div>
+            <div class="card analysis-insights-card">
+              <div class="analysis-card-head">
+                <div>
+                  <div class="analysis-card-kicker">Signal engine</div>
+                  <h3>Insights</h3>
+                </div>
+              </div>
+              <div id="analysis-insights"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- TRANSACTIONS -->

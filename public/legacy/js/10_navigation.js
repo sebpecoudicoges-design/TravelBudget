@@ -6,6 +6,7 @@ function setActiveTab(view) {
     ["dashboard", "tab-dashboard", "view-dashboard"],
     ["transactions", "tab-transactions", "view-transactions"],
     ["settings", "tab-settings", "view-settings"],
+    ["analysis", "tab-analysis", "view-analysis"],
     ["trip", "tab-trip", "view-trip"],
     ["members", "tab-members", "view-members"],
     ["help", "tab-help", "view-help"],
@@ -20,6 +21,7 @@ function showView(view) {
   setActiveTab(view);
   if (view === "transactions") renderTransactions();
   if (view === "settings") { renderSettings(); initPaletteUI(); }
+  if (view === "analysis") { if (typeof renderBudgetAnalysis === 'function') renderBudgetAnalysis(); }
   if (view === "dashboard") if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("10_navigation.js"); else redrawCharts();
   if (view === "trip") renderTrip();
   if (view === "members") renderMembersAdmin();

@@ -12,6 +12,9 @@ function applyTheme(theme) {
     if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("theme");
     else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
   } catch (_) {}
+  try {
+    if ((typeof activeView === 'string' ? activeView : '') === 'analysis' && typeof window.renderBudgetAnalysis === 'function') window.renderBudgetAnalysis();
+  } catch (_) {}
 }
 function toggleTheme() {
   const current = localStorage.getItem(THEME_KEY) || "light";
