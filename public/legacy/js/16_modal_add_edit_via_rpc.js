@@ -33,6 +33,35 @@ function _ensureSelectValue(el) {
   if (!ok) el.value = el.options && el.options[0] ? el.options[0].value : "";
 }
 
+function fillModalSubcategorySelect(categoryName, selectedValue) {
+  const el = document.getElementById("m-subcategory");
+  if (!el) return;
+  const selected = String(selectedValue || "").trim();
+  const rows = (typeof getCategorySubcategories === "function") ? getCategorySubcategories(categoryName) : [];
+  const options = ['<option value="">Aucune</option>'];
+  for (const row of rows) {
+    const name = String(row?.name || "").trim();
+    if (!name) continue;
+    options.push(`<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`);
+  }
+  if (selected && !rows.some((row) => String(row?.name || '').trim().toLowerCase() === selected.toLowerCase())) {
+    options.push(`<option value="${escapeHTML(selected)}">${escapeHTML(selected)}</option>`);
+  }
+  el.innerHTML = options.join("");
+  el.value = selected || "";
+}
+
+function wireSubcategoryLogic(selectedValue) {
+  const catEl = document.getElementById("m-category");
+  const subEl = document.getElementById("m-subcategory");
+  if (!catEl || !subEl) return;
+  fillModalSubcategorySelect(catEl.value, selectedValue);
+  catEl.onchange = () => {
+    fillModalSubcategorySelect(catEl.value, "");
+    if (typeof catEl._tbNightVisibility === "function") catEl._tbNightVisibility();
+  };
+}
+
 /**
  * Given a date, returns the period_id the backend is likely to pick.
  * IMPORTANT: Your periods currently overlap, so a date can belong to multiple periods.
@@ -149,8 +178,10 @@ function wireNightLogic() {
     if (!(t === "expense" && c === "Transport")) document.getElementById("m-night").checked = false;
   };
 
-  document.getElementById("m-type").onchange = updateNightVisibility;
-  document.getElementById("m-category").onchange = updateNightVisibility;
+  const typeEl = document.getElementById("m-type");
+  const catEl = document.getElementById("m-category");
+  if (typeEl) typeEl.onchange = updateNightVisibility;
+  if (catEl) catEl._tbNightVisibility = updateNightVisibility;
 
   document.getElementById("m-night").onchange = () => {
     if (document.getElementById("m-night").checked) document.getElementById("m-out").checked = true;
@@ -174,6 +205,7 @@ function openTxModal(type = "expense", walletId = null) {
 
   document.getElementById("m-amount").value = "";
   document.getElementById("m-category").value = "Autre";
+  fillModalSubcategorySelect("Autre", "");
   document.getElementById("m-start").value = now;
   document.getElementById("m-end").value = now;
   document.getElementById("m-label").value = "";
@@ -181,6 +213,7 @@ function openTxModal(type = "expense", walletId = null) {
   document.getElementById("m-out").checked = false;
   document.getElementById("m-night").checked = false;
 
+  wireSubcategoryLogic(tx.subcategory || "");
   wireNightLogic();
 
   document.getElementById("overlay").style.display = "block";
@@ -215,6 +248,7 @@ function openTxEditModal(txId) {
 
   document.getElementById("m-amount").value = tx.amount;
   document.getElementById("m-category").value = tx.category || "Autre";
+  fillModalSubcategorySelect(tx.category || "Autre", tx.subcategory || "");
   document.getElementById("m-start").value = tx.dateStart;
   document.getElementById("m-end").value = tx.dateEnd || tx.dateStart;
   document.getElementById("m-label").value = tx.label || "";
@@ -222,6 +256,7 @@ function openTxEditModal(txId) {
   document.getElementById("m-out").checked = !!tx.outOfBudget;
   document.getElementById("m-night").checked = !!tx.nightCovered;
 
+  wireSubcategoryLogic("");
   wireNightLogic();
 
   document.getElementById("overlay").style.display = "block";
@@ -380,6 +415,7 @@ async function saveModal() {
       const walletId = document.getElementById("m-wallet").value;
       const amount = parseFloat(document.getElementById("m-amount").value);
       const category = document.getElementById("m-category").value || "Autre";
+      const subcategory = String(document.getElementById("m-subcategory")?.value || "").trim() || null;
       const start = document.getElementById("m-start").value;
       const end = document.getElementById("m-end").value || start;
       const label = (document.getElementById("m-label").value || "").trim() || category;
@@ -436,6 +472,7 @@ async function saveModal() {
           p_currency: wallet.currency,
           p_category: category,
           p_label: label,
+          p_subcategory: subcategory,
           p_date_start: start,
           p_date_end: end,
           p_pay_now: payNow,
@@ -471,7 +508,7 @@ async function saveModal() {
             amount,
             currency: wallet.currency,
             category,
-            subcategory: null,
+            subcategory,
             dateStart: start,
             dateEnd: end,
             payNow,

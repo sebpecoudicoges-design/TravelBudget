@@ -1,4 +1,4 @@
-window.__TB_BUILD = "9.2.5";
+window.__TB_BUILD = "9.2.6";
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -14,6 +14,7 @@ window.__TB_BUILD = "9.2.5";
     transactions: "transactions",
     recurring_rules: "recurring_rules",
     categories: "categories",
+    category_subcategories: "category_subcategories",
     budget_segments: "budget_segments",
     trip_groups: "trip_groups",
     trip_expenses: "trip_expenses",
@@ -54,6 +55,7 @@ window.__TB_BUILD = "9.2.5";
     amount: "amount",
     type: "type",
     category: "category",
+    subcategory: "subcategory",
     label: "label",
 
     fx_mode: "fx_mode",
@@ -76,6 +78,7 @@ window.__TB_BUILD = "9.2.5";
 
     date_start: "date_start",
     date_end: "date_end",
+    transport_night_budget: "transport_night_budget",
   });
 
   const RPCS = Object.freeze({

@@ -154,6 +154,33 @@
     return out.sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
   }
 
+  function _rrSubcategoryOptions(categoryName, selectedValue) {
+    const rows = (typeof getCategorySubcategories === 'function') ? getCategorySubcategories(categoryName) : [];
+    const selected = String(selectedValue || '').trim();
+    const options = ['<option value="">Aucune</option>'];
+    for (const row of rows) {
+      const name = String(row?.name || '').trim();
+      if (!name) continue;
+      options.push(`<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`);
+    }
+    if (selected && !rows.some((row) => String(row?.name || '').trim().toLowerCase() === selected.toLowerCase())) {
+      options.push(`<option value="${escapeHTML(selected)}">${escapeHTML(selected)}</option>`);
+    }
+    return options.join('');
+  }
+
+  function _rrBindSubcategoryUi(initialValue) {
+    const categoryEl = document.getElementById('rr-category');
+    const subcategoryEl = document.getElementById('rr-subcategory');
+    if (!categoryEl || !subcategoryEl) return;
+    const render = (selectedValue) => {
+      subcategoryEl.innerHTML = _rrSubcategoryOptions(categoryEl.value, selectedValue);
+      subcategoryEl.value = selectedValue || '';
+    };
+    render(initialValue || '');
+    categoryEl.addEventListener('change', () => render(''));
+  }
+
   function _rrComputeFirstDueDate(ruleType, startDate, weekday, monthday) {
     const start = _rrDateToUTCDate(startDate);
     if (!start) return startDate;
@@ -418,7 +445,7 @@
         </div>
         <div class="field" style="min-width:180px;">
           <label>Sous-catégorie</label>
-          <input id="rr-subcategory" type="text" placeholder="Sous-catégorie" />
+          <select id="rr-subcategory"></select>
         </div>
       </div>
 
@@ -482,6 +509,7 @@
     `);
 
     _rrBindFrequencyUi();
+    _rrBindSubcategoryUi("");
 
     const walletSel = document.getElementById("rr-wallet");
     const curInp = document.getElementById("rr-currency");

@@ -29,6 +29,7 @@ budgetSegments: [],
 
 categories: [],
 categoryColors: {},
+categorySubcategories: [],
 };
 // ---- expose for plugins (do not remove) ----
 Object.defineProperty(window, "state", { get: () => state, set: (v) => { state = v; } });
@@ -93,6 +94,27 @@ function colorForCategory(cat) {
   return COLORS[key] || COLORS.Autre || "#94a3b8";
 }
 
+function getCategorySubcategories(categoryName, opts) {
+  const name = String(categoryName || "").trim();
+  if (!name) return [];
+  const activeOnly = opts?.activeOnly !== false;
+  const rows = Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : [];
+  return rows
+    .filter((row) => {
+      const rowCat = String(row?.categoryName || row?.category_name || "").trim();
+      if (!rowCat) return false;
+      if (rowCat.toLowerCase() !== name.toLowerCase()) return false;
+      if (!activeOnly) return true;
+      return row?.isActive !== false && row?.is_active !== false;
+    })
+    .slice()
+    .sort((a, b) => {
+      const aSort = Number(a?.sortOrder ?? a?.sort_order ?? 0);
+      const bSort = Number(b?.sortOrder ?? b?.sort_order ?? 0);
+      return (aSort - bSort) || String(a?.name || "").localeCompare(String(b?.name || ""), 'fr', { sensitivity: 'base' });
+    });
+}
+window.getCategorySubcategories = getCategorySubcategories;
 
 
 const TB_CATEGORIES_LS_KEY = "travelbudget_categories_v1";
@@ -259,6 +281,7 @@ function ensureStateIntegrity() {
   state.periods = Array.isArray(state.periods) ? state.periods : [];
   state.budgetSegments = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
   state.categories = Array.isArray(state.categories) ? state.categories : [];
+  state.categorySubcategories = Array.isArray(state.categorySubcategories) ? state.categorySubcategories : [];
   // local-only categories persistence (V6.4)
   if (state.categories.length === 0) {
     const lsCats = loadCategoriesFromLocalStorage();
@@ -294,6 +317,8 @@ function ensureStateIntegrity() {
       end: state.period.end,
       baseCurrency: state.period.baseCurrency,
       dailyBudgetBase: state.period.dailyBudgetBase,
+      transportNightBudget: 400,
+      transport_night_budget: 400,
       fxMode: "fixed",
       eurBaseRateFixed: state.period.eurBaseRate,
       sortOrder: 0,
@@ -306,10 +331,13 @@ function ensureStateIntegrity() {
     .map((seg, idx) => ({
       id: seg.id ?? null,
       periodId: seg.periodId ?? seg.period_id ?? state.period.id ?? null,
+      travelId: seg.travelId ?? seg.travel_id ?? null,
       start: (seg.start ?? seg.start_date ?? state.period.start),
       end: (seg.end ?? seg.end_date ?? state.period.end),
       baseCurrency: String(seg.baseCurrency ?? seg.base_currency ?? state.period.baseCurrency ?? "EUR").toUpperCase(),
       dailyBudgetBase: _safeNumber(seg.dailyBudgetBase ?? seg.daily_budget_base, state.period.dailyBudgetBase),
+      transportNightBudget: _safeNumber(seg.transportNightBudget ?? seg.transport_night_budget ?? seg.night_transport_budget, 400),
+      transport_night_budget: _safeNumber(seg.transportNightBudget ?? seg.transport_night_budget ?? seg.night_transport_budget, 400),
       fxMode: String(seg.fxMode ?? seg.fx_mode ?? "fixed"),
       eurBaseRateFixed: _safeNumber(seg.eurBaseRateFixed ?? seg.eur_base_rate_fixed, null),
       sortOrder: _safeNumber(seg.sortOrder ?? seg.sort_order, idx),
@@ -334,7 +362,30 @@ function ensureStateIntegrity() {
     t.amount = _safeNumber(t.amount, 0);
     if (!t.currency) t.currency = state.period.baseCurrency;
     if (t.date && typeof t.date === "string") t.date = t.date.slice(0,10);
+    t.subcategory = (t.subcategory === undefined) ? null : (t.subcategory || null);
   });
+
+  state.recurringRules = Array.isArray(state.recurringRules) ? state.recurringRules : [];
+  state.recurringRules.forEach(r => {
+    if (!r) return;
+    r.subcategory = (r.subcategory === undefined) ? null : (r.subcategory || null);
+  });
+
+  state.categorySubcategories = state.categorySubcategories
+    .filter(Boolean)
+    .map((row, idx) => ({
+      id: row.id ?? null,
+      categoryId: row.categoryId ?? row.category_id ?? null,
+      categoryName: String(row.categoryName ?? row.category_name ?? "").trim(),
+      name: String(row.name ?? "").trim(),
+      color: row.color || null,
+      sortOrder: _safeNumber(row.sortOrder ?? row.sort_order, idx),
+      isActive: row.isActive !== false && row.is_active !== false,
+      createdAt: row.createdAt ?? row.created_at ?? null,
+      updatedAt: row.updatedAt ?? row.updated_at ?? null,
+    }))
+    .filter((row) => row.categoryName && row.name)
+    .sort((a, b) => (a.sortOrder - b.sortOrder) || a.categoryName.localeCompare(b.categoryName, 'fr', { sensitivity: 'base' }) || a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
 
   return state;
 }

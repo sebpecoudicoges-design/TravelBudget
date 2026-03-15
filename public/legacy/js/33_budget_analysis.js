@@ -35,7 +35,14 @@
   }
   function _allSegments(){ return Array.isArray(state?.budgetSegments) ? state.budgetSegments.filter(Boolean) : []; }
   function _segmentsForTravel(travelId){
-    return _allSegments().filter(s => String(s.travel_id || s.travelId || state?.activeTravelId || '') === String(travelId || state?.activeTravelId || ''));
+    const wanted = String(travelId || state?.activeTravelId || '');
+    const periodTravelMap = Object.fromEntries((Array.isArray(state?.periods) ? state.periods : []).map((p) => [String(p.id), String(p.travel_id || p.travelId || '')]));
+    return _allSegments().filter(s => {
+      const direct = String(s.travel_id || s.travelId || '');
+      if (direct) return direct === wanted;
+      const byPeriod = periodTravelMap[String(s.period_id || s.periodId || '')] || '';
+      return byPeriod === wanted;
+    });
   }
   function _getActivePeriodForTravel(travelId){
     const list = _periodList(travelId).slice().sort((a,b)=>String(a.start_date || a.start || '').localeCompare(String(b.start_date || b.start || '')));

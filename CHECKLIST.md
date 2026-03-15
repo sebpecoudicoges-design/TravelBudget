@@ -99,6 +99,12 @@
   - la checklist projet si elle n’est plus alignée
 
 
+## V9.2.6
+
+- Analyse : chargement multi-périodes du voyage actif (transactions + budget_segments)
+- Sous-catégories : lecture bootstrap + modal transaction + récurrences
+- SQL : sécurisation RLS de category_subcategories
+
 ## V9.2.5
 - Nouvelle page Analyse budget dédiée (ECharts) sans modification du bloc KPI dashboard.
 - Vérifier la navigation Analyse, les filtres voyage/période/périmètre et le rendu des graphiques modernes.

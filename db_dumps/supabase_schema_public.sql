@@ -1118,6 +1118,265 @@ $$;
 ALTER FUNCTION "public"."recurring_rules_consistency_guard"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."rpc_budget_reference_compute_for_travel"("p_travel_id" "uuid", "p_country_code" "text", "p_region_code" "text" DEFAULT NULL::"text", "p_travel_profile" "text" DEFAULT 'solo'::"text", "p_travel_style" "text" DEFAULT 'standard'::"text", "p_adult_count" integer DEFAULT 1, "p_child_count" integer DEFAULT 0, "p_trip_days" integer DEFAULT NULL::integer, "p_traveler_age_min" integer DEFAULT NULL::integer, "p_traveler_age_max" integer DEFAULT NULL::integer, "p_save" boolean DEFAULT false) RETURNS TABLE("travel_id" "uuid", "reference_id" "uuid", "country_code" "text", "country_name" "text", "region_code" "text", "source_name" "text", "source_url" "text", "source_year" integer, "currency_code" "text", "base_daily_reference_amount" numeric, "profile_multiplier" numeric, "style_multiplier" numeric, "duration_multiplier" numeric, "recommended_daily_amount" numeric, "recommended_accommodation_daily_amount" numeric, "recommended_food_daily_amount" numeric, "recommended_transport_daily_amount" numeric, "recommended_activities_daily_amount" numeric, "recommended_misc_daily_amount" numeric, "source_mode" "text")
+    LANGUAGE "plpgsql"
+    AS $$
+declare
+  v_user_id uuid;
+  v_travel public.travels%rowtype;
+  v_ref public.country_budget_reference%rowtype;
+  v_base numeric;
+  v_profile_mult numeric := 1.0000;
+  v_style_mult numeric := 1.0000;
+  v_duration_mult numeric := 1.0000;
+  v_recommended_daily numeric;
+  v_rec_accommodation numeric;
+  v_rec_food numeric;
+  v_rec_transport numeric;
+  v_rec_activities numeric;
+  v_rec_misc numeric;
+  v_source_mode text := 'reference_suggested';
+begin
+  v_user_id := auth.uid();
+
+  if v_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if p_travel_profile not in ('solo','couple','family') then
+    raise exception 'Invalid travel_profile: %', p_travel_profile;
+  end if;
+
+  if p_travel_style not in ('budget','standard','comfort') then
+    raise exception 'Invalid travel_style: %', p_travel_style;
+  end if;
+
+  if p_adult_count < 1 then
+    raise exception 'adult_count must be >= 1';
+  end if;
+
+  if p_child_count < 0 then
+    raise exception 'child_count must be >= 0';
+  end if;
+
+  select *
+  into v_travel
+  from public.travels t
+  where t.id = p_travel_id
+    and t.user_id = v_user_id;
+
+  if not found then
+    raise exception 'Travel not found or not owned by current user';
+  end if;
+
+  select cbr.*
+  into v_ref
+  from public.v_country_budget_reference_latest cbr
+  where cbr.country_code = upper(trim(p_country_code))
+    and (
+      (p_region_code is null and cbr.region_code is null)
+      or cbr.region_code = p_region_code
+    )
+  order by
+    case when p_region_code is not null and cbr.region_code = p_region_code then 0 else 1 end,
+    cbr.source_published_at desc nulls last,
+    cbr.created_at desc
+  limit 1;
+
+  if not found then
+    raise exception 'No active budget reference found for country_code=%', p_country_code;
+  end if;
+
+  v_base :=
+    case
+      when p_travel_profile = 'solo' and v_ref.solo_daily_amount is not null
+        then v_ref.solo_daily_amount
+      when p_travel_profile = 'couple' and v_ref.couple_per_person_daily_amount is not null
+        then v_ref.couple_per_person_daily_amount
+      when p_travel_profile = 'family' and v_ref.family_per_person_daily_amount is not null
+        then v_ref.family_per_person_daily_amount
+      else v_ref.daily_budget_amount
+    end;
+
+  if v_base is null then
+    raise exception 'Reference found but no usable daily amount for country_code=%', p_country_code;
+  end if;
+
+  if p_travel_profile = 'couple' and v_ref.couple_per_person_daily_amount is null then
+    v_profile_mult := 0.95;
+  elsif p_travel_profile = 'family' and v_ref.family_per_person_daily_amount is null then
+    v_profile_mult := 1.10;
+  else
+    v_profile_mult := 1.00;
+  end if;
+
+  v_style_mult :=
+    case p_travel_style
+      when 'budget' then 0.85
+      when 'standard' then 1.00
+      when 'comfort' then 1.25
+      else 1.00
+    end;
+
+  if p_trip_days is not null then
+    if p_trip_days <= 14 then
+      if v_ref.short_trip_daily_amount is not null and v_base > 0 then
+        v_duration_mult := v_ref.short_trip_daily_amount / v_base;
+      else
+        v_duration_mult := 1.10;
+      end if;
+    elsif p_trip_days >= 90 then
+      if v_ref.long_trip_daily_amount is not null and v_base > 0 then
+        v_duration_mult := v_ref.long_trip_daily_amount / v_base;
+      else
+        v_duration_mult := 0.90;
+      end if;
+    else
+      v_duration_mult := 1.00;
+    end if;
+  end if;
+
+  v_recommended_daily := round((v_base * v_profile_mult * v_style_mult * v_duration_mult)::numeric, 2);
+
+  v_rec_accommodation := case
+    when v_ref.accommodation_daily_amount is not null
+      then round((v_ref.accommodation_daily_amount * v_profile_mult * v_style_mult * v_duration_mult)::numeric, 2)
+    else null
+  end;
+
+  v_rec_food := case
+    when v_ref.food_daily_amount is not null
+      then round((v_ref.food_daily_amount * v_profile_mult * v_style_mult * v_duration_mult)::numeric, 2)
+    else null
+  end;
+
+  v_rec_transport := case
+    when v_ref.transport_daily_amount is not null
+      then round((v_ref.transport_daily_amount * v_profile_mult * v_style_mult * v_duration_mult)::numeric, 2)
+    else null
+  end;
+
+  v_rec_activities := case
+    when v_ref.activities_daily_amount is not null
+      then round((v_ref.activities_daily_amount * v_profile_mult * v_style_mult * v_duration_mult)::numeric, 2)
+    else null
+  end;
+
+  v_rec_misc := case
+    when v_ref.misc_daily_amount is not null
+      then round((v_ref.misc_daily_amount * v_profile_mult * v_style_mult * v_duration_mult)::numeric, 2)
+    else null
+  end;
+
+  if p_save then
+    v_source_mode := 'reference_applied';
+
+    insert into public.travel_budget_reference_profile (
+      user_id,
+      travel_id,
+      reference_id,
+      country_code,
+      region_code,
+      travel_profile,
+      travel_style,
+      adult_count,
+      child_count,
+      trip_days,
+      traveler_age_min,
+      traveler_age_max,
+      base_daily_reference_amount,
+      style_multiplier,
+      profile_multiplier,
+      duration_multiplier,
+      recommended_daily_amount,
+      recommended_accommodation_daily_amount,
+      recommended_food_daily_amount,
+      recommended_transport_daily_amount,
+      recommended_activities_daily_amount,
+      recommended_misc_daily_amount,
+      source_mode
+    )
+    values (
+      v_user_id,
+      p_travel_id,
+      v_ref.id,
+      upper(trim(p_country_code)),
+      p_region_code,
+      p_travel_profile,
+      p_travel_style,
+      p_adult_count,
+      p_child_count,
+      p_trip_days,
+      p_traveler_age_min,
+      p_traveler_age_max,
+      v_base,
+      v_style_mult,
+      v_profile_mult,
+      v_duration_mult,
+      v_recommended_daily,
+      v_rec_accommodation,
+      v_rec_food,
+      v_rec_transport,
+      v_rec_activities,
+      v_rec_misc,
+      v_source_mode
+    )
+    on conflict (travel_id)
+    do update set
+      user_id = excluded.user_id,
+      reference_id = excluded.reference_id,
+      country_code = excluded.country_code,
+      region_code = excluded.region_code,
+      travel_profile = excluded.travel_profile,
+      travel_style = excluded.travel_style,
+      adult_count = excluded.adult_count,
+      child_count = excluded.child_count,
+      trip_days = excluded.trip_days,
+      traveler_age_min = excluded.traveler_age_min,
+      traveler_age_max = excluded.traveler_age_max,
+      base_daily_reference_amount = excluded.base_daily_reference_amount,
+      style_multiplier = excluded.style_multiplier,
+      profile_multiplier = excluded.profile_multiplier,
+      duration_multiplier = excluded.duration_multiplier,
+      recommended_daily_amount = excluded.recommended_daily_amount,
+      recommended_accommodation_daily_amount = excluded.recommended_accommodation_daily_amount,
+      recommended_food_daily_amount = excluded.recommended_food_daily_amount,
+      recommended_transport_daily_amount = excluded.recommended_transport_daily_amount,
+      recommended_activities_daily_amount = excluded.recommended_activities_daily_amount,
+      recommended_misc_daily_amount = excluded.recommended_misc_daily_amount,
+      source_mode = excluded.source_mode,
+      updated_at = now();
+  end if;
+
+  return query
+  select
+    p_travel_id,
+    v_ref.id,
+    v_ref.country_code,
+    v_ref.country_name,
+    v_ref.region_code,
+    v_ref.source_name,
+    v_ref.source_url,
+    v_ref.source_year,
+    v_ref.currency_code,
+    v_base,
+    v_profile_mult,
+    v_style_mult,
+    v_duration_mult,
+    v_recommended_daily,
+    v_rec_accommodation,
+    v_rec_food,
+    v_rec_transport,
+    v_rec_activities,
+    v_rec_misc,
+    v_source_mode;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."rpc_budget_reference_compute_for_travel"("p_travel_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."set_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -2278,13 +2537,19 @@ CREATE TABLE IF NOT EXISTS "public"."budget_segments" (
     "fx_rate_eur_to_base" numeric,
     "fx_source" "text",
     "fx_last_updated_at" timestamp with time zone,
+    "transport_night_budget" numeric DEFAULT 400,
     CONSTRAINT "budget_segments_currency_ok" CHECK ((("char_length"("base_currency") >= 3) AND ("char_length"("base_currency") <= 6))),
     CONSTRAINT "budget_segments_dates_ok" CHECK (("end_date" >= "start_date")),
-    CONSTRAINT "budget_segments_fx_mode_check" CHECK (("fx_mode" = ANY (ARRAY['live_ecb'::"text", 'fixed'::"text"])))
+    CONSTRAINT "budget_segments_fx_mode_check" CHECK (("fx_mode" = ANY (ARRAY['live_ecb'::"text", 'fixed'::"text"]))),
+    CONSTRAINT "budget_segments_transport_night_budget_check" CHECK ((("transport_night_budget" IS NULL) OR ("transport_night_budget" >= (0)::numeric)))
 );
 
 
 ALTER TABLE "public"."budget_segments" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."budget_segments"."transport_night_budget" IS 'Night transport budget stored per budget segment, expressed in the segment base currency.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."categories" (
@@ -2301,6 +2566,76 @@ CREATE TABLE IF NOT EXISTS "public"."categories" (
 
 
 ALTER TABLE "public"."categories" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."category_subcategories" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
+    "category_id" "uuid",
+    "category_name" "text" NOT NULL,
+    "name" "text" NOT NULL,
+    "color" "text",
+    "sort_order" integer DEFAULT 0 NOT NULL,
+    "is_active" boolean DEFAULT true NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "category_subcategories_category_name_chk" CHECK (("length"(TRIM(BOTH FROM "category_name")) > 0)),
+    CONSTRAINT "category_subcategories_color_check" CHECK ((("color" IS NULL) OR ("color" ~ '^#[0-9a-fA-F]{6}$'::"text"))),
+    CONSTRAINT "category_subcategories_name_chk" CHECK (("length"(TRIM(BOTH FROM "name")) > 0))
+);
+
+
+ALTER TABLE "public"."category_subcategories" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."category_subcategories" IS 'User-owned registry of subcategories grouped under a parent category.';
+
+
+
+COMMENT ON COLUMN "public"."category_subcategories"."category_id" IS 'Optional normalized parent category id for future migration to category ids.';
+
+
+
+COMMENT ON COLUMN "public"."category_subcategories"."category_name" IS 'Denormalized parent category name kept for compatibility with the current category-name based front-end.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."country_budget_reference" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "country_code" "text" NOT NULL,
+    "country_name" "text" NOT NULL,
+    "region_code" "text",
+    "region_name" "text",
+    "source_name" "text" DEFAULT 'tourdumondiste'::"text" NOT NULL,
+    "source_url" "text" NOT NULL,
+    "source_label" "text",
+    "source_published_at" "date",
+    "source_year" integer,
+    "currency_code" "text" DEFAULT 'EUR'::"text" NOT NULL,
+    "daily_budget_amount" numeric(12,2),
+    "solo_daily_amount" numeric(12,2),
+    "couple_per_person_daily_amount" numeric(12,2),
+    "family_per_person_daily_amount" numeric(12,2),
+    "short_trip_daily_amount" numeric(12,2),
+    "long_trip_daily_amount" numeric(12,2),
+    "accommodation_daily_amount" numeric(12,2),
+    "food_daily_amount" numeric(12,2),
+    "transport_daily_amount" numeric(12,2),
+    "activities_daily_amount" numeric(12,2),
+    "misc_daily_amount" numeric(12,2),
+    "sample_size" integer,
+    "methodology_note" "text",
+    "raw_notes" "text",
+    "is_active" boolean DEFAULT true NOT NULL,
+    "fetched_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "country_budget_reference_country_code_chk" CHECK (("country_code" ~ '^[A-Z]{2,3}$'::"text")),
+    CONSTRAINT "country_budget_reference_currency_code_chk" CHECK (("currency_code" ~ '^[A-Z]{3}$'::"text"))
+);
+
+
+ALTER TABLE "public"."country_budget_reference" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."fx_manual_rates" (
@@ -2419,6 +2754,10 @@ CREATE TABLE IF NOT EXISTS "public"."recurring_rules" (
 ALTER TABLE "public"."recurring_rules" OWNER TO "postgres";
 
 
+COMMENT ON COLUMN "public"."recurring_rules"."subcategory" IS 'Optional subcategory attached to the selected category for recurring rules.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."schema_version" (
     "key" "text" NOT NULL,
     "version" integer NOT NULL,
@@ -2493,6 +2832,52 @@ ALTER TABLE "public"."transactions" OWNER TO "postgres";
 
 COMMENT ON COLUMN "public"."transactions"."is_internal" IS 'True for internal/shadow rows (Trip budget-only allocations). Hidden from main transactions view and excluded from wallet cashflow.';
 
+
+
+COMMENT ON COLUMN "public"."transactions"."subcategory" IS 'Optional subcategory attached to the selected category.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."travel_budget_reference_profile" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "travel_id" "uuid" NOT NULL,
+    "reference_id" "uuid",
+    "country_code" "text" NOT NULL,
+    "region_code" "text",
+    "travel_profile" "text" NOT NULL,
+    "travel_style" "text" NOT NULL,
+    "adult_count" integer DEFAULT 1 NOT NULL,
+    "child_count" integer DEFAULT 0 NOT NULL,
+    "trip_days" integer,
+    "traveler_age_min" integer,
+    "traveler_age_max" integer,
+    "base_daily_reference_amount" numeric(12,2),
+    "style_multiplier" numeric(8,4) DEFAULT 1.0000 NOT NULL,
+    "profile_multiplier" numeric(8,4) DEFAULT 1.0000 NOT NULL,
+    "duration_multiplier" numeric(8,4) DEFAULT 1.0000 NOT NULL,
+    "recommended_daily_amount" numeric(12,2),
+    "recommended_accommodation_daily_amount" numeric(12,2),
+    "recommended_food_daily_amount" numeric(12,2),
+    "recommended_transport_daily_amount" numeric(12,2),
+    "recommended_activities_daily_amount" numeric(12,2),
+    "recommended_misc_daily_amount" numeric(12,2),
+    "source_mode" "text" DEFAULT 'reference_suggested'::"text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "travel_budget_reference_profile_adult_count_check" CHECK (("adult_count" >= 1)),
+    CONSTRAINT "travel_budget_reference_profile_child_count_check" CHECK (("child_count" >= 0)),
+    CONSTRAINT "travel_budget_reference_profile_country_code_chk" CHECK (("country_code" ~ '^[A-Z]{2,3}$'::"text")),
+    CONSTRAINT "travel_budget_reference_profile_source_mode_check" CHECK (("source_mode" = ANY (ARRAY['manual_only'::"text", 'reference_suggested'::"text", 'reference_applied'::"text", 'reference_modified'::"text"]))),
+    CONSTRAINT "travel_budget_reference_profile_travel_profile_check" CHECK (("travel_profile" = ANY (ARRAY['solo'::"text", 'couple'::"text", 'family'::"text"]))),
+    CONSTRAINT "travel_budget_reference_profile_travel_style_check" CHECK (("travel_style" = ANY (ARRAY['budget'::"text", 'standard'::"text", 'comfort'::"text"]))),
+    CONSTRAINT "travel_budget_reference_profile_traveler_age_max_check" CHECK ((("traveler_age_max" IS NULL) OR ("traveler_age_max" >= 0))),
+    CONSTRAINT "travel_budget_reference_profile_traveler_age_min_check" CHECK ((("traveler_age_min" IS NULL) OR ("traveler_age_min" >= 0))),
+    CONSTRAINT "travel_budget_reference_profile_trip_days_check" CHECK ((("trip_days" IS NULL) OR ("trip_days" >= 1)))
+);
+
+
+ALTER TABLE "public"."travel_budget_reference_profile" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."travels" (
@@ -2657,6 +3042,75 @@ CREATE TABLE IF NOT EXISTS "public"."trip_settlements" (
 
 
 ALTER TABLE "public"."trip_settlements" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."v_country_budget_reference_latest" AS
+ SELECT "id",
+    "country_code",
+    "country_name",
+    "region_code",
+    "region_name",
+    "source_name",
+    "source_url",
+    "source_label",
+    "source_published_at",
+    "source_year",
+    "currency_code",
+    "daily_budget_amount",
+    "solo_daily_amount",
+    "couple_per_person_daily_amount",
+    "family_per_person_daily_amount",
+    "short_trip_daily_amount",
+    "long_trip_daily_amount",
+    "accommodation_daily_amount",
+    "food_daily_amount",
+    "transport_daily_amount",
+    "activities_daily_amount",
+    "misc_daily_amount",
+    "sample_size",
+    "methodology_note",
+    "raw_notes",
+    "is_active",
+    "fetched_at",
+    "created_at",
+    "updated_at",
+    "rn"
+   FROM ( SELECT "cbr"."id",
+            "cbr"."country_code",
+            "cbr"."country_name",
+            "cbr"."region_code",
+            "cbr"."region_name",
+            "cbr"."source_name",
+            "cbr"."source_url",
+            "cbr"."source_label",
+            "cbr"."source_published_at",
+            "cbr"."source_year",
+            "cbr"."currency_code",
+            "cbr"."daily_budget_amount",
+            "cbr"."solo_daily_amount",
+            "cbr"."couple_per_person_daily_amount",
+            "cbr"."family_per_person_daily_amount",
+            "cbr"."short_trip_daily_amount",
+            "cbr"."long_trip_daily_amount",
+            "cbr"."accommodation_daily_amount",
+            "cbr"."food_daily_amount",
+            "cbr"."transport_daily_amount",
+            "cbr"."activities_daily_amount",
+            "cbr"."misc_daily_amount",
+            "cbr"."sample_size",
+            "cbr"."methodology_note",
+            "cbr"."raw_notes",
+            "cbr"."is_active",
+            "cbr"."fetched_at",
+            "cbr"."created_at",
+            "cbr"."updated_at",
+            "row_number"() OVER (PARTITION BY "cbr"."country_code", COALESCE("cbr"."region_code", ''::"text") ORDER BY COALESCE("cbr"."source_published_at", "make_date"(COALESCE("cbr"."source_year", 1900), 1, 1)) DESC, "cbr"."created_at" DESC) AS "rn"
+           FROM "public"."country_budget_reference" "cbr"
+          WHERE ("cbr"."is_active" = true)) "x"
+  WHERE ("rn" = 1);
+
+
+ALTER VIEW "public"."v_country_budget_reference_latest" OWNER TO "postgres";
 
 
 CREATE OR REPLACE VIEW "public"."v_trip_balances" WITH ("security_invoker"='true') AS
@@ -2974,6 +3428,21 @@ ALTER TABLE ONLY "public"."categories"
 
 
 
+ALTER TABLE ONLY "public"."category_subcategories"
+    ADD CONSTRAINT "category_subcategories_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."category_subcategories"
+    ADD CONSTRAINT "category_subcategories_unique" UNIQUE ("user_id", "category_name", "name");
+
+
+
+ALTER TABLE ONLY "public"."country_budget_reference"
+    ADD CONSTRAINT "country_budget_reference_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."fx_manual_rates"
     ADD CONSTRAINT "fx_manual_rates_pkey" PRIMARY KEY ("user_id", "currency");
 
@@ -3026,6 +3495,16 @@ ALTER TABLE ONLY "public"."transactions"
 
 ALTER TABLE ONLY "public"."transactions"
     ADD CONSTRAINT "transactions_trip_expense_unique" UNIQUE ("trip_expense_id");
+
+
+
+ALTER TABLE ONLY "public"."travel_budget_reference_profile"
+    ADD CONSTRAINT "travel_budget_reference_profile_one_per_travel" UNIQUE ("travel_id");
+
+
+
+ALTER TABLE ONLY "public"."travel_budget_reference_profile"
+    ADD CONSTRAINT "travel_budget_reference_profile_pkey" PRIMARY KEY ("id");
 
 
 
@@ -3122,11 +3601,47 @@ CREATE INDEX "fx_rates_as_of_idx" ON "public"."fx_rates" USING "btree" ("as_of" 
 
 
 
+CREATE INDEX "idx_category_subcategories_user_category" ON "public"."category_subcategories" USING "btree" ("user_id", "category_name", "sort_order", "name");
+
+
+
+CREATE INDEX "idx_category_subcategories_user_category_id" ON "public"."category_subcategories" USING "btree" ("user_id", "category_id");
+
+
+
+CREATE INDEX "idx_country_budget_reference_active" ON "public"."country_budget_reference" USING "btree" ("is_active");
+
+
+
+CREATE INDEX "idx_country_budget_reference_country" ON "public"."country_budget_reference" USING "btree" ("country_code");
+
+
+
+CREATE INDEX "idx_country_budget_reference_country_region_active" ON "public"."country_budget_reference" USING "btree" ("country_code", "region_code", "is_active");
+
+
+
+CREATE INDEX "idx_country_budget_reference_region" ON "public"."country_budget_reference" USING "btree" ("region_code");
+
+
+
 CREATE INDEX "idx_transactions_fx_snapshot_null" ON "public"."transactions" USING "btree" ((("fx_rate_snapshot" IS NULL)));
 
 
 
 CREATE INDEX "idx_transactions_match_trip" ON "public"."transactions" USING "btree" ("user_id", "type", "currency", "amount", "date_start", "date_end") WHERE ("type" = 'expense'::"text");
+
+
+
+CREATE INDEX "idx_travel_budget_reference_profile_country" ON "public"."travel_budget_reference_profile" USING "btree" ("country_code");
+
+
+
+CREATE INDEX "idx_travel_budget_reference_profile_travel" ON "public"."travel_budget_reference_profile" USING "btree" ("travel_id");
+
+
+
+CREATE INDEX "idx_travel_budget_reference_profile_user" ON "public"."travel_budget_reference_profile" USING "btree" ("user_id");
 
 
 
@@ -3438,6 +3953,14 @@ CREATE OR REPLACE TRIGGER "trg_budget_segments_touch" BEFORE UPDATE ON "public".
 
 
 
+CREATE OR REPLACE TRIGGER "trg_category_subcategories_updated_at" BEFORE UPDATE ON "public"."category_subcategories" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_country_budget_reference_touch_updated_at" BEFORE UPDATE ON "public"."country_budget_reference" FOR EACH ROW EXECUTE FUNCTION "public"."_touch_updated_at"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_fx_manual_rates_touch" BEFORE UPDATE ON "public"."fx_manual_rates" FOR EACH ROW EXECUTE FUNCTION "public"."tb_touch_updated_at"();
 
 
@@ -3459,6 +3982,10 @@ CREATE OR REPLACE TRIGGER "trg_tb_profiles_role_guard" BEFORE INSERT OR UPDATE O
 
 
 CREATE OR REPLACE TRIGGER "trg_transactions_travel_consistency_guard" BEFORE INSERT OR UPDATE ON "public"."transactions" FOR EACH ROW EXECUTE FUNCTION "public"."transactions_travel_consistency_guard"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_travel_budget_reference_profile_touch_updated_at" BEFORE UPDATE ON "public"."travel_budget_reference_profile" FOR EACH ROW EXECUTE FUNCTION "public"."_touch_updated_at"();
 
 
 
@@ -3490,6 +4017,11 @@ ALTER TABLE ONLY "public"."budget_segments"
 
 ALTER TABLE ONLY "public"."categories"
     ADD CONSTRAINT "categories_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."category_subcategories"
+    ADD CONSTRAINT "category_subcategories_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE CASCADE;
 
 
 
@@ -3565,6 +4097,21 @@ ALTER TABLE ONLY "public"."transactions"
 
 ALTER TABLE ONLY "public"."transactions"
     ADD CONSTRAINT "transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "public"."wallets"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."travel_budget_reference_profile"
+    ADD CONSTRAINT "travel_budget_reference_profile_reference_id_fkey" FOREIGN KEY ("reference_id") REFERENCES "public"."country_budget_reference"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."travel_budget_reference_profile"
+    ADD CONSTRAINT "travel_budget_reference_profile_travel_id_fkey" FOREIGN KEY ("travel_id") REFERENCES "public"."travels"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."travel_budget_reference_profile"
+    ADD CONSTRAINT "travel_budget_reference_profile_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -3840,6 +4387,44 @@ CREATE POLICY "categories_write_own" ON "public"."categories" USING (("auth"."ui
 
 
 
+ALTER TABLE "public"."category_subcategories" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "category_subcategories_delete_own" ON "public"."category_subcategories" FOR DELETE USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "category_subcategories_insert_own" ON "public"."category_subcategories" FOR INSERT WITH CHECK (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "category_subcategories_owner_select" ON "public"."category_subcategories" FOR SELECT TO "authenticated" USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "category_subcategories_owner_write" ON "public"."category_subcategories" TO "authenticated" USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "category_subcategories_select_own" ON "public"."category_subcategories" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "category_subcategories_update_own" ON "public"."category_subcategories" FOR UPDATE USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "category_subcategories_write_own" ON "public"."category_subcategories" USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+ALTER TABLE "public"."country_budget_reference" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "country_budget_reference_select_authenticated" ON "public"."country_budget_reference" FOR SELECT TO "authenticated" USING (true);
+
+
+
 ALTER TABLE "public"."fx_manual_rates" ENABLE ROW LEVEL SECURITY;
 
 
@@ -3973,6 +4558,25 @@ CREATE POLICY "transactions_select_own" ON "public"."transactions" FOR SELECT US
 
 
 CREATE POLICY "transactions_write_own" ON "public"."transactions" USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+ALTER TABLE "public"."travel_budget_reference_profile" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "travel_budget_reference_profile_delete_own" ON "public"."travel_budget_reference_profile" FOR DELETE TO "authenticated" USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "travel_budget_reference_profile_insert_own" ON "public"."travel_budget_reference_profile" FOR INSERT TO "authenticated" WITH CHECK (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "travel_budget_reference_profile_select_own" ON "public"."travel_budget_reference_profile" FOR SELECT TO "authenticated" USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "travel_budget_reference_profile_update_own" ON "public"."travel_budget_reference_profile" FOR UPDATE TO "authenticated" USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
 
 
 
@@ -4479,6 +5083,12 @@ GRANT ALL ON FUNCTION "public"."recurring_rules_consistency_guard"() TO "service
 
 
 
+GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_travel"("p_travel_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean) TO "anon";
+GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_travel"("p_travel_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_travel"("p_travel_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "service_role";
@@ -4619,6 +5229,18 @@ GRANT ALL ON TABLE "public"."categories" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."category_subcategories" TO "anon";
+GRANT ALL ON TABLE "public"."category_subcategories" TO "authenticated";
+GRANT ALL ON TABLE "public"."category_subcategories" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."country_budget_reference" TO "anon";
+GRANT ALL ON TABLE "public"."country_budget_reference" TO "authenticated";
+GRANT ALL ON TABLE "public"."country_budget_reference" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."fx_manual_rates" TO "anon";
 GRANT ALL ON TABLE "public"."fx_manual_rates" TO "authenticated";
 GRANT ALL ON TABLE "public"."fx_manual_rates" TO "service_role";
@@ -4669,6 +5291,12 @@ GRANT ALL ON TABLE "public"."settings" TO "service_role";
 GRANT ALL ON TABLE "public"."transactions" TO "anon";
 GRANT ALL ON TABLE "public"."transactions" TO "authenticated";
 GRANT ALL ON TABLE "public"."transactions" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."travel_budget_reference_profile" TO "anon";
+GRANT ALL ON TABLE "public"."travel_budget_reference_profile" TO "authenticated";
+GRANT ALL ON TABLE "public"."travel_budget_reference_profile" TO "service_role";
 
 
 
@@ -4729,6 +5357,12 @@ GRANT ALL ON TABLE "public"."trip_settlement_events" TO "service_role";
 GRANT ALL ON TABLE "public"."trip_settlements" TO "anon";
 GRANT ALL ON TABLE "public"."trip_settlements" TO "authenticated";
 GRANT ALL ON TABLE "public"."trip_settlements" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."v_country_budget_reference_latest" TO "anon";
+GRANT ALL ON TABLE "public"."v_country_budget_reference_latest" TO "authenticated";
+GRANT ALL ON TABLE "public"."v_country_budget_reference_latest" TO "service_role";
 
 
 

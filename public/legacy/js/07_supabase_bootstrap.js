@@ -580,10 +580,9 @@ const walletsPromise = (async () => {
 
 const txPromise = sb
   .from(TB_CONST.TABLES.transactions)
-  .select("id,travel_id,period_id,wallet_id,type,amount,currency,category,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,pay_now,out_of_budget,night_covered,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status")
+  .select("id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,pay_now,out_of_budget,night_covered,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status")
   .eq("user_id", sbUser.id)
   .eq("travel_id", activeTravelId)
-  .eq("period_id", activePeriodId)
   .order("created_at", { ascending: true });
 
   const recurringRulesPromise = (async () => {
@@ -609,9 +608,9 @@ const txPromise = sb
     try {
       const { data: segs, error: segErr } = await sb
         .from(TB_CONST.TABLES.budget_segments)
-        .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,fx_mode,eur_base_rate_fixed,sort_order")
+        .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,transport_night_budget,fx_mode,eur_base_rate_fixed,sort_order")
         .eq("user_id", sbUser.id)
-        .eq("period_id", activePeriodId)
+        .in("period_id", periodsForTravel.map((row) => row.id).filter(Boolean))
         .order("sort_order", { ascending: true })
         .order("start_date", { ascending: true });
 
@@ -627,6 +626,7 @@ const txPromise = sb
           end_date: p.end_date,
           base_currency: p.base_currency || "EUR",
           daily_budget_base: Number(p.daily_budget_base) || 0,
+          transport_night_budget: 400,
           fx_mode: "fixed",
           eur_base_rate_fixed: Number(p.eur_base_rate) || null,
           sort_order: 0,
@@ -635,9 +635,9 @@ const txPromise = sb
 
         const { data: segs2, error: seg2Err } = await sb
           .from(TB_CONST.TABLES.budget_segments)
-          .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,fx_mode,eur_base_rate_fixed,sort_order")
+          .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,transport_night_budget,fx_mode,eur_base_rate_fixed,sort_order")
           .eq("user_id", sbUser.id)
-          .eq("period_id", activePeriodId)
+          .in("period_id", periodsForTravel.map((row) => row.id).filter(Boolean))
           .order("sort_order", { ascending: true })
           .order("start_date", { ascending: true });
         if (seg2Err) throw seg2Err;
@@ -666,12 +666,30 @@ const txPromise = sb
     }
   })();
 
+  const subcatPromise = (async () => {
+    try {
+      const { data: rows, error } = await sb
+        .from(TB_CONST.TABLES.category_subcategories)
+        .select("id,category_id,category_name,name,color,sort_order,is_active,created_at,updated_at")
+        .eq("user_id", sbUser.id)
+        .order("category_name", { ascending: true })
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return rows || [];
+    } catch (e) {
+      console.warn("[category_subcategories] load failed (ignored)", e?.message || e);
+      return [];
+    }
+  })();
+
 const w = await walletsPromise;
 const walletBalanceRows = await walletBalancesPromise;
 const { data: tx, error: tErr } = await txPromise;
 if (tErr) throw tErr;
 const segRows = await segPromise;
 const recurringRuleRows = await recurringRulesPromise;
+const categorySubcategoryRows = await subcatPromise;
 
   state.period.id = p.id;
   state.period.start = p.start_date;
@@ -719,6 +737,7 @@ state.wallets = (w || []).map((x) => ({
   amount: Number(x.amount),
   currency: x.currency,
   category: x.category,
+  subcategory: x.subcategory || null,
   label: x.label || "",
   tripExpenseId: x.trip_expense_id || null,
   tripShareLinkId: x.trip_share_link_id || null,
@@ -746,13 +765,18 @@ state.wallets = (w || []).map((x) => ({
   baseCurrency: x.base_currency,
 }));
 
+  const periodTravelMap = Object.fromEntries((periods || []).map((row) => [String(row.id), row.travel_id || null]));
+
   state.budgetSegments = (segRows || []).map((x) => ({
     id: x.id,
     periodId: x.period_id,
+    travelId: periodTravelMap[String(x.period_id)] || null,
     start: x.start_date,
     end: x.end_date,
     baseCurrency: x.base_currency,
     dailyBudgetBase: Number(x.daily_budget_base),
+    transportNightBudget: (x.transport_night_budget === null || x.transport_night_budget === undefined) ? null : Number(x.transport_night_budget),
+    transport_night_budget: (x.transport_night_budget === null || x.transport_night_budget === undefined) ? null : Number(x.transport_night_budget),
     fxMode: x.fx_mode || "fixed",
     eurBaseRateFixed: (x.eur_base_rate_fixed === null || x.eur_base_rate_fixed === undefined) ? null : Number(x.eur_base_rate_fixed),
     sortOrder: Number(x.sort_order || 0),
@@ -771,6 +795,7 @@ state.wallets = (w || []).map((x) => ({
   amount: (x.amount === null || x.amount === undefined) ? null : Number(x.amount),
   currency: x.currency || null,
   category: x.category || null,
+  subcategory: x.subcategory || null,
 
   startDate: x.start_date || null,
   endDate: x.end_date || null,
@@ -789,6 +814,18 @@ state.wallets = (w || []).map((x) => ({
   outOfBudget: !!x.out_of_budget,
   nightCovered: !!x.night_covered,
 }));
+
+  state.categorySubcategories = (categorySubcategoryRows || []).map((x) => ({
+    id: x.id,
+    categoryId: x.category_id || null,
+    categoryName: x.category_name || '',
+    name: x.name || '',
+    color: x.color || null,
+    sortOrder: Number(x.sort_order || 0),
+    isActive: x.is_active !== false,
+    createdAt: x.created_at || null,
+    updatedAt: x.updated_at || null,
+  }));
 
   try {
     if (typeof syncTabsForRole === "function") syncTabsForRole();
