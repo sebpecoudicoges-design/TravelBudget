@@ -19,6 +19,7 @@ function _txGetFilters() {
     pay: _txEl("f-pay")?.value || "all",
     out: _txEl("f-out")?.value || "all",
     night: _txEl("f-night")?.value || "all",
+    recurring: _txEl("f-recurring")?.value || "all",
     q: _txEl("f-q")?.value || "",
   };
 }
@@ -33,6 +34,7 @@ function _txSetFilters(f) {
   if (_txEl("f-pay")) _txEl("f-pay").value = f.pay ?? "all";
   if (_txEl("f-out")) _txEl("f-out").value = f.out ?? "all";
   if (_txEl("f-night")) _txEl("f-night").value = f.night ?? "all";
+  if (_txEl("f-recurring")) _txEl("f-recurring").value = f.recurring ?? "all";
   if (_txEl("f-q")) _txEl("f-q").value = f.q ?? "";
 }
 
@@ -237,6 +239,7 @@ function renderTransactions() {
   const pay = document.getElementById("f-pay").value;
   const out = document.getElementById("f-out").value;
   const night = document.getElementById("f-night").value;
+  const recurring = document.getElementById("f-recurring")?.value || "all";
   const q = (document.getElementById("f-q").value || "").toLowerCase().trim();
 
   // Persist filters (UX)
@@ -274,6 +277,13 @@ function renderTransactions() {
 
     if (night === "yes" && !tx.nightCovered) return false;
     if (night === "no" && tx.nightCovered) return false;
+
+    const isRecurring = !!(tx.generatedByRule || tx.recurringRuleId);
+    const recurringStatus = String(tx.recurringInstanceStatus || "").toLowerCase();
+    if (recurring === "recurring" && !isRecurring) return false;
+    if (recurring === "non_recurring" && isRecurring) return false;
+    if (recurring === "generated" && recurringStatus !== "generated") return false;
+    if (recurring === "confirmed" && recurringStatus !== "confirmed") return false;
 
     if (q) {
       const hay = `${tx.label || ""} ${tx.category || ""}`.toLowerCase();
@@ -339,7 +349,7 @@ function renderTransactions() {
     list.appendChild(div);
   }
 
-  const ids = ["f-from", "f-to", "f-wallet", "f-category", "f-type", "f-pay", "f-out", "f-night", "f-q"];
+  const ids = ["f-from", "f-to", "f-wallet", "f-category", "f-type", "f-pay", "f-out", "f-night", "f-recurring", "f-q"];
   for (const id of ids) {
     const el = document.getElementById(id);
     if (el && !el._bound) {

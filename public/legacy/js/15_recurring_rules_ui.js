@@ -671,7 +671,7 @@
         if (act === "edit") {
           const rule = (state?.recurringRules || []).find((r) => String(r?.id || '') === id);
           if (!rule) throw new Error('Règle introuvable.');
-          _rrOpenRuleModal(rule);
+          window.openRecurringRuleModal(rule);
           return;
         }
         if (act === "pause") {

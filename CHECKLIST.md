@@ -110,7 +110,7 @@
 - Vérifier la navigation Analyse, les filtres voyage/période/périmètre et le rendu des graphiques modernes.
 
 
-## V9.2.6.3
+## V9.2.6.4
 - Fix modal transaction add/edit crash (`tx is not defined`).
 - Budget Analysis period selector now follows budget segments, so past/current/future periods reappear and active period no longer collapses to whole trip.
 - Subcategory selects now fall back to existing transaction/rule values when the SQL table is empty or not yet populated.

@@ -410,14 +410,13 @@ function _txIsMissingRpcSignature(err) {
 }
 
 async function _updateTransactionRpcCompat(args) {
-  try {
-    return await tbRpcWithRetry('update_transaction_v2', args);
-  } catch (err) {
-    if (!_txIsMissingRpcSignature(err) || !Object.prototype.hasOwnProperty.call(args || {}, 'p_subcategory')) throw err;
-    const fallbackArgs = { ...args };
-    delete fallbackArgs.p_subcategory;
-    return await tbRpcWithRetry('update_transaction_v2', fallbackArgs);
-  }
+  const hasSubcategory = Object.prototype.hasOwnProperty.call(args || {}, 'p_subcategory');
+  let res = await tbRpcWithRetry('update_transaction_v2', args);
+  if (!res?.error) return res;
+  if (!_txIsMissingRpcSignature(res.error) || !hasSubcategory) return res;
+  const fallbackArgs = { ...args };
+  delete fallbackArgs.p_subcategory;
+  return await tbRpcWithRetry('update_transaction_v2', fallbackArgs);
 }
 async function saveModal() {
   if (_savingTx) return;
