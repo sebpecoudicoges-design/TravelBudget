@@ -409,14 +409,75 @@ function _txIsMissingRpcSignature(err) {
   return code === 'PGRST202' || msg.includes('schema cache') || details.includes('schema cache');
 }
 
+async function _txPatchSubcategoryDirect(txId, subcategory) {
+  const s = _tbGetSB();
+  if (!s) throw new Error('Supabase non prêt.');
+  const payload = { subcategory: subcategory || null };
+  return await s
+    .from(TB_CONST.TABLES.transactions)
+    .update(payload)
+    .eq('id', txId);
+}
+
 async function _updateTransactionRpcCompat(args) {
+  const txId = String(args?.p_tx_id || args?.p_id || '').trim() || null;
   const hasSubcategory = Object.prototype.hasOwnProperty.call(args || {}, 'p_subcategory');
-  let res = await tbRpcWithRetry('update_transaction_v2', args);
-  if (!res?.error) return res;
-  if (!_txIsMissingRpcSignature(res.error) || !hasSubcategory) return res;
-  const fallbackArgs = { ...args };
-  delete fallbackArgs.p_subcategory;
-  return await tbRpcWithRetry('update_transaction_v2', fallbackArgs);
+
+  const variants = [];
+  if (args && args.p_tx_id && !args.p_id) {
+    variants.push({ ...args, p_id: args.p_tx_id });
+  }
+  variants.push({ ...args });
+
+  let lastRes = null;
+  let lastErr = null;
+
+  for (const variant of variants) {
+    try {
+      const res = await tbRpcWithRetry('update_transaction_v2', variant);
+      if (!res?.error) return { ...res, _tbUsedLegacyFallback: false };
+      lastRes = res;
+      lastErr = res.error;
+      if (!_txIsMissingRpcSignature(res.error)) return res;
+    } catch (e) {
+      lastErr = e;
+      if (!_txIsMissingRpcSignature(e)) throw e;
+    }
+  }
+
+  const fallbackArgs = {
+    p_wallet_id: args?.p_wallet_id,
+    p_tx_id: args?.p_tx_id || args?.p_id,
+    p_type: args?.p_type,
+    p_label: args?.p_label,
+    p_amount: args?.p_amount,
+    p_currency: args?.p_currency,
+    p_date_start: args?.p_date_start,
+    p_date_end: args?.p_date_end,
+    p_category: args?.p_category,
+    p_pay_now: args?.p_pay_now,
+    p_out_of_budget: args?.p_out_of_budget,
+    p_night_covered: args?.p_night_covered,
+    p_fx_rate_snapshot: args?.p_fx_rate_snapshot,
+    p_fx_source_snapshot: args?.p_fx_source_snapshot,
+    p_fx_snapshot_at: args?.p_fx_snapshot_at,
+    p_fx_base_currency_snapshot: args?.p_fx_base_currency_snapshot,
+    p_fx_tx_currency_snapshot: args?.p_fx_tx_currency_snapshot,
+    p_affects_budget: !(args?.p_out_of_budget),
+    p_trip_expense_id: args?.p_trip_expense_id || null,
+    p_trip_share_link_id: args?.p_trip_share_link_id || null,
+    p_user_id: args?.p_user_id || null,
+  };
+
+  const res = await tbRpcWithRetry('update_transaction_v2', fallbackArgs);
+  if (res?.error) return res;
+
+  if (hasSubcategory && txId) {
+    const patchRes = await _txPatchSubcategoryDirect(txId, args?.p_subcategory || null);
+    if (patchRes?.error) return patchRes;
+  }
+
+  return { ...res, _tbUsedLegacyFallback: true };
 }
 async function saveModal() {
   if (_savingTx) return;

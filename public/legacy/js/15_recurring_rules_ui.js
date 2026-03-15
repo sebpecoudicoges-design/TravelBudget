@@ -358,6 +358,65 @@
     window.renderRecurringRules();
   }
 
+  function _rrRuleToFormDefaults(rule, fallbackCurrency) {
+    const r = rule || {};
+    return {
+      label: String(r.label || r.name || "").trim(),
+      type: String(r.type || "expense").trim() || "expense",
+      amount: Number(r.amount || 0) || 0,
+      currency: String(r.currency || fallbackCurrency || "EUR").trim().toUpperCase(),
+      wallet_id: String(r.walletId || r.wallet_id || "").trim(),
+      category: String(r.category || "").trim(),
+      subcategory: String(r.subcategory || "").trim(),
+      rule_type: String(r.ruleType || r.rule_type || "every_x_months").trim() || "every_x_months",
+      interval_count: Math.max(1, Number(r.intervalCount || r.interval_count || 1) || 1),
+      weekday: (r.weekday === null || r.weekday === undefined) ? "1" : String(r.weekday),
+      monthday: (r.monthday === null || r.monthday === undefined) ? "" : String(r.monthday),
+      start_date: String(r.startDate || r.start_date || "").slice(0, 10),
+      end_date: String(r.endDate || r.end_date || "").slice(0, 10),
+      max_occurrences: (r.maxOccurrences === null || r.maxOccurrences === undefined || r.max_occurrences === null || r.max_occurrences === undefined) ? "" : String(r.maxOccurrences || r.max_occurrences),
+      out_of_budget: !!(r.outOfBudget || r.out_of_budget),
+    };
+  }
+
+  async function _rrUpdateRule(ruleId, payload) {
+    const s = _rrGetSB();
+    if (!s) throw new Error("Supabase non prêt.");
+    const rid = String(ruleId || "").trim();
+    if (!_rrIsUuid(rid)) throw new Error("UUID de règle invalide.");
+
+    const updatePayload = {
+      wallet_id: payload.wallet_id,
+      label: payload.label,
+      amount: payload.amount,
+      currency: payload.currency,
+      type: payload.type,
+      category: payload.category || null,
+      subcategory: payload.subcategory || null,
+      rule_type: payload.rule_type,
+      interval_count: payload.interval_count,
+      weekday: payload.weekday,
+      monthday: payload.monthday,
+      start_date: payload.start_date,
+      next_due_at: payload.next_due_at || payload.start_date,
+      end_date: payload.end_date || null,
+      max_occurrences: payload.max_occurrences,
+      out_of_budget: !!payload.out_of_budget,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await s
+      .from(TB_CONST.TABLES.recurring_rules)
+      .update(updatePayload)
+      .eq('id', rid);
+    if (error) throw error;
+
+    const genName = TB_CONST?.RPCS?.recurring_generate_for_rule || "recurring_generate_for_rule";
+    const { error: genErr } = await s.rpc(genName, { p_rule_id: rid });
+    if (genErr) throw genErr;
+    return rid;
+  }
+
   async function _rrArchive(ruleId) {
     const s = _rrGetSB();
     if (!s) throw new Error("Supabase non prêt.");

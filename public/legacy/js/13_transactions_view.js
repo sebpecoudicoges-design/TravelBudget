@@ -282,6 +282,8 @@ function renderTransactions() {
     const recurringStatus = String(tx.recurringInstanceStatus || "").toLowerCase();
     if (recurring === "recurring" && !isRecurring) return false;
     if (recurring === "non_recurring" && isRecurring) return false;
+    if (recurring === "recurring_generated" && !(isRecurring && recurringStatus === "generated")) return false;
+    if (recurring === "recurring_confirmed" && !(isRecurring && recurringStatus === "confirmed")) return false;
     if (recurring === "generated" && recurringStatus !== "generated") return false;
     if (recurring === "confirmed" && recurringStatus !== "confirmed") return false;
 
