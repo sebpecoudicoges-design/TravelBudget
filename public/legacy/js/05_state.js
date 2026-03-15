@@ -34,7 +34,36 @@ categorySubcategories: [],
 // ---- expose for plugins (do not remove) ----
 Object.defineProperty(window, "state", { get: () => state, set: (v) => { state = v; } });
 
-const DEFAULT_CATEGORIES = ["Repas", "Logement", "Transport", "Sorties", "Caution", "Autre"];
+const CATEGORY_DISPLAY_ORDER = [
+  "Repas",
+  "Logement",
+  "Transport",
+  "Transport Internationale",
+  "Visa",
+  "Sorties",
+  "Santé",
+  "Abonnement/Mobile",
+  "Frais bancaire",
+  "Laundry",
+  "Course",
+  "Projet Personnel",
+  "Cadeau",
+  "Souvenir",
+  "Caution",
+  "Revenu",
+  "Autre",
+  "Mouvement interne",
+];
+
+const DEFAULT_CATEGORIES = CATEGORY_DISPLAY_ORDER.slice();
+
+const DEFAULT_SUBCATEGORY_MAP = {
+  "Logement": ["Auberge", "Hôtel", "Guesthouse", "Airbnb", "Camping", "Loyer"],
+  "Transport": ["Bus local", "Train local", "Métro", "Taxi / VTC", "Scooter", "Essence", "Ferry local", "Location vélo", "Parking", "Péage"],
+  "Transport Internationale": ["Vol", "Bus international", "Train international", "Ferry international", "Frontière / passage", "Visa-run déplacement"],
+  "Visa": ["e-Visa", "Visa à l’arrivée", "Extension visa", "Frais consulaires", "Photos / documents visa"],
+  "Sorties": ["Culturel", "Sportive", "Verre", "Fête", "Café sortie", "Événement", "Cinéma", "Musée"],
+};
 
 function getCategories() {
   // Always include defaults (so UI doesn't "lose" categories if state has only a subset)
@@ -52,7 +81,15 @@ function getCategories() {
     seen.add(k);
     out.push(name);
   }
-  return out;
+
+  const orderMap = Object.fromEntries(CATEGORY_DISPLAY_ORDER.map((name, idx) => [String(name).toLowerCase(), idx]));
+  return out.slice().sort((a, b) => {
+    const aKey = String(a || '').toLowerCase();
+    const bKey = String(b || '').toLowerCase();
+    const aIdx = Object.prototype.hasOwnProperty.call(orderMap, aKey) ? orderMap[aKey] : 999;
+    const bIdx = Object.prototype.hasOwnProperty.call(orderMap, bKey) ? orderMap[bKey] : 999;
+    return (aIdx - bIdx) || String(a).localeCompare(String(b), 'fr', { sensitivity: 'base' });
+  });
 }
 const DEFAULT_CATEGORY_COLORS = {
   Repas: "#2f80ed",
@@ -107,7 +144,15 @@ function getCategorySubcategories(categoryName, opts) {
     const key = subName.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
-    out.push(row);
+    out.push({
+      id: row?.id || null,
+      categoryName: name,
+      name: subName,
+      color: row?.color || null,
+      sortOrder: Number(row?.sortOrder ?? row?.sort_order ?? 9999),
+      isActive: row?.isActive !== false && row?.is_active !== false,
+      source: row?.source || 'state'
+    });
   };
 
   rows
@@ -139,13 +184,30 @@ function getCategorySubcategories(categoryName, opts) {
       categoryName: name,
       name: sub,
       color: null,
-      sortOrder: 9999,
+      sortOrder: 9998,
       isActive: true,
       source: 'fallback'
     });
   });
 
-  return out;
+  const defaults = DEFAULT_SUBCATEGORY_MAP[name] || DEFAULT_SUBCATEGORY_MAP[Object.keys(DEFAULT_SUBCATEGORY_MAP).find((k) => k.toLowerCase() === name.toLowerCase())] || [];
+  defaults.forEach((sub, idx) => {
+    push({
+      id: null,
+      categoryName: name,
+      name: sub,
+      color: null,
+      sortOrder: idx,
+      isActive: true,
+      source: 'default'
+    });
+  });
+
+  return out.slice().sort((a, b) => {
+    const aSort = Number(a?.sortOrder ?? 9999);
+    const bSort = Number(b?.sortOrder ?? 9999);
+    return (aSort - bSort) || String(a?.name || '').localeCompare(String(b?.name || ''), 'fr', { sensitivity: 'base' });
+  });
 }
 window.getCategorySubcategories = getCategorySubcategories;
 
