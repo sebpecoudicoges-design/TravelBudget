@@ -420,6 +420,25 @@ function _txIsMissingRpcSignature(err) {
   );
 }
 
+function _txRpcSigCacheKey() {
+  return 'tb.update_transaction_v2.signature';
+}
+
+function _txGetCachedUpdateRpcAvailability() {
+  try {
+    return localStorage.getItem(_txRpcSigCacheKey()) || '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function _txSetCachedUpdateRpcAvailability(value) {
+  try {
+    if (!value) localStorage.removeItem(_txRpcSigCacheKey());
+    else localStorage.setItem(_txRpcSigCacheKey(), String(value));
+  } catch (_) {}
+}
+
 async function _txPatchSubcategoryDirect(txId, subcategory) {
   const s = _tbGetSB();
   if (!s) throw new Error('Supabase non prêt.');
@@ -503,6 +522,10 @@ async function _updateTransactionDirectCompat(args) {
 async function _updateTransactionRpcCompat(args) {
   const txId = String(args?.p_tx_id || args?.p_id || '').trim() || null;
   const hasSubcategory = Object.prototype.hasOwnProperty.call(args || {}, 'p_subcategory');
+  const cachedAvailability = _txGetCachedUpdateRpcAvailability();
+  if (cachedAvailability === 'missing') {
+    return await _updateTransactionDirectCompat(args);
+  }
 
   const variants = [];
   if (args && args.p_tx_id && !args.p_id) variants.push({ ...args, p_id: args.p_tx_id });
@@ -512,7 +535,10 @@ async function _updateTransactionRpcCompat(args) {
   for (const variant of variants) {
     try {
       const res = await tbRpcWithRetry('update_transaction_v2', variant);
-      if (!res?.error) return { ...res, _tbUsedLegacyFallback: false };
+      if (!res?.error) {
+        _txSetCachedUpdateRpcAvailability('present');
+        return { ...res, _tbUsedLegacyFallback: false };
+      }
       if (!_txIsMissingRpcSignature(res.error)) return res;
       sawMissingSignature = true;
     } catch (e) {
@@ -544,6 +570,7 @@ async function _updateTransactionRpcCompat(args) {
     if (res?.error) {
       if (!_txIsMissingRpcSignature(res.error)) return res;
     } else {
+      _txSetCachedUpdateRpcAvailability('present');
       if (hasSubcategory && txId) {
         const patchRes = await _txPatchSubcategoryDirect(txId, args?.p_subcategory || null);
         if (patchRes?.error) return patchRes;
@@ -555,7 +582,10 @@ async function _updateTransactionRpcCompat(args) {
     sawMissingSignature = true;
   }
 
-  if (sawMissingSignature) return await _updateTransactionDirectCompat(args);
+  if (sawMissingSignature) {
+    _txSetCachedUpdateRpcAvailability('missing');
+    return await _updateTransactionDirectCompat(args);
+  }
   return await _updateTransactionDirectCompat(args);
 }
 async function saveModal() {
