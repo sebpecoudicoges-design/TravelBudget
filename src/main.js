@@ -65,7 +65,7 @@ function loadScript(src) {
 async function boot() {
   // Simple marker for debugging
   window.__TB_BUILD__ = window.__TB_BUILD__ || {};
-  window.__TB_BUILD__.entry = 'v9-vite-legacy-loader-9.2.6.9';
+  window.__TB_BUILD__.entry = 'v9-vite-legacy-loader-9.2.6.10';
   window.__TB_BUILD__.loadedAt = new Date().toISOString();
 
   for (const src of LEGACY_SCRIPTS) {

@@ -420,25 +420,6 @@ function _txIsMissingRpcSignature(err) {
   );
 }
 
-function _txRpcSigCacheKey() {
-  return 'tb.update_transaction_v2.signature';
-}
-
-function _txGetCachedUpdateRpcAvailability() {
-  try {
-    return localStorage.getItem(_txRpcSigCacheKey()) || '';
-  } catch (_) {
-    return '';
-  }
-}
-
-function _txSetCachedUpdateRpcAvailability(value) {
-  try {
-    if (!value) localStorage.removeItem(_txRpcSigCacheKey());
-    else localStorage.setItem(_txRpcSigCacheKey(), String(value));
-  } catch (_) {}
-}
-
 async function _txPatchSubcategoryDirect(txId, subcategory) {
   const s = _tbGetSB();
   if (!s) throw new Error('Supabase non prêt.');
@@ -520,74 +501,9 @@ async function _updateTransactionDirectCompat(args) {
 }
 
 async function _updateTransactionRpcCompat(args) {
-  const txId = String(args?.p_tx_id || args?.p_id || '').trim() || null;
-  const hasSubcategory = Object.prototype.hasOwnProperty.call(args || {}, 'p_subcategory');
-  const cachedAvailability = _txGetCachedUpdateRpcAvailability();
-  if (cachedAvailability === 'missing') {
-    return await _updateTransactionDirectCompat(args);
-  }
-
-  const variants = [];
-  if (args && args.p_tx_id && !args.p_id) variants.push({ ...args, p_id: args.p_tx_id });
-  variants.push({ ...args });
-
-  let sawMissingSignature = false;
-  for (const variant of variants) {
-    try {
-      const res = await tbRpcWithRetry('update_transaction_v2', variant);
-      if (!res?.error) {
-        _txSetCachedUpdateRpcAvailability('present');
-        return { ...res, _tbUsedLegacyFallback: false };
-      }
-      if (!_txIsMissingRpcSignature(res.error)) return res;
-      sawMissingSignature = true;
-    } catch (e) {
-      if (!_txIsMissingRpcSignature(e)) throw e;
-      sawMissingSignature = true;
-    }
-  }
-
-  const fallbackArgs = {
-    p_id: args?.p_tx_id || args?.p_id,
-    p_wallet_id: args?.p_wallet_id,
-    p_type: args?.p_type,
-    p_label: args?.p_label,
-    p_amount: args?.p_amount,
-    p_currency: args?.p_currency,
-    p_date_start: args?.p_date_start,
-    p_date_end: args?.p_date_end,
-    p_category: args?.p_category,
-    p_pay_now: args?.p_pay_now,
-    p_out_of_budget: args?.p_out_of_budget,
-    p_night_covered: args?.p_night_covered,
-    p_user_id: args?.p_user_id || null,
-    p_trip_expense_id: args?.p_trip_expense_id || null,
-    p_trip_share_link_id: args?.p_trip_share_link_id || null,
-  };
-
-  try {
-    const res = await tbRpcWithRetry('update_transaction_v2', fallbackArgs);
-    if (res?.error) {
-      if (!_txIsMissingRpcSignature(res.error)) return res;
-    } else {
-      _txSetCachedUpdateRpcAvailability('present');
-      if (hasSubcategory && txId) {
-        const patchRes = await _txPatchSubcategoryDirect(txId, args?.p_subcategory || null);
-        if (patchRes?.error) return patchRes;
-      }
-      return { ...res, _tbUsedLegacyFallback: true };
-    }
-  } catch (e) {
-    if (!_txIsMissingRpcSignature(e)) throw e;
-    sawMissingSignature = true;
-  }
-
-  if (sawMissingSignature) {
-    _txSetCachedUpdateRpcAvailability('missing');
-    return await _updateTransactionDirectCompat(args);
-  }
   return await _updateTransactionDirectCompat(args);
 }
+
 async function saveModal() {
   if (_savingTx) return;
   _savingTx = true;
