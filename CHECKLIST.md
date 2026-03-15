@@ -99,6 +99,6 @@
   - la checklist projet si elle n’est plus alignée
 
 
-## V9.2.1
+## V9.2.2
 - Nouvelle page Analyse budget dédiée (ECharts) sans modification du bloc KPI dashboard.
 - Vérifier la navigation Analyse, les filtres voyage/période/périmètre et le rendu des graphiques modernes.
