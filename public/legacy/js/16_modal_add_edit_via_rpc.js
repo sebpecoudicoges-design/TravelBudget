@@ -406,7 +406,18 @@ function _txIsMissingRpcSignature(err) {
   const code = String(err?.code || '').trim();
   const msg = String(err?.message || '').toLowerCase();
   const details = String(err?.details || '').toLowerCase();
-  return code === 'PGRST202' || msg.includes('schema cache') || details.includes('schema cache');
+  const hint = String(err?.hint || '').toLowerCase();
+  return (
+    code === 'PGRST202' ||
+    code === '42883' ||
+    msg.includes('schema cache') ||
+    details.includes('schema cache') ||
+    msg.includes('does not exist') ||
+    msg.includes('no function matches') ||
+    details.includes('does not exist') ||
+    details.includes('no function matches') ||
+    hint.includes('add explicit type casts')
+  );
 }
 
 async function _txPatchSubcategoryDirect(txId, subcategory) {
