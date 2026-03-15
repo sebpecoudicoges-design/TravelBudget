@@ -47,17 +47,40 @@
   function _getActivePeriodForTravel(travelId){
     const list = _periodList(travelId).slice().sort((a,b)=>String(a.start_date || a.start || '').localeCompare(String(b.start_date || b.start || '')));
     if (!list.length) return null;
-    if (String(state?.activeTravelId || '') === String(travelId || '') && state?.period) return state.period;
     const today = _iso(new Date());
-    return list.find(p => {
+    const containing = list.filter(p => {
       const a = _norm(p.start_date || p.start);
       const b = _norm(p.end_date || p.end);
       return a && b && today >= a && today <= b;
-    }) || list[0] || null;
+    });
+    if (containing.length) {
+      return containing.slice().sort((a,b) => String(b.start_date || b.start || '').localeCompare(String(a.start_date || a.start || '')))[0];
+    }
+    const activePeriodId = String(state?.period?.id || '');
+    if (String(state?.activeTravelId || '') === String(travelId || '') && activePeriodId) {
+      const byId = list.find(p => String(p.id) === activePeriodId || String(p.periodId || '') === activePeriodId);
+      if (byId) return byId;
+    }
+    return list[0] || null;
   }
   function _travelList(){ return Array.isArray(state?.travels) ? state.travels : []; }
   function _periodList(travelId){
-    return (Array.isArray(state?.periods) ? state.periods : []).filter(p => String(p.travel_id || p.travelId || '') === String(travelId || state?.activeTravelId || ''));
+    const wanted = String(travelId || state?.activeTravelId || '');
+    const segs = _segmentsForTravel(wanted)
+      .filter(s => _norm(s.start || s.start_date || s.startDate) && _norm(s.end || s.end_date || s.endDate))
+      .map((s) => ({
+        id: s.id,
+        periodId: s.periodId || s.period_id || null,
+        travelId: wanted,
+        start: s.start || s.start_date || s.startDate,
+        end: s.end || s.end_date || s.endDate,
+        baseCurrency: s.baseCurrency || s.base_currency || '',
+        isSegment: true,
+      }));
+    if (segs.length) {
+      return segs.sort((a,b)=>String(a.start || '').localeCompare(String(b.start || '')));
+    }
+    return (Array.isArray(state?.periods) ? state.periods : []).filter(p => String(p.travel_id || p.travelId || '') === wanted);
   }
   function _getSelectedTravelId(){ return _el('analysis-travel')?.value || String(state?.activeTravelId || ''); }
   function _getSelectedPeriodId(){ return _el('analysis-period')?.value || 'active'; }

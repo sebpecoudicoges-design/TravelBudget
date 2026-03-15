@@ -99,7 +99,18 @@ function getCategorySubcategories(categoryName, opts) {
   if (!name) return [];
   const activeOnly = opts?.activeOnly !== false;
   const rows = Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : [];
-  return rows
+  const out = [];
+  const seen = new Set();
+  const push = (row) => {
+    const subName = String(row?.name || row?.subcategory || "").trim();
+    if (!subName) return;
+    const key = subName.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(row);
+  };
+
+  rows
     .filter((row) => {
       const rowCat = String(row?.categoryName || row?.category_name || "").trim();
       if (!rowCat) return false;
@@ -112,7 +123,29 @@ function getCategorySubcategories(categoryName, opts) {
       const aSort = Number(a?.sortOrder ?? a?.sort_order ?? 0);
       const bSort = Number(b?.sortOrder ?? b?.sort_order ?? 0);
       return (aSort - bSort) || String(a?.name || "").localeCompare(String(b?.name || ""), 'fr', { sensitivity: 'base' });
+    })
+    .forEach(push);
+
+  const fallbackSources = [];
+  if (Array.isArray(state?.transactions)) fallbackSources.push(...state.transactions);
+  if (Array.isArray(state?.recurringRules)) fallbackSources.push(...state.recurringRules);
+  fallbackSources.forEach((row) => {
+    const rowCat = String(row?.category || "").trim();
+    const sub = String(row?.subcategory || "").trim();
+    if (!sub) return;
+    if (rowCat.toLowerCase() !== name.toLowerCase()) return;
+    push({
+      id: null,
+      categoryName: name,
+      name: sub,
+      color: null,
+      sortOrder: 9999,
+      isActive: true,
+      source: 'fallback'
     });
+  });
+
+  return out;
 }
 window.getCategorySubcategories = getCategorySubcategories;
 

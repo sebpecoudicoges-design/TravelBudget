@@ -213,7 +213,7 @@ function openTxModal(type = "expense", walletId = null) {
   document.getElementById("m-out").checked = false;
   document.getElementById("m-night").checked = false;
 
-  wireSubcategoryLogic(tx.subcategory || "");
+  wireSubcategoryLogic("");
   wireNightLogic();
 
   document.getElementById("overlay").style.display = "block";
@@ -256,7 +256,7 @@ function openTxEditModal(txId) {
   document.getElementById("m-out").checked = !!tx.outOfBudget;
   document.getElementById("m-night").checked = !!tx.nightCovered;
 
-  wireSubcategoryLogic("");
+  wireSubcategoryLogic(tx.subcategory || "");
   wireNightLogic();
 
   document.getElementById("overlay").style.display = "block";
