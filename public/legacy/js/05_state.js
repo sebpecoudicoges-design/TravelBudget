@@ -58,11 +58,23 @@ const CATEGORY_DISPLAY_ORDER = [
 const DEFAULT_CATEGORIES = CATEGORY_DISPLAY_ORDER.slice();
 
 const DEFAULT_SUBCATEGORY_MAP = {
+  "Repas": ["Petit-déjeuner", "Déjeuner", "Dîner", "Snack", "Café", "Eau"],
   "Logement": ["Auberge", "Hôtel", "Guesthouse", "Airbnb", "Camping", "Loyer"],
   "Transport": ["Bus local", "Train local", "Métro", "Taxi / VTC", "Scooter", "Essence", "Ferry local", "Location vélo", "Parking", "Péage"],
   "Transport Internationale": ["Vol", "Bus international", "Train international", "Ferry international", "Frontière / passage", "Visa-run déplacement"],
   "Visa": ["e-Visa", "Visa à l’arrivée", "Extension visa", "Frais consulaires", "Photos / documents visa"],
   "Sorties": ["Culturel", "Sportive", "Verre", "Fête", "Café sortie", "Événement", "Cinéma", "Musée"],
+  "Santé": ["Pharmacie", "Consultation", "Assurance santé", "Soins", "Hygiène"],
+  "Abonnement/Mobile": ["Forfait mobile", "SIM", "Recharge data", "Abonnement app"],
+  "Frais bancaire": ["Frais carte", "Retrait ATM", "Commission change", "Tenue de compte"],
+  "Course": ["Supermarché", "Marché", "Eau", "Snacks", "Produits maison"],
+  "Projet Personnel": ["Matériel", "Formation", "Logiciel", "Démarches"],
+  "Cadeau": ["Famille", "Amis", "Hôte"],
+  "Souvenir": ["Artisanat", "Vêtement", "Carte postale"],
+  "Caution": ["Logement", "Location véhicule", "Autre caution"],
+  "Revenu": ["Salaire", "Remboursement", "Vente", "Prime", "Autre revenu"],
+  "Autre": ["Divers"],
+  "Mouvement interne": ["Virement", "Transfert cash", "Change devise"],
 };
 
 function getCategories() {

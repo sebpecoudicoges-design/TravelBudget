@@ -401,6 +401,24 @@ async function tbRpcWithRetry(fnName, args, opts) {
   }
   throw lastErr;
 }
+
+function _txIsMissingRpcSignature(err) {
+  const code = String(err?.code || '').trim();
+  const msg = String(err?.message || '').toLowerCase();
+  const details = String(err?.details || '').toLowerCase();
+  return code === 'PGRST202' || msg.includes('schema cache') || details.includes('schema cache');
+}
+
+async function _updateTransactionRpcCompat(args) {
+  try {
+    return await tbRpcWithRetry('update_transaction_v2', args);
+  } catch (err) {
+    if (!_txIsMissingRpcSignature(err) || !Object.prototype.hasOwnProperty.call(args || {}, 'p_subcategory')) throw err;
+    const fallbackArgs = { ...args };
+    delete fallbackArgs.p_subcategory;
+    return await tbRpcWithRetry('update_transaction_v2', fallbackArgs);
+  }
+}
 async function saveModal() {
   if (_savingTx) return;
   _savingTx = true;
@@ -464,7 +482,7 @@ async function saveModal() {
           }
         }
 
-        const { data, error } = await tbRpcWithRetry("update_transaction_v2", {
+        const { data, error } = await _updateTransactionRpcCompat({
           p_tx_id: editingTxId,
           p_wallet_id: walletId,
           p_type: type,
@@ -687,7 +705,7 @@ async function markTxAsPaid(txId) {
         }
       : _txBuildFxSnapshotArgs(tx.dateStart, String(tx.currency || wallet.currency || '').toUpperCase());
 
-    const { error } = await sb.rpc("update_transaction_v2", {
+    const { error } = await _updateTransactionRpcCompat({
       p_tx_id: tx.id,
       p_wallet_id: tx.walletId,
       p_type: tx.type,

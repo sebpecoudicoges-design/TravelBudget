@@ -151,6 +151,17 @@
       push(tx.category);
     });
 
+    try {
+      if (typeof getCategories === "function") {
+        const ordered = getCategories();
+        const pos = Object.fromEntries(ordered.map((name, idx) => [String(name || '').toLowerCase(), idx]));
+        return out.sort((a, b) => {
+          const ai = Object.prototype.hasOwnProperty.call(pos, String(a || '').toLowerCase()) ? pos[String(a || '').toLowerCase()] : 999;
+          const bi = Object.prototype.hasOwnProperty.call(pos, String(b || '').toLowerCase()) ? pos[String(b || '').toLowerCase()] : 999;
+          return (ai - bi) || a.localeCompare(b, "fr", { sensitivity: "base" });
+        });
+      }
+    } catch (_) {}
     return out.sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
   }
 
@@ -394,7 +405,7 @@
     apply();
   }
 
-  window.openRecurringRuleModal = async function openRecurringRuleModal() {
+  window.openRecurringRuleModal = async function openRecurringRuleModal(ruleToEdit) {
     const wallets = _rrWalletOptions();
     if (!wallets.length) throw new Error("Aucun wallet disponible sur le voyage actif.");
 
@@ -404,24 +415,26 @@
     const modal = (typeof _tbEnsureModal === "function") ? _tbEnsureModal() : null;
     if (!modal) throw new Error("Modal indisponible.");
     const today = _tbISO(new Date());
+    const defaults = _rrRuleToFormDefaults(ruleToEdit || null, String(wallets[0]?.currency || baseCur || "EUR").toUpperCase());
+    const isEditing = !!(ruleToEdit && ruleToEdit.id);
 
-    modal.setTitle("Nouvelle échéance périodique");
+    modal.setTitle(isEditing ? "Modifier échéance périodique" : "Nouvelle échéance périodique");
     modal.setBody(`
       <div class="row">
         <div class="field" style="min-width:220px;">
           <label>Nom</label>
-          <input id="rr-label" type="text" placeholder="Ex: Loyer, Assurance, Netflix" />
+          <input id="rr-label" type="text" placeholder="Ex: Loyer, Assurance, Netflix" value="${escapeHTML(defaults.label)}" />
         </div>
         <div class="field" style="min-width:140px;">
           <label>Type</label>
           <select id="rr-type">
-            <option value="expense">Dépense</option>
-            <option value="income">Entrée</option>
+            <option value="expense" ${defaults.type === "expense" ? "selected" : ""}>Dépense</option>
+            <option value="income" ${defaults.type === "income" ? "selected" : ""}>Entrée</option>
           </select>
         </div>
         <div class="field" style="min-width:140px;">
           <label>Montant</label>
-          <input id="rr-amount" type="number" step="0.01" min="0" />
+          <input id="rr-amount" type="number" step="0.01" min="0" value="${defaults.amount > 0 ? escapeHTML(String(defaults.amount)) : ""}" />
         </div>
       </div>
 
@@ -429,18 +442,18 @@
         <div class="field" style="min-width:220px;">
           <label>Wallet</label>
           <select id="rr-wallet">
-            ${wallets.map((w) => `<option value="${escapeHTML(w.id)}" data-cur="${escapeHTML(String(w.currency || "").toUpperCase())}">${escapeHTML(w.name)} — ${escapeHTML(w.currency)}</option>`).join("")}
+            ${wallets.map((w) => `<option value="${escapeHTML(w.id)}" data-cur="${escapeHTML(String(w.currency || "").toUpperCase())}" ${String(w.id) === String(defaults.wallet_id || wallets[0]?.id || "") ? "selected" : ""}>${escapeHTML(w.name)} — ${escapeHTML(w.currency)}</option>`).join("")}
           </select>
         </div>
         <div class="field" style="min-width:120px;">
           <label>Devise</label>
-          <input id="rr-currency" type="text" value="${escapeHTML(String(wallets[0]?.currency || baseCur || "EUR").toUpperCase())}" />
+          <input id="rr-currency" type="text" value="${escapeHTML(defaults.currency)}" />
         </div>
         <div class="field" style="min-width:180px;">
           <label>Catégorie</label>
           <select id="rr-category">
-            <option value="" selected disabled hidden>Choisir une catégorie</option>
-            ${cats.map((cat) => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join("")}
+            <option value="" ${defaults.category ? "" : "selected"} disabled hidden>Choisir une catégorie</option>
+            ${cats.map((cat) => `<option value="${escapeHTML(cat)}" ${String(cat) === String(defaults.category) ? "selected" : ""}>${escapeHTML(cat)}</option>`).join("")}
           </select>
         </div>
         <div class="field" style="min-width:180px;">
@@ -453,31 +466,31 @@
         <div class="field" style="min-width:180px;">
           <label>Fréquence</label>
           <select id="rr-rule-type">
-            <option value="daily">Jour</option>
-            <option value="weekly">Semaine</option>
-            <option value="every_x_months" selected>Mois</option>
-            <option value="yearly">Année</option>
+            <option value="daily" ${defaults.rule_type === "daily" ? "selected" : ""}>Jour</option>
+            <option value="weekly" ${defaults.rule_type === "weekly" ? "selected" : ""}>Semaine</option>
+            <option value="every_x_months" ${defaults.rule_type === "every_x_months" ? "selected" : ""}>Mois</option>
+            <option value="yearly" ${defaults.rule_type === "yearly" ? "selected" : ""}>Année</option>
           </select>
         </div>
         <div class="field" style="min-width:140px;">
           <label>Répéter tous les</label>
-          <input id="rr-interval-count" type="number" min="1" step="1" value="1" />
+          <input id="rr-interval-count" type="number" min="1" step="1" value="${escapeHTML(String(defaults.interval_count || 1))}" />
         </div>
         <div class="field" id="rr-weekday-wrap" style="min-width:180px; display:none;">
           <label>Jour de la semaine</label>
           <select id="rr-weekday">
-            <option value="1">Lundi</option>
-            <option value="2">Mardi</option>
-            <option value="3">Mercredi</option>
-            <option value="4">Jeudi</option>
-            <option value="5">Vendredi</option>
-            <option value="6">Samedi</option>
-            <option value="0">Dimanche</option>
+            <option value="1" ${String(defaults.weekday || "1") === "1" ? "selected" : ""}>Lundi</option>
+            <option value="2" ${String(defaults.weekday || "") === "2" ? "selected" : ""}>Mardi</option>
+            <option value="3" ${String(defaults.weekday || "") === "3" ? "selected" : ""}>Mercredi</option>
+            <option value="4" ${String(defaults.weekday || "") === "4" ? "selected" : ""}>Jeudi</option>
+            <option value="5" ${String(defaults.weekday || "") === "5" ? "selected" : ""}>Vendredi</option>
+            <option value="6" ${String(defaults.weekday || "") === "6" ? "selected" : ""}>Samedi</option>
+            <option value="0" ${String(defaults.weekday || "") === "0" ? "selected" : ""}>Dimanche</option>
           </select>
         </div>
         <div class="field" id="rr-monthday-wrap" style="min-width:180px;">
           <label>Jour du mois</label>
-          <input id="rr-monthday" type="number" min="1" max="31" placeholder="1-31" />
+          <input id="rr-monthday" type="number" min="1" max="31" placeholder="1-31" value="${escapeHTML(defaults.monthday)}" />
         </div>
       </div>
       <div class="muted" id="rr-frequency-help" style="margin:-4px 0 8px 0;"></div>
@@ -485,15 +498,15 @@
       <div class="row">
         <div class="field">
           <label>Début</label>
-          <input id="rr-start-date" type="date" value="${escapeHTML(today)}" />
+          <input id="rr-start-date" type="date" value="${escapeHTML(defaults.start_date || today)}" />
         </div>
         <div class="field">
           <label>Fin</label>
-          <input id="rr-end-date" type="date" />
+          <input id="rr-end-date" type="date" value="${escapeHTML(defaults.end_date)}" />
         </div>
         <div class="field">
           <label>Occurrences max</label>
-          <input id="rr-max-occurrences" type="number" min="1" step="1" placeholder="Optionnel" />
+          <input id="rr-max-occurrences" type="number" min="1" step="1" placeholder="Optionnel" value="${escapeHTML(defaults.max_occurrences)}" />
         </div>
       </div>
 
@@ -501,15 +514,15 @@
         <div class="field" style="min-width:220px;">
           <label>Impact budget</label>
           <select id="rr-budget-mode">
-            <option value="budget" selected>Dans le budget</option>
-            <option value="out">Hors budget</option>
+            <option value="budget" ${defaults.out_of_budget ? "" : "selected"}>Dans le budget</option>
+            <option value="out" ${defaults.out_of_budget ? "selected" : ""}>Hors budget</option>
           </select>
         </div>
       </div>
     `);
 
     _rrBindFrequencyUi();
-    _rrBindSubcategoryUi("");
+    _rrBindSubcategoryUi(defaults.subcategory || "");
 
     const walletSel = document.getElementById("rr-wallet");
     const curInp = document.getElementById("rr-currency");
@@ -527,7 +540,7 @@
     modal.setActions([
       { label: "Annuler", className: "btn", onClick: () => modal.close() },
       {
-        label: "Créer",
+        label: isEditing ? "Enregistrer" : "Créer",
         className: "btn primary",
         onClick: async () => {
           if (_rrSubmitting) return;
@@ -562,7 +575,7 @@
             const monthday = (rule_type === "every_x_months") ? Number(monthdayRaw || 0) || null : null;
             const next_due_at = _rrComputeFirstDueDate(rule_type, start_date, weekday, monthday);
 
-            await _rrCreateRule({
+            const payload = {
               label, type, amount, currency, wallet_id,
               category, subcategory: subcategory || null,
               rule_type, interval_count, weekday, monthday,
@@ -570,12 +583,18 @@
               end_date: end_date || null,
               max_occurrences: maxOccRaw === "" ? null : Number(maxOccRaw),
               out_of_budget
-            });
+            };
+
+            if (isEditing) {
+              await _rrUpdateRule(ruleToEdit.id, payload);
+            } else {
+              await _rrCreateRule(payload);
+            }
             modal.close();
             if (typeof window.refreshFromServer === "function") await window.refreshFromServer();
             else if (typeof refreshFromServer === "function") await refreshFromServer();
             window.renderRecurringRules();
-            _tbToastOk("Échéance créée.");
+            _tbToastOk(isEditing ? "Échéance mise à jour." : "Échéance créée.");
           } finally {
             _rrSubmitting = false;
           }
@@ -627,6 +646,7 @@
                 <td>${escapeHTML(_rrStatus(r))}</td>
                 <td>
                   <div class="row" style="gap:8px; justify-content:flex-start;">
+                    <button class="btn" data-rr-act="edit" data-rr-id="${escapeHTML(r.id)}">Modifier</button>
                     ${_rrStatus(r) === "active"
                       ? `<button class="btn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">Pause</button>`
                       : `<button class="btn" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`}
@@ -648,6 +668,12 @@
         if (!id) throw new Error("Règle introuvable.");
         if (!act) throw new Error("Action introuvable.");
 
+        if (act === "edit") {
+          const rule = (state?.recurringRules || []).find((r) => String(r?.id || '') === id);
+          if (!rule) throw new Error('Règle introuvable.');
+          _rrOpenRuleModal(rule);
+          return;
+        }
         if (act === "pause") {
           await _rrPauseRule(id);
           _tbToastOk("Échéance mise en pause.");
