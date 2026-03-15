@@ -233,7 +233,13 @@ try {
       let cur = String(state?.period?.baseCurrency || "EUR").toUpperCase();
       let daily = Number(state?.period?.dailyBudgetBase || 0);
       try {
-        if (typeof getBudgetSegmentForDate === "function") {
+        if (ds === todayISO && typeof getDailyBudgetInfoForDate === "function") {
+          const info = getDailyBudgetInfoForDate(ds);
+          const infoCur = String(info?.baseCurrency || '').toUpperCase();
+          const remaining = Number(info?.remaining);
+          if (infoCur) cur = infoCur;
+          if (Number.isFinite(remaining)) daily = Math.max(0, remaining);
+        } else if (typeof getBudgetSegmentForDate === "function") {
           const seg = getBudgetSegmentForDate(ds);
           if (seg) {
             const segCur = String(seg?.baseCurrency || seg?.base_currency || "").toUpperCase();
@@ -244,7 +250,7 @@ try {
         }
       } catch (_) {}
 
-      forecastEUR += _toEURSafe(daily, cur, ds);
+      forecastEUR += _toEURSafe(Math.max(0, daily), cur, ds);
     });
   }
 

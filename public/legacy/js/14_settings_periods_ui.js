@@ -615,6 +615,10 @@ function renderSettings(){
               <label>Budget/jour</label>
               <input data-k="daily_budget_base" value="${seg.dailyBudgetBase ?? ""}" />
             </div>
+            <div class="field">
+              <label>Nuit transport</label>
+              <input data-k="night_transport_budget" value="${(function(){try{const m=JSON.parse(localStorage.getItem('travelbudget_night_transport_budget_v1')||'{}')||{}; const v=Number(m[String(seg.id)]); return Number.isFinite(v)&&v>0 ? v : 400;}catch(_){return 400;}})()}" />
+            </div>
             <div class="field" style="min-width:180px;">
               <label>Taux</label>
               <input value="${rateDisplay}" placeholder="${autoAvail ? "auto" : (manualRate ? "taux perso" : "à renseigner")}" readonly />

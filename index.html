@@ -584,7 +584,7 @@
     .analysis-stat-bar > span{ display:block; height:100%; border-radius:999px; background:linear-gradient(90deg, var(--accent), rgba(168,85,247,.95)); transform-origin:left center; animation:analysisGrow 1s ease; }
     @keyframes analysisGrow{ from{ transform:scaleX(.1); opacity:.35;} to{ transform:scaleX(1); opacity:1;} }
     .analysis-main-grid{ display:grid; grid-template-columns: minmax(0,1.5fr) minmax(320px,.9fr); gap:16px; }
-    .analysis-side-stack{ display:grid; grid-template-rows:1fr 1fr; gap:16px; }
+    .analysis-side-stack{ display:grid; grid-template-rows:repeat(3,minmax(220px,1fr)); gap:16px; }
     .analysis-bottom-grid{ display:grid; grid-template-columns: minmax(0,1.25fr) minmax(300px,.75fr); gap:16px; }
     .analysis-chart-card,.analysis-insights-card{ border-radius:24px; }
     .analysis-card-head{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:10px; }
@@ -599,6 +599,7 @@
     .analysis-insight-title{ font-size:14px; font-weight:800; margin:0 0 4px; }
     .analysis-insight-body{ margin:0; color:var(--muted); font-size:13px; line-height:1.45; }
     @media (max-width: 1120px){ .analysis-summary-grid{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-toolbar{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-main-grid,.analysis-bottom-grid{ grid-template-columns:1fr; } .analysis-side-stack{ grid-template-rows:none; grid-template-columns:1fr 1fr; } }
+    .analysis-filter-hint{font-size:11px;color:var(--muted);margin-top:4px;}
     @media (max-width: 780px){ .analysis-hero{ padding:18px; min-height:0; } .analysis-hero h2{ font-size:28px; } .analysis-live-pill{ position:relative; top:auto; right:auto; margin-top:16px; width:max-content; } .analysis-summary-grid,.analysis-toolbar,.analysis-side-stack{ grid-template-columns:1fr; } .analysis-chart{ height:280px; } .analysis-chart--lg{ height:320px; } }
 
 </style>
@@ -823,10 +824,18 @@
               </select>
             </div>
             <div class="analysis-filter-group">
-              <label for="analysis-category">Catégorie</label>
-              <select id="analysis-category">
-                <option value="all">Toutes les catégories</option>
+              <label for="analysis-currency">Devise</label>
+              <select id="analysis-currency">
+                <option value="auto">Auto</option>
+                <option value="period">Devise période</option>
+                <option value="account">Devise du compte</option>
+                <option value="eur">EUR</option>
               </select>
+            </div>
+            <div class="analysis-filter-group" style="grid-column: span 2;">
+              <label for="analysis-category-exclude">Catégories à exclure</label>
+              <select id="analysis-category-exclude" multiple size="4"></select>
+              <div class="analysis-filter-hint">Ctrl/Cmd + clic pour exclure plusieurs catégories.</div>
             </div>
             <div class="analysis-filter-group">
               <label>&nbsp;</label>
@@ -859,6 +868,15 @@
                 <div id="analysis-category-chart" class="analysis-chart"></div>
               </div>
 
+              <div class="card analysis-chart-card">
+                <div class="analysis-card-head">
+                  <div>
+                    <div class="analysis-card-kicker">Category map</div>
+                    <h3>Toutes les catégories</h3>
+                  </div>
+                </div>
+                <div id="analysis-category-bars-chart" class="analysis-chart"></div>
+              </div>
               <div class="card analysis-chart-card">
                 <div class="analysis-card-head">
                   <div>

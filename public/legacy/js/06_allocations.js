@@ -2,6 +2,20 @@
    Allocations
    ========================= */
 
+function tbGetNightCoveredExtraForDate(dateStr) {
+  const ds = String(dateStr || '').slice(0,10);
+  let seg = null;
+  try { if (typeof getBudgetSegmentForDate === "function") seg = getBudgetSegmentForDate(ds); } catch (_) {}
+  const segId = String(seg?.id || '');
+  const cur = String(seg?.baseCurrency || seg?.base_currency || state?.period?.baseCurrency || 'EUR').toUpperCase();
+  let map = {};
+  try { map = JSON.parse(localStorage.getItem('travelbudget_night_transport_budget_v1') || '{}') || {}; } catch (_) {}
+  const raw = segId ? map[segId] : null;
+  const n = Number(raw);
+  return { amount: Number.isFinite(n) && n > 0 ? n : 400, currency: cur, segId };
+}
+
+
 function buildAllocationsForTx(tx) {
   const allocs = [];
   if (tx.type !== "expense") return allocs;
@@ -40,8 +54,9 @@ function buildAllocationsForTx(tx) {
     const dateStr = tx.dateStart;
     if (periodContains(dateStr)) {
       const seg = (typeof getBudgetSegmentForDate === "function") ? getBudgetSegmentForDate(dateStr) : null;
-      const baseCur = String(seg?.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
-      const extra = 400; // in segment base currency (by convention)
+      const cfg = (typeof tbGetNightCoveredExtraForDate === "function") ? tbGetNightCoveredExtraForDate(dateStr) : { amount: 400, currency: String(seg?.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase() };
+      const baseCur = String(cfg.currency || seg?.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
+      const extra = Number(cfg.amount) || 400; // in segment base currency by convention
       allocs.push({ id: uid("a"), txId: tx.id, dateStr, amountBase: extra, baseCurrency: baseCur, label: `Nuit couverte (${extra})` });
     }
   }

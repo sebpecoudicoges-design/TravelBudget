@@ -140,19 +140,13 @@ function _txBuildApplyV2Args(core, fxOverride) {
   };
 }
 
-
-function _txCategorySupportsNight(category) {
-  const c = String(category || "").trim().toLowerCase();
-  return c === "transport" || c === "transport internationale" || c === "transport international" || /^transport\s+inter/.test(c);
-}
-
 function wireNightLogic() {
   const updateNightVisibility = () => {
     const t = document.getElementById("m-type").value;
     const c = document.getElementById("m-category").value;
     const block = document.getElementById("m-night-block");
-    block.classList.toggle("hidden", !(t === "expense" && _txCategorySupportsNight(c)));
-    if (!(t === "expense" && _txCategorySupportsNight(c))) document.getElementById("m-night").checked = false;
+    block.classList.toggle("hidden", !(t === "expense" && c === "Transport"));
+    if (!(t === "expense" && c === "Transport")) document.getElementById("m-night").checked = false;
   };
 
   document.getElementById("m-type").onchange = updateNightVisibility;
@@ -446,7 +440,7 @@ async function saveModal() {
           p_date_end: end,
           p_pay_now: payNow,
           p_out_of_budget: outOfBudget,
-          p_night_covered: type === "expense" && _txCategorySupportsNight(category) ? nightCovered : false,
+          p_night_covered: type === "expense" && /^transport( internationale?| international)?$/i.test(String(category || "").trim()) ? nightCovered : false,
           // FX snapshot is computed for the transaction date + transaction currency.
           // (Use local variables here; `form` is not in scope.)
           ..._txBuildFxSnapshotArgs(start, wallet.currency)
@@ -482,7 +476,7 @@ async function saveModal() {
             dateEnd: end,
             payNow,
             outOfBudget,
-            nightCovered: (type === "expense" && _txCategorySupportsNight(category)) ? nightCovered : false,
+            nightCovered: (type === "expense" && /^transport( internationale?| international)?$/i.test(String(category || "").trim())) ? nightCovered : false,
             affectsBudget: !outOfBudget,
             tripExpenseId: null,
             tripShareLinkId: null
