@@ -175,6 +175,22 @@
     });
     return out.sort((a,b) => a.localeCompare(b, 'fr', { sensitivity:'base' }));
   }
+  function _updateCategoryExcludeSummary(){
+    const summary = _el('analysis-category-summary');
+    const badge = _el('analysis-category-count');
+    const toggle = _el('analysis-category-toggle');
+    const total = _allAnalysisCategories().length;
+    const count = excludedCats.size;
+    if (summary) {
+      if (!count) summary.textContent = total ? `Aucune catégorie exclue • ${total} catégories disponibles` : 'Aucune catégorie';
+      else summary.textContent = `${count} catégorie${count > 1 ? 's' : ''} exclue${count > 1 ? 's' : ''} • ${Math.max(total - count, 0)} incluse${(total - count) > 1 ? 's' : ''}`;
+    }
+    if (badge) badge.textContent = String(count);
+    if (toggle) toggle.textContent = excludePanelOpen ? 'Masquer' : 'Gérer';
+    const panel = _el('analysis-category-panel');
+    if (panel) panel.style.display = excludePanelOpen ? 'block' : 'none';
+  }
+
   function _renderCategoryExcludeChips(wanted){
     excludedCats = new Set(Array.isArray(wanted) ? wanted.map(v => _norm(v)).filter(Boolean) : Array.from(excludedCats));
     const host = _el('analysis-category-exclude-box');
@@ -183,7 +199,7 @@
     host.innerHTML = categories.map(cat => {
       const excluded = excludedCats.has(cat);
       const color = _categoryColor(cat);
-      return `<button type="button" class="analysis-chip${excluded ? ' is-excluded' : ''}" data-cat="${escapeHTML(cat)}" style="border-color:${escapeHTML(color)}44;background:linear-gradient(180deg, ${escapeHTML(color)}22, rgba(255,255,255,.03));box-shadow:inset 0 0 0 1px ${escapeHTML(color)}22;">${escapeHTML(cat)}</button>`;
+      return `<button type="button" class="analysis-chip${excluded ? ' is-excluded' : ''}" data-cat="${escapeHTML(cat)}" style="border-color:${escapeHTML(color)}44;background:linear-gradient(180deg, ${escapeHTML(color)}22, rgba(255,255,255,.03));box-shadow:inset 0 0 0 1px ${escapeHTML(color)}22;"><span class="analysis-chip-dot" style="background:${escapeHTML(color)};"></span>${escapeHTML(cat)}</button>`;
     }).join('');
     host.querySelectorAll('[data-cat]').forEach(btn => {
       btn.onclick = () => {
@@ -194,6 +210,7 @@
         _renderAll();
       };
     });
+    _updateCategoryExcludeSummary();
   }
 
   function _convert(amount, cur, dateISO, forcedBase){
@@ -565,6 +582,14 @@
       refresh._tbBound = true;
       refresh.addEventListener('click', _renderAll);
     }
+    const toggleBtn = _el('analysis-category-toggle');
+    if (toggleBtn && !toggleBtn._tbBound) {
+      toggleBtn._tbBound = true;
+      toggleBtn.onclick = () => {
+        excludePanelOpen = !excludePanelOpen;
+        _updateCategoryExcludeSummary();
+      };
+    }
     const allBtn = _el('analysis-cat-all');
     if (allBtn && !allBtn._tbBound) {
       allBtn._tbBound = true;
@@ -599,6 +624,7 @@
     if (_el('analysis-scope')) _el('analysis-scope').value = ['budget','out','all'].includes(filters.scope) ? filters.scope : 'budget';
     if (_el('analysis-mode')) _el('analysis-mode').value = ['expenses','planned'].includes(filters.mode) ? filters.mode : 'planned';
     if (_el('analysis-currency')) _el('analysis-currency').value = ['period','account'].includes(filters.currencyMode) ? filters.currencyMode : 'period';
+    excludePanelOpen = false;
     _renderCategoryExcludeChips(Array.isArray(filters.excludedCats) ? filters.excludedCats : []);
     _ensureEvents();
     _renderAll();

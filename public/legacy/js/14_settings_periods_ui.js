@@ -58,6 +58,9 @@ function _tbNormSeg(row){
   out.fx_mode = out.fxMode;
   out.eurBaseRateFixed = null;
   out.eur_base_rate_fixed = null;
+  const nightTransportRaw = (r.transportNightBudget !== undefined) ? r.transportNightBudget : (r.transport_night_budget !== undefined ? r.transport_night_budget : r.night_transport_budget);
+  out.transportNightBudget = Number.isFinite(Number(nightTransportRaw)) ? Number(nightTransportRaw) : null;
+  out.transport_night_budget = out.transportNightBudget;
   out.sortOrder = Number.isFinite(Number(sortRaw)) ? Number(sortRaw) : 0;
   out.sort_order = out.sortOrder;
   return out;
@@ -69,8 +72,12 @@ function _tbNightTransportBudgetMap(){
   try { return JSON.parse(localStorage.getItem("travelbudget_night_transport_budget_v1") || "{}") || {}; } catch (_) { return {}; }
 }
 function _tbGetNightTransportBudget(segId){
+  const key = String(segId || '');
+  const seg = (state?.budgetSegments || []).find(x => String(x.id) === key) || null;
+  const sqlVal = Number(seg?.transportNightBudget ?? seg?.transport_night_budget ?? seg?.night_transport_budget);
+  if (Number.isFinite(sqlVal) && sqlVal > 0) return sqlVal;
   const map = _tbNightTransportBudgetMap();
-  const n = Number(map[String(segId || '')]);
+  const n = Number(map[key]);
   return Number.isFinite(n) && n > 0 ? n : 400;
 }
 function _tbSetNightTransportBudget(segId, amount){
@@ -1234,9 +1241,19 @@ if(!autoOk){
     user_id: uid,
     period_id: pid
   };
+  if (Object.prototype.hasOwnProperty.call(seg || {}, 'transportNightBudget') || Object.prototype.hasOwnProperty.call(seg || {}, 'transport_night_budget') || Object.prototype.hasOwnProperty.call(seg || {}, 'night_transport_budget')) {
+    patch.transport_night_budget = newNightTransportBudget;
+  }
   const { error: e2 } = await s.from(TB_CONST.TABLES.budget_segments).update(patch).eq("id", segId);
   if(e2) throw e2;
   _tbSetNightTransportBudget(segId, newNightTransportBudget);
+  try {
+    const liveSeg = (state?.budgetSegments || []).find(x => String(x.id) === String(segId));
+    if (liveSeg) {
+      liveSeg.transportNightBudget = newNightTransportBudget;
+      liveSeg.transport_night_budget = newNightTransportBudget;
+    }
+  } catch (_) {}
 
   // phase C: fill gaps created by shrinking current (only immediate neighbors)
   if(prev){

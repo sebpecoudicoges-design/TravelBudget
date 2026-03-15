@@ -600,15 +600,24 @@
     .analysis-insight-body{ margin:0; color:var(--muted); font-size:13px; line-height:1.45; }
     @media (max-width: 1120px){ .analysis-summary-grid{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-toolbar{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-main-grid,.analysis-bottom-grid{ grid-template-columns:1fr; } .analysis-side-stack{ grid-template-rows:none; grid-template-columns:1fr 1fr; } }
     .analysis-filter-hint{font-size:11px;color:var(--muted);margin-top:4px;}
+    .analysis-category-compact{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,.60), rgba(255,255,255,.38));box-shadow:inset 0 1px 0 rgba(255,255,255,.40);}
+    .analysis-category-copy{display:flex;flex-direction:column;gap:3px;min-width:0;}
+    .analysis-category-copy strong{font-size:13px;}
+    .analysis-category-copy span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .analysis-category-actions{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+    .analysis-category-badge{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 8px;border-radius:999px;background:linear-gradient(135deg,#2563eb,#a855f7);color:#fff;font-size:12px;font-weight:800;box-shadow:0 8px 18px rgba(37,99,235,.22);}
+    .analysis-category-toggle{appearance:none;border:none;border-radius:999px;padding:10px 14px;background:linear-gradient(135deg,#2563eb,#3b82f6 55%,#8b5cf6);color:#fff;font-weight:800;cursor:pointer;box-shadow:0 10px 22px rgba(37,99,235,.22);}
+    .analysis-category-panel{display:none;margin-top:12px;padding:14px;border:1px solid var(--border);border-radius:20px;background:rgba(255,255,255,.66);backdrop-filter:blur(10px);}
     .analysis-chips{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;}
-    .analysis-chip{appearance:none;border:1px solid var(--border);background:rgba(148,163,184,.10);color:var(--text);padding:8px 12px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease, border-color .16s ease;background-clip:padding-box;}
+    .analysis-chip{appearance:none;border:1px solid var(--border);background:rgba(148,163,184,.10);color:var(--text);padding:8px 12px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease, border-color .16s ease;background-clip:padding-box;display:inline-flex;align-items:center;gap:8px;}
+    .analysis-chip-dot{display:inline-block;width:8px;height:8px;border-radius:999px;box-shadow:0 0 0 3px rgba(255,255,255,.32);}
     .analysis-chip:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(15,23,42,.10);}
     .analysis-chip.is-excluded{opacity:.42;filter:saturate(.55);text-decoration:line-through;}
     .analysis-chip-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
     .analysis-chip-tool{appearance:none;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;padding:0;}
     .analysis-chip-tool:hover{color:var(--text);}
 
-    @media (max-width: 780px){ .analysis-hero{ padding:18px; min-height:0; } .analysis-hero h2{ font-size:28px; } .analysis-live-pill{ position:relative; top:auto; right:auto; margin-top:16px; width:max-content; } .analysis-summary-grid,.analysis-toolbar,.analysis-side-stack{ grid-template-columns:1fr; } .analysis-chart{ height:280px; } .analysis-chart--lg{ height:320px; } }
+    @media (max-width: 780px){ .analysis-hero{ padding:18px; min-height:0; } .analysis-hero h2{ font-size:28px; } .analysis-live-pill{ position:relative; top:auto; right:auto; margin-top:16px; width:max-content; } .analysis-summary-grid,.analysis-toolbar,.analysis-side-stack{ grid-template-columns:1fr; } .analysis-chart{ height:280px; } .analysis-chart--lg{ height:320px; } .analysis-category-compact{flex-direction:column;align-items:stretch;} .analysis-category-actions{justify-content:space-between;} }
 
 </style>
 
@@ -838,14 +847,26 @@
                 <option value="account">Devise du compte</option>
               </select>
             </div>
-            <div class="analysis-filter-group" style="grid-column: span 2;">
-              <label for="analysis-category-exclude-box">Catégories à exclure</label>
-              <div id="analysis-category-exclude-box" class="analysis-chips"></div>
-              <div class="analysis-chip-tools">
-                <button id="analysis-cat-all" class="analysis-chip-tool" type="button">Tout inclure</button>
-                <button id="analysis-cat-none" class="analysis-chip-tool" type="button">Tout exclure</button>
+            <div class="analysis-filter-group" style="grid-column: 1 / -1;">
+              <label for="analysis-category-panel">Catégories à exclure</label>
+              <div class="analysis-category-compact">
+                <div class="analysis-category-copy">
+                  <strong>Exclusions catégories</strong>
+                  <span id="analysis-category-summary">Aucune catégorie exclue</span>
+                </div>
+                <div class="analysis-category-actions">
+                  <span id="analysis-category-count" class="analysis-category-badge">0</span>
+                  <button id="analysis-category-toggle" class="analysis-category-toggle" type="button">Gérer</button>
+                </div>
               </div>
-              <div class="analysis-filter-hint">Clique sur une pastille pour exclure ou réinclure une catégorie dans l’analyse.</div>
+              <div id="analysis-category-panel" class="analysis-category-panel">
+                <div id="analysis-category-exclude-box" class="analysis-chips"></div>
+                <div class="analysis-chip-tools">
+                  <button id="analysis-cat-all" class="analysis-chip-tool" type="button">Tout inclure</button>
+                  <button id="analysis-cat-none" class="analysis-chip-tool" type="button">Tout exclure</button>
+                </div>
+                <div class="analysis-filter-hint">Clique sur une pastille pour exclure ou réinclure une catégorie dans l’analyse.</div>
+              </div>
             </div>
             <div class="analysis-filter-group">
               <label>&nbsp;</label>

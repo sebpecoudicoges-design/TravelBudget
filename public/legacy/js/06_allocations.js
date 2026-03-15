@@ -8,6 +8,8 @@ function tbGetNightCoveredExtraForDate(dateStr) {
   try { if (typeof getBudgetSegmentForDate === "function") seg = getBudgetSegmentForDate(ds); } catch (_) {}
   const segId = String(seg?.id || '');
   const cur = String(seg?.baseCurrency || seg?.base_currency || state?.period?.baseCurrency || 'EUR').toUpperCase();
+  const sqlRaw = Number(seg?.transportNightBudget ?? seg?.transport_night_budget ?? seg?.night_transport_budget);
+  if (Number.isFinite(sqlRaw) && sqlRaw > 0) return { amount: sqlRaw, currency: cur, segId };
   let map = {};
   try { map = JSON.parse(localStorage.getItem('travelbudget_night_transport_budget_v1') || '{}') || {}; } catch (_) {}
   const raw = segId ? map[segId] : null;
