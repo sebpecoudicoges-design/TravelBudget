@@ -453,6 +453,14 @@ async function _updateTransactionDirectCompat(args) {
   if (!txId) throw new Error('Transaction introuvable.');
   const dateStart = String(args?.p_date_start || '').slice(0, 10);
   const dateEnd = String(args?.p_date_end || args?.p_date_start || '').slice(0, 10) || dateStart;
+
+  const { data: currentRow, error: currentErr } = await s
+    .from(TB_CONST.TABLES.transactions)
+    .select('id, fx_snapshot_at, fx_rate_snapshot, fx_source_snapshot, fx_base_currency_snapshot, fx_tx_currency_snapshot')
+    .eq('id', txId)
+    .maybeSingle();
+  if (currentErr) return { data: null, error: currentErr };
+
   const payload = {
     wallet_id: args?.p_wallet_id || null,
     type: args?.p_type || null,
@@ -466,13 +474,18 @@ async function _updateTransactionDirectCompat(args) {
     pay_now: !!args?.p_pay_now,
     out_of_budget: !!args?.p_out_of_budget,
     night_covered: !!args?.p_night_covered,
-    fx_rate_snapshot: (args?.p_fx_rate_snapshot === undefined) ? null : args?.p_fx_rate_snapshot,
-    fx_source_snapshot: (args?.p_fx_source_snapshot === undefined) ? null : args?.p_fx_source_snapshot,
-    fx_snapshot_at: (args?.p_fx_snapshot_at === undefined) ? null : args?.p_fx_snapshot_at,
-    fx_base_currency_snapshot: (args?.p_fx_base_currency_snapshot === undefined) ? null : args?.p_fx_base_currency_snapshot,
-    fx_tx_currency_snapshot: (args?.p_fx_tx_currency_snapshot === undefined) ? null : args?.p_fx_tx_currency_snapshot,
     updated_at: new Date().toISOString(),
   };
+
+  const fxLocked = !!(currentRow?.fx_snapshot_at);
+  if (!fxLocked) {
+    if (args?.p_fx_rate_snapshot !== undefined) payload.fx_rate_snapshot = args?.p_fx_rate_snapshot;
+    if (args?.p_fx_source_snapshot !== undefined) payload.fx_source_snapshot = args?.p_fx_source_snapshot;
+    if (args?.p_fx_snapshot_at !== undefined) payload.fx_snapshot_at = args?.p_fx_snapshot_at;
+    if (args?.p_fx_base_currency_snapshot !== undefined) payload.fx_base_currency_snapshot = args?.p_fx_base_currency_snapshot;
+    if (args?.p_fx_tx_currency_snapshot !== undefined) payload.fx_tx_currency_snapshot = args?.p_fx_tx_currency_snapshot;
+  }
+
   const periodId = _txFindPeriodIdForDate(dateStart);
   if (periodId) payload.period_id = periodId;
   const activeTravelId = String(state?.activeTravelId || '').trim();
@@ -484,7 +497,7 @@ async function _updateTransactionDirectCompat(args) {
     .select('id')
     .maybeSingle();
   if (res?.error) return res;
-  return { data: res.data?.id || txId, error: null, _tbUsedDirectFallback: true };
+  return { data: res.data?.id || txId, error: null, _tbUsedDirectFallback: true, _tbFxLocked: fxLocked };
 }
 
 async function _updateTransactionRpcCompat(args) {
