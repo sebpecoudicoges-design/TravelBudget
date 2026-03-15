@@ -63,6 +63,25 @@ function _tbNormSeg(row){
   return out;
 }
 
+
+
+function _tbNightTransportBudgetMap(){
+  try { return JSON.parse(localStorage.getItem("travelbudget_night_transport_budget_v1") || "{}") || {}; } catch (_) { return {}; }
+}
+function _tbGetNightTransportBudget(segId){
+  const map = _tbNightTransportBudgetMap();
+  const n = Number(map[String(segId || '')]);
+  return Number.isFinite(n) && n > 0 ? n : 400;
+}
+function _tbSetNightTransportBudget(segId, amount){
+  const key = String(segId || '');
+  if (!key) return;
+  const map = _tbNightTransportBudgetMap();
+  const n = Number(amount);
+  map[key] = Number.isFinite(n) && n > 0 ? n : 400;
+  try { localStorage.setItem('travelbudget_night_transport_budget_v1', JSON.stringify(map)); } catch (_) {}
+}
+
 function _tbAddDays(iso, n){
   const dt = new Date(iso+"T00:00:00Z");
   dt.setUTCDate(dt.getUTCDate()+n);
@@ -617,7 +636,7 @@ function renderSettings(){
             </div>
             <div class="field">
               <label>Nuit transport</label>
-              <input data-k="night_transport_budget" value="${(function(){try{const m=JSON.parse(localStorage.getItem('travelbudget_night_transport_budget_v1')||'{}')||{}; const v=Number(m[String(seg.id)]); return Number.isFinite(v)&&v>0 ? v : 400;}catch(_){return 400;}})()}" />
+              <input data-k="night_transport_budget" value="${_tbGetNightTransportBudget(seg.id)}" />
             </div>
             <div class="field" style="min-width:180px;">
               <label>Taux</label>
@@ -1161,10 +1180,12 @@ async function saveBudgetSegment(segId, wrapEl){
   const newEnd = getVal("end_date");
   const newCur = (getVal("base_currency")||"").trim().toUpperCase();
   const newBud = _tbParseNum(getVal("daily_budget_base"));
+  const newNightTransportBudget = _tbParseNum(getVal("night_transport_budget"));
 
   if(!newStart||!newEnd||newStart>newEnd) throw new Error("Dates invalides.");
     if(!newCur) throw new Error("Devise requise.");
   if(!Number.isFinite(newBud) || newBud < 0) throw new Error("Budget/jour invalide.");
+  if(!Number.isFinite(newNightTransportBudget) || newNightTransportBudget < 0) throw new Error("Nuit transport invalide.");
 
 // FX Option A: Auto is source of truth. If currency is not provided by auto FX, require a manual fallback.
 const autoOk = (typeof window.tbFxIsAutoAvailable==="function") ? window.tbFxIsAutoAvailable(newCur) : false;
@@ -1215,6 +1236,7 @@ if(!autoOk){
   };
   const { error: e2 } = await s.from(TB_CONST.TABLES.budget_segments).update(patch).eq("id", segId);
   if(e2) throw e2;
+  _tbSetNightTransportBudget(segId, newNightTransportBudget);
 
   // phase C: fill gaps created by shrinking current (only immediate neighbors)
   if(prev){

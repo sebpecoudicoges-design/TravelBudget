@@ -600,6 +600,14 @@
     .analysis-insight-body{ margin:0; color:var(--muted); font-size:13px; line-height:1.45; }
     @media (max-width: 1120px){ .analysis-summary-grid{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-toolbar{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-main-grid,.analysis-bottom-grid{ grid-template-columns:1fr; } .analysis-side-stack{ grid-template-rows:none; grid-template-columns:1fr 1fr; } }
     .analysis-filter-hint{font-size:11px;color:var(--muted);margin-top:4px;}
+    .analysis-chips{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;}
+    .analysis-chip{appearance:none;border:1px solid var(--border);background:rgba(148,163,184,.10);color:var(--text);padding:8px 12px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease, border-color .16s ease;background-clip:padding-box;}
+    .analysis-chip:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(15,23,42,.10);}
+    .analysis-chip.is-excluded{opacity:.42;filter:saturate(.55);text-decoration:line-through;}
+    .analysis-chip-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+    .analysis-chip-tool{appearance:none;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;padding:0;}
+    .analysis-chip-tool:hover{color:var(--text);}
+
     @media (max-width: 780px){ .analysis-hero{ padding:18px; min-height:0; } .analysis-hero h2{ font-size:28px; } .analysis-live-pill{ position:relative; top:auto; right:auto; margin-top:16px; width:max-content; } .analysis-summary-grid,.analysis-toolbar,.analysis-side-stack{ grid-template-columns:1fr; } .analysis-chart{ height:280px; } .analysis-chart--lg{ height:320px; } }
 
 </style>
@@ -826,16 +834,18 @@
             <div class="analysis-filter-group">
               <label for="analysis-currency">Devise</label>
               <select id="analysis-currency">
-                <option value="auto">Auto</option>
                 <option value="period">Devise période</option>
                 <option value="account">Devise du compte</option>
-                <option value="eur">EUR</option>
               </select>
             </div>
             <div class="analysis-filter-group" style="grid-column: span 2;">
-              <label for="analysis-category-exclude">Catégories à exclure</label>
-              <select id="analysis-category-exclude" multiple size="4"></select>
-              <div class="analysis-filter-hint">Ctrl/Cmd + clic pour exclure plusieurs catégories.</div>
+              <label for="analysis-category-exclude-box">Catégories à exclure</label>
+              <div id="analysis-category-exclude-box" class="analysis-chips"></div>
+              <div class="analysis-chip-tools">
+                <button id="analysis-cat-all" class="analysis-chip-tool" type="button">Tout inclure</button>
+                <button id="analysis-cat-none" class="analysis-chip-tool" type="button">Tout exclure</button>
+              </div>
+              <div class="analysis-filter-hint">Clique sur une pastille pour exclure ou réinclure une catégorie dans l’analyse.</div>
             </div>
             <div class="analysis-filter-group">
               <label>&nbsp;</label>

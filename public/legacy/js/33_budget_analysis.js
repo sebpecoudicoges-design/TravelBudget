@@ -3,8 +3,9 @@
    ========================= */
 (function () {
   const LS_KEY = 'tb_budget_analysis_filters_v1';
-  const charts = { trajectory: null, category: null, velocity: null, heatmap: null };
+  const charts = { trajectory: null, category: null, categoryBars: null, velocity: null, heatmap: null };
   let resizeBound = false;
+  let excludedCats = new Set();
 
   function _el(id){ return document.getElementById(id); }
   function _safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
@@ -32,9 +33,7 @@
       box: _el('analysis-range-box')
     };
   }
-  function _allSegments(){
-    return Array.isArray(state?.budgetSegments) ? state.budgetSegments.filter(Boolean) : [];
-  }
+  function _allSegments(){ return Array.isArray(state?.budgetSegments) ? state.budgetSegments.filter(Boolean) : []; }
   function _segmentsForTravel(travelId){
     return _allSegments().filter(s => String(s.travel_id || s.travelId || state?.activeTravelId || '') === String(travelId || state?.activeTravelId || ''));
   }
@@ -48,27 +47,6 @@
       const b = _norm(p.end_date || p.end);
       return a && b && today >= a && today <= b;
     }) || list[0] || null;
-  }
-  function _resolveAnalysisCurrency(startISO, endISO){
-    const mode = _selectedCurrencyMode();
-    if (mode === 'account') return _upper(state?.user?.baseCurrency || 'EUR');
-    if (mode === 'period') return _periodCurrency();
-    if (mode === 'eur') return 'EUR';
-    const travel = _getSelectedTravel();
-    const segs = _segmentsForTravel(_getSelectedTravelId());
-    const inRange = segs.filter(s => {
-      const a = _norm(s.start || s.start_date || s.startDate);
-      const b = _norm(s.end || s.end_date || s.endDate);
-      if (!a || !b) return false;
-      return (!startISO || b >= startISO) && (!endISO || a <= endISO);
-    });
-    const bases = new Set(inRange.map(s => _upper(s.baseCurrency || s.base_currency || s.base || '')).filter(Boolean));
-    if (bases.size === 1) return Array.from(bases)[0];
-    return _upper(travel?.base_currency || travel?.baseCurrency || state?.user?.baseCurrency || 'EUR');
-  }
-  function _currency(){
-    const r = _analysisRange();
-    return _resolveAnalysisCurrency(r.start, r.end);
   }
   function _travelList(){ return Array.isArray(state?.travels) ? state.travels : []; }
   function _periodList(travelId){
@@ -102,9 +80,7 @@
     const end = _norm(period?.end_date || period?.end || travel?.end_date || travel?.end || state?.period?.end);
     return { start, end };
   }
-  function _loadFilters(){
-    try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {}; } catch (_) { return {}; }
-  }
+  function _loadFilters(){ try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {}; } catch (_) { return {}; } }
   function _saveFilters(){
     try {
       localStorage.setItem(LS_KEY, JSON.stringify({
@@ -113,56 +89,49 @@
         rangeStart: _el('analysis-range-start')?.value || '',
         rangeEnd: _el('analysis-range-end')?.value || '',
         scope: _el('analysis-scope')?.value || 'budget',
-        mode: _el('analysis-mode')?.value || 'expenses',
-        currencyMode: _el('analysis-currency')?.value || 'auto',
-        excludedCats: Array.from(_el('analysis-category-exclude')?.selectedOptions || []).map(o => o.value).filter(Boolean)
+        mode: _el('analysis-mode')?.value || 'planned',
+        currencyMode: _el('analysis-currency')?.value || 'period',
+        excludedCats: Array.from(excludedCats)
       }));
     } catch (_) {}
   }
 
-  function _selectedCurrencyMode(){ return _el('analysis-currency')?.value || 'auto'; }
-  function _excludedCategorySet(){ return new Set(Array.from(_el('analysis-category-exclude')?.selectedOptions || []).map(o => String(o.value || '').trim()).filter(Boolean)); }
-  function _allAnalysisCategories(){
-    const out = [];
-    const seen = new Set();
-    const add = (v) => {
-      const name = _norm(v);
-      if (!name) return;
-      if (/^\[trip\]/i.test(name)) return;
-      if (/^cat[eé]gorie$/i.test(name) || /^category$/i.test(name)) return;
-      const k = name.toLowerCase();
-      if (seen.has(k)) return;
-      seen.add(k); out.push(name);
-    };
-    try { if (typeof getCategories === 'function') (getCategories() || []).forEach(add); } catch (_) {}
-    (Array.isArray(state?.categories) ? state.categories : []).forEach(add);
-    (Array.isArray(state?.transactions) ? state.transactions : []).forEach(tx => {
-      if (_isTripLinked(tx)) return;
-      add(tx?.category);
-    });
-    return out.sort((a,b) => a.localeCompare(b, 'fr', { sensitivity:'base' }));
-  }
-  function _fillCategoryExclude(wanted){
-    const sel = _el('analysis-category-exclude');
-    if (!sel) return;
-    const keep = new Set(Array.isArray(wanted) ? wanted : []);
-    sel.innerHTML = _allAnalysisCategories().map(c => `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join('');
-    Array.from(sel.options).forEach(o => { o.selected = keep.has(o.value); });
-  }
+  function _selectedCurrencyMode(){ return _el('analysis-currency')?.value || 'period'; }
+  function _excludedCategorySet(){ return new Set(Array.from(excludedCats)); }
   function _segmentForDate(dateISO){
     try { if (typeof getBudgetSegmentForDate === 'function') return getBudgetSegmentForDate(dateISO); } catch (_) {}
     return null;
   }
-  function _periodCurrency(){
-    const p = _getSelectedPeriodObj();
-    const travel = _getSelectedTravel();
-    return _upper(p?.base_currency || p?.baseCurrency || travel?.base_currency || travel?.baseCurrency || state?.period?.baseCurrency || state?.user?.baseCurrency || 'EUR');
+  function _segmentsInRange(startISO, endISO){
+    return _segmentsForTravel(_getSelectedTravelId()).filter(s => {
+      const a = _norm(s.start || s.start_date || s.startDate);
+      const b = _norm(s.end || s.end_date || s.endDate);
+      if (!a || !b) return false;
+      return (!startISO || b >= startISO) && (!endISO || a <= endISO);
+    });
   }
+  function _periodCurrency(){
+    const { start, end } = _analysisRange();
+    const segs = _segmentsInRange(start, end);
+    const bases = [...new Set(segs.map(s => _upper(s.baseCurrency || s.base_currency || '')).filter(Boolean))];
+    if (bases.length === 1) return bases[0];
+    if (bases.length > 1) {
+      const first = segs.slice().sort((a,b)=>String(a.start || a.start_date || '').localeCompare(String(b.start || b.start_date || '')))[0];
+      if (first) return _upper(first.baseCurrency || first.base_currency || '');
+    }
+    const travel = _getSelectedTravel();
+    return _upper(travel?.base_currency || travel?.baseCurrency || state?.period?.baseCurrency || state?.user?.baseCurrency || 'EUR');
+  }
+  function _resolveAnalysisCurrency(startISO, endISO){
+    const mode = _selectedCurrencyMode();
+    if (mode === 'account') return _upper(state?.user?.baseCurrency || state?.user?.base_currency || _getSelectedTravel()?.base_currency || 'EUR');
+    return _periodCurrency(startISO, endISO);
+  }
+  function _currency(){ const r = _analysisRange(); return _resolveAnalysisCurrency(r.start, r.end); }
+
   function _isTripLinked(tx){ return !!(tx?.trip_expense_id || tx?.tripExpenseId || tx?.trip_share_link_id || tx?.tripShareLinkId); }
   function _isInternalMovement(tx){ return String(tx?.category || '').trim().toLowerCase() === 'mouvement interne'; }
-  function _txDate(tx){
-    return _norm(tx?.dateStart || tx?.date_start || tx?.occurrence_date || tx?.date || tx?.created_at?.slice?.(0,10) || tx?.createdAt?.slice?.(0,10));
-  }
+  function _txDate(tx){ return _norm(tx?.dateStart || tx?.date_start || tx?.occurrence_date || tx?.date || tx?.created_at?.slice?.(0,10) || tx?.createdAt?.slice?.(0,10)); }
   function _txType(tx){ return String(tx?.type || '').toLowerCase(); }
   function _txPaid(tx){
     if (typeof tx?.payNow === 'boolean') return tx.payNow;
@@ -174,6 +143,59 @@
     if (typeof tx?.out_of_budget === 'boolean') return tx.out_of_budget;
     return !!tx?.outOfBudget || !!tx?.out_of_budget;
   }
+  function _categoryColor(name){
+    try {
+      if (typeof colorForCategory === 'function') return colorForCategory(name);
+      if (typeof getCategoryColors === 'function') {
+        const m = getCategoryColors() || {};
+        return m[name] || m[_norm(name)] || '#94a3b8';
+      }
+    } catch (_) {}
+    return '#94a3b8';
+  }
+  function _allAnalysisCategories(){
+    const out = [];
+    const seen = new Set();
+    const add = (v) => {
+      const name = _norm(v);
+      if (!name) return;
+      if (/^\[trip\]/i.test(name)) return;
+      if (/^cat[eé]gorie$/i.test(name) || /^category$/i.test(name)) return;
+      const k = name.toLowerCase();
+      if (seen.has(k)) return;
+      seen.add(k);
+      out.push(name);
+    };
+    try { if (typeof getCategories === 'function') (getCategories() || []).forEach(add); } catch (_) {}
+    (Array.isArray(state?.categories) ? state.categories : []).forEach(add);
+    (Array.isArray(state?.transactions) ? state.transactions : []).forEach(tx => {
+      if (_isTripLinked(tx)) return;
+      if (_txType(tx) !== 'expense') return;
+      add(tx?.category);
+    });
+    return out.sort((a,b) => a.localeCompare(b, 'fr', { sensitivity:'base' }));
+  }
+  function _renderCategoryExcludeChips(wanted){
+    excludedCats = new Set(Array.isArray(wanted) ? wanted.map(v => _norm(v)).filter(Boolean) : Array.from(excludedCats));
+    const host = _el('analysis-category-exclude-box');
+    if (!host) return;
+    const categories = _allAnalysisCategories();
+    host.innerHTML = categories.map(cat => {
+      const excluded = excludedCats.has(cat);
+      const color = _categoryColor(cat);
+      return `<button type="button" class="analysis-chip${excluded ? ' is-excluded' : ''}" data-cat="${escapeHTML(cat)}" style="border-color:${escapeHTML(color)}44;background:linear-gradient(180deg, ${escapeHTML(color)}22, rgba(255,255,255,.03));box-shadow:inset 0 0 0 1px ${escapeHTML(color)}22;">${escapeHTML(cat)}</button>`;
+    }).join('');
+    host.querySelectorAll('[data-cat]').forEach(btn => {
+      btn.onclick = () => {
+        const cat = _norm(btn.getAttribute('data-cat'));
+        if (!cat) return;
+        if (excludedCats.has(cat)) excludedCats.delete(cat); else excludedCats.add(cat);
+        _renderCategoryExcludeChips(Array.from(excludedCats));
+        _renderAll();
+      };
+    });
+  }
+
   function _convert(amount, cur, dateISO, forcedBase){
     const base = _upper(forcedBase || _currency());
     const a = _safeNum(amount);
@@ -189,19 +211,19 @@
       }
     } catch (_) {}
     try {
-      if (base === 'EUR' && typeof window.amountToBudgetBaseForDate === 'function' && seg) {
+      if (typeof window.amountToBudgetBaseForDate === 'function' && seg) {
         const inSegBase = window.amountToBudgetBaseForDate(a, from, dateISO);
         const segBase = _upper(seg.baseCurrency || seg.base_currency || state?.period?.baseCurrency || 'EUR');
-        if (segBase === 'EUR') return _safeNum(inSegBase);
+        if (segBase === base) return _safeNum(inSegBase);
         if (typeof window.fxConvert === 'function' && typeof window.fxRatesForSegment === 'function') {
           const rates = window.fxRatesForSegment(seg);
-          const out = window.fxConvert(inSegBase, segBase, 'EUR', rates);
+          const out = window.fxConvert(inSegBase, segBase, base, rates);
           if (out !== null && Number.isFinite(Number(out))) return Number(out);
         }
       }
     } catch (_) {}
     try {
-      if (base !== 'EUR' && typeof _toBaseForDate === 'function') {
+      if (typeof _toBaseForDate === 'function' && base === _upper(state?.user?.baseCurrency || 'EUR')) {
         return _safeNum(_toBaseForDate(a, from, dateISO));
       }
     } catch (_) {}
@@ -214,32 +236,46 @@
     const dailyNominal = _safeNum(seg?.dailyBudgetBase ?? seg?.daily_budget_base ?? state?.period?.dailyBudgetBase ?? 0);
     return _convert(dailyNominal, segCur, dateISO, base);
   }
-  function _filteredTransactions(){
+  function _baseExpenseTransactions(){
     const travelId = _getSelectedTravelId();
     const { start, end } = _analysisRange();
-    const scope = _el('analysis-scope')?.value || 'budget';
-    const mode = _el('analysis-mode')?.value || 'expenses';
     return (Array.isArray(state?.transactions) ? state.transactions : []).filter(tx => {
       const txTravelId = String(tx?.travel_id || tx?.travelId || '');
       if (travelId && txTravelId && txTravelId !== String(travelId)) return false;
-      const type = _txType(tx);
-      if (type !== 'expense') return false;
+      if (_txType(tx) !== 'expense') return false;
       if (_isTripLinked(tx)) return false;
       if (_isInternalMovement(tx)) return false;
       const ds = _txDate(tx);
       if (!ds) return false;
       if (start && ds < start) return false;
       if (end && ds > end) return false;
+      return true;
+    });
+  }
+  function _filteredTransactions(){
+    const scope = _el('analysis-scope')?.value || 'budget';
+    const mode = _el('analysis-mode')?.value || 'planned';
+    const excluded = _excludedCategorySet();
+    return _baseExpenseTransactions().filter(tx => {
       if (scope === 'budget' && _txOut(tx)) return false;
       if (scope === 'out' && !_txOut(tx)) return false;
       if (mode === 'expenses' && !_txPaid(tx)) return false;
-      const excluded = _excludedCategorySet();
       if (excluded.size && excluded.has(_norm(tx?.category || 'Autre'))) return false;
       return true;
     });
   }
+  function _outBudgetTransactions(){
+    const mode = _el('analysis-mode')?.value || 'planned';
+    const excluded = _excludedCategorySet();
+    return _baseExpenseTransactions().filter(tx => {
+      if (!_txOut(tx)) return false;
+      if (mode === 'expenses' && !_txPaid(tx)) return false;
+      if (excluded.size && excluded.has(_norm(tx?.category || 'Autre'))) return false;
+      return true;
+    });
+  }
+
   function _computeModel(){
-    const travelId = _getSelectedTravelId();
     const txs = _filteredTransactions();
     const { start, end } = _analysisRange();
     const base = _resolveAnalysisCurrency(start, end);
@@ -254,12 +290,12 @@
       const amt = _convert(tx?.amount, tx?.currency || base, ds, base);
       spent += amt;
       if (_txPaid(tx)) paidSpent += amt;
-      if (dailyMap[ds] == null) dailyMap[ds] = 0;
-      dailyMap[ds] += amt;
-      if (_txPaid(tx)) { if (paidMap[ds] == null) paidMap[ds] = 0; paidMap[ds] += amt; }
+      dailyMap[ds] = _safeNum(dailyMap[ds]) + amt;
+      if (_txPaid(tx)) paidMap[ds] = _safeNum(paidMap[ds]) + amt;
       const cat = _norm(tx?.category || 'Autre');
       catMap.set(cat, (catMap.get(cat) || 0) + amt);
     }
+
     const targetDaily = days.map(d => _dailyBudgetForDate(d, base));
     const totalBudget = targetDaily.reduce((a,b)=>a+b,0);
     const cumSpent = [];
@@ -283,6 +319,7 @@
       velocity.push(Number((_safeNum(dailyMap[d])).toFixed(2)));
       heat.push([idx, 0, Number((_safeNum(paidMap[d] || dailyMap[d])).toFixed(2))]);
     });
+
     const periodDays = Math.max(days.length, 1);
     const elapsedDays = Math.max(1, days.filter(d => d <= today).length || periodDays);
     const avgPerDay = spent / elapsedDays;
@@ -294,24 +331,11 @@
     const remaining = totalBudget - projection;
     const pct = totalBudget > 0 ? (spent / totalBudget) * 100 : 0;
     const topCategories = [...catMap.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 8);
-    const categorySeries = [...catMap.entries()].sort((a,b)=>b[1]-a[1]).map(([name, actual]) => ({ name, actual }));
-    return {
-      base, start, end, days, txs, spent, paidSpent, totalBudget, remaining, pct, avgPerDay, budgetPerDay, projection,
-      cumSpent, cumTarget, velocity, heat, topCategories, categorySeries,
-      outAmount: (Array.isArray(state?.transactions) ? state.transactions : []).filter(tx => {
-        const txTravelId = String(tx?.travel_id || tx?.travelId || '');
-        if (travelId && txTravelId && txTravelId !== String(travelId)) return false;
-        const type = _txType(tx);
-        if (type !== 'expense') return false;
-        const ds = _txDate(tx);
-        if (!ds || (start && ds < start) || (end && ds > end)) return false;
-        if (!_txOut(tx)) return false;
-        if (_isTripLinked(tx) || _isInternalMovement(tx)) return false;
-        const excluded = _excludedCategorySet();
-        if (excluded.size && excluded.has(_norm(tx?.category || 'Autre'))) return false;
-        return true;
-      }).reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txDate(tx), base), 0)
-    };
+    const categorySeries = [...catMap.entries()].sort((a,b)=>b[1]-a[1]).map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
+    const outAmount = _outBudgetTransactions().reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txDate(tx), base), 0);
+
+    return { base, start, end, days, txs, spent, paidSpent, totalBudget, remaining, pct, avgPerDay, budgetPerDay, projection,
+      cumSpent, cumTarget, velocity, heat, topCategories, categorySeries, outAmount, spentToToday, targetToToday };
   }
 
   function _buildSummary(model){
@@ -352,6 +376,7 @@
   function _renderTrajectory(model){
     const chart = _ensureChart('trajectory','analysis-trajectory-chart');
     if (!chart) return;
+    const todayLabel = _iso(new Date()).slice(5);
     chart.setOption({
       animationDuration: 900,
       animationEasing: 'cubicOut',
@@ -361,20 +386,20 @@
       xAxis: { type:'category', boundaryGap:false, data:model.days.map(d=>d.slice(5)), axisLine:{ lineStyle:{ color:_themeGrid() } }, axisLabel:{ color:_themeMuted() } },
       yAxis: { type:'value', axisLabel:{ color:_themeMuted(), formatter:(v)=>_fmtMoney(v, model.base) }, splitLine:{ lineStyle:{ color:_themeGrid() } } },
       series: [
-        { name:'Cible cumulée', type:'line', smooth:false, symbol:'none', lineStyle:{ width:3, color:_themeMuted(), opacity:.9 }, areaStyle:{ color:'transparent' }, data:model.cumTarget, markLine: model.days.length ? { symbol:'none', lineStyle:{ type:'dashed', color:_themeGrid() }, label:{ show:false }, data:[{ xAxis: model.days[Math.max(0, model.days.findIndex(d => d >= _iso(new Date()))) ] }] } : undefined },
+        { name:'Cible cumulée', type:'line', smooth:false, symbol:'none', lineStyle:{ width:3, color:_themeGood(), opacity:.95, type:'dashed' }, areaStyle:{ color:'transparent' }, data:model.cumTarget,
+          markLine: model.days.length ? { symbol:'none', lineStyle:{ type:'dashed', color:_themeGrid() }, label:{ show:false }, data:[{ xAxis: todayLabel }] } : undefined },
         { name:'Réel cumulé', type:'line', smooth:true, symbol:'circle', symbolSize:6, lineStyle:{ width:4, color:_themeAccent() }, areaStyle:{ color: { type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{ offset:0, color:'rgba(59,130,246,.34)' },{ offset:1, color:'rgba(59,130,246,.03)' }] } }, emphasis:{ focus:'series' }, data:model.cumSpent,
           markPoint:{ symbol:'circle', symbolSize:16, itemStyle:{ color:_themeAccent(), shadowBlur:18, shadowColor:'rgba(59,130,246,.45)' }, data: model.cumSpent.length ? [{ coord:[model.days.length-1, model.cumSpent[model.cumSpent.length-1]] }] : [] }
         }
       ]
     });
     const meta = _el('analysis-trajectory-meta');
-    if (meta) meta.innerHTML = `${escapeHTML(model.start || '—')} → ${escapeHTML(model.end || '—')}<br>${escapeHTML(model.days.length + ' jours')}`;
+    if (meta) meta.innerHTML = `${escapeHTML(model.start || '—')} → ${escapeHTML(model.end || '—')}<br>${escapeHTML(model.days.length + ' jours • ' + model.base)}`;
   }
   function _renderCategory(model){
     const chart = _ensureChart('category','analysis-category-chart');
     if (!chart) return;
-    const palette = [_themeAccent(), '#8b5cf6', '#06b6d4', '#22c55e', '#f59e0b', '#ef4444', '#14b8a6', '#f472b6'];
-    const data = model.topCategories.map((it, idx) => ({ name: it[0], value: Number(it[1].toFixed(2)), itemStyle:{ color: palette[idx % palette.length] } }));
+    const data = model.topCategories.map((it) => ({ name: it[0], value: Number(it[1].toFixed(2)), itemStyle:{ color: _categoryColor(it[0]) } }));
     chart.setOption({
       animationDuration: 1000,
       tooltip: { trigger:'item', backgroundColor:'rgba(15,23,42,.92)', borderWidth:0, textStyle:{ color:'#fff' }, formatter:(p)=>`${p.name}<br>${_fmtMoney(p.value, model.base)} • ${p.percent}%` },
@@ -397,7 +422,7 @@
       grid:{ left: 110, right: 20, top: 10, bottom: 20, containLabel:false },
       xAxis:{ type:'value', axisLabel:{ color:_themeMuted(), formatter:(v)=>_fmtMoney(v, model.base) }, splitLine:{ lineStyle:{ color:_themeGrid() } } },
       yAxis:{ type:'category', data: rows.map(r => r.name), axisLabel:{ color:_themeText() } },
-      series:[{ name:'Réel', type:'bar', data: rows.map(r => Number(r.actual.toFixed(2))), barMaxWidth:18, itemStyle:{ borderRadius:[0,10,10,0], color:new window.echarts.graphic.LinearGradient(1,0,0,0,[{ offset:0,color:'rgba(168,85,247,.95)' },{ offset:1,color:_themeAccent() }]) } }]
+      series:[{ name:'Réel', type:'bar', data: rows.map(r => ({ value:Number(r.actual.toFixed(2)), itemStyle:{ color:r.color || _themeAccent(), borderRadius:[0,10,10,0] } })), barMaxWidth:18 }]
     });
   }
   function _renderVelocity(model){
@@ -443,7 +468,7 @@
       {
         icon: top ? '🧲' : '•',
         title: top ? `Catégorie dominante : ${top[0]}` : 'Aucune catégorie dominante',
-        body: top ? `${_fmtMoney(top[1], model.base)} engagés, soit ${((top[1]/Math.max(model.spent,1))*100).toFixed(1)}% du total analysé.` : `Ajoute quelques dépenses payées pour faire émerger les tendances.`
+        body: top ? `${_fmtMoney(top[1], model.base)} engagés, soit ${((top[1]/Math.max(model.spent,1))*100).toFixed(1)}% du total analysé.` : `Ajoute quelques dépenses pour faire émerger les tendances.`
       },
       {
         icon: delta > 0 ? '📈' : '🌿',
@@ -453,7 +478,7 @@
       {
         icon: model.outAmount > 0 ? '🎯' : '🧭',
         title: model.outAmount > 0 ? 'Hors budget visible' : 'Lecture budgétaire propre',
-        body: model.outAmount > 0 ? `${_fmtMoney(model.outAmount, model.base)} hors budget sur la plage. Tu peux basculer le filtre pour isoler ces dépenses.` : `Aucune dépense hors budget notable sur la plage courante.`
+        body: model.outAmount > 0 ? `${_fmtMoney(model.outAmount, model.base)} hors budget sur la plage. Tu peux exclure des catégories sans polluer la trajectoire.` : `Aucune dépense hors budget notable sur la plage courante.`
       }
     ];
     if (host) host.innerHTML = insights.map(i => `
@@ -517,7 +542,7 @@
   }
 
   function _ensureEvents(){
-    ['analysis-travel','analysis-period','analysis-scope','analysis-mode','analysis-range-start','analysis-range-end','analysis-currency','analysis-category-exclude'].forEach(id => {
+    ['analysis-travel','analysis-period','analysis-scope','analysis-mode','analysis-range-start','analysis-range-end','analysis-currency'].forEach(id => {
       const el = _el(id);
       if (!el || el._tbBound) return;
       el._tbBound = true;
@@ -529,6 +554,7 @@
           if (rs) rs.value = f.rangeStart || '';
           if (re) re.value = f.rangeEnd || '';
           _fillPeriodSelect(_getSelectedTravelId(), 'active');
+          _renderCategoryExcludeChips(Array.from(excludedCats));
         }
         if (id === 'analysis-period') _toggleRangeBox();
         _renderAll();
@@ -538,6 +564,16 @@
     if (refresh && !refresh._tbBound) {
       refresh._tbBound = true;
       refresh.addEventListener('click', _renderAll);
+    }
+    const allBtn = _el('analysis-cat-all');
+    if (allBtn && !allBtn._tbBound) {
+      allBtn._tbBound = true;
+      allBtn.onclick = () => { excludedCats.clear(); _renderCategoryExcludeChips([]); _renderAll(); };
+    }
+    const noneBtn = _el('analysis-cat-none');
+    if (noneBtn && !noneBtn._tbBound) {
+      noneBtn._tbBound = true;
+      noneBtn.onclick = () => { excludedCats = new Set(_allAnalysisCategories()); _renderCategoryExcludeChips(Array.from(excludedCats)); _renderAll(); };
     }
     if (!resizeBound) {
       resizeBound = true;
@@ -561,9 +597,9 @@
     if (range.end) range.end.value = filters.rangeEnd || '';
     _toggleRangeBox();
     if (_el('analysis-scope')) _el('analysis-scope').value = ['budget','out','all'].includes(filters.scope) ? filters.scope : 'budget';
-    if (_el('analysis-mode')) _el('analysis-mode').value = ['expenses','planned'].includes(filters.mode) ? filters.mode : 'expenses';
-    if (_el('analysis-currency')) _el('analysis-currency').value = ['auto','period','account','eur'].includes(filters.currencyMode) ? filters.currencyMode : 'auto';
-    _fillCategoryExclude(Array.isArray(filters.excludedCats) ? filters.excludedCats : []);
+    if (_el('analysis-mode')) _el('analysis-mode').value = ['expenses','planned'].includes(filters.mode) ? filters.mode : 'planned';
+    if (_el('analysis-currency')) _el('analysis-currency').value = ['period','account'].includes(filters.currencyMode) ? filters.currencyMode : 'period';
+    _renderCategoryExcludeChips(Array.isArray(filters.excludedCats) ? filters.excludedCats : []);
     _ensureEvents();
     _renderAll();
   };
