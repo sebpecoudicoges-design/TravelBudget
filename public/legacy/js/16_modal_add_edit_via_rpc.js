@@ -419,35 +419,87 @@ async function _txPatchSubcategoryDirect(txId, subcategory) {
     .eq('id', txId);
 }
 
+function _txFindPeriodIdForDate(dateStr) {
+  const ds = String(dateStr || '').slice(0, 10);
+  if (!ds) return null;
+  const periods = Array.isArray(state?.periods) ? state.periods : [];
+  const activeTravelId = String(state?.activeTravelId || '').trim();
+  for (const p of periods) {
+    if (!p) continue;
+    const tid = String(p.travelId || p.travel_id || '').trim();
+    if (activeTravelId && tid && tid !== activeTravelId) continue;
+    const s = String(p.start || p.dateStart || '').slice(0, 10);
+    const e = String(p.end || p.dateEnd || '').slice(0, 10);
+    if (s && e && ds >= s && ds <= e) return String(p.id || '').trim() || null;
+  }
+  return String(state?.period?.id || '').trim() || null;
+}
+
+async function _updateTransactionDirectCompat(args) {
+  const s = _tbGetSB();
+  if (!s) throw new Error('Supabase non prêt.');
+  const txId = String(args?.p_tx_id || args?.p_id || '').trim();
+  if (!txId) throw new Error('Transaction introuvable.');
+  const dateStart = String(args?.p_date_start || '').slice(0, 10);
+  const dateEnd = String(args?.p_date_end || args?.p_date_start || '').slice(0, 10) || dateStart;
+  const payload = {
+    wallet_id: args?.p_wallet_id || null,
+    type: args?.p_type || null,
+    amount: args?.p_amount,
+    currency: args?.p_currency || null,
+    category: args?.p_category || null,
+    subcategory: (args?.p_subcategory === undefined ? null : (args?.p_subcategory || null)),
+    label: args?.p_label || null,
+    date_start: dateStart || null,
+    date_end: dateEnd || null,
+    pay_now: !!args?.p_pay_now,
+    out_of_budget: !!args?.p_out_of_budget,
+    night_covered: !!args?.p_night_covered,
+    fx_rate_snapshot: (args?.p_fx_rate_snapshot === undefined) ? null : args?.p_fx_rate_snapshot,
+    fx_source_snapshot: (args?.p_fx_source_snapshot === undefined) ? null : args?.p_fx_source_snapshot,
+    fx_snapshot_at: (args?.p_fx_snapshot_at === undefined) ? null : args?.p_fx_snapshot_at,
+    fx_base_currency_snapshot: (args?.p_fx_base_currency_snapshot === undefined) ? null : args?.p_fx_base_currency_snapshot,
+    fx_tx_currency_snapshot: (args?.p_fx_tx_currency_snapshot === undefined) ? null : args?.p_fx_tx_currency_snapshot,
+    updated_at: new Date().toISOString(),
+  };
+  const periodId = _txFindPeriodIdForDate(dateStart);
+  if (periodId) payload.period_id = periodId;
+  const activeTravelId = String(state?.activeTravelId || '').trim();
+  if (activeTravelId) payload.travel_id = activeTravelId;
+  const res = await s
+    .from(TB_CONST.TABLES.transactions)
+    .update(payload)
+    .eq('id', txId)
+    .select('id')
+    .maybeSingle();
+  if (res?.error) return res;
+  return { data: res.data?.id || txId, error: null, _tbUsedDirectFallback: true };
+}
+
 async function _updateTransactionRpcCompat(args) {
   const txId = String(args?.p_tx_id || args?.p_id || '').trim() || null;
   const hasSubcategory = Object.prototype.hasOwnProperty.call(args || {}, 'p_subcategory');
 
   const variants = [];
-  if (args && args.p_tx_id && !args.p_id) {
-    variants.push({ ...args, p_id: args.p_tx_id });
-  }
+  if (args && args.p_tx_id && !args.p_id) variants.push({ ...args, p_id: args.p_tx_id });
   variants.push({ ...args });
 
-  let lastRes = null;
-  let lastErr = null;
-
+  let sawMissingSignature = false;
   for (const variant of variants) {
     try {
       const res = await tbRpcWithRetry('update_transaction_v2', variant);
       if (!res?.error) return { ...res, _tbUsedLegacyFallback: false };
-      lastRes = res;
-      lastErr = res.error;
       if (!_txIsMissingRpcSignature(res.error)) return res;
+      sawMissingSignature = true;
     } catch (e) {
-      lastErr = e;
       if (!_txIsMissingRpcSignature(e)) throw e;
+      sawMissingSignature = true;
     }
   }
 
   const fallbackArgs = {
+    p_id: args?.p_tx_id || args?.p_id,
     p_wallet_id: args?.p_wallet_id,
-    p_tx_id: args?.p_tx_id || args?.p_id,
     p_type: args?.p_type,
     p_label: args?.p_label,
     p_amount: args?.p_amount,
@@ -458,26 +510,29 @@ async function _updateTransactionRpcCompat(args) {
     p_pay_now: args?.p_pay_now,
     p_out_of_budget: args?.p_out_of_budget,
     p_night_covered: args?.p_night_covered,
-    p_fx_rate_snapshot: args?.p_fx_rate_snapshot,
-    p_fx_source_snapshot: args?.p_fx_source_snapshot,
-    p_fx_snapshot_at: args?.p_fx_snapshot_at,
-    p_fx_base_currency_snapshot: args?.p_fx_base_currency_snapshot,
-    p_fx_tx_currency_snapshot: args?.p_fx_tx_currency_snapshot,
-    p_affects_budget: !(args?.p_out_of_budget),
+    p_user_id: args?.p_user_id || null,
     p_trip_expense_id: args?.p_trip_expense_id || null,
     p_trip_share_link_id: args?.p_trip_share_link_id || null,
-    p_user_id: args?.p_user_id || null,
   };
 
-  const res = await tbRpcWithRetry('update_transaction_v2', fallbackArgs);
-  if (res?.error) return res;
-
-  if (hasSubcategory && txId) {
-    const patchRes = await _txPatchSubcategoryDirect(txId, args?.p_subcategory || null);
-    if (patchRes?.error) return patchRes;
+  try {
+    const res = await tbRpcWithRetry('update_transaction_v2', fallbackArgs);
+    if (res?.error) {
+      if (!_txIsMissingRpcSignature(res.error)) return res;
+    } else {
+      if (hasSubcategory && txId) {
+        const patchRes = await _txPatchSubcategoryDirect(txId, args?.p_subcategory || null);
+        if (patchRes?.error) return patchRes;
+      }
+      return { ...res, _tbUsedLegacyFallback: true };
+    }
+  } catch (e) {
+    if (!_txIsMissingRpcSignature(e)) throw e;
+    sawMissingSignature = true;
   }
 
-  return { ...res, _tbUsedLegacyFallback: true };
+  if (sawMissingSignature) return await _updateTransactionDirectCompat(args);
+  return await _updateTransactionDirectCompat(args);
 }
 async function saveModal() {
   if (_savingTx) return;

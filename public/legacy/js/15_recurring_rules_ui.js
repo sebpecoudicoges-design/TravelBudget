@@ -379,6 +379,45 @@
     };
   }
 
+  async function _rrSyncGeneratedTransactions(ruleId, payload) {
+    const s = _rrGetSB();
+    if (!s) throw new Error("Supabase non prêt.");
+    const rid = String(ruleId || "").trim();
+    if (!_rrIsUuid(rid)) throw new Error("UUID de règle invalide.");
+
+    const { data: rows, error: selErr } = await s
+      .from(TB_CONST.TABLES.transactions)
+      .select('id, recurring_instance_status, generated_by_rule')
+      .eq('recurring_rule_id', rid)
+      .eq('generated_by_rule', true);
+    if (selErr) throw selErr;
+
+    const ids = (Array.isArray(rows) ? rows : [])
+      .filter((row) => String(row?.recurring_instance_status || '').toLowerCase() !== 'confirmed')
+      .map((row) => row.id)
+      .filter(Boolean);
+    if (!ids.length) return 0;
+
+    const updatePayload = {
+      wallet_id: payload.wallet_id,
+      label: payload.label,
+      amount: payload.amount,
+      currency: payload.currency,
+      type: payload.type,
+      category: payload.category || null,
+      subcategory: payload.subcategory || null,
+      out_of_budget: !!payload.out_of_budget,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: updErr } = await s
+      .from(TB_CONST.TABLES.transactions)
+      .update(updatePayload)
+      .in('id', ids);
+    if (updErr) throw updErr;
+    return ids.length;
+  }
+
   async function _rrUpdateRule(ruleId, payload) {
     const s = _rrGetSB();
     if (!s) throw new Error("Supabase non prêt.");
@@ -410,6 +449,8 @@
       .update(updatePayload)
       .eq('id', rid);
     if (error) throw error;
+
+    await _rrSyncGeneratedTransactions(rid, payload);
 
     const genName = TB_CONST?.RPCS?.recurring_generate_for_rule || "recurring_generate_for_rule";
     const { error: genErr } = await s.rpc(genName, { p_rule_id: rid });
