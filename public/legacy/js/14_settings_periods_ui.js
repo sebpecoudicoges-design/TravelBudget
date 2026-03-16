@@ -1465,6 +1465,31 @@ window.deleteActiveVoyage = ()=>safeCall("Supprimer voyage", _deleteActiveVoyage
    - Source of truth: public.categories
    ========================= */
 
+function _categoryIdByName(categoryName) {
+  const wanted = String(categoryName || '').trim().toLowerCase();
+  if (!wanted) return null;
+  const rows = Array.isArray(state?.categoriesRows) ? state.categoriesRows : [];
+  const hit = rows.find((row) => String(row?.name || '').trim().toLowerCase() === wanted);
+  return hit?.id || null;
+}
+
+function _subcategoriesForSettings(categoryName, includeInactive = true) {
+  const rows = Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : [];
+  return rows
+    .filter((row) => {
+      const rowCat = String(row?.categoryName || row?.category_name || '').trim().toLowerCase();
+      if (rowCat !== String(categoryName || '').trim().toLowerCase()) return false;
+      if (includeInactive) return true;
+      return row?.isActive !== false && row?.is_active !== false;
+    })
+    .slice()
+    .sort((a, b) => {
+      const aSort = Number(a?.sortOrder ?? a?.sort_order ?? 0);
+      const bSort = Number(b?.sortOrder ?? b?.sort_order ?? 0);
+      return (aSort - bSort) || String(a?.name || '').localeCompare(String(b?.name || ''), 'fr', { sensitivity: 'base' });
+    });
+}
+
 function renderCategoriesSettingsUI() {
   const host = document.getElementById("cat-list");
   if (!host) return;
@@ -1474,21 +1499,49 @@ function renderCategoriesSettingsUI() {
 
   host.innerHTML = (cats || []).map((c) => {
     const col = colors[c] || "#94a3b8";
+    const subRows = _subcategoriesForSettings(c, true);
+    const subHtml = subRows.length
+      ? subRows.map((row) => {
+          const active = row?.isActive !== false && row?.is_active !== false;
+          const badge = active ? 'Actif' : 'Inactif';
+          const badgeBg = active ? 'rgba(34,197,94,.12)' : 'rgba(148,163,184,.15)';
+          const badgeCol = active ? '#16a34a' : '#64748b';
+          const subColor = String(row?.color || '').trim();
+          return `
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02);">
+              <div style="font-weight:600;min-width:160px;">${escapeHTML(row?.name || '')}</div>
+              <span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:${badgeBg};color:${badgeCol};font-size:12px;font-weight:700;">${badge}</span>
+              <span class="muted" style="font-size:12px;">Ordre ${escapeHTML(String(Number(row?.sortOrder ?? row?.sort_order ?? 0)))}</span>
+              ${subColor ? `<span title="${escapeHTML(subColor)}" style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${escapeHTML(subColor)};border:1px solid rgba(0,0,0,.20);"></span>` : ''}
+              <div style="flex:1"></div>
+              <button class="btn" onclick="editSubcategory('${escapeHTML(String(row?.id || ''))}')">Modifier</button>
+              <button class="btn" onclick="toggleSubcategoryActive('${escapeHTML(String(row?.id || ''))}', ${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button>
+            </div>
+          `;
+        }).join('')
+      : `<div class="muted" style="padding:8px 0;">Aucune sous-catégorie SQL pour cette catégorie.</div>`;
+
     return `
-      <div class="card" style="padding:10px; margin:8px 0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-        <div style="min-width:180px; font-weight:700;">${escapeHTML(c)}</div>
+      <div class="card" style="padding:12px; margin:8px 0; display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div style="min-width:180px; font-weight:700;">${escapeHTML(c)}</div>
 
-        <span title="${escapeHTML(col)}" style="display:inline-block;width:18px;height:18px;border-radius:5px;background:${escapeHTML(col)};border:1px solid rgba(0,0,0,.20);"></span>
-        <div class="muted" style="min-width:84px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px;">
-          ${escapeHTML(col)}
+          <span title="${escapeHTML(col)}" style="display:inline-block;width:18px;height:18px;border-radius:5px;background:${escapeHTML(col)};border:1px solid rgba(0,0,0,.20);"></span>
+          <div class="muted" style="min-width:84px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px;">
+            ${escapeHTML(col)}
+          </div>
+
+          <input type="color"
+                 value="${escapeHTML(col)}"
+                 style="width:44px;height:30px;padding:0;border:none;background:transparent;cursor:pointer;"
+                 onchange="setCategoryColor('${escapeHTML(c)}', this.value)" />
+
+          <button class="btn" onclick="addSubcategory('${escapeHTML(c)}')">+ Sous-catégorie</button>
+          <button class="btn" onclick="deleteCategory('${escapeHTML(c)}')">Supprimer</button>
         </div>
-
-        <input type="color"
-               value="${escapeHTML(col)}"
-               style="width:44px;height:30px;padding:0;border:none;background:transparent;cursor:pointer;"
-               onchange="setCategoryColor('${escapeHTML(c)}', this.value)" />
-
-        <button class="btn" onclick="deleteCategory('${escapeHTML(c)}')">Supprimer</button>
+        <div style="display:grid;gap:8px;">
+          ${subHtml}
+        </div>
       </div>
     `;
   }).join("");
@@ -1561,9 +1614,88 @@ function setCategoryColor(name, color) {
   });
 }
 
+async function addSubcategory(categoryName) {
+  return safeCall("Add subcategory", async () => {
+    const category = String(categoryName || '').trim();
+    if (!category) throw new Error('Catégorie invalide.');
+    const rawName = prompt(`Nouvelle sous-catégorie pour "${category}"`, '');
+    if (rawName === null) return;
+    const name = String(rawName || '').trim();
+    if (!name) throw new Error('Nom de sous-catégorie vide.');
+    const existingRows = _subcategoriesForSettings(category, true);
+    const duplicate = existingRows.find((row) => String(row?.name || '').trim().toLowerCase() === name.toLowerCase());
+    if (duplicate) throw new Error('Cette sous-catégorie existe déjà pour cette catégorie.');
+    const sortOrder = existingRows.reduce((max, row) => Math.max(max, Number(row?.sortOrder ?? row?.sort_order ?? 0)), -1) + 1;
+    const payload = {
+      user_id: sbUser.id,
+      category_id: _categoryIdByName(category),
+      category_name: category,
+      name,
+      sort_order: sortOrder,
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await sb.from(TB_CONST.TABLES.category_subcategories).insert([payload]);
+    if (error) throw error;
+    await refreshFromServer();
+    renderSettings();
+  });
+}
+
+async function editSubcategory(id) {
+  return safeCall("Edit subcategory", async () => {
+    const row = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).find((x) => String(x?.id) === String(id));
+    if (!row) throw new Error('Sous-catégorie introuvable.');
+    const category = String(row?.categoryName || row?.category_name || '').trim();
+    const currentName = String(row?.name || '').trim();
+    const rawName = prompt(`Renommer la sous-catégorie de "${category}"`, currentName);
+    if (rawName === null) return;
+    const name = String(rawName || '').trim();
+    if (!name) throw new Error('Nom de sous-catégorie vide.');
+    const sortRaw = prompt('Ordre de tri (nombre entier)', String(Number(row?.sortOrder ?? row?.sort_order ?? 0)));
+    if (sortRaw === null) return;
+    const sortOrder = Number(String(sortRaw || '').trim());
+    if (!Number.isFinite(sortOrder)) throw new Error('Ordre invalide.');
+    const colorRaw = prompt('Couleur hexadécimale optionnelle (ex: #94a3b8). Laisse vide pour aucune couleur.', String(row?.color || ''));
+    if (colorRaw === null) return;
+    const color = String(colorRaw || '').trim();
+    if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) throw new Error('Couleur invalide.');
+    const duplicate = _subcategoriesForSettings(category, true).find((x) => String(x?.id) !== String(id) && String(x?.name || '').trim().toLowerCase() === name.toLowerCase());
+    if (duplicate) throw new Error('Une autre sous-catégorie porte déjà ce nom dans cette catégorie.');
+    const payload = {
+      name,
+      sort_order: Math.trunc(sortOrder),
+      color: color || null,
+      category_id: row?.categoryId || row?.category_id || _categoryIdByName(category),
+      category_name: category,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await sb.from(TB_CONST.TABLES.category_subcategories).update(payload).eq('id', id).eq('user_id', sbUser.id);
+    if (error) throw error;
+    await refreshFromServer();
+    renderSettings();
+  });
+}
+
+async function toggleSubcategoryActive(id, nextActive) {
+  return safeCall("Toggle subcategory", async () => {
+    const { error } = await sb
+      .from(TB_CONST.TABLES.category_subcategories)
+      .update({ is_active: !!nextActive, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', sbUser.id);
+    if (error) throw error;
+    await refreshFromServer();
+    renderSettings();
+  });
+}
+
 window.addCategory = addCategory;
 window.deleteCategory = deleteCategory;
 window.setCategoryColor = setCategoryColor;
+window.addSubcategory = addSubcategory;
+window.editSubcategory = editSubcategory;
+window.toggleSubcategoryActive = toggleSubcategoryActive;
 
 /* =========================
    Manual FX UI (fallback rates EUR->XXX)

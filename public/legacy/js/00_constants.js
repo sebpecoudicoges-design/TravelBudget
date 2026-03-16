@@ -1,4 +1,4 @@
-window.__TB_BUILD = "9.2.6.10";
+window.__TB_BUILD = "9.2.7";
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels

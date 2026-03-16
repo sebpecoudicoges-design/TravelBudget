@@ -690,6 +690,8 @@ if (tErr) throw tErr;
 const segRows = await segPromise;
 const recurringRuleRows = await recurringRulesPromise;
 const categorySubcategoryRows = await subcatPromise;
+const { rows: catRowsDb, error: catLoadErrDb } = await catPromise;
+if (catLoadErrDb) throw catLoadErrDb;
 
   state.period.id = p.id;
   state.period.start = p.start_date;
@@ -831,8 +833,10 @@ state.wallets = (w || []).map((x) => ({
     if (typeof syncTabsForRole === "function") syncTabsForRole();
   } catch (e) {}
 
+  state.categoriesRows = (catRowsDb || []).map((x) => ({ id: x.id, name: x.name, color: x.color || null, sortOrder: Number(x.sort_order || 0) }));
+
   // categories — DB first, then local/state, then filtered transaction fallback
-Promise.resolve(catPromise)
+Promise.resolve({ rows: catRowsDb, error: null })
   .then(async ({ rows: catRows, error: catLoadErr }) => {
     if (catLoadErr) throw catLoadErr;
 

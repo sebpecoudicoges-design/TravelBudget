@@ -330,6 +330,7 @@
     const dailyMap = Object.fromEntries(days.map(d => [d, 0]));
     const paidMap = Object.fromEntries(days.map(d => [d, 0]));
     const catMap = new Map();
+    const subcatMap = new Map();
     let spent = 0;
     let paidSpent = 0;
     for (const tx of txs) {
@@ -340,7 +341,12 @@
       dailyMap[ds] = _safeNum(dailyMap[ds]) + amt;
       if (_txPaid(tx)) paidMap[ds] = _safeNum(paidMap[ds]) + amt;
       const cat = _norm(tx?.category || 'Autre');
+      const sub = _norm(tx?.subcategory || '');
       catMap.set(cat, (catMap.get(cat) || 0) + amt);
+      if (sub) {
+        const key = `${cat}|||${sub}`;
+        subcatMap.set(key, (subcatMap.get(key) || 0) + amt);
+      }
     }
 
     const targetDaily = days.map(d => _dailyBudgetForDate(d, base));
@@ -379,10 +385,23 @@
     const pct = totalBudget > 0 ? (spent / totalBudget) * 100 : 0;
     const topCategories = [...catMap.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 8);
     const categorySeries = [...catMap.entries()].sort((a,b)=>b[1]-a[1]).map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
+    const subcategorySeries = [...subcatMap.entries()]
+      .sort((a,b)=>b[1]-a[1])
+      .map(([key, actual]) => {
+        const [categoryName, subcategoryName] = String(key || '').split('|||');
+        return {
+          key,
+          categoryName,
+          subcategoryName,
+          label: `${subcategoryName} · ${categoryName}`,
+          actual,
+          color: _categoryColor(categoryName)
+        };
+      });
     const outAmount = _outBudgetTransactions().reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txDate(tx), base), 0);
 
     return { base, start, end, days, txs, spent, paidSpent, totalBudget, remaining, pct, avgPerDay, budgetPerDay, projection,
-      cumSpent, cumTarget, velocity, heat, topCategories, categorySeries, outAmount, spentToToday, targetToToday };
+      cumSpent, cumTarget, velocity, heat, topCategories, categorySeries, subcategorySeries, outAmount, spentToToday, targetToToday };
   }
 
   function _buildSummary(model){
@@ -472,6 +491,28 @@
       series:[{ name:'Réel', type:'bar', data: rows.map(r => ({ value:Number(r.actual.toFixed(2)), itemStyle:{ color:r.color || _themeAccent(), borderRadius:[0,10,10,0] } })), barMaxWidth:18 }]
     });
   }
+
+  function _renderSubcategoryBreakdown(model){
+    const host = _el('analysis-subcategory-breakdown');
+    if (!host) return;
+    const rows = (model.subcategorySeries || []).slice(0, 10);
+    if (!rows.length) {
+      host.innerHTML = `<div class="muted">Aucune sous-catégorie exploitée sur la plage actuelle.</div>`;
+      return;
+    }
+    host.innerHTML = rows.map((row, idx) => `
+      <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 0;border-top:${idx ? '1px solid var(--border)' : 'none'};">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${escapeHTML(row.color || _themeAccent())};flex:0 0 auto;"></span>
+          <div style="min-width:0;">
+            <div style="font-weight:600;">${escapeHTML(row.subcategoryName || 'Sans sous-catégorie')}</div>
+            <div class="muted" style="font-size:12px;">${escapeHTML(row.categoryName || 'Autre')}</div>
+          </div>
+        </div>
+        <div style="font-weight:700;white-space:nowrap;">${escapeHTML(_fmtMoney(row.actual, model.base))}</div>
+      </div>
+    `).join('');
+  }
   function _renderVelocity(model){
     const chart = _ensureChart('velocity','analysis-velocity-chart');
     if (!chart) return;
@@ -549,6 +590,7 @@
     _renderTrajectory(model);
     _renderCategory(model);
     _renderCategoryBars(model);
+    _renderSubcategoryBreakdown(model);
     _renderVelocity(model);
     _renderHeatmap(model);
     _renderInsights(model);
