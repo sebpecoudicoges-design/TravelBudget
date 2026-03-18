@@ -1711,40 +1711,67 @@ async function editSubcategory(id) {
 
 
 async function moveSubcategory(id, direction) {
-  return safeCall("Move subcategory", async () => {
-    const target = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).find((x) => String(x?.id) === String(id));
-    if (!target) throw new Error('Sous-catégorie introuvable.');
-    const category = String(target?.categoryName || target?.category_name || '').trim();
-    if (!category) throw new Error('Catégorie introuvable.');
-    const sqlRows = _subcategoriesForSettings(category, true).filter((row) => row?.id);
-    if (sqlRows.length <= 1) return;
-    const currentIndex = sqlRows.findIndex((row) => String(row?.id) === String(id));
-    if (currentIndex < 0) throw new Error('Sous-catégorie introuvable dans l’ordre actuel.');
-    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (swapIndex < 0 || swapIndex >= sqlRows.length) return;
+  const target = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).find((x) => String(x?.id) === String(id));
+  if (!target) return;
 
-    const ordered = sqlRows.slice();
-    const tmp = ordered[currentIndex];
-    ordered[currentIndex] = ordered[swapIndex];
-    ordered[swapIndex] = tmp;
+  const category = String(target?.categoryName || target?.category_name || '').trim();
+  if (!category) return;
 
+  const sqlRows = _subcategoriesForSettings(category, true).filter((row) => row?.id);
+  if (sqlRows.length <= 1) return;
+
+  const currentIndex = sqlRows.findIndex((row) => String(row?.id) === String(id));
+  if (currentIndex < 0) return;
+
+  const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+  if (swapIndex < 0 || swapIndex >= sqlRows.length) return;
+
+  const ordered = sqlRows.slice();
+  const tmp = ordered[currentIndex];
+  ordered[currentIndex] = ordered[swapIndex];
+  ordered[swapIndex] = tmp;
+
+  const updates = ordered.map((row, idx) => ({
+    id: row.id,
+    sort_order: (idx + 1) * 10,
+  }));
+
+  const byId = new Map(updates.map((x) => [String(x.id), x.sort_order]));
+
+  const previousSnapshot = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).map((row) => ({
+    ...row,
+    sortOrder: row?.sortOrder,
+    sort_order: row?.sort_order,
+  }));
+
+  state.categorySubcategories = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).map((row) => {
+    const nextSort = byId.get(String(row?.id || ''));
+    if (nextSort === undefined) return row;
+    return {
+      ...row,
+      sortOrder: nextSort,
+      sort_order: nextSort,
+    };
+  });
+
+  renderSettings();
+
+  try {
     const nowIso = new Date().toISOString();
-    for (let i = 0; i < ordered.length; i += 1) {
-      const row = ordered[i];
-      const nextSort = (i + 1) * 10;
-      const currentSort = Number(row?.sortOrder ?? row?.sort_order ?? 0);
-      if (currentSort === nextSort) continue;
+    for (const row of updates) {
       const { error } = await sb
         .from(TB_CONST.TABLES.category_subcategories)
-        .update({ sort_order: nextSort, updated_at: nowIso })
+        .update({ sort_order: row.sort_order, updated_at: nowIso })
         .eq('id', row.id)
         .eq('user_id', sbUser.id);
+
       if (error) throw error;
     }
-
-    await refreshFromServer();
+  } catch (e) {
+    state.categorySubcategories = previousSnapshot;
     renderSettings();
-  });
+    throw e;
+  }
 }
 
 async function toggleSubcategoryActive(id, nextActive) {

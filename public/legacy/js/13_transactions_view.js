@@ -127,6 +127,7 @@ function _txGetFilters() {
     to: _txEl("f-to")?.value || "",
     walletId: _txEl("f-wallet")?.value || "all",
     cat: _txEl("f-category")?.value || "all",
+    subcategory: _txEl("f-subcategory")?.value || "all",
     type: _txEl("f-type")?.value || "all",
     pay: _txEl("f-pay")?.value || "all",
     out: _txEl("f-out")?.value || "all",
@@ -142,6 +143,7 @@ function _txSetFilters(f) {
   if (_txEl("f-to")) _txEl("f-to").value = f.to ?? "";
   if (_txEl("f-wallet")) _txEl("f-wallet").value = f.walletId ?? "all";
   if (_txEl("f-category")) _txEl("f-category").value = f.cat ?? "all";
+  if (_txEl("f-subcategory")) _txEl("f-subcategory").value = f.subcategory ?? "all";
   if (_txEl("f-type")) _txEl("f-type").value = f.type ?? "all";
   if (_txEl("f-pay")) _txEl("f-pay").value = f.pay ?? "all";
   if (_txEl("f-out")) _txEl("f-out").value = f.out ?? "all";
@@ -304,20 +306,57 @@ function _txInitFiltersOnce() {
 /* =========================
    Transactions view
    ========================= */
+
+function _txFillSubcategoryFilterSelect(categoryValue, preserveValue) {
+  const fSub = document.getElementById("f-subcategory");
+  if (!fSub) return;
+
+  const cat = String(categoryValue || "").trim();
+  const activeCategory = cat && cat !== "all" ? cat : "";
+
+  if (!activeCategory) {
+    fSub.innerHTML = `<option value="all">Toutes</option>`;
+    fSub.value = "all";
+    fSub.disabled = true;
+    return;
+  }
+
+  const rows = (typeof getCategorySubcategories === "function")
+    ? getCategorySubcategories(activeCategory)
+    : [];
+
+  const options = [`<option value="all">Toutes</option>`];
+  rows.forEach((row) => {
+    const name = String(row?.name || "").trim();
+    if (!name) return;
+    options.push(`<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`);
+  });
+
+  fSub.innerHTML = options.join("");
+  fSub.disabled = false;
+
+  const wanted = String(preserveValue || "").trim();
+  const exists = [...fSub.options].some((o) => o.value === wanted);
+  fSub.value = exists ? wanted : "all";
+}
+
 function fillFilterSelects() {
   const fWallet = document.getElementById("f-wallet");
   const fCat = document.getElementById("f-category");
+  const fSub = document.getElementById("f-subcategory");
   if (!fWallet || !fCat) return;
 
-  // Preserve selections across re-renders (important UX fix)
   const prevWallet = fWallet.value;
   const prevCat = fCat.value;
+  const prevSub = fSub ? fSub.value : "all";
 
   fWallet.innerHTML = `<option value="all">Tous</option>` + state.wallets.map((w) => `<option value="${w.id}">${w.name} (${w.currency})</option>`).join("");
   fCat.innerHTML = `<option value="all">Toutes</option>` + getCategories().map((c) => `<option value="${c}">${c}</option>`).join("");
 
   if (prevWallet && [...fWallet.options].some(o => o.value === prevWallet)) fWallet.value = prevWallet;
   if (prevCat && [...fCat.options].some(o => o.value === prevCat)) fCat.value = prevCat;
+
+  _txFillSubcategoryFilterSelect(fCat.value, prevSub);
 }
 
 
@@ -347,6 +386,7 @@ function renderTransactions() {
   const to = document.getElementById("f-to").value;
   const walletId = document.getElementById("f-wallet").value;
   const cat = document.getElementById("f-category").value;
+  const subcategory = document.getElementById("f-subcategory")?.value || "all";
   const type = document.getElementById("f-type").value;
   const pay = document.getElementById("f-pay").value;
   const out = document.getElementById("f-out").value;
@@ -378,6 +418,7 @@ function renderTransactions() {
     if (toD && d && d > toD) return false;
     if (walletId !== "all" && tx.walletId !== walletId) return false;
     if (cat !== "all" && tx.category !== cat) return false;
+    if (subcategory !== "all" && String(tx.subcategory || "") !== subcategory) return false;
     if (type === "expense" && tx.type !== "expense") return false;
     if (type === "income" && tx.type !== "income") return false;
 
@@ -400,7 +441,7 @@ function renderTransactions() {
     if (recurring === "confirmed" && recurringStatus !== "confirmed") return false;
 
     if (q) {
-      const hay = `${tx.label || ""} ${tx.category || ""}`.toLowerCase();
+      const hay = `${tx.label || ""} ${tx.category || ""} ${tx.subcategory || ""}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -503,7 +544,7 @@ function renderTransactions() {
     list.appendChild(div);
   }
 
-  const ids = ["f-from", "f-to", "f-wallet", "f-category", "f-type", "f-pay", "f-out", "f-night", "f-recurring", "f-q"];
+  const ids = ["f-from", "f-to", "f-wallet", "f-category", "f-subcategory", "f-type", "f-pay", "f-out", "f-night", "f-recurring", "f-q"];
   _txBulkSyncControls();
 
   for (const id of ids) {
