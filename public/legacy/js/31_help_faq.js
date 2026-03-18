@@ -49,7 +49,7 @@
       tags: ["segment", "période", "scope", "period"],
       q: { fr: "Segment vs période : quelle différence ?", en: "Segment vs period: what's the difference?" },
       a: {
-        fr: "La période définit les dates. Le segment est un “mode” à l’intérieur de la période (ex: une phase du voyage, un budget spécifique). Si tu n’en as pas besoin, reste en mode simple (1 période).",
+        fr: "Dans l’app, une période visible porte les dates, la devise et le budget/jour. Garde une structure simple tant que tu n’as pas besoin de découper davantage ton voyage.",
         en: "The period defines dates. A segment is a “mode” inside the period (a trip phase, a specific budget). If you don’t need it, stay simple (1 period)."
       }
     },
@@ -77,7 +77,7 @@
       tags: ["fx", "taux", "auto", "fixed", "manuel"],
       q: { fr: "Taux FX : auto ou fixe, comment ça marche ?", en: "FX rate: auto or fixed—how does it work?" },
       a: {
-        fr: "Si la devise est disponible via la source FX auto, l'app utilise automatiquement le taux (mode auto). Sinon, le mode passe en fixe et te demande un taux EUR→BASE. Objectif : éviter les erreurs de saisie.",
+        fr: "Si la devise est couverte, l’app met le taux à jour automatiquement. Sinon, tu peux saisir un taux perso pour garder un budget cohérent.",
         en: "If the currency is available from the auto FX provider, the app uses it automatically (auto mode). Otherwise it switches to fixed and asks for an EUR→BASE rate. Goal: prevent input mistakes."
       }
     },
@@ -104,7 +104,7 @@
       tags: ["périodes", "segments", "overlap", "trou", "dates"],
       q: { fr: "Pourquoi je ne peux pas avoir de trou / overlap entre les périodes ?", en: "Why can’t I have gaps/overlaps between periods?" },
       a: {
-        fr: "Pour garder un calcul cohérent (budget/j, courbes, FX), l’app garantit une continuité parfaite : aucune journée manquante et aucune journée comptée deux fois. Quand tu modifies une borne, les autres périodes s’ajustent.",
+        fr: "Pour garder des calculs propres, les périodes restent continues : pas de trou, pas de chevauchement. Quand tu modifies une borne, l’app réaligne le reste.",
         en: "To keep calculations consistent (daily budget, charts, FX), the app enforces perfect continuity: no missing day and no day counted twice. When you change a boundary, other periods are adjusted."
       }
     },
@@ -122,7 +122,7 @@
       tags: ["wallet", "ajouter", "créer", "nouveau", "portefeuille", "add", "create"],
       q: { fr: "Comment créer une nouvelle wallet ?", en: "How do I create a new wallet?" },
       a: {
-        fr: "Va dans <b>Settings</b> → section <b>Wallets</b> → <b>+ Ajouter wallet</b>. Donne un nom (ex: Cash LAK), choisis la devise (LAK) et enregistre. Si tu changes de devise de base de segment, le FX est géré automatiquement (Option A).",
+        fr: "Va dans <b>Settings</b> → <b>Wallets</b> → <b>+ Ajouter wallet</b>. Donne un nom simple, choisis la devise, puis enregistre.",
         en: "Go to <b>Settings</b> → <b>Wallets</b> → <b>+ Add wallet</b>. Give it a name (e.g., Cash LAK), pick the currency (LAK) and save. If your segment base currency changes, FX is handled automatically (Option A)."
       }
     },
@@ -133,6 +133,33 @@
       a: {
         fr: "Dans <b>Settings</b> → <b>Voyage</b>, utilise le champ <b>Nom du voyage</b>. C’est enregistré automatiquement. Si ta base n’a pas de colonne name côté periods, le nom est stocké localement sur ton navigateur.",
         en: "In <b>Settings</b> → <b>Trip</b>, use the <b>Trip name</b> field. It auto-saves. If your DB has no name column on periods, the name is stored locally in your browser."
+      }
+    }
+    ,{
+      id: "budget_reference_default",
+      tags: ["budget sourcé", "référence pays", "voyage", "période"],
+      q: { fr: "Budget de référence : comment ça marche ?", en: "How does the reference budget work?" },
+      a: {
+        fr: "Le voyage peut définir une référence par défaut. Chaque période peut soit reprendre ce réglage, soit être personnalisée. Dans l’analyse, le réel est comparé à cette référence pays.",
+        en: "The trip can define a default reference. Each period can either inherit it or use its own settings. In analysis, actual spend is compared to that country reference."
+      }
+    },
+    {
+      id: "budget_reference_inherit",
+      tags: ["héritage", "période", "référence pays", "voyage"],
+      q: { fr: "Quand garder l’héritage du voyage ?", en: "When should I keep trip inheritance?" },
+      a: {
+        fr: "Garde l’héritage si la période suit le même pays et le même style de voyage. Personnalise seulement si cette partie du voyage change vraiment ton niveau de dépense.",
+        en: "Keep inheritance when the period follows the same country and travel style. Only customize it when this part of the trip genuinely changes your spending level."
+      }
+    },
+    {
+      id: "analysis_reference_vs_actual",
+      tags: ["analyse", "référence", "réel", "catégories"],
+      q: { fr: "Analyse : que signifie “référence pays vs réel” ?", en: "Analysis: what does 'country reference vs actual' mean?" },
+      a: {
+        fr: "Tu compares tes dépenses réelles à une base recommandée pour le pays choisi. La vue par catégorie sert à repérer vite où tu dépenses plus, moins, ou dans la bonne zone.",
+        en: "You compare your actual spend with a recommended baseline for the selected country. The category view helps you quickly see where you spend more, less, or roughly on target."
       }
     }
   ];
@@ -270,10 +297,10 @@
     }
 
     guides.innerHTML = `
-      <div style="font-weight:600; margin-bottom:8px;">${_t("help.guides.title")}</div>
+      <div style="font-weight:700; margin-bottom:10px;">${_t("help.guides.title")}</div>
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px;">
         ${guideDefs.map(g => `
-          <div class="hint" style="padding:10px; border:1px solid rgba(0,0,0,.08); border-radius:12px; background:rgba(0,0,0,.02);">
+          <div class="help-guide-card">
             <div style="font-weight:600; margin-bottom:6px;">${_t(g.kt)}</div>
             <div class="muted" style="margin-bottom:10px;">${_t(g.kb)}</div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -310,9 +337,9 @@
     const q = (item.q && item.q[l]) || "";
     const a = (item.a && item.a[l]) || "";
     return `
-      <div class="card" style="padding:10px; margin:10px 0;">
-        <div style="font-weight:600;">${escapeHTML(q)}</div>
-        <div class="muted" style="margin-top:6px; white-space:pre-wrap;">${escapeHTML(a)}</div>
+      <div class="help-faq-card">
+        <div class="help-faq-q">${escapeHTML(q)}</div>
+        <div class="help-faq-a">${escapeHTML(a)}</div>
       </div>
     `;
   }

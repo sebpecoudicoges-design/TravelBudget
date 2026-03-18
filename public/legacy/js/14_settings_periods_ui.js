@@ -894,7 +894,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
           </div>
           <span style="${travel?.country_code ? st.chip : st.chipAlt};">${escapeHTML(travel?.country_code ? 'Défaut voyage actif' : 'Aucun défaut voyage')}</span>
         </div>
-        ${_tbBudgetRefSummaryHtml(travel || {}, travel?.country_code ? 'Défaut voyage' : 'À configurer', travel?.country_code ? 'Toutes les périodes héritent de ce profil tant qu’elles ne sont pas personnalisées.' : 'Configure un profil de base pour éviter de paramétrer chaque période une par une.')}
+        ${_tbBudgetRefSummaryHtml(travel || {}, travel?.country_code ? 'Défaut voyage' : 'À renseigner', travel?.country_code ? 'Toutes les périodes héritent de ce profil tant qu’elles ne sont pas personnalisées.' : 'Configure un profil de base pour éviter de paramétrer chaque période une par une.')}
         <div class="row" style="gap:12px; flex-wrap:wrap; align-items:end; margin-top:12px;">
           <div class="field" style="min-width:260px; flex:1 1 260px;">
             <label>Pays de référence</label>
@@ -905,7 +905,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
             <select data-br="travel-profile">
               <option value="solo" ${travel?.travel_profile==='solo'?'selected':''}>Solo</option>
               <option value="couple" ${travel?.travel_profile==='couple'?'selected':''}>Couple</option>
-              <option value="family" ${travel?.travel_profile==='family'?'selected':''}>Family</option>
+              <option value="family" ${travel?.travel_profile==='family'?'selected':''}>Famille</option>
             </select>
           </div>
           <div class="field" style="min-width:150px;">
@@ -913,7 +913,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
             <select data-br="travel-style">
               <option value="budget" ${travel?.travel_style==='budget'?'selected':''}>Budget</option>
               <option value="standard" ${(!travel?.travel_style || travel?.travel_style==='standard')?'selected':''}>Standard</option>
-              <option value="comfort" ${travel?.travel_style==='comfort'?'selected':''}>Comfort</option>
+              <option value="comfort" ${travel?.travel_style==='comfort'?'selected':''}>Confort</option>
             </select>
           </div>
           <div class="field" style="width:110px;">
@@ -961,7 +961,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       if(!wrap) return;
       const override = cache.segmentOverrides[String(seg.id)] || null;
       const resolved = cache.segmentResolved[String(seg.id)] || null;
-      const sourceLabel = override ? 'Période personnalisée' : (travel?.country_code ? 'Hérite du voyage' : 'À configurer');
+      const sourceLabel = override ? 'Réglage propre à cette période' : (travel?.country_code ? 'Hérite du voyage' : 'À renseigner');
       wrap.innerHTML = `
         <div class="tb-premium-inline-section tb-premium-inline-section--segment" style="${st.section}">
           <div class="row" style="align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
@@ -971,7 +971,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
             </div>
             <span style="${override ? st.chip : st.chipAlt};">${escapeHTML(sourceLabel)}</span>
           </div>
-          ${_tbBudgetRefSummaryHtml(resolved || override || travel || {}, sourceLabel, override ? 'Cette période écrase explicitement le défaut voyage.' : 'Cette période hérite du voyage tant que tu ne l’actives pas en mode personnalisé.')}
+          ${_tbBudgetRefSummaryHtml(resolved || override || travel || {}, sourceLabel, override ? 'Cette période utilise son propre budget de référence.' : 'Cette période reprend le réglage du voyage tant que tu ne la personnalises pas.')}
           <div class="row" style="gap:12px; align-items:end; margin-top:12px; flex-wrap:wrap;">
             <div class="field" style="min-width:180px;">
               <label>Mode</label>
@@ -991,7 +991,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
                   <select data-br="seg-profile">
                     <option value="solo" ${((override?.travel_profile || resolved?.travel_profile || 'solo')==='solo')?'selected':''}>Solo</option>
                     <option value="couple" ${((override?.travel_profile || resolved?.travel_profile)==='couple')?'selected':''}>Couple</option>
-                    <option value="family" ${((override?.travel_profile || resolved?.travel_profile)==='family')?'selected':''}>Family</option>
+                    <option value="family" ${((override?.travel_profile || resolved?.travel_profile)==='family')?'selected':''}>Famille</option>
                   </select>
                 </div>
                 <div class="field" style="min-width:150px;">
@@ -999,7 +999,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
                   <select data-br="seg-style">
                     <option value="budget" ${((override?.travel_style || resolved?.travel_style)==='budget')?'selected':''}>Budget</option>
                     <option value="standard" ${((override?.travel_style || resolved?.travel_style || 'standard')==='standard')?'selected':''}>Standard</option>
-                    <option value="comfort" ${((override?.travel_style || resolved?.travel_style)==='comfort')?'selected':''}>Comfort</option>
+                    <option value="comfort" ${((override?.travel_style || resolved?.travel_style)==='comfort')?'selected':''}>Confort</option>
                   </select>
                 </div>
                 <div class="field" style="width:110px;">

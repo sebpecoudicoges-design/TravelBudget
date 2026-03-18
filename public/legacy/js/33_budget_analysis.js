@@ -477,9 +477,58 @@
       });
     const outAmount = _outBudgetTransactions().reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txDate(tx), base), 0);
     const referenceCategorySeries = [...referenceCategoryMap.entries()].map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
+    const referenceComparisonSeries = _buildReferenceComparisonSeries(categorySeries, referenceCategoryMap);
 
     return { base, start, end, days, txs, spent, paidSpent, totalBudget, totalReference, remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay, projection,
-      cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays };
+      cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, referenceComparisonSeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays };
+  }
+
+  function _buildReferenceComparisonSeries(categorySeries, referenceCategoryMap){
+    const actualMap = new Map((categorySeries || []).map((row) => [String(row?.name || '').trim(), _safeNum(row?.actual)]));
+    const comparison = new Map();
+    const ensure = (name) => {
+      const key = String(name || '').trim();
+      if (!key) return null;
+      if (!comparison.has(key)) comparison.set(key, { name:key, actual:_safeNum(actualMap.get(key)), reference:0, color:_categoryColor(key) });
+      return comparison.get(key);
+    };
+    const addReference = (name, amount) => {
+      const row = ensure(name);
+      if (!row) return;
+      row.reference += _safeNum(amount);
+    };
+    const distribute = (amount, targets, fallbacks) => {
+      const total = _safeNum(amount);
+      if (total <= 0) return;
+      const validTargets = (targets || []).map((name) => String(name || '').trim()).filter(Boolean);
+      if (!validTargets.length) return;
+      const actualTotal = validTargets.reduce((sum, name) => sum + _safeNum(actualMap.get(name)), 0);
+      if (actualTotal > 0) {
+        validTargets.forEach((name) => addReference(name, total * (_safeNum(actualMap.get(name)) / actualTotal)));
+        return;
+      }
+      const fallbackMap = new Map((fallbacks || []).map((row) => [String(row?.name || '').trim(), _safeNum(row?.weight)]));
+      const fallbackTotal = validTargets.reduce((sum, name) => sum + _safeNum(fallbackMap.get(name) || 0), 0);
+      if (fallbackTotal > 0) {
+        validTargets.forEach((name) => addReference(name, total * (_safeNum(fallbackMap.get(name) || 0) / fallbackTotal)));
+        return;
+      }
+      const share = total / validTargets.length;
+      validTargets.forEach((name) => addReference(name, share));
+    };
+
+    for (const name of actualMap.keys()) ensure(name);
+    distribute(referenceCategoryMap.get('Logement'), ['Logement'], [{ name:'Logement', weight:1 }]);
+    distribute(referenceCategoryMap.get('Nourriture'), ['Repas', 'Course'], [{ name:'Repas', weight:0.7 }, { name:'Course', weight:0.3 }]);
+    distribute(referenceCategoryMap.get('Transport'), ['Transport', 'Transport Internationale'], [{ name:'Transport', weight:0.82 }, { name:'Transport Internationale', weight:0.18 }]);
+    distribute(referenceCategoryMap.get('Activités'), ['Sorties'], [{ name:'Sorties', weight:1 }]);
+    distribute(referenceCategoryMap.get('Divers'), ['Autre', 'Santé', 'Frais bancaire', 'Souvenir', 'Cadeau'], [{ name:'Autre', weight:0.62 }, { name:'Santé', weight:0.16 }, { name:'Frais bancaire', weight:0.12 }, { name:'Souvenir', weight:0.05 }, { name:'Cadeau', weight:0.05 }]);
+
+    return [...comparison.values()]
+      .map((row) => ({ ...row, delta: Number((row.actual - row.reference).toFixed(2)) }))
+      .filter((row) => _safeNum(row.actual) > 0 || _safeNum(row.reference) > 0)
+      .sort((a, b) => Math.max(_safeNum(b.actual), _safeNum(b.reference)) - Math.max(_safeNum(a.actual), _safeNum(a.reference)))
+      .slice(0, 10);
   }
 
   function _buildSummary(model){
@@ -488,9 +537,9 @@
     const health = model.totalBudget > 0 ? Math.max(0, Math.min(100, model.pct)) : 0;
     const cards = [
       { label:'Budget prévu app', value:_fmtMoney(model.totalBudget, model.base), meta:`${model.days.length} jours analysés`, pct:100 },
-      { label:'Budget sourcé', value:_fmtMoney(model.totalReference, model.base), meta:model.referenceCoverageDays ? `${model.referenceCoverageDays} j couverts par une source pays` : 'Aucune source active sur la plage', pct: model.totalReference ? 100 : 0 },
+      { label:'Budget sourcé', value:_fmtMoney(model.totalReference, model.base), meta:model.referenceCoverageDays ? `${model.referenceCoverageDays} j avec référence pays` : 'Aucune référence pays active sur la plage', pct: model.totalReference ? 100 : 0 },
       { label:'Dépensé', value:_fmtMoney(model.spent, model.base), meta:`${health.toFixed(1)}% du budget app consommé`, pct:health },
-      { label:'Écart vs sourcé', value:_fmtMoney(model.referenceGap, model.base), meta:model.referenceGap <= 0 ? 'Sous le budget sourcé' : 'Au-dessus du budget sourcé', pct: model.totalReference ? Math.min(100, Math.abs(model.referenceGap) / Math.max(model.totalReference,1) * 100) : 0 },
+      { label:'Écart vs sourcé', value:_fmtMoney(model.referenceGap, model.base), meta:model.referenceGap <= 0 ? 'Sous la référence pays' : 'Au-dessus de la référence pays', pct: model.totalReference ? Math.min(100, Math.abs(model.referenceGap) / Math.max(model.totalReference,1) * 100) : 0 },
       { label:'Hors budget', value:_fmtMoney(model.outAmount, model.base), meta:'Visible sans polluer le pilotage principal', pct: model.totalBudget ? Math.min(100, (model.outAmount / Math.max(model.totalBudget,1))*100) : 0 },
       { label:'Moyenne / jour', value:_fmtMoney(model.avgPerDay, model.base), meta:`Cible app ${_fmtMoney(model.budgetPerDay, model.base)}/j • source ${_fmtMoney(model.referencePerDay, model.base)}/j`, pct: model.budgetPerDay ? Math.min(100, (model.avgPerDay / model.budgetPerDay) * 100) : 0 },
       { label:'Projection fin période', value:_fmtMoney(model.projection, model.base), meta:model.projection > model.totalReference && model.totalReference > 0 ? 'Au-dessus de la source' : (model.projection > model.totalBudget ? 'Au-dessus du cap app' : 'Dans la trajectoire'), pct: model.totalBudget ? Math.min(100, (model.projection / model.totalBudget) * 100) : 0 },
@@ -623,9 +672,12 @@
   function _renderReferencePanel(model){
     const summary = _el('analysis-reference-summary');
     const chart = _ensureChart('referenceMix','analysis-reference-mix-chart');
+    const chartEl = _el('analysis-reference-mix-chart');
+    const rows = (model.referenceComparisonSeries || []).filter(r => _safeNum(r.actual) > 0 || _safeNum(r.reference) > 0);
     if (summary) {
       const coverage = model.referenceCoverageDays && model.days.length ? `${model.referenceCoverageDays}/${model.days.length} jours couverts` : 'Aucune source active';
-      const deltaTone = model.referenceGap <= 0 ? 'Sous la source' : 'Au-dessus de la source';
+      const deltaTone = model.referenceGap <= 0 ? 'Sous la référence' : 'Au-dessus de la référence';
+      const mainCats = rows.slice(0, 4).map((row) => row.name).join(' • ') || 'Aucune catégorie couverte';
       summary.innerHTML = `
         <div class="analysis-reference-stat">
           <span>Budget sourcé</span>
@@ -641,22 +693,68 @@
           <span>Écart</span>
           <strong>${escapeHTML(_fmtMoney(model.referenceGap, model.base))}</strong>
           <small>${escapeHTML(deltaTone)}</small>
+        </div>
+        <div class="analysis-reference-note">La comparaison reprend les catégories déjà utilisées dans l'app. La référence pays est répartie automatiquement pour rester lisible.</div>
+        <div class="analysis-reference-inline">
+          <span class="analysis-reference-pill">Référence ${escapeHTML(_fmtMoney(model.referencePerDay, model.base))}/jour</span>
+          <span class="analysis-reference-pill">Réel ${escapeHTML(_fmtMoney(model.avgPerDay, model.base))}/jour</span>
+          <span class="analysis-reference-pill">Catégories suivies : ${escapeHTML(mainCats)}</span>
         </div>`;
     }
+    if (chartEl) chartEl.style.height = `${Math.max(320, rows.length * 48 + 120)}px`;
     if (!chart) return;
-    const rows = (model.referenceCategorySeries || []).filter(r => _safeNum(r.actual) > 0);
+    if (!rows.length) {
+      chart.clear();
+      chart.setOption({ graphic:{ type:'text', left:'center', top:'middle', style:{ text:'Aucune référence pays active sur cette plage', fill:_themeMuted(), fontSize:14, fontWeight:600 } } });
+      return;
+    }
+    const ordered = [...rows].reverse();
     chart.setOption({
-      animationDuration: 850,
-      tooltip:{ trigger:'item', backgroundColor:'rgba(15,23,42,.92)', borderWidth:0, textStyle:{ color:'#fff' }, formatter:(p)=>`${p.name}<br>${_fmtMoney(p.value, model.base)}` },
-      series:[{
-        type:'pie',
-        radius:['48%','76%'],
-        center:['50%','54%'],
-        label:{ color:_themeMuted(), formatter:(p)=>`${p.name}
-${_fmtMoney(p.value, model.base)}` },
-        itemStyle:{ borderColor:'rgba(255,255,255,.08)', borderWidth:2 },
-        data: rows.map(r => ({ name:r.name, value:Number(r.actual.toFixed(2)), itemStyle:{ color:r.color } }))
-      }]
+      animationDuration: 900,
+      tooltip:{
+        trigger:'axis',
+        axisPointer:{ type:'shadow' },
+        backgroundColor:'rgba(15,23,42,.92)',
+        borderWidth:0,
+        textStyle:{ color:'#fff' },
+        formatter:(params)=>{
+          const axis = params?.[0]?.axisValue || '';
+          const ref = _safeNum(params?.find((p)=>p.seriesName==='Référence')?.value);
+          const actual = _safeNum(params?.find((p)=>p.seriesName==='Réel')?.value);
+          const delta = actual - ref;
+          return `${axis}<br>Référence : ${_fmtMoney(ref, model.base)}<br>Réel : ${_fmtMoney(actual, model.base)}<br>Écart : ${_fmtMoney(delta, model.base)}`;
+        }
+      },
+      legend:{ top:0, textStyle:{ color:_themeMuted() }, data:['Référence','Réel'] },
+      grid:{ left: 126, right: 20, top: 34, bottom: 20, containLabel:false },
+      xAxis:{ type:'value', axisLabel:{ color:_themeMuted(), formatter:(v)=>_fmtMoney(v, model.base) }, splitLine:{ lineStyle:{ color:_themeGrid() } } },
+      yAxis:{ type:'category', data: ordered.map(r => r.name), axisLabel:{ color:_themeText(), fontWeight:700 } },
+      series:[
+        {
+          name:'Référence',
+          type:'bar',
+          barMaxWidth:16,
+          itemStyle:{ color:_themeGood(), borderRadius:[0,10,10,0], opacity:.88 },
+          data: ordered.map(r => Number(_safeNum(r.reference).toFixed(2)))
+        },
+        {
+          name:'Réel',
+          type:'bar',
+          barMaxWidth:16,
+          itemStyle:{ color:_themeAccent(), borderRadius:[0,10,10,0] },
+          data: ordered.map(r => Number(_safeNum(r.actual).toFixed(2))),
+          label:{
+            show:true,
+            position:'right',
+            color:_themeMuted(),
+            formatter:(p)=>{
+              const row = ordered[p.dataIndex];
+              const delta = _safeNum(row?.actual) - _safeNum(row?.reference);
+              return delta === 0 ? '≈ 0' : `${delta > 0 ? '+' : ''}${_fmtMoney(delta, model.base)}`;
+            }
+          }
+        }
+      ]
     });
   }
 

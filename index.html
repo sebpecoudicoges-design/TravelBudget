@@ -80,7 +80,7 @@
                   var(--bg);
     }
 
-    .wrap{ max-width:1120px; margin:0 auto; padding:18px; }
+    .wrap{ max-width:1160px; margin:0 auto; padding:18px; }
 
     header{
       display:flex; gap:12px; justify-content:space-between; align-items:center; flex-wrap:wrap;
@@ -172,17 +172,20 @@
     @media (max-width: 980px){ .grid{ grid-template-columns:1fr; } }
 
     .card{
-      background: rgba(255,255,255,.75);
+      background: rgba(255,255,255,.78);
       border:1px solid var(--border);
-      border-radius:var(--radius);
+      border-radius:20px;
       box-shadow: var(--shadow);
-      padding:14px;
+      padding:16px;
       backdrop-filter: blur(10px);
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
     }
     body.theme-dark .card{
       background: rgba(30,41,59,.78);
     }
-    .card h2{ margin:0 0 10px; font-size:14px; letter-spacing:.2px; }
+    .card h2{ margin:0 0 10px; font-size:15px; letter-spacing:.1px; }
+    .card:hover{ border-color: rgba(37,99,235,.18); box-shadow: 0 18px 40px rgba(2,6,23,.10); }
+    body.theme-dark .card:hover{ border-color: rgba(96,165,250,.22); box-shadow: 0 20px 42px rgba(0,0,0,.38); }
     .muted{ color:var(--muted); }
 
     /* KPI container (content rendered by JS) */
@@ -625,6 +628,33 @@
     .analysis-reference-stat span{ display:block; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); }
     .analysis-reference-stat strong{ display:block; margin-top:10px; font-size:24px; letter-spacing:-.03em; }
     .analysis-reference-stat small{ display:block; margin-top:6px; color:var(--muted); font-size:12px; }
+    input:focus, select:focus{
+      border-color: rgba(37,99,235,.35);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.10), 0 12px 24px rgba(2,6,23,.08);
+    }
+    body.theme-dark input:focus, body.theme-dark select:focus{
+      border-color: rgba(96,165,250,.45);
+      box-shadow: 0 0 0 4px rgba(59,130,246,.14), 0 14px 26px rgba(0,0,0,.36);
+    }
+    .btn:focus-visible, .tab:focus-visible, .analysis-category-toggle:focus-visible{
+      outline: 3px solid rgba(37,99,235,.22);
+      outline-offset: 2px;
+    }
+    .table{ width:100%; border-collapse:separate; border-spacing:0; }
+    .table th{ text-align:left; font-size:12px; color:var(--muted); font-weight:800; padding:10px 12px; border-bottom:1px solid var(--border); }
+    .table td{ padding:12px; border-bottom:1px solid rgba(148,163,184,.14); vertical-align:top; }
+    .table tr:last-child td{ border-bottom:none; }
+    .help-faq-card{ padding:14px 16px; margin:10px 0; border-radius:18px; border:1px solid var(--border); background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.58)); box-shadow:0 14px 30px rgba(2,6,23,.06); }
+    body.theme-dark .help-faq-card{ background:linear-gradient(180deg, rgba(30,41,59,.90), rgba(22,38,58,.72)); }
+    .help-faq-q{ font-weight:800; font-size:14px; }
+    .help-faq-a{ margin-top:8px; color:var(--muted); white-space:pre-wrap; line-height:1.5; }
+    .help-guide-card{ padding:14px; border:1px solid var(--border); border-radius:18px; background:linear-gradient(180deg, rgba(255,255,255,.76), rgba(255,255,255,.52)); box-shadow:0 12px 24px rgba(2,6,23,.05); }
+    body.theme-dark .help-guide-card{ background:linear-gradient(180deg, rgba(30,41,59,.90), rgba(22,38,58,.72)); }
+    .help-setup-card{ border-radius:22px; }
+    .analysis-reference-note{ margin-top:10px; color:var(--muted); font-size:12px; line-height:1.45; }
+    .analysis-reference-inline{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .analysis-reference-pill{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; background:rgba(37,99,235,.10); border:1px solid rgba(37,99,235,.12); font-size:12px; font-weight:700; }
+
     .tb-premium-inline-section{ position:relative; }
     .tb-premium-inline-section::before{ content:''; position:absolute; left:0; top:0; width:84px; height:2px; border-radius:999px; background:linear-gradient(90deg, var(--accent), rgba(168,85,247,.9)); }
     .tb-premium-inline-section--segment::before{ width:72px; }
@@ -826,7 +856,7 @@
             <div class="analysis-glow analysis-glow-a"></div>
             <div class="analysis-glow analysis-glow-b"></div>
             <div class="analysis-hero-copy">
-              <div class="analysis-kicker">Budget intelligence</div>
+              <div class="analysis-kicker">Analyse budget</div>
               <h2>Analyse budget</h2>
               <p>Une lecture visuelle et vivante de ton voyage : trajectoire, cadence, catégories et signaux de dérive.</p>
             </div>
@@ -904,7 +934,7 @@
             <div class="card analysis-chart-card analysis-chart-card--hero">
               <div class="analysis-card-head">
                 <div>
-                  <div class="analysis-card-kicker">Trajectory</div>
+                  <div class="analysis-card-kicker">Trajectoire</div>
                   <h3>Budget vs réel</h3>
                 </div>
                 <div id="analysis-trajectory-meta" class="analysis-card-meta"></div>
@@ -916,7 +946,7 @@
               <div class="card analysis-chart-card">
                 <div class="analysis-card-head">
                   <div>
-                    <div class="analysis-card-kicker">Category gravity</div>
+                    <div class="analysis-card-kicker">Catégories</div>
                     <h3>Répartition catégories</h3>
                   </div>
                 </div>
@@ -926,7 +956,7 @@
               <div class="card analysis-chart-card">
                 <div class="analysis-card-head">
                   <div>
-                    <div class="analysis-card-kicker">Category map</div>
+                    <div class="analysis-card-kicker">Vue détaillée</div>
                     <h3>Toutes les catégories</h3>
                   </div>
                 </div>
@@ -935,7 +965,7 @@
               <div class="card analysis-chart-card">
                 <div class="analysis-card-head">
                   <div>
-                    <div class="analysis-card-kicker">Subcategory focus</div>
+                    <div class="analysis-card-kicker">Sous-catégories</div>
                     <h3>Sous-catégories dominantes</h3>
                   </div>
                 </div>
@@ -944,7 +974,7 @@
               <div class="card analysis-chart-card">
                 <div class="analysis-card-head">
                   <div>
-                    <div class="analysis-card-kicker">Spend velocity</div>
+                    <div class="analysis-card-kicker">Rythme</div>
                     <h3>Cadence quotidienne</h3>
                   </div>
                 </div>
@@ -957,7 +987,7 @@
             <div class="card analysis-chart-card">
               <div class="analysis-card-head">
                 <div>
-                  <div class="analysis-card-kicker">Pattern radar</div>
+                  <div class="analysis-card-kicker">Répartition temps</div>
                   <h3>Heatmap des dépenses</h3>
                 </div>
               </div>
@@ -966,17 +996,17 @@
             <div class="card analysis-chart-card">
               <div class="analysis-card-head">
                 <div>
-                  <div class="analysis-card-kicker">Source benchmark</div>
+                  <div class="analysis-card-kicker">Référence pays</div>
                   <h3>Budget sourcé vs réel</h3>
                 </div>
               </div>
               <div id="analysis-reference-summary" class="analysis-reference-summary"></div>
-              <div id="analysis-reference-mix-chart" class="analysis-chart analysis-chart--heatmap"></div>
+              <div id="analysis-reference-mix-chart" class="analysis-chart"></div>
             </div>
             <div class="card analysis-insights-card">
               <div class="analysis-card-head">
                 <div>
-                  <div class="analysis-card-kicker">Signal engine</div>
+                  <div class="analysis-card-kicker">Lecture rapide</div>
                   <h3>Insights</h3>
                 </div>
               </div>
@@ -1204,7 +1234,7 @@
       <div id="view-help" class="hidden">
         <div id="help-root" class="card">
           <h2 id="help-title" data-t="help.title">Aide & FAQ</h2>
-          <div class="muted" id="help-subtitle" data-t="help.subtitle">Réponses rapides, exemples concrets, et mini-assistant.</div>
+          <div class="muted" id="help-subtitle" data-t="help.subtitle">Réponses courtes, exemples utiles et actions simples.</div>
 
           <div class="form-row" style="margin-top:12px;">
             <label for="help-search" style="min-width:180px;" data-t="help.search_label">Recherche</label>
