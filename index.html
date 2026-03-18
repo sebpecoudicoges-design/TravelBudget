@@ -683,6 +683,236 @@
     @media (max-width: 780px){ .analysis-reference-summary{ grid-template-columns:1fr; } .analysis-chart-card--reference{ padding:18px; } .analysis-reference-visual{ padding:12px 12px 6px; } .analysis-chart--reference{ height:520px; min-height:520px; } .wrap{ padding:16px 14px 22px; } header{ padding:10px 12px; } }
 
 
+
+
+    /* =========================
+       2026 visual alignment
+       ========================= */
+    :root{
+      --panel-strong: rgba(255,255,255,.88);
+      --panel-soft: rgba(255,255,255,.62);
+      --panel-elevated: rgba(255,255,255,.74);
+      --shadow-soft: 0 18px 44px rgba(2,6,23,.06);
+      --shadow-strong: 0 24px 64px rgba(2,6,23,.10);
+      --radius-lg: 28px;
+      --radius-md: 20px;
+      --radius-sm: 16px;
+      --app-max-width: 1440px;
+    }
+    body.theme-dark{
+      --panel-strong: rgba(15,23,42,.78);
+      --panel-soft: rgba(15,23,42,.56);
+      --panel-elevated: rgba(30,41,59,.78);
+      --shadow-soft: 0 18px 40px rgba(0,0,0,.28);
+      --shadow-strong: 0 28px 72px rgba(0,0,0,.38);
+    }
+    body{
+      min-height:100vh;
+      background-attachment: fixed;
+    }
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      background:
+        radial-gradient(900px 520px at 14% -10%, rgba(37,99,235,.10), transparent 55%),
+        radial-gradient(900px 520px at 100% 0%, rgba(168,85,247,.08), transparent 50%),
+        linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0));
+      opacity:.9;
+    }
+    body.theme-dark::before{
+      background:
+        radial-gradient(900px 520px at 14% -10%, rgba(59,130,246,.18), transparent 55%),
+        radial-gradient(900px 520px at 100% 0%, rgba(168,85,247,.12), transparent 50%),
+        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+    }
+    .wrap{ max-width:var(--app-max-width); padding:28px 24px 40px; position:relative; z-index:1; }
+    header{
+      position:sticky; top:14px; z-index:20;
+      padding:14px 16px;
+      border-radius:28px;
+      background:linear-gradient(180deg, rgba(255,255,255,.84), rgba(255,255,255,.66));
+      box-shadow:0 18px 50px rgba(15,23,42,.08);
+    }
+    body.theme-dark header{ background:linear-gradient(180deg, rgba(15,23,42,.84), rgba(15,23,42,.66)); }
+    .brand h1{ font-size:20px; letter-spacing:-.02em; }
+    .brand .sub{ font-size:12px; letter-spacing:.02em; }
+    .top-actions{ gap:8px; }
+    .btn{
+      border-radius:16px;
+      padding:10px 14px;
+      box-shadow: var(--shadow-soft);
+    }
+    .btn:hover{ transform:translateY(-1px); box-shadow: var(--shadow-strong); }
+    .btn.small{ border-radius:14px; }
+    .app-tabs{
+      position:sticky; top:104px; z-index:15;
+      gap:10px;
+      margin:14px 0 18px;
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:24px;
+      background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.52));
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(14px);
+    }
+    body.theme-dark .app-tabs{ background:linear-gradient(180deg, rgba(15,23,42,.80), rgba(15,23,42,.60)); }
+    .tab{
+      border-radius:16px;
+      padding:11px 14px;
+      background:transparent;
+      box-shadow:none;
+      font-weight:700;
+      color:var(--muted);
+    }
+    .tab.active{
+      color:var(--text);
+      background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.78));
+      outline:none;
+      box-shadow:0 12px 26px rgba(15,23,42,.10);
+    }
+    body.theme-dark .tab.active{ background:linear-gradient(180deg, rgba(30,41,59,.98), rgba(30,41,59,.78)); }
+    .grid{ gap:20px; }
+    .card{
+      position:relative;
+      overflow:hidden;
+      background: linear-gradient(180deg, var(--panel-strong), var(--panel-soft));
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-soft);
+      padding:22px;
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:0 0 auto 0;
+      height:1px;
+      background:linear-gradient(90deg, rgba(255,255,255,.62), rgba(255,255,255,0));
+      pointer-events:none;
+    }
+    body.theme-dark .card::before{ background:linear-gradient(90deg, rgba(255,255,255,.10), rgba(255,255,255,0)); }
+    .card h2{ font-size:15px; font-weight:800; letter-spacing:.01em; margin-bottom:14px; }
+    .card:hover{ transform:translateY(-2px); border-color: rgba(37,99,235,.18); box-shadow: var(--shadow-strong); }
+    .premium-kpi-shell{ padding:20px 22px; margin-bottom:16px; }
+    .wallet,.day,.tx,.colorchip,.analysis-category-compact,.help-result,.help-faq-card,.help-guide-card{
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.72));
+      box-shadow: var(--shadow-soft);
+    }
+    body.theme-dark .wallet,
+    body.theme-dark .day,
+    body.theme-dark .tx,
+    body.theme-dark .colorchip{ background: linear-gradient(180deg, rgba(30,41,59,.94), rgba(22,38,58,.78)); }
+    input, select{
+      border-radius:16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.72));
+      border-color: rgba(148,163,184,.22);
+      box-shadow:none;
+      font-weight:650;
+      transition:border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+    input:focus, select:focus{
+      border-color: rgba(37,99,235,.38);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.10);
+    }
+    body.theme-dark input, body.theme-dark select{
+      background: linear-gradient(180deg, rgba(30,41,59,.92), rgba(22,38,58,.78));
+      border-color: rgba(148,163,184,.18);
+    }
+    body.theme-dark input:focus, body.theme-dark select:focus{ box-shadow:0 0 0 4px rgba(59,130,246,.14); }
+    .field label{ font-size:11px; letter-spacing:.04em; text-transform:uppercase; }
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0 10px;
+      font-size:13px;
+    }
+    th{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:800; text-align:left; padding:0 12px 6px; }
+    td{
+      background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.62));
+      border-top:1px solid rgba(148,163,184,.14);
+      border-bottom:1px solid rgba(148,163,184,.14);
+      padding:12px;
+      vertical-align:middle;
+    }
+    td:first-child{ border-left:1px solid rgba(148,163,184,.14); border-radius:16px 0 0 16px; }
+    td:last-child{ border-right:1px solid rgba(148,163,184,.14); border-radius:0 16px 16px 0; }
+    body.theme-dark td{ background: linear-gradient(180deg, rgba(30,41,59,.90), rgba(22,38,58,.72)); }
+    hr{ border:none; height:1px; background:linear-gradient(90deg, rgba(148,163,184,.28), rgba(148,163,184,0)); }
+    #auth-overlay, #overlay{ backdrop-filter: blur(14px); }
+    .auth-box, #modal{
+      border-radius:28px;
+      padding:22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.76));
+      box-shadow: 0 28px 72px rgba(2,6,23,.20);
+    }
+    body.theme-dark .auth-box, body.theme-dark #modal{ background: linear-gradient(180deg, rgba(15,23,42,.94), rgba(15,23,42,.80)); }
+    .auth-box h2, #modal h3{ font-size:22px; letter-spacing:-.02em; }
+    .auth-msg{ font-size:13px; line-height:1.5; }
+    .modal-grid{ gap:12px; }
+    .modal-actions{ margin-top:18px; gap:10px; }
+    #view-dashboard, #view-transactions, #view-settings, #view-help, #view-trip, #view-members{ display:flex; flex-direction:column; gap:18px; }
+    .dashboard-panel{ min-height:100%; }
+    .dashboard-panel h2{ margin-bottom:16px; }
+    #view-transactions .toolbar-card,
+    #tb-account-card,
+    #tb-travel-card,
+    #tb-periods-card,
+    .tb-settings-card,
+    .help-shell,
+    #view-transactions .tx-list-card{
+      background: linear-gradient(180deg, var(--panel-strong), var(--panel-soft)) !important;
+      box-shadow: var(--shadow-soft) !important;
+      border-radius: 30px !important;
+      padding: 20px 22px !important;
+    }
+    #view-transactions .toolbar-card h2,
+    .tb-settings-card h2,
+    .help-shell h2{ margin-bottom:16px; }
+    #view-transactions .toolbar-card .row,
+    #view-settings .tb-settings-card .row{ gap:14px; }
+    #tx-list{ display:flex; flex-direction:column; gap:12px; }
+    .tx{
+      border-radius:22px;
+      padding:16px 18px;
+      margin-bottom:0;
+      align-items:flex-start;
+    }
+    .tx .meta{ font-size:12px; line-height:1.45; }
+    .tag{ background:rgba(37,99,235,.08); border-color:rgba(37,99,235,.10); color:var(--text); }
+    body.theme-dark .tag{ background:rgba(59,130,246,.18); color:var(--text); }
+    .analysis-chart-card,.analysis-insights-card,.analysis-toolbar,.analysis-stat,.analysis-hero,
+    .help-shell,.help-guide-card,.help-faq-card,.help-setup-card{
+      border-radius:30px;
+    }
+    .analysis-toolbar{ padding:18px; }
+    .analysis-summary-grid{ gap:14px; }
+    .analysis-bottom-grid{ gap:24px; }
+    .analysis-reference-shell{ gap:18px; }
+    .analysis-chart-card--reference{ padding:26px; }
+    .analysis-reference-visual{ padding:18px 20px 10px; border-radius:24px; background:linear-gradient(180deg, rgba(255,255,255,.48), rgba(255,255,255,.26)); border:1px solid rgba(148,163,184,.14); }
+    body.theme-dark .analysis-reference-visual{ background:linear-gradient(180deg, rgba(30,41,59,.56), rgba(15,23,42,.24)); border-color: rgba(241,245,249,.08); }
+    .analysis-chart--reference{ height:460px; min-height:460px; }
+    #trip-root > *, #members-root > *{ border-radius:28px !important; }
+    .help-shell{ padding:22px 24px !important; }
+    details{
+      border:1px solid rgba(148,163,184,.14);
+      border-radius:18px;
+      padding:12px 14px;
+      background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.50));
+    }
+    body.theme-dark details{ background:linear-gradient(180deg, rgba(30,41,59,.86), rgba(22,38,58,.70)); }
+    summary{ list-style:none; }
+    summary::-webkit-details-marker{ display:none; }
+    .tb-assist-btn{ width:52px; height:52px; backdrop-filter: blur(12px); }
+    .tb-assist-panel{ border-radius:22px; }
+    @media (max-width: 980px){
+      .wrap{ padding:20px 16px 30px; }
+      header{ position:relative; top:auto; }
+      .app-tabs{ position:relative; top:auto; overflow:auto; }
+      .card, #view-transactions .toolbar-card, .tb-settings-card, .help-shell{ padding:18px !important; border-radius:24px !important; }
+      .analysis-chart--reference{ height:520px; min-height:520px; }
+    }
+
 </style>
 
 </head>
@@ -825,9 +1055,9 @@
         </div>
       </header>
 
-      <div id="kpi" class="card"></div>
+      <div id="kpi" class="card premium-kpi-shell"></div>
       <div id="solde-projection-container"></div>
-      <div class="tabs">
+      <div class="tabs app-tabs">
         <div id="tab-dashboard" class="tab active" onclick="showView('dashboard')" data-t="nav.dashboard">Dashboard</div>
         <div id="tab-transactions" class="tab" onclick="showView('transactions')" data-t="nav.transactions">Transactions</div>
         <div id="tab-settings" class="tab" onclick="showView('settings')" data-t="nav.settings">Settings</div>
@@ -840,7 +1070,7 @@
       <!-- DASHBOARD -->
       <div id="view-dashboard">
         <div class="grid">
-          <div class="card">
+          <div class="card dashboard-panel dashboard-panel--wallets">
             <h2>Wallets</h2>
             <div id="onboarding-panel" class="card" style="display:none; margin:10px 0; border:1px dashed rgba(0,0,0,.25); background:rgba(0,0,0,.02);">
               <h3 style="margin:0 0 6px 0;">Démarrer en 1 minute</h3>
@@ -853,14 +1083,14 @@
             <div id="wallets-container" style="display:flex; flex-direction:column; gap:12px;"></div>
           </div>
 
-          <div class="card">
+          <div class="card dashboard-panel dashboard-panel--budget">
             <h2>Budget journalier</h2>
             <div id="daily-budget-container" style="display:flex; flex-direction:column; gap:10px;"></div>
           </div>
         </div>
 
         <div class="grid" style="margin-top:12px;">
-          <div class="card">
+          <div class="card dashboard-panel dashboard-panel--categories">
             <h2>Dépenses par catégorie</h2>
             <canvas id="chart-pie"></canvas>
             <div id="pie-legend" style="margin-top:10px;"></div>
@@ -1047,7 +1277,7 @@
 
       <!-- TRANSACTIONS -->
       <div id="view-transactions" class="hidden">
-        <div class="card" style="margin-bottom:18px;
+        <div class="card toolbar-card tx-filters-card" style="margin-bottom:18px;
       padding:12px 14px;
       border:1px solid var(--border);
       border-radius:22px;
@@ -1132,7 +1362,7 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card tx-list-card">
           <h2>Liste</h2>
           <div id="tx-list"></div>
         </div>
@@ -1140,7 +1370,7 @@
 
       <!-- SETTINGS -->
       <div id="view-settings" class="hidden">
-        <div class="card" style="margin-bottom:18px;
+        <div class="card tb-settings-card tb-settings-card--account" style="margin-bottom:18px;
       padding:12px 14px;
       border:1px solid var(--border);
       border-radius:22px;
@@ -1151,7 +1381,7 @@
           <div id="tb-account-box"></div>
         </div>
 
-        <div class="card" style="margin-bottom:18px;
+        <div class="card tb-settings-card tb-settings-card--travel" style="margin-bottom:18px;
       padding:12px 14px;
       border:1px solid var(--border);
       border-radius:22px;
@@ -1188,7 +1418,7 @@
           <div id="tb-travel-budget-reference-inline" style="margin-top:14px;"></div>
         </div>
 
-        <div class="card" style="margin-bottom:18px;
+        <div class="card tb-settings-card tb-settings-card--periods" style="margin-bottom:18px;
       padding:12px 14px;
       border:1px solid var(--border);
       border-radius:22px;
@@ -1204,7 +1434,7 @@
           <div id="manual-fx-box" style="margin-top:12px;"></div>
         </div>
 
-        <div class="card">
+        <div class="card tb-settings-card tb-settings-card--palette">
           <h2>Palette</h2>
           <div class="muted" style="margin-bottom:10px;">
             Accent = boutons + highlights. Good/Warn/Bad = KPI + états. Sauvegardé en local (navigateur).
@@ -1260,7 +1490,7 @@
           </div>
         </div>
 
-        <div class="card" style="margin-bottom:18px;
+        <div class="card tb-settings-card tb-settings-card--categories" style="margin-bottom:18px;
       padding:12px 14px;
       border:1px solid var(--border);
       border-radius:22px;
@@ -1297,7 +1527,7 @@
 
       <!-- HELP / FAQ -->
       <div id="view-help" class="hidden">
-        <div id="help-root" class="card">
+        <div id="help-root" class="card help-shell">
           <h2 id="help-title" data-t="help.title">Aide & FAQ</h2>
           <div class="muted" id="help-subtitle" data-t="help.subtitle">Réponses courtes, exemples utiles et actions simples.</div>
 
