@@ -114,3 +114,9 @@
 - Fix modal transaction add/edit crash (`tx is not defined`).
 - Budget Analysis period selector now follows budget segments, so past/current/future periods reappear and active period no longer collapses to whole trip.
 - Subcategory selects now fall back to existing transaction/rule values when the SQL table is empty or not yet populated.
+
+
+## V9.2.7.1
+- Settings catégories : afficher aussi les sous-catégories existantes issues du catalogue/fallback, avec action d'enregistrement SQL.
+- Analyse : retirer le comportement sticky de la barre de filtres.
+- Vérifier 00_constants.js, package.json, package-lock.json et src/main.js alignés sur 9.2.7.1.

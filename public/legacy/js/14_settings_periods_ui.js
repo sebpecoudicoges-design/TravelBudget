@@ -1474,8 +1474,10 @@ function _categoryIdByName(categoryName) {
 }
 
 function _subcategoriesForSettings(categoryName, includeInactive = true) {
-  const rows = Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : [];
-  return rows
+  const rows = (typeof getCategorySubcategories === 'function')
+    ? getCategorySubcategories(categoryName, { activeOnly: !includeInactive })
+    : (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []);
+  return (rows || [])
     .filter((row) => {
       const rowCat = String(row?.categoryName || row?.category_name || '').trim().toLowerCase();
       if (rowCat !== String(categoryName || '').trim().toLowerCase()) return false;
@@ -1503,19 +1505,27 @@ function renderCategoriesSettingsUI() {
     const subHtml = subRows.length
       ? subRows.map((row) => {
           const active = row?.isActive !== false && row?.is_active !== false;
+          const isSql = !!row?.id;
+          const source = String(row?.source || (isSql ? 'sql' : 'default')).toLowerCase();
           const badge = active ? 'Actif' : 'Inactif';
           const badgeBg = active ? 'rgba(34,197,94,.12)' : 'rgba(148,163,184,.15)';
           const badgeCol = active ? '#16a34a' : '#64748b';
+          const sourceLabel = isSql ? 'SQL' : (source === 'fallback' ? 'Détectée' : 'Catalogue');
+          const sourceBg = isSql ? 'rgba(37,99,235,.10)' : 'rgba(168,85,247,.10)';
+          const sourceCol = isSql ? '#2563eb' : '#7c3aed';
           const subColor = String(row?.color || '').trim();
           return `
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02);">
               <div style="font-weight:600;min-width:160px;">${escapeHTML(row?.name || '')}</div>
               <span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:${badgeBg};color:${badgeCol};font-size:12px;font-weight:700;">${badge}</span>
+              <span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:${sourceBg};color:${sourceCol};font-size:12px;font-weight:700;">${sourceLabel}</span>
               <span class="muted" style="font-size:12px;">Ordre ${escapeHTML(String(Number(row?.sortOrder ?? row?.sort_order ?? 0)))}</span>
               ${subColor ? `<span title="${escapeHTML(subColor)}" style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${escapeHTML(subColor)};border:1px solid rgba(0,0,0,.20);"></span>` : ''}
               <div style="flex:1"></div>
-              <button class="btn" onclick="editSubcategory('${escapeHTML(String(row?.id || ''))}')">Modifier</button>
-              <button class="btn" onclick="toggleSubcategoryActive('${escapeHTML(String(row?.id || ''))}', ${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button>
+              ${isSql
+                ? `<button class="btn" onclick="editSubcategory('${escapeHTML(String(row?.id || ''))}')">Modifier</button>
+                   <button class="btn" onclick="toggleSubcategoryActive('${escapeHTML(String(row?.id || ''))}', ${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button>`
+                : `<button class="btn" onclick="importExistingSubcategory('${escapeHTML(c)}','${escapeHTML(String(row?.name || ''))}')">Enregistrer</button>`}
             </div>
           `;
         }).join('')
@@ -1609,6 +1619,31 @@ function setCategoryColor(name, color) {
       .eq("name", existing);
     if (upErr) throw upErr;
 
+    await refreshFromServer();
+    renderSettings();
+  });
+}
+
+async function importExistingSubcategory(categoryName, subcategoryName) {
+  return safeCall("Import subcategory", async () => {
+    const category = String(categoryName || '').trim();
+    const name = String(subcategoryName || '').trim();
+    if (!category || !name) throw new Error('Sous-catégorie invalide.');
+    const existingRows = _subcategoriesForSettings(category, true);
+    const duplicateSql = existingRows.find((row) => row?.id && String(row?.name || '').trim().toLowerCase() === name.toLowerCase());
+    if (duplicateSql) throw new Error('Cette sous-catégorie existe déjà en SQL pour cette catégorie.');
+    const sortOrder = existingRows.reduce((max, row) => Math.max(max, Number(row?.sortOrder ?? row?.sort_order ?? 0)), -1) + 1;
+    const payload = {
+      user_id: sbUser.id,
+      category_id: _categoryIdByName(category),
+      category_name: category,
+      name,
+      sort_order: sortOrder,
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await sb.from(TB_CONST.TABLES.category_subcategories).insert([payload]);
+    if (error) throw error;
     await refreshFromServer();
     renderSettings();
   });
