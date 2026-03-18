@@ -325,7 +325,10 @@ function _txFillSubcategoryFilterSelect(categoryValue, preserveValue) {
     ? getCategorySubcategories(activeCategory)
     : [];
 
-  const options = [`<option value="all">Toutes</option>`];
+  const options = [
+    `<option value="all">Toutes</option>`,
+    `<option value="__none__">Aucune</option>`
+  ];
   rows.forEach((row) => {
     const name = String(row?.name || "").trim();
     if (!name) return;
@@ -418,7 +421,8 @@ function renderTransactions() {
     if (toD && d && d > toD) return false;
     if (walletId !== "all" && tx.walletId !== walletId) return false;
     if (cat !== "all" && tx.category !== cat) return false;
-    if (subcategory !== "all" && String(tx.subcategory || "") !== subcategory) return false;
+    if (subcategory === "__none__" && String(tx.subcategory || "") !== "") return false;
+    if (subcategory !== "all" && subcategory !== "__none__" && String(tx.subcategory || "") !== subcategory) return false;
     if (type === "expense" && tx.type !== "expense") return false;
     if (type === "income" && tx.type !== "income") return false;
 
