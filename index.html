@@ -80,11 +80,17 @@
                   var(--bg);
     }
 
-    .wrap{ max-width:1160px; margin:0 auto; padding:18px; }
+    .wrap{ max-width:1320px; margin:0 auto; padding:24px 20px 28px; }
 
     header{
       display:flex; gap:12px; justify-content:space-between; align-items:center; flex-wrap:wrap;
-      margin-bottom:12px;
+      margin-bottom:18px;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:22px;
+      background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
+      box-shadow:0 20px 40px rgba(2,6,23,.06);
+      backdrop-filter: blur(14px);
     }
     .brand{
       display:flex; flex-direction:column; gap:2px;
@@ -97,20 +103,21 @@
     }
     .brand .sub{ color:var(--muted); font-size:12px; }
 
-    .top-actions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .top-actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    body.theme-dark header{ background:linear-gradient(180deg, rgba(30,41,59,.78), rgba(15,23,42,.58)); box-shadow:0 22px 44px rgba(0,0,0,.28); }
 
     .btn{
       appearance:none;
       border:1px solid var(--border);
       background: rgba(255,255,255,.70);
       color:var(--text);
-      padding:9px 14px;
-      border-radius:12px;
+      padding:10px 15px;
+      border-radius:14px;
       cursor:pointer;
       font-weight:700;
       font-size:13px;
       transition: transform .15s ease, box-shadow .15s ease, filter .15s ease, background .15s ease;
-      box-shadow: 0 8px 18px rgba(2,6,23,.06);
+      box-shadow: 0 14px 28px rgba(2,6,23,.08);
       backdrop-filter: blur(8px);
     }
     body.theme-dark .btn{
@@ -133,7 +140,7 @@
       color:white;
     }
 
-    .btn.small{ padding:7px 10px; border-radius:10px; font-size:12px; box-shadow:none; }
+    .btn.small{ padding:8px 11px; border-radius:12px; font-size:12px; box-shadow:none; }
 
     .tabs{
       display:flex; gap:8px; flex-wrap:wrap;
@@ -141,7 +148,7 @@
     }
     .tab{
       padding:10px 12px;
-      border-radius:12px;
+      border-radius:14px;
       background: rgba(255,255,255,.55);
       border:1px solid var(--border);
       cursor:pointer;
@@ -167,24 +174,24 @@
     .grid{
       display:grid;
       grid-template-columns: 1fr 1fr;
-      gap:12px;
+      gap:16px;
     }
     @media (max-width: 980px){ .grid{ grid-template-columns:1fr; } }
 
     .card{
       background: rgba(255,255,255,.78);
       border:1px solid var(--border);
-      border-radius:20px;
-      box-shadow: var(--shadow);
-      padding:16px;
-      backdrop-filter: blur(10px);
+      border-radius:24px;
+      box-shadow: 0 24px 48px rgba(2,6,23,.08);
+      padding:18px;
+      backdrop-filter: blur(14px);
       transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
     }
     body.theme-dark .card{
       background: rgba(30,41,59,.78);
     }
     .card h2{ margin:0 0 10px; font-size:15px; letter-spacing:.1px; }
-    .card:hover{ border-color: rgba(37,99,235,.18); box-shadow: 0 18px 40px rgba(2,6,23,.10); }
+    .card:hover{ border-color: rgba(37,99,235,.22); box-shadow: 0 26px 56px rgba(2,6,23,.12); }
     body.theme-dark .card:hover{ border-color: rgba(96,165,250,.22); box-shadow: 0 20px 42px rgba(0,0,0,.38); }
     .muted{ color:var(--muted); }
 
@@ -275,8 +282,9 @@
     .field label{ font-size:12px; color:var(--muted); font-weight:800; letter-spacing:.2px; }
 
     input, select{
-      padding:10px 12px;
-      border-radius:12px;
+      min-height:44px;
+      padding:11px 13px;
+      border-radius:14px;
       border:1px solid var(--border);
       background: rgba(255,255,255,.70);
       color:var(--text);
@@ -292,8 +300,8 @@
 
     .tx{
       display:flex; justify-content:space-between; gap:12px;
-      padding:12px;
-      border-radius:16px;
+      padding:14px;
+      border-radius:20px;
       background: rgba(255,255,255,.70);
       border:1px solid var(--border);
       margin-bottom:10px;
@@ -586,14 +594,16 @@
     .analysis-stat-bar{ margin-top:14px; height:8px; border-radius:999px; background:rgba(148,163,184,.18); overflow:hidden; }
     .analysis-stat-bar > span{ display:block; height:100%; border-radius:999px; background:linear-gradient(90deg, var(--accent), rgba(168,85,247,.95)); transform-origin:left center; animation:analysisGrow 1s ease; }
     @keyframes analysisGrow{ from{ transform:scaleX(.1); opacity:.35;} to{ transform:scaleX(1); opacity:1;} }
-    .analysis-main-grid{ display:grid; grid-template-columns: minmax(0,1.5fr) minmax(320px,.9fr); gap:16px; }
-    .analysis-side-stack{ display:grid; grid-template-rows:repeat(3,minmax(220px,1fr)); gap:16px; }
-    .analysis-bottom-grid{ display:grid; grid-template-columns: minmax(0,1.15fr) minmax(280px,.8fr) minmax(280px,.8fr); gap:16px; }
-    .analysis-chart-card,.analysis-insights-card{ border-radius:24px; }
+    .analysis-main-grid{ display:grid; grid-template-columns: minmax(0,1.55fr) minmax(340px,.88fr); gap:20px; }
+    .analysis-side-stack{ display:grid; grid-template-rows:repeat(3,minmax(220px,1fr)); gap:20px; }
+    .analysis-bottom-grid{ display:grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1.25fr); gap:20px; align-items:start; }
+    .analysis-chart-card,.analysis-insights-card{ border-radius:28px; }
+    .analysis-chart-card--reference{ grid-column:1 / -1; padding:22px; overflow:hidden; }
     .analysis-card-head{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:10px; }
     .analysis-card-head h3{ margin:6px 0 0; font-size:22px; letter-spacing:-.02em; }
     .analysis-card-meta{ color:var(--muted); font-size:13px; text-align:right; }
     .analysis-chart{ width:100%; height:340px; }
+    .analysis-chart--reference{ height:420px; min-height:420px; }
     .analysis-chart--lg{ height:420px; }
     .analysis-chart--heatmap{ height:300px; }
     .analysis-insight{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border); }
@@ -622,8 +632,13 @@
 
     @media (max-width: 780px){ .analysis-hero{ padding:18px; min-height:0; } .analysis-hero h2{ font-size:28px; } .analysis-live-pill{ position:relative; top:auto; right:auto; margin-top:16px; width:max-content; } .analysis-summary-grid,.analysis-toolbar,.analysis-side-stack{ grid-template-columns:1fr; } .analysis-chart{ height:280px; } .analysis-chart--lg{ height:320px; } .analysis-category-compact{flex-direction:column;align-items:stretch;} .analysis-category-actions{justify-content:space-between;} }
 
-    .analysis-reference-summary{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:10px; }
-    .analysis-reference-stat{ padding:14px; border-radius:18px; border:1px solid var(--border); background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.44)); box-shadow:0 12px 26px rgba(15,23,42,.05); }
+    .analysis-reference-shell{ display:grid; grid-template-columns:minmax(300px,.84fr) minmax(0,1.16fr); gap:22px; align-items:start; }
+    .analysis-reference-side{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+    .analysis-reference-visual{ min-width:0; border:1px solid rgba(148,163,184,.14); border-radius:24px; padding:16px 16px 10px; background:linear-gradient(180deg, rgba(255,255,255,.52), rgba(255,255,255,.26)); box-shadow: inset 0 1px 0 rgba(255,255,255,.32); }
+    body.theme-dark .analysis-reference-visual{ background:linear-gradient(180deg, rgba(30,41,59,.56), rgba(15,23,42,.32)); border-color: rgba(241,245,249,.08); }
+    .analysis-reference-summary{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:0; }
+    .analysis-reference-stat{ position:relative; overflow:hidden; padding:16px; border-radius:22px; border:1px solid var(--border); background:linear-gradient(180deg, rgba(255,255,255,.84), rgba(255,255,255,.56)); box-shadow:0 16px 34px rgba(15,23,42,.06); }
+    .analysis-reference-stat::after{ content:""; position:absolute; inset:auto -10px -18px auto; width:90px; height:90px; border-radius:999px; background:radial-gradient(circle, rgba(59,130,246,.14), rgba(59,130,246,0) 72%); pointer-events:none; }
     body.theme-dark .analysis-reference-stat{ background:linear-gradient(180deg, rgba(30,41,59,.92), rgba(22,38,58,.72)); }
     .analysis-reference-stat span{ display:block; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); }
     .analysis-reference-stat strong{ display:block; margin-top:10px; font-size:24px; letter-spacing:-.03em; }
@@ -651,9 +666,10 @@
     .help-guide-card{ padding:14px; border:1px solid var(--border); border-radius:18px; background:linear-gradient(180deg, rgba(255,255,255,.76), rgba(255,255,255,.52)); box-shadow:0 12px 24px rgba(2,6,23,.05); }
     body.theme-dark .help-guide-card{ background:linear-gradient(180deg, rgba(30,41,59,.90), rgba(22,38,58,.72)); }
     .help-setup-card{ border-radius:22px; }
-    .analysis-reference-note{ margin-top:10px; color:var(--muted); font-size:12px; line-height:1.45; }
-    .analysis-reference-inline{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-    .analysis-reference-pill{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; background:rgba(37,99,235,.10); border:1px solid rgba(37,99,235,.12); font-size:12px; font-weight:700; }
+    .analysis-reference-note{ margin:0; padding:14px 16px; color:var(--muted); font-size:13px; line-height:1.55; border:1px solid rgba(148,163,184,.14); border-radius:20px; background:linear-gradient(180deg, rgba(255,255,255,.54), rgba(255,255,255,.28)); }
+    body.theme-dark .analysis-reference-note{ background:linear-gradient(180deg, rgba(30,41,59,.56), rgba(15,23,42,.28)); border-color: rgba(241,245,249,.08); }
+    .analysis-reference-inline{ display:flex; gap:10px; flex-wrap:wrap; margin-top:0; }
+    .analysis-reference-pill{ display:inline-flex; align-items:center; gap:8px; padding:9px 12px; border-radius:999px; background:rgba(37,99,235,.10); border:1px solid rgba(37,99,235,.12); font-size:12px; font-weight:800; }
 
     .tb-premium-inline-section{ position:relative; }
     .tb-premium-inline-section::before{ content:''; position:absolute; left:0; top:0; width:84px; height:2px; border-radius:999px; background:linear-gradient(90deg, var(--accent), rgba(168,85,247,.9)); }
@@ -663,7 +679,8 @@
     #tb-periods-card{ background:linear-gradient(180deg, rgba(255,255,255,.78), rgba(248,250,252,.64)); }
     body.theme-dark #tb-travel-card, body.theme-dark #tb-periods-card{ background:linear-gradient(180deg, rgba(30,41,59,.90), rgba(22,38,58,.76)); }
     #seg-list > .card{ border-radius:24px !important; }
-    @media (max-width: 780px){ .analysis-reference-summary{ grid-template-columns:1fr; } }
+    @media (max-width: 1120px){ .analysis-reference-shell{ grid-template-columns:1fr; } }
+    @media (max-width: 780px){ .analysis-reference-summary{ grid-template-columns:1fr; } .analysis-chart-card--reference{ padding:18px; } .analysis-reference-visual{ padding:12px 12px 6px; } .analysis-chart--reference{ height:520px; min-height:520px; } .wrap{ padding:16px 14px 22px; } header{ padding:10px 12px; } }
 
 
 </style>
@@ -691,7 +708,13 @@
           <input id="auth-email" type="email" autocomplete="email" placeholder="you@email.com" />
         </div>
       </div>
-      <div class="row" style="margin-bottom:12px;">
+      <div class="row" style="margin-bottom:18px;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:22px;
+      background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
+      box-shadow:0 20px 40px rgba(2,6,23,.06);
+      backdrop-filter: blur(14px);">
         <div class="field" style="flex:1;">
           <label>Mot de passe</label>
           <input id="auth-pass" type="password" autocomplete="current-password" />
@@ -993,15 +1016,21 @@
               </div>
               <div id="analysis-heatmap-chart" class="analysis-chart analysis-chart--heatmap"></div>
             </div>
-            <div class="card analysis-chart-card">
+            <div class="card analysis-chart-card analysis-chart-card--reference">
               <div class="analysis-card-head">
                 <div>
                   <div class="analysis-card-kicker">Référence pays</div>
                   <h3>Budget sourcé vs réel</h3>
                 </div>
               </div>
-              <div id="analysis-reference-summary" class="analysis-reference-summary"></div>
-              <div id="analysis-reference-mix-chart" class="analysis-chart"></div>
+              <div class="analysis-reference-shell">
+                <div class="analysis-reference-side">
+                  <div id="analysis-reference-summary" class="analysis-reference-summary"></div>
+                </div>
+                <div class="analysis-reference-visual">
+                  <div id="analysis-reference-mix-chart" class="analysis-chart analysis-chart--reference"></div>
+                </div>
+              </div>
             </div>
             <div class="card analysis-insights-card">
               <div class="analysis-card-head">
@@ -1018,7 +1047,13 @@
 
       <!-- TRANSACTIONS -->
       <div id="view-transactions" class="hidden">
-        <div class="card" style="margin-bottom:12px;">
+        <div class="card" style="margin-bottom:18px;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:22px;
+      background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
+      box-shadow:0 20px 40px rgba(2,6,23,.06);
+      backdrop-filter: blur(14px);">
           <h2>Filtres</h2>
           <div class="row">
             <div class="field">
@@ -1105,12 +1140,24 @@
 
       <!-- SETTINGS -->
       <div id="view-settings" class="hidden">
-        <div class="card" style="margin-bottom:12px;" id="tb-account-card">
+        <div class="card" style="margin-bottom:18px;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:22px;
+      background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
+      box-shadow:0 20px 40px rgba(2,6,23,.06);
+      backdrop-filter: blur(14px);" id="tb-account-card">
           <h2>Compte</h2>
           <div id="tb-account-box"></div>
         </div>
 
-        <div class="card" style="margin-bottom:12px;" id="tb-travel-card">
+        <div class="card" style="margin-bottom:18px;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:22px;
+      background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
+      box-shadow:0 20px 40px rgba(2,6,23,.06);
+      backdrop-filter: blur(14px);" id="tb-travel-card">
           <h2>Voyage</h2>
 
           <div class="row" style="margin-bottom:10px;">
@@ -1141,7 +1188,13 @@
           <div id="tb-travel-budget-reference-inline" style="margin-top:14px;"></div>
         </div>
 
-        <div class="card" style="margin-bottom:12px;" id="tb-periods-card">
+        <div class="card" style="margin-bottom:18px;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:22px;
+      background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
+      box-shadow:0 20px 40px rgba(2,6,23,.06);
+      backdrop-filter: blur(14px);" id="tb-periods-card">
           <h2>Périodes du voyage</h2>
           <div class="muted" style="margin-bottom:10px;">
             Chaque période définit une tranche de dates avec une devise + un budget/jour propres.
@@ -1207,13 +1260,25 @@
           </div>
         </div>
 
-        <div class="card" style="margin-bottom:12px;">
+        <div class="card" style="margin-bottom:18px;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:22px;
+      background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
+      box-shadow:0 20px 40px rgba(2,6,23,.06);
+      backdrop-filter: blur(14px);">
           <h2>Catégories</h2>
           <div class="muted" style="margin-bottom:10px;">
             Les catégories pilotent les listes côté Budget + Trip. Elles sont sauvegardées sur Supabase.
           </div>
 
-          <div class="row" style="gap:10px; align-items:flex-end; margin-bottom:12px;">
+          <div class="row" style="gap:10px; align-items:flex-end; margin-bottom:18px;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:22px;
+      background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
+      box-shadow:0 20px 40px rgba(2,6,23,.06);
+      backdrop-filter: blur(14px);">
             <div class="field" style="min-width:220px;">
               <label>Nom</label>
               <input id="cat-name" type="text" placeholder="Ex: Santé" />

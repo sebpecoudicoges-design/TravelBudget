@@ -669,6 +669,26 @@
       series:[{ type:'heatmap', data:model.heat, label:{ show:false }, itemStyle:{ borderRadius:8, borderColor:'rgba(255,255,255,.05)', borderWidth:2 } }]
     });
   }
+  function _wrapAxisLabel(label){
+    const txt = String(label || '');
+    if (txt.length <= 14) return txt;
+    const words = txt.split(/\s+/).filter(Boolean);
+    if (words.length <= 1) return txt;
+    const lines = [];
+    let line = '';
+    words.forEach((word) => {
+      const next = line ? `${line} ${word}` : word;
+      if (next.length > 14 && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = next;
+      }
+    });
+    if (line) lines.push(line);
+    return lines.slice(0, 2).join('\n');
+  }
+
   function _renderReferencePanel(model){
     const summary = _el('analysis-reference-summary');
     const chart = _ensureChart('referenceMix','analysis-reference-mix-chart');
@@ -677,7 +697,7 @@
     if (summary) {
       const coverage = model.referenceCoverageDays && model.days.length ? `${model.referenceCoverageDays}/${model.days.length} jours couverts` : 'Aucune source active';
       const deltaTone = model.referenceGap <= 0 ? 'Sous la référence' : 'Au-dessus de la référence';
-      const mainCats = rows.slice(0, 4).map((row) => row.name).join(' • ') || 'Aucune catégorie couverte';
+      const mainCats = rows.slice(0, 5).map((row) => row.name).join(' • ') || 'Aucune catégorie couverte';
       summary.innerHTML = `
         <div class="analysis-reference-stat">
           <span>Budget sourcé</span>
@@ -694,14 +714,15 @@
           <strong>${escapeHTML(_fmtMoney(model.referenceGap, model.base))}</strong>
           <small>${escapeHTML(deltaTone)}</small>
         </div>
-        <div class="analysis-reference-note">La comparaison reprend les catégories déjà utilisées dans l'app. La référence pays est répartie automatiquement pour rester lisible.</div>
+        <div class="analysis-reference-note">Cette lecture compare ton réel à une référence pays sur la même plage. Les montants sont repris dans les catégories déjà utilisées dans l'app pour rester simples à lire.</div>
         <div class="analysis-reference-inline">
           <span class="analysis-reference-pill">Référence ${escapeHTML(_fmtMoney(model.referencePerDay, model.base))}/jour</span>
           <span class="analysis-reference-pill">Réel ${escapeHTML(_fmtMoney(model.avgPerDay, model.base))}/jour</span>
-          <span class="analysis-reference-pill">Catégories suivies : ${escapeHTML(mainCats)}</span>
+          <span class="analysis-reference-pill">Catégories : ${escapeHTML(mainCats)}</span>
         </div>`;
     }
-    if (chartEl) chartEl.style.height = `${Math.max(320, rows.length * 48 + 120)}px`;
+    const compact = typeof window !== 'undefined' && window.innerWidth < 780;
+    if (chartEl) chartEl.style.height = `${Math.max(compact ? 420 : 360, rows.length * (compact ? 58 : 50) + 120)}px`;
     if (!chart) return;
     if (!rows.length) {
       chart.clear();
@@ -725,28 +746,30 @@
           return `${axis}<br>Référence : ${_fmtMoney(ref, model.base)}<br>Réel : ${_fmtMoney(actual, model.base)}<br>Écart : ${_fmtMoney(delta, model.base)}`;
         }
       },
-      legend:{ top:0, textStyle:{ color:_themeMuted() }, data:['Référence','Réel'] },
-      grid:{ left: 126, right: 20, top: 34, bottom: 20, containLabel:false },
+      legend:{ top:0, left:0, itemWidth:14, itemHeight:10, textStyle:{ color:_themeMuted(), fontWeight:700 }, data:['Référence','Réel'] },
+      grid:{ left: compact ? 94 : 138, right: compact ? 14 : 24, top: 38, bottom: compact ? 28 : 20, containLabel:false },
       xAxis:{ type:'value', axisLabel:{ color:_themeMuted(), formatter:(v)=>_fmtMoney(v, model.base) }, splitLine:{ lineStyle:{ color:_themeGrid() } } },
-      yAxis:{ type:'category', data: ordered.map(r => r.name), axisLabel:{ color:_themeText(), fontWeight:700 } },
+      yAxis:{ type:'category', data: ordered.map(r => r.name), axisLabel:{ color:_themeText(), fontWeight:700, lineHeight:16, formatter:(value)=>_wrapAxisLabel(value) } },
       series:[
         {
           name:'Référence',
           type:'bar',
-          barMaxWidth:16,
-          itemStyle:{ color:_themeGood(), borderRadius:[0,10,10,0], opacity:.88 },
+          barMaxWidth: compact ? 12 : 16,
+          itemStyle:{ color:_themeGood(), borderRadius:[0,12,12,0], opacity:.88 },
           data: ordered.map(r => Number(_safeNum(r.reference).toFixed(2)))
         },
         {
           name:'Réel',
           type:'bar',
-          barMaxWidth:16,
-          itemStyle:{ color:_themeAccent(), borderRadius:[0,10,10,0] },
+          barMaxWidth: compact ? 12 : 16,
+          itemStyle:{ color:_themeAccent(), borderRadius:[0,12,12,0] },
           data: ordered.map(r => Number(_safeNum(r.actual).toFixed(2))),
           label:{
             show:true,
             position:'right',
+            distance: compact ? 6 : 10,
             color:_themeMuted(),
+            fontSize: compact ? 11 : 12,
             formatter:(p)=>{
               const row = ordered[p.dataIndex];
               const delta = _safeNum(row?.actual) - _safeNum(row?.reference);
