@@ -974,19 +974,28 @@
     .tb-settings-summary-title,.tb-settings-merge-title{font-size:16px; font-weight:900; letter-spacing:-.02em;}
     .tb-settings-summary-copy,.tb-settings-merge-copy{color:var(--muted); line-height:1.45; max-width:760px;}
     .tb-settings-summary-chips{display:flex; gap:8px; flex-wrap:wrap;}
-    .tb-settings-stat{display:flex; flex-direction:column; gap:6px; padding:14px 16px; border-radius:18px; border:1px solid rgba(148,163,184,.16); background:rgba(255,255,255,.78); min-height:78px;}
+    .tb-settings-stat{display:flex; flex-direction:column; gap:6px; padding:14px 16px; border-radius:18px; border:1px solid rgba(148,163,184,.16); background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(248,250,252,.82)); min-height:78px; box-shadow:0 10px 24px rgba(15,23,42,.05), inset 0 1px 0 rgba(255,255,255,.6);}
     .tb-settings-stat-label{font-size:11px; text-transform:uppercase; letter-spacing:.1em; font-weight:800; color:var(--muted);}
-    .tb-settings-merge-block{margin-top:14px; padding:18px; border:1px solid rgba(148,163,184,.16); border-radius:22px; background:linear-gradient(180deg, rgba(255,255,255,.90), rgba(248,250,252,.82));}
+    .tb-settings-merge-block{margin-top:14px; padding:18px; border:1px solid rgba(148,163,184,.16); border-radius:22px; background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(244,247,251,.86)); box-shadow:0 18px 40px rgba(15,23,42,.05);}
     .tb-settings-merge-block--segment{padding:16px 0 0; border:none; border-radius:0; background:transparent;}
     .tb-recurring-stack{display:flex; flex-direction:column; gap:12px;}
-    .tb-recurring-item{display:flex; align-items:stretch; justify-content:space-between; gap:14px; padding:16px; border:1px solid rgba(148,163,184,.16); border-radius:20px; background:linear-gradient(180deg, rgba(255,255,255,.90), rgba(248,250,252,.82));}
-    .tb-recurring-main{flex:1; min-width:0;}
+    .tb-recurring-item{display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:14px 16px; border:1px solid rgba(148,163,184,.16); border-radius:20px; background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(248,250,252,.84)); box-shadow:0 12px 28px rgba(15,23,42,.04);}
+    .tb-recurring-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:10px;}
     .tb-recurring-title-row{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap;}
     .tb-recurring-title{font-size:17px; font-weight:900; letter-spacing:-.02em;}
     .tb-recurring-subtitle{color:var(--muted); margin-top:4px;}
     .tb-recurring-chips,.tb-recurring-actions{display:flex; gap:8px; flex-wrap:wrap; align-items:flex-start;}
-    .tb-recurring-actions{min-width:200px; justify-content:flex-end; align-content:flex-start;}
+    .tb-recurring-actions{min-width:0; justify-content:flex-end; align-content:flex-start;}
     .tb-budget-summary-grid--recurring > *{grid-column:span 4;}
+    .tb-recurring-meta{display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center;}
+    .tb-recurring-meta-item{display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:14px; border:1px solid rgba(148,163,184,.16); background:rgba(255,255,255,.76); font-size:13px;}
+    .tb-recurring-meta-label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:800;}
+    .tb-recurring-actions .btn{padding:10px 14px;}
+    .tb-period-topgrid{display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:12px; margin-top:16px;}
+    .tb-period-topgrid > *{grid-column:span 2;}
+    .tb-period-topgrid > .is-wide{grid-column:span 3;}
+    .tb-period-ref-editor{margin-top:14px; padding:14px 16px; border-radius:20px; border:1px solid rgba(148,163,184,.14); background:linear-gradient(180deg, rgba(255,255,255,.78), rgba(248,250,252,.7));}
+
     .tb-period-card{ padding:0 !important; overflow:hidden; }
     .tb-period-head{
       width:100%; border:none; background:transparent; color:inherit; cursor:pointer; text-align:left;
@@ -1012,12 +1021,18 @@
     .tb-settings-inline-grid{ display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:12px; align-items:end; }
     .tb-settings-inline-grid > *{ min-width:0; }
     .tb-settings-inline-grid .field{ min-width:0 !important; }
+    .tb-settings-inline-grid .field--span-1{ grid-column:span 1; }
+    .tb-settings-inline-grid .field--span-2{ grid-column:span 2; }
+    .tb-settings-inline-grid .field--span-3{ grid-column:span 3; }
+    .tb-settings-inline-grid .field--span-4{ grid-column:span 4; }
+    .tb-settings-inline-grid .field--span-6{ grid-column:span 6; }
+
     .tb-budget-summary-grid{ display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:12px; margin-top:12px; }
     .tb-budget-summary-grid > *{ grid-column:span 3; }
       .tb-budget-summary-grid--recurring > *{grid-column:span 3;}
     .tb-budget-banner{ margin-top:12px; padding:12px 14px; border-radius:18px; background:rgba(37,99,235,.08); border:1px solid rgba(37,99,235,.12); color:var(--text); }
     @media (max-width: 1100px){
-      .tb-settings-subgrid, .tb-settings-inline-grid, .tb-budget-summary-grid{ grid-template-columns:repeat(6,minmax(0,1fr)); }
+      .tb-settings-subgrid, .tb-settings-inline-grid, .tb-budget-summary-grid, .tb-period-topgrid{ grid-template-columns:repeat(6,minmax(0,1fr)); }
       .tb-budget-summary-grid > *{ grid-column:span 3; }
       .tb-budget-summary-grid--recurring > *{grid-column:span 3;}
     }
@@ -1025,13 +1040,14 @@
       .tb-settings-hero{ padding:16px; }
       .tb-settings-panel-head, .tb-period-head{ padding:16px; }
       .tb-settings-panel-body, .tb-period-body{ padding:0 16px 16px; }
-      .tb-settings-subgrid, .tb-settings-inline-grid, .tb-budget-summary-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .tb-settings-subgrid, .tb-settings-inline-grid, .tb-budget-summary-grid, .tb-period-topgrid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
       .tb-settings-subgrid .field--span-2,
       .tb-settings-subgrid .field--span-3,
       .tb-settings-subgrid .field--span-4,
       .tb-settings-subgrid .field--span-6,
       .tb-budget-summary-grid > *,
-      .tb-settings-inline-grid > *{ grid-column:span 2 !important; }
+      .tb-settings-inline-grid > *,
+      .tb-period-topgrid > *{ grid-column:span 2 !important; }
       .tb-settings-panel-side{ justify-content:flex-start; }
       .tb-period-head{ flex-direction:column; }
       .tb-recurring-item{flex-direction:column;}

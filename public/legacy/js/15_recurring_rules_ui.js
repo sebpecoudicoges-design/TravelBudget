@@ -267,7 +267,7 @@
     card.innerHTML = `
       <h2>Échéances périodiques</h2>
       <div class="muted" style="margin-bottom:10px;">
-        Un seul espace pour suivre, ajuster et couper les échéances récurrentes du voyage.
+        Retrouve ici les échéances à venir et les actions utiles.
       </div>
       <div class="row" style="justify-content:flex-end; margin-bottom:10px;">
         <button class="btn primary" id="tb-recurring-add-btn">+ Nouvelle échéance</button>
@@ -722,7 +722,9 @@
 
     host.innerHTML = `
       <div class="tb-recurring-stack">
-        ${rows.map((r) => `
+        ${rows.map((r) => {
+          const walletName = String((state?.wallets || []).find(w=>String(w.id||'')===String(r.walletId||r.wallet_id||''))?.name || '—');
+          return `
           <div class="tb-recurring-item">
             <div class="tb-recurring-main">
               <div class="tb-recurring-title-row">
@@ -735,10 +737,10 @@
                   <span class="tb-settings-pill">${escapeHTML(_rrStatus(r))}</span>
                 </div>
               </div>
-              <div class="tb-budget-summary-grid tb-budget-summary-grid--recurring">
-                <div class="tb-settings-stat"><span class="tb-settings-stat-label">Fréquence</span><strong>${escapeHTML(_rrFreqLabel(r))}</strong></div>
-                <div class="tb-settings-stat"><span class="tb-settings-stat-label">Prochaine</span><strong>${escapeHTML(_rrFmtDate(r.nextDueAt || r.next_due_at))}</strong></div>
-                <div class="tb-settings-stat"><span class="tb-settings-stat-label">Wallet</span><strong>${escapeHTML(String((state?.wallets || []).find(w=>String(w.id||'')===String(r.walletId||r.wallet_id||''))?.name || '—'))}</strong></div>
+              <div class="tb-recurring-meta">
+                <span class="tb-recurring-meta-item"><span class="tb-recurring-meta-label">Fréquence</span><strong>${escapeHTML(_rrFreqLabel(r))}</strong></span>
+                <span class="tb-recurring-meta-item"><span class="tb-recurring-meta-label">Prochaine</span><strong>${escapeHTML(_rrFmtDate(r.nextDueAt || r.next_due_at))}</strong></span>
+                <span class="tb-recurring-meta-item"><span class="tb-recurring-meta-label">Wallet</span><strong>${escapeHTML(walletName)}</strong></span>
               </div>
             </div>
             <div class="tb-recurring-actions">
@@ -748,8 +750,8 @@
                 : `<button class="btn" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`}
               <button class="btn danger" data-rr-act="delete" data-rr-id="${escapeHTML(r.id)}">Supprimer</button>
             </div>
-          </div>
-        `).join("")}
+          </div>`;
+        }).join("")}
       </div>
     `;
 
