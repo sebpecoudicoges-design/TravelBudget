@@ -1053,7 +1053,7 @@
           <div id="tb-account-box"></div>
         </div>
 
-        <div class="card" style="margin-bottom:12px;">
+        <div class="card" style="margin-bottom:12px;" id="tb-travel-card">
           <h2>Voyage</h2>
 
           <div class="row" style="margin-bottom:10px;">
@@ -1080,17 +1080,11 @@
             <button class="btn" onclick="createPeriodPrompt()">+ Ajouter période</button>
             <button class="btn primary" onclick="saveSettings()">Mettre à jour</button>
           </div>
+
+          <div id="tb-travel-budget-reference-inline" style="margin-top:14px;"></div>
         </div>
 
-        <div class="card" style="margin-bottom:12px;" id="tb-budget-reference-card">
-          <h2>Budget de référence</h2>
-          <div class="muted" style="margin-bottom:10px;">
-            Défaut au niveau voyage, avec personnalisation possible sur chaque période existante du voyage.
-          </div>
-          <div id="tb-budget-reference-box"></div>
-        </div>
-
-        <div class="card" style="margin-bottom:12px;">
+        <div class="card" style="margin-bottom:12px;" id="tb-periods-card">
           <h2>Périodes du voyage</h2>
           <div class="muted" style="margin-bottom:10px;">
             Chaque période définit une tranche de dates avec une devise + un budget/jour propres.
