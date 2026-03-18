@@ -1510,7 +1510,7 @@ function renderCategoriesSettingsUI() {
           const badge = active ? 'Actif' : 'Inactif';
           const badgeBg = active ? 'rgba(34,197,94,.12)' : 'rgba(148,163,184,.15)';
           const badgeCol = active ? '#16a34a' : '#64748b';
-          const sourceLabel = isSql ? 'SQL' : (source === 'fallback' ? 'Détectée' : 'Catalogue');
+          const sourceLabel = isSql ? 'Sauvegardée' : (source === 'fallback' ? 'Détectée' : 'Par défaut');
           const sourceBg = isSql ? 'rgba(37,99,235,.10)' : 'rgba(168,85,247,.10)';
           const sourceCol = isSql ? '#2563eb' : '#7c3aed';
           const subColor = String(row?.color || '').trim();
@@ -1519,11 +1519,13 @@ function renderCategoriesSettingsUI() {
               <div style="font-weight:600;min-width:160px;">${escapeHTML(row?.name || '')}</div>
               <span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:${badgeBg};color:${badgeCol};font-size:12px;font-weight:700;">${badge}</span>
               <span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:${sourceBg};color:${sourceCol};font-size:12px;font-weight:700;">${sourceLabel}</span>
-              <span class="muted" style="font-size:12px;">Ordre ${escapeHTML(String(Number(row?.sortOrder ?? row?.sort_order ?? 0)))}</span>
+              <span class="muted" style="font-size:12px;">Position ${escapeHTML(String(Number(row?.sortOrder ?? row?.sort_order ?? 0)))}</span>
               ${subColor ? `<span title="${escapeHTML(subColor)}" style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${escapeHTML(subColor)};border:1px solid rgba(0,0,0,.20);"></span>` : ''}
               <div style="flex:1"></div>
               ${isSql
-                ? `<button class="btn" onclick="editSubcategory('${escapeHTML(String(row?.id || ''))}')">Modifier</button>
+                ? `<button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','up')" ${subRows.length > 1 ? '' : 'disabled'}>↑</button>
+                   <button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','down')" ${subRows.length > 1 ? '' : 'disabled'}>↓</button>
+                   <button class="btn" onclick="editSubcategory('${escapeHTML(String(row?.id || ''))}')">Modifier</button>
                    <button class="btn" onclick="toggleSubcategoryActive('${escapeHTML(String(row?.id || ''))}', ${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button>`
                 : `<button class="btn" onclick="importExistingSubcategory('${escapeHTML(c)}','${escapeHTML(String(row?.name || ''))}')">Enregistrer</button>`}
             </div>
@@ -1687,10 +1689,6 @@ async function editSubcategory(id) {
     if (rawName === null) return;
     const name = String(rawName || '').trim();
     if (!name) throw new Error('Nom de sous-catégorie vide.');
-    const sortRaw = prompt('Ordre de tri (nombre entier)', String(Number(row?.sortOrder ?? row?.sort_order ?? 0)));
-    if (sortRaw === null) return;
-    const sortOrder = Number(String(sortRaw || '').trim());
-    if (!Number.isFinite(sortOrder)) throw new Error('Ordre invalide.');
     const colorRaw = prompt('Couleur hexadécimale optionnelle (ex: #94a3b8). Laisse vide pour aucune couleur.', String(row?.color || ''));
     if (colorRaw === null) return;
     const color = String(colorRaw || '').trim();
@@ -1699,7 +1697,6 @@ async function editSubcategory(id) {
     if (duplicate) throw new Error('Une autre sous-catégorie porte déjà ce nom dans cette catégorie.');
     const payload = {
       name,
-      sort_order: Math.trunc(sortOrder),
       color: color || null,
       category_id: row?.categoryId || row?.category_id || _categoryIdByName(category),
       category_name: category,
@@ -1707,6 +1704,44 @@ async function editSubcategory(id) {
     };
     const { error } = await sb.from(TB_CONST.TABLES.category_subcategories).update(payload).eq('id', id).eq('user_id', sbUser.id);
     if (error) throw error;
+    await refreshFromServer();
+    renderSettings();
+  });
+}
+
+
+async function moveSubcategory(id, direction) {
+  return safeCall("Move subcategory", async () => {
+    const target = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).find((x) => String(x?.id) === String(id));
+    if (!target) throw new Error('Sous-catégorie introuvable.');
+    const category = String(target?.categoryName || target?.category_name || '').trim();
+    if (!category) throw new Error('Catégorie introuvable.');
+    const sqlRows = _subcategoriesForSettings(category, true).filter((row) => row?.id);
+    if (sqlRows.length <= 1) return;
+    const currentIndex = sqlRows.findIndex((row) => String(row?.id) === String(id));
+    if (currentIndex < 0) throw new Error('Sous-catégorie introuvable dans l’ordre actuel.');
+    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (swapIndex < 0 || swapIndex >= sqlRows.length) return;
+
+    const ordered = sqlRows.slice();
+    const tmp = ordered[currentIndex];
+    ordered[currentIndex] = ordered[swapIndex];
+    ordered[swapIndex] = tmp;
+
+    const nowIso = new Date().toISOString();
+    for (let i = 0; i < ordered.length; i += 1) {
+      const row = ordered[i];
+      const nextSort = (i + 1) * 10;
+      const currentSort = Number(row?.sortOrder ?? row?.sort_order ?? 0);
+      if (currentSort === nextSort) continue;
+      const { error } = await sb
+        .from(TB_CONST.TABLES.category_subcategories)
+        .update({ sort_order: nextSort, updated_at: nowIso })
+        .eq('id', row.id)
+        .eq('user_id', sbUser.id);
+      if (error) throw error;
+    }
+
     await refreshFromServer();
     renderSettings();
   });
@@ -1731,6 +1766,8 @@ window.setCategoryColor = setCategoryColor;
 window.addSubcategory = addSubcategory;
 window.editSubcategory = editSubcategory;
 window.toggleSubcategoryActive = toggleSubcategoryActive;
+window.moveSubcategory = moveSubcategory;
+window.importExistingSubcategory = importExistingSubcategory;
 
 /* =========================
    Manual FX UI (fallback rates EUR->XXX)

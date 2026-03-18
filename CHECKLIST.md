@@ -116,7 +116,10 @@
 - Subcategory selects now fall back to existing transaction/rule values when the SQL table is empty or not yet populated.
 
 
-## V9.2.7.1
+## V9.2.7.3
 - Settings catégories : afficher aussi les sous-catégories existantes issues du catalogue/fallback, avec action d'enregistrement SQL.
 - Analyse : retirer le comportement sticky de la barre de filtres.
-- Vérifier 00_constants.js, package.json, package-lock.json et src/main.js alignés sur 9.2.7.1.
+- Vérifier 00_constants.js, package.json, package-lock.json et src/main.js alignés sur 9.2.7.3.
+
+- [x] **9.2.7.2** — Sous-catégories : ordre utilisateur haut/bas avec persistance SQL
+- [x] **9.2.7.3** — Transactions : multi-sélection + recatégorisation / sous-catégorisation en masse

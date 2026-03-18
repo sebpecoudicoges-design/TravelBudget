@@ -1,3 +1,115 @@
+const TB_TX_BULK = window.__TB_TX_BULK || (window.__TB_TX_BULK = {
+  selectedIds: new Set(),
+  visibleIds: [],
+});
+
+function _txBulkVisibleSelectionCount() {
+  return (TB_TX_BULK.visibleIds || []).filter((id) => TB_TX_BULK.selectedIds.has(id)).length;
+}
+
+function _txBulkPruneSelection(visibleTxs) {
+  const visibleIds = (visibleTxs || []).map((tx) => String(tx?.id || '')).filter(Boolean);
+  TB_TX_BULK.visibleIds = visibleIds;
+  const visibleSet = new Set(visibleIds);
+  TB_TX_BULK.selectedIds = new Set([...TB_TX_BULK.selectedIds].filter((id) => visibleSet.has(id)));
+}
+
+function _txBulkToggleOne(id, checked) {
+  const key = String(id || '');
+  if (!key) return;
+  if (checked) TB_TX_BULK.selectedIds.add(key);
+  else TB_TX_BULK.selectedIds.delete(key);
+  renderTransactions();
+}
+
+function _txBulkToggleAll(checked) {
+  const visibleIds = Array.isArray(TB_TX_BULK.visibleIds) ? TB_TX_BULK.visibleIds : [];
+  if (checked) visibleIds.forEach((id) => TB_TX_BULK.selectedIds.add(id));
+  else visibleIds.forEach((id) => TB_TX_BULK.selectedIds.delete(id));
+  renderTransactions();
+}
+
+function _txBulkSelectedRows() {
+  const selected = TB_TX_BULK.selectedIds || new Set();
+  return (Array.isArray(state?.transactions) ? state.transactions : []).filter((tx) => selected.has(String(tx?.id || '')));
+}
+
+function _txBulkSelectedCommonCategory() {
+  const rows = _txBulkSelectedRows().filter((tx) => !tx?.isInternal);
+  if (!rows.length) return '';
+  const categories = [...new Set(rows.map((tx) => String(tx?.category || '').trim()).filter(Boolean))];
+  return categories.length === 1 ? categories[0] : '';
+}
+
+function _txBulkSubcategoryOptionsHtml(category, selectedValue) {
+  const current = String(category || '').trim();
+  if (!current) return '<option value="">Choisir d’abord une catégorie</option>';
+  const rows = (typeof getCategorySubcategories === 'function') ? getCategorySubcategories(current) : [];
+  const options = ['<option value="">Aucune</option>'];
+  rows.forEach((row) => {
+    const name = String(row?.name || '').trim();
+    if (!name) return;
+    const selected = name === String(selectedValue || '') ? ' selected' : '';
+    options.push(`<option value="${escapeHTML(name)}"${selected}>${escapeHTML(name)}</option>`);
+  });
+  return options.join('');
+}
+
+function _txBulkSyncControls() {
+  const catEl = document.getElementById('tx-bulk-category');
+  const subEl = document.getElementById('tx-bulk-subcategory');
+  const countEl = document.getElementById('tx-bulk-count');
+  const commonEl = document.getElementById('tx-bulk-common-category');
+  if (countEl) countEl.textContent = String(_txBulkVisibleSelectionCount());
+  const commonCategory = _txBulkSelectedCommonCategory();
+  if (commonEl) commonEl.textContent = commonCategory || 'mixte';
+  if (!catEl || !subEl) return;
+  const sourceCategory = String(catEl.value || '').trim() || commonCategory;
+  const prev = String(subEl.value || '').trim();
+  subEl.innerHTML = _txBulkSubcategoryOptionsHtml(sourceCategory, prev);
+  subEl.disabled = !sourceCategory;
+}
+
+async function applyBulkTxClassification() {
+  return safeCall('Bulk update transactions', async () => {
+    const selectedIds = [...(TB_TX_BULK.selectedIds || new Set())];
+    if (!selectedIds.length) throw new Error('Aucune transaction sélectionnée.');
+
+    const catEl = document.getElementById('tx-bulk-category');
+    const subEl = document.getElementById('tx-bulk-subcategory');
+    const chosenCategory = String(catEl?.value || '').trim();
+    const chosenSubcategory = String(subEl?.value || '').trim();
+    const commonCategory = _txBulkSelectedCommonCategory();
+
+    if (!chosenCategory && !chosenSubcategory) throw new Error('Choisis une catégorie et/ou une sous-catégorie.');
+    if (!chosenCategory && chosenSubcategory && !commonCategory) {
+      throw new Error('Pour changer seulement la sous-catégorie, les transactions sélectionnées doivent partager la même catégorie.');
+    }
+
+    const payload = chosenCategory
+      ? { category: chosenCategory, subcategory: chosenSubcategory || null }
+      : { subcategory: chosenSubcategory || null };
+
+    for (const id of selectedIds) {
+      const { error } = await sb
+        .from(TB_CONST.TABLES.transactions)
+        .update(payload)
+        .eq('id', id)
+        .eq('travel_id', state.activeTravelId);
+      if (error) throw error;
+    }
+
+    TB_TX_BULK.selectedIds.clear();
+    await refreshFromServer();
+    renderTransactions();
+  });
+}
+
+window._txBulkToggleOne = _txBulkToggleOne;
+window._txBulkToggleAll = _txBulkToggleAll;
+window._txBulkSyncControls = _txBulkSyncControls;
+window.applyBulkTxClassification = applyBulkTxClassification;
+
 /* =========================
    Transactions view (UX upgrade, logic unchanged)
    - Quick date-range shortcuts (Today / 7 days / Period / All)
@@ -294,9 +406,45 @@ function renderTransactions() {
     return true;
   });
 
+  _txBulkPruneSelection(txs);
+
+  const bulkCount = _txBulkVisibleSelectionCount();
+  const bulkAllChecked = !!(txs.length && bulkCount === txs.length);
+  const bulkCommonCategory = _txBulkSelectedCommonCategory();
+  const bulkCategoryOptions = [`<option value="">Catégorie inchangée</option>`]
+    .concat(getCategories().map((c) => `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`))
+    .join('');
+  const bulkSubcategoryOptions = _txBulkSubcategoryOptionsHtml(bulkCommonCategory, '');
+
+  const bulkToolbarHtml = `
+    <div class="card" style="margin-bottom:10px;padding:12px;display:grid;gap:10px;">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
+          <input type="checkbox" ${bulkAllChecked ? 'checked' : ''} onchange="_txBulkToggleAll(this.checked)" />
+          Tout sélectionner (vue filtrée)
+        </label>
+        <span class="muted">Sélection : <strong id="tx-bulk-count">${bulkCount}</strong></span>
+        <span class="muted">Catégorie commune : <strong id="tx-bulk-common-category">${escapeHTML(bulkCommonCategory || 'mixte')}</strong></span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+        <div class="field" style="min-width:220px;">
+          <label>Nouvelle catégorie</label>
+          <select id="tx-bulk-category" onchange="_txBulkSyncControls()">${bulkCategoryOptions}</select>
+        </div>
+        <div class="field" style="min-width:220px;">
+          <label>Nouvelle sous-catégorie</label>
+          <select id="tx-bulk-subcategory">${bulkSubcategoryOptions}</select>
+        </div>
+        <button class="btn primary" type="button" onclick="applyBulkTxClassification()" ${bulkCount ? '' : 'disabled'}>Appliquer aux sélectionnées</button>
+      </div>
+      <div class="muted" style="font-size:12px;">
+        Catégorie seule = la sous-catégorie est vidée. Sous-catégorie seule = uniquement si la sélection partage déjà la même catégorie.
+      </div>
+    </div>`;
+
   if (!txs.length) {
     const w0 = state.wallets?.[0]?.id || null;
-    list.innerHTML = `
+    list.innerHTML = bulkToolbarHtml + `
       <div class="muted" style="margin-bottom:10px;">Aucune transaction pour ces filtres.</div>
       ${w0 ? `
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -306,7 +454,7 @@ function renderTransactions() {
       ` : ""}
     `;
   } else {
-    list.innerHTML = "";
+    list.innerHTML = bulkToolbarHtml;
   }
 
   for (const tx of txs) {
@@ -329,14 +477,18 @@ function renderTransactions() {
 
     const div = document.createElement("div");
     div.className = "tx";
+    const txChecked = TB_TX_BULK.selectedIds.has(String(tx.id));
     div.innerHTML = `
-      <div style="flex:1;">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <input type="checkbox" style="margin-top:4px;" ${txChecked ? 'checked' : ''} onchange="_txBulkToggleOne('${escapeHTML(String(tx.id))}', this.checked)" />
+        <div style="flex:1;">
         <div><strong>${tx.type === "expense" ? "Dépense" : "Entrée"}</strong> — ${tx.amount} ${tx.currency}</div>
         <div class="meta">
           ${tx.dateStart}${tx.dateEnd && tx.dateEnd !== tx.dateStart ? " → " + tx.dateEnd : ""}
           • ${w ? w.name : "Wallet"} • ${_txCatBadge(tx.category)} ${tx.label ? " • " + escapeHTML(tx.label) : ""}
         </div>
         <div class="tags">${tags.map((t) => `<span class="tag">${t}</span>`).join("")}</div>
+        </div>
       </div>
 
       <div style="display:flex; gap:8px; align-items:center;">
@@ -352,6 +504,8 @@ function renderTransactions() {
   }
 
   const ids = ["f-from", "f-to", "f-wallet", "f-category", "f-type", "f-pay", "f-out", "f-night", "f-recurring", "f-q"];
+  _txBulkSyncControls();
+
   for (const id of ids) {
     const el = document.getElementById(id);
     if (el && !el._bound) {
