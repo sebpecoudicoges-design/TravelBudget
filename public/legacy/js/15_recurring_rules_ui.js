@@ -261,13 +261,13 @@
     if (box) return box.querySelector("#tb-recurring-box");
 
     const card = document.createElement("div");
-    card.className = "card";
+    card.className = "card tb-settings-card tb-settings-card--recurring";
     card.id = "tb-recurring-card";
     card.style.marginBottom = "12px";
     card.innerHTML = `
       <h2>Échéances périodiques</h2>
       <div class="muted" style="margin-bottom:10px;">
-        Crée des règles récurrentes liées au voyage actif. Le moteur SQL génère ensuite les occurrences.
+        Crée des échéances qui se répètent automatiquement pour le voyage actif.
       </div>
       <div class="row" style="justify-content:flex-end; margin-bottom:10px;">
         <button class="btn primary" id="tb-recurring-add-btn">+ Nouvelle échéance</button>

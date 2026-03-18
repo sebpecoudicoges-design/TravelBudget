@@ -283,6 +283,129 @@ async function refreshSegmentsForActivePeriod(){
 
 /* ---------- render ---------- */
 
+
+function _tbSettingsGetPanelState(key, fallbackOpen){
+  try {
+    const raw = localStorage.getItem(`tb_settings_open_${key}`);
+    if (raw === '1') return true;
+    if (raw === '0') return false;
+  } catch(_) {}
+  return !!fallbackOpen;
+}
+
+function _tbSettingsSetPanelState(key, isOpen){
+  try { localStorage.setItem(`tb_settings_open_${key}`, isOpen ? '1' : '0'); } catch(_) {}
+}
+
+function _tbSettingsCardSummary(card){
+  const id = String(card?.id || '');
+  if (id === 'tb-account-card') {
+    const base = String(state?.user?.baseCurrency || 'EUR').toUpperCase();
+    return { kicker:'Compte', summary:`Devise de base ${base} · sécurité et préférences`, pills:[base] };
+  }
+  if (id === 'tb-travel-card') {
+    const travel = (state?.travels || []).find(t => String(t?.id||'') === String(state?.activeTravelId||''));
+    const name = String(travel?.name || state?.period?.name || 'Voyage actif');
+    return { kicker:'Voyage', summary:`${name} · réglages généraux et budget de référence`, pills:[name] };
+  }
+  if (id === 'tb-periods-card') {
+    const count = Array.isArray(state?.budgetSegments) ? state.budgetSegments.length : 0;
+    return { kicker:'Périodes', summary:`${count} période${count>1?'s':''} visible${count>1?'s':''} · devise, budget/jour et héritage`, pills:[`${count} période${count>1?'s':''}`] };
+  }
+  if (id === 'tb-recurring-card') {
+    const count = Array.isArray(state?.recurringRules) ? state.recurringRules.length : 0;
+    return { kicker:'Échéances', summary:`${count} règle${count>1?'s':''} récurrente${count>1?'s':''}`, pills:[`${count} règle${count>1?'s':''}`] };
+  }
+  if (id.includes('palette')) return { kicker:'Palette', summary:'Couleurs et apparence générale', pills:['Visuel'] };
+  if (id.includes('categories')) return { kicker:'Catégories', summary:'Catégories et sous-catégories utilisées dans l’app', pills:['Classement'] };
+  const title = String(card?.querySelector('h2')?.textContent || '').trim() || 'Réglages';
+  return { kicker:'Réglages', summary:title, pills:[] };
+}
+
+function _tbSettingsEnsureHero(view){
+  if(!view) return;
+  const travel = (state?.travels || []).find(t => String(t?.id||'') === String(state?.activeTravelId||''));
+  const segCount = Array.isArray(state?.budgetSegments) ? state.budgetSegments.length : 0;
+  const rrCount = Array.isArray(state?.recurringRules) ? state.recurringRules.length : 0;
+  let hero = view.querySelector('.tb-settings-hero');
+  if (!hero) {
+    hero = document.createElement('div');
+    hero.className = 'tb-settings-hero';
+    view.insertBefore(hero, view.firstChild);
+  }
+  hero.innerHTML = `
+    <div>
+      <div class="tb-settings-hero-title">Réglages</div>
+      <div class="tb-settings-hero-copy">Un espace plus simple à parcourir : ouvre uniquement le bloc utile, garde les textes courts, et concentre-toi sur le voyage actif.</div>
+    </div>
+    <div class="tb-settings-hero-chips">
+      <span class="tb-settings-hero-chip">${escapeHTML(String(travel?.name || 'Voyage actif'))}</span>
+      <span class="tb-settings-hero-chip">${escapeHTML(String(segCount))} période${segCount>1?'s':''}</span>
+      <span class="tb-settings-hero-chip">${escapeHTML(String(rrCount))} échéance${rrCount>1?'s':''}</span>
+    </div>`;
+}
+
+function _tbSettingsDecoratePanels(view){
+  if(!view) return;
+  const cards = Array.from(view.querySelectorAll('#tb-account-card, #tb-travel-card, #tb-periods-card, #tb-recurring-card, .tb-settings-card--palette, .tb-settings-card--categories'));
+  cards.forEach((card)=>{
+    card.classList.add('tb-settings-panel');
+    const id = String(card.id || card.className || 'settings');
+    const meta = _tbSettingsCardSummary(card);
+    let h2 = card.querySelector(':scope > h2');
+    if (!h2) h2 = card.querySelector('h2');
+    if (!h2) return;
+    let body = card.querySelector(':scope > .tb-settings-panel-body');
+    if (!body) {
+      body = document.createElement('div');
+      body.className = 'tb-settings-panel-body';
+      const nodes = [];
+      let n = h2.nextSibling;
+      while (n) { const next = n.nextSibling; nodes.push(n); n = next; }
+      nodes.forEach(node => body.appendChild(node));
+      const head = document.createElement('button');
+      head.type = 'button';
+      head.className = 'tb-settings-panel-head';
+      head.innerHTML = `
+        <span class="tb-settings-panel-head-main">
+          <span class="tb-settings-panel-kicker"></span>
+          <span class="tb-settings-panel-title"></span>
+          <span class="tb-settings-panel-summary"></span>
+        </span>
+        <span class="tb-settings-panel-side">
+          <span class="tb-settings-pill tb-settings-panel-pill"></span>
+          <span class="tb-settings-panel-arrow">⌄</span>
+        </span>`;
+      head.onclick = ()=>{
+        const isCollapsed = card.classList.toggle('is-collapsed');
+        _tbSettingsSetPanelState(id, !isCollapsed);
+      };
+      card.insertBefore(head, h2);
+      const divider = document.createElement('div');
+      divider.className = 'tb-settings-divider';
+      card.insertBefore(divider, body);
+      card.appendChild(body);
+      h2.style.display = 'none';
+    }
+    const head = card.querySelector(':scope > .tb-settings-panel-head');
+    if (head) {
+      const titleEl = head.querySelector('.tb-settings-panel-title');
+      const kickerEl = head.querySelector('.tb-settings-panel-kicker');
+      const summaryEl = head.querySelector('.tb-settings-panel-summary');
+      const pillEl = head.querySelector('.tb-settings-panel-pill');
+      if (titleEl) titleEl.textContent = String(h2.textContent || '').trim();
+      if (kickerEl) kickerEl.textContent = meta.kicker || 'Réglages';
+      if (summaryEl) summaryEl.textContent = meta.summary || '';
+      if (pillEl) {
+        pillEl.textContent = meta.pills?.[0] || 'Ouvrir';
+        pillEl.style.display = (meta.pills && meta.pills.length) ? '' : 'none';
+      }
+    }
+    const shouldOpen = _tbSettingsGetPanelState(id, id === 'tb-travel-card' || id === 'tb-periods-card');
+    card.classList.toggle('is-collapsed', !shouldOpen);
+  });
+}
+
 function renderSettings(){
   const view = document.getElementById("view-settings");
   if(!view) return;
@@ -470,6 +593,7 @@ function renderSettings(){
   const host = document.getElementById("seg-list");
   if(host){
     host.innerHTML = "";
+    host.classList.add("tb-period-stack");
 
     // --- FX status + custom rates ---
 
@@ -627,47 +751,64 @@ function renderSettings(){
         const fxUiMode = autoAvail ? "Taux automatique" : (manualRate ? "Taux perso" : "Taux");
         const fxUiStatus = autoAvail ? "À jour" : (manualRate ? (stale ? "Mise à jour recommandée" : "À jour") : "À renseigner");
 
+        wrap.classList.add('tb-period-card');
+        const defaultOpen = idx === 0;
+        wrap.classList.toggle('is-collapsed', !defaultOpen);
         wrap.innerHTML = `
-          <div class="row" style="align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px;">
-            <div>
-              <div style="font-size:16px; font-weight:700;">Période ${escapeHTML(_tbISO(seg.start)||"—")} → ${escapeHTML(_tbISO(seg.end)||"—")}</div>
-              <div class="muted" style="margin-top:4px;">Devise ${escapeHTML((seg.baseCurrency||"").toUpperCase())} · ${escapeHTML(String(seg.dailyBudgetBase ?? ""))}/jour · ${escapeHTML(String(_tbBudgetRefDurationDays(seg) || ""))} jours</div>
+          <button type="button" class="tb-period-head" data-act="toggle-period">
+            <span class="tb-period-head-main">
+              <span class="tb-period-title">Période ${escapeHTML(_tbISO(seg.start)||"—")} → ${escapeHTML(_tbISO(seg.end)||"—")}</span>
+              <span class="tb-period-subtitle">Devise ${escapeHTML((seg.baseCurrency||"").toUpperCase())} · ${escapeHTML(String(seg.dailyBudgetBase ?? ""))}/jour · ${escapeHTML(String(_tbBudgetRefDurationDays(seg) || ""))} jours</span>
+            </span>
+            <span class="tb-period-head-side">
+              <span class="tb-period-status">${escapeHTML(fxUiMode)} · ${escapeHTML((rateDisplay || "") || "—")}</span>
+              <span class="tb-period-status">${escapeHTML(fxUiStatus)}</span>
+              <span class="tb-period-arrow">⌄</span>
+            </span>
+          </button>
+          <div class="tb-period-body">
+            <div class="tb-settings-subgrid" style="margin-top:16px;">
+              <div class="field field--span-2">
+                <label>Début</label>
+                <input type="date" data-k="start_date" value="${_tbISO(seg.start)||""}" />
+              </div>
+              <div class="field field--span-2">
+                <label>Fin</label>
+                <input type="date" data-k="end_date" value="${_tbISO(seg.end)||""}" />
+              </div>
+              <div class="field field--span-2">
+                <label>Devise</label>
+                <input data-k="base_currency" value="${(seg.baseCurrency||"").toUpperCase()}" />
+              </div>
+              <div class="field field--span-2">
+                <label>Budget/jour</label>
+                <input data-k="daily_budget_base" value="${seg.dailyBudgetBase ?? ""}" />
+              </div>
+              <div class="field field--span-2">
+                <label>Nuit transport</label>
+                <input data-k="night_transport_budget" value="${_tbGetNightTransportBudget(seg.id)}" />
+              </div>
+              <div class="field field--span-2">
+                <label>Taux</label>
+                <input value="${escapeHTML((rateDisplay || "") || "—")}" disabled />
+              </div>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end;">
-              <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:600; background:#f4f5f7; color:#475569; border:1px solid rgba(71,85,105,.10);">${escapeHTML(fxUiMode)} · ${escapeHTML((rateDisplay || "") || "—")}</span>
-              <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:600; background:${autoAvail ? '#eefaf2' : (manualRate ? '#fff7ed' : '#fef2f2')}; color:${autoAvail ? '#166534' : (manualRate ? '#9a3412' : '#b91c1c')}; border:1px solid rgba(15,23,42,.08);">${escapeHTML(fxUiStatus)}</span>
+            <div class="tb-settings-actions">
+              ${(!autoAvail) ? `<button class="btn" data-act="fx" title="Définir ou mettre à jour un taux perso pour cette devise">${manualRate ? "Modifier le taux" : "Ajouter un taux"}</button>` : ""}
+              <button class="btn primary" data-act="save">Enregistrer</button>
+              <button class="btn danger" data-act="del">Supprimer</button>
             </div>
+            <div data-br-inline-seg-id="${escapeHTML(String(seg.id))}" style="margin-top:14px;"></div>
           </div>
-          <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap;">
-            <div class="field">
-              <label>Début</label>
-              <input type="date" data-k="start_date" value="${_tbISO(seg.start)||""}" />
-            </div>
-            <div class="field">
-              <label>Fin</label>
-              <input type="date" data-k="end_date" value="${_tbISO(seg.end)||""}" />
-            </div>
-            <div class="field">
-              <label>Devise</label>
-              <input data-k="base_currency" value="${(seg.baseCurrency||"").toUpperCase()}" />
-            </div>
-            <div class="field">
-              <label>Budget/jour</label>
-              <input data-k="daily_budget_base" value="${seg.dailyBudgetBase ?? ""}" />
-            </div>
-            <div class="field">
-              <label>Nuit transport</label>
-              <input data-k="night_transport_budget" value="${_tbGetNightTransportBudget(seg.id)}" />
-            </div>
-            ${(!autoAvail) ? `<button class="btn" data-act="fx" title="Définir/mettre à jour un taux perso pour cette devise">${manualRate ? "Modifier taux perso" : "Utiliser un taux perso"}</button>` : ""}
-            <div style="flex:1"></div>
-            <button class="btn primary" data-act="save">Enregistrer</button>
-            <button class="btn danger" data-act="del">Supprimer</button>
-          </div>
-          <div data-br-inline-seg-id="${escapeHTML(String(seg.id))}" style="margin-top:14px;"></div>
         `;
 
         // handlers
+        const toggleBtn = wrap.querySelector('[data-act="toggle-period"]');
+        if (toggleBtn) {
+          toggleBtn.onclick = ()=>{
+            wrap.classList.toggle('is-collapsed');
+          };
+        }
         wrap.querySelector('[data-act="save"]').onclick = ()=>safeCall("Save période", ()=>saveBudgetSegment(seg.id, wrap));
         const fxBtn = wrap.querySelector('[data-act="fx"]');
         if(fxBtn){
@@ -692,6 +833,11 @@ function renderSettings(){
     if (typeof window.renderRecurringRules === "function") {
       window.renderRecurringRules();
     }
+  } catch (_) {}
+
+  try {
+    _tbSettingsEnsureHero(view);
+    _tbSettingsDecoratePanels(view);
   } catch (_) {}
 }
 
@@ -890,7 +1036,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
         <div class="row" style="align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
           <div>
             <div style="font-size:16px; font-weight:800;">Budget de référence par défaut</div>
-            <div class="muted" style="margin-top:4px; max-width:720px;">Ce réglage s'applique automatiquement à tout le voyage. Chaque période ci-dessous peut ensuite hériter ou personnaliser ce défaut, sans créer un second espace de dates.</div>
+            <div class="muted" style="margin-top:4px; max-width:720px;">Définis ici un réglage simple pour tout le voyage. Les périodes peuvent ensuite l’utiliser tel quel, ou le personnaliser si besoin.</div>
           </div>
           <span style="${travel?.country_code ? st.chip : st.chipAlt};">${escapeHTML(travel?.country_code ? 'Défaut voyage actif' : 'Aucun défaut voyage')}</span>
         </div>
@@ -967,7 +1113,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
           <div class="row" style="align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
             <div>
               <div style="font-size:15px; font-weight:800;">Budget de référence</div>
-              <div class="muted" style="margin-top:4px;">Le calcul s'aligne sur cette période visible. Aucun découpage de dates supplémentaire.</div>
+              <div class="muted" style="margin-top:4px;">Le budget de référence suit directement cette période. Rien de plus à configurer côté dates.</div>
             </div>
             <span style="${override ? st.chip : st.chipAlt};">${escapeHTML(sourceLabel)}</span>
           </div>
