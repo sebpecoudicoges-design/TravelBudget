@@ -600,7 +600,11 @@ function renderSettings(){
       segs.forEach((seg, idx)=>{
         const wrap = document.createElement("div");
         wrap.className = "card";
-        wrap.style.marginBottom = "10px";
+        wrap.style.marginBottom = "12px";
+        wrap.style.border = "1px solid rgba(15,23,42,.08)";
+        wrap.style.borderRadius = "20px";
+        wrap.style.background = "linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.94))";
+        wrap.style.boxShadow = "0 18px 40px rgba(15,23,42,.06)";
         const cur = String(seg.baseCurrency||"").toUpperCase();
         const autoAvail = (typeof window.tbFxIsAutoAvailable==="function") ? window.tbFxIsAutoAvailable(cur) : false;
         let manualObj = null; let manualRate = null; let manualAsof = null;
@@ -660,7 +664,7 @@ function renderSettings(){
             <button class="btn primary" data-act="save">Enregistrer</button>
             <button class="btn danger" data-act="del">Supprimer</button>
           </div>
-          <div data-br-inline-seg-id="${escapeHTML(String(seg.id))}" style="margin-top:12px;"></div>
+          <div data-br-inline-seg-id="${escapeHTML(String(seg.id))}" style="margin-top:14px;"></div>
         `;
 
         // handlers
@@ -710,11 +714,12 @@ window.__tbBudgetReferenceCache = window.__tbBudgetReferenceCache || {
 
 function _tbBudgetRefStyle(){
   return {
-    shell:'background:linear-gradient(135deg, rgba(47,128,237,.08), rgba(168,85,247,.08)); border:1px solid rgba(47,128,237,.12); border-radius:18px; padding:14px;',
-    card:'background:rgba(255,255,255,.82); backdrop-filter: blur(8px); border:1px solid rgba(15,23,42,.08); box-shadow:0 10px 30px rgba(15,23,42,.06); border-radius:18px; padding:14px;',
-    chip:'display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:600; background:#eef4ff; color:#2456d3; border:1px solid rgba(36,86,211,.12);',
-    chipAlt:'display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:600; background:#f4f5f7; color:#475569; border:1px solid rgba(71,85,105,.10);',
-    metric:'display:flex; flex-direction:column; min-width:120px; padding:10px 12px; border-radius:14px; background:rgba(15,23,42,.04); border:1px solid rgba(15,23,42,.06);',
+    section:'margin-top:14px; padding-top:14px; border-top:1px solid rgba(15,23,42,.08);',
+    panel:'padding:14px 0 0 0;',
+    chip:'display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:700; background:#eef4ff; color:#2456d3; border:1px solid rgba(36,86,211,.12);',
+    chipAlt:'display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:700; background:#f4f5f7; color:#475569; border:1px solid rgba(71,85,105,.10);',
+    metric:'display:flex; flex-direction:column; min-width:132px; padding:10px 12px; border-radius:14px; background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(248,250,252,.92)); border:1px solid rgba(15,23,42,.06); box-shadow:0 8px 22px rgba(15,23,42,.04);',
+    helper:'padding:10px 12px; border-radius:14px; background:rgba(47,128,237,.06); border:1px solid rgba(47,128,237,.10); color:#334155;',
   };
 }
 
@@ -768,7 +773,7 @@ function _tbBudgetRefSummaryHtml(rec, label, inheritText){
   const profile = rec?.travel_profile || 'solo';
   const style = rec?.travel_style || 'standard';
   const source = label || 'Configuration';
-  const hint = inheritText ? `<div class="muted" style="margin-top:6px;">${escapeHTML(inheritText)}</div>` : '';
+  const hint = inheritText ? `<div style="${st.helper}; margin-top:10px;">${escapeHTML(inheritText)}</div>` : '';
   return `
     <div class="row" style="gap:10px; flex-wrap:wrap; align-items:stretch;">
       <div style="${st.metric}">
@@ -882,11 +887,11 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
     const st = _tbBudgetRefStyle();
 
     travelHost.innerHTML = `
-      <div style="${st.shell}">
+      <div style="${st.section}">
         <div class="row" style="align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
           <div>
             <div style="font-size:16px; font-weight:800;">Budget de référence par défaut</div>
-            <div class="muted" style="margin-top:4px; max-width:720px;">Ce réglage s'applique automatiquement à tout le voyage. Chaque période ci-dessous peut ensuite hériter ou personnaliser ce défaut sans créer un second espace de dates.</div>
+            <div class="muted" style="margin-top:4px; max-width:720px;">Ce réglage s'applique automatiquement à tout le voyage. Chaque période ci-dessous peut ensuite hériter ou personnaliser ce défaut, sans créer un second espace de dates.</div>
           </div>
           <span style="${travel?.country_code ? st.chip : st.chipAlt};">${escapeHTML(travel?.country_code ? 'Défaut voyage actif' : 'Aucun défaut voyage')}</span>
         </div>
@@ -959,7 +964,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       const resolved = cache.segmentResolved[String(seg.id)] || null;
       const sourceLabel = override ? 'Période personnalisée' : (travel?.country_code ? 'Hérite du voyage' : 'À configurer');
       wrap.innerHTML = `
-        <div style="${st.shell}">
+        <div style="${st.section}">
           <div class="row" style="align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
             <div>
               <div style="font-size:15px; font-weight:800;">Budget de référence</div>
