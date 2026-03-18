@@ -3,7 +3,8 @@
    ========================= */
 (function () {
   const LS_KEY = 'tb_budget_analysis_filters_v1';
-  const charts = { trajectory: null, category: null, categoryBars: null, velocity: null, heatmap: null };
+  const charts = { trajectory: null, category: null, categoryBars: null, velocity: null, heatmap: null, referenceMix: null };
+  const referenceCache = { key: '', bySegment: {}, loaded: false };
   let resizeBound = false;
   let excludedCats = new Set();
 
@@ -129,9 +130,55 @@
   function _selectedCurrencyMode(){ return _el('analysis-currency')?.value || 'period'; }
   function _excludedCategorySet(){ return new Set(Array.from(excludedCats)); }
   function _segmentForDate(dateISO){
+    const ds = _norm(dateISO);
+    const travelSeg = _segmentsForTravel(_getSelectedTravelId()).find(s => {
+      const a = _norm(s.start || s.start_date || s.startDate);
+      const b = _norm(s.end || s.end_date || s.endDate);
+      return a && b && ds >= a && ds <= b;
+    });
+    if (travelSeg) return travelSeg;
     try { if (typeof getBudgetSegmentForDate === 'function') return getBudgetSegmentForDate(dateISO); } catch (_) {}
     return null;
   }
+  function _getSB(){
+    try { if (typeof window._tbGetSB === 'function') return window._tbGetSB(); } catch (_) {}
+    try { if (typeof _tbGetSB === 'function') return _tbGetSB(); } catch (_) {}
+    try { if (window.sb) return window.sb; } catch (_) {}
+    return null;
+  }
+  async function _loadReferenceCache(){
+    const s = _getSB();
+    const travelId = _getSelectedTravelId();
+    const segs = _segmentsForTravel(travelId);
+    const key = `${travelId}|${segs.map(s => String(s.id)).sort().join(',')}`;
+    if (referenceCache.key === key && referenceCache.loaded) return;
+    referenceCache.key = key;
+    referenceCache.bySegment = {};
+    referenceCache.loaded = true;
+    if (!s || !segs.length || !TB_CONST?.RPCS?.budget_reference_resolve_for_budget_segment) return;
+    await Promise.all(segs.map(async (seg) => {
+      try {
+        const { data, error } = await s.rpc(TB_CONST.RPCS.budget_reference_resolve_for_budget_segment, { p_budget_segment_id: String(seg.id) });
+        if (error) throw error;
+        referenceCache.bySegment[String(seg.id)] = Array.isArray(data) ? (data[0] || null) : (data || null);
+      } catch (_) {
+        referenceCache.bySegment[String(seg.id)] = null;
+      }
+    }));
+  }
+  function _referenceRowForDate(dateISO){
+    const seg = _segmentForDate(dateISO);
+    if (!seg) return null;
+    return referenceCache.bySegment[String(seg.id)] || null;
+  }
+  function _referenceDailyForDate(dateISO, analysisBase){
+    const row = _referenceRowForDate(dateISO);
+    const amount = _safeNum(row?.recommended_daily_amount);
+    const cur = _upper(row?.currency_code || '');
+    if (!amount || !cur) return 0;
+    return _convert(amount, cur, dateISO, analysisBase);
+  }
+
   function _segmentsInRange(startISO, endISO){
     return _segmentsForTravel(_getSelectedTravelId()).filter(s => {
       const a = _norm(s.start || s.start_date || s.startDate);
@@ -331,6 +378,13 @@
     const paidMap = Object.fromEntries(days.map(d => [d, 0]));
     const catMap = new Map();
     const subcatMap = new Map();
+    const referenceCategoryMap = new Map([
+      ['Logement', 0],
+      ['Nourriture', 0],
+      ['Transport', 0],
+      ['Activités', 0],
+      ['Divers', 0],
+    ]);
     let spent = 0;
     let paidSpent = 0;
     for (const tx of txs) {
@@ -350,25 +404,45 @@
     }
 
     const targetDaily = days.map(d => _dailyBudgetForDate(d, base));
+    const referenceDaily = days.map((d) => {
+      const row = _referenceRowForDate(d);
+      const cur = _upper(row?.currency_code || '');
+      if (cur) {
+        referenceCategoryMap.set('Logement', (referenceCategoryMap.get('Logement') || 0) + _convert(row?.recommended_accommodation_daily_amount, cur, d, base));
+        referenceCategoryMap.set('Nourriture', (referenceCategoryMap.get('Nourriture') || 0) + _convert(row?.recommended_food_daily_amount, cur, d, base));
+        referenceCategoryMap.set('Transport', (referenceCategoryMap.get('Transport') || 0) + _convert(row?.recommended_transport_daily_amount, cur, d, base));
+        referenceCategoryMap.set('Activités', (referenceCategoryMap.get('Activités') || 0) + _convert(row?.recommended_activities_daily_amount, cur, d, base));
+        referenceCategoryMap.set('Divers', (referenceCategoryMap.get('Divers') || 0) + _convert(row?.recommended_misc_daily_amount, cur, d, base));
+      }
+      return _referenceDailyForDate(d, base);
+    });
     const totalBudget = targetDaily.reduce((a,b)=>a+b,0);
+    const totalReference = referenceDaily.reduce((a,b)=>a+b,0);
+    const referenceCoverageDays = referenceDaily.filter(v => _safeNum(v) > 0).length;
     const cumSpent = [];
     const cumTarget = [];
+    const cumReference = [];
     const velocity = [];
     const heat = [];
     let runSpent = 0;
     let runTarget = 0;
+    let runReference = 0;
     const today = _iso(new Date());
     let targetToToday = 0;
     let spentToToday = 0;
+    let referenceToToday = 0;
     days.forEach((d, idx) => {
       runSpent += _safeNum(dailyMap[d]);
       runTarget += _safeNum(targetDaily[idx]);
+      runReference += _safeNum(referenceDaily[idx]);
       if (d <= today) {
         targetToToday = runTarget;
         spentToToday = runSpent;
+        referenceToToday = runReference;
       }
       cumSpent.push(Number(runSpent.toFixed(2)));
       cumTarget.push(Number(runTarget.toFixed(2)));
+      cumReference.push(Number(runReference.toFixed(2)));
       velocity.push(Number((_safeNum(dailyMap[d])).toFixed(2)));
       heat.push([idx, 0, Number((_safeNum(paidMap[d] || dailyMap[d])).toFixed(2))]);
     });
@@ -377,12 +451,15 @@
     const elapsedDays = Math.max(1, days.filter(d => d <= today).length || periodDays);
     const avgPerDay = spent / elapsedDays;
     const budgetPerDay = totalBudget / periodDays;
+    const referencePerDay = totalReference / periodDays;
     let projection = spent;
     if (end < today) projection = spent;
     else if (start > today) projection = totalBudget;
     else projection = Math.max(spentToToday, targetToToday) + Math.max(0, totalBudget - targetToToday);
     const remaining = totalBudget - projection;
+    const referenceGap = spent - totalReference;
     const pct = totalBudget > 0 ? (spent / totalBudget) * 100 : 0;
+    const referencePct = totalReference > 0 ? (spent / totalReference) * 100 : 0;
     const topCategories = [...catMap.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 8);
     const categorySeries = [...catMap.entries()].sort((a,b)=>b[1]-a[1]).map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
     const subcategorySeries = [...subcatMap.entries()]
@@ -399,9 +476,10 @@
         };
       });
     const outAmount = _outBudgetTransactions().reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txDate(tx), base), 0);
+    const referenceCategorySeries = [...referenceCategoryMap.entries()].map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
 
-    return { base, start, end, days, txs, spent, paidSpent, totalBudget, remaining, pct, avgPerDay, budgetPerDay, projection,
-      cumSpent, cumTarget, velocity, heat, topCategories, categorySeries, subcategorySeries, outAmount, spentToToday, targetToToday };
+    return { base, start, end, days, txs, spent, paidSpent, totalBudget, totalReference, remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay, projection,
+      cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays };
   }
 
   function _buildSummary(model){
@@ -409,12 +487,13 @@
     if (!host) return;
     const health = model.totalBudget > 0 ? Math.max(0, Math.min(100, model.pct)) : 0;
     const cards = [
-      { label:'Budget prévu', value:_fmtMoney(model.totalBudget, model.base), meta:`${model.days.length} jours analysés`, pct:100 },
-      { label:'Dépensé', value:_fmtMoney(model.spent, model.base), meta:`${health.toFixed(1)}% du budget consommé`, pct:health },
-      { label:'Restant', value:_fmtMoney(model.remaining, model.base), meta:model.remaining >= 0 ? 'Marge projetée' : 'Dépassement projeté', pct: model.totalBudget ? Math.max(0, 100 - health) : 0 },
+      { label:'Budget prévu app', value:_fmtMoney(model.totalBudget, model.base), meta:`${model.days.length} jours analysés`, pct:100 },
+      { label:'Budget sourcé', value:_fmtMoney(model.totalReference, model.base), meta:model.referenceCoverageDays ? `${model.referenceCoverageDays} j couverts par une source pays` : 'Aucune source active sur la plage', pct: model.totalReference ? 100 : 0 },
+      { label:'Dépensé', value:_fmtMoney(model.spent, model.base), meta:`${health.toFixed(1)}% du budget app consommé`, pct:health },
+      { label:'Écart vs sourcé', value:_fmtMoney(model.referenceGap, model.base), meta:model.referenceGap <= 0 ? 'Sous le budget sourcé' : 'Au-dessus du budget sourcé', pct: model.totalReference ? Math.min(100, Math.abs(model.referenceGap) / Math.max(model.totalReference,1) * 100) : 0 },
       { label:'Hors budget', value:_fmtMoney(model.outAmount, model.base), meta:'Visible sans polluer le pilotage principal', pct: model.totalBudget ? Math.min(100, (model.outAmount / Math.max(model.totalBudget,1))*100) : 0 },
-      { label:'Moyenne / jour', value:_fmtMoney(model.avgPerDay, model.base), meta:`Cible ${_fmtMoney(model.budgetPerDay, model.base)}/j`, pct: model.budgetPerDay ? Math.min(100, (model.avgPerDay / model.budgetPerDay) * 100) : 0 },
-      { label:'Projection fin période', value:_fmtMoney(model.projection, model.base), meta:model.projection > model.totalBudget ? 'Au-dessus du cap' : 'Dans le budget projeté', pct: model.totalBudget ? Math.min(100, (model.projection / model.totalBudget) * 100) : 0 },
+      { label:'Moyenne / jour', value:_fmtMoney(model.avgPerDay, model.base), meta:`Cible app ${_fmtMoney(model.budgetPerDay, model.base)}/j • source ${_fmtMoney(model.referencePerDay, model.base)}/j`, pct: model.budgetPerDay ? Math.min(100, (model.avgPerDay / model.budgetPerDay) * 100) : 0 },
+      { label:'Projection fin période', value:_fmtMoney(model.projection, model.base), meta:model.projection > model.totalReference && model.totalReference > 0 ? 'Au-dessus de la source' : (model.projection > model.totalBudget ? 'Au-dessus du cap app' : 'Dans la trajectoire'), pct: model.totalBudget ? Math.min(100, (model.projection / model.totalBudget) * 100) : 0 },
     ];
     host.innerHTML = cards.map((c, idx) => `
       <div class="analysis-stat" style="animation:analysisGrow .55s ease ${idx*60}ms both;">
@@ -541,6 +620,46 @@
       series:[{ type:'heatmap', data:model.heat, label:{ show:false }, itemStyle:{ borderRadius:8, borderColor:'rgba(255,255,255,.05)', borderWidth:2 } }]
     });
   }
+  function _renderReferencePanel(model){
+    const summary = _el('analysis-reference-summary');
+    const chart = _ensureChart('referenceMix','analysis-reference-mix-chart');
+    if (summary) {
+      const coverage = model.referenceCoverageDays && model.days.length ? `${model.referenceCoverageDays}/${model.days.length} jours couverts` : 'Aucune source active';
+      const deltaTone = model.referenceGap <= 0 ? 'Sous la source' : 'Au-dessus de la source';
+      summary.innerHTML = `
+        <div class="analysis-reference-stat">
+          <span>Budget sourcé</span>
+          <strong>${escapeHTML(_fmtMoney(model.totalReference, model.base))}</strong>
+          <small>${escapeHTML(coverage)}</small>
+        </div>
+        <div class="analysis-reference-stat">
+          <span>Réel analysé</span>
+          <strong>${escapeHTML(_fmtMoney(model.spent, model.base))}</strong>
+          <small>${escapeHTML(_fmtMoney(model.avgPerDay, model.base))}/jour</small>
+        </div>
+        <div class="analysis-reference-stat">
+          <span>Écart</span>
+          <strong>${escapeHTML(_fmtMoney(model.referenceGap, model.base))}</strong>
+          <small>${escapeHTML(deltaTone)}</small>
+        </div>`;
+    }
+    if (!chart) return;
+    const rows = (model.referenceCategorySeries || []).filter(r => _safeNum(r.actual) > 0);
+    chart.setOption({
+      animationDuration: 850,
+      tooltip:{ trigger:'item', backgroundColor:'rgba(15,23,42,.92)', borderWidth:0, textStyle:{ color:'#fff' }, formatter:(p)=>`${p.name}<br>${_fmtMoney(p.value, model.base)}` },
+      series:[{
+        type:'pie',
+        radius:['48%','76%'],
+        center:['50%','54%'],
+        label:{ color:_themeMuted(), formatter:(p)=>`${p.name}
+${_fmtMoney(p.value, model.base)}` },
+        itemStyle:{ borderColor:'rgba(255,255,255,.08)', borderWidth:2 },
+        data: rows.map(r => ({ name:r.name, value:Number(r.actual.toFixed(2)), itemStyle:{ color:r.color } }))
+      }]
+    });
+  }
+
   function _renderInsights(model){
     const host = _el('analysis-insights');
     const delta = model.projection - model.totalBudget;
@@ -593,6 +712,7 @@
     _renderSubcategoryBreakdown(model);
     _renderVelocity(model);
     _renderHeatmap(model);
+    _renderReferencePanel(model);
     _renderInsights(model);
   }
 
@@ -635,7 +755,7 @@
       const el = _el(id);
       if (!el || el._tbBound) return;
       el._tbBound = true;
-      el.addEventListener('change', () => {
+      el.addEventListener('change', async () => {
         if (id === 'analysis-travel') {
           const f = _loadFilters();
           const rs = _el('analysis-range-start');
@@ -646,13 +766,14 @@
           _renderCategoryExcludeChips(Array.from(excludedCats));
         }
         if (id === 'analysis-period') _toggleRangeBox();
+        await _loadReferenceCache();
         _renderAll();
       });
     });
     const refresh = _el('analysis-refresh');
     if (refresh && !refresh._tbBound) {
       refresh._tbBound = true;
-      refresh.addEventListener('click', _renderAll);
+      refresh.addEventListener('click', async () => { await _loadReferenceCache(); _renderAll(); });
     }
     const toggleBtn = _el('analysis-category-toggle');
     if (toggleBtn && !toggleBtn._tbBound) {
@@ -699,6 +820,7 @@
     excludePanelOpen = false;
     _renderCategoryExcludeChips(Array.isArray(filters.excludedCats) ? filters.excludedCats : []);
     _ensureEvents();
+    await _loadReferenceCache();
     _renderAll();
   };
 })();

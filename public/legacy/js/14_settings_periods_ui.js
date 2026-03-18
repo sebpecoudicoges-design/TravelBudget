@@ -714,12 +714,11 @@ window.__tbBudgetReferenceCache = window.__tbBudgetReferenceCache || {
 
 function _tbBudgetRefStyle(){
   return {
-    section:'margin-top:14px; padding-top:14px; border-top:1px solid rgba(15,23,42,.08);',
-    panel:'padding:14px 0 0 0;',
-    chip:'display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:700; background:#eef4ff; color:#2456d3; border:1px solid rgba(36,86,211,.12);',
-    chipAlt:'display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:700; background:#f4f5f7; color:#475569; border:1px solid rgba(71,85,105,.10);',
-    metric:'display:flex; flex-direction:column; min-width:132px; padding:10px 12px; border-radius:14px; background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(248,250,252,.92)); border:1px solid rgba(15,23,42,.06); box-shadow:0 8px 22px rgba(15,23,42,.04);',
-    helper:'padding:10px 12px; border-radius:14px; background:rgba(47,128,237,.06); border:1px solid rgba(47,128,237,.10); color:#334155;',
+    section:'margin-top:16px; padding-top:16px; border-top:1px solid var(--border);',
+    chip:'display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border-radius:999px; font-size:12px; font-weight:800; background:var(--accent-soft); color:var(--text); border:1px solid var(--border);',
+    chipAlt:'display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border-radius:999px; font-size:12px; font-weight:800; background:rgba(148,163,184,.10); color:var(--muted); border:1px solid var(--border);',
+    metric:'display:flex; flex-direction:column; min-width:132px; padding:12px 14px; border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.44)); border:1px solid var(--border); box-shadow:0 12px 28px rgba(15,23,42,.05);',
+    helper:'padding:11px 13px; border-radius:16px; background:rgba(37,99,235,.08); border:1px solid rgba(37,99,235,.12); color:var(--text);',
   };
 }
 
@@ -862,7 +861,7 @@ function _tbBudgetRefWireSegmentMode(wrap){
   const mode = wrap.querySelector('[data-br="seg-mode"]');
   const custom = wrap.querySelector('[data-br="seg-custom"]');
   if(!mode || !custom) return;
-  const sync = ()=>{ custom.style.display = mode.value === 'custom' ? '' : 'none'; };
+  const sync = ()=>{ const customMode = mode.value === 'custom'; custom.style.display = customMode ? '' : 'none'; const resetBtn = wrap.querySelector('[data-br-act="seg-reset"]'); if (resetBtn) resetBtn.style.display = customMode ? '' : 'none'; };
   mode.onchange = sync;
   sync();
 }
@@ -887,7 +886,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
     const st = _tbBudgetRefStyle();
 
     travelHost.innerHTML = `
-      <div style="${st.section}">
+      <div class="tb-premium-inline-section" style="${st.section}">
         <div class="row" style="align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
           <div>
             <div style="font-size:16px; font-weight:800;">Budget de référence par défaut</div>
@@ -964,7 +963,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       const resolved = cache.segmentResolved[String(seg.id)] || null;
       const sourceLabel = override ? 'Période personnalisée' : (travel?.country_code ? 'Hérite du voyage' : 'À configurer');
       wrap.innerHTML = `
-        <div style="${st.section}">
+        <div class="tb-premium-inline-section tb-premium-inline-section--segment" style="${st.section}">
           <div class="row" style="align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
             <div>
               <div style="font-size:15px; font-weight:800;">Budget de référence</div>
@@ -1014,7 +1013,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
               </div>
             </div>
             <div style="flex:1"></div>
-            <button class="btn" data-br-act="seg-reset">Revenir à l'héritage</button>
+            <button class="btn" data-br-act="seg-reset" style="display:${override ? "" : "none"};">Revenir à l'héritage</button>
             <button class="btn primary" data-br-act="seg-save">Enregistrer la période</button>
           </div>
         </div>
@@ -1027,7 +1026,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
           const mode = String(wrap.querySelector('[data-br="seg-mode"]')?.value || 'inherit');
           const s = _tbGetSB();
           if(mode !== 'custom'){
-            const { error } = await s.rpc(TB_CONST.RPCS.budget_reference_compute_for_budget_segment, { p_budget_segment_id: String(seg.id), p_save: true, p_disable_override: true });
+            const { error } = await s.rpc(TB_CONST.RPCS.budget_reference_compute_for_budget_segment, { p_budget_segment_id: String(seg.id), p_save: false, p_disable_override: true });
             if (error) throw error;
             await window.tbRenderBudgetReferenceUI();
             _tbToastOk('Période repassée en héritage.');
@@ -1044,7 +1043,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       if(btnReset){
         btnReset.onclick = ()=>safeCall('Héritage période', async ()=>{
           const s = _tbGetSB();
-          const { error } = await s.rpc(TB_CONST.RPCS.budget_reference_compute_for_budget_segment, { p_budget_segment_id: String(seg.id), p_save: true, p_disable_override: true });
+          const { error } = await s.rpc(TB_CONST.RPCS.budget_reference_compute_for_budget_segment, { p_budget_segment_id: String(seg.id), p_save: false, p_disable_override: true });
           if (error) throw error;
           await window.tbRenderBudgetReferenceUI();
           _tbToastOk('La période hérite de nouveau du voyage.');
