@@ -674,6 +674,8 @@ function renderSettings(){
     }
   }
 
+  try { window.tbRenderBudgetReferenceUI && window.tbRenderBudgetReferenceUI(); } catch (_) {}
+
   // Categories (Settings)
   try { renderCategoriesSettingsUI(); } catch (_) {}
 
@@ -684,6 +686,378 @@ function renderSettings(){
     }
   } catch (_) {}
 }
+
+
+
+/* =========================
+   Budget reference UI (travel default + visible period override)
+   Visible "périodes" in Settings map to budget_segments in the current product.
+   ========================= */
+
+window.__tbBudgetReferenceCache = window.__tbBudgetReferenceCache || {
+  countries: null,
+  travelDefault: null,
+  segmentOverrides: {},
+  segmentResolved: {},
+  travelId: null,
+  loading: false,
+  seq: 0,
+};
+
+function _tbBudgetRefStyle(){
+  return {
+    shell:'background:linear-gradient(135deg, rgba(47,128,237,.08), rgba(168,85,247,.08)); border:1px solid rgba(47,128,237,.12); border-radius:18px; padding:14px;',
+    card:'background:rgba(255,255,255,.82); backdrop-filter: blur(8px); border:1px solid rgba(15,23,42,.08); box-shadow:0 10px 30px rgba(15,23,42,.06); border-radius:18px; padding:14px;',
+    chip:'display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:600; background:#eef4ff; color:#2456d3; border:1px solid rgba(36,86,211,.12);',
+    chipAlt:'display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:600; background:#f4f5f7; color:#475569; border:1px solid rgba(71,85,105,.10);',
+    metric:'display:flex; flex-direction:column; min-width:120px; padding:10px 12px; border-radius:14px; background:rgba(15,23,42,.04); border:1px solid rgba(15,23,42,.06);',
+  };
+}
+
+async function _tbBudgetRefLoadCountries(){
+  const cache = window.__tbBudgetReferenceCache;
+  if (Array.isArray(cache.countries) && cache.countries.length) return cache.countries;
+  const s = _tbGetSB();
+  if(!s) return [];
+  const { data, error } = await s
+    .from(TB_CONST.TABLES.v_country_budget_reference_latest)
+    .select('country_code,country_name,region_code')
+    .order('country_name', { ascending:true });
+  if (error) throw error;
+  const seen = new Set();
+  cache.countries = (data || []).filter((row)=>{
+    const key = `${String(row.country_code||'').toUpperCase()}|${String(row.region_code||'')}`;
+    if(seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return cache.countries;
+}
+
+function _tbBudgetRefDurationDays(seg){
+  const start = _tbISO(seg?.start || seg?.start_date);
+  const end = _tbISO(seg?.end || seg?.end_date);
+  if(!start || !end) return null;
+  const a = new Date(start + 'T00:00:00Z');
+  const b = new Date(end + 'T00:00:00Z');
+  return Math.max(1, Math.round((b - a) / 86400000) + 1);
+}
+
+function _tbBudgetRefCountryOptions(selectedCode, selectedRegion){
+  const rows = Array.isArray(window.__tbBudgetReferenceCache?.countries) ? window.__tbBudgetReferenceCache.countries : [];
+  const wanted = `${String(selectedCode||'').toUpperCase()}|${String(selectedRegion||'')}`;
+  const opts = ['<option value="">Choisir un pays</option>'];
+  rows.forEach((row)=>{
+    const code = String(row.country_code || '').toUpperCase();
+    const region = String(row.region_code || '');
+    const value = `${code}|${region}`;
+    const label = region ? `${row.country_name} — ${region}` : `${row.country_name} (${code})`;
+    opts.push(`<option value="${escapeHTML(value)}" ${value===wanted?'selected':''}>${escapeHTML(label)}</option>`);
+  });
+  return opts.join('');
+}
+
+function _tbBudgetRefSummaryHtml(rec, label, inheritText){
+  const st = _tbBudgetRefStyle();
+  const amount = Number(rec?.recommended_daily_amount);
+  const country = rec?.country_name || rec?.country_code || '—';
+  const profile = rec?.travel_profile || 'solo';
+  const style = rec?.travel_style || 'standard';
+  const source = label || 'Configuration';
+  const hint = inheritText ? `<div class="muted" style="margin-top:6px;">${escapeHTML(inheritText)}</div>` : '';
+  return `
+    <div class="row" style="gap:10px; flex-wrap:wrap; align-items:stretch;">
+      <div style="${st.metric}">
+        <span class="muted" style="font-size:12px;">Source</span>
+        <strong>${escapeHTML(source)}</strong>
+      </div>
+      <div style="${st.metric}">
+        <span class="muted" style="font-size:12px;">Pays</span>
+        <strong>${escapeHTML(country)}</strong>
+      </div>
+      <div style="${st.metric}">
+        <span class="muted" style="font-size:12px;">Profil</span>
+        <strong>${escapeHTML(profile)} · ${escapeHTML(style)}</strong>
+      </div>
+      <div style="${st.metric}">
+        <span class="muted" style="font-size:12px;">Reco / jour</span>
+        <strong>${Number.isFinite(amount) ? escapeHTML(String(amount)) : '—'}</strong>
+      </div>
+    </div>
+    ${hint}
+  `;
+}
+
+async function _tbBudgetRefLoadState(){
+  const s = _tbGetSB();
+  if(!s) throw new Error('Supabase non prêt.');
+  const tid = String(state?.activeTravelId || '');
+  const pid = String(state?.period?.id || '');
+  const segs = (state?.budgetSegments || []).slice();
+  if(!tid || !pid) return;
+  const cache = window.__tbBudgetReferenceCache;
+  cache.travelId = tid;
+  const segIds = segs.map((seg)=>String(seg.id)).filter(Boolean);
+  const [travelDefaultRes, overridesRes] = await Promise.all([
+    s.from(TB_CONST.TABLES.travel_budget_reference_profile).select('*').eq('travel_id', tid).maybeSingle(),
+    segIds.length
+      ? s.from(TB_CONST.TABLES.budget_segment_budget_reference_override).select('*').in('budget_segment_id', segIds)
+      : Promise.resolve({ data: [], error: null })
+  ]);
+  if (travelDefaultRes.error) throw travelDefaultRes.error;
+  if (overridesRes.error) throw overridesRes.error;
+  cache.travelDefault = travelDefaultRes.data || null;
+  cache.segmentOverrides = {};
+  (overridesRes.data || []).forEach((row)=>{ cache.segmentOverrides[String(row.budget_segment_id)] = row; });
+  cache.segmentResolved = {};
+  const calls = segIds.map(async (segId)=>{
+    const { data, error } = await s.rpc(TB_CONST.RPCS.budget_reference_resolve_for_budget_segment, { p_budget_segment_id: segId });
+    if (error) throw error;
+    cache.segmentResolved[segId] = Array.isArray(data) ? (data[0] || null) : data;
+  });
+  await Promise.all(calls);
+}
+
+function _tbBudgetRefTravelDefaultPayload(box){
+  const countryRaw = String(box.querySelector('[data-br="travel-country"]')?.value || '');
+  const [country_code, region_code_raw] = countryRaw.split('|');
+  return {
+    p_travel_id: String(state?.activeTravelId || ''),
+    p_country_code: String(country_code || '').trim() || null,
+    p_region_code: String(region_code_raw || '').trim() || null,
+    p_travel_profile: String(box.querySelector('[data-br="travel-profile"]')?.value || 'solo'),
+    p_travel_style: String(box.querySelector('[data-br="travel-style"]')?.value || 'standard'),
+    p_adult_count: Number(box.querySelector('[data-br="travel-adults"]')?.value || 1),
+    p_child_count: Number(box.querySelector('[data-br="travel-children"]')?.value || 0),
+    p_save: true,
+  };
+}
+
+function _tbBudgetRefSegmentPayload(wrap, seg){
+  const countryRaw = String(wrap.querySelector('[data-br="seg-country"]')?.value || '');
+  const [country_code, region_code_raw] = countryRaw.split('|');
+  return {
+    p_budget_segment_id: String(seg?.id || ''),
+    p_country_code: String(country_code || '').trim() || null,
+    p_region_code: String(region_code_raw || '').trim() || null,
+    p_travel_profile: String(wrap.querySelector('[data-br="seg-profile"]')?.value || 'solo'),
+    p_travel_style: String(wrap.querySelector('[data-br="seg-style"]')?.value || 'standard'),
+    p_adult_count: Number(wrap.querySelector('[data-br="seg-adults"]')?.value || 1),
+    p_child_count: Number(wrap.querySelector('[data-br="seg-children"]')?.value || 0),
+    p_trip_days: _tbBudgetRefDurationDays(seg),
+    p_save: true,
+  };
+}
+
+function _tbBudgetRefWireSegmentMode(wrap){
+  const mode = wrap.querySelector('[data-br="seg-mode"]');
+  const custom = wrap.querySelector('[data-br="seg-custom"]');
+  if(!mode || !custom) return;
+  const sync = ()=>{ custom.style.display = mode.value === 'custom' ? '' : 'none'; };
+  mode.onchange = sync;
+  sync();
+}
+
+function _tbBudgetRefRenderSkeleton(host){
+  host.innerHTML = `<div class="muted">Chargement du budget de référence…</div>`;
+}
+
+window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
+  const host = document.getElementById('tb-budget-reference-box');
+  if(!host) return;
+  const tid = String(state?.activeTravelId || '');
+  if(!tid){ host.innerHTML = '<div class="muted">Sélectionne un voyage.</div>'; return; }
+  const cache = window.__tbBudgetReferenceCache;
+  const seq = ++cache.seq;
+  _tbBudgetRefRenderSkeleton(host);
+  try {
+    await _tbBudgetRefLoadCountries();
+    await _tbBudgetRefLoadState();
+    if (seq !== cache.seq) return;
+    const st = _tbBudgetRefStyle();
+    const travel = cache.travelDefault || {};
+    const segs = (state?.budgetSegments || []).map(_tbNormSeg).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
+    host.innerHTML = `
+      <div style="${st.shell}">
+        <div class="row" style="align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px;">
+          <div>
+            <div style="font-size:18px; font-weight:700;">Pilotage recommandé par pays</div>
+            <div class="muted" style="margin-top:4px; max-width:720px;">Définis un défaut pour tout le voyage, puis affine uniquement les périodes qui sortent de ce cadre. Priorité à la période visible ci-dessous.</div>
+          </div>
+          <span style="${st.chip}">Voyage par défaut → Période prioritaire</span>
+        </div>
+
+        <div style="${st.card}; margin-bottom:14px;">
+          <div class="row" style="align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px;">
+            <div>
+              <div style="font-size:16px; font-weight:700;">Défaut du voyage</div>
+              <div class="muted" style="margin-top:4px;">Appliqué automatiquement à toutes les périodes qui héritent.</div>
+            </div>
+            <span style="${travel?.country_code ? st.chip : st.chipAlt};">${travel?.country_code ? 'Actif' : 'Non configuré'}</span>
+          </div>
+          ${_tbBudgetRefSummaryHtml(travel, 'Défaut voyage', travel?.country_code ? '' : 'Aucun défaut enregistré pour ce voyage pour le moment.')}
+          <div class="row" style="gap:12px; flex-wrap:wrap; margin-top:12px; align-items:end;">
+            <div class="field" style="min-width:260px; flex:1 1 260px;">
+              <label>Pays de référence</label>
+              <select data-br="travel-country">${_tbBudgetRefCountryOptions(travel?.country_code, travel?.region_code)}</select>
+            </div>
+            <div class="field" style="min-width:140px;">
+              <label>Profil</label>
+              <select data-br="travel-profile">
+                <option value="solo" ${travel?.travel_profile==='solo'?'selected':''}>Solo</option>
+                <option value="couple" ${travel?.travel_profile==='couple'?'selected':''}>Couple</option>
+                <option value="family" ${travel?.travel_profile==='family'?'selected':''}>Family</option>
+              </select>
+            </div>
+            <div class="field" style="min-width:150px;">
+              <label>Style</label>
+              <select data-br="travel-style">
+                <option value="budget" ${travel?.travel_style==='budget'?'selected':''}>Budget</option>
+                <option value="standard" ${(!travel?.travel_style || travel?.travel_style==='standard')?'selected':''}>Standard</option>
+                <option value="comfort" ${travel?.travel_style==='comfort'?'selected':''}>Comfort</option>
+              </select>
+            </div>
+            <div class="field" style="width:110px;">
+              <label>Adultes</label>
+              <input data-br="travel-adults" type="number" min="1" step="1" value="${escapeHTML(String(travel?.adult_count ?? 1))}" />
+            </div>
+            <div class="field" style="width:110px;">
+              <label>Enfants</label>
+              <input data-br="travel-children" type="number" min="0" step="1" value="${escapeHTML(String(travel?.child_count ?? 0))}" />
+            </div>
+          </div>
+          <div class="row" style="gap:10px; justify-content:flex-end; margin-top:12px;">
+            <button class="btn" data-br-act="travel-clear">Retirer le défaut</button>
+            <button class="btn primary" data-br-act="travel-save">Appliquer au voyage</button>
+          </div>
+        </div>
+
+        <div style="display:grid; gap:12px;">
+          ${segs.map((seg)=>{
+            const override = cache.segmentOverrides[String(seg.id)] || null;
+            const resolved = cache.segmentResolved[String(seg.id)] || null;
+            const sourceLabel = override ? 'Période personnalisée' : (travel?.country_code ? 'Hérite du voyage' : 'À configurer');
+            return `
+              <div style="${st.card}" data-br-seg-id="${escapeHTML(String(seg.id))}">
+                <div class="row" style="align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px;">
+                  <div>
+                    <div style="font-size:15px; font-weight:700;">Période ${escapeHTML(_tbISO(seg.start) || '—')} → ${escapeHTML(_tbISO(seg.end) || '—')}</div>
+                    <div class="muted" style="margin-top:4px;">${escapeHTML(String(seg.baseCurrency || '').toUpperCase())} · ${escapeHTML(String(seg.dailyBudgetBase ?? ''))}/jour · ${escapeHTML(String(_tbBudgetRefDurationDays(seg) || ''))} jours</div>
+                  </div>
+                  <span style="${override ? st.chip : st.chipAlt};">${escapeHTML(sourceLabel)}</span>
+                </div>
+                ${_tbBudgetRefSummaryHtml(resolved || override || travel || {}, sourceLabel, override ? 'Cette période écrase explicitement le défaut voyage.' : 'Aucune date supplémentaire : la personnalisation reste attachée à cette période visible.')}
+                <div class="row" style="gap:12px; align-items:end; margin-top:12px; flex-wrap:wrap;">
+                  <div class="field" style="min-width:180px;">
+                    <label>Mode</label>
+                    <select data-br="seg-mode">
+                      <option value="inherit" ${override ? '' : 'selected'}>Hériter du voyage</option>
+                      <option value="custom" ${override ? 'selected' : ''}>Personnaliser cette période</option>
+                    </select>
+                  </div>
+                </div>
+                <div data-br="seg-custom" style="margin-top:12px; display:${override ? '' : 'none'};">
+                  <div class="row" style="gap:12px; flex-wrap:wrap; align-items:end;">
+                    <div class="field" style="min-width:260px; flex:1 1 260px;">
+                      <label>Pays de référence</label>
+                      <select data-br="seg-country">${_tbBudgetRefCountryOptions(override?.country_code || resolved?.country_code, override?.region_code || resolved?.region_code)}</select>
+                    </div>
+                    <div class="field" style="min-width:140px;">
+                      <label>Profil</label>
+                      <select data-br="seg-profile">
+                        <option value="solo" ${((override?.travel_profile || resolved?.travel_profile || 'solo')==='solo')?'selected':''}>Solo</option>
+                        <option value="couple" ${((override?.travel_profile || resolved?.travel_profile)==='couple')?'selected':''}>Couple</option>
+                        <option value="family" ${((override?.travel_profile || resolved?.travel_profile)==='family')?'selected':''}>Family</option>
+                      </select>
+                    </div>
+                    <div class="field" style="min-width:150px;">
+                      <label>Style</label>
+                      <select data-br="seg-style">
+                        <option value="budget" ${((override?.travel_style || resolved?.travel_style)==='budget')?'selected':''}>Budget</option>
+                        <option value="standard" ${((override?.travel_style || resolved?.travel_style || 'standard')==='standard')?'selected':''}>Standard</option>
+                        <option value="comfort" ${((override?.travel_style || resolved?.travel_style)==='comfort')?'selected':''}>Comfort</option>
+                      </select>
+                    </div>
+                    <div class="field" style="width:110px;">
+                      <label>Adultes</label>
+                      <input data-br="seg-adults" type="number" min="1" step="1" value="${escapeHTML(String(override?.adult_count ?? resolved?.adult_count ?? travel?.adult_count ?? 1))}" />
+                    </div>
+                    <div class="field" style="width:110px;">
+                      <label>Enfants</label>
+                      <input data-br="seg-children" type="number" min="0" step="1" value="${escapeHTML(String(override?.child_count ?? resolved?.child_count ?? travel?.child_count ?? 0))}" />
+                    </div>
+                  </div>
+                </div>
+                <div class="row" style="gap:10px; justify-content:flex-end; margin-top:12px;">
+                  <button class="btn" data-br-act="seg-reset">Revenir à l'héritage</button>
+                  <button class="btn primary" data-br-act="seg-save">Enregistrer la période</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+
+    host.querySelector('[data-br-act="travel-save"]').onclick = ()=>safeCall('Budget ref voyage', async ()=>{
+      const s = _tbGetSB();
+      const payload = _tbBudgetRefTravelDefaultPayload(host);
+      if(!payload.p_country_code) throw new Error('Pays de référence requis.');
+      const { error } = await s.rpc(TB_CONST.RPCS.budget_reference_compute_for_travel, payload);
+      if (error) throw error;
+      await window.tbRenderBudgetReferenceUI();
+      _tbToastOk('Budget de référence voyage enregistré.');
+    });
+    host.querySelector('[data-br-act="travel-clear"]').onclick = ()=>safeCall('Retirer défaut voyage', async ()=>{
+      const s = _tbGetSB();
+      const tid2 = String(state?.activeTravelId || '');
+      if(!tid2) throw new Error('Voyage non sélectionné.');
+      const { error } = await s.from(TB_CONST.TABLES.travel_budget_reference_profile).delete().eq('travel_id', tid2);
+      if (error) throw error;
+      await window.tbRenderBudgetReferenceUI();
+      _tbToastOk('Défaut voyage retiré.');
+    });
+
+    host.querySelectorAll('[data-br-seg-id]').forEach((wrap)=>{
+      const segId = String(wrap.getAttribute('data-br-seg-id') || '');
+      const seg = segs.find((row)=>String(row.id) === segId);
+      _tbBudgetRefWireSegmentMode(wrap);
+      const btnSave = wrap.querySelector('[data-br-act="seg-save"]');
+      const btnReset = wrap.querySelector('[data-br-act="seg-reset"]');
+      if(btnSave){
+        btnSave.onclick = ()=>safeCall('Budget ref période', async ()=>{
+          const mode = String(wrap.querySelector('[data-br="seg-mode"]')?.value || 'inherit');
+          const s = _tbGetSB();
+          if(mode !== 'custom'){
+            const { error } = await s.rpc(TB_CONST.RPCS.budget_reference_compute_for_budget_segment, { p_budget_segment_id: segId, p_save: true, p_disable_override: true });
+            if (error) throw error;
+            await window.tbRenderBudgetReferenceUI();
+            _tbToastOk('Période repassée en héritage.');
+            return;
+          }
+          const payload = _tbBudgetRefSegmentPayload(wrap, seg);
+          if(!payload.p_country_code) throw new Error('Pays de référence requis pour personnaliser cette période.');
+          const { error } = await s.rpc(TB_CONST.RPCS.budget_reference_compute_for_budget_segment, payload);
+          if (error) throw error;
+          await window.tbRenderBudgetReferenceUI();
+          _tbToastOk('Budget de référence période enregistré.');
+        });
+      }
+      if(btnReset){
+        btnReset.onclick = ()=>safeCall('Héritage période', async ()=>{
+          const s = _tbGetSB();
+          const { error } = await s.rpc(TB_CONST.RPCS.budget_reference_compute_for_budget_segment, { p_budget_segment_id: segId, p_save: true, p_disable_override: true });
+          if (error) throw error;
+          await window.tbRenderBudgetReferenceUI();
+          _tbToastOk('La période hérite de nouveau du voyage.');
+        });
+      }
+    });
+  } catch (err) {
+    console.error('[TB][budget-reference]', err);
+    host.innerHTML = `<div class="muted">Budget de référence indisponible. ${escapeHTML(err?.message || String(err))}</div>`;
+  }
+};
 
 /* ---------- voyage save / create / delete ---------- */
 

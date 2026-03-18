@@ -1,4 +1,4 @@
-window.__TB_BUILD = "9.2.7.4";
+window.__TB_BUILD = "9.2.8.1";
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -32,6 +32,9 @@ window.__TB_BUILD = "9.2.7.4";
     v_wallet_transactions_effect: "v_wallet_transactions_effect",
 
     fx_manual_rates: "fx_manual_rates",
+    travel_budget_reference_profile: "travel_budget_reference_profile",
+    budget_segment_budget_reference_override: "budget_segment_budget_reference_override",
+    v_country_budget_reference_latest: "v_country_budget_reference_latest",
   });
 
   const COLS = Object.freeze({
@@ -100,6 +103,10 @@ window.__TB_BUILD = "9.2.7.4";
     recurring_generate_for_rule: "recurring_generate_for_rule",
     recurring_delete_rule: "recurring_delete_rule",
     recurring_delete_rule_admin: "recurring_delete_rule_admin",
+
+    budget_reference_compute_for_travel: "rpc_budget_reference_compute_for_travel",
+    budget_reference_compute_for_budget_segment: "rpc_budget_reference_compute_for_budget_segment",
+    budget_reference_resolve_for_budget_segment: "rpc_budget_reference_resolve_for_budget_segment",
 
     // legacy fallback (older DB)
     trip_accept_invite: "trip_accept_invite",
