@@ -969,6 +969,24 @@
     .tb-settings-divider{ height:1px; background:linear-gradient(90deg, rgba(148,163,184,.24), rgba(148,163,184,0)); margin:0 20px 8px; }
     .tb-period-stack{ display:flex; flex-direction:column; gap:12px; }
     .tb-settings-mini-note{ color:var(--muted); font-size:13px; line-height:1.5; margin-bottom:10px; }
+.tb-settings-summary{margin:0 0 16px; padding:16px 18px; border:1px solid rgba(148,163,184,.18); border-radius:22px; background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(248,250,252,.84));}
+    .tb-settings-summary-head,.tb-settings-merge-head{display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap;}
+    .tb-settings-summary-title,.tb-settings-merge-title{font-size:16px; font-weight:900; letter-spacing:-.02em;}
+    .tb-settings-summary-copy,.tb-settings-merge-copy{color:var(--muted); line-height:1.45; max-width:760px;}
+    .tb-settings-summary-chips{display:flex; gap:8px; flex-wrap:wrap;}
+    .tb-settings-stat{display:flex; flex-direction:column; gap:6px; padding:14px 16px; border-radius:18px; border:1px solid rgba(148,163,184,.16); background:rgba(255,255,255,.78); min-height:78px;}
+    .tb-settings-stat-label{font-size:11px; text-transform:uppercase; letter-spacing:.1em; font-weight:800; color:var(--muted);}
+    .tb-settings-merge-block{margin-top:14px; padding:18px; border:1px solid rgba(148,163,184,.16); border-radius:22px; background:linear-gradient(180deg, rgba(255,255,255,.90), rgba(248,250,252,.82));}
+    .tb-settings-merge-block--segment{padding:16px 0 0; border:none; border-radius:0; background:transparent;}
+    .tb-recurring-stack{display:flex; flex-direction:column; gap:12px;}
+    .tb-recurring-item{display:flex; align-items:stretch; justify-content:space-between; gap:14px; padding:16px; border:1px solid rgba(148,163,184,.16); border-radius:20px; background:linear-gradient(180deg, rgba(255,255,255,.90), rgba(248,250,252,.82));}
+    .tb-recurring-main{flex:1; min-width:0;}
+    .tb-recurring-title-row{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+    .tb-recurring-title{font-size:17px; font-weight:900; letter-spacing:-.02em;}
+    .tb-recurring-subtitle{color:var(--muted); margin-top:4px;}
+    .tb-recurring-chips,.tb-recurring-actions{display:flex; gap:8px; flex-wrap:wrap; align-items:flex-start;}
+    .tb-recurring-actions{min-width:200px; justify-content:flex-end; align-content:flex-start;}
+    .tb-budget-summary-grid--recurring > *{grid-column:span 4;}
     .tb-period-card{ padding:0 !important; overflow:hidden; }
     .tb-period-head{
       width:100%; border:none; background:transparent; color:inherit; cursor:pointer; text-align:left;
@@ -996,10 +1014,12 @@
     .tb-settings-inline-grid .field{ min-width:0 !important; }
     .tb-budget-summary-grid{ display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:12px; margin-top:12px; }
     .tb-budget-summary-grid > *{ grid-column:span 3; }
+      .tb-budget-summary-grid--recurring > *{grid-column:span 3;}
     .tb-budget-banner{ margin-top:12px; padding:12px 14px; border-radius:18px; background:rgba(37,99,235,.08); border:1px solid rgba(37,99,235,.12); color:var(--text); }
     @media (max-width: 1100px){
       .tb-settings-subgrid, .tb-settings-inline-grid, .tb-budget-summary-grid{ grid-template-columns:repeat(6,minmax(0,1fr)); }
       .tb-budget-summary-grid > *{ grid-column:span 3; }
+      .tb-budget-summary-grid--recurring > *{grid-column:span 3;}
     }
     @media (max-width: 780px){
       .tb-settings-hero{ padding:16px; }
@@ -1014,6 +1034,8 @@
       .tb-settings-inline-grid > *{ grid-column:span 2 !important; }
       .tb-settings-panel-side{ justify-content:flex-start; }
       .tb-period-head{ flex-direction:column; }
+      .tb-recurring-item{flex-direction:column;}
+      .tb-recurring-actions{justify-content:flex-start; min-width:0;}
     }
 
 </style>
@@ -1530,8 +1552,7 @@
       backdrop-filter: blur(14px);" id="tb-periods-card">
           <h2>Périodes du voyage</h2>
           <div class="muted" style="margin-bottom:10px;">
-            Chaque période définit une tranche de dates avec une devise + un budget/jour propres.
-            Pour commencer : ajoute une période, puis ajuste les champs et enregistre.</div>
+            Chaque période rassemble dates, devise, budget/jour et référence pays. Ouvre seulement la période à ajuster.</div>
 
           <div id="seg-list"></div>
           <div id="manual-fx-box" style="margin-top:12px;"></div>

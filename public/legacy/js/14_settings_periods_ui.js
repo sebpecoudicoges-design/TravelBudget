@@ -470,6 +470,43 @@ function renderSettings(){
   // ensure periods list
   loadPeriodsListIntoUI();
 
+  try {
+    const travelCard = document.getElementById("tb-travel-card");
+    if (travelCard) {
+      let overview = document.getElementById("tb-travel-overview");
+      if (!overview) {
+        overview = document.createElement("div");
+        overview.id = "tb-travel-overview";
+        const budgetHost = document.getElementById("tb-travel-budget-reference-inline");
+        travelCard.insertBefore(overview, budgetHost || travelCard.children[1] || null);
+      }
+      const travelDefault = window.__tbBudgetReferenceCache?.travelDefault || null;
+      const segCount = segs.length;
+      const budgetAvg = segCount ? segs.reduce((a,seg)=>a + Number(seg.dailyBudgetBase || 0),0) / segCount : Number(state?.period?.dailyBudget || 0);
+      const recoDay = Number(travelDefault?.recommended_daily_amount || 0);
+      const totalDays = segCount ? segs.reduce((a,seg)=>a + Number(_tbBudgetRefDurationDays(seg)||0),0) : 0;
+      overview.innerHTML = `
+        <div class="tb-settings-summary">
+          <div class="tb-settings-summary-head">
+            <div>
+              <div class="tb-settings-summary-title">Vue d’ensemble du voyage</div>
+              <div class="tb-settings-summary-copy">Réunis ici le cadre du voyage, le budget/jour moyen et la référence pays.</div>
+            </div>
+            <div class="tb-settings-summary-chips">
+              <span class="tb-settings-pill">${escapeHTML(String(segCount))} période${segCount>1?'s':''}</span>
+              <span class="tb-settings-pill">${escapeHTML(String(totalDays||0))} jours</span>
+            </div>
+          </div>
+          <div class="tb-budget-summary-grid">
+            <div class="tb-settings-stat"><span class="tb-settings-stat-label">Budget/jour moyen</span><strong>${Number.isFinite(budgetAvg)?escapeHTML(String(Number(budgetAvg).toFixed(0))):'—'}</strong></div>
+            <div class="tb-settings-stat"><span class="tb-settings-stat-label">Référence voyage</span><strong>${escapeHTML(travelDefault?.country_code || 'À définir')}</strong></div>
+            <div class="tb-settings-stat"><span class="tb-settings-stat-label">Réco / jour</span><strong>${Number.isFinite(recoDay)&&recoDay>0?escapeHTML(String(Number(recoDay).toFixed(2))):'—'}</strong></div>
+            <div class="tb-settings-stat"><span class="tb-settings-stat-label">Devise la plus utilisée</span><strong>${escapeHTML(String(segs[0]?.baseCurrency || state?.period?.baseCurrency || '—').toUpperCase())}</strong></div>
+          </div>
+        </div>`;
+    }
+  } catch(_) {}
+
   // =========================
   // Account section (email + base currency + reset password)
   // =========================
@@ -494,7 +531,7 @@ function renderSettings(){
       const thrDisp = (thrInBase === null || !Number.isFinite(thrInBase)) ? "" : String(Math.round(thrInBase));
 
       box.innerHTML = `
-        <div class="muted" style="margin-bottom:10px;">Paramètres du compte (affichage + sécurité).</div>
+        <div class="muted" style="margin-bottom:10px;">Tes réglages de base : devise, seuil d’alerte et accès au mot de passe.</div>
 
         <div class="row" style="gap:12px; align-items:end; flex-wrap:wrap;">
           <div class="field" style="min-width:260px;">
@@ -518,7 +555,7 @@ function renderSettings(){
             <label>Seuil courbe trésorerie</label>
             <input id="tb-user-cfthr" type="number" min="1" step="1" value="${escapeHTML(thrDisp || "")}" />
           </div>
-          <div class="muted" style="padding-bottom:6px;">(référence: ${escapeHTML(String(Math.round(thrEur)))} EUR — ajusté automatiquement si tu changes la devise de base)</div>
+          <div class="muted" style="padding-bottom:6px;">Référence ${escapeHTML(String(Math.round(thrEur)))} EUR · ajustée si tu changes la devise de base</div>
           <button class="btn" id="tb-user-cfthr-save" type="button">Enregistrer seuil</button>
         </div>
       `;
@@ -836,8 +873,14 @@ function renderSettings(){
   } catch (_) {}
 
   try {
-    _tbSettingsEnsureHero(view);
-    _tbSettingsDecoratePanels(view);
+    const hero = view.querySelector('.tb-settings-hero');
+    if (hero) hero.remove();
+    view.querySelectorAll('.tb-settings-panel').forEach((card)=>{ card.classList.remove('tb-settings-panel','is-collapsed'); });
+    view.querySelectorAll('.tb-settings-panel-head,.tb-settings-divider').forEach((el)=>el.remove());
+    view.querySelectorAll('.tb-settings-panel-body').forEach((body)=>{
+      while (body.firstChild) body.parentNode.insertBefore(body.firstChild, body);
+      body.remove();
+    });
   } catch (_) {}
 }
 
@@ -1032,21 +1075,26 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
     const st = _tbBudgetRefStyle();
 
     travelHost.innerHTML = `
-      <div class="tb-premium-inline-section" style="${st.section}">
-        <div class="row" style="align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
+      <div class="tb-settings-merge-block">
+        <div class="tb-settings-merge-head">
           <div>
-            <div style="font-size:16px; font-weight:800;">Budget de référence par défaut</div>
-            <div class="muted" style="margin-top:4px; max-width:720px;">Définis ici un réglage simple pour tout le voyage. Les périodes peuvent ensuite l’utiliser tel quel, ou le personnaliser si besoin.</div>
+            <div class="tb-settings-merge-title">Référence voyage</div>
+            <div class="tb-settings-merge-copy">Un réglage simple pour tout le voyage. Chaque période peut ensuite le reprendre ou le personnaliser.</div>
           </div>
-          <span style="${travel?.country_code ? st.chip : st.chipAlt};">${escapeHTML(travel?.country_code ? 'Défaut voyage actif' : 'Aucun défaut voyage')}</span>
+          <span style="${travel?.country_code ? st.chip : st.chipAlt};">${escapeHTML(travel?.country_code ? 'Par défaut sur le voyage' : 'À définir')}</span>
         </div>
-        ${_tbBudgetRefSummaryHtml(travel || {}, travel?.country_code ? 'Défaut voyage' : 'À renseigner', travel?.country_code ? 'Toutes les périodes héritent de ce profil tant qu’elles ne sont pas personnalisées.' : 'Configure un profil de base pour éviter de paramétrer chaque période une par une.')}
-        <div class="row" style="gap:12px; flex-wrap:wrap; align-items:end; margin-top:12px;">
-          <div class="field" style="min-width:260px; flex:1 1 260px;">
+        <div class="tb-budget-summary-grid" style="margin-top:10px;">
+          <div class="tb-settings-stat"><span class="tb-settings-stat-label">Pays</span><strong>${escapeHTML(travel?.country_name || travel?.country_code || '—')}</strong></div>
+          <div class="tb-settings-stat"><span class="tb-settings-stat-label">Profil</span><strong>${escapeHTML((travel?.travel_profile || 'solo'))} · ${escapeHTML((travel?.travel_style || 'standard'))}</strong></div>
+          <div class="tb-settings-stat"><span class="tb-settings-stat-label">Reco / jour</span><strong>${Number.isFinite(Number(travel?.recommended_daily_amount)) ? escapeHTML(String(Number(travel?.recommended_daily_amount).toFixed(2))) : '—'}</strong></div>
+          <div class="tb-settings-stat"><span class="tb-settings-stat-label">Héritage</span><strong>${escapeHTML(travel?.country_code ? 'Actif' : 'Inactif')}</strong></div>
+        </div>
+        <div class="tb-settings-inline-grid" style="margin-top:12px; align-items:end;">
+          <div class="field field--span-4">
             <label>Pays de référence</label>
             <select data-br="travel-country">${_tbBudgetRefCountryOptions(travel?.country_code, travel?.region_code)}</select>
           </div>
-          <div class="field" style="min-width:140px;">
+          <div class="field field--span-2">
             <label>Profil</label>
             <select data-br="travel-profile">
               <option value="solo" ${travel?.travel_profile==='solo'?'selected':''}>Solo</option>
@@ -1054,7 +1102,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
               <option value="family" ${travel?.travel_profile==='family'?'selected':''}>Famille</option>
             </select>
           </div>
-          <div class="field" style="min-width:150px;">
+          <div class="field field--span-2">
             <label>Style</label>
             <select data-br="travel-style">
               <option value="budget" ${travel?.travel_style==='budget'?'selected':''}>Budget</option>
@@ -1062,21 +1110,21 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
               <option value="comfort" ${travel?.travel_style==='comfort'?'selected':''}>Confort</option>
             </select>
           </div>
-          <div class="field" style="width:110px;">
+          <div class="field field--span-2">
             <label>Adultes</label>
             <input data-br="travel-adults" type="number" min="1" step="1" value="${escapeHTML(String(travel?.adult_count ?? 1))}" />
           </div>
-          <div class="field" style="width:110px;">
+          <div class="field field--span-2">
             <label>Enfants</label>
             <input data-br="travel-children" type="number" min="0" step="1" value="${escapeHTML(String(travel?.child_count ?? 0))}" />
           </div>
-          <div style="flex:1"></div>
+        </div>
+        <div class="tb-settings-actions">
           <button class="btn" data-br-act="travel-clear">Retirer le défaut</button>
           <button class="btn primary" data-br-act="travel-save">Appliquer au voyage</button>
         </div>
       </div>
     `;
-
     const travelSave = travelHost.querySelector('[data-br-act="travel-save"]');
     const travelClear = travelHost.querySelector('[data-br-act="travel-clear"]');
     if(travelSave){
@@ -1109,30 +1157,35 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       const resolved = cache.segmentResolved[String(seg.id)] || null;
       const sourceLabel = override ? 'Réglage propre à cette période' : (travel?.country_code ? 'Hérite du voyage' : 'À renseigner');
       wrap.innerHTML = `
-        <div class="tb-premium-inline-section tb-premium-inline-section--segment" style="${st.section}">
-          <div class="row" style="align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
+        <div class="tb-settings-merge-block tb-settings-merge-block--segment" style="${st.section}">
+          <div class="tb-settings-merge-head">
             <div>
-              <div style="font-size:15px; font-weight:800;">Budget de référence</div>
-              <div class="muted" style="margin-top:4px;">Le budget de référence suit directement cette période. Rien de plus à configurer côté dates.</div>
+              <div class="tb-settings-merge-title">Référence de la période</div>
+              <div class="tb-settings-merge-copy">Un seul espace pour la devise, le budget/jour et le budget sourcé.</div>
             </div>
             <span style="${override ? st.chip : st.chipAlt};">${escapeHTML(sourceLabel)}</span>
           </div>
-          ${_tbBudgetRefSummaryHtml(resolved || override || travel || {}, sourceLabel, override ? 'Cette période utilise son propre budget de référence.' : 'Cette période reprend le réglage du voyage tant que tu ne la personnalises pas.')}
-          <div class="row" style="gap:12px; align-items:end; margin-top:12px; flex-wrap:wrap;">
-            <div class="field" style="min-width:180px;">
+          <div class="tb-budget-summary-grid" style="margin-top:10px;">
+            <div class="tb-settings-stat"><span class="tb-settings-stat-label">Pays</span><strong>${escapeHTML(resolved?.country_name || resolved?.country_code || '—')}</strong></div>
+            <div class="tb-settings-stat"><span class="tb-settings-stat-label">Reco / jour</span><strong>${Number.isFinite(Number(resolved?.recommended_daily_amount)) ? escapeHTML(String(Number(resolved?.recommended_daily_amount).toFixed(2))) : '—'}</strong></div>
+            <div class="tb-settings-stat"><span class="tb-settings-stat-label">Budget/jour</span><strong>${escapeHTML(String(seg.dailyBudgetBase ?? '—'))}</strong></div>
+            <div class="tb-settings-stat"><span class="tb-settings-stat-label">Mode</span><strong>${escapeHTML(override ? 'Personnalisé' : 'Hérité')}</strong></div>
+          </div>
+          <div class="tb-settings-inline-grid" style="margin-top:12px; align-items:end;">
+            <div class="field field--span-3">
               <label>Mode</label>
               <select data-br="seg-mode">
-                <option value="inherit" ${override ? '' : 'selected'}>Hériter du voyage</option>
-                <option value="custom" ${override ? 'selected' : ''}>Personnaliser cette période</option>
+                <option value="inherit" ${override ? '' : 'selected'}>Reprendre le voyage</option>
+                <option value="custom" ${override ? 'selected' : ''}>Personnaliser</option>
               </select>
             </div>
-            <div data-br="seg-custom" style="display:${override ? '' : 'none'}; flex:1 1 680px;">
-              <div class="row" style="gap:12px; flex-wrap:wrap; align-items:end;">
-                <div class="field" style="min-width:260px; flex:1 1 260px;">
-                  <label>Pays de référence</label>
+            <div data-br="seg-custom" class="field field--span-9" style="display:${override ? '' : 'none'};">
+              <div class="tb-settings-inline-grid" style="align-items:end;">
+                <div class="field field--span-4">
+                  <label>Pays</label>
                   <select data-br="seg-country">${_tbBudgetRefCountryOptions(override?.country_code || resolved?.country_code, override?.region_code || resolved?.region_code)}</select>
                 </div>
-                <div class="field" style="min-width:140px;">
+                <div class="field field--span-2">
                   <label>Profil</label>
                   <select data-br="seg-profile">
                     <option value="solo" ${((override?.travel_profile || resolved?.travel_profile || 'solo')==='solo')?'selected':''}>Solo</option>
@@ -1140,7 +1193,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
                     <option value="family" ${((override?.travel_profile || resolved?.travel_profile)==='family')?'selected':''}>Famille</option>
                   </select>
                 </div>
-                <div class="field" style="min-width:150px;">
+                <div class="field field--span-2">
                   <label>Style</label>
                   <select data-br="seg-style">
                     <option value="budget" ${((override?.travel_style || resolved?.travel_style)==='budget')?'selected':''}>Budget</option>
@@ -1148,17 +1201,18 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
                     <option value="comfort" ${((override?.travel_style || resolved?.travel_style)==='comfort')?'selected':''}>Confort</option>
                   </select>
                 </div>
-                <div class="field" style="width:110px;">
+                <div class="field field--span-1">
                   <label>Adultes</label>
                   <input data-br="seg-adults" type="number" min="1" step="1" value="${escapeHTML(String(override?.adult_count ?? resolved?.adult_count ?? travel?.adult_count ?? 1))}" />
                 </div>
-                <div class="field" style="width:110px;">
+                <div class="field field--span-1">
                   <label>Enfants</label>
                   <input data-br="seg-children" type="number" min="0" step="1" value="${escapeHTML(String(override?.child_count ?? resolved?.child_count ?? travel?.child_count ?? 0))}" />
                 </div>
               </div>
             </div>
-            <div style="flex:1"></div>
+          </div>
+          <div class="tb-settings-actions">
             <button class="btn" data-br-act="seg-reset" style="display:${override ? "" : "none"};">Revenir à l'héritage</button>
             <button class="btn primary" data-br-act="seg-save">Enregistrer la période</button>
           </div>

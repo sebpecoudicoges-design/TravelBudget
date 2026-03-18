@@ -267,7 +267,7 @@
     card.innerHTML = `
       <h2>Échéances périodiques</h2>
       <div class="muted" style="margin-bottom:10px;">
-        Crée des échéances qui se répètent automatiquement pour le voyage actif.
+        Un seul espace pour suivre, ajuster et couper les échéances récurrentes du voyage.
       </div>
       <div class="row" style="justify-content:flex-end; margin-bottom:10px;">
         <button class="btn primary" id="tb-recurring-add-btn">+ Nouvelle échéance</button>
@@ -721,42 +721,35 @@
     }
 
     host.innerHTML = `
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Nom</th>
-              <th>Montant</th>
-              <th>Fréquence</th>
-              <th>Prochaine</th>
-              <th>Statut</th>
-              <th style="width:240px;">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map((r) => `
-              <tr>
-                <td>
-                  ${escapeHTML(r.label || r.name || "—")}
-                  ${r.outOfBudget || r.out_of_budget ? `<div class="muted" style="font-size:12px;">Hors budget</div>` : ``}
-                </td>
-                <td>${escapeHTML(fmtMoney(Number(r.amount || 0), r.currency || ""))} ${escapeHTML(r.type || "")}</td>
-                <td>${escapeHTML(_rrFreqLabel(r))}</td>
-                <td>${escapeHTML(_rrFmtDate(r.nextDueAt || r.next_due_at))}</td>
-                <td>${escapeHTML(_rrStatus(r))}</td>
-                <td>
-                  <div class="row" style="gap:8px; justify-content:flex-start;">
-                    <button class="btn" data-rr-act="edit" data-rr-id="${escapeHTML(r.id)}">Modifier</button>
-                    ${_rrStatus(r) === "active"
-                      ? `<button class="btn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">Pause</button>`
-                      : `<button class="btn" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`}
-                    <button class="btn danger" data-rr-act="delete" data-rr-id="${escapeHTML(r.id)}">Supprimer</button>
-                  </div>
-                </td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
+      <div class="tb-recurring-stack">
+        ${rows.map((r) => `
+          <div class="tb-recurring-item">
+            <div class="tb-recurring-main">
+              <div class="tb-recurring-title-row">
+                <div>
+                  <div class="tb-recurring-title">${escapeHTML(r.label || r.name || "—")}</div>
+                  <div class="tb-recurring-subtitle">${escapeHTML(fmtMoney(Number(r.amount || 0), r.currency || ""))} · ${escapeHTML(String(r.type || '').replace('expense','dépense').replace('income','revenu') || '—')}</div>
+                </div>
+                <div class="tb-recurring-chips">
+                  ${r.outOfBudget || r.out_of_budget ? `<span class="tb-settings-pill">Hors budget</span>` : ``}
+                  <span class="tb-settings-pill">${escapeHTML(_rrStatus(r))}</span>
+                </div>
+              </div>
+              <div class="tb-budget-summary-grid tb-budget-summary-grid--recurring">
+                <div class="tb-settings-stat"><span class="tb-settings-stat-label">Fréquence</span><strong>${escapeHTML(_rrFreqLabel(r))}</strong></div>
+                <div class="tb-settings-stat"><span class="tb-settings-stat-label">Prochaine</span><strong>${escapeHTML(_rrFmtDate(r.nextDueAt || r.next_due_at))}</strong></div>
+                <div class="tb-settings-stat"><span class="tb-settings-stat-label">Wallet</span><strong>${escapeHTML(String((state?.wallets || []).find(w=>String(w.id||'')===String(r.walletId||r.wallet_id||''))?.name || '—'))}</strong></div>
+              </div>
+            </div>
+            <div class="tb-recurring-actions">
+              <button class="btn" data-rr-act="edit" data-rr-id="${escapeHTML(r.id)}">Modifier</button>
+              ${_rrStatus(r) === "active"
+                ? `<button class="btn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">Pause</button>`
+                : `<button class="btn" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`}
+              <button class="btn danger" data-rr-act="delete" data-rr-id="${escapeHTML(r.id)}">Supprimer</button>
+            </div>
+          </div>
+        `).join("")}
       </div>
     `;
 
