@@ -519,38 +519,49 @@
     modal.setTitle(isEditing ? "Modifier échéance périodique" : "Nouvelle échéance périodique");
     modal.setBody(`
       <div class="tb-modal-grid">
+        <div class="tb-modal-section"><div class="tb-modal-section-title">Essentiel</div></div>
         <div class="field field--span-2">
           <label>Nom</label>
           <input id="rr-label" value="${escapeHTML(defaults.label)}" placeholder="Ex: Loyer, Assurance, Netflix" />
         </div>
-        <div class="field">
+        <div class="field field--span-2">
           <label>Type</label>
           <select id="rr-type">
             <option value="expense" ${defaults.type === "income" ? "" : "selected"}>Dépense</option>
             <option value="income" ${defaults.type === "income" ? "selected" : ""}>Revenu</option>
           </select>
         </div>
-        <div class="field">
+        <div class="tb-modal-section"><div class="tb-modal-section-title">Montant</div></div>
+        <div class="field field--span-3">
           <label>Montant</label>
           <input id="rr-amount" type="number" min="0" step="0.01" value="${escapeHTML(defaults.amount)}" />
         </div>
-        <div class="field">
-          <label>Wallet</label>
-          <select id="rr-wallet">${walletOptions.map((w) => `<option value="${escapeHTML(w.id)}" data-cur="${escapeHTML(String(w.currency || '').toUpperCase())}" ${String(w.id) === String(defaults.wallet_id) ? "selected" : ""}>${escapeHTML(w.name || "Wallet")} — ${escapeHTML(String(w.currency || '').toUpperCase())}</option>`).join("")}</select>
-        </div>
-        <div class="field">
+        <div class="field field--span-3">
           <label>Devise</label>
           <input id="rr-currency" value="${escapeHTML(defaults.currency)}" />
         </div>
-        <div class="field">
+        <div class="field field--span-3">
+          <label>Wallet</label>
+          <select id="rr-wallet">${wallets.map((w) => `<option value="${escapeHTML(w.id)}" data-cur="${escapeHTML(String(w.currency || '').toUpperCase())}" ${String(w.id) === String(defaults.wallet_id) ? "selected" : ""}>${escapeHTML(w.name || "Wallet")} — ${escapeHTML(String(w.currency || '').toUpperCase())}</option>`).join("")}</select>
+        </div>
+        <div class="field field--span-3">
+          <label>Impact budget</label>
+          <select id="rr-budget-mode">
+            <option value="budget" ${defaults.out_of_budget ? "" : "selected"}>Dans le budget</option>
+            <option value="out" ${defaults.out_of_budget ? "selected" : ""}>Hors budget</option>
+          </select>
+        </div>
+        <div class="tb-modal-section"><div class="tb-modal-section-title">Classement</div></div>
+        <div class="field field--span-2">
           <label>Catégorie</label>
           <select id="rr-category">${window.CATEGORIES.map((c) => `<option value="${escapeHTML(c)}" ${c === defaults.category ? "selected" : ""}>${escapeHTML(c)}</option>`).join("")}</select>
         </div>
-        <div class="field">
+        <div class="field field--span-2">
           <label>Sous-catégorie</label>
           <select id="rr-subcategory"></select>
         </div>
-        <div class="field">
+        <div class="tb-modal-section"><div class="tb-modal-section-title">Rythme</div></div>
+        <div class="field field--span-3">
           <label>Fréquence</label>
           <select id="rr-rule-type">
             <option value="monthly" ${defaults.rule_type === "monthly" ? "selected" : ""}>Mois</option>
@@ -559,11 +570,11 @@
             <option value="yearly" ${defaults.rule_type === "yearly" ? "selected" : ""}>Année</option>
           </select>
         </div>
-        <div class="field">
+        <div class="field field--span-3">
           <label>Répéter tous les</label>
           <input id="rr-interval-count" type="number" min="1" step="1" value="${escapeHTML(String(defaults.interval_count || 1))}" />
         </div>
-        <div class="field" id="rr-weekday-wrap" style="display:none;">
+        <div class="field field--span-3" id="rr-weekday-wrap" style="display:none;">
           <label>Jour de la semaine</label>
           <select id="rr-weekday">
             <option value="1" ${String(defaults.weekday || "1") === "1" ? "selected" : ""}>Lundi</option>
@@ -575,29 +586,23 @@
             <option value="0" ${String(defaults.weekday || "") === "0" ? "selected" : ""}>Dimanche</option>
           </select>
         </div>
-        <div class="field" id="rr-monthday-wrap">
+        <div class="field field--span-3" id="rr-monthday-wrap">
           <label>Jour du mois</label>
           <input id="rr-monthday" type="number" min="1" max="31" placeholder="1-31" value="${escapeHTML(defaults.monthday)}" />
         </div>
         <div class="field field--span-2"><div class="muted" id="rr-frequency-help" style="margin-top:-2px;"></div></div>
-        <div class="field">
+        <div class="tb-modal-section"><div class="tb-modal-section-title">Dates</div></div>
+        <div class="field field--span-3">
           <label>Début</label>
           <input id="rr-start-date" type="date" value="${escapeHTML(defaults.start_date || today)}" />
         </div>
-        <div class="field">
+        <div class="field field--span-3">
           <label>Fin</label>
           <input id="rr-end-date" type="date" value="${escapeHTML(defaults.end_date)}" />
         </div>
-        <div class="field">
+        <div class="field field--span-3">
           <label>Occurrences max</label>
           <input id="rr-max-occurrences" type="number" min="1" step="1" placeholder="Optionnel" value="${escapeHTML(defaults.max_occurrences)}" />
-        </div>
-        <div class="field">
-          <label>Impact budget</label>
-          <select id="rr-budget-mode">
-            <option value="budget" ${defaults.out_of_budget ? "" : "selected"}>Dans le budget</option>
-            <option value="out" ${defaults.out_of_budget ? "selected" : ""}>Hors budget</option>
-          </select>
         </div>
       </div>
     `);
@@ -705,29 +710,27 @@
       <div class="tb-recurring-stack">
         ${rows.map((r) => {
           const walletName = String((state?.wallets || []).find(w=>String(w.id||'')===String(r.walletId||r.wallet_id||''))?.name || '—');
+          const cat = String(r.category||'').trim();
+          const sub = String(r.subcategory||'').trim();
           return `
           <div class="tb-recurring-item">
-            <div class="tb-recurring-main">
-              <div class="tb-recurring-title-row">
-                <div>
-                  <div class="tb-recurring-title">${escapeHTML(r.label || r.name || "—")}</div>
-                  <div class="tb-recurring-subtitle">${escapeHTML(fmtMoney(Number(r.amount || 0), r.currency || ""))} · ${escapeHTML(_rrFreqLabel(r))}</div>
-                </div>
-                <div class="tb-recurring-chips">
-                  ${r.outOfBudget || r.out_of_budget ? `<span class="tb-settings-pill">Hors budget</span>` : ``}
-                  <span class="tb-settings-pill">${escapeHTML(_rrStatus(r))}</span>
-                </div>
+            <div class="tb-recurring-row">
+              <div class="tb-recurring-main">
+                <div class="tb-recurring-title">${escapeHTML(r.label || r.name || "—")}</div>
+                <div class="tb-recurring-subtitle">${escapeHTML(fmtMoney(Number(r.amount || 0), r.currency || ""))} · ${escapeHTML(_rrFreqLabel(r))}</div>
               </div>
               <div class="tb-recurring-meta">
-                <span class="tb-recurring-meta-item"><span class="tb-recurring-meta-label">Prochaine</span><strong>${escapeHTML(_rrFmtDate(r.nextDueAt || r.next_due_at))}</strong></span>
-                <span class="tb-recurring-meta-item"><span class="tb-recurring-meta-label">Wallet</span><strong>${escapeHTML(walletName)}</strong></span>
-                ${String(r.category||'').trim() ? `<span class="tb-recurring-meta-item"><span class="tb-recurring-meta-label">Catégorie</span><strong>${escapeHTML(String(r.category||''))}${String(r.subcategory||'').trim()?` · ${escapeHTML(String(r.subcategory||''))}`:''}</strong></span>` : ``}
+                <span class="tb-recurring-meta-chip">${escapeHTML(_rrFmtDate(r.nextDueAt || r.next_due_at))}</span>
+                <span class="tb-recurring-meta-chip">${escapeHTML(walletName)}</span>
+                ${cat ? `<span class="tb-recurring-meta-chip">${escapeHTML(cat)}${sub?` · ${escapeHTML(sub)}`:''}</span>` : ``}
+                ${r.outOfBudget || r.out_of_budget ? `<span class="tb-settings-pill tb-settings-pill--warn">Hors budget</span>` : ``}
+                <span class="tb-settings-pill ${_rrStatus(r)==='active' ? 'tb-settings-pill--positive' : ''}">${escapeHTML(_rrStatus(r))}</span>
               </div>
-            </div>
-            <div class="tb-recurring-actions">
-              <button class="btn" data-rr-act="edit" data-rr-id="${escapeHTML(r.id)}">Modifier</button>
-              ${_rrStatus(r) === "active" ? `<button class="btn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">Pause</button>` : `<button class="btn" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`}
-              <button class="btn danger" data-rr-act="delete" data-rr-id="${escapeHTML(r.id)}">Supprimer</button>
+              <div class="tb-recurring-actions">
+                <button class="btn" data-rr-act="edit" data-rr-id="${escapeHTML(r.id)}">Modifier</button>
+                ${_rrStatus(r) === "active" ? `<button class="btn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">Pause</button>` : `<button class="btn" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`}
+                <button class="btn danger" data-rr-act="delete" data-rr-id="${escapeHTML(r.id)}">Supprimer</button>
+              </div>
             </div>
           </div>`;
         }).join("")}
