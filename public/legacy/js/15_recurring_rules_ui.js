@@ -509,7 +509,8 @@
 
     const activeTravel = (state?.travels || []).find((t) => String(t.id) === String(state?.activeTravelId || ""));
     const baseCur = String(activeTravel?.base_currency || state?.period?.baseCurrency || "EUR").toUpperCase();
-    const cats = await _rrCategoryOptions();
+    const cats = (await _rrCategoryOptions()) || [];
+    if (!cats.length) cats.push(...((state?.categories || []).map((c)=> typeof c === 'string' ? c : (c?.name || c?.label || c?.category || '')).filter(Boolean)));
     const modal = (typeof _tbEnsureModal === "function") ? _tbEnsureModal() : null;
     if (!modal) throw new Error("Modal indisponible.");
     const today = _tbISO(new Date());
@@ -554,7 +555,7 @@
         <div class="tb-modal-section"><div class="tb-modal-section-title">Classement</div></div>
         <div class="field field--span-2">
           <label>Catégorie</label>
-          <select id="rr-category">${window.CATEGORIES.map((c) => `<option value="${escapeHTML(c)}" ${c === defaults.category ? "selected" : ""}>${escapeHTML(c)}</option>`).join("")}</select>
+          <select id="rr-category">${(cats || []).map((c) => `<option value="${escapeHTML(c)}" ${c === defaults.category ? "selected" : ""}>${escapeHTML(c)}</option>`).join("")}</select>
         </div>
         <div class="field field--span-2">
           <label>Sous-catégorie</label>

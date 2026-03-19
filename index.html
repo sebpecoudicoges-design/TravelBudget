@@ -1122,6 +1122,46 @@
     .tb-v11-travel-title{font-size:30px; letter-spacing:-.05em; font-weight:900; color:#0f172a;}
     .tb-v11-travel-meta{display:flex; gap:8px; flex-wrap:wrap;}
     .tb-v11-accent{background:linear-gradient(135deg,#4f46e5,#7c3aed); -webkit-background-clip:text; background-clip:text; color:transparent;}
+    .tb-settings-card,.tb-settings-summary,.tb-settings-merge-block,.tb-period-card,.tb-recurring-item,.tb-category-card{position:relative; overflow:hidden;}
+    .tb-settings-card::before,.tb-settings-summary::before,.tb-settings-merge-block::before,.tb-period-card::before,.tb-recurring-item::before,.tb-category-card::before{content:""; position:absolute; inset:0 auto auto 0; width:100%; height:1px; background:linear-gradient(90deg, rgba(124,58,237,.35), rgba(99,102,241,.12), transparent); pointer-events:none;}
+    .tb-settings-summary,.tb-settings-merge-block,.tb-period-card,.tb-recurring-item,.tb-category-card{background:linear-gradient(180deg, rgba(255,255,255,.99), rgba(241,245,255,.96)); border:1px solid rgba(99,102,241,.16); box-shadow:0 20px 48px rgba(76,29,149,.08), 0 8px 24px rgba(15,23,42,.05);}
+    .tb-period-compare{display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px; padding:16px; border-radius:22px; background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(243,244,255,.95)); border:1px solid rgba(124,58,237,.14);}
+    .tb-period-kpis{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
+    .tb-period-ref-editor{display:none; margin-top:8px; padding:14px; border-radius:18px; background:linear-gradient(180deg, rgba(79,70,229,.04), rgba(124,58,237,.03)); border:1px dashed rgba(99,102,241,.22);}
+    .tb-period-ref-editor.is-open{display:block;}
+    .tb-period-shell{display:grid; gap:14px;}
+    .tb-period-editor{display:none;}
+    .tb-period-card.is-editing .tb-period-editor{display:block;}
+    .tb-period-card.is-editing .tb-period-summary-grid{display:none;}
+    .tb-period-summary-grid{display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:12px;}
+    .tb-period-summary-grid > .tb-settings-stat{grid-column:span 3;}
+    .tb-period-summary-grid [data-br-inline-seg-id]{grid-column:1 / -1;}
+    .tb-period-ref-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+    .tb-recurring-item{padding:12px 14px; border-radius:22px;}
+    .tb-recurring-row{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto; gap:12px;}
+    .tb-recurring-title{font-size:18px;}
+    .tb-recurring-meta-chip{padding:6px 10px; font-size:12px;}
+    .tb-modal-grid{gap:12px;}
+    .tb-modal-grid .tb-modal-section{grid-column:1 / -1; margin-top:2px;}
+    .tb-modal-grid .tb-modal-section-title{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#64748b; font-weight:800;}
+    .tb-category-card{display:block; padding:0; margin:10px 0; border-radius:22px;}
+    .tb-category-head{display:flex; align-items:center; justify-content:space-between; gap:12px; list-style:none; cursor:pointer; padding:16px 18px;}
+    .tb-category-head::-webkit-details-marker{display:none;}
+    .tb-category-head-left{display:flex; align-items:center; gap:12px; min-width:0;}
+    .tb-category-head-actions{display:flex; gap:8px; flex-wrap:wrap;}
+    .tb-category-swatch,.tb-subcat-color{display:inline-block; width:14px; height:14px; border-radius:999px; border:1px solid rgba(15,23,42,.10);}
+    .tb-category-name{font-size:16px; font-weight:800; color:#0f172a;}
+    .tb-category-meta{font-size:13px; color:#64748b;}
+    .tb-category-body{padding:0 18px 16px 18px; border-top:1px solid rgba(99,102,241,.10);}
+    .tb-category-toolbar{display:flex; align-items:center; gap:10px; padding:12px 0;}
+    .tb-category-sublist{display:flex; flex-direction:column; gap:8px;}
+    .tb-subcat-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; border-radius:16px; background:rgba(255,255,255,.86); border:1px solid rgba(148,163,184,.16);}
+    .tb-subcat-main{display:flex; flex-direction:column; gap:6px; min-width:0;}
+    .tb-subcat-meta,.tb-subcat-actions{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+    .tb-v11-travel-hero{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);}
+    @media (max-width: 1100px){ .tb-period-kpis{grid-template-columns:repeat(2,minmax(0,1fr));} .tb-period-summary-grid > .tb-settings-stat{grid-column:span 6;} }
+    @media (max-width: 780px){ .tb-period-kpis{grid-template-columns:1fr;} .tb-category-head{flex-direction:column; align-items:flex-start;} .tb-recurring-row{grid-template-columns:1fr;} }
+
     @media (max-width: 980px){
       .tb-v11-travel-hero,.tb-recurring-row{grid-template-columns:1fr;}
       .tb-period-summary-grid,.tb-budget-summary-grid,.tb-period-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
@@ -1627,7 +1667,7 @@
             <button class="btn" onclick="createVoyagePrompt()">+ Nouveau voyage</button>
             <button class="btn danger" onclick="deleteActiveVoyage()">Supprimer voyage</button>
             <button class="btn" onclick="createPeriodPrompt()">+ Ajouter période</button>
-            <button class="btn primary" onclick="saveSettings()">Mettre à jour</button>
+            <button class="btn primary" onclick="saveSettings()">Enregistrer le voyage</button>
           </div>
 
           <div id="tb-travel-budget-reference-inline" style="margin-top:14px;"></div>

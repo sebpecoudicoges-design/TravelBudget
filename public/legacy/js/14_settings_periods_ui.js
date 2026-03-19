@@ -500,7 +500,9 @@ function renderSettings(){
       const budgetBaseCur = _tbSettingsBaseCurrency();
       const budgetDual = (budgetAvg!==null && budgetCur) ? _tbFmtDualAmount(budgetAvg, budgetCur, budgetBaseCur, 0, 2) : { main:'—', secondary:null };
       const recoMain = Number.isFinite(recoDay)&&recoDay>0 ? _tbBudgetRefFmtAmount(recoDay, recoCur, 2) : '—';
-      const recoSecondary = (Number.isFinite(recoDay)&&recoDay>0) ? (_tbFmtDualAmount(recoDay, recoCur, budgetBaseCur, 2, 2).secondary) : null;
+      const recoDual = (Number.isFinite(recoDay)&&recoDay>0) ? _tbFmtDualAmount(recoDay, recoCur, budgetBaseCur, 2, 2) : { main:'—', secondary:null };
+      const budgetBaseAmount = _tbTryConvert(budgetAvg, budgetCur, budgetBaseCur);
+      const recoBaseAmount = _tbTryConvert(recoDay, recoCur, budgetBaseCur);
       overview.innerHTML = `
         <div class="tb-settings-summary">
           <div class="tb-v11-travel-hero">
@@ -518,8 +520,8 @@ function renderSettings(){
             <div class="tb-budget-summary-grid">
               <div class="tb-settings-stat"><span class="tb-settings-stat-label">Budget prévu / jour</span><div class="tb-v11-inline-dual"><strong class="tb-v11-accent">${escapeHTML(budgetDual.main || '—')}</strong>${budgetDual.secondary?`<span>${escapeHTML(budgetDual.secondary)} · base</span>`:''}</div></div>
               <div class="tb-settings-stat"><span class="tb-settings-stat-label">Référence voyage</span><strong>${escapeHTML(travelDefault?.country_name || travelDefault?.country_code || 'À définir')}</strong><small>${escapeHTML(travelDefault ? `${String(travelDefault.travel_profile||'solo')} · ${String(travelDefault.travel_style||'standard')}` : 'Choisis un pays et un profil')}</small></div>
-              <div class="tb-settings-stat"><span class="tb-settings-stat-label">Recommandé / jour</span><div class="tb-v11-inline-dual"><strong>${escapeHTML(recoMain)}</strong>${recoSecondary?`<span>${escapeHTML(recoSecondary)} · base</span>`:''}</div></div>
-              <div class="tb-settings-stat"><span class="tb-settings-stat-label">Cadence</span><strong>${budgetAvg!==null && Number.isFinite(budgetAvg) && Number.isFinite(recoDay) && recoDay>0 ? escapeHTML((budgetAvg>recoDay?'Au-dessus':'Sous la reco')) : 'À calibrer'}</strong><small>${Number.isFinite(recoDay)&&recoDay>0 && budgetAvg!==null ? escapeHTML(`${_tbBudgetRefFmtAmount(Math.abs(budgetAvg-recoDay), budgetCur, 0)} d’écart`) : 'Référence requise'}</small></div>
+              <div class="tb-settings-stat"><span class="tb-settings-stat-label">Recommandé / jour</span><div class="tb-v11-inline-dual"><strong>${escapeHTML(recoDual.main)}</strong>${recoDual.secondary?`<span>${escapeHTML(recoDual.secondary)} · base</span>`:''}</div></div>
+              <div class="tb-settings-stat"><span class="tb-settings-stat-label">Cadence</span><strong>${Number.isFinite(budgetBaseAmount) && Number.isFinite(recoBaseAmount) ? escapeHTML((budgetBaseAmount>recoBaseAmount?'Au-dessus':'Sous la reco')) : 'À calibrer'}</strong><small>${Number.isFinite(budgetBaseAmount)&&Number.isFinite(recoBaseAmount) ? escapeHTML(`${_tbBudgetRefFmtAmount(Math.abs(budgetBaseAmount-recoBaseAmount), budgetBaseCur, 2)} d’écart`) : 'Référence requise'}</small></div>
             </div>
           </div>
         </div>`;
@@ -1155,7 +1157,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
         <div class="tb-budget-summary-grid" style="margin-top:10px;">
           <div class="tb-settings-stat"><span class="tb-settings-stat-label">Pays</span><strong>${escapeHTML(travel?.country_name || travel?.country_code || '—')}</strong></div>
           <div class="tb-settings-stat"><span class="tb-settings-stat-label">Profil</span><strong>${escapeHTML((travel?.travel_profile || 'solo'))} · ${escapeHTML((travel?.travel_style || 'standard'))}</strong></div>
-          <div class="tb-settings-stat"><span class="tb-settings-stat-label">Reco / jour</span><strong>${Number.isFinite(Number(travel?.recommended_daily_amount)) ? escapeHTML(String(Number(travel?.recommended_daily_amount).toFixed(2))) : '—'}</strong></div>
+          <div class="tb-settings-stat"><span class="tb-settings-stat-label">Reco / jour</span><strong>${Number.isFinite(Number(travel?.recommended_daily_amount)) ? escapeHTML(_tbBudgetRefFmtAmount(Number(travel?.recommended_daily_amount), String(travel?.currency_code || 'EUR'), 2)) : '—'}</strong></div>
           <div class="tb-settings-stat"><span class="tb-settings-stat-label">Héritage</span><strong>${escapeHTML(travel?.country_code ? 'Actif' : 'Inactif')}</strong></div>
         </div>
         <div class="tb-settings-inline-grid" style="margin-top:12px; align-items:end;">
@@ -1311,6 +1313,17 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
           _tbToastOk('Budget de référence période enregistré.');
         });
       }
+      const btnEdit = wrap.querySelector('[data-act="edit-seg"]');
+      if (btnEdit) {
+        btnEdit.onclick = ()=>{
+          const card = wrap.closest('.tb-period-card');
+          if (card) { card.classList.add('is-editing'); card.classList.remove('is-collapsed'); }
+          const editor = wrap.querySelector('.tb-period-ref-editor');
+          if (editor) editor.classList.toggle('is-open');
+          const btnSaveInline = wrap.querySelector('[data-br-act="seg-save"]');
+          if (btnSaveInline) btnSaveInline.style.display = editor && editor.classList.contains('is-open') ? '' : 'none';
+        };
+      }
       if(btnReset){
         btnReset.onclick = ()=>safeCall('Héritage période', async ()=>{
           const s = _tbGetSB();
@@ -1321,6 +1334,10 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
         });
       }
     });
+    try {
+      const travelSave = document.querySelector('#tb-travel-card button[onclick*="saveSettings"]');
+      if (travelSave) travelSave.textContent = 'Enregistrer le voyage';
+    } catch(_) {}
   } catch (err) {
     console.error('[TB][budget-reference]', err);
     travelHost.innerHTML = `<div class="muted">Budget de référence indisponible. ${escapeHTML(err?.message || String(err))}</div>`;
@@ -2144,60 +2161,60 @@ function renderCategoriesSettingsUI() {
   host.innerHTML = (cats || []).map((c) => {
     const col = colors[c] || "#94a3b8";
     const subRows = _subcategoriesForSettings(c, true);
+    const activeCount = subRows.filter((row)=>row?.isActive !== false && row?.is_active !== false).length;
     const subHtml = subRows.length
       ? subRows.map((row) => {
           const active = row?.isActive !== false && row?.is_active !== false;
           const isSql = !!row?.id;
           const source = String(row?.source || (isSql ? 'sql' : 'default')).toLowerCase();
-          const badge = active ? 'Actif' : 'Inactif';
-          const badgeBg = active ? 'rgba(34,197,94,.12)' : 'rgba(148,163,184,.15)';
-          const badgeCol = active ? '#16a34a' : '#64748b';
           const sourceLabel = isSql ? 'Sauvegardée' : (source === 'fallback' ? 'Détectée' : 'Par défaut');
-          const sourceBg = isSql ? 'rgba(37,99,235,.10)' : 'rgba(168,85,247,.10)';
-          const sourceCol = isSql ? '#2563eb' : '#7c3aed';
           const subColor = String(row?.color || '').trim();
           return `
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02);">
-              <div style="font-weight:600;min-width:160px;">${escapeHTML(row?.name || '')}</div>
-              <span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:${badgeBg};color:${badgeCol};font-size:12px;font-weight:700;">${badge}</span>
-              <span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:${sourceBg};color:${sourceCol};font-size:12px;font-weight:700;">${sourceLabel}</span>
-              <span class="muted" style="font-size:12px;">Position ${escapeHTML(String(Number(row?.sortOrder ?? row?.sort_order ?? 0)))}</span>
-              ${subColor ? `<span title="${escapeHTML(subColor)}" style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${escapeHTML(subColor)};border:1px solid rgba(0,0,0,.20);"></span>` : ''}
-              <div style="flex:1"></div>
-              ${isSql
-                ? `<button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','up')" ${subRows.length > 1 ? '' : 'disabled'}>↑</button>
-                   <button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','down')" ${subRows.length > 1 ? '' : 'disabled'}>↓</button>
-                   <button class="btn" onclick="editSubcategory('${escapeHTML(String(row?.id || ''))}')">Modifier</button>
-                   <button class="btn" onclick="toggleSubcategoryActive('${escapeHTML(String(row?.id || ''))}', ${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button>`
-                : `<button class="btn" onclick="importExistingSubcategory('${escapeHTML(c)}','${escapeHTML(String(row?.name || ''))}')">Enregistrer</button>`}
-            </div>
-          `;
+            <div class="tb-subcat-row">
+              <div class="tb-subcat-main">
+                <strong>${escapeHTML(row?.name || '')}</strong>
+                <div class="tb-subcat-meta">
+                  <span class="tb-settings-pill ${active ? 'tb-settings-pill--positive' : ''}">${active ? 'Active' : 'Inactive'}</span>
+                  <span class="tb-settings-pill">${sourceLabel}</span>
+                  ${subColor ? `<span class="tb-subcat-color" title="${escapeHTML(subColor)}" style="background:${escapeHTML(subColor)}"></span>` : ''}
+                </div>
+              </div>
+              <div class="tb-subcat-actions">
+                ${isSql
+                  ? `<button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','up')">↑</button>
+                     <button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','down')">↓</button>
+                     <button class="btn" onclick="editSubcategory('${escapeHTML(String(row?.id || ''))}')">Modifier</button>
+                     <button class="btn" onclick="toggleSubcategoryActive('${escapeHTML(String(row?.id || ''))}', ${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button>`
+                  : `<button class="btn" onclick="importExistingSubcategory('${escapeHTML(c)}','${escapeHTML(String(row?.name || ''))}')">Enregistrer</button>`}
+              </div>
+            </div>`;
         }).join('')
-      : `<div class="muted" style="padding:8px 0;">Aucune sous-catégorie SQL pour cette catégorie.</div>`;
+      : `<div class="muted" style="padding:8px 0;">Aucune sous-catégorie.</div>`;
 
     return `
-      <div class="card" style="padding:12px; margin:8px 0; display:flex; flex-direction:column; gap:10px;">
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <div style="min-width:180px; font-weight:700;">${escapeHTML(c)}</div>
-
-          <span title="${escapeHTML(col)}" style="display:inline-block;width:18px;height:18px;border-radius:5px;background:${escapeHTML(col)};border:1px solid rgba(0,0,0,.20);"></span>
-          <div class="muted" style="min-width:84px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px;">
-            ${escapeHTML(col)}
+      <details class="tb-category-card" ${subRows.length ? '' : 'open'}>
+        <summary class="tb-category-head">
+          <div class="tb-category-head-left">
+            <span class="tb-category-swatch" style="background:${escapeHTML(col)}"></span>
+            <div>
+              <div class="tb-category-name">${escapeHTML(c)}</div>
+              <div class="tb-category-meta">${escapeHTML(String(subRows.length))} sous-catégorie${subRows.length>1?'s':''} · ${escapeHTML(String(activeCount))} active${activeCount>1?'s':''}</div>
+            </div>
           </div>
-
-          <input type="color"
-                 value="${escapeHTML(col)}"
-                 style="width:44px;height:30px;padding:0;border:none;background:transparent;cursor:pointer;"
-                 onchange="setCategoryColor('${escapeHTML(c)}', this.value)" />
-
-          <button class="btn" onclick="addSubcategory('${escapeHTML(c)}')">+ Sous-catégorie</button>
-          <button class="btn" onclick="deleteCategory('${escapeHTML(c)}')">Supprimer</button>
+          <div class="tb-category-head-actions">
+            <button class="btn" type="button" onclick="event.preventDefault(); event.stopPropagation(); addSubcategory('${escapeHTML(c)}')">+ Sous-catégorie</button>
+            <button class="btn" type="button" onclick="event.preventDefault(); event.stopPropagation(); deleteCategory('${escapeHTML(c)}')">Supprimer</button>
+          </div>
+        </summary>
+        <div class="tb-category-body">
+          <div class="tb-category-toolbar">
+            <span class="muted">Couleur</span>
+            <span class="tb-category-swatch" style="background:${escapeHTML(col)}"></span>
+            <input type="color" value="${escapeHTML(col)}" style="width:44px;height:30px;padding:0;border:none;background:transparent;cursor:pointer;" onchange="setCategoryColor('${escapeHTML(c)}', this.value)" />
+          </div>
+          <div class="tb-category-sublist">${subHtml}</div>
         </div>
-        <div style="display:grid;gap:8px;">
-          ${subHtml}
-        </div>
-      </div>
-    `;
+      </details>`;
   }).join("");
 
   if (!host.innerHTML) host.innerHTML = `<div class="muted">Aucune catégorie. Ajoute-en une ci-dessus.</div>`;
