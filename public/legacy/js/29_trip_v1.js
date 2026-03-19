@@ -3047,21 +3047,21 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
       // NEW (V8.2.0): optimized suggestions from DB (net_raw)
       if (Array.isArray(settlementSuggestionsRaw) && settlementSuggestionsRaw.length) {
-        parts.push(`<div class="muted" style="margin-top:10px;">Règlements optimisés (net brut)</div>`);
+        const receive = [];
+        const pay = [];
         for (const row of settlementSuggestionsRaw) {
           const cur = String(row.out_currency || row.currency || "").toUpperCase();
           const fromId = row.from_member_id || row.fromMemberId;
           const toId = row.to_member_id || row.toMemberId;
           const amt = Number(row.amount || 0);
           if (!cur || !fromId || !toId || !(amt > 0)) continue;
-          parts.push(
-            `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
-              <span>${escapeHTML(_memName(fromId))} → ${escapeHTML(_memName(toId))}</span>
-              <strong>${_fmtMoney(amt, cur)}</strong>
-            </div>`
-          );
+          const line = `<div class="tb-share-row"><span>${escapeHTML(_memName(fromId))} → ${escapeHTML(_memName(toId))}</span><strong>${_fmtMoney(amt, cur)}</strong></div>`;
+          if (me && toId === me.id) receive.push(line); else if (me && fromId === me.id) pay.push(line); else pay.push(line);
         }
-        parts.push(`<div class="muted" style="margin-top:6px; font-size:12px;">Basé sur les parts (avant règlements enregistrés). Les boutons ci-dessous restent basés sur le solde courant.</div>`);
+        parts.push('<div class="tb-share-clean">');
+        if (receive.length) parts.push(`<div class="tb-share-group"><h4>Tu dois recevoir</h4>${receive.join('')}</div>`);
+        if (pay.length) parts.push(`<div class="tb-share-group"><h4>Tu dois payer</h4>${pay.join('')}</div>`);
+        parts.push('</div>');
       }
 
       const hasAny = (() => {
@@ -3073,7 +3073,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       parts.push(`<div style="display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
         <button class="btn" id="trip-copy-settlements" type="button">Copier les règlements</button>
         <button class="btn" id="trip-share-settlements" type="button">Partager</button>
-        <span class="muted">${hasAny ? "Format Tricount" : "Rien à régler pour l'instant"}</span>
+        <span class="muted">${hasAny ? "Format simple" : "Rien à régler pour l'instant"}</span>
       </div>`);
 
       if (!hasAny) return parts.join("");

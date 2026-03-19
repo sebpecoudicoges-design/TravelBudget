@@ -1054,6 +1054,62 @@
       .tb-recurring-actions{justify-content:flex-start; min-width:0;}
     }
 
+
+    /* V9.2.10 settings refonte */
+    .tb-settings-summary,.tb-settings-merge-block,.tb-period-card,.tb-recurring-item{box-shadow:0 14px 34px rgba(15,23,42,.06), inset 0 1px 0 rgba(255,255,255,.55);} 
+    .tb-settings-summary,.tb-settings-merge-block{background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,250,255,.90));}
+    .tb-settings-stat{background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,250,255,.88)); min-height:auto;}
+    .tb-settings-summary-title,.tb-settings-merge-title,.tb-period-title,.tb-recurring-title{color:#0f172a;}
+    .tb-period-card{border-radius:24px !important; border:1px solid rgba(99,102,241,.10) !important; background:linear-gradient(180deg, rgba(255,255,255,.99), rgba(245,247,255,.94)) !important;}
+    .tb-period-head{padding:18px 20px 14px;}
+    .tb-period-head-side{gap:10px;}
+    .tb-period-status{background:rgba(255,255,255,.92); box-shadow:inset 0 1px 0 rgba(255,255,255,.85);} 
+    .tb-period-body{padding:0 20px 18px;}
+    .tb-period-shell{display:flex; flex-direction:column; gap:14px;}
+    .tb-period-summary-grid{display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:12px;}
+    .tb-period-summary-grid > *{grid-column:span 3;}
+    .tb-period-summary-grid .is-wide{grid-column:span 6;}
+    .tb-period-compare{display:grid; grid-template-columns:1.15fr .85fr; gap:14px; align-items:start;}
+    .tb-period-panel{padding:16px; border-radius:18px; border:1px solid rgba(148,163,184,.14); background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,255,.88));}
+    .tb-period-panel h4{margin:0 0 6px; font-size:15px; font-weight:900; letter-spacing:-.02em;}
+    .tb-period-panel p{margin:0; color:var(--muted); line-height:1.45;}
+    .tb-period-kpis{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:12px;}
+    .tb-period-editor{display:none; margin-top:12px; padding-top:14px; border-top:1px solid rgba(148,163,184,.14);} 
+    .tb-period-card.is-editing .tb-period-editor{display:block;} 
+    .tb-period-card.is-editing [data-act="edit-seg"]{display:none;} 
+    .tb-period-inline-actions{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:14px;}
+    .tb-period-ref-controls{display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:12px; align-items:end; margin-top:12px;}
+    .tb-period-ref-controls > .field{grid-column:span 3; min-width:0;}
+    .tb-period-ref-controls > .field.field--wide{grid-column:span 4;}
+    .tb-period-ref-controls > .field.field--narrow{grid-column:span 2;}
+    .tb-period-ref-banner{margin-top:12px; padding:11px 13px; border-radius:16px; background:rgba(99,102,241,.08); border:1px solid rgba(99,102,241,.14);} 
+    .tb-recurring-stack{gap:10px;}
+    .tb-recurring-item{padding:12px 14px; border-radius:18px; align-items:center;}
+    .tb-recurring-main{gap:8px;}
+    .tb-recurring-title{font-size:16px;}
+    .tb-recurring-subtitle{font-size:13px; margin-top:2px;}
+    .tb-recurring-meta{gap:8px;}
+    .tb-recurring-meta-item{padding:6px 10px; font-size:12px;}
+    .tb-recurring-actions .btn{padding:8px 12px;}
+    .tb-share-clean{display:flex; flex-direction:column; gap:12px; margin-top:10px;}
+    .tb-share-group{padding:14px 16px; border-radius:18px; border:1px solid rgba(148,163,184,.14); background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,255,.88));}
+    .tb-share-group h4{margin:0 0 10px; font-size:15px; font-weight:900; letter-spacing:-.02em;}
+    .tb-share-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid rgba(148,163,184,.12);} 
+    .tb-share-row:last-child{border-bottom:none; padding-bottom:0;} 
+    .tb-modal-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;} 
+    .tb-modal-grid > .field{min-width:0;} 
+    .tb-modal-grid .field--span-2{grid-column:span 2;} 
+    @media (max-width: 980px){
+      .tb-period-summary-grid,.tb-period-ref-controls{grid-template-columns:repeat(6,minmax(0,1fr));}
+      .tb-period-summary-grid > *{grid-column:span 3;}
+      .tb-period-summary-grid .is-wide{grid-column:span 6;}
+      .tb-period-compare{grid-template-columns:1fr;}
+    }
+    @media (max-width: 780px){
+      .tb-period-summary-grid,.tb-period-ref-controls,.tb-modal-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .tb-period-summary-grid > *, .tb-period-summary-grid .is-wide, .tb-period-ref-controls > .field, .tb-period-ref-controls > .field.field--wide, .tb-period-ref-controls > .field.field--narrow, .tb-modal-grid .field--span-2{grid-column:span 2 !important;}
+    }
+
 </style>
 
 </head>
