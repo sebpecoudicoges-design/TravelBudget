@@ -1252,6 +1252,46 @@
       #tb-modal > div{width:calc(100vw - 16px);padding:14px !important;}
     }
 
+
+    /* V9.2.11.4 minimal settings refinement */
+    .tb-settings-summary--minimal,.tb-settings-merge-block,.tb-period-card,.tb-recurring-item,.tb-category-card{background:#fff !important;border:1px solid rgba(15,23,42,.08) !important;box-shadow:0 6px 18px rgba(15,23,42,.04) !important;border-radius:16px !important;}
+    .tb-v11-travel-hero--minimal{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(360px,1fr);gap:16px;align-items:start;}
+    .tb-budget-summary-grid--minimal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+    .tb-settings-summary-copy,.tb-period-ref-copy{font-size:13px !important;color:var(--muted) !important;max-width:none !important;}
+    .tb-v11-travel-title{font-size:28px !important;line-height:1.05 !important;}
+    .tb-settings-pill{border-radius:999px !important;padding:8px 12px !important;font-size:12px !important;}
+    .tb-settings-stat{padding:12px 14px !important;border-radius:14px !important;background:#fff !important;border:1px solid rgba(15,23,42,.08) !important;box-shadow:none !important;min-height:0 !important;}
+    .tb-settings-stat strong{font-size:16px !important;line-height:1.2 !important;}
+    .tb-settings-stat small{font-size:11px !important;line-height:1.35 !important;}
+    .tb-budget-summary-grid .tb-settings-stat,.tb-period-kpis .tb-settings-stat,.tb-period-summary-grid .tb-settings-stat{min-height:0 !important;}
+    .tb-settings-actions--muted{justify-content:space-between;align-items:center;gap:12px;}
+    .tb-period-card{margin-bottom:10px !important;overflow:hidden;}
+    .tb-period-head{padding:14px 16px !important;}
+    .tb-period-title{font-size:18px !important;}
+    .tb-period-subtitle{font-size:13px !important;}
+    .tb-period-body{padding:0 16px 16px !important;}
+    .tb-period-summary-grid{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:10px !important;}
+    .tb-period-compare--minimal{margin-top:10px;padding-top:10px;border-top:1px solid rgba(15,23,42,.06);}
+    .tb-period-kpis--minimal{display:grid;grid-template-columns:2fr 2fr 1.3fr;gap:10px;margin:8px 0 10px;}
+    .tb-period-inline-actions{gap:8px !important;margin:8px 0 0 !important;}
+    .tb-period-ref-editor,.tb-period-editor{padding:12px !important;margin-top:10px !important;border-radius:14px !important;background:#fafbfc !important;border:1px solid rgba(15,23,42,.06) !important;}
+    .tb-settings-subgrid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:10px;}
+    .tb-settings-subgrid .field{min-width:0;}
+    .tb-settings-inline-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px;}
+    .tb-settings-inline-grid .field{min-width:0;}
+    .tb-recurring-modal .tb-modal-card{max-height:min(88vh,920px);overflow:auto;}
+    .tb-recurring-modal .tb-modal-body{overflow:visible;}
+    @media (max-width: 1100px){
+      .tb-v11-travel-hero--minimal{grid-template-columns:1fr;}
+      .tb-budget-summary-grid--minimal{grid-template-columns:1fr 1fr 1fr;}
+      .tb-period-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+      .tb-period-kpis--minimal{grid-template-columns:1fr 1fr;}
+    }
+    @media (max-width: 760px){
+      .tb-budget-summary-grid--minimal,.tb-period-kpis--minimal,.tb-period-summary-grid,.tb-settings-inline-grid,.tb-settings-subgrid{grid-template-columns:1fr !important;}
+      .tb-settings-actions--muted{flex-direction:column;align-items:flex-start;}
+    }
+
 </style>
 
 </head>
