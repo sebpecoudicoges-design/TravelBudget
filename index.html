@@ -1168,6 +1168,90 @@
       .tb-period-summary-grid .tb-settings-stat,.tb-budget-summary-grid .tb-settings-stat,.tb-period-kpis .tb-settings-stat{grid-column:span 1 !important;}
       .tb-modal-grid .field--span-2,.tb-modal-grid .field--span-3,.tb-modal-grid .field--span-4{grid-column:span 12;}
     }
+
+    /* V9.2.11.3 minimal settings refresh */
+    :root{
+      --bg:#f5f7fb;
+      --panel:#ffffff;
+      --panel2:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --accent:#6d28d9;
+      --accent-soft:rgba(109,40,217,.10);
+      --border:rgba(15,23,42,.08);
+      --shadow:0 10px 24px rgba(15,23,42,.06);
+      --radius:14px;
+    }
+    body.theme-dark{
+      --bg:#0f172a;
+      --panel:#111827;
+      --panel2:#111827;
+      --text:#f8fafc;
+      --muted:#94a3b8;
+      --accent:#8b5cf6;
+      --accent-soft:rgba(139,92,246,.18);
+      --border:rgba(255,255,255,.08);
+      --shadow:0 12px 28px rgba(0,0,0,.28);
+    }
+    body{background:var(--bg);} 
+    .wrap{max-width:1260px;padding:18px 18px 28px;}
+    header{background:var(--panel);box-shadow:var(--shadow);border-radius:18px;padding:10px 12px;backdrop-filter:none;}
+    .btn{box-shadow:none;border-radius:12px;padding:10px 14px;background:var(--panel);}
+    .btn.primary{background:linear-gradient(135deg,#7c3aed,#6d28d9);} 
+    .btn.danger{background:linear-gradient(135deg,#ef4444,#dc2626);} 
+    .tab{box-shadow:none;border-radius:12px;background:var(--panel);} 
+    .card,.tb-settings-summary,.tb-settings-merge-block,.tb-period-card,.tb-recurring-item,.tb-category-card{background:var(--panel) !important;border:1px solid var(--border) !important;box-shadow:var(--shadow) !important;border-radius:18px !important;}
+    .tb-settings-card::before,.tb-settings-summary::before,.tb-settings-merge-block::before,.tb-period-card::before,.tb-recurring-item::before,.tb-category-card::before{display:none !important;}
+    .tb-v11-travel-hero{grid-template-columns:minmax(0,1.2fr) minmax(360px,.8fr);gap:14px;align-items:start;}
+    .tb-v11-travel-title{font-size:20px;letter-spacing:-.03em;}
+    .tb-v11-travel-meta .pill{padding:6px 10px;font-size:12px;}
+    .tb-budget-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+    .tb-settings-stat{padding:14px;border-radius:14px;background:var(--panel2);border:1px solid var(--border);min-height:0 !important;}
+    .tb-settings-stat strong{font-size:18px;line-height:1.15;}
+    .tb-settings-stat small{display:block;margin-top:4px;color:var(--muted);font-size:12px;}
+    .tb-settings-stat-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:800;display:block;margin-bottom:8px;}
+    .tb-settings-merge-copy,.tb-period-ref-copy,.tb-period-ref-head .tb-period-ref-copy{font-size:13px;line-height:1.4;color:var(--muted);} 
+    .tb-settings-actions,.tb-period-inline-actions,.tb-recurring-actions{margin-top:12px;gap:8px;}
+    .tb-settings-inline-grid,.tb-settings-subgrid{gap:10px;}
+    .tb-settings-inline-grid .field label,.tb-settings-subgrid .field label,.field label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800;}
+    .field input,.field select, input, select, textarea{border-radius:12px !important;min-height:42px;background:var(--panel2);box-shadow:none !important;}
+    .tb-period-head{padding:14px 16px !important;}
+    .tb-period-title{font-size:18px !important;}
+    .tb-period-subtitle{font-size:13px !important;color:var(--muted) !important;}
+    .tb-period-summary-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+    .tb-period-summary-grid > .tb-settings-stat{grid-column:span 1 !important;}
+    .tb-period-summary-grid [data-br-inline-seg-id]{grid-column:1 / -1 !important;}
+    .tb-period-compare{padding:12px !important;margin-top:10px !important;background:transparent !important;border:1px dashed rgba(109,40,217,.16) !important;}
+    .tb-period-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+    .tb-period-ref-title{font-size:16px !important;}
+    .tb-period-ref-editor,.tb-period-editor{padding:12px !important;margin-top:10px !important;border-radius:14px !important;background:rgba(109,40,217,.04) !important;border:1px solid rgba(109,40,217,.10) !important;}
+    .tb-recurring-stack{gap:10px;}
+    .tb-recurring-item{padding:12px 14px !important;}
+    .tb-recurring-row{grid-template-columns:minmax(0,1.5fr) minmax(0,.9fr) auto !important;gap:10px !important;align-items:center;}
+    .tb-recurring-title{font-size:16px !important;margin:0 0 2px;}
+    .tb-recurring-subtitle{font-size:13px !important;}
+    .tb-recurring-meta{gap:6px !important;}
+    .tb-recurring-meta-chip{padding:5px 9px !important;border-radius:999px !important;background:transparent !important;}
+    #tb-modal{display:none;align-items:center;justify-content:center;padding:18px;overflow:auto;}
+    #tb-modal > div{width:min(860px,calc(100vw - 24px));max-height:min(88vh,900px);overflow:auto;margin:0 auto !important;background:var(--panel) !important;border-radius:18px !important;padding:16px !important;box-shadow:0 24px 48px rgba(15,23,42,.22);} 
+    #tb-modal-actions{position:sticky;bottom:0;padding-top:12px;background:linear-gradient(180deg, rgba(255,255,255,0), var(--panel) 35%) !important;}
+    body.theme-dark #tb-modal-actions{background:linear-gradient(180deg, rgba(17,24,39,0), var(--panel) 35%) !important;}
+    .tb-modal-grid{gap:10px !important;}
+    .tb-modal-section{padding-top:8px !important;margin-top:2px !important;}
+    .tb-modal-section-title{margin-bottom:8px !important;}
+    .tb-category-card{border-radius:16px !important;}
+    .tb-category-head{padding:12px 14px !important;}
+    .tb-category-body{padding:0 14px 14px !important;}
+    @media (max-width: 1080px){
+      .tb-v11-travel-hero{grid-template-columns:1fr;}
+      .tb-budget-summary-grid,.tb-period-kpis,.tb-period-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .tb-recurring-row{grid-template-columns:1fr !important;}
+    }
+    @media (max-width: 720px){
+      .tb-budget-summary-grid,.tb-period-kpis,.tb-period-summary-grid{grid-template-columns:1fr;}
+      #tb-modal > div{width:calc(100vw - 16px);padding:14px !important;}
+    }
+
 </style>
 
 </head>

@@ -1192,23 +1192,10 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
         </div>
         <div class="tb-settings-actions">
           <button class="btn" data-br-act="travel-clear">Retirer le défaut</button>
-          <button class="btn primary" data-br-act="travel-save">Appliquer au voyage</button>
         </div>
       </div>
     `;
-    const travelSave = travelHost.querySelector('[data-br-act="travel-save"]');
     const travelClear = travelHost.querySelector('[data-br-act="travel-clear"]');
-    if(travelSave){
-      travelSave.onclick = ()=>safeCall('Budget ref voyage', async ()=>{
-        const s = _tbGetSB();
-        const payload = _tbBudgetRefTravelDefaultPayload(travelHost);
-        if(!payload.p_country_code) throw new Error('Pays de référence requis.');
-        const { error } = await s.rpc(TB_CONST.RPCS.budget_reference_compute_for_travel, payload);
-        if (error) throw error;
-        await window.tbRenderBudgetReferenceUI();
-        _tbToastOk('Budget de référence voyage enregistré.');
-      });
-    }
     if(travelClear){
       travelClear.onclick = ()=>safeCall('Retirer défaut voyage', async ()=>{
         const s = _tbGetSB();
@@ -1246,9 +1233,9 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
             <div class="tb-settings-stat"><span class="tb-settings-stat-label">Mode</span><strong>${escapeHTML(override ? 'Personnalisé' : (travel?.country_code ? 'Hérité du voyage' : 'À définir'))}</strong><small>${escapeHTML(override ? 'Cette période garde son propre réglage.' : 'Le voyage sert de défaut tant que tu ne modifies pas cette période.')}</small></div>
           </div>
           <div class="tb-period-inline-actions">
-            <button class="btn" data-act="edit-seg">Modifier</button>
+            <button class="btn" data-act="edit-seg">Modifier la période</button>
             <button class="btn" data-br-act="seg-reset" style="display:${override ? '' : 'none'};">Hériter</button>
-            <button class="btn primary" data-br-act="seg-save" style="display:none;">Enregistrer la référence</button>
+            <button class="btn primary" data-br-act="seg-save" style="display:none;">Enregistrer</button>
           </div>
           <div class="tb-period-ref-editor">
             <div class="tb-settings-inline-grid">
@@ -1376,6 +1363,15 @@ if (tid) {
     })
     .eq("id", tid);
   if (tErr) throw tErr;
+
+  const travelRefHost = document.getElementById('tb-travel-budget-reference-inline');
+  if (travelRefHost) {
+    const payload = _tbBudgetRefTravelDefaultPayload(travelRefHost);
+    if (payload.p_country_code) {
+      const { error: refErr } = await s.rpc(TB_CONST.RPCS.budget_reference_compute_for_travel, payload);
+      if (refErr) throw refErr;
+    }
+  }
 }
 
   // Ensure first/last segments align to voyage bounds (no holes overall)
@@ -1619,7 +1615,7 @@ function _tbEnsureModal(){
     el.style.display="none";
     el.style.zIndex="9999";
     el.innerHTML = `
-      <div style="max-width:520px;margin:10vh auto;background:#fff;border-radius:12px;padding:14px;">
+      <div style="width:min(860px,calc(100vw - 24px));max-height:min(88vh,900px);overflow:auto;margin:0 auto;background:var(--panel,#fff);border-radius:18px;padding:16px;box-shadow:0 24px 48px rgba(15,23,42,.22);">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <h3 id="tb-modal-title" style="margin:0;font-size:18px;">Modal</h3>
           <button class="btn" id="tb-modal-x">X</button>

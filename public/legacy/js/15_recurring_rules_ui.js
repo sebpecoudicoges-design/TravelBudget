@@ -509,7 +509,8 @@
 
     const activeTravel = (state?.travels || []).find((t) => String(t.id) === String(state?.activeTravelId || ""));
     const baseCur = String(activeTravel?.base_currency || state?.period?.baseCurrency || "EUR").toUpperCase();
-    const cats = (await _rrCategoryOptions()) || [];
+    const fetchedCats = await _rrCategoryOptions();
+    const cats = Array.isArray(fetchedCats) ? fetchedCats.slice() : [];
     if (!cats.length) cats.push(...((state?.categories || []).map((c)=> typeof c === 'string' ? c : (c?.name || c?.label || c?.category || '')).filter(Boolean)));
     const modal = (typeof _tbEnsureModal === "function") ? _tbEnsureModal() : null;
     if (!modal) throw new Error("Modal indisponible.");
