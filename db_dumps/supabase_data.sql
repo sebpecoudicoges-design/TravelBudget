@@ -4,7 +4,7 @@ SET session_replication_role = replica;
 -- PostgreSQL database dump
 --
 
--- \restrict cg55x5KK27lUXtIcMRLcWIF1SdLT1OVmrlG2B8f3ftJbUtoNq0X4k7qx2sNebKy
+-- \restrict lsIYauAwZXesV9pmDOKR4v3wv6qkfw7q4bIYn7561lvkpmjQMBYUq2SOhB4yhE3
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -785,6 +785,31 @@ INSERT INTO "public"."travel_budget_reference_profile" ("id", "user_id", "travel
 
 
 --
+-- Data for Name: travel_day_logs; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."travel_day_logs" ("id", "user_id", "travel_id", "log_date", "end_place_label", "end_country_code", "end_lat", "end_lng", "travel_mode_main", "overnight_mode", "no_move_declared", "crossed_border", "is_rest_day", "note", "created_at", "updated_at") VALUES
+	('45f76625-723e-4689-bd3d-914421946696', 'b63f45f3-fc01-4714-8cc4-a09ab49e18c7', 'dd97e3e5-77b8-44e8-bcca-9dabb6fbc06d', '2026-03-20', 'Bangkok', 'TH', NULL, NULL, 'none', 'hostel', true, false, true, NULL, '2026-03-20 05:40:12.397636+00', '2026-03-20 05:40:12.397636+00'),
+	('c0e8f6d8-c50d-4d38-9b78-169bf98d4718', 'b63f45f3-fc01-4714-8cc4-a09ab49e18c7', 'dd97e3e5-77b8-44e8-bcca-9dabb6fbc06d', '2026-03-21', 'Ayutthaya', 'TH', NULL, NULL, 'bus', 'guesthouse', false, false, false, NULL, '2026-03-20 05:40:27.712459+00', '2026-03-20 05:40:27.712459+00'),
+	('f28fe2e2-813d-4c92-80d2-e427f33b2034', 'b63f45f3-fc01-4714-8cc4-a09ab49e18c7', 'dd97e3e5-77b8-44e8-bcca-9dabb6fbc06d', '2026-03-22', 'Ayutthaya', 'TH', NULL, NULL, 'bike', 'guesthouse', false, false, false, NULL, '2026-03-20 05:40:51.853724+00', '2026-03-20 05:40:51.853724+00'),
+	('ddd4e97f-be37-4a5d-93fb-4dafbbf43844', 'b63f45f3-fc01-4714-8cc4-a09ab49e18c7', 'dd97e3e5-77b8-44e8-bcca-9dabb6fbc06d', '2026-03-23', 'Chiang Mai', 'TH', NULL, NULL, 'mixed', 'hostel', false, false, false, NULL, '2026-03-20 05:41:05.48227+00', '2026-03-20 05:41:05.48227+00'),
+	('44e691a5-67bc-4872-8768-245a9eba530f', 'b63f45f3-fc01-4714-8cc4-a09ab49e18c7', 'dd97e3e5-77b8-44e8-bcca-9dabb6fbc06d', '2026-03-24', 'Chiang Mai', 'TH', NULL, NULL, NULL, 'hostel', false, false, false, NULL, '2026-03-20 06:03:18.953102+00', '2026-03-20 06:03:18.953102+00'),
+	('74a2d484-7191-4c52-a12a-40d76e43902f', 'b63f45f3-fc01-4714-8cc4-a09ab49e18c7', 'dd97e3e5-77b8-44e8-bcca-9dabb6fbc06d', '2026-03-25', NULL, NULL, NULL, NULL, NULL, NULL, false, false, false, NULL, '2026-03-20 06:05:57.593405+00', '2026-03-20 06:05:57.593405+00');
+
+
+--
+-- Data for Name: travel_day_moves; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."travel_day_moves" ("id", "user_id", "travel_day_log_id", "seq_no", "move_kind", "departure_place_label", "departure_country_code", "departure_lat", "departure_lng", "arrival_place_label", "arrival_country_code", "arrival_lat", "arrival_lng", "travel_mode", "distance_km", "duration_minutes", "is_border_crossing", "is_main_move", "note", "created_at", "updated_at") VALUES
+	('4f39a8f1-e763-46c6-a203-2ed9a75a06ce', 'b63f45f3-fc01-4714-8cc4-a09ab49e18c7', 'c0e8f6d8-c50d-4d38-9b78-169bf98d4718', 1, 'transfer', 'Bangkok', 'TH', NULL, NULL, 'Ayutthaya', 'TH', NULL, NULL, 'bus', 80.00, 90, false, true, NULL, '2026-03-20 05:44:00.392307+00', '2026-03-20 05:44:00.392307+00'),
+	('300d1bf3-ada6-4da0-b356-90ec7060e96c', 'b63f45f3-fc01-4714-8cc4-a09ab49e18c7', 'f28fe2e2-813d-4c92-80d2-e427f33b2034', 1, 'outing', 'Ayutthaya', 'TH', NULL, NULL, 'Temple Area', 'TH', NULL, NULL, 'bike', 10.00, 60, false, true, NULL, '2026-03-20 05:44:15.197376+00', '2026-03-20 05:44:15.197376+00'),
+	('6b9f33e6-209e-4857-8e11-1f5cc44f2077', 'b63f45f3-fc01-4714-8cc4-a09ab49e18c7', 'f28fe2e2-813d-4c92-80d2-e427f33b2034', 2, 'return', 'Temple Area', 'TH', NULL, NULL, 'Ayutthaya', 'TH', NULL, NULL, 'bike', 10.00, 60, false, false, NULL, '2026-03-20 05:44:15.197376+00', '2026-03-20 05:44:15.197376+00'),
+	('d170b1ff-40ec-406b-8c12-f5ec38d6ce3b', 'b63f45f3-fc01-4714-8cc4-a09ab49e18c7', 'ddd4e97f-be37-4a5d-93fb-4dafbbf43844', 1, 'transfer', 'Ayutthaya', 'TH', NULL, NULL, 'Bangkok', 'TH', NULL, NULL, 'train', 80.00, 90, false, false, NULL, '2026-03-20 05:44:44.025377+00', '2026-03-20 05:44:44.025377+00'),
+	('936606c1-8fa0-4e7c-86ef-20d46599ecf1', 'b63f45f3-fc01-4714-8cc4-a09ab49e18c7', 'ddd4e97f-be37-4a5d-93fb-4dafbbf43844', 2, 'transfer', 'Bangkok', 'TH', NULL, NULL, 'Chiang Mai', 'TH', NULL, NULL, 'flight', 600.00, 75, false, true, NULL, '2026-03-20 05:44:44.025377+00', '2026-03-20 05:44:44.025377+00');
+
+
+--
 -- Data for Name: trip_groups; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1049,6 +1074,6 @@ SELECT pg_catalog.setval('"public"."fx_rates_id_seq"', 7, true);
 -- PostgreSQL database dump complete
 --
 
--- \unrestrict cg55x5KK27lUXtIcMRLcWIF1SdLT1OVmrlG2B8f3ftJbUtoNq0X4k7qx2sNebKy
+-- \unrestrict lsIYauAwZXesV9pmDOKR4v3wv6qkfw7q4bIYn7561lvkpmjQMBYUq2SOhB4yhE3
 
 RESET ALL;

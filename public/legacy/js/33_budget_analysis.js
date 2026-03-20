@@ -380,10 +380,9 @@
     const subcatMap = new Map();
     const referenceCategoryMap = new Map([
       ['Logement', 0],
-      ['Nourriture', 0],
+      ['Repas', 0],
       ['Transport', 0],
       ['Activités', 0],
-      ['Divers', 0],
     ]);
     let spent = 0;
     let paidSpent = 0;
@@ -409,10 +408,9 @@
       const cur = _upper(row?.currency_code || '');
       if (cur) {
         referenceCategoryMap.set('Logement', (referenceCategoryMap.get('Logement') || 0) + _convert(row?.recommended_accommodation_daily_amount, cur, d, base));
-        referenceCategoryMap.set('Nourriture', (referenceCategoryMap.get('Nourriture') || 0) + _convert(row?.recommended_food_daily_amount, cur, d, base));
+        referenceCategoryMap.set('Repas', (referenceCategoryMap.get('Repas') || 0) + _convert(row?.recommended_food_daily_amount, cur, d, base));
         referenceCategoryMap.set('Transport', (referenceCategoryMap.get('Transport') || 0) + _convert(row?.recommended_transport_daily_amount, cur, d, base));
         referenceCategoryMap.set('Activités', (referenceCategoryMap.get('Activités') || 0) + _convert(row?.recommended_activities_daily_amount, cur, d, base));
-        referenceCategoryMap.set('Divers', (referenceCategoryMap.get('Divers') || 0) + _convert(row?.recommended_misc_daily_amount, cur, d, base));
       }
       return _referenceDailyForDate(d, base);
     });
@@ -485,61 +483,29 @@
 
   function _buildReferenceComparisonSeries(categorySeries, referenceCategoryMap, periodDays){
     const actualMap = new Map((categorySeries || []).map((row) => [String(row?.name || '').trim(), _safeNum(row?.actual)]));
-    const comparison = new Map();
-    const ensure = (name) => {
-      const key = String(name || '').trim();
-      if (!key) return null;
-      if (!comparison.has(key)) comparison.set(key, { name:key, actual:_safeNum(actualMap.get(key)), reference:0, color:_categoryColor(key) });
-      return comparison.get(key);
-    };
-    const addReference = (name, amount) => {
-      const row = ensure(name);
-      if (!row) return;
-      row.reference += _safeNum(amount);
-    };
-    const distribute = (amount, targets, fallbacks) => {
-      const total = _safeNum(amount);
-      if (total <= 0) return;
-      const validTargets = (targets || []).map((name) => String(name || '').trim()).filter(Boolean);
-      if (!validTargets.length) return;
-      const actualTotal = validTargets.reduce((sum, name) => sum + _safeNum(actualMap.get(name)), 0);
-      if (actualTotal > 0) {
-        validTargets.forEach((name) => addReference(name, total * (_safeNum(actualMap.get(name)) / actualTotal)));
-        return;
-      }
-      const fallbackMap = new Map((fallbacks || []).map((row) => [String(row?.name || '').trim(), _safeNum(row?.weight)]));
-      const fallbackTotal = validTargets.reduce((sum, name) => sum + _safeNum(fallbackMap.get(name) || 0), 0);
-      if (fallbackTotal > 0) {
-        validTargets.forEach((name) => addReference(name, total * (_safeNum(fallbackMap.get(name) || 0) / fallbackTotal)));
-        return;
-      }
-      const share = total / validTargets.length;
-      validTargets.forEach((name) => addReference(name, share));
-    };
-
-    for (const name of actualMap.keys()) ensure(name);
-    distribute(referenceCategoryMap.get('Logement'), ['Logement'], [{ name:'Logement', weight:1 }]);
-    distribute(referenceCategoryMap.get('Nourriture'), ['Repas', 'Course'], [{ name:'Repas', weight:0.7 }, { name:'Course', weight:0.3 }]);
-    distribute(referenceCategoryMap.get('Transport'), ['Transport', 'Transport Internationale'], [{ name:'Transport', weight:0.82 }, { name:'Transport Internationale', weight:0.18 }]);
-    distribute(referenceCategoryMap.get('Activités'), ['Sorties'], [{ name:'Sorties', weight:1 }]);
-    distribute(referenceCategoryMap.get('Divers'), ['Autre', 'Santé', 'Frais bancaire', 'Souvenir', 'Cadeau'], [{ name:'Autre', weight:0.62 }, { name:'Santé', weight:0.16 }, { name:'Frais bancaire', weight:0.12 }, { name:'Souvenir', weight:0.05 }, { name:'Cadeau', weight:0.05 }]);
-
     const days = Math.max(1, Number(periodDays) || 1);
-    return [...comparison.values()]
-      .map((row) => {
-        const actualPerDay = _safeNum(row.actual) / days;
-        const referencePerDay = _safeNum(row.reference) / days;
-        return {
-          ...row,
-          actualPerDay: Number(actualPerDay.toFixed(2)),
-          referencePerDay: Number(referencePerDay.toFixed(2)),
-          deltaPerDay: Number((actualPerDay - referencePerDay).toFixed(2)),
-          delta: Number((row.actual - row.reference).toFixed(2))
-        };
-      })
-      .filter((row) => _safeNum(row.actualPerDay) > 0 || _safeNum(row.referencePerDay) > 0)
-      .sort((a, b) => Math.max(_safeNum(b.actualPerDay), _safeNum(b.referencePerDay)) - Math.max(_safeNum(a.actualPerDay), _safeNum(a.referencePerDay)))
-      .slice(0, 10);
+    const mappings = [
+      { name:'Logement', actualKeys:['Logement'], referenceKey:'Logement' },
+      { name:'Repas', actualKeys:['Repas','Course'], referenceKey:'Repas' },
+      { name:'Transport', actualKeys:['Transport','Transport Internationale'], referenceKey:'Transport' },
+      { name:'Activités', actualKeys:['Activités','Sorties'], referenceKey:'Activités' },
+    ];
+    return mappings.map((row) => {
+      const actual = row.actualKeys.reduce((sum, key) => sum + _safeNum(actualMap.get(key)), 0);
+      const reference = _safeNum(referenceCategoryMap.get(row.referenceKey));
+      const actualPerDay = actual / days;
+      const referencePerDay = reference / days;
+      return {
+        name: row.name,
+        actual: Number(actual.toFixed(2)),
+        reference: Number(reference.toFixed(2)),
+        actualPerDay: Number(actualPerDay.toFixed(2)),
+        referencePerDay: Number(referencePerDay.toFixed(2)),
+        deltaPerDay: Number((actualPerDay - referencePerDay).toFixed(2)),
+        delta: Number((actual - reference).toFixed(2)),
+        color: _categoryColor(row.name)
+      };
+    }).filter((row) => _safeNum(row.actualPerDay) > 0 || _safeNum(row.referencePerDay) > 0);
   }
 
   function _buildSummary(model){

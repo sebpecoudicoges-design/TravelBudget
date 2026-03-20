@@ -349,6 +349,21 @@ $$;
 ALTER FUNCTION "public"."bind_trip_member_to_auth"("p_trip_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."can_access_travel"("p_travel_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE
+    AS $$
+  select exists (
+    select 1
+    from public.travels t
+    where t.id = p_travel_id
+      and t.user_id = auth.uid()
+  );
+$$;
+
+
+ALTER FUNCTION "public"."can_access_travel"("p_travel_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."delete_transaction"("p_tx_id" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -2084,6 +2099,19 @@ $$;
 ALTER FUNCTION "public"."rpc_budget_reference_resolve_for_period"("p_period_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."set_current_timestamp_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."set_current_timestamp_updated_at"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."set_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -2234,6 +2262,284 @@ $$;
 
 
 ALTER FUNCTION "public"."transactions_travel_consistency_guard"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."travel_day_context_for_date"("p_travel_id" "uuid", "p_log_date" "date") RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE
+    AS $$
+declare
+  v_current jsonb;
+  v_previous jsonb;
+begin
+  select to_jsonb(l)
+    into v_current
+  from public.v_travel_day_ui l
+  where l.travel_id = p_travel_id
+    and l.log_date = p_log_date;
+
+  select to_jsonb(x)
+    into v_previous
+  from public.travel_day_last_known_location(p_travel_id, p_log_date) x;
+
+  return jsonb_build_object(
+    'current_day', coalesce(v_current, '{}'::jsonb),
+    'previous_location', coalesce(v_previous, '{}'::jsonb)
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."travel_day_context_for_date"("p_travel_id" "uuid", "p_log_date" "date") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."travel_day_last_known_location"("p_travel_id" "uuid", "p_before_date" "date") RETURNS TABLE("log_id" "uuid", "log_date" "date", "end_place_label" "text", "end_country_code" "text", "end_lat" numeric, "end_lng" numeric, "travel_mode_main" "text", "overnight_mode" "text")
+    LANGUAGE "sql" STABLE
+    AS $$
+  select
+    l.id as log_id,
+    l.log_date,
+    l.end_place_label,
+    l.end_country_code,
+    l.end_lat,
+    l.end_lng,
+    l.travel_mode_main,
+    l.overnight_mode
+  from public.travel_day_logs l
+  where l.travel_id = p_travel_id
+    and l.log_date < p_before_date
+    and (
+      l.end_place_label is not null
+      or l.end_country_code is not null
+      or l.end_lat is not null
+      or l.end_lng is not null
+    )
+  order by l.log_date desc
+  limit 1;
+$$;
+
+
+ALTER FUNCTION "public"."travel_day_last_known_location"("p_travel_id" "uuid", "p_before_date" "date") OWNER TO "postgres";
+
+SET default_tablespace = '';
+
+SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."travel_day_logs" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
+    "travel_id" "uuid" NOT NULL,
+    "log_date" "date" NOT NULL,
+    "end_place_label" "text",
+    "end_country_code" "text",
+    "end_lat" numeric(9,6),
+    "end_lng" numeric(9,6),
+    "travel_mode_main" "text",
+    "overnight_mode" "text",
+    "no_move_declared" boolean DEFAULT false NOT NULL,
+    "crossed_border" boolean DEFAULT false NOT NULL,
+    "is_rest_day" boolean DEFAULT false NOT NULL,
+    "note" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "travel_day_logs_country_code_chk" CHECK ((("end_country_code" IS NULL) OR ("end_country_code" ~ '^[A-Z]{2,3}$'::"text"))),
+    CONSTRAINT "travel_day_logs_end_lat_chk" CHECK ((("end_lat" IS NULL) OR (("end_lat" >= ('-90'::integer)::numeric) AND ("end_lat" <= (90)::numeric)))),
+    CONSTRAINT "travel_day_logs_end_lng_chk" CHECK ((("end_lng" IS NULL) OR (("end_lng" >= ('-180'::integer)::numeric) AND ("end_lng" <= (180)::numeric)))),
+    CONSTRAINT "travel_day_logs_overnight_mode_chk" CHECK ((("overnight_mode" IS NULL) OR ("overnight_mode" = ANY (ARRAY['hostel'::"text", 'hotel'::"text", 'guesthouse'::"text", 'apartment'::"text", 'friends_family'::"text", 'couchsurfing'::"text", 'camping'::"text", 'wild_camping'::"text", 'night_transport'::"text", 'boat'::"text", 'van'::"text", 'outside'::"text", 'other'::"text"])))),
+    CONSTRAINT "travel_day_logs_travel_mode_main_chk" CHECK ((("travel_mode_main" IS NULL) OR ("travel_mode_main" = ANY (ARRAY['none'::"text", 'walk'::"text", 'bike'::"text", 'motorbike'::"text", 'car'::"text", 'bus'::"text", 'train'::"text", 'boat'::"text", 'flight'::"text", 'hitchhiking'::"text", 'mixed'::"text", 'other'::"text"]))))
+);
+
+
+ALTER TABLE "public"."travel_day_logs" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."travel_day_log_upsert"("p_travel_id" "uuid", "p_log_date" "date", "p_end_place_label" "text" DEFAULT NULL::"text", "p_end_country_code" "text" DEFAULT NULL::"text", "p_end_lat" numeric DEFAULT NULL::numeric, "p_end_lng" numeric DEFAULT NULL::numeric, "p_travel_mode_main" "text" DEFAULT NULL::"text", "p_overnight_mode" "text" DEFAULT NULL::"text", "p_no_move_declared" boolean DEFAULT false, "p_crossed_border" boolean DEFAULT false, "p_is_rest_day" boolean DEFAULT false, "p_note" "text" DEFAULT NULL::"text") RETURNS "public"."travel_day_logs"
+    LANGUAGE "plpgsql"
+    AS $$
+declare
+  v_row public.travel_day_logs;
+  v_last record;
+  v_same_place record;
+
+  v_end_place_label text := p_end_place_label;
+  v_end_country_code text := p_end_country_code;
+  v_end_lat numeric := p_end_lat;
+  v_end_lng numeric := p_end_lng;
+begin
+  -- 1) If "no move" and no place provided, inherit last known location
+  if p_no_move_declared = true
+     and p_end_place_label is null
+     and p_end_country_code is null
+     and p_end_lat is null
+     and p_end_lng is null
+  then
+    select *
+      into v_last
+    from public.travel_day_last_known_location(p_travel_id, p_log_date);
+
+    if found then
+      v_end_place_label := v_last.end_place_label;
+      v_end_country_code := v_last.end_country_code;
+      v_end_lat := v_last.end_lat;
+      v_end_lng := v_last.end_lng;
+    end if;
+  end if;
+
+  -- 2) If place is provided but coords missing, reuse last known coords for same place
+  if (v_end_lat is null or v_end_lng is null)
+     and (v_end_place_label is not null or v_end_country_code is not null)
+  then
+    select
+      l.end_lat,
+      l.end_lng
+    into v_same_place
+    from public.travel_day_logs l
+    where l.travel_id = p_travel_id
+      and l.log_date < p_log_date
+      and l.end_lat is not null
+      and l.end_lng is not null
+      and coalesce(lower(trim(l.end_place_label)), '') = coalesce(lower(trim(v_end_place_label)), '')
+      and coalesce(l.end_country_code, '') = coalesce(v_end_country_code, '')
+    order by l.log_date desc
+    limit 1;
+
+    if found then
+      v_end_lat := coalesce(v_end_lat, v_same_place.end_lat);
+      v_end_lng := coalesce(v_end_lng, v_same_place.end_lng);
+    end if;
+  end if;
+
+  insert into public.travel_day_logs (
+    user_id,
+    travel_id,
+    log_date,
+    end_place_label,
+    end_country_code,
+    end_lat,
+    end_lng,
+    travel_mode_main,
+    overnight_mode,
+    no_move_declared,
+    crossed_border,
+    is_rest_day,
+    note
+  )
+  values (
+    auth.uid(),
+    p_travel_id,
+    p_log_date,
+    v_end_place_label,
+    v_end_country_code,
+    v_end_lat,
+    v_end_lng,
+    p_travel_mode_main,
+    p_overnight_mode,
+    p_no_move_declared,
+    p_crossed_border,
+    p_is_rest_day,
+    p_note
+  )
+  on conflict (travel_id, log_date)
+  do update set
+    end_place_label   = excluded.end_place_label,
+    end_country_code  = excluded.end_country_code,
+    end_lat           = excluded.end_lat,
+    end_lng           = excluded.end_lng,
+    travel_mode_main  = excluded.travel_mode_main,
+    overnight_mode    = excluded.overnight_mode,
+    no_move_declared  = excluded.no_move_declared,
+    crossed_border    = excluded.crossed_border,
+    is_rest_day       = excluded.is_rest_day,
+    note              = excluded.note,
+    updated_at        = now()
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."travel_day_log_upsert"("p_travel_id" "uuid", "p_log_date" "date", "p_end_place_label" "text", "p_end_country_code" "text", "p_end_lat" numeric, "p_end_lng" numeric, "p_travel_mode_main" "text", "p_overnight_mode" "text", "p_no_move_declared" boolean, "p_crossed_border" boolean, "p_is_rest_day" boolean, "p_note" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."travel_day_logs_apply_no_move_defaults"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+begin
+  if new.no_move_declared = true and new.travel_mode_main is null then
+    new.travel_mode_main := 'none';
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."travel_day_logs_apply_no_move_defaults"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."travel_day_logs_validate_no_move"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+declare
+  v_move_count integer;
+begin
+  if new.no_move_declared then
+    select count(*)
+      into v_move_count
+    from public.travel_day_moves m
+    where m.travel_day_log_id = new.id;
+
+    if v_move_count > 0 then
+      raise exception 'Cannot set no_move_declared=true when moves already exist for this day.';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."travel_day_logs_validate_no_move"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."travel_day_moves_block_if_no_move_declared"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+declare
+  v_no_move boolean;
+begin
+  select l.no_move_declared
+    into v_no_move
+  from public.travel_day_logs l
+  where l.id = new.travel_day_log_id;
+
+  if coalesce(v_no_move, false) then
+    raise exception 'Cannot insert a move on a day declared as no movement.';
+  end if;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."travel_day_moves_block_if_no_move_declared"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."travel_day_moves_sync_user_id"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+begin
+  select l.user_id
+    into new.user_id
+  from public.travel_day_logs l
+  where l.id = new.travel_day_log_id;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."travel_day_moves_sync_user_id"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."trip_accept_invite"("p_token" "text") RETURNS "void"
@@ -3223,10 +3529,6 @@ $$;
 
 ALTER FUNCTION "public"."wallets_travel_consistency_guard"() OWNER TO "postgres";
 
-SET default_tablespace = '';
-
-SET default_table_access_method = "heap";
-
 
 CREATE TABLE IF NOT EXISTS "public"."budget_segment_budget_reference_override" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -3676,6 +3978,39 @@ CREATE TABLE IF NOT EXISTS "public"."travel_budget_reference_profile" (
 ALTER TABLE "public"."travel_budget_reference_profile" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."travel_day_moves" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
+    "travel_day_log_id" "uuid" NOT NULL,
+    "seq_no" integer DEFAULT 1 NOT NULL,
+    "move_kind" "text" DEFAULT 'transfer'::"text" NOT NULL,
+    "departure_place_label" "text",
+    "departure_country_code" "text",
+    "departure_lat" numeric(9,6),
+    "departure_lng" numeric(9,6),
+    "arrival_place_label" "text",
+    "arrival_country_code" "text",
+    "arrival_lat" numeric(9,6),
+    "arrival_lng" numeric(9,6),
+    "travel_mode" "text" NOT NULL,
+    "distance_km" numeric(9,2),
+    "duration_minutes" integer,
+    "is_border_crossing" boolean DEFAULT false NOT NULL,
+    "is_main_move" boolean DEFAULT false NOT NULL,
+    "note" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "travel_day_moves_distance_chk" CHECK ((("distance_km" IS NULL) OR ("distance_km" >= (0)::numeric))),
+    CONSTRAINT "travel_day_moves_duration_chk" CHECK ((("duration_minutes" IS NULL) OR ("duration_minutes" >= 0))),
+    CONSTRAINT "travel_day_moves_move_kind_chk" CHECK (("move_kind" = ANY (ARRAY['transfer'::"text", 'outing'::"text", 'return'::"text", 'detour'::"text", 'other'::"text"]))),
+    CONSTRAINT "travel_day_moves_seq_positive_chk" CHECK (("seq_no" >= 1)),
+    CONSTRAINT "travel_day_moves_travel_mode_chk" CHECK (("travel_mode" = ANY (ARRAY['walk'::"text", 'bike'::"text", 'motorbike'::"text", 'car'::"text", 'bus'::"text", 'train'::"text", 'boat'::"text", 'flight'::"text", 'hitchhiking'::"text", 'other'::"text"])))
+);
+
+
+ALTER TABLE "public"."travel_day_moves" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."travels" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -3985,6 +4320,199 @@ CREATE OR REPLACE VIEW "public"."v_period_budget_reference_resolved" AS
 
 
 ALTER VIEW "public"."v_period_budget_reference_resolved" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."v_travel_day_summary" AS
+ WITH "move_agg" AS (
+         SELECT "m"."travel_day_log_id",
+            "count"("m"."id") AS "move_count",
+            COALESCE("sum"("m"."distance_km"), (0)::numeric) AS "total_distance_km",
+            COALESCE("sum"("m"."duration_minutes"), (0)::bigint) AS "total_duration_minutes"
+           FROM "public"."travel_day_moves" "m"
+          GROUP BY "m"."travel_day_log_id"
+        ), "first_move" AS (
+         SELECT DISTINCT ON ("m"."travel_day_log_id") "m"."travel_day_log_id",
+            "m"."departure_place_label" AS "first_departure_place_label",
+            "m"."departure_country_code" AS "first_departure_country_code",
+            "m"."departure_lat" AS "first_departure_lat",
+            "m"."departure_lng" AS "first_departure_lng"
+           FROM "public"."travel_day_moves" "m"
+          ORDER BY "m"."travel_day_log_id", "m"."seq_no", "m"."created_at"
+        ), "last_move" AS (
+         SELECT DISTINCT ON ("m"."travel_day_log_id") "m"."travel_day_log_id",
+            "m"."arrival_place_label" AS "last_arrival_place_label",
+            "m"."arrival_country_code" AS "last_arrival_country_code",
+            "m"."arrival_lat" AS "last_arrival_lat",
+            "m"."arrival_lng" AS "last_arrival_lng"
+           FROM "public"."travel_day_moves" "m"
+          ORDER BY "m"."travel_day_log_id", "m"."seq_no" DESC, "m"."created_at" DESC
+        )
+ SELECT "l"."id",
+    "l"."travel_id",
+    "l"."user_id",
+    "l"."log_date",
+    "l"."end_place_label",
+    "l"."end_country_code",
+    "l"."end_lat",
+    "l"."end_lng",
+    "l"."travel_mode_main",
+    "l"."overnight_mode",
+    "l"."no_move_declared",
+    "l"."crossed_border",
+    "l"."is_rest_day",
+    "l"."note",
+    COALESCE("ma"."move_count", (0)::bigint) AS "move_count",
+    COALESCE("ma"."total_distance_km", (0)::numeric) AS "total_distance_km",
+    COALESCE("ma"."total_duration_minutes", (0)::bigint) AS "total_duration_minutes",
+    "f"."first_departure_place_label",
+    "f"."first_departure_country_code",
+    "f"."first_departure_lat",
+    "f"."first_departure_lng",
+    "lm"."last_arrival_place_label",
+    "lm"."last_arrival_country_code",
+    "lm"."last_arrival_lat",
+    "lm"."last_arrival_lng",
+        CASE
+            WHEN ("l"."no_move_declared" = true) THEN 'stationary'::"text"
+            WHEN (COALESCE("ma"."move_count", (0)::bigint) = 0) THEN 'unknown'::"text"
+            WHEN (COALESCE("ma"."move_count", (0)::bigint) = 1) THEN
+            CASE
+                WHEN ((COALESCE("lower"(TRIM(BOTH FROM "f"."first_departure_place_label")), ''::"text") = COALESCE("lower"(TRIM(BOTH FROM "lm"."last_arrival_place_label")), ''::"text")) AND (COALESCE("f"."first_departure_country_code", ''::"text") = COALESCE("lm"."last_arrival_country_code", ''::"text"))) THEN 'round_trip'::"text"
+                ELSE 'one_way'::"text"
+            END
+            ELSE
+            CASE
+                WHEN ((COALESCE("lower"(TRIM(BOTH FROM "f"."first_departure_place_label")), ''::"text") = COALESCE("lower"(TRIM(BOTH FROM "lm"."last_arrival_place_label")), ''::"text")) AND (COALESCE("f"."first_departure_country_code", ''::"text") = COALESCE("lm"."last_arrival_country_code", ''::"text"))) THEN 'round_trip'::"text"
+                ELSE 'multi_stop'::"text"
+            END
+        END AS "day_pattern"
+   FROM ((("public"."travel_day_logs" "l"
+     LEFT JOIN "move_agg" "ma" ON (("ma"."travel_day_log_id" = "l"."id")))
+     LEFT JOIN "first_move" "f" ON (("f"."travel_day_log_id" = "l"."id")))
+     LEFT JOIN "last_move" "lm" ON (("lm"."travel_day_log_id" = "l"."id")));
+
+
+ALTER VIEW "public"."v_travel_day_summary" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."v_travel_day_ui" AS
+ WITH "base" AS (
+         SELECT "s"."id",
+            "s"."travel_id",
+            "s"."user_id",
+            "s"."log_date",
+            "s"."end_place_label",
+            "s"."end_country_code",
+            "s"."end_lat",
+            "s"."end_lng",
+            "s"."travel_mode_main",
+            "s"."overnight_mode",
+            "s"."no_move_declared",
+            "s"."crossed_border",
+            "s"."is_rest_day",
+            "s"."note",
+            "s"."move_count",
+            "s"."total_distance_km",
+            "s"."total_duration_minutes",
+            "s"."first_departure_place_label",
+            "s"."first_departure_country_code",
+            "s"."first_departure_lat",
+            "s"."first_departure_lng",
+            "s"."last_arrival_place_label",
+            "s"."last_arrival_country_code",
+            "s"."last_arrival_lat",
+            "s"."last_arrival_lng",
+            "s"."day_pattern",
+            (("s"."end_place_label" IS NOT NULL) OR ("s"."end_country_code" IS NOT NULL)) AS "has_end_place"
+           FROM "public"."v_travel_day_summary" "s"
+        ), "resolved" AS (
+         SELECT "b"."id",
+            "b"."travel_id",
+            "b"."user_id",
+            "b"."log_date",
+            "b"."end_place_label",
+            "b"."end_country_code",
+            "b"."end_lat",
+            "b"."end_lng",
+            "b"."travel_mode_main",
+            "b"."overnight_mode",
+            "b"."no_move_declared",
+            "b"."crossed_border",
+            "b"."is_rest_day",
+            "b"."note",
+            "b"."move_count",
+            "b"."total_distance_km",
+            "b"."total_duration_minutes",
+            "b"."first_departure_place_label",
+            "b"."first_departure_country_code",
+            "b"."first_departure_lat",
+            "b"."first_departure_lng",
+            "b"."last_arrival_place_label",
+            "b"."last_arrival_country_code",
+            "b"."last_arrival_lat",
+            "b"."last_arrival_lng",
+            "b"."day_pattern",
+            "b"."has_end_place",
+            "sp"."end_lat" AS "same_place_fallback_lat",
+            "sp"."end_lng" AS "same_place_fallback_lng"
+           FROM ("base" "b"
+             LEFT JOIN LATERAL ( SELECT "l"."end_lat",
+                    "l"."end_lng"
+                   FROM "public"."travel_day_logs" "l"
+                  WHERE (("l"."travel_id" = "b"."travel_id") AND ("l"."log_date" < "b"."log_date") AND ("l"."end_lat" IS NOT NULL) AND ("l"."end_lng" IS NOT NULL) AND (COALESCE("lower"(TRIM(BOTH FROM "l"."end_place_label")), ''::"text") = COALESCE("lower"(TRIM(BOTH FROM "b"."end_place_label")), ''::"text")) AND (COALESCE("l"."end_country_code", ''::"text") = COALESCE("b"."end_country_code", ''::"text")))
+                  ORDER BY "l"."log_date" DESC
+                 LIMIT 1) "sp" ON (true))
+        )
+ SELECT "id",
+    "travel_id",
+    "user_id",
+    "log_date",
+    "end_place_label",
+    "end_country_code",
+    "end_lat",
+    "end_lng",
+    COALESCE("end_lat", "same_place_fallback_lat") AS "resolved_end_lat",
+    COALESCE("end_lng", "same_place_fallback_lng") AS "resolved_end_lng",
+    "travel_mode_main",
+    "overnight_mode",
+    "no_move_declared",
+    "crossed_border",
+    "is_rest_day",
+    "note",
+    "move_count",
+    "total_distance_km",
+    "total_duration_minutes",
+    "first_departure_place_label",
+    "first_departure_country_code",
+    "first_departure_lat",
+    "first_departure_lng",
+    "last_arrival_place_label",
+    "last_arrival_country_code",
+    "last_arrival_lat",
+    "last_arrival_lng",
+        CASE
+            WHEN "no_move_declared" THEN 'stationary'::"text"
+            WHEN (("move_count" = 0) AND "has_end_place" AND ("overnight_mode" IS NOT NULL)) THEN 'stationary'::"text"
+            ELSE "day_pattern"
+        END AS "day_pattern",
+        CASE
+            WHEN "no_move_declared" THEN true
+            WHEN ("move_count" > 0) THEN true
+            WHEN ("has_end_place" AND ("overnight_mode" IS NOT NULL)) THEN true
+            ELSE false
+        END AS "is_day_completed",
+        CASE
+            WHEN "no_move_declared" THEN 'no_move'::"text"
+            WHEN (("move_count" = 0) AND "has_end_place" AND ("overnight_mode" IS NOT NULL)) THEN 'stay'::"text"
+            WHEN ("move_count" = 0) THEN 'draft'::"text"
+            WHEN ("move_count" = 1) THEN 'simple'::"text"
+            ELSE 'detailed'::"text"
+        END AS "entry_mode",
+    ((COALESCE("end_lat", "same_place_fallback_lat") IS NOT NULL) AND (COALESCE("end_lng", "same_place_fallback_lng") IS NOT NULL)) AS "has_resolved_coordinates"
+   FROM "resolved" "r";
+
+
+ALTER VIEW "public"."v_travel_day_ui" OWNER TO "postgres";
 
 
 CREATE OR REPLACE VIEW "public"."v_trip_balances" WITH ("security_invoker"='true') AS
@@ -4402,6 +4930,26 @@ ALTER TABLE ONLY "public"."travel_budget_reference_profile"
 
 
 
+ALTER TABLE ONLY "public"."travel_day_logs"
+    ADD CONSTRAINT "travel_day_logs_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."travel_day_logs"
+    ADD CONSTRAINT "travel_day_logs_unique_travel_date" UNIQUE ("travel_id", "log_date");
+
+
+
+ALTER TABLE ONLY "public"."travel_day_moves"
+    ADD CONSTRAINT "travel_day_moves_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."travel_day_moves"
+    ADD CONSTRAINT "travel_day_moves_unique_seq" UNIQUE ("travel_day_log_id", "seq_no");
+
+
+
 ALTER TABLE ONLY "public"."travels"
     ADD CONSTRAINT "travels_pkey" PRIMARY KEY ("id");
 
@@ -4564,6 +5112,14 @@ CREATE INDEX "idx_travel_budget_reference_profile_travel" ON "public"."travel_bu
 
 
 CREATE INDEX "idx_travel_budget_reference_profile_user" ON "public"."travel_budget_reference_profile" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_travel_day_logs_travel_date" ON "public"."travel_day_logs" USING "btree" ("travel_id", "log_date");
+
+
+
+CREATE INDEX "idx_travel_day_moves_log_seq" ON "public"."travel_day_moves" USING "btree" ("travel_day_log_id", "seq_no");
 
 
 
@@ -4919,6 +5475,30 @@ CREATE OR REPLACE TRIGGER "trg_travel_budget_reference_profile_touch_updated_at"
 
 
 
+CREATE OR REPLACE TRIGGER "trg_travel_day_logs_apply_no_move_defaults" BEFORE INSERT OR UPDATE OF "no_move_declared", "travel_mode_main" ON "public"."travel_day_logs" FOR EACH ROW EXECUTE FUNCTION "public"."travel_day_logs_apply_no_move_defaults"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_travel_day_logs_set_updated_at" BEFORE UPDATE ON "public"."travel_day_logs" FOR EACH ROW EXECUTE FUNCTION "public"."set_current_timestamp_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_travel_day_logs_validate_no_move" BEFORE UPDATE OF "no_move_declared" ON "public"."travel_day_logs" FOR EACH ROW EXECUTE FUNCTION "public"."travel_day_logs_validate_no_move"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_travel_day_moves_block_if_no_move_declared" BEFORE INSERT OR UPDATE OF "travel_day_log_id" ON "public"."travel_day_moves" FOR EACH ROW EXECUTE FUNCTION "public"."travel_day_moves_block_if_no_move_declared"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_travel_day_moves_set_updated_at" BEFORE UPDATE ON "public"."travel_day_moves" FOR EACH ROW EXECUTE FUNCTION "public"."set_current_timestamp_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_travel_day_moves_sync_user_id" BEFORE INSERT OR UPDATE OF "travel_day_log_id" ON "public"."travel_day_moves" FOR EACH ROW EXECUTE FUNCTION "public"."travel_day_moves_sync_user_id"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_travels_touch_updated_at" BEFORE UPDATE ON "public"."travels" FOR EACH ROW EXECUTE FUNCTION "public"."_touch_updated_at"();
 
 
@@ -5087,6 +5667,16 @@ ALTER TABLE ONLY "public"."travel_budget_reference_profile"
 
 ALTER TABLE ONLY "public"."travel_budget_reference_profile"
     ADD CONSTRAINT "travel_budget_reference_profile_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."travel_day_logs"
+    ADD CONSTRAINT "travel_day_logs_travel_id_fkey" FOREIGN KEY ("travel_id") REFERENCES "public"."travels"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."travel_day_moves"
+    ADD CONSTRAINT "travel_day_moves_travel_day_log_id_fkey" FOREIGN KEY ("travel_day_log_id") REFERENCES "public"."travel_day_logs"("id") ON DELETE CASCADE;
 
 
 
@@ -5593,6 +6183,54 @@ CREATE POLICY "travel_budget_reference_profile_update_own" ON "public"."travel_b
 
 
 
+ALTER TABLE "public"."travel_day_logs" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "travel_day_logs_delete" ON "public"."travel_day_logs" FOR DELETE USING ("public"."can_access_travel"("travel_id"));
+
+
+
+CREATE POLICY "travel_day_logs_insert" ON "public"."travel_day_logs" FOR INSERT WITH CHECK ((("user_id" = "auth"."uid"()) AND "public"."can_access_travel"("travel_id")));
+
+
+
+CREATE POLICY "travel_day_logs_select" ON "public"."travel_day_logs" FOR SELECT USING ("public"."can_access_travel"("travel_id"));
+
+
+
+CREATE POLICY "travel_day_logs_update" ON "public"."travel_day_logs" FOR UPDATE USING ("public"."can_access_travel"("travel_id")) WITH CHECK ((("user_id" = "auth"."uid"()) AND "public"."can_access_travel"("travel_id")));
+
+
+
+ALTER TABLE "public"."travel_day_moves" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "travel_day_moves_delete" ON "public"."travel_day_moves" FOR DELETE USING ((EXISTS ( SELECT 1
+   FROM "public"."travel_day_logs" "l"
+  WHERE (("l"."id" = "travel_day_moves"."travel_day_log_id") AND "public"."can_access_travel"("l"."travel_id")))));
+
+
+
+CREATE POLICY "travel_day_moves_insert" ON "public"."travel_day_moves" FOR INSERT WITH CHECK ((("user_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM "public"."travel_day_logs" "l"
+  WHERE (("l"."id" = "travel_day_moves"."travel_day_log_id") AND "public"."can_access_travel"("l"."travel_id"))))));
+
+
+
+CREATE POLICY "travel_day_moves_select" ON "public"."travel_day_moves" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."travel_day_logs" "l"
+  WHERE (("l"."id" = "travel_day_moves"."travel_day_log_id") AND "public"."can_access_travel"("l"."travel_id")))));
+
+
+
+CREATE POLICY "travel_day_moves_update" ON "public"."travel_day_moves" FOR UPDATE USING ((EXISTS ( SELECT 1
+   FROM "public"."travel_day_logs" "l"
+  WHERE (("l"."id" = "travel_day_moves"."travel_day_log_id") AND "public"."can_access_travel"("l"."travel_id"))))) WITH CHECK ((("user_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM "public"."travel_day_logs" "l"
+  WHERE (("l"."id" = "travel_day_moves"."travel_day_log_id") AND "public"."can_access_travel"("l"."travel_id"))))));
+
+
+
 ALTER TABLE "public"."travels" ENABLE ROW LEVEL SECURITY;
 
 
@@ -5995,6 +6633,12 @@ GRANT ALL ON FUNCTION "public"."bind_trip_member_to_auth"("p_trip_id" "uuid") TO
 
 
 
+GRANT ALL ON FUNCTION "public"."can_access_travel"("p_travel_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."can_access_travel"("p_travel_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."can_access_travel"("p_travel_id" "uuid") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."delete_transaction"("p_tx_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."delete_transaction"("p_tx_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."delete_transaction"("p_tx_id" "uuid") TO "service_role";
@@ -6132,6 +6776,12 @@ GRANT ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_period"("p_peri
 
 
 
+GRANT ALL ON FUNCTION "public"."set_current_timestamp_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."set_current_timestamp_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."set_current_timestamp_updated_at"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "service_role";
@@ -6153,6 +6803,54 @@ GRANT ALL ON FUNCTION "public"."tb_touch_updated_at"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."transactions_travel_consistency_guard"() TO "anon";
 GRANT ALL ON FUNCTION "public"."transactions_travel_consistency_guard"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."transactions_travel_consistency_guard"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."travel_day_context_for_date"("p_travel_id" "uuid", "p_log_date" "date") TO "anon";
+GRANT ALL ON FUNCTION "public"."travel_day_context_for_date"("p_travel_id" "uuid", "p_log_date" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."travel_day_context_for_date"("p_travel_id" "uuid", "p_log_date" "date") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."travel_day_last_known_location"("p_travel_id" "uuid", "p_before_date" "date") TO "anon";
+GRANT ALL ON FUNCTION "public"."travel_day_last_known_location"("p_travel_id" "uuid", "p_before_date" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."travel_day_last_known_location"("p_travel_id" "uuid", "p_before_date" "date") TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."travel_day_logs" TO "anon";
+GRANT ALL ON TABLE "public"."travel_day_logs" TO "authenticated";
+GRANT ALL ON TABLE "public"."travel_day_logs" TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."travel_day_log_upsert"("p_travel_id" "uuid", "p_log_date" "date", "p_end_place_label" "text", "p_end_country_code" "text", "p_end_lat" numeric, "p_end_lng" numeric, "p_travel_mode_main" "text", "p_overnight_mode" "text", "p_no_move_declared" boolean, "p_crossed_border" boolean, "p_is_rest_day" boolean, "p_note" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."travel_day_log_upsert"("p_travel_id" "uuid", "p_log_date" "date", "p_end_place_label" "text", "p_end_country_code" "text", "p_end_lat" numeric, "p_end_lng" numeric, "p_travel_mode_main" "text", "p_overnight_mode" "text", "p_no_move_declared" boolean, "p_crossed_border" boolean, "p_is_rest_day" boolean, "p_note" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."travel_day_log_upsert"("p_travel_id" "uuid", "p_log_date" "date", "p_end_place_label" "text", "p_end_country_code" "text", "p_end_lat" numeric, "p_end_lng" numeric, "p_travel_mode_main" "text", "p_overnight_mode" "text", "p_no_move_declared" boolean, "p_crossed_border" boolean, "p_is_rest_day" boolean, "p_note" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."travel_day_logs_apply_no_move_defaults"() TO "anon";
+GRANT ALL ON FUNCTION "public"."travel_day_logs_apply_no_move_defaults"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."travel_day_logs_apply_no_move_defaults"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."travel_day_logs_validate_no_move"() TO "anon";
+GRANT ALL ON FUNCTION "public"."travel_day_logs_validate_no_move"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."travel_day_logs_validate_no_move"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."travel_day_moves_block_if_no_move_declared"() TO "anon";
+GRANT ALL ON FUNCTION "public"."travel_day_moves_block_if_no_move_declared"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."travel_day_moves_block_if_no_move_declared"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."travel_day_moves_sync_user_id"() TO "anon";
+GRANT ALL ON FUNCTION "public"."travel_day_moves_sync_user_id"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."travel_day_moves_sync_user_id"() TO "service_role";
 
 
 
@@ -6355,6 +7053,12 @@ GRANT ALL ON TABLE "public"."travel_budget_reference_profile" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."travel_day_moves" TO "anon";
+GRANT ALL ON TABLE "public"."travel_day_moves" TO "authenticated";
+GRANT ALL ON TABLE "public"."travel_day_moves" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."travels" TO "anon";
 GRANT ALL ON TABLE "public"."travels" TO "authenticated";
 GRANT ALL ON TABLE "public"."travels" TO "service_role";
@@ -6424,6 +7128,18 @@ GRANT ALL ON TABLE "public"."v_country_budget_reference_latest" TO "service_role
 GRANT ALL ON TABLE "public"."v_period_budget_reference_resolved" TO "anon";
 GRANT ALL ON TABLE "public"."v_period_budget_reference_resolved" TO "authenticated";
 GRANT ALL ON TABLE "public"."v_period_budget_reference_resolved" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."v_travel_day_summary" TO "anon";
+GRANT ALL ON TABLE "public"."v_travel_day_summary" TO "authenticated";
+GRANT ALL ON TABLE "public"."v_travel_day_summary" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."v_travel_day_ui" TO "anon";
+GRANT ALL ON TABLE "public"."v_travel_day_ui" TO "authenticated";
+GRANT ALL ON TABLE "public"."v_travel_day_ui" TO "service_role";
 
 
 

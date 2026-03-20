@@ -693,6 +693,22 @@
     modal.open();
   };
 
+  function _rrLsKey(travelId) {
+    return `tb_recurring_open_${String(travelId || state?.activeTravelId || '')}`;
+  }
+
+  function _rrGetOpenMap(travelId) {
+    try { return JSON.parse(localStorage.getItem(_rrLsKey(travelId)) || '{}') || {}; } catch (_) { return {}; }
+  }
+
+  function _rrSetOpenState(travelId, ruleId, isOpen) {
+    try {
+      const map = _rrGetOpenMap(travelId);
+      map[String(ruleId || '')] = !!isOpen;
+      localStorage.setItem(_rrLsKey(travelId), JSON.stringify(map));
+    } catch (_) {}
+  }
+
   window.renderRecurringRules = function renderRecurringRules() {
     const host = _rrEnsureSettingsBox();
     if (!host) return;
@@ -707,16 +723,17 @@
       host.innerHTML = `<div class="muted">Aucune échéance périodique sur ce voyage.</div>`;
       return;
     }
-
+    const openMap = _rrGetOpenMap(tid);
     host.innerHTML = `
       <div class="tb-recurring-stack tb-recurring-stack--lines">
         ${rows.map((r) => {
           const walletName = String((state?.wallets || []).find(w=>String(w.id||'')===String(r.walletId||r.wallet_id||''))?.name || '—');
           const cat = String(r.category||'').trim();
           const sub = String(r.subcategory||'').trim();
+          const isOpen = !!openMap[String(r.id || '')];
           return `
-          <div class="tb-recurring-item">
-            <div class="tb-recurring-row">
+          <div class="tb-recurring-item ${isOpen ? '' : 'is-collapsed'}" data-rr-card="${escapeHTML(r.id)}">
+            <button type="button" class="tb-recurring-toggle" data-rr-act="toggle" data-rr-id="${escapeHTML(r.id)}">
               <div class="tb-recurring-main">
                 <div class="tb-recurring-title">${escapeHTML(r.label || r.name || "—")}</div>
                 <div class="tb-recurring-subtitle">${escapeHTML(fmtMoney(Number(r.amount || 0), r.currency || ""))} · ${escapeHTML(_rrFreqLabel(r))}</div>
@@ -727,12 +744,13 @@
                 ${cat ? `<span class="tb-recurring-meta-chip">${escapeHTML(cat)}${sub?` · ${escapeHTML(sub)}`:''}</span>` : ``}
                 ${r.outOfBudget || r.out_of_budget ? `<span class="tb-settings-pill tb-settings-pill--warn">Hors budget</span>` : ``}
                 <span class="tb-settings-pill ${_rrStatus(r)==='active' ? 'tb-settings-pill--positive' : ''}">${escapeHTML(_rrStatus(r))}</span>
+                <span class="tb-recurring-arrow">⌄</span>
               </div>
-              <div class="tb-recurring-actions">
-                <button class="btn" data-rr-act="edit" data-rr-id="${escapeHTML(r.id)}">Modifier</button>
-                ${_rrStatus(r) === "active" ? `<button class="btn btn--warn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">Pause</button>` : `<button class="btn btn--positive" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`}
-                <button class="btn danger" data-rr-act="delete" data-rr-id="${escapeHTML(r.id)}">Supprimer</button>
-              </div>
+            </button>
+            <div class="tb-recurring-actions">
+              <button class="btn" data-rr-act="edit" data-rr-id="${escapeHTML(r.id)}">Modifier</button>
+              ${_rrStatus(r) === "active" ? `<button class="btn btn--warn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">Pause</button>` : `<button class="btn btn--positive" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`}
+              <button class="btn danger" data-rr-act="delete" data-rr-id="${escapeHTML(r.id)}">Supprimer</button>
             </div>
           </div>`;
         }).join("")}
@@ -747,6 +765,13 @@
         if (!id) throw new Error("Règle introuvable.");
         if (!act) throw new Error("Action introuvable.");
 
+        if (act === "toggle") {
+          const card = host.querySelector(`[data-rr-card="${CSS.escape(id)}"]`);
+          const nextOpen = !(card && !card.classList.contains('is-collapsed'));
+          if (card) card.classList.toggle('is-collapsed', !nextOpen);
+          _rrSetOpenState(tid, id, nextOpen);
+          return;
+        }
         if (act === "edit") {
           const rule = (state?.recurringRules || []).find((r) => String(r?.id || '') === id);
           if (!rule) throw new Error('Règle introuvable.');
