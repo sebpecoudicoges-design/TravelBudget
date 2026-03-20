@@ -1255,8 +1255,8 @@
 
     /* V9.2.11.4 minimal settings refinement */
     .tb-settings-summary--minimal,.tb-settings-merge-block,.tb-period-card,.tb-recurring-item,.tb-category-card{background:#fff !important;border:1px solid rgba(15,23,42,.08) !important;box-shadow:0 6px 18px rgba(15,23,42,.04) !important;border-radius:16px !important;}
-    .tb-v11-travel-hero--minimal{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(360px,1fr);gap:16px;align-items:start;}
-    .tb-budget-summary-grid--minimal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+    .tb-v11-travel-hero--minimal{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;}
+    .tb-budget-summary-grid--minimal{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
     .tb-settings-summary-copy,.tb-period-ref-copy{font-size:13px !important;color:var(--muted) !important;max-width:none !important;}
     .tb-v11-travel-title{font-size:28px !important;line-height:1.05 !important;}
     .tb-settings-pill{border-radius:999px !important;padding:8px 12px !important;font-size:12px !important;}
@@ -1264,7 +1264,7 @@
     .tb-settings-stat strong{font-size:16px !important;line-height:1.2 !important;}
     .tb-settings-stat small{font-size:11px !important;line-height:1.35 !important;}
     .tb-budget-summary-grid .tb-settings-stat,.tb-period-kpis .tb-settings-stat,.tb-period-summary-grid .tb-settings-stat{min-height:0 !important;}
-    .tb-settings-actions--muted{justify-content:space-between;align-items:center;gap:12px;}
+    .tb-settings-actions--muted{justify-content:flex-end;align-items:center;gap:12px;}
     .tb-period-card{margin-bottom:10px !important;overflow:hidden;}
     .tb-period-head{padding:14px 16px !important;}
     .tb-period-title{font-size:18px !important;}
@@ -1279,6 +1279,13 @@
     .tb-settings-subgrid .field{min-width:0;}
     .tb-settings-inline-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px;}
     .tb-settings-inline-grid .field{min-width:0;}
+    .tb-travel-edit-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px;align-items:end;}
+.tb-travel-unified .row{justify-content:flex-end;}
+.tb-travel-unified .field{min-width:0;}
+.tb-travel-unified .field--span-3{grid-column:span 3;}
+.tb-travel-unified .field--span-2{grid-column:span 2;}
+.tb-travel-unified .field--span-1{grid-column:span 1;}
+
     .tb-recurring-modal .tb-modal-card{max-height:min(88vh,920px);overflow:auto;}
     .tb-recurring-modal .tb-modal-body{overflow:visible;}
     @media (max-width: 1100px){

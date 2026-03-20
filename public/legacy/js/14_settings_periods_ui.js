@@ -855,14 +855,16 @@ function renderSettings(){
               <div class="tb-period-editor">
                 <div class="tb-settings-subgrid">
                   <div class="field field--span-2"><label>Début</label><input type="date" data-k="start_date" value="${_tbISO(seg.start)||""}" /></div>
-                  <div class="field field--span-2"><label>Pays</label><select data-br="seg-country">${_tbBudgetRefCountryOptions(override?.country_code || resolved?.country_code, override?.region_code || resolved?.region_code)}</select></div>
-                  <div class="field field--span-2"><label>Profil</label><select data-br="seg-profile"><option value="solo" ${(override?.travel_profile || resolved?.travel_profile || "solo")=="solo"?"selected":""}>Solo</option><option value="couple" ${(override?.travel_profile || resolved?.travel_profile)=="couple"?"selected":""}>Couple</option><option value="family" ${(override?.travel_profile || resolved?.travel_profile)=="family"?"selected":""}>Famille</option></select></div>
-                  <div class="field field--span-2"><label>Style</label><select data-br="seg-style"><option value="budget" ${(override?.travel_style || resolved?.travel_style)=="budget"?"selected":""}>Budget</option><option value="standard" ${(!(override?.travel_style || resolved?.travel_style) || (override?.travel_style || resolved?.travel_style)=="standard")?"selected":""}>Standard</option><option value="comfort" ${(override?.travel_style || resolved?.travel_style)=="comfort"?"selected":""}>Confort</option></select></div>
                   <div class="field field--span-2"><label>Fin</label><input type="date" data-k="end_date" value="${_tbISO(seg.end)||""}" /></div>
                   <div class="field field--span-2"><label>Devise</label><input data-k="base_currency" value="${(seg.baseCurrency||"").toUpperCase()}" /></div>
                   <div class="field field--span-2"><label>Budget / jour</label><input data-k="daily_budget_base" value="${seg.dailyBudgetBase ?? ""}" /></div>
                   <div class="field field--span-2"><label>Nuit transport ${typeof tbHelp==='function' ? tbHelp('Montant dédié aux nuits passées en transport.') : ''}</label><input data-k="night_transport_budget" value="${_tbGetNightTransportBudget(seg.id)}" /></div>
-                  <div class="field field--span-1"><label>Adultes</label><input data-br="seg-adults" type="number" min="1" step="1" value="${escapeHTML(String(override?.adult_count ?? resolved?.adult_count ?? 1))}" /></div><div class="field field--span-1"><label>Enfants</label><input data-br="seg-children" type="number" min="0" step="1" value="${escapeHTML(String(override?.child_count ?? resolved?.child_count ?? 0))}" /></div>${(!autoAvail) ? `<div class="field field--span-2"><label>Taux perso</label><button class="btn btn--warn" data-act="fx">${manualRate ? "Modifier" : "Ajouter"}</button></div>` : ``}
+                  <div class="field field--span-2"><label>Mode</label><select data-br="seg-mode"><option value="inherit" ${override ? '' : 'selected'}>Hériter du voyage</option><option value="custom" ${override ? 'selected' : ''}>Personnaliser</option></select></div>
+                  <div class="field field--span-3" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>Pays</label><select data-br="seg-country">${_tbBudgetRefCountryOptions(override?.country_code || resolved?.country_code, override?.region_code || resolved?.region_code)}</select></div>
+                  <div class="field field--span-2" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>Profil</label><select data-br="seg-profile"><option value="solo" ${(override?.travel_profile || resolved?.travel_profile || "solo")=="solo"?"selected":""}>Solo</option><option value="couple" ${(override?.travel_profile || resolved?.travel_profile)=="couple"?"selected":""}>Couple</option><option value="family" ${(override?.travel_profile || resolved?.travel_profile)=="family"?"selected":""}>Famille</option></select></div>
+                  <div class="field field--span-2" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>Style</label><select data-br="seg-style"><option value="budget" ${(override?.travel_style || resolved?.travel_style)=="budget"?"selected":""}>Budget</option><option value="standard" ${(!(override?.travel_style || resolved?.travel_style) || (override?.travel_style || resolved?.travel_style)=="standard")?"selected":""}>Standard</option><option value="comfort" ${(override?.travel_style || resolved?.travel_style)=="comfort"?"selected":""}>Confort</option></select></div>
+                  <div class="field field--span-1" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>Adultes</label><input data-br="seg-adults" type="number" min="1" step="1" value="${escapeHTML(String(override?.adult_count ?? resolved?.adult_count ?? 1))}" /></div>
+                  <div class="field field--span-1" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>Enfants</label><input data-br="seg-children" type="number" min="0" step="1" value="${escapeHTML(String(override?.child_count ?? resolved?.child_count ?? 0))}" /></div>
                 </div>
                 <div class="tb-period-inline-actions">
                   <button class="btn" data-act="edit-cancel">Annuler</button>
@@ -1260,45 +1262,6 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
             <button class="btn" data-act="edit-seg">Modifier</button>
             <button class="btn" data-br-act="seg-reset" style="display:${override ? '' : 'none'};">Hériter</button>
           </div>
-          <div class="tb-period-ref-editor">
-            <div class="tb-settings-inline-grid">
-              <div class="field field--span-3">
-                <label>Mode</label>
-                <select data-br="seg-mode">
-                  <option value="inherit" ${override ? '' : 'selected'}>Hériter du voyage</option>
-                  <option value="custom" ${override ? 'selected' : ''}>Personnaliser</option>
-                </select>
-              </div>
-              <div data-br="seg-custom" class="field field--span-4" style="display:${override ? '' : 'none'};">
-                <label>Pays</label>
-                <select data-br="seg-country">${_tbBudgetRefCountryOptions(override?.country_code || resolved?.country_code, override?.region_code || resolved?.region_code)}</select>
-              </div>
-              <div data-br="seg-custom" class="field field--span-2" style="display:${override ? '' : 'none'};">
-                <label>Profil</label>
-                <select data-br="seg-profile">
-                  <option value="solo" ${(override?.travel_profile || resolved?.travel_profile || 'solo')==='solo'?'selected':''}>Solo</option>
-                  <option value="couple" ${(override?.travel_profile || resolved?.travel_profile)==='couple'?'selected':''}>Couple</option>
-                  <option value="family" ${(override?.travel_profile || resolved?.travel_profile)==='family'?'selected':''}>Famille</option>
-                </select>
-              </div>
-              <div data-br="seg-custom" class="field field--span-2" style="display:${override ? '' : 'none'};">
-                <label>Style</label>
-                <select data-br="seg-style">
-                  <option value="budget" ${(override?.travel_style || resolved?.travel_style)==='budget'?'selected':''}>Budget</option>
-                  <option value="standard" ${(!(override?.travel_style || resolved?.travel_style) || (override?.travel_style || resolved?.travel_style)==='standard')?'selected':''}>Standard</option>
-                  <option value="comfort" ${(override?.travel_style || resolved?.travel_style)==='comfort'?'selected':''}>Confort</option>
-                </select>
-              </div>
-              <div data-br="seg-custom" class="field field--span-1" style="display:${override ? '' : 'none'};">
-                <label>Adultes</label>
-                <input data-br="seg-adults" type="number" min="1" step="1" value="${escapeHTML(String(override?.adult_count ?? resolved?.adult_count ?? 1))}" />
-              </div>
-              <div data-br="seg-custom" class="field field--span-1" style="display:${override ? '' : 'none'};">
-                <label>Enfants</label>
-                <input data-br="seg-children" type="number" min="0" step="1" value="${escapeHTML(String(override?.child_count ?? resolved?.child_count ?? 0))}" />
-              </div>
-            </div>
-          </div>
         </div>
       `;
       _tbBudgetRefWireSegmentMode(wrap);
@@ -1308,8 +1271,6 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
         btnEdit.onclick = ()=>{
           const card = wrap.closest('.tb-period-card');
           if (card) { card.classList.add('is-editing'); card.classList.remove('is-collapsed'); }
-          const editor = wrap.querySelector('.tb-period-ref-editor');
-          if (editor) editor.classList.add('is-open');
           const periodEditor = card?.querySelector('.tb-period-editor');
           if (periodEditor) periodEditor.scrollIntoView({ behavior:'smooth', block:'nearest' });
         };
