@@ -48,7 +48,10 @@
 # TravelBudget — Smoke checklist (à chaque zip)
 
 ## 0) Boot
+- [ ] `npm install` passe sans erreur
+- [ ] `npm run build` passe sans erreur
 - [ ] `npm run dev` démarre sans erreur
+- [ ] `npm test` / `vitest run` passe, ou l’échec est diagnostiqué comme environnemental avant livraison
 - [ ] Console: aucune erreur rouge au chargement
 - [ ] Dans la console: `TB_DOCTOR()` => `ok: true`
 
@@ -123,3 +126,9 @@
 
 - [x] **9.2.7.2** — Sous-catégories : ordre utilisateur haut/bas avec persistance SQL
 - [x] **9.2.7.3** — Transactions : multi-sélection + recatégorisation / sous-catégorisation en masse
+
+## Discipline UI / constantes
+- Centralisation via `TB_CONST` si concerné.
+- Aide utilisateur à jour si impact UI.
+- Vérification UI FR/EN si un libellé, un bouton, un titre ou un texte change.
+- Labels / titres / descriptions FR/EN réalignés si une feature UI change.
