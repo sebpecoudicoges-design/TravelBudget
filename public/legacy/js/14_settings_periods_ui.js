@@ -875,6 +875,7 @@ function renderSettings(){
             </div>
           </div>
         `;
+        _tbBudgetRefWireSegmentMode(wrap);
 
         // handlers
         const toggleBtn = wrap.querySelector('[data-act="toggle-period"]');
@@ -896,7 +897,16 @@ function renderSettings(){
             if (error) throw error;
           } else {
             const payload = _tbBudgetRefSegmentPayload(wrap, seg);
-            if(!payload.p_country_code) throw new Error('Pays de référence requis pour personnaliser cette période.');
+            if(!payload.p_country_code){
+              const countrySel = wrap.querySelector('[data-br="seg-country"]');
+              if (countrySel) {
+                countrySel.focus();
+                countrySel.classList.add('is-invalid');
+                setTimeout(()=>countrySel.classList.remove('is-invalid'), 1400);
+              }
+              alert('Choisis un pays pour personnaliser cette période.');
+              return;
+            }
             const { error } = await s2.rpc(TB_CONST.RPCS.budget_reference_compute_for_budget_segment, payload);
             if (error) throw error;
           }
@@ -1141,7 +1151,11 @@ function _tbBudgetRefTravelDefaultPayload(box){
 }
 
 function _tbBudgetRefSegmentPayload(wrap, seg){
-  const countryRaw = String(wrap.querySelector('[data-br="seg-country"]')?.value || '');
+  let countryRaw = String(wrap.querySelector('[data-br="seg-country"]')?.value || '');
+  if (!countryRaw) {
+    const travelDefault = window.__tbBudgetReferenceCache?.travelDefault || null;
+    if (travelDefault?.country_code) countryRaw = `${String(travelDefault.country_code || '').toUpperCase()}|${String(travelDefault.region_code || '')}`;
+  }
   const [country_code, region_code_raw] = countryRaw.split('|');
   return {
     p_budget_segment_id: String(seg?.id || ''),
@@ -1158,9 +1172,29 @@ function _tbBudgetRefSegmentPayload(wrap, seg){
 
 function _tbBudgetRefWireSegmentMode(wrap){
   const mode = wrap.querySelector('[data-br="seg-mode"]');
-  const custom = wrap.querySelector('[data-br="seg-custom"]');
-  if(!mode || !custom) return;
-  const sync = ()=>{ const customMode = mode.value === 'custom'; custom.style.display = customMode ? '' : 'none'; const resetBtn = wrap.querySelector('[data-br-act="seg-reset"]'); if (resetBtn) resetBtn.style.display = customMode ? '' : 'none'; };
+  const customFields = Array.from(wrap.querySelectorAll('[data-br="seg-custom"]'));
+  if(!mode || !customFields.length) return;
+  const ensureDefaults = ()=>{
+    const cache = window.__tbBudgetReferenceCache || {};
+    const travelDefault = cache.travelDefault || null;
+    const resolvedCountry = wrap.querySelector('[data-br="seg-country"]');
+    const profile = wrap.querySelector('[data-br="seg-profile"]');
+    const style = wrap.querySelector('[data-br="seg-style"]');
+    const adults = wrap.querySelector('[data-br="seg-adults"]');
+    const children = wrap.querySelector('[data-br="seg-children"]');
+    if (resolvedCountry && !resolvedCountry.value && travelDefault?.country_code) {
+      resolvedCountry.value = `${String(travelDefault.country_code || '').toUpperCase()}|${String(travelDefault.region_code || '')}`;
+    }
+    if (profile && !profile.value && travelDefault?.travel_profile) profile.value = String(travelDefault.travel_profile || 'solo');
+    if (style && !style.value && travelDefault?.travel_style) style.value = String(travelDefault.travel_style || 'standard');
+    if (adults && (!adults.value || Number(adults.value) <= 0) && Number.isFinite(Number(travelDefault?.adult_count))) adults.value = String(Number(travelDefault.adult_count));
+    if (children && (!children.value) && Number.isFinite(Number(travelDefault?.child_count))) children.value = String(Number(travelDefault.child_count));
+  };
+  const sync = ()=>{
+    const customMode = mode.value === 'custom';
+    if (customMode) ensureDefaults();
+    customFields.forEach((node)=>{ node.style.display = customMode ? '' : 'none'; });
+  };
   mode.onchange = sync;
   sync();
 }

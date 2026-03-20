@@ -477,13 +477,13 @@
       });
     const outAmount = _outBudgetTransactions().reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txDate(tx), base), 0);
     const referenceCategorySeries = [...referenceCategoryMap.entries()].map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
-    const referenceComparisonSeries = _buildReferenceComparisonSeries(categorySeries, referenceCategoryMap);
+    const referenceComparisonSeries = _buildReferenceComparisonSeries(categorySeries, referenceCategoryMap, periodDays);
 
     return { base, start, end, days, txs, spent, paidSpent, totalBudget, totalReference, remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay, projection,
       cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, referenceComparisonSeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays };
   }
 
-  function _buildReferenceComparisonSeries(categorySeries, referenceCategoryMap){
+  function _buildReferenceComparisonSeries(categorySeries, referenceCategoryMap, periodDays){
     const actualMap = new Map((categorySeries || []).map((row) => [String(row?.name || '').trim(), _safeNum(row?.actual)]));
     const comparison = new Map();
     const ensure = (name) => {
@@ -524,10 +524,21 @@
     distribute(referenceCategoryMap.get('Activités'), ['Sorties'], [{ name:'Sorties', weight:1 }]);
     distribute(referenceCategoryMap.get('Divers'), ['Autre', 'Santé', 'Frais bancaire', 'Souvenir', 'Cadeau'], [{ name:'Autre', weight:0.62 }, { name:'Santé', weight:0.16 }, { name:'Frais bancaire', weight:0.12 }, { name:'Souvenir', weight:0.05 }, { name:'Cadeau', weight:0.05 }]);
 
+    const days = Math.max(1, Number(periodDays) || 1);
     return [...comparison.values()]
-      .map((row) => ({ ...row, delta: Number((row.actual - row.reference).toFixed(2)) }))
-      .filter((row) => _safeNum(row.actual) > 0 || _safeNum(row.reference) > 0)
-      .sort((a, b) => Math.max(_safeNum(b.actual), _safeNum(b.reference)) - Math.max(_safeNum(a.actual), _safeNum(a.reference)))
+      .map((row) => {
+        const actualPerDay = _safeNum(row.actual) / days;
+        const referencePerDay = _safeNum(row.reference) / days;
+        return {
+          ...row,
+          actualPerDay: Number(actualPerDay.toFixed(2)),
+          referencePerDay: Number(referencePerDay.toFixed(2)),
+          deltaPerDay: Number((actualPerDay - referencePerDay).toFixed(2)),
+          delta: Number((row.actual - row.reference).toFixed(2))
+        };
+      })
+      .filter((row) => _safeNum(row.actualPerDay) > 0 || _safeNum(row.referencePerDay) > 0)
+      .sort((a, b) => Math.max(_safeNum(b.actualPerDay), _safeNum(b.referencePerDay)) - Math.max(_safeNum(a.actualPerDay), _safeNum(a.referencePerDay)))
       .slice(0, 10);
   }
 
@@ -700,21 +711,21 @@
       const mainCats = rows.slice(0, 5).map((row) => row.name).join(' • ') || 'Aucune catégorie couverte';
       summary.innerHTML = `
         <div class="analysis-reference-stat">
-          <span>Budget sourcé</span>
-          <strong>${escapeHTML(_fmtMoney(model.totalReference, model.base))}</strong>
+          <span>Budget sourcé / jour</span>
+          <strong>${escapeHTML(_fmtMoney(model.referencePerDay, model.base))}</strong>
           <small>${escapeHTML(coverage)}</small>
         </div>
         <div class="analysis-reference-stat">
-          <span>Réel analysé</span>
-          <strong>${escapeHTML(_fmtMoney(model.spent, model.base))}</strong>
-          <small>${escapeHTML(_fmtMoney(model.avgPerDay, model.base))}/jour</small>
+          <span>Réel / jour</span>
+          <strong>${escapeHTML(_fmtMoney(model.avgPerDay, model.base))}</strong>
+          <small>Moyenne quotidienne sur la période</small>
         </div>
         <div class="analysis-reference-stat">
-          <span>Écart</span>
-          <strong>${escapeHTML(_fmtMoney(model.referenceGap, model.base))}</strong>
+          <span>Écart / jour</span>
+          <strong>${escapeHTML(_fmtMoney(model.avgPerDay - model.referencePerDay, model.base))}</strong>
           <small>${escapeHTML(deltaTone)}</small>
         </div>
-        <div class="analysis-reference-note">Cette lecture compare ton réel à une référence pays sur la même plage. Les montants sont repris dans les catégories déjà utilisées dans l'app pour rester simples à lire.</div>
+        <div class="analysis-reference-note">Cette lecture compare les moyennes quotidiennes du réel et de la référence pays sur la même plage. Les catégories sont reprises avec les libellés déjà utilisés dans l'app.</div>
         <div class="analysis-reference-inline">
           <span class="analysis-reference-pill">Référence ${escapeHTML(_fmtMoney(model.referencePerDay, model.base))}/jour</span>
           <span class="analysis-reference-pill">Réel ${escapeHTML(_fmtMoney(model.avgPerDay, model.base))}/jour</span>
@@ -743,7 +754,7 @@
           const ref = _safeNum(params?.find((p)=>p.seriesName==='Référence')?.value);
           const actual = _safeNum(params?.find((p)=>p.seriesName==='Réel')?.value);
           const delta = actual - ref;
-          return `${axis}<br>Référence : ${_fmtMoney(ref, model.base)}<br>Réel : ${_fmtMoney(actual, model.base)}<br>Écart : ${_fmtMoney(delta, model.base)}`;
+          return `${axis}<br>Référence / jour : ${_fmtMoney(ref, model.base)}<br>Réel / jour : ${_fmtMoney(actual, model.base)}<br>Écart / jour : ${_fmtMoney(delta, model.base)}`;
         }
       },
       legend:{ top:0, left:0, itemWidth:14, itemHeight:10, textStyle:{ color:_themeMuted(), fontWeight:700 }, data:['Référence','Réel'] },
@@ -756,14 +767,14 @@
           type:'bar',
           barMaxWidth: compact ? 12 : 16,
           itemStyle:{ color:_themeGood(), borderRadius:[0,12,12,0], opacity:.88 },
-          data: ordered.map(r => Number(_safeNum(r.reference).toFixed(2)))
+          data: ordered.map(r => Number(_safeNum(r.referencePerDay).toFixed(2)))
         },
         {
           name:'Réel',
           type:'bar',
           barMaxWidth: compact ? 12 : 16,
           itemStyle:{ color:_themeAccent(), borderRadius:[0,12,12,0] },
-          data: ordered.map(r => Number(_safeNum(r.actual).toFixed(2))),
+          data: ordered.map(r => Number(_safeNum(r.actualPerDay).toFixed(2))),
           label:{
             show:true,
             position:'right',
@@ -772,7 +783,7 @@
             fontSize: compact ? 11 : 12,
             formatter:(p)=>{
               const row = ordered[p.dataIndex];
-              const delta = _safeNum(row?.actual) - _safeNum(row?.reference);
+              const delta = _safeNum(row?.actualPerDay) - _safeNum(row?.referencePerDay);
               return delta === 0 ? '≈ 0' : `${delta > 0 ? '+' : ''}${_fmtMoney(delta, model.base)}`;
             }
           }
