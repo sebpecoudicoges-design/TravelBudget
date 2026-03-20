@@ -702,13 +702,13 @@
 
   function _renderReferencePanel(model){
     const summary = _el('analysis-reference-summary');
-    const chart = _ensureChart('referenceMix','analysis-reference-mix-chart');
     const chartEl = _el('analysis-reference-mix-chart');
-    const rows = (model.referenceComparisonSeries || []).filter(r => _safeNum(r.actual) > 0 || _safeNum(r.reference) > 0);
+    const chart = _charts.referenceMix;
+    const rows = (model.referenceComparisonSeries || []).filter(r => _safeNum(r.actualPerDay) > 0 || _safeNum(r.referencePerDay) > 0);
+    const coverage = model.referenceCoverageDays && model.days.length ? `${model.referenceCoverageDays}/${model.days.length} jours couverts` : 'Aucune source active';
+    const deltaTone = model.referenceGap <= 0 ? 'Sous la référence' : 'Au-dessus de la référence';
+    const mainCats = rows.slice(0, 4).map((row) => row.name).join(' • ') || 'Aucune catégorie couverte';
     if (summary) {
-      const coverage = model.referenceCoverageDays && model.days.length ? `${model.referenceCoverageDays}/${model.days.length} jours couverts` : 'Aucune source active';
-      const deltaTone = model.referenceGap <= 0 ? 'Sous la référence' : 'Au-dessus de la référence';
-      const mainCats = rows.slice(0, 5).map((row) => row.name).join(' • ') || 'Aucune catégorie couverte';
       summary.innerHTML = `
         <div class="analysis-reference-stat">
           <span>Budget sourcé / jour</span>
@@ -725,71 +725,38 @@
           <strong>${escapeHTML(_fmtMoney(model.avgPerDay - model.referencePerDay, model.base))}</strong>
           <small>${escapeHTML(deltaTone)}</small>
         </div>
-        <div class="analysis-reference-note">Cette lecture compare les moyennes quotidiennes du réel et de la référence pays sur la même plage. Les catégories sont reprises avec les libellés déjà utilisés dans l'app.</div>
+        <div class="analysis-reference-note">Lecture quotidienne par catégorie sur la même plage.</div>
         <div class="analysis-reference-inline">
           <span class="analysis-reference-pill">Référence ${escapeHTML(_fmtMoney(model.referencePerDay, model.base))}/jour</span>
           <span class="analysis-reference-pill">Réel ${escapeHTML(_fmtMoney(model.avgPerDay, model.base))}/jour</span>
           <span class="analysis-reference-pill">Catégories : ${escapeHTML(mainCats)}</span>
         </div>`;
     }
-    const compact = typeof window !== 'undefined' && window.innerWidth < 780;
-    if (chartEl) chartEl.style.height = `${Math.max(compact ? 420 : 360, rows.length * (compact ? 58 : 50) + 120)}px`;
-    if (!chart) return;
+    if (chart && chart.dispose) { try { chart.dispose(); } catch(_) {} delete _charts.referenceMix; }
+    if (!chartEl) return;
     if (!rows.length) {
-      chart.clear();
-      chart.setOption({ graphic:{ type:'text', left:'center', top:'middle', style:{ text:'Aucune référence pays active sur cette plage', fill:_themeMuted(), fontSize:14, fontWeight:600 } } });
+      chartEl.innerHTML = `<div class="analysis-reference-empty">Aucune référence pays active sur cette plage.</div>`;
       return;
     }
-    const ordered = [...rows].reverse();
-    chart.setOption({
-      animationDuration: 900,
-      tooltip:{
-        trigger:'axis',
-        axisPointer:{ type:'shadow' },
-        backgroundColor:'rgba(15,23,42,.92)',
-        borderWidth:0,
-        textStyle:{ color:'#fff' },
-        formatter:(params)=>{
-          const axis = params?.[0]?.axisValue || '';
-          const ref = _safeNum(params?.find((p)=>p.seriesName==='Référence')?.value);
-          const actual = _safeNum(params?.find((p)=>p.seriesName==='Réel')?.value);
-          const delta = actual - ref;
-          return `${axis}<br>Référence / jour : ${_fmtMoney(ref, model.base)}<br>Réel / jour : ${_fmtMoney(actual, model.base)}<br>Écart / jour : ${_fmtMoney(delta, model.base)}`;
-        }
-      },
-      legend:{ top:0, left:0, itemWidth:14, itemHeight:10, textStyle:{ color:_themeMuted(), fontWeight:700 }, data:['Référence','Réel'] },
-      grid:{ left: compact ? 94 : 138, right: compact ? 14 : 24, top: 38, bottom: compact ? 28 : 20, containLabel:false },
-      xAxis:{ type:'value', axisLabel:{ color:_themeMuted(), formatter:(v)=>_fmtMoney(v, model.base) }, splitLine:{ lineStyle:{ color:_themeGrid() } } },
-      yAxis:{ type:'category', data: ordered.map(r => r.name), axisLabel:{ color:_themeText(), fontWeight:700, lineHeight:16, formatter:(value)=>_wrapAxisLabel(value) } },
-      series:[
-        {
-          name:'Référence',
-          type:'bar',
-          barMaxWidth: compact ? 12 : 16,
-          itemStyle:{ color:_themeGood(), borderRadius:[0,12,12,0], opacity:.88 },
-          data: ordered.map(r => Number(_safeNum(r.referencePerDay).toFixed(2)))
-        },
-        {
-          name:'Réel',
-          type:'bar',
-          barMaxWidth: compact ? 12 : 16,
-          itemStyle:{ color:_themeAccent(), borderRadius:[0,12,12,0] },
-          data: ordered.map(r => Number(_safeNum(r.actualPerDay).toFixed(2))),
-          label:{
-            show:true,
-            position:'right',
-            distance: compact ? 6 : 10,
-            color:_themeMuted(),
-            fontSize: compact ? 11 : 12,
-            formatter:(p)=>{
-              const row = ordered[p.dataIndex];
-              const delta = _safeNum(row?.actualPerDay) - _safeNum(row?.referencePerDay);
-              return delta === 0 ? '≈ 0' : `${delta > 0 ? '+' : ''}${_fmtMoney(delta, model.base)}`;
-            }
-          }
-        }
-      ]
-    });
+    chartEl.innerHTML = `
+      <div class="analysis-reference-metal-grid">
+        ${rows.map((row)=>{
+          const ref = _safeNum(row.referencePerDay);
+          const actual = _safeNum(row.actualPerDay);
+          const diff = actual - ref;
+          const tone = diff <= 0 ? 'good' : 'warn';
+          return `<div class="analysis-reference-metal analysis-reference-metal--${tone}">
+            <div class="analysis-reference-metal-head">
+              <span>${escapeHTML(row.name)}</span>
+              <strong>${escapeHTML(_fmtMoney(diff, model.base))}</strong>
+            </div>
+            <div class="analysis-reference-metal-body">
+              <div><small>Réel / jour</small><b>${escapeHTML(_fmtMoney(actual, model.base))}</b></div>
+              <div><small>Sourcé / jour</small><b>${escapeHTML(_fmtMoney(ref, model.base))}</b></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
   }
 
   function _renderInsights(model){

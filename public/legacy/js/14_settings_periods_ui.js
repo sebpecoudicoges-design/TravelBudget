@@ -510,7 +510,7 @@ function renderSettings(){
             <div class="tb-v11-travel-main">
               <div>
                 <div class="tb-v11-travel-title">${escapeHTML(String(_tbGetActiveTravelRow()?.name || 'Voyage actif'))}</div>
-                <div class="tb-settings-summary-copy">Voyage, référence et budget dans un seul espace.</div>
+                <div class="tb-settings-summary-copy">Lecture en haut, réglages modifiables juste en dessous.</div>
               </div>
               <div class="tb-v11-travel-meta">
                 <span class="tb-settings-pill">${escapeHTML(String(segCount))} période${segCount>1?'s':''}</span>
@@ -524,7 +524,8 @@ function renderSettings(){
               <div class="tb-settings-stat tb-settings-stat--violet"><span class="tb-settings-stat-label">Reco / jour</span><div class="tb-v11-inline-dual"><strong id="tb-travel-reco-main">${escapeHTML(recoDual.main)}</strong>${recoDual.secondary?`<span id="tb-travel-reco-secondary">${escapeHTML(recoDual.secondary)} · base</span>`:`<span id="tb-travel-reco-secondary" style="display:none"></span>`}</div></div>
               <div class="tb-settings-stat tb-settings-stat--violet"><span class="tb-settings-stat-label">Cadence</span><strong id="tb-travel-cadence-main">${escapeHTML((Number.isFinite(budgetBaseAmount) && Number.isFinite(recoBaseAmount)) ? (budgetBaseAmount <= recoBaseAmount ? 'Sous la reco' : 'Au-dessus') : 'À calibrer')}</strong><small id="tb-travel-cadence-sub">${escapeHTML((Number.isFinite(budgetBaseAmount) && Number.isFinite(recoBaseAmount)) ? `${Math.abs(budgetBaseAmount-recoBaseAmount).toFixed(2)} ${budgetBaseCur} d'écart` : 'Référence requise')}</small></div>
             </div>
-            <div class="tb-settings-inline-grid tb-settings-inline-grid--travel tb-travel-edit-grid" style="margin-top:16px; align-items:end;">
+            <div class="tb-edit-kicker">Réglages modifiables</div>
+            <div class="tb-settings-inline-grid tb-settings-inline-grid--travel tb-travel-edit-grid" style="margin-top:10px; align-items:end;">
               <div class="field field--span-3"><label>Voyage actif</label><select id="tb-inline-travel-select"></select></div>
               <div class="field field--span-3"><label>Nom</label><input id="tb-inline-travel-name" type="text" value="${escapeHTML(String(_tbGetActiveTravelRow()?.name || ''))}" /></div>
               <div class="field field--span-2"><label>Début</label><input id="tb-inline-travel-start" type="date" value="${escapeHTML(startISO||'')}" /></div>
@@ -852,7 +853,7 @@ function renderSettings(){
                 <div class="tb-settings-stat tb-settings-stat--blue"><span class="tb-settings-stat-label">Change</span><strong>${escapeHTML((rateDisplay || "—"))}</strong><small>Bloc change séparé plus bas</small></div>
                 <div data-br-inline-seg-id="${escapeHTML(String(seg.id))}"></div>
               </div>
-              <div class="tb-period-editor">
+              <div class="tb-period-editor"><div class="tb-edit-kicker">Réglages modifiables</div>
                 <div class="tb-settings-subgrid">
                   <div class="field field--span-2"><label>Début</label><input type="date" data-k="start_date" value="${_tbISO(seg.start)||""}" /></div>
                   <div class="field field--span-2"><label>Fin</label><input type="date" data-k="end_date" value="${_tbISO(seg.end)||""}" /></div>
@@ -904,7 +905,8 @@ function renderSettings(){
                 countrySel.classList.add('is-invalid');
                 setTimeout(()=>countrySel.classList.remove('is-invalid'), 1400);
               }
-              alert('Choisis un pays pour personnaliser cette période.');
+              const modeField = wrap.querySelector('[data-br="seg-mode"]');
+              if (modeField) modeField.focus();
               return;
             }
             const { error } = await s2.rpc(TB_CONST.RPCS.budget_reference_compute_for_budget_segment, payload);
@@ -1281,7 +1283,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
           <div class="tb-period-ref-head">
             <div>
               <h4 class="tb-period-ref-title">Référence de la période</h4>
-              <div class="tb-period-ref-copy">Pays, recommandé et détail journalier.</div>
+              <div class="tb-period-ref-copy">Lecture de la référence sur cette période.</div>
             </div>
             <span class="tb-settings-pill ${override ? '' : 'tb-settings-pill--positive'}">${escapeHTML(sourceLabel)}</span>
           </div>
@@ -1304,7 +1306,22 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       if (btnEdit) {
         btnEdit.onclick = ()=>{
           const card = wrap.closest('.tb-period-card');
-          if (card) { card.classList.add('is-editing'); card.classList.remove('is-collapsed'); }
+          if (card) {
+            card.classList.add('is-editing');
+            card.classList.remove('is-collapsed');
+            const modeSel = card.querySelector('[data-br="seg-mode"]');
+            const countrySel = card.querySelector('[data-br="seg-country"]');
+            if (modeSel) {
+              modeSel.value = override ? 'custom' : 'inherit';
+              if (modeSel.dispatchEvent) modeSel.dispatchEvent(new Event('change', { bubbles:true }));
+            }
+            if (override && countrySel && !countrySel.value) {
+              countrySel.value = `${String(override.country_code||'').toUpperCase()}|${String(override.region_code||'')}`;
+            }
+            if (!override && countrySel && !countrySel.value && travel?.country_code) {
+              countrySel.value = `${String(travel.country_code||'').toUpperCase()}|${String(travel.region_code||'')}`;
+            }
+          }
           const periodEditor = card?.querySelector('.tb-period-editor');
           if (periodEditor) periodEditor.scrollIntoView({ behavior:'smooth', block:'nearest' });
         };
