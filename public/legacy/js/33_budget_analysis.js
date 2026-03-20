@@ -703,7 +703,7 @@
   function _renderReferencePanel(model){
     const summary = _el('analysis-reference-summary');
     const chartEl = _el('analysis-reference-mix-chart');
-    const chart = _charts.referenceMix;
+    const chart = charts.referenceMix;
     const rows = (model.referenceComparisonSeries || []).filter(r => _safeNum(r.actualPerDay) > 0 || _safeNum(r.referencePerDay) > 0);
     const coverage = model.referenceCoverageDays && model.days.length ? `${model.referenceCoverageDays}/${model.days.length} jours couverts` : 'Aucune source active';
     const deltaTone = model.referenceGap <= 0 ? 'Sous la référence' : 'Au-dessus de la référence';
@@ -732,7 +732,7 @@
           <span class="analysis-reference-pill">Catégories : ${escapeHTML(mainCats)}</span>
         </div>`;
     }
-    if (chart && chart.dispose) { try { chart.dispose(); } catch(_) {} delete _charts.referenceMix; }
+    if (chart && chart.dispose) { try { chart.dispose(); } catch(_) {} delete charts.referenceMix; }
     if (!chartEl) return;
     if (!rows.length) {
       chartEl.innerHTML = `<div class="analysis-reference-empty">Aucune référence pays active sur cette plage.</div>`;

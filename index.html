@@ -1359,6 +1359,34 @@
     #tb-modal > div{max-height:calc(100vh - 44px) !important;} 
     @media (max-width:1100px){ .tb-mini-post-grid,.tb-period-kpis--4{grid-template-columns:repeat(2,minmax(0,1fr)) !important;} .tb-recurring-row{grid-template-columns:1fr !important;} } 
     @media (max-width:720px){ .tb-mini-post-grid,.tb-period-kpis--4,.tb-period-summary-grid--split{grid-template-columns:1fr !important;} }
+
+    /* V9.2.11.10 compact travel/period alignment */
+    .tb-v11-travel-main--compact{display:grid;gap:12px;}
+    .tb-v11-travel-topline{display:grid;grid-template-columns:minmax(260px,.95fr) minmax(0,1.45fr);gap:12px;align-items:start;}
+    .tb-v11-travel-main--compact .tb-v11-travel-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+    .tb-v11-travel-main--compact .tb-budget-summary-grid--minimal{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+    .tb-v11-travel-main--compact .tb-settings-stat{padding:10px 12px !important;}
+    .tb-v11-travel-main--compact .tb-settings-stat strong{font-size:15px !important;}
+    .tb-travel-edit-grid{grid-template-columns:repeat(12,minmax(0,1fr)) !important;gap:8px !important;}
+    .tb-travel-edit-grid .field--span-3{grid-column:span 3 !important;}
+    .tb-travel-edit-grid .field--span-2{grid-column:span 2 !important;}
+    .tb-travel-edit-grid .field--span-1{grid-column:span 1 !important;}
+    .tb-mini-post-grid--travel{margin-top:8px !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:8px !important;}
+    .tb-period-card .tb-period-summary-grid--split{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:8px !important;}
+    .tb-period-card .tb-period-kpis--4{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:8px !important;}
+    .tb-period-card .tb-settings-stat{padding:10px 12px !important;}
+    .tb-period-card .tb-settings-stat strong{font-size:15px !important;}
+    .tb-period-card .tb-mini-post-grid{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:8px !important;}
+    .tb-period-card .tb-period-inline-actions{justify-content:flex-end !important;}
+    @media (max-width: 1180px){
+      .tb-v11-travel-topline{grid-template-columns:1fr;}
+      .tb-v11-travel-main--compact .tb-budget-summary-grid--minimal{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .tb-mini-post-grid--travel{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+      .tb-period-card .tb-period-summary-grid--split,.tb-period-card .tb-period-kpis--4,.tb-period-card .tb-mini-post-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+    }
+    @media (max-width: 760px){
+      .tb-v11-travel-main--compact .tb-budget-summary-grid--minimal,.tb-mini-post-grid--travel,.tb-period-card .tb-period-summary-grid--split,.tb-period-card .tb-period-kpis--4,.tb-period-card .tb-mini-post-grid,.tb-travel-edit-grid{grid-template-columns:1fr !important;}
+    }
 </style>
 
 </head>
