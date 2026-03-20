@@ -830,6 +830,9 @@ function renderSettings(){
         const localDual = _tbFmtDualAmount(seg.dailyBudgetBase, cur, baseCur, 0, 2);
         const override = (cache && cache.segmentOverrides) ? (cache.segmentOverrides[String(seg.id)] || null) : null;
         const resolved = (cache && cache.segmentResolved) ? (cache.segmentResolved[String(seg.id)] || null) : null;
+        const autoAvail = (typeof window.tbFxIsAutoAvailable === "function") ? !!window.tbFxIsAutoAvailable(cur) : false;
+        const manualRates = (typeof window.tbFxGetManualRates === "function") ? (window.tbFxGetManualRates() || {}) : {};
+        const manualRate = manualRates[cur] ?? null;
         wrap.innerHTML = `
           <button type="button" class="tb-period-head" data-act="toggle-period">
             <span class="tb-period-head-main">
