@@ -778,6 +778,7 @@ function renderSettings(){
     });
 
     // --- Segments (period slices) ---
+    const cache = window.__tbBudgetReferenceCache || {};
     if(!segs.length){
       host.innerHTML += '<div class="muted">Aucune période (segment) pour ce voyage.</div>';
     }else{
