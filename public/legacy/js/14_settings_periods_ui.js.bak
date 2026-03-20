@@ -508,17 +508,16 @@ function renderSettings(){
         <div class="tb-settings-summary tb-settings-summary--minimal tb-travel-unified tb-travel-unified-card">
           <div class="tb-v11-travel-hero tb-v11-travel-hero--minimal">
             <div class="tb-v11-travel-main tb-v11-travel-main--compact">
-              <div class="tb-v11-travel-row">
-                <div class="tb-v11-travel-row-title">
+              <div class="tb-v11-travel-topline">
+                <div>
                   <div class="tb-v11-travel-title">${escapeHTML(String(_tbGetActiveTravelRow()?.name || 'Voyage actif'))}</div>
-                  <div class="tb-v11-travel-sub">Voyage, référence et budget dans un seul espace.</div>
+                  <div class="tb-v11-travel-meta">
+                    <span class="tb-settings-pill">${escapeHTML(String(segCount))} période${segCount>1?'s':''}</span>
+                    <span class="tb-settings-pill">${escapeHTML(String(totalDays||0))} jours</span>
+                    <span class="tb-settings-pill">Devise base · ${escapeHTML(budgetBaseCur)}</span>
+                  </div>
                 </div>
-                <div class="tb-v11-travel-meta">
-                  <span class="tb-settings-pill">${escapeHTML(String(segCount))} période${segCount>1?'s':''}</span>
-                  <span class="tb-settings-pill">${escapeHTML(String(totalDays||0))} jours</span>
-                  <span class="tb-settings-pill">Devise base · ${escapeHTML(budgetBaseCur)}</span>
-                </div>
-                <div class="tb-budget-summary-grid tb-budget-summary-grid--minimal tb-v11-tinted-grid tb-budget-summary-grid--travel-row">
+                <div class="tb-budget-summary-grid tb-budget-summary-grid--minimal tb-v11-tinted-grid">
                   <div class="tb-settings-stat tb-settings-stat--violet"><span class="tb-settings-stat-label">Budget / jour</span><div class="tb-v11-inline-dual"><strong id="tb-travel-budget-main">${escapeHTML(budgetDual.main || '—')}</strong>${budgetDual.secondary?`<span id="tb-travel-budget-secondary">${escapeHTML(budgetDual.secondary)} · base</span>`:`<span id="tb-travel-budget-secondary" style="display:none"></span>`}</div></div>
                   <div class="tb-settings-stat tb-settings-stat--violet"><span class="tb-settings-stat-label">Référence</span><strong id="tb-travel-ref-main">${escapeHTML(travelDefault?.country_name || travelDefault?.country_code || '—')}</strong><small id="tb-travel-ref-sub">${escapeHTML(travelDefault ? `${String(travelDefault.travel_profile||'solo')} · ${String(travelDefault.travel_style||'standard')}` : 'À définir')}</small></div>
                   <div class="tb-settings-stat tb-settings-stat--violet"><span class="tb-settings-stat-label">Reco / jour</span><div class="tb-v11-inline-dual"><strong id="tb-travel-reco-main">${escapeHTML(recoDual.main)}</strong>${recoDual.secondary?`<span id="tb-travel-reco-secondary">${escapeHTML(recoDual.secondary)} · base</span>`:`<span id="tb-travel-reco-secondary" style="display:none"></span>`}</div></div>
@@ -527,7 +526,7 @@ function renderSettings(){
               </div>
               <div class="tb-edit-kicker">Réglages modifiables</div>
               <div class="tb-settings-inline-grid tb-settings-inline-grid--travel tb-travel-edit-grid" style="margin-top:10px; align-items:end;">
-                <div class="field field--span-2"><label>Voyage actif</label><select id="tb-inline-travel-select"></select></div>
+                <div class="field field--span-3"><label>Voyage actif</label><select id="tb-inline-travel-select"></select></div>
                 <div class="field field--span-3"><label>Nom</label><input id="tb-inline-travel-name" type="text" value="${escapeHTML(String(_tbGetActiveTravelRow()?.name || ''))}" /></div>
                 <div class="field field--span-2"><label>Début</label><input id="tb-inline-travel-start" type="date" value="${escapeHTML(startISO||'')}" /></div>
                 <div class="field field--span-2"><label>Fin</label><input id="tb-inline-travel-end" type="date" value="${escapeHTML(endISO||'')}" /></div>
@@ -810,7 +809,6 @@ function renderSettings(){
 
     // --- Segments (period slices) ---
     const cache = window.__tbBudgetReferenceCache || {};
-    const travel = (cache && cache.travelDefault) ? cache.travelDefault : null;
     if(!segs.length){
       host.innerHTML += '<div class="muted">Aucune période (segment) pour ce voyage.</div>';
     }else{
@@ -863,12 +861,12 @@ function renderSettings(){
                   <div class="field field--span-2"><label>Devise</label><input data-k="base_currency" value="${(seg.baseCurrency||"").toUpperCase()}" /></div>
                   <div class="field field--span-2"><label>Budget / jour</label><input data-k="daily_budget_base" value="${seg.dailyBudgetBase ?? ""}" /></div>
                   <div class="field field--span-2"><label>Nuit transport ${typeof tbHelp==='function' ? tbHelp('Montant dédié aux nuits passées en transport.') : ''}</label><input data-k="night_transport_budget" value="${_tbGetNightTransportBudget(seg.id)}" /></div>
-                  <div class="field field--span-2"><label>Mode</label><select data-br="seg-mode"><option value="inherit" ${(override || resolved) ? '' : 'selected'}>Hériter du voyage</option><option value="custom" ${(override || resolved) ? 'selected' : ''}>Personnaliser</option></select></div>
-                  <div class="field field--span-3" data-br="seg-custom" style="display:${(override || resolved) ? '' : 'none'};"><label>Pays</label><select data-br="seg-country">${_tbBudgetRefCountryOptions(override?.country_code || resolved?.country_code || travel?.country_code, override?.region_code || resolved?.region_code || travel?.region_code)}</select></div>
-                  <div class="field field--span-2" data-br="seg-custom" style="display:${(override || resolved) ? '' : 'none'};"><label>Profil</label><select data-br="seg-profile"><option value="solo" ${(override?.travel_profile || resolved?.travel_profile || "solo")=="solo"?"selected":""}>Solo</option><option value="couple" ${(override?.travel_profile || resolved?.travel_profile)=="couple"?"selected":""}>Couple</option><option value="family" ${(override?.travel_profile || resolved?.travel_profile)=="family"?"selected":""}>Famille</option></select></div>
-                  <div class="field field--span-2" data-br="seg-custom" style="display:${(override || resolved) ? '' : 'none'};"><label>Style</label><select data-br="seg-style"><option value="budget" ${(override?.travel_style || resolved?.travel_style)=="budget"?"selected":""}>Budget</option><option value="standard" ${(!(override?.travel_style || resolved?.travel_style) || (override?.travel_style || resolved?.travel_style)=="standard")?"selected":""}>Standard</option><option value="comfort" ${(override?.travel_style || resolved?.travel_style)=="comfort"?"selected":""}>Confort</option></select></div>
-                  <div class="field field--span-1" data-br="seg-custom" style="display:${(override || resolved) ? '' : 'none'};"><label>Adultes</label><input data-br="seg-adults" type="number" min="1" step="1" value="${escapeHTML(String(override?.adult_count ?? resolved?.adult_count ?? 1))}" /></div>
-                  <div class="field field--span-1" data-br="seg-custom" style="display:${(override || resolved) ? '' : 'none'};"><label>Enfants</label><input data-br="seg-children" type="number" min="0" step="1" value="${escapeHTML(String(override?.child_count ?? resolved?.child_count ?? 0))}" /></div>
+                  <div class="field field--span-2"><label>Mode</label><select data-br="seg-mode"><option value="inherit" ${override ? '' : 'selected'}>Hériter du voyage</option><option value="custom" ${override ? 'selected' : ''}>Personnaliser</option></select></div>
+                  <div class="field field--span-3" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>Pays</label><select data-br="seg-country">${_tbBudgetRefCountryOptions(override?.country_code || resolved?.country_code || travel?.country_code, override?.region_code || resolved?.region_code || travel?.region_code)}</select></div>
+                  <div class="field field--span-2" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>Profil</label><select data-br="seg-profile"><option value="solo" ${(override?.travel_profile || resolved?.travel_profile || "solo")=="solo"?"selected":""}>Solo</option><option value="couple" ${(override?.travel_profile || resolved?.travel_profile)=="couple"?"selected":""}>Couple</option><option value="family" ${(override?.travel_profile || resolved?.travel_profile)=="family"?"selected":""}>Famille</option></select></div>
+                  <div class="field field--span-2" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>Style</label><select data-br="seg-style"><option value="budget" ${(override?.travel_style || resolved?.travel_style)=="budget"?"selected":""}>Budget</option><option value="standard" ${(!(override?.travel_style || resolved?.travel_style) || (override?.travel_style || resolved?.travel_style)=="standard")?"selected":""}>Standard</option><option value="comfort" ${(override?.travel_style || resolved?.travel_style)=="comfort"?"selected":""}>Confort</option></select></div>
+                  <div class="field field--span-1" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>Adultes</label><input data-br="seg-adults" type="number" min="1" step="1" value="${escapeHTML(String(override?.adult_count ?? resolved?.adult_count ?? 1))}" /></div>
+                  <div class="field field--span-1" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>Enfants</label><input data-br="seg-children" type="number" min="0" step="1" value="${escapeHTML(String(override?.child_count ?? resolved?.child_count ?? 0))}" /></div>
                 </div>
                 <div class="tb-period-inline-actions">
                   <button class="btn" data-act="edit-cancel">Annuler</button>
@@ -889,7 +887,7 @@ function renderSettings(){
           };
         }
         const editBtn = wrap.querySelector('[data-act="edit-seg"]');
-        if (editBtn) editBtn.onclick = ()=>{ wrap.classList.add('is-editing'); wrap.classList.remove('is-collapsed'); try{ wrap.scrollIntoView({behavior:'smooth', block:'start'});}catch(_){} };
+        if (editBtn) editBtn.onclick = ()=>{ wrap.classList.add('is-editing'); wrap.classList.remove('is-collapsed'); };
         const cancelBtn = wrap.querySelector('[data-act="edit-cancel"]');
         if (cancelBtn) cancelBtn.onclick = ()=>{ wrap.classList.remove('is-editing'); };
         wrap.querySelector('[data-act="save"]').onclick = ()=>safeCall("Save période", async ()=>{ 
@@ -1181,7 +1179,6 @@ function _tbBudgetRefWireSegmentMode(wrap){
   if(!mode || !customFields.length) return;
   const ensureDefaults = ()=>{
     const cache = window.__tbBudgetReferenceCache || {};
-    const travel = (cache && cache.travelDefault) ? cache.travelDefault : null;
     const travelDefault = cache.travelDefault || null;
     const resolvedCountry = wrap.querySelector('[data-br="seg-country"]');
     const profile = wrap.querySelector('[data-br="seg-profile"]');
