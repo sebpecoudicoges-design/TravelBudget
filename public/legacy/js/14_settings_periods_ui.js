@@ -816,6 +816,8 @@ function renderSettings(){
         wrap.classList.toggle('is-collapsed', !defaultOpen);
         const baseCur = _tbSettingsBaseCurrency();
         const localDual = _tbFmtDualAmount(seg.dailyBudgetBase, cur, baseCur, 0, 2);
+        const override = (cache && cache.segmentOverrides) ? (cache.segmentOverrides[String(seg.id)] || null) : null;
+        const resolved = (cache && cache.segmentResolved) ? (cache.segmentResolved[String(seg.id)] || null) : null;
         wrap.innerHTML = `
           <button type="button" class="tb-period-head" data-act="toggle-period">
             <span class="tb-period-head-main">
