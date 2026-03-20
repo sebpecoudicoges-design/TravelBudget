@@ -266,7 +266,7 @@
     card.style.marginBottom = "12px";
     card.innerHTML = `
       <h2>Échéances périodiques</h2>
-      <div class="muted" style="margin-bottom:10px;">Montant, rythme et prochaine échéance dans une lecture compacte.</div>
+      <div class="muted" style="margin-bottom:10px;">Une ligne par échéance, avec les actions à droite.</div>
       <div class="row" style="justify-content:flex-end; margin-bottom:10px;">
         <button class="btn primary" id="tb-recurring-add-btn">+ Nouvelle échéance</button>
       </div>
@@ -709,7 +709,7 @@
     }
 
     host.innerHTML = `
-      <div class="tb-recurring-stack">
+      <div class="tb-recurring-stack tb-recurring-stack--lines">
         ${rows.map((r) => {
           const walletName = String((state?.wallets || []).find(w=>String(w.id||'')===String(r.walletId||r.wallet_id||''))?.name || '—');
           const cat = String(r.category||'').trim();
@@ -730,7 +730,7 @@
               </div>
               <div class="tb-recurring-actions">
                 <button class="btn" data-rr-act="edit" data-rr-id="${escapeHTML(r.id)}">Modifier</button>
-                ${_rrStatus(r) === "active" ? `<button class="btn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">Pause</button>` : `<button class="btn" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`}
+                ${_rrStatus(r) === "active" ? `<button class="btn btn--warn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">Pause</button>` : `<button class="btn btn--positive" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`}
                 <button class="btn danger" data-rr-act="delete" data-rr-id="${escapeHTML(r.id)}">Supprimer</button>
               </div>
             </div>
