@@ -9,26 +9,7 @@
   let excludedCats = new Set();
   let excludePanelOpen = false;
 
-  const TB_SOURCED_CATEGORY_MAPPING = {
-    'logement': { mode: 'mapped', bucket: 'Logement' },
-    'repas': { mode: 'mapped', bucket: 'Repas' },
-    'course': { mode: 'mapped', bucket: 'Repas' },
-    'transport': { mode: 'mapped', bucket: 'Transport' },
-
-    'cadeau': { mode: 'mapped', bucket: 'Activités' },
-    'laundry': { mode: 'mapped', bucket: 'Activités' },
-    'autre': { mode: 'mapped', bucket: 'Activités' },
-    'abonnement/mobile': { mode: 'mapped', bucket: 'Activités' },
-
-    'transport internationale': { mode: 'excluded' },
-    'visa': { mode: 'excluded' },
-    'santé': { mode: 'excluded' },
-    'projet personnel': { mode: 'excluded' },
-    'souvenir': { mode: 'excluded' },
-    'caution': { mode: 'excluded' },
-    'revenu': { mode: 'excluded' },
-    'frais bancaire': { mode: 'excluded' },
-  };
+  const TB_SOURCED_CATEGORY_MAPPING = Object.freeze((window.TB_CONST && window.TB_CONST.ANALYSIS && window.TB_CONST.ANALYSIS.SOURCED_CATEGORY_MAPPING) || {});
 
   function _el(id){ return document.getElementById(id); }
   function _safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
@@ -304,42 +285,18 @@ function _normKey(s){
     .trim()
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .replace(/[̀-ͯ]/g, '');
 }
 
 function _mapToSourcedBucket(categoryName) {
   const key = _normKey(categoryName);
-
-  const mapping = {
-    // LOGEMENT
-    'logement': { mode: 'mapped', bucket: 'Logement' },
-
-    // REPAS
-    'repas': { mode: 'mapped', bucket: 'Repas' },
-    'course': { mode: 'mapped', bucket: 'Repas' },
-
-    // TRANSPORT
-    'transport': { mode: 'mapped', bucket: 'Transport' },
-
-    // ACTIVITÉS
-    'cadeau': { mode: 'mapped', bucket: 'Activités' },
-    'laundry': { mode: 'mapped', bucket: 'Activités' },
-    'autre': { mode: 'mapped', bucket: 'Activités' },
-    'abonnement/mobile': { mode: 'mapped', bucket: 'Activités' },
-
-    // EXCLUS
-    'transport internationale': { mode: 'excluded' },
-    'visa': { mode: 'excluded' },
-    'sante': { mode: 'excluded' },
-    'sant': { mode: 'excluded' },
-    'projet personnel': { mode: 'excluded' },
-    'souvenir': { mode: 'excluded' },
-    'caution': { mode: 'excluded' },
-    'revenu': { mode: 'excluded' },
-    'frais bancaire': { mode: 'excluded' },
-  };
-
-  return mapping[key] || { mode: 'unmapped' };
+  const meta = TB_SOURCED_CATEGORY_MAPPING[key] || null;
+  if (!meta) return { mode: 'unmapped' };
+  const compareMode = String(meta.compare_mode || meta.mode || '').trim().toLowerCase();
+  const bucket = meta.sourced_bucket || meta.bucket || null;
+  if (compareMode === 'mapped' && bucket) return { mode: 'mapped', bucket };
+  if (compareMode === 'excluded') return { mode: 'excluded' };
+  return { mode: 'unmapped' };
 }
   function _allAnalysisCategories(){
     const out = [];

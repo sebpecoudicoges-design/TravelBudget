@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.3';
+window.__TB_BUILD = '9.3.1';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -199,6 +199,33 @@ window.__TB_BUILD = '9.3';
     ux_help_dismissed: "travelbudget_ux_help_dismissed_v1",
   });
 
+
+
+  const ANALYSIS = Object.freeze({
+    SOURCED_CATEGORY_MAPPING: Object.freeze({
+      logement: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Logement" }),
+      repas: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Repas" }),
+      course: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Repas" }),
+      transport: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Transport" }),
+
+      cadeau: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Activités" }),
+      laundry: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Activités" }),
+      autre: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Activités" }),
+      "abonnement/mobile": Object.freeze({ compare_mode: "mapped", sourced_bucket: "Activités" }),
+
+      "transport internationale": Object.freeze({ compare_mode: "excluded" }),
+      "transport international": Object.freeze({ compare_mode: "excluded" }),
+      visa: Object.freeze({ compare_mode: "excluded" }),
+      santé: Object.freeze({ compare_mode: "excluded" }),
+      sante: Object.freeze({ compare_mode: "excluded" }),
+      "projet personnel": Object.freeze({ compare_mode: "excluded" }),
+      souvenir: Object.freeze({ compare_mode: "excluded" }),
+      caution: Object.freeze({ compare_mode: "excluded" }),
+      revenu: Object.freeze({ compare_mode: "excluded" }),
+      "frais bancaire": Object.freeze({ compare_mode: "excluded" }),
+    }),
+  });
+
   const UI_LABELS = Object.freeze({
     voyage: "Voyage",
     periode: "Période",
@@ -220,6 +247,7 @@ window.__TB_BUILD = '9.3';
     RECURRING,
     CATS,
     UI_LABELS,
+    ANALYSIS,
     EXPECTED_SCHEMA_VERSION,
   });
 
