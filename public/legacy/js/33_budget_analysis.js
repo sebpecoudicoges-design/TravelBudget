@@ -742,8 +742,8 @@ function _mapToSourcedBucket(categoryName) {
       animationDuration: 900,
       animationEasing: 'cubicOut',
       tooltip: { trigger:'axis', backgroundColor:'rgba(15,23,42,.92)', borderWidth:0, textStyle:{ color:'#fff' } },
-            legend: { top: 4, textStyle:{ color:_themeMuted(), fontSize:11 }, itemWidth:14, itemHeight:8, data:['Réel cumulé','Cible cumulée'] },
-      grid: { left: 22, right: 22, top: 44, bottom: 26, containLabel:true },
+      legend: { top: 6, textStyle:{ color:_themeMuted(), fontSize:11 }, itemWidth:14, itemHeight:8, data:['Réel cumulé','Cible cumulée'] },
+      grid: { left: 24, right: 24, top: 52, bottom: 30, containLabel:true },
       xAxis: { type:'category', boundaryGap:false, data:model.days.map(d=>d.slice(5)), axisLine:{ lineStyle:{ color:_themeGrid() } }, axisLabel:{ color:_themeMuted(), fontSize:10, margin:8 } },
       yAxis: { type:'value', axisLabel:{ color:_themeMuted(), fontSize:10, formatter:(v)=>_fmtMoney(v, model.base) }, splitLine:{ lineStyle:{ color:_themeGrid() } } },
       series: [
@@ -1005,89 +1005,125 @@ function _mapToSourcedBucket(categoryName) {
     if (pill) pill.textContent = `${model.txs.length} dépenses • ${model.days.length} jours • ${model.base}`;
   }
 
-        function _renderAll(){
+    function _renderAll(){
     if (!_el('view-analysis')) return;
     _saveFilters();
     const model = _computeModel();
 
     _buildSummary(model);
-    _renderReferencePanel(model);
     _renderInsights(model);
-    _renderTrajectory(model);
     _renderCategory(model);
     _renderCategoryBars(model);
     _renderSubcategoryBreakdown(model);
+    _renderTrajectory(model);
+    _renderReferencePanel(model);
     _renderVelocity(model);
     _renderHeatmap(model);
 
-    const referenceHost = _el('analysis-reference');
+    const view = _el('view-analysis');
+    if (!view) return;
+
     const insightsHost = _el('analysis-insights');
-    const trajectoryHost = _el('analysis-trajectory-chart');
     const categoryHost = _el('analysis-category-chart');
     const categoryBarsHost = _el('analysis-category-bars-chart');
+    const subcategoryHost = _el('analysis-subcategory-breakdown');
+    const trajectoryHost = _el('analysis-trajectory-chart');
+    const referenceSummaryHost = _el('analysis-reference-summary');
+    const referenceMixHost = _el('analysis-reference-mix-chart');
     const velocityHost = _el('analysis-velocity-chart');
     const heatmapHost = _el('analysis-heatmap-chart');
+    const summaryHost = _el('analysis-summary');
 
-    const referenceCard = referenceHost?.closest('.analysis-card, .card, section, .panel') || referenceHost?.parentElement;
-    const insightsCard = insightsHost?.closest('.analysis-card, .card, section, .panel') || insightsHost?.parentElement;
-    const trajectoryCard = trajectoryHost?.closest('.analysis-card, .card, section, .panel') || trajectoryHost?.parentElement;
-    const categoryCard = categoryHost?.closest('.analysis-card, .card, section, .panel') || categoryHost?.parentElement;
-    const categoryBarsCard = categoryBarsHost?.closest('.analysis-card, .card, section, .panel') || categoryBarsHost?.parentElement;
-    const velocityCard = velocityHost?.closest('.analysis-card, .card, section, .panel') || velocityHost?.parentElement;
-    const heatmapCard = heatmapHost?.closest('.analysis-card, .card, section, .panel') || heatmapHost?.parentElement;
+    function _cardFor(host){
+      if (!host) return null;
+      return host.closest('.analysis-card, .card, section, .panel') || host.parentElement;
+    }
 
-    const grid =
-      referenceCard?.parentElement ||
-      insightsCard?.parentElement ||
-      trajectoryCard?.parentElement ||
-      categoryCard?.parentElement;
+    const summaryCard = _cardFor(summaryHost);
+    const insightsCard = _cardFor(insightsHost);
+    const categoryCard = _cardFor(categoryHost);
+    const categoryBarsCard = _cardFor(categoryBarsHost);
+    const subcategoryCard = _cardFor(subcategoryHost);
+    const trajectoryCard = _cardFor(trajectoryHost);
+    const referenceCard = _cardFor(referenceSummaryHost) || _cardFor(referenceMixHost);
+    const velocityCard = _cardFor(velocityHost);
+    const heatmapCard = _cardFor(heatmapHost);
 
-    if (grid) {
-      const ordered = [
-        referenceCard,
-        insightsCard,
-        trajectoryCard,
-        categoryCard,
-        categoryBarsCard,
-        velocityCard,
-        heatmapCard
-      ].filter(Boolean);
+    let layout = _el('analysis-custom-layout');
+    if (!layout) {
+      layout = document.createElement('div');
+      layout.id = 'analysis-custom-layout';
+      layout.style.display = 'grid';
+      layout.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+      layout.style.gap = '18px';
+      layout.style.alignItems = 'stretch';
+      layout.style.width = '100%';
+      layout.style.marginTop = '18px';
 
-      ordered.forEach((card) => grid.appendChild(card));
+      if (summaryCard && summaryCard.parentElement === view) {
+        summaryCard.insertAdjacentElement('afterend', layout);
+      } else {
+        view.appendChild(layout);
+      }
+    }
+
+    const orderedCards = [
+      insightsCard,
+      categoryCard,
+      categoryBarsCard,
+      subcategoryCard,
+      trajectoryCard,
+      referenceCard,
+      velocityCard,
+      heatmapCard
+    ].filter(Boolean);
+
+    const oldContainers = [];
+
+    orderedCards.forEach((card) => {
+      if (!card) return;
+      const oldParent = card.parentElement;
+      if (oldParent && oldParent !== layout) oldContainers.push(oldParent);
+
+      layout.appendChild(card);
+      card.style.gridColumn = '';
+      card.style.minHeight = '';
+      card.style.width = '100%';
+      card.style.maxWidth = '100%';
+      card.style.alignSelf = 'stretch';
+      card.style.margin = '0';
+      card.style.boxSizing = 'border-box';
+    });
+
+    if (trajectoryCard) {
+      trajectoryCard.style.gridColumn = '1 / -1';
+      trajectoryCard.style.minHeight = '560px';
     }
 
     if (referenceCard) {
       referenceCard.style.gridColumn = '1 / -1';
     }
 
-    if (insightsCard) {
-      insightsCard.style.gridColumn = '1 / -1';
-    }
-
-    if (trajectoryCard) {
-      trajectoryCard.style.gridColumn = '1 / -1';
-      trajectoryCard.style.minHeight = '420px';
-    }
-
     if (trajectoryHost) {
-      trajectoryHost.style.height = '340px';
+      trajectoryHost.style.height = '430px';
       trajectoryHost.style.width = '100%';
     }
 
-    if (heatmapCard) {
-      heatmapCard.style.gridColumn = '1 / -1';
+    if (heatmapHost) {
+      heatmapHost.style.height = '320px';
+      heatmapHost.style.width = '100%';
     }
 
-    [referenceCard, insightsCard, trajectoryCard].forEach((card) => {
-      if (!card) return;
-      card.style.width = '100%';
-      card.style.alignSelf = 'stretch';
-    });
-
-    [categoryCard, categoryBarsCard, velocityCard].forEach((card) => {
-      if (!card) return;
-      card.style.gridColumn = 'auto';
-      card.style.minHeight = '0';
+    oldContainers.forEach((node) => {
+      if (!node || node === layout || node.contains(layout)) return;
+      if (node.children.length === 0 || node.textContent.trim() === '') {
+        node.style.display = 'none';
+        node.style.minHeight = '0';
+        node.style.height = '0';
+        node.style.margin = '0';
+        node.style.padding = '0';
+        node.style.border = '0';
+      }
     });
 
     try { charts.trajectory && charts.trajectory.resize(); } catch (_) {}

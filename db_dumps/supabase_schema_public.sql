@@ -1762,16 +1762,29 @@ CREATE OR REPLACE FUNCTION "public"."rpc_budget_reference_compute_values"("p_cou
     AS $$
 declare
   v_ref public.country_budget_reference%rowtype;
+
+  v_people_count integer := greatest(coalesce(p_adult_count, 1), 1) + greatest(coalesce(p_child_count, 0), 0);
+
   v_base numeric;
   v_profile_mult numeric := 1.0000;
   v_style_mult numeric := 1.0000;
   v_duration_mult numeric := 1.0000;
+
   v_recommended_daily numeric;
+
+  v_breakdown_total numeric := 0;
+  v_weight_accommodation numeric := 0;
+  v_weight_food numeric := 0;
+  v_weight_transport numeric := 0;
+  v_weight_activities numeric := 0;
+  v_weight_misc numeric := 0;
+
   v_rec_accommodation numeric;
   v_rec_food numeric;
   v_rec_transport numeric;
   v_rec_activities numeric;
   v_rec_misc numeric;
+
   v_source_mode text := 'reference_suggested';
 begin
   if p_country_code is null or btrim(p_country_code) = '' then
@@ -1812,28 +1825,39 @@ begin
     raise exception 'No active budget reference found for country_code=%', p_country_code;
   end if;
 
-  v_base :=
-    case
-      when p_travel_profile = 'solo' and v_ref.solo_daily_amount is not null
-        then v_ref.solo_daily_amount
-      when p_travel_profile = 'couple' and v_ref.couple_per_person_daily_amount is not null
-        then v_ref.couple_per_person_daily_amount
-      when p_travel_profile = 'family' and v_ref.family_per_person_daily_amount is not null
-        then v_ref.family_per_person_daily_amount
-      else v_ref.daily_budget_amount
-    end;
+  /*
+    Base totale résolue:
+    - solo: solo_daily_amount si dispo, sinon daily_budget_amount
+    - couple: couple_per_person_daily_amount * nb adultes si dispo, sinon daily_budget_amount * nb adultes
+    - family: family_per_person_daily_amount * nb personnes si dispo, sinon daily_budget_amount * nb personnes
+
+    NB:
+    - on ne "double" pas via profile_multiplier ensuite
+    - le multiplicateur de profil reste informatif = 1.00
+  */
+  if p_travel_profile = 'solo' then
+    v_base := coalesce(v_ref.solo_daily_amount, v_ref.daily_budget_amount);
+
+  elsif p_travel_profile = 'couple' then
+    if v_ref.couple_per_person_daily_amount is not null then
+      v_base := v_ref.couple_per_person_daily_amount * greatest(coalesce(p_adult_count, 2), 2);
+    else
+      v_base := coalesce(v_ref.daily_budget_amount, 0) * greatest(coalesce(p_adult_count, 2), 2);
+    end if;
+
+  elsif p_travel_profile = 'family' then
+    if v_ref.family_per_person_daily_amount is not null then
+      v_base := v_ref.family_per_person_daily_amount * v_people_count;
+    else
+      v_base := coalesce(v_ref.daily_budget_amount, 0) * v_people_count;
+    end if;
+  end if;
 
   if v_base is null then
     raise exception 'Reference found but no usable daily amount for country_code=%', p_country_code;
   end if;
 
-  if p_travel_profile = 'couple' and v_ref.couple_per_person_daily_amount is null then
-    v_profile_mult := 0.95;
-  elsif p_travel_profile = 'family' and v_ref.family_per_person_daily_amount is null then
-    v_profile_mult := 1.10;
-  else
-    v_profile_mult := 1.00;
-  end if;
+  v_profile_mult := 1.00;
 
   v_style_mult :=
     case p_travel_style
@@ -1845,14 +1869,14 @@ begin
 
   if p_trip_days is not null then
     if p_trip_days <= 14 then
-      if v_ref.short_trip_daily_amount is not null and v_base > 0 then
-        v_duration_mult := v_ref.short_trip_daily_amount / v_base;
+      if v_ref.short_trip_daily_amount is not null and v_ref.daily_budget_amount is not null and v_ref.daily_budget_amount > 0 then
+        v_duration_mult := v_ref.short_trip_daily_amount / v_ref.daily_budget_amount;
       else
         v_duration_mult := 1.10;
       end if;
     elsif p_trip_days >= 90 then
-      if v_ref.long_trip_daily_amount is not null and v_base > 0 then
-        v_duration_mult := v_ref.long_trip_daily_amount / v_base;
+      if v_ref.long_trip_daily_amount is not null and v_ref.daily_budget_amount is not null and v_ref.daily_budget_amount > 0 then
+        v_duration_mult := v_ref.long_trip_daily_amount / v_ref.daily_budget_amount;
       else
         v_duration_mult := 0.90;
       end if;
@@ -1861,28 +1885,47 @@ begin
     end if;
   end if;
 
-  v_recommended_daily := round((v_base * v_profile_mult * v_style_mult * v_duration_mult)::numeric, 2);
+  v_recommended_daily := round((v_base * v_style_mult * v_duration_mult)::numeric, 2);
 
-  v_rec_accommodation := case
-    when v_ref.accommodation_daily_amount is not null
-      then round((v_ref.accommodation_daily_amount * v_profile_mult * v_style_mult * v_duration_mult)::numeric, 2)
-    else null end;
-  v_rec_food := case
-    when v_ref.food_daily_amount is not null
-      then round((v_ref.food_daily_amount * v_profile_mult * v_style_mult * v_duration_mult)::numeric, 2)
-    else null end;
-  v_rec_transport := case
-    when v_ref.transport_daily_amount is not null
-      then round((v_ref.transport_daily_amount * v_profile_mult * v_style_mult * v_duration_mult)::numeric, 2)
-    else null end;
-  v_rec_activities := case
-    when v_ref.activities_daily_amount is not null
-      then round((v_ref.activities_daily_amount * v_profile_mult * v_style_mult * v_duration_mult)::numeric, 2)
-    else null end;
-  v_rec_misc := case
-    when v_ref.misc_daily_amount is not null
-      then round((v_ref.misc_daily_amount * v_profile_mult * v_style_mult * v_duration_mult)::numeric, 2)
-    else null end;
+  /*
+    Nouveau principe:
+    les catégories détaillées représentent la structure du budget de base "daily_budget_amount".
+    On re-proratise donc leur poids sur le total résolu final.
+  */
+  v_breakdown_total :=
+      coalesce(v_ref.accommodation_daily_amount, 0)
+    + coalesce(v_ref.food_daily_amount, 0)
+    + coalesce(v_ref.transport_daily_amount, 0)
+    + coalesce(v_ref.activities_daily_amount, 0)
+    + coalesce(v_ref.misc_daily_amount, 0);
+
+  if v_breakdown_total > 0 then
+    v_weight_accommodation := coalesce(v_ref.accommodation_daily_amount, 0) / v_breakdown_total;
+    v_weight_food          := coalesce(v_ref.food_daily_amount, 0) / v_breakdown_total;
+    v_weight_transport     := coalesce(v_ref.transport_daily_amount, 0) / v_breakdown_total;
+    v_weight_activities    := coalesce(v_ref.activities_daily_amount, 0) / v_breakdown_total;
+    v_weight_misc          := coalesce(v_ref.misc_daily_amount, 0) / v_breakdown_total;
+
+    v_rec_accommodation := round((v_recommended_daily * v_weight_accommodation)::numeric, 2);
+    v_rec_food          := round((v_recommended_daily * v_weight_food)::numeric, 2);
+    v_rec_transport     := round((v_recommended_daily * v_weight_transport)::numeric, 2);
+    v_rec_activities    := round((v_recommended_daily * v_weight_activities)::numeric, 2);
+
+    -- misc = reste pour garantir la somme exacte
+    v_rec_misc := round((
+        v_recommended_daily
+      - coalesce(v_rec_accommodation, 0)
+      - coalesce(v_rec_food, 0)
+      - coalesce(v_rec_transport, 0)
+      - coalesce(v_rec_activities, 0)
+    )::numeric, 2);
+  else
+    v_rec_accommodation := null;
+    v_rec_food := null;
+    v_rec_transport := null;
+    v_rec_activities := null;
+    v_rec_misc := null;
+  end if;
 
   return query
   select

@@ -295,9 +295,12 @@
     } catch (_) {}
     return '#94a3b8';
   }
-  function _norm(s) {
-  return (s || '')
-    .toString()
+  function _norm(s){ 
+  return String(s || '').trim(); 
+}
+
+function _normKey(s){
+  return String(s || '')
     .trim()
     .toLowerCase()
     .normalize('NFD')
@@ -305,7 +308,7 @@
 }
 
 function _mapToSourcedBucket(categoryName) {
-  const key = _norm(categoryName);
+  const key = _normKey(categoryName);
 
   const mapping = {
     // LOGEMENT
@@ -342,15 +345,16 @@ function _mapToSourcedBucket(categoryName) {
     const out = [];
     const seen = new Set();
     const add = (v) => {
-      const name = _norm(v);
-      if (!name) return;
-      if (/^\[trip\]/i.test(name)) return;
-      if (/^cat[eé]gorie$/i.test(name) || /^category$/i.test(name)) return;
-      const k = name.toLowerCase();
-      if (seen.has(k)) return;
-      seen.add(k);
-      out.push(name);
-    };
+  const raw = String(v || '').trim();
+  if (!raw) return;
+  if (/^\[trip\]/i.test(raw)) return;
+  if (/^cat[eé]gorie$/i.test(raw) || /^category$/i.test(raw)) return;
+
+  const k = _normKey(raw);
+  if (seen.has(k)) return;
+  seen.add(k);
+  out.push(raw);
+};
     try { if (typeof getCategories === 'function') (getCategories() || []).forEach(add); } catch (_) {}
     (Array.isArray(state?.categories) ? state.categories : []).forEach(add);
     (Array.isArray(state?.transactions) ? state.transactions : []).forEach(tx => {
@@ -521,29 +525,6 @@ function _mapToSourcedBucket(categoryName) {
       ['Activités', 0],
       ['Autre', 0],
     ]);
-
-    days.forEach((d) => {
-      const row = _referenceRowForDate(d);
-      const cur = _upper(row?.currency_code || '');
-      const hasRef = !!(_safeNum(row?.recommended_daily_amount) > 0 && cur);
-      if (!hasRef) return;
-
-      referenceCategoryMap.set('Logement',
-        referenceCategoryMap.get('Logement') + _safeNum(_convert(row?.recommended_accommodation_daily_amount || 0, cur, d, base))
-      );
-      referenceCategoryMap.set('Repas',
-        referenceCategoryMap.get('Repas') + _safeNum(_convert(row?.recommended_food_daily_amount || 0, cur, d, base))
-      );
-      referenceCategoryMap.set('Transport',
-        referenceCategoryMap.get('Transport') + _safeNum(_convert(row?.recommended_transport_daily_amount || 0, cur, d, base))
-      );
-      referenceCategoryMap.set('Activités',
-        referenceCategoryMap.get('Activités') + _safeNum(_convert(row?.recommended_activities_daily_amount || 0, cur, d, base))
-      );
-      referenceCategoryMap.set('Autre',
-        referenceCategoryMap.get('Autre') + _safeNum(_convert(row?.recommended_misc_daily_amount || 0, cur, d, base))
-      );
-    });
     const coveredDaySet = new Set(coveredDays);
     const todayIso = _iso(new Date());
     const effectiveEnd = end < todayIso ? end : todayIso;
@@ -581,7 +562,7 @@ function _mapToSourcedBucket(categoryName) {
       .filter((_, idx) => days[idx] <= effectiveEnd)
       .reduce((a,b)=>a+b,0);
     const totalReference = totalReferenceElapsed;
-    const referenceCoverageDays = elapsedComparableDaysList.length;
+    let referenceCoverageDays = 0;
     const cumSpent = [];
     const cumTarget = [];
     const cumReference = [];
@@ -613,11 +594,47 @@ function _mapToSourcedBucket(categoryName) {
     const elapsedDays = Math.max(1, elapsedDaysList.length || periodDays);
     const avgPerDay = spentToToday / elapsedDays;
     const budgetPerDay = totalBudget / periodDays;
-    const referencePerDay = elapsedComparableDaysList.length ? (totalReferenceElapsed / elapsedComparableDaysList.length) : 0;
 
-    const referenceMiscPerDay = elapsedComparableDaysList.length
-      ? (_safeNum(referenceCategoryMap.get('Autre')) / elapsedComparableDaysList.length)
-      : 0;
+    const activeReferenceDays = days.filter((d) => d <= effectiveEnd && _hasReferenceForDate(d));
+    referenceCoverageDays = Math.max(0, activeReferenceDays.length);
+
+    let referencePerDay = 0;
+    let referenceMiscPerDay = 0;
+
+    if (referenceCoverageDays > 0) {
+      const refSums = {
+        daily: 0,
+        misc: 0,
+        Logement: 0,
+        Repas: 0,
+        Transport: 0,
+        Activités: 0,
+        Autre: 0,
+      };
+
+      activeReferenceDays.forEach((d) => {
+        const row = _referenceRowForDate(d);
+        const cur = _upper(row?.currency_code || '');
+        if (!row || !cur) return;
+
+        refSums.daily += _safeNum(_convert(row?.recommended_daily_amount || 0, cur, d, base));
+        refSums.misc += _safeNum(_convert(row?.recommended_misc_daily_amount || 0, cur, d, base));
+        refSums.Logement += _safeNum(_convert(row?.recommended_accommodation_daily_amount || 0, cur, d, base));
+        refSums.Repas += _safeNum(_convert(row?.recommended_food_daily_amount || 0, cur, d, base));
+        refSums.Transport += _safeNum(_convert(row?.recommended_transport_daily_amount || 0, cur, d, base));
+        refSums.Activités += _safeNum(_convert(row?.recommended_activities_daily_amount || 0, cur, d, base));
+        refSums.Autre += _safeNum(_convert(row?.recommended_misc_daily_amount || 0, cur, d, base));
+      });
+
+      referencePerDay = refSums.daily / referenceCoverageDays;
+      referenceMiscPerDay = refSums.misc / referenceCoverageDays;
+
+      referenceCategoryMap.set('Logement', refSums.Logement / referenceCoverageDays);
+      referenceCategoryMap.set('Repas', refSums.Repas / referenceCoverageDays);
+      referenceCategoryMap.set('Transport', refSums.Transport / referenceCoverageDays);
+      referenceCategoryMap.set('Activités', refSums.Activités / referenceCoverageDays);
+      referenceCategoryMap.set('Autre', refSums.Autre / referenceCoverageDays);
+    }
 
     const unmappedComparableSpent = Math.max(0, comparableSpent - comparableMappedSpent);
     const unmappedPerDay = comparableDays > 0 ? (unmappedComparableSpent / comparableDays) : 0;
@@ -652,7 +669,10 @@ function _mapToSourcedBucket(categoryName) {
       cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, referenceComparisonSeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays, referenceContext };
         }
   function _buildReferenceComparisonSeries(actualMap, referenceCategoryMap, comparableDays){
-    const map = (actualMap instanceof Map) ? actualMap : new Map((actualMap || []).map((row) => [String(row?.name || '').trim(), _safeNum(row?.actual)]));
+    const map = (actualMap instanceof Map)
+      ? actualMap
+      : new Map((actualMap || []).map((row) => [String(row?.name || '').trim(), _safeNum(row?.actual)]));
+
     const days = Math.max(1, Number(comparableDays) || 1);
     const mappings = [
       { name:'Logement', actualKey:'Logement', referenceKey:'Logement' },
@@ -660,19 +680,20 @@ function _mapToSourcedBucket(categoryName) {
       { name:'Transport', actualKey:'Transport', referenceKey:'Transport' },
       { name:'Activités', actualKey:'Activités', referenceKey:'Activités' },
     ];
+
     return mappings.map((row) => {
       const actual = _safeNum(map.get(row.actualKey));
-      const reference = _safeNum(referenceCategoryMap.get(row.referenceKey));
+      const referenceDaily = _safeNum(referenceCategoryMap.get(row.referenceKey));
       const actualPerDay = actual / days;
-      const referencePerDay = reference / days;
+
       return {
         name: row.name,
         actual: Number(actual.toFixed(2)),
-        reference: Number(reference.toFixed(2)),
+        reference: Number(referenceDaily.toFixed(2)),
         actualPerDay: Number(actualPerDay.toFixed(2)),
-        referencePerDay: Number(referencePerDay.toFixed(2)),
-        deltaPerDay: Number((actualPerDay - referencePerDay).toFixed(2)),
-        delta: Number((actual - reference).toFixed(2)),
+        referencePerDay: Number(referenceDaily.toFixed(2)),
+        deltaPerDay: Number((actualPerDay - referenceDaily).toFixed(2)),
+        delta: Number((actual - (referenceDaily * days)).toFixed(2)),
         color: _categoryColor(row.name)
       };
     }).filter((row) => _safeNum(row.actualPerDay) > 0 || _safeNum(row.referencePerDay) > 0);
@@ -684,12 +705,10 @@ function _mapToSourcedBucket(categoryName) {
     const health = model.totalBudget > 0 ? Math.max(0, Math.min(100, model.pct)) : 0;
     const cards = [
       { label:'Budget prévu app', value:_fmtMoney(model.totalBudget, model.base), meta:`${model.days.length} jours analysés`, pct:100 },
-      { label:'Sourcé total période', value:_fmtMoney(model.totalReferencePeriod, model.base), meta:model.referenceCoverageDays ? `${model.referenceCoverageDays} j écoulés avec référence • ${model.referenceContext?.shortLabel || ''}` : 'Aucune référence pays active sur la plage', pct: model.totalReferencePeriod ? 100 : 0 },
+      { label:'Sourcé total période', value:_fmtMoney(model.totalReferencePeriod, model.base), pct: model.totalReferencePeriod ? 100 : 0 },
       { label:'Dépensé cumulé', value:_fmtMoney(model.spentToToday, model.base), meta:`${health.toFixed(1)}% du budget app consommé sur les jours écoulés`, pct:health },
       { label:'Sourcé cumulé écoulé', value:_fmtMoney(model.totalReferenceElapsed, model.base), meta:'Base de comparaison du réel écoulé', pct: model.totalReferenceElapsed ? 100 : 0 },
       { label:'Hors budget', value:_fmtMoney(model.outAmount, model.base), meta:'Visible sans polluer le pilotage principal', pct: model.totalBudget ? Math.min(100, (model.outAmount / Math.max(model.totalBudget,1))*100) : 0 },
-      { label:'Non référencé / jour', value:_fmtMoney(model.unmappedPerDay, model.base), meta:`Comparé au sourcé comme ${_fmtMoney(0, model.base)}/j`, pct: 0 },
-      { label:'Reste source / jour', value:_fmtMoney(model.referenceMiscPerDay, model.base), meta:'Part sourcée non ventilée dans les 4 grands postes', pct: 0 },
       { label:'Projection fin période', value:_fmtMoney(model.projection, model.base), meta:model.projection > model.totalReferencePeriod && model.totalReferencePeriod > 0 ? 'Au-dessus de la source totale' : (model.projection > model.totalBudget ? 'Au-dessus du cap app' : 'Dans la trajectoire'), pct: model.totalBudget ? Math.min(100, (model.projection / model.totalBudget) * 100) : 0 },
     ];
     host.innerHTML = cards.map((c, idx) => `
@@ -723,10 +742,10 @@ function _mapToSourcedBucket(categoryName) {
       animationDuration: 900,
       animationEasing: 'cubicOut',
       tooltip: { trigger:'axis', backgroundColor:'rgba(15,23,42,.92)', borderWidth:0, textStyle:{ color:'#fff' } },
-      legend: { top: 0, textStyle:{ color:_themeMuted() }, data:['Réel cumulé','Cible cumulée'] },
-      grid: { left: 20, right: 20, top: 42, bottom: 26, containLabel:true },
-      xAxis: { type:'category', boundaryGap:false, data:model.days.map(d=>d.slice(5)), axisLine:{ lineStyle:{ color:_themeGrid() } }, axisLabel:{ color:_themeMuted() } },
-      yAxis: { type:'value', axisLabel:{ color:_themeMuted(), formatter:(v)=>_fmtMoney(v, model.base) }, splitLine:{ lineStyle:{ color:_themeGrid() } } },
+      legend: { top: 2, textStyle:{ color:_themeMuted(), fontSize:11 }, itemWidth:14, itemHeight:8, data:['Réel cumulé','Cible cumulée'] },
+      grid: { left: 20, right: 20, top: 38, bottom: 24, containLabel:true },
+      xAxis: { type:'category', boundaryGap:false, data:model.days.map(d=>d.slice(5)), axisLine:{ lineStyle:{ color:_themeGrid() } }, axisLabel:{ color:_themeMuted(), fontSize:10, margin:8 } },
+      yAxis: { type:'value', axisLabel:{ color:_themeMuted(), fontSize:10, formatter:(v)=>_fmtMoney(v, model.base) }, splitLine:{ lineStyle:{ color:_themeGrid() } } },
       series: [
         { name:'Cible cumulée', type:'line', smooth:false, symbol:'none', lineStyle:{ width:3, color:_themeGood(), opacity:.95, type:'dashed' }, areaStyle:{ color:'transparent' }, data:model.cumTarget,
           markLine: model.days.length ? { symbol:'none', lineStyle:{ type:'dashed', color:_themeGrid() }, label:{ show:false }, data:[{ xAxis: todayLabel }] } : undefined },
@@ -736,7 +755,14 @@ function _mapToSourcedBucket(categoryName) {
       ]
     });
     const meta = _el('analysis-trajectory-meta');
-    if (meta) meta.innerHTML = `${escapeHTML(model.start || '—')} → ${escapeHTML(model.end || '—')}<br>${escapeHTML(model.days.length + ' jours • ' + model.base)}`;
+    if (meta) {
+      meta.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:center;">
+        <span>${escapeHTML(model.start || '—')} → ${escapeHTML(model.end || '—')}</span>
+        <span>${escapeHTML(model.days.length + ' jours')}</span>
+        <span>${escapeHTML(model.base)}</span>
+      </div>`;
+      meta.style.marginTop = '.65rem';
+    }
   }
   function _renderCategory(model){
     const chart = _ensureChart('category','analysis-category-chart');
@@ -844,8 +870,33 @@ function _mapToSourcedBucket(categoryName) {
     const rows = (model.referenceComparisonSeries || []).filter(r => _safeNum(r.actualPerDay) > 0 || _safeNum(r.referencePerDay) > 0);
     const coverage = model.referenceCoverageDays && model.days.length ? `${model.referenceCoverageDays}/${model.days.length} jours couverts` : 'Aucune source active';
     const deltaTone = model.referenceGap <= 0 ? 'Sous la référence' : 'Au-dessus de la référence';
-    const mainCats = rows.slice(0, 4).map((row) => row.name).join(' • ') || 'Aucune catégorie couverte';
-    const referenceContextLabel = model.referenceContext?.longLabel || 'Aucune référence pays active sur la plage';
+    const referenceCountry = model.referenceContext?.countryLabel && model.referenceContext.countryLabel !== 'Pays —'
+      ? model.referenceContext.countryLabel
+      : 'Aucune référence pays active';
+
+    const referenceProfile = model.referenceContext?.profileLabel && model.referenceContext.profileLabel !== 'Profil —'
+      ? model.referenceContext.profileLabel
+      : null;
+
+    const referenceStyle = model.referenceContext?.styleLabel && model.referenceContext.styleLabel !== 'Style —'
+      ? model.referenceContext.styleLabel
+      : null;
+
+    const referenceAdults = model.referenceContext?.adultsLabel && model.referenceContext.adultsLabel !== 'ad. —'
+      ? model.referenceContext.adultsLabel.replace('ad.', 'adulte(s)')
+      : null;
+
+    const referenceChildren = model.referenceContext?.childrenLabel && model.referenceContext.childrenLabel !== 'enf. —'
+      ? model.referenceContext.childrenLabel.replace('enf.', 'enfant(s)')
+      : null;
+
+    const referenceContextLabel = [
+      referenceCountry,
+      referenceProfile && `Profil ${referenceProfile}`,
+      referenceStyle && `Style ${referenceStyle}`,
+      referenceAdults,
+      referenceChildren
+    ].filter(Boolean).join(' • ');
     if (summary) {
       summary.innerHTML = `
         <div class="analysis-reference-stat">
@@ -856,19 +907,16 @@ function _mapToSourcedBucket(categoryName) {
         <div class="analysis-reference-stat">
           <span>Réel / jour</span>
           <strong>${escapeHTML(_fmtMoney(model.avgPerDay, model.base))}</strong>
-          <small>Jours écoulés pertinents uniquement</small>
         </div>
         <div class="analysis-reference-stat">
           <span>Écart / jour</span>
           <strong>${escapeHTML(_fmtMoney(model.avgPerDay - model.referencePerDay, model.base))}</strong>
           <small>${escapeHTML(deltaTone)}</small>
         </div>
-        <div class="analysis-reference-note">Lecture quotidienne homogène, calculée sur la même base temporelle et avec le profil/style/composition résolus par période.</div>
-        <div class="analysis-reference-inline">
-          <span class="analysis-reference-pill">Sourcé ${escapeHTML(_fmtMoney(model.referencePerDay, model.base))}/jour</span>
-          <span class="analysis-reference-pill">Réel ${escapeHTML(_fmtMoney(model.avgPerDay, model.base))}/jour</span>
-          <span class="analysis-reference-pill">Contexte : ${escapeHTML(referenceContextLabel)}</span>
-          <span class="analysis-reference-pill">Catégories : ${escapeHTML(mainCats)}</span>
+                <div class="analysis-reference-inline">
+          <div class="analysis-reference-context" style="font-size:1rem;font-weight:700;line-height:1.35;padding:.7rem .9rem;border-radius:16px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18);">
+            Contexte : ${escapeHTML(referenceContextLabel)}
+          </div>
         </div>`;
     }
     if (chart && chart.dispose) { try { chart.dispose(); } catch(_) {} delete charts.referenceMix; }
@@ -895,14 +943,32 @@ function _mapToSourcedBucket(categoryName) {
             </div>
           </div>`;
         }).join('')}
+        <div class="analysis-reference-metal analysis-reference-metal--neutral">
+          <div class="analysis-reference-metal-head">
+            <span>Non référencé</span>
+            <strong>${escapeHTML(_fmtMoney(model.unmappedPerDay, model.base))}</strong>
+          </div>
+          <div class="analysis-reference-metal-body">
+            <div><small>Réel / jour</small><b>${escapeHTML(_fmtMoney(model.unmappedPerDay, model.base))}</b></div>
+            <div><small>Sourcé / jour</small><b>${escapeHTML(_fmtMoney(0, model.base))}</b></div>
+          </div>
+        </div>
       </div>`;
   }
 
   function _renderInsights(model){
     const host = _el('analysis-insights');
     const delta = model.projection - model.totalBudget;
+    const sourcedGap = model.avgPerDay - model.referencePerDay;
     const top = model.topCategories[0];
     const insights = [
+      {
+        icon: sourcedGap > 0 ? '🧭' : '🌿',
+        title: sourcedGap > 0 ? 'Réel au-dessus du sourcé' : 'Réel sous le sourcé',
+        body: sourcedGap > 0
+          ? `Tu dépenses ${_fmtMoney(model.avgPerDay, model.base)}/jour contre une référence pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour, soit ${_fmtMoney(sourcedGap, model.base)}/jour au-dessus.`
+          : `Tu dépenses ${_fmtMoney(model.avgPerDay, model.base)}/jour contre une référence pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour, soit ${_fmtMoney(Math.abs(sourcedGap), model.base)}/jour en dessous.`
+      },
       {
         icon: model.avgPerDay > model.budgetPerDay ? '⚠️' : '✅',
         title: model.avgPerDay > model.budgetPerDay ? 'Cadence au-dessus de la cible' : 'Cadence maîtrisée',
@@ -939,19 +1005,87 @@ function _mapToSourcedBucket(categoryName) {
     if (pill) pill.textContent = `${model.txs.length} dépenses • ${model.days.length} jours • ${model.base}`;
   }
 
-  function _renderAll(){
+    function _renderAll(){
     if (!_el('view-analysis')) return;
     _saveFilters();
     const model = _computeModel();
+
     _buildSummary(model);
+    _renderReferencePanel(model);
+    _renderInsights(model);
     _renderTrajectory(model);
     _renderCategory(model);
     _renderCategoryBars(model);
     _renderSubcategoryBreakdown(model);
     _renderVelocity(model);
     _renderHeatmap(model);
-    _renderReferencePanel(model);
-    _renderInsights(model);
+
+    const referenceHost = _el('analysis-reference');
+    const insightsHost = _el('analysis-insights');
+    const trajectoryHost = _el('analysis-trajectory-chart');
+    const categoryHost = _el('analysis-category-chart');
+    const categoryBarsHost = _el('analysis-category-bars-chart');
+    const velocityHost = _el('analysis-velocity-chart');
+    const heatmapHost = _el('analysis-heatmap-chart');
+
+    const referenceCard = referenceHost?.closest('.analysis-card, .card, section, .panel') || referenceHost?.parentElement;
+    const insightsCard = insightsHost?.closest('.analysis-card, .card, section, .panel') || insightsHost?.parentElement;
+    const trajectoryCard = trajectoryHost?.closest('.analysis-card, .card, section, .panel') || trajectoryHost?.parentElement;
+    const categoryCard = categoryHost?.closest('.analysis-card, .card, section, .panel') || categoryHost?.parentElement;
+    const categoryBarsCard = categoryBarsHost?.closest('.analysis-card, .card, section, .panel') || categoryBarsHost?.parentElement;
+    const velocityCard = velocityHost?.closest('.analysis-card, .card, section, .panel') || velocityHost?.parentElement;
+    const heatmapCard = heatmapHost?.closest('.analysis-card, .card, section, .panel') || heatmapHost?.parentElement;
+
+    const cards = [
+      referenceCard,
+      insightsCard,
+      trajectoryCard,
+      categoryCard,
+      categoryBarsCard,
+      velocityCard,
+      heatmapCard
+    ].filter(Boolean);
+
+    cards.forEach((card) => {
+      card.style.gridColumn = '';
+      card.style.order = '';
+      card.style.minHeight = '';
+      card.style.width = '';
+      card.style.alignSelf = '';
+    });
+
+    if (referenceCard) {
+      referenceCard.style.order = '1';
+    }
+
+    if (insightsCard) {
+      insightsCard.style.order = '2';
+    }
+
+    if (trajectoryCard) {
+      trajectoryCard.style.order = '3';
+      trajectoryCard.style.gridColumn = '1 / -1';
+      trajectoryCard.style.minHeight = '460px';
+    }
+
+    if (categoryCard) categoryCard.style.order = '4';
+    if (categoryBarsCard) categoryBarsCard.style.order = '5';
+    if (velocityCard) velocityCard.style.order = '6';
+    if (heatmapCard) {
+      heatmapCard.style.order = '7';
+      heatmapCard.style.gridColumn = '1 / -1';
+    }
+
+    if (trajectoryHost) {
+      trajectoryHost.style.height = '360px';
+      trajectoryHost.style.width = '100%';
+    }
+
+    try { charts.trajectory && charts.trajectory.resize(); } catch (_) {}
+    try { charts.category && charts.category.resize(); } catch (_) {}
+    try { charts.categoryBars && charts.categoryBars.resize(); } catch (_) {}
+    try { charts.velocity && charts.velocity.resize(); } catch (_) {}
+    try { charts.heatmap && charts.heatmap.resize(); } catch (_) {}
   }
 
   function _toggleRangeBox(){
