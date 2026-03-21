@@ -266,7 +266,6 @@
     card.style.marginBottom = "12px";
     card.innerHTML = `
       <h2>Échéances périodiques</h2>
-      <div class="muted" style="margin-bottom:10px;">Une ligne par échéance, avec les actions à droite.</div>
       <div id="tb-recurring-box"></div>
     `;
 

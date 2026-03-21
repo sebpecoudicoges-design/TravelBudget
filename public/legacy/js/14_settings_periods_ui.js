@@ -786,7 +786,7 @@ function renderSettings(){
       <div data-act="mf-toggle" style="display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer;">
         <div>
           <b>Change</b>
-          <span class="muted">Taux perso séparés des périodes</span>
+          <span class="muted">Taux des devises gérées manuellement</span>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
           ${manualList.some(x=>x.stale) ? '<span class="tb-fx-alert-badge">⚠ À mettre à jour</span>' : '<span class="tb-fx-ok-badge">OK</span>'}
@@ -907,7 +907,6 @@ function renderSettings(){
           <div class="tb-period-body">
             <div class="tb-period-shell">
               <div class="tb-settings-inline-strip tb-settings-inline-strip--period tb-settings-inline-strip--period-2col">
-                <div class="tb-settings-chipstat tb-settings-chipstat--blue"><span>Prévu / jour</span><strong>${escapeHTML(localDual.main)}</strong>${localDual.secondary?`<small>${escapeHTML(localDual.secondary)} · base</small>`:''}</div>
                 <div class="tb-settings-chipstat tb-settings-chipstat--blue"><span>Devise locale</span><strong>${escapeHTML(cur)}</strong><small>Nuit transport · ${escapeHTML(_tbBudgetRefFmtAmount(_tbGetNightTransportBudget(seg.id), cur, 0))}</small></div>
                 <div class="tb-settings-chipstat tb-settings-chipstat--blue"><span>Change</span><strong>${escapeHTML((rateDisplay || "—"))}</strong><small>${fxMeta.stale ? '⚠ Taux à mettre à jour' : 'Bloc séparé'}</small></div>
               </div>

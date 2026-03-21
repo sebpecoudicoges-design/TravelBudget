@@ -9,10 +9,38 @@
   let excludedCats = new Set();
   let excludePanelOpen = false;
 
+  const TB_SOURCED_CATEGORY_MAPPING = {
+    'logement': { mode: 'mapped', bucket: 'Logement' },
+    'repas': { mode: 'mapped', bucket: 'Repas' },
+    'course': { mode: 'mapped', bucket: 'Repas' },
+    'transport': { mode: 'mapped', bucket: 'Transport' },
+
+    'cadeau': { mode: 'mapped', bucket: 'Activités' },
+    'laundry': { mode: 'mapped', bucket: 'Activités' },
+    'autre': { mode: 'mapped', bucket: 'Activités' },
+    'abonnement/mobile': { mode: 'mapped', bucket: 'Activités' },
+
+    'transport internationale': { mode: 'excluded' },
+    'visa': { mode: 'excluded' },
+    'santé': { mode: 'excluded' },
+    'projet personnel': { mode: 'excluded' },
+    'souvenir': { mode: 'excluded' },
+    'caution': { mode: 'excluded' },
+    'revenu': { mode: 'excluded' },
+    'frais bancaire': { mode: 'excluded' },
+  };
+
   function _el(id){ return document.getElementById(id); }
   function _safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
   function _norm(s){ return String(s || '').trim(); }
   function _upper(s){ return _norm(s).toUpperCase(); }
+    function _normKey(s){
+    return String(s || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
   function _isUUID(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || '')); }
   function _iso(d){ try { return toLocalISODate(d); } catch (_) { return new Date(d).toISOString().slice(0,10); } }
   function _parse(iso){ try { return parseISODateOrNull(iso); } catch (_) { return iso ? new Date(iso+'T00:00:00') : null; } }
@@ -267,6 +295,49 @@
     } catch (_) {}
     return '#94a3b8';
   }
+  function _norm(s) {
+  return (s || '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function _mapToSourcedBucket(categoryName) {
+  const key = _norm(categoryName);
+
+  const mapping = {
+    // LOGEMENT
+    'logement': { mode: 'mapped', bucket: 'Logement' },
+
+    // REPAS
+    'repas': { mode: 'mapped', bucket: 'Repas' },
+    'course': { mode: 'mapped', bucket: 'Repas' },
+
+    // TRANSPORT
+    'transport': { mode: 'mapped', bucket: 'Transport' },
+
+    // ACTIVITÉS
+    'cadeau': { mode: 'mapped', bucket: 'Activités' },
+    'laundry': { mode: 'mapped', bucket: 'Activités' },
+    'autre': { mode: 'mapped', bucket: 'Activités' },
+    'abonnement/mobile': { mode: 'mapped', bucket: 'Activités' },
+
+    // EXCLUS
+    'transport internationale': { mode: 'excluded' },
+    'visa': { mode: 'excluded' },
+    'sante': { mode: 'excluded' },
+    'sant': { mode: 'excluded' },
+    'projet personnel': { mode: 'excluded' },
+    'souvenir': { mode: 'excluded' },
+    'caution': { mode: 'excluded' },
+    'revenu': { mode: 'excluded' },
+    'frais bancaire': { mode: 'excluded' },
+  };
+
+  return mapping[key] || { mode: 'unmapped' };
+}
   function _allAnalysisCategories(){
     const out = [];
     const seen = new Set();
@@ -415,12 +486,6 @@
     const paidMap = Object.fromEntries(days.map(d => [d, 0]));
     const catMap = new Map();
     const subcatMap = new Map();
-    const referenceCategoryMap = new Map([
-      ['Logement', 0],
-      ['Repas', 0],
-      ['Transport', 0],
-      ['Activités', 0],
-    ]);
     let spent = 0;
     let paidSpent = 0;
     for (const tx of txs) {
@@ -445,14 +510,39 @@
       const row = _referenceRowForDate(d);
       const cur = _upper(row?.currency_code || '');
       const hasRef = !!(_safeNum(row?.recommended_daily_amount) > 0 && cur);
-      if (hasRef) {
-        coveredDays.push(d);
-        referenceCategoryMap.set('Logement', (referenceCategoryMap.get('Logement') || 0) + _convert(row?.recommended_accommodation_daily_amount, cur, d, base));
-        referenceCategoryMap.set('Repas', (referenceCategoryMap.get('Repas') || 0) + _convert(row?.recommended_food_daily_amount, cur, d, base));
-        referenceCategoryMap.set('Transport', (referenceCategoryMap.get('Transport') || 0) + _convert(row?.recommended_transport_daily_amount, cur, d, base));
-        referenceCategoryMap.set('Activités', (referenceCategoryMap.get('Activités') || 0) + _convert(row?.recommended_activities_daily_amount, cur, d, base));
-      }
-      return _referenceDailyForDate(d, base);
+      if (hasRef) coveredDays.push(d);
+      return _safeNum(_convert(row?.recommended_daily_amount || 0, cur || base, d, base));
+    });
+
+    const referenceCategoryMap = new Map([
+      ['Logement', 0],
+      ['Repas', 0],
+      ['Transport', 0],
+      ['Activités', 0],
+      ['Autre', 0],
+    ]);
+
+    days.forEach((d) => {
+      const row = _referenceRowForDate(d);
+      const cur = _upper(row?.currency_code || '');
+      const hasRef = !!(_safeNum(row?.recommended_daily_amount) > 0 && cur);
+      if (!hasRef) return;
+
+      referenceCategoryMap.set('Logement',
+        referenceCategoryMap.get('Logement') + _safeNum(_convert(row?.recommended_accommodation_daily_amount || 0, cur, d, base))
+      );
+      referenceCategoryMap.set('Repas',
+        referenceCategoryMap.get('Repas') + _safeNum(_convert(row?.recommended_food_daily_amount || 0, cur, d, base))
+      );
+      referenceCategoryMap.set('Transport',
+        referenceCategoryMap.get('Transport') + _safeNum(_convert(row?.recommended_transport_daily_amount || 0, cur, d, base))
+      );
+      referenceCategoryMap.set('Activités',
+        referenceCategoryMap.get('Activités') + _safeNum(_convert(row?.recommended_activities_daily_amount || 0, cur, d, base))
+      );
+      referenceCategoryMap.set('Autre',
+        referenceCategoryMap.get('Autre') + _safeNum(_convert(row?.recommended_misc_daily_amount || 0, cur, d, base))
+      );
     });
     const coveredDaySet = new Set(coveredDays);
     const todayIso = _iso(new Date());
@@ -462,21 +552,30 @@
     const comparableDays = Math.max(1, elapsedComparableDaysList.length || elapsedDaysList.length || days.length);
     const referenceContext = _buildReferenceContext(days, effectiveEnd);
     let comparableSpent = 0;
+    let comparableMappedSpent = 0;
     const comparableCategoryMap = new Map([['Logement',0],['Repas',0],['Transport',0],['Activités',0]]);
     for (const tx of txs) {
       const ds = _txDate(tx);
       if (ds > effectiveEnd) continue;
       if (!coveredDaySet.size || coveredDaySet.has(ds)) {
         const amt = _convert(tx?.amount, tx?.currency || base, ds, base);
-        comparableSpent += amt;
         const raw = _norm(tx?.category || 'Autre');
-        if (raw === 'Logement') comparableCategoryMap.set('Logement', comparableCategoryMap.get('Logement') + amt);
-        if (raw === 'Repas' || raw === 'Course') comparableCategoryMap.set('Repas', comparableCategoryMap.get('Repas') + amt);
-        if (raw === 'Transport' || raw === 'Transport Internationale') comparableCategoryMap.set('Transport', comparableCategoryMap.get('Transport') + amt);
-        if (raw === 'Activités' || raw === 'Sorties') comparableCategoryMap.set('Activités', comparableCategoryMap.get('Activités') + amt);
+        const mapping = _mapToSourcedBucket(raw);
+
+        comparableSpent += amt;
+
+        if (mapping.mode !== 'mapped') continue;
+
+        comparableMappedSpent += amt;
+        comparableCategoryMap.set(
+          mapping.bucket,
+          comparableCategoryMap.get(mapping.bucket) + amt
+        );
       }
     }
-    const totalBudget = targetDaily.reduce((a,b)=>a+b,0);
+    const totalBudget = targetDaily
+      .filter((_, idx) => days[idx] <= effectiveEnd)
+      .reduce((a,b)=>a+b,0);
     const totalReferencePeriod = referenceDaily.reduce((a,b)=>a+b,0);
     const totalReferenceElapsed = referenceDaily
       .filter((_, idx) => days[idx] <= effectiveEnd)
@@ -515,6 +614,13 @@
     const avgPerDay = spentToToday / elapsedDays;
     const budgetPerDay = totalBudget / periodDays;
     const referencePerDay = elapsedComparableDaysList.length ? (totalReferenceElapsed / elapsedComparableDaysList.length) : 0;
+
+    const referenceMiscPerDay = elapsedComparableDaysList.length
+      ? (_safeNum(referenceCategoryMap.get('Autre')) / elapsedComparableDaysList.length)
+      : 0;
+
+    const unmappedComparableSpent = Math.max(0, comparableSpent - comparableMappedSpent);
+    const unmappedPerDay = comparableDays > 0 ? (unmappedComparableSpent / comparableDays) : 0;
     let projection = spent;
     if (end < todayIso) projection = spent;
     else if (start > todayIso) projection = totalBudget;
@@ -540,11 +646,11 @@
       });
     const outAmount = _outBudgetTransactions().reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txDate(tx), base), 0);
     const referenceCategorySeries = [...referenceCategoryMap.entries()].map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
-    const referenceComparisonSeries = _buildReferenceComparisonSeries(comparableCategoryMap, referenceCategoryMap, comparableDays);
+    const referenceComparisonSeries = _buildReferenceComparisonSeries(comparableCategoryMap, referenceCategoryMap, elapsedComparableDaysList.length || comparableDays);
 
-        return { base, start, end, days, txs, spent, paidSpent, totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod, remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay, projection,
+    return { base, start, end, days, txs, spent, paidSpent, totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod, remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay, referenceMiscPerDay, unmappedPerDay, projection,
       cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, referenceComparisonSeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays, referenceContext };
-    }
+        }
   function _buildReferenceComparisonSeries(actualMap, referenceCategoryMap, comparableDays){
     const map = (actualMap instanceof Map) ? actualMap : new Map((actualMap || []).map((row) => [String(row?.name || '').trim(), _safeNum(row?.actual)]));
     const days = Math.max(1, Number(comparableDays) || 1);
@@ -582,7 +688,8 @@
       { label:'Dépensé cumulé', value:_fmtMoney(model.spentToToday, model.base), meta:`${health.toFixed(1)}% du budget app consommé sur les jours écoulés`, pct:health },
       { label:'Sourcé cumulé écoulé', value:_fmtMoney(model.totalReferenceElapsed, model.base), meta:'Base de comparaison du réel écoulé', pct: model.totalReferenceElapsed ? 100 : 0 },
       { label:'Hors budget', value:_fmtMoney(model.outAmount, model.base), meta:'Visible sans polluer le pilotage principal', pct: model.totalBudget ? Math.min(100, (model.outAmount / Math.max(model.totalBudget,1))*100) : 0 },
-      { label:'Réel / jour', value:_fmtMoney(model.avgPerDay, model.base), meta:`Cible app ${_fmtMoney(model.budgetPerDay, model.base)}/j • sourcé ${_fmtMoney(model.referencePerDay, model.base)}/j`, pct: model.budgetPerDay ? Math.min(100, (model.avgPerDay / model.budgetPerDay) * 100) : 0 },
+      { label:'Non référencé / jour', value:_fmtMoney(model.unmappedPerDay, model.base), meta:`Comparé au sourcé comme ${_fmtMoney(0, model.base)}/j`, pct: 0 },
+      { label:'Reste source / jour', value:_fmtMoney(model.referenceMiscPerDay, model.base), meta:'Part sourcée non ventilée dans les 4 grands postes', pct: 0 },
       { label:'Projection fin période', value:_fmtMoney(model.projection, model.base), meta:model.projection > model.totalReferencePeriod && model.totalReferencePeriod > 0 ? 'Au-dessus de la source totale' : (model.projection > model.totalBudget ? 'Au-dessus du cap app' : 'Dans la trajectoire'), pct: model.totalBudget ? Math.min(100, (model.projection / model.totalBudget) * 100) : 0 },
     ];
     host.innerHTML = cards.map((c, idx) => `
