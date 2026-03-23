@@ -10,6 +10,7 @@
   let excludePanelOpen = false;
 
   const TB_SOURCED_CATEGORY_MAPPING = Object.freeze((window.TB_CONST && window.TB_CONST.ANALYSIS && window.TB_CONST.ANALYSIS.SOURCED_CATEGORY_MAPPING) || {});
+  const TB_SOURCED_BUCKET_ORDER = Object.freeze(['Logement', 'Repas', 'Transport', 'Activités']);
 
   function _el(id){ return document.getElementById(id); }
   function _safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
@@ -291,12 +292,19 @@ function _normKey(s){
 function _mapToSourcedBucket(categoryName) {
   const key = _normKey(categoryName);
   const meta = TB_SOURCED_CATEGORY_MAPPING[key] || null;
-  if (!meta) return { mode: 'unmapped' };
+  if (!meta) return { mode: 'unmapped', key };
   const compareMode = String(meta.compare_mode || meta.mode || '').trim().toLowerCase();
-  const bucket = meta.sourced_bucket || meta.bucket || null;
-  if (compareMode === 'mapped' && bucket) return { mode: 'mapped', bucket };
-  if (compareMode === 'excluded') return { mode: 'excluded' };
-  return { mode: 'unmapped' };
+  const bucket = String(meta.sourced_bucket || meta.bucket || '').trim() || null;
+  if (compareMode === 'mapped' && bucket) return { mode: 'mapped', bucket, key };
+  if (compareMode === 'excluded') return { mode: 'excluded', key };
+  return { mode: 'unmapped', key };
+}
+
+function _analysisBucketOrder(){
+  const dynamic = Object.values(TB_SOURCED_CATEGORY_MAPPING || {})
+    .filter((meta) => String(meta?.compare_mode || meta?.mode || '').trim().toLowerCase() === 'mapped' && String(meta?.sourced_bucket || meta?.bucket || '').trim())
+    .map((meta) => String(meta.sourced_bucket || meta.bucket || '').trim());
+  return Array.from(new Set([...TB_SOURCED_BUCKET_ORDER, ...dynamic]));
 }
   function _allAnalysisCategories(){
     const out = [];
@@ -475,13 +483,8 @@ function _mapToSourcedBucket(categoryName) {
       return _safeNum(_convert(row?.recommended_daily_amount || 0, cur || base, d, base));
     });
 
-    const referenceCategoryMap = new Map([
-      ['Logement', 0],
-      ['Repas', 0],
-      ['Transport', 0],
-      ['Activités', 0],
-      ['Autre', 0],
-    ]);
+    const analysisBuckets = _analysisBucketOrder();
+    const referenceCategoryMap = new Map(analysisBuckets.map((bucket) => [bucket, 0]));
     const coveredDaySet = new Set(coveredDays);
     const todayIso = _iso(new Date());
     const effectiveEnd = end < todayIso ? end : todayIso;
@@ -489,9 +492,11 @@ function _mapToSourcedBucket(categoryName) {
     const elapsedComparableDaysList = coveredDays.filter((d) => d <= effectiveEnd);
     const comparableDays = Math.max(1, elapsedComparableDaysList.length || elapsedDaysList.length || days.length);
     const referenceContext = _buildReferenceContext(days, effectiveEnd);
-    let comparableSpent = 0;
+    let comparableIncludedSpent = 0;
     let comparableMappedSpent = 0;
-    const comparableCategoryMap = new Map([['Logement',0],['Repas',0],['Transport',0],['Activités',0]]);
+    let comparableExcludedSpent = 0;
+    const comparableCategoryMap = new Map(analysisBuckets.map((bucket) => [bucket, 0]));
+    const unmappedCategoryMap = new Map();
     for (const tx of txs) {
       const ds = _txDate(tx);
       if (ds > effectiveEnd) continue;
@@ -500,20 +505,27 @@ function _mapToSourcedBucket(categoryName) {
         const raw = _norm(tx?.category || 'Autre');
         const mapping = _mapToSourcedBucket(raw);
 
-        comparableSpent += amt;
+        if (mapping.mode === 'excluded') {
+          comparableExcludedSpent += amt;
+          continue;
+        }
 
-        if (mapping.mode !== 'mapped') continue;
+        comparableIncludedSpent += amt;
+
+        if (mapping.mode !== 'mapped') {
+          const unmappedKey = String(tx?.category || 'Autre').trim() || 'Autre';
+          unmappedCategoryMap.set(unmappedKey, (unmappedCategoryMap.get(unmappedKey) || 0) + amt);
+          continue;
+        }
 
         comparableMappedSpent += amt;
         comparableCategoryMap.set(
           mapping.bucket,
-          comparableCategoryMap.get(mapping.bucket) + amt
+          (comparableCategoryMap.get(mapping.bucket) || 0) + amt
         );
       }
     }
-    const totalBudget = targetDaily
-      .filter((_, idx) => days[idx] <= effectiveEnd)
-      .reduce((a,b)=>a+b,0);
+    const totalBudget = targetDaily.reduce((a,b)=>a+b,0);
     const totalReferencePeriod = referenceDaily.reduce((a,b)=>a+b,0);
     const totalReferenceElapsed = referenceDaily
       .filter((_, idx) => days[idx] <= effectiveEnd)
@@ -590,11 +602,12 @@ function _mapToSourcedBucket(categoryName) {
       referenceCategoryMap.set('Repas', refSums.Repas / referenceCoverageDays);
       referenceCategoryMap.set('Transport', refSums.Transport / referenceCoverageDays);
       referenceCategoryMap.set('Activités', refSums.Activités / referenceCoverageDays);
-      referenceCategoryMap.set('Autre', refSums.Autre / referenceCoverageDays);
     }
 
-    const unmappedComparableSpent = Math.max(0, comparableSpent - comparableMappedSpent);
+    const unmappedComparableSpent = Math.max(0, comparableIncludedSpent - comparableMappedSpent);
+    const comparablePerDay = comparableDays > 0 ? (comparableIncludedSpent / comparableDays) : 0;
     const unmappedPerDay = comparableDays > 0 ? (unmappedComparableSpent / comparableDays) : 0;
+    const excludedPerDay = comparableDays > 0 ? (comparableExcludedSpent / comparableDays) : 0;
     let projection = spent;
     if (end < todayIso) projection = spent;
     else if (start > todayIso) projection = totalBudget;
@@ -621,9 +634,12 @@ function _mapToSourcedBucket(categoryName) {
     const outAmount = _outBudgetTransactions().reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txDate(tx), base), 0);
     const referenceCategorySeries = [...referenceCategoryMap.entries()].map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
     const referenceComparisonSeries = _buildReferenceComparisonSeries(comparableCategoryMap, referenceCategoryMap, elapsedComparableDaysList.length || comparableDays);
+    const unmappedCategorySeries = [...unmappedCategoryMap.entries()]
+      .sort((a,b)=>b[1]-a[1])
+      .map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
 
-    return { base, start, end, days, txs, spent, paidSpent, totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod, remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay, referenceMiscPerDay, unmappedPerDay, projection,
-      cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, referenceComparisonSeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays, referenceContext };
+    return { base, start, end, days, txs, spent, paidSpent, totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod, remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay, referenceMiscPerDay, comparablePerDay, unmappedPerDay, excludedPerDay, projection,
+      cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, referenceComparisonSeries, unmappedCategorySeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays, referenceContext, comparableDays, comparableIncludedSpent, comparableExcludedSpent, unmappedComparableSpent };
         }
   function _buildReferenceComparisonSeries(actualMap, referenceCategoryMap, comparableDays){
     const map = (actualMap instanceof Map)
@@ -631,12 +647,7 @@ function _mapToSourcedBucket(categoryName) {
       : new Map((actualMap || []).map((row) => [String(row?.name || '').trim(), _safeNum(row?.actual)]));
 
     const days = Math.max(1, Number(comparableDays) || 1);
-    const mappings = [
-      { name:'Logement', actualKey:'Logement', referenceKey:'Logement' },
-      { name:'Repas', actualKey:'Repas', referenceKey:'Repas' },
-      { name:'Transport', actualKey:'Transport', referenceKey:'Transport' },
-      { name:'Activités', actualKey:'Activités', referenceKey:'Activités' },
-    ];
+    const mappings = _analysisBucketOrder().map((bucket) => ({ name: bucket, actualKey: bucket, referenceKey: bucket }));
 
     return mappings.map((row) => {
       const actual = _safeNum(map.get(row.actualKey));
@@ -659,23 +670,174 @@ function _mapToSourcedBucket(categoryName) {
   function _buildSummary(model){
     const host = _el('analysis-summary');
     if (!host) return;
-    const health = model.totalBudget > 0 ? Math.max(0, Math.min(100, model.pct)) : 0;
-    const cards = [
-      { label:'Budget prévu app', value:_fmtMoney(model.totalBudget, model.base), meta:`${model.days.length} jours analysés`, pct:100 },
-      { label:'Sourcé total période', value:_fmtMoney(model.totalReferencePeriod, model.base), pct: model.totalReferencePeriod ? 100 : 0 },
-      { label:'Dépensé cumulé', value:_fmtMoney(model.spentToToday, model.base), meta:`${health.toFixed(1)}% du budget app consommé sur les jours écoulés`, pct:health },
-      { label:'Sourcé cumulé écoulé', value:_fmtMoney(model.totalReferenceElapsed, model.base), meta:'Base de comparaison du réel écoulé', pct: model.totalReferenceElapsed ? 100 : 0 },
-      { label:'Hors budget', value:_fmtMoney(model.outAmount, model.base), meta:'Visible sans polluer le pilotage principal', pct: model.totalBudget ? Math.min(100, (model.outAmount / Math.max(model.totalBudget,1))*100) : 0 },
-      { label:'Projection fin période', value:_fmtMoney(model.projection, model.base), meta:model.projection > model.totalReferencePeriod && model.totalReferencePeriod > 0 ? 'Au-dessus de la source totale' : (model.projection > model.totalBudget ? 'Au-dessus du cap app' : 'Dans la trajectoire'), pct: model.totalBudget ? Math.min(100, (model.projection / model.totalBudget) * 100) : 0 },
+
+    const ensureFluidStyles = () => {
+      if (document.getElementById('tb-analysis-fluid-kpis')) return;
+      const style = document.createElement('style');
+      style.id = 'tb-analysis-fluid-kpis';
+      style.textContent = `
+  @keyframes tbWaveDriftBack {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-120px); }
+  }
+  @keyframes tbWaveDriftFront {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-160px); }
+  }
+  @keyframes tbWaterGlow {
+    0% { transform: translateX(-120%) skewX(-10deg); opacity:.10; }
+    50% { opacity:.22; }
+    100% { transform: translateX(160%) skewX(-10deg); opacity:.08; }
+  }
+  @keyframes tbBubbleRise {
+    0% { transform: translateY(0) scale(.8); opacity:0; }
+    15% { opacity:.18; }
+    70% { opacity:.14; }
+    100% { transform: translateY(-42px) scale(1.08); opacity:0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tb-water-wave-back,
+    .tb-water-wave-front,
+    .tb-water-glow,
+    .tb-water-bubble { animation: none !important; }
+  }
+`;
+      document.head.appendChild(style);
+    };
+    ensureFluidStyles();
+
+    const clampPct = (value) => Math.max(0, Math.min(100, Number(value) || 0));
+    const signedPct = (current, target) => {
+      if (!target) return 0;
+      return ((current - target) / target) * 100;
+    };
+    const ratioText = (current, total) => `${_fmtMoney(current, model.base)} / ${_fmtMoney(total, model.base)}`;
+    const deltaBudgetPct = signedPct(model.projection, model.totalBudget);
+    const deltaReferencePct = signedPct(model.projection, model.totalReferencePeriod);
+    const deltaBudgetTone = deltaBudgetPct > 0 ? _themeBad() : (deltaBudgetPct < 0 ? _themeGood() : _themeMuted());
+    const deltaReferenceTone = deltaReferencePct > 0 ? _themeBad() : (deltaReferencePct < 0 ? _themeGood() : _themeMuted());
+
+    const progressCards = [
+      {
+        label:'Rythme budget app',
+        title:'Part du budget app déjà ouverte à date dans la période analysée',
+        value: ratioText(model.targetToToday, model.totalBudget),
+        hint:'Budget prévu à date comparé au budget total.',
+        pct: model.totalBudget > 0 ? clampPct((model.targetToToday / model.totalBudget) * 100) : 0,
+        footer:`Cible de dépense sur ${model.days.length} jours analysés`,
+        tint:'rose',
+        liquid:'linear-gradient(180deg, rgba(251,113,133,.34) 0%, rgba(244,114,182,.46) 34%, rgba(236,72,153,.54) 70%, rgba(219,39,119,.66) 100%)',
+        liquidAlt:'linear-gradient(180deg, rgba(255,255,255,.00) 0%, rgba(255,255,255,.18) 22%, rgba(255,255,255,.00) 55%, rgba(255,255,255,.12) 100%)',
+        glow:'rgba(244,114,182,.22)',
+        shell:'rgba(251,207,232,.72)',
+        haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.42))'
+      },
+      {
+        label:'Rythme référence pays',
+        title:'Part de la référence pays déjà consommée à date sur la période analysée',
+        value: ratioText(model.totalReferenceElapsed, model.totalReferencePeriod),
+        hint:'Référence à date comparée à la référence totale.',
+        pct: model.totalReferencePeriod > 0 ? clampPct((model.totalReferenceElapsed / model.totalReferencePeriod) * 100) : 0,
+        footer:'Repère externe basé sur les jours déjà écoulés',
+        tint:'green',
+        liquid:'linear-gradient(180deg, rgba(110,231,183,.30) 0%, rgba(74,222,128,.44) 34%, rgba(34,197,94,.52) 70%, rgba(22,163,74,.62) 100%)',
+        liquidAlt:'linear-gradient(180deg, rgba(255,255,255,.00) 0%, rgba(255,255,255,.20) 24%, rgba(255,255,255,.00) 58%, rgba(255,255,255,.10) 100%)',
+        glow:'rgba(74,222,128,.20)',
+        shell:'rgba(187,247,208,.78)',
+        haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(236,253,245,.40))'
+      },
+      {
+        label:'Réalisé vs projection',
+        title:'Part du réalisé déjà absorbée dans la projection de fin de période',
+        value: ratioText(model.spentToToday, model.projection),
+        hint:'Dépensé cumulé comparé à la projection finale.',
+        pct: model.projection > 0 ? clampPct((model.spentToToday / model.projection) * 100) : 0,
+        footer: model.projection > model.totalBudget ? 'Tendance finale au-dessus du budget app' : 'Tendance finale contenue dans le budget app',
+        tint:'blue',
+        liquid:'linear-gradient(180deg, rgba(147,197,253,.30) 0%, rgba(125,211,252,.42) 34%, rgba(56,189,248,.52) 70%, rgba(14,165,233,.62) 100%)',
+        liquidAlt:'linear-gradient(180deg, rgba(255,255,255,.00) 0%, rgba(255,255,255,.22) 24%, rgba(255,255,255,.00) 60%, rgba(255,255,255,.10) 100%)',
+        glow:'rgba(56,189,248,.20)',
+        shell:'rgba(186,230,253,.76)',
+        haze:'linear-gradient(180deg, rgba(255,255,255,.84), rgba(239,246,255,.40))'
+      }
     ];
-    host.innerHTML = cards.map((c, idx) => `
-      <div class="analysis-stat" style="animation:analysisGrow .55s ease ${idx*60}ms both;">
-        <div class="analysis-stat-label">${escapeHTML(c.label)}</div>
-        <div class="analysis-stat-value">${escapeHTML(c.value)}</div>
-        <div class="analysis-stat-meta">${escapeHTML(c.meta)}</div>
-        <div class="analysis-stat-bar"><span style="width:${Math.max(6, Math.min(100, c.pct || 0))}%"></span></div>
-      </div>
-    `).join('');
+
+    const renderGlassCard = (c, idx) => {
+      const pct = clampPct(c.pct);
+      const liquidTop = Math.max(0, 100 - pct);
+      return `
+      <div class="analysis-stat analysis-stat--glass analysis-stat--glass-${escapeHTML(c.tint)}" title="${escapeHTML(c.title)}" style="animation:analysisGrow .55s ease ${idx*60}ms both; position:relative; isolation:isolate; overflow:hidden; padding:18px 18px 16px; border-radius:24px; border:1px solid rgba(255,255,255,.74); background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.90)); box-shadow:0 14px 34px rgba(148,163,184,.16), inset 0 1px 0 rgba(255,255,255,.88); min-height:196px; display:flex; flex-direction:column; justify-content:space-between; gap:14px;">
+        <span aria-hidden="true" style="position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 20% 12%, rgba(255,255,255,.94), rgba(255,255,255,0) 36%), radial-gradient(circle at 82% 18%, ${escapeHTML(c.glow)}, rgba(255,255,255,0) 38%), linear-gradient(180deg, rgba(255,255,255,.76), rgba(255,255,255,.36)); pointer-events:none;"></span>
+        <span aria-hidden="true" style="position:absolute; left:10px; right:10px; bottom:10px; top:10px; border-radius:20px; background:rgba(255,255,255,.16); border:1px solid ${escapeHTML(c.shell)}; box-shadow:inset 0 0 0 1px rgba(255,255,255,.24); pointer-events:none;"></span>
+        <span aria-hidden="true" style="position:absolute; left:10px; right:10px; bottom:10px; height:${pct}%; min-height:${pct > 0 ? 20 : 0}px; border-radius:0 0 20px 20px; overflow:hidden; pointer-events:none;">
+  <span style="position:absolute; inset:0; background:${escapeHTML(c.liquid)};"></span>
+
+  <span class="tb-water-glow" style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.18), rgba(255,255,255,0)); filter:blur(2px); animation:tbWaterGlow 6.2s linear infinite;"></span>
+
+  <svg class="tb-water-wave-back" viewBox="0 0 240 28" preserveAspectRatio="none"
+    style="position:absolute; left:-6px; bottom:10px; width:calc(100% + 140px); height:26px; opacity:.55; animation:tbWaveDriftBack 7.2s linear infinite;">
+    <path d="M0,16 C20,8 40,8 60,16 C80,24 100,24 120,16 C140,8 160,8 180,16 C200,24 220,24 240,16 L240,28 L0,28 Z"
+      fill="rgba(255,255,255,.28)"></path>
+  </svg>
+
+  <svg class="tb-water-wave-front" viewBox="0 0 320 34" preserveAspectRatio="none"
+    style="position:absolute; left:-8px; bottom:6px; width:calc(100% + 180px); height:30px; opacity:.92; animation:tbWaveDriftFront 5.1s linear infinite;">
+    <path d="M0,18 C24,8 48,8 72,18 C96,28 120,28 144,18 C168,8 192,8 216,18 C240,28 264,28 288,18 C304,12 312,12 320,18 L320,34 L0,34 Z"
+      fill="rgba(255,255,255,.40)"></path>
+  </svg>
+
+  <span class="tb-water-bubble" style="position:absolute; left:18%; bottom:12px; width:6px; height:6px; border-radius:999px; background:rgba(255,255,255,.14); animation:tbBubbleRise 5.0s ease-in infinite;"></span>
+  <span class="tb-water-bubble" style="position:absolute; left:61%; bottom:10px; width:4px; height:4px; border-radius:999px; background:rgba(255,255,255,.12); animation:tbBubbleRise 6.0s ease-in infinite 1.2s;"></span>
+  <span class="tb-water-bubble" style="position:absolute; left:77%; bottom:14px; width:5px; height:5px; border-radius:999px; background:rgba(255,255,255,.10); animation:tbBubbleRise 5.6s ease-in infinite 2.0s;"></span>
+</span>
+<span aria-hidden="true" style="position:absolute; left:10px; right:10px; top:calc(${liquidTop}% - 2px); height:24px; pointer-events:none; opacity:${pct > 3 ? '.98' : '0'};">
+  <svg viewBox="0 0 320 24" preserveAspectRatio="none" style="width:100%; height:100%; display:block;">
+    <path d="M0,14 C28,6 56,6 84,14 C112,22 140,22 168,14 C196,6 224,6 252,14 C280,22 300,22 320,14"
+      fill="none" stroke="rgba(255,255,255,.72)" stroke-width="3" stroke-linecap="round"></path>
+    <path d="M0,16 C28,9 56,9 84,16 C112,23 140,23 168,16 C196,9 224,9 252,16 C280,23 300,23 320,16"
+      fill="none" stroke="rgba(255,255,255,.34)" stroke-width="6" stroke-linecap="round" style="filter:blur(2px);"></path>
+  </svg>
+</span>
+        <span aria-hidden="true" style="position:absolute; left:26px; top:26px; bottom:26px; width:18px; border-radius:999px; background:${escapeHTML(c.haze)}; opacity:.58; pointer-events:none;"></span>
+        <div style="position:relative; z-index:1; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+          <div>
+            <div class="analysis-stat-label" style="font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:rgba(15,23,42,.72);">${escapeHTML(c.label)}</div>
+            <div class="analysis-stat-meta" style="margin-top:4px; font-size:12px; color:rgba(15,23,42,.58);">${escapeHTML(c.hint)}</div>
+          </div>
+          <div style="font-size:11px; font-weight:800; color:rgba(15,23,42,.60);">${pct.toFixed(0)}%</div>
+        </div>
+        <div style="position:relative; z-index:1; display:flex; flex-direction:column; justify-content:flex-end; gap:8px; min-width:0; flex:1;">
+          <div class="analysis-stat-value" style="font-size:25px; line-height:1.14; color:#0f172a; text-shadow:0 1px 0 rgba(255,255,255,.40);">${escapeHTML(c.value)}</div>
+          <div class="analysis-stat-meta" style="font-size:12px; color:rgba(15,23,42,.66);">${escapeHTML(c.footer)}</div>
+        </div>
+      </div>`;
+    };
+
+    const renderDeltaCard = (idx) => `
+      <div class="analysis-stat analysis-stat--delta" style="animation:analysisGrow .55s ease ${idx*60}ms both; position:relative; overflow:hidden; padding:18px 18px 16px; border-radius:24px; border:1px solid rgba(255,255,255,.68); background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.88)); box-shadow:0 14px 34px rgba(148,163,184,.16), inset 0 1px 0 rgba(255,255,255,.84); min-height:196px; display:flex; flex-direction:column; justify-content:space-between; gap:14px;">
+        <span aria-hidden="true" style="position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 18% 14%, rgba(255,255,255,.92), rgba(255,255,255,0) 34%), linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.34)); pointer-events:none;"></span>
+        <div style="position:relative; z-index:1;">
+          <div class="analysis-stat-label" style="font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:rgba(15,23,42,.72);">Écart de tendance</div>
+          <div class="analysis-stat-meta" style="margin-top:4px; font-size:12px; color:rgba(15,23,42,.58);">Projection finale comparée au budget app et à la référence pays.</div>
+        </div>
+        <div style="position:relative; z-index:1; display:flex; flex-direction:column; gap:12px;">
+          <div style="padding:12px 14px; border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.38)); border:1px solid rgba(255,255,255,.78); box-shadow:inset 0 1px 0 rgba(255,255,255,.78);">
+            <div style="font-size:12px; color:rgba(15,23,42,.58);">Vs budget app</div>
+            <div style="margin-top:4px; font-size:24px; font-weight:800; color:${escapeHTML(deltaBudgetTone)};">${deltaBudgetPct >= 0 ? '+' : ''}${deltaBudgetPct.toFixed(0)} %</div>
+          </div>
+          <div style="padding:12px 14px; border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.38)); border:1px solid rgba(255,255,255,.78); box-shadow:inset 0 1px 0 rgba(255,255,255,.78);">
+            <div style="font-size:12px; color:rgba(15,23,42,.58);">Vs référence pays</div>
+            <div style="margin-top:4px; font-size:24px; font-weight:800; color:${escapeHTML(deltaReferenceTone)};">${deltaReferencePct >= 0 ? '+' : ''}${deltaReferencePct.toFixed(0)} %</div>
+          </div>
+        </div>
+      </div>`;
+
+    host.style.display = 'grid';
+    host.style.gridTemplateColumns = 'repeat(auto-fit, minmax(250px, 1fr))';
+    host.style.gap = '16px';
+    host.style.alignItems = 'stretch';
+
+    host.innerHTML = progressCards.map((c, idx) => renderGlassCard(c, idx)).join('') + renderDeltaCard(progressCards.length);
   }
 
   function _themeText(){ return getComputedStyle(document.body).getPropertyValue('--text').trim() || '#e5e7eb'; }
@@ -826,7 +988,7 @@ function _mapToSourcedBucket(categoryName) {
     const chart = charts.referenceMix;
     const rows = (model.referenceComparisonSeries || []).filter(r => _safeNum(r.actualPerDay) > 0 || _safeNum(r.referencePerDay) > 0);
     const coverage = model.referenceCoverageDays && model.days.length ? `${model.referenceCoverageDays}/${model.days.length} jours couverts` : 'Aucune source active';
-    const deltaTone = model.referenceGap <= 0 ? 'Sous la référence' : 'Au-dessus de la référence';
+    const deltaTone = (model.comparablePerDay - model.referencePerDay) <= 0 ? 'Sous la référence' : 'Au-dessus de la référence';
     const referenceCountry = model.referenceContext?.countryLabel && model.referenceContext.countryLabel !== 'Pays —'
       ? model.referenceContext.countryLabel
       : 'Aucune référence pays active';
@@ -863,11 +1025,12 @@ function _mapToSourcedBucket(categoryName) {
         </div>
         <div class="analysis-reference-stat">
           <span>Réel / jour</span>
-          <strong>${escapeHTML(_fmtMoney(model.avgPerDay, model.base))}</strong>
+          <strong>${escapeHTML(_fmtMoney(model.comparablePerDay, model.base))}</strong>
+          <small>Comparatif net des catégories exclues</small>
         </div>
         <div class="analysis-reference-stat">
           <span>Écart / jour</span>
-          <strong>${escapeHTML(_fmtMoney(model.avgPerDay - model.referencePerDay, model.base))}</strong>
+          <strong>${escapeHTML(_fmtMoney(model.comparablePerDay - model.referencePerDay, model.base))}</strong>
           <small>${escapeHTML(deltaTone)}</small>
         </div>
                 <div class="analysis-reference-inline">
@@ -900,7 +1063,7 @@ function _mapToSourcedBucket(categoryName) {
             </div>
           </div>`;
         }).join('')}
-        <div class="analysis-reference-metal analysis-reference-metal--neutral">
+        ${model.unmappedPerDay > 0 ? `<div class="analysis-reference-metal analysis-reference-metal--neutral">
           <div class="analysis-reference-metal-head">
             <span>Non référencé</span>
             <strong>${escapeHTML(_fmtMoney(model.unmappedPerDay, model.base))}</strong>
@@ -909,29 +1072,40 @@ function _mapToSourcedBucket(categoryName) {
             <div><small>Réel / jour</small><b>${escapeHTML(_fmtMoney(model.unmappedPerDay, model.base))}</b></div>
             <div><small>Sourcé / jour</small><b>${escapeHTML(_fmtMoney(0, model.base))}</b></div>
           </div>
-        </div>
+        </div>` : ''}
+        ${model.excludedPerDay > 0 ? `<div class="analysis-reference-metal analysis-reference-metal--neutral">
+          <div class="analysis-reference-metal-head">
+            <span>Exclu du comparatif</span>
+            <strong>${escapeHTML(_fmtMoney(model.excludedPerDay, model.base))}</strong>
+          </div>
+          <div class="analysis-reference-metal-body">
+            <div><small>Réel / jour</small><b>${escapeHTML(_fmtMoney(model.excludedPerDay, model.base))}</b></div>
+            <div><small>Traitement</small><b>Hors comparaison sourcée</b></div>
+          </div>
+        </div>` : ''}
       </div>`;
   }
 
   function _renderInsights(model){
     const host = _el('analysis-insights');
     const delta = model.projection - model.totalBudget;
-    const sourcedGap = model.avgPerDay - model.referencePerDay;
+    const sourcedGap = model.comparablePerDay - model.referencePerDay;
     const top = model.topCategories[0];
+    const topUnmapped = (model.unmappedCategorySeries || [])[0] || null;
     const insights = [
       {
         icon: sourcedGap > 0 ? '🧭' : '🌿',
         title: sourcedGap > 0 ? 'Réel au-dessus du sourcé' : 'Réel sous le sourcé',
         body: sourcedGap > 0
-          ? `Tu dépenses ${_fmtMoney(model.avgPerDay, model.base)}/jour contre une référence pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour, soit ${_fmtMoney(sourcedGap, model.base)}/jour au-dessus.`
-          : `Tu dépenses ${_fmtMoney(model.avgPerDay, model.base)}/jour contre une référence pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour, soit ${_fmtMoney(Math.abs(sourcedGap), model.base)}/jour en dessous.`
+          ? `Sur le périmètre comparable, tu dépenses ${_fmtMoney(model.comparablePerDay, model.base)}/jour contre une référence pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour, soit ${_fmtMoney(sourcedGap, model.base)}/jour au-dessus.`
+          : `Sur le périmètre comparable, tu dépenses ${_fmtMoney(model.comparablePerDay, model.base)}/jour contre une référence pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour, soit ${_fmtMoney(Math.abs(sourcedGap), model.base)}/jour en dessous.`
       },
       {
         icon: model.avgPerDay > model.budgetPerDay ? '⚠️' : '✅',
         title: model.avgPerDay > model.budgetPerDay ? 'Cadence au-dessus de la cible' : 'Cadence maîtrisée',
         body: model.avgPerDay > model.budgetPerDay
-          ? `Tu tournes à ${_fmtMoney(model.avgPerDay, model.base)}/jour pour une cible app de ${_fmtMoney(model.budgetPerDay, model.base)}/jour, avec une source pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour.`
-          : `Tu restes sous la cible avec ${_fmtMoney(model.avgPerDay, model.base)}/jour contre ${_fmtMoney(model.budgetPerDay, model.base)}/jour visés, pour une source pays à ${_fmtMoney(model.referencePerDay, model.base)}/jour.`
+          ? `Globalement, tu tournes à ${_fmtMoney(model.avgPerDay, model.base)}/jour pour une cible app de ${_fmtMoney(model.budgetPerDay, model.base)}/jour. Sur le comparable sourcé, tu es à ${_fmtMoney(model.comparablePerDay, model.base)}/jour.`
+          : `Globalement, tu restes sous la cible avec ${_fmtMoney(model.avgPerDay, model.base)}/jour contre ${_fmtMoney(model.budgetPerDay, model.base)}/jour visés. Sur le comparable sourcé, tu es à ${_fmtMoney(model.comparablePerDay, model.base)}/jour.`
       },
       {
         icon: top ? '🧲' : '•',
@@ -944,9 +1118,15 @@ function _mapToSourcedBucket(categoryName) {
         body: delta > 0 ? `Au rythme actuel, tu finirais à ${_fmtMoney(model.projection, model.base)}, soit ${_fmtMoney(delta, model.base)} au-dessus du budget.` : `La projection termine à ${_fmtMoney(model.projection, model.base)}. Tu gardes une marge d’environ ${_fmtMoney(Math.abs(delta), model.base)}.`
       },
       {
-        icon: model.outAmount > 0 ? '🎯' : '🧭',
-        title: model.outAmount > 0 ? 'Hors budget visible' : 'Lecture budgétaire propre',
-        body: model.outAmount > 0 ? `${_fmtMoney(model.outAmount, model.base)} hors budget sur la plage. Tu peux exclure des catégories sans polluer la trajectoire.` : `Aucune dépense hors budget notable sur la plage courante.`
+        icon: topUnmapped ? '🧩' : (model.excludedPerDay > 0 ? '🪶' : (model.outAmount > 0 ? '🎯' : '🧭')),
+        title: topUnmapped ? `À mapper ensuite : ${topUnmapped.name}` : (model.excludedPerDay > 0 ? 'Comparatif nettoyé des exclus' : (model.outAmount > 0 ? 'Hors budget visible' : 'Lecture budgétaire propre')),
+        body: topUnmapped
+          ? `${_fmtMoney(topUnmapped.actual, model.base)} restent dans une catégorie non référencée. Elle est visible à part et ne se mélange pas au comparatif mappé.`
+          : (model.excludedPerDay > 0
+            ? `${_fmtMoney(model.excludedPerDay, model.base)}/jour sont exclus du comparatif sourcé selon le mapping centralisé, tout en restant visibles dans le pilotage global.`
+            : (model.outAmount > 0
+              ? `${_fmtMoney(model.outAmount, model.base)} hors budget sur la plage. Tu peux exclure des catégories sans polluer la trajectoire.`
+              : `Aucune dépense hors budget notable sur la plage courante.`))
       }
     ];
     if (host) host.innerHTML = insights.map(i => `

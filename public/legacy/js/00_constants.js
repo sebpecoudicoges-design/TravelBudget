@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.3.1';
+window.__TB_BUILD = '9.3.7';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -208,6 +208,7 @@ window.__TB_BUILD = '9.3.1';
       course: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Repas" }),
       transport: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Transport" }),
 
+      sorties: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Activités" }),
       cadeau: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Activités" }),
       laundry: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Activités" }),
       autre: Object.freeze({ compare_mode: "mapped", sourced_bucket: "Activités" }),
