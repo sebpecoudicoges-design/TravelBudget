@@ -637,9 +637,42 @@ function _analysisBucketOrder(){
     const unmappedCategorySeries = [...unmappedCategoryMap.entries()]
       .sort((a,b)=>b[1]-a[1])
       .map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
+    const nightCoveredRows = [];
+    let nightCoveredCount = 0;
+    let nightCoveredPotentialSavings = 0;
+    let nightCoveredTransportSpent = 0;
+    for (const tx of txs) {
+      if (!tx?.nightCovered) continue;
+      const eligible = (typeof window.tbIsNightCoveredEligibleCategory === 'function')
+        ? window.tbIsNightCoveredEligibleCategory(tx?.category)
+        : /^transport( internationale?| international)?$/i.test(String(tx?.category || '').trim());
+      if (!eligible) continue;
+      const insight = (typeof window.tbGetNightCoveredInsightForTx === 'function')
+        ? window.tbGetNightCoveredInsightForTx(tx, base)
+        : null;
+      const ds = _txDate(tx);
+      const spentAmt = _convert(tx?.amount, tx?.currency || base, ds, base);
+      nightCoveredCount += 1;
+      nightCoveredTransportSpent += spentAmt;
+      if (insight && Number.isFinite(insight.amount)) {
+        nightCoveredPotentialSavings += insight.amount;
+        nightCoveredRows.push({
+          id: String(tx?.id || nightCoveredRows.length + 1),
+          date: ds,
+          label: String(tx?.label || tx?.category || 'Transport'),
+          category: String(tx?.category || 'Transport'),
+          spent: Number(spentAmt.toFixed(2)),
+          saving: Number(Number(insight.amount || 0).toFixed(2)),
+          currency: base
+        });
+      }
+    }
+    nightCoveredRows.sort((a,b) => String(a.date).localeCompare(String(b.date)));
+    const nightCoveredAverageSaving = nightCoveredCount > 0 ? (nightCoveredPotentialSavings / nightCoveredCount) : 0;
+    const nightCoveredShareOfSpent = nightCoveredTransportSpent > 0 ? (nightCoveredPotentialSavings / nightCoveredTransportSpent) * 100 : 0;
 
     return { base, start, end, days, txs, spent, paidSpent, totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod, remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay, referenceMiscPerDay, comparablePerDay, unmappedPerDay, excludedPerDay, projection,
-      cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, referenceComparisonSeries, unmappedCategorySeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays, referenceContext, comparableDays, comparableIncludedSpent, comparableExcludedSpent, unmappedComparableSpent };
+      cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, referenceComparisonSeries, unmappedCategorySeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays, referenceContext, comparableDays, comparableIncludedSpent, comparableExcludedSpent, unmappedComparableSpent, nightCoveredCount, nightCoveredPotentialSavings, nightCoveredAverageSaving, nightCoveredTransportSpent, nightCoveredShareOfSpent, nightCoveredRows };
         }
   function _buildReferenceComparisonSeries(actualMap, referenceCategoryMap, comparableDays){
     const map = (actualMap instanceof Map)
@@ -772,18 +805,18 @@ function _analysisBucketOrder(){
         <span aria-hidden="true" style="position:absolute; left:10px; right:10px; bottom:10px; height:${pct}%; min-height:${pct > 0 ? 20 : 0}px; border-radius:0 0 20px 20px; overflow:hidden; pointer-events:none;">
   <span style="position:absolute; inset:0; background:${escapeHTML(c.liquid)};"></span>
 
-  <span class="tb-water-glow" style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.18), rgba(255,255,255,0)); filter:blur(2px); animation:tbWaterGlow 6.2s linear infinite;"></span>
+  <span class="tb-water-glow" style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.18), rgba(255,255,255,0)); filter:blur(1px); animation:tbWaterGlow 6.2s linear infinite;"></span>
 
   <svg class="tb-water-wave-back" viewBox="0 0 240 28" preserveAspectRatio="none"
-    style="position:absolute; left:-6px; bottom:10px; width:calc(100% + 140px); height:26px; opacity:.55; animation:tbWaveDriftBack 7.2s linear infinite;">
+    style="position:absolute; left:-6px; bottom:0px; width:calc(100% + 140px); height:36px; opacity:.55; animation:tbWaveDriftBack 7.2s linear infinite;">
     <path d="M0,16 C20,8 40,8 60,16 C80,24 100,24 120,16 C140,8 160,8 180,16 C200,24 220,24 240,16 L240,28 L0,28 Z"
-      fill="rgba(255,255,255,.28)"></path>
+      fill="rgba(255,255,255,.45)"></path>
   </svg>
 
   <svg class="tb-water-wave-front" viewBox="0 0 320 34" preserveAspectRatio="none"
-    style="position:absolute; left:-8px; bottom:6px; width:calc(100% + 180px); height:30px; opacity:.92; animation:tbWaveDriftFront 5.1s linear infinite;">
+    style="position:absolute; left:-8px; bottom:0px; width:calc(100% + 180px); height:42px; opacity:.92; animation:tbWaveDriftFront 5.1s linear infinite;">
     <path d="M0,18 C24,8 48,8 72,18 C96,28 120,28 144,18 C168,8 192,8 216,18 C240,28 264,28 288,18 C304,12 312,12 320,18 L320,34 L0,34 Z"
-      fill="rgba(255,255,255,.40)"></path>
+      fill="rgba(255,255,255,.65)"></path>
   </svg>
 
   <span class="tb-water-bubble" style="position:absolute; left:18%; bottom:12px; width:6px; height:6px; border-radius:999px; background:rgba(255,255,255,.14); animation:tbBubbleRise 5.0s ease-in infinite;"></span>
@@ -793,7 +826,7 @@ function _analysisBucketOrder(){
 <span aria-hidden="true" style="position:absolute; left:10px; right:10px; top:calc(${liquidTop}% - 2px); height:24px; pointer-events:none; opacity:${pct > 3 ? '.98' : '0'};">
   <svg viewBox="0 0 320 24" preserveAspectRatio="none" style="width:100%; height:100%; display:block;">
     <path d="M0,14 C28,6 56,6 84,14 C112,22 140,22 168,14 C196,6 224,6 252,14 C280,22 300,22 320,14"
-      fill="none" stroke="rgba(255,255,255,.72)" stroke-width="3" stroke-linecap="round"></path>
+      fill="none" stroke="rgba(255,255,255,.95)" stroke-width="4" stroke-linecap="round"></path>
     <path d="M0,16 C28,9 56,9 84,16 C112,23 140,23 168,16 C196,9 224,9 252,16 C280,23 300,23 320,16"
       fill="none" stroke="rgba(255,255,255,.34)" stroke-width="6" stroke-linecap="round" style="filter:blur(2px);"></path>
   </svg>
@@ -1086,13 +1119,62 @@ function _analysisBucketOrder(){
       </div>`;
   }
 
+  function _renderNightCovered(model){
+    const host = _el('analysis-night-covered');
+    if (!host) return;
+    const count = Number(model?.nightCoveredCount || 0);
+    if (!count) {
+      host.innerHTML = `<div class="muted">Aucun transport marqué comme remplaçant une nuit d'hébergement sur la plage analysée.</div>`;
+      return;
+    }
+    const rows = (model.nightCoveredRows || []).slice().sort((a,b)=> String(b.date).localeCompare(String(a.date))).slice(0,6);
+    host.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px;">
+        <div style="padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(59,130,246,.08), rgba(255,255,255,.5));">
+          <div class="muted" style="font-size:12px;">Transports concernés</div>
+          <div style="font-size:24px;font-weight:800;">${count}</div>
+        </div>
+        <div style="padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(16,185,129,.10), rgba(255,255,255,.5));">
+          <div class="muted" style="font-size:12px;">Économie potentielle logement</div>
+          <div style="font-size:24px;font-weight:800;">${escapeHTML(_fmtMoney(model.nightCoveredPotentialSavings, model.base))}</div>
+        </div>
+        <div style="padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(245,158,11,.10), rgba(255,255,255,.5));">
+          <div class="muted" style="font-size:12px;">Moyenne par nuit remplacée</div>
+          <div style="font-size:24px;font-weight:800;">${escapeHTML(_fmtMoney(model.nightCoveredAverageSaving, model.base))}</div>
+        </div>
+      </div>
+      <div class="muted" style="margin-bottom:10px;font-size:12px;line-height:1.45;">Signal analytique uniquement : ces montants n'altèrent ni le budget, ni les KPI, ni la projection. Ils servent à expliquer le logement potentiellement évité par des transports de nuit.</div>
+      <div style="display:grid;gap:8px;">
+        ${rows.map((row) => `
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--border);">
+            <div style="min-width:0;">
+              <div style="font-weight:700;">${escapeHTML(row.label)}</div>
+              <div class="muted" style="font-size:12px;">${escapeHTML(row.date)} • ${escapeHTML(row.category)}</div>
+            </div>
+            <div style="text-align:right;white-space:nowrap;">
+              <div style="font-weight:700;">${escapeHTML(_fmtMoney(row.saving, model.base))}</div>
+              <div class="muted" style="font-size:12px;">transport ${escapeHTML(_fmtMoney(row.spent, model.base))}</div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+  }
+
   function _renderInsights(model){
     const host = _el('analysis-insights');
+    if (!host) return;
     const delta = model.projection - model.totalBudget;
     const sourcedGap = model.comparablePerDay - model.referencePerDay;
     const top = model.topCategories[0];
     const topUnmapped = (model.unmappedCategorySeries || [])[0] || null;
+    const nightLine = Number(model?.nightCoveredCount || 0) > 0
+      ? {
+          icon: '🌙',
+          title: `Transports de nuit : ${model.nightCoveredCount} cas`,
+          body: `${_fmtMoney(model.nightCoveredPotentialSavings, model.base)} d'économie potentielle logement restent visibles à part, sans corriger le budget principal.`
+        }
+      : null;
     const insights = [
+      ...(nightLine ? [nightLine] : []),
       {
         icon: sourcedGap > 0 ? '🧭' : '🌿',
         title: sourcedGap > 0 ? 'Réel au-dessus du sourcé' : 'Réel sous le sourcé',
@@ -1129,7 +1211,7 @@ function _analysisBucketOrder(){
               : `Aucune dépense hors budget notable sur la plage courante.`))
       }
     ];
-    if (host) host.innerHTML = insights.map(i => `
+    host.innerHTML = insights.map(i => `
       <div class="analysis-insight">
         <div class="analysis-insight-badge">${i.icon}</div>
         <div>
@@ -1142,12 +1224,13 @@ function _analysisBucketOrder(){
     if (pill) pill.textContent = `${model.txs.length} dépenses • ${model.days.length} jours • ${model.base}`;
   }
 
-    function _renderAll(){
+  function _renderAll(){
     if (!_el('view-analysis')) return;
     _saveFilters();
     const model = _computeModel();
 
     _buildSummary(model);
+    _renderNightCovered(model);
     _renderInsights(model);
     _renderCategory(model);
     _renderCategoryBars(model);

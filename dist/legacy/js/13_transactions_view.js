@@ -119,6 +119,14 @@ window.applyBulkTxClassification = applyBulkTxClassification;
 
 const TX_FILTERS_KEY = "travelbudget_tx_filters_v1";
 
+function _fmtMoney(v, cur){
+  try { return fmtMoney(v, cur); }
+  catch (_) {
+    const n = Number(v);
+    return `${Number.isFinite(n) ? n.toFixed(2) : '0.00'} ${cur || ''}`.trim();
+  }
+}
+
 function _txEl(id){ return document.getElementById(id); }
 
 function _txGetFilters() {
@@ -523,6 +531,10 @@ function renderTransactions() {
     const div = document.createElement("div");
     div.className = "tx";
     const txChecked = TB_TX_BULK.selectedIds.has(String(tx.id));
+    const insightDisplayCurrency = String(state?.user?.baseCurrency || state?.user?.base_currency || state?.period?.baseCurrency || tx.currency || "EUR").toUpperCase();
+    const nightInsight = (tx.nightCovered && typeof window.tbGetNightCoveredInsightForTx === "function")
+      ? window.tbGetNightCoveredInsightForTx(tx, insightDisplayCurrency)
+      : null;
     div.innerHTML = `
       <div style="display:flex;align-items:flex-start;gap:10px;">
         <input type="checkbox" style="margin-top:4px;" ${txChecked ? 'checked' : ''} onchange="_txBulkToggleOne('${escapeHTML(String(tx.id))}', this.checked)" />
@@ -533,6 +545,7 @@ function renderTransactions() {
           • ${w ? w.name : "Wallet"} • ${_txCatBadge(tx.category)} ${tx.label ? " • " + escapeHTML(tx.label) : ""}
         </div>
         <div class="tags">${tags.map((t) => `<span class="tag">${t}</span>`).join("")}</div>
+        ${nightInsight ? `<div class="muted" style="margin-top:6px;font-size:12px;line-height:1.45;">Ce transport remplace une nuit d'hébergement : économie potentielle logement ${escapeHTML(_fmtMoney(nightInsight.amount, nightInsight.currency))}.</div>` : ``}
         </div>
       </div>
 

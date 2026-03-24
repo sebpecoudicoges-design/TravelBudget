@@ -637,9 +637,42 @@ function _analysisBucketOrder(){
     const unmappedCategorySeries = [...unmappedCategoryMap.entries()]
       .sort((a,b)=>b[1]-a[1])
       .map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
+    const nightCoveredRows = [];
+    let nightCoveredCount = 0;
+    let nightCoveredPotentialSavings = 0;
+    let nightCoveredTransportSpent = 0;
+    for (const tx of txs) {
+      if (!tx?.nightCovered) continue;
+      const eligible = (typeof window.tbIsNightCoveredEligibleCategory === 'function')
+        ? window.tbIsNightCoveredEligibleCategory(tx?.category)
+        : /^transport( internationale?| international)?$/i.test(String(tx?.category || '').trim());
+      if (!eligible) continue;
+      const insight = (typeof window.tbGetNightCoveredInsightForTx === 'function')
+        ? window.tbGetNightCoveredInsightForTx(tx, base)
+        : null;
+      const ds = _txDate(tx);
+      const spentAmt = _convert(tx?.amount, tx?.currency || base, ds, base);
+      nightCoveredCount += 1;
+      nightCoveredTransportSpent += spentAmt;
+      if (insight && Number.isFinite(insight.amount)) {
+        nightCoveredPotentialSavings += insight.amount;
+        nightCoveredRows.push({
+          id: String(tx?.id || nightCoveredRows.length + 1),
+          date: ds,
+          label: String(tx?.label || tx?.category || 'Transport'),
+          category: String(tx?.category || 'Transport'),
+          spent: Number(spentAmt.toFixed(2)),
+          saving: Number(Number(insight.amount || 0).toFixed(2)),
+          currency: base
+        });
+      }
+    }
+    nightCoveredRows.sort((a,b) => String(a.date).localeCompare(String(b.date)));
+    const nightCoveredAverageSaving = nightCoveredCount > 0 ? (nightCoveredPotentialSavings / nightCoveredCount) : 0;
+    const nightCoveredShareOfSpent = nightCoveredTransportSpent > 0 ? (nightCoveredPotentialSavings / nightCoveredTransportSpent) * 100 : 0;
 
     return { base, start, end, days, txs, spent, paidSpent, totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod, remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay, referenceMiscPerDay, comparablePerDay, unmappedPerDay, excludedPerDay, projection,
-      cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, referenceComparisonSeries, unmappedCategorySeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays, referenceContext, comparableDays, comparableIncludedSpent, comparableExcludedSpent, unmappedComparableSpent };
+      cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, referenceComparisonSeries, unmappedCategorySeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays, referenceContext, comparableDays, comparableIncludedSpent, comparableExcludedSpent, unmappedComparableSpent, nightCoveredCount, nightCoveredPotentialSavings, nightCoveredAverageSaving, nightCoveredTransportSpent, nightCoveredShareOfSpent, nightCoveredRows };
         }
   function _buildReferenceComparisonSeries(actualMap, referenceCategoryMap, comparableDays){
     const map = (actualMap instanceof Map)
@@ -676,45 +709,30 @@ function _analysisBucketOrder(){
       const style = document.createElement('style');
       style.id = 'tb-analysis-fluid-kpis';
       style.textContent = `
-  @keyframes tbLiquidWaveBack {
-    0% { transform: translateX(-18%) translateY(0) scaleX(1.02); }
-    25% { transform: translateX(-10%) translateY(-3px) scaleX(1.05); }
-    50% { transform: translateX(0%) translateY(1px) scaleX(1.00); }
-    75% { transform: translateX(-8%) translateY(-2px) scaleX(1.04); }
-    100% { transform: translateX(-18%) translateY(0) scaleX(1.02); }
+  @keyframes tbWaveDriftBack {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-120px); }
   }
-  @keyframes tbLiquidWaveFront {
-    0% { transform: translateX(0%) translateY(0) scaleX(1.00); }
-    25% { transform: translateX(-6%) translateY(2px) scaleX(1.03); }
-    50% { transform: translateX(-14%) translateY(-3px) scaleX(1.06); }
-    75% { transform: translateX(-7%) translateY(1px) scaleX(1.02); }
-    100% { transform: translateX(0%) translateY(0) scaleX(1.00); }
+  @keyframes tbWaveDriftFront {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-160px); }
   }
-  @keyframes tbLiquidShimmer {
-    0% { transform: translateX(-130%) skewX(-12deg); opacity:.10; }
-    35% { opacity:.26; }
-    50% { opacity:.34; }
-    100% { transform: translateX(180%) skewX(-12deg); opacity:.08; }
-  }
-  @keyframes tbSurfaceWave {
-    0% { transform: translateX(-10%) translateY(0) scaleX(1); }
-    25% { transform: translateX(2%) translateY(-2px) scaleX(1.04); }
-    50% { transform: translateX(10%) translateY(1px) scaleX(1.08); }
-    75% { transform: translateX(0%) translateY(-1px) scaleX(1.03); }
-    100% { transform: translateX(-10%) translateY(0) scaleX(1); }
+  @keyframes tbWaterGlow {
+    0% { transform: translateX(-120%) skewX(-10deg); opacity:.10; }
+    50% { opacity:.22; }
+    100% { transform: translateX(160%) skewX(-10deg); opacity:.08; }
   }
   @keyframes tbBubbleRise {
-    0% { transform: translateY(0) scale(.85); opacity:0; }
-    12% { opacity:.22; }
-    60% { opacity:.18; }
-    100% { transform: translateY(-34px) scale(1.12); opacity:0; }
+    0% { transform: translateY(0) scale(.8); opacity:0; }
+    15% { opacity:.18; }
+    70% { opacity:.14; }
+    100% { transform: translateY(-42px) scale(1.08); opacity:0; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .tb-liquid-back,
-    .tb-liquid-front,
-    .tb-liquid-shimmer,
-    .tb-liquid-surface,
-    .tb-liquid-bubble { animation: none !important; }
+    .tb-water-wave-back,
+    .tb-water-wave-front,
+    .tb-water-glow,
+    .tb-water-bubble { animation: none !important; }
   }
 `;
       document.head.appendChild(style);
@@ -784,18 +802,35 @@ function _analysisBucketOrder(){
       <div class="analysis-stat analysis-stat--glass analysis-stat--glass-${escapeHTML(c.tint)}" title="${escapeHTML(c.title)}" style="animation:analysisGrow .55s ease ${idx*60}ms both; position:relative; isolation:isolate; overflow:hidden; padding:18px 18px 16px; border-radius:24px; border:1px solid rgba(255,255,255,.74); background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.90)); box-shadow:0 14px 34px rgba(148,163,184,.16), inset 0 1px 0 rgba(255,255,255,.88); min-height:196px; display:flex; flex-direction:column; justify-content:space-between; gap:14px;">
         <span aria-hidden="true" style="position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 20% 12%, rgba(255,255,255,.94), rgba(255,255,255,0) 36%), radial-gradient(circle at 82% 18%, ${escapeHTML(c.glow)}, rgba(255,255,255,0) 38%), linear-gradient(180deg, rgba(255,255,255,.76), rgba(255,255,255,.36)); pointer-events:none;"></span>
         <span aria-hidden="true" style="position:absolute; left:10px; right:10px; bottom:10px; top:10px; border-radius:20px; background:rgba(255,255,255,.16); border:1px solid ${escapeHTML(c.shell)}; box-shadow:inset 0 0 0 1px rgba(255,255,255,.24); pointer-events:none;"></span>
-        <span aria-hidden="true" style="position:absolute; left:10px; right:10px; bottom:10px; height:${pct}%; min-height:${pct > 0 ? 18 : 0}px; border-radius:0 0 20px 20px; overflow:hidden; pointer-events:none;">
-  <span class="tb-liquid-back" style="position:absolute; inset:0; background:${escapeHTML(c.liquid)}; box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 -10px 18px rgba(255,255,255,.10); animation:tbLiquidWaveBack 7.4s ease-in-out infinite;"></span>
+        <span aria-hidden="true" style="position:absolute; left:10px; right:10px; bottom:10px; height:${pct}%; min-height:${pct > 0 ? 20 : 0}px; border-radius:0 0 20px 20px; overflow:hidden; pointer-events:none;">
+  <span style="position:absolute; inset:0; background:${escapeHTML(c.liquid)};"></span>
 
-  <span class="tb-liquid-front" style="position:absolute; left:-14%; right:-10%; top:8%; bottom:-2%; background:${escapeHTML(c.liquidAlt)}; mix-blend-mode:screen; opacity:.98; animation:tbLiquidWaveFront 5.1s ease-in-out infinite;"></span>
+  <span class="tb-water-glow" style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.18), rgba(255,255,255,0)); filter:blur(1px); animation:tbWaterGlow 6.2s linear infinite;"></span>
 
-  <span class="tb-liquid-shimmer" style="position:absolute; top:6%; bottom:4%; width:42%; background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.30), rgba(255,255,255,.08), rgba(255,255,255,0)); filter:blur(1.2px); animation:tbLiquidShimmer 5.8s linear infinite;"></span>
+  <svg class="tb-water-wave-back" viewBox="0 0 240 28" preserveAspectRatio="none"
+    style="position:absolute; left:-6px; bottom:0px; width:calc(100% + 140px); height:36px; opacity:.55; animation:tbWaveDriftBack 7.2s linear infinite;">
+    <path d="M0,16 C20,8 40,8 60,16 C80,24 100,24 120,16 C140,8 160,8 180,16 C200,24 220,24 240,16 L240,28 L0,28 Z"
+      fill="rgba(255,255,255,.45)"></path>
+  </svg>
 
-  <span class="tb-liquid-bubble" style="position:absolute; left:18%; bottom:8px; width:6px; height:6px; border-radius:999px; background:rgba(255,255,255,.22); box-shadow:0 0 0 1px rgba(255,255,255,.10) inset; animation:tbBubbleRise 4.8s ease-in infinite;"></span>
-  <span class="tb-liquid-bubble" style="position:absolute; left:64%; bottom:10px; width:4px; height:4px; border-radius:999px; background:rgba(255,255,255,.18); box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; animation:tbBubbleRise 6.2s ease-in infinite 1.1s;"></span>
-  <span class="tb-liquid-bubble" style="position:absolute; left:78%; bottom:12px; width:5px; height:5px; border-radius:999px; background:rgba(255,255,255,.14); box-shadow:0 0 0 1px rgba(255,255,255,.06) inset; animation:tbBubbleRise 5.4s ease-in infinite 2.2s;"></span>
+  <svg class="tb-water-wave-front" viewBox="0 0 320 34" preserveAspectRatio="none"
+    style="position:absolute; left:-8px; bottom:0px; width:calc(100% + 180px); height:42px; opacity:.92; animation:tbWaveDriftFront 5.1s linear infinite;">
+    <path d="M0,18 C24,8 48,8 72,18 C96,28 120,28 144,18 C168,8 192,8 216,18 C240,28 264,28 288,18 C304,12 312,12 320,18 L320,34 L0,34 Z"
+      fill="rgba(255,255,255,.65)"></path>
+  </svg>
+
+  <span class="tb-water-bubble" style="position:absolute; left:18%; bottom:12px; width:6px; height:6px; border-radius:999px; background:rgba(255,255,255,.14); animation:tbBubbleRise 5.0s ease-in infinite;"></span>
+  <span class="tb-water-bubble" style="position:absolute; left:61%; bottom:10px; width:4px; height:4px; border-radius:999px; background:rgba(255,255,255,.12); animation:tbBubbleRise 6.0s ease-in infinite 1.2s;"></span>
+  <span class="tb-water-bubble" style="position:absolute; left:77%; bottom:14px; width:5px; height:5px; border-radius:999px; background:rgba(255,255,255,.10); animation:tbBubbleRise 5.6s ease-in infinite 2.0s;"></span>
 </span>
-<span class="tb-liquid-surface" aria-hidden="true" style="position:absolute; left:8px; right:8px; top:calc(${liquidTop}% - 1px); height:18px; border-radius:999px; background:radial-gradient(circle at 18% 45%, rgba(255,255,255,.58), rgba(255,255,255,.18) 42%, rgba(255,255,255,0) 68%), radial-gradient(circle at 72% 55%, rgba(255,255,255,.22), rgba(255,255,255,0) 58%), linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.14)); filter:blur(1.8px); opacity:${pct > 3 ? '.98' : '0'}; animation:tbSurfaceWave 3.6s ease-in-out infinite; pointer-events:none;"></span>
+<span aria-hidden="true" style="position:absolute; left:10px; right:10px; top:calc(${liquidTop}% - 2px); height:24px; pointer-events:none; opacity:${pct > 3 ? '.98' : '0'};">
+  <svg viewBox="0 0 320 24" preserveAspectRatio="none" style="width:100%; height:100%; display:block;">
+    <path d="M0,14 C28,6 56,6 84,14 C112,22 140,22 168,14 C196,6 224,6 252,14 C280,22 300,22 320,14"
+      fill="none" stroke="rgba(255,255,255,.95)" stroke-width="4" stroke-linecap="round"></path>
+    <path d="M0,16 C28,9 56,9 84,16 C112,23 140,23 168,16 C196,9 224,9 252,16 C280,23 300,23 320,16"
+      fill="none" stroke="rgba(255,255,255,.34)" stroke-width="6" stroke-linecap="round" style="filter:blur(2px);"></path>
+  </svg>
+</span>
         <span aria-hidden="true" style="position:absolute; left:26px; top:26px; bottom:26px; width:18px; border-radius:999px; background:${escapeHTML(c.haze)}; opacity:.58; pointer-events:none;"></span>
         <div style="position:relative; z-index:1; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
           <div>
@@ -1084,13 +1119,62 @@ function _analysisBucketOrder(){
       </div>`;
   }
 
+  function _renderNightCovered(model){
+    const host = _el('analysis-night-covered');
+    if (!host) return;
+    const count = Number(model?.nightCoveredCount || 0);
+    if (!count) {
+      host.innerHTML = `<div class="muted">Aucun transport marqué comme remplaçant une nuit d'hébergement sur la plage analysée.</div>`;
+      return;
+    }
+    const rows = (model.nightCoveredRows || []).slice().sort((a,b)=> String(b.date).localeCompare(String(a.date))).slice(0,6);
+    host.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px;">
+        <div style="padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(59,130,246,.08), rgba(255,255,255,.5));">
+          <div class="muted" style="font-size:12px;">Transports concernés</div>
+          <div style="font-size:24px;font-weight:800;">${count}</div>
+        </div>
+        <div style="padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(16,185,129,.10), rgba(255,255,255,.5));">
+          <div class="muted" style="font-size:12px;">Économie potentielle logement</div>
+          <div style="font-size:24px;font-weight:800;">${escapeHTML(_fmtMoney(model.nightCoveredPotentialSavings, model.base))}</div>
+        </div>
+        <div style="padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(245,158,11,.10), rgba(255,255,255,.5));">
+          <div class="muted" style="font-size:12px;">Moyenne par nuit remplacée</div>
+          <div style="font-size:24px;font-weight:800;">${escapeHTML(_fmtMoney(model.nightCoveredAverageSaving, model.base))}</div>
+        </div>
+      </div>
+      <div class="muted" style="margin-bottom:10px;font-size:12px;line-height:1.45;">Signal analytique uniquement : ces montants n'altèrent ni le budget, ni les KPI, ni la projection. Ils servent à expliquer le logement potentiellement évité par des transports de nuit.</div>
+      <div style="display:grid;gap:8px;">
+        ${rows.map((row) => `
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--border);">
+            <div style="min-width:0;">
+              <div style="font-weight:700;">${escapeHTML(row.label)}</div>
+              <div class="muted" style="font-size:12px;">${escapeHTML(row.date)} • ${escapeHTML(row.category)}</div>
+            </div>
+            <div style="text-align:right;white-space:nowrap;">
+              <div style="font-weight:700;">${escapeHTML(_fmtMoney(row.saving, model.base))}</div>
+              <div class="muted" style="font-size:12px;">transport ${escapeHTML(_fmtMoney(row.spent, model.base))}</div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+  }
+
   function _renderInsights(model){
     const host = _el('analysis-insights');
+    if (!host) return;
     const delta = model.projection - model.totalBudget;
     const sourcedGap = model.comparablePerDay - model.referencePerDay;
     const top = model.topCategories[0];
     const topUnmapped = (model.unmappedCategorySeries || [])[0] || null;
+    const nightLine = Number(model?.nightCoveredCount || 0) > 0
+      ? {
+          icon: '🌙',
+          title: `Transports de nuit : ${model.nightCoveredCount} cas`,
+          body: `${_fmtMoney(model.nightCoveredPotentialSavings, model.base)} d'économie potentielle logement restent visibles à part, sans corriger le budget principal.`
+        }
+      : null;
     const insights = [
+      ...(nightLine ? [nightLine] : []),
       {
         icon: sourcedGap > 0 ? '🧭' : '🌿',
         title: sourcedGap > 0 ? 'Réel au-dessus du sourcé' : 'Réel sous le sourcé',
@@ -1127,7 +1211,7 @@ function _analysisBucketOrder(){
               : `Aucune dépense hors budget notable sur la plage courante.`))
       }
     ];
-    if (host) host.innerHTML = insights.map(i => `
+    host.innerHTML = insights.map(i => `
       <div class="analysis-insight">
         <div class="analysis-insight-badge">${i.icon}</div>
         <div>
@@ -1140,12 +1224,13 @@ function _analysisBucketOrder(){
     if (pill) pill.textContent = `${model.txs.length} dépenses • ${model.days.length} jours • ${model.base}`;
   }
 
-    function _renderAll(){
+  function _renderAll(){
     if (!_el('view-analysis')) return;
     _saveFilters();
     const model = _computeModel();
 
     _buildSummary(model);
+    _renderNightCovered(model);
     _renderInsights(model);
     _renderCategory(model);
     _renderCategoryBars(model);

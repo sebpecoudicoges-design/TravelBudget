@@ -2,6 +2,11 @@
    Allocations
    ========================= */
 
+function tbIsNightCoveredEligibleCategory(category) {
+  return /^transport( internationale?| international)?$/i.test(String(category || '').trim());
+}
+
+
 function tbGetNightCoveredExtraForDate(dateStr) {
   const ds = String(dateStr || '').slice(0,10);
   let seg = null;
@@ -17,6 +22,39 @@ function tbGetNightCoveredExtraForDate(dateStr) {
   return { amount: Number.isFinite(n) && n > 0 ? n : 400, currency: cur, segId };
 }
 
+
+function tbGetNightCoveredInsightForTx(tx, targetCurrency) {
+  if (!tx || tx.type !== "expense" || !tx.nightCovered || !tbIsNightCoveredEligibleCategory(tx.category)) return null;
+  const dateStr = String(tx.dateStart || tx.date_start || '').slice(0,10);
+  if (!dateStr) return null;
+  const cfg = tbGetNightCoveredExtraForDate(dateStr);
+  const srcCur = String(cfg.currency || state?.period?.baseCurrency || 'EUR').toUpperCase();
+  const dstCur = String(targetCurrency || srcCur).toUpperCase();
+  let amount = Number(cfg.amount) || 0;
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  try {
+    if (dstCur && srcCur && dstCur !== srcCur) {
+      const seg = (typeof getBudgetSegmentForDate === 'function') ? getBudgetSegmentForDate(dateStr) : null;
+      if (typeof window.fxConvert === 'function' && seg && typeof window.fxRatesForSegment === 'function') {
+        const rates = window.fxRatesForSegment(seg);
+        const out = window.fxConvert(amount, srcCur, dstCur, rates);
+        if (out !== null && Number.isFinite(Number(out))) amount = Number(out);
+      } else if (typeof amountToBudgetBaseForDate === 'function' && seg) {
+        const inSegBase = amountToBudgetBaseForDate(amount, srcCur, dateStr);
+        const segBase = String(seg.baseCurrency || seg.base_currency || state?.period?.baseCurrency || 'EUR').toUpperCase();
+        if (segBase === dstCur) amount = Number(inSegBase) || amount;
+      }
+    }
+  } catch (_) {}
+  return {
+    dateStr,
+    amount: Number(amount) || 0,
+    currency: dstCur || srcCur,
+    sourceCurrency: srcCur,
+    label: tx.label || tx.category || 'Transport',
+    category: tx.category || 'Transport'
+  };
+}
 
 function buildAllocationsForTx(tx) {
   const allocs = [];
@@ -50,17 +88,6 @@ function buildAllocationsForTx(tx) {
 
       allocs.push({ id: uid("a"), txId: tx.id, dateStr, amountBase: perDayBase, baseCurrency: baseCur, label });
     });
-  }
-
-  if (tx.nightCovered) {
-    const dateStr = tx.dateStart;
-    if (periodContains(dateStr)) {
-      const seg = (typeof getBudgetSegmentForDate === "function") ? getBudgetSegmentForDate(dateStr) : null;
-      const cfg = (typeof tbGetNightCoveredExtraForDate === "function") ? tbGetNightCoveredExtraForDate(dateStr) : { amount: 400, currency: String(seg?.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase() };
-      const baseCur = String(cfg.currency || seg?.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
-      const extra = Number(cfg.amount) || 400; // in segment base currency by convention
-      allocs.push({ id: uid("a"), txId: tx.id, dateStr, amountBase: extra, baseCurrency: baseCur, label: `Nuit couverte (${extra})` });
-    }
   }
   return allocs;
 }

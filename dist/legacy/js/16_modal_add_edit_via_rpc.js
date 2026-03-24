@@ -174,8 +174,11 @@ function wireNightLogic() {
     const t = document.getElementById("m-type").value;
     const c = document.getElementById("m-category").value;
     const block = document.getElementById("m-night-block");
-    block.classList.toggle("hidden", !(t === "expense" && c === "Transport"));
-    if (!(t === "expense" && c === "Transport")) document.getElementById("m-night").checked = false;
+    const eligible = (t === "expense" && typeof window.tbIsNightCoveredEligibleCategory === "function")
+      ? window.tbIsNightCoveredEligibleCategory(c)
+      : /^transport( internationale?| international)?$/i.test(String(c || '').trim());
+    block.classList.toggle("hidden", !eligible);
+    if (!eligible) document.getElementById("m-night").checked = false;
   };
 
   const typeEl = document.getElementById("m-type");
@@ -183,9 +186,6 @@ function wireNightLogic() {
   if (typeEl) typeEl.onchange = updateNightVisibility;
   if (catEl) catEl._tbNightVisibility = updateNightVisibility;
 
-  document.getElementById("m-night").onchange = () => {
-    if (document.getElementById("m-night").checked) document.getElementById("m-out").checked = true;
-  };
 
   updateNightVisibility();
 }
@@ -533,7 +533,6 @@ async function saveModal() {
       const wallet = findWallet(walletId);
       if (!wallet) throw new Error("Wallet invalide.");
 
-      if (nightCovered) outOfBudget = true;
 
       if (editingTxId) {
         const current = state.transactions.find((t) => t.id === editingTxId);
@@ -580,7 +579,7 @@ async function saveModal() {
           p_date_end: end,
           p_pay_now: payNow,
           p_out_of_budget: outOfBudget,
-          p_night_covered: type === "expense" && /^transport( internationale?| international)?$/i.test(String(category || "").trim()) ? nightCovered : false,
+          p_night_covered: type === "expense" && ((typeof window.tbIsNightCoveredEligibleCategory === "function") ? window.tbIsNightCoveredEligibleCategory(category) : /^transport( internationale?| international)?$/i.test(String(category || "").trim())) ? nightCovered : false,
           // FX snapshot is computed for the transaction date + transaction currency.
           // (Use local variables here; `form` is not in scope.)
           ..._txBuildFxSnapshotArgs(start, wallet.currency)

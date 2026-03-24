@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.3.7';
+window.__TB_BUILD = '9.3.8';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -258,4 +258,18 @@ window.__TB_BUILD = '9.3.7';
   window.TB_TABLES = window.TB_CONST.TABLES;
   window.TB_COLS = window.TB_CONST.COLS;
   window.TB_KEYS = window.TB_CONST.LS_KEYS;
+
+  window.tbResolveTransactionTravelId = function tbResolveTransactionTravelId(tx) {
+    try {
+      const direct = String(tx?.travel_id || tx?.travelId || '').trim();
+      if (direct) return direct;
+      const periodId = String(tx?.period_id || tx?.periodId || '').trim();
+      if (!periodId) return '';
+      const periods = Array.isArray(window.state?.periods) ? window.state.periods : [];
+      const row = periods.find((p) => String(p?.id || p?.periodId || '').trim() === periodId);
+      return String(row?.travel_id || row?.travelId || '').trim();
+    } catch (_) {
+      return '';
+    }
+  };
 })();
