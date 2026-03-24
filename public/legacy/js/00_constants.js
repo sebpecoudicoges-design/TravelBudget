@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.3.8';
+window.__TB_BUILD = '9.3.9.1';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -30,6 +30,10 @@ window.__TB_BUILD = '9.3.8';
     v_trip_user_net_balances: "v_trip_user_net_balances",
     v_wallet_balances: "v_wallet_balances",
     v_wallet_transactions_effect: "v_wallet_transactions_effect",
+    analytic_category_mappings: "analytic_category_mappings",
+    v_transaction_analytic_mapping: "v_transaction_analytic_mapping",
+    v_analytic_mapping_audit: "v_analytic_mapping_audit",
+    v_transaction_analytic_expenses: "v_transaction_analytic_expenses",
 
     fx_manual_rates: "fx_manual_rates",
     travel_budget_reference_profile: "travel_budget_reference_profile",

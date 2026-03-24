@@ -452,6 +452,26 @@ $$;
 ALTER FUNCTION "public"."get_period_for_travel_date"("p_travel_id" "uuid", "p_date" "date") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."get_unmapped_transaction_categories"() RETURNS TABLE("category" "text", "subcategory" "text", "tx_count" bigint, "expense_amount_sum" numeric)
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  select
+    v.category,
+    v.subcategory,
+    count(*) as tx_count,
+    coalesce(sum(case when v.type = 'expense' then v.amount else 0 end), 0) as expense_amount_sum
+  from public.v_transaction_analytic_mapping v
+  where v.user_id = auth.uid()
+    and v.mapping_status = 'unmapped'
+  group by v.category, v.subcategory
+  order by tx_count desc, category asc, subcategory asc nulls first;
+$$;
+
+
+ALTER FUNCTION "public"."get_unmapped_transaction_categories"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE
     AS $$
@@ -2142,6 +2162,99 @@ $$;
 ALTER FUNCTION "public"."rpc_budget_reference_resolve_for_period"("p_period_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."seed_default_analytic_category_mappings"() RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_user_id uuid := auth.uid();
+  v_count integer := 0;
+begin
+  if v_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  insert into public.analytic_category_mappings
+    (user_id, category_name, subcategory_name, mapping_status, analytic_family, notes)
+  values
+    -- mapped
+    (v_user_id, 'Logement', null, 'mapped', 'accommodation', 'Core accommodation category'),
+    (v_user_id, 'Repas', null, 'mapped', 'food', 'Core food category'),
+    (v_user_id, 'Transport', null, 'mapped', 'transport', 'Core transport category'),
+    (v_user_id, 'Sorties', null, 'mapped', 'activities', 'Mapped to activities by product decision'),
+    (v_user_id, 'Laundry', null, 'mapped', 'activities', 'Mapped to activities for now'),
+    (v_user_id, 'Autre', null, 'mapped', 'activities', 'Temporary analytical fallback'),
+    (v_user_id, 'Abonnement/Mobile', null, 'mapped', 'activities', 'Temporary analytical fallback'),
+
+    -- excluded
+    (v_user_id, 'Transport Internationale', null, 'excluded', null, 'Excluded from local daily reference mix'),
+    (v_user_id, 'Visa', null, 'excluded', null, 'Excluded from daily reference mix'),
+    (v_user_id, 'Santé', null, 'excluded', null, 'Excluded from daily reference mix'),
+    (v_user_id, 'Projet Personnel', null, 'excluded', null, 'Excluded from travel daily reference mix'),
+    (v_user_id, 'Souvenir', null, 'excluded', null, 'Excluded from reference mix'),
+    (v_user_id, 'Revenu', null, 'excluded', null, 'Income excluded from expense analytic mix'),
+    (v_user_id, 'Frais bancaire', null, 'excluded', null, 'Excluded from daily reference mix'),
+    (v_user_id, 'Caution', null, 'excluded', null, 'Excluded from daily reference mix')
+  on conflict do nothing;
+
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."seed_default_analytic_category_mappings"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."seed_default_analytic_category_mappings_admin"() RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_count integer := 0;
+begin
+  insert into public.analytic_category_mappings
+    (user_id, category_name, subcategory_name, mapping_status, analytic_family, notes)
+  select *
+  from (
+    select distinct
+      t.user_id,
+      x.category_name,
+      x.subcategory_name,
+      x.mapping_status,
+      x.analytic_family,
+      x.notes
+    from public.transactions t
+    cross join (
+      values
+        ('Logement', null, 'mapped', 'accommodation', 'Core accommodation category'),
+        ('Repas', null, 'mapped', 'food', 'Core food category'),
+        ('Transport', null, 'mapped', 'transport', 'Core transport category'),
+        ('Sorties', null, 'mapped', 'activities', 'Mapped to activities by product decision'),
+        ('Laundry', null, 'mapped', 'activities', 'Mapped to activities for now'),
+        ('Autre', null, 'mapped', 'activities', 'Temporary analytical fallback'),
+        ('Abonnement/Mobile', null, 'mapped', 'activities', 'Temporary analytical fallback'),
+        ('Transport Internationale', null, 'excluded', null, 'Excluded from local daily reference mix'),
+        ('Visa', null, 'excluded', null, 'Excluded from daily reference mix'),
+        ('Santé', null, 'excluded', null, 'Excluded from daily reference mix'),
+        ('Projet Personnel', null, 'excluded', null, 'Excluded from travel daily reference mix'),
+        ('Souvenir', null, 'excluded', null, 'Excluded from reference mix'),
+        ('Revenu', null, 'excluded', null, 'Income excluded from expense analytic mix'),
+        ('Frais bancaire', null, 'excluded', null, 'Excluded from daily reference mix'),
+        ('Caution', null, 'excluded', null, 'Excluded from daily reference mix')
+    ) as x(category_name, subcategory_name, mapping_status, analytic_family, notes)
+  ) s
+  on conflict do nothing;
+
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."seed_default_analytic_category_mappings_admin"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."set_current_timestamp_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -3573,6 +3686,47 @@ $$;
 ALTER FUNCTION "public"."wallets_travel_consistency_guard"() OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."analytic_category_mappings" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
+    "category_name" "text" NOT NULL,
+    "subcategory_name" "text",
+    "mapping_status" "text" DEFAULT 'unmapped'::"text" NOT NULL,
+    "analytic_family" "text",
+    "notes" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "analytic_category_mappings_category_name_chk" CHECK (("length"(TRIM(BOTH FROM "category_name")) > 0)),
+    CONSTRAINT "analytic_category_mappings_family_chk" CHECK ((("analytic_family" IS NULL) OR ("analytic_family" = ANY (ARRAY['accommodation'::"text", 'food'::"text", 'transport'::"text", 'activities'::"text"])))),
+    CONSTRAINT "analytic_category_mappings_status_chk" CHECK (("mapping_status" = ANY (ARRAY['mapped'::"text", 'excluded'::"text", 'unmapped'::"text"]))),
+    CONSTRAINT "analytic_category_mappings_status_family_consistency_chk" CHECK (((("mapping_status" = 'mapped'::"text") AND ("analytic_family" IS NOT NULL)) OR (("mapping_status" = ANY (ARRAY['excluded'::"text", 'unmapped'::"text"])) AND ("analytic_family" IS NULL)))),
+    CONSTRAINT "analytic_category_mappings_subcategory_name_chk" CHECK ((("subcategory_name" IS NULL) OR ("length"(TRIM(BOTH FROM "subcategory_name")) > 0)))
+);
+
+
+ALTER TABLE "public"."analytic_category_mappings" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."analytic_category_mappings" IS 'SQL source of truth for mapping user transaction categories/subcategories to analytic families.';
+
+
+
+COMMENT ON COLUMN "public"."analytic_category_mappings"."category_name" IS 'User transaction category name as stored on transactions.category.';
+
+
+
+COMMENT ON COLUMN "public"."analytic_category_mappings"."subcategory_name" IS 'Optional user transaction subcategory name as stored on transactions.subcategory.';
+
+
+
+COMMENT ON COLUMN "public"."analytic_category_mappings"."mapping_status" IS 'mapped | excluded | unmapped';
+
+
+
+COMMENT ON COLUMN "public"."analytic_category_mappings"."analytic_family" IS 'Target analytic family when mapping_status = mapped: accommodation | food | transport | activities';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."budget_segment_budget_reference_override" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -4218,6 +4372,131 @@ CREATE TABLE IF NOT EXISTS "public"."trip_settlements" (
 ALTER TABLE "public"."trip_settlements" OWNER TO "postgres";
 
 
+CREATE OR REPLACE VIEW "public"."v_transaction_analytic_mapping" AS
+ WITH "tx" AS (
+         SELECT "t"."id" AS "transaction_id",
+            "t"."user_id",
+            "t"."travel_id",
+            "t"."period_id",
+            "t"."wallet_id",
+            "t"."type",
+            "t"."amount",
+            "t"."currency",
+            "t"."category",
+            "t"."subcategory",
+            "t"."label",
+            "t"."date_start",
+            "t"."date_end",
+            "t"."pay_now",
+            "t"."out_of_budget",
+            "t"."affects_budget",
+            "t"."is_internal",
+            "t"."night_covered"
+           FROM "public"."transactions" "t"
+        ), "subcategory_match" AS (
+         SELECT "tx"."transaction_id",
+            "m"."id" AS "mapping_id",
+            "m"."mapping_status",
+            "m"."analytic_family"
+           FROM ("tx"
+             JOIN "public"."analytic_category_mappings" "m" ON ((("m"."user_id" = "tx"."user_id") AND ("lower"(TRIM(BOTH FROM "m"."category_name")) = "lower"(TRIM(BOTH FROM "tx"."category"))) AND ("lower"(TRIM(BOTH FROM COALESCE("m"."subcategory_name", ''::"text"))) = "lower"(TRIM(BOTH FROM COALESCE("tx"."subcategory", ''::"text")))) AND ("tx"."subcategory" IS NOT NULL))))
+        ), "category_match" AS (
+         SELECT "tx"."transaction_id",
+            "m"."id" AS "mapping_id",
+            "m"."mapping_status",
+            "m"."analytic_family"
+           FROM ("tx"
+             JOIN "public"."analytic_category_mappings" "m" ON ((("m"."user_id" = "tx"."user_id") AND ("lower"(TRIM(BOTH FROM "m"."category_name")) = "lower"(TRIM(BOTH FROM "tx"."category"))) AND ("m"."subcategory_name" IS NULL))))
+        ), "resolved" AS (
+         SELECT "tx"."transaction_id",
+            "tx"."user_id",
+            "tx"."travel_id",
+            "tx"."period_id",
+            "tx"."wallet_id",
+            "tx"."type",
+            "tx"."amount",
+            "tx"."currency",
+            "tx"."category",
+            "tx"."subcategory",
+            "tx"."label",
+            "tx"."date_start",
+            "tx"."date_end",
+            "tx"."pay_now",
+            "tx"."out_of_budget",
+            "tx"."affects_budget",
+            "tx"."is_internal",
+            "tx"."night_covered",
+            "sm"."mapping_id" AS "subcategory_mapping_id",
+            "sm"."mapping_status" AS "subcategory_mapping_status",
+            "sm"."analytic_family" AS "subcategory_analytic_family",
+            "cm"."mapping_id" AS "category_mapping_id",
+            "cm"."mapping_status" AS "category_mapping_status",
+            "cm"."analytic_family" AS "category_analytic_family"
+           FROM (("tx"
+             LEFT JOIN "subcategory_match" "sm" ON (("sm"."transaction_id" = "tx"."transaction_id")))
+             LEFT JOIN "category_match" "cm" ON (("cm"."transaction_id" = "tx"."transaction_id")))
+        )
+ SELECT "transaction_id",
+    "user_id",
+    "travel_id",
+    "period_id",
+    "wallet_id",
+    "type",
+    "amount",
+    "currency",
+    "category",
+    "subcategory",
+    "label",
+    "date_start",
+    "date_end",
+    "pay_now",
+    "out_of_budget",
+    "affects_budget",
+    "is_internal",
+    "night_covered",
+    COALESCE("subcategory_mapping_id", "category_mapping_id") AS "mapping_id",
+    COALESCE("subcategory_mapping_status", "category_mapping_status", 'unmapped'::"text") AS "mapping_status",
+    COALESCE("subcategory_analytic_family", "category_analytic_family") AS "analytic_family",
+        CASE
+            WHEN ("subcategory_mapping_id" IS NOT NULL) THEN 'subcategory_exact'::"text"
+            WHEN ("category_mapping_id" IS NOT NULL) THEN 'category_only'::"text"
+            ELSE 'fallback_unmapped'::"text"
+        END AS "mapping_source"
+   FROM "resolved" "r";
+
+
+ALTER VIEW "public"."v_transaction_analytic_mapping" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."v_analytic_mapping_audit" AS
+ SELECT "user_id",
+    "category",
+    "subcategory",
+    "mapping_status",
+    "analytic_family",
+    "mapping_source",
+    "count"(*) AS "tx_count",
+    "count"(*) FILTER (WHERE ("type" = 'expense'::"text")) AS "expense_count",
+    "count"(*) FILTER (WHERE ("type" = 'income'::"text")) AS "income_count",
+    COALESCE("sum"(
+        CASE
+            WHEN ("type" = 'expense'::"text") THEN "amount"
+            ELSE (0)::numeric
+        END), (0)::numeric) AS "expense_amount_sum",
+    COALESCE("sum"(
+        CASE
+            WHEN ("type" = 'income'::"text") THEN "amount"
+            ELSE (0)::numeric
+        END), (0)::numeric) AS "income_amount_sum",
+    "min"("date_start") AS "first_seen_date",
+    "max"("date_start") AS "last_seen_date"
+   FROM "public"."v_transaction_analytic_mapping" "v"
+  GROUP BY "user_id", "category", "subcategory", "mapping_status", "analytic_family", "mapping_source";
+
+
+ALTER VIEW "public"."v_analytic_mapping_audit" OWNER TO "postgres";
+
+
 CREATE OR REPLACE VIEW "public"."v_country_budget_reference_latest" AS
  SELECT "id",
     "country_code",
@@ -4363,6 +4642,36 @@ CREATE OR REPLACE VIEW "public"."v_period_budget_reference_resolved" AS
 
 
 ALTER VIEW "public"."v_period_budget_reference_resolved" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."v_transaction_analytic_expenses" AS
+ SELECT "transaction_id",
+    "user_id",
+    "travel_id",
+    "period_id",
+    "wallet_id",
+    "type",
+    "amount",
+    "currency",
+    "category",
+    "subcategory",
+    "label",
+    "date_start",
+    "date_end",
+    "pay_now",
+    "out_of_budget",
+    "affects_budget",
+    "is_internal",
+    "night_covered",
+    "mapping_id",
+    "mapping_status",
+    "analytic_family",
+    "mapping_source"
+   FROM "public"."v_transaction_analytic_mapping"
+  WHERE (("type" = 'expense'::"text") AND (COALESCE("is_internal", false) = false) AND ("mapping_status" = 'mapped'::"text"));
+
+
+ALTER VIEW "public"."v_transaction_analytic_expenses" OWNER TO "postgres";
 
 
 CREATE OR REPLACE VIEW "public"."v_travel_day_summary" AS
@@ -4858,6 +5167,11 @@ ALTER TABLE ONLY "public"."fx_rates" ALTER COLUMN "id" SET DEFAULT "nextval"('"p
 
 
 
+ALTER TABLE ONLY "public"."analytic_category_mappings"
+    ADD CONSTRAINT "analytic_category_mappings_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."budget_segment_budget_reference_override"
     ADD CONSTRAINT "budget_segment_budget_reference_override_one_per_segment" UNIQUE ("budget_segment_id");
 
@@ -5075,6 +5389,22 @@ ALTER TABLE ONLY "public"."trip_settlements"
 
 ALTER TABLE ONLY "public"."wallets"
     ADD CONSTRAINT "wallets_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE UNIQUE INDEX "analytic_category_mappings_user_cat_subcat_uidx" ON "public"."analytic_category_mappings" USING "btree" ("user_id", "lower"(TRIM(BOTH FROM "category_name")), "lower"(TRIM(BOTH FROM COALESCE("subcategory_name", ''::"text"))));
+
+
+
+CREATE INDEX "analytic_category_mappings_user_family_idx" ON "public"."analytic_category_mappings" USING "btree" ("user_id", "analytic_family");
+
+
+
+CREATE INDEX "analytic_category_mappings_user_idx" ON "public"."analytic_category_mappings" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "analytic_category_mappings_user_status_idx" ON "public"."analytic_category_mappings" USING "btree" ("user_id", "mapping_status");
 
 
 
@@ -5459,6 +5789,10 @@ CREATE INDEX "wallets_user_period_idx" ON "public"."wallets" USING "btree" ("use
 
 
 CREATE OR REPLACE TRIGGER "fx_manual_rates_touch" BEFORE UPDATE ON "public"."fx_manual_rates" FOR EACH ROW EXECUTE FUNCTION "public"."_touch_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "set_analytic_category_mappings_updated_at" BEFORE UPDATE ON "public"."analytic_category_mappings" FOR EACH ROW EXECUTE FUNCTION "public"."set_current_timestamp_updated_at"();
 
 
 
@@ -5938,6 +6272,25 @@ CREATE POLICY "Users can manage their trip expenses" ON "public"."trip_expenses"
 
 
 CREATE POLICY "Users can read their trip expenses" ON "public"."trip_expenses" FOR SELECT USING (("user_id" = "auth"."uid"()));
+
+
+
+ALTER TABLE "public"."analytic_category_mappings" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "analytic_category_mappings_delete_own" ON "public"."analytic_category_mappings" FOR DELETE USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "analytic_category_mappings_insert_own" ON "public"."analytic_category_mappings" FOR INSERT WITH CHECK (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "analytic_category_mappings_select_own" ON "public"."analytic_category_mappings" FOR SELECT USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "analytic_category_mappings_update_own" ON "public"."analytic_category_mappings" FOR UPDATE USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
 
 
 
@@ -6700,6 +7053,13 @@ GRANT ALL ON FUNCTION "public"."get_period_for_travel_date"("p_travel_id" "uuid"
 
 
 
+REVOKE ALL ON FUNCTION "public"."get_unmapped_transaction_categories"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."get_unmapped_transaction_categories"() TO "anon";
+GRANT ALL ON FUNCTION "public"."get_unmapped_transaction_categories"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_unmapped_transaction_categories"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") TO "authenticated";
@@ -6816,6 +7176,20 @@ GRANT ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_budget_segment"
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_period"("p_period_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_period"("p_period_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_period"("p_period_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."seed_default_analytic_category_mappings"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings"() TO "anon";
+GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."seed_default_analytic_category_mappings_admin"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings_admin"() TO "anon";
+GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings_admin"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings_admin"() TO "service_role";
 
 
 
@@ -7001,6 +7375,12 @@ GRANT ALL ON FUNCTION "public"."wallets_travel_consistency_guard"() TO "service_
 
 
 
+GRANT ALL ON TABLE "public"."analytic_category_mappings" TO "anon";
+GRANT ALL ON TABLE "public"."analytic_category_mappings" TO "authenticated";
+GRANT ALL ON TABLE "public"."analytic_category_mappings" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."budget_segment_budget_reference_override" TO "anon";
 GRANT ALL ON TABLE "public"."budget_segment_budget_reference_override" TO "authenticated";
 GRANT ALL ON TABLE "public"."budget_segment_budget_reference_override" TO "service_role";
@@ -7162,6 +7542,18 @@ GRANT ALL ON TABLE "public"."trip_settlements" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."v_transaction_analytic_mapping" TO "anon";
+GRANT ALL ON TABLE "public"."v_transaction_analytic_mapping" TO "authenticated";
+GRANT ALL ON TABLE "public"."v_transaction_analytic_mapping" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."v_analytic_mapping_audit" TO "anon";
+GRANT ALL ON TABLE "public"."v_analytic_mapping_audit" TO "authenticated";
+GRANT ALL ON TABLE "public"."v_analytic_mapping_audit" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."v_country_budget_reference_latest" TO "anon";
 GRANT ALL ON TABLE "public"."v_country_budget_reference_latest" TO "authenticated";
 GRANT ALL ON TABLE "public"."v_country_budget_reference_latest" TO "service_role";
@@ -7171,6 +7563,12 @@ GRANT ALL ON TABLE "public"."v_country_budget_reference_latest" TO "service_role
 GRANT ALL ON TABLE "public"."v_period_budget_reference_resolved" TO "anon";
 GRANT ALL ON TABLE "public"."v_period_budget_reference_resolved" TO "authenticated";
 GRANT ALL ON TABLE "public"."v_period_budget_reference_resolved" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."v_transaction_analytic_expenses" TO "anon";
+GRANT ALL ON TABLE "public"."v_transaction_analytic_expenses" TO "authenticated";
+GRANT ALL ON TABLE "public"."v_transaction_analytic_expenses" TO "service_role";
 
 
 
