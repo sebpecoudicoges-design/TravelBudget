@@ -2236,6 +2236,184 @@ function _subcategoriesForSettings(categoryName, includeInactive = true) {
     });
 }
 
+
+function _analyticFamilyLabel(family) {
+  const key = String(family || '').trim().toLowerCase();
+  if (key === 'accommodation') return 'Logement';
+  if (key === 'food') return 'Repas';
+  if (key === 'transport') return 'Transport';
+  if (key === 'activities') return 'Activités';
+  return 'À classer';
+}
+
+function _analyticSelectOptions(selectedValue, includeInherit = false) {
+  const current = String(selectedValue || '');
+  const opts = [];
+  if (includeInherit) opts.push(`<option value="__inherit__" ${current === '__inherit__' ? 'selected' : ''}>Hériter de la catégorie</option>`);
+  else opts.push(`<option value="__unmapped__" ${current === '__unmapped__' ? 'selected' : ''}>À classer</option>`);
+  opts.push(`<option value="accommodation" ${current === 'accommodation' ? 'selected' : ''}>Logement</option>`);
+  opts.push(`<option value="food" ${current === 'food' ? 'selected' : ''}>Repas</option>`);
+  opts.push(`<option value="transport" ${current === 'transport' ? 'selected' : ''}>Transport</option>`);
+  opts.push(`<option value="activities" ${current === 'activities' ? 'selected' : ''}>Activités</option>`);
+  opts.push(`<option value="__excluded__" ${current === '__excluded__' ? 'selected' : ''}>Exclure</option>`);
+  return opts.join('');
+}
+
+function _analyticRulesForSettings() {
+  return Array.isArray(state?.analyticCategoryMappings) ? state.analyticCategoryMappings : [];
+}
+
+function _findAnalyticRule(categoryName, subcategoryName) {
+  const cat = String(categoryName || '').trim().toLowerCase();
+  const sub = (subcategoryName === undefined || subcategoryName === null) ? null : String(subcategoryName || '').trim().toLowerCase();
+  return _analyticRulesForSettings().find((row) => {
+    const rowCat = String(row?.categoryName || row?.category_name || '').trim().toLowerCase();
+    const rowSubRaw = row?.subcategoryName ?? row?.subcategory_name ?? null;
+    const rowSub = (rowSubRaw === undefined || rowSubRaw === null || String(rowSubRaw).trim() === '') ? null : String(rowSubRaw).trim().toLowerCase();
+    return rowCat === cat && rowSub === sub;
+  }) || null;
+}
+
+function _auditRowsForSettings() {
+  return Array.isArray(state?.analysisAuditRows) ? state.analysisAuditRows : [];
+}
+
+function _auditUsageFor(categoryName, subcategoryName) {
+  const cat = String(categoryName || '').trim().toLowerCase();
+  const wantedSub = (subcategoryName === undefined || subcategoryName === null) ? null : String(subcategoryName || '').trim().toLowerCase();
+  const rows = _auditRowsForSettings().filter((row) => {
+    const rowCat = String(row?.category || '').trim().toLowerCase();
+    const rowSubRaw = row?.subcategory ?? null;
+    const rowSub = (rowSubRaw === undefined || rowSubRaw === null || String(rowSubRaw).trim() === '') ? null : String(rowSubRaw).trim().toLowerCase();
+    if (rowCat !== cat) return false;
+    if (wantedSub === null) return true;
+    return rowSub === wantedSub;
+  });
+  const txCount = rows.reduce((sum, row) => sum + Number(row?.tx_count || 0), 0);
+  const expenseAmountSum = rows.reduce((sum, row) => sum + Number(row?.expense_amount_sum || 0), 0);
+  return { rows, txCount, expenseAmountSum };
+}
+
+function _effectiveAnalyticMappingFor(categoryName, subcategoryName) {
+  const explicit = _findAnalyticRule(categoryName, subcategoryName);
+  if (explicit) {
+    return {
+      explicit: true,
+      inherited: false,
+      mappingStatus: explicit.mappingStatus || explicit.mapping_status || 'unmapped',
+      analyticFamily: explicit.analyticFamily || explicit.analytic_family || null,
+      sourceLabel: subcategoryName ? 'Règle sous-catégorie' : 'Règle catégorie',
+      row: explicit,
+    };
+  }
+  if (subcategoryName !== undefined && subcategoryName !== null && String(subcategoryName || '').trim()) {
+    const categoryRule = _findAnalyticRule(categoryName, null);
+    if (categoryRule) {
+      return {
+        explicit: false,
+        inherited: true,
+        mappingStatus: categoryRule.mappingStatus || categoryRule.mapping_status || 'unmapped',
+        analyticFamily: categoryRule.analyticFamily || categoryRule.analytic_family || null,
+        sourceLabel: 'Hérité de la catégorie',
+        row: categoryRule,
+      };
+    }
+  }
+  return {
+    explicit: false,
+    inherited: false,
+    mappingStatus: 'unmapped',
+    analyticFamily: null,
+    sourceLabel: 'À classer',
+    row: null,
+  };
+}
+
+function _analyticStatusPillHtml(mapping) {
+  const status = String(mapping?.mappingStatus || 'unmapped').trim().toLowerCase();
+  const family = String(mapping?.analyticFamily || '').trim().toLowerCase();
+  const positive = status === 'mapped';
+  const muted = status === 'excluded';
+  const label = status === 'mapped'
+    ? `Mappé · ${_analyticFamilyLabel(family)}`
+    : (status === 'excluded' ? 'Exclu' : 'À classer');
+  return `<span class="tb-settings-pill ${positive ? 'tb-settings-pill--positive' : ''}" ${muted ? 'style="opacity:.85;"' : ''}>${escapeHTML(label)}</span>`;
+}
+
+function _analyticUsagePillHtml(txCount) {
+  const count = Number(txCount || 0);
+  return `<span class="tb-settings-pill">${escapeHTML(String(count))} usage${count > 1 ? 's' : ''}</span>`;
+}
+
+async function saveAnalyticCategoryMapping(categoryName, nextValue) {
+  return safeCall('Mapping analytique catégorie', async () => {
+    const category = String(categoryName || '').trim();
+    const value = String(nextValue || '').trim();
+    if (!category) throw new Error('Catégorie invalide.');
+    const existing = _findAnalyticRule(category, null);
+    if (value === '__unmapped__') {
+      if (existing?.id) {
+        const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).delete().eq('id', existing.id).eq('user_id', sbUser.id);
+        if (error) throw error;
+      }
+    } else {
+      const payload = {
+        user_id: sbUser.id,
+        category_name: category,
+        subcategory_name: null,
+        mapping_status: value === '__excluded__' ? 'excluded' : 'mapped',
+        analytic_family: value === '__excluded__' ? null : value,
+        notes: null,
+        updated_at: new Date().toISOString(),
+      };
+      if (existing?.id) {
+        const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).update(payload).eq('id', existing.id).eq('user_id', sbUser.id);
+        if (error) throw error;
+      } else {
+        const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).insert([payload]);
+        if (error) throw error;
+      }
+    }
+    await refreshFromServer();
+    renderSettings();
+  });
+}
+
+async function saveAnalyticSubcategoryMapping(categoryName, subcategoryName, nextValue) {
+  return safeCall('Mapping analytique sous-catégorie', async () => {
+    const category = String(categoryName || '').trim();
+    const subcategory = String(subcategoryName || '').trim();
+    const value = String(nextValue || '').trim();
+    if (!category || !subcategory) throw new Error('Sous-catégorie invalide.');
+    const existing = _findAnalyticRule(category, subcategory);
+    if (value === '__inherit__') {
+      if (existing?.id) {
+        const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).delete().eq('id', existing.id).eq('user_id', sbUser.id);
+        if (error) throw error;
+      }
+    } else {
+      const payload = {
+        user_id: sbUser.id,
+        category_name: category,
+        subcategory_name: subcategory,
+        mapping_status: value === '__excluded__' ? 'excluded' : 'mapped',
+        analytic_family: value === '__excluded__' ? null : value,
+        notes: null,
+        updated_at: new Date().toISOString(),
+      };
+      if (existing?.id) {
+        const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).update(payload).eq('id', existing.id).eq('user_id', sbUser.id);
+        if (error) throw error;
+      } else {
+        const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).insert([payload]);
+        if (error) throw error;
+      }
+    }
+    await refreshFromServer();
+    renderSettings();
+  });
+}
+
 function renderCategoriesSettingsUI() {
   const host = document.getElementById("cat-list");
   if (!host) return;
@@ -2247,6 +2425,14 @@ function renderCategoriesSettingsUI() {
     const col = colors[c] || "#94a3b8";
     const subRows = _subcategoriesForSettings(c, true);
     const activeCount = subRows.filter((row)=>row?.isActive !== false && row?.is_active !== false).length;
+    const categoryMapping = _effectiveAnalyticMappingFor(c, null);
+    const categoryUsage = _auditUsageFor(c, null);
+    const categorySelectValue = categoryMapping.mappingStatus === 'mapped'
+      ? String(categoryMapping.analyticFamily || '').trim().toLowerCase()
+      : (categoryMapping.mappingStatus === 'excluded' ? '__excluded__' : '__unmapped__');
+    const categoryUsageText = categoryUsage.txCount > 0
+      ? ` · ${escapeHTML(String(categoryUsage.txCount))} transaction${categoryUsage.txCount > 1 ? 's' : ''}`
+      : '';
     const subHtml = subRows.length
       ? subRows.map((row) => {
           const active = row?.isActive !== false && row?.is_active !== false;
@@ -2254,23 +2440,38 @@ function renderCategoriesSettingsUI() {
           const source = String(row?.source || (isSql ? 'sql' : 'default')).toLowerCase();
           const sourceLabel = isSql ? 'Sauvegardée' : (source === 'fallback' ? 'Détectée' : 'Par défaut');
           const subColor = String(row?.color || '').trim();
+          const subName = String(row?.name || '').trim();
+          const subMapping = _effectiveAnalyticMappingFor(c, subName);
+          const subUsage = _auditUsageFor(c, subName);
+          const subSelectValue = subMapping.explicit
+            ? (subMapping.mappingStatus === 'mapped'
+              ? String(subMapping.analyticFamily || '').trim().toLowerCase()
+              : '__excluded__')
+            : '__inherit__';
           return `
             <div class="tb-subcat-row">
               <div class="tb-subcat-main">
-                <strong>${escapeHTML(row?.name || '')}</strong>
+                <strong>${escapeHTML(subName)}</strong>
                 <div class="tb-subcat-meta">
                   <span class="tb-settings-pill ${active ? 'tb-settings-pill--positive' : ''}">${active ? 'Active' : 'Inactive'}</span>
                   <span class="tb-settings-pill">${sourceLabel}</span>
+                  ${_analyticStatusPillHtml(subMapping)}
+                  ${_analyticUsagePillHtml(subUsage.txCount)}
+                  <span class="tb-settings-pill">${escapeHTML(subMapping.sourceLabel || 'À classer')}</span>
                   ${subColor ? `<span class="tb-subcat-color" title="${escapeHTML(subColor)}" style="background:${escapeHTML(subColor)}"></span>` : ''}
                 </div>
+                <div class="muted" style="margin-top:6px;">Analyse : ${escapeHTML(subMapping.mappingStatus === 'mapped' ? _analyticFamilyLabel(subMapping.analyticFamily) : (subMapping.mappingStatus === 'excluded' ? 'Exclue' : 'À classer'))}</div>
               </div>
-              <div class="tb-subcat-actions">
-                ${isSql
-                  ? `<button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','up')">↑</button>
-                     <button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','down')">↓</button>
-                     <button class="btn" onclick="editSubcategory('${escapeHTML(String(row?.id || ''))}')">Modifier</button>
-                     <button class="btn" onclick="toggleSubcategoryActive('${escapeHTML(String(row?.id || ''))}', ${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button>`
-                  : `<button class="btn" onclick="importExistingSubcategory('${escapeHTML(c)}','${escapeHTML(String(row?.name || ''))}')">Enregistrer</button>`}
+              <div class="tb-subcat-actions" style="align-items:flex-end; gap:6px;">
+                <select class="input" style="min-width:190px;" onchange="saveAnalyticSubcategoryMapping('${escapeHTML(c)}','${escapeHTML(subName)}', this.value)">${_analyticSelectOptions(subSelectValue, true)}</select>
+                <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end;">
+                  ${isSql
+                    ? `<button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','up')">↑</button>
+                       <button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','down')">↓</button>
+                       <button class="btn" onclick="editSubcategory('${escapeHTML(String(row?.id || ''))}')">Modifier</button>
+                       <button class="btn" onclick="toggleSubcategoryActive('${escapeHTML(String(row?.id || ''))}', ${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button>`
+                    : `<button class="btn" onclick="importExistingSubcategory('${escapeHTML(c)}','${escapeHTML(subName)}')">Enregistrer</button>`}
+                </div>
               </div>
             </div>`;
         }).join('')
@@ -2283,7 +2484,7 @@ function renderCategoriesSettingsUI() {
             <span class="tb-category-swatch" style="background:${escapeHTML(col)}"></span>
             <div>
               <div class="tb-category-name">${escapeHTML(c)}</div>
-              <div class="tb-category-meta">${escapeHTML(String(subRows.length))} sous-catégorie${subRows.length>1?'s':''} · ${escapeHTML(String(activeCount))} active${activeCount>1?'s':''}</div>
+              <div class="tb-category-meta">${escapeHTML(String(subRows.length))} sous-catégorie${subRows.length>1?'s':''} · ${escapeHTML(String(activeCount))} active${activeCount>1?'s':''}${categoryUsageText}</div>
             </div>
           </div>
           <div class="tb-category-head-actions">
@@ -2292,10 +2493,19 @@ function renderCategoriesSettingsUI() {
           </div>
         </summary>
         <div class="tb-category-body">
-          <div class="tb-category-toolbar">
-            <span class="muted">Couleur</span>
-            <span class="tb-category-swatch" style="background:${escapeHTML(col)}"></span>
-            <input type="color" value="${escapeHTML(col)}" style="width:44px;height:30px;padding:0;border:none;background:transparent;cursor:pointer;" onchange="setCategoryColor('${escapeHTML(c)}', this.value)" />
+          <div class="tb-category-toolbar" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between;">
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+              <span class="muted">Couleur</span>
+              <span class="tb-category-swatch" style="background:${escapeHTML(col)}"></span>
+              <input type="color" value="${escapeHTML(col)}" style="width:44px;height:30px;padding:0;border:none;background:transparent;cursor:pointer;" onchange="setCategoryColor('${escapeHTML(c)}', this.value)" />
+              ${_analyticStatusPillHtml(categoryMapping)}
+              ${_analyticUsagePillHtml(categoryUsage.txCount)}
+              <span class="tb-settings-pill">${escapeHTML(categoryMapping.sourceLabel || 'À classer')}</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span class="muted">Analyse</span>
+              <select class="input" style="min-width:190px;" onchange="saveAnalyticCategoryMapping('${escapeHTML(c)}', this.value)">${_analyticSelectOptions(categorySelectValue, false)}</select>
+            </div>
           </div>
           <div class="tb-category-sublist">${subHtml}</div>
         </div>
@@ -2539,6 +2749,8 @@ window.editSubcategory = editSubcategory;
 window.toggleSubcategoryActive = toggleSubcategoryActive;
 window.moveSubcategory = moveSubcategory;
 window.importExistingSubcategory = importExistingSubcategory;
+window.saveAnalyticCategoryMapping = saveAnalyticCategoryMapping;
+window.saveAnalyticSubcategoryMapping = saveAnalyticSubcategoryMapping;
 
 /* =========================
    Manual FX UI (fallback rates EUR->XXX)

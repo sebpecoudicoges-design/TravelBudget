@@ -762,6 +762,12 @@
         </div>
       </div>
     `;
+    const addBtn = host.querySelector("#tb-recurring-add-btn");
+    if (addBtn) {
+      addBtn.onclick = () => safeCall("Échéances périodiques", async () => {
+        window.openRecurringRuleModal();
+      });
+    }
     host.querySelectorAll("[data-rr-act]").forEach((btn) => {
       btn.onclick = (ev) => safeCall("Échéances périodiques", async () => {
         const el = ev.currentTarget;

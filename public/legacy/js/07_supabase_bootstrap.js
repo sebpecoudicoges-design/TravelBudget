@@ -697,6 +697,22 @@ const txPromise = sb
     }
   })();
 
+  const analyticMappingRulesPromise = (async () => {
+    try {
+      const { data: rows, error } = await sb
+        .from(TB_CONST.TABLES.analytic_category_mappings)
+        .select("id,user_id,category_name,subcategory_name,mapping_status,analytic_family,notes,created_at,updated_at")
+        .eq("user_id", sbUser.id)
+        .order("category_name", { ascending: true })
+        .order("subcategory_name", { ascending: true, nullsFirst: true });
+      if (error) throw error;
+      return { rows: rows || [], available: true };
+    } catch (e) {
+      console.warn("[analytic_category_mappings] load failed (settings governance limited)", e?.message || e);
+      return { rows: [], available: false };
+    }
+  })();
+
   const subcatPromise = (async () => {
     try {
       const { data: rows, error } = await sb
@@ -723,6 +739,7 @@ const recurringRuleRows = await recurringRulesPromise;
 const categorySubcategoryRows = await subcatPromise;
 const { rows: analysisMappingRows, available: analysisMappingAvailable } = await analysisMappingPromise;
 const { rows: analysisAuditRows, available: analysisAuditAvailable } = await analysisAuditPromise;
+const { rows: analyticMappingRuleRows, available: analyticMappingRulesAvailable } = await analyticMappingRulesPromise;
 const { rows: catRowsDb, error: catLoadErrDb } = await catPromise;
 if (catLoadErrDb) throw catLoadErrDb;
 
@@ -754,7 +771,19 @@ if (catLoadErrDb) throw catLoadErrDb;
 
   state.analysisMappingAvailable = !!analysisMappingAvailable;
   state.analysisAuditAvailable = !!analysisAuditAvailable;
+  state.analysisMappingRulesAvailable = !!analyticMappingRulesAvailable;
   state.analysisAuditRows = Array.isArray(analysisAuditRows) ? analysisAuditRows : [];
+  state.analyticCategoryMappings = (Array.isArray(analyticMappingRuleRows) ? analyticMappingRuleRows : []).map((x) => ({
+    id: x.id,
+    userId: x.user_id || null,
+    categoryName: x.category_name || null,
+    subcategoryName: x.subcategory_name || null,
+    mappingStatus: x.mapping_status || 'unmapped',
+    analyticFamily: x.analytic_family || null,
+    notes: x.notes || null,
+    createdAt: x.created_at || null,
+    updatedAt: x.updated_at || null,
+  }));
   state.analysisMappingByTxId = Object.fromEntries(
     (Array.isArray(analysisMappingRows) ? analysisMappingRows : [])
       .filter((x) => x && x.transaction_id)

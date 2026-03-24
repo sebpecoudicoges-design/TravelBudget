@@ -289,15 +289,34 @@ function _normKey(s){
     .replace(/[̀-ͯ]/g, '');
 }
 
-function _mapToSourcedBucket(categoryName) {
+function _sqlAnalyticFamilyToBucket(family) {
+  const f = _normKey(family);
+  if (f === 'accommodation') return 'Logement';
+  if (f === 'food') return 'Repas';
+  if (f === 'transport') return 'Transport';
+  if (f === 'activities') return 'Activités';
+  return null;
+}
+
+function _mapToSourcedBucket(categoryName, tx) {
+  const byTx = tx?.analyticMapping || (tx?.id ? state?.analysisMappingByTxId?.[String(tx.id)] : null) || null;
+  if (byTx) {
+    const status = String(byTx.mappingStatus || byTx.mapping_status || '').trim().toLowerCase();
+    const family = byTx.analyticFamily || byTx.analytic_family || null;
+    const bucket = _sqlAnalyticFamilyToBucket(family);
+    const key = _normKey(categoryName);
+    if (status === 'mapped' && bucket) return { mode: 'mapped', bucket, key, source: 'sql' };
+    if (status === 'excluded') return { mode: 'excluded', key, source: 'sql' };
+    if (status === 'unmapped') return { mode: 'unmapped', key, source: 'sql' };
+  }
   const key = _normKey(categoryName);
   const meta = TB_SOURCED_CATEGORY_MAPPING[key] || null;
-  if (!meta) return { mode: 'unmapped', key };
+  if (!meta) return { mode: 'unmapped', key, source: 'fallback' };
   const compareMode = String(meta.compare_mode || meta.mode || '').trim().toLowerCase();
   const bucket = String(meta.sourced_bucket || meta.bucket || '').trim() || null;
-  if (compareMode === 'mapped' && bucket) return { mode: 'mapped', bucket, key };
-  if (compareMode === 'excluded') return { mode: 'excluded', key };
-  return { mode: 'unmapped', key };
+  if (compareMode === 'mapped' && bucket) return { mode: 'mapped', bucket, key, source: 'fallback' };
+  if (compareMode === 'excluded') return { mode: 'excluded', key, source: 'fallback' };
+  return { mode: 'unmapped', key, source: 'fallback' };
 }
 
 function _analysisBucketOrder(){
@@ -503,7 +522,7 @@ function _analysisBucketOrder(){
       if (!coveredDaySet.size || coveredDaySet.has(ds)) {
         const amt = _convert(tx?.amount, tx?.currency || base, ds, base);
         const raw = _norm(tx?.category || 'Autre');
-        const mapping = _mapToSourcedBucket(raw);
+        const mapping = _mapToSourcedBucket(raw, tx);
 
         if (mapping.mode === 'excluded') {
           comparableExcludedSpent += amt;

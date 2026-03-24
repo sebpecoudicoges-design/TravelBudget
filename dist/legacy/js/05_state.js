@@ -30,6 +30,7 @@ budgetSegments: [],
 categories: [],
 categoryColors: {},
 categorySubcategories: [],
+analyticCategoryMappings: [],
 };
 // ---- expose for plugins (do not remove) ----
 Object.defineProperty(window, "state", { get: () => state, set: (v) => { state = v; } });

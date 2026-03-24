@@ -666,6 +666,53 @@ const txPromise = sb
     }
   })();
 
+  const analysisMappingPromise = (async () => {
+    try {
+      const { data: rows, error } = await sb
+        .from(TB_CONST.TABLES.v_transaction_analytic_mapping)
+        .select("transaction_id,mapping_id,mapping_status,analytic_family,mapping_source,category,subcategory")
+        .eq("user_id", sbUser.id)
+        .eq("travel_id", activeTravelId);
+      if (error) throw error;
+      return { rows: rows || [], available: true };
+    } catch (e) {
+      console.warn("[v_transaction_analytic_mapping] load failed (fallback to JS)", e?.message || e);
+      return { rows: [], available: false };
+    }
+  })();
+
+  const analysisAuditPromise = (async () => {
+    try {
+      const { data: rows, error } = await sb
+        .from(TB_CONST.TABLES.v_analytic_mapping_audit)
+        .select("user_id,category,subcategory,mapping_status,analytic_family,mapping_source,tx_count,expense_count,income_count,expense_amount_sum,income_amount_sum,first_seen_date,last_seen_date")
+        .eq("user_id", sbUser.id)
+        .order("tx_count", { ascending: false })
+        .order("category", { ascending: true });
+      if (error) throw error;
+      return { rows: rows || [], available: true };
+    } catch (e) {
+      console.warn("[v_analytic_mapping_audit] load failed (fallback to JS)", e?.message || e);
+      return { rows: [], available: false };
+    }
+  })();
+
+  const analyticMappingRulesPromise = (async () => {
+    try {
+      const { data: rows, error } = await sb
+        .from(TB_CONST.TABLES.analytic_category_mappings)
+        .select("id,user_id,category_name,subcategory_name,mapping_status,analytic_family,notes,created_at,updated_at")
+        .eq("user_id", sbUser.id)
+        .order("category_name", { ascending: true })
+        .order("subcategory_name", { ascending: true, nullsFirst: true });
+      if (error) throw error;
+      return { rows: rows || [], available: true };
+    } catch (e) {
+      console.warn("[analytic_category_mappings] load failed (settings governance limited)", e?.message || e);
+      return { rows: [], available: false };
+    }
+  })();
+
   const subcatPromise = (async () => {
     try {
       const { data: rows, error } = await sb
@@ -690,6 +737,9 @@ if (tErr) throw tErr;
 const segRows = await segPromise;
 const recurringRuleRows = await recurringRulesPromise;
 const categorySubcategoryRows = await subcatPromise;
+const { rows: analysisMappingRows, available: analysisMappingAvailable } = await analysisMappingPromise;
+const { rows: analysisAuditRows, available: analysisAuditAvailable } = await analysisAuditPromise;
+const { rows: analyticMappingRuleRows, available: analyticMappingRulesAvailable } = await analyticMappingRulesPromise;
 const { rows: catRowsDb, error: catLoadErrDb } = await catPromise;
 if (catLoadErrDb) throw catLoadErrDb;
 
@@ -718,6 +768,35 @@ if (catLoadErrDb) throw catLoadErrDb;
     lastTxCreatedAt: x.last_tx_created_at || null,
   }));
   state.walletBalanceMap = Object.fromEntries((state.walletBalances || []).map((x) => [String(x.walletId || ""), x]));
+
+  state.analysisMappingAvailable = !!analysisMappingAvailable;
+  state.analysisAuditAvailable = !!analysisAuditAvailable;
+  state.analysisMappingRulesAvailable = !!analyticMappingRulesAvailable;
+  state.analysisAuditRows = Array.isArray(analysisAuditRows) ? analysisAuditRows : [];
+  state.analyticCategoryMappings = (Array.isArray(analyticMappingRuleRows) ? analyticMappingRuleRows : []).map((x) => ({
+    id: x.id,
+    userId: x.user_id || null,
+    categoryName: x.category_name || null,
+    subcategoryName: x.subcategory_name || null,
+    mappingStatus: x.mapping_status || 'unmapped',
+    analyticFamily: x.analytic_family || null,
+    notes: x.notes || null,
+    createdAt: x.created_at || null,
+    updatedAt: x.updated_at || null,
+  }));
+  state.analysisMappingByTxId = Object.fromEntries(
+    (Array.isArray(analysisMappingRows) ? analysisMappingRows : [])
+      .filter((x) => x && x.transaction_id)
+      .map((x) => [String(x.transaction_id), {
+        transactionId: x.transaction_id,
+        mappingId: x.mapping_id || null,
+        mappingStatus: x.mapping_status || 'unmapped',
+        analyticFamily: x.analytic_family || null,
+        mappingSource: x.mapping_source || 'fallback_unmapped',
+        category: x.category || null,
+        subcategory: x.subcategory || null,
+      }])
+  );
 
 state.wallets = (w || []).map((x) => ({
   id: x.id,
@@ -754,6 +833,8 @@ state.wallets = (w || []).map((x) => ({
   occurrenceDate: x.occurrence_date || null,
   generatedByRule: !!x.generated_by_rule,
   recurringInstanceStatus: x.recurring_instance_status || null,
+
+  analyticMapping: state.analysisMappingByTxId[String(x.id)] || null,
 
   createdAt: new Date(x.created_at).getTime(),
   date: x.date_start ? new Date(String(x.date_start) + "T00:00:00").getTime() : new Date(x.created_at).getTime(),
