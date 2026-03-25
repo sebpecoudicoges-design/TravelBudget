@@ -4249,7 +4249,9 @@ CREATE TABLE IF NOT EXISTS "public"."settings" (
     "palette_json" "jsonb",
     "palette_preset" "text",
     "base_currency" "text" DEFAULT 'EUR'::"text",
-    CONSTRAINT "settings_base_currency_iso3_chk" CHECK ((("base_currency" IS NULL) OR ("base_currency" ~ '^[A-Z]{3}$'::"text")))
+    "ui_mode" "text" DEFAULT 'advanced'::"text" NOT NULL,
+    CONSTRAINT "settings_base_currency_iso3_chk" CHECK ((("base_currency" IS NULL) OR ("base_currency" ~ '^[A-Z]{3}$'::"text"))),
+    CONSTRAINT "settings_ui_mode_chk" CHECK (("ui_mode" = ANY (ARRAY['simple'::"text", 'advanced'::"text"])))
 );
 
 

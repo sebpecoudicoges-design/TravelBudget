@@ -4,7 +4,7 @@ SET session_replication_role = replica;
 -- PostgreSQL database dump
 --
 
--- \restrict SWmzO574yObVgCZNKwMk9LSyapeBFTMODhsVhDYatBqANRd86O43tJeVZahPdFf
+-- \restrict KNLAMFbIduU3c57eL28LhSXJb8zlPJknmbaVXOsqX4hqFacaf2QB7SErAa1bbuY
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -118,7 +118,8 @@ INSERT INTO "public"."analytic_category_mappings" ("id", "user_id", "category_na
 	('ef87fe07-6dfc-46e7-8bb6-8c60f8a1c770', 'b63f45f3-fc01-4714-8cc4-a09ab49e18c7', 'Cadeau', NULL, 'excluded', NULL, 'Gifts excluded from core travel daily reference mix', '2026-03-24 03:30:26.769828+00', '2026-03-24 03:30:26.769828+00'),
 	('2bc9826e-4e32-4f93-9f97-605f583605b5', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'Test', NULL, 'excluded', NULL, NULL, '2026-03-24 04:41:36.199282+00', '2026-03-24 04:41:35.398+00'),
 	('a9baef90-faac-478c-a01c-6b305f624e64', '8516d948-4970-453a-912e-e984afabddb9', 'test Deux', 'bloup', 'excluded', NULL, NULL, '2026-03-25 07:24:52.46758+00', '2026-03-25 07:31:08.439721+00'),
-	('1a60d187-8344-4466-8ee6-2953efdca79a', '8516d948-4970-453a-912e-e984afabddb9', 'test Deux', NULL, 'mapped', 'food', NULL, '2026-03-25 07:24:16.721429+00', '2026-03-25 07:31:14.495563+00');
+	('1a60d187-8344-4466-8ee6-2953efdca79a', '8516d948-4970-453a-912e-e984afabddb9', 'test Deux', NULL, 'mapped', 'food', NULL, '2026-03-25 07:24:16.721429+00', '2026-03-25 07:31:14.495563+00'),
+	('0b660908-e133-422c-bf05-c817328503d0', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'Autre', 'Remboursement', 'excluded', NULL, NULL, '2026-03-25 09:19:30.621322+00', '2026-03-25 09:19:30.621322+00');
 
 
 --
@@ -295,6 +296,7 @@ INSERT INTO "public"."category_subcategories" ("id", "user_id", "category_id", "
 	('7d212f35-abf8-4b68-ba69-14254fa6adbe', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'be4b7a43-261e-420d-b683-04d325289e1a', 'Souvenir', 'Carte postale', NULL, 10, true, '2026-03-18 07:08:39.140744+00', '2026-03-18 11:33:24.301223+00'),
 	('f2306993-661b-4bf7-8efa-1d676ccaa322', '8516d948-4970-453a-912e-e984afabddb9', NULL, 'test Deux', 'bloup', NULL, 0, true, '2026-03-25 07:24:36.557823+00', '2026-03-25 07:24:35.954+00'),
 	('a5beb2ea-7b61-49d2-acbe-ffcee77a36a7', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'c08b62fc-a3e4-4c92-ac96-3ac2e713d9ca', 'Cadeau', 'Hôte', NULL, 30, true, '2026-03-18 07:08:35.782641+00', '2026-03-18 11:33:18.828979+00'),
+	('450e0dc6-d7db-494a-b84b-f45f0e06cddf', '6db47d6b-6e2e-4886-a262-520a91854f4c', '1c8f633a-66f2-4e9f-997d-8f9dcd482a16', 'Autre', 'Remboursement', NULL, 2, true, '2026-03-25 09:19:30.084507+00', '2026-03-25 09:19:29.515+00'),
 	('d3f3166f-e546-4fd4-9d23-f0974bd2f808', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'be4b7a43-261e-420d-b683-04d325289e1a', 'Souvenir', 'Artisanat', NULL, 20, true, '2026-03-18 07:08:38.527093+00', '2026-03-18 11:33:24.82445+00'),
 	('5346dd9f-8b5f-4e31-b838-af59c5899a37', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'ba68eaf0-9c07-4153-b50f-e3b568825ce9', 'Mouvement interne', 'Virement', NULL, 20, true, '2026-03-18 07:09:16.872588+00', '2026-03-18 11:34:18.581466+00'),
 	('3c049ae5-eed4-45e3-8c91-32d3314505a5', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'ba68eaf0-9c07-4153-b50f-e3b568825ce9', 'Mouvement interne', 'Change devise', NULL, 30, true, '2026-03-18 07:09:18.68552+00', '2026-03-18 11:34:18.883716+00'),
@@ -376,8 +378,8 @@ INSERT INTO "public"."wallets" ("id", "user_id", "name", "currency", "balance", 
 	('6999585d-9607-47f0-a565-37786bfb67d9', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'Cash', 'THB', 0, '2026-02-10 13:27:31.83289+00', 'cash', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-11 08:05:38.343+00', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d'),
 	('05a20057-54c0-4f52-8bf1-4a2a22d30084', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'Banque Revolut', 'THB', 0, '2026-02-16 06:00:07.125358+00', 'bank', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-11 08:05:54.836+00', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d'),
 	('64de2c12-6e64-4fdd-9ec6-184c956dcb38', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'Cash', 'LAK', 810000, '2026-03-02 05:08:29.432919+00', 'cash', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-15 21:12:52.533+00', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d'),
-	('6e21e00c-8e67-4878-a2d3-6bb3bb1c6ec5', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'Compte Crédit Mutuel', 'EUR', 127.77, '2026-02-12 09:52:28.972012+00', 'bank', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-18 13:59:45.597+00', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d'),
-	('0b8895e4-f4cb-4571-89ae-9a7afd42e7e0', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'Cash', 'VND', 96000, '2026-03-15 07:12:41.417378+00', 'cash', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-23 10:21:50.384+00', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d');
+	('0b8895e4-f4cb-4571-89ae-9a7afd42e7e0', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'Cash', 'VND', 96000, '2026-03-15 07:12:41.417378+00', 'cash', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-23 10:21:50.384+00', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d'),
+	('6e21e00c-8e67-4878-a2d3-6bb3bb1c6ec5', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'Compte Crédit Mutuel', 'EUR', -892.23, '2026-02-12 09:52:28.972012+00', 'bank', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-25 09:20:56.387+00', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d');
 
 
 --
@@ -407,7 +409,8 @@ INSERT INTO "public"."recurring_rules" ("id", "user_id", "travel_id", "wallet_id
 	('7d9d71de-6b0c-4fd5-8448-78853f2ed45f', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', '6e21e00c-8e67-4878-a2d3-6bb3bb1c6ec5', 'Frais Crédit Mutuel', 'expense', 2.25, 'EUR', 'Frais bancaire', 'Tenue de compte', 'every_x_months', 1, NULL, 31, NULL, '2026-03-15', NULL, NULL, '2026-12-31', '2026-12-31', true, '2026-03-15 04:31:01.734224+00', '2026-03-18 13:32:29.723552+00', false, NULL, false),
 	('a245cbe4-a5a9-463a-acd9-1007e7255607', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', '4e2f798d-caa6-4134-9da1-57097cc07265', 'ChatGPT', 'expense', 23, 'EUR', 'Projet Personnel', 'Abonnement', 'every_x_months', 1, NULL, 13, NULL, '2026-04-01', NULL, NULL, '2026-12-31', '2026-12-31', true, '2026-03-15 04:29:27.867586+00', '2026-03-18 13:32:43.348271+00', false, NULL, true),
 	('010da0e4-eb9a-45b4-a485-f8c71b614e73', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', '4e2f798d-caa6-4134-9da1-57097cc07265', 'Frais MonaB Uniq+', 'expense', 12, 'EUR', 'Frais bancaire', 'Tenue de compte', 'every_x_months', 1, NULL, 6, NULL, '2026-03-15', NULL, NULL, '2026-12-31', '2026-12-31', true, '2026-03-15 04:32:37.932097+00', '2026-03-18 13:32:55.311503+00', false, NULL, false),
-	('4014eb18-4435-4254-8ddd-768f39731833', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', '6e21e00c-8e67-4878-a2d3-6bb3bb1c6ec5', 'eSim Free', 'expense', 2, 'EUR', 'Abonnement/Mobile', 'Forfait mobile', 'every_x_months', 1, NULL, 5, NULL, '2026-04-01', NULL, NULL, '2026-12-31', '2026-12-31', true, '2026-03-15 04:30:16.735931+00', '2026-03-18 13:33:12.436335+00', false, NULL, false);
+	('4014eb18-4435-4254-8ddd-768f39731833', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', '6e21e00c-8e67-4878-a2d3-6bb3bb1c6ec5', 'eSim Free', 'expense', 2, 'EUR', 'Abonnement/Mobile', 'Forfait mobile', 'every_x_months', 1, NULL, 5, NULL, '2026-04-01', NULL, NULL, '2026-12-31', '2026-12-31', true, '2026-03-15 04:30:16.735931+00', '2026-03-18 13:33:12.436335+00', false, NULL, false),
+	('e7907111-b085-45ee-ba65-d816779da1f9', '6db47d6b-6e2e-4886-a262-520a91854f4c', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', '4e2f798d-caa6-4134-9da1-57097cc07265', 'Remboursement Mamie', 'expense', 1000, 'EUR', 'Autre', 'Remboursement', 'every_x_months', 1, NULL, 5, NULL, '2026-08-01', '2026-11-30', NULL, '2026-11-30', '2026-11-30', true, '2026-03-25 09:07:36.789454+00', '2026-03-25 09:19:56.320439+00', false, NULL, true);
 
 
 --
@@ -416,19 +419,19 @@ INSERT INTO "public"."recurring_rules" ("id", "user_id", "travel_id", "wallet_id
 
 INSERT INTO "public"."schema_version" ("key", "version", "updated_at") VALUES
 	('travel_budget', 1, '2026-02-20 05:23:10.694738+00'),
-	('travelbudget', 93111, '2026-03-25 07:41:19.867762+00');
+	('travelbudget', 94000, '2026-03-25 08:27:49.706375+00');
 
 
 --
 -- Data for Name: settings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO "public"."settings" ("user_id", "period_start", "period_end", "daily_budget_thb", "eur_thb_rate", "theme", "updated_at", "periods", "palette_json", "palette_preset", "base_currency") VALUES
-	('b63f45f3-fc01-4714-8cc4-a09ab49e18c7', NULL, NULL, 1000, 35, 'light', '2026-03-11 04:00:32.013+00', NULL, '{"bad": "#ef4444", "good": "#16a34a", "warn": "#f59e0b", "accent": "#2563eb"}', 'Ocean', 'USD'),
-	('6db47d6b-6e2e-4886-a262-520a91854f4c', '2026-02-10', '2026-03-03', 1000, 35, 'light', '2026-03-18 15:00:12.265+00', NULL, '{"bad": "#fb7185", "good": "#22c55e", "warn": "#f59e0b", "accent": "#7c3aed"}', 'Grape', 'EUR'),
-	('2a575871-a403-43b9-aaf6-41bff3433d4a', NULL, NULL, 1000, 35, 'light', '2026-02-26 11:00:49.746+00', NULL, '{"bad": "#ef4444", "good": "#16a34a", "warn": "#f59e0b", "accent": "#2563eb"}', 'Ocean', 'EUR'),
-	('8516d948-4970-453a-912e-e984afabddb9', NULL, NULL, 1000, 35, 'light', '2026-03-03 14:49:09.874+00', NULL, '{"bad": "#ef4444", "good": "#16a34a", "warn": "#f59e0b", "accent": "#2563eb"}', 'Ocean', 'EUR'),
-	('bfe2a38a-d934-45c9-9061-cee531cf5823', NULL, NULL, 1000, 35, 'dark', '2026-03-04 02:42:22.359+00', NULL, '{"bad": "#ef4444", "good": "#16a34a", "warn": "#f59e0b", "accent": "#2563eb"}', 'Ocean', 'EUR');
+INSERT INTO "public"."settings" ("user_id", "period_start", "period_end", "daily_budget_thb", "eur_thb_rate", "theme", "updated_at", "periods", "palette_json", "palette_preset", "base_currency", "ui_mode") VALUES
+	('b63f45f3-fc01-4714-8cc4-a09ab49e18c7', NULL, NULL, 1000, 35, 'light', '2026-03-11 04:00:32.013+00', NULL, '{"bad": "#ef4444", "good": "#16a34a", "warn": "#f59e0b", "accent": "#2563eb"}', 'Ocean', 'USD', 'advanced'),
+	('6db47d6b-6e2e-4886-a262-520a91854f4c', '2026-02-10', '2026-03-03', 1000, 35, 'light', '2026-03-18 15:00:12.265+00', NULL, '{"bad": "#fb7185", "good": "#22c55e", "warn": "#f59e0b", "accent": "#7c3aed"}', 'Grape', 'EUR', 'advanced'),
+	('2a575871-a403-43b9-aaf6-41bff3433d4a', NULL, NULL, 1000, 35, 'light', '2026-02-26 11:00:49.746+00', NULL, '{"bad": "#ef4444", "good": "#16a34a", "warn": "#f59e0b", "accent": "#2563eb"}', 'Ocean', 'EUR', 'advanced'),
+	('8516d948-4970-453a-912e-e984afabddb9', NULL, NULL, 1000, 35, 'light', '2026-03-03 14:49:09.874+00', NULL, '{"bad": "#ef4444", "good": "#16a34a", "warn": "#f59e0b", "accent": "#2563eb"}', 'Ocean', 'EUR', 'advanced'),
+	('bfe2a38a-d934-45c9-9061-cee531cf5823', NULL, NULL, 1000, 35, 'dark', '2026-03-04 02:42:22.359+00', NULL, '{"bad": "#ef4444", "good": "#16a34a", "warn": "#f59e0b", "accent": "#2563eb"}', 'Ocean', 'EUR', 'advanced');
 
 
 --
@@ -924,7 +927,12 @@ INSERT INTO "public"."transactions" ("id", "user_id", "wallet_id", "type", "amou
 	('c71dcb67-793c-4dba-ad86-d1d0b8195231', '6db47d6b-6e2e-4886-a262-520a91854f4c', '0b8895e4-f4cb-4571-89ae-9a7afd42e7e0', 'expense', 120000, 'VND', 'Repas', 'Repas', '2026-03-23', '2026-03-23', true, false, false, '2026-03-23 07:05:26.804304+00', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-23 07:05:26.804304+00', NULL, true, NULL, false, 1, 'none', '2026-03-23 07:05:25.148+00', 'VND', 'VND', 'Déjeuner', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', NULL, NULL, false, 'confirmed'),
 	('70b6afd2-0758-4c4d-b97e-2e77ca0cf290', '8516d948-4970-453a-912e-e984afabddb9', '113a9886-c1a3-4afe-9181-e382a5b0dfc9', 'expense', 1500, 'THB', 'Transport Internationale', 'Transport Internationale', '2026-03-24', '2026-03-24', true, false, true, '2026-03-24 02:23:04.610454+00', '62840f74-3128-48c7-b431-2172f608246a', '2026-03-24 02:50:36.578+00', NULL, true, NULL, false, 1, 'none', '2026-03-24 02:23:03.904+00', 'THB', 'THB', 'Bus international', '81343a04-99a2-4a55-9cc7-0a4dded6971e', NULL, NULL, false, 'confirmed'),
 	('8b2ad057-1ac1-46d7-91fd-bcb120f57faa', '6db47d6b-6e2e-4886-a262-520a91854f4c', '64de2c12-6e64-4fdd-9ec6-184c956dcb38', 'expense', 220000, 'LAK', 'Autre', 'Protection téléphone et nouveau écouteur', '2026-03-14', '2026-03-14', true, false, false, '2026-03-14 11:05:02.659007+00', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-24 03:10:09.998+00', NULL, false, NULL, false, 1, 'none', '2026-03-14 11:05:02.406+00', 'LAK', 'LAK', NULL, 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', NULL, NULL, false, 'confirmed'),
-	('444c7855-d50d-4b53-8c3f-90c963df9e20', '6db47d6b-6e2e-4886-a262-520a91854f4c', '4e2f798d-caa6-4134-9da1-57097cc07265', 'expense', 12, 'EUR', 'Frais bancaire', 'Frais bancaire', '2026-03-09', '2026-03-09', true, false, false, '2026-03-09 08:58:23.099929+00', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-24 03:10:18.387+00', NULL, false, NULL, false, 24743.63, 'fx', '2026-03-09 08:58:22.946+00', 'LAK', 'EUR', 'Tenue de compte', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', NULL, NULL, false, 'confirmed');
+	('444c7855-d50d-4b53-8c3f-90c963df9e20', '6db47d6b-6e2e-4886-a262-520a91854f4c', '4e2f798d-caa6-4134-9da1-57097cc07265', 'expense', 12, 'EUR', 'Frais bancaire', 'Frais bancaire', '2026-03-09', '2026-03-09', true, false, false, '2026-03-09 08:58:23.099929+00', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-24 03:10:18.387+00', NULL, false, NULL, false, 24743.63, 'fx', '2026-03-09 08:58:22.946+00', 'LAK', 'EUR', 'Tenue de compte', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', NULL, NULL, false, 'confirmed'),
+	('a8e8ed79-f876-4b9a-9452-ff532efff297', '6db47d6b-6e2e-4886-a262-520a91854f4c', '4e2f798d-caa6-4134-9da1-57097cc07265', 'expense', 1000, 'EUR', 'Autre', 'Remboursement Mamie', '2026-08-05', '2026-08-05', false, true, false, '2026-03-25 09:10:36.075461+00', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-25 09:19:55.486+00', NULL, false, NULL, false, NULL, NULL, '2026-03-25 09:10:36.075461+00', NULL, NULL, 'Remboursement', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', 'e7907111-b085-45ee-ba65-d816779da1f9', '2026-08-05', true, 'generated'),
+	('2a4e8783-5951-43c8-980a-d9d49929aa9a', '6db47d6b-6e2e-4886-a262-520a91854f4c', '4e2f798d-caa6-4134-9da1-57097cc07265', 'expense', 1000, 'EUR', 'Autre', 'Remboursement Mamie', '2026-09-05', '2026-09-05', false, true, false, '2026-03-25 09:10:36.075461+00', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-25 09:19:55.486+00', NULL, false, NULL, false, NULL, NULL, '2026-03-25 09:10:36.075461+00', NULL, NULL, 'Remboursement', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', 'e7907111-b085-45ee-ba65-d816779da1f9', '2026-09-05', true, 'generated'),
+	('8f5b8cef-7090-432e-9017-f3ff3ba569a2', '6db47d6b-6e2e-4886-a262-520a91854f4c', '4e2f798d-caa6-4134-9da1-57097cc07265', 'expense', 1000, 'EUR', 'Autre', 'Remboursement Mamie', '2026-10-05', '2026-10-05', false, true, false, '2026-03-25 09:10:36.075461+00', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-25 09:19:55.486+00', NULL, false, NULL, false, NULL, NULL, '2026-03-25 09:10:36.075461+00', NULL, NULL, 'Remboursement', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', 'e7907111-b085-45ee-ba65-d816779da1f9', '2026-10-05', true, 'generated'),
+	('8afc19cc-e1c3-4db8-af33-f191a9f4a2b1', '6db47d6b-6e2e-4886-a262-520a91854f4c', '4e2f798d-caa6-4134-9da1-57097cc07265', 'expense', 1000, 'EUR', 'Autre', 'Remboursement Mamie', '2026-11-05', '2026-11-05', false, true, false, '2026-03-25 09:10:36.075461+00', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-25 09:19:55.486+00', NULL, false, NULL, false, NULL, NULL, '2026-03-25 09:10:36.075461+00', NULL, NULL, 'Remboursement', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', 'e7907111-b085-45ee-ba65-d816779da1f9', '2026-11-05', true, 'generated'),
+	('a76c44d3-84a5-4037-94e8-e54d5f43691d', '6db47d6b-6e2e-4886-a262-520a91854f4c', '6e21e00c-8e67-4878-a2d3-6bb3bb1c6ec5', 'expense', 600, 'EUR', 'Autre', 'Remboursement Maman', '2026-09-05', '2026-09-05', false, true, false, '2026-03-25 09:08:28.243279+00', 'bffe4068-e6bc-482c-8f97-24d6b4f8808b', '2026-03-25 09:21:06.636+00', NULL, false, NULL, false, 1.6652, 'fx', '2026-03-25 09:08:27.59+00', 'AUD', 'EUR', 'Remboursement', 'd6c3e70a-d31f-4647-91e8-e12830d0c00d', NULL, NULL, false, 'confirmed');
 
 
 --
@@ -1234,6 +1242,6 @@ SELECT pg_catalog.setval('"public"."fx_rates_id_seq"', 7, true);
 -- PostgreSQL database dump complete
 --
 
--- \unrestrict SWmzO574yObVgCZNKwMk9LSyapeBFTMODhsVhDYatBqANRd86O43tJeVZahPdFf
+-- \unrestrict KNLAMFbIduU3c57eL28LhSXJb8zlPJknmbaVXOsqX4hqFacaf2QB7SErAa1bbuY
 
 RESET ALL;

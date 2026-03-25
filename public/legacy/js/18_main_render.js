@@ -36,6 +36,7 @@ window.tbRefreshFinancialState = function tbRefreshFinancialState(reason, opts) 
 // Goal: a single broken widget must not take down the whole page.
 function renderAll() {
   _tbRenderLog("renderAll", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
+  try { if (typeof window.tbApplyUiModeToDocument === "function") window.tbApplyUiModeToDocument(); } catch (_) {}
   const view = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
 
   // If safeCall isn't loaded for some reason, fall back to best-effort legacy behaviour.

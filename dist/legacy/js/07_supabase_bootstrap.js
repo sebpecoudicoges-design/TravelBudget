@@ -209,8 +209,9 @@ async function runFirstTimeWizard() {
 }
 // --- end onboarding wizard ---
 
-async function ensureBootstrap() {
+async function ensureBootstrap(opts = {}) {
   if (!sbUser) return;
+  const refreshToken = Number(opts?.refreshToken || window.__TB_REFRESH_TOKEN__ || 0);
   const today = toLocalISODate(new Date());
 
   // local defaults
@@ -437,15 +438,28 @@ function pickActiveTravel(travels) {
   return travels[0].id;
 }
 
-async function loadFromSupabase() {
+async function loadFromSupabase(opts = {}) {
   if (!sbUser) return;
+  const refreshToken = Number(opts?.refreshToken || window.__TB_REFRESH_TOKEN__ || 0);
 
   // V8.9.4: parallelize the 3 independent bootstrap reads
-const settingsPromise = sb
-  .from(TB_CONST.TABLES.settings)
-  .select("theme,palette_json,palette_preset,base_currency")
-  .eq("user_id", sbUser.id)
-  .maybeSingle();
+const settingsPromise = (async () => {
+  const baseSel = "theme,palette_json,palette_preset,base_currency";
+  const withUiMode = `${baseSel},ui_mode`;
+  let res = await sb
+    .from(TB_CONST.TABLES.settings)
+    .select(withUiMode)
+    .eq("user_id", sbUser.id)
+    .maybeSingle();
+  if (res?.error && String(res.error.message || '').toLowerCase().includes('ui_mode')) {
+    res = await sb
+      .from(TB_CONST.TABLES.settings)
+      .select(baseSel)
+      .eq("user_id", sbUser.id)
+      .maybeSingle();
+  }
+  return res;
+})();
 
 const fxManualPromise = sb
   .from(TB_CONST.TABLES.fx_manual_rates)
@@ -497,6 +511,17 @@ if (s) {
       if (!state.user) state.user = {};
       state.user.baseCurrency = bc;
     }
+  } catch (_) {}
+
+  try {
+    if (!state.user) state.user = {};
+    const key = TB_CONST?.LS_KEYS?.ui_mode || 'travelbudget_ui_mode_v1';
+    const persisted = (typeof window.tbNormalizeUiMode === 'function')
+      ? window.tbNormalizeUiMode(s.ui_mode || localStorage.getItem(key) || 'advanced')
+      : (String(s.ui_mode || localStorage.getItem(key) || 'advanced').trim().toLowerCase() === 'simple' ? 'simple' : 'advanced');
+    state.user.uiMode = persisted;
+    try { localStorage.setItem(key, persisted); } catch (_) {}
+    try { if (typeof window.tbApplyUiModeToDocument === 'function') window.tbApplyUiModeToDocument(); } catch (_) {}
   } catch (_) {}
 }
 
@@ -668,13 +693,34 @@ const txPromise = sb
 
   const catPromise = (async () => {
     try {
-      const { data: catRows, error: catErr } = await sb
+      let { data: catRows, error: catErr } = await sb
         .from(TB_CONST.TABLES.categories)
         .select("id,name,color,sort_order")
         .eq("user_id", sbUser.id)
         .order("sort_order", { ascending: true })
         .order("name", { ascending: true });
       if (catErr) throw catErr;
+
+      if (!Array.isArray(catRows) || catRows.length === 0) {
+        try {
+          const seedRpc = TB_CONST?.RPCS?.seed_default_categories_for_user || 'seed_default_categories_for_user';
+          const { error: seedCatErr } = await sb.rpc(seedRpc);
+          if (seedCatErr) throw seedCatErr;
+          const seedMapRpc = TB_CONST?.RPCS?.seed_default_analytic_category_mappings || 'seed_default_analytic_category_mappings';
+          await sb.rpc(seedMapRpc);
+          const reload = await sb
+            .from(TB_CONST.TABLES.categories)
+            .select("id,name,color,sort_order")
+            .eq("user_id", sbUser.id)
+            .order("sort_order", { ascending: true })
+            .order("name", { ascending: true });
+          if (reload.error) throw reload.error;
+          catRows = reload.data || [];
+        } catch (seedErr) {
+          console.warn('[categories] seed default categories failed', seedErr?.message || seedErr);
+        }
+      }
+
       return { rows: (catRows || []), error: null };
     } catch (e) {
       return { rows: [], error: e };
@@ -745,18 +791,38 @@ const txPromise = sb
     }
   })();
 
-const w = await walletsPromise;
-const walletBalanceRows = await walletBalancesPromise;
-const { data: tx, error: tErr } = await txPromise;
+const [
+  w,
+  walletBalanceRows,
+  txRes,
+  segRows,
+  recurringRuleRows,
+  categorySubcategoryRows,
+  analysisMappingRes,
+  analysisAuditRes,
+  analyticMappingRulesRes,
+  catRes
+] = await Promise.all([
+  walletsPromise,
+  walletBalancesPromise,
+  txPromise,
+  segPromise,
+  recurringRulesPromise,
+  subcatPromise,
+  analysisMappingPromise,
+  analysisAuditPromise,
+  analyticMappingRulesPromise,
+  catPromise
+]);
+
+const { data: tx, error: tErr } = txRes || {};
 if (tErr) throw tErr;
-const segRows = await segPromise;
-const recurringRuleRows = await recurringRulesPromise;
-const categorySubcategoryRows = await subcatPromise;
-const { rows: analysisMappingRows, available: analysisMappingAvailable } = await analysisMappingPromise;
-const { rows: analysisAuditRows, available: analysisAuditAvailable } = await analysisAuditPromise;
-const { rows: analyticMappingRuleRows, available: analyticMappingRulesAvailable } = await analyticMappingRulesPromise;
-const { rows: catRowsDb, error: catLoadErrDb } = await catPromise;
+const { rows: analysisMappingRows, available: analysisMappingAvailable } = analysisMappingRes || { rows: [], available: false };
+const { rows: analysisAuditRows, available: analysisAuditAvailable } = analysisAuditRes || { rows: [], available: false };
+const { rows: analyticMappingRuleRows, available: analyticMappingRulesAvailable } = analyticMappingRulesRes || { rows: [], available: false };
+const { rows: catRowsDb, error: catLoadErrDb } = catRes || { rows: [], error: null };
 if (catLoadErrDb) throw catLoadErrDb;
+if (refreshToken !== Number(window.__TB_REFRESH_TOKEN__ || 0)) return;
 
   state.period.id = p.id;
   state.period.start = p.start_date;
@@ -931,12 +997,9 @@ state.wallets = (w || []).map((x) => ({
 
   state.categoriesRows = (catRowsDb || []).map((x) => ({ id: x.id, name: x.name, color: x.color || null, sortOrder: Number(x.sort_order || 0) }));
 
-  // categories — DB first, then local/state, then filtered transaction fallback
-Promise.resolve({ rows: catRowsDb, error: null })
-  .then(async ({ rows: catRows, error: catLoadErr }) => {
-    if (catLoadErr) throw catLoadErr;
-
-    const rows = catRows || [];
+  // categories — DB first, then in-memory transaction fallback, no generic localStorage restore
+  try {
+    const rows = catRowsDb || [];
     const merged = [];
     const seen = new Set();
     const isTripLike = (name) => /^\s*\[\s*trip\s*\]/i.test(String(name || ""));
@@ -952,22 +1015,7 @@ Promise.resolve({ rows: catRowsDb, error: null })
       merged.push(name);
     };
 
-    const dbNames = rows.map(r => String(r.name || "").trim()).filter(Boolean);
-    dbNames.forEach(push);
-
-    try {
-      if (typeof loadCategoriesFromLocalStorage === "function") {
-        const arr = loadCategoriesFromLocalStorage();
-        if (Array.isArray(arr)) arr.forEach(push);
-      }
-    } catch (_) {}
-
-    (state.categories || []).forEach((c) => {
-      if (typeof c === "string") return push(c);
-      push(c?.name);
-      push(c?.label);
-      push(c?.category);
-    });
+    rows.map((r) => String(r.name || "").trim()).filter(Boolean).forEach(push);
 
     (state.transactions || []).forEach((t) => {
       const cat = String(t?.category || "").trim();
@@ -998,10 +1046,9 @@ Promise.resolve({ rows: catRowsDb, error: null })
         window.tbBus.emit("categories:updated", { source: "loadFromSupabase" });
       }
     } catch (_) {}
-  })
-  .catch((e) => {
-    console.warn("[categories] load failed (fallback to local)", e?.message || e);
-  });
+  } catch (e) {
+    console.warn("[categories] merge failed", e?.message || e);
+  }
 
   recomputeAllocations();
 }

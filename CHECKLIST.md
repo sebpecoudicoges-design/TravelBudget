@@ -148,6 +148,8 @@
 
 
 ## Lot courant
-- V9.3.12.1 : session-safe bootstrap + audit bootstrap perf/parallélisation.
+- V9.4.0 : framework mode simple / avancé.
+- V9.4.1 : correctif cashflow curve sur scope date à date (budgets/jour par date + conversion homogène).
+- V9.4.1.4 : fiabilisation du solde réel historique de la courbe cashflow (impact wallet au jour de transaction, sans répartition budgétaire).
 - Vérifier explicitement le switch de compte sans hard refresh.
 - Vérifier le rechargement propre après SIGNED_OUT / SIGNED_IN.

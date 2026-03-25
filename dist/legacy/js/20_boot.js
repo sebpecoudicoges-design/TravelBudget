@@ -105,10 +105,34 @@ window.onload = async function () {
   await applyPalette(storedPalette, storedPreset, { persistLocal: true, persistRemote: false });
   try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:palette"); } catch (_) {}
 
-  sb.auth.onAuthStateChange((_event, session) => {
+  sb.auth.onAuthStateChange(async (_event, session) => {
+    const prevUid = sbUser?.id || "";
     sbUser = session?.user || null;
-    try { if (typeof window.tbAuthScopeSync === "function") window.tbAuthScopeSync(sbUser?.id || ""); } catch (_) {}
-    if (!sbUser) safeShowAuth(true, "Session expirée. Reconnecte-toi.");
+    const nextUid = sbUser?.id || "";
+    let scope = { changed: prevUid !== nextUid, prev: prevUid, uid: nextUid };
+    try { if (typeof window.tbAuthScopeSync === "function") scope = window.tbAuthScopeSync(nextUid) || scope; } catch (_) {}
+
+    if (scope?.changed && typeof window.tbResetClientSessionState === 'function') {
+      try { window.tbResetClientSessionState(`auth:${_event || 'changed'}`); } catch (_) {}
+    }
+
+    if (!sbUser) {
+      safeShowAuth(true, "Session expirée. Reconnecte-toi.");
+      return;
+    }
+
+    if (!window.__TB_BOOT_COMPLETED__) return;
+
+    try {
+      tbShowBootOverlay("Changement de compte… synchronisation");
+      showView("dashboard");
+      await refreshFromServer({ force: false });
+      safeShowAuth(false);
+    } catch (e) {
+      console.warn('[Boot] auth change refresh failed:', e?.message || e);
+    } finally {
+      try { tbHideBootOverlay(); } catch (_) {}
+    }
   });
 
   const { data, error } = await sb.auth.getSession();

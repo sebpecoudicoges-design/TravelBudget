@@ -163,6 +163,10 @@ async function _runRefreshFromServer(opts) {
 }
 
 async function refreshFromServer(opts = {}) {
+  if (opts && opts.force === true && typeof window.tbResetClientSessionState === 'function') {
+    try { window.tbResetClientSessionState('refresh-force'); } catch (_) {}
+  }
+
   if (_refreshInFlight) {
     _refreshPending = true;
     _tbRefreshLog("refreshFromServer:queued");

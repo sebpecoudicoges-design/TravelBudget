@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.3.12.1';
+window.__TB_BUILD = '9.4.1.5';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -205,6 +205,9 @@ window.__TB_BUILD = '9.3.12.1';
 
     // UX contextual help / onboarding dismiss state
     ux_help_dismissed: "travelbudget_ux_help_dismissed_v1",
+
+    // UI mode
+    ui_mode: "travelbudget_ui_mode_v1",
   });
 
 
@@ -245,7 +248,7 @@ window.__TB_BUILD = '9.3.12.1';
 
   // DB schema_version is stored as an integer in public.schema_version.version
   // Convention: 9.0.0 => 900
-  const EXPECTED_SCHEMA_VERSION = 93111;
+  const EXPECTED_SCHEMA_VERSION = 94000;
 
   window.TB_CONST = Object.freeze({
     TABLES,

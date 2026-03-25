@@ -1,40 +1,104 @@
 /* =========================
    State
    ========================= */
-let state = {
-  exchangeRates: { "EUR-BASE": 35, "BASE-EUR": 1 / 35 },
-  period: { id: null, start: "2026-02-10", end: "2026-02-28", baseCurrency: "THB", eurBaseRate: 35, dailyBudgetBase: 1000 },
-  // User/account-level preferences loaded from `settings`
-  user: {
-    baseCurrency: "EUR",
-  },
-  // FX state (manual rates are a DB-backed fallback; auto rates are in localStorage)
-  fx: {
-    manualRates: {}, // { CUR: { rate:number, asOf:"YYYY-MM-DD" } }
-  },
-wallets: [],
-walletBalances: [],
-walletBalanceMap: {},
+function tbMakeInitialState() {
+  return {
+    exchangeRates: { "EUR-BASE": 35, "BASE-EUR": 1 / 35 },
+    period: { id: null, start: "2026-02-10", end: "2026-02-28", baseCurrency: "THB", eurBaseRate: 35, dailyBudgetBase: 1000 },
+    // User/account-level preferences loaded from `settings`
+    user: {
+      baseCurrency: "EUR",
+      uiMode: "advanced",
+    },
+    // FX state (manual rates are a DB-backed fallback; auto rates are in localStorage)
+    fx: {
+      manualRates: {}, // { CUR: { rate:number, asOf:"YYYY-MM-DD" } }
+    },
+    wallets: [],
+    walletBalances: [],
+    walletBalanceMap: {},
+    transactions: [],
+    allocations: [],
+    travels: [],          // V9
+    activeTravelId: null, // V9
+    recurringRules: [],   // V9
+    periods: [],
+    budgetSegments: [],
+    categories: [],
+    categoryColors: {},
+    categorySubcategories: [],
+    analyticCategoryMappings: [],
+    hiddenCategories: [],
+    analysisMappingAvailable: false,
+    analysisAuditAvailable: false,
+    analysisMappingRulesAvailable: false,
+    analysisAuditRows: [],
+    analysisMappingByTxId: {},
+    categoriesRows: [],
+  };
+}
 
-transactions: [],
-
-allocations: [],
-
-travels: [],          // V9
-activeTravelId: null, // V9
-recurringRules: [],   // V9
-
-periods: [],
-budgetSegments: [],
-
-categories: [],
-categoryColors: {},
-categorySubcategories: [],
-analyticCategoryMappings: [],
-hiddenCategories: [],
-};
+let state = tbMakeInitialState();
 // ---- expose for plugins (do not remove) ----
 Object.defineProperty(window, "state", { get: () => state, set: (v) => { state = v; } });
+
+function tbResetClientSessionState(reason) {
+  try {
+    const hidden = Array.isArray(state?.hiddenCategories) ? state.hiddenCategories.slice() : [];
+    state = tbMakeInitialState();
+    state.hiddenCategories = hidden;
+    window.__TB_REFRESH_TOKEN__ = (Number(window.__TB_REFRESH_TOKEN__ || 0) + 1);
+    window.__TB_LAST_SESSION_RESET__ = { reason: String(reason || ''), at: Date.now() };
+    if (window.__TB_STATE) window.__TB_STATE = {};
+    if (window.__ANALYTIC_CACHE) window.__ANALYTIC_CACHE = {};
+    try {
+      if (window.tbBus && typeof window.tbBus.emit === 'function') {
+        window.tbBus.emit('state:reset', { reason: String(reason || '') });
+      }
+    } catch (_) {}
+  } catch (e) {
+    console.warn('[TB] tbResetClientSessionState failed', e?.message || e);
+  }
+}
+
+window.tbMakeInitialState = tbMakeInitialState;
+window.tbResetClientSessionState = tbResetClientSessionState;
+
+function tbNormalizeUiMode(v) {
+  const raw = String(v || '').trim().toLowerCase();
+  return raw === 'simple' ? 'simple' : 'advanced';
+}
+
+function tbGetUiMode() {
+  try {
+    const stateMode = tbNormalizeUiMode(window?.state?.user?.uiMode || state?.user?.uiMode || '');
+    if (stateMode) return stateMode;
+  } catch (_) {}
+  try {
+    const key = window.TB_CONST?.LS_KEYS?.ui_mode || 'travelbudget_ui_mode_v1';
+    const lsMode = tbNormalizeUiMode(localStorage.getItem(key) || '');
+    if (lsMode) return lsMode;
+  } catch (_) {}
+  return 'advanced';
+}
+
+function tbIsSimpleMode() { return tbGetUiMode() === 'simple'; }
+function tbIsAdvancedMode() { return tbGetUiMode() === 'advanced'; }
+
+function tbApplyUiModeToDocument() {
+  try {
+    const mode = tbGetUiMode();
+    document.body.classList.toggle('tb-ui-mode-simple', mode === 'simple');
+    document.body.classList.toggle('tb-ui-mode-advanced', mode !== 'simple');
+    document.body.setAttribute('data-ui-mode', mode);
+  } catch (_) {}
+}
+
+window.tbNormalizeUiMode = tbNormalizeUiMode;
+window.tbGetUiMode = tbGetUiMode;
+window.tbIsSimpleMode = tbIsSimpleMode;
+window.tbIsAdvancedMode = tbIsAdvancedMode;
+window.tbApplyUiModeToDocument = tbApplyUiModeToDocument;
 
 const CATEGORY_DISPLAY_ORDER = [
   "Repas",
@@ -57,7 +121,7 @@ const CATEGORY_DISPLAY_ORDER = [
   "Mouvement interne",
 ];
 
-const DEFAULT_CATEGORIES = CATEGORY_DISPLAY_ORDER.slice();
+const DEFAULT_CATEGORIES = []; // V9.3.11.1: categories are SQL/user-scoped; no cross-account front defaults
 
 const DEFAULT_SUBCATEGORY_MAP = {
   "Repas": ["Petit-déjeuner", "Déjeuner", "Dîner", "Snack", "Café", "Eau"],
@@ -80,10 +144,9 @@ const DEFAULT_SUBCATEGORY_MAP = {
 };
 
 function getCategories() {
-  // Always include defaults (so UI doesn't "lose" categories if state has only a subset)
   const raw = Array.isArray(state.categories) ? state.categories : [];
   const hidden = new Set(getHiddenCategories().map((x) => x.toLowerCase()));
-  const merged = [...DEFAULT_CATEGORIES, ...raw].filter((name) => !hidden.has(String(name || '').trim().toLowerCase()));
+  const merged = raw.filter((name) => !hidden.has(String(name || '').trim().toLowerCase()));
 
   // de-dupe (case-insensitive) while preserving first appearance
   const seen = new Set();
@@ -293,90 +356,17 @@ function _tryLoadFromStateBlob() {
 }
 
 function loadCategoriesFromLocalStorage() {
-  try {
-    // 1) Try several keys
-    let raw = null;
-    for (const k of TB_CATEGORIES_LS_KEYS_FALLBACK) {
-      raw = localStorage.getItem(k);
-      if (raw) break;
-    }
-    // 1bis) If nothing matched, do a best-effort scan (helps when key names changed across versions)
-    if (!raw) {
-      for (let i = 0; i < (localStorage?.length || 0); i++) {
-        const k = localStorage.key(i);
-        if (!k) continue;
-        if (!/categor/i.test(k)) continue;
-        const v = localStorage.getItem(k);
-        if (!v) continue;
-        // accept only JSON arrays
-        let maybe = null;
-        try { maybe = JSON.parse(v); } catch (_) { maybe = null; }
-        if (Array.isArray(maybe) && maybe.length) { raw = v; break; }
-      }
-    }
-    if (!raw) {
-      const blob = _tryLoadFromStateBlob();
-      const arr = blob && (blob.categories || blob.category_list || (blob.state && blob.state.categories));
-      if (Array.isArray(arr) && arr.length) {
-        // mimic v1 array format
-        raw = JSON.stringify(arr);
-      }
-    }
-    if (!raw) {
-      const blob = _tryLoadFromStateBlob();
-      const m = blob && (blob.categoryColors || blob.category_colors || (blob.state && (blob.state.categoryColors || blob.state.category_colors)));
-      if (m && typeof m === "object" && Object.keys(m).length) {
-        raw = JSON.stringify(m);
-      }
-    }
-    if (!raw) {
-      const blob = _tryLoadFromStateBlob();
-      const m = blob && (blob.categoryColors || blob.category_colors || (blob.state && (blob.state.categoryColors || blob.state.category_colors)));
-      if (m && typeof m === "object" && Object.keys(m).length) {
-        raw = JSON.stringify(m);
-      }
-    }
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-
-    // Support both:
-    // - ["Repas", "Transport"]
-    // - [{name:"Repas", color:"#..."}, ...]
-    const names = [];
-    const colors = {};
-    for (const item of parsed) {
-      if (typeof item === "string") {
-        const n = item.trim();
-        if (n) names.push(n);
-      } else if (item && typeof item === "object") {
-        const n = String(item.name ?? item.label ?? item.title ?? "").trim();
-        if (n) {
-          names.push(n);
-          const c = String(item.color ?? item.hex ?? "").trim();
-          if (c) colors[n] = c;
-        }
-      }
-    }
-
-    // If we found colors embedded, merge them into existing stored colors
-    if (Object.keys(colors).length) {
-      state.hiddenCategories = Array.isArray(state.hiddenCategories) ? state.hiddenCategories : [];
-  if (state.hiddenCategories.length === 0) {
-    const lsHidden = loadHiddenCategoriesFromLocalStorage();
-    if (Array.isArray(lsHidden) && lsHidden.length) state.hiddenCategories = lsHidden;
-  }
-  state.categoryColors = (state.categoryColors && typeof state.categoryColors === "object") ? state.categoryColors : {};
-      state.categoryColors = { ...state.categoryColors, ...colors };
-    }
-
-    return names.map(String).map(s => s.trim()).filter(Boolean);
-  } catch (_) {}
+  // V9.3.11.1: categories are no longer restored from generic localStorage keys.
+  // This avoids cross-account leakage on the same browser profile.
   return null;
 }
 
 function loadCategoryColorsFromLocalStorage() {
+  // V9.3.11.1: category colors are user-scoped in SQL; no generic local fallback.
+  return null;
+}
+
+function _unusedLegacyLoadCategoryColorsFromLocalStorageBackup() {
   try {
     let raw = null;
     for (const k of TB_CATEGORY_COLORS_LS_KEYS_FALLBACK) {
@@ -405,8 +395,7 @@ function loadCategoryColorsFromLocalStorage() {
 }
 
 function persistCategoriesToLocalStorage() {
-  try { localStorage.setItem(TB_CATEGORIES_LS_KEY, JSON.stringify(state.categories || [])); } catch (_) {}
-  try { localStorage.setItem(TB_CATEGORY_COLORS_LS_KEY, JSON.stringify(state.categoryColors || {})); } catch (_) {}
+  // V9.3.11.1: do not persist categories/colors globally in localStorage.
   try { localStorage.setItem(TB_HIDDEN_CATEGORIES_LS_KEY, JSON.stringify(state.hiddenCategories || [])); } catch (_) {}
 }
 
@@ -432,21 +421,12 @@ function ensureStateIntegrity() {
   state.budgetSegments = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
   state.categories = Array.isArray(state.categories) ? state.categories : [];
   state.categorySubcategories = Array.isArray(state.categorySubcategories) ? state.categorySubcategories : [];
-  // local-only categories persistence (V6.4)
-  if (state.categories.length === 0) {
-    const lsCats = loadCategoriesFromLocalStorage();
-    if (Array.isArray(lsCats) && lsCats.length) state.categories = lsCats;
-  }
   state.hiddenCategories = Array.isArray(state.hiddenCategories) ? state.hiddenCategories : [];
   if (state.hiddenCategories.length === 0) {
     const lsHidden = loadHiddenCategoriesFromLocalStorage();
     if (Array.isArray(lsHidden) && lsHidden.length) state.hiddenCategories = lsHidden;
   }
   state.categoryColors = (state.categoryColors && typeof state.categoryColors === "object") ? state.categoryColors : {};
-  if (Object.keys(state.categoryColors || {}).length === 0) {
-    const lsColors = loadCategoryColorsFromLocalStorage();
-    if (lsColors && typeof lsColors === "object") state.categoryColors = lsColors;
-  }
 
   // After best-effort load/migration, persist into canonical keys so the UI is stable across versions.
   if (typeof persistCategoriesToLocalStorage === 'function') {

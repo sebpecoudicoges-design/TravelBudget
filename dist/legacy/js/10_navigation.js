@@ -17,6 +17,8 @@ function setActiveTab(view) {
   }
 }
 function showView(view) {
+  try { if (typeof window.tbApplyUiModeToDocument === "function") window.tbApplyUiModeToDocument(); } catch (_) {}
+  if (view === "members" && typeof window.tbIsSimpleMode === "function" && window.tbIsSimpleMode()) view = "dashboard";
   activeView = view;
   setActiveTab(view);
   if (view === "transactions") renderTransactions();
@@ -32,8 +34,9 @@ function showView(view) {
 
 function syncTabsForRole() {
   const isAdmin = (window.sbRole === 'admin');
+  const simple = (typeof window.tbIsSimpleMode === 'function') ? window.tbIsSimpleMode() : false;
   const tab = document.getElementById('tab-members');
-  if (tab) tab.style.display = isAdmin ? 'block' : 'none';
+  if (tab) tab.style.display = (isAdmin && !simple) ? 'block' : 'none';
   // if user is not admin and is currently on members view, bounce to dashboard
-  if (!isAdmin && (typeof activeView !== 'undefined') && activeView === 'members') showView('dashboard');
+  if ((!isAdmin || simple) && (typeof activeView !== 'undefined') && activeView === 'members') showView('dashboard');
 }

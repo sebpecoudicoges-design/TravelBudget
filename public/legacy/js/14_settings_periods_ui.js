@@ -635,7 +635,7 @@ function renderSettings(){
       const thrDisp = (thrInBase === null || !Number.isFinite(thrInBase)) ? "" : String(Math.round(thrInBase));
 
       box.innerHTML = `
-        <div class="muted" style="margin-bottom:10px;">Devise de base, seuil d’alerte et mot de passe.</div>
+        <div class="muted" style="margin-bottom:10px;">Devise de base, mode d’interface, seuil d’alerte et mot de passe.</div>
 
         <div class="row" style="gap:12px; align-items:end; flex-wrap:wrap;">
           <div class="field" style="min-width:260px;">
@@ -650,11 +650,20 @@ function renderSettings(){
             </select>
           </div>
 
+          <div class="field" style="min-width:190px;">
+            <label>Mode d’interface</label>
+            <select id="tb-user-uimode">
+              <option value="simple" ${(typeof window.tbIsSimpleMode === 'function' && window.tbIsSimpleMode()) ? 'selected' : ''}>Simple</option>
+              <option value="advanced" ${(typeof window.tbIsSimpleMode === 'function' && !window.tbIsSimpleMode()) ? 'selected' : ''}>Avancé</option>
+            </select>
+          </div>
+
           <button class="btn" id="tb-user-basecur-save" type="button">Enregistrer</button>
+          <button class="btn" id="tb-user-uimode-save" type="button">Enregistrer mode</button>
           <button class="btn" id="tb-user-resetpwd" type="button">Reset mot de passe</button>
         </div>
 
-        <div class="row" style="gap:12px; align-items:end; flex-wrap:wrap; margin-top:10px;">
+        <div class="row tb-advanced-only" style="gap:12px; align-items:end; flex-wrap:wrap; margin-top:10px;">
           <div class="field" style="min-width:220px;">
             <label>Seuil courbe trésorerie</label>
             <input id="tb-user-cfthr" type="number" min="1" step="1" value="${escapeHTML(thrDisp || "")}" />
@@ -686,6 +695,32 @@ function renderSettings(){
           if (!state.user) state.user = {};
           state.user.baseCurrency = v;
           if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("settings:base_currency"); else renderAll();
+        });
+      }
+
+      const btnMode = box.querySelector("#tb-user-uimode-save");
+      if (btnMode) {
+        btnMode.onclick = () => safeCall("Enregistrer mode d’interface", async () => {
+          const s = _getSb();
+          const modeRaw = String(box.querySelector("#tb-user-uimode")?.value || "advanced").trim().toLowerCase();
+          const mode = (typeof window.tbNormalizeUiMode === 'function') ? window.tbNormalizeUiMode(modeRaw) : (modeRaw === 'simple' ? 'simple' : 'advanced');
+          const u = (await s.auth.getUser()).data?.user;
+          const uid = u?.id;
+          if (!uid) throw new Error("Non authentifié");
+          let remoteSaved = false;
+          try {
+            const { error } = await s.from(TB_CONST.TABLES.settings).upsert({ user_id: uid, ui_mode: mode }, { onConflict: "user_id" });
+            if (error) throw error;
+            remoteSaved = true;
+          } catch (e) {
+            console.warn('[ui mode] remote save fallback to local only', e?.message || e);
+          }
+          try { localStorage.setItem(TB_CONST?.LS_KEYS?.ui_mode || 'travelbudget_ui_mode_v1', mode); } catch (_) {}
+          if (!state.user) state.user = {};
+          state.user.uiMode = mode;
+          try { if (typeof window.tbApplyUiModeToDocument === 'function') window.tbApplyUiModeToDocument(); } catch (_) {}
+          if (typeof syncTabsForRole === 'function') syncTabsForRole();
+          if (typeof tbRequestRenderAll === 'function') tbRequestRenderAll(remoteSaved ? 'settings:ui_mode' : 'settings:ui_mode:local'); else renderAll();
         });
       }
 
@@ -2547,7 +2582,8 @@ function renderCategoriesSettingsUI() {
   const cats = (typeof getCategories === "function") ? getCategories() : (state.categories || []);
   const colors = (typeof getCategoryColors === "function") ? getCategoryColors() : (state.categoryColors || {});
 
-  host.innerHTML = (cats || []).map((c) => {
+  const simpleMode = (typeof window.tbIsSimpleMode === 'function') ? window.tbIsSimpleMode() : false;
+  host.innerHTML = `${simpleMode ? '<div class="tb-simple-mode-note">Mode simple : les réglages analytiques avancés sont masqués ici. Passe en mode avancé pour gouverner le mapping analytique.</div>' : ''}` + (cats || []).map((c) => {
     const col = colors[c] || "#94a3b8";
     const subRows = _subcategoriesForSettings(c, true);
     const activeCount = subRows.filter((row)=>row?.isActive !== false && row?.is_active !== false).length;
@@ -2581,15 +2617,15 @@ function renderCategoriesSettingsUI() {
                 <div class="tb-subcat-meta">
                   <span class="tb-settings-pill ${active ? 'tb-settings-pill--positive' : ''}">${active ? 'Active' : 'Inactive'}</span>
                   <span class="tb-settings-pill">${sourceLabel}</span>
-                  ${_analyticStatusPillHtml(subMapping)}
-                  ${_analyticUsagePillHtml(subUsage.txCount)}
-                  <span class="tb-settings-pill">${escapeHTML(subMapping.sourceLabel || 'À classer')}</span>
+                  <span class="tb-settings-pill tb-advanced-only">${escapeHTML(subMapping.sourceLabel || 'À classer')}</span>
+                  <span class="tb-advanced-only">${_analyticStatusPillHtml(subMapping)}</span>
+                  <span class="tb-advanced-only">${_analyticUsagePillHtml(subUsage.txCount)}</span>
                   ${subColor ? `<span class="tb-subcat-color" title="${escapeHTML(subColor)}" style="background:${escapeHTML(subColor)}"></span>` : ''}
                 </div>
-                <div class="muted" style="margin-top:6px;">Analyse : ${escapeHTML(subMapping.mappingStatus === 'mapped' ? _analyticFamilyLabel(subMapping.analyticFamily) : (subMapping.mappingStatus === 'excluded' ? 'Exclue' : 'À classer'))}</div>
+                <div class="muted tb-advanced-only" style="margin-top:6px;">Analyse : ${escapeHTML(subMapping.mappingStatus === 'mapped' ? _analyticFamilyLabel(subMapping.analyticFamily) : (subMapping.mappingStatus === 'excluded' ? 'Exclue' : 'À classer'))}</div>
               </div>
               <div class="tb-subcat-actions" style="align-items:flex-end; gap:6px;">
-                <select class="input" style="min-width:190px;" onchange="saveAnalyticSubcategoryMapping('${escapeHTML(c)}','${escapeHTML(subName)}', this.value)">${_analyticSelectOptions(subSelectValue, true)}</select>
+                <select class="input tb-advanced-only" style="min-width:190px;" onchange="saveAnalyticSubcategoryMapping('${escapeHTML(c)}','${escapeHTML(subName)}', this.value)">${_analyticSelectOptions(subSelectValue, true)}</select>
                 <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end;">
                   ${isSql
                     ? `<button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','up')">↑</button>
@@ -2624,11 +2660,11 @@ function renderCategoriesSettingsUI() {
               <span class="muted">Couleur</span>
               <span class="tb-category-swatch" style="background:${escapeHTML(col)}"></span>
               <input type="color" value="${escapeHTML(col)}" style="width:44px;height:30px;padding:0;border:none;background:transparent;cursor:pointer;" onchange="setCategoryColor('${escapeHTML(c)}', this.value)" />
-              ${_analyticStatusPillHtml(categoryMapping)}
-              ${_analyticUsagePillHtml(categoryUsage.txCount)}
-              <span class="tb-settings-pill">${escapeHTML(categoryMapping.sourceLabel || 'À classer')}</span>
+              <span class="tb-advanced-only">${_analyticStatusPillHtml(categoryMapping)}</span>
+              <span class="tb-advanced-only">${_analyticUsagePillHtml(categoryUsage.txCount)}</span>
+              <span class="tb-settings-pill tb-advanced-only">${escapeHTML(categoryMapping.sourceLabel || 'À classer')}</span>
             </div>
-            <div style="display:flex; gap:8px; align-items:center;">
+            <div class="tb-advanced-only" style="display:flex; gap:8px; align-items:center;">
               <span class="muted">Analyse</span>
               <select class="input" style="min-width:190px;" onchange="saveAnalyticCategoryMapping('${escapeHTML(c)}', this.value)">${_analyticSelectOptions(categorySelectValue, false)}</select>
             </div>

@@ -443,11 +443,23 @@ async function loadFromSupabase(opts = {}) {
   const refreshToken = Number(opts?.refreshToken || window.__TB_REFRESH_TOKEN__ || 0);
 
   // V8.9.4: parallelize the 3 independent bootstrap reads
-const settingsPromise = sb
-  .from(TB_CONST.TABLES.settings)
-  .select("theme,palette_json,palette_preset,base_currency")
-  .eq("user_id", sbUser.id)
-  .maybeSingle();
+const settingsPromise = (async () => {
+  const baseSel = "theme,palette_json,palette_preset,base_currency";
+  const withUiMode = `${baseSel},ui_mode`;
+  let res = await sb
+    .from(TB_CONST.TABLES.settings)
+    .select(withUiMode)
+    .eq("user_id", sbUser.id)
+    .maybeSingle();
+  if (res?.error && String(res.error.message || '').toLowerCase().includes('ui_mode')) {
+    res = await sb
+      .from(TB_CONST.TABLES.settings)
+      .select(baseSel)
+      .eq("user_id", sbUser.id)
+      .maybeSingle();
+  }
+  return res;
+})();
 
 const fxManualPromise = sb
   .from(TB_CONST.TABLES.fx_manual_rates)
@@ -499,6 +511,17 @@ if (s) {
       if (!state.user) state.user = {};
       state.user.baseCurrency = bc;
     }
+  } catch (_) {}
+
+  try {
+    if (!state.user) state.user = {};
+    const key = TB_CONST?.LS_KEYS?.ui_mode || 'travelbudget_ui_mode_v1';
+    const persisted = (typeof window.tbNormalizeUiMode === 'function')
+      ? window.tbNormalizeUiMode(s.ui_mode || localStorage.getItem(key) || 'advanced')
+      : (String(s.ui_mode || localStorage.getItem(key) || 'advanced').trim().toLowerCase() === 'simple' ? 'simple' : 'advanced');
+    state.user.uiMode = persisted;
+    try { localStorage.setItem(key, persisted); } catch (_) {}
+    try { if (typeof window.tbApplyUiModeToDocument === 'function') window.tbApplyUiModeToDocument(); } catch (_) {}
   } catch (_) {}
 }
 

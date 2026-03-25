@@ -8,6 +8,7 @@ function tbMakeInitialState() {
     // User/account-level preferences loaded from `settings`
     user: {
       baseCurrency: "EUR",
+      uiMode: "advanced",
     },
     // FX state (manual rates are a DB-backed fallback; auto rates are in localStorage)
     fx: {
@@ -59,8 +60,45 @@ function tbResetClientSessionState(reason) {
     console.warn('[TB] tbResetClientSessionState failed', e?.message || e);
   }
 }
+
 window.tbMakeInitialState = tbMakeInitialState;
 window.tbResetClientSessionState = tbResetClientSessionState;
+
+function tbNormalizeUiMode(v) {
+  const raw = String(v || '').trim().toLowerCase();
+  return raw === 'simple' ? 'simple' : 'advanced';
+}
+
+function tbGetUiMode() {
+  try {
+    const stateMode = tbNormalizeUiMode(window?.state?.user?.uiMode || state?.user?.uiMode || '');
+    if (stateMode) return stateMode;
+  } catch (_) {}
+  try {
+    const key = window.TB_CONST?.LS_KEYS?.ui_mode || 'travelbudget_ui_mode_v1';
+    const lsMode = tbNormalizeUiMode(localStorage.getItem(key) || '');
+    if (lsMode) return lsMode;
+  } catch (_) {}
+  return 'advanced';
+}
+
+function tbIsSimpleMode() { return tbGetUiMode() === 'simple'; }
+function tbIsAdvancedMode() { return tbGetUiMode() === 'advanced'; }
+
+function tbApplyUiModeToDocument() {
+  try {
+    const mode = tbGetUiMode();
+    document.body.classList.toggle('tb-ui-mode-simple', mode === 'simple');
+    document.body.classList.toggle('tb-ui-mode-advanced', mode !== 'simple');
+    document.body.setAttribute('data-ui-mode', mode);
+  } catch (_) {}
+}
+
+window.tbNormalizeUiMode = tbNormalizeUiMode;
+window.tbGetUiMode = tbGetUiMode;
+window.tbIsSimpleMode = tbIsSimpleMode;
+window.tbIsAdvancedMode = tbIsAdvancedMode;
+window.tbApplyUiModeToDocument = tbApplyUiModeToDocument;
 
 const CATEGORY_DISPLAY_ORDER = [
   "Repas",

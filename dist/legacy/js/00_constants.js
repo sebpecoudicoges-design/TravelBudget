@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.3.11.0';
+window.__TB_BUILD = '9.4.0';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -112,6 +112,9 @@ window.__TB_BUILD = '9.3.11.0';
     budget_reference_compute_for_budget_segment: "rpc_budget_reference_compute_for_budget_segment",
     budget_reference_resolve_for_budget_segment: "rpc_budget_reference_resolve_for_budget_segment",
     save_analytic_mapping_rule: "save_analytic_mapping_rule",
+    delete_category_bundle: "delete_category_bundle",
+    seed_default_categories_for_user: "seed_default_categories_for_user",
+    seed_default_analytic_category_mappings: "seed_default_analytic_category_mappings",
 
     // legacy fallback (older DB)
     trip_accept_invite: "trip_accept_invite",
@@ -202,6 +205,9 @@ window.__TB_BUILD = '9.3.11.0';
 
     // UX contextual help / onboarding dismiss state
     ux_help_dismissed: "travelbudget_ux_help_dismissed_v1",
+
+    // UI mode
+    ui_mode: "travelbudget_ui_mode_v1",
   });
 
 
@@ -242,7 +248,7 @@ window.__TB_BUILD = '9.3.11.0';
 
   // DB schema_version is stored as an integer in public.schema_version.version
   // Convention: 9.0.0 => 900
-  const EXPECTED_SCHEMA_VERSION = 93110;
+  const EXPECTED_SCHEMA_VERSION = 94000;
 
   window.TB_CONST = Object.freeze({
     TABLES,
