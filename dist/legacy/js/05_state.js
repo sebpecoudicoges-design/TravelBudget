@@ -31,6 +31,7 @@ categories: [],
 categoryColors: {},
 categorySubcategories: [],
 analyticCategoryMappings: [],
+hiddenCategories: [],
 };
 // ---- expose for plugins (do not remove) ----
 Object.defineProperty(window, "state", { get: () => state, set: (v) => { state = v; } });
@@ -81,7 +82,8 @@ const DEFAULT_SUBCATEGORY_MAP = {
 function getCategories() {
   // Always include defaults (so UI doesn't "lose" categories if state has only a subset)
   const raw = Array.isArray(state.categories) ? state.categories : [];
-  const merged = [...DEFAULT_CATEGORIES, ...raw];
+  const hidden = new Set(getHiddenCategories().map((x) => x.toLowerCase()));
+  const merged = [...DEFAULT_CATEGORIES, ...raw].filter((name) => !hidden.has(String(name || '').trim().toLowerCase()));
 
   // de-dupe (case-insensitive) while preserving first appearance
   const seen = new Set();
@@ -104,6 +106,37 @@ function getCategories() {
     return (aIdx - bIdx) || String(a).localeCompare(String(b), 'fr', { sensitivity: 'base' });
   });
 }
+
+function getHiddenCategories() {
+  const arr = Array.isArray(state?.hiddenCategories) ? state.hiddenCategories : [];
+  return arr.map((x) => String(x || '').trim()).filter(Boolean);
+}
+
+function isCategoryHidden(categoryName) {
+  const n = String(categoryName || '').trim().toLowerCase();
+  if (!n) return false;
+  return getHiddenCategories().some((x) => x.toLowerCase() === n);
+}
+
+function setCategoryHidden(categoryName, hidden) {
+  const n = String(categoryName || '').trim();
+  if (!n) return;
+  const current = getHiddenCategories();
+  const filtered = current.filter((x) => x.toLowerCase() !== n.toLowerCase());
+  state.hiddenCategories = hidden ? [...filtered, n] : filtered;
+  try { localStorage.setItem(TB_HIDDEN_CATEGORIES_LS_KEY, JSON.stringify(state.hiddenCategories || [])); } catch (_) {}
+}
+
+function loadHiddenCategoriesFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(TB_HIDDEN_CATEGORIES_LS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map((x) => String(x || '').trim()).filter(Boolean) : [];
+  } catch (_) {}
+  return [];
+}
+
 const DEFAULT_CATEGORY_COLORS = {
   Repas: "#2f80ed",
   Logement: "#22c55e",
@@ -227,6 +260,7 @@ window.getCategorySubcategories = getCategorySubcategories;
 
 const TB_CATEGORIES_LS_KEY = "travelbudget_categories_v1";
 const TB_CATEGORY_COLORS_LS_KEY = "travelbudget_category_colors_v1";
+const TB_HIDDEN_CATEGORIES_LS_KEY = "travelbudget_hidden_categories_v1";
 // legacy keys (<= v6.3) and fallbacks we may encounter
 const TB_CATEGORIES_LS_KEYS_FALLBACK = [
   "travelbudget_categories_v2",
@@ -328,7 +362,12 @@ function loadCategoriesFromLocalStorage() {
 
     // If we found colors embedded, merge them into existing stored colors
     if (Object.keys(colors).length) {
-      state.categoryColors = (state.categoryColors && typeof state.categoryColors === "object") ? state.categoryColors : {};
+      state.hiddenCategories = Array.isArray(state.hiddenCategories) ? state.hiddenCategories : [];
+  if (state.hiddenCategories.length === 0) {
+    const lsHidden = loadHiddenCategoriesFromLocalStorage();
+    if (Array.isArray(lsHidden) && lsHidden.length) state.hiddenCategories = lsHidden;
+  }
+  state.categoryColors = (state.categoryColors && typeof state.categoryColors === "object") ? state.categoryColors : {};
       state.categoryColors = { ...state.categoryColors, ...colors };
     }
 
@@ -368,9 +407,12 @@ function loadCategoryColorsFromLocalStorage() {
 function persistCategoriesToLocalStorage() {
   try { localStorage.setItem(TB_CATEGORIES_LS_KEY, JSON.stringify(state.categories || [])); } catch (_) {}
   try { localStorage.setItem(TB_CATEGORY_COLORS_LS_KEY, JSON.stringify(state.categoryColors || {})); } catch (_) {}
+  try { localStorage.setItem(TB_HIDDEN_CATEGORIES_LS_KEY, JSON.stringify(state.hiddenCategories || [])); } catch (_) {}
 }
 
 window.persistCategoriesToLocalStorage = persistCategoriesToLocalStorage;
+window.isCategoryHidden = isCategoryHidden;
+window.setCategoryHidden = setCategoryHidden;
 
 
 /* =========================
@@ -394,6 +436,11 @@ function ensureStateIntegrity() {
   if (state.categories.length === 0) {
     const lsCats = loadCategoriesFromLocalStorage();
     if (Array.isArray(lsCats) && lsCats.length) state.categories = lsCats;
+  }
+  state.hiddenCategories = Array.isArray(state.hiddenCategories) ? state.hiddenCategories : [];
+  if (state.hiddenCategories.length === 0) {
+    const lsHidden = loadHiddenCategoriesFromLocalStorage();
+    if (Array.isArray(lsHidden) && lsHidden.length) state.hiddenCategories = lsHidden;
   }
   state.categoryColors = (state.categoryColors && typeof state.categoryColors === "object") ? state.categoryColors : {};
   if (Object.keys(state.categoryColors || {}).length === 0) {

@@ -24,6 +24,12 @@ window.__TB_SB__ = sb;
   const LAST_UID_KEY = "travelbudget_last_auth_uid_v1";
   const TRIP_PREFIX = "travelbudget_trip_";
   const TRIP_ACTIVE_KEY = "travelbudget_trip_active_id_v1";
+  const SESSION_SCOPED_KEYS = [
+    "travelbudget_active_travel_id_v1",
+    "travelbudget_active_period_id_v1",
+    "travelbudget_cashflow_curve_scope_v1",
+    "travelbudget_cashflow_curve_range_v1",
+  ];
 
   function _lsSafeGet(k) {
     try { return localStorage.getItem(k); } catch (_) { return null; }
@@ -40,7 +46,8 @@ window.__TB_SB__ = sb;
         if (!k) continue;
         if (k === TRIP_ACTIVE_KEY || k.startsWith(TRIP_PREFIX)) toRemove.push(k);
       }
-      toRemove.forEach((k) => { try { localStorage.removeItem(k); } catch (_) {} });
+      SESSION_SCOPED_KEYS.forEach((k) => toRemove.push(k));
+      Array.from(new Set(toRemove)).forEach((k) => { try { localStorage.removeItem(k); } catch (_) {} });
     } catch (_) {}
   }
 
@@ -57,8 +64,9 @@ window.__TB_SB__ = sb;
       try {
         window.dispatchEvent(new CustomEvent("tb:auth_scope_changed", { detail: { prev, uid } }));
       } catch (_) {}
-      try { console.warn("[AuthScope] user changed -> cleared Trip local state", { prev, uid }); } catch (_) {}
+      try { console.warn("[AuthScope] user changed -> cleared scoped local state", { prev, uid }); } catch (_) {}
     }
+    return { prev, uid, changed: prev !== uid };
   };
 })();
 

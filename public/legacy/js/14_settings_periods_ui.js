@@ -2345,35 +2345,184 @@ function _analyticUsagePillHtml(txCount) {
   return `<span class="tb-settings-pill">${escapeHTML(String(count))} usage${count > 1 ? 's' : ''}</span>`;
 }
 
+async function _deleteCategoryBundleViaRpc(categoryName) {
+  const category = String(categoryName || '').trim();
+  if (!category) throw new Error('Catégorie invalide.');
+  try {
+    const rpcName = TB_CONST?.RPCS?.delete_category_bundle || 'delete_category_bundle';
+    const { error } = await sb.rpc(rpcName, { p_category_name: category });
+    if (error) throw error;
+    return;
+  } catch (rpcErr) {
+    console.warn('[categories] delete bundle RPC unavailable, fallback to direct deletes', rpcErr?.message || rpcErr);
+  }
+
+  const catLower = category.toLowerCase();
+  const { error: mapErr } = await sb
+    .from(TB_CONST.TABLES.analytic_category_mappings)
+    .delete()
+    .eq('user_id', sbUser.id)
+    .ilike('category_name', category);
+  if (mapErr) throw mapErr;
+
+  const { error: subErr } = await sb
+    .from(TB_CONST.TABLES.category_subcategories)
+    .delete()
+    .eq('user_id', sbUser.id)
+    .ilike('category_name', category);
+  if (subErr) throw subErr;
+
+  const sqlRow = (Array.isArray(state?.categoriesRows) ? state.categoriesRows : []).find((row) => String(row?.name || '').trim().toLowerCase() === catLower);
+  if (sqlRow) {
+    const { error: delErr } = await sb
+      .from(TB_CONST.TABLES.categories)
+      .delete()
+      .eq('user_id', sbUser.id)
+      .eq('id', sqlRow.id);
+    if (delErr) throw delErr;
+  } else if (typeof setCategoryHidden === 'function') {
+    setCategoryHidden(category, true);
+  }
+}
+
+async function _saveAnalyticMappingRuleViaRpc(categoryName, subcategoryName, nextValue) {
+  const category = String(categoryName || '').trim();
+  const subcategory = (subcategoryName === undefined || subcategoryName === null || String(subcategoryName || '').trim() === '')
+    ? null
+    : String(subcategoryName || '').trim();
+  const value = String(nextValue || '').trim();
+  if (!category) throw new Error('Catégorie invalide.');
+  const mappingStatus = (value === '__unmapped__' || value === '__inherit__')
+    ? 'unmapped'
+    : (value === '__excluded__' ? 'excluded' : 'mapped');
+  const analyticFamily = mappingStatus === 'mapped' ? value : null;
+  const rpcPayload = {
+    p_user_id: sbUser.id,
+    p_category_name: category,
+    p_subcategory_name: subcategory,
+    p_mapping_status: mappingStatus,
+    p_analytic_family: analyticFamily,
+  };
+
+  try {
+    const rpcName = TB_CONST?.RPCS?.save_analytic_mapping_rule || 'save_analytic_mapping_rule';
+    const { error } = await sb.rpc(rpcName, rpcPayload);
+    if (error) throw error;
+    return;
+  } catch (rpcErr) {
+    console.warn('[analytic mapping] RPC unavailable, fallback to direct table write', rpcErr?.message || rpcErr);
+  }
+
+  const existing = _findAnalyticRule(category, subcategory);
+  if (mappingStatus === 'unmapped') {
+    if (existing?.id) {
+      const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).delete().eq('id', existing.id).eq('user_id', sbUser.id);
+      if (error) throw error;
+    }
+    return;
+  }
+
+  const payload = {
+    user_id: sbUser.id,
+    category_name: category,
+    subcategory_name: subcategory,
+    mapping_status: mappingStatus,
+    analytic_family: analyticFamily,
+    notes: null,
+    updated_at: new Date().toISOString(),
+  };
+  if (existing?.id) {
+    const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).update(payload).eq('id', existing.id).eq('user_id', sbUser.id);
+    if (error) throw error;
+  } else {
+    const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).insert([payload]);
+    if (error) throw error;
+  }
+}
+
+function _openGuidedCategoryModal(defaults = {}) {
+  return new Promise((resolve) => {
+    const modal = _tbEnsureModal();
+    modal.setTitle(defaults.title || 'Nouvelle catégorie');
+    modal.setBody(`
+      <div class="row">
+        <div class="field" style="flex:1;min-width:220px;">
+          <label>Nom</label>
+          <input id="tb-cat-create-name" class="input" type="text" placeholder="Ex: Santé" value="${escapeHTML(defaults.name || '')}" />
+        </div>
+        <div class="field" style="min-width:160px;">
+          <label>Couleur</label>
+          <input id="tb-cat-create-color" class="input" type="color" value="${escapeHTML(defaults.color || '#94a3b8')}" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Mapping analytique</label>
+        <select id="tb-cat-create-mapping" class="input">${_analyticSelectOptions(defaults.mapping || '__unmapped__', false)}</select>
+      </div>
+      <div class="muted" style="margin-top:8px;">Choisis le rattachement analytique dès la création. “À classer” ne crée aucune règle SQL.</div>
+    `);
+    modal.setActions([
+      { label: 'Annuler', onClick: () => { modal.close(); resolve(null); } },
+      { label: defaults.confirmLabel || 'Créer', className: 'btn primary', onClick: () => {
+          const name = String(document.getElementById('tb-cat-create-name')?.value || '').trim();
+          const color = String(document.getElementById('tb-cat-create-color')?.value || '#94a3b8').trim() || '#94a3b8';
+          const mapping = String(document.getElementById('tb-cat-create-mapping')?.value || '__unmapped__').trim() || '__unmapped__';
+          modal.close();
+          resolve({ name, color, mapping });
+        } }
+    ]);
+    modal.open();
+    setTimeout(() => document.getElementById('tb-cat-create-name')?.focus(), 0);
+  });
+}
+
+function _openGuidedSubcategoryModal(categoryName, defaults = {}) {
+  return new Promise((resolve) => {
+    const modal = _tbEnsureModal();
+    const category = String(categoryName || '').trim();
+    modal.setTitle(defaults.title || `Nouvelle sous-catégorie · ${category}`);
+    modal.setBody(`
+      <div class="field">
+        <label>Catégorie</label>
+        <input class="input" type="text" value="${escapeHTML(category)}" disabled />
+      </div>
+      <div class="row">
+        <div class="field" style="flex:1;min-width:220px;">
+          <label>Nom</label>
+          <input id="tb-subcat-create-name" class="input" type="text" placeholder="Ex: Visa" value="${escapeHTML(defaults.name || '')}" />
+        </div>
+        <div class="field" style="min-width:160px;">
+          <label>Couleur optionnelle</label>
+          <input id="tb-subcat-create-color" class="input" type="text" placeholder="#94a3b8" value="${escapeHTML(defaults.color || '')}" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Mapping analytique</label>
+        <select id="tb-subcat-create-mapping" class="input">${_analyticSelectOptions(defaults.mapping || '__inherit__', true)}</select>
+      </div>
+      <div class="muted" style="margin-top:8px;">Par défaut, une sous-catégorie hérite du mapping de sa catégorie. Aucune règle SQL n’est créée en mode héritage.</div>
+    `);
+    modal.setActions([
+      { label: 'Annuler', onClick: () => { modal.close(); resolve(null); } },
+      { label: defaults.confirmLabel || 'Créer', className: 'btn primary', onClick: () => {
+          const name = String(document.getElementById('tb-subcat-create-name')?.value || '').trim();
+          const color = String(document.getElementById('tb-subcat-create-color')?.value || '').trim();
+          const mapping = String(document.getElementById('tb-subcat-create-mapping')?.value || '__inherit__').trim() || '__inherit__';
+          modal.close();
+          resolve({ name, color, mapping });
+        } }
+    ]);
+    modal.open();
+    setTimeout(() => document.getElementById('tb-subcat-create-name')?.focus(), 0);
+  });
+}
+
 async function saveAnalyticCategoryMapping(categoryName, nextValue) {
   return safeCall('Mapping analytique catégorie', async () => {
     const category = String(categoryName || '').trim();
     const value = String(nextValue || '').trim();
     if (!category) throw new Error('Catégorie invalide.');
-    const existing = _findAnalyticRule(category, null);
-    if (value === '__unmapped__') {
-      if (existing?.id) {
-        const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).delete().eq('id', existing.id).eq('user_id', sbUser.id);
-        if (error) throw error;
-      }
-    } else {
-      const payload = {
-        user_id: sbUser.id,
-        category_name: category,
-        subcategory_name: null,
-        mapping_status: value === '__excluded__' ? 'excluded' : 'mapped',
-        analytic_family: value === '__excluded__' ? null : value,
-        notes: null,
-        updated_at: new Date().toISOString(),
-      };
-      if (existing?.id) {
-        const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).update(payload).eq('id', existing.id).eq('user_id', sbUser.id);
-        if (error) throw error;
-      } else {
-        const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).insert([payload]);
-        if (error) throw error;
-      }
-    }
+    await _saveAnalyticMappingRuleViaRpc(category, null, value);
     await refreshFromServer();
     renderSettings();
   });
@@ -2385,30 +2534,7 @@ async function saveAnalyticSubcategoryMapping(categoryName, subcategoryName, nex
     const subcategory = String(subcategoryName || '').trim();
     const value = String(nextValue || '').trim();
     if (!category || !subcategory) throw new Error('Sous-catégorie invalide.');
-    const existing = _findAnalyticRule(category, subcategory);
-    if (value === '__inherit__') {
-      if (existing?.id) {
-        const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).delete().eq('id', existing.id).eq('user_id', sbUser.id);
-        if (error) throw error;
-      }
-    } else {
-      const payload = {
-        user_id: sbUser.id,
-        category_name: category,
-        subcategory_name: subcategory,
-        mapping_status: value === '__excluded__' ? 'excluded' : 'mapped',
-        analytic_family: value === '__excluded__' ? null : value,
-        notes: null,
-        updated_at: new Date().toISOString(),
-      };
-      if (existing?.id) {
-        const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).update(payload).eq('id', existing.id).eq('user_id', sbUser.id);
-        if (error) throw error;
-      } else {
-        const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).insert([payload]);
-        if (error) throw error;
-      }
-    }
+    await _saveAnalyticMappingRuleViaRpc(category, subcategory, value);
     await refreshFromServer();
     renderSettings();
   });
@@ -2519,8 +2645,18 @@ function addCategory() {
   safeCall("Add category", async () => {
     const nameEl = document.getElementById("cat-name");
     const colorEl = document.getElementById("cat-color");
-    const name = String(nameEl?.value || "").trim();
-    const color = String(colorEl?.value || "#94a3b8");
+    const defaults = {
+      name: String(nameEl?.value || "").trim(),
+      color: String(colorEl?.value || "#94a3b8"),
+      mapping: '__unmapped__',
+      title: 'Nouvelle catégorie',
+      confirmLabel: 'Créer',
+    };
+    const result = await _openGuidedCategoryModal(defaults);
+    if (!result) return;
+    const name = String(result?.name || "").trim();
+    const color = String(result?.color || "#94a3b8");
+    const mapping = String(result?.mapping || '__unmapped__').trim() || '__unmapped__';
     if (!name) throw new Error("Nom de catégorie vide.");
 
     const existing = (state.categories || []).find(c => String(c).toLowerCase() === name.toLowerCase()) || null;
@@ -2540,7 +2676,9 @@ function addCategory() {
     }
 
     if (typeof setCategoryHidden === "function") setCategoryHidden(name, false);
+    await _saveAnalyticMappingRuleViaRpc(name, null, mapping);
     if (nameEl) nameEl.value = "";
+    if (colorEl) colorEl.value = color;
     await refreshFromServer();
     renderSettings();
   });
@@ -2550,19 +2688,10 @@ function deleteCategory(name) {
   safeCall("Delete category", async () => {
     const n = String(name || "").trim();
     if (!n) return;
-    if (!confirm(`Supprimer la catégorie "${n}" ?`)) return;
-    const sqlRow = (Array.isArray(state?.categoriesRows) ? state.categoriesRows : []).find((row) => String(row?.name || '').trim().toLowerCase() === n.toLowerCase());
-    if (sqlRow) {
-      const { error: delErr } = await sb
-        .from(TB_CONST.TABLES.categories)
-        .delete()
-        .eq("user_id", sbUser.id)
-        .eq("id", sqlRow.id);
-      if (delErr) throw delErr;
-    } else if (typeof setCategoryHidden === 'function') {
-      setCategoryHidden(n, true);
-    }
+    if (!confirm(`Supprimer la catégorie "${n}" ?
 
+Cela supprimera aussi ses sous-catégories SQL et ses règles analytiques liées.`)) return;
+    await _deleteCategoryBundleViaRpc(n);
     await refreshFromServer();
     renderSettings();
   });
@@ -2614,10 +2743,13 @@ async function addSubcategory(categoryName) {
   return safeCall("Add subcategory", async () => {
     const category = String(categoryName || '').trim();
     if (!category) throw new Error('Catégorie invalide.');
-    const rawName = prompt(`Nouvelle sous-catégorie pour "${category}"`, '');
-    if (rawName === null) return;
-    const name = String(rawName || '').trim();
+    const result = await _openGuidedSubcategoryModal(category, { mapping: '__inherit__', title: `Nouvelle sous-catégorie · ${category}`, confirmLabel: 'Créer' });
+    if (!result) return;
+    const name = String(result?.name || '').trim();
+    const color = String(result?.color || '').trim();
+    const mapping = String(result?.mapping || '__inherit__').trim() || '__inherit__';
     if (!name) throw new Error('Nom de sous-catégorie vide.');
+    if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) throw new Error('Couleur invalide.');
     const existingRows = _subcategoriesForSettings(category, true);
     const duplicate = existingRows.find((row) => String(row?.name || '').trim().toLowerCase() === name.toLowerCase());
     if (duplicate) throw new Error('Cette sous-catégorie existe déjà pour cette catégorie.');
@@ -2627,12 +2759,14 @@ async function addSubcategory(categoryName) {
       category_id: _categoryIdByName(category),
       category_name: category,
       name,
+      color: color || null,
       sort_order: sortOrder,
       is_active: true,
       updated_at: new Date().toISOString(),
     };
     const { error } = await sb.from(TB_CONST.TABLES.category_subcategories).insert([payload]);
     if (error) throw error;
+    await _saveAnalyticMappingRuleViaRpc(category, name, mapping);
     await refreshFromServer();
     renderSettings();
   });

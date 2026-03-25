@@ -209,8 +209,9 @@ async function runFirstTimeWizard() {
 }
 // --- end onboarding wizard ---
 
-async function ensureBootstrap() {
+async function ensureBootstrap(opts = {}) {
   if (!sbUser) return;
+  const refreshToken = Number(opts?.refreshToken || window.__TB_REFRESH_TOKEN__ || 0);
   const today = toLocalISODate(new Date());
 
   // local defaults
@@ -220,9 +221,14 @@ async function ensureBootstrap() {
 
   // === Fast bootstrap: fetch the few required rows in parallel ===
   // Goal: reduce boot latency without changing any business logic.
-  // Schema version check disabled: some environments do not expose public.schema_version reliably,
-  // which causes noisy connection errors without functional impact.
-  const schemaP = Promise.resolve({ data: null, error: null });
+  // Schema version is read in soft mode: never block the app, but log mismatches explicitly.
+  const schemaP = sb
+    .from(TB_CONST.TABLES.schema_version)
+    .select('key,version,updated_at')
+    .eq('key', 'travelbudget')
+    .maybeSingle()
+    .then((res) => res)
+    .catch((error) => ({ data: null, error }));
 
   const profP = sb
     .from(TB_CONST.TABLES.profiles)
@@ -244,6 +250,16 @@ async function ensureBootstrap() {
     .limit(1);
 
   const [schemaRes, profRes, settingsRes, periodsRes] = await Promise.all([schemaP, profP, settingsP, periodsP]);
+
+  if (schemaRes?.error) {
+    console.warn('[schema_version] read failed (soft mode)', schemaRes.error?.message || schemaRes.error);
+  } else {
+    const dbVersion = Number(schemaRes?.data?.version || 0);
+    const expectedVersion = Number(TB_CONST?.EXPECTED_SCHEMA_VERSION || 0);
+    if (dbVersion && expectedVersion && dbVersion !== expectedVersion) {
+      console.warn(`[schema_version] mismatch db=${dbVersion} expected=${expectedVersion}`);
+    }
+  }
 
   if (profRes && profRes.error) throw profRes.error;
   if (settingsRes && settingsRes.error) throw settingsRes.error;
@@ -422,8 +438,9 @@ function pickActiveTravel(travels) {
   return travels[0].id;
 }
 
-async function loadFromSupabase() {
+async function loadFromSupabase(opts = {}) {
   if (!sbUser) return;
+  const refreshToken = Number(opts?.refreshToken || window.__TB_REFRESH_TOKEN__ || 0);
 
   // V8.9.4: parallelize the 3 independent bootstrap reads
 const settingsPromise = sb
@@ -653,13 +670,34 @@ const txPromise = sb
 
   const catPromise = (async () => {
     try {
-      const { data: catRows, error: catErr } = await sb
+      let { data: catRows, error: catErr } = await sb
         .from(TB_CONST.TABLES.categories)
         .select("id,name,color,sort_order")
         .eq("user_id", sbUser.id)
         .order("sort_order", { ascending: true })
         .order("name", { ascending: true });
       if (catErr) throw catErr;
+
+      if (!Array.isArray(catRows) || catRows.length === 0) {
+        try {
+          const seedRpc = TB_CONST?.RPCS?.seed_default_categories_for_user || 'seed_default_categories_for_user';
+          const { error: seedCatErr } = await sb.rpc(seedRpc);
+          if (seedCatErr) throw seedCatErr;
+          const seedMapRpc = TB_CONST?.RPCS?.seed_default_analytic_category_mappings || 'seed_default_analytic_category_mappings';
+          await sb.rpc(seedMapRpc);
+          const reload = await sb
+            .from(TB_CONST.TABLES.categories)
+            .select("id,name,color,sort_order")
+            .eq("user_id", sbUser.id)
+            .order("sort_order", { ascending: true })
+            .order("name", { ascending: true });
+          if (reload.error) throw reload.error;
+          catRows = reload.data || [];
+        } catch (seedErr) {
+          console.warn('[categories] seed default categories failed', seedErr?.message || seedErr);
+        }
+      }
+
       return { rows: (catRows || []), error: null };
     } catch (e) {
       return { rows: [], error: e };
@@ -730,18 +768,38 @@ const txPromise = sb
     }
   })();
 
-const w = await walletsPromise;
-const walletBalanceRows = await walletBalancesPromise;
-const { data: tx, error: tErr } = await txPromise;
+const [
+  w,
+  walletBalanceRows,
+  txRes,
+  segRows,
+  recurringRuleRows,
+  categorySubcategoryRows,
+  analysisMappingRes,
+  analysisAuditRes,
+  analyticMappingRulesRes,
+  catRes
+] = await Promise.all([
+  walletsPromise,
+  walletBalancesPromise,
+  txPromise,
+  segPromise,
+  recurringRulesPromise,
+  subcatPromise,
+  analysisMappingPromise,
+  analysisAuditPromise,
+  analyticMappingRulesPromise,
+  catPromise
+]);
+
+const { data: tx, error: tErr } = txRes || {};
 if (tErr) throw tErr;
-const segRows = await segPromise;
-const recurringRuleRows = await recurringRulesPromise;
-const categorySubcategoryRows = await subcatPromise;
-const { rows: analysisMappingRows, available: analysisMappingAvailable } = await analysisMappingPromise;
-const { rows: analysisAuditRows, available: analysisAuditAvailable } = await analysisAuditPromise;
-const { rows: analyticMappingRuleRows, available: analyticMappingRulesAvailable } = await analyticMappingRulesPromise;
-const { rows: catRowsDb, error: catLoadErrDb } = await catPromise;
+const { rows: analysisMappingRows, available: analysisMappingAvailable } = analysisMappingRes || { rows: [], available: false };
+const { rows: analysisAuditRows, available: analysisAuditAvailable } = analysisAuditRes || { rows: [], available: false };
+const { rows: analyticMappingRuleRows, available: analyticMappingRulesAvailable } = analyticMappingRulesRes || { rows: [], available: false };
+const { rows: catRowsDb, error: catLoadErrDb } = catRes || { rows: [], error: null };
 if (catLoadErrDb) throw catLoadErrDb;
+if (refreshToken !== Number(window.__TB_REFRESH_TOKEN__ || 0)) return;
 
   state.period.id = p.id;
   state.period.start = p.start_date;
@@ -916,12 +974,9 @@ state.wallets = (w || []).map((x) => ({
 
   state.categoriesRows = (catRowsDb || []).map((x) => ({ id: x.id, name: x.name, color: x.color || null, sortOrder: Number(x.sort_order || 0) }));
 
-  // categories — DB first, then local/state, then filtered transaction fallback
-Promise.resolve({ rows: catRowsDb, error: null })
-  .then(async ({ rows: catRows, error: catLoadErr }) => {
-    if (catLoadErr) throw catLoadErr;
-
-    const rows = catRows || [];
+  // categories — DB first, then in-memory transaction fallback, no generic localStorage restore
+  try {
+    const rows = catRowsDb || [];
     const merged = [];
     const seen = new Set();
     const isTripLike = (name) => /^\s*\[\s*trip\s*\]/i.test(String(name || ""));
@@ -937,22 +992,7 @@ Promise.resolve({ rows: catRowsDb, error: null })
       merged.push(name);
     };
 
-    const dbNames = rows.map(r => String(r.name || "").trim()).filter(Boolean);
-    dbNames.forEach(push);
-
-    try {
-      if (typeof loadCategoriesFromLocalStorage === "function") {
-        const arr = loadCategoriesFromLocalStorage();
-        if (Array.isArray(arr)) arr.forEach(push);
-      }
-    } catch (_) {}
-
-    (state.categories || []).forEach((c) => {
-      if (typeof c === "string") return push(c);
-      push(c?.name);
-      push(c?.label);
-      push(c?.category);
-    });
+    rows.map((r) => String(r.name || "").trim()).filter(Boolean).forEach(push);
 
     (state.transactions || []).forEach((t) => {
       const cat = String(t?.category || "").trim();
@@ -983,10 +1023,9 @@ Promise.resolve({ rows: catRowsDb, error: null })
         window.tbBus.emit("categories:updated", { source: "loadFromSupabase" });
       }
     } catch (_) {}
-  })
-  .catch((e) => {
-    console.warn("[categories] load failed (fallback to local)", e?.message || e);
-  });
+  } catch (e) {
+    console.warn("[categories] merge failed", e?.message || e);
+  }
 
   recomputeAllocations();
 }

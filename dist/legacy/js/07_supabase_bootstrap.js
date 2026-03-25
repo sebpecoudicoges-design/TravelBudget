@@ -220,9 +220,14 @@ async function ensureBootstrap() {
 
   // === Fast bootstrap: fetch the few required rows in parallel ===
   // Goal: reduce boot latency without changing any business logic.
-  // Schema version check disabled: some environments do not expose public.schema_version reliably,
-  // which causes noisy connection errors without functional impact.
-  const schemaP = Promise.resolve({ data: null, error: null });
+  // Schema version is read in soft mode: never block the app, but log mismatches explicitly.
+  const schemaP = sb
+    .from(TB_CONST.TABLES.schema_version)
+    .select('key,version,updated_at')
+    .eq('key', 'travelbudget')
+    .maybeSingle()
+    .then((res) => res)
+    .catch((error) => ({ data: null, error }));
 
   const profP = sb
     .from(TB_CONST.TABLES.profiles)
@@ -244,6 +249,16 @@ async function ensureBootstrap() {
     .limit(1);
 
   const [schemaRes, profRes, settingsRes, periodsRes] = await Promise.all([schemaP, profP, settingsP, periodsP]);
+
+  if (schemaRes?.error) {
+    console.warn('[schema_version] read failed (soft mode)', schemaRes.error?.message || schemaRes.error);
+  } else {
+    const dbVersion = Number(schemaRes?.data?.version || 0);
+    const expectedVersion = Number(TB_CONST?.EXPECTED_SCHEMA_VERSION || 0);
+    if (dbVersion && expectedVersion && dbVersion !== expectedVersion) {
+      console.warn(`[schema_version] mismatch db=${dbVersion} expected=${expectedVersion}`);
+    }
+  }
 
   if (profRes && profRes.error) throw profRes.error;
   if (settingsRes && settingsRes.error) throw settingsRes.error;

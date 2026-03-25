@@ -364,6 +364,53 @@ $$;
 ALTER FUNCTION "public"."can_access_travel"("p_travel_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."delete_category_bundle"("p_category_name" "text") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_actor uuid := auth.uid();
+  v_category text := nullif(trim(p_category_name), '');
+  v_deleted_mappings integer := 0;
+  v_deleted_subcategories integer := 0;
+  v_deleted_categories integer := 0;
+begin
+  if v_actor is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if v_category is null then
+    raise exception 'category_name is required';
+  end if;
+
+  delete from public.analytic_category_mappings m
+  where m.user_id = v_actor
+    and lower(trim(m.category_name)) = lower(v_category);
+  get diagnostics v_deleted_mappings = row_count;
+
+  delete from public.category_subcategories s
+  where s.user_id = v_actor
+    and lower(trim(s.category_name)) = lower(v_category);
+  get diagnostics v_deleted_subcategories = row_count;
+
+  delete from public.categories c
+  where c.user_id = v_actor
+    and lower(trim(c.name)) = lower(v_category);
+  get diagnostics v_deleted_categories = row_count;
+
+  return jsonb_build_object(
+    'category_name', v_category,
+    'deleted_mappings', v_deleted_mappings,
+    'deleted_subcategories', v_deleted_subcategories,
+    'deleted_categories', v_deleted_categories
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."delete_category_bundle"("p_category_name" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."delete_transaction"("p_tx_id" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -2162,6 +2209,90 @@ $$;
 ALTER FUNCTION "public"."rpc_budget_reference_resolve_for_period"("p_period_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."save_analytic_mapping_rule"("p_user_id" "uuid", "p_category_name" "text", "p_subcategory_name" "text", "p_mapping_status" "text", "p_analytic_family" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_actor uuid := auth.uid();
+  v_category text := nullif(trim(p_category_name), '');
+  v_subcategory text := nullif(trim(p_subcategory_name), '');
+  v_existing_id uuid;
+begin
+  if v_actor is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if p_user_id is null or p_user_id <> v_actor then
+    raise exception 'p_user_id must match auth.uid()';
+  end if;
+
+  if v_category is null then
+    raise exception 'category_name is required';
+  end if;
+
+  if p_mapping_status not in ('mapped', 'excluded', 'unmapped') then
+    raise exception 'invalid mapping_status: %', p_mapping_status;
+  end if;
+
+  if p_mapping_status = 'mapped' and p_analytic_family not in ('accommodation', 'food', 'transport', 'activities') then
+    raise exception 'invalid analytic_family for mapped status: %', p_analytic_family;
+  end if;
+
+  if p_mapping_status <> 'mapped' then
+    p_analytic_family := null;
+  end if;
+
+  select m.id
+    into v_existing_id
+  from public.analytic_category_mappings m
+  where m.user_id = p_user_id
+    and lower(trim(m.category_name)) = lower(v_category)
+    and lower(trim(coalesce(m.subcategory_name, ''))) = lower(trim(coalesce(v_subcategory, '')))
+  limit 1;
+
+  if p_mapping_status = 'unmapped' then
+    if v_existing_id is not null then
+      delete from public.analytic_category_mappings
+      where id = v_existing_id
+        and user_id = p_user_id;
+    end if;
+    return;
+  end if;
+
+  if v_existing_id is not null then
+    update public.analytic_category_mappings
+    set
+      category_name = v_category,
+      subcategory_name = v_subcategory,
+      mapping_status = p_mapping_status,
+      analytic_family = p_analytic_family,
+      updated_at = now()
+    where id = v_existing_id
+      and user_id = p_user_id;
+  else
+    insert into public.analytic_category_mappings (
+      user_id,
+      category_name,
+      subcategory_name,
+      mapping_status,
+      analytic_family
+    )
+    values (
+      p_user_id,
+      v_category,
+      v_subcategory,
+      p_mapping_status,
+      p_analytic_family
+    );
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."save_analytic_mapping_rule"("p_user_id" "uuid", "p_category_name" "text", "p_subcategory_name" "text", "p_mapping_status" "text", "p_analytic_family" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."seed_default_analytic_category_mappings"() RETURNS integer
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -2253,6 +2384,49 @@ $$;
 
 
 ALTER FUNCTION "public"."seed_default_analytic_category_mappings_admin"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."seed_default_categories_for_user"() RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_user_id uuid := auth.uid();
+  v_count integer := 0;
+begin
+  if v_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  insert into public.categories (user_id, name, color, sort_order)
+  values
+    (v_user_id, 'Repas', '#2f80ed', 0),
+    (v_user_id, 'Logement', '#22c55e', 1),
+    (v_user_id, 'Transport', '#f59e0b', 2),
+    (v_user_id, 'Transport Internationale', null, 3),
+    (v_user_id, 'Visa', null, 4),
+    (v_user_id, 'Sorties', '#a855f7', 5),
+    (v_user_id, 'Santé', null, 6),
+    (v_user_id, 'Abonnement/Mobile', null, 7),
+    (v_user_id, 'Frais bancaire', null, 8),
+    (v_user_id, 'Laundry', null, 9),
+    (v_user_id, 'Course', null, 10),
+    (v_user_id, 'Projet Personnel', null, 11),
+    (v_user_id, 'Cadeau', null, 12),
+    (v_user_id, 'Souvenir', null, 13),
+    (v_user_id, 'Caution', '#06b6d4', 14),
+    (v_user_id, 'Revenu', null, 15),
+    (v_user_id, 'Autre', '#94a3b8', 16),
+    (v_user_id, 'Mouvement interne', null, 17)
+  on conflict do nothing;
+
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."seed_default_categories_for_user"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."set_current_timestamp_updated_at"() RETURNS "trigger"
@@ -7035,6 +7209,12 @@ GRANT ALL ON FUNCTION "public"."can_access_travel"("p_travel_id" "uuid") TO "ser
 
 
 
+GRANT ALL ON FUNCTION "public"."delete_category_bundle"("p_category_name" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."delete_category_bundle"("p_category_name" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."delete_category_bundle"("p_category_name" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."delete_transaction"("p_tx_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."delete_transaction"("p_tx_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."delete_transaction"("p_tx_id" "uuid") TO "service_role";
@@ -7179,6 +7359,12 @@ GRANT ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_period"("p_peri
 
 
 
+GRANT ALL ON FUNCTION "public"."save_analytic_mapping_rule"("p_user_id" "uuid", "p_category_name" "text", "p_subcategory_name" "text", "p_mapping_status" "text", "p_analytic_family" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."save_analytic_mapping_rule"("p_user_id" "uuid", "p_category_name" "text", "p_subcategory_name" "text", "p_mapping_status" "text", "p_analytic_family" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."save_analytic_mapping_rule"("p_user_id" "uuid", "p_category_name" "text", "p_subcategory_name" "text", "p_mapping_status" "text", "p_analytic_family" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."seed_default_analytic_category_mappings"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings"() TO "anon";
 GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings"() TO "authenticated";
@@ -7190,6 +7376,12 @@ REVOKE ALL ON FUNCTION "public"."seed_default_analytic_category_mappings_admin"(
 GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings_admin"() TO "anon";
 GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings_admin"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings_admin"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."seed_default_categories_for_user"() TO "anon";
+GRANT ALL ON FUNCTION "public"."seed_default_categories_for_user"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."seed_default_categories_for_user"() TO "service_role";
 
 
 

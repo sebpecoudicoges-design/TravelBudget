@@ -132,3 +132,22 @@
 - Aide utilisateur à jour si impact UI.
 - Vérification UI FR/EN si un libellé, un bouton, un titre ou un texte change.
 - Labels / titres / descriptions FR/EN réalignés si une feature UI change.
+
+
+## V9.3.11.0
+- Création guidée catégorie/sous-catégorie avec choix de mapping analytique à la création.
+- Write-path analytique centralisé via RPC `save_analytic_mapping_rule` avec fallback front tolérant.
+- `schema_version` attendu = `93110`.
+- Vérifier zéro régression sur Settings > Catégories / Sous-catégories et Analyse.
+
+
+## Notes V9.3.11.1
+- Les catégories doivent rester strictement user-scoped en SQL : plus de restauration générique depuis localStorage.
+- Si un compte n'a aucune catégorie SQL, le bootstrap peut déclencher un seed SQL utilisateur (`seed_default_categories_for_user`).
+- La suppression d'une catégorie doit supprimer aussi le bundle lié : sous-catégories SQL + règles analytiques.
+
+
+## Lot courant
+- V9.3.12.1 : session-safe bootstrap + audit bootstrap perf/parallélisation.
+- Vérifier explicitement le switch de compte sans hard refresh.
+- Vérifier le rechargement propre après SIGNED_OUT / SIGNED_IN.

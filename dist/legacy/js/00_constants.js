@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.3.10';
+window.__TB_BUILD = '9.3.11.0';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -111,6 +111,7 @@ window.__TB_BUILD = '9.3.10';
     budget_reference_compute_for_travel: "rpc_budget_reference_compute_for_travel",
     budget_reference_compute_for_budget_segment: "rpc_budget_reference_compute_for_budget_segment",
     budget_reference_resolve_for_budget_segment: "rpc_budget_reference_resolve_for_budget_segment",
+    save_analytic_mapping_rule: "save_analytic_mapping_rule",
 
     // legacy fallback (older DB)
     trip_accept_invite: "trip_accept_invite",
@@ -241,7 +242,7 @@ window.__TB_BUILD = '9.3.10';
 
   // DB schema_version is stored as an integer in public.schema_version.version
   // Convention: 9.0.0 => 900
-  const EXPECTED_SCHEMA_VERSION = 900;
+  const EXPECTED_SCHEMA_VERSION = 93110;
 
   window.TB_CONST = Object.freeze({
     TABLES,
