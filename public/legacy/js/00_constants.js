@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.4.1.5';
+window.__TB_BUILD = '9.4.1.8';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -156,6 +156,7 @@ window.__TB_BUILD = '9.4.1.5';
     internal_movement: "Mouvement interne",
     trip: "Trip",
     other: "Autre",
+    wallet_adjustment: "Ajustement wallet",
   });
 
   const LS_KEYS = Object.freeze({

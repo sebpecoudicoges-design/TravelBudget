@@ -255,7 +255,9 @@
 
   function _isTripLinked(tx){ return !!(tx?.trip_expense_id || tx?.tripExpenseId || tx?.trip_share_link_id || tx?.tripShareLinkId); }
   function _isInternalMovement(tx){ return String(tx?.category || '').trim().toLowerCase() === 'mouvement interne'; }
-  function _txDate(tx){ return _norm(tx?.dateStart || tx?.date_start || tx?.occurrence_date || tx?.date || tx?.created_at?.slice?.(0,10) || tx?.createdAt?.slice?.(0,10)); }
+  function _txCashDate(tx){ return _norm(tx?.dateStart || tx?.date_start || tx?.occurrence_date || tx?.date || tx?.created_at?.slice?.(0,10) || tx?.createdAt?.slice?.(0,10)); }
+  function _txBudgetStart(tx){ return _norm(tx?.budgetDateStart || tx?.budget_date_start || tx?.dateStart || tx?.date_start || tx?.occurrence_date || tx?.date || tx?.created_at?.slice?.(0,10) || tx?.createdAt?.slice?.(0,10)); }
+  function _txBudgetEnd(tx){ return _norm(tx?.budgetDateEnd || tx?.budget_date_end || tx?.dateEnd || tx?.date_end || _txBudgetStart(tx)); }
   function _txType(tx){ return String(tx?.type || '').toLowerCase(); }
   function _txPaid(tx){
     if (typeof tx?.payNow === 'boolean') return tx.payNow;
@@ -435,10 +437,11 @@ function _analysisBucketOrder(){
       if (_txType(tx) !== 'expense') return false;
       if (_isTripLinked(tx)) return false;
       if (_isInternalMovement(tx)) return false;
-      const ds = _txDate(tx);
-      if (!ds) return false;
-      if (start && ds < start) return false;
-      if (end && ds > end) return false;
+      const bs = _txBudgetStart(tx);
+      const be = _txBudgetEnd(tx);
+      if (!bs || !be) return false;
+      if (start && be < start) return false;
+      if (end && bs > end) return false;
       return true;
     });
   }
@@ -477,12 +480,26 @@ function _analysisBucketOrder(){
     let spent = 0;
     let paidSpent = 0;
     for (const tx of txs) {
-      const ds = _txDate(tx);
-      const amt = _convert(tx?.amount, tx?.currency || base, ds, base);
+      const cashDate = _txCashDate(tx);
+      const budgetStart = _txBudgetStart(tx);
+      const budgetEnd = _txBudgetEnd(tx);
+
+      const budgetDays = _daysInclusive(budgetStart, budgetEnd)
+        .filter(d => dailyMap[d] !== undefined);
+
+      if (!budgetDays.length) continue;
+
+      const amt = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
+      const perDay = amt / budgetDays.length;
+
       spent += amt;
       if (_txPaid(tx)) paidSpent += amt;
-      dailyMap[ds] = _safeNum(dailyMap[ds]) + amt;
-      if (_txPaid(tx)) paidMap[ds] = _safeNum(paidMap[ds]) + amt;
+
+      for (const d of budgetDays) {
+        dailyMap[d] = _safeNum(dailyMap[d]) + perDay;
+        if (_txPaid(tx)) paidMap[d] = _safeNum(paidMap[d]) + perDay;
+      }
+
       const cat = _norm(tx?.category || 'Autre');
       const sub = _norm(tx?.subcategory || '');
       catMap.set(cat, (catMap.get(cat) || 0) + amt);
@@ -517,32 +534,36 @@ function _analysisBucketOrder(){
     const comparableCategoryMap = new Map(analysisBuckets.map((bucket) => [bucket, 0]));
     const unmappedCategoryMap = new Map();
     for (const tx of txs) {
-      const ds = _txDate(tx);
-      if (ds > effectiveEnd) continue;
-      if (!coveredDaySet.size || coveredDaySet.has(ds)) {
-        const amt = _convert(tx?.amount, tx?.currency || base, ds, base);
-        const raw = _norm(tx?.category || 'Autre');
-        const mapping = _mapToSourcedBucket(raw, tx);
+      const cashDate = _txCashDate(tx);
+      const budgetStart = _txBudgetStart(tx);
+      const budgetEnd = _txBudgetEnd(tx);
+      const comparableBudgetDays = _daysInclusive(budgetStart, budgetEnd)
+        .filter((d) => d <= effectiveEnd && (!coveredDaySet.size || coveredDaySet.has(d)));
 
-        if (mapping.mode === 'excluded') {
-          comparableExcludedSpent += amt;
-          continue;
-        }
+      if (!comparableBudgetDays.length) continue;
 
-        comparableIncludedSpent += amt;
+      const amt = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
+      const raw = _norm(tx?.category || 'Autre');
+      const mapping = _mapToSourcedBucket(raw, tx);
 
-        if (mapping.mode !== 'mapped') {
-          const unmappedKey = String(tx?.category || 'Autre').trim() || 'Autre';
-          unmappedCategoryMap.set(unmappedKey, (unmappedCategoryMap.get(unmappedKey) || 0) + amt);
-          continue;
-        }
-
-        comparableMappedSpent += amt;
-        comparableCategoryMap.set(
-          mapping.bucket,
-          (comparableCategoryMap.get(mapping.bucket) || 0) + amt
-        );
+      if (mapping.mode === 'excluded') {
+        comparableExcludedSpent += amt;
+        continue;
       }
+
+      comparableIncludedSpent += amt;
+
+      if (mapping.mode !== 'mapped') {
+        const unmappedKey = String(tx?.category || 'Autre').trim() || 'Autre';
+        unmappedCategoryMap.set(unmappedKey, (unmappedCategoryMap.get(unmappedKey) || 0) + amt);
+        continue;
+      }
+
+      comparableMappedSpent += amt;
+      comparableCategoryMap.set(
+        mapping.bucket,
+        (comparableCategoryMap.get(mapping.bucket) || 0) + amt
+      );
     }
     const totalBudget = targetDaily.reduce((a,b)=>a+b,0);
     const totalReferencePeriod = referenceDaily.reduce((a,b)=>a+b,0);
@@ -650,7 +671,7 @@ function _analysisBucketOrder(){
           color: _categoryColor(categoryName)
         };
       });
-    const outAmount = _outBudgetTransactions().reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txDate(tx), base), 0);
+    const outAmount = _outBudgetTransactions().reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txCashDate(tx) || _txBudgetStart(tx), base), 0);
     const referenceCategorySeries = [...referenceCategoryMap.entries()].map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
     const referenceComparisonSeries = _buildReferenceComparisonSeries(comparableCategoryMap, referenceCategoryMap, elapsedComparableDaysList.length || comparableDays);
     const unmappedCategorySeries = [...unmappedCategoryMap.entries()]
@@ -669,15 +690,16 @@ function _analysisBucketOrder(){
       const insight = (typeof window.tbGetNightCoveredInsightForTx === 'function')
         ? window.tbGetNightCoveredInsightForTx(tx, base)
         : null;
-      const ds = _txDate(tx);
-      const spentAmt = _convert(tx?.amount, tx?.currency || base, ds, base);
+      const bs = _txBudgetStart(tx);
+      const budgetDate = _txBudgetStart(tx) || _txCashDate(tx);
+      const spentAmt = _convert(tx?.amount, tx?.currency || base, _txCashDate(tx) || budgetDate, base);
       nightCoveredCount += 1;
       nightCoveredTransportSpent += spentAmt;
       if (insight && Number.isFinite(insight.amount)) {
         nightCoveredPotentialSavings += insight.amount;
         nightCoveredRows.push({
           id: String(tx?.id || nightCoveredRows.length + 1),
-          date: ds,
+          date: budgetDate,
           label: String(tx?.label || tx?.category || 'Transport'),
           category: String(tx?.category || 'Transport'),
           spent: Number(spentAmt.toFixed(2)),
@@ -1479,4 +1501,13 @@ function _analysisBucketOrder(){
     await _loadReferenceCache();
     _renderAll();
   };
-})();
+})();function forceSingleColumnMobile() {
+  if (window.innerWidth < 640) {
+    document.querySelectorAll(".kpi-grid").forEach(el => {
+      el.style.gridTemplateColumns = "1fr";
+    });
+  }
+}
+
+window.addEventListener("resize", forceSingleColumnMobile);
+forceSingleColumnMobile();

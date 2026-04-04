@@ -620,7 +620,7 @@ const walletsPromise = (async () => {
 
 const txPromise = sb
   .from(TB_CONST.TABLES.transactions)
-  .select("id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,pay_now,out_of_budget,night_covered,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status")
+  .select("id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,night_covered,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status")
   .eq("user_id", sbUser.id)
   .eq("travel_id", activeTravelId)
   .order("created_at", { ascending: true });
@@ -906,6 +906,8 @@ state.wallets = (w || []).map((x) => ({
   isInternal: !!(x.is_internal ?? x.isInternal),
   dateStart: x.date_start,
   dateEnd: x.date_end,
+  budgetDateStart: x.budget_date_start || x.date_start,
+  budgetDateEnd: x.budget_date_end || x.budget_date_start || x.date_end || x.date_start,
   payNow: !!x.pay_now,
   outOfBudget: !!x.out_of_budget,
   nightCovered: !!x.night_covered,

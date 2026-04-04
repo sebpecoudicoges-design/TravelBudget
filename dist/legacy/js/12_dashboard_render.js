@@ -261,8 +261,25 @@ function budgetSpentBaseForDateFromTx(dateStr) {
       const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
       if (outOfBudget) continue;
 
-      const s = parseISODateOrNull(t.dateStart || t.date_start || t.date || null);
-      const e = parseISODateOrNull(t.dateEnd || t.date_end || t.dateStart || t.date_start || t.date || null);
+      const s = parseISODateOrNull(
+  t.budgetDateStart ||
+  t.budget_date_start ||
+  t.dateStart ||
+  t.date_start ||
+  t.date ||
+  null
+);
+
+const e = parseISODateOrNull(
+  t.budgetDateEnd ||
+  t.budget_date_end ||
+  t.dateEnd ||
+  t.date_end ||
+  t.dateStart ||
+  t.date_start ||
+  t.date ||
+  null
+);
       if (!s || !e) continue;
 
       const sds = toLocalISODate(s);

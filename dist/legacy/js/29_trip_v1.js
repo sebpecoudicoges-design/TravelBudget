@@ -300,6 +300,8 @@ async function _rpcApplyTransactionV2(sb, rawArgs) {
     p_currency: cur,
     p_date_start: dateStart,
     p_date_end: dateEnd,
+    p_budget_date_start: (args.p_budget_date_start === undefined) ? dateStart : args.p_budget_date_start,
+    p_budget_date_end: (args.p_budget_date_end === undefined) ? dateEnd : args.p_budget_date_end,
     p_category: (args.p_category === undefined) ? null : args.p_category,
     p_subcategory: (args.p_subcategory === undefined) ? null : args.p_subcategory,
     p_pay_now: !!args.p_pay_now,
@@ -944,7 +946,28 @@ if (!Array.isArray(data)) return null;
       return lines.join("\n");
     }
 
-  
+function _tripParseLocaleAmount(raw) {
+  let s = String(raw ?? "").trim();
+  if (!s) return NaN;
+
+  s = s.replace(/[\s\u00A0\u202F]/g, "");
+
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+
+  if (hasComma && hasDot) {
+    if (s.lastIndexOf(",") > s.lastIndexOf(".")) {
+      s = s.replace(/\./g, "").replace(/,/g, ".");
+    } else {
+      s = s.replace(/,/g, "");
+    }
+  } else if (hasComma) {
+    s = s.replace(",", ".");
+  }
+
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}  
 let _settleModalState = null;
 
 function _ensureSettleModal() {
@@ -968,7 +991,12 @@ function _ensureSettleModal() {
       </div>
 
       <div style="margin-top:12px;">
-        <label class="muted" style="display:block;margin-bottom:6px;">Montant (dans la devise de la wallet)</label>
+        <label class="muted" style="display:block;margin-bottom:6px;">Devise transaction</label>
+        <input id="tripSettleCurrency" class="input" type="text" maxlength="3" style="width:100%" />
+      </div>
+
+      <div style="margin-top:12px;">
+        <label class="muted" style="display:block;margin-bottom:6px;">Montant (dans la devise choisie)</label>
         <input id="tripSettleAmount" class="input" type="number" step="0.01" style="width:100%" />
       </div>
 
@@ -1014,20 +1042,27 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
   if (defaultWalletId) sel.value = defaultWalletId;
 
   const inputAmt = modal.querySelector("#tripSettleAmount");
-  // Prefill with settlement amount. If wallet currency differs, user should overwrite manually.
+  const inputCur = modal.querySelector("#tripSettleCurrency");
+  let currencyDirty = false;
+  inputCur.value = String((wallets.find(x => x.id === sel.value)?.currency || currency || '')).toUpperCase();
   inputAmt.value = String(_round2(amount));
+  inputCur.oninput = () => { currencyDirty = true; inputCur.value = String(inputCur.value || '').toUpperCase().slice(0,3); refreshNote(); };
 
   const refreshNote = () => {
     const wid = sel.value;
     const w = wallets.find(x => x.id === wid);
     const wCur = String(w?.currency || "").toUpperCase();
+    if (!currencyDirty) inputCur.value = wCur || String(currency || '').toUpperCase();
+    const txCur = String(inputCur.value || '').toUpperCase();
     const note = modal.querySelector("#tripSettleWalletNote");
-    if (!wCur) {
+    if (!wCur || !txCur) {
       note.textContent = "";
       return;
     }
-    if (wCur !== String(currency||"").toUpperCase()) {
-      note.textContent = `⚠ Wallet en ${wCur}. Saisis le montant équivalent dans ${wCur} (conversion manuelle). Le règlement Trip reste en ${String(currency||"").toUpperCase()}.`;
+    if (wCur !== txCur) {
+      note.textContent = `⚠ Wallet en ${wCur}. La transaction sera créée en ${txCur} : vérifie que ce comportement est voulu.`;
+    } else if (txCur !== String(currency||"").toUpperCase()) {
+      note.textContent = `ℹ Règlement Trip en ${String(currency||"").toUpperCase()} mais transaction wallet saisie en ${txCur}.`;
     } else {
       note.textContent = "";
     }
@@ -1052,10 +1087,12 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
       const wallets2 = state.wallets || [];
       const w = wallets2.find(x => x.id === wid);
       if (!w) throw new Error("Wallet introuvable.");
-      const wCur = String(w.currency || "").toUpperCase();
-      const amtW = _round2(Number(inputAmt.value) || 0);
+      const walletCur = String(w.currency || "").toUpperCase();
+      const txCur = String((inputCur.value || walletCur)).toUpperCase().slice(0,3);
+      const amtW = _round2(_tripParseLocaleAmount(inputAmt.value));
       if (!(amtW > 0)) throw new Error("Montant invalide.");
-      await _persistSettlementWithWallet({ walletId: wid, walletCurrency: wCur, walletAmount: amtW });
+      if (!txCur) throw new Error("Devise invalide.");
+      await _persistSettlementWithWallet({ walletId: wid, walletCurrency: txCur, walletAmount: amtW, walletNativeCurrency: walletCur });
       modal.style.display = "none";
       _settleModalState = null;
       toastOk("Règlement enregistré.");
@@ -1383,7 +1420,7 @@ async function _persistSettlementEventOnly() {
   }
 }
 
-async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAmount }) {
+async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAmount, walletNativeCurrency }) {
   if (!_settleModalState) throw new Error("Aucun règlement en cours.");
   const uid = await _ensureSession();
   const members = tripState.members || [];
@@ -1392,8 +1429,8 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
   const eventId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(16).slice(2);
 
   // 1) Persist settlement event (Trip currency & amount)
-  const curTrip = String(currency || "").trim().toUpperCase();
-  const amtTrip = _round2(Number(amount) || 0);
+  const curTrip = String(walletCurrency || currency || "").trim().toUpperCase();
+  const amtTrip = _round2(Number(walletAmount) || 0);
   const { error: seInsErr } = await sb.from(TB_CONST.TABLES.trip_settlement_events).insert([{
     id: eventId,
     trip_id: tripState.activeTripId,
@@ -1406,9 +1443,10 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
   if (seInsErr) throw seInsErr;
 
   // 2) Create wallet transaction (wallet currency & amount)
+  const nativeCur = String(walletNativeCurrency || walletCurrency || '').toUpperCase();
   const label = isOut
-    ? `[Trip] SETTLE:${eventId} • Règlement à ${(members.find(x => x.id === toId)?.name) || "—"} (${curTrip} ${_round2(amtTrip)} → ${walletCurrency} ${_round2(walletAmount)})`
-    : `[Trip] SETTLE:${eventId} • Règlement reçu de ${(members.find(x => x.id === fromId)?.name) || "—"} (${curTrip} ${_round2(amtTrip)} → ${walletCurrency} ${_round2(walletAmount)})`;
+    ? `[Trip] SETTLE:${eventId} • Règlement à ${(members.find(x => x.id === toId)?.name) || "—"} (${curTrip} ${_round2(amtTrip)} → ${walletCurrency} ${_round2(walletAmount)}${nativeCur && nativeCur !== walletCurrency ? ` ; wallet ${nativeCur}` : ''})`
+    : `[Trip] SETTLE:${eventId} • Règlement reçu de ${(members.find(x => x.id === fromId)?.name) || "—"} (${curTrip} ${_round2(amtTrip)} → ${walletCurrency} ${_round2(walletAmount)}${nativeCur && nativeCur !== walletCurrency ? ` ; wallet ${nativeCur}` : ''})`;
 
   const date = _isoToday();
   const txType = isOut ? "expense" : "income";
@@ -1422,6 +1460,8 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     p_currency: walletCurrency,
     p_date_start: date,
     p_date_end: date,
+    p_budget_date_start: date,
+    p_budget_date_end: date,
     // category is NOT NULL in transactions; settlement wallet tx is an internal movement
     p_category: (TB_CONST?.CATS?.internal_movement || "Mouvement interne"),
     p_subcategory: null,
@@ -3058,10 +3098,6 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           const line = `<div class="tb-share-row"><span>${escapeHTML(_memName(fromId))} → ${escapeHTML(_memName(toId))}</span><strong>${_fmtMoney(amt, cur)}</strong></div>`;
           if (me && toId === me.id) receive.push(line); else if (me && fromId === me.id) pay.push(line); else pay.push(line);
         }
-        parts.push('<div class="tb-share-clean">');
-        if (receive.length) parts.push(`<div class="tb-share-group"><h4>Tu dois recevoir</h4>${receive.join('')}</div>`);
-        if (pay.length) parts.push(`<div class="tb-share-group"><h4>Tu dois payer</h4>${pay.join('')}</div>`);
-        parts.push('</div>');
       }
 
       const hasAny = (() => {

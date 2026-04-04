@@ -151,8 +151,10 @@ function _txBuildApplyV2Args(core, fxOverride) {
     p_label: core.label,
     p_amount: core.amount,
     p_currency: core.currency,
-    p_date_start: core.dateStart,
-    p_date_end: core.dateEnd,
+    p_date_start: core.cashDate || core.dateStart,
+    p_date_end: core.cashDate || core.dateEnd || core.dateStart,
+    p_budget_date_start: core.budgetDateStart || core.dateStart || core.cashDate,
+    p_budget_date_end: core.budgetDateEnd || core.dateEnd || core.dateStart || core.cashDate,
     p_category: cat,
     // optional
     p_subcategory: (core.subcategory !== undefined ? core.subcategory : null),
@@ -168,6 +170,8 @@ function _txBuildApplyV2Args(core, fxOverride) {
     p_user_id: uid
   };
 }
+
+window._txBuildApplyV2Args = _txBuildApplyV2Args;
 
 function wireNightLogic() {
   const updateNightVisibility = () => {
@@ -206,8 +210,9 @@ function openTxModal(type = "expense", walletId = null) {
   document.getElementById("m-amount").value = "";
   document.getElementById("m-category").value = "Autre";
   fillModalSubcategorySelect("Autre", "");
-  document.getElementById("m-start").value = now;
-  document.getElementById("m-end").value = now;
+  document.getElementById("m-cash-date").value = now;
+  document.getElementById("m-budget-start").value = now;
+  document.getElementById("m-budget-end").value = now;
   document.getElementById("m-label").value = "";
   document.getElementById("m-paynow").checked = true;
   document.getElementById("m-out").checked = false;
@@ -249,8 +254,9 @@ function openTxEditModal(txId) {
   document.getElementById("m-amount").value = tx.amount;
   document.getElementById("m-category").value = tx.category || "Autre";
   fillModalSubcategorySelect(tx.category || "Autre", tx.subcategory || "");
-  document.getElementById("m-start").value = tx.dateStart;
-  document.getElementById("m-end").value = tx.dateEnd || tx.dateStart;
+  document.getElementById("m-cash-date").value = tx.dateStart;
+  document.getElementById("m-budget-start").value = tx.budgetDateStart || tx.budget_date_start || tx.dateStart;
+  document.getElementById("m-budget-end").value = tx.budgetDateEnd || tx.budget_date_end || tx.dateEnd || tx.dateStart;
   document.getElementById("m-label").value = tx.label || "";
   document.getElementById("m-paynow").checked = !!tx.payNow;
   document.getElementById("m-out").checked = !!tx.outOfBudget;
@@ -273,7 +279,7 @@ function _txTripExpenseId(tx) {
 }
 
 function _setTxModalLock(isLocked, reason) {
-  const ids = ["m-type", "m-wallet", "m-amount", "m-start", "m-end", "m-paynow", "m-out", "m-night"];
+  const ids = ["m-type", "m-wallet", "m-amount", "m-cash-date", "m-budget-start", "m-budget-end", "m-paynow", "m-out", "m-night"];
   for (const id of ids) {
     const el = document.getElementById(id);
     if (el) el.disabled = !!isLocked;
@@ -471,6 +477,8 @@ async function _updateTransactionDirectCompat(args) {
     label: args?.p_label || null,
     date_start: dateStart || null,
     date_end: dateEnd || null,
+    budget_date_start: String(args?.p_budget_date_start || dateStart || '').slice(0, 10) || null,
+    budget_date_end: String(args?.p_budget_date_end || dateEnd || dateStart || '').slice(0, 10) || null,
     pay_now: !!args?.p_pay_now,
     out_of_budget: !!args?.p_out_of_budget,
     night_covered: !!args?.p_night_covered,
@@ -486,7 +494,7 @@ async function _updateTransactionDirectCompat(args) {
     if (args?.p_fx_tx_currency_snapshot !== undefined) payload.fx_tx_currency_snapshot = args?.p_fx_tx_currency_snapshot;
   }
 
-  const periodId = _txFindPeriodIdForDate(dateStart);
+  const periodId = _txFindPeriodIdForDate(String(args?.p_budget_date_start || dateStart).slice(0, 10));
   if (periodId) payload.period_id = periodId;
   const activeTravelId = String(state?.activeTravelId || '').trim();
   if (activeTravelId) payload.travel_id = activeTravelId;
@@ -503,7 +511,28 @@ async function _updateTransactionDirectCompat(args) {
 async function _updateTransactionRpcCompat(args) {
   return await _updateTransactionDirectCompat(args);
 }
+function _tbParseLocaleAmount(raw) {
+  let s = String(raw ?? "").trim();
+  if (!s) return NaN;
 
+  s = s.replace(/[\s\u00A0\u202F]/g, "");
+
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+
+  if (hasComma && hasDot) {
+    if (s.lastIndexOf(",") > s.lastIndexOf(".")) {
+      s = s.replace(/\./g, "").replace(/,/g, ".");
+    } else {
+      s = s.replace(/,/g, "");
+    }
+  } else if (hasComma) {
+    s = s.replace(",", ".");
+  }
+
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
 async function saveModal() {
   if (_savingTx) return;
   _savingTx = true;
@@ -516,18 +545,19 @@ async function saveModal() {
       await safeCall("Sauvegarde", async () => {
       const type = document.getElementById("m-type").value;
       const walletId = document.getElementById("m-wallet").value;
-      const amount = parseFloat(document.getElementById("m-amount").value);
+      const amount = _tbParseLocaleAmount(document.getElementById("m-amount").value);
       const category = document.getElementById("m-category").value || "Autre";
       const subcategory = String(document.getElementById("m-subcategory")?.value || "").trim() || null;
-      const start = document.getElementById("m-start").value;
-      const end = document.getElementById("m-end").value || start;
+      const cashDate = document.getElementById("m-cash-date").value;
+      const budgetStart = document.getElementById("m-budget-start").value || cashDate;
+      const budgetEnd = document.getElementById("m-budget-end").value || budgetStart;
       const label = (document.getElementById("m-label").value || "").trim() || category;
       const payNow = document.getElementById("m-paynow").checked;
       let outOfBudget = document.getElementById("m-out").checked;
       const nightCovered = document.getElementById("m-night").checked;
 
-      if (!start) throw new Error("Date début invalide.");
-      if (parseISODateOrNull(end) < parseISODateOrNull(start)) throw new Error("Date fin < date début.");
+      if (!cashDate) throw new Error("Date trésorerie invalide.");
+      if (parseISODateOrNull(budgetEnd) < parseISODateOrNull(budgetStart)) throw new Error("Date budget fin < date budget début.");
       if (!isFinite(amount) || amount <= 0) throw new Error("Montant invalide.");
 
       const wallet = findWallet(walletId);
@@ -543,7 +573,9 @@ async function saveModal() {
           if (type !== current.type) throw new Error("Transaction liée à Trip : changement de type interdit.");
           if (Math.abs(Number(amount) - Number(current.amount)) > 0.0001)
             throw new Error("Transaction liée à Trip : changement de montant interdit (modifie la dépense Trip à la place).");
-          if (String(start) !== String(current.dateStart) || String(end) !== String(current.dateEnd || current.dateStart)) {
+          const currentBudgetStart = current.budgetDateStart || current.budget_date_start || current.dateStart;
+          const currentBudgetEnd = current.budgetDateEnd || current.budget_date_end || current.dateEnd || current.dateStart;
+          if (String(cashDate) !== String(current.dateStart) || String(budgetStart) !== String(currentBudgetStart) || String(budgetEnd) !== String(currentBudgetEnd)) {
             throw new Error("Transaction liée à Trip : changement de dates interdit.");
           }
           if (!!payNow !== !!current.payNow) throw new Error("Transaction liée à Trip : changement pay_now interdit.");
@@ -554,7 +586,7 @@ async function saveModal() {
         // (Prompts manual EUR rates if provider doesn't support the currency.)
         {
           const txCur = String(wallet?.currency || "").trim().toUpperCase();
-          const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(start) : null;
+          const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(budgetStart) : null;
           const baseCur = String(seg?.baseCurrency || state?.period?.baseCurrency || "EUR").trim().toUpperCase();
           if (txCur && baseCur && txCur !== baseCur) {
             const ensure = (typeof window.tbFxEnsurePairInteractive === "function")
@@ -575,21 +607,23 @@ async function saveModal() {
           p_category: category,
           p_label: label,
           p_subcategory: subcategory,
-          p_date_start: start,
-          p_date_end: end,
+          p_date_start: cashDate,
+          p_date_end: cashDate,
+          p_budget_date_start: budgetStart,
+          p_budget_date_end: budgetEnd,
           p_pay_now: payNow,
           p_out_of_budget: outOfBudget,
           p_night_covered: type === "expense" && ((typeof window.tbIsNightCoveredEligibleCategory === "function") ? window.tbIsNightCoveredEligibleCategory(category) : /^transport( internationale?| international)?$/i.test(String(category || "").trim())) ? nightCovered : false,
           // FX snapshot is computed for the transaction date + transaction currency.
           // (Use local variables here; `form` is not in scope.)
-          ..._txBuildFxSnapshotArgs(start, wallet.currency)
+          ..._txBuildFxSnapshotArgs(cashDate, wallet.currency)
         });
         if (error) throw error;
       } else {
         // Ensure FX conversion is available for tx currency -> segment/base currency.
         {
           const txCur = String(wallet?.currency || "").trim().toUpperCase();
-          const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(start) : null;
+          const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(budgetStart) : null;
           const baseCur = String(seg?.baseCurrency || state?.period?.baseCurrency || "EUR").trim().toUpperCase();
           if (txCur && baseCur && txCur !== baseCur) {
             const ensure = (typeof window.tbFxEnsurePairInteractive === "function")
@@ -611,8 +645,11 @@ async function saveModal() {
             currency: wallet.currency,
             category,
             subcategory,
-            dateStart: start,
-            dateEnd: end,
+            cashDate,
+            dateStart: budgetStart,
+            dateEnd: budgetEnd,
+            budgetDateStart: budgetStart,
+            budgetDateEnd: budgetEnd,
             payNow,
             outOfBudget,
             nightCovered: (type === "expense" && /^transport( internationale?| international)?$/i.test(String(category || "").trim())) ? nightCovered : false,
@@ -659,6 +696,8 @@ async function resnapshotModal() {
   const txNightCovered = (tx.night_covered !== undefined) ? !!tx.night_covered : !!tx.nightCovered;
   const txDateStart = tx.date_start || tx.dateStart;
   const txDateEnd = tx.date_end || tx.dateEnd;
+  const txBudgetStart = tx.budget_date_start || tx.budgetDateStart || txDateStart;
+  const txBudgetEnd = tx.budget_date_end || tx.budgetDateEnd || txDateEnd || txDateStart;
   const txCurrency = String(tx.currency || "").toUpperCase();
 
   // Recommended: allow only for unpaid (pay_now=false)
@@ -686,8 +725,11 @@ async function resnapshotModal() {
         currency: (txCurrency || String(wallet.currency || '').toUpperCase()),
         category: tx.category,
         subcategory: tx.subcategory || null,
-        dateStart: txDateStart,
-        dateEnd: txDateEnd,
+        cashDate: txDateStart,
+        dateStart: txBudgetStart,
+        dateEnd: txBudgetEnd,
+        budgetDateStart: txBudgetStart,
+        budgetDateEnd: txBudgetEnd,
         // Preserve flags exactly (critical: avoid flipping paid/unpaid state)
         payNow: txPayNow,
         outOfBudget: txOutOfBudget,

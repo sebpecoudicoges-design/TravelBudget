@@ -153,3 +153,12 @@
 - V9.4.1.4 : fiabilisation du solde réel historique de la courbe cashflow (impact wallet au jour de transaction, sans répartition budgétaire).
 - Vérifier explicitement le switch de compte sans hard refresh.
 - Vérifier le rechargement propre après SIGNED_OUT / SIGNED_IN.
+
+
+## V9.4.1.8
+- Budget engine dual-date unifié : helpers globaux cash/budget ajoutés.
+- Hydratation bootstrap : budgetDateStart / budgetDateEnd exposés en camelCase.
+- Dashboard budget quotidien : lecture centralisée sur budget dates.
+- Analyse budget : lecture branchée sur helpers globaux cash/budget.
+- Trip budget-linked reads : budget dates rechargées dans les transactions liées.
+- Versioning réaligné : 00_constants.js, package.json, package-lock.json, src/main.js.

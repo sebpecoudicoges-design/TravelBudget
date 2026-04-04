@@ -223,7 +223,7 @@ end $$;
 ALTER FUNCTION "public"."apply_transaction"("p_amount" numeric, "p_category" "text", "p_currency" "text", "p_date_end" "date", "p_date_start" "date", "p_label" "text", "p_out_of_budget" boolean, "p_pay_now" boolean, "p_subcategory" "text", "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_type" "text", "p_user_id" "uuid", "p_wallet_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
+CREATE OR REPLACE FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid" DEFAULT NULL::"uuid", "p_budget_date_start" "date" DEFAULT NULL::"date", "p_budget_date_end" "date" DEFAULT NULL::"date") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
@@ -248,6 +248,7 @@ begin
     user_id, wallet_id, period_id,
     type, label, amount, currency,
     date_start, date_end,
+    budget_date_start, budget_date_end,
     category, subcategory,
     pay_now, out_of_budget, night_covered,
     affects_budget,
@@ -257,7 +258,9 @@ begin
   ) values (
     v_user_id, p_wallet_id, v_period_id,
     p_type, p_label, p_amount, p_currency,
-    p_date_start, p_date_end,
+    p_date_start, coalesce(p_date_end, p_date_start),
+    coalesce(p_budget_date_start, p_date_start),
+    coalesce(p_budget_date_end, p_budget_date_start, p_date_end, p_date_start),
     p_category, p_subcategory,
     p_pay_now, p_out_of_budget, p_night_covered,
     p_affects_budget,
@@ -273,7 +276,7 @@ end;
 $$;
 
 
-ALTER FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid", "p_budget_date_start" "date", "p_budget_date_end" "date") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."bind_trip_member_to_auth"("p_trip_id" "uuid") RETURNS "uuid"
@@ -3827,6 +3830,44 @@ $$;
 ALTER FUNCTION "public"."update_transaction_v2"("p_wallet_id" "uuid", "p_tx_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_user_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."update_transaction_v2"("p_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean DEFAULT false, "p_out_of_budget" boolean DEFAULT false, "p_night_covered" boolean DEFAULT false, "p_user_id" "uuid" DEFAULT NULL::"uuid", "p_subcategory" "text" DEFAULT NULL::"text", "p_trip_expense_id" "uuid" DEFAULT NULL::"uuid", "p_trip_share_link_id" "uuid" DEFAULT NULL::"uuid", "p_fx_rate_snapshot" numeric DEFAULT NULL::numeric, "p_fx_source_snapshot" "text" DEFAULT NULL::"text", "p_fx_snapshot_at" timestamp with time zone DEFAULT NULL::timestamp with time zone, "p_fx_base_currency_snapshot" "text" DEFAULT NULL::"text", "p_fx_tx_currency_snapshot" "text" DEFAULT NULL::"text", "p_budget_date_start" "date" DEFAULT NULL::"date", "p_budget_date_end" "date" DEFAULT NULL::"date") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+begin
+  perform public.update_transaction(
+    p_tx_id := p_id,
+    p_wallet_id := p_wallet_id,
+    p_type := p_type,
+    p_amount := p_amount,
+    p_currency := p_currency,
+    p_category := p_category,
+    p_label := p_label,
+    p_date_start := p_date_start,
+    p_date_end := p_date_end,
+    p_pay_now := p_pay_now,
+    p_out_of_budget := p_out_of_budget,
+    p_night_covered := p_night_covered
+  );
+
+  update public.transactions t
+  set subcategory = p_subcategory,
+      budget_date_start = coalesce(p_budget_date_start, p_date_start),
+      budget_date_end = coalesce(p_budget_date_end, p_budget_date_start, p_date_end, p_date_start),
+      updated_at = now()
+  where t.id = p_id
+    and t.user_id = auth.uid();
+
+  if not found then
+    raise exception 'Transaction introuvable ou non autorisée';
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."update_transaction_v2"("p_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_user_id" "uuid", "p_subcategory" "text", "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_budget_date_start" "date", "p_budget_date_end" "date") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."wallets_travel_consistency_guard"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -4290,7 +4331,10 @@ CREATE TABLE IF NOT EXISTS "public"."transactions" (
     "occurrence_date" "date",
     "generated_by_rule" boolean DEFAULT false NOT NULL,
     "recurring_instance_status" "text" DEFAULT 'confirmed'::"text",
+    "budget_date_start" "date" NOT NULL,
+    "budget_date_end" "date" NOT NULL,
     CONSTRAINT "transactions_amount_check" CHECK (("amount" > (0)::numeric)),
+    CONSTRAINT "transactions_budget_date_order_chk" CHECK (("budget_date_end" >= "budget_date_start")),
     CONSTRAINT "transactions_currency_iso3_chk" CHECK (("currency" ~ '^[A-Z]{3}$'::"text")),
     CONSTRAINT "transactions_fx_snapshot_consistency" CHECK (((("fx_rate_snapshot" IS NULL) AND ("fx_source_snapshot" IS NULL)) OR (("fx_rate_snapshot" IS NOT NULL) AND ("fx_source_snapshot" IS NOT NULL)))),
     CONSTRAINT "transactions_recurring_instance_status_chk" CHECK (("recurring_instance_status" = ANY (ARRAY['generated'::"text", 'confirmed'::"text", 'detached'::"text", 'skipped'::"text"]))),
@@ -7193,9 +7237,9 @@ GRANT ALL ON FUNCTION "public"."apply_transaction"("p_amount" numeric, "p_catego
 
 
 
-REVOKE ALL ON FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid", "p_budget_date_start" "date", "p_budget_date_end" "date") TO "anon";
+GRANT ALL ON FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid", "p_budget_date_start" "date", "p_budget_date_end" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid", "p_budget_date_start" "date", "p_budget_date_end" "date") TO "service_role";
 
 
 
@@ -7560,6 +7604,12 @@ GRANT ALL ON FUNCTION "public"."update_transaction_v2"("p_id" "uuid", "p_wallet_
 GRANT ALL ON FUNCTION "public"."update_transaction_v2"("p_wallet_id" "uuid", "p_tx_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_user_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."update_transaction_v2"("p_wallet_id" "uuid", "p_tx_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_user_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_transaction_v2"("p_wallet_id" "uuid", "p_tx_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_user_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_transaction_v2"("p_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_user_id" "uuid", "p_subcategory" "text", "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_budget_date_start" "date", "p_budget_date_end" "date") TO "anon";
+GRANT ALL ON FUNCTION "public"."update_transaction_v2"("p_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_user_id" "uuid", "p_subcategory" "text", "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_budget_date_start" "date", "p_budget_date_end" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_transaction_v2"("p_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_user_id" "uuid", "p_subcategory" "text", "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_budget_date_start" "date", "p_budget_date_end" "date") TO "service_role";
 
 
 

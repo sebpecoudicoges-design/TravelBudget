@@ -221,10 +221,93 @@ function getKpiScope() {
     setTimeout(_runQueuedRender, 0);
   }
 
-  function base() {
-    // Cashflow curve should follow the period/segment display currency (legacy behavior).
-    const seg = getSelectedSegment();
-    if (seg && (seg.baseCurrency || seg.base_currency)) return String(seg.baseCurrency || seg.base_currency || "").toUpperCase();
+  function _segmentBaseForDate(dateStr) {
+    try {
+      const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(dateStr) : null;
+      const cur = String(seg?.baseCurrency || seg?.base_currency || "").toUpperCase();
+      return /^[A-Z]{3}$/.test(cur) ? cur : "";
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function _scopeHasMultipleSegmentCurrencies(scopeObj) {
+    try {
+      const s = scopeObj || getKpiScope();
+      const startStr = String(s?.start || state?.period?.start || "").slice(0, 10);
+      const endStr = String(s?.end || state?.period?.end || "").slice(0, 10);
+      const start = window.parseISODateOrNull?.(startStr);
+      const end = window.parseISODateOrNull?.(endStr);
+      if (!start || !end) return false;
+      const seen = new Set();
+      (window.forEachDateInclusive ? window.forEachDateInclusive : _forEachDateInclusive)(start, end, (d) => {
+        const ds = (window.toLocalISODate ? window.toLocalISODate(d) : _toISODate(d));
+        const cur = _segmentBaseForDate(ds);
+        if (cur) seen.add(cur);
+      });
+      return seen.size > 1;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function _scopeSpansMultipleSegments(scopeObj) {
+    try {
+      const s = scopeObj || getKpiScope();
+      const startStr = String(s?.start || state?.period?.start || "").slice(0, 10);
+      const endStr = String(s?.end || state?.period?.end || "").slice(0, 10);
+      const start = window.parseISODateOrNull?.(startStr);
+      const end = window.parseISODateOrNull?.(endStr);
+      if (!start || !end) return false;
+      const seenSegs = new Set();
+      const seenCurrencies = new Set();
+      (window.forEachDateInclusive ? window.forEachDateInclusive : _forEachDateInclusive)(start, end, (d) => {
+        const ds = (window.toLocalISODate ? window.toLocalISODate(d) : _toISODate(d));
+        const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(ds) : null;
+        const segId = String(seg?.id || "");
+        const cur = String(seg?.baseCurrency || seg?.base_currency || "").toUpperCase();
+        if (segId) seenSegs.add(segId);
+        if (cur) seenCurrencies.add(cur);
+      });
+      return seenSegs.size > 1 || seenCurrencies.size > 1;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function curveCurrency(scopeObj) {
+    const scope = scopeObj || getKpiScope();
+    if (_scopeSpansMultipleSegments(scope)) {
+      const acct = accountBase();
+      if (acct) return acct;
+    }
+    const selSeg = getSelectedSegment(scope);
+    if (selSeg && (selSeg.baseCurrency || selSeg.base_currency)) {
+      return String(selSeg.baseCurrency || selSeg.base_currency || "").toUpperCase();
+    }
+    const anchor = String(scope?.start || todayStr()).slice(0, 10);
+    const segBase = _segmentBaseForDate(anchor);
+    if (segBase) return segBase;
+    return base(scope);
+  }
+
+  function base(scopeObj) {
+    const scope = scopeObj || getKpiScope();
+    const selSeg = getSelectedSegment(scope);
+    if (selSeg && (selSeg.baseCurrency || selSeg.base_currency)) {
+      return String(selSeg.baseCurrency || selSeg.base_currency || "").toUpperCase();
+    }
+
+    const multiSegCurrency = _scopeHasMultipleSegmentCurrencies(scope);
+    if (multiSegCurrency) {
+      const acct = accountBase();
+      if (acct) return acct;
+    }
+
+    const anchor = String(scope?.start || todayStr()).slice(0, 10);
+    const segBase = _segmentBaseForDate(anchor);
+    if (segBase) return segBase;
+
     const d = todayStr();
     if (typeof window.getDisplayCurrency === "function") return String(window.getDisplayCurrency(d) || "").toUpperCase();
     return String(window.state?.period?.baseCurrency || "").toUpperCase();
@@ -248,8 +331,100 @@ function getKpiScope() {
     return Number.isFinite(n) ? n : 0;
   }
 
-  function toBase(amount, cur) {
-    const b = base();
+  function toRenderForDate(amount, cur, dateStr, renderCurrency) {
+    const target = String(renderCurrency || base() || '').toUpperCase();
+    const a = safeNum(amount);
+    const source = String(cur || target).toUpperCase();
+    if (!target) return a;
+    if (source === target) return a;
+
+    try {
+      const seg = (typeof window.getBudgetSegmentForDate === 'function') ? window.getBudgetSegmentForDate(dateStr) : null;
+      if (seg && typeof window.fxConvert === 'function') {
+        const rates = (typeof window.fxRatesForSegment === 'function')
+          ? window.fxRatesForSegment(seg)
+          : (typeof window.fxGetEurRates === 'function' ? window.fxGetEurRates() : {});
+        const out = window.fxConvert(a, source, target, rates);
+        if (out !== null && Number.isFinite(out)) return out;
+      }
+    } catch (_) {}
+
+    if (typeof window.safeFxConvert === 'function') {
+      const out = window.safeFxConvert(a, source, target, null);
+      if (out !== null && Number.isFinite(out)) return out;
+    }
+    if (typeof window.fxConvert === 'function') {
+      const out = window.fxConvert(a, source, target);
+      if (out !== null && Number.isFinite(out)) return out;
+    }
+    return source === target ? a : 0;
+  }
+
+  function getDailyBudgetInRenderCurrency(dateStr, renderCurrency) {
+    try {
+      const info = (typeof window.getDailyBudgetInfoForDate === 'function')
+        ? window.getDailyBudgetInfoForDate(dateStr)
+        : null;
+      const daily = safeNum(info?.daily ?? info?.dailyBudget ?? 0);
+      const sourceCur = String(info?.baseCurrency || _segmentBaseForDate(dateStr) || renderCurrency || '').toUpperCase();
+      return toRenderForDate(daily, sourceCur, dateStr, renderCurrency);
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function budgetSpentForDateInRenderCurrency(dateStr, renderCurrency) {
+    try {
+      const txs = Array.isArray(window.state?.transactions) ? window.state.transactions : [];
+      const target = String(dateStr || '');
+      if (!target) return 0;
+      let sum = 0;
+      for (const t of txs) {
+        if (!t || t.isInternal) continue;
+        const type = String(t?.type || '').toLowerCase();
+        if (type !== 'expense') continue;
+
+        const cat = (t.category !== undefined && t.category !== null) ? String(t.category) : '';
+        if (cat && excludedCats.has(cat)) continue;
+
+        const affectsBudget = (t.affectsBudget === undefined || t.affectsBudget === null) ? true : !!t.affectsBudget;
+        if (!affectsBudget) continue;
+        const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
+        if (outOfBudget) continue;
+
+        const rng = txDateRange(t);
+        if (!rng) continue;
+        const sds = (window.toLocalISODate ? window.toLocalISODate(rng.start) : _toISODate(rng.start));
+        const eds = (window.toLocalISODate ? window.toLocalISODate(rng.end) : _toISODate(rng.end));
+        if (target < sds || target > eds) continue;
+
+        const p = (t.payNow ?? t.pay_now);
+        const isPaid = (p === undefined) ? true : !!p;
+
+        const label = String(t.label || '');
+        const isTrip = label.includes('[Trip]');
+        const isTripAdvance = isTrip && label.includes('Avance');
+        const affectsCashRaw = (t.affectsCash === undefined || t.affectsCash === null) ? null : !!t.affectsCash;
+        const isTripUnpaidShare = isTrip && !isTripAdvance && type === 'expense';
+        const affectsCash = (affectsCashRaw === null) ? (!isTripUnpaidShare) : affectsCashRaw;
+        const isBudgetOnly = !isPaid && affectsBudget && !affectsCash;
+        if (!isPaid && !isBudgetOnly) continue;
+
+        const amt = safeNum(t.amount);
+        if (!Number.isFinite(amt) || amt === 0) continue;
+        const days = daysInclusive(rng.start, rng.end);
+        if (!days) continue;
+        const perDay = amt / days;
+        sum += toRenderForDate(perDay, t.currency || renderCurrency, target, renderCurrency);
+      }
+      return sum;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function toBase(amount, cur, scopeObj) {
+    const b = base(scopeObj);
     const a = safeNum(amount);
     const c = String(cur || b).toUpperCase();
 
@@ -257,7 +432,7 @@ function getKpiScope() {
 
     // If a specific segment is selected, convert using that segment's FX overrides
     // without relying on the global display-currency mechanism.
-    const selSeg = getSelectedSegment();
+    const selSeg = getSelectedSegment(scopeObj);
     if (selSeg && typeof window.fxConvert === "function") {
       const rates = (typeof window.fxRatesForSegment === "function")
         ? window.fxRatesForSegment(selSeg)
@@ -284,15 +459,28 @@ function getKpiScope() {
     return (c === b) ? a : 0;
   }
 
-  function sumWalletsBase() {
-    const b = base();
+  function sumWalletsBase(scopeObj) {
+    const b = base(scopeObj);
     if (!b) return 0;
     let total = 0;
     for (const w of (window.state?.wallets || [])) {
       const eff = (typeof window.tbGetWalletEffectiveBalance === "function")
         ? (window.tbGetWalletEffectiveBalance(w?.id) || 0)
         : (w?.balance || 0);
-      total += toBase(eff || 0, w?.currency || b);
+      total += toBase(eff || 0, w?.currency || b, scopeObj);
+    }
+    return round2(total);
+  }
+
+  function sumWalletsInCurrency(scopeObj, renderCurrency) {
+    const target = String(renderCurrency || curveCurrency(scopeObj) || base(scopeObj) || "").toUpperCase();
+    if (!target) return 0;
+    let total = 0;
+    for (const w of (window.state?.wallets || [])) {
+      const eff = (typeof window.tbGetWalletEffectiveBalance === "function")
+        ? (window.tbGetWalletEffectiveBalance(w?.id) || 0)
+        : (w?.balance || 0);
+      total += toRenderForDate(eff || 0, w?.currency || target, todayStr(), target);
     }
     return round2(total);
   }
@@ -332,15 +520,14 @@ function getKpiScope() {
     });
   }
 
-  function buildMaps(periodStart, periodEnd) {
-    const paidNet = {};              // all paid net (income-expense)
+  function buildMaps(periodStart, periodEnd, renderCurrency) {
     const paidSpentAll = {};         // paid expense only (positive), ALL expenses (for "Dépensé/jour")
     const paidSpentBudget = {};      // paid expense only (positive), affects budget and not out_of_budget (for "Budget dépensé/jour")
     const pendingNetExp = {};        // pending expense only (negative already)
     const pendingNetInc = {};        // pending income only (positive)
 
     const txs = window.state?.transactions || [];
-    const b = base();
+    const b = String(renderCurrency || base() || '').toUpperCase();
 
     for (const t of txs) {
       if (!t) continue;
@@ -356,7 +543,6 @@ function getKpiScope() {
       const rng = txDateRange(t);
       if (!rng) continue;
 
-      // clamp to period
       const s = (rng.start < periodStart) ? periodStart : rng.start;
       const e = (rng.end > periodEnd) ? periodEnd : rng.end;
       if (e < periodStart || s > periodEnd) continue;
@@ -364,61 +550,126 @@ function getKpiScope() {
       const p = (t.payNow ?? t.pay_now);
       const isPaid = (p === undefined) ? true : !!p;
 
-      const amtBase = toBase(t.amount || 0, t.currency || b);
-      if (!Number.isFinite(amtBase)) continue;
-
       const type = String(t.type || "").toLowerCase();
       if (type !== "expense" && type !== "income") continue;
+
+      const amount = safeNum(t.amount || 0);
+      if (!Number.isFinite(amount) || amount === 0) continue;
 
       const affectsBudget = (t.affectsBudget === undefined || t.affectsBudget === null) ? true : !!t.affectsBudget;
       const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
 
-      const signed = (type === "income") ? +amtBase : -amtBase;
+      const totalDays = daysInclusive(rng.start, rng.end);
+      if (!totalDays) continue;
+      const perDayRaw = amount / totalDays;
 
-      if (isPaid) {
-        addDistributed(paidNet, s, e, signed);
+      (window.forEachDateInclusive ? window.forEachDateInclusive : _forEachDateInclusive)(s, e, (d) => {
+        const k = (window.toLocalISODate ? window.toLocalISODate(d) : _toISODate(d));
+        const perDayRender = toRenderForDate(perDayRaw, t.currency || b, k, b);
+        if (!Number.isFinite(perDayRender)) return;
 
-        if (type === "expense") {
-          // all paid expenses (total spent per day)
-          if (!catExcluded) addDistributed(paidSpentAll, s, e, +amtBase);
-
-          // budget spent per day: only expenses that affect budget and are not out_of_budget
-          if (!catExcluded && affectsBudget && !outOfBudget) addDistributed(paidSpentBudget, s, e, +amtBase);
-        }
-      } else {
-        // Unpaid items:
-        // - By default they impact *forecast cash* (pendingNet*).
-        // - Some items are *budget-only* (e.g. Trip shares paid by someone else): they must impact
-        //   the "budget used" column, but NOT wallet cash nor forecast cash.
-        const affectsCashRaw = (t.affectsCash === undefined || t.affectsCash === null) ? null : !!t.affectsCash;
-
-        // Heuristic: Trip expense without "Avance" and payNow=false is a share paid by someone else
-        // (already allocated to me via Trip engine). It should be budget-only by default.
-        const isTripUnpaidShare = isTrip && !isTripAdvance && type === "expense";
-
-        const affectsCash = (affectsCashRaw === null)
-          ? (!isTripUnpaidShare) // default: cash unless it's an unpaid trip share
-          : affectsCashRaw;
-
-        const isBudgetOnly = affectsBudget && !affectsCash;
-
-        if (isBudgetOnly) {
-          if (!outOfBudget && !catExcluded && type === "expense") {
-            addDistributed(paidSpentBudget, s, e, +amtBase);
+        if (isPaid) {
+          if (type === "expense") {
+            if (!catExcluded) paidSpentAll[k] = safeNum(paidSpentAll[k]) + perDayRender;
+            if (!catExcluded && affectsBudget && !outOfBudget) {
+              paidSpentBudget[k] = safeNum(paidSpentBudget[k]) + perDayRender;
+            }
           }
-          // no pendingNet impact
         } else {
-          // pending impacts forecast cash
-          if (type === "expense") addDistributed(pendingNetExp, s, e, -amtBase);
-          else addDistributed(pendingNetInc, s, e, +amtBase);
+          const affectsCashRaw = (t.affectsCash === undefined || t.affectsCash === null) ? null : !!t.affectsCash;
+          const isTripUnpaidShare = isTrip && !isTripAdvance && type === "expense";
+          const affectsCash = (affectsCashRaw === null) ? (!isTripUnpaidShare) : affectsCashRaw;
+          const isBudgetOnly = affectsBudget && !affectsCash;
+
+          if (isBudgetOnly) {
+            if (!outOfBudget && !catExcluded && type === "expense") {
+              paidSpentBudget[k] = safeNum(paidSpentBudget[k]) + perDayRender;
+            }
+          } else {
+            if (type === "expense") pendingNetExp[k] = safeNum(pendingNetExp[k]) - perDayRender;
+            else pendingNetInc[k] = safeNum(pendingNetInc[k]) + perDayRender;
+          }
         }
-      }
+      });
     }
 
-    return { paidNet, paidSpentAll, paidSpentBudget, pendingNetExp, pendingNetInc };
+    return { paidSpentAll, paidSpentBudget, pendingNetExp, pendingNetInc };
   }
 
-  
+  function walletEventDateStr(tx) {
+    const raw = tx?.dateStart || tx?.date_start || tx?.date || tx?.at || tx?.created_at;
+    const parse = (window.parseISODateOrNull ? window.parseISODateOrNull : _parseISODate);
+    const d = parse(raw);
+    if (!d) return "";
+    return (window.toLocalISODate ? window.toLocalISODate(d) : _toISODate(d));
+  }
+
+  function txWalletEffectAmount(tx, targetCurrency, dateStr) {
+    const amt = safeNum(tx?.amount || 0);
+    if (!Number.isFinite(amt) || amt === 0) return 0;
+    const type = String(tx?.type || "").toLowerCase();
+    if (type !== "expense" && type !== "income") return 0;
+    const converted = toRenderForDate(amt, tx?.currency || targetCurrency, dateStr || todayStr(), targetCurrency);
+    if (!Number.isFinite(converted) || converted === 0) return 0;
+    return type === "income" ? converted : -converted;
+  }
+
+  function buildPaidWalletEffectMap(periodStart, periodEnd, renderCurrency) {
+    const out = {};
+    const target = String(renderCurrency || curveCurrency() || "").toUpperCase();
+    const txs = Array.isArray(window.state?.transactions) ? window.state.transactions : [];
+    for (const t of txs) {
+      if (!t) continue;
+      const walletId = String(t?.walletId ?? t?.wallet_id ?? "");
+      if (!walletId) continue;
+      const p = (t.payNow ?? t.pay_now);
+      const isPaid = (p === undefined) ? true : !!p;
+      if (!isPaid) continue;
+      if (!!(t.isInternal ?? t.is_internal)) continue;
+      const ds = walletEventDateStr(t);
+      if (!ds) continue;
+      const d = (window.parseISODateOrNull ? window.parseISODateOrNull : _parseISODate)(ds);
+      if (!d) continue;
+      if (d < periodStart || d > periodEnd) continue;
+      const signed = txWalletEffectAmount(t, target, ds);
+      if (!Number.isFinite(signed) || signed === 0) continue;
+      out[ds] = safeNum(out[ds]) + signed;
+    }
+    return out;
+  }
+    function sumPaidWalletEffectsBetween(fromDateStr, toDateStr, renderCurrency) {
+    const parse = (window.parseISODateOrNull ? window.parseISODateOrNull : _parseISODate);
+    const from = parse(fromDateStr);
+    const to = parse(toDateStr);
+    const target = String(renderCurrency || curveCurrency() || base() || "").toUpperCase();
+
+    if (!from || !to || !target || to < from) return 0;
+
+    const txs = Array.isArray(window.state?.transactions) ? window.state.transactions : [];
+    let total = 0;
+
+    for (const tx of txs) {
+      if (!tx) continue;
+      if (tx.isInternal || tx.is_internal) continue;
+
+      const walletId = tx.wallet_id || tx.walletId || tx.wallet?.id || null;
+      if (!walletId) continue;
+
+      const p = (tx.payNow ?? tx.pay_now);
+      const isPaid = (p === undefined) ? true : !!p;
+      if (!isPaid) continue;
+
+      const dStr = walletEventDateStr(tx);
+      if (!dStr) continue;
+
+      const d = parse(dStr);
+      if (!d || d < from || d > to) continue;
+
+      total += txWalletEffectAmount(tx, target, dStr);
+    }
+
+    return round2(total);
+  }
   // =========================
   // Cache (V6.6) - avoids heavy recompute on reload
   // =========================
@@ -466,33 +717,31 @@ function buildSeries() {
     const end = window.parseISODateOrNull?.(rangeEndStr);
     if (!start || !end) return { ok:false, reason:"Dates de période invalides." };
 
-    const b = base();
-    if (!b) return { ok:false, reason:"Devise de base manquante." };
+    const lineCurrency = curveCurrency(scope);
+    const barCurrency = base(scope);
+    if (!lineCurrency || !barCurrency) return { ok:false, reason:"Devise de base manquante." };
 
     const tStr = todayStr();
     const tDate = window.parseISODateOrNull?.(tStr);
 
-    const infoToday = (typeof window.getDailyBudgetInfoForDate === "function") ? window.getDailyBudgetInfoForDate(tStr) : null;
-    const dailyBudget = safeNum(infoToday?.daily ?? infoToday?.dailyBudget ?? period.dailyBudgetBase ?? period.daily_budget_base ?? period.dailyBudget ?? period.budgetPerDay ?? period.daily_budget ?? 0);
+    const rangeHasMultiSegmentCurrency = _scopeHasMultipleSegmentCurrencies(scope);
+    const dailyBudgetLabel = rangeHasMultiSegmentCurrency ? null : safeNum(getDailyBudgetInRenderCurrency(tStr, lineCurrency));
 
-    const currentBalance = sumWalletsBase();
+    const currentBalance = sumWalletsInCurrency(scope, lineCurrency);
 
-    const { paidNet, paidSpentAll, paidSpentBudget, pendingNetExp, pendingNetInc } = buildMaps(start, end);
+    const lineMaps = buildMaps(start, end, lineCurrency);
+    const barMaps = (lineCurrency === barCurrency) ? lineMaps : buildMaps(start, end, barCurrency);
+    const { pendingNetExp, pendingNetInc } = lineMaps;
+    const { paidSpentAll, paidSpentBudget } = barMaps;
+    const paidWalletNet = buildPaidWalletEffectMap(start, end, lineCurrency);
 
-    // Budget spent per day: if the Dashboard helper exists, use it as the source of truth
-    // to avoid mismatches (normalization, distribution over date ranges, rounding).
-    const budgetSpentFn = (typeof window.budgetSpentBaseForDateFromTx === "function")
-      ? window.budgetSpentBaseForDateFromTx
-      : null;
+    const startStr = (window.toLocalISODate ? window.toLocalISODate(start) : _toISODate(start));
+    const anchorEndStr = tDate
+      ? (window.toLocalISODate ? window.toLocalISODate(tDate) : _toISODate(tDate))
+      : todayStr();
 
-    // compute cum net paid from start..today => estimate starting balance
-    let cumToToday = 0;
-    (window.forEachDateInclusive ? window.forEachDateInclusive : _forEachDateInclusive)(start, end, (d) => {
-      const k = (window.toLocalISODate ? window.toLocalISODate(d) : _toISODate(d));
-      if (tDate && d <= tDate) cumToToday += safeNum(paidNet[k] || 0);
-    });
-
-    const startBalance = round2(currentBalance - cumToToday);
+    const rollbackSinceStart = sumPaidWalletEffectsBetween(startStr, anchorEndStr, lineCurrency);
+    const startBalance = round2(currentBalance - rollbackSinceStart);
 
     const actual = [];
     const forecast = [];
@@ -505,17 +754,17 @@ function buildSeries() {
       const k = (window.toLocalISODate ? window.toLocalISODate(d) : _toISODate(d));
 
       if (tDate && d <= tDate) {
-        bal += safeNum(paidNet[k] || 0);
+        bal += safeNum(paidWalletNet[k] || 0);
         actual.push({ x: k, y: round2(bal) });
         forecast.push({ x: k, y: (tDate && d.getTime() === tDate.getTime()) ? round2(bal) : null });
 
         const spent = safeNum(paidSpentAll[k] || 0);
         spentBars.push({ x: k, y: round2(spent) });
-        const used = budgetSpentFn ? safeNum(budgetSpentFn(k)) : safeNum(paidSpentBudget[k] || 0);
+        const used = safeNum(budgetSpentForDateInRenderCurrency(k, barCurrency) || paidSpentBudget[k] || 0);
         budgetUsedVal.push({ x: k, y: round2(used) });
       } else {
         // forecast starts from last actual balance
-        bal -= dailyBudget;
+        bal -= getDailyBudgetInRenderCurrency(k, lineCurrency);
 
         if (includePendingExpenses) bal += safeNum(pendingNetExp[k] || 0);
         if (includePendingIncomes)  bal += safeNum(pendingNetInc[k] || 0);
@@ -549,8 +798,8 @@ function buildSeries() {
 
     // 2) Convert account base -> curve currency (for the plotted line)
     const thrLine = (thrBaseVal !== null && typeof window.safeFxConvert === "function")
-      ? window.safeFxConvert(thrBaseVal, uBase || "EUR", b, null)
-      : (thrBaseVal !== null && typeof window.fxConvert === "function" ? window.fxConvert(thrBaseVal, uBase || "EUR", b) : null);
+      ? window.safeFxConvert(thrBaseVal, uBase || "EUR", lineCurrency, null)
+      : (thrBaseVal !== null && typeof window.fxConvert === "function" ? window.fxConvert(thrBaseVal, uBase || "EUR", lineCurrency) : null);
     const thr500 = (thrLine === null || !Number.isFinite(thrLine)) ? null : round2(thrLine);
 
     // validate: no NaN in series
@@ -560,7 +809,7 @@ function buildSeries() {
     if (allY.some(v => Number.isNaN(v))) return { ok:false, reason:"Séries invalides (NaN)." };
 
     const thrLabel = (thrBaseVal !== null && uBase) ? `${thrBaseVal} ${uBase}` : null;
-    return { ok:true, b, start, end, tStr, dailyBudget, currentBalance, startBalance, actual, forecast, spentBars, budgetUsedVal, thr500, thrLabel, segFilter: getKpiScope(), segLabel: selSeg ? segLabel(selSeg) : "Période complète" };
+    return { ok:true, b: lineCurrency, lineCurrency, barCurrency, start, end, tStr, dailyBudget: dailyBudgetLabel, currentBalance, startBalance, actual, forecast, spentBars, budgetUsedVal, thr500, thrLabel, segFilter: getKpiScope(), segLabel: selSeg ? segLabel(selSeg) : "Période complète" };
   }
 
   async function renderCashflowChart() {
@@ -686,18 +935,19 @@ try {
 
         <div class="muted" style="margin-top:10px; display:flex; gap:12px; flex-wrap:wrap;">
           <span>Plage: <b>${escapeHTML(built.segLabel || "—")}</b></span>
-          <span>Devise: <b>${built.b}</b></span>
-          <span>Budget/jour: <b>${round2(built.dailyBudget)} ${built.b}</b></span>
-          <span>Solde actuel (wallets): <b>${round2(built.currentBalance)} ${built.b}</b></span>
+          <span>Devise courbe: <b>${built.lineCurrency}</b></span>
+          <span>Devise colonnes: <b>${built.barCurrency}</b></span>
+          <span>Budget/jour: <b>${built.dailyBudget === null ? 'Variable selon période' : (round2(built.dailyBudget) + ' ' + built.lineCurrency)}</b></span>
+          <span>Solde actuel (wallets): <b>${round2(built.currentBalance)} ${built.lineCurrency}</b></span>
         </div>
       </div>
     `;
 
     const series = [
-      { name: `Solde réel (${built.b})`, data: built.actual, type: "line" },
-      { name: `Prévision (${built.b})`, data: built.forecast, type: "line" },
-      { name: `Dépensé/jour (${built.b})`, data: built.spentBars, type: "column" },
-      { name: `Budget dépensé/jour (${built.b})`, data: built.budgetUsedVal, type: "column" }
+      { name: `Solde réel (${built.lineCurrency})`, data: built.actual, type: "line" },
+      { name: `Prévision (${built.lineCurrency})`, data: built.forecast, type: "line" },
+      { name: `Dépensé/jour (${built.barCurrency})`, data: built.spentBars, type: "column" },
+      { name: `Budget dépensé/jour (${built.barCurrency})`, data: built.budgetUsedVal, type: "column" }
     ];
 
     
@@ -791,7 +1041,8 @@ dataLabels: { enabled: false },
             const sName = opts && opts.w && opts.w.config && opts.w.config.series && opts.w.config.series[opts.seriesIndex]
               ? String(opts.w.config.series[opts.seriesIndex].name || "")
               : "";
-            return `${round2(v)} ${built.b}`;
+            const cur = (opts && opts.w && opts.w.config && opts.w.config.series && opts.w.config.series[opts.seriesIndex] && opts.w.config.series[opts.seriesIndex].type === 'column') ? built.barCurrency : built.lineCurrency;
+            return `${round2(v)} ${cur}`;
           }
         }
       },
@@ -814,7 +1065,7 @@ dataLabels: { enabled: false },
 	            y: built.thr500,
 	            borderColor: "#ef4444",
 	            strokeDashArray: 6,
-	            label: { text: (built.thrLabel || `${built.thr500} ${String(built.b || "").toUpperCase()}`), style: { background: "#ef4444" } }
+	            label: { text: (built.thrLabel || `${built.thr500} ${String(built.lineCurrency || "").toUpperCase()}`), style: { background: "#ef4444" } }
 	          }
         ] : [
           {
