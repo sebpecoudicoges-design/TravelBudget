@@ -906,6 +906,8 @@ state.wallets = (w || []).map((x) => ({
   isInternal: !!(x.is_internal ?? x.isInternal),
   dateStart: x.date_start,
   dateEnd: x.date_end,
+  budgetDateStart: x.budget_date_start || x.date_start,
+  budgetDateEnd: x.budget_date_end || x.budget_date_start || x.date_end || x.date_start,
   payNow: !!x.pay_now,
   outOfBudget: !!x.out_of_budget,
   nightCovered: !!x.night_covered,

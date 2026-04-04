@@ -361,6 +361,49 @@ function _normalizeCurrency(cur) {
     return c;
   }
 
+  function _tripCurrencyOptions(selectedCurrency) {
+    const selected = _normalizeCurrency(selectedCurrency);
+    const seen = new Set();
+    const out = [];
+
+    const pushCur = (value) => {
+      const cur = _normalizeCurrency(value);
+      if (!cur || seen.has(cur)) return;
+      seen.add(cur);
+      out.push(cur);
+    };
+
+    (state.wallets || []).forEach(w => pushCur(w?.currency));
+    pushCur(tripState?.trips?.find(t => t.id === tripState.activeTripId)?.base_currency);
+    pushCur(state?.period?.baseCurrency);
+    pushCur(selected);
+
+    return out;
+  }
+
+  function _tripCurrencyOptionsHTML(selectedCurrency) {
+    const selected = _normalizeCurrency(selectedCurrency);
+    return _tripCurrencyOptions(selected)
+      .map(cur => `<option value="${escapeHTML(cur)}" ${cur === selected ? "selected" : ""}>${escapeHTML(cur)}</option>`)
+      .join("");
+  }
+
+  function _tripResolveExpenseCurrency() {
+    const paidSel = _el("trip-exp-paidby");
+    const payer = (tripState.members || []).find(m => m.id === paidSel?.value) || null;
+    const isMe = !!payer?.isMe;
+    const walletSel = _el("trip-exp-wallet");
+    const currencySel = _el("trip-exp-currency");
+    if (!currencySel) return "";
+
+    if (isMe && walletSel?.value) {
+      const wallet = findWallet(walletSel.value);
+      const walletCur = _normalizeCurrency(wallet?.currency);
+      if (walletCur) return walletCur;
+    }
+    return _normalizeCurrency(currencySel.value);
+  }
+
 
 
   function _findPeriodIdForDate(dateStr) {
@@ -2960,9 +3003,12 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           <label>Montant</label>
           <input id="trip-exp-amount" type="number" step="0.01" placeholder="0" value="${editingDraft?.amount ?? ""}" />
         </div>
-        <div class="field" style="max-width:160px;">
+        <div class="field" style="max-width:180px;">
           <label>Devise</label>
-          <input id="trip-exp-currency" value="${escapeHTML(editingDraft?.currency || trip?.base_currency || state?.period?.baseCurrency || "THB")}" />
+          <select id="trip-exp-currency">
+            ${_tripCurrencyOptionsHTML(editingDraft?.currency || trip?.base_currency || state?.period?.baseCurrency || "THB")}
+          </select>
+          <div id="trip-exp-currency-help" class="muted" style="font-size:12px; margin-top:4px;"></div>
         </div>
       </div>
       <div class="row" style="align-items:flex-end; gap:12px; margin-top:6px;">
@@ -3470,7 +3516,60 @@ toastOk("Participant ajouté.");
 
 
     function _syncExpenseWalletUI() {
-  
+      const paidSel = _el("trip-exp-paidby");
+      const wSel = _el("trip-exp-wallet");
+      const curSel = _el("trip-exp-currency");
+      const curHelp = _el("trip-exp-currency-help");
+      if (!paidSel || !wSel || !curSel) return;
+
+      const payer = members.find(m => m.id === paidSel.value) || null;
+      const isMe = !!payer?.isMe;
+      const wallets = (state.wallets || []);
+      const selectedWallet = wallets.find(w => String(w.id || "") === String(wSel.value || "")) || null;
+
+      wSel.disabled = !isMe;
+      curSel.disabled = false;
+
+      if (!isMe) {
+        const currentCur = _normalizeCurrency(curSel.value || trip?.base_currency || state?.period?.baseCurrency || "THB");
+        wSel.value = "";
+        curSel.innerHTML = _tripCurrencyOptionsHTML(currentCur);
+        curSel.value = currentCur;
+        curSel.disabled = false;
+        if (curHelp) curHelp.textContent = "Payé par un autre participant : choisis la devise dans la liste.";
+        return;
+      }
+
+      if (!wallets.length) {
+        if (curHelp) curHelp.textContent = "Aucune wallet disponible : crée une wallet avant de saisir une dépense payée par toi.";
+        return;
+      }
+
+      if (!selectedWallet) {
+        const cur = _normalizeCurrency(curSel.value);
+        const match = wallets.find(w => _normalizeCurrency(w?.currency) === cur) || wallets[0] || null;
+        if (match) wSel.value = match.id;
+      }
+
+      const wallet = wallets.find(w => String(w.id || "") === String(wSel.value || "")) || null;
+      const walletCur = _normalizeCurrency(wallet?.currency);
+      if (walletCur) {
+        curSel.innerHTML = `<option value="${escapeHTML(walletCur)}" selected>${escapeHTML(walletCur)}</option>`;
+        curSel.value = walletCur;
+        curSel.disabled = true;
+      } else {
+        const currentCur = _normalizeCurrency(curSel.value || trip?.base_currency || state?.period?.baseCurrency || "THB");
+        curSel.innerHTML = _tripCurrencyOptionsHTML(currentCur);
+        curSel.value = currentCur;
+      }
+
+      if (curHelp) {
+        curHelp.textContent = walletCur
+          ? `Payé par moi : devise imposée par la wallet sélectionnée (${walletCur}).`
+          : "Payé par moi : sélectionne une wallet pour imposer la devise.";
+      }
+    }
+
     // Split UI (equal / percent / amount)
     function _renderSplitBox() {
       const box = _el("trip-split-box");
@@ -3555,22 +3654,6 @@ toastOk("Participant ajouté.");
 
     _renderSplitBox();
 
-    const paidSel = _el("trip-exp-paidby");
-      const wSel = _el("trip-exp-wallet");
-      if (!paidSel || !wSel) return;
-      const payer = members.find(m => m.id === paidSel.value) || null;
-      const isMe = !!payer?.isMe;
-      wSel.disabled = !isMe;
-      if (!isMe) {
-        wSel.value = "";
-        return;
-      }
-      // Auto-pick a wallet matching the expense currency
-      const cur = (_el("trip-exp-currency")?.value || "").trim().toUpperCase();
-      const match = (state.wallets || []).find(w => String(w.currency || "").toUpperCase() === cur);
-      if (match && (!wSel.value || wSel.value === "")) wSel.value = match.id;
-    }
-
     const btnAddExp = _el("trip-add-exp");
     if (btnAddExp) {
       btnAddExp.onclick = async () => {
@@ -3580,7 +3663,7 @@ toastOk("Participant ajouté.");
           const date = _el("trip-exp-date").value;
           const label = _el("trip-exp-label").value.trim();
           const amount = _el("trip-exp-amount").value;
-          const currency = _el("trip-exp-currency").value.trim().toUpperCase();
+          const currency = _tripResolveExpenseCurrency();
           const paidByMemberId = _el("trip-exp-paidby").value;
           const walletId = _el("trip-exp-wallet")?.value || "";
           const category = _el("trip-exp-category")?.value || "Autre";
@@ -3656,7 +3739,10 @@ toastOk("Participant ajouté.");
     if (paidSel) paidSel.onchange = _syncExpenseWalletUI;
 
     const curInp = _el("trip-exp-currency");
-    if (curInp) curInp.oninput = _syncExpenseWalletUI;
+    if (curInp) curInp.onchange = _syncExpenseWalletUI;
+
+    const walletSel = _el("trip-exp-wallet");
+    if (walletSel) walletSel.onchange = _syncExpenseWalletUI;
 
     _syncExpenseWalletUI();
 

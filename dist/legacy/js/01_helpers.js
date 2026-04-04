@@ -142,6 +142,80 @@ function moneyAdd(a,b,decimals=2){
 })();
 
 
+
+
+/* =========================
+   Transaction dual-date helpers (V9.4.1.8)
+   - cash / wallet / FX timing => cash date
+   - budget / dashboard / analysis timing => budget dates
+   ========================= */
+function tbNormalizeDateISO(value) {
+  if (value == null || value === "") return null;
+  if (typeof value === "string") {
+    const s = value.trim();
+    if (!s) return null;
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    const d = new Date(s);
+    return Number.isFinite(d.getTime()) ? toLocalISODate(d) : null;
+  }
+  if (value instanceof Date) {
+    return Number.isFinite(value.getTime()) ? toLocalISODate(value) : null;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const d = new Date(value);
+    return Number.isFinite(d.getTime()) ? toLocalISODate(d) : null;
+  }
+  return null;
+}
+function tbTxCashDate(tx) {
+  return tbNormalizeDateISO(
+    tx?.dateStart ||
+    tx?.date_start ||
+    tx?.occurrenceDate ||
+    tx?.occurrence_date ||
+    tx?.date ||
+    tx?.created_at ||
+    tx?.createdAt ||
+    null
+  );
+}
+function tbTxBudgetStart(tx) {
+  return tbNormalizeDateISO(
+    tx?.budgetDateStart ||
+    tx?.budget_date_start ||
+    tx?.dateStart ||
+    tx?.date_start ||
+    tx?.occurrenceDate ||
+    tx?.occurrence_date ||
+    tx?.date ||
+    tx?.created_at ||
+    tx?.createdAt ||
+    null
+  );
+}
+function tbTxBudgetEnd(tx) {
+  return tbNormalizeDateISO(
+    tx?.budgetDateEnd ||
+    tx?.budget_date_end ||
+    tx?.dateEnd ||
+    tx?.date_end ||
+    tbTxBudgetStart(tx) ||
+    null
+  );
+}
+function tbTxBudgetRange(tx) {
+  const start = tbTxBudgetStart(tx);
+  const end = tbTxBudgetEnd(tx) || start;
+  return { start, end };
+}
+
+window.tbNormalizeDateISO = tbNormalizeDateISO;
+window.tbTxCashDate = tbTxCashDate;
+window.tbTxBudgetStart = tbTxBudgetStart;
+window.tbTxBudgetEnd = tbTxBudgetEnd;
+window.tbTxBudgetRange = tbTxBudgetRange;
+
 /* =========================
    UI helpers (V6.6)
    ========================= */

@@ -25,7 +25,7 @@ function tbGetNightCoveredExtraForDate(dateStr) {
 
 function tbGetNightCoveredInsightForTx(tx, targetCurrency) {
   if (!tx || tx.type !== "expense" || !tx.nightCovered || !tbIsNightCoveredEligibleCategory(tx.category)) return null;
-  const dateStr = String(tx.budgetDateStart || tx.budget_date_start || tx.dateStart || tx.date_start || '').slice(0,10);
+  const dateStr = String((typeof tbTxBudgetStart === 'function' ? tbTxBudgetStart(tx) : (tx.budgetDateStart || tx.budget_date_start || tx.dateStart || tx.date_start || '')) || '').slice(0,10);
   if (!dateStr) return null;
   const cfg = tbGetNightCoveredExtraForDate(dateStr);
   const srcCur = String(cfg.currency || state?.period?.baseCurrency || 'EUR').toUpperCase();
@@ -60,8 +60,10 @@ function buildAllocationsForTx(tx) {
   const allocs = [];
   if (tx.type !== "expense") return allocs;
 
-  const start = parseISODateOrNull(tx.budgetDateStart || tx.budget_date_start || tx.dateStart) || new Date();
-  const end = parseISODateOrNull(tx.budgetDateEnd || tx.budget_date_end || tx.dateEnd || tx.budgetDateStart || tx.dateStart) || start;
+  const budgetStartISO = (typeof tbTxBudgetStart === 'function') ? tbTxBudgetStart(tx) : (tx.budgetDateStart || tx.budget_date_start || tx.dateStart || tx.date_start);
+  const budgetEndISO = (typeof tbTxBudgetEnd === 'function') ? tbTxBudgetEnd(tx) : (tx.budgetDateEnd || tx.budget_date_end || tx.dateEnd || tx.date_end || budgetStartISO);
+  const start = parseISODateOrNull(budgetStartISO) || new Date();
+  const end = parseISODateOrNull(budgetEndISO) || start;
   const label = tx.label || tx.category || "Autre";
 
   if (!tx.outOfBudget) {

@@ -392,7 +392,7 @@ function getKpiScope() {
         const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
         if (outOfBudget) continue;
 
-        const rng = txDateRange(t);
+        const rng = txBudgetDateRange(t);
         if (!rng) continue;
         const sds = (window.toLocalISODate ? window.toLocalISODate(rng.start) : _toISODate(rng.start));
         const eds = (window.toLocalISODate ? window.toLocalISODate(rng.end) : _toISODate(rng.end));
@@ -485,11 +485,10 @@ function getKpiScope() {
     return round2(total);
   }
 
-  function txDateRange(tx) {
-    // Accept both legacy and newer schemas:
-    // - dateStart/dateEnd (range allocation)
-    // - date (single day)
-    // - at/created_at (fallback)
+    function txCashDateRange(tx) {
+    // Cash / treasury timeline:
+    // - primary source = date_start/date_end
+    // - legacy fallback = date / at / created_at
     const ds = tx?.dateStart || tx?.date_start || tx?.date || tx?.at || tx?.created_at;
     const de = tx?.dateEnd || tx?.date_end || tx?.date || tx?.at || tx?.created_at || ds;
 
@@ -501,6 +500,20 @@ function getKpiScope() {
     return { start: s, end: e || s };
   }
 
+  function txBudgetDateRange(tx) {
+    // Budget / analysis timeline:
+    // - primary source = budget_date_start / budget_date_end
+    // - controlled fallback = cash range only when budget dates are absent
+    const ds = tx?.budgetDateStart || tx?.budget_date_start || tx?.dateStart || tx?.date_start || tx?.date || tx?.at || tx?.created_at;
+    const de = tx?.budgetDateEnd || tx?.budget_date_end || tx?.dateEnd || tx?.date_end || ds;
+
+    const parse = (window.parseISODateOrNull ? window.parseISODateOrNull : _parseISODate);
+    const s = parse(ds);
+    const e = parse(de);
+
+    if (!s) return null;
+    return { start: s, end: e || s };
+  }
 
   function daysInclusive(d1, d2) {
     // assumes Date objects at midnight
@@ -540,7 +553,7 @@ function getKpiScope() {
       const isTrip = label.includes("[Trip]");
       const isTripAdvance = isTrip && label.includes("Avance");
 
-      const rng = txDateRange(t);
+      const rng = txCashDateRange(t);
       if (!rng) continue;
 
       const s = (rng.start < periodStart) ? periodStart : rng.start;
@@ -753,6 +766,8 @@ function buildSeries() {
     (window.forEachDateInclusive ? window.forEachDateInclusive : _forEachDateInclusive)(start, end, (d) => {
       const k = (window.toLocalISODate ? window.toLocalISODate(d) : _toISODate(d));
 
+      const used = safeNum(budgetSpentForDateInRenderCurrency(k, barCurrency) || paidSpentBudget[k] || 0);
+
       if (tDate && d <= tDate) {
         bal += safeNum(paidWalletNet[k] || 0);
         actual.push({ x: k, y: round2(bal) });
@@ -760,7 +775,6 @@ function buildSeries() {
 
         const spent = safeNum(paidSpentAll[k] || 0);
         spentBars.push({ x: k, y: round2(spent) });
-        const used = safeNum(budgetSpentForDateInRenderCurrency(k, barCurrency) || paidSpentBudget[k] || 0);
         budgetUsedVal.push({ x: k, y: round2(used) });
       } else {
         // forecast starts from last actual balance
@@ -772,7 +786,7 @@ function buildSeries() {
         actual.push({ x: k, y: null });
         forecast.push({ x: k, y: round2(bal) });
         spentBars.push({ x: k, y: null });
-        budgetUsedVal.push({ x: k, y: null });
+        budgetUsedVal.push({ x: k, y: round2(used) });
       }
     });
 

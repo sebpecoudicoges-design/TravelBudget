@@ -162,3 +162,7 @@
 - Analyse budget : lecture branchée sur helpers globaux cash/budget.
 - Trip budget-linked reads : budget dates rechargées dans les transactions liées.
 - Versioning réaligné : 00_constants.js, package.json, package-lock.json, src/main.js.
+
+## V9.4.1.9
+- Trip currency UX : wallet => devise imposée, sinon dropdown
+- Cash/Budget bars fix : dépense = cash dates, budget = budget dates

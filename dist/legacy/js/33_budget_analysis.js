@@ -255,9 +255,18 @@
 
   function _isTripLinked(tx){ return !!(tx?.trip_expense_id || tx?.tripExpenseId || tx?.trip_share_link_id || tx?.tripShareLinkId); }
   function _isInternalMovement(tx){ return String(tx?.category || '').trim().toLowerCase() === 'mouvement interne'; }
-  function _txCashDate(tx){ return _norm(tx?.dateStart || tx?.date_start || tx?.occurrence_date || tx?.date || tx?.created_at?.slice?.(0,10) || tx?.createdAt?.slice?.(0,10)); }
-  function _txBudgetStart(tx){ return _norm(tx?.budgetDateStart || tx?.budget_date_start || tx?.dateStart || tx?.date_start || tx?.occurrence_date || tx?.date || tx?.created_at?.slice?.(0,10) || tx?.createdAt?.slice?.(0,10)); }
-  function _txBudgetEnd(tx){ return _norm(tx?.budgetDateEnd || tx?.budget_date_end || tx?.dateEnd || tx?.date_end || _txBudgetStart(tx)); }
+  function _txCashDate(tx){
+    if (typeof window.tbTxCashDate === 'function') return window.tbTxCashDate(tx);
+    return _norm(tx?.dateStart || tx?.date_start || tx?.occurrence_date || tx?.date || tx?.created_at?.slice?.(0,10) || tx?.createdAt?.slice?.(0,10));
+  }
+  function _txBudgetStart(tx){
+    if (typeof window.tbTxBudgetStart === 'function') return window.tbTxBudgetStart(tx);
+    return _norm(tx?.budgetDateStart || tx?.budget_date_start || tx?.dateStart || tx?.date_start || tx?.occurrence_date || tx?.date || tx?.created_at?.slice?.(0,10) || tx?.createdAt?.slice?.(0,10));
+  }
+  function _txBudgetEnd(tx){
+    if (typeof window.tbTxBudgetEnd === 'function') return window.tbTxBudgetEnd(tx);
+    return _norm(tx?.budgetDateEnd || tx?.budget_date_end || tx?.dateEnd || tx?.date_end || _txBudgetStart(tx));
+  }
   function _txType(tx){ return String(tx?.type || '').toLowerCase(); }
   function _txPaid(tx){
     if (typeof tx?.payNow === 'boolean') return tx.payNow;
