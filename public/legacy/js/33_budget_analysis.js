@@ -122,6 +122,17 @@
     const end = _norm(period?.end_date || period?.end || travel?.end_date || travel?.end || state?.period?.end);
     return { start, end };
   }
+    function _analysisCutoffEnd(){
+    const { end } = _analysisRange();
+    const today = _iso(new Date());
+
+    // Sur "période active", l’analyse doit s’arrêter à aujourd’hui
+    // pour éviter d’inclure le futur budgété dans les KPIs / catégories.
+    if (_getSelectedPeriodId() === 'active' && end && today && end > today) {
+      return today;
+    }
+    return end;
+  }
   function _loadFilters(){ try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {}; } catch (_) { return {}; } }
   function _saveFilters(){
     try {
@@ -160,22 +171,49 @@
   async function _loadReferenceCache(){
     const s = _getSB();
     const travelId = _getSelectedTravelId();
-    const segs = _segmentsForTravel(travelId);
+    const segsRaw = _segmentsForTravel(travelId);
+    const segs = segsRaw.filter(seg => _isUUID(seg?.id));
     const key = `${travelId}|${segs.map(s => String(s.id)).sort().join(',')}`;
+
     if (referenceCache.key === key && referenceCache.loaded) return;
+
     referenceCache.key = key;
     referenceCache.bySegment = {};
     referenceCache.loaded = true;
+
     if (!s || !segs.length || !TB_CONST?.RPCS?.budget_reference_resolve_for_budget_segment) return;
-    await Promise.all(segs.map(async (seg) => {
+
+    for (const seg of segs) {
       try {
-        const { data, error } = await s.rpc(TB_CONST.RPCS.budget_reference_resolve_for_budget_segment, { p_budget_segment_id: String(seg.id) });
-        if (error) throw error;
-        referenceCache.bySegment[String(seg.id)] = Array.isArray(data) ? (data[0] || null) : (data || null);
-      } catch (_) {
-        referenceCache.bySegment[String(seg.id)] = null;
+        const segId = String(seg.id);
+
+        console.log('[analysis] loading reference for segment', {
+          segId,
+          start: seg?.start || seg?.start_date || seg?.startDate || null,
+          end: seg?.end || seg?.end_date || seg?.endDate || null,
+          periodId: seg?.period_id || seg?.periodId || null
+        });
+
+        const { data, error } = await s.rpc(
+          TB_CONST.RPCS.budget_reference_resolve_for_budget_segment,
+          { p_budget_segment_id: segId }
+        );
+
+        if (error) {
+          console.warn('[analysis] reference RPC error', { segId, error });
+          referenceCache.bySegment[segId] = null;
+          continue;
+        }
+
+        referenceCache.bySegment[segId] = Array.isArray(data) ? (data[0] || null) : (data || null);
+      } catch (err) {
+        console.warn('[analysis] reference RPC failed', {
+          segId: String(seg?.id || ''),
+          err
+        });
+        referenceCache.bySegment[String(seg?.id || '')] = null;
       }
-    }));
+    }
   }
   function _referenceRowForDate(dateISO){
     const seg = _segmentForDate(dateISO);
@@ -480,6 +518,7 @@ function _analysisBucketOrder(){
   function _computeModel(){
     const txs = _filteredTransactions();
     const { start, end } = _analysisRange();
+    const cutoffEnd = _analysisCutoffEnd();
     const base = _resolveAnalysisCurrency(start, end);
     const days = _daysInclusive(start, end);
     const dailyMap = Object.fromEntries(days.map(d => [d, 0]));
@@ -488,33 +527,59 @@ function _analysisBucketOrder(){
     const subcatMap = new Map();
     let spent = 0;
     let paidSpent = 0;
-    for (const tx of txs) {
+
+    function _txAmountInVisibleWindow(tx){
       const cashDate = _txCashDate(tx);
       const budgetStart = _txBudgetStart(tx);
       const budgetEnd = _txBudgetEnd(tx);
 
-      const budgetDays = _daysInclusive(budgetStart, budgetEnd)
+      const fullBudgetDays = _daysInclusive(budgetStart, budgetEnd)
         .filter(d => dailyMap[d] !== undefined);
 
-      if (!budgetDays.length) continue;
+      if (!fullBudgetDays.length) {
+        return { amount: 0, fullBudgetDays: [], visibleBudgetDays: [], perDay: 0, cashDate, budgetStart, budgetEnd };
+      }
 
-      const amt = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
-      const perDay = amt / budgetDays.length;
+      const visibleBudgetDays = fullBudgetDays
+        .filter(d => !cutoffEnd || d <= cutoffEnd);
 
-      spent += amt;
-      if (_txPaid(tx)) paidSpent += amt;
+      if (!visibleBudgetDays.length) {
+        return { amount: 0, fullBudgetDays, visibleBudgetDays: [], perDay: 0, cashDate, budgetStart, budgetEnd };
+      }
 
-      for (const d of budgetDays) {
-        dailyMap[d] = _safeNum(dailyMap[d]) + perDay;
-        if (_txPaid(tx)) paidMap[d] = _safeNum(paidMap[d]) + perDay;
+      const fullAmount = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
+      const perDay = fullAmount / fullBudgetDays.length;
+      const visibleAmount = perDay * visibleBudgetDays.length;
+
+      return {
+        amount: visibleAmount,
+        fullBudgetDays,
+        visibleBudgetDays,
+        perDay,
+        cashDate,
+        budgetStart,
+        budgetEnd
+      };
+    }
+
+    for (const tx of txs) {
+      const alloc = _txAmountInVisibleWindow(tx);
+      if (!alloc.visibleBudgetDays.length) continue;
+
+      spent += alloc.amount;
+      if (_txPaid(tx)) paidSpent += alloc.amount;
+
+      for (const d of alloc.visibleBudgetDays) {
+        dailyMap[d] = _safeNum(dailyMap[d]) + alloc.perDay;
+        if (_txPaid(tx)) paidMap[d] = _safeNum(paidMap[d]) + alloc.perDay;
       }
 
       const cat = _norm(tx?.category || 'Autre');
       const sub = _norm(tx?.subcategory || '');
-      catMap.set(cat, (catMap.get(cat) || 0) + amt);
+      catMap.set(cat, (catMap.get(cat) || 0) + alloc.amount);
       if (sub) {
         const key = `${cat}|||${sub}`;
-        subcatMap.set(key, (subcatMap.get(key) || 0) + amt);
+        subcatMap.set(key, (subcatMap.get(key) || 0) + alloc.amount);
       }
     }
 
@@ -680,7 +745,25 @@ function _analysisBucketOrder(){
           color: _categoryColor(categoryName)
         };
       });
-    const outAmount = _outBudgetTransactions().reduce((sum, tx) => sum + _convert(tx?.amount, tx?.currency || base, _txCashDate(tx) || _txBudgetStart(tx), base), 0);
+    const outAmount = _outBudgetTransactions().reduce((sum, tx) => {
+      const budgetStart = _txBudgetStart(tx);
+      const budgetEnd = _txBudgetEnd(tx);
+      const cashDate = _txCashDate(tx);
+
+      const fullBudgetDays = _daysInclusive(budgetStart, budgetEnd)
+        .filter(d => days.includes(d));
+
+      if (!fullBudgetDays.length) return sum;
+
+      const visibleBudgetDays = fullBudgetDays
+        .filter(d => !cutoffEnd || d <= cutoffEnd);
+
+      if (!visibleBudgetDays.length) return sum;
+
+      const fullAmount = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
+      const perDay = fullAmount / fullBudgetDays.length;
+      return sum + (perDay * visibleBudgetDays.length);
+    }, 0);
     const referenceCategorySeries = [...referenceCategoryMap.entries()].map(([name, actual]) => ({ name, actual, color: _categoryColor(name) }));
     const referenceComparisonSeries = _buildReferenceComparisonSeries(comparableCategoryMap, referenceCategoryMap, elapsedComparableDaysList.length || comparableDays);
     const unmappedCategorySeries = [...unmappedCategoryMap.entries()]

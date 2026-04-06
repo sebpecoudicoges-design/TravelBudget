@@ -392,7 +392,7 @@ function getKpiScope() {
         const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
         if (outOfBudget) continue;
 
-        const rng = txCashDateRange(t);
+        const rng = txBudgetDateRange(t);
         if (!rng) continue;
         const sds = (window.toLocalISODate ? window.toLocalISODate(rng.start) : _toISODate(rng.start));
         const eds = (window.toLocalISODate ? window.toLocalISODate(rng.end) : _toISODate(rng.end));
@@ -533,81 +533,81 @@ function getKpiScope() {
     });
   }
 
-  function buildMaps(periodStart, periodEnd, renderCurrency) {
-    const paidSpentAll = {};         // paid expense only (positive), ALL expenses (for "Dépensé/jour")
-    const paidSpentBudget = {};      // paid expense only (positive), affects budget and not out_of_budget (for "Budget dépensé/jour")
-    const pendingNetExp = {};        // pending expense only (negative already)
-    const pendingNetInc = {};        // pending income only (positive)
+  function buildMaps(transactions, startDate, endDate) {
+  const paidSpentAll = {};
+  const paidSpentBudget = {};
+  const pendingNetExp = {};
+  const pendingNetInc = {};
 
-    const txs = window.state?.transactions || [];
-    const b = String(renderCurrency || base() || '').toUpperCase();
+  function add(map, date, value) {
+    if (!date) return;
+    map[date] = (map[date] || 0) + value;
+  }
 
-    for (const t of txs) {
-      if (!t) continue;
-      if (t.isInternal) continue;
+  function distribute(map, start, end, value) {
+    if (!start) return;
 
-      const cat = (t.category !== undefined && t.category !== null) ? String(t.category) : "";
-      const catExcluded = cat && excludedCats.has(cat);
+    const s = start;
+    const e = end || start;
 
-      const label = String(t.label || "");
-      const isTrip = label.includes("[Trip]");
-      const isTripAdvance = isTrip && label.includes("Avance");
+    const days = eachDayOfInterval({ start: new Date(s), end: new Date(e) });
+    const perDay = value / days.length;
 
-      const rng = txDateRange(t);
-      if (!rng) continue;
+    for (const d of days) {
+      const key = format(d, 'yyyy-MM-dd');
+      add(map, key, perDay);
+    }
+  }
 
-      const s = (rng.start < periodStart) ? periodStart : rng.start;
-      const e = (rng.end > periodEnd) ? periodEnd : rng.end;
-      if (e < periodStart || s > periodEnd) continue;
+  for (const t of transactions) {
+    const isExpense = t.type === 'expense';
+    const isIncome = t.type === 'income';
 
-      const p = (t.payNow ?? t.pay_now);
-      const isPaid = (p === undefined) ? true : !!p;
+    const amount = Number(t.amount || 0);
 
-      const type = String(t.type || "").toLowerCase();
-      if (type !== "expense" && type !== "income") continue;
+    const cashRange = txCashDateRange(t);
+    const budgetRange = txBudgetDateRange(t);
 
-      const amount = safeNum(t.amount || 0);
-      if (!Number.isFinite(amount) || amount === 0) continue;
+    const isPaid = t.pay_now === true;
+    const affectsBudget = t.affects_budget !== false;
+    const outOfBudget = t.out_of_budget === true;
 
-      const affectsBudget = (t.affectsBudget === undefined || t.affectsBudget === null) ? true : !!t.affectsBudget;
-      const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
-
-      const totalDays = daysInclusive(rng.start, rng.end);
-      if (!totalDays) continue;
-      const perDayRaw = amount / totalDays;
-
-      (window.forEachDateInclusive ? window.forEachDateInclusive : _forEachDateInclusive)(s, e, (d) => {
-        const k = (window.toLocalISODate ? window.toLocalISODate(d) : _toISODate(d));
-        const perDayRender = toRenderForDate(perDayRaw, t.currency || b, k, b);
-        if (!Number.isFinite(perDayRender)) return;
-
-        if (isPaid) {
-          if (type === "expense") {
-            if (!catExcluded) paidSpentAll[k] = safeNum(paidSpentAll[k]) + perDayRender;
-            if (!catExcluded && affectsBudget && !outOfBudget) {
-              paidSpentBudget[k] = safeNum(paidSpentBudget[k]) + perDayRender;
-            }
-          }
-        } else {
-          const affectsCashRaw = (t.affectsCash === undefined || t.affectsCash === null) ? null : !!t.affectsCash;
-          const isTripUnpaidShare = isTrip && !isTripAdvance && type === "expense";
-          const affectsCash = (affectsCashRaw === null) ? (!isTripUnpaidShare) : affectsCashRaw;
-          const isBudgetOnly = affectsBudget && !affectsCash;
-
-          if (isBudgetOnly) {
-            if (!outOfBudget && !catExcluded && type === "expense") {
-              paidSpentBudget[k] = safeNum(paidSpentBudget[k]) + perDayRender;
-            }
-          } else {
-            if (type === "expense") pendingNetExp[k] = safeNum(pendingNetExp[k]) - perDayRender;
-            else pendingNetInc[k] = safeNum(pendingNetInc[k]) + perDayRender;
-          }
-        }
-      });
+    // =========================
+    // CASH timeline (réel)
+    // =========================
+    if (isPaid) {
+      if (isExpense) {
+        distribute(paidSpentAll, cashRange.start, cashRange.end, amount);
+      } else if (isIncome) {
+        distribute(paidSpentAll, cashRange.start, cashRange.end, -amount);
+      }
+    } else {
+      if (isExpense) {
+        distribute(pendingNetExp, cashRange.start, cashRange.end, amount);
+      } else if (isIncome) {
+        distribute(pendingNetInc, cashRange.start, cashRange.end, amount);
+      }
     }
 
-    return { paidSpentAll, paidSpentBudget, pendingNetExp, pendingNetInc };
+    // =========================
+    // BUDGET timeline (budget)
+    // =========================
+    if (affectsBudget && !outOfBudget) {
+      if (isExpense) {
+        distribute(paidSpentBudget, budgetRange.start, budgetRange.end, amount);
+      } else if (isIncome) {
+        distribute(paidSpentBudget, budgetRange.start, budgetRange.end, -amount);
+      }
+    }
   }
+
+  return {
+    paidSpentAll,
+    paidSpentBudget,
+    pendingNetExp,
+    pendingNetInc,
+  };
+}
 
   function walletEventDateStr(tx) {
     const raw = tx?.dateStart || tx?.date_start || tx?.date || tx?.at || tx?.created_at;
@@ -766,6 +766,8 @@ function buildSeries() {
     (window.forEachDateInclusive ? window.forEachDateInclusive : _forEachDateInclusive)(start, end, (d) => {
       const k = (window.toLocalISODate ? window.toLocalISODate(d) : _toISODate(d));
 
+      const used = safeNum(budgetSpentForDateInRenderCurrency(k, barCurrency) || paidSpentBudget[k] || 0);
+
       if (tDate && d <= tDate) {
         bal += safeNum(paidWalletNet[k] || 0);
         actual.push({ x: k, y: round2(bal) });
@@ -773,7 +775,6 @@ function buildSeries() {
 
         const spent = safeNum(paidSpentAll[k] || 0);
         spentBars.push({ x: k, y: round2(spent) });
-        const used = safeNum(budgetSpentForDateInRenderCurrency(k, barCurrency) || paidSpentBudget[k] || 0);
         budgetUsedVal.push({ x: k, y: round2(used) });
       } else {
         // forecast starts from last actual balance
@@ -785,7 +786,7 @@ function buildSeries() {
         actual.push({ x: k, y: null });
         forecast.push({ x: k, y: round2(bal) });
         spentBars.push({ x: k, y: null });
-        budgetUsedVal.push({ x: k, y: null });
+        budgetUsedVal.push({ x: k, y: round2(used) });
       }
     });
 
