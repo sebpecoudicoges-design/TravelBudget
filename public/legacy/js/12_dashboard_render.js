@@ -143,13 +143,43 @@ function renderDashboardHero() {
     const conv = (typeof amountToBase === 'function') ? amountToBase(Number(effective || 0), w?.currency, baseCur) : Number(effective || 0);
     return sum + (Number(conv) || 0);
   }, 0);
-  const cashWalletBase = wallets
-    .filter(w => String(w?.type || '').toLowerCase() === 'cash')
-    .reduce((sum, w) => {
-      const effective = (typeof window.tbGetWalletEffectiveBalance === 'function') ? window.tbGetWalletEffectiveBalance(w.id) : Number(w?.balance || 0);
-      const conv = (typeof amountToBase === 'function') ? amountToBase(Number(effective || 0), w?.currency, baseCur) : Number(effective || 0);
-      return sum + (Number(conv) || 0);
-    }, 0);
+  // 🔵 Cash en devise réelle (pas converti)
+const cashWallets = wallets.filter(w => String(w?.type || '').toLowerCase() === 'cash');
+
+// si plusieurs devises cash → fallback base
+const uniqueCurrencies = [...new Set(cashWallets.map(w => w.currency))];
+
+let cashDisplayAmount = 0;
+let cashDisplayCurrency = baseCur;
+
+if (uniqueCurrencies.length === 1) {
+  // ✅ cas propre : une seule devise cash
+  cashDisplayCurrency = uniqueCurrencies[0];
+
+  cashDisplayAmount = cashWallets.reduce((sum, w) => {
+    const effective = (typeof window.tbGetWalletEffectiveBalance === 'function')
+      ? window.tbGetWalletEffectiveBalance(w.id)
+      : Number(w?.balance || 0);
+
+    return sum + (Number(effective) || 0);
+  }, 0);
+
+} else {
+  // ⚠️ fallback multi-devise → conversion en base
+  cashDisplayAmount = cashWallets.reduce((sum, w) => {
+    const effective = (typeof window.tbGetWalletEffectiveBalance === 'function')
+      ? window.tbGetWalletEffectiveBalance(w.id)
+      : Number(w?.balance || 0);
+
+    const conv = (typeof amountToBase === 'function')
+      ? amountToBase(Number(effective || 0), w?.currency, baseCur)
+      : Number(effective || 0);
+
+    return sum + (Number(conv) || 0);
+  }, 0);
+
+  cashDisplayCurrency = baseCur;
+}
 
   host.innerHTML = `
     <section class="dashboard-hero-card">
@@ -186,7 +216,7 @@ function renderDashboardHero() {
         <div class="dashboard-focus-card">
           <div>
             <div class="dashboard-focus-label">Cash disponible</div>
-            <div class="dashboard-focus-value">${esc(fmtMoney(cashWalletBase, baseCur))}</div>
+            <div class="dashboard-focus-value">${esc(fmtMoney(cashDisplayAmount, cashDisplayCurrency))}</div>
           </div>
           <div class="dashboard-focus-meta">Runway et burn s’appuient sur cette poche cash réelle.</div>
         </div>
