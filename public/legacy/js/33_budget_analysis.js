@@ -888,26 +888,30 @@ function _analysisBucketOrder(){
       {
         label: 'Voyage',
         value: String(travel?.name || 'Voyage actif'),
-        meta: `${periodText} • ${rangeText}`
+        meta: `${periodText} • ${rangeText}`,
+        accent: 'travel'
       },
       {
         label: 'Lecture',
         value: scopeText,
-        meta: `${modeText} • ${model.days.length} jours analysés`
+        meta: `${modeText} • ${model.days.length} jours analysés`,
+        accent: 'scope'
       },
       {
         label: 'Devise',
         value: model.base,
-        meta: currencyMode === 'account' ? 'Devise pivot du compte' : 'Devise de période / segment'
+        meta: currencyMode === 'account' ? 'Devise pivot du compte' : 'Devise de période / segment',
+        accent: 'currency'
       },
       {
         label: 'Couverture',
         value: `${model.txs.length} dépenses`,
-        meta: model.comparableDays > 0 ? `${model.comparableDays} jours comparables à la référence pays` : 'Référence pays absente sur la plage'
+        meta: model.comparableDays > 0 ? `${model.comparableDays} jours comparables à la référence pays` : 'Référence pays absente sur la plage',
+        accent: 'coverage'
       }
     ];
     host.innerHTML = cards.map((card) => `
-      <div class="analysis-overview-card">
+      <div class="analysis-overview-card analysis-overview-card--${escapeHTML(card.accent)}">
         <div class="analysis-overview-label">${escapeHTML(card.label)}</div>
         <div class="analysis-overview-value">${escapeHTML(card.value)}</div>
         <div class="analysis-overview-meta">${escapeHTML(card.meta)}</div>

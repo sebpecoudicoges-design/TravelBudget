@@ -420,23 +420,25 @@ function toastOk(msg) {
     const totalCat = categories.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const maxCat = Math.max(1, ...categories.map(x => Number(x.amount) || 0));
     const maxParticipant = Math.max(1, ...participants.map(x => Math.max(Math.abs(Number(x.net) || 0), Number(x.paid) || 0, Number(x.owed) || 0)));
+    const topCategory = categories[0] || null;
+    const highestAdvance = [...participants].sort((a,b) => (Number(b.net)||0) - (Number(a.net)||0))[0] || null;
+    const highestDebt = [...participants].sort((a,b) => (Number(a.net)||0) - (Number(b.net)||0))[0] || null;
+    const settledParticipants = participants.filter((row) => Math.abs(Number(row.net) || 0) < 0.01).length;
 
     const catHTML = categories.length
       ? categories.map((row) => {
           const pct = totalCat > 0 ? ((Number(row.amount) || 0) / totalCat) * 100 : 0;
           const width = Math.max(8, Math.min(100, ((Number(row.amount) || 0) / maxCat) * 100));
           return `
-            <div style="display:grid; gap:6px; padding:10px 0; border-bottom:1px solid rgba(148,163,184,.16);">
-              <div style="display:flex; justify-content:space-between; gap:12px; align-items:center;">
-                <strong style="min-width:0;">${escapeHTML(row.name)}</strong>
-                <div style="text-align:right; white-space:nowrap;">
+            <div class="trip-analysis-row">
+              <div class="trip-analysis-row-head">
+                <strong class="trip-analysis-row-title">${escapeHTML(row.name)}</strong>
+                <div class="trip-analysis-row-values">
                   <strong>${escapeHTML(_fmtMoney(row.amount, pivot))}</strong>
                   <div class="muted" style="font-size:12px;">${pct.toFixed(1)}%</div>
                 </div>
               </div>
-              <div style="height:10px; border-radius:999px; background:rgba(148,163,184,.14); overflow:hidden;">
-                <div style="height:100%; width:${width.toFixed(1)}%; border-radius:999px; background:linear-gradient(90deg, rgba(37,99,235,.96), rgba(168,85,247,.92));"></div>
-              </div>
+              <div class="trip-analysis-meter"><span style="width:${width.toFixed(1)}%;"></span></div>
             </div>`;
         }).join('')
       : `<div class="muted">Aucune dépense exploitable pour l’analyse catégorie.</div>`;
@@ -448,48 +450,72 @@ function toastOk(msg) {
           const widthPaid = Math.max(6, Math.min(100, ((Number(row.paid) || 0) / maxParticipant) * 100));
           const widthOwed = Math.max(6, Math.min(100, ((Number(row.owed) || 0) / maxParticipant) * 100));
           return `
-            <div style="display:grid; gap:8px; padding:12px 0; border-bottom:1px solid rgba(148,163,184,.16);">
-              <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+            <div class="trip-analysis-row">
+              <div class="trip-analysis-row-head">
                 <div>
-                  <strong>${escapeHTML(row.name)}${row.isMe ? ' (moi)' : ''}</strong>
+                  <strong class="trip-analysis-row-title">${escapeHTML(row.name)}${row.isMe ? ' (moi)' : ''}</strong>
                   <div class="muted" style="font-size:12px;">${row.expenseCount || 0} dépense(s) payée(s)</div>
                 </div>
-                <div style="text-align:right; white-space:nowrap;">
+                <div class="trip-analysis-row-values">
                   <strong style="color:${tone};">${escapeHTML(_fmtMoney(net, pivot))}</strong>
                   <div class="muted" style="font-size:12px;">Net = payé - part due</div>
                 </div>
               </div>
               <div style="display:grid; gap:6px;">
                 <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;"><span class="muted">Payé</span><span>${escapeHTML(_fmtMoney(row.paid, pivot))}</span></div>
-                <div style="height:8px; border-radius:999px; background:rgba(148,163,184,.14); overflow:hidden;"><div style="height:100%; width:${widthPaid.toFixed(1)}%; border-radius:999px; background:linear-gradient(90deg, rgba(16,185,129,.95), rgba(34,197,94,.88));"></div></div>
+                <div class="trip-analysis-meter trip-analysis-meter--paid"><span style="width:${widthPaid.toFixed(1)}%;"></span></div>
                 <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;"><span class="muted">Part due</span><span>${escapeHTML(_fmtMoney(row.owed, pivot))}</span></div>
-                <div style="height:8px; border-radius:999px; background:rgba(148,163,184,.14); overflow:hidden;"><div style="height:100%; width:${widthOwed.toFixed(1)}%; border-radius:999px; background:linear-gradient(90deg, rgba(239,68,68,.95), rgba(249,115,22,.88));"></div></div>
+                <div class="trip-analysis-meter trip-analysis-meter--owed"><span style="width:${widthOwed.toFixed(1)}%;"></span></div>
               </div>
             </div>`;
         }).join('')
       : `<div class="muted">Aucune donnée exploitable pour l’analyse participant.</div>`;
 
     return `
-      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; align-items:start;">
-        <div class="card" style="margin:0; border-radius:22px; border:1px solid rgba(148,163,184,.16); background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.62)); box-shadow:0 12px 30px rgba(15,23,42,.06);">
-          <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:8px;">
-            <div>
-              <h3 style="margin:0;">Analyse catégorie</h3>
-              <div class="muted" style="font-size:12px;">Lecture du trip en devise pivot du compte.</div>
-            </div>
-            <div class="pill">${escapeHTML(pivot)}</div>
+      <div class="trip-analysis-shell">
+        <div class="trip-analysis-summary">
+          <div class="trip-analysis-kpi">
+            <span>Total du trip</span>
+            <strong>${escapeHTML(_fmtMoney(totalCat, pivot))}</strong>
+            <small>${categories.length} catégorie(s) · ${participants.length} participant(s)</small>
           </div>
-          ${catHTML}
+          <div class="trip-analysis-kpi">
+            <span>Catégorie dominante</span>
+            <strong>${escapeHTML(topCategory?.name || '—')}</strong>
+            <small>${topCategory ? escapeHTML(_fmtMoney(topCategory.amount, pivot)) : 'Aucune donnée'}</small>
+          </div>
+          <div class="trip-analysis-kpi">
+            <span>Avance la plus forte</span>
+            <strong>${escapeHTML(highestAdvance?.name || '—')}</strong>
+            <small>${highestAdvance ? escapeHTML(_fmtMoney(highestAdvance.net, pivot)) : 'Aucune donnée'}</small>
+          </div>
+          <div class="trip-analysis-kpi">
+            <span>Équilibre</span>
+            <strong>${settledParticipants}/${participants.length || 0}</strong>
+            <small>${highestDebt ? `${escapeHTML(highestDebt.name)} doit ${escapeHTML(_fmtMoney(Math.abs(highestDebt.net || 0), pivot))}` : 'Aucun écart notable'}</small>
+          </div>
         </div>
-        <div class="card" style="margin:0; border-radius:22px; border:1px solid rgba(148,163,184,.16); background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.62)); box-shadow:0 12px 30px rgba(15,23,42,.06);">
-          <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:8px;">
-            <div>
-              <h3 style="margin:0;">Analyse participant</h3>
-              <div class="muted" style="font-size:12px;">Qui paie, qui consomme, qui avance.</div>
+        <div class="trip-analysis-grid">
+          <div class="trip-analysis-card">
+            <div class="trip-analysis-card-head">
+              <div>
+                <h3 style="margin:0;">Analyse catégorie</h3>
+                <div class="muted" style="font-size:12px;">Lecture du trip en devise pivot du compte.</div>
+              </div>
+              <div class="pill">${escapeHTML(pivot)}</div>
             </div>
-            <div class="pill">Pivot ${escapeHTML(pivot)}</div>
+            ${catHTML}
           </div>
-          ${participantHTML}
+          <div class="trip-analysis-card">
+            <div class="trip-analysis-card-head">
+              <div>
+                <h3 style="margin:0;">Analyse participant</h3>
+                <div class="muted" style="font-size:12px;">Qui paie, qui consomme, qui avance.</div>
+              </div>
+              <div class="pill">Pivot ${escapeHTML(pivot)}</div>
+            </div>
+            ${participantHTML}
+          </div>
         </div>
       </div>`;
   }
@@ -3545,12 +3571,13 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           const participantLabel = participantNames.length ? ` • participants: ${escapeHTML(participantNames.join(', '))}` : '';
           const editBtn = `<button class="btn" type="button" data-edit-exp="${ex.id}" title="${isLinked ? "Édition complète (wallet/budget inclus)" : "Modifier"}">Modifier</button>`;
 return `
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.04); gap:12px;">
-              <div style="min-width:0;">
-                <div style="font-weight:700; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">${escapeHTML(ex.label)}<span style="font-size:12px; padding:2px 8px; border-radius:999px; background:rgba(15,23,42,.06); border:1px solid rgba(15,23,42,.08); color:#334155;">${escapeHTML(resolvedCategory || 'Autre')}</span></div>
-                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${linkedLabel}${participantLabel}</div>
+            <div class="trip-history-row">
+              <div class="trip-history-copy">
+                <div class="trip-history-title">${escapeHTML(ex.label)}<span class="trip-badge">${escapeHTML(resolvedCategory || 'Autre')}</span></div>
+                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${linkedLabel}</div>
+                ${participantNames.length ? `<div class="trip-history-participants">${participantNames.map((name) => `<span class="trip-participant-pill">${escapeHTML(name)}</span>`).join('')}</div>` : ''}
               </div>
-              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+              <div class="trip-history-actions">
                 <strong>${_fmtMoney(ex.amount, ex.currency)}</strong>
                 ${moveUI}
                 <button class="btn" type="button" data-exp-detail="${ex.id}">Détail</button>
@@ -3632,9 +3659,9 @@ return `
       <div class="card" style="margin-top:12px;">
         <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
           <h2 style="margin:0;">Récap / Historique</h2>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <button class="btn" id="trip-tab-recap" type="button">Récap</button>
-            <button class="btn" id="trip-tab-history" type="button" style="background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);">Historique</button>
+          <div class="trip-tabs">
+            <button class="btn primary" id="trip-tab-recap" type="button">Récap</button>
+            <button class="btn trip-tab-btn" id="trip-tab-history" type="button">Historique</button>
           </div>
         </div>
 
@@ -3652,9 +3679,9 @@ return `
         </div>
 
         <div id="trip-tab-content-history" style="margin-top:10px; display:none;">
-          <div class="card" style="margin:0 0 12px 0; border-radius:18px; border:1px solid rgba(148,163,184,.16); background:linear-gradient(180deg, rgba(255,255,255,.84), rgba(255,255,255,.68));">
-            <div class="muted" style="margin-bottom:10px; font-size:12px;">Filtres d'audit du trip actif. Ils ne portent que sur l'historique du partage sélectionné.</div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px;">
+          <div class="card trip-history-toolbar">
+            <div class="muted trip-history-toolbar-copy">Filtres d'audit du trip actif. Ils ne portent que sur l'historique du partage sélectionné.</div>
+            <div class="trip-filter-grid">
               <div class="field"><label>Catégorie</label><select id="trip-hist-category"><option value="">Toutes</option>${historyCategoryOptions.map((cat) => `<option value="${escapeHTML(cat)}" ${historyFilters.category === cat ? 'selected' : ''}>${escapeHTML(cat)}</option>`).join('')}</select></div>
               <div class="field"><label>Payeur</label><select id="trip-hist-payer"><option value="">Tous</option>${members.map((m) => `<option value="${m.id}" ${historyFilters.payer === String(m.id) ? 'selected' : ''}>${escapeHTML(m.name)}</option>`).join('')}</select></div>
               <div class="field"><label>Participant</label><select id="trip-hist-participant"><option value="">Tous</option>${members.map((m) => `<option value="${m.id}" ${historyFilters.participant === String(m.id) ? 'selected' : ''}>${escapeHTML(m.name)}</option>`).join('')}</select></div>
@@ -3716,13 +3743,13 @@ return `
       // simple visual state
       if (btnTabRecap) {
         btnTabRecap.classList.toggle("primary", t === "recap");
-        if (t === "recap") btnTabRecap.style.cssText = "";
-        else btnTabRecap.style.cssText = "background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);";
+        btnTabRecap.classList.toggle("trip-tab-btn", t !== "recap");
+        btnTabRecap.style.cssText = "";
       }
       if (btnTabHist) {
         btnTabHist.classList.toggle("primary", t === "history");
-        if (t === "history") btnTabHist.style.cssText = "";
-        else btnTabHist.style.cssText = "background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);";
+        btnTabHist.classList.toggle("trip-tab-btn", t !== "history");
+        btnTabHist.style.cssText = "";
       }
     }
 
