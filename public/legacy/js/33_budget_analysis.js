@@ -292,6 +292,19 @@
   function _currency(){ const r = _analysisRange(); return _resolveAnalysisCurrency(r.start, r.end); }
 
   function _isTripLinked(tx){ return !!(tx?.trip_expense_id || tx?.tripExpenseId || tx?.trip_share_link_id || tx?.tripShareLinkId); }
+  function _isTripBudgetShare(tx){
+    if (!tx) return false;
+    const tripShareLinkId = tx?.trip_share_link_id || tx?.tripShareLinkId || null;
+    if (!tripShareLinkId) return false;
+    if (String(tx?.type || '').toLowerCase() !== 'expense') return false;
+    const payNow = (tx?.payNow ?? tx?.pay_now);
+    const isPaid = (payNow === undefined) ? true : !!payNow;
+    if (isPaid) return false;
+    const affectsBudget = (tx?.affectsBudget ?? tx?.affects_budget);
+    if (affectsBudget === false) return false;
+    const outOfBudget = !!(tx?.outOfBudget ?? tx?.out_of_budget);
+    return !outOfBudget;
+  }
   function _isInternalMovement(tx){ return String(tx?.category || '').trim().toLowerCase() === 'mouvement interne'; }
   function _txCashDate(tx){
     if (typeof window.tbTxCashDate === 'function') return window.tbTxCashDate(tx);
@@ -391,7 +404,7 @@ function _analysisBucketOrder(){
     try { if (typeof getCategories === 'function') (getCategories() || []).forEach(add); } catch (_) {}
     (Array.isArray(state?.categories) ? state.categories : []).forEach(add);
     (Array.isArray(state?.transactions) ? state.transactions : []).forEach(tx => {
-      if (_isTripLinked(tx)) return;
+      if (_isTripLinked(tx) && !_isTripBudgetShare(tx)) return;
       if (_txType(tx) !== 'expense') return;
       add(tx?.category);
     });
@@ -482,7 +495,7 @@ function _analysisBucketOrder(){
       const txTravelId = String(tx?.travel_id || tx?.travelId || '');
       if (travelId && txTravelId && txTravelId !== String(travelId)) return false;
       if (_txType(tx) !== 'expense') return false;
-      if (_isTripLinked(tx)) return false;
+      if (_isTripLinked(tx) && !_isTripBudgetShare(tx)) return false;
       if (_isInternalMovement(tx)) return false;
       const bs = _txBudgetStart(tx);
       const be = _txBudgetEnd(tx);
@@ -521,6 +534,7 @@ function _analysisBucketOrder(){
     const cutoffEnd = _analysisCutoffEnd();
     const base = _resolveAnalysisCurrency(start, end);
     const days = _daysInclusive(start, end);
+    const daySet = new Set(days);
     const dailyMap = Object.fromEntries(days.map(d => [d, 0]));
     const paidMap = Object.fromEntries(days.map(d => [d, 0]));
     const catMap = new Map();
@@ -534,7 +548,7 @@ function _analysisBucketOrder(){
       const budgetEnd = _txBudgetEnd(tx);
 
       const fullBudgetDays = _daysInclusive(budgetStart, budgetEnd)
-        .filter(d => dailyMap[d] !== undefined);
+        .filter(d => daySet.has(d));
 
       if (!fullBudgetDays.length) {
         return { amount: 0, fullBudgetDays: [], visibleBudgetDays: [], perDay: 0, cashDate, budgetStart, budgetEnd };
@@ -598,6 +612,9 @@ function _analysisBucketOrder(){
     const coveredDaySet = new Set(coveredDays);
     const todayIso = _iso(new Date());
     const effectiveEnd = end < todayIso ? end : todayIso;
+    const comparableDaySet = coveredDaySet.size
+      ? new Set(days.filter((d) => d <= effectiveEnd && coveredDaySet.has(d)))
+      : new Set(days.filter((d) => d <= effectiveEnd));
     const elapsedDaysList = days.filter((d) => d <= effectiveEnd);
     const elapsedComparableDaysList = coveredDays.filter((d) => d <= effectiveEnd);
     const comparableDays = Math.max(1, elapsedComparableDaysList.length || elapsedDaysList.length || days.length);
@@ -612,7 +629,7 @@ function _analysisBucketOrder(){
       const budgetStart = _txBudgetStart(tx);
       const budgetEnd = _txBudgetEnd(tx);
       const comparableBudgetDays = _daysInclusive(budgetStart, budgetEnd)
-        .filter((d) => d <= effectiveEnd && (!coveredDaySet.size || coveredDaySet.has(d)));
+        .filter((d) => comparableDaySet.has(d));
 
       if (!comparableBudgetDays.length) continue;
 
@@ -751,7 +768,7 @@ function _analysisBucketOrder(){
       const cashDate = _txCashDate(tx);
 
       const fullBudgetDays = _daysInclusive(budgetStart, budgetEnd)
-        .filter(d => days.includes(d));
+        .filter(d => daySet.has(d));
 
       if (!fullBudgetDays.length) return sum;
 

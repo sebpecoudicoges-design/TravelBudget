@@ -1035,7 +1035,7 @@ function _ensureSettleModal() {
 
       <div style="margin-top:12px;">
         <label class="muted" style="display:block;margin-bottom:6px;">Devise transaction</label>
-        <input id="tripSettleCurrency" class="input" type="text" maxlength="3" style="width:100%" />
+        <select id="tripSettleCurrency" class="input" style="width:100%"></select>
       </div>
 
       <div style="margin-top:12px;">
@@ -1087,15 +1087,23 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
   const inputAmt = modal.querySelector("#tripSettleAmount");
   const inputCur = modal.querySelector("#tripSettleCurrency");
   let currencyDirty = false;
-  inputCur.value = String((wallets.find(x => x.id === sel.value)?.currency || currency || '')).toUpperCase();
+  const refreshCurrencyOptions = () => {
+    const selected = String(inputCur.value || wallets.find(x => x.id === sel.value)?.currency || currency || '').toUpperCase();
+    inputCur.innerHTML = _tripCurrencyOptionsHTML(selected);
+    inputCur.value = selected;
+  };
+  refreshCurrencyOptions();
   inputAmt.value = String(_round2(amount));
-  inputCur.oninput = () => { currencyDirty = true; inputCur.value = String(inputCur.value || '').toUpperCase().slice(0,3); refreshNote(); };
+  inputCur.onchange = () => { currencyDirty = true; refreshNote(); };
 
   const refreshNote = () => {
     const wid = sel.value;
     const w = wallets.find(x => x.id === wid);
     const wCur = String(w?.currency || "").toUpperCase();
-    if (!currencyDirty) inputCur.value = wCur || String(currency || '').toUpperCase();
+    if (!currencyDirty) {
+      refreshCurrencyOptions();
+      inputCur.value = wCur || String(currency || '').toUpperCase();
+    }
     const txCur = String(inputCur.value || '').toUpperCase();
     const note = modal.querySelector("#tripSettleWalletNote");
     if (!wCur || !txCur) {

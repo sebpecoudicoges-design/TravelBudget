@@ -509,7 +509,82 @@ async function _updateTransactionDirectCompat(args) {
 }
 
 async function _updateTransactionRpcCompat(args) {
-  return await _updateTransactionDirectCompat(args);
+  const canonical = {
+    p_id: args?.p_id || args?.p_tx_id || null,
+    p_wallet_id: args?.p_wallet_id || null,
+    p_type: args?.p_type || null,
+    p_amount: args?.p_amount,
+    p_currency: args?.p_currency || null,
+    p_category: args?.p_category || null,
+    p_label: args?.p_label || null,
+    p_date_start: args?.p_date_start || null,
+    p_date_end: args?.p_date_end || args?.p_date_start || null,
+    p_pay_now: !!args?.p_pay_now,
+    p_out_of_budget: !!args?.p_out_of_budget,
+    p_night_covered: !!args?.p_night_covered,
+    p_user_id: args?.p_user_id || null,
+    p_subcategory: (args?.p_subcategory === undefined ? null : (args?.p_subcategory || null)),
+    p_trip_expense_id: args?.p_trip_expense_id || null,
+    p_trip_share_link_id: args?.p_trip_share_link_id || null,
+    p_fx_rate_snapshot: args?.p_fx_rate_snapshot,
+    p_fx_source_snapshot: args?.p_fx_source_snapshot,
+    p_fx_snapshot_at: args?.p_fx_snapshot_at,
+    p_fx_base_currency_snapshot: args?.p_fx_base_currency_snapshot,
+    p_fx_tx_currency_snapshot: args?.p_fx_tx_currency_snapshot,
+    p_budget_date_start: args?.p_budget_date_start || args?.p_date_start || null,
+    p_budget_date_end: args?.p_budget_date_end || args?.p_date_end || args?.p_date_start || null,
+  };
+
+  try {
+    return await tbRpcWithRetry(TB_CONST.RPCS.update_transaction_v2 || 'update_transaction_v2', canonical);
+  } catch (e) {
+    if (!_txIsMissingRpcSignature(e)) throw e;
+  }
+
+  const legacy = {
+    p_wallet_id: canonical.p_wallet_id,
+    p_tx_id: canonical.p_id,
+    p_type: canonical.p_type,
+    p_label: canonical.p_label,
+    p_amount: canonical.p_amount,
+    p_currency: canonical.p_currency,
+    p_date_start: canonical.p_date_start,
+    p_date_end: canonical.p_date_end,
+    p_category: canonical.p_category,
+    p_pay_now: canonical.p_pay_now,
+    p_out_of_budget: canonical.p_out_of_budget,
+    p_night_covered: canonical.p_night_covered,
+    p_fx_rate_snapshot: canonical.p_fx_rate_snapshot,
+    p_fx_source_snapshot: canonical.p_fx_source_snapshot,
+    p_fx_snapshot_at: canonical.p_fx_snapshot_at,
+    p_fx_base_currency_snapshot: canonical.p_fx_base_currency_snapshot,
+    p_fx_tx_currency_snapshot: canonical.p_fx_tx_currency_snapshot,
+    p_trip_expense_id: canonical.p_trip_expense_id,
+    p_trip_share_link_id: canonical.p_trip_share_link_id,
+    p_user_id: canonical.p_user_id || null,
+  };
+
+  const legacyRes = await tbRpcWithRetry(TB_CONST.RPCS.update_transaction_v2 || 'update_transaction_v2', legacy);
+  if (legacyRes?.error) return legacyRes;
+
+  const patchRes = await _updateTransactionDirectCompat({
+    p_id: canonical.p_id,
+    p_subcategory: canonical.p_subcategory,
+    p_date_start: canonical.p_date_start,
+    p_date_end: canonical.p_date_end,
+    p_budget_date_start: canonical.p_budget_date_start,
+    p_budget_date_end: canonical.p_budget_date_end,
+    p_wallet_id: canonical.p_wallet_id,
+    p_type: canonical.p_type,
+    p_amount: canonical.p_amount,
+    p_currency: canonical.p_currency,
+    p_category: canonical.p_category,
+    p_label: canonical.p_label,
+    p_pay_now: canonical.p_pay_now,
+    p_out_of_budget: canonical.p_out_of_budget,
+    p_night_covered: canonical.p_night_covered,
+  });
+  return { ...patchRes, _tbUsedLegacyRpcFallback: true };
 }
 function _tbParseLocaleAmount(raw) {
   let s = String(raw ?? "").trim();
