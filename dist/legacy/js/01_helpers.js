@@ -265,6 +265,10 @@ function tbShouldHideFromBudgetViews(tx) {
 }
 
 const __tbFxCache = new Map();
+function tbClearFxConvertCache() {
+  try { __tbFxCache.clear(); } catch (_) {}
+}
+
 function tbFxConvertForDateCached(amount, from, to, dateStr) {
   const a = Number(amount || 0);
   const source = String(from || to || '').toUpperCase();
@@ -325,6 +329,7 @@ window.tbIsInternalMovement = tbIsInternalMovement;
 window.tbTxAffectsBudget = tbTxAffectsBudget;
 window.tbTxAffectsCash = tbTxAffectsCash;
 window.tbShouldHideFromBudgetViews = tbShouldHideFromBudgetViews;
+window.tbClearFxConvertCache = tbClearFxConvertCache;
 window.tbFxConvertForDateCached = tbFxConvertForDateCached;
 
 /* =========================

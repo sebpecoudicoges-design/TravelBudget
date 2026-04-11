@@ -23,7 +23,7 @@ function showView(view) {
   setActiveTab(view);
   if (view === "transactions") renderTransactions();
   if (view === "settings") { renderSettings(); initPaletteUI(); }
-  if (view === "analysis") { if (typeof renderBudgetAnalysis === 'function') renderBudgetAnalysis(); }
+  if (view === "analysis") { if (typeof tbRequestAnalysisRender === 'function') tbRequestAnalysisRender('navigation'); else if (typeof renderBudgetAnalysis === 'function') renderBudgetAnalysis(); }
   if (view === "dashboard") if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("10_navigation.js"); else redrawCharts();
   if (view === "trip") renderTrip();
   if (view === "members") renderMembersAdmin();

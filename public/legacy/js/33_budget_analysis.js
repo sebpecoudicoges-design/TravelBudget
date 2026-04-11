@@ -75,7 +75,30 @@
     }
     return list[0] || null;
   }
-  function _travelList(){ return Array.isArray(state?.travels) ? state.travels : []; }
+  function _travelList(){
+    const direct = Array.isArray(state?.travels) ? state.travels.filter(Boolean) : [];
+    if (direct.length) return direct;
+
+    const byId = new Map();
+    const push = (id, name) => {
+      const key = String(id || '').trim();
+      if (!key) return;
+      if (!byId.has(key)) byId.set(key, { id: key, name: String(name || 'Voyage').trim() || 'Voyage' });
+    };
+
+    const activeTravelId = String(state?.activeTravelId || '').trim();
+    const activeTravelName = String(state?.travel?.name || state?.travelName || '').trim();
+    if (activeTravelId) push(activeTravelId, activeTravelName || 'Voyage actif');
+
+    for (const p of (Array.isArray(state?.periods) ? state.periods : [])) {
+      push(p?.travel_id || p?.travelId, p?.travel_name || p?.travelName || p?.name || 'Voyage');
+    }
+    for (const seg of (Array.isArray(state?.budgetSegments) ? state.budgetSegments : [])) {
+      push(seg?.travel_id || seg?.travelId, seg?.travel_name || seg?.travelName || 'Voyage');
+    }
+
+    return Array.from(byId.values());
+  }
   function _periodList(travelId){
     const wanted = String(travelId || state?.activeTravelId || '');
     const segs = _segmentsForTravel(wanted)
@@ -1375,20 +1398,36 @@ function _analysisBucketOrder(){
   function _renderAll(){
     if (!_el('view-analysis')) return;
     _saveFilters();
-    const model = _computeModel();
+    let model;
+    try {
+      model = _computeModel();
+    } catch (err) {
+      console.warn('[analysis] compute failed', err);
+      const host = _el('analysis-summary');
+      if (host) host.innerHTML = `<div class="muted">Impossible de calculer l’analyse pour le moment.</div>`;
+      return;
+    }
 
-    _buildSummary(model);
-    _renderNightCovered(model);
-    _renderInsights(model);
-    _renderCategory(model);
-    _renderCategoryBars(model);
-    _renderSubcategoryBreakdown(model);
-    _renderTrajectory(model);
-    _renderReferencePanel(model);
-    _renderVelocity(model);
-    _renderHeatmap(model);
+    const safe = (label, fn) => {
+      try { fn(model); } catch (err) { console.warn(`[analysis] ${label} failed`, err); }
+    };
+
+    safe('summary', _buildSummary);
+    safe('night-covered', _renderNightCovered);
+    safe('insights', _renderInsights);
+    safe('category', _renderCategory);
+    safe('category-bars', _renderCategoryBars);
+    safe('subcategory-breakdown', _renderSubcategoryBreakdown);
+    safe('trajectory', _renderTrajectory);
+    safe('reference-panel', _renderReferencePanel);
+    safe('velocity', _renderVelocity);
+    safe('heatmap', _renderHeatmap);
 
     const view = _el('view-analysis');
+    const summaryHostPre = _el('analysis-summary');
+    if (summaryHostPre && model && Array.isArray(model.txs) && model.txs.length === 0) {
+      summaryHostPre.innerHTML = `<div class="muted">Aucune dépense visible pour ce scope, cette plage, ou ces filtres.</div>`;
+    }
     if (!view) return;
 
     const insightsHost = _el('analysis-insights');
@@ -1591,10 +1630,18 @@ function _analysisBucketOrder(){
     if (!travelSel) return;
     const filters = _loadFilters();
     const travels = _travelList();
-    travelSel.innerHTML = travels.map(t => `<option value="${escapeHTML(String(t.id))}">${escapeHTML(String(t.name || 'Voyage'))}</option>`).join('');
-    const wantedTravel = (_isUUID(filters.travelId) && travels.some(t => String(t.id) === String(filters.travelId))) ? filters.travelId : (state?.activeTravelId || travels[0]?.id || '');
-    if (wantedTravel && [...travelSel.options].some(o => o.value === String(wantedTravel))) travelSel.value = String(wantedTravel);
-    _fillPeriodSelect(travelSel.value, filters.periodId || 'active');
+    if (!travels.length) {
+      const fallbackId = String(state?.activeTravelId || state?.period?.travel_id || state?.period?.travelId || '').trim();
+      const fallbackName = String(state?.travel?.name || state?.travelName || 'Voyage actif').trim() || 'Voyage actif';
+      travelSel.innerHTML = fallbackId ? `<option value="${escapeHTML(fallbackId)}">${escapeHTML(fallbackName)}</option>` : '<option value="">Aucun voyage disponible</option>';
+      if (fallbackId) travelSel.value = fallbackId;
+    } else {
+      travelSel.innerHTML = travels.map(t => `<option value="${escapeHTML(String(t.id))}">${escapeHTML(String(t.name || 'Voyage'))}</option>`).join('');
+      const wantedTravel = (_isUUID(filters.travelId) && travels.some(t => String(t.id) === String(filters.travelId))) ? filters.travelId : (state?.activeTravelId || travels[0]?.id || '');
+      if (wantedTravel && [...travelSel.options].some(o => o.value === String(wantedTravel))) travelSel.value = String(wantedTravel);
+      else if (!travelSel.value && travels[0]?.id) travelSel.value = String(travels[0].id);
+    }
+    _fillPeriodSelect(travelSel.value || String(state?.activeTravelId || ''), filters.periodId || 'active');
     const range = _rangeInputs();
     if (range.start) range.start.value = filters.rangeStart || '';
     if (range.end) range.end.value = filters.rangeEnd || '';

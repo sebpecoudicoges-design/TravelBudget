@@ -9,11 +9,14 @@ function applyTheme(theme) {
   // Redraw charts + cashflow curve on theme change so colors/contrast update immediately.
   if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("04_theme.js"); else redrawCharts();
   try {
-    if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("theme");
+    if (typeof window.tbRequestCashflowCurveRender === "function") window.tbRequestCashflowCurveRender("theme");
     else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
   } catch (_) {}
   try {
-    if ((typeof activeView === 'string' ? activeView : '') === 'analysis' && typeof window.renderBudgetAnalysis === 'function') window.renderBudgetAnalysis();
+    if ((typeof activeView === 'string' ? activeView : '') === 'analysis') {
+      if (typeof window.tbRequestAnalysisRender === 'function') window.tbRequestAnalysisRender('theme');
+      else if (typeof window.renderBudgetAnalysis === 'function') window.renderBudgetAnalysis();
+    }
   } catch (_) {}
 }
 function toggleTheme() {

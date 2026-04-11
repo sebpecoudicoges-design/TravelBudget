@@ -264,6 +264,169 @@ function toastOk(msg) {
   }
 
   
+  function _tripPivotCurrency() {
+    return String(state?.user?.baseCurrency || state?.period?.baseCurrency || "EUR").toUpperCase();
+  }
+
+  function _tripConvertToPivot(amount, fromCur) {
+    const pivot = _tripPivotCurrency();
+    const from = String(fromCur || '').toUpperCase();
+    const amt = Number(amount) || 0;
+    if (!from || !Number.isFinite(amt)) return 0;
+    if (from === pivot) return amt;
+    return _safeFx(amt, from, pivot);
+  }
+
+  function _txByIdMap() {
+    const map = new Map();
+    for (const tx of (Array.isArray(state?.transactions) ? state.transactions : [])) {
+      const id = String(tx?.id || '');
+      if (id) map.set(id, tx);
+    }
+    return map;
+  }
+
+  function _tripAnalysisCategoryKey(expense, txMap) {
+    try {
+      const txId = String(expense?.transactionId || '');
+      const tx = txId ? txMap.get(txId) : null;
+      const cat = String(tx?.category || '').trim();
+      if (cat) return cat;
+    } catch (_) {}
+    return 'Autre';
+  }
+
+  function _buildTripAnalysis(expenses, members, shares) {
+    const pivot = _tripPivotCurrency();
+    const txMap = _txByIdMap();
+    const sharesByExpense = _groupBy(shares || [], s => s.expenseId);
+    const categoryTotals = new Map();
+    const participantTotals = new Map();
+    for (const m of (members || [])) {
+      participantTotals.set(m.id, { paid: 0, owed: 0, net: 0, expenseCount: 0, name: m.name, isMe: !!m.isMe });
+    }
+
+    for (const ex of (expenses || [])) {
+      const exAmountPivot = _tripConvertToPivot(ex?.amount, ex?.currency);
+      const category = _tripAnalysisCategoryKey(ex, txMap);
+      categoryTotals.set(category, (categoryTotals.get(category) || 0) + exAmountPivot);
+
+      const payerId = ex?.paidByMemberId;
+      if (payerId && participantTotals.has(payerId)) {
+        const row = participantTotals.get(payerId);
+        row.paid += exAmountPivot;
+        row.expenseCount += 1;
+      }
+
+      const sh = sharesByExpense.get(ex?.id) || [];
+      for (const row of sh) {
+        const memberId = row?.memberId;
+        if (!memberId || !participantTotals.has(memberId)) continue;
+        participantTotals.get(memberId).owed += _tripConvertToPivot(row?.shareAmount, ex?.currency);
+      }
+    }
+
+    const categories = Array.from(categoryTotals.entries())
+      .map(([name, amount]) => ({ name, amount: _round2(amount) }))
+      .filter(x => x.amount > 0.004)
+      .sort((a, b) => b.amount - a.amount);
+
+    const participants = Array.from(participantTotals.entries())
+      .map(([id, row]) => ({
+        id,
+        name: row.name,
+        isMe: row.isMe,
+        paid: _round2(row.paid),
+        owed: _round2(row.owed),
+        net: _round2(row.paid - row.owed),
+        expenseCount: row.expenseCount || 0,
+      }))
+      .sort((a, b) => Math.abs(b.net) - Math.abs(a.net) || b.paid - a.paid || a.name.localeCompare(b.name));
+
+    return { pivot, categories, participants };
+  }
+
+  function _tripAnalysisBarsHTML(data) {
+    const pivot = String(data?.pivot || _tripPivotCurrency()).toUpperCase();
+    const categories = Array.isArray(data?.categories) ? data.categories : [];
+    const participants = Array.isArray(data?.participants) ? data.participants : [];
+    const totalCat = categories.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+    const maxCat = Math.max(1, ...categories.map(x => Number(x.amount) || 0));
+    const maxParticipant = Math.max(1, ...participants.map(x => Math.max(Math.abs(Number(x.net) || 0), Number(x.paid) || 0, Number(x.owed) || 0)));
+
+    const catHTML = categories.length
+      ? categories.map((row) => {
+          const pct = totalCat > 0 ? ((Number(row.amount) || 0) / totalCat) * 100 : 0;
+          const width = Math.max(8, Math.min(100, ((Number(row.amount) || 0) / maxCat) * 100));
+          return `
+            <div style="display:grid; gap:6px; padding:10px 0; border-bottom:1px solid rgba(148,163,184,.16);">
+              <div style="display:flex; justify-content:space-between; gap:12px; align-items:center;">
+                <strong style="min-width:0;">${escapeHTML(row.name)}</strong>
+                <div style="text-align:right; white-space:nowrap;">
+                  <strong>${escapeHTML(_fmtMoney(row.amount, pivot))}</strong>
+                  <div class="muted" style="font-size:12px;">${pct.toFixed(1)}%</div>
+                </div>
+              </div>
+              <div style="height:10px; border-radius:999px; background:rgba(148,163,184,.14); overflow:hidden;">
+                <div style="height:100%; width:${width.toFixed(1)}%; border-radius:999px; background:linear-gradient(90deg, rgba(37,99,235,.96), rgba(168,85,247,.92));"></div>
+              </div>
+            </div>`;
+        }).join('')
+      : `<div class="muted">Aucune dépense exploitable pour l’analyse catégorie.</div>`;
+
+    const participantHTML = participants.length
+      ? participants.map((row) => {
+          const net = Number(row.net) || 0;
+          const tone = net > 0.009 ? '#16a34a' : (net < -0.009 ? '#dc2626' : '#475569');
+          const widthPaid = Math.max(6, Math.min(100, ((Number(row.paid) || 0) / maxParticipant) * 100));
+          const widthOwed = Math.max(6, Math.min(100, ((Number(row.owed) || 0) / maxParticipant) * 100));
+          return `
+            <div style="display:grid; gap:8px; padding:12px 0; border-bottom:1px solid rgba(148,163,184,.16);">
+              <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+                <div>
+                  <strong>${escapeHTML(row.name)}${row.isMe ? ' (moi)' : ''}</strong>
+                  <div class="muted" style="font-size:12px;">${row.expenseCount || 0} dépense(s) payée(s)</div>
+                </div>
+                <div style="text-align:right; white-space:nowrap;">
+                  <strong style="color:${tone};">${escapeHTML(_fmtMoney(net, pivot))}</strong>
+                  <div class="muted" style="font-size:12px;">Net = payé - part due</div>
+                </div>
+              </div>
+              <div style="display:grid; gap:6px;">
+                <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;"><span class="muted">Payé</span><span>${escapeHTML(_fmtMoney(row.paid, pivot))}</span></div>
+                <div style="height:8px; border-radius:999px; background:rgba(148,163,184,.14); overflow:hidden;"><div style="height:100%; width:${widthPaid.toFixed(1)}%; border-radius:999px; background:linear-gradient(90deg, rgba(16,185,129,.95), rgba(34,197,94,.88));"></div></div>
+                <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;"><span class="muted">Part due</span><span>${escapeHTML(_fmtMoney(row.owed, pivot))}</span></div>
+                <div style="height:8px; border-radius:999px; background:rgba(148,163,184,.14); overflow:hidden;"><div style="height:100%; width:${widthOwed.toFixed(1)}%; border-radius:999px; background:linear-gradient(90deg, rgba(239,68,68,.95), rgba(249,115,22,.88));"></div></div>
+              </div>
+            </div>`;
+        }).join('')
+      : `<div class="muted">Aucune donnée exploitable pour l’analyse participant.</div>`;
+
+    return `
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; align-items:start;">
+        <div class="card" style="margin:0; border-radius:22px; border:1px solid rgba(148,163,184,.16); background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.62)); box-shadow:0 12px 30px rgba(15,23,42,.06);">
+          <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:8px;">
+            <div>
+              <h3 style="margin:0;">Analyse catégorie</h3>
+              <div class="muted" style="font-size:12px;">Lecture du trip en devise pivot du compte.</div>
+            </div>
+            <div class="pill">${escapeHTML(pivot)}</div>
+          </div>
+          ${catHTML}
+        </div>
+        <div class="card" style="margin:0; border-radius:22px; border:1px solid rgba(148,163,184,.16); background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.62)); box-shadow:0 12px 30px rgba(15,23,42,.06);">
+          <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:8px;">
+            <div>
+              <h3 style="margin:0;">Analyse participant</h3>
+              <div class="muted" style="font-size:12px;">Qui paie, qui consomme, qui avance.</div>
+            </div>
+            <div class="pill">Pivot ${escapeHTML(pivot)}</div>
+          </div>
+          ${participantHTML}
+        </div>
+      </div>`;
+  }
+
 
 function _isoToday() {
   // YYYY-MM-DD in local time
@@ -3242,6 +3405,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     })();
 
 
+    const tripAnalysis = _buildTripAnalysis(expenses, members, tripState.shares || []);
+    const tripAnalysisHTML = _tripAnalysisBarsHTML(tripAnalysis);
+
+
     const tripOptions = tripState.trips
       .map(t => `<option value="${t.id}" ${t.id === tripState.activeTripId ? "selected" : ""}>${escapeHTML(t.name)}</option>`)
       .join("");
@@ -3363,7 +3530,7 @@ return `
           </div>
         </div>
 
-        <div id="trip-tab-content-recap" style="margin-top:10px;">
+        <div id="trip-tab-content-recap" style="margin-top:10px; display:grid; gap:14px;">
           <div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">
             <div style="flex:1 1 260px; min-width:260px;">
               <h3 style="margin:0 0 8px 0;">Balances</h3>
@@ -3373,6 +3540,7 @@ return `
               ${settlementsHTML}
             </div>
           </div>
+          ${tripAnalysisHTML}
         </div>
 
         <div id="trip-tab-content-history" style="margin-top:10px; display:none;">

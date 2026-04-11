@@ -17,7 +17,14 @@
     } catch (_) {}
   }
 
+
+  function clearDerivedCaches() {
+    try { if (typeof window.tbClearFxConvertCache === 'function') window.tbClearFxConvertCache(); } catch (_) {}
+    try { if (typeof window.tbClearBudgetCaches === 'function') window.tbClearBudgetCaches(); } catch (_) {}
+  }
+
   function emit(name, detail) {
+    clearDerivedCaches();
     try {
       window.__TB_DATA_REV = (Number(window.__TB_DATA_REV || 0) + 1);
       window.__TB_DATA_UPDATED_AT = Date.now();
