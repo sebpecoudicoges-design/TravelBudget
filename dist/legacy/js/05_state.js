@@ -722,21 +722,30 @@ function fxRatesForSegment(seg) {
 }
 
 // Convert an amount from any currency to the segment base currency for the given date.
+const __tbBudgetBaseCache = new Map();
 function amountToBudgetBaseForDate(amount, currency, dateStr) {
   const seg = getBudgetSegmentForDate(dateStr) || { baseCurrency: state.period.baseCurrency, fxMode: "fixed", eurBaseRateFixed: state.period.eurBaseRate };
   const base = String(seg.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
-
-  // Prefer FX cross-rate engine if available
+  const a = Number(amount) || 0;
+  const from = String(currency || base).toUpperCase();
+  const rates = fxRatesForSegment(seg);
+  const key = [String(dateStr || '').slice(0,10), a, from, base, String(seg.fxMode || seg.fx_mode || ''), Number(seg.eurBaseRateFixed || seg.eur_base_rate_fixed || 0), Number(rates?.[from] ?? 1), Number(rates?.[base] ?? 1)].join('|');
+  if (__tbBudgetBaseCache.has(key)) return __tbBudgetBaseCache.get(key);
+  let out = null;
   if (typeof window.fxConvert === "function") {
-    const rates = fxRatesForSegment(seg);
-    const out = window.fxConvert(amount, currency, base, rates);
-    if (out !== null && isFinite(out)) return out;
+    out = window.fxConvert(a, from, base, rates);
+    if (out !== null && isFinite(out)) {
+      out = Number(out);
+      __tbBudgetBaseCache.set(key, out);
+      return out;
+    }
   }
-
-  // Fallback to legacy
-  if (currency === base) return Number(amount) || 0;
-  if (currency === "EUR") return (Number(amount) || 0) * (Number(seg.eurBaseRateFixed) || Number(state.exchangeRates["EUR-BASE"]) || 35);
-  return Number(amount) || 0;
+  if (from === base) out = a;
+  else if (from === "EUR") out = a * (Number(seg.eurBaseRateFixed) || Number(state.exchangeRates["EUR-BASE"]) || 35);
+  else out = a;
+  out = Number(out) || 0;
+  __tbBudgetBaseCache.set(key, out);
+  return out;
 }
 
 // allocations are stored in the *segment base currency of their day* (field: baseCurrency).
@@ -756,15 +765,20 @@ function getDailyBudgetForDate(dateStr) {
   return daily - getAllocatedBaseForDate(dateStr);
 }
 
+const __tbDailyBudgetInfoCache = new Map();
 function getDailyBudgetInfoForDate(dateStr) {
   const seg = getBudgetSegmentForDate(dateStr);
   if (!periodContains(dateStr) || !seg) return { remaining: 0, daily: 0, baseCurrency: state.period.baseCurrency };
-  return {
+  const key = [String(dateStr || '').slice(0,10), String(seg.baseCurrency || state.period.baseCurrency || 'EUR').toUpperCase(), Number(seg.dailyBudgetBase || 0), String(seg.fxMode || 'fixed'), Number(seg.eurBaseRateFixed || 0)].join('|');
+  if (__tbDailyBudgetInfoCache.has(key)) return __tbDailyBudgetInfoCache.get(key);
+  const info = {
     remaining: getDailyBudgetForDate(dateStr),
     daily: Number(seg.dailyBudgetBase) || 0,
     baseCurrency: String(seg.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase(),
     fxMode: String(seg.fxMode || "fixed"),
   };
+  __tbDailyBudgetInfoCache.set(key, info);
+  return info;
 }
 
 // Convenience: remaining budget converted to EUR (useful when multiple base currencies exist).

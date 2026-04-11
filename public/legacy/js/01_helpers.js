@@ -216,6 +216,122 @@ window.tbTxBudgetStart = tbTxBudgetStart;
 window.tbTxBudgetEnd = tbTxBudgetEnd;
 window.tbTxBudgetRange = tbTxBudgetRange;
 
+
+function tbIsTripBudgetShare(tx) {
+  if (!tx) return false;
+  const type = String(tx?.type || '').toLowerCase();
+  if (type !== 'expense') return false;
+  const payNow = (tx?.payNow ?? tx?.pay_now);
+  const isPaid = (payNow === undefined) ? true : !!payNow;
+  if (isPaid) return false;
+  const affectsBudget = (tx?.affectsBudget ?? tx?.affects_budget);
+  if (affectsBudget === false) return false;
+  const outOfBudget = !!(tx?.outOfBudget ?? tx?.out_of_budget);
+  if (outOfBudget) return false;
+  const tripShareLinkId = tx?.trip_share_link_id || tx?.tripShareLinkId || null;
+  const tripExpenseId = tx?.trip_expense_id || tx?.tripExpenseId || null;
+  const label = String(tx?.label || '');
+  return !!tripShareLinkId || !!tripExpenseId || (label.includes('[Trip]') && !label.includes('Avance'));
+}
+
+function tbIsInternalMovement(tx) {
+  if (!tx) return false;
+  const isInternal = !!(tx?.isInternal ?? tx?.is_internal);
+  if (!isInternal) return false;
+  return !tbIsTripBudgetShare(tx);
+}
+
+function tbTxAffectsBudget(tx) {
+  if (!tx) return false;
+  const type = String(tx?.type || '').toLowerCase();
+  if (type !== 'expense') return false;
+  if (tbIsInternalMovement(tx)) return false;
+  const affectsBudget = (tx?.affectsBudget ?? tx?.affects_budget);
+  if (affectsBudget === false) return false;
+  if (!!(tx?.outOfBudget ?? tx?.out_of_budget)) return false;
+  return true;
+}
+
+function tbTxAffectsCash(tx) {
+  if (!tx) return false;
+  if (tbIsInternalMovement(tx)) return false;
+  const payNow = (tx?.payNow ?? tx?.pay_now);
+  return (payNow === undefined) ? true : !!payNow;
+}
+
+function tbShouldHideFromBudgetViews(tx) {
+  if (!tx) return true;
+  return tbIsInternalMovement(tx);
+}
+
+const __tbFxCache = new Map();
+function tbClearFxConvertCache() {
+  try { __tbFxCache.clear(); } catch (_) {}
+}
+
+function tbFxConvertForDateCached(amount, from, to, dateStr) {
+  const a = Number(amount || 0);
+  const source = String(from || to || '').toUpperCase();
+  const target = String(to || from || '').toUpperCase();
+  const iso = tbNormalizeDateISO(dateStr) || String(dateStr || '').slice(0, 10) || '';
+  if (!Number.isFinite(a)) return 0;
+  if (!source || !target || source === target) return a;
+  try {
+    const seg = (typeof window.getBudgetSegmentForDate === 'function') ? window.getBudgetSegmentForDate(iso) : null;
+    if (seg && typeof window.fxConvert === 'function') {
+      const rates = (typeof window.fxRatesForSegment === 'function')
+        ? window.fxRatesForSegment(seg)
+        : (typeof window.fxGetEurRates === 'function' ? window.fxGetEurRates() : {});
+      const rFrom = Number(rates?.[source] ?? 1);
+      const rTo = Number(rates?.[target] ?? 1);
+      const segBase = String(seg?.baseCurrency || seg?.base_currency || '').toUpperCase();
+      const segMode = String(seg?.fxMode || seg?.fx_mode || '');
+      const segRate = Number(seg?.eurBaseRateFixed ?? seg?.eur_base_rate_fixed ?? rates?.[segBase] ?? 0);
+      const key = ['seg', iso, source, target, a, segBase, segMode, segRate, rFrom, rTo].join('|');
+      if (__tbFxCache.has(key)) return __tbFxCache.get(key);
+      const out = window.fxConvert(a, source, target, rates);
+      if (out !== null && Number.isFinite(Number(out))) {
+        const n = Number(out);
+        __tbFxCache.set(key, n);
+        return n;
+      }
+    }
+  } catch (_) {}
+  try {
+    if (typeof window.safeFxConvert === 'function') {
+      const key = ['safe', iso, source, target, a].join('|');
+      if (__tbFxCache.has(key)) return __tbFxCache.get(key);
+      const out = window.safeFxConvert(a, source, target, null);
+      if (out !== null && Number.isFinite(Number(out))) {
+        const n = Number(out);
+        __tbFxCache.set(key, n);
+        return n;
+      }
+    }
+  } catch (_) {}
+  try {
+    if (typeof window.fxConvert === 'function') {
+      const key = ['raw', iso, source, target, a].join('|');
+      if (__tbFxCache.has(key)) return __tbFxCache.get(key);
+      const out = window.fxConvert(a, source, target);
+      if (out !== null && Number.isFinite(Number(out))) {
+        const n = Number(out);
+        __tbFxCache.set(key, n);
+        return n;
+      }
+    }
+  } catch (_) {}
+  return source === target ? a : 0;
+}
+
+window.tbIsTripBudgetShare = tbIsTripBudgetShare;
+window.tbIsInternalMovement = tbIsInternalMovement;
+window.tbTxAffectsBudget = tbTxAffectsBudget;
+window.tbTxAffectsCash = tbTxAffectsCash;
+window.tbShouldHideFromBudgetViews = tbShouldHideFromBudgetViews;
+window.tbClearFxConvertCache = tbClearFxConvertCache;
+window.tbFxConvertForDateCached = tbFxConvertForDateCached;
+
 /* =========================
    UI helpers (V6.6)
    ========================= */

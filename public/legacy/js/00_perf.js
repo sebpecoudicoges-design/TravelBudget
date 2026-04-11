@@ -161,6 +161,29 @@
       }, 500);
     };
 
+    let _analysisReq = false;
+    let _lastAnalysisKey = "";
+    let _lastAnalysisAt = 0;
+    window.tbRequestAnalysisRender = window.tbRequestAnalysisRender || function(reason){
+      if (window.__TB_BOOTING) return;
+      const view = (typeof window.activeView === 'string' && window.activeView) ? window.activeView : '';
+      if (view !== 'analysis') return;
+
+      const k = _makeKey();
+      const t = _now();
+      if (k === _lastAnalysisKey && (t - _lastAnalysisAt) < 200) return;
+      _lastAnalysisKey = k; _lastAnalysisAt = t;
+
+      if (_analysisReq) return;
+      _analysisReq = true;
+      const sched = window.requestAnimationFrame || function(cb){ return setTimeout(cb, 0); };
+      sched(function(){
+        _analysisReq = false;
+        try { if (typeof window.renderBudgetAnalysis === 'function') return window.renderBudgetAnalysis(); }
+        catch (e) { console.warn('[TB] renderBudgetAnalysis failed', e); }
+      });
+    };
+
     // Called once at the end of boot to release accumulated requests (if any).
     window.tbReleaseBootRenders = window.tbReleaseBootRenders || function(){
       if (_bootPendingRender) { _bootPendingRender = false; window.tbRequestRenderAll("boot:release"); }

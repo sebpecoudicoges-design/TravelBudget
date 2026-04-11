@@ -344,7 +344,7 @@ function getKpiScope() {
         const rates = (typeof window.fxRatesForSegment === 'function')
           ? window.fxRatesForSegment(seg)
           : (typeof window.fxGetEurRates === 'function' ? window.fxGetEurRates() : {});
-        const out = window.fxConvert(a, source, target, rates);
+        const out = (typeof window.tbFxConvertForDateCached === 'function') ? window.tbFxConvertForDateCached(a, source, target, dateStr) : window.fxConvert(a, source, target, rates);
         if (out !== null && Number.isFinite(out)) return out;
       }
     } catch (_) {}
@@ -354,7 +354,7 @@ function getKpiScope() {
       if (out !== null && Number.isFinite(out)) return out;
     }
     if (typeof window.fxConvert === 'function') {
-      const out = window.fxConvert(a, source, target);
+      const out = (typeof window.tbFxConvertForDateCached === 'function') ? window.tbFxConvertForDateCached(a, source, target, dateStr) : window.fxConvert(a, source, target);
       if (out !== null && Number.isFinite(out)) return out;
     }
     return source === target ? a : 0;
@@ -516,26 +516,13 @@ function getKpiScope() {
   }
 
   function isTripBudgetOnlyTx(tx) {
-    if (!tx) return false;
-    const type = String(tx?.type || '').toLowerCase();
-    if (type !== 'expense') return false;
-    const payNow = (tx?.payNow ?? tx?.pay_now);
-    const isPaid = (payNow === undefined) ? true : !!payNow;
-    if (isPaid) return false;
-    const affectsBudget = (tx?.affectsBudget ?? tx?.affects_budget);
-    if (affectsBudget === false) return false;
-    const outOfBudget = !!(tx?.outOfBudget ?? tx?.out_of_budget);
-    if (outOfBudget) return false;
-    const tripShareLinkId = tx?.trip_share_link_id || tx?.tripShareLinkId || null;
-    const label = String(tx?.label || '');
-    return !!tripShareLinkId || (label.includes('[Trip]') && !label.includes('Avance'));
+    if (typeof window.tbIsTripBudgetShare === 'function') return window.tbIsTripBudgetShare(tx);
+    return false;
   }
 
   function shouldHideFromBudgetViews(tx) {
-    if (!tx) return true;
-    const isInternal = !!(tx?.isInternal ?? tx?.is_internal);
-    if (!isInternal) return false;
-    return !isTripBudgetOnlyTx(tx);
+    if (typeof window.tbShouldHideFromBudgetViews === 'function') return window.tbShouldHideFromBudgetViews(tx);
+    return true;
   }
 
   function daysInclusive(d1, d2) {

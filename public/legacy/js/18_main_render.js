@@ -117,7 +117,7 @@ function renderAll() {
   }
 
   if (view === "analysis") {
-    safeCall("Analyse budget", () => { if (typeof renderBudgetAnalysis === "function") return renderBudgetAnalysis(); }, { containerId: "view-analysis" });
+    safeCall("Analyse budget", () => { if (typeof window.tbRequestAnalysisRender === "function") return window.tbRequestAnalysisRender("renderAll"); if (typeof renderBudgetAnalysis === "function") return renderBudgetAnalysis(); }, { containerId: "view-analysis" });
     return;
   }
 

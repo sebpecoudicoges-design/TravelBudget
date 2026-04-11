@@ -344,7 +344,7 @@ function getKpiScope() {
         const rates = (typeof window.fxRatesForSegment === 'function')
           ? window.fxRatesForSegment(seg)
           : (typeof window.fxGetEurRates === 'function' ? window.fxGetEurRates() : {});
-        const out = window.fxConvert(a, source, target, rates);
+        const out = (typeof window.tbFxConvertForDateCached === 'function') ? window.tbFxConvertForDateCached(a, source, target, dateStr) : window.fxConvert(a, source, target, rates);
         if (out !== null && Number.isFinite(out)) return out;
       }
     } catch (_) {}
@@ -354,7 +354,7 @@ function getKpiScope() {
       if (out !== null && Number.isFinite(out)) return out;
     }
     if (typeof window.fxConvert === 'function') {
-      const out = window.fxConvert(a, source, target);
+      const out = (typeof window.tbFxConvertForDateCached === 'function') ? window.tbFxConvertForDateCached(a, source, target, dateStr) : window.fxConvert(a, source, target);
       if (out !== null && Number.isFinite(out)) return out;
     }
     return source === target ? a : 0;
@@ -380,7 +380,7 @@ function getKpiScope() {
       if (!target) return 0;
       let sum = 0;
       for (const t of txs) {
-        if (!t || t.isInternal) continue;
+        if (shouldHideFromBudgetViews(t)) continue;
         const type = String(t?.type || '').toLowerCase();
         if (type !== 'expense') continue;
 
@@ -513,6 +513,16 @@ function getKpiScope() {
 
     if (!s) return null;
     return { start: s, end: e || s };
+  }
+
+  function isTripBudgetOnlyTx(tx) {
+    if (typeof window.tbIsTripBudgetShare === 'function') return window.tbIsTripBudgetShare(tx);
+    return false;
+  }
+
+  function shouldHideFromBudgetViews(tx) {
+    if (typeof window.tbShouldHideFromBudgetViews === 'function') return window.tbShouldHideFromBudgetViews(tx);
+    return true;
   }
 
   function daysInclusive(d1, d2) {
@@ -679,7 +689,7 @@ function getKpiScope() {
       const p = (t.payNow ?? t.pay_now);
       const isPaid = (p === undefined) ? true : !!p;
       if (!isPaid) continue;
-      if (!!(t.isInternal ?? t.is_internal)) continue;
+      if (shouldHideFromBudgetViews(t)) continue;
       const ds = walletEventDateStr(t);
       if (!ds) continue;
       const d = (window.parseISODateOrNull ? window.parseISODateOrNull : _parseISODate)(ds);
@@ -704,7 +714,7 @@ function getKpiScope() {
 
     for (const tx of txs) {
       if (!tx) continue;
-      if (tx.isInternal || tx.is_internal) continue;
+      if (shouldHideFromBudgetViews(tx)) continue;
 
       const walletId = tx.wallet_id || tx.walletId || tx.wallet?.id || null;
       if (!walletId) continue;

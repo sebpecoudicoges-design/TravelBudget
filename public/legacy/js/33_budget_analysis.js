@@ -454,22 +454,20 @@ function _analysisBucketOrder(){
     const from = _upper(cur || base);
     if (!a) return 0;
     if (from === base) return a;
-    const seg = (typeof getBudgetSegmentForDate === 'function') ? getBudgetSegmentForDate(dateISO) : null;
     try {
-      if (typeof window.fxConvert === 'function' && seg && typeof window.fxRatesForSegment === 'function') {
-        const rates = window.fxRatesForSegment(seg);
-        const out = window.fxConvert(a, from, base, rates);
+      if (typeof window.tbFxConvertForDateCached === 'function') {
+        const out = window.tbFxConvertForDateCached(a, from, base, dateISO);
         if (out !== null && Number.isFinite(Number(out))) return Number(out);
       }
     } catch (_) {}
+    const seg = (typeof getBudgetSegmentForDate === 'function') ? getBudgetSegmentForDate(dateISO) : null;
     try {
       if (typeof window.amountToBudgetBaseForDate === 'function' && seg) {
         const inSegBase = window.amountToBudgetBaseForDate(a, from, dateISO);
         const segBase = _upper(seg.baseCurrency || seg.base_currency || state?.period?.baseCurrency || 'EUR');
         if (segBase === base) return _safeNum(inSegBase);
-        if (typeof window.fxConvert === 'function' && typeof window.fxRatesForSegment === 'function') {
-          const rates = window.fxRatesForSegment(seg);
-          const out = window.fxConvert(inSegBase, segBase, base, rates);
+        if (typeof window.tbFxConvertForDateCached === 'function') {
+          const out = window.tbFxConvertForDateCached(inSegBase, segBase, base, dateISO);
           if (out !== null && Number.isFinite(Number(out))) return Number(out);
         }
       }
@@ -496,7 +494,7 @@ function _analysisBucketOrder(){
       if (travelId && txTravelId && txTravelId !== String(travelId)) return false;
       if (_txType(tx) !== 'expense') return false;
       if (_isTripLinked(tx) && !_isTripBudgetShare(tx)) return false;
-      if (_isInternalMovement(tx)) return false;
+      if (typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(tx) : _isInternalMovement(tx)) return false;
       const bs = _txBudgetStart(tx);
       const be = _txBudgetEnd(tx);
       if (!bs || !be) return false;
