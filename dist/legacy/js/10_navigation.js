@@ -20,6 +20,7 @@ function showView(view) {
   try { if (typeof window.tbApplyUiModeToDocument === "function") window.tbApplyUiModeToDocument(); } catch (_) {}
   if (view === "members" && typeof window.tbIsSimpleMode === "function" && window.tbIsSimpleMode()) view = "dashboard";
   activeView = view;
+  try { if (typeof window !== "undefined") window.activeView = view; } catch (_) {}
   setActiveTab(view);
   if (view === "transactions") renderTransactions();
   if (view === "settings") { renderSettings(); initPaletteUI(); }

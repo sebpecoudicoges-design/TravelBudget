@@ -205,6 +205,8 @@ function toastOk(msg) {
   let tripState = {
     trips: [],
     activeTripId: null,
+    budgetLinks: [],
+    budgetTxById: new Map(),
     members: [],
     expenses: [],
     shares: [],
@@ -212,6 +214,7 @@ function toastOk(msg) {
     lastInviteUrl: null,
     editingExpenseId: null,
     editingExpenseDraft: null,
+    historyFilters: {},
     _tripsLoaded: false,
   };
 
@@ -221,6 +224,8 @@ function toastOk(msg) {
       try { localStorage.removeItem(TRIP_ACTIVE_KEY); } catch (_) {}
       tripState.trips = [];
       tripState.activeTripId = null;
+      tripState.budgetLinks = [];
+      tripState.budgetTxById = new Map();
       tripState.members = [];
       tripState.expenses = [];
       tripState.shares = [];
@@ -283,15 +288,37 @@ function toastOk(msg) {
       const id = String(tx?.id || '');
       if (id) map.set(id, tx);
     }
+    for (const [id, tx] of (tripState?.budgetTxById instanceof Map ? tripState.budgetTxById.entries() : [])) {
+      if (id && tx && !map.has(String(id))) map.set(String(id), tx);
+    }
     return map;
   }
 
   function _tripAnalysisCategoryKey(expense, txMap) {
-    try {
-      const txId = String(expense?.transactionId || '');
-      const tx = txId ? txMap.get(txId) : null;
+    const seen = new Set();
+    function _pick(tx) {
       const cat = String(tx?.category || '').trim();
-      if (cat) return cat;
+      if (!cat) return null;
+      if (/^mouvement interne$/i.test(cat)) return null;
+      return cat;
+    }
+    try {
+      const mainTxId = String(expense?.transactionId || '');
+      if (mainTxId) {
+        seen.add(mainTxId);
+        const picked = _pick(txMap.get(mainTxId));
+        if (picked) return picked;
+      }
+      const links = Array.isArray(tripState?.budgetLinks)
+        ? tripState.budgetLinks.filter((row) => String(row?.expenseId || '') === String(expense?.id || ''))
+        : [];
+      for (const link of links) {
+        const txId = String(link?.transactionId || '');
+        if (!txId || seen.has(txId)) continue;
+        seen.add(txId);
+        const picked = _pick(txMap.get(txId));
+        if (picked) return picked;
+      }
     } catch (_) {}
     return 'Autre';
   }
@@ -344,6 +371,46 @@ function toastOk(msg) {
       .sort((a, b) => Math.abs(b.net) - Math.abs(a.net) || b.paid - a.paid || a.name.localeCompare(b.name));
 
     return { pivot, categories, participants };
+  }
+
+
+  function _tripHistoryFilterState() {
+    return {
+      category: String(tripState.historyFilters?.category || ''),
+      payer: String(tripState.historyFilters?.payer || ''),
+      participant: String(tripState.historyFilters?.participant || ''),
+      dateFrom: String(tripState.historyFilters?.dateFrom || ''),
+      dateTo: String(tripState.historyFilters?.dateTo || ''),
+      amountMin: String(tripState.historyFilters?.amountMin || ''),
+      amountMax: String(tripState.historyFilters?.amountMax || ''),
+      q: String(tripState.historyFilters?.q || ''),
+    };
+  }
+
+  function _tripHistoryMatch(ex, txMap, membersById, shareMap, filters) {
+    const category = _tripAnalysisCategoryKey(ex, txMap);
+    const payerId = String(ex?.paidByMemberId || '');
+    const q = String(filters?.q || '').trim().toLowerCase();
+    if (filters?.category && category !== filters.category) return false;
+    if (filters?.payer && payerId !== String(filters.payer)) return false;
+    if (filters?.participant) {
+      const rows = shareMap.get(ex?.id) || [];
+      const wanted = String(filters.participant);
+      if (!rows.some((row) => String(row?.memberId || '') === wanted) && payerId !== wanted) return false;
+    }
+    const date = String(ex?.date || '');
+    if (filters?.dateFrom && date && date < filters.dateFrom) return false;
+    if (filters?.dateTo && date && date > filters.dateTo) return false;
+    const amt = Number(ex?.amount || 0);
+    if (filters?.amountMin !== '' && Number.isFinite(Number(filters.amountMin)) && amt < Number(filters.amountMin)) return false;
+    if (filters?.amountMax !== '' && Number.isFinite(Number(filters.amountMax)) && amt > Number(filters.amountMax)) return false;
+    if (q) {
+      const payerName = String(membersById.get(payerId)?.name || '').toLowerCase();
+      const participantNames = (shareMap.get(ex?.id) || []).map((row) => String(membersById.get(row?.memberId)?.name || '').toLowerCase()).join(' ');
+      const hay = [ex?.label || '', category, ex?.currency || '', payerName, participantNames, String(ex?.amount || '')].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
   }
 
   function _tripAnalysisBarsHTML(data) {
@@ -929,6 +996,36 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
       createdAt: x.created_at,
       cancelledAt: x.cancelled_at || null,
     }));
+
+    tripState.budgetLinks = [];
+    tripState.budgetTxById = new Map();
+    try {
+      const expenseIds = tripState.expenses.map(x => x.id).filter(Boolean);
+      if (expenseIds.length) {
+        const { data: linksData, error: linksErr } = await sb
+          .from(TB_CONST.TABLES.trip_expense_budget_links)
+          .select('expense_id,transaction_id,member_id')
+          .eq('trip_id', tripId)
+          .in('expense_id', expenseIds);
+        if (linksErr) throw linksErr;
+        tripState.budgetLinks = (linksData || []).map((row) => ({
+          expenseId: row.expense_id,
+          transactionId: row.transaction_id,
+          memberId: row.member_id || null,
+        }));
+        const txIds = Array.from(new Set(tripState.budgetLinks.map(x => x.transactionId).filter(Boolean)));
+        if (txIds.length) {
+          const { data: txRows, error: txErr } = await sb
+            .from(TB_CONST.TABLES.transactions)
+            .select('id,category,is_internal,trip_expense_id,trip_share_link_id,pay_now,affects_budget,out_of_budget')
+            .in('id', txIds);
+          if (txErr) throw txErr;
+          for (const row of (txRows || [])) tripState.budgetTxById.set(String(row.id), row);
+        }
+      }
+    } catch (e) {
+      console.warn('[Trip] budget link preload failed', e);
+    }
   }
 
   function _computeBalances() {
@@ -3429,18 +3526,29 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       .map(c => `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`)
       .join("");
 
-    const expensesHTML = expenses.length
-      ? await Promise.all(expenses.map(async ex => {
+    const tripTxMap = _txByIdMap();
+    const membersById = new Map(members.map((m) => [String(m.id), m]));
+    const sharesByExpenseForHistory = _groupBy(tripState.shares || [], (row) => row.expenseId);
+    const historyFilters = _tripHistoryFilterState();
+    const historyCategoryOptions = Array.from(new Set(expenses.map((ex) => _tripAnalysisCategoryKey(ex, tripTxMap)).filter(Boolean))).sort((a,b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+    const filteredExpenses = expenses.filter((ex) => _tripHistoryMatch(ex, tripTxMap, membersById, sharesByExpenseForHistory, historyFilters));
+
+    const expensesHTML = filteredExpenses.length
+      ? await Promise.all(filteredExpenses.map(async ex => {
           const payer = members.find(m => m.id === ex.paidByMemberId);
           const moveUI = ""; // removed move between trips
           const isLinked = await _expenseIsEditLocked(ex);
           const linkedLabel = isLinked ? " • lié au budget/wallet" : (ex.transactionId ? " • lié au budget" : "");
+          const resolvedCategory = _tripAnalysisCategoryKey(ex, tripTxMap);
+          const shareRows = sharesByExpenseForHistory.get(ex.id) || [];
+          const participantNames = shareRows.map((row) => membersById.get(String(row.memberId))?.name).filter(Boolean);
+          const participantLabel = participantNames.length ? ` • participants: ${escapeHTML(participantNames.join(', '))}` : '';
           const editBtn = `<button class="btn" type="button" data-edit-exp="${ex.id}" title="${isLinked ? "Édition complète (wallet/budget inclus)" : "Modifier"}">Modifier</button>`;
 return `
             <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.04); gap:12px;">
               <div style="min-width:0;">
-                <div style="font-weight:700;">${escapeHTML(ex.label)}</div>
-                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${linkedLabel}</div>
+                <div style="font-weight:700; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">${escapeHTML(ex.label)}<span style="font-size:12px; padding:2px 8px; border-radius:999px; background:rgba(15,23,42,.06); border:1px solid rgba(15,23,42,.08); color:#334155;">${escapeHTML(resolvedCategory || 'Autre')}</span></div>
+                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${linkedLabel}${participantLabel}</div>
               </div>
               <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
                 <strong>${_fmtMoney(ex.amount, ex.currency)}</strong>
@@ -3452,7 +3560,7 @@ return `
             </div>
           `;
         }))
-      : [`<div class="muted">Aucune dépense.</div>`];
+      : [`<div class="muted">Aucune dépense pour ces filtres.</div>`];
 
     const expensesHTMLJoined = Array.isArray(expensesHTML) ? expensesHTML.join("") : expensesHTML;
 
@@ -3544,6 +3652,24 @@ return `
         </div>
 
         <div id="trip-tab-content-history" style="margin-top:10px; display:none;">
+          <div class="card" style="margin:0 0 12px 0; border-radius:18px; border:1px solid rgba(148,163,184,.16); background:linear-gradient(180deg, rgba(255,255,255,.84), rgba(255,255,255,.68));">
+            <div class="muted" style="margin-bottom:10px; font-size:12px;">Filtres d'audit du trip actif. Ils ne portent que sur l'historique du partage sélectionné.</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px;">
+              <div class="field"><label>Catégorie</label><select id="trip-hist-category"><option value="">Toutes</option>${historyCategoryOptions.map((cat) => `<option value="${escapeHTML(cat)}" ${historyFilters.category === cat ? 'selected' : ''}>${escapeHTML(cat)}</option>`).join('')}</select></div>
+              <div class="field"><label>Payeur</label><select id="trip-hist-payer"><option value="">Tous</option>${members.map((m) => `<option value="${m.id}" ${historyFilters.payer === String(m.id) ? 'selected' : ''}>${escapeHTML(m.name)}</option>`).join('')}</select></div>
+              <div class="field"><label>Participant</label><select id="trip-hist-participant"><option value="">Tous</option>${members.map((m) => `<option value="${m.id}" ${historyFilters.participant === String(m.id) ? 'selected' : ''}>${escapeHTML(m.name)}</option>`).join('')}</select></div>
+              <div class="field"><label>Date min</label><input id="trip-hist-date-from" type="date" value="${escapeHTML(historyFilters.dateFrom)}" /></div>
+              <div class="field"><label>Date max</label><input id="trip-hist-date-to" type="date" value="${escapeHTML(historyFilters.dateTo)}" /></div>
+              <div class="field"><label>Montant min</label><input id="trip-hist-amount-min" type="number" step="0.01" value="${escapeHTML(historyFilters.amountMin)}" placeholder="0" /></div>
+              <div class="field"><label>Montant max</label><input id="trip-hist-amount-max" type="number" step="0.01" value="${escapeHTML(historyFilters.amountMax)}" placeholder="0" /></div>
+              <div class="field"><label>Recherche</label><input id="trip-hist-q" type="text" value="${escapeHTML(historyFilters.q)}" placeholder="Libellé, montant, participant…" /></div>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+              <button class="btn" type="button" id="trip-hist-apply">Appliquer</button>
+              <button class="btn" type="button" id="trip-hist-reset" style="background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);">Réinitialiser</button>
+              <span class="muted">${filteredExpenses.length} / ${expenses.length} dépense(s)</span>
+            </div>
+          </div>
           ${expensesHTMLJoined}
         </div>
       </div>
@@ -3602,6 +3728,28 @@ return `
 
     if (btnTabRecap) btnTabRecap.onclick = () => _setTripTab("recap");
     if (btnTabHist) btnTabHist.onclick = () => _setTripTab("history");
+
+    const applyHist = _el('trip-hist-apply');
+    if (applyHist) applyHist.onclick = async () => {
+      tripState.historyFilters = {
+        category: _el('trip-hist-category')?.value || '',
+        payer: _el('trip-hist-payer')?.value || '',
+        participant: _el('trip-hist-participant')?.value || '',
+        dateFrom: _el('trip-hist-date-from')?.value || '',
+        dateTo: _el('trip-hist-date-to')?.value || '',
+        amountMin: _el('trip-hist-amount-min')?.value || '',
+        amountMax: _el('trip-hist-amount-max')?.value || '',
+        q: _el('trip-hist-q')?.value || '',
+      };
+      await _renderUI();
+      _setTripTab('history');
+    };
+    const resetHist = _el('trip-hist-reset');
+    if (resetHist) resetHist.onclick = async () => {
+      tripState.historyFilters = {};
+      await _renderUI();
+      _setTripTab('history');
+    };
 
     let initialTab = "recap";
     try { initialTab = localStorage.getItem(TRIP_TAB_KEY) || "recap"; } catch (_) {}

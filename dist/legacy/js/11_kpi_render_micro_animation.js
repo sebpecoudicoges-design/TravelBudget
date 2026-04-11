@@ -8,6 +8,32 @@ function budgetClass(v) {
   return "bad";
 }
 
+function _activeTravelIdKpi() {
+  try { return String(window.state?.activeTravelId || state?.activeTravelId || ""); } catch (_) { return ""; }
+}
+
+function _txMatchesActiveTravelKpi(tx) {
+  const activeTravelId = _activeTravelIdKpi();
+  if (!activeTravelId) return true;
+  const txTravelId = String(tx?.travelId || tx?.travel_id || "");
+  return !txTravelId || txTravelId === activeTravelId;
+}
+
+function _txAffectsBudgetKpi(tx) {
+  try { if (typeof window.tbTxAffectsBudget === 'function') return !!window.tbTxAffectsBudget(tx); } catch (_) {}
+  const type = String(tx?.type || '').toLowerCase();
+  if (type !== 'expense') return false;
+  const affectsBudget = (tx?.affectsBudget === undefined || tx?.affectsBudget === null) ? true : !!tx?.affectsBudget;
+  const outOfBudget = !!tx?.outOfBudget || !!tx?.out_of_budget;
+  return affectsBudget && !outOfBudget;
+}
+
+function _txAffectsCashKpi(tx) {
+  try { if (typeof window.tbTxAffectsCash === 'function') return !!window.tbTxAffectsCash(tx); } catch (_) {}
+  const p = (tx?.payNow ?? tx?.pay_now);
+  return (p === undefined) ? true : !!p;
+}
+
 function remainingBudgetBaseFrom(dateStr) {
   const start = parseISODateOrNull(dateStr);
   const end = parseISODateOrNull(state.period.end);
@@ -34,17 +60,18 @@ function budgetSpentBaseForDate(dateStr) {
 
     let sum = 0;
     for (const t of txs) {
-      const type = String(t?.type || "").toLowerCase();
-      if (type !== "expense") continue;
+      if (!_txMatchesActiveTravelKpi(t)) continue;
+      if (!_txAffectsBudgetKpi(t)) continue;
 
-      const affectsBudget = (t.affectsBudget === undefined || t.affectsBudget === null) ? true : !!t.affectsBudget;
-      if (!affectsBudget) continue;
+      const budgetStartISO = (typeof tbTxBudgetStart === 'function')
+        ? tbTxBudgetStart(t)
+        : (t.budgetDateStart || t.budget_date_start || t.dateStart || t.date_start || t.date || null);
+      const budgetEndISO = (typeof tbTxBudgetEnd === 'function')
+        ? tbTxBudgetEnd(t)
+        : (t.budgetDateEnd || t.budget_date_end || t.dateEnd || t.date_end || budgetStartISO || null);
 
-      const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
-      if (outOfBudget) continue;
-
-      const s = parseISODateOrNull(t.dateStart || t.date_start || t.date || null);
-      const e = parseISODateOrNull(t.dateEnd || t.date_end || t.dateStart || t.date_start || t.date || null);
+      const s = parseISODateOrNull(budgetStartISO);
+      const e = parseISODateOrNull(budgetEndISO);
       if (!s || !e) continue;
 
       const sds = toLocalISODate(s);
@@ -107,9 +134,9 @@ function netPendingEUR(rangeStartISO, rangeEndISO) {
   let net = 0;
   for (const tx of (state.transactions || [])) {
     if (!tx) continue;
-    if (tx.isInternal) continue;
-    const _p = (tx.payNow ?? tx.pay_now);
-    const _paid = (_p === undefined) ? true : !!_p;
+    if (!_txMatchesActiveTravelKpi(tx)) continue;
+    try { if (typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(tx) : !!tx.isInternal) continue; } catch (_) { if (tx.isInternal) continue; }
+    const _paid = _txAffectsCashKpi(tx);
     if (_paid) continue;
     if (!_txOverlaps(tx)) continue;
 
@@ -401,13 +428,16 @@ function cashRunwayInfo(windowDays = 7) {
 
   for (const tx of (state.transactions || [])) {
     if (!tx) continue;
+    if (!_txMatchesActiveTravelKpi(tx)) continue;
     if (tx.type !== "expense") continue;
-    if (_isInternalMovement(tx)) continue;
-    const _p2 = (tx.payNow ?? tx.pay_now);
-    const _paid2 = (_p2 === undefined) ? true : !!_p2;
+    try { if (typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(tx) : _isInternalMovement(tx)) continue; } catch (_) { if (_isInternalMovement(tx)) continue; }
+    const _paid2 = _txAffectsCashKpi(tx);
     if (!_paid2) continue; // runway = real cash out
 
-    const d = parseISODateOrNull(tx.dateStart);
+    const walletId = String(tx?.walletId ?? tx?.wallet_id ?? '');
+    if (cashWalletIds.size && walletId && !cashWalletIds.has(walletId)) continue;
+
+    const d = parseISODateOrNull((typeof tbTxCashDate === 'function') ? tbTxCashDate(tx) : tx.dateStart);
     if (!d) continue;
     const dd = clampMidnight(d);
     if (dd < start || dd > today) continue;

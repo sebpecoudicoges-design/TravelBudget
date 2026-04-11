@@ -543,6 +543,13 @@ function getKpiScope() {
     });
   }
 
+  function txMatchesActiveTravel(tx) {
+    const activeTravelId = String(window.state?.activeTravelId || state?.activeTravelId || '');
+    if (!activeTravelId) return true;
+    const txTravelId = String(tx?.travelId || tx?.travel_id || '');
+    return !txTravelId || txTravelId === activeTravelId;
+  }
+
   function buildMaps(periodStart, periodEnd, renderCurrency) {
   const paidSpentAll = {};         // paid expense only (positive), ALL expenses (for "Dépensé/jour")
   const paidSpentBudget = {};      // paid expense only (positive), affects budget and not out_of_budget (for "Budget dépensé/jour")
@@ -554,7 +561,8 @@ function getKpiScope() {
 
   for (const t of txs) {
     if (!t) continue;
-    if (t.isInternal) continue;
+    if (!txMatchesActiveTravel(t)) continue;
+    if (typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(t) : !!t.isInternal) continue;
 
     const cat = (t.category !== undefined && t.category !== null) ? String(t.category) : "";
     const catExcluded = cat && excludedCats.has(cat);
@@ -684,6 +692,7 @@ function getKpiScope() {
     const txs = Array.isArray(window.state?.transactions) ? window.state.transactions : [];
     for (const t of txs) {
       if (!t) continue;
+      if (!txMatchesActiveTravel(t)) continue;
       const walletId = String(t?.walletId ?? t?.wallet_id ?? "");
       if (!walletId) continue;
       const p = (t.payNow ?? t.pay_now);
@@ -714,6 +723,7 @@ function getKpiScope() {
 
     for (const tx of txs) {
       if (!tx) continue;
+      if (!txMatchesActiveTravel(tx)) continue;
       if (shouldHideFromBudgetViews(tx)) continue;
 
       const walletId = tx.wallet_id || tx.walletId || tx.wallet?.id || null;

@@ -113,6 +113,7 @@ window.__TB_SB__ = sb;
 })();
 let sbUser = null;
 let activeView = "dashboard";
+if (typeof window !== "undefined") window.activeView = activeView;
 let redrawPending = false;
 
 const THEME_KEY = "travelbudget_theme_v1";

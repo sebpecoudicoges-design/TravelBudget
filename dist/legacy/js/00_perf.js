@@ -166,7 +166,9 @@
     let _lastAnalysisAt = 0;
     window.tbRequestAnalysisRender = window.tbRequestAnalysisRender || function(reason){
       if (window.__TB_BOOTING) return;
-      const view = (typeof window.activeView === 'string' && window.activeView) ? window.activeView : '';
+      const view = (typeof activeView === 'string' && activeView)
+        ? activeView
+        : ((typeof window.activeView === 'string' && window.activeView) ? window.activeView : '');
       if (view !== 'analysis') return;
 
       const k = _makeKey();
