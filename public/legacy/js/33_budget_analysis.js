@@ -871,6 +871,50 @@ function _analysisBucketOrder(){
     }).filter((row) => _safeNum(row.actualPerDay) > 0 || _safeNum(row.referencePerDay) > 0);
   }
 
+
+  function _renderOverviewStrip(model){
+    const host = _el('analysis-overview-strip');
+    if (!host) return;
+    const travel = _getSelectedTravel();
+    const periodId = _getSelectedPeriodId();
+    const scope = _el('analysis-scope')?.value || 'budget';
+    const mode = _el('analysis-mode')?.value || 'planned';
+    const currencyMode = _el('analysis-currency')?.value || 'period';
+    const rangeText = `${model.start || '—'} → ${model.end || '—'}`;
+    const scopeText = scope === 'all' ? 'Dans + hors budget' : (scope === 'out' ? 'Hors budget' : 'Dans le budget');
+    const modeText = mode === 'expenses' ? 'Dépenses payées' : 'Payées + à payer';
+    const periodText = periodId === 'active' ? 'Période active' : (periodId === 'all' ? 'Tout le voyage' : (periodId === 'range' ? 'Date à date' : 'Période ciblée'));
+    const cards = [
+      {
+        label: 'Voyage',
+        value: String(travel?.name || 'Voyage actif'),
+        meta: `${periodText} • ${rangeText}`
+      },
+      {
+        label: 'Lecture',
+        value: scopeText,
+        meta: `${modeText} • ${model.days.length} jours analysés`
+      },
+      {
+        label: 'Devise',
+        value: model.base,
+        meta: currencyMode === 'account' ? 'Devise pivot du compte' : 'Devise de période / segment'
+      },
+      {
+        label: 'Couverture',
+        value: `${model.txs.length} dépenses`,
+        meta: model.comparableDays > 0 ? `${model.comparableDays} jours comparables à la référence pays` : 'Référence pays absente sur la plage'
+      }
+    ];
+    host.innerHTML = cards.map((card) => `
+      <div class="analysis-overview-card">
+        <div class="analysis-overview-label">${escapeHTML(card.label)}</div>
+        <div class="analysis-overview-value">${escapeHTML(card.value)}</div>
+        <div class="analysis-overview-meta">${escapeHTML(card.meta)}</div>
+      </div>
+    `).join('');
+  }
+
   function _buildSummary(model){
     const host = _el('analysis-summary');
     if (!host) return;
@@ -1412,6 +1456,7 @@ function _analysisBucketOrder(){
       try { fn(model); } catch (err) { console.warn(`[analysis] ${label} failed`, err); }
     };
 
+    safe('overview-strip', _renderOverviewStrip);
     safe('summary', _buildSummary);
     safe('night-covered', _renderNightCovered);
     safe('insights', _renderInsights);

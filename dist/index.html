@@ -569,7 +569,36 @@
     /* =========================
        Budget Analysis View
        ========================= */
-    .analysis-shell{ display:flex; flex-direction:column; gap:16px; }
+        .dashboard-hero-shell{ display:grid; gap:16px; margin-bottom:18px; }
+    .dashboard-hero-card{ position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0,1.25fr) minmax(320px,.95fr); gap:20px; padding:24px 24px 22px; border-radius:30px; border:1px solid rgba(255,255,255,.46); background:linear-gradient(135deg, rgba(15,23,42,.92), rgba(37,99,235,.88) 46%, rgba(139,92,246,.82) 100%); box-shadow:0 26px 60px rgba(15,23,42,.18); color:#f8fafc; }
+    .dashboard-hero-card::before{ content:""; position:absolute; inset:-20% auto auto -8%; width:240px; height:240px; border-radius:999px; background:radial-gradient(circle, rgba(255,255,255,.26), rgba(255,255,255,0) 70%); opacity:.8; }
+    .dashboard-hero-card::after{ content:""; position:absolute; right:-90px; bottom:-110px; width:260px; height:260px; border-radius:999px; background:radial-gradient(circle, rgba(191,219,254,.20), rgba(191,219,254,0) 72%); }
+    .dashboard-hero-copy,.dashboard-hero-focus{ position:relative; z-index:1; }
+    .dashboard-hero-kicker,.dashboard-card-kicker{ font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.16em; opacity:.76; }
+    .dashboard-hero-title{ margin:10px 0 8px; font-size:34px; line-height:1.02; letter-spacing:-.04em; }
+    .dashboard-hero-text{ margin:0; max-width:640px; line-height:1.55; color:rgba(248,250,252,.84); }
+    .dashboard-hero-meta{ display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+    .dashboard-hero-pill{ display:inline-flex; align-items:center; gap:8px; padding:9px 12px; border-radius:999px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); font-size:12px; font-weight:700; }
+    .dashboard-hero-pill strong{ color:#fff; }
+    .dashboard-hero-actions{ display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+    .dashboard-hero-actions .btn{ box-shadow:none; }
+    .dashboard-hero-focus{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-content:start; }
+    .dashboard-focus-card{ padding:14px 14px 13px; border-radius:22px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.18); backdrop-filter:blur(12px); min-height:112px; display:flex; flex-direction:column; justify-content:space-between; }
+    .dashboard-focus-label{ font-size:11px; text-transform:uppercase; letter-spacing:.14em; font-weight:800; color:rgba(248,250,252,.74); }
+    .dashboard-focus-value{ margin-top:8px; font-size:25px; line-height:1.08; font-weight:900; letter-spacing:-.04em; color:#fff; }
+    .dashboard-focus-meta{ margin-top:6px; font-size:12px; color:rgba(248,250,252,.78); line-height:1.4; }
+    .dashboard-grid-main{ gap:20px; }
+    .dashboard-analysis-cta{ min-height:0; }
+    .dashboard-analysis-cta h2{ margin:8px 0 10px; font-size:26px; letter-spacing:-.03em; }
+    .dashboard-analysis-cta-copy{ display:grid; gap:14px; }
+    .dashboard-analysis-cta-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+    .analysis-overview-strip{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .analysis-overview-card{ position:relative; overflow:hidden; padding:16px 18px; border-radius:24px; border:1px solid rgba(255,255,255,.68); background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.86)); box-shadow:0 14px 34px rgba(148,163,184,.16); }
+    body.theme-dark .analysis-overview-card{ background:linear-gradient(180deg, rgba(30,41,59,.94), rgba(15,23,42,.82)); border-color:rgba(255,255,255,.08); }
+    .analysis-overview-label{ font-size:11px; text-transform:uppercase; letter-spacing:.14em; font-weight:800; color:var(--muted); }
+    .analysis-overview-value{ margin-top:8px; font-size:19px; line-height:1.18; font-weight:900; letter-spacing:-.03em; }
+    .analysis-overview-meta{ margin-top:6px; font-size:12px; color:var(--muted); line-height:1.45; }
+.analysis-shell{ display:flex; flex-direction:column; gap:16px; }
     .analysis-hero{ position:relative; overflow:hidden; border:1px solid var(--border); border-radius:28px; padding:24px; min-height:160px; background:linear-gradient(135deg, rgba(37,99,235,.18), rgba(168,85,247,.16) 45%, rgba(15,23,42,.06) 100%); box-shadow: var(--shadow); }
     body.theme-dark .analysis-hero{ background:linear-gradient(135deg, rgba(59,130,246,.20), rgba(168,85,247,.22) 45%, rgba(15,23,42,.30) 100%); }
     .analysis-hero-copy{ position:relative; z-index:2; max-width:700px; }
@@ -584,7 +613,7 @@
     .analysis-glow-a{ width:220px; height:220px; right:-60px; top:-40px; background:radial-gradient(circle, rgba(56,189,248,.55) 0%, rgba(56,189,248,.0) 70%); animation:analysisFloat 8s ease-in-out infinite; }
     .analysis-glow-b{ width:200px; height:200px; left:28%; bottom:-90px; background:radial-gradient(circle, rgba(251,191,36,.45) 0%, rgba(251,191,36,0) 72%); animation:analysisFloat 11s ease-in-out infinite reverse; }
     @keyframes analysisFloat{ 0%,100%{ transform:translate3d(0,0,0) scale(1);} 50%{ transform:translate3d(0,-8px,0) scale(1.05);} }
-    .analysis-toolbar{ display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:12px; position:static; top:auto; z-index:auto; }
+    .analysis-toolbar{ display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:12px; position:sticky; top:14px; z-index:8; backdrop-filter:blur(12px); }
     .analysis-filter-group{ display:flex; flex-direction:column; gap:6px; }
     .analysis-filter-group label{ font-size:12px; color:var(--muted); font-weight:700; }
     .analysis-filter-group select{ width:100%; }
@@ -615,7 +644,7 @@
     .analysis-insight-badge{ width:34px; height:34px; border-radius:14px; display:grid; place-items:center; font-size:16px; background:rgba(37,99,235,.14); flex:none; }
     .analysis-insight-title{ font-size:14px; font-weight:800; margin:0 0 4px; }
     .analysis-insight-body{ margin:0; color:var(--muted); font-size:13px; line-height:1.45; }
-    @media (max-width: 1120px){ .analysis-summary-grid{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-toolbar{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-main-grid,.analysis-bottom-grid{ grid-template-columns:1fr; } .analysis-side-stack{ grid-template-rows:none; grid-template-columns:1fr 1fr; } }
+    @media (max-width: 1120px){ .dashboard-hero-card{ grid-template-columns:1fr; } .dashboard-hero-focus{ grid-template-columns:repeat(2,minmax(0,1fr)); } .analysis-overview-strip,.analysis-summary-grid{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-toolbar{ grid-template-columns:repeat(3, minmax(0,1fr)); } .analysis-main-grid,.analysis-bottom-grid{ grid-template-columns:1fr; } .analysis-side-stack{ grid-template-rows:none; grid-template-columns:1fr 1fr; } }
     .analysis-filter-hint{font-size:11px;color:var(--muted);margin-top:4px;}
     .analysis-category-compact{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,.60), rgba(255,255,255,.38));box-shadow:inset 0 1px 0 rgba(255,255,255,.40);}
     .analysis-category-copy{display:flex;flex-direction:column;gap:3px;min-width:0;}
@@ -634,7 +663,7 @@
     .analysis-chip-tool{appearance:none;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;padding:0;}
     .analysis-chip-tool:hover{color:var(--text);}
 
-    @media (max-width: 780px){ .analysis-hero{ padding:18px; min-height:0; } .analysis-hero h2{ font-size:28px; } .analysis-live-pill{ position:relative; top:auto; right:auto; margin-top:16px; width:max-content; } .analysis-summary-grid,.analysis-toolbar,.analysis-side-stack{ grid-template-columns:1fr; } .analysis-chart{ height:280px; } .analysis-chart--lg{ height:320px; } .analysis-category-compact{flex-direction:column;align-items:stretch;} .analysis-category-actions{justify-content:space-between;} }
+    @media (max-width: 780px){ .dashboard-hero-card{ padding:20px 18px; } .dashboard-hero-title{ font-size:28px; } .dashboard-hero-focus,.analysis-overview-strip,.analysis-summary-grid,.analysis-toolbar,.analysis-side-stack{ grid-template-columns:1fr; } .analysis-hero{ padding:18px; min-height:0; } .analysis-hero h2{ font-size:28px; } .analysis-live-pill{ position:relative; top:auto; right:auto; margin-top:16px; width:max-content; } .analysis-chart{ height:280px; } .analysis-chart--lg{ height:320px; } .analysis-category-compact{flex-direction:column;align-items:stretch;} .analysis-category-actions{justify-content:space-between;} }
 
     .analysis-reference-shell{ display:grid; grid-template-columns:minmax(300px,.84fr) minmax(0,1.16fr); gap:22px; align-items:start; }
     .analysis-reference-side{ display:flex; flex-direction:column; gap:14px; min-width:0; }
@@ -1491,7 +1520,7 @@
 
 
   </style>
-  <script type="module" crossorigin src="./assets/index-inHdJQbU.js"></script>
+  <script type="module" crossorigin src="./assets/index-DfKZC_ej.js"></script>
 </head>
 
 <body class="theme-dark">
@@ -1651,7 +1680,9 @@
 
       <!-- DASHBOARD -->
       <div id="view-dashboard">
-        <div class="grid">
+        <div id="dashboard-hero-shell" class="dashboard-hero-shell"></div>
+
+        <div class="grid dashboard-grid-main">
           <div class="card dashboard-panel dashboard-panel--wallets">
             <h2>Wallets</h2>
             <div id="onboarding-panel" class="card" style="display:none; margin:10px 0; border:1px dashed rgba(0,0,0,.25); background:rgba(0,0,0,.02);">
@@ -1672,13 +1703,14 @@
         </div>
 
         <div class="grid" style="margin-top:12px;">
-          <div class="card dashboard-panel dashboard-panel--categories">
-            <h2>Analyse détaillée</h2>
-            <div style="display:grid; gap:12px;">
-              <div class="muted">Le dashboard reste centré sur l’état actuel et les décisions immédiates. Les graphiques d’analyse détaillée vivent désormais dans l’espace Analyse.</div>
-              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <div class="card dashboard-panel dashboard-panel--categories dashboard-analysis-cta">
+            <div class="dashboard-card-kicker">Analyse dédiée</div>
+            <h2>Lire les écarts, pas seulement les soldes</h2>
+            <div class="dashboard-analysis-cta-copy">
+              <p class="muted">Le dashboard reste centré sur l’état actuel. L’espace Analyse porte la trajectoire, les catégories, la cadence et les écarts budget vs réel.</p>
+              <div class="dashboard-analysis-cta-actions">
                 <button class="btn primary" onclick="showView('analysis')">Ouvrir Analyse</button>
-                <span class="pill">Vue dédiée</span>
+                <button class="btn" onclick="showView('trip')">Voir Partage</button>
               </div>
             </div>
           </div>
@@ -1702,6 +1734,8 @@
             </div>
             <div id="analysis-live-pill" class="analysis-live-pill">Chargement…</div>
           </div>
+
+          <div id="analysis-overview-strip" class="analysis-overview-strip"></div>
 
           <div class="analysis-toolbar card">
             <div class="analysis-filter-group">

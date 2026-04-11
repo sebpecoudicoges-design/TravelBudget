@@ -104,6 +104,103 @@ function renderDashboardContextHelp(container) {
   if (close) close.onclick = () => { try { (window.tbUxDismiss || _tbUxDismiss)('dashboard_overview'); } catch(_) {} box.remove(); };
 }
 
+
+function renderDashboardHero() {
+  const host = document.getElementById("dashboard-hero-shell");
+  if (!host) return;
+
+  const esc = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const travel = (state?.travels || []).find(t => String(t.id) === String(state?.activeTravelId || '')) || state?.travel || null;
+  const travelName = String(travel?.name || state?.travelName || 'Voyage actif');
+  const periodStart = String(state?.period?.start || state?.period?.start_date || travel?.start_date || '').trim();
+  const periodEnd = String(state?.period?.end || state?.period?.end_date || travel?.end_date || '').trim();
+  const today = (typeof toLocalISODate === 'function') ? toLocalISODate(new Date()) : '';
+  const budgetInfo = (typeof getDailyBudgetInfoForDate === 'function')
+    ? getDailyBudgetInfoForDate(today)
+    : { remaining: 0, daily: 0, baseCurrency: state?.period?.baseCurrency || state?.user?.baseCurrency || 'EUR' };
+  const baseCur = String(budgetInfo?.baseCurrency || state?.period?.baseCurrency || state?.user?.baseCurrency || 'EUR').toUpperCase();
+  const budgetRemaining = Number(budgetInfo?.remaining) || 0;
+  const budgetDaily = Number(budgetInfo?.daily) || 0;
+  const txs = Array.isArray(state?.transactions)
+    ? state.transactions.filter(t => String(t?.travelId || t?.travel_id || '') === String(state?.activeTravelId || ''))
+    : [];
+  let paidToday = 0;
+  let pendingCount = 0;
+  for (const tx of txs) {
+    const type = String(tx?.type || '').toLowerCase();
+    const cashDate = (typeof tbTxCashDate === 'function') ? tbTxCashDate(tx) : (tx?.date_start || tx?.dateStart || null);
+    if (type === 'expense' && String(cashDate || '') === today && (typeof tbTxAffectsCash === 'function' ? tbTxAffectsCash(tx) : !!tx?.pay_now)) {
+      paidToday += Number((typeof amountToBase === 'function') ? amountToBase(Number(tx?.amount || 0), tx?.currency, baseCur) : Number(tx?.amount || 0)) || 0;
+    }
+    if (type === 'expense' && !(typeof tbTxAffectsCash === 'function' ? tbTxAffectsCash(tx) : !!tx?.pay_now) && (typeof tbTxAffectsBudget === 'function' ? tbTxAffectsBudget(tx) : true)) {
+      pendingCount += 1;
+    }
+  }
+
+  const wallets = Array.isArray(state?.wallets) ? state.wallets : [];
+  const totalWalletBase = wallets.reduce((sum, w) => {
+    const effective = (typeof window.tbGetWalletEffectiveBalance === 'function') ? window.tbGetWalletEffectiveBalance(w.id) : Number(w?.balance || 0);
+    const conv = (typeof amountToBase === 'function') ? amountToBase(Number(effective || 0), w?.currency, baseCur) : Number(effective || 0);
+    return sum + (Number(conv) || 0);
+  }, 0);
+  const cashWalletBase = wallets
+    .filter(w => String(w?.type || '').toLowerCase() === 'cash')
+    .reduce((sum, w) => {
+      const effective = (typeof window.tbGetWalletEffectiveBalance === 'function') ? window.tbGetWalletEffectiveBalance(w.id) : Number(w?.balance || 0);
+      const conv = (typeof amountToBase === 'function') ? amountToBase(Number(effective || 0), w?.currency, baseCur) : Number(effective || 0);
+      return sum + (Number(conv) || 0);
+    }, 0);
+
+  host.innerHTML = `
+    <section class="dashboard-hero-card">
+      <div class="dashboard-hero-copy">
+        <div class="dashboard-hero-kicker">Pilotage quotidien</div>
+        <h2 class="dashboard-hero-title">${esc(travelName)}</h2>
+        <p class="dashboard-hero-text">Lis rapidement l’état du voyage, la pression sur le budget du jour, puis bascule vers Analyse quand tu veux comprendre la trajectoire ou les écarts.</p>
+        <div class="dashboard-hero-meta">
+          <span class="dashboard-hero-pill"><strong>Période</strong> ${esc(periodStart && periodEnd ? `${periodStart} → ${periodEnd}` : 'à définir')}</span>
+          <span class="dashboard-hero-pill"><strong>Devise pivot</strong> ${esc(baseCur)}</span>
+          <span class="dashboard-hero-pill"><strong>À payer</strong> ${esc(String(pendingCount))} dépense${pendingCount > 1 ? 's' : ''}</span>
+        </div>
+        <div class="dashboard-hero-actions">
+          <button class="btn primary" onclick="showView('transactions')">Ajouter / revoir les transactions</button>
+          <button class="btn" onclick="showView('analysis')">Lire l'analyse complète</button>
+          <button class="btn" onclick="showView('trip')">Ouvrir Partage</button>
+        </div>
+      </div>
+      <div class="dashboard-hero-focus">
+        <div class="dashboard-focus-card">
+          <div>
+            <div class="dashboard-focus-label">Budget du jour</div>
+            <div class="dashboard-focus-value">${esc(fmtMoney(budgetRemaining, baseCur))}</div>
+          </div>
+          <div class="dashboard-focus-meta">Objectif ${esc(fmtMoney(budgetDaily, baseCur))} • consommé aujourd’hui ${esc(fmtMoney(paidToday, baseCur))}</div>
+        </div>
+        <div class="dashboard-focus-card">
+          <div>
+            <div class="dashboard-focus-label">Wallets totaux</div>
+            <div class="dashboard-focus-value">${esc(fmtMoney(totalWalletBase, baseCur))}</div>
+          </div>
+          <div class="dashboard-focus-meta">Vue convertie dans la devise pivot du compte.</div>
+        </div>
+        <div class="dashboard-focus-card">
+          <div>
+            <div class="dashboard-focus-label">Cash disponible</div>
+            <div class="dashboard-focus-value">${esc(fmtMoney(cashWalletBase, baseCur))}</div>
+          </div>
+          <div class="dashboard-focus-meta">Runway et burn s’appuient sur cette poche cash réelle.</div>
+        </div>
+        <div class="dashboard-focus-card">
+          <div>
+            <div class="dashboard-focus-label">Cap suivant</div>
+            <div class="dashboard-focus-value">${pendingCount > 0 ? esc(`${pendingCount} à arbitrer`) : 'RAS'}</div>
+          </div>
+          <div class="dashboard-focus-meta">Passe en Analyse pour lire les dérives, ou en Partage pour solder les avances.</div>
+        </div>
+      </div>
+    </section>`;
+}
+
 /* =========================
    Dashboard render
    ========================= */
@@ -115,6 +212,7 @@ function renderWallets() {
 
   // Onboarding panel / empty states
   renderOnboardingPanel();
+  renderDashboardHero();
 
   container.innerHTML = "";
   renderDashboardContextHelp(container);
@@ -330,6 +428,7 @@ function renderDailyBudget() {
   const container = document.getElementById("daily-budget-container");
   if (!container) return; // page reset / dom partiel
   container.innerHTML = "";
+  renderDashboardHero();
 
   const start = parseISODateOrNull(state?.period?.start);
   const end = parseISODateOrNull(state?.period?.end);
