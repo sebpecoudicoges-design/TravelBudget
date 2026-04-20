@@ -320,6 +320,8 @@ function toastOk(msg) {
         if (picked) return picked;
       }
     } catch (_) {}
+    const expenseCategory = String(expense?.category || '').trim();
+    if (expenseCategory && !/^mouvement interne$/i.test(expenseCategory)) return expenseCategory;
     return 'Autre';
   }
 
@@ -998,6 +1000,10 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
       amount: Number(x.amount),
       currency: x.currency,
       paidByMemberId: x.paid_by_member_id,
+      category: x.category || null,
+      subcategory: x.subcategory || null,
+      budgetDateStart: x.budget_date_start || x.date || null,
+      budgetDateEnd: x.budget_date_end || x.budget_date_start || x.date || null,
       transactionId: x.transaction_id || null,
       createdAt: x.created_at,
     }));
@@ -1483,7 +1489,7 @@ async function _fetchExpenseAuditDetails(expenseId) {
     try {
       const { data, error } = await sb
         .from(TB_CONST.TABLES.transactions)
-        .select("id,wallet_id,type,amount,currency,category,label,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,affects_budget,is_internal,created_at")
+        .select("id,wallet_id,type,amount,currency,category,subcategory,label,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,affects_budget,is_internal,created_at")
         .in("id", Array.from(txIds));
       if (!error && Array.isArray(data)) {
         for (const row of data) {
@@ -1494,6 +1500,7 @@ async function _fetchExpenseAuditDetails(expenseId) {
             amount: Number(row.amount || 0),
             currency: row.currency || null,
             category: row.category || null,
+            subcategory: row.subcategory || null,
             label: row.label || null,
             dateStart: row.date_start || null,
             dateEnd: row.date_end || null,
@@ -1516,6 +1523,37 @@ async function _fetchExpenseAuditDetails(expenseId) {
 
 function _walletNameById(walletId) {
   return (state.wallets || []).find(w => w.id === walletId)?.name || null;
+}
+
+function _tripExpenseSubcategoryOptionsHtml(categoryName, selectedValue) {
+  const category = String(categoryName || '').trim();
+  if (!category) return '<option value="">Aucune</option>';
+  const rows = (typeof getCategorySubcategories === 'function') ? getCategorySubcategories(category) : [];
+  const selected = String(selectedValue || '').trim();
+  const options = ['<option value="">Aucune</option>'];
+  for (const row of rows) {
+    const name = String(row?.name || '').trim();
+    if (!name) continue;
+    const sel = name === selected ? ' selected' : '';
+    options.push(`<option value="${escapeHTML(name)}"${sel}>${escapeHTML(name)}</option>`);
+  }
+  if (selected && !rows.some((row) => String(row?.name || '').trim().toLowerCase() === selected.toLowerCase())) {
+    options.push(`<option value="${escapeHTML(selected)}" selected>${escapeHTML(selected)}</option>`);
+  }
+  return options.join('');
+}
+
+function _tripBindExpenseSubcategoryUi(initialValue) {
+  const categoryEl = _el('trip-exp-category');
+  const subcategoryEl = _el('trip-exp-subcategory');
+  if (!categoryEl || !subcategoryEl) return;
+  const render = (selectedValue) => {
+    subcategoryEl.innerHTML = _tripExpenseSubcategoryOptionsHtml(categoryEl.value, selectedValue);
+    subcategoryEl.disabled = !String(categoryEl.value || '').trim();
+    subcategoryEl.value = selectedValue || '';
+  };
+  render(initialValue || '');
+  categoryEl.onchange = () => render('');
 }
 
 function _yesNoPill(v) {
@@ -2113,8 +2151,11 @@ try {
     shares.forEach(s => { amounts[s.memberId] = Number(s.shareAmount || 0); });
 
     let walletId = "";
-    let category = "Autre";
+    let category = ex.category || "Autre";
+    let subcategory = ex.subcategory || "";
     let outOfBudget = false;
+    let budgetDateStart = ex.budgetDateStart || ex.date || _isoToday();
+    let budgetDateEnd = ex.budgetDateEnd || budgetDateStart || ex.date || _isoToday();
     try {
       const audit = await _fetchExpenseAuditDetails(expenseId);
       const tx = (audit?.myShareLink ? audit.budgetTransactionsById.get(audit.myShareLink.transactionId) : null)
@@ -2123,7 +2164,10 @@ try {
       if (tx) {
         walletId = tx.walletId || "";
         category = tx.category || category;
+        subcategory = tx.subcategory || subcategory;
         outOfBudget = tx.outOfBudget === true;
+        budgetDateStart = tx.budgetDateStart || budgetDateStart;
+        budgetDateEnd = tx.budgetDateEnd || budgetDateEnd;
       }
     } catch (_) {}
 
@@ -2136,6 +2180,9 @@ try {
       paidByMemberId: ex.paidByMemberId || "",
       walletId,
       category,
+      subcategory,
+      budgetDateStart,
+      budgetDateEnd,
       outOfBudget,
       split: {
         mode: "amount",
@@ -2261,7 +2308,7 @@ try {
     }
   }
 
-  async function _integrateExpenseBudgetSideEffects({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
+  async function _integrateExpenseBudgetSideEffects({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
     const uid = await _ensureSession();
     const members = tripState.members || [];
     const memberIds = members.map(m => m.id);
@@ -2269,6 +2316,9 @@ try {
     const cur = _normalizeCurrency(currency);
     const cat = (category || "Autre");
     const out = !!outOfBudget;
+    const subcat = String(subcategory || "").trim() || null;
+    const budgetStart = budgetDateStart || date;
+    const budgetEnd = budgetDateEnd || budgetStart || date;
     const payer = members.find(m => m.id === paidByMemberId) || null;
     const paidByMe = !!payer?.isMe;
     const parts = _computeSplitParts(amt, members, split);
@@ -2305,8 +2355,10 @@ try {
           p_currency: cur,
           p_date_start: date,
           p_date_end: date,
+          p_budget_date_start: budgetStart,
+          p_budget_date_end: budgetEnd,
           p_category: cat,
-          p_subcategory: null,
+          p_subcategory: subcat,
           p_pay_now: true,
           p_out_of_budget: out,
           p_night_covered: false,
@@ -2367,8 +2419,10 @@ try {
           p_currency: cur,
           p_date_start: date,
           p_date_end: date,
+          p_budget_date_start: budgetStart,
+          p_budget_date_end: budgetEnd,
           p_category: cat,
-          p_subcategory: null,
+          p_subcategory: subcat,
           p_pay_now: true,
           p_out_of_budget: true,
           p_night_covered: false,
@@ -2426,8 +2480,10 @@ try {
             p_currency: cur,
             p_date_start: date,
             p_date_end: date,
+            p_budget_date_start: budgetStart,
+            p_budget_date_end: budgetEnd,
             p_category: cat,
-            p_subcategory: null,
+            p_subcategory: subcat,
             p_pay_now: false,
             p_out_of_budget: out,
             p_night_covered: false,
@@ -2504,8 +2560,10 @@ try {
               p_currency: cur,
               p_date_start: date,
               p_date_end: date,
+              p_budget_date_start: budgetStart,
+              p_budget_date_end: budgetEnd,
               p_category: cat,
-              p_subcategory: null,
+              p_subcategory: subcat,
               p_pay_now: false,
               p_out_of_budget: out,
               p_night_covered: false,
@@ -2557,7 +2615,7 @@ try {
     }
   }
 
-  async function _updateExpense({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
+  async function _updateExpense({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
     await _ensureSession();
     const tripId = tripState.activeTripId;
     if (!tripId || !expenseId) throw new Error("Édition invalide.");
@@ -2585,6 +2643,10 @@ try {
       amount: amt,
       currency: cur,
       paid_by_member_id: paidByMemberId,
+      category: category || 'Autre',
+      subcategory: String(subcategory || '').trim() || null,
+      budget_date_start: budgetDateStart || date,
+      budget_date_end: budgetDateEnd || budgetDateStart || date,
       shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
       wallet_tx: { enabled: false },
     };
@@ -2594,41 +2656,45 @@ try {
     const updatedExpenseId = (Array.isArray(rpcRows) ? rpcRows[0]?.expense_id : rpcRows?.expense_id) || null;
     if (!updatedExpenseId) throw new Error("Trip: RPC trip_apply_expense_v2 n'a pas renvoyé expense_id.");
 
-    await _integrateExpenseBudgetSideEffects({ expenseId: updatedExpenseId, date, label, amount: amt, currency: cur, paidByMemberId, walletId, category, outOfBudget, split });
+    await _integrateExpenseBudgetSideEffects({ expenseId: updatedExpenseId, date, label, amount: amt, currency: cur, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split });
 
     tripState.editingExpenseId = null;
     tripState.editingExpenseDraft = null;
     return updatedExpenseId;
   }
 
-  async function _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
-    const uid = await _ensureSession();
-    const tripId = tripState.activeTripId;
-    if (!tripId) return;
+  async function _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
+  const uid = await _ensureSession();
+  const tripId = tripState.activeTripId;
+  if (!tripId) return;
 
-    const members = tripState.members;
-    if (!members.length) throw new Error("Ajoute au moins un participant.");
+  const members = tripState.members;
+  if (!members.length) throw new Error("Ajoute au moins un participant.");
 
-    const amt = Number(amount);
-    if (!date || !label || !isFinite(amt) || amt <= 0) throw new Error("Date, libellé et montant (>0) requis.");
-    if (!paidByMemberId) throw new Error("Sélectionne qui a payé.");
+  const amt = Number(amount);
+  if (!date || !isFinite(amt) || amt <= 0) throw new Error("Date et montant (>0) requis.");
+  if (!paidByMemberId) throw new Error("Sélectionne qui a payé.");
 
-    const cur = _normalizeCurrency(currency);
-    const payer = members.find(m => m.id === paidByMemberId) || null;
-    const paidByMe = !!payer?.isMe;
+  const cur = _normalizeCurrency(currency);
+  const payer = members.find(m => m.id === paidByMemberId) || null;
+  const paidByMe = !!payer?.isMe;
 
-    // If paid by me, ensure we can record it into the Budget system (wallet + category).
-    const cat = (category || "Autre");
-    const out = !!outOfBudget;
+  // If paid by me, ensure we can record it into the Budget system (wallet + category).
+  const cat = (category || "Autre");
+  const subcat = String(subcategory || "").trim() || null;
+  const out = !!outOfBudget;
+  const budgetStart = budgetDateStart || date;
+  const budgetEnd = budgetDateEnd || budgetStart || date;
 
-    if (paidByMe) {
-      if (!walletId) throw new Error("Choisis une wallet (pour décompter le paiement).");
-      const w = findWallet(walletId);
-      if (!w) throw new Error("Wallet invalide.");
-      if (String(w.currency || "").toUpperCase() !== cur) {
-        throw new Error(`Devise wallet (${w.currency}) différente de la dépense (${cur}). Choisis une wallet dans la même devise (conversion FX non implémentée).`);
-      }
+  if (paidByMe) {
+    if (!walletId) throw new Error("Choisis une wallet (pour décompter le paiement).");
+    const w = findWallet(walletId);
+    if (!w) throw new Error("Wallet invalide.");
+    if (String(w.currency || "").toUpperCase() !== cur) {
+      throw new Error(`Devise wallet (${w.currency}) différente de la dépense (${cur}). Choisis une wallet dans la même devise (conversion FX non implémentée).`);
+    }
 
+    // Duplicate control: if a matching Budget transaction exists, propose linking instead of creating a new one.
       // Duplicate control: if a matching Budget transaction exists, propose linking instead of creating a new one.
       try {
         const matches = await _findMatchingTransactions({ date, amount: amt, currency: cur });
@@ -2652,6 +2718,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
               amount: amt,
               currency: cur,
               paid_by_member_id: paidByMemberId,
+              category: cat,
+              subcategory: String(subcategory || '').trim() || null,
+              budget_date_start: budgetDateStart || date,
+              budget_date_end: budgetDateEnd || budgetDateStart || date,
               shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
             };
 
@@ -2721,8 +2791,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                       p_currency: cur,
                       p_date_start: date,
                       p_date_end: date,
+                      p_budget_date_start: budgetStart,
+                      p_budget_date_end: budgetEnd,
                       p_category: cat,
-                      p_subcategory: null,
+                      p_subcategory: subcat,
                       p_pay_now: false,
                       p_out_of_budget: out,
                       p_night_covered: false,
@@ -2802,6 +2874,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       amount: amt,
       currency: cur,
       paid_by_member_id: paidByMemberId,
+      category: cat,
+      subcategory: String(subcategory || '').trim() || null,
+      budget_date_start: budgetDateStart || date,
+      budget_date_end: budgetDateEnd || budgetDateStart || date,
       shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
       wallet_tx: { enabled: false },
     };
@@ -2845,8 +2921,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           p_currency: cur,
           p_date_start: date,
           p_date_end: date,
+          p_budget_date_start: budgetStart,
+          p_budget_date_end: budgetEnd,
           p_category: cat,
-          p_subcategory: null,
+          p_subcategory: subcat,
           p_pay_now: true,
           p_out_of_budget: out,
           p_night_covered: false,
@@ -2934,8 +3012,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           p_currency: cur,
           p_date_start: date,
           p_date_end: date,
+          p_budget_date_start: budgetStart,
+          p_budget_date_end: budgetEnd,
           p_category: cat,
-          p_subcategory: null,
+          p_subcategory: subcat,
           p_pay_now: true,
           p_out_of_budget: true,
           p_night_covered: false,
@@ -2999,8 +3079,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
               p_currency: cur,
               p_date_start: date,
               p_date_end: date,
+              p_budget_date_start: budgetStart,
+              p_budget_date_end: budgetEnd,
               p_category: cat,
-              p_subcategory: null,
+              p_subcategory: subcat,
               p_pay_now: false,
               p_out_of_budget: out,
               p_night_covered: false,
@@ -3086,8 +3168,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                 p_currency: cur,
                 p_date_start: date,
                 p_date_end: date,
+                p_budget_date_start: budgetStart,
+                p_budget_date_end: budgetEnd,
                 p_category: cat,
-                p_subcategory: null,
+                p_subcategory: subcat,
                 p_pay_now: false,
                 p_out_of_budget: out,
                 p_night_covered: false,
@@ -3257,10 +3341,6 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       : ``;
     const body = `
       <div class="row">
-        <div class="field">
-          <label>Date</label>
-          <input id="trip-exp-date" type="date" value="${escapeHTML(editingDraft?.date || toLocalISODate(new Date()))}" />
-        </div>
         <div class="field" style="min-width:220px;">
           <label>Payé par</label>
           <select id="trip-exp-paidby">${memberOptions}</select>
@@ -3279,6 +3359,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           <select id="trip-exp-category">
             ${categoryOptions}
           </select>
+        </div>
+        <div class="field" style="min-width:220px;">
+          <label>Sous-catégorie</label>
+          <select id="trip-exp-subcategory"></select>
         </div>
         <div class="field" style="min-width:180px;">
           <label>Hors budget</label>
@@ -3303,6 +3387,20 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
             ${_tripCurrencyOptionsHTML(editingDraft?.currency || trip?.base_currency || state?.period?.baseCurrency || "THB")}
           </select>
           <div id="trip-exp-currency-help" class="muted" style="font-size:12px; margin-top:4px;"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Date dépense (cash)</label>
+          <input id="trip-exp-date" type="date" value="${escapeHTML(editingDraft?.date || toLocalISODate(new Date()))}" />
+        </div>
+        <div class="field">
+          <label>Budget start</label>
+          <input id="trip-exp-budget-start" type="date" value="${escapeHTML(editingDraft?.budgetDateStart || editingDraft?.date || toLocalISODate(new Date()))}" />
+        </div>
+        <div class="field">
+          <label>Budget end</label>
+          <input id="trip-exp-budget-end" type="date" value="${escapeHTML(editingDraft?.budgetDateEnd || editingDraft?.budgetDateStart || editingDraft?.date || toLocalISODate(new Date()))}" />
         </div>
       </div>
       <div class="row" style="align-items:flex-end; gap:12px; margin-top:6px;">
@@ -3566,6 +3664,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           const isLinked = await _expenseIsEditLocked(ex);
           const linkedLabel = isLinked ? " • lié au budget/wallet" : (ex.transactionId ? " • lié au budget" : "");
           const resolvedCategory = _tripAnalysisCategoryKey(ex, tripTxMap);
+          const resolvedSubcategory = String(ex.subcategory || '').trim();
+          const budgetWindowLabel = (ex.budgetDateStart || ex.budgetDateEnd)
+            ? ` • budget ${escapeHTML(ex.budgetDateStart || ex.date || '—')} → ${escapeHTML(ex.budgetDateEnd || ex.budgetDateStart || ex.date || '—')}`
+            : '';
           const shareRows = sharesByExpenseForHistory.get(ex.id) || [];
           const participantNames = shareRows.map((row) => membersById.get(String(row.memberId))?.name).filter(Boolean);
           const participantLabel = participantNames.length ? ` • participants: ${escapeHTML(participantNames.join(', '))}` : '';
@@ -3573,8 +3675,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 return `
             <div class="trip-history-row">
               <div class="trip-history-copy">
-                <div class="trip-history-title">${escapeHTML(ex.label)}<span class="trip-badge">${escapeHTML(resolvedCategory || 'Autre')}</span></div>
-                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${linkedLabel}</div>
+                <div class="trip-history-title">${escapeHTML(ex.label)}<span class="trip-badge">${escapeHTML(resolvedCategory || 'Autre')}</span>${resolvedSubcategory ? `<span class="trip-badge">${escapeHTML(resolvedSubcategory)}</span>` : ''}</div>
+                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${linkedLabel}${budgetWindowLabel}</div>
                 ${participantNames.length ? `<div class="trip-history-participants">${participantNames.map((name) => `<span class="trip-participant-pill">${escapeHTML(name)}</span>`).join('')}</div>` : ''}
               </div>
               <div class="trip-history-actions">
@@ -3712,10 +3814,17 @@ return `
       if (walletSelInit && editingDraft.walletId) walletSelInit.value = editingDraft.walletId;
       const catSelInit = _el("trip-exp-category");
       if (catSelInit && editingDraft.category) catSelInit.value = editingDraft.category;
+      _tripBindExpenseSubcategoryUi(editingDraft.subcategory || '');
+      const budgetStartInit = _el("trip-exp-budget-start");
+      const budgetEndInit = _el("trip-exp-budget-end");
+      if (budgetStartInit && editingDraft.budgetDateStart) budgetStartInit.value = editingDraft.budgetDateStart;
+      if (budgetEndInit && editingDraft.budgetDateEnd) budgetEndInit.value = editingDraft.budgetDateEnd;
       const outSelInit = _el("trip-exp-out");
       if (outSelInit) outSelInit.value = editingDraft.outOfBudget ? "yes" : "no";
       const splitModeInit = _el("trip-split-mode");
       if (splitModeInit && editingDraft.split?.mode) splitModeInit.value = editingDraft.split.mode;
+    } else {
+      _tripBindExpenseSubcategoryUi('');
     }
 
     const sel = _el("trip-active");
@@ -4008,48 +4117,81 @@ toastOk("Participant ajouté.");
     const btnAddExp = _el("trip-add-exp");
     if (btnAddExp) {
       btnAddExp.onclick = async () => {
-        try {
-          btnAddExp.disabled = true;
+  try {
+    btnAddExp.disabled = true;
 
-          const date = _el("trip-exp-date").value;
-          const label = _el("trip-exp-label").value.trim();
-          const amount = _el("trip-exp-amount").value;
-          const currency = _tripResolveExpenseCurrency();
-          const paidByMemberId = _el("trip-exp-paidby").value;
-          const walletId = _el("trip-exp-wallet")?.value || "";
-          const category = _el("trip-exp-category")?.value || "Autre";
-          const outOfBudget = (_el("trip-exp-out")?.value || "no") === "yes";
-          const split = (() => {
-            const mode = (_el("trip-split-mode")?.value || "equal");
-            const members = (tripState.members || []);
-            const percents = {};
-            const amounts = {};
-            if (mode === "percent") {
-              members.forEach(m => {
-                const v = _el(`trip-split-pct-${m.id}`)?.value;
-                if (v !== undefined) percents[m.id] = v;
-              });
-            } else if (mode === "amount") {
-              members.forEach(m => {
-                const v = _el(`trip-split-amt-${m.id}`)?.value;
-                if (v !== undefined) amounts[m.id] = v;
-              });
-            }
-            return { mode, percents, amounts };
-          })();
-          if (editingExpenseId) {
-            const updatedExpenseId = await _updateExpense({ expenseId: editingExpenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
-            await _refreshAfterTripMutation("trip:update_expense", { expectExpenseId: updatedExpenseId || editingExpenseId });
-            toastOk("Dépense modifiée.");
-          } else {
-            const createdExpenseId = await _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
-            await _refreshAfterTripMutation("trip:add_expense", { expectExpenseId: createdExpenseId });
-            toastOk("Dépense ajoutée.");
-          }
-        } catch (e) {
-          toastWarn(e?.message || String(e));
-        }
-      };
+    const date = _el("trip-exp-date").value;
+    const label = _el("trip-exp-label").value.trim();
+    const amount = _el("trip-exp-amount").value;
+    const currency = _tripResolveExpenseCurrency();
+    const paidByMemberId = _el("trip-exp-paidby").value;
+    const walletId = _el("trip-exp-wallet")?.value || "";
+    const category = _el("trip-exp-category")?.value || "Autre";
+    const subcategory = String(_el("trip-exp-subcategory")?.value || '').trim() || '';
+    const budgetDateStart = _el("trip-exp-budget-start")?.value || date;
+    const budgetDateEnd = _el("trip-exp-budget-end")?.value || budgetDateStart || date;
+    const outOfBudget = (_el("trip-exp-out")?.value || "no") === "yes";
+    const split = (() => {
+      const mode = (_el("trip-split-mode")?.value || "equal");
+      const members = (tripState.members || []);
+      const percents = {};
+      const amounts = {};
+      if (mode === "percent") {
+        members.forEach(m => {
+          const v = _el(`trip-split-pct-${m.id}`)?.value;
+          if (v !== undefined) percents[m.id] = v;
+        });
+      } else if (mode === "amount") {
+        members.forEach(m => {
+          const v = _el(`trip-split-amt-${m.id}`)?.value;
+          if (v !== undefined) amounts[m.id] = v;
+        });
+      }
+      return { mode, percents, amounts };
+    })();
+
+    if (editingExpenseId) {
+      const updatedExpenseId = await _updateExpense({
+        expenseId: editingExpenseId,
+        date,
+        label,
+        amount,
+        currency,
+        paidByMemberId,
+        walletId,
+        category,
+        subcategory,
+        budgetDateStart,
+        budgetDateEnd,
+        outOfBudget,
+        split
+      });
+      await _refreshAfterTripMutation("trip:update_expense", { expectExpenseId: updatedExpenseId || editingExpenseId });
+      toastOk("Dépense modifiée.");
+    } else {
+      const createdExpenseId = await _addExpense({
+        date,
+        label,
+        amount,
+        currency,
+        paidByMemberId,
+        walletId,
+        category,
+        subcategory,
+        budgetDateStart,
+        budgetDateEnd,
+        outOfBudget,
+        split
+      });
+      await _refreshAfterTripMutation("trip:add_expense", { expectExpenseId: createdExpenseId });
+      toastOk("Dépense ajoutée.");
+    }
+  } catch (e) {
+    toastWarn(e?.message || String(e));
+  } finally {
+    btnAddExp.disabled = false;
+  }
+};
     }
 
     const btnCancelEditExp = _el("trip-cancel-edit-exp");
