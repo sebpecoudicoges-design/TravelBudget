@@ -39,6 +39,7 @@
   }
   function _fmtMoney(v, cur){ try { return fmtMoney(v, cur); } catch (_) { return `${(_safeNum(v)).toFixed(2)} ${cur || ''}`.trim(); } }
   function _rangeInputs(){
+    
     return {
       start: _el('analysis-range-start'),
       end: _el('analysis-range-end'),
@@ -912,32 +913,36 @@ function _sumTxArray(txs, base){
     const nightCoveredAverageSaving = nightCoveredCount > 0 ? (nightCoveredPotentialSavings / nightCoveredCount) : 0;
     const nightCoveredShareOfSpent = nightCoveredTransportSpent > 0 ? (nightCoveredPotentialSavings / nightCoveredTransportSpent) * 100 : 0;
 
-    return {
+const cashflowScope = _el('analysis-scope')?.value || 'budget';
+
+const todayIdx = days.indexOf(todayIso);
+const todayBudget = todayIdx >= 0 ? _safeNum(targetDaily[todayIdx]) : 0;
+const todaySpent = todayIdx >= 0 ? _safeNum(dailyMap[todayIso]) : 0;
+
+const futureBudget = days.reduce((sum, d, idx) => {
+  if (d > todayIso) return sum + _safeNum(targetDaily[idx]);
+  return sum;
+}, 0);
+
+const rawBudgetRemaining = futureBudget + Math.max(0, todayBudget - todaySpent);
+const budgetRemaining = cashflowScope === 'out' ? 0 : rawBudgetRemaining;
+
+const expenseUnpaid = Math.max(0, spent - paidSpent);
+const expenseRemaining = expenseUnpaid;
+
+return {
   base, start, end, days, txs, spent, paidSpent,
   incomeReal: incomeRealAmount,
   incomePlanned: incomePlannedAmount,
   expenseReal: paidSpent,
 expenseToDate: spentToToday,
+budgetRemaining,
 
-expensePlanned: (_el('analysis-scope')?.value || 'budget') === 'out'
-  ? Math.max(0, spent - paidSpent)
-  : Math.max(0, spent - paidSpent) + Math.max(0, totalBudget - spent),
+expensePlanned: expenseRemaining,
 
 deltaReal: incomeRealAmount - paidSpent,
-
-deltaPlanned: incomePlannedAmount - (
-  ((_el('analysis-scope')?.value || 'budget') === 'out')
-    ? Math.max(0, spent - paidSpent)
-    : Math.max(0, spent - paidSpent) + Math.max(0, totalBudget - spent)
-),
-
-deltaProjected: (incomeRealAmount - paidSpent) + (
-  incomePlannedAmount - (
-    ((_el('analysis-scope')?.value || 'budget') === 'out')
-      ? Math.max(0, spent - paidSpent)
-      : Math.max(0, spent - paidSpent) + Math.max(0, totalBudget - spent)
-  )
-),
+deltaPlanned: -expenseRemaining,
+deltaProjected: (incomeRealAmount - paidSpent) + incomePlannedAmount - expenseRemaining,
   totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod,
   remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay,
   referenceMiscPerDay, comparablePerDay, unmappedPerDay, excludedPerDay,
@@ -1197,52 +1202,74 @@ deltaProjected: (incomeRealAmount - paidSpent) + (
 
     const cashflowBlock = `
   <div class="analysis-stat analysis-stat--cashflow" style="grid-column:1 / -1; padding:18px; border-radius:24px; border:1px solid rgba(255,255,255,.68); background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.88)); box-shadow:0 14px 34px rgba(148,163,184,.16), inset 0 1px 0 rgba(255,255,255,.84);">
-    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px;">
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
       <div>
-        <div class="analysis-stat-label" style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:rgba(15,23,42,.72);">Cashflow</div>
-        <div class="analysis-stat-meta" style="margin-top:4px;font-size:12px;color:rgba(15,23,42,.58);">Entrées, sorties et delta sur le même filtre d’analyse.</div>
+        <div style="font-size:11px;font-weight:700;color:rgba(15,23,42,.5);text-transform:uppercase;margin-bottom:6px;">
+          Situation actuelle
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+          <div style="padding:12px 14px;border-radius:16px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.14);">
+            <div style="font-size:12px;color:rgba(15,23,42,.58);">Dépensé à date</div>
+            <div style="font-size:20px;font-weight:800;color:#3b82f6;">${escapeHTML(_fmtMoney(model.expenseToDate, model.base))}</div>
+          </div>
+          <div style="padding:12px 14px;border-radius:16px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.14);">
+            <div style="font-size:12px;color:rgba(15,23,42,.58);">Déjà engagé</div>
+            <div style="font-size:20px;font-weight:800;color:#ef4444;">${escapeHTML(_fmtMoney(model.expenseReal, model.base))}</div>
+          </div>
+        </div>
       </div>
-      <div style="font-size:12px;font-weight:800;color:rgba(15,23,42,.60);">${escapeHTML(model.base)}</div>
-    </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-      <div style="padding:12px 14px;border-radius:16px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.18);">
-        <div style="font-size:12px;color:rgba(15,23,42,.58);">Entrées reçues</div>
-        <div style="font-size:22px;font-weight:800;color:${escapeHTML(_themeGood())};">${escapeHTML(_fmtMoney(model.incomeReal, model.base))}</div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:rgba(15,23,42,.5);text-transform:uppercase;margin-bottom:6px;">
+          Projection
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+          <div style="padding:12px 14px;border-radius:16px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.14);">
+            <div style="font-size:12px;color:rgba(15,23,42,.58);">Entrées prévues</div>
+            <div style="font-size:18px;font-weight:700;color:#10b981;">${escapeHTML(_fmtMoney(model.incomePlanned, model.base))}</div>
+          </div>
+          <div style="padding:12px 14px;border-radius:16px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.14);">
+            <div style="font-size:12px;color:rgba(15,23,42,.58);">Sorties restantes</div>
+            <div style="font-size:18px;font-weight:700;color:#f59e0b;">${escapeHTML(_fmtMoney(model.expensePlanned, model.base))}</div>
+          </div>
+          <div style="padding:12px 14px;border-radius:16px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.14);">
+            <div style="font-size:12px;color:rgba(15,23,42,.58);">Budget restant</div>
+            <div style="font-size:18px;font-weight:700;color:#6366f1;">${escapeHTML(_fmtMoney(model.budgetRemaining, model.base))}</div>
+          </div>
+        </div>
       </div>
-      <div style="padding:12px 14px;border-radius:16px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.14);">
-        <div style="font-size:12px;color:rgba(15,23,42,.58);">Entrées prévues</div>
-        <div style="font-size:22px;font-weight:800;color:${escapeHTML(_themeGood())};">${escapeHTML(_fmtMoney(model.incomePlanned, model.base))}</div>
-      </div>
-      <div style="padding:12px 14px;border-radius:16px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.16);">
-        <div style="font-size:12px;color:rgba(15,23,42,.58);">Sorties réalisées</div>
-        <div style="font-size:22px;font-weight:800;color:${escapeHTML(_themeBad())};">${escapeHTML(_fmtMoney(model.expenseReal, model.base))}</div>
-      </div>
-      <div style="padding:12px 14px;border-radius:16px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.14);">
-  <div style="font-size:12px;color:rgba(15,23,42,.58);">Dépensé à date</div>
-  <div style="font-size:22px;font-weight:800;color:#3b82f6;">
-    ${escapeHTML(_fmtMoney(model.expenseToDate, model.base))}
-  </div>
-</div>
-      <div style="padding:12px 14px;border-radius:16px;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.12);">
-        <div style="font-size:12px;color:rgba(15,23,42,.58);">Sorties restantes prévues</div>
-        <div style="font-size:22px;font-weight:800;color:${escapeHTML(_themeBad())};">${escapeHTML(_fmtMoney(model.expensePlanned, model.base))}</div>
-      </div>
-    </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px;">
-      <div style="padding:12px 14px;border-radius:16px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18);">
-        <div style="font-size:12px;color:rgba(15,23,42,.58);">Delta réel</div>
-        <div style="font-size:24px;font-weight:900;color:${escapeHTML(model.deltaReal >= 0 ? _themeGood() : _themeBad())};">${escapeHTML(_fmtMoney(model.deltaReal, model.base))}</div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:rgba(15,23,42,.5);text-transform:uppercase;margin-bottom:6px;">
+          Résultat
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:16px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.16);">
+          <div style="display:flex;justify-content:space-between;gap:12px;">
+            <span style="font-size:13px;color:rgba(15,23,42,.6);">Solde déjà engagé</span>
+            <strong>${escapeHTML(_fmtMoney(model.deltaReal, model.base))}</strong>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;gap:12px;">
+            <span style="font-size:13px;color:rgba(15,23,42,.6);">Impact sorties restantes</span>
+            <strong>${escapeHTML(_fmtMoney(model.deltaPlanned, model.base))}</strong>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;gap:12px;">
+            <span style="font-size:13px;color:rgba(15,23,42,.6);">Dont budget restant</span>
+            <strong>${escapeHTML(_fmtMoney(model.budgetRemaining, model.base))}</strong>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;gap:12px;padding-top:8px;border-top:1px solid rgba(15,23,42,.08);">
+            <span style="font-size:14px;font-weight:700;">Solde fin période</span>
+            <strong style="font-size:22px;font-weight:900;color:${escapeHTML(model.deltaProjected >= 0 ? _themeGood() : _themeBad())};">
+              ${escapeHTML(_fmtMoney(model.deltaProjected, model.base))}
+            </strong>
+          </div>
+        </div>
       </div>
-      <div style="padding:12px 14px;border-radius:16px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18);">
-        <div style="font-size:12px;color:rgba(15,23,42,.58);">Delta engagé</div>
-        <div style="font-size:24px;font-weight:900;color:${escapeHTML(model.deltaPlanned >= 0 ? _themeGood() : _themeBad())};">${escapeHTML(_fmtMoney(model.deltaPlanned, model.base))}</div>
-      </div>
-      <div style="padding:12px 14px;border-radius:16px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18);">
-        <div style="font-size:12px;color:rgba(15,23,42,.58);">Delta projeté</div>
-        <div style="font-size:24px;font-weight:900;color:${escapeHTML(model.deltaProjected >= 0 ? _themeGood() : _themeBad())};">${escapeHTML(_fmtMoney(model.deltaProjected, model.base))}</div>
-      </div>
+
     </div>
   </div>
 `;
