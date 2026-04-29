@@ -932,7 +932,9 @@ const expenseRemaining = expenseUnpaid;
 
 return {
   base, start, end, days, txs, spent, paidSpent,
+
   incomeReal: incomeRealAmount,
+  incomeToDate: incomeRealAmount, // ✅ AJOUT ICI
   incomePlanned: incomePlannedAmount,
   expenseReal: paidSpent,
 expenseToDate: spentToToday,
@@ -1201,75 +1203,99 @@ deltaProjected: (incomeRealAmount - paidSpent) + incomePlannedAmount - expenseRe
     host.style.alignItems = 'stretch';
 
     const cashflowBlock = `
-  <div class="analysis-stat analysis-stat--cashflow" style="grid-column:1 / -1; padding:18px; border-radius:24px; border:1px solid rgba(255,255,255,.68); background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.88)); box-shadow:0 14px 34px rgba(148,163,184,.16), inset 0 1px 0 rgba(255,255,255,.84);">
-    <div style="display:flex;flex-direction:column;gap:16px;">
+  <div class="analysis-stat analysis-stat--cashflow"
+    style="
+      grid-column:1 / -1;
+      padding:20px;
+      border-radius:28px;
+      border:1px solid rgba(255,255,255,.9);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255,255,255,.95), transparent 34%),
+        radial-gradient(circle at 82% 18%, rgba(148,163,184,.20), transparent 42%),
+        linear-gradient(135deg, rgba(255,255,255,.96), rgba(226,232,240,.78));
+      box-shadow:
+        0 20px 45px rgba(148,163,184,.25),
+        inset 0 1px 0 rgba(255,255,255,.95),
+        inset 0 -1px 0 rgba(148,163,184,.20);
+      color:#0f172a;
+      overflow:hidden;
+      position:relative;
+      transition:all .25s ease;
+    "
+    onmouseenter="this.style.transform='translateY(-3px)'"
+    onmouseleave="this.style.transform='translateY(0)'"
+  >
+    <div style="position:absolute;inset:0;border-radius:28px;background:linear-gradient(120deg, transparent 38%, rgba(255,255,255,.38), transparent 62%);opacity:.55;pointer-events:none;"></div>
+    <div style="position:absolute;inset:auto -80px -120px auto;width:260px;height:260px;border-radius:999px;background:rgba(99,102,241,.10);filter:blur(18px);"></div>
+    <div style="position:absolute;inset:-100px auto auto -90px;width:240px;height:240px;border-radius:999px;background:rgba(148,163,184,.12);filter:blur(18px);"></div>
+
+    <div style="position:relative;z-index:1;display:flex;flex-direction:column;gap:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+        <div>
+          <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,23,42,.52);">Cashflow estimé</div>
+          <div style="margin-top:6px;font-size:34px;line-height:1;font-weight:950;color:${escapeHTML(model.deltaProjected >= 0 ? '#22c55e' : '#fb7185')};">
+            ${escapeHTML(_fmtMoney(model.deltaProjected, model.base))}
+          </div>
+          <div style="margin-top:8px;font-size:12px;color:rgba(15,23,42,.60);">
+            Solde fin période après entrées prévues et sorties restantes
+          </div>
+        </div>
+
+        <div style="padding:10px 12px;border-radius:999px;background:rgba(255,255,255,.58);border:1px solid rgba(148,163,184,.22);font-size:12px;font-weight:800;color:rgba(15,23,42,.72);box-shadow:inset 0 1px 0 rgba(255,255,255,.75);">
+          ${escapeHTML(model.base)}
+        </div>
+      </div>
 
       <div>
-        <div style="font-size:11px;font-weight:700;color:rgba(15,23,42,.5);text-transform:uppercase;margin-bottom:6px;">
-          Situation actuelle
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-          <div style="padding:12px 14px;border-radius:16px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.14);">
-            <div style="font-size:12px;color:rgba(15,23,42,.58);">Dépensé à date</div>
-            <div style="font-size:20px;font-weight:800;color:#3b82f6;">${escapeHTML(_fmtMoney(model.expenseToDate, model.base))}</div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,23,42,.48);margin-bottom:8px;">Aujourd’hui</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+          <div style="padding:13px 14px;border-radius:18px;background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.20);">
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">Encaissé à date</div>
+            <div style="margin-top:4px;font-size:20px;font-weight:900;color:#10b981;">${escapeHTML(_fmtMoney(model.incomeToDate || model.incomeReal, model.base))}</div>
           </div>
-          <div style="padding:12px 14px;border-radius:16px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.14);">
-            <div style="font-size:12px;color:rgba(15,23,42,.58);">Déjà engagé</div>
-            <div style="font-size:20px;font-weight:800;color:#ef4444;">${escapeHTML(_fmtMoney(model.expenseReal, model.base))}</div>
+          <div style="padding:13px 14px;border-radius:18px;background:rgba(59,130,246,.10);border:1px solid rgba(59,130,246,.20);">
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">Dépensé à date</div>
+            <div style="margin-top:4px;font-size:20px;font-weight:900;color:#3b82f6;">${escapeHTML(_fmtMoney(model.expenseToDate, model.base))}</div>
+          </div>
+          <div style="padding:13px 14px;border-radius:18px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.20);">
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">Déjà engagé</div>
+            <div style="margin-top:4px;font-size:20px;font-weight:900;color:#fb7185;">${escapeHTML(_fmtMoney(model.expenseReal, model.base))}</div>
           </div>
         </div>
       </div>
 
       <div>
-        <div style="font-size:11px;font-weight:700;color:rgba(15,23,42,.5);text-transform:uppercase;margin-bottom:6px;">
-          Projection
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-          <div style="padding:12px 14px;border-radius:16px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.14);">
-            <div style="font-size:12px;color:rgba(15,23,42,.58);">Entrées prévues</div>
-            <div style="font-size:18px;font-weight:700;color:#10b981;">${escapeHTML(_fmtMoney(model.incomePlanned, model.base))}</div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,23,42,.48);margin-bottom:8px;">À venir</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+          <div style="padding:13px 14px;border-radius:18px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.16);">
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">Entrées prévues</div>
+            <div style="margin-top:4px;font-size:19px;font-weight:850;color:#10b981;">${escapeHTML(_fmtMoney(model.incomePlanned, model.base))}</div>
           </div>
-          <div style="padding:12px 14px;border-radius:16px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.14);">
-            <div style="font-size:12px;color:rgba(15,23,42,.58);">Sorties restantes</div>
-            <div style="font-size:18px;font-weight:700;color:#f59e0b;">${escapeHTML(_fmtMoney(model.expensePlanned, model.base))}</div>
+          <div style="padding:13px 14px;border-radius:18px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.16);">
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">Sorties à payer</div>
+            <div style="margin-top:4px;font-size:19px;font-weight:850;color:#f59e0b;">${escapeHTML(_fmtMoney(model.expensePlanned, model.base))}</div>
           </div>
-          <div style="padding:12px 14px;border-radius:16px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.14);">
-            <div style="font-size:12px;color:rgba(15,23,42,.58);">Budget restant</div>
-            <div style="font-size:18px;font-weight:700;color:#6366f1;">${escapeHTML(_fmtMoney(model.budgetRemaining, model.base))}</div>
+          <div style="padding:13px 14px;border-radius:18px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.16);">
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">Budget restant</div>
+            <div style="margin-top:4px;font-size:19px;font-weight:850;color:#6366f1;">${escapeHTML(_fmtMoney(model.budgetRemaining, model.base))}</div>
           </div>
         </div>
       </div>
 
-      <div>
-        <div style="font-size:11px;font-weight:700;color:rgba(15,23,42,.5);text-transform:uppercase;margin-bottom:6px;">
-          Résultat
+      <div style="padding:14px 16px;border-radius:20px;background:rgba(255,255,255,.46);border:1px solid rgba(148,163,184,.18);display:flex;flex-direction:column;gap:9px;box-shadow:inset 0 1px 0 rgba(255,255,255,.72);">
+        <div style="display:flex;justify-content:space-between;gap:12px;">
+          <span style="font-size:13px;color:rgba(15,23,42,.60);">Solde déjà engagé</span>
+          <strong>${escapeHTML(_fmtMoney(model.deltaReal, model.base))}</strong>
         </div>
-
-        <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:16px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.16);">
-          <div style="display:flex;justify-content:space-between;gap:12px;">
-            <span style="font-size:13px;color:rgba(15,23,42,.6);">Solde déjà engagé</span>
-            <strong>${escapeHTML(_fmtMoney(model.deltaReal, model.base))}</strong>
-          </div>
-
-          <div style="display:flex;justify-content:space-between;gap:12px;">
-            <span style="font-size:13px;color:rgba(15,23,42,.6);">Impact sorties restantes</span>
-            <strong>${escapeHTML(_fmtMoney(model.deltaPlanned, model.base))}</strong>
-          </div>
-
-          <div style="display:flex;justify-content:space-between;gap:12px;">
-            <span style="font-size:13px;color:rgba(15,23,42,.6);">Dont budget restant</span>
-            <strong>${escapeHTML(_fmtMoney(model.budgetRemaining, model.base))}</strong>
-          </div>
-
-          <div style="display:flex;justify-content:space-between;gap:12px;padding-top:8px;border-top:1px solid rgba(15,23,42,.08);">
-            <span style="font-size:14px;font-weight:700;">Solde fin période</span>
-            <strong style="font-size:22px;font-weight:900;color:${escapeHTML(model.deltaProjected >= 0 ? _themeGood() : _themeBad())};">
-              ${escapeHTML(_fmtMoney(model.deltaProjected, model.base))}
-            </strong>
-          </div>
+        <div style="display:flex;justify-content:space-between;gap:12px;">
+          <span style="font-size:13px;color:rgba(15,23,42,.60);">Impact sorties restantes</span>
+          <strong>${escapeHTML(_fmtMoney(model.deltaPlanned, model.base))}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:12px;">
+          <span style="font-size:13px;color:rgba(15,23,42,.60);">Budget restant disponible</span>
+          <strong>${escapeHTML(_fmtMoney(model.budgetRemaining, model.base))}</strong>
         </div>
       </div>
-
     </div>
   </div>
 `;

@@ -1,4 +1,4 @@
-console.log("TB BUILD 9.4.1.14");
+console.log("TB BUILD 9.5.0");
 import './app/bridge.js';
 
 // TravelBudget V9 entrypoint (Vite + deterministic legacy loader)
