@@ -121,5 +121,10 @@ function renderAll() {
     return;
   }
 
+  if (view === "assets") {
+    safeCall("Patrimoine", () => { if (typeof window.renderAssets === "function") return window.renderAssets("renderAll"); }, { containerId: "view-assets" });
+    return;
+  }
+
   // other views (trip/members/help): their render is triggered by showView()
 }

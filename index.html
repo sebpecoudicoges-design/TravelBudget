@@ -926,7 +926,7 @@
     .auth-msg{ font-size:13px; line-height:1.5; }
     .modal-grid{ gap:12px; }
     .modal-actions{ margin-top:18px; gap:10px; }
-    #view-dashboard, #view-transactions, #view-settings, #view-help, #view-trip, #view-members{ display:flex; flex-direction:column; gap:18px; }
+    #view-dashboard, #view-transactions, #view-settings, #view-help, #view-trip, #view-members, #view-assets{ display:flex; flex-direction:column; gap:18px; }
     .dashboard-panel{ min-height:100%; }
     .dashboard-panel h2{ margin-bottom:16px; }
     #view-transactions .toolbar-card,
@@ -1715,6 +1715,7 @@
         <div id="tab-transactions" class="tab" onclick="showView('transactions')" data-t="nav.transactions">Transactions</div>
         <div id="tab-settings" class="tab" onclick="showView('settings')" data-t="nav.settings">Settings</div>
         <div id="tab-analysis" class="tab" onclick="showView('analysis')">Analyse</div>
+        <div id="tab-assets" class="tab" onclick="showView('assets')">Patrimoine</div>
         <div id="tab-help" class="tab" onclick="showView('help')" data-t="nav.help">Aide</div>
         <div id="tab-trip" class="tab" onclick="showView('trip')" data-t="nav.trip">Partage</div>
         <div id="tab-members" class="tab" style="display:none" onclick="showView('members')" data-t="nav.members">Membres</div>
@@ -1761,6 +1762,11 @@
         <!-- FULL WIDTH: Solde projection chart -->
         <div id="solde-projection-container" style="margin-top:16px;"></div>
 
+      </div>
+
+      <!-- ASSETS / PATRIMOINE -->
+      <div id="view-assets" class="hidden">
+        <div id="assets-root" class="card"></div>
       </div>
 
       <!-- ANALYSIS -->

@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.5.0';
+window.__TB_BUILD = '9.6.0';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -39,6 +39,8 @@ window.__TB_BUILD = '9.5.0';
     travel_budget_reference_profile: "travel_budget_reference_profile",
     budget_segment_budget_reference_override: "budget_segment_budget_reference_override",
     v_country_budget_reference_latest: "v_country_budget_reference_latest",
+    assets: "assets",
+    asset_owners: "asset_owners",
   });
 
   const COLS = Object.freeze({
@@ -86,6 +88,16 @@ window.__TB_BUILD = '9.5.0';
     date_start: "date_start",
     date_end: "date_end",
     transport_night_budget: "transport_night_budget",
+
+    asset_id: "asset_id",
+    asset_type: "asset_type",
+    purchase_value: "purchase_value",
+    residual_value: "residual_value",
+    purchase_date: "purchase_date",
+    depreciation_months: "depreciation_months",
+    ownership_percent: "ownership_percent",
+    display_name: "display_name",
+    status: "status",
   });
 
   const RPCS = Object.freeze({
@@ -209,6 +221,7 @@ window.__TB_BUILD = '9.5.0';
 
     // UI mode
     ui_mode: "travelbudget_ui_mode_v1",
+    assets_open: "travelbudget_assets_open_v1",
   });
 
 
@@ -245,6 +258,7 @@ window.__TB_BUILD = '9.5.0';
     segments: "Périodes",
     travels: "Voyages",
     recurring_rules: "Échéances périodiques",
+    assets: "Patrimoine",
   });
 
   // DB schema_version is stored as an integer in public.schema_version.version
