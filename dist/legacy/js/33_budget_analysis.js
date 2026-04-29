@@ -526,6 +526,43 @@ function _analysisBucketOrder(){
       return true;
     });
   }
+  function _baseIncomeTransactions(){
+  const travelId = _getSelectedTravelId();
+  const { start, end } = _analysisRange();
+
+  return (Array.isArray(state?.transactions) ? state.transactions : []).filter(tx => {
+    const txTravelId = String(tx?.travel_id || tx?.travelId || '');
+    if (travelId && txTravelId && txTravelId !== String(travelId)) return false;
+
+    if (_txType(tx) !== 'income') return false;
+
+    const bs = _txBudgetStart(tx);
+    const be = _txBudgetEnd(tx);
+    if (!bs || !be) return false;
+
+    if (start && be < start) return false;
+    if (end && bs > end) return false;
+
+    return true;
+  });
+}
+function _incomeSplit(txs){
+  const real = [];
+  const planned = [];
+
+  txs.forEach(tx => {
+    if (_txPaid(tx)) real.push(tx);
+    else planned.push(tx);
+  });
+
+  return { real, planned };
+}
+function _sumTxArray(txs, base){
+  return txs.reduce((sum, tx) => {
+    const cashDate = _txCashDate(tx);
+    return sum + _convert(tx.amount, tx.currency || base, cashDate, base);
+  }, 0);
+}
   function _filteredTransactions(){
     const scope = _el('analysis-scope')?.value || 'budget';
     const mode = _el('analysis-mode')?.value || 'planned';
@@ -554,6 +591,11 @@ function _analysisBucketOrder(){
     const { start, end } = _analysisRange();
     const cutoffEnd = _analysisCutoffEnd();
     const base = _resolveAnalysisCurrency(start, end);
+    const incomeTxs = _baseIncomeTransactions();
+    const { real: incomeReal, planned: incomePlanned } = _incomeSplit(incomeTxs);
+
+    const incomeRealAmount = _sumTxArray(incomeReal, base);
+    const incomePlannedAmount = _sumTxArray(incomePlanned, base);
     const days = _daysInclusive(start, end);
     const daySet = new Set(days);
     const dailyMap = Object.fromEntries(days.map(d => [d, 0]));
@@ -842,8 +884,27 @@ function _analysisBucketOrder(){
     const nightCoveredAverageSaving = nightCoveredCount > 0 ? (nightCoveredPotentialSavings / nightCoveredCount) : 0;
     const nightCoveredShareOfSpent = nightCoveredTransportSpent > 0 ? (nightCoveredPotentialSavings / nightCoveredTransportSpent) * 100 : 0;
 
-    return { base, start, end, days, txs, spent, paidSpent, totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod, remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay, referenceMiscPerDay, comparablePerDay, unmappedPerDay, excludedPerDay, projection,
-      cumSpent, cumTarget, cumReference, velocity, heat, topCategories, categorySeries, subcategorySeries, referenceCategorySeries, referenceComparisonSeries, unmappedCategorySeries, outAmount, spentToToday, targetToToday, referenceToToday, referenceGap, referenceCoverageDays, referenceContext, comparableDays, comparableIncludedSpent, comparableExcludedSpent, unmappedComparableSpent, nightCoveredCount, nightCoveredPotentialSavings, nightCoveredAverageSaving, nightCoveredTransportSpent, nightCoveredShareOfSpent, nightCoveredRows };
+    return {
+  base, start, end, days, txs, spent, paidSpent,
+  incomeReal: incomeRealAmount,
+  incomePlanned: incomePlannedAmount,
+  expenseReal: paidSpent,
+  expensePlanned: Math.max(0, spent - paidSpent),
+  deltaReal: incomeRealAmount - paidSpent,
+  deltaPlanned: incomePlannedAmount - Math.max(0, spent - paidSpent),
+  deltaProjected: (incomeRealAmount + incomePlannedAmount) - spent,
+  totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod,
+  remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay,
+  referenceMiscPerDay, comparablePerDay, unmappedPerDay, excludedPerDay,
+  projection, cumSpent, cumTarget, cumReference, velocity, heat,
+  topCategories, categorySeries, subcategorySeries, referenceCategorySeries,
+  referenceComparisonSeries, unmappedCategorySeries, outAmount,
+  spentToToday, targetToToday, referenceToToday, referenceGap,
+  referenceCoverageDays, referenceContext, comparableDays,
+  comparableIncludedSpent, comparableExcludedSpent, unmappedComparableSpent,
+  nightCoveredCount, nightCoveredPotentialSavings, nightCoveredAverageSaving,
+  nightCoveredTransportSpent, nightCoveredShareOfSpent, nightCoveredRows
+};
         }
   function _buildReferenceComparisonSeries(actualMap, referenceCategoryMap, comparableDays){
     const map = (actualMap instanceof Map)
@@ -888,26 +949,30 @@ function _analysisBucketOrder(){
       {
         label: 'Voyage',
         value: String(travel?.name || 'Voyage actif'),
-        meta: `${periodText} • ${rangeText}`
+        meta: `${periodText} • ${rangeText}`,
+        accent: 'travel'
       },
       {
         label: 'Lecture',
         value: scopeText,
-        meta: `${modeText} • ${model.days.length} jours analysés`
+        meta: `${modeText} • ${model.days.length} jours analysés`,
+        accent: 'scope'
       },
       {
         label: 'Devise',
         value: model.base,
-        meta: currencyMode === 'account' ? 'Devise pivot du compte' : 'Devise de période / segment'
+        meta: currencyMode === 'account' ? 'Devise pivot du compte' : 'Devise de période / segment',
+        accent: 'currency'
       },
       {
         label: 'Couverture',
         value: `${model.txs.length} dépenses`,
-        meta: model.comparableDays > 0 ? `${model.comparableDays} jours comparables à la référence pays` : 'Référence pays absente sur la plage'
+        meta: model.comparableDays > 0 ? `${model.comparableDays} jours comparables à la référence pays` : 'Référence pays absente sur la plage',
+        accent: 'coverage'
       }
     ];
     host.innerHTML = cards.map((card) => `
-      <div class="analysis-overview-card">
+      <div class="analysis-overview-card analysis-overview-card--${escapeHTML(card.accent)}">
         <div class="analysis-overview-label">${escapeHTML(card.label)}</div>
         <div class="analysis-overview-value">${escapeHTML(card.value)}</div>
         <div class="analysis-overview-meta">${escapeHTML(card.meta)}</div>
@@ -1085,7 +1150,53 @@ function _analysisBucketOrder(){
     host.style.gap = '16px';
     host.style.alignItems = 'stretch';
 
-    host.innerHTML = progressCards.map((c, idx) => renderGlassCard(c, idx)).join('') + renderDeltaCard(progressCards.length);
+    const cashflowBlock = `
+  <div class="analysis-stat analysis-stat--cashflow" style="grid-column:1 / -1; padding:18px; border-radius:24px; border:1px solid rgba(255,255,255,.68); background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.88)); box-shadow:0 14px 34px rgba(148,163,184,.16), inset 0 1px 0 rgba(255,255,255,.84);">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px;">
+      <div>
+        <div class="analysis-stat-label" style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:rgba(15,23,42,.72);">Cashflow</div>
+        <div class="analysis-stat-meta" style="margin-top:4px;font-size:12px;color:rgba(15,23,42,.58);">Entrées, sorties et delta sur le même filtre d’analyse.</div>
+      </div>
+      <div style="font-size:12px;font-weight:800;color:rgba(15,23,42,.60);">${escapeHTML(model.base)}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+      <div style="padding:12px 14px;border-radius:16px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.18);">
+        <div style="font-size:12px;color:rgba(15,23,42,.58);">Entrées reçues</div>
+        <div style="font-size:22px;font-weight:800;color:${escapeHTML(_themeGood())};">${escapeHTML(_fmtMoney(model.incomeReal, model.base))}</div>
+      </div>
+      <div style="padding:12px 14px;border-radius:16px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.14);">
+        <div style="font-size:12px;color:rgba(15,23,42,.58);">Entrées prévues</div>
+        <div style="font-size:22px;font-weight:800;color:${escapeHTML(_themeGood())};">${escapeHTML(_fmtMoney(model.incomePlanned, model.base))}</div>
+      </div>
+      <div style="padding:12px 14px;border-radius:16px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.16);">
+        <div style="font-size:12px;color:rgba(15,23,42,.58);">Sorties payées</div>
+        <div style="font-size:22px;font-weight:800;color:${escapeHTML(_themeBad())};">${escapeHTML(_fmtMoney(model.expenseReal, model.base))}</div>
+      </div>
+      <div style="padding:12px 14px;border-radius:16px;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.12);">
+        <div style="font-size:12px;color:rgba(15,23,42,.58);">Sorties prévues</div>
+        <div style="font-size:22px;font-weight:800;color:${escapeHTML(_themeBad())};">${escapeHTML(_fmtMoney(model.expensePlanned, model.base))}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px;">
+      <div style="padding:12px 14px;border-radius:16px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18);">
+        <div style="font-size:12px;color:rgba(15,23,42,.58);">Delta réel</div>
+        <div style="font-size:24px;font-weight:900;color:${escapeHTML(model.deltaReal >= 0 ? _themeGood() : _themeBad())};">${escapeHTML(_fmtMoney(model.deltaReal, model.base))}</div>
+      </div>
+      <div style="padding:12px 14px;border-radius:16px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18);">
+        <div style="font-size:12px;color:rgba(15,23,42,.58);">Delta engagé</div>
+        <div style="font-size:24px;font-weight:900;color:${escapeHTML(model.deltaPlanned >= 0 ? _themeGood() : _themeBad())};">${escapeHTML(_fmtMoney(model.deltaPlanned, model.base))}</div>
+      </div>
+      <div style="padding:12px 14px;border-radius:16px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18);">
+        <div style="font-size:12px;color:rgba(15,23,42,.58);">Delta projeté</div>
+        <div style="font-size:24px;font-weight:900;color:${escapeHTML(model.deltaProjected >= 0 ? _themeGood() : _themeBad())};">${escapeHTML(_fmtMoney(model.deltaProjected, model.base))}</div>
+      </div>
+    </div>
+  </div>
+`;
+
+host.innerHTML = progressCards.map((c, idx) => renderGlassCard(c, idx)).join('') + renderDeltaCard(progressCards.length) + cashflowBlock;
   }
 
   function _themeText(){ return getComputedStyle(document.body).getPropertyValue('--text').trim() || '#e5e7eb'; }

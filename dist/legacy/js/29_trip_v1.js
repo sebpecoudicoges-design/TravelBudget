@@ -320,6 +320,8 @@ function toastOk(msg) {
         if (picked) return picked;
       }
     } catch (_) {}
+    const expenseCategory = String(expense?.category || '').trim();
+    if (expenseCategory && !/^mouvement interne$/i.test(expenseCategory)) return expenseCategory;
     return 'Autre';
   }
 
@@ -420,23 +422,25 @@ function toastOk(msg) {
     const totalCat = categories.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const maxCat = Math.max(1, ...categories.map(x => Number(x.amount) || 0));
     const maxParticipant = Math.max(1, ...participants.map(x => Math.max(Math.abs(Number(x.net) || 0), Number(x.paid) || 0, Number(x.owed) || 0)));
+    const topCategory = categories[0] || null;
+    const highestAdvance = [...participants].sort((a,b) => (Number(b.net)||0) - (Number(a.net)||0))[0] || null;
+    const highestDebt = [...participants].sort((a,b) => (Number(a.net)||0) - (Number(b.net)||0))[0] || null;
+    const settledParticipants = participants.filter((row) => Math.abs(Number(row.net) || 0) < 0.01).length;
 
     const catHTML = categories.length
       ? categories.map((row) => {
           const pct = totalCat > 0 ? ((Number(row.amount) || 0) / totalCat) * 100 : 0;
           const width = Math.max(8, Math.min(100, ((Number(row.amount) || 0) / maxCat) * 100));
           return `
-            <div style="display:grid; gap:6px; padding:10px 0; border-bottom:1px solid rgba(148,163,184,.16);">
-              <div style="display:flex; justify-content:space-between; gap:12px; align-items:center;">
-                <strong style="min-width:0;">${escapeHTML(row.name)}</strong>
-                <div style="text-align:right; white-space:nowrap;">
+            <div class="trip-analysis-row">
+              <div class="trip-analysis-row-head">
+                <strong class="trip-analysis-row-title">${escapeHTML(row.name)}</strong>
+                <div class="trip-analysis-row-values">
                   <strong>${escapeHTML(_fmtMoney(row.amount, pivot))}</strong>
                   <div class="muted" style="font-size:12px;">${pct.toFixed(1)}%</div>
                 </div>
               </div>
-              <div style="height:10px; border-radius:999px; background:rgba(148,163,184,.14); overflow:hidden;">
-                <div style="height:100%; width:${width.toFixed(1)}%; border-radius:999px; background:linear-gradient(90deg, rgba(37,99,235,.96), rgba(168,85,247,.92));"></div>
-              </div>
+              <div class="trip-analysis-meter"><span style="width:${width.toFixed(1)}%;"></span></div>
             </div>`;
         }).join('')
       : `<div class="muted">Aucune dépense exploitable pour l’analyse catégorie.</div>`;
@@ -448,48 +452,72 @@ function toastOk(msg) {
           const widthPaid = Math.max(6, Math.min(100, ((Number(row.paid) || 0) / maxParticipant) * 100));
           const widthOwed = Math.max(6, Math.min(100, ((Number(row.owed) || 0) / maxParticipant) * 100));
           return `
-            <div style="display:grid; gap:8px; padding:12px 0; border-bottom:1px solid rgba(148,163,184,.16);">
-              <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+            <div class="trip-analysis-row">
+              <div class="trip-analysis-row-head">
                 <div>
-                  <strong>${escapeHTML(row.name)}${row.isMe ? ' (moi)' : ''}</strong>
+                  <strong class="trip-analysis-row-title">${escapeHTML(row.name)}${row.isMe ? ' (moi)' : ''}</strong>
                   <div class="muted" style="font-size:12px;">${row.expenseCount || 0} dépense(s) payée(s)</div>
                 </div>
-                <div style="text-align:right; white-space:nowrap;">
+                <div class="trip-analysis-row-values">
                   <strong style="color:${tone};">${escapeHTML(_fmtMoney(net, pivot))}</strong>
                   <div class="muted" style="font-size:12px;">Net = payé - part due</div>
                 </div>
               </div>
               <div style="display:grid; gap:6px;">
                 <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;"><span class="muted">Payé</span><span>${escapeHTML(_fmtMoney(row.paid, pivot))}</span></div>
-                <div style="height:8px; border-radius:999px; background:rgba(148,163,184,.14); overflow:hidden;"><div style="height:100%; width:${widthPaid.toFixed(1)}%; border-radius:999px; background:linear-gradient(90deg, rgba(16,185,129,.95), rgba(34,197,94,.88));"></div></div>
+                <div class="trip-analysis-meter trip-analysis-meter--paid"><span style="width:${widthPaid.toFixed(1)}%;"></span></div>
                 <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;"><span class="muted">Part due</span><span>${escapeHTML(_fmtMoney(row.owed, pivot))}</span></div>
-                <div style="height:8px; border-radius:999px; background:rgba(148,163,184,.14); overflow:hidden;"><div style="height:100%; width:${widthOwed.toFixed(1)}%; border-radius:999px; background:linear-gradient(90deg, rgba(239,68,68,.95), rgba(249,115,22,.88));"></div></div>
+                <div class="trip-analysis-meter trip-analysis-meter--owed"><span style="width:${widthOwed.toFixed(1)}%;"></span></div>
               </div>
             </div>`;
         }).join('')
       : `<div class="muted">Aucune donnée exploitable pour l’analyse participant.</div>`;
 
     return `
-      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; align-items:start;">
-        <div class="card" style="margin:0; border-radius:22px; border:1px solid rgba(148,163,184,.16); background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.62)); box-shadow:0 12px 30px rgba(15,23,42,.06);">
-          <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:8px;">
-            <div>
-              <h3 style="margin:0;">Analyse catégorie</h3>
-              <div class="muted" style="font-size:12px;">Lecture du trip en devise pivot du compte.</div>
-            </div>
-            <div class="pill">${escapeHTML(pivot)}</div>
+      <div class="trip-analysis-shell">
+        <div class="trip-analysis-summary">
+          <div class="trip-analysis-kpi">
+            <span>Total du trip</span>
+            <strong>${escapeHTML(_fmtMoney(totalCat, pivot))}</strong>
+            <small>${categories.length} catégorie(s) · ${participants.length} participant(s)</small>
           </div>
-          ${catHTML}
+          <div class="trip-analysis-kpi">
+            <span>Catégorie dominante</span>
+            <strong>${escapeHTML(topCategory?.name || '—')}</strong>
+            <small>${topCategory ? escapeHTML(_fmtMoney(topCategory.amount, pivot)) : 'Aucune donnée'}</small>
+          </div>
+          <div class="trip-analysis-kpi">
+            <span>Avance la plus forte</span>
+            <strong>${escapeHTML(highestAdvance?.name || '—')}</strong>
+            <small>${highestAdvance ? escapeHTML(_fmtMoney(highestAdvance.net, pivot)) : 'Aucune donnée'}</small>
+          </div>
+          <div class="trip-analysis-kpi">
+            <span>Équilibre</span>
+            <strong>${settledParticipants}/${participants.length || 0}</strong>
+            <small>${highestDebt ? `${escapeHTML(highestDebt.name)} doit ${escapeHTML(_fmtMoney(Math.abs(highestDebt.net || 0), pivot))}` : 'Aucun écart notable'}</small>
+          </div>
         </div>
-        <div class="card" style="margin:0; border-radius:22px; border:1px solid rgba(148,163,184,.16); background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.62)); box-shadow:0 12px 30px rgba(15,23,42,.06);">
-          <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:8px;">
-            <div>
-              <h3 style="margin:0;">Analyse participant</h3>
-              <div class="muted" style="font-size:12px;">Qui paie, qui consomme, qui avance.</div>
+        <div class="trip-analysis-grid">
+          <div class="trip-analysis-card">
+            <div class="trip-analysis-card-head">
+              <div>
+                <h3 style="margin:0;">Analyse catégorie</h3>
+                <div class="muted" style="font-size:12px;">Lecture du trip en devise pivot du compte.</div>
+              </div>
+              <div class="pill">${escapeHTML(pivot)}</div>
             </div>
-            <div class="pill">Pivot ${escapeHTML(pivot)}</div>
+            ${catHTML}
           </div>
-          ${participantHTML}
+          <div class="trip-analysis-card">
+            <div class="trip-analysis-card-head">
+              <div>
+                <h3 style="margin:0;">Analyse participant</h3>
+                <div class="muted" style="font-size:12px;">Qui paie, qui consomme, qui avance.</div>
+              </div>
+              <div class="pill">Pivot ${escapeHTML(pivot)}</div>
+            </div>
+            ${participantHTML}
+          </div>
         </div>
       </div>`;
   }
@@ -972,6 +1000,10 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
       amount: Number(x.amount),
       currency: x.currency,
       paidByMemberId: x.paid_by_member_id,
+      category: x.category || null,
+      subcategory: x.subcategory || null,
+      budgetDateStart: x.budget_date_start || x.date || null,
+      budgetDateEnd: x.budget_date_end || x.budget_date_start || x.date || null,
       transactionId: x.transaction_id || null,
       createdAt: x.created_at,
     }));
@@ -1457,7 +1489,7 @@ async function _fetchExpenseAuditDetails(expenseId) {
     try {
       const { data, error } = await sb
         .from(TB_CONST.TABLES.transactions)
-        .select("id,wallet_id,type,amount,currency,category,label,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,affects_budget,is_internal,created_at")
+        .select("id,wallet_id,type,amount,currency,category,subcategory,label,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,affects_budget,is_internal,created_at")
         .in("id", Array.from(txIds));
       if (!error && Array.isArray(data)) {
         for (const row of data) {
@@ -1468,6 +1500,7 @@ async function _fetchExpenseAuditDetails(expenseId) {
             amount: Number(row.amount || 0),
             currency: row.currency || null,
             category: row.category || null,
+            subcategory: row.subcategory || null,
             label: row.label || null,
             dateStart: row.date_start || null,
             dateEnd: row.date_end || null,
@@ -1490,6 +1523,37 @@ async function _fetchExpenseAuditDetails(expenseId) {
 
 function _walletNameById(walletId) {
   return (state.wallets || []).find(w => w.id === walletId)?.name || null;
+}
+
+function _tripExpenseSubcategoryOptionsHtml(categoryName, selectedValue) {
+  const category = String(categoryName || '').trim();
+  if (!category) return '<option value="">Aucune</option>';
+  const rows = (typeof getCategorySubcategories === 'function') ? getCategorySubcategories(category) : [];
+  const selected = String(selectedValue || '').trim();
+  const options = ['<option value="">Aucune</option>'];
+  for (const row of rows) {
+    const name = String(row?.name || '').trim();
+    if (!name) continue;
+    const sel = name === selected ? ' selected' : '';
+    options.push(`<option value="${escapeHTML(name)}"${sel}>${escapeHTML(name)}</option>`);
+  }
+  if (selected && !rows.some((row) => String(row?.name || '').trim().toLowerCase() === selected.toLowerCase())) {
+    options.push(`<option value="${escapeHTML(selected)}" selected>${escapeHTML(selected)}</option>`);
+  }
+  return options.join('');
+}
+
+function _tripBindExpenseSubcategoryUi(initialValue) {
+  const categoryEl = _el('trip-exp-category');
+  const subcategoryEl = _el('trip-exp-subcategory');
+  if (!categoryEl || !subcategoryEl) return;
+  const render = (selectedValue) => {
+    subcategoryEl.innerHTML = _tripExpenseSubcategoryOptionsHtml(categoryEl.value, selectedValue);
+    subcategoryEl.disabled = !String(categoryEl.value || '').trim();
+    subcategoryEl.value = selectedValue || '';
+  };
+  render(initialValue || '');
+  categoryEl.onchange = () => render('');
 }
 
 function _yesNoPill(v) {
@@ -2087,8 +2151,11 @@ try {
     shares.forEach(s => { amounts[s.memberId] = Number(s.shareAmount || 0); });
 
     let walletId = "";
-    let category = "Autre";
+    let category = ex.category || "Autre";
+    let subcategory = ex.subcategory || "";
     let outOfBudget = false;
+    let budgetDateStart = ex.budgetDateStart || ex.date || _isoToday();
+    let budgetDateEnd = ex.budgetDateEnd || budgetDateStart || ex.date || _isoToday();
     try {
       const audit = await _fetchExpenseAuditDetails(expenseId);
       const tx = (audit?.myShareLink ? audit.budgetTransactionsById.get(audit.myShareLink.transactionId) : null)
@@ -2097,7 +2164,10 @@ try {
       if (tx) {
         walletId = tx.walletId || "";
         category = tx.category || category;
+        subcategory = tx.subcategory || subcategory;
         outOfBudget = tx.outOfBudget === true;
+        budgetDateStart = tx.budgetDateStart || budgetDateStart;
+        budgetDateEnd = tx.budgetDateEnd || budgetDateEnd;
       }
     } catch (_) {}
 
@@ -2110,6 +2180,9 @@ try {
       paidByMemberId: ex.paidByMemberId || "",
       walletId,
       category,
+      subcategory,
+      budgetDateStart,
+      budgetDateEnd,
       outOfBudget,
       split: {
         mode: "amount",
@@ -2235,7 +2308,7 @@ try {
     }
   }
 
-  async function _integrateExpenseBudgetSideEffects({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
+  async function _integrateExpenseBudgetSideEffects({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
     const uid = await _ensureSession();
     const members = tripState.members || [];
     const memberIds = members.map(m => m.id);
@@ -2243,6 +2316,9 @@ try {
     const cur = _normalizeCurrency(currency);
     const cat = (category || "Autre");
     const out = !!outOfBudget;
+    const subcat = String(subcategory || "").trim() || null;
+    const budgetStart = budgetDateStart || date;
+    const budgetEnd = budgetDateEnd || budgetStart || date;
     const payer = members.find(m => m.id === paidByMemberId) || null;
     const paidByMe = !!payer?.isMe;
     const parts = _computeSplitParts(amt, members, split);
@@ -2279,8 +2355,10 @@ try {
           p_currency: cur,
           p_date_start: date,
           p_date_end: date,
+          p_budget_date_start: budgetStart,
+          p_budget_date_end: budgetEnd,
           p_category: cat,
-          p_subcategory: null,
+          p_subcategory: subcat,
           p_pay_now: true,
           p_out_of_budget: out,
           p_night_covered: false,
@@ -2341,8 +2419,10 @@ try {
           p_currency: cur,
           p_date_start: date,
           p_date_end: date,
+          p_budget_date_start: budgetStart,
+          p_budget_date_end: budgetEnd,
           p_category: cat,
-          p_subcategory: null,
+          p_subcategory: subcat,
           p_pay_now: true,
           p_out_of_budget: true,
           p_night_covered: false,
@@ -2400,8 +2480,10 @@ try {
             p_currency: cur,
             p_date_start: date,
             p_date_end: date,
+            p_budget_date_start: budgetStart,
+            p_budget_date_end: budgetEnd,
             p_category: cat,
-            p_subcategory: null,
+            p_subcategory: subcat,
             p_pay_now: false,
             p_out_of_budget: out,
             p_night_covered: false,
@@ -2478,8 +2560,10 @@ try {
               p_currency: cur,
               p_date_start: date,
               p_date_end: date,
+              p_budget_date_start: budgetStart,
+              p_budget_date_end: budgetEnd,
               p_category: cat,
-              p_subcategory: null,
+              p_subcategory: subcat,
               p_pay_now: false,
               p_out_of_budget: out,
               p_night_covered: false,
@@ -2531,7 +2615,7 @@ try {
     }
   }
 
-  async function _updateExpense({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
+  async function _updateExpense({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
     await _ensureSession();
     const tripId = tripState.activeTripId;
     if (!tripId || !expenseId) throw new Error("Édition invalide.");
@@ -2559,6 +2643,10 @@ try {
       amount: amt,
       currency: cur,
       paid_by_member_id: paidByMemberId,
+      category: category || 'Autre',
+      subcategory: String(subcategory || '').trim() || null,
+      budget_date_start: budgetDateStart || date,
+      budget_date_end: budgetDateEnd || budgetDateStart || date,
       shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
       wallet_tx: { enabled: false },
     };
@@ -2568,41 +2656,45 @@ try {
     const updatedExpenseId = (Array.isArray(rpcRows) ? rpcRows[0]?.expense_id : rpcRows?.expense_id) || null;
     if (!updatedExpenseId) throw new Error("Trip: RPC trip_apply_expense_v2 n'a pas renvoyé expense_id.");
 
-    await _integrateExpenseBudgetSideEffects({ expenseId: updatedExpenseId, date, label, amount: amt, currency: cur, paidByMemberId, walletId, category, outOfBudget, split });
+    await _integrateExpenseBudgetSideEffects({ expenseId: updatedExpenseId, date, label, amount: amt, currency: cur, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split });
 
     tripState.editingExpenseId = null;
     tripState.editingExpenseDraft = null;
     return updatedExpenseId;
   }
 
-  async function _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split }) {
-    const uid = await _ensureSession();
-    const tripId = tripState.activeTripId;
-    if (!tripId) return;
+  async function _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
+  const uid = await _ensureSession();
+  const tripId = tripState.activeTripId;
+  if (!tripId) return;
 
-    const members = tripState.members;
-    if (!members.length) throw new Error("Ajoute au moins un participant.");
+  const members = tripState.members;
+  if (!members.length) throw new Error("Ajoute au moins un participant.");
 
-    const amt = Number(amount);
-    if (!date || !label || !isFinite(amt) || amt <= 0) throw new Error("Date, libellé et montant (>0) requis.");
-    if (!paidByMemberId) throw new Error("Sélectionne qui a payé.");
+  const amt = Number(amount);
+  if (!date || !isFinite(amt) || amt <= 0) throw new Error("Date et montant (>0) requis.");
+  if (!paidByMemberId) throw new Error("Sélectionne qui a payé.");
 
-    const cur = _normalizeCurrency(currency);
-    const payer = members.find(m => m.id === paidByMemberId) || null;
-    const paidByMe = !!payer?.isMe;
+  const cur = _normalizeCurrency(currency);
+  const payer = members.find(m => m.id === paidByMemberId) || null;
+  const paidByMe = !!payer?.isMe;
 
-    // If paid by me, ensure we can record it into the Budget system (wallet + category).
-    const cat = (category || "Autre");
-    const out = !!outOfBudget;
+  // If paid by me, ensure we can record it into the Budget system (wallet + category).
+  const cat = (category || "Autre");
+  const subcat = String(subcategory || "").trim() || null;
+  const out = !!outOfBudget;
+  const budgetStart = budgetDateStart || date;
+  const budgetEnd = budgetDateEnd || budgetStart || date;
 
-    if (paidByMe) {
-      if (!walletId) throw new Error("Choisis une wallet (pour décompter le paiement).");
-      const w = findWallet(walletId);
-      if (!w) throw new Error("Wallet invalide.");
-      if (String(w.currency || "").toUpperCase() !== cur) {
-        throw new Error(`Devise wallet (${w.currency}) différente de la dépense (${cur}). Choisis une wallet dans la même devise (conversion FX non implémentée).`);
-      }
+  if (paidByMe) {
+    if (!walletId) throw new Error("Choisis une wallet (pour décompter le paiement).");
+    const w = findWallet(walletId);
+    if (!w) throw new Error("Wallet invalide.");
+    if (String(w.currency || "").toUpperCase() !== cur) {
+      throw new Error(`Devise wallet (${w.currency}) différente de la dépense (${cur}). Choisis une wallet dans la même devise (conversion FX non implémentée).`);
+    }
 
+    // Duplicate control: if a matching Budget transaction exists, propose linking instead of creating a new one.
       // Duplicate control: if a matching Budget transaction exists, propose linking instead of creating a new one.
       try {
         const matches = await _findMatchingTransactions({ date, amount: amt, currency: cur });
@@ -2626,6 +2718,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
               amount: amt,
               currency: cur,
               paid_by_member_id: paidByMemberId,
+              category: cat,
+              subcategory: String(subcategory || '').trim() || null,
+              budget_date_start: budgetDateStart || date,
+              budget_date_end: budgetDateEnd || budgetDateStart || date,
               shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
             };
 
@@ -2695,8 +2791,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                       p_currency: cur,
                       p_date_start: date,
                       p_date_end: date,
+                      p_budget_date_start: budgetStart,
+                      p_budget_date_end: budgetEnd,
                       p_category: cat,
-                      p_subcategory: null,
+                      p_subcategory: subcat,
                       p_pay_now: false,
                       p_out_of_budget: out,
                       p_night_covered: false,
@@ -2776,6 +2874,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       amount: amt,
       currency: cur,
       paid_by_member_id: paidByMemberId,
+      category: cat,
+      subcategory: String(subcategory || '').trim() || null,
+      budget_date_start: budgetDateStart || date,
+      budget_date_end: budgetDateEnd || budgetDateStart || date,
       shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
       wallet_tx: { enabled: false },
     };
@@ -2819,8 +2921,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           p_currency: cur,
           p_date_start: date,
           p_date_end: date,
+          p_budget_date_start: budgetStart,
+          p_budget_date_end: budgetEnd,
           p_category: cat,
-          p_subcategory: null,
+          p_subcategory: subcat,
           p_pay_now: true,
           p_out_of_budget: out,
           p_night_covered: false,
@@ -2908,8 +3012,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           p_currency: cur,
           p_date_start: date,
           p_date_end: date,
+          p_budget_date_start: budgetStart,
+          p_budget_date_end: budgetEnd,
           p_category: cat,
-          p_subcategory: null,
+          p_subcategory: subcat,
           p_pay_now: true,
           p_out_of_budget: true,
           p_night_covered: false,
@@ -2973,8 +3079,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
               p_currency: cur,
               p_date_start: date,
               p_date_end: date,
+              p_budget_date_start: budgetStart,
+              p_budget_date_end: budgetEnd,
               p_category: cat,
-              p_subcategory: null,
+              p_subcategory: subcat,
               p_pay_now: false,
               p_out_of_budget: out,
               p_night_covered: false,
@@ -3060,8 +3168,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
                 p_currency: cur,
                 p_date_start: date,
                 p_date_end: date,
+                p_budget_date_start: budgetStart,
+                p_budget_date_end: budgetEnd,
                 p_category: cat,
-                p_subcategory: null,
+                p_subcategory: subcat,
                 p_pay_now: false,
                 p_out_of_budget: out,
                 p_night_covered: false,
@@ -3231,10 +3341,6 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       : ``;
     const body = `
       <div class="row">
-        <div class="field">
-          <label>Date</label>
-          <input id="trip-exp-date" type="date" value="${escapeHTML(editingDraft?.date || toLocalISODate(new Date()))}" />
-        </div>
         <div class="field" style="min-width:220px;">
           <label>Payé par</label>
           <select id="trip-exp-paidby">${memberOptions}</select>
@@ -3253,6 +3359,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           <select id="trip-exp-category">
             ${categoryOptions}
           </select>
+        </div>
+        <div class="field" style="min-width:220px;">
+          <label>Sous-catégorie</label>
+          <select id="trip-exp-subcategory"></select>
         </div>
         <div class="field" style="min-width:180px;">
           <label>Hors budget</label>
@@ -3277,6 +3387,20 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
             ${_tripCurrencyOptionsHTML(editingDraft?.currency || trip?.base_currency || state?.period?.baseCurrency || "THB")}
           </select>
           <div id="trip-exp-currency-help" class="muted" style="font-size:12px; margin-top:4px;"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Date dépense (cash)</label>
+          <input id="trip-exp-date" type="date" value="${escapeHTML(editingDraft?.date || toLocalISODate(new Date()))}" />
+        </div>
+        <div class="field">
+          <label>Budget start</label>
+          <input id="trip-exp-budget-start" type="date" value="${escapeHTML(editingDraft?.budgetDateStart || editingDraft?.date || toLocalISODate(new Date()))}" />
+        </div>
+        <div class="field">
+          <label>Budget end</label>
+          <input id="trip-exp-budget-end" type="date" value="${escapeHTML(editingDraft?.budgetDateEnd || editingDraft?.budgetDateStart || editingDraft?.date || toLocalISODate(new Date()))}" />
         </div>
       </div>
       <div class="row" style="align-items:flex-end; gap:12px; margin-top:6px;">
@@ -3540,17 +3664,22 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           const isLinked = await _expenseIsEditLocked(ex);
           const linkedLabel = isLinked ? " • lié au budget/wallet" : (ex.transactionId ? " • lié au budget" : "");
           const resolvedCategory = _tripAnalysisCategoryKey(ex, tripTxMap);
+          const resolvedSubcategory = String(ex.subcategory || '').trim();
+          const budgetWindowLabel = (ex.budgetDateStart || ex.budgetDateEnd)
+            ? ` • budget ${escapeHTML(ex.budgetDateStart || ex.date || '—')} → ${escapeHTML(ex.budgetDateEnd || ex.budgetDateStart || ex.date || '—')}`
+            : '';
           const shareRows = sharesByExpenseForHistory.get(ex.id) || [];
           const participantNames = shareRows.map((row) => membersById.get(String(row.memberId))?.name).filter(Boolean);
           const participantLabel = participantNames.length ? ` • participants: ${escapeHTML(participantNames.join(', '))}` : '';
           const editBtn = `<button class="btn" type="button" data-edit-exp="${ex.id}" title="${isLinked ? "Édition complète (wallet/budget inclus)" : "Modifier"}">Modifier</button>`;
 return `
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.04); gap:12px;">
-              <div style="min-width:0;">
-                <div style="font-weight:700; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">${escapeHTML(ex.label)}<span style="font-size:12px; padding:2px 8px; border-radius:999px; background:rgba(15,23,42,.06); border:1px solid rgba(15,23,42,.08); color:#334155;">${escapeHTML(resolvedCategory || 'Autre')}</span></div>
-                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${linkedLabel}${participantLabel}</div>
+            <div class="trip-history-row">
+              <div class="trip-history-copy">
+                <div class="trip-history-title">${escapeHTML(ex.label)}<span class="trip-badge">${escapeHTML(resolvedCategory || 'Autre')}</span>${resolvedSubcategory ? `<span class="trip-badge">${escapeHTML(resolvedSubcategory)}</span>` : ''}</div>
+                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${linkedLabel}${budgetWindowLabel}</div>
+                ${participantNames.length ? `<div class="trip-history-participants">${participantNames.map((name) => `<span class="trip-participant-pill">${escapeHTML(name)}</span>`).join('')}</div>` : ''}
               </div>
-              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+              <div class="trip-history-actions">
                 <strong>${_fmtMoney(ex.amount, ex.currency)}</strong>
                 ${moveUI}
                 <button class="btn" type="button" data-exp-detail="${ex.id}">Détail</button>
@@ -3632,9 +3761,9 @@ return `
       <div class="card" style="margin-top:12px;">
         <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
           <h2 style="margin:0;">Récap / Historique</h2>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <button class="btn" id="trip-tab-recap" type="button">Récap</button>
-            <button class="btn" id="trip-tab-history" type="button" style="background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);">Historique</button>
+          <div class="trip-tabs">
+            <button class="btn primary" id="trip-tab-recap" type="button">Récap</button>
+            <button class="btn trip-tab-btn" id="trip-tab-history" type="button">Historique</button>
           </div>
         </div>
 
@@ -3652,9 +3781,9 @@ return `
         </div>
 
         <div id="trip-tab-content-history" style="margin-top:10px; display:none;">
-          <div class="card" style="margin:0 0 12px 0; border-radius:18px; border:1px solid rgba(148,163,184,.16); background:linear-gradient(180deg, rgba(255,255,255,.84), rgba(255,255,255,.68));">
-            <div class="muted" style="margin-bottom:10px; font-size:12px;">Filtres d'audit du trip actif. Ils ne portent que sur l'historique du partage sélectionné.</div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px;">
+          <div class="card trip-history-toolbar">
+            <div class="muted trip-history-toolbar-copy">Filtres d'audit du trip actif. Ils ne portent que sur l'historique du partage sélectionné.</div>
+            <div class="trip-filter-grid">
               <div class="field"><label>Catégorie</label><select id="trip-hist-category"><option value="">Toutes</option>${historyCategoryOptions.map((cat) => `<option value="${escapeHTML(cat)}" ${historyFilters.category === cat ? 'selected' : ''}>${escapeHTML(cat)}</option>`).join('')}</select></div>
               <div class="field"><label>Payeur</label><select id="trip-hist-payer"><option value="">Tous</option>${members.map((m) => `<option value="${m.id}" ${historyFilters.payer === String(m.id) ? 'selected' : ''}>${escapeHTML(m.name)}</option>`).join('')}</select></div>
               <div class="field"><label>Participant</label><select id="trip-hist-participant"><option value="">Tous</option>${members.map((m) => `<option value="${m.id}" ${historyFilters.participant === String(m.id) ? 'selected' : ''}>${escapeHTML(m.name)}</option>`).join('')}</select></div>
@@ -3685,10 +3814,17 @@ return `
       if (walletSelInit && editingDraft.walletId) walletSelInit.value = editingDraft.walletId;
       const catSelInit = _el("trip-exp-category");
       if (catSelInit && editingDraft.category) catSelInit.value = editingDraft.category;
+      _tripBindExpenseSubcategoryUi(editingDraft.subcategory || '');
+      const budgetStartInit = _el("trip-exp-budget-start");
+      const budgetEndInit = _el("trip-exp-budget-end");
+      if (budgetStartInit && editingDraft.budgetDateStart) budgetStartInit.value = editingDraft.budgetDateStart;
+      if (budgetEndInit && editingDraft.budgetDateEnd) budgetEndInit.value = editingDraft.budgetDateEnd;
       const outSelInit = _el("trip-exp-out");
       if (outSelInit) outSelInit.value = editingDraft.outOfBudget ? "yes" : "no";
       const splitModeInit = _el("trip-split-mode");
       if (splitModeInit && editingDraft.split?.mode) splitModeInit.value = editingDraft.split.mode;
+    } else {
+      _tripBindExpenseSubcategoryUi('');
     }
 
     const sel = _el("trip-active");
@@ -3716,13 +3852,13 @@ return `
       // simple visual state
       if (btnTabRecap) {
         btnTabRecap.classList.toggle("primary", t === "recap");
-        if (t === "recap") btnTabRecap.style.cssText = "";
-        else btnTabRecap.style.cssText = "background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);";
+        btnTabRecap.classList.toggle("trip-tab-btn", t !== "recap");
+        btnTabRecap.style.cssText = "";
       }
       if (btnTabHist) {
         btnTabHist.classList.toggle("primary", t === "history");
-        if (t === "history") btnTabHist.style.cssText = "";
-        else btnTabHist.style.cssText = "background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);";
+        btnTabHist.classList.toggle("trip-tab-btn", t !== "history");
+        btnTabHist.style.cssText = "";
       }
     }
 
@@ -3981,48 +4117,81 @@ toastOk("Participant ajouté.");
     const btnAddExp = _el("trip-add-exp");
     if (btnAddExp) {
       btnAddExp.onclick = async () => {
-        try {
-          btnAddExp.disabled = true;
+  try {
+    btnAddExp.disabled = true;
 
-          const date = _el("trip-exp-date").value;
-          const label = _el("trip-exp-label").value.trim();
-          const amount = _el("trip-exp-amount").value;
-          const currency = _tripResolveExpenseCurrency();
-          const paidByMemberId = _el("trip-exp-paidby").value;
-          const walletId = _el("trip-exp-wallet")?.value || "";
-          const category = _el("trip-exp-category")?.value || "Autre";
-          const outOfBudget = (_el("trip-exp-out")?.value || "no") === "yes";
-          const split = (() => {
-            const mode = (_el("trip-split-mode")?.value || "equal");
-            const members = (tripState.members || []);
-            const percents = {};
-            const amounts = {};
-            if (mode === "percent") {
-              members.forEach(m => {
-                const v = _el(`trip-split-pct-${m.id}`)?.value;
-                if (v !== undefined) percents[m.id] = v;
-              });
-            } else if (mode === "amount") {
-              members.forEach(m => {
-                const v = _el(`trip-split-amt-${m.id}`)?.value;
-                if (v !== undefined) amounts[m.id] = v;
-              });
-            }
-            return { mode, percents, amounts };
-          })();
-          if (editingExpenseId) {
-            const updatedExpenseId = await _updateExpense({ expenseId: editingExpenseId, date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
-            await _refreshAfterTripMutation("trip:update_expense", { expectExpenseId: updatedExpenseId || editingExpenseId });
-            toastOk("Dépense modifiée.");
-          } else {
-            const createdExpenseId = await _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, outOfBudget, split });
-            await _refreshAfterTripMutation("trip:add_expense", { expectExpenseId: createdExpenseId });
-            toastOk("Dépense ajoutée.");
-          }
-        } catch (e) {
-          toastWarn(e?.message || String(e));
-        }
-      };
+    const date = _el("trip-exp-date").value;
+    const label = _el("trip-exp-label").value.trim();
+    const amount = _el("trip-exp-amount").value;
+    const currency = _tripResolveExpenseCurrency();
+    const paidByMemberId = _el("trip-exp-paidby").value;
+    const walletId = _el("trip-exp-wallet")?.value || "";
+    const category = _el("trip-exp-category")?.value || "Autre";
+    const subcategory = String(_el("trip-exp-subcategory")?.value || '').trim() || '';
+    const budgetDateStart = _el("trip-exp-budget-start")?.value || date;
+    const budgetDateEnd = _el("trip-exp-budget-end")?.value || budgetDateStart || date;
+    const outOfBudget = (_el("trip-exp-out")?.value || "no") === "yes";
+    const split = (() => {
+      const mode = (_el("trip-split-mode")?.value || "equal");
+      const members = (tripState.members || []);
+      const percents = {};
+      const amounts = {};
+      if (mode === "percent") {
+        members.forEach(m => {
+          const v = _el(`trip-split-pct-${m.id}`)?.value;
+          if (v !== undefined) percents[m.id] = v;
+        });
+      } else if (mode === "amount") {
+        members.forEach(m => {
+          const v = _el(`trip-split-amt-${m.id}`)?.value;
+          if (v !== undefined) amounts[m.id] = v;
+        });
+      }
+      return { mode, percents, amounts };
+    })();
+
+    if (editingExpenseId) {
+      const updatedExpenseId = await _updateExpense({
+        expenseId: editingExpenseId,
+        date,
+        label,
+        amount,
+        currency,
+        paidByMemberId,
+        walletId,
+        category,
+        subcategory,
+        budgetDateStart,
+        budgetDateEnd,
+        outOfBudget,
+        split
+      });
+      await _refreshAfterTripMutation("trip:update_expense", { expectExpenseId: updatedExpenseId || editingExpenseId });
+      toastOk("Dépense modifiée.");
+    } else {
+      const createdExpenseId = await _addExpense({
+        date,
+        label,
+        amount,
+        currency,
+        paidByMemberId,
+        walletId,
+        category,
+        subcategory,
+        budgetDateStart,
+        budgetDateEnd,
+        outOfBudget,
+        split
+      });
+      await _refreshAfterTripMutation("trip:add_expense", { expectExpenseId: createdExpenseId });
+      toastOk("Dépense ajoutée.");
+    }
+  } catch (e) {
+    toastWarn(e?.message || String(e));
+  } finally {
+    btnAddExp.disabled = false;
+  }
+};
     }
 
     const btnCancelEditExp = _el("trip-cancel-edit-exp");

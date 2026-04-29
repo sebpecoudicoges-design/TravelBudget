@@ -105,130 +105,286 @@ function renderDashboardContextHelp(container) {
 }
 
 
+function tbMoveDashboardHeroToTop() {
+  try {
+    const heroShell = document.getElementById("dashboard-hero-shell");
+    const walletsContainer = document.getElementById("wallets-container");
+    if (!heroShell || !walletsContainer) return;
+
+    const dashboardRoot = walletsContainer.parentElement || walletsContainer;
+    if (dashboardRoot.firstElementChild !== heroShell) {
+      dashboardRoot.insertBefore(heroShell, dashboardRoot.firstElementChild || null);
+    }
+  } catch (_) {}
+}
+
+function tbMountExistingKpisIntoHero() {
+  try {
+    const heroKpiSlot = document.getElementById("dashboard-kpi-embed-slot");
+    const kpiContainer = document.getElementById("kpis-container");
+    if (!heroKpiSlot || !kpiContainer) return;
+
+    // Si le container KPI est déjà dans le hero, ne rien faire
+    if (heroKpiSlot.contains(kpiContainer)) return;
+
+    const oldParent = kpiContainer.parentElement;
+    heroKpiSlot.appendChild(kpiContainer);
+
+    // Tenter de masquer l'ancien wrapper KPI s'il devient vide / inutile
+    if (oldParent && oldParent !== heroKpiSlot) {
+      const txt = String(oldParent.textContent || "").trim().toLowerCase();
+      const hasOnlyKpiTitle =
+        txt === "kpis" ||
+        txt === "kpi" ||
+        txt.startsWith("kpis");
+
+      // masque les titres KPI résiduels
+      Array.from(oldParent.children || []).forEach((child) => {
+        if (child !== kpiContainer) {
+          const childTxt = String(child.textContent || "").trim().toLowerCase();
+          if (childTxt === "kpis" || childTxt === "kpi" || childTxt.startsWith("kpis")) {
+            child.style.display = "none";
+          }
+        }
+      });
+
+      // si c'était clairement un wrapper KPI, on le masque
+      if (hasOnlyKpiTitle || oldParent.children.length <= 1) {
+        oldParent.style.display = "none";
+      }
+    }
+  } catch (_) {}
+}
 function renderDashboardHero() {
-  const host = document.getElementById("dashboard-hero-shell");
+  const host =
+    document.getElementById("dashboard-hero-mount-inline") ||
+    document.getElementById("dashboard-hero-shell");
+
   if (!host) return;
 
-  const esc = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const travel = (state?.travels || []).find(t => String(t.id) === String(state?.activeTravelId || '')) || state?.travel || null;
-  const travelName = String(travel?.name || state?.travelName || 'Voyage actif');
-  const periodStart = String(state?.period?.start || state?.period?.start_date || travel?.start_date || '').trim();
-  const periodEnd = String(state?.period?.end || state?.period?.end_date || travel?.end_date || '').trim();
-  const today = (typeof toLocalISODate === 'function') ? toLocalISODate(new Date()) : '';
-  const budgetInfo = (typeof getDailyBudgetInfoForDate === 'function')
-    ? getDailyBudgetInfoForDate(today)
-    : { remaining: 0, daily: 0, baseCurrency: state?.period?.baseCurrency || state?.user?.baseCurrency || 'EUR' };
-  const baseCur = String(budgetInfo?.baseCurrency || state?.period?.baseCurrency || state?.user?.baseCurrency || 'EUR').toUpperCase();
-  const budgetRemaining = Number(budgetInfo?.remaining) || 0;
-  const budgetDaily = Number(budgetInfo?.daily) || 0;
+  const esc = (value) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+  const travel =
+    (state?.travels || []).find(t => String(t.id) === String(state?.activeTravelId || "")) ||
+    state?.travel ||
+    null;
+
+  const travelName = String(travel?.name || state?.travelName || "Voyage actif");
+
+  const periodStart = String(
+    state?.period?.start || state?.period?.start_date || travel?.start_date || ""
+  ).trim();
+
+  const periodEnd = String(
+    state?.period?.end || state?.period?.end_date || travel?.end_date || ""
+  ).trim();
+
+  const pivotCur = String(
+    state?.user?.baseCurrency ||
+    state?.settings?.base_currency ||
+    state?.settings?.baseCurrency ||
+    "EUR"
+  ).toUpperCase();
+
   const txs = Array.isArray(state?.transactions)
-    ? state.transactions.filter(t => String(t?.travelId || t?.travel_id || '') === String(state?.activeTravelId || ''))
+    ? state.transactions.filter(
+        t => String(t?.travelId || t?.travel_id || "") === String(state?.activeTravelId || "")
+      )
     : [];
-  let paidToday = 0;
+
   let pendingCount = 0;
   for (const tx of txs) {
-    const type = String(tx?.type || '').toLowerCase();
-    const cashDate = (typeof tbTxCashDate === 'function') ? tbTxCashDate(tx) : (tx?.date_start || tx?.dateStart || null);
-    if (type === 'expense' && String(cashDate || '') === today && (typeof tbTxAffectsCash === 'function' ? tbTxAffectsCash(tx) : !!tx?.pay_now)) {
-      paidToday += Number((typeof amountToBase === 'function') ? amountToBase(Number(tx?.amount || 0), tx?.currency, baseCur) : Number(tx?.amount || 0)) || 0;
-    }
-    if (type === 'expense' && !(typeof tbTxAffectsCash === 'function' ? tbTxAffectsCash(tx) : !!tx?.pay_now) && (typeof tbTxAffectsBudget === 'function' ? tbTxAffectsBudget(tx) : true)) {
+    const type = String(tx?.type || "").toLowerCase();
+    if (
+      type === "expense" &&
+      !(typeof tbTxAffectsCash === "function" ? tbTxAffectsCash(tx) : !!tx?.pay_now) &&
+      (typeof tbTxAffectsBudget === "function" ? tbTxAffectsBudget(tx) : true)
+    ) {
       pendingCount += 1;
     }
   }
 
-  const wallets = Array.isArray(state?.wallets) ? state.wallets : [];
-  const totalWalletBase = wallets.reduce((sum, w) => {
-    const effective = (typeof window.tbGetWalletEffectiveBalance === 'function') ? window.tbGetWalletEffectiveBalance(w.id) : Number(w?.balance || 0);
-    const conv = (typeof amountToBase === 'function') ? amountToBase(Number(effective || 0), w?.currency, baseCur) : Number(effective || 0);
-    return sum + (Number(conv) || 0);
-  }, 0);
-  // 🔵 Cash en devise réelle (pas converti)
-const cashWallets = wallets.filter(w => String(w?.type || '').toLowerCase() === 'cash');
-
-// si plusieurs devises cash → fallback base
-const uniqueCurrencies = [...new Set(cashWallets.map(w => w.currency))];
-
-let cashDisplayAmount = 0;
-let cashDisplayCurrency = baseCur;
-
-if (uniqueCurrencies.length === 1) {
-  // ✅ cas propre : une seule devise cash
-  cashDisplayCurrency = uniqueCurrencies[0];
-
-  cashDisplayAmount = cashWallets.reduce((sum, w) => {
-    const effective = (typeof window.tbGetWalletEffectiveBalance === 'function')
-      ? window.tbGetWalletEffectiveBalance(w.id)
-      : Number(w?.balance || 0);
-
-    return sum + (Number(effective) || 0);
-  }, 0);
-
-} else {
-  // ⚠️ fallback multi-devise → conversion en base
-  cashDisplayAmount = cashWallets.reduce((sum, w) => {
-    const effective = (typeof window.tbGetWalletEffectiveBalance === 'function')
-      ? window.tbGetWalletEffectiveBalance(w.id)
-      : Number(w?.balance || 0);
-
-    const conv = (typeof amountToBase === 'function')
-      ? amountToBase(Number(effective || 0), w?.currency, baseCur)
-      : Number(effective || 0);
-
-    return sum + (Number(conv) || 0);
-  }, 0);
-
-  cashDisplayCurrency = baseCur;
-}
-
   host.innerHTML = `
-    <section class="dashboard-hero-card">
-      <div class="dashboard-hero-copy">
-        <div class="dashboard-hero-kicker">Pilotage quotidien</div>
-        <h2 class="dashboard-hero-title">${esc(travelName)}</h2>
-        <p class="dashboard-hero-text">Lis rapidement l’état du voyage, la pression sur le budget du jour, puis bascule vers Analyse quand tu veux comprendre la trajectoire ou les écarts.</p>
-        <div class="dashboard-hero-meta">
-          <span class="dashboard-hero-pill"><strong>Période</strong> ${esc(periodStart && periodEnd ? `${periodStart} → ${periodEnd}` : 'à définir')}</span>
-          <span class="dashboard-hero-pill"><strong>Devise pivot</strong> ${esc(baseCur)}</span>
-          <span class="dashboard-hero-pill"><strong>À payer</strong> ${esc(String(pendingCount))} dépense${pendingCount > 1 ? 's' : ''}</span>
-        </div>
-        <div class="dashboard-hero-actions">
-          <button class="btn primary" onclick="showView('transactions')">Ajouter / revoir les transactions</button>
-          <button class="btn" onclick="showView('analysis')">Lire l'analyse complète</button>
-          <button class="btn" onclick="showView('trip')">Ouvrir Partage</button>
-        </div>
-      </div>
-      <div class="dashboard-hero-focus">
-        <div class="dashboard-focus-card">
-          <div>
-            <div class="dashboard-focus-label">Budget du jour</div>
-            <div class="dashboard-focus-value">${esc(fmtMoney(budgetRemaining, baseCur))}</div>
+    <style>
+      .dashboard-hero-inline-wrap{
+        margin-bottom: 16px;
+      }
+      .dashboard-hero-card--kpi-shell{
+        padding: 22px;
+        border-radius: 24px;
+        background:
+          radial-gradient(circle at top right, rgba(124,58,237,.22), transparent 35%),
+          linear-gradient(135deg, rgba(30,64,175,.92), rgba(59,130,246,.86) 48%, rgba(139,92,246,.72));
+        color: #fff;
+        box-shadow: 0 18px 50px rgba(30,41,59,.16);
+        border: 1px solid rgba(255,255,255,.14);
+      }
+      .dashboard-hero-card--kpi-shell .dashboard-hero-kicker{
+        text-transform: uppercase;
+        letter-spacing: .14em;
+        font-size: 12px;
+        font-weight: 800;
+        opacity: .78;
+        margin-bottom: 8px;
+      }
+      .dashboard-hero-card--kpi-shell .dashboard-hero-title{
+        margin: 0 0 10px 0;
+        font-size: clamp(32px, 4vw, 48px);
+        line-height: 1.02;
+        font-weight: 900;
+        color: #fff;
+      }
+      .dashboard-hero-card--kpi-shell .dashboard-hero-text{
+        margin: 0;
+        max-width: 780px;
+        color: rgba(255,255,255,.88);
+        font-size: 17px;
+        line-height: 1.5;
+      }
+      .dashboard-hero-card--kpi-shell .dashboard-hero-meta{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .dashboard-hero-card--kpi-shell .dashboard-hero-pill{
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 9px 14px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.12);
+        border: 1px solid rgba(255,255,255,.18);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        backdrop-filter: blur(10px);
+      }
+      .dashboard-hero-card--kpi-shell .dashboard-hero-actions{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .dashboard-hero-card--kpi-shell .dashboard-hero-actions .btn.primary{
+        background: linear-gradient(135deg, #9333ea, #7c3aed);
+        border-color: rgba(255,255,255,.16);
+      }
+
+      .dashboard-kpi-embedded-wrap{
+        margin-top: 18px;
+        padding: 14px;
+        border-radius: 22px;
+        background: rgba(255,255,255,.10);
+        border: 1px solid rgba(255,255,255,.14);
+        backdrop-filter: blur(12px);
+      }
+      .dashboard-kpi-embedded-head{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .dashboard-kpi-embedded-title{
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.76);
+      }
+      .dashboard-kpi-embedded-note{
+        font-size: 12px;
+        color: rgba(255,255,255,.74);
+      }
+
+      #dashboard-kpi-embed-slot #kpis-container{
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      #dashboard-kpi-embed-slot #kpis-container .card,
+      #dashboard-kpi-embed-slot #kpis-container .kpi,
+      #dashboard-kpi-embed-slot #kpis-container > div{
+        background: rgba(255,255,255,.92) !important;
+        color: #0f172a !important;
+        border: 1px solid rgba(255,255,255,.42) !important;
+        border-radius: 18px !important;
+        box-shadow: 0 10px 28px rgba(15,23,42,.10);
+      }
+
+      #dashboard-kpi-embed-slot #kpis-container .muted{
+        color: #64748b !important;
+      }
+
+      @media (max-width: 1100px){
+        #dashboard-kpi-embed-slot #kpis-container{
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 720px){
+        .dashboard-hero-card--kpi-shell{
+          padding: 16px;
+          border-radius: 18px;
+        }
+        .dashboard-kpi-embedded-wrap{
+          padding: 10px;
+          border-radius: 16px;
+        }
+        #dashboard-kpi-embed-slot #kpis-container{
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+
+    <div class="dashboard-hero-inline-wrap">
+      <section class="dashboard-hero-card dashboard-hero-card--kpi-shell">
+        <div class="dashboard-hero-copy">
+          <div class="dashboard-hero-kicker">Pilotage quotidien</div>
+          <h2 class="dashboard-hero-title">${esc(travelName)}</h2>
+          <p class="dashboard-hero-text">
+            Lis l’état du voyage au même endroit : contexte en haut, KPIs intégrés juste dessous,
+            puis cashflow et budget journalier plus bas.
+          </p>
+
+          <div class="dashboard-hero-meta">
+            <span class="dashboard-hero-pill">
+              <strong>Période</strong>
+              ${esc(periodStart && periodEnd ? `${periodStart} → ${periodEnd}` : "à définir")}
+            </span>
+            <span class="dashboard-hero-pill">
+              <strong>Devise pivot</strong>
+              ${esc(pivotCur)}
+            </span>
+            <span class="dashboard-hero-pill">
+              <strong>À payer</strong>
+              ${esc(String(pendingCount))} dépense${pendingCount > 1 ? "s" : ""}
+            </span>
           </div>
-          <div class="dashboard-focus-meta">Objectif ${esc(fmtMoney(budgetDaily, baseCur))} • consommé aujourd’hui ${esc(fmtMoney(paidToday, baseCur))}</div>
-        </div>
-        <div class="dashboard-focus-card">
-          <div>
-            <div class="dashboard-focus-label">Wallets totaux</div>
-            <div class="dashboard-focus-value">${esc(fmtMoney(totalWalletBase, baseCur))}</div>
+
+          <div class="dashboard-hero-actions">
+            <button class="btn primary" onclick="showView('transactions')">Ajouter / revoir les transactions</button>
+            <button class="btn" onclick="showView('analysis')">Lire l'analyse complète</button>
+            <button class="btn" onclick="showView('trip')">Ouvrir Partage</button>
           </div>
-          <div class="dashboard-focus-meta">Vue convertie dans la devise pivot du compte.</div>
-        </div>
-        <div class="dashboard-focus-card">
-          <div>
-            <div class="dashboard-focus-label">Cash disponible</div>
-            <div class="dashboard-focus-value">${esc(fmtMoney(cashDisplayAmount, cashDisplayCurrency))}</div>
+
+          <div class="dashboard-kpi-embedded-wrap">
+            <div class="dashboard-kpi-embedded-head">
+              <div class="dashboard-kpi-embedded-title">KPIs du dashboard</div>
+              <div class="dashboard-kpi-embedded-note">Même logique métier, sans doublon de calcul.</div>
+            </div>
+            <div id="dashboard-kpi-embed-slot"></div>
           </div>
-          <div class="dashboard-focus-meta">Runway et burn s’appuient sur cette poche cash réelle.</div>
         </div>
-        <div class="dashboard-focus-card">
-          <div>
-            <div class="dashboard-focus-label">Cap suivant</div>
-            <div class="dashboard-focus-value">${pendingCount > 0 ? esc(`${pendingCount} à arbitrer`) : 'RAS'}</div>
-          </div>
-          <div class="dashboard-focus-meta">Passe en Analyse pour lire les dérives, ou en Partage pour solder les avances.</div>
-        </div>
-      </div>
-    </section>`;
+      </section>
+    </div>
+  `;
 }
 
 /* =========================
@@ -237,29 +393,59 @@ if (uniqueCurrencies.length === 1) {
 function renderWallets() {
   // Sur certaines pages (reset/recovery), le DOM dashboard n'existe pas.
   const container = document.getElementById("wallets-container");
-  if (!container) return;
+if (!container) return;
 
+// Onboarding panel / empty states
+renderOnboardingPanel();
 
-  // Onboarding panel / empty states
-  renderOnboardingPanel();
-  renderDashboardHero();
+container.innerHTML = "";
 
-  container.innerHTML = "";
-  renderDashboardContextHelp(container);
+// Hero inline mount tout en haut du dashboard réel
+const heroMount = document.createElement("div");
+heroMount.id = "dashboard-hero-mount-inline";
+container.appendChild(heroMount);
 
-  // Actions
-  const actions = document.createElement("div");
-  actions.style.display = "flex";
-  actions.style.gap = "10px";
-  actions.style.flexWrap = "wrap";
-  actions.style.marginBottom = "12px";
-  actions.innerHTML = `
-    <button class="btn primary" onclick="createWallet()">+ Wallet</button>
-  `;
-  container.appendChild(actions);
+renderDashboardHero();
+renderDashboardContextHelp(container);
+
+// Actions
+const actions = document.createElement("div");
+actions.style.display = "flex";
+actions.style.gap = "10px";
+actions.style.flexWrap = "wrap";
+actions.style.marginBottom = "12px";
+actions.innerHTML = `
+  <button class="btn primary" onclick="createWallet()">+ Wallet</button>
+`;
+container.appendChild(actions);
 
 
 const wallets = Array.isArray(state.wallets) ? state.wallets : [];
+try {
+  if (typeof renderKpis === "function") renderKpis();
+
+  requestAnimationFrame(() => {
+    const kpiSlot = document.getElementById("dashboard-kpi-embed-slot");
+    const kpiContainer = document.getElementById("kpis-container");
+
+    if (kpiSlot && kpiContainer && !kpiSlot.contains(kpiContainer)) {
+      const oldParent = kpiContainer.parentElement;
+      kpiSlot.appendChild(kpiContainer);
+
+      // masque l'ancien wrapper résiduel si besoin
+      if (oldParent && oldParent !== kpiSlot) {
+        const txt = String(oldParent.textContent || "").trim().toLowerCase();
+        if (txt === "kpis" || txt === "kpi" || txt.startsWith("kpis") || oldParent.children.length <= 1) {
+          oldParent.style.display = "none";
+        }
+      }
+    }
+  });
+} catch (_) {}
+const kpiHost = document.getElementById("kpis-container");
+if (kpiHost && typeof renderKpis === "function") {
+  try { renderKpis(); } catch (_) {}
+}
 // If some wallets are missing a type, propose a guided fix (soft migration).
 const missingType = wallets.filter(w => !String(w?.type || "").trim());
 if (missingType.length) {
