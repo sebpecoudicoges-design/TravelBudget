@@ -1,4 +1,4 @@
-/* TravelBudget V9.6.0 - Assets core
+/* TravelBudget V9.6.4 - Assets core
    Stock patrimonial only: no cashflow mutation, no budget mutation. */
 (function(){
   function _num(v, fallback){ const n = Number(v); return Number.isFinite(n) ? n : (fallback || 0); }

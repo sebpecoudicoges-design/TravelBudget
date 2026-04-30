@@ -46,6 +46,44 @@
   function minePercent(rows){ const me = rows.find(r=>/toi|moi/i.test(String(r.display_name||''))); return Number(me?.ownership_percent ?? rows[0]?.ownership_percent ?? 100); }
   function totalPercent(rows){ return Math.round((rows||[]).reduce((s,r)=>s+n(r.ownership_percent,0),0)*100)/100; }
   function eventLabel(t){ return ({ buy_share:'Rachat parts', sell_share:'Vente parts', transfer_share:'Transfert parts' })[t] || 'Mouvement parts'; }
+  function isMeOwnerRow(r){
+  return /toi|moi/i.test(String(r.display_name||'')) || (!!r.user_id && r.user_id === window.sbUser?.id);
+}
+
+function eventsForAsset(assetId){
+  return (CACHE.events||[]).filter(e => String(e.asset_id) === String(assetId));
+}
+
+function realizedSalesForMe(assetId){
+  // Sommes encaissées par "toi" quand tu es le vendeur
+  const evs = eventsForAsset(assetId);
+  return evs.reduce((sum,e)=>{
+    if(!e) return sum;
+    // vendeur = from_owner_id
+    const from = (CACHE.owners||[]).find(o => String(o.id) === String(e.from_owner_id));
+    if(from && isMeOwnerRow(from)){
+      return sum + Number(e.amount || 0);
+    }
+    return sum;
+  }, 0);
+}
+
+function initialCostForMe(asset, owners){
+  // coût initial = purchase_value × ta part initiale (on prend la part actuelle comme approximation MVP)
+  const rows = ownerRows(asset, owners);
+  const ownPct = minePercent(rows);
+  return Number(asset.purchase_value||0) * (Number(ownPct||0)/100);
+}
+
+function realizedPnLForMe(asset, owners){
+  const proceeds = realizedSalesForMe(asset.id);
+  const cost = initialCostForMe(asset, owners);
+  return proceeds - cost; // positif = gain, négatif = perte
+}
+
+function isAssetSold(asset){
+  return String(asset.status||'').toLowerCase() === 'sold';
+}
   function txLabel(tx){
   const date = tx.date || tx.transaction_date || tx.created_at || '';
   const amount = tx.amount ?? tx.value ?? tx.total ?? '';
@@ -150,7 +188,22 @@ const depreciationStatus = width >= 100 ? 'Amortissement terminé' : 'En amortis
       <div class="tb-asset-chart" id="asset-chart-${esc(asset.id)}"></div>
       <div class="tb-asset-owners">${rows.length ? rows.map(r=>`<span>${esc(r.display_name)} · ${Number(r.ownership_percent||0)}%</span>`).join('') : '<span>Ownership non renseigné · 100%</span>'}${warning}</div>
       ${recent.length ? `<div class="tb-asset-events">${recent.map(e=>`<span>${esc(e.event_date||'')} · ${esc(eventLabel(e.event_type))} · ${esc(n(e.percent,0))}%</span>`).join('')}</div>` : ''}
-      <div class="tb-asset-actions"><button type="button" data-tb-asset-edit="${esc(asset.id)}">Modifier</button><button type="button" data-tb-asset-owners="${esc(asset.id)}">Copropriétaires</button><button type="button" data-tb-asset-transfer="${esc(asset.id)}">Rachat / vente</button><button type="button" class="danger" data-tb-asset-archive="${esc(asset.id)}">Archiver</button></div>
+
+${(() => {
+  const pnl = realizedPnLForMe(asset, owners);
+  const sold = isAssetSold(asset);
+
+  return sold ? `
+    <div class="tb-asset-pnl">
+      <span>P&L réalisé</span>
+      <strong class="${pnl >= 0 ? 'pos' : 'neg'}">
+        ${pnl >= 0 ? '+' : ''}${esc(money(pnl, asset.currency))}
+      </strong>
+    </div>
+  ` : '';
+})()}
+
+<div class="tb-asset-actions"><button type="button" data-tb-asset-edit="${esc(asset.id)}">Modifier</button><button type="button" data-tb-asset-owners="${esc(asset.id)}">Copropriétaires</button><button type="button" data-tb-asset-transfer="${esc(asset.id)}">Rachat / vente</button><button type="button" data-tb-asset-sell="${esc(asset.id)}">Vendre l’asset</button><button type="button" class="danger" data-tb-asset-archive="${esc(asset.id)}">Archiver</button></div>
     </section>`;
   }
 
@@ -229,6 +282,53 @@ const depreciationStatus = width >= 100 ? 'Amortissement terminé' : 'En amortis
     </form>
   </div>`;
 }
+function sellAssetModalHtml(asset, transactions){
+  const txOpts = (transactions||[]).map(tx=>`<option value="${esc(tx.id)}">${esc(txLabel(tx))}</option>`).join('');
+
+  return `<div class="tb-asset-modal-backdrop">
+    <form class="tb-asset-modal" data-tb-asset-sell-form data-asset-id="${esc(asset.id)}">
+      <div class="tb-asset-modal-head">
+        <div>
+          <strong>Vendre l’asset</strong>
+          <p>Marque l’asset comme vendu. Le prix de vente est réparti selon les parts actuelles. Aucun cashflow n’est créé.</p>
+        </div>
+        <button type="button" data-tb-asset-close>×</button>
+      </div>
+
+      <div class="tb-asset-form-grid">
+        <label>Date de vente
+          <input name="event_date" type="date" required value="${today()}">
+        </label>
+
+        <label>Prix de vente total
+          <input name="amount" type="number" min="0" step="0.01" required value="0">
+        </label>
+
+        <label>Devise
+          <input name="currency" maxlength="3" required value="${esc(asset.currency||'EUR')}">
+        </label>
+
+        <label>Transaction liée
+          <select name="linked_transaction_id">
+            <option value="">Aucune transaction liée</option>
+            ${txOpts}
+          </select>
+        </label>
+
+        <label>Note
+          <input name="note" placeholder="Vente totale de l’asset">
+        </label>
+      </div>
+
+      <div class="tb-asset-modal-error" data-tb-asset-error hidden></div>
+
+      <div class="tb-asset-modal-actions">
+        <button type="button" data-tb-asset-close>Annuler</button>
+        <button type="submit">Valider la vente</button>
+      </div>
+    </form>
+  </div>`;
+}
 
   function closeModal(){ document.querySelectorAll('.tb-asset-modal-backdrop').forEach(n=>n.remove()); }
   function openAssetModal(mode, assetId){ closeModal(); const asset = assetId ? findAsset(assetId) : null; document.body.insertAdjacentHTML('beforeend', assetFormHtml(mode, asset)); focusFirst(); }
@@ -246,6 +346,21 @@ const depreciationStatus = width >= 100 ? 'Amortissement terminé' : 'En amortis
   closeModal();
   const transactions = await loadRecentTransactions();
   document.body.insertAdjacentHTML('beforeend', transferModalHtml(asset, transactions));
+  focusFirst();
+}
+async function openSellAssetModal(assetId){
+  const asset = findAsset(assetId);
+  if(!asset) return;
+
+  const rows = ownerRows(asset);
+  if(!rows.length){
+    alert('Ajoute au moins un propriétaire avant de vendre l’asset.');
+    return;
+  }
+
+  closeModal();
+  const transactions = await loadRecentTransactions();
+  document.body.insertAdjacentHTML('beforeend', sellAssetModalHtml(asset, transactions));
   focusFirst();
 }
   function focusFirst(){ const el=document.querySelector('.tb-asset-modal input, .tb-asset-modal select'); if(el) setTimeout(()=>el.focus(),0); }
@@ -271,9 +386,69 @@ const payload = {
   linked_transaction_id: linkedTxId,
   note: String(fd.get('note')||'').trim() || null
 }; const ev = await c.from(table('asset_ownership_events','asset_ownership_events')).insert([payload]); if(ev.error) throw ev.error; }
+async function saveTotalAssetSaleFromForm(form){
+  const c = client();
+  if(!c) throw new Error('Client Supabase indisponible.');
+
+  const assetId = form.getAttribute('data-asset-id');
+  const asset = findAsset(assetId);
+  if(!asset) throw new Error('Asset introuvable.');
+
+  const rows = ownerRows(assetId);
+  if(!rows.length) throw new Error('Aucun copropriétaire trouvé.');
+
+  const fd = new FormData(form);
+  const totalAmount = Number(fd.get('amount') || 0);
+  if(!Number.isFinite(totalAmount) || totalAmount < 0) throw new Error('Prix de vente invalide.');
+
+  const currency = String(fd.get('currency') || asset.currency || 'EUR').trim().toUpperCase();
+  if(!/^[A-Z]{3}$/.test(currency)) throw new Error('Devise invalide.');
+
+  const eventDate = String(fd.get('event_date') || today()).slice(0,10);
+  const linkedTxId = String(fd.get('linked_transaction_id') || '').trim() || null;
+  const note = String(fd.get('note') || '').trim() || 'Vente totale asset';
+
+  const total = totalPercent(rows);
+  if(Math.abs(total - 100) > 0.01){
+    throw new Error(`Impossible de vendre : le total des parts doit faire 100%. Total actuel : ${total}%.`);
+  }
+
+  for(const r of rows){
+    const pct = Number(r.ownership_percent || 0);
+    if(pct <= 0) continue;
+
+    const ownerAmount = Math.round((totalAmount * pct / 100) * 100) / 100;
+
+    const payload = {
+      asset_id: assetId,
+      from_owner_id: r.id,
+      to_owner_id: null,
+      event_type: 'sell_share',
+      percent: pct,
+      amount: ownerAmount,
+      currency,
+      event_date: eventDate,
+      linked_transaction_id: linkedTxId,
+      note: `[VENTE_TOTALE] ${note}`
+    };
+
+    const ev = await c.from(table('asset_ownership_events','asset_ownership_events')).insert([payload]);
+    if(ev.error) throw ev.error;
+  }
+
+  const up = await c.from(table('assets','assets')).update({ status:'sold' }).eq('id', assetId);
+  if(up.error) throw up.error;
+}
 
   function refreshOwnerTotal(){ const form = document.querySelector('[data-tb-asset-owners-form]'); const box = document.querySelector('[data-tb-owner-total]'); if(!form || !box) return; const rows = Array.from(form.querySelectorAll('[name="owner_percent"]')).map(x=>Number(x.value||0)); const total = Math.round(rows.reduce((s,x)=>s+(Number.isFinite(x)?x:0),0)*100)/100; box.textContent = `Total : ${total}%`; box.classList.toggle('ok', Math.abs(total-100)<=0.01); }
-  function bindOnce(){ if(window.__tbAssetsUiBound) return; window.__tbAssetsUiBound = true; document.addEventListener('click', async function(ev){ const open = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-open]'); if(open){ ev.preventDefault(); openAssetModal('create'); return; } const edit = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-edit]'); if(edit){ ev.preventDefault(); openAssetModal('edit', edit.getAttribute('data-tb-asset-edit')); return; } const owners = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-owners]'); if(owners){ ev.preventDefault(); openOwnersModal(owners.getAttribute('data-tb-asset-owners')); return; } const transfer = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-transfer]'); if(transfer){ ev.preventDefault(); openTransferModal(transfer.getAttribute('data-tb-asset-transfer')); return; } const archive = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-archive]'); if(archive){ ev.preventDefault(); if(confirm('Archiver cet asset ? Il ne sera plus affiché, sans suppression de l’historique.')){ try{ await archiveAsset(archive.getAttribute('data-tb-asset-archive')); await renderAssets('asset-archived'); }catch(e){ alert(e && (e.message||e.code) || e); } } return; } const close = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-close]'); if(close){ ev.preventDefault(); closeModal(); return; } const addOwner = ev.target && ev.target.closest && ev.target.closest('[data-tb-owner-add]'); if(addOwner){ ev.preventDefault(); const list=document.querySelector('[data-tb-owner-list]'); if(list){ list.insertAdjacentHTML('beforeend', ownerRowHtml({id:'',display_name:'',ownership_percent:0})); refreshOwnerTotal(); } return; } const remOwner = ev.target && ev.target.closest && ev.target.closest('[data-tb-owner-remove]'); if(remOwner){ ev.preventDefault(); const row=remOwner.closest('.tb-owner-row'); if(row) row.remove(); refreshOwnerTotal(); return; } const backdrop = ev.target && ev.target.classList && ev.target.classList.contains('tb-asset-modal-backdrop'); if(backdrop){ ev.preventDefault(); closeModal(); } }); document.addEventListener('input', function(ev){ if(ev.target && ev.target.matches && ev.target.matches('[name="owner_percent"]')) refreshOwnerTotal(); }); document.addEventListener('submit', async function(ev){ const form = ev.target && ev.target.matches && ev.target.matches('[data-tb-asset-form], [data-tb-asset-owners-form], [data-tb-asset-transfer-form]') ? ev.target : null; if(!form) return; ev.preventDefault(); const submit = form.querySelector('button[type="submit"]'); const oldTxt = submit ? submit.textContent : ''; if(submit){ submit.disabled = true; submit.textContent = 'Enregistrement…'; } try{ if(form.matches('[data-tb-asset-owners-form]')) await saveOwnersFromForm(form); else if(form.matches('[data-tb-asset-transfer-form]')) await saveTransferFromForm(form); else if(form.getAttribute('data-tb-asset-form') === 'edit') await updateAssetFromForm(form); else await createAssetFromForm(form); closeModal(); await renderAssets('asset-saved'); }catch(e){ console.error('[TB][assets] save failed', e); showFormError(e && (e.message || e.details || e.code) ? (e.message || e.details || e.code) : e); } finally{ if(submit){ submit.disabled = false; submit.textContent = oldTxt || 'Enregistrer'; } } }); }
+  function bindOnce(){ if(window.__tbAssetsUiBound) return; window.__tbAssetsUiBound = true; document.addEventListener('click', async function(ev){ const open = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-open]'); if(open){ ev.preventDefault(); openAssetModal('create'); return; } const edit = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-edit]'); if(edit){ ev.preventDefault(); openAssetModal('edit', edit.getAttribute('data-tb-asset-edit')); return; } const owners = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-owners]'); if(owners){ ev.preventDefault(); openOwnersModal(owners.getAttribute('data-tb-asset-owners')); return; } const sellAsset = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-sell]');
+if(sellAsset){
+  ev.preventDefault();
+  openSellAssetModal(sellAsset.getAttribute('data-tb-asset-sell'));
+  return;
+} const archive = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-archive]'); if(archive){ ev.preventDefault(); if(confirm('Archiver cet asset ? Il ne sera plus affiché, sans suppression de l’historique.')){ try{ await archiveAsset(archive.getAttribute('data-tb-asset-archive')); await renderAssets('asset-archived'); }catch(e){ alert(e && (e.message||e.code) || e); } } return; } const close = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-close]'); if(close){ ev.preventDefault(); closeModal(); return; } const addOwner = ev.target && ev.target.closest && ev.target.closest('[data-tb-owner-add]'); if(addOwner){ ev.preventDefault(); const list=document.querySelector('[data-tb-owner-list]'); if(list){ list.insertAdjacentHTML('beforeend', ownerRowHtml({id:'',display_name:'',ownership_percent:0})); refreshOwnerTotal(); } return; } const remOwner = ev.target && ev.target.closest && ev.target.closest('[data-tb-owner-remove]'); if(remOwner){ ev.preventDefault(); const row=remOwner.closest('.tb-owner-row'); if(row) row.remove(); refreshOwnerTotal(); return; } const backdrop = ev.target && ev.target.classList && ev.target.classList.contains('tb-asset-modal-backdrop'); if(backdrop){ ev.preventDefault(); closeModal(); } }); document.addEventListener('input', function(ev){ if(ev.target && ev.target.matches && ev.target.matches('[name="owner_percent"]')) refreshOwnerTotal(); }); document.addEventListener('submit', async function(ev){ const form = ev.target && ev.target.matches && ev.target.matches('[data-tb-asset-form], [data-tb-asset-owners-form], [data-tb-asset-transfer-form], [data-tb-asset-sell-form]') ? ev.target : null; if(!form) return; ev.preventDefault(); const submit = form.querySelector('button[type="submit"]'); const oldTxt = submit ? submit.textContent : ''; if(submit){ submit.disabled = true; submit.textContent = 'Enregistrement…'; } try{ if(form.matches('[data-tb-asset-owners-form]')) await saveOwnersFromForm(form); else if(form.matches('[data-tb-asset-transfer-form]')) await saveTransferFromForm(form);
+else if(form.matches('[data-tb-asset-sell-form]')) await saveTotalAssetSaleFromForm(form);
+else if(form.getAttribute('data-tb-asset-form') === 'edit') await updateAssetFromForm(form); else await createAssetFromForm(form); closeModal(); await renderAssets('asset-saved'); }catch(e){ console.error('[TB][assets] save failed', e); showFormError(e && (e.message || e.details || e.code) ? (e.message || e.details || e.code) : e); } finally{ if(submit){ submit.disabled = false; submit.textContent = oldTxt || 'Enregistrer'; } } }); }
 
   function styles(){ if(document.getElementById('tb-assets-style')) return; const st=document.createElement('style'); st.id='tb-assets-style'; st.textContent=`
 .tb-assets-shell{position:relative;overflow:hidden;border:1px solid rgba(15,23,42,.08);border-radius:28px;padding:22px;background:linear-gradient(135deg,#ffffff,#f4f7fb);color:#0f172a;box-shadow:0 18px 45px rgba(15,23,42,.08)}
@@ -293,6 +468,30 @@ const payload = {
 .tb-asset-facts strong{color:#0f172a}
 .tb-asset-facts span.done{background:#ecfdf5;color:#047857;border-color:rgba(4,120,87,.18);font-weight:900}
 .tb-asset-metrics em.depr{color:#ea580c}.tb-asset-progress{margin-top:16px}.tb-asset-progress div{display:flex;justify-content:space-between;color:#64748b;font-size:11px;margin-bottom:7px}.tb-asset-progress b{display:block;height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden}.tb-asset-progress i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#06b6d4,#8b5cf6)}.tb-asset-chart{height:86px;margin-top:14px;border-radius:18px;background:linear-gradient(180deg,#eef2f7,#e5eaf1);border:1px solid rgba(15,23,42,.07)}.tb-asset-owners{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tb-asset-owners span{font-size:11px;color:#334155;border:1px solid rgba(15,23,42,.10);border-radius:999px;padding:6px 9px;background:#f8fafc}.tb-asset-owner-warning{background:#fff7ed!important;color:#c2410c!important;border-color:rgba(194,65,12,.22)!important}.tb-asset-events{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.tb-asset-events span{font-size:11px;color:#64748b;background:#eef2ff;border:1px solid rgba(99,102,241,.16);border-radius:999px;padding:6px 9px}.tb-asset-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.tb-asset-actions button{border:1px solid rgba(15,23,42,.10);background:#fff;color:#0f172a;border-radius:12px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer}.tb-asset-actions button.danger{color:#be123c;background:#fff1f2;border-color:rgba(225,29,72,.20)}
+.tb-asset-pnl{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:14px;
+  background:#f8fafc;
+  border:1px solid rgba(15,23,42,.08);
+}
+
+.tb-asset-pnl span{
+  font-size:12px;
+  color:#64748b;
+  font-weight:800;
+}
+
+.tb-asset-pnl strong{
+  font-size:16px;
+}
+
+.pos{color:#16a34a;}
+.neg{color:#dc2626;}
+
 .tb-asset-modal-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.42);display:flex;align-items:center;justify-content:center;padding:18px}.tb-asset-modal{width:min(800px,100%);max-height:92vh;overflow:auto;border-radius:26px;background:#fff;color:#0f172a;box-shadow:0 30px 90px rgba(15,23,42,.28);padding:20px}.tb-asset-modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:16px}.tb-asset-modal-head strong{font-size:22px}.tb-asset-modal-head p{margin:5px 0 0;color:#64748b;font-size:13px}.tb-asset-modal-head button{border:0;background:#f1f5f9;border-radius:999px;width:34px;height:34px;font-size:22px;line-height:1;cursor:pointer}.tb-asset-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tb-asset-form-grid label{display:grid;gap:6px;color:#475569;font-size:12px;font-weight:800}.tb-asset-form-grid input,.tb-asset-form-grid select{width:100%;border:1px solid rgba(15,23,42,.12);border-radius:14px;background:#f8fafc;color:#0f172a;padding:10px 11px;font-size:14px}.tb-asset-modal-error{margin-top:12px;border:1px solid rgba(225,29,72,.25);background:#fff1f2;color:#be123c;border-radius:14px;padding:10px;font-size:13px}.tb-asset-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}.tb-asset-modal-actions button{border:0;border-radius:14px;padding:10px 13px;font-weight:900;cursor:pointer}.tb-asset-modal-actions button:first-child{background:#f1f5f9;color:#334155}.tb-asset-modal-actions button:last-child{background:#0f172a;color:#fff}.tb-asset-modal-actions button:disabled{opacity:.55;cursor:not-allowed}.tb-owner-list{display:grid;gap:10px}.tb-owner-row{display:grid;grid-template-columns:1fr 130px 38px;gap:8px}.tb-owner-row input{border:1px solid rgba(15,23,42,.12);border-radius:14px;background:#f8fafc;color:#0f172a;padding:10px 11px;font-size:14px}.tb-owner-row button,.tb-owner-add{border:0;border-radius:14px;background:#f1f5f9;color:#334155;font-weight:900;cursor:pointer}.tb-owner-add{margin-top:12px;padding:10px 12px}.tb-owner-total{margin-top:10px;font-size:13px;color:#be123c;font-weight:900}.tb-owner-total.ok{color:#0891b2}@media(max-width:720px){.tb-assets-head,.tb-assets-empty{flex-direction:column;align-items:stretch}.tb-asset-metrics,.tb-asset-form-grid,.tb-owner-row{grid-template-columns:1fr}.tb-assets-actions{align-items:flex-start}}
   `; document.head.appendChild(st); }
 
