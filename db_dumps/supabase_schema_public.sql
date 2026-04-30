@@ -25,6 +25,7 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 CREATE OR REPLACE FUNCTION "public"."_touch_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 begin
   new.updated_at = now();
@@ -332,6 +333,7 @@ ALTER FUNCTION "public"."bind_trip_member_to_auth"("p_trip_id" "uuid") OWNER TO 
 
 CREATE OR REPLACE FUNCTION "public"."can_access_travel"("p_travel_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE
+    SET "search_path" TO 'public'
     AS $$
   select exists (
     select 1
@@ -422,6 +424,7 @@ ALTER FUNCTION "public"."delete_transaction"("p_tx_id" "uuid") OWNER TO "postgre
 
 CREATE OR REPLACE FUNCTION "public"."enforce_tx_wallet_period_match"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 declare
   w_period uuid;
@@ -452,6 +455,7 @@ ALTER FUNCTION "public"."enforce_tx_wallet_period_match"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."get_period_for_travel_date"("p_travel_id" "uuid", "p_date" "date") RETURNS "uuid"
     LANGUAGE "plpgsql" STABLE
+    SET "search_path" TO 'public'
     AS $$
 declare
   v_period_id uuid;
@@ -502,6 +506,7 @@ ALTER FUNCTION "public"."get_unmapped_transaction_categories"() OWNER TO "postgr
 
 CREATE OR REPLACE FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE
+    SET "search_path" TO 'public'
     AS $$
   select exists (
     select 1 from public.trip_participants tp
@@ -516,6 +521,7 @@ ALTER FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") OWNER TO "post
 
 CREATE OR REPLACE FUNCTION "public"."nth_weekday_of_month"("p_year" integer, "p_month" integer, "p_weekday" integer, "p_week_of_month" integer) RETURNS "date"
     LANGUAGE "plpgsql" IMMUTABLE
+    SET "search_path" TO 'public'
     AS $$
 declare
   v_first_day date;
@@ -555,6 +561,7 @@ ALTER FUNCTION "public"."nth_weekday_of_month"("p_year" integer, "p_month" integ
 
 CREATE OR REPLACE FUNCTION "public"."prevent_fx_snapshot_update"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 begin
   -- For each snapshot field:
@@ -912,6 +919,7 @@ ALTER FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") OWNER 
 
 CREATE OR REPLACE FUNCTION "public"."recurring_next_occurrence"("p_rule_type" "text", "p_interval_count" integer, "p_weekday" integer, "p_monthday" integer, "p_week_of_month" integer, "p_current" "date") RETURNS "date"
     LANGUAGE "plpgsql" IMMUTABLE
+    SET "search_path" TO 'public'
     AS $$
 declare
   v_current date := p_current;
@@ -1124,6 +1132,7 @@ ALTER FUNCTION "public"."recurring_resume_rule_admin"("p_rule_id" "uuid") OWNER 
 
 CREATE OR REPLACE FUNCTION "public"."recurring_rules_consistency_guard"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 declare
   v_wallet_user_id uuid;
@@ -2419,6 +2428,7 @@ ALTER FUNCTION "public"."seed_default_categories_for_user"() OWNER TO "postgres"
 
 CREATE OR REPLACE FUNCTION "public"."set_current_timestamp_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 begin
   new.updated_at := now();
@@ -2432,6 +2442,7 @@ ALTER FUNCTION "public"."set_current_timestamp_updated_at"() OWNER TO "postgres"
 
 CREATE OR REPLACE FUNCTION "public"."set_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 BEGIN
   NEW.updated_at = now();
@@ -2444,6 +2455,7 @@ ALTER FUNCTION "public"."set_updated_at"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."tb_profiles_role_guard"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 declare
   v_uid uuid := auth.uid();
@@ -2487,6 +2499,7 @@ ALTER FUNCTION "public"."tb_profiles_role_guard"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."tb_touch_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 begin
   new.updated_at = now();
@@ -2499,6 +2512,7 @@ ALTER FUNCTION "public"."tb_touch_updated_at"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."transactions_travel_consistency_guard"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 declare
   v_period_travel_id uuid;
@@ -2584,6 +2598,7 @@ ALTER FUNCTION "public"."transactions_travel_consistency_guard"() OWNER TO "post
 
 CREATE OR REPLACE FUNCTION "public"."travel_day_context_for_date"("p_travel_id" "uuid", "p_log_date" "date") RETURNS "jsonb"
     LANGUAGE "plpgsql" STABLE
+    SET "search_path" TO 'public'
     AS $$
 declare
   v_current jsonb;
@@ -2612,6 +2627,7 @@ ALTER FUNCTION "public"."travel_day_context_for_date"("p_travel_id" "uuid", "p_l
 
 CREATE OR REPLACE FUNCTION "public"."travel_day_last_known_location"("p_travel_id" "uuid", "p_before_date" "date") RETURNS TABLE("log_id" "uuid", "log_date" "date", "end_place_label" "text", "end_country_code" "text", "end_lat" numeric, "end_lng" numeric, "travel_mode_main" "text", "overnight_mode" "text")
     LANGUAGE "sql" STABLE
+    SET "search_path" TO 'public'
     AS $$
   select
     l.id as log_id,
@@ -2673,6 +2689,7 @@ ALTER TABLE "public"."travel_day_logs" OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."travel_day_log_upsert"("p_travel_id" "uuid", "p_log_date" "date", "p_end_place_label" "text" DEFAULT NULL::"text", "p_end_country_code" "text" DEFAULT NULL::"text", "p_end_lat" numeric DEFAULT NULL::numeric, "p_end_lng" numeric DEFAULT NULL::numeric, "p_travel_mode_main" "text" DEFAULT NULL::"text", "p_overnight_mode" "text" DEFAULT NULL::"text", "p_no_move_declared" boolean DEFAULT false, "p_crossed_border" boolean DEFAULT false, "p_is_rest_day" boolean DEFAULT false, "p_note" "text" DEFAULT NULL::"text") RETURNS "public"."travel_day_logs"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 declare
   v_row public.travel_day_logs;
@@ -2782,6 +2799,7 @@ ALTER FUNCTION "public"."travel_day_log_upsert"("p_travel_id" "uuid", "p_log_dat
 
 CREATE OR REPLACE FUNCTION "public"."travel_day_logs_apply_no_move_defaults"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 begin
   if new.no_move_declared = true and new.travel_mode_main is null then
@@ -2797,6 +2815,7 @@ ALTER FUNCTION "public"."travel_day_logs_apply_no_move_defaults"() OWNER TO "pos
 
 CREATE OR REPLACE FUNCTION "public"."travel_day_logs_validate_no_move"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 declare
   v_move_count integer;
@@ -2822,6 +2841,7 @@ ALTER FUNCTION "public"."travel_day_logs_validate_no_move"() OWNER TO "postgres"
 
 CREATE OR REPLACE FUNCTION "public"."travel_day_moves_block_if_no_move_declared"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 declare
   v_no_move boolean;
@@ -2845,6 +2865,7 @@ ALTER FUNCTION "public"."travel_day_moves_block_if_no_move_declared"() OWNER TO 
 
 CREATE OR REPLACE FUNCTION "public"."travel_day_moves_sync_user_id"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 begin
   select l.user_id
@@ -2862,6 +2883,7 @@ ALTER FUNCTION "public"."travel_day_moves_sync_user_id"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."trip_accept_invite"("p_token" "text") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
 declare
   v_trip uuid;
@@ -3568,6 +3590,7 @@ ALTER FUNCTION "public"."trip_get_balances_v1"("p_trip_id" "uuid") OWNER TO "pos
 
 CREATE OR REPLACE FUNCTION "public"."trip_role"("p_trip_id" "uuid") RETURNS "text"
     LANGUAGE "sql" STABLE
+    SET "search_path" TO 'public'
     AS $$
   select tp.role
   from public.trip_participants tp
@@ -3781,6 +3804,7 @@ ALTER FUNCTION "public"."update_transaction_v2"("p_id" "uuid", "p_wallet_id" "uu
 
 CREATE OR REPLACE FUNCTION "public"."wallets_travel_consistency_guard"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
     AS $$
 declare
   v_period_travel_id uuid;
@@ -3851,6 +3875,70 @@ COMMENT ON COLUMN "public"."analytic_category_mappings"."mapping_status" IS 'map
 
 COMMENT ON COLUMN "public"."analytic_category_mappings"."analytic_family" IS 'Target analytic family when mapping_status = mapped: accommodation | food | transport | activities';
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."asset_owners" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "asset_id" "uuid" NOT NULL,
+    "user_id" "uuid",
+    "trip_member_id" "uuid",
+    "display_name" "text" NOT NULL,
+    "ownership_percent" numeric NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "asset_owners_ownership_percent_check" CHECK ((("ownership_percent" >= (0)::numeric) AND ("ownership_percent" <= (100)::numeric)))
+);
+
+
+ALTER TABLE "public"."asset_owners" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."asset_ownership_events" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "asset_id" "uuid" NOT NULL,
+    "from_owner_id" "uuid",
+    "to_owner_id" "uuid",
+    "event_type" "text" NOT NULL,
+    "percent" numeric NOT NULL,
+    "amount" numeric DEFAULT 0 NOT NULL,
+    "currency" "text" NOT NULL,
+    "event_date" "date" DEFAULT CURRENT_DATE NOT NULL,
+    "note" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "asset_ownership_events_amount_check" CHECK (("amount" >= (0)::numeric)),
+    CONSTRAINT "asset_ownership_events_currency_check" CHECK (("currency" ~ '^[A-Z]{3}$'::"text")),
+    CONSTRAINT "asset_ownership_events_event_type_check" CHECK (("event_type" = ANY (ARRAY['buy_share'::"text", 'sell_share'::"text", 'transfer_share'::"text"]))),
+    CONSTRAINT "asset_ownership_events_percent_check" CHECK ((("percent" > (0)::numeric) AND ("percent" <= (100)::numeric)))
+);
+
+
+ALTER TABLE "public"."asset_ownership_events" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."assets" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "travel_id" "uuid",
+    "name" "text" NOT NULL,
+    "asset_type" "text" NOT NULL,
+    "purchase_value" numeric NOT NULL,
+    "residual_value" numeric DEFAULT 0 NOT NULL,
+    "currency" "text" NOT NULL,
+    "purchase_date" "date" NOT NULL,
+    "depreciation_months" integer NOT NULL,
+    "status" "text" DEFAULT 'active'::"text" NOT NULL,
+    "notes" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "assets_asset_type_check" CHECK (("asset_type" = ANY (ARRAY['car'::"text", 'real_estate'::"text", 'equipment'::"text", 'other'::"text"]))),
+    CONSTRAINT "assets_currency_check" CHECK (("currency" ~ '^[A-Z]{3}$'::"text")),
+    CONSTRAINT "assets_depreciation_months_check" CHECK (("depreciation_months" > 0)),
+    CONSTRAINT "assets_purchase_value_check" CHECK (("purchase_value" >= (0)::numeric)),
+    CONSTRAINT "assets_residual_value_check" CHECK (("residual_value" >= (0)::numeric)),
+    CONSTRAINT "assets_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'sold'::"text", 'archived'::"text"])))
+);
+
+
+ALTER TABLE "public"."assets" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."budget_segment_budget_reference_override" (
@@ -4507,7 +4595,7 @@ CREATE TABLE IF NOT EXISTS "public"."trip_settlements" (
 ALTER TABLE "public"."trip_settlements" OWNER TO "postgres";
 
 
-CREATE OR REPLACE VIEW "public"."v_transaction_analytic_mapping" AS
+CREATE OR REPLACE VIEW "public"."v_transaction_analytic_mapping" WITH ("security_invoker"='true') AS
  WITH "tx" AS (
          SELECT "t"."id" AS "transaction_id",
             "t"."user_id",
@@ -4603,7 +4691,7 @@ CREATE OR REPLACE VIEW "public"."v_transaction_analytic_mapping" AS
 ALTER VIEW "public"."v_transaction_analytic_mapping" OWNER TO "postgres";
 
 
-CREATE OR REPLACE VIEW "public"."v_analytic_mapping_audit" AS
+CREATE OR REPLACE VIEW "public"."v_analytic_mapping_audit" WITH ("security_invoker"='true') AS
  SELECT "user_id",
     "category",
     "subcategory",
@@ -4632,7 +4720,7 @@ CREATE OR REPLACE VIEW "public"."v_analytic_mapping_audit" AS
 ALTER VIEW "public"."v_analytic_mapping_audit" OWNER TO "postgres";
 
 
-CREATE OR REPLACE VIEW "public"."v_country_budget_reference_latest" AS
+CREATE OR REPLACE VIEW "public"."v_country_budget_reference_latest" WITH ("security_invoker"='true') AS
  SELECT "id",
     "country_code",
     "country_name",
@@ -4701,7 +4789,7 @@ CREATE OR REPLACE VIEW "public"."v_country_budget_reference_latest" AS
 ALTER VIEW "public"."v_country_budget_reference_latest" OWNER TO "postgres";
 
 
-CREATE OR REPLACE VIEW "public"."v_period_budget_reference_resolved" AS
+CREATE OR REPLACE VIEW "public"."v_period_budget_reference_resolved" WITH ("security_invoker"='true') AS
  SELECT "p"."id" AS "period_id",
     "p"."user_id",
     "p"."travel_id",
@@ -4779,7 +4867,7 @@ CREATE OR REPLACE VIEW "public"."v_period_budget_reference_resolved" AS
 ALTER VIEW "public"."v_period_budget_reference_resolved" OWNER TO "postgres";
 
 
-CREATE OR REPLACE VIEW "public"."v_transaction_analytic_expenses" AS
+CREATE OR REPLACE VIEW "public"."v_transaction_analytic_expenses" WITH ("security_invoker"='true') AS
  SELECT "transaction_id",
     "user_id",
     "travel_id",
@@ -4809,7 +4897,7 @@ CREATE OR REPLACE VIEW "public"."v_transaction_analytic_expenses" AS
 ALTER VIEW "public"."v_transaction_analytic_expenses" OWNER TO "postgres";
 
 
-CREATE OR REPLACE VIEW "public"."v_travel_day_summary" AS
+CREATE OR REPLACE VIEW "public"."v_travel_day_summary" WITH ("security_invoker"='true') AS
  WITH "move_agg" AS (
          SELECT "m"."travel_day_log_id",
             "count"("m"."id") AS "move_count",
@@ -4882,7 +4970,7 @@ CREATE OR REPLACE VIEW "public"."v_travel_day_summary" AS
 ALTER VIEW "public"."v_travel_day_summary" OWNER TO "postgres";
 
 
-CREATE OR REPLACE VIEW "public"."v_travel_day_ui" AS
+CREATE OR REPLACE VIEW "public"."v_travel_day_ui" WITH ("security_invoker"='true') AS
  WITH "base" AS (
          SELECT "s"."id",
             "s"."travel_id",
@@ -5307,6 +5395,21 @@ ALTER TABLE ONLY "public"."analytic_category_mappings"
 
 
 
+ALTER TABLE ONLY "public"."asset_owners"
+    ADD CONSTRAINT "asset_owners_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."asset_ownership_events"
+    ADD CONSTRAINT "asset_ownership_events_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."assets"
+    ADD CONSTRAINT "assets_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."budget_segment_budget_reference_override"
     ADD CONSTRAINT "budget_segment_budget_reference_override_one_per_segment" UNIQUE ("budget_segment_id");
 
@@ -5548,6 +5651,26 @@ CREATE UNIQUE INDEX "categories_user_name_uq" ON "public"."categories" USING "bt
 
 
 CREATE INDEX "fx_rates_as_of_idx" ON "public"."fx_rates" USING "btree" ("as_of" DESC);
+
+
+
+CREATE INDEX "idx_asset_owners_asset_id" ON "public"."asset_owners" USING "btree" ("asset_id");
+
+
+
+CREATE INDEX "idx_asset_ownership_events_asset_id" ON "public"."asset_ownership_events" USING "btree" ("asset_id");
+
+
+
+CREATE INDEX "idx_asset_ownership_events_event_date" ON "public"."asset_ownership_events" USING "btree" ("event_date" DESC);
+
+
+
+CREATE INDEX "idx_assets_travel_id" ON "public"."assets" USING "btree" ("travel_id");
+
+
+
+CREATE INDEX "idx_assets_user_id" ON "public"."assets" USING "btree" ("user_id");
 
 
 
@@ -6027,6 +6150,46 @@ CREATE OR REPLACE TRIGGER "trg_wallets_travel_consistency_guard" BEFORE INSERT O
 
 
 
+ALTER TABLE ONLY "public"."asset_owners"
+    ADD CONSTRAINT "asset_owners_asset_id_fkey" FOREIGN KEY ("asset_id") REFERENCES "public"."assets"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."asset_owners"
+    ADD CONSTRAINT "asset_owners_trip_member_id_fkey" FOREIGN KEY ("trip_member_id") REFERENCES "public"."trip_members"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."asset_owners"
+    ADD CONSTRAINT "asset_owners_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."asset_ownership_events"
+    ADD CONSTRAINT "asset_ownership_events_asset_id_fkey" FOREIGN KEY ("asset_id") REFERENCES "public"."assets"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."asset_ownership_events"
+    ADD CONSTRAINT "asset_ownership_events_from_owner_id_fkey" FOREIGN KEY ("from_owner_id") REFERENCES "public"."asset_owners"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."asset_ownership_events"
+    ADD CONSTRAINT "asset_ownership_events_to_owner_id_fkey" FOREIGN KEY ("to_owner_id") REFERENCES "public"."asset_owners"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."assets"
+    ADD CONSTRAINT "assets_travel_id_fkey" FOREIGN KEY ("travel_id") REFERENCES "public"."travels"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."assets"
+    ADD CONSTRAINT "assets_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."budget_segment_budget_reference_override"
     ADD CONSTRAINT "budget_segment_budget_reference_override_budget_segment_id_fkey" FOREIGN KEY ("budget_segment_id") REFERENCES "public"."budget_segments"("id") ON DELETE CASCADE;
 
@@ -6426,6 +6589,69 @@ CREATE POLICY "analytic_category_mappings_select_own" ON "public"."analytic_cate
 
 
 CREATE POLICY "analytic_category_mappings_update_own" ON "public"."analytic_category_mappings" FOR UPDATE USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
+
+
+
+ALTER TABLE "public"."asset_owners" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "asset_owners_delete_own_asset" ON "public"."asset_owners" FOR DELETE USING ((EXISTS ( SELECT 1
+   FROM "public"."assets" "a"
+  WHERE (("a"."id" = "asset_owners"."asset_id") AND ("a"."user_id" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "asset_owners_insert_own_asset" ON "public"."asset_owners" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."assets" "a"
+  WHERE (("a"."id" = "asset_owners"."asset_id") AND ("a"."user_id" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "asset_owners_select_own_asset" ON "public"."asset_owners" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."assets" "a"
+  WHERE (("a"."id" = "asset_owners"."asset_id") AND ("a"."user_id" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "asset_owners_update_own_asset" ON "public"."asset_owners" FOR UPDATE USING ((EXISTS ( SELECT 1
+   FROM "public"."assets" "a"
+  WHERE (("a"."id" = "asset_owners"."asset_id") AND ("a"."user_id" = "auth"."uid"()))))) WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."assets" "a"
+  WHERE (("a"."id" = "asset_owners"."asset_id") AND ("a"."user_id" = "auth"."uid"())))));
+
+
+
+ALTER TABLE "public"."asset_ownership_events" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "asset_ownership_events_insert_own_assets" ON "public"."asset_ownership_events" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."assets" "a"
+  WHERE (("a"."id" = "asset_ownership_events"."asset_id") AND ("a"."user_id" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "asset_ownership_events_select_own_assets" ON "public"."asset_ownership_events" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."assets" "a"
+  WHERE (("a"."id" = "asset_ownership_events"."asset_id") AND ("a"."user_id" = "auth"."uid"())))));
+
+
+
+ALTER TABLE "public"."assets" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "assets_delete_own" ON "public"."assets" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "assets_insert_own" ON "public"."assets" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "assets_select_own" ON "public"."assets" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "assets_update_own" ON "public"."assets" FOR UPDATE USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
@@ -7129,20 +7355,17 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."_touch_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."_touch_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."_touch_updated_at"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."accept_trip_invite"("p_token" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."accept_trip_invite"("p_token" "text") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."accept_trip_invite"("p_token" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."accept_trip_invite"("p_token" "text") TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."apply_transaction"("p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."apply_transaction"("p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."apply_transaction"("p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean) TO "service_role";
 
 
@@ -7152,25 +7375,24 @@ GRANT ALL ON FUNCTION "public"."apply_transaction"("p_amount" numeric, "p_catego
 
 
 
-GRANT ALL ON FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid", "p_budget_date_start" "date", "p_budget_date_end" "date") TO "anon";
+REVOKE ALL ON FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid", "p_budget_date_start" "date", "p_budget_date_end" "date") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid", "p_budget_date_start" "date", "p_budget_date_end" "date") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."apply_transaction_v2"("p_wallet_id" "uuid", "p_type" "text", "p_label" "text", "p_amount" numeric, "p_currency" "text", "p_date_start" "date", "p_date_end" "date", "p_category" "text", "p_subcategory" "text", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_affects_budget" boolean, "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_user_id" "uuid", "p_budget_date_start" "date", "p_budget_date_end" "date") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."bind_trip_member_to_auth"("p_trip_id" "uuid") TO "anon";
+REVOKE ALL ON FUNCTION "public"."bind_trip_member_to_auth"("p_trip_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."bind_trip_member_to_auth"("p_trip_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."bind_trip_member_to_auth"("p_trip_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."can_access_travel"("p_travel_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."can_access_travel"("p_travel_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."can_access_travel"("p_travel_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."delete_category_bundle"("p_category_name" "text") TO "anon";
+REVOKE ALL ON FUNCTION "public"."delete_category_bundle"("p_category_name" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."delete_category_bundle"("p_category_name" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."delete_category_bundle"("p_category_name" "text") TO "service_role";
 
@@ -7182,207 +7404,184 @@ GRANT ALL ON FUNCTION "public"."delete_transaction"("p_tx_id" "uuid") TO "servic
 
 
 
-GRANT ALL ON FUNCTION "public"."enforce_tx_wallet_period_match"() TO "anon";
 GRANT ALL ON FUNCTION "public"."enforce_tx_wallet_period_match"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."enforce_tx_wallet_period_match"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."get_period_for_travel_date"("p_travel_id" "uuid", "p_date" "date") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_period_for_travel_date"("p_travel_id" "uuid", "p_date" "date") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_period_for_travel_date"("p_travel_id" "uuid", "p_date" "date") TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."get_unmapped_transaction_categories"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."get_unmapped_transaction_categories"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_unmapped_transaction_categories"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_unmapped_transaction_categories"() TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_trip_participant"("p_trip_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."nth_weekday_of_month"("p_year" integer, "p_month" integer, "p_weekday" integer, "p_week_of_month" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."nth_weekday_of_month"("p_year" integer, "p_month" integer, "p_weekday" integer, "p_week_of_month" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."nth_weekday_of_month"("p_year" integer, "p_month" integer, "p_weekday" integer, "p_week_of_month" integer) TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."prevent_fx_snapshot_update"() TO "anon";
 GRANT ALL ON FUNCTION "public"."prevent_fx_snapshot_update"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."prevent_fx_snapshot_update"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."recurring_cleanup_rule_occurrences"("p_rule_id" "uuid", "p_mode" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."recurring_cleanup_rule_occurrences"("p_rule_id" "uuid", "p_mode" "text") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."recurring_cleanup_rule_occurrences"("p_rule_id" "uuid", "p_mode" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."recurring_cleanup_rule_occurrences"("p_rule_id" "uuid", "p_mode" "text") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."recurring_delete_rule"("p_rule_id" "uuid", "p_mode" "text") TO "anon";
+REVOKE ALL ON FUNCTION "public"."recurring_delete_rule"("p_rule_id" "uuid", "p_mode" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."recurring_delete_rule"("p_rule_id" "uuid", "p_mode" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."recurring_delete_rule"("p_rule_id" "uuid", "p_mode" "text") TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."recurring_delete_rule_admin"("p_rule_id" "uuid", "p_mode" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."recurring_delete_rule_admin"("p_rule_id" "uuid", "p_mode" "text") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."recurring_generate_all_active"() TO "anon";
-GRANT ALL ON FUNCTION "public"."recurring_generate_all_active"() TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."recurring_generate_all_active"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."recurring_generate_all_active"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."recurring_next_occurrence"("p_rule_type" "text", "p_interval_count" integer, "p_weekday" integer, "p_monthday" integer, "p_week_of_month" integer, "p_current" "date") TO "anon";
 GRANT ALL ON FUNCTION "public"."recurring_next_occurrence"("p_rule_type" "text", "p_interval_count" integer, "p_weekday" integer, "p_monthday" integer, "p_week_of_month" integer, "p_current" "date") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."recurring_next_occurrence"("p_rule_type" "text", "p_interval_count" integer, "p_weekday" integer, "p_monthday" integer, "p_week_of_month" integer, "p_current" "date") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."recurring_pause_rule"("p_rule_id" "uuid") TO "anon";
+REVOKE ALL ON FUNCTION "public"."recurring_pause_rule"("p_rule_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."recurring_pause_rule"("p_rule_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."recurring_pause_rule"("p_rule_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."recurring_pause_rule_admin"("p_rule_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."recurring_pause_rule_admin"("p_rule_id" "uuid") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."recurring_pause_rule_admin"("p_rule_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."recurring_pause_rule_admin"("p_rule_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."recurring_resume_rule"("p_rule_id" "uuid") TO "anon";
+REVOKE ALL ON FUNCTION "public"."recurring_resume_rule"("p_rule_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."recurring_resume_rule"("p_rule_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."recurring_resume_rule"("p_rule_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."recurring_resume_rule_admin"("p_rule_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."recurring_resume_rule_admin"("p_rule_id" "uuid") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."recurring_resume_rule_admin"("p_rule_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."recurring_resume_rule_admin"("p_rule_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."recurring_rules_consistency_guard"() TO "anon";
 GRANT ALL ON FUNCTION "public"."recurring_rules_consistency_guard"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."recurring_rules_consistency_guard"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_budget_segment"("p_budget_segment_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean, "p_disable_override" boolean) TO "anon";
+REVOKE ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_budget_segment"("p_budget_segment_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean, "p_disable_override" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_budget_segment"("p_budget_segment_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean, "p_disable_override" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_budget_segment"("p_budget_segment_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean, "p_disable_override" boolean) TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_period"("p_period_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean, "p_use_period_override" boolean, "p_disable_period_override" boolean) TO "anon";
+REVOKE ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_period"("p_period_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean, "p_use_period_override" boolean, "p_disable_period_override" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_period"("p_period_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean, "p_use_period_override" boolean, "p_disable_period_override" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_period"("p_period_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean, "p_use_period_override" boolean, "p_disable_period_override" boolean) TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_travel"("p_travel_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean) TO "anon";
+REVOKE ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_travel"("p_travel_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_travel"("p_travel_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_for_travel"("p_travel_id" "uuid", "p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer, "p_save" boolean) TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_values"("p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer) TO "anon";
+REVOKE ALL ON FUNCTION "public"."rpc_budget_reference_compute_values"("p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_values"("p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_compute_values"("p_country_code" "text", "p_region_code" "text", "p_travel_profile" "text", "p_travel_style" "text", "p_adult_count" integer, "p_child_count" integer, "p_trip_days" integer, "p_traveler_age_min" integer, "p_traveler_age_max" integer) TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_budget_segment"("p_budget_segment_id" "uuid") TO "anon";
+REVOKE ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_budget_segment"("p_budget_segment_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_budget_segment"("p_budget_segment_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_budget_segment"("p_budget_segment_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_period"("p_period_id" "uuid") TO "anon";
+REVOKE ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_period"("p_period_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_period"("p_period_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."rpc_budget_reference_resolve_for_period"("p_period_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."save_analytic_mapping_rule"("p_user_id" "uuid", "p_category_name" "text", "p_subcategory_name" "text", "p_mapping_status" "text", "p_analytic_family" "text") TO "anon";
+REVOKE ALL ON FUNCTION "public"."save_analytic_mapping_rule"("p_user_id" "uuid", "p_category_name" "text", "p_subcategory_name" "text", "p_mapping_status" "text", "p_analytic_family" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."save_analytic_mapping_rule"("p_user_id" "uuid", "p_category_name" "text", "p_subcategory_name" "text", "p_mapping_status" "text", "p_analytic_family" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."save_analytic_mapping_rule"("p_user_id" "uuid", "p_category_name" "text", "p_subcategory_name" "text", "p_mapping_status" "text", "p_analytic_family" "text") TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."seed_default_analytic_category_mappings"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings"() TO "anon";
-GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings"() TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."seed_default_analytic_category_mappings_admin"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings_admin"() TO "anon";
-GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings_admin"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."seed_default_analytic_category_mappings_admin"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."seed_default_categories_for_user"() TO "anon";
+REVOKE ALL ON FUNCTION "public"."seed_default_categories_for_user"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."seed_default_categories_for_user"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."seed_default_categories_for_user"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."set_current_timestamp_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."set_current_timestamp_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_current_timestamp_updated_at"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."tb_profiles_role_guard"() TO "anon";
 GRANT ALL ON FUNCTION "public"."tb_profiles_role_guard"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."tb_profiles_role_guard"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."tb_touch_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."tb_touch_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."tb_touch_updated_at"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."transactions_travel_consistency_guard"() TO "anon";
 GRANT ALL ON FUNCTION "public"."transactions_travel_consistency_guard"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."transactions_travel_consistency_guard"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."travel_day_context_for_date"("p_travel_id" "uuid", "p_log_date" "date") TO "anon";
 GRANT ALL ON FUNCTION "public"."travel_day_context_for_date"("p_travel_id" "uuid", "p_log_date" "date") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."travel_day_context_for_date"("p_travel_id" "uuid", "p_log_date" "date") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."travel_day_last_known_location"("p_travel_id" "uuid", "p_before_date" "date") TO "anon";
 GRANT ALL ON FUNCTION "public"."travel_day_last_known_location"("p_travel_id" "uuid", "p_before_date" "date") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."travel_day_last_known_location"("p_travel_id" "uuid", "p_before_date" "date") TO "service_role";
 
@@ -7394,129 +7593,112 @@ GRANT ALL ON TABLE "public"."travel_day_logs" TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."travel_day_log_upsert"("p_travel_id" "uuid", "p_log_date" "date", "p_end_place_label" "text", "p_end_country_code" "text", "p_end_lat" numeric, "p_end_lng" numeric, "p_travel_mode_main" "text", "p_overnight_mode" "text", "p_no_move_declared" boolean, "p_crossed_border" boolean, "p_is_rest_day" boolean, "p_note" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."travel_day_log_upsert"("p_travel_id" "uuid", "p_log_date" "date", "p_end_place_label" "text", "p_end_country_code" "text", "p_end_lat" numeric, "p_end_lng" numeric, "p_travel_mode_main" "text", "p_overnight_mode" "text", "p_no_move_declared" boolean, "p_crossed_border" boolean, "p_is_rest_day" boolean, "p_note" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."travel_day_log_upsert"("p_travel_id" "uuid", "p_log_date" "date", "p_end_place_label" "text", "p_end_country_code" "text", "p_end_lat" numeric, "p_end_lng" numeric, "p_travel_mode_main" "text", "p_overnight_mode" "text", "p_no_move_declared" boolean, "p_crossed_border" boolean, "p_is_rest_day" boolean, "p_note" "text") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."travel_day_logs_apply_no_move_defaults"() TO "anon";
 GRANT ALL ON FUNCTION "public"."travel_day_logs_apply_no_move_defaults"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."travel_day_logs_apply_no_move_defaults"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."travel_day_logs_validate_no_move"() TO "anon";
 GRANT ALL ON FUNCTION "public"."travel_day_logs_validate_no_move"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."travel_day_logs_validate_no_move"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."travel_day_moves_block_if_no_move_declared"() TO "anon";
 GRANT ALL ON FUNCTION "public"."travel_day_moves_block_if_no_move_declared"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."travel_day_moves_block_if_no_move_declared"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."travel_day_moves_sync_user_id"() TO "anon";
 GRANT ALL ON FUNCTION "public"."travel_day_moves_sync_user_id"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."travel_day_moves_sync_user_id"() TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."trip_accept_invite"("p_token" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."trip_accept_invite"("p_token" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."trip_accept_invite"("p_token" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_accept_invite"("p_token" "text") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."trip_after_group_insert_add_owner"() TO "anon";
-GRANT ALL ON FUNCTION "public"."trip_after_group_insert_add_owner"() TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."trip_after_group_insert_add_owner"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."trip_after_group_insert_add_owner"() TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."trip_apply_expense_v1"("p_trip_id" "uuid", "p_payload" "jsonb") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."trip_apply_expense_v1"("p_trip_id" "uuid", "p_payload" "jsonb") TO "anon";
 GRANT ALL ON FUNCTION "public"."trip_apply_expense_v1"("p_trip_id" "uuid", "p_payload" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_apply_expense_v1"("p_trip_id" "uuid", "p_payload" "jsonb") TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."trip_apply_expense_v2"("p_trip_id" "uuid", "p_payload" "jsonb") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."trip_apply_expense_v2"("p_trip_id" "uuid", "p_payload" "jsonb") TO "anon";
 GRANT ALL ON FUNCTION "public"."trip_apply_expense_v2"("p_trip_id" "uuid", "p_payload" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_apply_expense_v2"("p_trip_id" "uuid", "p_payload" "jsonb") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."trip_bind_member_to_auth"("p_trip_id" "uuid") TO "anon";
+REVOKE ALL ON FUNCTION "public"."trip_bind_member_to_auth"("p_trip_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."trip_bind_member_to_auth"("p_trip_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_bind_member_to_auth"("p_trip_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."trip_cancel_settlement_v1"("p_event_id" "uuid") TO "anon";
+REVOKE ALL ON FUNCTION "public"."trip_cancel_settlement_v1"("p_event_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."trip_cancel_settlement_v1"("p_event_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_cancel_settlement_v1"("p_event_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") TO "anon";
+REVOKE ALL ON FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_create_settlement_v1"("p_trip_id" "uuid", "p_currency" "text", "p_amount" numeric, "p_from_member_id" "uuid", "p_to_member_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."trip_debug_auth_v1"("p_trip_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."trip_debug_auth_v1"("p_trip_id" "uuid") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."trip_debug_auth_v1"("p_trip_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."trip_debug_auth_v1"("p_trip_id" "uuid") TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."trip_delete_expense_v1"("p_trip_id" "uuid", "p_expense_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."trip_delete_expense_v1"("p_trip_id" "uuid", "p_expense_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."trip_delete_expense_v1"("p_trip_id" "uuid", "p_expense_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_delete_expense_v1"("p_trip_id" "uuid", "p_expense_id" "uuid") TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."trip_get_balances_v1"("p_trip_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."trip_get_balances_v1"("p_trip_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."trip_get_balances_v1"("p_trip_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_get_balances_v1"("p_trip_id" "uuid") TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."trip_role"("p_trip_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."trip_role"("p_trip_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."trip_role"("p_trip_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_role"("p_trip_id" "uuid") TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."trip_suggest_settlements_v1"("p_trip_id" "uuid", "p_use_net_raw" boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."trip_suggest_settlements_v1"("p_trip_id" "uuid", "p_use_net_raw" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."trip_suggest_settlements_v1"("p_trip_id" "uuid", "p_use_net_raw" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trip_suggest_settlements_v1"("p_trip_id" "uuid", "p_use_net_raw" boolean) TO "service_role";
 
 
 
 REVOKE ALL ON FUNCTION "public"."update_transaction"("p_tx_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."update_transaction"("p_tx_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean) TO "anon";
-GRANT ALL ON FUNCTION "public"."update_transaction"("p_tx_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_transaction"("p_tx_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean) TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."update_transaction_v2"("p_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_user_id" "uuid", "p_subcategory" "text", "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_budget_date_start" "date", "p_budget_date_end" "date") TO "anon";
+REVOKE ALL ON FUNCTION "public"."update_transaction_v2"("p_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_user_id" "uuid", "p_subcategory" "text", "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_budget_date_start" "date", "p_budget_date_end" "date") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."update_transaction_v2"("p_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_user_id" "uuid", "p_subcategory" "text", "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_budget_date_start" "date", "p_budget_date_end" "date") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_transaction_v2"("p_id" "uuid", "p_wallet_id" "uuid", "p_type" "text", "p_amount" numeric, "p_currency" "text", "p_category" "text", "p_label" "text", "p_date_start" "date", "p_date_end" "date", "p_pay_now" boolean, "p_out_of_budget" boolean, "p_night_covered" boolean, "p_user_id" "uuid", "p_subcategory" "text", "p_trip_expense_id" "uuid", "p_trip_share_link_id" "uuid", "p_fx_rate_snapshot" numeric, "p_fx_source_snapshot" "text", "p_fx_snapshot_at" timestamp with time zone, "p_fx_base_currency_snapshot" "text", "p_fx_tx_currency_snapshot" "text", "p_budget_date_start" "date", "p_budget_date_end" "date") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."wallets_travel_consistency_guard"() TO "anon";
 GRANT ALL ON FUNCTION "public"."wallets_travel_consistency_guard"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."wallets_travel_consistency_guard"() TO "service_role";
 
@@ -7525,6 +7707,24 @@ GRANT ALL ON FUNCTION "public"."wallets_travel_consistency_guard"() TO "service_
 GRANT ALL ON TABLE "public"."analytic_category_mappings" TO "anon";
 GRANT ALL ON TABLE "public"."analytic_category_mappings" TO "authenticated";
 GRANT ALL ON TABLE "public"."analytic_category_mappings" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."asset_owners" TO "anon";
+GRANT ALL ON TABLE "public"."asset_owners" TO "authenticated";
+GRANT ALL ON TABLE "public"."asset_owners" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."asset_ownership_events" TO "anon";
+GRANT ALL ON TABLE "public"."asset_ownership_events" TO "authenticated";
+GRANT ALL ON TABLE "public"."asset_ownership_events" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."assets" TO "anon";
+GRANT ALL ON TABLE "public"."assets" TO "authenticated";
+GRANT ALL ON TABLE "public"."assets" TO "service_role";
 
 
 
@@ -7784,7 +7984,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQ
 
 
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "service_role";
 

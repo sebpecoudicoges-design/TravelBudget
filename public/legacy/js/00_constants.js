@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.6.0';
+window.__TB_BUILD = '9.6.4';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -41,6 +41,7 @@ window.__TB_BUILD = '9.6.0';
     v_country_budget_reference_latest: "v_country_budget_reference_latest",
     assets: "assets",
     asset_owners: "asset_owners",
+    asset_ownership_events: "asset_ownership_events",
   });
 
   const COLS = Object.freeze({

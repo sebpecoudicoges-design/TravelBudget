@@ -1,4 +1,4 @@
-console.log("TB BUILD 9.6.0");
+console.log("TB BUILD 9.6.4");
 import './app/bridge.js';
 
 // TravelBudget V9 entrypoint (Vite + deterministic legacy loader)
@@ -68,7 +68,7 @@ function loadScript(src) {
 async function boot() {
   // Simple marker for debugging
   window.__TB_BUILD__ = window.__TB_BUILD__ || {};
-  window.__TB_BUILD__.entry = 'v9-vite-legacy-loader-9.6.0';
+  window.__TB_BUILD__.entry = 'v9-vite-legacy-loader-9.6.4';
   window.__TB_BUILD__.loadedAt = new Date().toISOString();
 
   for (const src of LEGACY_SCRIPTS) {

@@ -211,13 +211,6 @@
       try {
         const segId = String(seg.id);
 
-        console.log('[analysis] loading reference for segment', {
-          segId,
-          start: seg?.start || seg?.start_date || seg?.startDate || null,
-          end: seg?.end || seg?.end_date || seg?.endDate || null,
-          periodId: seg?.period_id || seg?.periodId || null
-        });
-
         const { data, error } = await s.rpc(
           TB_CONST.RPCS.budget_reference_resolve_for_budget_segment,
           { p_budget_segment_id: segId }
@@ -480,36 +473,49 @@ function _analysisBucketOrder(){
   }
 
   function _convert(amount, cur, dateISO, forcedBase){
-    const base = _upper(forcedBase || _currency());
-    const a = _safeNum(amount);
-    const from = _upper(cur || base);
-    if (!a) return 0;
-    if (from === base) return a;
-    try {
+  const base = _upper(forcedBase || _currency());
+  const a = _safeNum(amount);
+  const from = _upper(cur || base);
+
+  if (!a) return 0;
+  if (from === base) return a;
+
+  const seg = (typeof getBudgetSegmentForDate === 'function')
+    ? getBudgetSegmentForDate(dateISO)
+    : null;
+
+  // Priorité à la conversion canonique utilisée par le reste de l’app.
+  // C’est important pour aligner Analyse et Dashboard.
+  try {
+    if (typeof window.amountToBudgetBaseForDate === 'function' && seg) {
+      const inSegBase = window.amountToBudgetBaseForDate(a, from, dateISO);
+      const segBase = _upper(seg.baseCurrency || seg.base_currency || state?.period?.baseCurrency || 'EUR');
+
+      if (segBase === base) return _safeNum(inSegBase);
+
       if (typeof window.tbFxConvertForDateCached === 'function') {
-        const out = window.tbFxConvertForDateCached(a, from, base, dateISO);
+        const out = window.tbFxConvertForDateCached(inSegBase, segBase, base, dateISO);
         if (out !== null && Number.isFinite(Number(out))) return Number(out);
       }
-    } catch (_) {}
-    const seg = (typeof getBudgetSegmentForDate === 'function') ? getBudgetSegmentForDate(dateISO) : null;
-    try {
-      if (typeof window.amountToBudgetBaseForDate === 'function' && seg) {
-        const inSegBase = window.amountToBudgetBaseForDate(a, from, dateISO);
-        const segBase = _upper(seg.baseCurrency || seg.base_currency || state?.period?.baseCurrency || 'EUR');
-        if (segBase === base) return _safeNum(inSegBase);
-        if (typeof window.tbFxConvertForDateCached === 'function') {
-          const out = window.tbFxConvertForDateCached(inSegBase, segBase, base, dateISO);
-          if (out !== null && Number.isFinite(Number(out))) return Number(out);
-        }
-      }
-    } catch (_) {}
-    try {
-      if (typeof _toBaseForDate === 'function' && base === _upper(state?.user?.baseCurrency || 'EUR')) {
-        return _safeNum(_toBaseForDate(a, from, dateISO));
-      }
-    } catch (_) {}
-    return 0;
-  }
+    }
+  } catch (_) {}
+
+  // Fallback FX direct uniquement si la conversion canonique n’est pas disponible.
+  try {
+    if (typeof window.tbFxConvertForDateCached === 'function') {
+      const out = window.tbFxConvertForDateCached(a, from, base, dateISO);
+      if (out !== null && Number.isFinite(Number(out))) return Number(out);
+    }
+  } catch (_) {}
+
+  try {
+    if (typeof _toBaseForDate === 'function' && base === _upper(state?.user?.baseCurrency || 'EUR')) {
+      return _safeNum(_toBaseForDate(a, from, dateISO));
+    }
+  } catch (_) {}
+
+  return 0;
+}
   function _dailyBudgetForDate(dateISO, analysisBase){
     const base = _upper(analysisBase || _currency());
     const seg = _segmentForDate(dateISO);
@@ -914,21 +920,52 @@ function _sumTxArray(txs, base){
     const nightCoveredShareOfSpent = nightCoveredTransportSpent > 0 ? (nightCoveredPotentialSavings / nightCoveredTransportSpent) * 100 : 0;
 
 const cashflowScope = _el('analysis-scope')?.value || 'budget';
+const cashflowMode = _el('analysis-mode')?.value || 'planned';
 
 const todayIdx = days.indexOf(todayIso);
 const todayBudget = todayIdx >= 0 ? _safeNum(targetDaily[todayIdx]) : 0;
-const todaySpent = todayIdx >= 0 ? _safeNum(dailyMap[todayIso]) : 0;
+
+const todayBudgetConsumed = todayIdx >= 0
+  ? txs.reduce((sum, tx) => {
+      if (cashflowMode === 'expenses' && !_txPaid(tx)) return sum;
+
+      const budgetStart = _txBudgetStart(tx);
+      const budgetEnd = _txBudgetEnd(tx);
+      if (!budgetStart || !budgetEnd) return sum;
+      if (todayIso < budgetStart || todayIso > budgetEnd) return sum;
+
+      const cashDate = _txCashDate(tx);
+
+      // Important : on divise par la durée complète de la dépense,
+      // pas seulement par les jours visibles dans le filtre.
+      const fullBudgetDays = _daysInclusive(budgetStart, budgetEnd);
+
+      if (!fullBudgetDays.length) return sum;
+
+      const fullAmount = _convert(tx?.amount, tx?.currency || base, cashDate || budgetStart, base);
+      const perDay = fullAmount / fullBudgetDays.length;
+
+      return sum + perDay;
+    }, 0)
+  : 0;
 
 const futureBudget = days.reduce((sum, d, idx) => {
   if (d > todayIso) return sum + _safeNum(targetDaily[idx]);
   return sum;
 }, 0);
 
-const rawBudgetRemaining = futureBudget + Math.max(0, todayBudget - todaySpent);
-const budgetRemaining = cashflowScope === 'out' ? 0 : rawBudgetRemaining;
+const budgetRemaining = cashflowScope === 'out'
+  ? 0
+  : futureBudget + Math.max(0, todayBudget - todayBudgetConsumed);
 
 const expenseUnpaid = Math.max(0, spent - paidSpent);
 const expenseRemaining = expenseUnpaid;
+
+const deltaProjectedWithBudget =
+  (incomeRealAmount - paidSpent) +
+  incomePlannedAmount -
+  expenseRemaining -
+  budgetRemaining;
 
 return {
   base, start, end, days, txs, spent, paidSpent,
@@ -945,6 +982,7 @@ expensePlanned: expenseRemaining,
 deltaReal: incomeRealAmount - paidSpent,
 deltaPlanned: -expenseRemaining,
 deltaProjected: (incomeRealAmount - paidSpent) + incomePlannedAmount - expenseRemaining,
+deltaProjectedWithBudget,
   totalBudget, totalReference, totalReferenceElapsed, totalReferencePeriod,
   remaining, pct, referencePct, avgPerDay, budgetPerDay, referencePerDay,
   referenceMiscPerDay, comparablePerDay, unmappedPerDay, excludedPerDay,
@@ -1237,7 +1275,7 @@ deltaProjected: (incomeRealAmount - paidSpent) + incomePlannedAmount - expenseRe
             ${escapeHTML(_fmtMoney(model.deltaProjected, model.base))}
           </div>
           <div style="margin-top:8px;font-size:12px;color:rgba(15,23,42,.60);">
-            Solde fin période après entrées prévues et sorties restantes
+            Solde cash estimé, hors budget restant théorique.
           </div>
         </div>
 
@@ -1258,7 +1296,7 @@ deltaProjected: (incomeRealAmount - paidSpent) + incomePlannedAmount - expenseRe
             <div style="margin-top:4px;font-size:20px;font-weight:900;color:#3b82f6;">${escapeHTML(_fmtMoney(model.expenseToDate, model.base))}</div>
           </div>
           <div style="padding:13px 14px;border-radius:18px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.20);">
-            <div style="font-size:12px;color:rgba(15,23,42,.60);">Déjà engagé</div>
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">Déjà payé</div>
             <div style="margin-top:4px;font-size:20px;font-weight:900;color:#fb7185;">${escapeHTML(_fmtMoney(model.expenseReal, model.base))}</div>
           </div>
         </div>
@@ -1278,23 +1316,37 @@ deltaProjected: (incomeRealAmount - paidSpent) + incomePlannedAmount - expenseRe
           <div style="padding:13px 14px;border-radius:18px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.16);">
             <div style="font-size:12px;color:rgba(15,23,42,.60);">Budget restant</div>
             <div style="margin-top:4px;font-size:19px;font-weight:850;color:#6366f1;">${escapeHTML(_fmtMoney(model.budgetRemaining, model.base))}</div>
+            <div style="margin-top:3px;font-size:11px;color:rgba(15,23,42,.48);">Indicatif, non inclus dans le solde final</div>
           </div>
         </div>
       </div>
 
       <div style="padding:14px 16px;border-radius:20px;background:rgba(255,255,255,.46);border:1px solid rgba(148,163,184,.18);display:flex;flex-direction:column;gap:9px;box-shadow:inset 0 1px 0 rgba(255,255,255,.72);">
         <div style="display:flex;justify-content:space-between;gap:12px;">
-          <span style="font-size:13px;color:rgba(15,23,42,.60);">Solde déjà engagé</span>
+          <span style="font-size:13px;color:rgba(15,23,42,.60);">Solde actuel</span>
           <strong>${escapeHTML(_fmtMoney(model.deltaReal, model.base))}</strong>
         </div>
         <div style="display:flex;justify-content:space-between;gap:12px;">
-          <span style="font-size:13px;color:rgba(15,23,42,.60);">Impact sorties restantes</span>
-          <strong>${escapeHTML(_fmtMoney(model.deltaPlanned, model.base))}</strong>
+          <span style="font-size:13px;color:rgba(15,23,42,.60);">Entrées prévues</span>
+          <strong>${escapeHTML(_fmtMoney(model.incomePlanned, model.base))}</strong>
         </div>
         <div style="display:flex;justify-content:space-between;gap:12px;">
-          <span style="font-size:13px;color:rgba(15,23,42,.60);">Budget restant disponible</span>
-          <strong>${escapeHTML(_fmtMoney(model.budgetRemaining, model.base))}</strong>
+          <span style="font-size:13px;color:rgba(15,23,42,.60);">Sorties à payer</span>
+<strong>-${escapeHTML(_fmtMoney(model.expensePlanned, model.base))}</strong>
         </div>
+        <div style="display:flex;justify-content:space-between;gap:12px;">
+  <span style="font-size:13px;color:rgba(15,23,42,.60);">Budget restant</span>
+  <strong style="color:#6366f1;">-${escapeHTML(_fmtMoney(model.budgetRemaining, model.base))}</strong>
+</div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding-top:9px;border-top:1px solid rgba(15,23,42,.10);">
+  <span style="font-size:14px;font-weight:800;color:rgba(15,23,42,.82);">Solde fin période cash</span>
+  <strong style="font-size:20px;font-weight:950;color:${escapeHTML(model.deltaProjected >= 0 ? '#22c55e' : '#fb7185')};">${escapeHTML(_fmtMoney(model.deltaProjected, model.base))}</strong>
+</div>
+
+<div style="display:flex;justify-content:space-between;gap:12px;">
+  <span style="font-size:13px;color:rgba(15,23,42,.60);">Solde fin période projeté</span>
+  <strong style="font-size:18px;font-weight:900;color:${escapeHTML(model.deltaProjectedWithBudget >= 0 ? '#22c55e' : '#fb7185')};">${escapeHTML(_fmtMoney(model.deltaProjectedWithBudget, model.base))}</strong>
+</div>
       </div>
     </div>
   </div>
