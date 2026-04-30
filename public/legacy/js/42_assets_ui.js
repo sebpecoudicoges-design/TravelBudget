@@ -46,6 +46,29 @@
   function minePercent(rows){ const me = rows.find(r=>/toi|moi/i.test(String(r.display_name||''))); return Number(me?.ownership_percent ?? rows[0]?.ownership_percent ?? 100); }
   function totalPercent(rows){ return Math.round((rows||[]).reduce((s,r)=>s+n(r.ownership_percent,0),0)*100)/100; }
   function eventLabel(t){ return ({ buy_share:'Rachat parts', sell_share:'Vente parts', transfer_share:'Transfert parts' })[t] || 'Mouvement parts'; }
+  function txLabel(tx){
+  const date = tx.date || tx.transaction_date || tx.created_at || '';
+  const amount = tx.amount ?? tx.value ?? tx.total ?? '';
+  const cur = tx.currency || tx.original_currency || '';
+  const label = tx.label || tx.description || tx.note || tx.title || 'Transaction';
+  return `${String(date).slice(0,10)} · ${amount} ${cur} · ${label}`;
+}
+
+async function loadRecentTransactions(){
+  const c = client();
+  if(!c) return [];
+  try{
+    let q = c.from(table('transactions','transactions')).select('*').order('created_at',{ascending:false}).limit(30);
+    const tid = activeTravelId();
+    if(tid) q = q.eq('travel_id', tid);
+    const { data, error } = await q;
+    if(error) throw error;
+    return data || [];
+  }catch(e){
+    console.warn('[TB][assets] transactions candidates unavailable', e);
+    return [];
+  }
+}
 function portfolioSummary(assets, owners){
   const core = window.TBAssetsCore;
   const activeAssets = (assets || []).filter(a => String(a.status || 'active') === 'active');
@@ -137,12 +160,94 @@ const depreciationStatus = width >= 100 ? 'Amortissement terminé' : 'En amortis
   function assetFormHtml(mode, asset){ const a = asset || { name:'', asset_type:'car', purchase_value:'', residual_value:0, currency:'EUR', purchase_date:today(), depreciation_months:36 }; const isEdit = mode === 'edit'; return `<div class="tb-asset-modal-backdrop"><form class="tb-asset-modal" data-tb-asset-form="${isEdit?'edit':'create'}" ${isEdit?`data-asset-id="${esc(a.id)}"`:''}><div class="tb-asset-modal-head"><div><strong>${isEdit?'Modifier l’asset':'Ajouter un asset'}</strong><p>Stock patrimonial seul : aucun mouvement cash, aucune dépense budget.</p></div><button type="button" data-tb-asset-close>×</button></div><div class="tb-asset-form-grid"><label>Nom<input name="name" required placeholder="Toyota X-Trail" value="${esc(a.name)}"></label><label>Type<select name="asset_type"><option value="car" ${a.asset_type==='car'?'selected':''}>Voiture</option><option value="real_estate" ${a.asset_type==='real_estate'?'selected':''}>Immo</option><option value="equipment" ${a.asset_type==='equipment'?'selected':''}>Matériel</option><option value="other" ${a.asset_type==='other'?'selected':''}>Autre</option></select></label><label>Valeur d’achat<input name="purchase_value" required type="number" min="0" step="0.01" placeholder="5000" value="${esc(a.purchase_value)}"></label><label>Valeur estimée finale<input name="residual_value" type="number" min="0" step="0.01" value="${esc(a.residual_value)}"></label><label>Devise<input name="currency" required maxlength="3" value="${esc(a.currency||'EUR')}"></label><label>Date d’achat<input name="purchase_date" required type="date" value="${esc(a.purchase_date||today())}"></label><label>Amortissement, mois<input name="depreciation_months" required type="number" min="1" step="1" value="${esc(a.depreciation_months||36)}"></label>${isEdit?'':'<label>Ta part %<input name="ownership_percent" required type="number" min="0" max="100" step="0.01" value="100"></label>'}</div><div class="tb-asset-modal-error" data-tb-asset-error hidden></div><div class="tb-asset-modal-actions"><button type="button" data-tb-asset-close>Annuler</button><button type="submit">${isEdit?'Enregistrer':'Créer l’asset'}</button></div></form></div>`; }
   function ownerRowHtml(o){ return `<div class="tb-owner-row" data-owner-id="${esc(o.id||'')}"><input name="owner_name" required placeholder="Nom" value="${esc(o.display_name||'')}"><input name="owner_percent" required type="number" min="0" max="100" step="0.01" value="${esc(o.ownership_percent||0)}"><button type="button" data-tb-owner-remove>×</button></div>`; }
   function ownersModalHtml(asset){ const rows = ownerRows(asset); return `<div class="tb-asset-modal-backdrop"><form class="tb-asset-modal" data-tb-asset-owners-form data-asset-id="${esc(asset.id)}"><div class="tb-asset-modal-head"><div><strong>Copropriétaires</strong><p>${esc(asset.name)} · le total des parts doit faire 100%.</p></div><button type="button" data-tb-asset-close>×</button></div><div class="tb-owner-list" data-tb-owner-list>${rows.map(ownerRowHtml).join('') || ownerRowHtml({id:'', display_name:'Toi', ownership_percent:100})}</div><button type="button" class="tb-owner-add" data-tb-owner-add>+ Ajouter un copropriétaire</button><div class="tb-owner-total" data-tb-owner-total></div><div class="tb-asset-modal-error" data-tb-asset-error hidden></div><div class="tb-asset-modal-actions"><button type="button" data-tb-asset-close>Annuler</button><button type="submit">Enregistrer les parts</button></div></form></div>`; }
-  function transferModalHtml(asset){ const rows = ownerRows(asset); const opts = rows.map(r=>`<option value="${esc(r.id)}">${esc(r.display_name)} · ${Number(r.ownership_percent||0)}%</option>`).join(''); return `<div class="tb-asset-modal-backdrop"><form class="tb-asset-modal" data-tb-asset-transfer-form data-asset-id="${esc(asset.id)}"><div class="tb-asset-modal-head"><div><strong>Rachat / vente de parts</strong><p>Trace un mouvement d’ownership. Aucun cashflow n’est créé automatiquement.</p></div><button type="button" data-tb-asset-close>×</button></div><div class="tb-asset-form-grid"><label>Type<select name="event_type"><option value="transfer_share">Transfert de parts</option><option value="buy_share">Rachat de parts</option><option value="sell_share">Vente de parts</option></select></label><label>Date<input name="event_date" type="date" required value="${today()}"></label><label>Vendeur / source<select name="from_owner_id" required>${opts}</select></label><label>Acheteur / destination<select name="to_owner_id" required>${opts}</select></label><label>Part transférée %<input name="percent" required type="number" min="0.01" max="100" step="0.01" value="10"></label><label>Montant payé<input name="amount" type="number" min="0" step="0.01" value="0"></label><label>Devise<input name="currency" maxlength="3" value="${esc(asset.currency||'EUR')}"></label><label>Note<input name="note" placeholder="Rachat part voiture"></label></div><div class="tb-asset-modal-error" data-tb-asset-error hidden></div><div class="tb-asset-modal-actions"><button type="button" data-tb-asset-close>Annuler</button><button type="submit">Valider le mouvement</button></div></form></div>`; }
+  function transferModalHtml(asset, transactions){
+  const rows = ownerRows(asset);
+  const opts = rows.map(r=>`<option value="${esc(r.id)}">${esc(r.display_name)} · ${Number(r.ownership_percent||0)}%</option>`).join('');
+  const txOpts = (transactions||[]).map(tx=>`<option value="${esc(tx.id)}">${esc(txLabel(tx))}</option>`).join('');
+
+  return `<div class="tb-asset-modal-backdrop">
+    <form class="tb-asset-modal" data-tb-asset-transfer-form data-asset-id="${esc(asset.id)}">
+      <div class="tb-asset-modal-head">
+        <div>
+          <strong>Rachat / vente de parts</strong>
+          <p>Trace un mouvement d’ownership. Tu peux le lier à une transaction existante sans créer de nouveau cashflow.</p>
+        </div>
+        <button type="button" data-tb-asset-close>×</button>
+      </div>
+
+      <div class="tb-asset-form-grid">
+        <label>Type
+          <select name="event_type">
+            <option value="transfer_share">Transfert de parts</option>
+            <option value="buy_share">Rachat de parts</option>
+            <option value="sell_share">Vente de parts</option>
+          </select>
+        </label>
+
+        <label>Date
+          <input name="event_date" type="date" required value="${today()}">
+        </label>
+
+        <label>Vendeur / source
+          <select name="from_owner_id" required>${opts}</select>
+        </label>
+
+        <label>Acheteur / destination
+          <select name="to_owner_id" required>${opts}</select>
+        </label>
+
+        <label>Part transférée %
+          <input name="percent" required type="number" min="0.01" max="100" step="0.01" value="10">
+        </label>
+
+        <label>Montant payé
+          <input name="amount" type="number" min="0" step="0.01" value="0">
+        </label>
+
+        <label>Devise
+          <input name="currency" maxlength="3" value="${esc(asset.currency||'EUR')}">
+        </label>
+
+        <label>Transaction liée
+          <select name="linked_transaction_id">
+            <option value="">Aucune transaction liée</option>
+            ${txOpts}
+          </select>
+        </label>
+
+        <label>Note
+          <input name="note" placeholder="Rachat part voiture">
+        </label>
+      </div>
+
+      <div class="tb-asset-modal-error" data-tb-asset-error hidden></div>
+
+      <div class="tb-asset-modal-actions">
+        <button type="button" data-tb-asset-close>Annuler</button>
+        <button type="submit">Valider le mouvement</button>
+      </div>
+    </form>
+  </div>`;
+}
 
   function closeModal(){ document.querySelectorAll('.tb-asset-modal-backdrop').forEach(n=>n.remove()); }
   function openAssetModal(mode, assetId){ closeModal(); const asset = assetId ? findAsset(assetId) : null; document.body.insertAdjacentHTML('beforeend', assetFormHtml(mode, asset)); focusFirst(); }
   function openOwnersModal(assetId){ const asset=findAsset(assetId); if(!asset) return; closeModal(); document.body.insertAdjacentHTML('beforeend', ownersModalHtml(asset)); refreshOwnerTotal(); focusFirst(); }
-  function openTransferModal(assetId){ const asset=findAsset(assetId); if(!asset) return; const rows=ownerRows(asset); if(rows.length<2){ alert('Ajoute au moins deux copropriétaires avant de transférer des parts.'); return; } closeModal(); document.body.insertAdjacentHTML('beforeend', transferModalHtml(asset)); focusFirst(); }
+  async function openTransferModal(assetId){
+  const asset = findAsset(assetId);
+  if(!asset) return;
+
+  const rows = ownerRows(asset);
+  if(rows.length < 2){
+    alert('Ajoute au moins deux copropriétaires avant de transférer des parts.');
+    return;
+  }
+
+  closeModal();
+  const transactions = await loadRecentTransactions();
+  document.body.insertAdjacentHTML('beforeend', transferModalHtml(asset, transactions));
+  focusFirst();
+}
   function focusFirst(){ const el=document.querySelector('.tb-asset-modal input, .tb-asset-modal select'); if(el) setTimeout(()=>el.focus(),0); }
   function showFormError(msg){ const el=document.querySelector('[data-tb-asset-error]'); if(el){ el.hidden=false; el.textContent=String(msg || 'Erreur inconnue'); } }
 
@@ -152,7 +257,20 @@ const depreciationStatus = width >= 100 ? 'Amortissement terminé' : 'En amortis
   async function archiveAsset(assetId){ const c = client(); if(!c) throw new Error('Client Supabase indisponible.'); const res = await c.from(table('assets','assets')).update({ status:'archived' }).eq('id', assetId); if(res.error) throw res.error; }
   function readOwnerRows(form){ const rows = Array.from(form.querySelectorAll('.tb-owner-row')).map(row=>({ id: row.getAttribute('data-owner-id') || '', display_name: String(row.querySelector('[name="owner_name"]')?.value || '').trim(), ownership_percent: Number(row.querySelector('[name="owner_percent"]')?.value || 0) })).filter(r=>r.display_name); if(!rows.length) throw new Error('Ajoute au moins un propriétaire.'); rows.forEach(r=>{ if(!Number.isFinite(r.ownership_percent) || r.ownership_percent < 0 || r.ownership_percent > 100) throw new Error('Chaque part doit être entre 0 et 100%.'); }); const total = totalPercent(rows); if(Math.abs(total - 100) > 0.01) throw new Error(`Le total des parts doit faire 100%. Total actuel : ${total}%.`); return rows; }
   async function saveOwnersFromForm(form){ const c = client(); if(!c) throw new Error('Client Supabase indisponible.'); const assetId = form.getAttribute('data-asset-id'); if(!assetId) throw new Error('Asset introuvable.'); const uid = await currentUserId(); const rows = readOwnerRows(form); const existing = ownerRows(assetId); const keepIds = rows.filter(r=>r.id).map(r=>String(r.id)); for(const old of existing){ if(old.id && !keepIds.includes(String(old.id))){ const del = await c.from(table('asset_owners','asset_owners')).delete().eq('id', old.id); if(del.error) throw del.error; } } for(const r of rows){ const payload = { asset_id: assetId, display_name:r.display_name, ownership_percent:r.ownership_percent }; if(r.id){ const up = await c.from(table('asset_owners','asset_owners')).update(payload).eq('id', r.id); if(up.error) throw up.error; } else { const ins = await c.from(table('asset_owners','asset_owners')).insert([Object.assign(payload, /toi|moi/i.test(r.display_name) && uid ? { user_id:uid } : {})]); if(ins.error) throw ins.error; } } }
-  async function saveTransferFromForm(form){ const c = client(); if(!c) throw new Error('Client Supabase indisponible.'); const assetId = form.getAttribute('data-asset-id'); const asset=findAsset(assetId); if(!asset) throw new Error('Asset introuvable.'); const fd = new FormData(form); const fromId = String(fd.get('from_owner_id')||''); const toId = String(fd.get('to_owner_id')||''); if(!fromId || !toId || fromId === toId) throw new Error('Choisis deux copropriétaires différents.'); const percent = Number(fd.get('percent')||0); if(!Number.isFinite(percent) || percent <= 0) throw new Error('Part transférée invalide.'); const rows = ownerRows(assetId); const from = rows.find(r=>String(r.id)===fromId); const to = rows.find(r=>String(r.id)===toId); if(!from || !to) throw new Error('Copropriétaire introuvable.'); if(n(from.ownership_percent,0) < percent) throw new Error(`${from.display_name} ne possède pas assez de parts.`); const nextFrom = Math.round((n(from.ownership_percent,0)-percent)*100)/100; const nextTo = Math.round((n(to.ownership_percent,0)+percent)*100)/100; const up1 = await c.from(table('asset_owners','asset_owners')).update({ ownership_percent: nextFrom }).eq('id', fromId); if(up1.error) throw up1.error; const up2 = await c.from(table('asset_owners','asset_owners')).update({ ownership_percent: nextTo }).eq('id', toId); if(up2.error) throw up2.error; const payload = { asset_id: assetId, from_owner_id: fromId, to_owner_id: toId, event_type: String(fd.get('event_type')||'transfer_share'), percent, amount: Number(fd.get('amount')||0), currency: String(fd.get('currency')||asset.currency||'EUR').trim().toUpperCase(), event_date: String(fd.get('event_date')||today()).slice(0,10), note: String(fd.get('note')||'').trim() || null }; const ev = await c.from(table('asset_ownership_events','asset_ownership_events')).insert([payload]); if(ev.error) throw ev.error; }
+  async function saveTransferFromForm(form){ const c = client(); if(!c) throw new Error('Client Supabase indisponible.'); const assetId = form.getAttribute('data-asset-id'); const asset=findAsset(assetId); if(!asset) throw new Error('Asset introuvable.'); const fd = new FormData(form); const fromId = String(fd.get('from_owner_id')||''); const toId = String(fd.get('to_owner_id')||''); if(!fromId || !toId || fromId === toId) throw new Error('Choisis deux copropriétaires différents.'); const percent = Number(fd.get('percent')||0); if(!Number.isFinite(percent) || percent <= 0) throw new Error('Part transférée invalide.'); const rows = ownerRows(assetId); const from = rows.find(r=>String(r.id)===fromId); const to = rows.find(r=>String(r.id)===toId); if(!from || !to) throw new Error('Copropriétaire introuvable.'); if(n(from.ownership_percent,0) < percent) throw new Error(`${from.display_name} ne possède pas assez de parts.`); const nextFrom = Math.round((n(from.ownership_percent,0)-percent)*100)/100; const nextTo = Math.round((n(to.ownership_percent,0)+percent)*100)/100; const up1 = await c.from(table('asset_owners','asset_owners')).update({ ownership_percent: nextFrom }).eq('id', fromId); if(up1.error) throw up1.error; const up2 = await c.from(table('asset_owners','asset_owners')).update({ ownership_percent: nextTo }).eq('id', toId); if(up2.error) throw up2.error; const linkedTxId = String(fd.get('linked_transaction_id') || '').trim() || null;
+
+const payload = {
+  asset_id: assetId,
+  from_owner_id: fromId,
+  to_owner_id: toId,
+  event_type: String(fd.get('event_type')||'transfer_share'),
+  percent,
+  amount: Number(fd.get('amount')||0),
+  currency: String(fd.get('currency')||asset.currency||'EUR').trim().toUpperCase(),
+  event_date: String(fd.get('event_date')||today()).slice(0,10),
+  linked_transaction_id: linkedTxId,
+  note: String(fd.get('note')||'').trim() || null
+}; const ev = await c.from(table('asset_ownership_events','asset_ownership_events')).insert([payload]); if(ev.error) throw ev.error; }
 
   function refreshOwnerTotal(){ const form = document.querySelector('[data-tb-asset-owners-form]'); const box = document.querySelector('[data-tb-owner-total]'); if(!form || !box) return; const rows = Array.from(form.querySelectorAll('[name="owner_percent"]')).map(x=>Number(x.value||0)); const total = Math.round(rows.reduce((s,x)=>s+(Number.isFinite(x)?x:0),0)*100)/100; box.textContent = `Total : ${total}%`; box.classList.toggle('ok', Math.abs(total-100)<=0.01); }
   function bindOnce(){ if(window.__tbAssetsUiBound) return; window.__tbAssetsUiBound = true; document.addEventListener('click', async function(ev){ const open = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-open]'); if(open){ ev.preventDefault(); openAssetModal('create'); return; } const edit = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-edit]'); if(edit){ ev.preventDefault(); openAssetModal('edit', edit.getAttribute('data-tb-asset-edit')); return; } const owners = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-owners]'); if(owners){ ev.preventDefault(); openOwnersModal(owners.getAttribute('data-tb-asset-owners')); return; } const transfer = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-transfer]'); if(transfer){ ev.preventDefault(); openTransferModal(transfer.getAttribute('data-tb-asset-transfer')); return; } const archive = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-archive]'); if(archive){ ev.preventDefault(); if(confirm('Archiver cet asset ? Il ne sera plus affiché, sans suppression de l’historique.')){ try{ await archiveAsset(archive.getAttribute('data-tb-asset-archive')); await renderAssets('asset-archived'); }catch(e){ alert(e && (e.message||e.code) || e); } } return; } const close = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-close]'); if(close){ ev.preventDefault(); closeModal(); return; } const addOwner = ev.target && ev.target.closest && ev.target.closest('[data-tb-owner-add]'); if(addOwner){ ev.preventDefault(); const list=document.querySelector('[data-tb-owner-list]'); if(list){ list.insertAdjacentHTML('beforeend', ownerRowHtml({id:'',display_name:'',ownership_percent:0})); refreshOwnerTotal(); } return; } const remOwner = ev.target && ev.target.closest && ev.target.closest('[data-tb-owner-remove]'); if(remOwner){ ev.preventDefault(); const row=remOwner.closest('.tb-owner-row'); if(row) row.remove(); refreshOwnerTotal(); return; } const backdrop = ev.target && ev.target.classList && ev.target.classList.contains('tb-asset-modal-backdrop'); if(backdrop){ ev.preventDefault(); closeModal(); } }); document.addEventListener('input', function(ev){ if(ev.target && ev.target.matches && ev.target.matches('[name="owner_percent"]')) refreshOwnerTotal(); }); document.addEventListener('submit', async function(ev){ const form = ev.target && ev.target.matches && ev.target.matches('[data-tb-asset-form], [data-tb-asset-owners-form], [data-tb-asset-transfer-form]') ? ev.target : null; if(!form) return; ev.preventDefault(); const submit = form.querySelector('button[type="submit"]'); const oldTxt = submit ? submit.textContent : ''; if(submit){ submit.disabled = true; submit.textContent = 'Enregistrement…'; } try{ if(form.matches('[data-tb-asset-owners-form]')) await saveOwnersFromForm(form); else if(form.matches('[data-tb-asset-transfer-form]')) await saveTransferFromForm(form); else if(form.getAttribute('data-tb-asset-form') === 'edit') await updateAssetFromForm(form); else await createAssetFromForm(form); closeModal(); await renderAssets('asset-saved'); }catch(e){ console.error('[TB][assets] save failed', e); showFormError(e && (e.message || e.details || e.code) ? (e.message || e.details || e.code) : e); } finally{ if(submit){ submit.disabled = false; submit.textContent = oldTxt || 'Enregistrer'; } } }); }
