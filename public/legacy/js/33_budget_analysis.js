@@ -645,15 +645,15 @@ function _sumTxArray(txs, base){
       const budgetStart = _txBudgetStart(tx);
       const budgetEnd = _txBudgetEnd(tx);
 
-      const fullBudgetDays = _daysInclusive(budgetStart, budgetEnd)
-        .filter(d => daySet.has(d));
+      const fullBudgetDays = _daysInclusive(budgetStart, budgetEnd);
 
-      if (!fullBudgetDays.length) {
-        return { amount: 0, fullBudgetDays: [], visibleBudgetDays: [], perDay: 0, cashDate, budgetStart, budgetEnd };
-      }
+if (!fullBudgetDays.length) {
+  return { amount: 0, fullBudgetDays: [], visibleBudgetDays: [], perDay: 0, cashDate, budgetStart, budgetEnd };
+}
 
-      const visibleBudgetDays = fullBudgetDays
-        .filter(d => !cutoffEnd || d <= cutoffEnd);
+const visibleBudgetDays = fullBudgetDays
+  .filter(d => daySet.has(d))
+  .filter(d => !cutoffEnd || d <= cutoffEnd);
 
       if (!visibleBudgetDays.length) {
         return { amount: 0, fullBudgetDays, visibleBudgetDays: [], perDay: 0, cashDate, budgetStart, budgetEnd };
@@ -865,13 +865,13 @@ function _sumTxArray(txs, base){
       const budgetEnd = _txBudgetEnd(tx);
       const cashDate = _txCashDate(tx);
 
-      const fullBudgetDays = _daysInclusive(budgetStart, budgetEnd)
-        .filter(d => daySet.has(d));
+      const fullBudgetDays = _daysInclusive(budgetStart, budgetEnd);
 
-      if (!fullBudgetDays.length) return sum;
+if (!fullBudgetDays.length) return sum;
 
-      const visibleBudgetDays = fullBudgetDays
-        .filter(d => !cutoffEnd || d <= cutoffEnd);
+const visibleBudgetDays = fullBudgetDays
+  .filter(d => daySet.has(d))
+  .filter(d => !cutoffEnd || d <= cutoffEnd);
 
       if (!visibleBudgetDays.length) return sum;
 
