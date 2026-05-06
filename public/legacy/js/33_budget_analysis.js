@@ -8,6 +8,7 @@
   let resizeBound = false;
   let excludedCats = new Set();
   let excludePanelOpen = false;
+  let lastAnalysisModel = null;
 
   const TB_SOURCED_CATEGORY_MAPPING = Object.freeze((window.TB_CONST && window.TB_CONST.ANALYSIS && window.TB_CONST.ANALYSIS.SOURCED_CATEGORY_MAPPING) || {});
   const TB_SOURCED_BUCKET_ORDER = Object.freeze(['Logement', 'Repas', 'Transport', 'Activités']);
@@ -637,6 +638,8 @@ function _sumTxArray(txs, base){
     const paidMap = Object.fromEntries(days.map(d => [d, 0]));
     const catMap = new Map();
     const subcatMap = new Map();
+    const categoryTxMap = new Map();
+    const subcategoryTxMap = new Map();
     let spent = 0;
     let paidSpent = 0;
 
@@ -687,12 +690,31 @@ const visibleBudgetDays = fullBudgetDays
       }
 
       const cat = _norm(tx?.category || 'Autre');
-      const sub = _norm(tx?.subcategory || '');
-      catMap.set(cat, (catMap.get(cat) || 0) + alloc.amount);
-      if (sub) {
-        const key = `${cat}|||${sub}`;
-        subcatMap.set(key, (subcatMap.get(key) || 0) + alloc.amount);
-      }
+const sub = _norm(tx?.subcategory || '');
+
+const txDetail = {
+  tx,
+  visibleAmount: alloc.amount,
+  perDay: alloc.perDay,
+  visibleBudgetDays: alloc.visibleBudgetDays,
+  fullBudgetDays: alloc.fullBudgetDays,
+  cashDate: alloc.cashDate,
+  budgetStart: alloc.budgetStart,
+  budgetEnd: alloc.budgetEnd
+};
+
+catMap.set(cat, (catMap.get(cat) || 0) + alloc.amount);
+
+if (!categoryTxMap.has(cat)) categoryTxMap.set(cat, []);
+categoryTxMap.get(cat).push(txDetail);
+
+if (sub) {
+  const key = `${cat}|||${sub}`;
+  subcatMap.set(key, (subcatMap.get(key) || 0) + alloc.amount);
+
+  if (!subcategoryTxMap.has(key)) subcategoryTxMap.set(key, []);
+  subcategoryTxMap.get(key).push(txDetail);
+}
     }
 
     const targetDaily = days.map(d => _dailyBudgetForDate(d, base));
@@ -993,7 +1015,8 @@ deltaProjectedWithBudget,
   referenceCoverageDays, referenceContext, comparableDays,
   comparableIncludedSpent, comparableExcludedSpent, unmappedComparableSpent,
   nightCoveredCount, nightCoveredPotentialSavings, nightCoveredAverageSaving,
-  nightCoveredTransportSpent, nightCoveredShareOfSpent, nightCoveredRows
+  nightCoveredTransportSpent, nightCoveredShareOfSpent, nightCoveredRows,
+categoryTxMap, subcategoryTxMap
 };
         }
   function _buildReferenceComparisonSeries(actualMap, referenceCategoryMap, comparableDays){
@@ -1354,7 +1377,147 @@ deltaProjectedWithBudget,
 
 host.innerHTML = progressCards.map((c, idx) => renderGlassCard(c, idx)).join('') + renderDeltaCard(progressCards.length) + cashflowBlock;
   }
+  function _txDrilldownId(tx, idx){
+  return String(tx?.id || tx?.transaction_id || tx?.local_id || `${_txBudgetStart(tx)}|${tx?.label || ''}|${tx?.amount || ''}|${idx || 0}`);
+}
 
+function _entryTripLabel(tx){
+  return (_isTripLinked(tx) || /^\[trip\]/i.test(String(tx?.label || '').trim())) ? 'Trip' : 'Standard';
+}
+
+function _entryBudgetLabel(tx){
+  return _txOut(tx) ? 'Hors budget' : 'Budget';
+}
+
+function _entryPaidLabel(tx){
+  if (_txPaid(tx)) return 'Payé';
+  if (_isTripAnalyticRealExpense(tx)) return 'Part Trip réelle';
+  return 'À payer';
+}
+
+function _ensureTxDrilldownStyles(){
+  if (document.getElementById('tb-analysis-tx-drilldown-style')) return;
+
+  const style = document.createElement('style');
+  style.id = 'tb-analysis-tx-drilldown-style';
+  style.textContent = `
+    .tb-analysis-clickable{cursor:pointer;transition:transform .16s ease, background .16s ease, border-color .16s ease;}
+    .tb-analysis-clickable:hover{transform:translateY(-1px);background:rgba(59,130,246,.06)!important;border-color:rgba(59,130,246,.22)!important;}
+    .tb-analysis-detail-btn{border:1px solid rgba(148,163,184,.28);background:rgba(255,255,255,.64);border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;color:rgba(15,23,42,.68);cursor:pointer;white-space:nowrap;}
+    .tb-analysis-detail-btn:hover{background:rgba(59,130,246,.10);border-color:rgba(59,130,246,.28);color:#0f172a;}
+    .tb-analysis-tx-overlay{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.42);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;padding:18px;}
+    .tb-analysis-tx-drawer{width:min(980px,100%);max-height:min(82vh,760px);overflow:hidden;border-radius:28px 28px 20px 20px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,252,.96));border:1px solid rgba(255,255,255,.78);box-shadow:0 28px 80px rgba(15,23,42,.28);display:flex;flex-direction:column;color:#0f172a;}
+    .tb-analysis-tx-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;padding:20px 22px 14px;border-bottom:1px solid rgba(148,163,184,.18);}
+    .tb-analysis-tx-title{font-size:20px;font-weight:950;line-height:1.15;margin:0;}
+    .tb-analysis-tx-meta{margin-top:6px;font-size:12px;color:rgba(15,23,42,.58);display:flex;flex-wrap:wrap;gap:8px;}
+    .tb-analysis-tx-close{border:0;background:rgba(15,23,42,.07);color:#0f172a;width:34px;height:34px;border-radius:999px;cursor:pointer;font-size:20px;line-height:1;}
+    .tb-analysis-tx-body{overflow:auto;padding:8px 22px 20px;display:grid;gap:10px;}
+    .tb-analysis-tx-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:flex-start;padding:13px 0;border-bottom:1px solid rgba(148,163,184,.18);}
+    .tb-analysis-tx-label{font-size:14px;font-weight:850;line-height:1.25;}
+    .tb-analysis-tx-sub{margin-top:5px;font-size:12px;color:rgba(15,23,42,.56);display:flex;flex-wrap:wrap;gap:7px;}
+    .tb-analysis-tx-pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;background:rgba(148,163,184,.12);font-size:11px;font-weight:750;color:rgba(15,23,42,.62);}
+    .tb-analysis-tx-amount{text-align:right;white-space:nowrap;}
+    .tb-analysis-tx-visible{font-size:15px;font-weight:950;}
+    .tb-analysis-tx-original{margin-top:4px;font-size:12px;color:rgba(15,23,42,.52);}
+    @media (max-width:640px){.tb-analysis-tx-overlay{padding:0;align-items:stretch}.tb-analysis-tx-drawer{max-height:100vh;border-radius:0}.tb-analysis-tx-row{grid-template-columns:1fr}.tb-analysis-tx-amount{text-align:left}}
+  `;
+  document.head.appendChild(style);
+}
+
+function _openTxDrilldown(kind, key, model){
+  _ensureTxDrilldownStyles();
+
+  const sourceModel = model || lastAnalysisModel || {};
+  const isSub = kind === 'subcategory';
+  const map = isSub ? sourceModel.subcategoryTxMap : sourceModel.categoryTxMap;
+  const entries = map instanceof Map ? (map.get(key) || []) : [];
+  const base = sourceModel.base || _currency();
+
+  const title = isSub
+    ? (() => {
+        const [cat, sub] = String(key || '').split('|||');
+        return `${sub || 'Sans sous-catégorie'} · ${cat || 'Autre'}`;
+      })()
+    : String(key || 'Catégorie');
+
+  const total = entries.reduce((sum, row) => sum + _safeNum(row?.visibleAmount), 0);
+  const sorted = entries.slice().sort((a,b) =>
+    String(a?.budgetStart || a?.cashDate || '').localeCompare(String(b?.budgetStart || b?.cashDate || ''))
+  );
+
+  let overlay = document.getElementById('tb-analysis-tx-drilldown');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'tb-analysis-tx-drilldown';
+    overlay.className = 'tb-analysis-tx-overlay';
+    document.body.appendChild(overlay);
+  }
+
+  overlay.innerHTML = `
+    <div class="tb-analysis-tx-drawer" role="dialog" aria-modal="true" aria-label="Transactions correspondantes">
+      <div class="tb-analysis-tx-head">
+        <div>
+          <h3 class="tb-analysis-tx-title">${escapeHTML(title)}</h3>
+          <div class="tb-analysis-tx-meta">
+            <span>${escapeHTML(sorted.length + ' transaction' + (sorted.length > 1 ? 's' : ''))}</span>
+            <span>•</span>
+            <span>Total visible : <strong>${escapeHTML(_fmtMoney(total, base))}</strong></span>
+            <span>•</span>
+            <span>${escapeHTML(sourceModel.start || '—')} → ${escapeHTML(sourceModel.end || '—')}</span>
+          </div>
+        </div>
+        <button type="button" class="tb-analysis-tx-close" data-close="1" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="tb-analysis-tx-body">
+        ${sorted.length ? sorted.map((row, idx) => {
+          const tx = row.tx || {};
+          const budgetRange = row.budgetStart && row.budgetEnd && row.budgetStart !== row.budgetEnd
+            ? `${row.budgetStart} → ${row.budgetEnd}`
+            : (row.budgetStart || '—');
+
+          const visibleRange = Array.isArray(row.visibleBudgetDays) && row.visibleBudgetDays.length
+            ? (row.visibleBudgetDays.length === 1
+              ? row.visibleBudgetDays[0]
+              : `${row.visibleBudgetDays[0]} → ${row.visibleBudgetDays[row.visibleBudgetDays.length - 1]}`)
+            : '—';
+
+          const original = `${_safeNum(tx.amount).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} ${_upper(tx.currency || base)}`;
+
+          return `
+            <div class="tb-analysis-tx-row" data-tx-row="${escapeHTML(_txDrilldownId(tx, idx))}">
+              <div style="min-width:0;">
+                <div class="tb-analysis-tx-label">${escapeHTML(tx.label || tx.category || 'Transaction')}</div>
+                <div class="tb-analysis-tx-sub">
+                  <span class="tb-analysis-tx-pill">Budget : ${escapeHTML(budgetRange)}</span>
+                  <span class="tb-analysis-tx-pill">Visible : ${escapeHTML(visibleRange)}</span>
+                  <span class="tb-analysis-tx-pill">Cash : ${escapeHTML(row.cashDate || _txCashDate(tx) || '—')}</span>
+                  <span class="tb-analysis-tx-pill">${escapeHTML(_entryPaidLabel(tx))}</span>
+                  <span class="tb-analysis-tx-pill">${escapeHTML(_entryBudgetLabel(tx))}</span>
+                  <span class="tb-analysis-tx-pill">${escapeHTML(_entryTripLabel(tx))}</span>
+                </div>
+              </div>
+              <div class="tb-analysis-tx-amount">
+                <div class="tb-analysis-tx-visible">${escapeHTML(_fmtMoney(row.visibleAmount, base))}</div>
+                <div class="tb-analysis-tx-original">${escapeHTML(original)}</div>
+              </div>
+            </div>`;
+        }).join('') : `<div class="muted" style="padding:18px 0;">Aucune transaction correspondante dans le modèle courant.</div>`}
+      </div>
+    </div>`;
+
+  const close = () => { overlay.remove(); };
+  overlay.querySelector('[data-close]')?.addEventListener('click', close);
+  overlay.addEventListener('click', (ev) => { if (ev.target === overlay) close(); });
+
+  const onKey = (ev) => {
+    if (ev.key === 'Escape') {
+      close();
+      window.removeEventListener('keydown', onKey);
+    }
+  };
+  window.addEventListener('keydown', onKey);
+}
   function _themeText(){ return getComputedStyle(document.body).getPropertyValue('--text').trim() || '#e5e7eb'; }
   function _themeMuted(){ return getComputedStyle(document.body).getPropertyValue('--muted').trim() || '#94a3b8'; }
   function _themeGrid(){ return getComputedStyle(document.body).getPropertyValue('--gridline').trim() || 'rgba(148,163,184,.18)'; }
@@ -1399,56 +1562,136 @@ host.innerHTML = progressCards.map((c, idx) => renderGlassCard(c, idx)).join('')
     }
   }
   function _renderCategory(model){
-    const chart = _ensureChart('category','analysis-category-chart');
-    if (!chart) return;
-    const data = model.topCategories.map((it) => ({ name: it[0], value: Number(it[1].toFixed(2)), itemStyle:{ color: _categoryColor(it[0]) } }));
-    chart.setOption({
-      animationDuration: 1000,
-      tooltip: { trigger:'item', backgroundColor:'rgba(15,23,42,.92)', borderWidth:0, textStyle:{ color:'#fff' }, formatter:(p)=>`${p.name}<br>${_fmtMoney(p.value, model.base)} • ${p.percent}%` },
-      series:[{
-        type:'pie', radius:['34%','78%'], center:['50%','56%'], roseType:'area', avoidLabelOverlap:true,
-        itemStyle:{ borderRadius:10, borderColor:'rgba(255,255,255,.06)', borderWidth:2 },
-        label:{ color:_themeText(), formatter:(p)=>`${p.name}\n${p.percent}%`, fontWeight:700 },
-        labelLine:{ length:10, length2:8 },
-        data: data.length ? data : [{ name:'Aucune dépense', value:1, itemStyle:{ color:'rgba(148,163,184,.25)' }, label:{ color:_themeMuted() } }]
+  const chart = _ensureChart('category','analysis-category-chart');
+  if (!chart) return;
+
+  const data = model.topCategories.map((it) => ({
+    name: it[0],
+    value: Number(it[1].toFixed(2)),
+    itemStyle:{ color: _categoryColor(it[0]) }
+  }));
+
+  chart.setOption({
+    animationDuration: 1000,
+    tooltip: {
+      trigger:'item',
+      backgroundColor:'rgba(15,23,42,.92)',
+      borderWidth:0,
+      textStyle:{ color:'#fff' },
+      formatter:(p)=>`${p.name}<br>${_fmtMoney(p.value, model.base)} • ${p.percent}%`
+    },
+    series:[{
+      type:'pie',
+      radius:['34%','78%'],
+      center:['50%','56%'],
+      roseType:'area',
+      avoidLabelOverlap:true,
+      itemStyle:{ borderRadius:10, borderColor:'rgba(255,255,255,.06)', borderWidth:2 },
+      label:{ color:_themeText(), formatter:(p)=>`${p.name}\n${p.percent}%`, fontWeight:700 },
+      labelLine:{ length:10, length2:8 },
+      data: data.length ? data : [{
+        name:'Aucune dépense',
+        value:1,
+        itemStyle:{ color:'rgba(148,163,184,.25)' },
+        label:{ color:_themeMuted() }
       }]
+    }]
+  });
+
+  try {
+    chart.off('click');
+    chart.on('click', (params) => {
+      const name = _norm(params?.name || '');
+      if (!name || name === 'Aucune dépense') return;
+      _openTxDrilldown('category', name, model);
     });
-  }
+  } catch (_) {}
+}
   function _renderCategoryBars(model){
-    const chart = _ensureChart('categoryBars','analysis-category-bars-chart');
-    if (!chart) return;
-    const rows = (model.categorySeries || []).slice(0, 12).reverse();
-    chart.setOption({
-      animationDuration: 900,
-      tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, backgroundColor:'rgba(15,23,42,.92)', borderWidth:0, textStyle:{ color:'#fff' }, formatter:(p)=>`${p?.[0]?.axisValue || ''}<br>${_fmtMoney(p?.[0]?.value || 0, model.base)}` },
-      grid:{ left: 110, right: 20, top: 10, bottom: 20, containLabel:false },
-      xAxis:{ type:'value', axisLabel:{ color:_themeMuted(), formatter:(v)=>_fmtMoney(v, model.base) }, splitLine:{ lineStyle:{ color:_themeGrid() } } },
-      yAxis:{ type:'category', data: rows.map(r => r.name), axisLabel:{ color:_themeText() } },
-      series:[{ name:'Réel', type:'bar', data: rows.map(r => ({ value:Number(r.actual.toFixed(2)), itemStyle:{ color:r.color || _themeAccent(), borderRadius:[0,10,10,0] } })), barMaxWidth:18 }]
+  const chart = _ensureChart('categoryBars','analysis-category-bars-chart');
+  if (!chart) return;
+
+  const rows = (model.categorySeries || []).slice(0, 12).reverse();
+
+  chart.setOption({
+    animationDuration: 900,
+    tooltip:{
+      trigger:'axis',
+      axisPointer:{ type:'shadow' },
+      backgroundColor:'rgba(15,23,42,.92)',
+      borderWidth:0,
+      textStyle:{ color:'#fff' },
+      formatter:(p)=>`${p?.[0]?.axisValue || ''}<br>${_fmtMoney(p?.[0]?.value || 0, model.base)}`
+    },
+    grid:{ left: 110, right: 20, top: 10, bottom: 20, containLabel:false },
+    xAxis:{
+      type:'value',
+      axisLabel:{ color:_themeMuted(), formatter:(v)=>_fmtMoney(v, model.base) },
+      splitLine:{ lineStyle:{ color:_themeGrid() } }
+    },
+    yAxis:{
+      type:'category',
+      data: rows.map(r => r.name),
+      axisLabel:{ color:_themeText() }
+    },
+    series:[{
+      name:'Réel',
+      type:'bar',
+      data: rows.map(r => ({
+        value:Number(r.actual.toFixed(2)),
+        itemStyle:{ color:r.color || _themeAccent(), borderRadius:[0,10,10,0] }
+      })),
+      barMaxWidth:18
+    }]
+  });
+
+  try {
+    chart.off('click');
+    chart.on('click', (params) => {
+      const name = _norm(params?.name || params?.axisValue || '');
+      if (!name) return;
+      _openTxDrilldown('category', name, model);
     });
-  }
+  } catch (_) {}
+}
 
   function _renderSubcategoryBreakdown(model){
-    const host = _el('analysis-subcategory-breakdown');
-    if (!host) return;
-    const rows = (model.subcategorySeries || []).slice(0, 10);
-    if (!rows.length) {
-      host.innerHTML = `<div class="muted">Aucune sous-catégorie exploitée sur la plage actuelle.</div>`;
-      return;
-    }
-    host.innerHTML = rows.map((row, idx) => `
-      <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 0;border-top:${idx ? '1px solid var(--border)' : 'none'};">
-        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-          <span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${escapeHTML(row.color || _themeAccent())};flex:0 0 auto;"></span>
-          <div style="min-width:0;">
-            <div style="font-weight:600;">${escapeHTML(row.subcategoryName || 'Sans sous-catégorie')}</div>
-            <div class="muted" style="font-size:12px;">${escapeHTML(row.categoryName || 'Autre')}</div>
-          </div>
-        </div>
-        <div style="font-weight:700;white-space:nowrap;">${escapeHTML(_fmtMoney(row.actual, model.base))}</div>
-      </div>
-    `).join('');
+  const host = _el('analysis-subcategory-breakdown');
+  if (!host) return;
+
+  const rows = (model.subcategorySeries || []).slice(0, 10);
+
+  if (!rows.length) {
+    host.innerHTML = `<div class="muted">Aucune sous-catégorie exploitée sur la plage actuelle.</div>`;
+    return;
   }
+
+  _ensureTxDrilldownStyles();
+
+  host.innerHTML = rows.map((row, idx) => `
+    <div class="tb-analysis-clickable" data-subkey="${escapeHTML(row.key)}" style="display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 8px;border-radius:14px;border:1px solid transparent;border-top:${idx ? '1px solid var(--border)' : '1px solid transparent'};">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${escapeHTML(row.color || _themeAccent())};flex:0 0 auto;"></span>
+        <div style="min-width:0;">
+          <div style="font-weight:600;">${escapeHTML(row.subcategoryName || 'Sans sous-catégorie')}</div>
+          <div class="muted" style="font-size:12px;">${escapeHTML(row.categoryName || 'Autre')}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+        <div style="font-weight:700;">${escapeHTML(_fmtMoney(row.actual, model.base))}</div>
+        <button type="button" class="tb-analysis-detail-btn">Détail</button>
+      </div>
+    </div>
+  `).join('');
+
+  host.querySelectorAll('[data-subkey]').forEach((node) => {
+    node.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      const key = node.getAttribute('data-subkey') || '';
+      if (key) _openTxDrilldown('subcategory', key, model);
+    });
+  });
+}
   function _renderVelocity(model){
     const chart = _ensureChart('velocity','analysis-velocity-chart');
     if (!chart) return;
@@ -1712,6 +1955,7 @@ host.innerHTML = progressCards.map((c, idx) => renderGlassCard(c, idx)).join('')
     let model;
     try {
       model = _computeModel();
+    lastAnalysisModel = model;
     } catch (err) {
       console.warn('[analysis] compute failed', err);
       const host = _el('analysis-summary');
