@@ -133,6 +133,16 @@ function setSelectedSort(v){
       .dark .tb-doc-expiry{color:#fbbf24;}
       .tb-doc-fav{border:0;background:transparent;font-size:20px;cursor:pointer;line-height:1;}
       .tb-doc-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+      .tb-doc-note{font-size:12px;color:var(--muted,#6b7280);line-height:1.25;border-left:3px solid rgba(127,127,127,.22);padding-left:8px;}
+      .tb-doc-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.58);z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;}
+      .tb-doc-modal{width:min(520px,96vw);border-radius:22px;background:var(--card,#fff);box-shadow:0 24px 80px rgba(0,0,0,.35);padding:16px;}
+      .dark .tb-doc-modal{background:#15151d;color:#f8fafc;}
+      .tb-doc-modal h3{margin:0 0 12px;font-size:20px;}
+      .tb-doc-form{display:flex;flex-direction:column;gap:10px;}
+      .tb-doc-form label{font-size:12px;font-weight:800;color:var(--muted,#6b7280);}
+      .tb-doc-form input,.tb-doc-form textarea{width:100%;}
+      .tb-doc-form textarea{min-height:92px;resize:vertical;}
+      .tb-doc-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
       @media(max-width:820px){.tb-doc-hero{flex-direction:column}.tb-doc-layout{grid-template-columns:1fr}.tb-doc-actions{justify-content:flex-start}.tb-doc-grid{grid-template-columns:1fr}}
     `;
     document.head.appendChild(st);
@@ -263,6 +273,7 @@ function setSelectedSort(v){
 
   const tags = Array.isArray(d.tags) ? d.tags : [];
   const expiry = fmtExpiry(d.expires_at);
+  const notePreview = String(d.notes || '').trim();
 
   return `<article class="tb-doc-card" data-doc-id="${esc(d.id)}">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
@@ -286,6 +297,7 @@ function setSelectedSort(v){
     ${tags.length ? `<div class="tb-doc-tags">${tags.map(t=>`<span class="tb-doc-tag">${esc(t)}</span>`).join('')}</div>` : ''}
 
     ${expiry ? `<div class="tb-doc-expiry">${esc(expiry)}</div>` : ''}
+    ${notePreview ? `<div class="tb-doc-note">${esc(notePreview.length > 90 ? notePreview.slice(0,90) + '…' : notePreview)}</div>` : ''}
 
     <select class="input"
       title="Déplacer vers"
@@ -364,7 +376,7 @@ function setSelectedSort(v){
         <strong>Glisse tes PDF ou images ici</strong>
         <span>${esc(folder ? `Ajout dans « ${folder.name} »` : 'Ajout dans Non classé')}</span>
       </div>
-      <button class="btn primary" type="button">Ajouter</button>
+      <button class="btn primary" type="button" onclick="event.stopPropagation(); document.getElementById('tb-doc-file-input')?.click()">Ajouter</button>
     </div>
     <div class="tb-doc-filters">
   <button class="btn ${CACHE.onlyFavorites ? 'primary' : ''}" type="button" onclick="window.tbDocumentsToggleFavoritesFilter()">
@@ -634,39 +646,75 @@ async function deleteFolder(id){
   await ensureLoaded();
 }
 
-async function editMeta(id){
+function openInfoModal(doc){
+  const currentTags = Array.isArray(doc.tags) ? doc.tags.join(', ') : '';
+  const currentExpiry = doc.expires_at ? String(doc.expires_at).slice(0,10) : '';
+  const currentNotes = String(doc.notes || '');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'tb-doc-modal-backdrop';
+  wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
+
+  wrap.innerHTML = `
+    <div class="tb-doc-modal">
+      <h3>Infos document</h3>
+
+      <div class="tb-doc-form">
+        <div>
+          <label>Tags</label>
+          <input id="tb-doc-info-tags" class="input" type="text" value="${esc(currentTags)}" placeholder="Australie, WHV, Banque" />
+        </div>
+
+        <div>
+          <label>Date d’expiration</label>
+          <input id="tb-doc-info-expiry" class="input" type="date" value="${esc(currentExpiry)}" />
+        </div>
+
+        <div>
+          <label>Note libre</label>
+          <textarea id="tb-doc-info-notes" class="input" placeholder="Ex : original papier chez parents, contrat à renouveler…">${esc(currentNotes)}</textarea>
+        </div>
+      </div>
+
+      <div class="tb-doc-modal-actions">
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">Annuler</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsSaveInfo('${esc(doc.id)}')">Enregistrer</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(wrap);
+}
+
+function editMeta(id){
+  const doc = (CACHE.documents||[]).find(d=>String(d.id)===String(id));
+  if(!doc) return;
+  openInfoModal(doc);
+}
+
+async function saveInfo(id){
   const c = client();
   if(!c) return alert('Client Supabase indisponible.');
 
-  const doc = (CACHE.documents||[]).find(d=>String(d.id)===String(id));
-  if(!doc) return;
-
-  const currentTags = Array.isArray(doc.tags) ? doc.tags.join(', ') : '';
-  const tagsInput = prompt('Tags séparés par des virgules :', currentTags);
-  if(tagsInput === null) return;
-
-  const currentExpiry = doc.expires_at ? String(doc.expires_at).slice(0,10) : '';
-  const expiryInput = prompt('Date d’expiration au format YYYY-MM-DD, ou vide :', currentExpiry);
-  if(expiryInput === null) return;
-
-  const expires_at = String(expiryInput || '').trim() || null;
-
-  if(expires_at && !/^\d{4}-\d{2}-\d{2}$/.test(expires_at)){
-    return alert('Format invalide. Utilise YYYY-MM-DD, par exemple 2027-05-31.');
-  }
+  const tagsInput = document.getElementById('tb-doc-info-tags')?.value || '';
+  const expires_at = document.getElementById('tb-doc-info-expiry')?.value || null;
+  const notes = document.getElementById('tb-doc-info-notes')?.value || null;
 
   const { error } = await c
     .from(table('documents','documents'))
     .update({
       tags: normalizeTags(tagsInput),
-      expires_at
+      expires_at,
+      notes
     })
     .eq('id', id);
 
   if(error) return alert(error.message || String(error));
 
+  document.querySelector('.tb-doc-modal-backdrop')?.remove();
   await ensureLoaded();
 }
+
   window.renderDocuments = function renderDocuments(){ ensureLoaded(); };
   window.tbDocumentsRenderOnly = renderShell;
   window.tbDocumentsSetSearch = function(v){ CACHE.search = String(v || ''); renderShell(); }; 
@@ -690,6 +738,7 @@ async function editMeta(id){
 };
 window.tbDocumentsToggleFavorite = toggleFavorite;
 window.tbDocumentsEditMeta = editMeta;
+window.tbDocumentsSaveInfo = saveInfo;
 
 window.tbDocumentsToggleFavoritesFilter = function(){
   CACHE.onlyFavorites = !CACHE.onlyFavorites;
