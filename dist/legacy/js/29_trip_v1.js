@@ -396,10 +396,16 @@ function toastOk(msg) {
     if (filters?.category && category !== filters.category) return false;
     if (filters?.payer && payerId !== String(filters.payer)) return false;
     if (filters?.participant) {
-      const rows = shareMap.get(ex?.id) || [];
-      const wanted = String(filters.participant);
-      if (!rows.some((row) => String(row?.memberId || '') === wanted) && payerId !== wanted) return false;
-    }
+  const rows = shareMap.get(ex?.id) || [];
+  const wanted = String(filters.participant);
+
+  const hasPositiveShare = rows.some((row) =>
+    String(row?.memberId || '') === wanted &&
+    Number(row?.shareAmount || 0) > 0.004
+  );
+
+  if (!hasPositiveShare && payerId !== wanted) return false;
+}
     const date = String(ex?.date || '');
     if (filters?.dateFrom && date && date < filters.dateFrom) return false;
     if (filters?.dateTo && date && date > filters.dateTo) return false;
@@ -706,67 +712,92 @@ function _normalizeCurrency(cur) {
     return out;
   }
   function _computeSplitParts(amt, members, split) {
-    const ids = members.map(m => m.id);
-    const n = ids.length;
-    const mode = (split?.mode || "equal");
-    // Work in cents to ensure sum(parts) == amt
-    const totalCents = Math.round(amt * 100);
+  const ids = members.map(m => m.id);
+  const selectedIds = Array.isArray(split?.selectedMemberIds)
+    ? split.selectedMemberIds.map(String).filter(Boolean)
+    : ids.slice();
 
-    if (mode === "percent") {
-      const pcts = split?.percents || {};
-      // Default: equal percents
-      const pctList = ids.map(id => {
-        const v = Number(pcts[id]);
-        return isFinite(v) ? v : (100 / n);
-      });
-      let sumPct = pctList.reduce((a,b)=>a+b,0);
-      if (!isFinite(sumPct) || sumPct <= 0) {
-        throw new Error("Répartition en % invalide : renseigne des pourcentages (>0).");
-      }
-      // UX: if user didn't sum exactly to 100%, rescale proportionally (tolerance still applies for tiny drift)
-      if (Math.abs(sumPct - 100) > 0.01) {
-        pctList = pctList.map(p => (p * 100) / sumPct);
-        sumPct = 100;
-      }
-      // Convert to cents
-      let cents = pctList.map(p => Math.floor(totalCents * (p/100)));
-      let used = cents.reduce((a,b)=>a+b,0);
-      let delta = totalCents - used;
-      // Distribute remaining cents to highest fractional remainders
-      const remainders = pctList.map((p,i)=>({
-        i,
-        r: (totalCents * (p/100)) - cents[i]
-      })).sort((a,b)=>b.r-a.r);
-      let k=0;
-      while (delta>0 && k<remainders.length*2) {
-        const i = remainders[k % remainders.length].i;
-        cents[i] += 1;
-        delta -= 1;
-        k += 1;
-      }
-      return cents.map(c => c/100);
-    }
+  const selectedSet = new Set(selectedIds);
+  const activeIds = ids.filter(id => selectedSet.has(String(id)));
+  const n = activeIds.length;
+  const mode = (split?.mode || "equal");
+  const totalCents = Math.round((Number(amt) || 0) * 100);
 
-    if (mode === "amount") {
-      const amts = split?.amounts || {};
-      // Read member amounts in cents
-      let cents = ids.map(id => {
-        const v = Number(amts[id]);
-        return isFinite(v) ? Math.round(v*100) : 0;
-      });
-      const sum = cents.reduce((a,b)=>a+b,0);
-      const diff = totalCents - sum;
-      if (Math.abs(diff) > 1) { // > 0.01
-        throw new Error("Répartition en montants invalide : la somme doit égaler le total.");
-      }
-      // Adjust last member by remaining cent (if needed) to match exactly
-      if (diff !== 0 && cents.length) cents[cents.length-1] += diff;
-      return cents.map(c => c/100);
-    }
+  if (!ids.length) return [];
+  if (totalCents <= 0) return ids.map(() => 0);
 
-    // equal (default)
-    return _splitEqual(amt, ids);
+  if (mode === "equal") {
+    if (!n) throw new Error("Sélectionne au moins un participant pour la répartition.");
+    const selectedParts = _splitEqual(Number(amt), activeIds);
+    const byId = new Map(activeIds.map((id, i) => [String(id), selectedParts[i] || 0]));
+    return ids.map(id => Number(byId.get(String(id)) || 0));
   }
+
+  if (mode === "percent") {
+    const pcts = split?.percents || {};
+    const pctList = ids.map(id => {
+      if (!selectedSet.has(String(id))) return 0;
+      const v = Number(pcts[id]);
+      return isFinite(v) ? v : (n ? 100 / n : 0);
+    });
+
+    let sumPct = pctList.reduce((a,b)=>a+b,0);
+    if (!isFinite(sumPct) || sumPct <= 0) {
+      throw new Error("Répartition en % invalide : renseigne des pourcentages (>0).");
+    }
+
+    if (Math.abs(sumPct - 100) > 0.01) {
+      for (let i = 0; i < pctList.length; i++) {
+        pctList[i] = (pctList[i] * 100) / sumPct;
+      }
+      sumPct = 100;
+    }
+
+    let cents = pctList.map(p => Math.floor(totalCents * (p / 100)));
+    let used = cents.reduce((a,b)=>a+b,0);
+    let delta = totalCents - used;
+
+    const remainders = pctList
+      .map((p,i)=>({ i, r: (totalCents * (p / 100)) - cents[i] }))
+      .filter(x => pctList[x.i] > 0)
+      .sort((a,b)=>b.r-a.r);
+
+    let k = 0;
+    while (delta > 0 && remainders.length && k < remainders.length * 2) {
+      const i = remainders[k % remainders.length].i;
+      cents[i] += 1;
+      delta -= 1;
+      k += 1;
+    }
+
+    return cents.map(c => c / 100);
+  }
+
+  if (mode === "amount") {
+    const amts = split?.amounts || {};
+    let cents = ids.map(id => {
+      if (!selectedSet.has(String(id))) return 0;
+      const v = Number(amts[id]);
+      return isFinite(v) ? Math.round(v * 100) : 0;
+    });
+
+    const sum = cents.reduce((a,b)=>a+b,0);
+    const diff = totalCents - sum;
+
+    if (Math.abs(diff) > 1) {
+      throw new Error("Répartition en montants invalide : la somme doit égaler le total.");
+    }
+
+    if (diff !== 0) {
+      const lastActiveIdx = ids.map(String).findLastIndex(id => selectedSet.has(id));
+      if (lastActiveIdx >= 0) cents[lastActiveIdx] += diff;
+    }
+
+    return cents.map(c => c / 100);
+  }
+
+  return ids.map(() => 0);
+}
 
 
   
@@ -3413,7 +3444,8 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           </select>
         </div>
       </div>
-      <div id="trip-split-box" style="margin-top:6px;"></div>
+      <div id="trip-split-participants-box" style="margin-top:6px;"></div>
+<div id="trip-split-box" style="margin-top:6px;"></div>
       <div class="muted" style="margin-top:6px;">Si tu payes pour plusieurs, la wallet est débitée du total mais le budget ne comptera que ta part.</div>
       <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
         ${editingExpenseId ? `<button class="btn" type="button" id="trip-cancel-edit-exp">Annuler modification</button>` : ``}
@@ -4031,12 +4063,52 @@ toastOk("Participant ajouté.");
     }
 
     // Split UI (equal / percent / amount)
-    function _renderSplitBox() {
+function _renderSplitParticipantsBox() {
+  const box = _el("trip-split-participants-box");
+  if (!box) return;
+
+  const members = tripState.members || [];
+  const selected = new Set(
+    Array.isArray(tripState.editingExpenseDraft?.split?.selectedMemberIds)
+      ? tripState.editingExpenseDraft.split.selectedMemberIds.map(String)
+      : members.map(m => String(m.id))
+  );
+
+  box.innerHTML = `
+    <div class="muted" style="margin-bottom:6px;">Participants concernés</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      ${members.map(m => `
+        <label style="display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(148,163,184,.28);border-radius:999px;padding:6px 10px;background:rgba(255,255,255,.72);cursor:pointer;">
+          <input type="checkbox" data-trip-split-member="${escapeHTML(m.id)}" ${selected.has(String(m.id)) ? "checked" : ""} />
+          <span>${escapeHTML(m.name || "—")}${m.isMe ? " (moi)" : ""}</span>
+        </label>
+      `).join("")}
+    </div>
+    <div class="muted" style="font-size:12px;margin-top:6px;">En mode égal, le total est réparti seulement entre les participants cochés. Les autres ont une part à 0.</div>
+  `;
+
+  box.querySelectorAll("[data-trip-split-member]").forEach(input => {
+    input.onchange = () => _renderSplitBox();
+  });
+}
+
+function _selectedSplitMemberIds() {
+  const checked = Array.from(document.querySelectorAll("[data-trip-split-member]:checked"))
+    .map(el => String(el.getAttribute("data-trip-split-member") || ""))
+    .filter(Boolean);
+
+  return checked;
+}
+
+function _renderSplitBox() {
       const box = _el("trip-split-box");
       if (!box) return;
       const mode = (_el("trip-split-mode")?.value || "equal");
       const members = tripState.members || [];
-      const amt = Number(_el("trip-exp-amount")?.value || 0);
+const selectedIds = _selectedSplitMemberIds();
+const selectedSet = new Set(selectedIds);
+const activeMembers = members.filter(m => selectedSet.has(String(m.id)));
+const amt = Number(_el("trip-exp-amount")?.value || 0);
 
       // Preserve current inputs if re-rendering
       const prevPct = {};
@@ -4049,20 +4121,20 @@ toastOk("Participant ajouté.");
       });
 
       if (mode === "equal") {
-        box.innerHTML = `<div class="muted">Égal entre ${members.length} participant(s).</div>`;
-        return;
-      }
+  box.innerHTML = `<div class="muted">Égal entre ${activeMembers.length} participant(s) coché(s).</div>`;
+  return;
+}
 
       let rows = "";
       if (mode === "percent") {
-        const def = members.length ? (100 / members.length) : 0;
+        const def = activeMembers.length ? (100 / activeMembers.length) : 0;
         members.forEach(m => {
           const seedPct = editingDraft?.split?.percents?.[m.id];
           const v = (prevPct[m.id] ?? seedPct ?? def).toString();
           rows += `<tr>
             <td style="padding:6px 8px;">${escapeHTML(m.name || "—")}${m.isMe ? " <span class='muted'>(moi)</span>" : ""}</td>
             <td style="padding:6px 8px; text-align:right;">
-              <input id="trip-split-pct-${m.id}" type="number" step="0.01" min="0" style="max-width:120px;" value="${escapeHTML(v)}" />
+              <input id="trip-split-pct-${m.id}" type="number" step="0.01" min="0" style="max-width:120px;" value="${escapeHTML(disabled ? "0" : v)}" ${disabled} />
             </td>
           </tr>`;
         });
@@ -4080,12 +4152,13 @@ toastOk("Participant ajouté.");
       if (mode === "amount") {
         const def = members.length ? (amt / members.length) : 0;
         members.forEach(m => {
+          const disabled = selectedSet.has(String(m.id)) ? "" : "disabled";
           const seedAmt = editingDraft?.split?.amounts?.[m.id];
           const v = (prevAmt[m.id] ?? seedAmt ?? (def ? def.toFixed(2) : "")).toString();
           rows += `<tr>
             <td style="padding:6px 8px;">${escapeHTML(m.name || "—")}${m.isMe ? " <span class='muted'>(moi)</span>" : ""}</td>
             <td style="padding:6px 8px; text-align:right;">
-              <input id="trip-split-amt-${m.id}" type="number" step="0.01" min="0" style="max-width:140px;" value="${escapeHTML(v)}" />
+              <input id="trip-split-amt-${m.id}" type="number" step="0.01" min="0" style="max-width:140px;" value="${escapeHTML(disabled ? "0" : v)}" ${disabled} />
             </td>
           </tr>`;
         });
@@ -4112,6 +4185,7 @@ toastOk("Participant ajouté.");
       if (mode === "amount") _renderSplitBox();
     };
 
+    _renderSplitParticipantsBox();
     _renderSplitBox();
 
     const btnAddExp = _el("trip-add-exp");
@@ -4138,6 +4212,7 @@ toastOk("Participant ajouté.");
       const amounts = {};
       if (mode === "percent") {
         members.forEach(m => {
+          const disabled = selectedSet.has(String(m.id)) ? "" : "disabled";
           const v = _el(`trip-split-pct-${m.id}`)?.value;
           if (v !== undefined) percents[m.id] = v;
         });
@@ -4147,7 +4222,12 @@ toastOk("Participant ajouté.");
           if (v !== undefined) amounts[m.id] = v;
         });
       }
-      return { mode, percents, amounts };
+      return {
+  mode,
+  percents,
+  amounts,
+  selectedMemberIds: _selectedSplitMemberIds()
+};
     })();
 
     if (editingExpenseId) {

@@ -126,5 +126,10 @@ function renderAll() {
     return;
   }
 
+  if (view === "documents") {
+    safeCall("Documents", () => { if (typeof window.renderDocuments === "function") return window.renderDocuments("renderAll"); }, { containerId: "view-documents" });
+    return;
+  }
+
   // other views (trip/members/help): their render is triggered by showView()
 }

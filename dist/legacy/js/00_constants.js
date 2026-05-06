@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.6.4';
+window.__TB_BUILD = '9.6.5';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -42,6 +42,8 @@ window.__TB_BUILD = '9.6.4';
     assets: "assets",
     asset_owners: "asset_owners",
     asset_ownership_events: "asset_ownership_events",
+    document_folders: "document_folders",
+    documents: "documents",
   });
 
   const COLS = Object.freeze({
@@ -223,6 +225,7 @@ window.__TB_BUILD = '9.6.4';
     // UI mode
     ui_mode: "travelbudget_ui_mode_v1",
     assets_open: "travelbudget_assets_open_v1",
+    documents_folder: "travelbudget_documents_folder_v1",
   });
 
 
@@ -260,6 +263,7 @@ window.__TB_BUILD = '9.6.4';
     travels: "Voyages",
     recurring_rules: "Échéances périodiques",
     assets: "Patrimoine",
+    documents: "Documents",
   });
 
   // DB schema_version is stored as an integer in public.schema_version.version
