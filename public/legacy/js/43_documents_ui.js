@@ -697,8 +697,11 @@ async function saveInfo(id){
   if(!c) return alert('Client Supabase indisponible.');
 
   const tagsInput = document.getElementById('tb-doc-info-tags')?.value || '';
-  const expires_at = document.getElementById('tb-doc-info-expiry')?.value || null;
-  const notes = document.getElementById('tb-doc-info-notes')?.value || null;
+  const expires_at_raw = document.getElementById('tb-doc-info-expiry')?.value || '';
+const notes_raw = document.getElementById('tb-doc-info-notes')?.value || '';
+
+const expires_at = expires_at_raw.trim() || null;
+const notes = notes_raw.trim() || null;
 
   const { error } = await c
     .from(table('documents','documents'))
