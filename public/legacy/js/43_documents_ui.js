@@ -13,7 +13,8 @@
   sort: '',
   uploading: '',
   onlyFavorites: false,
-  onlyExpiring: false
+  onlyExpiring: false,
+  selectedIds: []
 };
 
   function esc(v){ try { return escapeHTML(String(v ?? '')); } catch(_) { return String(v ?? '').replace(/[&<>'"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c])); } }
@@ -49,6 +50,19 @@ function normalizeTags(v){
     .map(x => x.trim())
     .filter(Boolean)
     .slice(0, 12);
+}
+  function isSelected(id){
+  return (CACHE.selectedIds || []).some(x => String(x) === String(id));
+}
+
+function selectedDocs(){
+  const ids = new Set((CACHE.selectedIds || []).map(String));
+  return (CACHE.documents || []).filter(d => ids.has(String(d.id)));
+}
+
+function clearSelection(){
+  CACHE.selectedIds = [];
+  renderShell();
 }
   function isImg(m){ return /^image\//i.test(String(m||'')); }
   function isPdf(m, name){ return /pdf/i.test(String(m||'')) || /\.pdf$/i.test(String(name||'')); }
@@ -143,6 +157,11 @@ function setSelectedSort(v){
       .tb-doc-form input,.tb-doc-form textarea{width:100%;}
       .tb-doc-form textarea{min-height:92px;resize:vertical;}
       .tb-doc-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+      .tb-doc-select{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;}
+      .tb-doc-batchbar{position:sticky;top:8px;z-index:20;margin-bottom:12px;border:1px solid rgba(79,70,229,.22);background:rgba(79,70,229,.10);backdrop-filter:blur(10px);border-radius:16px;padding:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+      .tb-doc-batchbar strong{font-size:13px;}
+      .tb-doc-share-links{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:220px;overflow:auto;}
+      .tb-doc-share-link{font-size:12px;word-break:break-all;border:1px solid rgba(127,127,127,.18);border-radius:12px;padding:8px;background:rgba(127,127,127,.06);}
       @media(max-width:820px){.tb-doc-hero{flex-direction:column}.tb-doc-layout{grid-template-columns:1fr}.tb-doc-actions{justify-content:flex-start}.tb-doc-grid{grid-template-columns:1fr}}
     `;
     document.head.appendChild(st);
@@ -277,8 +296,15 @@ function setSelectedSort(v){
 
   return `<article class="tb-doc-card" data-doc-id="${esc(d.id)}">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
-      ${thumb}
-      <button class="tb-doc-fav"
+  <label class="tb-doc-select">
+    <input type="checkbox"
+      ${isSelected(d.id) ? 'checked' : ''}
+      onchange="window.tbDocumentsToggleSelect('${esc(d.id)}')" />
+  </label>
+
+  ${thumb}
+
+  <button class="tb-doc-fav"
         type="button"
         title="Favori"
         onclick="window.tbDocumentsToggleFavorite('${esc(d.id)}')">
@@ -386,7 +412,17 @@ function setSelectedSort(v){
     ⏳ Expire bientôt
   </button>
 </div>
-
+    ${(CACHE.selectedIds || []).length ? `
+  <div class="tb-doc-batchbar">
+    <strong>${esc((CACHE.selectedIds || []).length)} document(s) sélectionné(s)</strong>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="btn primary" type="button" onclick="window.tbDocumentsShareSelected()">Partager</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsMoveSelected()">Déplacer</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsDeleteSelected()">Supprimer</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsClearSelection()">Annuler</button>
+    </div>
+  </div>
+` : ''}
     ${CACHE.uploading ? `<div class="tb-doc-uploading">${esc(CACHE.uploading)}</div>` : ''}
 
     ${CACHE.loading ? '<div class="tb-doc-empty">Chargement des documents…</div>' : ''}
@@ -717,7 +753,179 @@ const notes = notes_raw.trim() || null;
   document.querySelector('.tb-doc-modal-backdrop')?.remove();
   await ensureLoaded();
 }
+  function toggleSelect(id){
+  const sid = String(id);
+  const current = new Set((CACHE.selectedIds || []).map(String));
 
+  if(current.has(sid)){
+    current.delete(sid);
+  } else {
+    current.add(sid);
+  }
+
+  CACHE.selectedIds = Array.from(current);
+  renderShell();
+}
+
+async function createShareLinksForDocs(docs, expiresInSeconds){
+  const c = client();
+  if(!c) throw new Error('Client Supabase indisponible.');
+
+  const rows = [];
+
+  for(const doc of docs){
+    const res = await c.storage
+      .from(doc.storage_bucket || BUCKET)
+      .createSignedUrl(doc.storage_path, expiresInSeconds || 3600);
+
+    if(res.error) throw res.error;
+
+    rows.push({
+      name: doc.name || doc.original_filename || 'Document',
+      url: res.data && res.data.signedUrl
+    });
+  }
+
+  return rows;
+}
+
+function setSharePayload(bodyText, mailto){
+  window.__tbDocumentsShareBody = bodyText || '';
+  window.__tbDocumentsShareMailto = mailto || '';
+}
+
+async function shareSelected(){
+  const docs = selectedDocs();
+  if(!docs.length) return alert('Sélectionne au moins un document.');
+
+  const duration = String(prompt('Durée du lien temporaire ? 10m, 1h ou 24h', '1h') || '1h').trim().toLowerCase();
+
+  const seconds =
+    duration === '10m' ? 600 :
+    duration === '24h' ? 86400 :
+    3600;
+
+  try{
+    const links = await createShareLinksForDocs(docs, seconds);
+
+    const subject = encodeURIComponent(`Documents partagés (${links.length})`);
+    const bodyText = [
+      'Bonjour,',
+      '',
+      'Voici les documents via liens temporaires :',
+      '',
+      ...links.map(x => `- ${x.name} : ${x.url}`),
+      '',
+      `Durée approximative : ${duration || '1h'}.`
+    ].join('\n');
+
+    const mailto = `mailto:?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+    setSharePayload(bodyText, mailto);
+    window.__tbDocumentsShareLinksOnly = links
+  .map(x => x.url)
+  .filter(Boolean)
+  .join('\n');
+
+    const wrap = document.createElement('div');
+    wrap.className = 'tb-doc-modal-backdrop';
+    wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
+
+    wrap.innerHTML = `
+      <div class="tb-doc-modal">
+        <h3>Partager ${esc(links.length)} document(s)</h3>
+        <p class="muted" style="font-size:13px;margin-top:-4px;">
+          Liens privés temporaires. Évite de les partager publiquement.
+        </p>
+
+        <div class="tb-doc-modal-actions" style="justify-content:flex-start;margin-top:10px;">
+          <button class="btn primary" type="button" onclick="window.tbDocumentsOpenShareEmail()">Préparer un email</button>
+<button class="btn" type="button" onclick="window.tbDocumentsCopyShareLinks()">Copier les liens</button>
+        </div>
+
+        <div class="tb-doc-share-links">
+          ${links.map(x=>`
+            <div class="tb-doc-share-link">
+              <strong>${esc(x.name)}</strong><br>
+              ${esc(x.url || '')}
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="tb-doc-modal-actions">
+          <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">Fermer</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(wrap);
+  }catch(e){
+    alert(e.message || String(e));
+  }
+}
+
+async function moveSelected(){
+  const docs = selectedDocs();
+  if(!docs.length) return alert('Sélectionne au moins un document.');
+
+  const folderOptions = [
+    ['','Non classé'],
+    ...(CACHE.folders || []).map(f => [String(f.id), f.name])
+  ];
+
+  const label = folderOptions.map((x,i)=>`${i}. ${x[1]}`).join('\n');
+  const choice = prompt(`Déplacer vers :\n${label}`, '0');
+
+  if(choice === null) return;
+
+  const idx = Number(choice);
+  if(!Number.isInteger(idx) || idx < 0 || idx >= folderOptions.length){
+    return alert('Choix invalide.');
+  }
+
+  const folderId = folderOptions[idx][0] || null;
+  const c = client();
+  if(!c) return alert('Client Supabase indisponible.');
+
+  for(const doc of docs){
+    const { error } = await c
+      .from(table('documents','documents'))
+      .update({ folder_id: folderId })
+      .eq('id', doc.id);
+
+    if(error) return alert(error.message || String(error));
+  }
+
+  CACHE.selectedIds = [];
+  await ensureLoaded();
+}
+
+async function deleteSelected(){
+  const docs = selectedDocs();
+  if(!docs.length) return alert('Sélectionne au moins un document.');
+
+  if(!confirm(`Supprimer ${docs.length} document(s) ?`)) return;
+
+  const c = client();
+  if(!c) return alert('Client Supabase indisponible.');
+
+  for(const doc of docs){
+    try{
+      await c.storage.from(doc.storage_bucket || BUCKET).remove([doc.storage_path]);
+    }catch(e){
+      console.warn('[TB][documents] batch storage remove failed', e);
+    }
+
+    const { error } = await c
+      .from(table('documents','documents'))
+      .delete()
+      .eq('id', doc.id);
+
+    if(error) return alert(error.message || String(error));
+  }
+
+  CACHE.selectedIds = [];
+  await ensureLoaded();
+}
   window.renderDocuments = function renderDocuments(){ ensureLoaded(); };
   window.tbDocumentsRenderOnly = renderShell;
   window.tbDocumentsSetSearch = function(v){ CACHE.search = String(v || ''); renderShell(); }; 
@@ -751,5 +959,58 @@ window.tbDocumentsToggleFavoritesFilter = function(){
 window.tbDocumentsToggleExpiringFilter = function(){
   CACHE.onlyExpiring = !CACHE.onlyExpiring;
   renderShell();
+};
+window.tbDocumentsToggleSelect = toggleSelect;
+window.tbDocumentsClearSelection = clearSelection;
+window.tbDocumentsShareSelected = shareSelected;
+window.tbDocumentsMoveSelected = moveSelected;
+window.tbDocumentsDeleteSelected = deleteSelected;
+window.tbDocumentsOpenShareEmail = function(){
+  const body = window.__tbDocumentsShareBody || '';
+
+  if(!body){
+    return alert('Aucun email de partage prêt.');
+  }
+
+  const url =
+    'https://mail.google.com/mail/?view=cm&fs=1'
+    + '&su=' + encodeURIComponent('Documents partagés')
+    + '&body=' + encodeURIComponent(body);
+
+  window.open(url, '_blank', 'noopener,noreferrer');
+};
+
+window.tbDocumentsCopyShareLinks = async function(){
+  const text = window.__tbDocumentsShareLinksOnly || '';
+
+  if(!text){
+    return alert('Aucun lien à copier.');
+  }
+
+  try{
+    await navigator.clipboard.writeText(text);
+    alert('Lien(s) copié(s).');
+  }catch(e){
+    console.error(e);
+
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+
+    document.body.appendChild(ta);
+
+    ta.focus();
+    ta.select();
+
+    try{
+      document.execCommand('copy');
+      alert('Lien(s) copié(s).');
+    }catch(_){
+      alert('Copie impossible.');
+    }
+
+    ta.remove();
+  }
 };
 })();
