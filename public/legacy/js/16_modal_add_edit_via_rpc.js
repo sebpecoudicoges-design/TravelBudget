@@ -145,6 +145,14 @@ function _txBuildApplyV2Args(core, fxOverride) {
 
   const cat = String(core.category || "").trim() || (TB_CONST?.CATS?.other || "Autre");
 
+  if (window.Core?.transactionRpcPayload?.buildApplyTransactionV2Args) {
+    return window.Core.transactionRpcPayload.buildApplyTransactionV2Args(core, {
+      fallbackCategory: cat,
+      fxArgs,
+      userId: uid,
+    });
+  }
+
   return {
     p_wallet_id: core.walletId,
     p_type: core.type,
@@ -232,10 +240,11 @@ function openTxEditModal(txId) {
   editingTxId = txId;
   fillModalSelects();
 
-  const tripExpenseId = _txTripExpenseId(tx);
-  if (tripExpenseId) {
-    _setTxModalLock(true, "Transaction liée à une dépense Trip : édition verrouillée (seuls libellé/catégorie restent modifiables).");
+  const lockState = _txGetLockState(tx);
+  if (lockState.readonly) {
+    _setTxModalReadOnly(true, lockState.reason);
   } else {
+    _setTxModalReadOnly(false);
     _setTxModalLock(false);
   }
 
@@ -278,6 +287,52 @@ function _txTripExpenseId(tx) {
   return tx?.tripExpenseId || tx?.trip_expense_id || null;
 }
 
+function _txTripShareLinkId(tx) {
+  return tx?.tripShareLinkId || tx?.trip_share_link_id || null;
+}
+
+function _txIsTripLinked(tx) {
+  if (window.Core?.transactionRules?.isTripLinkedTransaction) {
+    return window.Core.transactionRules.isTripLinkedTransaction(tx);
+  }
+  return !!(_txTripExpenseId(tx) || _txTripShareLinkId(tx));
+}
+
+function _txIsWalletAdjustment(tx) {
+  const categoryName = (TB_CONST?.CATS?.wallet_adjustment || "Ajustement wallet");
+  if (window.Core?.transactionRules?.isWalletAdjustmentTransaction) {
+    return window.Core.transactionRules.isWalletAdjustmentTransaction(tx, { walletAdjustmentCategory: categoryName });
+  }
+  const cat = String(tx?.category || "").trim().toLowerCase();
+  const label = String(tx?.label || "").trim().toLowerCase();
+  const needle = String(categoryName || "Ajustement wallet").trim().toLowerCase();
+  return cat === needle || label.startsWith(`${needle} `) || label.startsWith(`${needle} -`);
+}
+
+function _txGetLockState(tx) {
+  const categoryName = (TB_CONST?.CATS?.wallet_adjustment || "Ajustement wallet");
+  if (window.Core?.transactionGuards?.getTransactionLockState) {
+    return window.Core.transactionGuards.getTransactionLockState(tx, { walletAdjustmentCategory: categoryName });
+  }
+  if (_txIsWalletAdjustment(tx)) {
+    return {
+      locked: true,
+      readonly: true,
+      kind: "wallet_adjustment",
+      reason: "Transaction d'ajustement wallet : modification verrouillee. Utilise l'action Ajuster solde pour creer un nouvel ajustement."
+    };
+  }
+  if (_txIsTripLinked(tx)) {
+    return {
+      locked: true,
+      readonly: true,
+      kind: "trip_linked",
+      reason: "Transaction liee a une depense Trip : modification verrouillee. Modifie la depense depuis l'onglet Trip."
+    };
+  }
+  return { locked: false, readonly: false, kind: null, reason: null };
+}
+
 function _setTxModalLock(isLocked, reason) {
   const ids = ["m-type", "m-wallet", "m-amount", "m-cash-date", "m-budget-start", "m-budget-end", "m-paynow", "m-out", "m-night"];
   for (const id of ids) {
@@ -288,6 +343,21 @@ function _setTxModalLock(isLocked, reason) {
   if (note) {
     note.textContent = isLocked ? (reason || "Cette transaction est verrouillée.") : "";
     note.style.display = isLocked ? "block" : "none";
+  }
+}
+
+function _setTxModalReadOnly(isReadOnly, reason) {
+  const ids = ["m-type", "m-wallet", "m-amount", "m-category", "m-subcategory", "m-cash-date", "m-budget-start", "m-budget-end", "m-label", "m-paynow", "m-out", "m-night"];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !!isReadOnly;
+  }
+  const saveBtn = document.querySelector("#modal button.btn.primary");
+  if (saveBtn) saveBtn.disabled = !!isReadOnly;
+  const note = document.getElementById("m-lock-note");
+  if (note) {
+    note.textContent = isReadOnly ? (reason || "Cette transaction est verrouillee.") : "";
+    note.style.display = isReadOnly ? "block" : "none";
   }
 }
 
@@ -509,31 +579,34 @@ async function _updateTransactionDirectCompat(args) {
 }
 
 async function _updateTransactionRpcCompat(args) {
-  const canonical = {
-    p_id: args?.p_id || args?.p_tx_id || null,
-    p_wallet_id: args?.p_wallet_id || null,
-    p_type: args?.p_type || null,
-    p_amount: args?.p_amount,
-    p_currency: args?.p_currency || null,
-    p_category: args?.p_category || null,
-    p_label: args?.p_label || null,
-    p_date_start: args?.p_date_start || null,
-    p_date_end: args?.p_date_end || args?.p_date_start || null,
-    p_pay_now: !!args?.p_pay_now,
-    p_out_of_budget: !!args?.p_out_of_budget,
-    p_night_covered: !!args?.p_night_covered,
-    p_user_id: args?.p_user_id || null,
-    p_subcategory: (args?.p_subcategory === undefined ? null : (args?.p_subcategory || null)),
-    p_trip_expense_id: args?.p_trip_expense_id || null,
-    p_trip_share_link_id: args?.p_trip_share_link_id || null,
-    p_fx_rate_snapshot: args?.p_fx_rate_snapshot,
-    p_fx_source_snapshot: args?.p_fx_source_snapshot,
-    p_fx_snapshot_at: args?.p_fx_snapshot_at,
-    p_fx_base_currency_snapshot: args?.p_fx_base_currency_snapshot,
-    p_fx_tx_currency_snapshot: args?.p_fx_tx_currency_snapshot,
-    p_budget_date_start: args?.p_budget_date_start || args?.p_date_start || null,
-    p_budget_date_end: args?.p_budget_date_end || args?.p_date_end || args?.p_date_start || null,
-  };
+  const payloadBuilders = window.Core?.transactionRpcPayload;
+  const canonical = payloadBuilders?.buildUpdateTransactionCanonicalArgs
+    ? payloadBuilders.buildUpdateTransactionCanonicalArgs(args)
+    : {
+        p_id: args?.p_id || args?.p_tx_id || null,
+        p_wallet_id: args?.p_wallet_id || null,
+        p_type: args?.p_type || null,
+        p_amount: args?.p_amount,
+        p_currency: args?.p_currency || null,
+        p_category: args?.p_category || null,
+        p_label: args?.p_label || null,
+        p_date_start: args?.p_date_start || null,
+        p_date_end: args?.p_date_end || args?.p_date_start || null,
+        p_pay_now: !!args?.p_pay_now,
+        p_out_of_budget: !!args?.p_out_of_budget,
+        p_night_covered: !!args?.p_night_covered,
+        p_user_id: args?.p_user_id || null,
+        p_subcategory: (args?.p_subcategory === undefined ? null : (args?.p_subcategory || null)),
+        p_trip_expense_id: args?.p_trip_expense_id || null,
+        p_trip_share_link_id: args?.p_trip_share_link_id || null,
+        p_fx_rate_snapshot: args?.p_fx_rate_snapshot,
+        p_fx_source_snapshot: args?.p_fx_source_snapshot,
+        p_fx_snapshot_at: args?.p_fx_snapshot_at,
+        p_fx_base_currency_snapshot: args?.p_fx_base_currency_snapshot,
+        p_fx_tx_currency_snapshot: args?.p_fx_tx_currency_snapshot,
+        p_budget_date_start: args?.p_budget_date_start || args?.p_date_start || null,
+        p_budget_date_end: args?.p_budget_date_end || args?.p_date_end || args?.p_date_start || null,
+      };
 
   try {
     return await tbRpcWithRetry(TB_CONST.RPCS.update_transaction_v2 || 'update_transaction_v2', canonical);
@@ -541,52 +614,60 @@ async function _updateTransactionRpcCompat(args) {
     if (!_txIsMissingRpcSignature(e)) throw e;
   }
 
-  const legacy = {
-    p_wallet_id: canonical.p_wallet_id,
-    p_tx_id: canonical.p_id,
-    p_type: canonical.p_type,
-    p_label: canonical.p_label,
-    p_amount: canonical.p_amount,
-    p_currency: canonical.p_currency,
-    p_date_start: canonical.p_date_start,
-    p_date_end: canonical.p_date_end,
-    p_category: canonical.p_category,
-    p_pay_now: canonical.p_pay_now,
-    p_out_of_budget: canonical.p_out_of_budget,
-    p_night_covered: canonical.p_night_covered,
-    p_fx_rate_snapshot: canonical.p_fx_rate_snapshot,
-    p_fx_source_snapshot: canonical.p_fx_source_snapshot,
-    p_fx_snapshot_at: canonical.p_fx_snapshot_at,
-    p_fx_base_currency_snapshot: canonical.p_fx_base_currency_snapshot,
-    p_fx_tx_currency_snapshot: canonical.p_fx_tx_currency_snapshot,
-    p_trip_expense_id: canonical.p_trip_expense_id,
-    p_trip_share_link_id: canonical.p_trip_share_link_id,
-    p_user_id: canonical.p_user_id || null,
-  };
+  const legacy = payloadBuilders?.buildUpdateTransactionLegacyArgs
+    ? payloadBuilders.buildUpdateTransactionLegacyArgs(canonical)
+    : {
+        p_wallet_id: canonical.p_wallet_id,
+        p_tx_id: canonical.p_id,
+        p_type: canonical.p_type,
+        p_label: canonical.p_label,
+        p_amount: canonical.p_amount,
+        p_currency: canonical.p_currency,
+        p_date_start: canonical.p_date_start,
+        p_date_end: canonical.p_date_end,
+        p_category: canonical.p_category,
+        p_pay_now: canonical.p_pay_now,
+        p_out_of_budget: canonical.p_out_of_budget,
+        p_night_covered: canonical.p_night_covered,
+        p_fx_rate_snapshot: canonical.p_fx_rate_snapshot,
+        p_fx_source_snapshot: canonical.p_fx_source_snapshot,
+        p_fx_snapshot_at: canonical.p_fx_snapshot_at,
+        p_fx_base_currency_snapshot: canonical.p_fx_base_currency_snapshot,
+        p_fx_tx_currency_snapshot: canonical.p_fx_tx_currency_snapshot,
+        p_trip_expense_id: canonical.p_trip_expense_id,
+        p_trip_share_link_id: canonical.p_trip_share_link_id,
+        p_user_id: canonical.p_user_id || null,
+      };
 
   const legacyRes = await tbRpcWithRetry(TB_CONST.RPCS.update_transaction_v2 || 'update_transaction_v2', legacy);
   if (legacyRes?.error) return legacyRes;
 
-  const patchRes = await _updateTransactionDirectCompat({
-    p_id: canonical.p_id,
-    p_subcategory: canonical.p_subcategory,
-    p_date_start: canonical.p_date_start,
-    p_date_end: canonical.p_date_end,
-    p_budget_date_start: canonical.p_budget_date_start,
-    p_budget_date_end: canonical.p_budget_date_end,
-    p_wallet_id: canonical.p_wallet_id,
-    p_type: canonical.p_type,
-    p_amount: canonical.p_amount,
-    p_currency: canonical.p_currency,
-    p_category: canonical.p_category,
-    p_label: canonical.p_label,
-    p_pay_now: canonical.p_pay_now,
-    p_out_of_budget: canonical.p_out_of_budget,
-    p_night_covered: canonical.p_night_covered,
-  });
+  const patchArgs = payloadBuilders?.buildUpdateTransactionDirectPatchArgs
+    ? payloadBuilders.buildUpdateTransactionDirectPatchArgs(canonical)
+    : {
+        p_id: canonical.p_id,
+        p_subcategory: canonical.p_subcategory,
+        p_date_start: canonical.p_date_start,
+        p_date_end: canonical.p_date_end,
+        p_budget_date_start: canonical.p_budget_date_start,
+        p_budget_date_end: canonical.p_budget_date_end,
+        p_wallet_id: canonical.p_wallet_id,
+        p_type: canonical.p_type,
+        p_amount: canonical.p_amount,
+        p_currency: canonical.p_currency,
+        p_category: canonical.p_category,
+        p_label: canonical.p_label,
+        p_pay_now: canonical.p_pay_now,
+        p_out_of_budget: canonical.p_out_of_budget,
+        p_night_covered: canonical.p_night_covered,
+      };
+  const patchRes = await _updateTransactionDirectCompat(patchArgs);
   return { ...patchRes, _tbUsedLegacyRpcFallback: true };
 }
 function _tbParseLocaleAmount(raw) {
+  if (window.Core?.transactionRules?.parseLocaleAmount) {
+    return window.Core.transactionRules.parseLocaleAmount(raw);
+  }
   let s = String(raw ?? "").trim();
   if (!s) return NaN;
 
@@ -638,11 +719,64 @@ async function saveModal() {
       const wallet = findWallet(walletId);
       if (!wallet) throw new Error("Wallet invalide.");
 
+      const txRules = window.Core?.transactionRules;
+      const normalizedTx = txRules?.normalizeTransactionInput
+        ? txRules.normalizeTransactionInput({
+            type,
+            walletId,
+            amount,
+            category,
+            subcategory,
+            cashDate,
+            budgetDateStart: budgetStart,
+            budgetDateEnd: budgetEnd,
+            label,
+            payNow,
+            outOfBudget,
+            nightCovered,
+          })
+        : {
+            type,
+            walletId,
+            amount,
+            category,
+            subcategory,
+            cashDate,
+            budgetDateStart: budgetStart,
+            budgetDateEnd: budgetEnd,
+            label,
+            payNow,
+            outOfBudget,
+            nightCovered,
+            affectsBudget: !outOfBudget,
+          };
+
+      const validation = txRules?.validateTransactionInput
+        ? txRules.validateTransactionInput(normalizedTx)
+        : { ok: true };
+      if (!validation.ok) throw new Error(validation.reason || "Transaction invalide.");
+
+      const currentTx = editingTxId ? state.transactions.find((t) => t.id === editingTxId) : null;
+      const mutationValidation = window.Core?.transactionGuards?.validateTransactionMutation
+        ? window.Core.transactionGuards.validateTransactionMutation(
+            { ...normalizedTx, currency: wallet.currency },
+            {
+              mode: editingTxId ? "edit" : "create",
+              currentTx,
+              wallet,
+              walletAdjustmentCategory: (TB_CONST?.CATS?.wallet_adjustment || "Ajustement wallet"),
+            }
+          )
+        : { ok: true };
+      if (!mutationValidation.ok) throw new Error(mutationValidation.reason || "Transaction invalide.");
 
       if (editingTxId) {
-        const current = state.transactions.find((t) => t.id === editingTxId);
-        const tripExpenseId = _txTripExpenseId(current);
-        if (tripExpenseId) {
+        const current = currentTx;
+        if (_txIsWalletAdjustment(current)) {
+          throw new Error("Transaction d'ajustement wallet verrouillee : utilise l'action Ajuster solde pour creer un nouvel ajustement.");
+        }
+        if (_txIsTripLinked(current)) {
+          throw new Error("Transaction liee a Trip verrouillee : modifie la depense depuis l'onglet Trip.");
           // Locked fields for Trip-linked payment transaction: prevent breaking 1:1 coherence.
           if (walletId !== current.walletId) throw new Error("Transaction liée à Trip : changement de wallet interdit.");
           if (type !== current.type) throw new Error("Transaction liée à Trip : changement de type interdit.");
@@ -688,7 +822,7 @@ async function saveModal() {
           p_budget_date_end: budgetEnd,
           p_pay_now: payNow,
           p_out_of_budget: outOfBudget,
-          p_night_covered: type === "expense" && ((typeof window.tbIsNightCoveredEligibleCategory === "function") ? window.tbIsNightCoveredEligibleCategory(category) : /^transport( internationale?| international)?$/i.test(String(category || "").trim())) ? nightCovered : false,
+          p_night_covered: !!normalizedTx.nightCovered,
           // FX snapshot is computed for the transaction date + transaction currency.
           // (Use local variables here; `form` is not in scope.)
           ..._txBuildFxSnapshotArgs(cashDate, wallet.currency)
@@ -727,8 +861,8 @@ async function saveModal() {
             budgetDateEnd: budgetEnd,
             payNow,
             outOfBudget,
-            nightCovered: (type === "expense" && /^transport( internationale?| international)?$/i.test(String(category || "").trim())) ? nightCovered : false,
-            affectsBudget: !outOfBudget,
+            nightCovered: !!normalizedTx.nightCovered,
+            affectsBudget: !!normalizedTx.affectsBudget,
             tripExpenseId: null,
             tripShareLinkId: null
           })

@@ -3904,6 +3904,7 @@ CREATE TABLE IF NOT EXISTS "public"."asset_ownership_events" (
     "event_date" "date" DEFAULT CURRENT_DATE NOT NULL,
     "note" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "linked_transaction_id" "uuid",
     CONSTRAINT "asset_ownership_events_amount_check" CHECK (("amount" >= (0)::numeric)),
     CONSTRAINT "asset_ownership_events_currency_check" CHECK (("currency" ~ '^[A-Z]{3}$'::"text")),
     CONSTRAINT "asset_ownership_events_event_type_check" CHECK (("event_type" = ANY (ARRAY['buy_share'::"text", 'sell_share'::"text", 'transfer_share'::"text"]))),
@@ -4101,6 +4102,47 @@ CREATE TABLE IF NOT EXISTS "public"."country_budget_reference" (
 
 
 ALTER TABLE "public"."country_budget_reference" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."document_folders" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "parent_id" "uuid",
+    "sort_order" integer DEFAULT 0 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "document_folders_name_not_blank" CHECK (("length"(TRIM(BOTH FROM "name")) > 0)),
+    CONSTRAINT "document_folders_parent_not_self" CHECK ((("parent_id" IS NULL) OR ("parent_id" <> "id")))
+);
+
+
+ALTER TABLE "public"."document_folders" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."documents" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "folder_id" "uuid",
+    "name" "text" NOT NULL,
+    "original_filename" "text",
+    "storage_bucket" "text" DEFAULT 'personal-documents'::"text" NOT NULL,
+    "storage_path" "text" NOT NULL,
+    "mime_type" "text",
+    "size_bytes" bigint DEFAULT 0 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "tags" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "is_favorite" boolean DEFAULT false NOT NULL,
+    "expires_at" "date",
+    "notes" "text",
+    CONSTRAINT "documents_name_not_blank" CHECK (("length"(TRIM(BOTH FROM "name")) > 0)),
+    CONSTRAINT "documents_size_non_negative" CHECK (("size_bytes" >= 0)),
+    CONSTRAINT "documents_storage_path_not_blank" CHECK (("length"(TRIM(BOTH FROM "storage_path")) > 0))
+);
+
+
+ALTER TABLE "public"."documents" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."fx_manual_rates" (
@@ -5450,6 +5492,21 @@ ALTER TABLE ONLY "public"."country_budget_reference"
 
 
 
+ALTER TABLE ONLY "public"."document_folders"
+    ADD CONSTRAINT "document_folders_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."documents"
+    ADD CONSTRAINT "documents_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."documents"
+    ADD CONSTRAINT "documents_unique_storage_path" UNIQUE ("storage_bucket", "storage_path");
+
+
+
 ALTER TABLE ONLY "public"."fx_manual_rates"
     ADD CONSTRAINT "fx_manual_rates_pkey" PRIMARY KEY ("user_id", "currency");
 
@@ -5666,6 +5723,10 @@ CREATE INDEX "idx_asset_ownership_events_event_date" ON "public"."asset_ownershi
 
 
 
+CREATE INDEX "idx_asset_ownership_events_linked_transaction_id" ON "public"."asset_ownership_events" USING "btree" ("linked_transaction_id");
+
+
+
 CREATE INDEX "idx_assets_travel_id" ON "public"."assets" USING "btree" ("travel_id");
 
 
@@ -5711,6 +5772,18 @@ CREATE INDEX "idx_country_budget_reference_country_region_active" ON "public"."c
 
 
 CREATE INDEX "idx_country_budget_reference_region" ON "public"."country_budget_reference" USING "btree" ("region_code");
+
+
+
+CREATE INDEX "idx_document_folders_user" ON "public"."document_folders" USING "btree" ("user_id", "name");
+
+
+
+CREATE INDEX "idx_documents_user_folder" ON "public"."documents" USING "btree" ("user_id", "folder_id", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_documents_user_name" ON "public"."documents" USING "btree" ("user_id", "lower"("name"));
 
 
 
@@ -6078,6 +6151,14 @@ CREATE OR REPLACE TRIGGER "trg_country_budget_reference_touch_updated_at" BEFORE
 
 
 
+CREATE OR REPLACE TRIGGER "trg_document_folders_touch_updated_at" BEFORE UPDATE ON "public"."document_folders" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_documents_touch_updated_at" BEFORE UPDATE ON "public"."documents" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_fx_manual_rates_touch" BEFORE UPDATE ON "public"."fx_manual_rates" FOR EACH ROW EXECUTE FUNCTION "public"."tb_touch_updated_at"();
 
 
@@ -6176,6 +6257,11 @@ ALTER TABLE ONLY "public"."asset_ownership_events"
 
 
 ALTER TABLE ONLY "public"."asset_ownership_events"
+    ADD CONSTRAINT "asset_ownership_events_linked_transaction_id_fkey" FOREIGN KEY ("linked_transaction_id") REFERENCES "public"."transactions"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."asset_ownership_events"
     ADD CONSTRAINT "asset_ownership_events_to_owner_id_fkey" FOREIGN KEY ("to_owner_id") REFERENCES "public"."asset_owners"("id") ON DELETE SET NULL;
 
 
@@ -6232,6 +6318,26 @@ ALTER TABLE ONLY "public"."categories"
 
 ALTER TABLE ONLY "public"."category_subcategories"
     ADD CONSTRAINT "category_subcategories_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."document_folders"
+    ADD CONSTRAINT "document_folders_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "public"."document_folders"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."document_folders"
+    ADD CONSTRAINT "document_folders_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."documents"
+    ADD CONSTRAINT "documents_folder_id_fkey" FOREIGN KEY ("folder_id") REFERENCES "public"."document_folders"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."documents"
+    ADD CONSTRAINT "documents_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -6763,6 +6869,44 @@ ALTER TABLE "public"."country_budget_reference" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "country_budget_reference_select_authenticated" ON "public"."country_budget_reference" FOR SELECT TO "authenticated" USING (true);
+
+
+
+ALTER TABLE "public"."document_folders" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "document_folders_delete_own" ON "public"."document_folders" FOR DELETE TO "authenticated" USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "document_folders_insert_own" ON "public"."document_folders" FOR INSERT TO "authenticated" WITH CHECK (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "document_folders_select_own" ON "public"."document_folders" FOR SELECT TO "authenticated" USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "document_folders_update_own" ON "public"."document_folders" FOR UPDATE TO "authenticated" USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
+
+
+
+ALTER TABLE "public"."documents" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "documents_delete_own" ON "public"."documents" FOR DELETE TO "authenticated" USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "documents_insert_own" ON "public"."documents" FOR INSERT TO "authenticated" WITH CHECK (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "documents_select_own" ON "public"."documents" FOR SELECT TO "authenticated" USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "documents_update_own" ON "public"."documents" FOR UPDATE TO "authenticated" USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
 
 
 
@@ -7755,6 +7899,18 @@ GRANT ALL ON TABLE "public"."category_subcategories" TO "service_role";
 GRANT ALL ON TABLE "public"."country_budget_reference" TO "anon";
 GRANT ALL ON TABLE "public"."country_budget_reference" TO "authenticated";
 GRANT ALL ON TABLE "public"."country_budget_reference" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."document_folders" TO "anon";
+GRANT ALL ON TABLE "public"."document_folders" TO "authenticated";
+GRANT ALL ON TABLE "public"."document_folders" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."documents" TO "anon";
+GRANT ALL ON TABLE "public"."documents" TO "authenticated";
+GRANT ALL ON TABLE "public"."documents" TO "service_role";
 
 
 

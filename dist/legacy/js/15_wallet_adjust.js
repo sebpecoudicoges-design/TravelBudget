@@ -2,6 +2,9 @@
    Wallet adjust
    ========================= */
 function tbParseLocaleNumber(input) {
+  if (window.Core?.transactionRules?.parseLocaleAmount) {
+    return window.Core.transactionRules.parseLocaleAmount(input);
+  }
   let s = String(input ?? "").trim();
   if (!s) return NaN;
   s = s.replace(/[\s\u00A0]/g, "");
@@ -14,11 +17,27 @@ function tbParseLocaleNumber(input) {
   const n = Number(s);
   return Number.isFinite(n) ? n : NaN;
 }
-function tbIsISODate(value) { return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "").trim()); }
+function tbIsISODate(value) {
+  if (window.Core?.transactionRules?.isISODate) {
+    return window.Core.transactionRules.isISODate(value);
+  }
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "").trim());
+}
 async function tbEnsureWalletAdjustmentCategory() {
   const categoryName = (TB_CONST?.CATS?.wallet_adjustment || "Ajustement wallet");
   const existing = (state?.categories || []).some((c) => String(c?.name || "").trim().toLowerCase() === categoryName.toLowerCase());
   if (existing) return categoryName;
+
+  try {
+    const { data, error } = await sb
+      .from(TB_CONST.TABLES.categories)
+      .select("id,name")
+      .eq("user_id", (window.sbUser && sbUser.id) ? sbUser.id : undefined)
+      .ilike("name", categoryName)
+      .limit(1);
+    if (!error && Array.isArray(data) && data.length) return categoryName;
+  } catch (_) {}
+
   let sortOrder = 999;
   const rows = (state?.categories || []).map((c) => Number(c?.sortOrder ?? c?.sort_order)).filter(Number.isFinite);
   if (rows.length) sortOrder = Math.max(...rows) + 1;
@@ -26,7 +45,7 @@ async function tbEnsureWalletAdjustmentCategory() {
     user_id: (window.sbUser && sbUser.id) ? sbUser.id : undefined,
     name: categoryName, color: '#64748b', sort_order: sortOrder,
   });
-  if (error && error.code !== '23505') throw error;
+  if (error && error.code !== '23505' && error.status !== 409) throw error;
   return categoryName;
 }
 async function adjustWalletBalance(walletId) {

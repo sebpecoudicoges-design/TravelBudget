@@ -629,6 +629,17 @@ function fxRate(from, to, ratesOpt) {
   if (f === t) return 1;
 
   const rates = ratesOpt || fxGetEurRatesMerged();
+  if (window.Core?.fxRules?.fxRate) {
+    const base = String(window.state?.period?.baseCurrency || "").toUpperCase();
+    const fallback = _fxNum(window.state?.period?.eurBaseRate) || _fxNum(window.state?.exchangeRates?.["EUR-BASE"]);
+    const out = window.Core.fxRules.fxRate(f, t, rates, {
+      pivotCurrency: "EUR",
+      fallbackCurrency: base,
+      fallbackPivotToCurrencyRate: fallback,
+    });
+    if (Number.isFinite(out) && out > 0) return out;
+  }
+
   const eurToFrom = _fxEurTo(f, rates);
   const eurToTo   = _fxEurTo(t, rates);
   if (!eurToFrom || !eurToTo) return null;
@@ -638,6 +649,18 @@ function fxRate(from, to, ratesOpt) {
 
 function fxConvert(amount, from, to, ratesOpt) {
   const a = _fxNum(amount) ?? 0;
+  if (window.Core?.fxRules?.fxConvert) {
+    const rates = ratesOpt || fxGetEurRatesMerged();
+    const base = String(window.state?.period?.baseCurrency || "").toUpperCase();
+    const fallback = _fxNum(window.state?.period?.eurBaseRate) || _fxNum(window.state?.exchangeRates?.["EUR-BASE"]);
+    const out = window.Core.fxRules.fxConvert(a, from, to, rates, {
+      pivotCurrency: "EUR",
+      fallbackCurrency: base,
+      fallbackPivotToCurrencyRate: fallback,
+    });
+    if (out !== null && Number.isFinite(out)) return out;
+  }
+
   const r = fxRate(from, to, ratesOpt);
   if (!r) return null;
   const out = a * r;

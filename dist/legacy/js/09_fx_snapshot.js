@@ -14,6 +14,15 @@ function fxBuildTxSnapshot(txCurrency, baseCurrency, dateStr) {
 
   // Same currency => identity
   if (txC === baseC) {
+    if (window.Core?.fxRules?.buildTxFxSnapshot) {
+      return window.Core.fxRules.buildTxFxSnapshot({
+        txCurrency: txC,
+        baseCurrency: baseC,
+        date: ds,
+        rates: { EUR: 1 },
+        source: "none",
+      });
+    }
     return {
       fx_rate_snapshot: 1,
       fx_source_snapshot: "none",
@@ -31,6 +40,24 @@ function fxBuildTxSnapshot(txCurrency, baseCurrency, dateStr) {
 
   if (typeof window.fxRate !== "function") throw new Error("[FX] snapshot: fxRate() missing");
   
+const sourceFromSegment = (String(seg?.fxMode || seg?.fx_mode || "live_ecb") === "fixed") ? "manual" : "fx";
+if (window.Core?.fxRules?.buildTxFxSnapshot) {
+  try {
+    return window.Core.fxRules.buildTxFxSnapshot({
+      txCurrency: txC,
+      baseCurrency: baseC,
+      date: ds,
+      rates,
+      pivotCurrency: "EUR",
+      fallbackCurrency: String(state?.period?.baseCurrency || "").toUpperCase(),
+      fallbackPivotToCurrencyRate: Number(state?.period?.eurBaseRate || state?.exchangeRates?.["EUR-BASE"]),
+      source: sourceFromSegment,
+    });
+  } catch (_) {
+    // Legacy self-healing below may prompt for missing manual rates.
+  }
+}
+
 const rate = window.fxRate(txC, baseC, rates);
 if (!rate || !Number.isFinite(rate) || rate <= 0) {
   // Try to self-heal by prompting for missing manual EUR->XXX rates (only on interactive write-path)
@@ -54,7 +81,7 @@ if (!rate || !Number.isFinite(rate) || rate <= 0) {
   // overwrite local var via return object below
   return {
     fx_rate_snapshot: rate2,
-    fx_source_snapshot: (String(seg?.fxMode || seg?.fx_mode || "live_ecb") === "fixed") ? "manual" : "fx",
+    fx_source_snapshot: sourceFromSegment,
     fx_snapshot_at: new Date().toISOString(),
     fx_base_currency_snapshot: baseC,
     fx_tx_currency_snapshot: txC,
@@ -80,6 +107,10 @@ if (!rate || !Number.isFinite(rate) || rate <= 0) {
 
 // Convert using snapshot if compatible, otherwise return null.
 function fxTryConvertWithSnapshot(amount, tx, targetBaseCurrency) {
+  if (window.Core?.fxRules?.tryConvertWithSnapshot) {
+    return window.Core.fxRules.tryConvertWithSnapshot(amount, tx, targetBaseCurrency);
+  }
+
   const a = Number(amount) || 0;
   if (!tx) return null;
 

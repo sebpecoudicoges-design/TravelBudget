@@ -620,6 +620,8 @@ async function _rpcTripApplyExpense(sb, tripId, payload) {
 
 function _normalizeCurrency(cur) {
     const fallback = (state?.period?.baseCurrency || "THB");
+    const core = window.Core?.tripRules;
+    if (core?.normalizeTripCurrency) return core.normalizeTripCurrency(cur, fallback);
     const c = String(cur || fallback || "").trim().toUpperCase();
     if (!/^[A-Z]{3}$/.test(c)) return String(fallback).trim().toUpperCase();
     return c;
@@ -712,6 +714,9 @@ function _normalizeCurrency(cur) {
     return out;
   }
   function _computeSplitParts(amt, members, split) {
+  const core = window.Core?.tripRules;
+  if (core?.computeTripSplitParts) return core.computeTripSplitParts(amt, members, split);
+
   const ids = members.map(m => m.id);
   const selectedIds = Array.isArray(split?.selectedMemberIds)
     ? split.selectedMemberIds.map(String).filter(Boolean)
@@ -802,6 +807,13 @@ function _normalizeCurrency(cur) {
 
   
   function _validateSplitParts(amt, parts) {
+    const core = window.Core?.tripRules;
+    if (core?.validateSplitTotal) {
+      const result = core.validateSplitTotal({ total: Number(amt), shares: parts });
+      if (!result.ok) throw new Error(result.reason || "Repartition invalide.");
+      return true;
+    }
+
     const a = Number(amt) || 0;
     if (!isFinite(a) || a <= 0) throw new Error("Montant dépense invalide.");
     if (!Array.isArray(parts) || !parts.length) throw new Error("Répartition invalide.");
@@ -817,6 +829,78 @@ function _normalizeCurrency(cur) {
       throw new Error(`Répartition incohérente : somme ${_round2(sum)} ≠ total ${_round2(a)}.`);
     }
     return true;
+  }
+
+  function _normalizeTripExpenseForMutation(input) {
+    const core = window.Core?.tripRules;
+    if (core?.normalizeTripExpenseInput) {
+      return core.normalizeTripExpenseInput(input, { fallbackCurrency: state?.period?.baseCurrency || "EUR" });
+    }
+
+    const date = String(input?.date || "").trim();
+    const label = String(input?.label || "").trim();
+    const amount = Number(input?.amount);
+    const paidByMemberId = String(input?.paidByMemberId || "").trim();
+    if (!date) throw new Error("Date requise.");
+    if (!label) throw new Error("Libellé requis.");
+    if (!isFinite(amount) || amount <= 0) throw new Error("Montant dépense invalide.");
+    if (!paidByMemberId) throw new Error("Sélectionne qui a payé.");
+    return {
+      expenseId: input?.expenseId || null,
+      date,
+      label,
+      amount,
+      currency: _normalizeCurrency(input?.currency),
+      paidByMemberId,
+      walletId: input?.walletId || "",
+      category: String(input?.category || "Autre").trim() || "Autre",
+      subcategory: String(input?.subcategory || "").trim() || null,
+      budgetDateStart: input?.budgetDateStart || date,
+      budgetDateEnd: input?.budgetDateEnd || input?.budgetDateStart || date,
+      outOfBudget: input?.outOfBudget === true,
+    };
+  }
+
+  function _validateTripExpenseForMutation({ input, members, parts, payer, wallet }) {
+    const core = window.Core?.tripRules;
+    if (core?.validateTripExpenseMutation) {
+      const result = core.validateTripExpenseMutation({ input, members, shares: parts, payer, wallet });
+      if (!result.ok) throw new Error(result.reason || "Dépense Trip invalide.");
+      return true;
+    }
+
+    if (!members?.length) throw new Error("Ajoute au moins un participant.");
+    _validateSplitParts(input.amount, parts);
+    if (payer?.isMe) {
+      if (!input.walletId) throw new Error("Choisis une wallet (pour décompter le paiement).");
+      if (!wallet) throw new Error("Wallet invalide.");
+      if (String(wallet.currency || "").toUpperCase() !== input.currency) {
+        throw new Error(`Devise wallet (${wallet.currency}) différente de la dépense (${input.currency}). Choisis une wallet dans la même devise.`);
+      }
+    }
+    return true;
+  }
+
+  function _buildTripExpenseRpcPayload({ input, members, parts }) {
+    const core = window.Core?.tripRules;
+    if (core?.buildTripExpenseRpcPayload) {
+      return core.buildTripExpenseRpcPayload({ input, members, shares: parts, walletTxEnabled: false });
+    }
+
+    return {
+      expense_id: input.expenseId || null,
+      date: input.date,
+      label: input.label,
+      amount: input.amount,
+      currency: input.currency,
+      paid_by_member_id: input.paidByMemberId,
+      category: input.category || "Autre",
+      subcategory: input.subcategory || null,
+      budget_date_start: input.budgetDateStart || input.date,
+      budget_date_end: input.budgetDateEnd || input.budgetDateStart || input.date,
+      shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
+      wallet_tx: { enabled: false },
+    };
   }
 
 async function _findMatchingTransactions({ date, amount, currency }) {
@@ -2661,26 +2745,16 @@ try {
     const currentEx = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!currentEx) throw new Error("Dépense introuvable.");
 
+    const input = _normalizeTripExpenseForMutation({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget });
+    const payer = members.find(m => m.id === input.paidByMemberId) || null;
+    const wallet = input.walletId ? findWallet(input.walletId) : null;
     const cur = _normalizeCurrency(currency);
     const parts = _computeSplitParts(amt, members, split);
-    _validateSplitParts(amt, parts);
+    _validateTripExpenseForMutation({ input, members, parts, payer, wallet });
 
     await _cleanupExpenseBudgetLinksBeforeEdit(expenseId);
 
-    const payloadExp = {
-      expense_id: expenseId,
-      date,
-      label,
-      amount: amt,
-      currency: cur,
-      paid_by_member_id: paidByMemberId,
-      category: category || 'Autre',
-      subcategory: String(subcategory || '').trim() || null,
-      budget_date_start: budgetDateStart || date,
-      budget_date_end: budgetDateEnd || budgetDateStart || date,
-      shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
-      wallet_tx: { enabled: false },
-    };
+    const payloadExp = _buildTripExpenseRpcPayload({ input, members, parts });
 
     const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpense(sb, tripId, payloadExp);
     if (rpcErr) throw rpcErr;
@@ -2706,6 +2780,7 @@ try {
   if (!date || !isFinite(amt) || amt <= 0) throw new Error("Date et montant (>0) requis.");
   if (!paidByMemberId) throw new Error("Sélectionne qui a payé.");
 
+  const input = _normalizeTripExpenseForMutation({ date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget });
   const cur = _normalizeCurrency(currency);
   const payer = members.find(m => m.id === paidByMemberId) || null;
   const paidByMe = !!payer?.isMe;
@@ -2740,21 +2815,9 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
             // Create trip expense + shares atomically (DB-first V8.1)
             const memberIds = members.map(m => m.id);
             const parts = _computeSplitParts(amt, members, split);
-            _validateSplitParts(amt, parts);
+            _validateTripExpenseForMutation({ input, members, parts, payer, wallet: input.walletId ? findWallet(input.walletId) : null });
 
-            const payloadExp = {
-              expense_id: null,
-              date,
-              label,
-              amount: amt,
-              currency: cur,
-              paid_by_member_id: paidByMemberId,
-              category: cat,
-              subcategory: String(subcategory || '').trim() || null,
-              budget_date_start: budgetDateStart || date,
-              budget_date_end: budgetDateEnd || budgetDateStart || date,
-              shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
-            };
+            const payloadExp = _buildTripExpenseRpcPayload({ input, members, parts });
 
             const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpense(sb, tripId, payloadExp);
             if (rpcErr) throw rpcErr;
@@ -2896,22 +2959,9 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     // 1) Create Trip expense + shares (DB-first V8.1)
     const memberIds = members.map(m => m.id);
     const parts = _computeSplitParts(amt, members, split);
-    _validateSplitParts(amt, parts);
+    _validateTripExpenseForMutation({ input, members, parts, payer, wallet: input.walletId ? findWallet(input.walletId) : null });
 
-    const payloadExp = {
-      expense_id: null,
-      date,
-      label,
-      amount: amt,
-      currency: cur,
-      paid_by_member_id: paidByMemberId,
-      category: cat,
-      subcategory: String(subcategory || '').trim() || null,
-      budget_date_start: budgetDateStart || date,
-      budget_date_end: budgetDateEnd || budgetDateStart || date,
-      shares: members.map((m, i) => ({ member_id: m.id, share_amount: parts[i] ?? 0 })),
-      wallet_tx: { enabled: false },
-    };
+    const payloadExp = _buildTripExpenseRpcPayload({ input, members, parts });
 
     const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpense(sb, tripId, payloadExp);
     if (rpcErr) throw rpcErr;
