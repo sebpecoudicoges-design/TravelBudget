@@ -585,8 +585,16 @@ if (!p) throw new Error("Période active introuvable.");
   // Perf (A3): fetch independent tables in parallel.
   // - wallets may auto-bootstrap (insert) if missing.
   // - transactions / segments / categories do not depend on wallets.
+  const perfPromise = (name, fn) => {
+    try { if (window.TB_PERF?.enabled) TB_PERF.mark(name); } catch (_) {}
+    return Promise.resolve()
+      .then(fn)
+      .finally(() => {
+        try { if (window.TB_PERF?.enabled) TB_PERF.end(name); } catch (_) {}
+      });
+  };
 
-  const walletsPromise = (async () => {
+  const walletsPromise = perfPromise("supabase:q:wallets", async () => {
   const { data: w0, error: wErr } = await sb
     .from(TB_CONST.TABLES.wallets)
     .select("id,travel_id,name,currency,balance,type,created_at,balance_snapshot_at")
@@ -616,9 +624,9 @@ if (!p) throw new Error("Période active introuvable.");
     w = w2 || [];
   }
   return w || [];
-})();
+});
 
-  const walletBalancesPromise = (async () => {
+  const walletBalancesPromise = perfPromise("supabase:q:walletBalances", async () => {
     try {
       const { data: rows, error } = await sb
         .from(TB_CONST.TABLES.v_wallet_balances)
@@ -631,16 +639,16 @@ if (!p) throw new Error("Période active introuvable.");
       console.warn("[v_wallet_balances] load failed (fallback to JS)", e?.message || e);
       return [];
     }
-  })();
+  });
 
-const txPromise = sb
+const txPromise = perfPromise("supabase:q:transactions", () => sb
   .from(TB_CONST.TABLES.transactions)
   .select("id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,night_covered,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status")
   .eq("user_id", sbUser.id)
   .eq("travel_id", activeTravelId)
-  .order("created_at", { ascending: true });
+  .order("created_at", { ascending: true }));
 
-  const recurringRulesPromise = (async () => {
+  const recurringRulesPromise = perfPromise("supabase:q:recurringRules", async () => {
   if (!shouldLoadDeferredData) return { rows: [], skipped: true };
   try {
     const { data: rows, error } = await sb
@@ -656,9 +664,9 @@ const txPromise = sb
     console.warn("[recurring_rules] load failed (ignored)", e?.message || e);
     return { rows: [], skipped: false };
   }
-})();
+});
 
-  const segPromise = (async () => {
+  const segPromise = perfPromise("supabase:q:segments", async () => {
     // budget segments (V6.4)
     let segRows = [];
     try {
@@ -705,9 +713,10 @@ const txPromise = sb
       segRows = [];
     }
     return segRows || [];
-  })();
+  });
 
-  const catPromise = (async () => {
+  const catPromise = perfPromise("supabase:q:categories", async () => {
+    if (!shouldLoadDeferredData) return { rows: [], error: null, skipped: true };
     try {
       let { data: catRows, error: catErr } = await sb
         .from(TB_CONST.TABLES.categories)
@@ -739,11 +748,11 @@ const txPromise = sb
 
       return { rows: (catRows || []), error: null };
     } catch (e) {
-      return { rows: [], error: e };
+      return { rows: [], error: e, skipped: false };
     }
-  })();
+  });
 
-  const analysisMappingPromise = (async () => {
+  const analysisMappingPromise = perfPromise("supabase:q:analysisMapping", async () => {
     if (!shouldLoadDeferredData) return { rows: [], available: false, skipped: true };
     try {
       const { data: rows, error } = await sb
@@ -757,7 +766,7 @@ const txPromise = sb
       console.warn("[v_transaction_analytic_mapping] load failed (fallback to JS)", e?.message || e);
       return { rows: [], available: false, skipped: false };
     }
-  })();
+  });
 
 try {
   if (window.TB_PERF?.enabled) {
@@ -769,7 +778,7 @@ try {
   }
 } catch (_) {}
 
-  const analysisAuditPromise = (async () => {
+  const analysisAuditPromise = perfPromise("supabase:q:analysisAudit", async () => {
     if (!shouldLoadGovernance) return { rows: [], available: false, skipped: true };
     try {
       const { data: rows, error } = await sb
@@ -784,9 +793,9 @@ try {
       console.warn("[v_analytic_mapping_audit] load failed (fallback to JS)", e?.message || e);
       return { rows: [], available: false };
     }
-  })();
+  });
 
-  const analyticMappingRulesPromise = (async () => {
+  const analyticMappingRulesPromise = perfPromise("supabase:q:analyticRules", async () => {
     if (!shouldLoadGovernance) return { rows: [], available: false, skipped: true };
     try {
       const { data: rows, error } = await sb
@@ -801,9 +810,9 @@ try {
       console.warn("[analytic_category_mappings] load failed (settings governance limited)", e?.message || e);
       return { rows: [], available: false };
     }
-  })();
+  });
 
-  const subcatPromise = (async () => {
+  const subcatPromise = perfPromise("supabase:q:subcategories", async () => {
     if (!shouldLoadDeferredData) return { rows: [], skipped: true };
     try {
       const { data: rows, error } = await sb
@@ -819,7 +828,7 @@ try {
       console.warn("[category_subcategories] load failed (ignored)", e?.message || e);
       return { rows: [], skipped: false };
     }
-  })();
+  });
 
 const [
   w,
@@ -857,8 +866,8 @@ const { rows: categorySubcategoryRows, skipped: categorySubcategoriesSkipped } =
 const { rows: analysisMappingRows, available: analysisMappingAvailable, skipped: analysisMappingSkipped } = analysisMappingRes || { rows: [], available: false, skipped: false };
 const { rows: analysisAuditRows, available: analysisAuditAvailable, skipped: analysisAuditSkipped } = analysisAuditRes || { rows: [], available: false, skipped: false };
 const { rows: analyticMappingRuleRows, available: analyticMappingRulesAvailable, skipped: analyticMappingRulesSkipped } = analyticMappingRulesRes || { rows: [], available: false, skipped: false };
-const { rows: catRowsDb, error: catLoadErrDb } = catRes || { rows: [], error: null };
-if (catLoadErrDb) throw catLoadErrDb;
+const { rows: catRowsDb, error: catLoadErrDb, skipped: catSkipped } = catRes || { rows: [], error: null, skipped: false };
+if (catLoadErrDb && !catSkipped) throw catLoadErrDb;
 if (refreshToken !== Number(window.__TB_REFRESH_TOKEN__ || 0)) return;
 
   state.period.id = p.id;
@@ -1045,11 +1054,13 @@ state.wallets = (w || []).map((x) => ({
     if (typeof syncTabsForRole === "function") syncTabsForRole();
   } catch (e) {}
 
-  state.categoriesRows = (catRowsDb || []).map((x) => ({ id: x.id, name: x.name, color: x.color || null, sortOrder: Number(x.sort_order || 0) }));
+  if (!catSkipped) {
+    state.categoriesRows = (catRowsDb || []).map((x) => ({ id: x.id, name: x.name, color: x.color || null, sortOrder: Number(x.sort_order || 0) }));
+  }
 
   // categories — DB first, then in-memory transaction fallback, no generic localStorage restore
   try {
-    const rows = catRowsDb || [];
+    const rows = catSkipped ? (state.categoriesRows || []) : (catRowsDb || []);
     const merged = [];
     const seen = new Set();
     const isTripLike = (name) => /^\s*\[\s*trip\s*\]/i.test(String(name || ""));

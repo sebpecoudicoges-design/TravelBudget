@@ -84,6 +84,11 @@
         ${row("supabase:load", latestSpan("supabase:load") == null ? "..." : latestSpan("supabase:load") + "ms")}
         ${row("supabase:bootstrap", latestSpan("supabase:bootstrap") == null ? "..." : latestSpan("supabase:bootstrap") + "ms")}
         ${row("supabase:core", latestSpan("supabase:core") == null ? "..." : latestSpan("supabase:core") + "ms")}
+        ${row("q:transactions", latestSpan("supabase:q:transactions") == null ? "..." : latestSpan("supabase:q:transactions") + "ms")}
+        ${row("q:walletBalances", latestSpan("supabase:q:walletBalances") == null ? "..." : latestSpan("supabase:q:walletBalances") + "ms")}
+        ${row("q:segments", latestSpan("supabase:q:segments") == null ? "..." : latestSpan("supabase:q:segments") + "ms")}
+        ${row("q:wallets", latestSpan("supabase:q:wallets") == null ? "..." : latestSpan("supabase:q:wallets") + "ms")}
+        ${row("q:categories", latestSpan("supabase:q:categories") == null ? "..." : latestSpan("supabase:q:categories") + "ms")}
         ${row("fx:ensureDaily", latestSpan("fx:ensureDaily") == null ? "..." : latestSpan("fx:ensureDaily") + "ms")}
         ${row("render:all", latestSpan("render:all") == null ? "..." : latestSpan("render:all") + "ms")}
         ${row("logical queries", counters.supabaseQueries || 0)}
