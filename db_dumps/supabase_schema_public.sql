@@ -5988,6 +5988,10 @@ CREATE UNIQUE INDEX "transactions_recurring_rule_occurrence_uidx" ON "public"."t
 
 
 
+CREATE INDEX "budget_segments_user_period_sort_start_idx" ON "public"."budget_segments" USING "btree" ("user_id", "period_id", "sort_order", "start_date");
+
+
+
 CREATE INDEX "transactions_travel_id_idx" ON "public"."transactions" USING "btree" ("travel_id");
 
 
@@ -8162,7 +8166,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
 
 
 
