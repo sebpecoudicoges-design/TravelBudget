@@ -985,7 +985,8 @@ async function resnapshotModal() {
 
     closeModal();
     editingTxId = null;
-    await refreshFromServer();
+    if (typeof window.tbAfterMutationRefresh === "function") await window.tbAfterMutationRefresh("tx:mark_paid");
+    else await refreshFromServer();
   });
 }
 

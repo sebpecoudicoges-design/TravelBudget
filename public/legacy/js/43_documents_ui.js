@@ -37,13 +37,13 @@
 
     const days = Math.round((dt - today) / 86400000);
 
-    if(days < 0) return `Expiré depuis ${Math.abs(days)} j`;
-    if(days === 0) return 'Expire aujourd’hui';
-    if(days <= 60) return `Expire dans ${days} j`;
+    if(days < 0) return tr('documents.expiry.expired_since', { days: Math.abs(days) });
+    if(days === 0) return tr('documents.expiry.today');
+    if(days <= 60) return tr('documents.expiry.in_days', { days });
 
-    return `Expire le ${fmtDate(v)}`;
+    return tr('documents.expiry.on_date', { date: fmtDate(v) });
   }catch(_){
-    return `Expire le ${String(v).slice(0,10)}`;
+    return tr('documents.expiry.on_date', { date: String(v).slice(0,10) });
   }
 }
 
@@ -459,14 +459,14 @@ function setSelectedSort(v){
   function folderLabel(folder){
     const core = window.Core?.documentRules;
     if(core?.folderLabel) return core.folderLabel(folder, CACHE.folders || []);
-    if(!folder) return 'Non classe';
+    if(!folder) return tr('documents.folder.unclassified');
     const parent = folder.parent_id ? (CACHE.folders || []).find(f => String(f.id) === String(folder.parent_id)) : null;
     return parent ? `${parent.name} / ${folder.name}` : folder.name;
   }
   function folderOptionsHTML(selectedId){
     const selected = String(selectedId || '');
     const roots = rootFolders();
-    const out = [`<option value="" ${!selected ? 'selected' : ''}>Non classe</option>`];
+    const out = [`<option value="" ${!selected ? 'selected' : ''}>${esc(tr('documents.folder.unclassified'))}</option>`];
     for(const f of roots){
       out.push(`<option value="${esc(f.id)}" ${String(f.id)===selected?'selected':''}>${esc(f.name)}</option>`);
       for(const sub of childFolders(f.id)){
@@ -535,7 +535,7 @@ function setSelectedSort(v){
     </div>
 
     <button class="tb-doc-folder${allActive}" type="button" onclick="window.tbDocumentsSelectFolder('')">
-      <span>📁 Tous les documents</span>
+      <span>📁 ${esc(tr('documents.folder.all'))}</span>
       <small>${esc((CACHE.documents||[]).length)}</small>
     </button>
 
@@ -601,7 +601,7 @@ function setSelectedSort(v){
       : (isImg(mime) ? '🖼️' : '📎');
 
   const moveOptions = [
-    `<option value="">Non classé</option>`,
+    `<option value="">${esc(tr('documents.folder.unclassified'))}</option>`,
     ...(CACHE.folders || []).map(f=>`
       <option
         value="${esc(f.id)}"
@@ -651,7 +651,7 @@ function setSelectedSort(v){
     ${notePreview ? `<div class="tb-doc-note">${esc(notePreview.length > 90 ? notePreview.slice(0,90) + '…' : notePreview)}</div>` : ''}
 
     <select class="input"
-      title="Déplacer vers"
+      title="${esc(tr('documents.action.move'))}"
       onchange="window.tbDocumentsMove('${esc(d.id)}', this.value)">
       ${moveOptions}
     </select>
@@ -916,7 +916,7 @@ function setSelectedSort(v){
       const wrap = document.createElement('div');
       wrap.className = 'tb-doc-preview-backdrop';
       wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
-      wrap.innerHTML = `<div class="tb-doc-preview"><div class="tb-doc-preview-head"><strong>${esc(name)}</strong><div style="display:flex;gap:8px;"><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Nouvel onglet</a><button class="btn" type="button" onclick="this.closest('.tb-doc-preview-backdrop').remove()">Fermer</button></div></div><div class="tb-doc-preview-body">${body}</div></div>`;
+      wrap.innerHTML = `<div class="tb-doc-preview"><div class="tb-doc-preview-head"><strong>${esc(name)}</strong><div style="display:flex;gap:8px;"><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">${esc(tr('documents.action.new_tab'))}</a><button class="btn" type="button" onclick="this.closest('.tb-doc-preview-backdrop').remove()">${esc(tr('documents.action.close'))}</button></div></div><div class="tb-doc-preview-body">${body}</div></div>`;
       document.body.appendChild(wrap);
     }catch(e){ alert(e.message || String(e)); }
   }
@@ -1159,7 +1159,7 @@ function setSharePayload(bodyText, mailto){
 
 async function shareSelected(){
   const docs = selectedDocs();
-  if(!docs.length) return alert('Sélectionne au moins un document.');
+  if(!docs.length) return alert(tr('documents.error.select_one'));
 
   const duration = String(prompt('Durée du lien temporaire ? 10m, 1h ou 24h', '1h') || '1h').trim().toLowerCase();
 
@@ -1197,14 +1197,14 @@ async function shareSelected(){
 
     wrap.innerHTML = `
       <div class="tb-doc-modal">
-        <h3>Partager ${esc(links.length)} document(s)</h3>
+        <h3>${esc(tr('documents.share.title', { count: links.length }))}</h3>
         <p class="muted" style="font-size:13px;margin-top:-4px;">
-          Liens privés temporaires. Évite de les partager publiquement.
+          ${esc(tr('documents.share.private_hint'))}
         </p>
 
         <div class="tb-doc-modal-actions" style="justify-content:flex-start;margin-top:10px;">
-          <button class="btn primary" type="button" onclick="window.tbDocumentsOpenShareEmail()">Préparer un email</button>
-<button class="btn" type="button" onclick="window.tbDocumentsCopyShareLinks()">Copier les liens</button>
+          <button class="btn primary" type="button" onclick="window.tbDocumentsOpenShareEmail()">${esc(tr('documents.action.prepare_email'))}</button>
+<button class="btn" type="button" onclick="window.tbDocumentsCopyShareLinks()">${esc(tr('documents.action.copy_links'))}</button>
         </div>
 
         <div class="tb-doc-share-links">
@@ -1217,7 +1217,7 @@ async function shareSelected(){
         </div>
 
         <div class="tb-doc-modal-actions">
-          <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">Fermer</button>
+          <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.close'))}</button>
         </div>
       </div>
     `;
@@ -1231,15 +1231,15 @@ async function shareSelected(){
 
 async function moveSelected(){
   const docs = selectedDocs();
-  if(!docs.length) return alert('Sélectionne au moins un document.');
+  if(!docs.length) return alert(tr('documents.error.select_one'));
 
   const folderOptions = [
-    ['','Non classé'],
+    ['',tr('documents.folder.unclassified')],
     ...(CACHE.folders || []).map(f => [String(f.id), folderLabel(f)])
   ];
 
   const label = folderOptions.map((x,i)=>`${i}. ${x[1]}`).join('\n');
-  const choice = prompt(`Déplacer vers :\n${label}`, '0');
+  const choice = prompt(`${tr('documents.move.destination')} :\n${label}`, '0');
 
   if(choice === null) return;
 
@@ -1302,7 +1302,7 @@ async function addTagSelected(){
 
 async function shareSelected(){
   const docs = selectedDocs();
-  if(!docs.length) return alert('Sélectionne au moins un document.');
+  if(!docs.length) return alert(tr('documents.error.select_one'));
 
   const wrap = document.createElement('div');
   wrap.className = 'tb-doc-modal-backdrop';
@@ -1332,7 +1332,7 @@ async function shareSelected(){
 
 async function generateShareLinksSelected(){
   const docs = selectedDocs();
-  if(!docs.length) return alert('Sélectionne au moins un document.');
+  if(!docs.length) return alert(tr('documents.error.select_one'));
 
   const duration = String(document.getElementById('tb-doc-share-duration')?.value || '1h').trim().toLowerCase();
   const seconds = window.Core?.documentRules?.shareDurationSeconds
@@ -1399,10 +1399,10 @@ async function generateShareLinksSelected(){
 
 async function moveSelected(){
   const docs = selectedDocs();
-  if(!docs.length) return alert('Sélectionne au moins un document.');
+  if(!docs.length) return alert(tr('documents.error.select_one'));
 
   const folderOptions = [
-    ['','Non classé'],
+    ['',tr('documents.folder.unclassified')],
     ...(CACHE.folders || []).map(f => [String(f.id), folderLabel(f)])
   ];
 
@@ -1429,7 +1429,7 @@ async function moveSelected(){
 
 async function applyMoveSelected(){
   const docs = selectedDocs();
-  if(!docs.length) return alert('Sélectionne au moins un document.');
+  if(!docs.length) return alert(tr('documents.error.select_one'));
 
   const folderId = document.getElementById('tb-doc-batch-folder')?.value || null;
   const c = client();
@@ -1461,7 +1461,7 @@ async function applyMoveSelected(){
 
 async function addTagSelected(){
   const docs = selectedDocs();
-  if(!docs.length) return alert('Sélectionne au moins un document.');
+  if(!docs.length) return alert(tr('documents.error.select_one'));
 
   const tags = allDocumentTags();
   const wrap = document.createElement('div');
@@ -1492,7 +1492,7 @@ async function addTagSelected(){
 
 async function applyAddTagSelected(){
   const docs = selectedDocs();
-  if(!docs.length) return alert('Sélectionne au moins un document.');
+  if(!docs.length) return alert(tr('documents.error.select_one'));
 
   const raw = String(document.getElementById('tb-doc-batch-tag')?.value || '').trim();
   const tag = normalizeTags(raw)[0] || '';
@@ -1535,7 +1535,7 @@ async function applyAddTagSelected(){
 
 async function deleteSelected(){
   const docs = selectedDocs();
-  if(!docs.length) return alert('Sélectionne au moins un document.');
+  if(!docs.length) return alert(tr('documents.error.select_one'));
 
   if(!confirm(`Supprimer ${docs.length} document(s) ?`)) return;
 
@@ -1639,7 +1639,7 @@ window.tbDocumentsOpenShareEmail = function(){
   const body = window.__tbDocumentsShareBody || '';
 
   if(!body){
-    return alert('Aucun email de partage prêt.');
+    return alert(tr('documents.share.no_email'));
   }
 
   const url =
@@ -1654,7 +1654,7 @@ window.tbDocumentsCopyShareLinks = async function(){
   const text = window.__tbDocumentsShareLinksOnly || '';
 
   if(!text){
-    return alert('Aucun lien à copier.');
+    return alert(tr('documents.share.no_links'));
   }
 
   try{
@@ -1688,7 +1688,7 @@ window.tbDocumentsCopyShareBody = async function(){
   const text = window.__tbDocumentsShareBody || '';
 
   if(!text){
-    return alert('Aucun message à copier.');
+    return alert(tr('documents.share.no_message'));
   }
 
   try{

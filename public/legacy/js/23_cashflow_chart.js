@@ -90,10 +90,11 @@
   function renderCashflowChart() {
     const el = document.getElementById("cashflowChart");
     if (!el) return;
+    const T = window.tbT || ((k) => k);
 
     const seriesPoints = _buildCashflowSeries();
     if (!seriesPoints || !seriesPoints.length) {
-      el.innerHTML = `<div class="muted">Courbe indisponible (période invalide)</div>`;
+      el.innerHTML = `<div class="muted">${T("cashflow.unavailable")}</div>`;
       return;
     }
 
@@ -107,7 +108,7 @@
         animations: { enabled: true }
       },
       series: [
-        { name: "Solde", data: seriesPoints.map(p => [p.x, p.y]) }
+        { name: T("cashflow.balance"), data: seriesPoints.map(p => [p.x, p.y]) }
       ],
       xaxis: {
         type: "category",

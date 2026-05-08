@@ -442,6 +442,11 @@ async function loadFromSupabase(opts = {}) {
   if (!sbUser) return;
   const refreshToken = Number(opts?.refreshToken || window.__TB_REFRESH_TOKEN__ || 0);
   try { if (window.TB_PERF?.enabled) TB_PERF.event("loadFromSupabase:start", { opts }); } catch (_) {}
+  const activeTravelKey = "travelbudget_active_travel_id_v1";
+  const storedActiveTravelId = (() => {
+    try { return String(localStorage.getItem(activeTravelKey) || "").trim() || null; } catch (_) { return null; }
+  })();
+  const transactionSelect = "id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,night_covered,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status";
   const perfPromise = (name, fn) => {
     try { if (window.TB_PERF?.enabled) TB_PERF.mark(name); } catch (_) {}
     return Promise.resolve()
@@ -449,6 +454,95 @@ async function loadFromSupabase(opts = {}) {
       .finally(() => {
         try { if (window.TB_PERF?.enabled) TB_PERF.end(name); } catch (_) {}
       });
+  };
+  const fetchTransactionsForTravel = (travelId) => sb
+    .from(TB_CONST.TABLES.transactions)
+    .select(transactionSelect)
+    .eq("user_id", sbUser.id)
+    .eq("travel_id", travelId)
+    .order("created_at", { ascending: true });
+  const earlyTxPromise = storedActiveTravelId
+    ? perfPromise("supabase:q:transactions:early", () => fetchTransactionsForTravel(storedActiveTravelId))
+    : null;
+  const storedActivePeriodId = (() => {
+    try { return String(localStorage.getItem(ACTIVE_PERIOD_KEY) || "").trim() || null; } catch (_) { return null; }
+  })();
+  const fetchWalletsForTravel = (travelId) => sb
+    .from(TB_CONST.TABLES.wallets)
+    .select("id,travel_id,period_id,name,currency,balance,type,created_at,balance_snapshot_at")
+    .eq("user_id", sbUser.id)
+    .eq("travel_id", travelId)
+    .order("created_at", { ascending: true });
+  const fetchSegmentsForPeriods = (periodIds) => sb
+    .from(TB_CONST.TABLES.budget_segments)
+    .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,transport_night_budget,fx_mode,eur_base_rate_fixed,sort_order")
+    .eq("user_id", sbUser.id)
+    .in("period_id", periodIds)
+    .order("sort_order", { ascending: true })
+    .order("start_date", { ascending: true });
+  const earlyWalletsPromise = storedActiveTravelId
+    ? perfPromise("supabase:q:wallets:early", () => fetchWalletsForTravel(storedActiveTravelId))
+    : null;
+  const earlySegmentsPromise = storedActivePeriodId
+    ? perfPromise("supabase:q:segments:early", () => fetchSegmentsForPeriods([storedActivePeriodId]))
+    : null;
+  const computeWalletBalanceRows = (walletRows, txRows, periodId) => {
+    try {
+      const fn = window.Core?.walletBalanceRules?.computeWalletBalanceRows;
+      if (typeof fn === "function") return fn(walletRows, txRows, periodId);
+    } catch (_) {}
+    const rows = [];
+    const txByWallet = new Map();
+    for (const t of (Array.isArray(txRows) ? txRows : [])) {
+      const walletId = String(t?.wallet_id || "");
+      if (!walletId) continue;
+      if (!txByWallet.has(walletId)) txByWallet.set(walletId, []);
+      txByWallet.get(walletId).push(t);
+    }
+    for (const w of (Array.isArray(walletRows) ? walletRows : [])) {
+      if (periodId && String(w?.period_id || "") !== String(periodId)) continue;
+      const walletId = String(w?.id || "");
+      const snapshot = w?.balance_snapshot_at ? new Date(w.balance_snapshot_at).getTime() : null;
+      let delta = 0;
+      let included = 0;
+      let excludedInternal = 0;
+      let excludedUnpaid = 0;
+      let excludedPreSnapshot = 0;
+      let lastTxCreatedAt = null;
+      for (const t of (txByWallet.get(walletId) || [])) {
+        const isInternal = !!t?.is_internal;
+        const payNow = t?.pay_now !== false;
+        const createdAtRaw = t?.created_at || null;
+        const createdAtMs = createdAtRaw ? new Date(createdAtRaw).getTime() : NaN;
+        if (!payNow) { excludedUnpaid += 1; continue; }
+        if (isInternal) { excludedInternal += 1; continue; }
+        if (snapshot && Number.isFinite(createdAtMs) && createdAtMs < snapshot) {
+          excludedPreSnapshot += 1;
+          continue;
+        }
+        const amount = Number(t?.amount || 0);
+        if (String(t?.type || "") === "income") delta += amount;
+        else if (String(t?.type || "") === "expense") delta -= amount;
+        included += 1;
+        if (createdAtRaw && (!lastTxCreatedAt || String(createdAtRaw) > String(lastTxCreatedAt))) lastTxCreatedAt = createdAtRaw;
+      }
+      const baseline = Number(w?.balance || 0);
+      rows.push({
+        wallet_id: w?.id,
+        period_id: w?.period_id || periodId || null,
+        wallet_currency: w?.currency || null,
+        baseline_balance: baseline,
+        balance_snapshot_at: w?.balance_snapshot_at || null,
+        transactions_delta: delta,
+        effective_balance: baseline + delta,
+        included_tx_count: included,
+        excluded_internal_count: excludedInternal,
+        excluded_unpaid_count: excludedUnpaid,
+        excluded_pre_snapshot_count: excludedPreSnapshot,
+        last_tx_created_at: lastTxCreatedAt,
+      });
+    }
+    return rows;
   };
 
   const loadFxManualRatesInBackground = () => {
@@ -561,7 +655,6 @@ if (s) {
   } catch (_) {}
 }
 
-const activeTravelKey = "travelbudget_active_travel_id_v1";
 const activeTravelId = pickActiveTravel(travels);
 if (!activeTravelId) throw new Error("Aucun voyage trouvé.");
 localStorage.setItem(activeTravelKey, activeTravelId);
@@ -600,12 +693,18 @@ if (!p) throw new Error("Période active introuvable.");
   // - wallets may auto-bootstrap (insert) if missing.
   // - transactions / segments / categories do not depend on wallets.
   const walletsPromise = perfPromise("supabase:q:wallets", async () => {
-  const { data: w0, error: wErr } = await sb
-    .from(TB_CONST.TABLES.wallets)
-    .select("id,travel_id,name,currency,balance,type,created_at,balance_snapshot_at")
-    .eq("user_id", sbUser.id)
-    .eq("travel_id", activeTravelId)
-    .order("created_at", { ascending: true });
+  let w0 = null;
+  if (earlyWalletsPromise && String(storedActiveTravelId || "") === String(activeTravelId || "")) {
+    const early = await earlyWalletsPromise;
+    if (early?.error) throw early.error;
+    if (Array.isArray(early?.data) && early.data.length > 0) w0 = early.data;
+  }
+  let wErr = null;
+  if (!w0) {
+    const res = await fetchWalletsForTravel(activeTravelId);
+    w0 = res?.data || null;
+    wErr = res?.error || null;
+  }
   if (wErr) throw wErr;
 
   let w = w0;
@@ -621,7 +720,7 @@ if (!p) throw new Error("Période active introuvable.");
 
     const { data: w2, error: w2Err } = await sb
       .from(TB_CONST.TABLES.wallets)
-      .select("id,travel_id,name,currency,balance,type,created_at,balance_snapshot_at")
+      .select("id,travel_id,period_id,name,currency,balance,type,created_at,balance_snapshot_at")
       .eq("user_id", sbUser.id)
       .eq("travel_id", activeTravelId)
       .order("created_at", { ascending: true });
@@ -631,27 +730,11 @@ if (!p) throw new Error("Période active introuvable.");
   return w || [];
 });
 
-  const walletBalancesPromise = perfPromise("supabase:q:walletBalances", async () => {
-    try {
-      const { data: rows, error } = await sb
-        .from(TB_CONST.TABLES.v_wallet_balances)
-        .select("wallet_id,period_id,wallet_currency,baseline_balance,balance_snapshot_at,transactions_delta,effective_balance,included_tx_count,excluded_internal_count,excluded_unpaid_count,excluded_pre_snapshot_count,last_tx_created_at")
-        .eq("period_id", activePeriodId)
-        .order("wallet_id", { ascending: true });
-      if (error) throw error;
-      return rows || [];
-    } catch (e) {
-      console.warn("[v_wallet_balances] load failed (fallback to JS)", e?.message || e);
-      return [];
-    }
-  });
+  const walletBalancesPromise = perfPromise("walletBalances:js", async () => []);
 
-const txPromise = perfPromise("supabase:q:transactions", () => sb
-  .from(TB_CONST.TABLES.transactions)
-  .select("id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,night_covered,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status")
-  .eq("user_id", sbUser.id)
-  .eq("travel_id", activeTravelId)
-  .order("created_at", { ascending: true }));
+const txPromise = (earlyTxPromise && String(storedActiveTravelId || "") === String(activeTravelId || ""))
+  ? earlyTxPromise
+  : perfPromise("supabase:q:transactions", () => fetchTransactionsForTravel(activeTravelId));
 
   const recurringRulesPromise = perfPromise("supabase:q:recurringRules", async () => {
   if (!shouldLoadDeferredData) return { rows: [], skipped: true };
@@ -671,17 +754,30 @@ const txPromise = perfPromise("supabase:q:transactions", () => sb
   }
 });
 
+  const segmentPeriodIds = ((currentView === "settings" || currentView === "analysis") ? periodsForTravel : [p])
+    .map((row) => row && row.id)
+    .filter(Boolean);
+
   const segPromise = perfPromise("supabase:q:segments", async () => {
     // budget segments (V6.4)
     let segRows = [];
     try {
-      const { data: segs, error: segErr } = await sb
-        .from(TB_CONST.TABLES.budget_segments)
-        .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,transport_night_budget,fx_mode,eur_base_rate_fixed,sort_order")
-        .eq("user_id", sbUser.id)
-        .in("period_id", periodsForTravel.map((row) => row.id).filter(Boolean))
-        .order("sort_order", { ascending: true })
-        .order("start_date", { ascending: true });
+      let segs = null;
+      let segErr = null;
+      if (
+        earlySegmentsPromise
+        && String(storedActivePeriodId || "") === String(activePeriodId || "")
+        && segmentPeriodIds.length === 1
+      ) {
+        const early = await earlySegmentsPromise;
+        if (early?.error) throw early.error;
+        if (Array.isArray(early?.data) && early.data.length > 0) segs = early.data;
+      }
+      if (!segs) {
+        const res = await fetchSegmentsForPeriods(segmentPeriodIds);
+        segs = res?.data || null;
+        segErr = res?.error || null;
+      }
 
       if (segErr) throw segErr;
       segRows = segs || [];
@@ -702,13 +798,7 @@ const txPromise = perfPromise("supabase:q:transactions", () => sb
         }]);
         if (insSegErr) throw insSegErr;
 
-        const { data: segs2, error: seg2Err } = await sb
-          .from(TB_CONST.TABLES.budget_segments)
-          .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,transport_night_budget,fx_mode,eur_base_rate_fixed,sort_order")
-          .eq("user_id", sbUser.id)
-          .in("period_id", periodsForTravel.map((row) => row.id).filter(Boolean))
-          .order("sort_order", { ascending: true })
-          .order("start_date", { ascending: true });
+        const { data: segs2, error: seg2Err } = await fetchSegmentsForPeriods(segmentPeriodIds);
         if (seg2Err) throw seg2Err;
         segRows = segs2 || [];
       }
@@ -837,7 +927,7 @@ try {
 
 const [
   w,
-  walletBalanceRows,
+  walletBalanceRowsRaw,
   txRes,
   segRows,
   recurringRuleRes,
@@ -866,6 +956,7 @@ const [
 
 const { data: tx, error: tErr } = txRes || {};
 if (tErr) throw tErr;
+const walletBalanceRows = computeWalletBalanceRows(w || [], tx || [], activePeriodId);
 const { rows: recurringRuleRows, skipped: recurringRulesSkipped } = recurringRuleRes || { rows: [], skipped: false };
 const { rows: categorySubcategoryRows, skipped: categorySubcategoriesSkipped } = categorySubcategoryRes || { rows: [], skipped: false };
 const { rows: analysisMappingRows, available: analysisMappingAvailable, skipped: analysisMappingSkipped } = analysisMappingRes || { rows: [], available: false, skipped: false };

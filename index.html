@@ -1690,8 +1690,8 @@
     <div class="wrap">
       <header>
         <div class="brand">
-          <h1>Travel Budget</h1>
-          <div class="sub">Outil de suivi de budget pendant tes voyages</div>
+          <h1 data-t="app.title">Travel Budget</h1>
+          <div class="sub" data-t="app.subtitle">Outil de suivi de budget pendant tes voyages</div>
         </div>
 
         <div class="top-actions">
@@ -1700,8 +1700,8 @@
             <button class="btn btn-lang" id="tbLangEn" type="button" data-lang="en">EN</button>
           </div>
 
-          <button class="btn" onclick="toggleTheme()">🌓 Theme</button>
-          <button class="btn" onclick="refreshFxRates()">↻ Mettre à jour taux</button>
+          <button class="btn" onclick="toggleTheme()" data-t="top.theme">Theme</button>
+          <button class="btn" onclick="refreshFxRates()" data-t="top.update_rates">Mettre a jour taux</button>
           <button class="btn" onclick="exportBackup()">⬇ Export</button>
           <button class="btn" onclick="importBackup()">⬆ Import</button>
           <button class="btn" onclick="signOut()">⎋ Logout</button>
@@ -1714,8 +1714,8 @@
         <div id="tab-dashboard" class="tab active" onclick="showView('dashboard')" data-t="nav.dashboard">Dashboard</div>
         <div id="tab-transactions" class="tab" onclick="showView('transactions')" data-t="nav.transactions">Transactions</div>
         <div id="tab-settings" class="tab" onclick="showView('settings')" data-t="nav.settings">Settings</div>
-        <div id="tab-analysis" class="tab" onclick="showView('analysis')">Analyse</div>
-        <div id="tab-assets" class="tab" onclick="showView('assets')">Patrimoine</div>
+        <div id="tab-analysis" class="tab" onclick="showView('analysis')" data-t="nav.analysis">Analyse</div>
+        <div id="tab-assets" class="tab" onclick="showView('assets')" data-t="nav.assets">Patrimoine</div>
         <div id="tab-documents" class="tab" onclick="showView('documents')">Documents</div>
         <div id="tab-help" class="tab" onclick="showView('help')" data-t="nav.help">Aide</div>
         <div id="tab-trip" class="tab" onclick="showView('trip')" data-t="nav.trip">Partage</div>
@@ -1728,33 +1728,33 @@
 
         <div class="grid dashboard-grid-main">
           <div class="card dashboard-panel dashboard-panel--wallets">
-            <h2>Wallets</h2>
+            <h2 data-t="dashboard.wallets">Wallets</h2>
             <div id="onboarding-panel" class="card" style="display:none; margin:10px 0; border:1px dashed rgba(0,0,0,.25); background:rgba(0,0,0,.02);">
-              <h3 style="margin:0 0 6px 0;">Démarrer en 1 minute</h3>
+              <h3 style="margin:0 0 6px 0;" data-t="onboarding.title">Démarrer en 1 minute</h3>
               <div id="onboarding-panel-body" style="font-size:13px; line-height:1.35;"></div>
               <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-                <button class="btn primary" onclick="showView('settings')">Configurer</button>
-                <button class="btn" onclick="hideOnboardingPanel()">Masquer</button>
+                <button class="btn primary" onclick="showView('settings')" data-t="common.configure">Configurer</button>
+                <button class="btn" onclick="hideOnboardingPanel()" data-t="common.hide">Masquer</button>
               </div>
             </div>
             <div id="wallets-container" style="display:flex; flex-direction:column; gap:12px;"></div>
           </div>
 
           <div class="card dashboard-panel dashboard-panel--budget">
-            <h2>Budget journalier</h2>
+            <h2 data-t="dashboard.daily_budget">Budget journalier</h2>
             <div id="daily-budget-container" style="display:flex; flex-direction:column; gap:10px;"></div>
           </div>
         </div>
 
         <div class="grid" style="margin-top:12px;">
           <div class="card dashboard-panel dashboard-panel--categories dashboard-analysis-cta">
-            <div class="dashboard-card-kicker">Analyse dédiée</div>
-            <h2>Lire les écarts, pas seulement les soldes</h2>
+            <div class="dashboard-card-kicker" data-t="dashboard.analysis.kicker">Analyse dédiée</div>
+            <h2 data-t="dashboard.analysis.title">Lire les écarts, pas seulement les soldes</h2>
             <div class="dashboard-analysis-cta-copy">
-              <p class="muted">Le dashboard reste centré sur l’état actuel. L’espace Analyse porte la trajectoire, les catégories, la cadence et les écarts budget vs réel.</p>
+              <p class="muted" data-t="dashboard.analysis.body">Le dashboard reste centré sur l’état actuel. L’espace Analyse porte la trajectoire, les catégories, la cadence et les écarts budget vs réel.</p>
               <div class="dashboard-analysis-cta-actions">
-                <button class="btn primary" onclick="showView('analysis')">Ouvrir Analyse</button>
-                <button class="btn" onclick="showView('trip')">Voir Partage</button>
+                <button class="btn primary" onclick="showView('analysis')" data-t="dashboard.analysis.open">Ouvrir Analyse</button>
+                <button class="btn" onclick="showView('trip')" data-t="dashboard.analysis.trip">Voir Partage</button>
               </div>
             </div>
           </div>
@@ -1782,77 +1782,77 @@
             <div class="analysis-glow analysis-glow-a"></div>
             <div class="analysis-glow analysis-glow-b"></div>
             <div class="analysis-hero-copy">
-              <div class="analysis-kicker">Analyse budget</div>
-              <h2>Analyse budget</h2>
-              <p>Une lecture visuelle et vivante de ton voyage : trajectoire, cadence, catégories et signaux de dérive.</p>
+              <div class="analysis-kicker" data-t="analysis.hero.kicker">Analyse budget</div>
+              <h2 data-t="analysis.hero.title">Analyse budget</h2>
+              <p data-t="analysis.hero.body">Une lecture visuelle et vivante de ton voyage : trajectoire, cadence, catégories et signaux de dérive.</p>
             </div>
-            <div id="analysis-live-pill" class="analysis-live-pill">Chargement…</div>
+            <div id="analysis-live-pill" class="analysis-live-pill" data-t="common.loading">Chargement…</div>
           </div>
 
           <div id="analysis-overview-strip" class="analysis-overview-strip"></div>
 
           <div class="analysis-toolbar card">
             <div class="analysis-filter-group">
-              <label for="analysis-travel">Voyage</label>
+              <label for="analysis-travel" data-t="analysis.filter.travel">Voyage</label>
               <select id="analysis-travel"></select>
             </div>
             <div class="analysis-filter-group">
-              <label for="analysis-period">Période</label>
+              <label for="analysis-period" data-t="analysis.filter.period">Période</label>
               <select id="analysis-period"></select>
             </div>
             <div id="analysis-range-box" class="analysis-filter-group" style="display:none; grid-column: span 2;">
-              <label>Date à date</label>
+              <label data-t="analysis.filter.range">Date à date</label>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                 <input id="analysis-range-start" type="date" />
                 <input id="analysis-range-end" type="date" />
               </div>
             </div>
             <div class="analysis-filter-group">
-              <label for="analysis-scope">Périmètre</label>
+              <label for="analysis-scope" data-t="analysis.filter.scope">Périmètre</label>
               <select id="analysis-scope">
-                <option value="budget">Dans le budget</option>
-                <option value="out">Hors budget</option>
-                <option value="all">Les deux</option>
+                <option value="budget" data-t="analysis.scope.budget">Dans le budget</option>
+                <option value="out" data-t="analysis.scope.out">Hors budget</option>
+                <option value="all" data-t="analysis.scope.all">Les deux</option>
               </select>
             </div>
             <div class="analysis-filter-group">
-              <label for="analysis-mode">Mode</label>
+              <label for="analysis-mode" data-t="analysis.filter.mode">Mode</label>
               <select id="analysis-mode">
-                <option value="expenses">Dépenses payées</option>
-                <option value="planned">Dépenses payées + à payer</option>
+                <option value="expenses" data-t="analysis.mode.expenses">Dépenses payées</option>
+                <option value="planned" data-t="analysis.mode.planned">Dépenses payées + à payer</option>
               </select>
             </div>
             <div class="analysis-filter-group">
-              <label for="analysis-currency">Devise</label>
+              <label for="analysis-currency" data-t="analysis.filter.currency">Devise</label>
               <select id="analysis-currency">
-                <option value="period">Devise période</option>
-                <option value="account">Devise du compte</option>
+                <option value="period" data-t="analysis.currency.period">Devise période</option>
+                <option value="account" data-t="analysis.currency.account">Devise du compte</option>
               </select>
             </div>
             <div class="analysis-filter-group" style="grid-column: 1 / -1;">
-              <label for="analysis-category-panel">Catégories à exclure</label>
+              <label for="analysis-category-panel" data-t="analysis.exclusions.label">Catégories à exclure</label>
               <div class="analysis-category-compact">
                 <div class="analysis-category-copy">
-                  <strong>Exclusions catégories</strong>
-                  <span id="analysis-category-summary">Aucune catégorie exclue</span>
+                  <strong data-t="analysis.exclusions.title">Exclusions catégories</strong>
+                  <span id="analysis-category-summary" data-t="analysis.exclusions.none">Aucune catégorie exclue</span>
                 </div>
                 <div class="analysis-category-actions">
                   <span id="analysis-category-count" class="analysis-category-badge">0</span>
-                  <button id="analysis-category-toggle" class="analysis-category-toggle" type="button">Gérer</button>
+                  <button id="analysis-category-toggle" class="analysis-category-toggle" type="button" data-t="analysis.exclusions.manage">Gérer</button>
                 </div>
               </div>
               <div id="analysis-category-panel" class="analysis-category-panel">
                 <div id="analysis-category-exclude-box" class="analysis-chips"></div>
                 <div class="analysis-chip-tools">
-                  <button id="analysis-cat-all" class="analysis-chip-tool" type="button">Tout inclure</button>
-                  <button id="analysis-cat-none" class="analysis-chip-tool" type="button">Tout exclure</button>
+                  <button id="analysis-cat-all" class="analysis-chip-tool" type="button" data-t="analysis.exclusions.include_all">Tout inclure</button>
+                  <button id="analysis-cat-none" class="analysis-chip-tool" type="button" data-t="analysis.exclusions.exclude_all">Tout exclure</button>
                 </div>
-                <div class="analysis-filter-hint">Clique sur une pastille pour exclure ou réinclure une catégorie dans l’analyse.</div>
+                <div class="analysis-filter-hint" data-t="analysis.exclusions.hint">Clique sur une pastille pour exclure ou réinclure une catégorie dans l’analyse.</div>
               </div>
             </div>
             <div class="analysis-filter-group">
               <label>&nbsp;</label>
-              <button id="analysis-refresh" class="btn primary" type="button">Actualiser</button>
+              <button id="analysis-refresh" class="btn primary" type="button" data-t="analysis.refresh">Actualiser</button>
             </div>
           </div>
 
@@ -1862,8 +1862,8 @@
             <div class="card analysis-chart-card analysis-chart-card--hero">
               <div class="analysis-card-head">
                 <div>
-                  <div class="analysis-card-kicker">Trajectoire</div>
-                  <h3>Budget vs réel</h3>
+                  <div class="analysis-card-kicker" data-t="analysis.card.trajectory">Trajectoire</div>
+                  <h3 data-t="analysis.card.budget_vs_actual">Budget vs réel</h3>
                 </div>
                 <div id="analysis-trajectory-meta" class="analysis-card-meta"></div>
               </div>
@@ -1874,8 +1874,8 @@
               <div class="card analysis-chart-card">
                 <div class="analysis-card-head">
                   <div>
-                    <div class="analysis-card-kicker">Catégories</div>
-                    <h3>Répartition catégories</h3>
+                    <div class="analysis-card-kicker" data-t="analysis.card.categories">Catégories</div>
+                    <h3 data-t="analysis.card.category_split">Répartition catégories</h3>
                   </div>
                 </div>
                 <div id="analysis-category-chart" class="analysis-chart"></div>
@@ -1884,8 +1884,8 @@
               <div class="card analysis-chart-card">
                 <div class="analysis-card-head">
                   <div>
-                    <div class="analysis-card-kicker">Vue détaillée</div>
-                    <h3>Toutes les catégories</h3>
+                    <div class="analysis-card-kicker" data-t="analysis.card.detail">Vue détaillée</div>
+                    <h3 data-t="analysis.card.all_categories">Toutes les catégories</h3>
                   </div>
                 </div>
                 <div id="analysis-category-bars-chart" class="analysis-chart"></div>
@@ -1893,8 +1893,8 @@
               <div class="card analysis-chart-card">
                 <div class="analysis-card-head">
                   <div>
-                    <div class="analysis-card-kicker">Sous-catégories</div>
-                    <h3>Sous-catégories dominantes</h3>
+                    <div class="analysis-card-kicker" data-t="analysis.card.subcategories">Sous-catégories</div>
+                    <h3 data-t="analysis.card.top_subcategories">Sous-catégories dominantes</h3>
                   </div>
                 </div>
                 <div id="analysis-subcategory-breakdown" style="display:grid;gap:2px;padding-top:4px;"></div>
@@ -1902,8 +1902,8 @@
               <div class="card analysis-chart-card">
                 <div class="analysis-card-head">
                   <div>
-                    <div class="analysis-card-kicker">Rythme</div>
-                    <h3>Cadence quotidienne</h3>
+                    <div class="analysis-card-kicker" data-t="analysis.card.pace">Rythme</div>
+                    <h3 data-t="analysis.card.daily_pace">Cadence quotidienne</h3>
                   </div>
                 </div>
                 <div id="analysis-velocity-chart" class="analysis-chart"></div>
@@ -1915,8 +1915,8 @@
             <div class="card analysis-chart-card">
               <div class="analysis-card-head">
                 <div>
-                  <div class="analysis-card-kicker">Répartition temps</div>
-                  <h3>Heatmap des dépenses</h3>
+                  <div class="analysis-card-kicker" data-t="analysis.card.time_split">Répartition temps</div>
+                  <h3 data-t="analysis.card.heatmap">Heatmap des dépenses</h3>
                 </div>
               </div>
               <div id="analysis-heatmap-chart" class="analysis-chart analysis-chart--heatmap"></div>
@@ -1924,8 +1924,8 @@
             <div class="card analysis-chart-card analysis-chart-card--reference">
               <div class="analysis-card-head">
                 <div>
-                  <div class="analysis-card-kicker">Référence pays</div>
-                  <h3>Budget sourcé vs réel</h3>
+                  <div class="analysis-card-kicker" data-t="analysis.card.country_reference">Référence pays</div>
+                  <h3 data-t="analysis.card.reference_vs_actual">Budget sourcé vs réel</h3>
                 </div>
               </div>
               <div class="analysis-reference-shell">
@@ -1940,8 +1940,8 @@
             <div class="card analysis-chart-card">
               <div class="analysis-card-head">
                 <div>
-                  <div class="analysis-card-kicker">Nuits remplacées</div>
-                  <h3>Impact analytique transport de nuit</h3>
+                  <div class="analysis-card-kicker" data-t="analysis.card.replaced_nights">Nuits remplacées</div>
+                  <h3 data-t="analysis.card.night_transport">Impact analytique transport de nuit</h3>
                 </div>
               </div>
               <div id="analysis-night-covered"></div>
@@ -1949,7 +1949,7 @@
             <div class="card analysis-insights-card">
               <div class="analysis-card-head">
                 <div>
-                  <div class="analysis-card-kicker">Lecture rapide</div>
+                  <div class="analysis-card-kicker" data-t="analysis.card.quick_read">Lecture rapide</div>
                   <h3>Insights</h3>
                 </div>
               </div>
@@ -1968,80 +1968,80 @@
       background:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
       box-shadow:0 20px 40px rgba(2,6,23,.06);
       backdrop-filter: blur(14px);">
-          <h2>Filtres</h2>
+          <h2 data-t="transactions.filters.title">Filtres</h2>
           <div class="row">
             <div class="field">
-              <label>Du</label>
+              <label data-t="transactions.filters.from">Du</label>
               <input id="f-from" type="date" />
             </div>
             <div class="field">
-              <label>Au</label>
+              <label data-t="transactions.filters.to">Au</label>
               <input id="f-to" type="date" />
             </div>
             <div class="field">
-              <label>Wallet</label>
+              <label data-t="transactions.filters.wallet">Wallet</label>
               <select id="f-wallet"></select>
             </div>
             <div class="field">
-            <label>Catégorie</label>
+            <label data-t="transactions.filters.category">Catégorie</label>
             <select id="f-category"></select>
           </div>
           <div class="field">
-            <label>Sous-catégorie</label>
+            <label data-t="transactions.filters.subcategory">Sous-catégorie</label>
             <select id="f-subcategory">
-             <option value="all">Toutes</option>
+             <option value="all" data-t="common.all">Toutes</option>
            </select>
           </div>
           <div class="field">
-            <label>Type</label>
+            <label data-t="transactions.filters.type">Type</label>
               <select id="f-type">
-                <option value="all">Tous</option>
-                <option value="expense">Dépenses</option>
-                <option value="income">Entrées</option>
+                <option value="all" data-t="common.all_m">Tous</option>
+                <option value="expense" data-t="transactions.type.expense_plural">Dépenses</option>
+                <option value="income" data-t="transactions.type.income_plural">Entrées</option>
               </select>
             </div>
 
             <div class="field">
-              <label>Payement</label>
+              <label data-t="transactions.filters.payment">Payement</label>
               <select id="f-pay">
-                <option value="all">Tous</option>
-                <option value="paid">Payés</option>
-                <option value="unpaid">À payer</option>
+                <option value="all" data-t="common.all_m">Tous</option>
+                <option value="paid" data-t="transactions.filters.paid">Payés</option>
+                <option value="unpaid" data-t="transactions.filters.unpaid">À payer</option>
               </select>
             </div>
 
             <div class="field">
-              <label>Hors budget</label>
+              <label data-t="transactions.filters.out_budget">Hors budget</label>
               <select id="f-out">
-                <option value="all">Tous</option>
-                <option value="yes">Oui</option>
-                <option value="no">Non</option>
+                <option value="all" data-t="common.all_m">Tous</option>
+                <option value="yes" data-t="common.yes">Oui</option>
+                <option value="no" data-t="common.no">Non</option>
               </select>
             </div>
 
             <div class="field">
-              <label>Nuit couverte</label>
+              <label data-t="transactions.filters.night">Nuit couverte</label>
               <select id="f-night">
-                <option value="all">Tous</option>
-                <option value="yes">Oui</option>
-                <option value="no">Non</option>
+                <option value="all" data-t="common.all_m">Tous</option>
+                <option value="yes" data-t="common.yes">Oui</option>
+                <option value="no" data-t="common.no">Non</option>
               </select>
             </div>
 
             <div class="field">
-              <label>Récurrence</label>
+              <label data-t="transactions.filters.recurring">Récurrence</label>
               <select id="f-recurring">
-                <option value="all">Toutes</option>
-                <option value="recurring">Récurrentes (toutes)</option>
-                <option value="non_recurring">Non récurrentes</option>
-                <option value="recurring_generated">Récurrentes générées</option>
-                <option value="recurring_confirmed">Récurrentes confirmées</option>
+                <option value="all" data-t="common.all">Toutes</option>
+                <option value="recurring" data-t="transactions.recurring.all">Récurrentes (toutes)</option>
+                <option value="non_recurring" data-t="transactions.recurring.none">Non récurrentes</option>
+                <option value="recurring_generated" data-t="transactions.recurring.generated">Récurrentes générées</option>
+                <option value="recurring_confirmed" data-t="transactions.recurring.confirmed">Récurrentes confirmées</option>
               </select>
             </div>
 
             <div class="field" style="min-width:220px;">
-              <label>Recherche</label>
-              <input id="f-q" type="text" placeholder="Label / catégorie..." />
+              <label data-t="transactions.filters.search">Recherche</label>
+              <input id="f-q" type="text" placeholder="Label / catégorie..." data-t-placeholder="transactions.filters.search_placeholder" />
             </div>
           </div>
         </div>

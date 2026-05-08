@@ -39,4 +39,13 @@ describe('i18n dictionaries', () => {
     expect(dicts.fr['documents.share.duration']).toBeTruthy();
     expect(dicts.en['documents.share.duration']).toBeTruthy();
   });
+
+  it('contains transaction bulk safety messages', () => {
+    const dicts = loadDictionaries();
+
+    expect(dicts.fr['transactions.bulk.error.locked']).toContain('{count}');
+    expect(dicts.en['transactions.bulk.error.locked']).toContain('{count}');
+    expect(dicts.fr['transactions.bulk.error.none']).toBeTruthy();
+    expect(dicts.en['transactions.bulk.error.none']).toBeTruthy();
+  });
 });

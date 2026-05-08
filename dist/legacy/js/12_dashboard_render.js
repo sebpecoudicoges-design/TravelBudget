@@ -75,6 +75,7 @@ function renderDashboardContextHelp(container) {
   if (!container) return;
   if ((window.tbUxIsDismissed || _tbUxIsDismissed)("dashboard_overview")) return;
   if (container.querySelector('[data-tb-help="dashboard-overview"]')) return;
+  const T = window.tbT || ((k) => k);
   const box = document.createElement('div');
   box.setAttribute('data-tb-help', 'dashboard-overview');
   box.className = 'hint';
@@ -86,17 +87,17 @@ function renderDashboardContextHelp(container) {
   box.innerHTML = `
     <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
       <div style="min-width:260px; flex:1;">
-        <div style="font-weight:700; margin-bottom:6px;">Comprendre le tableau de bord</div>
+        <div style="font-weight:700; margin-bottom:6px;">${T("dashboard.help.title")}</div>
         <div class="muted">
-          <div>• <b>Wallets</b> = ta trésorerie réelle, mise à jour avec les mouvements payés.</div>
-          <div>• <b>Budget journalier</b> = ton pilotage par jour, distinct du cash réel.</div>
-          <div>• <b>Partage</b> : si tu avances une dépense, la wallet prend le total, mais le budget ne garde que ta part.</div>
+          <div>• ${T("dashboard.help.wallets")}</div>
+          <div>• ${T("dashboard.help.daily")}</div>
+          <div>• ${T("dashboard.help.trip")}</div>
         </div>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn" type="button" onclick="showView('help')">Aide</button>
-        <button class="btn" type="button" onclick="showView('trip')">Partage</button>
-        <button class="btn" type="button" data-tb-help-close="dashboard_overview">Masquer</button>
+        <button class="btn" type="button" onclick="showView('help')">${T("nav.help")}</button>
+        <button class="btn" type="button" onclick="showView('trip')">${T("nav.trip")}</button>
+        <button class="btn" type="button" data-tb-help-close="dashboard_overview">${T("common.hide")}</button>
       </div>
     </div>`;
   container.prepend(box);
@@ -168,6 +169,7 @@ function renderDashboardHero() {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  const T = window.tbT || ((k) => k);
 
   const travel =
     (state?.travels || []).find(t => String(t.id) === String(state?.activeTravelId || "")) ||
@@ -346,38 +348,35 @@ function renderDashboardHero() {
     <div class="dashboard-hero-inline-wrap">
       <section class="dashboard-hero-card dashboard-hero-card--kpi-shell">
         <div class="dashboard-hero-copy">
-          <div class="dashboard-hero-kicker">Pilotage quotidien</div>
+          <div class="dashboard-hero-kicker">${esc(T("dashboard.hero.kicker"))}</div>
           <h2 class="dashboard-hero-title">${esc(travelName)}</h2>
-          <p class="dashboard-hero-text">
-            Lis l’état du voyage au même endroit : contexte en haut, KPIs intégrés juste dessous,
-            puis cashflow et budget journalier plus bas.
-          </p>
+          <p class="dashboard-hero-text">${esc(T("dashboard.hero.body"))}</p>
 
           <div class="dashboard-hero-meta">
             <span class="dashboard-hero-pill">
-              <strong>Période</strong>
-              ${esc(periodStart && periodEnd ? `${periodStart} → ${periodEnd}` : "à définir")}
+              <strong>${esc(T("dashboard.hero.period"))}</strong>
+              ${esc(periodStart && periodEnd ? `${periodStart} -> ${periodEnd}` : T("common.to_define"))}
             </span>
             <span class="dashboard-hero-pill">
-              <strong>Devise pivot</strong>
+              <strong>${esc(T("dashboard.hero.pivot"))}</strong>
               ${esc(pivotCur)}
             </span>
             <span class="dashboard-hero-pill">
-              <strong>À payer</strong>
-              ${esc(String(pendingCount))} dépense${pendingCount > 1 ? "s" : ""}
+              <strong>${esc(T("dashboard.hero.pending"))}</strong>
+              ${esc(String(pendingCount))} ${esc(T(pendingCount > 1 ? "transactions.expense_plural" : "transactions.expense_one"))}
             </span>
           </div>
 
           <div class="dashboard-hero-actions">
-            <button class="btn primary" onclick="showView('transactions')">Ajouter / revoir les transactions</button>
-            <button class="btn" onclick="showView('analysis')">Lire l'analyse complète</button>
-            <button class="btn" onclick="showView('trip')">Ouvrir Partage</button>
+            <button class="btn primary" onclick="showView('transactions')">${esc(T("dashboard.hero.add_review"))}</button>
+            <button class="btn" onclick="showView('analysis')">${esc(T("dashboard.hero.analysis"))}</button>
+            <button class="btn" onclick="showView('trip')">${esc(T("dashboard.hero.trip"))}</button>
           </div>
 
           <div class="dashboard-kpi-embedded-wrap">
             <div class="dashboard-kpi-embedded-head">
-              <div class="dashboard-kpi-embedded-title">KPIs du dashboard</div>
-              <div class="dashboard-kpi-embedded-note">Même logique métier, sans doublon de calcul.</div>
+              <div class="dashboard-kpi-embedded-title">${esc(T("dashboard.hero.kpi_title"))}</div>
+              <div class="dashboard-kpi-embedded-note">${esc(T("dashboard.hero.kpi_note"))}</div>
             </div>
             <div id="dashboard-kpi-embed-slot"></div>
           </div>
@@ -645,6 +644,7 @@ function _dbSaveView(view){
 }
 
 function renderDailyBudget() {
+  const T = window.tbT || ((k) => k);
   const container = document.getElementById("daily-budget-container");
   if (!container) return; // page reset / dom partiel
   container.innerHTML = "";
@@ -700,15 +700,15 @@ function renderDailyBudget() {
   ctrl.innerHTML = `
     <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between;">
       <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-        <button class="btn" id="db-prev">← Avant</button>
-        <button class="btn" id="db-today">Aujourd'hui</button>
-        <button class="btn" id="db-next">Après →</button>
+        <button class="btn" id="db-prev">${T("common.previous")}</button>
+        <button class="btn" id="db-today">${T("kpi.today")}</button>
+        <button class="btn" id="db-next">${T("common.next")}</button>
       </div>
       <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-        <span class="muted" style="font-size:12px;">Affichage :</span>
+        <span class="muted" style="font-size:12px;">${T("dashboard.daily.display")} :</span>
         <select class="input" id="db-mode" style="min-width:170px;">
-          <option value="segment">Période courante</option>
-          <option value="voyage">Tout le voyage</option>
+          <option value="segment">${T("dashboard.daily.current_period")}</option>
+          <option value="voyage">${T("analysis.period.all_trip")}</option>
         </select>
         <span class="muted" style="font-size:12px;">${viewStartISO} → ${viewEndISO}</span>
       </div>
@@ -772,12 +772,12 @@ function renderDailyBudget() {
         <div class="pill ${budgetClass(budget)}"><span class="dot"></span>${budget.toFixed(0)} ${baseDay}</div>
       </div>
       <div style="margin-top:6px; color:#6b7280; font-size:12px; display:flex; justify-content:space-between; gap:10px;">
-        <div>Budget utilisé : <b style="color:#111827;">${spentBudget.toFixed(0)} ${baseDay}</b></div>
-        <div>Objectif : <b style="color:#111827;">${Number(info.daily).toFixed(0)} ${baseDay}</b></div>
+        <div>${T("dashboard.daily.used")} : <b style="color:#111827;">${spentBudget.toFixed(0)} ${baseDay}</b></div>
+        <div>${T("dashboard.daily.target")} : <b style="color:#111827;">${Number(info.daily).toFixed(0)} ${baseDay}</b></div>
       </div>
       ${details.length
         ? `<div class="details">${details.map((x) => `• ${x.label} : ${Number(x.amountBase).toFixed(0)} ${x.baseCurrency || baseDay}`).join("<br>")}</div>`
-        : `<div class="details">Aucune allocation</div>`}
+        : `<div class="details">${T("dashboard.daily.no_allocation")}</div>`}
     `;
     container.appendChild(div);
   });

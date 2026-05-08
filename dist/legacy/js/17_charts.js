@@ -347,6 +347,7 @@ function drawPieChart(canvasId, legendId, mapCat) {
   legend.innerHTML = "";
 
   // Context line (range + rules)
+  const T = window.tbT || ((k) => k);
   const ctxLine = document.createElement("div");
   ctxLine.style.margin = "2px 0 8px";
   ctxLine.style.fontSize = "12px";
@@ -355,8 +356,8 @@ function drawPieChart(canvasId, legendId, mapCat) {
   const s0 = (meta && meta.startISO) ? meta.startISO : (state?.period?.start || "");
   const e0 = (meta && meta.endISO) ? meta.endISO : (state?.period?.end || "");
   const lab = (meta && meta.label) ? meta.label : "";
-  const head = lab ? `${lab} : ` : "Période : ";
-  ctxLine.textContent = `${head}${s0} → ${e0} · Dépenses payées (payNow)`;
+  const head = lab ? `${lab} : ` : `${T("charts.period")} : `;
+  ctxLine.textContent = `${head}${s0} -> ${e0} · ${T("charts.paid_expenses")}`;
   legend.appendChild(ctxLine);
 
   const filterWrap = document.createElement("div");
@@ -367,7 +368,7 @@ function drawPieChart(canvasId, legendId, mapCat) {
   filterWrap.style.color = "var(--muted)";
   filterWrap.style.fontSize = "12px";
   const filterLabel = document.createElement("div");
-  filterLabel.textContent = "Filtrer :";
+  filterLabel.textContent = `${T("charts.filter")} :`;
   filterLabel.style.marginRight = "4px";
   filterWrap.appendChild(filterLabel);
 
@@ -415,7 +416,7 @@ function drawPieChart(canvasId, legendId, mapCat) {
 
   if (!entries.length) {
     ctx.fillStyle = "rgba(127,127,127,0.85)";
-    ctx.fillText("Aucune dépense (filtre actif)", 16, 28);
+    ctx.fillText(T("charts.empty_filtered"), 16, 28);
     return;
   }
 

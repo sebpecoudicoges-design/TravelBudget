@@ -21,12 +21,14 @@ function _txBulkPruneSelection(visibleTxs) {
 function _txBulkToggleOne(id, checked) {
   const key = String(id || '');
   if (!key) return;
+  _txBulkSetMessage('');
   if (checked) TB_TX_BULK.selectedIds.add(key);
   else TB_TX_BULK.selectedIds.delete(key);
   renderTransactions();
 }
 
 function _txBulkToggleAll(checked) {
+  _txBulkSetMessage('');
   const visibleIds = Array.isArray(TB_TX_BULK.visibleIds) ? TB_TX_BULK.visibleIds : [];
   if (checked) visibleIds.forEach((id) => TB_TX_BULK.selectedIds.add(id));
   else visibleIds.forEach((id) => TB_TX_BULK.selectedIds.delete(id));
@@ -38,11 +40,37 @@ function _txBulkSelectedRows() {
   return (Array.isArray(state?.transactions) ? state.transactions : []).filter((tx) => selected.has(String(tx?.id || '')));
 }
 
+function _txBulkSelectedLockedRows() {
+  const getLock = window.Core?.transactionGuards?.getTransactionLockState;
+  const walletAdjustmentCategory = TB_CONST?.CATS?.wallet_adjustment || 'Ajustement wallet';
+  return _txBulkSelectedRows().filter((tx) => {
+    try {
+      if (typeof getLock === 'function') return !!getLock(tx, { walletAdjustmentCategory })?.locked;
+    } catch (_) {}
+    return !!(tx?.tripExpenseId || tx?.trip_expense_id || String(tx?.category || '').trim().toLowerCase() === String(walletAdjustmentCategory).toLowerCase());
+  });
+}
+
 function _txBulkSelectedCommonCategory() {
   const rows = _txBulkSelectedRows().filter((tx) => !tx?.isInternal);
   if (!rows.length) return '';
   const categories = [...new Set(rows.map((tx) => String(tx?.category || '').trim()).filter(Boolean))];
   return categories.length === 1 ? categories[0] : '';
+}
+
+function _txBulkSetMessage(message, type = 'warn') {
+  const text = String(message || '').trim();
+  try {
+    const el = document.getElementById('tx-bulk-message');
+    if (!el) {
+      if (text && typeof toastWarn === 'function') toastWarn(text);
+      return;
+    }
+    el.textContent = text;
+    el.style.display = text ? 'block' : 'none';
+    el.style.borderColor = type === 'success' ? 'rgba(34,197,94,.35)' : 'rgba(245,158,11,.38)';
+    el.style.background = type === 'success' ? 'rgba(34,197,94,.10)' : 'rgba(245,158,11,.12)';
+  } catch (_) {}
 }
 
 function _txBulkSubcategoryOptionsHtml(category, selectedValue) {
@@ -75,8 +103,18 @@ function _txBulkSyncControls() {
 }
 
 async function applyBulkTxClassification() {
-  return safeCall('Bulk update transactions', async () => {
+  _txBulkSetMessage('');
+  try {
     const selectedIds = [...(TB_TX_BULK.selectedIds || new Set())];
+    const lockedRows = _txBulkSelectedLockedRows();
+    if (lockedRows.length) {
+      _txBulkSetMessage(_txT('transactions.bulk.error.locked', { count: lockedRows.length }));
+      return;
+    }
+    if (!selectedIds.length) {
+      _txBulkSetMessage(_txT('transactions.bulk.error.none'));
+      return;
+    }
     if (!selectedIds.length) throw new Error('Aucune transaction sélectionnée.');
 
     const catEl = document.getElementById('tx-bulk-category');
@@ -84,6 +122,15 @@ async function applyBulkTxClassification() {
     const chosenCategory = String(catEl?.value || '').trim();
     const chosenSubcategory = String(subEl?.value || '').trim();
     const commonCategory = _txBulkSelectedCommonCategory();
+
+    if (!chosenCategory && !chosenSubcategory) {
+      _txBulkSetMessage(_txT('transactions.bulk.error.choose'));
+      return;
+    }
+    if (!chosenCategory && chosenSubcategory && !commonCategory) {
+      _txBulkSetMessage(_txT('transactions.bulk.error.subcategory_common'));
+      return;
+    }
 
     if (!chosenCategory && !chosenSubcategory) throw new Error('Choisis une catégorie et/ou une sous-catégorie.');
     if (!chosenCategory && chosenSubcategory && !commonCategory) {
@@ -104,9 +151,14 @@ async function applyBulkTxClassification() {
     }
 
     TB_TX_BULK.selectedIds.clear();
-    await refreshFromServer();
-    renderTransactions();
-  });
+    _txBulkSetMessage(_txT('transactions.bulk.success', { count: selectedIds.length }), 'success');
+    if (typeof window.tbAfterMutationRefresh === 'function') await window.tbAfterMutationRefresh('tx:bulk_classification');
+    else await refreshFromServer();
+  } catch (e) {
+    const msg = (typeof normalizeSbError === 'function') ? normalizeSbError(e) : (e?.message || String(e));
+    console.warn('[transactions bulk]', msg);
+    _txBulkSetMessage(msg);
+  }
 }
 
 window._txBulkToggleOne = _txBulkToggleOne;
@@ -507,6 +559,7 @@ function renderTransactions() {
       <div class="muted" style="font-size:12px;">
         ${_txT("transactions.bulk.hint")}
       </div>
+      <div id="tx-bulk-message" role="status" style="display:none;border:1px solid rgba(245,158,11,.38);background:rgba(245,158,11,.12);border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;"></div>
     </div>`;
 
   if (!txs.length) {

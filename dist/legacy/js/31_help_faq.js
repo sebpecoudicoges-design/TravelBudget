@@ -341,6 +341,18 @@
   }
 
   window.renderHelpFaq = renderHelpFaq;
+  try {
+    window.tbOnLangChange = window.tbOnLangChange || [];
+    if (!window.__tbHelpLangBound) {
+      window.__tbHelpLangBound = true;
+      window.tbOnLangChange.push(() => {
+        try {
+          const view = document.getElementById("view-help");
+          if (view && !view.classList.contains("hidden")) renderHelpFaq();
+        } catch (_) {}
+      });
+    }
+  } catch (_) {}
 
   function _runHelpAction(action, targetSel) {
     try { if (typeof window.showView === "function" && action) showView(action); } catch (_) {}

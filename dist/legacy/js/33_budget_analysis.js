@@ -14,6 +14,10 @@
   const TB_SOURCED_BUCKET_ORDER = Object.freeze(['Logement', 'Repas', 'Transport', 'Activités']);
 
   function _el(id){ return document.getElementById(id); }
+  function _t(key, vars){
+    const fn = window.tbT || ((k) => k);
+    return fn(key, vars);
+  }
   function _safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
   function _norm(s){ return String(s || '').trim(); }
   function _upper(s){ return _norm(s).toUpperCase(); }
@@ -1055,32 +1059,32 @@ categoryTxMap, subcategoryTxMap
     const mode = _el('analysis-mode')?.value || 'planned';
     const currencyMode = _el('analysis-currency')?.value || 'period';
     const rangeText = `${model.start || '—'} → ${model.end || '—'}`;
-    const scopeText = scope === 'all' ? 'Dans + hors budget' : (scope === 'out' ? 'Hors budget' : 'Dans le budget');
-    const modeText = mode === 'expenses' ? 'Dépenses payées' : 'Payées + à payer';
-    const periodText = periodId === 'active' ? 'Période active' : (periodId === 'all' ? 'Tout le voyage' : (periodId === 'range' ? 'Date à date' : 'Période ciblée'));
+    const scopeText = scope === 'all' ? _t('analysis.scope.budget_out') : (scope === 'out' ? _t('analysis.scope.out') : _t('analysis.scope.budget'));
+    const modeText = mode === 'expenses' ? _t('analysis.mode.expenses') : _t('analysis.mode.planned');
+    const periodText = periodId === 'active' ? _t('analysis.period.active') : (periodId === 'all' ? _t('analysis.period.all_trip') : (periodId === 'range' ? _t('analysis.filter.range') : _t('analysis.period.targeted')));
     const cards = [
       {
-        label: 'Voyage',
-        value: String(travel?.name || 'Voyage actif'),
+        label: _t('analysis.filter.travel'),
+        value: String(travel?.name || _t('analysis.trip.active')),
         meta: `${periodText} • ${rangeText}`,
         accent: 'travel'
       },
       {
-        label: 'Lecture',
+        label: _t('analysis.overview.reading'),
         value: scopeText,
-        meta: `${modeText} • ${model.days.length} jours analysés`,
+        meta: `${modeText} • ${_t('analysis.days_analyzed', { count: model.days.length })}`,
         accent: 'scope'
       },
       {
-        label: 'Devise',
+        label: _t('analysis.filter.currency'),
         value: model.base,
-        meta: currencyMode === 'account' ? 'Devise pivot du compte' : 'Devise de période / segment',
+        meta: currencyMode === 'account' ? _t('analysis.currency.account_pivot') : _t('analysis.currency.period_segment'),
         accent: 'currency'
       },
       {
-        label: 'Couverture',
-        value: `${model.txs.length} dépenses`,
-        meta: model.comparableDays > 0 ? `${model.comparableDays} jours comparables à la référence pays` : 'Référence pays absente sur la plage',
+        label: _t('analysis.overview.coverage'),
+        value: _t('analysis.expenses_count', { count: model.txs.length }),
+        meta: model.comparableDays > 0 ? _t('analysis.reference.comparable_days', { count: model.comparableDays }) : _t('analysis.reference.missing_range'),
         accent: 'coverage'
       }
     ];
@@ -2211,6 +2215,20 @@ function _openTxDrilldown(kind, key, model){
     await _loadReferenceCache();
     _renderAll();
   };
+
+  try {
+    window.tbOnLangChange = window.tbOnLangChange || [];
+    if (!window.__tbAnalysisLangBound) {
+      window.__tbAnalysisLangBound = true;
+      window.tbOnLangChange.push(() => {
+        try {
+          if (document.getElementById('view-analysis') && !document.getElementById('view-analysis').classList.contains('hidden')) {
+            window.renderBudgetAnalysis && window.renderBudgetAnalysis();
+          }
+        } catch (_) {}
+      });
+    }
+  } catch (_) {}
 })();function forceSingleColumnMobile() {
   if (window.innerWidth < 640) {
     document.querySelectorAll(".kpi-grid").forEach(el => {

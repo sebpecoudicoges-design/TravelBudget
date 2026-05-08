@@ -791,6 +791,7 @@ function renderKPI() {
   const __out = (function(){
 
   const kpi = document.getElementById("kpi");
+  const T = window.tbT || ((k) => k);
 
   // ✅ GUARD: si la vue n'a pas encore monté le conteneur KPI, on ne fait rien.
   if (!kpi) return;
@@ -1080,11 +1081,11 @@ const driver = "Dépenses";
           <!-- KPI mini-cards -->
           <div class="kpi-mini-grid" style="display:grid; gap:14px;">
             <div style="${miniCardStyle}">
-              <div class="muted" style="font-size:12px;">Budget dispo</div>
+              <div class="muted" style="font-size:12px;">${T("kpi.available_budget")}</div>
               <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
                 ${budgetToday.toFixed(0)} <span style="font-weight:700; font-size:14px;" class="muted">${base}</span>
               </div>
-              <div class="muted" style="font-size:12px; margin-top:6px;">Aujourd’hui</div>
+              <div class="muted" style="font-size:12px; margin-top:6px;">${T("kpi.today")}</div>
             </div>
 
             <div style="${miniCardStyle}">
@@ -1098,22 +1099,22 @@ const driver = "Dépenses";
 	            </div>
 
             <div style="${miniCardStyle}">
-              <div class="muted" style="font-size:12px;">Fin période</div>
+              <div class="muted" style="font-size:12px;">${T("kpi.period_end")}</div>
               <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
                 ${fmtKPICompact(projEndDisplay)} <span style="font-weight:700; font-size:14px;" class="muted">${displayCurPivot}</span>
               </div>
-              <div class="muted" style="font-size:12px; margin-top:6px;">Projection</div>
+              <div class="muted" style="font-size:12px; margin-top:6px;">${T("kpi.projection")}</div>
               <label class="muted" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;user-select:none;">
                 <input id="kpiIncludeUnpaidToggle" type="checkbox" ${includeUnpaid ? "checked" : ""} />
-                Inclure à recevoir / à payer
+                ${T("kpi.include_pending")}
                 ${includeUnpaid ? `<span style="margin-left:auto;opacity:.85;">Net: <strong style="color:var(--text);">${Math.round(pendingDisplay)} ${displayCurPivot}</strong></span>` : ``}
               </label>
             </div>
 
 	            <div style="${miniCardStyle}">
-	              <div class="muted" style="font-size:12px;">FX (période)</div>
+	              <div class="muted" style="font-size:12px;">${T("kpi.fx_period")}</div>
 	              <div style="font-weight:800; font-size:18px; line-height:1.2; margin-top:6px; color:var(--text);">${escapeHTML(fxRateText)}</div>
-	              <div class="muted" style="font-size:12px; margin-top:6px;">1€ en devise de période</div>
+	              <div class="muted" style="font-size:12px; margin-top:6px;">${T("kpi.fx_period_hint")}</div>
 	            </div>
 
 	            <!-- FX calculator (quick) -->
@@ -1139,7 +1140,7 @@ const driver = "Dépenses";
               <div style="font-weight:900; font-size:36px; line-height:1; color:var(--text);">
                 ${daysText}
               </div>
-              <div class="muted" style="font-weight:700;">jours</div>
+              <div class="muted" style="font-weight:700;">${T("kpi.days")}</div>
 
               <span class="pill ${level}" style="margin-left:auto;">
                 <span class="dot"></span>${driver}
@@ -1147,9 +1148,9 @@ const driver = "Dépenses";
             </div>
 
             <div class="muted" style="font-size:12px; margin-top:8px;">
-              Stock : <strong style="color:var(--text);">${fmtMoney(cashTotalBase, base)}</strong>
+              ${T("kpi.stock")} : <strong style="color:var(--text);">${fmtMoney(cashTotalBase, base)}</strong>
               <span style="margin:0 8px;">•</span>
-              Burn : <strong style="color:var(--text);">${fmtMoney(cashBurnBase, base)}/j</strong>
+              ${T("kpi.burn")} : <strong style="color:var(--text);">${fmtMoney(cashBurnBase, base)}/j</strong>
             </div>
 
             ${fxNote ? `<div class="muted" style="font-size:12px; margin-top:6px; color:var(--warn);">${fxNote}</div>` : ``}
@@ -1160,7 +1161,7 @@ const driver = "Dépenses";
         <div style="${miniCardStyle}">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
             <div>
-              <div style="font-weight:800; font-size:16px; color:var(--text);">Aujourd’hui</div>
+              <div style="font-weight:800; font-size:16px; color:var(--text);">${T("kpi.today")}</div>
               <div class="muted" style="font-size:12px; margin-top:2px;">${displayDateISO}</div>
             </div>
             <span class="pill ${todayPillClass}">
@@ -1172,7 +1173,7 @@ const driver = "Dépenses";
           ${pilot ? `
             <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,0,0,0.06);">
               <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px;">
-                <div style="font-weight:800; font-size:16px; color:var(--text);">Pilotage</div>
+                <div style="font-weight:800; font-size:16px; color:var(--text);">${T("kpi.steering")}</div>
                 <span class="pill ${pilot.decisionLevel}">
                   <span class="dot"></span>${pilot.decision}
                 </span>
@@ -1180,12 +1181,12 @@ const driver = "Dépenses";
 
               <div class="muted" style="font-size:12px; margin-top:8px;">
                 <div style="display:flex; justify-content:space-between; gap:10px;">
-                  <span>${pilot.kind === "range" ? "Budget conseillé (plage)" : "Budget conseillé"}</span>
+                  <span>${pilot.kind === "range" ? T("kpi.recommended_budget_range") : T("kpi.recommended_budget")}</span>
                   <strong style="color:var(--text);">${fmtMoney(pilot.recommendedDaily, pilot.base)}/j</strong>
                 </div>
 
                 <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
-                  <span>${pilot.kind === "range" ? "Solde fin de plage" : "Solde fin"}</span>
+                  <span>${pilot.kind === "range" ? T("kpi.range_end_balance") : T("kpi.end_balance")}</span>
                   <span class="pill ${_signPillClass(pilot.projectedEndBalance)}" style="padding:4px 10px;">
                     <span class="dot"></span>${fmtMoney(pilot.projectedEndBalance, pilot.base)}
                   </span>
@@ -1193,7 +1194,7 @@ const driver = "Dépenses";
 
                 ${pilot.kind === "range" ? `` : `
                   <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
-                    <span>Rupture estimée</span>
+                    <span>${T("kpi.estimated_break")}</span>
                     <strong style="color:var(--text);">${pilot.zeroDate}</strong>
                   </div>
                 `}
@@ -1201,7 +1202,7 @@ const driver = "Dépenses";
 
 	                ${pilot.kind === "range" ? `` : `
 	                  <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
-	                    <span>Jours restants</span>
+	                    <span>${T("kpi.days_remaining")}</span>
 	                    <strong style="color:var(--text);">${pilot.daysRemaining}</strong>
 	                  </div>
 	                `}

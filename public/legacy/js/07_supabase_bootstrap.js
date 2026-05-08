@@ -487,6 +487,10 @@ async function loadFromSupabase(opts = {}) {
     ? perfPromise("supabase:q:segments:early", () => fetchSegmentsForPeriods([storedActivePeriodId]))
     : null;
   const computeWalletBalanceRows = (walletRows, txRows, periodId) => {
+    try {
+      const fn = window.Core?.walletBalanceRules?.computeWalletBalanceRows;
+      if (typeof fn === "function") return fn(walletRows, txRows, periodId);
+    } catch (_) {}
     const rows = [];
     const txByWallet = new Map();
     for (const t of (Array.isArray(txRows) ? txRows : [])) {
@@ -716,7 +720,7 @@ if (!p) throw new Error("Période active introuvable.");
 
     const { data: w2, error: w2Err } = await sb
       .from(TB_CONST.TABLES.wallets)
-      .select("id,travel_id,name,currency,balance,type,created_at,balance_snapshot_at")
+      .select("id,travel_id,period_id,name,currency,balance,type,created_at,balance_snapshot_at")
       .eq("user_id", sbUser.id)
       .eq("travel_id", activeTravelId)
       .order("created_at", { ascending: true });
