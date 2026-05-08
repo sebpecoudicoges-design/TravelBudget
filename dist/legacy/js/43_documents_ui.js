@@ -282,6 +282,34 @@ function selectVisibleDocuments(){
   }
   renderShell();
 }
+
+function notify(message, type = 'info'){
+  const text = String(message || '').trim();
+  if(!text) return;
+  let host = document.getElementById('tb-doc-toast-host');
+  if(!host){
+    host = document.createElement('div');
+    host.id = 'tb-doc-toast-host';
+    document.body.appendChild(host);
+  }
+  const node = document.createElement('div');
+  node.className = `tb-doc-toast ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}`;
+  node.textContent = text;
+  host.appendChild(node);
+  setTimeout(()=>node.remove(), 4200);
+}
+
+function setActionMessage(message){
+  CACHE.uploading = String(message || '');
+  renderShell();
+}
+
+function actionError(error, fallback){
+  const message = error && (error.message || error.code) ? String(error.message || error.code) : String(error || fallback || 'Action impossible.');
+  console.warn('[TB][documents] action failed', error);
+  notify(message, 'error');
+  return message;
+}
   function isImg(m){ return /^image\//i.test(String(m||'')); }
   function isPdf(m, name){ return /pdf/i.test(String(m||'')) || /\.pdf$/i.test(String(name||'')); }
   function root(){ return document.getElementById('documents-root'); }
@@ -383,6 +411,11 @@ function setSelectedSort(v){
       .tb-doc-share-links{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:220px;overflow:auto;}
       .tb-doc-share-link{font-size:12px;word-break:break-all;border:1px solid rgba(127,127,127,.18);border-radius:12px;padding:8px;background:rgba(127,127,127,.06);}
       .tb-doc-share-body{width:100%;min-height:170px;margin-top:10px;font-size:12px;line-height:1.35;}
+      #tb-doc-toast-host{position:fixed;right:18px;bottom:18px;z-index:11000;display:flex;flex-direction:column;gap:8px;max-width:min(360px,calc(100vw - 36px));}
+      .tb-doc-toast{border:1px solid rgba(79,70,229,.22);background:rgba(255,255,255,.96);color:#111827;border-radius:14px;padding:10px 12px;box-shadow:0 16px 45px rgba(0,0,0,.20);font-size:13px;font-weight:700;}
+      .dark .tb-doc-toast{background:#191923;color:#f8fafc;}
+      .tb-doc-toast.success{border-color:rgba(34,197,94,.34);}
+      .tb-doc-toast.error{border-color:rgba(239,68,68,.36);}
       @media(max-width:820px){.tb-doc-hero{flex-direction:column}.tb-doc-layout{grid-template-columns:1fr}.tb-doc-actions{justify-content:flex-start}.tb-doc-grid{grid-template-columns:1fr}}
     `;
     document.head.appendChild(st);
@@ -818,6 +851,7 @@ function setSelectedSort(v){
 
   let done = 0;
   const uploadedIds = [];
+  let failed = 0;
   CACHE.uploading = `${list.length} fichier(s) en upload…`;
   renderShell();
 
@@ -851,12 +885,14 @@ function setSelectedSort(v){
       uploadedIds.push(docId);
     }catch(e){
       console.warn('[TB][documents] upload failed', e);
-      alert(`Upload impossible pour ${file.name || 'document'} : ${e.message || e}`);
+      failed += 1;
+      notify(`Upload impossible pour ${file.name || 'document'} : ${e.message || e}`, 'error');
     }
   }
 
   CACHE.uploading = '';
   await ensureLoaded();
+  notify(`${uploadedIds.length} upload(s) terminé(s), ${failed} erreur(s).`, failed ? 'error' : 'success');
   if(uploadedIds.length === 1){
     const doc = (CACHE.documents || []).find(d => String(d.id) === String(uploadedIds[0]));
     if(doc) setTimeout(() => openInfoModal(doc), 0);
@@ -1132,7 +1168,9 @@ async function shareSelected(){
     3600;
 
   try{
+    setActionMessage(`Création de ${docs.length} lien(s) temporaire(s)...`);
     const links = await createShareLinksForDocs(docs, seconds);
+    setActionMessage('');
 
     const subject = encodeURIComponent(`Documents partagés (${links.length})`);
     const bodyText = [
@@ -1185,7 +1223,8 @@ async function shareSelected(){
 
     document.body.appendChild(wrap);
   }catch(e){
-    alert(e.message || String(e));
+    setActionMessage('');
+    actionError(e, 'Création des liens impossible.');
   }
 }
 
@@ -1236,9 +1275,16 @@ async function addTagSelected(){
   const c = client();
   if(!c) return alert('Client Supabase indisponible.');
 
+  let updated = 0;
+  let skipped = 0;
+  let failed = 0;
+  setActionMessage(`Ajout du tag sur ${docs.length} document(s)...`);
   for(const doc of docs){
     const tags = docTags(doc);
-    if(tags.some(t => tagKey(t) === tagKey(tag))) continue;
+    if(tags.some(t => tagKey(t) === tagKey(tag))){
+      skipped += 1;
+      continue;
+    }
     const nextTags = window.Core?.documentRules?.mergeTags
       ? window.Core.documentRules.mergeTags(tags, [tag])
       : normalizeTags([...tags, tag].join(', '));
@@ -1293,7 +1339,9 @@ async function generateShareLinksSelected(){
     : (duration === '10m' ? 600 : duration === '24h' ? 86400 : 3600);
 
   try{
+    setActionMessage(`Création de ${docs.length} lien(s) temporaire(s)...`);
     const links = await createShareLinksForDocs(docs, seconds);
+    setActionMessage('');
     const subject = encodeURIComponent(`Documents partagés (${links.length})`);
     const bodyText = [
       'Bonjour,',
@@ -1343,7 +1391,8 @@ async function generateShareLinksSelected(){
     `;
     if(!wrap.parentNode) document.body.appendChild(wrap);
   }catch(e){
-    alert(e.message || String(e));
+    setActionMessage('');
+    actionError(e, 'Création des liens impossible.');
   }
 }
 
@@ -1385,18 +1434,28 @@ async function applyMoveSelected(){
   const c = client();
   if(!c) return alert('Client Supabase indisponible.');
 
+  let moved = 0;
+  let failed = 0;
+  setActionMessage(`Déplacement de ${docs.length} document(s)...`);
   for(const doc of docs){
     const { error } = await c
       .from(table('documents','documents'))
       .update({ folder_id: folderId })
       .eq('id', doc.id);
 
-    if(error) return alert(error.message || String(error));
+    if(error){
+      failed += 1;
+      console.warn('[TB][documents] batch move failed', error);
+      continue;
+    }
+    moved += 1;
   }
 
-  CACHE.selectedIds = [];
+  if(!failed) CACHE.selectedIds = [];
+  setActionMessage('');
   document.querySelector('.tb-doc-modal-backdrop')?.remove();
   await ensureLoaded();
+  notify(`${moved} document(s) déplacé(s), ${failed} erreur(s).`, failed ? 'error' : 'success');
 }
 
 async function addTagSelected(){
@@ -1441,9 +1500,16 @@ async function applyAddTagSelected(){
   const c = client();
   if(!c) return alert('Client Supabase indisponible.');
 
+  let updated = 0;
+  let skipped = 0;
+  let failed = 0;
+  setActionMessage(`Ajout du tag sur ${docs.length} document(s)...`);
   for(const doc of docs){
     const tags = docTags(doc);
-    if(tags.some(t => tagKey(t) === tagKey(tag))) continue;
+    if(tags.some(t => tagKey(t) === tagKey(tag))){
+      skipped += 1;
+      continue;
+    }
     const nextTags = window.Core?.documentRules?.mergeTags
       ? window.Core.documentRules.mergeTags(tags, [tag])
       : normalizeTags([...tags, tag].join(', '));
@@ -1452,11 +1518,18 @@ async function applyAddTagSelected(){
       .update({ tags: nextTags })
       .eq('id', doc.id);
 
-    if(error) return alert(error.message || String(error));
+    if(error){
+      failed += 1;
+      console.warn('[TB][documents] batch tag failed', error);
+      continue;
+    }
+    updated += 1;
   }
 
+  setActionMessage('');
   document.querySelector('.tb-doc-modal-backdrop')?.remove();
   await ensureLoaded();
+  notify(`${updated} document(s) modifié(s), ${skipped} déjà tagué(s), ${failed} erreur(s).`, failed ? 'error' : 'success');
 }
 
 async function deleteSelected(){
@@ -1468,6 +1541,9 @@ async function deleteSelected(){
   const c = client();
   if(!c) return alert('Client Supabase indisponible.');
 
+  let deleted = 0;
+  let failed = 0;
+  setActionMessage(`Suppression de ${docs.length} document(s)...`);
   for(const doc of docs){
     try{
       await c.storage.from(doc.storage_bucket || BUCKET).remove([doc.storage_path]);
@@ -1480,11 +1556,18 @@ async function deleteSelected(){
       .delete()
       .eq('id', doc.id);
 
-    if(error) return alert(error.message || String(error));
+    if(error){
+      failed += 1;
+      console.warn('[TB][documents] batch delete failed', error);
+      continue;
+    }
+    deleted += 1;
   }
 
-  CACHE.selectedIds = [];
+  if(!failed) CACHE.selectedIds = [];
+  setActionMessage('');
   await ensureLoaded();
+  notify(`${deleted} document(s) supprimé(s), ${failed} erreur(s).`, failed ? 'error' : 'success');
 }
   window.renderDocuments = function renderDocuments(){ ensureLoaded(); };
   window.tbDocumentsRenderOnly = renderShell;
