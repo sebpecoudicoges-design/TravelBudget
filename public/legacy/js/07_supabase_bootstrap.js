@@ -442,10 +442,50 @@ async function loadFromSupabase(opts = {}) {
   if (!sbUser) return;
   const refreshToken = Number(opts?.refreshToken || window.__TB_REFRESH_TOKEN__ || 0);
   try { if (window.TB_PERF?.enabled) TB_PERF.event("loadFromSupabase:start", { opts }); } catch (_) {}
+  const perfPromise = (name, fn) => {
+    try { if (window.TB_PERF?.enabled) TB_PERF.mark(name); } catch (_) {}
+    return Promise.resolve()
+      .then(fn)
+      .finally(() => {
+        try { if (window.TB_PERF?.enabled) TB_PERF.end(name); } catch (_) {}
+      });
+  };
+
+  const loadFxManualRatesInBackground = () => {
+    try {
+      Promise.resolve()
+        .then(() => perfPromise("supabase:q:fxManualRates", () => sb
+          .from(TB_CONST.TABLES.fx_manual_rates)
+          .select("currency,rate_to_eur,as_of")
+          .eq("user_id", sbUser.id)))
+        .then((res) => {
+          try {
+            if (res?.error) throw res.error;
+            const out = {};
+            for (const r of (res?.data || [])) {
+              const c = String(r.currency || "").trim().toUpperCase();
+              const rate = Number(r.rate_to_eur);
+              const asOf = r.as_of ? String(r.as_of).slice(0, 10) : null;
+              if (c && c !== "EUR" && /^[A-Z]{3}$/.test(c) && Number.isFinite(rate) && rate > 0) {
+                out[c] = { rate, asOf };
+              }
+            }
+            if (!state.fx) state.fx = {};
+            state.fx.manualRates = out;
+            try { if (window.TB_PERF?.enabled) TB_PERF.event("fxManual:loaded", { count: Object.keys(out).length }); } catch (_) {}
+          } catch (e) {
+            console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
+          }
+        })
+        .catch((e) => {
+          console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
+        });
+    } catch (_) {}
+  };
 
   // V8.9.4: parallelize the 3 independent bootstrap reads
 try { if (window.TB_PERF?.enabled) TB_PERF.mark("supabase:bootstrap"); } catch (_) {}
-const settingsPromise = (async () => {
+const settingsPromise = perfPromise("supabase:q:settings", async () => {
   const baseSel = "theme,palette_json,palette_preset,base_currency";
   const withUiMode = `${baseSel},ui_mode`;
   let res = await sb
@@ -461,43 +501,19 @@ const settingsPromise = (async () => {
       .maybeSingle();
   }
   return res;
-})();
+});
 
-const fxManualPromise = sb
-  .from(TB_CONST.TABLES.fx_manual_rates)
-  .select("currency,rate_to_eur,as_of")
-  .eq("user_id", sbUser.id)
-  .then((res) => {
-    try {
-      if (res?.error) throw res.error;
-      const out = {};
-      for (const r of (res?.data || [])) {
-        const c = String(r.currency || "").trim().toUpperCase();
-        const rate = Number(r.rate_to_eur);
-        const asOf = r.as_of ? String(r.as_of).slice(0, 10) : null;
-        if (c && c !== "EUR" && /^[A-Z]{3}$/.test(c) && Number.isFinite(rate) && rate > 0) {
-          out[c] = { rate, asOf };
-        }
-      }
-      if (!state.fx) state.fx = {};
-      state.fx.manualRates = out;
-      try { if (window.TB_PERF?.enabled) TB_PERF.event("fxManual:loaded", { count: Object.keys(out).length }); } catch (_) {}
-    } catch (e) {
-      console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
-    }
-  });
-
-const travelsPromise = sb
+const travelsPromise = perfPromise("supabase:q:travels", () => sb
   .from(TB_CONST.TABLES.travels)
   .select("id,name,start_date,end_date,base_currency,created_at")
   .eq("user_id", sbUser.id)
-  .order("start_date", { ascending: false });
+  .order("start_date", { ascending: false }));
 
-const periodsPromise = sb
+const periodsPromise = perfPromise("supabase:q:periods", () => sb
   .from(TB_CONST.TABLES.periods)
   .select("id,travel_id,start_date,end_date,base_currency,eur_base_rate,daily_budget_base,updated_at")
   .eq("user_id", sbUser.id)
-  .order("start_date", { ascending: false });
+  .order("start_date", { ascending: false }));
 
 const [
   { data: s, error: sErr },
@@ -545,8 +561,6 @@ if (s) {
   } catch (_) {}
 }
 
-try { fxManualPromise.catch(() => {}); } catch (_) {}
-
 const activeTravelKey = "travelbudget_active_travel_id_v1";
 const activeTravelId = pickActiveTravel(travels);
 if (!activeTravelId) throw new Error("Aucun voyage trouvé.");
@@ -560,7 +574,7 @@ const shouldLoadDeferredData = !!opts?.includeDeferredData || shouldLoadGovernan
 try {
   if (window.TB_PERF?.enabled) {
     TB_PERF.event("loadFromSupabase:mode", { view: currentView, deferred: shouldLoadDeferredData, governance: shouldLoadGovernance });
-    TB_PERF.count("supabaseQueries", 4);
+    TB_PERF.count("supabaseQueries", 3);
   }
 } catch (_) {}
 
@@ -585,15 +599,6 @@ if (!p) throw new Error("Période active introuvable.");
   // Perf (A3): fetch independent tables in parallel.
   // - wallets may auto-bootstrap (insert) if missing.
   // - transactions / segments / categories do not depend on wallets.
-  const perfPromise = (name, fn) => {
-    try { if (window.TB_PERF?.enabled) TB_PERF.mark(name); } catch (_) {}
-    return Promise.resolve()
-      .then(fn)
-      .finally(() => {
-        try { if (window.TB_PERF?.enabled) TB_PERF.end(name); } catch (_) {}
-      });
-  };
-
   const walletsPromise = perfPromise("supabase:q:wallets", async () => {
   const { data: w0, error: wErr } = await sb
     .from(TB_CONST.TABLES.wallets)
@@ -1112,6 +1117,7 @@ state.wallets = (w || []).map((x) => ({
   }
 
   recomputeAllocations();
+  loadFxManualRatesInBackground();
   try {
     if (window.TB_PERF?.enabled) {
       TB_PERF.event("loadFromSupabase:done", {

@@ -5992,6 +5992,10 @@ CREATE INDEX "transactions_travel_id_idx" ON "public"."transactions" USING "btre
 
 
 
+CREATE INDEX "transactions_user_travel_created_idx" ON "public"."transactions" USING "btree" ("user_id", "travel_id", "created_at");
+
+
+
 CREATE INDEX "transactions_trip_expense_id_idx" ON "public"."transactions" USING "btree" ("trip_expense_id");
 
 
@@ -8158,7 +8162,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
 
 
 

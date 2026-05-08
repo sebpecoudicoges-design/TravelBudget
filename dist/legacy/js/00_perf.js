@@ -83,6 +83,9 @@
         ${row("boot:refresh", latestSpan("boot:refreshFromServer") == null ? "..." : latestSpan("boot:refreshFromServer") + "ms")}
         ${row("supabase:load", latestSpan("supabase:load") == null ? "..." : latestSpan("supabase:load") + "ms")}
         ${row("supabase:bootstrap", latestSpan("supabase:bootstrap") == null ? "..." : latestSpan("supabase:bootstrap") + "ms")}
+        ${row("q:settings", latestSpan("supabase:q:settings") == null ? "..." : latestSpan("supabase:q:settings") + "ms")}
+        ${row("q:travels", latestSpan("supabase:q:travels") == null ? "..." : latestSpan("supabase:q:travels") + "ms")}
+        ${row("q:periods", latestSpan("supabase:q:periods") == null ? "..." : latestSpan("supabase:q:periods") + "ms")}
         ${row("supabase:core", latestSpan("supabase:core") == null ? "..." : latestSpan("supabase:core") + "ms")}
         ${row("q:transactions", latestSpan("supabase:q:transactions") == null ? "..." : latestSpan("supabase:q:transactions") + "ms")}
         ${row("q:walletBalances", latestSpan("supabase:q:walletBalances") == null ? "..." : latestSpan("supabase:q:walletBalances") + "ms")}
