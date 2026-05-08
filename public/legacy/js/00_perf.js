@@ -88,6 +88,7 @@
         ${row("q:periods", latestSpan("supabase:q:periods") == null ? "..." : latestSpan("supabase:q:periods") + "ms")}
         ${row("supabase:core", latestSpan("supabase:core") == null ? "..." : latestSpan("supabase:core") + "ms")}
         ${row("q:transactions", latestSpan("supabase:q:transactions") == null ? "..." : latestSpan("supabase:q:transactions") + "ms")}
+        ${row("q:transactions early", latestSpan("supabase:q:transactions:early") == null ? "..." : latestSpan("supabase:q:transactions:early") + "ms")}
         ${row("q:walletBalances", latestSpan("supabase:q:walletBalances") == null ? "..." : latestSpan("supabase:q:walletBalances") + "ms")}
         ${row("q:segments", latestSpan("supabase:q:segments") == null ? "..." : latestSpan("supabase:q:segments") + "ms")}
         ${row("q:wallets", latestSpan("supabase:q:wallets") == null ? "..." : latestSpan("supabase:q:wallets") + "ms")}

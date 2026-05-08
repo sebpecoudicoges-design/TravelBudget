@@ -442,6 +442,11 @@ async function loadFromSupabase(opts = {}) {
   if (!sbUser) return;
   const refreshToken = Number(opts?.refreshToken || window.__TB_REFRESH_TOKEN__ || 0);
   try { if (window.TB_PERF?.enabled) TB_PERF.event("loadFromSupabase:start", { opts }); } catch (_) {}
+  const activeTravelKey = "travelbudget_active_travel_id_v1";
+  const storedActiveTravelId = (() => {
+    try { return String(localStorage.getItem(activeTravelKey) || "").trim() || null; } catch (_) { return null; }
+  })();
+  const transactionSelect = "id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,night_covered,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status";
   const perfPromise = (name, fn) => {
     try { if (window.TB_PERF?.enabled) TB_PERF.mark(name); } catch (_) {}
     return Promise.resolve()
@@ -450,6 +455,15 @@ async function loadFromSupabase(opts = {}) {
         try { if (window.TB_PERF?.enabled) TB_PERF.end(name); } catch (_) {}
       });
   };
+  const fetchTransactionsForTravel = (travelId) => sb
+    .from(TB_CONST.TABLES.transactions)
+    .select(transactionSelect)
+    .eq("user_id", sbUser.id)
+    .eq("travel_id", travelId)
+    .order("created_at", { ascending: true });
+  const earlyTxPromise = storedActiveTravelId
+    ? perfPromise("supabase:q:transactions:early", () => fetchTransactionsForTravel(storedActiveTravelId))
+    : null;
 
   const loadFxManualRatesInBackground = () => {
     try {
@@ -561,7 +575,6 @@ if (s) {
   } catch (_) {}
 }
 
-const activeTravelKey = "travelbudget_active_travel_id_v1";
 const activeTravelId = pickActiveTravel(travels);
 if (!activeTravelId) throw new Error("Aucun voyage trouvé.");
 localStorage.setItem(activeTravelKey, activeTravelId);
@@ -646,12 +659,9 @@ if (!p) throw new Error("Période active introuvable.");
     }
   });
 
-const txPromise = perfPromise("supabase:q:transactions", () => sb
-  .from(TB_CONST.TABLES.transactions)
-  .select("id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,night_covered,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status")
-  .eq("user_id", sbUser.id)
-  .eq("travel_id", activeTravelId)
-  .order("created_at", { ascending: true }));
+const txPromise = (earlyTxPromise && String(storedActiveTravelId || "") === String(activeTravelId || ""))
+  ? earlyTxPromise
+  : perfPromise("supabase:q:transactions", () => fetchTransactionsForTravel(activeTravelId));
 
   const recurringRulesPromise = perfPromise("supabase:q:recurringRules", async () => {
   if (!shouldLoadDeferredData) return { rows: [], skipped: true };
