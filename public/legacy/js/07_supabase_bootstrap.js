@@ -464,6 +464,28 @@ async function loadFromSupabase(opts = {}) {
   const earlyTxPromise = storedActiveTravelId
     ? perfPromise("supabase:q:transactions:early", () => fetchTransactionsForTravel(storedActiveTravelId))
     : null;
+  const storedActivePeriodId = (() => {
+    try { return String(localStorage.getItem(ACTIVE_PERIOD_KEY) || "").trim() || null; } catch (_) { return null; }
+  })();
+  const fetchWalletsForTravel = (travelId) => sb
+    .from(TB_CONST.TABLES.wallets)
+    .select("id,travel_id,period_id,name,currency,balance,type,created_at,balance_snapshot_at")
+    .eq("user_id", sbUser.id)
+    .eq("travel_id", travelId)
+    .order("created_at", { ascending: true });
+  const fetchSegmentsForPeriods = (periodIds) => sb
+    .from(TB_CONST.TABLES.budget_segments)
+    .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,transport_night_budget,fx_mode,eur_base_rate_fixed,sort_order")
+    .eq("user_id", sbUser.id)
+    .in("period_id", periodIds)
+    .order("sort_order", { ascending: true })
+    .order("start_date", { ascending: true });
+  const earlyWalletsPromise = storedActiveTravelId
+    ? perfPromise("supabase:q:wallets:early", () => fetchWalletsForTravel(storedActiveTravelId))
+    : null;
+  const earlySegmentsPromise = storedActivePeriodId
+    ? perfPromise("supabase:q:segments:early", () => fetchSegmentsForPeriods([storedActivePeriodId]))
+    : null;
   const computeWalletBalanceRows = (walletRows, txRows, periodId) => {
     const rows = [];
     const txByWallet = new Map();
@@ -667,12 +689,18 @@ if (!p) throw new Error("Période active introuvable.");
   // - wallets may auto-bootstrap (insert) if missing.
   // - transactions / segments / categories do not depend on wallets.
   const walletsPromise = perfPromise("supabase:q:wallets", async () => {
-  const { data: w0, error: wErr } = await sb
-    .from(TB_CONST.TABLES.wallets)
-    .select("id,travel_id,name,currency,balance,type,created_at,balance_snapshot_at")
-    .eq("user_id", sbUser.id)
-    .eq("travel_id", activeTravelId)
-    .order("created_at", { ascending: true });
+  let w0 = null;
+  if (earlyWalletsPromise && String(storedActiveTravelId || "") === String(activeTravelId || "")) {
+    const early = await earlyWalletsPromise;
+    if (early?.error) throw early.error;
+    if (Array.isArray(early?.data) && early.data.length > 0) w0 = early.data;
+  }
+  let wErr = null;
+  if (!w0) {
+    const res = await fetchWalletsForTravel(activeTravelId);
+    w0 = res?.data || null;
+    wErr = res?.error || null;
+  }
   if (wErr) throw wErr;
 
   let w = w0;
@@ -730,13 +758,22 @@ const txPromise = (earlyTxPromise && String(storedActiveTravelId || "") === Stri
     // budget segments (V6.4)
     let segRows = [];
     try {
-      const { data: segs, error: segErr } = await sb
-        .from(TB_CONST.TABLES.budget_segments)
-        .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,transport_night_budget,fx_mode,eur_base_rate_fixed,sort_order")
-        .eq("user_id", sbUser.id)
-        .in("period_id", segmentPeriodIds)
-        .order("sort_order", { ascending: true })
-        .order("start_date", { ascending: true });
+      let segs = null;
+      let segErr = null;
+      if (
+        earlySegmentsPromise
+        && String(storedActivePeriodId || "") === String(activePeriodId || "")
+        && segmentPeriodIds.length === 1
+      ) {
+        const early = await earlySegmentsPromise;
+        if (early?.error) throw early.error;
+        if (Array.isArray(early?.data) && early.data.length > 0) segs = early.data;
+      }
+      if (!segs) {
+        const res = await fetchSegmentsForPeriods(segmentPeriodIds);
+        segs = res?.data || null;
+        segErr = res?.error || null;
+      }
 
       if (segErr) throw segErr;
       segRows = segs || [];
@@ -757,13 +794,7 @@ const txPromise = (earlyTxPromise && String(storedActiveTravelId || "") === Stri
         }]);
         if (insSegErr) throw insSegErr;
 
-        const { data: segs2, error: seg2Err } = await sb
-          .from(TB_CONST.TABLES.budget_segments)
-          .select("id,period_id,start_date,end_date,base_currency,daily_budget_base,transport_night_budget,fx_mode,eur_base_rate_fixed,sort_order")
-          .eq("user_id", sbUser.id)
-          .in("period_id", segmentPeriodIds)
-          .order("sort_order", { ascending: true })
-          .order("start_date", { ascending: true });
+        const { data: segs2, error: seg2Err } = await fetchSegmentsForPeriods(segmentPeriodIds);
         if (seg2Err) throw seg2Err;
         segRows = segs2 || [];
       }
