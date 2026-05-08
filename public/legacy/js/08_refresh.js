@@ -178,7 +178,13 @@ async function _runRefreshFromServer(opts) {
       try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("render:all"); } catch (_) {}
       if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("render:done");
     }
-    try { if (window.TB_PERF?.enabled) { TB_PERF.event("refresh:done", { skipRender: !!options.skipRender }); TB_PERF.panel("refresh"); } } catch (_) {}
+    try {
+      if (window.TB_PERF?.enabled) {
+        TB_PERF.event("refresh:done", { skipRender: !!options.skipRender });
+        TB_PERF.panel("refresh");
+        TB_PERF.flush("refresh done");
+      }
+    } catch (_) {}
     _tbRefreshLog("refreshFromServer:done", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
   } catch (e) {
     _tbRefreshLog("refreshFromServer:error", e && (e.message || e));
