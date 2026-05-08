@@ -15,6 +15,7 @@
   uploading: '',
   onlyFavorites: false,
   onlyExpiring: false,
+  collapsedFolderIds: [],
   selectedIds: []
 };
 
@@ -46,6 +47,8 @@
 }
 
 function normalizeTags(v){
+  const core = window.Core?.documentRules;
+  if(core?.normalizeTags) return core.normalizeTags(v);
   return String(v || '')
     .split(',')
     .map(x => x.trim())
@@ -54,14 +57,20 @@ function normalizeTags(v){
 }
 
 function tagKey(v){
+  const core = window.Core?.documentRules;
+  if(core?.tagKey) return core.tagKey(v);
   return String(v || '').trim().toLowerCase();
 }
 
 function docTags(doc){
+  const core = window.Core?.documentRules;
+  if(core?.docTags) return core.docTags(doc);
   return Array.isArray(doc?.tags) ? doc.tags.map(String).filter(Boolean) : [];
 }
 
 function allDocumentTags(){
+  const core = window.Core?.documentRules;
+  if(core?.allDocumentTags) return core.allDocumentTags(CACHE.documents || []);
   const map = new Map();
   for(const doc of (CACHE.documents || [])){
     for(const tag of docTags(doc)){
@@ -88,6 +97,8 @@ function setSelectedTagFilter(v){
 }
 
 function normalizeLookupText(v){
+  const core = window.Core?.documentRules;
+  if(core?.normalizeLookupText) return core.normalizeLookupText(v);
   return String(v || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -95,6 +106,8 @@ function normalizeLookupText(v){
 }
 
 function normalizeTagMatchText(v){
+  const core = window.Core?.documentRules;
+  if(core?.normalizeTagMatchText) return core.normalizeTagMatchText(v);
   return normalizeLookupText(v)
     .replace(/[^a-z0-9]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -102,6 +115,8 @@ function normalizeTagMatchText(v){
 }
 
 function cleanDocBaseName(doc){
+  const core = window.Core?.documentRules;
+  if(core?.cleanDocBaseName) return core.cleanDocBaseName(doc);
   return String(doc?.name || doc?.original_filename || '')
     .replace(/\.[a-z0-9]{1,8}$/i, '')
     .replace(/[_-]+/g, ' ')
@@ -110,6 +125,8 @@ function cleanDocBaseName(doc){
 }
 
 function titleTag(v){
+  const core = window.Core?.documentRules;
+  if(core?.titleTag) return core.titleTag(v);
   const raw = String(v || '').replace(/\s+/g, ' ').trim();
   if(!raw) return '';
   if(/[A-Z]{2,}/.test(raw)) return raw;
@@ -120,13 +137,15 @@ function titleTag(v){
 }
 
 function suggestEmployerFromPayrollName(doc){
+  const core = window.Core?.documentRules;
+  if(core?.suggestEmployerFromPayrollName) return core.suggestEmployerFromPayrollName(doc);
   const raw = cleanDocBaseName(doc);
   const lookup = normalizeLookupText(raw);
   if(!/(bulletin de paie|fiche de paie|payslip|pay slip|salaire|paie)/.test(lookup)) return '';
 
   let candidate = raw;
   candidate = candidate.replace(/.*?(bulletin\s+de\s+paie|fiche\s+de\s+paie|payslip|pay\s+slip|salaire|paie)/i, '');
-  candidate = candidate.replace(/\b(janvier|fevrier|février|mars|avril|mai|juin|juillet|aout|août|septembre|octobre|novembre|decembre|décembre|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/ig, ' ');
+  candidate = candidate.replace(/\b(janvier|fevrier|février|mars|avril|mai|mais|juin|juillet|aout|août|septembre|octobre|novembre|decembre|décembre|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/ig, ' ');
   candidate = candidate.replace(/\b(19|20)\d{2}\b/g, ' ');
   candidate = candidate.replace(/\b\d{1,2}\b/g, ' ');
   candidate = candidate.replace(/^[\s,.;:()'"]+|[\s,.;:()'"]+$/g, '').replace(/\s+/g, ' ').trim();
@@ -137,6 +156,8 @@ function suggestEmployerFromPayrollName(doc){
 }
 
 function suggestExistingTagsFromName(doc){
+  const core = window.Core?.documentRules;
+  if(core?.suggestExistingTagsFromName) return core.suggestExistingTagsFromName(doc, allDocumentTags());
   const name = normalizeTagMatchText(`${doc?.name || ''} ${doc?.original_filename || ''}`);
   if(!name) return [];
 
@@ -154,6 +175,8 @@ function suggestExistingTagsFromName(doc){
 }
 
 function suggestTagsForDocument(doc){
+  const core = window.Core?.documentRules;
+  if(core?.suggestTagsForDocument) return core.suggestTagsForDocument(doc, { knownTags: allDocumentTags() });
   const name = normalizeLookupText(`${doc?.name || ''} ${doc?.original_filename || ''}`);
   const mime = String(doc?.mime_type || '').toLowerCase();
   const out = [];
@@ -208,6 +231,43 @@ function selectedDocs(){
 
 function clearSelection(){
   CACHE.selectedIds = [];
+  renderShell();
+}
+
+function collapsedFolderIds(){
+  try {
+    const raw = localStorage.getItem(key('documents_collapsed_folders','travelbudget_documents_collapsed_folders_v1')) || '[]';
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.map(String) : [];
+  } catch(_) {
+    return Array.isArray(CACHE.collapsedFolderIds) ? CACHE.collapsedFolderIds.map(String) : [];
+  }
+}
+
+function setCollapsedFolderIds(ids){
+  CACHE.collapsedFolderIds = Array.from(new Set((ids || []).map(String).filter(Boolean)));
+  try {
+    localStorage.setItem(key('documents_collapsed_folders','travelbudget_documents_collapsed_folders_v1'), JSON.stringify(CACHE.collapsedFolderIds));
+  } catch(_) {}
+}
+
+function isFolderCollapsed(id){
+  return collapsedFolderIds().includes(String(id || ''));
+}
+
+function toggleFolderCollapsed(id){
+  const sid = String(id || '');
+  if(!sid) return;
+  const ids = collapsedFolderIds();
+  const next = ids.includes(sid) ? ids.filter(x => x !== sid) : [...ids, sid];
+  setCollapsedFolderIds(next);
+  renderShell();
+}
+
+function selectVisibleDocuments(){
+  const ids = new Set((CACHE.selectedIds || []).map(String));
+  for(const doc of visibleDocs()) ids.add(String(doc.id));
+  CACHE.selectedIds = Array.from(ids);
   renderShell();
 }
   function isImg(m){ return /^image\//i.test(String(m||'')); }
@@ -338,9 +398,19 @@ function setSelectedSort(v){
 
   function folderCount(id){ return (CACHE.documents||[]).filter(d => String(d.folder_id||'') === String(id||'')).length; }
   function selectedFolder(){ return (CACHE.folders||[]).find(f=>String(f.id)===String(CACHE.selectedFolderId)); }
-  function rootFolders(){ return (CACHE.folders || []).filter(f => !f.parent_id); }
-  function childFolders(parentId){ return (CACHE.folders || []).filter(f => String(f.parent_id || '') === String(parentId || '')); }
+  function rootFolders(){
+    const core = window.Core?.documentRules;
+    if(core?.rootFolders) return core.rootFolders(CACHE.folders || []);
+    return (CACHE.folders || []).filter(f => !f.parent_id);
+  }
+  function childFolders(parentId){
+    const core = window.Core?.documentRules;
+    if(core?.childFolders) return core.childFolders(CACHE.folders || [], parentId);
+    return (CACHE.folders || []).filter(f => String(f.parent_id || '') === String(parentId || ''));
+  }
   function folderLabel(folder){
+    const core = window.Core?.documentRules;
+    if(core?.folderLabel) return core.folderLabel(folder, CACHE.folders || []);
     if(!folder) return 'Non classe';
     const parent = folder.parent_id ? (CACHE.folders || []).find(f => String(f.id) === String(folder.parent_id)) : null;
     return parent ? `${parent.name} / ${folder.name}` : folder.name;
@@ -410,8 +480,12 @@ function setSelectedSort(v){
       <small>${esc((CACHE.documents||[]).length)}</small>
     </button>
 
-    ${folders.map(f=>`
+    ${folders.map(f=>{
+      const children = childFolders(f.id);
+      const collapsed = isFolderCollapsed(f.id);
+      return `
       <div style="display:flex;gap:6px;align-items:center;">
+        ${children.length ? `<button class="btn" type="button" title="${collapsed ? 'Deplier' : 'Replier'}" onclick="window.tbDocumentsToggleFolderCollapsed('${esc(f.id)}')">${collapsed ? '+' : '-'}</button>` : `<span style="width:34px;"></span>`}
         <button class="tb-doc-folder${String(f.id)===String(CACHE.selectedFolderId)?' active':''}"
           type="button"
           style="flex:1;"
@@ -441,7 +515,7 @@ function setSelectedSort(v){
           🗑️
         </button>
       </div>
-      ${childFolders(f.id).map(sub => `
+      ${collapsed ? '' : children.map(sub => `
         <div style="display:flex;gap:6px;align-items:center;margin-left:18px;">
           <button class="tb-doc-folder${String(sub.id)===String(CACHE.selectedFolderId)?' active':''}"
             type="button"
@@ -454,7 +528,7 @@ function setSelectedSort(v){
           <button class="btn" type="button" title="Supprimer" onclick="window.tbDocumentsDeleteFolder('${esc(sub.id)}')">Del</button>
         </div>
       `).join('')}
-    `).join('')}
+    `}).join('')}
   </div>`;
 }
 
@@ -615,6 +689,7 @@ function setSelectedSort(v){
   <div class="tb-doc-batchbar">
     <strong>${esc((CACHE.selectedIds || []).length)} document(s) sélectionné(s)</strong>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="btn" type="button" onclick="window.tbDocumentsSelectVisible()">Tout sélectionner</button>
       <button class="btn primary" type="button" onclick="window.tbDocumentsShareSelected()">Partager</button>
       <button class="btn" type="button" onclick="window.tbDocumentsAddTagSelected()">Ajouter tag</button>
       <button class="btn" type="button" onclick="window.tbDocumentsMoveSelected()">Déplacer</button>
@@ -698,9 +773,10 @@ function setSelectedSort(v){
     const c = client(); if(!c) return alert('Client Supabase indisponible.');
     const name = String(prompt('Nom du dossier ?') || '').trim(); if(!name) return;
     const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connecté.');
-    const parent = parentId ? (CACHE.folders || []).find(f => String(f.id) === String(parentId)) : null;
-    if(parentId && !parent) return alert('Dossier parent introuvable.');
-    if(parent?.parent_id) return alert('Un seul niveau de sous-dossier est autorise.');
+    const guard = window.Core?.documentRules?.canCreateSubFolder
+      ? window.Core.documentRules.canCreateSubFolder(parentId, CACHE.folders || [])
+      : { ok: true };
+    if(!guard.ok) return alert(guard.reason || 'Sous-dossier invalide.');
     const { error } = await c.from(table('document_folders','document_folders')).insert({ user_id: uid, name, parent_id: parentId || null });
     if(error) return alert(error.message || String(error));
     await ensureLoaded();
@@ -1138,7 +1214,9 @@ async function addTagSelected(){
   for(const doc of docs){
     const tags = docTags(doc);
     if(tags.some(t => tagKey(t) === tagKey(tag))) continue;
-    const nextTags = normalizeTags([...tags, tag].join(', '));
+    const nextTags = window.Core?.documentRules?.mergeTags
+      ? window.Core.documentRules.mergeTags(tags, [tag])
+      : normalizeTags([...tags, tag].join(', '));
     const { error } = await c
       .from(table('documents','documents'))
       .update({ tags: nextTags })
@@ -1226,6 +1304,8 @@ window.tbDocumentsToggleExpiringFilter = function(){
 };
 window.tbDocumentsToggleSelect = toggleSelect;
 window.tbDocumentsClearSelection = clearSelection;
+window.tbDocumentsSelectVisible = selectVisibleDocuments;
+window.tbDocumentsToggleFolderCollapsed = toggleFolderCollapsed;
 window.tbDocumentsShareSelected = shareSelected;
 window.tbDocumentsAddTagSelected = addTagSelected;
 window.tbDocumentsMoveSelected = moveSelected;

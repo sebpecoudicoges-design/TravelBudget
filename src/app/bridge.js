@@ -5,6 +5,7 @@ import * as transactionRules from '../core/transactionRules.js';
 import * as transactionGuards from '../core/transactionGuards.js';
 import * as transactionRpcPayload from '../core/transactionRpcPayload.js';
 import * as fxRules from '../core/fxRules.js';
+import * as documentRules from '../core/documentRules.js';
 
 window.Core = window.Core || {};
 window.Core.money = money;
@@ -13,6 +14,7 @@ window.Core.transactionRules = transactionRules;
 window.Core.transactionGuards = transactionGuards;
 window.Core.transactionRpcPayload = transactionRpcPayload;
 window.Core.fxRules = fxRules;
+window.Core.documentRules = documentRules;
 
 // Optional: expose money helpers directly for convenience (legacy may redefine later; that's OK)
 window.moneyRound = window.moneyRound || money.moneyRound;
