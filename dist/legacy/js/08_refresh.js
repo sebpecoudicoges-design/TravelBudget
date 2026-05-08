@@ -141,7 +141,10 @@ async function _runRefreshFromServer(opts) {
 
     if (typeof tbFxEnsureDaily === "function") {
       try {
-        _fxPromise = tbFxEnsureDaily({ blockingIfEmpty: true });
+        try { if (window.TB_PERF?.enabled) TB_PERF.mark("fx:ensureDaily"); } catch (_) {}
+        _fxPromise = tbFxEnsureDaily({ blockingIfEmpty: true }).finally(() => {
+          try { if (window.TB_PERF?.enabled) TB_PERF.end("fx:ensureDaily"); } catch (_) {}
+        });
       } catch (_) {}
     }
 

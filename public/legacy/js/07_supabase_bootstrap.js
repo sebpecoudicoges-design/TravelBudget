@@ -444,6 +444,7 @@ async function loadFromSupabase(opts = {}) {
   try { if (window.TB_PERF?.enabled) TB_PERF.event("loadFromSupabase:start", { opts }); } catch (_) {}
 
   // V8.9.4: parallelize the 3 independent bootstrap reads
+try { if (window.TB_PERF?.enabled) TB_PERF.mark("supabase:bootstrap"); } catch (_) {}
 const settingsPromise = (async () => {
   const baseSel = "theme,palette_json,palette_preset,base_currency";
   const withUiMode = `${baseSel},ui_mode`;
@@ -465,7 +466,26 @@ const settingsPromise = (async () => {
 const fxManualPromise = sb
   .from(TB_CONST.TABLES.fx_manual_rates)
   .select("currency,rate_to_eur,as_of")
-  .eq("user_id", sbUser.id);
+  .eq("user_id", sbUser.id)
+  .then((res) => {
+    try {
+      if (res?.error) throw res.error;
+      const out = {};
+      for (const r of (res?.data || [])) {
+        const c = String(r.currency || "").trim().toUpperCase();
+        const rate = Number(r.rate_to_eur);
+        const asOf = r.as_of ? String(r.as_of).slice(0, 10) : null;
+        if (c && c !== "EUR" && /^[A-Z]{3}$/.test(c) && Number.isFinite(rate) && rate > 0) {
+          out[c] = { rate, asOf };
+        }
+      }
+      if (!state.fx) state.fx = {};
+      state.fx.manualRates = out;
+      try { if (window.TB_PERF?.enabled) TB_PERF.event("fxManual:loaded", { count: Object.keys(out).length }); } catch (_) {}
+    } catch (e) {
+      console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
+    }
+  });
 
 const travelsPromise = sb
   .from(TB_CONST.TABLES.travels)
@@ -481,15 +501,14 @@ const periodsPromise = sb
 
 const [
   { data: s, error: sErr },
-  { data: fxm, error: fxmErr },
   { data: travels, error: trErr },
   { data: periods, error: pErr }
 ] = await Promise.all([
   settingsPromise,
-  fxManualPromise,
   travelsPromise,
   periodsPromise
 ]);
+try { if (window.TB_PERF?.enabled) TB_PERF.end("supabase:bootstrap"); } catch (_) {}
 
 if (sErr) throw sErr;
 if (pErr) throw pErr;
@@ -526,24 +545,7 @@ if (s) {
   } catch (_) {}
 }
 
-// FX manual fallback (DB-backed)
-try {
-  if (fxmErr) throw fxmErr;
-  const out = {};
-  for (const r of (fxm || [])) {
-    const c = String(r.currency || "").trim().toUpperCase();
-    const rate = Number(r.rate_to_eur);
-    const asOf = r.as_of ? String(r.as_of).slice(0, 10) : null;
-    if (c && c !== "EUR" && /^[A-Z]{3}$/.test(c) && Number.isFinite(rate) && rate > 0) {
-      out[c] = { rate, asOf };
-    }
-  }
-  if (!state.fx) state.fx = {};
-  state.fx.manualRates = out;
-} catch (e) {
-  // Non-blocking (table may not exist yet in some environments)
-  console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
-}
+try { fxManualPromise.catch(() => {}); } catch (_) {}
 
 const activeTravelKey = "travelbudget_active_travel_id_v1";
 const activeTravelId = pickActiveTravel(travels);
@@ -830,7 +832,9 @@ const [
   analysisAuditRes,
   analyticMappingRulesRes,
   catRes
-] = await Promise.all([
+] = await (async () => {
+  try { if (window.TB_PERF?.enabled) TB_PERF.mark("supabase:core"); } catch (_) {}
+  const out = await Promise.all([
   walletsPromise,
   walletBalancesPromise,
   txPromise,
@@ -841,7 +845,10 @@ const [
   analysisAuditPromise,
   analyticMappingRulesPromise,
   catPromise
-]);
+  ]);
+  try { if (window.TB_PERF?.enabled) TB_PERF.end("supabase:core"); } catch (_) {}
+  return out;
+})();
 
 const { data: tx, error: tErr } = txRes || {};
 if (tErr) throw tErr;

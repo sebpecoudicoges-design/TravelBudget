@@ -82,6 +82,9 @@
         ${row("boot:onload", latestSpan("boot:onload") == null ? "..." : latestSpan("boot:onload") + "ms")}
         ${row("boot:refresh", latestSpan("boot:refreshFromServer") == null ? "..." : latestSpan("boot:refreshFromServer") + "ms")}
         ${row("supabase:load", latestSpan("supabase:load") == null ? "..." : latestSpan("supabase:load") + "ms")}
+        ${row("supabase:bootstrap", latestSpan("supabase:bootstrap") == null ? "..." : latestSpan("supabase:bootstrap") + "ms")}
+        ${row("supabase:core", latestSpan("supabase:core") == null ? "..." : latestSpan("supabase:core") + "ms")}
+        ${row("fx:ensureDaily", latestSpan("fx:ensureDaily") == null ? "..." : latestSpan("fx:ensureDaily") + "ms")}
         ${row("render:all", latestSpan("render:all") == null ? "..." : latestSpan("render:all") + "ms")}
         ${row("logical queries", counters.supabaseQueries || 0)}
         <div style="margin-top:8px;color:#cbd5e1;">Derniers événements</div>
