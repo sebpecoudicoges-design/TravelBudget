@@ -441,6 +441,7 @@ function pickActiveTravel(travels) {
 async function loadFromSupabase(opts = {}) {
   if (!sbUser) return;
   const refreshToken = Number(opts?.refreshToken || window.__TB_REFRESH_TOKEN__ || 0);
+  try { if (window.TB_PERF?.enabled) TB_PERF.event("loadFromSupabase:start", { opts }); } catch (_) {}
 
   // V8.9.4: parallelize the 3 independent bootstrap reads
 const settingsPromise = (async () => {
@@ -549,6 +550,18 @@ const activeTravelId = pickActiveTravel(travels);
 if (!activeTravelId) throw new Error("Aucun voyage trouvé.");
 localStorage.setItem(activeTravelKey, activeTravelId);
 
+const currentView = (typeof activeView === "string" && activeView)
+  ? activeView
+  : ((typeof window !== "undefined" && typeof window.activeView === "string" && window.activeView) ? window.activeView : "dashboard");
+const shouldLoadGovernance = !!opts?.includeGovernance || currentView === "settings" || currentView === "analysis";
+const shouldLoadDeferredData = !!opts?.includeDeferredData || shouldLoadGovernance || currentView === "transactions";
+try {
+  if (window.TB_PERF?.enabled) {
+    TB_PERF.event("loadFromSupabase:mode", { view: currentView, deferred: shouldLoadDeferredData, governance: shouldLoadGovernance });
+    TB_PERF.count("supabaseQueries", 4);
+  }
+} catch (_) {}
+
 state.travels = (travels || []).map((x) => ({
   id: x.id,
   name: x.name || "",
@@ -571,7 +584,7 @@ if (!p) throw new Error("Période active introuvable.");
   // - wallets may auto-bootstrap (insert) if missing.
   // - transactions / segments / categories do not depend on wallets.
 
-const walletsPromise = (async () => {
+  const walletsPromise = (async () => {
   const { data: w0, error: wErr } = await sb
     .from(TB_CONST.TABLES.wallets)
     .select("id,travel_id,name,currency,balance,type,created_at,balance_snapshot_at")
@@ -626,19 +639,20 @@ const txPromise = sb
   .order("created_at", { ascending: true });
 
   const recurringRulesPromise = (async () => {
+  if (!shouldLoadDeferredData) return { rows: [], skipped: true };
   try {
     const { data: rows, error } = await sb
       .from(TB_CONST.TABLES.recurring_rules)
-      .select("*")
+      .select("id,user_id,travel_id,wallet_id,label,type,amount,currency,category,subcategory,rule_type,interval_count,weekday,monthday,week_of_month,start_date,next_due_at,end_date,max_occurrences,is_active,archived,out_of_budget,generated_until,created_at,updated_at")
       .eq("user_id", sbUser.id)
       .eq("travel_id", activeTravelId)
       .order("created_at", { ascending: true });
 
     if (error) throw error;
-    return rows || [];
+    return { rows: rows || [], skipped: false };
   } catch (e) {
     console.warn("[recurring_rules] load failed (ignored)", e?.message || e);
-    return [];
+    return { rows: [], skipped: false };
   }
 })();
 
@@ -728,6 +742,7 @@ const txPromise = sb
   })();
 
   const analysisMappingPromise = (async () => {
+    if (!shouldLoadDeferredData) return { rows: [], available: false, skipped: true };
     try {
       const { data: rows, error } = await sb
         .from(TB_CONST.TABLES.v_transaction_analytic_mapping)
@@ -735,14 +750,25 @@ const txPromise = sb
         .eq("user_id", sbUser.id)
         .eq("travel_id", activeTravelId);
       if (error) throw error;
-      return { rows: rows || [], available: true };
+      return { rows: rows || [], available: true, skipped: false };
     } catch (e) {
       console.warn("[v_transaction_analytic_mapping] load failed (fallback to JS)", e?.message || e);
-      return { rows: [], available: false };
+      return { rows: [], available: false, skipped: false };
     }
   })();
 
+try {
+  if (window.TB_PERF?.enabled) {
+    let q = 8; // wallets, wallet balances, transactions, segments, categories, FX/settings/travels already counted above
+    if (shouldLoadDeferredData) q += 3; // recurring, mapping, subcategories
+    if (shouldLoadGovernance) q += 2; // audit, mapping rules
+    TB_PERF.count("supabaseQueries", q);
+    TB_PERF.event("loadFromSupabase:queries", { base: 12, deferred: shouldLoadDeferredData, governance: shouldLoadGovernance });
+  }
+} catch (_) {}
+
   const analysisAuditPromise = (async () => {
+    if (!shouldLoadGovernance) return { rows: [], available: false, skipped: true };
     try {
       const { data: rows, error } = await sb
         .from(TB_CONST.TABLES.v_analytic_mapping_audit)
@@ -759,6 +785,7 @@ const txPromise = sb
   })();
 
   const analyticMappingRulesPromise = (async () => {
+    if (!shouldLoadGovernance) return { rows: [], available: false, skipped: true };
     try {
       const { data: rows, error } = await sb
         .from(TB_CONST.TABLES.analytic_category_mappings)
@@ -775,6 +802,7 @@ const txPromise = sb
   })();
 
   const subcatPromise = (async () => {
+    if (!shouldLoadDeferredData) return { rows: [], skipped: true };
     try {
       const { data: rows, error } = await sb
         .from(TB_CONST.TABLES.category_subcategories)
@@ -784,10 +812,10 @@ const txPromise = sb
         .order("sort_order", { ascending: true })
         .order("name", { ascending: true });
       if (error) throw error;
-      return rows || [];
+      return { rows: rows || [], skipped: false };
     } catch (e) {
       console.warn("[category_subcategories] load failed (ignored)", e?.message || e);
-      return [];
+      return { rows: [], skipped: false };
     }
   })();
 
@@ -796,8 +824,8 @@ const [
   walletBalanceRows,
   txRes,
   segRows,
-  recurringRuleRows,
-  categorySubcategoryRows,
+  recurringRuleRes,
+  categorySubcategoryRes,
   analysisMappingRes,
   analysisAuditRes,
   analyticMappingRulesRes,
@@ -817,9 +845,11 @@ const [
 
 const { data: tx, error: tErr } = txRes || {};
 if (tErr) throw tErr;
-const { rows: analysisMappingRows, available: analysisMappingAvailable } = analysisMappingRes || { rows: [], available: false };
-const { rows: analysisAuditRows, available: analysisAuditAvailable } = analysisAuditRes || { rows: [], available: false };
-const { rows: analyticMappingRuleRows, available: analyticMappingRulesAvailable } = analyticMappingRulesRes || { rows: [], available: false };
+const { rows: recurringRuleRows, skipped: recurringRulesSkipped } = recurringRuleRes || { rows: [], skipped: false };
+const { rows: categorySubcategoryRows, skipped: categorySubcategoriesSkipped } = categorySubcategoryRes || { rows: [], skipped: false };
+const { rows: analysisMappingRows, available: analysisMappingAvailable, skipped: analysisMappingSkipped } = analysisMappingRes || { rows: [], available: false, skipped: false };
+const { rows: analysisAuditRows, available: analysisAuditAvailable, skipped: analysisAuditSkipped } = analysisAuditRes || { rows: [], available: false, skipped: false };
+const { rows: analyticMappingRuleRows, available: analyticMappingRulesAvailable, skipped: analyticMappingRulesSkipped } = analyticMappingRulesRes || { rows: [], available: false, skipped: false };
 const { rows: catRowsDb, error: catLoadErrDb } = catRes || { rows: [], error: null };
 if (catLoadErrDb) throw catLoadErrDb;
 if (refreshToken !== Number(window.__TB_REFRESH_TOKEN__ || 0)) return;
@@ -850,34 +880,45 @@ if (refreshToken !== Number(window.__TB_REFRESH_TOKEN__ || 0)) return;
   }));
   state.walletBalanceMap = Object.fromEntries((state.walletBalances || []).map((x) => [String(x.walletId || ""), x]));
 
-  state.analysisMappingAvailable = !!analysisMappingAvailable;
-  state.analysisAuditAvailable = !!analysisAuditAvailable;
-  state.analysisMappingRulesAvailable = !!analyticMappingRulesAvailable;
-  state.analysisAuditRows = Array.isArray(analysisAuditRows) ? analysisAuditRows : [];
-  state.analyticCategoryMappings = (Array.isArray(analyticMappingRuleRows) ? analyticMappingRuleRows : []).map((x) => ({
-    id: x.id,
-    userId: x.user_id || null,
-    categoryName: x.category_name || null,
-    subcategoryName: x.subcategory_name || null,
-    mappingStatus: x.mapping_status || 'unmapped',
-    analyticFamily: x.analytic_family || null,
-    notes: x.notes || null,
-    createdAt: x.created_at || null,
-    updatedAt: x.updated_at || null,
-  }));
-  state.analysisMappingByTxId = Object.fromEntries(
-    (Array.isArray(analysisMappingRows) ? analysisMappingRows : [])
-      .filter((x) => x && x.transaction_id)
-      .map((x) => [String(x.transaction_id), {
-        transactionId: x.transaction_id,
-        mappingId: x.mapping_id || null,
-        mappingStatus: x.mapping_status || 'unmapped',
-        analyticFamily: x.analytic_family || null,
-        mappingSource: x.mapping_source || 'fallback_unmapped',
-        category: x.category || null,
-        subcategory: x.subcategory || null,
-      }])
-  );
+  if (!analysisMappingSkipped) {
+    state.analysisMappingAvailable = !!analysisMappingAvailable;
+    state.analysisMappingByTxId = Object.fromEntries(
+      (Array.isArray(analysisMappingRows) ? analysisMappingRows : [])
+        .filter((x) => x && x.transaction_id)
+        .map((x) => [String(x.transaction_id), {
+          transactionId: x.transaction_id,
+          mappingId: x.mapping_id || null,
+          mappingStatus: x.mapping_status || 'unmapped',
+          analyticFamily: x.analytic_family || null,
+          mappingSource: x.mapping_source || 'fallback_unmapped',
+          category: x.category || null,
+          subcategory: x.subcategory || null,
+        }])
+    );
+  }
+  if (!analysisAuditSkipped) {
+    state.analysisAuditAvailable = !!analysisAuditAvailable;
+    state.analysisAuditRows = Array.isArray(analysisAuditRows) ? analysisAuditRows : [];
+  }
+  if (!analyticMappingRulesSkipped) {
+    state.analysisMappingRulesAvailable = !!analyticMappingRulesAvailable;
+    state.analyticCategoryMappings = (Array.isArray(analyticMappingRuleRows) ? analyticMappingRuleRows : []).map((x) => ({
+      id: x.id,
+      userId: x.user_id || null,
+      categoryName: x.category_name || null,
+      subcategoryName: x.subcategory_name || null,
+      mappingStatus: x.mapping_status || 'unmapped',
+      analyticFamily: x.analytic_family || null,
+      notes: x.notes || null,
+      createdAt: x.created_at || null,
+      updatedAt: x.updated_at || null,
+    }));
+  }
+  try {
+    const deferredLoaded = !analysisMappingSkipped && !recurringRulesSkipped && !categorySubcategoriesSkipped && !analysisAuditSkipped && !analyticMappingRulesSkipped;
+    window.__tbDeferredDataLoadedForTravel = deferredLoaded ? String(activeTravelId || "") : (window.__tbDeferredDataLoadedForTravel || "");
+    window.__tbGovernanceLoadedForTravel = (!analysisAuditSkipped && !analyticMappingRulesSkipped && !analysisMappingSkipped) ? String(activeTravelId || "") : (window.__tbGovernanceLoadedForTravel || "");
+  } catch (_) {}
 
 state.wallets = (w || []).map((x) => ({
   id: x.id,
@@ -948,7 +989,7 @@ state.wallets = (w || []).map((x) => ({
     sortOrder: Number(x.sort_order || 0),
   }));
 
-  state.recurringRules = (recurringRuleRows || []).map((x) => ({
+  if (!recurringRulesSkipped) state.recurringRules = (recurringRuleRows || []).map((x) => ({
   id: x.id,
   travelId: x.travel_id || null,
   walletId: x.wallet_id || null,
@@ -981,7 +1022,7 @@ state.wallets = (w || []).map((x) => ({
   nightCovered: !!x.night_covered,
 }));
 
-  state.categorySubcategories = (categorySubcategoryRows || []).map((x) => ({
+  if (!categorySubcategoriesSkipped) state.categorySubcategories = (categorySubcategoryRows || []).map((x) => ({
     id: x.id,
     categoryId: x.category_id || null,
     categoryName: x.category_name || '',
@@ -1053,4 +1094,15 @@ state.wallets = (w || []).map((x) => ({
   }
 
   recomputeAllocations();
+  try {
+    if (window.TB_PERF?.enabled) {
+      TB_PERF.event("loadFromSupabase:done", {
+        tx: state.transactions?.length || 0,
+        wallets: state.wallets?.length || 0,
+        deferredLoaded: String(window.__tbDeferredDataLoadedForTravel || "") === String(activeTravelId || ""),
+        governanceLoaded: String(window.__tbGovernanceLoadedForTravel || "") === String(activeTravelId || "")
+      });
+      TB_PERF.panel("load");
+    }
+  } catch (_) {}
 }

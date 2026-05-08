@@ -9,6 +9,8 @@
 
   const marks = Object.create(null);
   const spans = [];
+  const events = [];
+  const counters = Object.create(null);
 
   function now() {
     return (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
@@ -26,6 +28,66 @@
     if (!isFinite(t0)) return;
     spans.push({ name, ms: +(t1 - t0).toFixed(1) });
     return t1 - t0;
+  }
+
+  function count(name, inc) {
+    if (!enabled) return;
+    counters[name] = Number(counters[name] || 0) + (Number(inc) || 1);
+  }
+
+  function event(name, data) {
+    if (!enabled) return;
+    events.push({ at: +now().toFixed(1), name, data: data || null });
+  }
+
+  function latestSpan(name) {
+    for (let i = spans.length - 1; i >= 0; i--) {
+      if (spans[i]?.name === name) return spans[i].ms;
+    }
+    return null;
+  }
+
+  function ensurePanel(label) {
+    if (!enabled) return;
+    try {
+      let el = document.getElementById("tb-perf-panel");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "tb-perf-panel";
+        el.style.cssText = [
+          "position:fixed",
+          "right:12px",
+          "top:12px",
+          "z-index:10050",
+          "width:min(360px, calc(100vw - 24px))",
+          "max-height:58vh",
+          "overflow:auto",
+          "padding:10px 12px",
+          "border-radius:8px",
+          "background:rgba(15,23,42,.94)",
+          "color:#f8fafc",
+          "font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace",
+          "box-shadow:0 12px 34px rgba(0,0,0,.28)",
+          "white-space:normal"
+        ].join(";");
+        document.body.appendChild(el);
+      }
+      const row = (k, v) => `<div style="display:flex;justify-content:space-between;gap:12px;border-top:1px solid rgba(255,255,255,.10);padding-top:4px;margin-top:4px;"><span>${k}</span><strong>${v}</strong></div>`;
+      const eventRows = events.slice(-8).map((e) => `<div style="opacity:.82;margin-top:3px;">${e.at}ms ${e.name}${e.data ? " " + JSON.stringify(e.data) : ""}</div>`).join("");
+      el.innerHTML = `
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+          <strong>TB PERF ${label ? "- " + label : ""}</strong>
+          <button type="button" onclick="this.closest('#tb-perf-panel').remove()" style="border:0;border-radius:6px;padding:2px 6px;cursor:pointer;">x</button>
+        </div>
+        ${row("boot:onload", latestSpan("boot:onload") == null ? "..." : latestSpan("boot:onload") + "ms")}
+        ${row("boot:refresh", latestSpan("boot:refreshFromServer") == null ? "..." : latestSpan("boot:refreshFromServer") + "ms")}
+        ${row("supabase:load", latestSpan("supabase:load") == null ? "..." : latestSpan("supabase:load") + "ms")}
+        ${row("render:all", latestSpan("render:all") == null ? "..." : latestSpan("render:all") + "ms")}
+        ${row("logical queries", counters.supabaseQueries || 0)}
+        <div style="margin-top:8px;color:#cbd5e1;">Derniers événements</div>
+        ${eventRows || '<div style="opacity:.7;">Aucun événement</div>'}
+      `;
+    } catch (_) {}
   }
 
   function wrap(name, fn) {
@@ -52,9 +114,12 @@
       const title = label ? `[TB PERF] ${label}` : "[TB PERF]";
       console.groupCollapsed(title);
       if (spans.length) console.table(spans);
+      if (events.length) console.table(events);
+      if (Object.keys(counters).length) console.table(counters);
       const total = spans.reduce((a, s) => a + (s.ms || 0), 0);
       console.log("Total (ms):", +total.toFixed(1));
       console.groupEnd();
+      ensurePanel(label || "flush");
     } catch (_) {}
   }
 
@@ -93,7 +158,10 @@
     end,
     wrap,
     flush,
-    now
+    now,
+    count,
+    event,
+    panel: ensurePanel
   };
 
   window.TB_DEFER = {

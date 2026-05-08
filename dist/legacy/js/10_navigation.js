@@ -24,9 +24,19 @@ function showView(view) {
   activeView = view;
   try { if (typeof window !== "undefined") window.activeView = view; } catch (_) {}
   setActiveTab(view);
-  if (view === "transactions") renderTransactions();
-  if (view === "settings") { renderSettings(); initPaletteUI(); }
-  if (view === "analysis") { if (typeof tbRequestAnalysisRender === 'function') tbRequestAnalysisRender('navigation'); else if (typeof renderBudgetAnalysis === 'function') renderBudgetAnalysis(); }
+  if (view === "transactions") {
+    renderTransactions();
+    try { if (typeof window.tbEnsureDeferredData === "function") window.tbEnsureDeferredData("transactions"); } catch (_) {}
+  }
+  if (view === "settings") {
+    renderSettings();
+    initPaletteUI();
+    try { if (typeof window.tbEnsureGovernanceData === "function") window.tbEnsureGovernanceData("settings"); } catch (_) {}
+  }
+  if (view === "analysis") {
+    try { if (typeof window.tbEnsureGovernanceData === "function") window.tbEnsureGovernanceData("analysis"); } catch (_) {}
+    if (typeof tbRequestAnalysisRender === 'function') tbRequestAnalysisRender('navigation'); else if (typeof renderBudgetAnalysis === 'function') renderBudgetAnalysis();
+  }
   if (view === "assets") { if (typeof window.renderAssets === "function") window.renderAssets("navigation"); }
   if (view === "documents") { if (typeof window.renderDocuments === "function") window.renderDocuments("navigation"); }
   if (view === "dashboard") if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("10_navigation.js"); else redrawCharts();

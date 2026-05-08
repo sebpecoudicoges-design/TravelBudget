@@ -32,6 +32,26 @@ window.tbAfterMutationRefresh = async function tbAfterMutationRefresh(reason, op
   _tbRefreshLog('afterMutation:done', reason || 'mutation', { view });
 };
 
+window.tbEnsureGovernanceData = async function tbEnsureGovernanceData(reason) {
+  try {
+    const tid = String(window.state?.activeTravelId || "");
+    if (tid && String(window.__tbGovernanceLoadedForTravel || "") === tid) return;
+    await refreshFromServer({ includeGovernance: true, includeDeferredData: true });
+  } catch (e) {
+    console.warn("[TB] governance refresh failed:", e?.message || e);
+  }
+};
+
+window.tbEnsureDeferredData = async function tbEnsureDeferredData(reason) {
+  try {
+    const tid = String(window.state?.activeTravelId || "");
+    if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid) return;
+    await refreshFromServer({ includeDeferredData: true, includeGovernance: reason === "analysis" || reason === "settings" });
+  } catch (e) {
+    console.warn("[TB] deferred data refresh failed:", e?.message || e);
+  }
+};
+
 function _tbEnsureLoadingBadge() {
   let el = document.getElementById("tb-loading-badge");
   if (el) return el;
@@ -114,6 +134,7 @@ async function _runRefreshFromServer(opts) {
 
   try {
     _tbRefreshLog("refreshFromServer:start", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
+    try { if (window.TB_PERF?.enabled) TB_PERF.event("refresh:start", options); } catch (_) {}
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("supabase:load"); } catch (_) {}
     // FX: ensure daily rates (blocks only if no cached rates yet)
     let _fxPromise = Promise.resolve();
@@ -124,7 +145,7 @@ async function _runRefreshFromServer(opts) {
       } catch (_) {}
     }
 
-    const _dataPromise = loadFromSupabase();
+    const _dataPromise = loadFromSupabase(options);
     await Promise.all([_dataPromise, _fxPromise]);
 
     try {
@@ -154,6 +175,7 @@ async function _runRefreshFromServer(opts) {
       try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("render:all"); } catch (_) {}
       if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("render:done");
     }
+    try { if (window.TB_PERF?.enabled) { TB_PERF.event("refresh:done", { skipRender: !!options.skipRender }); TB_PERF.panel("refresh"); } } catch (_) {}
     _tbRefreshLog("refreshFromServer:done", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
   } catch (e) {
     _tbRefreshLog("refreshFromServer:error", e && (e.message || e));
