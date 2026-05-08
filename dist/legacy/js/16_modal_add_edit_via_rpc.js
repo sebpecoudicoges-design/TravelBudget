@@ -2,6 +2,10 @@
    Modal: add/edit via RPC
    ========================= */
 
+function _txModalT(k, vars) {
+  try { return window.tbT ? window.tbT(k, vars) : k; } catch (_) { return k; }
+}
+
 function fillModalSelects() {
   const elW = document.getElementById("m-wallet");
   const elC = document.getElementById("m-category");
@@ -209,7 +213,7 @@ function openTxModal(type = "expense", walletId = null) {
   _setTxModalLock(false);
 
   const now = toLocalISODate(new Date());
-  document.getElementById("modal-title").textContent = "Nouvelle transaction";
+  document.getElementById("modal-title").textContent = _txModalT("transactions.modal.new");
   document.getElementById("m-type").value = type;
 
   const elW = document.getElementById("m-wallet");
@@ -236,7 +240,7 @@ function openTxModal(type = "expense", walletId = null) {
 
 function openTxEditModal(txId) {
   const tx = state.transactions.find((t) => t.id === txId);
-  if (!tx) return alert("Transaction introuvable.");
+  if (!tx) return alert(_txModalT("transactions.error.not_found"));
 
   editingTxId = txId;
   fillModalSelects();
@@ -249,7 +253,7 @@ function openTxEditModal(txId) {
     _setTxModalLock(false);
   }
 
-  document.getElementById("modal-title").textContent = "Modifier transaction";
+  document.getElementById("modal-title").textContent = _txModalT("transactions.modal.edit");
 
   const _btnResnap = document.getElementById("m-resnap");
   if (_btnResnap) {
@@ -322,7 +326,7 @@ function _txGetLockState(tx) {
       locked: true,
       readonly: true,
       kind: "wallet_adjustment",
-      reason: "Transaction d'ajustement wallet : modification verrouillee. Utilise l'action Ajuster solde pour creer un nouvel ajustement."
+      reason: _txModalT("transactions.lock.wallet_adjustment")
     };
   }
   if (_txIsTripLinked(tx)) {
@@ -330,7 +334,7 @@ function _txGetLockState(tx) {
       locked: true,
       readonly: true,
       kind: "trip_linked",
-      reason: "Transaction liee a une depense Trip : modification verrouillee. Modifie la depense depuis l'onglet Trip."
+      reason: _txModalT("transactions.lock.trip_linked")
     };
   }
   return { locked: false, readonly: false, kind: null, reason: null };
@@ -344,7 +348,7 @@ function _setTxModalLock(isLocked, reason) {
   }
   const note = document.getElementById("m-lock-note");
   if (note) {
-    note.textContent = isLocked ? (reason || "Cette transaction est verrouillée.") : "";
+    note.textContent = isLocked ? (reason || _txModalT("transactions.lock.default")) : "";
     note.style.display = isLocked ? "block" : "none";
   }
 }
@@ -359,7 +363,7 @@ function _setTxModalReadOnly(isReadOnly, reason) {
   if (saveBtn) saveBtn.disabled = !!isReadOnly;
   const note = document.getElementById("m-lock-note");
   if (note) {
-    note.textContent = isReadOnly ? (reason || "Cette transaction est verrouillee.") : "";
+    note.textContent = isReadOnly ? (reason || _txModalT("transactions.lock.default")) : "";
     note.style.display = isReadOnly ? "block" : "none";
   }
 }
@@ -986,7 +990,7 @@ async function resnapshotModal() {
 }
 
 async function deleteTx(txId) {
-  const ok = confirm("Supprimer cette transaction ? (solde wallet ajusté automatiquement)");
+  const ok = confirm(_txModalT("transactions.confirm.delete"));
   if (!ok) return;
 
   await safeCall("Suppression", async () => {
@@ -1023,9 +1027,9 @@ async function deleteTx(txId) {
 }
 
 async function markTxAsPaid(txId) {
-  await safeCall("Marquer comme payé", async () => {
+  await safeCall(_txModalT("transactions.safe.mark_paid"), async () => {
     const tx = state.transactions.find((t) => t.id === txId);
-    if (!tx) throw new Error("Transaction introuvable.");
+    if (!tx) throw new Error(_txModalT("transactions.error.not_found"));
     if (tx.type !== "expense" && tx.type !== "income") throw new Error("Seules les dépenses et les recettes sont concernées.");
     if (tx.payNow) return;
 

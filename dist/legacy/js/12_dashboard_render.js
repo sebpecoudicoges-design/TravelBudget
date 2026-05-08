@@ -391,6 +391,11 @@ function renderDashboardHero() {
    Dashboard render
    ========================= */
 function renderWallets() {
+  const T = (window.tbT ? tbT : (k, vars) => {
+    let s = String(k || "");
+    if (vars && typeof vars === "object") Object.keys(vars).forEach((v) => { s = s.replaceAll(`{${v}}`, String(vars[v])); });
+    return s;
+  });
   // Sur certaines pages (reset/recovery), le DOM dashboard n'existe pas.
   const container = document.getElementById("wallets-container");
 if (!container) return;
@@ -476,12 +481,11 @@ if (!wallets.length) {
   ob.style.borderRadius = "12px";
   ob.style.background = "rgba(0,0,0,.02)";
   ob.style.marginTop = "10px";
-  const T = (window.tbT ? tbT : (k)=>k);
   ob.innerHTML = `
     <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
       <div style="font-weight:600;">${T("onboarding.title")}</div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn" type="button" onclick="showView('settings')">Settings</button>
+        <button class="btn" type="button" onclick="showView('settings')">${T("nav.settings")}</button>
         <button class="btn" type="button" onclick="showView('help')">${T("nav.help")}</button>
       </div>
     </div>
@@ -521,23 +525,23 @@ if (!wallets.length) {
       <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap;">
         <div>
           <h3>${w.name} (${w.currency})</h3>
-          <p>Solde : <strong style="color:var(--text);">${fmtMoney((typeof window.tbGetWalletEffectiveBalance === "function" ? window.tbGetWalletEffectiveBalance(w.id) : w.balance), w.currency)}</strong></p>
+          <p>${T("wallet.balance")} : <strong style="color:var(--text);">${fmtMoney((typeof window.tbGetWalletEffectiveBalance === "function" ? window.tbGetWalletEffectiveBalance(w.id) : w.balance), w.currency)}</strong></p>
           ${isBase
-            ? `<p class="muted">Aujourd’hui (${today}) : budget dispo <strong>${budgetToday.toFixed(2)} ${base}</strong></p>`
-            : `<p class="muted">Budget/jour calculé (${base})</p>`}
+            ? `<p class="muted">${T("wallet.today_budget", { date: today })} <strong>${budgetToday.toFixed(2)} ${base}</strong></p>`
+            : `<p class="muted">${T("wallet.daily_budget_base", { currency: base })}</p>`}
         </div>
         <div style="display:flex; flex-direction:column; gap:8px; min-width:190px;">
-          <button class="btn primary" onclick="openTxModal('expense','${w.id}')">+ Dépense</button>
-          <button class="btn" onclick="openTxModal('income','${w.id}')">+ Entrée</button>
-          <button class="btn" onclick="editWallet('${w.id}')">✏️ Modifier</button>
-          <button class="btn" onclick="adjustWalletBalance('${w.id}')">⚙ Ajuster solde</button>
-          <button class="btn" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" onclick="deleteWallet('${w.id}')">🗑 Supprimer</button>
+          <button class="btn primary" onclick="openTxModal('expense','${w.id}')">${T("wallet.action.add_expense")}</button>
+          <button class="btn" onclick="openTxModal('income','${w.id}')">${T("wallet.action.add_income")}</button>
+          <button class="btn" onclick="editWallet('${w.id}')">✏️ ${T("wallet.action.edit")}</button>
+          <button class="btn" onclick="adjustWalletBalance('${w.id}')">⚙ ${T("wallet.action.adjust")}</button>
+          <button class="btn" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" onclick="deleteWallet('${w.id}')">🗑 ${T("wallet.action.delete")}</button>
         </div>
       </div>
 
       ${isBase ? `
         <div class="bar"><div style="width:${barPct.toFixed(0)}%;"></div></div>
-        <div class="muted" style="margin-top:6px;">Niveau budget dispo vs budget/jour</div>
+        <div class="muted" style="margin-top:6px;">${T("wallet.budget_level")}</div>
       ` : ""}
     `;
     listEl.appendChild(div);
@@ -1218,3 +1222,14 @@ async function deleteWallet(walletId) {
     alert(e?.message || "Erreur suppression wallet");
   }
 }
+
+try {
+  window.tbOnLangChange = window.tbOnLangChange || [];
+  if (!window.__tbDashboardLangBound) {
+    window.__tbDashboardLangBound = true;
+    window.tbOnLangChange.push(() => {
+      try { if (typeof renderWallets === "function") renderWallets(); } catch (_) {}
+      try { if (typeof renderDashboardHero === "function") renderDashboardHero(); } catch (_) {}
+    });
+  }
+} catch (_) {}

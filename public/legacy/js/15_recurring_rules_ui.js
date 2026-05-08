@@ -2,6 +2,14 @@
 (function(){
   let _rrSubmitting = false;
 
+  function rrT(key, vars) {
+    try {
+      return window.tbT ? window.tbT(key, vars) : key;
+    } catch (_) {
+      return key;
+    }
+  }
+
   function _rrGetSB() {
     if (typeof _tbGetSB === "function") return _tbGetSB();
     return window.supabase || window.sb || null;
@@ -234,18 +242,31 @@
   function _rrFreqLabel(rule) {
     const type = String(rule?.ruleType || rule?.rule_type || "").toLowerCase();
     const every = Number(rule?.intervalCount || rule?.interval_count || 1) || 1;
-    if (type === "daily") return every === 1 ? "Quotidien" : `Tous les ${every} jours`;
-    if (type === "weekly") return every === 1 ? "Hebdomadaire" : `Toutes les ${every} semaines`;
-    if (type === "monthly") return every === 1 ? "Mensuel" : `Tous les ${every} mois`;
-    if (type === "every_x_months") return every === 1 ? "Mensuel" : `Tous les ${every} mois`;
-    if (type === "yearly") return every === 1 ? "Annuel" : `Tous les ${every} ans`;
+    if (type === "daily") return every === 1 ? rrT("recurring.freq.daily_label") : rrT("recurring.freq.every_days", { count: every });
+    if (type === "weekly") return every === 1 ? rrT("recurring.freq.weekly_label") : rrT("recurring.freq.every_weeks", { count: every });
+    if (type === "monthly") return every === 1 ? rrT("recurring.freq.monthly_label") : rrT("recurring.freq.every_months", { count: every });
+    if (type === "every_x_months") return every === 1 ? rrT("recurring.freq.monthly_label") : rrT("recurring.freq.every_months", { count: every });
+    if (type === "yearly") return every === 1 ? rrT("recurring.freq.yearly_label") : rrT("recurring.freq.every_years", { count: every });
     return type || "—";
   }
 
   function _rrStatus(rule) {
-    if (rule?.archived) return "archivée";
-    if (rule?.isActive === false || rule?.is_active === false) return "pause";
-    return "active";
+    if (rule?.archived) return rrT("recurring.status.archived");
+    if (rule?.isActive === false || rule?.is_active === false) return rrT("recurring.status.paused");
+    return rrT("recurring.status.active");
+  }
+
+  function _rrIsActive(rule) {
+    return !(rule?.archived || rule?.isActive === false || rule?.is_active === false);
+  }
+
+  function _rrBindAddButton(host) {
+    const addBtn = host?.querySelector?.("#tb-recurring-add-btn");
+    if (addBtn) {
+      addBtn.onclick = () => safeCall(rrT("recurring.title"), async () => {
+        window.openRecurringRuleModal();
+      });
+    }
   }
 
   function _rrWalletOptions() {
@@ -258,14 +279,18 @@
     if (!view) return null;
 
     let box = document.getElementById("tb-recurring-card");
-    if (box) return box.querySelector("#tb-recurring-box");
+    if (box) {
+      const title = box.querySelector("h2");
+      if (title) title.textContent = rrT("recurring.title");
+      return box.querySelector("#tb-recurring-box");
+    }
 
     const card = document.createElement("div");
     card.className = "card tb-settings-card tb-settings-card--recurring";
     card.id = "tb-recurring-card";
     card.style.marginBottom = "12px";
     card.innerHTML = `
-      <h2>Échéances périodiques</h2>
+      <h2>${escapeHTML(rrT("recurring.title"))}</h2>
       <div id="tb-recurring-box"></div>
     `;
 
@@ -274,7 +299,7 @@
     else view.appendChild(card);
 
     const btn = card.querySelector("#tb-recurring-add-btn");
-    if (btn) btn.onclick = () => safeCall("Nouvelle échéance", window.openRecurringRuleModal);
+    if (btn) btn.onclick = () => safeCall(rrT("recurring.modal.new"), window.openRecurringRuleModal);
     return card.querySelector("#tb-recurring-box");
   }
 
@@ -482,13 +507,13 @@
       monthdayWrap.style.display = (type === "every_x_months") ? "" : "none";
 
       if (type === "daily") {
-        help.textContent = "Tous les X jours.";
+        help.textContent = rrT("recurring.help.daily");
       } else if (type === "weekly") {
-        help.textContent = "Toutes les X semaines, le jour choisi.";
+        help.textContent = rrT("recurring.help.weekly");
       } else if (type === "every_x_months") {
-        help.textContent = "Tous les X mois, au jour du mois choisi.";
+        help.textContent = rrT("recurring.help.monthly");
       } else if (type === "yearly") {
-        help.textContent = "Tous les X ans, à partir de la date de début.";
+        help.textContent = rrT("recurring.help.yearly");
       } else {
         help.textContent = "";
       }
@@ -514,93 +539,93 @@
     const defaults = _rrRuleToFormDefaults(ruleToEdit || null, String(wallets[0]?.currency || baseCur || "EUR").toUpperCase());
     const isEditing = !!(ruleToEdit && ruleToEdit.id);
 
-    modal.setTitle(isEditing ? "Modifier échéance périodique" : "Nouvelle échéance périodique");
+    modal.setTitle(isEditing ? rrT("recurring.modal.edit") : rrT("recurring.modal.new"));
     modal.setBody(`
       <div class="tb-modal-grid">
-        <div class="tb-modal-section"><div class="tb-modal-section-title">Essentiel</div></div>
+        <div class="tb-modal-section"><div class="tb-modal-section-title">${escapeHTML(rrT("recurring.section.essential"))}</div></div>
         <div class="field field--span-2">
-          <label>Nom</label>
-          <input id="rr-label" value="${escapeHTML(defaults.label)}" placeholder="Ex: Loyer, Assurance, Netflix" />
+          <label>${escapeHTML(rrT("recurring.label.name"))}</label>
+          <input id="rr-label" value="${escapeHTML(defaults.label)}" placeholder="${escapeHTML(rrT("recurring.placeholder.name"))}" />
         </div>
         <div class="field field--span-2">
-          <label>Type</label>
+          <label>${escapeHTML(rrT("recurring.label.type"))}</label>
           <select id="rr-type">
-            <option value="expense" ${defaults.type === "income" ? "" : "selected"}>Dépense</option>
-            <option value="income" ${defaults.type === "income" ? "selected" : ""}>Revenu</option>
+            <option value="expense" ${defaults.type === "income" ? "" : "selected"}>${escapeHTML(rrT("recurring.type.expense"))}</option>
+            <option value="income" ${defaults.type === "income" ? "selected" : ""}>${escapeHTML(rrT("recurring.type.income"))}</option>
           </select>
         </div>
-        <div class="tb-modal-section"><div class="tb-modal-section-title">Montant</div></div>
+        <div class="tb-modal-section"><div class="tb-modal-section-title">${escapeHTML(rrT("recurring.section.amount"))}</div></div>
         <div class="field field--span-3">
-          <label>Montant</label>
+          <label>${escapeHTML(rrT("recurring.label.amount"))}</label>
           <input id="rr-amount" type="number" min="0" step="0.01" value="${escapeHTML(defaults.amount)}" />
         </div>
         <div class="field field--span-3">
-          <label>Devise</label>
+          <label>${escapeHTML(rrT("recurring.label.currency"))}</label>
           <input id="rr-currency" value="${escapeHTML(defaults.currency)}" />
         </div>
         <div class="field field--span-3">
-          <label>Wallet</label>
+          <label>${escapeHTML(rrT("recurring.label.wallet"))}</label>
           <select id="rr-wallet">${wallets.map((w) => `<option value="${escapeHTML(w.id)}" data-cur="${escapeHTML(String(w.currency || '').toUpperCase())}" ${String(w.id) === String(defaults.wallet_id) ? "selected" : ""}>${escapeHTML(w.name || "Wallet")} — ${escapeHTML(String(w.currency || '').toUpperCase())}</option>`).join("")}</select>
         </div>
         <div class="field field--span-3">
-          <label>Impact budget</label>
+          <label>${escapeHTML(rrT("recurring.label.budget_impact"))}</label>
           <select id="rr-budget-mode">
-            <option value="budget" ${defaults.out_of_budget ? "" : "selected"}>Dans le budget</option>
-            <option value="out" ${defaults.out_of_budget ? "selected" : ""}>Hors budget</option>
+            <option value="budget" ${defaults.out_of_budget ? "" : "selected"}>${escapeHTML(rrT("recurring.budget.in"))}</option>
+            <option value="out" ${defaults.out_of_budget ? "selected" : ""}>${escapeHTML(rrT("recurring.budget.out"))}</option>
           </select>
         </div>
-        <div class="tb-modal-section"><div class="tb-modal-section-title">Classement</div></div>
+        <div class="tb-modal-section"><div class="tb-modal-section-title">${escapeHTML(rrT("recurring.section.classification"))}</div></div>
         <div class="field field--span-2">
-          <label>Catégorie</label>
+          <label>${escapeHTML(rrT("recurring.label.category"))}</label>
           <select id="rr-category">${(cats || []).map((c) => `<option value="${escapeHTML(c)}" ${c === defaults.category ? "selected" : ""}>${escapeHTML(c)}</option>`).join("")}</select>
         </div>
         <div class="field field--span-2">
-          <label>Sous-catégorie</label>
+          <label>${escapeHTML(rrT("recurring.label.subcategory"))}</label>
           <select id="rr-subcategory"></select>
         </div>
-        <div class="tb-modal-section"><div class="tb-modal-section-title">Rythme</div></div>
+        <div class="tb-modal-section"><div class="tb-modal-section-title">${escapeHTML(rrT("recurring.section.rhythm"))}</div></div>
         <div class="field field--span-3">
-          <label>Fréquence</label>
+          <label>${escapeHTML(rrT("recurring.label.frequency"))}</label>
           <select id="rr-rule-type">
-            <option value="monthly" ${defaults.rule_type === "monthly" ? "selected" : ""}>Mois</option>
-            <option value="weekly" ${defaults.rule_type === "weekly" ? "selected" : ""}>Semaine</option>
-            <option value="every_x_months" ${defaults.rule_type === "every_x_months" ? "selected" : ""}>Tous les X mois</option>
-            <option value="yearly" ${defaults.rule_type === "yearly" ? "selected" : ""}>Année</option>
+            <option value="monthly" ${defaults.rule_type === "monthly" ? "selected" : ""}>${escapeHTML(rrT("recurring.freq.monthly"))}</option>
+            <option value="weekly" ${defaults.rule_type === "weekly" ? "selected" : ""}>${escapeHTML(rrT("recurring.freq.weekly"))}</option>
+            <option value="every_x_months" ${defaults.rule_type === "every_x_months" ? "selected" : ""}>${escapeHTML(rrT("recurring.freq.every_x_months"))}</option>
+            <option value="yearly" ${defaults.rule_type === "yearly" ? "selected" : ""}>${escapeHTML(rrT("recurring.freq.yearly"))}</option>
           </select>
         </div>
         <div class="field field--span-3">
-          <label>Répéter tous les</label>
+          <label>${escapeHTML(rrT("recurring.label.repeat_every"))}</label>
           <input id="rr-interval-count" type="number" min="1" step="1" value="${escapeHTML(String(defaults.interval_count || 1))}" />
         </div>
         <div class="field field--span-3" id="rr-weekday-wrap" style="display:none;">
-          <label>Jour de la semaine</label>
+          <label>${escapeHTML(rrT("recurring.label.weekday"))}</label>
           <select id="rr-weekday">
-            <option value="1" ${String(defaults.weekday || "1") === "1" ? "selected" : ""}>Lundi</option>
-            <option value="2" ${String(defaults.weekday || "") === "2" ? "selected" : ""}>Mardi</option>
-            <option value="3" ${String(defaults.weekday || "") === "3" ? "selected" : ""}>Mercredi</option>
-            <option value="4" ${String(defaults.weekday || "") === "4" ? "selected" : ""}>Jeudi</option>
-            <option value="5" ${String(defaults.weekday || "") === "5" ? "selected" : ""}>Vendredi</option>
-            <option value="6" ${String(defaults.weekday || "") === "6" ? "selected" : ""}>Samedi</option>
-            <option value="0" ${String(defaults.weekday || "") === "0" ? "selected" : ""}>Dimanche</option>
+            <option value="1" ${String(defaults.weekday || "1") === "1" ? "selected" : ""}>${escapeHTML(rrT("recurring.weekday.mon"))}</option>
+            <option value="2" ${String(defaults.weekday || "") === "2" ? "selected" : ""}>${escapeHTML(rrT("recurring.weekday.tue"))}</option>
+            <option value="3" ${String(defaults.weekday || "") === "3" ? "selected" : ""}>${escapeHTML(rrT("recurring.weekday.wed"))}</option>
+            <option value="4" ${String(defaults.weekday || "") === "4" ? "selected" : ""}>${escapeHTML(rrT("recurring.weekday.thu"))}</option>
+            <option value="5" ${String(defaults.weekday || "") === "5" ? "selected" : ""}>${escapeHTML(rrT("recurring.weekday.fri"))}</option>
+            <option value="6" ${String(defaults.weekday || "") === "6" ? "selected" : ""}>${escapeHTML(rrT("recurring.weekday.sat"))}</option>
+            <option value="0" ${String(defaults.weekday || "") === "0" ? "selected" : ""}>${escapeHTML(rrT("recurring.weekday.sun"))}</option>
           </select>
         </div>
         <div class="field field--span-3" id="rr-monthday-wrap">
-          <label>Jour du mois</label>
+          <label>${escapeHTML(rrT("recurring.label.monthday"))}</label>
           <input id="rr-monthday" type="number" min="1" max="31" placeholder="1-31" value="${escapeHTML(defaults.monthday)}" />
         </div>
         <div class="field field--span-2"><div class="muted" id="rr-frequency-help" style="margin-top:-2px;"></div></div>
-        <div class="tb-modal-section"><div class="tb-modal-section-title">Dates</div></div>
+        <div class="tb-modal-section"><div class="tb-modal-section-title">${escapeHTML(rrT("recurring.section.dates"))}</div></div>
         <div class="field field--span-3">
-          <label>Début</label>
+          <label>${escapeHTML(rrT("recurring.label.start"))}</label>
           <input id="rr-start-date" type="date" value="${escapeHTML(defaults.start_date || today)}" />
         </div>
         <div class="field field--span-3">
-          <label>Fin</label>
+          <label>${escapeHTML(rrT("recurring.label.end"))}</label>
           <input id="rr-end-date" type="date" value="${escapeHTML(defaults.end_date)}" />
         </div>
         <div class="field field--span-3">
-          <label>Occurrences max</label>
-          <input id="rr-max-occurrences" type="number" min="1" step="1" placeholder="Optionnel" value="${escapeHTML(defaults.max_occurrences)}" />
+          <label>${escapeHTML(rrT("recurring.label.max_occurrences"))}</label>
+          <input id="rr-max-occurrences" type="number" min="1" step="1" placeholder="${escapeHTML(rrT("recurring.placeholder.optional"))}" value="${escapeHTML(defaults.max_occurrences)}" />
         </div>
       </div>
     `);
@@ -622,9 +647,9 @@
     }
 
     modal.setActions([
-      { label: "Annuler", className: "btn", onClick: () => modal.close() },
+      { label: rrT("recurring.action.cancel"), className: "btn", onClick: () => modal.close() },
       {
-        label: isEditing ? "Enregistrer" : "Créer",
+        label: isEditing ? rrT("recurring.action.save") : rrT("recurring.action.create"),
         className: "btn primary",
         onClick: async () => {
           if (_rrSubmitting) return;
@@ -678,7 +703,7 @@
             if (typeof window.refreshFromServer === "function") await window.refreshFromServer();
             else if (typeof refreshFromServer === "function") await refreshFromServer();
             window.renderRecurringRules();
-            _tbToastOk(isEditing ? "Échéance mise à jour." : "Échéance créée.");
+            _tbToastOk(isEditing ? rrT("recurring.toast.updated") : rrT("recurring.toast.created"));
           } finally {
             _rrSubmitting = false;
           }
@@ -716,7 +741,15 @@
       .sort((a, b) => String(a?.nextDueAt || a?.next_due_at || "").localeCompare(String(b?.nextDueAt || b?.next_due_at || "")));
 
     if (!rows.length) {
-      host.innerHTML = `<div class="muted">Aucune échéance périodique sur ce voyage.</div>`;
+      host.innerHTML = `
+        <div class="tb-recurring-stack tb-recurring-stack--lines">
+          <div class="tb-recurring-global-head" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 0 6px; flex-wrap:wrap;">
+            <div class="muted">${escapeHTML(rrT("recurring.empty"))}</div>
+            <button class="btn primary" id="tb-recurring-add-btn" type="button">${escapeHTML(rrT("recurring.action.new"))}</button>
+          </div>
+        </div>
+      `;
+      _rrBindAddButton(host);
       return;
     }
     const listOpen = !!(window.__tbRecurringListOpenByTravel && window.__tbRecurringListOpenByTravel[tid]);
@@ -725,12 +758,12 @@
         <div class="tb-recurring-global-head" style="display:flex; align-items:stretch; justify-content:space-between; gap:12px; padding:0 0 6px;">
           <button type="button" class="tb-recurring-global-toggle" data-rr-act="toggle-list" style="display:flex; align-items:center; justify-content:space-between; gap:12px; border:0; background:transparent; padding:0; cursor:pointer; flex:1 1 auto; width:100%; text-align:left;">
             <span style="display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0;">
-              <span class="tb-settings-pill tb-settings-pill--positive">${rows.length} active${rows.length>1?'s':''}</span>
-              <span class="muted">Clique pour ${listOpen ? 'replier' : 'dérouler'} les échéances du voyage.</span>
+              <span class="tb-settings-pill tb-settings-pill--positive">${escapeHTML(rrT("recurring.active_count", { count: rows.length }))}</span>
+              <span class="muted">${escapeHTML(rrT(listOpen ? "recurring.toggle_hint.close" : "recurring.toggle_hint.open"))}</span>
             </span>
             <span class="tb-recurring-arrow" aria-hidden="true">${listOpen ? '⌄' : '›'}</span>
           </button>
-          <button class="btn primary" id="tb-recurring-add-btn">+ Nouvelle échéance</button>
+          <button class="btn primary" id="tb-recurring-add-btn">${escapeHTML(rrT("recurring.action.new"))}</button>
         </div>
         <div class="tb-recurring-lines-body" style="display:${listOpen ? '' : 'none'};">
         ${rows.map((r) => {
@@ -748,28 +781,23 @@
                 <span class="tb-recurring-meta-chip">${escapeHTML(_rrFmtDate(r.nextDueAt || r.next_due_at))}</span>
                 <span class="tb-recurring-meta-chip">${escapeHTML(walletName)}</span>
                 ${cat ? `<span class="tb-recurring-meta-chip">${escapeHTML(cat)}${sub?` · ${escapeHTML(sub)}`:''}</span>` : ``}
-                ${r.outOfBudget || r.out_of_budget ? `<span class="tb-settings-pill tb-settings-pill--warn">Hors budget</span>` : ``}
-                <span class="tb-settings-pill ${_rrStatus(r)==='active' ? 'tb-settings-pill--positive' : ''}">${escapeHTML(_rrStatus(r))}</span>
+                ${r.outOfBudget || r.out_of_budget ? `<span class="tb-settings-pill tb-settings-pill--warn">${escapeHTML(rrT("recurring.budget.out"))}</span>` : ``}
+                <span class="tb-settings-pill ${_rrIsActive(r) ? 'tb-settings-pill--positive' : ''}">${escapeHTML(_rrStatus(r))}</span>
               </div>
             </div>
             <div class="tb-recurring-actions">
-              <button class="btn" data-rr-act="edit" data-rr-id="${escapeHTML(r.id)}">Modifier</button>
-              ${_rrStatus(r) === "active" ? `<button class="btn btn--warn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">Pause</button>` : `<button class="btn btn--positive" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">Reprendre</button>`}
-              <button class="btn danger" data-rr-act="delete" data-rr-id="${escapeHTML(r.id)}">Supprimer</button>
+              <button class="btn" data-rr-act="edit" data-rr-id="${escapeHTML(r.id)}">${escapeHTML(rrT("recurring.action.edit"))}</button>
+              ${_rrIsActive(r) ? `<button class="btn btn--warn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">${escapeHTML(rrT("recurring.action.pause"))}</button>` : `<button class="btn btn--positive" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">${escapeHTML(rrT("recurring.action.resume"))}</button>`}
+              <button class="btn danger" data-rr-act="delete" data-rr-id="${escapeHTML(r.id)}">${escapeHTML(rrT("recurring.action.delete"))}</button>
             </div>
           </div>`;
         }).join("")}
         </div>
       </div>
     `;
-    const addBtn = host.querySelector("#tb-recurring-add-btn");
-    if (addBtn) {
-      addBtn.onclick = () => safeCall("Échéances périodiques", async () => {
-        window.openRecurringRuleModal();
-      });
-    }
+    _rrBindAddButton(host);
     host.querySelectorAll("[data-rr-act]").forEach((btn) => {
-      btn.onclick = (ev) => safeCall("Échéances périodiques", async () => {
+      btn.onclick = (ev) => safeCall(rrT("recurring.title"), async () => {
         const el = ev.currentTarget;
         const id = String(el?.dataset?.rrId || "").trim();
         const act = String(el?.dataset?.rrAct || "").trim();
@@ -790,22 +818,34 @@
         }
         if (act === "pause") {
           await _rrPauseRule(id);
-          _tbToastOk("Échéance mise en pause.");
+          _tbToastOk(rrT("recurring.toast.paused"));
           return;
         }
         if (act === "resume") {
           await _rrResumeRule(id);
-          _tbToastOk("Échéance reprise.");
+          _tbToastOk(rrT("recurring.toast.resumed"));
           return;
         }
         if (act === "delete") {
-          if (!confirm("Supprimer cette échéance périodique ?\n\nLes occurrences non payées seront supprimées, y compris celles passées non confirmées. Les occurrences payées resteront conservées.")) return;
+          if (!confirm(rrT("recurring.confirm.delete"))) return;
           await _rrArchive(id);
-          _tbToastOk("Échéance supprimée.");
+          _tbToastOk(rrT("recurring.toast.deleted"));
           return;
         }
         throw new Error("Action non reconnue.");
       });
     });
   };
+
+  try {
+    window.tbOnLangChange = window.tbOnLangChange || [];
+    if (!window.__tbRecurringLangBound) {
+      window.__tbRecurringLangBound = true;
+      window.tbOnLangChange.push(() => {
+        try {
+          if (typeof window.renderRecurringRules === "function") window.renderRecurringRules();
+        } catch (_) {}
+      });
+    }
+  } catch (_) {}
 })();

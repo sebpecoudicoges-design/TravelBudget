@@ -785,6 +785,11 @@ begin
     raise exception 'recurring rule not found';
   end if;
 
+  if auth.uid() is not null and r.user_id <> auth.uid() then
+    raise exception 'recurring rule not owned by current user'
+      using errcode = '42501';
+  end if;
+
   if not r.is_active or coalesce(r.archived, false) then
     return query
     select r.id, 0, 0, r.generated_until, r.next_due_at;
@@ -7602,6 +7607,7 @@ GRANT ALL ON FUNCTION "public"."recurring_generate_all_active"() TO "service_rol
 
 
 REVOKE ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") TO "service_role";
 
 
@@ -8152,7 +8158,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
 
 
 

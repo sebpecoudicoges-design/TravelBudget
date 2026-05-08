@@ -20,6 +20,7 @@
 };
 
   function esc(v){ try { return escapeHTML(String(v ?? '')); } catch(_) { return String(v ?? '').replace(/[&<>'"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c])); } }
+  function tr(k, vars){ try { return window.tbT ? window.tbT(k, vars) : k; } catch(_) { return k; } }
   function client(){ try{ if(typeof sb !== 'undefined' && sb && sb.from) return sb; }catch(_){} try{ if(window.sb && window.sb.from) return window.sb; }catch(_){} return null; }
   function table(name, fallback){ return (window.TB_CONST && window.TB_CONST.TABLES && window.TB_CONST.TABLES[name]) || fallback || name; }
   function key(name, fallback){ return (window.TB_CONST && window.TB_CONST.LS_KEYS && window.TB_CONST.LS_KEYS[name]) || fallback || name; }
@@ -529,8 +530,8 @@ function setSelectedSort(v){
   const allActive = !CACHE.selectedFolderId ? ' active' : '';
   return `<div class="tb-doc-sidebar">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <strong>Dossiers</strong>
-      <button class="btn" type="button" onclick="window.tbDocumentsCreateFolder()">+ Dossier</button>
+      <strong>${esc(tr('documents.folders'))}</strong>
+      <button class="btn" type="button" onclick="window.tbDocumentsCreateFolder()">${esc(tr('documents.folder.create'))}</button>
     </div>
 
     <button class="tb-doc-folder${allActive}" type="button" onclick="window.tbDocumentsSelectFolder('')">
@@ -543,7 +544,7 @@ function setSelectedSort(v){
       const collapsed = isFolderCollapsed(f.id);
       return `
       <div style="display:flex;gap:6px;align-items:center;">
-        ${children.length ? `<button class="btn" type="button" title="${collapsed ? 'Deplier' : 'Replier'}" onclick="window.tbDocumentsToggleFolderCollapsed('${esc(f.id)}')">${collapsed ? '+' : '-'}</button>` : `<span style="width:34px;"></span>`}
+        ${children.length ? `<button class="btn" type="button" title="${esc(collapsed ? tr('documents.folder.expand') : tr('documents.folder.collapse'))}" onclick="window.tbDocumentsToggleFolderCollapsed('${esc(f.id)}')">${collapsed ? '+' : '-'}</button>` : `<span style="width:34px;"></span>`}
         <button class="tb-doc-folder${String(f.id)===String(CACHE.selectedFolderId)?' active':''}"
           type="button"
           style="flex:1;"
@@ -554,21 +555,21 @@ function setSelectedSort(v){
 
         <button class="btn"
           type="button"
-          title="Sous-dossier"
+          title="${esc(tr('documents.folder.subfolder'))}"
           onclick="window.tbDocumentsCreateSubFolder('${esc(f.id)}')">
           +
         </button>
 
         <button class="btn"
           type="button"
-          title="Renommer"
+          title="${esc(tr('documents.folder.rename'))}"
           onclick="window.tbDocumentsRenameFolder('${esc(f.id)}')">
           ✏️
         </button>
 
         <button class="btn"
           type="button"
-          title="Supprimer"
+          title="${esc(tr('documents.folder.delete'))}"
           onclick="window.tbDocumentsDeleteFolder('${esc(f.id)}')">
           🗑️
         </button>
@@ -582,8 +583,8 @@ function setSelectedSort(v){
             <span>-- ${esc(sub.name)}</span>
             <small>${esc(folderCount(sub.id))}</small>
           </button>
-          <button class="btn" type="button" title="Renommer" onclick="window.tbDocumentsRenameFolder('${esc(sub.id)}')">Edit</button>
-          <button class="btn" type="button" title="Supprimer" onclick="window.tbDocumentsDeleteFolder('${esc(sub.id)}')">Del</button>
+          <button class="btn" type="button" title="${esc(tr('documents.folder.rename'))}" onclick="window.tbDocumentsRenameFolder('${esc(sub.id)}')">${esc(tr('documents.folder.rename'))}</button>
+          <button class="btn" type="button" title="${esc(tr('documents.folder.delete'))}" onclick="window.tbDocumentsDeleteFolder('${esc(sub.id)}')">${esc(tr('documents.folder.delete'))}</button>
         </div>
       `).join('')}
     `}).join('')}
@@ -656,10 +657,10 @@ function setSelectedSort(v){
     </select>
 
     <div class="tb-doc-card-actions">
-      <button class="btn primary" type="button" onclick="window.tbDocumentsPreview('${esc(d.id)}')">Ouvrir</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsRename('${esc(d.id)}')">Renommer</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsEditMeta('${esc(d.id)}')">Infos</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsDelete('${esc(d.id)}')">Supprimer</button>
+      <button class="btn primary" type="button" onclick="window.tbDocumentsPreview('${esc(d.id)}')">${esc(tr('documents.action.open'))}</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsRename('${esc(d.id)}')">${esc(tr('documents.action.rename'))}</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsEditMeta('${esc(d.id)}')">${esc(tr('documents.action.info'))}</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsDelete('${esc(d.id)}')">${esc(tr('documents.action.delete'))}</button>
     </div>
   </article>`;
 }
@@ -691,7 +692,7 @@ function setSelectedSort(v){
 
     <div class="tb-doc-toolbar">
       <div>
-        <strong>${esc(folder ? folder.name : 'Tous les documents')}</strong>
+        <strong>${esc(folder ? folder.name : tr('documents.folder.all'))}</strong>
         <div class="muted" style="font-size:12px;">
           ${esc(docs.length)} document(s)
         </div>
@@ -701,13 +702,13 @@ function setSelectedSort(v){
         <select class="input"
           onchange="window.tbDocumentsSetSort(this.value)">
           <option value="date_desc" ${sort==='date_desc'?'selected':''}>
-            Plus récents
+            ${esc(tr('documents.sort.date_desc'))}
           </option>
           <option value="name_asc" ${sort==='name_asc'?'selected':''}>
-            Nom A → Z
+            ${esc(tr('documents.sort.name_asc'))}
           </option>
           <option value="size_desc" ${sort==='size_desc'?'selected':''}>
-            Taille
+            ${esc(tr('documents.sort.size_desc'))}
           </option>
         </select>
 
@@ -716,7 +717,7 @@ function setSelectedSort(v){
           class="tb-doc-search"
           type="search"
           value="${esc(CACHE.search||'')}"
-          placeholder="Rechercher par nom…"
+          placeholder="${esc(tr('documents.search.placeholder'))}"
           oninput="window.tbDocumentsSetSearch(this.value)"
         />
       </div>
@@ -725,40 +726,40 @@ function setSelectedSort(v){
     <div class="tb-doc-dropzone"
       onclick="document.getElementById('tb-doc-file-input')?.click()">
       <div>
-        <strong>Glisse tes PDF ou images ici</strong>
-        <span>${esc(folder ? `Ajout dans « ${folder.name} »` : 'Ajout dans Non classé')}</span>
+        <strong>${esc(tr('documents.drop.title'))}</strong>
+        <span>${esc(folder ? tr('documents.drop.target_folder', { folder: folder.name }) : tr('documents.drop.target_unclassified'))}</span>
       </div>
-      <button class="btn primary" type="button" onclick="event.stopPropagation(); document.getElementById('tb-doc-file-input')?.click()">Ajouter</button>
+      <button class="btn primary" type="button" onclick="event.stopPropagation(); document.getElementById('tb-doc-file-input')?.click()">${esc(tr('documents.drop.add'))}</button>
     </div>
     <div class="tb-doc-filters">
-  <select class="input" onchange="window.tbDocumentsSetTagFilter(this.value)" title="Filtrer par tag">
-    <option value="" ${!tagFilter ? 'selected' : ''}>Tous les tags</option>
+  <select class="input" onchange="window.tbDocumentsSetTagFilter(this.value)" title="${esc(tr('documents.filter.tag_title'))}">
+    <option value="" ${!tagFilter ? 'selected' : ''}>${esc(tr('documents.filter.all_tags'))}</option>
     ${tags.map(t => `<option value="${esc(t)}" ${tagKey(t) === tagKey(tagFilter) ? 'selected' : ''}>${esc(t)}</option>`).join('')}
   </select>
   <button class="btn ${CACHE.onlyFavorites ? 'primary' : ''}" type="button" onclick="window.tbDocumentsToggleFavoritesFilter()">
-    ⭐ Favoris
+    ⭐ ${esc(tr('documents.filter.favorites'))}
   </button>
   <button class="btn ${CACHE.onlyExpiring ? 'primary' : ''}" type="button" onclick="window.tbDocumentsToggleExpiringFilter()">
-    ⏳ Expire bientôt
+    ⏳ ${esc(tr('documents.filter.expiring'))}
   </button>
   ${tagFilter ? `<button class="btn" type="button" onclick="window.tbDocumentsSetTagFilter('')">Tag: ${esc(tagFilter)} x</button>` : ''}
 </div>
     ${(CACHE.selectedIds || []).length ? `
   <div class="tb-doc-batchbar">
-    <strong>${esc((CACHE.selectedIds || []).length)} document(s) sélectionné(s)</strong>
+    <strong>${esc(tr('documents.batch.selected', { count: (CACHE.selectedIds || []).length }))}</strong>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <button class="btn" type="button" onclick="window.tbDocumentsSelectVisible()">Tout sélectionner</button>
-      <button class="btn primary" type="button" onclick="window.tbDocumentsShareSelected()">Partager</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsAddTagSelected()">Ajouter tag</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsMoveSelected()">Déplacer</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsDeleteSelected()">Supprimer</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsClearSelection()">Annuler</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsSelectVisible()">${esc(tr('documents.action.select_visible'))}</button>
+      <button class="btn primary" type="button" onclick="window.tbDocumentsShareSelected()">${esc(tr('documents.action.share'))}</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsAddTagSelected()">${esc(tr('documents.action.add_tag'))}</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsMoveSelected()">${esc(tr('documents.action.move'))}</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsDeleteSelected()">${esc(tr('documents.action.delete'))}</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsClearSelection()">${esc(tr('documents.action.cancel'))}</button>
     </div>
   </div>
 ` : ''}
     ${CACHE.uploading ? `<div class="tb-doc-uploading">${esc(CACHE.uploading)}</div>` : ''}
 
-    ${CACHE.loading ? '<div class="tb-doc-empty">Chargement des documents…</div>' : ''}
+    ${CACHE.loading ? `<div class="tb-doc-empty">${esc(tr('documents.loading'))}</div>` : ''}
 
     ${CACHE.error ? `
       <div class="tb-doc-empty">
@@ -774,7 +775,7 @@ function setSelectedSort(v){
     ` : ''}
 
     ${(!CACHE.loading && !CACHE.error && !docs.length)
-      ? '<div class="tb-doc-empty">Aucun document ici.</div>'
+      ? `<div class="tb-doc-empty">${esc(tr('documents.empty'))}</div>`
       : ''}
 
     ${(!CACHE.loading && !CACHE.error && docs.length)
@@ -788,10 +789,10 @@ function setSelectedSort(v){
     const el = root(); if(!el) return;
     el.className = 'card tb-doc-shell';
     el.innerHTML = `<div class="tb-doc-hero">
-      <div><div class="tb-doc-kicker">Coffre documentaire</div><h2>Documents</h2><p>Un espace simple pour stocker, nommer et retrouver tes documents personnels. V1 volontairement légère : dossiers, upload, preview, renommage.</p></div>
+      <div><div class="tb-doc-kicker">${esc(tr('documents.kicker'))}</div><h2>${esc(tr('documents.title'))}</h2><p>${esc(tr('documents.subtitle'))}</p></div>
       <div class="tb-doc-actions">
-        <button class="btn" type="button" onclick="window.tbDocumentsCreateFolder()">+ Dossier</button>
-        <button class="btn primary" type="button" onclick="document.getElementById('tb-doc-file-input')?.click()">+ Ajouter document</button>
+        <button class="btn" type="button" onclick="window.tbDocumentsCreateFolder()">${esc(tr('documents.folder.create'))}</button>
+        <button class="btn primary" type="button" onclick="document.getElementById('tb-doc-file-input')?.click()">${esc(tr('documents.action.add_document'))}</button>
         <input id="tb-doc-file-input" class="tb-doc-hidden-input" type="file" multiple accept="application/pdf,image/*" onchange="window.tbDocumentsUpload(this.files); this.value=''" />
       </div>
     </div>
@@ -1040,41 +1041,41 @@ function openInfoModal(doc){
 
   wrap.innerHTML = `
     <div class="tb-doc-modal">
-      <h3>Infos document</h3>
+      <h3>${esc(tr('documents.modal.info_title'))}</h3>
 
       <div class="tb-doc-form">
         <div>
-          <label>Tags</label>
+          <label>${esc(tr('documents.modal.tags'))}</label>
           <input id="tb-doc-info-tags" class="input" type="text" value="${esc(currentTags)}" placeholder="Australie, WHV, Banque" />
           ${suggestions.length ? `
             <div class="tb-doc-tags" style="margin-top:8px;">
               ${suggestions.map(t => `<button class="btn" type="button" data-tag="${esc(t)}" onclick="window.tbDocumentsToggleSuggestedTag(this.dataset.tag)">${esc(t)}</button>`).join('')}
             </div>
-            <div class="muted" style="font-size:12px;margin-top:4px;">Suggestions d'apres le nom du fichier. Clique pour ajouter, puis valide.</div>
+            <div class="muted" style="font-size:12px;margin-top:4px;">${esc(tr('documents.modal.suggestions_hint'))}</div>
           ` : ''}
         </div>
 
         <div>
-          <label>Dossier</label>
+          <label>${esc(tr('documents.modal.folder'))}</label>
           <select id="tb-doc-info-folder" class="input">
             ${folderOptionsHTML(doc.folder_id || '')}
           </select>
         </div>
 
         <div>
-          <label>Date d'expiration</label>
+          <label>${esc(tr('documents.modal.expiry'))}</label>
           <input id="tb-doc-info-expiry" class="input" type="date" value="${esc(currentExpiry)}" />
         </div>
 
         <div>
-          <label>Note libre</label>
+          <label>${esc(tr('documents.modal.notes'))}</label>
           <textarea id="tb-doc-info-notes" class="input" placeholder="Ex : original papier chez parents, contrat à renouveler…">${esc(currentNotes)}</textarea>
         </div>
       </div>
 
       <div class="tb-doc-modal-actions">
-        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">Annuler</button>
-        <button class="btn primary" type="button" onclick="window.tbDocumentsSaveInfo('${esc(doc.id)}')">Enregistrer</button>
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsSaveInfo('${esc(doc.id)}')">${esc(tr('documents.action.save'))}</button>
       </div>
     </div>
   `;
@@ -1308,21 +1309,21 @@ async function shareSelected(){
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
   wrap.innerHTML = `
     <div class="tb-doc-modal">
-      <h3>Partager ${esc(docs.length)} document(s)</h3>
+      <h3>${esc(tr('documents.share.title', { count: docs.length }))}</h3>
       <div class="tb-doc-form">
-        <label for="tb-doc-share-duration">Durée des liens temporaires</label>
+        <label for="tb-doc-share-duration">${esc(tr('documents.share.duration'))}</label>
         <select id="tb-doc-share-duration" class="input">
-          <option value="10m">10 minutes</option>
-          <option value="1h" selected>1 heure</option>
-          <option value="24h">24 heures</option>
+          <option value="10m">${esc(tr('documents.share.10m'))}</option>
+          <option value="1h" selected>${esc(tr('documents.share.1h'))}</option>
+          <option value="24h">${esc(tr('documents.share.24h'))}</option>
         </select>
         <p class="muted" style="font-size:13px;margin:0;">
-          Les liens donnent accès aux fichiers sélectionnés pendant la durée choisie.
+          ${esc(tr('documents.share.hint'))}
         </p>
       </div>
       <div class="tb-doc-modal-actions">
-        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">Annuler</button>
-        <button class="btn primary" type="button" onclick="window.tbDocumentsGenerateShareLinks()">Créer les liens</button>
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsGenerateShareLinks()">${esc(tr('documents.action.create_links'))}</button>
       </div>
     </div>
   `;
@@ -1362,15 +1363,15 @@ async function generateShareLinksSelected(){
     wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
     wrap.innerHTML = `
       <div class="tb-doc-modal">
-        <h3>Partager ${esc(links.length)} document(s)</h3>
+        <h3>${esc(tr('documents.share.title', { count: links.length }))}</h3>
         <p class="muted" style="font-size:13px;margin-top:-4px;">
-          Liens privés temporaires. Évite de les partager publiquement.
+          ${esc(tr('documents.share.private_hint'))}
         </p>
         <div class="tb-doc-modal-actions between" style="margin-top:10px;">
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn primary" type="button" onclick="window.tbDocumentsOpenShareEmail()">Préparer un email</button>
-            <button class="btn" type="button" onclick="window.tbDocumentsCopyShareLinks()">Copier les liens</button>
-            <button class="btn" type="button" onclick="window.tbDocumentsCopyShareBody()">Copier le message</button>
+            <button class="btn primary" type="button" onclick="window.tbDocumentsOpenShareEmail()">${esc(tr('documents.action.prepare_email'))}</button>
+            <button class="btn" type="button" onclick="window.tbDocumentsCopyShareLinks()">${esc(tr('documents.action.copy_links'))}</button>
+            <button class="btn" type="button" onclick="window.tbDocumentsCopyShareBody()">${esc(tr('documents.action.copy_message'))}</button>
           </div>
           <small class="muted">${esc(duration || '1h')}</small>
         </div>
@@ -1384,8 +1385,8 @@ async function generateShareLinksSelected(){
           `).join('')}
         </div>
         <div class="tb-doc-modal-actions">
-          <button class="btn" type="button" onclick="window.tbDocumentsShareSelected()">Recréer</button>
-          <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">Fermer</button>
+          <button class="btn" type="button" onclick="window.tbDocumentsShareSelected()">${esc(tr('documents.action.recreate'))}</button>
+          <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.close'))}</button>
         </div>
       </div>
     `;
@@ -1410,16 +1411,16 @@ async function moveSelected(){
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
   wrap.innerHTML = `
     <div class="tb-doc-modal">
-      <h3>Déplacer ${esc(docs.length)} document(s)</h3>
+      <h3>${esc(tr('documents.move.title', { count: docs.length }))}</h3>
       <div class="tb-doc-form">
-        <label for="tb-doc-batch-folder">Dossier de destination</label>
+        <label for="tb-doc-batch-folder">${esc(tr('documents.move.destination'))}</label>
         <select id="tb-doc-batch-folder" class="input">
           ${folderOptions.map(([id,label]) => `<option value="${esc(id)}">${esc(label)}</option>`).join('')}
         </select>
       </div>
       <div class="tb-doc-modal-actions">
-        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">Annuler</button>
-        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyMoveSelected()">Déplacer</button>
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyMoveSelected()">${esc(tr('documents.action.move'))}</button>
       </div>
     </div>
   `;
@@ -1468,20 +1469,20 @@ async function addTagSelected(){
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
   wrap.innerHTML = `
     <div class="tb-doc-modal">
-      <h3>Ajouter un tag à ${esc(docs.length)} document(s)</h3>
+      <h3>${esc(tr('documents.tag.title', { count: docs.length }))}</h3>
       <div class="tb-doc-form">
-        <label for="tb-doc-batch-tag">Tag</label>
-        <input id="tb-doc-batch-tag" class="input" list="tb-doc-known-tags" placeholder="Ex: Contrat" autocomplete="off" />
+        <label for="tb-doc-batch-tag">${esc(tr('documents.tag.label'))}</label>
+        <input id="tb-doc-batch-tag" class="input" list="tb-doc-known-tags" placeholder="${esc(tr('documents.tag.placeholder'))}" autocomplete="off" />
         <datalist id="tb-doc-known-tags">
           ${tags.map(t => `<option value="${esc(t)}"></option>`).join('')}
         </datalist>
         <p class="muted" style="font-size:13px;margin:0;">
-          Si le tag existe déjà sur un document, il sera simplement ignoré pour ce document.
+          ${esc(tr('documents.tag.hint'))}
         </p>
       </div>
       <div class="tb-doc-modal-actions">
-        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">Annuler</button>
-        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyAddTagSelected()">Ajouter</button>
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyAddTagSelected()">${esc(tr('documents.drop.add'))}</button>
       </div>
     </div>
   `;
@@ -1571,6 +1572,13 @@ async function deleteSelected(){
 }
   window.renderDocuments = function renderDocuments(){ ensureLoaded(); };
   window.tbDocumentsRenderOnly = renderShell;
+  try {
+    window.tbOnLangChange = window.tbOnLangChange || [];
+    if(!window.__tbDocumentsLangBound){
+      window.__tbDocumentsLangBound = true;
+      window.tbOnLangChange.push(() => renderShell());
+    }
+  } catch(_) {}
   window.tbDocumentsSetSearch = function(v){ CACHE.search = String(v || ''); renderShell(); }; 
   window.tbDocumentsSetTagFilter = function(v){ setSelectedTagFilter(v); renderShell(); };
   window.tbDocumentsSelectFolder = function(id){ setSelectedFolderId(id); renderShell(); };

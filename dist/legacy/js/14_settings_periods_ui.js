@@ -448,6 +448,11 @@ function _tbSettingsDecoratePanels(view){
 }
 
 function renderSettings(){
+  const T = (window.tbT ? tbT : (k, vars) => {
+    let s = String(k || "");
+    if (vars && typeof vars === "object") Object.keys(vars).forEach((v) => { s = s.replaceAll(`{${v}}`, String(vars[v])); });
+    return s;
+  });
   const view = document.getElementById("view-settings");
   if(!view) return;
 
@@ -635,41 +640,41 @@ function renderSettings(){
       const thrDisp = (thrInBase === null || !Number.isFinite(thrInBase)) ? "" : String(Math.round(thrInBase));
 
       box.innerHTML = `
-        <div class="muted" style="margin-bottom:10px;">Devise de base, mode d’interface, seuil d’alerte et mot de passe.</div>
+        <div class="muted" style="margin-bottom:10px;">${T("settings.account.summary")}</div>
 
         <div class="row" style="gap:12px; align-items:end; flex-wrap:wrap;">
           <div class="field" style="min-width:260px;">
-            <label>Email</label>
+            <label>${T("settings.account.email")}</label>
             <input id="tb-account-email" type="text" value="—" disabled />
           </div>
 
           <div class="field" style="min-width:160px;">
-            <label>Devise de base</label>
+            <label>${T("settings.account.base_currency")}</label>
             <select id="tb-user-basecur">
               ${opts.map(c=>`<option value="${escapeHTML(c)}" ${String(c).toUpperCase()===cur?"selected":""}>${escapeHTML(c)}</option>`).join("")}
             </select>
           </div>
 
           <div class="field" style="min-width:190px;">
-            <label>Mode d’interface</label>
+            <label>${T("settings.account.ui_mode")}</label>
             <select id="tb-user-uimode">
-              <option value="simple" ${(typeof window.tbIsSimpleMode === 'function' && window.tbIsSimpleMode()) ? 'selected' : ''}>Simple</option>
-              <option value="advanced" ${(typeof window.tbIsSimpleMode === 'function' && !window.tbIsSimpleMode()) ? 'selected' : ''}>Avancé</option>
+              <option value="simple" ${(typeof window.tbIsSimpleMode === 'function' && window.tbIsSimpleMode()) ? 'selected' : ''}>${T("settings.account.mode.simple")}</option>
+              <option value="advanced" ${(typeof window.tbIsSimpleMode === 'function' && !window.tbIsSimpleMode()) ? 'selected' : ''}>${T("settings.account.mode.advanced")}</option>
             </select>
           </div>
 
-          <button class="btn" id="tb-user-basecur-save" type="button">Enregistrer</button>
-          <button class="btn" id="tb-user-uimode-save" type="button">Enregistrer mode</button>
-          <button class="btn" id="tb-user-resetpwd" type="button">Reset mot de passe</button>
+          <button class="btn" id="tb-user-basecur-save" type="button">${T("settings.account.save")}</button>
+          <button class="btn" id="tb-user-uimode-save" type="button">${T("settings.account.save_mode")}</button>
+          <button class="btn" id="tb-user-resetpwd" type="button">${T("settings.account.reset_password")}</button>
         </div>
 
         <div class="row tb-advanced-only" style="gap:12px; align-items:end; flex-wrap:wrap; margin-top:10px;">
           <div class="field" style="min-width:220px;">
-            <label>Seuil courbe trésorerie</label>
+            <label>${T("settings.account.cashflow_threshold")}</label>
             <input id="tb-user-cfthr" type="number" min="1" step="1" value="${escapeHTML(thrDisp || "")}" />
           </div>
-          <div class="muted" style="padding-bottom:6px;">Référence ${escapeHTML(String(Math.round(thrEur)))} EUR · ajustée si tu changes la devise de base</div>
-          <button class="btn" id="tb-user-cfthr-save" type="button">Enregistrer seuil</button>
+          <div class="muted" style="padding-bottom:6px;">${T("settings.account.cashflow_reference", { amount: escapeHTML(String(Math.round(thrEur))) })}</div>
+          <button class="btn" id="tb-user-cfthr-save" type="button">${T("settings.account.save_threshold")}</button>
         </div>
       `;
 
@@ -820,19 +825,19 @@ function renderSettings(){
     manualPanel.innerHTML = `
       <div data-act="mf-toggle" style="display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer;">
         <div>
-          <b>Change</b>
-          <span class="muted">Taux des devises gérées manuellement</span>
+          <b>${T("settings.fx.title")}</b>
+          <span class="muted">${T("settings.fx.subtitle")}</span>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
-          ${manualList.some(x=>x.stale) ? '<span class="tb-fx-alert-badge">⚠ À mettre à jour</span>' : '<span class="tb-fx-ok-badge">OK</span>'}
-          <button class="btn" data-act="mf-add" title="Ajouter/mettre à jour un taux perso">Ajouter</button><span class="tb-recurring-arrow" data-manual-fx-arrow>›</span>
+          ${manualList.some(x=>x.stale) ? `<span class="tb-fx-alert-badge">⚠ ${T("settings.fx.update_needed")}</span>` : '<span class="tb-fx-ok-badge">OK</span>'}
+          <button class="btn" data-act="mf-add" title="${T("settings.fx.add_title")}">${T("settings.fx.add")}</button><span class="tb-recurring-arrow" data-manual-fx-arrow>›</span>
         </div>
       </div>
       <div data-manual-fx-list style="margin-top:8px; overflow:auto; display:none;">
         ${manualList.length ? `
           <table class="table" style="width:100%; min-width:520px;">
             <thead><tr>
-              <th>Devise</th><th>Taux</th><th>Date</th><th>Statut</th><th style="text-align:right;">Actions</th>
+              <th>${T("settings.fx.currency")}</th><th>${T("settings.fx.rate")}</th><th>${T("settings.fx.date")}</th><th>${T("settings.fx.status")}</th><th style="text-align:right;">${T("settings.fx.actions")}</th>
             </tr></thead>
             <tbody>
               ${manualList.map(x => `
@@ -840,16 +845,16 @@ function renderSettings(){
                   <td><b>${escapeHTML(x.c)}</b></td>
                   <td>${escapeHTML(String(Number(x.rate).toFixed(6)).replace(/\.0+$/,''))}</td>
                   <td>${escapeHTML(x.asOf || "—")}</td>
-                  <td>${x.stale ? '<span class="tb-fx-alert-badge">⚠ À mettre à jour</span>' : '<span class="tb-fx-ok-badge">OK</span>'}</td>
+                  <td>${x.stale ? `<span class="tb-fx-alert-badge">⚠ ${T("settings.fx.update_needed")}</span>` : '<span class="tb-fx-ok-badge">OK</span>'}</td>
                   <td style="text-align:right; white-space:nowrap;">
-                    <button class="btn" data-act="mf-edit" data-cur="${escapeHTML(x.c)}">Modifier</button>
-                    <button class="btn danger" data-act="mf-del" data-cur="${escapeHTML(x.c)}">Supprimer</button>
+                    <button class="btn" data-act="mf-edit" data-cur="${escapeHTML(x.c)}">${T("settings.fx.edit")}</button>
+                    <button class="btn danger" data-act="mf-del" data-cur="${escapeHTML(x.c)}">${T("settings.fx.delete")}</button>
                   </td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
-        ` : `<div class="muted">Aucun taux perso enregistré. Utilise ce bloc seulement si tu veux forcer un taux.</div>`}
+        ` : `<div class="muted">${T("settings.fx.empty")}</div>`}
       </div>
     `;
     (manualHost || host).appendChild(manualPanel);
@@ -2219,6 +2224,15 @@ async function _syncVoyageBoundsToSegments(pid, start, end){
 /* ---------- legacy globals expected by index.html ---------- */
 
 window.renderSettings = renderSettings;
+try {
+  window.tbOnLangChange = window.tbOnLangChange || [];
+  if (!window.__tbSettingsLangBound) {
+    window.__tbSettingsLangBound = true;
+    window.tbOnLangChange.push(() => {
+      try { if (typeof renderSettings === "function") renderSettings(); } catch (_) {}
+    });
+  }
+} catch (_) {}
 window.saveSettings = ()=>safeCall("Enregistrer voyage", _saveSettingsImpl);
 window.createPeriodPrompt = ()=>safeCall("Ajouter période", _createPeriodPromptImpl);
 window.deleteActivePeriod = ()=>_tbToastOk("Suppression de période: utilise le bouton Supprimer sur une période.");

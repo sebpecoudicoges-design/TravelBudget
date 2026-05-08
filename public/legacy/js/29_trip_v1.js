@@ -153,6 +153,14 @@ async function _rpcBindMe(tripId) {
       .replace(/'/g, "&#039;");
   }
 
+  function _tripT(key, vars) {
+    try {
+      return window.tbT ? window.tbT(key, vars) : key;
+    } catch (_) {
+      return key;
+    }
+  }
+
   
 function _shareText(text) {
   try {
@@ -3416,37 +3424,37 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
   }
 
   function _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal = false }) {
-    const title = editingExpenseId ? "Modifier la dépense" : "Dépense";
+    const title = editingExpenseId ? _tripT("trip.expense.edit") : _tripT("trip.expense");
     const subtitle = editingExpenseId
-      ? `<div class="muted" style="margin:4px 0 10px 0;">Édition complète : split, wallet et budget seront recalculés proprement.</div>`
+      ? `<div class="muted" style="margin:4px 0 10px 0;">${escapeHTML(_tripT("trip.expense.edit_hint"))}</div>`
       : ``;
     const body = `
       <div class="row">
         <div class="field" style="min-width:220px;">
-          <label>Payé par</label>
+          <label>${escapeHTML(_tripT("trip.expense.paid_by"))}</label>
           <select id="trip-exp-paidby">${memberOptions}</select>
         </div>
       </div>
       <div class="row">
         <div class="field" style="min-width:220px;">
-          <label>Wallet (si payé par moi)</label>
+          <label>${escapeHTML(_tripT("trip.expense.wallet"))}</label>
           <select id="trip-exp-wallet">
             <option value="">—</option>
             ${walletOptions}
           </select>
         </div>
         <div class="field" style="min-width:200px;">
-          <label>Catégorie (Budget)</label>
+          <label>${escapeHTML(_tripT("trip.expense.category"))}</label>
           <select id="trip-exp-category">
             ${categoryOptions}
           </select>
         </div>
         <div class="field" style="min-width:220px;">
-          <label>Sous-catégorie</label>
+          <label>${escapeHTML(_tripT("trip.expense.subcategory"))}</label>
           <select id="trip-exp-subcategory"></select>
         </div>
         <div class="field" style="min-width:180px;">
-          <label>Hors budget</label>
+          <label>${escapeHTML(_tripT("trip.expense.out_budget"))}</label>
           <select id="trip-exp-out">
             <option value="no">Non</option>
             <option value="yes">Oui</option>
@@ -3455,15 +3463,15 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       </div>
       <div class="row">
         <div class="field" style="flex:1;">
-          <label>Libellé</label>
-          <input id="trip-exp-label" placeholder="Ex: Dîner" value="${escapeHTML(editingDraft?.label || "")}" />
+          <label>${escapeHTML(_tripT("trip.expense.label"))}</label>
+          <input id="trip-exp-label" placeholder="${escapeHTML(_tripT("trip.expense.label_placeholder"))}" value="${escapeHTML(editingDraft?.label || "")}" />
         </div>
         <div class="field" style="max-width:160px;">
-          <label>Montant</label>
+          <label>${escapeHTML(_tripT("trip.expense.amount"))}</label>
           <input id="trip-exp-amount" type="number" step="0.01" placeholder="0" value="${editingDraft?.amount ?? ""}" />
         </div>
         <div class="field" style="max-width:180px;">
-          <label>Devise</label>
+          <label>${escapeHTML(_tripT("trip.expense.currency"))}</label>
           <select id="trip-exp-currency">
             ${_tripCurrencyOptionsHTML(editingDraft?.currency || trip?.base_currency || state?.period?.baseCurrency || "THB")}
           </select>
@@ -3472,34 +3480,34 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       </div>
       <div class="row">
         <div class="field">
-          <label>Date dépense (cash)</label>
+          <label>${escapeHTML(_tripT("trip.expense.cash_date"))}</label>
           <input id="trip-exp-date" type="date" value="${escapeHTML(editingDraft?.date || toLocalISODate(new Date()))}" />
         </div>
         <div class="field">
-          <label>Budget start</label>
+          <label>${escapeHTML(_tripT("trip.expense.budget_start"))}</label>
           <input id="trip-exp-budget-start" type="date" value="${escapeHTML(editingDraft?.budgetDateStart || editingDraft?.date || toLocalISODate(new Date()))}" />
         </div>
         <div class="field">
-          <label>Budget end</label>
+          <label>${escapeHTML(_tripT("trip.expense.budget_end"))}</label>
           <input id="trip-exp-budget-end" type="date" value="${escapeHTML(editingDraft?.budgetDateEnd || editingDraft?.budgetDateStart || editingDraft?.date || toLocalISODate(new Date()))}" />
         </div>
       </div>
       <div class="row" style="align-items:flex-end; gap:12px; margin-top:6px;">
         <div class="field" style="min-width:220px;">
-          <label>Répartition</label>
+          <label>${escapeHTML(_tripT("trip.expense.split"))}</label>
           <select id="trip-split-mode">
-            <option value="equal">Égal</option>
+            <option value="equal">${escapeHTML(_tripT("trip.expense.split_equal"))}</option>
             <option value="percent">%</option>
-            <option value="amount">Montants</option>
+            <option value="amount">${escapeHTML(_tripT("trip.expense.split_amounts"))}</option>
           </select>
         </div>
       </div>
       <div id="trip-split-participants-box" style="margin-top:6px;"></div>
 <div id="trip-split-box" style="margin-top:6px;"></div>
-      <div class="muted" style="margin-top:6px;">Si tu payes pour plusieurs, la wallet est débitée du total mais le budget ne comptera que ta part.</div>
+      <div class="muted" style="margin-top:6px;">${escapeHTML(_tripT("trip.expense.budget_hint"))}</div>
       <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
-        ${editingExpenseId ? `<button class="btn" type="button" id="trip-cancel-edit-exp">Annuler modification</button>` : ``}
-        <button class="btn primary" id="trip-add-exp" ${canWrite ? "" : "disabled"} ${trip ? "" : "disabled"}>${editingExpenseId ? "Enregistrer modifications" : "Ajouter dépense"}</button>
+        ${editingExpenseId ? `<button class="btn" type="button" id="trip-cancel-edit-exp">${escapeHTML(_tripT("trip.expense.cancel_edit"))}</button>` : ``}
+        <button class="btn primary" id="trip-add-exp" ${canWrite ? "" : "disabled"} ${trip ? "" : "disabled"}>${escapeHTML(editingExpenseId ? _tripT("trip.expense.save_edit") : _tripT("trip.expense.add"))}</button>
       </div>`;
 
     if (!modal) {
@@ -3534,16 +3542,16 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       card.innerHTML = `
         <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
           <div style="min-width:280px; flex:1;">
-            <h2 style="margin:0 0 8px 0;">Bien utiliser Partage</h2>
+            <h2 style="margin:0 0 8px 0;">${escapeHTML(_tripT("trip.help.title"))}</h2>
             <div class="muted">
-              <div>• <b>Payé par moi</b> : la wallet peut être débitée du total.</div>
-              <div>• <b>Budget</b> : seule ta part doit rester dans ton budget journalier.</div>
-              <div>• <b>Règlement</b> : sert à solder entre participants ; avec wallet, il crée aussi un vrai mouvement.</div>
+              <div>• ${escapeHTML(_tripT("trip.help.paid_by_me"))}</div>
+              <div>• ${escapeHTML(_tripT("trip.help.budget"))}</div>
+              <div>• ${escapeHTML(_tripT("trip.help.settlement"))}</div>
             </div>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn" type="button" onclick="showView('help')">Aide</button>
-            <button class="btn" type="button" data-trip-help-close="1">Masquer</button>
+            <button class="btn" type="button" onclick="showView('help')">${escapeHTML(_tripT("trip.help.open"))}</button>
+            <button class="btn" type="button" data-trip-help-close="1">${escapeHTML(_tripT("trip.help.hide"))}</button>
           </div>
         </div>`;
       root.prepend(card);
@@ -3783,36 +3791,36 @@ return `
       ${globalNetHTML}
       <div class="grid">
         <div class="card">
-          <h2>Partage</h2>
+          <h2>${escapeHTML(_tripT("trip.title"))}</h2>
           <div class="row" style="margin-bottom:10px;">
             <div class="field" style="min-width:260px;">
-              <label>Partage actif</label>
+              <label>${escapeHTML(_tripT("trip.active"))}</label>
               <select id="trip-active">${tripOptions || ""}</select>
             </div>
             <div class="field" style="flex:1;">
-              <label>Nouveau partage</label>
+              <label>${escapeHTML(_tripT("trip.new"))}</label>
               <input id="trip-new-name" placeholder="Ex: Laos" />
             </div>
             <div class="field" style="align-self:flex-end;">
-              <button class="btn primary" id="trip-create">Créer</button>
+              <button class="btn primary" id="trip-create">${escapeHTML(_tripT("trip.create"))}</button>
             </div>
             <div class="field" style="align-self:flex-end;">
-              <button class="btn danger" id="trip-delete" ${trip ? "" : "disabled"}>Supprimer</button>
+              <button class="btn danger" id="trip-delete" ${trip ? "" : "disabled"}>${escapeHTML(_tripT("trip.delete"))}</button>
             </div>
           </div>
 
-          <h2 style="margin-top:14px;">Participants</h2>
+          <h2 style="margin-top:14px;">${escapeHTML(_tripT("trip.participants"))}</h2>
           <div class="row" style="margin-bottom:10px;">
             <div class="field" style="flex:1;">
-              <label>Nom</label>
+              <label>${escapeHTML(_tripT("trip.member.name"))}</label>
               <input id="trip-member-name" placeholder="Ex: Paul" />
             </div>
             <div class="field" style="min-width:240px;">
-              <label>Email (optionnel)</label>
+              <label>${escapeHTML(_tripT("trip.member.email"))}</label>
               <input id="trip-member-email" placeholder="ex: paul@email.com" />
             </div>
             <div class="field" style="align-self:flex-end;">
-              <button class="btn" id="trip-add-member" ${trip ? "" : "disabled"}>Ajouter</button>
+              <button class="btn" id="trip-add-member" ${trip ? "" : "disabled"}>${escapeHTML(_tripT("trip.member.add"))}</button>
             </div>
           </div>
 
@@ -3828,15 +3836,15 @@ return `
                     ${m.email ? escapeHTML(m.email) : `<em>invitation en attente</em>`}
                   </div>
                 </div>
-                ${canWrite ? `<button class="btn" type="button" data-rename-member="${m.id}">Renommer</button>` : ``}
-                <button class="btn danger" data-del-member="${m.id}">Supprimer</button>
+                ${canWrite ? `<button class="btn" type="button" data-rename-member="${m.id}">${escapeHTML(_tripT("trip.member.rename"))}</button>` : ``}
+                <button class="btn danger" data-del-member="${m.id}">${escapeHTML(_tripT("trip.delete"))}</button>
               </div>
             `).join("") : `<div class="muted">Aucun participant.</div>`}
           </div>
         </div>
 
         ${editingExpenseId
-          ? `<div class="card"><h2>Dépense</h2><div class="muted">Ajout rapide disponible hors édition. La modification s’ouvre dans une fenêtre dédiée.</div></div>`
+          ? `<div class="card"><h2>${escapeHTML(_tripT("trip.expense"))}</h2><div class="muted">${escapeHTML(_tripT("trip.expense.quick_hint"))}</div></div>`
           : _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal: false })}
       </div>
 
@@ -3844,15 +3852,15 @@ return `
         <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
           <h2 style="margin:0;">Récap / Historique</h2>
           <div class="trip-tabs">
-            <button class="btn primary" id="trip-tab-recap" type="button">Récap</button>
-            <button class="btn trip-tab-btn" id="trip-tab-history" type="button">Historique</button>
+            <button class="btn primary" id="trip-tab-recap" type="button">${escapeHTML(_tripT("trip.tabs.recap"))}</button>
+            <button class="btn trip-tab-btn" id="trip-tab-history" type="button">${escapeHTML(_tripT("trip.tabs.history"))}</button>
           </div>
         </div>
 
         <div id="trip-tab-content-recap" style="margin-top:10px; display:grid; gap:14px;">
           <div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">
             <div style="flex:1 1 260px; min-width:260px;">
-              <h3 style="margin:0 0 8px 0;">Balances</h3>
+              <h3 style="margin:0 0 8px 0;">${escapeHTML(_tripT("trip.balances"))}</h3>
               ${balHTML}
             </div>
             <div style="flex:2 1 320px; min-width:320px;">
@@ -3866,18 +3874,18 @@ return `
           <div class="card trip-history-toolbar">
             <div class="muted trip-history-toolbar-copy">Filtres d'audit du trip actif. Ils ne portent que sur l'historique du partage sélectionné.</div>
             <div class="trip-filter-grid">
-              <div class="field"><label>Catégorie</label><select id="trip-hist-category"><option value="">Toutes</option>${historyCategoryOptions.map((cat) => `<option value="${escapeHTML(cat)}" ${historyFilters.category === cat ? 'selected' : ''}>${escapeHTML(cat)}</option>`).join('')}</select></div>
-              <div class="field"><label>Payeur</label><select id="trip-hist-payer"><option value="">Tous</option>${members.map((m) => `<option value="${m.id}" ${historyFilters.payer === String(m.id) ? 'selected' : ''}>${escapeHTML(m.name)}</option>`).join('')}</select></div>
-              <div class="field"><label>Participant</label><select id="trip-hist-participant"><option value="">Tous</option>${members.map((m) => `<option value="${m.id}" ${historyFilters.participant === String(m.id) ? 'selected' : ''}>${escapeHTML(m.name)}</option>`).join('')}</select></div>
-              <div class="field"><label>Date min</label><input id="trip-hist-date-from" type="date" value="${escapeHTML(historyFilters.dateFrom)}" /></div>
-              <div class="field"><label>Date max</label><input id="trip-hist-date-to" type="date" value="${escapeHTML(historyFilters.dateTo)}" /></div>
-              <div class="field"><label>Montant min</label><input id="trip-hist-amount-min" type="number" step="0.01" value="${escapeHTML(historyFilters.amountMin)}" placeholder="0" /></div>
-              <div class="field"><label>Montant max</label><input id="trip-hist-amount-max" type="number" step="0.01" value="${escapeHTML(historyFilters.amountMax)}" placeholder="0" /></div>
-              <div class="field"><label>Recherche</label><input id="trip-hist-q" type="text" value="${escapeHTML(historyFilters.q)}" placeholder="Libellé, montant, participant…" /></div>
+              <div class="field"><label>${escapeHTML(_tripT("trip.history.category"))}</label><select id="trip-hist-category"><option value="">${escapeHTML(_tripT("common.all"))}</option>${historyCategoryOptions.map((cat) => `<option value="${escapeHTML(cat)}" ${historyFilters.category === cat ? 'selected' : ''}>${escapeHTML(cat)}</option>`).join('')}</select></div>
+              <div class="field"><label>${escapeHTML(_tripT("trip.history.payer"))}</label><select id="trip-hist-payer"><option value="">${escapeHTML(_tripT("common.all_m"))}</option>${members.map((m) => `<option value="${m.id}" ${historyFilters.payer === String(m.id) ? 'selected' : ''}>${escapeHTML(m.name)}</option>`).join('')}</select></div>
+              <div class="field"><label>${escapeHTML(_tripT("trip.history.participant"))}</label><select id="trip-hist-participant"><option value="">${escapeHTML(_tripT("common.all_m"))}</option>${members.map((m) => `<option value="${m.id}" ${historyFilters.participant === String(m.id) ? 'selected' : ''}>${escapeHTML(m.name)}</option>`).join('')}</select></div>
+              <div class="field"><label>${escapeHTML(_tripT("trip.history.date_from"))}</label><input id="trip-hist-date-from" type="date" value="${escapeHTML(historyFilters.dateFrom)}" /></div>
+              <div class="field"><label>${escapeHTML(_tripT("trip.history.date_to"))}</label><input id="trip-hist-date-to" type="date" value="${escapeHTML(historyFilters.dateTo)}" /></div>
+              <div class="field"><label>${escapeHTML(_tripT("trip.history.amount_min"))}</label><input id="trip-hist-amount-min" type="number" step="0.01" value="${escapeHTML(historyFilters.amountMin)}" placeholder="0" /></div>
+              <div class="field"><label>${escapeHTML(_tripT("trip.history.amount_max"))}</label><input id="trip-hist-amount-max" type="number" step="0.01" value="${escapeHTML(historyFilters.amountMax)}" placeholder="0" /></div>
+              <div class="field"><label>${escapeHTML(_tripT("trip.history.search"))}</label><input id="trip-hist-q" type="text" value="${escapeHTML(historyFilters.q)}" placeholder="${escapeHTML(_tripT("trip.history.search_placeholder"))}" /></div>
             </div>
             <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-              <button class="btn" type="button" id="trip-hist-apply">Appliquer</button>
-              <button class="btn" type="button" id="trip-hist-reset" style="background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);">Réinitialiser</button>
+              <button class="btn" type="button" id="trip-hist-apply">${escapeHTML(_tripT("trip.history.apply"))}</button>
+              <button class="btn" type="button" id="trip-hist-reset" style="background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);">${escapeHTML(_tripT("trip.history.reset"))}</button>
               <span class="muted">${filteredExpenses.length} / ${expenses.length} dépense(s)</span>
             </div>
           </div>
@@ -4588,7 +4596,7 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
     const root = _root();
     if (!root) return;
 
-    root.innerHTML = `<div class="card"><div class="muted">Chargement…</div></div>`;
+    root.innerHTML = `<div class="card"><div class="muted">${escapeHTML(_tripT("common.loading"))}</div></div>`;
     try {
       await _ensureSession();
       await _acceptInviteFromURL();
@@ -4605,4 +4613,16 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
       `;
     }
   };
+
+  try {
+    window.tbOnLangChange = window.tbOnLangChange || [];
+    if (!window.__tbTripLangBound) {
+      window.__tbTripLangBound = true;
+      window.tbOnLangChange.push(() => {
+        try {
+          if (typeof window.renderTrip === "function") window.renderTrip();
+        } catch (_) {}
+      });
+    }
+  } catch (_) {}
 })();

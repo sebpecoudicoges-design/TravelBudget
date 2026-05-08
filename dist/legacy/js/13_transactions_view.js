@@ -3,6 +3,10 @@ const TB_TX_BULK = window.__TB_TX_BULK || (window.__TB_TX_BULK = {
   visibleIds: [],
 });
 
+function _txT(k, vars) {
+  try { return window.tbT ? window.tbT(k, vars) : k; } catch (_) { return k; }
+}
+
 function _txBulkVisibleSelectionCount() {
   return (TB_TX_BULK.visibleIds || []).filter((id) => TB_TX_BULK.selectedIds.has(id)).length;
 }
@@ -126,6 +130,16 @@ function _fmtMoney(v, cur){
     return `${Number.isFinite(n) ? n.toFixed(2) : '0.00'} ${cur || ''}`.trim();
   }
 }
+
+try {
+  window.tbOnLangChange = window.tbOnLangChange || [];
+  if (!window.__tbTransactionsLangBound) {
+    window.__tbTransactionsLangBound = true;
+    window.tbOnLangChange.push(() => {
+      try { if (typeof renderTransactions === "function") renderTransactions(); } catch (_) {}
+    });
+  }
+} catch (_) {}
 
 function _txEl(id){ return document.getElementById(id); }
 
@@ -279,16 +293,16 @@ function _txEnsureHelpUI() {
   wrap.innerHTML = `
     <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
       <div style="min-width:260px; flex:1;">
-        <div style="font-weight:700; margin-bottom:6px;">Comment lire les transactions</div>
+        <div style="font-weight:700; margin-bottom:6px;">${_txT("transactions.help.title")}</div>
         <div class="muted">
-          <div>• <b>Payé</b> impacte la wallet tout de suite.</div>
-          <div>• <b>À payer</b> reste planifié, sans sortir du cash pour l’instant.</div>
-          <div>• <b>Hors budget</b> n’alimente pas le budget/jour, mais peut quand même toucher la wallet.</div>
+          <div>• ${_txT("transactions.help.paid")}</div>
+          <div>• ${_txT("transactions.help.unpaid")}</div>
+          <div>• ${_txT("transactions.help.out")}</div>
         </div>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn" type="button" onclick="showView('help')">Aide</button>
-        <button class="btn" type="button" data-tx-help-close="1">Masquer</button>
+        <button class="btn" type="button" onclick="showView('help')">${_txT("nav.help")}</button>
+        <button class="btn" type="button" data-tx-help-close="1">${_txT("transactions.help.hide")}</button>
       </div>
     </div>`;
   const firstField = anchor.closest('.row') || anchor.closest('.field') || anchor;
@@ -323,7 +337,7 @@ function _txFillSubcategoryFilterSelect(categoryValue, preserveValue) {
   const activeCategory = cat && cat !== "all" ? cat : "";
 
   if (!activeCategory) {
-    fSub.innerHTML = `<option value="all">Toutes</option>`;
+    fSub.innerHTML = `<option value="all">${_txT("transactions.option.all_f")}</option>`;
     fSub.value = "all";
     fSub.disabled = true;
     return;
@@ -334,8 +348,8 @@ function _txFillSubcategoryFilterSelect(categoryValue, preserveValue) {
     : [];
 
   const options = [
-    `<option value="all">Toutes</option>`,
-    `<option value="__none__">Aucune</option>`
+    `<option value="all">${_txT("transactions.option.all_f")}</option>`,
+    `<option value="__none__">${_txT("transactions.option.none_f")}</option>`
   ];
   rows.forEach((row) => {
     const name = String(row?.name || "").trim();
@@ -361,8 +375,8 @@ function fillFilterSelects() {
   const prevCat = fCat.value;
   const prevSub = fSub ? fSub.value : "all";
 
-  fWallet.innerHTML = `<option value="all">Tous</option>` + state.wallets.map((w) => `<option value="${w.id}">${w.name} (${w.currency})</option>`).join("");
-  fCat.innerHTML = `<option value="all">Toutes</option>` + getCategories().map((c) => `<option value="${c}">${c}</option>`).join("");
+  fWallet.innerHTML = `<option value="all">${_txT("transactions.option.all_m")}</option>` + state.wallets.map((w) => `<option value="${w.id}">${w.name} (${w.currency})</option>`).join("");
+  fCat.innerHTML = `<option value="all">${_txT("transactions.option.all_f")}</option>` + getCategories().map((c) => `<option value="${c}">${c}</option>`).join("");
 
   if (prevWallet && [...fWallet.options].some(o => o.value === prevWallet)) fWallet.value = prevWallet;
   if (prevCat && [...fCat.options].some(o => o.value === prevCat)) fCat.value = prevCat;
@@ -464,7 +478,7 @@ function renderTransactions() {
   const bulkCount = _txBulkVisibleSelectionCount();
   const bulkAllChecked = !!(txs.length && bulkCount === txs.length);
   const bulkCommonCategory = _txBulkSelectedCommonCategory();
-  const bulkCategoryOptions = [`<option value="">Catégorie inchangée</option>`]
+  const bulkCategoryOptions = [`<option value="">${_txT("transactions.bulk.keep_category")}</option>`]
     .concat(getCategories().map((c) => `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`))
     .join('');
   const bulkSubcategoryOptions = _txBulkSubcategoryOptionsHtml(bulkCommonCategory, '');
@@ -474,35 +488,35 @@ function renderTransactions() {
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
           <input type="checkbox" ${bulkAllChecked ? 'checked' : ''} onchange="_txBulkToggleAll(this.checked)" />
-          Tout sélectionner (vue filtrée)
+          ${_txT("transactions.bulk.select_visible")}
         </label>
-        <span class="muted">Sélection : <strong id="tx-bulk-count">${bulkCount}</strong></span>
-        <span class="muted">Catégorie commune : <strong id="tx-bulk-common-category">${escapeHTML(bulkCommonCategory || 'mixte')}</strong></span>
+        <span class="muted">${_txT("transactions.bulk.selection")} : <strong id="tx-bulk-count">${bulkCount}</strong></span>
+        <span class="muted">${_txT("transactions.bulk.common_category")} : <strong id="tx-bulk-common-category">${escapeHTML(bulkCommonCategory || _txT("transactions.bulk.mixed"))}</strong></span>
       </div>
       <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
         <div class="field" style="min-width:220px;">
-          <label>Nouvelle catégorie</label>
+          <label>${_txT("transactions.bulk.new_category")}</label>
           <select id="tx-bulk-category" onchange="_txBulkSyncControls()">${bulkCategoryOptions}</select>
         </div>
         <div class="field" style="min-width:220px;">
-          <label>Nouvelle sous-catégorie</label>
+          <label>${_txT("transactions.bulk.new_subcategory")}</label>
           <select id="tx-bulk-subcategory">${bulkSubcategoryOptions}</select>
         </div>
-        <button class="btn primary" type="button" onclick="applyBulkTxClassification()" ${bulkCount ? '' : 'disabled'}>Appliquer aux sélectionnées</button>
+        <button class="btn primary" type="button" onclick="applyBulkTxClassification()" ${bulkCount ? '' : 'disabled'}>${_txT("transactions.bulk.apply")}</button>
       </div>
       <div class="muted" style="font-size:12px;">
-        Catégorie seule = la sous-catégorie est vidée. Sous-catégorie seule = uniquement si la sélection partage déjà la même catégorie.
+        ${_txT("transactions.bulk.hint")}
       </div>
     </div>`;
 
   if (!txs.length) {
     const w0 = state.wallets?.[0]?.id || null;
     list.innerHTML = bulkToolbarHtml + `
-      <div class="muted" style="margin-bottom:10px;">Aucune transaction pour ces filtres.</div>
+      <div class="muted" style="margin-bottom:10px;">${_txT("transactions.empty.filtered")}</div>
       ${w0 ? `
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn primary" onclick="openTxModal('expense','${w0}')">+ Dépense</button>
-          <button class="btn" onclick="openTxModal('income','${w0}')">+ Entrée</button>
+          <button class="btn primary" onclick="openTxModal('expense','${w0}')">${_txT("transactions.action.add_expense")}</button>
+          <button class="btn" onclick="openTxModal('income','${w0}')">${_txT("transactions.action.add_income")}</button>
         </div>
       ` : ""}
     `;
@@ -539,7 +553,7 @@ function renderTransactions() {
       <div style="display:flex;align-items:flex-start;gap:10px;">
         <input type="checkbox" style="margin-top:4px;" ${txChecked ? 'checked' : ''} onchange="_txBulkToggleOne('${escapeHTML(String(tx.id))}', this.checked)" />
         <div style="flex:1;">
-        <div><strong>${tx.type === "expense" ? "Dépense" : "Entrée"}</strong> — ${tx.amount} ${tx.currency}</div>
+        <div><strong>${tx.type === "expense" ? _txT("transactions.type.expense") : _txT("transactions.type.income")}</strong> — ${tx.amount} ${tx.currency}</div>
         <div class="meta">
           ${tx.dateStart}${tx.dateEnd && tx.dateEnd !== tx.dateStart ? " → " + tx.dateEnd : ""}
           • ${w ? w.name : "Wallet"} • ${_txCatBadge(tx.category)} ${tx.label ? " • " + escapeHTML(tx.label) : ""}
@@ -551,7 +565,7 @@ function renderTransactions() {
 
       <div style="display:flex; gap:8px; align-items:center;">
         ${(!tx.payNow && (tx.type === "expense" || tx.type === "income"))
-          ? `<button class="btn small primary" onclick="markTxAsPaid(\'${tx.id}\')">✓ ${tx.type === "income" ? "Reçu" : "Payer"}</button>`
+          ? `<button class="btn small primary" onclick="markTxAsPaid(\'${tx.id}\')">✓ ${tx.type === "income" ? _txT("transactions.action.received") : _txT("transactions.action.pay")}</button>`
           : ""
         }
         <button class="btn small" onclick="openTxEditModal('${tx.id}')">✏️</button>

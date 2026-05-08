@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.7.0';
+window.__TB_BUILD = '9.7.1';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -268,7 +268,7 @@ window.__TB_BUILD = '9.7.0';
 
   // DB schema_version is stored as an integer in public.schema_version.version
   // Convention: 9.0.0 => 900
-  const EXPECTED_SCHEMA_VERSION = 970;
+  const EXPECTED_SCHEMA_VERSION = 94000;
 
   window.TB_CONST = Object.freeze({
     TABLES,
