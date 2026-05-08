@@ -245,7 +245,10 @@ function collapsedFolderIds(){
 }
 
 function setCollapsedFolderIds(ids){
-  CACHE.collapsedFolderIds = Array.from(new Set((ids || []).map(String).filter(Boolean)));
+  const core = window.Core?.documentRules;
+  CACHE.collapsedFolderIds = core?.normalizeCollapsedFolderIds
+    ? core.normalizeCollapsedFolderIds(ids)
+    : Array.from(new Set((ids || []).map(String).filter(Boolean)));
   try {
     localStorage.setItem(key('documents_collapsed_folders','travelbudget_documents_collapsed_folders_v1'), JSON.stringify(CACHE.collapsedFolderIds));
   } catch(_) {}
@@ -258,16 +261,25 @@ function isFolderCollapsed(id){
 function toggleFolderCollapsed(id){
   const sid = String(id || '');
   if(!sid) return;
+  const core = window.Core?.documentRules;
   const ids = collapsedFolderIds();
-  const next = ids.includes(sid) ? ids.filter(x => x !== sid) : [...ids, sid];
+  const next = core?.toggleCollapsedFolderId
+    ? core.toggleCollapsedFolderId(ids, sid)
+    : (ids.includes(sid) ? ids.filter(x => x !== sid) : [...ids, sid]);
   setCollapsedFolderIds(next);
   renderShell();
 }
 
 function selectVisibleDocuments(){
-  const ids = new Set((CACHE.selectedIds || []).map(String));
-  for(const doc of visibleDocs()) ids.add(String(doc.id));
-  CACHE.selectedIds = Array.from(ids);
+  const docs = visibleDocs();
+  const core = window.Core?.documentRules;
+  if(core?.selectVisibleDocumentIds){
+    CACHE.selectedIds = core.selectVisibleDocumentIds(CACHE.selectedIds || [], docs);
+  } else {
+    const ids = new Set((CACHE.selectedIds || []).map(String));
+    for(const doc of docs) ids.add(String(doc.id));
+    CACHE.selectedIds = Array.from(ids);
+  }
   renderShell();
 }
   function isImg(m){ return /^image\//i.test(String(m||'')); }
@@ -361,14 +373,16 @@ function setSelectedSort(v){
       .tb-doc-modal h3{margin:0 0 12px;font-size:20px;}
       .tb-doc-form{display:flex;flex-direction:column;gap:10px;}
       .tb-doc-form label{font-size:12px;font-weight:800;color:var(--muted,#6b7280);}
-      .tb-doc-form input,.tb-doc-form textarea{width:100%;}
+      .tb-doc-form input,.tb-doc-form textarea,.tb-doc-form select{width:100%;}
       .tb-doc-form textarea{min-height:92px;resize:vertical;}
       .tb-doc-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+      .tb-doc-modal-actions.between{justify-content:space-between;align-items:center;flex-wrap:wrap;}
       .tb-doc-select{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;}
       .tb-doc-batchbar{position:sticky;top:8px;z-index:20;margin-bottom:12px;border:1px solid rgba(79,70,229,.22);background:rgba(79,70,229,.10);backdrop-filter:blur(10px);border-radius:16px;padding:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
       .tb-doc-batchbar strong{font-size:13px;}
       .tb-doc-share-links{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:220px;overflow:auto;}
       .tb-doc-share-link{font-size:12px;word-break:break-all;border:1px solid rgba(127,127,127,.18);border-radius:12px;padding:8px;background:rgba(127,127,127,.06);}
+      .tb-doc-share-body{width:100%;min-height:170px;margin-top:10px;font-size:12px;line-height:1.35;}
       @media(max-width:820px){.tb-doc-hero{flex-direction:column}.tb-doc-layout{grid-template-columns:1fr}.tb-doc-actions{justify-content:flex-start}.tb-doc-grid{grid-template-columns:1fr}}
     `;
     document.head.appendChild(st);
@@ -428,6 +442,17 @@ function setSelectedSort(v){
     return out.join('');
   }
   function visibleDocs(){
+  const core = window.Core?.documentRules;
+  if(core?.filterVisibleDocuments){
+    return core.filterVisibleDocuments(CACHE.documents || [], {
+      selectedFolderId: CACHE.selectedFolderId,
+      search: CACHE.search,
+      tagFilter: selectedTagFilter(),
+      onlyFavorites: CACHE.onlyFavorites,
+      onlyExpiring: CACHE.onlyExpiring
+    });
+  }
+
   let rows = CACHE.documents || [];
 
   const folder = CACHE.selectedFolderId;
@@ -1228,6 +1253,212 @@ async function addTagSelected(){
   await ensureLoaded();
 }
 
+async function shareSelected(){
+  const docs = selectedDocs();
+  if(!docs.length) return alert('Sélectionne au moins un document.');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'tb-doc-modal-backdrop';
+  wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
+  wrap.innerHTML = `
+    <div class="tb-doc-modal">
+      <h3>Partager ${esc(docs.length)} document(s)</h3>
+      <div class="tb-doc-form">
+        <label for="tb-doc-share-duration">Durée des liens temporaires</label>
+        <select id="tb-doc-share-duration" class="input">
+          <option value="10m">10 minutes</option>
+          <option value="1h" selected>1 heure</option>
+          <option value="24h">24 heures</option>
+        </select>
+        <p class="muted" style="font-size:13px;margin:0;">
+          Les liens donnent accès aux fichiers sélectionnés pendant la durée choisie.
+        </p>
+      </div>
+      <div class="tb-doc-modal-actions">
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">Annuler</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsGenerateShareLinks()">Créer les liens</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+}
+
+async function generateShareLinksSelected(){
+  const docs = selectedDocs();
+  if(!docs.length) return alert('Sélectionne au moins un document.');
+
+  const duration = String(document.getElementById('tb-doc-share-duration')?.value || '1h').trim().toLowerCase();
+  const seconds = window.Core?.documentRules?.shareDurationSeconds
+    ? window.Core.documentRules.shareDurationSeconds(duration)
+    : (duration === '10m' ? 600 : duration === '24h' ? 86400 : 3600);
+
+  try{
+    const links = await createShareLinksForDocs(docs, seconds);
+    const subject = encodeURIComponent(`Documents partagés (${links.length})`);
+    const bodyText = [
+      'Bonjour,',
+      '',
+      'Voici les documents via liens temporaires :',
+      '',
+      ...links.map(x => `- ${x.name} : ${x.url}`),
+      '',
+      `Durée approximative : ${duration || '1h'}.`
+    ].join('\n');
+
+    const mailto = `mailto:?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+    setSharePayload(bodyText, mailto);
+    window.__tbDocumentsShareLinksOnly = links.map(x => x.url).filter(Boolean).join('\n');
+
+    const wrap = document.querySelector('.tb-doc-modal-backdrop') || document.createElement('div');
+    wrap.className = 'tb-doc-modal-backdrop';
+    wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
+    wrap.innerHTML = `
+      <div class="tb-doc-modal">
+        <h3>Partager ${esc(links.length)} document(s)</h3>
+        <p class="muted" style="font-size:13px;margin-top:-4px;">
+          Liens privés temporaires. Évite de les partager publiquement.
+        </p>
+        <div class="tb-doc-modal-actions between" style="margin-top:10px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn primary" type="button" onclick="window.tbDocumentsOpenShareEmail()">Préparer un email</button>
+            <button class="btn" type="button" onclick="window.tbDocumentsCopyShareLinks()">Copier les liens</button>
+            <button class="btn" type="button" onclick="window.tbDocumentsCopyShareBody()">Copier le message</button>
+          </div>
+          <small class="muted">${esc(duration || '1h')}</small>
+        </div>
+        <textarea class="input tb-doc-share-body" readonly>${esc(bodyText)}</textarea>
+        <div class="tb-doc-share-links">
+          ${links.map(x=>`
+            <div class="tb-doc-share-link">
+              <strong>${esc(x.name)}</strong><br>
+              ${esc(x.url || '')}
+            </div>
+          `).join('')}
+        </div>
+        <div class="tb-doc-modal-actions">
+          <button class="btn" type="button" onclick="window.tbDocumentsShareSelected()">Recréer</button>
+          <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">Fermer</button>
+        </div>
+      </div>
+    `;
+    if(!wrap.parentNode) document.body.appendChild(wrap);
+  }catch(e){
+    alert(e.message || String(e));
+  }
+}
+
+async function moveSelected(){
+  const docs = selectedDocs();
+  if(!docs.length) return alert('Sélectionne au moins un document.');
+
+  const folderOptions = [
+    ['','Non classé'],
+    ...(CACHE.folders || []).map(f => [String(f.id), folderLabel(f)])
+  ];
+
+  const wrap = document.createElement('div');
+  wrap.className = 'tb-doc-modal-backdrop';
+  wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
+  wrap.innerHTML = `
+    <div class="tb-doc-modal">
+      <h3>Déplacer ${esc(docs.length)} document(s)</h3>
+      <div class="tb-doc-form">
+        <label for="tb-doc-batch-folder">Dossier de destination</label>
+        <select id="tb-doc-batch-folder" class="input">
+          ${folderOptions.map(([id,label]) => `<option value="${esc(id)}">${esc(label)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="tb-doc-modal-actions">
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">Annuler</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyMoveSelected()">Déplacer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+}
+
+async function applyMoveSelected(){
+  const docs = selectedDocs();
+  if(!docs.length) return alert('Sélectionne au moins un document.');
+
+  const folderId = document.getElementById('tb-doc-batch-folder')?.value || null;
+  const c = client();
+  if(!c) return alert('Client Supabase indisponible.');
+
+  for(const doc of docs){
+    const { error } = await c
+      .from(table('documents','documents'))
+      .update({ folder_id: folderId })
+      .eq('id', doc.id);
+
+    if(error) return alert(error.message || String(error));
+  }
+
+  CACHE.selectedIds = [];
+  document.querySelector('.tb-doc-modal-backdrop')?.remove();
+  await ensureLoaded();
+}
+
+async function addTagSelected(){
+  const docs = selectedDocs();
+  if(!docs.length) return alert('Sélectionne au moins un document.');
+
+  const tags = allDocumentTags();
+  const wrap = document.createElement('div');
+  wrap.className = 'tb-doc-modal-backdrop';
+  wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
+  wrap.innerHTML = `
+    <div class="tb-doc-modal">
+      <h3>Ajouter un tag à ${esc(docs.length)} document(s)</h3>
+      <div class="tb-doc-form">
+        <label for="tb-doc-batch-tag">Tag</label>
+        <input id="tb-doc-batch-tag" class="input" list="tb-doc-known-tags" placeholder="Ex: Contrat" autocomplete="off" />
+        <datalist id="tb-doc-known-tags">
+          ${tags.map(t => `<option value="${esc(t)}"></option>`).join('')}
+        </datalist>
+        <p class="muted" style="font-size:13px;margin:0;">
+          Si le tag existe déjà sur un document, il sera simplement ignoré pour ce document.
+        </p>
+      </div>
+      <div class="tb-doc-modal-actions">
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">Annuler</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyAddTagSelected()">Ajouter</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  setTimeout(()=>document.getElementById('tb-doc-batch-tag')?.focus(), 0);
+}
+
+async function applyAddTagSelected(){
+  const docs = selectedDocs();
+  if(!docs.length) return alert('Sélectionne au moins un document.');
+
+  const raw = String(document.getElementById('tb-doc-batch-tag')?.value || '').trim();
+  const tag = normalizeTags(raw)[0] || '';
+  if(!tag) return;
+
+  const c = client();
+  if(!c) return alert('Client Supabase indisponible.');
+
+  for(const doc of docs){
+    const tags = docTags(doc);
+    if(tags.some(t => tagKey(t) === tagKey(tag))) continue;
+    const nextTags = window.Core?.documentRules?.mergeTags
+      ? window.Core.documentRules.mergeTags(tags, [tag])
+      : normalizeTags([...tags, tag].join(', '));
+    const { error } = await c
+      .from(table('documents','documents'))
+      .update({ tags: nextTags })
+      .eq('id', doc.id);
+
+    if(error) return alert(error.message || String(error));
+  }
+
+  document.querySelector('.tb-doc-modal-backdrop')?.remove();
+  await ensureLoaded();
+}
+
 async function deleteSelected(){
   const docs = selectedDocs();
   if(!docs.length) return alert('Sélectionne au moins un document.');
@@ -1307,8 +1538,11 @@ window.tbDocumentsClearSelection = clearSelection;
 window.tbDocumentsSelectVisible = selectVisibleDocuments;
 window.tbDocumentsToggleFolderCollapsed = toggleFolderCollapsed;
 window.tbDocumentsShareSelected = shareSelected;
+window.tbDocumentsGenerateShareLinks = generateShareLinksSelected;
 window.tbDocumentsAddTagSelected = addTagSelected;
+window.tbDocumentsApplyAddTagSelected = applyAddTagSelected;
 window.tbDocumentsMoveSelected = moveSelected;
+window.tbDocumentsApplyMoveSelected = applyMoveSelected;
 window.tbDocumentsDeleteSelected = deleteSelected;
 window.tbDocumentsOpenShareEmail = function(){
   const body = window.__tbDocumentsShareBody || '';
@@ -1351,6 +1585,40 @@ window.tbDocumentsCopyShareLinks = async function(){
     try{
       document.execCommand('copy');
       alert('Lien(s) copié(s).');
+    }catch(_){
+      alert('Copie impossible.');
+    }
+
+    ta.remove();
+  }
+};
+
+window.tbDocumentsCopyShareBody = async function(){
+  const text = window.__tbDocumentsShareBody || '';
+
+  if(!text){
+    return alert('Aucun message à copier.');
+  }
+
+  try{
+    await navigator.clipboard.writeText(text);
+    alert('Message copié.');
+  }catch(e){
+    console.error(e);
+
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+
+    document.body.appendChild(ta);
+
+    ta.focus();
+    ta.select();
+
+    try{
+      document.execCommand('copy');
+      alert('Message copié.');
     }catch(_){
       alert('Copie impossible.');
     }

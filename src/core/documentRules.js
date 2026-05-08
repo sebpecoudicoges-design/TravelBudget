@@ -174,3 +174,66 @@ export function canCreateSubFolder(parentId, folders = []) {
   if (parent.parent_id) return { ok: false, reason: 'Un seul niveau de sous-dossier est autorise.' };
   return { ok: true, parent };
 }
+
+export function filterVisibleDocuments(documents = [], options = {}) {
+  let rows = Array.isArray(documents) ? [...documents] : [];
+
+  const folder = options.selectedFolderId;
+  if (folder) rows = rows.filter((doc) => String(doc?.folder_id || '') === String(folder));
+
+  const q = String(options.search || '').trim().toLowerCase();
+  if (q) {
+    rows = rows.filter((doc) => {
+      const tags = docTags(doc).join(' ');
+      return `${doc?.name || ''} ${doc?.original_filename || ''} ${doc?.mime_type || ''} ${tags}`.toLowerCase().includes(q);
+    });
+  }
+
+  const tag = String(options.tagFilter || '').trim();
+  if (tag) {
+    const wanted = tagKey(tag);
+    rows = rows.filter((doc) => docTags(doc).some((value) => tagKey(value) === wanted));
+  }
+
+  if (options.onlyFavorites) rows = rows.filter((doc) => !!doc?.is_favorite);
+
+  if (options.onlyExpiring) {
+    const now = options.now ? new Date(options.now) : new Date();
+    const limit = new Date(now);
+    limit.setDate(limit.getDate() + 60);
+
+    rows = rows.filter((doc) => {
+      if (!doc?.expires_at) return false;
+      const dt = new Date(doc.expires_at);
+      return dt >= now && dt <= limit;
+    });
+  }
+
+  return rows;
+}
+
+export function selectVisibleDocumentIds(currentIds = [], visibleDocuments = []) {
+  const ids = new Set((currentIds || []).map(String).filter(Boolean));
+  for (const doc of visibleDocuments || []) {
+    if (doc?.id) ids.add(String(doc.id));
+  }
+  return Array.from(ids);
+}
+
+export function normalizeCollapsedFolderIds(ids = []) {
+  return Array.from(new Set((ids || []).filter((id) => id != null).map(String).filter(Boolean)));
+}
+
+export function toggleCollapsedFolderId(ids = [], id) {
+  const sid = String(id || '');
+  if (!sid) return normalizeCollapsedFolderIds(ids);
+  const current = normalizeCollapsedFolderIds(ids);
+  return current.includes(sid) ? current.filter((value) => value !== sid) : [...current, sid];
+}
+
+export function shareDurationSeconds(value) {
+  const duration = String(value || '1h').trim().toLowerCase();
+  if (duration === '10m') return 600;
+  if (duration === '24h') return 86400;
+  return 3600;
+}

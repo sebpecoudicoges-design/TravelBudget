@@ -3,10 +3,15 @@ import {
   allDocumentTags,
   canCreateSubFolder,
   childFolders,
+  filterVisibleDocuments,
   folderLabel,
   mergeTags,
+  normalizeCollapsedFolderIds,
   rootFolders,
+  selectVisibleDocumentIds,
+  shareDurationSeconds,
   suggestTagsForDocument,
+  toggleCollapsedFolderId,
 } from '../../src/core/documentRules.js';
 
 describe('document rules core', () => {
@@ -60,5 +65,54 @@ describe('document rules core', () => {
     expect(folderLabel(folders[1], folders)).toBe('Travail / Paie');
     expect(canCreateSubFolder('parent', folders).ok).toBe(true);
     expect(canCreateSubFolder('child', folders).ok).toBe(false);
+  });
+
+  it('filters visible documents by folder, search, tag and favorite state', () => {
+    const documents = [
+      { id: '1', folder_id: 'work', name: 'Bulletin avril', tags: ['Paie'], is_favorite: true },
+      { id: '2', folder_id: 'work', name: 'Contrat CDI', tags: ['Contrat'], is_favorite: false },
+      { id: '3', folder_id: 'travel', name: 'Passeport', tags: ['Identite'], is_favorite: true },
+    ];
+
+    expect(filterVisibleDocuments(documents, {
+      selectedFolderId: 'work',
+      search: 'bulletin',
+      tagFilter: 'paie',
+      onlyFavorites: true,
+    }).map((doc) => doc.id)).toEqual(['1']);
+  });
+
+  it('filters expiring documents over the next sixty days', () => {
+    const documents = [
+      { id: 'soon', expires_at: '2026-06-01' },
+      { id: 'late', expires_at: '2026-09-01' },
+      { id: 'none' },
+    ];
+
+    expect(filterVisibleDocuments(documents, {
+      onlyExpiring: true,
+      now: '2026-05-08',
+    }).map((doc) => doc.id)).toEqual(['soon']);
+  });
+
+  it('selects all visible document ids without losing existing selection', () => {
+    expect(selectVisibleDocumentIds(['already'], [
+      { id: 'visible-1' },
+      { id: 'visible-2' },
+      { id: 'visible-1' },
+    ])).toEqual(['already', 'visible-1', 'visible-2']);
+  });
+
+  it('normalizes and toggles collapsed folders', () => {
+    expect(normalizeCollapsedFolderIds(['parent', 'parent', '', null])).toEqual(['parent']);
+    expect(toggleCollapsedFolderId(['parent'], 'parent')).toEqual([]);
+    expect(toggleCollapsedFolderId([], 'parent')).toEqual(['parent']);
+  });
+
+  it('maps document share durations to signed url lifetimes', () => {
+    expect(shareDurationSeconds('10m')).toBe(600);
+    expect(shareDurationSeconds('1h')).toBe(3600);
+    expect(shareDurationSeconds('24h')).toBe(86400);
+    expect(shareDurationSeconds('unknown')).toBe(3600);
   });
 });
