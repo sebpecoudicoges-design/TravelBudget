@@ -4179,6 +4179,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
       if (mode === "percent") {
         const def = activeMembers.length ? (100 / activeMembers.length) : 0;
         members.forEach(m => {
+          const disabled = selectedSet.has(String(m.id)) ? "" : "disabled";
           const seedPct = editingDraft?.split?.percents?.[m.id];
           const v = (prevPct[m.id] ?? seedPct ?? def).toString();
           rows += `<tr>
@@ -4258,11 +4259,11 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
     const split = (() => {
       const mode = (_el("trip-split-mode")?.value || "equal");
       const members = (tripState.members || []);
+      const selectedMemberIds = _selectedSplitMemberIds();
       const percents = {};
       const amounts = {};
       if (mode === "percent") {
         members.forEach(m => {
-          const disabled = selectedSet.has(String(m.id)) ? "" : "disabled";
           const v = _el(`trip-split-pct-${m.id}`)?.value;
           if (v !== undefined) percents[m.id] = v;
         });
@@ -4276,7 +4277,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
   mode,
   percents,
   amounts,
-  selectedMemberIds: _selectedSplitMemberIds()
+  selectedMemberIds
 };
     })();
 

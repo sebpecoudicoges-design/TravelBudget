@@ -11,6 +11,7 @@
   error: '',
   search: '',
   sort: '',
+  tagFilter: '',
   uploading: '',
   onlyFavorites: false,
   onlyExpiring: false,
@@ -50,6 +51,151 @@ function normalizeTags(v){
     .map(x => x.trim())
     .filter(Boolean)
     .slice(0, 12);
+}
+
+function tagKey(v){
+  return String(v || '').trim().toLowerCase();
+}
+
+function docTags(doc){
+  return Array.isArray(doc?.tags) ? doc.tags.map(String).filter(Boolean) : [];
+}
+
+function allDocumentTags(){
+  const map = new Map();
+  for(const doc of (CACHE.documents || [])){
+    for(const tag of docTags(doc)){
+      const key = tagKey(tag);
+      if(key && !map.has(key)) map.set(key, tag);
+    }
+  }
+  return Array.from(map.values()).sort((a,b)=>String(a).localeCompare(String(b), 'fr'));
+}
+
+function selectedTagFilter(){
+  try {
+    return CACHE.tagFilter || localStorage.getItem(key('documents_tag','travelbudget_documents_tag_v1')) || '';
+  } catch(_) {
+    return CACHE.tagFilter || '';
+  }
+}
+
+function setSelectedTagFilter(v){
+  CACHE.tagFilter = String(v || '').trim();
+  try {
+    localStorage.setItem(key('documents_tag','travelbudget_documents_tag_v1'), CACHE.tagFilter);
+  } catch(_) {}
+}
+
+function normalizeLookupText(v){
+  return String(v || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function normalizeTagMatchText(v){
+  return normalizeLookupText(v)
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function cleanDocBaseName(doc){
+  return String(doc?.name || doc?.original_filename || '')
+    .replace(/\.[a-z0-9]{1,8}$/i, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function titleTag(v){
+  const raw = String(v || '').replace(/\s+/g, ' ').trim();
+  if(!raw) return '';
+  if(/[A-Z]{2,}/.test(raw)) return raw;
+  return raw.replace(/\b[\p{L}\p{N}][\p{L}\p{N}'-]*/gu, word => {
+    const lower = word.toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  });
+}
+
+function suggestEmployerFromPayrollName(doc){
+  const raw = cleanDocBaseName(doc);
+  const lookup = normalizeLookupText(raw);
+  if(!/(bulletin de paie|fiche de paie|payslip|pay slip|salaire|paie)/.test(lookup)) return '';
+
+  let candidate = raw;
+  candidate = candidate.replace(/.*?(bulletin\s+de\s+paie|fiche\s+de\s+paie|payslip|pay\s+slip|salaire|paie)/i, '');
+  candidate = candidate.replace(/\b(janvier|fevrier|février|mars|avril|mai|juin|juillet|aout|août|septembre|octobre|novembre|decembre|décembre|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/ig, ' ');
+  candidate = candidate.replace(/\b(19|20)\d{2}\b/g, ' ');
+  candidate = candidate.replace(/\b\d{1,2}\b/g, ' ');
+  candidate = candidate.replace(/^[\s,.;:()'"]+|[\s,.;:()'"]+$/g, '').replace(/\s+/g, ' ').trim();
+
+  if(candidate.length < 3) return '';
+  if(candidate.split(/\s+/).length > 5) return '';
+  return titleTag(candidate);
+}
+
+function suggestExistingTagsFromName(doc){
+  const name = normalizeTagMatchText(`${doc?.name || ''} ${doc?.original_filename || ''}`);
+  if(!name) return [];
+
+  return allDocumentTags()
+    .filter(tag => {
+      const tagText = normalizeTagMatchText(tag);
+      if(!tagText || tagText.length < 2) return false;
+      return (` ${name} `).includes(` ${tagText} `);
+    })
+    .sort((a,b) => {
+      const aw = normalizeTagMatchText(a).split(' ').length;
+      const bw = normalizeTagMatchText(b).split(' ').length;
+      return aw - bw || String(a).localeCompare(String(b), 'fr');
+    });
+}
+
+function suggestTagsForDocument(doc){
+  const name = normalizeLookupText(`${doc?.name || ''} ${doc?.original_filename || ''}`);
+  const mime = String(doc?.mime_type || '').toLowerCase();
+  const out = [];
+  const add = (tag) => {
+    const key = tagKey(tag);
+    if(!key) return;
+    if(out.some(x => tagKey(x) === key)) return;
+    if(docTags(doc).some(x => tagKey(x) === key)) return;
+    out.push(tag);
+  };
+
+  for(const tag of suggestExistingTagsFromName(doc)) add(tag);
+
+  const rules = [
+    ['Bulletin de Paie', ['bulletin de paie','fiche de paie','payslip','pay slip']],
+    ['STC', ['solde de tout compte','stc']],
+    ['Passeport', ['passeport','passport']],
+    ['Visa', ['visa','eta','esta']],
+    ['Banque', ['banque','bank','rib','iban','releve','statement','account']],
+    ['Assurance', ['assurance','insurance','attestation']],
+    ['Sante', ['sante','health','medical','vaccin','ordonnance']],
+    ['Transport', ['billet','ticket','flight','vol','train','bus','boarding','embarquement']],
+    ['Logement', ['hotel','booking','airbnb','reservation','bail','lease']],
+    ['Identite', ['identite','identity','id-card','idcard','carte-identite']],
+    ['Permis', ['permis','licence','license','driver']],
+    ['Impots', ['impot','tax','fiscal']],
+    ['Facture', ['facture','invoice','receipt','recu']],
+    ['Contrat', ['contrat','contract']],
+  ];
+
+  for(const [tag, needles] of rules){
+    if(needles.some(n => name.includes(n))) add(tag);
+  }
+
+  const employer = suggestEmployerFromPayrollName(doc);
+  if(employer) add(employer);
+
+  const hasMeaningfulSuggestion = out.length > 0;
+  if(!hasMeaningfulSuggestion && (/pdf/i.test(mime) || /\.pdf$/i.test(String(doc?.original_filename || '')))) add('PDF');
+  if(!hasMeaningfulSuggestion && /^image\//i.test(mime)) add('Image');
+
+  return out.slice(0, 6);
 }
   function isSelected(id){
   return (CACHE.selectedIds || []).some(x => String(x) === String(id));
@@ -127,6 +273,7 @@ function setSelectedSort(v){
       .tb-doc-name{font-weight:800;line-height:1.15;word-break:break-word;}
       .tb-doc-meta{font-size:12px;color:var(--muted,#6b7280);display:flex;gap:6px;flex-wrap:wrap;}
       .tb-doc-card-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;}
+      .tb-doc-card > select.input{display:none;}
       .tb-doc-empty{border:1px dashed rgba(127,127,127,.30);border-radius:18px;padding:28px;text-align:center;color:var(--muted,#6b7280);}
       .tb-doc-preview-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px;}
       .tb-doc-preview{width:min(980px,96vw);height:min(780px,92vh);border-radius:22px;background:var(--card,#fff);box-shadow:0 24px 80px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden;}
@@ -191,6 +338,25 @@ function setSelectedSort(v){
 
   function folderCount(id){ return (CACHE.documents||[]).filter(d => String(d.folder_id||'') === String(id||'')).length; }
   function selectedFolder(){ return (CACHE.folders||[]).find(f=>String(f.id)===String(CACHE.selectedFolderId)); }
+  function rootFolders(){ return (CACHE.folders || []).filter(f => !f.parent_id); }
+  function childFolders(parentId){ return (CACHE.folders || []).filter(f => String(f.parent_id || '') === String(parentId || '')); }
+  function folderLabel(folder){
+    if(!folder) return 'Non classe';
+    const parent = folder.parent_id ? (CACHE.folders || []).find(f => String(f.id) === String(folder.parent_id)) : null;
+    return parent ? `${parent.name} / ${folder.name}` : folder.name;
+  }
+  function folderOptionsHTML(selectedId){
+    const selected = String(selectedId || '');
+    const roots = rootFolders();
+    const out = [`<option value="" ${!selected ? 'selected' : ''}>Non classe</option>`];
+    for(const f of roots){
+      out.push(`<option value="${esc(f.id)}" ${String(f.id)===selected?'selected':''}>${esc(f.name)}</option>`);
+      for(const sub of childFolders(f.id)){
+        out.push(`<option value="${esc(sub.id)}" ${String(sub.id)===selected?'selected':''}>- ${esc(f.name)} / ${esc(sub.name)}</option>`);
+      }
+    }
+    return out.join('');
+  }
   function visibleDocs(){
   let rows = CACHE.documents || [];
 
@@ -200,9 +366,15 @@ function setSelectedSort(v){
   const q = String(CACHE.search || '').trim().toLowerCase();
   if(q){
     rows = rows.filter(d => {
-      const tags = Array.isArray(d.tags) ? d.tags.join(' ') : '';
+      const tags = docTags(d).join(' ');
       return `${d.name||''} ${d.original_filename||''} ${d.mime_type||''} ${tags}`.toLowerCase().includes(q);
     });
+  }
+
+  const tag = selectedTagFilter();
+  if(tag){
+    const wanted = tagKey(tag);
+    rows = rows.filter(d => docTags(d).some(t => tagKey(t) === wanted));
   }
 
   if(CACHE.onlyFavorites){
@@ -225,7 +397,7 @@ function setSelectedSort(v){
 }
 
  function renderFolders(){
-  const folders = CACHE.folders || [];
+  const folders = rootFolders();
   const allActive = !CACHE.selectedFolderId ? ' active' : '';
   return `<div class="tb-doc-sidebar">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -250,6 +422,13 @@ function setSelectedSort(v){
 
         <button class="btn"
           type="button"
+          title="Sous-dossier"
+          onclick="window.tbDocumentsCreateSubFolder('${esc(f.id)}')">
+          +
+        </button>
+
+        <button class="btn"
+          type="button"
           title="Renommer"
           onclick="window.tbDocumentsRenameFolder('${esc(f.id)}')">
           ✏️
@@ -262,6 +441,19 @@ function setSelectedSort(v){
           🗑️
         </button>
       </div>
+      ${childFolders(f.id).map(sub => `
+        <div style="display:flex;gap:6px;align-items:center;margin-left:18px;">
+          <button class="tb-doc-folder${String(sub.id)===String(CACHE.selectedFolderId)?' active':''}"
+            type="button"
+            style="flex:1;"
+            onclick="window.tbDocumentsSelectFolder('${esc(sub.id)}')">
+            <span>-- ${esc(sub.name)}</span>
+            <small>${esc(folderCount(sub.id))}</small>
+          </button>
+          <button class="btn" type="button" title="Renommer" onclick="window.tbDocumentsRenameFolder('${esc(sub.id)}')">Edit</button>
+          <button class="btn" type="button" title="Supprimer" onclick="window.tbDocumentsDeleteFolder('${esc(sub.id)}')">Del</button>
+        </div>
+      `).join('')}
     `).join('')}
   </div>`;
 }
@@ -346,6 +538,8 @@ function setSelectedSort(v){
   let docs = visibleDocs();
 
   const sort = selectedSort();
+  const tags = allDocumentTags();
+  const tagFilter = selectedTagFilter();
 
   docs = [...docs].sort((a,b)=>{
     if(sort === 'name_asc'){
@@ -405,18 +599,24 @@ function setSelectedSort(v){
       <button class="btn primary" type="button" onclick="event.stopPropagation(); document.getElementById('tb-doc-file-input')?.click()">Ajouter</button>
     </div>
     <div class="tb-doc-filters">
+  <select class="input" onchange="window.tbDocumentsSetTagFilter(this.value)" title="Filtrer par tag">
+    <option value="" ${!tagFilter ? 'selected' : ''}>Tous les tags</option>
+    ${tags.map(t => `<option value="${esc(t)}" ${tagKey(t) === tagKey(tagFilter) ? 'selected' : ''}>${esc(t)}</option>`).join('')}
+  </select>
   <button class="btn ${CACHE.onlyFavorites ? 'primary' : ''}" type="button" onclick="window.tbDocumentsToggleFavoritesFilter()">
     ⭐ Favoris
   </button>
   <button class="btn ${CACHE.onlyExpiring ? 'primary' : ''}" type="button" onclick="window.tbDocumentsToggleExpiringFilter()">
     ⏳ Expire bientôt
   </button>
+  ${tagFilter ? `<button class="btn" type="button" onclick="window.tbDocumentsSetTagFilter('')">Tag: ${esc(tagFilter)} x</button>` : ''}
 </div>
     ${(CACHE.selectedIds || []).length ? `
   <div class="tb-doc-batchbar">
     <strong>${esc((CACHE.selectedIds || []).length)} document(s) sélectionné(s)</strong>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
       <button class="btn primary" type="button" onclick="window.tbDocumentsShareSelected()">Partager</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsAddTagSelected()">Ajouter tag</button>
       <button class="btn" type="button" onclick="window.tbDocumentsMoveSelected()">Déplacer</button>
       <button class="btn" type="button" onclick="window.tbDocumentsDeleteSelected()">Supprimer</button>
       <button class="btn" type="button" onclick="window.tbDocumentsClearSelection()">Annuler</button>
@@ -494,11 +694,14 @@ function setSelectedSort(v){
   }
 }
 
-  async function createFolder(){
+  async function createFolder(parentId = null){
     const c = client(); if(!c) return alert('Client Supabase indisponible.');
     const name = String(prompt('Nom du dossier ?') || '').trim(); if(!name) return;
     const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connecté.');
-    const { error } = await c.from(table('document_folders','document_folders')).insert({ user_id: uid, name });
+    const parent = parentId ? (CACHE.folders || []).find(f => String(f.id) === String(parentId)) : null;
+    if(parentId && !parent) return alert('Dossier parent introuvable.');
+    if(parent?.parent_id) return alert('Un seul niveau de sous-dossier est autorise.');
+    const { error } = await c.from(table('document_folders','document_folders')).insert({ user_id: uid, name, parent_id: parentId || null });
     if(error) return alert(error.message || String(error));
     await ensureLoaded();
   }
@@ -513,6 +716,7 @@ function setSelectedSort(v){
   const folderId = CACHE.selectedFolderId || null;
 
   let done = 0;
+  const uploadedIds = [];
   CACHE.uploading = `${list.length} fichier(s) en upload…`;
   renderShell();
 
@@ -543,6 +747,7 @@ function setSelectedSort(v){
       });
 
       if(ins.error) throw ins.error;
+      uploadedIds.push(docId);
     }catch(e){
       console.warn('[TB][documents] upload failed', e);
       alert(`Upload impossible pour ${file.name || 'document'} : ${e.message || e}`);
@@ -551,6 +756,10 @@ function setSelectedSort(v){
 
   CACHE.uploading = '';
   await ensureLoaded();
+  if(uploadedIds.length === 1){
+    const doc = (CACHE.documents || []).find(d => String(d.id) === String(uploadedIds[0]));
+    if(doc) setTimeout(() => openInfoModal(doc), 0);
+  }
 }
 
   async function signedUrl(doc){
@@ -686,6 +895,7 @@ function openInfoModal(doc){
   const currentTags = Array.isArray(doc.tags) ? doc.tags.join(', ') : '';
   const currentExpiry = doc.expires_at ? String(doc.expires_at).slice(0,10) : '';
   const currentNotes = String(doc.notes || '');
+  const suggestions = suggestTagsForDocument(doc);
 
   const wrap = document.createElement('div');
   wrap.className = 'tb-doc-modal-backdrop';
@@ -699,10 +909,23 @@ function openInfoModal(doc){
         <div>
           <label>Tags</label>
           <input id="tb-doc-info-tags" class="input" type="text" value="${esc(currentTags)}" placeholder="Australie, WHV, Banque" />
+          ${suggestions.length ? `
+            <div class="tb-doc-tags" style="margin-top:8px;">
+              ${suggestions.map(t => `<button class="btn" type="button" data-tag="${esc(t)}" onclick="window.tbDocumentsToggleSuggestedTag(this.dataset.tag)">${esc(t)}</button>`).join('')}
+            </div>
+            <div class="muted" style="font-size:12px;margin-top:4px;">Suggestions d'apres le nom du fichier. Clique pour ajouter, puis valide.</div>
+          ` : ''}
         </div>
 
         <div>
-          <label>Date d’expiration</label>
+          <label>Dossier</label>
+          <select id="tb-doc-info-folder" class="input">
+            ${folderOptionsHTML(doc.folder_id || '')}
+          </select>
+        </div>
+
+        <div>
+          <label>Date d'expiration</label>
           <input id="tb-doc-info-expiry" class="input" type="date" value="${esc(currentExpiry)}" />
         </div>
 
@@ -733,6 +956,7 @@ async function saveInfo(id){
   if(!c) return alert('Client Supabase indisponible.');
 
   const tagsInput = document.getElementById('tb-doc-info-tags')?.value || '';
+  const folderId = document.getElementById('tb-doc-info-folder')?.value || '';
   const expires_at_raw = document.getElementById('tb-doc-info-expiry')?.value || '';
 const notes_raw = document.getElementById('tb-doc-info-notes')?.value || '';
 
@@ -743,6 +967,7 @@ const notes = notes_raw.trim() || null;
     .from(table('documents','documents'))
     .update({
       tags: normalizeTags(tagsInput),
+      folder_id: folderId || null,
       expires_at,
       notes
     })
@@ -869,7 +1094,7 @@ async function moveSelected(){
 
   const folderOptions = [
     ['','Non classé'],
-    ...(CACHE.folders || []).map(f => [String(f.id), f.name])
+    ...(CACHE.folders || []).map(f => [String(f.id), folderLabel(f)])
   ];
 
   const label = folderOptions.map((x,i)=>`${i}. ${x[1]}`).join('\n');
@@ -896,6 +1121,32 @@ async function moveSelected(){
   }
 
   CACHE.selectedIds = [];
+  await ensureLoaded();
+}
+
+async function addTagSelected(){
+  const docs = selectedDocs();
+  if(!docs.length) return alert('Selectionne au moins un document.');
+
+  const raw = String(prompt('Tag a ajouter aux documents selectionnes ?') || '').trim();
+  const tag = normalizeTags(raw)[0] || '';
+  if(!tag) return;
+
+  const c = client();
+  if(!c) return alert('Client Supabase indisponible.');
+
+  for(const doc of docs){
+    const tags = docTags(doc);
+    if(tags.some(t => tagKey(t) === tagKey(tag))) continue;
+    const nextTags = normalizeTags([...tags, tag].join(', '));
+    const { error } = await c
+      .from(table('documents','documents'))
+      .update({ tags: nextTags })
+      .eq('id', doc.id);
+
+    if(error) return alert(error.message || String(error));
+  }
+
   await ensureLoaded();
 }
 
@@ -929,8 +1180,10 @@ async function deleteSelected(){
   window.renderDocuments = function renderDocuments(){ ensureLoaded(); };
   window.tbDocumentsRenderOnly = renderShell;
   window.tbDocumentsSetSearch = function(v){ CACHE.search = String(v || ''); renderShell(); }; 
+  window.tbDocumentsSetTagFilter = function(v){ setSelectedTagFilter(v); renderShell(); };
   window.tbDocumentsSelectFolder = function(id){ setSelectedFolderId(id); renderShell(); };
   window.tbDocumentsCreateFolder = createFolder;
+  window.tbDocumentsCreateSubFolder = function(parentId){ createFolder(parentId); };
   window.tbDocumentsUpload = upload;
   window.tbDocumentsPreview = preview;
   window.tbDocumentsRename = rename;
@@ -950,6 +1203,17 @@ async function deleteSelected(){
 window.tbDocumentsToggleFavorite = toggleFavorite;
 window.tbDocumentsEditMeta = editMeta;
 window.tbDocumentsSaveInfo = saveInfo;
+window.tbDocumentsToggleSuggestedTag = function(tag){
+  const input = document.getElementById('tb-doc-info-tags');
+  if(!input) return;
+  const tags = normalizeTags(input.value);
+  const wanted = tagKey(tag);
+  const current = tags.findIndex(t => tagKey(t) === wanted);
+  if(current >= 0) tags.splice(current, 1);
+  else tags.push(String(tag || '').trim());
+  input.value = normalizeTags(tags.join(', ')).join(', ');
+  input.focus();
+};
 
 window.tbDocumentsToggleFavoritesFilter = function(){
   CACHE.onlyFavorites = !CACHE.onlyFavorites;
@@ -963,6 +1227,7 @@ window.tbDocumentsToggleExpiringFilter = function(){
 window.tbDocumentsToggleSelect = toggleSelect;
 window.tbDocumentsClearSelection = clearSelection;
 window.tbDocumentsShareSelected = shareSelected;
+window.tbDocumentsAddTagSelected = addTagSelected;
 window.tbDocumentsMoveSelected = moveSelected;
 window.tbDocumentsDeleteSelected = deleteSelected;
 window.tbDocumentsOpenShareEmail = function(){

@@ -205,6 +205,7 @@ function wireNightLogic() {
 function openTxModal(type = "expense", walletId = null) {
   editingTxId = null;
   fillModalSelects();
+  _setTxModalReadOnly(false);
   _setTxModalLock(false);
 
   const now = toLocalISODate(new Date());
@@ -281,6 +282,8 @@ function openTxEditModal(txId) {
 function closeModal() {
   document.getElementById("overlay").style.display = "none";
   document.getElementById("modal").style.display = "none";
+  _setTxModalReadOnly(false);
+  _setTxModalLock(false);
 }
 
 function _txTripExpenseId(tx) {
