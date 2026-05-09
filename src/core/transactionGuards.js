@@ -51,3 +51,21 @@ export function validateTransactionMutation(nextTx, context = {}) {
 
   return { ok: true };
 }
+
+export function validateTransactionAction(tx, action, context = {}) {
+  const lock = getTransactionLockState(tx, context);
+  if (!lock.locked) return { ok: true, action, lock };
+
+  const actionReasons = {
+    delete: 'Action impossible : cette transaction est verrouillee. Modifie ou supprime-la depuis son module source.',
+    mark_paid: 'Action impossible : cette transaction est verrouillee. Marque-la comme payee depuis son module source.',
+    edit: lock.reason,
+  };
+
+  return {
+    ok: false,
+    action,
+    lock,
+    reason: actionReasons[action] || lock.reason,
+  };
+}

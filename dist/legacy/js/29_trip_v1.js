@@ -215,6 +215,7 @@ function toastOk(msg) {
     activeTripId: null,
     budgetLinks: [],
     budgetTxById: new Map(),
+    linkIssues: [],
     members: [],
     expenses: [],
     shares: [],
@@ -234,6 +235,7 @@ function toastOk(msg) {
       tripState.activeTripId = null;
       tripState.budgetLinks = [];
       tripState.budgetTxById = new Map();
+      tripState.linkIssues = [];
       tripState.members = [];
       tripState.expenses = [];
       tripState.shares = [];
@@ -932,6 +934,91 @@ async function _findMatchingTransactions({ date, amount, currency }) {
     return data || [];
   }
 
+  function _tripTxWalletName(walletId) {
+    const wallet = (state?.wallets || []).find(w => String(w.id || '') === String(walletId || ''));
+    return wallet ? `${wallet.name || 'Wallet'} (${String(wallet.currency || '').toUpperCase()})` : 'Wallet';
+  }
+
+  function _tripTxMatchSubtitle(tx) {
+    const status = tx?.pay_now ? _tripT('trip.match.pay_now') : _tripT('trip.match.to_pay');
+    const budget = tx?.out_of_budget ? _tripT('trip.match.out_budget') : _tripT('trip.match.in_budget');
+    return `${status} · ${budget}`;
+  }
+
+  function _chooseMatchingTransaction(matches) {
+    return new Promise((resolve) => {
+      const rows = Array.isArray(matches) ? matches.filter(Boolean) : [];
+      if (!rows.length) return resolve(null);
+
+      const existing = document.getElementById('trip-match-modal');
+      if (existing) existing.remove();
+
+      const modal = document.createElement('div');
+      modal.id = 'trip-match-modal';
+      modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.42);display:flex;align-items:center;justify-content:center;padding:18px;';
+      modal.innerHTML = `
+        <div style="width:min(760px,100%);max-height:90vh;overflow:auto;border-radius:22px;background:#fff;color:#0f172a;box-shadow:0 28px 80px rgba(15,23,42,.28);padding:18px;">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px;">
+            <div>
+              <h3 style="margin:0;font-size:20px;">${escapeHTML(_tripT('trip.match.title'))}</h3>
+              <p class="muted" style="margin:6px 0 0;font-size:13px;line-height:1.45;">${escapeHTML(_tripT('trip.match.body'))}</p>
+            </div>
+            <button type="button" data-trip-match-new style="border:0;background:#f1f5f9;border-radius:999px;width:34px;height:34px;font-size:22px;line-height:1;cursor:pointer;">×</button>
+          </div>
+          <div style="display:grid;gap:10px;margin:12px 0;">
+            ${rows.map((tx, index) => {
+              const checked = index === 0 ? 'checked' : '';
+              const label = tx.label || _tripT('trip.match.none_label');
+              const wallet = _tripTxWalletName(tx.wallet_id || tx.walletId);
+              const category = tx.category || '—';
+              const dates = tx.date_start === tx.date_end ? tx.date_start : `${tx.date_start || '—'} → ${tx.date_end || tx.date_start || '—'}`;
+              return `
+                <label style="display:grid;grid-template-columns:auto 1fr;gap:10px;border:1px solid rgba(15,23,42,.12);border-radius:16px;padding:12px;background:${index === 0 ? 'rgba(59,130,246,.06)' : '#fff'};cursor:pointer;">
+                  <input type="radio" name="trip-match-tx" value="${escapeHTML(tx.id)}" ${checked} style="margin-top:4px;" />
+                  <span>
+                    <span style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+                      <strong>${escapeHTML(label)}</strong>
+                      <strong>${escapeHTML(_fmtMoney(Number(tx.amount || 0), tx.currency || ''))}</strong>
+                    </span>
+                    <span class="muted" style="display:block;margin-top:4px;font-size:12px;">${escapeHTML(_tripTxMatchSubtitle(tx))}</span>
+                    <span style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:9px;font-size:12px;color:#475569;">
+                      <span>${escapeHTML(_tripT('trip.match.wallet'))}: <b>${escapeHTML(wallet)}</b></span>
+                      <span>${escapeHTML(_tripT('trip.match.category'))}: <b>${escapeHTML(category)}</b></span>
+                      <span>${escapeHTML(_tripT('trip.match.date'))}: <b>${escapeHTML(dates)}</b></span>
+                      <span>${escapeHTML(_tripT('trip.match.amount'))}: <b>${escapeHTML(String(tx.amount || 0))} ${escapeHTML(tx.currency || '')}</b></span>
+                    </span>
+                    ${index === 0 ? `<span class="muted" style="display:block;margin-top:8px;font-size:12px;">${escapeHTML(_tripT('trip.match.recommended'))}</span>` : ''}
+                  </span>
+                </label>`;
+            }).join('')}
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+            <button type="button" class="btn" data-trip-match-new>${escapeHTML(_tripT('trip.match.create_new'))}</button>
+            <button type="button" class="btn primary" data-trip-match-link>${escapeHTML(_tripT('trip.match.link'))}</button>
+          </div>
+        </div>`;
+
+      const close = (value) => {
+        modal.remove();
+        resolve(value);
+      };
+      modal.addEventListener('click', (ev) => {
+        if (ev.target === modal) close(null);
+      });
+      modal.querySelectorAll('[data-trip-match-new]').forEach(btn => {
+        btn.addEventListener('click', () => close(null));
+      });
+      const linkBtn = modal.querySelector('[data-trip-match-link]');
+      if (linkBtn) {
+        linkBtn.addEventListener('click', () => {
+          const selectedId = modal.querySelector('input[name="trip-match-tx"]:checked')?.value || '';
+          close(rows.find(tx => String(tx.id) === String(selectedId)) || rows[0] || null);
+        });
+      }
+      document.body.appendChild(modal);
+    });
+  }
+
   async function _linkExpenseToTransaction(expenseId, transactionId) {
     const uid = await _ensureSession();
 
@@ -973,6 +1060,26 @@ async function _findMatchingTransactions({ date, amount, currency }) {
     if (e2) {
       await sb.from(TB_CONST.TABLES.trip_expenses).update({ transaction_id: null }).eq("id", expenseId);
       throw e2;
+    }
+
+    const [{ data: exAfter, error: exAfterErr }, { data: txAfter, error: txAfterErr }] = await Promise.all([
+      sb
+        .from(TB_CONST.TABLES.trip_expenses)
+        .select("id,transaction_id")
+        .eq("id", expenseId)
+        .maybeSingle(),
+      sb
+        .from(TB_CONST.TABLES.transactions)
+        .select("id,trip_expense_id")
+        .eq("id", transactionId)
+        .maybeSingle()
+    ]);
+    if (exAfterErr) throw exAfterErr;
+    if (txAfterErr) throw txAfterErr;
+    if (exAfter?.transaction_id !== transactionId || txAfter?.trip_expense_id !== expenseId) {
+      await sb.from(TB_CONST.TABLES.trip_expenses).update({ transaction_id: null }).eq("id", expenseId);
+      await sb.from(TB_CONST.TABLES.transactions).update({ trip_expense_id: null }).eq("id", transactionId);
+      throw new Error("Le lien avec la transaction selectionnee n'a pas pu etre confirme. Aucune nouvelle transaction Budget n'a ete creee.");
     }
   }
 
@@ -1071,6 +1178,60 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
     tripState._tripsLoaded = true;
   }
 
+  async function _auditTripTransactionLinks() {
+    const issues = [];
+    const expenses = Array.isArray(tripState.expenses) ? tripState.expenses : [];
+    const expenseIds = expenses.map((x) => String(x?.id || "")).filter(Boolean);
+    if (!expenseIds.length) return issues;
+
+    const expenseById = new Map(expenses.map((ex) => [String(ex.id || ""), ex]));
+    const mainTxIds = Array.from(new Set(expenses.map((ex) => String(ex?.transactionId || "")).filter(Boolean)));
+    const mainTxById = new Map();
+
+    if (mainTxIds.length) {
+      const { data, error } = await sb
+        .from(TB_CONST.TABLES.transactions)
+        .select("id,trip_expense_id,label,amount,currency")
+        .in("id", mainTxIds);
+      if (error) throw error;
+      (data || []).forEach((tx) => mainTxById.set(String(tx.id || ""), tx));
+
+      for (const ex of expenses) {
+        const txId = String(ex?.transactionId || "");
+        if (!txId) continue;
+        const tx = mainTxById.get(txId);
+        if (!tx) {
+          issues.push({ type: "missing_transaction", expenseId: ex.id, transactionId: txId, label: ex.label || "" });
+        } else if (String(tx.trip_expense_id || "") !== String(ex.id || "")) {
+          issues.push({ type: "missing_reverse_link", expenseId: ex.id, transactionId: txId, label: ex.label || "" });
+        }
+      }
+    }
+
+    const { data: reverseRows, error: reverseErr } = await sb
+      .from(TB_CONST.TABLES.transactions)
+      .select("id,trip_expense_id,label,amount,currency")
+      .in("trip_expense_id", expenseIds);
+    if (reverseErr) throw reverseErr;
+    for (const tx of (reverseRows || [])) {
+      const expenseId = String(tx.trip_expense_id || "");
+      const ex = expenseById.get(expenseId);
+      if (ex && String(ex.transactionId || "") !== String(tx.id || "")) {
+        issues.push({ type: "missing_expense_link", expenseId, transactionId: tx.id, label: ex.label || tx.label || "" });
+      }
+    }
+
+    const budgetTxIds = Array.from(new Set((tripState.budgetLinks || []).map((row) => String(row?.transactionId || "")).filter(Boolean)));
+    for (const txId of budgetTxIds) {
+      if (!tripState.budgetTxById?.has(String(txId))) {
+        const link = (tripState.budgetLinks || []).find((row) => String(row?.transactionId || "") === String(txId));
+        issues.push({ type: "missing_share_transaction", expenseId: link?.expenseId || null, transactionId: txId, label: "" });
+      }
+    }
+
+    return issues;
+  }
+
   async function _loadActiveData() {
     const uid = await _ensureSession();
     const tripId = tripState.activeTripId;
@@ -1078,6 +1239,7 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
     tripState.members = [];
     tripState.expenses = [];
     tripState.shares = [];
+    tripState.linkIssues = [];
     if (!tripId) return;
 
     tripState.myRole = await _getMyTripRole(tripId);
@@ -1182,6 +1344,13 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
       }
     } catch (e) {
       console.warn('[Trip] budget link preload failed', e);
+    }
+
+    try {
+      tripState.linkIssues = await _auditTripTransactionLinks();
+    } catch (e) {
+      console.warn("[Trip] link consistency audit failed", e);
+      tripState.linkIssues = [];
     }
   }
 
@@ -1756,6 +1925,13 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
          ⚠ Somme des parts = ${_fmtMoney(sum, cur)} (écart ${_fmtMoney(diff, cur)}). Vérifie la répartition.
        </div>`
     : "";
+  const localLinkIssues = (tripState.linkIssues || []).filter((issue) => String(issue?.expenseId || "") === String(ex?.id || ""));
+  const linkIssueHTML = localLinkIssues.length
+    ? `<div style="margin-top:12px;padding:10px;border-radius:12px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.28);">
+         <div style="font-weight:800;margin-bottom:6px;">${escapeHTML(_tripT("trip.linked.audit_title"))}</div>
+         ${localLinkIssues.map((issue) => `<div class="muted" style="font-size:12px;">${escapeHTML(issue.type || "link_issue")} • tx ${escapeHTML(String(issue.transactionId || "—"))}</div>`).join("")}
+       </div>`
+    : "";
 
   const mainTx = audit.walletTransaction;
   const mainTxWallet = mainTx?.walletId ? _walletNameById(mainTx.walletId) : null;
@@ -1770,6 +1946,7 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
         <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${escapeHTML(tx?.category || "—")}</td>
         <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${escapeHTML(walletName || "—")}</td>
         <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${tx ? `${_yesNoPill(tx.payNow)} / ${_yesNoPill(tx.outOfBudget)}` : "—"}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${tx ? `<button class="btn small" type="button" onclick="tbOpenTransactionFromTrip('${escapeHTML(String(tx.id || ""))}')">${escapeHTML(_tripT("trip.linked.open_transaction"))}</button>` : "—"}</td>
       </tr>
     `;
   }).join("");
@@ -1789,6 +1966,7 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
         <div style="font-weight:700;">${mainTx ? "Oui" : "Non"}</div>
         <div class="muted" style="font-size:12px;margin-top:6px;">${mainTx ? `${escapeHTML(mainTxWallet || "Wallet inconnue")} • ${escapeHTML(mainTx.category || "—")}` : "Aucune transaction wallet principale liée."}</div>
         ${mainTx ? `<div class="muted" style="font-size:12px;margin-top:6px;">${_fmtMoney(mainTx.amount, mainTx.currency)} • pay_now ${mainTx.payNow ? "oui" : "non"} • out_of_budget ${mainTx.outOfBudget ? "oui" : "non"}</div>` : ``}
+        ${mainTx ? `<button class="btn small" type="button" style="margin-top:8px;" onclick="tbOpenTransactionFromTrip('${escapeHTML(String(mainTx.id || ""))}')">${escapeHTML(_tripT("trip.linked.open_transaction"))}</button>` : ``}
       </div>
 
       <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;">
@@ -1803,6 +1981,7 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
         <div class="muted" style="font-size:12px;margin-top:6px;">Somme parts ${_fmtMoney(sum || 0, cur)} • total ${_fmtMoney(amt, cur)}</div>
       </div>
     </div>
+    ${linkIssueHTML}
 
     <div style="margin-top:12px;">
       <div class="muted" style="font-size:12px;margin-bottom:6px;">Répartition</div>
@@ -1833,7 +2012,7 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
     <div style="margin-top:12px;">
       <div class="muted" style="font-size:12px;margin-bottom:6px;">Liens budget</div>
       <div style="overflow:auto;border:1px solid rgba(0,0,0,.08);border-radius:12px;">
-        <table style="width:100%;border-collapse:collapse;min-width:520px;">
+        <table style="width:100%;border-collapse:collapse;min-width:620px;">
           <thead>
             <tr>
               <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Participant</th>
@@ -1841,10 +2020,11 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
               <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Catégorie</th>
               <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Wallet</th>
               <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">pay_now / out</th>
+              <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);"></th>
             </tr>
           </thead>
           <tbody>
-            ${budgetRows || `<tr><td colspan="5" class="muted" style="padding:10px;">Aucun lien budget enregistré pour cette dépense.</td></tr>`}
+            ${budgetRows || `<tr><td colspan="6" class="muted" style="padding:10px;">Aucun lien budget enregistré pour cette dépense.</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -2812,15 +2992,13 @@ try {
 
     // Duplicate control: if a matching Budget transaction exists, propose linking instead of creating a new one.
       // Duplicate control: if a matching Budget transaction exists, propose linking instead of creating a new one.
+      let selectedExistingTransaction = false;
       try {
         const matches = await _findMatchingTransactions({ date, amount: amt, currency: cur });
         if (matches.length) {
-          const m0 = matches[0];
-          const msg = `Transaction Budget similaire trouvée : ${m0.label || "(sans libellé)"} (${m0.category || "—"}).
-
-Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour éviter un doublon) ?`;
-          const link = confirm(msg);
-          if (link) {
+          const m0 = await _chooseMatchingTransaction(matches);
+          if (m0) {
+            selectedExistingTransaction = true;
             // Create trip expense first, then link.
             // Create trip expense + shares atomically (DB-first V8.1)
             const memberIds = members.map(m => m.id);
@@ -2962,6 +3140,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           }
         }
       } catch (e) {
+        if (selectedExistingTransaction) throw e;
         console.warn("Trip duplicate check failed:", e);
       }
     }
@@ -3750,13 +3929,31 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
     const historyFilters = _tripHistoryFilterState();
     const historyCategoryOptions = Array.from(new Set(expenses.map((ex) => _tripAnalysisCategoryKey(ex, tripTxMap)).filter(Boolean))).sort((a,b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
     const filteredExpenses = expenses.filter((ex) => _tripHistoryMatch(ex, tripTxMap, membersById, sharesByExpenseForHistory, historyFilters));
+    const linkIssues = Array.isArray(tripState.linkIssues) ? tripState.linkIssues : [];
+    const linkIssueExpenseIds = new Set(linkIssues.map((issue) => String(issue?.expenseId || "")).filter(Boolean));
+    const linkAuditHTML = linkIssues.length ? `
+      <div class="card" style="margin-top:12px;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08);">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+          <div>
+            <h2 style="margin:0 0 6px 0;">${escapeHTML(_tripT("trip.linked.audit_title"))}</h2>
+            <div class="muted">${escapeHTML(_tripT("trip.linked.audit_body", { count: linkIssues.length }))}</div>
+          </div>
+          <span class="trip-badge">${linkIssues.length}</span>
+        </div>
+      </div>
+    ` : "";
 
     const expensesHTML = filteredExpenses.length
       ? await Promise.all(filteredExpenses.map(async ex => {
           const payer = members.find(m => m.id === ex.paidByMemberId);
           const moveUI = ""; // removed move between trips
           const isLinked = await _expenseIsEditLocked(ex);
-          const linkedLabel = isLinked ? " • lié au budget/wallet" : (ex.transactionId ? " • lié au budget" : "");
+          const hasShareBudgetLink = (tripState.budgetLinks || []).some((row) => String(row?.expenseId || '') === String(ex.id || '') && row?.transactionId);
+          const linkedBadges = [
+            ex.transactionId ? `<span class="trip-badge">${escapeHTML(_tripT("trip.linked.main_transaction"))}</span>` : '',
+            hasShareBudgetLink ? `<span class="trip-badge">${escapeHTML(_tripT("trip.linked.share_transaction"))}</span>` : '',
+            linkIssueExpenseIds.has(String(ex.id || "")) ? `<span class="trip-badge" style="background:rgba(245,158,11,.18);border-color:rgba(245,158,11,.45);">Audit</span>` : ''
+          ].filter(Boolean).join('');
           const resolvedCategory = _tripAnalysisCategoryKey(ex, tripTxMap);
           const resolvedSubcategory = String(ex.subcategory || '').trim();
           const budgetWindowLabel = (ex.budgetDateStart || ex.budgetDateEnd)
@@ -3767,10 +3964,10 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           const participantLabel = participantNames.length ? ` • participants: ${escapeHTML(participantNames.join(', '))}` : '';
           const editBtn = `<button class="btn" type="button" data-edit-exp="${ex.id}" title="${isLinked ? "Édition complète (wallet/budget inclus)" : "Modifier"}">Modifier</button>`;
 return `
-            <div class="trip-history-row">
+            <div class="trip-history-row" data-trip-expense-row="${escapeHTML(String(ex.id || ""))}">
               <div class="trip-history-copy">
-                <div class="trip-history-title">${escapeHTML(ex.label)}<span class="trip-badge">${escapeHTML(resolvedCategory || 'Autre')}</span>${resolvedSubcategory ? `<span class="trip-badge">${escapeHTML(resolvedSubcategory)}</span>` : ''}</div>
-                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${linkedLabel}${budgetWindowLabel}</div>
+                <div class="trip-history-title">${escapeHTML(ex.label)}<span class="trip-badge">${escapeHTML(resolvedCategory || 'Autre')}</span>${resolvedSubcategory ? `<span class="trip-badge">${escapeHTML(resolvedSubcategory)}</span>` : ''}${linkedBadges}</div>
+                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${budgetWindowLabel}</div>
                 ${participantNames.length ? `<div class="trip-history-participants">${participantNames.map((name) => `<span class="trip-participant-pill">${escapeHTML(name)}</span>`).join('')}</div>` : ''}
               </div>
               <div class="trip-history-actions">
@@ -3851,6 +4048,7 @@ return `
           ? `<div class="card"><h2>${escapeHTML(_tripT("trip.expense"))}</h2><div class="muted">${escapeHTML(_tripT("trip.expense.quick_hint"))}</div></div>`
           : _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal: false })}
       </div>
+      ${linkAuditHTML}
 
       <div class="card" style="margin-top:12px;">
         <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
@@ -4539,6 +4737,22 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
         }
       };
     });
+
+    try {
+      const focusId = String(window.__tbFocusTripExpenseId || "");
+      if (focusId) {
+        const safeId = (window.CSS && typeof CSS.escape === "function") ? CSS.escape(focusId) : focusId.replace(/"/g, '\\"');
+        const row = root.querySelector(`[data-trip-expense-row="${safeId}"]`);
+        const detailBtn = root.querySelector(`[data-exp-detail="${safeId}"]`);
+        if (row) {
+          window.__tbFocusTripExpenseId = "";
+          row.scrollIntoView({ behavior: "smooth", block: "center" });
+          row.style.boxShadow = "0 0 0 3px rgba(124,58,237,.35)";
+          setTimeout(() => { try { row.style.boxShadow = ""; } catch (_) {} }, 2200);
+        }
+        if (detailBtn) setTimeout(() => { try { detailBtn.click(); } catch (_) {} }, 250);
+      }
+    } catch (_) {}
 
     // Move expense to another trip
     root.querySelectorAll("[data-move-exp]").forEach(btn => {

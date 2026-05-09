@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getTransactionLockState,
+  validateTransactionAction,
   validateTransactionMutation,
 } from '../../src/core/transactionGuards.js';
 import { normalizeTransactionInput } from '../../src/core/transactionRules.js';
@@ -72,5 +73,18 @@ describe('transaction guards', () => {
       mode: 'create',
       wallet: { id: 'wallet-1', currency: 'EUR' },
     }).ok).toBe(false);
+  });
+
+  it('blocks delete and mark-paid actions on locked transactions', () => {
+    const tripTx = { id: 'tx-trip', tripExpenseId: 'trip-expense-1' };
+    const adjustmentTx = { id: 'tx-adjust', category: 'Ajustement wallet' };
+
+    const deleteOut = validateTransactionAction(tripTx, 'delete');
+    expect(deleteOut.ok).toBe(false);
+    expect(deleteOut.lock.kind).toBe('trip_linked');
+
+    const paidOut = validateTransactionAction(adjustmentTx, 'mark_paid');
+    expect(paidOut.ok).toBe(false);
+    expect(paidOut.lock.kind).toBe('wallet_adjustment');
   });
 });

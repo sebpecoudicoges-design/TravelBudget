@@ -452,6 +452,20 @@ function _txCatBadge(cat) {
   return `<span style="background:${color}; padding:2px 8px; border-radius:999px; font-size:12px;">${escapeHTML(name)}</span>`;
 }
 
+window.tbOpenTransactionFromTrip = function tbOpenTransactionFromTrip(txId) {
+  const id = String(txId || '').trim();
+  if (!id) return;
+  window.__tbFocusTransactionId = id;
+  if (typeof showView === "function") showView("transactions");
+};
+
+window.tbOpenTripExpenseFromTransaction = function tbOpenTripExpenseFromTransaction(expenseId) {
+  const id = String(expenseId || '').trim();
+  if (!id) return;
+  window.__tbFocusTripExpenseId = id;
+  if (typeof showView === "function") showView("trip");
+};
+
 function renderTransactions() {
   const list = document.getElementById("tx-list");
   if (!list) return;
@@ -592,12 +606,17 @@ function renderTransactions() {
       tx.type === "expense" ? (tx.payNow ? _txT("transactions.tag.paid") : _txT("transactions.tag.unpaid")) : _txT("transactions.tag.income"),
       tx.outOfBudget ? _txT("transactions.tag.out_budget") : null,
      tx.nightCovered ? _txT("transactions.tag.night") : null,
+     tx.tripExpenseId || tx.trip_expense_id ? _txT("transactions.tag.trip_linked") : null,
+     tx.tripShareLinkId || tx.trip_share_link_id ? _txT("transactions.tag.trip_share") : null,
      ...recurringTags,
     ].filter(Boolean);
 
     const div = document.createElement("div");
     div.className = "tx";
+    div.setAttribute("data-tx-id", String(tx.id || ""));
     const txChecked = TB_TX_BULK.selectedIds.has(String(tx.id));
+    const linkedExpenseId = String(tx.tripExpenseId || tx.trip_expense_id || "");
+    const linkedTripShareId = String(tx.tripShareLinkId || tx.trip_share_link_id || "");
     const insightDisplayCurrency = String(state?.user?.baseCurrency || state?.user?.base_currency || state?.period?.baseCurrency || tx.currency || "EUR").toUpperCase();
     const nightInsight = (tx.nightCovered && typeof window.tbGetNightCoveredInsightForTx === "function")
       ? window.tbGetNightCoveredInsightForTx(tx, insightDisplayCurrency)
@@ -617,6 +636,12 @@ function renderTransactions() {
       </div>
 
       <div style="display:flex; gap:8px; align-items:center;">
+        ${linkedExpenseId
+          ? `<button class="btn small" type="button" onclick="tbOpenTripExpenseFromTransaction('${escapeHTML(linkedExpenseId)}')">${escapeHTML(_txT("transactions.action.open_trip"))}</button>`
+          : linkedTripShareId
+            ? `<button class="btn small" type="button" onclick="showView('trip')">${escapeHTML(_txT("transactions.action.open_trip"))}</button>`
+          : ""
+        }
         ${(!tx.payNow && (tx.type === "expense" || tx.type === "income"))
           ? `<button class="btn small primary" onclick="markTxAsPaid(\'${tx.id}\')">✓ ${tx.type === "income" ? _txT("transactions.action.received") : _txT("transactions.action.pay")}</button>`
           : ""
@@ -627,6 +652,20 @@ function renderTransactions() {
     `;
     list.appendChild(div);
   }
+
+  try {
+    const focusId = String(window.__tbFocusTransactionId || "");
+    if (focusId) {
+      const safeId = (window.CSS && typeof CSS.escape === "function") ? CSS.escape(focusId) : focusId.replace(/"/g, '\\"');
+      const target = list.querySelector(`[data-tx-id="${safeId}"]`);
+      if (target) {
+        window.__tbFocusTransactionId = "";
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.style.boxShadow = "0 0 0 3px rgba(124,58,237,.35)";
+        setTimeout(() => { try { target.style.boxShadow = ""; } catch (_) {} }, 2200);
+      }
+    }
+  } catch (_) {}
 
   const ids = ["f-from", "f-to", "f-wallet", "f-category", "f-subcategory", "f-type", "f-pay", "f-out", "f-night", "f-recurring", "f-q"];
   _txBulkSyncControls();

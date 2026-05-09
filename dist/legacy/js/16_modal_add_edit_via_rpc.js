@@ -991,12 +991,24 @@ async function resnapshotModal() {
 }
 
 async function deleteTx(txId) {
+  const tx = state.transactions.find((t) => String(t.id) === String(txId));
+  const actionValidation = window.Core?.transactionGuards?.validateTransactionAction
+    ? window.Core.transactionGuards.validateTransactionAction(tx, "delete", {
+        walletAdjustmentCategory: TB_CONST?.CATS?.wallet_adjustment || "Ajustement wallet",
+      })
+    : { ok: true };
+  if (!actionValidation.ok) {
+    const msg = _txModalT("transactions.safe.locked_delete") || actionValidation.reason;
+    try { if (typeof toastWarn === "function") toastWarn(msg); else alert(msg); } catch (_) {}
+    return;
+  }
+
   const ok = confirm(_txModalT("transactions.confirm.delete"));
   if (!ok) return;
 
-  await safeCall("Suppression", async () => {
+  await safeCall(_txModalT("transactions.safe.delete"), async () => {
     try {
-      try { if (typeof window.tbBusyStart === "function") window.tbBusyStart("Suppression en cours…"); } catch (_) {}
+      try { if (typeof window.tbBusyStart === "function") window.tbBusyStart(_txModalT("transactions.safe.delete_busy")); } catch (_) {}
       const { error } = await sb.rpc("delete_transaction", { p_tx_id: txId });
       if (error) {
         const code = String(error.code || "");
@@ -1009,7 +1021,7 @@ async function deleteTx(txId) {
           details.includes("trip_expenses_transaction_fk")
         );
         if (isTripLinked) {
-          const friendly = "Suppression bloquée : cette transaction est liée à une dépense Partage. Supprime d'abord la dépense depuis l'onglet Trip.";
+          const friendly = _txModalT("transactions.safe.trip_delete_blocked");
           try {
             if (typeof toastWarn === "function") toastWarn(friendly);
             else alert(friendly);
@@ -1031,11 +1043,17 @@ async function markTxAsPaid(txId) {
   await safeCall(_txModalT("transactions.safe.mark_paid"), async () => {
     const tx = state.transactions.find((t) => t.id === txId);
     if (!tx) throw new Error(_txModalT("transactions.error.not_found"));
-    if (tx.type !== "expense" && tx.type !== "income") throw new Error("Seules les dépenses et les recettes sont concernées.");
+    const actionValidation = window.Core?.transactionGuards?.validateTransactionAction
+      ? window.Core.transactionGuards.validateTransactionAction(tx, "mark_paid", {
+          walletAdjustmentCategory: TB_CONST?.CATS?.wallet_adjustment || "Ajustement wallet",
+        })
+      : { ok: true };
+    if (!actionValidation.ok) throw new Error(_txModalT("transactions.safe.locked_mark_paid") || actionValidation.reason);
+    if (tx.type !== "expense" && tx.type !== "income") throw new Error(_txModalT("transactions.safe.type_payable_only"));
     if (tx.payNow) return;
 
     const wallet = findWallet(tx.walletId);
-    if (!wallet) throw new Error("Wallet introuvable.");
+    if (!wallet) throw new Error(_txModalT("transactions.safe.wallet_not_found"));
 
     const hasLockedFx = !!(tx.fxSnapshotAt || tx.fx_snapshot_at || tx.fxRateSnapshot || tx.fx_rate_snapshot);
     const fxArgs = hasLockedFx
