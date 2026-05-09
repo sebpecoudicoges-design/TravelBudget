@@ -46,7 +46,7 @@
   function eventRows(assetOrId){ const id = typeof assetOrId === 'object' ? assetOrId.id : assetOrId; return (CACHE.events||[]).filter(e=>String(e.asset_id)===String(id)); }
   function minePercent(rows){ const me = rows.find(r=>/toi|moi/i.test(String(r.display_name||''))); return Number(me?.ownership_percent ?? rows[0]?.ownership_percent ?? 100); }
   function totalPercent(rows){ return Math.round((rows||[]).reduce((s,r)=>s+n(r.ownership_percent,0),0)*100)/100; }
-  function eventLabel(t){ return ({ buy_share:'Rachat parts', sell_share:'Vente parts', transfer_share:'Transfert parts' })[t] || 'Mouvement parts'; }
+  function eventLabel(t){ return ({ buy_share:tr('assets.event.buy_share'), sell_share:tr('assets.event.sell_share'), transfer_share:tr('assets.event.transfer_share') })[t] || tr('assets.event.share_movement'); }
   function isMeOwnerRow(r){
   return /toi|moi/i.test(String(r.display_name||'')) || (!!r.user_id && r.user_id === window.sbUser?.id);
 }
@@ -173,7 +173,7 @@ const depreciationStatus = width >= 100 ? 'Amortissement terminé' : 'En amortis
     return `<section class="tb-asset-card" data-asset-id="${esc(asset.id)}">
       <div class="tb-asset-top"><div><div class="tb-asset-kicker">Asset</div><h3>${icon(asset.asset_type)} ${esc(asset.name)}</h3><p>Acheté le ${esc(asset.purchase_date)}</p></div><span>${esc(label(asset.asset_type))}</span></div>
       <div class="tb-asset-metrics"><div class="tb-asset-primary"><small>Ta valeur</small><strong>${esc(money(ownValue,asset.currency))}</strong><em>${ownPct}% de l’asset</em></div><div>
-  <small>Valeur actuelle</small>
+  <small>${esc(tr('assets.card.current_value'))}</small>
   <strong>${esc(money(current,asset.currency))}</strong>
   <em class="depr">
     Dépréciation : -${esc(money(lossAmount,asset.currency))} · -${pctLoss}%
@@ -181,7 +181,7 @@ const depreciationStatus = width >= 100 ? 'Amortissement terminé' : 'En amortis
 </div></div>
       <div class="tb-asset-facts">
   <span>Achat : <strong>${esc(money(asset.purchase_value,asset.currency))}</strong></span>
-  <span>Valeur finale estimée : <strong>${esc(money(asset.residual_value,asset.currency))}</strong></span>
+  <span>${esc(tr('assets.card.residual_value'))} : <strong>${esc(money(asset.residual_value,asset.currency))}</strong></span>
   <span>Coût mensuel estimé : <strong>${esc(money(monthlyDep,asset.currency))}/mois</strong></span>
   <span class="${width >= 100 ? 'done' : ''}">${esc(depreciationStatus)}</span>
 </div>
@@ -204,14 +204,32 @@ ${(() => {
   ` : '';
 })()}
 
-<div class="tb-asset-actions"><button type="button" data-tb-asset-edit="${esc(asset.id)}">Modifier</button><button type="button" data-tb-asset-owners="${esc(asset.id)}">Copropriétaires</button><button type="button" data-tb-asset-transfer="${esc(asset.id)}">Rachat / vente</button><button type="button" data-tb-asset-sell="${esc(asset.id)}">Vendre l’asset</button><button type="button" class="danger" data-tb-asset-archive="${esc(asset.id)}">Archiver</button></div>
+<div class="tb-asset-actions"><button type="button" data-tb-asset-edit="${esc(asset.id)}">${esc(tr('assets.action.edit'))}</button><button type="button" data-tb-asset-owners="${esc(asset.id)}">${esc(tr('assets.action.owners'))}</button><button type="button" data-tb-asset-transfer="${esc(asset.id)}">${esc(tr('assets.action.buy_sell'))}</button><button type="button" data-tb-asset-sell="${esc(asset.id)}">${esc(tr('assets.action.sell_asset'))}</button><button type="button" class="danger" data-tb-asset-archive="${esc(asset.id)}">${esc(tr('assets.action.archive'))}</button></div>
     </section>`;
   }
 
   function emptyState(){ return `<section class="tb-assets-empty"><div><strong>${esc(tr('assets.empty.title'))}</strong><p>${esc(tr('assets.empty.body'))}</p></div><button class="tb-asset-add-btn" type="button" data-tb-asset-open>${esc(tr('assets.action.add_asset'))}</button></section>`; }
   function renderCharts(assets){ if(!window.echarts) return; for(const asset of assets){ const el = document.getElementById(`asset-chart-${asset.id}`); if(!el) continue; const old = window.echarts.getInstanceByDom ? window.echarts.getInstanceByDom(el) : null; if(old) old.dispose(); const series = window.TBAssetsCore.buildValueSeries(asset, 18); const chart = window.echarts.init(el, null, { renderer:'canvas' }); chart.setOption({ grid:{left:4,right:4,top:8,bottom:6}, xAxis:{type:'category',show:false,data:series.map(x=>x.date)}, yAxis:{type:'value',show:false,min:'dataMin'}, tooltip:{trigger:'axis', valueFormatter:v=>money(v, asset.currency)}, series:[{ type:'line', smooth:true, symbol:'none', lineStyle:{ width:4, color:'#22d3ee' }, areaStyle:{ color:{ type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:'rgba(6,182,212,.22)'},{offset:1,color:'rgba(6,182,212,.02)'}] } }, data:series.map(x=>Math.round(x.value*100)/100) }] }); } }
 
-  function assetFormHtml(mode, asset){ const a = asset || { name:'', asset_type:'car', purchase_value:'', residual_value:0, currency:'EUR', purchase_date:today(), depreciation_months:36 }; const isEdit = mode === 'edit'; return `<div class="tb-asset-modal-backdrop"><form class="tb-asset-modal" data-tb-asset-form="${isEdit?'edit':'create'}" ${isEdit?`data-asset-id="${esc(a.id)}"`:''}><div class="tb-asset-modal-head"><div><strong>${isEdit?'Modifier l’asset':'Ajouter un asset'}</strong><p>Stock patrimonial seul : aucun mouvement cash, aucune dépense budget.</p></div><button type="button" data-tb-asset-close>×</button></div><div class="tb-asset-form-grid"><label>Nom<input name="name" required placeholder="Toyota X-Trail" value="${esc(a.name)}"></label><label>Type<select name="asset_type"><option value="car" ${a.asset_type==='car'?'selected':''}>Voiture</option><option value="real_estate" ${a.asset_type==='real_estate'?'selected':''}>Immo</option><option value="equipment" ${a.asset_type==='equipment'?'selected':''}>Matériel</option><option value="other" ${a.asset_type==='other'?'selected':''}>Autre</option></select></label><label>Valeur d’achat<input name="purchase_value" required type="number" min="0" step="0.01" placeholder="5000" value="${esc(a.purchase_value)}"></label><label>Valeur estimée finale<input name="residual_value" type="number" min="0" step="0.01" value="${esc(a.residual_value)}"></label><label>Devise<input name="currency" required maxlength="3" value="${esc(a.currency||'EUR')}"></label><label>Date d’achat<input name="purchase_date" required type="date" value="${esc(a.purchase_date||today())}"></label><label>Amortissement, mois<input name="depreciation_months" required type="number" min="1" step="1" value="${esc(a.depreciation_months||36)}"></label>${isEdit?'':'<label>Ta part %<input name="ownership_percent" required type="number" min="0" max="100" step="0.01" value="100"></label>'}</div><div class="tb-asset-modal-error" data-tb-asset-error hidden></div><div class="tb-asset-modal-actions"><button type="button" data-tb-asset-close>Annuler</button><button type="submit">${isEdit?'Enregistrer':'Créer l’asset'}</button></div></form></div>`; }
+  function assetFormHtml(mode, asset){
+    const a = asset || { name:'', asset_type:'car', purchase_value:'', residual_value:0, currency:'EUR', purchase_date:today(), depreciation_months:36 };
+    const isEdit = mode === 'edit';
+    return `<div class="tb-asset-modal-backdrop"><form class="tb-asset-modal" data-tb-asset-form="${isEdit?'edit':'create'}" ${isEdit?`data-asset-id="${esc(a.id)}"`:''}>
+      <div class="tb-asset-modal-head"><div><strong>${esc(isEdit ? tr('assets.modal.edit_title') : tr('assets.modal.add_title'))}</strong><p>${esc(tr('assets.modal.cash_hint'))}</p></div><button type="button" data-tb-asset-close>×</button></div>
+      <div class="tb-asset-form-grid">
+        <label>${esc(tr('assets.form.name'))}<input name="name" required placeholder="Toyota X-Trail" value="${esc(a.name)}"></label>
+        <label>${esc(tr('assets.form.type'))}<select name="asset_type"><option value="car" ${a.asset_type==='car'?'selected':''}>${esc(tr('assets.type.car'))}</option><option value="real_estate" ${a.asset_type==='real_estate'?'selected':''}>${esc(tr('assets.type.real_estate'))}</option><option value="equipment" ${a.asset_type==='equipment'?'selected':''}>${esc(tr('assets.type.equipment'))}</option><option value="other" ${a.asset_type==='other'?'selected':''}>${esc(tr('assets.type.other'))}</option></select></label>
+        <label>${esc(tr('assets.form.purchase_value'))}<input name="purchase_value" required type="number" min="0" step="0.01" placeholder="5000" value="${esc(a.purchase_value)}"></label>
+        <label>${esc(tr('assets.form.residual_value'))}<input name="residual_value" type="number" min="0" step="0.01" value="${esc(a.residual_value)}"></label>
+        <label>${esc(tr('assets.form.currency'))}<input name="currency" required maxlength="3" value="${esc(a.currency||'EUR')}"></label>
+        <label>${esc(tr('assets.form.purchase_date'))}<input name="purchase_date" required type="date" value="${esc(a.purchase_date||today())}"></label>
+        <label>${esc(tr('assets.form.depreciation_months'))}<input name="depreciation_months" required type="number" min="1" step="1" value="${esc(a.depreciation_months||36)}"></label>
+        ${isEdit ? '' : `<label>${esc(tr('assets.form.your_share'))}<input name="ownership_percent" required type="number" min="0" max="100" step="0.01" value="100"></label>`}
+      </div>
+      <div class="tb-asset-modal-error" data-tb-asset-error hidden></div>
+      <div class="tb-asset-modal-actions"><button type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button><button type="submit">${esc(isEdit ? tr('documents.action.save') : tr('assets.action.create_asset'))}</button></div>
+    </form></div>`;
+  }
   function ownerRowHtml(o){ return `<div class="tb-owner-row" data-owner-id="${esc(o.id||'')}"><input name="owner_name" required placeholder="Nom" value="${esc(o.display_name||'')}"><input name="owner_percent" required type="number" min="0" max="100" step="0.01" value="${esc(o.ownership_percent||0)}"><button type="button" data-tb-owner-remove>×</button></div>`; }
   function ownersModalHtml(asset){ const rows = ownerRows(asset); return `<div class="tb-asset-modal-backdrop"><form class="tb-asset-modal" data-tb-asset-owners-form data-asset-id="${esc(asset.id)}"><div class="tb-asset-modal-head"><div><strong>Copropriétaires</strong><p>${esc(asset.name)} · le total des parts doit faire 100%.</p></div><button type="button" data-tb-asset-close>×</button></div><div class="tb-owner-list" data-tb-owner-list>${rows.map(ownerRowHtml).join('') || ownerRowHtml({id:'', display_name:'Toi', ownership_percent:100})}</div><button type="button" class="tb-owner-add" data-tb-owner-add>+ Ajouter un copropriétaire</button><div class="tb-owner-total" data-tb-owner-total></div><div class="tb-asset-modal-error" data-tb-asset-error hidden></div><div class="tb-asset-modal-actions"><button type="button" data-tb-asset-close>Annuler</button><button type="submit">Enregistrer les parts</button></div></form></div>`; }
   function transferModalHtml(asset, transactions){

@@ -424,7 +424,7 @@ function setSelectedSort(v){
 
   async function loadDocuments(){
     const c = client();
-    if(!c) throw new Error('Client Supabase indisponible.');
+    if(!c) throw new Error(tr('common.supabase_unavailable'));
     const foldersRes = await c.from(table('document_folders','document_folders')).select('*').order('name',{ascending:true});
     if(foldersRes.error) throw foldersRes.error;
     const docsRes = await c.from(table('documents','documents')).select('*').order('created_at',{ascending:false});
@@ -829,7 +829,7 @@ function setSelectedSort(v){
 }
 
   async function createFolder(parentId = null){
-    const c = client(); if(!c) return alert('Client Supabase indisponible.');
+    const c = client(); if(!c) return alert(tr('common.supabase_unavailable'));
     const name = String(prompt('Nom du dossier ?') || '').trim(); if(!name) return;
     const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connecté.');
     const guard = window.Core?.documentRules?.canCreateSubFolder
@@ -846,7 +846,7 @@ function setSelectedSort(v){
 
   async function upload(files){
   const list = Array.from(files || []); if(!list.length) return;
-  const c = client(); if(!c) return alert('Client Supabase indisponible.');
+  const c = client(); if(!c) return alert(tr('common.supabase_unavailable'));
   const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connecté.');
   const folderId = CACHE.selectedFolderId || null;
 
@@ -901,7 +901,7 @@ function setSelectedSort(v){
 }
 
   async function signedUrl(doc){
-    const c = client(); if(!c) throw new Error('Client Supabase indisponible.');
+    const c = client(); if(!c) throw new Error(tr('common.supabase_unavailable'));
     const res = await c.storage.from(doc.storage_bucket || BUCKET).createSignedUrl(doc.storage_path, 60 * 10);
     if(res.error) throw res.error;
     return res.data && res.data.signedUrl;
@@ -922,7 +922,7 @@ function setSelectedSort(v){
   }
 
   async function rename(id){
-    const c = client(); if(!c) return alert('Client Supabase indisponible.');
+    const c = client(); if(!c) return alert(tr('common.supabase_unavailable'));
     const doc = (CACHE.documents||[]).find(d=>String(d.id)===String(id)); if(!doc) return;
     const name = String(prompt('Nouveau nom du document ?', doc.name || doc.original_filename || '') || '').trim(); if(!name) return;
     const { error } = await c.from(table('documents','documents')).update({ name }).eq('id', id);
@@ -931,7 +931,7 @@ function setSelectedSort(v){
   }
 
   async function removeDoc(id){
-    const c = client(); if(!c) return alert('Client Supabase indisponible.');
+    const c = client(); if(!c) return alert(tr('common.supabase_unavailable'));
     const doc = (CACHE.documents||[]).find(d=>String(d.id)===String(id)); if(!doc) return;
     if(!confirm(`Supprimer « ${doc.name || doc.original_filename || 'Document'} » ?`)) return;
     try{ await c.storage.from(doc.storage_bucket || BUCKET).remove([doc.storage_path]); }catch(e){ console.warn('[TB][documents] storage remove failed', e); }
@@ -942,7 +942,7 @@ function setSelectedSort(v){
 
   async function renameFolder(id){
   const c = client();
-  if(!c) return alert('Client Supabase indisponible.');
+  if(!c) return alert(tr('common.supabase_unavailable'));
 
   const folder = (CACHE.folders||[]).find(f=>String(f.id)===String(id));
   if(!folder) return;
@@ -962,7 +962,7 @@ function setSelectedSort(v){
 
 async function deleteFolder(id){
   const c = client();
-  if(!c) return alert('Client Supabase indisponible.');
+  if(!c) return alert(tr('common.supabase_unavailable'));
 
   const folder = (CACHE.folders||[]).find(f=>String(f.id)===String(id));
   if(!folder) return;
@@ -996,7 +996,7 @@ async function deleteFolder(id){
   const c = client();
 
   if(!c){
-    return alert('Client Supabase indisponible.');
+    return alert(tr('common.supabase_unavailable'));
   }
 
   const { error } = await c
@@ -1014,7 +1014,7 @@ async function deleteFolder(id){
 }
   async function toggleFavorite(id){
   const c = client();
-  if(!c) return alert('Client Supabase indisponible.');
+  if(!c) return alert(tr('common.supabase_unavailable'));
 
   const doc = (CACHE.documents||[]).find(d=>String(d.id)===String(id));
   if(!doc) return;
@@ -1091,7 +1091,7 @@ function editMeta(id){
 
 async function saveInfo(id){
   const c = client();
-  if(!c) return alert('Client Supabase indisponible.');
+  if(!c) return alert(tr('common.supabase_unavailable'));
 
   const tagsInput = document.getElementById('tb-doc-info-tags')?.value || '';
   const folderId = document.getElementById('tb-doc-info-folder')?.value || '';
@@ -1132,7 +1132,7 @@ const notes = notes_raw.trim() || null;
 
 async function createShareLinksForDocs(docs, expiresInSeconds){
   const c = client();
-  if(!c) throw new Error('Client Supabase indisponible.');
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
 
   const rows = [];
 
@@ -1245,12 +1245,12 @@ async function moveSelected(){
 
   const idx = Number(choice);
   if(!Number.isInteger(idx) || idx < 0 || idx >= folderOptions.length){
-    return alert('Choix invalide.');
+    return alert(tr('common.invalid_choice'));
   }
 
   const folderId = folderOptions[idx][0] || null;
   const c = client();
-  if(!c) return alert('Client Supabase indisponible.');
+  if(!c) return alert(tr('common.supabase_unavailable'));
 
   for(const doc of docs){
     const { error } = await c
@@ -1274,7 +1274,7 @@ async function addTagSelected(){
   if(!tag) return;
 
   const c = client();
-  if(!c) return alert('Client Supabase indisponible.');
+  if(!c) return alert(tr('common.supabase_unavailable'));
 
   let updated = 0;
   let skipped = 0;
@@ -1433,7 +1433,7 @@ async function applyMoveSelected(){
 
   const folderId = document.getElementById('tb-doc-batch-folder')?.value || null;
   const c = client();
-  if(!c) return alert('Client Supabase indisponible.');
+  if(!c) return alert(tr('common.supabase_unavailable'));
 
   let moved = 0;
   let failed = 0;
@@ -1499,7 +1499,7 @@ async function applyAddTagSelected(){
   if(!tag) return;
 
   const c = client();
-  if(!c) return alert('Client Supabase indisponible.');
+  if(!c) return alert(tr('common.supabase_unavailable'));
 
   let updated = 0;
   let skipped = 0;

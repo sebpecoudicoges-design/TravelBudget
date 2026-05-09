@@ -339,28 +339,29 @@ function _tbSettingsSetPanelState(key, isOpen){
 }
 
 function _tbSettingsCardSummary(card){
+  const T = window.tbT || ((k) => k);
   const id = String(card?.id || '');
   if (id === 'tb-account-card') {
     const base = String(state?.user?.baseCurrency || 'EUR').toUpperCase();
-    return { kicker:'Compte', summary:`Devise de base ${base} · sécurité et préférences`, pills:[base] };
+    return { kicker:T('settings.card.account'), summary:T('settings.card.account_summary', { base }), pills:[base] };
   }
   if (id === 'tb-travel-card') {
     const travel = (state?.travels || []).find(t => String(t?.id||'') === String(state?.activeTravelId||''));
-    const name = String(travel?.name || state?.period?.name || 'Voyage actif');
-    return { kicker:'Voyage', summary:`${name} · réglages généraux et budget de référence`, pills:[name] };
+    const name = String(travel?.name || state?.period?.name || T('analysis.trip.active'));
+    return { kicker:T('settings.card.travel'), summary:T('settings.card.travel_summary', { name }), pills:[name] };
   }
   if (id === 'tb-periods-card') {
     const count = Array.isArray(state?.budgetSegments) ? state.budgetSegments.length : 0;
-    return { kicker:'Périodes', summary:`${count} période${count>1?'s':''} visible${count>1?'s':''} · devise, budget/jour et héritage`, pills:[`${count} période${count>1?'s':''}`] };
+    return { kicker:T('settings.card.periods'), summary:T('settings.card.periods_summary', { count }), pills:[T('settings.card.periods_count', { count })] };
   }
   if (id === 'tb-recurring-card') {
     const count = Array.isArray(state?.recurringRules) ? state.recurringRules.length : 0;
-    return { kicker:'Échéances', summary:`${count} règle${count>1?'s':''} récurrente${count>1?'s':''}`, pills:[`${count} règle${count>1?'s':''}`] };
+    return { kicker:T('settings.card.recurring'), summary:T('settings.card.recurring_summary', { count }), pills:[T('settings.card.recurring_count', { count })] };
   }
-  if (id.includes('palette')) return { kicker:'Palette', summary:'Couleurs et apparence générale', pills:['Visuel'] };
-  if (id.includes('categories')) return { kicker:'Catégories', summary:'Catégories et sous-catégories utilisées dans l’app', pills:['Classement'] };
-  const title = String(card?.querySelector('h2')?.textContent || '').trim() || 'Réglages';
-  return { kicker:'Réglages', summary:title, pills:[] };
+  if (id.includes('palette')) return { kicker:T('settings.card.palette'), summary:T('settings.card.palette_summary'), pills:[T('settings.card.visual')] };
+  if (id.includes('categories')) return { kicker:T('settings.card.categories'), summary:T('settings.card.categories_summary'), pills:[T('settings.card.classification')] };
+  const title = String(card?.querySelector('h2')?.textContent || '').trim() || T('settings.hero.title');
+  return { kicker:T('settings.hero.title'), summary:title, pills:[] };
 }
 
 function _tbSettingsEnsureHero(view){
@@ -376,13 +377,13 @@ function _tbSettingsEnsureHero(view){
   }
   hero.innerHTML = `
     <div>
-      <div class="tb-settings-hero-title">Réglages</div>
-      <div class="tb-settings-hero-copy">Un espace plus simple à parcourir : ouvre uniquement le bloc utile, garde les textes courts, et concentre-toi sur le voyage actif.</div>
+      <div class="tb-settings-hero-title">${escapeHTML((window.tbT || ((k)=>k))('settings.hero.title'))}</div>
+      <div class="tb-settings-hero-copy">${escapeHTML((window.tbT || ((k)=>k))('settings.hero.body'))}</div>
     </div>
     <div class="tb-settings-hero-chips">
-      <span class="tb-settings-hero-chip">${escapeHTML(String(travel?.name || 'Voyage actif'))}</span>
-      <span class="tb-settings-hero-chip">${escapeHTML(String(segCount))} période${segCount>1?'s':''}</span>
-      <span class="tb-settings-hero-chip">${escapeHTML(String(rrCount))} échéance${rrCount>1?'s':''}</span>
+      <span class="tb-settings-hero-chip">${escapeHTML(String(travel?.name || (window.tbT || ((k)=>k))('analysis.trip.active')))}</span>
+      <span class="tb-settings-hero-chip">${escapeHTML((window.tbT || ((k)=>k))('settings.card.periods_count', { count: segCount }))}</span>
+      <span class="tb-settings-hero-chip">${escapeHTML((window.tbT || ((k)=>k))('settings.card.recurring_count', { count: rrCount }))}</span>
     </div>`;
 }
 
