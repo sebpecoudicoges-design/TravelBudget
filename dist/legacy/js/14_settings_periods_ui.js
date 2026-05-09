@@ -1396,8 +1396,11 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       const refEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
       const rt = (fr, en) => refEn ? en : fr;
       const modeText = override ? rt('Personnalise', 'Custom') : (travel?.country_code ? rt('Herite', 'Inherited') : rt('A definir', 'To define'));
+      const plannedBaseAmount = Number(_tbTryConvert(seg.dailyBudgetBase, seg.baseCurrency || '', localBaseCur) || 0);
+      const referenceBaseAmount = Number(_tbTryConvert(resolved?.recommended_daily_amount, resolved?.currency_code || 'EUR', localBaseCur) || 0);
+      const plannedDiffAmount = plannedBaseAmount - referenceBaseAmount;
       const plannedDiff = Number.isFinite(Number(resolved?.recommended_daily_amount)) && Number.isFinite(Number(seg.dailyBudgetBase))
-        ? `${((Number(_tbTryConvert(seg.dailyBudgetBase, seg.baseCurrency || '', localBaseCur) || 0) - Number(_tbTryConvert(resolved?.recommended_daily_amount, resolved?.currency_code || 'EUR', localBaseCur) || 0)).toFixed(2)} ${localBaseCur} ${rt("d'ecart", 'gap')}`
+        ? `${plannedDiffAmount.toFixed(2)} ${localBaseCur} ${rt("d'ecart", 'gap')}`
         : '—';
       const postLabel = (label) => ({
         Logement: rt('Logement', 'Accommodation'),

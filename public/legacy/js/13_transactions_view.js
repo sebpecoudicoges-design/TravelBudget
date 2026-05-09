@@ -276,24 +276,24 @@ function _txEnsureShortcutsUI() {
     renderTransactions();
   };
 
-  wrap.appendChild(mkBtn("Aujourd’hui", () => {
+  wrap.appendChild(mkBtn(_txT("transactions.shortcut.today"), () => {
     const d = toLocalISODate(new Date());
     setRange(d, d);
   }));
 
-  wrap.appendChild(mkBtn("7 jours", () => {
+  wrap.appendChild(mkBtn(_txT("transactions.shortcut.days7"), () => {
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - 6);
     setRange(toLocalISODate(start), toLocalISODate(end));
   }));
 
-  wrap.appendChild(mkBtn("Voyage", () => {
+  wrap.appendChild(mkBtn(_txT("transactions.shortcut.trip"), () => {
     const t = (state?.travels || []).find(x => String(x.id) === String(state?.activeTravelId || ""));
     setRange(t?.start || state?.period?.start || "", t?.end || state?.period?.end || "");
   }));
 
-  wrap.appendChild(mkBtn("Tout", () => {
+  wrap.appendChild(mkBtn(_txT("transactions.shortcut.all"), () => {
     setRange("", "");
   }));
 
@@ -304,15 +304,15 @@ function _txEnsureShortcutsUI() {
   sep.textContent = "•";
   wrap.appendChild(sep);
 
-  wrap.appendChild(mkBtn("Payé", () => {
+  wrap.appendChild(mkBtn(_txT("transactions.shortcut.paid"), () => {
     if (_txEl("f-pay")) _txEl("f-pay").value = "paid";
     renderTransactions();
   }));
-  wrap.appendChild(mkBtn("À payer", () => {
+  wrap.appendChild(mkBtn(_txT("transactions.shortcut.unpaid"), () => {
     if (_txEl("f-pay")) _txEl("f-pay").value = "unpaid";
     renderTransactions();
   }));
-  wrap.appendChild(mkBtn("Tous", () => {
+  wrap.appendChild(mkBtn(_txT("transactions.shortcut.all_m"), () => {
     if (_txEl("f-pay")) _txEl("f-pay").value = "all";
     renderTransactions();
   }));
@@ -580,18 +580,18 @@ function renderTransactions() {
   for (const tx of txs) {
     const w = findWallet(tx.walletId);
     const recurringTags = [];
-    if (tx.generatedByRule || tx.recurringRuleId) recurringTags.push("récurrente");
+    if (tx.generatedByRule || tx.recurringRuleId) recurringTags.push(_txT("transactions.tag.recurring"));
 
     const st = String(tx.recurringInstanceStatus || "").toLowerCase();
-    if (st === "generated") recurringTags.push("générée");
-    if (st === "confirmed") recurringTags.push("confirmée");
-    if (st === "detached") recurringTags.push("détachée");
-    if (st === "skipped") recurringTags.push("sautée");
+    if (st === "generated") recurringTags.push(_txT("transactions.tag.generated"));
+    if (st === "confirmed") recurringTags.push(_txT("transactions.tag.confirmed"));
+    if (st === "detached") recurringTags.push(_txT("transactions.tag.detached"));
+    if (st === "skipped") recurringTags.push(_txT("transactions.tag.skipped"));
 
     const tags = [
-      tx.type === "expense" ? (tx.payNow ? "payé" : "à payer") : "entrée",
-      tx.outOfBudget ? "hors budget/jour" : null,
-     tx.nightCovered ? "nuit couverte" : null,
+      tx.type === "expense" ? (tx.payNow ? _txT("transactions.tag.paid") : _txT("transactions.tag.unpaid")) : _txT("transactions.tag.income"),
+      tx.outOfBudget ? _txT("transactions.tag.out_budget") : null,
+     tx.nightCovered ? _txT("transactions.tag.night") : null,
      ...recurringTags,
     ].filter(Boolean);
 
@@ -612,7 +612,7 @@ function renderTransactions() {
           • ${w ? w.name : "Wallet"} • ${_txCatBadge(tx.category)} ${tx.label ? " • " + escapeHTML(tx.label) : ""}
         </div>
         <div class="tags">${tags.map((t) => `<span class="tag">${t}</span>`).join("")}</div>
-        ${nightInsight ? `<div class="muted" style="margin-top:6px;font-size:12px;line-height:1.45;">Ce transport remplace une nuit d'hébergement : économie potentielle logement ${escapeHTML(_fmtMoney(nightInsight.amount, nightInsight.currency))}.</div>` : ``}
+        ${nightInsight ? `<div class="muted" style="margin-top:6px;font-size:12px;line-height:1.45;">${escapeHTML(_txT("transactions.night_insight", { amount: _fmtMoney(nightInsight.amount, nightInsight.currency) }))}</div>` : ``}
         </div>
       </div>
 
