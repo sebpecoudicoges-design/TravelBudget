@@ -431,6 +431,8 @@ function toastOk(msg) {
 
   function _tripAnalysisBarsHTML(data) {
     const pivot = String(data?.pivot || _tripPivotCurrency()).toUpperCase();
+    const isEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
+    const txt = (fr, en) => isEn ? en : fr;
     const categories = Array.isArray(data?.categories) ? data.categories : [];
     const participants = Array.isArray(data?.participants) ? data.participants : [];
     const totalCat = categories.reduce((s, x) => s + (Number(x.amount) || 0), 0);
@@ -457,7 +459,7 @@ function toastOk(msg) {
               <div class="trip-analysis-meter"><span style="width:${width.toFixed(1)}%;"></span></div>
             </div>`;
         }).join('')
-      : `<div class="muted">Aucune dépense exploitable pour l’analyse catégorie.</div>`;
+      : `<div class="muted">${escapeHTML(txt("Aucune dépense exploitable pour l’analyse catégorie.", "No usable expense for category analysis."))}</div>`;
 
     const participantHTML = participants.length
       ? participants.map((row) => {
@@ -469,54 +471,54 @@ function toastOk(msg) {
             <div class="trip-analysis-row">
               <div class="trip-analysis-row-head">
                 <div>
-                  <strong class="trip-analysis-row-title">${escapeHTML(row.name)}${row.isMe ? ' (moi)' : ''}</strong>
-                  <div class="muted" style="font-size:12px;">${row.expenseCount || 0} dépense(s) payée(s)</div>
+                  <strong class="trip-analysis-row-title">${escapeHTML(row.name)}${row.isMe ? ` (${escapeHTML(txt("moi", "me"))})` : ''}</strong>
+                  <div class="muted" style="font-size:12px;">${row.expenseCount || 0} ${escapeHTML(txt("dépense(s) payée(s)", "paid expense(s)"))}</div>
                 </div>
                 <div class="trip-analysis-row-values">
                   <strong style="color:${tone};">${escapeHTML(_fmtMoney(net, pivot))}</strong>
-                  <div class="muted" style="font-size:12px;">Net = payé - part due</div>
+                  <div class="muted" style="font-size:12px;">${escapeHTML(txt("Net = payé - part due", "Net = paid - owed share"))}</div>
                 </div>
               </div>
               <div style="display:grid; gap:6px;">
-                <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;"><span class="muted">Payé</span><span>${escapeHTML(_fmtMoney(row.paid, pivot))}</span></div>
+                <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;"><span class="muted">${escapeHTML(txt("Payé", "Paid"))}</span><span>${escapeHTML(_fmtMoney(row.paid, pivot))}</span></div>
                 <div class="trip-analysis-meter trip-analysis-meter--paid"><span style="width:${widthPaid.toFixed(1)}%;"></span></div>
-                <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;"><span class="muted">Part due</span><span>${escapeHTML(_fmtMoney(row.owed, pivot))}</span></div>
+                <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;"><span class="muted">${escapeHTML(txt("Part due", "Owed share"))}</span><span>${escapeHTML(_fmtMoney(row.owed, pivot))}</span></div>
                 <div class="trip-analysis-meter trip-analysis-meter--owed"><span style="width:${widthOwed.toFixed(1)}%;"></span></div>
               </div>
             </div>`;
         }).join('')
-      : `<div class="muted">Aucune donnée exploitable pour l’analyse participant.</div>`;
+      : `<div class="muted">${escapeHTML(txt("Aucune donnée exploitable pour l’analyse participant.", "No usable data for participant analysis."))}</div>`;
 
     return `
       <div class="trip-analysis-shell">
         <div class="trip-analysis-summary">
           <div class="trip-analysis-kpi">
-            <span>Total du trip</span>
+            <span>${escapeHTML(txt("Total du trip", "Trip total"))}</span>
             <strong>${escapeHTML(_fmtMoney(totalCat, pivot))}</strong>
-            <small>${categories.length} catégorie(s) · ${participants.length} participant(s)</small>
+            <small>${categories.length} ${escapeHTML(txt("catégorie(s)", "category/categories"))} · ${participants.length} ${escapeHTML(txt("participant(s)", "participant(s)"))}</small>
           </div>
           <div class="trip-analysis-kpi">
-            <span>Catégorie dominante</span>
+            <span>${escapeHTML(txt("Catégorie dominante", "Dominant category"))}</span>
             <strong>${escapeHTML(topCategory?.name || '—')}</strong>
-            <small>${topCategory ? escapeHTML(_fmtMoney(topCategory.amount, pivot)) : 'Aucune donnée'}</small>
+            <small>${topCategory ? escapeHTML(_fmtMoney(topCategory.amount, pivot)) : escapeHTML(txt("Aucune donnée", "No data"))}</small>
           </div>
           <div class="trip-analysis-kpi">
-            <span>Avance la plus forte</span>
+            <span>${escapeHTML(txt("Avance la plus forte", "Highest advance"))}</span>
             <strong>${escapeHTML(highestAdvance?.name || '—')}</strong>
-            <small>${highestAdvance ? escapeHTML(_fmtMoney(highestAdvance.net, pivot)) : 'Aucune donnée'}</small>
+            <small>${highestAdvance ? escapeHTML(_fmtMoney(highestAdvance.net, pivot)) : escapeHTML(txt("Aucune donnée", "No data"))}</small>
           </div>
           <div class="trip-analysis-kpi">
-            <span>Équilibre</span>
+            <span>${escapeHTML(txt("Équilibre", "Balance"))}</span>
             <strong>${settledParticipants}/${participants.length || 0}</strong>
-            <small>${highestDebt ? `${escapeHTML(highestDebt.name)} doit ${escapeHTML(_fmtMoney(Math.abs(highestDebt.net || 0), pivot))}` : 'Aucun écart notable'}</small>
+            <small>${highestDebt ? (isEn ? `${escapeHTML(highestDebt.name)} owes ${escapeHTML(_fmtMoney(Math.abs(highestDebt.net || 0), pivot))}` : `${escapeHTML(highestDebt.name)} doit ${escapeHTML(_fmtMoney(Math.abs(highestDebt.net || 0), pivot))}`) : escapeHTML(txt("Aucun écart notable", "No notable gap"))}</small>
           </div>
         </div>
         <div class="trip-analysis-grid">
           <div class="trip-analysis-card">
             <div class="trip-analysis-card-head">
               <div>
-                <h3 style="margin:0;">Analyse catégorie</h3>
-                <div class="muted" style="font-size:12px;">Lecture du trip en devise pivot du compte.</div>
+                <h3 style="margin:0;">${escapeHTML(txt("Analyse catégorie", "Category analysis"))}</h3>
+                <div class="muted" style="font-size:12px;">${escapeHTML(txt("Lecture du trip en devise pivot du compte.", "Trip readout in the account pivot currency."))}</div>
               </div>
               <div class="pill">${escapeHTML(pivot)}</div>
             </div>
@@ -525,10 +527,10 @@ function toastOk(msg) {
           <div class="trip-analysis-card">
             <div class="trip-analysis-card-head">
               <div>
-                <h3 style="margin:0;">Analyse participant</h3>
-                <div class="muted" style="font-size:12px;">Qui paie, qui consomme, qui avance.</div>
+                <h3 style="margin:0;">${escapeHTML(txt("Analyse participant", "Participant analysis"))}</h3>
+                <div class="muted" style="font-size:12px;">${escapeHTML(txt("Qui paie, qui consomme, qui avance.", "Who pays, who consumes, who advances."))}</div>
               </div>
-              <div class="pill">Pivot ${escapeHTML(pivot)}</div>
+              <div class="pill">${escapeHTML(txt("Pivot", "Pivot"))} ${escapeHTML(pivot)}</div>
             </div>
             ${participantHTML}
           </div>
@@ -3634,19 +3636,21 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
         for (const [, transfers] of settlementsByCur.entries()) if (transfers?.length) return true;
         return false;
       })();
+      const tripUiEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
+      const stxt = (fr, en) => tripUiEn ? en : fr;
 
       // Share / copy controls (even if no settlements)
       parts.push(`<div style="display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
-        <button class="btn" id="trip-copy-settlements" type="button">Copier les règlements</button>
-        <button class="btn" id="trip-share-settlements" type="button">Partager</button>
-        <span class="muted">${hasAny ? "Format simple" : "Rien à régler pour l'instant"}</span>
+        <button class="btn" id="trip-copy-settlements" type="button">${escapeHTML(stxt("Copier les règlements", "Copy settlements"))}</button>
+        <button class="btn" id="trip-share-settlements" type="button">${escapeHTML(stxt("Partager", "Share"))}</button>
+        <span class="muted">${escapeHTML(hasAny ? stxt("Format simple", "Simple format") : stxt("Rien à régler pour l'instant", "Nothing to settle for now"))}</span>
       </div>`);
 
       if (!hasAny) return parts.join("");
 
       for (const [cur, transfers] of settlementsByCur.entries()) {
         if (!transfers.length) continue;
-        parts.push(`<div class="muted" style="margin-top:10px;">Règlements suggérés • ${escapeHTML(cur)}</div>`);
+        parts.push(`<div class="muted" style="margin-top:10px;">${escapeHTML(stxt("Règlements suggérés", "Suggested settlements"))} • ${escapeHTML(cur)}</div>`);
         for (const t of transfers) {
           const from = members.find(x => x.id === t.fromId);
           const to = members.find(x => x.id === t.toId);
@@ -3657,7 +3661,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
 
           // Wallet-based settlement only makes sense when I am involved (it creates a Budget transaction in MY wallets).
           if (isMeInvolved) {
-            const actionLabel = (t.fromId === me.id) ? `Je paie ${escapeHTML(to?.name || "—")}` : `Je reçois de ${escapeHTML(from?.name || "—")}`;
+            const actionLabel = (t.fromId === me.id) ? `${escapeHTML(stxt("Je paie", "I pay"))} ${escapeHTML(to?.name || "—")}` : `${escapeHTML(stxt("Je reçois de", "I receive from"))} ${escapeHTML(from?.name || "—")}`;
             actionBtn = `<button class="btn" type="button"
                           data-settle-from="${t.fromId}"
                           data-settle-to="${t.toId}"
@@ -3668,7 +3672,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
           // NEW: allow recording a manual settlement even when neither side is "me" (tiers ↔ tiers).
           // This only records a trip_settlement_event, and does NOT touch wallets.
           if (canWrite) {
-            const labelOnly = isMeInvolved ? "Solder (sans wallet)" : "Marquer comme réglé";
+            const labelOnly = isMeInvolved ? stxt("Solder (sans wallet)", "Settle (without wallet)") : stxt("Marquer comme réglé", "Mark as settled");
             actionOnlyBtn = `<button class="btn" type="button" style="background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);"
                           data-settle-only="1"
                           data-settle-from="${t.fromId}"
@@ -3693,7 +3697,7 @@ Souhaites-tu L I E R la dépense Trip à cette transaction (recommandé pour év
       // Persisted settlements history (affects balances)
       const histRows = (tripState.settlementEvents || []).filter(x => !x.cancelledAt);
       if (histRows.length) {
-        parts.push(`<div class="muted" style="margin-top:14px;">Historique règlements</div>`);
+        parts.push(`<div class="muted" style="margin-top:14px;">${escapeHTML(stxt("Historique règlements", "Settlement history"))}</div>`);
         const byDate = histRows.slice().sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
         for (const ev of byDate) {
           const from = members.find(x => x.id === ev.fromMemberId);
@@ -3850,7 +3854,7 @@ return `
 
       <div class="card" style="margin-top:12px;">
         <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
-          <h2 style="margin:0;">Récap / Historique</h2>
+          <h2 style="margin:0;">${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Recap / History" : "Récap / Historique")}</h2>
           <div class="trip-tabs">
             <button class="btn primary" id="trip-tab-recap" type="button">${escapeHTML(_tripT("trip.tabs.recap"))}</button>
             <button class="btn trip-tab-btn" id="trip-tab-history" type="button">${escapeHTML(_tripT("trip.tabs.history"))}</button>
@@ -3886,7 +3890,7 @@ return `
             <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
               <button class="btn" type="button" id="trip-hist-apply">${escapeHTML(_tripT("trip.history.apply"))}</button>
               <button class="btn" type="button" id="trip-hist-reset" style="background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);">${escapeHTML(_tripT("trip.history.reset"))}</button>
-              <span class="muted">${filteredExpenses.length} / ${expenses.length} dépense(s)</span>
+              <span class="muted">${filteredExpenses.length} / ${expenses.length} ${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "expense(s)" : "dépense(s)")}</span>
             </div>
           </div>
           ${expensesHTMLJoined}

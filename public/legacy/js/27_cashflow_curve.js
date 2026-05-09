@@ -888,6 +888,39 @@ function buildSeries() {
   }
 
   async function renderCashflowChart() {
+    const T = window.tbT || ((k, vars) => {
+      const map = {
+        "cashflow.title": "Solde",
+        "cashflow.apex_missing": "ApexCharts non charge.",
+        "cashflow.error": "Erreur cashflow:",
+        "cashflow.no_data": "Pas de donnees :",
+        "cashflow.categories_count": "Categories ({included}/{total})",
+        "common.all_m": "Tous",
+        "transactions.option.none_f": "Aucune",
+        "cashflow.scope.whole_period": "Toute la periode",
+        "analysis.filter.range": "Date a date",
+        "cashflow.scope.selected_period": "Periode selectionnee",
+        "cashflow.scope.current_segment": "Segment courant",
+        "analysis.filter.scope": "Scope",
+        "cashflow.subtitle": "Projection basee sur ton budget journalier.",
+        "cashflow.pending_expenses": "Depenses a payer",
+        "cashflow.pending_income": "Rentrees a recevoir",
+        "cashflow.range": "Plage",
+        "cashflow.line_currency": "Devise courbe",
+        "cashflow.bar_currency": "Devise colonnes",
+        "cashflow.daily_budget": "Budget/jour",
+        "cashflow.variable_by_period": "Variable selon periode",
+        "cashflow.current_wallet_balance": "Solde actuel (wallets)",
+        "cashflow.series.actual": "Solde reel",
+        "cashflow.series.forecast": "Prevision",
+        "cashflow.series.spent_per_day": "Depense/jour",
+        "cashflow.series.budget_spent_per_day": "Budget depense/jour",
+        "common.today": "Aujourd'hui"
+      };
+      let s = map[k] || k;
+      if (vars && typeof s === "string") Object.keys(vars).forEach((name) => { s = s.replaceAll(`{${name}}`, String(vars[name])); });
+      return s;
+    });
     // keep in sync with existing navigation
     if (typeof window.activeView !== "undefined" && window.activeView !== "dashboard") return;
 // Dedup guard: avoid double render on first load / refresh if called twice rapidly with same scope
@@ -911,7 +944,7 @@ try {
     if (!container) return;
 
     if (typeof ApexCharts !== "function") {
-      container.innerHTML = '<div class="card"><h2>Solde</h2><div class="muted">ApexCharts non chargé.</div></div>';
+      container.innerHTML = `<div class="card"><h2>${escapeHTML(T("cashflow.title"))}</h2><div class="muted">${escapeHTML(T("cashflow.apex_missing"))}</div></div>`;
       return;
     }
 
@@ -929,8 +962,8 @@ try {
       window.__cashflowChart = null;
       container.innerHTML = `
         <div class="card">
-          <h2>Solde</h2>
-          <div class="muted" style="margin-top:6px;">Erreur cashflow: ${escapeHTML(err && err.message ? err.message : String(err))}</div>
+          <h2>${escapeHTML(T("cashflow.title"))}</h2>
+          <div class="muted" style="margin-top:6px;">${escapeHTML(T("cashflow.error"))} ${escapeHTML(err && err.message ? err.message : String(err))}</div>
         </div>`;
       return;
     }
@@ -940,8 +973,8 @@ try {
     if (!built.ok) {
       container.innerHTML = `
         <div class="card">
-          <h2>Solde</h2>
-          <div class="muted" style="margin-top:6px;">Pas de données : ${escapeHTML(built.reason || "—")}</div>
+          <h2>${escapeHTML(T("cashflow.title"))}</h2>
+          <div class="muted" style="margin-top:6px;">${escapeHTML(T("cashflow.no_data"))} ${escapeHTML(built.reason || "—")}</div>
         </div>`;
       return;
     }
@@ -952,11 +985,11 @@ try {
     const catsDetails = allCats.length
       ? `
           <details class="cashflow-cats" style="margin-left:6px;">
-            <summary style="cursor:pointer; user-select:none;">Catégories (${includedCatsCount}/${allCats.length})</summary>
+            <summary style="cursor:pointer; user-select:none;">${escapeHTML(T("cashflow.categories_count", { included: includedCatsCount, total: allCats.length }))}</summary>
             <div style="margin-top:8px; max-height:180px; overflow:auto; border:1px solid rgba(0,0,0,.12); border-radius:12px; padding:10px; background:#fff; min-width:220px;">
               <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-                <button type="button" class="btn" id="cashflowCatsAll" style="padding:4px 8px;">Tout</button>
-                <button type="button" class="btn" id="cashflowCatsNone" style="padding:4px 8px;">Aucun</button>
+                <button type="button" class="btn" id="cashflowCatsAll" style="padding:4px 8px;">${escapeHTML(T("common.all_m"))}</button>
+                <button type="button" class="btn" id="cashflowCatsNone" style="padding:4px 8px;">${escapeHTML(T("transactions.option.none_f"))}</button>
               </div>
               ${allCats
                 .map((c) => {
@@ -975,31 +1008,31 @@ try {
     // Segment filter UI (range)
     const segs = getSegments();
     const __sc = getKpiScope();
-    const scopeLabel = (__sc && __sc.mode === "period") ? "Toute la période"
-      : (__sc && __sc.mode === "range") ? "Date à date"
-      : (__sc && __sc.mode === "seg") ? "Période sélectionnée"
-      : "Segment courant";
+    const scopeLabel = (__sc && __sc.mode === "period") ? T("cashflow.scope.whole_period")
+      : (__sc && __sc.mode === "range") ? T("analysis.filter.range")
+      : (__sc && __sc.mode === "seg") ? T("cashflow.scope.selected_period")
+      : T("cashflow.scope.current_segment");
 
     // UI
     container.innerHTML = `
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap;">
           <div>
-            <h2>Solde</h2>
+            <h2>${escapeHTML(T("cashflow.title"))}</h2>
             <div class="muted" style="margin-top:4px;">
-              Projection basée sur ton budget journalier.
+              ${escapeHTML(T("cashflow.subtitle"))}
             </div>
           </div>
 
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-            <span class="muted" data-cf-scope style="padding:6px 8px;border:1px solid rgba(0,0,0,0.10);border-radius:10px; font-size:12px;">Scope: ${scopeLabel}</span>
+            <span class="muted" data-cf-scope style="padding:6px 8px;border:1px solid rgba(0,0,0,0.10);border-radius:10px; font-size:12px;">${escapeHTML(T("analysis.filter.scope"))}: ${escapeHTML(scopeLabel)}</span>
                         <label class="muted" style="display:flex; gap:6px; align-items:center;">
               <input type="checkbox" id="cf-pending-exp" ${includePendingExpenses ? "checked" : ""}/>
-              Dépenses à payer
+              ${escapeHTML(T("cashflow.pending_expenses"))}
             </label>
             <label class="muted" style="display:flex; gap:6px; align-items:center;">
               <input type="checkbox" id="cf-pending-inc" ${includePendingIncomes ? "checked" : ""}/>
-              Rentrées à recevoir
+              ${escapeHTML(T("cashflow.pending_income"))}
             </label>
             ${catsDetails}
             <button class="btn" id="cf-reset-zoom">Reset zoom</button>
@@ -1009,20 +1042,20 @@ try {
         <div id="cashflowCurve" style="margin-top:12px;"></div>
 
         <div class="muted" style="margin-top:10px; display:flex; gap:12px; flex-wrap:wrap;">
-          <span>Plage: <b>${escapeHTML(built.segLabel || "—")}</b></span>
-          <span>Devise courbe: <b>${built.lineCurrency}</b></span>
-          <span>Devise colonnes: <b>${built.barCurrency}</b></span>
-          <span>Budget/jour: <b>${built.dailyBudget === null ? 'Variable selon période' : (round2(built.dailyBudget) + ' ' + built.lineCurrency)}</b></span>
-          <span>Solde actuel (wallets): <b>${round2(built.currentBalance)} ${built.lineCurrency}</b></span>
+          <span>${escapeHTML(T("cashflow.range"))}: <b>${escapeHTML(built.segLabel || "—")}</b></span>
+          <span>${escapeHTML(T("cashflow.line_currency"))}: <b>${built.lineCurrency}</b></span>
+          <span>${escapeHTML(T("cashflow.bar_currency"))}: <b>${built.barCurrency}</b></span>
+          <span>${escapeHTML(T("cashflow.daily_budget"))}: <b>${built.dailyBudget === null ? escapeHTML(T("cashflow.variable_by_period")) : (round2(built.dailyBudget) + ' ' + built.lineCurrency)}</b></span>
+          <span>${escapeHTML(T("cashflow.current_wallet_balance"))}: <b>${round2(built.currentBalance)} ${built.lineCurrency}</b></span>
         </div>
       </div>
     `;
 
     const series = [
-      { name: `Solde réel (${built.lineCurrency})`, data: built.actual, type: "line" },
-      { name: `Prévision (${built.lineCurrency})`, data: built.forecast, type: "line" },
-      { name: `Dépensé/jour (${built.barCurrency})`, data: built.spentBars, type: "column" },
-      { name: `Budget dépensé/jour (${built.barCurrency})`, data: built.budgetUsedVal, type: "column" }
+      { name: `${T("cashflow.series.actual")} (${built.lineCurrency})`, data: built.actual, type: "line" },
+      { name: `${T("cashflow.series.forecast")} (${built.lineCurrency})`, data: built.forecast, type: "line" },
+      { name: `${T("cashflow.series.spent_per_day")} (${built.barCurrency})`, data: built.spentBars, type: "column" },
+      { name: `${T("cashflow.series.budget_spent_per_day")} (${built.barCurrency})`, data: built.budgetUsedVal, type: "column" }
     ];
 
     
@@ -1128,7 +1161,7 @@ dataLabels: { enabled: false },
         xaxis: built.tStr ? [{
           x: built.tStr,
           borderColor: window.cssVar?.("--warn", "#f59e0b") || "#f59e0b",
-          label: { text: "Aujourd’hui", style: { background: window.cssVar?.("--warn", "#f59e0b") || "#f59e0b" } }
+          label: { text: T("common.today"), style: { background: window.cssVar?.("--warn", "#f59e0b") || "#f59e0b" } }
         }] : [],
         yaxis: (built.thr500 !== null ? [
           {

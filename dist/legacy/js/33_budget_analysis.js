@@ -1146,15 +1146,18 @@ categoryTxMap, subcategoryTxMap
     const deltaReferencePct = signedPct(model.projection, model.totalReferencePeriod);
     const deltaBudgetTone = deltaBudgetPct > 0 ? _themeBad() : (deltaBudgetPct < 0 ? _themeGood() : _themeMuted());
     const deltaReferenceTone = deltaReferencePct > 0 ? _themeBad() : (deltaReferencePct < 0 ? _themeGood() : _themeMuted());
+    const isEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
+    const trA = (fr, en) => isEn ? en : fr;
+    const dayWord = trA('jours', 'days');
 
     const progressCards = [
       {
-        label:'Rythme budget app',
-        title:'Part du budget app déjà ouverte à date dans la période analysée',
+        label: trA('Rythme budget app', 'App budget pace'),
+        title: trA('Part du budget app déjà ouverte à date dans la période analysée', 'Share of app budget already opened to date in the analyzed period'),
         value: ratioText(model.targetToToday, model.totalBudget),
-        hint:'Budget prévu à date comparé au budget total.',
+        hint: trA('Budget prévu à date comparé au budget total.', 'Planned budget to date compared with the total budget.'),
         pct: model.totalBudget > 0 ? clampPct((model.targetToToday / model.totalBudget) * 100) : 0,
-        footer:`Cible de dépense sur ${model.days.length} jours analysés`,
+        footer: trA(`Cible de dépense sur ${model.days.length} jours analysés`, `Spending target over ${model.days.length} analyzed ${dayWord}`),
         tint:'rose',
         liquid:'linear-gradient(180deg, rgba(251,113,133,.34) 0%, rgba(244,114,182,.46) 34%, rgba(236,72,153,.54) 70%, rgba(219,39,119,.66) 100%)',
         liquidAlt:'linear-gradient(180deg, rgba(255,255,255,.00) 0%, rgba(255,255,255,.18) 22%, rgba(255,255,255,.00) 55%, rgba(255,255,255,.12) 100%)',
@@ -1163,12 +1166,12 @@ categoryTxMap, subcategoryTxMap
         haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.42))'
       },
       {
-        label:'Rythme référence pays',
-        title:'Part de la référence pays déjà consommée à date sur la période analysée',
+        label: trA('Rythme référence pays', 'Country reference pace'),
+        title: trA('Part de la référence pays déjà consommée à date sur la période analysée', 'Share of the country reference already consumed to date in the analyzed period'),
         value: ratioText(model.totalReferenceElapsed, model.totalReferencePeriod),
-        hint:'Référence à date comparée à la référence totale.',
+        hint: trA('Référence à date comparée à la référence totale.', 'Reference to date compared with the total reference.'),
         pct: model.totalReferencePeriod > 0 ? clampPct((model.totalReferenceElapsed / model.totalReferencePeriod) * 100) : 0,
-        footer:'Repère externe basé sur les jours déjà écoulés',
+        footer: trA('Repère externe basé sur les jours déjà écoulés', 'External benchmark based on elapsed days'),
         tint:'green',
         liquid:'linear-gradient(180deg, rgba(110,231,183,.30) 0%, rgba(74,222,128,.44) 34%, rgba(34,197,94,.52) 70%, rgba(22,163,74,.62) 100%)',
         liquidAlt:'linear-gradient(180deg, rgba(255,255,255,.00) 0%, rgba(255,255,255,.20) 24%, rgba(255,255,255,.00) 58%, rgba(255,255,255,.10) 100%)',
@@ -1177,12 +1180,12 @@ categoryTxMap, subcategoryTxMap
         haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(236,253,245,.40))'
       },
       {
-        label:'Réalisé vs projection',
-        title:'Part du réalisé déjà absorbée dans la projection de fin de période',
+        label: trA('Réalisé vs projection', 'Actual vs projection'),
+        title: trA('Part du réalisé déjà absorbée dans la projection de fin de période', 'Share of actual spend already absorbed into the end-of-period projection'),
         value: ratioText(model.spentToToday, model.projection),
-        hint:'Dépensé cumulé comparé à la projection finale.',
+        hint: trA('Dépensé cumulé comparé à la projection finale.', 'Cumulative spend compared with the final projection.'),
         pct: model.projection > 0 ? clampPct((model.spentToToday / model.projection) * 100) : 0,
-        footer: model.projection > model.totalBudget ? 'Tendance finale au-dessus du budget app' : 'Tendance finale contenue dans le budget app',
+        footer: model.projection > model.totalBudget ? trA('Tendance finale au-dessus du budget app', 'Final trend above app budget') : trA('Tendance finale contenue dans le budget app', 'Final trend within app budget'),
         tint:'blue',
         liquid:'linear-gradient(180deg, rgba(147,197,253,.30) 0%, rgba(125,211,252,.42) 34%, rgba(56,189,248,.52) 70%, rgba(14,165,233,.62) 100%)',
         liquidAlt:'linear-gradient(180deg, rgba(255,255,255,.00) 0%, rgba(255,255,255,.22) 24%, rgba(255,255,255,.00) 60%, rgba(255,255,255,.10) 100%)',
@@ -1247,16 +1250,16 @@ categoryTxMap, subcategoryTxMap
       <div class="analysis-stat analysis-stat--delta" style="animation:analysisGrow .55s ease ${idx*60}ms both; position:relative; overflow:hidden; padding:18px 18px 16px; border-radius:24px; border:1px solid rgba(255,255,255,.68); background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.88)); box-shadow:0 14px 34px rgba(148,163,184,.16), inset 0 1px 0 rgba(255,255,255,.84); min-height:196px; display:flex; flex-direction:column; justify-content:space-between; gap:14px;">
         <span aria-hidden="true" style="position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 18% 14%, rgba(255,255,255,.92), rgba(255,255,255,0) 34%), linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.34)); pointer-events:none;"></span>
         <div style="position:relative; z-index:1;">
-          <div class="analysis-stat-label" style="font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:rgba(15,23,42,.72);">Écart de tendance</div>
-          <div class="analysis-stat-meta" style="margin-top:4px; font-size:12px; color:rgba(15,23,42,.58);">Projection finale comparée au budget app et à la référence pays.</div>
+          <div class="analysis-stat-label" style="font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:rgba(15,23,42,.72);">${escapeHTML(trA('Écart de tendance', 'Trend gap'))}</div>
+          <div class="analysis-stat-meta" style="margin-top:4px; font-size:12px; color:rgba(15,23,42,.58);">${escapeHTML(trA('Projection finale comparée au budget app et à la référence pays.', 'Final projection compared with app budget and country reference.'))}</div>
         </div>
         <div style="position:relative; z-index:1; display:flex; flex-direction:column; gap:12px;">
           <div style="padding:12px 14px; border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.38)); border:1px solid rgba(255,255,255,.78); box-shadow:inset 0 1px 0 rgba(255,255,255,.78);">
-            <div style="font-size:12px; color:rgba(15,23,42,.58);">Vs budget app</div>
+            <div style="font-size:12px; color:rgba(15,23,42,.58);">${escapeHTML(trA('Vs budget app', 'Vs app budget'))}</div>
             <div style="margin-top:4px; font-size:24px; font-weight:800; color:${escapeHTML(deltaBudgetTone)};">${deltaBudgetPct >= 0 ? '+' : ''}${deltaBudgetPct.toFixed(0)} %</div>
           </div>
           <div style="padding:12px 14px; border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.38)); border:1px solid rgba(255,255,255,.78); box-shadow:inset 0 1px 0 rgba(255,255,255,.78);">
-            <div style="font-size:12px; color:rgba(15,23,42,.58);">Vs référence pays</div>
+            <div style="font-size:12px; color:rgba(15,23,42,.58);">${escapeHTML(trA('Vs référence pays', 'Vs country reference'))}</div>
             <div style="margin-top:4px; font-size:24px; font-weight:800; color:${escapeHTML(deltaReferenceTone)};">${deltaReferencePct >= 0 ? '+' : ''}${deltaReferencePct.toFixed(0)} %</div>
           </div>
         </div>
@@ -1297,12 +1300,12 @@ categoryTxMap, subcategoryTxMap
     <div style="position:relative;z-index:1;display:flex;flex-direction:column;gap:18px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
         <div>
-          <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,23,42,.52);">Cashflow estimé</div>
+          <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,23,42,.52);">${escapeHTML(trA('Cashflow estimé', 'Estimated cashflow'))}</div>
           <div style="margin-top:6px;font-size:34px;line-height:1;font-weight:950;color:${escapeHTML(model.deltaProjected >= 0 ? '#22c55e' : '#fb7185')};">
             ${escapeHTML(_fmtMoney(model.deltaProjected, model.base))}
           </div>
           <div style="margin-top:8px;font-size:12px;color:rgba(15,23,42,.60);">
-            Solde cash estimé, hors budget restant théorique.
+            ${escapeHTML(trA('Solde cash estimé, hors budget restant théorique.', 'Estimated cash balance, excluding theoretical remaining budget.'))}
           </div>
         </div>
 
@@ -1312,66 +1315,66 @@ categoryTxMap, subcategoryTxMap
       </div>
 
       <div>
-        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,23,42,.48);margin-bottom:8px;">Aujourd’hui</div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,23,42,.48);margin-bottom:8px;">${escapeHTML(trA("Aujourd'hui", 'Today'))}</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
           <div style="padding:13px 14px;border-radius:18px;background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.20);">
-            <div style="font-size:12px;color:rgba(15,23,42,.60);">Encaissé à date</div>
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">${escapeHTML(trA('Encaissé à date', 'Received to date'))}</div>
             <div style="margin-top:4px;font-size:20px;font-weight:900;color:#10b981;">${escapeHTML(_fmtMoney(model.incomeToDate || model.incomeReal, model.base))}</div>
           </div>
           <div style="padding:13px 14px;border-radius:18px;background:rgba(59,130,246,.10);border:1px solid rgba(59,130,246,.20);">
-            <div style="font-size:12px;color:rgba(15,23,42,.60);">Dépensé à date</div>
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">${escapeHTML(trA('Dépensé à date', 'Spent to date'))}</div>
             <div style="margin-top:4px;font-size:20px;font-weight:900;color:#3b82f6;">${escapeHTML(_fmtMoney(model.expenseToDate, model.base))}</div>
           </div>
           <div style="padding:13px 14px;border-radius:18px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.20);">
-            <div style="font-size:12px;color:rgba(15,23,42,.60);">Déjà payé</div>
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">${escapeHTML(trA('Déjà payé', 'Already paid'))}</div>
             <div style="margin-top:4px;font-size:20px;font-weight:900;color:#fb7185;">${escapeHTML(_fmtMoney(model.expenseReal, model.base))}</div>
           </div>
         </div>
       </div>
 
       <div>
-        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,23,42,.48);margin-bottom:8px;">À venir</div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,23,42,.48);margin-bottom:8px;">${escapeHTML(trA('À venir', 'Upcoming'))}</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
           <div style="padding:13px 14px;border-radius:18px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.16);">
-            <div style="font-size:12px;color:rgba(15,23,42,.60);">Entrées prévues</div>
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">${escapeHTML(trA('Entrées prévues', 'Expected income'))}</div>
             <div style="margin-top:4px;font-size:19px;font-weight:850;color:#10b981;">${escapeHTML(_fmtMoney(model.incomePlanned, model.base))}</div>
           </div>
           <div style="padding:13px 14px;border-radius:18px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.16);">
-            <div style="font-size:12px;color:rgba(15,23,42,.60);">Sorties à payer</div>
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">${escapeHTML(trA('Sorties à payer', 'Expenses to pay'))}</div>
             <div style="margin-top:4px;font-size:19px;font-weight:850;color:#f59e0b;">${escapeHTML(_fmtMoney(model.expensePlanned, model.base))}</div>
           </div>
           <div style="padding:13px 14px;border-radius:18px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.16);">
-            <div style="font-size:12px;color:rgba(15,23,42,.60);">Budget restant</div>
+            <div style="font-size:12px;color:rgba(15,23,42,.60);">${escapeHTML(trA('Budget restant', 'Remaining budget'))}</div>
             <div style="margin-top:4px;font-size:19px;font-weight:850;color:#6366f1;">${escapeHTML(_fmtMoney(model.budgetRemaining, model.base))}</div>
-            <div style="margin-top:3px;font-size:11px;color:rgba(15,23,42,.48);">Indicatif, non inclus dans le solde final</div>
+            <div style="margin-top:3px;font-size:11px;color:rgba(15,23,42,.48);">${escapeHTML(trA('Indicatif, non inclus dans le solde final', 'Indicative, not included in the final balance'))}</div>
           </div>
         </div>
       </div>
 
       <div style="padding:14px 16px;border-radius:20px;background:rgba(255,255,255,.46);border:1px solid rgba(148,163,184,.18);display:flex;flex-direction:column;gap:9px;box-shadow:inset 0 1px 0 rgba(255,255,255,.72);">
         <div style="display:flex;justify-content:space-between;gap:12px;">
-          <span style="font-size:13px;color:rgba(15,23,42,.60);">Solde actuel</span>
+          <span style="font-size:13px;color:rgba(15,23,42,.60);">${escapeHTML(trA('Solde actuel', 'Current balance'))}</span>
           <strong>${escapeHTML(_fmtMoney(model.deltaReal, model.base))}</strong>
         </div>
         <div style="display:flex;justify-content:space-between;gap:12px;">
-          <span style="font-size:13px;color:rgba(15,23,42,.60);">Entrées prévues</span>
+          <span style="font-size:13px;color:rgba(15,23,42,.60);">${escapeHTML(trA('Entrées prévues', 'Expected income'))}</span>
           <strong>${escapeHTML(_fmtMoney(model.incomePlanned, model.base))}</strong>
         </div>
         <div style="display:flex;justify-content:space-between;gap:12px;">
-          <span style="font-size:13px;color:rgba(15,23,42,.60);">Sorties à payer</span>
+          <span style="font-size:13px;color:rgba(15,23,42,.60);">${escapeHTML(trA('Sorties à payer', 'Expenses to pay'))}</span>
 <strong>-${escapeHTML(_fmtMoney(model.expensePlanned, model.base))}</strong>
         </div>
         <div style="display:flex;justify-content:space-between;gap:12px;">
-  <span style="font-size:13px;color:rgba(15,23,42,.60);">Budget restant</span>
+  <span style="font-size:13px;color:rgba(15,23,42,.60);">${escapeHTML(trA('Budget restant', 'Remaining budget'))}</span>
   <strong style="color:#6366f1;">-${escapeHTML(_fmtMoney(model.budgetRemaining, model.base))}</strong>
 </div>
         <div style="display:flex;justify-content:space-between;gap:12px;padding-top:9px;border-top:1px solid rgba(15,23,42,.10);">
-  <span style="font-size:14px;font-weight:800;color:rgba(15,23,42,.82);">Solde fin période cash</span>
+  <span style="font-size:14px;font-weight:800;color:rgba(15,23,42,.82);">${escapeHTML(trA('Solde fin période cash', 'End-of-period cash balance'))}</span>
   <strong style="font-size:20px;font-weight:950;color:${escapeHTML(model.deltaProjected >= 0 ? '#22c55e' : '#fb7185')};">${escapeHTML(_fmtMoney(model.deltaProjected, model.base))}</strong>
 </div>
 
 <div style="display:flex;justify-content:space-between;gap:12px;">
-  <span style="font-size:13px;color:rgba(15,23,42,.60);">Solde fin période projeté</span>
+  <span style="font-size:13px;color:rgba(15,23,42,.60);">${escapeHTML(trA('Solde fin période projeté', 'Projected end-of-period balance'))}</span>
   <strong style="font-size:18px;font-weight:900;color:${escapeHTML(model.deltaProjectedWithBudget >= 0 ? '#22c55e' : '#fb7185')};">${escapeHTML(_fmtMoney(model.deltaProjectedWithBudget, model.base))}</strong>
 </div>
       </div>
@@ -1891,6 +1894,8 @@ function _openTxDrilldown(kind, key, model){
   function _renderInsights(model){
     const host = _el('analysis-insights');
     if (!host) return;
+    const isEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
+    const day = isEn ? 'day' : 'jour';
     const delta = model.projection - model.totalBudget;
     const sourcedGap = model.comparablePerDay - model.referencePerDay;
     const top = model.topCategories[0];
@@ -1898,46 +1903,48 @@ function _openTxDrilldown(kind, key, model){
     const nightLine = Number(model?.nightCoveredCount || 0) > 0
       ? {
           icon: '🌙',
-          title: `Transports de nuit : ${model.nightCoveredCount} cas`,
-          body: `${_fmtMoney(model.nightCoveredPotentialSavings, model.base)} d'économie potentielle logement restent visibles à part, sans corriger le budget principal.`
+          title: isEn ? `Night transports: ${model.nightCoveredCount} case(s)` : `Transports de nuit : ${model.nightCoveredCount} cas`,
+          body: isEn
+            ? `${_fmtMoney(model.nightCoveredPotentialSavings, model.base)} in potential accommodation savings remains visible separately, without adjusting the main budget.`
+            : `${_fmtMoney(model.nightCoveredPotentialSavings, model.base)} d'économie potentielle logement restent visibles à part, sans corriger le budget principal.`
         }
       : null;
     const insights = [
       ...(nightLine ? [nightLine] : []),
       {
         icon: sourcedGap > 0 ? '🧭' : '🌿',
-        title: sourcedGap > 0 ? 'Réel au-dessus du sourcé' : 'Réel sous le sourcé',
+        title: sourcedGap > 0 ? (isEn ? 'Actual above reference' : 'Réel au-dessus du sourcé') : (isEn ? 'Actual below reference' : 'Réel sous le sourcé'),
         body: sourcedGap > 0
-          ? `Sur le périmètre comparable, tu dépenses ${_fmtMoney(model.comparablePerDay, model.base)}/jour contre une référence pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour, soit ${_fmtMoney(sourcedGap, model.base)}/jour au-dessus.`
-          : `Sur le périmètre comparable, tu dépenses ${_fmtMoney(model.comparablePerDay, model.base)}/jour contre une référence pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour, soit ${_fmtMoney(Math.abs(sourcedGap), model.base)}/jour en dessous.`
+          ? (isEn ? `On the comparable scope, you spend ${_fmtMoney(model.comparablePerDay, model.base)}/${day} versus a country reference of ${_fmtMoney(model.referencePerDay, model.base)}/${day}, so ${_fmtMoney(sourcedGap, model.base)}/${day} above.` : `Sur le périmètre comparable, tu dépenses ${_fmtMoney(model.comparablePerDay, model.base)}/jour contre une référence pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour, soit ${_fmtMoney(sourcedGap, model.base)}/jour au-dessus.`)
+          : (isEn ? `On the comparable scope, you spend ${_fmtMoney(model.comparablePerDay, model.base)}/${day} versus a country reference of ${_fmtMoney(model.referencePerDay, model.base)}/${day}, so ${_fmtMoney(Math.abs(sourcedGap), model.base)}/${day} below.` : `Sur le périmètre comparable, tu dépenses ${_fmtMoney(model.comparablePerDay, model.base)}/jour contre une référence pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour, soit ${_fmtMoney(Math.abs(sourcedGap), model.base)}/jour en dessous.`)
       },
       {
         icon: model.avgPerDay > model.budgetPerDay ? '⚠️' : '✅',
-        title: model.avgPerDay > model.budgetPerDay ? 'Cadence au-dessus de la cible' : 'Cadence maîtrisée',
+        title: model.avgPerDay > model.budgetPerDay ? (isEn ? 'Pace above target' : 'Cadence au-dessus de la cible') : (isEn ? 'Pace under control' : 'Cadence maîtrisée'),
         body: model.avgPerDay > model.budgetPerDay
-          ? `Globalement, tu tournes à ${_fmtMoney(model.avgPerDay, model.base)}/jour pour une cible app de ${_fmtMoney(model.budgetPerDay, model.base)}/jour. Sur le comparable sourcé, tu es à ${_fmtMoney(model.comparablePerDay, model.base)}/jour.`
-          : `Globalement, tu restes sous la cible avec ${_fmtMoney(model.avgPerDay, model.base)}/jour contre ${_fmtMoney(model.budgetPerDay, model.base)}/jour visés. Sur le comparable sourcé, tu es à ${_fmtMoney(model.comparablePerDay, model.base)}/jour.`
+          ? (isEn ? `Overall, you are running at ${_fmtMoney(model.avgPerDay, model.base)}/${day} for an app target of ${_fmtMoney(model.budgetPerDay, model.base)}/${day}. On the referenced comparable scope, you are at ${_fmtMoney(model.comparablePerDay, model.base)}/${day}.` : `Globalement, tu tournes à ${_fmtMoney(model.avgPerDay, model.base)}/jour pour une cible app de ${_fmtMoney(model.budgetPerDay, model.base)}/jour. Sur le comparable sourcé, tu es à ${_fmtMoney(model.comparablePerDay, model.base)}/jour.`)
+          : (isEn ? `Overall, you stay below target with ${_fmtMoney(model.avgPerDay, model.base)}/${day} versus ${_fmtMoney(model.budgetPerDay, model.base)}/${day} targeted. On the referenced comparable scope, you are at ${_fmtMoney(model.comparablePerDay, model.base)}/${day}.` : `Globalement, tu restes sous la cible avec ${_fmtMoney(model.avgPerDay, model.base)}/jour contre ${_fmtMoney(model.budgetPerDay, model.base)}/jour visés. Sur le comparable sourcé, tu es à ${_fmtMoney(model.comparablePerDay, model.base)}/jour.`)
       },
       {
         icon: top ? '🧲' : '•',
-        title: top ? `Catégorie dominante : ${top[0]}` : 'Aucune catégorie dominante',
-        body: top ? `${_fmtMoney(top[1], model.base)} engagés, soit ${((top[1]/Math.max(model.spent,1))*100).toFixed(1)}% du total analysé.` : `Ajoute quelques dépenses pour faire émerger les tendances.`
+        title: top ? `${isEn ? 'Dominant category' : 'Catégorie dominante'} : ${top[0]}` : (isEn ? 'No dominant category' : 'Aucune catégorie dominante'),
+        body: top ? (isEn ? `${_fmtMoney(top[1], model.base)} committed, ${((top[1]/Math.max(model.spent,1))*100).toFixed(1)}% of the analyzed total.` : `${_fmtMoney(top[1], model.base)} engagés, soit ${((top[1]/Math.max(model.spent,1))*100).toFixed(1)}% du total analysé.`) : (isEn ? `Add a few expenses to reveal trends.` : `Ajoute quelques dépenses pour faire émerger les tendances.`)
       },
       {
         icon: delta > 0 ? '📈' : '🌿',
-        title: delta > 0 ? 'Projection au-dessus du cap' : 'Projection dans la trajectoire',
-        body: delta > 0 ? `Au rythme actuel, tu finirais à ${_fmtMoney(model.projection, model.base)}, soit ${_fmtMoney(delta, model.base)} au-dessus du budget.` : `La projection termine à ${_fmtMoney(model.projection, model.base)}. Tu gardes une marge d’environ ${_fmtMoney(Math.abs(delta), model.base)}.`
+        title: delta > 0 ? (isEn ? 'Projection above cap' : 'Projection au-dessus du cap') : (isEn ? 'Projection on track' : 'Projection dans la trajectoire'),
+        body: delta > 0 ? (isEn ? `At the current pace, you would end at ${_fmtMoney(model.projection, model.base)}, ${_fmtMoney(delta, model.base)} above budget.` : `Au rythme actuel, tu finirais à ${_fmtMoney(model.projection, model.base)}, soit ${_fmtMoney(delta, model.base)} au-dessus du budget.`) : (isEn ? `The projection ends at ${_fmtMoney(model.projection, model.base)}. You keep a margin of about ${_fmtMoney(Math.abs(delta), model.base)}.` : `La projection termine à ${_fmtMoney(model.projection, model.base)}. Tu gardes une marge d’environ ${_fmtMoney(Math.abs(delta), model.base)}.`)
       },
       {
         icon: topUnmapped ? '🧩' : (model.excludedPerDay > 0 ? '🪶' : (model.outAmount > 0 ? '🎯' : '🧭')),
-        title: topUnmapped ? `À mapper ensuite : ${topUnmapped.name}` : (model.excludedPerDay > 0 ? 'Comparatif nettoyé des exclus' : (model.outAmount > 0 ? 'Hors budget visible' : 'Lecture budgétaire propre')),
+        title: topUnmapped ? `${isEn ? 'Map next' : 'À mapper ensuite'} : ${topUnmapped.name}` : (model.excludedPerDay > 0 ? (isEn ? 'Comparable view cleaned from exclusions' : 'Comparatif nettoyé des exclus') : (model.outAmount > 0 ? (isEn ? 'Out-of-budget visible' : 'Hors budget visible') : (isEn ? 'Clean budget reading' : 'Lecture budgétaire propre'))),
         body: topUnmapped
-          ? `${_fmtMoney(topUnmapped.actual, model.base)} restent dans une catégorie non référencée. Elle est visible à part et ne se mélange pas au comparatif mappé.`
+          ? (isEn ? `${_fmtMoney(topUnmapped.actual, model.base)} remains in an unmapped category. It stays visible separately and does not mix into the mapped comparison.` : `${_fmtMoney(topUnmapped.actual, model.base)} restent dans une catégorie non référencée. Elle est visible à part et ne se mélange pas au comparatif mappé.`)
           : (model.excludedPerDay > 0
-            ? `${_fmtMoney(model.excludedPerDay, model.base)}/jour sont exclus du comparatif sourcé selon le mapping centralisé, tout en restant visibles dans le pilotage global.`
+            ? (isEn ? `${_fmtMoney(model.excludedPerDay, model.base)}/${day} are excluded from the referenced comparison by the centralized mapping, while remaining visible in the global steering view.` : `${_fmtMoney(model.excludedPerDay, model.base)}/jour sont exclus du comparatif sourcé selon le mapping centralisé, tout en restant visibles dans le pilotage global.`)
             : (model.outAmount > 0
-              ? `${_fmtMoney(model.outAmount, model.base)} hors budget sur la plage. Tu peux exclure des catégories sans polluer la trajectoire.`
-              : `Aucune dépense hors budget notable sur la plage courante.`))
+              ? (isEn ? `${_fmtMoney(model.outAmount, model.base)} out of budget on the range. You can exclude categories without polluting the trajectory.` : `${_fmtMoney(model.outAmount, model.base)} hors budget sur la plage. Tu peux exclure des catégories sans polluer la trajectoire.`)
+              : (isEn ? `No notable out-of-budget expense on the current range.` : `Aucune dépense hors budget notable sur la plage courante.`)))
       }
     ];
     host.innerHTML = insights.map(i => `
@@ -1950,7 +1957,7 @@ function _openTxDrilldown(kind, key, model){
       </div>
     `).join('');
     const pill = _el('analysis-live-pill');
-    if (pill) pill.textContent = `${model.txs.length} dépenses • ${model.days.length} jours • ${model.base}`;
+    if (pill) pill.textContent = isEn ? `${model.txs.length} expenses • ${model.days.length} days • ${model.base}` : `${model.txs.length} dépenses • ${model.days.length} jours • ${model.base}`;
   }
 
   function _renderAll(){

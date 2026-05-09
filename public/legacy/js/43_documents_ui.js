@@ -1279,7 +1279,7 @@ async function addTagSelected(){
   let updated = 0;
   let skipped = 0;
   let failed = 0;
-  setActionMessage(`Ajout du tag sur ${docs.length} document(s)...`);
+  setActionMessage(tr('documents.tag.progress', { count: docs.length }));
   for(const doc of docs){
     const tags = docTags(doc);
     if(tags.some(t => tagKey(t) === tagKey(tag))){
@@ -1437,7 +1437,7 @@ async function applyMoveSelected(){
 
   let moved = 0;
   let failed = 0;
-  setActionMessage(`Déplacement de ${docs.length} document(s)...`);
+  setActionMessage(tr('documents.move.progress', { count: docs.length }));
   for(const doc of docs){
     const { error } = await c
       .from(table('documents','documents'))
@@ -1456,7 +1456,7 @@ async function applyMoveSelected(){
   setActionMessage('');
   document.querySelector('.tb-doc-modal-backdrop')?.remove();
   await ensureLoaded();
-  notify(`${moved} document(s) déplacé(s), ${failed} erreur(s).`, failed ? 'error' : 'success');
+  notify(tr('documents.move.result', { moved, failed }), failed ? 'error' : 'success');
 }
 
 async function addTagSelected(){
@@ -1530,21 +1530,21 @@ async function applyAddTagSelected(){
   setActionMessage('');
   document.querySelector('.tb-doc-modal-backdrop')?.remove();
   await ensureLoaded();
-  notify(`${updated} document(s) modifié(s), ${skipped} déjà tagué(s), ${failed} erreur(s).`, failed ? 'error' : 'success');
+  notify(tr('documents.tag.result', { updated, skipped, failed }), failed ? 'error' : 'success');
 }
 
 async function deleteSelected(){
   const docs = selectedDocs();
   if(!docs.length) return alert(tr('documents.error.select_one'));
 
-  if(!confirm(`Supprimer ${docs.length} document(s) ?`)) return;
+  if(!confirm(tr('documents.confirm.delete_selected', { count: docs.length }))) return;
 
   const c = client();
-  if(!c) return alert('Client Supabase indisponible.');
+  if(!c) return alert(tr('common.supabase_unavailable'));
 
   let deleted = 0;
   let failed = 0;
-  setActionMessage(`Suppression de ${docs.length} document(s)...`);
+  setActionMessage(tr('documents.delete.progress', { count: docs.length }));
   for(const doc of docs){
     try{
       await c.storage.from(doc.storage_bucket || BUCKET).remove([doc.storage_path]);
@@ -1568,7 +1568,7 @@ async function deleteSelected(){
   if(!failed) CACHE.selectedIds = [];
   setActionMessage('');
   await ensureLoaded();
-  notify(`${deleted} document(s) supprimé(s), ${failed} erreur(s).`, failed ? 'error' : 'success');
+  notify(tr('documents.delete.result', { deleted, failed }), failed ? 'error' : 'success');
 }
   window.renderDocuments = function renderDocuments(){ ensureLoaded(); };
   window.tbDocumentsRenderOnly = renderShell;

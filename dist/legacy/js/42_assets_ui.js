@@ -162,30 +162,32 @@ function portfolioSummaryHtml(assets, owners){
   </div>`;
 }
   function card(asset, owners){
+    const assetEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
+    const atxt = (fr, en) => assetEn ? en : fr;
     const core = window.TBAssetsCore; const current = core.computeLinearAssetValue(asset); const progress = core.computeDepreciationProgress(asset);
     const pctLoss = asset.purchase_value ? Math.round(((asset.purchase_value-current)/asset.purchase_value)*100) : 0;
     const lossAmount = Math.max(0, Number(asset.purchase_value || 0) - Number(current || 0));
     const rows = ownerRows(asset, owners); const ownPct = minePercent(rows); const ownValue = core.computeOwnedValue(asset, ownPct); const width = Math.round(progress.ratio*100);
 const monthlyDep = asset.depreciation_months ? (Number(asset.purchase_value || 0) - Number(asset.residual_value || 0)) / Number(asset.depreciation_months || 1) : 0;
-const depreciationStatus = width >= 100 ? 'Amortissement terminé' : 'En amortissement';
+const depreciationStatus = width >= 100 ? atxt('Amortissement terminé', 'Fully depreciated') : atxt('En amortissement', 'Depreciating');
     const total = totalPercent(rows); const warning = rows.length && Math.abs(total-100) > 0.01 ? `<span class="tb-asset-owner-warning">Total parts : ${esc(total)}%</span>` : '';
     const recent = eventRows(asset).slice(0,2);
     return `<section class="tb-asset-card" data-asset-id="${esc(asset.id)}">
-      <div class="tb-asset-top"><div><div class="tb-asset-kicker">Asset</div><h3>${icon(asset.asset_type)} ${esc(asset.name)}</h3><p>Acheté le ${esc(asset.purchase_date)}</p></div><span>${esc(label(asset.asset_type))}</span></div>
-      <div class="tb-asset-metrics"><div class="tb-asset-primary"><small>Ta valeur</small><strong>${esc(money(ownValue,asset.currency))}</strong><em>${ownPct}% de l’asset</em></div><div>
+      <div class="tb-asset-top"><div><div class="tb-asset-kicker">${esc(atxt("Asset", "Asset"))}</div><h3>${icon(asset.asset_type)} ${esc(asset.name)}</h3><p>${esc(atxt("Acheté le", "Purchased on"))} ${esc(asset.purchase_date)}</p></div><span>${esc(label(asset.asset_type))}</span></div>
+      <div class="tb-asset-metrics"><div class="tb-asset-primary"><small>${esc(atxt("Ta valeur", "Your value"))}</small><strong>${esc(money(ownValue,asset.currency))}</strong><em>${ownPct}% ${esc(atxt("de l’asset", "of the asset"))}</em></div><div>
   <small>${esc(tr('assets.card.current_value'))}</small>
   <strong>${esc(money(current,asset.currency))}</strong>
   <em class="depr">
-    Dépréciation : -${esc(money(lossAmount,asset.currency))} · -${pctLoss}%
+    ${esc(atxt("Dépréciation", "Depreciation"))} : -${esc(money(lossAmount,asset.currency))} · -${pctLoss}%
   </em>
 </div></div>
       <div class="tb-asset-facts">
-  <span>Achat : <strong>${esc(money(asset.purchase_value,asset.currency))}</strong></span>
+  <span>${esc(atxt("Achat", "Purchase"))} : <strong>${esc(money(asset.purchase_value,asset.currency))}</strong></span>
   <span>${esc(tr('assets.card.residual_value'))} : <strong>${esc(money(asset.residual_value,asset.currency))}</strong></span>
-  <span>Coût mensuel estimé : <strong>${esc(money(monthlyDep,asset.currency))}/mois</strong></span>
+  <span>${esc(atxt("Coût mensuel estimé", "Estimated monthly cost"))} : <strong>${esc(money(monthlyDep,asset.currency))}/${esc(atxt("mois", "month"))}</strong></span>
   <span class="${width >= 100 ? 'done' : ''}">${esc(depreciationStatus)}</span>
 </div>
-<div class="tb-asset-progress"><div><small>Amortissement</small><small>${width >= 100 ? 'Amortissement terminé · valeur plancher atteinte' : width + '% utilisé'}</small></div><b><i style="width:${width}%"></i></b></div>
+<div class="tb-asset-progress"><div><small>${esc(atxt("Amortissement", "Amortization"))}</small><small>${width >= 100 ? esc(atxt('Amortissement terminé · valeur plancher atteinte', 'Fully depreciated · floor value reached')) : width + '% ' + esc(atxt('utilisé', 'used'))}</small></div><b><i style="width:${width}%"></i></b></div>
       <div class="tb-asset-chart" id="asset-chart-${esc(asset.id)}"></div>
       <div class="tb-asset-owners">${rows.length ? rows.map(r=>`<span>${esc(r.display_name)} · ${Number(r.ownership_percent||0)}%</span>`).join('') : '<span>Ownership non renseigné · 100%</span>'}${warning}</div>
       ${recent.length ? `<div class="tb-asset-events">${recent.map(e=>`<span>${esc(e.event_date||'')} · ${esc(eventLabel(e.event_type))} · ${esc(n(e.percent,0))}%</span>`).join('')}</div>` : ''}
@@ -196,7 +198,7 @@ ${(() => {
 
   return sold ? `
     <div class="tb-asset-pnl">
-      <span>P&L réalisé</span>
+      <span>${esc(atxt("P&L réalisé", "Realized P&L"))}</span>
       <strong class="${pnl >= 0 ? 'pos' : 'neg'}">
         ${pnl >= 0 ? '+' : ''}${esc(money(pnl, asset.currency))}
       </strong>
@@ -230,8 +232,8 @@ ${(() => {
       <div class="tb-asset-modal-actions"><button type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button><button type="submit">${esc(isEdit ? tr('documents.action.save') : tr('assets.action.create_asset'))}</button></div>
     </form></div>`;
   }
-  function ownerRowHtml(o){ return `<div class="tb-owner-row" data-owner-id="${esc(o.id||'')}"><input name="owner_name" required placeholder="Nom" value="${esc(o.display_name||'')}"><input name="owner_percent" required type="number" min="0" max="100" step="0.01" value="${esc(o.ownership_percent||0)}"><button type="button" data-tb-owner-remove>×</button></div>`; }
-  function ownersModalHtml(asset){ const rows = ownerRows(asset); return `<div class="tb-asset-modal-backdrop"><form class="tb-asset-modal" data-tb-asset-owners-form data-asset-id="${esc(asset.id)}"><div class="tb-asset-modal-head"><div><strong>Copropriétaires</strong><p>${esc(asset.name)} · le total des parts doit faire 100%.</p></div><button type="button" data-tb-asset-close>×</button></div><div class="tb-owner-list" data-tb-owner-list>${rows.map(ownerRowHtml).join('') || ownerRowHtml({id:'', display_name:'Toi', ownership_percent:100})}</div><button type="button" class="tb-owner-add" data-tb-owner-add>+ Ajouter un copropriétaire</button><div class="tb-owner-total" data-tb-owner-total></div><div class="tb-asset-modal-error" data-tb-asset-error hidden></div><div class="tb-asset-modal-actions"><button type="button" data-tb-asset-close>Annuler</button><button type="submit">Enregistrer les parts</button></div></form></div>`; }
+  function ownerRowHtml(o){ return `<div class="tb-owner-row" data-owner-id="${esc(o.id||'')}"><input name="owner_name" required placeholder="${esc(tr('assets.form.name'))}" value="${esc(o.display_name||'')}"><input name="owner_percent" required type="number" min="0" max="100" step="0.01" value="${esc(o.ownership_percent||0)}"><button type="button" data-tb-owner-remove>×</button></div>`; }
+  function ownersModalHtml(asset){ const rows = ownerRows(asset); return `<div class="tb-asset-modal-backdrop"><form class="tb-asset-modal" data-tb-asset-owners-form data-asset-id="${esc(asset.id)}"><div class="tb-asset-modal-head"><div><strong>${esc(tr('assets.owners.title'))}</strong><p>${esc(tr('assets.owners.total_hint', { name: asset.name }))}</p></div><button type="button" data-tb-asset-close>×</button></div><div class="tb-owner-list" data-tb-owner-list>${rows.map(ownerRowHtml).join('') || ownerRowHtml({id:'', display_name:tr('assets.owner.me'), ownership_percent:100})}</div><button type="button" class="tb-owner-add" data-tb-owner-add>${esc(tr('assets.owners.add'))}</button><div class="tb-owner-total" data-tb-owner-total></div><div class="tb-asset-modal-error" data-tb-asset-error hidden></div><div class="tb-asset-modal-actions"><button type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button><button type="submit">${esc(tr('assets.owners.save'))}</button></div></form></div>`; }
   function transferModalHtml(asset, transactions){
   const rows = ownerRows(asset);
   const opts = rows.map(r=>`<option value="${esc(r.id)}">${esc(r.display_name)} · ${Number(r.ownership_percent||0)}%</option>`).join('');
@@ -241,48 +243,48 @@ ${(() => {
     <form class="tb-asset-modal" data-tb-asset-transfer-form data-asset-id="${esc(asset.id)}">
       <div class="tb-asset-modal-head">
         <div>
-          <strong>Rachat / vente de parts</strong>
-          <p>Trace un mouvement d’ownership. Tu peux le lier à une transaction existante sans créer de nouveau cashflow.</p>
+          <strong>${esc(tr('assets.transfer.title'))}</strong>
+          <p>${esc(tr('assets.transfer.body'))}</p>
         </div>
         <button type="button" data-tb-asset-close>×</button>
       </div>
 
       <div class="tb-asset-form-grid">
-        <label>Type
+        <label>${esc(tr('assets.form.type'))}
           <select name="event_type">
-            <option value="transfer_share">Transfert de parts</option>
-            <option value="buy_share">Rachat de parts</option>
-            <option value="sell_share">Vente de parts</option>
+            <option value="transfer_share">${esc(tr('assets.event.transfer_share'))}</option>
+            <option value="buy_share">${esc(tr('assets.event.buy_share'))}</option>
+            <option value="sell_share">${esc(tr('assets.event.sell_share'))}</option>
           </select>
         </label>
 
-        <label>Date
+        <label>${esc(tr('assets.transfer.date'))}
           <input name="event_date" type="date" required value="${today()}">
         </label>
 
-        <label>Vendeur / source
+        <label>${esc(tr('assets.transfer.seller'))}
           <select name="from_owner_id" required>${opts}</select>
         </label>
 
-        <label>Acheteur / destination
+        <label>${esc(tr('assets.transfer.buyer'))}
           <select name="to_owner_id" required>${opts}</select>
         </label>
 
-        <label>Part transférée %
+        <label>${esc(tr('assets.transfer.percent'))}
           <input name="percent" required type="number" min="0.01" max="100" step="0.01" value="10">
         </label>
 
-        <label>Montant payé
+        <label>${esc(tr('assets.transfer.amount'))}
           <input name="amount" type="number" min="0" step="0.01" value="0">
         </label>
 
-        <label>Devise
+        <label>${esc(tr('assets.form.currency'))}
           <input name="currency" maxlength="3" value="${esc(asset.currency||'EUR')}">
         </label>
 
-        <label>Transaction liée
+        <label>${esc(tr('assets.transfer.linked_transaction'))}
           <select name="linked_transaction_id">
-            <option value="">Aucune transaction liée</option>
+            <option value="">${esc(tr('assets.transfer.no_linked_transaction'))}</option>
             ${txOpts}
           </select>
         </label>
@@ -295,55 +297,57 @@ ${(() => {
       <div class="tb-asset-modal-error" data-tb-asset-error hidden></div>
 
       <div class="tb-asset-modal-actions">
-        <button type="button" data-tb-asset-close>Annuler</button>
-        <button type="submit">Valider le mouvement</button>
+        <button type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button>
+        <button type="submit">${esc(tr('assets.transfer.submit'))}</button>
       </div>
     </form>
   </div>`;
 }
 function sellAssetModalHtml(asset, transactions){
+  const assetEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
+  const atxt = (fr, en) => assetEn ? en : fr;
   const txOpts = (transactions||[]).map(tx=>`<option value="${esc(tx.id)}">${esc(txLabel(tx))}</option>`).join('');
 
   return `<div class="tb-asset-modal-backdrop">
     <form class="tb-asset-modal" data-tb-asset-sell-form data-asset-id="${esc(asset.id)}">
       <div class="tb-asset-modal-head">
         <div>
-          <strong>Vendre l’asset</strong>
-          <p>Marque l’asset comme vendu. Le prix de vente est réparti selon les parts actuelles. Aucun cashflow n’est créé.</p>
+          <strong>${esc(atxt("Vendre l’asset", "Sell asset"))}</strong>
+          <p>${esc(atxt("Marque l’asset comme vendu. Le prix de vente est réparti selon les parts actuelles. Aucun cashflow n’est créé.", "Mark the asset as sold. The sale price is split according to current shares. No cashflow is created."))}</p>
         </div>
         <button type="button" data-tb-asset-close>×</button>
       </div>
 
       <div class="tb-asset-form-grid">
-        <label>Date de vente
+        <label>${esc(atxt("Date de vente", "Sale date"))}
           <input name="event_date" type="date" required value="${today()}">
         </label>
 
-        <label>Prix de vente total
+        <label>${esc(atxt("Prix de vente total", "Total sale price"))}
           <input name="amount" type="number" min="0" step="0.01" required value="0">
         </label>
 
-        <label>Devise
+        <label>${esc(atxt("Devise", "Currency"))}
           <input name="currency" maxlength="3" required value="${esc(asset.currency||'EUR')}">
         </label>
 
-        <label>Transaction liée
+        <label>${esc(atxt("Transaction liée", "Linked transaction"))}
           <select name="linked_transaction_id">
-            <option value="">Aucune transaction liée</option>
+            <option value="">${esc(atxt("Aucune transaction liée", "No linked transaction"))}</option>
             ${txOpts}
           </select>
         </label>
 
         <label>Note
-          <input name="note" placeholder="Vente totale de l’asset">
+          <input name="note" placeholder="${esc(atxt("Vente totale de l’asset", "Full asset sale"))}">
         </label>
       </div>
 
       <div class="tb-asset-modal-error" data-tb-asset-error hidden></div>
 
       <div class="tb-asset-modal-actions">
-        <button type="button" data-tb-asset-close>Annuler</button>
-        <button type="submit">Valider la vente</button>
+        <button type="button" data-tb-asset-close>${esc(atxt("Annuler", "Cancel"))}</button>
+        <button type="submit">${esc(atxt("Valider la vente", "Confirm sale"))}</button>
       </div>
     </form>
   </div>`;
