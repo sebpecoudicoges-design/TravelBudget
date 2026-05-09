@@ -820,7 +820,6 @@ begin
   end if;
 
   while v_due is not null and v_due <= v_horizon loop
-
     v_period_id := public.get_period_for_travel_date(r.travel_id, v_due);
 
     if v_period_id is null then
@@ -867,8 +866,8 @@ begin
         r.label,
         v_due,
         v_due,
-        v_due, -- 🔥 FIX
-        v_due, -- 🔥 FIX
+        v_due,
+        v_due,
         false,
         coalesce(r.out_of_budget, false),
         false,
@@ -883,7 +882,6 @@ begin
       );
 
       v_inserted := v_inserted + 1;
-
     exception
       when unique_violation then
         v_skipped := v_skipped + 1;
@@ -903,7 +901,6 @@ begin
     end if;
 
     v_due := v_next_due;
-
   end loop;
 
   update public.recurring_rules rr
@@ -914,7 +911,6 @@ begin
 
   return query
   select r.id, v_inserted, v_skipped, v_horizon, v_due;
-
 end;
 $$;
 
@@ -5708,6 +5704,10 @@ CREATE INDEX "analytic_category_mappings_user_status_idx" ON "public"."analytic_
 
 
 
+CREATE INDEX "budget_segments_user_period_sort_start_idx" ON "public"."budget_segments" USING "btree" ("user_id", "period_id", "sort_order", "start_date");
+
+
+
 CREATE UNIQUE INDEX "categories_user_name_uq" ON "public"."categories" USING "btree" ("user_id", "lower"("name"));
 
 
@@ -5988,15 +5988,7 @@ CREATE UNIQUE INDEX "transactions_recurring_rule_occurrence_uidx" ON "public"."t
 
 
 
-CREATE INDEX "budget_segments_user_period_sort_start_idx" ON "public"."budget_segments" USING "btree" ("user_id", "period_id", "sort_order", "start_date");
-
-
-
 CREATE INDEX "transactions_travel_id_idx" ON "public"."transactions" USING "btree" ("travel_id");
-
-
-
-CREATE INDEX "transactions_user_travel_created_idx" ON "public"."transactions" USING "btree" ("user_id", "travel_id", "created_at");
 
 
 
@@ -6013,6 +6005,10 @@ CREATE INDEX "transactions_trip_match_idx" ON "public"."transactions" USING "btr
 
 
 CREATE INDEX "transactions_trip_share_link_id_idx" ON "public"."transactions" USING "btree" ("trip_share_link_id");
+
+
+
+CREATE INDEX "transactions_user_travel_created_idx" ON "public"."transactions" USING "btree" ("user_id", "travel_id", "created_at");
 
 
 
@@ -7615,8 +7611,8 @@ GRANT ALL ON FUNCTION "public"."recurring_generate_all_active"() TO "service_rol
 
 
 REVOKE ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "public"."recurring_generate_for_rule"("p_rule_id" "uuid") TO "authenticated";
 
 
 
@@ -8166,6 +8162,9 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+
+
+
 
 
 
