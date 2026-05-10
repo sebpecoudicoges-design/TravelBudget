@@ -36,6 +36,7 @@ window.__TB_BUILD = '9.7.1';
     v_transaction_analytic_expenses: "v_transaction_analytic_expenses",
 
     fx_manual_rates: "fx_manual_rates",
+    fx_rates: "fx_rates",
     travel_budget_reference_profile: "travel_budget_reference_profile",
     budget_segment_budget_reference_override: "budget_segment_budget_reference_override",
     v_country_budget_reference_latest: "v_country_budget_reference_latest",

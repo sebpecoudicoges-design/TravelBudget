@@ -98,6 +98,7 @@ function renderAll() {
         if (typeof tbRequestRedrawCharts === "function") return tbRequestRedrawCharts("renderAll:deferred");
         if (typeof redrawCharts === "function") return redrawCharts();
       }, { containerId: "view-dashboard" });
+
     } catch (e) {
       console.warn("[renderAll] deferred dashboard blocks failed", e);
     }
@@ -118,6 +119,7 @@ function renderAll() {
 
   if (view === "analysis") {
     safeCall("Analyse budget", () => { if (typeof window.tbRequestAnalysisRender === "function") return window.tbRequestAnalysisRender("renderAll"); if (typeof renderBudgetAnalysis === "function") return renderBudgetAnalysis(); }, { containerId: "view-analysis" });
+    safeCall("FX decision", () => { if (typeof window.renderFxDecision === "function") return window.renderFxDecision(false); }, { containerId: "view-analysis" });
     return;
   }
 

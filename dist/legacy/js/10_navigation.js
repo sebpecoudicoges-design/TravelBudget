@@ -36,10 +36,13 @@ function showView(view) {
   if (view === "analysis") {
     try { if (typeof window.tbEnsureGovernanceData === "function") window.tbEnsureGovernanceData("analysis"); } catch (_) {}
     if (typeof tbRequestAnalysisRender === 'function') tbRequestAnalysisRender('navigation'); else if (typeof renderBudgetAnalysis === 'function') renderBudgetAnalysis();
+    try { if (typeof window.renderFxDecision === "function") window.renderFxDecision(false); } catch (_) {}
   }
   if (view === "assets") { if (typeof window.renderAssets === "function") window.renderAssets("navigation"); }
   if (view === "documents") { if (typeof window.renderDocuments === "function") window.renderDocuments("navigation"); }
-  if (view === "dashboard") if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("10_navigation.js"); else redrawCharts();
+  if (view === "dashboard") {
+    if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("10_navigation.js"); else redrawCharts();
+  }
   if (view === "trip") renderTrip();
   if (view === "members") renderMembersAdmin();
   if (view === "help") { if (typeof renderHelpFaq === "function") renderHelpFaq(); }
