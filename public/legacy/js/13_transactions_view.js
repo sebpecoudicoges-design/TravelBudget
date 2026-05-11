@@ -207,6 +207,7 @@ function _txGetFilters() {
     out: _txEl("f-out")?.value || "all",
     night: _txEl("f-night")?.value || "all",
     recurring: _txEl("f-recurring")?.value || "all",
+    invoice: _txEl("f-invoice")?.value || "all",
     q: _txEl("f-q")?.value || "",
   };
 }
@@ -223,6 +224,7 @@ function _txSetFilters(f) {
   if (_txEl("f-out")) _txEl("f-out").value = f.out ?? "all";
   if (_txEl("f-night")) _txEl("f-night").value = f.night ?? "all";
   if (_txEl("f-recurring")) _txEl("f-recurring").value = f.recurring ?? "all";
+  if (_txEl("f-invoice")) _txEl("f-invoice").value = f.invoice ?? "all";
   if (_txEl("f-q")) _txEl("f-q").value = f.q ?? "";
 }
 
@@ -327,6 +329,35 @@ function _txEnsureShortcutsUI() {
 }
 
 
+function _txEnsureInvoiceFilterUI() {
+  if (_txEl("f-invoice")) return;
+  const anchor = _txEl("f-recurring") || _txEl("f-q") || _txEl("f-type") || _txEl("tx-list");
+  if (!anchor) return;
+  const row = anchor.closest(".row") || anchor.parentElement;
+  if (!row) return;
+
+  const field = document.createElement("div");
+  field.className = "field";
+  field.setAttribute("data-tx-invoice-filter", "1");
+  field.style.minWidth = "150px";
+  field.innerHTML = `
+    <label>${_txT("transactions.filters.invoice")}</label>
+    <select id="f-invoice">
+      <option value="all">${_txT("transactions.invoice_filter.all")}</option>
+      <option value="with">${_txT("transactions.invoice_filter.with")}</option>
+      <option value="without">${_txT("transactions.invoice_filter.without")}</option>
+    </select>
+  `;
+
+  const anchorField = anchor.closest(".field") || anchor;
+  if (anchorField && anchorField.parentElement === row) {
+    anchorField.insertAdjacentElement("afterend", field);
+  } else {
+    row.appendChild(field);
+  }
+}
+
+
 function _txEnsureHelpUI() {
   const anchor = _txEl("f-from") || _txEl("f-wallet") || _txEl("tx-list");
   if (!anchor) return;
@@ -368,6 +399,9 @@ function _txInitFiltersOnce() {
   const list = _txEl("tx-list");
   if (!list || list._filtersInit) return;
   list._filtersInit = true;
+
+  // Add optional filter controls before restoring persisted values.
+  _txEnsureInvoiceFilterUI();
 
   // Restore filters after selects exist
   const stored = _txLoadStoredFilters();
@@ -466,6 +500,408 @@ window.tbOpenTripExpenseFromTransaction = function tbOpenTripExpenseFromTransact
   if (typeof showView === "function") showView("trip");
 };
 
+
+/* =========================
+   Transaction documents / invoices bridge
+   V9.7.5 safe: dedicated modal, visible linked-document count, invoice filter, i18n, constants, no financial mutation.
+   Requires SQL table public.transaction_documents.
+   ========================= */
+
+const TB_TX_DOC_BUCKET = window.TB_CONST?.DOCUMENTS?.BUCKETS?.personal_documents || 'personal-documents';
+const TB_TX_DOC_FOLDER_NAME = window.TB_CONST?.DOCUMENTS?.FOLDERS?.invoices || 'Factures';
+
+const TB_TX_DOC_COUNTS = window.__TB_TX_DOC_COUNTS || (window.__TB_TX_DOC_COUNTS = {
+  map: new Map(),
+  loading: false,
+});
+
+function _txDocT(k, vars){
+  try { return window.tbT ? window.tbT(k, vars) : k; } catch (_) { return k; }
+}
+
+function _txDocClient(){
+  try { if (typeof sb !== 'undefined' && sb && sb.from) return sb; } catch (_) {}
+  try { if (window.sb && window.sb.from) return window.sb; } catch (_) {}
+  return null;
+}
+
+function _txDocTable(name, fallback){
+  return (window.TB_CONST && window.TB_CONST.TABLES && window.TB_CONST.TABLES[name]) || fallback || name;
+}
+
+function _txDocEsc(v){
+  try { return escapeHTML(String(v ?? '')); }
+  catch (_) { return String(v ?? '').replace(/[&<>'"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c])); }
+}
+
+function _txDocCleanFilename(name){
+  return String(name || 'document')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 120) || 'document';
+}
+
+function _txDocRelationLabel(type){
+  const key = String(type || 'invoice').trim() || 'invoice';
+  return _txDocT(`documents.relation.${key}`);
+}
+
+function _txDocEnsureStyles(){
+  if (document.getElementById('tb-tx-doc-style')) return;
+  const st = document.createElement('style');
+  st.id = 'tb-tx-doc-style';
+  st.textContent = `
+    .tb-tx-doc-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.58);z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;}
+    .tb-tx-doc-modal{width:min(560px,96vw);max-height:92vh;overflow:auto;border-radius:22px;background:var(--card,#fff);box-shadow:0 24px 80px rgba(0,0,0,.35);padding:16px;color:inherit;}
+    .dark .tb-tx-doc-modal{background:#15151d;color:#f8fafc;}
+    .tb-tx-doc-modal h3{margin:0 0 12px;font-size:20px;}
+    .tb-tx-doc-form{display:flex;flex-direction:column;gap:10px;border:1px dashed rgba(127,127,127,.28);border-radius:16px;padding:12px;background:rgba(127,127,127,.055);}
+    .tb-tx-doc-list{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;}
+    .tb-tx-doc-row{font-size:12px;word-break:break-word;border:1px solid rgba(127,127,127,.18);border-radius:12px;padding:9px;background:rgba(127,127,127,.06);}
+    .tb-tx-doc-empty{border:1px dashed rgba(127,127,127,.30);border-radius:14px;padding:18px;text-align:center;color:var(--muted,#6b7280);}
+    .tb-tx-doc-msg{border:1px solid rgba(79,70,229,.22);background:rgba(79,70,229,.08);border-radius:14px;padding:9px 11px;margin-bottom:10px;font-size:13px;font-weight:700;}
+    .tb-tx-doc-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-wrap:wrap;}
+    .tb-tx-doc-hidden-input{display:none!important;}
+  `;
+  document.head.appendChild(st);
+}
+
+async function _txDocCurrentUserId(){
+  try { if (window.sbUser && window.sbUser.id) return window.sbUser.id; } catch (_) {}
+  const c = _txDocClient();
+  if (c && c.auth && typeof c.auth.getUser === 'function') {
+    const res = await c.auth.getUser();
+    return res && res.data && res.data.user && res.data.user.id ? res.data.user.id : '';
+  }
+  return '';
+}
+
+function _txDocFindTx(txId){
+  const id = String(txId || '');
+  return (Array.isArray(state?.transactions) ? state.transactions : []).find((tx) => String(tx?.id || '') === id) || null;
+}
+
+async function _txDocEnsureInvoicesFolder(){
+  const c = _txDocClient();
+  if (!c) throw new Error(_txDocT('common.supabase_unavailable'));
+  const uid = await _txDocCurrentUserId();
+  if (!uid) throw new Error(_txDocT('transactions.documents.user_missing'));
+
+  const folderTable = _txDocTable('document_folders', 'document_folders');
+  const existing = await c
+    .from(folderTable)
+    .select('id,name,parent_id')
+    .eq('user_id', uid)
+    .is('parent_id', null)
+    .ilike('name', TB_TX_DOC_FOLDER_NAME)
+    .maybeSingle();
+
+  if (existing.error && existing.error.code !== 'PGRST116') throw existing.error;
+  if (existing.data && existing.data.id) return existing.data.id;
+
+  const created = await c
+    .from(folderTable)
+    .insert({ user_id: uid, name: TB_TX_DOC_FOLDER_NAME, parent_id: null })
+    .select('id')
+    .single();
+
+  if (created.error) throw created.error;
+  return created.data.id;
+}
+
+async function _txDocFetchLinks(txId){
+  const c = _txDocClient();
+  if (!c) throw new Error(_txDocT('common.supabase_unavailable'));
+  const linkTable = _txDocTable('transaction_documents', 'transaction_documents');
+  const docTable = _txDocTable('documents', 'documents');
+
+  const linksRes = await c
+    .from(linkTable)
+    .select('*')
+    .eq('transaction_id', txId)
+    .order('created_at', { ascending: false });
+
+  if (linksRes.error) throw linksRes.error;
+  const links = linksRes.data || [];
+  const docIds = links.map((x) => x.document_id).filter(Boolean);
+  if (!docIds.length) return [];
+
+  const docsRes = await c
+    .from(docTable)
+    .select('*')
+    .in('id', docIds);
+
+  if (docsRes.error) throw docsRes.error;
+  const docsById = new Map((docsRes.data || []).map((d) => [String(d.id), d]));
+
+  return links.map((link) => ({ link, doc: docsById.get(String(link.document_id)) || null }));
+}
+
+
+async function _txDocFetchCountsForTransactions(txIds){
+  const ids = Array.from(new Set((txIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
+  const wanted = new Set(ids);
+  const counts = new Map();
+  ids.forEach((id) => counts.set(id, 0));
+  if (!ids.length) return counts;
+
+  const c = _txDocClient();
+  if (!c) return counts;
+  const linkTable = _txDocTable('transaction_documents', 'transaction_documents');
+
+  // V9.7.6: avoid PostgREST .in('uuid', ids) for visible transaction batches.
+  // Some Supabase/PostgREST setups reject long/encoded UUID IN lists with 400 Bad Request.
+  // RLS already scopes rows to the authenticated user, then we filter/count client-side.
+  const res = await c
+    .from(linkTable)
+    .select('transaction_id');
+
+  if (res.error) throw res.error;
+
+  for (const row of (res.data || [])) {
+    const key = String(row?.transaction_id || '').trim();
+    if (!key || !wanted.has(key)) continue;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  return counts;
+}
+
+function _txDocCachedCount(txId){
+  const id = String(txId || '').trim();
+  if (!id) return { known: false, count: 0 };
+  const map = TB_TX_DOC_COUNTS.map instanceof Map ? TB_TX_DOC_COUNTS.map : (TB_TX_DOC_COUNTS.map = new Map());
+  return { known: map.has(id), count: Number(map.get(id) || 0) };
+}
+
+async function _txDocEnsureCachedCounts(txs, options = {}){
+  const ids = Array.from(new Set((txs || []).map((tx) => String(tx?.id || '').trim()).filter(Boolean)));
+  if (!ids.length) return;
+  const map = TB_TX_DOC_COUNTS.map instanceof Map ? TB_TX_DOC_COUNTS.map : (TB_TX_DOC_COUNTS.map = new Map());
+  const missing = ids.filter((id) => !map.has(id));
+  if (!missing.length) return;
+  if (TB_TX_DOC_COUNTS.loading) return;
+
+  TB_TX_DOC_COUNTS.loading = true;
+  try {
+    const counts = await _txDocFetchCountsForTransactions(missing);
+    missing.forEach((id) => map.set(id, counts.get(id) || 0));
+    if (options.rerender && typeof renderTransactions === 'function') {
+      renderTransactions();
+    }
+  } catch (e) {
+    console.warn('[TB][tx-doc] count cache failed', e);
+  } finally {
+    TB_TX_DOC_COUNTS.loading = false;
+  }
+}
+
+function _txDocApplyCountToButton(txId, count){
+  const id = String(txId || '').trim();
+  if (!id) return;
+  const safeId = (window.CSS && typeof CSS.escape === 'function') ? CSS.escape(id) : id.replace(/"/g, '\\"');
+  const btn = document.querySelector(`[data-tx-doc-btn="${safeId}"]`);
+  if (!btn) return;
+  const n = Number(count || 0);
+  const base = _txDocT('transactions.action.invoice');
+  const label = n > 0
+    ? _txDocT('transactions.action.invoice_count', { count: n })
+    : base;
+  btn.innerHTML = `📎 ${_txDocEsc(label)}`;
+  btn.title = n > 0
+    ? _txDocT('transactions.documents.count_title', { count: n })
+    : _txDocT('transactions.documents.empty');
+  btn.classList.toggle('primary', n > 0);
+}
+
+async function _txDocRefreshVisibleCounts(txs){
+  const ids = (txs || []).map((tx) => String(tx?.id || '').trim()).filter(Boolean);
+  if (!ids.length) return;
+  try {
+    const counts = await _txDocFetchCountsForTransactions(ids);
+    const map = TB_TX_DOC_COUNTS.map instanceof Map ? TB_TX_DOC_COUNTS.map : (TB_TX_DOC_COUNTS.map = new Map());
+    ids.forEach((id) => {
+      const count = counts.get(id) || 0;
+      map.set(id, count);
+      _txDocApplyCountToButton(id, count);
+    });
+  } catch (e) {
+    console.warn('[TB][tx-doc] count refresh failed', e);
+  }
+}
+
+async function _txDocCreateSignedUrl(doc){
+  const c = _txDocClient();
+  if (!c) throw new Error(_txDocT('common.supabase_unavailable'));
+  const res = await c.storage.from(doc.storage_bucket || TB_TX_DOC_BUCKET).createSignedUrl(doc.storage_path, 60 * 10);
+  if (res.error) throw res.error;
+  return res.data && res.data.signedUrl;
+}
+
+async function _txDocUploadAndLink(txId, files){
+  const list = Array.from(files || []);
+  if (!list.length) return;
+  const tx = _txDocFindTx(txId);
+  if (!tx) throw new Error(_txDocT('transactions.error.not_found'));
+
+  const c = _txDocClient();
+  if (!c) throw new Error(_txDocT('common.supabase_unavailable'));
+  const uid = await _txDocCurrentUserId();
+  if (!uid) throw new Error(_txDocT('transactions.documents.user_missing'));
+
+  const folderId = await _txDocEnsureInvoicesFolder();
+  const docTable = _txDocTable('documents', 'documents');
+  const linkTable = _txDocTable('transaction_documents', 'transaction_documents');
+
+  for (const file of list) {
+    const docId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const safe = _txDocCleanFilename(file.name || 'facture');
+    const path = `${uid}/${docId}/${safe}`;
+    const up = await c.storage.from(TB_TX_DOC_BUCKET).upload(path, file, { upsert: false, contentType: file.type || undefined });
+    if (up.error) throw up.error;
+
+    const baseName = String(file.name || _txDocT('documents.relation.invoice')).replace(/\.[a-z0-9]{1,8}$/i, '');
+    const txLabel = String(tx.label || tx.category || '').trim();
+    const docName = txLabel ? `${baseName || _txDocT('documents.relation.invoice')} — ${txLabel}` : (baseName || _txDocT('documents.relation.invoice'));
+
+    const insDoc = await c.from(docTable).insert({
+      id: docId,
+      user_id: uid,
+      folder_id: folderId,
+      name: docName,
+      original_filename: file.name || safe,
+      storage_bucket: TB_TX_DOC_BUCKET,
+      storage_path: path,
+      mime_type: file.type || '',
+      size_bytes: file.size || 0,
+      tags: [_txDocT('documents.relation.invoice')]
+    });
+    if (insDoc.error) throw insDoc.error;
+
+    const insLink = await c.from(linkTable).insert({
+      user_id: uid,
+      transaction_id: txId,
+      document_id: docId,
+      relation_type: window.TB_CONST?.DOCUMENTS?.RELATION_TYPES?.invoice || 'invoice'
+    });
+    if (insLink.error) throw insLink.error;
+  }
+}
+
+async function _txDocUnlink(linkId){
+  const c = _txDocClient();
+  if (!c) throw new Error(_txDocT('common.supabase_unavailable'));
+  const linkTable = _txDocTable('transaction_documents', 'transaction_documents');
+  const { error } = await c.from(linkTable).delete().eq('id', linkId);
+  if (error) throw error;
+}
+
+function _txDocRenderModal(txId, rows, message){
+  _txDocEnsureStyles();
+  const tx = _txDocFindTx(txId);
+  const wrap = document.getElementById('tb-tx-doc-modal') || document.createElement('div');
+  wrap.id = 'tb-tx-doc-modal';
+  wrap.className = 'tb-tx-doc-backdrop';
+  wrap.onclick = (e) => { if (e.target === wrap) wrap.remove(); };
+
+  const title = tx
+    ? `${tx.dateStart || ''} · ${tx.amount || ''} ${tx.currency || ''} · ${tx.label || tx.category || 'Transaction'}`
+    : 'Transaction';
+
+  wrap.innerHTML = `
+    <div class="tb-tx-doc-modal" role="dialog" aria-modal="true">
+      <h3>${_txDocEsc(_txDocT('transactions.documents.title'))}</h3>
+      <p class="muted" style="font-size:13px;margin-top:-6px;">${_txDocEsc(title)}</p>
+      ${message ? `<div class="tb-tx-doc-msg">${_txDocEsc(message)}</div>` : ''}
+      <div class="tb-tx-doc-form">
+        <strong>${_txDocEsc(_txDocT('transactions.documents.add'))}</strong>
+        <input id="tb-tx-doc-file-input" class="tb-tx-doc-hidden-input" type="file" multiple accept="application/pdf,image/*" />
+        <button class="btn primary" type="button" id="tb-tx-doc-upload-btn">${_txDocEsc(_txDocT('transactions.documents.upload'))}</button>
+        <p class="muted" style="font-size:12px;margin:0;">${_txDocEsc(_txDocT('transactions.documents.upload_hint'))}</p>
+      </div>
+      <div class="tb-tx-doc-list">
+        ${rows && rows.length ? rows.map(({ link, doc }) => `
+          <div class="tb-tx-doc-row">
+            <strong>${_txDocEsc(doc?.name || doc?.original_filename || 'Document')}</strong><br>
+            <span class="muted">${_txDocEsc(doc?.created_at ? new Date(doc.created_at).toLocaleDateString('fr-FR') : '')} · ${_txDocEsc(_txDocRelationLabel(link?.relation_type))}</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+              <button class="btn small primary" type="button" onclick="window.tbTxDocPreview('${_txDocEsc(doc?.id || '')}')">${_txDocEsc(_txDocT('transactions.documents.open'))}</button>
+              <button class="btn small" type="button" onclick="window.tbTxDocUnlink('${_txDocEsc(link?.id || '')}', '${_txDocEsc(txId)}')">${_txDocEsc(_txDocT('transactions.documents.unlink'))}</button>
+            </div>
+          </div>
+        `).join('') : `<div class="tb-tx-doc-empty">${_txDocEsc(_txDocT('transactions.documents.empty'))}</div>`}
+      </div>
+      <div class="tb-tx-doc-actions">
+        <button class="btn" type="button" onclick="document.getElementById('tb-tx-doc-modal')?.remove()">${_txDocEsc(_txDocT('transactions.documents.close'))}</button>
+      </div>
+    </div>
+  `;
+
+  if (!wrap.parentNode) document.body.appendChild(wrap);
+
+  const input = document.getElementById('tb-tx-doc-file-input');
+  const uploadBtn = document.getElementById('tb-tx-doc-upload-btn');
+  if (uploadBtn && input && !uploadBtn._tbBound) {
+    uploadBtn._tbBound = true;
+    uploadBtn.addEventListener('click', () => input.click());
+  }
+  if (input && !input._tbBound) {
+    input._tbBound = true;
+    input.addEventListener('change', async () => {
+      const files = input.files;
+      if (!files || !files.length) return;
+      try {
+        _txDocRenderModal(txId, rows || [], _txDocT('transactions.documents.uploading', { count: files.length }));
+        await _txDocUploadAndLink(txId, files);
+        try { TB_TX_DOC_COUNTS.map?.delete?.(String(txId)); } catch (_) {}
+        await window.tbTxDocOpen(txId, _txDocT('transactions.documents.added'));
+      } catch (e) {
+        console.warn('[TB][tx-doc]', e);
+        _txDocRenderModal(txId, rows || [], e?.message || String(e));
+      }
+    });
+  }
+}
+
+window.tbTxDocOpen = async function tbTxDocOpen(txId, message){
+  try {
+    const rows = await _txDocFetchLinks(txId);
+    window.__tbTxDocRows = rows;
+    _txDocApplyCountToButton(txId, rows.length);
+    _txDocRenderModal(txId, rows, message || '');
+  } catch (e) {
+    console.warn('[TB][tx-doc] open failed', e);
+    _txDocRenderModal(txId, [], e?.message || String(e));
+  }
+};
+
+window.tbTxDocPreview = async function tbTxDocPreview(docId){
+  try {
+    const rows = Array.isArray(window.__tbTxDocRows) ? window.__tbTxDocRows : [];
+    const doc = rows.map((x) => x.doc).find((d) => String(d?.id || '') === String(docId || ''));
+    if (!doc) throw new Error('Document introuvable.');
+    const url = await _txDocCreateSignedUrl(doc);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  } catch (e) {
+    alert(e?.message || String(e));
+  }
+};
+
+window.tbTxDocUnlink = async function tbTxDocUnlink(linkId, txId){
+  if (!linkId) return;
+  if (!confirm(_txDocT('transactions.documents.unlink_confirm'))) return;
+  try {
+    await _txDocUnlink(linkId);
+    try { TB_TX_DOC_COUNTS.map?.delete?.(String(txId)); } catch (_) {}
+    await window.tbTxDocOpen(txId, _txDocT('transactions.documents.unlinked'));
+  } catch (e) {
+    alert(e?.message || String(e));
+  }
+};
+
 function renderTransactions() {
   const list = document.getElementById("tx-list");
   if (!list) return;
@@ -483,6 +919,7 @@ function renderTransactions() {
   const out = document.getElementById("f-out").value;
   const night = document.getElementById("f-night").value;
   const recurring = document.getElementById("f-recurring")?.value || "all";
+  const invoice = document.getElementById("f-invoice")?.value || "all";
   const q = (document.getElementById("f-q").value || "").toLowerCase().trim();
 
   // Persist filters (UX)
@@ -538,6 +975,15 @@ function renderTransactions() {
     }
     return true;
   });
+
+  _txDocEnsureCachedCounts(txs, { rerender: invoice !== "all" });
+  if (invoice !== "all") {
+    txs = txs.filter((tx) => {
+      const cached = _txDocCachedCount(tx?.id);
+      if (!cached.known) return true; // Temporary pass while counts load; render refresh applies the filter.
+      return invoice === "with" ? cached.count > 0 : cached.count <= 0;
+    });
+  }
 
   _txBulkPruneSelection(txs);
 
@@ -646,12 +1092,15 @@ function renderTransactions() {
           ? `<button class="btn small primary" onclick="markTxAsPaid(\'${tx.id}\')">✓ ${tx.type === "income" ? _txT("transactions.action.received") : _txT("transactions.action.pay")}</button>`
           : ""
         }
+        <button class="btn small" type="button" data-tx-doc-btn="${escapeHTML(String(tx.id))}" onclick="window.tbTxDocOpen('${escapeHTML(String(tx.id))}')">📎 ${escapeHTML(_txT("transactions.action.invoice"))}</button>
         <button class="btn small" onclick="openTxEditModal('${tx.id}')">✏️</button>
         <button class="btn small danger" onclick="deleteTx('${tx.id}')">🗑️</button>
       </div>
     `;
     list.appendChild(div);
   }
+
+  _txDocRefreshVisibleCounts(txs);
 
   try {
     const focusId = String(window.__tbFocusTransactionId || "");
@@ -667,7 +1116,7 @@ function renderTransactions() {
     }
   } catch (_) {}
 
-  const ids = ["f-from", "f-to", "f-wallet", "f-category", "f-subcategory", "f-type", "f-pay", "f-out", "f-night", "f-recurring", "f-q"];
+  const ids = ["f-from", "f-to", "f-wallet", "f-category", "f-subcategory", "f-type", "f-pay", "f-out", "f-night", "f-recurring", "f-invoice", "f-q"];
   _txBulkSyncControls();
 
   for (const id of ids) {

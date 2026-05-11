@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.7.1';
+window.__TB_BUILD = '9.7.2';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -45,6 +45,7 @@ window.__TB_BUILD = '9.7.1';
     asset_ownership_events: "asset_ownership_events",
     document_folders: "document_folders",
     documents: "documents",
+    transaction_documents: "transaction_documents",
   });
 
   const COLS = Object.freeze({
@@ -227,9 +228,27 @@ window.__TB_BUILD = '9.7.1';
     ui_mode: "travelbudget_ui_mode_v1",
     assets_open: "travelbudget_assets_open_v1",
     documents_folder: "travelbudget_documents_folder_v1",
+    documents_tag: "travelbudget_documents_tag_v1",
+    documents_sort: "travelbudget_documents_sort_v1",
+    documents_collapsed_folders: "travelbudget_documents_collapsed_folders_v1",
   });
 
 
+  const DOCUMENTS = Object.freeze({
+    BUCKETS: Object.freeze({
+      personal_documents: "personal-documents",
+    }),
+    FOLDERS: Object.freeze({
+      invoices: "Factures",
+    }),
+    RELATION_TYPES: Object.freeze({
+      invoice: "invoice",
+      receipt: "receipt",
+      warranty: "warranty",
+      proof: "proof",
+      other: "other",
+    }),
+  });
 
   const ANALYSIS = Object.freeze({
     SOURCED_CATEGORY_MAPPING: Object.freeze({
@@ -281,6 +300,7 @@ window.__TB_BUILD = '9.7.1';
     CATS,
     UI_LABELS,
     ANALYSIS,
+    DOCUMENTS,
     EXPECTED_SCHEMA_VERSION,
   });
 

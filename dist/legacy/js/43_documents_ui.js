@@ -660,6 +660,7 @@ function setSelectedSort(v){
       <button class="btn primary" type="button" onclick="window.tbDocumentsPreview('${esc(d.id)}')">${esc(tr('documents.action.open'))}</button>
       <button class="btn" type="button" onclick="window.tbDocumentsRename('${esc(d.id)}')">${esc(tr('documents.action.rename'))}</button>
       <button class="btn" type="button" onclick="window.tbDocumentsEditMeta('${esc(d.id)}')">${esc(tr('documents.action.info'))}</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsOpenTransactionLinks('${esc(d.id)}')">🔗 ${esc(tr('documents.linked_transactions.title'))}</button>
       <button class="btn" type="button" onclick="window.tbDocumentsDelete('${esc(d.id)}')">${esc(tr('documents.action.delete'))}</button>
     </div>
   </article>`;
@@ -1570,6 +1571,183 @@ async function deleteSelected(){
   await ensureLoaded();
   notify(tr('documents.delete.result', { deleted, failed }), failed ? 'error' : 'success');
 }
+
+/* =========================
+   Documents <-> transactions links
+   V1 safe: no financial mutation, link/unlink only.
+   Requires SQL table public.transaction_documents.
+   ========================= */
+
+function txDocLinkTable(){
+  return table('transaction_documents', 'transaction_documents');
+}
+
+function findTxById(id){
+  const sid = String(id || '');
+  return (Array.isArray(window.state?.transactions) ? window.state.transactions : [])
+    .find(tx => String(tx?.id || '') === sid) || null;
+}
+
+function txLabel(tx){
+  if(!tx) return 'Transaction';
+  const date = tx.dateStart || tx.date_start || '';
+  const amount = tx.amount != null ? `${tx.amount} ${tx.currency || ''}`.trim() : '';
+  const label = tx.label || tx.category || 'Transaction';
+  return [date, amount, label].filter(Boolean).join(' · ');
+}
+
+function txSearchText(tx){
+  if(!tx) return '';
+  return normalizeLookupText([
+    txLabel(tx),
+    tx.category || '',
+    tx.subcategory || '',
+    tx.label || '',
+    tx.currency || '',
+    tx.type || '',
+    tx.dateStart || tx.date_start || ''
+  ].join(' '));
+}
+
+function activeTravelTransactions(){
+  const active = String(window.state?.activeTravelId || '');
+  return (Array.isArray(window.state?.transactions) ? window.state.transactions : [])
+    .filter(tx => !active || String(tx.travelId || tx.travel_id || '') === active)
+    .filter(tx => !tx.isInternal)
+    .slice()
+    .sort((a,b) => String(b.dateStart || b.date_start || '').localeCompare(String(a.dateStart || a.date_start || '')));
+}
+
+function filterTransactionCandidates(txs, query, linkedTxIds){
+  const q = normalizeLookupText(query || '').trim();
+  let rows = (txs || []).filter(tx => !linkedTxIds.has(String(tx.id || '')));
+  if(q){
+    rows = rows.filter(tx => txSearchText(tx).includes(q));
+  }
+  return rows.slice(0, 25);
+}
+
+async function fetchDocumentTransactionLinks(docId){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+
+  const res = await c
+    .from(txDocLinkTable())
+    .select('*')
+    .eq('document_id', docId)
+    .order('created_at', { ascending: false });
+
+  if(res.error) throw res.error;
+  return res.data || [];
+}
+
+async function linkDocumentToTransaction(docId, txId, relationType){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+  const uid = await currentUserId();
+  if(!uid) throw new Error(tr('transactions.documents.user_missing'));
+
+  const { error } = await c
+    .from(txDocLinkTable())
+    .insert({
+      user_id: uid,
+      document_id: docId,
+      transaction_id: txId,
+      relation_type: relationType || 'invoice'
+    });
+
+  if(error) throw error;
+}
+
+async function unlinkDocumentTransaction(linkId){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+
+  const { error } = await c
+    .from(txDocLinkTable())
+    .delete()
+    .eq('id', linkId);
+
+  if(error) throw error;
+}
+
+function renderDocumentTransactionsModal(doc, links, message){
+  const txs = activeTravelTransactions();
+  const linkedTxIds = new Set((links || []).map(l => String(l.transaction_id || '')));
+  const searchQuery = String(window.__tbDocTxSearch || '').trim();
+  const candidates = filterTransactionCandidates(txs, searchQuery, linkedTxIds);
+
+  const wrap = document.getElementById('tb-doc-tx-modal') || document.createElement('div');
+  wrap.id = 'tb-doc-tx-modal';
+  wrap.className = 'tb-doc-modal-backdrop';
+  wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
+
+  wrap.innerHTML = `
+    <div class="tb-doc-modal">
+      <h3>${esc(tr('documents.linked_transactions.title'))}</h3>
+      <p class="muted" style="font-size:13px;margin-top:-6px;">${esc(doc.name || doc.original_filename || 'Document')}</p>
+      ${message ? `<div class="tb-doc-uploading">${esc(message)}</div>` : ''}
+
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;margin-bottom:12px;">
+        ${(links || []).length ? links.map(link => {
+          const tx = findTxById(link.transaction_id);
+          return `
+            <div class="tb-doc-share-link">
+              <strong>${esc(txLabel(tx))}</strong><br>
+              <span class="muted">${esc(tr('documents.relation.' + (link.relation_type || 'invoice')))}</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+                ${tx ? `<button class="btn small primary" type="button" onclick="window.tbOpenTransactionFromDocument('${esc(link.transaction_id)}')">${esc(tr('documents.linked_transactions.open'))}</button>` : ''}
+                <button class="btn small" type="button" onclick="window.tbDocumentsUnlinkTransaction('${esc(link.id)}','${esc(doc.id)}')">${esc(tr('transactions.documents.unlink'))}</button>
+              </div>
+            </div>
+          `;
+        }).join('') : `<div class="tb-doc-empty">${esc(tr('documents.linked_transactions.empty'))}</div>`}
+      </div>
+
+      <div class="tb-doc-form">
+        <label>${esc(tr('documents.linked_transactions.add'))}</label>
+        <input id="tb-doc-link-tx-search" class="input" type="search" value="${esc(searchQuery)}" placeholder="${esc(tr('documents.linked_transactions.search_placeholder'))}" oninput="window.tbDocumentsFilterTransactionSearch('${esc(doc.id)}', this.value)" autocomplete="off" />
+        <select id="tb-doc-link-tx-id" class="input" size="${Math.min(Math.max(candidates.length || 1, 4), 8)}">
+          ${candidates.length ? candidates.map(tx => `
+            <option value="${esc(tx.id)}">
+              ${esc(txLabel(tx))}
+            </option>
+          `).join('') : `<option value="">${esc(searchQuery ? tr('documents.linked_transactions.no_result') : tr('documents.linked_transactions.search_first'))}</option>`}
+        </select>
+        <div class="muted" style="font-size:12px;line-height:1.35;">${esc(tr('documents.linked_transactions.search_hint'))}</div>
+        <select id="tb-doc-link-type" class="input">
+          <option value="invoice">${esc(tr('documents.relation.invoice'))}</option>
+          <option value="receipt">${esc(tr('documents.relation.receipt'))}</option>
+          <option value="warranty">${esc(tr('documents.relation.warranty'))}</option>
+          <option value="proof">${esc(tr('documents.relation.proof'))}</option>
+          <option value="other">${esc(tr('documents.relation.other'))}</option>
+        </select>
+      </div>
+
+      <div class="tb-doc-modal-actions">
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyLinkTransaction('${esc(doc.id)}')">${esc(tr('documents.linked_transactions.link'))}</button>
+      </div>
+    </div>
+  `;
+
+  if(!wrap.parentNode) document.body.appendChild(wrap);
+}
+
+async function openDocumentTransactionsModal(docId, message){
+  const doc = (CACHE.documents || []).find(d => String(d.id) === String(docId));
+  if(!doc) return;
+  try{
+    if(message !== '__keep_search__') window.__tbDocTxSearch = '';
+    const links = await fetchDocumentTransactionLinks(docId);
+    renderDocumentTransactionsModal(doc, links, message === '__keep_search__' ? '' : (message || ''));
+  }catch(e){
+    console.warn('[TB][documents] transaction links failed', e);
+    alert(e.message || String(e));
+  }
+}
+
+
   window.renderDocuments = function renderDocuments(){ ensureLoaded(); };
   window.tbDocumentsRenderOnly = renderShell;
   try {
@@ -1634,6 +1812,44 @@ window.tbDocumentsAddTagSelected = addTagSelected;
 window.tbDocumentsApplyAddTagSelected = applyAddTagSelected;
 window.tbDocumentsMoveSelected = moveSelected;
 window.tbDocumentsApplyMoveSelected = applyMoveSelected;
+window.tbDocumentsOpenTransactionLinks = openDocumentTransactionsModal;
+window.tbDocumentsFilterTransactionSearch = async function(docId, query){
+  window.__tbDocTxSearch = String(query || '');
+  await openDocumentTransactionsModal(docId, '__keep_search__');
+  setTimeout(() => {
+    const input = document.getElementById('tb-doc-link-tx-search');
+    if(input){
+      input.focus();
+      try { input.setSelectionRange(input.value.length, input.value.length); } catch(_) {}
+    }
+  }, 0);
+};
+window.tbDocumentsApplyLinkTransaction = async function(docId){
+  const txId = document.getElementById('tb-doc-link-tx-id')?.value || '';
+  const relationType = document.getElementById('tb-doc-link-type')?.value || 'invoice';
+  if(!txId) return alert(tr('documents.linked_transactions.choose_error'));
+  try{
+    await linkDocumentToTransaction(docId, txId, relationType);
+    window.__tbDocTxSearch = '';
+    await openDocumentTransactionsModal(docId, tr('documents.linked_transactions.linked'));
+  }catch(e){
+    alert(e.message || String(e));
+  }
+};
+window.tbDocumentsUnlinkTransaction = async function(linkId, docId){
+  if(!confirm(tr('documents.linked_transactions.unlink_confirm'))) return;
+  try{
+    await unlinkDocumentTransaction(linkId);
+    await openDocumentTransactionsModal(docId, tr('documents.linked_transactions.unlinked'));
+  }catch(e){
+    alert(e.message || String(e));
+  }
+};
+window.tbOpenTransactionFromDocument = function(txId){
+  window.__tbFocusTransactionId = String(txId || '');
+  document.getElementById('tb-doc-tx-modal')?.remove();
+  if(typeof showView === 'function') showView('transactions');
+};
 window.tbDocumentsDeleteSelected = deleteSelected;
 window.tbDocumentsOpenShareEmail = function(){
   const body = window.__tbDocumentsShareBody || '';
