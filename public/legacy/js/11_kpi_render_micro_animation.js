@@ -1123,8 +1123,8 @@ const driver = "Dépenses";
 	              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
 	                <input id="kpiFxCalcAmount" type="number" inputmode="decimal" placeholder="0" style="width:120px; padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);" />
 	                <select id="kpiFxCalcFrom" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);"></select>
-	                <span class="muted" style="font-size:12px;">→</span>
-	                <select id="kpiFxCalcTo" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);"></select>
+	                <button id="kpiFxCalcSwap" type="button" title="Intervertir les devises" aria-label="Intervertir les devises" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);cursor:pointer;">↔</button>
+                  <select id="kpiFxCalcTo" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);"></select>
 	              </div>
 	              <div class="muted" style="font-size:12px; margin-top:8px;">
 	                <span id="kpiFxCalcOut">—</span>
@@ -1301,6 +1301,7 @@ try {
       const aEl = kpi.querySelector("#kpiFxCalcAmount");
       const fEl = kpi.querySelector("#kpiFxCalcFrom");
       const tEl = kpi.querySelector("#kpiFxCalcTo");
+      const sEl = kpi.querySelector("#kpiFxCalcSwap");
       const oEl = kpi.querySelector("#kpiFxCalcOut");
       if (aEl && fEl && tEl && oEl && !aEl.dataset.bound) {
         aEl.dataset.bound = "1";
@@ -1320,17 +1321,38 @@ try {
         fEl.innerHTML = optHTML;
         tEl.innerHTML = optHTML;
 
-        // Defaults: from = current segment base, to = period base
-        const segBase = String((window.__TB_ACTIVE_SEG && (__TB_ACTIVE_SEG.baseCurrency || __TB_ACTIVE_SEG.base_currency)) || base || "EUR").toUpperCase();
-        const perBase = String(base || state?.period?.baseCurrency || state?.period?.base_currency || "EUR").toUpperCase();
+        // Defaults: from = account currency, to = current period/segment currency
+        const accountBase = String(
+  state?.settings?.baseCurrency ||
+  state?.settings?.base_currency ||
+  state?.profile?.baseCurrency ||
+  state?.profile?.base_currency ||
+  state?.account?.baseCurrency ||
+  state?.account?.base_currency ||
+  base ||
+  "EUR"
+).toUpperCase();
+        const periodBase = String(
+          (window.__TB_ACTIVE_SEG && (__TB_ACTIVE_SEG.baseCurrency || __TB_ACTIVE_SEG.base_currency)) ||
+          base ||
+          state?.period?.baseCurrency ||
+          state?.period?.base_currency ||
+          "EUR"
+        ).toUpperCase();
 
         const savedA = (localStorage.getItem(AKEY) || "").trim();
         const savedF = (localStorage.getItem(FKEY) || "").trim().toUpperCase();
         const savedT = (localStorage.getItem(TKEY) || "").trim().toUpperCase();
 
         aEl.value = savedA || "";
-        fEl.value = curs.includes(savedF) ? savedF : (curs.includes(segBase) ? segBase : "EUR");
-        tEl.value = curs.includes(savedT) ? savedT : (curs.includes(perBase) ? perBase : "EUR");
+        const fallbackCurrency = curs.includes(accountBase)
+  ? accountBase
+  : (curs.includes(periodBase) ? periodBase : curs[0]);
+
+fEl.value = curs.includes(savedF) ? savedF : fallbackCurrency;
+tEl.value = curs.includes(savedT)
+  ? savedT
+  : (curs.includes(periodBase) ? periodBase : fallbackCurrency);
 
         const fmtOut = (x, cur) => {
           const n = Number(x);
@@ -1364,7 +1386,18 @@ try {
 
         [aEl, fEl, tEl].forEach(el => el.addEventListener("input", compute));
         [aEl, fEl, tEl].forEach(el => el.addEventListener("change", compute));
-        compute();
+
+        if (sEl && !sEl.dataset.bound) {
+         sEl.dataset.bound = "1";
+         sEl.addEventListener("click", () => {
+           const from = fEl.value;
+           fEl.value = tEl.value;
+           tEl.value = from;
+           compute();
+         });
+        }
+
+compute();
       }
     } catch (_) {}
   } catch (e) {
