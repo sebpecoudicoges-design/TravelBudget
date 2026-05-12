@@ -651,6 +651,19 @@ function renderSettings(){
             <input id="tb-account-email" type="text" value="—" disabled />
           </div>
 
+          <div class="field" style="min-width:260px;max-width:320px;">
+  <label>WhatsApp</label>
+  <input
+    id="tb-account-whatsapp"
+    type="tel"
+    placeholder="+33612345678"
+    value=""
+    autocomplete="tel"
+    style="color:var(--text);font-weight:750;background:var(--panel);opacity:1;"
+  />
+  <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">Format international, ex. +33612345678.</small>
+</div>
+
           <div class="field" style="min-width:160px;">
             <label>${T("settings.account.base_currency")}</label>
             <select id="tb-user-basecur">
@@ -667,6 +680,7 @@ function renderSettings(){
           </div>
 
           <button class="btn" id="tb-user-basecur-save" type="button">${T("settings.account.save")}</button>
+          <button class="btn" id="tb-user-whatsapp-save" type="button">Enregistrer WhatsApp</button>
           <button class="btn" id="tb-user-uimode-save" type="button">${T("settings.account.save_mode")}</button>
           <button class="btn" id="tb-user-resetpwd" type="button">${T("settings.account.reset_password")}</button>
         </div>
@@ -689,6 +703,62 @@ function renderSettings(){
         } catch(_){ }
         throw new Error("Supabase client not found");
       };
+
+      const normalizeWhatsappPhone = (v) => String(v || "")
+  .trim()
+  .replace(/\s+/g, "")
+  .replace(/[().-]/g, "");
+
+(async () => {
+  try {
+    const s = _getSb();
+    const u = (await s.auth.getUser()).data?.user;
+    const uid = u?.id;
+    if (!uid) return;
+
+    const { data, error } = await s
+      .from("profiles")
+      .select("whatsapp_phone_e164")
+      .eq("id", uid)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const inp = box.querySelector("#tb-account-whatsapp");
+    if (inp) inp.value = String(data?.whatsapp_phone_e164 || "");
+  } catch (e) {
+    console.warn("[TB][settings] whatsapp load failed", e);
+  }
+})();
+
+const btnWhatsapp = box.querySelector("#tb-user-whatsapp-save");
+if (btnWhatsapp) {
+  btnWhatsapp.onclick = () => safeCall("Enregistrer WhatsApp", async () => {
+    const s = _getSb();
+    const u = (await s.auth.getUser()).data?.user;
+    const uid = u?.id;
+    if (!uid) throw new Error("Non authentifié");
+
+    const raw = box.querySelector("#tb-account-whatsapp")?.value || "";
+    const phone = normalizeWhatsappPhone(raw);
+
+    if (phone && !/^\+[1-9][0-9]{7,14}$/.test(phone)) {
+      throw new Error("Format WhatsApp invalide. Utilise le format international, ex. +33612345678.");
+    }
+
+    const { error } = await s
+      .from("profiles")
+      .update({ whatsapp_phone_e164: phone || null })
+      .eq("id", uid);
+
+    if (error) throw error;
+
+    const inp = box.querySelector("#tb-account-whatsapp");
+    if (inp) inp.value = phone;
+
+    alert("Numéro WhatsApp enregistré.");
+  });
+}
 
       const btnSave = box.querySelector("#tb-user-basecur-save");
       if (btnSave) {
@@ -744,6 +814,24 @@ function renderSettings(){
         });
       }
 
+      const btnWhatsApp = box.querySelector("#tb-user-whatsapp-save");
+if (btnWhatsApp) {
+  btnWhatsApp.onclick = () => safeCall("Enregistrer numéro WhatsApp", async () => {
+    const s = _getSb();
+    const raw = String(box.querySelector("#tb-account-whatsapp")?.value || "").trim();
+    const phone = raw.replace(/\s+/g, "");
+    if (phone && !/^\+[1-9]\d{6,14}$/.test(phone)) {
+      throw new Error("Numéro WhatsApp enregistré pour l’envoi vers À traiter.");
+    }
+    const u = (await s.auth.getUser()).data?.user;
+    const uid = u?.id;
+    if (!uid) throw new Error("Non authentifié");
+    const { error } = await s.from("profiles").update({ whatsapp_phone_e164: phone || null }).eq("id", uid);
+    if (error) throw error;
+    alert("Numéro WhatsApp enregistré.");
+  });
+}
+
       // Fill email asynchronously (sbUser is not guaranteed on window)
       (async () => {
         try {
@@ -753,6 +841,11 @@ function renderSettings(){
           const inp = box.querySelector("#tb-account-email");
           if (inp) inp.value = em;
         } catch(_) {}
+        try {
+           const { data: profile } = await s.from("profiles").select("whatsapp_phone_e164").eq("id", u?.id).single();
+            const wa = box.querySelector("#tb-account-whatsapp");
+            if (wa) wa.value = profile?.whatsapp_phone_e164 || "";
+        } catch (_) {}
       })();
 
       // Save cashflow threshold (EUR reference)

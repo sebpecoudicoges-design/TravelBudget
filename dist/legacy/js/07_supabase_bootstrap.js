@@ -455,12 +455,31 @@ async function loadFromSupabase(opts = {}) {
         try { if (window.TB_PERF?.enabled) TB_PERF.end(name); } catch (_) {}
       });
   };
-  const fetchTransactionsForTravel = (travelId) => sb
-    .from(TB_CONST.TABLES.transactions)
-    .select(transactionSelect)
-    .eq("user_id", sbUser.id)
-    .eq("travel_id", travelId)
-    .order("created_at", { ascending: true });
+  const fetchTransactionsForTravel = async (travelId) => {
+  const pageSize = 1000;
+  let from = 0;
+  let rows = [];
+
+  while (true) {
+    const { data, error } = await sb
+      .from(TB_CONST.TABLES.transactions)
+      .select(transactionSelect)
+      .eq("user_id", sbUser.id)
+      .eq("travel_id", travelId)
+      .order("created_at", { ascending: true })
+      .range(from, from + pageSize - 1);
+
+    if (error) return { data: rows, error };
+
+    const page = data || [];
+    rows = rows.concat(page);
+
+    if (page.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return { data: rows, error: null };
+};
   const earlyTxPromise = storedActiveTravelId
     ? perfPromise("supabase:q:transactions:early", () => fetchTransactionsForTravel(storedActiveTravelId))
     : null;

@@ -1,4 +1,4 @@
-console.log("TB BUILD 9.7.2");
+console.log("TB BUILD 9.7.3");
 import './app/bridge.js';
 
 // TravelBudget V9 entrypoint (Vite + deterministic legacy loader)
@@ -41,6 +41,7 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/41_assets_core.js',
   '/legacy/js/42_assets_ui.js',
   '/legacy/js/43_documents_ui.js',
+  '/legacy/js/44_inbox_ui.js',
   '/legacy/js/18_main_render.js',
   '/legacy/js/08_refresh.js',
   '/legacy/js/19_backup_export_import.js',

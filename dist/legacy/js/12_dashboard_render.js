@@ -156,235 +156,6 @@ function tbMountExistingKpisIntoHero() {
     }
   } catch (_) {}
 }
-function renderDashboardHero() {
-  const host =
-    document.getElementById("dashboard-hero-mount-inline") ||
-    document.getElementById("dashboard-hero-shell");
-
-  if (!host) return;
-
-  const esc = (value) =>
-    String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  const T = window.tbT || ((k) => k);
-
-  const travel =
-    (state?.travels || []).find(t => String(t.id) === String(state?.activeTravelId || "")) ||
-    state?.travel ||
-    null;
-
-  const travelName = String(travel?.name || state?.travelName || "Voyage actif");
-
-  const periodStart = String(
-    state?.period?.start || state?.period?.start_date || travel?.start_date || ""
-  ).trim();
-
-  const periodEnd = String(
-    state?.period?.end || state?.period?.end_date || travel?.end_date || ""
-  ).trim();
-
-  const pivotCur = String(
-    state?.user?.baseCurrency ||
-    state?.settings?.base_currency ||
-    state?.settings?.baseCurrency ||
-    "EUR"
-  ).toUpperCase();
-
-  const txs = Array.isArray(state?.transactions)
-    ? state.transactions.filter(
-        t => String(t?.travelId || t?.travel_id || "") === String(state?.activeTravelId || "")
-      )
-    : [];
-
-  let pendingCount = 0;
-  for (const tx of txs) {
-    const type = String(tx?.type || "").toLowerCase();
-    if (
-      type === "expense" &&
-      !(typeof tbTxAffectsCash === "function" ? tbTxAffectsCash(tx) : !!tx?.pay_now) &&
-      (typeof tbTxAffectsBudget === "function" ? tbTxAffectsBudget(tx) : true)
-    ) {
-      pendingCount += 1;
-    }
-  }
-
-  host.innerHTML = `
-    <style>
-      .dashboard-hero-inline-wrap{
-        margin-bottom: 16px;
-      }
-      .dashboard-hero-card--kpi-shell{
-        padding: 22px;
-        border-radius: 24px;
-        background:
-          radial-gradient(circle at top right, rgba(124,58,237,.22), transparent 35%),
-          linear-gradient(135deg, rgba(30,64,175,.92), rgba(59,130,246,.86) 48%, rgba(139,92,246,.72));
-        color: #fff;
-        box-shadow: 0 18px 50px rgba(30,41,59,.16);
-        border: 1px solid rgba(255,255,255,.14);
-      }
-      .dashboard-hero-card--kpi-shell .dashboard-hero-kicker{
-        text-transform: uppercase;
-        letter-spacing: .14em;
-        font-size: 12px;
-        font-weight: 800;
-        opacity: .78;
-        margin-bottom: 8px;
-      }
-      .dashboard-hero-card--kpi-shell .dashboard-hero-title{
-        margin: 0 0 10px 0;
-        font-size: clamp(32px, 4vw, 48px);
-        line-height: 1.02;
-        font-weight: 900;
-        color: #fff;
-      }
-      .dashboard-hero-card--kpi-shell .dashboard-hero-text{
-        margin: 0;
-        max-width: 780px;
-        color: rgba(255,255,255,.88);
-        font-size: 17px;
-        line-height: 1.5;
-      }
-      .dashboard-hero-card--kpi-shell .dashboard-hero-meta{
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 18px;
-      }
-      .dashboard-hero-card--kpi-shell .dashboard-hero-pill{
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 9px 14px;
-        border-radius: 999px;
-        background: rgba(255,255,255,.12);
-        border: 1px solid rgba(255,255,255,.18);
-        color: #fff;
-        font-size: 13px;
-        font-weight: 700;
-        backdrop-filter: blur(10px);
-      }
-      .dashboard-hero-card--kpi-shell .dashboard-hero-actions{
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 18px;
-      }
-      .dashboard-hero-card--kpi-shell .dashboard-hero-actions .btn.primary{
-        background: linear-gradient(135deg, #9333ea, #7c3aed);
-        border-color: rgba(255,255,255,.16);
-      }
-
-      .dashboard-kpi-embedded-wrap{
-        margin-top: 18px;
-        padding: 14px;
-        border-radius: 22px;
-        background: rgba(255,255,255,.10);
-        border: 1px solid rgba(255,255,255,.14);
-        backdrop-filter: blur(12px);
-      }
-      .dashboard-kpi-embedded-head{
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 12px;
-      }
-      .dashboard-kpi-embedded-title{
-        font-size: 13px;
-        font-weight: 800;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-        color: rgba(255,255,255,.76);
-      }
-      .dashboard-kpi-embedded-note{
-        font-size: 12px;
-        color: rgba(255,255,255,.74);
-      }
-
-      #dashboard-kpi-embed-slot #kpis-container{
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 12px;
-      }
-
-      #dashboard-kpi-embed-slot #kpis-container .card,
-      #dashboard-kpi-embed-slot #kpis-container .kpi,
-      #dashboard-kpi-embed-slot #kpis-container > div{
-        background: rgba(255,255,255,.92) !important;
-        color: #0f172a !important;
-        border: 1px solid rgba(255,255,255,.42) !important;
-        border-radius: 18px !important;
-        box-shadow: 0 10px 28px rgba(15,23,42,.10);
-      }
-
-      #dashboard-kpi-embed-slot #kpis-container .muted{
-        color: #64748b !important;
-      }
-
-      @media (max-width: 1100px){
-        #dashboard-kpi-embed-slot #kpis-container{
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-      }
-      @media (max-width: 720px){
-        .dashboard-hero-card--kpi-shell{
-          padding: 16px;
-          border-radius: 18px;
-        }
-        .dashboard-kpi-embedded-wrap{
-          padding: 10px;
-          border-radius: 16px;
-        }
-        #dashboard-kpi-embed-slot #kpis-container{
-          grid-template-columns: 1fr;
-        }
-      }
-    </style>
-
-    <div class="dashboard-hero-inline-wrap">
-      <section class="dashboard-hero-card dashboard-hero-card--kpi-shell">
-        <div class="dashboard-hero-copy">
-          <div class="dashboard-hero-kicker">${esc(T("dashboard.hero.kicker"))}</div>
-          <h2 class="dashboard-hero-title">${esc(travelName)}</h2>
-          <p class="dashboard-hero-text">${esc(T("dashboard.hero.body"))}</p>
-
-          <div class="dashboard-hero-meta">
-            <span class="dashboard-hero-pill">
-              <strong>${esc(T("dashboard.hero.period"))}</strong>
-              ${esc(periodStart && periodEnd ? `${periodStart} -> ${periodEnd}` : T("common.to_define"))}
-            </span>
-            <span class="dashboard-hero-pill">
-              <strong>${esc(T("dashboard.hero.pivot"))}</strong>
-              ${esc(pivotCur)}
-            </span>
-            <span class="dashboard-hero-pill">
-              <strong>${esc(T("dashboard.hero.pending"))}</strong>
-              ${esc(String(pendingCount))} ${esc(T(pendingCount > 1 ? "transactions.expense_plural" : "transactions.expense_one"))}
-            </span>
-          </div>
-
-          <div class="dashboard-hero-actions">
-            <button class="btn primary" onclick="showView('transactions')">${esc(T("dashboard.hero.add_review"))}</button>
-            <button class="btn" onclick="showView('analysis')">${esc(T("dashboard.hero.analysis"))}</button>
-            <button class="btn" onclick="showView('trip')">${esc(T("dashboard.hero.trip"))}</button>
-          </div>
-
-          <div class="dashboard-kpi-embedded-wrap">
-            <div class="dashboard-kpi-embedded-head">
-              <div class="dashboard-kpi-embedded-title">${esc(T("dashboard.hero.kpi_title"))}</div>
-              <div class="dashboard-kpi-embedded-note">${esc(T("dashboard.hero.kpi_note"))}</div>
-            </div>
-            <div id="dashboard-kpi-embed-slot"></div>
-          </div>
-        </div>
-      </section>
-    </div>
-  `;
-}
 
 /* =========================
    Dashboard render
@@ -404,14 +175,6 @@ renderOnboardingPanel();
 
 container.innerHTML = "";
 
-// Hero inline mount tout en haut du dashboard réel
-const heroMount = document.createElement("div");
-heroMount.id = "dashboard-hero-mount-inline";
-container.appendChild(heroMount);
-
-renderDashboardHero();
-renderDashboardContextHelp(container);
-
 // Actions
 const actions = document.createElement("div");
 actions.style.display = "flex";
@@ -428,23 +191,6 @@ const wallets = Array.isArray(state.wallets) ? state.wallets : [];
 try {
   if (typeof renderKpis === "function") renderKpis();
 
-  requestAnimationFrame(() => {
-    const kpiSlot = document.getElementById("dashboard-kpi-embed-slot");
-    const kpiContainer = document.getElementById("kpis-container");
-
-    if (kpiSlot && kpiContainer && !kpiSlot.contains(kpiContainer)) {
-      const oldParent = kpiContainer.parentElement;
-      kpiSlot.appendChild(kpiContainer);
-
-      // masque l'ancien wrapper résiduel si besoin
-      if (oldParent && oldParent !== kpiSlot) {
-        const txt = String(oldParent.textContent || "").trim().toLowerCase();
-        if (txt === "kpis" || txt === "kpi" || txt.startsWith("kpis") || oldParent.children.length <= 1) {
-          oldParent.style.display = "none";
-        }
-      }
-    }
-  });
 } catch (_) {}
 const kpiHost = document.getElementById("kpis-container");
 if (kpiHost && typeof renderKpis === "function") {
@@ -648,7 +394,6 @@ function renderDailyBudget() {
   const container = document.getElementById("daily-budget-container");
   if (!container) return; // page reset / dom partiel
   container.innerHTML = "";
-  renderDashboardHero();
 
   const start = parseISODateOrNull(state?.period?.start);
   const end = parseISODateOrNull(state?.period?.end);
@@ -1229,7 +974,6 @@ try {
     window.__tbDashboardLangBound = true;
     window.tbOnLangChange.push(() => {
       try { if (typeof renderWallets === "function") renderWallets(); } catch (_) {}
-      try { if (typeof renderDashboardHero === "function") renderDashboardHero(); } catch (_) {}
     });
   }
 } catch (_) {}
