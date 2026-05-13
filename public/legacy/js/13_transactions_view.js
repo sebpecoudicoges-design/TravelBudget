@@ -640,6 +640,46 @@ async function _txDocFetchLinks(txId){
   return links.map((link) => ({ link, doc: docsById.get(String(link.document_id)) || null }));
 }
 
+async function _txDocFetchTripExpenseLinksForTx(txId){
+  const c = _txDocClient();
+  if (!c) throw new Error(_txDocT('common.supabase_unavailable'));
+
+  const tx = _txDocFindTx(txId);
+  const expenseId = String(tx?.tripExpenseId || tx?.trip_expense_id || '').trim();
+
+  if (!expenseId) return [];
+
+  const linkTable = _txDocTable('trip_expense_documents', 'trip_expense_documents');
+  const docTable = _txDocTable('documents', 'documents');
+
+  const linksRes = await c
+    .from(linkTable)
+    .select('*')
+    .eq('expense_id', expenseId)
+    .order('created_at', { ascending: false });
+
+  if (linksRes.error) throw linksRes.error;
+
+  const links = linksRes.data || [];
+  const docIds = links.map((x) => x.document_id).filter(Boolean);
+
+  if (!docIds.length) return [];
+
+  const docsRes = await c
+    .from(docTable)
+    .select('*')
+    .in('id', docIds);
+
+  if (docsRes.error) throw docsRes.error;
+
+  const docsById = new Map((docsRes.data || []).map((d) => [String(d.id), d]));
+
+  return links.map((link) => ({
+    link,
+    doc: docsById.get(String(link.document_id)) || null,
+    source: 'trip',
+  }));
+}
 
 async function _txDocFetchCountsForTransactions(txIds){
   const ids = Array.from(new Set((txIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
@@ -650,21 +690,54 @@ async function _txDocFetchCountsForTransactions(txIds){
 
   const c = _txDocClient();
   if (!c) return counts;
-  const linkTable = _txDocTable('transaction_documents', 'transaction_documents');
 
-  // V9.7.6: avoid PostgREST .in('uuid', ids) for visible transaction batches.
-  // Some Supabase/PostgREST setups reject long/encoded UUID IN lists with 400 Bad Request.
-  // RLS already scopes rows to the authenticated user, then we filter/count client-side.
-  const res = await c
-    .from(linkTable)
+  const directTable = _txDocTable('transaction_documents', 'transaction_documents');
+
+  const directRes = await c
+    .from(directTable)
     .select('transaction_id');
 
-  if (res.error) throw res.error;
+  if (directRes.error) throw directRes.error;
 
-  for (const row of (res.data || [])) {
+  for (const row of (directRes.data || [])) {
     const key = String(row?.transaction_id || '').trim();
     if (!key || !wanted.has(key)) continue;
     counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  const visibleTxs = (Array.isArray(state?.transactions) ? state.transactions : [])
+    .filter(tx => wanted.has(String(tx?.id || '')));
+
+  const txByExpense = new Map();
+
+  for (const tx of visibleTxs) {
+    const txId = String(tx?.id || '');
+    const expenseId = String(tx?.tripExpenseId || tx?.trip_expense_id || '').trim();
+    if (!txId || !expenseId) continue;
+    if (!txByExpense.has(expenseId)) txByExpense.set(expenseId, []);
+    txByExpense.get(expenseId).push(txId);
+  }
+
+  const expenseIds = Array.from(txByExpense.keys());
+
+  if (expenseIds.length) {
+    const tripTable = _txDocTable('trip_expense_documents', 'trip_expense_documents');
+
+    const tripRes = await c
+      .from(tripTable)
+      .select('expense_id')
+      .in('expense_id', expenseIds);
+
+    if (tripRes.error) throw tripRes.error;
+
+    for (const row of (tripRes.data || [])) {
+      const expenseId = String(row?.expense_id || '').trim();
+      const txIdsForExpense = txByExpense.get(expenseId) || [];
+
+      for (const txId of txIdsForExpense) {
+        counts.set(txId, (counts.get(txId) || 0) + 1);
+      }
+    }
   }
 
   return counts;
@@ -823,13 +896,20 @@ function _txDocRenderModal(txId, rows, message){
         <p class="muted" style="font-size:12px;margin:0;">${_txDocEsc(_txDocT('transactions.documents.upload_hint'))}</p>
       </div>
       <div class="tb-tx-doc-list">
-        ${rows && rows.length ? rows.map(({ link, doc }) => `
+        ${rows && rows.length ? rows.map(({ link, doc, source }) => `
           <div class="tb-tx-doc-row">
             <strong>${_txDocEsc(doc?.name || doc?.original_filename || 'Document')}</strong><br>
-            <span class="muted">${_txDocEsc(doc?.created_at ? new Date(doc.created_at).toLocaleDateString('fr-FR') : '')} · ${_txDocEsc(_txDocRelationLabel(link?.relation_type))}</span>
+            <span class="muted">
+  ${_txDocEsc(doc?.created_at ? new Date(doc.created_at).toLocaleDateString('fr-FR') : '')}
+  · ${_txDocEsc(_txDocRelationLabel(link?.relation_type))}
+  ${source === 'trip' ? ' · Source Trip' : ''}
+</span>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
               <button class="btn small primary" type="button" onclick="window.tbTxDocPreview('${_txDocEsc(doc?.id || '')}')">${_txDocEsc(_txDocT('transactions.documents.open'))}</button>
-              <button class="btn small" type="button" onclick="window.tbTxDocUnlink('${_txDocEsc(link?.id || '')}', '${_txDocEsc(txId)}')">${_txDocEsc(_txDocT('transactions.documents.unlink'))}</button>
+${source === 'trip'
+  ? `<button class="btn small" type="button" onclick="window.tbOpenTripExpenseFromTransaction('${_txDocEsc(link?.expense_id || '')}')">Ouvrir Trip</button>`
+  : `<button class="btn small" type="button" onclick="window.tbTxDocUnlink('${_txDocEsc(link?.id || '')}', '${_txDocEsc(txId)}')">${_txDocEsc(_txDocT('transactions.documents.unlink'))}</button>`
+}
             </div>
           </div>
         `).join('') : `<div class="tb-tx-doc-empty">${_txDocEsc(_txDocT('transactions.documents.empty'))}</div>`}
@@ -868,10 +948,16 @@ function _txDocRenderModal(txId, rows, message){
 
 window.tbTxDocOpen = async function tbTxDocOpen(txId, message){
   try {
-    const rows = await _txDocFetchLinks(txId);
-    window.__tbTxDocRows = rows;
-    _txDocApplyCountToButton(txId, rows.length);
-    _txDocRenderModal(txId, rows, message || '');
+    const directRows = await _txDocFetchLinks(txId);
+const tripRows = await _txDocFetchTripExpenseLinksForTx(txId);
+const rows = [
+  ...directRows.map(row => ({ ...row, source: 'transaction' })),
+  ...tripRows
+];
+
+window.__tbTxDocRows = rows;
+_txDocApplyCountToButton(txId, rows.length);
+_txDocRenderModal(txId, rows, message || '');
   } catch (e) {
     console.warn('[TB][tx-doc] open failed', e);
     _txDocRenderModal(txId, [], e?.message || String(e));

@@ -1596,6 +1596,55 @@ function txLabel(tx){
   return [date, amount, label].filter(Boolean).join(' · ');
 }
 
+function tripExpenseDocLinkTable(){
+  return table('trip_expense_documents', 'trip_expense_documents');
+}
+
+function findTripExpenseById(id){
+  const sid = String(id || '');
+  try {
+    if (Array.isArray(window.__tripState?.expenses)) {
+      return window.__tripState.expenses.find(ex => String(ex?.id || '') === sid) || null;
+    }
+  } catch(_) {}
+  return null;
+}
+
+function tripExpenseLabel(ex){
+  if(!ex) return 'Dépense Trip';
+  const date = ex.date || '';
+  const amount = ex.amount != null ? `${ex.amount} ${ex.currency || ''}`.trim() : '';
+  const label = ex.label || ex.category || 'Dépense Trip';
+  return [date, amount, label].filter(Boolean).join(' · ');
+}
+
+async function fetchDocumentTripExpenseLinks(docId){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+
+  const res = await c
+    .from(tripExpenseDocLinkTable())
+    .select('*')
+    .eq('document_id', docId)
+    .order('created_at', { ascending: false });
+
+  if(res.error) throw res.error;
+
+  return res.data || [];
+}
+
+async function unlinkDocumentTripExpense(linkId){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+
+  const { error } = await c
+    .from(tripExpenseDocLinkTable())
+    .delete()
+    .eq('id', linkId);
+
+  if(error) throw error;
+}
+
 function txSearchText(tx){
   if(!tx) return '';
   return normalizeLookupText([
@@ -1671,7 +1720,7 @@ async function unlinkDocumentTransaction(linkId){
   if(error) throw error;
 }
 
-function renderDocumentTransactionsModal(doc, links, message){
+function renderDocumentTransactionsModal(doc, links, message, tripLinks = []){
   const txs = activeTravelTransactions();
   const linkedTxIds = new Set((links || []).map(l => String(l.transaction_id || '')));
   const searchQuery = String(window.__tbDocTxSearch || '').trim();
@@ -1703,7 +1752,24 @@ function renderDocumentTransactionsModal(doc, links, message){
           `;
         }).join('') : `<div class="tb-doc-empty">${esc(tr('documents.linked_transactions.empty'))}</div>`}
       </div>
-
+              <div style="margin:10px 0 12px;">
+        <strong>Dépenses Trip liées</strong>
+        <div style="display:flex;flex-direction:column;gap:8px;max-height:180px;overflow:auto;margin-top:8px;">
+          ${(tripLinks || []).length ? tripLinks.map(link => {
+            const ex = findTripExpenseById(link.expense_id);
+            return `
+              <div class="tb-doc-share-link">
+                <strong>${esc(tripExpenseLabel(ex))}</strong><br>
+                <span class="muted">${esc(tr('documents.relation.' + (link.relation_type || 'receipt')))}</span>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+                  <button class="btn small primary" type="button" onclick="window.tbOpenTripExpenseFromDocument('${esc(link.expense_id)}')">Ouvrir Trip</button>
+                  <button class="btn small" type="button" onclick="window.tbDocumentsUnlinkTripExpense('${esc(link.id)}','${esc(doc.id)}')">${esc(tr('transactions.documents.unlink'))}</button>
+                </div>
+              </div>
+            `;
+          }).join('') : `<div class="tb-doc-empty">Aucune dépense Trip liée.</div>`}
+        </div>
+      </div>
       <div class="tb-doc-form">
         <label>${esc(tr('documents.linked_transactions.add'))}</label>
         <input id="tb-doc-link-tx-search" class="input" type="search" value="${esc(searchQuery)}" placeholder="${esc(tr('documents.linked_transactions.search_placeholder'))}" oninput="window.tbDocumentsFilterTransactionSearch('${esc(doc.id)}', this.value)" autocomplete="off" />
@@ -1740,7 +1806,8 @@ async function openDocumentTransactionsModal(docId, message){
   try{
     if(message !== '__keep_search__') window.__tbDocTxSearch = '';
     const links = await fetchDocumentTransactionLinks(docId);
-    renderDocumentTransactionsModal(doc, links, message === '__keep_search__' ? '' : (message || ''));
+const tripLinks = await fetchDocumentTripExpenseLinks(docId);
+renderDocumentTransactionsModal(doc, links, message === '__keep_search__' ? '' : (message || ''), tripLinks);
   }catch(e){
     console.warn('[TB][documents] transaction links failed', e);
     alert(e.message || String(e));
@@ -1849,6 +1916,21 @@ window.tbOpenTransactionFromDocument = function(txId){
   window.__tbFocusTransactionId = String(txId || '');
   document.getElementById('tb-doc-tx-modal')?.remove();
   if(typeof showView === 'function') showView('transactions');
+};
+window.tbOpenTripExpenseFromDocument = function(expenseId){
+  window.__tbFocusTripExpenseId = String(expenseId || '');
+  document.getElementById('tb-doc-tx-modal')?.remove();
+  if(typeof showView === 'function') showView('trip');
+};
+
+window.tbDocumentsUnlinkTripExpense = async function(linkId, docId){
+  if(!confirm(tr('documents.linked_transactions.unlink_confirm'))) return;
+  try{
+    await unlinkDocumentTripExpense(linkId);
+    await openDocumentTransactionsModal(docId, 'Lien Trip supprimé.');
+  }catch(e){
+    alert(e.message || String(e));
+  }
 };
 window.tbDocumentsDeleteSelected = deleteSelected;
 window.tbDocumentsOpenShareEmail = function(){

@@ -916,23 +916,45 @@ function _normalizeCurrency(cur) {
   }
 
 async function _findMatchingTransactions({ date, amount, currency }) {
-    const uid = await _ensureSession();
-    // Heuristic match: same day, same amount/currency, expense type, and not already linked to a trip expense.
-    const { data, error } = await sb
-      .from(TB_CONST.TABLES.transactions)
-      .select("id,label,category,wallet_id,trip_expense_id,date_start,date_end,amount,currency,pay_now,out_of_budget")
-      
-      .eq("type", "expense")
-      .eq("amount", amount)
-      .eq("currency", currency)
-      .eq("date_start", date)
-      .eq("date_end", date)
-      .is("trip_expense_id", null)
-      .order("created_at", { ascending: false })
-      .limit(5);
-    if (error) throw error;
-    return data || [];
+  await _ensureSession();
+
+  const cur = _normalizeCurrency(currency);
+  const targetAmount = Number(amount) || 0;
+  const activeTravelId = String(state?.activeTravelId || "");
+
+  const { data, error } = await sb
+    .from(TB_CONST.TABLES.transactions)
+    .select("id,label,category,subcategory,wallet_id,trip_expense_id,date_start,date_end,amount,currency,pay_now,out_of_budget,travel_id,created_at")
+    .eq("type", "expense")
+    .eq("currency", cur)
+    .is("trip_expense_id", null)
+    .order("date_start", { ascending: false })
+    .limit(80);
+
+  if (error) throw error;
+
+  let rows = data || [];
+
+  if (activeTravelId) {
+    rows = rows.filter(tx => !tx.travel_id || String(tx.travel_id) === activeTravelId);
   }
+
+  return rows
+    .map(tx => {
+      const sameDate = String(tx.date_start || "") === String(date || "");
+      const sameAmount = Math.abs(Number(tx.amount || 0) - targetAmount) < 0.005;
+      const score =
+        (sameDate ? 100 : 0) +
+        (sameAmount ? 100 : 0) +
+        (tx.pay_now ? 8 : 0);
+
+      return { ...tx, _tripMatchScore: score };
+    })
+    .sort((a, b) =>
+      Number(b._tripMatchScore || 0) - Number(a._tripMatchScore || 0)
+      || String(b.date_start || "").localeCompare(String(a.date_start || ""))
+    );
+}
 
   function _tripTxWalletName(walletId) {
     const wallet = (state?.wallets || []).find(w => String(w.id || '') === String(walletId || ''));
@@ -945,79 +967,193 @@ async function _findMatchingTransactions({ date, amount, currency }) {
     return `${status} · ${budget}`;
   }
 
-  function _chooseMatchingTransaction(matches) {
-    return new Promise((resolve) => {
-      const rows = Array.isArray(matches) ? matches.filter(Boolean) : [];
-      if (!rows.length) return resolve(null);
+  function _chooseMatchingTransaction(matches, context = {}) {
+  return new Promise((resolve) => {
+    const rows = Array.isArray(matches) ? matches.filter(Boolean) : [];
+    if (!rows.length) return resolve(null);
 
-      const existing = document.getElementById('trip-match-modal');
-      if (existing) existing.remove();
+    const existing = document.getElementById("trip-match-modal");
+    if (existing) existing.remove();
 
-      const modal = document.createElement('div');
-      modal.id = 'trip-match-modal';
-      modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.42);display:flex;align-items:center;justify-content:center;padding:18px;';
+    let query = "";
+    let exactOnly = true;
+
+    const targetDate = String(context.date || "");
+    const targetAmount = Number(context.amount || 0);
+    const targetCurrency = _normalizeCurrency(context.currency || "");
+
+    function txSearchText(tx) {
+      return [
+        tx.label || "",
+        tx.category || "",
+        tx.subcategory || "",
+        tx.currency || "",
+        tx.date_start || "",
+        tx.amount || "",
+        _tripTxWalletName(tx.wallet_id || tx.walletId)
+      ].join(" ").toLowerCase();
+    }
+
+    function filteredRows() {
+      const q = query.trim().toLowerCase();
+
+      return rows.filter(tx => {
+        const sameDate = String(tx.date_start || "") === targetDate;
+        const sameAmount = Math.abs(Number(tx.amount || 0) - targetAmount) < 0.005;
+
+        if (exactOnly && !(sameDate && sameAmount)) return false;
+        if (q && !txSearchText(tx).includes(q)) return false;
+
+        return true;
+      }).slice(0, 40);
+    }
+
+    const modal = document.createElement("div");
+    modal.id = "trip-match-modal";
+    modal.style.cssText = `
+      position:fixed;
+      inset:0;
+      z-index:10060;
+      background:rgba(15,23,42,.48);
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding:32px 16px;
+      overflow:auto;
+    `;
+
+    function render() {
+      const list = filteredRows();
+
       modal.innerHTML = `
-        <div style="width:min(760px,100%);max-height:90vh;overflow:auto;border-radius:22px;background:#fff;color:#0f172a;box-shadow:0 28px 80px rgba(15,23,42,.28);padding:18px;">
-          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px;">
+        <div class="card" style="width:min(960px,100%);max-height:calc(100vh - 64px);overflow:auto;border-radius:22px;box-shadow:0 28px 80px rgba(15,23,42,.35);">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px;">
             <div>
-              <h3 style="margin:0;font-size:20px;">${escapeHTML(_tripT('trip.match.title'))}</h3>
-              <p class="muted" style="margin:6px 0 0;font-size:13px;line-height:1.45;">${escapeHTML(_tripT('trip.match.body'))}</p>
+              <h2 style="margin:0;">Transaction existante détectée</h2>
+              <div class="muted" style="font-size:13px;margin-top:4px;">
+                Une transaction Budget ressemble à cette dépense Trip. Tu peux la lier pour éviter un doublon.
+              </div>
             </div>
-            <button type="button" data-trip-match-new style="border:0;background:#f1f5f9;border-radius:999px;width:34px;height:34px;font-size:22px;line-height:1;cursor:pointer;">×</button>
+            <button type="button" class="btn" data-trip-match-new>✕</button>
           </div>
-          <div style="display:grid;gap:10px;margin:12px 0;">
-            ${rows.map((tx, index) => {
-              const checked = index === 0 ? 'checked' : '';
-              const label = tx.label || _tripT('trip.match.none_label');
+
+          <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:12px;">
+            <div>
+              <label class="muted" style="display:block;font-size:12px;margin-bottom:4px;">Recherche</label>
+              <input id="trip-match-search" class="input" type="search" value="${escapeHTML(query)}" placeholder="Libellé, catégorie, wallet, montant…" style="width:100%;" />
+            </div>
+
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;">
+              <input id="trip-match-exact" type="checkbox" ${exactOnly ? "checked" : ""} />
+              Match exact date + montant
+            </label>
+          </div>
+
+          <div class="muted" style="font-size:12px;margin-bottom:10px;">
+            Dépense Trip : ${escapeHTML(targetDate || "—")} · ${escapeHTML(_fmtMoney(targetAmount, targetCurrency))}
+          </div>
+
+          <div style="display:grid;gap:10px;">
+            ${list.length ? list.map((tx, index) => {
+              const checked = index === 0 ? "checked" : "";
+              const label = tx.label || _tripT("trip.match.none_label");
               const wallet = _tripTxWalletName(tx.wallet_id || tx.walletId);
-              const category = tx.category || '—';
-              const dates = tx.date_start === tx.date_end ? tx.date_start : `${tx.date_start || '—'} → ${tx.date_end || tx.date_start || '—'}`;
+              const category = [tx.category || "—", tx.subcategory || ""].filter(Boolean).join(" / ");
+              const dates = tx.date_start === tx.date_end ? tx.date_start : `${tx.date_start || "—"} → ${tx.date_end || tx.date_start || "—"}`;
+              const sameDate = String(tx.date_start || "") === targetDate;
+              const sameAmount = Math.abs(Number(tx.amount || 0) - targetAmount) < 0.005;
+
               return `
-                <label style="display:grid;grid-template-columns:auto 1fr;gap:10px;border:1px solid rgba(15,23,42,.12);border-radius:16px;padding:12px;background:${index === 0 ? 'rgba(59,130,246,.06)' : '#fff'};cursor:pointer;">
+                <label style="display:grid;grid-template-columns:auto 1fr;gap:10px;border:1px solid rgba(15,23,42,.12);border-radius:16px;padding:12px;background:${index === 0 ? "rgba(59,130,246,.06)" : "rgba(255,255,255,.78)"};cursor:pointer;">
                   <input type="radio" name="trip-match-tx" value="${escapeHTML(tx.id)}" ${checked} style="margin-top:4px;" />
                   <span>
                     <span style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
                       <strong>${escapeHTML(label)}</strong>
-                      <strong>${escapeHTML(_fmtMoney(Number(tx.amount || 0), tx.currency || ''))}</strong>
+                      <strong>${escapeHTML(_fmtMoney(Number(tx.amount || 0), tx.currency || ""))}</strong>
                     </span>
-                    <span class="muted" style="display:block;margin-top:4px;font-size:12px;">${escapeHTML(_tripTxMatchSubtitle(tx))}</span>
-                    <span style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:9px;font-size:12px;color:#475569;">
-                      <span>${escapeHTML(_tripT('trip.match.wallet'))}: <b>${escapeHTML(wallet)}</b></span>
-                      <span>${escapeHTML(_tripT('trip.match.category'))}: <b>${escapeHTML(category)}</b></span>
-                      <span>${escapeHTML(_tripT('trip.match.date'))}: <b>${escapeHTML(dates)}</b></span>
-                      <span>${escapeHTML(_tripT('trip.match.amount'))}: <b>${escapeHTML(String(tx.amount || 0))} ${escapeHTML(tx.currency || '')}</b></span>
-                    </span>
-                    ${index === 0 ? `<span class="muted" style="display:block;margin-top:8px;font-size:12px;">${escapeHTML(_tripT('trip.match.recommended'))}</span>` : ''}
-                  </span>
-                </label>`;
-            }).join('')}
-          </div>
-          <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
-            <button type="button" class="btn" data-trip-match-new>${escapeHTML(_tripT('trip.match.create_new'))}</button>
-            <button type="button" class="btn primary" data-trip-match-link>${escapeHTML(_tripT('trip.match.link'))}</button>
-          </div>
-        </div>`;
 
-      const close = (value) => {
-        modal.remove();
-        resolve(value);
-      };
-      modal.addEventListener('click', (ev) => {
-        if (ev.target === modal) close(null);
+                    <span class="muted" style="display:block;margin-top:4px;font-size:12px;">
+                      ${escapeHTML(_tripTxMatchSubtitle(tx))}
+                    </span>
+
+                    <span style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:9px;font-size:12px;color:#475569;">
+                      <span>Wallet : <b>${escapeHTML(wallet)}</b></span>
+                      <span>Catégorie : <b>${escapeHTML(category)}</b></span>
+                      <span>Date : <b>${escapeHTML(dates)}</b></span>
+                      <span>Montant : <b>${escapeHTML(String(tx.amount || 0))} ${escapeHTML(tx.currency || "")}</b></span>
+                    </span>
+
+                    <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+                      ${sameDate ? `<span class="pill" style="font-size:12px;">Même date</span>` : ""}
+                      ${sameAmount ? `<span class="pill" style="font-size:12px;">Même montant</span>` : ""}
+                      ${index === 0 ? `<span class="pill" style="font-size:12px;">Recommandé</span>` : ""}
+                    </span>
+                  </span>
+                </label>
+              `;
+            }).join("") : `
+              <div class="muted" style="padding:18px;border:1px dashed rgba(148,163,184,.35);border-radius:16px;">
+                Aucun résultat avec ces filtres.
+              </div>
+            `}
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:16px;">
+            <button type="button" class="btn" data-trip-match-new>Créer une nouvelle transaction</button>
+            <button type="button" class="btn primary" data-trip-match-link ${list.length ? "" : "disabled"}>Lier la sélection</button>
+          </div>
+        </div>
+      `;
+
+      const search = modal.querySelector("#trip-match-search");
+      if (search) {
+        search.oninput = () => {
+          query = search.value || "";
+          render();
+          setTimeout(() => {
+            const el = modal.querySelector("#trip-match-search");
+            if (el) {
+              el.focus();
+              try { el.setSelectionRange(el.value.length, el.value.length); } catch (_) {}
+            }
+          }, 0);
+        };
+      }
+
+      const exact = modal.querySelector("#trip-match-exact");
+      if (exact) {
+        exact.onchange = () => {
+          exactOnly = !!exact.checked;
+          render();
+        };
+      }
+
+      modal.querySelectorAll("[data-trip-match-new]").forEach(btn => {
+        btn.addEventListener("click", () => close(null));
       });
-      modal.querySelectorAll('[data-trip-match-new]').forEach(btn => {
-        btn.addEventListener('click', () => close(null));
-      });
-      const linkBtn = modal.querySelector('[data-trip-match-link]');
+
+      const linkBtn = modal.querySelector("[data-trip-match-link]");
       if (linkBtn) {
-        linkBtn.addEventListener('click', () => {
-          const selectedId = modal.querySelector('input[name="trip-match-tx"]:checked')?.value || '';
-          close(rows.find(tx => String(tx.id) === String(selectedId)) || rows[0] || null);
+        linkBtn.addEventListener("click", () => {
+          const selectedId = modal.querySelector('input[name="trip-match-tx"]:checked')?.value || "";
+          close(rows.find(tx => String(tx.id) === String(selectedId)) || null);
         });
       }
-      document.body.appendChild(modal);
+    }
+
+    const close = (value) => {
+      modal.remove();
+      resolve(value);
+    };
+
+    modal.addEventListener("click", (ev) => {
+      if (ev.target === modal) close(null);
     });
-  }
+
+    document.body.appendChild(modal);
+    render();
+  });
+}
 
   async function _linkExpenseToTransaction(expenseId, transactionId) {
     const uid = await _ensureSession();
@@ -1813,6 +1949,551 @@ async function _fetchExpenseAuditDetails(expenseId) {
 
   if (ex?.transactionId) out.walletTransaction = out.budgetTransactionsById.get(ex.transactionId) || null;
   return out;
+}
+
+/* =========================
+   Trip expense <-> documents links
+   V1 safe: no financial mutation, link/unlink only.
+   Requires SQL table public.trip_expense_documents.
+   ========================= */
+
+function _tripExpenseDocumentsTable() {
+  return (TB_CONST?.TABLES?.trip_expense_documents) || "trip_expense_documents";
+}
+
+function _tripDocumentsTable() {
+  return (TB_CONST?.TABLES?.documents) || "documents";
+}
+
+function _tripDocumentBucket(doc) {
+  return doc?.storage_bucket || "personal-documents";
+}
+
+function _tripDocumentName(doc) {
+  return doc?.name || doc?.original_filename || "Document";
+}
+
+function _tripDocumentRelationLabel(value) {
+  const v = String(value || "receipt");
+  const labels = {
+    invoice: "Facture",
+    receipt: "Reçu",
+    warranty: "Garantie",
+    proof: "Justificatif",
+    other: "Autre",
+  };
+  return labels[v] || labels.other;
+}
+
+function _tripDocumentSearchText(doc) {
+  return [
+    doc?.name || "",
+    doc?.original_filename || "",
+    doc?.mime_type || "",
+    Array.isArray(doc?.tags) ? doc.tags.join(" ") : "",
+  ].join(" ").toLowerCase();
+}
+
+async function _ensureTripInvoiceFolderId() {
+  const uid = await _ensureSession();
+
+  const { data: existing, error: existingErr } = await sb
+    .from(_tripDocumentsTable().replace("documents", "document_folders"))
+    .select("id")
+    .eq("user_id", uid)
+    .ilike("name", "Factures")
+    .is("parent_id", null)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingErr) throw existingErr;
+  if (existing?.id) return existing.id;
+
+  const { data: created, error: createErr } = await sb
+    .from("document_folders")
+    .insert({
+      user_id: uid,
+      name: "Factures",
+      parent_id: null
+    })
+    .select("id")
+    .single();
+
+  if (createErr) throw createErr;
+  return created.id;
+}
+
+function _tripCleanFilename(name){
+  return String(name || "document")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 120) || "document";
+}
+
+function _tripDocumentTagsForRelation(relationType){
+  const rel = String(relationType || "receipt");
+
+  const map = {
+    receipt: ["Trip", "Reçu"],
+    invoice: ["Trip", "Facture"],
+    proof: ["Trip", "Justificatif"],
+    warranty: ["Trip", "Garantie"],
+    other: ["Trip"],
+  };
+
+  return map[rel] || map.other;
+}
+
+async function _uploadTripExpenseDocumentFile(expenseId, file, relationType = "receipt"){
+  const uid = await _ensureSession();
+  const ex = (tripState.expenses || []).find(e => String(e.id) === String(expenseId));
+  if(!ex) throw new Error("Dépense introuvable.");
+
+  const docId = crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const safe = _tripCleanFilename(file.name || "document");
+  const bucket = "personal-documents";
+  const path = `${uid}/${docId}/${safe}`;
+  const baseName = String(file.name || "Document").replace(/\.[a-z0-9]{1,8}$/i, "");
+
+  const up = await sb.storage.from(bucket).upload(path, file, {
+    upsert: false,
+    contentType: file.type || undefined
+  });
+  if(up.error) throw up.error;
+
+  const ins = await sb.from(_tripDocumentsTable()).insert({
+    id: docId,
+    user_id: uid,
+    folder_id: await _ensureTripInvoiceFolderId(),
+    name: baseName || "Document",
+    original_filename: file.name || safe,
+    storage_bucket: bucket,
+    storage_path: path,
+    mime_type: file.type || "",
+    size_bytes: file.size || 0,
+    tags: _tripDocumentTagsForRelation(relationType)
+  });
+
+  if(ins.error){
+    await sb.storage.from(bucket).remove([path]);
+    throw ins.error;
+  }
+
+  await _linkTripExpenseDocument({
+    expenseId,
+    tripId: tripState.activeTripId,
+    documentId: docId,
+    relationType
+  });
+
+  return docId;
+}
+
+async function _fetchTripExpenseDocumentLinks(expenseId) {
+  if (!expenseId) return [];
+
+  const { data: links, error } = await sb
+    .from(_tripExpenseDocumentsTable())
+    .select("*")
+    .eq("expense_id", expenseId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  const rows = links || [];
+  const docIds = Array.from(new Set(rows.map(row => row.document_id).filter(Boolean)));
+
+  if (!docIds.length) {
+    return rows.map(row => ({ ...row, document: null }));
+  }
+
+  const { data: docs, error: docsErr } = await sb
+    .from(_tripDocumentsTable())
+    .select("id,name,original_filename,storage_bucket,storage_path,mime_type,size_bytes,created_at,tags")
+    .in("id", docIds);
+
+  if (docsErr) throw docsErr;
+
+  const docsById = new Map((docs || []).map(doc => [String(doc.id), doc]));
+
+  return rows.map(row => ({
+    ...row,
+    document: docsById.get(String(row.document_id)) || null,
+  }));
+}
+
+async function _searchTripDocuments(query = "") {
+  let req = sb
+    .from(_tripDocumentsTable())
+    .select("id,name,original_filename,storage_bucket,storage_path,mime_type,size_bytes,created_at,tags")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  const trimmed = String(query || "").trim().toLowerCase();
+
+  const { data, error } = await req;
+
+  if (error) throw error;
+
+  if (!trimmed) return data || [];
+
+  return (data || []).filter(doc =>
+    _tripDocumentSearchText(doc).includes(trimmed)
+  );
+}
+
+async function _unlinkTripExpenseDocument(linkId) {
+  const { error } = await sb
+    .from(_tripExpenseDocumentsTable())
+    .delete()
+    .eq("id", linkId);
+
+  if (error) throw error;
+}
+
+async function _linkTripExpenseDocument({
+  expenseId,
+  tripId,
+  documentId,
+  relationType = "receipt",
+}) {
+  const payload = {
+    user_id: await _ensureSession(),
+    expense_id: expenseId,
+    trip_id: tripId,
+    document_id: documentId,
+    relation_type: relationType,
+  };
+
+  const { error } = await sb
+    .from(_tripExpenseDocumentsTable())
+    .insert(payload);
+
+  if (error) throw error;
+}
+
+async function _openTripDocument(doc) {
+  if (!doc?.storage_path) {
+    toastWarn("Document introuvable.");
+    return;
+  }
+
+  const bucket = _tripDocumentBucket(doc);
+
+  const { data, error } = await sb.storage
+    .from(bucket)
+    .createSignedUrl(doc.storage_path, 3600);
+
+  if (error) throw error;
+
+  if (data?.signedUrl) {
+    window.open(data.signedUrl, "_blank", "noopener");
+  }
+}
+
+async function _openTripExpenseDocumentsModal(expenseId) {
+  const ex = (tripState.expenses || []).find(e => String(e.id) === String(expenseId));
+
+  if (!ex) {
+    toastWarn("Dépense introuvable.");
+    return;
+  }
+
+  let links = [];
+  let docs = [];
+
+  try {
+    links = await _fetchTripExpenseDocumentLinks(expenseId);
+    docs = await _searchTripDocuments("");
+  } catch (e) {
+    toastWarn(e?.message || String(e));
+    return;
+  }
+
+  const linkedIds = new Set(
+    links.map(x => String(x.document_id))
+  );
+
+  const availableDocs = docs.filter(
+    doc => !linkedIds.has(String(doc.id))
+  );
+
+  const linkedHTML = links.length
+    ? links.map(link => {
+        const doc = link.document;
+
+        if (!doc) {
+          return `
+            <div class="card" style="margin-bottom:8px;">
+              <div class="muted">Document supprimé</div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="card" style="margin-bottom:8px;">
+            <div class="row" style="justify-content:space-between;gap:10px;">
+              <div>
+                <strong>${escapeHTML(_tripDocumentName(doc))}</strong>
+                <div class="muted" style="font-size:12px;">
+                  ${escapeHTML(_tripDocumentRelationLabel(link.relation_type))}
+                </div>
+              </div>
+
+              <div class="row" style="gap:6px;">
+                <button class="btn" data-open-trip-doc="${doc.id}">
+                  Ouvrir
+                </button>
+
+                <button class="btn danger" data-unlink-trip-doc="${link.id}">
+                  Délier
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("")
+    : `<div class="muted">Aucun document lié.</div>`;
+
+  const availableHTML = `
+  <div style="margin-top:14px;border-top:1px solid rgba(148,163,184,.25);padding-top:14px;">
+    <h3 style="margin:0 0 10px;">Ajouter ou lier un document</h3>
+
+    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;">
+      <div>
+        <label class="muted" style="display:block;font-size:12px;margin-bottom:4px;">Document existant</label>
+        <input id="trip-doc-search" class="input" type="search" placeholder="Rechercher un document…" style="width:100%;margin-bottom:8px;" />
+
+        <select id="trip-doc-select" class="input" style="width:100%;">
+          ${availableDocs.map(doc => `
+            <option value="${escapeHTML(doc.id)}">
+              ${escapeHTML(_tripDocumentName(doc))}
+            </option>
+          `).join("")}
+        </select>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+        <select id="trip-doc-relation" class="input">
+          <option value="receipt">Reçu</option>
+          <option value="invoice">Facture</option>
+          <option value="proof">Justificatif</option>
+          <option value="warranty">Garantie</option>
+          <option value="other">Autre</option>
+        </select>
+
+        <button class="btn primary" type="button" data-trip-doc-link-selected>
+          Lier
+        </button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <select id="trip-doc-upload-relation" class="input">
+  <option value="receipt">Reçu</option>
+  <option value="invoice">Facture</option>
+  <option value="proof">Justificatif</option>
+  <option value="warranty">Garantie</option>
+  <option value="other">Autre</option>
+</select>
+
+<button class="btn" type="button" data-trip-doc-upload-btn>
+  + Ajouter un document
+</button>
+
+<input id="trip-doc-upload-input" type="file" accept="application/pdf,image/*" style="display:none;" />
+      <span class="muted" style="font-size:12px;">PDF ou image. Le fichier sera ajouté au coffre Documents puis lié à cette dépense.</span>
+    </div>
+  </div>
+`;
+
+  const html = `
+  <div style="padding:4px 0;">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px;">
+      <div>
+        <h2 style="margin:0;">Documents • ${escapeHTML(ex.label || "Dépense")}</h2>
+        <div class="muted" style="font-size:12px;margin-top:4px;">
+          Lier ou délier des justificatifs à cette dépense Trip.
+        </div>
+      </div>
+      <button class="btn" type="button" data-trip-doc-close>✕</button>
+    </div>
+
+    ${linkedHTML}
+
+    ${availableHTML}
+  </div>
+`;
+
+const existing = document.getElementById("trip-expense-docs-modal");
+if (existing) existing.remove();
+
+const wrap = document.createElement("div");
+wrap.id = "trip-expense-docs-modal";
+wrap.style.cssText = `
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(15,23,42,.48);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 16px;
+  overflow: auto;
+`;
+
+wrap.onclick = (e) => {
+  if (e.target === wrap) wrap.remove();
+};
+
+wrap.innerHTML = `
+  <div class="card" style="
+    width: min(920px, 100%);
+    max-height: calc(100vh - 64px);
+    overflow: auto;
+    margin: 0;
+    border-radius: 22px;
+    box-shadow: 0 28px 80px rgba(15,23,42,.35);
+  ">
+    ${html}
+  </div>
+`;
+
+document.body.appendChild(wrap);
+
+const modal = {
+  close: () => wrap.remove(),
+  content: wrap,
+};
+
+const root = wrap;
+
+root.querySelector("[data-trip-doc-close]")?.addEventListener("click", () => {
+  wrap.remove();
+});
+
+const docSelect = root.querySelector("#trip-doc-select");
+const docSearch = root.querySelector("#trip-doc-search");
+
+if(docSearch && docSelect){
+  docSearch.oninput = () => {
+    const q = String(docSearch.value || "").toLowerCase().trim();
+    const filtered = availableDocs.filter(doc => _tripDocumentSearchText(doc).includes(q));
+
+    docSelect.innerHTML = filtered.map(doc => `
+      <option value="${escapeHTML(doc.id)}">
+        ${escapeHTML(_tripDocumentName(doc))}
+      </option>
+    `).join("");
+  };
+}
+
+root.querySelector("[data-trip-doc-link-selected]")?.addEventListener("click", async () => {
+  try{
+    const documentId = root.querySelector("#trip-doc-select")?.value || "";
+    const relationType = root.querySelector("#trip-doc-upload-relation")?.value || "receipt";
+
+    if(!documentId) return toastWarn("Choisis un document.");
+
+    await _linkTripExpenseDocument({
+      expenseId,
+      tripId: tripState.activeTripId,
+      documentId,
+      relationType
+    });
+
+    toastOk("Document lié.");
+    wrap.remove();
+    await _openTripExpenseDocumentsModal(expenseId);
+  }catch(e){
+    toastWarn(e?.message || String(e));
+  }
+});
+
+root.querySelector("[data-trip-doc-upload-btn]")?.addEventListener("click", () => {
+  root.querySelector("#trip-doc-upload-input")?.click();
+});
+
+root.querySelector("#trip-doc-upload-input")?.addEventListener("change", async (ev) => {
+  try{
+    const file = ev.target.files?.[0];
+    if(!file) return;
+
+    const relationType = root.querySelector("#trip-doc-relation")?.value || "receipt";
+
+await _uploadTripExpenseDocumentFile(expenseId, file, relationType);
+
+    toastOk("Document ajouté et lié.");
+    wrap.remove();
+    await _openTripExpenseDocumentsModal(expenseId);
+  }catch(e){
+    toastWarn(e?.message || String(e));
+  }
+});
+
+  root.querySelectorAll("[data-open-trip-doc]").forEach(btn => {
+    btn.onclick = async () => {
+      try {
+        const id = btn.getAttribute("data-open-trip-doc");
+        const link = links.find(x => String(x.document_id) === String(id));
+        if (!link?.document) return;
+
+        await _openTripDocument(link.document);
+      } catch (e) {
+        toastWarn(e?.message || String(e));
+      }
+    };
+  });
+
+  root.querySelectorAll("[data-unlink-trip-doc]").forEach(btn => {
+    btn.onclick = async () => {
+      try {
+        const linkId = btn.getAttribute("data-unlink-trip-doc");
+
+        await _unlinkTripExpenseDocument(linkId);
+
+        toastOk("Document délié.");
+
+        modal?.close?.();
+
+        await _openTripExpenseDocumentsModal(expenseId);
+      } catch (e) {
+        toastWarn(e?.message || String(e));
+      }
+    };
+  });
+
+  root.querySelectorAll("[data-link-trip-doc]").forEach(btn => {
+    btn.onclick = async () => {
+      try {
+        const docId = btn.getAttribute("data-link-trip-doc");
+
+        const select = root.querySelector(
+          `[data-trip-doc-rel="${docId}"]`
+        );
+
+        const relationType = select?.value || "receipt";
+
+        await _linkTripExpenseDocument({
+          expenseId,
+          tripId: tripState.activeTripId,
+          documentId: docId,
+          relationType,
+        });
+
+        toastOk("Document lié.");
+
+        modal?.close?.();
+
+        await _openTripExpenseDocumentsModal(expenseId);
+      } catch (e) {
+        toastWarn(e?.message || String(e));
+      }
+    };
+  });
 }
 
 function _walletNameById(walletId) {
@@ -2996,7 +3677,11 @@ try {
       try {
         const matches = await _findMatchingTransactions({ date, amount: amt, currency: cur });
         if (matches.length) {
-          const m0 = await _chooseMatchingTransaction(matches);
+          const m0 = await _chooseMatchingTransaction(matches, {
+            date,
+            amount: amt,
+            currency: cur
+        });
           if (m0) {
             selectedExistingTransaction = true;
             // Create trip expense first, then link.
@@ -3943,6 +4628,29 @@ try {
       </div>
     ` : "";
 
+const tripDocCountsByExpense = new Map();
+
+try {
+  const visibleExpenseIds = filteredExpenses.map(ex => ex.id).filter(Boolean);
+
+  if (visibleExpenseIds.length) {
+    const { data: docLinkRows, error: docLinkErr } = await sb
+      .from((TB_CONST?.TABLES?.trip_expense_documents) || "trip_expense_documents")
+      .select("expense_id")
+      .in("expense_id", visibleExpenseIds);
+
+    if (!docLinkErr) {
+      for (const row of (docLinkRows || [])) {
+        const id = String(row.expense_id || "");
+        if (!id) continue;
+        tripDocCountsByExpense.set(id, (tripDocCountsByExpense.get(id) || 0) + 1);
+      }
+    }
+  }
+} catch (e) {
+  console.warn("[Trip] document counts failed", e);
+}
+
     const expensesHTML = filteredExpenses.length
       ? await Promise.all(filteredExpenses.map(async ex => {
           const payer = members.find(m => m.id === ex.paidByMemberId);
@@ -3974,6 +4682,9 @@ return `
                 <strong>${_fmtMoney(ex.amount, ex.currency)}</strong>
                 ${moveUI}
                 <button class="btn" type="button" data-exp-detail="${ex.id}">Détail</button>
+                <button class="btn" type="button" data-exp-docs="${ex.id}">
+                  📎 Docs${tripDocCountsByExpense.get(String(ex.id)) ? ` (${tripDocCountsByExpense.get(String(ex.id))})` : ""}
+                </button>
                 ${editBtn}
                 <button class="btn danger" type="button" data-del-exp="${ex.id}">Supprimer</button>
               </div>
@@ -4687,6 +5398,17 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
     }
 
 
+root.querySelectorAll("[data-exp-docs]").forEach(btn => {
+  btn.onclick = async () => {
+    try {
+      const id = btn.getAttribute("data-exp-docs");
+      if (!id) return;
+      await _openTripExpenseDocumentsModal(id);
+    } catch (e) {
+      toastWarn(e?.message || String(e));
+    }
+  };
+});
 
     root.querySelectorAll('[data-exp-detail]').forEach(btn => {
   btn.onclick = async () => {
