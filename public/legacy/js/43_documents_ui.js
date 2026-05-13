@@ -16,13 +16,15 @@
   onlyFavorites: false,
   onlyExpiring: false,
   collapsedFolderIds: [],
-  selectedIds: []
+  selectedIds: [],
+  linkCounts: {}
 };
 
   function esc(v){ try { return escapeHTML(String(v ?? '')); } catch(_) { return String(v ?? '').replace(/[&<>'"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c])); } }
   function tr(k, vars){ try { return window.tbT ? window.tbT(k, vars) : k; } catch(_) { return k; } }
   function client(){ try{ if(typeof sb !== 'undefined' && sb && sb.from) return sb; }catch(_){} try{ if(window.sb && window.sb.from) return window.sb; }catch(_){} return null; }
   function table(name, fallback){ return (window.TB_CONST && window.TB_CONST.TABLES && window.TB_CONST.TABLES[name]) || fallback || name; }
+  function atxt(fr, en){ try { return (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? en : fr; } catch(_) { return fr; } }
   function key(name, fallback){ return (window.TB_CONST && window.TB_CONST.LS_KEYS && window.TB_CONST.LS_KEYS[name]) || fallback || name; }
   function fmtDate(v){ if(!v) return '—'; try { return new Date(v).toLocaleDateString('fr-FR'); } catch(_) { return String(v).slice(0,10); } }
   function fmtSize(bytes){ const n = Number(bytes||0); if(!n) return '—'; if(n < 1024) return `${n} o`; if(n < 1024*1024) return `${Math.round(n/102.4)/10} Ko`; return `${Math.round(n/1024/102.4)/10} Mo`; }
@@ -422,6 +424,69 @@ function setSelectedSort(v){
     document.head.appendChild(st);
   }
 
+  async function loadDocumentLinkCounts(docIds){
+  const c = client();
+  if(!c) return {};
+
+  const ids = (docIds || []).map(String).filter(Boolean);
+  if(!ids.length) return {};
+
+  const out = {};
+  ids.forEach(id => {
+    out[id] = { transactions: 0, tripTransactions: 0, assets: 0 };
+  });
+
+  try{
+    const { data, error } = await c
+      .from(txDocLinkTable())
+      .select('document_id')
+      .in('document_id', ids);
+
+    if(!error){
+      for(const row of data || []){
+        const id = String(row.document_id || '');
+        if(out[id]) out[id].transactions += 1;
+      }
+    }
+  }catch(e){
+    console.warn('[TB][documents] transaction link counts unavailable', e);
+  }
+
+  try{
+    const { data, error } = await c
+      .from(tripExpenseDocLinkTable())
+      .select('document_id')
+      .in('document_id', ids);
+
+    if(!error){
+      for(const row of data || []){
+        const id = String(row.document_id || '');
+        if(out[id]) out[id].tripTransactions += 1;
+      }
+    }
+  }catch(e){
+    console.warn('[TB][documents] trip link counts unavailable', e);
+  }
+
+  try{
+    const { data, error } = await c
+      .from(assetDocLinkTable())
+      .select('document_id')
+      .in('document_id', ids);
+
+    if(!error){
+      for(const row of data || []){
+        const id = String(row.document_id || '');
+        if(out[id]) out[id].assets += 1;
+      }
+    }
+  }catch(e){
+    console.warn('[TB][documents] asset link counts unavailable', e);
+  }
+
+  return out;
+}
+
   async function loadDocuments(){
     const c = client();
     if(!c) throw new Error(tr('common.supabase_unavailable'));
@@ -431,6 +496,7 @@ function setSelectedSort(v){
     if(docsRes.error) throw docsRes.error;
     CACHE.folders = foldersRes.data || [];
     CACHE.documents = docsRes.data || [];
+    CACHE.linkCounts = await loadDocumentLinkCounts((CACHE.documents || []).map(d => d.id));
     CACHE.selectedFolderId = selectedFolderId();
     if(CACHE.selectedFolderId && !CACHE.folders.some(f=>String(f.id)===String(CACHE.selectedFolderId))) setSelectedFolderId('');
     CACHE.error = '';
@@ -618,6 +684,9 @@ function setSelectedSort(v){
   const tags = Array.isArray(d.tags) ? d.tags : [];
   const expiry = fmtExpiry(d.expires_at);
   const notePreview = String(d.notes || '').trim();
+  const counts = CACHE.linkCounts?.[String(d.id)] || {};
+const txCount = Number(counts.transactions || 0) + Number(counts.tripTransactions || 0);
+const assetCount = Number(counts.assets || 0);
 
   return `<article class="tb-doc-card" data-doc-id="${esc(d.id)}">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
@@ -660,7 +729,12 @@ function setSelectedSort(v){
       <button class="btn primary" type="button" onclick="window.tbDocumentsPreview('${esc(d.id)}')">${esc(tr('documents.action.open'))}</button>
       <button class="btn" type="button" onclick="window.tbDocumentsRename('${esc(d.id)}')">${esc(tr('documents.action.rename'))}</button>
       <button class="btn" type="button" onclick="window.tbDocumentsEditMeta('${esc(d.id)}')">${esc(tr('documents.action.info'))}</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsOpenTransactionLinks('${esc(d.id)}')">🔗 ${esc(tr('documents.linked_transactions.title'))}</button>
+      <button class="btn" type="button" onclick="window.tbDocumentsOpenTransactionLinks('${esc(d.id)}')">
+     🔗 ${esc(tr('documents.linked_transactions.title'))} (${esc(txCount)})
+      </button>
+      <button class="btn" type="button" onclick="window.tbDocumentsOpenAssetLinks('${esc(d.id)}')">
+      🚗 ${esc(atxt('Assets liés', 'Linked assets'))} (${esc(assetCount)})
+</button>
       <button class="btn" type="button" onclick="window.tbDocumentsDelete('${esc(d.id)}')">${esc(tr('documents.action.delete'))}</button>
     </div>
   </article>`;
@@ -845,7 +919,8 @@ function setSelectedSort(v){
   function cleanFilename(name){ return String(name||'document').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,120) || 'document'; }
   function extFromName(name){ const m = String(name||'').match(/\.([a-z0-9]{1,8})$/i); return m ? `.${m[1].toLowerCase()}` : ''; }
 
-  async function upload(files){
+  async function upload(files, opts){
+  opts = opts || {};
   const list = Array.from(files || []); if(!list.length) return;
   const c = client(); if(!c) return alert(tr('common.supabase_unavailable'));
   const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connecté.');
@@ -874,7 +949,8 @@ function setSelectedSort(v){
       const ins = await c.from(table('documents','documents')).insert({
         id: docId,
         user_id: uid,
-        folder_id: folderId,
+        folder_id: opts.folder_id !== undefined ? opts.folder_id : folderId,
+        tags: Array.isArray(opts.tags) ? opts.tags : undefined,
         name: baseName || 'Document',
         original_filename: file.name || safe,
         storage_bucket: BUCKET,
@@ -895,6 +971,9 @@ function setSelectedSort(v){
   CACHE.uploading = '';
   await ensureLoaded();
   notify(`${uploadedIds.length} upload(s) terminé(s), ${failed} erreur(s).`, failed ? 'error' : 'success');
+  if(typeof opts.afterUpload === 'function'){
+   await opts.afterUpload(uploadedIds);
+  }
   if(uploadedIds.length === 1){
     const doc = (CACHE.documents || []).find(d => String(d.id) === String(uploadedIds[0]));
     if(doc) setTimeout(() => openInfoModal(doc), 0);
@@ -1815,6 +1894,122 @@ renderDocumentTransactionsModal(doc, links, message === '__keep_search__' ? '' :
 }
 
 
+/* =========================
+   Documents <-> assets links
+   V1 safe: no patrimony mutation, link/unlink only.
+   Requires SQL table public.asset_documents.
+   ========================= */
+
+function assetDocLinkTable(){
+  return table('asset_documents', 'asset_documents');
+}
+
+async function fetchDocumentAssetLinks(docId){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+  const { data, error } = await c.from(assetDocLinkTable()).select('*').eq('document_id', docId).order('created_at', { ascending:false });
+  if(error) throw error;
+  return data || [];
+}
+
+async function loadAssetCandidates(){
+  const c = client();
+  if(!c) return [];
+  try{
+    let q = c.from(table('assets','assets')).select('*').neq('status','archived').order('created_at',{ ascending:false }).limit(200);
+    const tid = String(window.state?.activeTravelId || '').trim();
+    if(tid) q = q.or(`travel_id.eq.${tid},travel_id.is.null`);
+    const { data, error } = await q;
+    if(error) throw error;
+    return data || [];
+  }catch(e){
+    console.warn('[TB][documents] asset candidates unavailable', e);
+    return [];
+  }
+}
+
+function assetLabel(asset){
+  if(!asset) return 'Asset';
+  const name = asset.name || 'Asset';
+  const amount = asset.purchase_value != null ? `${asset.purchase_value} ${asset.currency || ''}`.trim() : '';
+  const type = asset.asset_type || '';
+  return [name, type, amount].filter(Boolean).join(' · ');
+}
+
+async function linkDocumentToAsset(docId, assetId, relationType){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+  const uid = await currentUserId();
+  if(!uid) throw new Error(tr('transactions.documents.user_missing'));
+  const { error } = await c.from(assetDocLinkTable()).insert({
+    user_id: uid,
+    document_id: docId,
+    asset_id: assetId,
+    relation_type: relationType || 'proof'
+  });
+  if(error) throw error;
+}
+
+async function unlinkDocumentAsset(linkId){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+  const { error } = await c.from(assetDocLinkTable()).delete().eq('id', linkId);
+  if(error) throw error;
+}
+
+function renderDocumentAssetsModal(doc, links, assets, message){
+  const linkedIds = new Set((links || []).map(l => String(l.asset_id || '')));
+  const candidates = (assets || []).filter(a => !linkedIds.has(String(a.id || ''))).slice(0,80);
+  const wrap = document.getElementById('tb-doc-asset-modal') || document.createElement('div');
+  wrap.id = 'tb-doc-asset-modal';
+  wrap.className = 'tb-doc-modal-backdrop';
+  wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
+  wrap.innerHTML = `
+    <div class="tb-doc-modal">
+      <h3>${esc(atxt('Assets liés', 'Linked assets'))}</h3>
+      <p class="muted" style="font-size:13px;margin-top:-6px;">${esc(doc.name || doc.original_filename || 'Document')}</p>
+      ${message ? `<div class="tb-doc-uploading">${esc(message)}</div>` : ''}
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;margin-bottom:12px;">
+        ${(links || []).length ? links.map(link => {
+          const asset = (assets || []).find(a => String(a.id || '') === String(link.asset_id || ''));
+          return `<div class="tb-doc-share-link"><strong>${esc(assetLabel(asset))}</strong><br><span class="muted">${esc(tr('documents.relation.' + (link.relation_type || 'proof')))}</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="btn small primary" type="button" onclick="window.tbOpenAssetFromDocument('${esc(link.asset_id)}')">${esc(atxt('Ouvrir Patrimoine', 'Open Assets'))}</button><button class="btn small" type="button" onclick="window.tbDocumentsUnlinkAsset('${esc(link.id)}','${esc(doc.id)}')">${esc(tr('transactions.documents.unlink'))}</button></div></div>`;
+        }).join('') : `<div class="tb-doc-empty">${esc(atxt('Aucun asset lié.', 'No linked asset.'))}</div>`}
+      </div>
+      <div class="tb-doc-form">
+        <label>${esc(atxt('Ajouter un asset', 'Add asset'))}</label>
+        <select id="tb-doc-link-asset-id" class="input">
+          ${candidates.length ? candidates.map(a => `<option value="${esc(a.id)}">${esc(assetLabel(a))}</option>`).join('') : `<option value="">${esc(atxt('Aucun asset disponible', 'No available asset'))}</option>`}
+        </select>
+        <select id="tb-doc-link-asset-type" class="input">
+          <option value="invoice">${esc(tr('documents.relation.invoice'))}</option>
+          <option value="receipt">${esc(tr('documents.relation.receipt'))}</option>
+          <option value="warranty">${esc(tr('documents.relation.warranty'))}</option>
+          <option value="proof" selected>${esc(tr('documents.relation.proof'))}</option>
+          <option value="other">${esc(tr('documents.relation.other'))}</option>
+        </select>
+      </div>
+      <div class="tb-doc-modal-actions">
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyLinkAsset('${esc(doc.id)}')">${esc(atxt('Lier l’asset', 'Link asset'))}</button>
+      </div>
+    </div>`;
+  if(!wrap.parentNode) document.body.appendChild(wrap);
+}
+
+async function openDocumentAssetsModal(docId, message){
+  const doc = (CACHE.documents || []).find(d => String(d.id) === String(docId));
+  if(!doc) return;
+  try{
+    const assets = await loadAssetCandidates();
+    const links = await fetchDocumentAssetLinks(docId);
+    renderDocumentAssetsModal(doc, links, assets, message || '');
+  }catch(e){
+    console.warn('[TB][documents] asset links failed', e);
+    alert(e.message || String(e));
+  }
+}
+
+
   window.renderDocuments = function renderDocuments(){ ensureLoaded(); };
   window.tbDocumentsRenderOnly = renderShell;
   try {
@@ -1880,6 +2075,7 @@ window.tbDocumentsApplyAddTagSelected = applyAddTagSelected;
 window.tbDocumentsMoveSelected = moveSelected;
 window.tbDocumentsApplyMoveSelected = applyMoveSelected;
 window.tbDocumentsOpenTransactionLinks = openDocumentTransactionsModal;
+window.tbDocumentsOpenAssetLinks = openDocumentAssetsModal;
 window.tbDocumentsFilterTransactionSearch = async function(docId, query){
   window.__tbDocTxSearch = String(query || '');
   await openDocumentTransactionsModal(docId, '__keep_search__');
@@ -1917,12 +2113,37 @@ window.tbOpenTransactionFromDocument = function(txId){
   document.getElementById('tb-doc-tx-modal')?.remove();
   if(typeof showView === 'function') showView('transactions');
 };
+window.tbOpenAssetFromDocument = function(assetId){
+  window.__tbFocusAssetId = String(assetId || '');
+  document.getElementById('tb-doc-asset-modal')?.remove();
+  if(typeof showView === 'function') showView('assets');
+};
 window.tbOpenTripExpenseFromDocument = function(expenseId){
   window.__tbFocusTripExpenseId = String(expenseId || '');
   document.getElementById('tb-doc-tx-modal')?.remove();
   if(typeof showView === 'function') showView('trip');
 };
 
+window.tbDocumentsApplyLinkAsset = async function(docId){
+  const assetId = document.getElementById('tb-doc-link-asset-id')?.value || '';
+  const relationType = document.getElementById('tb-doc-link-asset-type')?.value || 'proof';
+  if(!assetId) return alert(atxt('Choisis un asset.', 'Choose an asset.'));
+  try{
+    await linkDocumentToAsset(docId, assetId, relationType);
+    await openDocumentAssetsModal(docId, atxt('Asset lié.', 'Asset linked.'));
+  }catch(e){
+    alert(e.message || String(e));
+  }
+};
+window.tbDocumentsUnlinkAsset = async function(linkId, docId){
+  if(!confirm(tr('documents.linked_transactions.unlink_confirm'))) return;
+  try{
+    await unlinkDocumentAsset(linkId);
+    await openDocumentAssetsModal(docId, atxt('Lien asset supprimé.', 'Asset link removed.'));
+  }catch(e){
+    alert(e.message || String(e));
+  }
+};
 window.tbDocumentsUnlinkTripExpense = async function(linkId, docId){
   if(!confirm(tr('documents.linked_transactions.unlink_confirm'))) return;
   try{
@@ -2015,4 +2236,193 @@ window.tbDocumentsCopyShareBody = async function(){
     ta.remove();
   }
 };
+
+async function ensureDocumentFolderByPath(names){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+
+  const uid = await currentUserId();
+  if(!uid) throw new Error(tr('transactions.documents.user_missing'));
+
+  let parentId = null;
+
+  for(const rawName of names || []){
+    const name = String(rawName || '').trim();
+    if(!name) continue;
+
+    let q = c.from(table('document_folders','document_folders'))
+      .select('*')
+      .eq('user_id', uid)
+      .eq('name', name)
+      .limit(1);
+
+    q = parentId ? q.eq('parent_id', parentId) : q.is('parent_id', null);
+
+    const { data, error } = await q;
+    if(error) throw error;
+
+    let folder = data && data[0];
+
+    if(!folder){
+      const ins = await c.from(table('document_folders','document_folders'))
+        .insert({ user_id: uid, name, parent_id: parentId })
+        .select('*')
+        .single();
+
+      if(ins.error) throw ins.error;
+      folder = ins.data;
+    }
+
+    parentId = folder.id;
+  }
+
+  return parentId;
+}
+
+function assetDocumentTags(asset){
+  const name = String(asset?.name || 'Asset').trim();
+  return ['Asset', name].filter(Boolean);
+}
+
+async function addTagsToDocument(docId, tags){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+
+  const { data, error } = await c.from(table('documents','documents'))
+    .select('id,tags')
+    .eq('id', docId)
+    .single();
+
+  if(error) throw error;
+
+  const current = Array.isArray(data.tags) ? data.tags.map(String) : [];
+  const next = Array.from(new Set([...current, ...(tags || []).map(String).filter(Boolean)]));
+
+  const up = await c.from(table('documents','documents'))
+    .update({ tags: next })
+    .eq('id', docId);
+
+  if(up.error) throw up.error;
+}
+
+async function replaceAssetNameTagOnLinkedDocuments(assetId, oldName, newName){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+
+  const { data: links, error } = await c.from(assetDocLinkTable())
+    .select('document_id')
+    .eq('asset_id', assetId);
+
+  if(error) throw error;
+
+  const oldTag = String(oldName || '').trim();
+  const newTag = String(newName || '').trim();
+
+  for(const link of links || []){
+    const docId = link.document_id;
+
+    const { data: doc, error: docErr } = await c.from(table('documents','documents'))
+      .select('id,tags')
+      .eq('id', docId)
+      .single();
+
+    if(docErr) throw docErr;
+
+    const current = Array.isArray(doc.tags) ? doc.tags.map(String) : [];
+    const cleaned = current.filter(t => String(t) !== oldTag);
+    const next = Array.from(new Set([...cleaned, 'Asset', newTag].filter(Boolean)));
+
+    const up = await c.from(table('documents','documents'))
+      .update({ tags: next })
+      .eq('id', docId);
+
+    if(up.error) throw up.error;
+  }
+}
+
+async function renameAssetDocumentFolder(oldName, newName){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+
+  const uid = await currentUserId();
+  if(!uid) throw new Error(tr('transactions.documents.user_missing'));
+
+  const rootRes = await c.from(table('document_folders','document_folders'))
+    .select('*')
+    .eq('user_id', uid)
+    .eq('name', 'Patrimoine')
+    .is('parent_id', null)
+    .limit(1);
+
+  if(rootRes.error) throw rootRes.error;
+
+  const root = rootRes.data && rootRes.data[0];
+  if(!root) return;
+
+  const childRes = await c.from(table('document_folders','document_folders'))
+    .select('*')
+    .eq('user_id', uid)
+    .eq('parent_id', root.id)
+    .eq('name', oldName)
+    .limit(1);
+
+  if(childRes.error) throw childRes.error;
+
+  const child = childRes.data && childRes.data[0];
+  if(!child) return;
+
+  const up = await c.from(table('document_folders','document_folders'))
+    .update({ name: newName })
+    .eq('id', child.id);
+
+  if(up.error) throw up.error;
+}
+
+window.tbDocumentsUploadAndLinkAsset = async function(files, asset){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+
+  const uid = await currentUserId();
+  if(!uid) throw new Error(tr('transactions.documents.user_missing'));
+
+  const assetId = String(asset?.id || '').trim();
+  const assetName = String(asset?.name || 'Asset').trim();
+
+  if(!assetId) throw new Error('Asset manquant.');
+
+  const folderId = await ensureDocumentFolderByPath(['Patrimoine', assetName]);
+  const tags = assetDocumentTags(asset);
+
+  await upload(files, {
+    folder_id: folderId,
+    tags,
+    afterUpload: async function(uploadedIds){
+      for(const docId of uploadedIds || []){
+        const { error } = await c.from(assetDocLinkTable()).insert({
+          user_id: uid,
+          asset_id: assetId,
+          document_id: docId,
+          relation_type: 'proof'
+        });
+        if(error) throw error;
+      }
+    }
+  });
+};
+
+window.tbDocumentsAddAssetTags = async function(docId, asset){
+  if(!docId || !asset?.id) return;
+  await addTagsToDocument(docId, assetDocumentTags(asset));
+};
+
+window.tbDocumentsSyncAssetRename = async function(assetId, oldName, newName){
+  const oldClean = String(oldName || '').trim();
+  const newClean = String(newName || '').trim();
+
+  if(!assetId || !oldClean || !newClean || oldClean === newClean) return;
+
+  await replaceAssetNameTagOnLinkedDocuments(assetId, oldClean, newClean);
+  await renameAssetDocumentFolder(oldClean, newClean);
+};
+
 })();

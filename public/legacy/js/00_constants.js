@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.7.4';
+window.__TB_BUILD = '9.7.4.1';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -43,6 +43,7 @@ window.__TB_BUILD = '9.7.4';
     assets: "assets",
     asset_owners: "asset_owners",
     asset_ownership_events: "asset_ownership_events",
+    asset_documents: "asset_documents",
     document_folders: "document_folders",
     documents: "documents",
     transaction_documents: "transaction_documents",
