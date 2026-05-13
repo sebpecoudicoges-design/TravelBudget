@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# SQL dumps
+db_dumps/
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
