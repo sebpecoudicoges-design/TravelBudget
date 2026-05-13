@@ -446,7 +446,7 @@ async function loadFromSupabase(opts = {}) {
   const storedActiveTravelId = (() => {
     try { return String(localStorage.getItem(activeTravelKey) || "").trim() || null; } catch (_) { return null; }
   })();
-  const transactionSelect = "id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,night_covered,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status";
+  const transactionSelect = "id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,internal_transfer_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,night_covered,affects_budget,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status";
   const perfPromise = (name, fn) => {
     try { if (window.TB_PERF?.enabled) TB_PERF.mark(name); } catch (_) {}
     return Promise.resolve()
@@ -1075,6 +1075,10 @@ state.wallets = (w || []).map((x) => ({
   label: x.label || "",
   tripExpenseId: x.trip_expense_id || null,
   tripShareLinkId: x.trip_share_link_id || null,
+  internalTransferId: x.internal_transfer_id || null,
+  internal_transfer_id: x.internal_transfer_id || null,
+  affectsBudget: x.affects_budget !== false,
+  affects_budget: x.affects_budget !== false,
   isInternal: !!(x.is_internal ?? x.isInternal),
   dateStart: x.date_start,
   dateEnd: x.date_end,

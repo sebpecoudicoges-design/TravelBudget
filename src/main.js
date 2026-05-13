@@ -36,6 +36,7 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/14_settings_periods_ui.js',
   '/legacy/js/15_recurring_rules_ui.js',
   '/legacy/js/15_wallet_adjust.js',
+  '/legacy/js/17_internal_transfers.js',
   '/legacy/js/17_charts.js',
   '/legacy/js/33_budget_analysis.js',
   '/legacy/js/41_assets_core.js',

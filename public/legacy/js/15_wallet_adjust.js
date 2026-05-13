@@ -25,29 +25,48 @@ function tbIsISODate(value) {
 }
 async function tbEnsureWalletAdjustmentCategory() {
   const categoryName = (TB_CONST?.CATS?.wallet_adjustment || "Ajustement wallet");
-  const existing = (state?.categories || []).some((c) => String(c?.name || "").trim().toLowerCase() === categoryName.toLowerCase());
+
+  const existing = (state?.categories || []).some((c) =>
+    String(c?.name || c || "").trim().toLowerCase() === categoryName.toLowerCase()
+  );
   if (existing) return categoryName;
+
+  const userId = window.sbUser?.id || sbUser?.id || null;
+  if (!userId) {
+    console.warn("[wallet_adjust] user unavailable, skip category ensure");
+    return categoryName;
+  }
 
   try {
     const { data, error } = await sb
       .from(TB_CONST.TABLES.categories)
       .select("id,name")
-      .eq("user_id", (window.sbUser && sbUser.id) ? sbUser.id : undefined)
+      .eq("user_id", userId)
       .ilike("name", categoryName)
       .limit(1);
+
     if (!error && Array.isArray(data) && data.length) return categoryName;
   } catch (_) {}
 
   let sortOrder = 999;
-  const rows = (state?.categories || []).map((c) => Number(c?.sortOrder ?? c?.sort_order)).filter(Number.isFinite);
+  const rows = (state?.categoriesRows || state?.categories || [])
+    .map((c) => Number(c?.sortOrder ?? c?.sort_order))
+    .filter(Number.isFinite);
+
   if (rows.length) sortOrder = Math.max(...rows) + 1;
+
   const { error } = await sb.from(TB_CONST.TABLES.categories).insert({
-    user_id: (window.sbUser && sbUser.id) ? sbUser.id : undefined,
-    name: categoryName, color: '#64748b', sort_order: sortOrder,
+    user_id: userId,
+    name: categoryName,
+    color: "#64748b",
+    sort_order: sortOrder,
   });
-  if (error && error.code !== '23505' && error.status !== 409) throw error;
+
+  if (error && error.code !== "23505" && error.status !== 409) throw error;
+
   return categoryName;
 }
+
 async function adjustWalletBalance(walletId) {
   await safeCall("Ajuster solde", async () => {
     const w = findWallet(walletId);

@@ -1022,6 +1022,15 @@ function renderTransactions() {
     // Hide internal/shadow rows (e.g., Trip budget-only allocations).
     // These rows are tracked for split/budget logic but should not pollute the Transactions list.
     if (tx.isInternal) return false;
+    const hasInternalTransferId = !!(tx.internal_transfer_id || tx.internalTransferId);
+const isBudgetOnlyInternalTransferFee =
+  hasInternalTransferId &&
+  tx.type === 'expense' &&
+  tx.payNow === false &&
+  tx.outOfBudget === false &&
+  (tx.affectsBudget === true || tx.affects_budget === true);
+
+if (isBudgetOnlyInternalTransferFee) return false;
 
 
 
@@ -1101,6 +1110,9 @@ function renderTransactions() {
           <select id="tx-bulk-subcategory">${bulkSubcategoryOptions}</select>
         </div>
         <button class="btn primary" type="button" onclick="applyBulkTxClassification()" ${bulkCount ? '' : 'disabled'}>${_txT("transactions.bulk.apply")}</button>
+        <button class="btn" type="button" onclick="openInternalTransferModal()">
+          ↔ ${_txT("transactions.action.internal_transfer")}
+        </button>
       </div>
       <div class="muted" style="font-size:12px;">
         ${_txT("transactions.bulk.hint")}
@@ -1116,6 +1128,9 @@ function renderTransactions() {
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn primary" onclick="openTxModal('expense','${w0}')">${_txT("transactions.action.add_expense")}</button>
           <button class="btn" onclick="openTxModal('income','${w0}')">${_txT("transactions.action.add_income")}</button>
+          <button class="btn" onclick="openInternalTransferModal()">
+           ↔ ${_txT("transactions.action.internal_transfer")}
+          </button>
         </div>
       ` : ""}
     `;
@@ -1124,6 +1139,11 @@ function renderTransactions() {
   }
 
   for (const tx of txs) {
+    const internalTransferId =
+  tx.internal_transfer_id
+  || tx.internalTransferId
+  || '';
+    const isInternalTransfer = !!internalTransferId;
     const w = findWallet(tx.walletId);
     const recurringTags = [];
     if (tx.generatedByRule || tx.recurringRuleId) recurringTags.push(_txT("transactions.tag.recurring"));
@@ -1137,6 +1157,7 @@ function renderTransactions() {
     const tags = [
       tx.type === "expense" ? (tx.payNow ? _txT("transactions.tag.paid") : _txT("transactions.tag.unpaid")) : _txT("transactions.tag.income"),
       tx.outOfBudget ? _txT("transactions.tag.out_budget") : null,
+      isInternalTransfer ? '↔ Mouvement interne' : null,
      tx.nightCovered ? _txT("transactions.tag.night") : null,
      tx.tripExpenseId || tx.trip_expense_id ? _txT("transactions.tag.trip_linked") : null,
      tx.tripShareLinkId || tx.trip_share_link_id ? _txT("transactions.tag.trip_share") : null,
@@ -1153,6 +1174,15 @@ function renderTransactions() {
     const nightInsight = (tx.nightCovered && typeof window.tbGetNightCoveredInsightForTx === "function")
       ? window.tbGetNightCoveredInsightForTx(tx, insightDisplayCurrency)
       : null;
+    const transferFeeTx = isInternalTransfer
+  ? (state.transactions || []).find((candidate) =>
+      String(candidate.internalTransferId || candidate.internal_transfer_id || '') === String(internalTransferId)
+      && candidate.type === 'expense'
+      && candidate.payNow === false
+      && candidate.outOfBudget === false
+      && (candidate.affectsBudget === true || candidate.affects_budget === true)
+    )
+  : null;
     div.innerHTML = `
       <div style="display:flex;align-items:flex-start;gap:10px;">
         <input type="checkbox" style="margin-top:4px;" ${txChecked ? 'checked' : ''} onchange="_txBulkToggleOne('${escapeHTML(String(tx.id))}', this.checked)" />
@@ -1160,10 +1190,19 @@ function renderTransactions() {
         <div><strong>${tx.type === "expense" ? _txT("transactions.type.expense") : _txT("transactions.type.income")}</strong> — ${tx.amount} ${tx.currency}</div>
         <div class="meta">
           ${tx.dateStart}${tx.dateEnd && tx.dateEnd !== tx.dateStart ? " → " + tx.dateEnd : ""}
-          • ${w ? w.name : "Wallet"} • ${_txCatBadge(tx.category)} ${tx.label ? " • " + escapeHTML(tx.label) : ""}
+          • ${w ? w.name : "Wallet"} • ${_txCatBadge(tx.category)} ${
+  isInternalTransfer
+    ? ` • ↔ ${escapeHTML(tx.label || "Mouvement interne")}`
+    : (tx.label ? " • " + escapeHTML(tx.label) : "")
+}
         </div>
         <div class="tags">${tags.map((t) => `<span class="tag">${t}</span>`).join("")}</div>
         ${nightInsight ? `<div class="muted" style="margin-top:6px;font-size:12px;line-height:1.45;">${escapeHTML(_txT("transactions.night_insight", { amount: _fmtMoney(nightInsight.amount, nightInsight.currency) }))}</div>` : ``}
+        ${transferFeeTx ? `
+  <div class="muted" style="margin-top:6px;font-size:12px;line-height:1.45;">
+    Frais estimés inclus budget : ${escapeHTML(_fmtMoney(transferFeeTx.amount, transferFeeTx.currency))}
+  </div>
+` : ``}
         </div>
       </div>
 
@@ -1180,7 +1219,11 @@ function renderTransactions() {
         }
         <button class="btn small" type="button" data-tx-doc-btn="${escapeHTML(String(tx.id))}" onclick="window.tbTxDocOpen('${escapeHTML(String(tx.id))}')">📎 ${escapeHTML(_txT("transactions.action.invoice"))}</button>
         <button class="btn small" onclick="openTxEditModal('${tx.id}')">✏️</button>
-        <button class="btn small danger" onclick="deleteTx('${tx.id}')">🗑️</button>
+        ${
+  isInternalTransfer
+    ? `<button class="btn small danger" onclick="deleteInternalTransfer('${escapeHTML(String(internalTransferId))}')">🗑️</button>`
+    : `<button class="btn small danger" onclick="deleteTx('${tx.id}')">🗑️</button>`
+}
       </div>
     `;
     list.appendChild(div);
@@ -1214,3 +1257,10 @@ function renderTransactions() {
     }
   }
 }
+window.openInternalTransferModal = function openInternalTransferModal() {
+  if (typeof window.tbOpenInternalTransferModal === 'function') {
+    return window.tbOpenInternalTransferModal();
+  }
+
+  alert('Internal transfer modal not loaded.');
+};
