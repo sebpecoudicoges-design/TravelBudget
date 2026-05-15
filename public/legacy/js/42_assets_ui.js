@@ -21,6 +21,10 @@
   function atxt(fr, en){ try { return (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? en : fr; } catch(_) { return fr; } }
   function portfolioCurrency(){
     try{
+      const c = String(window.state?.user?.baseCurrency || window.state?.user?.base_currency || window.state?.settings?.base_currency || '').toUpperCase();
+      if(/^[A-Z]{3}$/.test(c)) return c;
+    }catch(_){}
+    try{
       if(typeof window.getDisplayCurrency === 'function') return String(window.getDisplayCurrency(today()) || '').toUpperCase() || 'EUR';
     }catch(_){}
     try{ return String(window.state?.period?.baseCurrency || window.state?.user?.baseCurrency || 'EUR').toUpperCase(); }catch(_){ return 'EUR'; }
@@ -43,7 +47,7 @@
         if(out !== null && Number.isFinite(out)) return out;
       }
     }catch(_){}
-    return amt;
+    return null;
   }
   async function currentUserId(){
     try{ if(window.sbUser && window.sbUser.id) return window.sbUser.id; }catch(_){}
@@ -148,12 +152,28 @@ async function loadRecentTransactions(){
 }
 function portfolioSummary(assets, owners){
   const core = window.TBAssetsCore;
-  const activeAssets = (assets || []).filter(a => String(a.status || 'active') === 'active');
+  const currency = portfolioCurrency();
 
+  if(window.Core?.assetRules?.summarizeAssetPortfolio){
+    const rates = typeof window.fxGetEurRates === 'function' ? window.fxGetEurRates() : {};
+    const fallbackCurrency = String(window.state?.period?.baseCurrency || '').toUpperCase();
+    const fallbackPivotToCurrencyRate = Number(window.state?.period?.eurBaseRate || window.state?.exchangeRates?.["EUR-BASE"] || 0);
+    return window.Core.assetRules.summarizeAssetPortfolio(assets, owners, {
+      baseCurrency: currency,
+      rates,
+      fallbackCurrency,
+      fallbackPivotToCurrencyRate,
+      computeCurrentValue: (asset) => core.computeLinearAssetValue(asset),
+      ownerPercent: (asset) => minePercent(ownerRows(asset, owners)),
+    });
+  }
+
+  const activeAssets = (assets || []).filter(a => String(a.status || 'active') === 'active');
   let totalCurrent = 0;
   let totalOwned = 0;
   let totalDepreciation = 0;
-  let currency = portfolioCurrency();
+  let convertedCount = 0;
+  const missingCurrencies = [];
 
   for(const asset of activeAssets){
     const current = core.computeLinearAssetValue(asset);
@@ -161,12 +181,17 @@ function portfolioSummary(assets, owners){
     const assetCurrency = String(asset.currency || currency).toUpperCase();
     const currentInPortfolioCurrency = convertAssetAmount(current, assetCurrency, currency);
     const purchaseInPortfolioCurrency = convertAssetAmount(purchase, assetCurrency, currency);
+    if(currentInPortfolioCurrency === null || purchaseInPortfolioCurrency === null){
+      if(!missingCurrencies.includes(assetCurrency)) missingCurrencies.push(assetCurrency);
+      continue;
+    }
     const rows = ownerRows(asset, owners);
     const ownPct = minePercent(rows);
 
     totalCurrent += currentInPortfolioCurrency;
     totalOwned += currentInPortfolioCurrency * (Number(ownPct || 0) / 100);
     totalDepreciation += Math.max(0, purchaseInPortfolioCurrency - currentInPortfolioCurrency);
+    convertedCount += 1;
   }
 
   return {
@@ -174,7 +199,9 @@ function portfolioSummary(assets, owners){
     currency,
     totalCurrent,
     totalOwned,
-    totalDepreciation
+    totalDepreciation,
+    convertedCount,
+    missingCurrencies
   };
 }
 
@@ -198,6 +225,7 @@ function portfolioSummaryHtml(assets, owners){
       <small>${esc(tr('assets.summary.active_assets'))}</small>
       <strong>${esc(s.count)}</strong>
     </div>
+    ${s.missingCurrencies && s.missingCurrencies.length ? `<div class="tb-assets-summary-note">${esc(atxt('Conversion manquante pour : ', 'Missing conversion for: '))}${esc(s.missingCurrencies.join(', '))}. ${esc(atxt('Ces assets ne sont pas inclus dans les totaux.', 'These assets are not included in totals.'))}</div>` : ''}
   </div>`;
 }
   function card(asset, owners){
@@ -922,6 +950,7 @@ await window.tbDocumentsUploadAndLinkAsset(files, asset);
 .tb-assets-summary-card strong{display:block;margin-top:6px;color:#0f172a;font-size:24px;letter-spacing:-.03em}
 .tb-assets-summary-card.primary strong{color:#fff;font-size:28px}
 .tb-assets-summary-card strong.depr{color:#ea580c}
+.tb-assets-summary-note{grid-column:1/-1;border:1px solid rgba(245,158,11,.24);background:#fffbeb;color:#92400e;border-radius:14px;padding:9px 11px;font-size:12px;font-weight:800}
 .tb-asset-card{border:1px solid rgba(15,23,42,.08);border-radius:24px;background:linear-gradient(180deg,#ffffff,#f7f9fc);padding:18px;box-shadow:0 18px 40px rgba(15,23,42,.08);transition:transform .2s ease,box-shadow .2s ease}.tb-asset-card:hover{transform:scale(1.01);box-shadow:0 24px 60px rgba(15,23,42,.12)}.tb-asset-top{display:flex;justify-content:space-between;gap:12px}.tb-asset-kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#64748b;font-weight:900}.tb-asset-top h3{margin:4px 0 3px;font-size:20px;color:#0f172a}.tb-asset-top p{margin:0;color:#64748b;font-size:12px}.tb-asset-top span{height:max-content;border-radius:999px;background:#e0f7fb;color:#0891b2;border:1px solid rgba(8,145,178,.16);padding:7px 10px;font-size:12px;font-weight:800}.tb-asset-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}.tb-asset-metrics>div{border-radius:18px;background:linear-gradient(180deg,#f8fafc,#eef2f7);border:1px solid rgba(15,23,42,.06);padding:13px}.tb-asset-metrics small{display:block;color:#64748b;font-size:11px}.tb-asset-metrics strong{display:block;margin-top:4px;font-size:24px;letter-spacing:-.03em;color:#0f172a}.tb-asset-primary strong{font-size:30px}.tb-asset-metrics em{display:block;margin-top:3px;color:#0891b2;font-style:normal;font-size:12px}.tb-asset-metrics em.loss{color:#e11d48}
 .tb-asset-facts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .tb-asset-facts span{font-size:11px;color:#475569;background:#f8fafc;border:1px solid rgba(15,23,42,.08);border-radius:999px;padding:6px 9px}

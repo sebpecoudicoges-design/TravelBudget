@@ -9,6 +9,7 @@ import * as fxDecisionRules from '../core/fxDecisionRules.js';
 import * as inboxRules from '../core/inboxRules.js';
 import * as documentRules from '../core/documentRules.js';
 import * as walletBalanceRules from '../core/walletBalanceRules.js';
+import * as assetRules from '../core/assetRules.js';
 
 window.Core = window.Core || {};
 window.Core.money = money;
@@ -21,6 +22,7 @@ window.Core.fxDecisionRules = fxDecisionRules;
 window.Core.inboxRules = inboxRules;
 window.Core.documentRules = documentRules;
 window.Core.walletBalanceRules = walletBalanceRules;
+window.Core.assetRules = assetRules;
 
 // Optional: expose money helpers directly for convenience (legacy may redefine later; that's OK)
 window.moneyRound = window.moneyRound || money.moneyRound;
