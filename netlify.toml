@@ -1,5 +1,5 @@
 [build]
-  command = "corepack enable && corepack prepare pnpm@9.15.5 --activate && pnpm --version && pnpm install --frozen-lockfile --reporter=append-only && pnpm run build"
+  command = "npm ci && npm run build"
   publish = "dist"
 
 [build.environment]

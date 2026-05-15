@@ -6,6 +6,7 @@
   const FALLBACK_OWNERS = [{ id:'demo-owner-me', asset_id:'demo-car', display_name:'Toi', ownership_percent:50 }, { id:'demo-owner-co', asset_id:'demo-car', display_name:'Co-owner', ownership_percent:50 }];
   const FALLBACK_EVENTS = [];
   let CACHE = { assets:[], owners:[], events:[], documentLinks:[], demo:false };
+  let TRIP_EXPENSE_CACHE = new Map();
 
   function esc(v){ try { return escapeHTML(String(v ?? '')); } catch(_) { return String(v ?? '').replace(/[&<>\'"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c])); } }
   function tr(k, vars){ try { return window.tbT ? window.tbT(k, vars) : k; } catch(_) { return k; } }
@@ -18,6 +19,32 @@
   function n(v, fallback){ const x=Number(v); return Number.isFinite(x) ? x : (fallback||0); }
   function table(name, fallback){ return (window.TB_CONST && window.TB_CONST.TABLES && window.TB_CONST.TABLES[name]) || fallback || name; }
   function atxt(fr, en){ try { return (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? en : fr; } catch(_) { return fr; } }
+  function portfolioCurrency(){
+    try{
+      if(typeof window.getDisplayCurrency === 'function') return String(window.getDisplayCurrency(today()) || '').toUpperCase() || 'EUR';
+    }catch(_){}
+    try{ return String(window.state?.period?.baseCurrency || window.state?.user?.baseCurrency || 'EUR').toUpperCase(); }catch(_){ return 'EUR'; }
+  }
+  function convertAssetAmount(amount, fromCurrency, toCurrency){
+    const amt = Number(amount || 0);
+    const from = String(fromCurrency || toCurrency || 'EUR').toUpperCase();
+    const to = String(toCurrency || from || 'EUR').toUpperCase();
+    if(!Number.isFinite(amt) || from === to) return amt;
+    try{
+      if(typeof window.amountToDisplayForDate === 'function' && to === portfolioCurrency()){
+        const out = window.amountToDisplayForDate(amt, from, today());
+        if(out !== null && Number.isFinite(out)) return out;
+      }
+    }catch(_){}
+    try{
+      if(typeof window.fxConvert === 'function'){
+        const rates = typeof window.fxGetEurRates === 'function' ? window.fxGetEurRates() : undefined;
+        const out = window.fxConvert(amt, from, to, rates);
+        if(out !== null && Number.isFinite(out)) return out;
+      }
+    }catch(_){}
+    return amt;
+  }
   async function currentUserId(){
     try{ if(window.sbUser && window.sbUser.id) return window.sbUser.id; }catch(_){}
     const c = client();
@@ -126,19 +153,20 @@ function portfolioSummary(assets, owners){
   let totalCurrent = 0;
   let totalOwned = 0;
   let totalDepreciation = 0;
-  let currency = activeAssets[0]?.currency || 'EUR';
+  let currency = portfolioCurrency();
 
   for(const asset of activeAssets){
     const current = core.computeLinearAssetValue(asset);
     const purchase = Number(asset.purchase_value || 0);
+    const assetCurrency = String(asset.currency || currency).toUpperCase();
+    const currentInPortfolioCurrency = convertAssetAmount(current, assetCurrency, currency);
+    const purchaseInPortfolioCurrency = convertAssetAmount(purchase, assetCurrency, currency);
     const rows = ownerRows(asset, owners);
     const ownPct = minePercent(rows);
 
-    totalCurrent += current;
-    totalOwned += current * (Number(ownPct || 0) / 100);
-    totalDepreciation += Math.max(0, purchase - current);
-
-    if(asset.currency) currency = asset.currency;
+    totalCurrent += currentInPortfolioCurrency;
+    totalOwned += currentInPortfolioCurrency * (Number(ownPct || 0) / 100);
+    totalDepreciation += Math.max(0, purchaseInPortfolioCurrency - currentInPortfolioCurrency);
   }
 
   return {
@@ -450,7 +478,50 @@ async function fetchDocumentTripExpenseLinksForDocs(docIds){
     .order('created_at', { ascending:false });
 
   if(error) throw error;
+  await cacheTripExpensesForLinks(data || []);
   return data || [];
+}
+
+function normalizeTripExpenseRow(row){
+  if(!row) return null;
+  return {
+    ...row,
+    paidByMemberId: row.paidByMemberId || row.paid_by_member_id || null,
+    transactionId: row.transactionId || row.transaction_id || null,
+    budgetDateStart: row.budgetDateStart || row.budget_date_start || row.date || null,
+    budgetDateEnd: row.budgetDateEnd || row.budget_date_end || row.budget_date_start || row.date || null,
+  };
+}
+
+function rememberTripExpenses(rows){
+  for(const row of rows || []){
+    const ex = normalizeTripExpenseRow(row);
+    if(ex?.id) TRIP_EXPENSE_CACHE.set(String(ex.id), ex);
+  }
+}
+
+async function cacheTripExpensesForLinks(links){
+  const ids = Array.from(new Set((links || []).map(l => String(l.expense_id || '')).filter(Boolean)));
+  if(!ids.length) return;
+
+  try{ rememberTripExpenses(window.__tripState?.expenses || []); }catch(_){}
+
+  const missing = ids.filter(id => !TRIP_EXPENSE_CACHE.has(String(id)));
+  if(!missing.length) return;
+
+  const c = client();
+  if(!c) return;
+
+  try{
+    const { data, error } = await c
+      .from(table('trip_expenses','trip_expenses'))
+      .select('id,date,label,amount,currency,category,subcategory,paid_by_member_id,transaction_id,budget_date_start,budget_date_end,trip_id')
+      .in('id', missing);
+    if(error) throw error;
+    rememberTripExpenses(data || []);
+  }catch(e){
+    console.warn('[TB][assets] trip expense details unavailable', e);
+  }
 }
 
 function findTxById(id){
@@ -490,6 +561,8 @@ function findTripExpenseById(id){
       return window.__tripState.expenses.find(ex => String(ex?.id || '') === sid) || null;
     }
   }catch(_){}
+
+  if(TRIP_EXPENSE_CACHE.has(sid)) return TRIP_EXPENSE_CACHE.get(sid);
 
   return null;
 }

@@ -529,6 +529,17 @@ function setSelectedSort(v){
     const parent = folder.parent_id ? (CACHE.folders || []).find(f => String(f.id) === String(folder.parent_id)) : null;
     return parent ? `${parent.name} / ${folder.name}` : folder.name;
   }
+  function folderById(folderId){
+    const sid = String(folderId || '');
+    return sid ? (CACHE.folders || []).find(f => String(f.id) === sid) || null : null;
+  }
+  function normalizeTagsForFolderId(tags, folderId){
+    const core = window.Core?.documentRules;
+    if(core?.normalizeTagsForFolder){
+      return core.normalizeTagsForFolder(tags, folderById(folderId), CACHE.folders || []);
+    }
+    return normalizeTags(tags);
+  }
   function folderOptionsHTML(selectedId){
     const selected = String(selectedId || '');
     const roots = rootFolders();
@@ -946,11 +957,12 @@ const assetCount = Number(counts.assets || 0);
 
       const baseName = String(file.name || 'Document').replace(/\.[a-z0-9]{1,8}$/i,'');
 
+      const targetFolderId = opts.folder_id !== undefined ? opts.folder_id : folderId;
       const ins = await c.from(table('documents','documents')).insert({
         id: docId,
         user_id: uid,
-        folder_id: opts.folder_id !== undefined ? opts.folder_id : folderId,
-        tags: Array.isArray(opts.tags) ? opts.tags : undefined,
+        folder_id: targetFolderId,
+        tags: Array.isArray(opts.tags) ? normalizeTagsForFolderId(opts.tags, targetFolderId) : undefined,
         name: baseName || 'Document',
         original_filename: file.name || safe,
         storage_bucket: BUCKET,
@@ -1082,7 +1094,8 @@ async function deleteFolder(id){
   const { error } = await c
     .from(table('documents','documents'))
     .update({
-      folder_id: folderId || null
+      folder_id: folderId || null,
+      tags: normalizeTagsForFolderId(docTags((CACHE.documents || []).find(d => String(d.id) === String(id)) || {}), folderId)
     })
     .eq('id', id);
 
@@ -1184,7 +1197,7 @@ const notes = notes_raw.trim() || null;
   const { error } = await c
     .from(table('documents','documents'))
     .update({
-      tags: normalizeTags(tagsInput),
+      tags: normalizeTagsForFolderId(tagsInput, folderId),
       folder_id: folderId || null,
       expires_at,
       notes
@@ -1335,7 +1348,10 @@ async function moveSelected(){
   for(const doc of docs){
     const { error } = await c
       .from(table('documents','documents'))
-      .update({ folder_id: folderId })
+      .update({
+        folder_id: folderId,
+        tags: normalizeTagsForFolderId(docTags(doc), folderId)
+      })
       .eq('id', doc.id);
 
     if(error) return alert(error.message || String(error));
@@ -1371,7 +1387,7 @@ async function addTagSelected(){
       : normalizeTags([...tags, tag].join(', '));
     const { error } = await c
       .from(table('documents','documents'))
-      .update({ tags: nextTags })
+      .update({ tags: normalizeTagsForFolderId(nextTags, doc.folder_id || null) })
       .eq('id', doc.id);
 
     if(error) return alert(error.message || String(error));
@@ -1521,7 +1537,10 @@ async function applyMoveSelected(){
   for(const doc of docs){
     const { error } = await c
       .from(table('documents','documents'))
-      .update({ folder_id: folderId })
+      .update({
+        folder_id: folderId,
+        tags: normalizeTagsForFolderId(docTags(doc), folderId)
+      })
       .eq('id', doc.id);
 
     if(error){
@@ -1596,7 +1615,7 @@ async function applyAddTagSelected(){
       : normalizeTags([...tags, tag].join(', '));
     const { error } = await c
       .from(table('documents','documents'))
-      .update({ tags: nextTags })
+      .update({ tags: normalizeTagsForFolderId(nextTags, doc.folder_id || null) })
       .eq('id', doc.id);
 
     if(error){
@@ -1775,6 +1794,17 @@ async function linkDocumentToTransaction(docId, txId, relationType){
   const uid = await currentUserId();
   if(!uid) throw new Error(tr('transactions.documents.user_missing'));
 
+  const existing = await c
+    .from(txDocLinkTable())
+    .select('id')
+    .eq('user_id', uid)
+    .eq('document_id', docId)
+    .eq('transaction_id', txId)
+    .limit(1);
+
+  if(existing.error) throw existing.error;
+  if(existing.data?.[0]?.id) return existing.data[0].id;
+
   const { error } = await c
     .from(txDocLinkTable())
     .insert({
@@ -1784,7 +1814,7 @@ async function linkDocumentToTransaction(docId, txId, relationType){
       relation_type: relationType || 'invoice'
     });
 
-  if(error) throw error;
+  if(error && error.code !== '23505') throw error;
 }
 
 async function unlinkDocumentTransaction(linkId){
@@ -2289,7 +2319,7 @@ async function addTagsToDocument(docId, tags){
   if(!c) throw new Error(tr('common.supabase_unavailable'));
 
   const { data, error } = await c.from(table('documents','documents'))
-    .select('id,tags')
+    .select('id,tags,folder_id')
     .eq('id', docId)
     .single();
 
@@ -2299,7 +2329,7 @@ async function addTagsToDocument(docId, tags){
   const next = Array.from(new Set([...current, ...(tags || []).map(String).filter(Boolean)]));
 
   const up = await c.from(table('documents','documents'))
-    .update({ tags: next })
+    .update({ tags: normalizeTagsForFolderId(next, data.folder_id || null) })
     .eq('id', docId);
 
   if(up.error) throw up.error;
@@ -2322,7 +2352,7 @@ async function replaceAssetNameTagOnLinkedDocuments(assetId, oldName, newName){
     const docId = link.document_id;
 
     const { data: doc, error: docErr } = await c.from(table('documents','documents'))
-      .select('id,tags')
+      .select('id,tags,folder_id')
       .eq('id', docId)
       .single();
 
@@ -2333,7 +2363,7 @@ async function replaceAssetNameTagOnLinkedDocuments(assetId, oldName, newName){
     const next = Array.from(new Set([...cleaned, 'Asset', newTag].filter(Boolean)));
 
     const up = await c.from(table('documents','documents'))
-      .update({ tags: next })
+      .update({ tags: normalizeTagsForFolderId(next, doc.folder_id || null) })
       .eq('id', docId);
 
     if(up.error) throw up.error;

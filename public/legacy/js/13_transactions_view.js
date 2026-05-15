@@ -1157,7 +1157,7 @@ if (isBudgetOnlyInternalTransferFee) return false;
     const tags = [
       tx.type === "expense" ? (tx.payNow ? _txT("transactions.tag.paid") : _txT("transactions.tag.unpaid")) : _txT("transactions.tag.income"),
       tx.outOfBudget ? _txT("transactions.tag.out_budget") : null,
-      isInternalTransfer ? '↔ Mouvement interne' : null,
+      isInternalTransfer ? `↔ ${_txT("transactions.tag.internal_transfer")}` : null,
      tx.nightCovered ? _txT("transactions.tag.night") : null,
      tx.tripExpenseId || tx.trip_expense_id ? _txT("transactions.tag.trip_linked") : null,
      tx.tripShareLinkId || tx.trip_share_link_id ? _txT("transactions.tag.trip_share") : null,
@@ -1192,7 +1192,7 @@ if (isBudgetOnlyInternalTransferFee) return false;
           ${tx.dateStart}${tx.dateEnd && tx.dateEnd !== tx.dateStart ? " → " + tx.dateEnd : ""}
           • ${w ? w.name : "Wallet"} • ${_txCatBadge(tx.category)} ${
   isInternalTransfer
-    ? ` • ↔ ${escapeHTML(tx.label || "Mouvement interne")}`
+    ? ` • ↔ ${escapeHTML(tx.label || _txT("transactions.action.internal_transfer"))}`
     : (tx.label ? " • " + escapeHTML(tx.label) : "")
 }
         </div>
@@ -1200,7 +1200,7 @@ if (isBudgetOnlyInternalTransferFee) return false;
         ${nightInsight ? `<div class="muted" style="margin-top:6px;font-size:12px;line-height:1.45;">${escapeHTML(_txT("transactions.night_insight", { amount: _fmtMoney(nightInsight.amount, nightInsight.currency) }))}</div>` : ``}
         ${transferFeeTx ? `
   <div class="muted" style="margin-top:6px;font-size:12px;line-height:1.45;">
-    Frais estimés inclus budget : ${escapeHTML(_fmtMoney(transferFeeTx.amount, transferFeeTx.currency))}
+    ${escapeHTML(_txT("transactions.internal_transfer.fee_in_budget", { amount: _fmtMoney(transferFeeTx.amount, transferFeeTx.currency) }))}
   </div>
 ` : ``}
         </div>

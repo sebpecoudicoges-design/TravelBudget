@@ -239,7 +239,7 @@ Tape EXACTEMENT ${word} pour confirmer :`
 async function adminInviteUser(email) {
   await guard("Invite user", async () => {
     _setStatus("Inviting...");
-    await callEdge("admin-invite", { email });
+    await callEdge("admin-invite", { email, redirectTo: window.location.origin });
     _setStatus("✅ Invitation sent");
     await adminRefreshUsers();
   });

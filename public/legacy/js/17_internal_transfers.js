@@ -4,6 +4,10 @@
   function t(k, vars) {
     try { return window.tbT ? window.tbT(k, vars) : k; } catch (_) { return k; }
   }
+  function txt(fr, en) {
+    try { return (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? en : fr; }
+    catch (_) { return fr; }
+  }
 
   function esc(v) {
     try { return escapeHTML(String(v ?? '')); }
@@ -96,7 +100,7 @@ function pickDefaultCategory(name, fallback) {
 
   function subcategoryOptions(category, selected) {
     const rows = subcategories(category);
-    const out = [`<option value="">Aucune</option>`];
+    const out = [`<option value="">${esc(txt('Aucune', 'None'))}</option>`];
     rows.forEach(row => {
       const name = String(row?.name || '').trim();
       if (!name) return;
@@ -133,10 +137,10 @@ function pickDefaultCategory(name, fallback) {
     if (!box) return;
 
     box.innerHTML = `
-      <strong>Aperçu</strong><br>
-      1. Sortie wallet : ${esc(fromW?.name || 'Wallet source')} — ${fromAmount || 0} ${esc(fromW?.currency || '')}, hors budget, impact wallet.<br>
-      2. Entrée wallet : ${esc(toW?.name || 'Wallet destination')} — ${toAmount || 0} ${esc(toW?.currency || '')}, hors budget, impact wallet.<br>
-      3. Frais estimés : ${fee ? 'créés automatiquement si écart positif, inclus budget, sans impact wallet.' : 'désactivés.'}
+      <strong>${esc(txt('Aperçu', 'Preview'))}</strong><br>
+      1. ${esc(txt('Sortie wallet', 'Wallet out'))} : ${esc(fromW?.name || txt('Wallet source', 'Source wallet'))} — ${fromAmount || 0} ${esc(fromW?.currency || '')}, ${esc(txt('hors budget, impact wallet.', 'out of budget, wallet impact.'))}<br>
+      2. ${esc(txt('Entrée wallet', 'Wallet in'))} : ${esc(toW?.name || txt('Wallet destination', 'Destination wallet'))} — ${toAmount || 0} ${esc(toW?.currency || '')}, ${esc(txt('hors budget, impact wallet.', 'out of budget, wallet impact.'))}<br>
+      3. ${esc(txt('Frais estimés', 'Estimated fee'))} : ${esc(fee ? txt('créés automatiquement si écart positif, inclus budget, sans impact wallet.', 'created automatically when the difference is positive, included in budget, no wallet impact.') : txt('désactivés.', 'disabled.'))}
     `;
   }
 
@@ -149,7 +153,7 @@ function pickDefaultCategory(name, fallback) {
 
     const c = client();
     if (!c) {
-      setMessage('Supabase indisponible.');
+      setMessage(txt('Supabase indisponible.', 'Supabase unavailable.'));
       return;
     }
 
@@ -174,7 +178,7 @@ const feeFxRate = (
       p_transfer_date: document.getElementById('tb-it-date')?.value || todayISO(),
       p_category: document.getElementById('tb-it-category')?.value || '',
       p_subcategory: document.getElementById('tb-it-subcategory')?.value || null,
-      p_label: document.getElementById('tb-it-label')?.value || 'Mouvement interne',
+      p_label: document.getElementById('tb-it-label')?.value || t('transactions.action.internal_transfer'),
       p_note: document.getElementById('tb-it-note')?.value || null,
       p_create_fee: !!document.getElementById('tb-it-create-fee')?.checked,
       p_fee_category: document.getElementById('tb-it-fee-category')?.value || 'Frais bancaires',
@@ -183,10 +187,10 @@ const feeFxRate = (
       p_fee_fx_source: feeFxRate ? 'frontend_fxRate' : null,
     };
 
-    if (!payload.p_from_wallet_id || !payload.p_to_wallet_id) return setMessage('Choisis les deux wallets.');
-    if (payload.p_from_wallet_id === payload.p_to_wallet_id) return setMessage('Les deux wallets doivent être différents.');
-    if (!(payload.p_from_amount > 0) || !(payload.p_to_amount > 0)) return setMessage('Les deux montants doivent être positifs.');
-    if (!payload.p_category) return setMessage('Choisis une catégorie.');
+    if (!payload.p_from_wallet_id || !payload.p_to_wallet_id) return setMessage(txt('Choisis les deux wallets.', 'Choose both wallets.'));
+    if (payload.p_from_wallet_id === payload.p_to_wallet_id) return setMessage(txt('Les deux wallets doivent être différents.', 'The two wallets must be different.'));
+    if (!(payload.p_from_amount > 0) || !(payload.p_to_amount > 0)) return setMessage(txt('Les deux montants doivent être positifs.', 'Both amounts must be positive.'));
+    if (!payload.p_category) return setMessage(txt('Choisis une catégorie.', 'Choose a category.'));
 
     const btn = document.getElementById('tb-it-save');
     if (btn) btn.disabled = true;
@@ -221,7 +225,7 @@ const feeFxRate = (
 
     const ws = wallets();
     if (ws.length < 2) {
-      alert('Il faut au moins deux wallets pour créer un mouvement interne.');
+      alert(txt('Il faut au moins deux wallets pour créer un mouvement interne.', 'You need at least two wallets to create an internal transfer.'));
       return;
     }
 
@@ -238,70 +242,70 @@ const feeFxRate = (
 
     wrap.innerHTML = `
       <div class="tb-it-modal" role="dialog" aria-modal="true">
-        <h3>↔ Mouvement interne</h3>
+        <h3>↔ ${esc(t('transactions.action.internal_transfer'))}</h3>
         <div class="muted">
-          Crée automatiquement une sortie wallet, une entrée wallet, et une ligne de frais estimés optionnelle.
+          ${esc(txt('Crée automatiquement une sortie wallet, une entrée wallet, et une ligne de frais estimés optionnelle.', 'Automatically creates a wallet out transaction, a wallet in transaction, and an optional estimated fee line.'))}
         </div>
 
         <div class="tb-it-grid">
           <div class="field">
-            <label>Wallet source</label>
+            <label>${esc(txt('Wallet source', 'Source wallet'))}</label>
             <select id="tb-it-from-wallet">${walletOptions(fromId)}</select>
           </div>
 
           <div class="field">
-            <label>Wallet destination</label>
+            <label>${esc(txt('Wallet destination', 'Destination wallet'))}</label>
             <select id="tb-it-to-wallet">${walletOptions(toId)}</select>
           </div>
 
           <div class="field">
-            <label>Montant sorti</label>
+            <label>${esc(txt('Montant sorti', 'Amount sent'))}</label>
             <input id="tb-it-from-amount" type="number" step="0.01" min="0" placeholder="0.00" />
           </div>
 
           <div class="field">
-            <label>Montant reçu</label>
+            <label>${esc(txt('Montant reçu', 'Amount received'))}</label>
             <input id="tb-it-to-amount" type="number" step="0.01" min="0" placeholder="0.00" />
           </div>
 
           <div class="field">
-            <label>Date</label>
+            <label>${esc(txt('Date', 'Date'))}</label>
             <input id="tb-it-date" type="date" value="${esc(todayISO())}" />
           </div>
 
           <div class="field">
-            <label>Catégorie</label>
+            <label>${esc(txt('Catégorie', 'Category'))}</label>
             <select id="tb-it-category">${categoryOptions(defaultTransferCategory)}</select>
           </div>
 
           <div class="field">
-            <label>Sous-catégorie</label>
+            <label>${esc(txt('Sous-catégorie', 'Subcategory'))}</label>
             <select id="tb-it-subcategory">${subcategoryOptions(defaultTransferCategory, '')}</select>
           </div>
 
           <div class="field">
-            <label>Créer frais estimés</label>
+            <label>${esc(txt('Créer frais estimés', 'Create estimated fee'))}</label>
             <input id="tb-it-create-fee" type="checkbox" checked />
           </div>
 
           <div class="field">
-            <label>Catégorie frais</label>
+            <label>${esc(txt('Catégorie frais', 'Fee category'))}</label>
             <select id="tb-it-fee-category">${categoryOptions(defaultFeeCategory)}</select>
           </div>
 
           <div class="field">
-            <label>Sous-catégorie frais</label>
+            <label>${esc(txt('Sous-catégorie frais', 'Fee subcategory'))}</label>
             <select id="tb-it-fee-subcategory">${subcategoryOptions(defaultFeeCategory, defaultFeeSubcategory)}</select>
           </div>
 
           <div class="field tb-it-wide">
-            <label>Libellé</label>
-            <input id="tb-it-label" type="text" value="Mouvement interne" />
+            <label>${esc(txt('Libellé', 'Label'))}</label>
+            <input id="tb-it-label" type="text" value="${esc(t('transactions.action.internal_transfer'))}" />
           </div>
 
           <div class="field tb-it-wide">
-            <label>Note</label>
-            <input id="tb-it-note" type="text" placeholder="Optionnel" />
+            <label>${esc(txt('Note', 'Note'))}</label>
+            <input id="tb-it-note" type="text" placeholder="${esc(txt('Optionnel', 'Optional'))}" />
           </div>
         </div>
 
@@ -309,8 +313,8 @@ const feeFxRate = (
         <div id="tb-it-msg" class="tb-it-msg"></div>
 
         <div class="tb-it-actions">
-          <button class="btn" type="button" id="tb-it-cancel">Annuler</button>
-          <button class="btn primary" type="button" id="tb-it-save">Créer le mouvement</button>
+          <button class="btn" type="button" id="tb-it-cancel">${esc(txt('Annuler', 'Cancel'))}</button>
+          <button class="btn primary" type="button" id="tb-it-save">${esc(txt('Créer le mouvement', 'Create transfer'))}</button>
         </div>
       </div>
     `;
@@ -349,7 +353,7 @@ const feeFxRate = (
       return !!(tx?.internal_transfer_id || tx?.internalTransferId);
     },
     getInternalTransferLabel(tx) {
-      return tx?.label || 'Mouvement interne';
+      return tx?.label || t('transactions.action.internal_transfer');
     }
   };
 
@@ -357,10 +361,10 @@ window.deleteInternalTransfer = async function deleteInternalTransfer(transferId
   const id = String(transferId || '').trim();
   if (!id) return;
 
-  if (!confirm('Supprimer ce mouvement interne ? Cela supprimera la sortie, l’entrée et les frais estimés liés.')) return;
+  if (!confirm(txt('Supprimer ce mouvement interne ? Cela supprimera la sortie, l’entrée et les frais estimés liés.', 'Delete this internal transfer? It will delete the outgoing, incoming and linked estimated fee transactions.'))) return;
 
   const c = client();
-  if (!c) return alert('Supabase indisponible.');
+  if (!c) return alert(txt('Supabase indisponible.', 'Supabase unavailable.'));
 
   try {
     const { error } = await c.rpc('delete_wallet_transfer_v1', {

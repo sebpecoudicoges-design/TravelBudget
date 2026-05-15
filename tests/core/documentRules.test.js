@@ -7,6 +7,7 @@ import {
   folderLabel,
   mergeTags,
   normalizeCollapsedFolderIds,
+  normalizeTagsForFolder,
   rootFolders,
   selectVisibleDocumentIds,
   shareDurationSeconds,
@@ -45,6 +46,12 @@ describe('document rules core', () => {
 
   it('merges tags without duplicates for batch updates', () => {
     expect(mergeTags(['Banque', 'Contrat'], ['contrat', 'O TOP'])).toEqual(['Banque', 'Contrat', 'O TOP']);
+  });
+
+  it('normalizes invoice-like tags to Facture inside the Factures folder', () => {
+    expect(normalizeTagsForFolder(['Reçu', 'Invoice', 'Banque'], 'Factures')).toEqual(['Banque', 'Facture']);
+    expect(normalizeTagsForFolder(['Facture', 'facture'], { name: 'Factures' })).toEqual(['Facture']);
+    expect(normalizeTagsForFolder(['Invoice'], 'Administratif')).toEqual(['Invoice']);
   });
 
   it('collects unique document tags', () => {

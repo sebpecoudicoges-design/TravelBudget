@@ -3,7 +3,7 @@
    Trip expense action is visible but intentionally disabled. */
 (function(){
   const BUCKET = 'inbox-documents';
-  const TABLE = 'inbox_items';
+  const TABLE = (window.TB_CONST?.TABLES?.inbox_items || 'inbox_items');
   const CACHE = {
     items: [],
     loading: false,
@@ -25,16 +25,20 @@
     }
   }
 
-  function tr(fr, en){
+  function inboxLang(){
     try {
-      const lang = String(window.__tbLang || localStorage.getItem('tb.lang') || navigator.language || 'fr').toLowerCase();
-      return lang.startsWith('en') ? (en || fr) : fr;
-    } catch(_) { return fr; }
+      if(typeof window.tbGetLang === 'function') return String(window.tbGetLang() || 'fr').toLowerCase();
+      return String(window.__tbLang || localStorage.getItem('tb_lang_v1') || navigator.language || 'fr').toLowerCase();
+    } catch(_) { return 'fr'; }
+  }
+
+  function tr(fr, en){
+    return inboxLang().startsWith('en') ? (en || fr) : fr;
   }
 
   function fmtDateTime(v){
     if(!v) return '—';
-    try { return new Date(v).toLocaleString('fr-FR', { dateStyle:'short', timeStyle:'short' }); }
+    try { return new Date(v).toLocaleString(inboxLang().startsWith('en') ? 'en-AU' : 'fr-FR', { dateStyle:'short', timeStyle:'short' }); }
     catch(_) { return String(v).slice(0, 16); }
   }
 
@@ -59,6 +63,9 @@
   }
 
   function parseQuickText(raw){
+    try {
+      if(window.Core?.inboxRules?.parseInboxText) return window.Core.inboxRules.parseInboxText(raw);
+    } catch(_) {}
     const text = String(raw || '').trim();
     if(!text) return null;
     const m = text.match(/(?:^|\s)(AUD|EUR|USD|JPY|THB|LAK|VND|GBP|CHF|CAD|NZD|SGD)?\s*([0-9]+(?:[,.][0-9]{1,2})?)\s*(€|eur|aud|usd|jpy|thb|lak|vnd|gbp|chf|cad|nzd|sgd)?\b/i);
@@ -111,7 +118,7 @@
     const text = String(item?.raw_text || '').trim();
     if(text) return text.slice(0,90);
     const path = String(item?.storage_path || item?.media_url || 'document');
-    return path.split('/').pop() || 'Document reçu';
+    return path.split('/').pop() || tr('Document reçu', 'Received document');
   }
 
   function mimeExtension(mime, fallbackPath){
@@ -188,6 +195,25 @@
     return String(tx?.dateStart || tx?.date_start || tx?.cashDate || tx?.date || tx?.created_at || '').slice(0,10);
   }
 
+  function inferDraft(item){
+    try {
+      if(window.Core?.inboxRules?.inferInboxDraft){
+        return window.Core.inboxRules.inferInboxDraft(item, {
+          categories: categoriesList(),
+          defaultCategory: defaultCategory()
+        });
+      }
+    } catch(_) {}
+    const parsed = parseQuickText(item?.raw_text) || {};
+    return {
+      amount: parsed.amount || '',
+      currency: parsed.currency || '',
+      label: parsed.label || String(item?.raw_text || '').trim() || nameFromInbox(item),
+      category: defaultCategory(),
+      type: 'expense'
+    };
+  }
+
   async function ensureInvoiceFolder(userId){
     const c = client();
     if(!c || !userId) return null;
@@ -217,17 +243,37 @@
 
   async function createDocumentFromInbox(item, opts = {}){
     const c = client();
-    if(!c) throw new Error('Client Supabase indisponible');
+    if(!c) throw new Error(tr('Client Supabase indisponible.', 'Supabase client unavailable.'));
     const uid = await currentUserId();
-    if(!uid) throw new Error('Utilisateur non connecté.');
-    if(!item?.storage_path) throw new Error('Aucun fichier Storage associé à cet élément.');
+    if(!uid) throw new Error(tr('Utilisateur non connecté.', 'User not connected.'));
+    if(!item?.storage_path) throw new Error(tr('Aucun fichier Storage associé à cet élément.', 'No Storage file linked to this item.'));
 
     const asInvoice = !!opts.asInvoice;
     const docId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const baseName = nameFromInbox(item).replace(/\.[a-z0-9]{1,8}$/i, '') || 'Document reçu';
+    const baseName = nameFromInbox(item).replace(/\.[a-z0-9]{1,8}$/i, '') || tr('Document reçu', 'Received document');
     const ext = mimeExtension(item.media_content_type, item.storage_path);
     const original = cleanFilename(baseName + ext);
     const invoiceFolderId = asInvoice ? await ensureInvoiceFolder(uid) : null;
+    const existing = await c.from(tableName('documents','documents'))
+      .select('id,tags,folder_id')
+      .eq('user_id', uid)
+      .eq('storage_bucket', BUCKET)
+      .eq('storage_path', item.storage_path)
+      .maybeSingle();
+    if(existing.error) throw existing.error;
+    if(existing.data?.id){
+      if(asInvoice && invoiceFolderId){
+        const tags = Array.isArray(existing.data.tags) ? existing.data.tags.map(String) : [];
+        const nextTags = window.Core?.documentRules?.normalizeTagsForFolder
+          ? window.Core.documentRules.normalizeTagsForFolder(tags, 'Factures')
+          : Array.from(new Set([...tags, 'Facture']));
+        const up = await c.from(tableName('documents','documents'))
+          .update({ folder_id: invoiceFolderId, tags: nextTags })
+          .eq('id', existing.data.id);
+        if(up.error) throw up.error;
+      }
+      return existing.data.id;
+    }
 
     const { error } = await c.from(tableName('documents','documents')).insert({
       id: docId,
@@ -240,7 +286,7 @@
       mime_type: item.media_content_type || '',
       size_bytes: 0,
       tags: asInvoice ? ['Facture'] : [],
-      notes: `Importé depuis WhatsApp / À traiter${item.raw_text ? ` — ${item.raw_text}` : ''}`
+      notes: `${tr('Importé depuis WhatsApp / À traiter', 'Imported from WhatsApp / Inbox')}${item.raw_text ? ` — ${item.raw_text}` : ''}`
     });
     if(error) throw error;
     return docId;
@@ -250,22 +296,31 @@
     const c = client();
     if(!c || !docId || !txId) return;
     const uid = await currentUserId();
+    if(!uid) throw new Error(tr('Utilisateur non connecté.', 'User not connected.'));
+    const existing = await c.from(tableName('transaction_documents','transaction_documents'))
+      .select('id')
+      .eq('user_id', uid)
+      .eq('document_id', docId)
+      .eq('transaction_id', txId)
+      .limit(1);
+    if(existing.error) throw existing.error;
+    if(existing.data?.[0]?.id) return existing.data[0].id;
     const { error } = await c.from(tableName('transaction_documents','transaction_documents')).insert({
       user_id: uid,
       document_id: docId,
       transaction_id: txId,
       relation_type: 'invoice'
     });
-    if(error) throw error;
+    if(error && error.code !== '23505') throw error;
   }
 
   async function createTransactionFromInbox(item, form){
     const c = client();
-    if(!c) throw new Error('Client Supabase indisponible');
+    if(!c) throw new Error(tr('Client Supabase indisponible.', 'Supabase client unavailable.'));
     const wallet = findWallet(form.walletId);
-    if(!wallet) throw new Error('Wallet invalide.');
+    if(!wallet) throw new Error(tr('Wallet invalide.', 'Invalid wallet.'));
     const amount = Number(String(form.amount || '').replace(',', '.'));
-    if(!Number.isFinite(amount) || amount <= 0) throw new Error('Montant invalide.');
+    if(!Number.isFinite(amount) || amount <= 0) throw new Error(tr('Montant invalide.', 'Invalid amount.'));
 
     const txType = String(form.type || 'expense') === 'income' ? 'income' : 'expense';
     const cashStart = String(form.cashDateStart || form.date || todayISO()).slice(0,10);
@@ -335,13 +390,13 @@
       if(error) throw error;
       txId = data?.[0]?.id || null;
     }
-    if(!txId) throw new Error('Transaction créée mais identifiant introuvable.');
+    if(!txId) throw new Error(tr('Transaction créée mais identifiant introuvable.', 'Transaction created but identifier not found.'));
     return txId;
   }
 
   async function linkInboxDocumentToExistingTransaction(item, txId){
-    if(!item?.storage_path) throw new Error('Aucun document Storage associé à cet élément.');
-    if(!txId) throw new Error('Transaction cible invalide.');
+    if(!item?.storage_path) throw new Error(tr('Aucun document Storage associé à cet élément.', 'No Storage document linked to this item.'));
+    if(!txId) throw new Error(tr('Transaction cible invalide.', 'Invalid target transaction.'));
     const docId = await createDocumentFromInbox(item, { asInvoice: true });
     await linkDocumentToTransaction(docId, txId);
     await updateItem(item.id, {
@@ -360,15 +415,15 @@
   }
 
   function openTransactionModalForInbox(item){
-    const parsed = parseQuickText(item.raw_text) || {};
+    const draft = inferDraft(item);
     const wallets = Array.isArray(window.state?.wallets) ? window.state.wallets : [];
-    if(!wallets.length) return alert('Aucun wallet disponible.');
-    const preferredCurrency = parsed.currency || String(window.state?.period?.baseCurrency || window.state?.period?.base_currency || '').toUpperCase();
+    if(!wallets.length) return alert(tr('Aucun wallet disponible.', 'No wallet available.'));
+    const preferredCurrency = draft.currency || String(window.state?.period?.baseCurrency || window.state?.period?.base_currency || '').toUpperCase();
     const firstWallet = wallets.find(w => String(w.currency || '').toUpperCase() === preferredCurrency) || wallets[0];
     const date = String(item.created_at || '').slice(0,10) || todayISO();
-    const label = parsed.label || String(item.raw_text || '').trim() || nameFromInbox(item);
-    const initialType = 'expense';
-    const initialCategory = defaultCategory();
+    const label = draft.label || String(item.raw_text || '').trim() || nameFromInbox(item);
+    const initialType = draft.type || 'expense';
+    const initialCategory = draft.category || defaultCategory();
 
     closeInboxModal();
     const wrap = document.createElement('div');
@@ -382,9 +437,9 @@
         </div>
         <div class="tb-inbox-form-grid">
           <div class="field"><label>${esc(tr('Type', 'Type'))}</label><select id="tb-inbox-tx-type"><option value="expense" ${initialType==='expense'?'selected':''}>${esc(tr('Dépense', 'Expense'))}</option><option value="income">${esc(tr('Entrée', 'Income'))}</option></select></div>
-          <div class="field"><label>Wallet</label><select id="tb-inbox-tx-wallet">${walletOptionsHtml(preferredCurrency)}</select></div>
+          <div class="field"><label>${esc(tr('Wallet', 'Wallet'))}</label><select id="tb-inbox-tx-wallet">${walletOptionsHtml(preferredCurrency)}</select></div>
           <div class="field"><label>${esc(tr('Devise', 'Currency'))}</label><input id="tb-inbox-tx-currency" type="text" value="" disabled style="opacity:1;font-weight:800;"></div>
-          <div class="field"><label>${esc(tr('Montant', 'Amount'))}</label><input id="tb-inbox-tx-amount" type="number" step="0.01" value="${esc(parsed.amount || '')}"></div>
+          <div class="field"><label>${esc(tr('Montant', 'Amount'))}</label><input id="tb-inbox-tx-amount" type="number" step="0.01" value="${esc(draft.amount || '')}"></div>
           <div class="field span-2"><label>${esc(tr('Libellé', 'Label'))}</label><input id="tb-inbox-tx-label" type="text" value="${esc(label)}"></div>
           <div class="field"><label>${esc(tr('Date paiement début', 'Cash start date'))}</label><input id="tb-inbox-tx-cash-start" type="date" value="${esc(date)}"></div>
           <div class="field"><label>${esc(tr('Date paiement fin', 'Cash end date'))}</label><input id="tb-inbox-tx-cash-end" type="date" value="${esc(date)}"></div>
@@ -468,17 +523,22 @@
 
   function openLinkTransactionModalForInbox(item){
     if(!item?.storage_path) return alert(tr('Aucun document à lier.', 'No document to link.'));
-    const allTxs = (Array.isArray(window.state?.transactions) ? window.state.transactions : [])
-      .slice()
-      .sort((a,b) => String(b.createdAt || b.created_at || '').localeCompare(String(a.createdAt || a.created_at || '')));
+    const rawTxs = Array.isArray(window.state?.transactions) ? window.state.transactions : [];
+    const scored = window.Core?.inboxRules?.sortInboxTransactionCandidates
+      ? window.Core.inboxRules.sortInboxTransactionCandidates(item, rawTxs, 120)
+      : rawTxs.map(tx => ({ tx, match:{ score:0, reasons:[] } }));
+    const allTxs = scored.map(x => x.tx);
     if(!allTxs.length) return alert(tr('Aucune transaction chargée.', 'No loaded transaction.'));
 
     const txLabel = (tx) => {
+      const scoredRow = scored.find(row => String(row.tx?.id || '') === String(tx?.id || ''));
+      const score = Number(scoredRow?.match?.score || 0);
       const date = transactionDateValue(tx);
       const label = tx.label || tx.description || 'Transaction';
       const amount = tx.amount ?? '';
       const cur = tx.currency || tx.currencyCode || '';
-      return `${date} · ${label} · ${amount} ${cur}`.trim();
+      const prefix = score >= 70 ? tr('Probable', 'Likely') : (score >= 40 ? tr('Possible', 'Possible') : '');
+      return `${prefix ? `${prefix} ${score}% · ` : ''}${date} · ${label} · ${amount} ${cur}`.trim();
     };
 
     const txSearchText = (tx) => [
@@ -510,7 +570,7 @@
     wrap.innerHTML = `
       <div class="tb-inbox-modal" role="dialog" aria-modal="true">
         <div class="tb-inbox-modal-head">
-          <div><h3>${esc(tr('Lier à une transaction', 'Link to a transaction'))}</h3><div class="tb-inbox-note">${esc(tr('Recherche par libellé, montant, date, catégorie ou devise. Le document sera classé comme facture puis lié à la transaction choisie.', 'Search by label, amount, date, category or currency. The document will be filed as an invoice and linked to the selected transaction.'))}</div></div>
+          <div><h3>${esc(tr('Lier à une transaction', 'Link to a transaction'))}</h3><div class="tb-inbox-note">${esc(tr('Les transactions les plus probables sont en haut selon montant, devise, date et libellé. Le document sera classé comme facture puis lié à la transaction choisie.', 'Likely transactions are shown first using amount, currency, date and label. The document will be filed as an invoice and linked to the selected transaction.'))}</div></div>
           <button class="btn" type="button" data-inbox-modal-close>×</button>
         </div>
         <div class="tb-inbox-form-grid">
@@ -552,7 +612,7 @@
   }
 
   async function classifyInboxDocument(item){
-    if(!item.storage_path) throw new Error('Aucun document Storage à classer.');
+    if(!item.storage_path) throw new Error(tr('Aucun document Storage à classer.', 'No Storage document to file.'));
     const docId = await createDocumentFromInbox(item);
     await updateItem(item.id, {
       status:'processed',
@@ -702,7 +762,7 @@
 
   async function loadInbox(){
     const c = client();
-    if(!c) throw new Error('Client Supabase indisponible');
+    if(!c) throw new Error(tr('Client Supabase indisponible.', 'Supabase client unavailable.'));
     CACHE.loading = true;
     CACHE.error = '';
     renderInboxShell();
@@ -766,7 +826,7 @@
       return `<div class="tb-inbox-preview"><div class="tb-inbox-file">📎 ${esc(item.media_content_type || 'Document')} · ${esc(tr('aperçu indisponible', 'preview unavailable'))}</div></div>`;
     }
 
-    if(isImage(item)) return `<div class="tb-inbox-preview"><a href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" alt="Aperçu document reçu" loading="lazy"></a></div>`;
+    if(isImage(item)) return `<div class="tb-inbox-preview"><a href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" alt="${esc(tr('Aperçu document reçu', 'Received document preview'))}" loading="lazy"></a></div>`;
     const icon = isPdf(item) ? '📄' : '📎';
     return `<div class="tb-inbox-preview"><a class="tb-inbox-file" href="${esc(url)}" target="_blank" rel="noopener">${icon} ${esc(item.raw_text || item.storage_path || 'Document')}</a></div>`;
   }
@@ -793,7 +853,7 @@
           ${snoozeInfo}
         </div>
         ${renderPreview(item)}
-        <div class="tb-inbox-note">${esc(item.source_from || '')}${item.storage_path ? ' · Storage OK' : (item.media_count ? ' · Storage manquant' : '')}</div>
+        <div class="tb-inbox-note">${esc(item.source_from || '')}${item.storage_path ? ` · ${esc(tr('Storage OK', 'Storage OK'))}` : (item.media_count ? ` · ${esc(tr('Storage manquant', 'Missing Storage'))}` : '')}</div>
         <div class="tb-inbox-buttons">
           <button class="primary" type="button" data-inbox-action="transaction" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' ? 'disabled' : ''}>${esc(tr('Créer transaction', 'Create transaction'))}</button>
           <button type="button" data-inbox-action="document" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' || !item.storage_path ? 'disabled' : ''}>${esc(tr('Classer document', 'File document'))}</button>
@@ -822,7 +882,7 @@
             <p>${esc(tr('Messages WhatsApp, reçus, photos et PDF à classer plus tard.', 'WhatsApp messages, receipts, images and PDFs to process later.'))}</p>
           </div>
           <div class="tb-inbox-actions">
-            <select id="inbox-status-filter" aria-label="Statut">
+            <select id="inbox-status-filter" aria-label="${esc(tr('Statut', 'Status'))}">
               <option value="active" ${CACHE.status==='active'?'selected':''}>${esc(tr('Actifs', 'Active'))}</option>
               <option value="pending" ${CACHE.status==='pending'?'selected':''}>${esc(tr('À traiter', 'Pending'))}</option>
               <option value="snoozed" ${CACHE.status==='snoozed'?'selected':''}>${esc(tr('Reportés', 'Snoozed'))}</option>
@@ -865,7 +925,7 @@
 
   async function updateItem(id, patch){
     const c = client();
-    if(!c) throw new Error('Client Supabase indisponible');
+    if(!c) throw new Error(tr('Client Supabase indisponible.', 'Supabase client unavailable.'));
     const { error } = await c.from(TABLE).update(patch).eq('id', id);
     if(error) throw error;
     await loadInbox();
@@ -886,7 +946,7 @@
         return;
       }
       const item = (CACHE.items || []).find(x => String(x.id) === String(id));
-      if(!item) throw new Error('Élément inbox introuvable.');
+      if(!item) throw new Error(tr('Élément inbox introuvable.', 'Inbox item not found.'));
       if(action === 'transaction'){
         openTransactionModalForInbox(item);
         return;
@@ -952,6 +1012,20 @@
 
   function boot(){
     patchNavigation();
+    try {
+      window.tbOnLangChange = window.tbOnLangChange || [];
+      window.tbOnLangChange.push(() => {
+        try { ensureView(); } catch(_) {}
+        try {
+          const tabLabel = document.querySelector('#tab-inbox .tb-inbox-tab-label');
+          if(tabLabel) tabLabel.textContent = tr('À traiter', 'Inbox');
+        } catch(_) {}
+        try {
+          const view = (typeof activeView === 'string' && activeView) ? activeView : window.activeView;
+          if(view === 'inbox') renderInboxShell();
+        } catch(_) {}
+      });
+    } catch(_) {}
     refreshInboxTabBadge();
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

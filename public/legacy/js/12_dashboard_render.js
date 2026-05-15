@@ -184,7 +184,7 @@ actions.style.marginBottom = "12px";
 actions.innerHTML = `
   <button class="btn primary" onclick="createWallet()">+ Wallet</button>
   <button class="btn" type="button" onclick="openInternalTransferModal()">
-    ↔ Mouvement interne
+    ↔ ${T("transactions.action.internal_transfer")}
   </button> 
 `;
 container.appendChild(actions);

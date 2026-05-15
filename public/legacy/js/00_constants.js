@@ -47,6 +47,7 @@ window.__TB_BUILD = '9.7.4.1';
     document_folders: "document_folders",
     documents: "documents",
     transaction_documents: "transaction_documents",
+    inbox_items: "inbox_items",
   });
 
   const COLS = Object.freeze({

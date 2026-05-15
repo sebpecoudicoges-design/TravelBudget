@@ -717,7 +717,7 @@ function renderSettings(){
     if (!uid) return;
 
     const { data, error } = await s
-      .from("profiles")
+      .from(TB_CONST.TABLES.profiles)
       .select("whatsapp_phone_e164")
       .eq("id", uid)
       .maybeSingle();
@@ -747,7 +747,7 @@ if (btnWhatsapp) {
     }
 
     const { error } = await s
-      .from("profiles")
+      .from(TB_CONST.TABLES.profiles)
       .update({ whatsapp_phone_e164: phone || null })
       .eq("id", uid);
 
@@ -826,7 +826,7 @@ if (btnWhatsApp) {
     const u = (await s.auth.getUser()).data?.user;
     const uid = u?.id;
     if (!uid) throw new Error("Non authentifié");
-    const { error } = await s.from("profiles").update({ whatsapp_phone_e164: phone || null }).eq("id", uid);
+    const { error } = await s.from(TB_CONST.TABLES.profiles).update({ whatsapp_phone_e164: phone || null }).eq("id", uid);
     if (error) throw error;
     alert("Numéro WhatsApp enregistré.");
   });
@@ -842,7 +842,7 @@ if (btnWhatsApp) {
           if (inp) inp.value = em;
         } catch(_) {}
         try {
-           const { data: profile } = await s.from("profiles").select("whatsapp_phone_e164").eq("id", u?.id).single();
+           const { data: profile } = await s.from(TB_CONST.TABLES.profiles).select("whatsapp_phone_e164").eq("id", u?.id).single();
             const wa = box.querySelector("#tb-account-whatsapp");
             if (wa) wa.value = profile?.whatsapp_phone_e164 || "";
         } catch (_) {}

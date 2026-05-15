@@ -226,6 +226,7 @@ function toastOk(msg) {
     historyFilters: {},
     _tripsLoaded: false,
   };
+  window.__tripState = tripState;
 
   // Reset Trip state on auth account switch (prevents cross-account UI bleed)
   try {
@@ -2010,7 +2011,7 @@ async function _ensureTripInvoiceFolderId() {
   if (existing?.id) return existing.id;
 
   const { data: created, error: createErr } = await sb
-    .from("document_folders")
+    .from(TB_CONST.TABLES.document_folders)
     .insert({
       user_id: uid,
       name: "Factures",

@@ -11,6 +11,10 @@ export function tagKey(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function normalizedKey(value) {
+  return normalizeLookupText(value).replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
 export function docTags(doc) {
   return Array.isArray(doc?.tags) ? doc.tags.map(String).filter(Boolean) : [];
 }
@@ -165,6 +169,21 @@ export function folderLabel(folder, folders = []) {
   if (!folder) return 'Non classe';
   const parent = folder.parent_id ? (folders || []).find((f) => String(f.id) === String(folder.parent_id)) : null;
   return parent ? `${parent.name} / ${folder.name}` : folder.name;
+}
+
+export function isInvoiceFolder(folder, folders = []) {
+  const label = typeof folder === 'string' ? folder : folderLabel(folder, folders);
+  return normalizedKey(label).split(' ').includes('factures')
+    || normalizedKey(label).split(' ').includes('facture');
+}
+
+export function normalizeTagsForFolder(tags = [], folder = null, folders = [], limit = 12) {
+  const values = normalizeTags(tags, limit);
+  if (!isInvoiceFolder(folder, folders)) return mergeTags(values, [], limit);
+
+  const invoiceAliases = new Set(['facture', 'factures', 'invoice', 'invoices', 'recu', 'recus', 'receipt', 'receipts']);
+  const filtered = values.filter((tag) => !invoiceAliases.has(normalizedKey(tag)));
+  return mergeTags(filtered, ['Facture'], limit);
 }
 
 export function canCreateSubFolder(parentId, folders = []) {
