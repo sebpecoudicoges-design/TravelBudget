@@ -23,6 +23,7 @@ function showView(view) {
   if (view === "members" && typeof window.tbIsSimpleMode === "function" && window.tbIsSimpleMode()) view = "dashboard";
   activeView = view;
   try { if (typeof window !== "undefined") window.activeView = view; } catch (_) {}
+  try { if (window.tbBus && typeof window.tbBus.emit === "function") window.tbBus.emit("view:changed", { view }); } catch (_) {}
   setActiveTab(view);
   if (view === "transactions") {
     renderTransactions();

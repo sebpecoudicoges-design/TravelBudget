@@ -523,7 +523,7 @@
     if (!host) {
       host = document.createElement("div");
       host.id = "tb-fx-decision";
-      const after = document.getElementById("analysis-overview-strip") || analysis.querySelector(".analysis-hero");
+      const after = analysis.querySelector(".analysis-main-grid") || document.getElementById("analysis-summary") || document.getElementById("analysis-overview-strip") || analysis.querySelector(".analysis-hero");
       if (after?.parentElement) after.parentElement.insertBefore(host, after.nextSibling);
       else analysis.appendChild(host);
     }

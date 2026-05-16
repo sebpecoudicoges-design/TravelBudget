@@ -15,6 +15,7 @@
   uploading: '',
   onlyFavorites: false,
   onlyExpiring: false,
+  assistantFilter: '',
   collapsedFolderIds: [],
   selectedIds: [],
   linkCounts: {}
@@ -574,13 +575,15 @@ function setSelectedSort(v){
   function visibleDocs(){
   const core = window.Core?.documentRules;
   if(core?.filterVisibleDocuments){
-    return core.filterVisibleDocuments(CACHE.documents || [], {
+    let rows = core.filterVisibleDocuments(CACHE.documents || [], {
       selectedFolderId: CACHE.selectedFolderId,
       search: CACHE.search,
       tagFilter: selectedTagFilter(),
       onlyFavorites: CACHE.onlyFavorites,
       onlyExpiring: CACHE.onlyExpiring
     });
+    if(CACHE.assistantFilter === 'untagged') rows = rows.filter(d => !docTags(d).length);
+    return rows;
   }
 
   let rows = CACHE.documents || [];
@@ -617,6 +620,8 @@ function setSelectedSort(v){
       return dt >= now && dt <= limit;
     });
   }
+
+  if(CACHE.assistantFilter === 'untagged') rows = rows.filter(d => !docTags(d).length);
 
   return rows;
 }
@@ -2107,6 +2112,28 @@ window.tbDocumentsToggleFavoritesFilter = function(){
 window.tbDocumentsToggleExpiringFilter = function(){
   CACHE.onlyExpiring = !CACHE.onlyExpiring;
   renderShell();
+};
+window.tbDocumentsSetAssistantFilter = function(kind){
+  const k = String(kind || '').trim();
+  if(k === 'expiring') {
+    CACHE.onlyExpiring = true;
+    CACHE.onlyFavorites = false;
+    CACHE.assistantFilter = '';
+    CACHE.tagFilter = '';
+    CACHE.query = '';
+    saveFilters();
+    renderShell();
+    return;
+  }
+  if(k === 'untagged') {
+    CACHE.onlyExpiring = false;
+    CACHE.onlyFavorites = false;
+    CACHE.assistantFilter = 'untagged';
+    CACHE.tagFilter = '';
+    CACHE.query = '';
+    saveFilters();
+    renderShell();
+  }
 };
 window.tbDocumentsToggleSelect = toggleSelect;
 window.tbDocumentsClearSelection = clearSelection;

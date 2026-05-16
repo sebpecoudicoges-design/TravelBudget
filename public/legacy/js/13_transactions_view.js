@@ -1,4 +1,4 @@
-const TB_TX_BULK = window.__TB_TX_BULK || (window.__TB_TX_BULK = {
+﻿const TB_TX_BULK = window.__TB_TX_BULK || (window.__TB_TX_BULK = {
   selectedIds: new Set(),
   visibleIds: [],
 });
@@ -115,7 +115,7 @@ async function applyBulkTxClassification() {
       _txBulkSetMessage(_txT('transactions.bulk.error.none'));
       return;
     }
-    if (!selectedIds.length) throw new Error('Aucune transaction sélectionnée.');
+    if (!selectedIds.length) throw new Error('Aucune transaction selectionnee.');
 
     const catEl = document.getElementById('tx-bulk-category');
     const subEl = document.getElementById('tx-bulk-subcategory');
@@ -132,9 +132,9 @@ async function applyBulkTxClassification() {
       return;
     }
 
-    if (!chosenCategory && !chosenSubcategory) throw new Error('Choisis une catégorie et/ou une sous-catégorie.');
+    if (!chosenCategory && !chosenSubcategory) throw new Error('Choisis une categorie et/ou une sous-categorie.');
     if (!chosenCategory && chosenSubcategory && !commonCategory) {
-      throw new Error('Pour changer seulement la sous-catégorie, les transactions sélectionnées doivent partager la même catégorie.');
+      throw new Error('Pour changer seulement la sous-categorie, les transactions selectionnees doivent partager la meme categorie.');
     }
 
     const payload = chosenCategory
@@ -214,18 +214,18 @@ function _txGetFilters() {
 
 function _txSetFilters(f) {
   if (!f) return;
-  if (_txEl("f-from")) _txEl("f-from").value = f.from ?? "";
-  if (_txEl("f-to")) _txEl("f-to").value = f.to ?? "";
-  if (_txEl("f-wallet")) _txEl("f-wallet").value = f.walletId ?? "all";
-  if (_txEl("f-category")) _txEl("f-category").value = f.cat ?? "all";
-  if (_txEl("f-subcategory")) _txEl("f-subcategory").value = f.subcategory ?? "all";
-  if (_txEl("f-type")) _txEl("f-type").value = f.type ?? "all";
-  if (_txEl("f-pay")) _txEl("f-pay").value = f.pay ?? "all";
-  if (_txEl("f-out")) _txEl("f-out").value = f.out ?? "all";
-  if (_txEl("f-night")) _txEl("f-night").value = f.night ?? "all";
-  if (_txEl("f-recurring")) _txEl("f-recurring").value = f.recurring ?? "all";
-  if (_txEl("f-invoice")) _txEl("f-invoice").value = f.invoice ?? "all";
-  if (_txEl("f-q")) _txEl("f-q").value = f.q ?? "";
+  if (_txEl("f-from")) _txEl("f-from").value = f.from || "";
+  if (_txEl("f-to")) _txEl("f-to").value = f.to || "";
+  if (_txEl("f-wallet")) _txEl("f-wallet").value = f.walletId || "all";
+  if (_txEl("f-category")) _txEl("f-category").value = f.cat || "all";
+  if (_txEl("f-subcategory")) _txEl("f-subcategory").value = f.subcategory || "all";
+  if (_txEl("f-type")) _txEl("f-type").value = f.type || "all";
+  if (_txEl("f-pay")) _txEl("f-pay").value = f.pay || "all";
+  if (_txEl("f-out")) _txEl("f-out").value = f.out || "all";
+  if (_txEl("f-night")) _txEl("f-night").value = f.night || "all";
+  if (_txEl("f-recurring")) _txEl("f-recurring").value = f.recurring || "all";
+  if (_txEl("f-invoice")) _txEl("f-invoice").value = f.invoice || "all";
+  if (_txEl("f-q")) _txEl("f-q").value = f.q || "";
 }
 
 function _txLoadStoredFilters() {
@@ -303,7 +303,7 @@ function _txEnsureShortcutsUI() {
   const sep = document.createElement("span");
   sep.className = "muted";
   sep.style.margin = "0 4px";
-  sep.textContent = "•";
+  sep.textContent = "-";
   wrap.appendChild(sep);
 
   wrap.appendChild(mkBtn(_txT("transactions.shortcut.paid"), () => {
@@ -378,9 +378,9 @@ function _txEnsureHelpUI() {
       <div style="min-width:260px; flex:1;">
         <div style="font-weight:700; margin-bottom:6px;">${_txT("transactions.help.title")}</div>
         <div class="muted">
-          <div>• ${_txT("transactions.help.paid")}</div>
-          <div>• ${_txT("transactions.help.unpaid")}</div>
-          <div>• ${_txT("transactions.help.out")}</div>
+          <div>- ${_txT("transactions.help.paid")}</div>
+          <div>- ${_txT("transactions.help.unpaid")}</div>
+          <div>- ${_txT("transactions.help.out")}</div>
         </div>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -783,7 +783,7 @@ function _txDocApplyCountToButton(txId, count){
   const label = n > 0
     ? _txDocT('transactions.action.invoice_count', { count: n })
     : base;
-  btn.innerHTML = `📎 ${_txDocEsc(label)}`;
+  btn.innerHTML = _txDocEsc(label);
   btn.title = n > 0
     ? _txDocT('transactions.documents.count_title', { count: n })
     : _txDocT('transactions.documents.empty');
@@ -838,7 +838,7 @@ async function _txDocUploadAndLink(txId, files){
 
     const baseName = String(file.name || _txDocT('documents.relation.invoice')).replace(/\.[a-z0-9]{1,8}$/i, '');
     const txLabel = String(tx.label || tx.category || '').trim();
-    const docName = txLabel ? `${baseName || _txDocT('documents.relation.invoice')} — ${txLabel}` : (baseName || _txDocT('documents.relation.invoice'));
+    const docName = txLabel ? `${baseName || _txDocT('documents.relation.invoice')} - ${txLabel}` : (baseName || _txDocT('documents.relation.invoice'));
 
     const insDoc = await c.from(docTable).insert({
       id: docId,
@@ -881,7 +881,7 @@ function _txDocRenderModal(txId, rows, message){
   wrap.onclick = (e) => { if (e.target === wrap) wrap.remove(); };
 
   const title = tx
-    ? `${tx.dateStart || ''} · ${tx.amount || ''} ${tx.currency || ''} · ${tx.label || tx.category || 'Transaction'}`
+    ? `${tx.dateStart || ''} - ${tx.amount || ''} ${tx.currency || ''} - ${tx.label || tx.category || 'Transaction'}`
     : 'Transaction';
 
   wrap.innerHTML = `
@@ -901,8 +901,8 @@ function _txDocRenderModal(txId, rows, message){
             <strong>${_txDocEsc(doc?.name || doc?.original_filename || 'Document')}</strong><br>
             <span class="muted">
   ${_txDocEsc(doc?.created_at ? new Date(doc.created_at).toLocaleDateString('fr-FR') : '')}
-  · ${_txDocEsc(_txDocRelationLabel(link?.relation_type))}
-  ${source === 'trip' ? ' · Source Trip' : ''}
+  - ${_txDocEsc(_txDocRelationLabel(link?.relation_type))}
+  ${source === 'trip' ? ' - Source Trip' : ''}
 </span>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
               <button class="btn small primary" type="button" onclick="window.tbTxDocPreview('${_txDocEsc(doc?.id || '')}')">${_txDocEsc(_txDocT('transactions.documents.open'))}</button>
@@ -1111,7 +1111,7 @@ if (isBudgetOnlyInternalTransferFee) return false;
         </div>
         <button class="btn primary" type="button" onclick="applyBulkTxClassification()" ${bulkCount ? '' : 'disabled'}>${_txT("transactions.bulk.apply")}</button>
         <button class="btn" type="button" onclick="openInternalTransferModal()">
-          ↔ ${_txT("transactions.action.internal_transfer")}
+          ${_txT("transactions.action.internal_transfer")}
         </button>
       </div>
       <div class="muted" style="font-size:12px;">
@@ -1129,7 +1129,7 @@ if (isBudgetOnlyInternalTransferFee) return false;
           <button class="btn primary" onclick="openTxModal('expense','${w0}')">${_txT("transactions.action.add_expense")}</button>
           <button class="btn" onclick="openTxModal('income','${w0}')">${_txT("transactions.action.add_income")}</button>
           <button class="btn" onclick="openInternalTransferModal()">
-           ↔ ${_txT("transactions.action.internal_transfer")}
+           ${_txT("transactions.action.internal_transfer")}
           </button>
         </div>
       ` : ""}
@@ -1157,7 +1157,7 @@ if (isBudgetOnlyInternalTransferFee) return false;
     const tags = [
       tx.type === "expense" ? (tx.payNow ? _txT("transactions.tag.paid") : _txT("transactions.tag.unpaid")) : _txT("transactions.tag.income"),
       tx.outOfBudget ? _txT("transactions.tag.out_budget") : null,
-      isInternalTransfer ? `↔ ${_txT("transactions.tag.internal_transfer")}` : null,
+      isInternalTransfer ? _txT("transactions.tag.internal_transfer") : null,
      tx.nightCovered ? _txT("transactions.tag.night") : null,
      tx.tripExpenseId || tx.trip_expense_id ? _txT("transactions.tag.trip_linked") : null,
      tx.tripShareLinkId || tx.trip_share_link_id ? _txT("transactions.tag.trip_share") : null,
@@ -1187,14 +1187,15 @@ if (isBudgetOnlyInternalTransferFee) return false;
       <div style="display:flex;align-items:flex-start;gap:10px;">
         <input type="checkbox" style="margin-top:4px;" ${txChecked ? 'checked' : ''} onchange="_txBulkToggleOne('${escapeHTML(String(tx.id))}', this.checked)" />
         <div style="flex:1;">
-        <div><strong>${tx.type === "expense" ? _txT("transactions.type.expense") : _txT("transactions.type.income")}</strong> — ${tx.amount} ${tx.currency}</div>
+        <div><strong>${tx.type === "expense" ? _txT("transactions.type.expense") : _txT("transactions.type.income")}</strong> - ${tx.amount} ${tx.currency}</div>
         <div class="meta">
-          ${tx.dateStart}${tx.dateEnd && tx.dateEnd !== tx.dateStart ? " → " + tx.dateEnd : ""}
-          • ${w ? w.name : "Wallet"} • ${_txCatBadge(tx.category)} ${
+          ${tx.dateStart}${tx.dateEnd && tx.dateEnd !== tx.dateStart ? " -> " + tx.dateEnd : ""}
+          - ${w ? w.name : "Wallet"} - ${_txCatBadge(tx.category)} ${
   isInternalTransfer
-    ? ` • ↔ ${escapeHTML(tx.label || _txT("transactions.action.internal_transfer"))}`
-    : (tx.label ? " • " + escapeHTML(tx.label) : "")
+    ? ` - ${escapeHTML(tx.label || _txT("transactions.action.internal_transfer"))}`
+    : (tx.label ? " - " + escapeHTML(tx.label) : "")
 }
+
         </div>
         <div class="tags">${tags.map((t) => `<span class="tag">${t}</span>`).join("")}</div>
         ${nightInsight ? `<div class="muted" style="margin-top:6px;font-size:12px;line-height:1.45;">${escapeHTML(_txT("transactions.night_insight", { amount: _fmtMoney(nightInsight.amount, nightInsight.currency) }))}</div>` : ``}
@@ -1214,15 +1215,15 @@ if (isBudgetOnlyInternalTransferFee) return false;
           : ""
         }
         ${(!tx.payNow && (tx.type === "expense" || tx.type === "income"))
-          ? `<button class="btn small primary" onclick="markTxAsPaid(\'${tx.id}\')">✓ ${tx.type === "income" ? _txT("transactions.action.received") : _txT("transactions.action.pay")}</button>`
+          ? `<button class="btn small primary" onclick="markTxAsPaid(\'${tx.id}\')">${tx.type === "income" ? _txT("transactions.action.received") : _txT("transactions.action.pay")}</button>`
           : ""
         }
-        <button class="btn small" type="button" data-tx-doc-btn="${escapeHTML(String(tx.id))}" onclick="window.tbTxDocOpen('${escapeHTML(String(tx.id))}')">📎 ${escapeHTML(_txT("transactions.action.invoice"))}</button>
-        <button class="btn small" onclick="openTxEditModal('${tx.id}')">✏️</button>
+        <button class="btn small" type="button" data-tx-doc-btn="${escapeHTML(String(tx.id))}" onclick="window.tbTxDocOpen('${escapeHTML(String(tx.id))}')">${escapeHTML(_txT("transactions.action.invoice"))}</button>
+        <button class="btn small" onclick="openTxEditModal('${tx.id}')">Edit</button>
         ${
   isInternalTransfer
-    ? `<button class="btn small danger" onclick="deleteInternalTransfer('${escapeHTML(String(internalTransferId))}')">🗑️</button>`
-    : `<button class="btn small danger" onclick="deleteTx('${tx.id}')">🗑️</button>`
+    ? `<button class="btn small danger" onclick="deleteInternalTransfer('${escapeHTML(String(internalTransferId))}')">Del</button>`
+    : `<button class="btn small danger" onclick="deleteTx('${tx.id}')">Del</button>`
 }
       </div>
     `;
@@ -1257,6 +1258,31 @@ if (isBudgetOnlyInternalTransferFee) return false;
     }
   }
 }
+window.tbTransactionsApplyAssistantFilter = function tbTransactionsApplyAssistantFilter(kind) {
+  const k = String(kind || '').trim();
+  try { if (typeof window.showView === 'function') window.showView('transactions'); } catch (_) {}
+  setTimeout(() => {
+    const q = document.getElementById('f-q');
+    const pay = document.getElementById('f-pay');
+    const cat = document.getElementById('f-category');
+    if (q) q.value = '';
+    if (pay) pay.value = 'all';
+    if (cat) cat.value = 'all';
+    if (k === 'uncategorized') {
+      if (cat) cat.value = 'Autre';
+      if (q) q.value = 'Autre';
+    } else if (k === 'pending') {
+      if (pay) pay.value = 'unpaid';
+    } else if (k === 'linked') {
+      if (q) q.value = 'Trip';
+    } else if (k === 'internal') {
+      if (q) q.value = 'Mouvement interne';
+    }
+    try { renderTransactions(); } catch (_) {}
+    try { document.getElementById('tx-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+  }, 80);
+};
+
 window.openInternalTransferModal = function openInternalTransferModal() {
   if (typeof window.tbOpenInternalTransferModal === 'function') {
     return window.tbOpenInternalTransferModal();
@@ -1264,3 +1290,4 @@ window.openInternalTransferModal = function openInternalTransferModal() {
 
   alert('Internal transfer modal not loaded.');
 };
+

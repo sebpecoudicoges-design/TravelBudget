@@ -3,22 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BudgetPacker - Vue projet</title>
-  <meta name="description" content="Presentation partageable du projet BudgetPacker : budget voyage, patrimoine, documents, split expenses et pilotage multi-devise." />
+  <title>BudgetPacker - Demo interactive</title>
+  <meta name="description" content="Demo publique interactive de BudgetPacker : budget voyage, transactions, documents, patrimoine, split et arbitrage multi-devise." />
   <style>
     :root {
       color-scheme: light;
-      --ink: #0f172a;
-      --muted: #64748b;
-      --line: rgba(15, 23, 42, .12);
-      --panel: rgba(255, 255, 255, .88);
-      --soft: #f5f7fb;
+      --ink: #0b1220;
+      --muted: #63718a;
+      --line: rgba(15, 23, 42, .11);
+      --panel: rgba(255,255,255,.86);
+      --panel-strong: #ffffff;
+      --soft: #f4f7fb;
       --blue: #2563eb;
-      --cyan: #06b6d4;
+      --cyan: #0891b2;
       --green: #10b981;
       --pink: #fb7185;
       --violet: #7c3aed;
       --amber: #f59e0b;
+      --shadow: 0 22px 70px rgba(15, 23, 42, .12);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -26,263 +28,257 @@
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
+      min-height: 100vh;
       color: var(--ink);
       background:
-        radial-gradient(circle at 18% 18%, rgba(37, 99, 235, .16), transparent 30%),
-        radial-gradient(circle at 84% 14%, rgba(16, 185, 129, .13), transparent 28%),
-        linear-gradient(180deg, #eef3fb 0%, #ffffff 48%, #f7fafc 100%);
+        radial-gradient(circle at 14% 8%, rgba(37, 99, 235, .15), transparent 30%),
+        radial-gradient(circle at 88% 18%, rgba(16, 185, 129, .12), transparent 28%),
+        linear-gradient(180deg, #eef4fb 0%, #ffffff 44%, #f7fafc 100%);
     }
-
+    button, input { font: inherit; }
     a { color: inherit; }
     .shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
 
     header {
       position: sticky;
       top: 0;
-      z-index: 20;
-      backdrop-filter: blur(18px);
-      background: rgba(248, 250, 252, .78);
+      z-index: 30;
       border-bottom: 1px solid rgba(15, 23, 42, .08);
+      background: rgba(248, 250, 252, .82);
+      backdrop-filter: blur(18px);
     }
-
     .nav {
-      height: 68px;
+      min-height: 70px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 18px;
     }
-
     .brand {
       display: flex;
       align-items: center;
       gap: 10px;
-      font-weight: 900;
-      letter-spacing: 0;
+      text-decoration: none;
+      font-weight: 950;
     }
-
     .brand-mark {
       width: 38px;
       height: 38px;
-      border-radius: 12px;
+      border-radius: 13px;
       display: grid;
       place-items: center;
       color: #fff;
-      background: linear-gradient(135deg, var(--blue), var(--cyan));
-      box-shadow: 0 14px 30px rgba(37, 99, 235, .22);
-      font-weight: 950;
+      background: linear-gradient(135deg, #0f172a, var(--blue), var(--cyan));
+      box-shadow: 0 14px 34px rgba(37, 99, 235, .22);
     }
-
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #475569;
-      font-size: 14px;
-    }
-
-    .nav-links a {
-      text-decoration: none;
-      padding: 9px 11px;
-      border-radius: 999px;
-    }
-
+    .nav-links { display: flex; align-items: center; gap: 6px; color: #475569; font-size: 14px; font-weight: 750; }
+    .nav-links a { text-decoration: none; padding: 9px 10px; border-radius: 999px; }
     .nav-links a:hover { background: rgba(15, 23, 42, .06); }
+    .nav-actions { display: flex; align-items: center; gap: 8px; }
+    .lang-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid rgba(15, 23, 42, .10);
+      border-radius: 999px;
+      background: rgba(255,255,255,.9);
+      box-shadow: 0 14px 34px rgba(15, 23, 42, .10);
+    }
+    .floating-lang {
+      position: fixed;
+      left: 18px;
+      bottom: 18px;
+      z-index: 40;
+      display: none;
+    }
 
-    .btn {
+    .btn, .lang-btn, .tab-btn, .scenario-btn {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--ink);
+      padding: 0 15px;
+      text-decoration: none;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 42px;
-      padding: 0 16px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: #fff;
-      color: var(--ink);
-      text-decoration: none;
-      font-weight: 850;
-      box-shadow: 0 10px 28px rgba(15, 23, 42, .08);
+      font-weight: 900;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, .06);
+      cursor: pointer;
     }
-
-    .btn.primary {
-      border: 0;
+    .btn.primary, .tab-btn.active, .scenario-btn.active {
+      border-color: transparent;
       color: #fff;
-      background: linear-gradient(135deg, #0f172a, #2563eb);
+      background: linear-gradient(135deg, #111827, var(--blue));
     }
+    .lang-btn { min-width: 46px; padding: 0 11px; box-shadow: none; }
+    .lang-btn.active { color: #fff; background: #111827; border-color: #111827; }
 
     .hero {
-      min-height: calc(100vh - 68px);
+      min-height: calc(100vh - 70px);
       display: grid;
-      grid-template-columns: minmax(0, .95fr) minmax(360px, 1.05fr);
+      grid-template-columns: minmax(0, .92fr) minmax(430px, 1.08fr);
       gap: 40px;
       align-items: center;
-      padding: 34px 0 42px;
+      padding: 42px 0 54px;
     }
-
     .eyebrow {
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      min-height: 34px;
       border: 1px solid rgba(37, 99, 235, .18);
-      background: rgba(255, 255, 255, .7);
+      background: rgba(255,255,255,.74);
       color: #1e40af;
       border-radius: 999px;
-      padding: 8px 12px;
+      padding: 0 12px;
       font-size: 13px;
-      font-weight: 850;
-      box-shadow: 0 12px 28px rgba(37, 99, 235, .08);
+      font-weight: 900;
     }
-
     h1 {
       margin: 18px 0 14px;
       font-size: clamp(44px, 6vw, 78px);
-      line-height: .95;
+      line-height: .96;
       letter-spacing: 0;
     }
-
     .lead {
       margin: 0;
-      max-width: 650px;
+      max-width: 680px;
       color: #475569;
       font-size: 18px;
       line-height: 1.65;
     }
-
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 26px;
-    }
-
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
     .metrics {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       margin-top: 28px;
     }
-
     .metric {
       border: 1px solid rgba(15, 23, 42, .08);
-      border-radius: 16px;
+      border-radius: 18px;
       padding: 14px;
-      background: rgba(255, 255, 255, .72);
+      background: rgba(255,255,255,.76);
+      box-shadow: 0 14px 38px rgba(15, 23, 42, .05);
     }
+    .metric strong { display: block; font-size: 20px; line-height: 1.1; }
+    .metric span { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; font-weight: 780; }
 
-    .metric strong {
-      display: block;
-      font-size: 22px;
-      line-height: 1.1;
-    }
-
-    .metric span {
-      display: block;
-      margin-top: 5px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 750;
-    }
-
-    .app-visual {
-      position: relative;
+    .product-frame {
       border: 1px solid rgba(15, 23, 42, .12);
-      border-radius: 28px;
+      border-radius: 30px;
       padding: 14px;
-      background: rgba(255, 255, 255, .68);
+      background: rgba(255,255,255,.68);
       box-shadow: 0 30px 90px rgba(15, 23, 42, .16);
       overflow: hidden;
     }
-
-    .window {
+    .mock-app {
       border: 1px solid rgba(15, 23, 42, .12);
-      border-radius: 20px;
+      border-radius: 22px;
       overflow: hidden;
       background: #f8fafc;
     }
-
-    .window-bar {
-      height: 42px;
+    .mock-bar {
+      height: 44px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 14px;
-      border-bottom: 1px solid rgba(15, 23, 42, .08);
       background: #fff;
+      border-bottom: 1px solid rgba(15, 23, 42, .08);
+      font-weight: 900;
     }
-
     .dots { display: flex; gap: 7px; }
-    .dots i { width: 10px; height: 10px; border-radius: 999px; display: block; }
+    .dots i { width: 10px; height: 10px; border-radius: 99px; display: block; }
     .dots i:nth-child(1) { background: #fb7185; }
     .dots i:nth-child(2) { background: #fbbf24; }
     .dots i:nth-child(3) { background: #34d399; }
-
-    .screen {
-      display: grid;
-      grid-template-columns: 190px 1fr;
-      min-height: 500px;
-    }
-
-    .side {
-      padding: 16px;
-      background: #0f172a;
-      color: #cbd5e1;
-    }
-
-    .side strong { color: #fff; display: block; margin-bottom: 14px; }
-    .side span {
+    .mock-screen { display: grid; grid-template-columns: 170px 1fr; min-height: 520px; }
+    .mock-side { padding: 16px; background: #0f172a; color: #cbd5e1; }
+    .mock-side strong { color: #fff; display: block; margin-bottom: 15px; }
+    .mock-side button {
+      width: 100%;
       display: block;
-      padding: 10px 11px;
+      padding: 10px;
+      border: 0;
       border-radius: 12px;
-      margin-bottom: 6px;
+      margin-bottom: 7px;
+      color: #cbd5e1;
+      background: transparent;
+      text-align: left;
       font-size: 13px;
-      font-weight: 780;
+      font-weight: 800;
+      cursor: pointer;
     }
-    .side span.active { background: rgba(255, 255, 255, .12); color: #fff; }
-
-    .dash { padding: 18px; display: grid; gap: 14px; }
-    .dash-top {
-      display: grid;
-      grid-template-columns: 1.2fr .8fr;
-      gap: 14px;
-    }
+    .mock-side button.active { background: rgba(255,255,255,.13); color: #fff; }
+    .mock-side button:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .mock-main { padding: 18px; display: grid; gap: 14px; }
 
     .panel {
       border: 1px solid rgba(15, 23, 42, .08);
-      border-radius: 18px;
+      border-radius: 20px;
       padding: 16px;
-      background: #fff;
+      background: var(--panel-strong);
+      box-shadow: 0 14px 38px rgba(15, 23, 42, .05);
       min-width: 0;
     }
-
     .panel small {
+      display: block;
       color: var(--muted);
-      font-weight: 850;
       text-transform: uppercase;
       font-size: 11px;
+      font-weight: 900;
       letter-spacing: 0;
     }
-
-    .panel h3 { margin: 8px 0 0; font-size: 28px; }
-
+    .panel h3 { margin: 8px 0 0; font-size: 28px; line-height: 1.05; }
+    .mock-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 14px; }
     .bars { display: grid; gap: 9px; margin-top: 16px; }
-    .bar { height: 10px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
-    .bar i { display: block; height: 100%; border-radius: inherit; }
+    .bar { height: 10px; border-radius: 999px; overflow: hidden; background: #e2e8f0; }
+    .bar i { display: block; height: 100%; border-radius: inherit; transition: width .28s ease; }
     .chart {
-      height: 170px;
+      height: 150px;
       display: flex;
       align-items: end;
       gap: 8px;
-      padding-top: 12px;
+      padding-top: 14px;
     }
     .chart i {
       flex: 1;
-      border-radius: 999px 999px 4px 4px;
+      min-height: 28px;
+      border-radius: 999px 999px 6px 6px;
       background: linear-gradient(180deg, var(--cyan), var(--blue));
-      min-height: 30px;
     }
+    .feed { display: grid; gap: 8px; }
+    .feed-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid rgba(15, 23, 42, .08);
+      border-radius: 14px;
+      background: #fff;
+      padding: 10px;
+    }
+    .feed-row strong { font-size: 13px; }
+    .feed-row span { color: var(--muted); font-size: 12px; font-weight: 780; text-align: right; }
+    .mock-chipline { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .mock-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      color: #075985;
+      background: #e0f2fe;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .mock-doc-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
 
-    section.band { padding: 76px 0; }
-
+    section.band { padding: 78px 0; }
     .section-head {
       display: flex;
       align-items: end;
@@ -290,427 +286,139 @@
       gap: 24px;
       margin-bottom: 24px;
     }
-
     .section-head h2 {
       margin: 0;
       font-size: clamp(32px, 4vw, 50px);
-      letter-spacing: 0;
-      line-height: 1.05;
+      line-height: 1.04;
+      max-width: 720px;
     }
+    .section-head p { margin: 0; color: var(--muted); max-width: 560px; line-height: 1.6; }
 
-    .section-head p {
-      margin: 0;
-      color: var(--muted);
-      max-width: 560px;
-      line-height: 1.6;
-    }
-
-    .feature-grid {
+    .interactive {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    .feature {
-      border: 1px solid rgba(15, 23, 42, .09);
-      border-radius: 18px;
-      background: rgba(255, 255, 255, .82);
-      padding: 18px;
-      box-shadow: 0 16px 42px rgba(15, 23, 42, .06);
-    }
-
-    .feature b {
-      width: 38px;
-      height: 38px;
-      display: grid;
-      place-items: center;
-      border-radius: 12px;
-      color: #fff;
-      background: linear-gradient(135deg, var(--violet), var(--blue));
-      margin-bottom: 14px;
-      font-size: 16px;
-    }
-
-    .feature h3 { margin: 0 0 8px; font-size: 19px; }
-    .feature p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
-
-    .workflow {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: .9fr 1.1fr;
       gap: 16px;
       align-items: stretch;
     }
-
-    .timeline {
-      display: grid;
-      gap: 10px;
-    }
-
-    .step {
-      display: grid;
-      grid-template-columns: 42px 1fr;
-      gap: 12px;
-      align-items: start;
-      border: 1px solid rgba(15, 23, 42, .09);
-      border-radius: 16px;
-      background: #fff;
-      padding: 14px;
-    }
-
-    .step span {
-      width: 42px;
-      height: 42px;
-      display: grid;
-      place-items: center;
-      border-radius: 14px;
-      background: #eff6ff;
-      color: #1d4ed8;
-      font-weight: 950;
-    }
-
-    .step h3 { margin: 0 0 4px; font-size: 16px; }
-    .step p { margin: 0; color: var(--muted); line-height: 1.5; font-size: 14px; }
-
-    .phone {
-      justify-self: center;
-      width: min(330px, 100%);
-      border-radius: 34px;
-      border: 10px solid #0f172a;
-      background: #fff;
-      box-shadow: 0 28px 70px rgba(15, 23, 42, .18);
-      overflow: hidden;
-    }
-
-    .phone-head {
-      height: 52px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-bottom: 1px solid rgba(15, 23, 42, .08);
-      font-weight: 900;
-    }
-
-    .phone-body { padding: 14px; display: grid; gap: 10px; background: #f8fafc; }
-    .mini-card {
-      border: 1px solid rgba(15, 23, 42, .08);
-      border-radius: 16px;
-      background: #fff;
-      padding: 12px;
-    }
-    .mini-card strong { display: block; font-size: 18px; }
-    .mini-card span { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
-
-    .demo-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    .demo-card {
-      border: 1px solid rgba(15, 23, 42, .09);
-      border-radius: 22px;
-      background: rgba(255, 255, 255, .86);
-      overflow: hidden;
-      box-shadow: 0 18px 48px rgba(15, 23, 42, .08);
-    }
-
-    .demo-preview {
-      min-height: 230px;
-      padding: 16px;
-      background:
-        linear-gradient(135deg, rgba(37, 99, 235, .08), rgba(6, 182, 212, .08)),
-        #f8fafc;
-    }
-
-    .demo-topline {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .demo-pill {
-      display: inline-flex;
-      align-items: center;
-      min-height: 28px;
-      padding: 0 10px;
-      border-radius: 999px;
-      background: #fff;
-      border: 1px solid rgba(15, 23, 42, .08);
-      color: #334155;
-      font-size: 12px;
-      font-weight: 850;
-    }
-
-    .demo-kpis {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .demo-kpi,
-    .demo-row,
-    .demo-doc {
-      border: 1px solid rgba(15, 23, 42, .08);
-      border-radius: 14px;
-      background: #fff;
-      padding: 11px;
-    }
-
-    .demo-kpi small,
-    .demo-row small,
-    .demo-doc small {
-      display: block;
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 850;
-      margin-bottom: 4px;
-    }
-
-    .demo-kpi strong { display: block; font-size: 20px; }
-    .demo-stack { display: grid; gap: 8px; }
-    .demo-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .demo-row strong { font-size: 14px; }
-    .demo-row span { color: var(--muted); font-size: 12px; font-weight: 760; }
-    .demo-doc strong { display: block; font-size: 15px; }
-
-    .demo-body {
-      padding: 18px;
-      display: grid;
-      gap: 12px;
-    }
-
-    .demo-body h3 { margin: 0; font-size: 21px; }
-    .demo-body p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
-
-    .demo-proof {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .demo-proof span {
-      border: 1px solid rgba(37, 99, 235, .14);
-      background: #eff6ff;
-      color: #1d4ed8;
-      border-radius: 999px;
-      padding: 7px 9px;
-      font-size: 12px;
-      font-weight: 850;
-    }
-
-    .scenario {
-      display: grid;
-      grid-template-columns: 1.1fr .9fr;
-      gap: 14px;
-      margin-bottom: 18px;
-    }
-
-    .scenario-main,
-    .scenario-aside,
-    .roadmap {
-      border: 1px solid rgba(15, 23, 42, .09);
-      border-radius: 22px;
-      background: rgba(255, 255, 255, .86);
-      box-shadow: 0 18px 48px rgba(15, 23, 42, .07);
-    }
-
-    .scenario-main { padding: 24px; }
-    .scenario-main h3 { margin: 0 0 10px; font-size: 28px; }
-    .scenario-main p { margin: 0; color: var(--muted); line-height: 1.65; }
-
-    .scenario-aside {
-      padding: 18px;
-      display: grid;
-      gap: 10px;
-    }
-
-    .scenario-item {
-      display: grid;
-      grid-template-columns: 36px 1fr;
-      gap: 10px;
-      align-items: start;
-    }
-
-    .scenario-item span {
-      width: 36px;
-      height: 36px;
-      border-radius: 13px;
-      display: grid;
-      place-items: center;
-      background: #ecfeff;
-      color: #0891b2;
-      font-weight: 950;
-    }
-
-    .scenario-item strong { display: block; font-size: 14px; }
-    .scenario-item small { display: block; margin-top: 3px; color: var(--muted); line-height: 1.45; }
-
-    .live-demo {
+    .control-card, .result-card, .module-card, .workflow-card, .tech-card {
       border: 1px solid rgba(15, 23, 42, .09);
       border-radius: 24px;
-      background: rgba(255, 255, 255, .9);
-      box-shadow: 0 20px 56px rgba(15, 23, 42, .08);
-      padding: 18px;
-      margin-bottom: 18px;
+      background: rgba(255,255,255,.88);
+      box-shadow: var(--shadow);
     }
-
-    .scenario-switch {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-
-    .scenario-switch button {
-      min-height: 40px;
-      border: 1px solid rgba(15, 23, 42, .12);
-      border-radius: 999px;
-      background: #fff;
-      color: #334155;
-      padding: 0 14px;
-      font: inherit;
-      font-size: 13px;
-      font-weight: 880;
-      cursor: pointer;
-    }
-
-    .scenario-switch button.active {
-      border-color: transparent;
-      color: #fff;
-      background: linear-gradient(135deg, var(--blue), var(--violet));
-      box-shadow: 0 14px 28px rgba(37, 99, 235, .18);
-    }
-
-    .live-demo-grid {
-      display: grid;
-      grid-template-columns: .9fr 1.1fr;
-      gap: 14px;
-      align-items: stretch;
-    }
-
-    .live-panel {
+    .control-card, .result-card { padding: 18px; }
+    .scenario-switch { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .range-grid { display: grid; gap: 14px; }
+    .range-line {
       border: 1px solid rgba(15, 23, 42, .08);
       border-radius: 18px;
-      background: #f8fafc;
-      padding: 16px;
-      min-width: 0;
-    }
-
-    .live-panel h3 { margin: 0 0 6px; font-size: 24px; }
-    .live-panel p { margin: 0; color: var(--muted); line-height: 1.55; }
-
-    .live-amounts {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .live-amount {
-      border-radius: 15px;
+      padding: 13px;
       background: #fff;
+    }
+    .range-line label { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; font-weight: 900; }
+    .range-line output { color: var(--ink); font-weight: 950; }
+    input[type="range"] { width: 100%; accent-color: var(--blue); margin-top: 12px; }
+    .result-top { display: flex; align-items: start; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+    .result-top h3 { margin: 0 0 7px; font-size: 30px; }
+    .result-top p { margin: 0; color: var(--muted); line-height: 1.55; }
+    .decision-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      color: #065f46;
+      background: #d1fae5;
+      font-size: 12px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+    .result-kpis { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin: 14px 0; }
+    .kpi {
       border: 1px solid rgba(15, 23, 42, .08);
-      padding: 12px;
-    }
-
-    .live-amount small {
-      display: block;
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 850;
-      margin-bottom: 5px;
-    }
-
-    .live-amount strong {
-      display: block;
-      font-size: 20px;
-      line-height: 1.1;
-    }
-
-    .live-feed {
-      display: grid;
-      gap: 8px;
-    }
-
-    .live-feed .demo-row strong { font-size: 13px; }
-
-    .roadmap {
-      margin-top: 18px;
-      padding: 22px;
-    }
-
-    .roadmap h3 { margin: 0 0 14px; font-size: 24px; }
-    .roadmap-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .roadmap-item {
-      border: 1px solid rgba(15, 23, 42, .08);
-      border-radius: 16px;
+      border-radius: 17px;
       padding: 13px;
       background: #f8fafc;
     }
+    .kpi small { display: block; color: var(--muted); font-size: 11px; font-weight: 900; margin-bottom: 6px; }
+    .kpi strong { display: block; font-size: 22px; line-height: 1.1; }
+    .demo-table { display: grid; gap: 8px; margin-top: 12px; }
 
-    .roadmap-item strong { display: block; font-size: 14px; }
-    .roadmap-item span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .modules-layout { display: grid; grid-template-columns: 260px 1fr; gap: 16px; }
+    .tabs { display: grid; gap: 8px; align-self: start; }
+    .tab-btn { justify-content: flex-start; border-radius: 16px; min-height: 48px; }
+    .module-card { padding: 22px; min-height: 360px; }
+    .module-card h3 { margin: 0 0 8px; font-size: 34px; }
+    .module-card p { margin: 0; color: var(--muted); line-height: 1.62; max-width: 760px; }
+    .module-proof { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-top: 18px; }
+    .proof {
+      border: 1px solid rgba(15, 23, 42, .08);
+      border-radius: 18px;
+      padding: 14px;
+      background: #f8fafc;
+    }
+    .proof strong { display: block; font-size: 15px; }
+    .proof span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.45; }
 
+    .workflow-grid, .tech-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+    .workflow-card, .tech-card { padding: 18px; }
+    .workflow-card b, .tech-card b {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--violet), var(--blue));
+      margin-bottom: 14px;
+    }
+    .workflow-card h3, .tech-card h3 { margin: 0 0 8px; font-size: 20px; }
+    .workflow-card p, .tech-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
     .cta {
-      margin: 70px 0 34px;
+      margin-top: 28px;
       border-radius: 28px;
-      padding: 30px;
+      padding: 28px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 24px;
+      gap: 22px;
       color: #fff;
-      background:
-        linear-gradient(135deg, rgba(15, 23, 42, .96), rgba(37, 99, 235, .92)),
-        #0f172a;
+      background: linear-gradient(135deg, #0f172a, #1d4ed8);
       box-shadow: 0 24px 70px rgba(15, 23, 42, .18);
     }
-
     .cta h2 { margin: 0 0 8px; font-size: 32px; }
     .cta p { margin: 0; color: #cbd5e1; line-height: 1.55; }
-    .cta .btn { box-shadow: none; }
+    footer { padding: 28px 0 42px; color: var(--muted); text-align: center; font-size: 13px; }
 
-    footer {
-      padding: 26px 0 42px;
-      color: var(--muted);
-      font-size: 13px;
-      text-align: center;
-    }
-
-    @media (max-width: 900px) {
-      .nav { height: auto; padding: 12px 0; align-items: flex-start; }
+    @media (max-width: 960px) {
       .nav-links { display: none; }
-      .hero, .workflow { grid-template-columns: 1fr; }
-      .hero { min-height: auto; padding-top: 42px; }
-      .screen { grid-template-columns: 1fr; }
-      .side { display: none; }
-      .feature-grid { grid-template-columns: 1fr; }
-      .demo-grid { grid-template-columns: 1fr; }
-      .scenario { grid-template-columns: 1fr; }
-      .live-demo-grid { grid-template-columns: 1fr; }
-      .roadmap-grid { grid-template-columns: 1fr 1fr; }
+      .hero, .interactive, .modules-layout { grid-template-columns: 1fr; }
+      .hero { min-height: auto; }
+      .metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .mock-screen { grid-template-columns: 1fr; }
+      .mock-screen { grid-template-columns: 1fr; }
+      .mock-side {
+        display: flex;
+        gap: 7px;
+        overflow-x: auto;
+        padding: 10px;
+      }
+      .mock-side strong { display: none; }
+      .mock-side button { width: auto; white-space: nowrap; margin: 0; }
+      .workflow-grid, .tech-grid { grid-template-columns: 1fr; }
       .section-head { display: block; }
       .section-head p { margin-top: 12px; }
-      .cta { flex-direction: column; align-items: flex-start; }
     }
-
-    @media (max-width: 560px) {
+    @media (max-width: 620px) {
       .shell { width: min(100% - 22px, 1180px); }
-      .metrics { grid-template-columns: 1fr; }
-      .dash-top { grid-template-columns: 1fr; }
+      .nav { align-items: flex-start; padding: 12px 0; }
+      .nav-actions { flex-wrap: wrap; justify-content: flex-end; }
+      .product-frame { padding: 8px; border-radius: 22px; }
+      .mock-grid, .result-kpis, .module-proof, .metrics { grid-template-columns: 1fr; }
       .hero-actions .btn { width: 100%; }
-      .app-visual { padding: 8px; border-radius: 22px; }
-      .chart { height: 120px; }
-      .live-amounts { grid-template-columns: 1fr; }
-      .roadmap-grid { grid-template-columns: 1fr; }
+      .cta { flex-direction: column; align-items: flex-start; }
+      .nav-actions .lang-switch { display: none; }
+      .floating-lang { display: inline-flex; }
     }
   </style>
 </head>
@@ -722,132 +430,89 @@
         <span>BudgetPacker</span>
       </a>
       <nav class="nav-links" aria-label="Sections">
-        <a href="#modules">Modules</a>
-        <a href="#workflow">Parcours</a>
-        <a href="#demo">Demos</a>
-        <a href="#tech">Technique</a>
+        <a href="#demo" data-i18n="nav.demo">Demo</a>
+        <a href="#modules" data-i18n="nav.modules">Modules</a>
+        <a href="#workflow" data-i18n="nav.workflow">Parcours</a>
+        <a href="#tech" data-i18n="nav.tech">Technique</a>
       </nav>
-      <a class="btn primary" href="#demo">Voir la demo</a>
+      <div class="nav-actions">
+        <div class="lang-switch" aria-label="Language">
+          <button class="lang-btn active" type="button" data-lang="fr">FR</button>
+          <button class="lang-btn" type="button" data-lang="en">EN</button>
+        </div>
+        <a class="btn primary" href="#demo" data-i18n="nav.cta">Tester la demo</a>
+      </div>
     </div>
   </header>
 
+  <div class="lang-switch floating-lang" aria-label="Language">
+    <button class="lang-btn active" type="button" data-lang="fr">FR</button>
+    <button class="lang-btn" type="button" data-lang="en">EN</button>
+  </div>
+
   <main>
-    <div class="shell hero" id="top">
+    <section class="shell hero" id="top">
       <div>
-        <span class="eyebrow">Projet personnel - budget, voyage et patrimoine</span>
-        <h1>Le cockpit de voyage qui suit aussi la vraie vie.</h1>
-        <p class="lead">
-          BudgetPacker centralise le cashflow, les voyages, les dépenses partagées,
-          le patrimoine, les documents et les décisions multi-devise dans une seule
-          interface pensée pour un PVT, un long voyage ou une gestion nomade.
+        <span class="eyebrow" data-i18n="hero.eyebrow">Demo publique - aucune donnee personnelle</span>
+        <h1 data-i18n="hero.title">Le cockpit budget pour voyager, travailler et garder le cap.</h1>
+        <p class="lead" data-i18n="hero.lead">
+          BudgetPacker relie cashflow, voyages, documents, patrimoine, split expenses et decisions multi-devise dans une interface pensee pour la vraie vie nomade.
         </p>
         <div class="hero-actions">
-          <a class="btn primary" href="#demo">Voir la demo</a>
-          <a class="btn" href="#modules">Voir les modules</a>
+          <a class="btn primary" href="#demo" data-i18n="hero.primary">Jouer avec la demo</a>
+          <a class="btn" href="#modules" data-i18n="hero.secondary">Voir les modules</a>
         </div>
-        <div class="metrics" aria-label="Points forts du projet">
-          <div class="metric"><strong>Multi-devise</strong><span>FX, base utilisateur, snapshots</span></div>
-          <div class="metric"><strong>Documents</strong><span>Tags, dossiers, liens financiers</span></div>
-          <div class="metric"><strong>Voyage</strong><span>Budget, split, projections</span></div>
-          <div class="metric"><strong>Sans compte</strong><span>Vitrine publique, aucune donnee chargee</span></div>
+        <div class="metrics">
+          <div class="metric"><strong data-i18n="metric.fx.title">Multi-devise</strong><span data-i18n="metric.fx.body">AUD, EUR, JPY et devise de base</span></div>
+          <div class="metric"><strong data-i18n="metric.docs.title">Documents Hub</strong><span data-i18n="metric.docs.body">Tags, dossiers, preuves liees</span></div>
+          <div class="metric"><strong data-i18n="metric.trip.title">Voyage</strong><span data-i18n="metric.trip.body">Budget, split, remboursements</span></div>
+          <div class="metric"><strong data-i18n="metric.safe.title">Demo sure</strong><span data-i18n="metric.safe.body">Donnees fictives, sans login</span></div>
         </div>
       </div>
 
-      <div class="app-visual" aria-label="Apercu visuel de BudgetPacker">
-        <div class="window">
-          <div class="window-bar">
+      <div class="product-frame" aria-label="Apercu interactif du produit">
+        <div class="mock-app">
+          <div class="mock-bar">
             <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
-            <strong>Dashboard</strong>
+            <span id="mockTitle">Dashboard</span>
           </div>
-          <div class="screen">
-            <aside class="side">
+          <div class="mock-screen">
+            <aside class="mock-side">
               <strong>BudgetPacker</strong>
-              <span class="active">Dashboard</span>
-              <span>Transactions</span>
-              <span>Analyse</span>
-              <span>Patrimoine</span>
-              <span>Documents</span>
-              <span>Split</span>
+              <button class="active" type="button" data-mock-module="dashboard">Dashboard</button>
+              <button type="button" data-mock-module="transactions">Transactions</button>
+              <button type="button" data-mock-module="analysis">Analysis</button>
+              <button type="button" data-mock-module="assets">Assets</button>
+              <button type="button" data-mock-module="documents">Documents</button>
+              <button type="button" data-mock-module="split">Split</button>
             </aside>
-            <div class="dash">
-              <div class="dash-top">
+            <div class="mock-main" id="mockMain">
+              <div class="mock-grid">
                 <div class="panel">
-                  <small>Cashflow estime</small>
-                  <h3>10 428 JPY</h3>
+                  <small data-i18n="mock.cashflow">Cashflow estime</small>
+                  <h3 id="mockCash">3 470 AUD</h3>
                   <div class="bars">
-                    <div class="bar"><i style="width:78%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
-                    <div class="bar"><i style="width:46%;background:linear-gradient(90deg,var(--amber),var(--pink));"></i></div>
-                    <div class="bar"><i style="width:62%;background:linear-gradient(90deg,var(--blue),var(--violet));"></i></div>
+                    <div class="bar"><i id="mockBarA" style="width:70%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
+                    <div class="bar"><i id="mockBarB" style="width:44%;background:linear-gradient(90deg,var(--amber),var(--pink));"></i></div>
+                    <div class="bar"><i id="mockBarC" style="width:60%;background:linear-gradient(90deg,var(--blue),var(--violet));"></i></div>
                   </div>
                 </div>
                 <div class="panel">
-                  <small>Patrimoine</small>
-                  <h3>3 500 AUD</h3>
-                  <div class="bars">
-                    <div class="bar"><i style="width:58%;background:var(--cyan);"></i></div>
-                    <div class="bar"><i style="width:34%;background:var(--green);"></i></div>
-                  </div>
+                  <small data-i18n="mock.signal">Signal du jour</small>
+                  <h3 id="mockSignal">Garder AUD</h3>
                 </div>
               </div>
               <div class="panel">
-                <small>Projection solde</small>
+                <small data-i18n="mock.projection">Projection</small>
                 <div class="chart" aria-hidden="true">
-                  <i style="height:78%"></i><i style="height:82%"></i><i style="height:77%"></i><i style="height:66%"></i>
-                  <i style="height:42%;background:linear-gradient(180deg,var(--amber),var(--pink));"></i>
-                  <i style="height:54%"></i><i style="height:61%"></i><i style="height:72%"></i><i style="height:81%"></i>
+                  <i style="height:70%"></i><i style="height:78%"></i><i style="height:68%"></i><i style="height:42%;background:linear-gradient(180deg,var(--amber),var(--pink));"></i><i style="height:54%"></i><i style="height:66%"></i><i style="height:82%"></i>
                 </div>
               </div>
               <div class="panel">
-                <small>Documents lies</small>
-                <h3>Factures, garanties, contrats</h3>
+                <small data-i18n="mock.feed">Flux recent</small>
+                <div class="feed" id="mockFeed"></div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <section id="modules" class="band">
-      <div class="shell">
-        <div class="section-head">
-          <h2>Un produit modulaire, pas une simple feuille de calcul.</h2>
-          <p>
-            Chaque module couvre une zone concrete de la gestion nomade, avec des liens
-            entre budget, documents, patrimoine et voyages.
-          </p>
-        </div>
-        <div class="feature-grid">
-          <article class="feature"><b>01</b><h3>Dashboard financier</h3><p>Solde, budget journalier, cashflow futur, transactions payees ou a payer, et projection visuelle.</p></article>
-          <article class="feature"><b>02</b><h3>Transactions securisees</h3><p>Regles metier, verrouillage des lignes Trip ou Wallet, categories, sous-categories et snapshots FX.</p></article>
-          <article class="feature"><b>03</b><h3>Analyse dediee</h3><p>Comparaison au budget, rythme de depense, categories dominantes et signaux de pilotage.</p></article>
-          <article class="feature"><b>04</b><h3>Patrimoine</h3><p>Assets, coproprietaires, amortissement lineaire, documents lies et valorisation multi-devise.</p></article>
-          <article class="feature"><b>05</b><h3>Documents Hub</h3><p>Dossiers, sous-dossiers, tags, partage temporaire et liens vers transactions, Trip et assets.</p></article>
-          <article class="feature"><b>06</b><h3>Split voyage</h3><p>Depenses partagees, participants, soldes, matching avec transactions et suivi des avances.</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section id="workflow" class="band">
-      <div class="shell workflow">
-        <div>
-          <div class="section-head">
-            <h2>Du recu WhatsApp a la vision globale.</h2>
-          </div>
-          <div class="timeline">
-            <div class="step"><span>1</span><div><h3>Capturer</h3><p>Un recu, une facture ou une depense arrive dans le flux a traiter.</p></div></div>
-            <div class="step"><span>2</span><div><h3>Classer</h3><p>Le document est range, tagge et peut etre lie a une transaction ou a un asset.</p></div></div>
-            <div class="step"><span>3</span><div><h3>Analyser</h3><p>Les montants alimentent la projection, les stats et les decisions de conversion.</p></div></div>
-            <div class="step"><span>4</span><div><h3>Partager</h3><p>Les liens temporaires permettent de transmettre les pieces importantes sans exposer tout le coffre.</p></div></div>
-          </div>
-        </div>
-
-        <div class="phone" aria-label="Apercu mobile">
-          <div class="phone-head">Vue mobile</div>
-          <div class="phone-body">
-            <div class="mini-card"><span>Solde actuel</span><strong>10 428 JPY</strong></div>
-            <div class="mini-card"><span>Depense Trip</span><strong>Repas - 2 parts</strong></div>
-            <div class="mini-card"><span>Document</span><strong>Facture voiture</strong></div>
-            <div class="mini-card"><span>Decision FX</span><strong>Garder AUD / convertir EUR</strong></div>
           </div>
         </div>
       </div>
@@ -856,133 +521,87 @@
     <section id="demo" class="band">
       <div class="shell">
         <div class="section-head">
-          <h2>Trois demos visibles sans compte.</h2>
-          <p>
-            Ces exemples racontent le produit avec des donnees fictives. Ils montrent
-            les parcours cles sans exposer l'application privee ni les donnees reelles.
-          </p>
+          <h2 data-i18n="demo.title">Une demo que l'on peut manipuler.</h2>
+          <p data-i18n="demo.lead">Les valeurs sont fictives. Change le scenario, ajuste le salaire AUD et la part que tu gardes : la lecture se met a jour comme une mini-version du produit.</p>
         </div>
 
-        <div class="scenario">
-          <div class="scenario-main">
-            <h3>Scenario : vivre, voyager, documenter, arbitrer.</h3>
-            <p>
-              Tu gagnes en AUD, tu voyages parfois en JPY ou EUR, tu avances des frais
-              pour d'autres personnes et tu dois garder les preuves utiles. BudgetPacker
-              sert de cockpit : chaque action reste dans son module, mais tout remonte
-              dans une lecture globale.
-            </p>
+        <div class="interactive">
+          <div class="control-card">
+            <div class="scenario-switch" role="tablist" aria-label="Scenarios">
+              <button class="scenario-btn active" type="button" data-scenario="pvt" data-i18n="scenario.pvt">PVT Australie</button>
+              <button class="scenario-btn" type="button" data-scenario="trip" data-i18n="scenario.trip">Voyage partage</button>
+              <button class="scenario-btn" type="button" data-scenario="docs" data-i18n="scenario.docs">Documents</button>
+            </div>
+            <div class="range-grid">
+              <div class="range-line">
+                <label><span id="controlLabelA" data-i18n="demo.salary">Salaire hebdo AUD</span><output id="salaryOut">1200 AUD</output></label>
+                <input id="salaryRange" type="range" min="700" max="2200" step="50" value="1200" />
+              </div>
+              <div class="range-line">
+                <label><span id="controlLabelB" data-i18n="demo.keep">AUD a garder</span><output id="keepOut">500 AUD</output></label>
+                <input id="keepRange" type="range" min="0" max="2200" step="50" value="500" />
+              </div>
+              <div class="range-line">
+                <label><span id="controlLabelC" data-i18n="demo.rate">Taux AUD/EUR simule</span><output id="rateOut">0.615 EUR</output></label>
+                <input id="rateRange" type="range" min="0.56" max="0.68" step="0.005" value="0.615" />
+              </div>
+            </div>
           </div>
-          <div class="scenario-aside">
-            <div class="scenario-item"><span>1</span><div><strong>Je saisis ou importe</strong><small>Transactions, recus, depenses Trip ou mouvements internes.</small></div></div>
-            <div class="scenario-item"><span>2</span><div><strong>Je relie les preuves</strong><small>Factures, garanties, contrats et documents administratifs.</small></div></div>
-            <div class="scenario-item"><span>3</span><div><strong>Je decide</strong><small>Budget restant, rythme de depense et arbitrage AUD vers EUR.</small></div></div>
-          </div>
-        </div>
 
-        <div class="live-demo" aria-label="Demo interactive statique">
-          <div class="scenario-switch" role="tablist" aria-label="Choisir un scenario de demo">
-            <button class="active" type="button" data-demo-scenario="pvt">PVT Australie</button>
-            <button type="button" data-demo-scenario="trip">Voyage partage</button>
-            <button type="button" data-demo-scenario="docs">Dossier administratif</button>
-          </div>
-          <div class="live-demo-grid">
-            <div class="live-panel">
-              <h3 id="liveDemoTitle">PVT Australie : salaire, AUD et budget</h3>
-              <p id="liveDemoText">
-                Tu suis ton salaire hebdo en AUD, ton budget quotidien et la decision de convertir une partie en EUR.
-              </p>
-              <div class="live-amounts">
-                <div class="live-amount"><small id="liveDemoLabelA">Revenu semaine</small><strong id="liveDemoValueA">1 200 AUD</strong></div>
-                <div class="live-amount"><small id="liveDemoLabelB">A garder</small><strong id="liveDemoValueB">500 AUD</strong></div>
-                <div class="live-amount"><small id="liveDemoLabelC">A convertir</small><strong id="liveDemoValueC">700 AUD</strong></div>
+          <div class="result-card">
+            <div class="result-top">
+              <div>
+                <h3 id="scenarioTitle">PVT Australie</h3>
+                <p id="scenarioText">Tu arbitres chaque semaine entre garder du cash AUD et convertir une partie en EUR.</p>
               </div>
+              <span class="decision-pill" id="decisionPill">Garder AUD</span>
             </div>
-            <div class="live-panel">
-              <div class="live-feed" id="liveDemoFeed">
-                <div class="demo-row"><strong>Decision FX</strong><span>Garder AUD</span></div>
-                <div class="demo-row"><strong>Projection budget</strong><span>18 jours couverts</span></div>
-                <div class="demo-row"><strong>Preuve liee</strong><span>Bulletin de paie</span></div>
-                <div class="bar"><i style="width:68%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
-              </div>
+            <div class="result-kpis">
+              <div class="kpi"><small id="resultLabelA" data-i18n="demo.convert">A convertir</small><strong id="convertAud">700 AUD</strong></div>
+              <div class="kpi"><small id="resultLabelB" data-i18n="demo.eur">Equivalent EUR</small><strong id="convertEur">431 EUR</strong></div>
+              <div class="kpi"><small id="resultLabelC" data-i18n="demo.buffer">Buffer AUD</small><strong id="bufferAud">500 AUD</strong></div>
             </div>
+            <div class="demo-table" id="scenarioFeed"></div>
+            <div class="bar" style="margin-top:14px;"><i id="confidenceBar" style="width:68%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
           </div>
         </div>
+      </div>
+    </section>
 
-        <div class="demo-grid">
-          <article class="demo-card">
-            <div class="demo-preview">
-              <div class="demo-topline">
-                <span class="demo-pill">Cashflow voyage</span>
-                <span class="demo-pill">JPY</span>
-              </div>
-              <div class="demo-kpis">
-                <div class="demo-kpi"><small>Solde actuel</small><strong>10 428</strong></div>
-                <div class="demo-kpi"><small>Budget/jour</small><strong>100</strong></div>
-              </div>
-              <div class="chart" aria-hidden="true">
-                <i style="height:82%"></i><i style="height:78%"></i><i style="height:66%"></i>
-                <i style="height:45%;background:linear-gradient(180deg,var(--amber),var(--pink));"></i>
-                <i style="height:52%"></i><i style="height:63%"></i><i style="height:74%"></i>
-              </div>
-            </div>
-            <div class="demo-body">
-              <h3>Piloter le budget d'un PVT</h3>
-              <p>Le dashboard compare solde reel, depenses a venir, rentrees attendues et rythme journalier.</p>
-              <div class="demo-proof"><span>Projection</span><span>Multi-devise</span><span>Budget restant</span></div>
-            </div>
-          </article>
-
-          <article class="demo-card">
-            <div class="demo-preview">
-              <div class="demo-topline">
-                <span class="demo-pill">Documents Hub</span>
-                <span class="demo-pill">Tags</span>
-              </div>
-              <div class="demo-stack">
-                <div class="demo-doc"><small>Dossier</small><strong>Factures / Voiture</strong></div>
-                <div class="demo-row"><strong>Facture garantie.pdf</strong><span>Asset lie</span></div>
-                <div class="demo-row"><strong>Recu essence.jpg</strong><span>Transaction liee</span></div>
-                <div class="demo-row"><strong>Contrat location.pdf</strong><span>Partage temporaire</span></div>
-              </div>
-            </div>
-            <div class="demo-body">
-              <h3>Relier documents et finances</h3>
-              <p>Un document peut servir de preuve, de facture, de garantie ou de piece liee a un asset.</p>
-              <div class="demo-proof"><span>Dossiers</span><span>Tags proposes</span><span>Liens financiers</span></div>
-            </div>
-          </article>
-
-          <article class="demo-card">
-            <div class="demo-preview">
-              <div class="demo-topline">
-                <span class="demo-pill">Split voyage</span>
-                <span class="demo-pill">2 personnes</span>
-              </div>
-              <div class="demo-stack">
-                <div class="demo-row"><strong>Repas Sydney</strong><span>112 AUD</span></div>
-                <div class="demo-row"><strong>Moi</strong><span>+56 AUD</span></div>
-                <div class="demo-row"><strong>Dimitri</strong><span>-56 AUD</span></div>
-                <div class="bar"><i style="width:72%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
-                <div class="bar"><i style="width:42%;background:linear-gradient(90deg,var(--pink),var(--amber));"></i></div>
-              </div>
-            </div>
-            <div class="demo-body">
-              <h3>Partager sans casser le budget</h3>
-              <p>Les depenses Trip restent pilotees par le module Trip, avec matching transaction et soldes lisibles.</p>
-              <div class="demo-proof"><span>Participants</span><span>Matching</span><span>Remboursements</span></div>
-            </div>
+    <section id="modules" class="band">
+      <div class="shell">
+        <div class="section-head">
+          <h2 data-i18n="modules.title">Les modules se parlent entre eux.</h2>
+          <p data-i18n="modules.lead">Clique sur un module pour voir ce qu'il apporte dans le projet. La vitrine reste publique, mais elle raconte la logique de l'app reelle.</p>
+        </div>
+        <div class="modules-layout">
+          <div class="tabs" role="tablist">
+            <button class="tab-btn active" type="button" data-module="dashboard">Dashboard</button>
+            <button class="tab-btn" type="button" data-module="transactions">Transactions</button>
+            <button class="tab-btn" type="button" data-module="documents">Documents</button>
+            <button class="tab-btn" type="button" data-module="assets">Assets</button>
+            <button class="tab-btn" type="button" data-module="split">Split</button>
+            <button class="tab-btn" type="button" data-module="assistant">Assistant</button>
+          </div>
+          <article class="module-card">
+            <h3 id="moduleTitle">Dashboard</h3>
+            <p id="moduleText"></p>
+            <div class="module-proof" id="moduleProof"></div>
           </article>
         </div>
+      </div>
+    </section>
 
-        <div class="roadmap">
-          <h3>Ce que la Vitrine montre deja</h3>
-          <div class="roadmap-grid">
-            <div class="roadmap-item"><strong>Produit utilisable</strong><span>Dashboard, transactions, voyages, documents et patrimoine sont deja connectes.</span></div>
-            <div class="roadmap-item"><strong>Donnees protegees</strong><span>La demo publique reste fictive ; l'app reelle garde l'authentification et les RLS.</span></div>
-            <div class="roadmap-item"><strong>Multi-devise</strong><span>La devise de base utilisateur pilote les conversions et les lectures de valeur.</span></div>
-            <div class="roadmap-item"><strong>Suite logique</strong><span>Ajouter une vraie demo interactive sans compte, branchee sur un jeu de donnees public.</span></div>
-          </div>
+    <section id="workflow" class="band">
+      <div class="shell">
+        <div class="section-head">
+          <h2 data-i18n="workflow.title">Un parcours simple : capturer, classer, decider.</h2>
+          <p data-i18n="workflow.lead">Le projet vise a reduire la friction : une depense ou un document arrive, puis il trouve sa place dans le budget, le voyage ou le patrimoine.</p>
+        </div>
+        <div class="workflow-grid">
+          <article class="workflow-card"><b>1</b><h3 data-i18n="workflow.one.title">Capturer</h3><p data-i18n="workflow.one.body">Transaction, recu WhatsApp, facture PDF, depense Trip ou mouvement interne.</p></article>
+          <article class="workflow-card"><b>2</b><h3 data-i18n="workflow.two.title">Relier</h3><p data-i18n="workflow.two.body">Les preuves peuvent etre liees aux transactions, assets ou depenses partagees.</p></article>
+          <article class="workflow-card"><b>3</b><h3 data-i18n="workflow.three.title">Piloter</h3><p data-i18n="workflow.three.body">Analyse, cashflow, conversion FX et documents importants restent lisibles.</p></article>
         </div>
       </div>
     </section>
@@ -990,100 +609,454 @@
     <section id="tech" class="band">
       <div class="shell">
         <div class="section-head">
-          <h2>Une base technique simple, robuste et partageable.</h2>
-          <p>
-            L'application est statique cote front, branchee a Supabase pour les donnees,
-            les Edge Functions, l'authentification et le stockage prive des documents.
-          </p>
+          <h2 data-i18n="tech.title">Une vitrine autonome, une app privee derriere.</h2>
+          <p data-i18n="tech.lead">Cette page ne charge aucune donnee utilisateur. L'application reelle reste protegee par Supabase Auth, RLS, Storage et Edge Functions.</p>
         </div>
-        <div class="feature-grid">
-          <article class="feature"><b>DB</b><h3>Supabase + RLS</h3><p>Tables metier, RPC, contraintes d'unicite, policies RLS et fonctions admin protegees.</p></article>
-          <article class="feature"><b>FX</b><h3>Conversion multi-devise</h3><p>Taux automatiques, taux manuels, snapshots transactionnels et devise de base utilisateur.</p></article>
-          <article class="feature"><b>UI</b><h3>Interface modulaire</h3><p>Legacy JS structure par modules, tests core Vitest et deploiement Netlify rapide.</p></article>
+        <div class="tech-grid">
+          <article class="tech-card"><b>DB</b><h3>Supabase</h3><p data-i18n="tech.db">Tables metier, RPC, RLS, Storage documents et fonctions Edge.</p></article>
+          <article class="tech-card"><b>FX</b><h3>Multi-currency</h3><p data-i18n="tech.fx">Devise de base utilisateur, snapshots, taux manuels et calculs de decision.</p></article>
+          <article class="tech-card"><b>UI</b><h3>Netlify</h3><p data-i18n="tech.ui">Front statique, demo publique partageable et app privee separee.</p></article>
         </div>
-
         <div class="cta">
           <div>
-            <h2>Voir le projet en action</h2>
-            <p>Cette page est une vitrine autonome : aucun compte, aucune connexion et aucune donnee personnelle chargee.</p>
+            <h2 data-i18n="cta.title">Pret a montrer le projet.</h2>
+            <p data-i18n="cta.body">Cette page explique BudgetPacker sans compte, sans connexion et sans exposer tes donnees.</p>
           </div>
-          <a class="btn" href="#modules">Explorer les modules</a>
+          <a class="btn" href="#demo" data-i18n="cta.button">Rejouer la demo</a>
         </div>
       </div>
     </section>
   </main>
 
   <footer>
-    <div class="shell">BudgetPacker - Vue projet partageable</div>
+    <div class="shell" data-i18n="footer">BudgetPacker - demo publique interactive</div>
   </footer>
+
   <script>
     (() => {
-      const scenarios = {
-        pvt: {
-          title: "PVT Australie : salaire, AUD et budget",
-          text: "Tu suis ton salaire hebdo en AUD, ton budget quotidien et la decision de convertir une partie en EUR.",
-          labels: ["Revenu semaine", "A garder", "A convertir"],
-          values: ["1 200 AUD", "500 AUD", "700 AUD"],
-          feed: [
-            ["Decision FX", "Garder AUD"],
-            ["Projection budget", "18 jours couverts"],
-            ["Preuve liee", "Bulletin de paie"],
-          ],
-          bar: "68%",
-          color: "linear-gradient(90deg,var(--green),var(--cyan))",
+      const copy = {
+        fr: {
+          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.tech": "Technique", "nav.cta": "Tester la demo",
+          "hero.eyebrow": "Demo publique - aucune donnee personnelle",
+          "hero.title": "Le cockpit budget pour voyager, travailler et garder le cap.",
+          "hero.lead": "BudgetPacker relie cashflow, voyages, documents, patrimoine, split expenses et decisions multi-devise dans une interface pensee pour la vraie vie nomade.",
+          "hero.primary": "Jouer avec la demo", "hero.secondary": "Voir les modules",
+          "metric.fx.title": "Multi-devise", "metric.fx.body": "AUD, EUR, JPY et devise de base",
+          "metric.docs.title": "Documents Hub", "metric.docs.body": "Tags, dossiers, preuves liees",
+          "metric.trip.title": "Voyage", "metric.trip.body": "Budget, split, remboursements",
+          "metric.safe.title": "Demo sure", "metric.safe.body": "Donnees fictives, sans login",
+          "mock.cashflow": "Cashflow estime", "mock.signal": "Signal du jour", "mock.projection": "Projection", "mock.feed": "Flux recent",
+          "demo.title": "Une demo que l'on peut manipuler.",
+          "demo.lead": "Les valeurs sont fictives. Change le scenario, ajuste le salaire AUD et la part que tu gardes : la lecture se met a jour comme une mini-version du produit.",
+          "scenario.pvt": "PVT Australie", "scenario.trip": "Voyage partage", "scenario.docs": "Documents",
+          "demo.salary": "Salaire hebdo AUD", "demo.keep": "AUD a garder", "demo.rate": "Taux AUD/EUR simule",
+          "demo.convert": "A convertir", "demo.eur": "Equivalent EUR", "demo.buffer": "Buffer AUD",
+          "modules.title": "Les modules se parlent entre eux.",
+          "modules.lead": "Clique sur un module pour voir ce qu'il apporte dans le projet. La vitrine reste publique, mais elle raconte la logique de l'app reelle.",
+          "workflow.title": "Un parcours simple : capturer, classer, decider.",
+          "workflow.lead": "Le projet vise a reduire la friction : une depense ou un document arrive, puis il trouve sa place dans le budget, le voyage ou le patrimoine.",
+          "workflow.one.title": "Capturer", "workflow.one.body": "Transaction, recu WhatsApp, facture PDF, depense Trip ou mouvement interne.",
+          "workflow.two.title": "Relier", "workflow.two.body": "Les preuves peuvent etre liees aux transactions, assets ou depenses partagees.",
+          "workflow.three.title": "Piloter", "workflow.three.body": "Analyse, cashflow, conversion FX et documents importants restent lisibles.",
+          "tech.title": "Une vitrine autonome, une app privee derriere.",
+          "tech.lead": "Cette page ne charge aucune donnee utilisateur. L'application reelle reste protegee par Supabase Auth, RLS, Storage et Edge Functions.",
+          "tech.db": "Tables metier, RPC, RLS, Storage documents et fonctions Edge.",
+          "tech.fx": "Devise de base utilisateur, snapshots, taux manuels et calculs de decision.",
+          "tech.ui": "Front statique, demo publique partageable et app privee separee.",
+          "cta.title": "Pret a montrer le projet.", "cta.body": "Cette page explique BudgetPacker sans compte, sans connexion et sans exposer tes donnees.", "cta.button": "Rejouer la demo",
+          "footer": "BudgetPacker - demo publique interactive"
         },
-        trip: {
-          title: "Voyage partage : depense, parts et remboursement",
-          text: "Une depense de groupe reste dans le module Trip, mais elle peut etre matchee avec une transaction wallet.",
-          labels: ["Depense totale", "Ma part", "A recevoir"],
-          values: ["112 AUD", "56 AUD", "56 AUD"],
-          feed: [
-            ["Transaction liee", "Carte Wise"],
-            ["Participant", "Dimitri doit 56 AUD"],
-            ["Document", "Recu restaurant"],
-          ],
-          bar: "54%",
-          color: "linear-gradient(90deg,var(--pink),var(--amber))",
-        },
-        docs: {
-          title: "Dossier administratif : classer, tagger, retrouver",
-          text: "Un document peut etre range dans un dossier, tagge automatiquement et relie a un asset ou une transaction.",
-          labels: ["Dossier", "Tags proposes", "Liens"],
-          values: ["Factures", "3", "2"],
-          feed: [
-            ["Document", "Facture garantie.pdf"],
-            ["Asset lie", "Voiture Test"],
-            ["Transaction liee", "Garantie voiture"],
-          ],
-          bar: "82%",
-          color: "linear-gradient(90deg,var(--blue),var(--violet))",
-        },
+        en: {
+          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Workflow", "nav.tech": "Tech", "nav.cta": "Try the demo",
+          "hero.eyebrow": "Public demo - no personal data",
+          "hero.title": "The budget cockpit for travel, work and everyday decisions.",
+          "hero.lead": "BudgetPacker connects cashflow, trips, documents, assets, split expenses and currency decisions in one interface designed for a nomad life.",
+          "hero.primary": "Play with the demo", "hero.secondary": "Explore modules",
+          "metric.fx.title": "Multi-currency", "metric.fx.body": "AUD, EUR, JPY and base currency",
+          "metric.docs.title": "Documents Hub", "metric.docs.body": "Tags, folders, linked proofs",
+          "metric.trip.title": "Travel", "metric.trip.body": "Budget, split, reimbursements",
+          "metric.safe.title": "Safe demo", "metric.safe.body": "Fake data, no login",
+          "mock.cashflow": "Estimated cashflow", "mock.signal": "Today's signal", "mock.projection": "Projection", "mock.feed": "Recent feed",
+          "demo.title": "A demo you can actually manipulate.",
+          "demo.lead": "Values are fictional. Switch scenario, adjust AUD income and the amount you keep: the page updates like a mini version of the product.",
+          "scenario.pvt": "Australia WHV", "scenario.trip": "Shared trip", "scenario.docs": "Documents",
+          "demo.salary": "Weekly AUD income", "demo.keep": "AUD to keep", "demo.rate": "Simulated AUD/EUR rate",
+          "demo.convert": "To convert", "demo.eur": "EUR equivalent", "demo.buffer": "AUD buffer",
+          "modules.title": "Modules work together.",
+          "modules.lead": "Click a module to see what it brings to the project. The showcase is public, but it explains the logic of the private app.",
+          "workflow.title": "A simple flow: capture, classify, decide.",
+          "workflow.lead": "The project reduces friction: an expense or document arrives, then finds its place in budget, trip or assets.",
+          "workflow.one.title": "Capture", "workflow.one.body": "Transaction, WhatsApp receipt, PDF invoice, Trip expense or internal transfer.",
+          "workflow.two.title": "Link", "workflow.two.body": "Proofs can be linked to transactions, assets or shared expenses.",
+          "workflow.three.title": "Drive", "workflow.three.body": "Analysis, cashflow, FX conversion and important documents remain readable.",
+          "tech.title": "A standalone showcase, a private app behind it.",
+          "tech.lead": "This page loads no user data. The real app remains protected by Supabase Auth, RLS, Storage and Edge Functions.",
+          "tech.db": "Business tables, RPCs, RLS, document storage and Edge Functions.",
+          "tech.fx": "User base currency, snapshots, manual rates and decision calculations.",
+          "tech.ui": "Static frontend, public showcase and separate private app.",
+          "cta.title": "Ready to share the project.", "cta.body": "This page explains BudgetPacker without account, login or personal data exposure.", "cta.button": "Replay the demo",
+          "footer": "BudgetPacker - interactive public demo"
+        }
       };
 
-      const title = document.getElementById("liveDemoTitle");
-      const text = document.getElementById("liveDemoText");
-      const labels = ["liveDemoLabelA", "liveDemoLabelB", "liveDemoLabelC"].map((id) => document.getElementById(id));
-      const values = ["liveDemoValueA", "liveDemoValueB", "liveDemoValueC"].map((id) => document.getElementById(id));
-      const feed = document.getElementById("liveDemoFeed");
-      const buttons = Array.from(document.querySelectorAll("[data-demo-scenario]"));
+      const scenarios = {
+        fr: {
+          pvt: {
+            title: "PVT Australie", text: "Tu arbitres chaque semaine entre garder du cash AUD et convertir une partie en EUR.", decision: "Garder AUD",
+            feed: [["Decision FX", "Tendance favorable AUD"], ["Document", "Bulletin de paie lie"], ["Budget", "18 jours couverts"]]
+          },
+          trip: {
+            title: "Voyage partage", text: "Une depense de groupe reste pilotee par Split, avec une transaction wallet matchee si besoin.", decision: "Equilibrer le split",
+            feed: [["Depense", "Repas Sydney - 112 AUD"], ["Participant", "Dimitri doit 56 AUD"], ["Preuve", "Recu restaurant lie"]]
+          },
+          docs: {
+            title: "Documents", text: "Un document peut etre range, tagge, partage et relie a une transaction ou un asset.", decision: "Classer et relier",
+            feed: [["Dossier", "Factures / Voiture"], ["Tags", "Facture, Asset, Toyota"], ["Lien", "Transaction + Asset"]]
+          }
+        },
+        en: {
+          pvt: {
+            title: "Australia WHV", text: "Each week, decide what to keep in AUD and what to convert to EUR.", decision: "Keep AUD",
+            feed: [["FX decision", "AUD trend is favorable"], ["Document", "Payslip linked"], ["Budget", "18 days covered"]]
+          },
+          trip: {
+            title: "Shared trip", text: "A group expense stays managed by Split, with a matched wallet transaction when needed.", decision: "Balance split",
+            feed: [["Expense", "Sydney dinner - 112 AUD"], ["Participant", "Dimitri owes 56 AUD"], ["Proof", "Receipt linked"]]
+          },
+          docs: {
+            title: "Documents", text: "A document can be filed, tagged, shared and linked to a transaction or an asset.", decision: "Classify and link",
+            feed: [["Folder", "Invoices / Car"], ["Tags", "Invoice, Asset, Toyota"], ["Link", "Transaction + Asset"]]
+          }
+        }
+      };
 
-      function renderScenario(key) {
-        const scenario = scenarios[key] || scenarios.pvt;
-        title.textContent = scenario.title;
-        text.textContent = scenario.text;
-        scenario.labels.forEach((label, index) => { labels[index].textContent = label; });
-        scenario.values.forEach((value, index) => { values[index].textContent = value; });
-        feed.innerHTML = scenario.feed
-          .map(([name, value]) => `<div class="demo-row"><strong>${name}</strong><span>${value}</span></div>`)
-          .join("") + `<div class="bar"><i style="width:${scenario.bar};background:${scenario.color};"></i></div>`;
-        buttons.forEach((button) => {
-          button.classList.toggle("active", button.dataset.demoScenario === key);
+      const modules = {
+        fr: {
+          dashboard: ["Dashboard", "Vue cashflow, budget quotidien, rentrees attendues et projections pour savoir ou tu en es vraiment.", ["Solde multi-wallet", "Budget restant", "Courbe de tresorerie"]],
+          transactions: ["Transactions", "Creation, filtres, categories, factures liees, mouvements internes et protections pour les lignes Trip ou wallet.", ["Verrouillages metier", "Bulk classification", "Factures liees"]],
+          documents: ["Documents", "Hub transversal pour factures, contrats, garanties, tags, sous-dossiers et partages temporaires.", ["Tags proposes", "Liens financiers", "Partage public"]],
+          assets: ["Assets", "Suivi du patrimoine, coproprietaires, amortissement, documents lies et valorisation multi-devise.", ["Valeur actuelle", "Coproprietaires", "Garanties"]],
+          split: ["Split", "Depenses partagees, participants, matching transaction et recap des remboursements.", ["Parts", "Avances", "Solde par personne"]],
+          assistant: ["Assistant", "Aide locale contextuelle : signaux rapides, navigation et reponses simples sans appeler d'API externe.", ["Contexte vue", "Signaux", "Guidage"]]
+        },
+        en: {
+          dashboard: ["Dashboard", "Cashflow, daily budget, expected income and projections to understand where you really stand.", ["Multi-wallet balance", "Remaining budget", "Cash curve"]],
+          transactions: ["Transactions", "Creation, filters, categories, linked invoices, internal transfers and safeguards for Trip or wallet rows.", ["Business locks", "Bulk classification", "Linked invoices"]],
+          documents: ["Documents", "Cross-module hub for invoices, contracts, warranties, tags, subfolders and temporary sharing.", ["Suggested tags", "Financial links", "Public sharing"]],
+          assets: ["Assets", "Track assets, co-owners, depreciation, linked documents and multi-currency valuation.", ["Current value", "Co-owners", "Warranties"]],
+          split: ["Split", "Shared expenses, participants, transaction matching and reimbursement recap.", ["Shares", "Advances", "Balance by person"]],
+          assistant: ["Assistant", "Local contextual help: quick signals, navigation and simple answers without external API calls.", ["View context", "Signals", "Guidance"]]
+        }
+      };
+
+      const moduleFigures = {
+        fr: {
+          dashboard: [["Cash net", "3 470 AUD"], ["Budget/jour", "100 AUD"], ["A payer", "280 AUD"], ["La courbe combine solde reel, sorties futures et revenus attendus."]],
+          transactions: [["Transactions", "1 045"], ["A classer", "25"], ["Factures liees", "128"], ["Les lignes Trip et mouvements internes restent protegees dans leur module source."]],
+          documents: [["Documents", "91"], ["Factures", "6"], ["Liens actifs", "34"], ["Chaque fichier peut etre tagge, range et relie a une transaction ou un asset."]],
+          assets: [["Valeur totale", "7 500 AUD"], ["Documents", "2"], ["Amortissement", "-62 AUD/mois"], ["Les garanties et factures restent accessibles depuis la fiche asset."]],
+          split: [["Depense", "112 AUD"], ["Participants", "2"], ["A recevoir", "56 AUD"], ["Le matching garde le budget et les remboursements coherents."]],
+          assistant: [["Signaux", "6"], ["Modules lus", "5"], ["Reponses", "Locales"], ["L'assistant guide sans envoyer tes donnees vers une API externe."]]
+        },
+        en: {
+          dashboard: [["Net cash", "3,470 AUD"], ["Daily budget", "100 AUD"], ["To pay", "280 AUD"], ["The curve combines current balance, future outflows and expected income."]],
+          transactions: [["Transactions", "1,045"], ["To classify", "25"], ["Linked invoices", "128"], ["Trip and internal transfer rows stay protected in their source module."]],
+          documents: [["Documents", "91"], ["Invoices", "6"], ["Active links", "34"], ["Each file can be tagged, filed and linked to a transaction or asset."]],
+          assets: [["Total value", "7,500 AUD"], ["Documents", "2"], ["Depreciation", "-62 AUD/month"], ["Warranties and invoices remain available from the asset page."]],
+          split: [["Expense", "112 AUD"], ["Participants", "2"], ["To receive", "56 AUD"], ["Matching keeps budget and reimbursements consistent."]],
+          assistant: [["Signals", "6"], ["Modules read", "5"], ["Answers", "Local"], ["The assistant guides without sending your data to an external API."]]
+        }
+      };
+
+      const mockModules = {
+        fr: {
+          dashboard: {
+            title: "Dashboard",
+            cash: "3 470 AUD",
+            signal: "Garder AUD",
+            rows: [["Cash disponible", "3 470 AUD"], ["A payer", "280 AUD"], ["Revenus attendus", "1 200 AUD"]],
+            chips: ["Projection", "Budget/jour", "Wallets"]
+          },
+          transactions: {
+            title: "Transactions",
+            cash: "Liste filtree",
+            signal: "25 a classer",
+            rows: [["Salaire semaine", "+1 200 AUD"], ["Repas Sydney", "-112 AUD"], ["Mouvement interne", "AUD -> EUR"]],
+            chips: ["Filtres", "Factures", "Verrouillages"]
+          },
+          analysis: {
+            title: "Analyse",
+            cash: "Rythme reel",
+            signal: "+8% vs cible",
+            rows: [["Categorie dominante", "Transport"], ["Budget source", "100 AUD/j"], ["Ecart tendance", "+8%"]],
+            chips: ["Categories", "Projection", "Mapping"]
+          },
+          assets: {
+            title: "Assets",
+            cash: "7 500 AUD",
+            signal: "2 documents",
+            rows: [["Voiture", "7 500 AUD"], ["Amortissement", "-62 AUD/mois"], ["Garantie", "Expire dans 72 j"]],
+            chips: ["Valeur", "Coproprietaires", "Garanties"]
+          },
+          documents: {
+            title: "Documents",
+            cash: "91 fichiers",
+            signal: "6 factures",
+            rows: [["Facture voiture.pdf", "Asset lie"], ["Bulletin de paie.pdf", "Tag propose"], ["Contrat travail.pdf", "Partageable"]],
+            chips: ["Tags", "Dossiers", "Liens"]
+          },
+          split: {
+            title: "Split",
+            cash: "112 AUD",
+            signal: "56 AUD a recevoir",
+            rows: [["Repas Sydney", "2 parts"], ["Moi", "+56 AUD"], ["Dimitri", "-56 AUD"]],
+            chips: ["Participants", "Matching", "Remboursements"]
+          }
+        },
+        en: {
+          dashboard: {
+            title: "Dashboard",
+            cash: "3,470 AUD",
+            signal: "Keep AUD",
+            rows: [["Available cash", "3,470 AUD"], ["To pay", "280 AUD"], ["Expected income", "1,200 AUD"]],
+            chips: ["Projection", "Daily budget", "Wallets"]
+          },
+          transactions: {
+            title: "Transactions",
+            cash: "Filtered list",
+            signal: "25 to classify",
+            rows: [["Weekly salary", "+1,200 AUD"], ["Sydney dinner", "-112 AUD"], ["Internal transfer", "AUD -> EUR"]],
+            chips: ["Filters", "Invoices", "Locks"]
+          },
+          analysis: {
+            title: "Analysis",
+            cash: "Actual pace",
+            signal: "+8% vs target",
+            rows: [["Top category", "Transport"], ["Source budget", "100 AUD/day"], ["Trend delta", "+8%"]],
+            chips: ["Categories", "Projection", "Mapping"]
+          },
+          assets: {
+            title: "Assets",
+            cash: "7,500 AUD",
+            signal: "2 documents",
+            rows: [["Car", "7,500 AUD"], ["Depreciation", "-62 AUD/month"], ["Warranty", "Expires in 72 d"]],
+            chips: ["Value", "Co-owners", "Warranties"]
+          },
+          documents: {
+            title: "Documents",
+            cash: "91 files",
+            signal: "6 invoices",
+            rows: [["Car invoice.pdf", "Asset linked"], ["Payslip.pdf", "Suggested tag"], ["Work contract.pdf", "Shareable"]],
+            chips: ["Tags", "Folders", "Links"]
+          },
+          split: {
+            title: "Split",
+            cash: "112 AUD",
+            signal: "56 AUD to receive",
+            rows: [["Sydney dinner", "2 shares"], ["Me", "+56 AUD"], ["Dimitri", "-56 AUD"]],
+            chips: ["Participants", "Matching", "Reimbursements"]
+          }
+        }
+      };
+
+      const state = { lang: "fr", scenario: "pvt", module: "dashboard", mockModule: "dashboard" };
+      const $ = (id) => document.getElementById(id);
+      const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
+      const fmt = (n, cur) => `${Math.round(n).toLocaleString(state.lang === "fr" ? "fr-FR" : "en-US")} ${cur}`;
+      const t = (key) => copy[state.lang][key] || key;
+
+      function setRange(el, min, max, step, value) {
+        el.min = String(min);
+        el.max = String(max);
+        el.step = String(step);
+        if (value !== undefined) el.value = String(value);
+      }
+
+      function configureScenarioControls(reset = false) {
+        const a = $("salaryRange");
+        const b = $("keepRange");
+        const c = $("rateRange");
+        if (!a || !b || !c) return;
+        if (state.scenario === "pvt") {
+          setRange(a, 700, 2200, 50, reset ? 1200 : a.value);
+          setRange(b, 0, Number(a.value), 50, reset ? 500 : Math.min(Number(b.value), Number(a.value)));
+          setRange(c, 0.56, 0.68, 0.005, reset ? 0.615 : c.value);
+        } else if (state.scenario === "trip") {
+          setRange(a, 40, 800, 10, reset ? 112 : a.value);
+          setRange(b, 0, Number(a.value), 10, reset ? 112 : Math.min(Number(b.value), Number(a.value)));
+          setRange(c, 2, 6, 1, reset ? 2 : Math.max(2, Math.round(Number(c.value) || 2)));
+        } else {
+          setRange(a, 10, 180, 5, reset ? 91 : a.value);
+          setRange(b, 0, 100, 5, reset ? 68 : Math.min(100, Number(b.value)));
+          setRange(c, 0, 30, 1, reset ? 6 : Math.round(Number(c.value) || 0));
+        }
+      }
+
+      function applyLang(lang) {
+        state.lang = lang;
+        document.documentElement.lang = lang;
+        document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+        document.querySelectorAll("[data-lang]").forEach((btn) => btn.classList.toggle("active", btn.dataset.lang === lang));
+        renderMockModule();
+        renderScenario();
+        renderModule();
+      }
+
+      function renderMockModule() {
+        const data = mockModules[state.lang][state.mockModule] || mockModules[state.lang].dashboard;
+        $("mockTitle").textContent = data.title;
+        $("mockMain").innerHTML = `
+          <div class="mock-grid">
+            <div class="panel">
+              <small>${state.lang === "fr" ? "Vue active" : "Active view"}</small>
+              <h3 id="mockCash">${data.cash}</h3>
+              <div class="mock-chipline">${data.chips.map((chip) => `<span class="mock-chip">${chip}</span>`).join("")}</div>
+            </div>
+            <div class="panel">
+              <small>${state.lang === "fr" ? "Signal" : "Signal"}</small>
+              <h3 id="mockSignal">${data.signal}</h3>
+            </div>
+          </div>
+          <div class="panel">
+            <small>${state.lang === "fr" ? "Donnees exemple" : "Sample data"}</small>
+            <div class="${state.mockModule === "documents" ? "mock-doc-grid" : "feed"}" id="mockFeed">
+              ${data.rows.map(([a, b]) => `<div class="feed-row"><strong>${a}</strong><span>${b}</span></div>`).join("")}
+            </div>
+          </div>
+          <div class="panel">
+            <small>${state.lang === "fr" ? "Indicateurs" : "Indicators"}</small>
+            <div class="bars">
+              <div class="bar"><i id="mockBarA" style="width:70%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
+              <div class="bar"><i id="mockBarB" style="width:44%;background:linear-gradient(90deg,var(--amber),var(--pink));"></i></div>
+              <div class="bar"><i id="mockBarC" style="width:60%;background:linear-gradient(90deg,var(--blue),var(--violet));"></i></div>
+            </div>
+          </div>
+        `;
+        document.querySelectorAll("[data-mock-module]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.mockModule === state.mockModule);
         });
       }
 
-      buttons.forEach((button) => {
-        button.addEventListener("click", () => renderScenario(button.dataset.demoScenario));
-      });
+      function renderScenario() {
+        configureScenarioControls(false);
+        const a = Number($("salaryRange").value);
+        const b = Number($("keepRange").value);
+        const c = Number($("rateRange").value);
+        const s = scenarios[state.lang][state.scenario];
+        setText("scenarioTitle", s.title);
+        setText("scenarioText", s.text);
+        let decision = s.decision;
+        let confidence = 68;
+        let feed = s.feed;
+
+        if (state.scenario === "pvt") {
+          const salary = a;
+          const keep = Math.min(b, salary);
+          const rate = c;
+          const convert = Math.max(0, salary - keep);
+          const eur = convert * rate;
+          confidence = Math.max(18, Math.min(92, 42 + ((rate - .56) / .12) * 36 + (keep / Math.max(1, salary)) * 18));
+          decision = rate >= .61 ? s.decision : (state.lang === "fr" ? "Convertir plus" : "Convert more");
+          setText("controlLabelA", state.lang === "fr" ? "Salaire hebdo AUD" : "Weekly AUD income");
+          setText("controlLabelB", state.lang === "fr" ? "AUD a garder" : "AUD to keep");
+          setText("controlLabelC", state.lang === "fr" ? "Taux AUD/EUR simule" : "Simulated AUD/EUR rate");
+          setText("salaryOut", fmt(salary, "AUD"));
+          setText("keepOut", fmt(keep, "AUD"));
+          setText("rateOut", `${rate.toFixed(3)} EUR`);
+          setText("resultLabelA", state.lang === "fr" ? "A convertir" : "To convert");
+          setText("resultLabelB", state.lang === "fr" ? "Equivalent EUR" : "EUR equivalent");
+          setText("resultLabelC", state.lang === "fr" ? "Buffer AUD" : "AUD buffer");
+          setText("convertAud", fmt(convert, "AUD"));
+          setText("convertEur", fmt(eur, "EUR"));
+          setText("bufferAud", fmt(keep, "AUD"));
+          feed = [
+            ...s.feed,
+            [state.lang === "fr" ? "Conversion" : "Conversion", `${fmt(convert, "AUD")} -> ${fmt(eur, "EUR")}`]
+          ];
+        } else if (state.scenario === "trip") {
+          const total = a;
+          const paid = Math.min(b, total);
+          const participants = Math.max(2, Math.round(c));
+          const myShare = total / participants;
+          const balance = paid - myShare;
+          confidence = Math.max(18, Math.min(92, 35 + participants * 8 + (paid / Math.max(1, total)) * 24));
+          decision = balance >= 0 ? (state.lang === "fr" ? "A recevoir" : "To receive") : (state.lang === "fr" ? "A rembourser" : "To reimburse");
+          setText("controlLabelA", state.lang === "fr" ? "Depense totale" : "Total expense");
+          setText("controlLabelB", state.lang === "fr" ? "Montant paye par moi" : "Amount I paid");
+          setText("controlLabelC", state.lang === "fr" ? "Participants" : "Participants");
+          setText("salaryOut", fmt(total, "AUD"));
+          setText("keepOut", fmt(paid, "AUD"));
+          setText("rateOut", String(participants));
+          setText("resultLabelA", state.lang === "fr" ? "Ma part" : "My share");
+          setText("resultLabelB", decision);
+          setText("resultLabelC", state.lang === "fr" ? "Participants" : "Participants");
+          setText("convertAud", fmt(myShare, "AUD"));
+          setText("convertEur", fmt(Math.abs(balance), "AUD"));
+          setText("bufferAud", String(participants));
+          feed = [
+            [state.lang === "fr" ? "Depense Trip" : "Trip expense", fmt(total, "AUD")],
+            [state.lang === "fr" ? "Part/personne" : "Share/person", fmt(myShare, "AUD")],
+            [state.lang === "fr" ? "Matching transaction" : "Matched transaction", paid > 0 ? fmt(paid, "AUD") : "-"]
+          ];
+        } else {
+          const docs = Math.round(a);
+          const linkedPct = Math.round(b);
+          const expiring = Math.round(c);
+          const linked = Math.round(docs * linkedPct / 100);
+          const unlinked = Math.max(0, docs - linked);
+          confidence = Math.max(18, Math.min(92, linkedPct - expiring + 30));
+          decision = expiring > 0 ? (state.lang === "fr" ? "Prioriser expirations" : "Prioritize expirations") : s.decision;
+          setText("controlLabelA", state.lang === "fr" ? "Documents charges" : "Loaded documents");
+          setText("controlLabelB", state.lang === "fr" ? "Pourcentage lie" : "Linked percentage");
+          setText("controlLabelC", state.lang === "fr" ? "Expire bientot" : "Expiring soon");
+          setText("salaryOut", String(docs));
+          setText("keepOut", `${linkedPct}%`);
+          setText("rateOut", String(expiring));
+          setText("resultLabelA", state.lang === "fr" ? "Documents lies" : "Linked documents");
+          setText("resultLabelB", state.lang === "fr" ? "Non lies" : "Unlinked");
+          setText("resultLabelC", state.lang === "fr" ? "A surveiller" : "To watch");
+          setText("convertAud", String(linked));
+          setText("convertEur", String(unlinked));
+          setText("bufferAud", String(expiring));
+          feed = [
+            [state.lang === "fr" ? "Factures" : "Invoices", `${Math.max(1, Math.round(docs * .12))}`],
+            [state.lang === "fr" ? "Liens actifs" : "Active links", String(linked)],
+            [state.lang === "fr" ? "Partage possible" : "Shareable", state.lang === "fr" ? "Oui" : "Yes"]
+          ];
+        }
+
+        setText("decisionPill", decision);
+        if ($("confidenceBar")) $("confidenceBar").style.width = `${confidence}%`;
+        if ($("scenarioFeed")) $("scenarioFeed").innerHTML = feed.map(([x,y]) => `<div class="feed-row"><strong>${x}</strong><span>${y}</span></div>`).join("");
+        if (state.mockModule === "dashboard") {
+          setText("mockCash", state.scenario === "docs" ? `${Math.round(a)} docs` : fmt(Math.max(0, a - Math.min(b, a)) + 2970, "AUD"));
+          setText("mockSignal", decision);
+          if ($("mockFeed")) $("mockFeed").innerHTML = feed.slice(0, 3).map(([x,y]) => `<div class="feed-row"><strong>${x}</strong><span>${y}</span></div>`).join("");
+        }
+        if ($("mockBarA")) $("mockBarA").style.width = `${Math.max(20, Math.min(95, (b / Math.max(1, a)) * 100))}%`;
+        if ($("mockBarB")) $("mockBarB").style.width = `${Math.max(20, Math.min(95, ((a - Math.min(b, a)) / Math.max(1, a)) * 100))}%`;
+        if ($("mockBarC")) $("mockBarC").style.width = `${Math.round(confidence)}%`;
+        document.querySelectorAll("[data-scenario]").forEach((btn) => btn.classList.toggle("active", btn.dataset.scenario === state.scenario));
+      }
+
+      function renderModule() {
+        const [title, text, proof] = modules[state.lang][state.module];
+        const figures = moduleFigures[state.lang][state.module] || [];
+        $("moduleTitle").textContent = title;
+        $("moduleText").textContent = text;
+        $("moduleProof").innerHTML = proof.map((p, index) => {
+          const fig = figures[index] || [p, ""];
+          return `<div class="proof"><strong>${fig[1]}</strong><span>${p} - ${fig[0]}</span></div>`;
+        }).join("") + `<div class="proof" style="grid-column:1/-1;"><strong>${state.lang === "fr" ? "Ce que tu peux tester" : "What you can test"}</strong><span>${figures[3] || ""}</span></div>`;
+        document.querySelectorAll("[data-module]").forEach((btn) => btn.classList.toggle("active", btn.dataset.module === state.module));
+      }
+
+      document.querySelectorAll("[data-lang]").forEach((btn) => btn.addEventListener("click", () => applyLang(btn.dataset.lang)));
+      document.querySelectorAll("[data-scenario]").forEach((btn) => btn.addEventListener("click", () => { state.scenario = btn.dataset.scenario; configureScenarioControls(true); renderScenario(); }));
+      document.querySelectorAll("[data-module]").forEach((btn) => btn.addEventListener("click", () => { state.module = btn.dataset.module; renderModule(); }));
+      document.querySelectorAll("[data-mock-module]").forEach((btn) => btn.addEventListener("click", () => { state.mockModule = btn.dataset.mockModule; renderMockModule(); renderScenario(); }));
+      ["salaryRange", "keepRange", "rateRange"].forEach((id) => $(id).addEventListener("input", renderScenario));
+      applyLang("fr");
     })();
   </script>
 </body>
