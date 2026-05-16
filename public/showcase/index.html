@@ -400,6 +400,265 @@
     .mini-card strong { display: block; font-size: 18px; }
     .mini-card span { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
 
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .demo-card {
+      border: 1px solid rgba(15, 23, 42, .09);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, .86);
+      overflow: hidden;
+      box-shadow: 0 18px 48px rgba(15, 23, 42, .08);
+    }
+
+    .demo-preview {
+      min-height: 230px;
+      padding: 16px;
+      background:
+        linear-gradient(135deg, rgba(37, 99, 235, .08), rgba(6, 182, 212, .08)),
+        #f8fafc;
+    }
+
+    .demo-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .demo-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid rgba(15, 23, 42, .08);
+      color: #334155;
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .demo-kpis {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .demo-kpi,
+    .demo-row,
+    .demo-doc {
+      border: 1px solid rgba(15, 23, 42, .08);
+      border-radius: 14px;
+      background: #fff;
+      padding: 11px;
+    }
+
+    .demo-kpi small,
+    .demo-row small,
+    .demo-doc small {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 850;
+      margin-bottom: 4px;
+    }
+
+    .demo-kpi strong { display: block; font-size: 20px; }
+    .demo-stack { display: grid; gap: 8px; }
+    .demo-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .demo-row strong { font-size: 14px; }
+    .demo-row span { color: var(--muted); font-size: 12px; font-weight: 760; }
+    .demo-doc strong { display: block; font-size: 15px; }
+
+    .demo-body {
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .demo-body h3 { margin: 0; font-size: 21px; }
+    .demo-body p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
+
+    .demo-proof {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .demo-proof span {
+      border: 1px solid rgba(37, 99, 235, .14);
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-radius: 999px;
+      padding: 7px 9px;
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .scenario {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .scenario-main,
+    .scenario-aside,
+    .roadmap {
+      border: 1px solid rgba(15, 23, 42, .09);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, .86);
+      box-shadow: 0 18px 48px rgba(15, 23, 42, .07);
+    }
+
+    .scenario-main { padding: 24px; }
+    .scenario-main h3 { margin: 0 0 10px; font-size: 28px; }
+    .scenario-main p { margin: 0; color: var(--muted); line-height: 1.65; }
+
+    .scenario-aside {
+      padding: 18px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .scenario-item {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .scenario-item span {
+      width: 36px;
+      height: 36px;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      background: #ecfeff;
+      color: #0891b2;
+      font-weight: 950;
+    }
+
+    .scenario-item strong { display: block; font-size: 14px; }
+    .scenario-item small { display: block; margin-top: 3px; color: var(--muted); line-height: 1.45; }
+
+    .live-demo {
+      border: 1px solid rgba(15, 23, 42, .09);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, .9);
+      box-shadow: 0 20px 56px rgba(15, 23, 42, .08);
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .scenario-switch {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .scenario-switch button {
+      min-height: 40px;
+      border: 1px solid rgba(15, 23, 42, .12);
+      border-radius: 999px;
+      background: #fff;
+      color: #334155;
+      padding: 0 14px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 880;
+      cursor: pointer;
+    }
+
+    .scenario-switch button.active {
+      border-color: transparent;
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--violet));
+      box-shadow: 0 14px 28px rgba(37, 99, 235, .18);
+    }
+
+    .live-demo-grid {
+      display: grid;
+      grid-template-columns: .9fr 1.1fr;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .live-panel {
+      border: 1px solid rgba(15, 23, 42, .08);
+      border-radius: 18px;
+      background: #f8fafc;
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .live-panel h3 { margin: 0 0 6px; font-size: 24px; }
+    .live-panel p { margin: 0; color: var(--muted); line-height: 1.55; }
+
+    .live-amounts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .live-amount {
+      border-radius: 15px;
+      background: #fff;
+      border: 1px solid rgba(15, 23, 42, .08);
+      padding: 12px;
+    }
+
+    .live-amount small {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 850;
+      margin-bottom: 5px;
+    }
+
+    .live-amount strong {
+      display: block;
+      font-size: 20px;
+      line-height: 1.1;
+    }
+
+    .live-feed {
+      display: grid;
+      gap: 8px;
+    }
+
+    .live-feed .demo-row strong { font-size: 13px; }
+
+    .roadmap {
+      margin-top: 18px;
+      padding: 22px;
+    }
+
+    .roadmap h3 { margin: 0 0 14px; font-size: 24px; }
+    .roadmap-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .roadmap-item {
+      border: 1px solid rgba(15, 23, 42, .08);
+      border-radius: 16px;
+      padding: 13px;
+      background: #f8fafc;
+    }
+
+    .roadmap-item strong { display: block; font-size: 14px; }
+    .roadmap-item span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
     .cta {
       margin: 70px 0 34px;
       border-radius: 28px;
@@ -434,6 +693,10 @@
       .screen { grid-template-columns: 1fr; }
       .side { display: none; }
       .feature-grid { grid-template-columns: 1fr; }
+      .demo-grid { grid-template-columns: 1fr; }
+      .scenario { grid-template-columns: 1fr; }
+      .live-demo-grid { grid-template-columns: 1fr; }
+      .roadmap-grid { grid-template-columns: 1fr 1fr; }
       .section-head { display: block; }
       .section-head p { margin-top: 12px; }
       .cta { flex-direction: column; align-items: flex-start; }
@@ -446,6 +709,8 @@
       .hero-actions .btn { width: 100%; }
       .app-visual { padding: 8px; border-radius: 22px; }
       .chart { height: 120px; }
+      .live-amounts { grid-template-columns: 1fr; }
+      .roadmap-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -459,6 +724,7 @@
       <nav class="nav-links" aria-label="Sections">
         <a href="#modules">Modules</a>
         <a href="#workflow">Parcours</a>
+        <a href="#demo">Demos</a>
         <a href="#tech">Technique</a>
       </nav>
       <a class="btn primary" href="#demo">Voir la demo</a>
@@ -587,6 +853,140 @@
       </div>
     </section>
 
+    <section id="demo" class="band">
+      <div class="shell">
+        <div class="section-head">
+          <h2>Trois demos visibles sans compte.</h2>
+          <p>
+            Ces exemples racontent le produit avec des donnees fictives. Ils montrent
+            les parcours cles sans exposer l'application privee ni les donnees reelles.
+          </p>
+        </div>
+
+        <div class="scenario">
+          <div class="scenario-main">
+            <h3>Scenario : vivre, voyager, documenter, arbitrer.</h3>
+            <p>
+              Tu gagnes en AUD, tu voyages parfois en JPY ou EUR, tu avances des frais
+              pour d'autres personnes et tu dois garder les preuves utiles. BudgetPacker
+              sert de cockpit : chaque action reste dans son module, mais tout remonte
+              dans une lecture globale.
+            </p>
+          </div>
+          <div class="scenario-aside">
+            <div class="scenario-item"><span>1</span><div><strong>Je saisis ou importe</strong><small>Transactions, recus, depenses Trip ou mouvements internes.</small></div></div>
+            <div class="scenario-item"><span>2</span><div><strong>Je relie les preuves</strong><small>Factures, garanties, contrats et documents administratifs.</small></div></div>
+            <div class="scenario-item"><span>3</span><div><strong>Je decide</strong><small>Budget restant, rythme de depense et arbitrage AUD vers EUR.</small></div></div>
+          </div>
+        </div>
+
+        <div class="live-demo" aria-label="Demo interactive statique">
+          <div class="scenario-switch" role="tablist" aria-label="Choisir un scenario de demo">
+            <button class="active" type="button" data-demo-scenario="pvt">PVT Australie</button>
+            <button type="button" data-demo-scenario="trip">Voyage partage</button>
+            <button type="button" data-demo-scenario="docs">Dossier administratif</button>
+          </div>
+          <div class="live-demo-grid">
+            <div class="live-panel">
+              <h3 id="liveDemoTitle">PVT Australie : salaire, AUD et budget</h3>
+              <p id="liveDemoText">
+                Tu suis ton salaire hebdo en AUD, ton budget quotidien et la decision de convertir une partie en EUR.
+              </p>
+              <div class="live-amounts">
+                <div class="live-amount"><small id="liveDemoLabelA">Revenu semaine</small><strong id="liveDemoValueA">1 200 AUD</strong></div>
+                <div class="live-amount"><small id="liveDemoLabelB">A garder</small><strong id="liveDemoValueB">500 AUD</strong></div>
+                <div class="live-amount"><small id="liveDemoLabelC">A convertir</small><strong id="liveDemoValueC">700 AUD</strong></div>
+              </div>
+            </div>
+            <div class="live-panel">
+              <div class="live-feed" id="liveDemoFeed">
+                <div class="demo-row"><strong>Decision FX</strong><span>Garder AUD</span></div>
+                <div class="demo-row"><strong>Projection budget</strong><span>18 jours couverts</span></div>
+                <div class="demo-row"><strong>Preuve liee</strong><span>Bulletin de paie</span></div>
+                <div class="bar"><i style="width:68%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="demo-grid">
+          <article class="demo-card">
+            <div class="demo-preview">
+              <div class="demo-topline">
+                <span class="demo-pill">Cashflow voyage</span>
+                <span class="demo-pill">JPY</span>
+              </div>
+              <div class="demo-kpis">
+                <div class="demo-kpi"><small>Solde actuel</small><strong>10 428</strong></div>
+                <div class="demo-kpi"><small>Budget/jour</small><strong>100</strong></div>
+              </div>
+              <div class="chart" aria-hidden="true">
+                <i style="height:82%"></i><i style="height:78%"></i><i style="height:66%"></i>
+                <i style="height:45%;background:linear-gradient(180deg,var(--amber),var(--pink));"></i>
+                <i style="height:52%"></i><i style="height:63%"></i><i style="height:74%"></i>
+              </div>
+            </div>
+            <div class="demo-body">
+              <h3>Piloter le budget d'un PVT</h3>
+              <p>Le dashboard compare solde reel, depenses a venir, rentrees attendues et rythme journalier.</p>
+              <div class="demo-proof"><span>Projection</span><span>Multi-devise</span><span>Budget restant</span></div>
+            </div>
+          </article>
+
+          <article class="demo-card">
+            <div class="demo-preview">
+              <div class="demo-topline">
+                <span class="demo-pill">Documents Hub</span>
+                <span class="demo-pill">Tags</span>
+              </div>
+              <div class="demo-stack">
+                <div class="demo-doc"><small>Dossier</small><strong>Factures / Voiture</strong></div>
+                <div class="demo-row"><strong>Facture garantie.pdf</strong><span>Asset lie</span></div>
+                <div class="demo-row"><strong>Recu essence.jpg</strong><span>Transaction liee</span></div>
+                <div class="demo-row"><strong>Contrat location.pdf</strong><span>Partage temporaire</span></div>
+              </div>
+            </div>
+            <div class="demo-body">
+              <h3>Relier documents et finances</h3>
+              <p>Un document peut servir de preuve, de facture, de garantie ou de piece liee a un asset.</p>
+              <div class="demo-proof"><span>Dossiers</span><span>Tags proposes</span><span>Liens financiers</span></div>
+            </div>
+          </article>
+
+          <article class="demo-card">
+            <div class="demo-preview">
+              <div class="demo-topline">
+                <span class="demo-pill">Split voyage</span>
+                <span class="demo-pill">2 personnes</span>
+              </div>
+              <div class="demo-stack">
+                <div class="demo-row"><strong>Repas Sydney</strong><span>112 AUD</span></div>
+                <div class="demo-row"><strong>Moi</strong><span>+56 AUD</span></div>
+                <div class="demo-row"><strong>Dimitri</strong><span>-56 AUD</span></div>
+                <div class="bar"><i style="width:72%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
+                <div class="bar"><i style="width:42%;background:linear-gradient(90deg,var(--pink),var(--amber));"></i></div>
+              </div>
+            </div>
+            <div class="demo-body">
+              <h3>Partager sans casser le budget</h3>
+              <p>Les depenses Trip restent pilotees par le module Trip, avec matching transaction et soldes lisibles.</p>
+              <div class="demo-proof"><span>Participants</span><span>Matching</span><span>Remboursements</span></div>
+            </div>
+          </article>
+        </div>
+
+        <div class="roadmap">
+          <h3>Ce que la Vitrine montre deja</h3>
+          <div class="roadmap-grid">
+            <div class="roadmap-item"><strong>Produit utilisable</strong><span>Dashboard, transactions, voyages, documents et patrimoine sont deja connectes.</span></div>
+            <div class="roadmap-item"><strong>Donnees protegees</strong><span>La demo publique reste fictive ; l'app reelle garde l'authentification et les RLS.</span></div>
+            <div class="roadmap-item"><strong>Multi-devise</strong><span>La devise de base utilisateur pilote les conversions et les lectures de valeur.</span></div>
+            <div class="roadmap-item"><strong>Suite logique</strong><span>Ajouter une vraie demo interactive sans compte, branchee sur un jeu de donnees public.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="tech" class="band">
       <div class="shell">
         <div class="section-head">
@@ -602,7 +1002,7 @@
           <article class="feature"><b>UI</b><h3>Interface modulaire</h3><p>Legacy JS structure par modules, tests core Vitest et deploiement Netlify rapide.</p></article>
         </div>
 
-        <div class="cta" id="demo">
+        <div class="cta">
           <div>
             <h2>Voir le projet en action</h2>
             <p>Cette page est une vitrine autonome : aucun compte, aucune connexion et aucune donnee personnelle chargee.</p>
@@ -616,5 +1016,75 @@
   <footer>
     <div class="shell">BudgetPacker - Vue projet partageable</div>
   </footer>
+  <script>
+    (() => {
+      const scenarios = {
+        pvt: {
+          title: "PVT Australie : salaire, AUD et budget",
+          text: "Tu suis ton salaire hebdo en AUD, ton budget quotidien et la decision de convertir une partie en EUR.",
+          labels: ["Revenu semaine", "A garder", "A convertir"],
+          values: ["1 200 AUD", "500 AUD", "700 AUD"],
+          feed: [
+            ["Decision FX", "Garder AUD"],
+            ["Projection budget", "18 jours couverts"],
+            ["Preuve liee", "Bulletin de paie"],
+          ],
+          bar: "68%",
+          color: "linear-gradient(90deg,var(--green),var(--cyan))",
+        },
+        trip: {
+          title: "Voyage partage : depense, parts et remboursement",
+          text: "Une depense de groupe reste dans le module Trip, mais elle peut etre matchee avec une transaction wallet.",
+          labels: ["Depense totale", "Ma part", "A recevoir"],
+          values: ["112 AUD", "56 AUD", "56 AUD"],
+          feed: [
+            ["Transaction liee", "Carte Wise"],
+            ["Participant", "Dimitri doit 56 AUD"],
+            ["Document", "Recu restaurant"],
+          ],
+          bar: "54%",
+          color: "linear-gradient(90deg,var(--pink),var(--amber))",
+        },
+        docs: {
+          title: "Dossier administratif : classer, tagger, retrouver",
+          text: "Un document peut etre range dans un dossier, tagge automatiquement et relie a un asset ou une transaction.",
+          labels: ["Dossier", "Tags proposes", "Liens"],
+          values: ["Factures", "3", "2"],
+          feed: [
+            ["Document", "Facture garantie.pdf"],
+            ["Asset lie", "Voiture Test"],
+            ["Transaction liee", "Garantie voiture"],
+          ],
+          bar: "82%",
+          color: "linear-gradient(90deg,var(--blue),var(--violet))",
+        },
+      };
+
+      const title = document.getElementById("liveDemoTitle");
+      const text = document.getElementById("liveDemoText");
+      const labels = ["liveDemoLabelA", "liveDemoLabelB", "liveDemoLabelC"].map((id) => document.getElementById(id));
+      const values = ["liveDemoValueA", "liveDemoValueB", "liveDemoValueC"].map((id) => document.getElementById(id));
+      const feed = document.getElementById("liveDemoFeed");
+      const buttons = Array.from(document.querySelectorAll("[data-demo-scenario]"));
+
+      function renderScenario(key) {
+        const scenario = scenarios[key] || scenarios.pvt;
+        title.textContent = scenario.title;
+        text.textContent = scenario.text;
+        scenario.labels.forEach((label, index) => { labels[index].textContent = label; });
+        scenario.values.forEach((value, index) => { values[index].textContent = value; });
+        feed.innerHTML = scenario.feed
+          .map(([name, value]) => `<div class="demo-row"><strong>${name}</strong><span>${value}</span></div>`)
+          .join("") + `<div class="bar"><i style="width:${scenario.bar};background:${scenario.color};"></i></div>`;
+        buttons.forEach((button) => {
+          button.classList.toggle("active", button.dataset.demoScenario === key);
+        });
+      }
+
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => renderScenario(button.dataset.demoScenario));
+      });
+    })();
+  </script>
 </body>
 </html>

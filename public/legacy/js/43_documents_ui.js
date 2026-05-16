@@ -1,4 +1,4 @@
-/* TravelBudget V9.6.5 - Documents UI
+﻿/* TravelBudget V9.6.5 - Documents UI
    V1 coffre documentaire: dossiers, upload, renommage, suppression, preview PDF/image.
    No OCR, no entity links, no financial mutation. */
 (function(){
@@ -26,8 +26,8 @@
   function table(name, fallback){ return (window.TB_CONST && window.TB_CONST.TABLES && window.TB_CONST.TABLES[name]) || fallback || name; }
   function atxt(fr, en){ try { return (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? en : fr; } catch(_) { return fr; } }
   function key(name, fallback){ return (window.TB_CONST && window.TB_CONST.LS_KEYS && window.TB_CONST.LS_KEYS[name]) || fallback || name; }
-  function fmtDate(v){ if(!v) return '—'; try { return new Date(v).toLocaleDateString('fr-FR'); } catch(_) { return String(v).slice(0,10); } }
-  function fmtSize(bytes){ const n = Number(bytes||0); if(!n) return '—'; if(n < 1024) return `${n} o`; if(n < 1024*1024) return `${Math.round(n/102.4)/10} Ko`; return `${Math.round(n/1024/102.4)/10} Mo`; }
+  function fmtDate(v){ if(!v) return '-'; try { return new Date(v).toLocaleDateString('fr-FR'); } catch(_) { return String(v).slice(0,10); } }
+  function fmtSize(bytes){ const n = Number(bytes||0); if(!n) return '-'; if(n < 1024) return `${n} o`; if(n < 1024*1024) return `${Math.round(n/102.4)/10} Ko`; return `${Math.round(n/1024/102.4)/10} Mo`; }
   function fmtExpiry(v){
   if(!v) return '';
   try{
@@ -148,7 +148,7 @@ function suggestEmployerFromPayrollName(doc){
 
   let candidate = raw;
   candidate = candidate.replace(/.*?(bulletin\s+de\s+paie|fiche\s+de\s+paie|payslip|pay\s+slip|salaire|paie)/i, '');
-  candidate = candidate.replace(/\b(janvier|fevrier|février|mars|avril|mai|mais|juin|juillet|aout|août|septembre|octobre|novembre|decembre|décembre|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/ig, ' ');
+  candidate = candidate.replace(/\b(janvier|fevrier|fÃ©vrier|mars|avril|mai|mais|juin|juillet|aout|aoÃ»t|septembre|octobre|novembre|decembre|dÃ©cembre|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/ig, ' ');
   candidate = candidate.replace(/\b(19|20)\d{2}\b/g, ' ');
   candidate = candidate.replace(/\b\d{1,2}\b/g, ' ');
   candidate = candidate.replace(/^[\s,.;:()'"]+|[\s,.;:()'"]+$/g, '').replace(/\s+/g, ' ').trim();
@@ -362,20 +362,39 @@ function setSelectedSort(v){
       .tb-doc-layout{display:grid;grid-template-columns:245px minmax(0,1fr);gap:14px;margin-top:14px;}
       .tb-doc-sidebar,.tb-doc-main{border:1px solid rgba(127,127,127,.18);border-radius:20px;background:rgba(255,255,255,.62);padding:12px;}
       .dark .tb-doc-sidebar,.dark .tb-doc-main{background:rgba(255,255,255,.04);}
-      .tb-doc-folder{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;border:0;border-radius:14px;background:transparent;padding:10px 11px;text-align:left;cursor:pointer;color:inherit;}
+      .tb-doc-folder{width:100%;min-width:0;display:flex;justify-content:space-between;align-items:center;gap:8px;border:0;border-radius:12px;background:transparent;padding:9px 10px;text-align:left;cursor:pointer;color:inherit;}
+      .tb-doc-folder-row{position:relative;display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px;align-items:center;margin-bottom:4px;}
+      .tb-doc-folder-row.sub{margin-left:14px;grid-template-columns:18px minmax(0,1fr);}
+      .tb-doc-folder-tools{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:flex;gap:4px;align-items:center;opacity:0;pointer-events:none;transition:opacity .14s ease;}
+      .tb-doc-folder-row:hover .tb-doc-folder-tools{opacity:1;pointer-events:auto;}
+      .tb-doc-folder-icon,.tb-doc-folder-icon-placeholder{width:28px;height:28px;border-radius:10px;display:inline-grid;place-items:center;flex:0 0 auto;}
+      .tb-doc-folder-icon{border:1px solid rgba(127,127,127,.18);background:rgba(255,255,255,.90);color:inherit;cursor:pointer;font-weight:900;font-size:11px;}
+      .dark .tb-doc-folder-icon{background:rgba(255,255,255,.06);}
+      .tb-doc-folder-icon.danger{color:#e11d48;}
       .tb-doc-folder:hover{background:rgba(127,127,127,.10);}
       .tb-doc-folder.active{background:rgba(79,70,229,.13);box-shadow:inset 0 0 0 1px rgba(79,70,229,.20);}
       .tb-doc-folder small{opacity:.62;}
       .tb-doc-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px;}
       .tb-doc-search{min-width:220px;flex:1;max-width:420px;}
-      .tb-doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;}
-      .tb-doc-card{border:1px solid rgba(127,127,127,.18);border-radius:18px;background:rgba(255,255,255,.76);padding:12px;display:flex;flex-direction:column;gap:10px;min-height:168px;}
-      .dark .tb-doc-card{background:rgba(255,255,255,.045);}
-      .tb-doc-thumb{height:74px;border-radius:14px;background:linear-gradient(135deg,rgba(127,127,127,.12),rgba(127,127,127,.04));display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden;}
+      .tb-doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:22px;}
+      .tb-doc-card{position:relative;overflow:hidden;border:1px solid rgba(127,127,127,.14);border-radius:26px;background:radial-gradient(circle at 92% 0%,rgba(14,165,233,.10),transparent 34%),linear-gradient(180deg,#fff,#f8fafc);padding:20px;display:flex;flex-direction:column;gap:12px;min-height:0;}
+      .tb-doc-card::before{content:"";position:absolute;left:20px;right:20px;top:0;height:3px;border-radius:0 0 999px 999px;background:linear-gradient(90deg,#2563eb,#0891b2);opacity:.72;}
+      .dark .tb-doc-card{background:radial-gradient(circle at 92% 0%,rgba(34,211,238,.14),transparent 34%),linear-gradient(180deg,rgba(17,24,39,.98),rgba(15,23,42,.94));}
+      .tb-doc-top{position:relative;display:block;}
+      .tb-doc-thumb{height:112px;width:100%;border-radius:20px;background:linear-gradient(135deg,#eef6ff,#f8fafc);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:950;color:rgba(15,23,42,.50);overflow:hidden;}
       .tb-doc-thumb img{width:100%;height:100%;object-fit:cover;}
+      .tb-doc-select{position:absolute;left:10px;top:10px;z-index:2;}
+      .tb-doc-fav{position:absolute;right:10px;top:10px;z-index:2;}
       .tb-doc-name{font-weight:800;line-height:1.15;word-break:break-word;}
       .tb-doc-meta{font-size:12px;color:var(--muted,#6b7280);display:flex;gap:6px;flex-wrap:wrap;}
-      .tb-doc-card-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;}
+      .tb-doc-link-badges{display:flex;gap:6px;flex-wrap:wrap;}
+      .tb-doc-link-badge{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(79,70,229,.16);border-radius:999px;background:rgba(79,70,229,.08);padding:5px 8px;font-size:11px;font-weight:800;}
+      .tb-doc-card-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:auto;}
+      .tb-doc-card-actions .btn{width:100%;justify-content:center;}
+      .tb-doc-more{grid-column:1/-1;border:0;border-radius:14px;background:transparent;padding:0;}
+      .tb-doc-more summary{cursor:pointer;width:max-content;padding:4px 2px;font-size:12px;font-weight:900;list-style:none;color:var(--muted,#6b7280);}
+      .tb-doc-more summary::-webkit-details-marker{display:none;}
+      .tb-doc-more > div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:0 10px 10px;}
       .tb-doc-card > select.input{display:none;}
       .tb-doc-empty{border:1px dashed rgba(127,127,127,.30);border-radius:18px;padding:28px;text-align:center;color:var(--muted,#6b7280);}
       .tb-doc-preview-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px;}
@@ -391,11 +410,11 @@ function setSelectedSort(v){
       .tb-doc-dropzone strong{display:block;font-size:14px;}
       .tb-doc-dropzone span{display:block;font-size:12px;color:var(--muted,#6b7280);margin-top:2px;}
       .tb-doc-uploading{border:1px solid rgba(79,70,229,.22);background:rgba(79,70,229,.08);border-radius:14px;padding:10px 12px;margin-bottom:12px;font-size:13px;font-weight:700;}
-      .tb-doc-tags{display:flex;gap:5px;flex-wrap:wrap;}
-      .tb-doc-tag{font-size:11px;font-weight:700;border-radius:999px;padding:3px 7px;background:rgba(127,127,127,.12);}
+      .tb-doc-tags{display:flex;gap:6px;flex-wrap:wrap;max-height:24px;overflow:hidden;}
+      .tb-doc-tag{font-size:10px;font-weight:800;border-radius:999px;padding:5px 8px;background:rgba(15,23,42,.06);color:var(--muted,#6b7280);}
       .tb-doc-expiry{font-size:12px;font-weight:800;border-radius:999px;padding:4px 8px;background:rgba(245,158,11,.12);color:#b45309;width:max-content;}
       .dark .tb-doc-expiry{color:#fbbf24;}
-      .tb-doc-fav{border:0;background:transparent;font-size:20px;cursor:pointer;line-height:1;}
+      .tb-doc-fav{border:0;width:auto;min-width:58px;height:30px;padding:0 11px;border-radius:999px;background:rgba(15,23,42,.78);color:#fff;font-size:11px;font-weight:900;cursor:pointer;line-height:1;box-shadow:0 10px 24px rgba(15,23,42,.18);}
       .tb-doc-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
       .tb-doc-note{font-size:12px;color:var(--muted,#6b7280);line-height:1.25;border-left:3px solid rgba(127,127,127,.22);padding-left:8px;}
       .tb-doc-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.58);z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;}
@@ -419,7 +438,7 @@ function setSelectedSort(v){
       .dark .tb-doc-toast{background:#191923;color:#f8fafc;}
       .tb-doc-toast.success{border-color:rgba(34,197,94,.34);}
       .tb-doc-toast.error{border-color:rgba(239,68,68,.36);}
-      @media(max-width:820px){.tb-doc-hero{flex-direction:column}.tb-doc-layout{grid-template-columns:1fr}.tb-doc-actions{justify-content:flex-start}.tb-doc-grid{grid-template-columns:1fr}}
+      @media(max-width:820px){.tb-doc-hero{flex-direction:column}.tb-doc-layout{grid-template-columns:1fr}.tb-doc-actions{justify-content:flex-start}.tb-doc-grid{grid-template-columns:1fr}.tb-doc-card-actions{grid-template-columns:1fr}.tb-doc-top{grid-template-columns:auto minmax(0,1fr) auto}}
     `;
     document.head.appendChild(st);
   }
@@ -606,13 +625,13 @@ function setSelectedSort(v){
   const folders = rootFolders();
   const allActive = !CACHE.selectedFolderId ? ' active' : '';
   return `<div class="tb-doc-sidebar">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <div class="tb-doc-sidebar-head">
       <strong>${esc(tr('documents.folders'))}</strong>
       <button class="btn" type="button" onclick="window.tbDocumentsCreateFolder()">${esc(tr('documents.folder.create'))}</button>
     </div>
 
     <button class="tb-doc-folder${allActive}" type="button" onclick="window.tbDocumentsSelectFolder('')">
-      <span>📁 ${esc(tr('documents.folder.all'))}</span>
+      <span>${esc(tr('documents.folder.all'))}</span>
       <small>${esc((CACHE.documents||[]).length)}</small>
     </button>
 
@@ -620,48 +639,33 @@ function setSelectedSort(v){
       const children = childFolders(f.id);
       const collapsed = isFolderCollapsed(f.id);
       return `
-      <div style="display:flex;gap:6px;align-items:center;">
-        ${children.length ? `<button class="btn" type="button" title="${esc(collapsed ? tr('documents.folder.expand') : tr('documents.folder.collapse'))}" onclick="window.tbDocumentsToggleFolderCollapsed('${esc(f.id)}')">${collapsed ? '+' : '-'}</button>` : `<span style="width:34px;"></span>`}
+      <div class="tb-doc-folder-row">
+        ${children.length ? `<button class="tb-doc-folder-icon" type="button" title="${esc(collapsed ? tr('documents.folder.expand') : tr('documents.folder.collapse'))}" onclick="window.tbDocumentsToggleFolderCollapsed('${esc(f.id)}')">${collapsed ? '+' : '-'}</button>` : `<span class="tb-doc-folder-icon-placeholder"></span>`}
         <button class="tb-doc-folder${String(f.id)===String(CACHE.selectedFolderId)?' active':''}"
           type="button"
-          style="flex:1;"
           onclick="window.tbDocumentsSelectFolder('${esc(f.id)}')">
-          <span>📂 ${esc(f.name)}</span>
+          <span>${esc(f.name)}</span>
           <small>${esc(folderCount(f.id))}</small>
         </button>
-
-        <button class="btn"
-          type="button"
-          title="${esc(tr('documents.folder.subfolder'))}"
-          onclick="window.tbDocumentsCreateSubFolder('${esc(f.id)}')">
-          +
-        </button>
-
-        <button class="btn"
-          type="button"
-          title="${esc(tr('documents.folder.rename'))}"
-          onclick="window.tbDocumentsRenameFolder('${esc(f.id)}')">
-          ✏️
-        </button>
-
-        <button class="btn"
-          type="button"
-          title="${esc(tr('documents.folder.delete'))}"
-          onclick="window.tbDocumentsDeleteFolder('${esc(f.id)}')">
-          🗑️
-        </button>
+        <div class="tb-doc-folder-tools">
+          <button class="tb-doc-folder-icon" type="button" title="${esc(tr('documents.folder.subfolder'))}" onclick="window.tbDocumentsCreateSubFolder('${esc(f.id)}')">+</button>
+          <button class="tb-doc-folder-icon" type="button" title="${esc(tr('documents.folder.rename'))}" onclick="window.tbDocumentsRenameFolder('${esc(f.id)}')">Edit</button>
+          <button class="tb-doc-folder-icon danger" type="button" title="${esc(tr('documents.folder.delete'))}" onclick="window.tbDocumentsDeleteFolder('${esc(f.id)}')">Del</button>
+        </div>
       </div>
       ${collapsed ? '' : children.map(sub => `
-        <div style="display:flex;gap:6px;align-items:center;margin-left:18px;">
+        <div class="tb-doc-folder-row sub">
+          <span class="tb-doc-folder-icon-placeholder"></span>
           <button class="tb-doc-folder${String(sub.id)===String(CACHE.selectedFolderId)?' active':''}"
             type="button"
-            style="flex:1;"
             onclick="window.tbDocumentsSelectFolder('${esc(sub.id)}')">
-            <span>-- ${esc(sub.name)}</span>
+            <span>${esc(sub.name)}</span>
             <small>${esc(folderCount(sub.id))}</small>
           </button>
-          <button class="btn" type="button" title="${esc(tr('documents.folder.rename'))}" onclick="window.tbDocumentsRenameFolder('${esc(sub.id)}')">${esc(tr('documents.folder.rename'))}</button>
-          <button class="btn" type="button" title="${esc(tr('documents.folder.delete'))}" onclick="window.tbDocumentsDeleteFolder('${esc(sub.id)}')">${esc(tr('documents.folder.delete'))}</button>
+          <div class="tb-doc-folder-tools">
+            <button class="tb-doc-folder-icon" type="button" title="${esc(tr('documents.folder.rename'))}" onclick="window.tbDocumentsRenameFolder('${esc(sub.id)}')">Edit</button>
+            <button class="tb-doc-folder-icon danger" type="button" title="${esc(tr('documents.folder.delete'))}" onclick="window.tbDocumentsDeleteFolder('${esc(sub.id)}')">Del</button>
+          </div>
         </div>
       `).join('')}
     `}).join('')}
@@ -674,8 +678,8 @@ function setSelectedSort(v){
 
   const icon =
     isPdf(mime,name)
-      ? '📄'
-      : (isImg(mime) ? '🖼️' : '📎');
+      ? 'PDF'
+      : (isImg(mime) ? 'IMG' : 'DOC');
 
   const moveOptions = [
     `<option value="">${esc(tr('documents.folder.unclassified'))}</option>`,
@@ -698,9 +702,13 @@ function setSelectedSort(v){
   const counts = CACHE.linkCounts?.[String(d.id)] || {};
 const txCount = Number(counts.transactions || 0) + Number(counts.tripTransactions || 0);
 const assetCount = Number(counts.assets || 0);
+  const linkBadges = [
+    txCount ? `<span class="tb-doc-link-badge">${esc(atxt('Transactions', 'Transactions'))} ${esc(txCount)}</span>` : '',
+    assetCount ? `<span class="tb-doc-link-badge">${esc(atxt('Assets', 'Assets'))} ${esc(assetCount)}</span>` : ''
+  ].filter(Boolean).join('');
 
   return `<article class="tb-doc-card" data-doc-id="${esc(d.id)}">
-    <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
+    <div class="tb-doc-top">
   <label class="tb-doc-select">
     <input type="checkbox"
       ${isSelected(d.id) ? 'checked' : ''}
@@ -711,9 +719,9 @@ const assetCount = Number(counts.assets || 0);
 
   <button class="tb-doc-fav"
         type="button"
-        title="Favori"
+        title="${esc(atxt('Favori', 'Favorite'))}"
         onclick="window.tbDocumentsToggleFavorite('${esc(d.id)}')">
-        ${d.is_favorite ? '⭐' : '☆'}
+        ${esc(d.is_favorite ? atxt('Favori', 'Saved') : atxt('Favori', 'Save'))}
       </button>
     </div>
 
@@ -721,14 +729,16 @@ const assetCount = Number(counts.assets || 0);
 
     <div class="tb-doc-meta">
       <span>${esc(fmtDate(d.created_at))}</span>
-      <span>·</span>
+      <span>-</span>
       <span>${esc(fmtSize(d.size_bytes))}</span>
     </div>
+
+    ${linkBadges ? `<div class="tb-doc-link-badges">${linkBadges}</div>` : ''}
 
     ${tags.length ? `<div class="tb-doc-tags">${tags.map(t=>`<span class="tb-doc-tag">${esc(t)}</span>`).join('')}</div>` : ''}
 
     ${expiry ? `<div class="tb-doc-expiry">${esc(expiry)}</div>` : ''}
-    ${notePreview ? `<div class="tb-doc-note">${esc(notePreview.length > 90 ? notePreview.slice(0,90) + '…' : notePreview)}</div>` : ''}
+    ${notePreview ? `<div class="tb-doc-note">${esc(notePreview.length > 90 ? notePreview.slice(0,90) + '...' : notePreview)}</div>` : ''}
 
     <select class="input"
       title="${esc(tr('documents.action.move'))}"
@@ -738,15 +748,20 @@ const assetCount = Number(counts.assets || 0);
 
     <div class="tb-doc-card-actions">
       <button class="btn primary" type="button" onclick="window.tbDocumentsPreview('${esc(d.id)}')">${esc(tr('documents.action.open'))}</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsRename('${esc(d.id)}')">${esc(tr('documents.action.rename'))}</button>
       <button class="btn" type="button" onclick="window.tbDocumentsEditMeta('${esc(d.id)}')">${esc(tr('documents.action.info'))}</button>
+      <details class="tb-doc-more">
+        <summary>${esc(atxt('Plus', 'More'))}</summary>
+        <div>
+          <button class="btn" type="button" onclick="window.tbDocumentsRename('${esc(d.id)}')">${esc(tr('documents.action.rename'))}</button>
       <button class="btn" type="button" onclick="window.tbDocumentsOpenTransactionLinks('${esc(d.id)}')">
-     🔗 ${esc(tr('documents.linked_transactions.title'))} (${esc(txCount)})
+     ${esc(tr('documents.linked_transactions.title'))} (${esc(txCount)})
       </button>
       <button class="btn" type="button" onclick="window.tbDocumentsOpenAssetLinks('${esc(d.id)}')">
-      🚗 ${esc(atxt('Assets liés', 'Linked assets'))} (${esc(assetCount)})
+       ${esc(atxt('Assets', 'Linked assets'))} (${esc(assetCount)})
 </button>
-      <button class="btn" type="button" onclick="window.tbDocumentsDelete('${esc(d.id)}')">${esc(tr('documents.action.delete'))}</button>
+      <button class="btn danger" type="button" onclick="window.tbDocumentsDelete('${esc(d.id)}')">${esc(tr('documents.action.delete'))}</button>
+        </div>
+      </details>
     </div>
   </article>`;
 }
@@ -823,10 +838,10 @@ const assetCount = Number(counts.assets || 0);
     ${tags.map(t => `<option value="${esc(t)}" ${tagKey(t) === tagKey(tagFilter) ? 'selected' : ''}>${esc(t)}</option>`).join('')}
   </select>
   <button class="btn ${CACHE.onlyFavorites ? 'primary' : ''}" type="button" onclick="window.tbDocumentsToggleFavoritesFilter()">
-    ⭐ ${esc(tr('documents.filter.favorites'))}
+    ${esc(tr('documents.filter.favorites'))}
   </button>
   <button class="btn ${CACHE.onlyExpiring ? 'primary' : ''}" type="button" onclick="window.tbDocumentsToggleExpiringFilter()">
-    ⏳ ${esc(tr('documents.filter.expiring'))}
+    ${esc(tr('documents.filter.expiring'))}
   </button>
   ${tagFilter ? `<button class="btn" type="button" onclick="window.tbDocumentsSetTagFilter('')">Tag: ${esc(tagFilter)} x</button>` : ''}
 </div>
@@ -849,13 +864,12 @@ const assetCount = Number(counts.assets || 0);
 
     ${CACHE.error ? `
       <div class="tb-doc-empty">
-        <strong>Module Documents non initialisé.</strong>
+        <strong>${esc(atxt('Module Documents non initialise.', 'Documents module not initialized.'))}</strong>
         <br><br>
         ${esc(CACHE.error)}
         <br><br>
         <span>
-          Applique d’abord le patch SQL V9.6.5,
-          puis recharge l’application.
+          ${esc(atxt('Applique d abord le patch SQL V9.6.5, puis recharge l application.', 'Apply the SQL V9.6.5 patch first, then reload the app.'))}
         </span>
       </div>
     ` : ''}
@@ -917,7 +931,7 @@ const assetCount = Number(counts.assets || 0);
   async function createFolder(parentId = null){
     const c = client(); if(!c) return alert(tr('common.supabase_unavailable'));
     const name = String(prompt('Nom du dossier ?') || '').trim(); if(!name) return;
-    const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connecté.');
+    const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connectÃ©.');
     const guard = window.Core?.documentRules?.canCreateSubFolder
       ? window.Core.documentRules.canCreateSubFolder(parentId, CACHE.folders || [])
       : { ok: true };
@@ -934,19 +948,19 @@ const assetCount = Number(counts.assets || 0);
   opts = opts || {};
   const list = Array.from(files || []); if(!list.length) return;
   const c = client(); if(!c) return alert(tr('common.supabase_unavailable'));
-  const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connecté.');
+  const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connectÃ©.');
   const folderId = CACHE.selectedFolderId || null;
 
   let done = 0;
   const uploadedIds = [];
   let failed = 0;
-  CACHE.uploading = `${list.length} fichier(s) en upload…`;
+  CACHE.uploading = `${list.length} fichier(s) en uploadâ€¦`;
   renderShell();
 
   for(const file of list){
     try{
       done += 1;
-      CACHE.uploading = `Upload ${done}/${list.length} — ${file.name || 'document'}`;
+      CACHE.uploading = `Upload ${done}/${list.length} - ${file.name || 'document'}`;
       renderShell();
 
       const docId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -982,7 +996,7 @@ const assetCount = Number(counts.assets || 0);
 
   CACHE.uploading = '';
   await ensureLoaded();
-  notify(`${uploadedIds.length} upload(s) terminé(s), ${failed} erreur(s).`, failed ? 'error' : 'success');
+  notify(`${uploadedIds.length} upload(s) terminÃ©(s), ${failed} erreur(s).`, failed ? 'error' : 'success');
   if(typeof opts.afterUpload === 'function'){
    await opts.afterUpload(uploadedIds);
   }
@@ -1004,7 +1018,7 @@ const assetCount = Number(counts.assets || 0);
     try{
       const url = await signedUrl(doc);
       const name = doc.name || doc.original_filename || 'Document';
-      const body = isImg(doc.mime_type) ? `<img src="${esc(url)}" alt="${esc(name)}" />` : (isPdf(doc.mime_type, doc.original_filename) ? `<iframe src="${esc(url)}" title="${esc(name)}"></iframe>` : `<div style="padding:24px;text-align:center;"><p>Aperçu non disponible pour ce type de fichier.</p><a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">Ouvrir / télécharger</a></div>`);
+      const body = isImg(doc.mime_type) ? `<img src="${esc(url)}" alt="${esc(name)}" />` : (isPdf(doc.mime_type, doc.original_filename) ? `<iframe src="${esc(url)}" title="${esc(name)}"></iframe>` : `<div style="padding:24px;text-align:center;"><p>AperÃ§u non disponible pour ce type de fichier.</p><a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">Ouvrir / tÃ©lÃ©charger</a></div>`);
       const wrap = document.createElement('div');
       wrap.className = 'tb-doc-preview-backdrop';
       wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
@@ -1025,7 +1039,7 @@ const assetCount = Number(counts.assets || 0);
   async function removeDoc(id){
     const c = client(); if(!c) return alert(tr('common.supabase_unavailable'));
     const doc = (CACHE.documents||[]).find(d=>String(d.id)===String(id)); if(!doc) return;
-    if(!confirm(`Supprimer « ${doc.name || doc.original_filename || 'Document'} » ?`)) return;
+    if(!confirm(`Supprimer Â« ${doc.name || doc.original_filename || 'Document'} Â» ?`)) return;
     try{ await c.storage.from(doc.storage_bucket || BUCKET).remove([doc.storage_path]); }catch(e){ console.warn('[TB][documents] storage remove failed', e); }
     const { error } = await c.from(table('documents','documents')).delete().eq('id', id);
     if(error) return alert(error.message || String(error));
@@ -1062,10 +1076,10 @@ async function deleteFolder(id){
   const count = folderCount(id);
 
   if(count > 0){
-    return alert('Ce dossier contient encore des documents. Déplace ou supprime-les avant de supprimer le dossier.');
+    return alert('Ce dossier contient encore des documents. DÃ©place ou supprime-les avant de supprimer le dossier.');
   }
 
-  if(!confirm(`Supprimer le dossier « ${folder.name} » ?`)) return;
+  if(!confirm(`Supprimer le dossier Â« ${folder.name} Â» ?`)) return;
 
   const { error } = await c
     .from(table('document_folders','document_folders'))
@@ -1162,7 +1176,7 @@ function openInfoModal(doc){
 
         <div>
           <label>${esc(tr('documents.modal.notes'))}</label>
-          <textarea id="tb-doc-info-notes" class="input" placeholder="Ex : original papier chez parents, contrat à renouveler…">${esc(currentNotes)}</textarea>
+          <textarea id="tb-doc-info-notes" class="input" placeholder="Ex : original papier chez parents, contrat Ã  renouvelerâ€¦">${esc(currentNotes)}</textarea>
         </div>
       </div>
 
@@ -1254,7 +1268,7 @@ async function shareSelected(){
   const docs = selectedDocs();
   if(!docs.length) return alert(tr('documents.error.select_one'));
 
-  const duration = String(prompt('Durée du lien temporaire ? 10m, 1h ou 24h', '1h') || '1h').trim().toLowerCase();
+  const duration = String(prompt('DurÃ©e du lien temporaire ? 10m, 1h ou 24h', '1h') || '1h').trim().toLowerCase();
 
   const seconds =
     duration === '10m' ? 600 :
@@ -1262,11 +1276,11 @@ async function shareSelected(){
     3600;
 
   try{
-    setActionMessage(`Création de ${docs.length} lien(s) temporaire(s)...`);
+    setActionMessage(`CrÃ©ation de ${docs.length} lien(s) temporaire(s)...`);
     const links = await createShareLinksForDocs(docs, seconds);
     setActionMessage('');
 
-    const subject = encodeURIComponent(`Documents partagés (${links.length})`);
+    const subject = encodeURIComponent(`Documents partagÃ©s (${links.length})`);
     const bodyText = [
       'Bonjour,',
       '',
@@ -1274,7 +1288,7 @@ async function shareSelected(){
       '',
       ...links.map(x => `- ${x.name} : ${x.url}`),
       '',
-      `Durée approximative : ${duration || '1h'}.`
+      `DurÃ©e approximative : ${duration || '1h'}.`
     ].join('\n');
 
     const mailto = `mailto:?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
@@ -1318,7 +1332,7 @@ async function shareSelected(){
     document.body.appendChild(wrap);
   }catch(e){
     setActionMessage('');
-    actionError(e, 'Création des liens impossible.');
+    actionError(e, 'CrÃ©ation des liens impossible.');
   }
 }
 
@@ -1436,10 +1450,10 @@ async function generateShareLinksSelected(){
     : (duration === '10m' ? 600 : duration === '24h' ? 86400 : 3600);
 
   try{
-    setActionMessage(`Création de ${docs.length} lien(s) temporaire(s)...`);
+    setActionMessage(`CrÃ©ation de ${docs.length} lien(s) temporaire(s)...`);
     const links = await createShareLinksForDocs(docs, seconds);
     setActionMessage('');
-    const subject = encodeURIComponent(`Documents partagés (${links.length})`);
+    const subject = encodeURIComponent(`Documents partagÃ©s (${links.length})`);
     const bodyText = [
       'Bonjour,',
       '',
@@ -1447,7 +1461,7 @@ async function generateShareLinksSelected(){
       '',
       ...links.map(x => `- ${x.name} : ${x.url}`),
       '',
-      `Durée approximative : ${duration || '1h'}.`
+      `DurÃ©e approximative : ${duration || '1h'}.`
     ].join('\n');
 
     const mailto = `mailto:?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
@@ -1489,7 +1503,7 @@ async function generateShareLinksSelected(){
     if(!wrap.parentNode) document.body.appendChild(wrap);
   }catch(e){
     setActionMessage('');
-    actionError(e, 'Création des liens impossible.');
+    actionError(e, 'CrÃ©ation des liens impossible.');
   }
 }
 
@@ -1691,7 +1705,7 @@ function txLabel(tx){
   const date = tx.dateStart || tx.date_start || '';
   const amount = tx.amount != null ? `${tx.amount} ${tx.currency || ''}`.trim() : '';
   const label = tx.label || tx.category || 'Transaction';
-  return [date, amount, label].filter(Boolean).join(' · ');
+  return [date, amount, label].filter(Boolean).join(' - ');
 }
 
 function tripExpenseDocLinkTable(){
@@ -1709,11 +1723,11 @@ function findTripExpenseById(id){
 }
 
 function tripExpenseLabel(ex){
-  if(!ex) return 'Dépense Trip';
+  if(!ex) return 'DÃ©pense Trip';
   const date = ex.date || '';
   const amount = ex.amount != null ? `${ex.amount} ${ex.currency || ''}`.trim() : '';
-  const label = ex.label || ex.category || 'Dépense Trip';
-  return [date, amount, label].filter(Boolean).join(' · ');
+  const label = ex.label || ex.category || 'DÃ©pense Trip';
+  return [date, amount, label].filter(Boolean).join(' - ');
 }
 
 async function fetchDocumentTripExpenseLinks(docId){
@@ -1862,7 +1876,7 @@ function renderDocumentTransactionsModal(doc, links, message, tripLinks = []){
         }).join('') : `<div class="tb-doc-empty">${esc(tr('documents.linked_transactions.empty'))}</div>`}
       </div>
               <div style="margin:10px 0 12px;">
-        <strong>Dépenses Trip liées</strong>
+        <strong>DÃ©penses Trip liÃ©es</strong>
         <div style="display:flex;flex-direction:column;gap:8px;max-height:180px;overflow:auto;margin-top:8px;">
           ${(tripLinks || []).length ? tripLinks.map(link => {
             const ex = findTripExpenseById(link.expense_id);
@@ -1876,7 +1890,7 @@ function renderDocumentTransactionsModal(doc, links, message, tripLinks = []){
                 </div>
               </div>
             `;
-          }).join('') : `<div class="tb-doc-empty">Aucune dépense Trip liée.</div>`}
+          }).join('') : `<div class="tb-doc-empty">Aucune dÃ©pense Trip liÃ©e.</div>`}
         </div>
       </div>
       <div class="tb-doc-form">
@@ -1963,7 +1977,7 @@ function assetLabel(asset){
   const name = asset.name || 'Asset';
   const amount = asset.purchase_value != null ? `${asset.purchase_value} ${asset.currency || ''}`.trim() : '';
   const type = asset.asset_type || '';
-  return [name, type, amount].filter(Boolean).join(' · ');
+  return [name, type, amount].filter(Boolean).join(' - ');
 }
 
 async function linkDocumentToAsset(docId, assetId, relationType){
@@ -1996,14 +2010,14 @@ function renderDocumentAssetsModal(doc, links, assets, message){
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
   wrap.innerHTML = `
     <div class="tb-doc-modal">
-      <h3>${esc(atxt('Assets liés', 'Linked assets'))}</h3>
+      <h3>${esc(atxt('Assets', 'Linked assets'))}</h3>
       <p class="muted" style="font-size:13px;margin-top:-6px;">${esc(doc.name || doc.original_filename || 'Document')}</p>
       ${message ? `<div class="tb-doc-uploading">${esc(message)}</div>` : ''}
       <div style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;margin-bottom:12px;">
         ${(links || []).length ? links.map(link => {
           const asset = (assets || []).find(a => String(a.id || '') === String(link.asset_id || ''));
           return `<div class="tb-doc-share-link"><strong>${esc(assetLabel(asset))}</strong><br><span class="muted">${esc(tr('documents.relation.' + (link.relation_type || 'proof')))}</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="btn small primary" type="button" onclick="window.tbOpenAssetFromDocument('${esc(link.asset_id)}')">${esc(atxt('Ouvrir Patrimoine', 'Open Assets'))}</button><button class="btn small" type="button" onclick="window.tbDocumentsUnlinkAsset('${esc(link.id)}','${esc(doc.id)}')">${esc(tr('transactions.documents.unlink'))}</button></div></div>`;
-        }).join('') : `<div class="tb-doc-empty">${esc(atxt('Aucun asset lié.', 'No linked asset.'))}</div>`}
+        }).join('') : `<div class="tb-doc-empty">${esc(atxt('Aucun asset liÃ©.', 'No linked asset.'))}</div>`}
       </div>
       <div class="tb-doc-form">
         <label>${esc(atxt('Ajouter un asset', 'Add asset'))}</label>
@@ -2020,7 +2034,7 @@ function renderDocumentAssetsModal(doc, links, assets, message){
       </div>
       <div class="tb-doc-modal-actions">
         <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
-        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyLinkAsset('${esc(doc.id)}')">${esc(atxt('Lier l’asset', 'Link asset'))}</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyLinkAsset('${esc(doc.id)}')">${esc(atxt('Lier lâ€™asset', 'Link asset'))}</button>
       </div>
     </div>`;
   if(!wrap.parentNode) document.body.appendChild(wrap);
@@ -2160,7 +2174,7 @@ window.tbDocumentsApplyLinkAsset = async function(docId){
   if(!assetId) return alert(atxt('Choisis un asset.', 'Choose an asset.'));
   try{
     await linkDocumentToAsset(docId, assetId, relationType);
-    await openDocumentAssetsModal(docId, atxt('Asset lié.', 'Asset linked.'));
+    await openDocumentAssetsModal(docId, atxt('Asset liÃ©.', 'Asset linked.'));
   }catch(e){
     alert(e.message || String(e));
   }
@@ -2169,7 +2183,7 @@ window.tbDocumentsUnlinkAsset = async function(linkId, docId){
   if(!confirm(tr('documents.linked_transactions.unlink_confirm'))) return;
   try{
     await unlinkDocumentAsset(linkId);
-    await openDocumentAssetsModal(docId, atxt('Lien asset supprimé.', 'Asset link removed.'));
+    await openDocumentAssetsModal(docId, atxt('Lien asset supprimÃ©.', 'Asset link removed.'));
   }catch(e){
     alert(e.message || String(e));
   }
@@ -2178,7 +2192,7 @@ window.tbDocumentsUnlinkTripExpense = async function(linkId, docId){
   if(!confirm(tr('documents.linked_transactions.unlink_confirm'))) return;
   try{
     await unlinkDocumentTripExpense(linkId);
-    await openDocumentTransactionsModal(docId, 'Lien Trip supprimé.');
+    await openDocumentTransactionsModal(docId, 'Lien Trip supprimÃ©.');
   }catch(e){
     alert(e.message || String(e));
   }
@@ -2193,7 +2207,7 @@ window.tbDocumentsOpenShareEmail = function(){
 
   const url =
     'https://mail.google.com/mail/?view=cm&fs=1'
-    + '&su=' + encodeURIComponent('Documents partagés')
+    + '&su=' + encodeURIComponent('Documents partagÃ©s')
     + '&body=' + encodeURIComponent(body);
 
   window.open(url, '_blank', 'noopener,noreferrer');
@@ -2208,7 +2222,7 @@ window.tbDocumentsCopyShareLinks = async function(){
 
   try{
     await navigator.clipboard.writeText(text);
-    alert('Lien(s) copié(s).');
+    alert('Lien(s) copiÃ©(s).');
   }catch(e){
     console.error(e);
 
@@ -2224,7 +2238,7 @@ window.tbDocumentsCopyShareLinks = async function(){
 
     try{
       document.execCommand('copy');
-      alert('Lien(s) copié(s).');
+      alert('Lien(s) copiÃ©(s).');
     }catch(_){
       alert('Copie impossible.');
     }
@@ -2242,7 +2256,7 @@ window.tbDocumentsCopyShareBody = async function(){
 
   try{
     await navigator.clipboard.writeText(text);
-    alert('Message copié.');
+    alert('Message copiÃ©.');
   }catch(e){
     console.error(e);
 
@@ -2258,7 +2272,7 @@ window.tbDocumentsCopyShareBody = async function(){
 
     try{
       document.execCommand('copy');
-      alert('Message copié.');
+      alert('Message copiÃ©.');
     }catch(_){
       alert('Copie impossible.');
     }
@@ -2456,3 +2470,5 @@ window.tbDocumentsSyncAssetRename = async function(assetId, oldName, newName){
 };
 
 })();
+
+
