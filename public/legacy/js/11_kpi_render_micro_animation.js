@@ -1,4 +1,4 @@
-/* =========================
+﻿/* =========================
    KPI + Render (micro animation)
    ========================= */
 
@@ -1028,7 +1028,7 @@ const driver = "Dépenses";
     const st = document.createElement("style");
     st.id = "kpiResponsiveStyles";
     st.textContent = `
-      .kpi-layout { grid-template-columns: 520px 1fr; }
+      .kpi-layout { grid-template-columns: minmax(360px, 470px) minmax(0, 1fr); }
       .kpi-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; }
 
       @media (max-width: 1100px) {
@@ -1133,7 +1133,7 @@ const driver = "Dépenses";
           </div>
 
           <!-- CASH card -->
-          <div style="${miniCardStyle} margin-top:14px;">
+          <div style="${miniCardStyle} margin-top:14px; display:none;">
             <div class="muted" style="font-size:12px;">Cash</div>
 
             <div style="display:flex; align-items:baseline; gap:10px; margin-top:8px;">
@@ -1209,6 +1209,26 @@ const driver = "Dépenses";
               </div>
             </div>
           ` : ``}
+
+          <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,0,0,0.06);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+              <div>
+                <div class="muted" style="font-size:12px;">Cash</div>
+                <div style="display:flex; align-items:baseline; gap:8px; margin-top:6px;">
+                  <div style="font-weight:900; font-size:30px; line-height:1; color:var(--text);">${daysText}</div>
+                  <div class="muted" style="font-weight:700;">${T("kpi.days")}</div>
+                </div>
+              </div>
+              <span class="pill ${level}">
+                <span class="dot"></span>${driver}
+              </span>
+            </div>
+            <div class="muted" style="font-size:12px; margin-top:8px; display:flex; flex-wrap:wrap; gap:8px 14px;">
+              <span>${T("kpi.stock")} : <strong style="color:var(--text);">${fmtMoney(cashTotalBase, base)}</strong></span>
+              <span>${T("kpi.burn")} : <strong style="color:var(--text);">${fmtMoney(cashBurnBase, base)}/j</strong></span>
+            </div>
+            ${fxNote ? `<div class="muted" style="font-size:12px; margin-top:6px; color:var(--warn);">${fxNote}</div>` : ``}
+          </div>
         </div>
       </div>
   `;
@@ -1417,3 +1437,4 @@ compute();
   try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("kpi:render"); } catch (_) {}
   return __out;
 }
+

@@ -12,7 +12,10 @@
     horizonDays: "travelbudget_fx_decision_horizon_days_v1",
     eurNeedAmount: "travelbudget_fx_decision_eur_need_amount_v1",
     audSafetyAmount: "travelbudget_fx_decision_aud_safety_amount_v1",
+    rateOverride: "travelbudget_fx_decision_rate_override_v1",
     historyCache: "travelbudget_fx_decision_aud_eur_history_cache_v1",
+    fromCurrency: "travelbudget_fx_decision_from_currency_v1",
+    toCurrency: "travelbudget_fx_decision_to_currency_v1",
   };
 
   const esc = (value) => (typeof escapeHTML === "function" ? escapeHTML(value) : String(value ?? ""));
@@ -37,6 +40,23 @@
   const writeNumber = (key, value) => {
     try { localStorage.setItem(key, String(Number(value))); } catch (_) {}
   };
+  const readOptionalNumber = (key) => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null || String(raw).trim() === "") return null;
+      const n = Number(raw);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    } catch (_) {
+      return null;
+    }
+  };
+  const writeOptionalNumber = (key, value) => {
+    try {
+      const n = Number(value);
+      if (Number.isFinite(n) && n > 0) localStorage.setItem(key, String(n));
+      else localStorage.removeItem(key);
+    } catch (_) {}
+  };
   const readText = (key, fallback) => {
     try {
       const value = String(localStorage.getItem(key) || "").trim();
@@ -49,22 +69,56 @@
     try { localStorage.setItem(key, String(value || "")); } catch (_) {}
   };
   const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
+  const normCur = (value) => String(value || "").trim().toUpperCase();
+  const accountCurrency = () => normCur(window.state?.user?.baseCurrency || window.state?.user?.base_currency || "EUR") || "EUR";
+  const periodCurrency = () => normCur(window.state?.period?.baseCurrency || window.state?.period?.base_currency || window.state?.travel?.baseCurrency || window.state?.travel?.base_currency || accountCurrency()) || accountCurrency();
+  const commonCurrencies = ["AUD", "EUR", "USD", "GBP", "JPY", "THB", "LAK", "VND", "NZD", "CAD", "CHF", "SGD"];
+  const availableCurrencies = () => {
+    const set = new Set([periodCurrency(), accountCurrency(), ...commonCurrencies]);
+    try { (Array.isArray(window.state?.wallets) ? window.state.wallets : []).forEach((w) => set.add(normCur(w?.currency))); } catch (_) {}
+    try { (Array.isArray(window.state?.transactions) ? window.state.transactions : []).forEach((t) => set.add(normCur(t?.currency))); } catch (_) {}
+    return Array.from(set).filter(Boolean).sort((a, b) => a.localeCompare(b));
+  };
+  const readCurrency = (key, fallback) => {
+    const saved = normCur(readText(key, fallback));
+    return saved || fallback;
+  };
+  const pairCacheKey = (from, to) => `${LS.historyCache}_${normCur(from)}_${normCur(to)}`;
+  const eurRates = () => {
+    try { return typeof window.fxGetEurRates === "function" ? (window.fxGetEurRates() || {}) : {}; } catch (_) { return {}; }
+  };
+  const rateFromEurRow = (row, from, to) => {
+    const f = normCur(from);
+    const t = normCur(to);
+    if (!f || !t) return null;
+    if (f === t) return 1;
+    const rates = row?.rates || {};
+    const perEur = (cur) => cur === "EUR" ? 1 : Number(rates[cur]);
+    const fromPerEur = perEur(f);
+    const toPerEur = perEur(t);
+    if (!Number.isFinite(fromPerEur) || fromPerEur <= 0 || !Number.isFinite(toPerEur) || toPerEur <= 0) return null;
+    return toPerEur / fromPerEur;
+  };
   const readHorizonDays = () => {
     const n = Number(readNumber(LS.horizonDays, 90));
     return [30, 60, 90, 180].includes(n) ? n : 90;
   };
 
-  function currentAudEurRate() {
+  function currentPairRate(from, to) {
+    const f = normCur(from);
+    const t = normCur(to);
+    if (f === t) return 1;
     try {
       if (typeof window.fxRate === "function") {
-        const r = Number(window.fxRate("AUD", "EUR"));
+        const r = Number(window.fxRate(f, t));
         if (Number.isFinite(r) && r > 0) return r;
       }
     } catch (_) {}
     try {
-      const rates = typeof window.fxGetEurRates === "function" ? window.fxGetEurRates() : {};
-      const aud = Number(rates?.AUD);
-      if (Number.isFinite(aud) && aud > 0) return 1 / aud;
+      const rates = eurRates();
+      const fromPerEur = f === "EUR" ? 1 : Number(rates?.[f]);
+      const toPerEur = t === "EUR" ? 1 : Number(rates?.[t]);
+      if (Number.isFinite(fromPerEur) && fromPerEur > 0 && Number.isFinite(toPerEur) && toPerEur > 0) return toPerEur / fromPerEur;
     } catch (_) {}
     return null;
   }
@@ -89,22 +143,22 @@
       .sort((a, b) => String(a.date).localeCompare(String(b.date)));
   }
 
-  function readHistoryCache() {
+  function readHistoryCache(from, to) {
     try {
-      const parsed = JSON.parse(localStorage.getItem(LS.historyCache) || "null");
+      const parsed = JSON.parse(localStorage.getItem(pairCacheKey(from, to)) || localStorage.getItem(LS.historyCache) || "null");
       const rows = normalizeAudEurRows(parsed?.rows);
       if (rows.length >= 20) return { rows, source: "cache" };
     } catch (_) {}
     return null;
   }
 
-  function writeHistoryCache(rows) {
+  function writeHistoryCache(rows, from, to) {
     try {
-      localStorage.setItem(LS.historyCache, JSON.stringify({ asOf: todayISO(), rows: normalizeAudEurRows(rows) }));
+      localStorage.setItem(pairCacheKey(from, to), JSON.stringify({ asOf: todayISO(), rows: normalizeAudEurRows(rows) }));
     } catch (_) {}
   }
 
-  async function fetchAudEurHistoryFromDb() {
+  async function fetchAudEurHistoryFromDb(from, to) {
     if (!window.sb?.from) return null;
     const end = todayISO();
     const start = addDaysISO(end, -180);
@@ -115,28 +169,28 @@
       .gte("as_of", start)
       .order("as_of", { ascending: true });
     if (error || !Array.isArray(data)) return null;
-    const rows = normalizeAudEurRows(data.map((row) => {
-      const audPerEur = Number(row?.rates?.AUD);
-      return { date: row?.as_of, rate: audPerEur > 0 ? 1 / audPerEur : null };
-    }));
+    const rows = normalizeAudEurRows(data.map((row) => ({ date: row?.as_of, rate: rateFromEurRow(row, from, to) })));
     if (rows.length >= 60) return { rows, source: "db" };
     return null;
   }
 
-  async function fetchAudEurHistoryFromMarket() {
+  async function fetchAudEurHistoryFromMarket(from, to) {
+    const f = normCur(from);
+    const t = normCur(to);
+    if (!f || !t || f === t) return { rows: fallbackSeries(1), source: "local" };
     const end = todayISO();
     const start = addDaysISO(end, -180);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 6000);
     try {
-      const res = await fetch(`https://api.frankfurter.dev/v1/${start}..${end}?base=AUD&symbols=EUR`, {
+      const res = await fetch(`https://api.frankfurter.dev/v1/${start}..${end}?base=${encodeURIComponent(f)}&symbols=${encodeURIComponent(t)}`, {
         signal: controller.signal,
         cache: "no-store",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       const rows = normalizeAudEurRows(Object.entries(json?.rates || {})
-        .map(([date, row]) => ({ date, rate: Number(row?.EUR) }))
+        .map(([date, row]) => ({ date, rate: Number(row?.[t]) }))
       );
       if (rows.length < 20) throw new Error("history_too_short");
       return { rows, source: "frankfurter" };
@@ -145,16 +199,16 @@
     }
   }
 
-  async function fetchAudEurHistory() {
+  async function fetchAudEurHistory(from, to) {
     let fromDb = null;
-    try { fromDb = await fetchAudEurHistoryFromDb(); } catch (_) { fromDb = null; }
+    try { fromDb = await fetchAudEurHistoryFromDb(from, to); } catch (_) { fromDb = null; }
     if (fromDb?.rows?.length) return fromDb;
     try {
-      const fromMarket = await fetchAudEurHistoryFromMarket();
-      writeHistoryCache(fromMarket.rows);
+      const fromMarket = await fetchAudEurHistoryFromMarket(from, to);
+      writeHistoryCache(fromMarket.rows, from, to);
       return fromMarket;
     } catch (e) {
-      const cached = readHistoryCache();
+      const cached = readHistoryCache(from, to);
       if (cached) return cached;
       throw e;
     }
@@ -221,7 +275,9 @@
       dot.setAttribute("cx", String(x));
       dot.setAttribute("cy", String(y));
       dot.style.display = "";
-      tip.textContent = `${row.date} - 1 AUD = ${Number(row.rate).toFixed(4)} EUR`;
+      const from = host.dataset.fromCurrency || "AUD";
+      const to = host.dataset.toCurrency || "EUR";
+      tip.textContent = `${row.date} - 1 ${from} = ${Number(row.rate).toFixed(4)} ${to}`;
       tip.style.display = "block";
       const tipX = Math.min(Math.max(8, ev.clientX - rect.left + 12), Math.max(8, rect.width - tip.offsetWidth - 8));
       tip.style.left = `${tipX}px`;
@@ -261,12 +317,18 @@
 
   function currentRateFromRows(rows) {
     const list = normalizeAudEurRows(rows);
-    return Number(list[list.length - 1]?.rate) > 0 ? Number(list[list.length - 1].rate) : currentAudEurRate();
+    const from = readCurrency(LS.fromCurrency, periodCurrency());
+    const to = readCurrency(LS.toCurrency, accountCurrency());
+    return Number(list[list.length - 1]?.rate) > 0 ? Number(list[list.length - 1].rate) : currentPairRate(from, to);
   }
 
-  function readDecisionInputs(rows) {
+  function readDecisionInputs(rows, allowManualRate) {
+    const fromCurrency = readCurrency(LS.fromCurrency, periodCurrency());
+    const toCurrency = readCurrency(LS.toCurrency, accountCurrency());
     const weeklyIncomeAud = Math.max(0, readNumber(LS.weeklyIncome, 1200));
-    const rate = currentRateFromRows(rows) || 0;
+    const marketRate = (Number(normalizeAudEurRows(rows).slice(-1)[0]?.rate) > 0 ? Number(normalizeAudEurRows(rows).slice(-1)[0].rate) : currentPairRate(fromCurrency, toCurrency)) || 0;
+    const rateOverride = allowManualRate ? readOptionalNumber(LS.rateOverride) : null;
+    const rate = rateOverride || marketRate;
     const mode = readText(LS.scaleMode, "percent") === "amount" ? "amount" : "percent";
     const horizonDays = readHorizonDays();
     const weeklyIncomeEur = weeklyIncomeAud * rate;
@@ -280,7 +342,7 @@
     const localAudSafetyRatio = mode === "amount" && weeklyIncomeAud > 0
       ? clamp01(audSafetyAmount / weeklyIncomeAud)
       : clamp01(readNumber(LS.audSafety, 0.35));
-    return { weeklyIncomeAud, mode, horizonDays, rate, weeklyIncomeEur, eurNeedAmount, audSafetyAmount, eurNeedRatio, localAudSafetyRatio };
+    return { weeklyIncomeAud, mode, horizonDays, rate, marketRate, rateOverride, fromCurrency, toCurrency, weeklyIncomeEur, eurNeedAmount, audSafetyAmount, eurNeedRatio, localAudSafetyRatio };
   }
 
   function buildRecommendationExplanation(decision, inputs) {
@@ -298,7 +360,7 @@
     if (inputs.eurNeedRatio >= 0.65) parts.push(T("fxdecision.reason.eur_need_high"));
     else if (inputs.eurNeedRatio <= 0.25) parts.push(T("fxdecision.reason.eur_need_low"));
     if (inputs.localAudSafetyRatio >= 0.6) parts.push(T("fxdecision.reason.aud_safety_high"));
-    if (inputs.mode === "amount") parts.push(T("fxdecision.reason.target_hold", { amount: money(inputs.audSafetyAmount || 0, "AUD") }));
+    if (inputs.mode === "amount") parts.push(T("fxdecision.reason.target_hold", { amount: money(inputs.audSafetyAmount || 0, inputs.fromCurrency || "AUD") }));
     if (volatility >= 0.03) parts.push(T("fxdecision.reason.volatility", { percent: (volatility * 100).toFixed(2) }));
     return parts;
   }
@@ -320,6 +382,14 @@
     const confidence = decision.confidence || { level: "medium", score: 55 };
     const confidenceStyle = confidenceTone(confidence.level);
     const effectiveInputs = inputs || readDecisionInputs(rows);
+    const fromCurrency = effectiveInputs.fromCurrency || "AUD";
+    const toCurrency = effectiveInputs.toCurrency || "EUR";
+    host.dataset.fromCurrency = fromCurrency;
+    host.dataset.toCurrency = toCurrency;
+    const marketRate = Number(effectiveInputs.marketRate || currentRateFromRows(rows) || 0);
+    const rateOverride = Number(effectiveInputs.rateOverride || 0);
+    const isManualRate = rateOverride > 0;
+    const allowManualRate = source === "local" || !marketRate;
     const chartRows = normalizeAudEurRows(rows).slice(-effectiveInputs.horizonDays);
     const coverageStart = chartRows[0]?.date || rows[0]?.date || "";
     const coverageEnd = chartRows[chartRows.length - 1]?.date || rows[rows.length - 1]?.date || "";
@@ -330,22 +400,22 @@
     const safetyPercent = Math.round(effectiveInputs.localAudSafetyRatio * 100);
     const controlsHtml = scaleMode === "amount" ? `
           <div class="field">
-            <label>${esc(T("fxdecision.eur_need_amount"))}</label>
+            <label>${esc(T("fxdecision.eur_need_amount", { to: toCurrency }))}</label>
             <input id="tb-fx-decision-eur-need-amount" type="number" min="0" step="10" value="${esc(Math.round(effectiveInputs.eurNeedAmount || 0))}" />
             <div class="muted" style="font-size:12px;margin-top:4px;">${esc(T("fxdecision.equivalent_percent", { percent: needPercent }))}</div>
           </div>
           <div class="field">
-            <label>${esc(T("fxdecision.aud_hold_amount"))}</label>
+            <label>${esc(T("fxdecision.aud_hold_amount", { from: fromCurrency }))}</label>
             <input id="tb-fx-decision-aud-safety-amount" type="number" min="0" step="50" value="${esc(Math.round(effectiveInputs.audSafetyAmount || 0))}" />
             <div class="muted" style="font-size:12px;margin-top:4px;">${esc(T("fxdecision.equivalent_percent", { percent: safetyPercent }))}</div>
           </div>
     ` : `
           <div class="field">
-            <label>${esc(T("fxdecision.eur_need"))} <span class="muted">${needPercent}%</span></label>
+            <label>${esc(T("fxdecision.eur_need", { to: toCurrency }))} <span class="muted">${needPercent}%</span></label>
             <input id="tb-fx-decision-eur-need" type="range" min="0" max="100" step="5" value="${needPercent}" />
           </div>
           <div class="field">
-            <label>${esc(T("fxdecision.aud_safety"))} <span class="muted">${safetyPercent}%</span></label>
+            <label>${esc(T("fxdecision.aud_safety", { from: fromCurrency }))} <span class="muted">${safetyPercent}%</span></label>
             <input id="tb-fx-decision-aud-safety" type="range" min="0" max="100" step="5" value="${safetyPercent}" />
           </div>
     `;
@@ -355,13 +425,42 @@
         <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;">
           <div style="min-width:260px;flex:1;">
             <div class="muted" style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;">${esc(T("fxdecision.kicker"))}</div>
-            <h2 style="margin:4px 0 6px 0;">${esc(T("fxdecision.title"))}</h2>
-            <div class="muted">${esc(T("fxdecision.subtitle"))}</div>
+            <h2 style="margin:4px 0 6px 0;">${esc(T("fxdecision.title", { from: fromCurrency, to: toCurrency }))}</h2>
+            <div class="muted">${esc(T("fxdecision.subtitle", { from: fromCurrency, to: toCurrency }))}</div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <span class="pill" style="background:${sourceTone};border:1px solid ${sourceBorder};">${esc(sourceLabel)}</span>
             <button class="btn" type="button" id="tb-fx-decision-refresh">${esc(T("fxdecision.refresh"))}</button>
           </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:14px;padding:12px;border:1px solid rgba(0,0,0,.08);border-radius:14px;background:rgba(248,250,252,.72);">
+          <div style="grid-column:1 / -1;display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:14px;font-weight:950;">${esc(T("fxdecision.pair_title"))}</div>
+              <div class="muted" style="font-size:12px;margin-top:3px;">${esc(T("fxdecision.pair_hint"))}</div>
+            </div>
+            <div class="pill" style="background:${sourceTone};border:1px solid ${sourceBorder};">${esc(sourceLabel)}</div>
+          </div>
+          <div class="field">
+            <label>${esc(T("fxdecision.source_currency"))}</label>
+            <select id="tb-fx-decision-from">${availableCurrencies().map((cur) => `<option value="${esc(cur)}"${cur === fromCurrency ? " selected" : ""}>${esc(cur)}</option>`).join("")}</select>
+          </div>
+          <div class="field">
+            <label>${esc(T("fxdecision.target_currency"))}</label>
+            <select id="tb-fx-decision-to">${availableCurrencies().map((cur) => `<option value="${esc(cur)}"${cur === toCurrency ? " selected" : ""}>${esc(cur)}</option>`).join("")}</select>
+          </div>
+          <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;background:#fff;">
+            <div class="muted" style="font-size:12px;">${esc(T("fxdecision.auto_rate"))}</div>
+            <strong>1 ${esc(fromCurrency)} = ${rate ? rate.toFixed(4) : "--"} ${esc(toCurrency)}</strong>
+            ${isManualRate ? `<div class="muted" style="font-size:11px;margin-top:2px;">${esc(T("fxdecision.rate_manual_badge"))}</div>` : ""}
+          </div>
+          ${allowManualRate ? `
+          <div class="field">
+            <label>${esc(T("fxdecision.rate_override", { from: fromCurrency, to: toCurrency }))}</label>
+            <input id="tb-fx-decision-rate" type="number" min="0" step="0.0001" placeholder="${esc(marketRate ? marketRate.toFixed(4) : "")}" value="${esc(isManualRate ? rateOverride.toFixed(4) : "")}" />
+            <div class="muted" style="font-size:12px;margin-top:4px;">${esc(T("fxdecision.rate_override_hint", { from: fromCurrency, to: toCurrency }))}</div>
+          </div>` : ""}
         </div>
 
         <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.8fr);gap:16px;margin-top:14px;">
@@ -393,8 +492,8 @@
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;">
-                <div class="muted" style="font-size:12px;">${esc(T("fxdecision.rate"))}</div>
-                <strong>${rate ? rate.toFixed(4) : "--"} EUR</strong>
+                <div class="muted" style="font-size:12px;">${esc(T("fxdecision.rate", { from: fromCurrency, to: toCurrency }))}</div>
+                <strong>${rate ? rate.toFixed(4) : "--"} ${esc(toCurrency)}</strong>
               </div>
               <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;">
                 <div class="muted" style="font-size:12px;">${esc(T("fxdecision.score"))}</div>
@@ -406,7 +505,7 @@
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px;">
           <div class="field">
-            <label>${esc(T("fxdecision.weekly_income"))}</label>
+            <label>${esc(T("fxdecision.weekly_income", { from: fromCurrency }))}</label>
             <input id="tb-fx-decision-income" type="number" min="0" step="50" value="${esc(decision.weeklyIncomeAud)}" />
           </div>
           <div class="field">
@@ -429,26 +528,26 @@
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px;">
-          <div class="pill" style="justify-content:space-between;align-items:flex-start;border-radius:10px;"><span>${esc(T("fxdecision.if_all"))}</span><strong style="text-align:right;">${esc(money(decision.weeklyIncomeAud || 0, "AUD"))}<br>${esc(money(weeklyIncomeEur, "EUR"))}</strong></div>
-          <div class="pill" style="justify-content:space-between;align-items:flex-start;border-radius:10px;"><span>${esc(T("fxdecision.convert_now"))}</span><strong style="text-align:right;">${esc(money(convertAud, "AUD"))}<br>${esc(money(convertEur, "EUR"))}</strong></div>
-          <div class="pill" style="justify-content:space-between;align-items:flex-start;border-radius:10px;"><span>${esc(T("fxdecision.keep_aud"))}</span><strong style="text-align:right;">${esc(money(holdAud, "AUD"))}<br>${esc(money(holdEur, "EUR"))}</strong></div>
+          <div class="pill" style="justify-content:space-between;align-items:flex-start;border-radius:10px;"><span>${esc(T("fxdecision.if_all"))}</span><strong style="text-align:right;">${esc(money(decision.weeklyIncomeAud || 0, fromCurrency))}<br>${esc(money(weeklyIncomeEur, toCurrency))}</strong></div>
+          <div class="pill" style="justify-content:space-between;align-items:flex-start;border-radius:10px;"><span>${esc(T("fxdecision.convert_now"))}</span><strong style="text-align:right;">${esc(money(convertAud, fromCurrency))}<br>${esc(money(convertEur, toCurrency))}</strong></div>
+          <div class="pill" style="justify-content:space-between;align-items:flex-start;border-radius:10px;"><span>${esc(T("fxdecision.keep_aud", { from: fromCurrency }))}</span><strong style="text-align:right;">${esc(money(holdAud, fromCurrency))}<br>${esc(money(holdEur, toCurrency))}</strong></div>
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px;">
           <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:12px;background:rgba(248,250,252,.72);">
-            <div class="muted" style="font-size:12px;font-weight:800;text-transform:uppercase;">${esc(T("fxdecision.scenario.keep_all"))}</div>
-            <strong style="display:block;margin-top:6px;">${esc(money(decision.weeklyIncomeAud || 0, "AUD"))}</strong>
-            <div class="muted" style="font-size:12px;margin-top:4px;">${esc(T("fxdecision.scenario.eur_now", { amount: money(weeklyIncomeEur, "EUR") }))}</div>
+            <div class="muted" style="font-size:12px;font-weight:800;text-transform:uppercase;">${esc(T("fxdecision.scenario.keep_all", { from: fromCurrency }))}</div>
+            <strong style="display:block;margin-top:6px;">${esc(money(decision.weeklyIncomeAud || 0, fromCurrency))}</strong>
+            <div class="muted" style="font-size:12px;margin-top:4px;">${esc(T("fxdecision.scenario.eur_now", { amount: money(weeklyIncomeEur, toCurrency) }))}</div>
           </div>
           <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:12px;background:rgba(236,253,245,.72);">
             <div class="muted" style="font-size:12px;font-weight:800;text-transform:uppercase;">${esc(T("fxdecision.scenario.convert_now"))}</div>
-            <strong style="display:block;margin-top:6px;">${esc(money(convertAud, "AUD"))}</strong>
-            <div class="muted" style="font-size:12px;margin-top:4px;">${esc(T("fxdecision.scenario.receive_eur", { amount: money(convertEur, "EUR") }))}</div>
+            <strong style="display:block;margin-top:6px;">${esc(money(convertAud, fromCurrency))}</strong>
+            <div class="muted" style="font-size:12px;margin-top:4px;">${esc(T("fxdecision.scenario.receive_eur", { amount: money(convertEur, toCurrency) }))}</div>
           </div>
           <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:12px;background:rgba(239,246,255,.72);">
             <div class="muted" style="font-size:12px;font-weight:800;text-transform:uppercase;">${esc(T("fxdecision.scenario.after"))}</div>
-            <strong style="display:block;margin-top:6px;">${esc(money(holdAud, "AUD"))}</strong>
-            <div class="muted" style="font-size:12px;margin-top:4px;">${esc(T("fxdecision.scenario.eur_now", { amount: money(holdEur, "EUR") }))}</div>
+            <strong style="display:block;margin-top:6px;">${esc(money(holdAud, fromCurrency))}</strong>
+            <div class="muted" style="font-size:12px;margin-top:4px;">${esc(T("fxdecision.scenario.eur_now", { amount: money(holdEur, toCurrency) }))}</div>
           </div>
         </div>
 
@@ -466,10 +565,22 @@
     bindChartTooltip(host, chartRows);
 
     const rerender = () => {
+      const selectedFrom = normCur(document.getElementById("tb-fx-decision-from")?.value || fromCurrency);
+      const selectedTo = normCur(document.getElementById("tb-fx-decision-to")?.value || toCurrency);
+      if (selectedFrom !== fromCurrency || selectedTo !== toCurrency) {
+        writeText(LS.fromCurrency, selectedFrom);
+        writeText(LS.toCurrency, selectedTo);
+        writeOptionalNumber(LS.rateOverride, null);
+        host.dataset.ready = "0";
+        renderFxDecision(true);
+        return;
+      }
       const income = Number(document.getElementById("tb-fx-decision-income")?.value || 1200);
       const mode = document.getElementById("tb-fx-decision-scale-mode")?.value === "amount" ? "amount" : "percent";
       const horizon = Number(document.getElementById("tb-fx-decision-horizon")?.value || readHorizonDays());
-      const rateNow = currentRateFromRows(rows) || 0;
+      const manualRate = Number(document.getElementById("tb-fx-decision-rate")?.value || 0);
+      writeOptionalNumber(LS.rateOverride, allowManualRate ? manualRate : null);
+      const rateNow = (allowManualRate && Number.isFinite(manualRate) && manualRate > 0 ? manualRate : currentRateFromRows(rows)) || 0;
       writeNumber(LS.weeklyIncome, income);
       writeText(LS.scaleMode, mode);
       writeNumber(LS.horizonDays, horizon);
@@ -490,7 +601,7 @@
         writeNumber(LS.eurNeedAmount, income * rateNow * readNumber(LS.eurNeed, 0.5));
         writeNumber(LS.audSafetyAmount, income * readNumber(LS.audSafety, 0.35));
       }
-      const nextInputs = readDecisionInputs(rows);
+      const nextInputs = readDecisionInputs(rows, allowManualRate);
       const next = window.Core.fxDecisionRules.computeFxDecision({
         rates: rows,
         weeklyIncomeAud: nextInputs.weeklyIncomeAud,
@@ -498,11 +609,12 @@
         localAudSafetyRatio: nextInputs.localAudSafetyRatio,
         targetHoldAud: nextInputs.mode === "amount" ? nextInputs.audSafetyAmount : null,
         horizonDays: nextInputs.horizonDays,
+        currentRate: nextInputs.rate,
       });
       renderCard(host, next, rows, source, nextInputs);
     };
 
-    ["tb-fx-decision-income", "tb-fx-decision-scale-mode", "tb-fx-decision-horizon", "tb-fx-decision-eur-need", "tb-fx-decision-aud-safety", "tb-fx-decision-eur-need-amount", "tb-fx-decision-aud-safety-amount"].forEach((id) => {
+    ["tb-fx-decision-from", "tb-fx-decision-to", "tb-fx-decision-income", "tb-fx-decision-scale-mode", "tb-fx-decision-horizon", "tb-fx-decision-rate", "tb-fx-decision-eur-need", "tb-fx-decision-aud-safety", "tb-fx-decision-eur-need-amount", "tb-fx-decision-aud-safety-amount"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) {
         el.onchange = rerender;
@@ -535,15 +647,19 @@
     let source = "local";
     let rows = [];
     try {
-      const fetched = await fetchAudEurHistory();
+      const fromCurrency = readCurrency(LS.fromCurrency, periodCurrency());
+      const toCurrency = readCurrency(LS.toCurrency, accountCurrency());
+      const fetched = await fetchAudEurHistory(fromCurrency, toCurrency);
       rows = fetched.rows;
       source = fetched.source;
     } catch (e) {
-      rows = fallbackSeries(currentAudEurRate());
+      const fromCurrency = readCurrency(LS.fromCurrency, periodCurrency());
+      const toCurrency = readCurrency(LS.toCurrency, accountCurrency());
+      rows = fallbackSeries(currentPairRate(fromCurrency, toCurrency));
       source = "local";
     }
 
-    const inputs = readDecisionInputs(rows);
+    const inputs = readDecisionInputs(rows, source === "local");
     const decision = window.Core.fxDecisionRules.computeFxDecision({
       rates: rows,
       weeklyIncomeAud: inputs.weeklyIncomeAud,
@@ -551,6 +667,7 @@
       localAudSafetyRatio: inputs.localAudSafetyRatio,
       targetHoldAud: inputs.mode === "amount" ? inputs.audSafetyAmount : null,
       horizonDays: inputs.horizonDays,
+      currentRate: inputs.rate,
     });
     renderCard(host, decision, rows, source, inputs);
   }

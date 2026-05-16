@@ -172,13 +172,13 @@
         rangeEnd: _el('analysis-range-end')?.value || '',
         scope: _el('analysis-scope')?.value || 'budget',
         mode: _el('analysis-mode')?.value || 'planned',
-        currencyMode: _el('analysis-currency')?.value || 'period',
+        currencyMode: _el('analysis-currency')?.value || 'account',
         excludedCats: Array.from(excludedCats)
       }));
     } catch (_) {}
   }
 
-  function _selectedCurrencyMode(){ return _el('analysis-currency')?.value || 'period'; }
+  function _selectedCurrencyMode(){ return _el('analysis-currency')?.value || 'account'; }
   function _excludedCategorySet(){ return new Set(Array.from(excludedCats)); }
   function _segmentForDate(dateISO){
     const ds = _norm(dateISO);
@@ -1057,7 +1057,7 @@ categoryTxMap, subcategoryTxMap
     const periodId = _getSelectedPeriodId();
     const scope = _el('analysis-scope')?.value || 'budget';
     const mode = _el('analysis-mode')?.value || 'planned';
-    const currencyMode = _el('analysis-currency')?.value || 'period';
+    const currencyMode = _el('analysis-currency')?.value || 'account';
     const rangeText = `${model.start || '—'} → ${model.end || '—'}`;
     const scopeText = scope === 'all' ? _t('analysis.scope.budget_out') : (scope === 'out' ? _t('analysis.scope.out') : _t('analysis.scope.budget'));
     const modeText = mode === 'expenses' ? _t('analysis.mode.expenses') : _t('analysis.mode.planned');
@@ -2215,7 +2215,7 @@ function _openTxDrilldown(kind, key, model){
     _toggleRangeBox();
     if (_el('analysis-scope')) _el('analysis-scope').value = ['budget','out','all'].includes(filters.scope) ? filters.scope : 'budget';
     if (_el('analysis-mode')) _el('analysis-mode').value = ['expenses','planned'].includes(filters.mode) ? filters.mode : 'planned';
-    if (_el('analysis-currency')) _el('analysis-currency').value = ['period','account'].includes(filters.currencyMode) ? filters.currencyMode : 'period';
+    if (_el('analysis-currency')) _el('analysis-currency').value = ['period','account'].includes(filters.currencyMode) ? filters.currencyMode : 'account';
     excludePanelOpen = false;
     _renderCategoryExcludeChips(Array.isArray(filters.excludedCats) ? filters.excludedCats : []);
     _ensureEvents();

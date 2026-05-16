@@ -55,7 +55,7 @@ function syncTabsForRole() {
   const isAdmin = (window.sbRole === 'admin');
   const simple = (typeof window.tbIsSimpleMode === 'function') ? window.tbIsSimpleMode() : false;
   const tab = document.getElementById('tab-members');
-  if (tab) tab.style.display = (isAdmin && !simple) ? 'block' : 'none';
+  if (tab) tab.style.display = (isAdmin && !simple) ? 'flex' : 'none';
   // if user is not admin and is currently on members view, bounce to dashboard
   if ((!isAdmin || simple) && (typeof activeView !== 'undefined') && activeView === 'members') showView('dashboard');
 }

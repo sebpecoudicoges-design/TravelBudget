@@ -177,6 +177,7 @@ container.innerHTML = "";
 
 // Actions
 const actions = document.createElement("div");
+actions.className = "tb-wallet-actions";
 actions.style.display = "flex";
 actions.style.gap = "10px";
 actions.style.flexWrap = "wrap";

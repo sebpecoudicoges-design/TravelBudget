@@ -1956,10 +1956,7 @@
       border-radius:18px !important;
       padding:15px !important;
     }
-    #wallets-container > div:first-child{
-      position:sticky;
-      top:154px;
-      z-index:6;
+    .tb-wallet-actions{
       padding:10px;
       margin:-4px -4px 12px !important;
       border:1px solid var(--bp-line);
@@ -1968,7 +1965,7 @@
       box-shadow:0 12px 28px rgba(15,23,42,.07);
       backdrop-filter:blur(14px);
     }
-    body.theme-dark #wallets-container > div:first-child{
+    body.theme-dark .tb-wallet-actions{
       background:rgba(15,23,42,.84);
     }
     #wallets-list{
@@ -2504,10 +2501,7 @@
       .tx{ grid-template-columns:1fr; }
       .field{ min-width:min(100%, 168px); }
       .dashboard-grid-main{ grid-template-columns:1fr; }
-      #wallets-container > div:first-child{
-        position:relative;
-        top:auto;
-      }
+      .tb-wallet-actions{ position:relative; top:auto; }
       .wallet-item > div:first-child{ grid-template-columns:1fr; }
       .wallet-item > div:first-child > div:last-child{ width:100%; }
       .dashboard-analysis-cta{ grid-template-columns:1fr; }
@@ -2919,18 +2913,23 @@
     .dashboard-analysis-cta{
       width:100%;
       min-height:0 !important;
-      display:grid !important;
-      grid-template-columns:minmax(0,.95fr) minmax(280px,1.05fr);
-      gap:18px;
-      align-items:center;
-      padding:20px !important;
+      display:block !important;
+      padding:18px 20px !important;
     }
     .dashboard-analysis-cta h2{
       font-size:clamp(22px,2.2vw,30px) !important;
+      margin:6px 0 8px !important;
     }
     .dashboard-analysis-cta p{
-      max-width:720px;
+      max-width:860px;
       line-height:1.5;
+    }
+    .dashboard-analysis-cta-copy{
+      display:flex !important;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:18px;
+      flex-wrap:wrap;
     }
     .tx-workspace-card{
       padding:18px !important;
@@ -3005,6 +3004,101 @@
       }
       #tx-list > .card:first-child > div:nth-child(2) .field{
         grid-column:span 6;
+      }
+    }
+    @media (min-width:1180px){
+      .wrap{
+        display:grid;
+        grid-template-columns:162px minmax(0,1fr);
+        gap:12px 14px;
+        align-items:start;
+      }
+      .wrap > header{
+        grid-column:1 / -1;
+      }
+      .wrap > #kpi{
+        grid-column:2;
+        grid-row:2;
+      }
+      .wrap > .app-tabs{
+        grid-column:1;
+        grid-row:2 / span 30;
+        position:sticky !important;
+        top:108px !important;
+        z-index:18;
+        display:flex !important;
+        flex-direction:column;
+        align-self:start;
+        max-height:calc(100vh - 132px);
+        overflow:auto;
+        margin:0 !important;
+        padding:9px !important;
+        gap:6px !important;
+      }
+      .wrap > .app-tabs::-webkit-scrollbar{ width:0; height:0; }
+      .app-tabs .tab{
+        width:calc(100% - 4px);
+        margin-inline:2px;
+        justify-content:flex-start;
+        min-height:34px;
+        border-radius:999px !important;
+        overflow:hidden;
+        white-space:nowrap;
+        padding:0 9px !important;
+        font-size:11.5px;
+      }
+      .app-tabs .tab::before{
+        content:"";
+        width:6px;
+        height:6px;
+        border-radius:999px;
+        margin-right:6px;
+        background:rgba(99,113,138,.35);
+        flex:0 0 auto;
+      }
+      .app-tabs .tab.active::before{
+        background:#fff;
+      }
+      .app-tabs .tab:nth-child(2)::before{ background:#38bdf8; }
+      .app-tabs .tab:nth-child(3)::before{ background:#a78bfa; }
+      .app-tabs .tab:nth-child(4)::before{ background:#f59e0b; }
+      .app-tabs .tab:nth-child(5)::before{ background:#10b981; }
+      .app-tabs .tab:nth-child(6)::before{ background:#06b6d4; }
+      .app-tabs .tab:nth-child(7)::before{ background:#f97316; }
+      .app-tabs .tab:nth-child(8)::before{ background:#64748b; }
+      .app-tabs .tab:nth-child(9)::before{ background:#ec4899; }
+      .app-tabs .tab:nth-child(10)::before{ background:#14b8a6; }
+      .wrap > #view-dashboard,
+      .wrap > #view-transactions,
+      .wrap > #view-settings,
+      .wrap > #view-analysis,
+      .wrap > #view-assets,
+      .wrap > #view-documents,
+      .wrap > #view-help,
+      .wrap > #view-trip,
+      .wrap > #view-members{
+        grid-column:2;
+        grid-row:auto;
+        min-width:0;
+      }
+      .dashboard-grid-main{
+        grid-template-columns:minmax(0,1fr) minmax(320px,.46fr) !important;
+      }
+      .dashboard-panel--budget{
+        min-height:0 !important;
+      }
+      #daily-budget-container{
+        display:grid !important;
+        grid-template-columns:1fr;
+        gap:10px !important;
+      }
+      #daily-budget-container > .card{
+        grid-column:auto;
+      }
+      #wallets-list{
+        display:flex !important;
+        flex-direction:column;
+        gap:10px !important;
       }
     }
     @media (max-width:720px){
@@ -3275,8 +3369,8 @@
             <div class="analysis-filter-group">
               <label for="analysis-currency" data-t="analysis.filter.currency">Devise</label>
               <select id="analysis-currency">
-                <option value="period" data-t="analysis.currency.period">Devise période</option>
                 <option value="account" data-t="analysis.currency.account">Devise du compte</option>
+                <option value="period" data-t="analysis.currency.period">Devise période</option>
               </select>
             </div>
             <div class="analysis-filter-group" style="grid-column: 1 / -1;">

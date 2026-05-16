@@ -166,6 +166,22 @@
     }
     .metric strong { display: block; font-size: 20px; line-height: 1.1; }
     .metric span { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; font-weight: 780; }
+    .auth-entry {
+      margin-top: 18px;
+      border: 1px solid rgba(15, 23, 42, .10);
+      border-radius: 22px;
+      padding: 14px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      background: rgba(255, 255, 255, .78);
+      box-shadow: 0 18px 44px rgba(15, 23, 42, .08);
+    }
+    .auth-entry strong { display: block; font-size: 15px; }
+    .auth-entry span { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .auth-entry-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .btn.compact { min-height: 38px; padding: 0 13px; font-size: 13px; }
 
     .product-frame {
       border: 1px solid rgba(15, 23, 42, .12);
@@ -416,6 +432,8 @@
       .product-frame { padding: 8px; border-radius: 22px; }
       .mock-grid, .result-kpis, .module-proof, .metrics { grid-template-columns: 1fr; }
       .hero-actions .btn { width: 100%; }
+      .auth-entry { grid-template-columns: 1fr; }
+      .auth-entry-actions { justify-content: flex-start; }
       .cta { flex-direction: column; align-items: flex-start; }
       .nav-actions .lang-switch { display: none; }
       .floating-lang { display: inline-flex; }
@@ -461,6 +479,16 @@
         <div class="hero-actions">
           <a class="btn primary" href="#demo" data-i18n="hero.primary">Jouer avec la demo</a>
           <a class="btn" href="#modules" data-i18n="hero.secondary">Voir les modules</a>
+        </div>
+        <div class="auth-entry">
+          <div>
+            <strong data-i18n="auth.title">Acceder a l'app complete</strong>
+            <span data-i18n="auth.body">La demo est publique. Pour synchroniser tes donnees, cree un compte ou connecte-toi.</span>
+          </div>
+          <div class="auth-entry-actions">
+            <a class="btn compact primary" href="/" data-i18n="auth.signup">Creer un compte</a>
+            <a class="btn compact" href="/" data-i18n="auth.login">Se connecter</a>
+          </div>
         </div>
         <div class="metrics">
           <div class="metric"><strong data-i18n="metric.fx.title">Multi-devise</strong><span data-i18n="metric.fx.body">AUD, EUR, JPY et devise de base</span></div>
@@ -641,6 +669,7 @@
           "hero.title": "Le cockpit budget pour voyager, travailler et garder le cap.",
           "hero.lead": "BudgetPacker relie cashflow, voyages, documents, patrimoine, split expenses et decisions multi-devise dans une interface pensee pour la vraie vie nomade.",
           "hero.primary": "Jouer avec la demo", "hero.secondary": "Voir les modules",
+          "auth.title": "Acceder a l'app complete", "auth.body": "La demo est publique. Pour synchroniser tes donnees, cree un compte ou connecte-toi.", "auth.signup": "Creer un compte", "auth.login": "Se connecter",
           "metric.fx.title": "Multi-devise", "metric.fx.body": "AUD, EUR, JPY et devise de base",
           "metric.docs.title": "Documents Hub", "metric.docs.body": "Tags, dossiers, preuves liees",
           "metric.trip.title": "Voyage", "metric.trip.body": "Budget, split, remboursements",
@@ -672,6 +701,7 @@
           "hero.title": "The budget cockpit for travel, work and everyday decisions.",
           "hero.lead": "BudgetPacker connects cashflow, trips, documents, assets, split expenses and currency decisions in one interface designed for a nomad life.",
           "hero.primary": "Play with the demo", "hero.secondary": "Explore modules",
+          "auth.title": "Open the full app", "auth.body": "The demo is public. To sync your own data, create an account or sign in.", "auth.signup": "Create account", "auth.login": "Sign in",
           "metric.fx.title": "Multi-currency", "metric.fx.body": "AUD, EUR, JPY and base currency",
           "metric.docs.title": "Documents Hub", "metric.docs.body": "Tags, folders, linked proofs",
           "metric.trip.title": "Travel", "metric.trip.body": "Budget, split, reimbursements",
