@@ -231,6 +231,7 @@
     if (input) input.placeholder = _t("help.search_placeholder");
 
     renderQuickSetup(root);
+    try { if (typeof window.tbInjectGuidedTourHelpButton === "function") window.tbInjectGuidedTourHelpButton(); } catch (_) {}
     renderGuides(root);
 
     const list = document.getElementById("help-list");
@@ -277,15 +278,92 @@
       guides.style.marginBottom = "12px";
       root.insertBefore(guides, root.querySelector(".form-row"));
     }
+    const l = _lang();
+    const tx = (fr, en) => l === "en" ? en : fr;
     const guideDefs = [
-      { kt: "help.guide.create_trip.title", kb: "help.guide.create_trip.body", action: "settings", target: "#s-period-name" },
-      { kt: "help.guide.wallets.title", kb: "help.guide.wallets.body", action: "dashboard", target: "#wallets-container" },
-      { kt: "help.guide.transactions.title", kb: "help.guide.transactions.body", action: "transactions", target: "#transactions-root" },
-      { kt: "help.guide.analysis.title", kb: "help.guide.analysis.body", action: "analysis", target: "#analysis-root" },
-      { kt: "help.guide.recurring.title", kb: "help.guide.recurring.body", action: "settings", target: "#recurring-root" },
-      { kt: "help.guide.documents.title", kb: "help.guide.documents.body", action: "documents", target: "#documents-root" },
-      { kt: "help.guide.assets.title", kb: "help.guide.assets.body", action: "assets", target: "#assets-root" },
-      { kt: "help.guide.trip.title", kb: "help.guide.trip.body", action: "trip", target: "#trip-root" }
+      {
+        kt: "help.guide.create_trip.title",
+        kb: "help.guide.create_trip.body",
+        action: "settings",
+        target: "#s-period-name",
+        cmds: [
+          { cmd: "settings_trip", label: tx("Paramétrer voyage", "Set trip") },
+          { cmd: "settings_periods", label: tx("Périodes", "Periods") }
+        ]
+      },
+      {
+        kt: "help.guide.wallets.title",
+        kb: "help.guide.wallets.body",
+        action: "dashboard",
+        target: "#wallets-container",
+        cmds: [
+          { cmd: "wallet_create", label: tx("Ajouter wallet", "Add wallet") },
+          { cmd: "tx_add_expense", label: tx("Ajouter dépense", "Add expense") },
+          { cmd: "tx_add_income", label: tx("Ajouter entrée", "Add income") }
+        ]
+      },
+      {
+        kt: "help.guide.transactions.title",
+        kb: "help.guide.transactions.body",
+        action: "transactions",
+        target: "#view-transactions",
+        cmds: [
+          { cmd: "tx_add_expense", label: tx("Ajouter transaction", "Add transaction") },
+          { cmd: "tx_edit_first", label: tx("Modifier une ligne", "Edit a row") },
+          { cmd: "tx_bulk", label: tx("Classement en lot", "Bulk classify") }
+        ]
+      },
+      {
+        kt: "help.guide.analysis.title",
+        kb: "help.guide.analysis.body",
+        action: "analysis",
+        target: "#analysis-root",
+        cmds: [
+          { cmd: "analysis_budget", label: tx("Lire budget", "Read budget") },
+          { cmd: "analysis_fx", label: tx("Décision change", "FX decision") }
+        ]
+      },
+      {
+        kt: "help.guide.recurring.title",
+        kb: "help.guide.recurring.body",
+        action: "settings",
+        target: "#recurring-root",
+        cmds: [
+          { cmd: "recurring_create", label: tx("Nouvelle règle", "New rule") },
+          { cmd: "recurring_list", label: tx("Voir règles", "View rules") }
+        ]
+      },
+      {
+        kt: "help.guide.documents.title",
+        kb: "help.guide.documents.body",
+        action: "documents",
+        target: "#documents-root",
+        cmds: [
+          { cmd: "documents_upload", label: tx("Ajouter document", "Add document") },
+          { cmd: "documents_tags", label: tx("Tags / dossiers", "Tags / folders") }
+        ]
+      },
+      {
+        kt: "help.guide.assets.title",
+        kb: "help.guide.assets.body",
+        action: "assets",
+        target: "#assets-root",
+        cmds: [
+          { cmd: "asset_create", label: tx("Ajouter asset", "Add asset") },
+          { cmd: "asset_docs", label: tx("Documents liés", "Linked docs") }
+        ]
+      },
+      {
+        kt: "help.guide.trip.title",
+        kb: "help.guide.trip.body",
+        action: "trip",
+        target: "#trip-root",
+        cmds: [
+          { cmd: "trip_member", label: tx("Ajouter membre", "Add member") },
+          { cmd: "trip_expense", label: tx("Ajouter dépense", "Add expense") },
+          { cmd: "trip_balances", label: tx("Balances", "Balances") }
+        ]
+      }
     ];
     const label = (action) => {
       if (action === "settings") return _t("help.action.open_settings");
@@ -297,6 +375,7 @@
       if (action === "assets") return _t("assistant.action.assets");
       return action;
     };
+    const guideLabel = _lang() === "en" ? "Interactive guide" : "Guide interactif";
     guides.innerHTML = `
       <div style="font-weight:700; margin-bottom:10px;">${_esc(_t("help.guides.title"))}</div>
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px;">
@@ -306,6 +385,8 @@
             <div class="muted" style="margin-bottom:10px;">${_t(g.kb)}</div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <button class="btn" style="padding:6px 10px; font-size:12px;" data-help-action="${_esc(g.action)}" data-help-target="${_esc(g.target)}">${_esc(label(g.action))}</button>
+              <button class="btn primary" style="padding:6px 10px; font-size:12px;" data-help-tour="${_esc(g.action)}">${_esc(guideLabel)}</button>
+              ${(g.cmds || []).map(cmd => `<button class="btn" style="padding:6px 10px; font-size:12px;" data-help-cmd="${_esc(cmd.cmd)}">${_esc(cmd.label)}</button>`).join("")}
             </div>
           </div>`).join("")}
       </div>`;
@@ -313,6 +394,22 @@
       guides.__tbBound = true;
       guides.addEventListener("click", ev => {
         const btn = ev.target && ev.target.closest && ev.target.closest("[data-help-action]");
+        const tourBtn = ev.target && ev.target.closest && ev.target.closest("[data-help-tour]");
+        const cmdBtn = ev.target && ev.target.closest && ev.target.closest("[data-help-cmd]");
+        if (cmdBtn) {
+          ev.preventDefault();
+          _runHelpCommand(cmdBtn.getAttribute("data-help-cmd") || "");
+          return;
+        }
+        if (tourBtn) {
+          ev.preventDefault();
+          const mode = tourBtn.getAttribute("data-help-tour") || "";
+          try {
+            if (typeof window.tbStartGuidedTour === "function") window.tbStartGuidedTour({ mode: mode });
+            else _runHelpAction(mode, "");
+          } catch (_) {}
+          return;
+        }
         if (!btn) return;
         ev.preventDefault();
         _runHelpAction(btn.getAttribute("data-help-action") || "", btn.getAttribute("data-help-target") || "");
@@ -357,6 +454,136 @@
   function _runHelpAction(action, targetSel) {
     try { if (typeof window.showView === "function" && action) showView(action); } catch (_) {}
     _scrollAndHighlight(targetSel);
+  }
+
+  function _firstWalletId() {
+    try {
+      const rows = Array.isArray(window.state?.wallets) ? window.state.wallets : [];
+      const activeTravelId = String(window.state?.activeTravelId || "");
+      const found = rows.find(w => !activeTravelId || String(w.travelId || w.travel_id || "") === activeTravelId) || rows[0];
+      return found ? String(found.id || "") : "";
+    } catch (_) { return ""; }
+  }
+
+  function _firstTransactionId() {
+    try {
+      const rows = Array.isArray(window.state?.transactions) ? window.state.transactions : [];
+      const found = rows.find(t => !t?.isInternal && !t?.is_internal) || rows[0];
+      return found ? String(found.id || "") : "";
+    } catch (_) { return ""; }
+  }
+
+  function _afterView(action, cb) {
+    try { if (typeof window.showView === "function" && action) showView(action); } catch (_) {}
+    setTimeout(() => { try { cb && cb(); } catch (e) { console.warn("[Help] command failed", e?.message || e); } }, 220);
+  }
+
+  function _highlightFirst(selectors) {
+    const list = Array.isArray(selectors) ? selectors : [selectors];
+    for (const sel of list) {
+      const el = sel ? document.querySelector(sel) : null;
+      if (el) { _scrollAndHighlight(sel); return true; }
+    }
+    return false;
+  }
+
+  function _runHelpCommand(cmd) {
+    const c = String(cmd || "").trim();
+    if (!c) return;
+    if (c === "wallet_create") {
+      _afterView("dashboard", () => {
+        if (typeof window.createWallet === "function") window.createWallet();
+        else _scrollAndHighlight("#wallets-container");
+      });
+      return;
+    }
+    if (c === "tx_add_expense" || c === "tx_add_income") {
+      _afterView("dashboard", () => {
+        const type = c === "tx_add_income" ? "income" : "expense";
+        const walletId = _firstWalletId();
+        if (typeof window.openTxModal === "function") window.openTxModal(type, walletId || null);
+        else _scrollAndHighlight("#wallets-container");
+      });
+      return;
+    }
+    if (c === "tx_edit_first") {
+      _afterView("transactions", () => {
+        const txId = _firstTransactionId();
+        if (txId && typeof window.openTxEditModal === "function") window.openTxEditModal(txId);
+        else _highlightFirst(["[data-tx-id]", "#tx-list", "#view-transactions"]);
+      });
+      return;
+    }
+    if (c === "tx_bulk") {
+      _afterView("transactions", () => _highlightFirst(["#tx-bulk-panel", "#tx-list", "#view-transactions .card", "#view-transactions"]));
+      return;
+    }
+    if (c === "settings_trip") {
+      _afterView("settings", () => _highlightFirst(["#s-period-name", "#tb-inline-travel-start", "#settings-root", "#view-settings"]));
+      return;
+    }
+    if (c === "settings_periods") {
+      _afterView("settings", () => _highlightFirst([".tb-period-card", "#s-start", "#settings-root", "#view-settings"]));
+      return;
+    }
+    if (c === "recurring_create") {
+      _afterView("settings", () => {
+        if (typeof window.openRecurringRuleModal === "function") window.openRecurringRuleModal();
+        else _highlightFirst(["#recurring-root", "#tb-recurring-card", "#view-settings"]);
+      });
+      return;
+    }
+    if (c === "recurring_list") {
+      _afterView("settings", () => _highlightFirst(["#recurring-root", "#tb-recurring-card", ".tb-recurring-stack", "#view-settings"]));
+      return;
+    }
+    if (c === "analysis_budget") {
+      _afterView("analysis", () => _highlightFirst(["#analysis-root", "#view-analysis"]));
+      return;
+    }
+    if (c === "analysis_fx") {
+      _afterView("analysis", () => _highlightFirst(["#fx-decision-root", ".fx-decision-card", "#view-analysis"]));
+      return;
+    }
+    if (c === "documents_upload") {
+      _afterView("documents", () => _highlightFirst(["#documents-root input[type='file']", ".tb-doc-drop", "#documents-root", "#view-documents"]));
+      return;
+    }
+    if (c === "documents_tags") {
+      _afterView("documents", () => _highlightFirst(["#documents-root select", ".tb-doc-filters", "#documents-root", "#view-documents"]));
+      return;
+    }
+    if (c === "asset_create") {
+      _afterView("assets", () => {
+        const btn = document.querySelector("[data-tb-asset-open]");
+        if (btn) btn.click();
+        else _highlightFirst(["#assets-root", "#view-assets"]);
+      });
+      return;
+    }
+    if (c === "asset_docs") {
+      _afterView("assets", () => _highlightFirst(["[data-tb-asset-docs]", "#assets-root", "#view-assets"]));
+      return;
+    }
+    if (c === "trip_member") {
+      _afterView("trip", () => {
+        const btn = document.getElementById("trip-add-member");
+        if (btn) btn.click();
+        else _highlightFirst(["#trip-root", "#view-trip"]);
+      });
+      return;
+    }
+    if (c === "trip_expense") {
+      _afterView("trip", () => {
+        const btn = document.getElementById("trip-add-exp");
+        if (btn) btn.click();
+        else _highlightFirst(["#trip-root", "#view-trip"]);
+      });
+      return;
+    }
+    if (c === "trip_balances") {
+      _afterView("trip", () => _highlightFirst(["#trip-balances", "#trip-root", "#view-trip"]));
+    }
   }
 
   function _scrollAndHighlight(sel) {

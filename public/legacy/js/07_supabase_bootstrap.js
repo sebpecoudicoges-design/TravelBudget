@@ -190,17 +190,258 @@ function showFirstTimeWizardModal(defaults) {
   });
 }
 
+showFirstTimeWizardModal = function showFirstTimeWizardModalFintech(defaults) {
+  const d = defaults || {};
+  return new Promise(function (resolve) {
+    if (!document.getElementById("tb-first-run-style")) {
+      const style = document.createElement("style");
+      style.id = "tb-first-run-style";
+      style.textContent = `
+        .tb-first-run-overlay{position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.56);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);}
+        .tb-first-run{width:min(980px,100%);max-height:min(760px,calc(100vh - 32px));overflow:auto;border:1px solid rgba(148,163,184,.28);border-radius:28px;background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(248,250,252,.94));box-shadow:0 28px 90px rgba(15,23,42,.32);}
+        .tb-first-run-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:24px 26px 18px;border-bottom:1px solid rgba(148,163,184,.18);}
+        .tb-first-run-kicker{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#2563eb;margin-bottom:8px;}
+        .tb-first-run-title{font-size:28px;line-height:1.05;font-weight:950;color:#0f172a;margin:0;}
+        .tb-first-run-copy{max-width:620px;margin:9px 0 0;color:#64748b;font-size:14px;line-height:1.45;}
+        .tb-first-run-close{border:1px solid rgba(148,163,184,.34);background:#fff;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer;color:#0f172a;box-shadow:0 10px 24px rgba(15,23,42,.08);}
+        .tb-first-run-body{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:18px;padding:20px 26px 26px;}
+        .tb-first-run-main{display:flex;flex-direction:column;gap:14px;}
+        .tb-first-run-section{border:1px solid rgba(148,163,184,.24);border-radius:22px;background:rgba(255,255,255,.76);padding:16px;box-shadow:0 16px 42px rgba(15,23,42,.06);}
+        .tb-first-run-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
+        .tb-first-run-step{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:900;color:#0f172a;}
+        .tb-first-run-dot{width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f2e74,#2563eb);color:#fff;font-size:12px;}
+        .tb-first-run-hint{font-size:12px;color:#64748b;}
+        .tb-first-run-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+        .tb-first-run-field{display:flex;flex-direction:column;gap:7px;min-width:0;}
+        .tb-first-run-field label{font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#64748b;}
+        .tb-first-run-field input,.tb-first-run-field select{width:100%;box-sizing:border-box;border:1px solid rgba(148,163,184,.34);border-radius:16px;background:#fff;padding:13px 14px;color:#0f172a;font-weight:800;outline:none;box-shadow:0 10px 24px rgba(15,23,42,.04);}
+        .tb-first-run-field input:focus,.tb-first-run-field select:focus{border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+        .tb-first-run-fx{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:end;}
+        .tb-first-run-btn{border:1px solid rgba(148,163,184,.34);background:#fff;border-radius:16px;padding:12px 14px;font-weight:900;color:#0f172a;cursor:pointer;box-shadow:0 12px 28px rgba(15,23,42,.08);}
+        .tb-first-run-btn.primary{border-color:transparent;background:linear-gradient(135deg,#0f2e74,#2563eb);color:#fff;box-shadow:0 16px 34px rgba(37,99,235,.28);}
+        .tb-first-run-wallets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+        .tb-wallet-choice{border:1px solid rgba(148,163,184,.24);border-radius:20px;padding:14px;background:linear-gradient(180deg,#fff,#f8fafc);}
+        .tb-wallet-choice.is-disabled{opacity:.54;}
+        .tb-wallet-choice-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px;font-weight:950;color:#0f172a;}
+        .tb-wallet-choice-head input{width:18px;height:18px;}
+        .tb-first-run-side{position:sticky;top:0;align-self:start;border-radius:24px;padding:18px;background:linear-gradient(145deg,#0f172a,#173b8f 58%,#0891b2);color:#fff;box-shadow:0 22px 58px rgba(15,23,42,.26);}
+        .tb-first-run-side small{display:block;color:rgba(255,255,255,.72);font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
+        .tb-first-run-summary{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
+        .tb-first-run-summary-row{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.14);font-size:13px;}
+        .tb-first-run-summary-row span{color:rgba(255,255,255,.72);}
+        .tb-first-run-summary-row strong{text-align:right;color:#fff;}
+        .tb-first-run-actions{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:16px;}
+        .tb-first-run-error{display:none;margin-top:12px;border:1px solid rgba(244,63,94,.28);background:rgba(255,241,242,.9);color:#be123c;border-radius:16px;padding:10px 12px;font-size:13px;font-weight:800;}
+        .tb-first-run-error.is-visible{display:block;}
+        @media(max-width:820px){.tb-first-run-body{grid-template-columns:1fr}.tb-first-run-side{position:relative}.tb-first-run-grid,.tb-first-run-wallets{grid-template-columns:1fr}.tb-first-run-title{font-size:24px}.tb-first-run-fx{grid-template-columns:1fr}}
+      `;
+      document.head.appendChild(style);
+    }
+
+    const overlay = document.createElement("div");
+    overlay.className = "tb-first-run-overlay";
+    const card = document.createElement("div");
+    card.className = "tb-first-run";
+    const tr = (fr, en) => String(window.TB_LANG || "fr").toLowerCase() === "en" ? en : fr;
+    const currencyChoices = ["EUR", "AUD", "USD", "GBP", "CAD", "JPY", "THB", "VND", "LAK", "IDR", "NZD"];
+    const options = (selected) => {
+      const cur = String(selected || "EUR").trim().toUpperCase();
+      const list = currencyChoices.includes(cur) ? currencyChoices : [cur].concat(currencyChoices);
+      return list.map((c) => `<option value="${_wizEsc(c)}" ${c === cur ? "selected" : ""}>${_wizEsc(c)}</option>`).join("");
+    };
+    card.innerHTML = `
+      <div class="tb-first-run-head">
+        <div>
+          <div class="tb-first-run-kicker">${tr("Première utilisation", "First setup")}</div>
+          <h2 class="tb-first-run-title">${tr("Configure ton espace budget", "Set up your budget space")}</h2>
+          <p class="tb-first-run-copy">${tr("On crée ton voyage, ta période de budget et tes premiers wallets. Tu pourras tout modifier ensuite dans Settings.", "We will create your trip, budget period and first wallets. You can edit everything later in Settings.")}</p>
+        </div>
+        <button id="wizClose" class="tb-first-run-close" type="button">${tr("Plus tard", "Later")}</button>
+      </div>
+      <div class="tb-first-run-body">
+        <div class="tb-first-run-main">
+          <section class="tb-first-run-section">
+            <div class="tb-first-run-section-head">
+              <div class="tb-first-run-step"><span class="tb-first-run-dot">1</span> ${tr("Voyage et budget", "Trip and budget")}</div>
+              <div class="tb-first-run-hint">${tr("Base de calcul", "Calculation base")}</div>
+            </div>
+            <div class="tb-first-run-grid">
+              <div class="tb-first-run-field"><label for="wizStart">${tr("Début", "Start")}</label><input id="wizStart" type="date" value="${_wizEsc(d.start || "")}"></div>
+              <div class="tb-first-run-field"><label for="wizEnd">${tr("Fin", "End")}</label><input id="wizEnd" type="date" value="${_wizEsc(d.end || "")}"></div>
+              <div class="tb-first-run-field"><label for="wizCur">${tr("Devise période", "Period currency")}</label><select id="wizCur">${options(d.baseCurrency || "EUR")}</select></div>
+              <div class="tb-first-run-field"><label for="wizDaily">${tr("Budget par jour", "Daily budget")}</label><input id="wizDaily" type="number" step="0.01" value="${_wizEsc(String((d.dailyBudgetBase !== undefined) ? d.dailyBudgetBase : 50))}"></div>
+            </div>
+          </section>
+
+          <section class="tb-first-run-section">
+            <div class="tb-first-run-section-head">
+              <div class="tb-first-run-step"><span class="tb-first-run-dot">2</span> ${tr("Taux de change", "Exchange rate")}</div>
+              <div id="wizFxHint" class="tb-first-run-hint">${tr("Auto si disponible", "Auto if available")}</div>
+            </div>
+            <div class="tb-first-run-fx">
+              <button id="wizFetchEcb" class="tb-first-run-btn" type="button">${tr("Récupérer le taux", "Fetch rate")}</button>
+              <div class="tb-first-run-field"><label for="wizRate">${tr("1 EUR vaut", "1 EUR equals")}</label><input id="wizRate" type="number" step="0.000001" placeholder="Ex: 1.627" value="${_wizEsc(d.eurBaseRate ? String(d.eurBaseRate) : "1")}"></div>
+            </div>
+          </section>
+
+          <section class="tb-first-run-section">
+            <div class="tb-first-run-section-head">
+              <div class="tb-first-run-step"><span class="tb-first-run-dot">3</span> ${tr("Wallets de départ", "Starting wallets")}</div>
+              <div class="tb-first-run-hint">${tr("Cash et banque", "Cash and bank")}</div>
+            </div>
+            <div class="tb-first-run-wallets">
+              <div id="wizCashCard" class="tb-wallet-choice">
+                <label class="tb-wallet-choice-head"><span>Cash</span><input id="wizHasCash" type="checkbox" ${d.hasCash ? "checked" : ""}></label>
+                <div class="tb-first-run-grid">
+                  <div class="tb-first-run-field"><label for="wizCashAmt">${tr("Montant", "Amount")}</label><input id="wizCashAmt" type="number" step="0.01" value="${_wizEsc(String((d.cashAmount !== undefined) ? d.cashAmount : ""))}"></div>
+                  <div class="tb-first-run-field"><label for="wizCashCur">${tr("Devise", "Currency")}</label><select id="wizCashCur">${options(d.cashCurrency || d.baseCurrency || "EUR")}</select></div>
+                </div>
+              </div>
+              <div id="wizBankCard" class="tb-wallet-choice">
+                <label class="tb-wallet-choice-head"><span>${tr("Compte bancaire", "Bank account")}</span><input id="wizHasBank" type="checkbox" ${d.hasBank ? "checked" : ""}></label>
+                <div class="tb-first-run-grid">
+                  <div class="tb-first-run-field"><label for="wizBankAmt">${tr("Solde", "Balance")}</label><input id="wizBankAmt" type="number" step="0.01" value="${_wizEsc(String((d.bankAmount !== undefined) ? d.bankAmount : ""))}"></div>
+                  <div class="tb-first-run-field"><label for="wizBankCur">${tr("Devise", "Currency")}</label><select id="wizBankCur">${options(d.bankCurrency || "EUR")}</select></div>
+                </div>
+              </div>
+            </div>
+            <div id="wizError" class="tb-first-run-error"></div>
+          </section>
+        </div>
+
+        <aside class="tb-first-run-side">
+          <small>${tr("Résumé", "Summary")}</small>
+          <h3 style="margin:0;font-size:24px;line-height:1.1;">${tr("Prêt à démarrer", "Ready to start")}</h3>
+          <div class="tb-first-run-summary">
+            <div class="tb-first-run-summary-row"><span>${tr("Période", "Period")}</span><strong id="wizSummaryDates">-</strong></div>
+            <div class="tb-first-run-summary-row"><span>Devise</span><strong id="wizSummaryCur">-</strong></div>
+            <div class="tb-first-run-summary-row"><span>Budget/jour</span><strong id="wizSummaryDaily">-</strong></div>
+            <div class="tb-first-run-summary-row"><span>Wallets</span><strong id="wizSummaryWallets">-</strong></div>
+          </div>
+          <div class="tb-first-run-actions"><button id="wizCreate" class="tb-first-run-btn primary" type="button">${tr("Créer mon espace", "Create my space")}</button></div>
+        </aside>
+      </div>`;
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    function $(sel) { return card.querySelector(sel); }
+    function showError(msg) {
+      const el = $("#wizError");
+      if (!el) return;
+      el.textContent = msg || "";
+      el.classList.toggle("is-visible", !!msg);
+    }
+    function upperCurrencyInput(input) {
+      if (!input) return;
+      input.value = String(input.value || "").trim().toUpperCase().slice(0, 3);
+    }
+    function updateSummary() {
+      const start = String($("#wizStart").value || "").trim();
+      const end = String($("#wizEnd").value || "").trim();
+      const cur = String($("#wizCur").value || "").trim().toUpperCase() || "-";
+      const daily = Number($("#wizDaily").value);
+      const wallets = [];
+      if ($("#wizHasCash").checked) wallets.push("Cash");
+      if ($("#wizHasBank").checked) wallets.push("Banque");
+      $("#wizSummaryDates").textContent = start && end ? `${start} -> ${end}` : "-";
+      $("#wizSummaryCur").textContent = cur;
+      $("#wizSummaryDaily").textContent = Number.isFinite(daily) ? `${daily} ${cur}` : "-";
+      $("#wizSummaryWallets").textContent = wallets.length ? wallets.join(" + ") : "Aucun";
+    }
+    function syncWalletRows() {
+      const cashOn = !!$("#wizHasCash").checked;
+      const bankOn = !!$("#wizHasBank").checked;
+      $("#wizCashCard").classList.toggle("is-disabled", !cashOn);
+      $("#wizBankCard").classList.toggle("is-disabled", !bankOn);
+      $("#wizCashAmt").disabled = !cashOn;
+      $("#wizCashCur").disabled = !cashOn;
+      $("#wizBankAmt").disabled = !bankOn;
+      $("#wizBankCur").disabled = !bankOn;
+      updateSummary();
+    }
+
+    syncWalletRows();
+    $("#wizHasCash").addEventListener("change", syncWalletRows);
+    $("#wizHasBank").addEventListener("change", syncWalletRows);
+    ["#wizStart", "#wizEnd", "#wizDaily"].forEach((sel) => $(sel).addEventListener("input", updateSummary));
+    ["#wizCur", "#wizCashCur", "#wizBankCur"].forEach((sel) => $(sel).addEventListener("change", function () {
+      updateSummary();
+    }));
+
+    $("#wizClose").addEventListener("click", function () {
+      overlay.remove();
+      resolve(null);
+    });
+
+    $("#wizFetchEcb").addEventListener("click", async function () {
+      const cur = String($("#wizCur").value || "").trim().toUpperCase();
+      $("#wizFxHint").textContent = tr("Recherche du taux...", "Fetching rate...");
+      try {
+        const r = await getAutoFxEurTo(cur);
+        if (!r) {
+          $("#wizFxHint").textContent = tr("Taux indisponible pour ", "Rate unavailable for ") + cur + tr(", saisie manuelle.", ", enter it manually.");
+          return;
+        }
+        $("#wizRate").value = String(r);
+        $("#wizFxHint").textContent = "FX OK: 1 EUR = " + r + " " + cur;
+      } catch (e) {
+        console.warn(e);
+        $("#wizFxHint").textContent = tr("FX inaccessible, saisie manuelle.", "FX unavailable, enter it manually.");
+      }
+    });
+
+    $("#wizCreate").addEventListener("click", function () {
+      showError("");
+      const start = String($("#wizStart").value || "").trim();
+      const end = String($("#wizEnd").value || "").trim();
+      const baseCurrency = String($("#wizCur").value || "").trim().toUpperCase();
+      const dailyBudgetBase = Number($("#wizDaily").value);
+      const eurBaseRate = Number($("#wizRate").value);
+
+      if (!start || !end) return showError(tr("Renseigne une date de début et une date de fin.", "Enter a start and end date."));
+      if (end < start) return showError(tr("La date de fin doit être après la date de début.", "End date must be after start date."));
+      if (!baseCurrency || baseCurrency.length !== 3) return showError(tr("La devise période doit contenir 3 lettres.", "Period currency must be 3 letters."));
+      if (!(Number.isFinite(dailyBudgetBase) && dailyBudgetBase >= 0)) return showError(tr("Le budget par jour doit être un montant valide.", "Daily budget must be a valid amount."));
+      if (baseCurrency !== "EUR" && !(Number.isFinite(eurBaseRate) && eurBaseRate > 0)) {
+        return showError(tr("Renseigne le taux : 1 EUR = X ", "Enter the rate: 1 EUR = X ") + baseCurrency + ".");
+      }
+
+      const hasCash = !!$("#wizHasCash").checked;
+      const cashAmount = Number($("#wizCashAmt").value);
+      const cashCurrency = String($("#wizCashCur").value || "").trim().toUpperCase() || baseCurrency;
+      const hasBank = !!$("#wizHasBank").checked;
+      const bankAmount = Number($("#wizBankAmt").value);
+      const bankCurrency = String($("#wizBankCur").value || "").trim().toUpperCase() || "EUR";
+
+      overlay.remove();
+      resolve({
+        start: start,
+        end: end,
+        baseCurrency: baseCurrency,
+        eurBaseRate: (baseCurrency === "EUR") ? 1 : eurBaseRate,
+        dailyBudgetBase: dailyBudgetBase,
+        fxMode: (baseCurrency === "EUR") ? "fixed" : (Number.isFinite(eurBaseRate) ? "live" : "fixed"),
+        wallets: {
+          cash: hasCash ? { name: "Cash", type: "cash", currency: cashCurrency, balance: Number.isFinite(cashAmount) ? cashAmount : 0 } : null,
+          bank: hasBank ? { name: "Compte bancaire", type: "bank", currency: bankCurrency, balance: Number.isFinite(bankAmount) ? bankAmount : 0 } : null
+        }
+      });
+    });
+  });
+};
+
 async function runFirstTimeWizard() {
   const today = toLocalISODate(new Date());
   const defaults = {
     start: today,
     end: toLocalISODate(addDays(new Date(), 20)),
-    baseCurrency: "THB",
-    dailyBudgetBase: 900,
-    eurBaseRate: "",
+    baseCurrency: "EUR",
+    dailyBudgetBase: 50,
+    eurBaseRate: "1",
     hasCash: true,
     cashAmount: 0,
-    cashCurrency: "THB",
+    cashCurrency: "EUR",
     hasBank: true,
     bankAmount: 0,
     bankCurrency: "EUR"
@@ -210,6 +451,25 @@ async function runFirstTimeWizard() {
 // --- end onboarding wizard ---
 
 async function ensureBootstrap(opts = {}) {
+  if (!sbUser) return;
+  const uid = String(sbUser.id || "");
+  if (window.__TB_BOOTSTRAP_PROMISE__ && window.__TB_BOOTSTRAP_UID__ === uid) {
+    return await window.__TB_BOOTSTRAP_PROMISE__;
+  }
+
+  window.__TB_BOOTSTRAP_UID__ = uid;
+  window.__TB_BOOTSTRAP_PROMISE__ = _tbEnsureBootstrapImpl(opts)
+    .finally(() => {
+      if (window.__TB_BOOTSTRAP_UID__ === uid) {
+        window.__TB_BOOTSTRAP_PROMISE__ = null;
+        window.__TB_BOOTSTRAP_UID__ = "";
+      }
+    });
+
+  return await window.__TB_BOOTSTRAP_PROMISE__;
+}
+
+async function _tbEnsureBootstrapImpl(opts = {}) {
   if (!sbUser) return;
   const refreshToken = Number(opts?.refreshToken || window.__TB_REFRESH_TOKEN__ || 0);
   const today = toLocalISODate(new Date());
@@ -321,9 +581,9 @@ async function ensureBootstrap(opts = {}) {
   // If user cancels: keep minimal defaults
   const start = (cfg && cfg.start) ? cfg.start : today;
   const end = (cfg && cfg.end) ? cfg.end : toLocalISODate(addDays(new Date(), 20));
-  const baseCur = String((cfg && cfg.baseCurrency) ? cfg.baseCurrency : "THB").toUpperCase();
-  const eurBaseRate = (cfg && Number.isFinite(cfg.eurBaseRate)) ? cfg.eurBaseRate : (baseCur === "EUR" ? 1 : 36.0);
-  const daily = (cfg && Number.isFinite(cfg.dailyBudgetBase)) ? cfg.dailyBudgetBase : 900;
+  const baseCur = String((cfg && cfg.baseCurrency) ? cfg.baseCurrency : "EUR").toUpperCase();
+  const eurBaseRate = (cfg && Number.isFinite(cfg.eurBaseRate)) ? cfg.eurBaseRate : 1;
+  const daily = (cfg && Number.isFinite(cfg.dailyBudgetBase)) ? cfg.dailyBudgetBase : 50;
 
 // Create travel first
 const { data: travelRow, error: travelErr } = await sb
@@ -387,6 +647,7 @@ if (cfg && cfg.wallets) {
         {
           user_id: sbUser.id,
           travel_id: travelRow.id,
+          period_id: p1.id,
         },
         cfg.wallets.cash
       )
@@ -399,6 +660,7 @@ if (cfg && cfg.wallets) {
         {
           user_id: sbUser.id,
           travel_id: travelRow.id,
+          period_id: p1.id,
         },
         cfg.wallets.bank
       )
@@ -846,7 +1108,8 @@ const txPromise = (earlyTxPromise && String(storedActiveTravelId || "") === Stri
           const { error: seedCatErr } = await sb.rpc(seedRpc);
           if (seedCatErr) throw seedCatErr;
           const seedMapRpc = TB_CONST?.RPCS?.seed_default_analytic_category_mappings || 'seed_default_analytic_category_mappings';
-          await sb.rpc(seedMapRpc);
+          const { error: seedMapErr } = await sb.rpc(seedMapRpc);
+          if (seedMapErr) console.warn('[categories] seed analytic mappings failed', seedMapErr?.message || seedMapErr);
           const reload = await sb
             .from(TB_CONST.TABLES.categories)
             .select("id,name,color,sort_order")

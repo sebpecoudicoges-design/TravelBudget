@@ -1091,8 +1091,8 @@ if (isBudgetOnlyInternalTransferFee) return false;
   const bulkSubcategoryOptions = _txBulkSubcategoryOptionsHtml(bulkCommonCategory, '');
 
   const bulkToolbarHtml = `
-    <div class="card" style="margin-bottom:10px;padding:12px;display:grid;gap:10px;">
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <div class="card tx-bulk-toolbar">
+      <div class="tx-bulk-head">
         <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
           <input type="checkbox" ${bulkAllChecked ? 'checked' : ''} onchange="_txBulkToggleAll(this.checked)" />
           ${_txT("transactions.bulk.select_visible")}
@@ -1100,15 +1100,17 @@ if (isBudgetOnlyInternalTransferFee) return false;
         <span class="muted">${_txT("transactions.bulk.selection")} : <strong id="tx-bulk-count">${bulkCount}</strong></span>
         <span class="muted">${_txT("transactions.bulk.common_category")} : <strong id="tx-bulk-common-category">${escapeHTML(bulkCommonCategory || _txT("transactions.bulk.mixed"))}</strong></span>
       </div>
-      <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
-        <div class="field" style="min-width:220px;">
+      <div class="tx-bulk-controls">
+        <div class="field">
           <label>${_txT("transactions.bulk.new_category")}</label>
           <select id="tx-bulk-category" onchange="_txBulkSyncControls()">${bulkCategoryOptions}</select>
         </div>
-        <div class="field" style="min-width:220px;">
+        <div class="field">
           <label>${_txT("transactions.bulk.new_subcategory")}</label>
           <select id="tx-bulk-subcategory">${bulkSubcategoryOptions}</select>
         </div>
+      </div>
+      <div class="tx-bulk-actions">
         <button class="btn primary" type="button" onclick="applyBulkTxClassification()" ${bulkCount ? '' : 'disabled'}>${_txT("transactions.bulk.apply")}</button>
         <button class="btn" type="button" onclick="openInternalTransferModal()">
           ${_txT("transactions.action.internal_transfer")}

@@ -36,10 +36,28 @@ async function signUp() {
   const pass = document.getElementById("auth-pass").value;
   if (!email || !pass) return showAuth(true, "Email/mot de passe requis.");
 
-  const { error } = await sb.auth.signUp({ email, password: pass });
+  const { data, error } = await sb.auth.signUp({ email, password: pass });
   if (error) return showAuth(true, error.message);
 
-  showAuth(true, "Compte créé. Si confirmation email activée, confirme puis connecte-toi.");
+  const user = data?.user || null;
+  const session = data?.session || null;
+
+  if (!session || !user) {
+    return showAuth(true, "Compte créé. Connecte-toi pour terminer l'initialisation.");
+  }
+
+  sbUser = user;
+
+  try {
+    await ensureBootstrap();
+    await refreshFromServer();
+    showAuth(false);
+    showView("dashboard");
+    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("03_ui_auth.js:signup");
+    else if (typeof renderAll === "function") renderAll();
+  } catch (e) {
+    showAuth(true, `Compte créé, mais l'initialisation a échoué : ${e?.message || e}`);
+  }
 }
 
 async function signOut() {
@@ -59,4 +77,3 @@ async function signOut() {
 
   showAuth(true, "Déconnecté.");
 }
-

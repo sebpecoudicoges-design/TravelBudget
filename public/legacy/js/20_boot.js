@@ -72,6 +72,7 @@ window.onload = async function () {
 
   try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:onload"); } catch (_) {}
   window.__TB_BOOTING = true;
+  window.__TB_BOOT_COMPLETED__ = false;
   const __tbBootStartedAt = Date.now();
   try { tbShowBootOverlay("Initialisation de l’application"); } catch (_) {}
 
@@ -126,6 +127,7 @@ window.onload = async function () {
     try {
       tbShowBootOverlay("Changement de compte… synchronisation");
       showView("dashboard");
+      if (typeof ensureBootstrap === "function") await ensureBootstrap();
       await refreshFromServer({ force: false });
       safeShowAuth(false);
     } catch (e) {
@@ -211,6 +213,7 @@ const _refreshPromise = (typeof refreshFromServer === "function")
   } finally {
     // Release coalesced renders scheduled during boot
     window.__TB_BOOTING = false;
+    window.__TB_BOOT_COMPLETED__ = true;
     try { if (typeof window.tbReleaseBootRenders === "function") window.tbReleaseBootRenders();
   if (window.__TB_BOOT_NEEDS_CASHFLOW_CURVE && typeof tbRequestCashflowCurveRender === "function") {
     window.__TB_BOOT_NEEDS_CASHFLOW_CURVE = false;
@@ -231,5 +234,6 @@ const _refreshPromise = (typeof refreshFromServer === "function")
         TB_PERF.flush("boot");
       }
     } catch (_) {}
+    try { if (typeof window.tbMaybeStartGuidedTour === "function") window.tbMaybeStartGuidedTour(); } catch (_) {}
   }
 };
