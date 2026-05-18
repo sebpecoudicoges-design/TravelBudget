@@ -133,5 +133,10 @@ function renderAll() {
     return;
   }
 
+  if (view === "sport") {
+    safeCall("Sport", () => { if (typeof window.renderSport === "function") return window.renderSport("renderAll"); }, { containerId: "view-sport" });
+    return;
+  }
+
   // other views (trip/members/help): their render is triggered by showView()
 }

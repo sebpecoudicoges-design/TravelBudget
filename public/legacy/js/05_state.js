@@ -35,6 +35,9 @@ function tbMakeInitialState() {
     analysisAuditRows: [],
     analysisMappingByTxId: {},
     categoriesRows: [],
+    sportSessions: [],
+    sportSessionItems: [],
+    sportSets: [],
   };
 }
 
@@ -421,6 +424,9 @@ function ensureStateIntegrity() {
   state.budgetSegments = Array.isArray(state.budgetSegments) ? state.budgetSegments : [];
   state.categories = Array.isArray(state.categories) ? state.categories : [];
   state.categorySubcategories = Array.isArray(state.categorySubcategories) ? state.categorySubcategories : [];
+  state.sportSessions = Array.isArray(state.sportSessions) ? state.sportSessions : [];
+  state.sportSessionItems = Array.isArray(state.sportSessionItems) ? state.sportSessionItems : [];
+  state.sportSets = Array.isArray(state.sportSets) ? state.sportSets : [];
   state.hiddenCategories = Array.isArray(state.hiddenCategories) ? state.hiddenCategories : [];
   if (state.hiddenCategories.length === 0) {
     const lsHidden = loadHiddenCategoriesFromLocalStorage();
@@ -818,4 +824,3 @@ function sumsPaidCommittedEUR() {
   }
   return { paid, committed };
 }
-

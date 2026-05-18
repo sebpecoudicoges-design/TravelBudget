@@ -1,4 +1,4 @@
-window.__TB_BUILD = '9.7.5';
+window.__TB_BUILD = '9.7.4.1';
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -48,6 +48,9 @@ window.__TB_BUILD = '9.7.5';
     documents: "documents",
     transaction_documents: "transaction_documents",
     inbox_items: "inbox_items",
+    sport_sessions: "sport_sessions",
+    sport_session_items: "sport_session_items",
+    sport_sets: "sport_sets",
   });
 
   const COLS = Object.freeze({
@@ -233,6 +236,10 @@ window.__TB_BUILD = '9.7.5';
     documents_tag: "travelbudget_documents_tag_v1",
     documents_sort: "travelbudget_documents_sort_v1",
     documents_collapsed_folders: "travelbudget_documents_collapsed_folders_v1",
+    sport_plan: "travelbudget_sport_plan_v1",
+    sport_body_weight: "travelbudget_sport_body_weight_v1",
+    sport_body_height: "travelbudget_sport_body_height_v1",
+    sport_history: "travelbudget_sport_history_v1",
   });
 
 
