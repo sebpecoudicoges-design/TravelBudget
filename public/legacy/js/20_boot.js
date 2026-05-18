@@ -107,6 +107,7 @@ window.onload = async function () {
   try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:palette"); } catch (_) {}
 
   sb.auth.onAuthStateChange(async (_event, session) => {
+    const authEvent = String(_event || "").toUpperCase();
     const prevUid = sbUser?.id || "";
     sbUser = session?.user || null;
     const nextUid = sbUser?.id || "";
@@ -118,11 +119,20 @@ window.onload = async function () {
     }
 
     if (!sbUser) {
+      if (authEvent !== "SIGNED_OUT" && !scope?.changed) return;
       safeShowAuth(true, "Session expirée. Reconnecte-toi.");
       return;
     }
 
     if (!window.__TB_BOOT_COMPLETED__) return;
+
+    const sameUserWakeEvent = !scope?.changed && (
+      authEvent === "INITIAL_SESSION"
+      || authEvent === "TOKEN_REFRESHED"
+      || authEvent === "USER_UPDATED"
+      || authEvent === "SIGNED_IN"
+    );
+    if (sameUserWakeEvent) return;
 
     try {
       tbShowBootOverlay("Changement de compte… synchronisation");
