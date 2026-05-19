@@ -22,6 +22,7 @@ function tbMakeInitialState() {
     travels: [],          // V9
     activeTravelId: null, // V9
     recurringRules: [],   // V9
+    tripNetBalances: [],
     periods: [],
     budgetSegments: [],
     categories: [],

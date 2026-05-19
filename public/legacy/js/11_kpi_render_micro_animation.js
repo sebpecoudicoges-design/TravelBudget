@@ -34,6 +34,50 @@ function _txAffectsCashKpi(tx) {
   return (p === undefined) ? true : !!p;
 }
 
+function _kpiNormText(s) {
+  try {
+    return String(s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  } catch (_) {
+    return String(s || "").toLowerCase().trim();
+  }
+}
+
+function _kpiIsInternalMovementTx(tx) {
+  if (!tx) return false;
+  if (tx.internalTransferId || tx.internal_transfer_id) return true;
+  if (tx.isInternal || tx.is_internal) return true;
+  try {
+    if (typeof window.tbIsInternalMovement === "function" && window.tbIsInternalMovement(tx)) return true;
+  } catch (_) {}
+  const cat = _kpiNormText(tx.category);
+  const label = _kpiNormText(tx.label);
+  return cat === "mouvement interne"
+    || cat === "internal movement"
+    || label.includes("[internal]")
+    || label.includes("mouvement interne");
+}
+
+function _kpiIsTripLinkedTx(tx) {
+  return !!(tx?.tripExpenseId || tx?.trip_expense_id || tx?.tripShareLinkId || tx?.trip_share_link_id);
+}
+
+function _kpiIsCashPendingProjectionTx(tx) {
+  if (!tx) return false;
+  if (!_txMatchesActiveTravelKpi(tx)) return false;
+  if (_kpiIsInternalMovementTx(tx)) return false;
+  if (_kpiIsTripLinkedTx(tx)) return false;
+  if (_txAffectsCashKpi(tx)) return false;
+  const type = String(tx.type || "").toLowerCase();
+  if (type !== "income" && type !== "expense") return false;
+  // If no wallet is attached, this is usually a budget-only technical line.
+  if (!String(tx.walletId || tx.wallet_id || "").trim()) return false;
+  return true;
+}
+
 function remainingBudgetBaseFrom(dateStr) {
   const start = parseISODateOrNull(dateStr);
   const end = parseISODateOrNull(state.period.end);
@@ -133,11 +177,7 @@ function netPendingEUR(rangeStartISO, rangeEndISO) {
 
   let net = 0;
   for (const tx of (state.transactions || [])) {
-    if (!tx) continue;
-    if (!_txMatchesActiveTravelKpi(tx)) continue;
-    try { if (typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(tx) : !!tx.isInternal) continue; } catch (_) { if (tx.isInternal) continue; }
-    const _paid = _txAffectsCashKpi(tx);
-    if (_paid) continue;
+    if (!_kpiIsCashPendingProjectionTx(tx)) continue;
     if (!_txOverlaps(tx)) continue;
 
     const v = amountToEUR(Number(tx.amount) || 0, tx.currency);
@@ -145,6 +185,30 @@ function netPendingEUR(rangeStartISO, rangeEndISO) {
     else if (tx.type === "expense") net -= v;
   }
   return net;
+}
+
+function _kpiDatesOverlap(aStartISO, aEndISO, bStartISO, bEndISO) {
+  const as = parseISODateOrNull(aStartISO);
+  const ae = parseISODateOrNull(aEndISO || aStartISO);
+  const bs = parseISODateOrNull(bStartISO);
+  const be = parseISODateOrNull(bEndISO || bStartISO);
+  if (!as || !ae || !bs || !be) return true;
+  const a0 = clampMidnight(as);
+  const a1 = clampMidnight(ae);
+  const b0 = clampMidnight(bs);
+  const b1 = clampMidnight(be);
+  return !(a1 < b0 || a0 > b1);
+}
+
+function _kpiTripNetRowInRange(row, rangeStartISO, rangeEndISO) {
+  // Trip net balances are currently stored as a whole-trip balance. We scope them
+  // by the trip's linked period so the KPI filter does not pull unrelated trips.
+  const periodId = String(row?.periodId || row?.period_id || "");
+  if (!periodId) return true;
+  const periods = Array.isArray(state?.periods) ? state.periods : [];
+  const p = periods.find((x) => String(x?.id || "") === periodId);
+  if (!p) return true;
+  return _kpiDatesOverlap(p.start || p.start_date, p.end || p.end_date, rangeStartISO, rangeEndISO);
 }
 
 function fmtKPICompact(v) {
@@ -214,6 +278,34 @@ const todayISO = (typeof window.getDisplayDateISO === "function") ? window.getDi
     // 1 EUR = r CUR => CUR -> EUR = / r
     return a / r;
   }
+  function _tripNetBalancesEUR(dateISO, rangeStartISO, rangeEndISO) {
+    const rows = Array.isArray(state?.tripNetBalances) && state.tripNetBalances.length
+      ? state.tripNetBalances
+      : (Array.isArray(window.__tripState?.globalNetRows) ? window.__tripState.globalNetRows : []);
+    const byTrip = new Map();
+    for (const row of rows) {
+      const net = Number(row?.net || 0);
+      if (!Number.isFinite(net) || Math.abs(net) < 0.000001) continue;
+      if (!_kpiTripNetRowInRange(row, rangeStartISO, rangeEndISO)) continue;
+      const cur = String(row?.currency || state?.period?.baseCurrency || "EUR").toUpperCase();
+      let converted = null;
+      if (cur === "EUR") {
+        converted = net;
+      } else {
+        try {
+          if (typeof window.fxConvert === "function") converted = window.fxConvert(net, cur, "EUR");
+        } catch (_) {}
+      }
+      if (converted === null || !Number.isFinite(converted)) continue;
+      const key = String(row?.tripId || row?.trip_id || row?.tripName || row?.trip_name || "trip");
+      byTrip.set(key, (byTrip.get(key) || 0) + converted);
+    }
+    let out = 0;
+    for (const v of byTrip.values()) {
+      if (Math.abs(Number(v) || 0) >= 1) out += v;
+    }
+    return out;
+  }
 
   // Total wallets now in EUR
   let totalNowEUR = 0;
@@ -248,7 +340,9 @@ try {
   }
 } catch (_) {}
 
-  const pendingEUR = includeUnpaid ? (Number(netPendingEUR(horizonStartISO, horizonEndISO)) || 0) : 0;
+  const pendingEUR = includeUnpaid
+    ? ((Number(netPendingEUR(horizonStartISO, horizonEndISO)) || 0) + _tripNetBalancesEUR(todayISO, horizonStartISO, horizonEndISO))
+    : 0;
 
   // Forecast daily budget (sum of daily budgets) in EUR
   let forecastEUR = 0;
@@ -678,6 +772,33 @@ function _pilotageInsights(scopeMeta) {
     if (includePending && typeof netPendingEUR === "function") {
       pendingEUR = Number(netPendingEUR(anchorISO, endISO)) || 0;
     }
+    if (includePending) {
+      const rows = Array.isArray(state?.tripNetBalances) && state.tripNetBalances.length
+        ? state.tripNetBalances
+        : (Array.isArray(window.__tripState?.globalNetRows) ? window.__tripState.globalNetRows : []);
+      const byTrip = new Map();
+      for (const row of rows) {
+        const net = Number(row?.net || 0);
+        if (!_kpiTripNetRowInRange(row, anchorISO, endISO)) continue;
+        if (Number.isFinite(net) && Math.abs(net) > 0.000001) {
+          const cur = String(row?.currency || state?.period?.baseCurrency || "EUR").toUpperCase();
+          let converted = null;
+          try {
+            if (typeof window.fxConvert === "function") {
+              converted = window.fxConvert(net, cur, "EUR");
+              if (converted === null || !Number.isFinite(converted)) converted = window.fxConvert(net, cur, "EUR", _pilotRatesForDate(anchorISO));
+            }
+          } catch (_) {}
+          if (converted !== null && Number.isFinite(converted)) {
+            const key = String(row?.tripId || row?.trip_id || row?.tripName || row?.trip_name || "trip");
+            byTrip.set(key, (byTrip.get(key) || 0) + converted);
+          }
+        }
+      }
+      for (const v of byTrip.values()) {
+        if (Math.abs(Number(v) || 0) >= 1) pendingEUR += v;
+      }
+    }
   } catch (_) {}
 
   const balanceEUR = walletTotalEUR + pendingEUR;
@@ -875,6 +996,47 @@ function renderKPI() {
     return eur;
   }
 
+  function _toPivotStrict(amount, cur, dateISO) {
+    const a = Number(amount) || 0;
+    const from = String(cur || "EUR").toUpperCase();
+    const to = String(displayCurPivot || "EUR").toUpperCase();
+    if (from === to) return a;
+    try {
+      if (typeof window.fxConvert === "function") {
+        const direct = window.fxConvert(a, from, to);
+        if (direct !== null && isFinite(direct)) return direct;
+        const seg = (typeof getBudgetSegmentForDate === "function") ? getBudgetSegmentForDate(dateISO || today) : null;
+        const rates = (typeof fxRatesForSegment === "function")
+          ? fxRatesForSegment(seg)
+          : (typeof window.fxGetEurRates === "function" ? window.fxGetEurRates() : {});
+        const out = window.fxConvert(a, from, to, rates);
+        if (out !== null && isFinite(out)) return out;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function _tripNetBalancesPivot(dateISO, rangeStartISO, rangeEndISO) {
+    const rows = Array.isArray(state?.tripNetBalances) && state.tripNetBalances.length
+      ? state.tripNetBalances
+      : (Array.isArray(window.__tripState?.globalNetRows) ? window.__tripState.globalNetRows : []);
+    const byTrip = new Map();
+    for (const row of rows) {
+      const net = Number(row?.net || 0);
+      if (!Number.isFinite(net) || Math.abs(net) < 0.000001) continue;
+      if (!_kpiTripNetRowInRange(row, rangeStartISO, rangeEndISO)) continue;
+      const converted = _toPivotStrict(net, row?.currency || state?.period?.baseCurrency || "EUR", dateISO);
+      if (converted === null || !isFinite(converted)) continue;
+      const key = String(row?.tripId || row?.trip_id || row?.tripName || row?.trip_name || "trip");
+      byTrip.set(key, (byTrip.get(key) || 0) + converted);
+    }
+    let out = 0;
+    for (const v of byTrip.values()) {
+      if (Math.abs(Number(v) || 0) >= 1) out += v;
+    }
+    return out;
+  }
+
   // Total wallets:
   // - primary value in account base currency (pivot)
   // - secondary value in the current display segment currency (display date segment)
@@ -908,12 +1070,13 @@ function renderKPI() {
     return endISO;
   }
   const _kpiHorizonEndISO = _kpiResolveHorizonEndISO(kpiScope, displayDateISO);
-  const pendingEUR = includeUnpaid ? (Number(netPendingEUR(displayDateISO, _kpiHorizonEndISO)) || 0) : 0; // EUR
-  const pendingDisplay = includeUnpaid ? _toPivot(pendingEUR, "EUR", displayDateISO) : 0; // pivot
-  const totalDisplay = walletTotalEUR + (includeUnpaid ? pendingDisplay : 0); // kept for backward compat of internal uses
-
-  const projEndEUR = projectedEndDisplayWithOptions({ includeUnpaid, scope: kpiScope });
-  const projEndDisplay = _toPivot(projEndEUR, "EUR", displayDateISO);
+  let pendingTransactionsEUR = 0;
+  let pendingTripsDisplay = 0;
+  let pendingDisplay = 0;
+  let totalDisplay = walletTotalEUR;
+  let projEndEUR = 0;
+  let projEndDisplay = 0;
+  let pendingDetailHTML = "";
 
   // =========================
   // KPI scope selector (V6.6.91)
@@ -968,6 +1131,111 @@ function renderKPI() {
   const _labPeriod = (_lang === "en") ? "Whole period" : "Toute la période";
   const _labRange = (_lang === "en") ? "Date range…" : "Date à date…";
   const _labPer = (_lang === "en") ? "Period" : "Periode";
+
+  function _pendingTxOverlaps(tx, rangeStartISO, rangeEndISO) {
+    const ds = String(tx?.dateStart || tx?.date_start || tx?.date || "").slice(0, 10);
+    const de = String(tx?.dateEnd || tx?.date_end || ds || "").slice(0, 10);
+    return _kpiDatesOverlap(ds, de, rangeStartISO, rangeEndISO);
+  }
+
+  function _pendingAmountText(value, cur) {
+    const n = Number(value) || 0;
+    const sign = n >= 0 ? "+" : "-";
+    let amount = String(Math.round(Math.abs(n)));
+    try {
+      amount = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.abs(n));
+    } catch (_) {}
+    return `${sign} ${amount} ${cur}`;
+  }
+
+  function _pendingProjectionItems(rangeStartISO, rangeEndISO) {
+    const items = [];
+    for (const tx of (state.transactions || [])) {
+      if (!_kpiIsCashPendingProjectionTx(tx)) continue;
+      if (!_pendingTxOverlaps(tx, rangeStartISO, rangeEndISO)) continue;
+      const type = String(tx.type || "").toLowerCase();
+      const label = String(tx.label || tx.subcategory || tx.category || (type === "income" ? "Entrée prévue" : "Dépense prévue"));
+      const dateISO = String(tx.dateStart || tx.date_start || rangeStartISO || displayDateISO).slice(0, 10);
+      const amount = _toPivot(Number(tx.amount) || 0, tx.currency || "EUR", dateISO);
+      items.push({
+        kind: type === "income" ? "receive" : "pay",
+        source: type === "income" ? (_lang === "en" ? "Receivable" : "À recevoir") : (_lang === "en" ? "Payable" : "À payer"),
+        label,
+        value: type === "income" ? amount : -amount,
+      });
+    }
+
+    const tripRows = Array.isArray(state?.tripNetBalances) && state.tripNetBalances.length
+      ? state.tripNetBalances
+      : (Array.isArray(window.__tripState?.globalNetRows) ? window.__tripState.globalNetRows : []);
+    const tripItems = new Map();
+    for (const row of tripRows) {
+      const net = Number(row?.net || 0);
+      if (!Number.isFinite(net) || Math.abs(net) < 0.000001) continue;
+      if (!_kpiTripNetRowInRange(row, rangeStartISO, rangeEndISO)) continue;
+      const v = _toPivotStrict(net, row?.currency || state?.period?.baseCurrency || "EUR", rangeStartISO || displayDateISO);
+      if (v === null || !isFinite(v)) continue;
+      const tripName = String(row?.tripName || row?.trip_name || "Trip");
+      const key = String(row?.tripId || row?.trip_id || tripName);
+      const prev = tripItems.get(key) || { label: tripName, value: 0 };
+      prev.value += v;
+      tripItems.set(key, prev);
+    }
+    for (const it of tripItems.values()) {
+      if (Math.abs(Number(it.value) || 0) < 1) continue;
+      items.push({
+        kind: it.value >= 0 ? "receive" : "pay",
+        source: it.value >= 0 ? (_lang === "en" ? "Trip receivable" : "À recevoir Trip") : (_lang === "en" ? "Trip payable" : "À payer Trip"),
+        label: it.label,
+        value: it.value,
+      });
+    }
+    const grouped = new Map();
+    for (const it of items) {
+      const key = [it.kind, _kpiNormText(it.source), _kpiNormText(it.label)].join("|");
+      const prev = grouped.get(key);
+      if (prev) {
+        prev.value += Number(it.value || 0);
+        prev.count += 1;
+      } else {
+        grouped.set(key, Object.assign({ count: 1 }, it));
+      }
+    }
+    return Array.from(grouped.values())
+      .filter((it) => Math.abs(Number(it.value || 0)) >= 1)
+      .sort((a, b) => Math.abs(Number(b.value || 0)) - Math.abs(Number(a.value || 0)));
+  }
+
+  const _pendingRangeStartISO = String(_rrPilot.startISO || displayDateISO).slice(0, 10);
+  const _pendingRangeEndISO = String(_rrPilot.endISO || _kpiHorizonEndISO || displayDateISO).slice(0, 10);
+  pendingTransactionsEUR = includeUnpaid ? (Number(netPendingEUR(_pendingRangeStartISO, _pendingRangeEndISO)) || 0) : 0;
+  pendingTripsDisplay = includeUnpaid ? _tripNetBalancesPivot(displayDateISO, _pendingRangeStartISO, _pendingRangeEndISO) : 0;
+  pendingDisplay = includeUnpaid ? (_toPivot(pendingTransactionsEUR, "EUR", displayDateISO) + pendingTripsDisplay) : 0;
+  totalDisplay = walletTotalEUR + (includeUnpaid ? pendingDisplay : 0);
+  projEndEUR = projectedEndDisplayWithOptions({ includeUnpaid, scope: kpiScope, rangeStartISO: _pendingRangeStartISO, rangeEndISO: _pendingRangeEndISO });
+  projEndDisplay = _toPivot(projEndEUR, "EUR", displayDateISO);
+  if (includeUnpaid) {
+    const items = _pendingProjectionItems(_pendingRangeStartISO, _pendingRangeEndISO);
+    const max = 8;
+    const shown = items.slice(0, max);
+    const more = items.length - shown.length;
+    const empty = _lang === "en" ? "No receivable/payable item in this range." : "Aucun élément à recevoir / à payer dans cette plage.";
+    const detailLabel = _lang === "en" ? "Details" : "Détail";
+    const rangeLabel = `${_pendingRangeStartISO} → ${_pendingRangeEndISO}`;
+    pendingDetailHTML = `
+      <details class="kpi-pending-detail">
+        <summary>${escapeHTML(detailLabel)} <span>${escapeHTML(rangeLabel)}</span></summary>
+        <div class="kpi-pending-pop">
+          ${shown.length ? shown.map((it) => `
+            <div class="kpi-pending-row">
+              <span><strong>${escapeHTML(it.source)}</strong><small>${escapeHTML(it.label)}${it.count > 1 ? ` x${it.count}` : ``}</small></span>
+              <b class="${it.value >= 0 ? "pos" : "neg"}">${escapeHTML(_pendingAmountText(it.value, displayCurPivot))}</b>
+            </div>
+          `).join("") : `<div class="muted" style="font-size:12px;">${escapeHTML(empty)}</div>`}
+          ${more > 0 ? `<div class="muted" style="font-size:12px;margin-top:6px;">+${more} ${_lang === "en" ? "more" : "autre(s)"}</div>` : ``}
+        </div>
+      </details>`;
+  }
   const scopeOptionsHTML = [
     `<option value="segment">${_labSeg}</option>`,
     `<option value="period">${_labPeriod}</option>`,
@@ -1030,6 +1298,16 @@ const driver = "Dépenses";
     st.textContent = `
       .kpi-layout { grid-template-columns: minmax(360px, 470px) minmax(0, 1fr); }
       .kpi-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; }
+      .kpi-pending-detail { margin-top:8px; position:relative; }
+      .kpi-pending-detail summary { cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; color:var(--muted); }
+      .kpi-pending-detail summary::-webkit-details-marker { display:none; }
+      .kpi-pending-detail summary span { font-size:11px; opacity:.8; }
+      .kpi-pending-pop { margin-top:8px; padding:10px; border:1px solid var(--border); border-radius:14px; background:var(--panel); box-shadow:0 14px 28px rgba(15,23,42,.08); display:grid; gap:8px; }
+      .kpi-pending-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; font-size:12px; }
+      .kpi-pending-row small { display:block; margin-top:2px; color:var(--muted); line-height:1.25; }
+      .kpi-pending-row b { white-space:nowrap; }
+      .kpi-pending-row b.pos { color:#059669; }
+      .kpi-pending-row b.neg { color:#e11d48; }
 
       @media (max-width: 1100px) {
         .kpi-layout { grid-template-columns: 1fr; }
@@ -1109,6 +1387,7 @@ const driver = "Dépenses";
                 ${T("kpi.include_pending")}
                 ${includeUnpaid ? `<span style="margin-left:auto;opacity:.85;">Net: <strong style="color:var(--text);">${Math.round(pendingDisplay)} ${displayCurPivot}</strong></span>` : ``}
               </label>
+              ${pendingDetailHTML}
             </div>
 
 	            <div style="${miniCardStyle}">

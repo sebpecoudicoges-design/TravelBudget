@@ -1035,6 +1035,36 @@ const txPromise = (earlyTxPromise && String(storedActiveTravelId || "") === Stri
   }
 });
 
+  const tripNetBalancesPromise = perfPromise("supabase:q:tripNetBalances", async () => {
+  try {
+    const { data: rows, error } = await sb
+      .from(TB_CONST.TABLES.v_trip_user_net_balances)
+      .select("trip_id,trip_name,currency,paid,owed,settled_out,settled_in,net");
+    if (error) throw error;
+    const out = rows || [];
+    if (out.length) {
+      try {
+        const tripIds = Array.from(new Set(out.map((x) => String(x?.trip_id || "")).filter(Boolean)));
+        if (tripIds.length) {
+          const { data: groupRows, error: groupErr } = await sb
+            .from(TB_CONST.TABLES.trip_groups)
+            .select("id,period_id")
+            .in("id", tripIds);
+          if (groupErr) throw groupErr;
+          const periodByTripId = new Map((groupRows || []).map((x) => [String(x.id || ""), x.period_id || null]));
+          out.forEach((x) => { x.period_id = periodByTripId.get(String(x?.trip_id || "")) || null; });
+        }
+      } catch (metaErr) {
+        console.warn("[trip_groups] metadata for net balances failed (ignored)", metaErr?.message || metaErr);
+      }
+    }
+    return { rows: out, skipped: false };
+  } catch (e) {
+    console.warn("[v_trip_user_net_balances] load failed (ignored)", e?.message || e);
+    return { rows: [], skipped: false };
+  }
+});
+
   const segmentPeriodIds = ((currentView === "settings" || currentView === "analysis") ? periodsForTravel : [p])
     .map((row) => row && row.id)
     .filter(Boolean);
@@ -1147,7 +1177,7 @@ const txPromise = (earlyTxPromise && String(storedActiveTravelId || "") === Stri
 
 try {
   if (window.TB_PERF?.enabled) {
-    let q = 8; // wallets, wallet balances, transactions, segments, categories, FX/settings/travels already counted above
+    let q = 9; // wallets, wallet balances, transactions, segments, trip net, categories, FX/settings/travels already counted above
     if (shouldLoadDeferredData) q += 3; // recurring, mapping, subcategories
     if (shouldLoadGovernance) q += 2; // audit, mapping rules
     TB_PERF.count("supabaseQueries", q);
@@ -1213,6 +1243,7 @@ const [
   txRes,
   segRows,
   recurringRuleRes,
+  tripNetBalancesRes,
   categorySubcategoryRes,
   analysisMappingRes,
   analysisAuditRes,
@@ -1226,6 +1257,7 @@ const [
   txPromise,
   segPromise,
   recurringRulesPromise,
+  tripNetBalancesPromise,
   subcatPromise,
   analysisMappingPromise,
   analysisAuditPromise,
@@ -1240,6 +1272,7 @@ const { data: tx, error: tErr } = txRes || {};
 if (tErr) throw tErr;
 const walletBalanceRows = computeWalletBalanceRows(w || [], tx || [], activePeriodId);
 const { rows: recurringRuleRows, skipped: recurringRulesSkipped } = recurringRuleRes || { rows: [], skipped: false };
+const { rows: tripNetBalanceRows, skipped: tripNetBalancesSkipped } = tripNetBalancesRes || { rows: [], skipped: false };
 const { rows: categorySubcategoryRows, skipped: categorySubcategoriesSkipped } = categorySubcategoryRes || { rows: [], skipped: false };
 const { rows: analysisMappingRows, available: analysisMappingAvailable, skipped: analysisMappingSkipped } = analysisMappingRes || { rows: [], available: false, skipped: false };
 const { rows: analysisAuditRows, available: analysisAuditAvailable, skipped: analysisAuditSkipped } = analysisAuditRes || { rows: [], available: false, skipped: false };
@@ -1273,6 +1306,19 @@ if (refreshToken !== Number(window.__TB_REFRESH_TOKEN__ || 0)) return;
     lastTxCreatedAt: x.last_tx_created_at || null,
   }));
   state.walletBalanceMap = Object.fromEntries((state.walletBalances || []).map((x) => [String(x.walletId || ""), x]));
+  if (!tripNetBalancesSkipped) {
+    state.tripNetBalances = (Array.isArray(tripNetBalanceRows) ? tripNetBalanceRows : []).map((x) => ({
+        tripId: x.trip_id || null,
+        tripName: x.trip_name || "",
+        periodId: x.period_id || null,
+        currency: String(x.currency || state?.period?.baseCurrency || "EUR").toUpperCase(),
+        paid: Number(x.paid || 0),
+      owed: Number(x.owed || 0),
+      settledOut: Number(x.settled_out || 0),
+      settledIn: Number(x.settled_in || 0),
+      net: Number(x.net || 0),
+    }));
+  }
 
   if (!analysisMappingSkipped) {
     state.analysisMappingAvailable = !!analysisMappingAvailable;

@@ -161,6 +161,123 @@ async function applyBulkTxClassification() {
   }
 }
 
+async function duplicateTx(txId) {
+  _txBulkSetMessage('');
+
+  try {
+    const tx = (state.transactions || []).find((t) => String(t.id) === String(txId));
+    if (!tx) throw new Error('Transaction introuvable.');
+
+    const lockedRows = _txBulkSelectedLockedRows().filter((row) => String(row.id) === String(txId));
+    if (lockedRows.length) {
+      _txBulkSetMessage('Cette transaction ne peut pas être dupliquée.');
+      return;
+    }
+
+    if (tx.isInternal || tx.internal_transfer_id || tx.internalTransferId) {
+      _txBulkSetMessage('Les mouvements internes doivent être recréés depuis le bouton Transfert interne.');
+      return;
+    }
+
+    const core = {
+      walletId: tx.walletId || tx.wallet_id,
+      type: tx.type,
+      label: `${String(tx.label || tx.category || 'Transaction').trim()} (copie)`,
+      amount: Number(tx.amount || 0),
+      currency: tx.currency,
+      cashDate: tx.dateStart || tx.date_start,
+      dateStart: tx.dateStart || tx.date_start,
+      dateEnd: tx.dateEnd || tx.date_end || tx.dateStart || tx.date_start,
+      budgetDateStart: tx.budgetDateStart || tx.budget_date_start || tx.dateStart || tx.date_start,
+      budgetDateEnd: tx.budgetDateEnd || tx.budget_date_end || tx.dateEnd || tx.date_end || tx.dateStart || tx.date_start,
+      category: tx.category || TB_CONST?.CATS?.other || 'Autre',
+      subcategory: tx.subcategory || null,
+      payNow: !!(tx.payNow ?? tx.pay_now),
+      outOfBudget: !!(tx.outOfBudget ?? tx.out_of_budget),
+      nightCovered: !!(tx.nightCovered ?? tx.night_covered),
+      affectsBudget: tx.affectsBudget ?? tx.affects_budget ?? !tx.outOfBudget,
+      tripExpenseId: null,
+      tripShareLinkId: null,
+    };
+
+    if (!core.walletId) throw new Error('Wallet manquant.');
+    if (!Number.isFinite(core.amount) || core.amount <= 0) throw new Error('Montant invalide.');
+
+    const buildArgs = window._txBuildApplyV2Args;
+    if (typeof buildArgs !== 'function') {
+      throw new Error('Duplication impossible : _txBuildApplyV2Args indisponible.');
+    }
+
+    const payload = buildArgs(core);
+    const { error } = await sb.rpc(TB_CONST.RPCS.apply_transaction_v2 || 'apply_transaction_v2', payload);
+    if (error) throw error;
+
+    _txBulkSetMessage('Transaction dupliquée.', 'success');
+
+    if (typeof window.tbAfterMutationRefresh === 'function') {
+      await window.tbAfterMutationRefresh('tx:duplicate');
+    } else {
+      await refreshFromServer();
+    }
+  } catch (e) {
+    const msg = (typeof normalizeSbError === 'function') ? normalizeSbError(e) : (e?.message || String(e));
+    console.warn('[transactions duplicate]', msg);
+    _txBulkSetMessage(msg);
+  }
+}
+
+async function applyBulkTxDelete() {
+  _txBulkSetMessage('');
+
+  try {
+    const selectedRows = _txBulkSelectedRows();
+    if (!selectedRows.length) {
+      _txBulkSetMessage('Aucune transaction sélectionnée.');
+      return;
+    }
+
+    const lockedRows = _txBulkSelectedLockedRows();
+    if (lockedRows.length) {
+      _txBulkSetMessage(`Suppression impossible : ${lockedRows.length} transaction(s) verrouillée(s).`);
+      return;
+    }
+
+    const internalRows = selectedRows.filter((tx) => tx.isInternal || tx.internal_transfer_id || tx.internalTransferId);
+    if (internalRows.length) {
+      _txBulkSetMessage('Suppression multiple bloquée : supprime les mouvements internes un par un.');
+      return;
+    }
+
+    const ok = confirm(`Supprimer ${selectedRows.length} transaction(s) sélectionnée(s) ?`);
+    if (!ok) return;
+
+    try { if (typeof window.tbBusyStart === 'function') window.tbBusyStart('Suppression des transactions...'); } catch (_) {}
+
+    for (const tx of selectedRows) {
+      const { error } = await sb.rpc('delete_transaction', { p_tx_id: tx.id });
+      if (error) throw error;
+    }
+
+    TB_TX_BULK.selectedIds.clear();
+    _txBulkSetMessage(`${selectedRows.length} transaction(s) supprimée(s).`, 'success');
+
+    if (typeof window.tbAfterMutationRefresh === 'function') {
+      await window.tbAfterMutationRefresh('tx:bulk_delete');
+    } else {
+      await refreshFromServer();
+    }
+  } catch (e) {
+    const msg = (typeof normalizeSbError === 'function') ? normalizeSbError(e) : (e?.message || String(e));
+    console.warn('[transactions bulk delete]', msg);
+    _txBulkSetMessage(msg);
+  } finally {
+    try { if (typeof window.tbBusyEnd === 'function') window.tbBusyEnd(); } catch (_) {}
+  }
+}
+
+window.duplicateTx = duplicateTx;
+window.applyBulkTxDelete = applyBulkTxDelete;
+
 window._txBulkToggleOne = _txBulkToggleOne;
 window._txBulkToggleAll = _txBulkToggleAll;
 window._txBulkSyncControls = _txBulkSyncControls;
@@ -1112,6 +1229,9 @@ if (isBudgetOnlyInternalTransferFee) return false;
       </div>
       <div class="tx-bulk-actions">
         <button class="btn primary" type="button" onclick="applyBulkTxClassification()" ${bulkCount ? '' : 'disabled'}>${_txT("transactions.bulk.apply")}</button>
+        <button class="btn danger" type="button" onclick="applyBulkTxDelete()" ${bulkCount ? '' : 'disabled'}>
+          ${_txT("transactions.bulk.delete")}
+        </button>
         <button class="btn" type="button" onclick="openInternalTransferModal()">
           ${_txT("transactions.action.internal_transfer")}
         </button>
@@ -1221,6 +1341,7 @@ if (isBudgetOnlyInternalTransferFee) return false;
           : ""
         }
         <button class="btn small" type="button" data-tx-doc-btn="${escapeHTML(String(tx.id))}" onclick="window.tbTxDocOpen('${escapeHTML(String(tx.id))}')">${escapeHTML(_txT("transactions.action.invoice"))}</button>
+        <button class="btn small" type="button" onclick="openTxDuplicateModal('${escapeHTML(String(tx.id))}')">Dupliquer</button>
         <button class="btn small" onclick="openTxEditModal('${tx.id}')">Edit</button>
         ${
   isInternalTransfer
