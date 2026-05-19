@@ -333,7 +333,26 @@
   function filteredExercises(goal, equipment) {
     const g = goal || "strength";
     const eq = equipment || "all";
-    return EXERCISE_LIBRARY.filter(ex => (g === "free" || ex.goal === g) && (eq === "all" || ex.equipment === eq));
+    return EXERCISE_LIBRARY
+      .filter(ex => (g === "free" || ex.goal === g) && (eq === "all" || ex.equipment === eq))
+      .slice()
+      .sort((a, b) => exercisePriority(a, g) - exercisePriority(b, g));
+  }
+  function exercisePriority(ex, goal) {
+    if (goal === "cardio") {
+      if (ex.activityKey === "running") return 0;
+      if (ex.activityKey === "cycling") return 1;
+      if (ex.activityKey === "walking" || ex.activityKey === "hiking") return 2;
+      if (ex.activityKey === "rowing") return 3;
+      if (ex.activityKey === "hiit") return 6;
+    }
+    if (goal === "strength") {
+      if (ex.equipment === "bodyweight") return 0;
+      if (ex.equipment === "band") return 1;
+      if (ex.equipment === "dumbbell") return 2;
+      if (ex.equipment === "machine") return 3;
+    }
+    return 5;
   }
   function goalOptions(selected) {
     return GOALS.map(g => `<option value="${esc(g[0])}" ${g[0] === selected ? "selected" : ""}>${esc(lang() === "en" ? g[2] : g[1])}</option>`).join("");
@@ -347,6 +366,22 @@
   function libraryOptions(goal, equipment, selected) {
     const rows = filteredExercises(goal, equipment);
     return `<option value="">${esc(txt("Choisir un exercice", "Choose an exercise"))}</option>` + rows.map(ex => `<option value="${esc(ex.key)}" ${ex.key === selected ? "selected" : ""}>${esc(exerciseLabel(ex))}</option>`).join("");
+  }
+  function simpleExerciseOptions(goal, equipment, selected) {
+    const rows = filteredExercises(goal, equipment);
+    const list = rows.length ? rows : filteredExercises(goal, "all");
+    return list.map(ex => `<option value="${esc(ex.key)}" ${ex.key === selected ? "selected" : ""}>${esc(exerciseLabel(ex))}</option>`).join("");
+  }
+  function defaultFormat(goal) {
+    return goal === "strength" || goal === "free" ? "reps" : "time";
+  }
+  function formatOptions(selected) {
+    const rows = [
+      ["time", txt("Duree", "Duration")],
+      ["reps", txt("Repetitions", "Reps")],
+      ["max_reps", txt("Max reps", "Max reps")],
+    ];
+    return rows.map(row => `<option value="${esc(row[0])}" ${row[0] === selected ? "selected" : ""}>${esc(row[1])}</option>`).join("");
   }
   function libraryEquipmentOptions(selected) {
     const opts = [`<option value="all" ${selected === "all" ? "selected" : ""}>${esc(txt("Tous les materiels", "All equipment"))}</option>`];
@@ -374,6 +409,38 @@
     setVal("#sport-load", 0);
     setVal("#sport-intensity", "moderate");
     syncLoadField(root);
+  }
+  function simplePlanItemFromForm(root) {
+    const goal = CACHE.builderGoal || "strength";
+    const key = root?.querySelector("#sport-simple-ex")?.value || "";
+    const ex = EXERCISE_LIBRARY.find(row => row.key === key) || filteredExercises(goal, CACHE.builderEquipment || "all")[0] || EXERCISE_LIBRARY[0];
+    const format = root?.querySelector("#sport-simple-format")?.value || defaultFormat(goal);
+    const item = libraryToPlanItem(ex);
+    const minutes = Math.max(1, n(root?.querySelector("#sport-simple-minutes")?.value, 45));
+    const reps = Math.max(1, Math.round(n(root?.querySelector("#sport-simple-reps")?.value, item.targetReps || ex.reps || 10)));
+    item.mode = format === "time" ? "time" : "reps";
+    item.targetSeconds = format === "time" ? minutes * 60 : 0;
+    item.targetReps = format === "time" ? 0 : reps;
+    item.sets = format === "time" || format === "max_reps" ? 1 : Math.max(1, Math.round(n(root?.querySelector("#sport-simple-sets")?.value, item.sets || 3)));
+    item.restSeconds = format === "time" || format === "max_reps" ? 0 : Math.max(0, Math.round(n(root?.querySelector("#sport-simple-rest")?.value, item.restSeconds || 60)));
+    item.distanceM = Math.max(0, n(root?.querySelector("#sport-simple-distance")?.value, item.distanceM || 0));
+    if (format === "max_reps") item.exerciseName = `${item.exerciseName} - ${txt("max reps", "max reps")}`;
+    item.notes = format === "max_reps" ? txt("Serie max : saisis le nombre realise.", "Max set: enter completed reps.") : "";
+    return item;
+  }
+  function syncSimpleFields(root) {
+    const format = root?.querySelector("#sport-simple-format")?.value || "time";
+    const isTime = format === "time";
+    const isMax = format === "max_reps";
+    const show = (selector, visible) => {
+      const el = root?.querySelector(selector);
+      if (el) el.style.display = visible ? "" : "none";
+    };
+    show("#sport-simple-minutes-wrap", isTime);
+    show("#sport-simple-distance-wrap", isTime);
+    show("#sport-simple-reps-wrap", !isTime);
+    show("#sport-simple-sets-wrap", !isTime && !isMax);
+    show("#sport-simple-rest-wrap", !isTime && !isMax);
   }
   function goalFromTemplate(kind) {
     if (kind === "run") return "cardio";
@@ -524,6 +591,8 @@
       .tb-sport-template-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px;}
       .tb-sport-smart{border:1px solid rgba(37,99,235,.16);border-radius:20px;background:linear-gradient(135deg,#eff6ff,#f8fafc);padding:12px;margin:12px 0;}
       .tb-sport-smart-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;}
+      .tb-sport-simple{border:1px solid rgba(14,165,233,.18);border-radius:22px;background:linear-gradient(180deg,#f0f9ff,#fff);padding:14px;margin:12px 0;}
+      .tb-sport-simple-title{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;}
       .tb-sport-timer{min-height:300px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:12px;border-radius:24px;background:radial-gradient(circle at 50% 0%,rgba(37,99,235,.18),transparent 38%),#0f172a;color:white;padding:18px;}
       .tb-sport-timer .kind{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#93c5fd;font-weight:950;}
       .tb-sport-timer .name{font-size:34px;font-weight:950;line-height:1.05;}
@@ -544,6 +613,7 @@
       body.theme-dark .tb-sport-profile-note{background:rgba(14,165,233,.14);color:#bae6fd;border-color:rgba(125,211,252,.20);}
       body.theme-dark .tb-sport-library{background:rgba(14,165,233,.08);border-color:rgba(125,211,252,.18);}
       body.theme-dark .tb-sport-smart{background:rgba(37,99,235,.10);border-color:rgba(147,197,253,.16);}
+      body.theme-dark .tb-sport-simple{background:rgba(14,165,233,.08);border-color:rgba(125,211,252,.18);}
       body.theme-dark .tb-sport-ex-card{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-ex-card span{color:#94a3b8;}
       body.theme-dark .tb-sport-modal{background:linear-gradient(180deg,#111827,#0f172a);color:#f8fafc;border-color:rgba(255,255,255,.12);}
@@ -663,71 +733,57 @@
             <span style="font-size:12px;">${esc(txt("IMC indicatif", "Indicative BMI"))}: ${bmi ? bmi.toFixed(1) : "-"}</span>
           </div>
         </div>
-        <div class="tb-sport-template-row">
-          <div class="tb-sport-field" style="min-width:min(260px,100%);">
-            <label>${esc(txt("Objectif seance", "Workout goal"))}</label>
-            <select id="sport-goal">${goalOptions(goal)}</select>
-          </div>
-          <button class="btn small" type="button" data-sport-template="body">${esc(txt("Plan force", "Strength plan"))}</button>
-          <button class="btn small" type="button" data-sport-template="run">${esc(txt("Plan cardio", "Cardio plan"))}</button>
-          <button class="btn small" type="button" data-sport-template="swim">${esc(txt("Plan natation", "Swim plan"))}</button>
-          <button class="btn small" type="button" data-sport-template="climb">${esc(txt("Plan escalade", "Climb plan"))}</button>
-          <button class="btn small" type="button" data-sport-template="mobility">${esc(txt("Plan mobilite", "Mobility plan"))}</button>
-        </div>
-        <div class="tb-sport-smart">
-          <div class="tb-sport-smart-head">
+        <div class="tb-sport-simple">
+          <div class="tb-sport-simple-title">
             <div>
-              <strong>${esc(txt("Generateur intelligent", "Smart builder"))}</strong>
-              <div class="muted">${esc(txt("Choisis une intention, une duree, un niveau et le materiel disponible.", "Choose a goal, duration, level and available equipment."))}</div>
+              <strong>${esc(txt("Ajout rapide", "Quick add"))}</strong>
+              <div class="muted">${esc(txt("Exemple : cardio, course a pied, duree, 45 min, distance optionnelle.", "Example: cardio, running, duration, 45 min, optional distance."))}</div>
             </div>
-            <button class="btn primary" type="button" id="sport-generate-plan">${esc(txt("Generer la seance", "Generate workout"))}</button>
+            <button class="btn primary" type="button" id="sport-simple-add">+ ${esc(txt("Ajouter", "Add"))}</button>
+          </div>
+          <div class="tb-sport-fields">
+            <div class="tb-sport-field"><label>${esc(txt("Objectif", "Goal"))}</label><select id="sport-goal">${goalOptions(goal)}</select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Materiel", "Equipment"))}</label><select id="sport-library-equipment">${libraryEquipmentOptions(selectedEquipment)}</select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Exercice / activite", "Exercise / activity"))}</label><select id="sport-simple-ex">${simpleExerciseOptions(goal, selectedEquipment, "")}</select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Format", "Format"))}</label><select id="sport-simple-format">${formatOptions(defaultFormat(goal))}</select></div>
+            <div class="tb-sport-field" id="sport-simple-minutes-wrap"><label>${esc(txt("Duree min", "Duration min"))}</label><input id="sport-simple-minutes" type="number" value="${goal === "cardio" ? "45" : "10"}"></div>
+            <div class="tb-sport-field" id="sport-simple-distance-wrap"><label>${esc(txt("Distance m optionnelle", "Optional distance m"))}</label><input id="sport-simple-distance" type="number" value="0"></div>
+            <div class="tb-sport-field" id="sport-simple-reps-wrap"><label>${esc(txt("Reps / max reps", "Reps / max reps"))}</label><input id="sport-simple-reps" type="number" value="10"></div>
+            <div class="tb-sport-field" id="sport-simple-sets-wrap"><label>${esc(txt("Series", "Sets"))}</label><input id="sport-simple-sets" type="number" value="3"></div>
+            <div class="tb-sport-field" id="sport-simple-rest-wrap"><label>${esc(txt("Repos sec", "Rest sec"))}</label><input id="sport-simple-rest" type="number" value="60"></div>
+          </div>
+        </div>
+        <details class="tb-sport-smart">
+          <summary><strong>${esc(txt("Generer une seance complete", "Generate a full workout"))}</strong></summary>
+          <div class="tb-sport-smart-head" style="margin-top:10px;">
+            <div class="muted">${esc(txt("L'app compose echauffement, bloc principal et retour au calme avec les filtres ci-dessus.", "The app builds warm-up, main block and cooldown using the filters above."))}</div>
+            <button class="btn primary" type="button" id="sport-generate-plan">${esc(txt("Generer", "Generate"))}</button>
           </div>
           <div class="tb-sport-fields">
             <div class="tb-sport-field"><label>${esc(txt("Duree cible", "Target duration"))}</label><select id="sport-builder-duration">${durationOptions(duration)}</select></div>
             <div class="tb-sport-field"><label>${esc(txt("Niveau", "Level"))}</label><select id="sport-builder-level">${levelOptions(level)}</select></div>
-            <div class="tb-sport-field"><label>${esc(txt("Ajustement", "Output"))}</label><div class="tb-sport-profile-note">${esc(txt("Le plan remplace la seance actuelle.", "This replaces the current plan."))}</div></div>
           </div>
-        </div>
-        <div class="tb-sport-library">
-          <div class="tb-sport-library-head">
-            <div>
-              <strong>${esc(txt("Suggestions", "Suggestions"))}</strong>
-              <div class="muted">${esc(txt("Clique un exercice pour l'ajouter directement.", "Click an exercise to add it directly."))}</div>
-            </div>
-            <div class="tb-sport-library-filters">
-              <div class="tb-sport-field">
-                <label>${esc(txt("Materiel", "Equipment"))}</label>
-                <select id="sport-library-equipment">${libraryEquipmentOptions(selectedEquipment)}</select>
-              </div>
-              <span class="tb-sport-chip">${suggested.length} ${esc(txt("exercices", "exercises"))}</span>
-            </div>
-          </div>
-          <div class="tb-sport-library-grid">
+        </details>
+        <details class="tb-sport-library">
+          <summary><strong>${esc(txt("Voir les suggestions", "Show suggestions"))}</strong> <span class="tb-sport-chip">${suggested.length}</span></summary>
+          <div class="tb-sport-library-grid" style="margin-top:10px;">
             ${suggested.length ? suggested.map(ex => `
               <button class="tb-sport-ex-card" type="button" data-sport-ex="${esc(ex.key)}">
                 ${esc(exerciseLabel(ex))}
                 <span>${esc(labelEquipment(ex.equipment))} - ${ex.mode === "time" ? `${n(ex.seconds, 0)} sec` : `${n(ex.reps, 0)} reps`} x ${n(ex.sets, 1)}</span>
               </button>`).join("") : `<div class="muted">${esc(txt("Aucun exercice pour ce filtre.", "No exercise for this filter."))}</div>`}
           </div>
-        </div>
-        <div class="tb-sport-quick-row">
-          <button class="btn small" type="button" data-sport-quick="pushup">${esc(txt("+ Push-up", "+ Push-up"))}</button>
-          <button class="btn small" type="button" data-sport-quick="squat">${esc(txt("+ Squat", "+ Squat"))}</button>
-          <button class="btn small" type="button" data-sport-quick="plank">${esc(txt("+ Gainage", "+ Plank"))}</button>
-          <button class="btn small" type="button" data-sport-quick="band_row">${esc(txt("+ Tirage elastique", "+ Band row"))}</button>
-        </div>
-        <div class="tb-sport-fields">
-          <div class="tb-sport-field"><label>${esc(txt("Depuis la bibliotheque", "From library"))}</label><select id="sport-library-ex">${libraryOptions(goal, selectedEquipment, "")}</select></div>
-          <div class="tb-sport-field"><label>${esc(txt("Type d'effort", "Effort type"))}</label><select id="sport-activity">${activityOptions("strength")}</select></div>
-          <div class="tb-sport-field"><label>${esc(txt("Exercice", "Exercise"))}</label><input id="sport-ex-name" value="Push-up"></div>
-          <div class="tb-sport-field"><label>${esc(txt("Materiel", "Equipment"))}</label><select id="sport-equipment">${equipmentOptions("bodyweight")}</select></div>
-          <div class="tb-sport-field"><label>${esc(txt("Reps", "Reps"))}</label><input id="sport-reps" type="number" value="30"></div>
-          <div class="tb-sport-field"><label>${esc(txt("Series", "Sets"))}</label><input id="sport-sets" type="number" value="3"></div>
-          <div class="tb-sport-field"><label>${esc(txt("Repos sec", "Rest sec"))}</label><input id="sport-rest" type="number" value="60"></div>
-        </div>
+        </details>
         <details class="tb-sport-advanced">
-          <summary>${esc(txt("Options avancees", "Advanced options"))}</summary>
+          <summary>${esc(txt("Ajout manuel avance", "Advanced manual add"))}</summary>
           <div class="tb-sport-fields" style="margin-top:10px;">
+            <div class="tb-sport-field"><label>${esc(txt("Depuis la bibliotheque", "From library"))}</label><select id="sport-library-ex">${libraryOptions(goal, selectedEquipment, "")}</select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Type d'effort", "Effort type"))}</label><select id="sport-activity">${activityOptions("strength")}</select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Exercice", "Exercise"))}</label><input id="sport-ex-name" value="Push-up"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Materiel", "Equipment"))}</label><select id="sport-equipment">${equipmentOptions("bodyweight")}</select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Reps", "Reps"))}</label><input id="sport-reps" type="number" value="30"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Series", "Sets"))}</label><input id="sport-sets" type="number" value="3"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Repos sec", "Rest sec"))}</label><input id="sport-rest" type="number" value="60"></div>
             <div class="tb-sport-field"><label>${esc(txt("Mode", "Mode"))}</label><select id="sport-mode"><option value="reps">${esc(txt("Repetitions", "Reps"))}</option><option value="time">${esc(txt("Temps", "Time"))}</option></select></div>
             <div class="tb-sport-field"><label>${esc(txt("Intensite", "Intensity"))}</label><select id="sport-intensity">${intensityOptions("moderate")}</select></div>
             <div class="tb-sport-field"><label>${esc(txt("Temps sec", "Time sec"))}</label><input id="sport-seconds" type="number" value="45"></div>
@@ -942,6 +998,16 @@
       CACHE.builderEquipment = libraryEquipment.value || "all";
       renderSport("library-equipment");
     };
+    const simpleAdd = root.querySelector("#sport-simple-add");
+    if (simpleAdd) simpleAdd.onclick = () => {
+      const item = simplePlanItemFromForm(root);
+      CACHE.plan.push(item);
+      savePlan();
+      renderSport("simple-add");
+    };
+    const simpleFormat = root.querySelector("#sport-simple-format");
+    if (simpleFormat) simpleFormat.onchange = () => syncSimpleFields(root);
+    syncSimpleFields(root);
     const builderDuration = root.querySelector("#sport-builder-duration");
     if (builderDuration) builderDuration.onchange = () => {
       CACHE.builderDuration = Math.max(10, n(builderDuration.value, 35));
