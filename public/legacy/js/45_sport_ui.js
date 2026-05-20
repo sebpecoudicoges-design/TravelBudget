@@ -3,11 +3,13 @@
    - Sessions, guided timer, reps/time/rest, MET kcal estimates
    ========================= */
 (function () {
+  const baseHistoryKey = () => window.TB_CONST?.LS_KEYS?.sport_history || "travelbudget_sport_history_v1";
   const scopedKey = (key) => `${key}::${sportStorageScope()}`;
   const PLAN_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_plan || "travelbudget_sport_plan_v1");
   const WEIGHT_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1");
   const HEIGHT_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1");
-  const HISTORY_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_history || "travelbudget_sport_history_v1");
+  const HISTORY_KEY = () => scopedKey(baseHistoryKey());
+  const ANON_HISTORY_KEY = () => `${baseHistoryKey()}::anon`;
 
   const CATALOG = [
     { key: "strength", fr: "Musculation", en: "Strength training", met: 3.5, mode: "reps", equipment: "bodyweight" },
@@ -196,7 +198,12 @@
     return new Date().toISOString().slice(0, 10);
   }
   function client() { return window.sb || null; }
-  function uid() { return window.sbUser?.id || null; }
+  function currentUser() {
+    try { if (window.sbUser && window.sbUser.id) return window.sbUser; } catch (_) {}
+    try { if (sbUser && sbUser.id) return sbUser; } catch (_) {}
+    return null;
+  }
+  function uid() { return currentUser()?.id || null; }
   function sportStorageScope() {
     const userId = uid();
     return userId ? `user:${userId}` : "anon";
@@ -288,8 +295,31 @@
       return Array.isArray(parsed) ? parsed.slice(0, 50) : [];
     } catch (_) { return []; }
   }
+  function loadAnonHistory() {
+    try {
+      const raw = localStorage.getItem(ANON_HISTORY_KEY());
+      const parsed = raw ? JSON.parse(raw) : null;
+      return Array.isArray(parsed) ? parsed.slice(0, 50) : [];
+    } catch (_) { return []; }
+  }
   function saveLocalHistory(rows) {
     try { localStorage.setItem(HISTORY_KEY(), JSON.stringify((rows || []).slice(0, 50))); } catch (_) {}
+  }
+  function saveAnonHistory(rows) {
+    try { localStorage.setItem(ANON_HISTORY_KEY(), JSON.stringify((rows || []).slice(0, 50))); } catch (_) {}
+  }
+  function importAnonLocalHistory() {
+    const userId = uid();
+    if (!userId) return;
+    const rows = loadAnonHistory();
+    if (!rows.length) return;
+    const existing = CACHE.localSessions || [];
+    const seen = new Set(existing.map(s => String(s.localId || s.remoteId || s.startedAt || s.started_at || "")));
+    const imported = rows.filter(s => !seen.has(String(s.localId || s.remoteId || s.startedAt || s.started_at || "")));
+    CACHE.localSessions = imported.concat(existing).slice(0, 50);
+    saveLocalHistory(CACHE.localSessions);
+    saveAnonHistory([]);
+    CACHE.status = txt(`${imported.length} seance(s) locale(s) recuperee(s).`, `${imported.length} local workout(s) recovered.`);
   }
   function rememberLocalWorkout(summary, synced) {
     const id = summary.localId || ("local_" + Date.now() + "_" + Math.random().toString(16).slice(2));
@@ -948,18 +978,26 @@
   function renderHistory() {
     const remoteSessions = CACHE.sessions || [];
     const localSessions = CACHE.localSessions || [];
+    const recoverableAnonCount = uid() && !localSessions.length ? loadAnonHistory().length : 0;
     const remoteIds = new Set(remoteSessions.map(s => String(s.id || "")));
     const unsyncedLocal = localSessions.filter(s => !s.remoteId || !remoteIds.has(String(s.remoteId)));
     const sessions = remoteSessions.concat(unsyncedLocal.map(localToHistorySession))
       .sort((a, b) => String(b.started_at || "").localeCompare(String(a.started_at || "")));
     const status = CACHE.status ? `<div class="tb-sport-status">${esc(CACHE.status)}</div>` : "";
+    const recover = recoverableAnonCount
+      ? `<div class="tb-sport-status" style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <span>${esc(txt(`${recoverableAnonCount} ancienne(s) seance(s) locale(s) peuvent etre recuperee(s).`, `${recoverableAnonCount} old local workout(s) can be recovered.`))}</span>
+          <button class="btn" type="button" id="sport-import-anon-history">${esc(txt("Recuperer", "Recover"))}</button>
+        </div>`
+      : "";
     if (CACHE.error) {
-      return `<div class="tb-sport-card"><h3>${esc(txt("Historique", "History"))}</h3>${status}<div class="muted" style="margin-top:10px;">${esc(txt("Synchro Supabase indisponible, historique local conserve.", "Supabase sync unavailable, local history kept."))} ${esc(CACHE.error)}</div>${renderHistoryGrid(sessions)}</div>`;
+      return `<div class="tb-sport-card"><h3>${esc(txt("Historique", "History"))}</h3>${status}${recover}<div class="muted" style="margin-top:10px;">${esc(txt("Synchro Supabase indisponible, historique local conserve.", "Supabase sync unavailable, local history kept."))} ${esc(CACHE.error)}</div>${renderHistoryGrid(sessions)}</div>`;
     }
     return `
       <div class="tb-sport-card">
         <h3>${esc(txt("Historique", "History"))}</h3>
         ${status}
+        ${recover}
         ${renderHistoryGrid(sessions)}
       </div>`;
   }
@@ -1204,6 +1242,11 @@
     root.querySelectorAll("[data-sport-edit-date]").forEach(btn => {
       btn.onclick = () => editSportSessionDate(btn.getAttribute("data-sport-edit-date"), btn.getAttribute("data-sport-date"));
     });
+    const importAnon = root.querySelector("#sport-import-anon-history");
+    if (importAnon) importAnon.onclick = () => {
+      importAnonLocalHistory();
+      renderSport("import-anon-history");
+    };
   }
   function syncLoadField(root) {
     const equipment = root?.querySelector("#sport-equipment");
