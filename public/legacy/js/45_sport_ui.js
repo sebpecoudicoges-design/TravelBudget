@@ -3,10 +3,11 @@
    - Sessions, guided timer, reps/time/rest, MET kcal estimates
    ========================= */
 (function () {
-  const PLAN_KEY = () => window.TB_CONST?.LS_KEYS?.sport_plan || "travelbudget_sport_plan_v1";
-  const WEIGHT_KEY = () => window.TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1";
-  const HEIGHT_KEY = () => window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1";
-  const HISTORY_KEY = () => window.TB_CONST?.LS_KEYS?.sport_history || "travelbudget_sport_history_v1";
+  const scopedKey = (key) => `${key}::${sportStorageScope()}`;
+  const PLAN_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_plan || "travelbudget_sport_plan_v1");
+  const WEIGHT_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1");
+  const HEIGHT_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1");
+  const HISTORY_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_history || "travelbudget_sport_history_v1");
 
   const CATALOG = [
     { key: "strength", fr: "Musculation", en: "Strength training", met: 3.5, mode: "reps", equipment: "bodyweight" },
@@ -20,6 +21,7 @@
     { key: "walking", fr: "Marche rapide", en: "Brisk walk", met: 3.8, mode: "time", equipment: "outdoor" },
     { key: "hiking", fr: "Randonnee", en: "Hiking", met: 6.0, mode: "time", equipment: "outdoor" },
     { key: "rowing", fr: "Rameur", en: "Rowing", met: 7.0, mode: "time", equipment: "machine" },
+    { key: "basketball", fr: "Basket", en: "Basketball", met: 6.5, mode: "time", equipment: "outdoor" },
     { key: "hiit", fr: "HIIT", en: "HIIT", met: 8.0, mode: "time", equipment: "mixed" },
     { key: "yoga", fr: "Yoga", en: "Yoga", met: 2.5, mode: "time", equipment: "mat" },
     { key: "mobility", fr: "Mobilite", en: "Mobility", met: 2.0, mode: "time", equipment: "mat" },
@@ -42,6 +44,7 @@
   const GOALS = [
     ["strength", "Force", "Strength"],
     ["cardio", "Cardio", "Cardio"],
+    ["basketball", "Basket", "Basketball"],
     ["mobility", "Mobilite", "Mobility"],
     ["climb", "Escalade", "Climbing"],
     ["swim", "Natation", "Swimming"],
@@ -127,6 +130,8 @@
     { key: "cycling_intervals", goal: "cardio", equipment: "outdoor", activityKey: "cycling", fr: "Intervalles velo", en: "Cycling intervals", mode: "time", seconds: 120, sets: 6, rest: 90 },
     { key: "rowing", goal: "cardio", equipment: "machine", activityKey: "rowing", fr: "Rameur", en: "Rowing", mode: "time", seconds: 300, sets: 4, rest: 90 },
     { key: "rowing_easy", goal: "cardio", equipment: "machine", activityKey: "rowing", fr: "Rameur facile", en: "Easy rowing", mode: "time", seconds: 900, sets: 1, rest: 0 },
+    { key: "basketball_1h", goal: "basketball", equipment: "outdoor", activityKey: "basketball", fr: "Basket", en: "Basketball", mode: "time", seconds: 3600, sets: 1, rest: 0 },
+    { key: "basketball_shootaround", goal: "basketball", equipment: "outdoor", activityKey: "basketball", fr: "Shoot basket", en: "Basketball shootaround", mode: "time", seconds: 1800, sets: 1, rest: 0 },
     { key: "hiit_bodyweight", goal: "cardio", equipment: "bodyweight", activityKey: "hiit", fr: "HIIT poids du corps", en: "Bodyweight HIIT", mode: "time", seconds: 40, sets: 8, rest: 20 },
     { key: "hips", goal: "mobility", equipment: "mat", activityKey: "mobility", fr: "Mobilite hanches", en: "Hip mobility", mode: "time", seconds: 60, sets: 3, rest: 20 },
     { key: "shoulders", goal: "mobility", equipment: "mat", activityKey: "mobility", fr: "Mobilite epaules", en: "Shoulder mobility", mode: "time", seconds: 60, sets: 3, rest: 20 },
@@ -170,6 +175,7 @@
     timer: null,
     pendingSummary: null,
     wakeLock: null,
+    localScope: "",
     status: "",
     builderGoal: "strength",
     builderEquipment: "all",
@@ -191,6 +197,17 @@
   }
   function client() { return window.sb || null; }
   function uid() { return window.sbUser?.id || null; }
+  function sportStorageScope() {
+    const userId = uid();
+    return userId ? `user:${userId}` : "anon";
+  }
+  function reloadScopedLocalState(force) {
+    const scope = sportStorageScope();
+    if (!force && CACHE.localScope === scope) return;
+    CACHE.localScope = scope;
+    CACHE.localSessions = loadLocalHistory();
+    CACHE.plan = loadPlan();
+  }
   function activeTravelId() { return window.state?.activeTravelId || null; }
   function table(name) { return window.TB_CONST?.TABLES?.[name] || name; }
   function n(v, fallback) { const x = Number(v); return Number.isFinite(x) ? x : (fallback || 0); }
@@ -258,7 +275,7 @@
     try {
       const raw = localStorage.getItem(PLAN_KEY());
       const parsed = raw ? JSON.parse(raw) : null;
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? parsed.slice(0, 80) : [];
     } catch (_) { return []; }
   }
   function savePlan() {
@@ -268,7 +285,7 @@
     try {
       const raw = localStorage.getItem(HISTORY_KEY());
       const parsed = raw ? JSON.parse(raw) : null;
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? parsed.slice(0, 50) : [];
     } catch (_) { return []; }
   }
   function saveLocalHistory(rows) {
@@ -357,7 +374,7 @@
     const g = goal || "strength";
     const eq = equipment || "all";
     return EXERCISE_LIBRARY
-      .filter(ex => (g === "free" || ex.goal === g) && (eq === "all" || ex.equipment === eq))
+      .filter(ex => (g === "free" || ex.goal === g || (g === "cardio" && ex.goal === "basketball")) && (eq === "all" || ex.equipment === eq))
       .slice()
       .sort((a, b) => exercisePriority(a, g) - exercisePriority(b, g));
   }
@@ -368,6 +385,10 @@
       if (ex.activityKey === "walking" || ex.activityKey === "hiking") return 2;
       if (ex.activityKey === "rowing") return 3;
       if (ex.activityKey === "hiit") return 6;
+    }
+    if (goal === "basketball") {
+      if (ex.key === "basketball_1h") return 0;
+      if (ex.key === "basketball_shootaround") return 1;
     }
     if (goal === "strength") {
       if (ex.equipment === "bodyweight") return 0;
@@ -654,7 +675,7 @@
     if (CACHE.loading) return;
     const c = client();
     const userId = uid();
-    CACHE.localSessions = loadLocalHistory();
+    reloadScopedLocalState();
     if (!c || !userId) {
       CACHE.loaded = true;
       CACHE.sessions = [];
@@ -698,6 +719,9 @@
       CACHE.items = items.data || [];
       CACHE.sets = sets.data || [];
       CACHE.loaded = true;
+      CACHE.status = CACHE.sessions.length
+        ? txt(`Historique synchronise : ${CACHE.sessions.length} seance(s) SQL.`, `Synced history: ${CACHE.sessions.length} SQL workout(s).`)
+        : txt("Aucune seance SQL pour ce compte. Les seances locales restent visibles tant qu'elles ne sont pas synchronisees.", "No SQL workout for this account. Local workouts remain visible until synced.");
       if (window.state) {
         state.sportSessions = CACHE.sessions;
         state.sportSessionItems = CACHE.items;
@@ -955,8 +979,10 @@
     };
   }
   function renderHistoryGrid(sessions) {
+    const visibleSessions = (sessions || []).slice(0, 20);
+    const hiddenCount = Math.max(0, (sessions || []).length - visibleSessions.length);
     return `<div class="tb-sport-history" style="margin-top:10px;">
-      ${sessions.length ? sessions.map(s => {
+      ${visibleSessions.length ? visibleSessions.map(s => {
         const items = s.localPlanCount
           ? new Array(s.localPlanCount).fill(null)
           : (CACHE.items || []).filter(i => String(i.session_id) === String(s.id));
@@ -984,6 +1010,7 @@
           </div>
         </div>`;
       }).join("") : `<div class="muted">${esc(txt("Aucune seance enregistree.", "No saved workout yet."))}</div>`}
+      ${hiddenCount ? `<div class="muted" style="margin-top:10px;">${esc(txt(`+ ${hiddenCount} seance(s) plus ancienne(s) masquee(s).`, `+ ${hiddenCount} older workout(s) hidden.`))}</div>` : ""}
     </div>`;
   }
 
@@ -991,6 +1018,7 @@
     const root = document.getElementById("sport-root");
     if (!root) return;
     ensureStyles();
+    reloadScopedLocalState(false);
     const kg = bodyWeight();
     const planSec = totalPlanSeconds(CACHE.plan);
     const kcal = totalPlanKcal(CACHE.plan, kg);
@@ -1640,6 +1668,16 @@
     try { CACHE.wakeLock?.release?.(); } catch (_) {}
     CACHE.wakeLock = null;
   }
+
+  window.addEventListener("tb:auth_scope_changed", () => {
+    reloadScopedLocalState(true);
+    CACHE.loaded = false;
+    CACHE.sessions = [];
+    CACHE.items = [];
+    CACHE.sets = [];
+    CACHE.error = "";
+    CACHE.status = "";
+  });
 
   window.renderSport = renderSport;
   window.tbSportCatalog = CATALOG.slice();
