@@ -292,6 +292,29 @@
       : s);
     saveLocalHistory(CACHE.localSessions);
   }
+  function removeLocalWorkout(id) {
+    const key = String(id || "");
+    CACHE.localSessions = (CACHE.localSessions || []).filter(s => String(s.localId || s.id || "") !== key && String(s.remoteId || "") !== key);
+    saveLocalHistory(CACHE.localSessions);
+  }
+  function updateLocalWorkoutDate(id, newDate) {
+    const key = String(id || "");
+    const d = String(newDate || "").slice(0, 10);
+    if (!key || !d) return false;
+    let changed = false;
+    CACHE.localSessions = (CACHE.localSessions || []).map(s => {
+      if (String(s.localId || s.id || "") !== key && String(s.remoteId || "") !== key) return s;
+      changed = true;
+      const oldStart = String(s.startedAt || s.started_at || new Date().toISOString());
+      const oldEnd = String(s.endedAt || s.ended_at || oldStart);
+      return Object.assign({}, s, {
+        startedAt: `${d}T${oldStart.slice(11, 19) || "00:00:00"}`,
+        endedAt: `${d}T${oldEnd.slice(11, 19) || oldStart.slice(11, 19) || "00:00:00"}`,
+      });
+    });
+    if (changed) saveLocalHistory(CACHE.localSessions);
+    return changed;
+  }
   function makePlanItem(activityKey, overrides) {
     const a = catalogItem(activityKey || "strength");
     const mode = overrides?.mode || a.mode;
@@ -794,6 +817,7 @@
         <div class="muted" style="margin-top:8px;">${esc(txt("Les kcal sont indicatives : poids, duree effective, type d'effort, intensite et charge externe si elle est portee. Un elastique ne s'ajoute pas a ton poids.", "Calories are indicative: weight, effective duration, effort type, intensity and external load when carried. Resistance bands are not added to body weight."))}</div>
         <div class="tb-sport-actions" style="margin-top:12px;">
           <button class="btn primary" type="button" id="sport-add-item">+ ${esc(txt("Ajouter au plan", "Add to plan"))}</button>
+          <button class="btn primary" type="button" id="sport-mark-done-builder" ${CACHE.plan.length ? "" : "disabled"}>${esc(txt("Marquer la seance faite", "Mark workout done"))}</button>
           <button class="btn" type="button" id="sport-sample">${esc(txt("Exemple push-up", "Push-up sample"))}</button>
           <button class="btn" type="button" id="sport-clear">${esc(txt("Vider", "Clear"))}</button>
         </div>
@@ -954,6 +978,10 @@
             ${s.perceived_effort ? `<span class="tb-sport-chip">RPE ${esc(String(s.perceived_effort))}/10</span>` : ""}
           </div>
           ${s.mood_after ? `<div class="muted" style="margin-top:8px;">${esc(txt("Apres", "After"))}: ${esc(s.mood_after)}</div>` : ""}
+          <div class="tb-sport-actions" style="margin-top:10px;">
+            <button class="btn" type="button" data-sport-edit-date="${esc(String(s.id || ""))}" data-sport-date="${esc(String(s.started_at || "").slice(0, 10))}">${esc(txt("Modifier date", "Edit date"))}</button>
+            <button class="btn danger" type="button" data-sport-delete-session="${esc(String(s.id || ""))}">${esc(txt("Supprimer", "Delete"))}</button>
+          </div>
         </div>`;
       }).join("") : `<div class="muted">${esc(txt("Aucune seance enregistree.", "No saved workout yet."))}</div>`}
     </div>`;
@@ -1127,8 +1155,9 @@
     });
     const start = root.querySelector("#sport-start");
     if (start) start.onclick = startTimer;
-    const markDone = root.querySelector("#sport-mark-done");
-    if (markDone) markDone.onclick = completePlanWithoutTimer;
+    root.querySelectorAll("#sport-mark-done,#sport-mark-done-builder").forEach(btn => {
+      btn.onclick = completePlanWithoutTimer;
+    });
     const done = root.querySelector("#sport-step-done");
     if (done) done.onclick = completeStep;
     const skipRest = root.querySelector("#sport-skip-rest");
@@ -1141,6 +1170,12 @@
     if (pause) pause.onclick = togglePause;
     const finish = root.querySelector("#sport-finish");
     if (finish) finish.onclick = finishWorkout;
+    root.querySelectorAll("[data-sport-delete-session]").forEach(btn => {
+      btn.onclick = () => deleteSportSession(btn.getAttribute("data-sport-delete-session"));
+    });
+    root.querySelectorAll("[data-sport-edit-date]").forEach(btn => {
+      btn.onclick = () => editSportSessionDate(btn.getAttribute("data-sport-edit-date"), btn.getAttribute("data-sport-date"));
+    });
   }
   function syncLoadField(root) {
     const equipment = root?.querySelector("#sport-equipment");
@@ -1523,6 +1558,72 @@
       CACHE.status = txt("Seance sauvegardee localement. Synchro Supabase a verifier.", "Workout saved locally. Supabase sync needs checking.");
       console.warn("[sport] save failed", CACHE.error);
     }
+  }
+
+  async function deleteSportSession(sessionId) {
+    const id = String(sessionId || "");
+    if (!id) return;
+    if (!confirm(txt("Supprimer cette seance ?", "Delete this workout?"))) return;
+    const c = client();
+    removeLocalWorkout(id);
+    CACHE.status = txt("Suppression de la seance...", "Deleting workout...");
+    try {
+      if (c && !id.startsWith("local_")) {
+        const itemIds = (CACHE.items || [])
+          .filter(item => String(item.session_id || "") === id)
+          .map(item => item.id)
+          .filter(Boolean);
+        if (itemIds.length) {
+          const sets = await c.from(table("sport_sets")).delete().in("item_id", itemIds);
+          if (sets.error) throw sets.error;
+        }
+        const items = await c.from(table("sport_session_items")).delete().eq("session_id", id);
+        if (items.error) throw items.error;
+        const sess = await c.from(table("sport_sessions")).delete().eq("id", id);
+        if (sess.error) throw sess.error;
+      }
+      CACHE.loaded = false;
+      CACHE.status = txt("Seance supprimee.", "Workout deleted.");
+      await loadHistory();
+    } catch (e) {
+      CACHE.error = e?.message || String(e);
+      CACHE.status = txt("Suppression locale effectuee. Synchro Supabase a verifier.", "Deleted locally. Supabase sync needs checking.");
+      console.warn("[sport] delete failed", CACHE.error);
+    }
+    renderSport("delete-session");
+  }
+
+  async function editSportSessionDate(sessionId, currentDate) {
+    const id = String(sessionId || "");
+    if (!id) return;
+    const nextDate = prompt(txt("Nouvelle date de seance (AAAA-MM-JJ)", "New workout date (YYYY-MM-DD)"), String(currentDate || todayISO()).slice(0, 10));
+    const d = String(nextDate || "").trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    const c = client();
+    updateLocalWorkoutDate(id, d);
+    const session = (CACHE.sessions || []).find(s => String(s.id || "") === id);
+    const oldStart = String(session?.started_at || new Date().toISOString());
+    const oldEnd = String(session?.ended_at || oldStart);
+    const startedAt = `${d}T${oldStart.slice(11, 19) || "00:00:00"}`;
+    const endedAt = `${d}T${oldEnd.slice(11, 19) || oldStart.slice(11, 19) || "00:00:00"}`;
+    CACHE.status = txt("Date de seance mise a jour...", "Updating workout date...");
+    try {
+      if (c && !id.startsWith("local_")) {
+        const res = await c
+          .from(table("sport_sessions"))
+          .update({ started_at: startedAt, ended_at: endedAt })
+          .eq("id", id);
+        if (res.error) throw res.error;
+      }
+      CACHE.loaded = false;
+      CACHE.status = txt("Date de seance mise a jour.", "Workout date updated.");
+      await loadHistory();
+    } catch (e) {
+      CACHE.error = e?.message || String(e);
+      CACHE.status = txt("Date modifiee localement. Synchro Supabase a verifier.", "Date changed locally. Supabase sync needs checking.");
+      console.warn("[sport] date update failed", CACHE.error);
+    }
+    renderSport("edit-session-date");
   }
 
   async function requestWakeLock() {

@@ -338,14 +338,16 @@
     const list = normalizeAudEurRows(rows);
     const from = readCurrency(LS.fromCurrency, periodCurrency());
     const to = readCurrency(LS.toCurrency, accountCurrency());
-    return Number(list[list.length - 1]?.rate) > 0 ? Number(list[list.length - 1].rate) : currentPairRate(from, to);
+    const live = currentPairRate(from, to);
+    if (Number.isFinite(Number(live)) && Number(live) > 0) return Number(live);
+    return Number(list[list.length - 1]?.rate) > 0 ? Number(list[list.length - 1].rate) : null;
   }
 
   function readDecisionInputs(rows, allowManualRate) {
     const fromCurrency = readCurrency(LS.fromCurrency, periodCurrency());
     const toCurrency = readCurrency(LS.toCurrency, accountCurrency());
     const weeklyIncomeAud = Math.max(0, readNumber(LS.weeklyIncome, 1200));
-    const marketRate = (Number(normalizeAudEurRows(rows).slice(-1)[0]?.rate) > 0 ? Number(normalizeAudEurRows(rows).slice(-1)[0].rate) : currentPairRate(fromCurrency, toCurrency)) || 0;
+    const marketRate = currentRateFromRows(rows) || 0;
     const rateOverride = allowManualRate ? readOptionalNumber(LS.rateOverride) : null;
     const rate = rateOverride || marketRate;
     const mode = readText(LS.scaleMode, "percent") === "amount" ? "amount" : "percent";
