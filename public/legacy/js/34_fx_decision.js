@@ -123,6 +123,24 @@
     return null;
   }
 
+  function withCurrentPairRate(history, from, to) {
+    const rows = normalizeAudEurRows(history?.rows);
+    const liveRate = Number(currentPairRate(from, to));
+    if (!Number.isFinite(liveRate) || liveRate <= 0) {
+      return { rows, source: history?.source || "unknown" };
+    }
+    const today = todayISO();
+    const out = rows.slice();
+    const last = out[out.length - 1];
+    if (!last) return { rows: [{ date: today, rate: liveRate }], source: `${history?.source || "local"}+app_rate` };
+    const lastDate = String(last.date || "");
+    const drift = Math.abs(Number(last.rate) - liveRate);
+    const shouldReplaceToday = lastDate === today && drift > Math.max(0.000001, liveRate * 0.0002);
+    if (lastDate < today) out.push({ date: today, rate: liveRate });
+    else if (shouldReplaceToday) out[out.length - 1] = { date: today, rate: liveRate };
+    return { rows: out, source: out.length !== rows.length || shouldReplaceToday ? `${history?.source || "unknown"}+app_rate` : (history?.source || "unknown") };
+  }
+
   function fallbackSeries(rate) {
     const base = Number(rate) > 0 ? Number(rate) : 0.61;
     const end = todayISO();
@@ -202,14 +220,15 @@
   async function fetchAudEurHistory(from, to) {
     let fromDb = null;
     try { fromDb = await fetchAudEurHistoryFromDb(from, to); } catch (_) { fromDb = null; }
-    if (fromDb?.rows?.length) return fromDb;
+    if (fromDb?.rows?.length) return withCurrentPairRate(fromDb, from, to);
     try {
       const fromMarket = await fetchAudEurHistoryFromMarket(from, to);
-      writeHistoryCache(fromMarket.rows, from, to);
-      return fromMarket;
+      const enriched = withCurrentPairRate(fromMarket, from, to);
+      writeHistoryCache(enriched.rows, from, to);
+      return enriched;
     } catch (e) {
       const cached = readHistoryCache(from, to);
-      if (cached) return cached;
+      if (cached) return withCurrentPairRate(cached, from, to);
       throw e;
     }
   }

@@ -512,6 +512,7 @@
               <button type="button" data-mock-module="analysis">Analysis</button>
               <button type="button" data-mock-module="assets">Assets</button>
               <button type="button" data-mock-module="documents">Documents</button>
+              <button type="button" data-mock-module="sport">Sport</button>
               <button type="button" data-mock-module="split">Split</button>
             </aside>
             <div class="mock-main" id="mockMain">
@@ -607,6 +608,7 @@
             <button class="tab-btn active" type="button" data-module="dashboard">Dashboard</button>
             <button class="tab-btn" type="button" data-module="transactions">Transactions</button>
             <button class="tab-btn" type="button" data-module="documents">Documents</button>
+            <button class="tab-btn" type="button" data-module="sport">Sport</button>
             <button class="tab-btn" type="button" data-module="assets">Assets</button>
             <button class="tab-btn" type="button" data-module="split">Split</button>
             <button class="tab-btn" type="button" data-module="assistant">Assistant</button>
@@ -765,6 +767,7 @@
           dashboard: ["Dashboard", "Vue cashflow, budget quotidien, rentrees attendues et projections pour savoir ou tu en es vraiment.", ["Solde multi-wallet", "Budget restant", "Courbe de tresorerie"]],
           transactions: ["Transactions", "Creation, filtres, categories, factures liees, mouvements internes et protections pour les lignes Trip ou wallet.", ["Verrouillages metier", "Bulk classification", "Factures liees"]],
           documents: ["Documents", "Hub transversal pour factures, contrats, garanties, tags, sous-dossiers et partages temporaires.", ["Tags proposes", "Liens financiers", "Partage public"]],
+          sport: ["Sport", "Construis une seance, suis les exercices, estime les kcal et garde un historique de tes sensations.", ["Seances guidees", "Kcal estimees", "Historique"]],
           assets: ["Assets", "Suivi du patrimoine, coproprietaires, amortissement, documents lies et valorisation multi-devise.", ["Valeur actuelle", "Coproprietaires", "Garanties"]],
           split: ["Split", "Depenses partagees, participants, matching transaction et recap des remboursements.", ["Parts", "Avances", "Solde par personne"]],
           assistant: ["Assistant", "Aide locale contextuelle : signaux rapides, navigation et reponses simples sans appeler d'API externe.", ["Contexte vue", "Signaux", "Guidage"]]
@@ -773,6 +776,7 @@
           dashboard: ["Dashboard", "Cashflow, daily budget, expected income and projections to understand where you really stand.", ["Multi-wallet balance", "Remaining budget", "Cash curve"]],
           transactions: ["Transactions", "Creation, filters, categories, linked invoices, internal transfers and safeguards for Trip or wallet rows.", ["Business locks", "Bulk classification", "Linked invoices"]],
           documents: ["Documents", "Cross-module hub for invoices, contracts, warranties, tags, subfolders and temporary sharing.", ["Suggested tags", "Financial links", "Public sharing"]],
+          sport: ["Sport", "Build a workout, follow exercises, estimate kcal and keep a history of how you felt.", ["Guided sessions", "Estimated kcal", "History"]],
           assets: ["Assets", "Track assets, co-owners, depreciation, linked documents and multi-currency valuation.", ["Current value", "Co-owners", "Warranties"]],
           split: ["Split", "Shared expenses, participants, transaction matching and reimbursement recap.", ["Shares", "Advances", "Balance by person"]],
           assistant: ["Assistant", "Local contextual help: quick signals, navigation and simple answers without external API calls.", ["View context", "Signals", "Guidance"]]
@@ -784,6 +788,7 @@
           dashboard: [["Cash net", "3 470 AUD"], ["Budget/jour", "100 AUD"], ["A payer", "280 AUD"], ["La courbe combine solde reel, sorties futures et revenus attendus."]],
           transactions: [["Transactions", "1 045"], ["A classer", "25"], ["Factures liees", "128"], ["Les lignes Trip et mouvements internes restent protegees dans leur module source."]],
           documents: [["Documents", "91"], ["Factures", "6"], ["Liens actifs", "34"], ["Chaque fichier peut etre tagge, range et relie a une transaction ou un asset."]],
+          sport: [["Seance", "35 min"], ["Exercices", "8"], ["Kcal", "210"], ["Le timer est optionnel : une seance preparee peut aussi etre marquee comme faite."]],
           assets: [["Valeur totale", "7 500 AUD"], ["Documents", "2"], ["Amortissement", "-62 AUD/mois"], ["Les garanties et factures restent accessibles depuis la fiche asset."]],
           split: [["Depense", "112 AUD"], ["Participants", "2"], ["A recevoir", "56 AUD"], ["Le matching garde le budget et les remboursements coherents."]],
           assistant: [["Signaux", "6"], ["Modules lus", "5"], ["Reponses", "Locales"], ["L'assistant guide sans envoyer tes donnees vers une API externe."]]
@@ -792,6 +797,7 @@
           dashboard: [["Net cash", "3,470 AUD"], ["Daily budget", "100 AUD"], ["To pay", "280 AUD"], ["The curve combines current balance, future outflows and expected income."]],
           transactions: [["Transactions", "1,045"], ["To classify", "25"], ["Linked invoices", "128"], ["Trip and internal transfer rows stay protected in their source module."]],
           documents: [["Documents", "91"], ["Invoices", "6"], ["Active links", "34"], ["Each file can be tagged, filed and linked to a transaction or asset."]],
+          sport: [["Workout", "35 min"], ["Exercises", "8"], ["Kcal", "210"], ["The timer is optional: a prepared workout can also be marked as done."]],
           assets: [["Total value", "7,500 AUD"], ["Documents", "2"], ["Depreciation", "-62 AUD/month"], ["Warranties and invoices remain available from the asset page."]],
           split: [["Expense", "112 AUD"], ["Participants", "2"], ["To receive", "56 AUD"], ["Matching keeps budget and reimbursements consistent."]],
           assistant: [["Signals", "6"], ["Modules read", "5"], ["Answers", "Local"], ["The assistant guides without sending your data to an external API."]]
@@ -834,6 +840,13 @@
             signal: "6 factures",
             rows: [["Facture voiture.pdf", "Asset lie"], ["Bulletin de paie.pdf", "Tag propose"], ["Contrat travail.pdf", "Partageable"]],
             chips: ["Tags", "Dossiers", "Liens"]
+          },
+          sport: {
+            title: "Sport",
+            cash: "35 min",
+            signal: "Seance faite",
+            rows: [["Course facile", "45 min"], ["Push-up", "30 reps x 3"], ["Ressenti", "OK - 210 kcal"]],
+            chips: ["Timer", "Historique", "Kcal"]
           },
           split: {
             title: "Split",
@@ -878,6 +891,13 @@
             signal: "6 invoices",
             rows: [["Car invoice.pdf", "Asset linked"], ["Payslip.pdf", "Suggested tag"], ["Work contract.pdf", "Shareable"]],
             chips: ["Tags", "Folders", "Links"]
+          },
+          sport: {
+            title: "Sport",
+            cash: "35 min",
+            signal: "Workout done",
+            rows: [["Easy run", "45 min"], ["Push-up", "30 reps x 3"], ["Feeling", "OK - 210 kcal"]],
+            chips: ["Timer", "History", "Kcal"]
           },
           split: {
             title: "Split",

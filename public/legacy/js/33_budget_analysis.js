@@ -1382,7 +1382,46 @@ categoryTxMap, subcategoryTxMap
   </div>
 `;
 
-host.innerHTML = progressCards.map((c, idx) => renderGlassCard(c, idx)).join('') + renderDeltaCard(progressCards.length) + cashflowBlock;
+    const cashIn = _safeNum(model.incomeReal);
+    const cashOut = _safeNum(model.expenseReal);
+    const cashNet = cashIn - cashOut;
+    const cashMax = Math.max(1, Math.abs(cashIn), Math.abs(cashOut));
+    const cashInPct = Math.max(4, Math.min(100, (Math.abs(cashIn) / cashMax) * 100));
+    const cashOutPct = Math.max(4, Math.min(100, (Math.abs(cashOut) / cashMax) * 100));
+    const cashCoverage = cashOut > 0 ? (cashIn / cashOut) * 100 : (cashIn > 0 ? 100 : 0);
+    const cashOnlyBlock = `
+      <div class="analysis-stat analysis-stat--cash-only"
+        style="grid-column:1 / -1; padding:20px; border-radius:28px; border:1px solid rgba(148,163,184,.22); background:linear-gradient(135deg, rgba(255,255,255,.96), rgba(248,250,252,.88)); box-shadow:0 16px 38px rgba(148,163,184,.16);">
+        <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+          <div>
+            <div style="font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,23,42,.52);">${escapeHTML(trA('Tresorerie pure', 'Cash-only analysis'))}</div>
+            <h3 style="margin:6px 0 4px;font-size:28px;line-height:1.1;">${escapeHTML(trA('Entrees vs sorties', 'Income vs outflows'))}</h3>
+            <div style="font-size:13px;color:rgba(15,23,42,.62);">${escapeHTML(trA('Uniquement les mouvements cash deja encaisses ou payes dans le filtre courant.', 'Only cash movements already received or paid within the current filter.'))}</div>
+          </div>
+          <div style="padding:10px 14px;border-radius:18px;background:${cashNet >= 0 ? 'rgba(16,185,129,.10)' : 'rgba(244,63,94,.10)'};border:1px solid ${cashNet >= 0 ? 'rgba(16,185,129,.22)' : 'rgba(244,63,94,.22)'};">
+            <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:rgba(15,23,42,.52);">${escapeHTML(trA('Net cash', 'Net cash'))}</div>
+            <div style="margin-top:4px;font-size:24px;font-weight:950;color:${cashNet >= 0 ? '#10b981' : '#f43f5e'};">${escapeHTML(_fmtMoney(cashNet, model.base))}</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(180px,.6fr);gap:12px;margin-top:16px;">
+          <div style="padding:14px;border-radius:18px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.16);">
+            <div style="display:flex;justify-content:space-between;gap:10px;font-weight:850;"><span>${escapeHTML(trA('Entrees encaissees', 'Received income'))}</span><span style="color:#10b981;">${escapeHTML(_fmtMoney(cashIn, model.base))}</span></div>
+            <div class="bar" style="height:9px;margin-top:12px;background:rgba(15,23,42,.08);border-radius:999px;overflow:hidden;"><i style="display:block;height:100%;width:${cashInPct.toFixed(0)}%;background:linear-gradient(90deg,#10b981,#22d3ee);border-radius:inherit;"></i></div>
+          </div>
+          <div style="padding:14px;border-radius:18px;background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.16);">
+            <div style="display:flex;justify-content:space-between;gap:10px;font-weight:850;"><span>${escapeHTML(trA('Sorties payees', 'Paid outflows'))}</span><span style="color:#f43f5e;">${escapeHTML(_fmtMoney(cashOut, model.base))}</span></div>
+            <div class="bar" style="height:9px;margin-top:12px;background:rgba(15,23,42,.08);border-radius:999px;overflow:hidden;"><i style="display:block;height:100%;width:${cashOutPct.toFixed(0)}%;background:linear-gradient(90deg,#fb7185,#f59e0b);border-radius:inherit;"></i></div>
+          </div>
+          <div style="padding:14px;border-radius:18px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.16);">
+            <div style="font-size:12px;color:rgba(15,23,42,.58);">${escapeHTML(trA('Couverture entrees/sorties', 'Income/outflow coverage'))}</div>
+            <div style="margin-top:6px;font-size:23px;font-weight:950;color:#2563eb;">${Number.isFinite(cashCoverage) ? cashCoverage.toFixed(0) : '0'}%</div>
+            <div style="margin-top:4px;font-size:12px;color:rgba(15,23,42,.52);">${escapeHTML(model.start)} - ${escapeHTML(model.end)}</div>
+          </div>
+        </div>
+      </div>`;
+
+host.innerHTML = progressCards.map((c, idx) => renderGlassCard(c, idx)).join('') + renderDeltaCard(progressCards.length) + cashflowBlock + cashOnlyBlock;
   }
   function _txDrilldownId(tx, idx){
   return String(tx?.id || tx?.transaction_id || tx?.local_id || `${_txBudgetStart(tx)}|${tx?.label || ''}|${tx?.amount || ''}|${idx || 0}`);

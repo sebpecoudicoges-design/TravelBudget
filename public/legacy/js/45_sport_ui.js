@@ -864,7 +864,10 @@
             <div class="kind">${esc(txt("Pret", "Ready"))}</div>
             <div class="name">${esc(txt("Construis ta seance", "Build your workout"))}</div>
             <div class="hint">${esc(txt("Lance le timer apres avoir ajoute tes exercices.", "Start the timer after adding exercises."))}</div>
-            <button class="btn primary" type="button" id="sport-start" ${CACHE.plan.length ? "" : "disabled"}>${esc(txt("Lancer la seance", "Start workout"))}</button>
+            <div class="tb-sport-actions" style="justify-content:center;">
+              <button class="btn primary" type="button" id="sport-start" ${CACHE.plan.length ? "" : "disabled"}>${esc(txt("Lancer la seance", "Start workout"))}</button>
+              <button class="btn" type="button" id="sport-mark-done" ${CACHE.plan.length ? "" : "disabled"}>${esc(txt("Marquer faite", "Mark done"))}</button>
+            </div>
           </div>
         </div>`;
     }
@@ -1124,6 +1127,8 @@
     });
     const start = root.querySelector("#sport-start");
     if (start) start.onclick = startTimer;
+    const markDone = root.querySelector("#sport-mark-done");
+    if (markDone) markDone.onclick = completePlanWithoutTimer;
     const done = root.querySelector("#sport-step-done");
     if (done) done.onclick = completeStep;
     const skipRest = root.querySelector("#sport-skip-rest");
@@ -1169,6 +1174,61 @@
     requestWakeLock();
     startTicker();
     renderSport("timer-start");
+  }
+
+  function completePlanWithoutTimer() {
+    if (!CACHE.plan.length) return;
+    saveBodyWeight(document.getElementById("sport-weight")?.value || bodyWeight());
+    saveBodyHeight(document.getElementById("sport-height")?.value || bodyHeight());
+    stopTicker();
+    releaseWakeLock();
+
+    const weightKg = bodyWeight();
+    const heightCm = bodyHeight();
+    const durationSeconds = Math.max(1, Math.round(totalPlanSeconds(CACHE.plan)));
+    const endedAt = Date.now();
+    const startedAt = endedAt - durationSeconds * 1000;
+    let cursor = startedAt;
+    const doneSets = [];
+
+    (CACHE.plan || []).forEach((item, itemIndex) => {
+      const sets = Math.max(1, Math.round(n(item.sets, 1)));
+      for (let setIndex = 0; setIndex < sets; setIndex += 1) {
+        const workSeconds = setWorkSeconds(item);
+        cursor += workSeconds * 1000;
+        doneSets.push({
+          itemIndex,
+          setIndex,
+          reps: item.mode === "reps" ? n(item.targetReps, 0) : null,
+          durationSeconds: workSeconds,
+          weightKg: effectiveLoadKg(item, weightKg),
+          distanceM: n(item.distanceM, 0),
+          completedAt: new Date(Math.min(cursor, endedAt)).toISOString(),
+        });
+        cursor += Math.max(0, n(item.restSeconds, 0)) * 1000;
+      }
+    });
+
+    const summary = {
+      startedAt: new Date(startedAt).toISOString(),
+      endedAt: new Date(endedAt).toISOString(),
+      durationSeconds,
+      bodyWeightKg: weightKg,
+      bodyHeightCm: heightCm,
+      moodAfter: "",
+      perceivedEffort: null,
+      notes: "",
+      estimatedKcal: Math.max(1, Math.round(doneSets.reduce((sum, set) => {
+        const item = CACHE.plan[set.itemIndex];
+        return sum + kcalEstimate(item?.metValue || 1, weightKg, set.durationSeconds, set.weightKg);
+      }, 0))),
+      doneSets,
+      plan: CACHE.plan.slice(),
+    };
+    CACHE.timer = null;
+    CACHE.pendingSummary = summary;
+    renderSport("mark-done");
+    openFinishModal(summary);
   }
 
   function startTicker() {
