@@ -6,7 +6,7 @@ function _txModalT(k, vars) {
   try { return window.tbT ? window.tbT(k, vars) : k; } catch (_) { return k; }
 }
 
-function fillModalSelects() {
+function fillModalSelects(includeWalletId) {
   const elW = document.getElementById("m-wallet");
   const elC = document.getElementById("m-category");
   if (!elW || !elC) return;
@@ -16,13 +16,15 @@ function fillModalSelects() {
 
   const wallets = (state.wallets || []).filter((w) => {
     const tid = w?.travelId || w?.travel_id || null;
+    if (String(includeWalletId || "") === String(w?.id || "")) return true;
+    if (w?.archived === true) return false;
     if (!tid) return true; // legacy
     if (!activeTravelId) return true;
     return String(tid) === String(activeTravelId);
   });
 
   elW.innerHTML = wallets
-    .map((w) => `<option value="${w.id}">${w.name} (${w.currency})</option>`)
+    .map((w) => `<option value="${w.id}">${w.name} (${w.currency})${w.archived ? " - archivé" : ""}</option>`)
     .join("");
 
   elC.innerHTML = getCategories()
@@ -219,7 +221,7 @@ function openTxModal(type = "expense", walletId = null) {
   document.getElementById("m-type").value = type;
 
   const elW = document.getElementById("m-wallet");
-  elW.value = walletId || state.wallets[0]?.id || "";
+  elW.value = walletId || (state.wallets || []).find(w => w.archived !== true)?.id || state.wallets[0]?.id || "";
   _ensureSelectValue(elW);
 
   document.getElementById("m-amount").value = "";
@@ -245,7 +247,7 @@ function openTxEditModal(txId) {
   if (!tx) return alert(_txModalT("transactions.error.not_found"));
 
   editingTxId = txId;
-  fillModalSelects();
+  fillModalSelects(tx.walletId || tx.wallet_id);
 
   const lockState = _txGetLockState(tx);
   if (lockState.readonly) {
@@ -304,7 +306,7 @@ function openTxDuplicateModal(txId) {
 
   editingTxId = null;
 
-  fillModalSelects();
+  fillModalSelects(tx.walletId || tx.wallet_id);
   _setTxModalReadOnly(false);
   _setTxModalLock(false);
 

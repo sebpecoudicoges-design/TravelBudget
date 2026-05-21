@@ -71,6 +71,56 @@ function _tbUxDismiss(id) {
 window.tbUxDismiss = window.tbUxDismiss || _tbUxDismiss;
 window.tbUxIsDismissed = window.tbUxIsDismissed || _tbUxIsDismissed;
 
+function _walletRecentTxDate(tx) {
+  return String(tx?.dateStart || tx?.date_start || tx?.budgetDateStart || tx?.budget_date_start || "").slice(0, 10);
+}
+
+function _walletRecentTransactions(walletId, today) {
+  const wid = String(walletId || "");
+  const maxDate = String(today || toLocalISODate(new Date()));
+  return (Array.isArray(state?.transactions) ? state.transactions : [])
+    .filter((tx) => String(tx?.walletId || tx?.wallet_id || "") === wid)
+    .filter((tx) => (tx?.travelId || tx?.travel_id || null) === state.activeTravelId)
+    .filter((tx) => {
+      const d = _walletRecentTxDate(tx);
+      return !!d && d <= maxDate;
+    })
+    .sort((a, b) => {
+      const da = _walletRecentTxDate(a);
+      const db = _walletRecentTxDate(b);
+      if (db !== da) return db.localeCompare(da);
+      return (Number(b?.createdAt || 0) - Number(a?.createdAt || 0));
+    })
+    .slice(0, 5);
+}
+
+function _walletRecentTransactionsHTML(walletId, today, T) {
+  const rows = _walletRecentTransactions(walletId, today);
+  if (!rows.length) {
+    return `<div class="muted" style="font-size:12px;">${T("wallet.recent.empty")}</div>`;
+  }
+  return rows.map((tx) => {
+    const type = String(tx?.type || "").toLowerCase();
+    const sign = type === "expense" ? "-" : "+";
+    const isPaid = tx?.payNow !== false;
+    const statusColor = isPaid ? "rgba(16,185,129,.12)" : "rgba(245,158,11,.14)";
+    const statusBorder = isPaid ? "rgba(16,185,129,.35)" : "rgba(245,158,11,.38)";
+    const statusText = isPaid ? T("wallet.recent.paid") : T("wallet.recent.unpaid");
+    const label = escapeHTML(String(tx?.label || tx?.category || "Transaction"));
+    const date = escapeHTML(_walletRecentTxDate(tx));
+    const amount = escapeHTML(`${sign}${fmtMoney(Math.abs(Number(tx?.amount) || 0), tx?.currency || "")}`);
+    return `
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid rgba(15,23,42,.07);">
+        <div style="min-width:0;">
+          <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
+          <div class="muted" style="font-size:12px;">${date} · <span style="display:inline-flex;align-items:center;border:1px solid ${statusBorder};background:${statusColor};border-radius:999px;padding:1px 7px;color:var(--text);font-weight:700;">${escapeHTML(statusText)}</span></div>
+        </div>
+        <div style="font-weight:800;white-space:nowrap;color:${type === "expense" ? "var(--danger)" : "var(--ok)"};">${amount}</div>
+      </div>
+    `;
+  }).join("");
+}
+
 function renderDashboardContextHelp(container) {
   if (!container) return;
   if ((window.tbUxIsDismissed || _tbUxIsDismissed)("dashboard_overview")) return;
@@ -191,7 +241,15 @@ actions.innerHTML = `
 container.appendChild(actions);
 
 
-const wallets = Array.isArray(state.wallets) ? state.wallets : [];
+const allWallets = Array.isArray(state.wallets) ? state.wallets : [];
+const showArchivedWallets = !!window.__tbShowArchivedWallets;
+const wallets = allWallets.filter(w => showArchivedWallets || w.archived !== true);
+const archiveToggleBtn = document.createElement("button");
+archiveToggleBtn.className = "btn";
+archiveToggleBtn.type = "button";
+archiveToggleBtn.textContent = showArchivedWallets ? T("wallet.action.hide_archived") : T("wallet.action.show_archived");
+archiveToggleBtn.onclick = () => toggleArchivedWallets();
+actions.appendChild(archiveToggleBtn);
 try {
   if (typeof renderKpis === "function") renderKpis();
 
@@ -260,8 +318,8 @@ if (!wallets.length) {
   const base = String(infoToday.baseCurrency || state?.period?.baseCurrency || "EUR").toUpperCase();
 
   const orderedWallets = (typeof sortWalletsBySavedOrder === "function")
-    ? sortWalletsBySavedOrder([...(state.wallets || [])])
-    : ([...(state.wallets || [])]);
+    ? sortWalletsBySavedOrder([...wallets])
+    : ([...wallets]);
 
   for (const w of orderedWallets) {
     const isBase = w.currency === base;
@@ -271,15 +329,23 @@ if (!wallets.length) {
     div.className = "wallet wallet-item";
     div.dataset.walletId = w.id;
     div.innerHTML = `
-      <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap;">
-        <div>
-          <h3>${w.name} (${w.currency})</h3>
+      <div style="display:flex; justify-content:space-between; gap:18px; align-items:flex-start; flex-wrap:wrap;">
+        <div style="min-width:280px; flex:1 1 520px;">
+          <h3>${w.name} (${w.currency}) ${w.archived ? `<span class="pill">${T("wallet.archived")}</span>` : ""}</h3>
           <p>${T("wallet.balance")} : <strong style="color:var(--text);">${fmtMoney((typeof window.tbGetWalletEffectiveBalance === "function" ? window.tbGetWalletEffectiveBalance(w.id) : w.balance), w.currency)}</strong></p>
           ${isBase
             ? `<p class="muted">${T("wallet.today_budget", { date: today })} <strong>${budgetToday.toFixed(2)} ${base}</strong></p>`
             : `<p class="muted">${T("wallet.daily_budget_base", { currency: base })}</p>`}
+          <div style="margin-top:12px;max-width:620px;">
+            <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:800;">${T("wallet.recent.title")}</div>
+            ${_walletRecentTransactionsHTML(w.id, today, T)}
+          </div>
+          ${isBase ? `
+            <div class="bar" style="margin-top:12px;"><div style="width:${barPct.toFixed(0)}%;"></div></div>
+            <div class="muted" style="margin-top:6px;">${T("wallet.budget_level")}</div>
+          ` : ""}
         </div>
-        <div style="display:flex; flex-direction:column; gap:8px; min-width:190px;">
+        <div style="display:flex; flex-direction:column; gap:8px; flex:0 0 200px;">
           <button class="btn primary" onclick="openTxModal('expense','${w.id}')">${T("wallet.action.add_expense")}</button>
           <button class="btn" onclick="openTxModal('income','${w.id}')">${T("wallet.action.add_income")}</button>
           <button class="btn" onclick="editWallet('${w.id}')">✏️ ${T("wallet.action.edit")}</button>
@@ -288,11 +354,23 @@ if (!wallets.length) {
         </div>
       </div>
 
-      ${isBase ? `
-        <div class="bar"><div style="width:${barPct.toFixed(0)}%;"></div></div>
-        <div class="muted" style="margin-top:6px;">${T("wallet.budget_level")}</div>
-      ` : ""}
     `;
+    const actionCol = div.querySelector('div[style*="flex-direction:column"]');
+    if (actionCol) {
+      if (w.archived) {
+        actionCol.querySelectorAll("button").forEach((btn) => {
+          const action = String(btn.getAttribute("onclick") || "");
+          if (action.includes("openTxModal") || action.includes("adjustWalletBalance")) btn.remove();
+        });
+      }
+      const archiveBtn = document.createElement("button");
+      archiveBtn.className = "btn";
+      archiveBtn.textContent = w.archived ? T("wallet.action.unarchive") : T("wallet.action.archive");
+      archiveBtn.onclick = () => w.archived ? unarchiveWallet(w.id) : archiveWallet(w.id);
+      const deleteBtn = actionCol.querySelector("button[onclick^='deleteWallet']");
+      if (deleteBtn) actionCol.insertBefore(archiveBtn, deleteBtn);
+      else actionCol.appendChild(archiveBtn);
+    }
     listEl.appendChild(div);
   }
 
@@ -907,6 +985,42 @@ async function editWallet(walletId) {
   } catch (e) {
     console.error(e);
     alert("Erreur modification wallet : " + (e?.message || e));
+  }
+}
+
+function toggleArchivedWallets() {
+  window.__tbShowArchivedWallets = !window.__tbShowArchivedWallets;
+  renderWallets();
+}
+
+async function archiveWallet(walletId) {
+  try {
+    const w = (state.wallets || []).find(x => String(x.id) === String(walletId));
+    if (!w) return;
+    if (!confirm(`${(window.tbT ? tbT("wallet.action.archive") : "Archiver")} "${w.name} (${w.currency})" ?`)) return;
+    const { error } = await sb
+      .from(TB_CONST.TABLES.wallets)
+      .update({ archived: true, archived_at: new Date().toISOString() })
+      .eq("id", walletId);
+    if (error) throw error;
+    await refreshFromServer();
+  } catch (e) {
+    console.error(e);
+    alert(e?.message || "Erreur archive wallet");
+  }
+}
+
+async function unarchiveWallet(walletId) {
+  try {
+    const { error } = await sb
+      .from(TB_CONST.TABLES.wallets)
+      .update({ archived: false, archived_at: null })
+      .eq("id", walletId);
+    if (error) throw error;
+    await refreshFromServer();
+  } catch (e) {
+    console.error(e);
+    alert(e?.message || "Erreur désarchivage wallet");
   }
 }
 

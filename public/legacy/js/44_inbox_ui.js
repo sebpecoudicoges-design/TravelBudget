@@ -132,7 +132,7 @@
   }
 
   function walletOptionsHtml(selectedCurrency){
-    const wallets = Array.isArray(window.state?.wallets) ? window.state.wallets : [];
+    const wallets = (Array.isArray(window.state?.wallets) ? window.state.wallets : []).filter(w => w?.archived !== true);
     return wallets.map(w => {
       const id = w.id || w.wallet_id;
       const cur = String(w.currency || '').toUpperCase();
@@ -416,7 +416,7 @@
 
   function openTransactionModalForInbox(item){
     const draft = inferDraft(item);
-    const wallets = Array.isArray(window.state?.wallets) ? window.state.wallets : [];
+    const wallets = (Array.isArray(window.state?.wallets) ? window.state.wallets : []).filter(w => w?.archived !== true);
     if(!wallets.length) return alert(tr('Aucun wallet disponible.', 'No wallet available.'));
     const preferredCurrency = draft.currency || String(window.state?.period?.baseCurrency || window.state?.period?.base_currency || '').toUpperCase();
     const firstWallet = wallets.find(w => String(w.currency || '').toUpperCase() === preferredCurrency) || wallets[0];

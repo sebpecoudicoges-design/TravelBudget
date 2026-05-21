@@ -250,6 +250,9 @@ function toastOk(msg) {
 
   function _el(id) { return document.getElementById(id); }
   function _root() { return document.getElementById("trip-root"); }
+  function _activeWallets() {
+    return (state.wallets || []).filter(w => w?.archived !== true);
+  }
 
   function _fmtMoney(v, cur) {
     const n = Number(v) || 0;
@@ -652,7 +655,7 @@ function _normalizeCurrency(cur) {
       out.push(cur);
     };
 
-    (state.wallets || []).forEach(w => pushCur(w?.currency));
+    _activeWallets().forEach(w => pushCur(w?.currency));
     pushCur(tripState?.trips?.find(t => t.id === tripState.activeTripId)?.base_currency);
     pushCur(state?.period?.baseCurrency);
     pushCur(selected);
@@ -1694,6 +1697,55 @@ if (!Array.isArray(data)) return null;
     return out;
   }
 
+  function _serializeBalancesForSnapshot(balancesByCur) {
+    const out = [];
+    for (const [currency, rows] of (balancesByCur || new Map()).entries()) {
+      for (const [memberId, amount] of (rows || new Map()).entries()) {
+        out.push({ currency, memberId, amount: _round2(amount) });
+      }
+    }
+    return out;
+  }
+
+  function _balancesFromSnapshot(snapshot) {
+    const out = new Map();
+    const rows = Array.isArray(snapshot?.balances) ? snapshot.balances : [];
+    for (const row of rows) {
+      const cur = String(row?.currency || "").toUpperCase();
+      const memberId = row?.memberId || row?.member_id;
+      if (!cur || !memberId) continue;
+      if (!out.has(cur)) out.set(cur, new Map());
+      out.get(cur).set(memberId, Number(row?.amount || 0));
+    }
+    return out;
+  }
+
+  function _settlementsFromSnapshot(snapshot) {
+    const out = new Map();
+    const rows = Array.isArray(snapshot?.settlements) ? snapshot.settlements : [];
+    for (const row of rows) {
+      const cur = String(row?.currency || row?.out_currency || "").toUpperCase();
+      if (!cur) continue;
+      if (!out.has(cur)) out.set(cur, []);
+      out.get(cur).push({
+        fromId: row?.fromId || row?.from_member_id,
+        toId: row?.toId || row?.to_member_id,
+        amount: Number(row?.amount || 0),
+      });
+    }
+    return out;
+  }
+
+  function _serializeSettlementsForSnapshot(settlementsByCur) {
+    const out = [];
+    for (const [currency, rows] of (settlementsByCur || new Map()).entries()) {
+      for (const row of (rows || [])) {
+        out.push({ currency, fromId: row.fromId, toId: row.toId, amount: _round2(row.amount) });
+      }
+    }
+    return out;
+  }
+
 
   function _buildSettlementMessage(tripName, members, settlementsByCur) {
       const lines = [];
@@ -1797,7 +1849,7 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
 
   const sel = modal.querySelector("#tripSettleWallet");
   sel.innerHTML = "";
-  const wallets = state.wallets || [];
+  const wallets = _activeWallets();
   for (const w of wallets) {
     const opt = document.createElement("option");
     opt.value = w.id;
@@ -1858,7 +1910,7 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
   modal.querySelector("#tripSettleConfirm").onclick = async () => {
     try {
       const wid = sel.value;
-      const wallets2 = state.wallets || [];
+      const wallets2 = _activeWallets();
       const w = wallets2.find(x => x.id === wid);
       if (!w) throw new Error("Wallet introuvable.");
       const walletCur = String(w.currency || "").toUpperCase();
@@ -2887,7 +2939,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
       if (!(amt > 0)) throw new Error("Montant invalide.");
   
       // Choose wallet (required)
-      const walletId = tripState.settlementWalletId || state.activeWalletId || (state.wallets?.[0]?.id || "");
+      const walletId = tripState.settlementWalletId || state.activeWalletId || (_activeWallets()?.[0]?.id || "");
       if (!walletId) throw new Error("Aucune wallet disponible. Crée/sélectionne une wallet.");
   
       const w = (state.wallets || []).find(x => x.id === walletId);
@@ -3528,7 +3580,7 @@ try {
           let wId = walletId || null;
           let w = wId ? findWallet(wId) : null;
           if (!w) {
-            w = state.wallets.find(x => String(x.currency || "").toUpperCase() === cur) || null;
+            w = _activeWallets().find(x => String(x.currency || "").toUpperCase() === cur) || null;
             wId = w?.id || null;
           }
           if (!wId || !w) {
@@ -4104,7 +4156,7 @@ try {
             let wId = walletId || null;
             let w = wId ? findWallet(wId) : null;
             if (!w) {
-              w = state.wallets.find(x => String(x.currency || "").toUpperCase() === cur) || null;
+              w = _activeWallets().find(x => String(x.currency || "").toUpperCase() === cur) || null;
               wId = w?.id || null;
             }
             if (!wId || !w) {
@@ -4432,8 +4484,10 @@ try {
     if (!root) return;
 
     const trip = tripState.trips.find(t => t.id === tripState.activeTripId) || null;
+    const tripClosed = !!(trip && trip.closed_at);
+    const tripSnapshot = tripClosed && trip?.close_snapshot && typeof trip.close_snapshot === "object" ? trip.close_snapshot : null;
     const myRole = tripState.myRole || 'owner';
-    const canWrite = (myRole !== 'viewer');
+    const canWrite = (myRole !== 'viewer') && !tripClosed;
     const members = tripState.members;
     const expenses = tripState.expenses;
     const editingExpenseId = tripState.editingExpenseId || null;
@@ -4443,10 +4497,20 @@ try {
 
     const globalNetHTML = "";// removed: global net to avoid confusion
 
-    const balancesByCurRaw = (await _fetchBalancesFromDb(tripState.activeTripId)) || _computeBalances();
-    const balancesByCur = _unifyBalancesToDisplayCurrency(balancesByCurRaw);
-    const settlementsByCur = _computeSettlements(balancesByCur);
-    const settlementSuggestionsRaw = (await _fetchSettlementSuggestionsFromDb(tripState.activeTripId, true)) || [];
+    const liveBalancesByCurRaw = _computeBalances();
+    const liveBalancesByCur = _unifyBalancesToDisplayCurrency(liveBalancesByCurRaw);
+    const liveSettlementsByCur = _computeSettlements(liveBalancesByCur);
+    const balancesByCur = tripSnapshot ? _balancesFromSnapshot(tripSnapshot) : liveBalancesByCur;
+    const settlementsByCur = tripSnapshot ? _settlementsFromSnapshot(tripSnapshot) : liveSettlementsByCur;
+    const settlementSuggestionsRaw = [];
+    tripState._lastCloseSnapshot = {
+      closedAt: new Date().toISOString(),
+      displayCurrency: Array.from(liveBalancesByCur.keys())[0] || String(state?.period?.baseCurrency || "EUR").toUpperCase(),
+      balances: _serializeBalancesForSnapshot(liveBalancesByCur),
+      settlements: _serializeSettlementsForSnapshot(liveSettlementsByCur),
+      expenseCount: Array.isArray(expenses) ? expenses.length : 0,
+      memberCount: Array.isArray(members) ? members.length : 0,
+    };
 
     const balHTML = (() => {
       if (!members.length) return `<div class="muted">Ajoute des participants.</div>`;
@@ -4511,9 +4575,7 @@ try {
         <span class="muted">${escapeHTML(hasAny ? stxt("Format simple", "Simple format") : stxt("Rien à régler pour l'instant", "Nothing to settle for now"))}</span>
       </div>`);
 
-      if (!hasAny) return parts.join("");
-
-      for (const [cur, transfers] of settlementsByCur.entries()) {
+      if (hasAny) for (const [cur, transfers] of settlementsByCur.entries()) {
         if (!transfers.length) continue;
         parts.push(`<div class="muted" style="margin-top:10px;">${escapeHTML(stxt("Règlements suggérés", "Suggested settlements"))} • ${escapeHTML(cur)}</div>`);
         for (const t of transfers) {
@@ -4590,8 +4652,23 @@ try {
 
 
     const tripOptions = tripState.trips
-      .map(t => `<option value="${t.id}" ${t.id === tripState.activeTripId ? "selected" : ""}>${escapeHTML(t.name)}</option>`)
+      .map(t => `<option value="${t.id}" ${t.id === tripState.activeTripId ? "selected" : ""}>${escapeHTML(t.name)}${t.closed_at ? " · clos" : ""}</option>`)
       .join("");
+    const closedDate = tripClosed ? String(trip?.closed_at || "").slice(0, 10) : "";
+    const tripStatusHTML = trip
+      ? `<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="pill" style="${tripClosed ? "background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.35);color:#047857;" : "background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.32);color:#1d4ed8;"}font-weight:800;">
+            ${escapeHTML(tripClosed
+              ? ((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Closed / frozen" : "Clos / fige")
+              : ((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Active / live rates" : "Actif / taux vivants"))}
+          </span>
+          <span class="muted" style="font-size:12px;">
+            ${escapeHTML(tripClosed
+              ? (((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Snapshot date: " : "Snapshot du : ") + closedDate)
+              : ((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Balances still move with expenses and FX." : "Les balances evoluent encore avec les depenses et les taux."))}
+          </span>
+        </div>`
+      : "";
 
     const memberOptions = members
       .map(m => {
@@ -4601,7 +4678,7 @@ try {
       })
       .join("");
 
-    const walletOptions = (state.wallets || [])
+    const walletOptions = _activeWallets()
       .map(w => `<option value="${w.id}">${escapeHTML(w.name)} (${escapeHTML(w.currency)})</option>`)
       .join("");
 
@@ -4671,7 +4748,7 @@ try {
           const shareRows = sharesByExpenseForHistory.get(ex.id) || [];
           const participantNames = shareRows.map((row) => membersById.get(String(row.memberId))?.name).filter(Boolean);
           const participantLabel = participantNames.length ? ` • participants: ${escapeHTML(participantNames.join(', '))}` : '';
-          const editBtn = `<button class="btn" type="button" data-edit-exp="${ex.id}" title="${isLinked ? "Édition complète (wallet/budget inclus)" : "Modifier"}">Modifier</button>`;
+          const editBtn = canWrite ? `<button class="btn" type="button" data-edit-exp="${ex.id}" title="${isLinked ? "Édition complète (wallet/budget inclus)" : "Modifier"}">Modifier</button>` : "";
 return `
             <div class="trip-history-row" data-trip-expense-row="${escapeHTML(String(ex.id || ""))}">
               <div class="trip-history-copy">
@@ -4687,7 +4764,7 @@ return `
                   📎 Docs${tripDocCountsByExpense.get(String(ex.id)) ? ` (${tripDocCountsByExpense.get(String(ex.id))})` : ""}
                 </button>
                 ${editBtn}
-                <button class="btn danger" type="button" data-del-exp="${ex.id}">Supprimer</button>
+                ${canWrite ? `<button class="btn danger" type="button" data-del-exp="${ex.id}">Supprimer</button>` : ""}
               </div>
             </div>
           `;
@@ -4702,6 +4779,15 @@ return `
 
     root.innerHTML = `
       ${globalNetHTML}
+      ${tripClosed ? `<div class="card" style="margin-bottom:12px;border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.08);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <h2 style="margin:0 0 4px 0;">${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Closed split" : "Partage clos")}</h2>
+            <div class="muted">${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Balances are frozen from the closing snapshot." : "Les balances sont figées depuis le snapshot de clôture.")} ${escapeHTML(String(trip.closed_at || "").slice(0, 10))}</div>
+          </div>
+          ${myRole !== "viewer" ? `<button class="btn" id="trip-reopen" type="button">${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Reopen" : "Réouvrir")}</button>` : ""}
+        </div>
+      </div>` : ""}
       <div class="grid">
         <div class="card">
           <h2>${escapeHTML(_tripT("trip.title"))}</h2>
@@ -4709,6 +4795,7 @@ return `
             <div class="field" style="min-width:260px;">
               <label>${escapeHTML(_tripT("trip.active"))}</label>
               <select id="trip-active">${tripOptions || ""}</select>
+              ${tripStatusHTML}
             </div>
             <div class="field" style="flex:1;">
               <label>${escapeHTML(_tripT("trip.new"))}</label>
@@ -4719,6 +4806,11 @@ return `
             </div>
             <div class="field" style="align-self:flex-end;">
               <button class="btn danger" id="trip-delete" ${trip ? "" : "disabled"}>${escapeHTML(_tripT("trip.delete"))}</button>
+            </div>
+            <div class="field" style="align-self:flex-end;">
+              ${tripClosed
+                ? `<button class="btn" id="trip-reopen-inline" ${trip && myRole !== "viewer" ? "" : "disabled"}>${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Reopen / unfreeze" : "Reouvrir / defiger")}</button>`
+                : `<button class="btn" id="trip-close" ${trip && myRole !== "viewer" ? "" : "disabled"}>${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Close / freeze" : "Clore / figer")}</button>`}
             </div>
           </div>
 
@@ -4733,7 +4825,7 @@ return `
               <input id="trip-member-email" placeholder="ex: paul@email.com" />
             </div>
             <div class="field" style="align-self:flex-end;">
-              <button class="btn" id="trip-add-member" ${trip ? "" : "disabled"}>${escapeHTML(_tripT("trip.member.add"))}</button>
+              <button class="btn" id="trip-add-member" ${trip && !tripClosed ? "" : "disabled"}>${escapeHTML(_tripT("trip.member.add"))}</button>
             </div>
           </div>
 
@@ -4750,7 +4842,7 @@ return `
                   </div>
                 </div>
                 ${canWrite ? `<button class="btn" type="button" data-rename-member="${m.id}">${escapeHTML(_tripT("trip.member.rename"))}</button>` : ``}
-                <button class="btn danger" data-del-member="${m.id}">${escapeHTML(_tripT("trip.delete"))}</button>
+                ${canWrite ? `<button class="btn danger" data-del-member="${m.id}">${escapeHTML(_tripT("trip.delete"))}</button>` : ``}
               </div>
             `).join("") : `<div class="muted">Aucun participant.</div>`}
           </div>
@@ -4928,6 +5020,53 @@ toastOk("Trip supprimé.");
 
     }
 
+    const btnClose = _el("trip-close");
+    if (btnClose) {
+      btnClose.onclick = async () => {
+        try {
+          if (!tripState.activeTripId) return toastWarn("[Trip] Sélectionne un trip d'abord.");
+          if (!confirm("Clore ce trip et figer les balances actuelles ?")) return;
+          const { error } = await sb
+            .from(TB_CONST.TABLES.trip_groups)
+            .update({
+              closed_at: new Date().toISOString(),
+              closed_by: sbUser?.id || null,
+              close_snapshot: tripState._lastCloseSnapshot || {},
+            })
+            .eq("id", tripState.activeTripId);
+          if (error) throw error;
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+          toastOk("Trip clos et snapshot figé.");
+        } catch (e) {
+          toastWarn(e?.message || String(e));
+        }
+      };
+    }
+
+    const btnReopen = _el("trip-reopen");
+    const btnReopenInline = _el("trip-reopen-inline");
+    const handleReopenTrip = async () => {
+      try {
+        if (!tripState.activeTripId) return;
+        if (!confirm("Réouvrir ce trip ? Les balances redeviendront dynamiques.")) return;
+        const { error } = await sb
+          .from(TB_CONST.TABLES.trip_groups)
+          .update({ closed_at: null, closed_by: null, close_snapshot: null })
+          .eq("id", tripState.activeTripId);
+        if (error) throw error;
+        if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+        toastOk("Trip réouvert.");
+      } catch (e) {
+        toastWarn(e?.message || String(e));
+      }
+    };
+    if (btnReopen) {
+      btnReopen.onclick = async () => {
+        await handleReopenTrip();
+      };
+    }
+    if (btnReopenInline) btnReopenInline.onclick = handleReopenTrip;
+
     const btnAddMem = _el("trip-add-member");
     if (btnAddMem) {
       btnAddMem.onclick = async () => {
@@ -4988,7 +5127,7 @@ toastOk("Participant ajouté.");
 
       const payer = members.find(m => m.id === paidSel.value) || null;
       const isMe = !!payer?.isMe;
-      const wallets = (state.wallets || []);
+      const wallets = _activeWallets();
       const selectedWallet = wallets.find(w => String(w.id || "") === String(wSel.value || "")) || null;
 
       wSel.disabled = !isMe;

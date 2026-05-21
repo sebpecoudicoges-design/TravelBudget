@@ -750,7 +750,7 @@ async function loadFromSupabase(opts = {}) {
   })();
   const fetchWalletsForTravel = (travelId) => sb
     .from(TB_CONST.TABLES.wallets)
-    .select("id,travel_id,period_id,name,currency,balance,type,created_at,balance_snapshot_at")
+    .select("id,travel_id,period_id,name,currency,balance,type,archived,archived_at,created_at,balance_snapshot_at")
     .eq("user_id", sbUser.id)
     .eq("travel_id", travelId)
     .order("created_at", { ascending: true });
@@ -1001,7 +1001,7 @@ if (!p) throw new Error("Période active introuvable.");
 
     const { data: w2, error: w2Err } = await sb
       .from(TB_CONST.TABLES.wallets)
-      .select("id,travel_id,period_id,name,currency,balance,type,created_at,balance_snapshot_at")
+      .select("id,travel_id,period_id,name,currency,balance,type,archived,archived_at,created_at,balance_snapshot_at")
       .eq("user_id", sbUser.id)
       .eq("travel_id", activeTravelId)
       .order("created_at", { ascending: true });
@@ -1367,6 +1367,9 @@ state.wallets = (w || []).map((x) => ({
   currency: x.currency,
   balance: Number(x.balance),
   type: x.type || "other",
+  archived: x.archived === true,
+  archivedAt: x.archived_at || null,
+  archived_at: x.archived_at || null,
   balance_snapshot_at: x.balance_snapshot_at || null,
   balanceSnapshotAt: x.balance_snapshot_at || null,
 }));

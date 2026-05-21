@@ -297,9 +297,21 @@
   }
   function loadAnonHistory() {
     try {
-      const raw = localStorage.getItem(ANON_HISTORY_KEY());
-      const parsed = raw ? JSON.parse(raw) : null;
-      return Array.isArray(parsed) ? parsed.slice(0, 50) : [];
+      const rows = [];
+      [ANON_HISTORY_KEY(), baseHistoryKey()].forEach(key => {
+        try {
+          const raw = localStorage.getItem(key);
+          const parsed = raw ? JSON.parse(raw) : null;
+          if (Array.isArray(parsed)) rows.push(...parsed);
+        } catch (_) {}
+      });
+      const seen = new Set();
+      return rows.filter(row => {
+        const id = String(row?.localId || row?.remoteId || row?.startedAt || row?.started_at || "");
+        if (!id || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      }).slice(0, 50);
     } catch (_) { return []; }
   }
   function saveLocalHistory(rows) {
@@ -307,6 +319,37 @@
   }
   function saveAnonHistory(rows) {
     try { localStorage.setItem(ANON_HISTORY_KEY(), JSON.stringify((rows || []).slice(0, 50))); } catch (_) {}
+    try { localStorage.removeItem(baseHistoryKey()); } catch (_) {}
+  }
+  function sportHistoryKeys() {
+    const keys = new Set([HISTORY_KEY(), ANON_HISTORY_KEY(), baseHistoryKey()]);
+    try {
+      const base = baseHistoryKey();
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (key && (key === base || key.startsWith(`${base}::`))) keys.add(key);
+      }
+    } catch (_) {}
+    return Array.from(keys);
+  }
+  function removeWorkoutFromStoredHistory(storageKey, id) {
+    const key = String(id || "");
+    if (!key || !storageKey) return false;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (!Array.isArray(parsed)) return false;
+      const next = parsed.filter(s =>
+        String(s?.localId || s?.id || "") !== key &&
+        String(s?.remoteId || "") !== key
+      );
+      if (next.length === parsed.length) return false;
+      if (next.length) localStorage.setItem(storageKey, JSON.stringify(next.slice(0, 50)));
+      else localStorage.removeItem(storageKey);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
   function importAnonLocalHistory() {
     const userId = uid();
@@ -343,6 +386,7 @@
     const key = String(id || "");
     CACHE.localSessions = (CACHE.localSessions || []).filter(s => String(s.localId || s.id || "") !== key && String(s.remoteId || "") !== key);
     saveLocalHistory(CACHE.localSessions);
+    sportHistoryKeys().forEach(storageKey => removeWorkoutFromStoredHistory(storageKey, key));
   }
   function updateLocalWorkoutDate(id, newDate) {
     const key = String(id || "");
@@ -990,14 +1034,21 @@
           <button class="btn" type="button" id="sport-import-anon-history">${esc(txt("Recuperer", "Recover"))}</button>
         </div>`
       : "";
+    const sync = uid() && unsyncedLocal.length
+      ? `<div class="tb-sport-status" style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <span>${esc(txt(`${unsyncedLocal.length} seance(s) locale(s) a synchroniser.`, `${unsyncedLocal.length} local workout(s) to sync.`))}</span>
+          <button class="btn primary" type="button" id="sport-sync-local-history">${esc(txt("Synchroniser", "Sync"))}</button>
+        </div>`
+      : "";
     if (CACHE.error) {
-      return `<div class="tb-sport-card"><h3>${esc(txt("Historique", "History"))}</h3>${status}${recover}<div class="muted" style="margin-top:10px;">${esc(txt("Synchro Supabase indisponible, historique local conserve.", "Supabase sync unavailable, local history kept."))} ${esc(CACHE.error)}</div>${renderHistoryGrid(sessions)}</div>`;
+      return `<div class="tb-sport-card"><h3>${esc(txt("Historique", "History"))}</h3>${status}${recover}${sync}<div class="muted" style="margin-top:10px;">${esc(txt("Synchro Supabase indisponible, historique local conserve.", "Supabase sync unavailable, local history kept."))} ${esc(CACHE.error)}</div>${renderHistoryGrid(sessions)}</div>`;
     }
     return `
       <div class="tb-sport-card">
         <h3>${esc(txt("Historique", "History"))}</h3>
         ${status}
         ${recover}
+        ${sync}
         ${renderHistoryGrid(sessions)}
       </div>`;
   }
@@ -1247,6 +1298,8 @@
       importAnonLocalHistory();
       renderSport("import-anon-history");
     };
+    const syncLocal = root.querySelector("#sport-sync-local-history");
+    if (syncLocal) syncLocal.onclick = () => syncLocalWorkouts();
   }
   function syncLoadField(root) {
     const equipment = root?.querySelector("#sport-equipment");
@@ -1629,6 +1682,91 @@
       CACHE.status = txt("Seance sauvegardee localement. Synchro Supabase a verifier.", "Workout saved locally. Supabase sync needs checking.");
       console.warn("[sport] save failed", CACHE.error);
     }
+  }
+
+  async function syncLocalWorkoutRow(row) {
+    const c = client();
+    const userId = uid();
+    if (!c || !userId || !row || row.remoteId) return false;
+    const plan = Array.isArray(row.plan) ? row.plan : [];
+    if (!plan.length) return false;
+    const doneSets = Array.isArray(row.doneSets) ? row.doneSets : [];
+    const primaryActivity = plan[0]?.activityKey || row.activity_type || "strength";
+    const sess = await c
+      .from(table("sport_sessions"))
+      .insert([{
+        user_id: userId,
+        travel_id: activeTravelId(),
+        activity_type: primaryActivity,
+        started_at: row.startedAt || row.started_at || new Date().toISOString(),
+        ended_at: row.endedAt || row.ended_at || row.startedAt || row.started_at || new Date().toISOString(),
+        duration_seconds: row.durationSeconds || row.duration_seconds || 0,
+        mood_after: row.moodAfter || row.mood_after || null,
+        fatigue: row.perceivedEffort || row.fatigue || null,
+        body_weight_kg: row.bodyWeightKg || row.body_weight_kg || null,
+        notes: row.notes || null,
+        estimated_kcal: row.estimatedKcal || row.estimated_kcal || 0,
+      }])
+      .select("id")
+      .single();
+    if (sess.error) throw sess.error;
+    const sessionId = sess.data?.id;
+    const itemRows = plan.map((item, idx) => ({
+      user_id: userId,
+      session_id: sessionId,
+      activity_key: item.activityKey || primaryActivity,
+      exercise_name: item.exerciseName || item.label || labelActivity(item.activityKey || primaryActivity),
+      equipment: item.equipment || "mixed",
+      mode: item.mode || "time",
+      target_reps: item.targetReps || null,
+      target_seconds: item.targetSeconds || null,
+      distance_m: item.distanceM || null,
+      planned_sets: item.sets || 1,
+      rest_seconds: item.restSeconds || 0,
+      sort_order: idx,
+      met_value: item.metValue || null,
+      notes: item.notes || null,
+    }));
+    const items = await c.from(table("sport_session_items")).insert(itemRows).select("id,sort_order");
+    if (items.error) throw items.error;
+    const itemByIndex = new Map((items.data || []).map(item => [Number(item.sort_order), item.id]));
+    const setRows = doneSets.map(set => ({
+      user_id: userId,
+      item_id: itemByIndex.get(Number(set.itemIndex)),
+      set_index: set.setIndex,
+      reps: set.reps,
+      duration_seconds: set.durationSeconds,
+      weight_kg: set.weightKg || null,
+      distance_m: set.distanceM || null,
+      completed_at: set.completedAt || row.endedAt || row.ended_at || new Date().toISOString(),
+    })).filter(set => set.item_id);
+    if (setRows.length) {
+      const savedSets = await c.from(table("sport_sets")).insert(setRows);
+      if (savedSets.error) throw savedSets.error;
+    }
+    markLocalSynced(row.localId || row.id, sessionId);
+    return true;
+  }
+
+  async function syncLocalWorkouts() {
+    const rows = (CACHE.localSessions || []).filter(row => !row.remoteId);
+    if (!rows.length) return;
+    CACHE.status = txt("Synchronisation des seances locales...", "Syncing local workouts...");
+    renderSport("sync-local-start");
+    let ok = 0;
+    try {
+      for (const row of rows) {
+        if (await syncLocalWorkoutRow(row)) ok += 1;
+      }
+      CACHE.loaded = false;
+      CACHE.status = txt(`${ok} seance(s) synchronisee(s).`, `${ok} workout(s) synced.`);
+      await loadHistory();
+    } catch (e) {
+      CACHE.error = e?.message || String(e);
+      CACHE.status = txt(`${ok} seance(s) synchronisee(s), puis erreur Supabase.`, `${ok} workout(s) synced, then Supabase error.`);
+      console.warn("[sport] local sync failed", CACHE.error);
+    }
+    renderSport("sync-local-done");
   }
 
   async function deleteSportSession(sessionId) {

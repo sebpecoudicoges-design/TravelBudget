@@ -25,7 +25,7 @@
   }
 
   function wallets() {
-    return Array.isArray(window.state?.wallets) ? window.state.wallets : [];
+    return Array.isArray(window.state?.wallets) ? window.state.wallets.filter(w => w?.archived !== true) : [];
   }
 
   function categories() {
