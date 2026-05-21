@@ -46,6 +46,67 @@ function renderOnboardingPanel() {
   `;
 }
 
+renderOnboardingPanel = function () {
+  const panel = document.getElementById("onboarding-panel");
+  const body = document.getElementById("onboarding-panel-body");
+  if (!panel || !body) return;
+
+  try {
+    if (localStorage.getItem("tb_onboarding_hide_v1") === "1") {
+      panel.style.display = "none";
+      return;
+    }
+  } catch (_) {}
+
+  const wallets = (window.state && Array.isArray(state.wallets)) ? state.wallets.filter(w => w?.archived !== true) : [];
+  const txs = (window.state && Array.isArray(state.transactions))
+    ? state.transactions.filter(t => (t.travelId || t.travel_id) === state.activeTravelId && !t?.isInternal && !t?.is_internal)
+    : [];
+  const hasSegments = !!(window.state && Array.isArray(state.segments) && state.segments.length);
+  const hasSettings = !!(window.state && Array.isArray(state.settings) && state.settings.length);
+
+  const rows = [
+    { ok: hasSegments || hasSettings, text: tbT ? tbT("onboarding.step.period") : "Set trip and period.", action: "showView('settings')", label: tbT ? tbT("onboarding.action.period") : "Set trip" },
+    { ok: wallets.length > 0, text: tbT ? tbT("onboarding.step.wallet") : "Create a wallet.", action: "if(typeof createWallet==='function')createWallet();else showView('dashboard')", label: tbT ? tbT("onboarding.action.wallet") : "Create wallet" },
+    { ok: txs.length > 0, text: tbT ? tbT("onboarding.step.tx") : "Add a first transaction.", action: "if(typeof openTxModal==='function')openTxModal('expense',null);else showView('transactions')", label: tbT ? tbT("onboarding.action.tx") : "Add transaction" }
+  ];
+  const done = rows.filter(r => r.ok).length;
+  if (done === rows.length) {
+    panel.style.display = "none";
+    return;
+  }
+
+  panel.style.display = "block";
+  panel.style.border = "1px solid rgba(37,99,235,.18)";
+  panel.style.background = "linear-gradient(135deg, rgba(37,99,235,.08), rgba(14,165,233,.05))";
+  panel.style.borderRadius = "20px";
+  body.innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+      <div>
+        <div class="muted" style="margin-bottom:6px;">${tbT ? tbT("onboarding.subtitle") : "Set up the foundation in the right order."}</div>
+        <div class="pill" style="display:inline-flex;font-weight:900;">${tbT ? tbT("onboarding.progress", { done, total: rows.length }) : `${done}/${rows.length}`}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn primary" type="button" onclick="if(typeof tbStartGuidedTour==='function')tbStartGuidedTour({mode:'dashboard'});">${tbT ? tbT("onboarding.action.guide") : "Guide"}</button>
+        <button class="btn" type="button" onclick="hideOnboardingPanel()">${tbT ? tbT("onboarding.hide") : "Hide"}</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:12px;">
+      ${rows.map((row) => `
+        <div style="border:1px solid ${row.ok ? "rgba(16,185,129,.28)" : "rgba(148,163,184,.25)"};background:${row.ok ? "rgba(16,185,129,.08)" : "rgba(255,255,255,.62)"};border-radius:16px;padding:12px;">
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            <span style="width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:950;background:${row.ok ? "rgba(16,185,129,.18)" : "rgba(37,99,235,.12)"};color:${row.ok ? "#047857" : "#1d4ed8"};">${row.ok ? "&#10003;" : "&bull;"}</span>
+            <div style="min-width:0;flex:1;">
+              <div style="font-weight:800;line-height:1.3;">${row.text}</div>
+              ${row.ok ? "" : `<button class="btn" type="button" style="margin-top:10px;padding:7px 10px;font-size:12px;" onclick="${row.action}">${row.label}</button>`}
+            </div>
+          </div>
+        </div>`).join("")}
+    </div>
+    <div style="margin-top:10px; opacity:.82;" class="muted">${tbT ? tbT("onboarding.tip") : "Need help? Click ?."}</div>
+  `;
+};
+
 /* =========================
    UX contextual help
    ========================= */
@@ -75,12 +136,30 @@ function _walletRecentTxDate(tx) {
   return String(tx?.dateStart || tx?.date_start || tx?.budgetDateStart || tx?.budget_date_start || "").slice(0, 10);
 }
 
+function _walletRecentTxTouchesWallet(tx) {
+  if (!tx) return false;
+  if (tx.isInternal || tx.is_internal) return false;
+  try {
+    if (typeof window.tbIsTripBudgetShare === "function" && window.tbIsTripBudgetShare(tx)) return false;
+  } catch (_) {}
+  const internalTransferId = tx.internalTransferId || tx.internal_transfer_id || null;
+  const budgetOnlyInternalTransferFee =
+    !!internalTransferId &&
+    String(tx.type || "").toLowerCase() === "expense" &&
+    (tx.payNow === false || tx.pay_now === false) &&
+    (tx.outOfBudget === false || tx.out_of_budget === false) &&
+    (tx.affectsBudget === true || tx.affects_budget === true);
+  if (budgetOnlyInternalTransferFee) return false;
+  return true;
+}
+
 function _walletRecentTransactions(walletId, today) {
   const wid = String(walletId || "");
   const maxDate = String(today || toLocalISODate(new Date()));
   return (Array.isArray(state?.transactions) ? state.transactions : [])
     .filter((tx) => String(tx?.walletId || tx?.wallet_id || "") === wid)
     .filter((tx) => (tx?.travelId || tx?.travel_id || null) === state.activeTravelId)
+    .filter(_walletRecentTxTouchesWallet)
     .filter((tx) => {
       const d = _walletRecentTxDate(tx);
       return !!d && d <= maxDate;
