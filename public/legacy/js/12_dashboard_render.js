@@ -188,13 +188,14 @@ function _walletRecentTransactionsHTML(walletId, today, T) {
     const label = escapeHTML(String(tx?.label || tx?.category || "Transaction"));
     const date = escapeHTML(_walletRecentTxDate(tx));
     const amount = escapeHTML(`${sign}${fmtMoney(Math.abs(Number(tx?.amount) || 0), tx?.currency || "")}`);
+    const amountColor = type === "expense" ? "#b42335" : "#047857";
     return `
       <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid rgba(15,23,42,.07);">
         <div style="min-width:0;">
           <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
           <div class="muted" style="font-size:12px;">${date} · <span style="display:inline-flex;align-items:center;border:1px solid ${statusBorder};background:${statusColor};border-radius:999px;padding:1px 7px;color:var(--text);font-weight:700;">${escapeHTML(statusText)}</span></div>
         </div>
-        <div style="font-weight:800;white-space:nowrap;color:${type === "expense" ? "var(--danger)" : "var(--ok)"};">${amount}</div>
+        <div style="font-weight:800;white-space:nowrap;color:${amountColor};">${amount}</div>
       </div>
     `;
   }).join("");

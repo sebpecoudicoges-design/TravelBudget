@@ -1,5 +1,11 @@
-console.log("TB BUILD 9.7.6");
+import pkg from '../package.json';
 import './app/bridge.js';
+
+const TB_APP_VERSION = String(pkg?.version || 'dev');
+window.TB_VERSION = window.TB_VERSION || TB_APP_VERSION;
+window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
+
+console.log(`TB BUILD ${window.TB_VERSION}`);
 
 // TravelBudget V9 entrypoint (Vite + deterministic legacy loader)
 // This preserves the original global-script semantics while removing fragile <script> ordering in index.html.
@@ -74,7 +80,8 @@ function loadScript(src) {
 async function boot() {
   // Simple marker for debugging
   window.__TB_BUILD__ = window.__TB_BUILD__ || {};
-  window.__TB_BUILD__.entry = 'v9-vite-legacy-loader-9.7.6';
+  window.__TB_BUILD__.entry = `v9-vite-legacy-loader-${window.TB_VERSION}`;
+  window.__TB_BUILD__.version = window.TB_VERSION;
   window.__TB_BUILD__.loadedAt = new Date().toISOString();
 
   for (const src of LEGACY_SCRIPTS) {

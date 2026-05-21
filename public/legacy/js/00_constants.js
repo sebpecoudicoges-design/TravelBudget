@@ -1,4 +1,17 @@
-window.__TB_BUILD = '9.7.4.1';
+window.TB_VERSION = window.TB_VERSION || "9.7.7";
+window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
+window.__TB_BUILD = window.TB_VERSION;
+window.tbApplyVersionLabels = function tbApplyVersionLabels(root) {
+  try {
+    const scope = root && root.querySelectorAll ? root : document;
+    scope.querySelectorAll("[data-tb-version]").forEach((el) => { el.textContent = window.TB_VERSION; });
+    scope.querySelectorAll("[data-tb-build-label]").forEach((el) => { el.textContent = window.TB_BUILD_LABEL; });
+  } catch (_) {}
+};
+try {
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => window.tbApplyVersionLabels());
+  else window.tbApplyVersionLabels();
+} catch (_) {}
 /* =========================
    Constants
    - Single source of truth for DB identifiers & UI labels
@@ -300,6 +313,8 @@ window.__TB_BUILD = '9.7.4.1';
   const EXPECTED_SCHEMA_VERSION = 94000;
 
   window.TB_CONST = Object.freeze({
+    VERSION: window.TB_VERSION,
+    BUILD_LABEL: window.TB_BUILD_LABEL,
     TABLES,
     COLS,
     LS_KEYS,
