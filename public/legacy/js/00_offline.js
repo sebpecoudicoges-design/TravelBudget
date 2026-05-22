@@ -64,6 +64,7 @@
         sportSessions: s.sportSessions || [],
         sportSessionItems: s.sportSessionItems || [],
         sportSets: s.sportSets || [],
+        profile: s.profile || null,
         user: s.user || null,
         hiddenCategories: s.hiddenCategories || [],
       };
@@ -124,7 +125,7 @@
   }
 
   function markNetworkUnavailable(reason) {
-    networkUnavailableUntil = Date.now() + 30000;
+    networkUnavailableUntil = Date.now() + 8000;
     window.__TB_OFFLINE_NETWORK__ = { reason: String(reason || "network"), until: networkUnavailableUntil };
     try { document.documentElement.classList.add("tb-supabase-offline"); } catch (_) {}
   }

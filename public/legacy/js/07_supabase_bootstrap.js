@@ -501,7 +501,7 @@ async function _tbEnsureBootstrapImpl(opts = {}) {
 
   const profP = sb
     .from(TB_CONST.TABLES.profiles)
-    .select("id, role")
+    .select("id, role, email, whatsapp_phone_e164")
     .eq("id", sbUser.id)
     .maybeSingle();
 
@@ -538,6 +538,13 @@ async function _tbEnsureBootstrapImpl(opts = {}) {
   const s = settingsRes ? settingsRes.data : null;
   const periods = periodsRes ? periodsRes.data : null;
 
+  if (prof) {
+    state.profile = prof;
+    if (!state.user) state.user = {};
+    state.user.email = prof.email || sbUser.email || state.user.email || null;
+    state.user.whatsappPhone = prof.whatsapp_phone_e164 || state.user.whatsappPhone || "";
+  }
+
   // 1) Ensure profile row exists (role default: 'user')
   // expose role globally for navigation/admin UI
   window.sbRole = (prof && prof.role) ? String(prof.role) : (window.sbRole || 'user');
@@ -551,6 +558,9 @@ async function _tbEnsureBootstrapImpl(opts = {}) {
       },
     ]);
     if (insErr) throw insErr;
+    state.profile = { id: sbUser.id, email: sbUser.email || null, role: "user", whatsapp_phone_e164: null };
+    if (!state.user) state.user = {};
+    state.user.email = sbUser.email || state.user.email || null;
   }
 
   // 2) Ensure settings row exists (palette persisted server side)

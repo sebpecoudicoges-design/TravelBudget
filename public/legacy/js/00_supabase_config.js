@@ -14,11 +14,25 @@ function tbSupabaseFetch(input, init) {
   const isProjectRequest = !!url && url.indexOf(SUPABASE_URL) === 0;
   try {
     const offline = (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false);
+    const restoredOffline = !!window.__TB_OFFLINE_SNAPSHOT__?.restored || document.documentElement.classList.contains("tb-offline-restored");
     if (isProjectRequest && offline) {
-      return Promise.reject(new TypeError("TB offline mode: Supabase request skipped"));
+      if (restoredOffline || (navigator && navigator.onLine === false)) {
+        return Promise.resolve(new Response(JSON.stringify({ message: "TB offline mode" }), {
+          status: 503,
+          statusText: "TB Offline",
+          headers: { "Content-Type": "application/json" },
+        }));
+      }
     }
   } catch (_) {}
-  return fetch(input, init).catch((err) => {
+  return fetch(input, init).then((res) => {
+    try {
+      if (isProjectRequest && res && res.status < 500 && typeof window.tbClearNetworkUnavailable === "function") {
+        window.tbClearNetworkUnavailable();
+      }
+    } catch (_) {}
+    return res;
+  }).catch((err) => {
     try {
       if (isProjectRequest && typeof window.tbMarkNetworkUnavailable === "function") {
         window.tbMarkNetworkUnavailable(err?.name || "supabase-fetch-failed");

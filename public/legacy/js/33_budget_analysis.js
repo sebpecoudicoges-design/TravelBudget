@@ -210,7 +210,10 @@
     referenceCache.bySegment = {};
     referenceCache.loaded = true;
 
-    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) return;
+    const offline = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode("analysis-reference")
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (offline) return;
     if (!s || !segs.length || !TB_CONST?.RPCS?.budget_reference_resolve_for_budget_segment) return;
 
     for (const seg of segs) {
@@ -230,6 +233,10 @@
 
         referenceCache.bySegment[segId] = Array.isArray(data) ? (data[0] || null) : (data || null);
       } catch (err) {
+        if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+          referenceCache.bySegment[String(seg?.id || '')] = null;
+          continue;
+        }
         console.warn('[analysis] reference RPC failed', {
           segId: String(seg?.id || ''),
           err

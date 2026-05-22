@@ -704,6 +704,43 @@ function renderSettings(){
         throw new Error("Supabase client not found");
       };
 
+      const _settingsOffline = () => {
+        try {
+          return (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false);
+        } catch (_) {
+          return false;
+        }
+      };
+
+      const _cachedAccount = () => {
+        const u = window.sbUser || (typeof sbUser !== "undefined" ? sbUser : null) || {};
+        return {
+          id: u.id || u.user?.id || state?.profile?.id || state?.user?.id || "",
+          email: u.email || u.user?.email || state?.profile?.email || state?.user?.email || "",
+          whatsapp: state?.profile?.whatsapp_phone_e164 || state?.user?.whatsappPhone || "",
+        };
+      };
+
+      const _fillCachedAccount = () => {
+        const cached = _cachedAccount();
+        const em = box.querySelector("#tb-account-email");
+        if (em) em.value = cached.email || "—";
+        const wa = box.querySelector("#tb-account-whatsapp");
+        if (wa && !wa.value) wa.value = cached.whatsapp || "";
+      };
+
+      const _rememberAccount = (user, phone) => {
+        const uid = user?.id || user?.user?.id || state?.profile?.id || "";
+        const email = user?.email || user?.user?.email || state?.profile?.email || state?.user?.email || null;
+        state.profile = Object.assign({}, state.profile || {}, { id: uid, email, whatsapp_phone_e164: phone || "" });
+        if (!state.user) state.user = {};
+        state.user.email = email;
+        state.user.whatsappPhone = phone || "";
+        try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("settings:account"); } catch (_) {}
+      };
+
+      _fillCachedAccount();
+
       const normalizeWhatsappPhone = (v) => String(v || "")
   .trim()
   .replace(/\s+/g, "")
@@ -711,6 +748,10 @@ function renderSettings(){
 
 (async () => {
   try {
+    if (_settingsOffline()) {
+      _fillCachedAccount();
+      return;
+    }
     const s = _getSb();
     const u = (await s.auth.getUser()).data?.user;
     const uid = u?.id;
@@ -726,6 +767,7 @@ function renderSettings(){
 
     const inp = box.querySelector("#tb-account-whatsapp");
     if (inp) inp.value = String(data?.whatsapp_phone_e164 || "");
+    _rememberAccount(u, data?.whatsapp_phone_e164 || "");
   } catch (e) {
     console.warn("[TB][settings] whatsapp load failed", e);
   }
@@ -734,6 +776,7 @@ function renderSettings(){
 const btnWhatsapp = box.querySelector("#tb-user-whatsapp-save");
 if (btnWhatsapp) {
   btnWhatsapp.onclick = () => safeCall("Enregistrer WhatsApp", async () => {
+    if (_settingsOffline()) throw new Error("Mode hors ligne : reconnecte-toi pour enregistrer WhatsApp.");
     const s = _getSb();
     const u = (await s.auth.getUser()).data?.user;
     const uid = u?.id;
@@ -755,6 +798,7 @@ if (btnWhatsapp) {
 
     const inp = box.querySelector("#tb-account-whatsapp");
     if (inp) inp.value = phone;
+    _rememberAccount(u, phone);
 
     alert("Numéro WhatsApp enregistré.");
   });
@@ -805,6 +849,7 @@ if (btnWhatsapp) {
       const btnReset = box.querySelector("#tb-user-resetpwd");
       if (btnReset) {
         btnReset.onclick = () => safeCall("Reset mot de passe", async () => {
+          if (_settingsOffline()) throw new Error("Mode hors ligne : reconnecte-toi pour envoyer l'email de réinitialisation.");
           const s = _getSb();
           const u = (await s.auth.getUser()).data?.user;
           const em = String(u?.email || "").trim();
@@ -815,39 +860,50 @@ if (btnWhatsapp) {
       }
 
       const btnWhatsApp = box.querySelector("#tb-user-whatsapp-save");
-if (btnWhatsApp) {
-  btnWhatsApp.onclick = () => safeCall("Enregistrer numéro WhatsApp", async () => {
-    const s = _getSb();
-    const raw = String(box.querySelector("#tb-account-whatsapp")?.value || "").trim();
-    const phone = raw.replace(/\s+/g, "");
-    if (phone && !/^\+[1-9]\d{6,14}$/.test(phone)) {
-      throw new Error("Numéro WhatsApp enregistré pour l’envoi vers À traiter.");
-    }
-    const u = (await s.auth.getUser()).data?.user;
-    const uid = u?.id;
-    if (!uid) throw new Error("Non authentifié");
-    const { error } = await s.from(TB_CONST.TABLES.profiles).update({ whatsapp_phone_e164: phone || null }).eq("id", uid);
-    if (error) throw error;
-    alert("Numéro WhatsApp enregistré.");
-  });
-}
-
+      if (btnWhatsApp) {
+        btnWhatsApp.onclick = () => safeCall("Enregistrer numero WhatsApp", async () => {
+          if (_settingsOffline()) throw new Error("Mode hors ligne : reconnecte-toi pour enregistrer WhatsApp.");
+          const s = _getSb();
+          const raw = String(box.querySelector("#tb-account-whatsapp")?.value || "").trim();
+          const phone = raw.replace(/\s+/g, "");
+          if (phone && !/^\+[1-9]\d{6,14}$/.test(phone)) {
+            throw new Error("Format WhatsApp invalide. Utilise le format international, ex. +33612345678.");
+          }
+          const u = (await s.auth.getUser()).data?.user;
+          const uid = u?.id;
+          if (!uid) throw new Error("Non authentifie");
+          const { error } = await s.from(TB_CONST.TABLES.profiles).update({ whatsapp_phone_e164: phone || null }).eq("id", uid);
+          if (error) throw error;
+          const inp = box.querySelector("#tb-account-whatsapp");
+          if (inp) inp.value = phone;
+          _rememberAccount(u, phone);
+          alert("Numero WhatsApp enregistre.");
+        });
+      }
       // Fill email asynchronously (sbUser is not guaranteed on window)
       (async () => {
+        let s = null;
+        let u = null;
         try {
-          const s = _getSb();
-          const u = (await s.auth.getUser()).data?.user;
-          const em = String(u?.email || "—");
+          if (_settingsOffline()) {
+            _fillCachedAccount();
+            return;
+          }
+          s = _getSb();
+          u = (await s.auth.getUser()).data?.user;
+          const em = String(u?.email || "�");
           const inp = box.querySelector("#tb-account-email");
           if (inp) inp.value = em;
+          _rememberAccount(u, state?.profile?.whatsapp_phone_e164 || state?.user?.whatsappPhone || "");
         } catch(_) {}
         try {
-           const { data: profile } = await s.from(TB_CONST.TABLES.profiles).select("whatsapp_phone_e164").eq("id", u?.id).single();
-            const wa = box.querySelector("#tb-account-whatsapp");
-            if (wa) wa.value = profile?.whatsapp_phone_e164 || "";
+          if (!s || !u?.id) return;
+          const { data: profile } = await s.from(TB_CONST.TABLES.profiles).select("whatsapp_phone_e164").eq("id", u.id).single();
+          const wa = box.querySelector("#tb-account-whatsapp");
+          if (wa) wa.value = profile?.whatsapp_phone_e164 || "";
+          _rememberAccount(u, profile?.whatsapp_phone_e164 || "");
         } catch (_) {}
       })();
-
       // Save cashflow threshold (EUR reference)
       const btnThr = box.querySelector("#tb-user-cfthr-save");
       if (btnThr) {
