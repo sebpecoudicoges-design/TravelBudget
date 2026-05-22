@@ -34,6 +34,7 @@ window.tbAfterMutationRefresh = async function tbAfterMutationRefresh(reason, op
 
 window.tbEnsureGovernanceData = async function tbEnsureGovernanceData(reason) {
   try {
+    if (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) return;
     const tid = String(window.state?.activeTravelId || "");
     if (tid && String(window.__tbGovernanceLoadedForTravel || "") === tid) return;
     await refreshFromServer({ includeGovernance: true, includeDeferredData: true });
@@ -44,6 +45,7 @@ window.tbEnsureGovernanceData = async function tbEnsureGovernanceData(reason) {
 
 window.tbEnsureDeferredData = async function tbEnsureDeferredData(reason) {
   try {
+    if (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) return;
     const tid = String(window.state?.activeTravelId || "");
     if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid) return;
     await refreshFromServer({ includeDeferredData: true, includeGovernance: reason === "analysis" || reason === "settings" });
@@ -133,7 +135,10 @@ async function _runRefreshFromServer(opts) {
   if (!sbUser) return;
 
   try {
-    if (navigator && navigator.onLine === false) {
+    const useOffline = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode("refreshFromServer")
+      : (navigator && navigator.onLine === false);
+    if (useOffline) {
       if (typeof window.tbRestoreOfflineSnapshot === "function" && window.tbRestoreOfflineSnapshot("refreshFromServer:offline")) {
         try { if (!options.skipRender) { if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("offline-snapshot"); else if (typeof renderAll === "function") renderAll(); } } catch (_) {}
         try { if (typeof toastInfo === "function") toastInfo(window.tbOfflineMessage ? window.tbOfflineMessage() : "Mode hors ligne."); } catch (_) {}
@@ -199,6 +204,7 @@ async function _runRefreshFromServer(opts) {
   } catch (e) {
     _tbRefreshLog("refreshFromServer:error", e && (e.message || e));
     (window.log?log.error:console.error)("[refreshFromServer]", e);
+    try { if (typeof window.tbMarkNetworkUnavailable === "function" && /failed to fetch|network|name_not_resolved/i.test(String(e?.message || e))) window.tbMarkNetworkUnavailable("refresh-error"); } catch (_) {}
     if (navigator && navigator.onLine === false && typeof window.tbRestoreOfflineSnapshot === "function" && window.tbRestoreOfflineSnapshot("refreshFromServer:error")) {
       try { if (!options.skipRender) { if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("offline-snapshot"); else if (typeof renderAll === "function") renderAll(); } } catch (_) {}
       try { if (typeof toastInfo === "function") toastInfo(window.tbOfflineMessage ? window.tbOfflineMessage() : "Mode hors ligne."); } catch (_) {}

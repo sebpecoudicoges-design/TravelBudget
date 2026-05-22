@@ -452,7 +452,10 @@ async function runFirstTimeWizard() {
 
 async function ensureBootstrap(opts = {}) {
   if (!sbUser) return;
-  if (navigator && navigator.onLine === false) {
+  const useOffline = (typeof window.tbShouldUseOfflineMode === "function")
+    ? await window.tbShouldUseOfflineMode("ensureBootstrap")
+    : (navigator && navigator.onLine === false);
+  if (useOffline) {
     if (typeof window.tbRestoreOfflineSnapshot === "function") {
       window.tbRestoreOfflineSnapshot("ensureBootstrap:offline");
     }

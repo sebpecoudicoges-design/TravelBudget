@@ -712,7 +712,7 @@
   async function refreshInboxTabBadge(){
     try{
       ensureView();
-      if (navigator && navigator.onLine === false) return;
+      if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) return;
       const c = client();
       if(!c) return;
       const { count, error } = await c

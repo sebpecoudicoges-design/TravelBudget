@@ -4,6 +4,8 @@
 
 const SUPABASE_URL = "https://obznbrzarhvmlbprcfie.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_xMHxyW0Cs9oRpGQsdatnyA_JIaaAC0D";
+window.SUPABASE_URL = SUPABASE_URL;
+window.__TB_SUPABASE_URL = SUPABASE_URL;
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {

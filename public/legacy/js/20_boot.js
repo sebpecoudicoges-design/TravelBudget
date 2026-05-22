@@ -137,7 +137,10 @@ window.onload = async function () {
     try {
       tbShowBootOverlay("Changement de compteâ€¦ synchronisation");
       showView("dashboard");
-      if (navigator && navigator.onLine === false) {
+      const authOffline = (typeof window.tbShouldUseOfflineMode === "function")
+        ? await window.tbShouldUseOfflineMode("auth-change")
+        : (navigator && navigator.onLine === false);
+      if (authOffline) {
         if (typeof window.tbRestoreOfflineSnapshot === "function" && window.tbRestoreOfflineSnapshot("auth-change:offline")) {
           try { if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("offline-auth-change"); else if (typeof renderAll === "function") renderAll(); } catch (_) {}
           safeShowAuth(false);
@@ -167,7 +170,10 @@ window.onload = async function () {
   }
 
   try {
-    if (navigator && navigator.onLine === false) {
+    const bootOffline = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode("boot")
+      : (navigator && navigator.onLine === false);
+    if (bootOffline) {
       try { tbShowBootOverlay("Mode hors ligne : restauration locale..."); } catch (_) {}
       const restored = (typeof window.tbRestoreOfflineSnapshot === "function") && window.tbRestoreOfflineSnapshot("boot:offline");
       showView("dashboard");

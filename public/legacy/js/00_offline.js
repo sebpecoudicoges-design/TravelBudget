@@ -5,6 +5,8 @@
 (function () {
   const SNAPSHOT_VERSION = 2;
   const MAX_AGE_DAYS = 14;
+  let networkUnavailableUntil = 0;
+  let reachabilityPromise = null;
 
   function uid() {
     try { return String(window.sbUser?.id || window.sbUser?.user?.id || "").trim(); } catch (_) { return ""; }
@@ -116,7 +118,73 @@
     }
   }
 
+  function markNetworkUnavailable(reason) {
+    networkUnavailableUntil = Date.now() + 30000;
+    window.__TB_OFFLINE_NETWORK__ = { reason: String(reason || "network"), until: networkUnavailableUntil };
+    try { document.documentElement.classList.add("tb-supabase-offline"); } catch (_) {}
+  }
+
+  function clearNetworkUnavailable() {
+    networkUnavailableUntil = 0;
+    window.__TB_OFFLINE_NETWORK__ = null;
+    try { document.documentElement.classList.remove("tb-supabase-offline"); } catch (_) {}
+  }
+
+  function isOfflineMode() {
+    try {
+      return (navigator && navigator.onLine === false) || Date.now() < Number(networkUnavailableUntil || 0);
+    } catch (_) {
+      return Date.now() < Number(networkUnavailableUntil || 0);
+    }
+  }
+
+  async function isSupabaseReachable(reason) {
+    try {
+      if (navigator && navigator.onLine === false) {
+        markNetworkUnavailable(reason || "navigator-offline");
+        return false;
+      }
+    } catch (_) {}
+    if (Date.now() < Number(networkUnavailableUntil || 0)) return false;
+    if (reachabilityPromise) return await reachabilityPromise;
+
+    reachabilityPromise = (async () => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => {
+        try { controller.abort(); } catch (_) {}
+      }, 1300);
+      try {
+        const base = String(window.SUPABASE_URL || window.__TB_SUPABASE_URL || "https://obznbrzarhvmlbprcfie.supabase.co").replace(/\/+$/, "");
+        await fetch(base + "/auth/v1/health", {
+          method: "GET",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        clearNetworkUnavailable();
+        return true;
+      } catch (_) {
+        markNetworkUnavailable(reason || "supabase-unreachable");
+        return false;
+      } finally {
+        clearTimeout(timer);
+        reachabilityPromise = null;
+      }
+    })();
+
+    return await reachabilityPromise;
+  }
+
+  async function shouldUseOfflineMode(reason) {
+    if (isOfflineMode()) return true;
+    return !(await isSupabaseReachable(reason || "offline-check"));
+  }
+
   window.tbSaveOfflineSnapshot = saveOfflineSnapshot;
   window.tbRestoreOfflineSnapshot = restoreOfflineSnapshot;
   window.tbOfflineMessage = offlineMessage;
+  window.tbMarkNetworkUnavailable = markNetworkUnavailable;
+  window.tbClearNetworkUnavailable = clearNetworkUnavailable;
+  window.tbIsOfflineMode = isOfflineMode;
+  window.tbIsSupabaseReachable = isSupabaseReachable;
+  window.tbShouldUseOfflineMode = shouldUseOfflineMode;
 })();
