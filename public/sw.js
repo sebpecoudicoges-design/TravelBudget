@@ -1,4 +1,4 @@
-const TB_SW_VERSION = "travelbudget-pwa-v1";
+const TB_SW_VERSION = "travelbudget-pwa-v2";
 const TB_STATIC_CACHE = `${TB_SW_VERSION}-static`;
 const TB_RUNTIME_CACHE = `${TB_SW_VERSION}-runtime`;
 
@@ -41,12 +41,18 @@ function shouldCache(request) {
 async function cacheFirst(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
-  const response = await fetch(request);
-  if (shouldCache(request)) {
-    const cache = await caches.open(TB_RUNTIME_CACHE);
-    cache.put(request, response.clone()).catch(() => {});
+  try {
+    const response = await fetch(request);
+    if (shouldCache(request) && response && response.ok) {
+      const cache = await caches.open(TB_RUNTIME_CACHE);
+      cache.put(request, response.clone()).catch(() => {});
+    }
+    return response;
+  } catch (error) {
+    const fallback = await caches.match(request.url);
+    if (fallback) return fallback;
+    throw error;
   }
-  return response;
 }
 
 async function networkFirstNavigation(request) {
@@ -68,4 +74,25 @@ self.addEventListener("fetch", (event) => {
   }
   if (!shouldCache(request)) return;
   event.respondWith(cacheFirst(request));
+});
+
+self.addEventListener("message", (event) => {
+  const data = event.data || {};
+  if (data.type !== "TB_CACHE_URLS" || !Array.isArray(data.urls)) return;
+  event.waitUntil((async () => {
+    const cache = await caches.open(TB_RUNTIME_CACHE);
+    const urls = Array.from(new Set(data.urls))
+      .map((url) => {
+        try { return new URL(url, self.location.origin).toString(); } catch (_) { return ""; }
+      })
+      .filter(Boolean)
+      .filter((url) => shouldCache(new Request(url)));
+
+    await Promise.all(urls.map(async (url) => {
+      try {
+        const response = await fetch(url, { cache: "no-store" });
+        if (response && response.ok) await cache.put(url, response.clone());
+      } catch (_) {}
+    }));
+  })());
 });

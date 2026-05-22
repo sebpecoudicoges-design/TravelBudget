@@ -133,6 +133,15 @@ async function _runRefreshFromServer(opts) {
   if (!sbUser) return;
 
   try {
+    if (navigator && navigator.onLine === false) {
+      if (typeof window.tbRestoreOfflineSnapshot === "function" && window.tbRestoreOfflineSnapshot("refreshFromServer:offline")) {
+        try { if (!options.skipRender) { if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("offline-snapshot"); else if (typeof renderAll === "function") renderAll(); } } catch (_) {}
+        try { if (typeof toastInfo === "function") toastInfo(window.tbOfflineMessage ? window.tbOfflineMessage() : "Mode hors ligne."); } catch (_) {}
+        return;
+      }
+      throw new Error("Mode hors ligne : aucune sauvegarde locale disponible pour cet utilisateur.");
+    }
+
     _tbRefreshLog("refreshFromServer:start", { view: (typeof activeView === "string" && activeView) ? activeView : "dashboard" });
     try { if (window.TB_PERF?.enabled) TB_PERF.event("refresh:start", options); } catch (_) {}
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("supabase:load"); } catch (_) {}

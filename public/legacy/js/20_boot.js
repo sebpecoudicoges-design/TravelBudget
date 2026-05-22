@@ -1,4 +1,4 @@
-/* =========================
+﻿/* =========================
    Boot
    ========================= */
 
@@ -32,8 +32,8 @@ function tbEnsureBootOverlay() {
     el.innerHTML = `
       <div style="min-width:240px;max-width:86vw;padding:18px 20px;border-radius:20px;background:rgba(17,24,39,.92);color:#fff;box-shadow:0 18px 48px rgba(0,0,0,.28);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;border:1px solid rgba(255,255,255,.08);">
         <div style="width:32px;height:32px;border-radius:999px;border:3px solid rgba(255,255,255,.22);border-top-color:#fff;animation:tbBootSpin .8s linear infinite;"></div>
-        <div style="font-weight:700;font-size:15px;">Chargement de ton budget…</div>
-        <div id="tb-boot-overlay-text" style="font-size:12px;opacity:.82;">Préparation des données et des vues</div>
+        <div style="font-weight:700;font-size:15px;">Chargement de ton budgetâ€¦</div>
+        <div id="tb-boot-overlay-text" style="font-size:12px;opacity:.82;">PrÃ©paration des donnÃ©es et des vues</div>
       </div>`;
     if (!document.getElementById("tb-boot-overlay-style")) {
       const style = document.createElement("style");
@@ -74,21 +74,21 @@ window.onload = async function () {
   window.__TB_BOOTING = true;
   window.__TB_BOOT_COMPLETED__ = false;
   const __tbBootStartedAt = Date.now();
-  try { tbShowBootOverlay("Initialisation de l’application"); } catch (_) {}
+  try { tbShowBootOverlay("Initialisation de lâ€™application"); } catch (_) {}
 
 
-  // ✅ Post invite/recovery: laisse la page se stabiliser
+  // âœ… Post invite/recovery: laisse la page se stabiliser
   const postAuth = sessionStorage.getItem("tb_post_auth_redirect") === "1";
   if (postAuth) {
     sessionStorage.removeItem("tb_post_auth_redirect");
-    // un petit délai suffit à éviter les null DOM dans certains navigateurs
+    // un petit dÃ©lai suffit Ã  Ã©viter les null DOM dans certains navigateurs
     await new Promise(r => setTimeout(r, 150));
   }
 
-  // Helper: showAuth peut planter si le DOM auth n'est pas encore monté
+  // Helper: showAuth peut planter si le DOM auth n'est pas encore montÃ©
   const safeShowAuth = (show, msg) => {
     try {
-      // showAuth est défini dans 03_ui_auth.js
+      // showAuth est dÃ©fini dans 03_ui_auth.js
       if (typeof showAuth === "function") showAuth(show, msg);
     } catch (e) {
       console.warn("[Boot] showAuth skipped (DOM not ready):", e);
@@ -120,7 +120,7 @@ window.onload = async function () {
 
     if (!sbUser) {
       if (authEvent !== "SIGNED_OUT" && !scope?.changed) return;
-      safeShowAuth(true, "Session expirée. Reconnecte-toi.");
+      safeShowAuth(true, "Session expirÃ©e. Reconnecte-toi.");
       return;
     }
 
@@ -135,8 +135,15 @@ window.onload = async function () {
     if (sameUserWakeEvent) return;
 
     try {
-      tbShowBootOverlay("Changement de compte… synchronisation");
+      tbShowBootOverlay("Changement de compteâ€¦ synchronisation");
       showView("dashboard");
+      if (navigator && navigator.onLine === false) {
+        if (typeof window.tbRestoreOfflineSnapshot === "function" && window.tbRestoreOfflineSnapshot("auth-change:offline")) {
+          try { if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("offline-auth-change"); else if (typeof renderAll === "function") renderAll(); } catch (_) {}
+          safeShowAuth(false);
+          return;
+        }
+      }
       if (typeof ensureBootstrap === "function") await ensureBootstrap();
       await refreshFromServer({ force: false });
       safeShowAuth(false);
@@ -160,14 +167,35 @@ window.onload = async function () {
   }
 
   try {
+    if (navigator && navigator.onLine === false) {
+      try { tbShowBootOverlay("Mode hors ligne : restauration locale..."); } catch (_) {}
+      const restored = (typeof window.tbRestoreOfflineSnapshot === "function") && window.tbRestoreOfflineSnapshot("boot:offline");
+      showView("dashboard");
+      await new Promise(r => setTimeout(r, 0));
+      if (restored) {
+        try { if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("offline-boot"); else if (typeof renderAll === "function") renderAll(); } catch (_) {}
+        try { if (typeof toastInfo === "function") toastInfo(window.tbOfflineMessage ? window.tbOfflineMessage() : "Mode hors ligne."); } catch (_) {}
+      } else {
+        try { if (typeof toastWarn === "function") toastWarn("Mode hors ligne : aucune sauvegarde locale disponible pour cet utilisateur."); } catch (_) {}
+      }
+      safeShowAuth(false);
+      try {
+        const elapsed = Date.now() - __tbBootStartedAt;
+        const wait = Math.max(0, 500 - elapsed);
+        if (wait) await new Promise(r => setTimeout(r, wait));
+        tbHideBootOverlay();
+      } catch (_) {}
+      return;
+    }
+
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:ensureBootstrap"); } catch (_) {}
-    try { tbShowBootOverlay("Connexion et synchronisation…"); } catch (_) {}
+    try { tbShowBootOverlay("Connexion et synchronisationâ€¦"); } catch (_) {}
     // Launch bootstrap but do not block first render
     const _bootstrapPromise = ensureBootstrap();
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:ensureBootstrap"); } catch (_) {}
 
-    // ✅ IMPORTANT: afficher la vue AVANT refreshFromServer(),
-    // sinon renderKPI peut chercher des nodes qui n’existent pas encore
+    // âœ… IMPORTANT: afficher la vue AVANT refreshFromServer(),
+    // sinon renderKPI peut chercher des nodes qui nâ€™existent pas encore
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:showView"); } catch (_) {}
     showView("dashboard");
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:showView"); } catch (_) {}
@@ -177,14 +205,14 @@ window.onload = async function () {
 
     // Perf (A2): do not block UI on network refresh.
     // Show the dashboard immediately and refresh in background.
-    try { tbShowBootOverlay("Chargement des transactions, wallets et graphiques…"); } catch (_) {}
+    try { tbShowBootOverlay("Chargement des transactions, wallets et graphiquesâ€¦"); } catch (_) {}
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:refreshFromServer"); } catch (_) {}
 
     _bootstrapPromise.catch(e => {
       console.warn("[Boot] ensureBootstrap failed:", e?.message || e);
     });
 
-    // Refresh serveur en parallèle
+    // Refresh serveur en parallÃ¨le
 const _refreshPromise = (typeof refreshFromServer === "function")
   ? refreshFromServer()
   : Promise.resolve();
@@ -247,3 +275,4 @@ const _refreshPromise = (typeof refreshFromServer === "function")
     try { if (typeof window.tbMaybeStartGuidedTour === "function") window.tbMaybeStartGuidedTour(); } catch (_) {}
   }
 };
+

@@ -1,6 +1,39 @@
 export function registerPwa() {
   if (typeof window === "undefined") return;
 
+  const collectCacheUrls = () => {
+    const urls = new Set([
+      "/",
+      "/index.html",
+      "/offline.html",
+      "/manifest.webmanifest",
+      "/favicon.ico",
+      "/pwa-icon.svg",
+    ]);
+    try {
+      document.querySelectorAll("script[src],link[href]").forEach((el) => {
+        const raw = el.getAttribute("src") || el.getAttribute("href") || "";
+        if (raw) urls.add(new URL(raw, window.location.origin).toString());
+      });
+      performance.getEntriesByType("resource").forEach((entry) => {
+        const name = String(entry?.name || "");
+        if (!name) return;
+        const url = new URL(name, window.location.origin);
+        if (url.origin === window.location.origin || url.hostname === "cdn.jsdelivr.net") urls.add(url.toString());
+      });
+    } catch (_) {}
+    return Array.from(urls);
+  };
+
+  const requestCacheWarmup = async (registration) => {
+    try {
+      const ready = registration || await navigator.serviceWorker.ready;
+      const worker = ready?.active || navigator.serviceWorker.controller || ready?.waiting || ready?.installing;
+      if (!worker) return;
+      worker.postMessage({ type: "TB_CACHE_URLS", urls: collectCacheUrls() });
+    } catch (_) {}
+  };
+
   const updateOnlineState = () => {
     try {
       document.documentElement.classList.toggle("tb-offline", !navigator.onLine);
@@ -38,9 +71,15 @@ export function registerPwa() {
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js").catch((err) => {
-        console.warn("[PWA] service worker registration failed", err);
-      });
+      navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" })
+        .then((registration) => {
+          requestCacheWarmup(registration);
+          setTimeout(() => requestCacheWarmup(registration), 2500);
+          setTimeout(() => requestCacheWarmup(registration), 8000);
+        })
+        .catch((err) => {
+          console.warn("[PWA] service worker registration failed", err);
+        });
     });
   }
 }

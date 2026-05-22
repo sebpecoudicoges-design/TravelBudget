@@ -452,6 +452,12 @@ async function runFirstTimeWizard() {
 
 async function ensureBootstrap(opts = {}) {
   if (!sbUser) return;
+  if (navigator && navigator.onLine === false) {
+    if (typeof window.tbRestoreOfflineSnapshot === "function") {
+      window.tbRestoreOfflineSnapshot("ensureBootstrap:offline");
+    }
+    return;
+  }
   const uid = String(sbUser.id || "");
   if (window.__TB_BOOTSTRAP_PROMISE__ && window.__TB_BOOTSTRAP_UID__ === uid) {
     return await window.__TB_BOOTSTRAP_PROMISE__;
