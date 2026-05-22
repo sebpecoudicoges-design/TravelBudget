@@ -1,17 +1,20 @@
 import pkg from '../package.json';
 import './app/bridge.js';
+import { registerPwa } from './app/pwa.js';
 
 const TB_APP_VERSION = String(pkg?.version || 'dev');
 window.TB_VERSION = window.TB_VERSION || TB_APP_VERSION;
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 
 console.log(`TB BUILD ${window.TB_VERSION}`);
+registerPwa();
 
 // TravelBudget V9 entrypoint (Vite + deterministic legacy loader)
 // This preserves the original global-script semantics while removing fragile <script> ordering in index.html.
 
 const LEGACY_SCRIPTS = [
   '/legacy/js/00_constants.js',
+  '/legacy/js/00_offline.js',
   '/legacy/js/00_i18n.js',
   '/legacy/js/00_perf.js',
   '/legacy/js/98_error_bus.js',

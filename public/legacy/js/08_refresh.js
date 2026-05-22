@@ -171,6 +171,7 @@ async function _runRefreshFromServer(opts) {
       try { ensureTxFxSnapshots(); } catch (_) {}
     }
     if (typeof ensureStateIntegrity === "function") ensureStateIntegrity();
+    try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("refreshFromServer"); } catch (_) {}
     try { if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("refresh:data_loaded", { source: "refreshFromServer" }); } catch (_) {}
     if (!options.skipRender) {
       try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("render:all"); } catch (_) {}
@@ -189,6 +190,11 @@ async function _runRefreshFromServer(opts) {
   } catch (e) {
     _tbRefreshLog("refreshFromServer:error", e && (e.message || e));
     (window.log?log.error:console.error)("[refreshFromServer]", e);
+    if (navigator && navigator.onLine === false && typeof window.tbRestoreOfflineSnapshot === "function" && window.tbRestoreOfflineSnapshot("refreshFromServer:error")) {
+      try { if (!options.skipRender) { if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("offline-snapshot"); else if (typeof renderAll === "function") renderAll(); } } catch (_) {}
+      try { if (typeof toastInfo === "function") toastInfo(window.tbOfflineMessage ? window.tbOfflineMessage() : "Mode hors ligne."); } catch (_) {}
+      return;
+    }
     alert("Refresh impossible : " + normalizeSbError(e));
   }
 }

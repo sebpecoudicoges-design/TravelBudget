@@ -1,0 +1,19 @@
+{
+  "name": "Travel Budget",
+  "short_name": "BudgetPacker",
+  "description": "Travel budget, wallets, trips, documents and sport tracking.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f8fafc",
+  "theme_color": "#163b8f",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
