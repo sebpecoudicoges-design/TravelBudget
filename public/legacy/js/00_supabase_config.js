@@ -114,6 +114,7 @@ window.__TB_SB__ = sb;
   }
 })();
 let sbUser = null;
+window.sbUser = null;
 let activeView = "dashboard";
 if (typeof window !== "undefined") window.activeView = activeView;
 let redrawPending = false;

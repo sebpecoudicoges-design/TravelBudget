@@ -9,7 +9,12 @@
   let reachabilityPromise = null;
 
   function uid() {
-    try { return String(window.sbUser?.id || window.sbUser?.user?.id || "").trim(); } catch (_) { return ""; }
+    try {
+      const u = (typeof sbUser !== "undefined" && sbUser) ? sbUser : (window.sbUser || null);
+      return String(u?.id || u?.user?.id || "").trim();
+    } catch (_) {
+      try { return String(window.sbUser?.id || window.sbUser?.user?.id || "").trim(); } catch (__) { return ""; }
+    }
   }
 
   function key() {
@@ -155,8 +160,9 @@
       }, 1300);
       try {
         const base = String(window.SUPABASE_URL || window.__TB_SUPABASE_URL || "https://obznbrzarhvmlbprcfie.supabase.co").replace(/\/+$/, "");
-        await fetch(base + "/auth/v1/health", {
-          method: "GET",
+        await fetch(base + "/rest/v1/", {
+          method: "HEAD",
+          mode: "no-cors",
           cache: "no-store",
           signal: controller.signal,
         });

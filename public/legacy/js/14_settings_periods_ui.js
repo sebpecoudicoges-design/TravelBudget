@@ -1198,6 +1198,7 @@ function _tbBudgetRefStyle(){
 async function _tbBudgetRefLoadCountries(){
   const cache = window.__tbBudgetReferenceCache;
   if (Array.isArray(cache.countries) && cache.countries.length) return cache.countries;
+  if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) return [];
   const s = _tbGetSB();
   if(!s) return [];
   const { data, error } = await s

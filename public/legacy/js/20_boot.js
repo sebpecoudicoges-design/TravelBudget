@@ -110,6 +110,7 @@ window.onload = async function () {
     const authEvent = String(_event || "").toUpperCase();
     const prevUid = sbUser?.id || "";
     sbUser = session?.user || null;
+    window.sbUser = sbUser;
     const nextUid = sbUser?.id || "";
     let scope = { changed: prevUid !== nextUid, prev: prevUid, uid: nextUid };
     try { if (typeof window.tbAuthScopeSync === "function") scope = window.tbAuthScopeSync(nextUid) || scope; } catch (_) {}
@@ -161,6 +162,7 @@ window.onload = async function () {
   if (error) { safeShowAuth(true, error.message); try { tbHideBootOverlay(); } catch (_) {} return; }
 
   sbUser = data.session?.user || null;
+  window.sbUser = sbUser;
   try { if (typeof window.tbAuthScopeSync === "function") window.tbAuthScopeSync(sbUser?.id || ""); } catch (_) {}
 
   if (!sbUser) {

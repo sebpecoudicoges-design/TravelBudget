@@ -19,6 +19,7 @@ async function signIn() {
   if (error) return showAuth(true, error.message);
 
   sbUser = data.user;
+  window.sbUser = sbUser;
 
   try {
     await ensureBootstrap();
@@ -47,6 +48,7 @@ async function signUp() {
   }
 
   sbUser = user;
+  window.sbUser = sbUser;
 
   try {
     await ensureBootstrap();
@@ -63,6 +65,7 @@ async function signUp() {
 async function signOut() {
   await sb.auth.signOut();
   sbUser = null;
+  window.sbUser = null;
 
   // Clear in-memory state to avoid showing stale data while logged out
   try {
