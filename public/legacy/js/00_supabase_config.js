@@ -12,19 +12,6 @@ window.__TB_SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
 function tbSupabaseFetch(input, init) {
   const url = String(typeof input === "string" ? input : (input && input.url) || "");
   const isProjectRequest = !!url && url.indexOf(SUPABASE_URL) === 0;
-  try {
-    const offline = (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false);
-    const restoredOffline = !!window.__TB_OFFLINE_SNAPSHOT__?.restored || document.documentElement.classList.contains("tb-offline-restored");
-    if (isProjectRequest && offline) {
-      if (restoredOffline || (navigator && navigator.onLine === false)) {
-        return Promise.resolve(new Response(JSON.stringify({ message: "TB offline mode" }), {
-          status: 503,
-          statusText: "TB Offline",
-          headers: { "Content-Type": "application/json" },
-        }));
-      }
-    }
-  } catch (_) {}
   return fetch(input, init).then((res) => {
     try {
       if (isProjectRequest && res && res.status < 500 && typeof window.tbClearNetworkUnavailable === "function") {
