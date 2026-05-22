@@ -228,6 +228,21 @@ function toastOk(msg) {
   };
   window.__tripState = tripState;
 
+  function _syncTripStateToAppState(reason) {
+    try {
+      if (!window.state) return;
+      state.tripGroups = Array.isArray(tripState.trips) ? tripState.trips : [];
+      state.tripNetBalances = Array.isArray(tripState.globalNetRows) ? tripState.globalNetRows : [];
+      state.tripMembers = Array.isArray(tripState.members) ? tripState.members : [];
+      state.tripParticipants = Array.isArray(tripState.members) ? tripState.members : [];
+      state.tripExpenses = Array.isArray(tripState.expenses) ? tripState.expenses : [];
+      state.tripExpenseShares = Array.isArray(tripState.shares) ? tripState.shares : [];
+      state.tripSettlementEvents = Array.isArray(tripState.settlementEvents) ? tripState.settlementEvents : [];
+      state.tripBudgetLinks = Array.isArray(tripState.budgetLinks) ? tripState.budgetLinks : [];
+      if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot(reason || "trip");
+    } catch (_) {}
+  }
+
   // Reset Trip state on auth account switch (prevents cross-account UI bleed)
   try {
     window.addEventListener("tb:auth_scope_changed", () => {
@@ -1327,6 +1342,7 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
     }
 
     tripState._tripsLoaded = true;
+    _syncTripStateToAppState("trip:list");
   }
 
   async function _auditTripTransactionLinks() {
@@ -1384,6 +1400,16 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
   }
 
   async function _loadActiveData() {
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+      tripState.members = Array.isArray(state?.tripMembers) ? state.tripMembers : (Array.isArray(state?.tripParticipants) ? state.tripParticipants : []);
+      tripState.expenses = Array.isArray(state?.tripExpenses) ? state.tripExpenses : [];
+      tripState.shares = Array.isArray(state?.tripExpenseShares) ? state.tripExpenseShares : [];
+      tripState.settlementEvents = Array.isArray(state?.tripSettlementEvents) ? state.tripSettlementEvents : [];
+      tripState.budgetLinks = Array.isArray(state?.tripBudgetLinks) ? state.tripBudgetLinks : [];
+      tripState.budgetTxById = new Map();
+      tripState.linkIssues = [];
+      return;
+    }
     const uid = await _ensureSession();
     const tripId = tripState.activeTripId;
 
@@ -1503,6 +1529,7 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
       console.warn("[Trip] link consistency audit failed", e);
       tripState.linkIssues = [];
     }
+    _syncTripStateToAppState("trip:active");
   }
 
   function _computeBalances() {

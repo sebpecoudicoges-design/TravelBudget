@@ -143,6 +143,16 @@
     }
   }
 
+  function supabaseHealthUrl() {
+    const base = String(window.SUPABASE_URL || window.__TB_SUPABASE_URL || "").replace(/\/+$/, "");
+    return base ? `${base}/auth/v1/health` : "";
+  }
+
+  function supabasePublicHeaders() {
+    const anon = String(window.SUPABASE_ANON_KEY || window.__TB_SUPABASE_ANON_KEY || "").trim();
+    return anon ? { apikey: anon, Authorization: `Bearer ${anon}` } : {};
+  }
+
   async function isSupabaseReachable(reason) {
     try {
       if (navigator && navigator.onLine === false) {
@@ -151,7 +161,36 @@
       }
     } catch (_) {}
     if (Date.now() < Number(networkUnavailableUntil || 0)) return false;
-    return true;
+
+    if (reachabilityPromise) return reachabilityPromise;
+    reachabilityPromise = (async () => {
+      const url = supabaseHealthUrl();
+      if (!url) return true;
+
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timeout = controller ? setTimeout(() => controller.abort(), 1400) : null;
+      try {
+        const res = await fetch(url, {
+          method: "GET",
+          cache: "no-store",
+          headers: supabasePublicHeaders(),
+          signal: controller ? controller.signal : undefined,
+        });
+        if (res && res.status < 500) {
+          clearNetworkUnavailable();
+          return true;
+        }
+        markNetworkUnavailable(reason || "supabase-unreachable");
+        return false;
+      } catch (e) {
+        markNetworkUnavailable(reason || e?.name || "supabase-unreachable");
+        return false;
+      } finally {
+        if (timeout) clearTimeout(timeout);
+        reachabilityPromise = null;
+      }
+    })();
+    return reachabilityPromise;
   }
 
   async function shouldUseOfflineMode(reason) {

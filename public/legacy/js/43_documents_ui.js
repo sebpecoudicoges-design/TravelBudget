@@ -923,6 +923,7 @@ const assetCount = Number(counts.assets || 0);
   }
 
   async function hydrateImageThumbs(){
+  if ((typeof window.tbIsOfflineMode === 'function' && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) return;
   const c = client();
   if(!c) return;
 
