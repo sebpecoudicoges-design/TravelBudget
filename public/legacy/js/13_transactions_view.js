@@ -688,6 +688,8 @@ function _txDocEnsureStyles(){
 
 async function _txDocCurrentUserId(){
   try { if (window.sbUser && window.sbUser.id) return window.sbUser.id; } catch (_) {}
+  try { if (typeof sbUser !== 'undefined' && sbUser && sbUser.id) return sbUser.id; } catch (_) {}
+  if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) return '';
   const c = _txDocClient();
   if (c && c.auth && typeof c.auth.getUser === 'function') {
     const res = await c.auth.getUser();
@@ -804,6 +806,32 @@ async function _txDocFetchCountsForTransactions(txIds){
   const counts = new Map();
   ids.forEach((id) => counts.set(id, 0));
   if (!ids.length) return counts;
+
+  if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+    const directRows = Array.isArray(state?.transactionDocuments) ? state.transactionDocuments : [];
+    for (const row of directRows) {
+      const key = String(row?.transaction_id || row?.transactionId || '').trim();
+      if (key && wanted.has(key)) counts.set(key, (counts.get(key) || 0) + 1);
+    }
+
+    const visibleTxs = (Array.isArray(state?.transactions) ? state.transactions : [])
+      .filter(tx => wanted.has(String(tx?.id || '')));
+    const txByExpense = new Map();
+    for (const tx of visibleTxs) {
+      const txId = String(tx?.id || '');
+      const expenseId = String(tx?.tripExpenseId || tx?.trip_expense_id || '').trim();
+      if (!txId || !expenseId) continue;
+      if (!txByExpense.has(expenseId)) txByExpense.set(expenseId, []);
+      txByExpense.get(expenseId).push(txId);
+    }
+    const tripRows = Array.isArray(state?.tripExpenseDocuments) ? state.tripExpenseDocuments : [];
+    for (const row of tripRows) {
+      const expenseId = String(row?.expense_id || row?.expenseId || '').trim();
+      const txIdsForExpense = txByExpense.get(expenseId) || [];
+      for (const txId of txIdsForExpense) counts.set(txId, (counts.get(txId) || 0) + 1);
+    }
+    return counts;
+  }
 
   const c = _txDocClient();
   if (!c) return counts;
@@ -1413,4 +1441,3 @@ window.openInternalTransferModal = function openInternalTransferModal() {
 
   alert('Internal transfer modal not loaded.');
 };
-

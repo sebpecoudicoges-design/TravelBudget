@@ -172,6 +172,12 @@ window.onload = async function () {
   }
 
   try {
+    if (typeof window.tbRestoreOfflineSnapshot === "function") {
+      window.tbRestoreOfflineSnapshot("boot:prime");
+    }
+  } catch (_) {}
+
+  try {
     const bootOffline = (typeof window.tbShouldUseOfflineMode === "function")
       ? await window.tbShouldUseOfflineMode("boot")
       : (navigator && navigator.onLine === false);

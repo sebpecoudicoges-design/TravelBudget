@@ -86,6 +86,8 @@
 
   async function currentUserId(){
     try { if(window.sbUser && window.sbUser.id) return window.sbUser.id; } catch(_) {}
+    try { if(typeof sbUser !== 'undefined' && sbUser && sbUser.id) return sbUser.id; } catch(_) {}
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) return '';
     const c = client();
     try {
       if(c && c.auth && typeof c.auth.getUser === 'function'){
@@ -765,6 +767,14 @@
   }
 
   async function loadInbox(){
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+      CACHE.loading = false;
+      CACHE.error = '';
+      CACHE.items = Array.isArray(state?.inboxItems) ? state.inboxItems : [];
+      renderInboxShell();
+      setInboxTabBadge((CACHE.items || []).filter(x => x.status === 'pending').length);
+      return;
+    }
     const c = client();
     if(!c) throw new Error(tr('Client Supabase indisponible.', 'Supabase client unavailable.'));
     CACHE.loading = true;
@@ -783,6 +793,10 @@
     const { data, error } = await q;
     if(error) throw error;
     CACHE.items = data || [];
+    try {
+      if (window.state) state.inboxItems = CACHE.items;
+      if (typeof window.tbSaveOfflineSnapshot === 'function') window.tbSaveOfflineSnapshot('inbox:load');
+    } catch (_) {}
     CACHE.loading = false;
     await hydrateSignedUrls();
     renderInboxShell();

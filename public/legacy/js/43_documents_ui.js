@@ -340,6 +340,8 @@ function setSelectedSort(v){
 
   async function currentUserId(){
     try{ if(window.sbUser && window.sbUser.id) return window.sbUser.id; }catch(_){}
+    try{ if(typeof sbUser !== 'undefined' && sbUser && sbUser.id) return sbUser.id; }catch(_){}
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) return '';
     const c = client();
     if(c && c.auth && typeof c.auth.getUser === 'function'){
       const res = await c.auth.getUser();
@@ -508,6 +510,14 @@ function setSelectedSort(v){
 }
 
   async function loadDocuments(){
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+      CACHE.folders = Array.isArray(state?.documentFolders) ? state.documentFolders : [];
+      CACHE.documents = Array.isArray(state?.documents) ? state.documents : [];
+      CACHE.linkCounts = {};
+      CACHE.selectedFolderId = selectedFolderId();
+      CACHE.error = '';
+      return CACHE;
+    }
     const c = client();
     if(!c) throw new Error(tr('common.supabase_unavailable'));
     const foldersRes = await c.from(table('document_folders','document_folders')).select('*').order('name',{ascending:true});
@@ -520,6 +530,13 @@ function setSelectedSort(v){
     CACHE.selectedFolderId = selectedFolderId();
     if(CACHE.selectedFolderId && !CACHE.folders.some(f=>String(f.id)===String(CACHE.selectedFolderId))) setSelectedFolderId('');
     CACHE.error = '';
+    try {
+      if (window.state) {
+        state.documentFolders = CACHE.folders;
+        state.documents = CACHE.documents;
+      }
+      if (typeof window.tbSaveOfflineSnapshot === 'function') window.tbSaveOfflineSnapshot('documents:load');
+    } catch (_) {}
     return CACHE;
   }
 

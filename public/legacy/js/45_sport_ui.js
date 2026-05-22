@@ -750,6 +750,16 @@
     const c = client();
     const userId = uid();
     reloadScopedLocalState();
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+      CACHE.sessions = Array.isArray(state?.sportSessions) ? state.sportSessions : [];
+      CACHE.items = Array.isArray(state?.sportSessionItems) ? state.sportSessionItems : [];
+      CACHE.sets = Array.isArray(state?.sportSets) ? state.sportSets : [];
+      CACHE.loaded = true;
+      CACHE.loading = false;
+      CACHE.error = "";
+      CACHE.status = txt("Historique restaure hors ligne.", "History restored offline.");
+      return;
+    }
     if (!c || !userId) {
       CACHE.loaded = true;
       CACHE.sessions = [];
@@ -801,6 +811,7 @@
         state.sportSessionItems = CACHE.items;
         state.sportSets = CACHE.sets;
       }
+      try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("sport:load"); } catch (_) {}
     } catch (e) {
       CACHE.error = e?.message || String(e);
       CACHE.loaded = true;

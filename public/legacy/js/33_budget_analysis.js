@@ -210,6 +210,7 @@
     referenceCache.bySegment = {};
     referenceCache.loaded = true;
 
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) return;
     if (!s || !segs.length || !TB_CONST?.RPCS?.budget_reference_resolve_for_budget_segment) return;
 
     for (const seg of segs) {

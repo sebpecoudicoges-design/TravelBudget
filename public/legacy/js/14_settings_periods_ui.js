@@ -1311,6 +1311,12 @@ async function _tbBudgetRefLoadState(){
   if(!tid || !pid) return;
   const cache = window.__tbBudgetReferenceCache;
   cache.travelId = tid;
+  if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+    cache.travelDefault = cache.travelDefault || null;
+    cache.segmentOverrides = cache.segmentOverrides || {};
+    cache.segmentResolved = cache.segmentResolved || {};
+    return;
+  }
   const segIds = segs.map((seg)=>String(seg.id)).filter(Boolean);
   const [travelDefaultRes, overridesRes] = await Promise.all([
     s.from(TB_CONST.TABLES.travel_budget_reference_profile).select('*').eq('travel_id', tid).maybeSingle(),

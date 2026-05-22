@@ -177,6 +177,7 @@
   }
 
   async function fetchAudEurHistoryFromDb(from, to) {
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) return null;
     if (!window.sb?.from) return null;
     const end = todayISO();
     const start = addDaysISO(end, -180);
@@ -193,6 +194,7 @@
   }
 
   async function fetchAudEurHistoryFromMarket(from, to) {
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) throw new Error("offline");
     const f = normCur(from);
     const t = normCur(to);
     if (!f || !t || f === t) return { rows: fallbackSeries(1), source: "local" };

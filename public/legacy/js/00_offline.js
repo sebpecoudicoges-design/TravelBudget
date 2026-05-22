@@ -151,33 +151,7 @@
       }
     } catch (_) {}
     if (Date.now() < Number(networkUnavailableUntil || 0)) return false;
-    if (reachabilityPromise) return await reachabilityPromise;
-
-    reachabilityPromise = (async () => {
-      const controller = new AbortController();
-      const timer = setTimeout(() => {
-        try { controller.abort(); } catch (_) {}
-      }, 1300);
-      try {
-        const base = String(window.SUPABASE_URL || window.__TB_SUPABASE_URL || "https://obznbrzarhvmlbprcfie.supabase.co").replace(/\/+$/, "");
-        await fetch(base + "/rest/v1/", {
-          method: "HEAD",
-          mode: "no-cors",
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        clearNetworkUnavailable();
-        return true;
-      } catch (_) {
-        markNetworkUnavailable(reason || "supabase-unreachable");
-        return false;
-      } finally {
-        clearTimeout(timer);
-        reachabilityPromise = null;
-      }
-    })();
-
-    return await reachabilityPromise;
+    return true;
   }
 
   async function shouldUseOfflineMode(reason) {

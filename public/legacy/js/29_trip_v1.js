@@ -1274,8 +1274,11 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
   async function _ensureSession() {
     // sb and sbUser are globals in your app
     if (typeof sb === "undefined") throw new Error("Supabase client (sb) introuvable.");
-    const uid = sbUser?.id || sbUser?.user?.id;
+    const uid = sbUser?.id || sbUser?.user?.id || window.sbUser?.id || window.sbUser?.user?.id;
     if (uid) return uid;
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+      throw new Error("Mode hors ligne");
+    }
 
     // try fetch from auth
     const { data, error } = await sb.auth.getUser();
@@ -1286,6 +1289,14 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
   }
 
   async function _loadTrips() {
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+      tripState.trips = Array.isArray(state?.tripGroups) ? state.tripGroups : [];
+      tripState.globalNetRows = Array.isArray(state?.tripNetBalances) ? state.tripNetBalances : [];
+      const stored = localStorage.getItem(TRIP_ACTIVE_KEY);
+      if (stored && tripState.trips.some(t => t.id === stored)) tripState.activeTripId = stored;
+      else tripState.activeTripId = tripState.trips[0]?.id || null;
+      return;
+    }
     const uid = await _ensureSession();
     const { data, error } = await sb
       .from(TB_CONST.TABLES.trip_groups)

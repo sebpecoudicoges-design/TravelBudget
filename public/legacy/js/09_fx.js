@@ -110,6 +110,7 @@ function tbFxAutoStatus() {
 
 async function _fxUpsertManualRateSB(cur, rate, asOf) {
   try {
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) return;
     const sb = window.sb || window.__TB_SB__;
     if (!sb) return;
 
@@ -137,6 +138,7 @@ async function _fxUpsertManualRateSB(cur, rate, asOf) {
 
 async function _fxDeleteManualRateSB(cur) {
   try {
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) return;
     const sb = window.sb || window.__TB_SB__;
     if (!sb) return;
 

@@ -51,12 +51,25 @@
   }
   async function currentUserId(){
     try{ if(window.sbUser && window.sbUser.id) return window.sbUser.id; }catch(_){}
+    try{ if(typeof sbUser !== 'undefined' && sbUser && sbUser.id) return sbUser.id; }catch(_){}
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) return '';
     const c = client();
     if(c && c.auth && typeof c.auth.getUser === 'function'){ const res = await c.auth.getUser(); return res && res.data && res.data.user && res.data.user.id ? res.data.user.id : ''; }
     return '';
   }
 
   async function loadAssets(){
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+      CACHE = {
+        assets: Array.isArray(state?.assets) ? state.assets : [],
+        owners: Array.isArray(state?.assetOwners) ? state.assetOwners : [],
+        events: Array.isArray(state?.assetEvents) ? state.assetEvents : [],
+        documentLinks: Array.isArray(state?.assetDocuments) ? state.assetDocuments : [],
+        demo: false,
+        empty: !(Array.isArray(state?.assets) && state.assets.length)
+      };
+      return CACHE;
+    }
     const c = client();
     if(!c) return { assets:FALLBACK_ASSETS, owners:FALLBACK_OWNERS, events:FALLBACK_EVENTS, demo:true, reason:'client-missing' };
     try{
@@ -71,7 +84,17 @@
       try{ const evRes = await c.from(table('asset_ownership_events','asset_ownership_events')).select('*').in('asset_id', ids).order('event_date',{ascending:false}).limit(50); events = evRes.error ? [] : (evRes.data||[]); }catch(_){ events = []; }
       let documentLinks = [];
       try{ const docRes = await c.from(table('asset_documents','asset_documents')).select('*').in('asset_id', ids).order('created_at',{ascending:false}); documentLinks = docRes.error ? [] : (docRes.data||[]); }catch(e){ console.warn('[TB][assets] document links unavailable', e); documentLinks = []; }
-      CACHE = { assets, owners: ownersRes.error ? [] : (ownersRes.data||[]), events, documentLinks, demo:false, empty:false }; return CACHE;
+      CACHE = { assets, owners: ownersRes.error ? [] : (ownersRes.data||[]), events, documentLinks, demo:false, empty:false };
+      try {
+        if (window.state) {
+          state.assets = CACHE.assets;
+          state.assetOwners = CACHE.owners;
+          state.assetEvents = CACHE.events;
+          state.assetDocuments = CACHE.documentLinks;
+        }
+        if (typeof window.tbSaveOfflineSnapshot === 'function') window.tbSaveOfflineSnapshot('assets:load');
+      } catch (_) {}
+      return CACHE;
     }catch(e){ console.warn('[TB][assets] fallback preview used', e); CACHE = { assets:FALLBACK_ASSETS, owners:FALLBACK_OWNERS, events:FALLBACK_EVENTS, demo:true, reason:e && (e.message || e.code) }; return CACHE; }
   }
 
