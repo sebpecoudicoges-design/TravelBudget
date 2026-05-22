@@ -5716,8 +5716,11 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
 
     root.innerHTML = `<div class="card"><div class="muted">${escapeHTML(_tripT("common.loading"))}</div></div>`;
     try {
-      await _ensureSession();
-      await _acceptInviteFromURL();
+      const offline = (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false);
+      if (!offline) {
+        await _ensureSession();
+        await _acceptInviteFromURL();
+      }
       if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 } catch (e) {
       root.innerHTML = `

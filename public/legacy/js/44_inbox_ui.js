@@ -714,6 +714,10 @@
   async function refreshInboxTabBadge(){
     try{
       ensureView();
+      if (!window.__TB_BOOT_COMPLETED__) {
+        setTimeout(refreshInboxTabBadge, 1500);
+        return;
+      }
       const offline = (typeof window.tbShouldUseOfflineMode === "function")
         ? await window.tbShouldUseOfflineMode("inbox-badge")
         : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));

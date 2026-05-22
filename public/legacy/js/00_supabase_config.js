@@ -9,7 +9,29 @@ window.__TB_SUPABASE_URL = SUPABASE_URL;
 window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
 window.__TB_SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
 
+function tbSupabaseFetch(input, init) {
+  const url = String(typeof input === "string" ? input : (input && input.url) || "");
+  const isProjectRequest = !!url && url.indexOf(SUPABASE_URL) === 0;
+  try {
+    const offline = (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false);
+    if (isProjectRequest && offline) {
+      return Promise.reject(new TypeError("TB offline mode: Supabase request skipped"));
+    }
+  } catch (_) {}
+  return fetch(input, init).catch((err) => {
+    try {
+      if (isProjectRequest && typeof window.tbMarkNetworkUnavailable === "function") {
+        window.tbMarkNetworkUnavailable(err?.name || "supabase-fetch-failed");
+      }
+    } catch (_) {}
+    throw err;
+  });
+}
+
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  global: {
+    fetch: tbSupabaseFetch,
+  },
   auth: {
     detectSessionInUrl: true,
     persistSession: true,
