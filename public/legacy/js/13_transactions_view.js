@@ -1333,12 +1333,18 @@ if (isBudgetOnlyInternalTransferFee) return false;
       && (candidate.affectsBudget === true || candidate.affects_budget === true)
     )
   : null;
+    const txAmountClass = tx.type === "expense" ? "tx-amount--expense" : "tx-amount--income";
+    const txAmountPrefix = tx.type === "expense" ? "-" : "+";
+    const txKindLabel = tx.type === "expense" ? _txT("transactions.type.expense") : _txT("transactions.type.income");
     div.innerHTML = `
-      <div style="display:flex;align-items:flex-start;gap:10px;">
-        <input type="checkbox" style="margin-top:4px;" ${txChecked ? 'checked' : ''} onchange="_txBulkToggleOne('${escapeHTML(String(tx.id))}', this.checked)" />
-        <div style="flex:1;">
-        <div><strong>${tx.type === "expense" ? _txT("transactions.type.expense") : _txT("transactions.type.income")}</strong> - ${tx.amount} ${tx.currency}</div>
-        <div class="meta">
+      <div class="tx-main" style="display:flex;align-items:flex-start;gap:10px;">
+        <input class="tx-select" type="checkbox" style="margin-top:4px;" ${txChecked ? 'checked' : ''} onchange="_txBulkToggleOne('${escapeHTML(String(tx.id))}', this.checked)" />
+        <div class="tx-body" style="flex:1;">
+        <div class="tx-title-row">
+          <div class="tx-kind"><strong>${txKindLabel}</strong></div>
+          <div class="tx-amount ${txAmountClass}">${txAmountPrefix}${tx.amount} ${tx.currency}</div>
+        </div>
+        <div class="meta tx-meta">
           ${tx.dateStart}${tx.dateEnd && tx.dateEnd !== tx.dateStart ? " -> " + tx.dateEnd : ""}
           - ${w ? w.name : "Wallet"} - ${_txCatBadge(tx.category)} ${
   isInternalTransfer
@@ -1357,7 +1363,7 @@ if (isBudgetOnlyInternalTransferFee) return false;
         </div>
       </div>
 
-      <div style="display:flex; gap:8px; align-items:center;">
+      <div class="tx-actions" style="display:flex; gap:8px; align-items:center;">
         ${linkedExpenseId
           ? `<button class="btn small" type="button" onclick="tbOpenTripExpenseFromTransaction('${escapeHTML(linkedExpenseId)}')">${escapeHTML(_txT("transactions.action.open_trip"))}</button>`
           : linkedTripShareId
