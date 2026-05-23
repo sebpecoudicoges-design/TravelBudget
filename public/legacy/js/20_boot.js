@@ -204,7 +204,8 @@ window.onload = async function () {
 
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:ensureBootstrap"); } catch (_) {}
     try { tbShowBootOverlay("Connexion et synchronisation…"); } catch (_) {}
-    // Launch bootstrap but do not block first render
+    // Launch bootstrap, then keep the boot overlay until the first useful refresh has hydrated
+    // dashboard-critical data (wallets, KPI, budget, analysis inputs).
     const _bootstrapPromise = ensureBootstrap();
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:ensureBootstrap"); } catch (_) {}
 
@@ -217,40 +218,33 @@ window.onload = async function () {
     // Laisse le DOM de la vue se poser
     await new Promise(r => setTimeout(r, 0));
 
-    // Perf (A2): do not block UI on network refresh.
-    // Show the dashboard immediately and refresh in background.
+    // First refresh: keep it awaited on boot so the first mobile launch does not freeze on
+    // empty KPI/wallet/analyse panels until the app is killed and reopened.
     try { tbShowBootOverlay("Chargement des transactions, wallets et graphiques…"); } catch (_) {}
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:refreshFromServer"); } catch (_) {}
 
-    _bootstrapPromise.catch(e => {
-      console.warn("[Boot] ensureBootstrap failed:", e?.message || e);
-    });
-
-    // Refresh serveur en parallèle
-const _refreshPromise = (typeof refreshFromServer === "function")
-  ? refreshFromServer()
-  : Promise.resolve();
     try {
-      _refreshPromise
-        .catch((e) => {
-          // Avoid hard crash during boot; refreshFromServer already logs/alerts.
-          console.warn("[Boot] refreshFromServer failed:", e?.message || e);
-        })
-        .finally(async () => {
-          try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:refreshFromServer"); } catch (_) {}
-          try {
-            const elapsed = Date.now() - __tbBootStartedAt;
-            const wait = Math.max(0, 500 - elapsed);
-            if (wait) await new Promise(r => setTimeout(r, wait));
-            tbHideBootOverlay();
-          } catch (_) {}
-        });
-    } catch (_) {
-      try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:refreshFromServer"); } catch (_) {}
-      try { tbHideBootOverlay(); } catch (_) {}
+      await _bootstrapPromise;
+    } catch (e) {
+      console.warn("[Boot] ensureBootstrap failed:", e?.message || e);
     }
 
-    // Hide auth overlay right away; data hydrates in background.
+    try {
+      if (typeof refreshFromServer === "function") await refreshFromServer({ force: false });
+      try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
+    } catch (e) {
+      // Avoid hard crash during boot; refreshFromServer already logs/alerts.
+      console.warn("[Boot] refreshFromServer failed:", e?.message || e);
+    } finally {
+      try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:refreshFromServer"); } catch (_) {}
+      try {
+        const elapsed = Date.now() - __tbBootStartedAt;
+        const wait = Math.max(0, 500 - elapsed);
+        if (wait) await new Promise(r => setTimeout(r, wait));
+        tbHideBootOverlay();
+      } catch (_) {}
+    }
+
     safeShowAuth(false);
 
     let resizeTimer = null;

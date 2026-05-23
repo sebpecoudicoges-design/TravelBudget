@@ -3178,6 +3178,157 @@
         grid-column:span 1;
       }
     }
+
+    @media (max-width: 760px){
+      html{
+        -webkit-text-size-adjust:100%;
+      }
+      body{
+        background:var(--bg);
+        overflow-x:hidden;
+      }
+      .wrap{
+        width:100%;
+        max-width:none;
+        box-sizing:border-box;
+        padding:12px 10px calc(92px + env(safe-area-inset-bottom, 0px));
+      }
+      header{
+        position:sticky;
+        top:0;
+        z-index:80;
+        margin:0 -10px 10px;
+        padding:10px 12px;
+        border-radius:0 0 18px 18px;
+      }
+      .brand h1{
+        font-size:16px;
+      }
+      .brand .sub{
+        display:none;
+      }
+      .top-actions{
+        width:100%;
+        gap:7px;
+        overflow-x:auto;
+        flex-wrap:nowrap;
+        padding-bottom:2px;
+        -webkit-overflow-scrolling:touch;
+      }
+      .top-actions .btn,
+      .top-actions select,
+      .top-actions input{
+        flex:0 0 auto;
+        min-height:40px;
+      }
+      .tabs,
+      .app-tabs{
+        position:fixed;
+        left:0;
+        right:0;
+        bottom:0;
+        z-index:90;
+        display:flex !important;
+        flex-wrap:nowrap !important;
+        gap:6px !important;
+        margin:0 !important;
+        padding:8px 8px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+        overflow-x:auto;
+        background:rgba(15,23,42,.92);
+        border-top:1px solid rgba(255,255,255,.12);
+        box-shadow:0 -12px 28px rgba(0,0,0,.28);
+        backdrop-filter:blur(14px);
+        -webkit-overflow-scrolling:touch;
+      }
+      .tab,
+      .app-tabs .tab{
+        flex:0 0 auto;
+        min-width:78px;
+        min-height:42px;
+        padding:8px 10px !important;
+        border-radius:12px !important;
+        font-size:12px !important;
+        text-align:center;
+        color:#fff;
+        background:rgba(255,255,255,.10) !important;
+        box-shadow:none !important;
+      }
+      .tab.active,
+      .app-tabs .tab.active{
+        background:var(--accent) !important;
+        outline:0;
+      }
+      .grid,
+      .dashboard-grid-main,
+      .dashboard-grid,
+      .settings-grid,
+      .tb-settings-inline-grid,
+      .tb-travel-edit-grid,
+      .tb-period-ref-grid,
+      .tb-period-editor,
+      .tb-doc-shell,
+      .tb-inbox-head,
+      .tb-sport-grid{
+        grid-template-columns:1fr !important;
+      }
+      .card{
+        border-radius:14px;
+        padding:13px;
+        box-shadow:0 10px 22px rgba(2,6,23,.08);
+      }
+      .card:hover{
+        transform:none;
+      }
+      .btn,
+      button,
+      input,
+      select,
+      textarea{
+        max-width:100%;
+        font-size:16px;
+      }
+      .btn,
+      button{
+        min-height:42px;
+      }
+      input,
+      select,
+      textarea{
+        box-sizing:border-box;
+        width:100%;
+      }
+      table{
+        display:block;
+        width:100%;
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+      }
+      #kpi,
+      #wallets-list,
+      #daily-budget-container{
+        min-width:0;
+      }
+      .kpi-grid,
+      #kpi > div,
+      #wallets-list{
+        grid-template-columns:1fr !important;
+      }
+      .tb-modal,
+      .modal,
+      .tb-doc-modal,
+      .tb-sport-modal{
+        width:calc(100vw - 20px) !important;
+        max-width:calc(100vw - 20px) !important;
+        max-height:calc(100vh - 24px);
+        overflow:auto;
+        border-radius:16px !important;
+      }
+      #tb-offline-badge{
+        bottom:calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+        max-width:calc(100vw - 28px);
+        text-align:center;
+      }
+    }
   </style>
 </head>
 

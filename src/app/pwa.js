@@ -1,5 +1,6 @@
 export function registerPwa() {
   if (typeof window === "undefined") return;
+  let offlineBadgeTimer = null;
 
   const collectCacheUrls = () => {
     const urls = new Set([
@@ -62,7 +63,21 @@ export function registerPwa() {
       }
       const lang = String(window.__tbLang || localStorage.getItem("tb_lang_v1") || navigator.language || "fr").toLowerCase();
       badge.textContent = lang.startsWith("en") ? "Offline mode - local data" : "Mode hors ligne - donnees locales";
-      badge.style.display = appOffline ? "block" : "none";
+      if (offlineBadgeTimer) {
+        clearTimeout(offlineBadgeTimer);
+        offlineBadgeTimer = null;
+      }
+      if (appOffline) {
+        offlineBadgeTimer = setTimeout(() => {
+          try {
+            const stillOffline = (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode())
+              || (navigator && navigator.onLine === false);
+            badge.style.display = stillOffline ? "block" : "none";
+          } catch (_) {}
+        }, 1800);
+      } else {
+        badge.style.display = "none";
+      }
     } catch (_) {}
   };
 
