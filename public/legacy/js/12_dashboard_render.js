@@ -205,10 +205,20 @@ function _walletRecentTransactionsHTML(walletId, today, T) {
   const recentRows = _walletRecentTransactions(walletId, today);
   const upcomingRows = _walletUpcomingTransactions(walletId, today);
   const upcomingCount = Math.min(2, upcomingRows.length);
+  const wallet = (Array.isArray(state?.wallets) ? state.wallets : [])
+    .find((w) => String(w?.id || "") === String(walletId || ""));
+  let projectedBalance = Number((typeof window.tbGetWalletEffectiveBalance === "function")
+    ? window.tbGetWalletEffectiveBalance(walletId)
+    : wallet?.balance) || 0;
   const rows = upcomingCount
     ? [
-        ...recentRows.slice(0, Math.max(0, 5 - upcomingCount)),
-        ...upcomingRows.slice(0, upcomingCount).map((tx) => ({ ...tx, __tbWalletUpcoming: true }))
+        ...upcomingRows.slice(0, upcomingCount).map((tx) => {
+          const type = String(tx?.type || "").toLowerCase();
+          const amount = Math.abs(Number(tx?.amount) || 0);
+          projectedBalance += type === "expense" ? -amount : amount;
+          return { ...tx, __tbWalletUpcoming: true, __tbWalletProjectedNegative: projectedBalance < 0 };
+        }),
+        ...recentRows.slice(0, Math.max(0, 5 - upcomingCount))
       ]
     : recentRows;
   if (!rows.length) {
@@ -219,9 +229,13 @@ function _walletRecentTransactionsHTML(walletId, today, T) {
     const sign = type === "expense" ? "-" : "+";
     const isPaid = tx?.payNow !== false;
     const isUpcoming = !!tx.__tbWalletUpcoming;
+    const projectedNegative = !!tx.__tbWalletProjectedNegative;
     const statusColor = isUpcoming ? "rgba(59,130,246,.12)" : (isPaid ? "rgba(16,185,129,.12)" : "rgba(245,158,11,.14)");
     const statusBorder = isUpcoming ? "rgba(59,130,246,.35)" : (isPaid ? "rgba(16,185,129,.35)" : "rgba(245,158,11,.38)");
     const statusText = isUpcoming ? ((window.tbGetLang && window.tbGetLang() === "en") ? "Upcoming" : "A venir") : (isPaid ? T("wallet.recent.paid") : T("wallet.recent.unpaid"));
+    const warningChip = projectedNegative
+      ? `<span title="${escapeHTML((window.tbGetLang && window.tbGetLang() === "en") ? "Wallet may go below zero" : "Le wallet peut passer sous zero")}" style="display:inline-flex;align-items:center;border:1px solid rgba(244,63,94,.35);background:rgba(244,63,94,.10);border-radius:999px;padding:1px 6px;color:#be123c;font-weight:800;">${escapeHTML((window.tbGetLang && window.tbGetLang() === "en") ? "risk < 0" : "risque < 0")}</span>`
+      : "";
     const label = escapeHTML(String(tx?.label || tx?.category || "Transaction"));
     const date = escapeHTML(_walletRecentTxDate(tx));
     const amount = escapeHTML(`${sign}${fmtMoney(Math.abs(Number(tx?.amount) || 0), tx?.currency || "")}`);
@@ -229,10 +243,88 @@ function _walletRecentTransactionsHTML(walletId, today, T) {
     return `
       <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid rgba(15,23,42,.07);">
         <div style="min-width:0;">
-          <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
+          <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}${warningChip ? ` ${warningChip}` : ""}</div>
           <div class="muted" style="font-size:12px;">${date} · <span style="display:inline-flex;align-items:center;border:1px solid ${statusBorder};background:${statusColor};border-radius:999px;padding:1px 7px;color:var(--text);font-weight:700;">${escapeHTML(statusText)}</span></div>
         </div>
         <div style="font-weight:800;white-space:nowrap;color:${amountColor};">${amount}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+function _walletRecentTransactionsHTML(walletId, today, T) {
+  const wid = String(walletId || "");
+  const todayIso = String(today || toLocalISODate(new Date()));
+  const maxFutureDate = _walletRecentAddDaysISO(todayIso, 7);
+  const wallet = (Array.isArray(state?.wallets) ? state.wallets : [])
+    .find((w) => String(w?.id || "") === wid);
+  let projectedFutureBalance = Number((typeof window.tbGetWalletEffectiveBalance === "function")
+    ? window.tbGetWalletEffectiveBalance(walletId)
+    : wallet?.balance) || 0;
+
+  const rows = (Array.isArray(state?.transactions) ? state.transactions : [])
+    .filter((tx) => String(tx?.walletId || tx?.wallet_id || "") === wid)
+    .filter((tx) => (tx?.travelId || tx?.travel_id || null) === state.activeTravelId)
+    .filter(_walletRecentTxTouchesWallet)
+    .map((tx) => {
+      const date = _walletRecentTxDate(tx);
+      const isPaid = tx?.payNow !== false;
+      const isFutureSoon = !!date && date > todayIso && date <= maxFutureDate;
+      const isPastUnpaid = !!date && date <= todayIso && !isPaid;
+      return { tx, date, isPaid, isFutureSoon, isPastUnpaid };
+    })
+    .filter((row) => !!row.date && (row.date <= todayIso || row.isFutureSoon))
+    .sort((a, b) => {
+      const pa = a.isFutureSoon ? 0 : (a.isPastUnpaid ? 1 : 2);
+      const pb = b.isFutureSoon ? 0 : (b.isPastUnpaid ? 1 : 2);
+      if (pa !== pb) return pa - pb;
+      if (a.isFutureSoon || a.isPastUnpaid) {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+      } else if (a.date !== b.date) {
+        return b.date.localeCompare(a.date);
+      }
+      return String(a.tx?.label || "").localeCompare(String(b.tx?.label || ""));
+    })
+    .slice(0, 5)
+    .map((row) => {
+      if (!row.isFutureSoon) return row;
+      const type = String(row.tx?.type || "").toLowerCase();
+      const amount = Math.abs(Number(row.tx?.amount) || 0);
+      projectedFutureBalance += type === "expense" ? -amount : amount;
+      return { ...row, projectedNegative: projectedFutureBalance < 0 };
+    });
+
+  if (!rows.length) {
+    return `<div class="muted" style="font-size:12px;">${T("wallet.recent.empty")}</div>`;
+  }
+
+  return rows.map((row) => {
+    const tx = row.tx;
+    const type = String(tx?.type || "").toLowerCase();
+    const sign = type === "expense" ? "-" : "+";
+    const statusColor = row.isFutureSoon
+      ? "rgba(59,130,246,.12)"
+      : (row.isPaid ? "rgba(16,185,129,.12)" : "rgba(245,158,11,.14)");
+    const statusBorder = row.isFutureSoon
+      ? "rgba(59,130,246,.35)"
+      : (row.isPaid ? "rgba(16,185,129,.35)" : "rgba(245,158,11,.38)");
+    const statusText = row.isFutureSoon
+      ? ((window.tbGetLang && window.tbGetLang() === "en") ? "Upcoming" : "A venir")
+      : (row.isPaid ? T("wallet.recent.paid") : T("wallet.recent.unpaid"));
+    const warningChip = row.isFutureSoon && row.projectedNegative
+      ? `<span title="${escapeHTML((window.tbGetLang && window.tbGetLang() === "en") ? "Wallet may go below zero" : "Le wallet peut passer sous zero")}" style="display:inline-flex;align-items:center;border:1px solid rgba(244,63,94,.35);background:rgba(244,63,94,.10);border-radius:999px;padding:1px 6px;color:#be123c;font-size:11px;font-weight:800;">${escapeHTML((window.tbGetLang && window.tbGetLang() === "en") ? "risk < 0" : "risque < 0")}</span>`
+      : "";
+    const label = escapeHTML(String(tx?.label || tx?.category || "Transaction"));
+    const date = escapeHTML(row.date);
+    const amount = escapeHTML(`${sign}${fmtMoney(Math.abs(Number(tx?.amount) || 0), tx?.currency || "")}`);
+    const amountColor = type === "expense" ? "#b42335" : "#047857";
+    return `
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid rgba(15,23,42,.07);">
+        <div style="min-width:0;">
+          <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
+          <div class="muted" style="font-size:12px;">${date} - <span style="display:inline-flex;align-items:center;border:1px solid ${statusBorder};background:${statusColor};border-radius:999px;padding:1px 7px;color:var(--text);font-weight:700;">${escapeHTML(statusText)}</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-weight:800;white-space:nowrap;color:${amountColor};">${amount}${warningChip}</div>
       </div>
     `;
   }).join("");
