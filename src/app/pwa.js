@@ -68,14 +68,18 @@ export function registerPwa() {
         clearTimeout(offlineBadgeTimer);
         offlineBadgeTimer = null;
       }
-      if (appOffline) {
+      if (networkOffline) {
         offlineBadgeTimer = setTimeout(() => {
           try {
-            const stillOffline = !!(navigator && navigator.onLine === false)
-              || !!document.documentElement.classList.contains("tb-offline-restored");
+            const stillOffline = !!(navigator && navigator.onLine === false);
             badge.style.display = stillOffline ? "block" : "none";
+            if (stillOffline) {
+              offlineBadgeTimer = setTimeout(() => {
+                try { badge.style.display = "none"; } catch (_) {}
+              }, 4500);
+            }
           } catch (_) {}
-        }, 1800);
+        }, 2200);
       } else {
         badge.style.display = "none";
       }

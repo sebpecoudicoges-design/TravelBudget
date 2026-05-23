@@ -1150,12 +1150,12 @@ categoryTxMap, subcategoryTxMap
       return ((current - target) / target) * 100;
     };
     const ratioText = (current, total) => `${_fmtMoney(current, model.base)} / ${_fmtMoney(total, model.base)}`;
-    const deltaBudgetPct = signedPct(model.projection, model.totalBudget);
-    const deltaReferencePct = signedPct(model.projection, model.totalReferencePeriod);
+    const deltaBudgetPct = signedPct(model.spentToToday, model.targetToToday);
+    const deltaReferencePct = signedPct(model.spentToToday, model.totalReferenceElapsed);
     const deltaBudgetTone = deltaBudgetPct > 0 ? _themeBad() : (deltaBudgetPct < 0 ? _themeGood() : _themeMuted());
     const deltaReferenceTone = deltaReferencePct > 0 ? _themeBad() : (deltaReferencePct < 0 ? _themeGood() : _themeMuted());
-    const deltaBudgetAmount = _safeNum(model.projection) - _safeNum(model.totalBudget);
-    const deltaReferenceAmount = _safeNum(model.projection) - _safeNum(model.totalReferencePeriod);
+    const deltaBudgetAmount = _safeNum(model.spentToToday) - _safeNum(model.targetToToday);
+    const deltaReferenceAmount = _safeNum(model.spentToToday) - _safeNum(model.totalReferenceElapsed);
     const formatSignedPct = (value) => {
       const pct = Number(value) || 0;
       const abs = Math.abs(pct);
