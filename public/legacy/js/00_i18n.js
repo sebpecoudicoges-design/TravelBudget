@@ -31,7 +31,7 @@
       "app.title": "Travel Budget",
       "app.subtitle": "Outil de suivi de budget pendant tes voyages",
       "top.theme": "Theme",
-      "top.update_rates": "Mettre a jour taux",
+      "top.update_rates": "Mettre a jour les taux",
 
       // Navigation
       "nav.dashboard": "Tableau",

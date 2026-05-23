@@ -3730,7 +3730,7 @@
           </div>
 
           <button class="btn" onclick="toggleTheme()" data-t="top.theme">Theme</button>
-          <button class="btn" onclick="refreshFxRates()" data-t="top.update_rates">Mettre a jour taux</button>
+          <button class="btn" onclick="refreshFxRates()" data-t="top.update_rates">Mettre a jour les taux</button>
           <button class="btn" onclick="exportBackup()">⬇ Export</button>
           <button class="btn" onclick="importBackup()">⬆ Import</button>
           <button class="btn" onclick="signOut()">⎋ Logout</button>
@@ -4034,7 +4034,7 @@
             </div>
 
             <div class="field">
-              <label data-t="transactions.filters.payment">Payement</label>
+              <label data-t="transactions.filters.payment">Paiement</label>
               <select id="f-pay">
                 <option value="all" data-t="common.all_m">Tous</option>
                 <option value="paid" data-t="transactions.filters.paid">Payés</option>
@@ -4453,17 +4453,11 @@
       body.tb-capacitor-app .top-actions > button:nth-of-type(4){
         display:none!important;
       }
-      body.tb-capacitor-app .top-actions > button:nth-of-type(2),
-      body.tb-capacitor-app .top-actions > button:nth-of-type(5){
-        font-size:0!important;
-      }
       body.tb-capacitor-app .top-actions > button:nth-of-type(2)::after{
-        content:"Taux";
-        font-size:10px!important;
+        content:none!important;
       }
       body.tb-capacitor-app .top-actions > button:nth-of-type(5)::after{
-        content:"Logout";
-        font-size:9px!important;
+        content:none!important;
       }
       body.tb-capacitor-app .top-actions .btn,
       body.tb-capacitor-app .top-actions select,

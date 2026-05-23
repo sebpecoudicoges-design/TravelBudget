@@ -121,6 +121,74 @@ export function registerPwa() {
     } catch (_) {}
   };
 
+  const getLang = () => {
+    try {
+      const lang = String(
+        (typeof window.tbGetLang === "function" ? window.tbGetLang() : "")
+        || window.__tbLang
+        || localStorage.getItem("tb_lang_v1")
+        || navigator.language
+        || "fr"
+      ).toLowerCase();
+      return lang.startsWith("en") ? "en" : "fr";
+    } catch (_) {
+      return "fr";
+    }
+  };
+
+  const setText = (selector, fr, en) => {
+    try {
+      const el = document.querySelector(selector);
+      if (el) el.textContent = getLang() === "en" ? en : fr;
+    } catch (_) {}
+  };
+
+  const setLabelFor = (id, fr, en) => {
+    try {
+      const el = document.getElementById(id);
+      const field = el?.closest?.(".field");
+      const label = field?.querySelector?.("label");
+      if (!label) return;
+      const help = label.querySelector(".tb-help");
+      label.textContent = getLang() === "en" ? en : fr;
+      if (help) {
+        label.appendChild(document.createTextNode(" "));
+        label.appendChild(help);
+      }
+    } catch (_) {}
+  };
+
+  const applyMobileCopy = () => {
+    try {
+      if (!document.body.classList.contains("tb-capacitor-app")) return;
+      const lang = getLang();
+      document.body.dataset.tbMobileLang = lang;
+
+      setText(".top-actions > button:nth-of-type(1)", "Theme", "Theme");
+      setText(".top-actions > button:nth-of-type(2)", "Taux", "Rates");
+      setText(".top-actions > button:nth-of-type(5)", "Sortir", "Logout");
+
+      setText("#modal-title", "Transaction", "Transaction");
+      setLabelFor("m-type", "Type", "Type");
+      setLabelFor("m-wallet", "Wallet", "Wallet");
+      setLabelFor("m-amount", "Montant", "Amount");
+      setLabelFor("m-category", "Categorie", "Category");
+      setLabelFor("m-subcategory", "Sous-cat.", "Subcat.");
+      setLabelFor("m-cash-date", "Tresorerie", "Cash date");
+      setLabelFor("m-budget-start", "Budget debut", "Budget start");
+      setLabelFor("m-budget-end", "Budget fin", "Budget end");
+      setLabelFor("m-label", "Note", "Note");
+      setLabelFor("m-paynow", "Paye maintenant", "Paid now");
+      setLabelFor("m-out", "Hors budget", "Out of budget");
+      setLabelFor("m-night", "Remplace nuit", "Replaces night");
+
+      const cancel = document.querySelector("#modal .modal-actions .btn:not(.primary)");
+      if (cancel) cancel.textContent = lang === "en" ? "Cancel" : "Annuler";
+      const save = document.querySelector("#modal .modal-actions .btn.primary");
+      if (save && !save.disabled) save.textContent = lang === "en" ? "Save" : "Enregistrer";
+    } catch (_) {}
+  };
+
   const markRuntimeMode = () => {
     try {
       const isCapacitor = !!window.Capacitor
@@ -133,6 +201,7 @@ export function registerPwa() {
         document.body.dataset.tbView = id || "dashboard";
         document.body.classList.toggle("tb-view-dashboard", (id || "dashboard") === "dashboard");
       }
+      applyMobileCopy();
     } catch (_) {}
   };
 
@@ -144,12 +213,19 @@ export function registerPwa() {
       markRuntimeMode();
       updateOnlineState();
       ensureMobileNav();
+      applyMobileCopy();
     });
   } else {
     markRuntimeMode();
     updateOnlineState();
     ensureMobileNav();
+    applyMobileCopy();
   }
+
+  document.addEventListener("click", () => setTimeout(applyMobileCopy, 30), true);
+  window.addEventListener("tb:language_changed", applyMobileCopy);
+  window.addEventListener("languagechange", applyMobileCopy);
+  setInterval(applyMobileCopy, 1200);
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
