@@ -117,7 +117,7 @@ export function registerPwa() {
         document.body.classList.remove("tb-mobile-nav-open");
         btn.setAttribute("aria-expanded", "false");
       });
-      header.appendChild(btn);
+      document.body.appendChild(btn);
     } catch (_) {}
   };
 
