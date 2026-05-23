@@ -12,6 +12,11 @@ window.__TB_SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
 function tbSupabaseFetch(input, init) {
   const url = String(typeof input === "string" ? input : (input && input.url) || "");
   const isProjectRequest = !!url && url.indexOf(SUPABASE_URL) === 0;
+  try {
+    if (isProjectRequest && typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) {
+      return Promise.reject(new TypeError("Offline mode: Supabase request skipped"));
+    }
+  } catch (_) {}
   return fetch(input, init).then((res) => {
     try {
       if (isProjectRequest && res && res.status < 500 && typeof window.tbClearNetworkUnavailable === "function") {

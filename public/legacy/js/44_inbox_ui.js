@@ -771,7 +771,10 @@
   }
 
   async function loadInbox(){
-    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+    const offline = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode("inbox:load")
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (offline) {
       CACHE.loading = false;
       CACHE.error = '';
       CACHE.items = Array.isArray(state?.inboxItems) ? state.inboxItems : [];
@@ -940,8 +943,14 @@
 
   function showError(e){
     CACHE.loading = false;
-    CACHE.error = String(e?.message || e || tr('Erreur inbox', 'Inbox error'));
-    console.error('[TB][inbox]', e);
+    const msg = String(e?.message || e || tr('Erreur inbox', 'Inbox error'));
+    if (/offline mode|supabase request skipped|failed to fetch|network/i.test(msg)) {
+      CACHE.error = '';
+      CACHE.items = Array.isArray(state?.inboxItems) ? state.inboxItems : [];
+    } else {
+      CACHE.error = msg;
+      console.error('[TB][inbox]', e);
+    }
     renderInboxShell();
   }
 

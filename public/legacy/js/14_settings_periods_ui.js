@@ -200,7 +200,7 @@ function _tbFormatTravelOptionLabel(t) {
   const name = String(row.name || "").trim();
   const start = _tbISO(row.start || row.start_date);
   const end = _tbISO(row.end || row.end_date);
-  const range = (start && end) ? `${start} â†’ ${end}` : (start || end || "");
+  const range = (start && end) ? `${start} → ${end}` : (start || end || "");
   return name || (`Voyage ${range}`.trim()) || "Voyage";
 }
 
@@ -222,7 +222,7 @@ function _tbSetActiveTravelAndPeriod(travelId, periodId) {
 
 async function _tbSaveActiveTravelName(name) {
   const s = _tbGetSB();
-  if (!s) throw new Error("Supabase non prÃªt.");
+  if (!s) throw new Error("Supabase non prêt.");
 
   const tid = String(state?.activeTravelId || "");
   if (!tid) throw new Error("Aucun voyage actif.");
@@ -307,7 +307,7 @@ async function loadPeriodsListIntoUI(){
 
 async function refreshSegmentsForActivePeriod(){
   const s = _tbGetSB();
-  if(!s) throw new Error("Supabase non prÃªt.");
+  if(!s) throw new Error("Supabase non prêt.");
   const pid = state.period && state.period.id;
   if(!pid) return;
 
@@ -416,7 +416,7 @@ function _tbSettingsDecoratePanels(view){
         </span>
         <span class="tb-settings-panel-side">
           <span class="tb-settings-pill tb-settings-panel-pill"></span>
-          <span class="tb-settings-panel-arrow">âŒ„</span>
+          <span class="tb-settings-panel-arrow">⌄</span>
         </span>`;
       head.onclick = ()=>{
         const isCollapsed = card.classList.toggle('is-collapsed');
@@ -436,7 +436,7 @@ function _tbSettingsDecoratePanels(view){
       const summaryEl = head.querySelector('.tb-settings-panel-summary');
       const pillEl = head.querySelector('.tb-settings-panel-pill');
       if (titleEl) titleEl.textContent = String(h2.textContent || '').trim();
-      if (kickerEl) kickerEl.textContent = meta.kicker || 'RÃ©glages';
+      if (kickerEl) kickerEl.textContent = meta.kicker || 'Réglages';
       if (summaryEl) summaryEl.textContent = meta.summary || '';
       if (pillEl) {
         pillEl.textContent = meta.pills?.[0] || 'Ouvrir';
@@ -481,7 +481,7 @@ function renderSettings(){
       labels.forEach((lab) => {
         const txt = String(lab.textContent || "").trim();
         if (!txt) return;
-        if ((txt === "DÃ©but" || txt === "Fin") && helpDates) {
+        if ((txt === "Début" || txt === "Fin") && helpDates) {
           lab.innerHTML = `${escapeHTML(txt)} ${tbHelp(helpDates)}`;
         }
       });
@@ -496,9 +496,9 @@ function renderSettings(){
         }
       } catch (_) {}
 
-      // Add a hint in the "PÃ©riodes du voyage" card title
+      // Add a hint in the "Périodes du voyage" card title
       const h2s = Array.from(view.querySelectorAll("h2"));
-      const periodsH2 = h2s.find(h => String(h.textContent||"").trim() === "PÃ©riodes du voyage");
+      const periodsH2 = h2s.find(h => String(h.textContent||"").trim() === "Périodes du voyage");
       if (periodsH2 && helpSegs) {
         periodsH2.innerHTML = `${escapeHTML(periodsH2.textContent)} ${tbHelp(helpSegs)}`;
       }
@@ -541,15 +541,15 @@ function renderSettings(){
       const recoCur = String(travelDefault?.currency_code || 'EUR').toUpperCase();
       const totalDays = budgetMeta.totalDays || 0;
       const budgetBaseCur = _tbSettingsBaseCurrency();
-      const budgetDual = (budgetAvg!==null && budgetCur) ? _tbFmtDualAmount(budgetAvg, budgetCur, budgetBaseCur, 0, 2) : { main:'â€”', secondary:null };
-      const recoDual = (Number.isFinite(recoDay)&&recoDay>0) ? _tbFmtDualAmount(recoDay, recoCur, budgetBaseCur, 2, 2) : { main:'â€”', secondary:null };
+      const budgetDual = (budgetAvg!==null && budgetCur) ? _tbFmtDualAmount(budgetAvg, budgetCur, budgetBaseCur, 0, 2) : { main:'—', secondary:null };
+      const recoDual = (Number.isFinite(recoDay)&&recoDay>0) ? _tbFmtDualAmount(recoDay, recoCur, budgetBaseCur, 2, 2) : { main:'—', secondary:null };
       const budgetBaseAmount = _tbTryConvert(budgetAvg, budgetCur, budgetBaseCur);
       const recoBaseAmount = _tbTryConvert(recoDay, recoCur, budgetBaseCur);
       const perPost = [
         ['Logement', travelDefault?.recommended_accommodation_daily_amount],
         ['Repas', travelDefault?.recommended_food_daily_amount],
         ['Transport', travelDefault?.recommended_transport_daily_amount],
-        ['ActivitÃ©s', travelDefault?.recommended_activities_daily_amount],
+        ['Activités', travelDefault?.recommended_activities_daily_amount],
       ].filter((x)=>Number.isFinite(Number(x[1])) && Number(x[1])>0);
       const settingsEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
       const st = (fr, en) => settingsEn ? en : fr;
@@ -560,25 +560,25 @@ function renderSettings(){
               <div class="tb-v11-travel-row tb-v11-travel-row--lot-a">
                 <div class="tb-v11-travel-row-title">
                   <div class="tb-v11-travel-title">${escapeHTML(String(_tbGetActiveTravelRow()?.name || st('Voyage actif', 'Active trip')))}</div>
-                  <div class="tb-v11-travel-sub">${escapeHTML(st('Voyage, rÃ©fÃ©rence et budget dans un seul espace.', 'Trip, reference and budget in one place.'))}</div>
+                  <div class="tb-v11-travel-sub">${escapeHTML(st('Voyage, référence et budget dans un seul espace.', 'Trip, reference and budget in one place.'))}</div>
                 </div>
                 <div class="tb-v11-travel-meta">
-                  <span class="tb-settings-pill">${escapeHTML(String(segCount))} ${escapeHTML(st(segCount>1?'pÃ©riodes':'pÃ©riode', segCount>1?'periods':'period'))}</span>
+                  <span class="tb-settings-pill">${escapeHTML(String(segCount))} ${escapeHTML(st(segCount>1?'périodes':'période', segCount>1?'periods':'period'))}</span>
                   <span class="tb-settings-pill">${escapeHTML(String(totalDays||0))} ${escapeHTML(st('jours', 'days'))}</span>
-                  <span class="tb-settings-pill">Base Â· ${escapeHTML(budgetBaseCur)}</span>
+                  <span class="tb-settings-pill">Base · ${escapeHTML(budgetBaseCur)}</span>
                 </div>
               </div>
               <div class="tb-settings-inline-strip tb-settings-inline-strip--travel tb-settings-inline-strip--travel-lot-a">
-                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(st('Budget / jour', 'Budget / day'))}</span><strong id="tb-travel-budget-main">${escapeHTML(budgetDual.main || 'â€”')}</strong>${budgetDual.secondary?`<small id="tb-travel-budget-secondary">${escapeHTML(budgetDual.secondary)} Â· base</small>`:`<small id="tb-travel-budget-secondary" style="display:none"></small>`}</div>
-                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(st('RÃ©fÃ©rence', 'Reference'))}</span><strong id="tb-travel-ref-main">${escapeHTML(travelDefault?.country_name || travelDefault?.country_code || 'â€”')}</strong><small id="tb-travel-ref-sub">${escapeHTML(travelDefault ? `${String(travelDefault.travel_profile||'solo')} Â· ${String(travelDefault.travel_style||'standard')}` : st('Ã€ dÃ©finir', 'To define'))}</small></div>
-                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(st('Reco / jour', 'Reco / day'))}</span><strong id="tb-travel-reco-main">${escapeHTML(recoDual.main)}</strong>${recoDual.secondary?`<small id="tb-travel-reco-secondary">${escapeHTML(recoDual.secondary)} Â· base</small>`:`<small id="tb-travel-reco-secondary" style="display:none"></small>`}</div>
-                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(st('Cadence', 'Pace'))}</span><strong id="tb-travel-cadence-main">${escapeHTML((Number.isFinite(budgetBaseAmount) && Number.isFinite(recoBaseAmount)) ? (budgetBaseAmount <= recoBaseAmount ? st('Sous la reco', 'Below reco') : st('Au-dessus', 'Above')) : st('Ã€ calibrer', 'To calibrate'))}</strong><small id="tb-travel-cadence-sub">${escapeHTML((Number.isFinite(budgetBaseAmount) && Number.isFinite(recoBaseAmount)) ? `${Math.abs(budgetBaseAmount-recoBaseAmount).toFixed(2)} ${budgetBaseCur} ${st("d'Ã©cart", 'gap')}` : st('RÃ©fÃ©rence requise', 'Reference required'))}</small></div>
+                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(st('Budget / jour', 'Budget / day'))}</span><strong id="tb-travel-budget-main">${escapeHTML(budgetDual.main || '—')}</strong>${budgetDual.secondary?`<small id="tb-travel-budget-secondary">${escapeHTML(budgetDual.secondary)} · base</small>`:`<small id="tb-travel-budget-secondary" style="display:none"></small>`}</div>
+                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(st('Référence', 'Reference'))}</span><strong id="tb-travel-ref-main">${escapeHTML(travelDefault?.country_name || travelDefault?.country_code || '—')}</strong><small id="tb-travel-ref-sub">${escapeHTML(travelDefault ? `${String(travelDefault.travel_profile||'solo')} · ${String(travelDefault.travel_style||'standard')}` : st('À définir', 'To define'))}</small></div>
+                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(st('Reco / jour', 'Reco / day'))}</span><strong id="tb-travel-reco-main">${escapeHTML(recoDual.main)}</strong>${recoDual.secondary?`<small id="tb-travel-reco-secondary">${escapeHTML(recoDual.secondary)} · base</small>`:`<small id="tb-travel-reco-secondary" style="display:none"></small>`}</div>
+                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(st('Cadence', 'Pace'))}</span><strong id="tb-travel-cadence-main">${escapeHTML((Number.isFinite(budgetBaseAmount) && Number.isFinite(recoBaseAmount)) ? (budgetBaseAmount <= recoBaseAmount ? st('Sous la reco', 'Below reco') : st('Au-dessus', 'Above')) : st('À calibrer', 'To calibrate'))}</strong><small id="tb-travel-cadence-sub">${escapeHTML((Number.isFinite(budgetBaseAmount) && Number.isFinite(recoBaseAmount)) ? `${Math.abs(budgetBaseAmount-recoBaseAmount).toFixed(2)} ${budgetBaseCur} ${st("d'écart", 'gap')}` : st('Référence requise', 'Reference required'))}</small></div>
               </div>
-              <div class="tb-edit-kicker">${escapeHTML(st('RÃ©glages modifiables', 'Editable settings'))}</div>
+              <div class="tb-edit-kicker">${escapeHTML(st('Réglages modifiables', 'Editable settings'))}</div>
               <div class="tb-settings-inline-grid tb-settings-inline-grid--travel tb-travel-edit-grid tb-travel-edit-grid--equal" style="margin-top:10px; align-items:end;">
                 <div class="field field--span-2"><label>${escapeHTML(st('Voyage', 'Trip'))}</label><select id="tb-inline-travel-select"></select></div>
                 <div class="field field--span-2"><label>${escapeHTML(st('Nom', 'Name'))}</label><input id="tb-inline-travel-name" type="text" value="${escapeHTML(String(_tbGetActiveTravelRow()?.name || ''))}" /></div>
-                <div class="field field--span-2"><label>${escapeHTML(st('DÃ©but', 'Start'))}</label><input id="tb-inline-travel-start" type="date" value="${escapeHTML(startISO||'')}" /></div>
+                <div class="field field--span-2"><label>${escapeHTML(st('Début', 'Start'))}</label><input id="tb-inline-travel-start" type="date" value="${escapeHTML(startISO||'')}" /></div>
                 <div class="field field--span-2"><label>${escapeHTML(st('Fin', 'End'))}</label><input id="tb-inline-travel-end" type="date" value="${escapeHTML(endISO||'')}" /></div>
                 <div class="field field--span-2"><label>${escapeHTML(st('Pays', 'Country'))}</label><select data-br="travel-country"></select></div>
                 <div class="field field--span-2"><label>${escapeHTML(st('Profil', 'Profile'))}</label><select data-br="travel-profile"><option value="solo">Solo</option><option value="couple">Couple</option><option value="family">${escapeHTML(st('Famille', 'Family'))}</option></select></div>
@@ -590,7 +590,7 @@ function renderSettings(){
               <div class="row" style="justify-content:flex-end; margin-top:14px; gap:10px;">
                 <button class="btn" onclick="createVoyagePrompt()">+ ${escapeHTML(st('Nouveau voyage', 'New trip'))}</button>
                 <button class="btn danger" onclick="deleteActiveVoyage()">${escapeHTML(st('Supprimer voyage', 'Delete trip'))}</button>
-                <button class="btn" onclick="createPeriodPrompt()">+ ${escapeHTML(st('Ajouter pÃ©riode', 'Add period'))}</button>
+                <button class="btn" onclick="createPeriodPrompt()">+ ${escapeHTML(st('Ajouter période', 'Add period'))}</button>
                 <button class="btn primary" id="tb-inline-save-travel">${escapeHTML(st('Enregistrer le voyage', 'Save trip'))}</button>
               </div>
             </div>
@@ -648,7 +648,7 @@ function renderSettings(){
         <div class="row" style="gap:12px; align-items:end; flex-wrap:wrap;">
           <div class="field" style="min-width:260px;">
             <label>${T("settings.account.email")}</label>
-            <input id="tb-account-email" type="text" value="â€”" disabled />
+            <input id="tb-account-email" type="text" value="—" disabled />
           </div>
 
           <div class="field" style="min-width:260px;max-width:320px;">
@@ -724,7 +724,7 @@ function renderSettings(){
       const _fillCachedAccount = () => {
         const cached = _cachedAccount();
         const em = box.querySelector("#tb-account-email");
-        if (em) em.value = cached.email || "â€”";
+        if (em) em.value = cached.email || "—";
         const wa = box.querySelector("#tb-account-whatsapp");
         if (wa && !wa.value) wa.value = cached.whatsapp || "";
       };
@@ -783,7 +783,7 @@ if (btnWhatsapp) {
     const s = _getSb();
     const u = (await s.auth.getUser()).data?.user;
     const uid = u?.id;
-    if (!uid) throw new Error("Non authentifiÃ©");
+    if (!uid) throw new Error("Non authentifié");
 
     const raw = box.querySelector("#tb-account-whatsapp")?.value || "";
     const phone = normalizeWhatsappPhone(raw);
@@ -803,7 +803,7 @@ if (btnWhatsapp) {
     if (inp) inp.value = phone;
     _rememberAccount(u, phone);
 
-    alert("NumÃ©ro WhatsApp enregistrÃ©.");
+    alert("Numéro WhatsApp enregistré.");
   });
 }
 
@@ -815,7 +815,7 @@ if (btnWhatsapp) {
           if (!v || !/^[A-Z]{3}$/.test(v)) throw new Error("Devise invalide (ISO3 attendu)");
           const u = (await s.auth.getUser()).data?.user;
           const uid = u?.id;
-          if (!uid) throw new Error("Non authentifiÃ©");
+          if (!uid) throw new Error("Non authentifié");
           await s.from(TB_CONST.TABLES.settings).upsert({ user_id: uid, base_currency: v }, { onConflict: "user_id" });
           if (!state.user) state.user = {};
           state.user.baseCurrency = v;
@@ -825,13 +825,13 @@ if (btnWhatsapp) {
 
       const btnMode = box.querySelector("#tb-user-uimode-save");
       if (btnMode) {
-        btnMode.onclick = () => safeCall("Enregistrer mode dâ€™interface", async () => {
+        btnMode.onclick = () => safeCall("Enregistrer mode d’interface", async () => {
           const s = _getSb();
           const modeRaw = String(box.querySelector("#tb-user-uimode")?.value || "advanced").trim().toLowerCase();
           const mode = (typeof window.tbNormalizeUiMode === 'function') ? window.tbNormalizeUiMode(modeRaw) : (modeRaw === 'simple' ? 'simple' : 'advanced');
           const u = (await s.auth.getUser()).data?.user;
           const uid = u?.id;
-          if (!uid) throw new Error("Non authentifiÃ©");
+          if (!uid) throw new Error("Non authentifié");
           let remoteSaved = false;
           try {
             const { error } = await s.from(TB_CONST.TABLES.settings).upsert({ user_id: uid, ui_mode: mode }, { onConflict: "user_id" });
@@ -852,13 +852,13 @@ if (btnWhatsapp) {
       const btnReset = box.querySelector("#tb-user-resetpwd");
       if (btnReset) {
         btnReset.onclick = () => safeCall("Reset mot de passe", async () => {
-          if (_settingsOffline()) throw new Error("Mode hors ligne : reconnecte-toi pour envoyer l'email de rÃ©initialisation.");
+          if (_settingsOffline()) throw new Error("Mode hors ligne : reconnecte-toi pour envoyer l'email de réinitialisation.");
           const s = _getSb();
           const u = (await s.auth.getUser()).data?.user;
           const em = String(u?.email || "").trim();
           if (!em) throw new Error("Email introuvable");
           await s.auth.resetPasswordForEmail(em);
-          alert("Email de rÃ©initialisation envoyÃ©.");
+          alert("Email de réinitialisation envoyé.");
         });
       }
 
@@ -910,7 +910,7 @@ if (btnWhatsapp) {
       // Save cashflow threshold (EUR reference)
       const btnThr = box.querySelector("#tb-user-cfthr-save");
       if (btnThr) {
-        btnThr.onclick = () => safeCall("Enregistrer seuil trÃ©sorerie", async () => {
+        btnThr.onclick = () => safeCall("Enregistrer seuil trésorerie", async () => {
           const v = Number(box.querySelector("#tb-user-cfthr")?.value);
           if (!Number.isFinite(v) || v <= 0) throw new Error("Seuil invalide");
           const eur = (typeof window.safeFxConvert === "function")
@@ -935,8 +935,8 @@ if (btnWhatsapp) {
 
 
     const _fxHelp = (window.tbT ? tbT("settings.help.fx") : [
-      "Taux automatique : mis Ã  jour rÃ©guliÃ¨rement (week-end ok).",
-      "Taux perso : utilisÃ© seulement si le taux auto est indisponible.",
+      "Taux automatique : mis à jour régulièrement (week-end ok).",
+      "Taux perso : utilisé seulement si le taux auto est indisponible.",
       "Si aucun taux dispo : saisie requise."
     ].join("\n"));
 
@@ -953,7 +953,7 @@ if (btnWhatsapp) {
     const ecbAsof = fxStatus ? fxStatus.asOf : (function(){ try { return String(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_asof) || "").slice(0,10) || null; } catch(_){ return null; } })();
     const ecbCount = fxStatus ? (fxStatus.count||0) : (function(){ try { return JSON.parse(localStorage.getItem(TB_CONST.LS_KEYS.eur_rates_keys) || "[]").length || 0; } catch(_){ return 0; } })();
 
-    // Taux perso / change (bloc sÃ©parÃ© du voyage et des pÃ©riodes)
+    // Taux perso / change (bloc séparé du voyage et des périodes)
     let manualHost = document.getElementById('manual-fx-box');
     if (manualHost) {
       manualHost.innerHTML = '';
@@ -984,8 +984,8 @@ if (btnWhatsapp) {
           <span class="muted">${T("settings.fx.subtitle")}</span>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
-          ${manualList.some(x=>x.stale) ? `<span class="tb-fx-alert-badge">âš  ${T("settings.fx.update_needed")}</span>` : '<span class="tb-fx-ok-badge">OK</span>'}
-          <button class="btn" data-act="mf-add" title="${T("settings.fx.add_title")}">${T("settings.fx.add")}</button><span class="tb-recurring-arrow" data-manual-fx-arrow>â€º</span>
+          ${manualList.some(x=>x.stale) ? `<span class="tb-fx-alert-badge">⚠ ${T("settings.fx.update_needed")}</span>` : '<span class="tb-fx-ok-badge">OK</span>'}
+          <button class="btn" data-act="mf-add" title="${T("settings.fx.add_title")}">${T("settings.fx.add")}</button><span class="tb-recurring-arrow" data-manual-fx-arrow>›</span>
         </div>
       </div>
       <div data-manual-fx-list style="margin-top:8px; overflow:auto; display:none;">
@@ -999,8 +999,8 @@ if (btnWhatsapp) {
                 <tr>
                   <td><b>${escapeHTML(x.c)}</b></td>
                   <td>${escapeHTML(String(Number(x.rate).toFixed(6)).replace(/\.0+$/,''))}</td>
-                  <td>${escapeHTML(x.asOf || "â€”")}</td>
-                  <td>${x.stale ? `<span class="tb-fx-alert-badge">âš  ${T("settings.fx.update_needed")}</span>` : '<span class="tb-fx-ok-badge">OK</span>'}</td>
+                  <td>${escapeHTML(x.asOf || "—")}</td>
+                  <td>${x.stale ? `<span class="tb-fx-alert-badge">⚠ ${T("settings.fx.update_needed")}</span>` : '<span class="tb-fx-ok-badge">OK</span>'}</td>
                   <td style="text-align:right; white-space:nowrap;">
                     <button class="btn" data-act="mf-edit" data-cur="${escapeHTML(x.c)}">${T("settings.fx.edit")}</button>
                     <button class="btn danger" data-act="mf-del" data-cur="${escapeHTML(x.c)}">${T("settings.fx.delete")}</button>
@@ -1035,7 +1035,7 @@ if (btnWhatsapp) {
 
     const mfToggle = manualPanel.querySelector('[data-act="mf-toggle"]');
     const mfList = manualPanel.querySelector('[data-manual-fx-list]');
-    if (mfToggle && mfList) { const arrow = manualPanel.querySelector('[data-manual-fx-arrow]'); mfToggle.onclick = (ev)=>{ if (ev.target && ev.target.closest('[data-act="mf-add"]')) return; const open = (mfList.style.display === 'none'); mfList.style.display = open ? '' : 'none'; if (arrow) arrow.textContent = open ? 'âŒ„' : 'â€º'; }; }
+    if (mfToggle && mfList) { const arrow = manualPanel.querySelector('[data-manual-fx-arrow]'); mfToggle.onclick = (ev)=>{ if (ev.target && ev.target.closest('[data-act="mf-add"]')) return; const open = (mfList.style.display === 'none'); mfList.style.display = open ? '' : 'none'; if (arrow) arrow.textContent = open ? '⌄' : '›'; }; }
 
     manualPanel.querySelectorAll('[data-act="mf-edit"]').forEach(btn=>{
       btn.onclick = ()=>safeCall("Modifier taux manuel", ()=>{
@@ -1051,7 +1051,7 @@ if (btnWhatsapp) {
       btn.onclick = ()=>safeCall("Supprimer taux manuel", ()=>{
         const c = btn.getAttribute('data-cur');
         if (!c) return;
-        const ok = confirm(`Supprimer le taux perso EURâ†’${c} ?`);
+        const ok = confirm(`Supprimer le taux perso EUR→${c} ?`);
         if (!ok) return;
         if (typeof window.tbFxDeleteManualRate !== "function") throw new Error("tbFxDeleteManualRate() manquant");
         window.tbFxDeleteManualRate(c);
@@ -1063,7 +1063,7 @@ if (btnWhatsapp) {
     const cache = window.__tbBudgetReferenceCache || {};
     const travel = (cache && cache.travelDefault) ? cache.travelDefault : null;
     if(!segs.length){
-      host.innerHTML += '<div class="muted">Aucune pÃ©riode (segment) pour ce voyage.</div>';
+      host.innerHTML += '<div class="muted">Aucune période (segment) pour ce voyage.</div>';
     }else{
       segs.forEach((seg, idx)=>{
         const wrap = document.createElement("div");
@@ -1076,7 +1076,7 @@ if (btnWhatsapp) {
         const cur = String(seg.baseCurrency||"").toUpperCase();
         const ratesMerged = (typeof window.fxGetEurRates === "function") ? window.fxGetEurRates() : null;
         const usedRate = (typeof window.fxRate==="function" && ratesMerged) ? window.fxRate("EUR", cur, ratesMerged) : null;
-        const rateDisplay = (usedRate!==null && usedRate!==undefined && Number.isFinite(Number(usedRate))) ? String(Number(usedRate).toFixed(2)) : "â€”";
+        const rateDisplay = (usedRate!==null && usedRate!==undefined && Number.isFinite(Number(usedRate))) ? String(Number(usedRate).toFixed(2)) : "—";
 
         wrap.classList.add('tb-period-card');
         const defaultOpen = false;
@@ -1092,30 +1092,30 @@ if (btnWhatsapp) {
         wrap.innerHTML = `
           <button type="button" class="tb-period-head" data-act="toggle-period">
             <span class="tb-period-head-main">
-              <span class="tb-period-title">${escapeHTML(pt('PÃ©riode', 'Period'))} ${escapeHTML(_tbISO(seg.start)||"â€”")} â†’ ${escapeHTML(_tbISO(seg.end)||"â€”")}</span>
-              <span class="tb-period-subtitle">${escapeHTML(String(_tbBudgetRefDurationDays(seg) || ""))} ${escapeHTML(pt('jours', 'days'))} Â· ${escapeHTML(pt('Pays', 'Country'))} ${escapeHTML(resolved?.country_name || resolved?.country_code || override?.country_name || override?.country_code || travel?.country_name || travel?.country_code || "â€”")} Â· ${escapeHTML(cur)} Â· ${escapeHTML(localDual.main)}</span>
+              <span class="tb-period-title">${escapeHTML(pt('Période', 'Period'))} ${escapeHTML(_tbISO(seg.start)||"—")} → ${escapeHTML(_tbISO(seg.end)||"—")}</span>
+              <span class="tb-period-subtitle">${escapeHTML(String(_tbBudgetRefDurationDays(seg) || ""))} ${escapeHTML(pt('jours', 'days'))} · ${escapeHTML(pt('Pays', 'Country'))} ${escapeHTML(resolved?.country_name || resolved?.country_code || override?.country_name || override?.country_code || travel?.country_name || travel?.country_code || "—")} · ${escapeHTML(cur)} · ${escapeHTML(localDual.main)}</span>
             </span>
             <span class="tb-period-head-side">
-              ${fxMeta.stale ? `<span class="tb-fx-alert-badge">âš  ${escapeHTML(pt('Taux Ã  mettre Ã  jour', 'Rate needs update'))}</span>` : ''}
+              ${fxMeta.stale ? `<span class="tb-fx-alert-badge">⚠ ${escapeHTML(pt('Taux à mettre à jour', 'Rate needs update'))}</span>` : ''}
               <span class="tb-period-status">${escapeHTML(String(seg.dailyBudgetBase || 0))} ${escapeHTML(cur)}/${escapeHTML(pt('jour', 'day'))}</span>
-              <span class="tb-period-arrow">âŒ„</span>
+              <span class="tb-period-arrow">⌄</span>
             </span>
           </button>
           <div class="tb-period-body">
             <div class="tb-period-shell">
               <div class="tb-settings-inline-strip tb-settings-inline-strip--period tb-settings-inline-strip--period-2col">
-                <div class="tb-settings-chipstat tb-settings-chipstat--blue"><span>${escapeHTML(pt('Devise locale', 'Local currency'))}</span><strong>${escapeHTML(cur)}</strong><small>${escapeHTML(pt('Nuit transport', 'Night transport'))} Â· ${escapeHTML(_tbBudgetRefFmtAmount(_tbGetNightTransportBudget(seg.id), cur, 0))}</small></div>
-                <div class="tb-settings-chipstat tb-settings-chipstat--blue"><span>${escapeHTML(pt('Change', 'Exchange rate'))}</span><strong>${escapeHTML((rateDisplay || "â€”"))}</strong><small>${fxMeta.stale ? `âš  ${escapeHTML(pt('Taux Ã  mettre Ã  jour', 'Rate needs update'))}` : escapeHTML(pt('Bloc sÃ©parÃ©', 'Separate block'))}</small></div>
+                <div class="tb-settings-chipstat tb-settings-chipstat--blue"><span>${escapeHTML(pt('Devise locale', 'Local currency'))}</span><strong>${escapeHTML(cur)}</strong><small>${escapeHTML(pt('Nuit transport', 'Night transport'))} · ${escapeHTML(_tbBudgetRefFmtAmount(_tbGetNightTransportBudget(seg.id), cur, 0))}</small></div>
+                <div class="tb-settings-chipstat tb-settings-chipstat--blue"><span>${escapeHTML(pt('Change', 'Exchange rate'))}</span><strong>${escapeHTML((rateDisplay || "—"))}</strong><small>${fxMeta.stale ? `⚠ ${escapeHTML(pt('Taux à mettre à jour', 'Rate needs update'))}` : escapeHTML(pt('Bloc séparé', 'Separate block'))}</small></div>
               </div>
               <div data-br-inline-seg-id="${escapeHTML(String(seg.id))}"></div>
-              <div class="tb-period-editor"><div class="tb-edit-kicker">${escapeHTML(pt('RÃ©glages modifiables', 'Editable settings'))}</div>
+              <div class="tb-period-editor"><div class="tb-edit-kicker">${escapeHTML(pt('Réglages modifiables', 'Editable settings'))}</div>
                 <div class="tb-settings-subgrid tb-settings-subgrid--period-edit">
-                  <div class="field field--span-2"><label>${escapeHTML(pt('DÃ©but', 'Start'))}</label><input type="date" data-k="start_date" value="${_tbISO(seg.start)||""}" /></div>
+                  <div class="field field--span-2"><label>${escapeHTML(pt('Début', 'Start'))}</label><input type="date" data-k="start_date" value="${_tbISO(seg.start)||""}" /></div>
                   <div class="field field--span-2"><label>${escapeHTML(pt('Fin', 'End'))}</label><input type="date" data-k="end_date" value="${_tbISO(seg.end)||""}" /></div>
                   <div class="field field--span-2"><label>${escapeHTML(pt('Devise', 'Currency'))}</label><input data-k="base_currency" value="${(seg.baseCurrency||"").toUpperCase()}" /></div>
                   <div class="field field--span-2"><label>${escapeHTML(pt('Budget / jour', 'Budget / day'))}</label><input data-k="daily_budget_base" value="${seg.dailyBudgetBase ?? ""}" /></div>
-                  <div class="field field--span-2"><label>${escapeHTML(pt('Nuit transport', 'Night transport'))} ${typeof tbHelp==='function' ? tbHelp(pt('Montant dÃ©diÃ© aux nuits passÃ©es en transport.', 'Amount dedicated to nights spent in transport.')) : ''}</label><input data-k="night_transport_budget" value="${_tbGetNightTransportBudget(seg.id)}" /></div>
-                  <div class="field field--span-2"><label>${escapeHTML(pt('Mode', 'Mode'))}</label><select data-br="seg-mode"><option value="inherit" ${override ? '' : 'selected'}>${escapeHTML(pt('HÃ©riter du voyage', 'Inherit from trip'))}</option><option value="custom" ${override ? 'selected' : ''}>${escapeHTML(pt('Personnaliser', 'Customize'))}</option></select></div>
+                  <div class="field field--span-2"><label>${escapeHTML(pt('Nuit transport', 'Night transport'))} ${typeof tbHelp==='function' ? tbHelp(pt('Montant dédié aux nuits passées en transport.', 'Amount dedicated to nights spent in transport.')) : ''}</label><input data-k="night_transport_budget" value="${_tbGetNightTransportBudget(seg.id)}" /></div>
+                  <div class="field field--span-2"><label>${escapeHTML(pt('Mode', 'Mode'))}</label><select data-br="seg-mode"><option value="inherit" ${override ? '' : 'selected'}>${escapeHTML(pt('Hériter du voyage', 'Inherit from trip'))}</option><option value="custom" ${override ? 'selected' : ''}>${escapeHTML(pt('Personnaliser', 'Customize'))}</option></select></div>
                   <div class="field field--span-2" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>${escapeHTML(pt('Pays', 'Country'))}</label><select data-br="seg-country" data-selected-country="${escapeHTML(String(resolvedCountry.country_code || ""))}" data-selected-region="${escapeHTML(String(resolvedCountry.region_code || ""))}">${_tbBudgetRefCountryOptions(resolvedCountry.country_code, resolvedCountry.region_code)}</select></div>
                   <div class="field field--span-2" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>${escapeHTML(pt('Profil', 'Profile'))}</label><select data-br="seg-profile"><option value="solo" ${(override?.travel_profile || resolved?.travel_profile || "solo")=="solo"?"selected":""}>Solo</option><option value="couple" ${(override?.travel_profile || resolved?.travel_profile)=="couple"?"selected":""}>Couple</option><option value="family" ${(override?.travel_profile || resolved?.travel_profile)=="family"?"selected":""}>${escapeHTML(pt('Famille', 'Family'))}</option></select></div>
                   <div class="field field--span-2" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>Style</label><select data-br="seg-style"><option value="budget" ${(override?.travel_style || resolved?.travel_style)=="budget"?"selected":""}>Budget</option><option value="standard" ${(!(override?.travel_style || resolved?.travel_style) || (override?.travel_style || resolved?.travel_style)=="standard")?"selected":""}>Standard</option><option value="comfort" ${(override?.travel_style || resolved?.travel_style)=="comfort"?"selected":""}>Comfort</option></select></div>
@@ -1144,7 +1144,7 @@ if (btnWhatsapp) {
         if (editBtn) editBtn.onclick = ()=>{ wrap.classList.add('is-editing'); wrap.classList.remove('is-collapsed'); try{ const y = wrap.getBoundingClientRect().top + window.scrollY - 176; window.scrollTo({ top: Math.max(0, y), behavior:'smooth' }); }catch(_){} };
         const cancelBtn = wrap.querySelector('[data-act="edit-cancel"]');
         if (cancelBtn) cancelBtn.onclick = ()=>{ wrap.classList.remove('is-editing'); };
-        wrap.querySelector('[data-act="save"]').onclick = ()=>safeCall("Save pÃ©riode", async ()=>{ 
+        wrap.querySelector('[data-act="save"]').onclick = ()=>safeCall("Save période", async ()=>{ 
           await saveBudgetSegment(seg.id, wrap); 
           const mode = String(wrap.querySelector('[data-br="seg-mode"]')?.value || 'inherit');
           const s2 = _tbGetSB();
@@ -1177,7 +1177,7 @@ if (btnWhatsapp) {
             renderSettings();
           });
         }
-        wrap.querySelector('[data-act="del"]').onclick = ()=>safeCall("Supprimer pÃ©riode", ()=>deleteBudgetSegment(seg.id));
+        wrap.querySelector('[data-act="del"]').onclick = ()=>safeCall("Supprimer période", ()=>deleteBudgetSegment(seg.id));
         host.appendChild(wrap);
       });
     }
@@ -1211,7 +1211,7 @@ if (btnWhatsapp) {
 
 /* =========================
    Budget reference UI (travel default + visible period override)
-   Visible "pÃ©riodes" in Settings map to budget_segments in the current product.
+   Visible "périodes" in Settings map to budget_segments in the current product.
    ========================= */
 
 window.__tbBudgetReferenceCache = window.__tbBudgetReferenceCache || {
@@ -1241,7 +1241,7 @@ function _tbFmtDualAmount(amount, fromCur, toCur, fromDecimals=0, toDecimals=2){
   const main = _tbBudgetRefFmtAmount(amount, fromCur, fromDecimals);
   const conv = _tbTryConvert(amount, fromCur, toCur);
   if (conv===null || !Number.isFinite(conv) || String(fromCur||'').toUpperCase()===String(toCur||'').toUpperCase()) return { main, secondary:null };
-  return { main, secondary:`â‰ˆ ${_tbBudgetRefFmtAmount(conv, toCur, toDecimals)}` };
+  return { main, secondary:`≈ ${_tbBudgetRefFmtAmount(conv, toCur, toDecimals)}` };
 }
 
 function _tbBudgetRefStyle(){
@@ -1287,7 +1287,7 @@ function _tbBudgetRefDurationDays(seg){
 function _tbBudgetRefFmtAmount(amount, currency, digits){
   const n = Number(amount);
   const cur = String(currency || '').trim().toUpperCase();
-  if (!Number.isFinite(n)) return 'â€”';
+  if (!Number.isFinite(n)) return '—';
   const d = Number.isFinite(Number(digits)) ? Number(digits) : 2;
   return `${n.toFixed(d)}${cur ? ' ' + cur : ''}`;
 }
@@ -1324,7 +1324,7 @@ function _tbBudgetRefCountryOptions(selectedCode, selectedRegion){
     const code = String(row.country_code || '').toUpperCase();
     const region = String(row.region_code || '');
     const value = `${code}|${region}`;
-    const label = region ? `${row.country_name} â€” ${region}` : `${row.country_name} (${code})`;
+    const label = region ? `${row.country_name} — ${region}` : `${row.country_name} (${code})`;
     opts.push(`<option value="${escapeHTML(value)}" ${value===wanted?'selected':''}>${escapeHTML(label)}</option>`);
   });
   return opts.join('');
@@ -1333,7 +1333,7 @@ function _tbBudgetRefCountryOptions(selectedCode, selectedRegion){
 function _tbBudgetRefSummaryHtml(rec, label, inheritText){
   const st = _tbBudgetRefStyle();
   const amount = Number(rec?.recommended_daily_amount);
-  const country = rec?.country_name || rec?.country_code || 'â€”';
+  const country = rec?.country_name || rec?.country_code || '—';
   const profile = rec?.travel_profile || 'solo';
   const style = rec?.travel_style || 'standard';
   const source = label || 'Configuration';
@@ -1350,11 +1350,11 @@ function _tbBudgetRefSummaryHtml(rec, label, inheritText){
       </div>
       <div style="${st.metric}">
         <span class="muted" style="font-size:12px;">Profil</span>
-        <strong>${escapeHTML(profile)} Â· ${escapeHTML(style)}</strong>
+        <strong>${escapeHTML(profile)} · ${escapeHTML(style)}</strong>
       </div>
       <div style="${st.metric}">
         <span class="muted" style="font-size:12px;">Reco / jour</span>
-        <strong>${Number.isFinite(amount) ? escapeHTML(String(amount)) : 'â€”'}</strong>
+        <strong>${Number.isFinite(amount) ? escapeHTML(String(amount)) : '—'}</strong>
       </div>
     </div>
     ${hint}
@@ -1363,7 +1363,7 @@ function _tbBudgetRefSummaryHtml(rec, label, inheritText){
 
 async function _tbBudgetRefLoadState(){
   const s = _tbGetSB();
-  if(!s) throw new Error('Supabase non prÃªt.');
+  if(!s) throw new Error('Supabase non prêt.');
   const tid = String(state?.activeTravelId || '');
   const pid = String(state?.period?.id || '');
   const segs = (state?.budgetSegments || []).slice();
@@ -1475,7 +1475,7 @@ function _tbBudgetRefWireSegmentMode(wrap){
 }
 
 function _tbBudgetRefRenderSkeleton(host){
-  host.innerHTML = `<div class="muted">Chargement du budget de rÃ©fÃ©renceâ€¦</div>`;
+  host.innerHTML = `<div class="muted">Chargement du budget de référence…</div>`;
 }
 
 
@@ -1486,6 +1486,10 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
   if(!travelHost) return;
 
   try {
+    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+      travelHost.innerHTML = `<div class="muted">Mode hors ligne : référence budget en lecture locale indisponible.</div>`;
+      return;
+    }
     await _tbBudgetRefLoadCountries();
     await _tbBudgetRefLoadState();
     const cache = window.__tbBudgetReferenceCache;
@@ -1511,12 +1515,12 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
         const recoSecEl = document.getElementById('tb-travel-reco-secondary');
         const cadenceMain = document.getElementById('tb-travel-cadence-main');
         const cadenceSub = document.getElementById('tb-travel-cadence-sub');
-        if (refMain) refMain.textContent = travel?.country_name || travel?.country_code || 'â€”';
-        if (refSub) refSub.textContent = travel ? `${String(travel.travel_profile||'solo')} Â· ${String(travel.travel_style||'standard')}` : 'Choisis un pays et un profil';
-        if (recoMainEl) recoMainEl.textContent = Number.isFinite(Number(travel?.recommended_daily_amount)) ? _tbBudgetRefFmtAmount(Number(travel.recommended_daily_amount), String(travel?.currency_code || 'EUR'), 2) : 'â€”';
+        if (refMain) refMain.textContent = travel?.country_name || travel?.country_code || '—';
+        if (refSub) refSub.textContent = travel ? `${String(travel.travel_profile||'solo')} · ${String(travel.travel_style||'standard')}` : 'Choisis un pays et un profil';
+        if (recoMainEl) recoMainEl.textContent = Number.isFinite(Number(travel?.recommended_daily_amount)) ? _tbBudgetRefFmtAmount(Number(travel.recommended_daily_amount), String(travel?.currency_code || 'EUR'), 2) : '—';
         if (recoSecEl) {
           const dual = (Number.isFinite(Number(travel?.recommended_daily_amount))) ? _tbFmtDualAmount(Number(travel?.recommended_daily_amount), String(travel?.currency_code || 'EUR'), _tbSettingsBaseCurrency(), 2, 2) : { secondary:null };
-          recoSecEl.textContent = dual.secondary ? `${dual.secondary} Â· base` : '';
+          recoSecEl.textContent = dual.secondary ? `${dual.secondary} · base` : '';
           recoSecEl.style.display = dual.secondary ? '' : 'none';
         }
         const budgetText = document.getElementById('tb-travel-budget-main')?.textContent || '';
@@ -1525,8 +1529,8 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
         const budgetCur = match ? match[2] : _tbSettingsBaseCurrency();
         const budgetBase2 = _tbTryConvert(budgetAmt, budgetCur, _tbSettingsBaseCurrency());
         const recoBase2 = _tbTryConvert(Number(travel?.recommended_daily_amount || NaN), String(travel?.currency_code || 'EUR'), _tbSettingsBaseCurrency());
-        if (cadenceMain) cadenceMain.textContent = (Number.isFinite(budgetBase2) && Number.isFinite(recoBase2)) ? (budgetBase2 <= recoBase2 ? 'Sous la reco' : 'Au-dessus') : 'Ã€ calibrer';
-        if (cadenceSub) cadenceSub.textContent = (Number.isFinite(budgetBase2) && Number.isFinite(recoBase2)) ? `${Math.abs(budgetBase2-recoBase2).toFixed(2)} ${_tbSettingsBaseCurrency()} d'Ã©cart` : 'RÃ©fÃ©rence requise';
+        if (cadenceMain) cadenceMain.textContent = (Number.isFinite(budgetBase2) && Number.isFinite(recoBase2)) ? (budgetBase2 <= recoBase2 ? 'Sous la reco' : 'Au-dessus') : 'À calibrer';
+        if (cadenceSub) cadenceSub.textContent = (Number.isFinite(budgetBase2) && Number.isFinite(recoBase2)) ? `${Math.abs(budgetBase2-recoBase2).toFixed(2)} ${_tbSettingsBaseCurrency()} d'écart` : 'Référence requise';
       } catch(_) {}
         const nameInline = document.getElementById('tb-inline-travel-name');
         const startInline = document.getElementById('tb-inline-travel-start');
@@ -1541,16 +1545,16 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       if(!wrap) return;
       const override = cache.segmentOverrides[String(seg.id)] || null;
       const resolved = cache.segmentResolved[String(seg.id)] || null;
-      const sourceLabel = override ? 'RÃ©glage propre Ã  cette pÃ©riode' : (travel?.country_code ? 'HÃ©rite du voyage' : 'Ã€ renseigner');
+      const sourceLabel = override ? 'Réglage propre à cette période' : (travel?.country_code ? 'Hérite du voyage' : 'À renseigner');
       const resolvedCountry = _tbPickResolvedCountry(resolved, override, travel);
       const localBaseCur = _tbSettingsBaseCurrency();
-      const recoDual = (resolved?.recommended_daily_amount && resolved?.currency_code) ? _tbFmtDualAmount(resolved.recommended_daily_amount, resolved.currency_code, localBaseCur, 2, 2) : { main:'â€”', secondary:null };
+      const recoDual = (resolved?.recommended_daily_amount && resolved?.currency_code) ? _tbFmtDualAmount(resolved.recommended_daily_amount, resolved.currency_code, localBaseCur, 2, 2) : { main:'—', secondary:null };
       const plannedDual = _tbFmtDualAmount(seg.dailyBudgetBase, seg.baseCurrency || '', localBaseCur, 0, 2);
       const posts = [
         ['Logement', resolved?.recommended_accommodation_daily_amount],
         ['Repas', resolved?.recommended_food_daily_amount],
         ['Transport', resolved?.recommended_transport_daily_amount],
-        ['ActivitÃ©s', resolved?.recommended_activities_daily_amount],
+        ['Activités', resolved?.recommended_activities_daily_amount],
       ].filter((x)=>Number.isFinite(Number(x[1])) && Number(x[1])>0);
       const refEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
       const rt = (fr, en) => refEn ? en : fr;
@@ -1560,7 +1564,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       const plannedDiffAmount = plannedBaseAmount - referenceBaseAmount;
       const plannedDiff = Number.isFinite(Number(resolved?.recommended_daily_amount)) && Number.isFinite(Number(seg.dailyBudgetBase))
         ? `${plannedDiffAmount.toFixed(2)} ${localBaseCur} ${rt("d'ecart", 'gap')}`
-        : 'â€”';
+        : '—';
       const postLabel = (label) => ({
         Logement: rt('Logement', 'Accommodation'),
         Repas: rt('Repas', 'Food'),
@@ -1572,21 +1576,21 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
         <div class="tb-period-compare tb-period-compare--minimal tb-period-compare--tight">
           <div class="tb-period-ref-head">
             <div>
-              <h4 class="tb-period-ref-title">${escapeHTML(rt('RÃ©fÃ©rence de la pÃ©riode', 'Period reference'))}</h4>
-              <div class="tb-period-ref-copy">${escapeHTML(rt('Lecture de la rÃ©fÃ©rence sur cette pÃ©riode.', 'Reference readout for this period.'))}</div>
+              <h4 class="tb-period-ref-title">${escapeHTML(rt('Référence de la période', 'Period reference'))}</h4>
+              <div class="tb-period-ref-copy">${escapeHTML(rt('Lecture de la référence sur cette période.', 'Reference readout for this period.'))}</div>
             </div>
             <span class="tb-settings-pill ${override ? '' : 'tb-settings-pill--positive'}">${escapeHTML(sourceLabel)}</span>
           </div>
           <div class="tb-period-ref-grid tb-period-ref-grid--tight">
-            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(rt('Pays', 'Country'))}</span><strong>${escapeHTML(resolved?.country_name || resolved?.country_code || 'â€”')}</strong><small>${escapeHTML(String(resolved?.travel_profile || 'solo'))} Â· ${escapeHTML(String(resolved?.travel_style || 'standard'))}</small></div>
-            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(rt('Reco / jour', 'Reco / day'))}</span><strong>${escapeHTML(recoDual.main)}</strong>${recoDual.secondary?`<small>${escapeHTML(recoDual.secondary)} Â· base</small>`:''}</div>
-            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(rt('PrÃ©vu / jour', 'Planned / day'))}</span><strong>${escapeHTML(plannedDual.main || 'â€”')}</strong>${plannedDual.secondary?`<small>${escapeHTML(plannedDual.secondary)} Â· base</small>`:''}</div>
+            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(rt('Pays', 'Country'))}</span><strong>${escapeHTML(resolved?.country_name || resolved?.country_code || '—')}</strong><small>${escapeHTML(String(resolved?.travel_profile || 'solo'))} · ${escapeHTML(String(resolved?.travel_style || 'standard'))}</small></div>
+            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(rt('Reco / jour', 'Reco / day'))}</span><strong>${escapeHTML(recoDual.main)}</strong>${recoDual.secondary?`<small>${escapeHTML(recoDual.secondary)} · base</small>`:''}</div>
+            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(rt('Prévu / jour', 'Planned / day'))}</span><strong>${escapeHTML(plannedDual.main || '—')}</strong>${plannedDual.secondary?`<small>${escapeHTML(plannedDual.secondary)} · base</small>`:''}</div>
             <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(rt('Mode', 'Mode'))}</span><strong>${escapeHTML(modeText)}</strong><small>${escapeHTML(plannedDiff)}</small></div>
           </div>
           ${posts.length?`<div class="tb-mini-post-grid tb-mini-post-grid--tight">${posts.map(([label,val])=>`<div class="tb-mini-post"><span>${escapeHTML(postLabel(label))}</span><strong>${escapeHTML(_tbBudgetRefFmtAmount(val, resolved?.currency_code || 'EUR', 2))}</strong></div>`).join('')}</div>`:''}
           <div class="tb-period-inline-actions">
             <button class="btn" data-act="edit-seg">${escapeHTML(rt('Modifier', 'Edit'))}</button>
-            <button class="btn" data-br-act="seg-reset" style="display:${override ? '' : 'none'};">${escapeHTML(rt('HÃ©riter', 'Inherit'))}</button>
+            <button class="btn" data-br-act="seg-reset" style="display:${override ? '' : 'none'};">${escapeHTML(rt('Hériter', 'Inherit'))}</button>
           </div>
         </div>
       `;
@@ -1621,12 +1625,12 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
         };
       }
       if(btnReset){
-        btnReset.onclick = ()=>safeCall('HÃ©ritage pÃ©riode', async ()=>{
+        btnReset.onclick = ()=>safeCall('Héritage période', async ()=>{
           const s = _tbGetSB();
           const { error } = await s.rpc(TB_CONST.RPCS.budget_reference_compute_for_budget_segment, { p_budget_segment_id: String(seg.id), p_save: false, p_disable_override: true });
           if (error) throw error;
           await window.tbRenderBudgetReferenceUI();
-          _tbToastOk('La pÃ©riode hÃ©rite de nouveau du voyage.');
+          _tbToastOk('La période hérite de nouveau du voyage.');
         });
       }
     });
@@ -1636,7 +1640,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
     } catch(_) {}
   } catch (err) {
     console.error('[TB][budget-reference]', err);
-    travelHost.innerHTML = `<div class="muted">Budget de rÃ©fÃ©rence indisponible. ${escapeHTML(err?.message || String(err))}</div>`;
+    travelHost.innerHTML = `<div class="muted">Budget de référence indisponible. ${escapeHTML(err?.message || String(err))}</div>`;
   }
 };
 
@@ -1644,17 +1648,17 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
 
 async function _saveSettingsImpl(){
   const s = _tbGetSB();
-  if(!s) throw new Error("Supabase non prÃªt.");
+  if(!s) throw new Error("Supabase non prêt.");
   const tid = String(state?.activeTravelId || "");
-  if (!tid) throw new Error("Voyage non sÃ©lectionnÃ©.");
+  if (!tid) throw new Error("Voyage non sélectionné.");
 
   const pid = state.period && state.period.id;
-  if(!pid) throw new Error("PÃ©riode non sÃ©lectionnÃ©e.");
+  if(!pid) throw new Error("Période non sélectionnée.");
 
   const start = document.getElementById("s-start")?.value;
   const end   = document.getElementById("s-end")?.value;
   if(!start || !end) throw new Error("Dates invalides.");
-  if(start > end) throw new Error("Date de dÃ©but > date de fin.");
+  if(start > end) throw new Error("Date de début > date de fin.");
 
   // Patch period dates only
   const { error } = await s.from(TB_CONST.TABLES.periods).update({ start_date:start, end_date:end }).eq("id", pid);
@@ -1692,12 +1696,12 @@ if (tid) {
   } else if (typeof refreshFromServer === "function") {
     await refreshFromServer();
   }
-  _tbToastOk("Voyage mis Ã  jour.");
+  _tbToastOk("Voyage mis à jour.");
 }
 
 async function _createVoyagePromptImpl(){
   const s = _tbGetSB();
-  if(!s) throw new Error("Supabase non prÃªt.");
+  if(!s) throw new Error("Supabase non prêt.");
   const uid = await _tbAuthUid();
   if(!uid) throw new Error("Not authenticated.");
 
@@ -1719,15 +1723,15 @@ async function _createVoyagePromptImpl(){
   modal.setTitle("Nouveau voyage");
   modal.setBody(`
     <div class="row">
-      <div class="field"><label>DÃ©but</label><input id="tb-vstart" type="date" value="${sugStart}" /></div>
+      <div class="field"><label>Début</label><input id="tb-vstart" type="date" value="${sugStart}" /></div>
       <div class="field"><label>Fin</label><input id="tb-vend" type="date" value="${sugEnd}" /></div>
     </div>
-    <div class="muted" style="margin-top:8px;">Le voyage doit Ãªtre non chevauchant.</div>
+    <div class="muted" style="margin-top:8px;">Le voyage doit être non chevauchant.</div>
   `);
 
   modal.setActions([
     { label:"Annuler", className:"btn", onClick:()=>modal.close() },
-    { label:"CrÃ©er", className:"btn primary", onClick:async ()=>{
+    { label:"Créer", className:"btn primary", onClick:async ()=>{
       const start = document.getElementById("tb-vstart")?.value;
       const end = document.getElementById("tb-vend")?.value;
       if(!start||!end||start>end) throw new Error("Dates invalides.");
@@ -1737,7 +1741,7 @@ async function _createVoyagePromptImpl(){
         const ps = _tbISO(p.start_date);
         const pe = _tbISO(p.end_date);
         if(!ps||!pe) continue;
-        if(!(end < ps || start > pe)) throw new Error(`Chevauchement avec un voyage existant (${ps} â†’ ${pe}).`);
+        if(!(end < ps || start > pe)) throw new Error(`Chevauchement avec un voyage existant (${ps} → ${pe}).`);
       }
 
       const { data: travelData, error: travelErr } = await s
@@ -1806,7 +1810,7 @@ async function _createVoyagePromptImpl(){
 
       await refreshSegmentsForActivePeriod();
       renderSettings();
-      _tbToastOk("Voyage crÃ©Ã©.");
+      _tbToastOk("Voyage créé.");
     }}
   ]);
   modal.open();
@@ -1814,22 +1818,22 @@ async function _createVoyagePromptImpl(){
 
 async function _deleteActiveVoyageImpl(){
   const s = _tbGetSB();
-  if(!s) throw new Error("Supabase non prÃªt.");
+  if(!s) throw new Error("Supabase non prêt.");
 
   const tid = String(state?.activeTravelId || "");
-  if (!tid) throw new Error("Voyage non sÃ©lectionnÃ©.");
+  if (!tid) throw new Error("Voyage non sélectionné.");
 
-  // sÃ©curitÃ© projet : ne jamais supprimer le vrai voyage actif utilisateur
+  // sécurité projet : ne jamais supprimer le vrai voyage actif utilisateur
   if (tid === "d6c3e70a-d31f-4647-91e8-e12830d0c00d") {
-    throw new Error("Suppression refusÃ©e : ce voyage est protÃ©gÃ©.");
+    throw new Error("Suppression refusée : ce voyage est protégé.");
   }
 
   const t = _tbGetActiveTravelRow();
-  const label = t?.name || `Voyage ${_tbISO(t?.start)} â†’ ${_tbISO(t?.end)}`;
+  const label = t?.name || `Voyage ${_tbISO(t?.start)} → ${_tbISO(t?.end)}`;
 
   if(!confirm(`Supprimer ${label} ?
 
-La suppression n'est autorisÃ©e que si le voyage n'a ni transactions, ni Ã©chÃ©ances, ni soldes wallet non nuls.`)) return;
+La suppression n'est autorisée que si le voyage n'a ni transactions, ni échéances, ni soldes wallet non nuls.`)) return;
 
   const primaryPeriod = _tbGetTravelPrimaryPeriod(tid);
   const pid = String(primaryPeriod?.id || "");
@@ -1843,11 +1847,11 @@ La suppression n'est autorisÃ©e que si le voyage n'a ni transactions, ni Ã©c
 
     if (error) throw error;
     if (Number(count || 0) > 0) {
-      throw new Error("Suppression refusÃ©e : transactions liÃ©es au voyage.");
+      throw new Error("Suppression refusée : transactions liées au voyage.");
     }
   }
 
-  // 2) rÃ¨gles rÃ©currentes -> bloquant
+  // 2) règles récurrentes -> bloquant
   {
     const { count, error } = await s
       .from(TB_CONST.TABLES.recurring_rules)
@@ -1857,11 +1861,11 @@ La suppression n'est autorisÃ©e que si le voyage n'a ni transactions, ni Ã©c
 
     if (error) throw error;
     if (Number(count || 0) > 0) {
-      throw new Error("Suppression refusÃ©e : Ã©chÃ©ances pÃ©riodiques liÃ©es au voyage.");
+      throw new Error("Suppression refusée : échéances périodiques liées au voyage.");
     }
   }
 
-  // 3) wallets -> autorisÃ©s seulement si soldes tous Ã  0
+  // 3) wallets -> autorisés seulement si soldes tous à 0
   {
     const { data: wallets, error } = await s
       .from(TB_CONST.TABLES.wallets)
@@ -1872,7 +1876,7 @@ La suppression n'est autorisÃ©e que si le voyage n'a ni transactions, ni Ã©c
 
     const usedWallet = (wallets || []).some(w => Math.abs(Number(w?.balance || 0)) > 0.0000001);
     if (usedWallet) {
-      throw new Error("Suppression refusÃ©e : wallets liÃ©s au voyage avec solde non nul.");
+      throw new Error("Suppression refusée : wallets liés au voyage avec solde non nul.");
     }
   }
 
@@ -1907,7 +1911,7 @@ La suppression n'est autorisÃ©e que si le voyage n'a ni transactions, ni Ã©c
   }
 
   renderSettings();
-  _tbToastOk("Voyage supprimÃ©.");
+  _tbToastOk("Voyage supprimé.");
 }
 
 /* ---------- segments create / update / delete ---------- */
@@ -1959,34 +1963,34 @@ function _tbEnsureModal(){
 
 async function _createPeriodPromptImpl(){
   const s = _tbGetSB();
-  if(!s) throw new Error("Supabase non prÃªt.");
+  if(!s) throw new Error("Supabase non prêt.");
   const uid = await _tbAuthUid();
   if(!uid) throw new Error("Not authenticated.");
   const tid = String(state?.activeTravelId || "");
-  if (!tid) throw new Error("Voyage non sÃ©lectionnÃ©.");
+  if (!tid) throw new Error("Voyage non sélectionné.");
 
   const pid = state.period && state.period.id;
-  if(!pid) throw new Error("PÃ©riode non sÃ©lectionnÃ©e.");
+  if(!pid) throw new Error("Période non sélectionnée.");
 
   const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
-  if(!segs.length) throw new Error("Aucune pÃ©riode existante Ã  dÃ©couper.");
+  if(!segs.length) throw new Error("Aucune période existante à découper.");
 
   const vStart = _tbISO(segs[0].start || segs[0].start_date || segs[0].startDate);
   const vEnd   = _tbISO(segs[segs.length-1].end || segs[segs.length-1].end_date || segs[segs.length-1].endDate);
   if(!vStart || !vEnd) throw new Error("Bornes voyage invalides (start/end).");
 
   const modal = _tbEnsureModal();
-  modal.setTitle("Ajouter une pÃ©riode");
+  modal.setTitle("Ajouter une période");
   modal.setBody(`
     <div class="row">
-      <div class="field"><label>DÃ©but</label><input id="tb-pstart" type="date" value="${vStart}" min="${vStart}" max="${vEnd}" /></div>
+      <div class="field"><label>Début</label><input id="tb-pstart" type="date" value="${vStart}" min="${vStart}" max="${vEnd}" /></div>
       <div class="field"><label>Fin</label><input id="tb-pend" type="date" value="${vEnd}" min="${vStart}" max="${vEnd}" /></div>
     </div>
     <div class="row">
       <div class="field"><label>Devise</label><input id="tb-pcur" value="${(segs[0].base_currency||"EUR").toUpperCase()}" /></div>
       <div class="field"><label>Budget/jour</label><input id="tb-pbud" value="${segs[0].daily_budget_base ?? 0}" /></div>
     </div>
-    <div class="muted" style="margin-top:8px;">La nouvelle pÃ©riode doit Ãªtre incluse dans une pÃ©riode existante (split automatique).</div>
+    <div class="muted" style="margin-top:8px;">La nouvelle période doit être incluse dans une période existante (split automatique).</div>
   `);
   modal.setActions([
     { label:"Annuler", className:"btn", onClick:()=>modal.close() },
@@ -2005,7 +2009,7 @@ async function _createPeriodPromptImpl(){
       modal.close();
       await refreshSegmentsForActivePeriod();
       renderSettings();
-      _tbToastOk("PÃ©riode ajoutÃ©e.");
+      _tbToastOk("Période ajoutée.");
     }}
   ]);
   modal.open();
@@ -2013,7 +2017,7 @@ async function _createPeriodPromptImpl(){
 
 async function _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud){
   const s = _tbGetSB();
-  if(!s) throw new Error("Supabase non prÃªt.");
+  if(!s) throw new Error("Supabase non prêt.");
 
   // We will "carve out" [start,end] from existing segments:
   // - any segment fully inside => deleted
@@ -2021,7 +2025,7 @@ async function _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud){
   // - any segment spanning across => split (update left part + insert right part)
   const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
 
-  if(!segs.length) throw new Error("Aucune pÃ©riode existante.");
+  if(!segs.length) throw new Error("Aucune période existante.");
 
   const vStart = _tbISO(segs[0].start || segs[0].start_date || segs[0].startDate);
   const vEnd   = _tbISO(segs[segs.length-1].end || segs[segs.length-1].end_date || segs[segs.length-1].endDate);
@@ -2131,18 +2135,18 @@ async function _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud){
 
 async function saveBudgetSegment(segId, wrapEl){
   const s = _tbGetSB();
-  if(!s) throw new Error("Supabase non prÃªt.");
+  if(!s) throw new Error("Supabase non prêt.");
   const uid = await _tbAuthUid();
   if(!uid) throw new Error("Not authenticated.");
   const tid = String(state?.activeTravelId || "");
-  if (!tid) throw new Error("Voyage non sÃ©lectionnÃ©.");
+  if (!tid) throw new Error("Voyage non sélectionné.");
 
   const pid = state.period && state.period.id;
-  if(!pid) throw new Error("PÃ©riode non sÃ©lectionnÃ©e.");
+  if(!pid) throw new Error("Période non sélectionnée.");
 
   const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
   const idx = segs.findIndex(x=>x.id===segId);
-  if(idx<0) throw new Error("PÃ©riode introuvable.");
+  if(idx<0) throw new Error("Période introuvable.");
 
   const seg = segs[idx];
   const getVal = (k)=>wrapEl.querySelector(`[data-k="${k}"]`)?.value;
@@ -2242,7 +2246,7 @@ if(!autoOk){
   await refreshSegmentsForActivePeriod();
   _tbAssertSegmentsIntegrity("after refreshSegmentsForActivePeriod");
   renderSettings();
-  _tbToastOk("PÃ©riode enregistrÃ©e.");
+  _tbToastOk("Période enregistrée.");
 }
 
 async function _tbFetchSeg(id){
@@ -2254,21 +2258,21 @@ async function _tbFetchSeg(id){
 
 async function deleteBudgetSegment(segId){
   const s = _tbGetSB();
-  if(!s) throw new Error("Supabase non prÃªt.");
+  if(!s) throw new Error("Supabase non prêt.");
   const tid = String(state?.activeTravelId || "");
-  if (!tid) throw new Error("Voyage non sÃ©lectionnÃ©.");
+  if (!tid) throw new Error("Voyage non sélectionné.");
 
   const pid = state.period && state.period.id;
-  if(!pid) throw new Error("PÃ©riode non sÃ©lectionnÃ©e.");
+  if(!pid) throw new Error("Période non sélectionnée.");
 
   const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
-  if(segs.length<=1) throw new Error("Impossible: au moins 1 pÃ©riode requise.");
+  if(segs.length<=1) throw new Error("Impossible: au moins 1 période requise.");
 
   const idx = segs.findIndex(x=>x.id===segId);
-  if(idx<0) throw new Error("PÃ©riode introuvable.");
+  if(idx<0) throw new Error("Période introuvable.");
 
   const seg = segs[idx];
-  if(!confirm(`Supprimer la pÃ©riode ${_tbISO(seg.start)} â†’ ${_tbISO(seg.end)} ?`)) return;
+  if(!confirm(`Supprimer la période ${_tbISO(seg.start)} → ${_tbISO(seg.end)} ?`)) return;
 
   const prev = idx>0 ? segs[idx-1] : null;
   const next = idx<segs.length-1 ? segs[idx+1] : null;
@@ -2299,7 +2303,7 @@ async function deleteBudgetSegment(segId){
   await refreshSegmentsForActivePeriod();
   _tbAssertSegmentsIntegrity("after refreshSegmentsForActivePeriod");
   renderSettings();
-  _tbToastOk("PÃ©riode supprimÃ©e.");
+  _tbToastOk("Période supprimée.");
 }
 
 async function _tbRecalcSegmentSortOrder(pid){
@@ -2414,8 +2418,8 @@ try {
   }
 } catch (_) {}
 window.saveSettings = ()=>safeCall("Enregistrer voyage", _saveSettingsImpl);
-window.createPeriodPrompt = ()=>safeCall("Ajouter pÃ©riode", _createPeriodPromptImpl);
-window.deleteActivePeriod = ()=>_tbToastOk("Suppression de pÃ©riode: utilise le bouton Supprimer sur une pÃ©riode.");
+window.createPeriodPrompt = ()=>safeCall("Ajouter période", _createPeriodPromptImpl);
+window.deleteActivePeriod = ()=>_tbToastOk("Suppression de période: utilise le bouton Supprimer sur une période.");
 window.createVoyagePrompt = ()=>safeCall("Ajouter voyage", _createVoyagePromptImpl);
 window.deleteActiveVoyage = ()=>safeCall("Supprimer voyage", _deleteActiveVoyageImpl);
 
@@ -2471,19 +2475,19 @@ function _analyticFamilyLabel(family) {
   if (key === 'accommodation') return 'Logement';
   if (key === 'food') return 'Repas';
   if (key === 'transport') return 'Transport';
-  if (key === 'activities') return 'ActivitÃ©s';
-  return 'Ã€ classer';
+  if (key === 'activities') return 'Activités';
+  return 'À classer';
 }
 
 function _analyticSelectOptions(selectedValue, includeInherit = false) {
   const current = String(selectedValue || '');
   const opts = [];
-  if (includeInherit) opts.push(`<option value="__inherit__" ${current === '__inherit__' ? 'selected' : ''}>HÃ©riter de la catÃ©gorie</option>`);
-  else opts.push(`<option value="__unmapped__" ${current === '__unmapped__' ? 'selected' : ''}>Ã€ classer</option>`);
+  if (includeInherit) opts.push(`<option value="__inherit__" ${current === '__inherit__' ? 'selected' : ''}>Hériter de la catégorie</option>`);
+  else opts.push(`<option value="__unmapped__" ${current === '__unmapped__' ? 'selected' : ''}>À classer</option>`);
   opts.push(`<option value="accommodation" ${current === 'accommodation' ? 'selected' : ''}>Logement</option>`);
   opts.push(`<option value="food" ${current === 'food' ? 'selected' : ''}>Repas</option>`);
   opts.push(`<option value="transport" ${current === 'transport' ? 'selected' : ''}>Transport</option>`);
-  opts.push(`<option value="activities" ${current === 'activities' ? 'selected' : ''}>ActivitÃ©s</option>`);
+  opts.push(`<option value="activities" ${current === 'activities' ? 'selected' : ''}>Activités</option>`);
   opts.push(`<option value="__excluded__" ${current === '__excluded__' ? 'selected' : ''}>Exclure</option>`);
   return opts.join('');
 }
@@ -2531,7 +2535,7 @@ function _effectiveAnalyticMappingFor(categoryName, subcategoryName) {
       inherited: false,
       mappingStatus: explicit.mappingStatus || explicit.mapping_status || 'unmapped',
       analyticFamily: explicit.analyticFamily || explicit.analytic_family || null,
-      sourceLabel: subcategoryName ? 'RÃ¨gle sous-catÃ©gorie' : 'RÃ¨gle catÃ©gorie',
+      sourceLabel: subcategoryName ? 'Règle sous-catégorie' : 'Règle catégorie',
       row: explicit,
     };
   }
@@ -2543,7 +2547,7 @@ function _effectiveAnalyticMappingFor(categoryName, subcategoryName) {
         inherited: true,
         mappingStatus: categoryRule.mappingStatus || categoryRule.mapping_status || 'unmapped',
         analyticFamily: categoryRule.analyticFamily || categoryRule.analytic_family || null,
-        sourceLabel: 'HÃ©ritÃ© de la catÃ©gorie',
+        sourceLabel: 'Hérité de la catégorie',
         row: categoryRule,
       };
     }
@@ -2553,7 +2557,7 @@ function _effectiveAnalyticMappingFor(categoryName, subcategoryName) {
     inherited: false,
     mappingStatus: 'unmapped',
     analyticFamily: null,
-    sourceLabel: 'Ã€ classer',
+    sourceLabel: 'À classer',
     row: null,
   };
 }
@@ -2564,8 +2568,8 @@ function _analyticStatusPillHtml(mapping) {
   const positive = status === 'mapped';
   const muted = status === 'excluded';
   const label = status === 'mapped'
-    ? `MappÃ© Â· ${_analyticFamilyLabel(family)}`
-    : (status === 'excluded' ? 'Exclu' : 'Ã€ classer');
+    ? `Mappé · ${_analyticFamilyLabel(family)}`
+    : (status === 'excluded' ? 'Exclu' : 'À classer');
   return `<span class="tb-settings-pill ${positive ? 'tb-settings-pill--positive' : ''}" ${muted ? 'style="opacity:.85;"' : ''}>${escapeHTML(label)}</span>`;
 }
 
@@ -2576,7 +2580,7 @@ function _analyticUsagePillHtml(txCount) {
 
 async function _deleteCategoryBundleViaRpc(categoryName) {
   const category = String(categoryName || '').trim();
-  if (!category) throw new Error('CatÃ©gorie invalide.');
+  if (!category) throw new Error('Catégorie invalide.');
   try {
     const rpcName = TB_CONST?.RPCS?.delete_category_bundle || 'delete_category_bundle';
     const { error } = await sb.rpc(rpcName, { p_category_name: category });
@@ -2620,7 +2624,7 @@ async function _saveAnalyticMappingRuleViaRpc(categoryName, subcategoryName, nex
     ? null
     : String(subcategoryName || '').trim();
   const value = String(nextValue || '').trim();
-  if (!category) throw new Error('CatÃ©gorie invalide.');
+  if (!category) throw new Error('Catégorie invalide.');
   const mappingStatus = (value === '__unmapped__' || value === '__inherit__')
     ? 'unmapped'
     : (value === '__excluded__' ? 'excluded' : 'mapped');
@@ -2672,12 +2676,12 @@ async function _saveAnalyticMappingRuleViaRpc(categoryName, subcategoryName, nex
 function _openGuidedCategoryModal(defaults = {}) {
   return new Promise((resolve) => {
     const modal = _tbEnsureModal();
-    modal.setTitle(defaults.title || 'Nouvelle catÃ©gorie');
+    modal.setTitle(defaults.title || 'Nouvelle catégorie');
     modal.setBody(`
       <div class="row">
         <div class="field" style="flex:1;min-width:220px;">
           <label>Nom</label>
-          <input id="tb-cat-create-name" class="input" type="text" placeholder="Ex: SantÃ©" value="${escapeHTML(defaults.name || '')}" />
+          <input id="tb-cat-create-name" class="input" type="text" placeholder="Ex: Santé" value="${escapeHTML(defaults.name || '')}" />
         </div>
         <div class="field" style="min-width:160px;">
           <label>Couleur</label>
@@ -2688,11 +2692,11 @@ function _openGuidedCategoryModal(defaults = {}) {
         <label>Mapping analytique</label>
         <select id="tb-cat-create-mapping" class="input">${_analyticSelectOptions(defaults.mapping || '__unmapped__', false)}</select>
       </div>
-      <div class="muted" style="margin-top:8px;">Choisis le rattachement analytique dÃ¨s la crÃ©ation. â€œÃ€ classerâ€ ne crÃ©e aucune rÃ¨gle SQL.</div>
+      <div class="muted" style="margin-top:8px;">Choisis le rattachement analytique dès la création. “À classer” ne crée aucune règle SQL.</div>
     `);
     modal.setActions([
       { label: 'Annuler', onClick: () => { modal.close(); resolve(null); } },
-      { label: defaults.confirmLabel || 'CrÃ©er', className: 'btn primary', onClick: () => {
+      { label: defaults.confirmLabel || 'Créer', className: 'btn primary', onClick: () => {
           const name = String(document.getElementById('tb-cat-create-name')?.value || '').trim();
           const color = String(document.getElementById('tb-cat-create-color')?.value || '#94a3b8').trim() || '#94a3b8';
           const mapping = String(document.getElementById('tb-cat-create-mapping')?.value || '__unmapped__').trim() || '__unmapped__';
@@ -2709,10 +2713,10 @@ function _openGuidedSubcategoryModal(categoryName, defaults = {}) {
   return new Promise((resolve) => {
     const modal = _tbEnsureModal();
     const category = String(categoryName || '').trim();
-    modal.setTitle(defaults.title || `Nouvelle sous-catÃ©gorie Â· ${category}`);
+    modal.setTitle(defaults.title || `Nouvelle sous-catégorie · ${category}`);
     modal.setBody(`
       <div class="field">
-        <label>CatÃ©gorie</label>
+        <label>Catégorie</label>
         <input class="input" type="text" value="${escapeHTML(category)}" disabled />
       </div>
       <div class="row">
@@ -2729,11 +2733,11 @@ function _openGuidedSubcategoryModal(categoryName, defaults = {}) {
         <label>Mapping analytique</label>
         <select id="tb-subcat-create-mapping" class="input">${_analyticSelectOptions(defaults.mapping || '__inherit__', true)}</select>
       </div>
-      <div class="muted" style="margin-top:8px;">Par dÃ©faut, une sous-catÃ©gorie hÃ©rite du mapping de sa catÃ©gorie. Aucune rÃ¨gle SQL nâ€™est crÃ©Ã©e en mode hÃ©ritage.</div>
+      <div class="muted" style="margin-top:8px;">Par défaut, une sous-catégorie hérite du mapping de sa catégorie. Aucune règle SQL n’est créée en mode héritage.</div>
     `);
     modal.setActions([
       { label: 'Annuler', onClick: () => { modal.close(); resolve(null); } },
-      { label: defaults.confirmLabel || 'CrÃ©er', className: 'btn primary', onClick: () => {
+      { label: defaults.confirmLabel || 'Créer', className: 'btn primary', onClick: () => {
           const name = String(document.getElementById('tb-subcat-create-name')?.value || '').trim();
           const color = String(document.getElementById('tb-subcat-create-color')?.value || '').trim();
           const mapping = String(document.getElementById('tb-subcat-create-mapping')?.value || '__inherit__').trim() || '__inherit__';
@@ -2747,10 +2751,10 @@ function _openGuidedSubcategoryModal(categoryName, defaults = {}) {
 }
 
 async function saveAnalyticCategoryMapping(categoryName, nextValue) {
-  return safeCall('Mapping analytique catÃ©gorie', async () => {
+  return safeCall('Mapping analytique catégorie', async () => {
     const category = String(categoryName || '').trim();
     const value = String(nextValue || '').trim();
-    if (!category) throw new Error('CatÃ©gorie invalide.');
+    if (!category) throw new Error('Catégorie invalide.');
     await _saveAnalyticMappingRuleViaRpc(category, null, value);
     await refreshFromServer();
     renderSettings();
@@ -2758,11 +2762,11 @@ async function saveAnalyticCategoryMapping(categoryName, nextValue) {
 }
 
 async function saveAnalyticSubcategoryMapping(categoryName, subcategoryName, nextValue) {
-  return safeCall('Mapping analytique sous-catÃ©gorie', async () => {
+  return safeCall('Mapping analytique sous-catégorie', async () => {
     const category = String(categoryName || '').trim();
     const subcategory = String(subcategoryName || '').trim();
     const value = String(nextValue || '').trim();
-    if (!category || !subcategory) throw new Error('Sous-catÃ©gorie invalide.');
+    if (!category || !subcategory) throw new Error('Sous-catégorie invalide.');
     await _saveAnalyticMappingRuleViaRpc(category, subcategory, value);
     await refreshFromServer();
     renderSettings();
@@ -2777,7 +2781,7 @@ function renderCategoriesSettingsUI() {
   const colors = (typeof getCategoryColors === "function") ? getCategoryColors() : (state.categoryColors || {});
 
   const simpleMode = (typeof window.tbIsSimpleMode === 'function') ? window.tbIsSimpleMode() : false;
-  host.innerHTML = `${simpleMode ? '<div class="tb-simple-mode-note">Mode simple : les rÃ©glages analytiques avancÃ©s sont masquÃ©s ici. Passe en mode avancÃ© pour gouverner le mapping analytique.</div>' : ''}` + (cats || []).map((c) => {
+  host.innerHTML = `${simpleMode ? '<div class="tb-simple-mode-note">Mode simple : les réglages analytiques avancés sont masqués ici. Passe en mode avancé pour gouverner le mapping analytique.</div>' : ''}` + (cats || []).map((c) => {
     const col = colors[c] || "#94a3b8";
     const subRows = _subcategoriesForSettings(c, true);
     const activeCount = subRows.filter((row)=>row?.isActive !== false && row?.is_active !== false).length;
@@ -2787,14 +2791,14 @@ function renderCategoriesSettingsUI() {
       ? String(categoryMapping.analyticFamily || '').trim().toLowerCase()
       : (categoryMapping.mappingStatus === 'excluded' ? '__excluded__' : '__unmapped__');
     const categoryUsageText = categoryUsage.txCount > 0
-      ? ` Â· ${escapeHTML(String(categoryUsage.txCount))} transaction${categoryUsage.txCount > 1 ? 's' : ''}`
+      ? ` · ${escapeHTML(String(categoryUsage.txCount))} transaction${categoryUsage.txCount > 1 ? 's' : ''}`
       : '';
     const subHtml = subRows.length
       ? subRows.map((row) => {
           const active = row?.isActive !== false && row?.is_active !== false;
           const isSql = !!row?.id;
           const source = String(row?.source || (isSql ? 'sql' : 'default')).toLowerCase();
-          const sourceLabel = isSql ? 'SauvegardÃ©e' : (source === 'fallback' ? 'DÃ©tectÃ©e' : 'Par dÃ©faut');
+          const sourceLabel = isSql ? 'Sauvegardée' : (source === 'fallback' ? 'Détectée' : 'Par défaut');
           const subColor = String(row?.color || '').trim();
           const subName = String(row?.name || '').trim();
           const subMapping = _effectiveAnalyticMappingFor(c, subName);
@@ -2811,27 +2815,27 @@ function renderCategoriesSettingsUI() {
                 <div class="tb-subcat-meta">
                   <span class="tb-settings-pill ${active ? 'tb-settings-pill--positive' : ''}">${active ? 'Active' : 'Inactive'}</span>
                   <span class="tb-settings-pill">${sourceLabel}</span>
-                  <span class="tb-settings-pill tb-advanced-only">${escapeHTML(subMapping.sourceLabel || 'Ã€ classer')}</span>
+                  <span class="tb-settings-pill tb-advanced-only">${escapeHTML(subMapping.sourceLabel || 'À classer')}</span>
                   <span class="tb-advanced-only">${_analyticStatusPillHtml(subMapping)}</span>
                   <span class="tb-advanced-only">${_analyticUsagePillHtml(subUsage.txCount)}</span>
                   ${subColor ? `<span class="tb-subcat-color" title="${escapeHTML(subColor)}" style="background:${escapeHTML(subColor)}"></span>` : ''}
                 </div>
-                <div class="muted tb-advanced-only" style="margin-top:6px;">Analyse : ${escapeHTML(subMapping.mappingStatus === 'mapped' ? _analyticFamilyLabel(subMapping.analyticFamily) : (subMapping.mappingStatus === 'excluded' ? 'Exclue' : 'Ã€ classer'))}</div>
+                <div class="muted tb-advanced-only" style="margin-top:6px;">Analyse : ${escapeHTML(subMapping.mappingStatus === 'mapped' ? _analyticFamilyLabel(subMapping.analyticFamily) : (subMapping.mappingStatus === 'excluded' ? 'Exclue' : 'À classer'))}</div>
               </div>
               <div class="tb-subcat-actions" style="align-items:flex-end; gap:6px;">
                 <select class="input tb-advanced-only" style="min-width:190px;" onchange="saveAnalyticSubcategoryMapping('${escapeHTML(c)}','${escapeHTML(subName)}', this.value)">${_analyticSelectOptions(subSelectValue, true)}</select>
                 <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end;">
                   ${isSql
-                    ? `<button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','up')">â†‘</button>
-                       <button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','down')">â†“</button>
+                    ? `<button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','up')">↑</button>
+                       <button class="btn" onclick="moveSubcategory('${escapeHTML(String(row?.id || ''))}','down')">↓</button>
                        <button class="btn" onclick="editSubcategory('${escapeHTML(String(row?.id || ''))}')">Modifier</button>
-                       <button class="btn" onclick="toggleSubcategoryActive('${escapeHTML(String(row?.id || ''))}', ${active ? 'false' : 'true'})">${active ? 'DÃ©sactiver' : 'RÃ©activer'}</button>`
+                       <button class="btn" onclick="toggleSubcategoryActive('${escapeHTML(String(row?.id || ''))}', ${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button>`
                     : `<button class="btn" onclick="importExistingSubcategory('${escapeHTML(c)}','${escapeHTML(subName)}')">Enregistrer</button>`}
                 </div>
               </div>
             </div>`;
         }).join('')
-      : `<div class="muted" style="padding:8px 0;">Aucune sous-catÃ©gorie.</div>`;
+      : `<div class="muted" style="padding:8px 0;">Aucune sous-catégorie.</div>`;
 
     return `
       <details class="tb-category-card" ${subRows.length ? '' : 'open'}>
@@ -2840,11 +2844,11 @@ function renderCategoriesSettingsUI() {
             <span class="tb-category-swatch" style="background:${escapeHTML(col)}"></span>
             <div>
               <div class="tb-category-name">${escapeHTML(c)}</div>
-              <div class="tb-category-meta">${escapeHTML(String(subRows.length))} sous-catÃ©gorie${subRows.length>1?'s':''} Â· ${escapeHTML(String(activeCount))} active${activeCount>1?'s':''}${categoryUsageText}</div>
+              <div class="tb-category-meta">${escapeHTML(String(subRows.length))} sous-catégorie${subRows.length>1?'s':''} · ${escapeHTML(String(activeCount))} active${activeCount>1?'s':''}${categoryUsageText}</div>
             </div>
           </div>
           <div class="tb-category-head-actions">
-            <button class="btn" type="button" onclick="event.preventDefault(); event.stopPropagation(); addSubcategory('${escapeHTML(c)}')">+ Sous-catÃ©gorie</button>
+            <button class="btn" type="button" onclick="event.preventDefault(); event.stopPropagation(); addSubcategory('${escapeHTML(c)}')">+ Sous-catégorie</button>
             <button class="btn" type="button" onclick="event.preventDefault(); event.stopPropagation(); deleteCategory('${escapeHTML(c)}')">Supprimer</button>
           </div>
         </summary>
@@ -2856,7 +2860,7 @@ function renderCategoriesSettingsUI() {
               <input type="color" value="${escapeHTML(col)}" style="width:44px;height:30px;padding:0;border:none;background:transparent;cursor:pointer;" onchange="setCategoryColor('${escapeHTML(c)}', this.value)" />
               <span class="tb-advanced-only">${_analyticStatusPillHtml(categoryMapping)}</span>
               <span class="tb-advanced-only">${_analyticUsagePillHtml(categoryUsage.txCount)}</span>
-              <span class="tb-settings-pill tb-advanced-only">${escapeHTML(categoryMapping.sourceLabel || 'Ã€ classer')}</span>
+              <span class="tb-settings-pill tb-advanced-only">${escapeHTML(categoryMapping.sourceLabel || 'À classer')}</span>
             </div>
             <div class="tb-advanced-only" style="display:flex; gap:8px; align-items:center;">
               <span class="muted">Analyse</span>
@@ -2868,7 +2872,7 @@ function renderCategoriesSettingsUI() {
       </details>`;
   }).join("");
 
-  if (!host.innerHTML) host.innerHTML = `<div class="muted">Aucune catÃ©gorie. Ajoute-en une ci-dessus.</div>`;
+  if (!host.innerHTML) host.innerHTML = `<div class="muted">Aucune catégorie. Ajoute-en une ci-dessus.</div>`;
 }
 
 function addCategory() {
@@ -2879,15 +2883,15 @@ function addCategory() {
       name: String(nameEl?.value || "").trim(),
       color: String(colorEl?.value || "#94a3b8"),
       mapping: '__unmapped__',
-      title: 'Nouvelle catÃ©gorie',
-      confirmLabel: 'CrÃ©er',
+      title: 'Nouvelle catégorie',
+      confirmLabel: 'Créer',
     };
     const result = await _openGuidedCategoryModal(defaults);
     if (!result) return;
     const name = String(result?.name || "").trim();
     const color = String(result?.color || "#94a3b8");
     const mapping = String(result?.mapping || '__unmapped__').trim() || '__unmapped__';
-    if (!name) throw new Error("Nom de catÃ©gorie vide.");
+    if (!name) throw new Error("Nom de catégorie vide.");
 
     const existing = (state.categories || []).find(c => String(c).toLowerCase() === name.toLowerCase()) || null;
     if (existing) {
@@ -2918,9 +2922,9 @@ function deleteCategory(name) {
   safeCall("Delete category", async () => {
     const n = String(name || "").trim();
     if (!n) return;
-    if (!confirm(`Supprimer la catÃ©gorie "${n}" ?
+    if (!confirm(`Supprimer la catégorie "${n}" ?
 
-Cela supprimera aussi ses sous-catÃ©gories SQL et ses rÃ¨gles analytiques liÃ©es.`)) return;
+Cela supprimera aussi ses sous-catégories SQL et ses règles analytiques liées.`)) return;
     await _deleteCategoryBundleViaRpc(n);
     await refreshFromServer();
     renderSettings();
@@ -2948,10 +2952,10 @@ async function importExistingSubcategory(categoryName, subcategoryName) {
   return safeCall("Import subcategory", async () => {
     const category = String(categoryName || '').trim();
     const name = String(subcategoryName || '').trim();
-    if (!category || !name) throw new Error('Sous-catÃ©gorie invalide.');
+    if (!category || !name) throw new Error('Sous-catégorie invalide.');
     const existingRows = _subcategoriesForSettings(category, true);
     const duplicateSql = existingRows.find((row) => row?.id && String(row?.name || '').trim().toLowerCase() === name.toLowerCase());
-    if (duplicateSql) throw new Error('Cette sous-catÃ©gorie existe dÃ©jÃ  en SQL pour cette catÃ©gorie.');
+    if (duplicateSql) throw new Error('Cette sous-catégorie existe déjà en SQL pour cette catégorie.');
     const sortOrder = existingRows.reduce((max, row) => Math.max(max, Number(row?.sortOrder ?? row?.sort_order ?? 0)), -1) + 1;
     const payload = {
       user_id: sbUser.id,
@@ -2972,17 +2976,17 @@ async function importExistingSubcategory(categoryName, subcategoryName) {
 async function addSubcategory(categoryName) {
   return safeCall("Add subcategory", async () => {
     const category = String(categoryName || '').trim();
-    if (!category) throw new Error('CatÃ©gorie invalide.');
-    const result = await _openGuidedSubcategoryModal(category, { mapping: '__inherit__', title: `Nouvelle sous-catÃ©gorie Â· ${category}`, confirmLabel: 'CrÃ©er' });
+    if (!category) throw new Error('Catégorie invalide.');
+    const result = await _openGuidedSubcategoryModal(category, { mapping: '__inherit__', title: `Nouvelle sous-catégorie · ${category}`, confirmLabel: 'Créer' });
     if (!result) return;
     const name = String(result?.name || '').trim();
     const color = String(result?.color || '').trim();
     const mapping = String(result?.mapping || '__inherit__').trim() || '__inherit__';
-    if (!name) throw new Error('Nom de sous-catÃ©gorie vide.');
+    if (!name) throw new Error('Nom de sous-catégorie vide.');
     if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) throw new Error('Couleur invalide.');
     const existingRows = _subcategoriesForSettings(category, true);
     const duplicate = existingRows.find((row) => String(row?.name || '').trim().toLowerCase() === name.toLowerCase());
-    if (duplicate) throw new Error('Cette sous-catÃ©gorie existe dÃ©jÃ  pour cette catÃ©gorie.');
+    if (duplicate) throw new Error('Cette sous-catégorie existe déjà pour cette catégorie.');
     const sortOrder = existingRows.reduce((max, row) => Math.max(max, Number(row?.sortOrder ?? row?.sort_order ?? 0)), -1) + 1;
     const payload = {
       user_id: sbUser.id,
@@ -3005,19 +3009,19 @@ async function addSubcategory(categoryName) {
 async function editSubcategory(id) {
   return safeCall("Edit subcategory", async () => {
     const row = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).find((x) => String(x?.id) === String(id));
-    if (!row) throw new Error('Sous-catÃ©gorie introuvable.');
+    if (!row) throw new Error('Sous-catégorie introuvable.');
     const category = String(row?.categoryName || row?.category_name || '').trim();
     const currentName = String(row?.name || '').trim();
-    const rawName = prompt(`Renommer la sous-catÃ©gorie de "${category}"`, currentName);
+    const rawName = prompt(`Renommer la sous-catégorie de "${category}"`, currentName);
     if (rawName === null) return;
     const name = String(rawName || '').trim();
-    if (!name) throw new Error('Nom de sous-catÃ©gorie vide.');
-    const colorRaw = prompt('Couleur hexadÃ©cimale optionnelle (ex: #94a3b8). Laisse vide pour aucune couleur.', String(row?.color || ''));
+    if (!name) throw new Error('Nom de sous-catégorie vide.');
+    const colorRaw = prompt('Couleur hexadécimale optionnelle (ex: #94a3b8). Laisse vide pour aucune couleur.', String(row?.color || ''));
     if (colorRaw === null) return;
     const color = String(colorRaw || '').trim();
     if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) throw new Error('Couleur invalide.');
     const duplicate = _subcategoriesForSettings(category, true).find((x) => String(x?.id) !== String(id) && String(x?.name || '').trim().toLowerCase() === name.toLowerCase());
-    if (duplicate) throw new Error('Une autre sous-catÃ©gorie porte dÃ©jÃ  ce nom dans cette catÃ©gorie.');
+    if (duplicate) throw new Error('Une autre sous-catégorie porte déjà ce nom dans cette catégorie.');
     const payload = {
       name,
       color: color || null,
@@ -3136,7 +3140,7 @@ function renderManualFxBox() {
     <div class="card" style="padding:12px;">
       <h3 style="margin:0 0 8px 0;">Taux perso</h3>
       <div class="muted" style="margin-bottom:10px;">
-        UtilisÃ© seulement si le taux automatique est indisponible.
+        Utilisé seulement si le taux automatique est indisponible.
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
         <div style="min-width:120px;">

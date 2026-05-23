@@ -149,7 +149,7 @@ function suggestEmployerFromPayrollName(doc){
 
   let candidate = raw;
   candidate = candidate.replace(/.*?(bulletin\s+de\s+paie|fiche\s+de\s+paie|payslip|pay\s+slip|salaire|paie)/i, '');
-  candidate = candidate.replace(/\b(janvier|fevrier|fÃ©vrier|mars|avril|mai|mais|juin|juillet|aout|aoÃ»t|septembre|octobre|novembre|decembre|dÃ©cembre|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/ig, ' ');
+  candidate = candidate.replace(/\b(janvier|fevrier|février|mars|avril|mai|mais|juin|juillet|aout|août|septembre|octobre|novembre|decembre|décembre|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/ig, ' ');
   candidate = candidate.replace(/\b(19|20)\d{2}\b/g, ' ');
   candidate = candidate.replace(/\b\d{1,2}\b/g, ' ');
   candidate = candidate.replace(/^[\s,.;:()'"]+|[\s,.;:()'"]+$/g, '').replace(/\s+/g, ' ').trim();
@@ -510,7 +510,10 @@ function setSelectedSort(v){
 }
 
   async function loadDocuments(){
-    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+    const offline = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode("documents:load")
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (offline) {
       CACHE.folders = Array.isArray(state?.documentFolders) ? state.documentFolders : [];
       CACHE.documents = Array.isArray(state?.documents) ? state.documents : [];
       CACHE.linkCounts = {};
@@ -543,7 +546,19 @@ function setSelectedSort(v){
   async function ensureLoaded(){
     CACHE.loading = true; renderShell();
     try { await loadDocuments(); }
-    catch(e){ CACHE.error = e && (e.message || e.code) ? String(e.message || e.code) : String(e); console.warn('[TB][documents] load failed', e); }
+    catch(e){
+      const msg = e && (e.message || e.code) ? String(e.message || e.code) : String(e);
+      if (/offline mode|supabase request skipped|failed to fetch|network/i.test(msg)) {
+        CACHE.folders = Array.isArray(state?.documentFolders) ? state.documentFolders : [];
+        CACHE.documents = Array.isArray(state?.documents) ? state.documents : [];
+        CACHE.linkCounts = {};
+        CACHE.selectedFolderId = selectedFolderId();
+        CACHE.error = '';
+      } else {
+        CACHE.error = msg;
+        console.warn('[TB][documents] load failed', e);
+      }
+    }
     CACHE.loading = false; renderShell();
   }
 
@@ -954,7 +969,7 @@ const assetCount = Number(counts.assets || 0);
   async function createFolder(parentId = null){
     const c = client(); if(!c) return alert(tr('common.supabase_unavailable'));
     const name = String(prompt('Nom du dossier ?') || '').trim(); if(!name) return;
-    const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connectÃ©.');
+    const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connecté.');
     const guard = window.Core?.documentRules?.canCreateSubFolder
       ? window.Core.documentRules.canCreateSubFolder(parentId, CACHE.folders || [])
       : { ok: true };
@@ -971,13 +986,13 @@ const assetCount = Number(counts.assets || 0);
   opts = opts || {};
   const list = Array.from(files || []); if(!list.length) return;
   const c = client(); if(!c) return alert(tr('common.supabase_unavailable'));
-  const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connectÃ©.');
+  const uid = await currentUserId(); if(!uid) return alert('Utilisateur non connecté.');
   const folderId = CACHE.selectedFolderId || null;
 
   let done = 0;
   const uploadedIds = [];
   let failed = 0;
-  CACHE.uploading = `${list.length} fichier(s) en uploadâ€¦`;
+  CACHE.uploading = `${list.length} fichier(s) en upload…`;
   renderShell();
 
   for(const file of list){
@@ -1019,7 +1034,7 @@ const assetCount = Number(counts.assets || 0);
 
   CACHE.uploading = '';
   await ensureLoaded();
-  notify(`${uploadedIds.length} upload(s) terminÃ©(s), ${failed} erreur(s).`, failed ? 'error' : 'success');
+  notify(`${uploadedIds.length} upload(s) terminé(s), ${failed} erreur(s).`, failed ? 'error' : 'success');
   if(typeof opts.afterUpload === 'function'){
    await opts.afterUpload(uploadedIds);
   }
@@ -1041,7 +1056,7 @@ const assetCount = Number(counts.assets || 0);
     try{
       const url = await signedUrl(doc);
       const name = doc.name || doc.original_filename || 'Document';
-      const body = isImg(doc.mime_type) ? `<img src="${esc(url)}" alt="${esc(name)}" />` : (isPdf(doc.mime_type, doc.original_filename) ? `<iframe src="${esc(url)}" title="${esc(name)}"></iframe>` : `<div style="padding:24px;text-align:center;"><p>AperÃ§u non disponible pour ce type de fichier.</p><a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">Ouvrir / tÃ©lÃ©charger</a></div>`);
+      const body = isImg(doc.mime_type) ? `<img src="${esc(url)}" alt="${esc(name)}" />` : (isPdf(doc.mime_type, doc.original_filename) ? `<iframe src="${esc(url)}" title="${esc(name)}"></iframe>` : `<div style="padding:24px;text-align:center;"><p>Aperçu non disponible pour ce type de fichier.</p><a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">Ouvrir / télécharger</a></div>`);
       const wrap = document.createElement('div');
       wrap.className = 'tb-doc-preview-backdrop';
       wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
@@ -1062,7 +1077,7 @@ const assetCount = Number(counts.assets || 0);
   async function removeDoc(id){
     const c = client(); if(!c) return alert(tr('common.supabase_unavailable'));
     const doc = (CACHE.documents||[]).find(d=>String(d.id)===String(id)); if(!doc) return;
-    if(!confirm(`Supprimer Â« ${doc.name || doc.original_filename || 'Document'} Â» ?`)) return;
+    if(!confirm(`Supprimer « ${doc.name || doc.original_filename || 'Document'} » ?`)) return;
     try{ await c.storage.from(doc.storage_bucket || BUCKET).remove([doc.storage_path]); }catch(e){ console.warn('[TB][documents] storage remove failed', e); }
     const { error } = await c.from(table('documents','documents')).delete().eq('id', id);
     if(error) return alert(error.message || String(error));
@@ -1099,10 +1114,10 @@ async function deleteFolder(id){
   const count = folderCount(id);
 
   if(count > 0){
-    return alert('Ce dossier contient encore des documents. DÃ©place ou supprime-les avant de supprimer le dossier.');
+    return alert('Ce dossier contient encore des documents. Déplace ou supprime-les avant de supprimer le dossier.');
   }
 
-  if(!confirm(`Supprimer le dossier Â« ${folder.name} Â» ?`)) return;
+  if(!confirm(`Supprimer le dossier « ${folder.name} » ?`)) return;
 
   const { error } = await c
     .from(table('document_folders','document_folders'))
@@ -1199,7 +1214,7 @@ function openInfoModal(doc){
 
         <div>
           <label>${esc(tr('documents.modal.notes'))}</label>
-          <textarea id="tb-doc-info-notes" class="input" placeholder="Ex : original papier chez parents, contrat Ã  renouvelerâ€¦">${esc(currentNotes)}</textarea>
+          <textarea id="tb-doc-info-notes" class="input" placeholder="Ex : original papier chez parents, contrat à renouveler…">${esc(currentNotes)}</textarea>
         </div>
       </div>
 
@@ -1291,7 +1306,7 @@ async function shareSelected(){
   const docs = selectedDocs();
   if(!docs.length) return alert(tr('documents.error.select_one'));
 
-  const duration = String(prompt('DurÃ©e du lien temporaire ? 10m, 1h ou 24h', '1h') || '1h').trim().toLowerCase();
+  const duration = String(prompt('Durée du lien temporaire ? 10m, 1h ou 24h', '1h') || '1h').trim().toLowerCase();
 
   const seconds =
     duration === '10m' ? 600 :
@@ -1299,11 +1314,11 @@ async function shareSelected(){
     3600;
 
   try{
-    setActionMessage(`CrÃ©ation de ${docs.length} lien(s) temporaire(s)...`);
+    setActionMessage(`Création de ${docs.length} lien(s) temporaire(s)...`);
     const links = await createShareLinksForDocs(docs, seconds);
     setActionMessage('');
 
-    const subject = encodeURIComponent(`Documents partagÃ©s (${links.length})`);
+    const subject = encodeURIComponent(`Documents partagés (${links.length})`);
     const bodyText = [
       'Bonjour,',
       '',
@@ -1311,7 +1326,7 @@ async function shareSelected(){
       '',
       ...links.map(x => `- ${x.name} : ${x.url}`),
       '',
-      `DurÃ©e approximative : ${duration || '1h'}.`
+      `Durée approximative : ${duration || '1h'}.`
     ].join('\n');
 
     const mailto = `mailto:?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
@@ -1355,7 +1370,7 @@ async function shareSelected(){
     document.body.appendChild(wrap);
   }catch(e){
     setActionMessage('');
-    actionError(e, 'CrÃ©ation des liens impossible.');
+    actionError(e, 'Création des liens impossible.');
   }
 }
 
@@ -1473,10 +1488,10 @@ async function generateShareLinksSelected(){
     : (duration === '10m' ? 600 : duration === '24h' ? 86400 : 3600);
 
   try{
-    setActionMessage(`CrÃ©ation de ${docs.length} lien(s) temporaire(s)...`);
+    setActionMessage(`Création de ${docs.length} lien(s) temporaire(s)...`);
     const links = await createShareLinksForDocs(docs, seconds);
     setActionMessage('');
-    const subject = encodeURIComponent(`Documents partagÃ©s (${links.length})`);
+    const subject = encodeURIComponent(`Documents partagés (${links.length})`);
     const bodyText = [
       'Bonjour,',
       '',
@@ -1484,7 +1499,7 @@ async function generateShareLinksSelected(){
       '',
       ...links.map(x => `- ${x.name} : ${x.url}`),
       '',
-      `DurÃ©e approximative : ${duration || '1h'}.`
+      `Durée approximative : ${duration || '1h'}.`
     ].join('\n');
 
     const mailto = `mailto:?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
@@ -1526,7 +1541,7 @@ async function generateShareLinksSelected(){
     if(!wrap.parentNode) document.body.appendChild(wrap);
   }catch(e){
     setActionMessage('');
-    actionError(e, 'CrÃ©ation des liens impossible.');
+    actionError(e, 'Création des liens impossible.');
   }
 }
 
@@ -1746,10 +1761,10 @@ function findTripExpenseById(id){
 }
 
 function tripExpenseLabel(ex){
-  if(!ex) return 'DÃ©pense Trip';
+  if(!ex) return 'Dépense Trip';
   const date = ex.date || '';
   const amount = ex.amount != null ? `${ex.amount} ${ex.currency || ''}`.trim() : '';
-  const label = ex.label || ex.category || 'DÃ©pense Trip';
+  const label = ex.label || ex.category || 'Dépense Trip';
   return [date, amount, label].filter(Boolean).join(' - ');
 }
 
@@ -1899,7 +1914,7 @@ function renderDocumentTransactionsModal(doc, links, message, tripLinks = []){
         }).join('') : `<div class="tb-doc-empty">${esc(tr('documents.linked_transactions.empty'))}</div>`}
       </div>
               <div style="margin:10px 0 12px;">
-        <strong>DÃ©penses Trip liÃ©es</strong>
+        <strong>Dépenses Trip liées</strong>
         <div style="display:flex;flex-direction:column;gap:8px;max-height:180px;overflow:auto;margin-top:8px;">
           ${(tripLinks || []).length ? tripLinks.map(link => {
             const ex = findTripExpenseById(link.expense_id);
@@ -1913,7 +1928,7 @@ function renderDocumentTransactionsModal(doc, links, message, tripLinks = []){
                 </div>
               </div>
             `;
-          }).join('') : `<div class="tb-doc-empty">Aucune dÃ©pense Trip liÃ©e.</div>`}
+          }).join('') : `<div class="tb-doc-empty">Aucune dépense Trip liée.</div>`}
         </div>
       </div>
       <div class="tb-doc-form">
@@ -2040,7 +2055,7 @@ function renderDocumentAssetsModal(doc, links, assets, message){
         ${(links || []).length ? links.map(link => {
           const asset = (assets || []).find(a => String(a.id || '') === String(link.asset_id || ''));
           return `<div class="tb-doc-share-link"><strong>${esc(assetLabel(asset))}</strong><br><span class="muted">${esc(tr('documents.relation.' + (link.relation_type || 'proof')))}</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="btn small primary" type="button" onclick="window.tbOpenAssetFromDocument('${esc(link.asset_id)}')">${esc(atxt('Ouvrir Patrimoine', 'Open Assets'))}</button><button class="btn small" type="button" onclick="window.tbDocumentsUnlinkAsset('${esc(link.id)}','${esc(doc.id)}')">${esc(tr('transactions.documents.unlink'))}</button></div></div>`;
-        }).join('') : `<div class="tb-doc-empty">${esc(atxt('Aucun asset liÃ©.', 'No linked asset.'))}</div>`}
+        }).join('') : `<div class="tb-doc-empty">${esc(atxt('Aucun asset lié.', 'No linked asset.'))}</div>`}
       </div>
       <div class="tb-doc-form">
         <label>${esc(atxt('Ajouter un asset', 'Add asset'))}</label>
@@ -2057,7 +2072,7 @@ function renderDocumentAssetsModal(doc, links, assets, message){
       </div>
       <div class="tb-doc-modal-actions">
         <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
-        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyLinkAsset('${esc(doc.id)}')">${esc(atxt('Lier lâ€™asset', 'Link asset'))}</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyLinkAsset('${esc(doc.id)}')">${esc(atxt('Lier l’asset', 'Link asset'))}</button>
       </div>
     </div>`;
   if(!wrap.parentNode) document.body.appendChild(wrap);
@@ -2219,7 +2234,7 @@ window.tbDocumentsApplyLinkAsset = async function(docId){
   if(!assetId) return alert(atxt('Choisis un asset.', 'Choose an asset.'));
   try{
     await linkDocumentToAsset(docId, assetId, relationType);
-    await openDocumentAssetsModal(docId, atxt('Asset liÃ©.', 'Asset linked.'));
+    await openDocumentAssetsModal(docId, atxt('Asset lié.', 'Asset linked.'));
   }catch(e){
     alert(e.message || String(e));
   }
@@ -2228,7 +2243,7 @@ window.tbDocumentsUnlinkAsset = async function(linkId, docId){
   if(!confirm(tr('documents.linked_transactions.unlink_confirm'))) return;
   try{
     await unlinkDocumentAsset(linkId);
-    await openDocumentAssetsModal(docId, atxt('Lien asset supprimÃ©.', 'Asset link removed.'));
+    await openDocumentAssetsModal(docId, atxt('Lien asset supprimé.', 'Asset link removed.'));
   }catch(e){
     alert(e.message || String(e));
   }
@@ -2237,7 +2252,7 @@ window.tbDocumentsUnlinkTripExpense = async function(linkId, docId){
   if(!confirm(tr('documents.linked_transactions.unlink_confirm'))) return;
   try{
     await unlinkDocumentTripExpense(linkId);
-    await openDocumentTransactionsModal(docId, 'Lien Trip supprimÃ©.');
+    await openDocumentTransactionsModal(docId, 'Lien Trip supprimé.');
   }catch(e){
     alert(e.message || String(e));
   }
@@ -2252,7 +2267,7 @@ window.tbDocumentsOpenShareEmail = function(){
 
   const url =
     'https://mail.google.com/mail/?view=cm&fs=1'
-    + '&su=' + encodeURIComponent('Documents partagÃ©s')
+    + '&su=' + encodeURIComponent('Documents partagés')
     + '&body=' + encodeURIComponent(body);
 
   window.open(url, '_blank', 'noopener,noreferrer');
@@ -2267,7 +2282,7 @@ window.tbDocumentsCopyShareLinks = async function(){
 
   try{
     await navigator.clipboard.writeText(text);
-    alert('Lien(s) copiÃ©(s).');
+    alert('Lien(s) copié(s).');
   }catch(e){
     console.error(e);
 
@@ -2283,7 +2298,7 @@ window.tbDocumentsCopyShareLinks = async function(){
 
     try{
       document.execCommand('copy');
-      alert('Lien(s) copiÃ©(s).');
+      alert('Lien(s) copié(s).');
     }catch(_){
       alert('Copie impossible.');
     }
@@ -2301,7 +2316,7 @@ window.tbDocumentsCopyShareBody = async function(){
 
   try{
     await navigator.clipboard.writeText(text);
-    alert('Message copiÃ©.');
+    alert('Message copié.');
   }catch(e){
     console.error(e);
 
@@ -2317,7 +2332,7 @@ window.tbDocumentsCopyShareBody = async function(){
 
     try{
       document.execCommand('copy');
-      alert('Message copiÃ©.');
+      alert('Message copié.');
     }catch(_){
       alert('Copie impossible.');
     }

@@ -203,8 +203,27 @@ async function _copyToClipboard(text) {
   }
 }
 
-function toastOk(msg) {
+  function toastOk(msg) {
     console.log("[Trip]", msg);
+  }
+
+  function _tripOfflineFallback() {
+    try {
+      return (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function _tripShouldUseOfflineMode(reason) {
+    try {
+      if (typeof window.tbShouldUseOfflineMode === "function") {
+        return await window.tbShouldUseOfflineMode(reason || "trip");
+      }
+    } catch (_) {
+      return true;
+    }
+    return _tripOfflineFallback();
   }
 
   const TRIP_ACTIVE_KEY = "travelbudget_trip_active_id_v1";
@@ -1291,7 +1310,7 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
     if (typeof sb === "undefined") throw new Error("Supabase client (sb) introuvable.");
     const uid = sbUser?.id || sbUser?.user?.id || window.sbUser?.id || window.sbUser?.user?.id;
     if (uid) return uid;
-    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+    if (await _tripShouldUseOfflineMode("trip:ensureSession")) {
       throw new Error("Mode hors ligne");
     }
 
@@ -1304,12 +1323,13 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
   }
 
   async function _loadTrips() {
-    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+    if (await _tripShouldUseOfflineMode("trip:loadTrips")) {
       tripState.trips = Array.isArray(state?.tripGroups) ? state.tripGroups : [];
       tripState.globalNetRows = Array.isArray(state?.tripNetBalances) ? state.tripNetBalances : [];
       const stored = localStorage.getItem(TRIP_ACTIVE_KEY);
       if (stored && tripState.trips.some(t => t.id === stored)) tripState.activeTripId = stored;
       else tripState.activeTripId = tripState.trips[0]?.id || null;
+      tripState._tripsLoaded = true;
       return;
     }
     const uid = await _ensureSession();
@@ -1400,7 +1420,7 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
   }
 
   async function _loadActiveData() {
-    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+    if (await _tripShouldUseOfflineMode("trip:loadActiveData")) {
       tripState.members = Array.isArray(state?.tripMembers) ? state.tripMembers : (Array.isArray(state?.tripParticipants) ? state.tripParticipants : []);
       tripState.expenses = Array.isArray(state?.tripExpenses) ? state.tripExpenses : [];
       tripState.shares = Array.isArray(state?.tripExpenseShares) ? state.tripExpenseShares : [];
@@ -4749,7 +4769,8 @@ const tripDocCountsByExpense = new Map();
 try {
   const visibleExpenseIds = filteredExpenses.map(ex => ex.id).filter(Boolean);
 
-  if (visibleExpenseIds.length) {
+  const offlineDocs = await _tripShouldUseOfflineMode("trip:documentCounts");
+  if (!offlineDocs && visibleExpenseIds.length) {
     const { data: docLinkRows, error: docLinkErr } = await sb
       .from((TB_CONST?.TABLES?.trip_expense_documents) || "trip_expense_documents")
       .select("expense_id")
@@ -5716,7 +5737,7 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
 
     root.innerHTML = `<div class="card"><div class="muted">${escapeHTML(_tripT("common.loading"))}</div></div>`;
     try {
-      const offline = (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false);
+      const offline = await _tripShouldUseOfflineMode("trip:render");
       if (!offline) {
         await _ensureSession();
         await _acceptInviteFromURL();

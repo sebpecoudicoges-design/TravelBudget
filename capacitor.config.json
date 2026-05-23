@@ -1,0 +1,8 @@
+{
+  "appId": "com.travelbudget.app",
+  "appName": "Travel Budget",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

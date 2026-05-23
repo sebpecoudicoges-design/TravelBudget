@@ -750,7 +750,10 @@
     const c = client();
     const userId = uid();
     reloadScopedLocalState();
-    if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
+    const offline = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode("sport:loadHistory")
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (offline) {
       CACHE.sessions = Array.isArray(state?.sportSessions) ? state.sportSessions : [];
       CACHE.items = Array.isArray(state?.sportSessionItems) ? state.sportSessionItems : [];
       CACHE.sets = Array.isArray(state?.sportSets) ? state.sportSets : [];
@@ -815,7 +818,15 @@
     } catch (e) {
       CACHE.error = e?.message || String(e);
       CACHE.loaded = true;
-      console.warn("[sport] load failed", CACHE.error);
+      if (/offline mode|supabase request skipped|failed to fetch|network/i.test(CACHE.error)) {
+        CACHE.sessions = Array.isArray(state?.sportSessions) ? state.sportSessions : [];
+        CACHE.items = Array.isArray(state?.sportSessionItems) ? state.sportSessionItems : [];
+        CACHE.sets = Array.isArray(state?.sportSets) ? state.sportSets : [];
+        CACHE.error = "";
+        CACHE.status = txt("Historique restaure hors ligne.", "History restored offline.");
+      } else {
+        console.warn("[sport] load failed", CACHE.error);
+      }
     } finally {
       CACHE.loading = false;
     }

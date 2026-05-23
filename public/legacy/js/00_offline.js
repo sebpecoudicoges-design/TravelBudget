@@ -128,12 +128,14 @@
     networkUnavailableUntil = Date.now() + 8000;
     window.__TB_OFFLINE_NETWORK__ = { reason: String(reason || "network"), until: networkUnavailableUntil };
     try { document.documentElement.classList.add("tb-supabase-offline"); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent("tb:offline_state_changed", { detail: { offline: true, reason: String(reason || "network") } })); } catch (_) {}
   }
 
   function clearNetworkUnavailable() {
     networkUnavailableUntil = 0;
     window.__TB_OFFLINE_NETWORK__ = null;
     try { document.documentElement.classList.remove("tb-supabase-offline"); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent("tb:offline_state_changed", { detail: { offline: false } })); } catch (_) {}
   }
 
   function isOfflineMode() {

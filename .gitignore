@@ -4,6 +4,21 @@ node_modules/
 # Build
 dist/
 
+# Capacitor / Android generated artifacts
+android/.gradle/
+android/**/build/
+android/local.properties
+android/**/*.apk
+android/**/*.aab
+android/**/*.ap_
+android/**/*.aar
+
+# Local portable Android toolchains (do not commit)
+AndroidSdk/
+jdk-21/
+temurin-jdk21.zip
+android-commandlinetools.zip
+
 # Env
 .env
 .env.*
