@@ -243,6 +243,7 @@ async function _copyToClipboard(text) {
     editingExpenseId: null,
     editingExpenseDraft: null,
     historyFilters: {},
+    addExpenseOpen: false,
     _tripsLoaded: false,
   };
   window.__tripState = tripState;
@@ -278,6 +279,7 @@ async function _copyToClipboard(text) {
       tripState.lastInviteUrl = null;
       tripState.editingExpenseId = null;
       tripState.editingExpenseDraft = null;
+      tripState.addExpenseOpen = false;
       tripState._tripsLoaded = false;
     });
   } catch (_) {}
@@ -4550,6 +4552,8 @@ try {
     const expenses = tripState.expenses;
     const editingExpenseId = tripState.editingExpenseId || null;
     const editingDraft = tripState.editingExpenseDraft || null;
+    const isTripMobileApp = !!document.body?.classList?.contains("tb-capacitor-app");
+    const addExpenseOpen = isTripMobileApp && !!tripState.addExpenseOpen;
 
     
 
@@ -4832,9 +4836,14 @@ return `
 
     const expensesHTMLJoined = Array.isArray(expensesHTML) ? expensesHTML.join("") : expensesHTML;
 
-    const editExpenseModalHTML = editingExpenseId
+    const editExpenseModalHTML = (editingExpenseId || addExpenseOpen)
       ? _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal: true })
       : "";
+    const memberPillsHTML = members.length
+      ? `<div class="trip-mobile-member-pills">${members.map(m => `<span class="trip-participant-pill">${escapeHTML(m.name)}${m.isMe ? ` · ${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "me" : "moi")}` : ""}</span>`).join("")}</div>`
+      : `<div class="muted">Aucun participant.</div>`;
+    const tripManageSummary = escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Manage split" : "Gerer le partage");
+    const tripQuickAddLabel = escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "+ Shared expense" : "+ Depense partagee");
 
     root.innerHTML = `
       ${globalNetHTML}
@@ -4849,7 +4858,15 @@ return `
       </div>` : ""}
       <div class="grid">
         <div class="card">
-          <h2>${escapeHTML(_tripT("trip.title"))}</h2>
+          <div class="trip-mobile-title-row">
+            <div>
+              <h2>${escapeHTML(_tripT("trip.title"))}</h2>
+              ${memberPillsHTML}
+            </div>
+            <button class="btn primary trip-mobile-add-expense" type="button" data-trip-open-add-exp ${trip && canWrite ? "" : "disabled"}>${tripQuickAddLabel}</button>
+          </div>
+          <details class="trip-manage-panel" ${isTripMobileApp ? "" : "open"}>
+            <summary>${tripManageSummary}</summary>
           <div class="row" style="margin-bottom:10px;">
             <div class="field" style="min-width:260px;">
               <label>${escapeHTML(_tripT("trip.active"))}</label>
@@ -4905,11 +4922,18 @@ return `
               </div>
             `).join("") : `<div class="muted">Aucun participant.</div>`}
           </div>
+          </details>
         </div>
 
         ${editingExpenseId
           ? `<div class="card"><h2>${escapeHTML(_tripT("trip.expense"))}</h2><div class="muted">${escapeHTML(_tripT("trip.expense.quick_hint"))}</div></div>`
-          : _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal: false })}
+          : (isTripMobileApp
+              ? `<div class="card trip-mobile-expense-launcher">
+                  <h2>${escapeHTML(_tripT("trip.expense"))}</h2>
+                  <div class="muted">${escapeHTML(_tripT("trip.expense.quick_hint"))}</div>
+                  <button class="btn primary" type="button" data-trip-open-add-exp ${trip && canWrite ? "" : "disabled"}>${tripQuickAddLabel}</button>
+                </div>`
+              : _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal: false }))}
       </div>
       ${linkAuditHTML}
 
@@ -5435,6 +5459,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
         split
       });
       await _refreshAfterTripMutation("trip:add_expense", { expectExpenseId: createdExpenseId });
+      tripState.addExpenseOpen = false;
       toastOk("Dépense ajoutée.");
     }
   } catch (e) {
@@ -5449,7 +5474,11 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
     if (btnCancelEditExp) {
       btnCancelEditExp.onclick = async () => {
         try {
-          await _cancelEditExpense();
+          if (editingExpenseId) await _cancelEditExpense();
+          else {
+            tripState.addExpenseOpen = false;
+            await _renderUI();
+          }
         } catch (e) {
           toastWarn(e?.message || String(e));
         }
@@ -5460,7 +5489,11 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
     if (btnCloseEditExp) {
       btnCloseEditExp.onclick = async () => {
         try {
-          await _cancelEditExpense();
+          if (editingExpenseId) await _cancelEditExpense();
+          else {
+            tripState.addExpenseOpen = false;
+            await _renderUI();
+          }
         } catch (e) {
           toastWarn(e?.message || String(e));
         }
@@ -5472,12 +5505,30 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
       editOverlay.onclick = async (ev) => {
         if (ev.target !== editOverlay) return;
         try {
-          await _cancelEditExpense();
+          if (editingExpenseId) await _cancelEditExpense();
+          else {
+            tripState.addExpenseOpen = false;
+            await _renderUI();
+          }
         } catch (e) {
           toastWarn(e?.message || String(e));
         }
       };
     }
+
+    root.querySelectorAll("[data-trip-open-add-exp]").forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          tripState.addExpenseOpen = true;
+          tripState.editingExpenseId = null;
+          tripState.editingExpenseDraft = null;
+          await _renderUI();
+          setTimeout(() => { try { _el("trip-exp-label")?.focus(); } catch (_) {} }, 50);
+        } catch (e) {
+          toastWarn(e?.message || String(e));
+        }
+      };
+    });
 
     const paidSel = _el("trip-exp-paidby");
     if (paidSel) paidSel.onchange = _syncExpenseWalletUI;
