@@ -127,6 +127,12 @@ export function registerPwa() {
         || String(window.location?.protocol || "").startsWith("capacitor")
         || !!document.querySelector('html[data-capacitor], body[data-capacitor]');
       document.body.classList.toggle("tb-capacitor-app", !!isCapacitor);
+      if (!document.body.dataset.tbView) {
+        const activeTab = document.querySelector(".app-tabs .tab.active, .tabs .tab.active");
+        const id = String(activeTab?.id || "").replace(/^tab-/, "");
+        document.body.dataset.tbView = id || "dashboard";
+        document.body.classList.toggle("tb-view-dashboard", (id || "dashboard") === "dashboard");
+      }
     } catch (_) {}
   };
 

@@ -4423,11 +4423,25 @@
       .table{display:block!important;overflow-x:auto!important;white-space:nowrap!important;}
 
       body.tb-capacitor-app header{
+        position:sticky!important;
+        top:0!important;
+        z-index:99980!important;
         padding:8px 12px 10px!important;
+        border-radius:0 0 18px 18px!important;
+        box-shadow:0 12px 28px rgba(15,23,42,.12)!important;
+      }
+      body.tb-capacitor-app .wrap{
+        padding-top:8px!important;
+      }
+      body.tb-capacitor-app .brand h1{
+        max-width:calc(100vw - 112px)!important;
+        font-size:24px!important;
       }
       body.tb-capacitor-app .top-actions{
-        grid-template-columns:repeat(3,minmax(0,1fr))!important;
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
         gap:6px!important;
+        max-height:88px!important;
+        overflow:hidden!important;
       }
       body.tb-capacitor-app .top-actions .btn,
       body.tb-capacitor-app .top-actions select,
@@ -4443,11 +4457,34 @@
         grid-template-columns:1fr 1fr!important;
         gap:4px!important;
       }
+      body.tb-capacitor-app:not(.tb-view-dashboard) #kpi,
+      body.tb-capacitor-app:not(.tb-view-dashboard) .premium-kpi-shell,
+      body.tb-capacitor-app:not(.tb-view-dashboard) #dashboard-hero-shell,
+      body.tb-capacitor-app:not(.tb-view-dashboard) #cashflowChart,
+      body.tb-capacitor-app:not(.tb-view-dashboard) .cashflow-card{
+        display:none!important;
+      }
+      body.tb-capacitor-app #tb-mobile-nav-toggle{
+        position:fixed!important;
+        top:calc(10px + env(safe-area-inset-top,0px))!important;
+        right:12px!important;
+        z-index:99992!important;
+        width:46px!important;
+        height:46px!important;
+        border-radius:16px!important;
+        background:rgba(255,255,255,.92)!important;
+        border:1px solid rgba(15,23,42,.08)!important;
+        box-shadow:0 10px 26px rgba(15,23,42,.16)!important;
+      }
+      body.theme-dark.tb-capacitor-app #tb-mobile-nav-toggle{
+        background:rgba(15,23,42,.86)!important;
+        border-color:rgba(255,255,255,.10)!important;
+      }
       body.tb-capacitor-app.tb-mobile-nav-open .tabs.app-tabs,
       body.tb-capacitor-app.tb-mobile-nav-open .app-tabs,
       body.tb-capacitor-app.tb-mobile-nav-open .tabs{
-        inset:calc(76px + env(safe-area-inset-top,0px)) 10px auto 10px!important;
-        max-height:calc(100vh - 96px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;
+        inset:calc(64px + env(safe-area-inset-top,0px)) 10px auto 10px!important;
+        max-height:calc(100vh - 84px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;
         padding:10px!important;
         border-radius:18px!important;
       }

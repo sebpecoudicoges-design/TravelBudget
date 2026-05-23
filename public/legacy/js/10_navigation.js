@@ -2,6 +2,10 @@
    Navigation
    ========================= */
 function setActiveTab(view) {
+  try {
+    document.body.dataset.tbView = String(view || "dashboard");
+    document.body.classList.toggle("tb-view-dashboard", view === "dashboard");
+  } catch (_) {}
   const tabs = [
     ["dashboard", "tab-dashboard", "view-dashboard"],
     ["transactions", "tab-transactions", "view-transactions"],
