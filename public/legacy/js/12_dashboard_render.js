@@ -312,7 +312,7 @@ function _walletRecentTransactionsHTML(walletId, today, T) {
       ? ((window.tbGetLang && window.tbGetLang() === "en") ? "Upcoming" : "A venir")
       : (row.isPaid ? T("wallet.recent.paid") : T("wallet.recent.unpaid"));
     const warningChip = row.isFutureSoon && row.projectedNegative
-      ? `<span title="${escapeHTML((window.tbGetLang && window.tbGetLang() === "en") ? "Wallet may go below zero" : "Le wallet peut passer sous zero")}" style="display:inline-flex;align-items:center;border:1px solid rgba(244,63,94,.35);background:rgba(244,63,94,.10);border-radius:999px;padding:1px 6px;color:#be123c;font-size:11px;font-weight:800;">${escapeHTML((window.tbGetLang && window.tbGetLang() === "en") ? "risk < 0" : "risque < 0")}</span>`
+      ? `<span title="${escapeHTML((window.tbGetLang && window.tbGetLang() === "en") ? "Overdraft risk" : "Risque de decouvert")}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid rgba(244,63,94,.38);background:rgba(244,63,94,.10);border-radius:999px;padding:2px 7px;color:#be123c;font-size:11px;font-weight:850;">${escapeHTML((window.tbGetLang && window.tbGetLang() === "en") ? "! Overdraft risk" : "! Risque de decouvert")}</span>`
       : "";
     const label = escapeHTML(String(tx?.label || tx?.category || "Transaction"));
     const date = escapeHTML(row.date);
@@ -324,7 +324,7 @@ function _walletRecentTransactionsHTML(walletId, today, T) {
           <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
           <div class="muted" style="font-size:12px;">${date} - <span style="display:inline-flex;align-items:center;border:1px solid ${statusBorder};background:${statusColor};border-radius:999px;padding:1px 7px;color:var(--text);font-weight:700;">${escapeHTML(statusText)}</span></div>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-weight:800;white-space:nowrap;color:${amountColor};">${amount}${warningChip}</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-weight:800;white-space:nowrap;color:${amountColor};">${amount}${warningChip}</div>
       </div>
     `;
   }).join("");
@@ -554,7 +554,7 @@ if (!wallets.length) {
             <div class="muted" style="margin-top:6px;">${T("wallet.budget_level")}</div>
           ` : ""}
         </div>
-        <div style="display:flex; flex-direction:column; gap:8px; flex:0 0 200px;">
+        <div class="tb-wallet-action-col" style="display:flex; flex-direction:column; gap:8px; flex:0 0 200px;">
           <button class="btn primary" onclick="openTxModal('expense','${w.id}')">${T("wallet.action.add_expense")}</button>
           <button class="btn" onclick="openTxModal('income','${w.id}')">${T("wallet.action.add_income")}</button>
           <button class="btn" onclick="editWallet('${w.id}')">✏️ ${T("wallet.action.edit")}</button>
@@ -564,7 +564,7 @@ if (!wallets.length) {
       </div>
 
     `;
-    const actionCol = div.querySelector('div[style*="flex-direction:column"]');
+    const actionCol = div.querySelector(".tb-wallet-action-col");
     if (actionCol) {
       if (w.archived) {
         actionCol.querySelectorAll("button").forEach((btn) => {

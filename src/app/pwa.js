@@ -121,15 +121,26 @@ export function registerPwa() {
     } catch (_) {}
   };
 
+  const markRuntimeMode = () => {
+    try {
+      const isCapacitor = !!window.Capacitor
+        || String(window.location?.protocol || "").startsWith("capacitor")
+        || !!document.querySelector('html[data-capacitor], body[data-capacitor]');
+      document.body.classList.toggle("tb-capacitor-app", !!isCapacitor);
+    } catch (_) {}
+  };
+
   window.addEventListener("online", updateOnlineState);
   window.addEventListener("offline", updateOnlineState);
   window.addEventListener("tb:offline_state_changed", updateOnlineState);
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
+      markRuntimeMode();
       updateOnlineState();
       ensureMobileNav();
     });
   } else {
+    markRuntimeMode();
     updateOnlineState();
     ensureMobileNav();
   }
