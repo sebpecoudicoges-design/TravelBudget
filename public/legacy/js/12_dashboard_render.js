@@ -153,6 +153,34 @@ function _walletRecentTxTouchesWallet(tx) {
   return true;
 }
 
+function _walletRecentAddDaysISO(iso, days) {
+  const d = new Date(`${String(iso || "").slice(0, 10)}T12:00:00`);
+  if (!Number.isFinite(d.getTime())) return String(iso || "").slice(0, 10);
+  d.setDate(d.getDate() + (Number(days) || 0));
+  return toLocalISODate(d);
+}
+
+function _walletUpcomingTransactions(walletId, today) {
+  const wid = String(walletId || "");
+  const minDate = String(today || toLocalISODate(new Date()));
+  const maxDate = _walletRecentAddDaysISO(minDate, 7);
+  return (Array.isArray(state?.transactions) ? state.transactions : [])
+    .filter((tx) => String(tx?.walletId || tx?.wallet_id || "") === wid)
+    .filter((tx) => (tx?.travelId || tx?.travel_id || null) === state.activeTravelId)
+    .filter(_walletRecentTxTouchesWallet)
+    .filter((tx) => {
+      const d = _walletRecentTxDate(tx);
+      return !!d && d > minDate && d <= maxDate;
+    })
+    .sort((a, b) => {
+      const da = _walletRecentTxDate(a);
+      const db = _walletRecentTxDate(b);
+      if (da !== db) return da.localeCompare(db);
+      return String(a?.label || "").localeCompare(String(b?.label || ""));
+    })
+    .slice(0, 2);
+}
+
 function _walletRecentTransactions(walletId, today) {
   const wid = String(walletId || "");
   const maxDate = String(today || toLocalISODate(new Date()));
@@ -174,7 +202,15 @@ function _walletRecentTransactions(walletId, today) {
 }
 
 function _walletRecentTransactionsHTML(walletId, today, T) {
-  const rows = _walletRecentTransactions(walletId, today);
+  const recentRows = _walletRecentTransactions(walletId, today);
+  const upcomingRows = _walletUpcomingTransactions(walletId, today);
+  const upcomingCount = Math.min(2, upcomingRows.length);
+  const rows = upcomingCount
+    ? [
+        ...recentRows.slice(0, Math.max(0, 5 - upcomingCount)),
+        ...upcomingRows.slice(0, upcomingCount).map((tx) => ({ ...tx, __tbWalletUpcoming: true }))
+      ]
+    : recentRows;
   if (!rows.length) {
     return `<div class="muted" style="font-size:12px;">${T("wallet.recent.empty")}</div>`;
   }
@@ -182,9 +218,10 @@ function _walletRecentTransactionsHTML(walletId, today, T) {
     const type = String(tx?.type || "").toLowerCase();
     const sign = type === "expense" ? "-" : "+";
     const isPaid = tx?.payNow !== false;
-    const statusColor = isPaid ? "rgba(16,185,129,.12)" : "rgba(245,158,11,.14)";
-    const statusBorder = isPaid ? "rgba(16,185,129,.35)" : "rgba(245,158,11,.38)";
-    const statusText = isPaid ? T("wallet.recent.paid") : T("wallet.recent.unpaid");
+    const isUpcoming = !!tx.__tbWalletUpcoming;
+    const statusColor = isUpcoming ? "rgba(59,130,246,.12)" : (isPaid ? "rgba(16,185,129,.12)" : "rgba(245,158,11,.14)");
+    const statusBorder = isUpcoming ? "rgba(59,130,246,.35)" : (isPaid ? "rgba(16,185,129,.35)" : "rgba(245,158,11,.38)");
+    const statusText = isUpcoming ? ((window.tbGetLang && window.tbGetLang() === "en") ? "Upcoming" : "A venir") : (isPaid ? T("wallet.recent.paid") : T("wallet.recent.unpaid"));
     const label = escapeHTML(String(tx?.label || tx?.category || "Transaction"));
     const date = escapeHTML(_walletRecentTxDate(tx));
     const amount = escapeHTML(`${sign}${fmtMoney(Math.abs(Number(tx?.amount) || 0), tx?.currency || "")}`);
