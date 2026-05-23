@@ -4439,11 +4439,15 @@
         font-size:24px!important;
       }
       body.tb-capacitor-app .top-actions{
-        grid-template-columns:58px 70px 54px 38px!important;
-        gap:5px!important;
+        display:flex!important;
+        flex-wrap:nowrap!important;
+        justify-content:flex-start!important;
+        width:auto!important;
+        gap:4px!important;
         max-height:none!important;
         overflow:visible!important;
         align-items:center!important;
+        padding-top:2px!important;
       }
       body.tb-capacitor-app .top-actions > button:nth-of-type(3),
       body.tb-capacitor-app .top-actions > button:nth-of-type(4){
@@ -4464,18 +4468,33 @@
       body.tb-capacitor-app .top-actions .btn,
       body.tb-capacitor-app .top-actions select,
       body.tb-capacitor-app .top-actions input{
-        min-height:30px!important;
-        padding:5px 7px!important;
+        width:auto!important;
+        min-height:28px!important;
+        padding:5px 8px!important;
         border-radius:999px!important;
         font-size:10px!important;
         line-height:1.05!important;
         box-shadow:0 8px 18px rgba(15,23,42,.08)!important;
+        flex:0 0 auto!important;
+        white-space:nowrap!important;
+      }
+      body.tb-capacitor-app .top-actions > button:nth-of-type(1){
+        width:64px!important;
+      }
+      body.tb-capacitor-app .top-actions > button:nth-of-type(2){
+        width:52px!important;
+      }
+      body.tb-capacitor-app .top-actions > button:nth-of-type(5){
+        width:58px!important;
       }
       body.tb-capacitor-app .top-actions .lang-switch{
         display:grid!important;
         grid-template-columns:1fr 1fr!important;
         gap:3px!important;
         padding:2px!important;
+        width:58px!important;
+        min-width:58px!important;
+        flex:0 0 58px!important;
         border-radius:999px!important;
         background:rgba(255,255,255,.64)!important;
       }
@@ -4516,25 +4535,36 @@
       body.tb-capacitor-app.tb-mobile-nav-open .tabs.app-tabs,
       body.tb-capacitor-app.tb-mobile-nav-open .app-tabs,
       body.tb-capacitor-app.tb-mobile-nav-open .tabs{
-        inset:auto 10px calc(74px + env(safe-area-inset-bottom,0px)) 10px!important;
-        max-height:44vh!important;
-        padding:10px!important;
+        inset:auto 12px calc(76px + env(safe-area-inset-bottom,0px)) 12px!important;
+        max-height:38vh!important;
+        padding:12px!important;
         border-radius:22px!important;
-        display:grid!important;
-        grid-template-columns:repeat(3,minmax(0,1fr))!important;
-        gap:7px!important;
+        display:flex!important;
+        flex-direction:row!important;
+        flex-wrap:wrap!important;
+        justify-content:center!important;
+        align-content:flex-start!important;
+        gap:8px!important;
       }
       body.tb-capacitor-app.tb-mobile-nav-open .tabs.app-tabs .tab,
       body.tb-capacitor-app.tb-mobile-nav-open .app-tabs .tab,
       body.tb-capacitor-app.tb-mobile-nav-open .tabs .tab{
-        min-height:32px!important;
-        padding:7px 8px!important;
+        width:auto!important;
+        flex:0 0 auto!important;
+        min-width:0!important;
+        max-width:calc(50vw - 28px)!important;
+        min-height:30px!important;
+        padding:7px 10px!important;
         border-radius:999px!important;
         font-size:10px!important;
         gap:5px!important;
         justify-content:center!important;
         text-align:center!important;
+        color:#0f172a!important;
         background:rgba(15,23,42,.045)!important;
+        border:1px solid rgba(15,23,42,.06)!important;
+        box-shadow:0 8px 22px rgba(15,23,42,.08)!important;
+        white-space:nowrap!important;
       }
       body.tb-capacitor-app.tb-mobile-nav-open .tabs.app-tabs .tab::before,
       body.tb-capacitor-app.tb-mobile-nav-open .app-tabs .tab::before,
@@ -4558,6 +4588,20 @@
       body.tb-capacitor-app.tb-mobile-nav-open #tab-sport::before{background:#22c55e!important;box-shadow:0 0 0 3px rgba(34,197,94,.13)!important;}
       body.tb-capacitor-app.tb-mobile-nav-open #tab-help::before{background:#0ea5e9!important;box-shadow:0 0 0 3px rgba(14,165,233,.13)!important;}
       body.tb-capacitor-app.tb-mobile-nav-open #tab-trip::before{background:#ec4899!important;box-shadow:0 0 0 3px rgba(236,72,153,.13)!important;}
+      body.tb-capacitor-app.tb-mobile-nav-open .tabs.app-tabs .tab.active,
+      body.tb-capacitor-app.tb-mobile-nav-open .app-tabs .tab.active,
+      body.tb-capacitor-app.tb-mobile-nav-open .tabs .tab.active{
+        background:linear-gradient(135deg,#111827,#2563eb)!important;
+        color:#fff!important;
+        border-color:rgba(255,255,255,.22)!important;
+        box-shadow:0 12px 30px rgba(37,99,235,.26)!important;
+      }
+      body.tb-capacitor-app.tb-mobile-nav-open .tabs.app-tabs .tab.active::before,
+      body.tb-capacitor-app.tb-mobile-nav-open .app-tabs .tab.active::before,
+      body.tb-capacitor-app.tb-mobile-nav-open .tabs .tab.active::before{
+        background:#fff!important;
+        box-shadow:0 0 0 3px rgba(255,255,255,.18)!important;
+      }
       body.tb-capacitor-app.tb-view-dashboard #view-dashboard{
         gap:10px!important;
       }
@@ -4622,6 +4666,29 @@
       body.tb-capacitor-app.tb-view-dashboard .kpi-mini-grid > div:nth-child(3),
       body.tb-capacitor-app.tb-view-dashboard .kpi-mini-grid > div:nth-child(4){
         grid-column:1 / -1!important;
+      }
+      body.tb-capacitor-app.tb-view-dashboard .kpi-mini-grid > div:nth-child(5){
+        grid-column:1 / -1!important;
+      }
+      body.tb-capacitor-app.tb-view-dashboard .kpi-mini-grid > div:nth-child(5) > div:nth-child(2){
+        display:grid!important;
+        grid-template-columns:1fr 1fr!important;
+        gap:8px!important;
+        align-items:center!important;
+      }
+      body.tb-capacitor-app.tb-view-dashboard .kpi-mini-grid > div:nth-child(5) input,
+      body.tb-capacitor-app.tb-view-dashboard .kpi-mini-grid > div:nth-child(5) select,
+      body.tb-capacitor-app.tb-view-dashboard .kpi-mini-grid > div:nth-child(5) button{
+        width:100%!important;
+        min-height:36px!important;
+        padding:7px 9px!important;
+        border-radius:13px!important;
+        font-size:12px!important;
+      }
+      body.tb-capacitor-app.tb-view-dashboard .kpi-mini-grid > div:nth-child(5) button{
+        grid-column:1 / -1!important;
+        width:44px!important;
+        justify-self:center!important;
       }
       body.tb-capacitor-app.tb-view-dashboard #kpis-container .muted{
         font-size:11px!important;
