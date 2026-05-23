@@ -37,8 +37,9 @@ export function registerPwa() {
 
   const updateOnlineState = () => {
     try {
-      const appOffline = (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode())
-        || (navigator && navigator.onLine === false);
+      const networkOffline = !!(navigator && navigator.onLine === false);
+      const restoredOffline = !!document.documentElement.classList.contains("tb-offline-restored");
+      const appOffline = networkOffline || restoredOffline;
       document.documentElement.classList.toggle("tb-offline", !!appOffline);
       let badge = document.getElementById("tb-offline-badge");
       if (!badge) {
@@ -70,8 +71,8 @@ export function registerPwa() {
       if (appOffline) {
         offlineBadgeTimer = setTimeout(() => {
           try {
-            const stillOffline = (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode())
-              || (navigator && navigator.onLine === false);
+            const stillOffline = !!(navigator && navigator.onLine === false)
+              || !!document.documentElement.classList.contains("tb-offline-restored");
             badge.style.display = stillOffline ? "block" : "none";
           } catch (_) {}
         }, 1800);
@@ -81,11 +82,46 @@ export function registerPwa() {
     } catch (_) {}
   };
 
+  const ensureMobileNav = () => {
+    try {
+      if (document.getElementById("tb-mobile-nav-toggle")) return;
+      const header = document.querySelector("header");
+      const tabs = document.querySelector(".tabs, .app-tabs");
+      if (!header || !tabs) return;
+      const btn = document.createElement("button");
+      btn.id = "tb-mobile-nav-toggle";
+      btn.className = "btn";
+      btn.type = "button";
+      btn.setAttribute("aria-label", "Menu");
+      btn.setAttribute("aria-expanded", "false");
+      btn.innerHTML = '<span></span><span></span><span></span>';
+      btn.addEventListener("click", () => {
+        const open = !document.body.classList.contains("tb-mobile-nav-open");
+        document.body.classList.toggle("tb-mobile-nav-open", open);
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      tabs.addEventListener("click", (ev) => {
+        if (ev.target && ev.target.closest && ev.target.closest(".tab")) {
+          document.body.classList.remove("tb-mobile-nav-open");
+          btn.setAttribute("aria-expanded", "false");
+        }
+      });
+      header.appendChild(btn);
+    } catch (_) {}
+  };
+
   window.addEventListener("online", updateOnlineState);
   window.addEventListener("offline", updateOnlineState);
   window.addEventListener("tb:offline_state_changed", updateOnlineState);
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", updateOnlineState);
-  else updateOnlineState();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      updateOnlineState();
+      ensureMobileNav();
+    });
+  } else {
+    updateOnlineState();
+    ensureMobileNav();
+  }
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
