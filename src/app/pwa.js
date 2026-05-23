@@ -106,6 +106,13 @@ export function registerPwa() {
           btn.setAttribute("aria-expanded", "false");
         }
       });
+      document.addEventListener("click", (ev) => {
+        const target = ev.target;
+        if (!document.body.classList.contains("tb-mobile-nav-open")) return;
+        if (target && target.closest && (target.closest("#tb-mobile-nav-toggle") || target.closest(".tabs, .app-tabs"))) return;
+        document.body.classList.remove("tb-mobile-nav-open");
+        btn.setAttribute("aria-expanded", "false");
+      });
       header.appendChild(btn);
     } catch (_) {}
   };

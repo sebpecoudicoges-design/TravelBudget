@@ -3228,23 +3228,24 @@
       .tabs,
       .app-tabs{
         position:fixed;
-        top:76px;
+        top:calc(76px + env(safe-area-inset-top, 0px));
         right:10px;
-        left:auto;
+        left:10px;
         bottom:auto;
         z-index:120;
-        width:min(260px, calc(100vw - 20px));
-        max-height:calc(100vh - 96px);
+        width:auto;
+        max-width:none;
+        max-height:calc(100vh - 104px - env(safe-area-inset-top, 0px));
         display:flex !important;
         flex-direction:column;
         flex-wrap:nowrap !important;
-        gap:7px !important;
+        gap:8px !important;
         margin:0 !important;
-        padding:10px !important;
+        padding:12px !important;
         overflow:auto;
         background:rgba(15,23,42,.92);
         border:1px solid rgba(255,255,255,.12);
-        border-radius:16px;
+        border-radius:18px;
         box-shadow:0 18px 44px rgba(0,0,0,.34);
         backdrop-filter:blur(14px);
         -webkit-overflow-scrolling:touch;
@@ -3259,22 +3260,34 @@
         pointer-events:auto;
         transform:translateY(0) scale(1);
       }
-      .tab,
-      .app-tabs .tab{
+      body.tb-mobile-nav-open{
+        overflow:hidden;
+      }
+      html body .tabs .tab,
+      html body .app-tabs .tab{
         flex:0 0 auto;
         width:100%;
-        min-height:42px;
-        padding:8px 10px !important;
+        min-height:46px;
+        display:flex;
+        align-items:center;
+        justify-content:flex-start;
+        padding:10px 12px !important;
         border-radius:12px !important;
-        font-size:12px !important;
+        border:1px solid rgba(255,255,255,.12) !important;
+        font-size:13px !important;
+        font-weight:850 !important;
         text-align:left;
-        color:#fff;
+        color:#f8fafc !important;
         background:rgba(255,255,255,.10) !important;
         box-shadow:none !important;
+        white-space:normal;
+        line-height:1.2;
       }
-      .tab.active,
-      .app-tabs .tab.active{
+      html body .tabs .tab.active,
+      html body .app-tabs .tab.active{
         background:var(--accent) !important;
+        color:#fff !important;
+        border-color:rgba(255,255,255,.20) !important;
         outline:0;
       }
       #tb-mobile-nav-toggle{

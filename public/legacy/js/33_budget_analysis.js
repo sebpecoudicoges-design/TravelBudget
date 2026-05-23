@@ -1154,6 +1154,21 @@ categoryTxMap, subcategoryTxMap
     const deltaReferencePct = signedPct(model.projection, model.totalReferencePeriod);
     const deltaBudgetTone = deltaBudgetPct > 0 ? _themeBad() : (deltaBudgetPct < 0 ? _themeGood() : _themeMuted());
     const deltaReferenceTone = deltaReferencePct > 0 ? _themeBad() : (deltaReferencePct < 0 ? _themeGood() : _themeMuted());
+    const deltaBudgetAmount = _safeNum(model.projection) - _safeNum(model.totalBudget);
+    const deltaReferenceAmount = _safeNum(model.projection) - _safeNum(model.totalReferencePeriod);
+    const formatSignedPct = (value) => {
+      const pct = Number(value) || 0;
+      const abs = Math.abs(pct);
+      const decimals = abs > 0 && abs < 10 ? 1 : 0;
+      const rounded = Number(pct.toFixed(decimals));
+      const prefix = rounded > 0 ? '+' : '';
+      return `${prefix}${rounded.toFixed(decimals).replace('.', ',')} %`;
+    };
+    const deltaAmountText = (amount, positiveLabel, negativeLabel, neutralLabel) => {
+      const value = _safeNum(amount);
+      if (Math.abs(value) < 0.005) return `${neutralLabel} : ${_fmtMoney(0, model.base)}`;
+      return `${value > 0 ? positiveLabel : negativeLabel} : ${_fmtMoney(Math.abs(value), model.base)}`;
+    };
     const isEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
     const trA = (fr, en) => isEn ? en : fr;
     const dayWord = trA('jours', 'days');
@@ -1264,11 +1279,13 @@ categoryTxMap, subcategoryTxMap
         <div style="position:relative; z-index:1; display:flex; flex-direction:column; gap:12px;">
           <div style="padding:12px 14px; border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.38)); border:1px solid rgba(255,255,255,.78); box-shadow:inset 0 1px 0 rgba(255,255,255,.78);">
             <div style="font-size:12px; color:rgba(15,23,42,.58);">${escapeHTML(trA('Vs budget app', 'Vs app budget'))}</div>
-            <div style="margin-top:4px; font-size:24px; font-weight:800; color:${escapeHTML(deltaBudgetTone)};">${deltaBudgetPct >= 0 ? '+' : ''}${deltaBudgetPct.toFixed(0)} %</div>
+            <div style="margin-top:4px; font-size:24px; font-weight:800; color:${escapeHTML(deltaBudgetTone)};">${escapeHTML(formatSignedPct(deltaBudgetPct))}</div>
+            <div style="margin-top:4px; font-size:12px; font-weight:750; color:rgba(15,23,42,.62);">${escapeHTML(deltaAmountText(deltaBudgetAmount, trA('Dépassement', 'Over budget'), trA('Économisé', 'Saved'), trA('Écart', 'Gap')))}</div>
           </div>
           <div style="padding:12px 14px; border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.38)); border:1px solid rgba(255,255,255,.78); box-shadow:inset 0 1px 0 rgba(255,255,255,.78);">
             <div style="font-size:12px; color:rgba(15,23,42,.58);">${escapeHTML(trA('Vs référence pays', 'Vs country reference'))}</div>
-            <div style="margin-top:4px; font-size:24px; font-weight:800; color:${escapeHTML(deltaReferenceTone)};">${deltaReferencePct >= 0 ? '+' : ''}${deltaReferencePct.toFixed(0)} %</div>
+            <div style="margin-top:4px; font-size:24px; font-weight:800; color:${escapeHTML(deltaReferenceTone)};">${escapeHTML(formatSignedPct(deltaReferencePct))}</div>
+            <div style="margin-top:4px; font-size:12px; font-weight:750; color:rgba(15,23,42,.62);">${escapeHTML(deltaAmountText(deltaReferenceAmount, trA('Au-dessus', 'Above'), trA('Sous référence', 'Below reference'), trA('Écart', 'Gap')))}</div>
           </div>
         </div>
       </div>`;
