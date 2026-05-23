@@ -4408,13 +4408,13 @@ try {
       ? `<div class="muted" style="margin:4px 0 10px 0;">${escapeHTML(_tripT("trip.expense.edit_hint"))}</div>`
       : ``;
     const body = `
-      <div class="row">
+      <div class="row trip-expense-row trip-expense-row--payer">
         <div class="field" style="min-width:220px;">
           <label>${escapeHTML(_tripT("trip.expense.paid_by"))}</label>
           <select id="trip-exp-paidby">${memberOptions}</select>
         </div>
       </div>
-      <div class="row">
+      <div class="row trip-expense-row trip-expense-row--meta">
         <div class="field" style="min-width:220px;">
           <label>${escapeHTML(_tripT("trip.expense.wallet"))}</label>
           <select id="trip-exp-wallet">
@@ -4432,15 +4432,8 @@ try {
           <label>${escapeHTML(_tripT("trip.expense.subcategory"))}</label>
           <select id="trip-exp-subcategory"></select>
         </div>
-        <div class="field" style="min-width:180px;">
-          <label>${escapeHTML(_tripT("trip.expense.out_budget"))}</label>
-          <select id="trip-exp-out">
-            <option value="no">Non</option>
-            <option value="yes">Oui</option>
-          </select>
-        </div>
       </div>
-      <div class="row">
+      <div class="row trip-expense-row trip-expense-row--amount">
         <div class="field" style="flex:1;">
           <label>${escapeHTML(_tripT("trip.expense.label"))}</label>
           <input id="trip-exp-label" placeholder="${escapeHTML(_tripT("trip.expense.label_placeholder"))}" value="${escapeHTML(editingDraft?.label || "")}" />
@@ -4457,21 +4450,33 @@ try {
           <div id="trip-exp-currency-help" class="muted" style="font-size:12px; margin-top:4px;"></div>
         </div>
       </div>
-      <div class="row">
+      <div class="row trip-expense-row trip-expense-row--dates">
         <div class="field">
           <label>${escapeHTML(_tripT("trip.expense.cash_date"))}</label>
           <input id="trip-exp-date" type="date" value="${escapeHTML(editingDraft?.date || toLocalISODate(new Date()))}" />
         </div>
-        <div class="field">
-          <label>${escapeHTML(_tripT("trip.expense.budget_start"))}</label>
-          <input id="trip-exp-budget-start" type="date" value="${escapeHTML(editingDraft?.budgetDateStart || editingDraft?.date || toLocalISODate(new Date()))}" />
-        </div>
-        <div class="field">
-          <label>${escapeHTML(_tripT("trip.expense.budget_end"))}</label>
-          <input id="trip-exp-budget-end" type="date" value="${escapeHTML(editingDraft?.budgetDateEnd || editingDraft?.budgetDateStart || editingDraft?.date || toLocalISODate(new Date()))}" />
-        </div>
       </div>
-      <div class="row" style="align-items:flex-end; gap:12px; margin-top:6px;">
+      <details class="trip-expense-advanced" ${modal ? "" : "open"}>
+        <summary>${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Advanced" : "Avance")}</summary>
+        <div class="row trip-expense-row trip-expense-row--advanced">
+          <div class="field" style="min-width:180px;">
+            <label>${escapeHTML(_tripT("trip.expense.out_budget"))}</label>
+            <select id="trip-exp-out">
+              <option value="no">Non</option>
+              <option value="yes">Oui</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>${escapeHTML(_tripT("trip.expense.budget_start"))}</label>
+            <input id="trip-exp-budget-start" type="date" value="${escapeHTML(editingDraft?.budgetDateStart || editingDraft?.date || toLocalISODate(new Date()))}" />
+          </div>
+          <div class="field">
+            <label>${escapeHTML(_tripT("trip.expense.budget_end"))}</label>
+            <input id="trip-exp-budget-end" type="date" value="${escapeHTML(editingDraft?.budgetDateEnd || editingDraft?.budgetDateStart || editingDraft?.date || toLocalISODate(new Date()))}" />
+          </div>
+        </div>
+      </details>
+      <div class="row trip-expense-row trip-expense-row--split" style="align-items:flex-end; gap:12px; margin-top:6px;">
         <div class="field" style="min-width:220px;">
           <label>${escapeHTML(_tripT("trip.expense.split"))}</label>
           <select id="trip-split-mode">
@@ -4484,7 +4489,7 @@ try {
       <div id="trip-split-participants-box" style="margin-top:6px;"></div>
 <div id="trip-split-box" style="margin-top:6px;"></div>
       <div class="muted" style="margin-top:6px;">${escapeHTML(_tripT("trip.expense.budget_hint"))}</div>
-      <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
+      <div class="row trip-expense-row trip-expense-actions-row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
         ${editingExpenseId ? `<button class="btn" type="button" id="trip-cancel-edit-exp">${escapeHTML(_tripT("trip.expense.cancel_edit"))}</button>` : ``}
         <button class="btn primary" id="trip-add-exp" ${canWrite ? "" : "disabled"} ${trip ? "" : "disabled"}>${escapeHTML(editingExpenseId ? _tripT("trip.expense.save_edit") : _tripT("trip.expense.add"))}</button>
       </div>`;
@@ -4495,15 +4500,15 @@ try {
 
     return `
       <div id="trip-edit-exp-overlay" style="position:fixed; inset:0; background:rgba(15,23,42,0.38); z-index:10020; display:flex; align-items:flex-start; justify-content:center; padding:32px 16px; overflow:auto;">
-        <div class="card" style="width:min(920px, 100%); margin:0; box-shadow:0 18px 48px rgba(0,0,0,0.18);">
-          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+        <div class="card trip-expense-sheet" style="width:min(920px, 100%); margin:0; box-shadow:0 18px 48px rgba(0,0,0,0.18);">
+          <div class="trip-expense-sheet-head" style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
             <div>
               <h2 style="margin:0;">${title}</h2>
               ${subtitle}
             </div>
             <button class="btn" type="button" id="trip-edit-exp-close" aria-label="Fermer">✕</button>
           </div>
-          ${body}
+          <div class="trip-expense-sheet-body">${body}</div>
         </div>
       </div>`;
   }
@@ -5458,8 +5463,8 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
         outOfBudget,
         split
       });
-      await _refreshAfterTripMutation("trip:add_expense", { expectExpenseId: createdExpenseId });
       tripState.addExpenseOpen = false;
+      await _refreshAfterTripMutation("trip:add_expense", { expectExpenseId: createdExpenseId });
       toastOk("Dépense ajoutée.");
     }
   } catch (e) {

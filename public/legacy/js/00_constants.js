@@ -1,4 +1,4 @@
-window.TB_VERSION = window.TB_VERSION || "9.7.9";
+window.TB_VERSION = window.TB_VERSION || "9.8.0";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
 window.tbApplyVersionLabels = function tbApplyVersionLabels(root) {

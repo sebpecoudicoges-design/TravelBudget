@@ -5299,7 +5299,11 @@
         border-radius:22px!important;
         padding:12px!important;
       }
-      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay > .card > div:first-child{
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-sheet{
+        display:flex!important;
+        flex-direction:column!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-sheet-head{
         position:sticky!important;
         top:-12px!important;
         z-index:2!important;
@@ -5308,11 +5312,156 @@
         background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,255,255,.90))!important;
         border-bottom:1px solid rgba(15,23,42,.06)!important;
       }
+      body.theme-dark.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-sheet-head{
+        background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(15,23,42,.90))!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-sheet-head h2{
+        font-size:18px!important;
+        line-height:1.08!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-sheet-body{
+        display:flex!important;
+        flex-direction:column!important;
+        gap:8px!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row{
+        display:grid!important;
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+        gap:8px!important;
+        margin:0!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row--payer,
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row--split{
+        grid-template-columns:1fr!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row--meta{
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row--amount{
+        grid-template-columns:minmax(0,1fr) minmax(86px,.42fr) minmax(92px,.46fr)!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row--amount .field:has(#trip-exp-label){
+        grid-column:1 / -1!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row--dates{
+        grid-template-columns:minmax(0,1fr)!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row--dates input{
+        font-size:11px!important;
+        padding-left:7px!important;
+        padding-right:6px!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-advanced{
+        border:1px solid rgba(15,23,42,.07)!important;
+        border-radius:16px!important;
+        padding:0!important;
+        background:rgba(248,250,252,.56)!important;
+        overflow:hidden!important;
+      }
+      body.theme-dark.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-advanced{
+        background:rgba(15,23,42,.34)!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-advanced summary{
+        min-height:38px!important;
+        display:flex!important;
+        align-items:center!important;
+        justify-content:space-between!important;
+        padding:8px 10px!important;
+        cursor:pointer!important;
+        list-style:none!important;
+        font-size:12px!important;
+        font-weight:900!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-advanced summary::-webkit-details-marker{
+        display:none!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-advanced summary::after{
+        content:"+"!important;
+        display:inline-grid!important;
+        place-items:center!important;
+        width:22px!important;
+        height:22px!important;
+        border-radius:999px!important;
+        background:rgba(37,99,235,.10)!important;
+        color:#2563eb!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-advanced[open] summary::after{
+        content:"-"!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row--advanced{
+        grid-template-columns:repeat(3,minmax(0,1fr))!important;
+        padding:0 10px 10px!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay #trip-exp-currency-help{
+        display:none!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay #trip-split-participants-box{
+        padding:9px!important;
+        border:1px solid rgba(15,23,42,.07)!important;
+        border-radius:16px!important;
+        background:rgba(248,250,252,.70)!important;
+      }
+      body.theme-dark.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay #trip-split-participants-box{
+        background:rgba(15,23,42,.42)!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay #trip-split-participants-box > div:first-child{
+        margin-bottom:5px!important;
+        font-size:10px!important;
+        text-transform:uppercase!important;
+        letter-spacing:.04em!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay #trip-split-participants-box label{
+        padding:5px 8px!important;
+        gap:5px!important;
+        font-size:11px!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay #trip-split-participants-box input[type="checkbox"]{
+        width:15px!important;
+        height:15px!important;
+        min-height:15px!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay #trip-split-participants-box .muted:last-child{
+        display:none!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay #trip-split-box table{
+        font-size:11px!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-actions-row{
+        position:sticky!important;
+        bottom:-12px!important;
+        z-index:2!important;
+        grid-template-columns:1fr!important;
+        margin:2px -12px -12px!important;
+        padding:12px!important;
+        background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.96) 34%,rgba(255,255,255,.98))!important;
+        border-top:1px solid rgba(15,23,42,.06)!important;
+      }
+      body.theme-dark.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-actions-row{
+        background:linear-gradient(180deg,rgba(15,23,42,0),rgba(15,23,42,.94) 34%,rgba(15,23,42,.98))!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-actions-row .btn{
+        width:100%!important;
+        justify-content:center!important;
+        min-height:42px!important;
+        font-size:13px!important;
+      }
       body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-close{
         min-width:36px!important;
         width:36px!important;
         height:36px!important;
         padding:0!important;
+      }
+      @media (max-width:380px){
+        body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay{
+          padding-left:7px!important;
+          padding-right:7px!important;
+        }
+        body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row--meta,
+        body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row--amount,
+        body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row--dates,
+        body.tb-capacitor-app[data-tb-view="trip"] #trip-edit-exp-overlay .trip-expense-row--advanced{
+          grid-template-columns:1fr!important;
+        }
       }
       body.tb-capacitor-app #overlay{
         z-index:100010!important;
