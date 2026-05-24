@@ -1,0 +1,191 @@
+/* =========================
+   Offline mutation queue V2
+   - Minimal durable queue for safe offline writes.
+   - V2 scope: new transactions first; sport keeps its local history queue.
+   ========================= */
+(function () {
+  const QUEUE_VERSION = 2;
+  const KEY_PREFIX = "travelbudget_offline_queue_v2";
+  let syncing = false;
+
+  function uid() {
+    try {
+      const u = (typeof sbUser !== "undefined" && sbUser) ? sbUser : (window.sbUser || null);
+      return String(u?.id || u?.user?.id || "").trim();
+    } catch (_) {
+      try { return String(window.sbUser?.id || window.sbUser?.user?.id || "").trim(); } catch (__) { return ""; }
+    }
+  }
+
+  function key() {
+    return `${KEY_PREFIX}_${uid() || "anon"}`;
+  }
+
+  function nowISO() {
+    try { return new Date().toISOString(); } catch (_) { return ""; }
+  }
+
+  function safeRead() {
+    try {
+      const payload = JSON.parse(localStorage.getItem(key()) || "null");
+      if (!payload || !Array.isArray(payload.items)) return [];
+      return payload.items.filter(Boolean);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function safeWrite(items) {
+    try {
+      localStorage.setItem(key(), JSON.stringify({
+        version: QUEUE_VERSION,
+        savedAt: nowISO(),
+        items: Array.isArray(items) ? items : [],
+      }));
+      dispatchChanged();
+      return true;
+    } catch (e) {
+      console.warn("[OfflineQueue] write failed", e?.message || e);
+      return false;
+    }
+  }
+
+  function dispatchChanged(extra) {
+    try {
+      window.dispatchEvent(new CustomEvent("tb:offline_queue_changed", {
+        detail: Object.assign({ count: safeRead().filter((x) => x.status !== "done").length }, extra || {}),
+      }));
+    } catch (_) {}
+  }
+
+  function message(fr, en) {
+    try {
+      const lang = String(window.__tbLang || localStorage.getItem("tb_lang_v1") || navigator.language || "fr").toLowerCase();
+      return lang.startsWith("en") ? en : fr;
+    } catch (_) {
+      return fr;
+    }
+  }
+
+  function toastInfo(text) {
+    try {
+      if (typeof window.toastOk === "function") window.toastOk(text);
+      else if (typeof window.toastWarn === "function") window.toastWarn(text);
+      else console.info(text);
+    } catch (_) {}
+  }
+
+  function makeId(kind) {
+    return `oq_${String(kind || "item").replace(/[^a-z0-9_-]/gi, "_")}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  }
+
+  function enqueue(kind, payload, meta) {
+    const items = safeRead();
+    const item = {
+      id: makeId(kind),
+      kind: String(kind || "unknown"),
+      status: "pending",
+      attempts: 0,
+      createdAt: nowISO(),
+      updatedAt: nowISO(),
+      payload: payload || {},
+      meta: meta || {},
+    };
+    items.push(item);
+    safeWrite(items);
+    toastInfo(message("Action enregistree hors ligne. Synchro au retour reseau.", "Saved offline. It will sync when the connection returns."));
+    return item;
+  }
+
+  function remove(id) {
+    const items = safeRead().filter((item) => String(item.id) !== String(id));
+    safeWrite(items);
+  }
+
+  function count() {
+    return safeRead().filter((item) => item.status !== "done").length;
+  }
+
+  function pending() {
+    return safeRead().filter((item) => item.status !== "done");
+  }
+
+  async function runItem(item) {
+    if (!item || item.status === "done") return true;
+    if (item.kind === "transaction.apply_v2") {
+      const rpcName = item.payload?.rpcName || window.TB_CONST?.RPCS?.apply_transaction_v2 || "apply_transaction_v2";
+      const args = item.payload?.args || {};
+      if (!window.sb || typeof window.sb.rpc !== "function") throw new Error("Supabase indisponible");
+      const { error } = await window.sb.rpc(rpcName, args);
+      if (error) throw error;
+      return true;
+    }
+    if (item.kind === "sport.sync_local") {
+      if (typeof window.tbSportSyncLocalWorkouts === "function") {
+        await window.tbSportSyncLocalWorkouts();
+      }
+      return true;
+    }
+    throw new Error(`Type de queue inconnu: ${item.kind}`);
+  }
+
+  async function sync(reason) {
+    if (syncing) return { ok: false, skipped: "already-syncing" };
+    try {
+      if (typeof window.tbShouldUseOfflineMode === "function" && await window.tbShouldUseOfflineMode(`offline-queue:${reason || "sync"}`)) {
+        return { ok: false, skipped: "offline" };
+      }
+    } catch (_) {
+      return { ok: false, skipped: "offline-check" };
+    }
+    const items = safeRead();
+    const todo = items.filter((item) => item.status !== "done");
+    if (!todo.length) return { ok: true, synced: 0 };
+
+    syncing = true;
+    let synced = 0;
+    try {
+      for (const item of todo) {
+        try {
+          item.status = "syncing";
+          item.attempts = Number(item.attempts || 0) + 1;
+          item.updatedAt = nowISO();
+          safeWrite(items);
+          await runItem(item);
+          remove(item.id);
+          synced += 1;
+        } catch (e) {
+          item.status = "pending";
+          item.error = e?.message || String(e);
+          item.updatedAt = nowISO();
+          safeWrite(items);
+          throw e;
+        }
+      }
+      if (synced) {
+        toastInfo(message(`${synced} action(s) hors ligne synchronisee(s).`, `${synced} offline action(s) synced.`));
+        try {
+          if (typeof window.refreshFromServer === "function") await window.refreshFromServer({ force: true });
+        } catch (_) {}
+      }
+      return { ok: true, synced };
+    } finally {
+      syncing = false;
+      dispatchChanged({ synced });
+    }
+  }
+
+  window.tbOfflineQueueEnqueue = enqueue;
+  window.tbOfflineQueueSync = sync;
+  window.tbOfflineQueueCount = count;
+  window.tbOfflineQueuePending = pending;
+
+  window.addEventListener("online", () => {
+    setTimeout(() => { sync("online").catch((e) => console.warn("[OfflineQueue] sync failed", e?.message || e)); }, 1200);
+  });
+  window.addEventListener("tb:offline_state_changed", (ev) => {
+    if (ev?.detail && ev.detail.offline === false) {
+      setTimeout(() => { sync("state-online").catch((e) => console.warn("[OfflineQueue] sync failed", e?.message || e)); }, 800);
+    }
+  });
+})();

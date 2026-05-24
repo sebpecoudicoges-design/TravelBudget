@@ -15,6 +15,7 @@ registerPwa();
 const LEGACY_SCRIPTS = [
   '/legacy/js/00_constants.js',
   '/legacy/js/00_offline.js',
+  '/legacy/js/00_offline_queue.js',
   '/legacy/js/00_i18n.js',
   '/legacy/js/00_perf.js',
   '/legacy/js/98_error_bus.js',

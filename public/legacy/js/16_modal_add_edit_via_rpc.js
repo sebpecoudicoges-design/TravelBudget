@@ -435,6 +435,52 @@ function _setTxModalReadOnly(isReadOnly, reason) {
 
 let _savingTx = false;
 
+function _txAddOptimisticOfflineRow(core, rpcArgs) {
+  try {
+    const tempId = rpcArgs?.p_idempotency_key || `offline_tx_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const wallet = (state.wallets || []).find((w) => String(w.id) === String(core.walletId));
+    const row = {
+      id: tempId,
+      localOnly: true,
+      offlinePending: true,
+      walletId: core.walletId,
+      wallet_id: core.walletId,
+      walletName: wallet?.name || "",
+      wallet_name: wallet?.name || "",
+      type: core.type,
+      amount: Number(core.amount) || 0,
+      currency: core.currency,
+      category: core.category,
+      subcategory: core.subcategory || "",
+      label: core.label,
+      dateStart: core.cashDate || core.dateStart,
+      date_start: core.cashDate || core.dateStart,
+      dateEnd: core.cashDate || core.dateEnd || core.dateStart,
+      date_end: core.cashDate || core.dateEnd || core.dateStart,
+      budgetDateStart: core.budgetDateStart || core.dateStart || core.cashDate,
+      budget_date_start: core.budgetDateStart || core.dateStart || core.cashDate,
+      budgetDateEnd: core.budgetDateEnd || core.dateEnd || core.dateStart || core.cashDate,
+      budget_date_end: core.budgetDateEnd || core.dateEnd || core.dateStart || core.cashDate,
+      payNow: !!core.payNow,
+      pay_now: !!core.payNow,
+      outOfBudget: !!core.outOfBudget,
+      out_of_budget: !!core.outOfBudget,
+      nightCovered: !!core.nightCovered,
+      night_covered: !!core.nightCovered,
+      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    };
+    state.transactions = Array.isArray(state.transactions) ? state.transactions.slice() : [];
+    state.transactions.unshift(row);
+    try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("offline-queue:tx"); } catch (_) {}
+    try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
+    return row;
+  } catch (e) {
+    console.warn("[OfflineQueue] optimistic tx failed", e?.message || e);
+    return null;
+  }
+}
+
 async function _findLikelyCreatedTxId({ walletId, type, amount, start, end, label }) {
   try {
     const { data, error } = await sb
@@ -916,35 +962,55 @@ async function saveModal() {
           }
         }
 
-        const { data, error } = await tbRpcWithRetry(
-          TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2",
-          _txBuildApplyV2Args({
-            walletId,
-            type,
+        const coreArgs = {
+          walletId,
+          type,
+          label,
+          amount,
+          currency: wallet.currency,
+          category,
+          subcategory,
+          cashDate,
+          dateStart: budgetStart,
+          dateEnd: budgetEnd,
+          budgetDateStart: budgetStart,
+          budgetDateEnd: budgetEnd,
+          payNow,
+          outOfBudget,
+          nightCovered: !!normalizedTx.nightCovered,
+          affectsBudget: !!normalizedTx.affectsBudget,
+          tripExpenseId: null,
+          tripShareLinkId: null
+        };
+        const rpcArgs = _txBuildApplyV2Args(coreArgs);
+        const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
+          ? await window.tbShouldUseOfflineMode("tx:create")
+          : (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode());
+        if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
+          window.tbOfflineQueueEnqueue("transaction.apply_v2", {
+            rpcName: TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2",
+            args: rpcArgs,
+          }, {
             label,
             amount,
             currency: wallet.currency,
-            category,
-            subcategory,
-            cashDate,
-            dateStart: budgetStart,
-            dateEnd: budgetEnd,
-            budgetDateStart: budgetStart,
-            budgetDateEnd: budgetEnd,
-            payNow,
-            outOfBudget,
-            nightCovered: !!normalizedTx.nightCovered,
-            affectsBudget: !!normalizedTx.affectsBudget,
-            tripExpenseId: null,
-            tripShareLinkId: null
-          })
-        );
-        if (error) throw error;
+            type,
+          });
+          _txAddOptimisticOfflineRow(coreArgs, rpcArgs);
+        } else {
+          const { data, error } = await tbRpcWithRetry(
+            TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2",
+            rpcArgs
+          );
+          if (error) throw error;
+        }
       }
 
       closeModal();
       editingTxId = null;
-      if (typeof window.tbAfterMutationRefresh === "function") await window.tbAfterMutationRefresh("tx:save");
+      if (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) {
+        try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
+      } else if (typeof window.tbAfterMutationRefresh === "function") await window.tbAfterMutationRefresh("tx:save");
       else await refreshFromServer();
       });
     }, editingTxId ? "Mise à jour en cours…" : "Enregistrement en cours…");

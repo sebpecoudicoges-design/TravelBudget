@@ -63,7 +63,10 @@ export function registerPwa() {
         document.body.appendChild(badge);
       }
       const lang = String(window.__tbLang || localStorage.getItem("tb_lang_v1") || navigator.language || "fr").toLowerCase();
-      badge.textContent = lang.startsWith("en") ? "Offline mode - local data" : "Mode hors ligne - donnees locales";
+      const queueCount = typeof window.tbOfflineQueueCount === "function" ? Number(window.tbOfflineQueueCount() || 0) : 0;
+      badge.textContent = queueCount > 0
+        ? (lang.startsWith("en") ? `Offline - ${queueCount} pending sync` : `Hors ligne - ${queueCount} synchro en attente`)
+        : (lang.startsWith("en") ? "Offline mode - local data" : "Mode hors ligne - donnees locales");
       if (offlineBadgeTimer) {
         clearTimeout(offlineBadgeTimer);
         offlineBadgeTimer = null;
@@ -208,6 +211,7 @@ export function registerPwa() {
   window.addEventListener("online", updateOnlineState);
   window.addEventListener("offline", updateOnlineState);
   window.addEventListener("tb:offline_state_changed", updateOnlineState);
+  window.addEventListener("tb:offline_queue_changed", updateOnlineState);
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       markRuntimeMode();
