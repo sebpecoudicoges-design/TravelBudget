@@ -5185,10 +5185,55 @@
       body.tb-capacitor-app[data-tb-view="trip"] #trip-tab-content-recap > div:first-child{
         display:grid!important;
         grid-template-columns:1fr!important;
-        gap:10px!important;
+        gap:8px!important;
       }
       body.tb-capacitor-app[data-tb-view="trip"] #trip-tab-content-recap > div:first-child > div{
         min-width:0!important;
+        padding:10px!important;
+        border:1px solid rgba(15,23,42,.07)!important;
+        border-radius:16px!important;
+        background:rgba(248,250,252,.68)!important;
+      }
+      body.theme-dark.tb-capacitor-app[data-tb-view="trip"] #trip-tab-content-recap > div:first-child > div{
+        background:rgba(15,23,42,.34)!important;
+        border-color:rgba(255,255,255,.08)!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-tab-content-recap h3{
+        font-size:14px!important;
+        margin-bottom:6px!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] .trip-balance-row{
+        align-items:center!important;
+        padding:7px 0!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] .trip-balance-name{
+        min-width:0!important;
+        overflow:hidden!important;
+        text-overflow:ellipsis!important;
+        white-space:nowrap!important;
+        font-size:12px!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] .trip-balance-amount{
+        flex:0 0 auto!important;
+        font-size:13px!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-copy-settlements,
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-share-settlements{
+        min-height:30px!important;
+        padding:6px 9px!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-tab-content-recap .tb-share-row{
+        display:grid!important;
+        grid-template-columns:minmax(0,1fr) auto!important;
+        gap:8px!important;
+        align-items:center!important;
+        padding:6px 0!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] #trip-tab-content-recap .tb-share-row span{
+        min-width:0!important;
+        overflow:hidden!important;
+        text-overflow:ellipsis!important;
+        white-space:nowrap!important;
       }
       body.tb-capacitor-app[data-tb-view="trip"] .trip-analysis-summary{
         display:grid!important;
@@ -5237,13 +5282,37 @@
       }
       body.tb-capacitor-app[data-tb-view="trip"] .trip-history-row{
         display:grid!important;
-        grid-template-columns:1fr!important;
-        gap:8px!important;
-        padding:11px 0!important;
+        grid-template-columns:minmax(0,1fr)!important;
+        gap:9px!important;
+        padding:12px!important;
+        margin:8px 0!important;
+        border:1px solid rgba(15,23,42,.07)!important;
+        border-radius:16px!important;
+        background:rgba(255,255,255,.78)!important;
+        box-shadow:0 10px 22px rgba(15,23,42,.05)!important;
+      }
+      body.theme-dark.tb-capacitor-app[data-tb-view="trip"] .trip-history-row{
+        background:rgba(15,23,42,.40)!important;
+        border-color:rgba(255,255,255,.08)!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] .trip-history-copy{
+        min-width:0!important;
       }
       body.tb-capacitor-app[data-tb-view="trip"] .trip-history-title{
+        display:flex!important;
+        flex-wrap:wrap!important;
+        align-items:center!important;
+        gap:5px!important;
         font-size:13px!important;
-        line-height:1.2!important;
+        line-height:1.18!important;
+        font-weight:900!important;
+        min-width:0!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] .trip-history-participants{
+        display:flex!important;
+        flex-wrap:wrap!important;
+        gap:4px!important;
+        margin-top:5px!important;
       }
       body.tb-capacitor-app[data-tb-view="trip"] .trip-badge,
       body.tb-capacitor-app[data-tb-view="trip"] .trip-participant-pill{
@@ -5251,30 +5320,49 @@
         font-size:9px!important;
       }
       body.tb-capacitor-app[data-tb-view="trip"] .trip-history-actions{
-        display:flex!important;
-        flex-wrap:nowrap!important;
+        display:grid!important;
+        grid-template-columns:repeat(3,minmax(0,1fr))!important;
         gap:6px!important;
-        overflow-x:auto!important;
-        overflow-y:hidden!important;
-        -webkit-overflow-scrolling:touch!important;
-        padding:1px 18px 2px 0!important;
-        scrollbar-width:none!important;
-        mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent)!important;
-      }
-      body.tb-capacitor-app[data-tb-view="trip"] .trip-history-actions::-webkit-scrollbar{
-        display:none!important;
+        overflow:visible!important;
+        padding:0!important;
+        mask-image:none!important;
+        align-items:stretch!important;
       }
       body.tb-capacitor-app[data-tb-view="trip"] .trip-history-actions > *{
-        flex:0 0 auto!important;
+        min-width:0!important;
       }
-      body.tb-capacitor-app[data-tb-view="trip"] .trip-history-actions strong{
+      body.tb-capacitor-app[data-tb-view="trip"] .trip-history-actions .btn{
+        width:100%!important;
+        min-height:31px!important;
+        padding:6px 7px!important;
+        font-size:10px!important;
+        justify-content:center!important;
+        overflow:hidden!important;
+        text-overflow:ellipsis!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] .trip-history-actions .btn.danger{
+        grid-column:auto!important;
+      }
+      body.tb-capacitor-app[data-tb-view="trip"] .trip-history-actions .trip-history-amount{
+        grid-column:1 / -1!important;
+        justify-self:end!important;
         min-height:28px!important;
         display:inline-flex!important;
         align-items:center!important;
         padding:5px 9px!important;
         border-radius:999px!important;
-        background:rgba(15,23,42,.05)!important;
+        background:rgba(37,99,235,.10)!important;
+        color:#0f172a!important;
         font-size:12px!important;
+      }
+      body.theme-dark.tb-capacitor-app[data-tb-view="trip"] .trip-history-actions .trip-history-amount{
+        color:#e5e7eb!important;
+        background:rgba(96,165,250,.16)!important;
+      }
+      @media (max-width:380px){
+        body.tb-capacitor-app[data-tb-view="trip"] .trip-history-actions{
+          grid-template-columns:repeat(2,minmax(0,1fr))!important;
+        }
       }
       body.tb-capacitor-app[data-tb-view="trip"] .tb-assist-btn{
         width:48px!important;

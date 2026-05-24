@@ -4588,9 +4588,9 @@ try {
           const v = m.get(mem.id) || 0;
           const cls = v < -1e-9 ? "bad" : (v > 1e-9 ? "good" : "");
           parts.push(
-            `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
-              <span>${escapeHTML(mem.name)}${mem.isMe ? " (moi)" : ""}</span>
-              <strong class="${cls}">${_fmtMoney(v, cur)}</strong>
+            `<div class="trip-balance-row" style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
+              <span class="trip-balance-name">${escapeHTML(mem.name)}${mem.isMe ? " (moi)" : ""}</span>
+              <strong class="trip-balance-amount ${cls}">${_fmtMoney(v, cur)}</strong>
             </div>`
           );
         }
@@ -4825,7 +4825,7 @@ return `
                 ${participantNames.length ? `<div class="trip-history-participants">${participantNames.map((name) => `<span class="trip-participant-pill">${escapeHTML(name)}</span>`).join('')}</div>` : ''}
               </div>
               <div class="trip-history-actions">
-                <strong>${_fmtMoney(ex.amount, ex.currency)}</strong>
+                <strong class="trip-history-amount">${_fmtMoney(ex.amount, ex.currency)}</strong>
                 ${moveUI}
                 <button class="btn" type="button" data-exp-detail="${ex.id}">Détail</button>
                 <button class="btn" type="button" data-exp-docs="${ex.id}">
