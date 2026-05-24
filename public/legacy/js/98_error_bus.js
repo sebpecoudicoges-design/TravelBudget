@@ -9,6 +9,7 @@
   const LS_KEY = "travelbudget_error_logs_v2";
   const SYNC_LOCK_MS = 20000;
   const _buf = [];
+  const _lastPushByKey = new Map();
   let _syncing = false;
   let _lastSyncAt = 0;
   let _consoleInstalled = false;
@@ -162,6 +163,11 @@
   function push(entry) {
     try {
       const row = _normalizeEntry(entry);
+      const dedupeKey = `${row.type}|${row.severity}|${row.view}|${row.message}`.slice(0, 500);
+      const lastAt = Number(_lastPushByKey.get(dedupeKey) || 0);
+      const nowMs = Date.now();
+      if (lastAt && nowMs - lastAt < 30000) return null;
+      _lastPushByKey.set(dedupeKey, nowMs);
       _buf.push(row);
       while (_buf.length > MAX_MEMORY) _buf.shift();
       const stored = _readStored();
@@ -303,9 +309,14 @@
     const originalError = console.error ? console.error.bind(console) : null;
     console.error = function () {
       try {
+        const msg = Array.from(arguments).map((x) => x && x.message ? x.message : _safeString(x, 1000)).join(" ");
+        if (/Offline mode:\s*Supabase request skipped/i.test(msg)) {
+          if (originalError) return originalError.apply(console, arguments);
+          return undefined;
+        }
         push({
           type: "console.error",
-          message: Array.from(arguments).map((x) => x && x.message ? x.message : _safeString(x, 1000)).join(" "),
+          message: msg,
           details: { args: Array.from(arguments).map((x) => _toPlain(x)) },
         });
       } catch (_) {}

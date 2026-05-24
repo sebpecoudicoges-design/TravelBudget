@@ -14,16 +14,6 @@ function tbSupabaseFetch(input, init) {
   const isProjectRequest = !!url && url.indexOf(SUPABASE_URL) === 0;
   try {
     if (isProjectRequest && typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) {
-      try {
-        if (window.__errorBus && typeof window.__errorBus.push === "function") {
-          window.__errorBus.push({
-            type: "supabase.fetch.skipped_offline",
-            severity: "info",
-            message: "Offline mode: Supabase request skipped",
-            details: { url: url.replace(/\?.*$/, "?...") },
-          });
-        }
-      } catch (_) {}
       return Promise.reject(new TypeError("Offline mode: Supabase request skipped"));
     }
   } catch (_) {}
