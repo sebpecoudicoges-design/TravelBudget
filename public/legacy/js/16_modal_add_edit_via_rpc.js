@@ -1084,7 +1084,7 @@ async function saveModal() {
           p_night_covered: !!normalizedTx.nightCovered,
           // FX snapshot is computed for the transaction date + transaction currency.
           // (Use local variables here; `form` is not in scope.)
-          ..._txBuildFxSnapshotArgs(cashDate, wallet.currency)
+          ..._txBuildFxSnapshotArgs(cashDate, wallet.currency, { skipInteractiveFx: offlineNow })
         };
         if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
           const queueItem = window.tbOfflineQueueEnqueue("transaction.update_v2", {

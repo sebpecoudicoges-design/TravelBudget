@@ -232,6 +232,10 @@
     const rows = _readStored();
     const todo = rows.filter((x) => x && !x.synced).slice(0, 25);
     if (!todo.length) return { ok: true, synced: 0 };
+    if (!String(reason || "").includes("online") && !String(reason || "").includes("diagnostic")) {
+      const looksOffline = todo.some((x) => x && (x.offline === true || x.online === false));
+      if (looksOffline) return { ok: false, skipped: "offline-log-batch" };
+    }
 
     _syncing = true;
     _lastSyncAt = Date.now();

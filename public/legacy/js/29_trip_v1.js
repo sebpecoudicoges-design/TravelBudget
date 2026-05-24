@@ -3219,17 +3219,10 @@ try {
   }
   
   async function _expenseHasBudgetLinks(expenseId) {
-    try {
-      const { data, error } = await sb
-        .from(TB_CONST.TABLES.trip_expense_budget_links)
-        .select("id")
-        .eq("expense_id", expenseId)
-        .limit(1);
-      if (error) return false;
-      return !!(data && data.length);
-    } catch (e) {
-      return false;
-    }
+    const id = String(expenseId || "");
+    if (!id || id.startsWith("local_trip_exp_")) return false;
+    if ((tripState.budgetLinks || []).some((row) => String(row?.expenseId || "") === id && row?.transactionId)) return true;
+    return false;
   }
 
   function _expenseIsWalletLinked(ex) {
@@ -3255,8 +3248,21 @@ try {
     let outOfBudget = false;
     let budgetDateStart = ex.budgetDateStart || ex.date || _isoToday();
     let budgetDateEnd = ex.budgetDateEnd || budgetDateStart || ex.date || _isoToday();
+    const localTx = ex.transactionId
+      ? (Array.isArray(state?.transactions) ? state.transactions : []).find((tx) => String(tx?.id || "") === String(ex.transactionId))
+      : null;
+    if (localTx) {
+      walletId = localTx.walletId || localTx.wallet_id || walletId;
+      category = localTx.category || category;
+      subcategory = localTx.subcategory || subcategory;
+      outOfBudget = (localTx.outOfBudget === true || localTx.out_of_budget === true);
+      budgetDateStart = localTx.budgetDateStart || localTx.budget_date_start || budgetDateStart;
+      budgetDateEnd = localTx.budgetDateEnd || localTx.budget_date_end || budgetDateEnd;
+    }
+    const offline = (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode())
+      || (typeof navigator !== "undefined" && navigator.onLine === false);
     try {
-      const audit = await _fetchExpenseAuditDetails(expenseId);
+      const audit = offline ? null : await _fetchExpenseAuditDetails(expenseId);
       const tx = (audit?.myShareLink ? audit.budgetTransactionsById.get(audit.myShareLink.transactionId) : null)
         || audit?.walletTransaction
         || null;
@@ -3752,7 +3758,7 @@ try {
     return updatedExpenseId;
   }
 
-  async function _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
+  async function _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split, skipDuplicateCheck }) {
   const uid = await _ensureSession();
   const tripId = tripState.activeTripId;
   if (!tripId) return;
@@ -3787,6 +3793,7 @@ try {
     // Duplicate control: if a matching Budget transaction exists, propose linking instead of creating a new one.
       // Duplicate control: if a matching Budget transaction exists, propose linking instead of creating a new one.
       let selectedExistingTransaction = false;
+      if (!skipDuplicateCheck) {
       try {
         const matches = await _findMatchingTransactions({ date, amount: amt, currency: cur });
         if (matches.length) {
@@ -3940,6 +3947,7 @@ try {
       } catch (e) {
         if (selectedExistingTransaction) throw e;
         console.warn("Trip duplicate check failed:", e);
+      }
       }
     }
 
@@ -4416,7 +4424,7 @@ try {
     if (String(payload?.mode || payload?.kind || "").includes("update") || payload?.expenseId) {
       await _updateExpense(Object.assign({ expenseId: payload.expenseId }, form));
     } else {
-      await _addExpense(form);
+      await _addExpense(Object.assign({}, form, { skipDuplicateCheck: true }));
     }
     if (previousTripId && previousTripId !== tripState.activeTripId) {
       tripState.activeTripId = previousTripId;
