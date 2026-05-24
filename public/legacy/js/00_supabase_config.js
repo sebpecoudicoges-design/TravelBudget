@@ -14,6 +14,16 @@ function tbSupabaseFetch(input, init) {
   const isProjectRequest = !!url && url.indexOf(SUPABASE_URL) === 0;
   try {
     if (isProjectRequest && typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) {
+      try {
+        if (window.__errorBus && typeof window.__errorBus.push === "function") {
+          window.__errorBus.push({
+            type: "supabase.fetch.skipped_offline",
+            severity: "info",
+            message: "Offline mode: Supabase request skipped",
+            details: { url: url.replace(/\?.*$/, "?...") },
+          });
+        }
+      } catch (_) {}
       return Promise.reject(new TypeError("Offline mode: Supabase request skipped"));
     }
   } catch (_) {}
@@ -28,6 +38,16 @@ function tbSupabaseFetch(input, init) {
     try {
       if (isProjectRequest && typeof window.tbMarkNetworkUnavailable === "function") {
         window.tbMarkNetworkUnavailable(err?.name || "supabase-fetch-failed");
+      }
+    } catch (_) {}
+    try {
+      if (isProjectRequest && window.__errorBus && typeof window.__errorBus.push === "function") {
+        window.__errorBus.push({
+          type: "supabase.fetch.error",
+          message: err?.message || String(err),
+          error: err,
+          details: { url: url.replace(/\?.*$/, "?...") },
+        });
       }
     } catch (_) {}
     throw err;
