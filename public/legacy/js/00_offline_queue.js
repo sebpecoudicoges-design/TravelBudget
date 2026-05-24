@@ -196,6 +196,35 @@
     return safeRead().filter((item) => item.status !== "done");
   }
 
+  function isPermanentFailure(kind, error) {
+    const k = String(kind || "");
+    const msg = String(error?.message || error || "").toLowerCase();
+    if (!msg) return false;
+    if (k.startsWith("trip.expense")) {
+      return (
+        msg.includes("transactions_trip_expense_unique") ||
+        msg.includes("duplicate key value") ||
+        msg.includes("deja liee") ||
+        msg.includes("déjà liée") ||
+        msg.includes("already linked") ||
+        msg.includes("trip_expenses_transaction_fk") ||
+        msg.includes("violates foreign key constraint") ||
+        msg.includes("le lien avec la transaction") ||
+        msg.includes("ajoute au moins un participant")
+      );
+    }
+    return false;
+  }
+
+  function cleanupItemSideEffects(item) {
+    try {
+      if (String(item?.kind || "").startsWith("trip.expense") && typeof window.tbTripCleanupOfflineOptimistic === "function") {
+        window.tbTripCleanupOfflineOptimistic(item.id);
+      }
+      if (String(item?.kind || "").startsWith("transaction.")) cleanupOptimisticRows(item.id);
+    } catch (_) {}
+  }
+
   function discardFailed(filterKind) {
     const kind = String(filterKind || "").trim();
     const before = safeRead();
@@ -205,12 +234,7 @@
       const match = !kind || String(item.kind || "") === kind || String(item.kind || "").startsWith(kind);
       if (failed && match) {
         removed.push(item);
-        try {
-          if (String(item.kind || "").startsWith("trip.expense") && typeof window.tbTripCleanupOfflineOptimistic === "function") {
-            window.tbTripCleanupOfflineOptimistic(item.id);
-          }
-          if (String(item.kind || "").startsWith("transaction.") && typeof cleanupOptimisticRows === "function") cleanupOptimisticRows(item.id);
-        } catch (_) {}
+        cleanupItemSideEffects(item);
         return false;
       }
       return true;
@@ -294,6 +318,16 @@
           remove(item.id);
           synced += 1;
         } catch (e) {
+          if (isPermanentFailure(item.kind, e)) {
+            item.status = "discarded";
+            item.error = e?.message || String(e);
+            item.updatedAt = nowISO();
+            cleanupItemSideEffects(item);
+            const remaining = safeRead().filter((x) => String(x.id) !== String(item.id));
+            safeWrite(remaining);
+            toastInfo(message("Ancienne action offline Trip ignoree car elle n'est plus rejouable.", "Old Trip offline action skipped because it is no longer replayable."));
+            continue;
+          }
           item.status = "pending";
           item.error = e?.message || String(e);
           item.updatedAt = nowISO();

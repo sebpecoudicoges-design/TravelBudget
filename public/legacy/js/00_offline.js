@@ -29,46 +29,64 @@
 
   function cloneStateForSnapshot() {
     const s = window.state || {};
-    try {
-      return JSON.parse(JSON.stringify(s));
-    } catch (_) {
-      return {
-        travels: s.travels || [],
-        activeTravelId: s.activeTravelId || null,
-        periods: s.periods || [],
-        activePeriodId: s.activePeriodId || null,
-        period: s.period || null,
-        settings: s.settings || [],
-        wallets: s.wallets || [],
-        walletBalances: s.walletBalances || [],
-        transactions: s.transactions || [],
-        recurringRules: s.recurringRules || [],
-        categories: s.categories || [],
-        categorySubcategories: s.categorySubcategories || [],
-        subcategories: s.subcategories || [],
-        budgetSegments: s.budgetSegments || [],
-        segments: s.segments || [],
-        tripGroups: s.tripGroups || [],
-        tripExpenses: s.tripExpenses || [],
-        tripParticipants: s.tripParticipants || [],
-        tripMembers: s.tripMembers || [],
-        tripNetBalances: s.tripNetBalances || [],
-        documents: s.documents || [],
-        documentFolders: s.documentFolders || [],
-        assetDocuments: s.assetDocuments || [],
-        transactionDocuments: s.transactionDocuments || [],
-        tripExpenseDocuments: s.tripExpenseDocuments || [],
-        assets: s.assets || [],
-        assetOwners: s.assetOwners || [],
-        assetEvents: s.assetEvents || [],
-        sportSessions: s.sportSessions || [],
-        sportSessionItems: s.sportSessionItems || [],
-        sportSets: s.sportSets || [],
-        profile: s.profile || null,
-        user: s.user || null,
-        hiddenCategories: s.hiddenCategories || [],
-      };
-    }
+    const slimRows = (rows, limit, mapper) => {
+      const arr = Array.isArray(rows) ? rows : [];
+      return arr.slice(0, limit).map((row) => {
+        const copy = mapper ? mapper(row || {}) : Object.assign({}, row || {});
+        delete copy.media;
+        delete copy.raw;
+        delete copy.raw_text;
+        delete copy.signedUrl;
+        delete copy.signed_url;
+        delete copy.previewUrl;
+        delete copy.preview_url;
+        delete copy.thumbnailUrl;
+        delete copy.thumbnail_url;
+        delete copy.base64;
+        delete copy.blob;
+        return copy;
+      });
+    };
+    return {
+      travels: slimRows(s.travels, 30),
+      activeTravelId: s.activeTravelId || null,
+      periods: slimRows(s.periods, 60),
+      activePeriodId: s.activePeriodId || null,
+      period: s.period || null,
+      settings: slimRows(s.settings, 200),
+      wallets: slimRows(s.wallets, 80),
+      walletBalances: slimRows(s.walletBalances, 100),
+      walletBalanceMap: s.walletBalanceMap || {},
+      transactions: slimRows(s.transactions, 1000),
+      recurringRules: slimRows(s.recurringRules, 200),
+      categories: s.categories || [],
+      categorySubcategories: s.categorySubcategories || [],
+      subcategories: s.subcategories || [],
+      budgetSegments: slimRows(s.budgetSegments, 120),
+      segments: slimRows(s.segments, 120),
+      tripGroups: slimRows(s.tripGroups, 80),
+      tripExpenses: slimRows(s.tripExpenses, 600),
+      tripExpenseShares: slimRows(s.tripExpenseShares, 1600),
+      tripParticipants: slimRows(s.tripParticipants, 200),
+      tripMembers: slimRows(s.tripMembers, 200),
+      tripNetBalances: slimRows(s.tripNetBalances, 300),
+      tripBudgetLinks: slimRows(s.tripBudgetLinks, 600),
+      tripSettlementEvents: slimRows(s.tripSettlementEvents, 500),
+      documents: slimRows(s.documents, 300),
+      documentFolders: slimRows(s.documentFolders, 200),
+      assetDocuments: slimRows(s.assetDocuments, 300),
+      transactionDocuments: slimRows(s.transactionDocuments, 600),
+      tripExpenseDocuments: slimRows(s.tripExpenseDocuments, 600),
+      assets: slimRows(s.assets, 200),
+      assetOwners: slimRows(s.assetOwners, 300),
+      assetEvents: slimRows(s.assetEvents, 500),
+      sportSessions: slimRows(s.sportSessions, 80),
+      sportSessionItems: slimRows(s.sportSessionItems, 400),
+      sportSets: slimRows(s.sportSets, 800),
+      profile: s.profile || null,
+      user: s.user || null,
+      hiddenCategories: s.hiddenCategories || [],
+    };
   }
 
   function saveOfflineSnapshot(reason) {
@@ -81,7 +99,16 @@
         reason: String(reason || "refresh"),
         state: cloneStateForSnapshot(),
       };
-      localStorage.setItem(k, JSON.stringify(payload));
+      const raw = JSON.stringify(payload);
+      try {
+        localStorage.setItem(k, raw);
+      } catch (quotaErr) {
+        payload.state.transactions = (payload.state.transactions || []).slice(0, 400);
+        payload.state.documents = (payload.state.documents || []).slice(0, 100);
+        payload.state.tripExpenses = (payload.state.tripExpenses || []).slice(0, 300);
+        payload.state.tripExpenseShares = (payload.state.tripExpenseShares || []).slice(0, 900);
+        localStorage.setItem(k, JSON.stringify(payload));
+      }
       window.__TB_OFFLINE_SNAPSHOT__ = { savedAt: payload.savedAt, restored: false };
       return true;
     } catch (e) {
