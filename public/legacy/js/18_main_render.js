@@ -16,10 +16,13 @@ function _tbRenderLog() {
 }
 
 
-window.tbRefreshFinancialState = function tbRefreshFinancialState(reason, opts) {
+window.tbRenderDashboardCritical = function tbRenderDashboardCritical(reason, opts) {
   const options = opts || {};
   try {
     if (typeof renderWallets === "function") renderWallets();
+  } catch (_) {}
+  try {
+    if (typeof renderDailyBudget === "function") renderDailyBudget();
   } catch (_) {}
   try {
     if (typeof renderKPI === "function") renderKPI();
@@ -28,6 +31,17 @@ window.tbRefreshFinancialState = function tbRefreshFinancialState(reason, opts) 
     const view = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
     if (options.cashflow !== false && view === "dashboard" && typeof tbRequestCashflowCurveRender === "function") {
       tbRequestCashflowCurveRender(reason || "financialState");
+    }
+  } catch (_) {}
+};
+
+window.tbRefreshFinancialState = function tbRefreshFinancialState(reason, opts) {
+  const options = opts || {};
+  try { window.tbRenderDashboardCritical(reason || "financialState", options); } catch (_) {}
+  try {
+    const view = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
+    if (view === "analysis" && typeof window.tbRequestAnalysisRender === "function") {
+      window.tbRequestAnalysisRender(reason || "financialState");
     }
   } catch (_) {}
 };

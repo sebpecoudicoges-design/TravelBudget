@@ -106,7 +106,7 @@ function _txResolveBaseCurrencyForDate(dateISO) {
   return String(state?.period?.baseCurrency || state?.period?.base_currency || "EUR").toUpperCase();
 }
 
-function _txBuildFxSnapshotArgs(dateISO, txCurrency) {
+function _txBuildFxSnapshotArgs(dateISO, txCurrency, options) {
   const ds = String(dateISO || "").slice(0, 10);
   const txC = (String(txCurrency || "").trim().toUpperCase() || "EUR");
   const baseC = _txResolveBaseCurrencyForDate(ds);
@@ -114,7 +114,7 @@ function _txBuildFxSnapshotArgs(dateISO, txCurrency) {
   // Interactive safeguard: if we can't compute FX because EUR->XXX is missing, ask once now.
   // This is intentionally placed on the write-path to avoid prompting during boot.
   try {
-    if (txC !== baseC && typeof window.tbFxEnsureEurRatesInteractive === "function") {
+    if (!options?.skipInteractiveFx && txC !== baseC && typeof window.tbFxEnsureEurRatesInteractive === "function") {
       const out = window.tbFxEnsureEurRatesInteractive([txC, baseC], `Nécessaire pour convertir ${txC} → ${baseC}`);
       if (out && out.cancelled) {
         throw new Error("Sauvegarde annulée (taux manquant).");
@@ -129,7 +129,19 @@ function _txBuildFxSnapshotArgs(dateISO, txCurrency) {
     throw new Error("fxBuildTxSnapshot() not found (09_fx_snapshot.js not loaded?)");
   }
 
-  const snap = window.fxBuildTxSnapshot(txC, baseC, ds);
+  let snap = null;
+  try {
+    snap = window.fxBuildTxSnapshot(txC, baseC, ds);
+  } catch (e) {
+    if (!options?.skipInteractiveFx) throw e;
+    snap = {
+      fx_rate_snapshot: txC === baseC ? 1 : null,
+      fx_source_snapshot: "offline_pending",
+      fx_snapshot_at: new Date().toISOString(),
+      fx_base_currency_snapshot: baseC,
+      fx_tx_currency_snapshot: txC
+    };
+  }
   return {
     p_fx_rate_snapshot: snap.fx_rate_snapshot,
     p_fx_source_snapshot: snap.fx_source_snapshot,
@@ -147,7 +159,7 @@ function _txBuildApplyV2Args(core, fxOverride) {
   const uid = (window.sbUser && sbUser.id) ? sbUser.id : null;
   const fxDate = fxOverride?.fxDate || core.dateStart;
   const fxCur = fxOverride?.fxCurrency || core.currency;
-  const fxArgs = _txBuildFxSnapshotArgs(fxDate, fxCur);
+  const fxArgs = _txBuildFxSnapshotArgs(fxDate, fxCur, { skipInteractiveFx: !!fxOverride?.skipInteractiveFx });
 
   const cat = String(core.category || "").trim() || (TB_CONST?.CATS?.other || "Autre");
 
@@ -947,8 +959,11 @@ async function saveModal() {
         });
         if (error) throw error;
       } else {
+        const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
+          ? await window.tbShouldUseOfflineMode("tx:create")
+          : (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode());
         // Ensure FX conversion is available for tx currency -> segment/base currency.
-        {
+        if (!offlineNow) {
           const txCur = String(wallet?.currency || "").trim().toUpperCase();
           const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(budgetStart) : null;
           const baseCur = String(seg?.baseCurrency || state?.period?.baseCurrency || "EUR").trim().toUpperCase();
@@ -982,14 +997,12 @@ async function saveModal() {
           tripExpenseId: null,
           tripShareLinkId: null
         };
-        const rpcArgs = _txBuildApplyV2Args(coreArgs);
-        const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
-          ? await window.tbShouldUseOfflineMode("tx:create")
-          : (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode());
+        const rpcArgs = _txBuildApplyV2Args(coreArgs, { skipInteractiveFx: offlineNow });
         if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
           window.tbOfflineQueueEnqueue("transaction.apply_v2", {
             rpcName: TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2",
             args: rpcArgs,
+            coreArgs,
           }, {
             label,
             amount,

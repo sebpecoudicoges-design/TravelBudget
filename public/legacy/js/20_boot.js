@@ -231,7 +231,16 @@ window.onload = async function () {
 
     try {
       if (typeof refreshFromServer === "function") await refreshFromServer({ force: false });
+      try { if (typeof window.tbRenderDashboardCritical === "function") window.tbRenderDashboardCritical("boot:post-refresh", { cashflow: false }); } catch (_) {}
       try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
+      setTimeout(() => {
+        try {
+          const view = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
+          if (view !== "dashboard") return;
+          if (typeof window.tbRenderDashboardCritical === "function") window.tbRenderDashboardCritical("boot:settle", { cashflow: false });
+          if (typeof renderAll === "function") renderAll();
+        } catch (_) {}
+      }, 250);
     } catch (e) {
       // Avoid hard crash during boot; refreshFromServer already logs/alerts.
       console.warn("[Boot] refreshFromServer failed:", e?.message || e);

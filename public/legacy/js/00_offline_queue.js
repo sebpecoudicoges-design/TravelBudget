@@ -114,7 +114,10 @@
     if (!item || item.status === "done") return true;
     if (item.kind === "transaction.apply_v2") {
       const rpcName = item.payload?.rpcName || window.TB_CONST?.RPCS?.apply_transaction_v2 || "apply_transaction_v2";
-      const args = item.payload?.args || {};
+      let args = item.payload?.args || {};
+      if (item.payload?.coreArgs && typeof window._txBuildApplyV2Args === "function") {
+        args = window._txBuildApplyV2Args(item.payload.coreArgs, { skipInteractiveFx: false });
+      }
       if (!window.sb || typeof window.sb.rpc !== "function") throw new Error("Supabase indisponible");
       const { error } = await window.sb.rpc(rpcName, args);
       if (error) throw error;

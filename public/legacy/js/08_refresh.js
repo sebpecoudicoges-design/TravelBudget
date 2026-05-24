@@ -165,17 +165,15 @@ async function _runRefreshFromServer(opts) {
     const _dataPromise = loadFromSupabase(options);
     await Promise.all([_dataPromise, _fxPromise]);
 
-    try {
-      const currentView = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
-      if (currentView !== "dashboard" && typeof window.tbRefreshFinancialState === "function") {
-        window.tbRefreshFinancialState("refreshFromServer", { cashflow: false });
-      }
-    } catch (_) {}
-
     // FX: apply cached daily rates to current period base
     if (typeof tbFxApplyToState === "function") {
       try { tbFxApplyToState({ allowPrompt: true }); } catch (_) {}
     }
+    try {
+      if (typeof window.tbRefreshFinancialState === "function") {
+        window.tbRefreshFinancialState("refreshFromServer", { cashflow: false });
+      }
+    } catch (_) {}
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("supabase:load"); } catch (_) {}
     // FX snapshots: run in background (do not block refresh/boot)
     if (typeof ensureTxFxSnapshotsDeferred === "function") {
