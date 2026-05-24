@@ -355,6 +355,7 @@
           <button class="btn primary" type="button" data-diag-sync-logs>${_esc(tx("Sync logs", "Sync logs"))}</button>
           <button class="btn" type="button" data-diag-sync-queue>${_esc(tx("Sync actions", "Sync actions"))}</button>
           <button class="btn" type="button" data-diag-clear-failed>${_esc(tx("Retirer erreurs action", "Remove failed actions"))}</button>
+          <button class="btn danger" type="button" data-diag-clear-trip>${_esc(tx("Vider conflits Trip", "Clear Trip conflicts"))}</button>
           <button class="btn" type="button" data-diag-export>${_esc(tx("Exporter logs", "Export logs"))}</button>
           <button class="btn" type="button" data-diag-clear>${_esc(tx("Vider logs locaux", "Clear local logs"))}</button>
         </div>
@@ -410,6 +411,13 @@
         if (target.hasAttribute("data-diag-clear-failed")) {
           if (confirm(tx("Retirer les actions offline en erreur sur cet appareil ?", "Remove failed offline actions on this device?"))) {
             try { if (typeof window.tbOfflineQueueDiscardFailed === "function") window.tbOfflineQueueDiscardFailed(); } catch (_) {}
+            renderDiagnostics(root);
+          }
+        }
+        if (target.hasAttribute("data-diag-clear-trip")) {
+          if (confirm(tx("Retirer les anciennes actions Trip bloquees sur cet appareil ?", "Remove old blocked Trip actions on this device?"))) {
+            try { if (typeof window.tbOfflineQueueDiscardTripConflicts === "function") window.tbOfflineQueueDiscardTripConflicts(); } catch (_) {}
+            try { if (typeof window.tbClearOfflineSnapshots === "function") window.tbClearOfflineSnapshots(); } catch (_) {}
             renderDiagnostics(root);
           }
         }

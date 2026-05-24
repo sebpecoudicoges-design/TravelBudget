@@ -27,6 +27,18 @@
     return id ? `travelbudget_offline_snapshot_v1_${id}` : "";
   }
 
+  function clearSnapshotKeys() {
+    try {
+      const id = uid();
+      const prefix = id ? `travelbudget_offline_snapshot_` : "travelbudget_offline_snapshot_";
+      Object.keys(localStorage || {}).forEach((k) => {
+        if (String(k || "").startsWith(prefix) && (!id || String(k).includes(id))) {
+          try { localStorage.removeItem(k); } catch (_) {}
+        }
+      });
+    } catch (_) {}
+  }
+
   function cloneStateForSnapshot() {
     const s = window.state || {};
     const slimRows = (rows, limit, mapper) => {
@@ -104,6 +116,7 @@
         try { localStorage.removeItem(k); } catch (_) {}
         localStorage.setItem(k, raw);
       } catch (quotaErr) {
+        clearSnapshotKeys();
         payload.state.transactions = (payload.state.transactions || []).slice(0, 400);
         payload.state.documents = (payload.state.documents || []).slice(0, 100);
         payload.state.tripExpenses = (payload.state.tripExpenses || []).slice(0, 300);
@@ -116,6 +129,7 @@
         try {
           localStorage.setItem(k, JSON.stringify(payload));
         } catch (smallErr) {
+          clearSnapshotKeys();
           payload.state.transactions = (payload.state.transactions || []).slice(0, 120);
           payload.state.tripExpenses = (payload.state.tripExpenses || []).slice(0, 120);
           payload.state.tripExpenseShares = (payload.state.tripExpenseShares || []).slice(0, 360);
@@ -248,6 +262,7 @@
 
   window.tbSaveOfflineSnapshot = saveOfflineSnapshot;
   window.tbRestoreOfflineSnapshot = restoreOfflineSnapshot;
+  window.tbClearOfflineSnapshots = clearSnapshotKeys;
   window.tbOfflineMessage = offlineMessage;
   window.tbMarkNetworkUnavailable = markNetworkUnavailable;
   window.tbClearNetworkUnavailable = clearNetworkUnavailable;

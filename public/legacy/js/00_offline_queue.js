@@ -196,9 +196,18 @@
     return safeRead().filter((item) => item.status !== "done");
   }
 
+  function errorText(error) {
+    const raw = String(error?.message || error || "").toLowerCase();
+    try {
+      return raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    } catch (_) {
+      return raw;
+    }
+  }
+
   function isPermanentFailure(kind, error) {
     const k = String(kind || "");
-    const msg = String(error?.message || error || "").toLowerCase();
+    const msg = errorText(error);
     if (!msg) return false;
     const looksLikeOldTripFailure = (
       msg.includes("transactions_trip_expense_unique") ||
@@ -208,6 +217,9 @@
       msg.includes("le lien avec la transaction") ||
       msg.includes("ajoute au moins un participant") ||
       msg.includes("shares are empty") ||
+      msg.includes("cette depense trip est deja liee") ||
+      msg.includes("cette depense est deja liee") ||
+      msg.includes("liee") ||
       msg.includes("already linked") ||
       msg.includes("deja lie") ||
       msg.includes("liÃ")
@@ -225,6 +237,25 @@
         msg.includes("le lien avec la transaction") ||
         msg.includes("ajoute au moins un participant")
       );
+    }
+    return false;
+  }
+
+  function isTripConflictItem(item) {
+    if (!item) return false;
+    const k = String(item.kind || "");
+    const err = item.error || item.lastError || item.meta?.error;
+    const payload = item.payload || {};
+    const args = payload.args || payload.coreArgs || {};
+    if (isPermanentFailure(k, err)) return true;
+    if (k.startsWith("trip.expense")) {
+      if (Number(item.attempts || 0) > 0 || err) return true;
+      if (!Array.isArray(payload.members) || !payload.members.length) return true;
+      return false;
+    }
+    if (k === "transaction.update_v2") {
+      if (args.p_trip_expense_id || args.tripExpenseId || args.trip_expense_id) return true;
+      if (Number(item.attempts || 0) > 0 && err && errorText(err).includes("trip")) return true;
     }
     return false;
   }
@@ -254,6 +285,27 @@
       return true;
     });
     safeWrite(next);
+    return removed;
+  }
+
+  function discardTripConflicts(options) {
+    const opts = options || {};
+    const before = safeRead();
+    const removed = [];
+    const next = before.filter((item) => {
+      if (isTripConflictItem(item)) {
+        removed.push(item);
+        cleanupItemSideEffects(item);
+        return false;
+      }
+      return true;
+    });
+    if (removed.length) {
+      safeWrite(next);
+      if (!opts.silent) {
+        toastInfo(message(`${removed.length} ancienne(s) action(s) Trip retiree(s).`, `${removed.length} old Trip action(s) removed.`));
+      }
+    }
     return removed;
   }
 
@@ -369,7 +421,12 @@
   window.tbOfflineQueueCount = count;
   window.tbOfflineQueuePending = pending;
   window.tbOfflineQueueDiscardFailed = discardFailed;
+  window.tbOfflineQueueDiscardTripConflicts = discardTripConflicts;
   window.tbOfflineQueueCleanupOptimistic = cleanupOptimisticRows;
+
+  setTimeout(() => {
+    try { discardTripConflicts({ silent: true }); } catch (_) {}
+  }, 600);
 
   window.addEventListener("online", () => {
     setTimeout(() => { sync("online").catch((e) => console.warn("[OfflineQueue] sync failed", e?.message || e)); }, 1200);
