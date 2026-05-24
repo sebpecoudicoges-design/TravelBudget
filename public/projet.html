@@ -376,8 +376,28 @@
     .proof strong { display: block; font-size: 15px; }
     .proof span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.45; }
 
-    .workflow-grid, .tech-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
-    .workflow-card, .tech-card { padding: 18px; }
+    .workflow-grid, .tech-grid, .app-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+    .workflow-card, .tech-card, .app-card { padding: 18px; }
+    .app-card {
+      border: 1px solid rgba(15, 23, 42, .09);
+      border-radius: 24px;
+      background: rgba(255,255,255,.88);
+      box-shadow: var(--shadow);
+    }
+    .app-card strong {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: rgba(37,99,235,.10);
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 950;
+      margin-bottom: 12px;
+    }
+    .app-card h3 { margin: 0 0 8px; font-size: 21px; }
+    .app-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
     .workflow-card b, .tech-card b {
       width: 40px;
       height: 40px;
@@ -421,7 +441,7 @@
       }
       .mock-side strong { display: none; }
       .mock-side button { width: auto; white-space: nowrap; margin: 0; }
-      .workflow-grid, .tech-grid { grid-template-columns: 1fr; }
+      .workflow-grid, .tech-grid, .app-grid { grid-template-columns: 1fr; }
       .section-head { display: block; }
       .section-head p { margin-top: 12px; }
     }
@@ -451,6 +471,7 @@
         <a href="#demo" data-i18n="nav.demo">Demo</a>
         <a href="#modules" data-i18n="nav.modules">Modules</a>
         <a href="#workflow" data-i18n="nav.workflow">Parcours</a>
+        <a href="#app" data-i18n="nav.app">App</a>
         <a href="#tech" data-i18n="nav.tech">Technique</a>
       </nav>
       <div class="nav-actions">
@@ -479,6 +500,7 @@
         <div class="hero-actions">
           <a class="btn primary" href="#demo" data-i18n="hero.primary">Jouer avec la demo</a>
           <a class="btn" href="#modules" data-i18n="hero.secondary">Voir les modules</a>
+          <a class="btn" href="/downloads/travelbudget-10.1.0-debug.apk" download data-i18n="hero.apk">Telecharger l'APK</a>
         </div>
         <div class="auth-entry">
           <div>
@@ -494,7 +516,7 @@
           <div class="metric"><strong data-i18n="metric.fx.title">Multi-devise</strong><span data-i18n="metric.fx.body">AUD, EUR, JPY et devise de base</span></div>
           <div class="metric"><strong data-i18n="metric.docs.title">Documents Hub</strong><span data-i18n="metric.docs.body">Tags, dossiers, preuves liees</span></div>
           <div class="metric"><strong data-i18n="metric.trip.title">Voyage</strong><span data-i18n="metric.trip.body">Budget, split, remboursements</span></div>
-          <div class="metric"><strong data-i18n="metric.safe.title">Demo sure</strong><span data-i18n="metric.safe.body">Donnees fictives, sans login</span></div>
+          <div class="metric"><strong data-i18n="metric.safe.title">App + offline</strong><span data-i18n="metric.safe.body">APK debug et actions en attente</span></div>
         </div>
       </div>
 
@@ -636,6 +658,27 @@
       </div>
     </section>
 
+    <section id="app" class="band">
+      <div class="shell">
+        <div class="section-head">
+          <h2 data-i18n="app.title">Disponible en app Android de test.</h2>
+          <p data-i18n="app.lead">La version mobile garde la logique du web, avec un usage plus rapide : dashboard, transactions, wallets, partage, sport et lecture offline.</p>
+        </div>
+        <div class="app-grid">
+          <article class="app-card"><strong>APK</strong><h3 data-i18n="app.apk.title">Installation manuelle</h3><p data-i18n="app.apk.body">Un APK debug est fourni pour tester sur mobile avant une diffusion Play Store.</p></article>
+          <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les donnees locales restent consultables, les transactions offline sont mises en attente puis synchronisees au retour reseau.</p></article>
+          <article class="app-card"><strong>10.1.0</strong><h3 data-i18n="app.version.title">Baseline mobile</h3><p data-i18n="app.version.body">Version orientee stabilite mobile : premier chargement, file d'attente offline et navigation app.</p></article>
+        </div>
+        <div class="cta">
+          <div>
+            <h2 data-i18n="app.cta.title">Tester l'APK Android.</h2>
+            <p data-i18n="app.cta.body">Le fichier est une build debug destinee aux tests manuels.</p>
+          </div>
+          <a class="btn" href="/downloads/travelbudget-10.1.0-debug.apk" download data-i18n="app.cta.button">Telecharger l'APK</a>
+        </div>
+      </div>
+    </section>
+
     <section id="tech" class="band">
       <div class="shell">
         <div class="section-head">
@@ -666,16 +709,16 @@
     (() => {
       const copy = {
         fr: {
-          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.tech": "Technique", "nav.cta": "Tester la demo",
+          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.app": "App", "nav.tech": "Technique", "nav.cta": "Tester la demo",
           "hero.eyebrow": "Demo publique - aucune donnee personnelle",
           "hero.title": "Le cockpit budget pour voyager, travailler et garder le cap.",
           "hero.lead": "BudgetPacker relie cashflow, voyages, documents, patrimoine, split expenses et decisions multi-devise dans une interface pensee pour la vraie vie nomade.",
-          "hero.primary": "Jouer avec la demo", "hero.secondary": "Voir les modules",
+          "hero.primary": "Jouer avec la demo", "hero.secondary": "Voir les modules", "hero.apk": "Telecharger l'APK",
           "auth.title": "Acceder a l'app complete", "auth.body": "La demo est publique. Pour synchroniser tes donnees, cree un compte ou connecte-toi.", "auth.signup": "Creer un compte", "auth.login": "Se connecter",
           "metric.fx.title": "Multi-devise", "metric.fx.body": "AUD, EUR, JPY et devise de base",
           "metric.docs.title": "Documents Hub", "metric.docs.body": "Tags, dossiers, preuves liees",
           "metric.trip.title": "Voyage", "metric.trip.body": "Budget, split, remboursements",
-          "metric.safe.title": "Demo sure", "metric.safe.body": "Donnees fictives, sans login",
+          "metric.safe.title": "App + offline", "metric.safe.body": "APK debug et actions en attente",
           "mock.cashflow": "Cashflow estime", "mock.signal": "Signal du jour", "mock.projection": "Projection", "mock.feed": "Flux recent",
           "demo.title": "Une demo que l'on peut manipuler.",
           "demo.lead": "Les valeurs sont fictives. Change le scenario, ajuste le salaire AUD et la part que tu gardes : la lecture se met a jour comme une mini-version du produit.",
@@ -689,6 +732,12 @@
           "workflow.one.title": "Capturer", "workflow.one.body": "Transaction, recu WhatsApp, facture PDF, depense Trip ou mouvement interne.",
           "workflow.two.title": "Relier", "workflow.two.body": "Les preuves peuvent etre liees aux transactions, assets ou depenses partagees.",
           "workflow.three.title": "Piloter", "workflow.three.body": "Analyse, cashflow, conversion FX et documents importants restent lisibles.",
+          "app.title": "Disponible en app Android de test.",
+          "app.lead": "La version mobile garde la logique du web, avec un usage plus rapide : dashboard, transactions, wallets, partage, sport et lecture offline.",
+          "app.apk.title": "Installation manuelle", "app.apk.body": "Un APK debug est fourni pour tester sur mobile avant une diffusion Play Store.",
+          "app.offline.title": "Mode hors ligne", "app.offline.body": "Les donnees locales restent consultables, les transactions offline sont mises en attente puis synchronisees au retour reseau.",
+          "app.version.title": "Baseline mobile", "app.version.body": "Version orientee stabilite mobile : premier chargement, file d'attente offline et navigation app.",
+          "app.cta.title": "Tester l'APK Android.", "app.cta.body": "Le fichier est une build debug destinee aux tests manuels.", "app.cta.button": "Telecharger l'APK",
           "tech.title": "Une vitrine autonome, une app privee derriere.",
           "tech.lead": "Cette page ne charge aucune donnee utilisateur. L'application reelle reste protegee par Supabase Auth, RLS, Storage et Edge Functions.",
           "tech.db": "Tables metier, RPC, RLS, Storage documents et fonctions Edge.",
@@ -698,16 +747,16 @@
           "footer": "BudgetPacker - demo publique interactive"
         },
         en: {
-          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Workflow", "nav.tech": "Tech", "nav.cta": "Try the demo",
+          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Workflow", "nav.app": "App", "nav.tech": "Tech", "nav.cta": "Try the demo",
           "hero.eyebrow": "Public demo - no personal data",
           "hero.title": "The budget cockpit for travel, work and everyday decisions.",
           "hero.lead": "BudgetPacker connects cashflow, trips, documents, assets, split expenses and currency decisions in one interface designed for a nomad life.",
-          "hero.primary": "Play with the demo", "hero.secondary": "Explore modules",
+          "hero.primary": "Play with the demo", "hero.secondary": "Explore modules", "hero.apk": "Download APK",
           "auth.title": "Open the full app", "auth.body": "The demo is public. To sync your own data, create an account or sign in.", "auth.signup": "Create account", "auth.login": "Sign in",
           "metric.fx.title": "Multi-currency", "metric.fx.body": "AUD, EUR, JPY and base currency",
           "metric.docs.title": "Documents Hub", "metric.docs.body": "Tags, folders, linked proofs",
           "metric.trip.title": "Travel", "metric.trip.body": "Budget, split, reimbursements",
-          "metric.safe.title": "Safe demo", "metric.safe.body": "Fake data, no login",
+          "metric.safe.title": "App + offline", "metric.safe.body": "Debug APK and pending actions",
           "mock.cashflow": "Estimated cashflow", "mock.signal": "Today's signal", "mock.projection": "Projection", "mock.feed": "Recent feed",
           "demo.title": "A demo you can actually manipulate.",
           "demo.lead": "Values are fictional. Switch scenario, adjust AUD income and the amount you keep: the page updates like a mini version of the product.",
@@ -721,6 +770,12 @@
           "workflow.one.title": "Capture", "workflow.one.body": "Transaction, WhatsApp receipt, PDF invoice, Trip expense or internal transfer.",
           "workflow.two.title": "Link", "workflow.two.body": "Proofs can be linked to transactions, assets or shared expenses.",
           "workflow.three.title": "Drive", "workflow.three.body": "Analysis, cashflow, FX conversion and important documents remain readable.",
+          "app.title": "Available as an Android test app.",
+          "app.lead": "The mobile version keeps the web logic with faster everyday use: dashboard, transactions, wallets, split, sport and offline reading.",
+          "app.apk.title": "Manual install", "app.apk.body": "A debug APK is available for mobile testing before a Play Store release.",
+          "app.offline.title": "Offline mode", "app.offline.body": "Local data remains readable, offline transactions wait in a queue and sync when the network returns.",
+          "app.version.title": "Mobile baseline", "app.version.body": "A mobile stability version: first load, offline queue and app navigation.",
+          "app.cta.title": "Test the Android APK.", "app.cta.body": "This file is a debug build for manual testing.", "app.cta.button": "Download APK",
           "tech.title": "A standalone showcase, a private app behind it.",
           "tech.lead": "This page loads no user data. The real app remains protected by Supabase Auth, RLS, Storage and Edge Functions.",
           "tech.db": "Business tables, RPCs, RLS, document storage and Edge Functions.",

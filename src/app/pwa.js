@@ -35,6 +35,156 @@ export function registerPwa() {
     } catch (_) {}
   };
 
+  const queueLang = () => {
+    try {
+      const lang = String(window.__tbLang || localStorage.getItem("tb_lang_v1") || navigator.language || "fr").toLowerCase();
+      return lang.startsWith("en") ? "en" : "fr";
+    } catch (_) {
+      return "fr";
+    }
+  };
+
+  const queueText = (fr, en) => queueLang() === "en" ? en : fr;
+
+  const queueItemLabel = (item) => {
+    try {
+      const kind = String(item?.kind || "");
+      const meta = item?.meta || {};
+      const label = String(meta.label || "").trim();
+      const amount = meta.amount != null ? String(meta.amount) : "";
+      const currency = String(meta.currency || "").trim();
+      if (kind === "transaction.apply_v2") {
+        const base = label || queueText("Transaction", "Transaction");
+        const amt = amount ? ` - ${amount}${currency ? ` ${currency}` : ""}` : "";
+        return `${base}${amt}`;
+      }
+      if (kind === "sport.sync_local") return queueText("Seance sport", "Sport session");
+      return queueText("Action hors ligne", "Offline action");
+    } catch (_) {
+      return queueText("Action hors ligne", "Offline action");
+    }
+  };
+
+  const ensurePendingQueueUi = () => {
+    try {
+      const count = typeof window.tbOfflineQueueCount === "function" ? Number(window.tbOfflineQueueCount() || 0) : 0;
+      let chip = document.getElementById("tb-offline-queue-chip");
+      if (!count) {
+        if (chip) chip.style.display = "none";
+        const panel = document.getElementById("tb-offline-queue-panel");
+        if (panel) panel.style.display = "none";
+        return;
+      }
+      if (!chip) {
+        chip = document.createElement("button");
+        chip.id = "tb-offline-queue-chip";
+        chip.type = "button";
+        chip.style.cssText = [
+          "position:fixed",
+          "right:14px",
+          "top:82px",
+          "z-index:99997",
+          "border:1px solid rgba(37,99,235,.22)",
+          "border-radius:999px",
+          "background:rgba(255,255,255,.94)",
+          "color:#0f172a",
+          "box-shadow:0 14px 42px rgba(15,23,42,.16)",
+          "padding:8px 11px",
+          "font:900 12px system-ui,-apple-system,Segoe UI,Roboto,Arial",
+          "display:none",
+          "align-items:center",
+          "gap:7px",
+          "backdrop-filter:blur(14px)"
+        ].join(";");
+        chip.addEventListener("click", () => {
+          const panel = ensurePendingPanel();
+          if (panel) panel.style.display = panel.style.display === "block" ? "none" : "block";
+        });
+        document.body.appendChild(chip);
+      }
+      chip.innerHTML = `<span style="width:8px;height:8px;border-radius:999px;background:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12);"></span>${queueText(`${count} en attente`, `${count} pending`)}`;
+      chip.style.display = "inline-flex";
+      const panel = document.getElementById("tb-offline-queue-panel");
+      if (panel && panel.style.display === "block") renderPendingPanel(panel);
+    } catch (_) {}
+  };
+
+  const renderPendingPanel = (panel) => {
+    try {
+      const items = typeof window.tbOfflineQueuePending === "function" ? window.tbOfflineQueuePending() : [];
+      const rows = (items || []).slice(0, 8).map((item) => `
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 0;border-top:1px solid rgba(15,23,42,.08);">
+          <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(queueItemLabel(item))}</span>
+          <small style="color:#64748b;font-weight:800;">${escapeHtml(String(item?.status || "pending"))}</small>
+        </div>
+      `).join("");
+      panel.innerHTML = `
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px;">
+          <strong>${escapeHtml(queueText("Actions en attente", "Pending actions"))}</strong>
+          <button type="button" data-tb-queue-close style="border:0;background:transparent;font:900 18px system-ui;color:#64748b;">x</button>
+        </div>
+        <p style="margin:0 0 10px;color:#64748b;font-size:12px;line-height:1.45;">${escapeHtml(queueText("Elles seront envoyees automatiquement au retour reseau.", "They will sync automatically when the connection returns."))}</p>
+        ${rows || `<div style="color:#64748b;font-size:13px;">${escapeHtml(queueText("Aucune action en attente.", "No pending action."))}</div>`}
+        <button type="button" data-tb-queue-sync style="width:100%;margin-top:12px;border:0;border-radius:999px;background:linear-gradient(135deg,#0f172a,#2563eb);color:#fff;padding:10px 12px;font:900 13px system-ui;">${escapeHtml(queueText("Synchroniser maintenant", "Sync now"))}</button>
+      `;
+      panel.querySelector("[data-tb-queue-close]")?.addEventListener("click", () => { panel.style.display = "none"; });
+      panel.querySelector("[data-tb-queue-sync]")?.addEventListener("click", async (ev) => {
+        const btn = ev.currentTarget;
+        btn.disabled = true;
+        btn.textContent = queueText("Synchronisation...", "Syncing...");
+        try {
+          if (typeof window.tbOfflineQueueSync === "function") await window.tbOfflineQueueSync("manual");
+        } catch (e) {
+          console.warn("[OfflineQueue] manual sync failed", e?.message || e);
+        } finally {
+          btn.disabled = false;
+          ensurePendingQueueUi();
+        }
+      });
+    } catch (_) {}
+  };
+
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[ch]));
+
+  const ensurePendingPanel = () => {
+    try {
+      let panel = document.getElementById("tb-offline-queue-panel");
+      if (!panel) {
+        panel = document.createElement("div");
+        panel.id = "tb-offline-queue-panel";
+        panel.style.cssText = [
+          "position:fixed",
+          "right:14px",
+          "top:124px",
+          "z-index:99997",
+          "width:min(340px,calc(100vw - 28px))",
+          "max-height:min(420px,calc(100vh - 156px))",
+          "overflow:auto",
+          "display:none",
+          "border:1px solid rgba(15,23,42,.10)",
+          "border-radius:18px",
+          "background:rgba(255,255,255,.98)",
+          "box-shadow:0 22px 70px rgba(15,23,42,.22)",
+          "padding:14px",
+          "color:#0f172a",
+          "font:800 13px system-ui,-apple-system,Segoe UI,Roboto,Arial",
+          "backdrop-filter:blur(18px)"
+        ].join(";");
+        document.body.appendChild(panel);
+      }
+      renderPendingPanel(panel);
+      return panel;
+    } catch (_) {
+      return null;
+    }
+  };
+
   const updateOnlineState = () => {
     try {
       const networkOffline = !!(navigator && navigator.onLine === false);
@@ -86,6 +236,7 @@ export function registerPwa() {
       } else {
         badge.style.display = "none";
       }
+      ensurePendingQueueUi();
     } catch (_) {}
   };
 
