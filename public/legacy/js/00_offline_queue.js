@@ -200,6 +200,19 @@
     const k = String(kind || "");
     const msg = String(error?.message || error || "").toLowerCase();
     if (!msg) return false;
+    const looksLikeOldTripFailure = (
+      msg.includes("transactions_trip_expense_unique") ||
+      msg.includes("duplicate key value") ||
+      msg.includes("trip_expenses_transaction_fk") ||
+      msg.includes("violates foreign key constraint") ||
+      msg.includes("le lien avec la transaction") ||
+      msg.includes("ajoute au moins un participant") ||
+      msg.includes("shares are empty") ||
+      msg.includes("already linked") ||
+      msg.includes("deja lie") ||
+      msg.includes("liÃ")
+    );
+    if (looksLikeOldTripFailure && (k.startsWith("trip.expense") || k.startsWith("transaction."))) return true;
     if (k.startsWith("trip.expense")) {
       return (
         msg.includes("transactions_trip_expense_unique") ||
@@ -231,8 +244,9 @@
     const removed = [];
     const next = before.filter((item) => {
       const failed = item && item.error;
+      const permanent = item && isPermanentFailure(item.kind, item.error || item.lastError || item.meta?.error);
       const match = !kind || String(item.kind || "") === kind || String(item.kind || "").startsWith(kind);
-      if (failed && match) {
+      if ((failed || permanent) && match) {
         removed.push(item);
         cleanupItemSideEffects(item);
         return false;

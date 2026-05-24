@@ -101,13 +101,31 @@
       };
       const raw = JSON.stringify(payload);
       try {
+        try { localStorage.removeItem(k); } catch (_) {}
         localStorage.setItem(k, raw);
       } catch (quotaErr) {
         payload.state.transactions = (payload.state.transactions || []).slice(0, 400);
         payload.state.documents = (payload.state.documents || []).slice(0, 100);
         payload.state.tripExpenses = (payload.state.tripExpenses || []).slice(0, 300);
         payload.state.tripExpenseShares = (payload.state.tripExpenseShares || []).slice(0, 900);
-        localStorage.setItem(k, JSON.stringify(payload));
+        payload.state.transactionDocuments = [];
+        payload.state.tripExpenseDocuments = [];
+        payload.state.assetDocuments = [];
+        payload.state.sportSets = (payload.state.sportSets || []).slice(0, 300);
+        try { localStorage.removeItem(k); } catch (_) {}
+        try {
+          localStorage.setItem(k, JSON.stringify(payload));
+        } catch (smallErr) {
+          payload.state.transactions = (payload.state.transactions || []).slice(0, 120);
+          payload.state.tripExpenses = (payload.state.tripExpenses || []).slice(0, 120);
+          payload.state.tripExpenseShares = (payload.state.tripExpenseShares || []).slice(0, 360);
+          payload.state.documents = [];
+          payload.state.assets = [];
+          payload.state.assetEvents = [];
+          payload.state.sportSets = [];
+          try { localStorage.removeItem(k); } catch (_) {}
+          localStorage.setItem(k, JSON.stringify(payload));
+        }
       }
       window.__TB_OFFLINE_SNAPSHOT__ = { savedAt: payload.savedAt, restored: false };
       return true;
