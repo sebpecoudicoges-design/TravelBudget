@@ -126,6 +126,28 @@
     return `oq_${String(kind || "item").replace(/[^a-z0-9_-]/gi, "_")}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   }
 
+  function cleanupOptimisticRows(queueId) {
+    try {
+      if (!window.state || !Array.isArray(state.transactions)) return 0;
+      const before = state.transactions.length;
+      const qid = String(queueId || "").trim();
+      state.transactions = state.transactions.filter((tx) => {
+        if (!tx || !(tx.localOnly || tx.offlinePending || tx.local_only || tx.offline_pending)) return true;
+        if (!qid) return false;
+        const rowQueueId = String(tx.offlineQueueId || tx.offline_queue_id || tx.id || "").trim();
+        return rowQueueId !== qid;
+      });
+      const removed = before - state.transactions.length;
+      if (removed) {
+        try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("offline-queue:cleanup"); } catch (_) {}
+        try { if (typeof window.renderAll === "function") window.renderAll(); } catch (_) {}
+      }
+      return removed;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   function enqueue(kind, payload, meta) {
     const items = safeRead();
     const item = {
@@ -145,6 +167,7 @@
   }
 
   function remove(id) {
+    cleanupOptimisticRows(id);
     const items = safeRead().filter((item) => String(item.id) !== String(id));
     safeWrite(items);
   }
@@ -215,6 +238,7 @@
         }
       }
       if (synced) {
+        cleanupOptimisticRows("");
         toastInfo(message(`${synced} action(s) hors ligne synchronisee(s).`, `${synced} offline action(s) synced.`));
         try {
           if (typeof window.refreshFromServer === "function") await window.refreshFromServer({ force: true });
@@ -232,6 +256,7 @@
   window.tbOfflineQueueSync = sync;
   window.tbOfflineQueueCount = count;
   window.tbOfflineQueuePending = pending;
+  window.tbOfflineQueueCleanupOptimistic = cleanupOptimisticRows;
 
   window.addEventListener("online", () => {
     setTimeout(() => { sync("online").catch((e) => console.warn("[OfflineQueue] sync failed", e?.message || e)); }, 1200);

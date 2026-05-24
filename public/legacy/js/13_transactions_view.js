@@ -896,7 +896,9 @@ function _txDocCachedCount(txId){
 }
 
 async function _txDocEnsureCachedCounts(txs, options = {}){
-  const ids = Array.from(new Set((txs || []).map((tx) => String(tx?.id || '').trim()).filter(Boolean)));
+  if ((navigator && navigator.onLine === false) || (typeof window.tbIsOfflineMode === 'function' && window.tbIsOfflineMode())) return;
+  const ids = Array.from(new Set((txs || []).map((tx) => String(tx?.id || '').trim()).filter(Boolean)))
+    .filter((id) => !/^oq_|^offline_tx_/i.test(id));
   if (!ids.length) return;
   const map = TB_TX_DOC_COUNTS.map instanceof Map ? TB_TX_DOC_COUNTS.map : (TB_TX_DOC_COUNTS.map = new Map());
   const missing = ids.filter((id) => !map.has(id));
@@ -936,7 +938,9 @@ function _txDocApplyCountToButton(txId, count){
 }
 
 async function _txDocRefreshVisibleCounts(txs){
-  const ids = (txs || []).map((tx) => String(tx?.id || '').trim()).filter(Boolean);
+  if ((navigator && navigator.onLine === false) || (typeof window.tbIsOfflineMode === 'function' && window.tbIsOfflineMode())) return;
+  const ids = (txs || []).map((tx) => String(tx?.id || '').trim()).filter(Boolean)
+    .filter((id) => !/^oq_|^offline_tx_/i.test(id));
   if (!ids.length) return;
   try {
     const counts = await _txDocFetchCountsForTransactions(ids);

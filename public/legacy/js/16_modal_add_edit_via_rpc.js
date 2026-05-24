@@ -447,9 +447,10 @@ function _setTxModalReadOnly(isReadOnly, reason) {
 
 let _savingTx = false;
 
-function _txAddOptimisticOfflineRow(core, rpcArgs) {
+function _txAddOptimisticOfflineRow(core, rpcArgs, queueId) {
   try {
-    const tempId = rpcArgs?.p_idempotency_key || `offline_tx_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const qid = String(queueId || "").trim();
+    const tempId = qid || rpcArgs?.p_idempotency_key || `offline_tx_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     const wallet = (state.wallets || []).find((w) => String(w.id) === String(core.walletId));
     const createdAt = new Date().toISOString();
     const travelId = core.travelId || core.travel_id || state?.activeTravelId || null;
@@ -457,6 +458,8 @@ function _txAddOptimisticOfflineRow(core, rpcArgs) {
       id: tempId,
       localOnly: true,
       offlinePending: true,
+      offlineQueueId: qid || tempId,
+      offline_queue_id: qid || tempId,
       walletId: core.walletId,
       wallet_id: core.walletId,
       travelId,
@@ -1026,7 +1029,7 @@ async function saveModal() {
         };
         const rpcArgs = _txBuildApplyV2Args(coreArgs, { skipInteractiveFx: offlineNow });
         if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
-          window.tbOfflineQueueEnqueue("transaction.apply_v2", {
+          const queueItem = window.tbOfflineQueueEnqueue("transaction.apply_v2", {
             rpcName: TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2",
             args: rpcArgs,
             coreArgs,
@@ -1036,7 +1039,7 @@ async function saveModal() {
             currency: wallet.currency,
             type,
           });
-          _txAddOptimisticOfflineRow(coreArgs, rpcArgs);
+          _txAddOptimisticOfflineRow(coreArgs, rpcArgs, queueItem?.id);
         } else {
           const { data, error } = await tbRpcWithRetry(
             TB_CONST.RPCS.apply_transaction_v2 || "apply_transaction_v2",
