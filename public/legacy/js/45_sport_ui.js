@@ -681,6 +681,10 @@
       .tb-sport-hero h2{margin:0;font-size:30px;line-height:1.05;}
       .tb-sport-hero p{margin:8px 0 0;color:rgba(255,255,255,.78);}
       .tb-sport-pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:9px 12px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);font-weight:900;}
+      .tb-sport-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+      .tb-sport-stat{border:1px solid rgba(148,163,184,.18);border-radius:18px;background:linear-gradient(180deg,#fff,#f8fafc);padding:12px;box-shadow:0 10px 24px rgba(15,23,42,.05);}
+      .tb-sport-stat span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:900;}
+      .tb-sport-stat strong{display:block;margin-top:6px;font-size:22px;line-height:1;font-weight:950;color:#0f172a;}
       .tb-sport-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr);gap:14px;}
       .tb-sport-card{border:1px solid rgba(148,163,184,.20);border-radius:22px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 14px 36px rgba(15,23,42,.06);padding:16px;}
       .tb-sport-card h3{margin:0 0 10px;font-size:18px;}
@@ -691,6 +695,7 @@
       .tb-sport-field label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:900;color:#64748b;}
       .tb-sport-field input,.tb-sport-field select,.tb-sport-field textarea{border:1px solid rgba(148,163,184,.32);border-radius:14px;background:#fff;padding:11px 12px;font-weight:800;color:#0f172a;box-sizing:border-box;width:100%;}
       .tb-sport-quick-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;}
+      .tb-sport-quick-btn{border:1px solid rgba(37,99,235,.16);border-radius:999px;background:#fff;color:#0f172a;padding:9px 12px;font-weight:950;cursor:pointer;box-shadow:0 8px 18px rgba(15,23,42,.05);}
       .tb-sport-library{margin-top:12px;border:1px solid rgba(14,165,233,.14);border-radius:18px;background:linear-gradient(180deg,#f0f9ff,#f8fafc);padding:12px;}
       .tb-sport-library-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;}
       .tb-sport-library-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:end;}
@@ -727,6 +732,8 @@
       .tb-sport-history-card{border:1px solid rgba(148,163,184,.18);border-radius:18px;background:#fff;padding:12px;}
       .tb-sport-status{border:1px solid rgba(14,165,233,.18);border-radius:16px;background:#e0f2fe;color:#075985;padding:10px 12px;font-weight:850;}
       body.theme-dark .tb-sport-card,body.theme-dark .tb-sport-item,body.theme-dark .tb-sport-history-card{background:#111827;color:#f8fafc;border-color:rgba(255,255,255,.12);}
+      body.theme-dark .tb-sport-stat{background:#111827;border-color:rgba(255,255,255,.12);}
+      body.theme-dark .tb-sport-stat strong{color:#f8fafc;}
       body.theme-dark .tb-sport-status{background:rgba(14,165,233,.14);color:#bae6fd;border-color:rgba(125,211,252,.20);}
       body.theme-dark .tb-sport-profile-note{background:rgba(14,165,233,.14);color:#bae6fd;border-color:rgba(125,211,252,.20);}
       body.theme-dark .tb-sport-library{background:rgba(14,165,233,.08);border-color:rgba(125,211,252,.18);}
@@ -736,11 +743,65 @@
       body.theme-dark .tb-sport-ex-card span{color:#94a3b8;}
       body.theme-dark .tb-sport-modal{background:linear-gradient(180deg,#111827,#0f172a);color:#f8fafc;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-choice{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
+      body.theme-dark .tb-sport-quick-btn{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       body.theme-dark .tb-sport-advanced{background:rgba(15,23,42,.72);border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-advanced summary{color:#f8fafc;}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}}
       @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}}
+      body.tb-capacitor-app[data-tb-view="sport"] #sport-root{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-shell{gap:10px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-hero{border-radius:22px!important;padding:16px!important;min-height:0!important;box-shadow:0 16px 34px rgba(37,99,235,.16)!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-hero h2{font-size:24px!important;line-height:1.05!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-hero p{display:none!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-pill{padding:7px 10px!important;font-size:12px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-stat{border-radius:15px!important;padding:10px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-stat span{font-size:9px!important;letter-spacing:.06em!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-stat strong{font-size:18px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-grid{grid-template-columns:1fr!important;gap:10px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-card{border-radius:18px!important;padding:12px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-card h3{font-size:16px!important;margin-bottom:8px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin-bottom:8px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-profile-note{grid-column:1 / -1!important;padding:8px 10px!important;font-size:11px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-fields{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-field label{font-size:9px!important;letter-spacing:.05em!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-field input,
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-field select,
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-field textarea{min-height:38px!important;border-radius:13px!important;padding:8px 9px!important;font-size:12px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-simple{border-radius:18px!important;padding:11px!important;margin:9px 0!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-simple-title{margin-bottom:8px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-simple-title .muted{display:none!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-quick-row{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important;margin:8px 0!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-quick-btn{min-width:0!important;padding:8px 5px!important;font-size:10px!important;text-align:center!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-smart,
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-library,
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-advanced{border-radius:16px!important;padding:9px!important;margin:8px 0!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-ex-card{border-radius:13px!important;padding:9px!important;font-size:11px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-ex-card span{font-size:10px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-actions .btn{width:100%!important;justify-content:center!important;min-height:34px!important;padding:7px 8px!important;font-size:11px!important;white-space:normal!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-plan{gap:8px!important;margin-top:10px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-item{grid-template-columns:1fr!important;gap:8px!important;border-radius:16px!important;padding:10px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-item-title{font-size:13px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-meta{gap:4px!important;margin-top:5px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-chip{padding:4px 7px!important;font-size:10px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer{min-height:220px!important;border-radius:18px!important;padding:14px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer .name{font-size:24px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer .clock{font-size:42px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-history{grid-template-columns:1fr!important;gap:8px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-history-card{border-radius:16px!important;padding:10px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-history-card > div:first-child{align-items:center!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-modal-backdrop{z-index:100030!important;align-items:flex-start!important;padding:calc(12px + env(safe-area-inset-top,0px)) 10px calc(82px + env(safe-area-inset-bottom,0px))!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-modal{max-height:calc(100vh - 94px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important;border-radius:22px!important;padding:12px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-modal h3{position:sticky!important;top:-12px!important;z-index:2!important;margin:-12px -12px 8px!important;padding:12px!important;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,255,255,.90))!important;border-bottom:1px solid rgba(15,23,42,.06)!important;font-size:18px!important;}
+      body.theme-dark.tb-capacitor-app[data-tb-view="sport"] .tb-sport-modal h3{background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(15,23,42,.90))!important;}
+      @media(max-width:380px){
+        body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-fields,
+        body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-profile{grid-template-columns:1fr!important;}
+        body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-quick-row{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+      }
     `;
     document.head.appendChild(style);
   }
@@ -883,6 +944,13 @@
               <div class="muted">${esc(txt("Exemple : cardio, course a pied, duree, 45 min, distance optionnelle.", "Example: cardio, running, duration, 45 min, optional distance."))}</div>
             </div>
             <button class="btn primary" type="button" id="sport-simple-add">+ ${esc(txt("Ajouter", "Add"))}</button>
+          </div>
+          <div class="tb-sport-quick-row" aria-label="${esc(txt("Raccourcis sport", "Sport shortcuts"))}">
+            <button class="tb-sport-quick-btn" type="button" data-sport-quick="brisk_walk">${esc(txt("Marche", "Walk"))}</button>
+            <button class="tb-sport-quick-btn" type="button" data-sport-quick="easy_run">${esc(txt("Course", "Run"))}</button>
+            <button class="tb-sport-quick-btn" type="button" data-sport-quick="pushup">${esc(txt("Muscu", "Strength"))}</button>
+            <button class="tb-sport-quick-btn" type="button" data-sport-quick="cycling_easy">${esc(txt("Velo", "Bike"))}</button>
+            <button class="tb-sport-quick-btn" type="button" data-sport-quick="hips">${esc(txt("Mobilite", "Mobility"))}</button>
           </div>
           <div class="tb-sport-fields">
             <div class="tb-sport-field"><label>${esc(txt("Objectif", "Goal"))}</label><select id="sport-goal">${goalOptions(goal)}</select></div>
@@ -1125,6 +1193,34 @@
     </div>`;
   }
 
+  function sportStatsHTML() {
+    const remoteSessions = CACHE.sessions || [];
+    const localSessions = CACHE.localSessions || [];
+    const remoteIds = new Set(remoteSessions.map(s => String(s.id || "")));
+    const sessions = remoteSessions.concat(
+      localSessions
+        .filter(s => !s.remoteId || !remoteIds.has(String(s.remoteId)))
+        .map(localToHistorySession)
+    );
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const inRange = (s, minDate) => {
+      const d = new Date(s.started_at || s.startedAt || 0);
+      return Number.isFinite(d.getTime()) && d >= minDate && d <= now;
+    };
+    const sum = (rows, prop) => rows.reduce((acc, row) => acc + n(row[prop], 0), 0);
+    const week = sessions.filter(s => inRange(s, weekAgo));
+    const month = sessions.filter(s => inRange(s, monthAgo));
+    return `
+      <div class="tb-sport-stats">
+        <div class="tb-sport-stat"><span>${esc(txt("7 jours", "7 days"))}</span><strong>${week.length}</strong></div>
+        <div class="tb-sport-stat"><span>${esc(txt("Temps", "Time"))}</span><strong>${fmtSec(sum(week, "duration_seconds"))}</strong></div>
+        <div class="tb-sport-stat"><span>${esc(txt("30 jours", "30 days"))}</span><strong>${month.length}</strong></div>
+        <div class="tb-sport-stat"><span>${esc(txt("Kcal", "Kcal"))}</span><strong>${Math.round(sum(month, "estimated_kcal"))}</strong></div>
+      </div>`;
+  }
+
   function renderSport(reason) {
     const root = document.getElementById("sport-root");
     if (!root) return;
@@ -1143,6 +1239,7 @@
           </div>
           <div class="tb-sport-pill">${fmtSec(planSec)} - ${Math.round(kcal)} kcal</div>
         </div>
+        ${sportStatsHTML()}
         <div class="tb-sport-grid">
           ${renderBuilder()}
           ${renderTimer()}
