@@ -231,6 +231,7 @@
     if (input) input.placeholder = _t("help.search_placeholder");
 
     renderQuickSetup(root);
+    renderDiagnostics(root);
     try { if (typeof window.tbInjectGuidedTourHelpButton === "function") window.tbInjectGuidedTourHelpButton(); } catch (_) {}
     renderGuides(root);
 
@@ -267,6 +268,133 @@
         ${row(docs.length > 0, _t("help.quick_start.documents"), "documents")}
         ${row(assets.length > 0, _t("help.quick_start.assets"), "assets")}
       </div>`;
+  }
+
+  function _diagPlatform() {
+    try {
+      const isApp = !!window.Capacitor || document.body?.classList?.contains("tb-capacitor-app") || String(location.protocol || "").startsWith("capacitor");
+      const mobile = /android|iphone|ipad|ipod|mobile/i.test(String(navigator.userAgent || "")) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+      return isApp ? "android_app" : (mobile ? "web_mobile" : "web_desktop");
+    } catch (_) {
+      return "web";
+    }
+  }
+
+  function _diagNetwork() {
+    try {
+      const online = !(navigator && navigator.onLine === false);
+      const offlineMode = typeof window.tbIsOfflineMode === "function" ? window.tbIsOfflineMode() : !online;
+      return { online, offlineMode };
+    } catch (_) {
+      return { online: true, offlineMode: false };
+    }
+  }
+
+  function _diagRows() {
+    const logs = (window.__errorBus && typeof window.__errorBus.get === "function") ? window.__errorBus.get() : [];
+    const pendingLogs = (window.__errorBus && typeof window.__errorBus.pending === "function") ? window.__errorBus.pending() : [];
+    const queueCount = typeof window.tbOfflineQueueCount === "function" ? Number(window.tbOfflineQueueCount() || 0) : 0;
+    const net = _diagNetwork();
+    return {
+      logs: Array.isArray(logs) ? logs : [],
+      pendingLogs: Array.isArray(pendingLogs) ? pendingLogs : [],
+      queueCount,
+      net,
+      platform: _diagPlatform(),
+      version: String(window.TB_VERSION || window.__TB_BUILD || "dev"),
+    };
+  }
+
+  function renderDiagnostics(root) {
+    let diag = document.getElementById("help-diagnostics");
+    if (!diag) {
+      diag = document.createElement("div");
+      diag.id = "help-diagnostics";
+      diag.style.marginTop = "12px";
+      diag.style.marginBottom = "12px";
+      root.insertBefore(diag, root.querySelector("#help-guides") || root.querySelector(".form-row") || root.firstChild);
+    }
+    const l = _lang();
+    const tx = (fr, en) => l === "en" ? en : fr;
+    const d = _diagRows();
+    const recent = d.logs.slice(-4).reverse();
+    const badge = (label, value, tone) => `
+      <div style="border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:10px;background:${tone || "rgba(255,255,255,.58)"};">
+        <div class="muted" style="font-size:11px;font-weight:800;text-transform:uppercase;">${_esc(label)}</div>
+        <div style="font-weight:900;margin-top:4px;">${_esc(value)}</div>
+      </div>`;
+    diag.innerHTML = `
+      <div class="help-guide-card" style="border-color:rgba(37,99,235,.18);">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px;">
+          <div>
+            <div style="font-weight:800;font-size:16px;">${_esc(tx("Diagnostic", "Diagnostics"))}</div>
+            <div class="muted" style="margin-top:4px;">${_esc(tx("Statut technique utile pour les tests et le support.", "Technical status for testing and support."))}</div>
+          </div>
+          <button class="btn" type="button" data-diag-refresh>${_esc(tx("Actualiser", "Refresh"))}</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:12px;">
+          ${badge("Version", d.version)}
+          ${badge(tx("Plateforme", "Platform"), d.platform)}
+          ${badge("Online", d.net.online ? "OK" : "Offline", d.net.online ? "rgba(16,185,129,.08)" : "rgba(244,63,94,.08)")}
+          ${badge(tx("Mode offline", "Offline mode"), d.net.offlineMode ? "Actif" : "Non")}
+          ${badge(tx("Actions attente", "Pending actions"), String(d.queueCount))}
+          ${badge(tx("Logs attente", "Pending logs"), String(d.pendingLogs.length))}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn primary" type="button" data-diag-sync-logs>${_esc(tx("Sync logs", "Sync logs"))}</button>
+          <button class="btn" type="button" data-diag-sync-queue>${_esc(tx("Sync actions", "Sync actions"))}</button>
+          <button class="btn" type="button" data-diag-export>${_esc(tx("Exporter logs", "Export logs"))}</button>
+          <button class="btn" type="button" data-diag-clear>${_esc(tx("Vider logs locaux", "Clear local logs"))}</button>
+        </div>
+        <div>
+          <div class="muted" style="font-size:12px;font-weight:800;margin-bottom:6px;">${_esc(tx("Derniers logs locaux", "Latest local logs"))}</div>
+          ${recent.length ? recent.map((row) => `
+            <div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px;padding:7px 0;border-top:1px solid rgba(15,23,42,.07);font-size:12px;">
+              <span class="muted">${_esc(String(row.created_at || row.ts || "").replace("T", " ").slice(0, 19))}</span>
+              <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><b>${_esc(row.type || "error")}</b> - ${_esc(row.message || "")}</span>
+            </div>`).join("") : `<div class="muted" style="font-size:12px;">${_esc(tx("Aucun log local.", "No local log."))}</div>`}
+        </div>
+      </div>`;
+    if (!diag.__tbBound) {
+      diag.__tbBound = true;
+      diag.addEventListener("click", async (ev) => {
+        const target = ev.target && ev.target.closest && ev.target.closest("button");
+        if (!target) return;
+        if (target.hasAttribute("data-diag-refresh")) return renderDiagnostics(root);
+        if (target.hasAttribute("data-diag-export")) {
+          if (window.__errorBus && typeof window.__errorBus.exportFile === "function") window.__errorBus.exportFile();
+          return;
+        }
+        if (target.hasAttribute("data-diag-clear")) {
+          if (confirm(tx("Vider les logs locaux sur cet appareil ?", "Clear local logs on this device?"))) {
+            if (window.__errorBus && typeof window.__errorBus.clearLocal === "function") window.__errorBus.clearLocal();
+            renderDiagnostics(root);
+          }
+          return;
+        }
+        if (target.hasAttribute("data-diag-sync-logs")) {
+          target.disabled = true;
+          try { if (window.__errorBus && typeof window.__errorBus.sync === "function") await window.__errorBus.sync("diagnostic"); } catch (_) {}
+          target.disabled = false;
+          renderDiagnostics(root);
+          return;
+        }
+        if (target.hasAttribute("data-diag-sync-queue")) {
+          target.disabled = true;
+          try { if (typeof window.tbOfflineQueueSync === "function") await window.tbOfflineQueueSync("diagnostic"); } catch (_) {}
+          target.disabled = false;
+          renderDiagnostics(root);
+        }
+      });
+      window.addEventListener("tb:error_log_changed", () => {
+        const view = document.getElementById("view-help");
+        if (view && !view.classList.contains("hidden")) renderDiagnostics(root);
+      });
+      window.addEventListener("tb:offline_queue_changed", () => {
+        const view = document.getElementById("view-help");
+        if (view && !view.classList.contains("hidden")) renderDiagnostics(root);
+      });
+    }
   }
 
   function renderGuides(root) {

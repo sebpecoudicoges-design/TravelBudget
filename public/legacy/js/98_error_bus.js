@@ -303,6 +303,17 @@
     }
   }
 
+  function clearLocal() {
+    try {
+      _buf.length = 0;
+      localStorage.removeItem(LS_KEY);
+      try { window.dispatchEvent(new CustomEvent("tb:error_log_changed", { detail: { count: 0 } })); } catch (_) {}
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function installConsoleCapture() {
     if (_consoleInstalled) return;
     _consoleInstalled = true;
@@ -356,6 +367,7 @@
     pending,
     sync,
     exportFile,
+    clearLocal,
     toPlain: _toPlain,
     copyToClipboard,
     installGlobalHandlers,
