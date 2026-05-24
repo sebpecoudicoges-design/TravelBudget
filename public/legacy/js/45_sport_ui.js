@@ -382,6 +382,9 @@
       : s);
     saveLocalHistory(CACHE.localSessions);
   }
+  function isLocalWorkoutUnsynced(row) {
+    return !!row && !String(row.remoteId || "").trim();
+  }
   function removeLocalWorkout(id) {
     const key = String(id || "");
     CACHE.localSessions = (CACHE.localSessions || []).filter(s => String(s.localId || s.id || "") !== key && String(s.remoteId || "") !== key);
@@ -1123,8 +1126,7 @@
     const remoteSessions = CACHE.sessions || [];
     const localSessions = CACHE.localSessions || [];
     const recoverableAnonCount = uid() && !localSessions.length ? loadAnonHistory().length : 0;
-    const remoteIds = new Set(remoteSessions.map(s => String(s.id || "")));
-    const unsyncedLocal = localSessions.filter(s => !s.remoteId || !remoteIds.has(String(s.remoteId)));
+    const unsyncedLocal = localSessions.filter(isLocalWorkoutUnsynced);
     const sessions = remoteSessions.concat(unsyncedLocal.map(localToHistorySession))
       .sort((a, b) => String(b.started_at || "").localeCompare(String(a.started_at || "")));
     const status = CACHE.status ? `<div class="tb-sport-status">${esc(CACHE.status)}</div>` : "";
@@ -1206,10 +1208,9 @@
   function sportStatsHTML() {
     const remoteSessions = CACHE.sessions || [];
     const localSessions = CACHE.localSessions || [];
-    const remoteIds = new Set(remoteSessions.map(s => String(s.id || "")));
     const sessions = remoteSessions.concat(
       localSessions
-        .filter(s => !s.remoteId || !remoteIds.has(String(s.remoteId)))
+        .filter(isLocalWorkoutUnsynced)
         .map(localToHistorySession)
     );
     const now = new Date();
