@@ -196,6 +196,29 @@
     return safeRead().filter((item) => item.status !== "done");
   }
 
+  function discardFailed(filterKind) {
+    const kind = String(filterKind || "").trim();
+    const before = safeRead();
+    const removed = [];
+    const next = before.filter((item) => {
+      const failed = item && item.error;
+      const match = !kind || String(item.kind || "") === kind || String(item.kind || "").startsWith(kind);
+      if (failed && match) {
+        removed.push(item);
+        try {
+          if (String(item.kind || "").startsWith("trip.expense") && typeof window.tbTripCleanupOfflineOptimistic === "function") {
+            window.tbTripCleanupOfflineOptimistic(item.id);
+          }
+          if (String(item.kind || "").startsWith("transaction.") && typeof cleanupOptimisticRows === "function") cleanupOptimisticRows(item.id);
+        } catch (_) {}
+        return false;
+      }
+      return true;
+    });
+    safeWrite(next);
+    return removed;
+  }
+
   async function runItem(item) {
     if (!item || item.status === "done") return true;
     if (item.kind === "transaction.apply_v2") {
@@ -297,6 +320,7 @@
   window.tbOfflineQueueSync = sync;
   window.tbOfflineQueueCount = count;
   window.tbOfflineQueuePending = pending;
+  window.tbOfflineQueueDiscardFailed = discardFailed;
   window.tbOfflineQueueCleanupOptimistic = cleanupOptimisticRows;
 
   window.addEventListener("online", () => {

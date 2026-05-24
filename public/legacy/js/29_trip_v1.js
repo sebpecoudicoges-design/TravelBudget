@@ -4395,6 +4395,13 @@ try {
   async function _queueTripExpenseMutation({ mode, expenseId, form }) {
     const queuedForm = _tripExpenseFormForQueue(form);
     _tripValidateExpenseFormOffline(queuedForm);
+    if (mode === "update") {
+      const current = (tripState.expenses || []).find((ex) => String(ex.id || "") === String(expenseId || ""));
+      const hasBudgetLink = (tripState.budgetLinks || []).some((row) => String(row?.expenseId || "") === String(expenseId || "") && row?.transactionId);
+      if (current?.transactionId || hasBudgetLink) {
+        throw new Error("Modification offline impossible pour une depense Trip deja liee a Budget/Wallet. Repasse en ligne pour modifier cette depense.");
+      }
+    }
     const kind = mode === "update" ? "trip.expense.update" : "trip.expense.create";
     if (typeof window.tbOfflineQueueEnqueue !== "function") throw new Error("File offline indisponible.");
     const queueItem = window.tbOfflineQueueEnqueue(kind, {
@@ -4402,6 +4409,14 @@ try {
       mode,
       expenseId: expenseId || null,
       form: queuedForm,
+      members: (tripState.members || []).map((m) => ({
+        id: m.id,
+        name: m.name,
+        email: m.email || null,
+        authUserId: m.authUserId || null,
+        userId: m.userId || null,
+        isMe: !!m.isMe,
+      })),
     }, {
       label: queuedForm.label,
       amount: queuedForm.amount,
@@ -4418,7 +4433,17 @@ try {
     if (tripState.activeTripId !== tripId) {
       tripState.activeTripId = tripId;
       localStorage.setItem(TRIP_ACTIVE_KEY, tripId);
-      await _loadActiveData();
+    }
+    await _loadActiveData();
+    if (!(tripState.members || []).length && Array.isArray(payload?.members) && payload.members.length) {
+      tripState.members = payload.members.map((m) => ({
+        id: m.id,
+        name: m.name,
+        email: m.email || null,
+        authUserId: m.authUserId || null,
+        userId: m.userId || null,
+        isMe: !!m.isMe,
+      }));
     }
     const form = _tripExpenseFormForQueue(payload?.form || {});
     if (String(payload?.mode || payload?.kind || "").includes("update") || payload?.expenseId) {

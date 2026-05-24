@@ -354,6 +354,7 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
           <button class="btn primary" type="button" data-diag-sync-logs>${_esc(tx("Sync logs", "Sync logs"))}</button>
           <button class="btn" type="button" data-diag-sync-queue>${_esc(tx("Sync actions", "Sync actions"))}</button>
+          <button class="btn" type="button" data-diag-clear-failed>${_esc(tx("Retirer erreurs action", "Remove failed actions"))}</button>
           <button class="btn" type="button" data-diag-export>${_esc(tx("Exporter logs", "Export logs"))}</button>
           <button class="btn" type="button" data-diag-clear>${_esc(tx("Vider logs locaux", "Clear local logs"))}</button>
         </div>
@@ -404,6 +405,13 @@
           try { if (typeof window.tbOfflineQueueSync === "function") await window.tbOfflineQueueSync("diagnostic"); } catch (_) {}
           target.disabled = false;
           renderDiagnostics(root);
+          return;
+        }
+        if (target.hasAttribute("data-diag-clear-failed")) {
+          if (confirm(tx("Retirer les actions offline en erreur sur cet appareil ?", "Remove failed offline actions on this device?"))) {
+            try { if (typeof window.tbOfflineQueueDiscardFailed === "function") window.tbOfflineQueueDiscardFailed(); } catch (_) {}
+            renderDiagnostics(root);
+          }
         }
       });
       window.addEventListener("tb:error_log_changed", () => {
