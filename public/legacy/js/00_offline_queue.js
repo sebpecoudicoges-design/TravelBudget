@@ -209,10 +209,35 @@
       if (error) throw error;
       return true;
     }
+    if (item.kind === "transaction.update_v2") {
+      const args = item.payload?.args || {};
+      if (typeof window._txUpdateTransactionRpcCompat === "function") {
+        const res = await window._txUpdateTransactionRpcCompat(args);
+        if (res?.error) throw res.error;
+        return true;
+      }
+      if (!window.sb || typeof window.sb.rpc !== "function") throw new Error("Supabase indisponible");
+      const rpcName = item.payload?.rpcName || window.TB_CONST?.RPCS?.update_transaction_v2 || "update_transaction_v2";
+      const { error } = await window.sb.rpc(rpcName, args);
+      if (error) throw error;
+      return true;
+    }
     if (item.kind === "sport.sync_local") {
       if (typeof window.tbSportSyncLocalWorkouts === "function") {
         await window.tbSportSyncLocalWorkouts();
       }
+      return true;
+    }
+    if (item.kind === "trip.expense.create" || item.kind === "trip.expense.update") {
+      if (typeof window.tbTripReplayOfflineExpenseMutation !== "function") {
+        throw new Error("Trip indisponible pour rejouer l'action offline");
+      }
+      await window.tbTripReplayOfflineExpenseMutation(Object.assign({}, item.payload || {}, {
+        mode: item.kind === "trip.expense.update" ? "update" : "create",
+      }));
+      try {
+        if (typeof window.tbTripCleanupOfflineOptimistic === "function") window.tbTripCleanupOfflineOptimistic(item.id);
+      } catch (_) {}
       return true;
     }
     throw new Error(`Type de queue inconnu: ${item.kind}`);

@@ -293,11 +293,13 @@
   function _diagRows() {
     const logs = (window.__errorBus && typeof window.__errorBus.get === "function") ? window.__errorBus.get() : [];
     const pendingLogs = (window.__errorBus && typeof window.__errorBus.pending === "function") ? window.__errorBus.pending() : [];
+    const pendingActions = typeof window.tbOfflineQueuePending === "function" ? window.tbOfflineQueuePending() : [];
     const queueCount = typeof window.tbOfflineQueueCount === "function" ? Number(window.tbOfflineQueueCount() || 0) : 0;
     const net = _diagNetwork();
     return {
       logs: Array.isArray(logs) ? logs : [],
       pendingLogs: Array.isArray(pendingLogs) ? pendingLogs : [],
+      pendingActions: Array.isArray(pendingActions) ? pendingActions : [],
       queueCount,
       net,
       platform: _diagPlatform(),
@@ -318,6 +320,15 @@
     const tx = (fr, en) => l === "en" ? en : fr;
     const d = _diagRows();
     const recent = d.logs.slice(-4).reverse();
+    const pendingActionLabel = (item) => {
+      const kind = String(item?.kind || "");
+      const meta = item?.meta || {};
+      const label = meta.label || item?.payload?.form?.label || item?.payload?.coreArgs?.label || item?.payload?.args?.p_label || kind;
+      const amount = Number(meta.amount ?? item?.payload?.form?.amount ?? item?.payload?.coreArgs?.amount ?? item?.payload?.args?.p_amount);
+      const currency = meta.currency || item?.payload?.form?.currency || item?.payload?.coreArgs?.currency || item?.payload?.args?.p_currency || "";
+      const money = Number.isFinite(amount) && currency ? ` - ${amount.toFixed(2)} ${currency}` : "";
+      return `${kind}${label ? ` - ${label}` : ""}${money}`;
+    };
     const badge = (label, value, tone) => `
       <div style="border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:10px;background:${tone || "rgba(255,255,255,.58)"};">
         <div class="muted" style="font-size:11px;font-weight:800;text-transform:uppercase;">${_esc(label)}</div>
@@ -345,6 +356,15 @@
           <button class="btn" type="button" data-diag-sync-queue>${_esc(tx("Sync actions", "Sync actions"))}</button>
           <button class="btn" type="button" data-diag-export>${_esc(tx("Exporter logs", "Export logs"))}</button>
           <button class="btn" type="button" data-diag-clear>${_esc(tx("Vider logs locaux", "Clear local logs"))}</button>
+        </div>
+        <div style="margin-bottom:12px;">
+          <div class="muted" style="font-size:12px;font-weight:800;margin-bottom:6px;">${_esc(tx("Actions en attente", "Pending actions"))}</div>
+          ${d.pendingActions.length ? d.pendingActions.map((item) => `
+            <div style="display:grid;grid-template-columns:84px minmax(0,1fr) 56px;gap:8px;align-items:center;padding:8px 0;border-top:1px solid rgba(15,23,42,.07);font-size:12px;">
+              <span class="muted">${_esc(String(item.createdAt || "").replace("T", " ").slice(0, 16))}</span>
+              <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><b>${_esc(item.status || "pending")}</b> - ${_esc(pendingActionLabel(item))}</span>
+              <span class="muted">${_esc(String(item.attempts || 0))}x</span>
+            </div>`).join("") : `<div class="muted" style="font-size:12px;">${_esc(tx("Aucune action en attente.", "No pending action."))}</div>`}
         </div>
         <div>
           <div class="muted" style="font-size:12px;font-weight:800;margin-bottom:6px;">${_esc(tx("Derniers logs locaux", "Latest local logs"))}</div>

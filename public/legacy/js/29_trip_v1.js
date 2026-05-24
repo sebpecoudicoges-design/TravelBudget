@@ -4297,6 +4297,150 @@ try {
     return ex.id;
   }
 
+  function _tripExpenseFormForQueue(form) {
+    return {
+      date: String(form?.date || "").slice(0, 10),
+      label: String(form?.label || "").trim(),
+      amount: Number(form?.amount || 0),
+      currency: _normalizeCurrency(form?.currency),
+      paidByMemberId: String(form?.paidByMemberId || ""),
+      walletId: String(form?.walletId || ""),
+      category: String(form?.category || "Autre"),
+      subcategory: String(form?.subcategory || "").trim(),
+      budgetDateStart: String(form?.budgetDateStart || form?.date || "").slice(0, 10),
+      budgetDateEnd: String(form?.budgetDateEnd || form?.budgetDateStart || form?.date || "").slice(0, 10),
+      outOfBudget: !!form?.outOfBudget,
+      split: form?.split || { mode: "equal" },
+    };
+  }
+
+  function _tripValidateExpenseFormOffline(form) {
+    const tripId = tripState.activeTripId;
+    if (!tripId) throw new Error("Selectionne un trip d'abord.");
+    const members = tripState.members || [];
+    if (!members.length) throw new Error("Ajoute au moins un participant.");
+    const input = _normalizeTripExpenseForMutation(form);
+    const amt = Number(input.amount);
+    if (!input.date || !input.label || !Number.isFinite(amt) || amt <= 0) throw new Error("Date, libelle et montant (>0) requis.");
+    const payer = members.find(m => m.id === input.paidByMemberId) || null;
+    if (!payer) throw new Error("Selectionne qui a paye.");
+    const wallet = input.walletId ? findWallet(input.walletId) : null;
+    const parts = _computeSplitParts(amt, members, form.split);
+    _validateTripExpenseForMutation({ input, members, parts, payer, wallet });
+    return { input, parts };
+  }
+
+  function _tripMakeLocalExpenseId() {
+    return `local_trip_exp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  }
+
+  function _tripApplyOptimisticExpenseMutation({ mode, expenseId, form, queueId }) {
+    const tripId = tripState.activeTripId;
+    const members = tripState.members || [];
+    const { input, parts } = _tripValidateExpenseFormOffline(form);
+    const id = mode === "update" ? String(expenseId || "") : _tripMakeLocalExpenseId();
+    if (!id) throw new Error("Depense Trip introuvable.");
+    if (mode === "update" && id.startsWith("local_trip_exp_")) {
+      throw new Error("Cette depense est deja en attente de synchro. Attends la synchro avant de la modifier.");
+    }
+    const now = new Date().toISOString();
+    const row = {
+      id,
+      tripId,
+      date: input.date,
+      label: input.label,
+      amount: Number(input.amount),
+      currency: input.currency,
+      paidByMemberId: input.paidByMemberId,
+      category: input.category || null,
+      subcategory: input.subcategory || null,
+      budgetDateStart: input.budgetDateStart || input.date || null,
+      budgetDateEnd: input.budgetDateEnd || input.budgetDateStart || input.date || null,
+      transactionId: null,
+      createdAt: mode === "update"
+        ? ((tripState.expenses || []).find((ex) => String(ex.id) === id)?.createdAt || now)
+        : now,
+      localOnly: mode === "create",
+      offlinePending: true,
+      offlineQueueId: queueId || "",
+    };
+    if (mode === "update") {
+      tripState.expenses = (tripState.expenses || []).map((ex) => String(ex.id) === id ? Object.assign({}, ex, row) : ex);
+    } else {
+      tripState.expenses = [row].concat(tripState.expenses || []);
+    }
+    const shareRows = members.map((m, idx) => ({
+      id: `${id}_share_${m.id}`,
+      expenseId: id,
+      memberId: m.id,
+      shareAmount: Number(parts[idx] || 0),
+      localOnly: mode === "create",
+      offlinePending: true,
+      offlineQueueId: queueId || "",
+    }));
+    tripState.shares = (tripState.shares || []).filter((s) => String(s.expenseId) !== id).concat(shareRows);
+    _syncTripStateToAppState(`trip:offline-${mode}`);
+    try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot(`trip:offline-${mode}`); } catch (_) {}
+    return id;
+  }
+
+  async function _queueTripExpenseMutation({ mode, expenseId, form }) {
+    const queuedForm = _tripExpenseFormForQueue(form);
+    _tripValidateExpenseFormOffline(queuedForm);
+    const kind = mode === "update" ? "trip.expense.update" : "trip.expense.create";
+    if (typeof window.tbOfflineQueueEnqueue !== "function") throw new Error("File offline indisponible.");
+    const queueItem = window.tbOfflineQueueEnqueue(kind, {
+      tripId: tripState.activeTripId,
+      mode,
+      expenseId: expenseId || null,
+      form: queuedForm,
+    }, {
+      label: queuedForm.label,
+      amount: queuedForm.amount,
+      currency: queuedForm.currency,
+      type: "trip",
+    });
+    return _tripApplyOptimisticExpenseMutation({ mode, expenseId, form: queuedForm, queueId: queueItem?.id });
+  }
+
+  async function _tripReplayOfflineExpenseMutation(payload) {
+    const tripId = String(payload?.tripId || "");
+    if (!tripId) throw new Error("Trip manquant dans l'action offline.");
+    const previousTripId = tripState.activeTripId;
+    if (tripState.activeTripId !== tripId) {
+      tripState.activeTripId = tripId;
+      localStorage.setItem(TRIP_ACTIVE_KEY, tripId);
+      await _loadActiveData();
+    }
+    const form = _tripExpenseFormForQueue(payload?.form || {});
+    if (String(payload?.mode || payload?.kind || "").includes("update") || payload?.expenseId) {
+      await _updateExpense(Object.assign({ expenseId: payload.expenseId }, form));
+    } else {
+      await _addExpense(form);
+    }
+    if (previousTripId && previousTripId !== tripState.activeTripId) {
+      tripState.activeTripId = previousTripId;
+      localStorage.setItem(TRIP_ACTIVE_KEY, previousTripId);
+      await _loadActiveData();
+    }
+  }
+  window.tbTripReplayOfflineExpenseMutation = _tripReplayOfflineExpenseMutation;
+
+  function _tripCleanupOfflineOptimistic(queueId) {
+    const qid = String(queueId || "").trim();
+    if (!qid) return 0;
+    const before = (tripState.expenses || []).length;
+    tripState.expenses = (tripState.expenses || []).filter((ex) => !(ex.localOnly && String(ex.offlineQueueId || "") === qid));
+    tripState.shares = (tripState.shares || []).filter((share) => !(share.localOnly && String(share.offlineQueueId || "") === qid));
+    const removed = before - (tripState.expenses || []).length;
+    if (removed) {
+      _syncTripStateToAppState("trip:offline-cleanup");
+      try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("trip:offline-cleanup"); } catch (_) {}
+    }
+    return removed;
+  }
+  window.tbTripCleanupOfflineOptimistic = _tripCleanupOfflineOptimistic;
+
   async function _deleteExpense(expenseId) {
     await _ensureSession();
     const tripId = tripState.activeTripId;
@@ -5431,6 +5575,18 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
     })();
 
     if (editingExpenseId) {
+      const expenseForm = { date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split };
+      const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
+        ? await window.tbShouldUseOfflineMode("trip:update_expense")
+        : (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode());
+      if (offlineNow) {
+        await _queueTripExpenseMutation({ mode: "update", expenseId: editingExpenseId, form: expenseForm });
+        tripState.editingExpenseId = null;
+        tripState.editingExpenseDraft = null;
+        await _renderUI();
+        toastOk("Modification Trip en attente de synchro.");
+        return;
+      }
       const updatedExpenseId = await _updateExpense({
         expenseId: editingExpenseId,
         date,
@@ -5449,6 +5605,17 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
       await _refreshAfterTripMutation("trip:update_expense", { expectExpenseId: updatedExpenseId || editingExpenseId });
       toastOk("Dépense modifiée.");
     } else {
+      const expenseForm = { date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split };
+      const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
+        ? await window.tbShouldUseOfflineMode("trip:add_expense")
+        : (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode());
+      if (offlineNow) {
+        await _queueTripExpenseMutation({ mode: "create", form: expenseForm });
+        tripState.addExpenseOpen = false;
+        await _renderUI();
+        toastOk("Depense Trip en attente de synchro.");
+        return;
+      }
       const createdExpenseId = await _addExpense({
         date,
         label,

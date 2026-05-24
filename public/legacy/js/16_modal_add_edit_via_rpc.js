@@ -823,6 +823,102 @@ async function _updateTransactionRpcCompat(args) {
   const patchRes = await _updateTransactionDirectCompat(patchArgs);
   return { ...patchRes, _tbUsedLegacyRpcFallback: true };
 }
+window._txUpdateTransactionRpcCompat = _updateTransactionRpcCompat;
+
+function _txCashDelta(tx) {
+  if (!tx) return 0;
+  const payNow = tx.pay_now !== undefined ? !!tx.pay_now : (tx.payNow !== undefined ? !!tx.payNow : true);
+  if (!payNow || tx.isInternal || tx.is_internal) return 0;
+  const amount = Number(tx.amount || 0);
+  if (!Number.isFinite(amount)) return 0;
+  return String(tx.type || "").toLowerCase() === "income" ? amount : -amount;
+}
+
+function _txWalletId(tx) {
+  return String(tx?.walletId || tx?.wallet_id || "").trim();
+}
+
+function _txAdjustWalletBalance(walletId, delta) {
+  try {
+    const wid = String(walletId || "").trim();
+    const d = Number(delta || 0);
+    if (!wid || !Number.isFinite(d) || Math.abs(d) < 0.000001) return;
+    const map = state.walletBalanceMap || {};
+    const row = map[wid];
+    const wallet = (state.wallets || []).find((w) => String(w.id) === wid);
+    if (row) {
+      const current = Number(row.effectiveBalance ?? row.effective_balance ?? row.balance ?? wallet?.balance ?? 0);
+      const next = current + d;
+      map[wid] = Object.assign({}, row, {
+        effectiveBalance: next,
+        effective_balance: next,
+        offlinePendingDelta: Number(row.offlinePendingDelta || 0) + d,
+      });
+      state.walletBalanceMap = map;
+    }
+    if (wallet) {
+      const current = Number(wallet.balance ?? wallet.amount ?? wallet.current_balance ?? 0);
+      if (Number.isFinite(current)) {
+        wallet.balance = current + d;
+        wallet.current_balance = current + d;
+      }
+    }
+  } catch (_) {}
+}
+
+function _txApplyOptimisticOfflineEdit(args, queueId) {
+  try {
+    const txId = String(args?.p_tx_id || args?.p_id || "").trim();
+    if (!txId || !Array.isArray(state.transactions)) return;
+    const idx = state.transactions.findIndex((tx) => String(tx?.id || "") === txId);
+    if (idx < 0) return;
+    const before = state.transactions[idx];
+    const oldWalletId = _txWalletId(before);
+    const oldDelta = _txCashDelta(before);
+    const dateStart = String(args?.p_date_start || "").slice(0, 10);
+    const dateEnd = String(args?.p_date_end || args?.p_date_start || "").slice(0, 10) || dateStart;
+    const next = Object.assign({}, before, {
+      walletId: args?.p_wallet_id || before.walletId,
+      wallet_id: args?.p_wallet_id || before.wallet_id,
+      type: args?.p_type || before.type,
+      amount: Number(args?.p_amount ?? before.amount),
+      currency: args?.p_currency || before.currency,
+      category: args?.p_category || before.category,
+      subcategory: args?.p_subcategory || "",
+      label: args?.p_label || before.label,
+      dateStart,
+      date_start: dateStart,
+      dateEnd,
+      date_end: dateEnd,
+      budgetDateStart: String(args?.p_budget_date_start || dateStart).slice(0, 10),
+      budget_date_start: String(args?.p_budget_date_start || dateStart).slice(0, 10),
+      budgetDateEnd: String(args?.p_budget_date_end || dateEnd || dateStart).slice(0, 10),
+      budget_date_end: String(args?.p_budget_date_end || dateEnd || dateStart).slice(0, 10),
+      payNow: !!args?.p_pay_now,
+      pay_now: !!args?.p_pay_now,
+      outOfBudget: !!args?.p_out_of_budget,
+      out_of_budget: !!args?.p_out_of_budget,
+      nightCovered: !!args?.p_night_covered,
+      night_covered: !!args?.p_night_covered,
+      offlinePending: true,
+      offlineQueueId: queueId || before.offlineQueueId || "",
+      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    const newWalletId = _txWalletId(next);
+    const newDelta = _txCashDelta(next);
+    if (oldWalletId === newWalletId) _txAdjustWalletBalance(newWalletId, newDelta - oldDelta);
+    else {
+      _txAdjustWalletBalance(oldWalletId, -oldDelta);
+      _txAdjustWalletBalance(newWalletId, newDelta);
+    }
+    state.transactions[idx] = next;
+    try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("tx:offline-edit"); } catch (_) {}
+    try { if (typeof window.renderAll === "function") window.renderAll(); } catch (_) {}
+  } catch (e) {
+    console.warn("[tx] optimistic offline edit failed", e?.message || e);
+  }
+}
 function _tbParseLocaleAmount(raw) {
   if (window.Core?.transactionRules?.parseLocaleAmount) {
     return window.Core.transactionRules.parseLocaleAmount(raw);
@@ -929,6 +1025,10 @@ async function saveModal() {
         : { ok: true };
       if (!mutationValidation.ok) throw new Error(mutationValidation.reason || "Transaction invalide.");
 
+      const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
+        ? await window.tbShouldUseOfflineMode(editingTxId ? "tx:edit" : "tx:create")
+        : (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode());
+
       if (editingTxId) {
         const current = currentTx;
         if (_txIsWalletAdjustment(current)) {
@@ -952,7 +1052,7 @@ async function saveModal() {
 
         // Ensure FX conversion is available for tx currency -> segment/base currency.
         // (Prompts manual EUR rates if provider doesn't support the currency.)
-        {
+        if (!offlineNow) {
           const txCur = String(wallet?.currency || "").trim().toUpperCase();
           const seg = (typeof window.getBudgetSegmentForDate === "function") ? window.getBudgetSegmentForDate(budgetStart) : null;
           const baseCur = String(seg?.baseCurrency || state?.period?.baseCurrency || "EUR").trim().toUpperCase();
@@ -966,7 +1066,7 @@ async function saveModal() {
           }
         }
 
-        const { data, error } = await _updateTransactionRpcCompat({
+        const updateArgs = {
           p_tx_id: editingTxId,
           p_wallet_id: walletId,
           p_type: type,
@@ -985,12 +1085,24 @@ async function saveModal() {
           // FX snapshot is computed for the transaction date + transaction currency.
           // (Use local variables here; `form` is not in scope.)
           ..._txBuildFxSnapshotArgs(cashDate, wallet.currency)
-        });
-        if (error) throw error;
+        };
+        if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
+          const queueItem = window.tbOfflineQueueEnqueue("transaction.update_v2", {
+            rpcName: TB_CONST.RPCS.update_transaction_v2 || "update_transaction_v2",
+            args: updateArgs,
+          }, {
+            label,
+            amount,
+            currency: wallet.currency,
+            type,
+            transactionId: editingTxId,
+          });
+          _txApplyOptimisticOfflineEdit(updateArgs, queueItem?.id);
+        } else {
+          const { data, error } = await _updateTransactionRpcCompat(updateArgs);
+          if (error) throw error;
+        }
       } else {
-        const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
-          ? await window.tbShouldUseOfflineMode("tx:create")
-          : (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode());
         // Ensure FX conversion is available for tx currency -> segment/base currency.
         if (!offlineNow) {
           const txCur = String(wallet?.currency || "").trim().toUpperCase();
