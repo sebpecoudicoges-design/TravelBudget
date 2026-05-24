@@ -4,8 +4,14 @@
    - V2 scope: new transactions first; sport keeps its local history queue.
    ========================= */
 (function () {
+  if (window.__TB_OFFLINE_QUEUE_V2_LOADED__) return;
+  window.__TB_OFFLINE_QUEUE_V2_LOADED__ = true;
+
   const QUEUE_VERSION = 2;
   const KEY_PREFIX = "travelbudget_offline_queue_v2";
+  const LOCK_PREFIX = "travelbudget_offline_queue_v2_lock";
+  const LOCK_TTL_MS = 45000;
+  const OWNER = `oq_owner_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   let syncing = false;
 
   function uid() {
@@ -19,6 +25,10 @@
 
   function key() {
     return `${KEY_PREFIX}_${uid() || "anon"}`;
+  }
+
+  function lockKey() {
+    return `${LOCK_PREFIX}_${uid() || "anon"}`;
   }
 
   function nowISO() {
@@ -48,6 +58,43 @@
       console.warn("[OfflineQueue] write failed", e?.message || e);
       return false;
     }
+  }
+
+  function readLock() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(lockKey()) || "null");
+      return raw && typeof raw === "object" ? raw : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function acquireLock(reason) {
+    const now = Date.now();
+    const current = readLock();
+    if (current?.owner && current.owner !== OWNER && Number(current.expiresAt || 0) > now) {
+      return false;
+    }
+    const next = {
+      owner: OWNER,
+      reason: String(reason || "sync"),
+      createdAt: now,
+      expiresAt: now + LOCK_TTL_MS,
+    };
+    try {
+      localStorage.setItem(lockKey(), JSON.stringify(next));
+      const check = readLock();
+      return check?.owner === OWNER;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function releaseLock() {
+    try {
+      const current = readLock();
+      if (!current || current.owner === OWNER) localStorage.removeItem(lockKey());
+    } catch (_) {}
   }
 
   function dispatchChanged(extra) {
@@ -134,20 +181,22 @@
 
   async function sync(reason) {
     if (syncing) return { ok: false, skipped: "already-syncing" };
-    try {
-      if (typeof window.tbShouldUseOfflineMode === "function" && await window.tbShouldUseOfflineMode(`offline-queue:${reason || "sync"}`)) {
-        return { ok: false, skipped: "offline" };
-      }
-    } catch (_) {
-      return { ok: false, skipped: "offline-check" };
-    }
-    const items = safeRead();
-    const todo = items.filter((item) => item.status !== "done");
-    if (!todo.length) return { ok: true, synced: 0 };
-
-    syncing = true;
+    if (!acquireLock(reason)) return { ok: false, skipped: "locked" };
     let synced = 0;
     try {
+      try {
+        if (typeof window.tbShouldUseOfflineMode === "function" && await window.tbShouldUseOfflineMode(`offline-queue:${reason || "sync"}`)) {
+          return { ok: false, skipped: "offline" };
+        }
+      } catch (_) {
+        return { ok: false, skipped: "offline-check" };
+      }
+
+      const items = safeRead();
+      const todo = items.filter((item) => item.status !== "done");
+      if (!todo.length) return { ok: true, synced: 0 };
+
+      syncing = true;
       for (const item of todo) {
         try {
           item.status = "syncing";
@@ -174,6 +223,7 @@
       return { ok: true, synced };
     } finally {
       syncing = false;
+      releaseLock();
       dispatchChanged({ synced });
     }
   }

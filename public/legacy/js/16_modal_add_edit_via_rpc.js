@@ -451,12 +451,16 @@ function _txAddOptimisticOfflineRow(core, rpcArgs) {
   try {
     const tempId = rpcArgs?.p_idempotency_key || `offline_tx_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     const wallet = (state.wallets || []).find((w) => String(w.id) === String(core.walletId));
+    const createdAt = new Date().toISOString();
+    const travelId = core.travelId || core.travel_id || state?.activeTravelId || null;
     const row = {
       id: tempId,
       localOnly: true,
       offlinePending: true,
       walletId: core.walletId,
       wallet_id: core.walletId,
+      travelId,
+      travel_id: travelId,
       walletName: wallet?.name || "",
       wallet_name: wallet?.name || "",
       type: core.type,
@@ -475,17 +479,39 @@ function _txAddOptimisticOfflineRow(core, rpcArgs) {
       budget_date_end: core.budgetDateEnd || core.dateEnd || core.dateStart || core.cashDate,
       payNow: !!core.payNow,
       pay_now: !!core.payNow,
+      affectsBudget: core.affectsBudget !== undefined ? !!core.affectsBudget : !core.outOfBudget,
+      affects_budget: core.affectsBudget !== undefined ? !!core.affectsBudget : !core.outOfBudget,
       outOfBudget: !!core.outOfBudget,
       out_of_budget: !!core.outOfBudget,
       nightCovered: !!core.nightCovered,
       night_covered: !!core.nightCovered,
-      createdAt: new Date().toISOString(),
-      created_at: new Date().toISOString(),
+      createdAt,
+      created_at: createdAt,
     };
     state.transactions = Array.isArray(state.transactions) ? state.transactions.slice() : [];
+    state.transactions = state.transactions.filter((tx) => String(tx?.id || "") !== String(tempId));
     state.transactions.unshift(row);
+    try {
+      const map = state.walletBalanceMap || {};
+      const wid = String(core.walletId || "");
+      const balanceRow = map[wid];
+      if (balanceRow && row.payNow !== false && !row.isInternal && !row.is_internal) {
+        const delta = String(row.type || "").toLowerCase() === "income"
+          ? Number(row.amount || 0)
+          : -Number(row.amount || 0);
+        const current = Number(balanceRow.effectiveBalance ?? balanceRow.effective_balance ?? balanceRow.balance ?? wallet?.balance ?? 0);
+        const next = current + (Number.isFinite(delta) ? delta : 0);
+        map[wid] = Object.assign({}, balanceRow, {
+          effectiveBalance: next,
+          effective_balance: next,
+          offlinePendingDelta: Number(balanceRow.offlinePendingDelta || 0) + (Number.isFinite(delta) ? delta : 0),
+        });
+        state.walletBalanceMap = Object.assign({}, map);
+      }
+    } catch (_) {}
     try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("offline-queue:tx"); } catch (_) {}
     try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
+    try { if (typeof window.tbRefreshFinancialState === "function") window.tbRefreshFinancialState("offline-queue:tx", { cashflow: false }); } catch (_) {}
     return row;
   } catch (e) {
     console.warn("[OfflineQueue] optimistic tx failed", e?.message || e);
@@ -994,6 +1020,7 @@ async function saveModal() {
           outOfBudget,
           nightCovered: !!normalizedTx.nightCovered,
           affectsBudget: !!normalizedTx.affectsBudget,
+          travelId: state?.activeTravelId || null,
           tripExpenseId: null,
           tripShareLinkId: null
         };
