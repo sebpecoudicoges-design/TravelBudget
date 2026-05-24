@@ -126,6 +126,10 @@
     return `oq_${String(kind || "item").replace(/[^a-z0-9_-]/gi, "_")}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   }
 
+  function singletonKind(kind) {
+    return String(kind || "") === "sport.sync_local";
+  }
+
   function cleanupOptimisticRows(queueId) {
     try {
       if (!window.state || !Array.isArray(state.transactions)) return 0;
@@ -150,9 +154,21 @@
 
   function enqueue(kind, payload, meta) {
     const items = safeRead();
+    const normalizedKind = String(kind || "unknown");
+    if (singletonKind(normalizedKind)) {
+      const existing = items.find((item) => item && item.kind === normalizedKind && item.status !== "done");
+      if (existing) {
+        existing.updatedAt = nowISO();
+        existing.payload = Object.assign({}, existing.payload || {}, payload || {});
+        existing.meta = Object.assign({}, existing.meta || {}, meta || {});
+        safeWrite(items);
+        toastInfo(message("Action deja en attente. Synchro au retour reseau.", "Action already pending. It will sync when the connection returns."));
+        return existing;
+      }
+    }
     const item = {
       id: makeId(kind),
-      kind: String(kind || "unknown"),
+      kind: normalizedKind,
       status: "pending",
       attempts: 0,
       createdAt: nowISO(),

@@ -444,9 +444,17 @@
       weightKg: 0,
     });
   }
+  function normalizedEquipmentForGoal(goal, equipment) {
+    const g = String(goal || "strength");
+    const eq = String(equipment || "all");
+    if (g === "basketball") return eq === "all" || eq === "outdoor" ? eq : "outdoor";
+    if (g === "swim") return eq === "all" || eq === "pool" ? eq : "pool";
+    if (g === "climb") return eq === "all" || eq === "wall" ? eq : "wall";
+    return eq;
+  }
   function filteredExercises(goal, equipment) {
     const g = goal || "strength";
-    const eq = equipment || "all";
+    const eq = normalizedEquipmentForGoal(g, equipment || "all");
     return EXERCISE_LIBRARY
       .filter(ex => (g === "free" || ex.goal === g || (g === "cardio" && ex.goal === "basketball")) && (eq === "all" || ex.equipment === eq))
       .slice()
@@ -602,7 +610,7 @@
   }
   function generateSmartPlan() {
     const goal = CACHE.builderGoal || "strength";
-    const equipment = CACHE.builderEquipment || "all";
+    const equipment = normalizedEquipmentForGoal(goal, CACHE.builderEquipment || "all");
     const level = CACHE.builderLevel || "regular";
     const targetSeconds = Math.max(10, n(CACHE.builderDuration, 35)) * 60;
     const pool = filteredExercises(goal, equipment)
@@ -626,7 +634,9 @@
     }
     const cool = smartCooldown(goal);
     if (cool && goal !== "free" && totalPlanSeconds(plan) < targetSeconds * 1.08) plan.push(tunedPlanItem(cool, "beginner"));
-    return plan.length ? plan : [defaultPlanItem()];
+    if (plan.length) return plan;
+    const sportFallback = filteredExercises(goal, "all")[0];
+    return sportFallback ? [tunedPlanItem(sportFallback, level)] : [defaultPlanItem()];
   }
   function defaultPlanItem() {
     return makePlanItem("bodyweight_strength", { exerciseName: "Push-up", mode: "reps", targetReps: 30, sets: 3, restSeconds: 60 });
@@ -1258,11 +1268,12 @@
     const goalSelect = root.querySelector("#sport-goal");
     if (goalSelect) goalSelect.onchange = () => {
       CACHE.builderGoal = goalSelect.value || "strength";
+      CACHE.builderEquipment = normalizedEquipmentForGoal(CACHE.builderGoal, CACHE.builderEquipment || "all");
       renderSport("goal");
     };
     const libraryEquipment = root.querySelector("#sport-library-equipment");
     if (libraryEquipment) libraryEquipment.onchange = () => {
-      CACHE.builderEquipment = libraryEquipment.value || "all";
+      CACHE.builderEquipment = normalizedEquipmentForGoal(CACHE.builderGoal || "strength", libraryEquipment.value || "all");
       renderSport("library-equipment");
     };
     const simpleAdd = root.querySelector("#sport-simple-add");
@@ -1883,19 +1894,25 @@
     CACHE.status = txt("Synchronisation des seances locales...", "Syncing local workouts...");
     renderSport("sync-local-start");
     let ok = 0;
+    let syncError = null;
     try {
       for (const row of rows) {
         if (await syncLocalWorkoutRow(row)) ok += 1;
+      }
+      if (ok < rows.length) {
+        throw new Error(txt("Certaines seances locales restent en attente.", "Some local workouts are still pending."));
       }
       CACHE.loaded = false;
       CACHE.status = txt(`${ok} seance(s) synchronisee(s).`, `${ok} workout(s) synced.`);
       await loadHistory();
     } catch (e) {
+      syncError = e;
       CACHE.error = e?.message || String(e);
       CACHE.status = txt(`${ok} seance(s) synchronisee(s), puis erreur Supabase.`, `${ok} workout(s) synced, then Supabase error.`);
       console.warn("[sport] local sync failed", CACHE.error);
     }
     renderSport("sync-local-done");
+    if (syncError) throw syncError;
   }
   window.tbSportSyncLocalWorkouts = syncLocalWorkouts;
 
