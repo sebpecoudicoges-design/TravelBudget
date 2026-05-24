@@ -106,7 +106,12 @@ window.__TB_SB__ = sb;
       try {
         window.dispatchEvent(new CustomEvent("tb:auth_scope_changed", { detail: { prev, uid } }));
       } catch (_) {}
-      try { console.warn("[AuthScope] user changed -> cleared scoped local state", { prev, uid }); } catch (_) {}
+      try {
+        const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(String(location.hostname || ""));
+        console.warn("[AuthScope] user changed -> cleared scoped local state", isLocal
+          ? { prev, uid }
+          : { hadPrev: !!prev, hasUid: !!uid });
+      } catch (_) {}
     }
     return { prev, uid, changed: prev !== uid };
   };

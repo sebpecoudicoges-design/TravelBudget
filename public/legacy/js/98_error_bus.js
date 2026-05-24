@@ -31,6 +31,28 @@
     }
   }
 
+  function _redact(value) {
+    try {
+      let s = typeof value === "string" ? value : JSON.stringify(value);
+      s = String(s == null ? "" : s);
+      s = s.replace(/(access_token|refresh_token|authorization|bearer|apikey|api_key|password|jwt)(["'\s:=]+)([^"',\s}]+)/gi, "$1$2[redacted]");
+      s = s.replace(/\b[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}\b/g, "[uuid]");
+      return s;
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function _redactJson(value) {
+    try {
+      if (value == null) return null;
+      const redacted = _redact(value);
+      try { return JSON.parse(redacted); } catch (_) { return { redacted }; }
+    } catch (_) {
+      return null;
+    }
+  }
+
   function _toPlain(err) {
     try {
       if (!err) return { message: "Unknown error" };
@@ -54,7 +76,7 @@
       const u = window.sbUser || window.__TB_USER || null;
       return {
         user_id: u?.id || u?.user?.id || null,
-        email: u?.email || u?.user?.email || null,
+        email: null,
       };
     } catch (_) {
       return { user_id: null, email: null };
@@ -149,13 +171,13 @@
     return _context({
       type: String(e.type || "error"),
       section: e.section ? String(e.section) : null,
-      message: _safeString(e.message || plain?.message || e.text || "Unknown error", 2000),
-      stack: _safeString(e.stack || plain?.stack || "", 8000),
+      message: _safeString(_redact(e.message || plain?.message || e.text || "Unknown error"), 2000),
+      stack: _safeString(_redact(e.stack || plain?.stack || ""), 8000),
       filename: e.filename || null,
       lineno: e.lineno || null,
       colno: e.colno || null,
       severity: String(e.severity || "error"),
-      details: e.details || plain || null,
+      details: e.details ? _redactJson(e.details) : (plain ? _redactJson(plain) : null),
       synced: false,
     });
   }
@@ -196,7 +218,7 @@
     return {
       id: row.id,
       user_id: row.user_id || currentUser.user_id || null,
-      email: row.email || currentUser.email || null,
+      email: null,
       version: row.version || null,
       build_label: row.build_label || null,
       platform: row.platform || null,
