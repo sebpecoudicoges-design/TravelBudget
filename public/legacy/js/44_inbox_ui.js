@@ -216,6 +216,70 @@
     };
   }
 
+  function tripApprovalMeta(item){
+    const raw = item?.media;
+    if(raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;
+    return {};
+  }
+
+  function isTripPayerApproval(item){
+    return String(item?.source || '') === 'trip_payer_approval'
+      || String(tripApprovalMeta(item)?.kind || '') === 'trip_payer_approval';
+  }
+
+  function openTripPayerApprovalModal(item){
+    const meta = tripApprovalMeta(item);
+    const amount = Number(meta.amount || 0);
+    const currency = String(meta.currency || '').toUpperCase();
+    const wallets = (Array.isArray(window.state?.wallets) ? window.state.wallets : [])
+      .filter(w => w?.archived !== true && String(w.currency || '').toUpperCase() === currency);
+    if(!wallets.length) return alert(tr('Aucun wallet disponible dans cette devise.', 'No wallet available in this currency.'));
+
+    closeInboxModal();
+    const wrap = document.createElement('div');
+    wrap.className = 'tb-inbox-modal-backdrop';
+    wrap.onclick = (e) => { if(e.target === wrap) closeInboxModal(); };
+    wrap.innerHTML = `
+      <div class="tb-inbox-modal" role="dialog" aria-modal="true">
+        <div class="tb-inbox-modal-head">
+          <div><h3>${esc(tr('Valider un paiement Trip', 'Approve Trip payment'))}</h3><div class="tb-inbox-note">${esc(tr('Cette action créera les écritures Budget dans ton compte.', 'This will create Budget entries in your account.'))}</div></div>
+          <button class="btn" type="button" data-inbox-modal-close>×</button>
+        </div>
+        <div class="tb-inbox-form-grid">
+          <div class="field span-2"><label>${esc(tr('Partage', 'Shared trip'))}</label><input type="text" value="${esc(meta.trip_name || 'Trip')}" disabled></div>
+          <div class="field span-2"><label>${esc(tr('Dépense', 'Expense'))}</label><input type="text" value="${esc(meta.expense_label || '')}" disabled></div>
+          <div class="field"><label>${esc(tr('Montant payé', 'Paid amount'))}</label><input type="text" value="${esc(`${amount || ''} ${currency}`.trim())}" disabled></div>
+          <div class="field"><label>${esc(tr('Ta part budget', 'Your budget share'))}</label><input type="text" value="${esc(`${Number(meta.payer_share_amount || 0) || 0} ${currency}`)}" disabled></div>
+          <div class="field span-2"><label>${esc(tr('Wallet à débiter', 'Wallet to debit'))}</label><select id="tb-trip-approval-wallet">${wallets.map(w => `<option value="${esc(w.id || w.wallet_id)}">${esc(w.name || 'Wallet')} · ${esc(w.currency || '')}</option>`).join('')}</select></div>
+        </div>
+        <div class="tb-inbox-modal-actions">
+          <button class="btn" type="button" data-inbox-modal-close>${esc(tr('Annuler', 'Cancel'))}</button>
+          <button class="btn primary" type="button" id="tb-trip-approval-save">${esc(tr('Valider et créer', 'Approve and create'))}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    wrap.querySelectorAll('[data-inbox-modal-close]').forEach(b => b.onclick = closeInboxModal);
+    const save = wrap.querySelector('#tb-trip-approval-save');
+    save.onclick = async () => {
+      save.disabled = true;
+      try {
+        const walletId = wrap.querySelector('#tb-trip-approval-wallet')?.value || '';
+        const rpcName = window.TB_CONST?.RPCS?.trip_accept_payer_approval || 'trip_accept_payer_approval';
+        const c = client();
+        if(!c) throw new Error(tr('Client Supabase indisponible.', 'Supabase client unavailable.'));
+        const { error } = await c.rpc(rpcName, { p_inbox_id: item.id, p_wallet_id: walletId });
+        if(error) throw error;
+        closeInboxModal();
+        await loadInbox();
+        try { if(typeof window.tbAfterMutationRefresh === 'function') await window.tbAfterMutationRefresh('trip:payer-approval'); else if(typeof window.refreshFromServer === 'function') await window.refreshFromServer(); } catch(_) {}
+        alert(tr('Paiement Trip validé.', 'Trip payment approved.'));
+      } catch(e) {
+        save.disabled = false;
+        alert(e?.message || String(e));
+      }
+    };
+  }
+
   async function ensureInvoiceFolder(userId){
     const c = client();
     if(!c || !userId) return null;
@@ -857,6 +921,32 @@
   }
 
   function renderCard(item){
+    if(isTripPayerApproval(item)){
+      const meta = tripApprovalMeta(item);
+      const amount = `${meta.amount || ''} ${meta.currency || ''}`.trim();
+      const title = `${tr('Paiement Trip à valider', 'Trip payment to approve')} · ${meta.trip_name || 'Trip'}`;
+      const detail = `${meta.expense_label || tr('Dépense', 'Expense')} · ${amount}`;
+      return `
+        <article class="tb-inbox-card" data-id="${esc(item.id)}" data-status="${esc(item.status || 'pending')}">
+          <div class="tb-inbox-meta">
+            <span class="tb-inbox-badge">${esc(statusLabel(item.status))}</span>
+            <span>${esc(fmtDateTime(item.created_at))}</span>
+          </div>
+          <div class="tb-inbox-text">${esc(title)}</div>
+          <div class="tb-inbox-parse">
+            <span class="tb-inbox-chip">Trip</span>
+            <span class="tb-inbox-chip">${esc(detail)}</span>
+            <span class="tb-inbox-chip">${esc(tr('Demandé par', 'Requested by'))} ${esc(meta.created_by_email || item.source_from || 'TravelBudget')}</span>
+          </div>
+          <div class="tb-inbox-note">${esc(tr('Valide seulement si tu confirmes avoir payé cette dépense.', 'Approve only if you confirm you paid this expense.'))}</div>
+          <div class="tb-inbox-buttons">
+            <button class="primary" type="button" data-inbox-action="trip-payer-approve" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' ? 'disabled' : ''}>${esc(tr('Valider paiement', 'Approve payment'))}</button>
+            <button type="button" data-inbox-action="snooze" data-id="${esc(item.id)}" ${item.status === 'deleted' ? 'disabled' : ''}>${esc(tr('Reporter', 'Snooze'))}</button>
+            <button class="danger" type="button" data-inbox-action="delete" data-id="${esc(item.id)}" ${item.status === 'deleted' ? 'disabled' : ''}>${esc(tr('Supprimer', 'Delete'))}</button>
+          </div>
+        </article>
+      `;
+    }
     const parsed = parseQuickText(item.raw_text);
     const text = String(item.raw_text || '').trim();
     const title = text || (item.media_count ? tr('Document reçu', 'Received document') : tr('Élément reçu', 'Received item'));
@@ -990,6 +1080,10 @@
         openLinkTransactionModalForInbox(item);
         return;
       }
+      if(action === 'trip-payer-approve'){
+        openTripPayerApprovalModal(item);
+        return;
+      }
     }catch(e){ showError(e); }
   }
 
@@ -1040,6 +1134,7 @@
   window.renderInbox = renderInbox;
   window.tbInboxRefresh = renderInbox;
   window.refreshInboxTabBadge = refreshInboxTabBadge;
+  window.tbRefreshInboxBadge = refreshInboxTabBadge;
 
   function boot(){
     patchNavigation();

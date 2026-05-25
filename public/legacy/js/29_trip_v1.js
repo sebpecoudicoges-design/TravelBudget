@@ -201,6 +201,28 @@ async function _rpcAcceptInvite(token) {
   }
 }
 
+  async function _requestPayerApprovalIfNeeded(expenseId, paidByMemberId) {
+    try {
+      if (!expenseId) return null;
+      if (await _tripShouldUseOfflineMode("trip:payerApproval")) return null;
+      const exp = (tripState.expenses || []).find((row) => String(row?.id || "") === String(expenseId));
+      const payerId = paidByMemberId || exp?.paidByMemberId || exp?.paid_by_member_id || null;
+      const payer = (tripState.members || []).find((m) => String(m.id || "") === String(payerId || ""));
+      if (payer?.isMe) return null;
+      const rpcName = TB_CONST?.RPCS?.trip_request_payer_approval || "trip_request_payer_approval";
+      const { data, error } = await sb.rpc(rpcName, { p_expense_id: expenseId });
+      if (error) throw error;
+      if (data) {
+        try { if (typeof window.tbRefreshInboxBadge === "function") window.tbRefreshInboxBadge(); } catch (_) {}
+        toastOk("[Trip] Demande de validation envoyée au payeur.");
+      }
+      return data || null;
+    } catch (e) {
+      console.warn("[Trip] payer approval request failed:", e);
+      return null;
+    }
+  }
+
   async function _loadPendingTripInvites() {
     try {
       if (await _tripShouldUseOfflineMode("trip:pendingInvites")) return [];
@@ -3953,6 +3975,7 @@ try {
     if (!updatedExpenseId) throw new Error("Trip: RPC trip_apply_expense_v2 n'a pas renvoyé expense_id.");
 
     await _integrateExpenseBudgetSideEffects({ expenseId: updatedExpenseId, date, label, amount: amt, currency: cur, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split });
+    await _requestPayerApprovalIfNeeded(updatedExpenseId, paidByMemberId);
 
     tripState.editingExpenseId = null;
     tripState.editingExpenseDraft = null;
@@ -4503,6 +4526,7 @@ try {
 
     }
 
+    await _requestPayerApprovalIfNeeded(ex.id, paidByMemberId);
     return ex.id;
   }
 
