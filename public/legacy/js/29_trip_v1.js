@@ -258,6 +258,56 @@ async function _rpcAcceptInvite(token) {
     `;
   }
 
+  function _syncTripInviteNotification(invites) {
+    try {
+      const rows = Array.isArray(invites) ? invites.filter((row) => row?.token && row?.tripId) : [];
+      const tab = document.getElementById("tab-trip");
+      if (tab) {
+        tab.classList.toggle("tb-has-trip-invite", rows.length > 0);
+        tab.setAttribute("data-trip-invite-count", rows.length ? String(rows.length) : "");
+        tab.title = rows.length ? `${rows.length} invitation Trip en attente` : "";
+      }
+
+      let box = document.getElementById("tb-trip-invite-notice");
+      if (!rows.length) {
+        if (box) box.remove();
+        return;
+      }
+
+      const en = typeof window.tbGetLang === "function" && window.tbGetLang() === "en";
+      if (!box) {
+        box = document.createElement("button");
+        box.id = "tb-trip-invite-notice";
+        box.type = "button";
+        box.className = "tb-trip-invite-notice";
+        box.addEventListener("click", () => {
+          try { showView("trip"); } catch (_) { window.location.hash = "#trip"; }
+        });
+        document.body.appendChild(box);
+      }
+      const first = rows[0];
+      box.innerHTML = `
+        <span class="tb-trip-invite-dot">${rows.length}</span>
+        <span class="tb-trip-invite-copy">
+          <strong>${escapeHTML(en ? "Trip invitation" : "Invitation Trip")}</strong>
+          <small>${escapeHTML(first.tripName || "Trip")}</small>
+        </span>
+      `;
+      box.style.display = "inline-flex";
+    } catch (e) {
+      console.warn("[Trip] invite notification sync failed:", e);
+    }
+  }
+
+  async function _refreshTripInviteNotification() {
+    const invites = await _loadPendingTripInvites();
+    tripState.pendingInvites = invites;
+    _syncTripInviteNotification(invites);
+    return invites;
+  }
+
+  window.tbRefreshTripInviteNotifications = _refreshTripInviteNotification;
+
 async function _rpcBindMe(tripId) {
   if (!tripId || typeof tripId !== "string") return;
   // basic UUID sanity check to avoid 400 on RPC
@@ -414,6 +464,7 @@ async function _copyToClipboard(text) {
       tripState.shares = [];
       tripState.myRole = null;
       tripState.pendingInvites = [];
+      _syncTripInviteNotification([]);
       tripState.lastInviteUrl = null;
       tripState.editingExpenseId = null;
       tripState.editingExpenseDraft = null;
@@ -5497,6 +5548,7 @@ toastOk("Participant ajouté.");
           btn.disabled = true;
           await _rpcAcceptInvite(token);
           tripState.pendingInvites = (tripState.pendingInvites || []).filter((row) => String(row?.token || "") !== String(token));
+          _syncTripInviteNotification(tripState.pendingInvites);
           tripState._tripsLoaded = false;
           if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ forceTrips: true });
           toastOk("[Trip] Invitation acceptée.");
@@ -6155,6 +6207,7 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
 
     if (tripState.activeTripId) localStorage.setItem(TRIP_ACTIVE_KEY, tripState.activeTripId);
     tripState.pendingInvites = await _loadPendingTripInvites();
+    _syncTripInviteNotification(tripState.pendingInvites);
     await _loadActiveData();
     await _renderUI();
   }

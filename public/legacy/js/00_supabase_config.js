@@ -101,6 +101,8 @@ window.__TB_SB__ = sb;
     const uid = currentUid || "";
     const prev = _lsSafeGet(LAST_UID_KEY) || "";
     if (prev !== uid) {
+      try { window.sbRole = "user"; } catch (_) {}
+      try { if (typeof window.syncTabsForRole === "function") window.syncTabsForRole(); } catch (_) {}
       tbClearTripLocalState();
       _lsSafeSet(LAST_UID_KEY, uid);
       try {

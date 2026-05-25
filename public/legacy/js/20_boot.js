@@ -150,6 +150,7 @@ window.onload = async function () {
       }
       if (typeof ensureBootstrap === "function") await ensureBootstrap();
       await refreshFromServer({ force: false });
+      try { if (typeof window.tbRefreshTripInviteNotifications === "function") window.tbRefreshTripInviteNotifications(); } catch (_) {}
       safeShowAuth(false);
     } catch (e) {
       console.warn('[Boot] auth change refresh failed:', e?.message || e);
@@ -233,6 +234,7 @@ window.onload = async function () {
       if (typeof refreshFromServer === "function") await refreshFromServer({ force: false });
       try { if (typeof window.tbRenderDashboardCritical === "function") window.tbRenderDashboardCritical("boot:post-refresh", { cashflow: false }); } catch (_) {}
       try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
+      try { if (typeof window.tbRefreshTripInviteNotifications === "function") window.tbRefreshTripInviteNotifications(); } catch (_) {}
       setTimeout(() => {
         try {
           const view = (typeof activeView === "string" && activeView) ? activeView : "dashboard";

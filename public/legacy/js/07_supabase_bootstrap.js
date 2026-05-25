@@ -547,7 +547,7 @@ async function _tbEnsureBootstrapImpl(opts = {}) {
 
   // 1) Ensure profile row exists (role default: 'user')
   // expose role globally for navigation/admin UI
-  window.sbRole = (prof && prof.role) ? String(prof.role).trim().toLowerCase() : (window.sbRole || 'user');
+  window.sbRole = (prof && prof.role) ? String(prof.role).trim().toLowerCase() : 'user';
   try {
     if (typeof syncTabsForRole === "function") syncTabsForRole();
   } catch (_) {}
