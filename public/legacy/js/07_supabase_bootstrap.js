@@ -547,7 +547,10 @@ async function _tbEnsureBootstrapImpl(opts = {}) {
 
   // 1) Ensure profile row exists (role default: 'user')
   // expose role globally for navigation/admin UI
-  window.sbRole = (prof && prof.role) ? String(prof.role) : (window.sbRole || 'user');
+  window.sbRole = (prof && prof.role) ? String(prof.role).trim().toLowerCase() : (window.sbRole || 'user');
+  try {
+    if (typeof syncTabsForRole === "function") syncTabsForRole();
+  } catch (_) {}
   if (!prof) {
     window.sbRole = 'user';
     const { error: insErr } = await sb.from(TB_CONST.TABLES.profiles).insert([

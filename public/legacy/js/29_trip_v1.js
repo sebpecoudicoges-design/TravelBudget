@@ -87,6 +87,85 @@
   return url;
 }
 
+  function _isTripEmail(value) {
+    const email = String(value || "").trim();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  function _tripInviteUrl(token) {
+    const base = window.location.origin + window.location.pathname;
+    return base + "#trip&invite=" + encodeURIComponent(token);
+  }
+
+  async function _createInviteForExistingMember(memberId, email) {
+    const tripId = tripState.activeTripId;
+    if (!tripId) throw new Error("Trip introuvable.");
+    const cleanEmail = String(email || "").trim();
+    if (!_isTripEmail(cleanEmail)) throw new Error("Email invalide.");
+
+    const member = (tripState.members || []).find((m) => String(m.id) === String(memberId));
+    if (!member) throw new Error("Participant introuvable.");
+
+    const createdBy = await _ensureSession();
+    const token = (crypto?.randomUUID ? crypto.randomUUID() : (Date.now() + "-" + Math.random()).replace(/\./g, ""));
+    const expiresAt = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString();
+
+    const updatePayload = { email: cleanEmail };
+    const { error: updateErr } = await sb
+      .from(TB_CONST.TABLES.trip_members)
+      .update(updatePayload)
+      .eq("trip_id", tripId)
+      .eq("id", memberId);
+    if (updateErr) throw updateErr;
+
+    const { error: inviteErr } = await sb.from(TB_CONST.TABLES.trip_invites).insert({
+      token,
+      trip_id: tripId,
+      role: "member",
+      created_by: createdBy,
+      expires_at: expiresAt,
+      member_id: memberId,
+    });
+    if (inviteErr) throw inviteErr;
+
+    const url = _tripInviteUrl(token);
+    tripState.lastInviteUrl = url;
+    return {
+      url,
+      email: cleanEmail,
+      name: member.name || "Participant",
+      expiresAt,
+    };
+  }
+
+  async function _sendInviteForExistingMember(memberId) {
+    const member = (tripState.members || []).find((m) => String(m.id) === String(memberId));
+    if (!member) throw new Error("Participant introuvable.");
+    const currentEmail = String(member.email || "").trim();
+    const nextEmail = prompt(`Email pour ${member.name || "ce participant"} :`, currentEmail);
+    if (nextEmail === null) return null;
+    const email = String(nextEmail || "").trim();
+    if (!_isTripEmail(email)) throw new Error("Email invalide.");
+
+    const invite = await _createInviteForExistingMember(memberId, email);
+    const tripName = (tripState.trips || []).find((t) => String(t.id) === String(tripState.activeTripId))?.name || "TravelBudget";
+    const subject = `Invitation Trip - ${tripName}`;
+    const body = [
+      `Bonjour ${invite.name || ""}`.trim() + ",",
+      "",
+      "Voici ton lien d'invitation pour rejoindre le partage Trip :",
+      invite.url,
+      "",
+      "Le lien expire dans 14 jours.",
+    ].join("\n");
+
+    await _copyToClipboard(invite.url);
+    try {
+      window.location.href = `mailto:${encodeURIComponent(invite.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    } catch (_) {}
+    return invite;
+  }
+
   async function _acceptInviteFromURL() {
     const hash = window.location.hash || "";
     const m = hash.match(/(?:\?|&|#)invite=([^&]+)/);
@@ -5099,6 +5178,7 @@ return `
                     ${m.email ? escapeHTML(m.email) : `<em>invitation en attente</em>`}
                   </div>
                 </div>
+                ${canWrite && !m.isMe ? `<button class="btn" type="button" data-resend-invite="${m.id}">${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Resend invite" : "Renvoyer invitation")}</button>` : ``}
                 ${canWrite ? `<button class="btn" type="button" data-rename-member="${m.id}">${escapeHTML(_tripT("trip.member.rename"))}</button>` : ``}
                 ${canWrite ? `<button class="btn danger" data-del-member="${m.id}">${escapeHTML(_tripT("trip.delete"))}</button>` : ``}
               </div>
@@ -5376,6 +5456,21 @@ toastOk("Participant ajouté.");
           await _renameMember(id, name);
           if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
           toastOk("Participant renommé.");
+        } catch (e) {
+          toastWarn(e?.message || String(e));
+        }
+      };
+    });
+
+    root.querySelectorAll("[data-resend-invite]").forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          const id = btn.getAttribute("data-resend-invite");
+          if (!id) return;
+          const invite = await _sendInviteForExistingMember(id);
+          if (!invite) return;
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
+          toastOk(`Invitation prete pour ${invite.email}. Lien copie.`);
         } catch (e) {
           toastWarn(e?.message || String(e));
         }

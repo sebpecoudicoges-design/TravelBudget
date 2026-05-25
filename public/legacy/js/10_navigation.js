@@ -25,7 +25,7 @@ function setActiveTab(view) {
 }
 function showView(view) {
   try { if (typeof window.tbApplyUiModeToDocument === "function") window.tbApplyUiModeToDocument(); } catch (_) {}
-  if (view === "members" && typeof window.tbIsSimpleMode === "function" && window.tbIsSimpleMode()) view = "dashboard";
+  if (view === "members" && String(window.sbRole || "").trim().toLowerCase() !== "admin") view = "dashboard";
   activeView = view;
   try { if (typeof window !== "undefined") window.activeView = view; } catch (_) {}
   try { if (window.tbBus && typeof window.tbBus.emit === "function") window.tbBus.emit("view:changed", { view }); } catch (_) {}
@@ -58,10 +58,10 @@ function showView(view) {
 
 
 function syncTabsForRole() {
-  const isAdmin = (window.sbRole === 'admin');
-  const simple = (typeof window.tbIsSimpleMode === 'function') ? window.tbIsSimpleMode() : false;
+  const isAdmin = String(window.sbRole || "").trim().toLowerCase() === "admin";
   const tab = document.getElementById('tab-members');
-  if (tab) tab.style.display = (isAdmin && !simple) ? 'flex' : 'none';
+  try { document.body.classList.toggle("tb-role-admin", isAdmin); } catch (_) {}
+  if (tab) tab.style.display = isAdmin ? 'flex' : 'none';
   // if user is not admin and is currently on members view, bounce to dashboard
-  if ((!isAdmin || simple) && (typeof activeView !== 'undefined') && activeView === 'members') showView('dashboard');
+  if (!isAdmin && (typeof activeView !== 'undefined') && activeView === 'members') showView('dashboard');
 }
