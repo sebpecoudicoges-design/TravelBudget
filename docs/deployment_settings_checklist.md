@@ -19,7 +19,7 @@ Public webhook functions:
 
 - `whatsapp-inbox`: `verify_jwt=false`, because Twilio cannot send a Supabase JWT.
 
-Admin functions may also run with `verify_jwt=false`, but must validate the caller Bearer token and check `profiles.role = 'admin'` inside the function before using the service role key.
+Admin functions should run with `verify_jwt=true` and still validate the caller role with `profiles.role = 'admin'` inside the function before using the service role key.
 
 ## Supabase RPC Grants
 

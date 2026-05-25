@@ -368,13 +368,16 @@ deno_version = 2
 verify_jwt = false
 
 [functions.admin-invite]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-generate-invite-link]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-generate-recovery-link]
-verify_jwt = false
+verify_jwt = true
+
+[functions.admin-wipe-user]
+verify_jwt = true
 
 [analytics]
 enabled = true
