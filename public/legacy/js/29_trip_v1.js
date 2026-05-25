@@ -201,6 +201,63 @@ async function _rpcAcceptInvite(token) {
   }
 }
 
+  async function _loadPendingTripInvites() {
+    try {
+      if (await _tripShouldUseOfflineMode("trip:pendingInvites")) return [];
+      await _ensureSession();
+      const rpcName = TB_CONST?.RPCS?.trip_pending_invites_for_current_user || "trip_pending_invites_for_current_user";
+      const { data, error } = await sb.rpc(rpcName);
+      if (error) {
+        if (!window.__tbTripPendingInviteRpcWarned) {
+          window.__tbTripPendingInviteRpcWarned = true;
+          console.warn("[Trip] pending invites RPC unavailable:", error);
+        }
+        return [];
+      }
+      return (data || []).map((row) => ({
+        token: row.token,
+        tripId: row.trip_id || row.tripId,
+        tripName: row.trip_name || row.tripName || "Trip",
+        memberId: row.member_id || row.memberId,
+        memberName: row.member_name || row.memberName || "Participant",
+        role: row.role || "member",
+        expiresAt: row.expires_at || row.expiresAt || null,
+        createdAt: row.created_at || row.createdAt || null,
+      })).filter((row) => row.token && row.tripId);
+    } catch (e) {
+      console.warn("[Trip] pending invites load failed:", e);
+      return [];
+    }
+  }
+
+  function _pendingTripInvitesHTML(invites) {
+    const rows = Array.isArray(invites) ? invites.filter((row) => row?.token && row?.tripId) : [];
+    if (!rows.length) return "";
+    const en = typeof window.tbGetLang === "function" && window.tbGetLang() === "en";
+    return `
+      <div class="card" style="margin-bottom:12px;border-color:rgba(59,130,246,.35);background:rgba(59,130,246,.08);">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+          <div>
+            <h2 style="margin:0 0 6px 0;">${escapeHTML(en ? "Pending Trip invitation" : "Invitation Trip en attente")}</h2>
+            <div class="muted">${escapeHTML(en ? "You have been invited to join a shared trip." : "Tu as une invitation pour rejoindre un partage Trip.")}</div>
+          </div>
+          <span class="trip-badge">${rows.length}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+          ${rows.map((invite) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+              <div>
+                <strong>${escapeHTML(invite.tripName)}</strong>
+                <div class="muted" style="font-size:12px;">${escapeHTML(en ? "Invited as" : "Invite pour")} ${escapeHTML(invite.memberName)}</div>
+              </div>
+              <button class="btn primary" type="button" data-accept-pending-invite="${escapeHTML(invite.token)}">${escapeHTML(en ? "Join" : "Rejoindre")}</button>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
 async function _rpcBindMe(tripId) {
   if (!tripId || typeof tripId !== "string") return;
   // basic UUID sanity check to avoid 400 on RPC
@@ -318,6 +375,7 @@ async function _copyToClipboard(text) {
     expenses: [],
     shares: [],
     myRole: null,
+    pendingInvites: [],
     lastInviteUrl: null,
     editingExpenseId: null,
     editingExpenseDraft: null,
@@ -355,6 +413,7 @@ async function _copyToClipboard(text) {
       tripState.expenses = [];
       tripState.shares = [];
       tripState.myRole = null;
+      tripState.pendingInvites = [];
       tripState.lastInviteUrl = null;
       tripState.editingExpenseId = null;
       tripState.editingExpenseDraft = null;
@@ -4819,6 +4878,7 @@ try {
     
 
     const globalNetHTML = "";// removed: global net to avoid confusion
+    const pendingInvitesHTML = _pendingTripInvitesHTML(tripState.pendingInvites || []);
 
     const liveBalancesByCurRaw = _computeBalances();
     const liveBalancesByCur = _unifyBalancesToDisplayCurrency(liveBalancesByCurRaw);
@@ -5108,6 +5168,7 @@ return `
 
     root.innerHTML = `
       ${globalNetHTML}
+      ${pendingInvitesHTML}
       ${tripClosed ? `<div class="card" style="margin-bottom:12px;border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.08);">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
           <div>
@@ -5427,6 +5488,25 @@ toastOk("Participant ajouté.");
         }
       };
     }
+
+    root.querySelectorAll("[data-accept-pending-invite]").forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          const token = btn.getAttribute("data-accept-pending-invite");
+          if (!token) return;
+          btn.disabled = true;
+          await _rpcAcceptInvite(token);
+          tripState.pendingInvites = (tripState.pendingInvites || []).filter((row) => String(row?.token || "") !== String(token));
+          tripState._tripsLoaded = false;
+          if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ forceTrips: true });
+          toastOk("[Trip] Invitation acceptée.");
+        } catch (e) {
+          toastWarn(e?.message || "[Trip] Invitation invalide/expirée.");
+        } finally {
+          try { btn.disabled = false; } catch (_) {}
+        }
+      };
+    });
 
     root.querySelectorAll("[data-del-member]").forEach(btn => {
       btn.onclick = async () => {
@@ -6074,6 +6154,7 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
     }
 
     if (tripState.activeTripId) localStorage.setItem(TRIP_ACTIVE_KEY, tripState.activeTripId);
+    tripState.pendingInvites = await _loadPendingTripInvites();
     await _loadActiveData();
     await _renderUI();
   }

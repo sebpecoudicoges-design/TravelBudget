@@ -126,6 +126,7 @@ try {
   const RPCS = Object.freeze({
     accept_trip_invite: "accept_trip_invite",
     bind_trip_member_to_auth: "bind_trip_member_to_auth",
+    trip_pending_invites_for_current_user: "trip_pending_invites_for_current_user",
     apply_transaction_v2: "apply_transaction_v2",
     apply_transaction: "apply_transaction",
     delete_transaction: "delete_transaction",
