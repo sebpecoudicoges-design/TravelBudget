@@ -221,6 +221,8 @@ async function _rpcAcceptInvite(token) {
         memberId: row.member_id || row.memberId,
         memberName: row.member_name || row.memberName || "Participant",
         role: row.role || "member",
+        inviterEmail: row.inviter_email || row.inviterEmail || "",
+        inviterName: row.inviter_name || row.inviterName || row.inviter_email || "",
         expiresAt: row.expires_at || row.expiresAt || null,
         createdAt: row.created_at || row.createdAt || null,
       })).filter((row) => row.token && row.tripId);
@@ -234,6 +236,12 @@ async function _rpcAcceptInvite(token) {
     const rows = Array.isArray(invites) ? invites.filter((row) => row?.token && row?.tripId) : [];
     if (!rows.length) return "";
     const en = typeof window.tbGetLang === "function" && window.tbGetLang() === "en";
+    const roleLabel = (role) => {
+      const value = String(role || "member");
+      if (value === "viewer") return en ? "viewer" : "lecteur";
+      if (value === "owner") return en ? "owner" : "proprietaire";
+      return en ? "member" : "membre";
+    };
     return `
       <div class="card" style="margin-bottom:12px;border-color:rgba(59,130,246,.35);background:rgba(59,130,246,.08);">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
@@ -248,7 +256,11 @@ async function _rpcAcceptInvite(token) {
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
               <div>
                 <strong>${escapeHTML(invite.tripName)}</strong>
-                <div class="muted" style="font-size:12px;">${escapeHTML(en ? "Invited as" : "Invite pour")} ${escapeHTML(invite.memberName)}</div>
+                <div class="muted" style="font-size:12px;">
+                  ${escapeHTML(en ? "Invited by" : "Invité par")} ${escapeHTML(invite.inviterName || invite.inviterEmail || "TravelBudget")}
+                  · ${escapeHTML(en ? "as" : "en tant que")} ${escapeHTML(invite.memberName)}
+                  · ${escapeHTML(roleLabel(invite.role))}
+                </div>
               </div>
               <button class="btn primary" type="button" data-accept-pending-invite="${escapeHTML(invite.token)}">${escapeHTML(en ? "Join" : "Rejoindre")}</button>
             </div>
@@ -290,7 +302,7 @@ async function _rpcAcceptInvite(token) {
         <span class="tb-trip-invite-dot">${rows.length}</span>
         <span class="tb-trip-invite-copy">
           <strong>${escapeHTML(en ? "Trip invitation" : "Invitation Trip")}</strong>
-          <small>${escapeHTML(first.tripName || "Trip")}</small>
+          <small>${escapeHTML(first.tripName || "Trip")} · ${escapeHTML(first.inviterName || first.inviterEmail || "TravelBudget")}</small>
         </span>
       `;
       box.style.display = "inline-flex";
