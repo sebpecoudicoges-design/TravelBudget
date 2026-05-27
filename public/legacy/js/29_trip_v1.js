@@ -1553,6 +1553,7 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
     if (error) throw error;
     if (!data?.user?.id) throw new Error("Session non prête. Connecte-toi puis recharge.");
     sbUser = data.user;
+    window.sbUser = data.user;
     return data.user.id;
   }
 
@@ -1691,11 +1692,12 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
     if (seErr) throw seErr;
 
     // Determine *exactly one* "me" member row.
-    // Rationale: legacy data may have multiple rows with user_id == auth.uid() (because user_id was used as NOT NULL placeholder).
-    // We prefer auth_user_id match, then is_me flag, then a single (first) user_id match.
+    // Rationale: legacy data may have loose user_id/is_me placeholders, so auth identity/email must win.
+    const _myEmail = String(sbUser?.email || window.sbUser?.email || "").trim().toLowerCase();
     const _meRow = (m || []).find(r => r.auth_user_id && (String(r.auth_user_id) === String(uid)))
-      || (m || []).find(r => r.is_me === true)
+      || (_myEmail ? (m || []).find(r => String(r.email || "").trim().toLowerCase() === _myEmail) : null)
       || (m || []).find(r => r.user_id && (String(r.user_id) === String(uid)))
+      || (m || []).find(r => r.is_me === true && r.user_id && (String(r.user_id) === String(uid)))
       || null;
     const _meId = _meRow ? _meRow.id : null;
 

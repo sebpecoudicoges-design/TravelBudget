@@ -881,6 +881,26 @@
     } catch (_) {}
   }
 
+  async function hasInboxAuthSession(c){
+    try {
+      const localUid = window.sbUser?.id || window.sbUser?.user?.id || null;
+      if(localUid) return true;
+      if(!c?.auth?.getSession) return false;
+      const { data, error } = await c.auth.getSession();
+      if(error) return false;
+      return !!(data?.session?.user?.id || data?.session?.access_token);
+    } catch(_) {
+      return false;
+    }
+  }
+
+  function clearInboxBadgeAndNotifications(){
+    try {
+      CACHE.pendingNotifications = [];
+      setInboxTabBadge(0);
+    } catch(_) {}
+  }
+
   async function refreshInboxTabBadge(){
     try{
       ensureView();
@@ -894,6 +914,10 @@
       if (offline) return;
       const c = client();
       if(!c) return;
+      if(!(await hasInboxAuthSession(c))) {
+        clearInboxBadgeAndNotifications();
+        return;
+      }
       const { data, count, error } = await c
         .from(TABLE)
         .select('id,user_id,source,source_from,status,raw_text,media,target_type,target_id,created_at', { count:'exact' })
@@ -901,6 +925,10 @@
         .order('created_at', { ascending:false })
         .limit(20);
       if(error){
+        if(error?.code === '42501' || error?.status === 401 || /unauthorized|permission denied/i.test(String(error?.message || ''))) {
+          clearInboxBadgeAndNotifications();
+          return;
+        }
         console.warn('[TB][inbox] tab badge count failed', error);
         return;
       }
