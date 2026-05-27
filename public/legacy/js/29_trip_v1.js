@@ -205,16 +205,12 @@ async function _rpcAcceptInvite(token) {
     try {
       if (!expenseId) return null;
       if (await _tripShouldUseOfflineMode("trip:payerApproval")) return null;
-      const exp = (tripState.expenses || []).find((row) => String(row?.id || "") === String(expenseId));
-      const payerId = paidByMemberId || exp?.paidByMemberId || exp?.paid_by_member_id || null;
-      const payer = (tripState.members || []).find((m) => String(m.id || "") === String(payerId || ""));
-      if (payer?.isMe) return null;
       const rpcName = TB_CONST?.RPCS?.trip_request_payer_approval || "trip_request_payer_approval";
       const { data, error } = await sb.rpc(rpcName, { p_expense_id: expenseId });
       if (error) throw error;
       if (data) {
         try { if (typeof window.tbRefreshInboxBadge === "function") window.tbRefreshInboxBadge(); } catch (_) {}
-        toastOk("[Trip] Demande de validation envoyée au payeur.");
+        toastOk("[Trip] Demande d'ajout Budget envoyée aux participants concernés.");
       }
       return data || null;
     } catch (e) {
