@@ -1295,6 +1295,28 @@ async function deleteTx(txId) {
   await safeCall(_txModalT("transactions.safe.delete"), async () => {
     try {
       try { if (typeof window.tbBusyStart === "function") window.tbBusyStart(_txModalT("transactions.safe.delete_busy")); } catch (_) {}
+      const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
+        ? await window.tbShouldUseOfflineMode("transaction:delete")
+        : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+      if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
+        window.tbOfflineQueueEnqueue("transaction.delete", {
+          txId,
+          rpcName: TB_CONST?.RPCS?.delete_transaction || "delete_transaction",
+        }, {
+          label: tx?.label || "transaction",
+          amount: tx?.amount,
+          currency: tx?.currency,
+        });
+        try {
+          if (window.state && Array.isArray(state.transactions)) {
+            state.transactions = state.transactions.filter((row) => String(row.id) !== String(txId));
+          }
+          if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("tx:delete:offline");
+          if (typeof closeModal === "function") closeModal();
+          if (typeof renderAll === "function") renderAll();
+        } catch (_) {}
+        return;
+      }
       const { error } = await sb.rpc("delete_transaction", { p_tx_id: txId });
       if (error) {
         const code = String(error.code || "");

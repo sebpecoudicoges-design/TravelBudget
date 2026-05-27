@@ -295,6 +295,15 @@ async function _rpcAcceptInvite(token) {
   function _syncTripInviteNotification(invites) {
     try {
       const rows = Array.isArray(invites) ? invites.filter((row) => row?.token && row?.tripId) : [];
+      try {
+        if (typeof window.tbSetNotificationBucket === "function") {
+          window.tbSetNotificationBucket("trip_invites", rows.map((invite) => ({
+            title: (typeof window.tbGetLang === "function" && window.tbGetLang() === "en") ? "Trip invitation" : "Invitation Trip",
+            body: `${invite.tripName || "Trip"} · ${invite.inviterName || invite.inviterEmail || "TravelBudget"}`,
+            view: "trip",
+          })));
+        }
+      } catch (_) {}
       const tab = document.getElementById("tab-trip");
       if (tab) {
         tab.classList.toggle("tb-has-trip-invite", rows.length > 0);

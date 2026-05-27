@@ -11,7 +11,11 @@
     status: 'active',
     search: '',
     signedUrls: {},
+    pendingNotifications: [],
   };
+
+  const NOTIF_STATE = window.__tbNotificationState || { buckets: {} };
+  window.__tbNotificationState = NOTIF_STATE;
 
   function client(){
     try { if (typeof sb !== 'undefined' && sb && sb.from) return sb; } catch(_) {}
@@ -35,6 +39,79 @@
   function tr(fr, en){
     return inboxLang().startsWith('en') ? (en || fr) : fr;
   }
+
+  function ensureNotificationCenterStyles(){
+    if(document.getElementById('tb-notification-center-style')) return;
+    const style = document.createElement('style');
+    style.id = 'tb-notification-center-style';
+    style.textContent = `
+      #tb-notification-center{position:fixed;right:16px;top:82px;z-index:99998;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-family:inherit;}
+      #tb-notification-button{border:1px solid rgba(37,99,235,.24);border-radius:999px;background:rgba(255,255,255,.97);color:#0f172a;box-shadow:0 16px 48px rgba(15,23,42,.18);padding:9px 12px;display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-weight:900;font-size:13px;}
+      body.theme-dark #tb-notification-button{background:rgba(15,23,42,.96);color:#f8fafc;border-color:rgba(148,163,184,.28);}
+      .tb-notification-dot{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:900;}
+      #tb-notification-panel{width:min(380px,calc(100vw - 32px));max-height:min(460px,calc(100vh - 132px));overflow:auto;border:1px solid rgba(15,23,42,.10);border-radius:8px;background:rgba(255,255,255,.98);box-shadow:0 24px 70px rgba(15,23,42,.24);padding:12px;color:#0f172a;display:none;}
+      body.theme-dark #tb-notification-panel{background:rgba(15,23,42,.98);color:#f8fafc;border-color:rgba(148,163,184,.22);}
+      .tb-notification-row{border:1px solid rgba(15,23,42,.08);border-radius:8px;padding:10px;background:rgba(248,250,252,.92);display:flex;flex-direction:column;gap:4px;cursor:pointer;margin-top:8px;}
+      body.theme-dark .tb-notification-row{background:rgba(30,41,59,.72);border-color:rgba(148,163,184,.16);}
+      .tb-notification-row strong{font-size:13px;line-height:1.25;}
+      .tb-notification-row small{font-size:12px;color:#64748b;line-height:1.35;}
+      body.theme-dark .tb-notification-row small{color:#cbd5e1;}
+      .tb-notification-empty{font-size:13px;color:#64748b;padding:8px;}
+      @media(max-width:720px){#tb-notification-center{right:12px;top:72px;}#tb-notification-button{padding:8px 10px;}.tb-notification-label{display:none;}}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function syncNotificationCenter(){
+    try {
+      ensureNotificationCenterStyles();
+      const buckets = NOTIF_STATE.buckets || {};
+      const rows = Object.values(buckets).flatMap((bucket) => Array.isArray(bucket?.items) ? bucket.items : []);
+      let host = document.getElementById('tb-notification-center');
+      if(!host){
+        host = document.createElement('div');
+        host.id = 'tb-notification-center';
+        host.innerHTML = '<button id="tb-notification-button" type="button"><span class="tb-notification-dot">0</span><span class="tb-notification-label">Notifications</span></button><div id="tb-notification-panel"></div>';
+        document.body.appendChild(host);
+        host.querySelector('#tb-notification-button')?.addEventListener('click', () => {
+          const panel = document.getElementById('tb-notification-panel');
+          if(panel) panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        });
+      }
+      const total = rows.length;
+      host.style.display = total ? 'flex' : 'none';
+      const dot = host.querySelector('.tb-notification-dot');
+      if(dot) dot.textContent = String(total);
+      const panel = host.querySelector('#tb-notification-panel');
+      if(panel){
+        panel.innerHTML = total ? rows.map((row, idx) => `
+          <button class="tb-notification-row" type="button" data-notification-idx="${idx}">
+            <strong>${esc(row.title || tr('Notification', 'Notification'))}</strong>
+            <small>${esc(row.body || '')}</small>
+          </button>
+        `).join('') : `<div class="tb-notification-empty">${esc(tr('Aucune notification.', 'No notifications.'))}</div>`;
+        panel.querySelectorAll('[data-notification-idx]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const row = rows[Number(btn.getAttribute('data-notification-idx') || 0)];
+            if(row?.view && typeof window.showView === 'function') window.showView(row.view);
+            else if(row?.href) window.location.href = row.href;
+            panel.style.display = 'none';
+          });
+        });
+      }
+    } catch(e) {
+      console.warn('[TB][notifications] sync failed', e);
+    }
+  }
+
+  window.tbSetNotificationBucket = function tbSetNotificationBucket(name, items){
+    try {
+      const key = String(name || 'default');
+      NOTIF_STATE.buckets[key] = { items: Array.isArray(items) ? items : [] };
+      syncNotificationCenter();
+    } catch(_) {}
+  };
+  window.tbSyncNotificationCenter = syncNotificationCenter;
 
   function fmtDateTime(v){
     if(!v) return '—';
@@ -763,16 +840,45 @@
       tab.querySelector('.tb-inbox-nav-badge')?.remove();
 
       const n = Number(count || 0);
-      if(n <= 0) return;
+      if(n <= 0) {
+        syncInboxNotificationBucket();
+        return;
+      }
 
       const badge = document.createElement('span');
       badge.className = 'tb-inbox-nav-badge';
       badge.textContent = n > 99 ? '99+' : String(n);
       badge.title = `${n} ${tr('élément(s) à traiter', 'pending item(s)')}`;
       tab.appendChild(badge);
+      syncInboxNotificationBucket();
     }catch(e){
       console.warn('[TB][inbox] tab badge render failed', e);
     }
+  }
+
+  function syncInboxNotificationBucket(){
+    try {
+      if(typeof window.tbSetNotificationBucket !== 'function') return;
+      const source = Array.isArray(CACHE.pendingNotifications) ? CACHE.pendingNotifications : CACHE.items || [];
+      const items = source
+        .filter(x => x.status === 'pending')
+        .map((item) => {
+          if(isTripPayerApproval(item)){
+            const meta = tripApprovalMeta(item);
+            return {
+              title: tr('Paiement Trip à valider', 'Trip payment to approve'),
+              body: `${meta.trip_name || 'Trip'} · ${meta.expense_label || tr('Dépense', 'Expense')} · ${meta.amount || ''} ${meta.currency || ''}`.trim(),
+              view: 'inbox'
+            };
+          }
+          return {
+            title: tr('À traiter', 'Inbox'),
+            body: String(item.raw_text || item.source_from || tr('Élément en attente', 'Pending item')).slice(0, 120),
+            view: 'inbox'
+          };
+        });
+      window.tbSetNotificationBucket('inbox', items);
+    } catch (_) {}
   }
 
   async function refreshInboxTabBadge(){
@@ -788,13 +894,21 @@
       if (offline) return;
       const c = client();
       if(!c) return;
-      const { count, error } = await c
+      const { data, count, error } = await c
         .from(TABLE)
-        .select('id', { count:'exact', head:true })
-        .eq('status', 'pending');
+        .select('id,user_id,source,source_from,status,raw_text,media,target_type,target_id,created_at', { count:'exact' })
+        .eq('status', 'pending')
+        .order('created_at', { ascending:false })
+        .limit(20);
       if(error){
         console.warn('[TB][inbox] tab badge count failed', error);
         return;
+      }
+      if(Array.isArray(data)) {
+        CACHE.pendingNotifications = data;
+        const activeIds = new Set(data.map((item) => String(item.id)));
+        const merged = [...data, ...(CACHE.items || []).filter((item) => !activeIds.has(String(item.id)))];
+        CACHE.items = merged;
       }
       setInboxTabBadge(count || 0);
     }catch(e){

@@ -335,6 +335,15 @@
       if (error) throw error;
       return true;
     }
+    if (item.kind === "transaction.delete") {
+      const txId = item.payload?.txId || item.payload?.p_tx_id;
+      if (!txId) throw new Error("Transaction a supprimer introuvable");
+      if (!window.sb || typeof window.sb.rpc !== "function") throw new Error("Supabase indisponible");
+      const rpcName = item.payload?.rpcName || window.TB_CONST?.RPCS?.delete_transaction || "delete_transaction";
+      const { error } = await window.sb.rpc(rpcName, { p_tx_id: txId });
+      if (error) throw error;
+      return true;
+    }
     if (item.kind === "sport.sync_local") {
       if (typeof window.tbSportSyncLocalWorkouts === "function") {
         await window.tbSportSyncLocalWorkouts();

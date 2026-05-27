@@ -253,6 +253,31 @@ async function applyBulkTxDelete() {
 
     try { if (typeof window.tbBusyStart === 'function') window.tbBusyStart('Suppression des transactions...'); } catch (_) {}
 
+    const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode("transaction:bulk-delete")
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
+      for (const tx of selectedRows) {
+        window.tbOfflineQueueEnqueue("transaction.delete", {
+          txId: tx.id,
+          rpcName: TB_CONST?.RPCS?.delete_transaction || "delete_transaction",
+        }, {
+          label: tx.label || "transaction",
+          amount: tx.amount,
+          currency: tx.currency,
+        });
+      }
+      try {
+        const ids = new Set(selectedRows.map((tx) => String(tx.id)));
+        if (window.state && Array.isArray(state.transactions)) state.transactions = state.transactions.filter((tx) => !ids.has(String(tx.id)));
+        if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("tx:bulk-delete:offline");
+        if (typeof renderAll === "function") renderAll();
+      } catch (_) {}
+      TB_TX_BULK.selectedIds.clear();
+      _txBulkSetMessage(`${selectedRows.length} transaction(s) en attente de suppression hors ligne.`, 'success');
+      return;
+    }
+
     for (const tx of selectedRows) {
       const { error } = await sb.rpc('delete_transaction', { p_tx_id: tx.id });
       if (error) throw error;
