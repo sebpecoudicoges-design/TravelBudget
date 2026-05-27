@@ -319,19 +319,19 @@
     wrap.innerHTML = `
       <div class="tb-inbox-modal" role="dialog" aria-modal="true">
         <div class="tb-inbox-modal-head">
-          <div><h3>${esc(tr('Valider un paiement Trip', 'Approve Trip payment'))}</h3><div class="tb-inbox-note">${esc(tr('Cette action créera les écritures Budget dans ton compte.', 'This will create Budget entries in your account.'))}</div></div>
+          <div><h3>${esc(tr('Ajouter ma part Budget Trip', 'Add my Trip budget share'))}</h3><div class="tb-inbox-note">${esc(tr('Cette action ajoute uniquement ta part au Budget. Elle ne débite pas ta wallet et ne crée pas de paiement cash.', 'This only adds your share to Budget. It does not debit your wallet or create a cash payment.'))}</div></div>
           <button class="btn" type="button" data-inbox-modal-close>×</button>
         </div>
         <div class="tb-inbox-form-grid">
           <div class="field span-2"><label>${esc(tr('Partage', 'Shared trip'))}</label><input type="text" value="${esc(meta.trip_name || 'Trip')}" disabled></div>
           <div class="field span-2"><label>${esc(tr('Dépense', 'Expense'))}</label><input type="text" value="${esc(meta.expense_label || '')}" disabled></div>
-          <div class="field"><label>${esc(tr('Montant payé', 'Paid amount'))}</label><input type="text" value="${esc(`${amount || ''} ${currency}`.trim())}" disabled></div>
+          <div class="field"><label>${esc(tr('Montant déclaré payé par toi', 'Amount declared paid by you'))}</label><input type="text" value="${esc(`${amount || ''} ${currency}`.trim())}" disabled></div>
           <div class="field"><label>${esc(tr('Ta part budget', 'Your budget share'))}</label><input type="text" value="${esc(`${Number(meta.payer_share_amount || 0) || 0} ${currency}`)}" disabled></div>
-          <div class="field span-2"><label>${esc(tr('Wallet à débiter', 'Wallet to debit'))}</label><select id="tb-trip-approval-wallet">${wallets.map(w => `<option value="${esc(w.id || w.wallet_id)}">${esc(w.name || 'Wallet')} · ${esc(w.currency || '')}</option>`).join('')}</select></div>
+          <div class="field span-2"><label>${esc(tr('Wallet de référence (non débitée)', 'Reference wallet (not debited)'))}</label><select id="tb-trip-approval-wallet">${wallets.map(w => `<option value="${esc(w.id || w.wallet_id)}">${esc(w.name || 'Wallet')} · ${esc(w.currency || '')}</option>`).join('')}</select></div>
         </div>
         <div class="tb-inbox-modal-actions">
           <button class="btn" type="button" data-inbox-modal-close>${esc(tr('Annuler', 'Cancel'))}</button>
-          <button class="btn primary" type="button" id="tb-trip-approval-save">${esc(tr('Valider et créer', 'Approve and create'))}</button>
+          <button class="btn primary" type="button" id="tb-trip-approval-save">${esc(tr('Ajouter au Budget', 'Add to Budget'))}</button>
         </div>
       </div>`;
     document.body.appendChild(wrap);
@@ -349,7 +349,7 @@
         closeInboxModal();
         await loadInbox();
         try { if(typeof window.tbAfterMutationRefresh === 'function') await window.tbAfterMutationRefresh('trip:payer-approval'); else if(typeof window.refreshFromServer === 'function') await window.refreshFromServer(); } catch(_) {}
-        alert(tr('Paiement Trip validé.', 'Trip payment approved.'));
+        alert(tr('Part Budget Trip ajoutée.', 'Trip budget share added.'));
       } catch(e) {
         save.disabled = false;
         alert(e?.message || String(e));
@@ -866,7 +866,7 @@
           if(isTripPayerApproval(item)){
             const meta = tripApprovalMeta(item);
             return {
-              title: tr('Paiement Trip à valider', 'Trip payment to approve'),
+              title: tr('Part Budget Trip à ajouter', 'Trip budget share to add'),
               body: `${meta.trip_name || 'Trip'} · ${meta.expense_label || tr('Dépense', 'Expense')} · ${meta.amount || ''} ${meta.currency || ''}`.trim(),
               view: 'inbox'
             };
@@ -1038,7 +1038,7 @@
     if(isTripPayerApproval(item)){
       const meta = tripApprovalMeta(item);
       const amount = `${meta.amount || ''} ${meta.currency || ''}`.trim();
-      const title = `${tr('Paiement Trip à valider', 'Trip payment to approve')} · ${meta.trip_name || 'Trip'}`;
+      const title = `${tr('Part Budget Trip à ajouter', 'Trip budget share to add')} · ${meta.trip_name || 'Trip'}`;
       const detail = `${meta.expense_label || tr('Dépense', 'Expense')} · ${amount}`;
       return `
         <article class="tb-inbox-card" data-id="${esc(item.id)}" data-status="${esc(item.status || 'pending')}">
@@ -1052,9 +1052,9 @@
             <span class="tb-inbox-chip">${esc(detail)}</span>
             <span class="tb-inbox-chip">${esc(tr('Demandé par', 'Requested by'))} ${esc(meta.created_by_email || item.source_from || 'TravelBudget')}</span>
           </div>
-          <div class="tb-inbox-note">${esc(tr('Valide seulement si tu confirmes avoir payé cette dépense.', 'Approve only if you confirm you paid this expense.'))}</div>
+          <div class="tb-inbox-note">${esc(tr('Ajoute uniquement ta part au Budget. Aucun paiement cash ne sera créé.', 'Only adds your share to Budget. No cash payment will be created.'))}</div>
           <div class="tb-inbox-buttons">
-            <button class="primary" type="button" data-inbox-action="trip-payer-approve" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' ? 'disabled' : ''}>${esc(tr('Valider paiement', 'Approve payment'))}</button>
+            <button class="primary" type="button" data-inbox-action="trip-payer-approve" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' ? 'disabled' : ''}>${esc(tr('Ajouter au Budget', 'Add to Budget'))}</button>
             <button type="button" data-inbox-action="snooze" data-id="${esc(item.id)}" ${item.status === 'deleted' ? 'disabled' : ''}>${esc(tr('Reporter', 'Snooze'))}</button>
             <button class="danger" type="button" data-inbox-action="delete" data-id="${esc(item.id)}" ${item.status === 'deleted' ? 'disabled' : ''}>${esc(tr('Supprimer', 'Delete'))}</button>
           </div>
@@ -1267,6 +1267,20 @@
       });
     } catch(_) {}
     refreshInboxTabBadge();
+    if(!window.__tbInboxBadgePollStarted){
+      window.__tbInboxBadgePollStarted = true;
+      setInterval(() => {
+        try { refreshInboxTabBadge(); } catch(_) {}
+      }, 30000);
+      document.addEventListener('visibilitychange', () => {
+        if(!document.hidden) {
+          try { refreshInboxTabBadge(); } catch(_) {}
+        }
+      });
+      window.addEventListener('focus', () => {
+        try { refreshInboxTabBadge(); } catch(_) {}
+      });
+    }
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
