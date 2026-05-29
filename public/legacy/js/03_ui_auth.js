@@ -95,7 +95,7 @@ function tbEnsureAuthMarkup() {
           </div>
         </form>
         <div class="auth-provider-row">
-          <button class="btn" type="button" onclick="signInWithProvider('google')">${tbAuthText("Continuer avec Google", "Continue with Google")}</button>
+          <button class="btn auth-google-btn" type="button" onclick="signInWithProvider('google')" aria-label="${tbAuthText("Continuer avec Google", "Continue with Google")}"><span class="auth-google-mark" aria-hidden="true">G</span>${tbAuthText("Continuer avec Google", "Continue with Google")}</button>
         </div>
         <p class="auth-muted">${tbAuthText("Les providers externes necessitent d'etre actives cote Supabase Auth.", "External providers need to be enabled in Supabase Auth.")}</p>
       </section>
@@ -264,6 +264,7 @@ async function resetPassword() {
 async function signInWithProvider(provider) {
   try {
     const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    sessionStorage.setItem("tb_oauth_provider", String(provider || ""));
     const { error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo } });
     if (error) return showAuth(true, tbFriendlyAuthError(error));
   } catch (e) {

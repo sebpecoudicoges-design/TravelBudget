@@ -196,15 +196,18 @@ async function handleAuthRedirectFlow() {
 
   const hash = window.location.hash || "";
   const search = window.location.search || "";
+  const params = new URLSearchParams(search || "");
+  const hashParams = new URLSearchParams(String(hash || "").replace(/^#/, ""));
+  const flowType = String(hashParams.get("type") || params.get("type") || "").toLowerCase();
+  const hasOAuthCode = !!params.get("code");
 
-  const isAuthFlow =
-    hash.includes("type=recovery") ||
-    hash.includes("type=invite") ||
-    hash.includes("access_token=") ||
-    search.includes("type=recovery") ||
-    search.includes("type=invite");
+  const isPasswordFlow = flowType === "recovery" || flowType === "invite";
+  if (hasOAuthCode && !isPasswordFlow) {
+    sessionStorage.setItem("tb_post_auth_redirect", "1");
+    return;
+  }
 
-  if (!isAuthFlow) return;
+  if (!isPasswordFlow) return;
 
   const { data: sessionData } = await sb.auth.getSession();
   if (!sessionData?.session) return;
