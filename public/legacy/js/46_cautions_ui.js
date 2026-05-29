@@ -21,6 +21,13 @@
   }
   function today() { return new Date().toISOString().slice(0, 10); }
   function n(v, fallback) { const x = Number(v); return Number.isFinite(x) ? x : (fallback || 0); }
+  function normKey(v) {
+    return String(v || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
   function money(v, cur) {
     try { return fmtMoney(v, cur); }
     catch (_) { return `${n(v).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} ${cur || ""}`.trim(); }
@@ -94,6 +101,58 @@
       }
     } catch (_) {}
     return null;
+  }
+  function txType(tx) { return String(tx?.type || "").toLowerCase(); }
+  function txDate(tx) {
+    return String(tx?.budgetDateStart || tx?.budget_date_start || tx?.dateStart || tx?.date_start || tx?.occurrence_date || tx?.date || tx?.created_at?.slice?.(0, 10) || today()).slice(0, 10);
+  }
+  function txPaid(tx) {
+    if (typeof tx?.payNow === "boolean") return tx.payNow;
+    if (typeof tx?.pay_now === "boolean") return tx.pay_now;
+    return !!tx?.payNow || !!tx?.pay_now;
+  }
+  function txAmount(tx) { return Math.abs(n(tx?.amount ?? tx?.value ?? tx?.total)); }
+  function txTravelMatches(tx) {
+    const tid = activeTravelId();
+    if (!tid) return true;
+    const rowTid = String(tx?.travel_id || tx?.travelId || "").trim();
+    return !rowTid || rowTid === tid;
+  }
+  function isCautionTx(tx) {
+    return txType(tx) === "expense" && normKey(tx?.category) === "caution" && txTravelMatches(tx);
+  }
+  function cautionTxs() {
+    return (Array.isArray(window.state?.transactions) ? window.state.transactions : [])
+      .filter(isCautionTx)
+      .sort((a, b) => String(txDate(b)).localeCompare(String(txDate(a))));
+  }
+  function cautionTxAnalysis() {
+    const cur = baseCurrency();
+    const rows = cautionTxs();
+    const bySub = new Map();
+    let paid = 0;
+    let planned = 0;
+    for (const tx of rows) {
+      const amount = convertAmount(txAmount(tx), tx.currency || tx.original_currency || cur, cur, txDate(tx));
+      const converted = amount === null ? txAmount(tx) : amount;
+      if (txPaid(tx)) paid += converted;
+      else planned += converted;
+      const sub = String(tx?.subcategory || "").trim() || atxt("Sans sous-categorie", "No subcategory");
+      const prev = bySub.get(sub) || { name: sub, total: 0, paid: 0, planned: 0, count: 0 };
+      prev.total += converted;
+      if (txPaid(tx)) prev.paid += converted;
+      else prev.planned += converted;
+      prev.count += 1;
+      bySub.set(sub, prev);
+    }
+    return {
+      currency: cur,
+      rows,
+      total: paid + planned,
+      paid,
+      planned,
+      bySub: Array.from(bySub.values()).sort((a, b) => b.total - a.total)
+    };
   }
 
   async function loadCautions() {
@@ -195,7 +254,7 @@
     if (error) throw error;
   }
 
-  function summaryHtml(rows) {
+  function summaryHtml(rows, analysis) {
     const cur = baseCurrency();
     let locked = 0;
     let returned = 0;
@@ -213,6 +272,7 @@
     }
     return `<div class="tb-cautions-summary">
       <div class="tb-caution-kpi primary"><span>${esc(atxt("Immobilise", "Locked"))}</span><strong>${esc(money(locked, cur))}</strong></div>
+      <div class="tb-caution-kpi tx"><span>${esc(atxt("Categorie Caution", "Caution category"))}</span><strong>${esc(money(analysis?.total || 0, analysis?.currency || cur))}</strong></div>
       <div class="tb-caution-kpi"><span>${esc(atxt("Rendu", "Returned"))}</span><strong>${esc(money(returned, cur))}</strong></div>
       <div class="tb-caution-kpi"><span>${esc(atxt("Perdu", "Lost"))}</span><strong>${esc(money(lost, cur))}</strong></div>
       <div class="tb-caution-kpi warn"><span>${esc(atxt("En retard", "Overdue"))}</span><strong>${esc(overdue)}</strong></div>
@@ -288,6 +348,53 @@
     return `<div class="tb-cautions-grid">${rows.map(cardHtml).join("")}</div>`;
   }
 
+  function txLabel(tx) {
+    return String(tx?.label || tx?.description || tx?.note || tx?.title || atxt("Transaction", "Transaction")).trim();
+  }
+  function analysisHtml(analysis) {
+    const rows = analysis?.rows || [];
+    const subRows = analysis?.bySub || [];
+    if (!rows.length) {
+      return `<section class="tb-caution-analysis">
+        <div class="tb-caution-analysis-head">
+          <div>
+            <h3>${esc(atxt("Analyse categorie Caution", "Caution category analysis"))}</h3>
+            <p>${esc(atxt("Aucune transaction avec la categorie Caution sur le voyage courant.", "No transaction with the Caution category in the current trip."))}</p>
+          </div>
+        </div>
+      </section>`;
+    }
+    return `<section class="tb-caution-analysis">
+      <div class="tb-caution-analysis-head">
+        <div>
+          <h3>${esc(atxt("Analyse categorie Caution", "Caution category analysis"))}</h3>
+          <p>${esc(atxt("Source: transactions categorie Caution, groupees par sous-categorie.", "Source: Caution category transactions, grouped by subcategory."))}</p>
+        </div>
+        <div class="tb-caution-analysis-total">
+          <span>${esc(atxt("Total", "Total"))}</span>
+          <strong>${esc(money(analysis.total, analysis.currency))}</strong>
+        </div>
+      </div>
+      <div class="tb-caution-analysis-kpis">
+        <div><span>${esc(atxt("Payees", "Paid"))}</span><strong>${esc(money(analysis.paid, analysis.currency))}</strong></div>
+        <div><span>${esc(atxt("A payer", "Planned"))}</span><strong>${esc(money(analysis.planned, analysis.currency))}</strong></div>
+        <div><span>${esc(atxt("Transactions", "Transactions"))}</span><strong>${esc(rows.length)}</strong></div>
+      </div>
+      <div class="tb-caution-subcats">
+        ${subRows.map(row => `<div class="tb-caution-subcat-row">
+          <div><strong>${esc(row.name)}</strong><span>${esc(row.count)} ${esc(atxt("transaction(s)", "transaction(s)"))}</span></div>
+          <b>${esc(money(row.total, analysis.currency))}</b>
+        </div>`).join("")}
+      </div>
+      <div class="tb-caution-recent">
+        ${rows.slice(0, 6).map(tx => `<div class="tb-caution-tx-row">
+          <div><strong>${esc(txLabel(tx))}</strong><span>${esc(txDate(tx))} · ${esc(tx?.subcategory || atxt("Sans sous-categorie", "No subcategory"))}</span></div>
+          <b>${esc(money(txAmount(tx), tx.currency || analysis.currency))}</b>
+        </div>`).join("")}
+      </div>
+    </section>`;
+  }
+
   function styles() {
     if (document.getElementById("tb-cautions-style")) return;
     const st = document.createElement("style");
@@ -299,12 +406,24 @@
       .tb-cautions-head p{margin:6px 0 0;color:var(--muted);line-height:1.45;}
       .tb-cautions-badge{border:1px solid rgba(16,185,129,.22);background:rgba(16,185,129,.09);color:#047857;border-radius:999px;padding:7px 10px;font-weight:800;font-size:12px;white-space:nowrap;}
       .tb-cautions-layout{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:16px;align-items:start;}
-      .tb-cautions-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+      .tb-cautions-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;}
       .tb-caution-kpi{border:1px solid var(--border);border-radius:14px;padding:12px;background:rgba(255,255,255,.68);}
       .tb-caution-kpi span{display:block;color:var(--muted);font-size:12px;font-weight:800;margin-bottom:6px;}
       .tb-caution-kpi strong{font-size:18px;}
       .tb-caution-kpi.primary{border-color:rgba(16,185,129,.28);background:linear-gradient(135deg,rgba(16,185,129,.14),rgba(14,165,233,.08));}
       .tb-caution-kpi.warn{border-color:rgba(245,158,11,.28);}
+      .tb-caution-kpi.tx{border-color:rgba(59,130,246,.24);background:rgba(59,130,246,.08);}
+      .tb-caution-analysis{border:1px solid rgba(59,130,246,.18);border-radius:18px;background:rgba(255,255,255,.72);padding:14px;display:flex;flex-direction:column;gap:12px;}
+      .tb-caution-analysis-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+      .tb-caution-analysis h3{margin:0;font-size:18px;}
+      .tb-caution-analysis p{margin:5px 0 0;color:var(--muted);font-size:13px;line-height:1.45;}
+      .tb-caution-analysis-total{text-align:right;white-space:nowrap;}
+      .tb-caution-analysis-total span,.tb-caution-analysis-kpis span,.tb-caution-subcat-row span,.tb-caution-tx-row span{display:block;color:var(--muted);font-size:12px;}
+      .tb-caution-analysis-total strong{font-size:22px;}
+      .tb-caution-analysis-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+      .tb-caution-analysis-kpis>div{border:1px solid var(--border);border-radius:14px;padding:10px;background:rgba(248,250,252,.72);}
+      .tb-caution-subcats,.tb-caution-recent{display:flex;flex-direction:column;gap:8px;}
+      .tb-caution-subcat-row,.tb-caution-tx-row{display:flex;justify-content:space-between;gap:12px;border:1px solid var(--border);border-radius:14px;padding:10px;background:rgba(255,255,255,.62);}
       .tb-caution-form,.tb-caution-card,.tb-cautions-empty{border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.72);padding:14px;box-shadow:0 10px 30px rgba(15,23,42,.06);}
       .tb-caution-form-title{font-weight:900;margin-bottom:10px;}
       .tb-caution-form{display:flex;flex-direction:column;gap:10px;}
@@ -331,7 +450,7 @@
       .tb-caution-actions button.danger{color:#b91c1c;border-color:rgba(239,68,68,.28);}
       .tb-cautions-empty{display:flex;flex-direction:column;gap:6px;color:var(--muted);}
       .tb-cautions-empty strong{color:var(--text);}
-      @media(max-width:880px){.tb-cautions-layout{grid-template-columns:1fr}.tb-cautions-summary{grid-template-columns:1fr 1fr}.tb-cautions-head{flex-direction:column}.tb-caution-card-main,.tb-caution-card-foot{flex-direction:column}.tb-caution-amount{text-align:left}.tb-caution-actions{justify-content:flex-start}}
+      @media(max-width:880px){.tb-cautions-layout{grid-template-columns:1fr}.tb-cautions-summary{grid-template-columns:1fr 1fr}.tb-cautions-head,.tb-caution-analysis-head{flex-direction:column}.tb-caution-card-main,.tb-caution-card-foot{flex-direction:column}.tb-caution-amount,.tb-caution-analysis-total{text-align:left}.tb-caution-actions{justify-content:flex-start}.tb-caution-analysis-kpis{grid-template-columns:1fr}}
     `;
     document.head.appendChild(st);
   }
@@ -398,6 +517,7 @@
     if (!root) return;
     root.innerHTML = `<div class="tb-cautions-shell"><div class="tb-cautions-head"><div><h2>${esc(atxt("Cautions", "Deposits"))}</h2><p>${esc(atxt("Chargement...", "Loading..."))}</p></div></div></div>`;
     const data = await loadCautions();
+    const analysis = cautionTxAnalysis();
     const build = window.TB_BUILD_LABEL || "V10";
     root.innerHTML = `<div class="tb-cautions-shell">
       <div class="tb-cautions-head">
@@ -407,7 +527,8 @@
         </div>
         <div class="tb-cautions-badge">${esc(build)} · ${esc(atxt("Cautions", "Deposits"))}</div>
       </div>
-      ${summaryHtml(data.rows)}
+      ${summaryHtml(data.rows, analysis)}
+      ${analysisHtml(analysis)}
       <div class="tb-cautions-layout">
         <div id="tb-caution-form-host">${formHtml()}</div>
         ${listHtml(data.rows)}

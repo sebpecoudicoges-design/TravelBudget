@@ -482,7 +482,7 @@ function _analysisBucketOrder(){
     if (catSel) {
       const current = catSel.value || 'all';
       const cats = _allAnalysisCategories();
-      catSel.innerHTML = `<option value="all">Toutes</option><option value="__income">Revenu</option>` + cats
+      catSel.innerHTML = `<option value="all">${escapeHTML(_t('common.all'))}</option><option value="__income">${escapeHTML(_t('analysis.filter.income'))}</option>` + cats
         .filter(cat => _normKey(cat) !== 'revenu')
         .map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`)
         .join('');
@@ -491,7 +491,7 @@ function _analysisBucketOrder(){
     if (subSel) {
       const current = subSel.value || 'all';
       const subs = _allAnalysisSubcategories();
-      subSel.innerHTML = `<option value="all">Toutes</option><option value="__none__">Sans sous-catégorie</option>` + subs
+      subSel.innerHTML = `<option value="all">${escapeHTML(_t('common.all'))}</option><option value="__none__">${escapeHTML(_t('analysis.filter.no_subcategory'))}</option>` + subs
         .map(sub => `<option value="${escapeHTML(sub)}">${escapeHTML(sub)}</option>`)
         .join('');
       subSel.value = [...subSel.options].some(o => o.value === current) ? current : 'all';
