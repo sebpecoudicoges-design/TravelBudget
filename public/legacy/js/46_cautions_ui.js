@@ -175,7 +175,7 @@
       const { data, error } = await q;
       if (error) throw error;
       const rows = data || [];
-      CACHE = { rows, empty: !rows.length, demo: false };
+      CACHE = { rows, empty: !rows.length, demo: false, reason: "" };
       try {
         if (window.state) state.cautionDeposits = rows;
         if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("cautions:load");
@@ -183,7 +183,7 @@
       return CACHE;
     } catch (e) {
       console.warn("[TB][cautions] load failed", e);
-      CACHE = { rows: [], empty: true, demo: false, reason: e && (e.message || e.code) };
+      CACHE = { rows: [], empty: true, demo: false, reason: e && (e.message || e.details || e.code) };
       return CACHE;
     }
   }
@@ -348,6 +348,14 @@
     return `<div class="tb-cautions-grid">${rows.map(cardHtml).join("")}</div>`;
   }
 
+  function statusHtml(data) {
+    if (!data?.offline && !data?.reason) return "";
+    const msg = data?.offline
+      ? atxt("Mode hors ligne : affichage depuis le dernier snapshot local.", "Offline mode: showing the latest local snapshot.")
+      : `${atxt("Cautions chargees en mode degrade.", "Deposits loaded in degraded mode.")} ${data.reason || ""}`;
+    return `<div class="tb-caution-status-panel ${data?.reason ? "error" : ""}">${esc(msg)}</div>`;
+  }
+
   function txLabel(tx) {
     return String(tx?.label || tx?.description || tx?.note || tx?.title || atxt("Transaction", "Transaction")).trim();
   }
@@ -413,6 +421,8 @@
       .tb-caution-kpi.primary{border-color:rgba(16,185,129,.28);background:linear-gradient(135deg,rgba(16,185,129,.14),rgba(14,165,233,.08));}
       .tb-caution-kpi.warn{border-color:rgba(245,158,11,.28);}
       .tb-caution-kpi.tx{border-color:rgba(59,130,246,.24);background:rgba(59,130,246,.08);}
+      .tb-caution-status-panel{border:1px solid rgba(245,158,11,.28);background:rgba(245,158,11,.10);color:#92400e;border-radius:14px;padding:11px 12px;font-size:13px;font-weight:800;}
+      .tb-caution-status-panel.error{border-color:rgba(239,68,68,.26);background:rgba(239,68,68,.10);color:#b91c1c;}
       .tb-caution-analysis{border:1px solid rgba(59,130,246,.18);border-radius:18px;background:rgba(255,255,255,.72);padding:14px;display:flex;flex-direction:column;gap:12px;}
       .tb-caution-analysis-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
       .tb-caution-analysis h3{margin:0;font-size:18px;}
@@ -527,6 +537,7 @@
         </div>
         <div class="tb-cautions-badge">${esc(build)} · ${esc(atxt("Cautions", "Deposits"))}</div>
       </div>
+      ${statusHtml(data)}
       ${summaryHtml(data.rows, analysis)}
       ${analysisHtml(analysis)}
       <div class="tb-cautions-layout">
