@@ -125,7 +125,7 @@
     if(v === 'snoozed') return tr('Reporté', 'Snoozed');
     if(v === 'processed') return tr('Traité', 'Processed');
     if(v === 'deleted') return tr('Supprimé', 'Deleted');
-    if(v === 'error') return tr('Erreur', 'Error');
+    if(v === 'error') return tr('Refusé / erreur', 'Declined / error');
     return v;
   }
 
@@ -304,8 +304,22 @@
       || String(tripApprovalMeta(item)?.kind || '') === 'trip_payer_approval';
   }
 
+  function tripApprovalCreatesCash(item){
+    const meta = tripApprovalMeta(item);
+    const memberId = String(meta.member_id || '').trim();
+    const payerId = String(meta.payer_member_id || '').trim();
+    return !!payerId && (!memberId || memberId === payerId);
+  }
+
+  function tripApprovalActionLabel(item){
+    return tripApprovalCreatesCash(item)
+      ? tr('Ajouter la dépense', 'Add expense')
+      : tr('Ajouter au Budget', 'Add to Budget');
+  }
+
   function openTripPayerApprovalModal(item){
     const meta = tripApprovalMeta(item);
+    const createsCash = tripApprovalCreatesCash(item);
     const amount = Number(meta.amount || 0);
     const currency = String(meta.currency || '').toUpperCase();
     const wallets = (Array.isArray(window.state?.wallets) ? window.state.wallets : [])
@@ -319,19 +333,19 @@
     wrap.innerHTML = `
       <div class="tb-inbox-modal" role="dialog" aria-modal="true">
         <div class="tb-inbox-modal-head">
-          <div><h3>${esc(tr('Ajouter ma part Budget Trip', 'Add my Trip budget share'))}</h3><div class="tb-inbox-note">${esc(tr('Cette action ajoute uniquement ta part au Budget. Elle ne débite pas ta wallet et ne crée pas de paiement cash.', 'This only adds your share to Budget. It does not debit your wallet or create a cash payment.'))}</div></div>
+          <div><h3>${esc(createsCash ? tr('Ajouter la dépense Trip', 'Add Trip expense') : tr('Ajouter ma part Budget Trip', 'Add my Trip budget share'))}</h3><div class="tb-inbox-note">${esc(createsCash ? tr('Cette action crée le paiement cash complet et ta part Budget.', 'This creates the full cash payment and your Budget share.') : tr('Cette action ajoute uniquement ta part au Budget. Elle ne débite pas ta wallet et ne crée pas de paiement cash.', 'This only adds your share to Budget. It does not debit your wallet or create a cash payment.'))}</div></div>
           <button class="btn" type="button" data-inbox-modal-close>×</button>
         </div>
         <div class="tb-inbox-form-grid">
           <div class="field span-2"><label>${esc(tr('Partage', 'Shared trip'))}</label><input type="text" value="${esc(meta.trip_name || 'Trip')}" disabled></div>
           <div class="field span-2"><label>${esc(tr('Dépense', 'Expense'))}</label><input type="text" value="${esc(meta.expense_label || '')}" disabled></div>
-          <div class="field"><label>${esc(tr('Montant déclaré payé par toi', 'Amount declared paid by you'))}</label><input type="text" value="${esc(`${amount || ''} ${currency}`.trim())}" disabled></div>
+          <div class="field"><label>${esc(createsCash ? tr('Montant à débiter', 'Amount to debit') : tr('Montant déclaré payé', 'Declared paid amount'))}</label><input type="text" value="${esc(`${amount || ''} ${currency}`.trim())}" disabled></div>
           <div class="field"><label>${esc(tr('Ta part budget', 'Your budget share'))}</label><input type="text" value="${esc(`${Number(meta.payer_share_amount || 0) || 0} ${currency}`)}" disabled></div>
-          <div class="field span-2"><label>${esc(tr('Wallet de référence (non débitée)', 'Reference wallet (not debited)'))}</label><select id="tb-trip-approval-wallet">${wallets.map(w => `<option value="${esc(w.id || w.wallet_id)}">${esc(w.name || 'Wallet')} · ${esc(w.currency || '')}</option>`).join('')}</select></div>
+          <div class="field span-2"><label>${esc(createsCash ? tr('Wallet à débiter', 'Wallet to debit') : tr('Wallet de référence (non débitée)', 'Reference wallet (not debited)'))}</label><select id="tb-trip-approval-wallet">${wallets.map(w => `<option value="${esc(w.id || w.wallet_id)}">${esc(w.name || 'Wallet')} · ${esc(w.currency || '')}</option>`).join('')}</select></div>
         </div>
         <div class="tb-inbox-modal-actions">
           <button class="btn" type="button" data-inbox-modal-close>${esc(tr('Annuler', 'Cancel'))}</button>
-          <button class="btn primary" type="button" id="tb-trip-approval-save">${esc(tr('Ajouter au Budget', 'Add to Budget'))}</button>
+          <button class="btn primary" type="button" id="tb-trip-approval-save">${esc(tripApprovalActionLabel(item))}</button>
         </div>
       </div>`;
     document.body.appendChild(wrap);
@@ -349,7 +363,7 @@
         closeInboxModal();
         await loadInbox();
         try { if(typeof window.tbAfterMutationRefresh === 'function') await window.tbAfterMutationRefresh('trip:payer-approval'); else if(typeof window.refreshFromServer === 'function') await window.refreshFromServer(); } catch(_) {}
-        alert(tr('Part Budget Trip ajoutée.', 'Trip budget share added.'));
+        alert(createsCash ? tr('Dépense Trip ajoutée.', 'Trip expense added.') : tr('Part Budget Trip ajoutée.', 'Trip budget share added.'));
       } catch(e) {
         save.disabled = false;
         alert(e?.message || String(e));
@@ -865,8 +879,9 @@
         .map((item) => {
           if(isTripPayerApproval(item)){
             const meta = tripApprovalMeta(item);
+            const createsCash = tripApprovalCreatesCash(item);
             return {
-              title: tr('Part Budget Trip à ajouter', 'Trip budget share to add'),
+              title: createsCash ? tr('Dépense Trip à ajouter', 'Trip expense to add') : tr('Part Budget Trip à ajouter', 'Trip budget share to add'),
               body: `${meta.trip_name || 'Trip'} · ${meta.expense_label || tr('Dépense', 'Expense')} · ${meta.amount || ''} ${meta.currency || ''}`.trim(),
               view: 'inbox'
             };
@@ -1065,8 +1080,9 @@
   function renderCard(item){
     if(isTripPayerApproval(item)){
       const meta = tripApprovalMeta(item);
+      const createsCash = tripApprovalCreatesCash(item);
       const amount = `${meta.amount || ''} ${meta.currency || ''}`.trim();
-      const title = `${tr('Part Budget Trip à ajouter', 'Trip budget share to add')} · ${meta.trip_name || 'Trip'}`;
+      const title = `${createsCash ? tr('Dépense Trip à ajouter', 'Trip expense to add') : tr('Part Budget Trip à ajouter', 'Trip budget share to add')} · ${meta.trip_name || 'Trip'}`;
       const detail = `${meta.expense_label || tr('Dépense', 'Expense')} · ${amount}`;
       return `
         <article class="tb-inbox-card" data-id="${esc(item.id)}" data-status="${esc(item.status || 'pending')}">
@@ -1080,9 +1096,11 @@
             <span class="tb-inbox-chip">${esc(detail)}</span>
             <span class="tb-inbox-chip">${esc(tr('Demandé par', 'Requested by'))} ${esc(meta.created_by_email || item.source_from || 'TravelBudget')}</span>
           </div>
-          <div class="tb-inbox-note">${esc(tr('Ajoute uniquement ta part au Budget. Aucun paiement cash ne sera créé.', 'Only adds your share to Budget. No cash payment will be created.'))}</div>
+          <div class="tb-inbox-note">${esc(createsCash ? tr('Ajoute le paiement cash complet et ta part Budget.', 'Adds the full cash payment and your Budget share.') : tr('Ajoute uniquement ta part au Budget. Aucun paiement cash ne sera créé.', 'Only adds your share to Budget. No cash payment will be created.'))}</div>
+          ${item.error_message ? `<div class="tb-inbox-note">${esc(item.error_message)}</div>` : ''}
           <div class="tb-inbox-buttons">
-            <button class="primary" type="button" data-inbox-action="trip-payer-approve" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' ? 'disabled' : ''}>${esc(tr('Ajouter au Budget', 'Add to Budget'))}</button>
+            <button class="primary" type="button" data-inbox-action="trip-payer-approve" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' || item.status === 'error' ? 'disabled' : ''}>${esc(tripApprovalActionLabel(item))}</button>
+            <button type="button" data-inbox-action="trip-payer-decline" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' || item.status === 'error' ? 'disabled' : ''}>${esc(tr('Refuser', 'Decline'))}</button>
             <button type="button" data-inbox-action="snooze" data-id="${esc(item.id)}" ${item.status === 'deleted' ? 'disabled' : ''}>${esc(tr('Reporter', 'Snooze'))}</button>
             <button class="danger" type="button" data-inbox-action="delete" data-id="${esc(item.id)}" ${item.status === 'deleted' ? 'disabled' : ''}>${esc(tr('Supprimer', 'Delete'))}</button>
           </div>
@@ -1143,6 +1161,7 @@
               <option value="active" ${CACHE.status==='active'?'selected':''}>${esc(tr('Actifs', 'Active'))}</option>
               <option value="pending" ${CACHE.status==='pending'?'selected':''}>${esc(tr('À traiter', 'Pending'))}</option>
               <option value="snoozed" ${CACHE.status==='snoozed'?'selected':''}>${esc(tr('Reportés', 'Snoozed'))}</option>
+              <option value="error" ${CACHE.status==='error'?'selected':''}>${esc(tr('Refusés / erreurs', 'Declined / errors'))}</option>
               <option value="deleted" ${CACHE.status==='deleted'?'selected':''}>${esc(tr('Supprimés', 'Deleted'))}</option>
               <option value="all" ${CACHE.status==='all'?'selected':''}>${esc(tr('Tous', 'All'))}</option>
             </select>
@@ -1224,6 +1243,19 @@
       }
       if(action === 'trip-payer-approve'){
         openTripPayerApprovalModal(item);
+        return;
+      }
+      if(action === 'trip-payer-decline'){
+        const ok = confirm(tr('Refuser cette demande Trip ? Aucune dépense ni part Budget ne sera créée.', 'Decline this Trip request? No expense or Budget share will be created.'));
+        if(!ok) return;
+        const reason = prompt(tr('Raison du refus (optionnel)', 'Decline reason (optional)')) || '';
+        const c = client();
+        if(!c) throw new Error(tr('Client Supabase indisponible.', 'Supabase client unavailable.'));
+        const rpcName = window.TB_CONST?.RPCS?.trip_decline_payer_approval || 'trip_decline_payer_approval';
+        const { error } = await c.rpc(rpcName, { p_inbox_id: item.id, p_reason: reason });
+        if(error) throw error;
+        await loadInbox();
+        try { if(typeof window.tbAfterMutationRefresh === 'function') await window.tbAfterMutationRefresh('trip:payer-decline'); } catch(_) {}
         return;
       }
     }catch(e){ showError(e); }

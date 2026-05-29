@@ -57,6 +57,7 @@ try {
     asset_owners: "asset_owners",
     asset_ownership_events: "asset_ownership_events",
     asset_documents: "asset_documents",
+    caution_deposits: "caution_deposits",
     document_folders: "document_folders",
     documents: "documents",
     transaction_documents: "transaction_documents",
@@ -129,6 +130,7 @@ try {
     trip_pending_invites_for_current_user: "trip_pending_invites_for_current_user",
     trip_request_payer_approval: "trip_request_payer_approval",
     trip_accept_payer_approval: "trip_accept_payer_approval",
+    trip_decline_payer_approval: "trip_decline_payer_approval",
     apply_transaction_v2: "apply_transaction_v2",
     apply_transaction: "apply_transaction",
     delete_transaction: "delete_transaction",
@@ -308,6 +310,7 @@ try {
     travels: "Voyages",
     recurring_rules: "Échéances périodiques",
     assets: "Patrimoine",
+    caution_deposits: "Cautions",
     documents: "Documents",
   });
 

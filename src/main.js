@@ -52,6 +52,7 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/33_budget_analysis.js',
   '/legacy/js/41_assets_core.js',
   '/legacy/js/42_assets_ui.js',
+  '/legacy/js/46_cautions_ui.js',
   '/legacy/js/43_documents_ui.js',
   '/legacy/js/44_inbox_ui.js',
   '/legacy/js/45_sport_ui.js',

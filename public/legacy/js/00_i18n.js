@@ -39,6 +39,7 @@
       "nav.settings": "Settings",
       "nav.analysis": "Analyse",
       "nav.assets": "Patrimoine",
+      "nav.cautions": "Cautions",
       "nav.trip": "Partage",
       "nav.members": "Membres",
 
@@ -913,6 +914,7 @@
       "nav.settings": "Settings",
       "nav.analysis": "Analysis",
       "nav.assets": "Assets",
+      "nav.cautions": "Deposits",
       "nav.trip": "Split",
       "nav.members": "Members",
 

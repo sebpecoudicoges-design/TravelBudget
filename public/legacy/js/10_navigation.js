@@ -12,6 +12,7 @@ function setActiveTab(view) {
     ["settings", "tab-settings", "view-settings"],
     ["analysis", "tab-analysis", "view-analysis"],
     ["assets", "tab-assets", "view-assets"],
+    ["cautions", "tab-cautions", "view-cautions"],
     ["documents", "tab-documents", "view-documents"],
     ["sport", "tab-sport", "view-sport"],
     ["trip", "tab-trip", "view-trip"],
@@ -45,6 +46,7 @@ function showView(view) {
     try { if (typeof window.renderFxDecision === "function") window.renderFxDecision(false); } catch (_) {}
   }
   if (view === "assets") { if (typeof window.renderAssets === "function") window.renderAssets("navigation"); }
+  if (view === "cautions") { if (typeof window.renderCautions === "function") window.renderCautions("navigation"); }
   if (view === "documents") { if (typeof window.renderDocuments === "function") window.renderDocuments("navigation"); }
   if (view === "sport") { if (typeof window.renderSport === "function") window.renderSport("navigation"); }
   if (view === "dashboard") {

@@ -76,6 +76,11 @@ function renderAll() {
       return;
     }
 
+    if (view === "cautions") {
+      try { if (typeof window.renderCautions === "function") window.renderCautions("renderAll"); } catch (e) { console.warn("[renderAll] renderCautions failed", e); }
+      return;
+    }
+
     // other views (trip/members/help): their render is triggered by showView()
     return;
   }
@@ -139,6 +144,11 @@ function renderAll() {
 
   if (view === "assets") {
     safeCall("Patrimoine", () => { if (typeof window.renderAssets === "function") return window.renderAssets("renderAll"); }, { containerId: "view-assets" });
+    return;
+  }
+
+  if (view === "cautions") {
+    safeCall("Cautions", () => { if (typeof window.renderCautions === "function") return window.renderCautions("renderAll"); }, { containerId: "view-cautions" });
     return;
   }
 

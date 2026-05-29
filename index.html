@@ -1016,7 +1016,7 @@
     .auth-msg{ font-size:13px; line-height:1.5; }
     .modal-grid{ gap:12px; }
     .modal-actions{ margin-top:18px; gap:10px; }
-    #view-dashboard, #view-transactions, #view-settings, #view-help, #view-trip, #view-members, #view-assets, #view-documents{ display:flex; flex-direction:column; gap:18px; }
+    #view-dashboard, #view-transactions, #view-settings, #view-help, #view-trip, #view-members, #view-assets, #view-cautions, #view-documents{ display:flex; flex-direction:column; gap:18px; }
     .dashboard-panel{ min-height:100%; }
     .dashboard-panel h2{ margin-bottom:16px; }
     #view-transactions .toolbar-card,
@@ -3210,6 +3210,7 @@
       .wrap > #view-settings,
       .wrap > #view-analysis,
       .wrap > #view-assets,
+      .wrap > #view-cautions,
       .wrap > #view-documents,
       .wrap > #view-help,
       .wrap > #view-trip,
@@ -3812,6 +3813,7 @@
         <div id="tab-settings" class="tab" onclick="showView('settings')" data-t="nav.settings">Settings</div>
         <div id="tab-analysis" class="tab" onclick="showView('analysis')" data-t="nav.analysis">Analyse</div>
         <div id="tab-assets" class="tab" onclick="showView('assets')" data-t="nav.assets">Patrimoine</div>
+        <div id="tab-cautions" class="tab" onclick="showView('cautions')" data-t="nav.cautions">Cautions</div>
         <div id="tab-documents" class="tab" onclick="showView('documents')">Documents</div>
         <div id="tab-sport" class="tab" onclick="showView('sport')">Sport</div>
         <div id="tab-help" class="tab" onclick="showView('help')" data-t="nav.help">Aide</div>
@@ -3863,6 +3865,11 @@
       <!-- ASSETS / PATRIMOINE -->
       <div id="view-assets" class="hidden">
         <div id="assets-root" class="card"></div>
+      </div>
+
+      <!-- CAUTIONS -->
+      <div id="view-cautions" class="hidden">
+        <div id="cautions-root" class="card"></div>
       </div>
 
       <!-- DOCUMENTS -->
@@ -3927,6 +3934,18 @@
               <select id="analysis-currency">
                 <option value="account" data-t="analysis.currency.account">Devise du compte</option>
                 <option value="period" data-t="analysis.currency.period">Devise période</option>
+              </select>
+            </div>
+            <div class="analysis-filter-group">
+              <label for="analysis-category-filter" data-t="analysis.filter.category">CatÃ©gorie</label>
+              <select id="analysis-category-filter">
+                <option value="all" data-t="common.all">Toutes</option>
+              </select>
+            </div>
+            <div class="analysis-filter-group">
+              <label for="analysis-subcategory-filter" data-t="analysis.filter.subcategory">Sous-catÃ©gorie</label>
+              <select id="analysis-subcategory-filter">
+                <option value="all" data-t="common.all">Toutes</option>
               </select>
             </div>
             <div class="analysis-filter-group" style="grid-column: 1 / -1;">
@@ -4645,6 +4664,7 @@
       body.tb-capacitor-app.tb-mobile-nav-open #tab-settings::before{background:#64748b!important;box-shadow:0 0 0 3px rgba(100,116,139,.14)!important;}
       body.tb-capacitor-app.tb-mobile-nav-open #tab-analysis::before{background:#8b5cf6!important;box-shadow:0 0 0 3px rgba(139,92,246,.13)!important;}
       body.tb-capacitor-app.tb-mobile-nav-open #tab-assets::before{background:#f59e0b!important;box-shadow:0 0 0 3px rgba(245,158,11,.14)!important;}
+      body.tb-capacitor-app.tb-mobile-nav-open #tab-cautions::before{background:#10b981!important;box-shadow:0 0 0 3px rgba(16,185,129,.14)!important;}
       body.tb-capacitor-app.tb-mobile-nav-open #tab-documents::before{background:#06b6d4!important;box-shadow:0 0 0 3px rgba(6,182,212,.14)!important;}
       body.tb-capacitor-app.tb-mobile-nav-open #tab-inbox::before{background:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.13)!important;}
       body.tb-capacitor-app.tb-mobile-nav-open #tab-sport::before{background:#22c55e!important;box-shadow:0 0 0 3px rgba(34,197,94,.13)!important;}

@@ -173,6 +173,8 @@
         scope: _el('analysis-scope')?.value || 'budget',
         mode: _el('analysis-mode')?.value || 'planned',
         currencyMode: _el('analysis-currency')?.value || 'account',
+        categoryFilter: _el('analysis-category-filter')?.value || 'all',
+        subcategoryFilter: _el('analysis-subcategory-filter')?.value || 'all',
         excludedCats: Array.from(excludedCats)
       }));
     } catch (_) {}
@@ -180,6 +182,10 @@
 
   function _selectedCurrencyMode(){ return _el('analysis-currency')?.value || 'account'; }
   function _excludedCategorySet(){ return new Set(Array.from(excludedCats)); }
+  function _selectedCategoryFilter(){ return _el('analysis-category-filter')?.value || 'all'; }
+  function _selectedSubcategoryFilter(){ return _el('analysis-subcategory-filter')?.value || 'all'; }
+  function _txCategory(tx){ return _norm(tx?.category || (_txType(tx) === 'income' ? 'Revenu' : 'Autre')); }
+  function _txSubcategory(tx){ return _norm(tx?.subcategory || ''); }
   function _segmentForDate(dateISO){
     const ds = _norm(dateISO);
     const travelSeg = _segmentsForTravel(_getSelectedTravelId()).find(s => {
@@ -438,14 +444,58 @@ function _analysisBucketOrder(){
   seen.add(k);
   out.push(raw);
 };
+    add('Revenu');
     try { if (typeof getCategories === 'function') (getCategories() || []).forEach(add); } catch (_) {}
     (Array.isArray(state?.categories) ? state.categories : []).forEach(add);
     (Array.isArray(state?.transactions) ? state.transactions : []).forEach(tx => {
       if (_isTripLinked(tx) && !_isTripBudgetShare(tx)) return;
-      if (_txType(tx) !== 'expense') return;
-      add(tx?.category);
+      if (_txType(tx) === 'income') add('Revenu');
+      else if (_txType(tx) === 'expense') add(tx?.category);
     });
     return out.sort((a,b) => a.localeCompare(b, 'fr', { sensitivity:'base' }));
+  }
+  function _allAnalysisSubcategories(){
+    const catFilter = _selectedCategoryFilter();
+    const out = [];
+    const seen = new Set();
+    const add = (v) => {
+      const raw = String(v || '').trim();
+      if (!raw) return;
+      const k = _normKey(raw);
+      if (seen.has(k)) return;
+      seen.add(k);
+      out.push(raw);
+    };
+    (Array.isArray(state?.transactions) ? state.transactions : []).forEach(tx => {
+      if (_isTripLinked(tx) && !_isTripBudgetShare(tx)) return;
+      const type = _txType(tx);
+      if (type !== 'expense' && type !== 'income') return;
+      if (catFilter === '__income' && type !== 'income') return;
+      if (catFilter !== 'all' && catFilter !== '__income' && _norm(tx?.category || 'Autre') !== catFilter) return;
+      add(tx?.subcategory);
+    });
+    return out.sort((a,b) => a.localeCompare(b, 'fr', { sensitivity:'base' }));
+  }
+  function _renderAnalysisFilterSelects(){
+    const catSel = _el('analysis-category-filter');
+    const subSel = _el('analysis-subcategory-filter');
+    if (catSel) {
+      const current = catSel.value || 'all';
+      const cats = _allAnalysisCategories();
+      catSel.innerHTML = `<option value="all">Toutes</option><option value="__income">Revenu</option>` + cats
+        .filter(cat => _normKey(cat) !== 'revenu')
+        .map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`)
+        .join('');
+      catSel.value = [...catSel.options].some(o => o.value === current) ? current : 'all';
+    }
+    if (subSel) {
+      const current = subSel.value || 'all';
+      const subs = _allAnalysisSubcategories();
+      subSel.innerHTML = `<option value="all">Toutes</option><option value="__none__">Sans sous-catégorie</option>` + subs
+        .map(sub => `<option value="${escapeHTML(sub)}">${escapeHTML(sub)}</option>`)
+        .join('');
+      subSel.value = [...subSel.options].some(o => o.value === current) ? current : 'all';
+    }
   }
   function _updateCategoryExcludeSummary(){
     const summary = _el('analysis-category-summary');
@@ -594,14 +644,20 @@ function _sumTxArray(txs, base){
   const scope = _el('analysis-scope')?.value || 'budget';
   const mode = _el('analysis-mode')?.value || 'planned';
   const excluded = _excludedCategorySet();
+  const catFilter = _selectedCategoryFilter();
+  const subFilter = _selectedSubcategoryFilter();
 
   return _baseIncomeTransactions().filter(tx => {
-    const cat = _norm(tx?.category || 'Autre');
+    const cat = _txCategory(tx);
     const catKey = _normKey(cat);
+    const sub = _txSubcategory(tx);
 
     if (scope === 'budget' && _txOut(tx)) return false;
     if (scope === 'out' && !_txOut(tx)) return false;
     if (mode === 'expenses' && !_txPaid(tx)) return false;
+    if (catFilter && catFilter !== 'all' && catFilter !== '__income' && cat !== catFilter) return false;
+    if (subFilter === '__none__' && sub) return false;
+    if (subFilter && subFilter !== 'all' && subFilter !== '__none__' && sub !== subFilter) return false;
     if (excluded.size && excluded.has(cat)) return false;
 
     if (typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(tx) : _isInternalMovement(tx)) return false;
@@ -615,21 +671,37 @@ function _sumTxArray(txs, base){
     const scope = _el('analysis-scope')?.value || 'budget';
     const mode = _el('analysis-mode')?.value || 'planned';
     const excluded = _excludedCategorySet();
+    const catFilter = _selectedCategoryFilter();
+    const subFilter = _selectedSubcategoryFilter();
     return _baseExpenseTransactions().filter(tx => {
+      const cat = _txCategory(tx);
+      const sub = _txSubcategory(tx);
       if (scope === 'budget' && _txOut(tx)) return false;
       if (scope === 'out' && !_txOut(tx)) return false;
       if (mode === 'expenses' && !_txPaid(tx)) return false;
-      if (excluded.size && excluded.has(_norm(tx?.category || 'Autre'))) return false;
+      if (catFilter === '__income') return false;
+      if (catFilter && catFilter !== 'all' && cat !== catFilter) return false;
+      if (subFilter === '__none__' && sub) return false;
+      if (subFilter && subFilter !== 'all' && subFilter !== '__none__' && sub !== subFilter) return false;
+      if (excluded.size && excluded.has(cat)) return false;
       return true;
     });
   }
   function _outBudgetTransactions(){
     const mode = _el('analysis-mode')?.value || 'planned';
     const excluded = _excludedCategorySet();
+    const catFilter = _selectedCategoryFilter();
+    const subFilter = _selectedSubcategoryFilter();
     return _baseExpenseTransactions().filter(tx => {
+      const cat = _txCategory(tx);
+      const sub = _txSubcategory(tx);
       if (!_txOut(tx)) return false;
       if (mode === 'expenses' && !_txPaid(tx)) return false;
-      if (excluded.size && excluded.has(_norm(tx?.category || 'Autre'))) return false;
+      if (catFilter === '__income') return false;
+      if (catFilter && catFilter !== 'all' && cat !== catFilter) return false;
+      if (subFilter === '__none__' && sub) return false;
+      if (subFilter && subFilter !== 'all' && subFilter !== '__none__' && sub !== subFilter) return false;
+      if (excluded.size && excluded.has(cat)) return false;
       return true;
     });
   }
@@ -701,8 +773,8 @@ const visibleBudgetDays = fullBudgetDays
         if (_txPaid(tx) || _isTripAnalyticRealExpense(tx)) paidMap[d] = _safeNum(paidMap[d]) + alloc.perDay;
       }
 
-      const cat = _norm(tx?.category || 'Autre');
-const sub = _norm(tx?.subcategory || '');
+      const cat = _txCategory(tx);
+const sub = _txSubcategory(tx);
 
 const txDetail = {
   tx,
@@ -1001,6 +1073,20 @@ const deltaProjectedWithBudget =
   expenseRemaining -
   budgetRemaining;
 
+const cashIncomeByCategory = new Map();
+const cashExpenseByCategory = new Map();
+incomeReal.forEach(tx => {
+  const key = _txCategory(tx) || 'Revenu';
+  cashIncomeByCategory.set(key, (cashIncomeByCategory.get(key) || 0) + _convert(tx?.amount, tx?.currency || base, _txCashDate(tx), base));
+});
+txs.forEach(tx => {
+  if (!_txPaid(tx) && !_isTripAnalyticRealExpense(tx)) return;
+  const key = _txCategory(tx);
+  cashExpenseByCategory.set(key, (cashExpenseByCategory.get(key) || 0) + _convert(tx?.amount, tx?.currency || base, _txCashDate(tx), base));
+});
+const cashIncomeCategories = [...cashIncomeByCategory.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 5);
+const cashExpenseCategories = [...cashExpenseByCategory.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 5);
+
 return {
   base, start, end, days, txs, spent, paidSpent,
 
@@ -1029,6 +1115,7 @@ deltaProjectedWithBudget,
   nightCoveredCount, nightCoveredPotentialSavings, nightCoveredAverageSaving,
   nightCoveredTransportSpent, nightCoveredShareOfSpent, nightCoveredRows,
 categoryTxMap, subcategoryTxMap
+  , cashIncomeCategories, cashExpenseCategories
 };
         }
   function _buildReferenceComparisonSeries(actualMap, referenceCategoryMap, comparableDays){
@@ -1414,6 +1501,9 @@ categoryTxMap, subcategoryTxMap
     const cashInPct = Math.max(4, Math.min(100, (Math.abs(cashIn) / cashMax) * 100));
     const cashOutPct = Math.max(4, Math.min(100, (Math.abs(cashOut) / cashMax) * 100));
     const cashCoverage = cashOut > 0 ? (cashIn / cashOut) * 100 : (cashIn > 0 ? 100 : 0);
+    const renderCashRows = (rows, tone) => (rows || []).length
+      ? rows.map(([name, value]) => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;"><span>${escapeHTML(name || 'Autre')}</span><strong style="color:${tone};">${escapeHTML(_fmtMoney(value, model.base))}</strong></div>`).join('')
+      : `<div style="font-size:12px;color:rgba(15,23,42,.52);">${escapeHTML(trA('Aucune donnée', 'No data'))}</div>`;
     const cashOnlyBlock = `
       <div class="analysis-stat analysis-stat--cash-only"
         style="grid-column:1 / -1; padding:20px; border-radius:28px; border:1px solid rgba(148,163,184,.22); background:linear-gradient(135deg, rgba(255,255,255,.96), rgba(248,250,252,.88)); box-shadow:0 16px 38px rgba(148,163,184,.16);">
@@ -1442,6 +1532,16 @@ categoryTxMap, subcategoryTxMap
             <div style="font-size:12px;color:rgba(15,23,42,.58);">${escapeHTML(trA('Couverture entrees/sorties', 'Income/outflow coverage'))}</div>
             <div style="margin-top:6px;font-size:23px;font-weight:950;color:#2563eb;">${Number.isFinite(cashCoverage) ? cashCoverage.toFixed(0) : '0'}%</div>
             <div style="margin-top:4px;font-size:12px;color:rgba(15,23,42,.52);">${escapeHTML(model.start)} - ${escapeHTML(model.end)}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px;">
+          <div style="padding:14px;border-radius:18px;background:rgba(255,255,255,.58);border:1px solid rgba(16,185,129,.14);">
+            <div style="font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,23,42,.52);margin-bottom:8px;">${escapeHTML(trA('Entrées par catégorie', 'Income by category'))}</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">${renderCashRows(model.cashIncomeCategories, '#10b981')}</div>
+          </div>
+          <div style="padding:14px;border-radius:18px;background:rgba(255,255,255,.58);border:1px solid rgba(244,63,94,.14);">
+            <div style="font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,23,42,.52);margin-bottom:8px;">${escapeHTML(trA('Sorties par catégorie', 'Outflows by category'))}</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">${renderCashRows(model.cashExpenseCategories, '#f43f5e')}</div>
           </div>
         </div>
       </div>`;
@@ -2206,7 +2306,7 @@ function _openTxDrilldown(kind, key, model){
   }
 
   function _ensureEvents(){
-    ['analysis-travel','analysis-period','analysis-scope','analysis-mode','analysis-range-start','analysis-range-end','analysis-currency'].forEach(id => {
+    ['analysis-travel','analysis-period','analysis-scope','analysis-mode','analysis-range-start','analysis-range-end','analysis-currency','analysis-category-filter','analysis-subcategory-filter'].forEach(id => {
       const el = _el(id);
       if (!el || el._tbBound) return;
       el._tbBound = true;
@@ -2221,6 +2321,7 @@ function _openTxDrilldown(kind, key, model){
           _renderCategoryExcludeChips(Array.from(excludedCats));
         }
         if (id === 'analysis-period') _toggleRangeBox();
+        if (id === 'analysis-category-filter') _renderAnalysisFilterSelects();
         await _loadReferenceCache();
         _renderAll();
       });
@@ -2280,6 +2381,10 @@ function _openTxDrilldown(kind, key, model){
     if (_el('analysis-scope')) _el('analysis-scope').value = ['budget','out','all'].includes(filters.scope) ? filters.scope : 'budget';
     if (_el('analysis-mode')) _el('analysis-mode').value = ['expenses','planned'].includes(filters.mode) ? filters.mode : 'planned';
     if (_el('analysis-currency')) _el('analysis-currency').value = ['period','account'].includes(filters.currencyMode) ? filters.currencyMode : 'account';
+    _renderAnalysisFilterSelects();
+    if (_el('analysis-category-filter')) _el('analysis-category-filter').value = [..._el('analysis-category-filter').options].some(o => o.value === filters.categoryFilter) ? filters.categoryFilter : 'all';
+    _renderAnalysisFilterSelects();
+    if (_el('analysis-subcategory-filter')) _el('analysis-subcategory-filter').value = [..._el('analysis-subcategory-filter').options].some(o => o.value === filters.subcategoryFilter) ? filters.subcategoryFilter : 'all';
     excludePanelOpen = false;
     _renderCategoryExcludeChips(Array.isArray(filters.excludedCats) ? filters.excludedCats : []);
     _ensureEvents();
