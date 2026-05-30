@@ -60,6 +60,24 @@ function tbSetAuthMessage(message, kind) {
   if (resolved) elMsg.classList.add(resolved);
 }
 
+function tbAuthLogError(section, error, details) {
+  try {
+    if (!window.__errorBus || typeof window.__errorBus.push !== "function") return;
+    window.__errorBus.push({
+      type: "auth.error",
+      severity: "warn",
+      section: section || "auth",
+      message: error?.message || String(error || "Auth error"),
+      details: Object.assign({
+        mode: tbAuthMode,
+        isNativeApp: tbAuthIsNativeApp(),
+        protocol: String(location.protocol || ""),
+        host: String(location.host || ""),
+      }, details || {}),
+    });
+  } catch (_) {}
+}
+
 function tbEnsureAuthMarkup() {
   const box = document.querySelector("#auth-overlay .auth-box");
   if (!box || box.dataset.tbAuthEnhanced === "1") return;
@@ -88,15 +106,15 @@ function tbEnsureAuthMarkup() {
         <form class="auth-form" onsubmit="return submitAuthForm(event)">
           <div class="auth-field">
             <label for="auth-email">Email</label>
-            <input id="auth-email" type="email" autocomplete="email" placeholder="you@email.com" required />
+            <input id="auth-email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="you@email.com" required />
           </div>
           <div id="auth-password-row" class="auth-field">
             <label for="auth-pass">${tbAuthText("Mot de passe", "Password")}</label>
-            <input id="auth-pass" type="password" autocomplete="current-password" />
+            <input id="auth-pass" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" />
           </div>
           <div id="auth-confirm-row" class="auth-field" style="display:none;">
             <label for="auth-pass-confirm">${tbAuthText("Confirmer le mot de passe", "Confirm password")}</label>
-            <input id="auth-pass-confirm" type="password" autocomplete="new-password" />
+            <input id="auth-pass-confirm" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" />
           </div>
           <p id="auth-helper" class="auth-muted"></p>
           <div class="auth-actions">
@@ -211,7 +229,10 @@ async function signIn() {
   if (!email || !pass) return showAuth(true, tbAuthText("Email et mot de passe requis.", "Email and password are required."));
 
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-  if (error) return showAuth(true, tbFriendlyAuthError(error));
+  if (error) {
+    tbAuthLogError("signInWithPassword", error, { emailDomain: email.split("@")[1] || "", emailLength: email.length, passwordLength: pass.length });
+    return showAuth(true, tbFriendlyAuthError(error));
+  }
 
   sbUser = data.user;
   window.sbUser = sbUser;
@@ -235,7 +256,10 @@ async function signUp() {
   if (pass !== confirm) return showAuth(true, tbAuthText("Les deux mots de passe ne correspondent pas.", "Passwords do not match."));
 
   const { data, error } = await sb.auth.signUp({ email, password: pass });
-  if (error) return showAuth(true, tbFriendlyAuthError(error));
+  if (error) {
+    tbAuthLogError("signUp", error, { emailDomain: email.split("@")[1] || "", emailLength: email.length, passwordLength: pass.length });
+    return showAuth(true, tbFriendlyAuthError(error));
+  }
 
   const user = data?.user || null;
   const session = data?.session || null;
@@ -267,7 +291,10 @@ async function resetPassword() {
   try {
     const redirectTo = `${window.location.origin}${window.location.pathname}`;
     const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
-    if (error) return showAuth(true, tbFriendlyAuthError(error));
+    if (error) {
+      tbAuthLogError("resetPassword", error, { emailDomain: email.split("@")[1] || "", emailLength: email.length });
+      return showAuth(true, tbFriendlyAuthError(error));
+    }
     tbSetAuthMessage(tbAuthText("Email de reinitialisation envoye. Verifie ta boite mail.", "Password reset email sent. Check your inbox."), "success");
   } catch (e) {
     showAuth(true, tbFriendlyAuthError(e));
@@ -285,7 +312,10 @@ async function signInWithProvider(provider) {
     const redirectTo = `${window.location.origin}${window.location.pathname}`;
     sessionStorage.setItem("tb_oauth_provider", String(provider || ""));
     const { error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo } });
-    if (error) return showAuth(true, tbFriendlyAuthError(error));
+    if (error) {
+      tbAuthLogError("signInWithProvider", error, { provider: String(provider || "") });
+      return showAuth(true, tbFriendlyAuthError(error));
+    }
   } catch (e) {
     showAuth(true, tbFriendlyAuthError(e));
   }
