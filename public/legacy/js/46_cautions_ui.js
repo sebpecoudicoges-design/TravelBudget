@@ -1,7 +1,8 @@
 /* TravelBudget - Cautions
    Suivi des depots/cautions immobilises, sans mutation automatique des wallets. */
 (function () {
-  let CACHE = { rows: [], empty: true, demo: false };
+  let CACHE = { rows: [], documents: [], empty: true, demo: false };
+  const HIDE_SETTLED_KEY = "travelbudget_cautions_hide_settled_v1";
 
   function esc(v) {
     try { return escapeHTML(String(v ?? "")); }
@@ -81,6 +82,27 @@
   function isOverdue(row) {
     const expected = String(row?.expected_return_date || "");
     return expected && expected < today() && !["returned", "lost"].includes(String(row?.status || ""));
+  }
+  function hideSettled() {
+    try { return localStorage.getItem(HIDE_SETTLED_KEY) !== "0"; }
+    catch (_) { return true; }
+  }
+  function setHideSettled(v) {
+    try { localStorage.setItem(HIDE_SETTLED_KEY, v ? "1" : "0"); } catch (_) {}
+  }
+  function isSettledRow(row) {
+    const st = String(row?.status || "");
+    const settlement = String(row?.settlement_status || "");
+    return st === "returned" || settlement === "settled";
+  }
+  function linkedReturnIds(row) {
+    const ids = Array.isArray(row?.linked_return_transaction_ids) ? row.linked_return_transaction_ids : [];
+    const one = row?.linked_return_transaction_id ? [row.linked_return_transaction_id] : [];
+    return Array.from(new Set(ids.concat(one).map(x => String(x || "").trim()).filter(Boolean)));
+  }
+  function settlementDocIds(row) {
+    const ids = Array.isArray(row?.settlement_document_ids) ? row.settlement_document_ids : [];
+    return Array.from(new Set(ids.map(x => String(x || "").trim()).filter(Boolean)));
   }
   function convertAmount(amount, fromCurrency, toCurrency, dateISO) {
     const amt = n(amount);
@@ -173,7 +195,8 @@
   async function loadCautions() {
     if (isOffline()) {
       const rows = Array.isArray(window.state?.cautionDeposits) ? window.state.cautionDeposits : [];
-      CACHE = { rows, empty: !rows.length, demo: false, offline: true };
+      const documents = Array.isArray(window.state?.documents) ? window.state.documents : [];
+      CACHE = { rows, documents, empty: !rows.length, demo: false, offline: true };
       return CACHE;
     }
     const c = client();
@@ -190,9 +213,17 @@
       const { data, error } = await q;
       if (error) throw error;
       const rows = data || [];
-      CACHE = { rows, empty: !rows.length, demo: false, reason: "" };
+      let documents = Array.isArray(window.state?.documents) ? window.state.documents : [];
+      try {
+        const docsRes = await c.from(table("documents", "documents")).select("id,name,original_filename,created_at,tags").order("created_at", { ascending: false }).limit(200);
+        if (!docsRes.error) documents = docsRes.data || documents;
+      } catch (e) {
+        console.warn("[TB][cautions] documents load skipped", e);
+      }
+      CACHE = { rows, documents, empty: !rows.length, demo: false, reason: "" };
       try {
         if (window.state) state.cautionDeposits = rows;
+        if (window.state) state.documents = documents;
         if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("cautions:load");
       } catch (_) {}
       return CACHE;
@@ -354,13 +385,30 @@
   }
 
   function listHtml(rows) {
-    if (!rows.length) {
+    const visibleRows = hideSettled() ? rows.filter(row => !isSettledRow(row)) : rows;
+    if (!visibleRows.length) {
       return `<div class="tb-cautions-empty">
-        <strong>${esc(atxt("Aucune caution suivie.", "No deposit tracked."))}</strong>
-        <span>${esc(atxt("Ajoute une caution pour voir ce qui reste immobilise, rendu, perdu ou en retard.", "Add a deposit to track what remains locked, returned, lost or overdue."))}</span>
+        <strong>${esc(rows.length ? atxt("Toutes les cautions visibles sont soldees.", "All visible deposits are settled.") : atxt("Aucune caution suivie.", "No deposit tracked."))}</strong>
+        <span>${esc(rows.length ? atxt("Decoche le filtre pour revoir l'historique solde.", "Uncheck the filter to review settled history.") : atxt("Ajoute une caution pour voir ce qui reste immobilise, rendu, perdu ou en retard.", "Add a deposit to track what remains locked, returned, lost or overdue."))}</span>
       </div>`;
     }
-    return `<div class="tb-cautions-grid">${rows.map(cardHtml).join("")}</div>`;
+    return `<div class="tb-cautions-grid">${visibleRows.map(cardHtml).join("")}</div>`;
+  }
+
+  function winkHtml(rows, analysis) {
+    const openRows = (rows || []).filter(row => !isSettledRow(row));
+    const openPaid = (analysis?.paidRows || []).filter(tx => !isSettledRow(reconciliationForPaid(tx.id, rows)));
+    const remainingTotal = openRows.reduce((sum, row) => {
+      const converted = convertAmount(remaining(row), row.currency, analysis?.currency || baseCurrency(), row.expected_return_date || row.paid_date || today());
+      return sum + (converted ?? remaining(row));
+    }, 0);
+    return `<div class="tb-caution-wink">
+      <strong>${esc(atxt("Clin d'oeil", "Quick wink"))}</strong>
+      <span>${esc(atxt(
+        `${openRows.length} caution(s) non soldee(s), ${openPaid.length} connexion(s) transaction a finaliser, reste ${money(remainingTotal, analysis?.currency || baseCurrency())}.`,
+        `${openRows.length} unsettled deposit(s), ${openPaid.length} transaction connection(s) left, ${money(remainingTotal, analysis?.currency || baseCurrency())} remaining.`
+      ))}</span>
+    </div>`;
   }
 
   function statusHtml(data) {
@@ -401,6 +449,38 @@
     const returned = returnTx ? txAmountInBase(returnTx, analysis.currency) : n(row?.returned_amount);
     return paid - returned;
   }
+  function returnTxsByIds(ids, analysis) {
+    const selected = new Set((ids || []).map(id => String(id || "")));
+    return (analysis?.returnRows || []).filter(tx => selected.has(String(tx?.id || "")));
+  }
+  function returnMultiOptionsHtml(selectedIds, analysis) {
+    const selected = new Set((selectedIds || []).map(id => String(id || "")));
+    return (analysis?.returnRows || []).map(tx => {
+      const label = `${txDate(tx)} - ${txLabel(tx)} - ${money(txAmount(tx), txCurrency(tx, analysis.currency))}`;
+      return `<option value="${esc(tx.id || "")}" ${selected.has(String(tx.id || "")) ? "selected" : ""}>${esc(label)}</option>`;
+    }).join("");
+  }
+  function documentOptionsHtml(selectedIds) {
+    const selected = new Set((selectedIds || []).map(id => String(id || "")));
+    return (CACHE.documents || []).map(doc => {
+      const label = doc?.name || doc?.original_filename || atxt("Document", "Document");
+      const date = String(doc?.created_at || "").slice(0, 10);
+      return `<option value="${esc(doc.id || "")}" ${selected.has(String(doc.id || "")) ? "selected" : ""}>${esc(label)}${date ? ` - ${esc(date)}` : ""}</option>`;
+    }).join("");
+  }
+  function documentLinksHtml(row) {
+    const ids = new Set(settlementDocIds(row));
+    const docs = (CACHE.documents || []).filter(doc => ids.has(String(doc?.id || "")));
+    const docLinks = docs.map(doc => `<button class="btn small" type="button" onclick="showView('documents')">${esc(doc?.name || doc?.original_filename || atxt("Document", "Document"))}</button>`);
+    const urlLink = row?.settlement_document_url ? [`<a href="${esc(row.settlement_document_url)}" target="_blank" rel="noopener">${esc(row.settlement_document_label || atxt("Voir document", "Open document"))}</a>`] : [];
+    return docLinks.concat(urlLink).join("");
+  }
+  function reconciliationMultiDifference(paidTx, returnTxs, row, analysis) {
+    const paid = txAmountInBase(paidTx, analysis.currency);
+    const returnedFromTxs = (returnTxs || []).reduce((sum, tx) => sum + txAmountInBase(tx, analysis.currency), 0);
+    const returned = returnedFromTxs || n(row?.returned_amount);
+    return paid - returned;
+  }
   async function saveReconciliation(form) {
     const c = client();
     if (!c) throw new Error(atxt("Client Supabase indisponible.", "Supabase client unavailable."));
@@ -410,8 +490,10 @@
     const paidId = String(form.getAttribute("data-paid-tx-id") || "");
     const paidTx = (Array.isArray(window.state?.transactions) ? window.state.transactions : []).find(tx => String(tx?.id || "") === paidId);
     if (!paidTx) throw new Error(atxt("Transaction de caution introuvable.", "Deposit transaction not found."));
-    const returnId = String(fd.get("linked_return_transaction_id") || "");
-    const returnTx = (Array.isArray(window.state?.transactions) ? window.state.transactions : []).find(tx => String(tx?.id || "") === returnId);
+    const returnIds = fd.getAll("linked_return_transaction_ids").map(x => String(x || "").trim()).filter(Boolean);
+    const docIds = fd.getAll("settlement_document_ids").map(x => String(x || "").trim()).filter(Boolean);
+    const allTxs = Array.isArray(window.state?.transactions) ? window.state.transactions : [];
+    const returnTxs = allTxs.filter(tx => returnIds.includes(String(tx?.id || "")));
     const settlementStatus = String(fd.get("settlement_status") || "open");
     const note = String(fd.get("settlement_note") || "").trim() || null;
     const docUrl = String(fd.get("settlement_document_url") || "").trim() || null;
@@ -425,15 +507,17 @@
       amount: txAmount(paidTx),
       currency: txCurrency(paidTx),
       paid_date: txDate(paidTx) || null,
-      returned_date: returnTx ? txDate(returnTx) : null,
-      returned_amount: returnTx ? txAmount(returnTx) : null,
+      returned_date: returnTxs.length ? txDate(returnTxs[0]) : null,
+      returned_amount: returnTxs.length ? returnTxs.reduce((sum, tx) => sum + txAmount(tx), 0) : null,
       status: depositStatusFromSettlement(settlementStatus),
       linked_paid_transaction_id: paidId || null,
-      linked_return_transaction_id: returnId || null,
+      linked_return_transaction_id: returnIds[0] || null,
+      linked_return_transaction_ids: returnIds,
       settlement_status: settlementStatus,
       settlement_note: note,
       settlement_document_url: docUrl,
       settlement_document_label: docLabel,
+      settlement_document_ids: docIds,
       note,
       updated_at: new Date().toISOString()
     };
@@ -496,6 +580,8 @@
 
   function reconciliationHtml(analysis, rows) {
     const paid = analysis?.paidRows || [];
+    const hideDone = hideSettled();
+    const visiblePaid = hideDone ? paid.filter(tx => !isSettledRow(reconciliationForPaid(tx.id, rows))) : paid;
     if (!paid.length) {
       return `<section class="tb-caution-match">
         <div class="tb-caution-analysis-head">
@@ -510,14 +596,16 @@
       <div class="tb-caution-analysis-head">
         <div>
           <h3>${esc(atxt("Rapprochement des cautions payees", "Paid deposit reconciliation"))}</h3>
-          <p>${esc(atxt("Selectionne le revenu Caution correspondant, puis indique si la caution est soldee ou s'il reste un ecart a justifier.", "Select the matching Caution income, then mark whether the deposit is settled or if a difference needs justification."))}</p>
+          <p>${esc(atxt("Lie une ou plusieurs transactions de retour, puis indique si la caution est soldee ou s'il reste un ecart a justifier.", "Link one or more return transactions, then mark whether the deposit is settled or if a difference needs justification."))}</p>
         </div>
+        <label class="tb-caution-toggle"><input type="checkbox" data-tb-caution-hide-settled ${hideDone ? "checked" : ""}> ${esc(atxt("Masquer les soldees", "Hide settled"))}</label>
       </div>
       <div class="tb-caution-match-list">
-        ${paid.map(tx => {
+        ${visiblePaid.map(tx => {
           const row = reconciliationForPaid(tx.id, rows);
-          const selectedReturn = returnTxById(row?.linked_return_transaction_id, analysis);
-          const diff = reconciliationDifference(tx, selectedReturn, row, analysis);
+          const selectedReturnIds = linkedReturnIds(row);
+          const selectedReturns = returnTxsByIds(selectedReturnIds, analysis);
+          const diff = reconciliationMultiDifference(tx, selectedReturns, row, analysis);
           return `<form class="tb-caution-match-card" data-tb-caution-reconcile-form data-paid-tx-id="${esc(tx.id || "")}" data-caution-id="${esc(row?.id || "")}">
             <div class="tb-caution-match-title">
               <div>
@@ -527,22 +615,23 @@
               <b>${esc(money(txAmount(tx), txCurrency(tx, analysis.currency)))}</b>
             </div>
             <div class="tb-caution-match-grid">
-              <label>${esc(atxt("Retour recu", "Returned income"))}<select name="linked_return_transaction_id">${returnOptionsHtml(row?.linked_return_transaction_id, analysis)}</select></label>
+              <label>${esc(atxt("Retours recus", "Returned incomes"))}<select name="linked_return_transaction_ids" multiple size="4">${returnMultiOptionsHtml(selectedReturnIds, analysis)}</select></label>
               <label>${esc(atxt("Statut", "Status"))}<select name="settlement_status">
                 ${["open", "settled", "partial", "lost", "disputed"].map(s => `<option value="${s}" ${String(row?.settlement_status || "open") === s ? "selected" : ""}>${esc(settlementLabel(s))}</option>`).join("")}
               </select></label>
               <label>${esc(atxt("Commentaire ecart", "Difference comment"))}<input name="settlement_note" value="${esc(row?.settlement_note || row?.note || "")}" placeholder="${esc(atxt("Ex: frais retenus, menage, degradation...", "Ex: retained fee, cleaning, damage..."))}"></label>
-              <label>${esc(atxt("Document justificatif", "Supporting document"))}<input name="settlement_document_url" value="${esc(row?.settlement_document_url || "")}" placeholder="https://..."></label>
+              <label>${esc(atxt("Documents lies", "Linked documents"))}<select name="settlement_document_ids" multiple size="4">${documentOptionsHtml(settlementDocIds(row))}</select></label>
+              <label>${esc(atxt("Lien document externe", "External document link"))}<input name="settlement_document_url" value="${esc(row?.settlement_document_url || "")}" placeholder="https://..."></label>
               <label>${esc(atxt("Nom du document", "Document name"))}<input name="settlement_document_label" value="${esc(row?.settlement_document_label || "")}" placeholder="${esc(atxt("Etat des lieux, recu...", "Inspection report, receipt..."))}"></label>
             </div>
             <div class="tb-caution-match-foot">
               <span class="${Math.abs(diff) < 0.01 ? "ok" : "warn"}">${esc(atxt("Ecart", "Difference"))}: ${esc(money(diff, analysis.currency))}</span>
-              ${row?.settlement_document_url ? `<a href="${esc(row.settlement_document_url)}" target="_blank" rel="noopener">${esc(row.settlement_document_label || atxt("Voir document", "Open document"))}</a>` : ""}
+              ${documentLinksHtml(row)}
               <button class="btn primary" type="submit">${esc(atxt("Enregistrer rapprochement", "Save reconciliation"))}</button>
             </div>
             <div class="tb-caution-form-error" data-tb-caution-error hidden></div>
           </form>`;
-        }).join("")}
+        }).join("") || `<div class="tb-cautions-empty"><strong>${esc(atxt("Tout est solde.", "Everything is settled."))}</strong><span>${esc(atxt("Active l'affichage des soldees pour revoir l'historique.", "Show settled items to review history."))}</span></div>`}
       </div>
     </section>`;
   }
@@ -557,6 +646,11 @@
       .tb-cautions-head h2{margin:0;font-size:24px;}
       .tb-cautions-head p{margin:6px 0 0;color:var(--muted);line-height:1.45;}
       .tb-cautions-badge{border:1px solid rgba(16,185,129,.22);background:rgba(16,185,129,.09);color:#047857;border-radius:999px;padding:7px 10px;font-weight:800;font-size:12px;white-space:nowrap;}
+      .tb-caution-wink{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(16,185,129,.24);background:linear-gradient(135deg,rgba(16,185,129,.13),rgba(59,130,246,.08));border-radius:16px;padding:12px 14px;}
+      .tb-caution-wink strong{font-size:14px;}
+      .tb-caution-wink span{color:var(--muted);font-size:13px;line-height:1.4;}
+      .tb-caution-toggle{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:999px;padding:8px 11px;background:rgba(255,255,255,.62);font-weight:900;font-size:12px;color:var(--muted);white-space:nowrap;}
+      .tb-caution-toggle input{width:16px;height:16px;}
       .tb-cautions-layout{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:16px;align-items:start;}
       .tb-cautions-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;}
       .tb-caution-kpi{border:1px solid var(--border);border-radius:14px;padding:12px;background:rgba(255,255,255,.68);}
@@ -584,6 +678,7 @@
       .tb-caution-match-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
       .tb-caution-match-grid label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:12px;font-weight:800;}
       .tb-caution-match-grid input,.tb-caution-match-grid select{width:100%;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--text);padding:10px 11px;font:inherit;}
+      .tb-caution-match-grid select[multiple]{min-height:108px;padding:7px;}
       .tb-caution-match-foot span{font-weight:900;border-radius:999px;padding:7px 10px;background:rgba(148,163,184,.12);}
       .tb-caution-match-foot span.ok{color:#047857;background:rgba(16,185,129,.12);}
       .tb-caution-match-foot span.warn{color:#b45309;background:rgba(245,158,11,.14);}
@@ -616,7 +711,7 @@
       .tb-caution-actions button.danger{color:#b91c1c;border-color:rgba(239,68,68,.28);}
       .tb-cautions-empty{display:flex;flex-direction:column;gap:6px;color:var(--muted);}
       .tb-cautions-empty strong{color:var(--text);}
-      @media(max-width:880px){.tb-cautions-layout{grid-template-columns:1fr}.tb-cautions-summary{grid-template-columns:1fr 1fr}.tb-cautions-head,.tb-caution-analysis-head{flex-direction:column}.tb-caution-card-main,.tb-caution-card-foot{flex-direction:column}.tb-caution-amount,.tb-caution-analysis-total{text-align:left}.tb-caution-actions{justify-content:flex-start}.tb-caution-analysis-kpis,.tb-caution-match-grid{grid-template-columns:1fr}}
+      @media(max-width:880px){.tb-cautions-layout{grid-template-columns:1fr}.tb-cautions-summary{grid-template-columns:1fr 1fr}.tb-cautions-head,.tb-caution-analysis-head,.tb-caution-wink{flex-direction:column;align-items:flex-start}.tb-caution-card-main,.tb-caution-card-foot{flex-direction:column}.tb-caution-amount,.tb-caution-analysis-total{text-align:left}.tb-caution-actions{justify-content:flex-start}.tb-caution-analysis-kpis,.tb-caution-match-grid{grid-template-columns:1fr}}
     `;
     document.head.appendChild(st);
   }
@@ -654,6 +749,12 @@
         try { await removeCaution(del.getAttribute("data-tb-caution-delete")); await renderCautions("delete"); }
         catch (e) { alert(e && (e.message || e.code) || e); }
       }
+    });
+    document.addEventListener("change", async (ev) => {
+      const toggle = ev.target?.closest?.("[data-tb-caution-hide-settled]");
+      if (!toggle) return;
+      setHideSettled(!!toggle.checked);
+      await renderCautions("hide-settled");
     });
     document.addEventListener("submit", async (ev) => {
       const reconciliationForm = ev.target?.matches?.("[data-tb-caution-reconcile-form]") ? ev.target : null;
@@ -713,6 +814,7 @@
         <div class="tb-cautions-badge">${esc(build)} · ${esc(atxt("Cautions", "Deposits"))}</div>
       </div>
       ${statusHtml(data)}
+      ${winkHtml(data.rows, analysis)}
       ${summaryHtml(data.rows, analysis)}
       ${analysisHtml(analysis)}
       ${reconciliationHtml(analysis, data.rows)}
