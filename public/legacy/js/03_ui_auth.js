@@ -173,6 +173,9 @@ function showAuth(show, msg = "") {
   const overlay = document.getElementById("auth-overlay");
   const app = document.getElementById("app-root");
   if (msg) tbSetAuthMessage(msg);
+  try {
+    document.body?.classList?.toggle("tb-auth-visible", !!show);
+  } catch (_) {}
   if (overlay) overlay.style.display = show ? "block" : "none";
   if (app) app.style.display = show ? "none" : "block";
 }

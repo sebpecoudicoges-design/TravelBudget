@@ -470,6 +470,8 @@ async function _copyToClipboard(text) {
     editingExpenseDraft: null,
     historyFilters: {},
     addExpenseOpen: false,
+    _expenseSaving: false,
+    _offlineReplaySaving: false,
     _tripsLoaded: false,
   };
   window.__tripState = tripState;
@@ -508,6 +510,8 @@ async function _copyToClipboard(text) {
       tripState.editingExpenseId = null;
       tripState.editingExpenseDraft = null;
       tripState.addExpenseOpen = false;
+      tripState._expenseSaving = false;
+      tripState._offlineReplaySaving = false;
       tripState._tripsLoaded = false;
     });
   } catch (_) {}
@@ -4658,35 +4662,90 @@ try {
     return _tripApplyOptimisticExpenseMutation({ mode, expenseId, form: queuedForm, queueId: queueItem?.id });
   }
 
+  async function _findExistingTripExpenseForReplay(tripId, form) {
+    try {
+      const normalizedTripId = String(tripId || "").trim();
+      const date = String(form?.date || "").slice(0, 10);
+      const label = String(form?.label || "").trim();
+      const amount = Number(form?.amount || 0);
+      const currency = _normalizeCurrency(form?.currency);
+      const paidByMemberId = String(form?.paidByMemberId || "");
+      if (!normalizedTripId || !date || !label || !isFinite(amount) || amount <= 0 || !currency || !paidByMemberId) return null;
+
+      const candidates = (tripState.expenses || []).filter((ex) => {
+        if (!ex || ex.localOnly) return false;
+        return String(ex.tripId || ex.trip_id || normalizedTripId) === normalizedTripId
+          && String(ex.date || "").slice(0, 10) === date
+          && String(ex.label || "").trim().toLowerCase() === label.toLowerCase()
+          && Math.abs(Number(ex.amount || 0) - amount) < 0.005
+          && _normalizeCurrency(ex.currency) === currency
+          && String(ex.paidByMemberId || ex.paid_by_member_id || "") === paidByMemberId;
+      });
+      if (candidates.length) {
+        candidates.sort((a, b) => String(a.createdAt || a.created_at || "").localeCompare(String(b.createdAt || b.created_at || "")));
+        return candidates[0].id || candidates[0].expenseId || null;
+      }
+
+      const { data, error } = await sb
+        .from(TB_CONST.TABLES.trip_expenses)
+        .select("id,created_at")
+        .eq("trip_id", normalizedTripId)
+        .eq("date", date)
+        .eq("label", label)
+        .eq("amount", amount)
+        .eq("currency", currency)
+        .eq("paid_by_member_id", paidByMemberId)
+        .order("created_at", { ascending: true })
+        .limit(1);
+      if (error) throw error;
+      return data?.[0]?.id || null;
+    } catch (e) {
+      console.warn("[Trip] offline replay duplicate guard failed", e);
+      return null;
+    }
+  }
+
   async function _tripReplayOfflineExpenseMutation(payload) {
     const tripId = String(payload?.tripId || "");
     if (!tripId) throw new Error("Trip manquant dans l'action offline.");
+    if (tripState._offlineReplaySaving) throw new Error("Synchronisation Trip deja en cours.");
+    tripState._offlineReplaySaving = true;
     const previousTripId = tripState.activeTripId;
-    if (tripState.activeTripId !== tripId) {
-      tripState.activeTripId = tripId;
-      localStorage.setItem(TRIP_ACTIVE_KEY, tripId);
-    }
-    await _loadActiveData();
-    if (!(tripState.members || []).length && Array.isArray(payload?.members) && payload.members.length) {
-      tripState.members = payload.members.map((m) => ({
-        id: m.id,
-        name: m.name,
-        email: m.email || null,
-        authUserId: m.authUserId || null,
-        userId: m.userId || null,
-        isMe: !!m.isMe,
-      }));
-    }
-    const form = _tripExpenseFormForQueue(payload?.form || {});
-    if (String(payload?.mode || payload?.kind || "").includes("update") || payload?.expenseId) {
-      await _updateExpense(Object.assign({ expenseId: payload.expenseId }, form));
-    } else {
-      await _addExpense(Object.assign({}, form, { skipDuplicateCheck: true }));
-    }
-    if (previousTripId && previousTripId !== tripState.activeTripId) {
-      tripState.activeTripId = previousTripId;
-      localStorage.setItem(TRIP_ACTIVE_KEY, previousTripId);
+    try {
+      if (tripState.activeTripId !== tripId) {
+        tripState.activeTripId = tripId;
+        localStorage.setItem(TRIP_ACTIVE_KEY, tripId);
+      }
       await _loadActiveData();
+      if (!(tripState.members || []).length && Array.isArray(payload?.members) && payload.members.length) {
+        tripState.members = payload.members.map((m) => ({
+          id: m.id,
+          name: m.name,
+          email: m.email || null,
+          authUserId: m.authUserId || null,
+          userId: m.userId || null,
+          isMe: !!m.isMe,
+        }));
+      }
+      const form = _tripExpenseFormForQueue(payload?.form || {});
+      if (String(payload?.mode || payload?.kind || "").includes("update") || payload?.expenseId) {
+        await _updateExpense(Object.assign({ expenseId: payload.expenseId }, form));
+      } else {
+        const existingExpenseId = await _findExistingTripExpenseForReplay(tripId, form);
+        if (existingExpenseId) return existingExpenseId;
+        await _addExpense(Object.assign({}, form, { skipDuplicateCheck: true }));
+      }
+    } finally {
+      tripState._offlineReplaySaving = false;
+      if (previousTripId && previousTripId !== tripState.activeTripId) {
+        try {
+          tripState.activeTripId = previousTripId;
+          localStorage.setItem(TRIP_ACTIVE_KEY, previousTripId);
+          await _loadActiveData();
+        } catch (e) {
+          console.warn("[Trip] restore active trip after offline replay failed", e);
+        }
+      }
     }
   }
   window.tbTripReplayOfflineExpenseMutation = _tripReplayOfflineExpenseMutation;
@@ -5838,7 +5897,9 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
     const btnAddExp = _el("trip-add-exp");
     if (btnAddExp) {
       btnAddExp.onclick = async () => {
+  if (tripState._expenseSaving) return;
   try {
+    tripState._expenseSaving = true;
     btnAddExp.disabled = true;
 
     const date = _el("trip-exp-date").value;
@@ -5940,6 +6001,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
   } catch (e) {
     toastWarn(e?.message || String(e));
   } finally {
+    tripState._expenseSaving = false;
     btnAddExp.disabled = false;
   }
 };
