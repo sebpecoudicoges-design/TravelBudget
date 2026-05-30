@@ -8,6 +8,16 @@ function tbAuthText(fr, en) {
   catch (_) { return fr; }
 }
 
+function tbAuthIsNativeApp() {
+  try {
+    return !!window.Capacitor
+      || document.body?.classList?.contains("tb-capacitor-app")
+      || String(location.protocol || "").startsWith("capacitor");
+  } catch (_) {
+    return false;
+  }
+}
+
 function tbAuthMessageKind(message) {
   const msg = String(message || "").toLowerCase();
   if (!msg) return "";
@@ -97,7 +107,7 @@ function tbEnsureAuthMarkup() {
         <div class="auth-provider-row">
           <button class="btn auth-google-btn" type="button" onclick="signInWithProvider('google')" aria-label="${tbAuthText("Continuer avec Google", "Continue with Google")}"><span class="auth-google-mark" aria-hidden="true">G</span>${tbAuthText("Continuer avec Google", "Continue with Google")}</button>
         </div>
-        <p class="auth-muted">${tbAuthText("Les providers externes necessitent d'etre actives cote Supabase Auth.", "External providers need to be enabled in Supabase Auth.")}</p>
+        <p class="auth-muted auth-provider-note">${tbAuthText("Les providers externes necessitent d'etre actives cote Supabase Auth.", "External providers need to be enabled in Supabase Auth.")}</p>
       </section>
     </div>`;
   setAuthMode(tbAuthMode);
@@ -266,6 +276,12 @@ async function resetPassword() {
 
 async function signInWithProvider(provider) {
   try {
+    if (tbAuthIsNativeApp()) {
+      return showAuth(true, tbAuthText(
+        "Connexion Google indisponible dans l'app pour le moment. Utilise email + mot de passe.",
+        "Google sign-in is not available in the app yet. Use email + password."
+      ));
+    }
     const redirectTo = `${window.location.origin}${window.location.pathname}`;
     sessionStorage.setItem("tb_oauth_provider", String(provider || ""));
     const { error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo } });
