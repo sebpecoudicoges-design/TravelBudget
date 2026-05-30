@@ -460,6 +460,18 @@
     .auth-msg{border:1px solid transparent;border-radius:14px;padding:10px 12px;background:rgba(59,130,246,.08);color:#1d4ed8;font-weight:700;}
     .auth-msg.error{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.22);color:#b91c1c;}
     .auth-msg.success{background:rgba(16,185,129,.10);border-color:rgba(16,185,129,.22);color:#047857;}
+    body.tb-capacitor-app #auth-overlay{overflow:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,rgba(15,23,42,.96),rgba(30,41,59,.92));padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(18px + env(safe-area-inset-bottom,0px));}
+    body.tb-capacitor-app .auth-box{width:100%!important;min-height:calc(100vh - 28px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));margin:0!important;border-radius:24px!important;padding:12px!important;box-shadow:0 20px 60px rgba(0,0,0,.28)!important;}
+    body.tb-capacitor-app .auth-shell{grid-template-columns:1fr!important;gap:12px!important;}
+    body.tb-capacitor-app .auth-hero{min-height:0!important;padding:16px!important;border-radius:20px!important;}
+    body.tb-capacitor-app .auth-hero h2{font-size:24px!important;}
+    body.tb-capacitor-app .auth-hero ul{display:none!important;}
+    body.tb-capacitor-app .auth-panel{gap:10px!important;}
+    body.tb-capacitor-app .auth-tabs{grid-template-columns:1fr 1fr 1fr!important;gap:5px!important;border-radius:14px!important;}
+    body.tb-capacitor-app .auth-tab{padding:9px 6px!important;font-size:12px!important;}
+    body.tb-capacitor-app .auth-field input{min-height:44px!important;font-size:16px!important;}
+    body.tb-capacitor-app .auth-actions{display:grid!important;grid-template-columns:1fr!important;}
+    body.tb-capacitor-app .auth-actions .btn,body.tb-capacitor-app .auth-provider-row .btn{width:100%!important;min-height:44px!important;}
     @media(max-width:760px){.auth-box{margin:18px auto;width:calc(100vw - 24px);padding:12px}.auth-shell{grid-template-columns:1fr}.auth-hero{min-height:auto}.auth-tabs{grid-template-columns:1fr}.auth-actions{align-items:stretch}.auth-actions .btn{width:100%}}
 
     /* Modal */
