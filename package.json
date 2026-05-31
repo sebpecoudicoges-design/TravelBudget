@@ -1,7 +1,7 @@
 {
   "name": "travelbudget",
   "private": true,
-  "version": "10.3.3",
+  "version": "10.3.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,8 @@
     "lint:db": "node scripts/lint_db_strings.cjs",
     "cap:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",
-    "android:build-debug": "powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1"
+    "android:build-debug": "powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1",
+    "android:release-debug": "powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1 -UploadSupabase"
   },
   "devDependencies": {
     "@capacitor/android": "^8.3.4",

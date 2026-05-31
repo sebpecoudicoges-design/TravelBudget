@@ -3,6 +3,7 @@ node_modules/
 
 # Build
 dist/
+public/downloads/*.apk
 
 # Capacitor / Android generated artifacts
 android/.gradle/
