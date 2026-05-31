@@ -405,15 +405,18 @@
   function winkHtml(rows, analysis) {
     const openRows = (rows || []).filter(row => !isSettledRow(row));
     const openPaid = (analysis?.paidRows || []).filter(tx => !isSettledRow(reconciliationForPaid(tx.id, rows)));
+    const rowPaidIds = new Set((rows || []).map(row => String(row?.linked_paid_transaction_id || "")).filter(Boolean));
+    const unmanagedPaid = (analysis?.paidRows || []).filter(tx => !rowPaidIds.has(String(tx?.id || "")));
     const remainingTotal = openRows.reduce((sum, row) => {
       const converted = convertAmount(remaining(row), row.currency, analysis?.currency || baseCurrency(), row.expected_return_date || row.paid_date || today());
       return sum + (converted ?? remaining(row));
-    }, 0);
+    }, 0) + unmanagedPaid.reduce((sum, tx) => sum + txAmountInBase(tx, analysis?.currency || baseCurrency()), 0);
+    const unsettledCount = openRows.length + unmanagedPaid.length;
     return `<div class="tb-caution-wink">
       <strong>${esc(atxt("Clin d'oeil", "Quick wink"))}</strong>
       <span>${esc(atxt(
-        `${openRows.length} caution(s) non soldee(s), ${openPaid.length} connexion(s) transaction a finaliser, reste ${money(remainingTotal, analysis?.currency || baseCurrency())}.`,
-        `${openRows.length} unsettled deposit(s), ${openPaid.length} transaction connection(s) left, ${money(remainingTotal, analysis?.currency || baseCurrency())} remaining.`
+        `${unsettledCount} caution(s) non soldee(s), ${openPaid.length} connexion(s) transaction a finaliser, reste ${money(remainingTotal, analysis?.currency || baseCurrency())}.`,
+        `${unsettledCount} unsettled deposit(s), ${openPaid.length} transaction connection(s) left, ${money(remainingTotal, analysis?.currency || baseCurrency())} remaining.`
       ))}</span>
     </div>`;
   }
@@ -491,7 +494,7 @@
     const tx = item.tx;
     const search = txSearchText(tx);
     const amount = money(txAmount(tx), txCurrency(tx, analysis.currency));
-    return `<label class="tb-caution-return-option ${item.exact ? "suggested" : ""}" data-tb-caution-return-option data-search="${esc(search)}">
+    return `<label class="tb-caution-return-option ${item.exact ? "suggested" : ""}" data-tb-caution-return-option data-search="${esc(search)}" ${item.exact || item.selected ? "" : `style="display:none"`}>
       <input type="checkbox" name="linked_return_transaction_ids" value="${esc(tx.id || "")}" ${item.selected ? "checked" : ""}>
       <span>
         <strong>${esc(txLabel(tx))}</strong>
@@ -510,11 +513,12 @@
       : `<div class="tb-caution-picker-empty">${esc(atxt("Aucun autre revenu Caution.", "No other Caution income."))}</div>`;
     return `<div class="tb-caution-picker" data-tb-caution-return-picker>
       ${exactHtml}
-      <div class="tb-caution-picker-group">
-        <b>${esc(atxt("Recherche revenus Caution", "Search Caution income"))}</b>
+      <details class="tb-caution-picker-group">
+        <summary>${esc(atxt("Rechercher un autre revenu", "Search another income"))}</summary>
         <input type="search" data-tb-caution-return-filter placeholder="${esc(atxt("Date, montant, libelle, sous-categorie...", "Date, amount, label, subcategory..."))}" autocomplete="off">
+        <div class="tb-caution-picker-empty" data-tb-caution-search-hint>${esc(atxt("Tape une recherche pour afficher les revenus Caution correspondants.", "Type to show matching Caution income."))}</div>
         <div class="tb-caution-picker-scroll">${otherHtml}</div>
-      </div>
+      </details>
     </div>`;
   }
   function folderMap() {
@@ -555,19 +559,32 @@
       return String(b?.created_at || "").localeCompare(String(a?.created_at || ""));
     });
     if (!docs.length) {
-      return `<div class="tb-caution-picker-empty">${esc(atxt("Aucun document disponible. Ajoute d'abord tes justificatifs dans Documents.", "No document available. Add proofs in Documents first."))}</div>`;
+      return `<div class="tb-caution-doc-actions"><button class="btn" type="button" onclick="showView('documents')">${esc(atxt("Ajouter un document", "Add a document"))}</button></div>
+        <div class="tb-caution-picker-empty">${esc(atxt("Aucun document disponible. Ajoute d'abord tes justificatifs dans Documents.", "No document available. Add proofs in Documents first."))}</div>`;
     }
+    const selectedDocs = docs.filter(doc => selected.has(String(doc?.id || "")));
     return `<div class="tb-caution-doc-picker" data-tb-caution-doc-picker>
-      <input type="search" data-tb-caution-doc-filter placeholder="${esc(atxt("Rechercher dossier, document, tag...", "Search folder, document, tag..."))}" autocomplete="off">
+      <div class="tb-caution-doc-actions">
+        <button class="btn" type="button" onclick="showView('documents')">${esc(atxt("Ajouter un document", "Add a document"))}</button>
+        <details>
+          <summary>${esc(atxt("Ajouter depuis mes documents", "Add from my documents"))}</summary>
+          <input type="search" data-tb-caution-doc-filter placeholder="${esc(atxt("Rechercher dossier, document, tag...", "Search folder, document, tag..."))}" autocomplete="off">
+        </details>
+      </div>
+      ${selectedDocs.length ? `<div class="tb-caution-doc-selected">${selectedDocs.map(doc => `<span><b>${esc(docTitle(doc))}</b><small>${esc(folderPath(doc?.folder_id))}</small></span>`).join("")}</div>` : ""}
+      <div class="tb-caution-picker-empty" data-tb-caution-doc-hint>${esc(atxt("Tape une recherche pour afficher les documents correspondants.", "Type to show matching documents."))}</div>
       <div class="tb-caution-doc-grid">
-        ${docs.map(doc => `<label class="tb-caution-doc-option ${selected.has(String(doc?.id || "")) ? "selected" : ""}" data-tb-caution-doc-option data-search="${esc(docSearchText(doc))}">
+        ${docs.map(doc => {
+          const isSelected = selected.has(String(doc?.id || ""));
+          return `<label class="tb-caution-doc-option ${isSelected ? "selected" : ""}" data-tb-caution-doc-option data-search="${esc(docSearchText(doc))}" style="${isSelected ? "" : "display:none"}">
           <input type="checkbox" name="settlement_document_ids" value="${esc(doc.id || "")}" ${selected.has(String(doc?.id || "")) ? "checked" : ""}>
           <span class="tb-caution-doc-icon">DOC</span>
           <span>
             <strong>${esc(docTitle(doc))}</strong>
             <small>${esc(folderPath(doc?.folder_id))}${doc?.created_at ? ` - ${esc(String(doc.created_at).slice(0, 10))}` : ""}</small>
           </span>
-        </label>`).join("")}
+        </label>`;
+        }).join("")}
       </div>
     </div>`;
   }
@@ -588,6 +605,9 @@
     const returnedFromTxs = (returnTxs || []).reduce((sum, tx) => sum + txAmountInBase(tx, analysis.currency), 0);
     const returned = returnedFromTxs || n(row?.returned_amount);
     return paid - returned;
+  }
+  function reconciliationDisplayDifference(paidTx, returnTxs, row, analysis) {
+    return -reconciliationMultiDifference(paidTx, returnTxs, row, analysis);
   }
   async function saveReconciliation(form) {
     const c = client();
@@ -646,7 +666,7 @@
       return `<section class="tb-caution-analysis">
         <div class="tb-caution-analysis-head">
           <div>
-            <h3>${esc(atxt("Analyse categorie Caution", "Caution category analysis"))}</h3>
+            <h3>${esc(atxt("Transactions Caution", "Caution transactions"))}</h3>
             <p>${esc(atxt("Aucune transaction avec la categorie Caution sur le voyage courant.", "No transaction with the Caution category in the current trip."))}</p>
           </div>
         </div>
@@ -655,7 +675,7 @@
     return `<section class="tb-caution-analysis">
       <div class="tb-caution-analysis-head">
         <div>
-          <h3>${esc(atxt("Analyse categorie Caution", "Caution category analysis"))}</h3>
+          <h3>${esc(atxt("Transactions Caution", "Caution transactions"))}</h3>
           <p>${esc(atxt("Source: transactions categorie Caution, groupees par sous-categorie.", "Source: Caution category transactions, grouped by subcategory."))}</p>
         </div>
         <div class="tb-caution-analysis-total">
@@ -711,7 +731,7 @@
           const row = reconciliationForPaid(tx.id, rows);
           const selectedReturnIds = linkedReturnIds(row);
           const selectedReturns = returnTxsByIds(selectedReturnIds, analysis);
-          const diff = reconciliationMultiDifference(tx, selectedReturns, row, analysis);
+          const diff = reconciliationDisplayDifference(tx, selectedReturns, row, analysis);
           return `<form class="tb-caution-match-card" data-tb-caution-reconcile-form data-paid-tx-id="${esc(tx.id || "")}" data-caution-id="${esc(row?.id || "")}">
             <div class="tb-caution-match-title">
               <div>
@@ -792,7 +812,7 @@
       .tb-caution-match-grid select[multiple]{min-height:108px;padding:7px;}
       .tb-caution-picker,.tb-caution-doc-picker{border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.62);padding:10px;display:flex;flex-direction:column;gap:10px;}
       .tb-caution-picker-group{display:flex;flex-direction:column;gap:7px;}
-      .tb-caution-picker-group>b{color:var(--text);font-size:12px;}
+      .tb-caution-picker-group>b,.tb-caution-picker-group summary{color:var(--text);font-size:12px;font-weight:900;cursor:pointer;}
       .tb-caution-picker-scroll{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:7px;max-height:230px;overflow:auto;padding-right:3px;}
       .tb-caution-return-option{display:flex!important;flex-direction:row!important;align-items:flex-start!important;gap:9px!important;border:1px solid var(--border);border-radius:12px;background:rgba(248,250,252,.82);padding:9px!important;color:var(--text)!important;font-weight:700!important;}
       .tb-caution-return-option.suggested{border-color:rgba(16,185,129,.36);background:rgba(16,185,129,.10);}
@@ -801,6 +821,10 @@
       .tb-caution-return-option small{color:var(--muted);font-size:11px;line-height:1.3;}
       .tb-caution-return-option em{margin-left:auto;font-style:normal;color:#047857;background:rgba(16,185,129,.13);border-radius:999px;padding:3px 7px;font-size:10px;white-space:nowrap;}
       .tb-caution-picker-empty{border:1px dashed var(--border);border-radius:12px;padding:10px;color:var(--muted);font-size:12px;background:rgba(148,163,184,.08);}
+      .tb-caution-doc-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+      .tb-caution-doc-actions details{flex:1;min-width:220px;}
+      .tb-caution-doc-actions summary{cursor:pointer;font-weight:900;color:var(--text);border:1px solid var(--border);border-radius:999px;padding:9px 12px;background:var(--card);display:inline-flex;}
+      .tb-caution-doc-actions input{margin-top:8px;}
       .tb-caution-doc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;max-height:260px;overflow:auto;padding-right:3px;}
       .tb-caution-doc-option{display:grid!important;grid-template-columns:auto auto minmax(0,1fr)!important;align-items:center!important;gap:9px!important;border:1px solid var(--border);border-radius:13px;background:rgba(248,250,252,.82);padding:9px!important;color:var(--text)!important;font-weight:700!important;}
       .tb-caution-doc-option.selected{border-color:rgba(37,99,235,.34);background:rgba(59,130,246,.10);}
@@ -809,6 +833,10 @@
       .tb-caution-doc-option span:last-child{display:flex;flex-direction:column;gap:2px;min-width:0;}
       .tb-caution-doc-option strong,.tb-caution-doc-chip b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
       .tb-caution-doc-option small,.tb-caution-doc-chip small{color:var(--muted);font-size:11px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+      .tb-caution-doc-selected{display:flex;gap:7px;flex-wrap:wrap;}
+      .tb-caution-doc-selected span{display:flex;flex-direction:column;gap:2px;border:1px solid rgba(37,99,235,.24);background:rgba(59,130,246,.09);border-radius:12px;padding:7px 9px;min-width:150px;max-width:240px;}
+      .tb-caution-doc-selected b,.tb-caution-doc-selected small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+      .tb-caution-doc-selected small{color:var(--muted);font-size:11px;}
       .tb-caution-match-foot span{font-weight:900;border-radius:999px;padding:7px 10px;background:rgba(148,163,184,.12);}
       .tb-caution-match-foot span.ok{color:#047857;background:rgba(16,185,129,.12);}
       .tb-caution-match-foot span.warn{color:#b45309;background:rgba(245,158,11,.14);}
@@ -894,9 +922,11 @@
       if (returnFilter) {
         const q = normKey(returnFilter.value || "");
         const picker = returnFilter.closest("[data-tb-caution-return-picker]");
+        const hint = picker?.querySelector?.("[data-tb-caution-search-hint]");
+        if (hint) hint.style.display = q ? "none" : "";
         picker?.querySelectorAll?.("[data-tb-caution-return-option]").forEach((option) => {
           const search = String(option.getAttribute("data-search") || "");
-          option.style.display = !q || search.includes(q) ? "" : "none";
+          option.style.display = q && search.includes(q) ? "" : "none";
         });
         return;
       }
@@ -904,9 +934,12 @@
       if (docFilter) {
         const q = normKey(docFilter.value || "");
         const picker = docFilter.closest("[data-tb-caution-doc-picker]");
+        const hint = picker?.querySelector?.("[data-tb-caution-doc-hint]");
+        if (hint) hint.style.display = q ? "none" : "";
         picker?.querySelectorAll?.("[data-tb-caution-doc-option]").forEach((option) => {
           const search = String(option.getAttribute("data-search") || "");
-          option.style.display = !q || search.includes(q) ? "" : "none";
+          const checked = !!option.querySelector("input[type='checkbox']")?.checked;
+          option.style.display = (q && search.includes(q)) || checked ? "" : "none";
         });
       }
     });
@@ -970,7 +1003,6 @@
       ${statusHtml(data)}
       ${winkHtml(data.rows, analysis)}
       ${summaryHtml(data.rows, analysis)}
-      ${analysisHtml(analysis)}
       ${reconciliationHtml(analysis, data.rows)}
       <div class="tb-cautions-layout">
         <div id="tb-caution-form-host">${formHtml()}</div>
