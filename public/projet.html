@@ -151,6 +151,13 @@
       line-height: 1.65;
     }
     .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+    .hero-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 760;
+    }
     .metrics {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -166,6 +173,28 @@
     }
     .metric strong { display: block; font-size: 20px; line-height: 1.1; }
     .metric span { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; font-weight: 780; }
+    .trust-strip {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .trust-item {
+      border: 1px solid rgba(15, 23, 42, .08);
+      border-radius: 18px;
+      padding: 13px;
+      background: rgba(255,255,255,.72);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.42;
+      font-weight: 760;
+    }
+    .trust-item strong {
+      display: block;
+      color: var(--ink);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
     .auth-entry {
       margin-top: 18px;
       border: 1px solid rgba(15, 23, 42, .10);
@@ -376,7 +405,7 @@
     .proof strong { display: block; font-size: 15px; }
     .proof span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.45; }
 
-    .workflow-grid, .tech-grid, .app-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+    .workflow-grid, .tech-grid, .app-grid, .case-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
     .workflow-card, .tech-card, .app-card { padding: 18px; }
     .app-card {
       border: 1px solid rgba(15, 23, 42, .09);
@@ -410,6 +439,63 @@
     }
     .workflow-card h3, .tech-card h3 { margin: 0 0 8px; font-size: 20px; }
     .workflow-card p, .tech-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
+    .case-card {
+      border: 1px solid rgba(15, 23, 42, .09);
+      border-radius: 22px;
+      padding: 18px;
+      background: rgba(255,255,255,.82);
+    }
+    .case-card strong { display: block; color: #1d4ed8; font-size: 12px; text-transform: uppercase; letter-spacing: 0; margin-bottom: 9px; }
+    .case-card h3 { margin: 0 0 8px; font-size: 21px; }
+    .case-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
+    .tech-stack {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .tech-panel {
+      border: 1px solid rgba(15, 23, 42, .09);
+      border-radius: 24px;
+      padding: 20px;
+      background: rgba(255,255,255,.88);
+      box-shadow: var(--shadow);
+    }
+    .tech-panel h3 { margin: 0 0 12px; font-size: 23px; }
+    .tech-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+    .tech-list li {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 12px;
+      padding: 11px 0;
+      border-top: 1px solid rgba(15, 23, 42, .08);
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .tech-list li:first-child { border-top: 0; padding-top: 0; }
+    .tech-list strong { color: var(--ink); font-size: 13px; }
+    .changelog {
+      margin-top: 16px;
+      border: 1px solid rgba(15, 23, 42, .09);
+      border-radius: 24px;
+      padding: 18px;
+      background: rgba(255,255,255,.88);
+      box-shadow: var(--shadow);
+    }
+    .changelog h3 { margin: 0 0 14px; font-size: 22px; }
+    .release-list { display: grid; gap: 10px; }
+    .release-row {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding-top: 10px;
+      border-top: 1px solid rgba(15, 23, 42, .08);
+    }
+    .release-row:first-child { border-top: 0; padding-top: 0; }
+    .release-row strong { color: #1d4ed8; }
+    .release-row span { color: var(--muted); line-height: 1.45; font-size: 14px; }
     .cta {
       margin-top: 28px;
       border-radius: 28px;
@@ -441,7 +527,8 @@
       }
       .mock-side strong { display: none; }
       .mock-side button { width: auto; white-space: nowrap; margin: 0; }
-      .workflow-grid, .tech-grid, .app-grid { grid-template-columns: 1fr; }
+      .workflow-grid, .tech-grid, .app-grid, .case-grid, .tech-stack { grid-template-columns: 1fr; }
+      .trust-strip { grid-template-columns: 1fr; }
       .section-head { display: block; }
       .section-head p { margin-top: 12px; }
     }
@@ -457,6 +544,13 @@
       .cta { flex-direction: column; align-items: flex-start; }
       .nav-actions .lang-switch { display: none; }
       .floating-lang { display: inline-flex; }
+      .hero { padding-top: 24px; }
+      h1 { font-size: clamp(38px, 12vw, 54px); }
+      section.band { padding: 54px 0; }
+      .mock-screen { min-height: auto; }
+      .mock-main { padding: 12px; }
+      .tech-list li { grid-template-columns: 1fr; gap: 4px; }
+      .release-row { grid-template-columns: 1fr; gap: 4px; }
     }
   </style>
 </head>
@@ -492,15 +586,16 @@
   <main>
     <section class="shell hero" id="top">
       <div>
-        <span class="eyebrow" data-i18n="hero.eyebrow">Demo publique - aucune donnee personnelle</span>
-        <h1 data-i18n="hero.title">Le cockpit budget pour voyager, travailler et garder le cap.</h1>
+        <span class="eyebrow" data-i18n="hero.eyebrow">BudgetPacker - demo publique, donnees fictives</span>
+        <h1 data-i18n="hero.title">BudgetPacker, l'app budget pour voyager sans perdre le fil.</h1>
         <p class="lead" data-i18n="hero.lead">
-          BudgetPacker relie cashflow, voyages, documents, patrimoine, split expenses et decisions multi-devise dans une interface pensee pour la vraie vie nomade.
+          Suivi de tresorerie, transactions, voyages partages, cautions, documents et decisions multi-devise dans une app pensee pour les semaines ou tout bouge.
         </p>
         <div class="hero-actions">
-          <a class="btn primary" href="#demo" data-i18n="hero.primary">Jouer avec la demo</a>
-          <a class="btn" href="#modules" data-i18n="hero.secondary">Voir les modules</a>
+          <a class="btn primary" href="#demo" data-i18n="hero.primary">Ouvrir la demo</a>
+          <a class="btn" href="#app" data-i18n="hero.secondary">Telecharger l'APK</a>
         </div>
+        <p class="hero-note" data-i18n="hero.note">La page ci-dessous ne charge aucune donnee personnelle : elle montre le produit, les modules et la logique technique.</p>
         <div class="auth-entry">
           <div>
             <strong data-i18n="auth.title">Acceder a l'app complete</strong>
@@ -516,6 +611,11 @@
           <div class="metric"><strong data-i18n="metric.docs.title">Documents Hub</strong><span data-i18n="metric.docs.body">Tags, dossiers, preuves liees</span></div>
           <div class="metric"><strong data-i18n="metric.trip.title">Voyage</strong><span data-i18n="metric.trip.body">Budget, split, remboursements</span></div>
           <div class="metric"><strong data-i18n="metric.safe.title">App + offline</strong><span data-i18n="metric.safe.body">Actions en attente et lecture hors ligne</span></div>
+        </div>
+        <div class="trust-strip" aria-label="Points de confiance">
+          <div class="trust-item"><strong data-i18n="trust.private.title">Donnees privees</strong><span data-i18n="trust.private.body">Supabase Auth, RLS et stockage separent les comptes de chaque utilisateur.</span></div>
+          <div class="trust-item"><strong data-i18n="trust.mobile.title">Mobile en test</strong><span data-i18n="trust.mobile.body">APK versionnee, flow de build nettoye et lien public de telechargement.</span></div>
+          <div class="trust-item"><strong data-i18n="trust.offline.title">Usage terrain</strong><span data-i18n="trust.offline.body">Lecture hors ligne, file d'attente et synchronisation au retour reseau.</span></div>
         </div>
       </div>
 
@@ -533,6 +633,7 @@
               <button type="button" data-mock-module="analysis">Analysis</button>
               <button type="button" data-mock-module="assets">Assets</button>
               <button type="button" data-mock-module="documents">Documents</button>
+              <button type="button" data-mock-module="cautions">Cautions</button>
               <button type="button" data-mock-module="sport">Sport</button>
               <button type="button" data-mock-module="split">Split</button>
             </aside>
@@ -621,14 +722,20 @@
     <section id="modules" class="band">
       <div class="shell">
         <div class="section-head">
-          <h2 data-i18n="modules.title">Les modules se parlent entre eux.</h2>
-          <p data-i18n="modules.lead">Clique sur un module pour voir ce qu'il apporte dans le projet. La vitrine reste publique, mais elle raconte la logique de l'app reelle.</p>
+          <h2 data-i18n="modules.title">Les modules couvrent les vrais cas du voyage.</h2>
+          <p data-i18n="modules.lead">Budget quotidien, partage Trip, documents, cautions, patrimoine et notifications : chaque brique nourrit les autres au lieu de rester isolee.</p>
+        </div>
+        <div class="case-grid" aria-label="Cas d'usage principaux">
+          <article class="case-card"><strong data-i18n="case.one.kicker">Budget</strong><h3 data-i18n="case.one.title">Savoir ce qu'il reste vraiment</h3><p data-i18n="case.one.body">Wallets, transactions, budget journalier et projections donnent une lecture rapide de la tresorerie.</p></article>
+          <article class="case-card"><strong data-i18n="case.two.kicker">Trip</strong><h3 data-i18n="case.two.title">Partager sans casser les comptes</h3><p data-i18n="case.two.body">Invitations, depenses partagees et validations evitent les ajouts silencieux chez les autres membres.</p></article>
+          <article class="case-card"><strong data-i18n="case.three.kicker">Cautions</strong><h3 data-i18n="case.three.title">Suivre ce qui doit revenir</h3><p data-i18n="case.three.body">Les cautions payees, remboursements, ecarts, commentaires et documents restent rattaches au dossier.</p></article>
         </div>
         <div class="modules-layout">
           <div class="tabs" role="tablist">
             <button class="tab-btn active" type="button" data-module="dashboard">Dashboard</button>
             <button class="tab-btn" type="button" data-module="transactions">Transactions</button>
             <button class="tab-btn" type="button" data-module="documents">Documents</button>
+            <button class="tab-btn" type="button" data-module="cautions">Cautions</button>
             <button class="tab-btn" type="button" data-module="sport">Sport</button>
             <button class="tab-btn" type="button" data-module="assets">Assets</button>
             <button class="tab-btn" type="button" data-module="split">Split</button>
@@ -660,20 +767,28 @@
     <section id="app" class="band">
       <div class="shell">
         <div class="section-head">
-          <h2 data-i18n="app.title">Disponible en app Android de test.</h2>
-          <p data-i18n="app.lead">La version mobile garde la logique du web, avec un usage plus rapide : dashboard, transactions, wallets, partage, sport et lecture offline.</p>
+          <h2 data-i18n="app.title">App Android de test, lien direct et version lisible.</h2>
+          <p data-i18n="app.lead">La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.</p>
         </div>
         <div class="app-grid">
-          <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body">APK debug 10.3.4 build 20260531-124455 disponible pour les tests Android.</p></article>
+          <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body">APK debug 10.3.5 build 20260531-130657 disponible pour les tests Android.</p></article>
           <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les donnees locales restent consultables, les transactions offline sont mises en attente puis synchronisees au retour reseau.</p></article>
-          <article class="app-card"><strong>10.3.4</strong><h3 data-i18n="app.version.title">APK securise</h3><p data-i18n="app.version.body">Workflow Android nettoye : aucun APK imbrique dans les assets et release versionnee plus fiable.</p></article>
+          <article class="app-card"><strong>10.3.5</strong><h3 data-i18n="app.version.title">Page projet detaillee</h3><p data-i18n="app.version.body">Hero, cas d'usage, technique et changelog clarifies pour presenter le projet proprement.</p></article>
+        </div>
+        <div class="changelog">
+          <h3 data-i18n="release.title">Dernieres versions</h3>
+          <div class="release-list">
+            <div class="release-row"><strong>10.3.5</strong><span data-i18n="release.1035">Page projet plus claire, technique detaillee et APK de test mis a jour.</span></div>
+            <div class="release-row"><strong>10.3.4</strong><span data-i18n="release.1034">Workflow APK securise : nettoyage avant sync, build propre et upload Storage.</span></div>
+            <div class="release-row"><strong>10.3.3</strong><span data-i18n="release.1033">Cautions ciblees, recherche documents/transactions et ecarts corriges.</span></div>
+          </div>
         </div>
         <div class="cta">
           <div>
             <h2 data-i18n="app.cta.title">App Android en test interne.</h2>
-            <p data-i18n="app.cta.body">Telecharge l'APK versionnee 10.3.4 build 20260531-124455 depuis Supabase Storage pour tester la derniere build Android.</p>
+            <p data-i18n="app.cta.body">Telecharge l'APK versionnee 10.3.5 build 20260531-130657 depuis Supabase Storage pour tester la derniere build Android.</p>
           </div>
-          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.3.4-20260531-124455-debug.apk" download data-i18n="app.cta.button">Telecharger l'APK 10.3.4</a>
+          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.3.5-20260531-130657-debug.apk" download data-i18n="app.cta.button">Telecharger l'APK 10.3.5</a>
         </div>
       </div>
     </section>
@@ -681,13 +796,33 @@
     <section id="tech" class="band">
       <div class="shell">
         <div class="section-head">
-          <h2 data-i18n="tech.title">Une vitrine autonome, une app privee derriere.</h2>
-          <p data-i18n="tech.lead">Cette page ne charge aucune donnee utilisateur. L'application reelle reste protegee par Supabase Auth, RLS, Storage et Edge Functions.</p>
+          <h2 data-i18n="tech.title">Une vitrine statique, une app privee structuree derriere.</h2>
+          <p data-i18n="tech.lead">BudgetPacker combine un front leger, Supabase pour les donnees, des RPC pour les operations sensibles, Storage pour les fichiers et Capacitor pour l'app Android.</p>
         </div>
         <div class="tech-grid">
-          <article class="tech-card"><b>DB</b><h3>Supabase</h3><p data-i18n="tech.db">Tables metier, RPC, RLS, Storage documents et fonctions Edge.</p></article>
-          <article class="tech-card"><b>FX</b><h3>Multi-currency</h3><p data-i18n="tech.fx">Devise de base utilisateur, snapshots, taux manuels et calculs de decision.</p></article>
-          <article class="tech-card"><b>UI</b><h3>Netlify</h3><p data-i18n="tech.ui">Front statique, demo publique partageable et app privee separee.</p></article>
+          <article class="tech-card"><b>DB</b><h3>Supabase</h3><p data-i18n="tech.db">Postgres, RLS, RPC, Edge Functions et Storage structurent les donnees utilisateur, documents, invitations et APK.</p></article>
+          <article class="tech-card"><b>APP</b><h3>Capacitor</h3><p data-i18n="tech.app">Le web build Vite est synchronise dans Android, avec deep links auth et release APK versionnee.</p></article>
+          <article class="tech-card"><b>WEB</b><h3>Netlify</h3><p data-i18n="tech.ui">Front statique deployable, page publique autonome et application privee servie sans serveur applicatif lourd.</p></article>
+        </div>
+        <div class="tech-stack">
+          <article class="tech-panel">
+            <h3 data-i18n="tech.data.title">Donnees et securite</h3>
+            <ul class="tech-list">
+              <li><strong>Auth</strong><span data-i18n="tech.auth">Supabase Auth gere email, mot de passe, Google OAuth et redirections mobile/web.</span></li>
+              <li><strong>RLS</strong><span data-i18n="tech.rls">Les tables exposees restent filtrees par utilisateur ou membership Trip.</span></li>
+              <li><strong>RPC</strong><span data-i18n="tech.rpc">Les actions sensibles passent par des fonctions controlees : invitations, acceptations, validations.</span></li>
+              <li><strong>Storage</strong><span data-i18n="tech.storage">Documents, preuves et APK versionnees sont stockes dans des buckets dedies.</span></li>
+            </ul>
+          </article>
+          <article class="tech-panel">
+            <h3 data-i18n="tech.delivery.title">Build, mobile et fiabilite</h3>
+            <ul class="tech-list">
+              <li><strong>Vite</strong><span data-i18n="tech.vite">Build statique rapide, page projet autonome et assets synchronises vers Android.</span></li>
+              <li><strong>APK</strong><span data-i18n="tech.apkflow">Le script nettoie les APK locaux avant sync, verifie les assets puis upload la release.</span></li>
+              <li><strong>Offline</strong><span data-i18n="tech.offline">Lecture locale et actions en attente reduisent les blocages terrain.</span></li>
+              <li><strong>Tests</strong><span data-i18n="tech.tests">Vitest couvre les regles metier : transactions, documents, Trip, FX, inbox et wallet.</span></li>
+            </ul>
+          </article>
         </div>
         <div class="cta">
           <div>
@@ -709,77 +844,97 @@
       const copy = {
         fr: {
           "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.app": "App", "nav.tech": "Technique", "nav.cta": "Tester la demo",
-          "hero.eyebrow": "Demo publique - aucune donnee personnelle",
-          "hero.title": "Le cockpit budget pour voyager, travailler et garder le cap.",
-          "hero.lead": "BudgetPacker relie cashflow, voyages, documents, patrimoine, split expenses et decisions multi-devise dans une interface pensee pour la vraie vie nomade.",
-          "hero.primary": "Jouer avec la demo", "hero.secondary": "Voir les modules", "hero.apk": "App Android",
+          "hero.eyebrow": "BudgetPacker - demo publique, donnees fictives",
+          "hero.title": "BudgetPacker, l'app budget pour voyager sans perdre le fil.",
+          "hero.lead": "Suivi de tresorerie, transactions, voyages partages, cautions, documents et decisions multi-devise dans une app pensee pour les semaines ou tout bouge.",
+          "hero.primary": "Ouvrir la demo", "hero.secondary": "Telecharger l'APK", "hero.apk": "App Android",
+          "hero.note": "La page ci-dessous ne charge aucune donnee personnelle : elle montre le produit, les modules et la logique technique.",
           "auth.title": "Acceder a l'app complete", "auth.body": "La demo est publique. Pour synchroniser tes donnees, cree un compte ou connecte-toi.", "auth.signup": "Creer un compte", "auth.login": "Se connecter",
           "metric.fx.title": "Multi-devise", "metric.fx.body": "AUD, EUR, JPY et devise de base",
           "metric.docs.title": "Documents Hub", "metric.docs.body": "Tags, dossiers, preuves liees",
           "metric.trip.title": "Voyage", "metric.trip.body": "Budget, split, remboursements",
           "metric.safe.title": "App + offline", "metric.safe.body": "Actions en attente et lecture hors ligne",
+          "trust.private.title": "Donnees privees", "trust.private.body": "Supabase Auth, RLS et stockage separent les comptes de chaque utilisateur.",
+          "trust.mobile.title": "Mobile en test", "trust.mobile.body": "APK versionnee, flow de build nettoye et lien public de telechargement.",
+          "trust.offline.title": "Usage terrain", "trust.offline.body": "Lecture hors ligne, file d'attente et synchronisation au retour reseau.",
           "mock.cashflow": "Cashflow estime", "mock.signal": "Signal du jour", "mock.projection": "Projection", "mock.feed": "Flux recent",
           "demo.title": "Une demo que l'on peut manipuler.",
           "demo.lead": "Les valeurs sont fictives. Change le scenario, ajuste le salaire AUD et la part que tu gardes : la lecture se met a jour comme une mini-version du produit.",
           "scenario.pvt": "PVT Australie", "scenario.trip": "Voyage partage", "scenario.docs": "Documents",
           "demo.salary": "Salaire hebdo AUD", "demo.keep": "AUD a garder", "demo.rate": "Taux AUD/EUR simule",
           "demo.convert": "A convertir", "demo.eur": "Equivalent EUR", "demo.buffer": "Buffer AUD",
-          "modules.title": "Les modules se parlent entre eux.",
-          "modules.lead": "Clique sur un module pour voir ce qu'il apporte dans le projet. La vitrine reste publique, mais elle raconte la logique de l'app reelle.",
+          "modules.title": "Les modules couvrent les vrais cas du voyage.",
+          "modules.lead": "Budget quotidien, partage Trip, documents, cautions, patrimoine et notifications : chaque brique nourrit les autres au lieu de rester isolee.",
+          "case.one.kicker": "Budget", "case.one.title": "Savoir ce qu'il reste vraiment", "case.one.body": "Wallets, transactions, budget journalier et projections donnent une lecture rapide de la tresorerie.",
+          "case.two.kicker": "Trip", "case.two.title": "Partager sans casser les comptes", "case.two.body": "Invitations, depenses partagees et validations evitent les ajouts silencieux chez les autres membres.",
+          "case.three.kicker": "Cautions", "case.three.title": "Suivre ce qui doit revenir", "case.three.body": "Les cautions payees, remboursements, ecarts, commentaires et documents restent rattaches au dossier.",
           "workflow.title": "Un parcours simple : capturer, classer, decider.",
           "workflow.lead": "Le projet vise a reduire la friction : une depense ou un document arrive, puis il trouve sa place dans le budget, le voyage ou le patrimoine.",
           "workflow.one.title": "Capturer", "workflow.one.body": "Transaction, recu WhatsApp, facture PDF, depense Trip ou mouvement interne.",
           "workflow.two.title": "Relier", "workflow.two.body": "Les preuves peuvent etre liees aux transactions, assets ou depenses partagees.",
           "workflow.three.title": "Piloter", "workflow.three.body": "Analyse, cashflow, conversion FX et documents importants restent lisibles.",
-          "app.title": "Disponible en app Android de test.",
-          "app.lead": "La version mobile garde la logique du web, avec un usage plus rapide : dashboard, transactions, wallets, partage, sport et lecture offline.",
-          "app.apk.title": "Build Android", "app.apk.body": "APK debug 10.3.4 build 20260531-124455 disponible pour les tests Android.",
+          "app.title": "App Android de test, lien direct et version lisible.",
+          "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
+          "app.apk.title": "Build Android", "app.apk.body": "APK debug 10.3.5 build 20260531-130657 disponible pour les tests Android.",
           "app.offline.title": "Mode hors ligne", "app.offline.body": "Les donnees locales restent consultables, les transactions offline sont mises en attente puis synchronisees au retour reseau.",
-          "app.version.title": "APK securise", "app.version.body": "Workflow Android nettoye : aucun APK imbrique dans les assets et release versionnee plus fiable.",
-          "app.cta.title": "App Android en test interne.", "app.cta.body": "Telecharge l'APK versionnee 10.3.4 build 20260531-124455 depuis Supabase Storage pour tester la derniere build Android.", "app.cta.button": "Telecharger l'APK 10.3.4",
-          "tech.title": "Une vitrine autonome, une app privee derriere.",
-          "tech.lead": "Cette page ne charge aucune donnee utilisateur. L'application reelle reste protegee par Supabase Auth, RLS, Storage et Edge Functions.",
-          "tech.db": "Tables metier, RPC, RLS, Storage documents et fonctions Edge.",
-          "tech.fx": "Devise de base utilisateur, snapshots, taux manuels et calculs de decision.",
-          "tech.ui": "Front statique, demo publique partageable et app privee separee.",
+          "app.version.title": "Page projet detaillee", "app.version.body": "Hero, cas d'usage, technique et changelog clarifies pour presenter le projet proprement.",
+          "release.title": "Dernieres versions", "release.1035": "Page projet plus claire, technique detaillee et APK de test mis a jour.", "release.1034": "Workflow APK securise : nettoyage avant sync, build propre et upload Storage.", "release.1033": "Cautions ciblees, recherche documents/transactions et ecarts corriges.",
+          "app.cta.title": "App Android en test interne.", "app.cta.body": "Telecharge l'APK versionnee 10.3.5 build 20260531-130657 depuis Supabase Storage pour tester la derniere build Android.", "app.cta.button": "Telecharger l'APK 10.3.5",
+          "tech.title": "Une vitrine statique, une app privee structuree derriere.",
+          "tech.lead": "BudgetPacker combine un front leger, Supabase pour les donnees, des RPC pour les operations sensibles, Storage pour les fichiers et Capacitor pour l'app Android.",
+          "tech.db": "Postgres, RLS, RPC, Edge Functions et Storage structurent les donnees utilisateur, documents, invitations et APK.",
+          "tech.app": "Le web build Vite est synchronise dans Android, avec deep links auth et release APK versionnee.",
+          "tech.ui": "Front statique deployable, page publique autonome et application privee servie sans serveur applicatif lourd.",
+          "tech.data.title": "Donnees et securite", "tech.auth": "Supabase Auth gere email, mot de passe, Google OAuth et redirections mobile/web.", "tech.rls": "Les tables exposees restent filtrees par utilisateur ou membership Trip.", "tech.rpc": "Les actions sensibles passent par des fonctions controlees : invitations, acceptations, validations.", "tech.storage": "Documents, preuves et APK versionnees sont stockes dans des buckets dedies.",
+          "tech.delivery.title": "Build, mobile et fiabilite", "tech.vite": "Build statique rapide, page projet autonome et assets synchronises vers Android.", "tech.apkflow": "Le script nettoie les APK locaux avant sync, verifie les assets puis upload la release.", "tech.offline": "Lecture locale et actions en attente reduisent les blocages terrain.", "tech.tests": "Vitest couvre les regles metier : transactions, documents, Trip, FX, inbox et wallet.",
           "cta.title": "Pret a montrer le projet.", "cta.body": "Cette page explique BudgetPacker sans compte, sans connexion et sans exposer tes donnees.", "cta.button": "Rejouer la demo",
           "footer": "BudgetPacker - demo publique interactive"
         },
         en: {
           "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Workflow", "nav.app": "App", "nav.tech": "Tech", "nav.cta": "Try the demo",
-          "hero.eyebrow": "Public demo - no personal data",
-          "hero.title": "The budget cockpit for travel, work and everyday decisions.",
-          "hero.lead": "BudgetPacker connects cashflow, trips, documents, assets, split expenses and currency decisions in one interface designed for a nomad life.",
-          "hero.primary": "Play with the demo", "hero.secondary": "Explore modules", "hero.apk": "Android app",
+          "hero.eyebrow": "BudgetPacker - public demo, fictional data",
+          "hero.title": "BudgetPacker, the travel budget app that keeps the thread.",
+          "hero.lead": "Cashflow tracking, transactions, shared trips, deposits, documents and multi-currency decisions in an app built for weeks when everything moves.",
+          "hero.primary": "Open the demo", "hero.secondary": "Download APK", "hero.apk": "Android app",
+          "hero.note": "This page loads no personal data: it presents the product, modules and technical logic.",
           "auth.title": "Open the full app", "auth.body": "The demo is public. To sync your own data, create an account or sign in.", "auth.signup": "Create account", "auth.login": "Sign in",
           "metric.fx.title": "Multi-currency", "metric.fx.body": "AUD, EUR, JPY and base currency",
           "metric.docs.title": "Documents Hub", "metric.docs.body": "Tags, folders, linked proofs",
           "metric.trip.title": "Travel", "metric.trip.body": "Budget, split, reimbursements",
           "metric.safe.title": "App + offline", "metric.safe.body": "Pending actions and offline reading",
+          "trust.private.title": "Private data", "trust.private.body": "Supabase Auth, RLS and storage keep each user's account separated.",
+          "trust.mobile.title": "Mobile testing", "trust.mobile.body": "Versioned APK, cleaned build flow and public download link.",
+          "trust.offline.title": "Field use", "trust.offline.body": "Offline reading, action queue and sync when the network returns.",
           "mock.cashflow": "Estimated cashflow", "mock.signal": "Today's signal", "mock.projection": "Projection", "mock.feed": "Recent feed",
           "demo.title": "A demo you can actually manipulate.",
           "demo.lead": "Values are fictional. Switch scenario, adjust AUD income and the amount you keep: the page updates like a mini version of the product.",
           "scenario.pvt": "Australia WHV", "scenario.trip": "Shared trip", "scenario.docs": "Documents",
           "demo.salary": "Weekly AUD income", "demo.keep": "AUD to keep", "demo.rate": "Simulated AUD/EUR rate",
           "demo.convert": "To convert", "demo.eur": "EUR equivalent", "demo.buffer": "AUD buffer",
-          "modules.title": "Modules work together.",
-          "modules.lead": "Click a module to see what it brings to the project. The showcase is public, but it explains the logic of the private app.",
+          "modules.title": "Modules cover real travel cases.",
+          "modules.lead": "Daily budget, Trip sharing, documents, deposits, assets and notifications: each block feeds the others instead of staying isolated.",
+          "case.one.kicker": "Budget", "case.one.title": "Know what is really left", "case.one.body": "Wallets, transactions, daily budget and projections give a fast read of cashflow.",
+          "case.two.kicker": "Trip", "case.two.title": "Share without breaking accounts", "case.two.body": "Invitations, shared expenses and validations avoid silent additions on another member's side.",
+          "case.three.kicker": "Deposits", "case.three.title": "Track what should come back", "case.three.body": "Paid deposits, refunds, differences, comments and documents remain attached to the file.",
           "workflow.title": "A simple flow: capture, classify, decide.",
           "workflow.lead": "The project reduces friction: an expense or document arrives, then finds its place in budget, trip or assets.",
           "workflow.one.title": "Capture", "workflow.one.body": "Transaction, WhatsApp receipt, PDF invoice, Trip expense or internal transfer.",
           "workflow.two.title": "Link", "workflow.two.body": "Proofs can be linked to transactions, assets or shared expenses.",
           "workflow.three.title": "Drive", "workflow.three.body": "Analysis, cashflow, FX conversion and important documents remain readable.",
-          "app.title": "Available as an Android test app.",
-          "app.lead": "The mobile version keeps the web logic with faster everyday use: dashboard, transactions, wallets, split, sport and offline reading.",
-          "app.apk.title": "Android build", "app.apk.body": "Debug APK 10.3.4 build 20260531-124455 is available for Android testing.",
+          "app.title": "Android test app, direct link and readable version.",
+          "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
+          "app.apk.title": "Android build", "app.apk.body": "Debug APK 10.3.5 build 20260531-130657 is available for Android testing.",
           "app.offline.title": "Offline mode", "app.offline.body": "Local data remains readable, offline transactions wait in a queue and sync when the network returns.",
-          "app.version.title": "Safer APK flow", "app.version.body": "Android workflow cleaned up: no nested APK inside assets and more reliable versioned release.",
-          "app.cta.title": "Android app in internal testing.", "app.cta.body": "Download the versioned 10.3.4 build 20260531-124455 APK from Supabase Storage to test the latest Android build.", "app.cta.button": "Download APK 10.3.4",
-          "tech.title": "A standalone showcase, a private app behind it.",
-          "tech.lead": "This page loads no user data. The real app remains protected by Supabase Auth, RLS, Storage and Edge Functions.",
-          "tech.db": "Business tables, RPCs, RLS, document storage and Edge Functions.",
-          "tech.fx": "User base currency, snapshots, manual rates and decision calculations.",
-          "tech.ui": "Static frontend, public showcase and separate private app.",
+          "app.version.title": "Detailed project page", "app.version.body": "Hero, use cases, tech and changelog clarified to present the project cleanly.",
+          "release.title": "Latest versions", "release.1035": "Clearer project page, detailed technical section and updated test APK.", "release.1034": "Secured APK workflow: cleanup before sync, clean build and Storage upload.", "release.1033": "Targeted deposits, document/transaction search and corrected differences.",
+          "app.cta.title": "Android app in internal testing.", "app.cta.body": "Download the versioned 10.3.5 build 20260531-130657 APK from Supabase Storage to test the latest Android build.", "app.cta.button": "Download APK 10.3.5",
+          "tech.title": "A static showcase, a structured private app behind it.",
+          "tech.lead": "BudgetPacker combines a light frontend, Supabase for data, RPCs for sensitive operations, Storage for files and Capacitor for Android.",
+          "tech.db": "Postgres, RLS, RPC, Edge Functions and Storage structure user data, documents, invitations and APKs.",
+          "tech.app": "The Vite web build is synced into Android, with auth deep links and versioned APK release.",
+          "tech.ui": "Deployable static frontend, autonomous public page and private app served without a heavy app server.",
+          "tech.data.title": "Data and security", "tech.auth": "Supabase Auth handles email, password, Google OAuth and mobile/web redirects.", "tech.rls": "Exposed tables remain filtered by user or Trip membership.", "tech.rpc": "Sensitive actions go through controlled functions: invitations, acceptances, validations.", "tech.storage": "Documents, proofs and versioned APKs are stored in dedicated buckets.",
+          "tech.delivery.title": "Build, mobile and reliability", "tech.vite": "Fast static build, autonomous project page and assets synced to Android.", "tech.apkflow": "The script cleans local APKs before sync, checks assets, then uploads the release.", "tech.offline": "Local reading and queued actions reduce field blockers.", "tech.tests": "Vitest covers business rules: transactions, documents, Trip, FX, inbox and wallet.",
           "cta.title": "Ready to share the project.", "cta.body": "This page explains BudgetPacker without account, login or personal data exposure.", "cta.button": "Replay the demo",
           "footer": "BudgetPacker - interactive public demo"
         }
@@ -821,6 +976,7 @@
           dashboard: ["Dashboard", "Vue cashflow, budget quotidien, rentrees attendues et projections pour savoir ou tu en es vraiment.", ["Solde multi-wallet", "Budget restant", "Courbe de tresorerie"]],
           transactions: ["Transactions", "Creation, filtres, categories, factures liees, mouvements internes et protections pour les lignes Trip ou wallet.", ["Verrouillages metier", "Bulk classification", "Factures liees"]],
           documents: ["Documents", "Hub transversal pour factures, contrats, garanties, tags, sous-dossiers et partages temporaires.", ["Tags proposes", "Liens financiers", "Partage public"]],
+          cautions: ["Cautions", "Suivi des cautions payees, remboursements attendus, ecarts, commentaires et justificatifs rattaches.", ["A recuperer", "Remboursements lies", "Dossiers preuves"]],
           sport: ["Sport", "Construis une seance, suis les exercices, estime les kcal et garde un historique de tes sensations.", ["Seances guidees", "Kcal estimees", "Historique"]],
           assets: ["Assets", "Suivi du patrimoine, coproprietaires, amortissement, documents lies et valorisation multi-devise.", ["Valeur actuelle", "Coproprietaires", "Garanties"]],
           split: ["Split", "Depenses partagees, participants, matching transaction et recap des remboursements.", ["Parts", "Avances", "Solde par personne"]],
@@ -830,6 +986,7 @@
           dashboard: ["Dashboard", "Cashflow, daily budget, expected income and projections to understand where you really stand.", ["Multi-wallet balance", "Remaining budget", "Cash curve"]],
           transactions: ["Transactions", "Creation, filters, categories, linked invoices, internal transfers and safeguards for Trip or wallet rows.", ["Business locks", "Bulk classification", "Linked invoices"]],
           documents: ["Documents", "Cross-module hub for invoices, contracts, warranties, tags, subfolders and temporary sharing.", ["Suggested tags", "Financial links", "Public sharing"]],
+          cautions: ["Deposits", "Track paid deposits, expected refunds, differences, comments and attached proof files.", ["To recover", "Linked refunds", "Proof folders"]],
           sport: ["Sport", "Build a workout, follow exercises, estimate kcal and keep a history of how you felt.", ["Guided sessions", "Estimated kcal", "History"]],
           assets: ["Assets", "Track assets, co-owners, depreciation, linked documents and multi-currency valuation.", ["Current value", "Co-owners", "Warranties"]],
           split: ["Split", "Shared expenses, participants, transaction matching and reimbursement recap.", ["Shares", "Advances", "Balance by person"]],
@@ -842,6 +999,7 @@
           dashboard: [["Cash net", "3 470 AUD"], ["Budget/jour", "100 AUD"], ["A payer", "280 AUD"], ["La courbe combine solde reel, sorties futures et revenus attendus."]],
           transactions: [["Transactions", "1 045"], ["A classer", "25"], ["Factures liees", "128"], ["Les lignes Trip et mouvements internes restent protegees dans leur module source."]],
           documents: [["Documents", "91"], ["Factures", "6"], ["Liens actifs", "34"], ["Chaque fichier peut etre tagge, range et relie a une transaction ou un asset."]],
+          cautions: [["En cours", "90 EUR"], ["Docs lies", "2"], ["Ecart", "A suivre"], ["Le module relie la caution payee, les revenus de retour, les commentaires et les justificatifs."]],
           sport: [["Seance", "35 min"], ["Exercices", "8"], ["Kcal", "210"], ["Le timer est optionnel : une seance preparee peut aussi etre marquee comme faite."]],
           assets: [["Valeur totale", "7 500 AUD"], ["Documents", "2"], ["Amortissement", "-62 AUD/mois"], ["Les garanties et factures restent accessibles depuis la fiche asset."]],
           split: [["Depense", "112 AUD"], ["Participants", "2"], ["A recevoir", "56 AUD"], ["Le matching garde le budget et les remboursements coherents."]],
@@ -851,6 +1009,7 @@
           dashboard: [["Net cash", "3,470 AUD"], ["Daily budget", "100 AUD"], ["To pay", "280 AUD"], ["The curve combines current balance, future outflows and expected income."]],
           transactions: [["Transactions", "1,045"], ["To classify", "25"], ["Linked invoices", "128"], ["Trip and internal transfer rows stay protected in their source module."]],
           documents: [["Documents", "91"], ["Invoices", "6"], ["Active links", "34"], ["Each file can be tagged, filed and linked to a transaction or asset."]],
+          cautions: [["Open", "90 EUR"], ["Linked docs", "2"], ["Difference", "To review"], ["The module links the paid deposit, refund income, comments and proof files."]],
           sport: [["Workout", "35 min"], ["Exercises", "8"], ["Kcal", "210"], ["The timer is optional: a prepared workout can also be marked as done."]],
           assets: [["Total value", "7,500 AUD"], ["Documents", "2"], ["Depreciation", "-62 AUD/month"], ["Warranties and invoices remain available from the asset page."]],
           split: [["Expense", "112 AUD"], ["Participants", "2"], ["To receive", "56 AUD"], ["Matching keeps budget and reimbursements consistent."]],
@@ -894,6 +1053,13 @@
             signal: "6 factures",
             rows: [["Facture voiture.pdf", "Asset lie"], ["Bulletin de paie.pdf", "Tag propose"], ["Contrat travail.pdf", "Partageable"]],
             chips: ["Tags", "Dossiers", "Liens"]
+          },
+          cautions: {
+            title: "Cautions",
+            cash: "90 EUR",
+            signal: "Non soldee",
+            rows: [["Caution logement", "Payee"], ["Retour attendu", "A rapprocher"], ["Justificatifs", "2 documents"]],
+            chips: ["Ecart", "Commentaire", "Dossier"]
           },
           sport: {
             title: "Sport",
@@ -945,6 +1111,13 @@
             signal: "6 invoices",
             rows: [["Car invoice.pdf", "Asset linked"], ["Payslip.pdf", "Suggested tag"], ["Work contract.pdf", "Shareable"]],
             chips: ["Tags", "Folders", "Links"]
+          },
+          cautions: {
+            title: "Deposits",
+            cash: "90 EUR",
+            signal: "Unsettled",
+            rows: [["Housing deposit", "Paid"], ["Expected return", "To match"], ["Proof files", "2 documents"]],
+            chips: ["Difference", "Comment", "Folder"]
           },
           sport: {
             title: "Sport",
