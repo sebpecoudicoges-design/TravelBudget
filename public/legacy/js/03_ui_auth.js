@@ -18,6 +18,91 @@ function tbAuthIsNativeApp() {
   }
 }
 
+const TB_MOBILE_AUTH_REDIRECT_URL = "com.travelbudget.app://auth-callback";
+
+function tbAuthGetCapacitorPlugin(name) {
+  try {
+    return window.Capacitor?.Plugins?.[name] || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function tbAuthParamsFromUrl(url) {
+  const out = new URLSearchParams();
+  try {
+    const parsed = new URL(String(url || ""));
+    new URLSearchParams(parsed.search || "").forEach((value, key) => out.set(key, value));
+    new URLSearchParams(String(parsed.hash || "").replace(/^#/, "")).forEach((value, key) => out.set(key, value));
+  } catch (_) {}
+  return out;
+}
+
+async function tbCompleteMobileOAuth(url) {
+  const params = tbAuthParamsFromUrl(url);
+  const error = params.get("error_description") || params.get("error");
+  if (error) throw new Error(error);
+
+  const code = params.get("code");
+  if (code && sb?.auth?.exchangeCodeForSession) {
+    const { error: codeError } = await sb.auth.exchangeCodeForSession(code);
+    if (codeError) throw codeError;
+    return true;
+  }
+
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  if (accessToken && refreshToken) {
+    const { error: sessionError } = await sb.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (sessionError) throw sessionError;
+    return true;
+  }
+
+  return false;
+}
+
+async function tbAfterOAuthSessionReady() {
+  const { data } = await sb.auth.getUser();
+  sbUser = data?.user || null;
+  window.sbUser = sbUser;
+  if (!sbUser) return false;
+
+  tbSetAuthMessage(tbAuthText("Connexion Google reussie. Synchronisation...", "Google sign-in complete. Syncing..."), "success");
+  await ensureBootstrap();
+  await refreshFromServer();
+  showAuth(false);
+  showView("dashboard");
+  if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("03_ui_auth.js:oauth");
+  else if (typeof renderAll === "function") renderAll();
+  return true;
+}
+
+function tbInitMobileOAuthListener() {
+  if (!tbAuthIsNativeApp()) return;
+  const App = tbAuthGetCapacitorPlugin("App");
+  if (!App || typeof App.addListener !== "function") return;
+  if (window.__tbMobileOAuthListenerReady) return;
+  window.__tbMobileOAuthListenerReady = true;
+
+  App.addListener("appUrlOpen", async (event) => {
+    const url = String(event?.url || "");
+    if (!url.startsWith(TB_MOBILE_AUTH_REDIRECT_URL)) return;
+    try {
+      const completed = await tbCompleteMobileOAuth(url);
+      if (completed) await tbAfterOAuthSessionReady();
+      else showAuth(true, tbAuthText("Retour Google incomplet. Reessaie.", "Incomplete Google callback. Try again."));
+    } catch (e) {
+      tbAuthLogError("mobileOAuthCallback", e, { callbackUrlPrefix: url.slice(0, 60) });
+      showAuth(true, tbFriendlyAuthError(e));
+    } finally {
+      try { await tbAuthGetCapacitorPlugin("Browser")?.close?.(); } catch (_) {}
+    }
+  });
+}
+
 function tbAuthMessageKind(message) {
   const msg = String(message || "").toLowerCase();
   if (!msg) return "";
@@ -304,10 +389,25 @@ async function resetPassword() {
 async function signInWithProvider(provider) {
   try {
     if (tbAuthIsNativeApp()) {
-      return showAuth(true, tbAuthText(
-        "Connexion Google indisponible dans l'app pour le moment. Utilise email + mot de passe.",
-        "Google sign-in is not available in the app yet. Use email + password."
-      ));
+      const Browser = tbAuthGetCapacitorPlugin("Browser");
+      const { data, error } = await sb.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: TB_MOBILE_AUTH_REDIRECT_URL,
+          skipBrowserRedirect: true,
+          queryParams: { prompt: "select_account" },
+        },
+      });
+      if (error) {
+        tbAuthLogError("signInWithProvider:native", error, { provider: String(provider || "") });
+        return showAuth(true, tbFriendlyAuthError(error));
+      }
+      if (!data?.url) return showAuth(true, tbAuthText("Lien Google indisponible. Reessaie.", "Google sign-in link unavailable. Try again."));
+      sessionStorage.setItem("tb_oauth_provider", String(provider || ""));
+      tbSetAuthMessage(tbAuthText("Ouverture de Google...", "Opening Google..."));
+      if (Browser && typeof Browser.open === "function") await Browser.open({ url: data.url });
+      else window.open(data.url, "_system");
+      return;
     }
     const redirectTo = `${window.location.origin}${window.location.pathname}`;
     sessionStorage.setItem("tb_oauth_provider", String(provider || ""));
@@ -320,6 +420,8 @@ async function signInWithProvider(provider) {
     showAuth(true, tbFriendlyAuthError(e));
   }
 }
+
+try { tbInitMobileOAuthListener(); } catch (_) {}
 
 async function signOut() {
   await sb.auth.signOut();

@@ -1,7 +1,7 @@
 {
   "name": "travelbudget",
   "private": true,
-  "version": "10.2.0",
+  "version": "10.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,5 +20,9 @@
     "@capacitor/core": "^8.3.4",
     "vite": "^5.4.0",
     "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/browser": "^8.0.0"
   }
 }

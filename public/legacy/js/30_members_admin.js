@@ -40,6 +40,31 @@ function _ensureMembersAdminDOM() {
       </div>
 
       <div class="card" style="margin-top:12px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:700;margin-bottom:4px;">Notifications mobiles</div>
+            <div style="font-size:12px;opacity:.65;">Espace admin pour preparer les messages APK. L'envoi push reel demandera les tokens mobiles + FCM.</div>
+          </div>
+          <button class="btn" id="admin-mobile-notifications-refresh-btn">Refresh</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:12px;align-items:center;">
+          <input id="admin-mobile-notification-title" placeholder="Titre" />
+          <input id="admin-mobile-notification-body" placeholder="Message court" />
+          <select id="admin-mobile-notification-target">
+            <option value="all">Tous</option>
+            <option value="admins">Admins</option>
+            <option value="test">Test</option>
+          </select>
+          <select id="admin-mobile-notification-status">
+            <option value="draft">Brouillon</option>
+            <option value="ready">Pret</option>
+          </select>
+          <button class="btn primary" id="admin-mobile-notification-create-btn">Ajouter</button>
+        </div>
+        <div id="admin-mobile-notifications-list" style="margin-top:12px;">Chargement...</div>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
         <div style="font-weight:700;margin-bottom:8px;">Liste des comptes</div>
         <div id="admin-users-list">Loading...</div>
       </div>
@@ -66,6 +91,9 @@ function _ensureMembersAdminDOM() {
     if (!email) return alert("Email manquant");
     await adminGenerateRecoveryLink(email);
   });
+
+  document.getElementById("admin-mobile-notifications-refresh-btn")?.addEventListener("click", adminRefreshMobileNotifications);
+  document.getElementById("admin-mobile-notification-create-btn")?.addEventListener("click", adminCreateMobileNotification);
 }
 
 function _setStatus(txt) {
@@ -276,10 +304,98 @@ async function adminGenerateRecoveryLink(email) {
 }
 
 /* =========================
+   Mobile notifications admin
+========================= */
+
+function adminMobileNotificationsTable() {
+  return TB_CONST?.TABLES?.mobile_notification_campaigns || "mobile_notification_campaigns";
+}
+
+async function adminRefreshMobileNotifications() {
+  await guard("List mobile notifications", async () => {
+    const list = document.getElementById("admin-mobile-notifications-list");
+    if (list) list.textContent = "Chargement...";
+    const { data, error } = await sb
+      .from(adminMobileNotificationsTable())
+      .select("id,title,body,target,status,created_at,scheduled_at,sent_at")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    renderMobileNotifications(data || []);
+  });
+}
+
+function renderMobileNotifications(rows) {
+  const list = document.getElementById("admin-mobile-notifications-list");
+  if (!list) return;
+  if (!rows.length) {
+    list.innerHTML = `<div style="opacity:.7;">Aucune notification preparee.</div>`;
+    return;
+  }
+  list.innerHTML = rows.map((row) => `
+    <div class="card" style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="min-width:0;">
+          <div><b>${_escapeHtml(row.title)}</b> <span style="font-size:12px;opacity:.65;">${_escapeHtml(row.status)} / ${_escapeHtml(row.target)}</span></div>
+          <div style="font-size:13px;opacity:.78;margin-top:4px;">${_escapeHtml(row.body)}</div>
+          <div style="font-size:12px;opacity:.55;margin-top:4px;">${_escapeHtml(row.created_at || "")}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          ${row.status !== "archived" ? `<button class="btn" onclick="adminArchiveMobileNotification('${_escapeHtml(row.id)}')">Archiver</button>` : ""}
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function adminCreateMobileNotification() {
+  await guard("Create mobile notification", async () => {
+    const title = (document.getElementById("admin-mobile-notification-title")?.value || "").trim();
+    const body = (document.getElementById("admin-mobile-notification-body")?.value || "").trim();
+    const target = (document.getElementById("admin-mobile-notification-target")?.value || "all").trim();
+    const status = (document.getElementById("admin-mobile-notification-status")?.value || "draft").trim();
+    if (!title || !body) return alert("Titre et message requis.");
+
+    const { data: userRes } = await sb.auth.getUser();
+    const userId = userRes?.user?.id;
+    if (!userId) throw new Error("Session admin introuvable.");
+
+    const { error } = await sb.from(adminMobileNotificationsTable()).insert([{
+      created_by: userId,
+      title,
+      body,
+      target,
+      status,
+      payload: { source: "admin-ui", build: window.TB_BUILD_LABEL || "" },
+    }]);
+    if (error) throw error;
+
+    const titleInput = document.getElementById("admin-mobile-notification-title");
+    const bodyInput = document.getElementById("admin-mobile-notification-body");
+    if (titleInput) titleInput.value = "";
+    if (bodyInput) bodyInput.value = "";
+    _setStatus("Notification mobile preparee.");
+    await adminRefreshMobileNotifications();
+  });
+}
+
+async function adminArchiveMobileNotification(id) {
+  await guard("Archive mobile notification", async () => {
+    const { error } = await sb
+      .from(adminMobileNotificationsTable())
+      .update({ status: "archived", updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw error;
+    await adminRefreshMobileNotifications();
+  });
+}
+
+/* =========================
    Entry point
 ========================= */
 
 function renderMembersAdmin() {
   _ensureMembersAdminDOM();
+  adminRefreshMobileNotifications();
   adminRefreshUsers();
 }
