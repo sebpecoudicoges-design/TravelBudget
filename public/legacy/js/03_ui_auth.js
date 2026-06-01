@@ -92,6 +92,7 @@ async function tbAfterOAuthSessionReady() {
   tbSetAuthMessage(tbAuthText("Connexion Google reussie. Synchronisation...", "Google sign-in complete. Syncing..."), "success");
   await ensureBootstrap();
   await refreshFromServer();
+  try { if (typeof window.tbInitMobilePushNotifications === "function") await window.tbInitMobilePushNotifications(); } catch (_) {}
   showAuth(false);
   showView("dashboard");
   if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("03_ui_auth.js:oauth");
@@ -376,6 +377,7 @@ async function signIn() {
     tbSetAuthMessage(tbAuthText("Connexion reussie. Synchronisation...", "Signed in. Syncing..."), "success");
     await ensureBootstrap();
     await refreshFromServer();
+    try { if (typeof window.tbInitMobilePushNotifications === "function") await window.tbInitMobilePushNotifications(); } catch (_) {}
     showAuth(false);
     showView("dashboard");
     if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("03_ui_auth.js"); else if (typeof renderAll === "function") renderAll();
@@ -414,6 +416,7 @@ async function signUp() {
     tbSetAuthMessage(tbAuthText("Compte cree. Initialisation...", "Account created. Initializing..."), "success");
     await ensureBootstrap();
     await refreshFromServer();
+    try { if (typeof window.tbInitMobilePushNotifications === "function") await window.tbInitMobilePushNotifications(); } catch (_) {}
     showAuth(false);
     showView("dashboard");
     if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("03_ui_auth.js:signup");
@@ -505,5 +508,6 @@ async function signOut() {
   } catch (_) {}
 
   setAuthMode("signin", tbAuthText("Deconnecte.", "Signed out."));
+  try { if (typeof window.tbClearAllNotifications === "function") window.tbClearAllNotifications(); } catch (_) {}
   showAuth(true);
 }

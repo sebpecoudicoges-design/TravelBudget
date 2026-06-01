@@ -40,6 +40,57 @@
     return inboxLang().startsWith('en') ? (en || fr) : fr;
   }
 
+  function notificationReadKey(){
+    return window.TB_CONST?.LS_KEYS?.notification_read || 'travelbudget_notification_read_v1';
+  }
+
+  function readNotificationMap(){
+    try { return JSON.parse(localStorage.getItem(notificationReadKey()) || '{}') || {}; }
+    catch(_) { return {}; }
+  }
+
+  function writeNotificationMap(map){
+    try { localStorage.setItem(notificationReadKey(), JSON.stringify(map || {})); } catch(_) {}
+  }
+
+  function notificationKeyForRow(row){
+    const explicit = String(row?.notificationKey || row?.notification_key || '').trim();
+    if (explicit) return explicit;
+    const source = String(row?.source || row?.view || row?.href || 'notification').trim();
+    const id = String(row?.id || row?.target_id || row?.body || row?.title || '').trim();
+    return `${source}:${id}`.slice(0, 240);
+  }
+
+  function isNotificationRead(row){
+    const key = notificationKeyForRow(row);
+    if (!key) return false;
+    const map = readNotificationMap();
+    return !!map[key];
+  }
+
+  function markNotificationRead(row){
+    try {
+      const key = notificationKeyForRow(row);
+      if (!key) return;
+      const map = readNotificationMap();
+      map[key] = new Date().toISOString();
+      writeNotificationMap(map);
+      if (String(key).startsWith('daily-budget:')) {
+        const day = key.split(':')[1] || new Date().toISOString().slice(0, 10);
+        try { localStorage.setItem(window.TB_CONST?.LS_KEYS?.notification_daily_sent || 'travelbudget_notification_daily_sent_v1', day); } catch(_) {}
+      }
+    } catch(_) {}
+  }
+
+  function clearAllNotifications(){
+    try {
+      Object.keys(NOTIF_STATE.buckets || {}).forEach((key) => {
+        NOTIF_STATE.buckets[key] = { items: [] };
+      });
+      syncNotificationCenter();
+    } catch(_) {}
+  }
+
   function ensureNotificationCenterStyles(){
     if(document.getElementById('tb-notification-center-style')) return;
     const style = document.createElement('style');
@@ -66,7 +117,9 @@
     try {
       ensureNotificationCenterStyles();
       const buckets = NOTIF_STATE.buckets || {};
-      const rows = Object.values(buckets).flatMap((bucket) => Array.isArray(bucket?.items) ? bucket.items : []);
+      const rows = Object.values(buckets)
+        .flatMap((bucket) => Array.isArray(bucket?.items) ? bucket.items : [])
+        .filter((row) => !isNotificationRead(row));
       let host = document.getElementById('tb-notification-center');
       if(!host){
         host = document.createElement('div');
@@ -93,9 +146,11 @@
         panel.querySelectorAll('[data-notification-idx]').forEach((btn) => {
           btn.addEventListener('click', () => {
             const row = rows[Number(btn.getAttribute('data-notification-idx') || 0)];
+            markNotificationRead(row);
             if(row?.view && typeof window.showView === 'function') window.showView(row.view);
             else if(row?.href) window.location.href = row.href;
             panel.style.display = 'none';
+            syncNotificationCenter();
           });
         });
       }
@@ -112,6 +167,8 @@
     } catch(_) {}
   };
   window.tbSyncNotificationCenter = syncNotificationCenter;
+  window.tbMarkNotificationRead = markNotificationRead;
+  window.tbClearAllNotifications = clearAllNotifications;
 
   const NOTIF_PREF_DEFAULTS = Object.freeze({
     inbox: true,
@@ -161,6 +218,7 @@
       state.user.notificationPrefs = normalized;
     } catch(_) {}
     syncPreferenceDrivenNotifications();
+    try { if (normalized.localDevice) initMobilePushNotifications(true); } catch(_) {}
     return normalized;
   }
 
@@ -177,6 +235,91 @@
       }
     }
     return normalized;
+  }
+
+  function isNativeApp(){
+    try {
+      return !!window.Capacitor || document.body?.classList?.contains('tb-capacitor-app') || String(location.protocol || '').startsWith('capacitor');
+    } catch(_) { return false; }
+  }
+
+  function pushPlugin(){
+    try { return window.Capacitor?.Plugins?.PushNotifications || null; }
+    catch(_) { return null; }
+  }
+
+  async function currentAuthUser(){
+    try {
+      if (window.sbUser?.id) return window.sbUser;
+      const c = client();
+      if (!c?.auth?.getUser) return null;
+      return (await c.auth.getUser())?.data?.user || null;
+    } catch(_) { return null; }
+  }
+
+  async function savePushToken(token){
+    const c = client();
+    const user = await currentAuthUser();
+    const cleanToken = String(token || '').trim();
+    if (!c?.from || !user?.id || !cleanToken) return false;
+    const payload = {
+      user_id: user.id,
+      token: cleanToken,
+      platform: 'android',
+      device_label: navigator.userAgent ? String(navigator.userAgent).slice(0, 180) : 'Android',
+      app_version: window.TB_VERSION || window.__TB_BUILD || null,
+      revoked_at: null,
+      last_seen_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await c
+      .from(window.TB_CONST?.TABLES?.mobile_push_tokens || 'mobile_push_tokens')
+      .upsert(payload, { onConflict: 'token' });
+    if (error) throw error;
+    return true;
+  }
+
+  async function initMobilePushNotifications(force){
+    const prefs = getNotificationPrefs();
+    if (!force && prefs.localDevice !== true) return false;
+    if (!isNativeApp()) return false;
+    const PushNotifications = pushPlugin();
+    if (!PushNotifications?.requestPermissions || !PushNotifications?.register) return false;
+    if (window.__tbPushInitStarted) return true;
+    window.__tbPushInitStarted = true;
+    try {
+      const permission = await PushNotifications.requestPermissions();
+      if (permission?.receive !== 'granted') return false;
+      await PushNotifications.register();
+      if (!window.__tbPushListenersReady) {
+        window.__tbPushListenersReady = true;
+        PushNotifications.addListener('registration', async (token) => {
+          try { await savePushToken(token?.value || token); }
+          catch(e) { console.warn('[TB][push] token save failed', e?.message || e); }
+        });
+        PushNotifications.addListener('registrationError', (error) => {
+          console.warn('[TB][push] registration failed', error?.error || error);
+        });
+        PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
+          try {
+            const data = event?.notification?.data || {};
+            markNotificationRead({
+              notificationKey: data.notificationKey || data.notification_key || (data.source && data.id ? `${data.source}:${data.id}` : ''),
+              source: data.source,
+              id: data.id,
+              view: data.view,
+            });
+            syncNotificationCenter();
+            if (data.view && typeof window.showView === 'function') window.showView(data.view);
+          } catch(_) {}
+        });
+      }
+      return true;
+    } catch(e) {
+      window.__tbPushInitStarted = false;
+      console.warn('[TB][push] init failed', e?.message || e);
+      return false;
+    }
   }
 
   async function requestLocalNotificationPermission(){
@@ -217,6 +360,7 @@
       try { sent = localStorage.getItem(notificationSentKey()) || ''; } catch(_) {}
       if (hhmm >= prefs.dailyBudgetTime && sent !== day) {
         rows.push({
+          notificationKey: `daily-budget:${day}`,
           title: tr('Point budget quotidien', 'Daily budget check'),
           body: tr('Ouvre le dashboard pour verifier ton budget restant et ta cadence.', 'Open the dashboard to check remaining budget and pace.'),
           view: 'dashboard',
@@ -229,7 +373,7 @@
   async function triggerDailyBudgetNotificationTest(){
     const title = tr('Point budget quotidien', 'Daily budget check');
     const body = tr('Notification test : ouvre le dashboard pour verifier ton budget restant.', 'Test notification: open the dashboard to check remaining budget.');
-    window.tbSetNotificationBucket('daily-budget-test', [{ title, body, view: 'dashboard' }]);
+    window.tbSetNotificationBucket('daily-budget-test', [{ notificationKey: `daily-budget-test:${Date.now()}`, title, body, view: 'dashboard' }]);
     await sendLocalNotification(title, body, { tag: 'travelbudget-daily-test', view: 'dashboard' });
   }
 
@@ -240,6 +384,7 @@
   window.tbRequestLocalNotificationPermission = requestLocalNotificationPermission;
   window.tbTriggerDailyBudgetNotificationTest = triggerDailyBudgetNotificationTest;
   window.tbSyncPreferenceDrivenNotifications = syncPreferenceDrivenNotifications;
+  window.tbInitMobilePushNotifications = initMobilePushNotifications;
 
   function fmtDateTime(v){
     if(!v) return '—';
@@ -1015,12 +1160,14 @@
             const meta = tripApprovalMeta(item);
             const createsCash = tripApprovalCreatesCash(item);
             return {
+              notificationKey: `inbox:${item.id}`,
               title: createsCash ? tr('Dépense Trip à ajouter', 'Trip expense to add') : tr('Part Budget Trip à ajouter', 'Trip budget share to add'),
               body: `${meta.trip_name || 'Trip'} · ${meta.expense_label || tr('Dépense', 'Expense')} · ${meta.amount || ''} ${meta.currency || ''}`.trim(),
               view: 'inbox'
             };
           }
           return {
+            notificationKey: `inbox:${item.id}`,
             title: tr('À traiter', 'Inbox'),
             body: String(item.raw_text || item.source_from || tr('Élément en attente', 'Pending item')).slice(0, 120),
             view: 'inbox'
@@ -1463,6 +1610,9 @@
     } catch(_) {}
     refreshInboxTabBadge();
     syncPreferenceDrivenNotifications();
+    setTimeout(() => {
+      try { initMobilePushNotifications(); } catch(_) {}
+    }, 2000);
     if(!window.__tbInboxBadgePollStarted){
       window.__tbInboxBadgePollStarted = true;
       setInterval(() => {
