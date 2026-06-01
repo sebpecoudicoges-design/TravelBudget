@@ -505,11 +505,21 @@ async function _tbEnsureBootstrapImpl(opts = {}) {
     .eq("id", sbUser.id)
     .maybeSingle();
 
-  const settingsP = sb
-    .from(TB_CONST.TABLES.settings)
-    .select("theme,palette_json,palette_preset")
-    .eq("user_id", sbUser.id)
-    .maybeSingle();
+  const settingsP = (async () => {
+    let res = await sb
+      .from(TB_CONST.TABLES.settings)
+      .select("theme,palette_json,palette_preset,notification_prefs")
+      .eq("user_id", sbUser.id)
+      .maybeSingle();
+    if (res?.error && String(res.error.message || '').toLowerCase().includes('notification_prefs')) {
+      res = await sb
+        .from(TB_CONST.TABLES.settings)
+        .select("theme,palette_json,palette_preset")
+        .eq("user_id", sbUser.id)
+        .maybeSingle();
+    }
+    return res;
+  })();
 
   const periodsP = sb
     .from(TB_CONST.TABLES.periods)
@@ -576,6 +586,7 @@ async function _tbEnsureBootstrapImpl(opts = {}) {
       theme: localStorage.getItem(THEME_KEY) || "light",
       palette_json: p,
       palette_preset: preset,
+      notification_prefs: (typeof window.tbGetNotificationPrefs === "function") ? window.tbGetNotificationPrefs() : {},
       updated_at: new Date().toISOString(),
     };
 
@@ -885,11 +896,19 @@ try { if (window.TB_PERF?.enabled) TB_PERF.mark("supabase:bootstrap"); } catch (
 const settingsPromise = perfPromise("supabase:q:settings", async () => {
   const baseSel = "theme,palette_json,palette_preset,base_currency";
   const withUiMode = `${baseSel},ui_mode`;
+  const withNotifications = `${withUiMode},notification_prefs`;
   let res = await sb
     .from(TB_CONST.TABLES.settings)
-    .select(withUiMode)
+    .select(withNotifications)
     .eq("user_id", sbUser.id)
     .maybeSingle();
+  if (res?.error && /ui_mode|notification_prefs/i.test(String(res.error.message || ''))) {
+    res = await sb
+      .from(TB_CONST.TABLES.settings)
+      .select(withUiMode)
+      .eq("user_id", sbUser.id)
+      .maybeSingle();
+  }
   if (res?.error && String(res.error.message || '').toLowerCase().includes('ui_mode')) {
     res = await sb
       .from(TB_CONST.TABLES.settings)
@@ -943,6 +962,17 @@ if (s) {
     if (bc && /^[A-Z]{3}$/.test(bc)) {
       if (!state.user) state.user = {};
       state.user.baseCurrency = bc;
+    }
+  } catch (_) {}
+
+  try {
+    if (!state.user) state.user = {};
+    const prefs = s.notification_prefs && typeof s.notification_prefs === "object" ? s.notification_prefs : null;
+    if (prefs && typeof window.tbRememberNotificationPrefs === "function") {
+      state.user.notificationPrefs = window.tbRememberNotificationPrefs(prefs);
+    } else if (prefs) {
+      state.user.notificationPrefs = prefs;
+      try { localStorage.setItem(TB_CONST?.LS_KEYS?.notification_prefs || "travelbudget_notification_prefs_v1", JSON.stringify(prefs)); } catch (_) {}
     }
   } catch (_) {}
 

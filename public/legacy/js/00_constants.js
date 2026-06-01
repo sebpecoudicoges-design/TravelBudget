@@ -1,4 +1,4 @@
-window.TB_VERSION = window.TB_VERSION || "10.3.5";
+window.TB_VERSION = window.TB_VERSION || "10.3.6";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
 window.tbApplyVersionLabels = function tbApplyVersionLabels(root) {
@@ -204,6 +204,8 @@ try {
     theme: "travelbudget_theme_v1",
     palette: "travelbudget_palette_v1",
     preset: "travelbudget_palette_preset_v1",
+    notification_prefs: "travelbudget_notification_prefs_v1",
+    notification_daily_sent: "travelbudget_notification_daily_sent_v1",
 
     // Auto FX (EUR→XXX) cache
     eur_rates: "EUR_RATES",

@@ -641,6 +641,9 @@ function renderSettings(){
         ? window.safeFxConvert(thrEur, "EUR", cur, null)
         : (typeof window.fxConvert === "function" ? window.fxConvert(thrEur, "EUR", cur) : null);
       const thrDisp = (thrInBase === null || !Number.isFinite(thrInBase)) ? "" : String(Math.round(thrInBase));
+      const notifPrefs = (typeof window.tbGetNotificationPrefs === "function")
+        ? window.tbGetNotificationPrefs()
+        : { inbox:true, trip:true, dailyBudget:false, dailyBudgetTime:'20:00', lowBudget:true, localDevice:false };
 
       box.innerHTML = `
         <div class="muted" style="margin-bottom:10px;">${T("settings.account.summary")}</div>
@@ -692,6 +695,31 @@ function renderSettings(){
           </div>
           <div class="muted" style="padding-bottom:6px;">${T("settings.account.cashflow_reference", { amount: escapeHTML(String(Math.round(thrEur))) })}</div>
           <button class="btn" id="tb-user-cfthr-save" type="button">${T("settings.account.save_threshold")}</button>
+        </div>
+
+        <div class="tb-settings-notif-box" style="margin-top:14px;padding:12px;border:1px solid var(--border);border-radius:14px;background:rgba(37,99,235,.05);">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+            <div>
+              <strong>Notifications mobile</strong>
+              <div class="muted" style="margin-top:4px;line-height:1.35;">Centre de notifications, rappels locaux quand l'app est ouverte, et préférences prêtes pour la future push native.</div>
+            </div>
+            <button class="btn" id="tb-notif-test" type="button">Tester</button>
+          </div>
+          <div class="row" style="gap:14px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-inbox" type="checkbox" ${notifPrefs.inbox ? 'checked' : ''}> À traiter</label>
+            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-trip" type="checkbox" ${notifPrefs.trip ? 'checked' : ''}> Invitations et validations Trip</label>
+            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-lowbudget" type="checkbox" ${notifPrefs.lowBudget ? 'checked' : ''}> Alertes budget faible</label>
+            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-local" type="checkbox" ${notifPrefs.localDevice ? 'checked' : ''}> Notification téléphone</label>
+          </div>
+          <div class="row" style="gap:12px;align-items:end;flex-wrap:wrap;margin-top:10px;">
+            <label style="display:flex;gap:8px;align-items:center;padding-bottom:8px;"><input id="tb-notif-daily" type="checkbox" ${notifPrefs.dailyBudget ? 'checked' : ''}> Point budget quotidien</label>
+            <div class="field" style="min-width:150px;">
+              <label>Heure</label>
+              <input id="tb-notif-daily-time" type="time" value="${escapeHTML(String(notifPrefs.dailyBudgetTime || '20:00'))}" />
+            </div>
+            <button class="btn primary" id="tb-notif-save" type="button">Enregistrer notifications</button>
+          </div>
+          <div class="muted" style="font-size:12px;line-height:1.35;margin-top:8px;">Pour une notification Android même app fermée, il faudra ajouter la brique native FCM. Ici on fiabilise déjà les préférences et les rappels visibles dans l'app.</div>
         </div>
       `;
 
@@ -857,8 +885,45 @@ if (btnWhatsapp) {
           const u = (await s.auth.getUser()).data?.user;
           const em = String(u?.email || "").trim();
           if (!em) throw new Error("Email introuvable");
-          await s.auth.resetPasswordForEmail(em);
+          const redirectTo = (typeof window.tbAuthWebRedirectUrl === "function") ? window.tbAuthWebRedirectUrl() : `${window.location.origin}${window.location.pathname}`;
+          await s.auth.resetPasswordForEmail(em, { redirectTo });
           alert("Email de réinitialisation envoyé.");
+        });
+      }
+
+      const readNotificationForm = () => ({
+        inbox: !!box.querySelector("#tb-notif-inbox")?.checked,
+        trip: !!box.querySelector("#tb-notif-trip")?.checked,
+        lowBudget: !!box.querySelector("#tb-notif-lowbudget")?.checked,
+        localDevice: !!box.querySelector("#tb-notif-local")?.checked,
+        dailyBudget: !!box.querySelector("#tb-notif-daily")?.checked,
+        dailyBudgetTime: String(box.querySelector("#tb-notif-daily-time")?.value || "20:00"),
+      });
+
+      const btnNotifSave = box.querySelector("#tb-notif-save");
+      if (btnNotifSave) {
+        btnNotifSave.onclick = () => safeCall("Enregistrer notifications", async () => {
+          const prefs = readNotificationForm();
+          if (prefs.localDevice && typeof window.tbRequestLocalNotificationPermission === "function") {
+            const permission = await window.tbRequestLocalNotificationPermission();
+            if (permission === "denied") throw new Error("Notifications refusées par le téléphone/navigateur.");
+          }
+          if (typeof window.tbSaveNotificationPrefs === "function") await window.tbSaveNotificationPrefs(prefs);
+          else {
+            if (!state.user) state.user = {};
+            state.user.notificationPrefs = prefs;
+            try { localStorage.setItem(TB_CONST?.LS_KEYS?.notification_prefs || "travelbudget_notification_prefs_v1", JSON.stringify(prefs)); } catch (_) {}
+          }
+          alert("Préférences notifications enregistrées.");
+        });
+      }
+
+      const btnNotifTest = box.querySelector("#tb-notif-test");
+      if (btnNotifTest) {
+        btnNotifTest.onclick = () => safeCall("Tester notification", async () => {
+          if (typeof window.tbRememberNotificationPrefs === "function") window.tbRememberNotificationPrefs(readNotificationForm());
+          if (typeof window.tbTriggerDailyBudgetNotificationTest === "function") await window.tbTriggerDailyBudgetNotificationTest();
+          alert("Notification test ajoutée au centre de notifications.");
         });
       }
 

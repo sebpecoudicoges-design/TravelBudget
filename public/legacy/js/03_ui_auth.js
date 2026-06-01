@@ -20,6 +20,25 @@ function tbAuthIsNativeApp() {
 
 const TB_MOBILE_AUTH_REDIRECT_URL = "com.travelbudget.app://auth-callback";
 
+function tbAuthWebRedirectUrl() {
+  try {
+    const origin = window.location.origin && window.location.origin !== "null"
+      ? window.location.origin
+      : "https://stunning-dieffenbachia-2b2ed0.netlify.app";
+    return `${origin}${window.location.pathname || "/"}`;
+  } catch (_) {
+    return "https://stunning-dieffenbachia-2b2ed0.netlify.app/";
+  }
+}
+
+function tbNormalizeAuthEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+function tbIsValidAuthEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(email || "").trim());
+}
+
 function tbAuthGetCapacitorPlugin(name) {
   try {
     return window.Capacitor?.Plugins?.[name] || null;
@@ -115,14 +134,26 @@ function tbFriendlyAuthError(error) {
   const raw = String(error?.message || error || "").trim();
   const msg = raw.toLowerCase();
   if (!raw) return tbAuthText("Une erreur est survenue.", "Something went wrong.");
+  if (/issued in the future|clock|skew/.test(msg)) {
+    return tbAuthText("L'heure du telephone semble decalee. Active l'heure automatique puis reessaie.", "Your phone clock looks out of sync. Enable automatic time, then try again.");
+  }
   if (/invalid login credentials|invalid credentials|invalid email or password/.test(msg)) {
     return tbAuthText("Email ou mot de passe incorrect.", "Incorrect email or password.");
+  }
+  if (/invalid email|email address is invalid/.test(msg)) {
+    return tbAuthText("Adresse email invalide.", "Invalid email address.");
   }
   if (/email not confirmed|not confirmed/.test(msg)) {
     return tbAuthText("Ton email n'est pas encore confirme. Verifie ta boite mail.", "Your email is not confirmed yet. Check your inbox.");
   }
   if (/user already registered|already registered|already exists/.test(msg)) {
     return tbAuthText("Un compte existe deja avec cet email. Essaie de te connecter.", "An account already exists with this email. Try signing in.");
+  }
+  if (/expired|otp expired|link is invalid|invalid.*token/.test(msg)) {
+    return tbAuthText("Le lien a expire ou n'est plus valide. Demande un nouveau lien.", "This link has expired or is no longer valid. Request a new link.");
+  }
+  if (/code verifier|pkce|flow state|auth session missing/.test(msg)) {
+    return tbAuthText("La connexion Google a ete interrompue. Relance Google depuis l'app.", "Google sign-in was interrupted. Start Google again from the app.");
   }
   if (/password should be|weak password|at least/.test(msg)) {
     return tbAuthText("Mot de passe trop court ou trop faible. Utilise au moins 8 caracteres.", "Password is too short or weak. Use at least 8 characters.");
@@ -143,6 +174,15 @@ function tbSetAuthMessage(message, kind) {
   elMsg.classList.remove("error", "success");
   const resolved = kind || tbAuthMessageKind(message);
   if (resolved) elMsg.classList.add(resolved);
+}
+
+function tbSetAuthBusy(isBusy) {
+  try {
+    document.querySelectorAll("#auth-overlay button, #auth-overlay input").forEach((el) => {
+      if (el.id === "auth-email" || el.id === "auth-pass" || el.id === "auth-pass-confirm") el.disabled = !!isBusy;
+      else el.disabled = !!isBusy;
+    });
+  } catch (_) {}
 }
 
 function tbAuthLogError(section, error, details) {
@@ -202,6 +242,7 @@ function tbEnsureAuthMarkup() {
             <input id="auth-pass-confirm" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" />
           </div>
           <p id="auth-helper" class="auth-muted"></p>
+          <p id="auth-edge-note" class="auth-muted"></p>
           <div class="auth-actions">
             <button id="auth-submit" class="btn primary" type="submit">${tbAuthText("Se connecter", "Sign in")}</button>
             <button id="auth-secondary" class="btn" type="button" onclick="setAuthMode('recovery')">${tbAuthText("Mot de passe oublie", "Forgot password")}</button>
@@ -257,6 +298,7 @@ function setAuthMode(mode, msg) {
   const confirmRow = document.getElementById("auth-confirm-row");
   const pass = document.getElementById("auth-pass");
   const passConfirm = document.getElementById("auth-pass-confirm");
+  const edgeNote = document.getElementById("auth-edge-note");
 
   if (title) title.textContent = copy.title;
   if (helper) helper.textContent = copy.helper;
@@ -272,6 +314,11 @@ function setAuthMode(mode, msg) {
     pass.required = tbAuthMode !== "recovery";
   }
   if (passConfirm) passConfirm.required = tbAuthMode === "signup";
+  if (edgeNote) {
+    edgeNote.textContent = tbAuthMode === "signin"
+      ? tbAuthText("Google rattache le meme compte si Supabase recoit le meme email verifie.", "Google links to the same account when Supabase receives the same verified email.")
+      : "";
+  }
   tbSetAuthMessage(msg || (
     tbAuthMode === "signin"
       ? tbAuthText("Connecte-toi pour synchroniser.", "Sign in to sync.")
@@ -295,7 +342,7 @@ function showAuth(show, msg = "") {
 
 function tbAuthValues() {
   return {
-    email: document.getElementById("auth-email")?.value.trim() || "",
+    email: tbNormalizeAuthEmail(document.getElementById("auth-email")?.value || ""),
     pass: document.getElementById("auth-pass")?.value || "",
     confirm: document.getElementById("auth-pass-confirm")?.value || "",
   };
@@ -312,8 +359,11 @@ async function submitAuthForm(ev) {
 async function signIn() {
   const { email, pass } = tbAuthValues();
   if (!email || !pass) return showAuth(true, tbAuthText("Email et mot de passe requis.", "Email and password are required."));
+  if (!tbIsValidAuthEmail(email)) return showAuth(true, tbAuthText("Adresse email invalide.", "Invalid email address."));
 
+  tbSetAuthBusy(true);
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  tbSetAuthBusy(false);
   if (error) {
     tbAuthLogError("signInWithPassword", error, { emailDomain: email.split("@")[1] || "", emailLength: email.length, passwordLength: pass.length });
     return showAuth(true, tbFriendlyAuthError(error));
@@ -337,10 +387,13 @@ async function signIn() {
 async function signUp() {
   const { email, pass, confirm } = tbAuthValues();
   if (!email || !pass) return showAuth(true, tbAuthText("Email et mot de passe requis.", "Email and password are required."));
+  if (!tbIsValidAuthEmail(email)) return showAuth(true, tbAuthText("Adresse email invalide.", "Invalid email address."));
   if (pass.length < 8) return showAuth(true, tbAuthText("Mot de passe trop court : 8 caracteres minimum.", "Password too short: 8 characters minimum."));
   if (pass !== confirm) return showAuth(true, tbAuthText("Les deux mots de passe ne correspondent pas.", "Passwords do not match."));
 
-  const { data, error } = await sb.auth.signUp({ email, password: pass });
+  tbSetAuthBusy(true);
+  const { data, error } = await sb.auth.signUp({ email, password: pass, options: { emailRedirectTo: tbAuthWebRedirectUrl() } });
+  tbSetAuthBusy(false);
   if (error) {
     tbAuthLogError("signUp", error, { emailDomain: email.split("@")[1] || "", emailLength: email.length, passwordLength: pass.length });
     return showAuth(true, tbFriendlyAuthError(error));
@@ -373,21 +426,26 @@ async function signUp() {
 async function resetPassword() {
   const { email } = tbAuthValues();
   if (!email) return showAuth(true, tbAuthText("Email requis pour reinitialiser le mot de passe.", "Email is required to reset your password."));
+  if (!tbIsValidAuthEmail(email)) return showAuth(true, tbAuthText("Adresse email invalide.", "Invalid email address."));
   try {
-    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const redirectTo = tbAuthWebRedirectUrl();
+    tbSetAuthBusy(true);
     const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+    tbSetAuthBusy(false);
     if (error) {
       tbAuthLogError("resetPassword", error, { emailDomain: email.split("@")[1] || "", emailLength: email.length });
       return showAuth(true, tbFriendlyAuthError(error));
     }
     tbSetAuthMessage(tbAuthText("Email de reinitialisation envoye. Verifie ta boite mail.", "Password reset email sent. Check your inbox."), "success");
   } catch (e) {
+    tbSetAuthBusy(false);
     showAuth(true, tbFriendlyAuthError(e));
   }
 }
 
 async function signInWithProvider(provider) {
   try {
+    tbSetAuthBusy(true);
     if (tbAuthIsNativeApp()) {
       const Browser = tbAuthGetCapacitorPlugin("Browser");
       const { data, error } = await sb.auth.signInWithOAuth({
@@ -400,23 +458,31 @@ async function signInWithProvider(provider) {
       });
       if (error) {
         tbAuthLogError("signInWithProvider:native", error, { provider: String(provider || "") });
+        tbSetAuthBusy(false);
         return showAuth(true, tbFriendlyAuthError(error));
       }
-      if (!data?.url) return showAuth(true, tbAuthText("Lien Google indisponible. Reessaie.", "Google sign-in link unavailable. Try again."));
+      if (!data?.url) {
+        tbSetAuthBusy(false);
+        return showAuth(true, tbAuthText("Lien Google indisponible. Reessaie.", "Google sign-in link unavailable. Try again."));
+      }
       sessionStorage.setItem("tb_oauth_provider", String(provider || ""));
       tbSetAuthMessage(tbAuthText("Ouverture de Google...", "Opening Google..."));
       if (Browser && typeof Browser.open === "function") await Browser.open({ url: data.url });
       else window.open(data.url, "_system");
+      tbSetAuthBusy(false);
       return;
     }
-    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const redirectTo = tbAuthWebRedirectUrl();
     sessionStorage.setItem("tb_oauth_provider", String(provider || ""));
     const { error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo } });
+    tbSetAuthBusy(false);
     if (error) {
       tbAuthLogError("signInWithProvider", error, { provider: String(provider || "") });
+      tbSetAuthBusy(false);
       return showAuth(true, tbFriendlyAuthError(error));
     }
   } catch (e) {
+    tbSetAuthBusy(false);
     showAuth(true, tbFriendlyAuthError(e));
   }
 }

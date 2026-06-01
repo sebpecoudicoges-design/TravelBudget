@@ -113,6 +113,134 @@
   };
   window.tbSyncNotificationCenter = syncNotificationCenter;
 
+  const NOTIF_PREF_DEFAULTS = Object.freeze({
+    inbox: true,
+    trip: true,
+    dailyBudget: false,
+    dailyBudgetTime: '20:00',
+    lowBudget: true,
+    localDevice: false,
+  });
+
+  function notificationPrefKey(){
+    return window.TB_CONST?.LS_KEYS?.notification_prefs || 'travelbudget_notification_prefs_v1';
+  }
+
+  function notificationSentKey(){
+    return window.TB_CONST?.LS_KEYS?.notification_daily_sent || 'travelbudget_notification_daily_sent_v1';
+  }
+
+  function normalizeNotificationPrefs(raw){
+    const src = raw && typeof raw === 'object' ? raw : {};
+    const time = /^\d{2}:\d{2}$/.test(String(src.dailyBudgetTime || '')) ? String(src.dailyBudgetTime) : NOTIF_PREF_DEFAULTS.dailyBudgetTime;
+    return {
+      inbox: src.inbox !== false,
+      trip: src.trip !== false,
+      dailyBudget: src.dailyBudget === true,
+      dailyBudgetTime: time,
+      lowBudget: src.lowBudget !== false,
+      localDevice: src.localDevice === true,
+    };
+  }
+
+  function getNotificationPrefs(){
+    try {
+      const fromState = window.state?.user?.notificationPrefs;
+      if (fromState && typeof fromState === 'object') return normalizeNotificationPrefs(fromState);
+    } catch(_) {}
+    try { return normalizeNotificationPrefs(JSON.parse(localStorage.getItem(notificationPrefKey()) || '{}')); }
+    catch(_) { return normalizeNotificationPrefs({}); }
+  }
+
+  function rememberNotificationPrefs(prefs){
+    const normalized = normalizeNotificationPrefs(prefs);
+    try { localStorage.setItem(notificationPrefKey(), JSON.stringify(normalized)); } catch(_) {}
+    try {
+      if (!window.state) window.state = {};
+      if (!state.user) state.user = {};
+      state.user.notificationPrefs = normalized;
+    } catch(_) {}
+    syncPreferenceDrivenNotifications();
+    return normalized;
+  }
+
+  async function saveNotificationPrefs(prefs){
+    const normalized = rememberNotificationPrefs(prefs);
+    const c = client();
+    if (c?.auth?.getUser && c?.from && navigator.onLine !== false) {
+      const user = (await c.auth.getUser())?.data?.user;
+      if (user?.id) {
+        const { error } = await c
+          .from(window.TB_CONST?.TABLES?.settings || 'settings')
+          .upsert({ user_id: user.id, notification_prefs: normalized, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+        if (error) throw error;
+      }
+    }
+    return normalized;
+  }
+
+  async function requestLocalNotificationPermission(){
+    try {
+      if (typeof Notification === 'undefined') return 'unsupported';
+      if (Notification.permission === 'granted') return 'granted';
+      if (Notification.permission === 'denied') return 'denied';
+      return await Notification.requestPermission();
+    } catch(_) { return 'unsupported'; }
+  }
+
+  async function sendLocalNotification(title, body, data){
+    const prefs = getNotificationPrefs();
+    if (!prefs.localDevice) return false;
+    try {
+      const permission = await requestLocalNotificationPermission();
+      if (permission !== 'granted') return false;
+      const n = new Notification(String(title || tr('Notification', 'Notification')), {
+        body: String(body || ''),
+        tag: String(data?.tag || 'travelbudget'),
+      });
+      n.onclick = () => {
+        try { window.focus(); } catch(_) {}
+        if (data?.view && typeof window.showView === 'function') window.showView(data.view);
+      };
+      return true;
+    } catch(_) { return false; }
+  }
+
+  function syncPreferenceDrivenNotifications(){
+    const prefs = getNotificationPrefs();
+    const rows = [];
+    if (prefs.dailyBudget) {
+      const now = new Date();
+      const day = now.toISOString().slice(0, 10);
+      const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      let sent = '';
+      try { sent = localStorage.getItem(notificationSentKey()) || ''; } catch(_) {}
+      if (hhmm >= prefs.dailyBudgetTime && sent !== day) {
+        rows.push({
+          title: tr('Point budget quotidien', 'Daily budget check'),
+          body: tr('Ouvre le dashboard pour verifier ton budget restant et ta cadence.', 'Open the dashboard to check remaining budget and pace.'),
+          view: 'dashboard',
+        });
+      }
+    }
+    window.tbSetNotificationBucket('daily-budget', rows);
+  }
+
+  async function triggerDailyBudgetNotificationTest(){
+    const title = tr('Point budget quotidien', 'Daily budget check');
+    const body = tr('Notification test : ouvre le dashboard pour verifier ton budget restant.', 'Test notification: open the dashboard to check remaining budget.');
+    window.tbSetNotificationBucket('daily-budget-test', [{ title, body, view: 'dashboard' }]);
+    await sendLocalNotification(title, body, { tag: 'travelbudget-daily-test', view: 'dashboard' });
+  }
+
+  window.tbGetNotificationPrefs = getNotificationPrefs;
+  window.tbNormalizeNotificationPrefs = normalizeNotificationPrefs;
+  window.tbRememberNotificationPrefs = rememberNotificationPrefs;
+  window.tbSaveNotificationPrefs = saveNotificationPrefs;
+  window.tbRequestLocalNotificationPermission = requestLocalNotificationPermission;
+  window.tbTriggerDailyBudgetNotificationTest = triggerDailyBudgetNotificationTest;
+  window.tbSyncPreferenceDrivenNotifications = syncPreferenceDrivenNotifications;
+
   function fmtDateTime(v){
     if(!v) return '—';
     try { return new Date(v).toLocaleString(inboxLang().startsWith('en') ? 'en-AU' : 'fr-FR', { dateStyle:'short', timeStyle:'short' }); }
@@ -873,9 +1001,15 @@
   function syncInboxNotificationBucket(){
     try {
       if(typeof window.tbSetNotificationBucket !== 'function') return;
+      const prefs = getNotificationPrefs();
+      if (prefs.inbox === false) {
+        window.tbSetNotificationBucket('inbox', []);
+        return;
+      }
       const source = Array.isArray(CACHE.pendingNotifications) ? CACHE.pendingNotifications : CACHE.items || [];
       const items = source
         .filter(x => x.status === 'pending')
+        .filter(x => !isTripPayerApproval(x) || prefs.trip !== false)
         .map((item) => {
           if(isTripPayerApproval(item)){
             const meta = tripApprovalMeta(item);
@@ -954,6 +1088,7 @@
         CACHE.items = merged;
       }
       setInboxTabBadge(count || 0);
+      syncPreferenceDrivenNotifications();
     }catch(e){
       console.warn('[TB][inbox] tab badge refresh failed', e);
     }
@@ -1327,10 +1462,12 @@
       });
     } catch(_) {}
     refreshInboxTabBadge();
+    syncPreferenceDrivenNotifications();
     if(!window.__tbInboxBadgePollStarted){
       window.__tbInboxBadgePollStarted = true;
       setInterval(() => {
         try { refreshInboxTabBadge(); } catch(_) {}
+        try { syncPreferenceDrivenNotifications(); } catch(_) {}
       }, 30000);
       document.addEventListener('visibilitychange', () => {
         if(!document.hidden) {
