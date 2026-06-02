@@ -209,6 +209,7 @@ async function _rpcAcceptInvite(token) {
       const { data, error } = await sb.rpc(rpcName, { p_expense_id: expenseId });
       if (error) throw error;
       if (data) {
+        try { await _sendTripPayerApprovalPush(data); } catch (_) {}
         try { if (typeof window.tbRefreshInboxBadge === "function") window.tbRefreshInboxBadge(); } catch (_) {}
         toastOk("[Trip] Demande d'ajout Budget envoyée aux participants concernés.");
       }
@@ -217,6 +218,37 @@ async function _rpcAcceptInvite(token) {
       console.warn("[Trip] payer approval request failed:", e);
       return null;
     }
+  }
+
+  async function _sendTripPayerApprovalPush(inboxId) {
+    if (!inboxId || typeof window.tbSendMobilePushNotification !== "function") return null;
+    const { data: item, error } = await sb
+      .from(TB_CONST.TABLES.inbox_items)
+      .select("id,user_id,source,raw_text,media,target_type,target_id")
+      .eq("id", inboxId)
+      .maybeSingle();
+    if (error || !item?.user_id) return null;
+    const media = item.media || {};
+    const tripName = media.trip_name || "Trip";
+    const label = media.expense_label || "Dépense";
+    const amount = media.member_share_amount || media.amount || "";
+    const currency = media.currency || "";
+    return window.tbSendMobilePushNotification({
+      user_id: item.user_id,
+      title: "Validation Budget Trip",
+      body: `${tripName} · ${label}${amount ? ` · ${amount} ${currency}` : ""}`,
+      source: "trip_payer_approval",
+      view: "inbox",
+      notification_key: `trip-payer-approval:${item.id}`,
+      data: {
+        kind: "trip_payer_approval",
+        id: item.id,
+        inbox_id: item.id,
+        trip_id: media.trip_id || "",
+        expense_id: media.expense_id || item.target_id || "",
+        view: "inbox",
+      },
+    });
   }
 
   async function _loadPendingTripInvites() {

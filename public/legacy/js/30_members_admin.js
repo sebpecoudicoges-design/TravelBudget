@@ -43,7 +43,7 @@ function _ensureMembersAdminDOM() {
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
           <div>
             <div style="font-weight:700;margin-bottom:4px;">Notifications mobiles</div>
-            <div style="font-size:12px;opacity:.65;">Espace admin pour preparer les messages APK. L'envoi push reel demandera les tokens mobiles + FCM.</div>
+            <div style="font-size:12px;opacity:.65;">Espace admin pour preparer et tester les push mobiles FCM.</div>
           </div>
           <button class="btn" id="admin-mobile-notifications-refresh-btn">Refresh</button>
         </div>
@@ -60,6 +60,7 @@ function _ensureMembersAdminDOM() {
             <option value="ready">Pret</option>
           </select>
           <button class="btn primary" id="admin-mobile-notification-create-btn">Ajouter</button>
+          <button class="btn" id="admin-mobile-notification-test-btn">Test push moi</button>
         </div>
         <div id="admin-mobile-notifications-list" style="margin-top:12px;">Chargement...</div>
       </div>
@@ -94,6 +95,7 @@ function _ensureMembersAdminDOM() {
 
   document.getElementById("admin-mobile-notifications-refresh-btn")?.addEventListener("click", adminRefreshMobileNotifications);
   document.getElementById("admin-mobile-notification-create-btn")?.addEventListener("click", adminCreateMobileNotification);
+  document.getElementById("admin-mobile-notification-test-btn")?.addEventListener("click", adminSendMobilePushTest);
 }
 
 function _setStatus(txt) {
@@ -376,6 +378,35 @@ async function adminCreateMobileNotification() {
     if (bodyInput) bodyInput.value = "";
     _setStatus("Notification mobile preparee.");
     await adminRefreshMobileNotifications();
+  });
+}
+
+async function adminSendMobilePushTest() {
+  await guard("Send mobile push test", async () => {
+    const { data: userRes } = await sb.auth.getUser();
+    const userId = userRes?.user?.id;
+    if (!userId) throw new Error("Session admin introuvable.");
+    const morning = (typeof window.tbBuildMorningBudgetPushPayload === "function")
+      ? window.tbBuildMorningBudgetPushPayload()
+      : null;
+    const title = (document.getElementById("admin-mobile-notification-title")?.value || morning?.title || "Budget du matin").trim();
+    const body = (document.getElementById("admin-mobile-notification-body")?.value || morning?.body || "Point budget quotidien.").trim();
+    const send = window.tbSendMobilePushNotification || (async (payload) => callEdge("send-mobile-notification", payload));
+    const out = await send({
+      ...(morning || {}),
+      user_id: userId,
+      title,
+      body,
+      source: morning?.source || "daily_budget",
+      view: morning?.view || "dashboard",
+      force: true,
+      notification_key: `admin-test:${Date.now()}`,
+    });
+    const msg = out?.skipped
+      ? `Test ignore: ${out.reason || "préférence désactivée"}`
+      : `Test push envoyé: ${out?.sent || 0} OK, ${out?.failed || 0} erreur(s).`;
+    _setStatus(msg);
+    alert(msg);
   });
 }
 

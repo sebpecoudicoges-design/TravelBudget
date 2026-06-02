@@ -290,6 +290,19 @@
     try {
       const permission = await PushNotifications.requestPermissions();
       if (permission?.receive !== 'granted') return false;
+      try {
+        if (PushNotifications.createChannel) {
+          await PushNotifications.createChannel({
+            id: 'travelbudget',
+            name: 'TravelBudget',
+            description: 'Notifications TravelBudget',
+            importance: 5,
+            visibility: 1,
+          });
+        }
+      } catch(e) {
+        console.warn('[TB][push] channel setup failed', e?.message || e);
+      }
       await PushNotifications.register();
       if (!window.__tbPushListenersReady) {
         window.__tbPushListenersReady = true;
@@ -371,10 +384,141 @@
   }
 
   async function triggerDailyBudgetNotificationTest(){
-    const title = tr('Point budget quotidien', 'Daily budget check');
-    const body = tr('Notification test : ouvre le dashboard pour verifier ton budget restant.', 'Test notification: open the dashboard to check remaining budget.');
-    window.tbSetNotificationBucket('daily-budget-test', [{ notificationKey: `daily-budget-test:${Date.now()}`, title, body, view: 'dashboard' }]);
-    await sendLocalNotification(title, body, { tag: 'travelbudget-daily-test', view: 'dashboard' });
+    const msg = buildMorningBudgetPushPayload();
+    window.tbSetNotificationBucket('daily-budget-test', [{ notificationKey: msg.notification_key, title: msg.title, body: msg.body, view: 'dashboard' }]);
+    await sendLocalNotification(msg.title, msg.body, { tag: 'travelbudget-daily-test', view: 'dashboard' });
+    return msg;
+  }
+
+  function money(value, currency){
+    try { if (typeof window.fmtMoney === 'function') return window.fmtMoney(Number(value) || 0, currency || ''); } catch(_) {}
+    const n = Number(value) || 0;
+    return `${Math.round(n * 100) / 100} ${currency || ''}`.trim();
+  }
+
+  function todayISO(){
+    try { if (typeof window.toLocalISODate === 'function') return window.toLocalISODate(new Date()); } catch(_) {}
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function dateDiffDaysInclusive(start, end){
+    const s = new Date(`${String(start || '').slice(0, 10)}T00:00:00`);
+    const e = new Date(`${String(end || '').slice(0, 10)}T00:00:00`);
+    if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime()) || e < s) return 0;
+    return Math.floor((e - s) / 86400000) + 1;
+  }
+
+  function txBudgetDate(tx){
+    return String(tx?.budgetDateStart || tx?.budget_date_start || tx?.dateStart || tx?.date_start || '').slice(0, 10);
+  }
+
+  function txAffectsBudget(tx){
+    if (tx?.affectsBudget === false || tx?.affects_budget === false) return false;
+    if (tx?.outOfBudget === true || tx?.out_of_budget === true) return false;
+    return true;
+  }
+
+  function txIsBudgetExpense(tx){
+    return String(tx?.type || '').toLowerCase() === 'expense' && txAffectsBudget(tx);
+  }
+
+  function txAmountInBudgetBase(tx, dateISO, fallbackCurrency){
+    const amount = Math.abs(Number(tx?.amount || 0)) || 0;
+    const cur = String(tx?.currency || fallbackCurrency || '').toUpperCase();
+    try {
+      if (typeof window.amountToBudgetBaseForDate === 'function') {
+        const out = window.amountToBudgetBaseForDate(amount, cur, dateISO);
+        if (Number.isFinite(Number(out))) return Number(out);
+      }
+    } catch(_) {}
+    return amount;
+  }
+
+  function buildMorningBudgetPushPayload(){
+    const today = todayISO();
+    const info = (typeof window.getDailyBudgetInfoForDate === 'function')
+      ? window.getDailyBudgetInfoForDate(today)
+      : { remaining: 0, daily: window.state?.period?.dailyBudgetBase || 0, baseCurrency: window.state?.period?.baseCurrency || 'EUR' };
+    const currency = String(info?.baseCurrency || window.state?.period?.baseCurrency || 'EUR').toUpperCase();
+    const remainingToday = Number(info?.remaining || 0);
+
+    const start = String(window.state?.period?.start || window.state?.period?.start_date || today).slice(0, 10);
+    const endRaw = String(window.state?.period?.end || window.state?.period?.end_date || today).slice(0, 10);
+    const end = endRaw && endRaw < today ? endRaw : today;
+    const elapsedDays = Math.max(1, dateDiffDaysInclusive(start, end));
+
+    let spentToDate = 0;
+    for (const tx of (window.state?.transactions || [])) {
+      if (!txIsBudgetExpense(tx)) continue;
+      const d = txBudgetDate(tx);
+      if (!d || d < start || d > end) continue;
+      spentToDate += txAmountInBudgetBase(tx, d, currency);
+    }
+
+    let targetToDate = 0;
+    for (let i = 0; i < elapsedDays; i += 1) {
+      const d = new Date(`${start}T00:00:00`);
+      d.setDate(d.getDate() + i);
+      const ds = d.toISOString().slice(0, 10);
+      const dayInfo = (typeof window.getDailyBudgetInfoForDate === 'function')
+        ? window.getDailyBudgetInfoForDate(ds)
+        : { daily: window.state?.period?.dailyBudgetBase || 0 };
+      targetToDate += Number(dayInfo?.daily || 0);
+    }
+
+    const delta = spentToDate - targetToDate;
+    const absDelta = Math.abs(delta);
+    const pct = targetToDate > 0 ? (delta / targetToDate) * 100 : 0;
+    const statusFr = delta <= 0 ? 'sous objectif' : 'au-dessus';
+    const statusEn = delta <= 0 ? 'below target' : 'above target';
+    const sign = delta <= 0 ? '-' : '+';
+    const title = tr('Budget du matin', 'Morning budget');
+    const body = tr(
+      `Reste aujourd'hui ${money(remainingToday, currency)}. Tu es ${statusFr} de ${sign}${money(absDelta, currency)} (${sign}${Math.abs(pct).toFixed(1)}%).`,
+      `Today left ${money(remainingToday, currency)}. You are ${statusEn} by ${sign}${money(absDelta, currency)} (${sign}${Math.abs(pct).toFixed(1)}%).`
+    );
+    return {
+      title,
+      body,
+      source: 'daily_budget',
+      view: 'dashboard',
+      notification_key: `daily-budget:${today}`,
+      data: {
+        kind: 'daily_budget',
+        today,
+        remaining_today: remainingToday,
+        currency,
+        spent_to_date: spentToDate,
+        target_to_date: targetToDate,
+        delta,
+        pct,
+      },
+    };
+  }
+
+  async function sendMobilePushNotification(payload){
+    const c = client();
+    if (!c?.auth?.getSession) throw new Error('Supabase session indisponible.');
+    const { data: sess } = await c.auth.getSession();
+    const token = sess?.session?.access_token;
+    if (!token) throw new Error('Session requise pour envoyer une notification mobile.');
+    const url = c.supabaseUrl;
+    const key = c.supabaseKey;
+    if (!url || !key) throw new Error('Client Supabase incomplet.');
+    const res = await fetch(`${url}/functions/v1/send-mobile-notification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: key,
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload || {}),
+    });
+    const text = await res.text();
+    let json;
+    try { json = text ? JSON.parse(text) : {}; } catch(_) { json = { raw: text }; }
+    if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+    return json;
   }
 
   window.tbGetNotificationPrefs = getNotificationPrefs;
@@ -383,6 +527,8 @@
   window.tbSaveNotificationPrefs = saveNotificationPrefs;
   window.tbRequestLocalNotificationPermission = requestLocalNotificationPermission;
   window.tbTriggerDailyBudgetNotificationTest = triggerDailyBudgetNotificationTest;
+  window.tbBuildMorningBudgetPushPayload = buildMorningBudgetPushPayload;
+  window.tbSendMobilePushNotification = sendMobilePushNotification;
   window.tbSyncPreferenceDrivenNotifications = syncPreferenceDrivenNotifications;
   window.tbInitMobilePushNotifications = initMobilePushNotifications;
 

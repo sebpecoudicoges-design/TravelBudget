@@ -10,6 +10,7 @@ type PushPayload = {
   view?: string;
   source?: string;
   dry_run?: boolean;
+  force?: boolean;
 };
 
 const corsHeaders = {
@@ -177,6 +178,25 @@ function fcmBody(token: string, payload: Required<Pick<PushPayload, "title" | "b
   };
 }
 
+function prefKeyForPayload(payload: PushPayload) {
+  const source = String(payload.source || payload.data?.source || "").toLowerCase();
+  const view = String(payload.view || payload.data?.view || "").toLowerCase();
+  const kind = String(payload.data?.kind || "").toLowerCase();
+  if (source.includes("daily") || kind.includes("daily")) return "dailyBudget";
+  if (source.includes("low_budget") || source.includes("low-budget") || kind.includes("low_budget")) return "lowBudget";
+  if (source.includes("trip") || kind.includes("trip") || view === "trip") return "trip";
+  if (source.includes("inbox") || view === "inbox") return "inbox";
+  return "inbox";
+}
+
+function prefEnabled(rawPrefs: unknown, key: string) {
+  const prefs = rawPrefs && typeof rawPrefs === "object" ? rawPrefs as Record<string, unknown> : {};
+  if (key === "dailyBudget") return prefs.dailyBudget === true;
+  if (key === "trip") return prefs.trip !== false;
+  if (key === "lowBudget") return prefs.lowBudget !== false;
+  return prefs.inbox !== false;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -204,6 +224,19 @@ Deno.serve(async (req: Request) => {
     if (!title || !body) return json({ error: "Missing title/body" }, 400);
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+    const prefKey = prefKeyForPayload(payload);
+    if (!payload.force) {
+      const { data: settings, error: prefError } = await adminClient
+        .from("settings")
+        .select("notification_prefs")
+        .eq("user_id", targetUserId)
+        .maybeSingle();
+      if (prefError) throw prefError;
+      if (!prefEnabled(settings?.notification_prefs, prefKey)) {
+        return json({ ok: true, sent: 0, failed: 0, skipped: true, reason: `Preference disabled: ${prefKey}` });
+      }
+    }
+
     const { data: tokens, error: tokenError } = await adminClient
       .from("mobile_push_tokens")
       .select("id,token")
