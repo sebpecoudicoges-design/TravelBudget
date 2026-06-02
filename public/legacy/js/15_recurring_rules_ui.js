@@ -406,13 +406,14 @@
 
     const { data: rows, error: selErr } = await s
       .from(TB_CONST.TABLES.transactions)
-      .select('id, recurring_instance_status, generated_by_rule')
+      .select('id, recurring_instance_status, generated_by_rule, pay_now')
       .eq('recurring_rule_id', rid)
       .eq('generated_by_rule', true);
     if (selErr) throw selErr;
 
     const ids = (Array.isArray(rows) ? rows : [])
       .filter((row) => String(row?.recurring_instance_status || '').toLowerCase() !== 'confirmed')
+      .filter((row) => row?.pay_now !== true)
       .map((row) => row.id)
       .filter(Boolean);
     if (!ids.length) return 0;

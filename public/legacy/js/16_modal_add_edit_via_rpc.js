@@ -713,6 +713,9 @@ async function _updateTransactionDirectCompat(args) {
     night_covered: !!args?.p_night_covered,
     updated_at: new Date().toISOString(),
   };
+  if (currentRow?.generated_by_rule === true) {
+    payload.recurring_instance_status = payload.pay_now ? "confirmed" : (currentRow?.recurring_instance_status || "generated");
+  }
 
   const fxLocked = !!(currentRow?.fx_snapshot_at);
   if (!fxLocked) {
@@ -1349,7 +1352,7 @@ async function deleteTx(txId) {
 
 async function markTxAsPaid(txId) {
   await safeCall(_txModalT("transactions.safe.mark_paid"), async () => {
-    const tx = state.transactions.find((t) => t.id === txId);
+    const tx = state.transactions.find((t) => String(t.id) === String(txId));
     if (!tx) throw new Error(_txModalT("transactions.error.not_found"));
     const actionValidation = window.Core?.transactionGuards?.validateTransactionAction
       ? window.Core.transactionGuards.validateTransactionAction(tx, "mark_paid", {
@@ -1358,10 +1361,19 @@ async function markTxAsPaid(txId) {
       : { ok: true };
     if (!actionValidation.ok) throw new Error(_txModalT("transactions.safe.locked_mark_paid") || actionValidation.reason);
     if (tx.type !== "expense" && tx.type !== "income") throw new Error(_txModalT("transactions.safe.type_payable_only"));
-    if (tx.payNow) return;
+    const txPayNow = (tx.pay_now !== undefined) ? !!tx.pay_now : !!tx.payNow;
+    if (txPayNow) return;
 
-    const wallet = findWallet(tx.walletId);
+    const walletId = tx.walletId || tx.wallet_id;
+    const wallet = findWallet(walletId);
     if (!wallet) throw new Error(_txModalT("transactions.safe.wallet_not_found"));
+
+    const dateStart = tx.dateStart || tx.date_start;
+    const dateEnd = tx.dateEnd || tx.date_end || dateStart;
+    const budgetDateStart = tx.budgetDateStart || tx.budget_date_start || dateStart;
+    const budgetDateEnd = tx.budgetDateEnd || tx.budget_date_end || dateEnd || budgetDateStart;
+    const outOfBudget = (tx.out_of_budget !== undefined) ? !!tx.out_of_budget : !!tx.outOfBudget;
+    const nightCovered = (tx.night_covered !== undefined) ? !!tx.night_covered : !!tx.nightCovered;
 
     const hasLockedFx = !!(tx.fxSnapshotAt || tx.fx_snapshot_at || tx.fxRateSnapshot || tx.fx_rate_snapshot);
     const fxArgs = hasLockedFx
@@ -1372,21 +1384,26 @@ async function markTxAsPaid(txId) {
           p_fx_base_currency_snapshot: null,
           p_fx_tx_currency_snapshot: null,
         }
-      : _txBuildFxSnapshotArgs(tx.dateStart, String(tx.currency || wallet.currency || '').toUpperCase());
+      : _txBuildFxSnapshotArgs(dateStart, String(tx.currency || wallet.currency || '').toUpperCase());
 
     const { error } = await _updateTransactionRpcCompat({
       p_tx_id: tx.id,
-      p_wallet_id: tx.walletId,
+      p_wallet_id: walletId,
       p_type: tx.type,
       p_amount: Number(tx.amount),
       p_currency: tx.currency || wallet.currency,
       p_category: tx.category || "Autre",
+      p_subcategory: tx.subcategory || null,
       p_label: tx.label || "",
-      p_date_start: tx.dateStart,
-      p_date_end: tx.dateEnd || tx.dateStart,
+      p_date_start: dateStart,
+      p_date_end: dateEnd,
+      p_budget_date_start: budgetDateStart,
+      p_budget_date_end: budgetDateEnd,
       p_pay_now: true,
-      p_out_of_budget: !!tx.outOfBudget,
-      p_night_covered: !!tx.nightCovered,
+      p_out_of_budget: outOfBudget,
+      p_night_covered: nightCovered,
+      p_trip_expense_id: tx.tripExpenseId || tx.trip_expense_id || null,
+      p_trip_share_link_id: tx.tripShareLinkId || tx.trip_share_link_id || null,
       ...fxArgs
     });
 
