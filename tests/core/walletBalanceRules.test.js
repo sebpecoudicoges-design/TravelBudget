@@ -45,4 +45,18 @@ describe('wallet balance rules', () => {
     expect(rows[0].wallet_id).toBe('active');
     expect(rows[0].effective_balance).toBe(6);
   });
+
+  it('does not deduct pending expenses from the displayed wallet balance', () => {
+    const rows = computeWalletBalanceRows([
+      { id: 'wallet-1', period_id: 'period-1', currency: 'AUD', balance: 200 },
+    ], [
+      { wallet_id: 'wallet-1', type: 'expense', amount: 40, pay_now: false },
+      { wallet_id: 'wallet-1', type: 'expense', amount: 25, pay_now: true },
+      { wallet_id: 'wallet-1', type: 'income', amount: 10, pay_now: true },
+    ], 'period-1');
+
+    expect(rows[0].transactions_delta).toBe(-15);
+    expect(rows[0].effective_balance).toBe(185);
+    expect(rows[0].excluded_unpaid_count).toBe(1);
+  });
 });

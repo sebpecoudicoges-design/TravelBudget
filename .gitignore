@@ -27,6 +27,9 @@ android-commandlinetools.zip
 
 # SQL dumps
 db_dumps/
+supabase/data.sql
+supabase/schema.sql
+supabase/platform_schema.sql
 
 # Supabase local
 supabase/.temp/

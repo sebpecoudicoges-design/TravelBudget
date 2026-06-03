@@ -20,8 +20,23 @@ function json(body: unknown, status = 200) {
 
 function redirectTarget(value?: string | null) {
   const raw = String(value || "").trim();
-  if (/^https?:\/\//i.test(raw)) return raw;
-  return Deno.env.get("SITE_URL") || DEFAULT_SITE_URL;
+  const fallback = Deno.env.get("SITE_URL") || DEFAULT_SITE_URL;
+  const allowedOrigins = new Set(
+    [fallback, ...(Deno.env.get("ALLOWED_REDIRECT_ORIGINS") || "").split(",")]
+      .map((item) => {
+        try { return new URL(String(item).trim()).origin; } catch (_) { return ""; }
+      })
+      .filter(Boolean),
+  );
+
+  if (!/^https?:\/\//i.test(raw)) return fallback;
+
+  try {
+    const target = new URL(raw);
+    if (allowedOrigins.has(target.origin)) return target.toString();
+  } catch (_) {}
+
+  return fallback;
 }
 
 Deno.serve(async (req: Request) => {

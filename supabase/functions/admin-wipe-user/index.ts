@@ -9,6 +9,13 @@ const corsHeaders = {
 
 const PROTECTED_TRAVEL_ID = "d6c3e70a-d31f-4647-91e8-e12830d0c00d"
 
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  })
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })
@@ -20,10 +27,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization") || req.headers.get("authorization") || ""
 
     if (!authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Missing bearer token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      return json({ error: "Missing bearer token" }, 401)
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE)
@@ -36,10 +40,7 @@ serve(async (req) => {
 
     const callerUserId = callerAuth?.user?.id
     if (!callerUserId) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      return json({ error: "Unauthorized" }, 401)
     }
 
     const { data: callerProfile, error: profileErr } = await admin
@@ -50,21 +51,25 @@ serve(async (req) => {
 
     if (profileErr) throw profileErr
     if (!callerProfile || String(callerProfile.role || "").toLowerCase() !== "admin") {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      return json({ error: "Forbidden" }, 403)
     }
 
     const body = await req.json()
     const targetUserId = body?.targetUserId || body?.userId
     const mode = body?.mode || "all"
+    const expectedConfirm = mode === "all" ? "WIPE" : "RESET"
+    const confirm = String(body?.confirm || body?.confirmation || "").trim()
 
     if (!targetUserId) {
-      return new Response(JSON.stringify({ error: "targetUserId required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      return json({ error: "targetUserId required" }, 400)
+    }
+
+    if (String(targetUserId) === String(callerUserId)) {
+      return json({ error: "Refused: admin cannot wipe the current authenticated account" }, 403)
+    }
+
+    if (confirm !== expectedConfirm) {
+      return json({ error: `Confirmation required: ${expectedConfirm}` }, 400)
     }
 
     const { data: protectedTravelRows, error: protectedTravelErr } = await admin
@@ -75,13 +80,10 @@ serve(async (req) => {
 
     if (protectedTravelErr) throw protectedTravelErr
     if ((protectedTravelRows || []).length) {
-      return new Response(JSON.stringify({
+      return json({
         error: "Protected user/travel cannot be wiped",
         protectedTravelId: PROTECTED_TRAVEL_ID,
-      }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      }, 403)
     }
 
     const { data: trips, error: tripsErr } = await admin
@@ -182,20 +184,14 @@ serve(async (req) => {
       if (mapErr) throw mapErr
     }
 
-    return new Response(JSON.stringify({
+    return json({
       success: true,
       message: "Reset utilisateur terminé avec succès (travels + règles récurrentes inclus).",
       wipedTrips: tripIds.length,
       mode,
       actor: callerUserId,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   } catch (e) {
-    return new Response(JSON.stringify({ error: e?.message || String(e) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    })
+    return json({ error: e?.message || String(e) }, 500)
   }
 })

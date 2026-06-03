@@ -244,7 +244,8 @@ Tape EXACTEMENT ${word} pour confirmer :`
 
     const out = await callEdge("admin-wipe-user", {
       targetUserId: userId,
-      mode
+      mode,
+      confirm: token
     });
 
     console.log("[MembersAdmin] adminWipeUser:callEdgeResult", out);

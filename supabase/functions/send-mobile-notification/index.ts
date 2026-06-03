@@ -218,6 +218,9 @@ Deno.serve(async (req: Request) => {
     if (auth.mode === "user" && targetUserId !== auth.userId && !auth.isAdmin) {
       return json({ error: "Forbidden" }, 403);
     }
+    if (payload.force && auth.mode === "user" && !auth.isAdmin) {
+      return json({ error: "Forbidden: force requires admin or internal sender" }, 403);
+    }
 
     const title = String(payload.title || "").trim();
     const body = String(payload.body || "").trim();
