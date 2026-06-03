@@ -8,14 +8,16 @@
   const PLAN_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_plan || "travelbudget_sport_plan_v1");
   const WEIGHT_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1");
   const HEIGHT_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1");
+  const GLOBAL_REST_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_global_rest || "travelbudget_sport_global_rest_v1");
   const HISTORY_KEY = () => scopedKey(baseHistoryKey());
   const ANON_HISTORY_KEY = () => `${baseHistoryKey()}::anon`;
+  const RECOVERY_MET = 1.3;
 
   const CATALOG = [
-    { key: "strength", fr: "Musculation", en: "Strength training", met: 3.5, mode: "reps", equipment: "bodyweight" },
-    { key: "bodyweight_strength", fr: "Musculation poids du corps", en: "Bodyweight strength", met: 3.8, mode: "reps", equipment: "bodyweight" },
-    { key: "resistance_band_strength", fr: "Renforcement elastique", en: "Resistance band strength", met: 3.5, mode: "reps", equipment: "band" },
-    { key: "plank_core", fr: "Gainage / core", en: "Core / plank", met: 3.3, mode: "time", equipment: "bodyweight" },
+    { key: "strength", fr: "Musculation", en: "Strength training", met: 5.0, mode: "reps", equipment: "bodyweight" },
+    { key: "bodyweight_strength", fr: "Musculation poids du corps", en: "Bodyweight strength", met: 5.2, mode: "reps", equipment: "bodyweight" },
+    { key: "resistance_band_strength", fr: "Renforcement elastique", en: "Resistance band strength", met: 4.8, mode: "reps", equipment: "band" },
+    { key: "plank_core", fr: "Gainage / core", en: "Core / plank", met: 4.2, mode: "time", equipment: "bodyweight" },
     { key: "running", fr: "Course a pied", en: "Running", met: 8.3, mode: "time", equipment: "outdoor" },
     { key: "cycling", fr: "Velo", en: "Cycling", met: 6.8, mode: "time", equipment: "outdoor" },
     { key: "swimming", fr: "Natation", en: "Swimming", met: 6.0, mode: "time", equipment: "pool" },
@@ -183,6 +185,8 @@
     builderEquipment: "all",
     builderDuration: 35,
     builderLevel: "regular",
+    globalRestSeconds: loadGlobalRest(),
+    editingPlanIndex: null,
   };
 
   function lang() {
@@ -214,6 +218,7 @@
     CACHE.localScope = scope;
     CACHE.localSessions = loadLocalHistory();
     CACHE.plan = loadPlan();
+    CACHE.globalRestSeconds = loadGlobalRest();
   }
   function activeTravelId() { return window.state?.activeTravelId || null; }
   function table(name) { return window.TB_CONST?.TABLES?.[name] || name; }
@@ -245,6 +250,15 @@
   function saveBodyHeight(v) {
     try { localStorage.setItem(HEIGHT_KEY(), String(Math.max(60, n(v, 175)))); } catch (_) {}
   }
+  function loadGlobalRest() {
+    try { return Math.max(0, Math.round(n(localStorage.getItem(GLOBAL_REST_KEY()), 60))); } catch (_) { return 60; }
+  }
+  function saveGlobalRest(v) {
+    const seconds = Math.max(0, Math.round(n(v, 60)));
+    CACHE.globalRestSeconds = seconds;
+    try { localStorage.setItem(GLOBAL_REST_KEY(), String(seconds)); } catch (_) {}
+    return seconds;
+  }
   function bmiValue(kg, cm) {
     const h = n(cm, 0) / 100;
     if (!h) return 0;
@@ -260,23 +274,63 @@
     if (item?.mode === "time") return Math.max(1, Math.round(n(item?.targetSeconds, 0)));
     return Math.max(10, Math.round(n(item?.targetReps, 0) * 2.5));
   }
+  function restSecondsForItem(item) {
+    const raw = Number(item?.restSeconds);
+    if (Number.isFinite(raw) && raw >= 0) return Math.round(raw);
+    return Math.max(0, Math.round(n(CACHE.globalRestSeconds, 60)));
+  }
+  function isStrengthLike(item) {
+    const key = String(item?.activityKey || "");
+    const equipment = String(item?.equipment || "");
+    return key === "strength" || key === "bodyweight_strength" || key === "resistance_band_strength" || key === "plank_core" ||
+      ["bodyweight", "band", "dumbbell", "barbell", "kettlebell", "machine"].includes(equipment);
+  }
+  function calibratedMet(item) {
+    const activity = catalogItem(item?.activityKey || "strength");
+    const intensity = String(item?.intensity || "moderate");
+    const base = n(item?.metValue, activity.met * intensityFactor(intensity));
+    if (!isStrengthLike(item)) return Math.max(1, base);
+    const floor = activity.met * intensityFactor(intensity);
+    const loadBoost = Math.min(1.4, Math.max(0, n(item?.weightKg, 0)) / 35);
+    const repsBoost = item?.mode === "reps" ? Math.min(0.7, Math.max(0, n(item?.targetReps, 0) - 8) / 35) : 0;
+    return Math.max(4.2, base, floor + loadBoost + repsBoost);
+  }
   function kcalEstimate(met, kg, seconds, loadKg) {
     const minutes = Math.max(0, n(seconds, 0)) / 60;
     const effectiveKg = Math.max(1, n(kg, 70) + Math.max(0, n(loadKg, 0)));
     return Math.max(0, (n(met, 1) * 3.5 * effectiveKg / 200) * minutes);
   }
+  function kcalEstimateForItem(item, kg, seconds, loadKg) {
+    return kcalEstimate(calibratedMet(item), kg, seconds, loadKg);
+  }
+  function sessionKcalEstimate(plan, doneSets, kg, durationSeconds) {
+    const rows = Array.isArray(doneSets) ? doneSets : [];
+    const workKcal = rows.reduce((sum, set) => {
+      const item = (plan || [])[set.itemIndex];
+      return sum + kcalEstimateForItem(item, kg, set.durationSeconds, set.weightKg);
+    }, 0);
+    const workSeconds = rows.reduce((sum, set) => sum + Math.max(0, n(set.durationSeconds, 0)), 0);
+    const totalSeconds = Math.max(workSeconds, Math.max(0, n(durationSeconds, 0)));
+    const recoverySeconds = Math.max(0, totalSeconds - workSeconds);
+    const recoveryKcal = recoverySeconds ? kcalEstimate(RECOVERY_MET, kg, recoverySeconds, 0) : 0;
+    const hasStrength = (plan || []).some(isStrengthLike);
+    const hasCardio = (plan || []).some(item => !isStrengthLike(item));
+    const floorMet = hasStrength && !hasCardio ? 3.8 : hasStrength && hasCardio ? 3.3 : 0;
+    const floorKcal = floorMet ? kcalEstimate(floorMet, kg, totalSeconds, 0) : 0;
+    return Math.max(0, workKcal + recoveryKcal, floorKcal);
+  }
   function totalPlanSeconds(plan) {
     return (plan || []).reduce((sum, item) => {
       const work = setWorkSeconds(item) * n(item.sets, 1);
-      const rest = Math.max(0, n(item.restSeconds, 0) * Math.max(0, n(item.sets, 1) - 1));
+      const rest = Math.max(0, restSecondsForItem(item) * Math.max(0, n(item.sets, 1) - 1));
       return sum + work + rest;
     }, 0);
   }
   function totalPlanKcal(plan, kg) {
     return (plan || []).reduce((sum, item) => {
       const seconds = setWorkSeconds(item) * n(item.sets, 1);
-      return sum + kcalEstimate(item.metValue, kg, seconds, effectiveLoadKg(item, kg));
-    }, 0);
+      return sum + kcalEstimateForItem(item, kg, seconds, effectiveLoadKg(item, kg));
+    }, 0) + kcalEstimate(RECOVERY_MET, kg, Math.max(0, totalPlanSeconds(plan) - (plan || []).reduce((sum, item) => sum + setWorkSeconds(item) * n(item.sets, 1), 0)), 0);
   }
   function loadPlan() {
     try {
@@ -422,7 +476,7 @@
       targetReps: mode === "reps" ? n(overrides?.targetReps, 10) : 0,
       targetSeconds: mode === "time" ? n(overrides?.targetSeconds, 45) : n(overrides?.targetSeconds, 0),
       sets: Math.max(1, Math.round(n(overrides?.sets, 1))),
-      restSeconds: Math.max(0, Math.round(n(overrides?.restSeconds, 60))),
+      restSeconds: Math.max(0, Math.round(n(overrides?.restSeconds, CACHE.globalRestSeconds || 60))),
       weightKg: n(overrides?.weightKg, 0),
       distanceM: n(overrides?.distanceM, 0),
       intensity,
@@ -551,7 +605,7 @@
     item.targetSeconds = format === "time" ? minutes * 60 : 0;
     item.targetReps = format === "time" ? 0 : reps;
     item.sets = format === "time" || format === "max_reps" ? 1 : Math.max(1, Math.round(n(root?.querySelector("#sport-simple-sets")?.value, item.sets || 3)));
-    item.restSeconds = format === "time" || format === "max_reps" ? 0 : Math.max(0, Math.round(n(root?.querySelector("#sport-simple-rest")?.value, item.restSeconds || 60)));
+    item.restSeconds = format === "time" || format === "max_reps" ? 0 : Math.max(0, Math.round(n(root?.querySelector("#sport-simple-rest")?.value, item.restSeconds || CACHE.globalRestSeconds || 60)));
     item.distanceM = Math.max(0, n(root?.querySelector("#sport-simple-distance")?.value, item.distanceM || 0));
     if (format === "max_reps") item.exerciseName = `${item.exerciseName} - ${txt("max reps", "max reps")}`;
     item.notes = format === "max_reps" ? txt("Serie max : saisis le nombre realise.", "Max set: enter completed reps.") : "";
@@ -570,6 +624,31 @@
     show("#sport-simple-reps-wrap", !isTime);
     show("#sport-simple-sets-wrap", !isTime && !isMax);
     show("#sport-simple-rest-wrap", !isTime && !isMax);
+  }
+  function planItemFromManualForm(root, existing) {
+    const a = catalogItem(root.querySelector("#sport-activity")?.value || existing?.activityKey || "strength");
+    const intensity = String(root.querySelector("#sport-intensity")?.value || existing?.intensity || "moderate");
+    const mode = String(root.querySelector("#sport-mode")?.value || existing?.mode || a.mode);
+    const item = Object.assign({}, existing || {}, {
+      tmpId: existing?.tmpId || ("tmp_" + Date.now() + "_" + Math.random().toString(16).slice(2)),
+      activityKey: a.key,
+      exerciseName: String(root.querySelector("#sport-ex-name")?.value || existing?.exerciseName || (lang() === "en" ? a.en : a.fr)).trim(),
+      equipment: String(root.querySelector("#sport-equipment")?.value || existing?.equipment || a.equipment),
+      mode,
+      targetReps: mode === "reps" ? n(root.querySelector("#sport-reps")?.value, existing?.targetReps || 0) : 0,
+      targetSeconds: mode === "time" ? n(root.querySelector("#sport-seconds")?.value, existing?.targetSeconds || 0) : n(root.querySelector("#sport-seconds")?.value, 0),
+      sets: Math.max(1, Math.round(n(root.querySelector("#sport-sets")?.value, existing?.sets || 1))),
+      restSeconds: Math.max(0, Math.round(n(root.querySelector("#sport-rest")?.value, restSecondsForItem(existing || {})))),
+      weightKg: n(root.querySelector("#sport-load")?.value, existing?.weightKg || 0),
+      distanceM: n(root.querySelector("#sport-distance")?.value, existing?.distanceM || 0),
+      intensity,
+      intensityLabel: root.querySelector("#sport-intensity")?.selectedOptions?.[0]?.textContent || existing?.intensityLabel || txt("moderee", "moderate"),
+      metValue: a.met * intensityFactor(intensity),
+      notes: existing?.notes || "",
+    });
+    if (item.equipment === "band") item.weightKg = 0;
+    item.metValue = calibratedMet(item);
+    return item;
   }
   function goalFromTemplate(kind) {
     if (kind === "run") return "cardio";
@@ -939,6 +1018,14 @@
     const duration = CACHE.builderDuration || 35;
     const level = CACHE.builderLevel || "regular";
     const suggested = filteredExercises(goal, selectedEquipment).slice(0, 8);
+    const editIdx = Number.isInteger(CACHE.editingPlanIndex) ? CACHE.editingPlanIndex : null;
+    const editing = editIdx !== null ? CACHE.plan[editIdx] : null;
+    const manualActivity = editing?.activityKey || "strength";
+    const manualEquipment = editing?.equipment || "bodyweight";
+    const manualMode = editing?.mode || "reps";
+    const manualIntensity = editing?.intensity || "moderate";
+    const manualName = editing?.exerciseName || "Push-up";
+    const manualRest = editing ? restSecondsForItem(editing) : n(CACHE.globalRestSeconds, 60);
     return `
       <div class="tb-sport-card">
         <h3>${esc(txt("Construire la seance", "Build workout"))}</h3>
@@ -974,7 +1061,8 @@
             <div class="tb-sport-field" id="sport-simple-distance-wrap"><label>${esc(txt("Distance m optionnelle", "Optional distance m"))}</label><input id="sport-simple-distance" type="number" value="0"></div>
             <div class="tb-sport-field" id="sport-simple-reps-wrap"><label>${esc(txt("Reps / max reps", "Reps / max reps"))}</label><input id="sport-simple-reps" type="number" value="10"></div>
             <div class="tb-sport-field" id="sport-simple-sets-wrap"><label>${esc(txt("Series", "Sets"))}</label><input id="sport-simple-sets" type="number" value="3"></div>
-            <div class="tb-sport-field" id="sport-simple-rest-wrap"><label>${esc(txt("Repos sec", "Rest sec"))}</label><input id="sport-simple-rest" type="number" value="60"></div>
+            <div class="tb-sport-field" id="sport-simple-rest-wrap"><label>${esc(txt("Repos sec", "Rest sec"))}</label><input id="sport-simple-rest" type="number" value="${esc(String(n(CACHE.globalRestSeconds, 60)))}"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Repos global sec", "Global rest sec"))}</label><input id="sport-global-rest" type="number" value="${esc(String(n(CACHE.globalRestSeconds, 60)))}"></div>
           </div>
         </div>
         <details class="tb-sport-smart">
@@ -998,26 +1086,28 @@
               </button>`).join("") : `<div class="muted">${esc(txt("Aucun exercice pour ce filtre.", "No exercise for this filter."))}</div>`}
           </div>
         </details>
-        <details class="tb-sport-advanced">
+        <details class="tb-sport-advanced" ${editing ? "open" : ""}>
           <summary>${esc(txt("Ajout manuel avance", "Advanced manual add"))}</summary>
+          ${editing ? `<div class="tb-sport-status" style="margin-top:10px;">${esc(txt(`Edition ligne ${editIdx + 1}`, `Editing line ${editIdx + 1}`))}</div>` : ""}
           <div class="tb-sport-fields" style="margin-top:10px;">
             <div class="tb-sport-field"><label>${esc(txt("Depuis la bibliotheque", "From library"))}</label><select id="sport-library-ex">${libraryOptions(goal, selectedEquipment, "")}</select></div>
-            <div class="tb-sport-field"><label>${esc(txt("Type d'effort", "Effort type"))}</label><select id="sport-activity">${activityOptions("strength")}</select></div>
-            <div class="tb-sport-field"><label>${esc(txt("Exercice", "Exercise"))}</label><input id="sport-ex-name" value="Push-up"></div>
-            <div class="tb-sport-field"><label>${esc(txt("Materiel", "Equipment"))}</label><select id="sport-equipment">${equipmentOptions("bodyweight")}</select></div>
-            <div class="tb-sport-field"><label>${esc(txt("Reps", "Reps"))}</label><input id="sport-reps" type="number" value="30"></div>
-            <div class="tb-sport-field"><label>${esc(txt("Series", "Sets"))}</label><input id="sport-sets" type="number" value="3"></div>
-            <div class="tb-sport-field"><label>${esc(txt("Repos sec", "Rest sec"))}</label><input id="sport-rest" type="number" value="60"></div>
-            <div class="tb-sport-field"><label>${esc(txt("Mode", "Mode"))}</label><select id="sport-mode"><option value="reps">${esc(txt("Repetitions", "Reps"))}</option><option value="time">${esc(txt("Temps", "Time"))}</option></select></div>
-            <div class="tb-sport-field"><label>${esc(txt("Intensite", "Intensity"))}</label><select id="sport-intensity">${intensityOptions("moderate")}</select></div>
-            <div class="tb-sport-field"><label>${esc(txt("Temps sec", "Time sec"))}</label><input id="sport-seconds" type="number" value="45"></div>
-            <div class="tb-sport-field"><label>${esc(txt("Charge externe kg", "External load kg"))}</label><input id="sport-load" type="number" step="0.5" value="0"></div>
-            <div class="tb-sport-field"><label>${esc(txt("Distance m", "Distance m"))}</label><input id="sport-distance" type="number" value="0"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Type d'effort", "Effort type"))}</label><select id="sport-activity">${activityOptions(manualActivity)}</select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Exercice", "Exercise"))}</label><input id="sport-ex-name" value="${esc(manualName)}"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Materiel", "Equipment"))}</label><select id="sport-equipment">${equipmentOptions(manualEquipment)}</select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Reps", "Reps"))}</label><input id="sport-reps" type="number" value="${esc(String(n(editing?.targetReps, 30)))}"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Series", "Sets"))}</label><input id="sport-sets" type="number" value="${esc(String(n(editing?.sets, 3)))}"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Repos sec", "Rest sec"))}</label><input id="sport-rest" type="number" value="${esc(String(manualRest))}"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Mode", "Mode"))}</label><select id="sport-mode"><option value="reps" ${manualMode === "reps" ? "selected" : ""}>${esc(txt("Repetitions", "Reps"))}</option><option value="time" ${manualMode === "time" ? "selected" : ""}>${esc(txt("Temps", "Time"))}</option></select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Intensite", "Intensity"))}</label><select id="sport-intensity">${intensityOptions(manualIntensity)}</select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Temps sec", "Time sec"))}</label><input id="sport-seconds" type="number" value="${esc(String(n(editing?.targetSeconds, 45)))}"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Charge externe kg", "External load kg"))}</label><input id="sport-load" type="number" step="0.5" value="${esc(String(n(editing?.weightKg, 0)))}"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Distance m", "Distance m"))}</label><input id="sport-distance" type="number" value="${esc(String(n(editing?.distanceM, 0)))}"></div>
           </div>
         </details>
         <div class="muted" style="margin-top:8px;">${esc(txt("Les kcal sont indicatives : poids, duree effective, type d'effort, intensite et charge externe si elle est portee. Un elastique ne s'ajoute pas a ton poids.", "Calories are indicative: weight, effective duration, effort type, intensity and external load when carried. Resistance bands are not added to body weight."))}</div>
         <div class="tb-sport-actions" style="margin-top:12px;">
-          <button class="btn primary" type="button" id="sport-add-item">+ ${esc(txt("Ajouter au plan", "Add to plan"))}</button>
+          <button class="btn primary" type="button" id="sport-add-item">${editing ? esc(txt("Mettre a jour la ligne", "Update line")) : `+ ${esc(txt("Ajouter au plan", "Add to plan"))}`}</button>
+          ${editing ? `<button class="btn" type="button" id="sport-cancel-edit">${esc(txt("Annuler edition", "Cancel edit"))}</button>` : ""}
           <button class="btn primary" type="button" id="sport-mark-done-builder" ${CACHE.plan.length ? "" : "disabled"}>${esc(txt("Marquer la seance faite", "Mark workout done"))}</button>
           <button class="btn" type="button" id="sport-sample">${esc(txt("Exemple push-up", "Push-up sample"))}</button>
           <button class="btn" type="button" id="sport-clear">${esc(txt("Vider", "Clear"))}</button>
@@ -1038,11 +1128,13 @@
             <span class="tb-sport-chip">${esc(labelEquipment(item.equipment))}</span>
             <span class="tb-sport-chip">${item.mode === "time" ? `${n(item.targetSeconds,0)} sec` : `${n(item.targetReps,0)} reps`}</span>
             <span class="tb-sport-chip">${n(item.sets,1)} ${esc(txt("series", "sets"))}</span>
-            <span class="tb-sport-chip">${n(item.restSeconds,0)} sec ${esc(txt("repos", "rest"))}</span>
+            <span class="tb-sport-chip">${restSecondsForItem(item)} sec ${esc(txt("repos", "rest"))}</span>
             <span class="tb-sport-chip">${esc(txt("Intensite", "Intensity"))}: ${esc(item.intensityLabel || txt("moderee", "moderate"))}</span>
+            <span class="tb-sport-chip">MET ${calibratedMet(item).toFixed(1)}</span>
           </div>
         </div>
         <div class="tb-sport-actions">
+          <button class="btn small" type="button" data-sport-edit="${idx}">${esc(txt("Modifier", "Edit"))}</button>
           <button class="btn small" type="button" data-sport-move="${idx}" data-dir="-1">Up</button>
           <button class="btn small" type="button" data-sport-move="${idx}" data-dir="1">Down</button>
           <button class="btn small danger" type="button" data-sport-remove="${idx}">Del</button>
@@ -1056,7 +1148,8 @@
       const sets = Math.max(1, Math.round(n(item.sets, 1)));
       for (let setIndex = 1; setIndex <= sets; setIndex += 1) {
         seq.push({ kind: "work", item, itemIndex, setIndex, duration: item.mode === "time" ? n(item.targetSeconds, 0) : 0 });
-        if (setIndex < sets && n(item.restSeconds, 0) > 0) seq.push({ kind: "rest", item, itemIndex, setIndex, duration: n(item.restSeconds, 0) });
+        const rest = restSecondsForItem(item);
+        if (setIndex < sets && rest > 0) seq.push({ kind: "rest", item, itemIndex, setIndex, duration: rest });
       }
     });
     return seq;
@@ -1287,6 +1380,15 @@
     const simpleFormat = root.querySelector("#sport-simple-format");
     if (simpleFormat) simpleFormat.onchange = () => syncSimpleFields(root);
     syncSimpleFields(root);
+    const globalRest = root.querySelector("#sport-global-rest");
+    if (globalRest) globalRest.onchange = () => {
+      saveGlobalRest(globalRest.value);
+      CACHE.plan = (CACHE.plan || []).map(item => Object.assign({}, item, {
+        restSeconds: CACHE.globalRestSeconds,
+      }));
+      savePlan();
+      renderSport("global-rest");
+    };
     const builderDuration = root.querySelector("#sport-builder-duration");
     if (builderDuration) builderDuration.onchange = () => {
       CACHE.builderDuration = Math.max(10, n(builderDuration.value, 35));
@@ -1334,28 +1436,22 @@
     if (height) height.onchange = () => { saveBodyHeight(height.value); renderSport("height"); };
     const add = root.querySelector("#sport-add-item");
     if (add) add.onclick = () => {
-      const a = catalogItem(root.querySelector("#sport-activity")?.value || "strength");
-      const item = {
-        tmpId: "tmp_" + Date.now() + "_" + Math.random().toString(16).slice(2),
-        activityKey: a.key,
-        exerciseName: String(root.querySelector("#sport-ex-name")?.value || (lang() === "en" ? a.en : a.fr)).trim(),
-        equipment: String(root.querySelector("#sport-equipment")?.value || a.equipment),
-        mode: String(root.querySelector("#sport-mode")?.value || a.mode),
-        targetReps: n(root.querySelector("#sport-reps")?.value, 0),
-        targetSeconds: n(root.querySelector("#sport-seconds")?.value, 0),
-        sets: Math.max(1, Math.round(n(root.querySelector("#sport-sets")?.value, 1))),
-        restSeconds: Math.max(0, Math.round(n(root.querySelector("#sport-rest")?.value, 0))),
-        weightKg: n(root.querySelector("#sport-load")?.value, 0),
-        distanceM: n(root.querySelector("#sport-distance")?.value, 0),
-        intensity: String(root.querySelector("#sport-intensity")?.value || "moderate"),
-        intensityLabel: root.querySelector("#sport-intensity")?.selectedOptions?.[0]?.textContent || txt("moderee", "moderate"),
-        metValue: a.met * intensityFactor(String(root.querySelector("#sport-intensity")?.value || "moderate")),
-        notes: "",
-      };
-      if (item.equipment === "band") item.weightKg = 0;
-      CACHE.plan.push(item);
+      const editIdx = Number.isInteger(CACHE.editingPlanIndex) ? CACHE.editingPlanIndex : null;
+      const item = planItemFromManualForm(root, editIdx !== null ? CACHE.plan[editIdx] : null);
+      if (editIdx !== null && CACHE.plan[editIdx]) {
+        CACHE.plan[editIdx] = item;
+        CACHE.editingPlanIndex = null;
+        sportFeedback(txt("Ligne mise a jour", "Line updated"), item.exerciseName, { toast: true });
+      } else {
+        CACHE.plan.push(item);
+      }
       savePlan();
       renderSport("add-item");
+    };
+    const cancelEdit = root.querySelector("#sport-cancel-edit");
+    if (cancelEdit) cancelEdit.onclick = () => {
+      CACHE.editingPlanIndex = null;
+      renderSport("cancel-edit");
     };
     const sample = root.querySelector("#sport-sample");
     if (sample) sample.onclick = () => {
@@ -1380,10 +1476,20 @@
       };
     });
     const clear = root.querySelector("#sport-clear");
-    if (clear) clear.onclick = () => { CACHE.plan = []; savePlan(); renderSport("clear"); };
+    if (clear) clear.onclick = () => { CACHE.plan = []; CACHE.editingPlanIndex = null; savePlan(); renderSport("clear"); };
+    root.querySelectorAll("[data-sport-edit]").forEach(btn => {
+      btn.onclick = () => {
+        const idx = Number(btn.getAttribute("data-sport-edit"));
+        if (!CACHE.plan[idx]) return;
+        CACHE.editingPlanIndex = idx;
+        renderSport("edit-line");
+      };
+    });
     root.querySelectorAll("[data-sport-remove]").forEach(btn => {
       btn.onclick = () => {
-        CACHE.plan.splice(Number(btn.getAttribute("data-sport-remove")), 1);
+        const idx = Number(btn.getAttribute("data-sport-remove"));
+        CACHE.plan.splice(idx, 1);
+        if (Number(CACHE.editingPlanIndex) === idx) CACHE.editingPlanIndex = null;
         savePlan();
         renderSport("remove");
       };
@@ -1462,6 +1568,8 @@
       bodyHeightCm: bodyHeight(),
     };
     requestWakeLock();
+    sportFeedback(txt("Seance lancee", "Workout started"), txt("Timer sport lance. Bon entrainement.", "Sport timer started. Good workout."), { persistNotification: true });
+    beep("work");
     startTicker();
     renderSport("timer-start");
   }
@@ -1495,7 +1603,7 @@
           distanceM: n(item.distanceM, 0),
           completedAt: new Date(Math.min(cursor, endedAt)).toISOString(),
         });
-        cursor += Math.max(0, n(item.restSeconds, 0)) * 1000;
+        cursor += Math.max(0, restSecondsForItem(item)) * 1000;
       }
     });
 
@@ -1508,10 +1616,7 @@
       moodAfter: "",
       perceivedEffort: null,
       notes: "",
-      estimatedKcal: Math.max(1, Math.round(doneSets.reduce((sum, set) => {
-        const item = CACHE.plan[set.itemIndex];
-        return sum + kcalEstimate(item?.metValue || 1, weightKg, set.durationSeconds, set.weightKg);
-      }, 0))),
+      estimatedKcal: Math.max(1, Math.round(sessionKcalEstimate(CACHE.plan, doneSets, weightKg, durationSeconds))),
       doneSets,
       plan: CACHE.plan.slice(),
     };
@@ -1544,18 +1649,46 @@
     if (CACHE.ticker) clearInterval(CACHE.ticker);
     CACHE.ticker = null;
   }
-  function beep() {
+  function sportToast(message, kind) {
+    try {
+      const text = String(message || "");
+      if (!text) return;
+      if (kind === "warn" && typeof window.toastWarn === "function") return window.toastWarn(text);
+      if (typeof window.toastOk === "function") return window.toastOk(text);
+      if (typeof window.toastInfo === "function") return window.toastInfo(text);
+    } catch (_) {}
+  }
+  function syncSportNotification(title, body, persist) {
+    try {
+      if (typeof window.tbSetNotificationBucket !== "function") return;
+      const row = persist ? [{
+        notificationKey: "sport:timer",
+        title,
+        body,
+        view: "sport",
+        source: "sport",
+      }] : [];
+      window.tbSetNotificationBucket("sport_timer", row);
+    } catch (_) {}
+  }
+  function sportFeedback(title, body, opts) {
+    const text = body || title;
+    CACHE.status = text || CACHE.status;
+    if (opts?.toast !== false) sportToast(text, opts?.kind);
+    syncSportNotification(title || txt("Sport", "Sport"), text || "", !!opts?.persistNotification);
+  }
+  function beep(kind) {
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       const ctx = new AC();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.frequency.value = 880;
-      gain.gain.value = 0.08;
+      osc.frequency.value = kind === "finish" ? 1046 : kind === "rest" ? 660 : 880;
+      gain.gain.value = kind === "finish" ? 0.11 : 0.08;
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      setTimeout(() => { try { osc.stop(); ctx.close(); } catch (_) {} }, 140);
+      setTimeout(() => { try { osc.stop(); ctx.close(); } catch (_) {} }, kind === "finish" ? 220 : 140);
     } catch (_) {}
   }
   function recordWorkStep(timer, step, durationOverride) {
@@ -1584,11 +1717,12 @@
     recordWorkStep(timer, step);
     timer.index += 1;
     const next = currentTimerStep();
-    beep();
+    beep(next?.kind === "rest" ? "rest" : "work");
     if (!next) {
       finishWorkout();
       return;
     }
+    sportFeedback(step.kind === "work" ? txt("Serie terminee", "Set complete") : txt("Repos termine", "Rest complete"), `${stepLabel(next)} - ${next.duration ? fmtSec(next.duration) : txt("a valider", "to validate")}`, { toast: step.kind === "rest", persistNotification: true });
     timer.stepStartedAt = Date.now();
     timer.stepEndAt = next.duration ? Date.now() + (next.duration * 1000) : null;
     renderSport("step");
@@ -1599,11 +1733,12 @@
     if (!timer || !step || step.kind !== "rest") return;
     timer.index += 1;
     const next = currentTimerStep();
-    beep();
+    beep("work");
     if (!next) {
       finishWorkout();
       return;
     }
+    sportFeedback(txt("Repos saute", "Rest skipped"), `${stepLabel(next)} - ${next.duration ? fmtSec(next.duration) : txt("a valider", "to validate")}`, { persistNotification: true });
     timer.stepStartedAt = Date.now();
     timer.stepEndAt = next.duration ? Date.now() + (next.duration * 1000) : null;
     renderSport("skip-rest");
@@ -1624,11 +1759,13 @@
     if (!timer.paused) {
       timer.paused = true;
       timer.pauseStartedAt = Date.now();
+      sportFeedback(txt("Timer en pause", "Timer paused"), txt("Seance en pause.", "Workout paused."), { persistNotification: true });
     } else {
       const delta = Date.now() - (timer.pauseStartedAt || Date.now());
       timer.paused = false;
       timer.pauseStartedAt = null;
       if (timer.stepEndAt) timer.stepEndAt += delta;
+      sportFeedback(txt("Timer repris", "Timer resumed"), txt("Seance reprise.", "Workout resumed."), { persistNotification: true });
     }
     renderSport("pause");
   }
@@ -1654,15 +1791,14 @@
       moodAfter: "",
       perceivedEffort: null,
       notes: "",
-      estimatedKcal: Math.max(1, Math.round(timer.doneSets.reduce((sum, set) => {
-        const item = CACHE.plan[set.itemIndex];
-        return sum + kcalEstimate(item?.metValue || 1, timer.bodyWeightKg, set.durationSeconds, set.weightKg);
-      }, 0))),
+      estimatedKcal: Math.max(1, Math.round(sessionKcalEstimate(CACHE.plan, timer.doneSets, timer.bodyWeightKg, durationSeconds))),
       doneSets: timer.doneSets.slice(),
       plan: CACHE.plan.slice(),
     };
     CACHE.timer = null;
     CACHE.pendingSummary = summary;
+    beep("finish");
+    sportFeedback(txt("Seance terminee", "Workout complete"), `${fmtSec(summary.durationSeconds)} - ${Math.round(n(summary.estimatedKcal, 0))} kcal`, { persistNotification: false });
     renderSport("finish");
     openFinishModal(summary);
   }

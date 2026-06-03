@@ -701,7 +701,7 @@ function renderSettings(){
           <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
             <div>
               <strong>Notifications mobile</strong>
-              <div class="muted" style="margin-top:4px;line-height:1.35;">Centre de notifications, rappels locaux quand l'app est ouverte, et préférences prêtes pour la future push native.</div>
+              <div class="muted" style="margin-top:4px;line-height:1.35;">Centre de notifications, rappels locaux natifs sur mobile, et préférences push.</div>
             </div>
             <button class="btn" id="tb-notif-test" type="button">Tester</button>
           </div>
@@ -719,7 +719,7 @@ function renderSettings(){
             </div>
             <button class="btn primary" id="tb-notif-save" type="button">Enregistrer notifications</button>
           </div>
-          <div class="muted" style="font-size:12px;line-height:1.35;margin-top:8px;">Pour une notification Android même app fermée, il faudra ajouter la brique native FCM. Ici on fiabilise déjà les préférences et les rappels visibles dans l'app.</div>
+          <div class="muted" style="font-size:12px;line-height:1.35;margin-top:8px;">Sur Android, active "Notification téléphone" puis teste: l'app utilise la notification locale native quand le plugin Capacitor est disponible.</div>
         </div>
       `;
 

@@ -218,6 +218,7 @@
       state.user.notificationPrefs = normalized;
     } catch(_) {}
     syncPreferenceDrivenNotifications();
+    try { if (normalized.localDevice) initLocalNotifications(); } catch(_) {}
     try { if (normalized.localDevice) initMobilePushNotifications(true); } catch(_) {}
     return normalized;
   }
@@ -245,6 +246,10 @@
 
   function pushPlugin(){
     try { return window.Capacitor?.Plugins?.PushNotifications || null; }
+    catch(_) { return null; }
+  }
+  function localNotificationPlugin(){
+    try { return window.Capacitor?.Plugins?.LocalNotifications || null; }
     catch(_) { return null; }
   }
 
@@ -335,8 +340,46 @@
     }
   }
 
+  async function initLocalNotifications(){
+    const LocalNotifications = localNotificationPlugin();
+    if (!isNativeApp() || !LocalNotifications) return false;
+    try {
+      if (LocalNotifications.createChannel) {
+        await LocalNotifications.createChannel({
+          id: 'travelbudget',
+          name: 'TravelBudget',
+          description: 'Notifications TravelBudget',
+          importance: 5,
+          visibility: 1,
+          sound: 'default',
+        });
+      }
+      if (!window.__tbLocalNotificationListenersReady && LocalNotifications.addListener) {
+        window.__tbLocalNotificationListenersReady = true;
+        LocalNotifications.addListener('localNotificationActionPerformed', (event) => {
+          try {
+            const data = event?.notification?.extra || {};
+            if (data.view && typeof window.showView === 'function') window.showView(data.view);
+          } catch(_) {}
+        });
+      }
+      return true;
+    } catch(e) {
+      console.warn('[TB][local notifications] init failed', e?.message || e);
+      return false;
+    }
+  }
+
   async function requestLocalNotificationPermission(){
     try {
+      const LocalNotifications = localNotificationPlugin();
+      if (isNativeApp() && LocalNotifications?.requestPermissions) {
+        await initLocalNotifications();
+        const current = LocalNotifications.checkPermissions ? await LocalNotifications.checkPermissions() : null;
+        if (current?.display === 'granted') return 'granted';
+        const permission = await LocalNotifications.requestPermissions();
+        return permission?.display === 'granted' ? 'granted' : (permission?.display || 'denied');
+      }
       if (typeof Notification === 'undefined') return 'unsupported';
       if (Notification.permission === 'granted') return 'granted';
       if (Notification.permission === 'denied') return 'denied';
@@ -350,6 +393,21 @@
     try {
       const permission = await requestLocalNotificationPermission();
       if (permission !== 'granted') return false;
+      const LocalNotifications = localNotificationPlugin();
+      if (isNativeApp() && LocalNotifications?.schedule) {
+        await LocalNotifications.schedule({
+          notifications: [{
+            id: Math.floor(Date.now() % 2147483647),
+            title: String(title || tr('Notification', 'Notification')),
+            body: String(body || ''),
+            schedule: { at: new Date(Date.now() + 250) },
+            sound: 'default',
+            channelId: 'travelbudget',
+            extra: Object.assign({}, data || {}),
+          }],
+        });
+        return true;
+      }
       const n = new Notification(String(title || tr('Notification', 'Notification')), {
         body: String(body || ''),
         tag: String(data?.tag || 'travelbudget'),
@@ -526,6 +584,7 @@
   window.tbRememberNotificationPrefs = rememberNotificationPrefs;
   window.tbSaveNotificationPrefs = saveNotificationPrefs;
   window.tbRequestLocalNotificationPermission = requestLocalNotificationPermission;
+  window.tbInitLocalNotifications = initLocalNotifications;
   window.tbTriggerDailyBudgetNotificationTest = triggerDailyBudgetNotificationTest;
   window.tbBuildMorningBudgetPushPayload = buildMorningBudgetPushPayload;
   window.tbSendMobilePushNotification = sendMobilePushNotification;
