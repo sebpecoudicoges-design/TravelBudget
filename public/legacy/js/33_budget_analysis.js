@@ -43,6 +43,30 @@
     return out;
   }
   function _fmtMoney(v, cur){ try { return fmtMoney(v, cur); } catch (_) { return `${(_safeNum(v)).toFixed(2)} ${cur || ''}`.trim(); } }
+  function _signedPct(current, target){
+    const c = _safeNum(current), t = _safeNum(target);
+    if (!t) return 0;
+    return ((c - t) / t) * 100;
+  }
+  function _analysisNotificationSummaryFromModel(model){
+    if (!model) return null;
+    const deltaBudgetAmount = _safeNum(model.spentToToday) - _safeNum(model.targetToToday);
+    const deltaBudgetPct = _signedPct(model.spentToToday, model.targetToToday);
+    const remainingToday = (typeof window.getDailyBudgetInfoForDate === 'function')
+      ? _safeNum(window.getDailyBudgetInfoForDate(_iso(new Date()))?.remaining)
+      : _safeNum(model.remaining);
+    return {
+      base: model.base,
+      remainingToday,
+      deltaBudgetAmount,
+      deltaBudgetPct,
+      spentToToday: _safeNum(model.spentToToday),
+      targetToToday: _safeNum(model.targetToToday),
+      projection: _safeNum(model.projection),
+      totalBudget: _safeNum(model.totalBudget),
+      filters: _loadFilters(),
+    };
+  }
   function _rangeInputs(){
     
     return {
@@ -2131,6 +2155,7 @@ function _openTxDrilldown(kind, key, model){
     try {
       model = _computeModel();
     lastAnalysisModel = model;
+    window.__tbLastBudgetAnalysisNotificationSummary = _analysisNotificationSummaryFromModel(model);
     } catch (err) {
       console.warn('[analysis] compute failed', err);
       const host = _el('analysis-summary');
@@ -2390,6 +2415,24 @@ function _openTxDrilldown(kind, key, model){
     _ensureEvents();
     await _loadReferenceCache();
     _renderAll();
+  };
+
+  window.tbGetBudgetAnalysisNotificationSummary = async function tbGetBudgetAnalysisNotificationSummary(){
+    try {
+      const travelSel = _el('analysis-travel');
+      if (!lastAnalysisModel || (travelSel && !travelSel.options.length)) {
+        await window.renderBudgetAnalysis();
+        if (window.__tbLastBudgetAnalysisNotificationSummary) return window.__tbLastBudgetAnalysisNotificationSummary;
+      }
+      await _loadReferenceCache();
+      const model = _computeModel();
+      lastAnalysisModel = model;
+      window.__tbLastBudgetAnalysisNotificationSummary = _analysisNotificationSummaryFromModel(model);
+      return window.__tbLastBudgetAnalysisNotificationSummary;
+    } catch (err) {
+      console.warn('[analysis] notification summary failed', err);
+      return window.__tbLastBudgetAnalysisNotificationSummary || _analysisNotificationSummaryFromModel(lastAnalysisModel);
+    }
   };
 
   try {

@@ -387,7 +387,7 @@ async function adminSendMobilePushTest() {
     const userId = userRes?.user?.id;
     if (!userId) throw new Error("Session admin introuvable.");
     const morning = (typeof window.tbBuildMorningBudgetPushPayload === "function")
-      ? window.tbBuildMorningBudgetPushPayload()
+      ? await window.tbBuildMorningBudgetPushPayload()
       : null;
     const title = (document.getElementById("admin-mobile-notification-title")?.value || morning?.title || "Budget du matin").trim();
     const body = (document.getElementById("admin-mobile-notification-body")?.value || morning?.body || "Point budget quotidien.").trim();

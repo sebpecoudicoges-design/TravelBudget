@@ -914,6 +914,9 @@ if (btnWhatsapp) {
             state.user.notificationPrefs = prefs;
             try { localStorage.setItem(TB_CONST?.LS_KEYS?.notification_prefs || "travelbudget_notification_prefs_v1", JSON.stringify(prefs)); } catch (_) {}
           }
+          if (prefs.dailyBudget && prefs.localDevice && typeof window.tbScheduleDailyBudgetLocalNotification === "function") {
+            await window.tbScheduleDailyBudgetLocalNotification();
+          }
           alert("Préférences notifications enregistrées.");
         });
       }
@@ -922,8 +925,10 @@ if (btnWhatsapp) {
       if (btnNotifTest) {
         btnNotifTest.onclick = () => safeCall("Tester notification", async () => {
           if (typeof window.tbRememberNotificationPrefs === "function") window.tbRememberNotificationPrefs(readNotificationForm());
-          if (typeof window.tbTriggerDailyBudgetNotificationTest === "function") await window.tbTriggerDailyBudgetNotificationTest();
-          alert("Notification test ajoutée au centre de notifications.");
+          const msg = (typeof window.tbTriggerDailyBudgetNotificationTest === "function") ? await window.tbTriggerDailyBudgetNotificationTest() : null;
+          alert(msg?.localDelivered
+            ? "Notification test envoyée au téléphone et ajoutée au centre de notifications."
+            : "Notification test ajoutée au centre de notifications. Active/autorise les notifications téléphone si rien n'apparaît sur mobile.");
         });
       }
 

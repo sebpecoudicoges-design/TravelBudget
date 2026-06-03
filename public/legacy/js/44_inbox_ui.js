@@ -387,7 +387,7 @@
     } catch(_) { return 'unsupported'; }
   }
 
-  async function sendLocalNotification(title, body, data){
+  async function sendLocalNotification(title, body, data, options){
     const prefs = getNotificationPrefs();
     if (!prefs.localDevice) return false;
     try {
@@ -397,10 +397,10 @@
       if (isNativeApp() && LocalNotifications?.schedule) {
         await LocalNotifications.schedule({
           notifications: [{
-            id: Math.floor(Date.now() % 2147483647),
+            id: Number(options?.id || Math.floor(Date.now() % 2147483647)),
             title: String(title || tr('Notification', 'Notification')),
             body: String(body || ''),
-            schedule: { at: new Date(Date.now() + 250) },
+            schedule: options?.schedule || { at: new Date(Date.now() + 250) },
             sound: 'default',
             channelId: 'travelbudget',
             extra: Object.assign({}, data || {}),
@@ -418,6 +418,33 @@
       };
       return true;
     } catch(_) { return false; }
+  }
+
+  function nextDailyBudgetNotificationDate(timeValue){
+    const clean = /^\d{2}:\d{2}$/.test(String(timeValue || '')) ? String(timeValue) : NOTIF_PREF_DEFAULTS.dailyBudgetTime;
+    const [hh, mm] = clean.split(':').map((v) => Number(v));
+    const next = new Date();
+    next.setHours(Number.isFinite(hh) ? hh : 20, Number.isFinite(mm) ? mm : 0, 0, 0);
+    if (next.getTime() <= Date.now() + 30000) next.setDate(next.getDate() + 1);
+    return next;
+  }
+
+  async function scheduleDailyBudgetLocalNotification(){
+    const prefs = getNotificationPrefs();
+    if (!prefs.dailyBudget || !prefs.localDevice) return false;
+    const LocalNotifications = localNotificationPlugin();
+    if (!isNativeApp() || !LocalNotifications?.schedule) return false;
+    const msg = await buildMorningBudgetPushPayload();
+    const at = nextDailyBudgetNotificationDate(prefs.dailyBudgetTime);
+    try {
+      if (LocalNotifications.cancel) await LocalNotifications.cancel({ notifications: [{ id: 1001 }] });
+    } catch(_) {}
+    return sendLocalNotification(
+      msg.title,
+      msg.body,
+      Object.assign({ tag: 'travelbudget-daily-budget', view: 'dashboard' }, msg.data || {}),
+      { id: 1001, schedule: { at, repeats: true, every: 'day', allowWhileIdle: true } }
+    );
   }
 
   function syncPreferenceDrivenNotifications(){
@@ -439,12 +466,14 @@
       }
     }
     window.tbSetNotificationBucket('daily-budget', rows);
+    try { if (prefs.dailyBudget && prefs.localDevice) scheduleDailyBudgetLocalNotification(); } catch(_) {}
   }
 
   async function triggerDailyBudgetNotificationTest(){
-    const msg = buildMorningBudgetPushPayload();
+    const msg = await buildMorningBudgetPushPayload();
     window.tbSetNotificationBucket('daily-budget-test', [{ notificationKey: msg.notification_key, title: msg.title, body: msg.body, view: 'dashboard' }]);
-    await sendLocalNotification(msg.title, msg.body, { tag: 'travelbudget-daily-test', view: 'dashboard' });
+    const delivered = await sendLocalNotification(msg.title, msg.body, Object.assign({ tag: 'travelbudget-daily-test', view: 'dashboard' }, msg.data || {}));
+    msg.localDelivered = delivered;
     return msg;
   }
 
@@ -492,48 +521,37 @@
     return amount;
   }
 
-  function buildMorningBudgetPushPayload(){
+  function signedPctText(value){
+    const n = Number(value) || 0;
+    const sign = n > 0 ? '+' : '';
+    return `${sign}${Math.round(n)}%`;
+  }
+
+  async function budgetAnalysisNotificationSummary(){
+    try {
+      if (typeof window.tbGetBudgetAnalysisNotificationSummary === 'function') {
+        const out = await window.tbGetBudgetAnalysisNotificationSummary();
+        if (out && String(out.base || '').trim()) return out;
+      }
+    } catch(_) {}
+    return window.__tbLastBudgetAnalysisNotificationSummary || null;
+  }
+
+  async function buildMorningBudgetPushPayload(){
     const today = todayISO();
     const info = (typeof window.getDailyBudgetInfoForDate === 'function')
       ? window.getDailyBudgetInfoForDate(today)
       : { remaining: 0, daily: window.state?.period?.dailyBudgetBase || 0, baseCurrency: window.state?.period?.baseCurrency || 'EUR' };
-    const currency = String(info?.baseCurrency || window.state?.period?.baseCurrency || 'EUR').toUpperCase();
-    const remainingToday = Number(info?.remaining || 0);
-
-    const start = String(window.state?.period?.start || window.state?.period?.start_date || today).slice(0, 10);
-    const endRaw = String(window.state?.period?.end || window.state?.period?.end_date || today).slice(0, 10);
-    const end = endRaw && endRaw < today ? endRaw : today;
-    const elapsedDays = Math.max(1, dateDiffDaysInclusive(start, end));
-
-    let spentToDate = 0;
-    for (const tx of (window.state?.transactions || [])) {
-      if (!txIsBudgetExpense(tx)) continue;
-      const d = txBudgetDate(tx);
-      if (!d || d < start || d > end) continue;
-      spentToDate += txAmountInBudgetBase(tx, d, currency);
-    }
-
-    let targetToDate = 0;
-    for (let i = 0; i < elapsedDays; i += 1) {
-      const d = new Date(`${start}T00:00:00`);
-      d.setDate(d.getDate() + i);
-      const ds = d.toISOString().slice(0, 10);
-      const dayInfo = (typeof window.getDailyBudgetInfoForDate === 'function')
-        ? window.getDailyBudgetInfoForDate(ds)
-        : { daily: window.state?.period?.dailyBudgetBase || 0 };
-      targetToDate += Number(dayInfo?.daily || 0);
-    }
-
-    const delta = spentToDate - targetToDate;
-    const absDelta = Math.abs(delta);
-    const pct = targetToDate > 0 ? (delta / targetToDate) * 100 : 0;
-    const statusFr = delta <= 0 ? 'sous objectif' : 'au-dessus';
-    const statusEn = delta <= 0 ? 'below target' : 'above target';
-    const sign = delta <= 0 ? '-' : '+';
+    const analysis = await budgetAnalysisNotificationSummary();
+    const currency = String(analysis?.base || info?.baseCurrency || window.state?.period?.baseCurrency || 'EUR').toUpperCase();
+    const remainingToday = Number(analysis?.remainingToday ?? info?.remaining ?? 0);
+    const delta = Number(analysis?.deltaBudgetAmount || 0);
+    const pct = Number(analysis?.deltaBudgetPct || 0);
+    const pctText = signedPctText(pct);
     const title = tr('Budget du matin', 'Morning budget');
     const body = tr(
-      `Reste aujourd'hui ${money(remainingToday, currency)}. Tu es ${statusFr} de ${sign}${money(absDelta, currency)} (${sign}${Math.abs(pct).toFixed(1)}%).`,
-      `Today left ${money(remainingToday, currency)}. You are ${statusEn} by ${sign}${money(absDelta, currency)} (${sign}${Math.abs(pct).toFixed(1)}%).`
+      `Reste aujourd'hui ${money(remainingToday, currency)}. Écart tendance vs budget app : ${pctText}, ${money(delta, currency)}.`,
+      `Today left ${money(remainingToday, currency)}. Trend gap vs app budget: ${pctText}, ${money(delta, currency)}.`
     );
     return {
       title,
@@ -546,8 +564,8 @@
         today,
         remaining_today: remainingToday,
         currency,
-        spent_to_date: spentToDate,
-        target_to_date: targetToDate,
+        spent_to_date: Number(analysis?.spentToToday || 0),
+        target_to_date: Number(analysis?.targetToToday || 0),
         delta,
         pct,
       },
@@ -587,6 +605,7 @@
   window.tbInitLocalNotifications = initLocalNotifications;
   window.tbTriggerDailyBudgetNotificationTest = triggerDailyBudgetNotificationTest;
   window.tbBuildMorningBudgetPushPayload = buildMorningBudgetPushPayload;
+  window.tbScheduleDailyBudgetLocalNotification = scheduleDailyBudgetLocalNotification;
   window.tbSendMobilePushNotification = sendMobilePushNotification;
   window.tbSyncPreferenceDrivenNotifications = syncPreferenceDrivenNotifications;
   window.tbInitMobilePushNotifications = initMobilePushNotifications;
