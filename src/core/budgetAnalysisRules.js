@@ -29,3 +29,49 @@ export function formatSignedMoney(value, currency = 'EUR') {
   const abs = Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return `${n > 0 ? '+' : n < 0 ? '-' : ''}${abs} ${String(currency || 'EUR').toUpperCase()}`;
 }
+
+export function normalizeAnalysisKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+export function sqlAnalyticFamilyToBucket(family) {
+  const f = normalizeAnalysisKey(family);
+  if (f === 'accommodation') return 'Logement';
+  if (f === 'food') return 'Repas';
+  if (f === 'transport') return 'Transport';
+  if (f === 'activities') return 'Activités';
+  return null;
+}
+
+export function mapToSourcedBucket({ categoryName = '', tx = null, mappingByTxId = {}, fallbackMapping = {} } = {}) {
+  const byTx = tx?.analyticMapping || (tx?.id ? mappingByTxId?.[String(tx.id)] : null) || null;
+  const key = normalizeAnalysisKey(categoryName);
+
+  if (byTx) {
+    const status = String(byTx.mappingStatus || byTx.mapping_status || '').trim().toLowerCase();
+    const family = byTx.analyticFamily || byTx.analytic_family || null;
+    const bucket = sqlAnalyticFamilyToBucket(family);
+    if (status === 'mapped' && bucket) return { mode: 'mapped', bucket, key, source: 'sql' };
+    if (status === 'excluded') return { mode: 'excluded', key, source: 'sql' };
+    if (status === 'unmapped') return { mode: 'unmapped', key, source: 'sql' };
+  }
+
+  const meta = fallbackMapping?.[key] || null;
+  if (!meta) return { mode: 'unmapped', key, source: 'fallback' };
+  const compareMode = String(meta.compare_mode || meta.mode || '').trim().toLowerCase();
+  const bucket = String(meta.sourced_bucket || meta.bucket || '').trim() || null;
+  if (compareMode === 'mapped' && bucket) return { mode: 'mapped', bucket, key, source: 'fallback' };
+  if (compareMode === 'excluded') return { mode: 'excluded', key, source: 'fallback' };
+  return { mode: 'unmapped', key, source: 'fallback' };
+}
+
+export function analysisBucketOrder({ fallbackMapping = {}, baseOrder = [] } = {}) {
+  const dynamic = Object.values(fallbackMapping || {})
+    .filter((meta) => String(meta?.compare_mode || meta?.mode || '').trim().toLowerCase() === 'mapped' && String(meta?.sourced_bucket || meta?.bucket || '').trim())
+    .map((meta) => String(meta.sourced_bucket || meta.bucket || '').trim());
+  return Array.from(new Set([...(Array.isArray(baseOrder) ? baseOrder : []), ...dynamic]));
+}

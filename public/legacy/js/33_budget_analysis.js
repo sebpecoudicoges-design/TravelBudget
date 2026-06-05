@@ -21,7 +21,9 @@
   function _safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
   function _norm(s){ return String(s || '').trim(); }
   function _upper(s){ return _norm(s).toUpperCase(); }
-    function _normKey(s){
+  function _normKey(s){
+    const core = window.TBCore?.budgetAnalysisRules;
+    if (core?.normalizeAnalysisKey) return core.normalizeAnalysisKey(s);
     return String(s || '')
       .trim()
       .toLowerCase()
@@ -411,6 +413,8 @@
 }
 
 function _normKey(s){
+  const core = window.TBCore?.budgetAnalysisRules;
+  if (core?.normalizeAnalysisKey) return core.normalizeAnalysisKey(s);
   return String(s || '')
     .trim()
     .toLowerCase()
@@ -419,6 +423,8 @@ function _normKey(s){
 }
 
 function _sqlAnalyticFamilyToBucket(family) {
+  const core = window.TBCore?.budgetAnalysisRules;
+  if (core?.sqlAnalyticFamilyToBucket) return core.sqlAnalyticFamilyToBucket(family);
   const f = _normKey(family);
   if (f === 'accommodation') return 'Logement';
   if (f === 'food') return 'Repas';
@@ -428,6 +434,15 @@ function _sqlAnalyticFamilyToBucket(family) {
 }
 
 function _mapToSourcedBucket(categoryName, tx) {
+  const core = window.TBCore?.budgetAnalysisRules;
+  if (core?.mapToSourcedBucket) {
+    return core.mapToSourcedBucket({
+      categoryName,
+      tx,
+      mappingByTxId: state?.analysisMappingByTxId || {},
+      fallbackMapping: TB_SOURCED_CATEGORY_MAPPING,
+    });
+  }
   const byTx = tx?.analyticMapping || (tx?.id ? state?.analysisMappingByTxId?.[String(tx.id)] : null) || null;
   if (byTx) {
     const status = String(byTx.mappingStatus || byTx.mapping_status || '').trim().toLowerCase();
@@ -449,6 +464,13 @@ function _mapToSourcedBucket(categoryName, tx) {
 }
 
 function _analysisBucketOrder(){
+  const core = window.TBCore?.budgetAnalysisRules;
+  if (core?.analysisBucketOrder) {
+    return core.analysisBucketOrder({
+      fallbackMapping: TB_SOURCED_CATEGORY_MAPPING,
+      baseOrder: TB_SOURCED_BUCKET_ORDER,
+    });
+  }
   const dynamic = Object.values(TB_SOURCED_CATEGORY_MAPPING || {})
     .filter((meta) => String(meta?.compare_mode || meta?.mode || '').trim().toLowerCase() === 'mapped' && String(meta?.sourced_bucket || meta?.bucket || '').trim())
     .map((meta) => String(meta.sourced_bucket || meta.bucket || '').trim());

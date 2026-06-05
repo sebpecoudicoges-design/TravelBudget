@@ -1,10 +1,15 @@
 import pkg from '../package.json';
 import './app/bridge.js';
 import { registerPwa } from './app/pwa.js';
+import * as budgetAnalysisRules from './core/budgetAnalysisRules.js';
 
 const TB_APP_VERSION = String(pkg?.version || 'dev');
 window.TB_VERSION = window.TB_VERSION || TB_APP_VERSION;
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
+window.TBCore = {
+  ...(window.TBCore || {}),
+  budgetAnalysisRules,
+};
 
 console.log(`TB BUILD ${window.TB_VERSION}`);
 registerPwa();
