@@ -13,6 +13,50 @@ const normalizePhone = (value: string) =>
     .replace(/[().-]/g, "")
     .trim();
 
+const shortId = (value: string) => {
+  const v = String(value || "");
+  return v.length > 8 ? `...${v.slice(-8)}` : v;
+};
+
+function webhookUrl(req: Request) {
+  return Deno.env.get("TWILIO_WEBHOOK_URL") || req.url;
+}
+
+function timingSafeEqual(a: string, b: string) {
+  const left = new TextEncoder().encode(a);
+  const right = new TextEncoder().encode(b);
+  if (left.length !== right.length) return false;
+  let diff = 0;
+  for (let i = 0; i < left.length; i += 1) diff |= left[i] ^ right[i];
+  return diff === 0;
+}
+
+async function twilioSignature(req: Request, form: FormData, authToken: string) {
+  const pairs = Array.from(form.entries())
+    .map(([key, value]) => [key, typeof value === "string" ? value : value.name] as const)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  const signed = pairs.reduce((acc, [key, value]) => `${acc}${key}${value}`, webhookUrl(req));
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(authToken),
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signed));
+  const bytes = new Uint8Array(signature);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+async function validateTwilioRequest(req: Request, form: FormData, authToken: string) {
+  const received = req.headers.get("x-twilio-signature") || req.headers.get("X-Twilio-Signature") || "";
+  if (!authToken || !received) return false;
+  const expected = await twilioSignature(req, form, authToken);
+  return timingSafeEqual(expected, received);
+}
+
 Deno.serve(async (req) => {
   try {
     if (req.method === "OPTIONS") return textResponse("OK");
@@ -32,6 +76,14 @@ Deno.serve(async (req) => {
     }
 
     const form = await req.formData();
+    const signatureValid = await validateTwilioRequest(req, form, twilioToken || "");
+    if (!signatureValid) {
+      console.warn("[whatsapp-inbox] invalid Twilio signature", {
+        hasToken: !!twilioToken,
+        hasSignature: !!(req.headers.get("x-twilio-signature") || req.headers.get("X-Twilio-Signature")),
+      });
+      return textResponse("Forbidden", 403);
+    }
 
     const fromRaw = String(form.get("From") || "");
     const from = normalizePhone(fromRaw);
@@ -42,7 +94,10 @@ Deno.serve(async (req) => {
     const numMedia = Number(form.get("NumMedia") || 0);
     const messageSid = String(form.get("MessageSid") || "");
     if (!messageSid) {
-      console.error("[whatsapp-inbox] missing MessageSid", { fromRaw, toRaw });
+      console.error("[whatsapp-inbox] missing MessageSid", {
+        hasFrom: !!fromRaw,
+        hasTo: !!toRaw,
+      });
       return textResponse("Missing MessageSid", 400);
     }
 
@@ -58,7 +113,9 @@ Deno.serve(async (req) => {
       .single();
 
     if (profileError || !profile) {
-      console.log("[whatsapp-inbox] unknown phone", { from });
+      console.log("[whatsapp-inbox] unknown phone", {
+        phoneSuffix: shortId(from),
+      });
 
       return textResponse("Unknown phone", 200);
     }
@@ -78,7 +135,7 @@ Deno.serve(async (req) => {
       console.log("[whatsapp-inbox] duplicate ignored", {
         id: existingItem.id,
         status: existingItem.status,
-        messageSid,
+        messageSid: shortId(messageSid),
       });
       return textResponse("OK");
     }
@@ -112,7 +169,6 @@ Deno.serve(async (req) => {
       });
 
       console.log("[whatsapp-inbox] media download", {
-  mediaUrl,
   mediaContentType,
   status: mediaResp.status,
   ok: mediaResp.ok,
@@ -139,8 +195,8 @@ if (mediaResp.ok) {
             upsert: true,
           });
         console.log("[whatsapp-inbox] storage upload", {
-  storagePath,
-  uploadError,
+  storagePath: storagePath ? `whatsapp/.../${shortId(messageSid)}` : null,
+  ok: !uploadError,
 });
 
         if (uploadError) {
@@ -180,8 +236,9 @@ if (mediaResp.ok) {
 
     console.log("[whatsapp-inbox] stored", {
       user_id: profile.id,
-      body,
-      storagePath,
+      bodyLength: body.length,
+      hasStorage: !!storagePath,
+      messageSid: shortId(messageSid),
     });
 
     return textResponse("OK");

@@ -107,6 +107,10 @@ boot().catch((err) => {
   console.error('[TB V9] Fatal boot error', err);
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;inset:0;background:#111;color:#fff;padding:16px;font-family:system-ui;z-index:99999;overflow:auto;';
-  el.innerHTML = `<h2>TravelBudget boot failed</h2><pre>${String(err?.stack || err)}</pre>`;
+  const title = document.createElement('h2');
+  title.textContent = 'TravelBudget boot failed';
+  const details = document.createElement('pre');
+  details.textContent = String(err?.stack || err);
+  el.append(title, details);
   document.body.appendChild(el);
 });
