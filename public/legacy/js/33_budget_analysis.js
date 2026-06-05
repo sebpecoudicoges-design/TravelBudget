@@ -2382,9 +2382,34 @@ function _openTxDrilldown(kind, key, model){
     }
   }
 
+  let ensureAnalysisDeferredPromise = null;
+  async function _ensureAnalysisDeferredData(){
+    try {
+      if (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) return;
+      const tid = String(state?.activeTravelId || state?.period?.travel_id || state?.period?.travelId || "").trim();
+      if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid) return;
+      if (ensureAnalysisDeferredPromise) {
+        await ensureAnalysisDeferredPromise;
+        return;
+      }
+      if (typeof refreshFromServer !== "function") return;
+      ensureAnalysisDeferredPromise = refreshFromServer({
+        includeDeferredData: true,
+        includeGovernance: true,
+        skipRender: true,
+      });
+      await ensureAnalysisDeferredPromise;
+    } catch (err) {
+      console.warn("[analysis] deferred mapping refresh failed", err?.message || err);
+    } finally {
+      ensureAnalysisDeferredPromise = null;
+    }
+  }
+
   window.renderBudgetAnalysis = async function renderBudgetAnalysis(){
     const travelSel = _el('analysis-travel');
     if (!travelSel) return;
+    await _ensureAnalysisDeferredData();
     const filters = _loadFilters();
     const travels = _travelList();
     if (!travels.length) {
@@ -2419,6 +2444,7 @@ function _openTxDrilldown(kind, key, model){
 
   window.tbGetBudgetAnalysisNotificationSummary = async function tbGetBudgetAnalysisNotificationSummary(){
     try {
+      await _ensureAnalysisDeferredData();
       const travelSel = _el('analysis-travel');
       if (!lastAnalysisModel || (travelSel && !travelSel.options.length)) {
         await window.renderBudgetAnalysis();
