@@ -265,6 +265,67 @@ export function buildTripTransactionRpcPayload(rawArgs = {}, { userId, today } =
   };
 }
 
+function baseTripExpenseTransactionArgs({ userId, walletId, label, amount, currency, date, budgetDateStart, budgetDateEnd, category, subcategory }) {
+  return {
+    p_user_id: userId ?? null,
+    p_wallet_id: walletId,
+    p_type: 'expense',
+    p_label: label,
+    p_amount: amount,
+    p_currency: currency,
+    p_date_start: date,
+    p_date_end: date,
+    p_budget_date_start: budgetDateStart || date,
+    p_budget_date_end: budgetDateEnd || budgetDateStart || date,
+    p_category: category,
+    p_subcategory: subcategory || null,
+    p_night_covered: false,
+    p_trip_expense_id: null,
+    p_trip_share_link_id: null,
+  };
+}
+
+export function buildTripFullShareTransactionArgs(args = {}) {
+  const outOfBudget = args.outOfBudget === true;
+  return {
+    ...baseTripExpenseTransactionArgs({
+      ...args,
+      label: `[Trip] ${String(args.label || '').trim()}`,
+      amount: args.amount,
+    }),
+    p_pay_now: true,
+    p_out_of_budget: outOfBudget,
+    p_affects_budget: !outOfBudget,
+  };
+}
+
+export function buildTripAdvanceTransactionArgs(args = {}) {
+  return {
+    ...baseTripExpenseTransactionArgs({
+      ...args,
+      label: `[Trip] Avance - ${String(args.label || '').trim()}`,
+      amount: args.amount,
+    }),
+    p_pay_now: true,
+    p_out_of_budget: true,
+    p_affects_budget: false,
+  };
+}
+
+export function buildTripPersonalShareTransactionArgs(args = {}) {
+  const outOfBudget = args.outOfBudget === true;
+  return {
+    ...baseTripExpenseTransactionArgs({
+      ...args,
+      label: `[Trip] ${String(args.label || '').trim()}`,
+      amount: args.myShare ?? args.amount,
+    }),
+    p_pay_now: false,
+    p_out_of_budget: outOfBudget,
+    p_affects_budget: !outOfBudget,
+  };
+}
+
 export function buildTripDeleteExpenseRpcArgs({ tripId, expenseId }) {
   const cleanTripId = String(tripId || '').trim();
   const cleanExpenseId = String(expenseId || '').trim();

@@ -3762,24 +3762,9 @@ try {
 
       if (isFullShare) {
         const { error: rpcErr } = await _rpcApplyTransactionV2(sb, {
-          p_user_id: uid,
-          p_wallet_id: walletId,
-          p_type: "expense",
-          p_label: `[Trip] ${label}`,
-          p_amount: amt,
-          p_currency: cur,
-          p_date_start: date,
-          p_date_end: date,
-          p_budget_date_start: budgetStart,
-          p_budget_date_end: budgetEnd,
-          p_category: cat,
-          p_subcategory: subcat,
-          p_pay_now: true,
-          p_out_of_budget: out,
-          p_night_covered: false,
-          p_affects_budget: !out,
-          p_trip_expense_id: null,
-          p_trip_share_link_id: null,
+          ...(window.Core?.tripRules?.buildTripFullShareTransactionArgs
+            ? window.Core.tripRules.buildTripFullShareTransactionArgs({ userId: uid, walletId, label, amount: amt, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, outOfBudget: out })
+            : { p_user_id: uid, p_wallet_id: walletId, p_type: "expense", p_label: `[Trip] ${label}`, p_amount: amt, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: true, p_out_of_budget: out, p_night_covered: false, p_affects_budget: !out, p_trip_expense_id: null, p_trip_share_link_id: null }),
           ..._rpcFxSnapshotArgs(date, cur)
         });
         if (rpcErr) throw rpcErr;
@@ -3824,26 +3809,12 @@ try {
           toastWarn("[Trip] Impossible de déterminer ta part pour le budget (participant 'moi' manquant).");
         }
 
-        const advanceLabel = `[Trip] Avance - ${label}`;
+        const advanceArgs = window.Core?.tripRules?.buildTripAdvanceTransactionArgs
+          ? window.Core.tripRules.buildTripAdvanceTransactionArgs({ userId: uid, walletId, label, amount: amt, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat })
+          : { p_user_id: uid, p_wallet_id: walletId, p_type: "expense", p_label: `[Trip] Avance - ${label}`, p_amount: amt, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: true, p_out_of_budget: true, p_night_covered: false, p_affects_budget: false, p_trip_expense_id: null, p_trip_share_link_id: null };
+        const advanceLabel = advanceArgs.p_label;
         const { error: rpcErrA } = await _rpcApplyTransactionV2(sb, {
-          p_user_id: uid,
-          p_wallet_id: walletId,
-          p_type: "expense",
-          p_label: advanceLabel,
-          p_amount: amt,
-          p_currency: cur,
-          p_date_start: date,
-          p_date_end: date,
-          p_budget_date_start: budgetStart,
-          p_budget_date_end: budgetEnd,
-          p_category: cat,
-          p_subcategory: subcat,
-          p_pay_now: true,
-          p_out_of_budget: true,
-          p_night_covered: false,
-          p_affects_budget: false,
-          p_trip_expense_id: null,
-          p_trip_share_link_id: null,
+          ...advanceArgs,
           ..._rpcFxSnapshotArgs(date, cur)
         });
         if (rpcErrA) throw rpcErrA;
@@ -3885,26 +3856,12 @@ try {
         }
 
         if (me && myIdx >= 0 && budgetFlow.hasMyShare) {
-          const consLabel = `[Trip] ${label}`;
+          const shareArgs = window.Core?.tripRules?.buildTripPersonalShareTransactionArgs
+            ? window.Core.tripRules.buildTripPersonalShareTransactionArgs({ userId: uid, walletId, label, myShare, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, outOfBudget: out })
+            : { p_user_id: uid, p_wallet_id: walletId, p_type: "expense", p_label: `[Trip] ${label}`, p_amount: myShare, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: false, p_out_of_budget: out, p_night_covered: false, p_affects_budget: !out, p_trip_expense_id: null, p_trip_share_link_id: null };
+          const consLabel = shareArgs.p_label;
           const { error: rpcErrB } = await _rpcApplyTransactionV2(sb, {
-            p_user_id: uid,
-            p_wallet_id: walletId,
-            p_type: "expense",
-            p_label: consLabel,
-            p_amount: myShare,
-            p_currency: cur,
-            p_date_start: date,
-            p_date_end: date,
-            p_budget_date_start: budgetStart,
-            p_budget_date_end: budgetEnd,
-            p_category: cat,
-            p_subcategory: subcat,
-            p_pay_now: false,
-            p_out_of_budget: out,
-            p_night_covered: false,
-            p_affects_budget: !out,
-            p_trip_expense_id: null,
-            p_trip_share_link_id: null,
+            ...shareArgs,
             ..._rpcFxSnapshotArgs(date, cur)
           });
           if (rpcErrB) throw rpcErrB;

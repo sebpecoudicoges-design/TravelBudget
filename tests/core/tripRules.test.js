@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildTripDeleteExpenseRpcArgs,
+  buildTripAdvanceTransactionArgs,
   buildTripExpenseRpcPayload,
+  buildTripFullShareTransactionArgs,
+  buildTripPersonalShareTransactionArgs,
   buildTripSettlementRpcArgs,
   buildTripTransactionRpcPayload,
   canUseTripWalletForExpense,
@@ -214,6 +217,46 @@ describe('trip rules core', () => {
       p_date_end: '2026-06-02',
       p_budget_date_start: '2026-06-01',
       p_budget_date_end: '2026-06-02',
+    });
+  });
+
+  it('builds specialized Trip expense transaction args', () => {
+    const base = {
+      userId: 'u1',
+      walletId: 'w1',
+      label: 'Dinner',
+      amount: 100,
+      myShare: 40,
+      currency: 'EUR',
+      date: '2026-06-03',
+      budgetDateStart: '2026-06-01',
+      budgetDateEnd: '2026-06-30',
+      category: 'Food',
+      subcategory: 'Restaurant',
+    };
+
+    expect(buildTripFullShareTransactionArgs({ ...base, outOfBudget: false })).toMatchObject({
+      p_label: '[Trip] Dinner',
+      p_amount: 100,
+      p_pay_now: true,
+      p_out_of_budget: false,
+      p_affects_budget: true,
+    });
+
+    expect(buildTripAdvanceTransactionArgs(base)).toMatchObject({
+      p_label: '[Trip] Avance - Dinner',
+      p_amount: 100,
+      p_pay_now: true,
+      p_out_of_budget: true,
+      p_affects_budget: false,
+    });
+
+    expect(buildTripPersonalShareTransactionArgs({ ...base, outOfBudget: true })).toMatchObject({
+      p_label: '[Trip] Dinner',
+      p_amount: 40,
+      p_pay_now: false,
+      p_out_of_budget: true,
+      p_affects_budget: false,
     });
   });
 
