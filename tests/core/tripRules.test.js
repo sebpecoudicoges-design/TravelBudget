@@ -7,6 +7,7 @@ import {
   canUseTripWalletForExpense,
   computeTripAnalysis,
   computeTripSplitParts,
+  decideTripExpenseBudgetFlow,
   matchesTripHistoryFilter,
   normalizeTripHistoryFilters,
   normalizeTripExpenseInput,
@@ -22,6 +23,37 @@ describe('trip rules core', () => {
     expect(shouldAutoCashflowOnly({ linked: true, isPaymentTotal: true, total: 100, myShare: 100 })).toBe(false);
     expect(shouldAutoCashflowOnly({ linked: true, isPaymentTotal: false, total: 100, myShare: 10 })).toBe(false);
     expect(shouldAutoCashflowOnly({ linked: false, isPaymentTotal: true, total: 100, myShare: 10 })).toBe(false);
+  });
+
+  it('decides Trip budget flow for paid-by-me expenses', () => {
+    const members = [{ id: 'me', isMe: true }, { id: 'b' }];
+
+    expect(decideTripExpenseBudgetFlow({ amount: 100, members, shares: [100, 0] })).toMatchObject({
+      mode: 'single',
+      myIdx: 0,
+      myShare: 100,
+      hasMyShare: true,
+      isFullShare: true,
+      missingMe: false,
+    });
+
+    expect(decideTripExpenseBudgetFlow({ amount: 100, members, shares: [40, 60] })).toMatchObject({
+      mode: 'advance_and_share',
+      myIdx: 0,
+      myShare: 40,
+      hasMyShare: true,
+      isFullShare: false,
+      missingMe: false,
+    });
+
+    expect(decideTripExpenseBudgetFlow({ amount: 100, members: [{ id: 'b' }], shares: [100] })).toMatchObject({
+      mode: 'advance_and_share',
+      meId: null,
+      myIdx: -1,
+      hasMyShare: false,
+      isFullShare: false,
+      missingMe: true,
+    });
   });
 
   it('enforces 1:1 link', () => {

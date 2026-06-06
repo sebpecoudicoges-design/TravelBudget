@@ -3748,9 +3748,17 @@ try {
 
       const targetPeriodId = _findPeriodIdForDate(date);
       const me = members.find(m => m.isMe) || null;
-      const myIdx = me ? memberIds.indexOf(me.id) : -1;
-      const myShare = (myIdx >= 0) ? Number(parts[myIdx] ?? 0) : NaN;
-      const isFullShare = isFinite(myShare) && Math.abs(myShare - amt) < 0.005;
+      const budgetFlow = window.Core?.tripRules?.decideTripExpenseBudgetFlow
+        ? window.Core.tripRules.decideTripExpenseBudgetFlow({ amount: amt, members, shares: parts })
+        : {
+          myIdx: me ? memberIds.indexOf(me.id) : -1,
+          myShare: me ? Number(parts[memberIds.indexOf(me.id)] ?? 0) : NaN,
+          hasMyShare: me ? isFinite(Number(parts[memberIds.indexOf(me.id)] ?? 0)) && Number(parts[memberIds.indexOf(me.id)] ?? 0) > 0 : false,
+          isFullShare: me ? isFinite(Number(parts[memberIds.indexOf(me.id)] ?? 0)) && Math.abs(Number(parts[memberIds.indexOf(me.id)] ?? 0) - amt) < 0.005 : false,
+        };
+      const myIdx = budgetFlow.myIdx;
+      const myShare = Number(budgetFlow.myShare);
+      const isFullShare = !!budgetFlow.isFullShare;
 
       if (isFullShare) {
         const { error: rpcErr } = await _rpcApplyTransactionV2(sb, {
@@ -3876,7 +3884,7 @@ try {
           await _linkExpenseToTransaction(ex.id, txA.id);
         }
 
-        if (me && myIdx >= 0 && isFinite(myShare) && myShare > 0) {
+        if (me && myIdx >= 0 && budgetFlow.hasMyShare) {
           const consLabel = `[Trip] ${label}`;
           const { error: rpcErrB } = await _rpcApplyTransactionV2(sb, {
             p_user_id: uid,
@@ -4292,14 +4300,22 @@ try {
       const targetPeriodId = _findPeriodIdForDate(date);
 
       const me = members.find(m => m.isMe) || null;
-      const myIdx = me ? memberIds.indexOf(me.id) : -1;
-      const myShare = (myIdx >= 0) ? Number(parts[myIdx] ?? 0) : NaN;
+      const budgetFlow = window.Core?.tripRules?.decideTripExpenseBudgetFlow
+        ? window.Core.tripRules.decideTripExpenseBudgetFlow({ amount: amt, members, shares: parts })
+        : {
+          myIdx: me ? memberIds.indexOf(me.id) : -1,
+          myShare: me ? Number(parts[memberIds.indexOf(me.id)] ?? 0) : NaN,
+          hasMyShare: me ? isFinite(Number(parts[memberIds.indexOf(me.id)] ?? 0)) && Number(parts[memberIds.indexOf(me.id)] ?? 0) > 0 : false,
+          isFullShare: me ? isFinite(Number(parts[memberIds.indexOf(me.id)] ?? 0)) && Math.abs(Number(parts[memberIds.indexOf(me.id)] ?? 0) - amt) < 0.005 : false,
+        };
+      const myIdx = budgetFlow.myIdx;
+      const myShare = Number(budgetFlow.myShare);
 
       // If I effectively pay 100% (solo / my share == total), we can record a single Budget expense.
       // Otherwise:
       //  - record a cashflow "advance" (pay_now=true, out_of_budget=true) to decrement the wallet
       //  - record my consumption share (pay_now=false) so budget/allocation reflects my real cost
-      const isFullShare = isFinite(myShare) && Math.abs(myShare - amt) < 0.005;
+      const isFullShare = !!budgetFlow.isFullShare;
 
       if (isFullShare) {
         const { error: rpcErr } = await _rpcApplyTransactionV2(sb, {
@@ -4456,7 +4472,7 @@ try {
         }
 
         // B) My consumption share (budget/allocation, but pay_now=false so wallet isn't decremented twice)
-        if (me && myIdx >= 0 && isFinite(myShare) && myShare > 0) {
+        if (me && myIdx >= 0 && budgetFlow.hasMyShare) {
           const existing = await _getShareBudgetLink(ex.id, me.id);
           if (!existing) {
             const consLabel = `[Trip] ${label}`;

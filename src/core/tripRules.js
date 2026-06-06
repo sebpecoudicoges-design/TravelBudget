@@ -17,6 +17,25 @@ export function shouldAutoCashflowOnly({ linked, isPaymentTotal, total, myShare 
   return Math.abs(myShare - total) > 1e-9;
 }
 
+export function decideTripExpenseBudgetFlow({ amount, members = [], shares = [], tolerance = 0.005 }) {
+  const total = Number(amount);
+  const me = (members || []).find((member) => !!member?.isMe) || null;
+  const myIdx = me ? members.findIndex((member) => String(member?.id || '') === String(me.id || '')) : -1;
+  const myShare = myIdx >= 0 ? Number(shares?.[myIdx] ?? 0) : NaN;
+  const hasMyShare = Number.isFinite(myShare) && myShare > 0;
+  const isFullShare = Number.isFinite(total) && Number.isFinite(myShare) && Math.abs(myShare - total) < tolerance;
+
+  return {
+    mode: isFullShare ? 'single' : 'advance_and_share',
+    meId: me?.id || null,
+    myIdx,
+    myShare,
+    hasMyShare,
+    isFullShare,
+    missingMe: !me,
+  };
+}
+
 /**
  * Enforce 1 transaction = 1 trip expense (and 1 expense = 1 transaction).
  * Returns {ok:true} or {ok:false, reason}.
