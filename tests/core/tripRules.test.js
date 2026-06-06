@@ -6,6 +6,8 @@ import {
   canUseTripWalletForExpense,
   computeTripAnalysis,
   computeTripSplitParts,
+  matchesTripHistoryFilter,
+  normalizeTripHistoryFilters,
   normalizeTripExpenseInput,
   shouldAutoCashflowOnly,
   validateOneToOneLink,
@@ -220,5 +222,50 @@ describe('trip rules core', () => {
       { id: 'me', name: 'Moi', isMe: true, paid: 100, owed: 55, net: 45, expenseCount: 1 },
       { id: 'b', name: 'Ben', isMe: false, paid: 10, owed: 55, net: -45, expenseCount: 1 },
     ]);
+  });
+
+  it('normalizes and matches Trip history filters', () => {
+    const membersById = new Map([
+      ['me', { id: 'me', name: 'Moi' }],
+      ['b', { id: 'b', name: 'Ben' }],
+    ]);
+    const expense = {
+      id: 'e1',
+      date: '2026-06-03',
+      label: 'Dinner ramen',
+      amount: 42,
+      currency: 'EUR',
+      paidByMemberId: 'me',
+    };
+    const shares = [
+      { expenseId: 'e1', memberId: 'me', shareAmount: 21 },
+      { expenseId: 'e1', memberId: 'b', shareAmount: 21 },
+    ];
+
+    expect(normalizeTripHistoryFilters({ amountMin: 40, q: ' ben ' })).toMatchObject({
+      amountMin: '40',
+      q: ' ben ',
+    });
+    expect(matchesTripHistoryFilter({
+      expense,
+      category: 'Food',
+      membersById,
+      sharesByExpense: shares,
+      filters: { participant: 'b', q: 'ben', dateFrom: '2026-06-01', amountMax: '50' },
+    })).toBe(true);
+    expect(matchesTripHistoryFilter({
+      expense,
+      category: 'Food',
+      membersById,
+      sharesByExpense: shares,
+      filters: { category: 'Transport' },
+    })).toBe(false);
+    expect(matchesTripHistoryFilter({
+      expense,
+      category: 'Food',
+      membersById,
+      sharesByExpense: shares,
+      filters: { amountMin: '50' },
+    })).toBe(false);
   });
 });

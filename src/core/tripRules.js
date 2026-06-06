@@ -318,6 +318,69 @@ export function computeTripAnalysis({ expenses = [], members = [], shares = [], 
   return { pivot, categories, participants };
 }
 
+export function normalizeTripHistoryFilters(filters = {}) {
+  return {
+    category: String(filters?.category || ''),
+    payer: String(filters?.payer || ''),
+    participant: String(filters?.participant || ''),
+    dateFrom: String(filters?.dateFrom || ''),
+    dateTo: String(filters?.dateTo || ''),
+    amountMin: String(filters?.amountMin || ''),
+    amountMax: String(filters?.amountMax || ''),
+    q: String(filters?.q || ''),
+  };
+}
+
+export function matchesTripHistoryFilter({ expense, category, membersById, sharesByExpense, filters }) {
+  const normalized = normalizeTripHistoryFilters(filters);
+  const payerId = String(expense?.paidByMemberId || '');
+  const shareRows = Array.isArray(sharesByExpense)
+    ? sharesByExpense
+    : (sharesByExpense?.get?.(expense?.id) || []);
+
+  if (normalized.category && String(category || '') !== normalized.category) return false;
+  if (normalized.payer && payerId !== normalized.payer) return false;
+
+  if (normalized.participant) {
+    const wanted = String(normalized.participant);
+    const hasPositiveShare = shareRows.some((row) =>
+      String(row?.memberId || '') === wanted &&
+      Number(row?.shareAmount || 0) > 0.004
+    );
+    if (!hasPositiveShare && payerId !== wanted) return false;
+  }
+
+  const date = String(expense?.date || '');
+  if (normalized.dateFrom && date && date < normalized.dateFrom) return false;
+  if (normalized.dateTo && date && date > normalized.dateTo) return false;
+
+  const amount = Number(expense?.amount || 0);
+  const amountMin = Number(normalized.amountMin);
+  const amountMax = Number(normalized.amountMax);
+  if (normalized.amountMin !== '' && Number.isFinite(amountMin) && amount < amountMin) return false;
+  if (normalized.amountMax !== '' && Number.isFinite(amountMax) && amount > amountMax) return false;
+
+  const q = normalized.q.trim().toLowerCase();
+  if (q) {
+    const getMember = (id) => membersById?.get?.(String(id)) || null;
+    const payerName = String(getMember(payerId)?.name || '').toLowerCase();
+    const participantNames = shareRows
+      .map((row) => String(getMember(row?.memberId)?.name || '').toLowerCase())
+      .join(' ');
+    const haystack = [
+      expense?.label || '',
+      category || '',
+      expense?.currency || '',
+      payerName,
+      participantNames,
+      String(expense?.amount || ''),
+    ].join(' ').toLowerCase();
+    if (!haystack.includes(q)) return false;
+  }
+
+  return true;
+}
+
 export function canUseTripWalletForExpense({ wallet, userId, travelId, tripId, currency }) {
   if (!wallet) return { ok: false, reason: 'Wallet invalide.' };
   if (userId && String(wallet.user_id || wallet.userId || '') !== String(userId)) {

@@ -703,6 +703,8 @@ async function _copyToClipboard(text) {
 
 
   function _tripHistoryFilterState() {
+    const core = window.Core?.tripRules;
+    if (core?.normalizeTripHistoryFilters) return core.normalizeTripHistoryFilters(tripState.historyFilters || {});
     return {
       category: String(tripState.historyFilters?.category || ''),
       payer: String(tripState.historyFilters?.payer || ''),
@@ -717,12 +719,23 @@ async function _copyToClipboard(text) {
 
   function _tripHistoryMatch(ex, txMap, membersById, shareMap, filters) {
     const category = _tripAnalysisCategoryKey(ex, txMap);
+    const rows = shareMap.get(ex?.id) || [];
+    const core = window.Core?.tripRules;
+    if (core?.matchesTripHistoryFilter) {
+      return core.matchesTripHistoryFilter({
+        expense: ex,
+        category,
+        membersById,
+        sharesByExpense: rows,
+        filters,
+      });
+    }
+
     const payerId = String(ex?.paidByMemberId || '');
     const q = String(filters?.q || '').trim().toLowerCase();
     if (filters?.category && category !== filters.category) return false;
     if (filters?.payer && payerId !== String(filters.payer)) return false;
     if (filters?.participant) {
-  const rows = shareMap.get(ex?.id) || [];
   const wanted = String(filters.participant);
 
   const hasPositiveShare = rows.some((row) =>
