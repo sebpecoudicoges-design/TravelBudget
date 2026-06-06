@@ -25,8 +25,9 @@
     { key: "walking", fr: "Marche rapide", en: "Brisk walk", met: 3.8, mode: "time", equipment: "outdoor" },
     { key: "hiking", fr: "Randonnee", en: "Hiking", met: 6.0, mode: "time", equipment: "outdoor" },
     { key: "rowing", fr: "Rameur", en: "Rowing", met: 7.0, mode: "time", equipment: "machine" },
+    { key: "jump_rope", fr: "Corde a sauter", en: "Jump rope", met: 12.0, mode: "time", equipment: "rope" },
     { key: "basketball", fr: "Basket", en: "Basketball", met: 6.5, mode: "time", equipment: "outdoor" },
-    { key: "hiit", fr: "HIIT", en: "HIIT", met: 8.0, mode: "time", equipment: "mixed" },
+    { key: "hiit", fr: "HIIT", en: "HIIT", met: 7.8, mode: "time", equipment: "mixed" },
     { key: "yoga", fr: "Yoga", en: "Yoga", met: 2.5, mode: "time", equipment: "mat" },
     { key: "mobility", fr: "Mobilite", en: "Mobility", met: 2.0, mode: "time", equipment: "mat" },
   ];
@@ -38,6 +39,7 @@
     ["barbell", "Barre", "Barbell"],
     ["band", "Elastique", "Resistance band"],
     ["kettlebell", "Kettlebell", "Kettlebell"],
+    ["rope", "Corde a sauter", "Jump rope"],
     ["outdoor", "Exterieur", "Outdoor"],
     ["pool", "Piscine", "Pool"],
     ["wall", "Mur / voie", "Wall / route"],
@@ -81,6 +83,8 @@
     { key: "mountain_climber", goal: "cardio", equipment: "bodyweight", activityKey: "hiit", fr: "Mountain climbers", en: "Mountain climbers", mode: "time", seconds: 40, sets: 6, rest: 20 },
     { key: "burpee", goal: "cardio", equipment: "bodyweight", activityKey: "hiit", fr: "Burpees", en: "Burpees", mode: "reps", reps: 8, sets: 5, rest: 45 },
     { key: "jumping_jack", goal: "cardio", equipment: "bodyweight", activityKey: "hiit", fr: "Jumping jacks", en: "Jumping jacks", mode: "time", seconds: 45, sets: 5, rest: 20 },
+    { key: "jump_rope", goal: "cardio", equipment: "rope", activityKey: "jump_rope", fr: "Corde a sauter", en: "Jump rope", mode: "time", seconds: 60, sets: 10, rest: 30 },
+    { key: "jump_rope_easy", goal: "cardio", equipment: "rope", activityKey: "jump_rope", fr: "Corde a sauter facile", en: "Easy jump rope", mode: "time", seconds: 45, sets: 8, rest: 45 },
     { key: "band_row", goal: "strength", equipment: "band", activityKey: "resistance_band_strength", fr: "Tirage elastique", en: "Band row", mode: "reps", reps: 15, sets: 3, rest: 60 },
     { key: "band_curl", goal: "strength", equipment: "band", activityKey: "resistance_band_strength", fr: "Curl elastique", en: "Band curl", mode: "reps", reps: 15, sets: 3, rest: 45 },
     { key: "band_triceps", goal: "strength", equipment: "band", activityKey: "resistance_band_strength", fr: "Extension triceps elastique", en: "Band triceps extension", mode: "reps", reps: 15, sets: 3, rest: 45 },
@@ -185,6 +189,7 @@
     builderEquipment: "all",
     builderDuration: 35,
     builderLevel: "regular",
+    exerciseSearch: "",
     globalRestSeconds: loadGlobalRest(),
     editingPlanIndex: null,
   };
@@ -519,6 +524,25 @@
       .slice()
       .sort((a, b) => exercisePriority(a, g) - exercisePriority(b, g));
   }
+  function normalizedSearch(s) {
+    return String(s || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+  function visibleExercises(equipment, query) {
+    const eq = String(equipment || "all");
+    const q = normalizedSearch(query);
+    return EXERCISE_LIBRARY
+      .filter(ex => (eq === "all" || ex.equipment === eq))
+      .filter(ex => {
+        if (!q) return true;
+        return normalizedSearch(`${ex.fr} ${ex.en} ${labelEquipment(ex.equipment)}`).includes(q);
+      })
+      .slice()
+      .sort((a, b) => exerciseLabel(a).localeCompare(exerciseLabel(b), lang() === "en" ? "en" : "fr", { sensitivity: "base" }));
+  }
   function exercisePriority(ex, goal) {
     if (goal === "cardio") {
       if (ex.activityKey === "running") return 0;
@@ -549,7 +573,7 @@
     return [15, 25, 35, 45, 60, 75].map(v => `<option value="${v}" ${Number(selected) === v ? "selected" : ""}>${v} min</option>`).join("");
   }
   function libraryOptions(goal, equipment, selected) {
-    const rows = filteredExercises(goal, equipment);
+    const rows = visibleExercises(equipment, CACHE.exerciseSearch || "");
     return `<option value="">${esc(txt("Choisir un exercice", "Choose an exercise"))}</option>` + rows.map(ex => `<option value="${esc(ex.key)}" ${ex.key === selected ? "selected" : ""}>${esc(exerciseLabel(ex))}</option>`).join("");
   }
   function simpleExerciseOptions(goal, equipment, selected) {
@@ -595,6 +619,21 @@
     setVal("#sport-intensity", "moderate");
     syncLoadField(root);
     syncSimpleFields(root);
+  }
+  function refreshExercisePicker(root) {
+    if (!root) return;
+    const select = root.querySelector("#sport-library-ex");
+    if (!select) return;
+    const selected = select.value;
+    select.innerHTML = libraryOptions("free", CACHE.builderEquipment || "all", selected);
+    if (selected && EXERCISE_LIBRARY.some(ex => ex.key === selected)) select.value = selected;
+    if (!select.value) {
+      const first = visibleExercises(CACHE.builderEquipment || "all", CACHE.exerciseSearch || "")[0];
+      if (first) {
+        select.value = first.key;
+        applyExerciseToForm(root, first.key);
+      }
+    }
   }
   function simplePlanItemFromForm(root) {
     const goal = CACHE.builderGoal || "strength";
@@ -1022,17 +1061,15 @@
     const bmi = bmiValue(kg, height);
     const planSec = totalPlanSeconds(CACHE.plan);
     const kcal = totalPlanKcal(CACHE.plan, kg);
-    const goal = CACHE.builderGoal || "strength";
     const selectedEquipment = CACHE.builderEquipment || "all";
-    const duration = CACHE.builderDuration || 35;
-    const level = CACHE.builderLevel || "regular";
+    const search = CACHE.exerciseSearch || "";
     const editIdx = Number.isInteger(CACHE.editingPlanIndex) ? CACHE.editingPlanIndex : null;
     const editing = editIdx !== null ? CACHE.plan[editIdx] : null;
-    const baseExercise = filteredExercises(goal, selectedEquipment)[0] || filteredExercises(goal, "all")[0] || EXERCISE_LIBRARY[0];
+    const rows = visibleExercises(selectedEquipment, search);
+    const baseExercise = rows[0] || visibleExercises(selectedEquipment, "")[0] || EXERCISE_LIBRARY[0];
     const manualActivity = editing?.activityKey || baseExercise?.activityKey || "strength";
     const manualEquipment = editing?.equipment || baseExercise?.equipment || "bodyweight";
-    const manualMode = editing?.mode || baseExercise?.mode || defaultFormat(goal);
-    const manualIntensity = editing?.intensity || "moderate";
+    const manualMode = editing?.mode || baseExercise?.mode || "reps";
     const manualName = editing?.exerciseName || exerciseLabel(baseExercise) || "Push-up";
     const manualRest = editing ? restSecondsForItem(editing) : n(CACHE.globalRestSeconds, 60);
     const manualReps = n(editing?.targetReps, baseExercise?.reps || 10);
@@ -1064,39 +1101,36 @@
           <div class="tb-sport-quick-row" aria-label="${esc(txt("Raccourcis sport", "Sport shortcuts"))}">
             <button class="tb-sport-quick-btn" type="button" data-sport-quick="brisk_walk">${esc(txt("Marche", "Walk"))}</button>
             <button class="tb-sport-quick-btn" type="button" data-sport-quick="easy_run">${esc(txt("Course", "Run"))}</button>
+            <button class="tb-sport-quick-btn" type="button" data-sport-quick="jump_rope">${esc(txt("Corde", "Rope"))}</button>
             <button class="tb-sport-quick-btn" type="button" data-sport-quick="pushup">${esc(txt("Muscu", "Strength"))}</button>
             <button class="tb-sport-quick-btn" type="button" data-sport-quick="cycling_easy">${esc(txt("Velo", "Bike"))}</button>
-            <button class="tb-sport-quick-btn" type="button" data-sport-quick="hips">${esc(txt("Mobilite", "Mobility"))}</button>
           </div>
           <div class="tb-sport-fields">
-            <div class="tb-sport-field"><label>${esc(txt("Objectif", "Goal"))}</label><select id="sport-goal">${goalOptions(goal)}</select></div>
             <div class="tb-sport-field"><label>${esc(txt("Materiel", "Equipment"))}</label><select id="sport-library-equipment">${libraryEquipmentOptions(selectedEquipment)}</select></div>
-            <div class="tb-sport-field"><label>${esc(txt("Bibliotheque", "Library"))}</label><select id="sport-library-ex">${libraryOptions(goal, selectedEquipment, matchedExercise?.key || baseExercise?.key || "")}</select></div>
-            <div class="tb-sport-field"><label>${esc(txt("Nom exercice", "Exercise name"))}</label><input id="sport-ex-name" value="${esc(manualName)}"></div>
-            <div class="tb-sport-field"><label>${esc(txt("Type d'effort", "Effort type"))}</label><select id="sport-activity">${activityOptions(manualActivity)}</select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Recherche", "Search"))}</label><input id="sport-ex-search" type="search" value="${esc(search)}" placeholder="${esc(txt("Ecris le nom", "Type a name"))}"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Exercice", "Exercise"))}</label><select id="sport-library-ex">${libraryOptions("free", selectedEquipment, matchedExercise?.key || baseExercise?.key || "")}</select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Nom", "Name"))}</label><input id="sport-ex-name" value="${esc(manualName)}"></div>
+            <input id="sport-activity" type="hidden" value="${esc(manualActivity)}">
+            <input id="sport-equipment" type="hidden" value="${esc(manualEquipment)}">
             <div class="tb-sport-field"><label>${esc(txt("Mode", "Mode"))}</label><select id="sport-mode"><option value="reps" ${manualMode === "reps" ? "selected" : ""}>${esc(txt("Repetitions", "Reps"))}</option><option value="time" ${manualMode === "time" ? "selected" : ""}>${esc(txt("Temps", "Time"))}</option></select></div>
             <div class="tb-sport-field" id="sport-reps-wrap"><label>${esc(txt("Repetitions", "Reps"))}</label><input id="sport-reps" type="number" min="1" value="${esc(String(manualReps || 10))}"></div>
             <div class="tb-sport-field" id="sport-seconds-wrap"><label>${esc(txt("Temps exercice sec", "Exercise time sec"))}</label><input id="sport-seconds" type="number" min="1" value="${esc(String(manualSeconds || 45))}"></div>
             <div class="tb-sport-field"><label>${esc(txt("Series", "Sets"))}</label><input id="sport-sets" type="number" min="1" value="${esc(String(manualSets || 3))}"></div>
             <div class="tb-sport-field"><label>${esc(txt("Repos apres serie sec", "Rest after set sec"))}</label><input id="sport-rest" type="number" min="0" value="${esc(String(manualRest || 60))}"></div>
-            <div class="tb-sport-field"><label>${esc(txt("Intensite", "Intensity"))}</label><select id="sport-intensity">${intensityOptions(manualIntensity)}</select></div>
+            <input id="sport-intensity" type="hidden" value="${esc(editing?.intensity || "moderate")}">
             <div class="tb-sport-field"><label>${esc(txt("Charge kg optionnelle", "Optional load kg"))}</label><input id="sport-load" type="number" step="0.5" value="${esc(String(n(editing?.weightKg, 0)))}"></div>
             <div class="tb-sport-field"><label>${esc(txt("Distance m optionnelle", "Optional distance m"))}</label><input id="sport-distance" type="number" value="${esc(String(n(editing?.distanceM, baseExercise?.distanceM || 0)))}"></div>
-            <div class="tb-sport-field"><label>${esc(txt("Duree cible", "Target duration"))}</label><select id="sport-builder-duration">${durationOptions(duration)}</select></div>
-            <div class="tb-sport-field"><label>${esc(txt("Niveau", "Level"))}</label><select id="sport-builder-level">${levelOptions(level)}</select></div>
             <div class="tb-sport-field"><label>${esc(txt("Repos par defaut sec", "Default rest sec"))}</label><input id="sport-global-rest" type="number" min="0" value="${esc(String(n(CACHE.globalRestSeconds, 60)))}"></div>
           </div>
           <div class="tb-sport-actions" style="margin-top:12px;">
             <button class="btn primary" type="button" id="sport-add-item">${editing ? esc(txt("Mettre a jour", "Update")) : `+ ${esc(txt("Ajouter l'exercice", "Add exercise"))}`}</button>
             ${editing ? `<button class="btn" type="button" id="sport-cancel-edit">${esc(txt("Annuler", "Cancel"))}</button>` : ""}
-            <button class="btn" type="button" id="sport-generate-plan">${esc(txt("Generer seance", "Generate workout"))}</button>
             <button class="btn" type="button" id="sport-clear">${esc(txt("Vider", "Clear"))}</button>
           </div>
         </div>
         <div class="muted" style="margin-top:8px;">${esc(txt("Les kcal sont indicatives : poids, duree effective, type d'effort, intensite et charge externe si elle est portee. Un elastique ne s'ajoute pas a ton poids.", "Calories are indicative: weight, effective duration, effort type, intensity and external load when carried. Resistance bands are not added to body weight."))}</div>
         <div class="tb-sport-actions" style="margin-top:12px;">
           <button class="btn primary" type="button" id="sport-mark-done-builder" ${CACHE.plan.length ? "" : "disabled"}>${esc(txt("Marquer la seance faite", "Mark workout done"))}</button>
-          <button class="btn" type="button" id="sport-sample">${esc(txt("Exemple push-up", "Push-up sample"))}</button>
         </div>
         <div class="muted" style="margin-top:10px;">${esc(txt("Estimation", "Estimate"))}: ${fmtSec(planSec)} - ${Math.round(kcal)} kcal (${esc(txt("indicatif", "indicative"))})</div>
         <div class="tb-sport-plan">${renderPlan()}</div>
@@ -1276,6 +1310,7 @@
           </div>
           ${s.mood_after ? `<div class="muted" style="margin-top:8px;">${esc(txt("Apres", "After"))}: ${esc(s.mood_after)}</div>` : ""}
           <div class="tb-sport-actions" style="margin-top:10px;">
+            <button class="btn primary" type="button" data-sport-repeat-session="${esc(String(s.id || ""))}">${esc(txt("Refaire", "Repeat"))}</button>
             <button class="btn" type="button" data-sport-edit-date="${esc(String(s.id || ""))}" data-sport-date="${esc(String(s.started_at || "").slice(0, 10))}">${esc(txt("Modifier date", "Edit date"))}</button>
             <button class="btn danger" type="button" data-sport-delete-session="${esc(String(s.id || ""))}">${esc(txt("Supprimer", "Delete"))}</button>
           </div>
@@ -1354,8 +1389,13 @@
     };
     const libraryEquipment = root.querySelector("#sport-library-equipment");
     if (libraryEquipment) libraryEquipment.onchange = () => {
-      CACHE.builderEquipment = normalizedEquipmentForGoal(CACHE.builderGoal || "strength", libraryEquipment.value || "all");
+      CACHE.builderEquipment = libraryEquipment.value || "all";
       renderSport("library-equipment");
+    };
+    const exerciseSearch = root.querySelector("#sport-ex-search");
+    if (exerciseSearch) exerciseSearch.oninput = () => {
+      CACHE.exerciseSearch = exerciseSearch.value || "";
+      refreshExercisePicker(root);
     };
     const simpleAdd = root.querySelector("#sport-simple-add");
     if (simpleAdd) simpleAdd.onclick = () => {
@@ -1463,8 +1503,8 @@
         const key = String(btn.getAttribute("data-sport-quick") || "pushup");
         const ex = EXERCISE_LIBRARY.find(row => row.key === key);
         if (!ex) return;
-        CACHE.builderGoal = ex.goal === "basketball" ? "basketball" : (ex.goal || CACHE.builderGoal || "strength");
         CACHE.builderEquipment = ex.equipment || CACHE.builderEquipment || "all";
+        CACHE.exerciseSearch = exerciseLabel(ex);
         renderSport("quick-fill");
         setTimeout(() => {
           const nextRoot = document.getElementById("sport-root");
@@ -1524,6 +1564,9 @@
     root.querySelectorAll("[data-sport-delete-session]").forEach(btn => {
       btn.onclick = () => deleteSportSession(btn.getAttribute("data-sport-delete-session"));
     });
+    root.querySelectorAll("[data-sport-repeat-session]").forEach(btn => {
+      btn.onclick = () => repeatSportSession(btn.getAttribute("data-sport-repeat-session"));
+    });
     root.querySelectorAll("[data-sport-edit-date]").forEach(btn => {
       btn.onclick = () => editSportSessionDate(btn.getAttribute("data-sport-edit-date"), btn.getAttribute("data-sport-date"));
     });
@@ -1548,6 +1591,46 @@
     load.title = isBand
       ? txt("L'elastique ajoute une resistance, pas un poids porte.", "Resistance bands add tension, not carried load.")
       : "";
+  }
+
+  function planFromStoredSession(sessionId) {
+    const id = String(sessionId || "");
+    const local = (CACHE.localSessions || []).find(s =>
+      String(s.localId || s.id || "") === id || String(s.remoteId || "") === id
+    );
+    if (Array.isArray(local?.plan) && local.plan.length) return local.plan.map(item => Object.assign({}, item));
+
+    const sessionItems = (CACHE.items || [])
+      .filter(item => String(item.session_id || "") === id)
+      .slice()
+      .sort((a, b) => n(a.sort_order, 0) - n(b.sort_order, 0));
+    return sessionItems.map(item => makePlanItem(item.activity_key || "strength", {
+      exerciseName: item.exercise_name || labelActivity(item.activity_key || "strength"),
+      equipment: item.equipment || catalogItem(item.activity_key || "strength").equipment,
+      mode: item.mode || "time",
+      targetReps: item.target_reps || 0,
+      targetSeconds: item.target_seconds || 0,
+      sets: item.planned_sets || 1,
+      restSeconds: item.rest_seconds || CACHE.globalRestSeconds || 60,
+      distanceM: item.distance_m || 0,
+      weightKg: 0,
+      metValue: item.met_value || null,
+      notes: item.notes || "",
+    }));
+  }
+
+  function repeatSportSession(sessionId) {
+    const plan = planFromStoredSession(sessionId);
+    if (!plan.length) {
+      sportFeedback(txt("Seance introuvable", "Workout not found"), txt("Impossible de reconstruire cette seance.", "Unable to rebuild this workout."), { kind: "warn" });
+      return;
+    }
+    CACHE.plan = plan;
+    CACHE.editingPlanIndex = null;
+    CACHE.exerciseSearch = "";
+    savePlan();
+    sportFeedback(txt("Seance prete", "Workout ready"), txt("La seance est rechargee. Tu peux la relancer ou l'ajuster.", "Workout reloaded. You can start or adjust it."), { toast: true });
+    renderSport("repeat-session");
   }
 
   function startTimer() {
