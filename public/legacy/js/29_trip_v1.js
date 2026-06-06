@@ -892,36 +892,37 @@ async function _rpcApplyTransactionV2(sb, rawArgs) {
 
   // Normalize dates to ISO yyyy-mm-dd (function expects date)
   const dateStart = args.p_date_start || args.date_start || _isoToday();
-  const dateEnd = args.p_date_end || args.date_end || dateStart;
   const cur = args.p_currency || args.currency || null;
 
   // Build full payload with explicit NULLs for optional args.
   // This matches our current DB overloads and avoids PostgREST schema-cache mismatch.
-  const payload = {
-    p_wallet_id: args.p_wallet_id ?? null,
-    p_type: args.p_type ?? null,
-    p_label: args.p_label ?? null,
-    p_amount: args.p_amount ?? null,
-    p_currency: cur,
-    p_date_start: dateStart,
-    p_date_end: dateEnd,
-    p_budget_date_start: (args.p_budget_date_start === undefined) ? dateStart : args.p_budget_date_start,
-    p_budget_date_end: (args.p_budget_date_end === undefined) ? dateEnd : args.p_budget_date_end,
-    p_category: (args.p_category === undefined) ? null : args.p_category,
-    p_subcategory: (args.p_subcategory === undefined) ? null : args.p_subcategory,
-    p_pay_now: !!args.p_pay_now,
-    p_out_of_budget: !!args.p_out_of_budget,
-    p_night_covered: !!args.p_night_covered,
-    p_affects_budget: !!args.p_affects_budget,
-    p_trip_expense_id: (args.p_trip_expense_id === undefined) ? null : args.p_trip_expense_id,
-    p_trip_share_link_id: (args.p_trip_share_link_id === undefined) ? null : args.p_trip_share_link_id,
-    p_fx_rate_snapshot: (args.p_fx_rate_snapshot === undefined) ? null : args.p_fx_rate_snapshot,
-    p_fx_source_snapshot: (args.p_fx_source_snapshot === undefined) ? null : args.p_fx_source_snapshot,
-    p_fx_snapshot_at: (args.p_fx_snapshot_at === undefined) ? null : args.p_fx_snapshot_at,
-    p_fx_base_currency_snapshot: (args.p_fx_base_currency_snapshot === undefined) ? null : args.p_fx_base_currency_snapshot,
-    p_fx_tx_currency_snapshot: (args.p_fx_tx_currency_snapshot === undefined) ? null : args.p_fx_tx_currency_snapshot,
-    p_user_id: args.p_user_id ?? uid,
-  };
+  const payload = window.Core?.tripRules?.buildTripTransactionRpcPayload
+    ? window.Core.tripRules.buildTripTransactionRpcPayload(args, { userId: uid, today: dateStart })
+    : {
+      p_wallet_id: args.p_wallet_id ?? null,
+      p_type: args.p_type ?? null,
+      p_label: args.p_label ?? null,
+      p_amount: args.p_amount ?? null,
+      p_currency: cur,
+      p_date_start: dateStart,
+      p_date_end: args.p_date_end || args.date_end || dateStart,
+      p_budget_date_start: (args.p_budget_date_start === undefined) ? dateStart : args.p_budget_date_start,
+      p_budget_date_end: (args.p_budget_date_end === undefined) ? (args.p_date_end || args.date_end || dateStart) : args.p_budget_date_end,
+      p_category: (args.p_category === undefined) ? null : args.p_category,
+      p_subcategory: (args.p_subcategory === undefined) ? null : args.p_subcategory,
+      p_pay_now: !!args.p_pay_now,
+      p_out_of_budget: !!args.p_out_of_budget,
+      p_night_covered: !!args.p_night_covered,
+      p_affects_budget: !!args.p_affects_budget,
+      p_trip_expense_id: (args.p_trip_expense_id === undefined) ? null : args.p_trip_expense_id,
+      p_trip_share_link_id: (args.p_trip_share_link_id === undefined) ? null : args.p_trip_share_link_id,
+      p_fx_rate_snapshot: (args.p_fx_rate_snapshot === undefined) ? null : args.p_fx_rate_snapshot,
+      p_fx_source_snapshot: (args.p_fx_source_snapshot === undefined) ? null : args.p_fx_source_snapshot,
+      p_fx_snapshot_at: (args.p_fx_snapshot_at === undefined) ? null : args.p_fx_snapshot_at,
+      p_fx_base_currency_snapshot: (args.p_fx_base_currency_snapshot === undefined) ? null : args.p_fx_base_currency_snapshot,
+      p_fx_tx_currency_snapshot: (args.p_fx_tx_currency_snapshot === undefined) ? null : args.p_fx_tx_currency_snapshot,
+      p_user_id: args.p_user_id ?? uid,
+    };
 
   // Convenience: if caller didn't provide FX snapshot, derive from helpers
   if (typeof _rpcFxSnapshotArgs === "function") {

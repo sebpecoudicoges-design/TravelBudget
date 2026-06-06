@@ -3,6 +3,7 @@ import {
   buildTripDeleteExpenseRpcArgs,
   buildTripExpenseRpcPayload,
   buildTripSettlementRpcArgs,
+  buildTripTransactionRpcPayload,
   canUseTripWalletForExpense,
   computeTripAnalysis,
   computeTripSplitParts,
@@ -136,6 +137,51 @@ describe('trip rules core', () => {
         { member_id: 'b', share_amount: 10 },
       ],
       wallet_tx: { enabled: false },
+    });
+  });
+
+  it('builds full Trip transaction RPC payload with explicit defaults', () => {
+    expect(buildTripTransactionRpcPayload({
+      p_wallet_id: 'w1',
+      p_type: 'expense',
+      p_label: '[Trip] Dinner',
+      p_amount: 42,
+      p_currency: 'EUR',
+      p_date_start: '2026-06-03',
+      p_pay_now: true,
+      p_out_of_budget: false,
+      p_affects_budget: true,
+    }, { userId: 'u1', today: '2026-06-06' })).toMatchObject({
+      p_wallet_id: 'w1',
+      p_type: 'expense',
+      p_label: '[Trip] Dinner',
+      p_amount: 42,
+      p_currency: 'EUR',
+      p_date_start: '2026-06-03',
+      p_date_end: '2026-06-03',
+      p_budget_date_start: '2026-06-03',
+      p_budget_date_end: '2026-06-03',
+      p_category: null,
+      p_subcategory: null,
+      p_pay_now: true,
+      p_out_of_budget: false,
+      p_night_covered: false,
+      p_affects_budget: true,
+      p_trip_expense_id: null,
+      p_trip_share_link_id: null,
+      p_user_id: 'u1',
+    });
+
+    expect(buildTripTransactionRpcPayload({
+      currency: 'AUD',
+      date_start: '2026-06-01',
+      date_end: '2026-06-02',
+    }, { today: '2026-06-06' })).toMatchObject({
+      p_currency: 'AUD',
+      p_date_start: '2026-06-01',
+      p_date_end: '2026-06-02',
+      p_budget_date_start: '2026-06-01',
+      p_budget_date_end: '2026-06-02',
     });
   });
 
