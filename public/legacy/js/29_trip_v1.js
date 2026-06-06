@@ -3097,18 +3097,20 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
 
 
 async function _createSettlementEventOnly({ tripId, currency, amount, fromId, toId }) {
-  const cur = String(currency || "").trim().toUpperCase();
-  const amt = _round2(Number(amount) || 0);
-  if (!tripId || !fromId || !toId || !cur || !(amt > 0)) throw new Error("Règlement invalide.");
+  const core = window.Core?.tripRules;
+  const rpcArgs = core?.buildTripSettlementRpcArgs
+    ? core.buildTripSettlementRpcArgs({ tripId, currency, amount, fromMemberId: fromId, toMemberId: toId })
+    : {
+        p_trip_id: tripId,
+        p_currency: String(currency || "").trim().toUpperCase(),
+        p_amount: _round2(Number(amount) || 0),
+        p_from_member_id: fromId,
+        p_to_member_id: toId,
+      };
+  if (!rpcArgs.p_trip_id || !rpcArgs.p_from_member_id || !rpcArgs.p_to_member_id || !rpcArgs.p_currency || !(Number(rpcArgs.p_amount) > 0)) throw new Error("Règlement invalide.");
 
   if (sb?.rpc && TB_CONST?.RPCS?.trip_create_settlement_v1) {
-    const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_create_settlement_v1, {
-      p_trip_id: tripId,
-      p_currency: cur,
-      p_amount: amt,
-      p_from_member_id: fromId,
-      p_to_member_id: toId,
-    });
+    const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_create_settlement_v1, rpcArgs);
     if (!error) return data;
     console.warn("[Trip] trip_create_settlement_v1 fallback", error);
   }
@@ -3117,11 +3119,11 @@ async function _createSettlementEventOnly({ tripId, currency, amount, fromId, to
   const eventId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(16).slice(2);
   const { error: seInsErr } = await sb.from(TB_CONST.TABLES.trip_settlement_events).insert([{
     id: eventId,
-    trip_id: tripId,
-    currency: cur,
-    amount: amt,
-    from_member_id: fromId,
-    to_member_id: toId,
+    trip_id: rpcArgs.p_trip_id,
+    currency: rpcArgs.p_currency,
+    amount: rpcArgs.p_amount,
+    from_member_id: rpcArgs.p_from_member_id,
+    to_member_id: rpcArgs.p_to_member_id,
     created_by: uid,
   }]);
   if (seInsErr) throw seInsErr;
@@ -4803,10 +4805,10 @@ try {
     if (!tripId || !expenseId) throw new Error("Suppression invalide.");
 
     if (sb?.rpc && TB_CONST?.RPCS?.trip_delete_expense_v1) {
-      const { error } = await sb.rpc(TB_CONST.RPCS.trip_delete_expense_v1, {
-        p_trip_id: tripId,
-        p_expense_id: expenseId,
-      });
+      const args = window.Core?.tripRules?.buildTripDeleteExpenseRpcArgs
+        ? window.Core.tripRules.buildTripDeleteExpenseRpcArgs({ tripId, expenseId })
+        : { p_trip_id: tripId, p_expense_id: expenseId };
+      const { error } = await sb.rpc(TB_CONST.RPCS.trip_delete_expense_v1, args);
       if (!error) return;
       console.warn("[Trip] trip_delete_expense_v1 fallback", error);
     }

@@ -206,3 +206,55 @@ export function buildTripExpenseRpcPayload({ input, members = [], shares = [], w
     wallet_tx: { enabled: !!walletTxEnabled },
   };
 }
+
+export function buildTripDeleteExpenseRpcArgs({ tripId, expenseId }) {
+  const cleanTripId = String(tripId || '').trim();
+  const cleanExpenseId = String(expenseId || '').trim();
+  if (!cleanTripId || !cleanExpenseId) {
+    throw new Error('Suppression Trip invalide.');
+  }
+  return {
+    p_trip_id: cleanTripId,
+    p_expense_id: cleanExpenseId,
+  };
+}
+
+export function buildTripSettlementRpcArgs({ tripId, currency, amount, fromMemberId, toMemberId }) {
+  const cleanTripId = String(tripId || '').trim();
+  const cleanFrom = String(fromMemberId || '').trim();
+  const cleanTo = String(toMemberId || '').trim();
+  const cur = normalizeTripCurrency(currency, '');
+  const amt = Math.round((Number(amount) || 0) * 100) / 100;
+
+  if (!cleanTripId || !cleanFrom || !cleanTo || !cur || !(amt > 0)) {
+    throw new Error('Reglement Trip invalide.');
+  }
+  if (cleanFrom === cleanTo) {
+    throw new Error('Les membres du reglement doivent etre differents.');
+  }
+
+  return {
+    p_trip_id: cleanTripId,
+    p_currency: cur,
+    p_amount: amt,
+    p_from_member_id: cleanFrom,
+    p_to_member_id: cleanTo,
+  };
+}
+
+export function canUseTripWalletForExpense({ wallet, userId, tripId, currency }) {
+  if (!wallet) return { ok: false, reason: 'Wallet invalide.' };
+  if (userId && String(wallet.user_id || wallet.userId || '') !== String(userId)) {
+    return { ok: false, reason: 'Wallet non proprietaire.' };
+  }
+  const walletTripId = String(wallet.travel_id || wallet.travelId || '');
+  if (tripId && walletTripId && walletTripId !== String(tripId)) {
+    return { ok: false, reason: 'Wallet hors voyage.' };
+  }
+  const walletCurrency = normalizeTripCurrency(wallet.currency, currency || 'EUR');
+  const expenseCurrency = normalizeTripCurrency(currency, walletCurrency);
+  if (walletCurrency !== expenseCurrency) {
+    return { ok: false, reason: `Devise wallet (${wallet.currency}) differente de la depense (${expenseCurrency}).` };
+  }
+  return { ok: true };
+}

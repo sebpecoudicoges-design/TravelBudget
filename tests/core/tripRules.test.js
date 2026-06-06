@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildTripDeleteExpenseRpcArgs,
   buildTripExpenseRpcPayload,
+  buildTripSettlementRpcArgs,
+  canUseTripWalletForExpense,
   computeTripSplitParts,
   normalizeTripExpenseInput,
   shouldAutoCashflowOnly,
@@ -121,5 +124,53 @@ describe('trip rules core', () => {
       ],
       wallet_tx: { enabled: false },
     });
+  });
+
+  it('builds Trip delete RPC args safely', () => {
+    expect(buildTripDeleteExpenseRpcArgs({ tripId: 't1', expenseId: 'e1' })).toEqual({
+      p_trip_id: 't1',
+      p_expense_id: 'e1',
+    });
+    expect(() => buildTripDeleteExpenseRpcArgs({ tripId: '', expenseId: 'e1' })).toThrow(/Suppression/);
+  });
+
+  it('builds Trip settlement RPC args with normalized currency and rounded amount', () => {
+    expect(buildTripSettlementRpcArgs({
+      tripId: 't1',
+      currency: 'eur',
+      amount: 12.345,
+      fromMemberId: 'a',
+      toMemberId: 'b',
+    })).toEqual({
+      p_trip_id: 't1',
+      p_currency: 'EUR',
+      p_amount: 12.35,
+      p_from_member_id: 'a',
+      p_to_member_id: 'b',
+    });
+    expect(() => buildTripSettlementRpcArgs({ tripId: 't1', currency: 'EUR', amount: 1, fromMemberId: 'a', toMemberId: 'a' })).toThrow(/differents/);
+  });
+
+  it('validates Trip wallet ownership, trip and currency', () => {
+    expect(canUseTripWalletForExpense({
+      wallet: { id: 'w1', user_id: 'u1', travel_id: 't1', currency: 'AUD' },
+      userId: 'u1',
+      tripId: 't1',
+      currency: 'AUD',
+    }).ok).toBe(true);
+
+    expect(canUseTripWalletForExpense({
+      wallet: { id: 'w1', user_id: 'u1', travel_id: 'other', currency: 'AUD' },
+      userId: 'u1',
+      tripId: 't1',
+      currency: 'AUD',
+    }).ok).toBe(false);
+
+    expect(canUseTripWalletForExpense({
+      wallet: { id: 'w1', user_id: 'u1', travel_id: 't1', currency: 'EUR' },
+      userId: 'u1',
+      tripId: 't1',
+      currency: 'AUD',
+    }).ok).toBe(false);
   });
 });
