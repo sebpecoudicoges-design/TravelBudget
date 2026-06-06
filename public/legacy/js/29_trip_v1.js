@@ -4802,10 +4802,14 @@ try {
     const tripId = tripState.activeTripId;
     if (!tripId || !expenseId) throw new Error("Suppression invalide.");
 
-    // Temporary front-first path:
-    // remote SQL trip_delete_expense_v1 currently deletes budget links before deleting
-    // the linked budget transactions, which can leave orphan budget tx visible in UI.
-    // Keep the legacy flow until the SQL RPC is patched and revalidated.
+    if (sb?.rpc && TB_CONST?.RPCS?.trip_delete_expense_v1) {
+      const { error } = await sb.rpc(TB_CONST.RPCS.trip_delete_expense_v1, {
+        p_trip_id: tripId,
+        p_expense_id: expenseId,
+      });
+      if (!error) return;
+      console.warn("[Trip] trip_delete_expense_v1 fallback", error);
+    }
 
     // Fallback legacy si la RPC n'est pas disponible côté DB
     const ex = tripState.expenses.find(x => x.id === expenseId);
