@@ -4,6 +4,7 @@ import {
   buildTripExpenseRpcPayload,
   buildTripSettlementRpcArgs,
   canUseTripWalletForExpense,
+  computeTripAnalysis,
   computeTripSplitParts,
   normalizeTripExpenseInput,
   shouldAutoCashflowOnly,
@@ -92,6 +93,16 @@ describe('trip rules core', () => {
       payer: members[0],
       wallet: { id: 'w1', currency: 'EUR' },
     }).ok).toBe(false);
+
+    expect(validateTripExpenseMutation({
+      input,
+      members,
+      shares: [5, 5],
+      payer: members[0],
+      wallet: { id: 'w1', user_id: 'other', travel_id: 'travel1', currency: 'THB' },
+      userId: 'u1',
+      travelId: 'travel1',
+    }).ok).toBe(false);
   });
 
   it('builds Trip expense RPC payload with shares', () => {
@@ -155,7 +166,14 @@ describe('trip rules core', () => {
     expect(canUseTripWalletForExpense({
       wallet: { id: 'w1', user_id: 'u1', travel_id: 't1', currency: 'AUD' },
       userId: 'u1',
-      tripId: 't1',
+      travelId: 't1',
+      currency: 'AUD',
+    }).ok).toBe(true);
+
+    expect(canUseTripWalletForExpense({
+      wallet: { id: 'w1', user_id: 'u1', currency: 'AUD' },
+      userId: 'u1',
+      travelId: 't1',
       currency: 'AUD',
     }).ok).toBe(true);
 
@@ -172,5 +190,35 @@ describe('trip rules core', () => {
       tripId: 't1',
       currency: 'AUD',
     }).ok).toBe(false);
+  });
+
+  it('computes Trip analysis totals by category and participant', () => {
+    const data = computeTripAnalysis({
+      pivot: 'EUR',
+      members: [
+        { id: 'me', name: 'Moi', isMe: true },
+        { id: 'b', name: 'Ben' },
+      ],
+      expenses: [
+        { id: 'e1', amount: 100, currency: 'EUR', paidByMemberId: 'me', category: 'Food' },
+        { id: 'e2', amount: 1000, currency: 'JPY', paidByMemberId: 'b', category: 'Transport' },
+      ],
+      shares: [
+        { expenseId: 'e1', memberId: 'me', shareAmount: 50 },
+        { expenseId: 'e1', memberId: 'b', shareAmount: 50 },
+        { expenseId: 'e2', memberId: 'me', shareAmount: 500 },
+        { expenseId: 'e2', memberId: 'b', shareAmount: 500 },
+      ],
+      convertAmount: (amount, currency) => currency === 'JPY' ? Number(amount) / 100 : Number(amount),
+    });
+
+    expect(data.categories).toEqual([
+      { name: 'Food', amount: 100 },
+      { name: 'Transport', amount: 10 },
+    ]);
+    expect(data.participants).toEqual([
+      { id: 'me', name: 'Moi', isMe: true, paid: 100, owed: 55, net: 45, expenseCount: 1 },
+      { id: 'b', name: 'Ben', isMe: false, paid: 10, owed: 55, net: -45, expenseCount: 1 },
+    ]);
   });
 });

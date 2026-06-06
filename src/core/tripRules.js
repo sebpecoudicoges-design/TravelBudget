@@ -1,6 +1,10 @@
 // Core trip rules (V4.2+ validated semantics)
 // Pure functions for enforcing constraints and budget-vs-cashflow behavior.
 
+function round2(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
 /**
  * Determines whether a linked payment transaction should be excluded from budget (cashflow-only).
  * Rule: only when linked to a shared expense AND the transaction represents the total payment.
@@ -164,7 +168,7 @@ export function computeTripSplitParts(amount, members = [], split = {}) {
   return ids.map(() => 0);
 }
 
-export function validateTripExpenseMutation({ input, members = [], shares, payer, wallet, paidByMe }) {
+export function validateTripExpenseMutation({ input, members = [], shares, payer, wallet, paidByMe, userId, travelId }) {
   if (!Array.isArray(members) || members.length === 0) {
     return { ok: false, reason: 'Ajoute au moins un participant.' };
   }
@@ -177,11 +181,13 @@ export function validateTripExpenseMutation({ input, members = [], shares, payer
   const isPaidByMe = paidByMe === undefined ? !!payer?.isMe : !!paidByMe;
   if (isPaidByMe) {
     if (!input?.walletId) return { ok: false, reason: 'Choisis une wallet (pour decompter le paiement).' };
-    if (!wallet) return { ok: false, reason: 'Wallet invalide.' };
-    const walletCurrency = normalizeTripCurrency(wallet.currency, input.currency);
-    if (walletCurrency !== input.currency) {
-      return { ok: false, reason: `Devise wallet (${wallet.currency}) differente de la depense (${input.currency}). Choisis une wallet dans la meme devise.` };
-    }
+    const walletValidation = canUseTripWalletForExpense({
+      wallet,
+      userId,
+      travelId,
+      currency: input.currency,
+    });
+    if (!walletValidation.ok) return walletValidation;
   }
 
   return { ok: true };
@@ -242,19 +248,90 @@ export function buildTripSettlementRpcArgs({ tripId, currency, amount, fromMembe
   };
 }
 
-export function canUseTripWalletForExpense({ wallet, userId, tripId, currency }) {
+export function computeTripAnalysis({ expenses = [], members = [], shares = [], pivot, convertAmount, categoryForExpense }) {
+  const toPivot = typeof convertAmount === 'function'
+    ? convertAmount
+    : ((amount) => Number(amount) || 0);
+  const getCategory = typeof categoryForExpense === 'function'
+    ? categoryForExpense
+    : ((expense) => String(expense?.category || '').trim() || 'Autre');
+
+  const sharesByExpense = new Map();
+  for (const row of shares || []) {
+    const expenseId = String(row?.expenseId || '');
+    if (!expenseId) continue;
+    if (!sharesByExpense.has(expenseId)) sharesByExpense.set(expenseId, []);
+    sharesByExpense.get(expenseId).push(row);
+  }
+
+  const categoryTotals = new Map();
+  const participantTotals = new Map();
+  for (const member of members || []) {
+    const id = String(member?.id || '');
+    if (!id) continue;
+    participantTotals.set(id, {
+      paid: 0,
+      owed: 0,
+      expenseCount: 0,
+      name: member?.name || '',
+      isMe: !!member?.isMe,
+    });
+  }
+
+  for (const expense of expenses || []) {
+    const expenseId = String(expense?.id || '');
+    const amountPivot = Number(toPivot(expense?.amount, expense?.currency, expense)) || 0;
+    const category = String(getCategory(expense) || '').trim() || 'Autre';
+    categoryTotals.set(category, (categoryTotals.get(category) || 0) + amountPivot);
+
+    const payerId = String(expense?.paidByMemberId || '');
+    if (payerId && participantTotals.has(payerId)) {
+      const payerRow = participantTotals.get(payerId);
+      payerRow.paid += amountPivot;
+      payerRow.expenseCount += 1;
+    }
+
+    for (const share of sharesByExpense.get(expenseId) || []) {
+      const memberId = String(share?.memberId || '');
+      if (!memberId || !participantTotals.has(memberId)) continue;
+      participantTotals.get(memberId).owed += Number(toPivot(share?.shareAmount, expense?.currency, expense)) || 0;
+    }
+  }
+
+  const categories = Array.from(categoryTotals.entries())
+    .map(([name, amount]) => ({ name, amount: round2(amount) }))
+    .filter((row) => row.amount > 0.004)
+    .sort((a, b) => b.amount - a.amount);
+
+  const participants = Array.from(participantTotals.entries())
+    .map(([id, row]) => ({
+      id,
+      name: row.name,
+      isMe: row.isMe,
+      paid: round2(row.paid),
+      owed: round2(row.owed),
+      net: round2(row.paid - row.owed),
+      expenseCount: row.expenseCount || 0,
+    }))
+    .sort((a, b) => Math.abs(b.net) - Math.abs(a.net) || b.paid - a.paid || String(a.name).localeCompare(String(b.name)));
+
+  return { pivot, categories, participants };
+}
+
+export function canUseTripWalletForExpense({ wallet, userId, travelId, tripId, currency }) {
   if (!wallet) return { ok: false, reason: 'Wallet invalide.' };
   if (userId && String(wallet.user_id || wallet.userId || '') !== String(userId)) {
     return { ok: false, reason: 'Wallet non proprietaire.' };
   }
+  const wantedTravelId = String(travelId || tripId || '');
   const walletTripId = String(wallet.travel_id || wallet.travelId || '');
-  if (tripId && walletTripId && walletTripId !== String(tripId)) {
+  if (wantedTravelId && walletTripId && walletTripId !== wantedTravelId) {
     return { ok: false, reason: 'Wallet hors voyage.' };
   }
   const walletCurrency = normalizeTripCurrency(wallet.currency, currency || 'EUR');
   const expenseCurrency = normalizeTripCurrency(currency, walletCurrency);
   if (walletCurrency !== expenseCurrency) {
-    return { ok: false, reason: `Devise wallet (${wallet.currency}) differente de la depense (${expenseCurrency}).` };
+    return { ok: false, reason: `Devise wallet (${wallet.currency}) differente de la depense (${expenseCurrency}). Choisis une wallet dans la meme devise.` };
   }
   return { ok: true };
 }

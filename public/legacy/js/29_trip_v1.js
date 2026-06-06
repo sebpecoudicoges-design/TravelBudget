@@ -642,6 +642,18 @@ async function _copyToClipboard(text) {
   function _buildTripAnalysis(expenses, members, shares) {
     const pivot = _tripPivotCurrency();
     const txMap = _txByIdMap();
+    const core = window.Core?.tripRules;
+    if (core?.computeTripAnalysis) {
+      return core.computeTripAnalysis({
+        expenses,
+        members,
+        shares,
+        pivot,
+        convertAmount: (amount, currency) => _tripConvertToPivot(amount, currency),
+        categoryForExpense: (expense) => _tripAnalysisCategoryKey(expense, txMap),
+      });
+    }
+
     const sharesByExpense = _groupBy(shares || [], s => s.expenseId);
     const categoryTotals = new Map();
     const participantTotals = new Map();
@@ -1180,7 +1192,15 @@ function _normalizeCurrency(cur) {
   function _validateTripExpenseForMutation({ input, members, parts, payer, wallet }) {
     const core = window.Core?.tripRules;
     if (core?.validateTripExpenseMutation) {
-      const result = core.validateTripExpenseMutation({ input, members, shares: parts, payer, wallet });
+      const result = core.validateTripExpenseMutation({
+        input,
+        members,
+        shares: parts,
+        payer,
+        wallet,
+        userId: sbUser?.id || window.sbUser?.id || null,
+        travelId: state?.activeTravelId || null,
+      });
       if (!result.ok) throw new Error(result.reason || "Dépense Trip invalide.");
       return true;
     }
@@ -4054,9 +4074,20 @@ try {
   if (paidByMe) {
     if (!walletId) throw new Error("Choisis une wallet (pour décompter le paiement).");
     const w = findWallet(walletId);
-    if (!w) throw new Error("Wallet invalide.");
-    if (String(w.currency || "").toUpperCase() !== cur) {
-      throw new Error(`Devise wallet (${w.currency}) différente de la dépense (${cur}). Choisis une wallet dans la même devise (conversion FX non implémentée).`);
+    const core = window.Core?.tripRules;
+    if (core?.canUseTripWalletForExpense) {
+      const walletValidation = core.canUseTripWalletForExpense({
+        wallet: w,
+        userId: sbUser?.id || window.sbUser?.id || null,
+        travelId: state?.activeTravelId || null,
+        currency: cur,
+      });
+      if (!walletValidation.ok) throw new Error(walletValidation.reason || "Wallet invalide.");
+    } else {
+      if (!w) throw new Error("Wallet invalide.");
+      if (String(w.currency || "").toUpperCase() !== cur) {
+        throw new Error(`Devise wallet (${w.currency}) différente de la dépense (${cur}). Choisis une wallet dans la même devise (conversion FX non implémentée).`);
+      }
     }
 
     // Duplicate control: if a matching Budget transaction exists, propose linking instead of creating a new one.
