@@ -496,7 +496,8 @@ export function matchesTripHistoryFilter({ expense, category, membersById, share
 
 export function canUseTripWalletForExpense({ wallet, userId, travelId, tripId, currency }) {
   if (!wallet) return { ok: false, reason: 'Wallet invalide.' };
-  if (userId && String(wallet.user_id || wallet.userId || '') !== String(userId)) {
+  const walletUserId = String(wallet.user_id || wallet.userId || '');
+  if (userId && walletUserId && walletUserId !== String(userId)) {
     return { ok: false, reason: 'Wallet non proprietaire.' };
   }
   const wantedTravelId = String(travelId || tripId || '');

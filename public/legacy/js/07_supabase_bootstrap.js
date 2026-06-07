@@ -783,7 +783,7 @@ async function loadFromSupabase(opts = {}) {
   })();
   const fetchWalletsForTravel = (travelId) => sb
     .from(TB_CONST.TABLES.wallets)
-    .select("id,travel_id,period_id,name,currency,balance,type,archived,archived_at,created_at,balance_snapshot_at")
+    .select("id,user_id,travel_id,period_id,name,currency,balance,type,archived,archived_at,created_at,balance_snapshot_at")
     .eq("user_id", sbUser.id)
     .eq("travel_id", travelId)
     .order("created_at", { ascending: true });
@@ -1053,7 +1053,7 @@ if (!p) throw new Error("Période active introuvable.");
 
     const { data: w2, error: w2Err } = await sb
       .from(TB_CONST.TABLES.wallets)
-      .select("id,travel_id,period_id,name,currency,balance,type,archived,archived_at,created_at,balance_snapshot_at")
+      .select("id,user_id,travel_id,period_id,name,currency,balance,type,archived,archived_at,created_at,balance_snapshot_at")
       .eq("user_id", sbUser.id)
       .eq("travel_id", activeTravelId)
       .order("created_at", { ascending: true });

@@ -301,6 +301,13 @@ describe('trip rules core', () => {
     }).ok).toBe(true);
 
     expect(canUseTripWalletForExpense({
+      wallet: { id: 'w1', travel_id: 't1', currency: 'AUD' },
+      userId: 'u1',
+      travelId: 't1',
+      currency: 'AUD',
+    }).ok).toBe(true);
+
+    expect(canUseTripWalletForExpense({
       wallet: { id: 'w1', user_id: 'u1', travel_id: 'other', currency: 'AUD' },
       userId: 'u1',
       tripId: 't1',
