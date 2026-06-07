@@ -1604,6 +1604,66 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
   if (error) throw error;
 }
 
+async function _findTripBudgetTransaction({ walletId, amount, currency, category, label, date, payNow, outOfBudget, requireUnlinkedExpense = true }) {
+  let query = sb
+    .from(TB_CONST.TABLES.transactions)
+    .select("id,travel_id,period_id")
+    .eq("wallet_id", walletId)
+    .eq("type", "expense")
+    .eq("amount", amount)
+    .eq("currency", currency)
+    .eq("category", category)
+    .eq("label", label)
+    .eq("date_start", date)
+    .eq("date_end", date)
+    .eq("pay_now", !!payNow)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (outOfBudget !== undefined) query = query.eq("out_of_budget", !!outOfBudget);
+  if (requireUnlinkedExpense) query = query.is("trip_expense_id", null);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+async function _alignTripTransactionTravelPeriod(tx, date, targetPeriodId) {
+  if (!tx?.id) return null;
+  const targetTravelId = _findTravelIdForDate(date);
+  if (
+    (targetTravelId && (!tx.travel_id || tx.travel_id !== targetTravelId)) ||
+    (targetPeriodId && (!tx.period_id || tx.period_id !== targetPeriodId))
+  ) {
+    await sb
+      .from(TB_CONST.TABLES.transactions)
+      .update({
+        travel_id: targetTravelId || tx.travel_id || null,
+        period_id: targetPeriodId || tx.period_id || null
+      })
+      .eq("id", tx.id);
+  }
+  return tx;
+}
+
+async function _linkCreatedExpenseTransaction({ tx, expenseId, date, targetPeriodId, missingMessage }) {
+  if (!tx) {
+    if (missingMessage) console.warn(missingMessage);
+    return false;
+  }
+  await _alignTripTransactionTravelPeriod(tx, date, targetPeriodId);
+  await _linkExpenseToTransaction(expenseId, tx.id);
+  return true;
+}
+
+async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, targetPeriodId }) {
+  if (!tx) return false;
+  await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", tx.id);
+  await _alignTripTransactionTravelPeriod(tx, date, targetPeriodId);
+  await _linkShareToTransaction({ expenseId, memberId, transactionId: tx.id });
+  return true;
+}
+
 
   async function _ensureSession() {
     // sb and sbUser are globals in your app
@@ -3769,41 +3829,8 @@ try {
         });
         if (rpcErr) throw rpcErr;
 
-        const { data: txRows, error: txErr } = await sb
-          .from(TB_CONST.TABLES.transactions)
-          .select("id,travel_id,period_id")
-          .eq("wallet_id", walletId)
-          .eq("type", "expense")
-          .eq("amount", amt)
-          .eq("currency", cur)
-          .eq("category", cat)
-          .eq("label", `[Trip] ${label}`)
-          .eq("date_start", date)
-          .eq("date_end", date)
-          .eq("pay_now", true)
-          .eq("out_of_budget", out)
-          .is("trip_expense_id", null)
-          .order("created_at", { ascending: false })
-          .limit(1);
-        if (txErr) throw txErr;
-
-        const tx = txRows?.[0] || null;
-        if (tx) {
-          const targetTravelId = _findTravelIdForDate(date);
-          if (
-            (targetTravelId && (!tx.travel_id || tx.travel_id !== targetTravelId)) ||
-            (targetPeriodId && (!tx.period_id || tx.period_id !== targetPeriodId))
-          ) {
-            await sb
-              .from(TB_CONST.TABLES.transactions)
-              .update({
-                travel_id: targetTravelId || tx.travel_id || null,
-                period_id: targetPeriodId || tx.period_id || null
-              })
-              .eq("id", tx.id);
-          }
-          await _linkExpenseToTransaction(ex.id, tx.id);
-        }
+        const tx = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: `[Trip] ${label}`, date, payNow: true, outOfBudget: out });
+        await _linkCreatedExpenseTransaction({ tx, expenseId: ex.id, date, targetPeriodId });
       } else {
         if (!me) {
           toastWarn("[Trip] Impossible de déterminer ta part pour le budget (participant 'moi' manquant).");
@@ -3819,41 +3846,8 @@ try {
         });
         if (rpcErrA) throw rpcErrA;
 
-        const { data: txRowsA, error: txErrA } = await sb
-          .from(TB_CONST.TABLES.transactions)
-          .select("id,travel_id,period_id")
-          .eq("wallet_id", walletId)
-          .eq("type", "expense")
-          .eq("amount", amt)
-          .eq("currency", cur)
-          .eq("category", cat)
-          .eq("label", advanceLabel)
-          .eq("date_start", date)
-          .eq("date_end", date)
-          .eq("pay_now", true)
-          .eq("out_of_budget", true)
-          .is("trip_expense_id", null)
-          .order("created_at", { ascending: false })
-          .limit(1);
-        if (txErrA) throw txErrA;
-
-        const txA = txRowsA?.[0] || null;
-        if (txA) {
-          const targetTravelId = _findTravelIdForDate(date);
-          if (
-            (targetTravelId && (!txA.travel_id || txA.travel_id !== targetTravelId)) ||
-            (targetPeriodId && (!txA.period_id || txA.period_id !== targetPeriodId))
-          ) {
-            await sb
-              .from(TB_CONST.TABLES.transactions)
-              .update({
-                travel_id: targetTravelId || txA.travel_id || null,
-                period_id: targetPeriodId || txA.period_id || null
-              })
-              .eq("id", txA.id);
-          }
-          await _linkExpenseToTransaction(ex.id, txA.id);
-        }
+        const txA = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: advanceLabel, date, payNow: true, outOfBudget: true });
+        await _linkCreatedExpenseTransaction({ tx: txA, expenseId: ex.id, date, targetPeriodId });
 
         if (me && myIdx >= 0 && budgetFlow.hasMyShare) {
           const shareArgs = window.Core?.tripRules?.buildTripPersonalShareTransactionArgs
@@ -3866,42 +3860,8 @@ try {
           });
           if (rpcErrB) throw rpcErrB;
 
-          const { data: txRowsB, error: txErrB } = await sb
-            .from(TB_CONST.TABLES.transactions)
-            .select("id,travel_id,period_id")
-            .eq("wallet_id", walletId)
-            .eq("type", "expense")
-            .eq("amount", myShare)
-            .eq("currency", cur)
-            .eq("category", cat)
-            .eq("label", consLabel)
-            .eq("date_start", date)
-            .eq("date_end", date)
-            .eq("pay_now", false)
-            .eq("out_of_budget", out)
-            .is("trip_expense_id", null)
-            .order("created_at", { ascending: false })
-            .limit(1);
-          if (txErrB) throw txErrB;
-
-          const txB = txRowsB?.[0] || null;
-          if (txB) {
-            await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", txB.id);
-            const targetTravelId = _findTravelIdForDate(date);
-          if (
-            (targetTravelId && (!txB.travel_id || txB.travel_id !== targetTravelId)) ||
-            (targetPeriodId && (!txB.period_id || txB.period_id !== targetPeriodId))
-          ) {
-            await sb
-              .from(TB_CONST.TABLES.transactions)
-              .update({
-                travel_id: targetTravelId || txB.travel_id || null,
-                period_id: targetPeriodId || txB.period_id || null
-              })
-              .eq("id", txB.id);
-          }
-            await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: txB.id });
-          }
+          const txB = await _findTripBudgetTransaction({ walletId, amount: myShare, currency: cur, category: cat, label: consLabel, date, payNow: false, outOfBudget: out });
+          await _linkCreatedShareTransaction({ tx: txB, expenseId: ex.id, memberId: me.id, date, targetPeriodId });
         }
       }
     } else {
@@ -4284,67 +4244,8 @@ try {
         });
         if (rpcErr) throw rpcErr;
 
-      // Update settlement event with transaction_id (best-effort)
-      try {
-        const { data: txRow, error: txErr } = await sb
-          .from(TB_CONST.TABLES.transactions)
-          .select("id")
-          .eq("user_id", uid)
-          .eq("label", label)
-          .eq("currency", cur)
-          .eq("amount", amt)
-          .eq("date_start", date)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (!txErr && txRow?.id) {
-          await sb.from(TB_CONST.TABLES.trip_settlement_events)
-            .update({ transaction_id: txRow.id })
-            .eq("id", eventId);
-        }
-      } catch (e) {
-        console.warn("[Trip] settlement event tx link failed", e);
-      }
-
-
-        const { data: txRows, error: txErr } = await sb
-          .from(TB_CONST.TABLES.transactions)
-          .select("id,travel_id,period_id")
-          
-          .eq("wallet_id", walletId)
-          .eq("type", "expense")
-          .eq("amount", amt)
-          .eq("currency", cur)
-          .eq("category", cat)
-          .eq("label", fullShareArgs.p_label)
-          .eq("date_start", date)
-          .eq("date_end", date)
-          .eq("pay_now", true)
-          .eq("out_of_budget", out)
-          .is("trip_expense_id", null)
-          .order("created_at", { ascending: false })
-          .limit(1);
-        if (txErr) throw txErr;
-
-        const tx = txRows?.[0] || null;
-        if (tx) {
-          const targetTravelId = _findTravelIdForDate(date);
-          if (
-            (targetTravelId && (!tx.travel_id || tx.travel_id !== targetTravelId)) ||
-            (targetPeriodId && (!tx.period_id || tx.period_id !== targetPeriodId))
-          ) {
-            await sb
-              .from(TB_CONST.TABLES.transactions)
-              .update({
-                travel_id: targetTravelId || tx.travel_id || null,
-                period_id: targetPeriodId || tx.period_id || null
-              })
-              .eq("id", tx.id);
-          }
-          await _linkExpenseToTransaction(ex.id, tx.id);
-        } else {
-          console.warn("Budget tx created but not found for linking.");
-        }
+        const tx = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: fullShareArgs.p_label, date, payNow: true, outOfBudget: out });
+        await _linkCreatedExpenseTransaction({ tx, expenseId: ex.id, date, targetPeriodId, missingMessage: "Budget tx created but not found for linking." });
       } else {
         if (!me) {
           toastWarn("[Trip] Impossible de déterminer ta part pour le budget (participant 'moi' manquant).");
@@ -4361,44 +4262,8 @@ try {
         });
         if (rpcErrA) throw rpcErrA;
 
-        const { data: txRowsA, error: txErrA } = await sb
-          .from(TB_CONST.TABLES.transactions)
-          .select("id,travel_id,period_id")
-          
-          .eq("wallet_id", walletId)
-          .eq("type", "expense")
-          .eq("amount", amt)
-          .eq("currency", cur)
-          .eq("category", cat)
-          .eq("label", advanceLabel)
-          .eq("date_start", date)
-          .eq("date_end", date)
-          .eq("pay_now", true)
-          .eq("out_of_budget", true)
-          .is("trip_expense_id", null)
-          .order("created_at", { ascending: false })
-          .limit(1);
-        if (txErrA) throw txErrA;
-
-        const txA = txRowsA?.[0] || null;
-        if (txA) {
-          const targetTravelId = _findTravelIdForDate(date);
-          if (
-            (targetTravelId && (!txA.travel_id || txA.travel_id !== targetTravelId)) ||
-            (targetPeriodId && (!txA.period_id || txA.period_id !== targetPeriodId))
-          ) {
-            await sb
-              .from(TB_CONST.TABLES.transactions)
-              .update({
-                travel_id: targetTravelId || txA.travel_id || null,
-                period_id: targetPeriodId || txA.period_id || null
-              })
-              .eq("id", txA.id);
-          }
-          await _linkExpenseToTransaction(ex.id, txA.id);
-        } else {
-          console.warn("Advance tx created but not found for linking.");
-        }
+        const txA = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: advanceLabel, date, payNow: true, outOfBudget: true });
+        await _linkCreatedExpenseTransaction({ tx: txA, expenseId: ex.id, date, targetPeriodId, missingMessage: "Advance tx created but not found for linking." });
 
         // B) My consumption share (budget/allocation, but pay_now=false so wallet isn't decremented twice)
         if (me && myIdx >= 0 && budgetFlow.hasMyShare) {
@@ -4414,43 +4279,8 @@ try {
             });
             if (rpcErrB) throw rpcErrB;
 
-            const { data: txRowsB, error: txErrB } = await sb
-              .from(TB_CONST.TABLES.transactions)
-              .select("id,travel_id,period_id")
-              
-              .eq("wallet_id", walletId)
-              .eq("type", "expense")
-              .eq("amount", myShare)
-              .eq("currency", cur)
-              .eq("category", cat)
-              .eq("label", consLabel)
-              .eq("date_start", date)
-              .eq("date_end", date)
-              .eq("pay_now", false)
-              .eq("out_of_budget", out)
-              .is("trip_expense_id", null)
-              .order("created_at", { ascending: false })
-              .limit(1);
-            if (txErrB) throw txErrB;
-
-            const txB = txRowsB?.[0] || null;
-            if (txB) {
-              await sb.from(TB_CONST.TABLES.transactions).update({ is_internal: true }).eq("id", txB.id);
-              const targetTravelId = _findTravelIdForDate(date);
-          if (
-            (targetTravelId && (!txB.travel_id || txB.travel_id !== targetTravelId)) ||
-            (targetPeriodId && (!txB.period_id || txB.period_id !== targetPeriodId))
-          ) {
-            await sb
-              .from(TB_CONST.TABLES.transactions)
-              .update({
-                travel_id: targetTravelId || txB.travel_id || null,
-                period_id: targetPeriodId || txB.period_id || null
-              })
-              .eq("id", txB.id);
-          }
-              await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: txB.id });
-            }
+            const txB = await _findTripBudgetTransaction({ walletId, amount: myShare, currency: cur, category: cat, label: consLabel, date, payNow: false, outOfBudget: out });
+            await _linkCreatedShareTransaction({ tx: txB, expenseId: ex.id, memberId: me.id, date, targetPeriodId });
           }
         }
       }
