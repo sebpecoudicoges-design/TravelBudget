@@ -548,11 +548,17 @@
     const delta = Number(analysis?.deltaBudgetAmount || 0);
     const pct = Number(analysis?.deltaBudgetPct || 0);
     const pctText = signedPctText(pct);
-    const title = tr('Budget du matin', 'Morning budget');
-    const body = tr(
-      `Reste aujourd'hui ${money(remainingToday, currency)}. Écart tendance vs budget app : ${pctText}, ${money(delta, currency)}.`,
-      `Today left ${money(remainingToday, currency)}. Trend gap vs app budget: ${pctText}, ${money(delta, currency)}.`
-    );
+    const variant = window.Core?.notificationRules?.selectBudgetNotificationVariant
+      ? window.Core.notificationRules.selectBudgetNotificationVariant({ remainingToday, delta, pct, currency })
+      : null;
+    const title = variant ? tr(variant.titleFr, variant.titleEn) : tr('Budget du matin', 'Morning budget');
+    const formatters = { money, pctText };
+    const body = variant
+      ? tr(variant.bodyFr(formatters), variant.bodyEn(formatters))
+      : tr(
+        `Reste aujourd'hui ${money(remainingToday, currency)}. Écart tendance vs budget app : ${pctText}, ${money(delta, currency)}.`,
+        `Today left ${money(remainingToday, currency)}. Trend gap vs app budget: ${pctText}, ${money(delta, currency)}.`
+      );
     return {
       title,
       body,
@@ -568,6 +574,7 @@
         target_to_date: Number(analysis?.targetToToday || 0),
         delta,
         pct,
+        tone: variant?.tone || 'steady',
       },
     };
   }

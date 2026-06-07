@@ -26,3 +26,48 @@ export function notificationPrefKeyForPayload(payload = {}) {
 export function canForceMobileNotification({ mode = 'none', isAdmin = false } = {}) {
   return mode === 'internal' || !!isAdmin;
 }
+
+export function selectBudgetNotificationVariant({ remainingToday = 0, delta = 0, pct = 0, currency = 'EUR' } = {}) {
+  const remaining = Number(remainingToday) || 0;
+  const gap = Number(delta) || 0;
+  const trendPct = Number(pct) || 0;
+  const cur = String(currency || 'EUR').toUpperCase();
+
+  if (remaining < 0) {
+    return {
+      tone: 'over_today',
+      titleFr: 'Budget a surveiller',
+      titleEn: 'Budget watch',
+      bodyFr: ({ money, pctText }) => `Aujourd'hui depasse de ${money(Math.abs(remaining), cur)}. Tendance vs budget app : ${pctText}, ${money(gap, cur)}.`,
+      bodyEn: ({ money, pctText }) => `Today is over by ${money(Math.abs(remaining), cur)}. Trend vs app budget: ${pctText}, ${money(gap, cur)}.`,
+    };
+  }
+
+  if (trendPct < -10 || gap < 0) {
+    return {
+      tone: 'ahead',
+      titleFr: 'Budget en avance',
+      titleEn: 'Ahead of budget',
+      bodyFr: ({ money, pctText }) => `Reste aujourd'hui ${money(remaining, cur)}. Tu es mieux que le budget app : ${pctText}, ${money(gap, cur)}.`,
+      bodyEn: ({ money, pctText }) => `Today left ${money(remaining, cur)}. You are ahead of app budget: ${pctText}, ${money(gap, cur)}.`,
+    };
+  }
+
+  if (trendPct > 10 || gap > 0) {
+    return {
+      tone: 'above_trend',
+      titleFr: 'Rythme budget eleve',
+      titleEn: 'Budget pace high',
+      bodyFr: ({ money, pctText }) => `Reste aujourd'hui ${money(remaining, cur)}. Tendance au-dessus du budget app : ${pctText}, ${money(gap, cur)}.`,
+      bodyEn: ({ money, pctText }) => `Today left ${money(remaining, cur)}. Trend above app budget: ${pctText}, ${money(gap, cur)}.`,
+    };
+  }
+
+  return {
+    tone: 'steady',
+    titleFr: 'Budget du matin',
+    titleEn: 'Morning budget',
+    bodyFr: ({ money, pctText }) => `Reste aujourd'hui ${money(remaining, cur)}. Ecart tendance vs budget app : ${pctText}, ${money(gap, cur)}.`,
+    bodyEn: ({ money, pctText }) => `Today left ${money(remaining, cur)}. Trend gap vs app budget: ${pctText}, ${money(gap, cur)}.`,
+  };
+}

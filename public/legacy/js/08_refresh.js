@@ -5,6 +5,8 @@ let _refreshInFlight = false;
 let _refreshPending = false;
 let _refreshPromise = null;
 let _tbBusyCounter = 0;
+let _tbLastRefreshCompletedAt = 0;
+let _tbAutoRefreshLastAttemptAt = 0;
 
 function _tbDebugRefresh() {
   try { return !!window.__tbDebugRefresh; } catch (_) { return false; }
@@ -185,6 +187,8 @@ async function _runRefreshFromServer(opts) {
     if (typeof ensureStateIntegrity === "function") ensureStateIntegrity();
     try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("refreshFromServer"); } catch (_) {}
     try { if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("refresh:data_loaded", { source: "refreshFromServer" }); } catch (_) {}
+    _tbLastRefreshCompletedAt = Date.now();
+    try { window.__tbLastRefreshCompletedAt = _tbLastRefreshCompletedAt; } catch (_) {}
     if (!options.skipRender) {
       try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("render:all"); } catch (_) {}
       if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("08_refresh.js"); else if (typeof renderAll === "function") renderAll();
@@ -208,8 +212,58 @@ async function _runRefreshFromServer(opts) {
       try { if (typeof toastInfo === "function") toastInfo(window.tbOfflineMessage ? window.tbOfflineMessage() : "Mode hors ligne."); } catch (_) {}
       return;
     }
-    alert("Refresh impossible : " + normalizeSbError(e));
+    if (!options.auto && !options.silent) alert("Refresh impossible : " + normalizeSbError(e));
   }
+}
+
+async function tbRefreshIfStale(reason, opts = {}) {
+  try {
+    if (!sbUser) return false;
+    if (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) return false;
+    if (typeof document !== "undefined" && document.hidden && !opts.force) return false;
+    const now = Date.now();
+    const minIntervalMs = Number(opts.minIntervalMs || 120000);
+    const attemptCooldownMs = Number(opts.attemptCooldownMs || 30000);
+    const lastDone = Number(window.__tbLastRefreshCompletedAt || _tbLastRefreshCompletedAt || 0);
+    if (!opts.force && now - _tbAutoRefreshLastAttemptAt < attemptCooldownMs) return false;
+    if (!opts.force && lastDone && now - lastDone < minIntervalMs) return false;
+    _tbAutoRefreshLastAttemptAt = now;
+    await refreshFromServer({ reason: reason || "auto", auto: true });
+    try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
+    try { if (typeof window.tbRefreshInboxBadge === "function") window.tbRefreshInboxBadge(); } catch (_) {}
+    return true;
+  } catch (e) {
+    console.warn("[TB] auto refresh skipped:", e?.message || e);
+    return false;
+  }
+}
+
+window.tbRefreshIfStale = tbRefreshIfStale;
+
+function tbInstallAutoRefreshHooks() {
+  if (window.__tbAutoRefreshHooksInstalled) return;
+  window.__tbAutoRefreshHooksInstalled = true;
+  const run = (reason) => { try { tbRefreshIfStale(reason); } catch (_) {} };
+  try {
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) run("visibility");
+    });
+  } catch (_) {}
+  try { window.addEventListener("focus", () => run("focus")); } catch (_) {}
+  try {
+    const App = window.Capacitor?.Plugins?.App || window.Capacitor?.App;
+    if (App?.addListener) {
+      App.addListener("resume", () => run("app-resume"));
+      App.addListener("appStateChange", (state) => {
+        if (state?.isActive) run("app-active");
+      });
+    }
+  } catch (_) {}
+}
+
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", tbInstallAutoRefreshHooks);
+  else tbInstallAutoRefreshHooks();
 }
 
 async function refreshFromServer(opts = {}) {
