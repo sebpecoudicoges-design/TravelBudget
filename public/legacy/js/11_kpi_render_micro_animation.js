@@ -49,10 +49,10 @@ function _kpiNormText(s) {
 function _kpiIsInternalMovementTx(tx) {
   if (!tx) return false;
   if (tx.internalTransferId || tx.internal_transfer_id) return true;
-  if (tx.isInternal || tx.is_internal) return true;
   try {
     if (typeof window.tbIsInternalMovement === "function" && window.tbIsInternalMovement(tx)) return true;
   } catch (_) {}
+  if (tx.isInternal || tx.is_internal) return true;
   const cat = _kpiNormText(tx.category);
   const label = _kpiNormText(tx.label);
   return cat === "mouvement interne"

@@ -59,6 +59,9 @@ function tbGetNightCoveredInsightForTx(tx, targetCurrency) {
 function buildAllocationsForTx(tx) {
   const allocs = [];
   if (tx.type !== "expense") return allocs;
+  try {
+    if (typeof window.tbTxAffectsBudget === "function" && !window.tbTxAffectsBudget(tx)) return allocs;
+  } catch (_) {}
 
   const budgetStartISO = (typeof tbTxBudgetStart === 'function') ? tbTxBudgetStart(tx) : (tx.budgetDateStart || tx.budget_date_start || tx.dateStart || tx.date_start);
   const budgetEndISO = (typeof tbTxBudgetEnd === 'function') ? tbTxBudgetEnd(tx) : (tx.budgetDateEnd || tx.budget_date_end || tx.dateEnd || tx.date_end || budgetStartISO);
@@ -66,7 +69,7 @@ function buildAllocationsForTx(tx) {
   const end = parseISODateOrNull(budgetEndISO) || start;
   const label = tx.label || tx.category || "Autre";
 
-  if (!tx.outOfBudget) {
+  if (!tx.outOfBudget && !tx.out_of_budget) {
     const days = dayCountInclusive(start, end);
     const perDayInTxCur = (Number(tx.amount) || 0) / days;
 
@@ -97,5 +100,5 @@ function buildAllocationsForTx(tx) {
 function recomputeAllocations() {
   state.allocations = [];
   for (const tx of state.transactions) state.allocations.push(...buildAllocationsForTx(tx));
+  try { if (typeof window.tbClearBudgetCaches === "function") window.tbClearBudgetCaches(); } catch (_) {}
 }
-

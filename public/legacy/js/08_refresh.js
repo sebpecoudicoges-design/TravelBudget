@@ -171,11 +171,6 @@ async function _runRefreshFromServer(opts) {
     if (typeof tbFxApplyToState === "function") {
       try { tbFxApplyToState({ allowPrompt: true }); } catch (_) {}
     }
-    try {
-      if (!options.skipFinancialRender && typeof window.tbRefreshFinancialState === "function") {
-        window.tbRefreshFinancialState("refreshFromServer", { cashflow: false });
-      }
-    } catch (_) {}
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("supabase:load"); } catch (_) {}
     // FX snapshots: run in background (do not block refresh/boot)
     if (typeof ensureTxFxSnapshotsDeferred === "function") {
@@ -185,8 +180,14 @@ async function _runRefreshFromServer(opts) {
       try { ensureTxFxSnapshots(); } catch (_) {}
     }
     if (typeof ensureStateIntegrity === "function") ensureStateIntegrity();
+    try { if (typeof window.tbClearBudgetCaches === "function") window.tbClearBudgetCaches(); } catch (_) {}
     try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("refreshFromServer"); } catch (_) {}
     try { if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("refresh:data_loaded", { source: "refreshFromServer" }); } catch (_) {}
+    try {
+      if (!options.skipFinancialRender && typeof window.tbRefreshFinancialState === "function") {
+        window.tbRefreshFinancialState("refreshFromServer", { cashflow: false });
+      }
+    } catch (_) {}
     _tbLastRefreshCompletedAt = Date.now();
     try { window.__tbLastRefreshCompletedAt = _tbLastRefreshCompletedAt; } catch (_) {}
     if (!options.skipRender) {

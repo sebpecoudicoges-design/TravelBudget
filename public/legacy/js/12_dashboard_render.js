@@ -608,12 +608,16 @@ function budgetSpentBaseForDateFromTx(dateStr) {
       const type = String(t?.type || "").toLowerCase();
       if (type !== "expense") continue;
 
-      const affectsBudget =
-        (t.affectsBudget === undefined || t.affectsBudget === null) ? true : !!t.affectsBudget;
-      if (!affectsBudget) continue;
+      if (typeof window.tbTxAffectsBudget === "function") {
+        if (!window.tbTxAffectsBudget(t)) continue;
+      } else {
+        const affectsBudget =
+          (t.affectsBudget === undefined || t.affectsBudget === null) ? true : !!t.affectsBudget;
+        if (!affectsBudget) continue;
 
-      const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
-      if (outOfBudget) continue;
+        const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
+        if (outOfBudget) continue;
+      }
 
       const budgetStartISO = (typeof tbTxBudgetStart === 'function')
         ? tbTxBudgetStart(t)
@@ -796,8 +800,8 @@ function renderDailyBudget() {
     const dateStr = toLocalISODate(d);
     const info = (typeof getDailyBudgetInfoForDate === "function") ? getDailyBudgetInfoForDate(dateStr) : { remaining: state.period.dailyBudgetBase - budgetSpentBaseForDateFromTx(dateStr), daily: state.period.dailyBudgetBase, baseCurrency: state.period.baseCurrency };
     const baseDay = String(info.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
-    const spentBudget = budgetSpentBaseForDateFromTx(dateStr);
-    const budget = Number(info.daily) - spentBudget;
+    const budget = Number(info.remaining) || 0;
+    const spentBudget = Math.max(0, Number(info.daily || 0) - budget);
     const details = (state.allocations || []).filter((a) => a && a.dateStr === dateStr);
 
     const div = document.createElement("div");

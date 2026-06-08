@@ -2381,7 +2381,26 @@ function _openTxDrilldown(kind, key, model){
     const refresh = _el('analysis-refresh');
     if (refresh && !refresh._tbBound) {
       refresh._tbBound = true;
-      refresh.addEventListener('click', async () => { await _loadReferenceCache(); _renderAll(); });
+      refresh.addEventListener('click', async () => {
+        try {
+          if (typeof refreshFromServer === 'function') {
+            await refreshFromServer({
+              includeDeferredData: true,
+              includeGovernance: true,
+              skipRender: true,
+              skipFinancialRender: true,
+              force: true,
+              silent: true,
+            });
+          }
+        } catch (err) {
+          console.warn('[analysis] manual refresh failed', err?.message || err);
+        }
+        referenceCache.loaded = false;
+        await _loadReferenceCache();
+        _renderAnalysisFilterSelects();
+        _renderAll();
+      });
     }
     const toggleBtn = _el('analysis-category-toggle');
     if (toggleBtn && !toggleBtn._tbBound) {
