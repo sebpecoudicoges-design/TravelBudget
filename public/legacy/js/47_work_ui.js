@@ -86,11 +86,19 @@
       else wrap.appendChild(view);
     }
   }
-  async function loadWorkDays() {
-    if (CACHE.loading || CACHE.loaded) return;
+  function publishWorkDays(reason) {
+    if (!window.state) window.state = {};
+    window.state.workDays = CACHE.rows.slice();
+    try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot(`work:${reason || "load"}`); } catch (_) {}
+    try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+  }
+  async function loadWorkDays(options = {}) {
+    const force = !!options.force;
+    if (CACHE.loading || (CACHE.loaded && !force)) return false;
     CACHE.loading = true;
     CACHE.error = "";
     const c = client();
+    let changed = false;
     try {
       if (c && uid()) {
         const q = c.from(table("work_days"))
@@ -101,22 +109,30 @@
         const { data, error } = await q;
         if (error) throw error;
         CACHE.rows = data || [];
+      } else {
+        CACHE.rows = CACHE.rows || [];
       }
       CACHE.loaded = true;
+      changed = true;
     } catch (e) {
       CACHE.error = e?.message || String(e);
+      CACHE.loaded = true;
       console.warn("[work] load failed", CACHE.error);
     } finally {
       CACHE.loading = false;
-      if (!window.state) window.state = {};
-      window.state.workDays = CACHE.rows.slice();
+      publishWorkDays("load");
     }
+    return changed;
   }
   function renderWork(reason) {
     ensureWorkShell();
     const root = document.getElementById("work-root");
     if (!root) return;
-    loadWorkDays().then(() => { if ((window.activeView || "") === "work") renderWork("loaded"); }).catch(() => {});
+    if (!CACHE.loaded && !CACHE.loading) {
+      loadWorkDays().then((changed) => {
+        if (changed && (window.activeView || "") === "work") renderWork("loaded");
+      }).catch(() => {});
+    }
     const p = presets();
     const b = baseline();
     const recent = CACHE.rows.slice(0, 12);
@@ -211,8 +227,7 @@
         row.id = `local_work_${Date.now()}`;
         CACHE.rows.unshift(row);
       }
-      CACHE.loaded = false;
-      await loadWorkDays();
+      await loadWorkDays({ force: true });
       if (typeof window.tbRequestRenderAll === "function") window.tbRequestRenderAll("work:save");
       renderWork("save");
     } catch (e) {
@@ -224,13 +239,12 @@
   window.renderWork = renderWork;
   window.tbLoadWorkDays = loadWorkDays;
   window.tbReloadWorkDays = async function tbReloadWorkDays() {
-    CACHE.loaded = false;
-    await loadWorkDays();
+    await loadWorkDays({ force: true });
     return CACHE.rows.slice();
   };
   window.addEventListener("tb:auth_scope_changed", () => { CACHE.loaded = false; CACHE.rows = []; });
   try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadWorkDays(); } catch (_) {} }); } catch (_) {}
-  setTimeout(() => { try { if (uid()) loadWorkDays(); } catch (_) {} }, 300);
+  setTimeout(() => { try { if (uid()) loadWorkDays().catch(() => {}); } catch (_) {} }, 300);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ensureWorkShell);
   else ensureWorkShell();
 })();

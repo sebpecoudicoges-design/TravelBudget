@@ -946,6 +946,18 @@
     document.head.appendChild(style);
   }
 
+  function publishSportHistory(reason) {
+    if (window.state) {
+      state.sportSessions = Array.isArray(CACHE.sessions) ? CACHE.sessions : [];
+      state.sportSessionItems = Array.isArray(CACHE.items) ? CACHE.items : [];
+      state.sportSets = Array.isArray(CACHE.sets) ? CACHE.sets : [];
+    }
+    try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+    try {
+      if (reason && typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot(`sport:${reason}`);
+    } catch (_) {}
+  }
+
   async function loadHistory() {
     if (CACHE.loading) return;
     const c = client();
@@ -962,6 +974,7 @@
       CACHE.loading = false;
       CACHE.error = "";
       CACHE.status = txt("Historique restaure hors ligne.", "History restored offline.");
+      publishSportHistory("offline");
       return;
     }
     if (!c || !userId) {
@@ -971,6 +984,7 @@
       CACHE.sets = [];
       CACHE.error = "";
       CACHE.status = txt("Historique local uniquement pour le moment.", "Local history only for now.");
+      publishSportHistory("local");
       return;
     }
     CACHE.loading = true;
@@ -1010,12 +1024,7 @@
       CACHE.status = CACHE.sessions.length
         ? txt(`Historique synchronise : ${CACHE.sessions.length} seance(s) SQL.`, `Synced history: ${CACHE.sessions.length} SQL workout(s).`)
         : txt("Aucune seance SQL pour ce compte. Les seances locales restent visibles tant qu'elles ne sont pas synchronisees.", "No SQL workout for this account. Local workouts remain visible until synced.");
-      if (window.state) {
-        state.sportSessions = CACHE.sessions;
-        state.sportSessionItems = CACHE.items;
-        state.sportSets = CACHE.sets;
-      }
-      try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("sport:load"); } catch (_) {}
+      publishSportHistory("load");
     } catch (e) {
       CACHE.error = e?.message || String(e);
       CACHE.loaded = true;
@@ -1025,6 +1034,7 @@
         CACHE.sets = Array.isArray(state?.sportSets) ? state.sportSets : [];
         CACHE.error = "";
         CACHE.status = txt("Historique restaure hors ligne.", "History restored offline.");
+        publishSportHistory("fallback");
       } else {
         console.warn("[sport] load failed", CACHE.error);
       }
@@ -2231,9 +2241,10 @@
   window.tbReloadSportHistory = async function tbReloadSportHistory() {
     CACHE.loaded = false;
     await loadHistory();
+    publishSportHistory("reload");
     return CACHE.sessions.slice();
   };
   try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadSportHistory(); } catch (_) {} }); } catch (_) {}
-  setTimeout(() => { try { if (uid()) loadHistory(); } catch (_) {} }, 450);
+  setTimeout(() => { try { if (uid()) loadHistory().then(() => publishSportHistory("auto")).catch(() => {}); } catch (_) {} }, 450);
   window.tbSportCatalog = CATALOG.slice();
 })();
