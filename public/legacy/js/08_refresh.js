@@ -172,7 +172,7 @@ async function _runRefreshFromServer(opts) {
       try { tbFxApplyToState({ allowPrompt: true }); } catch (_) {}
     }
     try {
-      if (typeof window.tbRefreshFinancialState === "function") {
+      if (!options.skipFinancialRender && typeof window.tbRefreshFinancialState === "function") {
         window.tbRefreshFinancialState("refreshFromServer", { cashflow: false });
       }
     } catch (_) {}

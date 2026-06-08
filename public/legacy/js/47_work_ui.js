@@ -3,7 +3,7 @@
    - Physical work days, separate from sport
    ========================= */
 (function () {
-  const CACHE = { loaded: false, loading: false, rows: [], error: "" };
+  const CACHE = { loaded: false, loading: false, rows: [], error: "", editId: "" };
 
   function txt(fr, en) {
     try { return String(window.TB_LANG || "fr").toLowerCase() === "en" ? en : fr; } catch (_) { return fr; }
@@ -136,6 +136,14 @@
     const p = presets();
     const b = baseline();
     const recent = CACHE.rows.slice(0, 12);
+    const editing = CACHE.editId ? CACHE.rows.find(row => String(row.id || "") === String(CACHE.editId)) : null;
+    const initialPresetKey = editing?.activity_key || p[0]?.key || "farm_harvest_moderate";
+    const initialHours = editing ? (Number(editing.duration_minutes || 0) / 60) : 8;
+    const initialBreaks = editing ? Number(editing.break_minutes || 0) : 0;
+    const initialMet = editing ? Number(editing.met_value || 4.8) : 4.8;
+    const initialRpe = editing ? Number(editing.perceived_effort || 7) : 7;
+    const initialDate = String(editing?.work_date || todayISO()).slice(0, 10);
+    const initialLabel = editing ? String(editing.label || "") : "Avocado picking";
     const today = todayISO();
     root.innerHTML = `
       <section class="tb-work-shell">
@@ -148,29 +156,43 @@
         </div>
         <div class="tb-work-grid" style="display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:14px;margin-top:14px;">
           <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-            <div class="field"><label>${esc(txt("Date", "Date"))}</label><input id="work-date" type="date" value="${esc(today)}"></div>
-            <div class="field"><label>${esc(txt("Type", "Type"))}</label><select id="work-type">${p.map(x => `<option value="${esc(x.key)}" data-met="${esc(String(x.met))}">${esc(labelPreset(x))} · MET ${esc(String(x.met))}</option>`).join("")}</select></div>
+            <div class="field"><label>${esc(txt("Date", "Date"))}</label><input id="work-date" type="date" value="${esc(initialDate)}"></div>
+            <div class="field"><label>${esc(txt("Type", "Type"))}</label><select id="work-type">${p.map(x => `<option value="${esc(x.key)}" data-met="${esc(String(x.met))}" ${String(x.key) === String(initialPresetKey) ? "selected" : ""}>${esc(labelPreset(x))} - MET ${esc(String(x.met))}</option>`).join("")}</select></div>
             <div class="row" style="gap:10px;">
-              <div class="field" style="flex:1;"><label>${esc(txt("Durée h", "Hours"))}</label><input id="work-hours" type="number" min="0" step="0.25" value="8"></div>
-              <div class="field" style="flex:1;"><label>${esc(txt("Pause min", "Break min"))}</label><input id="work-breaks" type="number" min="0" step="5" value="0"></div>
+              <div class="field" style="flex:1;"><label>${esc(txt("Duree h", "Hours"))}</label><input id="work-hours" type="number" min="0" step="0.25" value="${esc(String(Math.round(initialHours * 100) / 100))}"></div>
+              <div class="field" style="flex:1;"><label>${esc(txt("Pause min", "Break min"))}</label><input id="work-breaks" type="number" min="0" step="5" value="${esc(String(initialBreaks))}"></div>
             </div>
             <div class="row" style="gap:10px;">
-              <div class="field" style="flex:1;"><label>MET</label><input id="work-met" type="number" min="1" step="0.1" value="4.8"></div>
-              <div class="field" style="flex:1;"><label>RPE</label><input id="work-rpe" type="number" min="1" max="10" step="1" value="7"></div>
+              <div class="field" style="flex:1;"><label>MET</label><input id="work-met" type="number" min="1" step="0.1" value="${esc(String(initialMet))}"></div>
+              <div class="field" style="flex:1;"><label>RPE</label><input id="work-rpe" type="number" min="1" max="10" step="1" value="${esc(String(initialRpe))}"></div>
             </div>
             <div class="field"><label>${esc(txt("BMR connu", "Known BMR"))}</label><input id="work-bmr" type="number" min="0" step="1" value="${esc(String(bodyBmr() || ""))}" placeholder="${esc(txt("Optionnel", "Optional"))}"></div>
-            <div class="field"><label>${esc(txt("Notes", "Notes"))}</label><input id="work-notes" value="Avocado picking"></div>
+            <div class="muted" style="font-size:12px;line-height:1.45;margin:-2px 0 8px;">
+              <div><b>MET</b> : ${esc(txt("intensite metabolique de l'activite. Plus il est haut, plus les kcal montent.", "activity intensity. Higher means more kcal."))}</div>
+              <div><b>RPE</b> : ${esc(txt("effort ressenti de 1 a 10, utile pour relire la journee.", "perceived effort from 1 to 10, useful for review."))}</div>
+              <div><b>BMR</b> : ${esc(txt("metabolisme basal connu. Optionnel, il remplace l'estimation par poids/taille/age.", "known basal metabolic rate. Optional; replaces the weight/height/age estimate."))}</div>
+            </div>
+            <div class="field"><label>${esc(txt("Notes", "Notes"))}</label><input id="work-notes" value="${esc(initialLabel)}"></div>
             <div class="pill" id="work-kcal-preview" style="margin-top:8px;">0 kcal</div>
-            <button class="btn primary" id="work-save" type="button" style="margin-top:10px;width:100%;">${esc(txt("Ajouter la journée", "Add work day"))}</button>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button class="btn primary" id="work-save" type="button" style="flex:1;">${esc(editing ? txt("Mettre a jour", "Update") : txt("Ajouter la journee", "Add work day"))}</button>
+              ${editing ? `<button class="btn" id="work-cancel-edit" type="button">${esc(txt("Annuler", "Cancel"))}</button>` : ""}
+            </div>
           </div>
           <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
             <h3 style="margin:0 0 10px;">${esc(txt("Historique travail", "Work history"))}</h3>
             ${CACHE.loading ? `<div class="muted">${esc(txt("Chargement...", "Loading..."))}</div>` : ""}
             ${CACHE.error ? `<div class="muted">${esc(CACHE.error)}</div>` : ""}
             ${recent.length ? recent.map(row => `
-              <div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--border);padding:9px 0;">
+              <div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--border);padding:9px 0;align-items:flex-start;">
                 <div><strong>${esc(row.label || "Travail")}</strong><div class="muted">${esc(String(row.work_date || "").slice(0,10))} · ${Math.round(Number(row.duration_minutes || 0) / 60 * 10) / 10}h · MET ${Number(row.met_value || 0)}</div></div>
-                <strong>${Math.round(Number(row.estimated_kcal || 0))} kcal</strong>
+                <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+                  <strong>${Math.round(Number(row.estimated_kcal || 0))} kcal</strong>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+                    <button class="btn small" type="button" data-work-edit="${esc(String(row.id || ""))}">${esc(txt("Modifier", "Edit"))}</button>
+                    <button class="btn small" type="button" data-work-delete="${esc(String(row.id || ""))}">${esc(txt("Supprimer", "Delete"))}</button>
+                  </div>
+                </div>
               </div>`).join("") : `<div class="muted">${esc(txt("Aucune journée enregistrée.", "No work day saved."))}</div>`}
           </div>
         </div>
@@ -188,6 +210,17 @@
     });
     const save = root.querySelector("#work-save");
     if (save) save.onclick = () => saveWorkDay(root);
+    const cancel = root.querySelector("#work-cancel-edit");
+    if (cancel) cancel.onclick = () => { CACHE.editId = ""; renderWork("cancel-edit"); };
+    root.querySelectorAll("[data-work-edit]").forEach((btn) => {
+      btn.onclick = () => {
+        CACHE.editId = String(btn.getAttribute("data-work-edit") || "");
+        renderWork("edit");
+      };
+    });
+    root.querySelectorAll("[data-work-delete]").forEach((btn) => {
+      btn.onclick = () => deleteWorkDay(String(btn.getAttribute("data-work-delete") || ""));
+    });
   }
   function updatePreview(root) {
     const kcal = calcKcal(Number(root.querySelector("#work-hours")?.value || 0), Number(root.querySelector("#work-breaks")?.value || 0), Number(root.querySelector("#work-met")?.value || 4.8));
@@ -219,20 +252,50 @@
       notes: "",
     };
     const c = client();
+    const editId = String(CACHE.editId || "");
     try {
       if (c && uid()) {
-        const { error } = await c.from(table("work_days")).insert(row);
+        const query = editId
+          ? c.from(table("work_days")).update(row).eq("id", editId).eq("user_id", uid())
+          : c.from(table("work_days")).insert(row);
+        const { error } = await query;
         if (error) throw error;
+      } else if (editId) {
+        CACHE.rows = CACHE.rows.map(existing => String(existing.id || "") === editId ? { ...existing, ...row, id: existing.id } : existing);
       } else {
         row.id = `local_work_${Date.now()}`;
         CACHE.rows.unshift(row);
       }
+      CACHE.editId = "";
       await loadWorkDays({ force: true });
       if (typeof window.tbRequestRenderAll === "function") window.tbRequestRenderAll("work:save");
       renderWork("save");
     } catch (e) {
       CACHE.error = e?.message || String(e);
       renderWork("save-error");
+    }
+  }
+
+  async function deleteWorkDay(id) {
+    const workId = String(id || "");
+    if (!workId) return;
+    const ok = confirm(txt("Supprimer cette journee de travail ?", "Delete this work day?"));
+    if (!ok) return;
+    const c = client();
+    try {
+      if (c && uid() && !workId.startsWith("local_work_")) {
+        const { error } = await c.from(table("work_days")).delete().eq("id", workId).eq("user_id", uid());
+        if (error) throw error;
+      }
+      CACHE.rows = CACHE.rows.filter(row => String(row.id || "") !== workId);
+      if (String(CACHE.editId || "") === workId) CACHE.editId = "";
+      publishWorkDays("delete");
+      await loadWorkDays({ force: true });
+      if (typeof window.tbRequestRenderAll === "function") window.tbRequestRenderAll("work:delete");
+      renderWork("delete");
+    } catch (e) {
+      CACHE.error = e?.message || String(e);
+      renderWork("delete-error");
     }
   }
 

@@ -54,6 +54,10 @@ function showView(view) {
   if (view === "sport") { if (typeof window.renderSport === "function") window.renderSport("navigation"); }
   if (view === "work") { if (typeof window.renderWork === "function") window.renderWork("navigation"); }
   if (view === "dashboard") {
+    try {
+      if (typeof window.tbRenderDashboardCritical === "function") window.tbRenderDashboardCritical("navigation:dashboard", { cashflow: false });
+      else if (typeof window.renderAll === "function") window.renderAll();
+    } catch (_) {}
     if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("10_navigation.js"); else redrawCharts();
   }
   if (view === "trip") renderTrip();

@@ -356,8 +356,6 @@
   function _isTripLinked(tx){ return !!(tx?.trip_expense_id || tx?.tripExpenseId || tx?.trip_share_link_id || tx?.tripShareLinkId); }
   function _isTripBudgetShare(tx){
     if (!tx) return false;
-    const tripShareLinkId = tx?.trip_share_link_id || tx?.tripShareLinkId || null;
-    if (!tripShareLinkId) return false;
     if (String(tx?.type || '').toLowerCase() !== 'expense') return false;
     const payNow = (tx?.payNow ?? tx?.pay_now);
     const isPaid = (payNow === undefined) ? true : !!payNow;
@@ -365,7 +363,10 @@
     const affectsBudget = (tx?.affectsBudget ?? tx?.affects_budget);
     if (affectsBudget === false) return false;
     const outOfBudget = !!(tx?.outOfBudget ?? tx?.out_of_budget);
-    return !outOfBudget;
+    if (outOfBudget) return false;
+    const tripShareLinkId = tx?.trip_share_link_id || tx?.tripShareLinkId || null;
+    if (tripShareLinkId) return true;
+    return /^\[trip\]/i.test(String(tx?.label || '').trim());
   }
   function _isTripAnalyticRealExpense(tx){
   const label = String(tx?.label || '').trim();
@@ -375,6 +376,10 @@
   return true;
   }
   function _isInternalMovement(tx){ return String(tx?.category || '').trim().toLowerCase() === 'mouvement interne'; }
+  function _isAnalysisInternalMovement(tx) {
+    if (_isTripBudgetShare(tx)) return false;
+    return typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(tx) : _isInternalMovement(tx);
+  }
   function _txCashDate(tx){
     if (typeof window.tbTxCashDate === 'function') return window.tbTxCashDate(tx);
     return _norm(tx?.dateStart || tx?.date_start || tx?.occurrence_date || tx?.date || tx?.created_at?.slice?.(0,10) || tx?.createdAt?.slice?.(0,10));
@@ -640,7 +645,7 @@ function _analysisBucketOrder(){
       if (travelId && txTravelId && txTravelId !== String(travelId)) return false;
       if (_txType(tx) !== 'expense') return false;
       if (_isTripLinked(tx) && !_isTripBudgetShare(tx)) return false;
-      if (typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(tx) : _isInternalMovement(tx)) return false;
+      if (_isAnalysisInternalMovement(tx)) return false;
       const bs = _txBudgetStart(tx);
       const be = _txBudgetEnd(tx);
       if (!bs || !be) return false;
@@ -706,7 +711,7 @@ function _sumTxArray(txs, base){
     if (subFilter && subFilter !== 'all' && subFilter !== '__none__' && sub !== subFilter) return false;
     if (excluded.size && excluded.has(cat)) return false;
 
-    if (typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(tx) : _isInternalMovement(tx)) return false;
+    if (_isAnalysisInternalMovement(tx)) return false;
     if (catKey === 'mouvement interne') return false;
     if (catKey === 'ajustement wallet') return false;
 
@@ -2419,6 +2424,7 @@ function _openTxDrilldown(kind, key, model){
         includeDeferredData: true,
         includeGovernance: true,
         skipRender: true,
+        skipFinancialRender: true,
       });
       await ensureAnalysisDeferredPromise;
     } catch (err) {
