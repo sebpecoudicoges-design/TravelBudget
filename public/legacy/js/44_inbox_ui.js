@@ -174,9 +174,13 @@
     inbox: true,
     trip: true,
     dailyBudget: false,
+    morningBudget: false,
+    eveningSummary: false,
     dailyBudgetTime: '20:00',
+    serverPush: true,
     lowBudget: true,
     localDevice: false,
+    timezone: '',
   });
 
   function notificationPrefKey(){
@@ -190,13 +194,22 @@
   function normalizeNotificationPrefs(raw){
     const src = raw && typeof raw === 'object' ? raw : {};
     const time = /^\d{2}:\d{2}$/.test(String(src.dailyBudgetTime || '')) ? String(src.dailyBudgetTime) : NOTIF_PREF_DEFAULTS.dailyBudgetTime;
+    let timezone = String(src.timezone || '').trim();
+    if (!timezone) {
+      try { timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch(_) { timezone = ''; }
+    }
+    const daily = src.dailyBudget === true || src.morningBudget === true || src.eveningSummary === true;
     return {
       inbox: src.inbox !== false,
       trip: src.trip !== false,
-      dailyBudget: src.dailyBudget === true,
+      dailyBudget: daily,
+      morningBudget: src.morningBudget === true || src.dailyBudget === true,
+      eveningSummary: src.eveningSummary === true,
       dailyBudgetTime: time,
+      serverPush: src.serverPush !== false,
       lowBudget: src.lowBudget !== false,
       localDevice: src.localDevice === true,
+      timezone,
     };
   }
 
@@ -431,10 +444,10 @@
 
   async function scheduleDailyBudgetLocalNotification(){
     const prefs = getNotificationPrefs();
-    if (!prefs.dailyBudget || !prefs.localDevice) return false;
+    if (!(prefs.dailyBudget || prefs.morningBudget || prefs.eveningSummary) || !prefs.localDevice) return false;
     const LocalNotifications = localNotificationPlugin();
     if (!isNativeApp() || !LocalNotifications?.schedule) return false;
-    const msg = await buildMorningBudgetPushPayload();
+    const msg = await buildMorningBudgetPushPayload('morning');
     const at = nextDailyBudgetNotificationDate(prefs.dailyBudgetTime);
     try {
       if (LocalNotifications.cancel) await LocalNotifications.cancel({ notifications: [{ id: 1001 }] });
@@ -450,7 +463,7 @@
   function syncPreferenceDrivenNotifications(){
     const prefs = getNotificationPrefs();
     const rows = [];
-    if (prefs.dailyBudget) {
+    if (prefs.dailyBudget || prefs.morningBudget || prefs.eveningSummary) {
       const now = new Date();
       const day = now.toISOString().slice(0, 10);
       const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -466,11 +479,11 @@
       }
     }
     window.tbSetNotificationBucket('daily-budget', rows);
-    try { if (prefs.dailyBudget && prefs.localDevice) scheduleDailyBudgetLocalNotification(); } catch(_) {}
+    try { if ((prefs.dailyBudget || prefs.morningBudget || prefs.eveningSummary) && prefs.localDevice) scheduleDailyBudgetLocalNotification(); } catch(_) {}
   }
 
   async function triggerDailyBudgetNotificationTest(){
-    const msg = await buildMorningBudgetPushPayload();
+    const msg = await buildMorningBudgetPushPayload('test');
     window.tbSetNotificationBucket('daily-budget-test', [{ notificationKey: msg.notification_key, title: msg.title, body: msg.body, view: 'dashboard' }]);
     const delivered = await sendLocalNotification(msg.title, msg.body, Object.assign({ tag: 'travelbudget-daily-test', view: 'dashboard' }, msg.data || {}));
     msg.localDelivered = delivered;
@@ -537,7 +550,24 @@
     return window.__tbLastBudgetAnalysisNotificationSummary || null;
   }
 
-  async function buildMorningBudgetPushPayload(){
+  function todayActivitySummary(){
+    const today = todayISO();
+    const sameDay = (v) => String(v || '').slice(0, 10) === today;
+    const sportRows = Array.isArray(window.state?.sportSessions) ? window.state.sportSessions : [];
+    const workRows = Array.isArray(window.state?.workDays) ? window.state.workDays : [];
+    const sport = sportRows.filter((x) => sameDay(x.started_at || x.startedAt));
+    const work = workRows.filter((x) => sameDay(x.work_date || x.workDate));
+    const sum = (rows, keys) => rows.reduce((acc, row) => acc + keys.reduce((v, k) => Number.isFinite(Number(row?.[k])) ? Number(row[k]) : v, 0), 0);
+    return {
+      sportCount: sport.length,
+      sportKcal: sum(sport, ['estimated_kcal', 'estimatedKcal']),
+      workCount: work.length,
+      workKcal: sum(work, ['estimated_kcal', 'estimatedKcal']),
+      workMinutes: sum(work, ['duration_minutes', 'durationMinutes']),
+    };
+  }
+
+  async function buildMorningBudgetPushPayload(slot){
     const today = todayISO();
     const info = (typeof window.getDailyBudgetInfoForDate === 'function')
       ? window.getDailyBudgetInfoForDate(today)
@@ -551,22 +581,34 @@
     const variant = window.Core?.notificationRules?.selectBudgetNotificationVariant
       ? window.Core.notificationRules.selectBudgetNotificationVariant({ remainingToday, delta, pct, currency })
       : null;
-    const title = variant ? tr(variant.titleFr, variant.titleEn) : tr('Budget du matin', 'Morning budget');
+    const activity = todayActivitySummary();
+    const isEvening = String(slot || '').toLowerCase() === 'evening';
+    const title = isEvening
+      ? tr('Bilan du soir', 'Evening summary')
+      : (variant ? tr(variant.titleFr, variant.titleEn) : tr('Budget du matin', 'Morning budget'));
     const formatters = { money, pctText };
-    const body = variant
+    const budgetText = variant
       ? tr(variant.bodyFr(formatters), variant.bodyEn(formatters))
       : tr(
-        `Reste aujourd'hui ${money(remainingToday, currency)}. Écart tendance vs budget app : ${pctText}, ${money(delta, currency)}.`,
+        `Reste aujourd'hui ${money(remainingToday, currency)}. Ecart tendance vs budget app : ${pctText}, ${money(delta, currency)}.`,
         `Today left ${money(remainingToday, currency)}. Trend gap vs app budget: ${pctText}, ${money(delta, currency)}.`
       );
+    const body = isEvening
+      ? tr(
+        `${budgetText} Sport ${Math.round(activity.sportKcal)} kcal, travail ${Math.round(activity.workKcal)} kcal.`,
+        `${budgetText} Sport ${Math.round(activity.sportKcal)} kcal, work ${Math.round(activity.workKcal)} kcal.`
+      )
+      : budgetText;
     return {
       title,
       body,
       source: 'daily_budget',
       view: 'dashboard',
-      notification_key: `daily-budget:${today}`,
+      slot: isEvening ? 'evening' : 'morning',
+      notification_key: `daily-budget:${isEvening ? 'evening' : 'morning'}:${today}`,
       data: {
         kind: 'daily_budget',
+        slot: isEvening ? 'evening' : 'morning',
         today,
         remaining_today: remainingToday,
         currency,
@@ -575,6 +617,8 @@
         delta,
         pct,
         tone: variant?.tone || 'steady',
+        sport_kcal: Math.round(activity.sportKcal),
+        work_kcal: Math.round(activity.workKcal),
       },
     };
   }

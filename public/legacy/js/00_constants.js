@@ -1,4 +1,4 @@
-window.TB_VERSION = window.TB_VERSION || "10.4.4";
+window.TB_VERSION = window.TB_VERSION || "10.4.5";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
 window.tbApplyVersionLabels = function tbApplyVersionLabels(root) {
@@ -67,6 +67,7 @@ try {
     sport_sessions: "sport_sessions",
     sport_session_items: "sport_session_items",
     sport_sets: "sport_sets",
+    work_days: "work_days",
   });
 
   const COLS = Object.freeze({
@@ -262,6 +263,9 @@ try {
     sport_plan: "travelbudget_sport_plan_v1",
     sport_body_weight: "travelbudget_sport_body_weight_v1",
     sport_body_height: "travelbudget_sport_body_height_v1",
+    body_age: "travelbudget_body_age_v1",
+    body_sex: "travelbudget_body_sex_v1",
+    body_bmr: "travelbudget_body_bmr_v1",
     sport_history: "travelbudget_sport_history_v1",
   });
 

@@ -95,6 +95,7 @@
       sportSessions: slimRows(s.sportSessions, 80),
       sportSessionItems: slimRows(s.sportSessionItems, 400),
       sportSets: slimRows(s.sportSets, 800),
+      workDays: slimRows(s.workDays, 120),
       profile: s.profile || null,
       user: s.user || null,
       hiddenCategories: s.hiddenCategories || [],

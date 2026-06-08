@@ -39,6 +39,7 @@ function tbMakeInitialState() {
     sportSessions: [],
     sportSessionItems: [],
     sportSets: [],
+    workDays: [],
   };
 }
 
@@ -428,6 +429,7 @@ function ensureStateIntegrity() {
   state.sportSessions = Array.isArray(state.sportSessions) ? state.sportSessions : [];
   state.sportSessionItems = Array.isArray(state.sportSessionItems) ? state.sportSessionItems : [];
   state.sportSets = Array.isArray(state.sportSets) ? state.sportSets : [];
+  state.workDays = Array.isArray(state.workDays) ? state.workDays : [];
   state.hiddenCategories = Array.isArray(state.hiddenCategories) ? state.hiddenCategories : [];
   if (state.hiddenCategories.length === 0) {
     const lsHidden = loadHiddenCategoriesFromLocalStorage();

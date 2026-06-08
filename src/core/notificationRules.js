@@ -2,12 +2,17 @@ export function normalizeNotificationPrefs(input = {}) {
   const prefs = input && typeof input === 'object' ? input : {};
   return {
     enabled: prefs.enabled !== false,
-    dailyBudget: prefs.dailyBudget === true,
+    dailyBudget: prefs.dailyBudget === true || prefs.morningBudget === true || prefs.eveningSummary === true,
+    morningBudget: prefs.morningBudget === true || prefs.dailyBudget === true,
+    eveningSummary: prefs.eveningSummary === true,
+    serverPush: prefs.serverPush !== false,
     inbox: prefs.inbox !== false,
     trip: prefs.trip !== false,
     lowBudget: prefs.lowBudget !== false,
     sound: prefs.sound !== false,
     mobilePush: prefs.mobilePush !== false,
+    localDevice: prefs.localDevice === true,
+    timezone: typeof prefs.timezone === 'string' && prefs.timezone.trim() ? prefs.timezone.trim() : '',
   };
 }
 

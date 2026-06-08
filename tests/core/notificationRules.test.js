@@ -6,6 +6,9 @@ describe('notification rules core', () => {
     expect(normalizeNotificationPrefs({ dailyBudget: true, inbox: false })).toMatchObject({
       enabled: true,
       dailyBudget: true,
+      morningBudget: true,
+      eveningSummary: false,
+      serverPush: true,
       inbox: false,
       trip: true,
       lowBudget: true,

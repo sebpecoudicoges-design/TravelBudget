@@ -12,6 +12,8 @@ import * as walletBalanceRules from '../core/walletBalanceRules.js';
 import * as assetRules from '../core/assetRules.js';
 import * as assistantRules from '../core/assistantRules.js';
 import * as notificationRules from '../core/notificationRules.js';
+import * as workRules from '../core/workRules.js';
+import * as bodyEnergyRules from '../core/bodyEnergyRules.js';
 
 window.Core = window.Core || {};
 window.Core.money = money;
@@ -27,6 +29,8 @@ window.Core.walletBalanceRules = walletBalanceRules;
 window.Core.assetRules = assetRules;
 window.Core.assistantRules = assistantRules;
 window.Core.notificationRules = notificationRules;
+window.Core.workRules = workRules;
+window.Core.bodyEnergyRules = bodyEnergyRules;
 
 // Optional: expose money helpers directly for convenience (legacy may redefine later; that's OK)
 window.moneyRound = window.moneyRound || money.moneyRound;

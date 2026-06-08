@@ -643,7 +643,7 @@ function renderSettings(){
       const thrDisp = (thrInBase === null || !Number.isFinite(thrInBase)) ? "" : String(Math.round(thrInBase));
       const notifPrefs = (typeof window.tbGetNotificationPrefs === "function")
         ? window.tbGetNotificationPrefs()
-        : { inbox:true, trip:true, dailyBudget:false, dailyBudgetTime:'20:00', lowBudget:true, localDevice:false };
+        : { inbox:true, trip:true, dailyBudget:false, morningBudget:false, eveningSummary:false, serverPush:true, lowBudget:true, localDevice:false };
 
       box.innerHTML = `
         <div class="muted" style="margin-bottom:10px;">${T("settings.account.summary")}</div>
@@ -701,7 +701,7 @@ function renderSettings(){
           <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
             <div>
               <strong>Notifications mobile</strong>
-              <div class="muted" style="margin-top:4px;line-height:1.35;">Centre de notifications, rappels locaux natifs sur mobile, et préférences push.</div>
+              <div class="muted" style="margin-top:4px;line-height:1.35;">Centre de notifications, push mobile serveur, et rappels locaux natifs en secours.</div>
             </div>
             <button class="btn" id="tb-notif-test" type="button">Tester</button>
           </div>
@@ -710,16 +710,14 @@ function renderSettings(){
             <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-trip" type="checkbox" ${notifPrefs.trip ? 'checked' : ''}> Invitations et validations Trip</label>
             <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-lowbudget" type="checkbox" ${notifPrefs.lowBudget ? 'checked' : ''}> Alertes budget faible</label>
             <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-local" type="checkbox" ${notifPrefs.localDevice ? 'checked' : ''}> Notification téléphone</label>
+            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-server" type="checkbox" ${notifPrefs.serverPush !== false ? 'checked' : ''}> Envoi serveur</label>
           </div>
           <div class="row" style="gap:12px;align-items:end;flex-wrap:wrap;margin-top:10px;">
-            <label style="display:flex;gap:8px;align-items:center;padding-bottom:8px;"><input id="tb-notif-daily" type="checkbox" ${notifPrefs.dailyBudget ? 'checked' : ''}> Point budget quotidien</label>
-            <div class="field" style="min-width:150px;">
-              <label>Heure</label>
-              <input id="tb-notif-daily-time" type="time" value="${escapeHTML(String(notifPrefs.dailyBudgetTime || '20:00'))}" />
-            </div>
+            <label style="display:flex;gap:8px;align-items:center;padding-bottom:8px;"><input id="tb-notif-morning" type="checkbox" ${notifPrefs.morningBudget || notifPrefs.dailyBudget ? 'checked' : ''}> Résumé du matin</label>
+            <label style="display:flex;gap:8px;align-items:center;padding-bottom:8px;"><input id="tb-notif-evening" type="checkbox" ${notifPrefs.eveningSummary ? 'checked' : ''}> Bilan du soir</label>
             <button class="btn primary" id="tb-notif-save" type="button">Enregistrer notifications</button>
           </div>
-          <div class="muted" style="font-size:12px;line-height:1.35;margin-top:8px;">Sur Android, active "Notification téléphone" puis teste: l'app utilise la notification locale native quand le plugin Capacitor est disponible.</div>
+          <div class="muted" style="font-size:12px;line-height:1.35;margin-top:8px;">Aucune heure à choisir : le serveur envoie un résumé matin et/ou soir selon le fuseau du téléphone. Le local Android sert de secours quand l'app peut planifier.</div>
         </div>
       `;
 
@@ -896,8 +894,11 @@ if (btnWhatsapp) {
         trip: !!box.querySelector("#tb-notif-trip")?.checked,
         lowBudget: !!box.querySelector("#tb-notif-lowbudget")?.checked,
         localDevice: !!box.querySelector("#tb-notif-local")?.checked,
-        dailyBudget: !!box.querySelector("#tb-notif-daily")?.checked,
-        dailyBudgetTime: String(box.querySelector("#tb-notif-daily-time")?.value || "20:00"),
+        serverPush: !!box.querySelector("#tb-notif-server")?.checked,
+        morningBudget: !!box.querySelector("#tb-notif-morning")?.checked,
+        eveningSummary: !!box.querySelector("#tb-notif-evening")?.checked,
+        dailyBudget: !!box.querySelector("#tb-notif-morning")?.checked || !!box.querySelector("#tb-notif-evening")?.checked,
+        timezone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch(_) { return ""; } })(),
       });
 
       const btnNotifSave = box.querySelector("#tb-notif-save");

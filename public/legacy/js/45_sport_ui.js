@@ -2228,5 +2228,12 @@
   });
 
   window.renderSport = renderSport;
+  window.tbReloadSportHistory = async function tbReloadSportHistory() {
+    CACHE.loaded = false;
+    await loadHistory();
+    return CACHE.sessions.slice();
+  };
+  try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadSportHistory(); } catch (_) {} }); } catch (_) {}
+  setTimeout(() => { try { if (uid()) loadHistory(); } catch (_) {} }, 450);
   window.tbSportCatalog = CATALOG.slice();
 })();

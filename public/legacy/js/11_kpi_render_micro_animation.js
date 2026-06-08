@@ -78,6 +78,23 @@ function _kpiIsCashPendingProjectionTx(tx) {
   return true;
 }
 
+function _kpiActivitySummaryForDate(dateISO) {
+  const day = String(dateISO || '').slice(0, 10);
+  const sameDay = (v) => String(v || '').slice(0, 10) === day;
+  const sportRows = Array.isArray(window.state?.sportSessions) ? window.state.sportSessions : [];
+  const workRows = Array.isArray(window.state?.workDays) ? window.state.workDays : [];
+  const sumKeys = (rows, keys) => rows.reduce((acc, row) => acc + keys.reduce((v, k) => Number.isFinite(Number(row?.[k])) ? Number(row[k]) : v, 0), 0);
+  const sport = sportRows.filter((x) => sameDay(x.started_at || x.startedAt));
+  const work = workRows.filter((x) => sameDay(x.work_date || x.workDate));
+  return {
+    sportCount: sport.length,
+    sportKcal: sumKeys(sport, ['estimated_kcal', 'estimatedKcal']),
+    workCount: work.length,
+    workKcal: sumKeys(work, ['estimated_kcal', 'estimatedKcal']),
+    workMinutes: sumKeys(work, ['duration_minutes', 'durationMinutes']),
+  };
+}
+
 function remainingBudgetBaseFrom(dateStr) {
   const start = parseISODateOrNull(dateStr);
   const end = parseISODateOrNull(state.period.end);
@@ -1267,6 +1284,7 @@ const driver = "Dépenses";
   const todayDetailsHTML = _renderTodayDetailsHTML(displayDateISO);
   const todayBudget = getDailyBudgetForDate(displayDateISO);
   const todayBudgetSpent = budgetSpentBaseForDate(displayDateISO);
+  const activityToday = _kpiActivitySummaryForDate(displayDateISO);
   const todayPillClass = budgetClass(todayBudget);
 
   let level = "good";
@@ -1375,6 +1393,22 @@ const driver = "Dépenses";
 	                ≈ ${fmtKPICompact(walletTotalBase)} ${displayCur}
 	              </div>
 	            </div>
+
+            <div style="${miniCardStyle}">
+              <div class="muted" style="font-size:12px;">Sport fait</div>
+              <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
+                ${Math.round(activityToday.sportKcal)} <span style="font-weight:700; font-size:14px;" class="muted">kcal</span>
+              </div>
+              <div class="muted" style="font-size:12px; margin-top:6px;">${activityToday.sportCount} séance(s)</div>
+            </div>
+
+            <div style="${miniCardStyle}">
+              <div class="muted" style="font-size:12px;">Travail fait</div>
+              <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
+                ${Math.round(activityToday.workKcal)} <span style="font-weight:700; font-size:14px;" class="muted">kcal</span>
+              </div>
+              <div class="muted" style="font-size:12px; margin-top:6px;">${Math.round(activityToday.workMinutes / 60 * 10) / 10}h · ${activityToday.workCount} journée(s)</div>
+            </div>
 
             <div style="${miniCardStyle}">
               <div class="muted" style="font-size:12px;">${T("kpi.period_end")}</div>

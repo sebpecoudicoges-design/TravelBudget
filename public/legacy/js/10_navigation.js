@@ -15,13 +15,16 @@ function setActiveTab(view) {
     ["cautions", "tab-cautions", "view-cautions"],
     ["documents", "tab-documents", "view-documents"],
     ["sport", "tab-sport", "view-sport"],
+    ["work", "tab-work", "view-work"],
     ["trip", "tab-trip", "view-trip"],
     ["members", "tab-members", "view-members"],
     ["help", "tab-help", "view-help"],
   ];
   for (const [name, tabId, viewId] of tabs) {
-    document.getElementById(tabId).classList.toggle("active", name === view);
-    document.getElementById(viewId).classList.toggle("hidden", name !== view);
+    const tab = document.getElementById(tabId);
+    const viewEl = document.getElementById(viewId);
+    if (tab) tab.classList.toggle("active", name === view);
+    if (viewEl) viewEl.classList.toggle("hidden", name !== view);
   }
 }
 function showView(view) {
@@ -49,6 +52,7 @@ function showView(view) {
   if (view === "cautions") { if (typeof window.renderCautions === "function") window.renderCautions("navigation"); }
   if (view === "documents") { if (typeof window.renderDocuments === "function") window.renderDocuments("navigation"); }
   if (view === "sport") { if (typeof window.renderSport === "function") window.renderSport("navigation"); }
+  if (view === "work") { if (typeof window.renderWork === "function") window.renderWork("navigation"); }
   if (view === "dashboard") {
     if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("10_navigation.js"); else redrawCharts();
   }
