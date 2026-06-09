@@ -376,8 +376,11 @@
   return true;
   }
   function _isInternalMovement(tx){ return String(tx?.category || '').trim().toLowerCase() === 'mouvement interne'; }
+  function _isInternalTransferLinked(tx){ return !!(tx?.internal_transfer_id || tx?.internalTransferId); }
   function _isAnalysisInternalMovement(tx) {
     if (_isTripBudgetShare(tx)) return false;
+    if (_isInternalTransferLinked(tx)) return true;
+    if (tx?.is_internal === true || tx?.isInternal === true) return true;
     return typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(tx) : _isInternalMovement(tx);
   }
   function _txCashDate(tx){
@@ -1351,11 +1354,11 @@ categoryTxMap, subcategoryTxMap
         haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(236,253,245,.40))'
       },
       {
-        label: trA('Réalisé vs projection', 'Actual vs projection'),
-        title: trA('Part du réalisé déjà absorbée dans la projection de fin de période', 'Share of actual spend already absorbed into the end-of-period projection'),
-        value: ratioText(model.spentToToday, model.projection),
-        hint: trA('Dépensé cumulé comparé à la projection finale.', 'Cumulative spend compared with the final projection.'),
-        pct: model.projection > 0 ? clampPct((model.spentToToday / model.projection) * 100) : 0,
+        label: trA('Réalisé payé vs projection', 'Paid actual vs projection'),
+        title: trA('Part du réel payé déjà absorbée dans la projection de fin de période', 'Share of paid actual spend already absorbed into the end-of-period projection'),
+        value: ratioText(model.paidSpent, model.projection),
+        hint: trA('Dépenses payées comparées à la projection finale.', 'Paid expenses compared with the final projection.'),
+        pct: model.projection > 0 ? clampPct((model.paidSpent / model.projection) * 100) : 0,
         footer: model.projection > model.totalBudget ? trA('Tendance finale au-dessus du budget app', 'Final trend above app budget') : trA('Tendance finale contenue dans le budget app', 'Final trend within app budget'),
         tint:'blue',
         liquid:'linear-gradient(180deg, rgba(147,197,253,.30) 0%, rgba(125,211,252,.42) 34%, rgba(56,189,248,.52) 70%, rgba(14,165,233,.62) 100%)',
