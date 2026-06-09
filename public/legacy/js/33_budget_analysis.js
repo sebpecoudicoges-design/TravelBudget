@@ -774,6 +774,7 @@ function _sumTxArray(txs, base){
     const subcatMap = new Map();
     const categoryTxMap = new Map();
     const subcategoryTxMap = new Map();
+    const unpaidTxDetails = [];
     let spent = 0;
     let paidSpent = 0;
 
@@ -836,6 +837,10 @@ const txDetail = {
   budgetStart: alloc.budgetStart,
   budgetEnd: alloc.budgetEnd
 };
+
+if (!_txPaid(tx) && !_isTripAnalyticRealExpense(tx)) {
+  unpaidTxDetails.push(txDetail);
+}
 
 catMap.set(cat, (catMap.get(cat) || 0) + alloc.amount);
 
@@ -1165,7 +1170,10 @@ deltaProjectedWithBudget,
   nightCoveredCount, nightCoveredPotentialSavings, nightCoveredAverageSaving,
   nightCoveredTransportSpent, nightCoveredShareOfSpent, nightCoveredRows,
 categoryTxMap, subcategoryTxMap
-  , cashIncomeCategories, cashExpenseCategories
+  , cashIncomeCategories, cashExpenseCategories,
+  unpaidTxDetails: unpaidTxDetails
+    .slice()
+    .sort((a,b) => String(a?.budgetStart || a?.cashDate || '').localeCompare(String(b?.budgetStart || b?.cashDate || '')))
 };
         }
   function _buildReferenceComparisonSeries(actualMap, referenceCategoryMap, comparableDays){
@@ -1596,7 +1604,48 @@ categoryTxMap, subcategoryTxMap
         </div>
       </div>`;
 
-host.innerHTML = progressCards.map((c, idx) => renderGlassCard(c, idx)).join('') + renderDeltaCard(progressCards.length) + cashflowBlock + cashOnlyBlock;
+    const unpaidRows = Array.isArray(model.unpaidTxDetails) ? model.unpaidTxDetails : [];
+    const unpaidBlock = unpaidRows.length ? `
+      <div class="analysis-stat analysis-stat--unpaid"
+        style="grid-column:1 / -1; padding:18px 20px; border-radius:24px; border:1px solid rgba(245,158,11,.24); background:linear-gradient(135deg, rgba(255,251,235,.96), rgba(255,255,255,.88)); box-shadow:0 16px 38px rgba(245,158,11,.12);">
+        <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+          <div>
+            <div style="font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(120,53,15,.62);">${escapeHTML(trA('Sorties a payer identifiees', 'Identified unpaid expenses'))}</div>
+            <h3 style="margin:5px 0 4px;font-size:23px;line-height:1.15;color:#78350f;">${escapeHTML(_fmtMoney(model.expensePlanned, model.base))}</h3>
+            <div style="font-size:13px;color:rgba(120,53,15,.72);">${escapeHTML(trA('Ces lignes expliquent l ecart entre "payees" et "payees + a payer" dans le filtre courant.', 'These rows explain the gap between paid and paid + unpaid in the current filter.'))}</div>
+          </div>
+          <div style="font-size:12px;font-weight:850;color:#92400e;">${escapeHTML(unpaidRows.length)} ${escapeHTML(trA('ligne(s)', 'row(s)'))}</div>
+        </div>
+        <div style="margin-top:12px;display:grid;gap:8px;">
+          ${unpaidRows.slice(0, 8).map((row) => {
+            const tx = row.tx || {};
+            const budgetRange = row.budgetStart && row.budgetEnd && row.budgetStart !== row.budgetEnd
+              ? `${row.budgetStart} → ${row.budgetEnd}`
+              : (row.budgetStart || '—');
+            const original = `${_safeNum(tx.amount).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} ${_upper(tx.currency || model.base)}`;
+            return `
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid rgba(245,158,11,.18);">
+                <div style="min-width:0;">
+                  <div style="font-size:13px;font-weight:900;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(tx.label || tx.category || 'Transaction')}</div>
+                  <div style="margin-top:4px;font-size:12px;color:rgba(120,53,15,.72);display:flex;gap:6px;flex-wrap:wrap;">
+                    <span>Budget : ${escapeHTML(budgetRange)}</span>
+                    <span>•</span>
+                    <span>${escapeHTML(_txCategory(tx) || 'Autre')}${_txSubcategory(tx) ? ` / ${escapeHTML(_txSubcategory(tx))}` : ''}</span>
+                    <span>•</span>
+                    <span>${escapeHTML(_entryTripLabel(tx))}</span>
+                  </div>
+                </div>
+                <div style="text-align:right;white-space:nowrap;">
+                  <div style="font-size:14px;font-weight:950;color:#b45309;">${escapeHTML(_fmtMoney(row.visibleAmount, model.base))}</div>
+                  <div style="font-size:12px;color:rgba(120,53,15,.62);">${escapeHTML(original)}</div>
+                </div>
+              </div>`;
+          }).join('')}
+          ${unpaidRows.length > 8 ? `<div style="font-size:12px;color:rgba(120,53,15,.72);padding-top:4px;">${escapeHTML(trA(`+ ${unpaidRows.length - 8} autre(s) ligne(s) dans la periode.`, `+ ${unpaidRows.length - 8} other row(s) in the period.`))}</div>` : ''}
+        </div>
+      </div>` : '';
+
+host.innerHTML = progressCards.map((c, idx) => renderGlassCard(c, idx)).join('') + renderDeltaCard(progressCards.length) + cashflowBlock + unpaidBlock + cashOnlyBlock;
   }
   function _txDrilldownId(tx, idx){
   return String(tx?.id || tx?.transaction_id || tx?.local_id || `${_txBudgetStart(tx)}|${tx?.label || ''}|${tx?.amount || ''}|${idx || 0}`);

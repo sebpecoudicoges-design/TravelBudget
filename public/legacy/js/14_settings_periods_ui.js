@@ -712,6 +712,12 @@ function renderSettings(){
             <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-local" type="checkbox" ${notifPrefs.localDevice ? 'checked' : ''}> Notification téléphone</label>
             <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-server" type="checkbox" ${notifPrefs.serverPush !== false ? 'checked' : ''}> Envoi serveur</label>
           </div>
+          <div class="row" style="gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-emojis" type="checkbox" ${notifPrefs.emojis !== false ? 'checked' : ''}> Emojis</label>
+            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-tone" type="checkbox" ${notifPrefs.motivationalTone !== false ? 'checked' : ''}> Ton motivant</label>
+            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-sport-reminder" type="checkbox" ${notifPrefs.sportReminder !== false ? 'checked' : ''}> Rappel sport</label>
+            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-work-reminder" type="checkbox" ${notifPrefs.workReminder !== false ? 'checked' : ''}> Rappel travail</label>
+          </div>
           <div class="row" style="gap:12px;align-items:end;flex-wrap:wrap;margin-top:10px;">
             <label style="display:flex;gap:8px;align-items:center;padding-bottom:8px;"><input id="tb-notif-morning" type="checkbox" ${notifPrefs.morningBudget || notifPrefs.dailyBudget ? 'checked' : ''}> Résumé du matin</label>
             <label style="display:flex;gap:8px;align-items:center;padding-bottom:8px;"><input id="tb-notif-evening" type="checkbox" ${notifPrefs.eveningSummary ? 'checked' : ''}> Bilan du soir</label>
@@ -895,6 +901,10 @@ if (btnWhatsapp) {
         lowBudget: !!box.querySelector("#tb-notif-lowbudget")?.checked,
         localDevice: !!box.querySelector("#tb-notif-local")?.checked,
         serverPush: !!box.querySelector("#tb-notif-server")?.checked,
+        emojis: !!box.querySelector("#tb-notif-emojis")?.checked,
+        motivationalTone: !!box.querySelector("#tb-notif-tone")?.checked,
+        sportReminder: !!box.querySelector("#tb-notif-sport-reminder")?.checked,
+        workReminder: !!box.querySelector("#tb-notif-work-reminder")?.checked,
         morningBudget: !!box.querySelector("#tb-notif-morning")?.checked,
         eveningSummary: !!box.querySelector("#tb-notif-evening")?.checked,
         dailyBudget: !!box.querySelector("#tb-notif-morning")?.checked || !!box.querySelector("#tb-notif-evening")?.checked,

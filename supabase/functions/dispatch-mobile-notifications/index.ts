@@ -35,6 +35,19 @@ function money(value: number, currency: string) {
   return `${Math.round(value * 100) / 100} ${currency}`.trim();
 }
 
+function prefBool(prefs: Record<string, unknown>, key: string, fallback = true) {
+  return prefs[key] === undefined ? fallback : prefs[key] !== false;
+}
+
+function withEmoji(text: string, emoji: string, enabled: boolean) {
+  return enabled ? `${emoji} ${text}` : text;
+}
+
+function signedPctText(value: number) {
+  const n = Number(value) || 0;
+  return `${n > 0 ? "+" : ""}${Math.round(n)}%`;
+}
+
 function dayCountInclusive(start: string, end: string) {
   const s = new Date(`${start}T00:00:00Z`);
   const e = new Date(`${end}T00:00:00Z`);
@@ -50,6 +63,44 @@ function convertWithSnapshot(tx: Record<string, unknown>, amount: number, target
   if (txCurrency === targetCurrency) return amount;
   if (rate > 0 && snapFrom === txCurrency && snapTo === targetCurrency) return amount * rate;
   return amount;
+}
+
+function budgetTone(remaining: number, spent: number, daily: number) {
+  if (remaining < 0) return "over_today";
+  if (daily > 0 && spent / daily > 0.85) return "near_limit";
+  if (remaining > Math.max(5, daily * 0.35)) return "ahead";
+  return "steady";
+}
+
+function composeNotification(slot: Slot, budget: { base: string; daily: number; spent: number; remaining: number }, activity: { sportCount: number; sportKcal: number; workCount: number; workKcal: number; workMinutes: number }, prefs: Record<string, unknown>) {
+  const emojis = prefBool(prefs, "emojis", true);
+  const motivational = prefBool(prefs, "motivationalTone", true);
+  const sportReminder = prefBool(prefs, "sportReminder", true);
+  const workReminder = prefBool(prefs, "workReminder", true);
+  const tone = budgetTone(budget.remaining, budget.spent, budget.daily);
+  const evening = slot === "evening";
+
+  let title = evening ? withEmoji("Bilan du soir", "🌙", emojis) : withEmoji("Budget du matin", "🌅", emojis);
+  if (!evening && tone === "over_today") title = withEmoji("Budget a surveiller", "⚠️", emojis);
+  if (!evening && tone === "near_limit") title = withEmoji("Rythme budget eleve", "🟠", emojis);
+  if (!evening && tone === "ahead") title = withEmoji("Budget en avance", "✅", emojis);
+
+  const baseLine = evening
+    ? `Budget restant ${money(budget.remaining, budget.base)}.`
+    : `Reste aujourd'hui ${money(budget.remaining, budget.base)}. Depense du jour ${money(budget.spent, budget.base)} / ${money(budget.daily, budget.base)}.`;
+
+  let nudge = "";
+  if (motivational && evening) {
+    if (activity.sportKcal > 0 && activity.workKcal > 0) nudge = `Sport ${Math.round(activity.sportKcal)} kcal, travail ${Math.round(activity.workKcal)} kcal. Grosse journee.`;
+    else if (activity.sportKcal > 0) nudge = `Sport note : ${Math.round(activity.sportKcal)} kcal.`;
+    else if (activity.workKcal > 0) nudge = `Travail note : ${Math.round(activity.workKcal)} kcal sur ${Math.round(activity.workMinutes / 60 * 10) / 10}h.`;
+    else if (workReminder) nudge = "Tu as travaille aujourd'hui ? Ajoute la journee pour garder les kcal a jour.";
+  }
+  if (motivational && !evening && sportReminder && activity.sportCount <= 0) {
+    nudge = "Envie de 15 min de marche, corde ou ping-pong aujourd'hui ?";
+  }
+
+  return { title, body: `${baseLine}${nudge ? ` ${nudge}` : ""}`.trim(), tone };
 }
 
 async function budgetSummary(admin: ReturnType<typeof createClient>, userId: string, date: string) {
@@ -164,10 +215,9 @@ Deno.serve(async (req: Request) => {
 
       const budget = await budgetSummary(admin, row.user_id, parts.date);
       const activity = await activitySummary(admin, row.user_id, parts.date);
-      const title = slot === "evening" ? "Bilan du soir" : "Budget du matin";
-      const body = slot === "evening"
-        ? `Budget restant ${money(budget.remaining, budget.base)}. Sport ${Math.round(activity.sportKcal)} kcal, travail ${Math.round(activity.workKcal)} kcal.`
-        : `Reste aujourd'hui ${money(budget.remaining, budget.base)}. Depense du jour ${money(budget.spent, budget.base)} / ${money(budget.daily, budget.base)}.`;
+      const message = composeNotification(slot, budget, activity, prefs);
+      const title = message.title;
+      const body = message.body;
       if (dryRun) {
         results.push({ user_id: row.user_id, slot, dry_run: true, title, body });
         continue;
@@ -185,6 +235,9 @@ Deno.serve(async (req: Request) => {
           today: parts.date,
           currency: budget.base,
           remaining_today: String(Math.round(budget.remaining * 100) / 100),
+          spent_today: String(Math.round(budget.spent * 100) / 100),
+          daily_budget: String(Math.round(budget.daily * 100) / 100),
+          tone: message.tone,
           sport_kcal: String(Math.round(activity.sportKcal)),
           work_kcal: String(Math.round(activity.workKcal)),
         },

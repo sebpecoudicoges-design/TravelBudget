@@ -180,6 +180,10 @@
     serverPush: true,
     lowBudget: true,
     localDevice: false,
+    emojis: true,
+    motivationalTone: true,
+    sportReminder: true,
+    workReminder: true,
     timezone: '',
   });
 
@@ -209,6 +213,10 @@
       serverPush: src.serverPush !== false,
       lowBudget: src.lowBudget !== false,
       localDevice: src.localDevice === true,
+      emojis: src.emojis !== false,
+      motivationalTone: src.motivationalTone !== false,
+      sportReminder: src.sportReminder !== false,
+      workReminder: src.workReminder !== false,
       timezone,
     };
   }
@@ -579,26 +587,34 @@
     const delta = analysisCurrency === currency ? Number(analysis?.deltaBudgetAmount || 0) : 0;
     const pct = Number(analysis?.deltaBudgetPct || 0);
     const pctText = signedPctText(pct);
+    const prefs = getNotificationPrefs();
+    const daily = Number(info?.daily || 0);
+    const spentToday = Math.max(0, daily - remainingToday);
     const variant = window.Core?.notificationRules?.selectBudgetNotificationVariant
-      ? window.Core.notificationRules.selectBudgetNotificationVariant({ remainingToday, delta, pct, currency })
+      ? window.Core.notificationRules.selectBudgetNotificationVariant({ remainingToday, delta, pct, currency, emojis: prefs.emojis !== false })
       : null;
     const activity = todayActivitySummary();
     const isEvening = String(slot || '').toLowerCase() === 'evening';
-    const title = isEvening
-      ? tr('Bilan du soir', 'Evening summary')
-      : (variant ? tr(variant.titleFr, variant.titleEn) : tr('Budget du matin', 'Morning budget'));
     const formatters = { money, pctText };
-    const budgetText = variant
-      ? tr(variant.bodyFr(formatters), variant.bodyEn(formatters))
+    const composed = window.Core?.notificationRules?.composeDailyBudgetNotification
+      ? window.Core.notificationRules.composeDailyBudgetNotification({ slot: isEvening ? 'evening' : 'morning', remainingToday, daily, spentToday, delta, pct, currency, activity, prefs, ...formatters })
+      : null;
+    const title = composed
+      ? tr(composed.titleFr, composed.titleEn)
+      : (isEvening ? tr('Bilan du soir', 'Evening summary') : (variant ? tr(variant.titleFr, variant.titleEn) : tr('Budget du matin', 'Morning budget')));
+    const budgetText = composed
+      ? tr(composed.bodyFr, composed.bodyEn)
+      : (variant
+        ? tr(variant.bodyFr(formatters), variant.bodyEn(formatters))
       : tr(
         `Reste aujourd'hui ${money(remainingToday, currency)}. Ecart tendance vs budget app : ${pctText}, ${money(delta, currency)}.`,
         `Today left ${money(remainingToday, currency)}. Trend gap vs app budget: ${pctText}, ${money(delta, currency)}.`
-      );
+      ));
     const body = isEvening
-      ? tr(
+      ? (composed ? budgetText : tr(
         `${budgetText} Sport ${Math.round(activity.sportKcal)} kcal, travail ${Math.round(activity.workKcal)} kcal.`,
         `${budgetText} Sport ${Math.round(activity.sportKcal)} kcal, work ${Math.round(activity.workKcal)} kcal.`
-      )
+      ))
       : budgetText;
     return {
       title,
@@ -617,7 +633,7 @@
         target_to_date: Number(analysis?.targetToToday || 0),
         delta,
         pct,
-        tone: variant?.tone || 'steady',
+        tone: composed?.tone || variant?.tone || 'steady',
         sport_kcal: Math.round(activity.sportKcal),
         work_kcal: Math.round(activity.workKcal),
       },
