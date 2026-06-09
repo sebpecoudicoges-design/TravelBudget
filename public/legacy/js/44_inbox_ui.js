@@ -573,9 +573,10 @@
       ? window.getDailyBudgetInfoForDate(today)
       : { remaining: 0, daily: window.state?.period?.dailyBudgetBase || 0, baseCurrency: window.state?.period?.baseCurrency || 'EUR' };
     const analysis = await budgetAnalysisNotificationSummary();
-    const currency = String(analysis?.base || info?.baseCurrency || window.state?.period?.baseCurrency || 'EUR').toUpperCase();
-    const remainingToday = Number(analysis?.remainingToday ?? info?.remaining ?? 0);
-    const delta = Number(analysis?.deltaBudgetAmount || 0);
+    const currency = String(info?.baseCurrency || window.state?.period?.baseCurrency || analysis?.base || 'EUR').toUpperCase();
+    const analysisCurrency = String(analysis?.base || '').toUpperCase();
+    const remainingToday = Number(info?.remaining ?? analysis?.remainingToday ?? 0);
+    const delta = analysisCurrency === currency ? Number(analysis?.deltaBudgetAmount || 0) : 0;
     const pct = Number(analysis?.deltaBudgetPct || 0);
     const pctText = signedPctText(pct);
     const variant = window.Core?.notificationRules?.selectBudgetNotificationVariant

@@ -35,10 +35,27 @@ function money(value: number, currency: string) {
   return `${Math.round(value * 100) / 100} ${currency}`.trim();
 }
 
+function dayCountInclusive(start: string, end: string) {
+  const s = new Date(`${start}T00:00:00Z`);
+  const e = new Date(`${end}T00:00:00Z`);
+  if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime()) || e < s) return 1;
+  return Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1);
+}
+
+function convertWithSnapshot(tx: Record<string, unknown>, amount: number, targetCurrency: string) {
+  const txCurrency = String(tx.currency || "").toUpperCase();
+  const snapFrom = String(tx.fx_tx_currency_snapshot || "").toUpperCase();
+  const snapTo = String(tx.fx_base_currency_snapshot || "").toUpperCase();
+  const rate = Number(tx.fx_rate_snapshot || 0);
+  if (txCurrency === targetCurrency) return amount;
+  if (rate > 0 && snapFrom === txCurrency && snapTo === targetCurrency) return amount * rate;
+  return amount;
+}
+
 async function budgetSummary(admin: ReturnType<typeof createClient>, userId: string, date: string) {
   const { data: period } = await admin
     .from("periods")
-    .select("id,base_currency,daily_budget_base")
+    .select("id,travel_id,base_currency,daily_budget_base,start_date,end_date")
     .eq("user_id", userId)
     .lte("start_date", date)
     .gte("end_date", date)
@@ -46,18 +63,40 @@ async function budgetSummary(admin: ReturnType<typeof createClient>, userId: str
     .limit(1)
     .maybeSingle();
 
-  const base = String(period?.base_currency || "EUR").toUpperCase();
-  const daily = Number(period?.daily_budget_base || 0);
+  const { data: segment } = period?.id
+    ? await admin
+      .from("budget_segments")
+      .select("id,base_currency,daily_budget_base,start_date,end_date,sort_order")
+      .eq("user_id", userId)
+      .eq("period_id", period.id)
+      .lte("start_date", date)
+      .gte("end_date", date)
+      .order("sort_order", { ascending: true })
+      .order("start_date", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    : { data: null };
+
+  const base = String(segment?.base_currency || period?.base_currency || "EUR").toUpperCase();
+  const daily = Number(segment?.daily_budget_base ?? period?.daily_budget_base ?? 0);
   const { data: txRows } = await admin
     .from("transactions")
-    .select("amount,currency,type,affects_budget,out_of_budget,budget_date_start,budget_date_end")
+    .select("amount,currency,type,affects_budget,out_of_budget,budget_date_start,budget_date_end,travel_id,period_id,fx_rate_snapshot,fx_base_currency_snapshot,fx_tx_currency_snapshot")
     .eq("user_id", userId)
     .eq("type", "expense")
     .eq("affects_budget", true)
-    .eq("out_of_budget", false)
     .lte("budget_date_start", date)
     .gte("budget_date_end", date);
-  const spent = (txRows || []).reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const spent = (txRows || [])
+    .filter((tx) => tx.out_of_budget !== true)
+    .filter((tx) => !period?.travel_id || !tx.travel_id || String(tx.travel_id) === String(period.travel_id))
+    .filter((tx) => !period?.id || !tx.period_id || String(tx.period_id) === String(period.id))
+    .reduce((sum, tx) => {
+      const start = String(tx.budget_date_start || date).slice(0, 10);
+      const end = String(tx.budget_date_end || start).slice(0, 10);
+      const perDay = Number(tx.amount || 0) / dayCountInclusive(start, end);
+      return sum + convertWithSnapshot(tx as Record<string, unknown>, perDay, base);
+    }, 0);
   return { base, daily, spent, remaining: daily - spent };
 }
 

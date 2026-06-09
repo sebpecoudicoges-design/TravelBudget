@@ -373,7 +373,7 @@
   if (!/^\[trip\]/i.test(label)) return false;
   if (_txType(tx) !== 'expense') return false;
   if (_txOut(tx)) return false;
-  return true;
+  return _txPaid(tx);
   }
   function _isInternalMovement(tx){ return String(tx?.category || '').trim().toLowerCase() === 'mouvement interne'; }
   function _isAnalysisInternalMovement(tx) {
@@ -644,7 +644,6 @@ function _analysisBucketOrder(){
       const txTravelId = String(tx?.travel_id || tx?.travelId || '');
       if (travelId && txTravelId && txTravelId !== String(travelId)) return false;
       if (_txType(tx) !== 'expense') return false;
-      if (_isTripLinked(tx) && !_isTripBudgetShare(tx)) return false;
       if (_isAnalysisInternalMovement(tx)) return false;
       const bs = _txBudgetStart(tx);
       const be = _txBudgetEnd(tx);

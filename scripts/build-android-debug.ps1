@@ -27,7 +27,7 @@ $Version = (Get-Content $PackageJsonPath -Raw | ConvertFrom-Json).version
 if (!$Version) {
   throw "Version introuvable dans package.json"
 }
-if (!$BuildStamp) {
+if (!$BuildStamp -or $BuildStamp -notmatch '^\d{8}-\d{6}$') {
   $BuildStamp = Get-Date -Format "yyyyMMdd-HHmmss"
 }
 
