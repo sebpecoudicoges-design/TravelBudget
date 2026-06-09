@@ -373,7 +373,7 @@
   if (!/^\[trip\]/i.test(label)) return false;
   if (_txType(tx) !== 'expense') return false;
   if (_txOut(tx)) return false;
-  return _txPaid(tx);
+  return true;
   }
   function _isInternalMovement(tx){ return String(tx?.category || '').trim().toLowerCase() === 'mouvement interne'; }
   function _isAnalysisInternalMovement(tx) {
@@ -397,6 +397,9 @@
     if (typeof tx?.payNow === 'boolean') return tx.payNow;
     if (typeof tx?.pay_now === 'boolean') return tx.pay_now;
     return !!tx?.payNow || !!tx?.pay_now;
+  }
+  function _txAnalysisPaid(tx){
+    return _txPaid(tx) || _isTripAnalyticRealExpense(tx);
   }
   function _txOut(tx){
     if (typeof tx?.outOfBudget === 'boolean') return tx.outOfBudget;
@@ -728,7 +731,7 @@ function _sumTxArray(txs, base){
       const sub = _txSubcategory(tx);
       if (scope === 'budget' && _txOut(tx)) return false;
       if (scope === 'out' && !_txOut(tx)) return false;
-      if (mode === 'expenses' && !_txPaid(tx)) return false;
+      if (mode === 'expenses' && !_txAnalysisPaid(tx)) return false;
       if (catFilter === '__income') return false;
       if (catFilter && catFilter !== 'all' && cat !== catFilter) return false;
       if (subFilter === '__none__' && sub) return false;
@@ -746,7 +749,7 @@ function _sumTxArray(txs, base){
       const cat = _txCategory(tx);
       const sub = _txSubcategory(tx);
       if (!_txOut(tx)) return false;
-      if (mode === 'expenses' && !_txPaid(tx)) return false;
+      if (mode === 'expenses' && !_txAnalysisPaid(tx)) return false;
       if (catFilter === '__income') return false;
       if (catFilter && catFilter !== 'all' && cat !== catFilter) return false;
       if (subFilter === '__none__' && sub) return false;
@@ -817,11 +820,11 @@ const visibleBudgetDays = fullBudgetDays
       if (!alloc.visibleBudgetDays.length) continue;
 
       spent += alloc.amount;
-      if (_txPaid(tx) || _isTripAnalyticRealExpense(tx)) paidSpent += alloc.amount;
+      if (_txAnalysisPaid(tx)) paidSpent += alloc.amount;
 
       for (const d of alloc.visibleBudgetDays) {
         dailyMap[d] = _safeNum(dailyMap[d]) + alloc.perDay;
-        if (_txPaid(tx) || _isTripAnalyticRealExpense(tx)) paidMap[d] = _safeNum(paidMap[d]) + alloc.perDay;
+        if (_txAnalysisPaid(tx)) paidMap[d] = _safeNum(paidMap[d]) + alloc.perDay;
       }
 
       const cat = _txCategory(tx);
@@ -838,7 +841,7 @@ const txDetail = {
   budgetEnd: alloc.budgetEnd
 };
 
-if (!_txPaid(tx) && !_isTripAnalyticRealExpense(tx)) {
+if (!_txAnalysisPaid(tx)) {
   unpaidTxDetails.push(txDetail);
 }
 
@@ -1088,7 +1091,7 @@ const todayBudget = todayIdx >= 0 ? _safeNum(targetDaily[todayIdx]) : 0;
 
 const todayBudgetConsumed = todayIdx >= 0
   ? txs.reduce((sum, tx) => {
-      if (cashflowMode === 'expenses' && !_txPaid(tx)) return sum;
+      if (cashflowMode === 'expenses' && !_txAnalysisPaid(tx)) return sum;
 
       const budgetStart = _txBudgetStart(tx);
       const budgetEnd = _txBudgetEnd(tx);
@@ -1135,7 +1138,7 @@ incomeReal.forEach(tx => {
   cashIncomeByCategory.set(key, (cashIncomeByCategory.get(key) || 0) + _convert(tx?.amount, tx?.currency || base, _txCashDate(tx), base));
 });
 txs.forEach(tx => {
-  if (!_txPaid(tx) && !_isTripAnalyticRealExpense(tx)) return;
+  if (!_txAnalysisPaid(tx)) return;
   const key = _txCategory(tx);
   cashExpenseByCategory.set(key, (cashExpenseByCategory.get(key) || 0) + _convert(tx?.amount, tx?.currency || base, _txCashDate(tx), base));
 });
