@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   analysisBucketOrder,
+  affectsBudgetAnalysisDataset,
   computeTrendGap,
   formatSignedMoney,
   formatSignedPercent,
@@ -56,5 +57,11 @@ describe('budget analysis rules core', () => {
         data: { compare_mode: 'mapped', sourced_bucket: 'Connectivité' },
       },
     })).toEqual(['Logement', 'Repas', 'Connectivité']);
+  });
+
+  it('keeps cashflow-only rows out of budget analysis totals', () => {
+    expect(affectsBudgetAnalysisDataset({ type: 'expense', affects_budget: true })).toBe(true);
+    expect(affectsBudgetAnalysisDataset({ type: 'expense', affectsBudget: false })).toBe(false);
+    expect(affectsBudgetAnalysisDataset({ type: 'income', affects_budget: true })).toBe(false);
   });
 });

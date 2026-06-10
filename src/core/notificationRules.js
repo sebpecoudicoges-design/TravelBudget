@@ -118,13 +118,13 @@ export function composeDailyBudgetNotification({ slot = 'morning', remainingToda
   const titleEn = evening ? withEmoji('Evening summary', '🌙', p.emojis) : variant.titleEn;
   const budgetLineFr = evening
     ? `Budget restant ${fmtMoney(remainingToday, cur)}.`
-    : variant.bodyFr({ money: fmtMoney, pctText: fmtPct });
+    : `Reste ${fmtMoney(remainingToday, cur)}.`;
   const budgetLineEn = evening
     ? `Budget left ${fmtMoney(remainingToday, cur)}.`
-    : variant.bodyEn({ money: fmtMoney, pctText: fmtPct });
+    : `Left ${fmtMoney(remainingToday, cur)}.`;
   const nudge = p.motivationalTone ? selectActivityNudge({ slot, activity, prefs: p }) : null;
-  const morningSpendFr = !evening && Number(daily) > 0 ? ` Depense du jour ${fmtMoney(spentToday, cur)} / ${fmtMoney(daily, cur)}.` : '';
-  const morningSpendEn = !evening && Number(daily) > 0 ? ` Today spend ${fmtMoney(spentToday, cur)} / ${fmtMoney(daily, cur)}.` : '';
+  const morningSpendFr = !evening && Number(daily) > 0 ? ` Jour ${fmtMoney(spentToday, cur)} / ${fmtMoney(daily, cur)}.` : '';
+  const morningSpendEn = !evening && Number(daily) > 0 ? ` Day ${fmtMoney(spentToday, cur)} / ${fmtMoney(daily, cur)}.` : '';
   return {
     tone: variant.tone,
     titleFr,

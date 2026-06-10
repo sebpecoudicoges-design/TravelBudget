@@ -38,6 +38,14 @@ export function normalizeAnalysisKey(value) {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+export function affectsBudgetAnalysisDataset(tx = {}) {
+  if (!tx || typeof tx !== 'object') return false;
+  const flag = tx.affectsBudget ?? tx.affects_budget;
+  if (flag === false) return false;
+  if (String(tx.type || '').toLowerCase() !== 'expense') return false;
+  return true;
+}
+
 export function sqlAnalyticFamilyToBucket(family) {
   const f = normalizeAnalysisKey(family);
   if (f === 'accommodation') return 'Logement';

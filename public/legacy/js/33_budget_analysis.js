@@ -409,6 +409,14 @@
     if (typeof tx?.out_of_budget === 'boolean') return tx.out_of_budget;
     return !!tx?.outOfBudget || !!tx?.out_of_budget;
   }
+  function _txAffectsAnalysisDataset(tx){
+    const core = window.TBCore?.budgetAnalysisRules;
+    if (core?.affectsBudgetAnalysisDataset) return !!core.affectsBudgetAnalysisDataset(tx);
+    if (!tx || typeof tx !== 'object') return false;
+    const flag = tx.affectsBudget ?? tx.affects_budget;
+    if (flag === false) return false;
+    return _txType(tx) === 'expense';
+  }
   function _categoryColor(name){
     try {
       if (typeof colorForCategory === 'function') return colorForCategory(name);
@@ -507,7 +515,7 @@ function _analysisBucketOrder(){
     (Array.isArray(state?.transactions) ? state.transactions : []).forEach(tx => {
       if (_isTripLinked(tx) && !_isTripBudgetShare(tx)) return;
       if (_txType(tx) === 'income') add('Revenu');
-      else if (_txType(tx) === 'expense') add(tx?.category);
+      else if (_txType(tx) === 'expense' && _txAffectsAnalysisDataset(tx)) add(tx?.category);
     });
     return out.sort((a,b) => a.localeCompare(b, 'fr', { sensitivity:'base' }));
   }
@@ -527,6 +535,7 @@ function _analysisBucketOrder(){
       if (_isTripLinked(tx) && !_isTripBudgetShare(tx)) return;
       const type = _txType(tx);
       if (type !== 'expense' && type !== 'income') return;
+      if (type === 'expense' && !_txAffectsAnalysisDataset(tx)) return;
       if (catFilter === '__income' && type !== 'income') return;
       if (catFilter !== 'all' && catFilter !== '__income' && _norm(tx?.category || 'Autre') !== catFilter) return;
       add(tx?.subcategory);
@@ -650,6 +659,7 @@ function _analysisBucketOrder(){
       const txTravelId = String(tx?.travel_id || tx?.travelId || '');
       if (travelId && txTravelId && txTravelId !== String(travelId)) return false;
       if (_txType(tx) !== 'expense') return false;
+      if (!_txAffectsAnalysisDataset(tx)) return false;
       if (_isAnalysisInternalMovement(tx)) return false;
       const bs = _txBudgetStart(tx);
       const be = _txBudgetEnd(tx);

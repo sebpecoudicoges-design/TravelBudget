@@ -9,6 +9,7 @@
   const WEIGHT_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1");
   const HEIGHT_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1");
   const GLOBAL_REST_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_global_rest || "travelbudget_sport_global_rest_v1");
+  const CIRCUIT_KEY = () => scopedKey("travelbudget_sport_circuit_v1");
   const HISTORY_KEY = () => scopedKey(baseHistoryKey());
   const ANON_HISTORY_KEY = () => `${baseHistoryKey()}::anon`;
   const RECOVERY_MET = 1.3;
@@ -193,6 +194,7 @@
     builderLevel: "regular",
     exerciseSearch: "",
     globalRestSeconds: loadGlobalRest(),
+    circuit: loadCircuit(),
     editingPlanIndex: null,
   };
 
@@ -226,6 +228,7 @@
     CACHE.localSessions = loadLocalHistory();
     CACHE.plan = loadPlan();
     CACHE.globalRestSeconds = loadGlobalRest();
+    CACHE.circuit = loadCircuit();
   }
   function activeTravelId() { return window.state?.activeTravelId || null; }
   function table(name) { return window.TB_CONST?.TABLES?.[name] || name; }
@@ -265,6 +268,27 @@
     CACHE.globalRestSeconds = seconds;
     try { localStorage.setItem(GLOBAL_REST_KEY(), String(seconds)); } catch (_) {}
     return seconds;
+  }
+  function loadCircuit() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(CIRCUIT_KEY()) || "{}");
+      return {
+        enabled: raw.enabled === true,
+        rounds: Math.max(1, Math.round(n(raw.rounds, 4))),
+        roundRestSeconds: Math.max(0, Math.round(n(raw.roundRestSeconds, 60))),
+        amrapMinutes: Math.max(0, Math.round(n(raw.amrapMinutes, 0))),
+      };
+    } catch (_) {
+      return { enabled: false, rounds: 4, roundRestSeconds: 60, amrapMinutes: 0 };
+    }
+  }
+  function saveCircuit(next) {
+    CACHE.circuit = Object.assign({ enabled: false, rounds: 4, roundRestSeconds: 60, amrapMinutes: 0 }, CACHE.circuit || {}, next || {});
+    CACHE.circuit.rounds = Math.max(1, Math.round(n(CACHE.circuit.rounds, 4)));
+    CACHE.circuit.roundRestSeconds = Math.max(0, Math.round(n(CACHE.circuit.roundRestSeconds, 60)));
+    CACHE.circuit.amrapMinutes = Math.max(0, Math.round(n(CACHE.circuit.amrapMinutes, 0)));
+    try { localStorage.setItem(CIRCUIT_KEY(), JSON.stringify(CACHE.circuit)); } catch (_) {}
+    return CACHE.circuit;
   }
   function bmiValue(kg, cm) {
     const h = n(cm, 0) / 100;
@@ -328,6 +352,11 @@
   }
   function totalPlanSeconds(plan) {
     const rows = plan || [];
+    if (CACHE.circuit?.enabled && rows.length) {
+      return makeSequence()
+        .filter(step => step.kind === "work" || step.kind === "rest" || step.kind === "round_rest")
+        .reduce((sum, step) => sum + Math.max(0, n(step.duration, step.kind === "work" ? setWorkSeconds(step.item) : 0)), 0);
+    }
     return rows.reduce((sum, item, idx) => {
       const work = setWorkSeconds(item) * n(item.sets, 1);
       const restSlots = Math.max(0, n(item.sets, 1) - 1) + (idx < rows.length - 1 ? 1 : 0);
@@ -1087,6 +1116,7 @@
     const manualReps = n(editing?.targetReps, baseExercise?.reps || 10);
     const manualSeconds = n(editing?.targetSeconds, baseExercise?.seconds || 45);
     const manualSets = n(editing?.sets, baseExercise?.sets || 3);
+    const circuit = CACHE.circuit || { enabled: false, rounds: 4, roundRestSeconds: 60, amrapMinutes: 0 };
     const matchedExercise = EXERCISE_LIBRARY.find(ex =>
       String(exerciseLabel(ex)).toLowerCase() === String(manualName).toLowerCase() ||
       String(ex.key) === String(editing?.libraryKey || "")
@@ -1140,6 +1170,20 @@
             <button class="btn" type="button" id="sport-clear">${esc(txt("Vider", "Clear"))}</button>
           </div>
         </div>
+        <div class="tb-sport-simple" style="margin-top:12px;">
+          <div class="tb-sport-simple-title">
+            <div>
+              <strong>${esc(txt("Tours / circuit", "Rounds / circuit"))}</strong>
+              <div class="muted">${esc(txt("La liste d'exercices devient un tour. Repete-la ou lance un max de tours en X minutes.", "The exercise list becomes one round. Repeat it or run max rounds in X minutes."))}</div>
+            </div>
+          </div>
+          <div class="tb-sport-fields">
+            <div class="tb-sport-field"><label>${esc(txt("Mode tours", "Round mode"))}</label><select id="sport-circuit-enabled"><option value="off" ${!circuit.enabled ? "selected" : ""}>${esc(txt("Classique", "Classic"))}</option><option value="on" ${circuit.enabled ? "selected" : ""}>${esc(txt("Circuit", "Circuit"))}</option></select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Nombre de tours", "Round count"))}</label><input id="sport-circuit-rounds" type="number" min="1" value="${esc(String(n(circuit.rounds, 4)))}"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Repos entre tours sec", "Rest between rounds sec"))}</label><input id="sport-circuit-rest" type="number" min="0" value="${esc(String(n(circuit.roundRestSeconds, 60)))}"></div>
+            <div class="tb-sport-field"><label>${esc(txt("AMRAP minutes", "AMRAP minutes"))}</label><input id="sport-circuit-amrap" type="number" min="0" value="${esc(String(n(circuit.amrapMinutes, 0)))}"></div>
+          </div>
+        </div>
         <div class="muted" style="margin-top:8px;">${esc(txt("Les kcal sont indicatives : poids, duree effective, type d'effort, intensite et charge externe si elle est portee. Un elastique ne s'ajoute pas a ton poids.", "Calories are indicative: weight, effective duration, effort type, intensity and external load when carried. Resistance bands are not added to body weight."))}</div>
         <div class="tb-sport-actions" style="margin-top:12px;">
           <button class="btn primary" type="button" id="sport-mark-done-builder" ${CACHE.plan.length ? "" : "disabled"}>${esc(txt("Marquer la seance faite", "Mark workout done"))}</button>
@@ -1176,6 +1220,21 @@
 
   function makeSequence() {
     const seq = [];
+    if (CACHE.circuit?.enabled && CACHE.plan.length) {
+      const rounds = CACHE.circuit.amrapMinutes > 0 ? 1 : Math.max(1, Math.round(n(CACHE.circuit.rounds, 4)));
+      for (let roundIndex = 1; roundIndex <= rounds; roundIndex += 1) {
+        CACHE.plan.forEach((item, itemIndex) => {
+          seq.push({ kind: "work", item, itemIndex, setIndex: roundIndex, roundIndex, roundTotal: rounds, duration: item.mode === "time" ? n(item.targetSeconds, 0) : 0 });
+          const rest = restSecondsForItem(item);
+          const hasNextInRound = itemIndex < CACHE.plan.length - 1;
+          if (hasNextInRound && rest > 0) seq.push({ kind: "rest", item, itemIndex, setIndex: roundIndex, roundIndex, roundTotal: rounds, duration: rest });
+        });
+        if (roundIndex < rounds && n(CACHE.circuit.roundRestSeconds, 0) > 0) {
+          seq.push({ kind: "round_rest", roundIndex, roundTotal: rounds, duration: n(CACHE.circuit.roundRestSeconds, 60) });
+        }
+      }
+      return seq;
+    }
     CACHE.plan.forEach((item, itemIndex) => {
       const sets = Math.max(1, Math.round(n(item.sets, 1)));
       for (let setIndex = 1; setIndex <= sets; setIndex += 1) {
@@ -1195,6 +1254,7 @@
   }
   function stepLabel(step) {
     if (!step) return txt("Fin", "End");
+    if (step.kind === "round_rest") return `${txt("Fin du tour", "End of round")} ${step.roundIndex}`;
     if (step.kind === "rest") return txt("Repos", "Rest");
     return step.item?.exerciseName || labelActivity(step.item?.activityKey || "strength");
   }
@@ -1227,19 +1287,25 @@
     const remaining = step && step.duration ? Math.max(0, Math.ceil((timer.stepEndAt - Date.now()) / 1000)) : 0;
     const workDone = timer.doneSets.length;
     const totalWork = timer.sequence.filter(s => s.kind === "work").length;
-    const display = step?.kind === "rest" ? fmtSec(remaining) : (step?.item?.mode === "time" ? fmtSec(remaining) : `${n(step?.item?.targetReps, 0)} reps`);
+    const isRest = step?.kind === "rest" || step?.kind === "round_rest";
+    const displayValue = isRest ? fmtSec(remaining) : (step?.item?.mode === "time" ? fmtSec(remaining) : `${n(step?.item?.targetReps, 0)} reps`);
+    const roundInfo = step?.roundIndex ? ` - ${esc(txt("Tour", "Round"))} ${step.roundIndex}${step.roundTotal ? `/${step.roundTotal}` : ""}` : "";
+    const amrap = CACHE.circuit?.enabled && n(CACHE.circuit?.amrapMinutes, 0) > 0;
+    const amrapRemaining = amrap && timer.timeCapEndAt ? Math.max(0, Math.ceil((timer.timeCapEndAt - Date.now()) / 1000)) : 0;
     return `
       <div class="tb-sport-card">
         <h3>${esc(txt("Timer guide", "Guided timer"))}</h3>
         <div class="tb-sport-timer">
-          <div class="kind">${esc(step?.kind === "rest" ? txt("Repos", "Rest") : txt("Travail", "Work"))} - ${workDone}/${totalWork}</div>
-          <div class="name">${esc(step?.kind === "rest" ? txt("Recupere", "Recover") : (step?.item?.exerciseName || ""))}</div>
-          <div class="clock">${esc(display)}</div>
+          <div class="kind">${esc(isRest ? txt("Repos", "Rest") : txt("Travail", "Work"))}${roundInfo} - ${workDone}/${totalWork}</div>
+          <div class="name">${esc(isRest ? stepLabel(step) : (step?.item?.exerciseName || ""))}</div>
+          <div class="clock">${esc(displayValue)}</div>
+          ${amrap ? `<div class="hint">${esc(txt("AMRAP restant", "AMRAP left"))}: ${fmtSec(amrapRemaining)} - ${esc(txt("Tours valides", "Rounds counted"))}: ${n(timer.roundsCompleted, 0)}</div>` : ""}
           <div class="hint">${esc(txt("Temps total", "Total time"))}: ${fmtSec(elapsed)} ${step?.kind === "work" ? `- ${esc(labelEquipment(step.item.equipment))}` : ""}</div>
           <div class="tb-sport-next">${esc(txt("Ensuite", "Next"))}: ${esc(nextStepLabel())}</div>
           <div class="tb-sport-actions" style="justify-content:center;">
             ${step?.kind === "work" && step?.item?.mode === "reps" ? `<button class="btn primary" type="button" id="sport-step-done">${esc(txt("Fini", "Done"))}</button>` : ""}
-            ${step?.kind === "rest" ? `<button class="btn primary" type="button" id="sport-skip-rest">${esc(txt("Sauter le repos", "Skip rest"))}</button>` : ""}
+            ${amrap ? `<button class="btn primary" type="button" id="sport-round-count">+ ${esc(txt("Tour", "Round"))}</button>` : ""}
+            ${isRest ? `<button class="btn primary" type="button" id="sport-skip-rest">${esc(txt("Sauter le repos", "Skip rest"))}</button>` : ""}
             ${step?.duration ? `<button class="btn" type="button" id="sport-minus-time">-15s</button><button class="btn" type="button" id="sport-plus-time">+30s</button>` : ""}
             <button class="btn" type="button" id="sport-pause">${timer.paused ? esc(txt("Reprendre", "Resume")) : esc(txt("Pause", "Pause"))}</button>
             <button class="btn danger" type="button" id="sport-finish">${esc(txt("Terminer", "Finish"))}</button>
@@ -1430,6 +1496,19 @@
       savePlan();
       renderSport("global-rest");
     };
+    const saveCircuitFromForm = () => {
+      saveCircuit({
+        enabled: root.querySelector("#sport-circuit-enabled")?.value === "on",
+        rounds: root.querySelector("#sport-circuit-rounds")?.value,
+        roundRestSeconds: root.querySelector("#sport-circuit-rest")?.value,
+        amrapMinutes: root.querySelector("#sport-circuit-amrap")?.value,
+      });
+      renderSport("circuit");
+    };
+    ["#sport-circuit-enabled", "#sport-circuit-rounds", "#sport-circuit-rest", "#sport-circuit-amrap"].forEach((selector) => {
+      const el = root.querySelector(selector);
+      if (el) el.onchange = saveCircuitFromForm;
+    });
     const builderDuration = root.querySelector("#sport-builder-duration");
     if (builderDuration) builderDuration.onchange = () => {
       CACHE.builderDuration = Math.max(10, n(builderDuration.value, 35));
@@ -1565,6 +1644,13 @@
     if (done) done.onclick = completeStep;
     const skipRest = root.querySelector("#sport-skip-rest");
     if (skipRest) skipRest.onclick = skipRestStep;
+    const roundCount = root.querySelector("#sport-round-count");
+    if (roundCount) roundCount.onclick = () => {
+      if (!CACHE.timer) return;
+      CACHE.timer.roundsCompleted = n(CACHE.timer.roundsCompleted, 0) + 1;
+      sportFeedback(txt("Tour ajoute", "Round added"), `${txt("Tours valides", "Rounds counted")}: ${CACHE.timer.roundsCompleted}`, { toast: true, persistNotification: true });
+      renderSport("round-count");
+    };
     const minusTime = root.querySelector("#sport-minus-time");
     if (minusTime) minusTime.onclick = () => adjustCurrentStepSeconds(-15);
     const plusTime = root.querySelector("#sport-plus-time");
@@ -1659,6 +1745,8 @@
       paused: false,
       pauseStartedAt: null,
       doneSets: [],
+      roundsCompleted: 0,
+      timeCapEndAt: CACHE.circuit?.enabled && n(CACHE.circuit?.amrapMinutes, 0) > 0 ? Date.now() + n(CACHE.circuit.amrapMinutes, 0) * 60000 : null,
       bodyWeightKg: bodyWeight(),
       bodyHeightCm: bodyHeight(),
     };
@@ -1684,6 +1772,24 @@
     let cursor = startedAt;
     const doneSets = [];
 
+    const circuitSequence = CACHE.circuit?.enabled ? makeSequence().filter(step => step.kind === "work") : null;
+    if (circuitSequence?.length) {
+      circuitSequence.forEach((step) => {
+        const item = step.item;
+        const workSeconds = setWorkSeconds(item);
+        cursor += workSeconds * 1000;
+        doneSets.push({
+          itemIndex: step.itemIndex,
+          setIndex: step.setIndex,
+          reps: item.mode === "reps" ? n(item.targetReps, 0) : null,
+          durationSeconds: workSeconds,
+          weightKg: effectiveLoadKg(item, weightKg),
+          distanceM: n(item.distanceM, 0),
+          completedAt: new Date(Math.min(cursor, endedAt)).toISOString(),
+        });
+        cursor += Math.max(0, restSecondsForItem(item)) * 1000;
+      });
+    } else {
     (CACHE.plan || []).forEach((item, itemIndex) => {
       const sets = Math.max(1, Math.round(n(item.sets, 1)));
       for (let setIndex = 0; setIndex < sets; setIndex += 1) {
@@ -1701,6 +1807,7 @@
         cursor += Math.max(0, restSecondsForItem(item)) * 1000;
       }
     });
+    }
 
     const summary = {
       startedAt: new Date(startedAt).toISOString(),
@@ -1727,6 +1834,7 @@
       const timer = CACHE.timer;
       const step = currentTimerStep();
       if (!timer || timer.paused || !step) return;
+      if (timer.timeCapEndAt && Date.now() >= timer.timeCapEndAt) return finishWorkout();
       if (step.duration && Date.now() >= timer.stepEndAt) completeStep();
       else if ((typeof activeView === "string" ? activeView : "") === "sport") {
         const root = document.getElementById("sport-root");
@@ -1813,6 +1921,16 @@
     timer.index += 1;
     const next = currentTimerStep();
     beep(next?.kind === "rest" ? "rest" : "work");
+    if (!next && timer.timeCapEndAt && Date.now() < timer.timeCapEndAt) {
+      timer.roundsCompleted = n(timer.roundsCompleted, 0) + 1;
+      timer.index = 0;
+      const first = currentTimerStep();
+      sportFeedback(txt("Tour valide", "Round counted"), `${txt("Tour", "Round")} ${timer.roundsCompleted} - ${stepLabel(first)}`, { persistNotification: true });
+      timer.stepStartedAt = Date.now();
+      timer.stepEndAt = first?.duration ? Date.now() + (first.duration * 1000) : null;
+      renderSport("amrap-loop");
+      return;
+    }
     if (!next) {
       finishWorkout();
       return;
@@ -1825,7 +1943,7 @@
   function skipRestStep() {
     const timer = CACHE.timer;
     const step = currentTimerStep();
-    if (!timer || !step || step.kind !== "rest") return;
+    if (!timer || !step || (step.kind !== "rest" && step.kind !== "round_rest")) return;
     timer.index += 1;
     const next = currentTimerStep();
     beep("work");
@@ -1860,6 +1978,7 @@
       timer.paused = false;
       timer.pauseStartedAt = null;
       if (timer.stepEndAt) timer.stepEndAt += delta;
+      if (timer.timeCapEndAt) timer.timeCapEndAt += delta;
       sportFeedback(txt("Timer repris", "Timer resumed"), txt("Seance reprise.", "Workout resumed."), { persistNotification: true });
     }
     renderSport("pause");

@@ -701,29 +701,16 @@ function renderSettings(){
           <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
             <div>
               <strong>Notifications mobile</strong>
-              <div class="muted" style="margin-top:4px;line-height:1.35;">Centre de notifications, push mobile serveur, et rappels locaux natifs en secours.</div>
+              <div class="muted" style="margin-top:4px;line-height:1.35;">Test rapide mobile. Les messages sont courts pour rester lisibles sur l'écran verrouillé.</div>
             </div>
-            <button class="btn" id="tb-notif-test" type="button">Tester</button>
+            <button class="btn primary" id="tb-notif-test" type="button">Envoyer un test</button>
           </div>
-          <div class="row" style="gap:14px;align-items:center;flex-wrap:wrap;margin-top:12px;">
-            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-inbox" type="checkbox" ${notifPrefs.inbox ? 'checked' : ''}> À traiter</label>
-            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-trip" type="checkbox" ${notifPrefs.trip ? 'checked' : ''}> Invitations et validations Trip</label>
-            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-lowbudget" type="checkbox" ${notifPrefs.lowBudget ? 'checked' : ''}> Alertes budget faible</label>
-            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-local" type="checkbox" ${notifPrefs.localDevice ? 'checked' : ''}> Notification téléphone</label>
-            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-server" type="checkbox" ${notifPrefs.serverPush !== false ? 'checked' : ''}> Envoi serveur</label>
+          <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+            <button class="btn" id="tb-notif-test-ok" type="button">Je l'ai reçue</button>
+            <button class="btn" id="tb-notif-test-ko" type="button">Pas reçue</button>
+            <button class="btn" id="tb-notif-test-cut" type="button">Texte coupé</button>
           </div>
-          <div class="row" style="gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px;">
-            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-emojis" type="checkbox" ${notifPrefs.emojis !== false ? 'checked' : ''}> Emojis</label>
-            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-tone" type="checkbox" ${notifPrefs.motivationalTone !== false ? 'checked' : ''}> Ton motivant</label>
-            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-sport-reminder" type="checkbox" ${notifPrefs.sportReminder !== false ? 'checked' : ''}> Rappel sport</label>
-            <label style="display:flex;gap:8px;align-items:center;"><input id="tb-notif-work-reminder" type="checkbox" ${notifPrefs.workReminder !== false ? 'checked' : ''}> Rappel travail</label>
-          </div>
-          <div class="row" style="gap:12px;align-items:end;flex-wrap:wrap;margin-top:10px;">
-            <label style="display:flex;gap:8px;align-items:center;padding-bottom:8px;"><input id="tb-notif-morning" type="checkbox" ${notifPrefs.morningBudget || notifPrefs.dailyBudget ? 'checked' : ''}> Résumé du matin</label>
-            <label style="display:flex;gap:8px;align-items:center;padding-bottom:8px;"><input id="tb-notif-evening" type="checkbox" ${notifPrefs.eveningSummary ? 'checked' : ''}> Bilan du soir</label>
-            <button class="btn primary" id="tb-notif-save" type="button">Enregistrer notifications</button>
-          </div>
-          <div class="muted" style="font-size:12px;line-height:1.35;margin-top:8px;">Aucune heure à choisir : le serveur envoie un résumé matin et/ou soir selon le fuseau du téléphone. Le local Android sert de secours quand l'app peut planifier.</div>
+          <div id="tb-notif-test-status" class="muted" style="font-size:12px;line-height:1.35;margin-top:8px;">Serveur actif : matin + soir selon le fuseau du téléphone. Le bouton ci-dessus force seulement un test immédiat.</div>
         </div>
       `;
 
@@ -896,18 +883,18 @@ if (btnWhatsapp) {
       }
 
       const readNotificationForm = () => ({
-        inbox: !!box.querySelector("#tb-notif-inbox")?.checked,
-        trip: !!box.querySelector("#tb-notif-trip")?.checked,
-        lowBudget: !!box.querySelector("#tb-notif-lowbudget")?.checked,
-        localDevice: !!box.querySelector("#tb-notif-local")?.checked,
-        serverPush: !!box.querySelector("#tb-notif-server")?.checked,
-        emojis: !!box.querySelector("#tb-notif-emojis")?.checked,
-        motivationalTone: !!box.querySelector("#tb-notif-tone")?.checked,
-        sportReminder: !!box.querySelector("#tb-notif-sport-reminder")?.checked,
-        workReminder: !!box.querySelector("#tb-notif-work-reminder")?.checked,
-        morningBudget: !!box.querySelector("#tb-notif-morning")?.checked,
-        eveningSummary: !!box.querySelector("#tb-notif-evening")?.checked,
-        dailyBudget: !!box.querySelector("#tb-notif-morning")?.checked || !!box.querySelector("#tb-notif-evening")?.checked,
+        inbox: notifPrefs.inbox !== false,
+        trip: notifPrefs.trip !== false,
+        lowBudget: notifPrefs.lowBudget !== false,
+        localDevice: true,
+        serverPush: true,
+        emojis: notifPrefs.emojis !== false,
+        motivationalTone: true,
+        sportReminder: true,
+        workReminder: true,
+        morningBudget: true,
+        eveningSummary: true,
+        dailyBudget: true,
         timezone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch(_) { return ""; } })(),
       });
 
@@ -935,13 +922,29 @@ if (btnWhatsapp) {
       const btnNotifTest = box.querySelector("#tb-notif-test");
       if (btnNotifTest) {
         btnNotifTest.onclick = () => safeCall("Tester notification", async () => {
-          if (typeof window.tbRememberNotificationPrefs === "function") window.tbRememberNotificationPrefs(readNotificationForm());
+          const prefs = readNotificationForm();
+          if (typeof window.tbSaveNotificationPrefs === "function") await window.tbSaveNotificationPrefs(prefs);
+          else if (typeof window.tbRememberNotificationPrefs === "function") window.tbRememberNotificationPrefs(prefs);
           const msg = (typeof window.tbTriggerDailyBudgetNotificationTest === "function") ? await window.tbTriggerDailyBudgetNotificationTest() : null;
-          alert(msg?.localDelivered
-            ? "Notification test envoyée au téléphone et ajoutée au centre de notifications."
-            : "Notification test ajoutée au centre de notifications. Active/autorise les notifications téléphone si rien n'apparaît sur mobile.");
+          const status = box.querySelector("#tb-notif-test-status");
+          if (status) status.textContent = msg?.localDelivered
+            ? "Test envoyé. Dis-moi ensuite si tu l'as reçue."
+            : "Test ajouté au centre de notifications. Si rien n'apparait sur mobile, vérifie l'autorisation Android.";
         });
       }
+      [
+        ["#tb-notif-test-ok", "Validation notée : notification reçue."],
+        ["#tb-notif-test-ko", "Validation notée : notification non reçue, à investiguer côté token/permission."],
+        ["#tb-notif-test-cut", "Validation notée : texte coupé, on garde les prochaines notifs encore plus courtes."],
+      ].forEach(([selector, message]) => {
+        const btn = box.querySelector(selector);
+        if (!btn) return;
+        btn.onclick = () => {
+          try { localStorage.setItem("travelbudget_notification_last_test_v1", JSON.stringify({ selector, at: new Date().toISOString() })); } catch (_) {}
+          const status = box.querySelector("#tb-notif-test-status");
+          if (status) status.textContent = message;
+        };
+      });
 
       const btnWhatsApp = box.querySelector("#tb-user-whatsapp-save");
       if (btnWhatsApp) {

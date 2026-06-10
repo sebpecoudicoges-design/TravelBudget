@@ -87,17 +87,17 @@ function composeNotification(slot: Slot, budget: { base: string; daily: number; 
 
   const baseLine = evening
     ? `Budget restant ${money(budget.remaining, budget.base)}.`
-    : `Reste aujourd'hui ${money(budget.remaining, budget.base)}. Depense du jour ${money(budget.spent, budget.base)} / ${money(budget.daily, budget.base)}.`;
+    : `Reste ${money(budget.remaining, budget.base)}. Jour ${money(budget.spent, budget.base)} / ${money(budget.daily, budget.base)}.`;
 
   let nudge = "";
   if (motivational && evening) {
-    if (activity.sportKcal > 0 && activity.workKcal > 0) nudge = `Sport ${Math.round(activity.sportKcal)} kcal, travail ${Math.round(activity.workKcal)} kcal. Grosse journee.`;
-    else if (activity.sportKcal > 0) nudge = `Sport note : ${Math.round(activity.sportKcal)} kcal.`;
-    else if (activity.workKcal > 0) nudge = `Travail note : ${Math.round(activity.workKcal)} kcal sur ${Math.round(activity.workMinutes / 60 * 10) / 10}h.`;
-    else if (workReminder) nudge = "Tu as travaille aujourd'hui ? Ajoute la journee pour garder les kcal a jour.";
+    if (activity.sportKcal > 0 && activity.workKcal > 0) nudge = `Sport ${Math.round(activity.sportKcal)} kcal, travail ${Math.round(activity.workKcal)} kcal.`;
+    else if (activity.sportKcal > 0) nudge = `Sport ${Math.round(activity.sportKcal)} kcal.`;
+    else if (activity.workKcal > 0) nudge = `Travail ${Math.round(activity.workKcal)} kcal sur ${Math.round(activity.workMinutes / 60 * 10) / 10}h.`;
+    else if (workReminder) nudge = "Travail fait ? Ajoute la journee.";
   }
   if (motivational && !evening && sportReminder && activity.sportCount <= 0) {
-    nudge = "Envie de 15 min de marche, corde ou ping-pong aujourd'hui ?";
+    nudge = "15 min de marche, corde ou ping-pong ?";
   }
 
   return { title, body: `${baseLine}${nudge ? ` ${nudge}` : ""}`.trim(), tone };
