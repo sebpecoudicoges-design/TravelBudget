@@ -245,6 +245,9 @@
   function activeTravelId() { return window.state?.activeTravelId || null; }
   function table(name) { return window.TB_CONST?.TABLES?.[name] || name; }
   function n(v, fallback) { const x = Number(v); return Number.isFinite(x) ? x : (fallback || 0); }
+  function isOfflineSkipError(err) {
+    return /offline mode|supabase request skipped|failed to fetch|network/i.test(String(err?.message || err || ""));
+  }
   function fmtSec(sec) {
     const s = Math.max(0, Math.round(Number(sec) || 0));
     const m = Math.floor(s / 60);
@@ -315,12 +318,32 @@
   function setWorkSeconds(item, actualSeconds) {
     if (Number.isFinite(Number(actualSeconds)) && Number(actualSeconds) > 0) return Math.max(1, Math.round(Number(actualSeconds)));
     if (item?.mode === "time") return Math.max(1, Math.round(n(item?.targetSeconds, 0)));
-    return Math.max(10, Math.round(n(item?.targetReps, 0) * 2.5));
+    const reps = Math.max(1, Math.round(n(item?.targetReps, 10)));
+    return Math.max(15, Math.round(reps * 2.5));
   }
   function restSecondsForItem(item) {
     const raw = Number(item?.restSeconds);
     if (Number.isFinite(raw) && raw >= 0) return Math.round(raw);
     return Math.max(0, Math.round(n(CACHE.globalRestSeconds, 60)));
+  }
+  function sequenceStepSeconds(step) {
+    if (!step) return 0;
+    const direct = Number(step.duration);
+    if (Number.isFinite(direct) && direct > 0) return Math.max(1, Math.round(direct));
+    return step.kind === "work" ? setWorkSeconds(step.item) : 0;
+  }
+  function estimatedCompletionSequence() {
+    const base = makeSequence();
+    const capSeconds = CACHE.circuit?.enabled ? Math.max(0, Math.round(n(CACHE.circuit.amrapMinutes, 0) * 60)) : 0;
+    if (!capSeconds || !base.length) return base;
+    const baseSeconds = base.reduce((sum, step) => sum + sequenceStepSeconds(step), 0);
+    if (baseSeconds <= 0) return base;
+    const rounds = Math.max(1, Math.floor(capSeconds / baseSeconds));
+    const out = [];
+    for (let round = 1; round <= Math.min(rounds, 100); round += 1) {
+      base.forEach(step => out.push(Object.assign({}, step, { setIndex: round, roundIndex: round, roundTotal: rounds })));
+    }
+    return out.length ? out : base;
   }
   function isStrengthLike(item) {
     const key = String(item?.activityKey || "");
@@ -365,9 +388,11 @@
   function totalPlanSeconds(plan) {
     const rows = plan || [];
     if (CACHE.circuit?.enabled && rows.length) {
+      const capSeconds = Math.max(0, Math.round(n(CACHE.circuit.amrapMinutes, 0) * 60));
+      if (capSeconds > 0) return capSeconds;
       return makeSequence()
         .filter(step => step.kind === "work" || step.kind === "rest" || step.kind === "round_rest")
-        .reduce((sum, step) => sum + Math.max(0, n(step.duration, step.kind === "work" ? setWorkSeconds(step.item) : 0)), 0);
+        .reduce((sum, step) => sum + sequenceStepSeconds(step), 0);
     }
     return rows.reduce((sum, item, idx) => {
       const work = setWorkSeconds(item) * n(item.sets, 1);
@@ -377,10 +402,17 @@
     }, 0);
   }
   function totalPlanKcal(plan, kg) {
-    return (plan || []).reduce((sum, item) => {
-      const seconds = setWorkSeconds(item) * n(item.sets, 1);
-      return sum + kcalEstimateForItem(item, kg, seconds, effectiveLoadKg(item, kg));
-    }, 0) + kcalEstimate(RECOVERY_MET, kg, Math.max(0, totalPlanSeconds(plan) - (plan || []).reduce((sum, item) => sum + setWorkSeconds(item) * n(item.sets, 1), 0)), 0);
+    const circuitSeq = CACHE.circuit?.enabled ? estimatedCompletionSequence() : [];
+    const workSeconds = CACHE.circuit?.enabled
+      ? circuitSeq.filter(step => step.kind === "work").reduce((sum, step) => sum + sequenceStepSeconds(step), 0)
+      : (plan || []).reduce((sum, item) => sum + setWorkSeconds(item) * n(item.sets, 1), 0);
+    const workKcal = CACHE.circuit?.enabled
+      ? circuitSeq.filter(step => step.kind === "work").reduce((sum, step) => sum + kcalEstimateForItem(step.item, kg, sequenceStepSeconds(step), effectiveLoadKg(step.item, kg)), 0)
+      : (plan || []).reduce((sum, item) => {
+          const seconds = setWorkSeconds(item) * n(item.sets, 1);
+          return sum + kcalEstimateForItem(item, kg, seconds, effectiveLoadKg(item, kg));
+        }, 0);
+    return workKcal + kcalEstimate(RECOVERY_MET, kg, Math.max(0, totalPlanSeconds(plan) - workSeconds), 0);
   }
   function loadPlan() {
     try {
@@ -1071,7 +1103,7 @@
     } catch (e) {
       CACHE.error = e?.message || String(e);
       CACHE.loaded = true;
-      if (/offline mode|supabase request skipped|failed to fetch|network/i.test(CACHE.error)) {
+      if (isOfflineSkipError(CACHE.error)) {
         CACHE.sessions = Array.isArray(state?.sportSessions) ? state.sportSessions : [];
         CACHE.items = Array.isArray(state?.sportSessionItems) ? state.sportSessionItems : [];
         CACHE.sets = Array.isArray(state?.sportSets) ? state.sportSets : [];
@@ -1786,20 +1818,21 @@
 
     const circuitSequence = CACHE.circuit?.enabled ? makeSequence().filter(step => step.kind === "work") : null;
     if (circuitSequence?.length) {
-      circuitSequence.forEach((step) => {
-        const item = step.item;
-        const workSeconds = setWorkSeconds(item);
-        cursor += workSeconds * 1000;
-        doneSets.push({
-          itemIndex: step.itemIndex,
-          setIndex: step.setIndex,
-          reps: item.mode === "reps" ? n(item.targetReps, 0) : null,
-          durationSeconds: workSeconds,
-          weightKg: effectiveLoadKg(item, weightKg),
-          distanceM: n(item.distanceM, 0),
-          completedAt: new Date(Math.min(cursor, endedAt)).toISOString(),
-        });
-        cursor += Math.max(0, restSecondsForItem(item)) * 1000;
+      estimatedCompletionSequence().forEach((step) => {
+        const stepSeconds = sequenceStepSeconds(step);
+        cursor += stepSeconds * 1000;
+        if (step.kind === "work") {
+          const item = step.item;
+          doneSets.push({
+            itemIndex: step.itemIndex,
+            setIndex: step.setIndex,
+            reps: item.mode === "reps" ? n(item.targetReps, 0) : null,
+            durationSeconds: stepSeconds,
+            weightKg: effectiveLoadKg(item, weightKg),
+            distanceM: n(item.distanceM, 0),
+            completedAt: new Date(Math.min(cursor, endedAt)).toISOString(),
+          });
+        }
       });
     } else {
     (CACHE.plan || []).forEach((item, itemIndex) => {
@@ -2307,7 +2340,7 @@
     } catch (e) {
       CACHE.error = e?.message || String(e);
       CACHE.status = txt("Suppression locale effectuee. Synchro Supabase a verifier.", "Deleted locally. Supabase sync needs checking.");
-      console.warn("[sport] delete failed", CACHE.error);
+      if (!isOfflineSkipError(e)) console.warn("[sport] delete failed", CACHE.error);
     }
     renderSport("delete-session");
   }

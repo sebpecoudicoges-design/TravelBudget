@@ -882,11 +882,15 @@ async function loadFromSupabase(opts = {}) {
             state.fx.manualRates = out;
             try { if (window.TB_PERF?.enabled) TB_PERF.event("fxManual:loaded", { count: Object.keys(out).length }); } catch (_) {}
           } catch (e) {
-            console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
+            if (!/offline mode|supabase request skipped|failed to fetch|network/i.test(String(e?.message || e || ""))) {
+              console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
+            }
           }
         })
         .catch((e) => {
-          console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
+          if (!/offline mode|supabase request skipped|failed to fetch|network/i.test(String(e?.message || e || ""))) {
+            console.warn("[fx_manual_rates] load failed (ignored)", e?.message || e);
+          }
         });
     } catch (_) {}
   };

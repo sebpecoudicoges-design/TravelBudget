@@ -637,6 +637,10 @@ async function tbRpcWithRetry(fnName, args, opts) {
   throw lastErr;
 }
 
+function _txIsOfflineSkipError(err) {
+  return /offline mode|supabase request skipped|failed to fetch|network/i.test(String(err?.message || err || ""));
+}
+
 function _txIsMissingRpcSignature(err) {
   const code = String(err?.code || '').trim();
   const msg = String(err?.message || '').toLowerCase();
@@ -1352,64 +1356,99 @@ async function deleteTx(txId) {
 
 async function markTxAsPaid(txId) {
   await safeCall(_txModalT("transactions.safe.mark_paid"), async () => {
-    const tx = state.transactions.find((t) => String(t.id) === String(txId));
-    if (!tx) throw new Error(_txModalT("transactions.error.not_found"));
-    const actionValidation = window.Core?.transactionGuards?.validateTransactionAction
-      ? window.Core.transactionGuards.validateTransactionAction(tx, "mark_paid", {
-          walletAdjustmentCategory: TB_CONST?.CATS?.wallet_adjustment || "Ajustement wallet",
-        })
-      : { ok: true };
-    if (!actionValidation.ok) throw new Error(_txModalT("transactions.safe.locked_mark_paid") || actionValidation.reason);
-    if (tx.type !== "expense" && tx.type !== "income") throw new Error(_txModalT("transactions.safe.type_payable_only"));
-    const txPayNow = (tx.pay_now !== undefined) ? !!tx.pay_now : !!tx.payNow;
-    if (txPayNow) return;
+    try { if (typeof window.tbBusyStart === "function") window.tbBusyStart(_txModalT("transactions.safe.mark_paid")); } catch (_) {}
+    try {
+      const tx = state.transactions.find((t) => String(t.id) === String(txId));
+      if (!tx) throw new Error(_txModalT("transactions.error.not_found"));
+      const actionValidation = window.Core?.transactionGuards?.validateTransactionAction
+        ? window.Core.transactionGuards.validateTransactionAction(tx, "mark_paid", {
+            walletAdjustmentCategory: TB_CONST?.CATS?.wallet_adjustment || "Ajustement wallet",
+          })
+        : { ok: true };
+      if (!actionValidation.ok) throw new Error(_txModalT("transactions.safe.locked_mark_paid") || actionValidation.reason);
+      if (tx.type !== "expense" && tx.type !== "income") throw new Error(_txModalT("transactions.safe.type_payable_only"));
+      const txPayNow = (tx.pay_now !== undefined) ? !!tx.pay_now : !!tx.payNow;
+      if (txPayNow) return;
 
-    const walletId = tx.walletId || tx.wallet_id;
-    const wallet = findWallet(walletId);
-    if (!wallet) throw new Error(_txModalT("transactions.safe.wallet_not_found"));
+      const walletId = tx.walletId || tx.wallet_id;
+      const wallet = findWallet(walletId);
+      if (!wallet) throw new Error(_txModalT("transactions.safe.wallet_not_found"));
 
-    const dateStart = tx.dateStart || tx.date_start;
-    const dateEnd = tx.dateEnd || tx.date_end || dateStart;
-    const budgetDateStart = tx.budgetDateStart || tx.budget_date_start || dateStart;
-    const budgetDateEnd = tx.budgetDateEnd || tx.budget_date_end || dateEnd || budgetDateStart;
-    const outOfBudget = (tx.out_of_budget !== undefined) ? !!tx.out_of_budget : !!tx.outOfBudget;
-    const nightCovered = (tx.night_covered !== undefined) ? !!tx.night_covered : !!tx.nightCovered;
+      const dateStart = tx.dateStart || tx.date_start;
+      const dateEnd = tx.dateEnd || tx.date_end || dateStart;
+      const budgetDateStart = tx.budgetDateStart || tx.budget_date_start || dateStart;
+      const budgetDateEnd = tx.budgetDateEnd || tx.budget_date_end || dateEnd || budgetDateStart;
+      const outOfBudget = (tx.out_of_budget !== undefined) ? !!tx.out_of_budget : !!tx.outOfBudget;
+      const nightCovered = (tx.night_covered !== undefined) ? !!tx.night_covered : !!tx.nightCovered;
+      const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
+        ? await window.tbShouldUseOfflineMode("transaction:mark_paid")
+        : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
 
-    const hasLockedFx = !!(tx.fxSnapshotAt || tx.fx_snapshot_at || tx.fxRateSnapshot || tx.fx_rate_snapshot);
-    const fxArgs = hasLockedFx
-      ? {
-          p_fx_rate_snapshot: null,
-          p_fx_source_snapshot: null,
-          p_fx_snapshot_at: null,
-          p_fx_base_currency_snapshot: null,
-          p_fx_tx_currency_snapshot: null,
-        }
-      : _txBuildFxSnapshotArgs(dateStart, String(tx.currency || wallet.currency || '').toUpperCase());
+      const hasLockedFx = !!(tx.fxSnapshotAt || tx.fx_snapshot_at || tx.fxRateSnapshot || tx.fx_rate_snapshot);
+      const fxArgs = hasLockedFx
+        ? {
+            p_fx_rate_snapshot: null,
+            p_fx_source_snapshot: null,
+            p_fx_snapshot_at: null,
+            p_fx_base_currency_snapshot: null,
+            p_fx_tx_currency_snapshot: null,
+          }
+        : _txBuildFxSnapshotArgs(dateStart, String(tx.currency || wallet.currency || '').toUpperCase(), { skipInteractiveFx: offlineNow });
 
-    const { error } = await _updateTransactionRpcCompat({
-      p_tx_id: tx.id,
-      p_wallet_id: walletId,
-      p_type: tx.type,
-      p_amount: Number(tx.amount),
-      p_currency: tx.currency || wallet.currency,
-      p_category: tx.category || "Autre",
-      p_subcategory: tx.subcategory || null,
-      p_label: tx.label || "",
-      p_date_start: dateStart,
-      p_date_end: dateEnd,
-      p_budget_date_start: budgetDateStart,
-      p_budget_date_end: budgetDateEnd,
-      p_pay_now: true,
-      p_out_of_budget: outOfBudget,
-      p_night_covered: nightCovered,
-      p_trip_expense_id: tx.tripExpenseId || tx.trip_expense_id || null,
-      p_trip_share_link_id: tx.tripShareLinkId || tx.trip_share_link_id || null,
-      ...fxArgs
-    });
+      const updateArgs = {
+        p_tx_id: tx.id,
+        p_wallet_id: walletId,
+        p_type: tx.type,
+        p_amount: Number(tx.amount),
+        p_currency: tx.currency || wallet.currency,
+        p_category: tx.category || "Autre",
+        p_subcategory: tx.subcategory || null,
+        p_label: tx.label || "",
+        p_date_start: dateStart,
+        p_date_end: dateEnd,
+        p_budget_date_start: budgetDateStart,
+        p_budget_date_end: budgetDateEnd,
+        p_pay_now: true,
+        p_out_of_budget: outOfBudget,
+        p_night_covered: nightCovered,
+        p_trip_expense_id: tx.tripExpenseId || tx.trip_expense_id || null,
+        p_trip_share_link_id: tx.tripShareLinkId || tx.trip_share_link_id || null,
+        ...fxArgs
+      };
+      const queuePaidUpdate = () => {
+        if (typeof window.tbOfflineQueueEnqueue !== "function") return false;
+        const queueItem = window.tbOfflineQueueEnqueue("transaction.update_v2", {
+          rpcName: TB_CONST.RPCS.update_transaction_v2 || "update_transaction_v2",
+          args: updateArgs,
+        }, {
+          label: tx.label || "transaction",
+          amount: tx.amount,
+          currency: tx.currency || wallet.currency,
+          type: tx.type,
+          transactionId: tx.id,
+          action: "mark_paid",
+        });
+        _txApplyOptimisticOfflineEdit(updateArgs, queueItem?.id);
+        try { if (typeof closeModal === "function") closeModal(); } catch (_) {}
+        try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
+        return true;
+      };
 
-    if (error) throw error;
+      if (offlineNow && queuePaidUpdate()) return;
 
-    await refreshFromServer();
+      try {
+        const { error } = await _updateTransactionRpcCompat(updateArgs);
+        if (error) throw error;
+      } catch (e) {
+        if (_txIsOfflineSkipError(e) && queuePaidUpdate()) return;
+        throw e;
+      }
+
+      if (typeof window.tbAfterMutationRefresh === "function") await window.tbAfterMutationRefresh("tx:mark_paid");
+      else await refreshFromServer();
+    } finally {
+      try { if (typeof window.tbBusyEnd === "function") window.tbBusyEnd(); } catch (_) {}
+    }
   });
 }
 

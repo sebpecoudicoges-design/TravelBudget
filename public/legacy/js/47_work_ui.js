@@ -20,6 +20,9 @@
   function client() { return window.sb || null; }
   function uid() { return window.sbUser?.id || null; }
   function activeTravelId() { return window.state?.activeTravelId || null; }
+  function isOfflineSkipError(err) {
+    return /offline mode|supabase request skipped|failed to fetch|network/i.test(String(err?.message || err || ""));
+  }
   function bodyWeight() {
     try { return Number(localStorage.getItem(window.TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1")) || 70; } catch (_) { return 70; }
   }
@@ -117,7 +120,7 @@
     } catch (e) {
       CACHE.error = e?.message || String(e);
       CACHE.loaded = true;
-      console.warn("[work] load failed", CACHE.error);
+      if (!isOfflineSkipError(e)) console.warn("[work] load failed", CACHE.error);
     } finally {
       CACHE.loading = false;
       publishWorkDays("load");
