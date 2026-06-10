@@ -18,6 +18,7 @@
     { key: "strength", fr: "Musculation", en: "Strength training", met: 5.0, mode: "reps", equipment: "bodyweight" },
     { key: "bodyweight_strength", fr: "Musculation poids du corps", en: "Bodyweight strength", met: 5.2, mode: "reps", equipment: "bodyweight" },
     { key: "resistance_band_strength", fr: "Renforcement elastique", en: "Resistance band strength", met: 4.8, mode: "reps", equipment: "band" },
+    { key: "core_abs", fr: "Abdos / core", en: "Abs / core", met: 4.5, mode: "reps", equipment: "bodyweight" },
     { key: "plank_core", fr: "Gainage / core", en: "Core / plank", met: 4.2, mode: "time", equipment: "bodyweight" },
     { key: "running", fr: "Course a pied", en: "Running", met: 8.3, mode: "time", equipment: "outdoor" },
     { key: "cycling", fr: "Velo", en: "Cycling", met: 6.8, mode: "time", equipment: "outdoor" },
@@ -82,6 +83,17 @@
     { key: "reverse_lunge", goal: "strength", equipment: "bodyweight", activityKey: "bodyweight_strength", fr: "Fente arriere", en: "Reverse lunge", mode: "reps", reps: 10, sets: 3, rest: 60 },
     { key: "step_up", goal: "strength", equipment: "bodyweight", activityKey: "bodyweight_strength", fr: "Step-up", en: "Step-up", mode: "reps", reps: 10, sets: 3, rest: 60 },
     { key: "hollow_hold", goal: "strength", equipment: "bodyweight", activityKey: "plank_core", fr: "Hollow hold", en: "Hollow hold", mode: "time", seconds: 30, sets: 3, rest: 45 },
+    { key: "crunch", goal: "strength", equipment: "bodyweight", activityKey: "core_abs", fr: "Crunch", en: "Crunch", mode: "reps", reps: 20, sets: 3, rest: 45 },
+    { key: "reverse_crunch", goal: "strength", equipment: "bodyweight", activityKey: "core_abs", fr: "Crunch inverse", en: "Reverse crunch", mode: "reps", reps: 15, sets: 3, rest: 45 },
+    { key: "bicycle_crunch", goal: "strength", equipment: "bodyweight", activityKey: "core_abs", fr: "Crunch bicyclette", en: "Bicycle crunch", mode: "reps", reps: 20, sets: 3, rest: 45 },
+    { key: "sit_up", goal: "strength", equipment: "bodyweight", activityKey: "core_abs", fr: "Sit-up", en: "Sit-up", mode: "reps", reps: 15, sets: 3, rest: 60 },
+    { key: "lying_leg_raise", goal: "strength", equipment: "bodyweight", activityKey: "core_abs", fr: "Elevation jambes au sol", en: "Lying leg raise", mode: "reps", reps: 12, sets: 3, rest: 60 },
+    { key: "hanging_knee_raise", goal: "strength", equipment: "bodyweight", activityKey: "core_abs", fr: "Elevation genoux sous barre", en: "Hanging knee raise", mode: "reps", reps: 10, sets: 3, rest: 75 },
+    { key: "hanging_leg_raise", goal: "strength", equipment: "bodyweight", activityKey: "core_abs", fr: "Elevation jambes sous barre", en: "Hanging leg raise", mode: "reps", reps: 8, sets: 3, rest: 90 },
+    { key: "toes_to_bar", goal: "strength", equipment: "bodyweight", activityKey: "core_abs", fr: "Pieds a la barre", en: "Toes to bar", mode: "reps", reps: 6, sets: 3, rest: 90 },
+    { key: "flutter_kicks", goal: "strength", equipment: "bodyweight", activityKey: "core_abs", fr: "Battements de jambes", en: "Flutter kicks", mode: "time", seconds: 35, sets: 3, rest: 45 },
+    { key: "v_up", goal: "strength", equipment: "bodyweight", activityKey: "core_abs", fr: "V-up", en: "V-up", mode: "reps", reps: 10, sets: 3, rest: 60 },
+    { key: "russian_twist", goal: "strength", equipment: "bodyweight", activityKey: "core_abs", fr: "Russian twist", en: "Russian twist", mode: "reps", reps: 20, sets: 3, rest: 45 },
     { key: "mountain_climber", goal: "cardio", equipment: "bodyweight", activityKey: "hiit", fr: "Mountain climbers", en: "Mountain climbers", mode: "time", seconds: 40, sets: 6, rest: 20 },
     { key: "burpee", goal: "cardio", equipment: "bodyweight", activityKey: "hiit", fr: "Burpees", en: "Burpees", mode: "reps", reps: 8, sets: 5, rest: 45 },
     { key: "jumping_jack", goal: "cardio", equipment: "bodyweight", activityKey: "hiit", fr: "Jumping jacks", en: "Jumping jacks", mode: "time", seconds: 45, sets: 5, rest: 20 },
@@ -313,7 +325,7 @@
   function isStrengthLike(item) {
     const key = String(item?.activityKey || "");
     const equipment = String(item?.equipment || "");
-    return key === "strength" || key === "bodyweight_strength" || key === "resistance_band_strength" || key === "plank_core" ||
+    return key === "strength" || key === "bodyweight_strength" || key === "resistance_band_strength" || key === "core_abs" || key === "plank_core" ||
       ["bodyweight", "band", "dumbbell", "barbell", "kettlebell", "machine"].includes(equipment);
   }
   function calibratedMet(item) {
