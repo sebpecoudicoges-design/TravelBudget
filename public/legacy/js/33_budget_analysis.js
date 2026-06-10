@@ -1354,11 +1354,11 @@ categoryTxMap, subcategoryTxMap
         haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(236,253,245,.40))'
       },
       {
-        label: trA('Réalisé payé vs projection', 'Paid actual vs projection'),
-        title: trA('Part du réel payé déjà absorbée dans la projection de fin de période', 'Share of paid actual spend already absorbed into the end-of-period projection'),
-        value: ratioText(model.paidSpent, model.projection),
-        hint: trA('Dépenses payées comparées à la projection finale.', 'Paid expenses compared with the final projection.'),
-        pct: model.projection > 0 ? clampPct((model.paidSpent / model.projection) * 100) : 0,
+        label: trA('Budget consommé vs projection', 'Budget used vs projection'),
+        title: trA('Part du budget alloué à la période déjà consommée dans la projection', 'Share of period-allocated budget already consumed in the projection'),
+        value: ratioText(model.spentToToday, model.projection),
+        hint: trA('Budget ventilé sur les dates analysées comparé à la projection finale.', 'Budget allocated over analyzed dates compared with the final projection.'),
+        pct: model.projection > 0 ? clampPct((model.spentToToday / model.projection) * 100) : 0,
         footer: model.projection > model.totalBudget ? trA('Tendance finale au-dessus du budget app', 'Final trend above app budget') : trA('Tendance finale contenue dans le budget app', 'Final trend within app budget'),
         tint:'blue',
         liquid:'linear-gradient(180deg, rgba(147,197,253,.30) 0%, rgba(125,211,252,.42) 34%, rgba(56,189,248,.52) 70%, rgba(14,165,233,.62) 100%)',
@@ -2572,6 +2572,18 @@ function _openTxDrilldown(kind, key, model){
             window.renderBudgetAnalysis && window.renderBudgetAnalysis();
           }
         } catch (_) {}
+      });
+    }
+  } catch (_) {}
+  try {
+    if (!window.__tbAnalysisRefreshBound) {
+      window.__tbAnalysisRefreshBound = true;
+      document.addEventListener('tb:financial:data_loaded', () => {
+        referenceCache.loaded = false;
+        const view = (typeof activeView === 'string' && activeView) ? activeView : (window.activeView || '');
+        if (view !== 'analysis') return;
+        if (typeof window.tbRequestAnalysisRender === 'function') window.tbRequestAnalysisRender('data-loaded');
+        else if (typeof window.renderBudgetAnalysis === 'function') window.renderBudgetAnalysis();
       });
     }
   } catch (_) {}

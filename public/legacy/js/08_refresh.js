@@ -132,6 +132,26 @@ window.tbWithBusy = async function tbWithBusy(fn, text) {
   }
 };
 
+function _tbEmitRefreshDataLoaded(detail) {
+  const payload = detail || { source: "refreshFromServer" };
+  let emitted = false;
+  try {
+    if (window.tbBus && typeof tbBus.emit === "function") {
+      tbBus.emit("refresh:data_loaded", payload);
+      emitted = true;
+    }
+  } catch (_) {}
+  if (!emitted) {
+    try {
+      window.__TB_DATA_REV = (Number(window.__TB_DATA_REV || 0) + 1);
+      window.__TB_DATA_UPDATED_AT = Date.now();
+    } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent("tb:refresh:data_loaded", { detail: payload })); } catch (_) {}
+    try { document.dispatchEvent(new Event("data:updated")); } catch (_) {}
+  }
+  try { document.dispatchEvent(new CustomEvent("tb:financial:data_loaded", { detail: payload })); } catch (_) {}
+}
+
 async function _runRefreshFromServer(opts) {
   const options = opts || {};
   if (!sbUser) return;
@@ -182,7 +202,7 @@ async function _runRefreshFromServer(opts) {
     if (typeof ensureStateIntegrity === "function") ensureStateIntegrity();
     try { if (typeof window.tbClearBudgetCaches === "function") window.tbClearBudgetCaches(); } catch (_) {}
     try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("refreshFromServer"); } catch (_) {}
-    try { if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("refresh:data_loaded", { source: "refreshFromServer" }); } catch (_) {}
+    _tbEmitRefreshDataLoaded({ source: "refreshFromServer", reason: options.reason || null, includeDeferredData: !!options.includeDeferredData });
     try {
       if (!options.skipFinancialRender && typeof window.tbRefreshFinancialState === "function") {
         window.tbRefreshFinancialState("refreshFromServer", { cashflow: false });
