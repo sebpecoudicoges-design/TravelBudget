@@ -10,6 +10,7 @@
   const HEIGHT_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1");
   const GLOBAL_REST_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_global_rest || "travelbudget_sport_global_rest_v1");
   const CIRCUIT_KEY = () => scopedKey("travelbudget_sport_circuit_v1");
+  const DELETE_QUEUE_KEY = () => scopedKey("travelbudget_sport_delete_queue_v1");
   const HISTORY_KEY = () => scopedKey(baseHistoryKey());
   const ANON_HISTORY_KEY = () => `${baseHistoryKey()}::anon`;
   const RECOVERY_MET = 1.3;
@@ -457,6 +458,34 @@
     try { localStorage.setItem(ANON_HISTORY_KEY(), JSON.stringify((rows || []).slice(0, 50))); } catch (_) {}
     try { localStorage.removeItem(baseHistoryKey()); } catch (_) {}
   }
+  function loadPendingDeletes() {
+    try {
+      const rows = JSON.parse(localStorage.getItem(DELETE_QUEUE_KEY()) || "[]");
+      return Array.isArray(rows) ? rows.map(String).filter(Boolean) : [];
+    } catch (_) { return []; }
+  }
+  function savePendingDeletes(rows) {
+    const clean = Array.from(new Set((rows || []).map(String).filter(Boolean))).slice(0, 80);
+    try {
+      if (clean.length) localStorage.setItem(DELETE_QUEUE_KEY(), JSON.stringify(clean));
+      else localStorage.removeItem(DELETE_QUEUE_KEY());
+    } catch (_) {}
+    return clean;
+  }
+  function rememberPendingDelete(id) {
+    const key = String(id || "");
+    if (!key || key.startsWith("local_")) return;
+    savePendingDeletes(loadPendingDeletes().concat(key));
+  }
+  function clearPendingDelete(id) {
+    const key = String(id || "");
+    if (!key) return;
+    savePendingDeletes(loadPendingDeletes().filter(x => x !== key));
+  }
+  function isPendingDeleted(id) {
+    const key = String(id || "");
+    return !!key && loadPendingDeletes().includes(key);
+  }
   function sportHistoryKeys() {
     const keys = new Set([HISTORY_KEY(), ANON_HISTORY_KEY(), baseHistoryKey()]);
     try {
@@ -526,6 +555,18 @@
     CACHE.localSessions = (CACHE.localSessions || []).filter(s => String(s.localId || s.id || "") !== key && String(s.remoteId || "") !== key);
     saveLocalHistory(CACHE.localSessions);
     sportHistoryKeys().forEach(storageKey => removeWorkoutFromStoredHistory(storageKey, key));
+  }
+  function removeSessionFromRuntime(id) {
+    const key = String(id || "");
+    if (!key) return;
+    const itemIds = new Set((CACHE.items || [])
+      .filter(item => String(item.session_id || "") === key)
+      .map(item => String(item.id || ""))
+      .filter(Boolean));
+    CACHE.sessions = (CACHE.sessions || []).filter(s => String(s.id || "") !== key);
+    CACHE.items = (CACHE.items || []).filter(item => String(item.session_id || "") !== key);
+    CACHE.sets = (CACHE.sets || []).filter(set => !itemIds.has(String(set.item_id || "")));
+    publishSportHistory("delete-local");
   }
   function updateLocalWorkoutDate(id, newDate) {
     const key = String(id || "");
@@ -1065,6 +1106,7 @@
     CACHE.loading = true;
     CACHE.error = "";
     try {
+      await syncPendingSportDeletes(c, userId);
       const sess = await c
         .from(table("sport_sessions"))
         .select("id,user_id,travel_id,activity_type,started_at,ended_at,duration_seconds,mood_before,mood_after,energy,fatigue,pain,body_weight_kg,notes,estimated_kcal,created_at")
@@ -1072,7 +1114,9 @@
         .order("started_at", { ascending: false })
         .limit(20);
       if (sess.error) throw sess.error;
-      const sessionIds = (sess.data || []).map(s => s.id).filter(Boolean);
+      const pendingDeletes = new Set(loadPendingDeletes());
+      const filteredSessions = (sess.data || []).filter(s => !pendingDeletes.has(String(s.id || "")));
+      const sessionIds = filteredSessions.map(s => s.id).filter(Boolean);
       let items = { data: [], error: null };
       let sets = { data: [], error: null };
       if (sessionIds.length) {
@@ -1092,7 +1136,7 @@
           if (sets.error) throw sets.error;
         }
       }
-      CACHE.sessions = sess.data || [];
+      CACHE.sessions = filteredSessions;
       CACHE.items = items.data || [];
       CACHE.sets = sets.data || [];
       CACHE.loaded = true;
@@ -2312,28 +2356,59 @@
   }
   window.tbSportSyncLocalWorkouts = syncLocalWorkouts;
 
+  async function deleteRemoteSportSession(c, id) {
+    const key = String(id || "");
+    if (!key || key.startsWith("local_")) return true;
+    if (!c) throw new Error("Supabase indisponible");
+    let itemIds = (CACHE.items || [])
+      .filter(item => String(item.session_id || "") === key)
+      .map(item => item.id)
+      .filter(Boolean);
+    if (!itemIds.length) {
+      const found = await c.from(table("sport_session_items")).select("id").eq("session_id", key);
+      if (found.error) throw found.error;
+      itemIds = (found.data || []).map(item => item.id).filter(Boolean);
+    }
+    if (itemIds.length) {
+      const sets = await c.from(table("sport_sets")).delete().in("item_id", itemIds);
+      if (sets.error) throw sets.error;
+    }
+    const items = await c.from(table("sport_session_items")).delete().eq("session_id", key);
+    if (items.error) throw items.error;
+    const sess = await c.from(table("sport_sessions")).delete().eq("id", key);
+    if (sess.error) throw sess.error;
+    return true;
+  }
+
+  async function syncPendingSportDeletes(c, userId) {
+    const ids = loadPendingDeletes();
+    if (!c || !userId || !ids.length) return 0;
+    let done = 0;
+    for (const id of ids) {
+      try {
+        await deleteRemoteSportSession(c, id);
+        clearPendingDelete(id);
+        done += 1;
+      } catch (e) {
+        if (!isOfflineSkipError(e)) console.warn("[sport] pending delete failed", e?.message || e);
+      }
+    }
+    return done;
+  }
+
   async function deleteSportSession(sessionId) {
     const id = String(sessionId || "");
     if (!id) return;
     if (!confirm(txt("Supprimer cette seance ?", "Delete this workout?"))) return;
     const c = client();
     removeLocalWorkout(id);
+    removeSessionFromRuntime(id);
+    if (!id.startsWith("local_")) rememberPendingDelete(id);
     CACHE.status = txt("Suppression de la seance...", "Deleting workout...");
+    renderSport("delete-session-optimistic");
     try {
-      if (c && !id.startsWith("local_")) {
-        const itemIds = (CACHE.items || [])
-          .filter(item => String(item.session_id || "") === id)
-          .map(item => item.id)
-          .filter(Boolean);
-        if (itemIds.length) {
-          const sets = await c.from(table("sport_sets")).delete().in("item_id", itemIds);
-          if (sets.error) throw sets.error;
-        }
-        const items = await c.from(table("sport_session_items")).delete().eq("session_id", id);
-        if (items.error) throw items.error;
-        const sess = await c.from(table("sport_sessions")).delete().eq("id", id);
-        if (sess.error) throw sess.error;
-      }
+      await deleteRemoteSportSession(c, id);
+      clearPendingDelete(id);
       CACHE.loaded = false;
       CACHE.status = txt("Seance supprimee.", "Workout deleted.");
       await loadHistory();
