@@ -823,6 +823,7 @@ function buildSeries() {
     const budgetUsedVal = [];
 
     let bal = startBalance;
+    let forecastBal = startBalance;
 
     (window.forEachDateInclusive ? window.forEachDateInclusive : _forEachDateInclusive)(start, end, (d) => {
       const k = (window.toLocalISODate ? window.toLocalISODate(d) : _toISODate(d));
@@ -830,22 +831,26 @@ function buildSeries() {
       const used = safeNum(budgetSpentForDateInRenderCurrency(k, barCurrency) || paidSpentBudget[k] || 0);
 
       if (tDate && d <= tDate) {
-        bal += safeNum(paidWalletNet[k] || 0);
+        const paidNet = safeNum(paidWalletNet[k] || 0);
+        bal += paidNet;
+        forecastBal += paidNet;
+        if (includePendingExpenses) forecastBal += safeNum(pendingNetExp[k] || 0);
+        if (includePendingIncomes) forecastBal += safeNum(pendingNetInc[k] || 0);
         actual.push({ x: k, y: round2(bal) });
-        forecast.push({ x: k, y: (tDate && d.getTime() === tDate.getTime()) ? round2(bal) : null });
+        forecast.push({ x: k, y: (tDate && d.getTime() === tDate.getTime()) ? round2(forecastBal) : null });
 
         const spent = safeNum(paidSpentAll[k] || 0);
         spentBars.push({ x: k, y: round2(spent) });
         budgetUsedVal.push({ x: k, y: round2(used) });
       } else {
         // forecast starts from last actual balance
-        bal -= getDailyBudgetInRenderCurrency(k, lineCurrency);
+        forecastBal -= getDailyBudgetInRenderCurrency(k, lineCurrency);
 
-        if (includePendingExpenses) bal += safeNum(pendingNetExp[k] || 0);
-        if (includePendingIncomes)  bal += safeNum(pendingNetInc[k] || 0);
+        if (includePendingExpenses) forecastBal += safeNum(pendingNetExp[k] || 0);
+        if (includePendingIncomes)  forecastBal += safeNum(pendingNetInc[k] || 0);
 
         actual.push({ x: k, y: null });
-        forecast.push({ x: k, y: round2(bal) });
+        forecast.push({ x: k, y: round2(forecastBal) });
         spentBars.push({ x: k, y: null });
         budgetUsedVal.push({ x: k, y: round2(used) });
       }

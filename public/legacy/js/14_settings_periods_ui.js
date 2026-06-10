@@ -706,9 +706,9 @@ function renderSettings(){
             <button class="btn primary" id="tb-notif-test" type="button">Envoyer un test</button>
           </div>
           <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;">
-            <button class="btn" id="tb-notif-test-ok" type="button">Je l'ai reçue</button>
-            <button class="btn" id="tb-notif-test-ko" type="button">Pas reçue</button>
-            <button class="btn" id="tb-notif-test-cut" type="button">Texte coupé</button>
+            <span class="muted" style="font-size:12px;font-weight:800;">Notification reçue ?</span>
+            <button class="btn" id="tb-notif-test-yes" type="button">Oui</button>
+            <button class="btn" id="tb-notif-test-no" type="button">Non</button>
           </div>
           <div id="tb-notif-test-status" class="muted" style="font-size:12px;line-height:1.35;margin-top:8px;">Serveur actif : matin + soir selon le fuseau du téléphone. Le bouton ci-dessus force seulement un test immédiat.</div>
         </div>
@@ -933,9 +933,8 @@ if (btnWhatsapp) {
         });
       }
       [
-        ["#tb-notif-test-ok", "Validation notée : notification reçue."],
-        ["#tb-notif-test-ko", "Validation notée : notification non reçue, à investiguer côté token/permission."],
-        ["#tb-notif-test-cut", "Validation notée : texte coupé, on garde les prochaines notifs encore plus courtes."],
+        ["#tb-notif-test-yes", "Parfait, le téléphone reçoit bien les notifications."],
+        ["#tb-notif-test-no", "Noté. On vérifiera l'autorisation Android, le token mobile et l'envoi serveur."],
       ].forEach(([selector, message]) => {
         const btn = box.querySelector(selector);
         if (!btn) return;
