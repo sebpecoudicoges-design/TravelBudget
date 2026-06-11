@@ -25,6 +25,16 @@
   function uid() { return window.sbUser?.id || null; }
   function activeTravelId() { return window.state?.activeTravelId || null; }
   function todayISO() { try { return window.toLocalISODate(new Date()); } catch (_) { return new Date().toISOString().slice(0, 10); } }
+  function localDateISO(value) {
+    const raw = String(value || "");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const d = new Date(raw);
+    if (Number.isFinite(d.getTime())) {
+      try { if (typeof window.toLocalISODate === "function") return window.toLocalISODate(d); } catch (_) {}
+      return d.toISOString().slice(0, 10);
+    }
+    return raw.slice(0, 10);
+  }
   function n(v, fallback) { const x = Number(v); return Number.isFinite(x) ? x : (fallback || 0); }
   function foodCacheKey() { return window.TB_CONST?.LS_KEYS?.nutrition_food_cache || "travelbudget_nutrition_food_cache_v1"; }
   function localMealKey() { return `${window.TB_CONST?.LS_KEYS?.nutrition_local_meals || "travelbudget_nutrition_local_meals_v1"}::${uid() || "anon"}`; }
@@ -51,7 +61,7 @@
       tab.id = "tab-nutrition";
       tab.className = "tab";
       tab.textContent = txt("Alimentation", "Nutrition");
-      tab.onclick = () => window.showView ? window.showView("nutrition") : renderNutrition("tab");
+      tab.onclick = () => openNutritionView();
       const ref = document.getElementById("tab-work") || document.getElementById("tab-sport") || tabs.lastElementChild;
       if (ref?.parentNode === tabs) tabs.insertBefore(tab, ref.nextSibling);
       else tabs.appendChild(tab);
@@ -66,6 +76,20 @@
       if (ref?.parentNode === wrap) wrap.insertBefore(view, ref.nextSibling);
       else wrap.appendChild(view);
     }
+  }
+  function openNutritionView() {
+    if (typeof window.showView === "function") {
+      window.showView("nutrition");
+      return;
+    }
+    try { if (typeof activeView !== "undefined") activeView = "nutrition"; } catch (_) {}
+    try { window.activeView = "nutrition"; } catch (_) {}
+    try { if (typeof window.setActiveTab === "function") window.setActiveTab("nutrition"); } catch (_) {}
+    try {
+      document.getElementById("tab-nutrition")?.classList.add("active");
+      document.getElementById("view-nutrition")?.classList.remove("hidden");
+    } catch (_) {}
+    renderNutrition("tab-fallback");
   }
   function publishNutrition(reason) {
     if (!window.state) window.state = {};
@@ -83,38 +107,51 @@
     const c = client();
     try {
       if (c) {
-        const foods = await c.from(table("nutrition_foods"))
-          .select("key,name,brand,serving_grams,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,fiber_per_100g,water_ml_per_100g")
-          .eq("is_active", true)
-          .order("name", { ascending: true })
-          .limit(500);
-        if (foods.error) throw foods.error;
-        const normalizedFoods = (foods.data || []).map(normalizeFood).filter(Boolean);
-        if (normalizedFoods.length) {
-          CACHE.foods = normalizedFoods;
-          saveCachedFoods(normalizedFoods);
+        try {
+          const foods = await c.from(table("nutrition_foods"))
+            .select("key,name,brand,serving_grams,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,fiber_per_100g,water_ml_per_100g")
+            .eq("is_active", true)
+            .order("name", { ascending: true })
+            .limit(500);
+          if (foods.error) throw foods.error;
+          const normalizedFoods = (foods.data || []).map(normalizeFood).filter(Boolean);
+          if (normalizedFoods.length) {
+            CACHE.foods = normalizedFoods;
+            saveCachedFoods(normalizedFoods);
+          }
+        } catch (e) {
+          CACHE.error = e?.message || String(e);
+          console.warn("[nutrition] food library fallback", CACHE.error);
         }
       }
       if (c && uid()) {
-        const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-        const meals = await c.from(table("nutrition_meals"))
-          .select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,created_at")
-          .eq("user_id", uid())
-          .gte("meal_date", since)
-          .order("meal_date", { ascending: false })
-          .order("created_at", { ascending: false });
-        if (meals.error) throw meals.error;
-        CACHE.meals = meals.data || [];
-        const mealIds = CACHE.meals.map(row => row.id).filter(Boolean);
-        if (mealIds.length) {
-          const items = await c.from(table("nutrition_meal_items"))
-            .select("id,user_id,meal_id,food_key,label,grams,kcal,protein_g,carbs_g,fat_g,fiber_g,sort_order,created_at")
-            .in("meal_id", mealIds)
-            .order("sort_order", { ascending: true });
-          if (items.error) throw items.error;
-          CACHE.items = items.data || [];
-        } else {
-          CACHE.items = [];
+        try {
+          const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+          const meals = await c.from(table("nutrition_meals"))
+            .select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,created_at")
+            .eq("user_id", uid())
+            .gte("meal_date", since)
+            .order("meal_date", { ascending: false })
+            .order("created_at", { ascending: false });
+          if (meals.error) throw meals.error;
+          CACHE.meals = meals.data || [];
+          const mealIds = CACHE.meals.map(row => row.id).filter(Boolean);
+          if (mealIds.length) {
+            const items = await c.from(table("nutrition_meal_items"))
+              .select("id,user_id,meal_id,food_key,label,grams,kcal,protein_g,carbs_g,fat_g,fiber_g,sort_order,created_at")
+              .in("meal_id", mealIds)
+              .order("sort_order", { ascending: true });
+            if (items.error) throw items.error;
+            CACHE.items = items.data || [];
+          } else {
+            CACHE.items = [];
+          }
+        } catch (e) {
+          CACHE.error = CACHE.error || e?.message || String(e);
+          const local = loadLocalMeals();
+          CACHE.meals = local.map(row => row.meal);
+          CACHE.items = local.map(row => row.item);
+          console.warn("[nutrition] meals fallback", e?.message || e);
         }
       } else {
         const local = loadLocalMeals();
@@ -132,6 +169,7 @@
         CACHE.items = local.map(row => row.item);
       }
       console.warn("[nutrition] load failed", CACHE.error);
+      changed = true;
     } finally {
       CACHE.loading = false;
       publishNutrition("load");
@@ -140,19 +178,19 @@
   }
   function todayRows() {
     const day = todayISO();
-    const meals = CACHE.meals.filter(row => String(row.meal_date || "").slice(0, 10) === day);
+    const meals = CACHE.meals.filter(row => localDateISO(row.meal_date) === day);
     const mealIds = new Set(meals.map(row => String(row.id || "")));
     const items = CACHE.items.filter(row => mealIds.has(String(row.meal_id || "")));
     return { meals, items };
   }
   function todaySportKcal() {
     const day = todayISO();
-    return (window.state?.sportSessions || []).filter(s => String(s.started_at || s.startedAt || "").slice(0, 10) === day)
+    return (window.state?.sportSessions || []).filter(s => localDateISO(s.started_at || s.startedAt) === day)
       .reduce((sum, s) => sum + n(s.estimated_kcal || s.estimatedKcal, 0), 0);
   }
   function todayWorkKcal() {
     const day = todayISO();
-    return (window.state?.workDays || []).filter(w => String(w.work_date || "").slice(0, 10) === day)
+    return (window.state?.workDays || []).filter(w => localDateISO(w.work_date) === day)
       .reduce((sum, w) => sum + n(w.estimated_kcal, 0), 0);
   }
   function bodyBmr() {

@@ -247,6 +247,16 @@
     try { if (typeof window.toLocalISODate === "function") return window.toLocalISODate(new Date()); } catch (_) {}
     return new Date().toISOString().slice(0, 10);
   }
+  function localDateISO(value) {
+    const raw = String(value || "");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const d = new Date(raw);
+    if (Number.isFinite(d.getTime())) {
+      try { if (typeof window.toLocalISODate === "function") return window.toLocalISODate(d); } catch (_) {}
+      return d.toISOString().slice(0, 10);
+    }
+    return raw.slice(0, 10);
+  }
   function client() { return window.sb || null; }
   function currentUser() {
     try { if (window.sbUser && window.sbUser.id) return window.sbUser; } catch (_) {}
@@ -1537,7 +1547,7 @@
       </div>`;
   }
   function isTodaySession(s) {
-    return String(s?.started_at || s?.startedAt || "").slice(0, 10) === todayISO();
+    return localDateISO(s?.started_at || s?.startedAt) === todayISO();
   }
   function localToHistorySession(s) {
     return {
