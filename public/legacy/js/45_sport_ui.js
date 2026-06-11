@@ -1506,6 +1506,7 @@
     const unsyncedLocal = localSessions.filter(isLocalWorkoutUnsynced);
     const sessions = remoteSessions.concat(unsyncedLocal.map(localToHistorySession))
       .sort((a, b) => String(b.started_at || "").localeCompare(String(a.started_at || "")));
+    const todayMergeCount = sessions.filter(isTodaySession).length;
     const status = CACHE.status ? `<div class="tb-sport-status">${esc(CACHE.status)}</div>` : "";
     const recover = recoverableAnonCount
       ? `<div class="tb-sport-status" style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
@@ -1528,8 +1529,15 @@
         ${status}
         ${recover}
         ${sync}
+        ${todayMergeCount >= 2 ? `<div class="tb-sport-status" style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <span>${esc(txt(`${todayMergeCount} seances aujourd hui peuvent etre fusionnees.`, `${todayMergeCount} workouts today can be merged.`))}</span>
+          <button class="btn primary" type="button" id="sport-merge-today">${esc(txt("Fusionner aujourd hui", "Merge today"))}</button>
+        </div>` : ""}
         ${renderHistoryGrid(sessions)}
       </div>`;
+  }
+  function isTodaySession(s) {
+    return String(s?.started_at || s?.startedAt || "").slice(0, 10) === todayISO();
   }
   function localToHistorySession(s) {
     return {
@@ -1865,6 +1873,8 @@
     };
     const syncLocal = root.querySelector("#sport-sync-local-history");
     if (syncLocal) syncLocal.onclick = () => syncLocalWorkouts();
+    const mergeToday = root.querySelector("#sport-merge-today");
+    if (mergeToday) mergeToday.onclick = () => mergeTodaySportSessions();
   }
   function syncLoadField(root) {
     const equipment = root?.querySelector("#sport-equipment");
@@ -1905,6 +1915,94 @@
       metValue: item.met_value || null,
       notes: item.notes || "",
     }));
+  }
+  function doneSetsFromStoredSession(sessionId, offset) {
+    const id = String(sessionId || "");
+    const baseOffset = Math.max(0, Math.round(n(offset, 0)));
+    const local = (CACHE.localSessions || []).find(s =>
+      String(s.localId || s.id || "") === id || String(s.remoteId || "") === id
+    );
+    if (Array.isArray(local?.doneSets)) {
+      return local.doneSets.map(set => Object.assign({}, set, { itemIndex: baseOffset + Math.max(0, Math.round(n(set.itemIndex, 0))) }));
+    }
+    const sessionItems = (CACHE.items || [])
+      .filter(item => String(item.session_id || "") === id)
+      .slice()
+      .sort((a, b) => n(a.sort_order, 0) - n(b.sort_order, 0));
+    const itemIndexById = new Map(sessionItems.map((item, idx) => [String(item.id || ""), idx]));
+    return (CACHE.sets || [])
+      .filter(set => itemIndexById.has(String(set.item_id || "")))
+      .slice()
+      .sort((a, b) => {
+        const ai = itemIndexById.get(String(a.item_id || "")) || 0;
+        const bi = itemIndexById.get(String(b.item_id || "")) || 0;
+        if (ai !== bi) return ai - bi;
+        return n(a.set_index, 0) - n(b.set_index, 0);
+      })
+      .map(set => ({
+        itemIndex: baseOffset + (itemIndexById.get(String(set.item_id || "")) || 0),
+        setIndex: n(set.set_index, 1),
+        reps: set.reps ?? null,
+        durationSeconds: n(set.duration_seconds, 0),
+        weightKg: n(set.weight_kg, 0),
+        distanceM: n(set.distance_m, 0),
+        completedAt: set.completed_at || new Date().toISOString(),
+      }));
+  }
+  async function mergeTodaySportSessions() {
+    const all = (CACHE.sessions || []).concat((CACHE.localSessions || []).filter(isLocalWorkoutUnsynced).map(localToHistorySession));
+    const rows = all.filter(isTodaySession).sort((a, b) => String(a.started_at || "").localeCompare(String(b.started_at || "")));
+    if (rows.length < 2) return;
+    if (!confirm(txt(`Fusionner ${rows.length} seances d aujourd hui ?`, `Merge ${rows.length} workouts from today?`))) return;
+    const plan = [];
+    const doneSets = [];
+    rows.forEach((session) => {
+      const sessionPlan = planFromStoredSession(session.id);
+      const offset = plan.length;
+      plan.push(...sessionPlan);
+      doneSets.push(...doneSetsFromStoredSession(session.id, offset));
+    });
+    if (!plan.length) {
+      sportFeedback(txt("Fusion impossible", "Merge unavailable"), txt("Aucun detail de seance a fusionner.", "No workout details to merge."), { kind: "warn" });
+      return;
+    }
+    const starts = rows.map(s => String(s.started_at || "")).filter(Boolean).sort();
+    const totalDuration = rows.reduce((sum, s) => sum + n(s.duration_seconds, 0), 0);
+    const totalKcal = rows.reduce((sum, s) => sum + n(s.estimated_kcal, 0), 0);
+    const merged = {
+      startedAt: starts[0] || new Date().toISOString(),
+      endedAt: new Date().toISOString(),
+      durationSeconds: Math.max(1, Math.round(totalDuration)),
+      bodyWeightKg: bodyWeight(),
+      bodyHeightCm: bodyHeight(),
+      moodAfter: txt("Fusion jour", "Day merge"),
+      perceivedEffort: null,
+      notes: txt(`Fusion automatique de ${rows.length} seances du jour.`, `Automatic merge of ${rows.length} workouts from today.`),
+      estimatedKcal: Math.max(1, Math.round(totalKcal || sessionKcalEstimate(plan, doneSets, bodyWeight(), totalDuration))),
+      doneSets,
+      plan,
+    };
+    CACHE.status = txt("Fusion des seances du jour...", "Merging today's workouts...");
+    renderSport("merge-today-start");
+    await saveWorkout(merged);
+    const c = client();
+    for (const session of rows) {
+      const id = String(session.id || "");
+      removeLocalWorkout(id);
+      removeSessionFromRuntime(id);
+      if (id.startsWith("local_")) continue;
+      rememberPendingDelete(id);
+      try {
+        await deleteRemoteSportSession(c, id);
+        clearPendingDelete(id);
+      } catch (e) {
+        if (!isOfflineSkipError(e)) console.warn("[sport] merge delete failed", e?.message || e);
+      }
+    }
+    CACHE.loaded = false;
+    CACHE.status = txt("Seances du jour fusionnees.", "Today's workouts merged.");
+    await loadHistory();
+    renderSport("merge-today");
   }
 
   function repeatSportSession(sessionId) {

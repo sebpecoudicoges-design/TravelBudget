@@ -16,6 +16,7 @@ function setActiveTab(view) {
     ["documents", "tab-documents", "view-documents"],
     ["sport", "tab-sport", "view-sport"],
     ["work", "tab-work", "view-work"],
+    ["nutrition", "tab-nutrition", "view-nutrition"],
     ["trip", "tab-trip", "view-trip"],
     ["members", "tab-members", "view-members"],
     ["help", "tab-help", "view-help"],
@@ -53,6 +54,7 @@ function showView(view) {
   if (view === "documents") { if (typeof window.renderDocuments === "function") window.renderDocuments("navigation"); }
   if (view === "sport") { if (typeof window.renderSport === "function") window.renderSport("navigation"); }
   if (view === "work") { if (typeof window.renderWork === "function") window.renderWork("navigation"); }
+  if (view === "nutrition") { if (typeof window.renderNutrition === "function") window.renderNutrition("navigation"); }
   if (view === "dashboard") {
     try {
       if (typeof window.tbRenderDashboardCritical === "function") window.tbRenderDashboardCritical("navigation:dashboard", { cashflow: false });
