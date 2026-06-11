@@ -9,6 +9,7 @@
   const WEIGHT_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1");
   const HEIGHT_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1");
   const GLOBAL_REST_KEY = () => scopedKey(window.TB_CONST?.LS_KEYS?.sport_global_rest || "travelbudget_sport_global_rest_v1");
+  const LIBRARY_KEY = () => window.TB_CONST?.LS_KEYS?.sport_library || "travelbudget_sport_library_v1";
   const CIRCUIT_KEY = () => scopedKey("travelbudget_sport_circuit_v1");
   const DELETE_QUEUE_KEY = () => scopedKey("travelbudget_sport_delete_queue_v1");
   const HISTORY_KEY = () => scopedKey(baseHistoryKey());
@@ -31,6 +32,7 @@
     { key: "jump_rope", fr: "Corde a sauter", en: "Jump rope", met: 12.0, mode: "time", equipment: "rope" },
     { key: "basketball", fr: "Basket", en: "Basketball", met: 6.5, mode: "time", equipment: "outdoor" },
     { key: "table_tennis", fr: "Ping-pong", en: "Table tennis", met: 4.0, mode: "time", equipment: "mixed" },
+    { key: "boxing", fr: "Boxe", en: "Boxing", met: 7.8, mode: "time", equipment: "boxing" },
     { key: "hiit", fr: "HIIT", en: "HIIT", met: 7.8, mode: "time", equipment: "mixed" },
     { key: "yoga", fr: "Yoga", en: "Yoga", met: 2.5, mode: "time", equipment: "mat" },
     { key: "mobility", fr: "Mobilite", en: "Mobility", met: 2.0, mode: "time", equipment: "mat" },
@@ -44,6 +46,7 @@
     ["band", "Elastique", "Resistance band"],
     ["kettlebell", "Kettlebell", "Kettlebell"],
     ["rope", "Corde a sauter", "Jump rope"],
+    ["boxing", "Boxe", "Boxing"],
     ["outdoor", "Exterieur", "Outdoor"],
     ["pool", "Piscine", "Pool"],
     ["wall", "Mur / voie", "Wall / route"],
@@ -54,6 +57,7 @@
   const GOALS = [
     ["strength", "Force", "Strength"],
     ["cardio", "Cardio", "Cardio"],
+    ["boxing", "Boxe", "Boxing"],
     ["basketball", "Basket", "Basketball"],
     ["mobility", "Mobilite", "Mobility"],
     ["climb", "Escalade", "Climbing"],
@@ -185,7 +189,24 @@
     { key: "swim_drill_kick", goal: "swim", equipment: "pool", activityKey: "swimming", fr: "Battements jambes", en: "Kick drill", mode: "time", seconds: 90, sets: 6, rest: 30, distanceM: 50 },
     { key: "swim_pull", goal: "swim", equipment: "pool", activityKey: "swimming", fr: "Pull nage", en: "Pull swim", mode: "time", seconds: 120, sets: 5, rest: 45, distanceM: 50 },
     { key: "swim_endurance", goal: "swim", equipment: "pool", activityKey: "swimming", fr: "Endurance continue", en: "Continuous endurance swim", mode: "time", seconds: 1200, sets: 1, rest: 0, distanceM: 800 },
+    { key: "boxing_heavy_bag", goal: "boxing", equipment: "boxing", activityKey: "boxing", fr: "Sac de frappe", en: "Heavy bag rounds", mode: "time", seconds: 180, sets: 6, rest: 60, metValue: 7.8 },
+    { key: "boxing_speed_bag", goal: "boxing", equipment: "boxing", activityKey: "boxing", fr: "Poire de vitesse", en: "Speed bag", mode: "time", seconds: 120, sets: 5, rest: 45, metValue: 5.8 },
+    { key: "boxing_shadow", goal: "boxing", equipment: "bodyweight", activityKey: "boxing", fr: "Shadow boxing", en: "Shadow boxing", mode: "time", seconds: 180, sets: 5, rest: 45, metValue: 7.0 },
+    { key: "boxing_mitts", goal: "boxing", equipment: "boxing", activityKey: "boxing", fr: "Pattes d ours", en: "Focus mitts", mode: "time", seconds: 180, sets: 6, rest: 60, metValue: 8.0 },
+    { key: "boxing_light_sparring", goal: "boxing", equipment: "boxing", activityKey: "boxing", fr: "Sparring leger", en: "Light sparring", mode: "time", seconds: 180, sets: 4, rest: 90, metValue: 8.2 },
+    { key: "boxing_footwork", goal: "boxing", equipment: "bodyweight", activityKey: "boxing", fr: "Footwork boxe", en: "Boxing footwork", mode: "time", seconds: 120, sets: 6, rest: 45, metValue: 6.5 },
+    { key: "boxing_slips", goal: "boxing", equipment: "bodyweight", activityKey: "boxing", fr: "Esquives et slips", en: "Slips and defensive drills", mode: "time", seconds: 90, sets: 6, rest: 30, metValue: 5.8 },
+    { key: "boxing_burpees", goal: "boxing", equipment: "bodyweight", activityKey: "hiit", fr: "Burpees boxe", en: "Boxing burpees", mode: "reps", reps: 8, sets: 5, rest: 45, metValue: 8.5 },
+    { key: "boxing_jump_rope", goal: "boxing", equipment: "rope", activityKey: "jump_rope", fr: "Corde a sauter boxe", en: "Boxing jump rope", mode: "time", seconds: 180, sets: 5, rest: 45, metValue: 11.8 },
+    { key: "boxing_bag_combo_rounds", goal: "boxing", equipment: "boxing", activityKey: "boxing", fr: "Rounds combo au sac", en: "Heavy bag combo rounds", mode: "time", seconds: 180, sets: 8, rest: 60, metValue: 8.3 },
+    { key: "pullup", goal: "strength", equipment: "bodyweight", activityKey: "bodyweight_strength", fr: "Tractions", en: "Pull-up", mode: "reps", reps: 6, sets: 4, rest: 90, metValue: 6.0 },
+    { key: "chinup", goal: "strength", equipment: "bodyweight", activityKey: "bodyweight_strength", fr: "Chin-up", en: "Chin-up", mode: "reps", reps: 6, sets: 4, rest: 90, metValue: 6.0 },
+    { key: "australian_pullup", goal: "strength", equipment: "bodyweight", activityKey: "bodyweight_strength", fr: "Tractions australiennes", en: "Australian pull-up", mode: "reps", reps: 10, sets: 3, rest: 75, metValue: 5.4 },
+    { key: "handstand_hold", goal: "strength", equipment: "bodyweight", activityKey: "plank_core", fr: "Appui renverse tenu", en: "Handstand hold", mode: "time", seconds: 30, sets: 4, rest: 75, metValue: 5.0 },
+    { key: "box_jump", goal: "cardio", equipment: "bodyweight", activityKey: "hiit", fr: "Box jump", en: "Box jump", mode: "reps", reps: 10, sets: 5, rest: 60, metValue: 8.0 },
+    { key: "wall_ball", goal: "cardio", equipment: "mixed", activityKey: "hiit", fr: "Wall ball", en: "Wall ball", mode: "reps", reps: 15, sets: 5, rest: 60, metValue: 7.6 },
   ];
+  const FALLBACK_EXERCISE_LIBRARY = EXERCISE_LIBRARY.map(row => Object.assign({}, row));
 
   const CACHE = {
     loaded: false,
@@ -209,6 +230,9 @@
     globalRestSeconds: loadGlobalRest(),
     circuit: loadCircuit(),
     editingPlanIndex: null,
+    libraryLoaded: false,
+    libraryLoading: false,
+    librarySource: "fallback",
   };
 
   function lang() {
@@ -246,6 +270,79 @@
   function activeTravelId() { return window.state?.activeTravelId || null; }
   function table(name) { return window.TB_CONST?.TABLES?.[name] || name; }
   function n(v, fallback) { const x = Number(v); return Number.isFinite(x) ? x : (fallback || 0); }
+  function sportLibraryRules() { return window.Core?.sportLibraryRules || null; }
+  function normalizeSportExercise(row) {
+    const rules = sportLibraryRules();
+    if (rules?.normalizeSportExerciseRow) return rules.normalizeSportExerciseRow(row);
+    return row && row.key ? Object.assign({}, row) : null;
+  }
+  function mergeSportLibraries(fallback, remote) {
+    const rules = sportLibraryRules();
+    if (rules?.mergeSportExerciseLibraries) return rules.mergeSportExerciseLibraries(fallback, remote);
+    const byKey = new Map();
+    (fallback || []).forEach(row => { const ex = normalizeSportExercise(row); if (ex) byKey.set(ex.key, Object.assign({}, row, ex)); });
+    (remote || []).forEach(row => { const ex = normalizeSportExercise(row); if (ex) byKey.set(ex.key, Object.assign({}, byKey.get(ex.key), ex, { source: "sql" })); });
+    return Array.from(byKey.values());
+  }
+  function applySportLibrary(rows, source) {
+    const merged = mergeSportLibraries(FALLBACK_EXERCISE_LIBRARY, rows || []);
+    if (!merged.length) return false;
+    EXERCISE_LIBRARY.splice(0, EXERCISE_LIBRARY.length, ...merged);
+    CACHE.libraryLoaded = true;
+    CACHE.librarySource = source || "fallback";
+    return true;
+  }
+  function loadCachedSportLibrary() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(LIBRARY_KEY()) || "null");
+      const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+      return rows.slice(0, 400);
+    } catch (_) { return []; }
+  }
+  function saveCachedSportLibrary(rows) {
+    try {
+      localStorage.setItem(LIBRARY_KEY(), JSON.stringify({ savedAt: new Date().toISOString(), rows: (rows || []).slice(0, 400) }));
+    } catch (_) {}
+  }
+  async function ensureSportLibraryLoaded(reason) {
+    if (CACHE.libraryLoading) return false;
+    const cached = loadCachedSportLibrary();
+    if (cached.length && CACHE.librarySource === "fallback") applySportLibrary(cached, "cache");
+    const c = client();
+    if (!c) {
+      CACHE.libraryLoaded = true;
+      return false;
+    }
+    const offline = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode(`sport:library:${reason || "render"}`)
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (offline) {
+      CACHE.libraryLoaded = true;
+      return false;
+    }
+    CACHE.libraryLoading = true;
+    try {
+      const res = await c
+        .from(table("sport_exercises"))
+        .select("key,goal,equipment,activity_key,name_fr,name_en,mode,default_reps,default_seconds,default_sets,default_rest_seconds,distance_m,met_value,tags,sort_order")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("name_fr", { ascending: true });
+      if (res.error) throw res.error;
+      const rows = (res.data || []).map(normalizeSportExercise).filter(Boolean);
+      if (rows.length) {
+        applySportLibrary(rows, "sql");
+        saveCachedSportLibrary(rows);
+        return true;
+      }
+    } catch (e) {
+      if (!isOfflineSkipError(e)) console.warn("[sport] library load failed", e?.message || e);
+    } finally {
+      CACHE.libraryLoading = false;
+      CACHE.libraryLoaded = true;
+    }
+    return false;
+  }
   function isOfflineSkipError(err) {
     return /offline mode|supabase request skipped|failed to fetch|network/i.test(String(err?.message || err || ""));
   }
@@ -1518,6 +1615,11 @@
     if (!root) return;
     ensureStyles();
     reloadScopedLocalState(false);
+    if (!CACHE.libraryLoaded && !CACHE.libraryLoading) {
+      ensureSportLibraryLoaded(reason).then((changed) => {
+        if (changed && (window.activeView || "") === "sport") renderSport("library-loaded");
+      }).catch(() => {});
+    }
     const kg = bodyWeight();
     const planSec = totalPlanSeconds(CACHE.plan);
     const kcal = totalPlanKcal(CACHE.plan, kg);
@@ -2488,4 +2590,9 @@
   try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadSportHistory(); } catch (_) {} }); } catch (_) {}
   setTimeout(() => { try { if (uid()) loadHistory().then(() => publishSportHistory("auto")).catch(() => {}); } catch (_) {} }, 450);
   window.tbSportCatalog = CATALOG.slice();
+  window.tbReloadSportLibrary = async function tbReloadSportLibrary() {
+    CACHE.libraryLoaded = false;
+    CACHE.librarySource = "fallback";
+    return ensureSportLibraryLoaded("manual");
+  };
 })();

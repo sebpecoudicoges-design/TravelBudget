@@ -1,4 +1,4 @@
-window.TB_VERSION = window.TB_VERSION || "10.5.6";
+window.TB_VERSION = window.TB_VERSION || "10.5.7";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
 window.tbApplyVersionLabels = function tbApplyVersionLabels(root) {
@@ -64,6 +64,11 @@ try {
     documents: "documents",
     transaction_documents: "transaction_documents",
     inbox_items: "inbox_items",
+    nutrition_foods: "nutrition_foods",
+    nutrition_meals: "nutrition_meals",
+    nutrition_meal_items: "nutrition_meal_items",
+    sport_exercises: "sport_exercises",
+    sport_exercise_favorites: "sport_exercise_favorites",
     sport_sessions: "sport_sessions",
     sport_session_items: "sport_session_items",
     sport_sets: "sport_sets",
@@ -261,6 +266,7 @@ try {
     documents_sort: "travelbudget_documents_sort_v1",
     documents_collapsed_folders: "travelbudget_documents_collapsed_folders_v1",
     sport_plan: "travelbudget_sport_plan_v1",
+    sport_library: "travelbudget_sport_library_v1",
     sport_body_weight: "travelbudget_sport_body_weight_v1",
     sport_body_height: "travelbudget_sport_body_height_v1",
     body_age: "travelbudget_body_age_v1",

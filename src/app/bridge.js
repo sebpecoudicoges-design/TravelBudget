@@ -14,6 +14,8 @@ import * as assistantRules from '../core/assistantRules.js';
 import * as notificationRules from '../core/notificationRules.js';
 import * as workRules from '../core/workRules.js';
 import * as bodyEnergyRules from '../core/bodyEnergyRules.js';
+import * as sportLibraryRules from '../core/sportLibraryRules.js';
+import * as nutritionRules from '../core/nutritionRules.js';
 
 window.Core = window.Core || {};
 window.Core.money = money;
@@ -31,6 +33,8 @@ window.Core.assistantRules = assistantRules;
 window.Core.notificationRules = notificationRules;
 window.Core.workRules = workRules;
 window.Core.bodyEnergyRules = bodyEnergyRules;
+window.Core.sportLibraryRules = sportLibraryRules;
+window.Core.nutritionRules = nutritionRules;
 
 // Optional: expose money helpers directly for convenience (legacy may redefine later; that's OK)
 window.moneyRound = window.moneyRound || money.moneyRound;
