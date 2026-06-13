@@ -38,6 +38,7 @@
     { key: "protein_bar", name: "Barre proteinee", servingGrams: 60, kcalPer100g: 350, proteinPer100g: 30, carbsPer100g: 35, fatPer100g: 11, fiberPer100g: 8 },
     { key: "jam", name: "Confiture", servingGrams: 20, kcalPer100g: 250, proteinPer100g: 0.3, carbsPer100g: 60, fatPer100g: 0.1, fiberPer100g: 1 },
     { key: "honey", name: "Miel", servingGrams: 15, kcalPer100g: 304, proteinPer100g: 0.3, carbsPer100g: 82, fatPer100g: 0 },
+    { key: "pain_perdu", name: "Pain perdu", servingGrams: 160, kcalPer100g: 230, proteinPer100g: 7.5, carbsPer100g: 31, fatPer100g: 8.5, fiberPer100g: 1.5, tags: ["petit-dej", "dessert", "plat", "pain"] },
     { key: "banana", name: "Banane", servingGrams: 120, kcalPer100g: 89, proteinPer100g: 1.1, carbsPer100g: 22.8, fatPer100g: 0.3, fiberPer100g: 2.6 },
     { key: "apple", name: "Pomme", servingGrams: 150, kcalPer100g: 52, proteinPer100g: 0.3, carbsPer100g: 13.8, fatPer100g: 0.2, fiberPer100g: 2.4 },
     { key: "orange", name: "Orange", servingGrams: 130, kcalPer100g: 47, proteinPer100g: 0.9, carbsPer100g: 11.8, fatPer100g: 0.1, fiberPer100g: 2.4 },
@@ -187,6 +188,43 @@
       if (ref?.parentNode === wrap) wrap.insertBefore(view, ref.nextSibling);
       else wrap.appendChild(view);
     }
+  }
+  function ensureNutritionStyles() {
+    if (document.getElementById("tbNutritionResponsiveStyles")) return;
+    const style = document.createElement("style");
+    style.id = "tbNutritionResponsiveStyles";
+    style.textContent = `
+      .tb-nutrition-top { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr)); gap:12px; align-items:stretch; }
+      .tb-nutrition-layout { display:grid; grid-template-columns:minmax(280px,390px) 1fr; gap:14px; margin-top:14px; }
+      .tb-nutrition-macro-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+      .tb-nutrition-catalog-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; }
+      .tb-nutrition-water-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin-bottom:8px; }
+      .tb-nutrition-week-grid { display:grid; grid-template-columns:repeat(7,minmax(26px,1fr)); gap:6px; align-items:end; margin-bottom:12px; }
+      .tb-nutrition-history-type-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:6px; }
+      .tb-nutrition-timeline-row { display:grid; grid-template-columns:24px 1fr; gap:10px; align-items:stretch; }
+      .tb-nutrition-shell button { min-width:0; }
+      .tb-nutrition-shell .btn { white-space:normal; }
+      @media (max-width: 860px) {
+        #nutrition-root { padding:12px !important; }
+        .tb-nutrition-shell { margin:-4px -4px 0; }
+        .tb-nutrition-layout { grid-template-columns:1fr; }
+        .tb-nutrition-form-row { flex-direction:column; align-items:stretch !important; }
+        .tb-nutrition-form-row .field { min-width:0 !important; width:100%; }
+        .tb-nutrition-water-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .tb-nutrition-week-grid { gap:4px; }
+        .tb-nutrition-history-type-grid { grid-template-columns:1fr; }
+        .tb-nutrition-timeline-row { grid-template-columns:18px minmax(0,1fr); gap:8px; }
+        .tb-nutrition-shell .tb-sport-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      }
+      @media (max-width: 460px) {
+        .tb-nutrition-top,
+        .tb-nutrition-macro-grid,
+        .tb-nutrition-catalog-grid,
+        .tb-nutrition-shell .tb-sport-stats { grid-template-columns:1fr; }
+        .tb-nutrition-week-grid button { padding:6px 3px !important; font-size:10px !important; }
+      }
+    `;
+    document.head.appendChild(style);
   }
   function openNutritionView() {
     if (typeof window.showView === "function") {
@@ -504,8 +542,16 @@
     const mealId = String(item?.meal_id || "");
     return CACHE.meals.find(meal => String(meal.id || "") === mealId) || null;
   }
+  function isWaterOnlyMeal(meal, itemsForDay) {
+    if (!meal) return false;
+    const mealId = String(meal.id || "");
+    const hasItem = (itemsForDay || CACHE.items || []).some(item => String(item?.meal_id || "") === mealId);
+    const label = String(meal.label || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    return !hasItem && (label === "eau" || label === "water");
+  }
   function renderNutrition(reason) {
     ensureNutritionShell();
+    ensureNutritionStyles();
     const root = document.getElementById("nutrition-root");
     if (!root) return;
     if (!CACHE.loaded && !CACHE.loading) {
@@ -531,7 +577,9 @@
       fiber: item.fiber_g,
       waterMl: 0,
     } })));
-    const waterMl = meals.reduce((sum, meal) => sum + n(meal.water_ml, 0), 0);
+    const drinkWaterMl = meals.reduce((sum, meal) => sum + (isWaterOnlyMeal(meal, items) ? n(meal.water_ml, 0) : 0), 0);
+    const foodWaterMl = Math.max(0, meals.reduce((sum, meal) => sum + n(meal.water_ml, 0), 0) - drinkWaterMl);
+    const waterMl = drinkWaterMl;
     const base = baseline();
     const sportKcal = todaySportKcal();
     const workKcal = todayWorkKcal();
@@ -568,7 +616,7 @@
             <button class="btn" type="button" id="nutrition-refresh">${esc(txt("Rafraichir", "Refresh"))}</button>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:14px;margin-top:14px;align-items:stretch;">
+        <div class="tb-nutrition-top" style="margin-top:14px;">
           <div style="border:1px solid var(--border);border-radius:8px;padding:14px;background:linear-gradient(145deg,rgba(34,197,94,.10),rgba(56,189,248,.08)),var(--panel2);display:grid;place-items:center;">
             <div style="width:min(210px,72vw);aspect-ratio:1;border-radius:50%;background:conic-gradient(${kcalRingColor} ${kcalPct}%, rgba(148,163,184,.18) 0);display:grid;place-items:center;box-shadow:0 18px 44px rgba(15,23,42,.18);">
               <div style="width:68%;aspect-ratio:1;border-radius:50%;background:var(--panel2);display:grid;place-items:center;text-align:center;border:1px solid var(--border);">
@@ -581,28 +629,29 @@
               </div>
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
-            <div style="border:1px solid rgba(56,189,248,.35);border-radius:8px;padding:12px;background:rgba(56,189,248,.10);">${progressBar(txt("Eau", "Water"), waterMl, 2000, "ml")}</div>
+          <div class="tb-nutrition-macro-grid">
+            <div style="border:1px solid rgba(56,189,248,.35);border-radius:8px;padding:12px;background:rgba(56,189,248,.10);">${progressBar(txt("Eau bue", "Drunk water"), drinkWaterMl, 2000, "ml")}</div>
             <div style="border:1px solid rgba(34,197,94,.35);border-radius:8px;padding:12px;background:rgba(34,197,94,.10);">${progressBar(txt("Proteines", "Protein"), total.protein, proteinTarget, "g")}</div>
             <div style="border:1px solid rgba(245,158,11,.35);border-radius:8px;padding:12px;background:rgba(245,158,11,.10);">${progressBar(txt("Glucides", "Carbs"), total.carbs, carbsTarget, "g")}</div>
             <div style="border:1px solid rgba(251,113,133,.35);border-radius:8px;padding:12px;background:rgba(251,113,133,.10);">${progressBar(txt("Lipides", "Fat"), total.fat, fatTarget, "g")}</div>
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);grid-column:1/-1;">
               <div class="muted" style="font-size:12px;">${esc(txt("Besoin calcule", "Calculated need"))}</div>
               <strong>${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))} = ${Math.round(needsKcal)} kcal</strong>
+              <div class="muted" style="font-size:12px;margin-top:6px;">${esc(txt("Hydratation : objectif 2 L en eau bue. Eau des aliments", "Hydration: 2 L target from drunk water. Food water"))} ${Math.round(foodWaterMl)} ml.</div>
             </div>
           </div>
         </div>
-        <div class="tb-work-grid" style="display:grid;grid-template-columns:minmax(280px,390px) 1fr;gap:14px;margin-top:14px;">
+        <div class="tb-nutrition-layout">
           <div style="display:flex;flex-direction:column;gap:12px;">
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
               <h3 style="margin:0 0 10px;">${esc(editingItem ? txt("Modifier", "Edit") : txt("Ajout rapide", "Quick add"))}</h3>
               <div class="field"><label>${esc(txt("Chercher", "Search"))}</label><input id="nutrition-search" value="${esc(CACHE.foodQuery)}" placeholder="${esc(txt("Riz, poulet, banane...", "Rice, chicken, banana..."))}"></div>
               <div class="field"><label>${esc(txt("Aliment", "Food"))}</label><select id="nutrition-food">${foodOptions()}</select></div>
-              <div class="row" style="gap:10px;">
+              <div class="row tb-nutrition-form-row" style="gap:10px;">
                 <div class="field" style="flex:1;"><label>${esc(txt("Mode", "Mode"))}</label><select id="nutrition-amount-mode"><option value="portion">${esc(txt("Portions", "Servings"))}</option><option value="grams">${esc(txt("Grammes", "Grams"))}</option></select></div>
                 <div class="field" style="flex:1;"><label>${esc(txt("Quantite", "Quantity"))}</label><input id="nutrition-quantity" type="number" min="0" step="0.25" value="1"></div>
               </div>
-              <div class="row" style="gap:10px;">
+              <div class="row tb-nutrition-form-row" style="gap:10px;">
                 <div class="field" style="flex:1;"><label>${esc(txt("Grammes estimes", "Estimated grams"))}</label><input id="nutrition-grams" type="number" min="0" step="5" value="100"></div>
                 <div class="field" style="flex:1;"><label>${esc(txt("Moment", "Moment"))}</label><select id="nutrition-type"><option value="breakfast">${esc(txt("Petit-dej", "Breakfast"))}</option><option value="morning_snack">${esc(txt("Pause 10h", "10am snack"))}</option><option value="lunch">${esc(txt("Dejeuner", "Lunch"))}</option><option value="afternoon_snack">${esc(txt("Gouter", "Afternoon snack"))}</option><option value="dinner">${esc(txt("Diner", "Dinner"))}</option><option value="snack">${esc(txt("Snack", "Snack"))}</option><option value="meal">${esc(txt("Repas libre", "Free meal"))}</option></select></div>
               </div>
@@ -619,7 +668,7 @@
               <div style="display:flex;gap:6px;overflow:auto;padding-bottom:6px;margin-bottom:8px;">
                 ${catalogCats.map(cat => `<button class="btn small" type="button" data-nutrition-food-filter="${esc(cat)}" style="white-space:nowrap;${CACHE.foodCategory === cat ? "border-color:var(--accent);background:rgba(34,197,94,.12);" : ""}">${esc(foodCategoryLabel(cat))}</button>`).join("")}
               </div>
-              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;">
+              <div class="tb-nutrition-catalog-grid">
                 ${catalog.length ? catalog.map(food => {
                   const serving = Math.round(n(food.servingGrams, 100));
                   const one = nutritionForGrams(food, serving);
@@ -634,7 +683,7 @@
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
               <h3 style="margin:0 0 10px;">${esc(txt("Hydratation", "Hydration"))}</h3>
               <div class="field"><label>${esc(txt("Eau ml", "Water ml"))}</label><input id="nutrition-water-ml" type="number" min="0" step="50" value="250"></div>
-              <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px;">
+              <div class="tb-nutrition-water-grid">
                 <button class="btn small" type="button" data-nutrition-water-quick="250">250</button>
                 <button class="btn small" type="button" data-nutrition-water-quick="500">500</button>
                 <button class="btn small" type="button" data-nutrition-water-quick="1000">1L</button>
@@ -644,7 +693,7 @@
             </div>
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(56,189,248,.08),rgba(15,23,42,.02)),var(--panel2);">
               <h3 style="margin:0 0 10px;">${esc(txt("Historique", "History"))}</h3>
-              <div style="display:grid;grid-template-columns:repeat(7,minmax(26px,1fr));gap:6px;align-items:end;margin-bottom:12px;">
+              <div class="tb-nutrition-week-grid">
                 ${week.map(row => {
                   const height = Math.max(8, Math.min(74, pct(row.kcal, needsKcal) * 0.74));
                   const active = row.day === day;
@@ -661,7 +710,7 @@
                     <span>${esc(row.day)}</span>
                     <span>${Math.round(row.kcal)} kcal · ${Math.round(row.waterMl)} ml</span>
                   </button>
-                  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:6px;">
+                  <div class="tb-nutrition-history-type-grid">
                     ${row.typeRows.map(typeRow => `
                       <button class="btn small" type="button" data-nutrition-history-type="${esc(row.day)}::${esc(typeRow.type)}" style="display:flex;justify-content:space-between;gap:6px;${expanded ? "border-color:rgba(56,189,248,.55);" : ""}">
                         <span>${esc(mealTypeLabel(typeRow.type))}</span>
@@ -711,7 +760,7 @@
               <div class="tb-sport-stat"><span>${esc(txt("Proteines", "Protein"))}</span><strong>${fmtMacro(total.protein)}</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Glucides", "Carbs"))}</span><strong>${fmtMacro(total.carbs)}</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Lipides", "Fat"))}</span><strong>${fmtMacro(total.fat)}</strong></div>
-              <div class="tb-sport-stat"><span>${esc(txt("Eau", "Water"))}</span><strong>${Math.round(waterMl)} ml</strong></div>
+              <div class="tb-sport-stat"><span>${esc(txt("Eau bue", "Drunk water"))}</span><strong>${Math.round(drinkWaterMl)} ml</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Balance", "Balance"))}</span><strong>${Math.round(balance.balanceKcal)} kcal</strong></div>
             </div>
             <div class="muted" style="margin:-4px 0 12px;">
@@ -727,8 +776,8 @@
                 const consumed = typeTotals[target.type] || { kcal: 0, protein: 0, carbs: 0, fat: 0 };
                 const rowItems = items.filter(item => String(itemMeal(item)?.meal_type || "meal") === target.type);
                 const rest = target.kcal - n(consumed.kcal, 0);
-                const suggestion = mealMomentSuggestion(target.type, consumed, target.kcal, { ...total, waterMl }, { protein: proteinTarget, carbs: carbsTarget, fat: fatTarget });
-                return `<div style="display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:stretch;">
+                const suggestion = mealMomentSuggestion(target.type, consumed, target.kcal, { ...total, waterMl: drinkWaterMl }, { protein: proteinTarget, carbs: carbsTarget, fat: fatTarget });
+                return `<div class="tb-nutrition-timeline-row">
                   <div style="display:grid;grid-template-rows:18px 1fr;justify-items:center;padding-top:4px;">
                     <span style="width:16px;height:16px;border-radius:50%;background:${target.color};box-shadow:0 0 0 4px ${target.color}22;"></span>
                     <span style="width:2px;background:${index === mealTargets.length - 1 ? "transparent" : "rgba(148,163,184,.35)"};"></span>

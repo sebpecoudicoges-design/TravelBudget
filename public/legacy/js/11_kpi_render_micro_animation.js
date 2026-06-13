@@ -95,6 +95,100 @@ function _kpiActivitySummaryForDate(dateISO) {
   };
 }
 
+function _kpiBodyMetric(key, fallback) {
+  try {
+    const ls = window.TB_CONST?.LS_KEYS || {};
+    const map = {
+      weight: ls.sport_body_weight || "travelbudget_sport_body_weight_v1",
+      height: ls.sport_body_height || "travelbudget_sport_body_height_v1",
+      age: ls.sport_body_age || "travelbudget_sport_body_age_v1",
+      sex: ls.sport_body_sex || "travelbudget_sport_body_sex_v1",
+      bmr: ls.sport_body_bmr || "travelbudget_sport_body_bmr_v1",
+    };
+    const raw = localStorage.getItem(map[key]);
+    return raw === null || raw === "" ? fallback : raw;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function _kpiBaselineKcal() {
+  const custom = Number(_kpiBodyMetric("bmr", 0));
+  if (Number.isFinite(custom) && custom > 900) return custom;
+  const weight = Number(_kpiBodyMetric("weight", 70));
+  const height = Number(_kpiBodyMetric("height", 175));
+  const age = Number(_kpiBodyMetric("age", 35));
+  const sex = String(_kpiBodyMetric("sex", "male")).toLowerCase();
+  const offset = sex === "female" || sex === "f" ? -161 : 5;
+  const bmr = 10 * (Number.isFinite(weight) ? weight : 70)
+    + 6.25 * (Number.isFinite(height) ? height : 175)
+    - 5 * (Number.isFinite(age) ? age : 35)
+    + offset;
+  return Math.max(1200, Math.round(bmr));
+}
+
+function _kpiNutritionSummaryForDate(dateISO) {
+  const day = String(dateISO || "").slice(0, 10);
+  const sameDay = (v) => String(v || "").slice(0, 10) === day;
+  const meals = (Array.isArray(window.state?.nutritionMeals) ? window.state.nutritionMeals : []).filter((meal) => sameDay(meal.meal_date || meal.mealDate));
+  const mealIds = new Set(meals.map((meal) => String(meal.id || "")));
+  const items = (Array.isArray(window.state?.nutritionMealItems) ? window.state.nutritionMealItems : []).filter((item) => mealIds.has(String(item.meal_id || item.mealId || "")));
+  const hasItem = (meal) => items.some((item) => String(item.meal_id || item.mealId || "") === String(meal.id || ""));
+  const isWaterOnly = (meal) => {
+    const label = _kpiNormText(meal?.label);
+    return !hasItem(meal) && (label === "eau" || label === "water");
+  };
+  const sum = (keyA, keyB) => items.reduce((acc, item) => acc + (Number(item?.[keyA] ?? item?.[keyB]) || 0), 0);
+  return {
+    mealCount: meals.length,
+    itemCount: items.length,
+    kcal: sum("kcal", "kcal"),
+    protein: sum("protein_g", "proteinG"),
+    carbs: sum("carbs_g", "carbsG"),
+    fat: sum("fat_g", "fatG"),
+    drinkWaterMl: meals.reduce((acc, meal) => acc + (isWaterOnly(meal) ? (Number(meal?.water_ml ?? meal?.waterMl) || 0) : 0), 0),
+    foodWaterMl: meals.reduce((acc, meal) => acc + (!isWaterOnly(meal) ? (Number(meal?.water_ml ?? meal?.waterMl) || 0) : 0), 0),
+  };
+}
+
+function _kpiHealthSummaryForDate(dateISO, activity) {
+  const nutrition = _kpiNutritionSummaryForDate(dateISO);
+  const sportKcal = Number(activity?.sportKcal) || 0;
+  const workKcal = Number(activity?.workKcal) || 0;
+  const activityKcal = sportKcal + workKcal;
+  const baseline = _kpiBaselineKcal();
+  const needsKcal = Math.max(1200, baseline + activityKcal);
+  const balance = nutrition.kcal - needsKcal;
+  const kcalTolerance = Math.max(260, needsKcal * 0.16);
+  const kcalScore = Math.max(0, 42 - (Math.abs(balance) / kcalTolerance) * 22);
+  const hydrationScore = Math.min(24, (nutrition.drinkWaterMl / 2000) * 24);
+  const proteinTarget = Math.max(70, (Number(_kpiBodyMetric("weight", 70)) || 70) * 1.35);
+  const proteinScore = Math.min(18, (nutrition.protein / proteinTarget) * 18);
+  const loadScore = activityKcal > 1200 ? 8 : activityKcal > 850 ? 12 : activityKcal > 200 ? 16 : 12;
+  const score = Math.max(0, Math.min(100, Math.round(kcalScore + hydrationScore + proteinScore + loadScore)));
+  const level = score >= 78 ? "good" : score >= 58 ? "warn" : "bad";
+  const label = score >= 78 ? "Equilibre" : score >= 58 ? "A surveiller" : "A corriger";
+  let advice = "Equilibre correct entre besoins, nutrition, eau et charge.";
+  if (!nutrition.mealCount) advice = "Ajoute tes repas pour activer une lecture sante fiable.";
+  else if (nutrition.drinkWaterMl < 1400) advice = "Hydratation a completer : l'objectif suit l'eau bue, pas l'eau des aliments.";
+  else if (balance < -450 && activityKcal > 250) advice = "Deficit marque avec activite : prevois proteines et glucides utiles.";
+  else if (balance > 450) advice = "Journee haute en kcal : vise leger, eau et legumes au prochain repas.";
+  else if (activityKcal > 900) advice = "Charge forte : pense recuperation, sommeil et proteines.";
+  return {
+    ...nutrition,
+    baseline,
+    needsKcal,
+    balance,
+    activityKcal,
+    proteinTarget,
+    score,
+    level,
+    label,
+    advice,
+    color: level === "good" ? "#22c55e" : level === "warn" ? "#f59e0b" : "#ef4444",
+  };
+}
+
 function remainingBudgetBaseFrom(dateStr) {
   const start = parseISODateOrNull(dateStr);
   const end = parseISODateOrNull(state.period.end);
@@ -1285,6 +1379,7 @@ const driver = "Dépenses";
   const todayBudget = getDailyBudgetForDate(displayDateISO);
   const todayBudgetSpent = budgetSpentBaseForDate(displayDateISO);
   const activityToday = _kpiActivitySummaryForDate(displayDateISO);
+  const healthToday = _kpiHealthSummaryForDate(displayDateISO, activityToday);
   const todayPillClass = budgetClass(todayBudget);
 
   let level = "good";
@@ -1316,6 +1411,15 @@ const driver = "Dépenses";
     st.textContent = `
       .kpi-layout { grid-template-columns: minmax(360px, 470px) minmax(0, 1fr); }
       .kpi-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; }
+      .kpi-health-card { grid-column:1 / -1; border:1px solid rgba(34,197,94,.28); border-radius:16px; padding:14px; background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(56,189,248,.08)),var(--panel2); box-shadow:0 16px 38px rgba(15,23,42,.10); }
+      .kpi-health-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+      .kpi-health-body { display:grid; grid-template-columns:92px 1fr; gap:12px; align-items:center; margin-top:12px; }
+      .kpi-health-ring { width:92px; aspect-ratio:1; border-radius:50%; display:grid; place-items:center; box-shadow:inset 0 0 0 1px rgba(148,163,184,.20); }
+      .kpi-health-ring-inner { width:66px; aspect-ratio:1; border-radius:50%; background:var(--panel2); border:1px solid var(--border); display:grid; place-items:center; text-align:center; font-weight:900; color:var(--text); }
+      .kpi-health-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+      .kpi-health-metric { border:1px solid rgba(148,163,184,.22); border-radius:10px; padding:9px; background:rgba(255,255,255,.04); min-width:0; }
+      .kpi-health-metric span { display:block; font-size:11px; color:var(--muted); }
+      .kpi-health-metric strong { display:block; margin-top:3px; font-size:13px; color:var(--text); overflow-wrap:anywhere; }
       .kpi-pending-detail { margin-top:8px; position:relative; }
       .kpi-pending-detail summary { cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; color:var(--muted); }
       .kpi-pending-detail summary::-webkit-details-marker { display:none; }
@@ -1333,10 +1437,15 @@ const driver = "Dépenses";
 
       @media (max-width: 720px) {
         .kpi-mini-grid { grid-template-columns: 1fr; }
+        .kpi-health-body { grid-template-columns:1fr; }
+        .kpi-health-ring { margin:auto; }
+        .kpi-health-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
       }
 
       @media (max-width: 480px) {
         .kpi-mini-grid { grid-template-columns: 1fr; }
+        .kpi-health-head { align-items:flex-start; flex-direction:column; }
+        .kpi-health-grid { grid-template-columns:1fr; }
       }
     `;
     document.head.appendChild(st);
@@ -1408,6 +1517,31 @@ const driver = "Dépenses";
                 ${Math.round(activityToday.workKcal)} <span style="font-weight:700; font-size:14px;" class="muted">kcal</span>
               </div>
               <div class="muted" style="font-size:12px; margin-top:6px;">${Math.round(activityToday.workMinutes / 60 * 10) / 10}h · ${activityToday.workCount} journée(s)</div>
+            </div>
+
+            <div class="kpi-health-card">
+              <div class="kpi-health-head">
+                <div>
+                  <div class="muted" style="font-size:12px;">Santé</div>
+                  <div style="font-weight:900;font-size:22px;line-height:1.15;margin-top:3px;">Suivi du jour</div>
+                  <div class="muted" style="font-size:12px;margin-top:4px;">Nutrition · sport · travail · hydratation</div>
+                </div>
+                <span class="pill ${healthToday.level}" style="border-color:${healthToday.color};color:${healthToday.color};">${healthToday.label}</span>
+              </div>
+              <div class="kpi-health-body">
+                <div class="kpi-health-ring" style="background:conic-gradient(${healthToday.color} ${healthToday.score}%, rgba(148,163,184,.18) 0);">
+                  <div class="kpi-health-ring-inner">${healthToday.score}<span class="muted" style="font-size:10px;font-weight:700;">/100</span></div>
+                </div>
+                <div>
+                  <div class="kpi-health-grid">
+                    <div class="kpi-health-metric"><span>Energie</span><strong>${Math.round(healthToday.kcal)} / ${Math.round(healthToday.needsKcal)} kcal</strong></div>
+                    <div class="kpi-health-metric"><span>Balance</span><strong>${Math.round(healthToday.balance)} kcal</strong></div>
+                    <div class="kpi-health-metric"><span>Eau bue</span><strong>${Math.round(healthToday.drinkWaterMl)} / 2000 ml</strong></div>
+                    <div class="kpi-health-metric"><span>Charge</span><strong>${Math.round(healthToday.activityKcal)} kcal</strong></div>
+                  </div>
+                  <div class="muted" style="font-size:12px;margin-top:9px;">${escapeHTML(healthToday.advice)} Eau aliments: ${Math.round(healthToday.foodWaterMl)} ml · Sommeil: prochaine brique.</div>
+                </div>
+              </div>
             </div>
 
             <div style="${miniCardStyle}">
