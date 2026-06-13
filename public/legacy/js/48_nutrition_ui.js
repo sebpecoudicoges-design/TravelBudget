@@ -3,7 +3,7 @@
    - Food library, quick meals, kcal/macros, hydration
    ========================= */
 (function () {
-  const CACHE = { loaded: false, loading: false, foods: [], meals: [], items: [], error: "", foodQuery: "", selectedDate: "", expandedHistory: "" };
+  const CACHE = { loaded: false, loading: false, foods: [], meals: [], items: [], error: "", foodQuery: "", selectedDate: "", expandedHistory: "", editingItemId: "" };
   const FALLBACK_FOODS = [
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
@@ -108,7 +108,9 @@
     const key = String(type || "meal");
     const labels = {
       breakfast: txt("Petit dejeuner", "Breakfast"),
+      morning_snack: txt("Pause 10h", "10am snack"),
       lunch: txt("Dejeuner", "Lunch"),
+      afternoon_snack: txt("Gouter", "Afternoon snack"),
       dinner: txt("Diner", "Dinner"),
       snack: txt("Snack", "Snack"),
       meal: txt("Repas", "Meal"),
@@ -266,7 +268,7 @@
   }
   function dailySummaries() {
     const byDay = new Map();
-    const typeOrder = ["breakfast", "lunch", "dinner", "snack", "meal"];
+    const typeOrder = ["breakfast", "morning_snack", "lunch", "afternoon_snack", "dinner", "snack", "meal"];
     function ensureType(row, type) {
       const key = typeOrder.includes(type) ? type : "meal";
       if (!row.types[key]) row.types[key] = { type: key, meals: [], items: [], kcal: 0, protein: 0, carbs: 0, fat: 0, waterMl: 0 };
@@ -382,6 +384,33 @@
         </div>
       </div>`;
   }
+  function mealMomentTargets(needsKcal) {
+    const rows = [
+      { type: "breakfast", pct: 0.25, color: "#38bdf8" },
+      { type: "morning_snack", pct: 0.10, color: "#a78bfa" },
+      { type: "lunch", pct: 0.35, color: "#22c55e" },
+      { type: "afternoon_snack", pct: 0.10, color: "#f59e0b" },
+      { type: "dinner", pct: 0.20, color: "#fb7185" },
+    ];
+    return rows.map(row => ({ ...row, kcal: Math.round(n(needsKcal, 0) * row.pct) }));
+  }
+  function typeTotalsForDay(meals, items) {
+    const mealTypes = new Map();
+    meals.forEach(meal => mealTypes.set(String(meal.id || ""), String(meal.meal_type || "meal")));
+    return items.reduce((acc, item) => {
+      const type = mealTypes.get(String(item.meal_id || "")) || "meal";
+      if (!acc[type]) acc[type] = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+      acc[type].kcal += n(item.kcal, 0);
+      acc[type].protein += n(item.protein_g, 0);
+      acc[type].carbs += n(item.carbs_g, 0);
+      acc[type].fat += n(item.fat_g, 0);
+      return acc;
+    }, {});
+  }
+  function itemMeal(item) {
+    const mealId = String(item?.meal_id || "");
+    return CACHE.meals.find(meal => String(meal.id || "") === mealId) || null;
+  }
   function renderNutrition(reason) {
     ensureNutritionShell();
     const root = document.getElementById("nutrition-root");
@@ -425,6 +454,9 @@
     const proteinTarget = Math.max(70, kg * 1.6);
     const fatTarget = Math.max(45, kg * 0.8);
     const carbsTarget = Math.max(120, (needsKcal - (proteinTarget * 4) - (fatTarget * 9)) / 4);
+    const mealTargets = mealMomentTargets(needsKcal);
+    const typeTotals = typeTotalsForDay(meals, items);
+    const editingItem = CACHE.editingItemId ? items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
     root.innerHTML = `
       <section class="tb-nutrition-shell">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
@@ -438,10 +470,21 @@
             <button class="btn" type="button" id="nutrition-refresh">${esc(txt("Rafraichir", "Refresh"))}</button>
           </div>
         </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-top:14px;">
+          ${mealTargets.map(target => {
+            const consumed = n(typeTotals[target.type]?.kcal, 0);
+            const delta = target.kcal - consumed;
+            return `<button class="btn" type="button" data-nutrition-pick-type="${esc(target.type)}" style="display:grid;text-align:left;gap:5px;border-color:${target.color};background:linear-gradient(135deg,${target.color}24,transparent);">
+              <span>${esc(mealTypeLabel(target.type))}</span>
+              <strong>${Math.round(consumed)} / ${target.kcal} kcal</strong>
+              <small class="muted">${delta >= 0 ? esc(txt("reste", "left")) : esc(txt("surplus", "surplus"))} ${Math.abs(Math.round(delta))}</small>
+            </button>`;
+          }).join("")}
+        </div>
         <div class="tb-work-grid" style="display:grid;grid-template-columns:minmax(280px,390px) 1fr;gap:14px;margin-top:14px;">
           <div style="display:flex;flex-direction:column;gap:12px;">
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-              <h3 style="margin:0 0 10px;">${esc(txt("Ajout rapide", "Quick add"))}</h3>
+              <h3 style="margin:0 0 10px;">${esc(editingItem ? txt("Modifier", "Edit") : txt("Ajout rapide", "Quick add"))}</h3>
               <div class="field"><label>${esc(txt("Chercher", "Search"))}</label><input id="nutrition-search" value="${esc(CACHE.foodQuery)}" placeholder="${esc(txt("Riz, poulet, banane...", "Rice, chicken, banana..."))}"></div>
               <div class="field"><label>${esc(txt("Aliment", "Food"))}</label><select id="nutrition-food">${foodOptions()}</select></div>
               <div class="row" style="gap:10px;">
@@ -450,10 +493,11 @@
               </div>
               <div class="row" style="gap:10px;">
                 <div class="field" style="flex:1;"><label>${esc(txt("Grammes estimes", "Estimated grams"))}</label><input id="nutrition-grams" type="number" min="0" step="5" value="100"></div>
-                <div class="field" style="flex:1;"><label>${esc(txt("Repas", "Meal"))}</label><select id="nutrition-type"><option value="breakfast">${esc(txt("Petit-dej", "Breakfast"))}</option><option value="lunch">${esc(txt("Dejeuner", "Lunch"))}</option><option value="dinner">${esc(txt("Diner", "Dinner"))}</option><option value="snack">${esc(txt("Snack", "Snack"))}</option></select></div>
+                <div class="field" style="flex:1;"><label>${esc(txt("Moment", "Moment"))}</label><select id="nutrition-type"><option value="breakfast">${esc(txt("Petit-dej", "Breakfast"))}</option><option value="morning_snack">${esc(txt("Pause 10h", "10am snack"))}</option><option value="lunch">${esc(txt("Dejeuner", "Lunch"))}</option><option value="afternoon_snack">${esc(txt("Gouter", "Afternoon snack"))}</option><option value="dinner">${esc(txt("Diner", "Dinner"))}</option><option value="snack">${esc(txt("Snack", "Snack"))}</option><option value="meal">${esc(txt("Repas libre", "Free meal"))}</option></select></div>
               </div>
               <div class="pill" id="nutrition-preview">0 kcal</div>
-              <button class="btn primary" id="nutrition-save" type="button" style="width:100%;margin-top:10px;">${esc(txt("Ajouter", "Add"))}</button>
+              <button class="btn primary" id="nutrition-save" type="button" style="width:100%;margin-top:10px;">${esc(editingItem ? txt("Enregistrer", "Save") : txt("Ajouter", "Add"))}</button>
+              ${editingItem ? `<button class="btn" id="nutrition-edit-cancel" type="button" style="width:100%;margin-top:8px;">${esc(txt("Annuler la modification", "Cancel edit"))}</button>` : ""}
               ${CACHE.error ? `<div class="muted" style="margin-top:10px;">${esc(CACHE.error)}</div>` : ""}
             </div>
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
@@ -539,7 +583,7 @@
             ${items.length ? items.map(item => `
               <div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--border);padding:9px 0;align-items:flex-start;">
                 <div><strong>${esc(item.label || item.food_key || "Aliment")}</strong><div class="muted">${Math.round(n(item.grams, 0))}g · P ${fmtMacro(item.protein_g)} · G ${fmtMacro(item.carbs_g)} · L ${fmtMacro(item.fat_g)}</div></div>
-                <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;"><strong>${Math.round(n(item.kcal, 0))} kcal</strong><button class="btn small" type="button" data-nutrition-delete="${esc(String(item.id || ""))}">${esc(txt("Supprimer", "Delete"))}</button></div>
+                <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;"><strong>${Math.round(n(item.kcal, 0))} kcal</strong><button class="btn small" type="button" data-nutrition-edit="${esc(String(item.id || ""))}">${esc(txt("Modifier", "Edit"))}</button><button class="btn small" type="button" data-nutrition-delete="${esc(String(item.id || ""))}">${esc(txt("Supprimer", "Delete"))}</button></div>
               </div>`).join("") : `<div class="muted">${esc(txt("Aucun repas pour cette date.", "No meal for this date."))}</div>`}
           </div>
         </div>
@@ -576,6 +620,7 @@
     }
   }
   function bindNutrition(root) {
+    const editingItem = CACHE.editingItemId ? CACHE.items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
     const search = root.querySelector("#nutrition-search");
     if (search) search.oninput = () => {
       CACHE.foodQuery = search.value || "";
@@ -595,6 +640,13 @@
     });
     const refresh = root.querySelector("#nutrition-refresh");
     if (refresh) refresh.onclick = async () => { await loadNutrition({ force: true }); renderNutrition("refresh"); };
+    root.querySelectorAll("[data-nutrition-pick-type]").forEach(btn => {
+      btn.onclick = () => {
+        const select = root.querySelector("#nutrition-type");
+        if (select) select.value = btn.getAttribute("data-nutrition-pick-type") || "meal";
+        root.querySelector("#nutrition-search")?.focus();
+      };
+    });
     const dateInput = root.querySelector("#nutrition-date");
     if (dateInput) dateInput.onchange = async () => {
       CACHE.selectedDate = dateInput.value || todayISO();
@@ -603,6 +655,8 @@
     };
     const save = root.querySelector("#nutrition-save");
     if (save) save.onclick = () => saveNutritionMeal(root);
+    const cancel = root.querySelector("#nutrition-edit-cancel");
+    if (cancel) cancel.onclick = () => { CACHE.editingItemId = ""; renderNutrition("edit-cancel"); };
     const waterOnly = root.querySelector("#nutrition-water-only");
     if (waterOnly) waterOnly.onclick = () => saveWaterOnly(root);
     root.querySelectorAll("[data-nutrition-water-quick]").forEach(btn => {
@@ -633,6 +687,33 @@
     root.querySelectorAll("[data-nutrition-delete]").forEach(btn => {
       btn.onclick = () => deleteNutritionItem(btn.getAttribute("data-nutrition-delete"));
     });
+    root.querySelectorAll("[data-nutrition-edit]").forEach(btn => {
+      btn.onclick = () => startNutritionEdit(root, btn.getAttribute("data-nutrition-edit"));
+    });
+    if (editingItem) hydrateNutritionEdit(root, editingItem);
+  }
+  function hydrateNutritionEdit(root, item) {
+    const food = CACHE.foods.find(row => String(row.key) === String(item.food_key || ""));
+    const meal = itemMeal(item);
+    if (food) {
+      const select = root.querySelector("#nutrition-food");
+      if (select && Array.from(select.options).some(opt => opt.value === food.key)) select.value = food.key;
+    }
+    const mode = root.querySelector("#nutrition-amount-mode");
+    if (mode) mode.value = "grams";
+    const grams = root.querySelector("#nutrition-grams");
+    if (grams) {
+      grams.readOnly = false;
+      grams.value = Math.round(n(item.grams, food?.servingGrams || 100));
+    }
+    const type = root.querySelector("#nutrition-type");
+    if (type) type.value = meal?.meal_type || "meal";
+    updateNutritionPreview(root);
+  }
+  function startNutritionEdit(root, id) {
+    CACHE.editingItemId = String(id || "");
+    CACHE.foodQuery = "";
+    renderNutrition("edit");
   }
   async function saveNutritionMeal(root) {
     const food = selectedFood(root);
@@ -642,7 +723,31 @@
     const waterMl = n(nut.waterMl, 0);
     const c = client();
     try {
-      if (c && uid()) {
+      if (c && uid() && CACHE.editingItemId) {
+        const existing = CACHE.items.find(item => String(item.id || "") === String(CACHE.editingItemId));
+        const meal = itemMeal(existing);
+        if (meal?.id) {
+          const mealUpdate = await c.from(table("nutrition_meals")).update({
+            meal_date: selectedDateISO(),
+            meal_type: root.querySelector("#nutrition-type")?.value || "meal",
+            label: food.name,
+            water_ml: waterMl,
+          }).eq("id", meal.id).eq("user_id", uid());
+          if (mealUpdate.error) throw mealUpdate.error;
+        }
+        const itemUpdate = await c.from(table("nutrition_meal_items")).update({
+          food_key: food.key,
+          label: food.name,
+          grams,
+          kcal: nut.kcal,
+          protein_g: nut.protein,
+          carbs_g: nut.carbs,
+          fat_g: nut.fat,
+          fiber_g: nut.fiber,
+        }).eq("id", CACHE.editingItemId).eq("user_id", uid());
+        if (itemUpdate.error) throw itemUpdate.error;
+        CACHE.editingItemId = "";
+      } else if (c && uid()) {
         const meal = await c.from(table("nutrition_meals")).insert({
           user_id: uid(),
           travel_id: activeTravelId(),
@@ -667,6 +772,17 @@
           });
           if (item.error) throw item.error;
         }
+      } else if (CACHE.editingItemId) {
+        const rows = loadLocalMeals();
+        const edited = rows.map(row => {
+          if (String(row.item?.id || "") !== String(CACHE.editingItemId)) return row;
+          return {
+            meal: { ...(row.meal || {}), meal_date: selectedDateISO(), meal_type: root.querySelector("#nutrition-type")?.value || "meal", label: food.name, water_ml: waterMl },
+            item: { ...(row.item || {}), food_key: food.key, label: food.name, grams, kcal: nut.kcal, protein_g: nut.protein, carbs_g: nut.carbs, fat_g: nut.fat, fiber_g: nut.fiber },
+          };
+        });
+        saveLocalMeals(edited);
+        CACHE.editingItemId = "";
       } else {
         const mealId = `local_meal_${Date.now()}`;
         const itemId = `local_item_${Date.now()}`;
