@@ -23,6 +23,7 @@ export function normalizeFoodRow(row = {}) {
     fatPer100g: Math.max(0, num(row.fatPer100g || row.fat_per_100g, 0)),
     fiberPer100g: Math.max(0, num(row.fiberPer100g || row.fiber_per_100g, 0)),
     waterMlPer100g: Math.max(0, num(row.waterMlPer100g || row.water_ml_per_100g, 0)),
+    tags: Array.isArray(row.tags) ? row.tags.map((tag) => str(tag)).filter(Boolean) : [],
     source: str(row.source, 'library'),
   };
 }

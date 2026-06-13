@@ -65,6 +65,36 @@
     { key: "double_cheeseburger", name: "Double cheeseburger", servingGrams: 330, kcalPer100g: 310, proteinPer100g: 18, carbsPer100g: 20, fatPer100g: 19, fiberPer100g: 1.4 },
     { key: "chicken_burger", name: "Burger poulet", servingGrams: 260, kcalPer100g: 250, proteinPer100g: 13, carbsPer100g: 28, fatPer100g: 10, fiberPer100g: 2 },
     { key: "veggie_burger", name: "Burger vegetarien", servingGrams: 250, kcalPer100g: 220, proteinPer100g: 9, carbsPer100g: 31, fatPer100g: 7, fiberPer100g: 5 },
+    { key: "croque_monsieur", name: "Croque monsieur", servingGrams: 200, kcalPer100g: 285, proteinPer100g: 14, carbsPer100g: 24, fatPer100g: 15, fiberPer100g: 1.6 },
+    { key: "club_sandwich_chicken", name: "Club sandwich poulet", servingGrams: 260, kcalPer100g: 230, proteinPer100g: 13, carbsPer100g: 24, fatPer100g: 9, fiberPer100g: 2 },
+    { key: "pizza_4_cheese", name: "Pizza 4 fromages", servingGrams: 300, kcalPer100g: 295, proteinPer100g: 13, carbsPer100g: 30, fatPer100g: 14, fiberPer100g: 2 },
+    { key: "pizza_pepperoni", name: "Pizza pepperoni", servingGrams: 300, kcalPer100g: 300, proteinPer100g: 13, carbsPer100g: 31, fatPer100g: 14.5, fiberPer100g: 2.2 },
+    { key: "gratin_dauphinois", name: "Gratin dauphinois", servingGrams: 250, kcalPer100g: 160, proteinPer100g: 4, carbsPer100g: 17, fatPer100g: 8.5, fiberPer100g: 1.5 },
+    { key: "hachis_parmentier", name: "Hachis parmentier", servingGrams: 350, kcalPer100g: 145, proteinPer100g: 8, carbsPer100g: 15, fatPer100g: 5.5, fiberPer100g: 2 },
+    { key: "tartiflette", name: "Tartiflette", servingGrams: 350, kcalPer100g: 220, proteinPer100g: 9, carbsPer100g: 15, fatPer100g: 14, fiberPer100g: 1.5 },
+    { key: "steak_fries", name: "Steak frites", servingGrams: 380, kcalPer100g: 220, proteinPer100g: 13, carbsPer100g: 20, fatPer100g: 10, fiberPer100g: 2.5 },
+    { key: "fish_and_chips", name: "Fish and chips", servingGrams: 350, kcalPer100g: 240, proteinPer100g: 11, carbsPer100g: 25, fatPer100g: 11, fiberPer100g: 2 },
+    { key: "paella_chicken_seafood", name: "Paella poulet fruits de mer", servingGrams: 380, kcalPer100g: 145, proteinPer100g: 9, carbsPer100g: 19, fatPer100g: 4, fiberPer100g: 2 },
+    { key: "risotto_mushroom", name: "Risotto champignons", servingGrams: 320, kcalPer100g: 150, proteinPer100g: 5, carbsPer100g: 22, fatPer100g: 5, fiberPer100g: 1.5 },
+    { key: "chicken_tikka_masala_rice", name: "Poulet tikka masala riz", servingGrams: 400, kcalPer100g: 165, proteinPer100g: 10, carbsPer100g: 21, fatPer100g: 5, fiberPer100g: 1.8 },
+    { key: "dahl_lentils_rice", name: "Dahl lentilles riz", servingGrams: 380, kcalPer100g: 125, proteinPer100g: 6, carbsPer100g: 20, fatPer100g: 2.5, fiberPer100g: 5 },
+    { key: "vegetable_curry_rice", name: "Curry legumes riz", servingGrams: 380, kcalPer100g: 125, proteinPer100g: 4, carbsPer100g: 20, fatPer100g: 3.5, fiberPer100g: 4 },
+    { key: "falafel_plate", name: "Assiette falafels", servingGrams: 350, kcalPer100g: 210, proteinPer100g: 8, carbsPer100g: 24, fatPer100g: 9, fiberPer100g: 5 },
+    { key: "buddha_bowl_chicken", name: "Buddha bowl poulet", servingGrams: 420, kcalPer100g: 150, proteinPer100g: 10, carbsPer100g: 17, fatPer100g: 4.5, fiberPer100g: 4 },
+    { key: "salmon_potatoes_greenbeans", name: "Saumon pommes de terre haricots verts", servingGrams: 380, kcalPer100g: 145, proteinPer100g: 12, carbsPer100g: 13, fatPer100g: 6, fiberPer100g: 2.5 },
+    { key: "chicken_potatoes_vegetables", name: "Poulet pommes de terre legumes", servingGrams: 400, kcalPer100g: 135, proteinPer100g: 12, carbsPer100g: 15, fatPer100g: 3.5, fiberPer100g: 2.8 },
+    { key: "beef_bourguignon_pasta", name: "Boeuf bourguignon pates", servingGrams: 400, kcalPer100g: 155, proteinPer100g: 11, carbsPer100g: 18, fatPer100g: 4.5, fiberPer100g: 2 },
+    { key: "couscous_royal", name: "Couscous royal", servingGrams: 450, kcalPer100g: 150, proteinPer100g: 10, carbsPer100g: 17, fatPer100g: 5, fiberPer100g: 3 },
+    { key: "lasagna_vegetable", name: "Lasagnes legumes", servingGrams: 300, kcalPer100g: 145, proteinPer100g: 7, carbsPer100g: 15, fatPer100g: 6, fiberPer100g: 2.5 },
+    { key: "ravioli_beef_tomato", name: "Raviolis boeuf sauce tomate", servingGrams: 300, kcalPer100g: 150, proteinPer100g: 7, carbsPer100g: 22, fatPer100g: 4, fiberPer100g: 2 },
+    { key: "ramen_chicken", name: "Ramen poulet", servingGrams: 500, kcalPer100g: 95, proteinPer100g: 6, carbsPer100g: 12, fatPer100g: 2.5, fiberPer100g: 1.2, waterMlPer100g: 88 },
+    { key: "pad_thai_chicken", name: "Pad thai poulet", servingGrams: 380, kcalPer100g: 185, proteinPer100g: 10, carbsPer100g: 24, fatPer100g: 5.5, fiberPer100g: 2 },
+    { key: "bo_bun_beef", name: "Bo bun boeuf", servingGrams: 420, kcalPer100g: 150, proteinPer100g: 9, carbsPer100g: 20, fatPer100g: 4, fiberPer100g: 3 },
+    { key: "fajitas_chicken", name: "Fajitas poulet", servingGrams: 330, kcalPer100g: 185, proteinPer100g: 11, carbsPer100g: 22, fatPer100g: 6, fiberPer100g: 3 },
+    { key: "quesadilla_cheese_chicken", name: "Quesadilla poulet fromage", servingGrams: 280, kcalPer100g: 260, proteinPer100g: 14, carbsPer100g: 24, fatPer100g: 12, fiberPer100g: 2 },
+    { key: "hot_dog", name: "Hot dog", servingGrams: 180, kcalPer100g: 285, proteinPer100g: 11, carbsPer100g: 30, fatPer100g: 13, fiberPer100g: 1.5 },
+    { key: "chicken_wings", name: "Chicken wings", servingGrams: 180, kcalPer100g: 285, proteinPer100g: 20, carbsPer100g: 5, fatPer100g: 20, fiberPer100g: 0.5 },
+    { key: "sushi_mixed_box", name: "Plateau sushi mixte", servingGrams: 260, kcalPer100g: 150, proteinPer100g: 7, carbsPer100g: 26, fatPer100g: 2.2, fiberPer100g: 0.8 },
     { key: "olive_oil", name: "Huile olive", servingGrams: 10, kcalPer100g: 884, proteinPer100g: 0, carbsPer100g: 0, fatPer100g: 100 },
     { key: "coffee", name: "Cafe", servingGrams: 200, kcalPer100g: 1, proteinPer100g: 0.1, carbsPer100g: 0, fatPer100g: 0, waterMlPer100g: 99 },
     { key: "tea", name: "The", servingGrams: 250, kcalPer100g: 1, proteinPer100g: 0, carbsPer100g: 0.2, fatPer100g: 0, waterMlPer100g: 99 },
@@ -190,7 +220,7 @@
       if (c) {
         try {
           const foods = await c.from(table("nutrition_foods"))
-            .select("key,name,brand,serving_grams,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,fiber_per_100g,water_ml_per_100g")
+            .select("key,name,brand,serving_grams,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,fiber_per_100g,water_ml_per_100g,tags")
             .eq("is_active", true)
             .order("name", { ascending: true })
             .limit(500);
@@ -411,6 +441,14 @@
     return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   }
   function foodCategory(food) {
+    const tags = Array.isArray(food?.tags) ? food.tags.map(normalizeText) : [];
+    if (tags.includes("plat")) return "dishes";
+    if (tags.includes("fruit")) return "fruits";
+    if (tags.some(tag => ["laitage", "fromage"].includes(tag))) return "dairy";
+    if (tags.some(tag => ["base", "riz", "pates", "semoule", "glucides", "pain"].includes(tag))) return "carbs";
+    if (tags.some(tag => ["proteines", "boeuf", "poulet", "poisson", "oeuf", "vegetarien"].includes(tag))) return "protein";
+    if (tags.some(tag => ["snack", "gateau", "chocolat"].includes(tag))) return "snacks";
+    if (tags.includes("boisson")) return "drinks";
     const s = normalizeText(`${food?.key || ""} ${food?.name || ""}`);
     if (/banane|pomme|poire|orange|kiwi|fraise|raisin|peche|mangue|melon|pasteque|fruit|compote|datte|myrtille|framboise/.test(s)) return "fruits";
     if (/yaourt|fromage|skyr|lait|mozzarella|emmental|cheddar|feta|chevre|cottage|laitage/.test(s)) return "dairy";
@@ -418,7 +456,7 @@
     if (/poulet|dinde|boeuf|steak|thon|saumon|cabillaud|crevette|oeuf|tofu|tempeh|lentille|pois chiche|whey|proteine/.test(s)) return "protein";
     if (/biscuit|gateau|belvita|barre|chocolat|cookie|chips|cracker|donut|muffin|gaufre|snack|galette/.test(s)) return "snacks";
     if (/eau|cafe|the|biere|cidre|jus|cola|boisson|latte|cappuccino|smoothie/.test(s)) return "drinks";
-    if (/burger|sandwich|wrap|bowl|pizza|salade|soupe|curry|chili|lasagne|kebab|tacos|burrito|omelette|plat/.test(s)) return "dishes";
+    if (/burger|sandwich|wrap|bowl|pizza|salade|soupe|curry|chili|lasagne|kebab|tacos|burrito|omelette|plat|croque|panini|gratin|hachis|tartiflette|raclette|paella|risotto|dahl|falafel|shakshuka|saumon pommes|poulet pommes|bourguignon|blanquette|couscous|moussaka|ravioli|gnocchi|ramen|pad thai|bo bun|fajitas|quesadilla|hot dog|sushi/.test(s)) return "dishes";
     return "all";
   }
   function foodCategoryLabel(cat) {
