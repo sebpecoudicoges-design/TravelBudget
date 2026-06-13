@@ -1,0 +1,3 @@
+-- Alignment migration.
+-- This version already exists in the linked Supabase migration history.
+-- The data currently present remotely is preserved by later idempotent nutrition upserts.

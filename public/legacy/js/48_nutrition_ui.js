@@ -3,7 +3,7 @@
    - Food library, quick meals, kcal/macros, hydration
    ========================= */
 (function () {
-  const CACHE = { loaded: false, loading: false, foods: [], meals: [], items: [], error: "", foodQuery: "" };
+  const CACHE = { loaded: false, loading: false, foods: [], meals: [], items: [], error: "", foodQuery: "", selectedDate: "", expandedHistory: "" };
   const FALLBACK_FOODS = [
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
@@ -84,6 +84,10 @@
   function uid() { return window.sbUser?.id || null; }
   function activeTravelId() { return window.state?.activeTravelId || null; }
   function todayISO() { try { return window.toLocalISODate(new Date()); } catch (_) { return new Date().toISOString().slice(0, 10); } }
+  function selectedDateISO() {
+    if (!CACHE.selectedDate) CACHE.selectedDate = todayISO();
+    return /^\d{4}-\d{2}-\d{2}$/.test(CACHE.selectedDate) ? CACHE.selectedDate : todayISO();
+  }
   function localDateISO(value) {
     const raw = String(value || "");
     if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
@@ -94,7 +98,23 @@
     }
     return raw.slice(0, 10);
   }
+  function offsetDateISO(day, offsetDays) {
+    const d = new Date(`${day || todayISO()}T00:00:00`);
+    d.setDate(d.getDate() + offsetDays);
+    return d.toISOString().slice(0, 10);
+  }
   function n(v, fallback) { const x = Number(v); return Number.isFinite(x) ? x : (fallback || 0); }
+  function mealTypeLabel(type) {
+    const key = String(type || "meal");
+    const labels = {
+      breakfast: txt("Petit dejeuner", "Breakfast"),
+      lunch: txt("Dejeuner", "Lunch"),
+      dinner: txt("Diner", "Dinner"),
+      snack: txt("Snack", "Snack"),
+      meal: txt("Repas", "Meal"),
+    };
+    return labels[key] || key;
+  }
   function foodCacheKey() { return window.TB_CONST?.LS_KEYS?.nutrition_food_cache || "travelbudget_nutrition_food_cache_v1"; }
   function localMealKey() { return `${window.TB_CONST?.LS_KEYS?.nutrition_local_meals || "travelbudget_nutrition_local_meals_v1"}::${uid() || "anon"}`; }
   function rules() { return window.Core?.nutritionRules || {}; }
@@ -185,7 +205,9 @@
       }
       if (c && uid()) {
         try {
-          const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+          const recentSince = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+          const selectedSince = offsetDateISO(selectedDateISO(), -1);
+          const since = selectedSince < recentSince ? selectedSince : recentSince;
           const meals = await c.from(table("nutrition_meals"))
             .select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,created_at")
             .eq("user_id", uid())
@@ -235,20 +257,66 @@
     }
     return changed;
   }
-  function todayRows() {
-    const day = todayISO();
+  function selectedRows() {
+    const day = selectedDateISO();
     const meals = CACHE.meals.filter(row => localDateISO(row.meal_date) === day);
     const mealIds = new Set(meals.map(row => String(row.id || "")));
     const items = CACHE.items.filter(row => row && mealIds.has(String(row.meal_id || "")));
     return { meals, items };
   }
+  function dailySummaries() {
+    const byDay = new Map();
+    const typeOrder = ["breakfast", "lunch", "dinner", "snack", "meal"];
+    function ensureType(row, type) {
+      const key = typeOrder.includes(type) ? type : "meal";
+      if (!row.types[key]) row.types[key] = { type: key, meals: [], items: [], kcal: 0, protein: 0, carbs: 0, fat: 0, waterMl: 0 };
+      return row.types[key];
+    }
+    CACHE.meals.forEach(meal => {
+      const day = localDateISO(meal.meal_date);
+      if (!day) return;
+      if (!byDay.has(day)) byDay.set(day, { day, meals: [], waterMl: 0, kcal: 0, protein: 0, carbs: 0, fat: 0, types: {} });
+      const row = byDay.get(day);
+      const typeRow = ensureType(row, String(meal.meal_type || "meal"));
+      row.meals.push(meal);
+      row.waterMl += n(meal.water_ml, 0);
+      typeRow.meals.push(meal);
+      typeRow.waterMl += n(meal.water_ml, 0);
+    });
+    const mealToDay = new Map();
+    const mealToType = new Map();
+    CACHE.meals.forEach(meal => {
+      mealToDay.set(String(meal.id || ""), localDateISO(meal.meal_date));
+      mealToType.set(String(meal.id || ""), String(meal.meal_type || "meal"));
+    });
+    CACHE.items.forEach(item => {
+      const mealId = String(item.meal_id || "");
+      const day = mealToDay.get(mealId);
+      const row = day ? byDay.get(day) : null;
+      if (!row) return;
+      const typeRow = ensureType(row, mealToType.get(mealId) || "meal");
+      typeRow.items.push(item);
+      typeRow.kcal += n(item.kcal, 0);
+      typeRow.protein += n(item.protein_g, 0);
+      typeRow.carbs += n(item.carbs_g, 0);
+      typeRow.fat += n(item.fat_g, 0);
+      row.kcal += n(item.kcal, 0);
+      row.protein += n(item.protein_g, 0);
+      row.carbs += n(item.carbs_g, 0);
+      row.fat += n(item.fat_g, 0);
+    });
+    return Array.from(byDay.values()).map(row => ({
+      ...row,
+      typeRows: typeOrder.map(type => row.types[type]).filter(Boolean),
+    })).sort((a, b) => String(b.day).localeCompare(String(a.day))).slice(0, 21);
+  }
   function todaySportKcal() {
-    const day = todayISO();
+    const day = selectedDateISO();
     return (window.state?.sportSessions || []).filter(s => localDateISO(s.started_at || s.startedAt) === day)
       .reduce((sum, s) => sum + n(s.estimated_kcal || s.estimatedKcal, 0), 0);
   }
   function todayWorkKcal() {
-    const day = todayISO();
+    const day = selectedDateISO();
     return (window.state?.workDays || []).filter(w => localDateISO(w.work_date) === day)
       .reduce((sum, w) => sum + n(w.estimated_kcal, 0), 0);
   }
@@ -296,6 +364,24 @@
     if (before && Array.from(select.options).some(opt => opt.value === before)) select.value = before;
   }
   function fmtMacro(v, unit) { return `${Math.round(n(v, 0) * 10) / 10}${unit || "g"}`; }
+  function pct(current, target) {
+    const t = Math.max(1, n(target, 0));
+    return Math.max(0, Math.min(160, (n(current, 0) / t) * 100));
+  }
+  function progressBar(label, current, target, unit) {
+    const percent = pct(current, target);
+    const over = n(current, 0) > n(target, 0);
+    return `
+      <div style="display:grid;gap:5px;">
+        <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;">
+          <span>${esc(label)}</span>
+          <strong>${Math.round(n(current, 0))}/${Math.round(n(target, 0))}${esc(unit || "")}</strong>
+        </div>
+        <div style="height:8px;border:1px solid var(--border);border-radius:999px;overflow:hidden;background:rgba(148,163,184,.12);">
+          <div style="height:100%;width:${Math.min(100, percent)}%;background:${over ? "var(--danger,#ef4444)" : "var(--accent,#22c55e)"};"></div>
+        </div>
+      </div>`;
+  }
   function renderNutrition(reason) {
     ensureNutritionShell();
     const root = document.getElementById("nutrition-root");
@@ -312,7 +398,9 @@
         }
       }).catch(() => {});
     }
-    const { meals, items } = todayRows();
+    const day = selectedDateISO();
+    const { meals, items } = selectedRows();
+    const history = dailySummaries();
     const total = sumNutrition(items.map(item => ({ nutrition: {
       kcal: item.kcal,
       protein: item.protein_g,
@@ -329,6 +417,14 @@
       ? rules().energyBalance({ consumedKcal: total.kcal, sportKcal, workKcal, bmr: base.bmr })
       : { spentKcal: base.bmr + sportKcal + workKcal, balanceKcal: total.kcal - (base.bmr + sportKcal + workKcal) };
     const balanceLabel = balance.balanceKcal >= 0 ? txt("au-dessus", "above") : txt("en-dessous", "below");
+    const needsKcal = Math.max(0, n(balance.spentKcal, base.bmr + sportKcal + workKcal));
+    const consumedKcal = Math.max(0, n(total.kcal, 0));
+    const kcalDelta = consumedKcal - needsKcal;
+    const kcalTargetLabel = kcalDelta >= 0 ? txt("surplus", "surplus") : txt("reste", "left");
+    const kg = bodyWeight();
+    const proteinTarget = Math.max(70, kg * 1.6);
+    const fatTarget = Math.max(45, kg * 0.8);
+    const carbsTarget = Math.max(120, (needsKcal - (proteinTarget * 4) - (fatTarget * 9)) / 4);
     root.innerHTML = `
       <section class="tb-nutrition-shell">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
@@ -337,6 +433,7 @@
             <div class="muted" style="margin-top:4px;">${esc(txt("Repas, calories, macros et hydratation, sans lecture medicale.", "Meals, calories, macros and hydration, without medical interpretation."))}</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <label class="pill" style="display:flex;align-items:center;gap:6px;">${esc(txt("Date", "Date"))} <input id="nutrition-date" type="date" value="${esc(day)}" style="width:142px;"></label>
             <span class="pill">${esc(txt("Base", "Base"))} ${Math.round(base.bmr || 0)} kcal</span>
             <button class="btn" type="button" id="nutrition-refresh">${esc(txt("Rafraichir", "Refresh"))}</button>
           </div>
@@ -370,9 +467,60 @@
               </div>
               <button class="btn primary" id="nutrition-water-only" type="button" style="width:100%;">${esc(txt("Ajouter eau", "Add water"))}</button>
             </div>
+            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(56,189,248,.08),rgba(15,23,42,.02)),var(--panel2);">
+              <h3 style="margin:0 0 10px;">${esc(txt("Historique", "History"))}</h3>
+              ${history.length ? history.map(row => {
+                const expanded = CACHE.expandedHistory === row.day;
+                return `
+                  <button class="btn" type="button" data-nutrition-history-date="${esc(row.day)}" style="width:100%;display:flex;justify-content:space-between;gap:8px;margin-top:6px;${row.day === day ? "border-color:var(--accent);" : ""}">
+                    <span>${esc(row.day)}</span>
+                    <span>${Math.round(row.kcal)} kcal · ${Math.round(row.waterMl)} ml</span>
+                  </button>
+                  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:6px;">
+                    ${row.typeRows.map(typeRow => `
+                      <button class="btn small" type="button" data-nutrition-history-type="${esc(row.day)}::${esc(typeRow.type)}" style="display:flex;justify-content:space-between;gap:6px;${expanded ? "border-color:rgba(56,189,248,.55);" : ""}">
+                        <span>${esc(mealTypeLabel(typeRow.type))}</span>
+                        <strong>${Math.round(typeRow.kcal)} kcal</strong>
+                      </button>
+                    `).join("")}
+                  </div>
+                  ${expanded ? `
+                    <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:6px;background:rgba(15,23,42,.05);">
+                      ${row.typeRows.map(typeRow => `
+                        <div style="margin-bottom:8px;">
+                          <strong>${esc(mealTypeLabel(typeRow.type))}</strong>
+                          <div class="muted">${Math.round(typeRow.kcal)} kcal · ${Math.round(typeRow.waterMl)} ml · P ${fmtMacro(typeRow.protein)} · G ${fmtMacro(typeRow.carbs)} · L ${fmtMacro(typeRow.fat)}</div>
+                          ${typeRow.items.length ? typeRow.items.map(item => `<div class="muted" style="display:flex;justify-content:space-between;gap:8px;margin-top:3px;"><span>${esc(item.label || item.food_key || "Aliment")}</span><span>${Math.round(n(item.grams, 0))}g · ${Math.round(n(item.kcal, 0))} kcal</span></div>`).join("") : ""}
+                        </div>
+                      `).join("")}
+                    </div>
+                  ` : ""}
+                `;
+              }).join("") : `<div class="muted">${esc(txt("Aucun historique charge.", "No loaded history."))}</div>`}
+            </div>
           </div>
           <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-            <h3 style="margin:0 0 10px;">${esc(txt("Aujourd hui", "Today"))}</h3>
+            <h3 style="margin:0 0 10px;">${esc(txt("Jour selectionne", "Selected day"))} · ${esc(day)}</h3>
+            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;background:rgba(15,23,42,.04);">
+              <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;">
+                <div>
+                  <div class="muted" style="font-size:12px;">${esc(txt("Comparaison besoins / consomme", "Needs / consumed comparison"))}</div>
+                  <strong style="font-size:22px;">${Math.round(consumedKcal)} / ${Math.round(needsKcal)} kcal</strong>
+                </div>
+                <div class="pill">${esc(kcalTargetLabel)} ${Math.abs(Math.round(kcalDelta))} kcal</div>
+              </div>
+              <div style="display:grid;gap:10px;">
+                ${progressBar("kcal", consumedKcal, needsKcal, "")}
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+                  ${progressBar(txt("Proteines", "Protein"), total.protein, proteinTarget, "g")}
+                  ${progressBar(txt("Glucides", "Carbs"), total.carbs, carbsTarget, "g")}
+                  ${progressBar(txt("Lipides", "Fat"), total.fat, fatTarget, "g")}
+                </div>
+              </div>
+              <div class="muted" style="margin-top:10px;">
+                ${esc(txt("Besoins calcules", "Calculated needs"))}: ${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))}.
+              </div>
+            </div>
             <div class="tb-sport-stats" style="margin-bottom:12px;">
               <div class="tb-sport-stat"><span>kcal</span><strong>${Math.round(total.kcal)}</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Proteines", "Protein"))}</span><strong>${fmtMacro(total.protein)}</strong></div>
@@ -392,7 +540,7 @@
               <div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--border);padding:9px 0;align-items:flex-start;">
                 <div><strong>${esc(item.label || item.food_key || "Aliment")}</strong><div class="muted">${Math.round(n(item.grams, 0))}g · P ${fmtMacro(item.protein_g)} · G ${fmtMacro(item.carbs_g)} · L ${fmtMacro(item.fat_g)}</div></div>
                 <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;"><strong>${Math.round(n(item.kcal, 0))} kcal</strong><button class="btn small" type="button" data-nutrition-delete="${esc(String(item.id || ""))}">${esc(txt("Supprimer", "Delete"))}</button></div>
-              </div>`).join("") : `<div class="muted">${esc(txt("Aucun repas aujourd hui.", "No meal today."))}</div>`}
+              </div>`).join("") : `<div class="muted">${esc(txt("Aucun repas pour cette date.", "No meal for this date."))}</div>`}
           </div>
         </div>
       </section>`;
@@ -447,6 +595,12 @@
     });
     const refresh = root.querySelector("#nutrition-refresh");
     if (refresh) refresh.onclick = async () => { await loadNutrition({ force: true }); renderNutrition("refresh"); };
+    const dateInput = root.querySelector("#nutrition-date");
+    if (dateInput) dateInput.onchange = async () => {
+      CACHE.selectedDate = dateInput.value || todayISO();
+      await loadNutrition({ force: true });
+      renderNutrition("date");
+    };
     const save = root.querySelector("#nutrition-save");
     if (save) save.onclick = () => saveNutritionMeal(root);
     const waterOnly = root.querySelector("#nutrition-water-only");
@@ -456,6 +610,24 @@
         const input = root.querySelector("#nutrition-water-ml");
         if (input) input.value = btn.getAttribute("data-nutrition-water-quick") || "250";
         saveWaterOnly(root);
+      };
+    });
+    root.querySelectorAll("[data-nutrition-history-date]").forEach(btn => {
+      btn.onclick = async () => {
+        const picked = btn.getAttribute("data-nutrition-history-date") || todayISO();
+        CACHE.selectedDate = picked;
+        CACHE.expandedHistory = CACHE.expandedHistory === picked ? "" : picked;
+        await loadNutrition({ force: true });
+        renderNutrition("history-date");
+      };
+    });
+    root.querySelectorAll("[data-nutrition-history-type]").forEach(btn => {
+      btn.onclick = async () => {
+        const [picked] = String(btn.getAttribute("data-nutrition-history-type") || "").split("::");
+        CACHE.selectedDate = picked || todayISO();
+        CACHE.expandedHistory = picked || "";
+        await loadNutrition({ force: true });
+        renderNutrition("history-type");
       };
     });
     root.querySelectorAll("[data-nutrition-delete]").forEach(btn => {
@@ -474,7 +646,7 @@
         const meal = await c.from(table("nutrition_meals")).insert({
           user_id: uid(),
           travel_id: activeTravelId(),
-          meal_date: todayISO(),
+          meal_date: selectedDateISO(),
           meal_type: root.querySelector("#nutrition-type")?.value || "meal",
           label: food.name,
           water_ml: waterMl,
@@ -500,7 +672,7 @@
         const itemId = `local_item_${Date.now()}`;
         const rows = loadLocalMeals();
         rows.unshift({
-          meal: { id: mealId, user_id: uid(), travel_id: activeTravelId(), meal_date: todayISO(), meal_type: root.querySelector("#nutrition-type")?.value || "meal", label: food.name, water_ml: waterMl, created_at: new Date().toISOString() },
+          meal: { id: mealId, user_id: uid(), travel_id: activeTravelId(), meal_date: selectedDateISO(), meal_type: root.querySelector("#nutrition-type")?.value || "meal", label: food.name, water_ml: waterMl, created_at: new Date().toISOString() },
           item: grams > 0 ? { id: itemId, user_id: uid(), meal_id: mealId, food_key: food.key, label: food.name, grams, kcal: nut.kcal, protein_g: nut.protein, carbs_g: nut.carbs, fat_g: nut.fat, fiber_g: nut.fiber, created_at: new Date().toISOString() } : null,
         });
         saveLocalMeals(rows);
@@ -520,7 +692,7 @@
         const meal = await c.from(table("nutrition_meals")).insert({
           user_id: uid(),
           travel_id: activeTravelId(),
-          meal_date: todayISO(),
+          meal_date: selectedDateISO(),
           meal_type: root.querySelector("#nutrition-type")?.value || "meal",
           label: txt("Eau", "Water"),
           water_ml: water,
@@ -529,7 +701,7 @@
       } else {
         const rows = loadLocalMeals();
         rows.unshift({
-          meal: { id: `local_meal_${Date.now()}`, user_id: uid(), travel_id: activeTravelId(), meal_date: todayISO(), meal_type: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water"), water_ml: water, created_at: new Date().toISOString() },
+          meal: { id: `local_meal_${Date.now()}`, user_id: uid(), travel_id: activeTravelId(), meal_date: selectedDateISO(), meal_type: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water"), water_ml: water, created_at: new Date().toISOString() },
           item: null,
         });
         saveLocalMeals(rows);
