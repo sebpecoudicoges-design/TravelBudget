@@ -151,8 +151,25 @@ function _kpiNutritionSummaryForDate(dateISO) {
   };
 }
 
+function _kpiSleepSummaryForDate(dateISO) {
+  const day = String(dateISO || "").slice(0, 10);
+  const readRows = () => {
+    try {
+      if (window.state?.nutritionSleep && typeof window.state.nutritionSleep === "object") return window.state.nutritionSleep;
+      const lsKey = window.TB_CONST?.LS_KEYS?.nutrition_sleep || "travelbudget_nutrition_sleep_v1";
+      const scoped = `${lsKey}::${window.sbUser?.id || "anon"}`;
+      return JSON.parse(localStorage.getItem(scoped) || "{}") || {};
+    } catch (_) {
+      return {};
+    }
+  };
+  const row = readRows()[day] || {};
+  return { hours: Number(row.hours) || 0, quality: String(row.quality || "ok") };
+}
+
 function _kpiHealthSummaryForDate(dateISO, activity) {
   const nutrition = _kpiNutritionSummaryForDate(dateISO);
+  const sleep = _kpiSleepSummaryForDate(dateISO);
   const sportKcal = Number(activity?.sportKcal) || 0;
   const workKcal = Number(activity?.workKcal) || 0;
   const activityKcal = sportKcal + workKcal;
@@ -165,7 +182,9 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
   const proteinTarget = Math.max(70, (Number(_kpiBodyMetric("weight", 70)) || 70) * 1.35);
   const proteinScore = Math.min(18, (nutrition.protein / proteinTarget) * 18);
   const loadScore = activityKcal > 1200 ? 8 : activityKcal > 850 ? 12 : activityKcal > 200 ? 16 : 12;
-  const score = Math.max(0, Math.min(100, Math.round(kcalScore + hydrationScore + proteinScore + loadScore)));
+  const sleepBase = sleep.hours > 0 ? Math.max(0, 16 - Math.abs(sleep.hours - 7.5) * 4) : 8;
+  const sleepScore = sleep.quality === "bad" ? Math.max(0, sleepBase - 5) : sleep.quality === "good" ? Math.min(18, sleepBase + 2) : sleepBase;
+  const score = Math.max(0, Math.min(100, Math.round(kcalScore + hydrationScore + proteinScore + loadScore + sleepScore - 8)));
   const level = score >= 78 ? "good" : score >= 58 ? "warn" : "bad";
   const label = score >= 78 ? "Equilibre" : score >= 58 ? "A surveiller" : "A corriger";
   let advice = "Equilibre correct entre besoins, nutrition, eau et charge.";
@@ -173,6 +192,7 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
   else if (nutrition.drinkWaterMl < 1400) advice = "Hydratation a completer : l'objectif suit l'eau bue, pas l'eau des aliments.";
   else if (balance < -450 && activityKcal > 250) advice = "Deficit marque avec activite : prevois proteines et glucides utiles.";
   else if (balance > 450) advice = "Journee haute en kcal : vise leger, eau et legumes au prochain repas.";
+  else if (sleep.hours > 0 && sleep.hours < 6.5) advice = "Nuit courte : allege la charge et vise recuperation.";
   else if (activityKcal > 900) advice = "Charge forte : pense recuperation, sommeil et proteines.";
   return {
     ...nutrition,
@@ -180,6 +200,8 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
     needsKcal,
     balance,
     activityKcal,
+    sleepHours: sleep.hours,
+    sleepQuality: sleep.quality,
     proteinTarget,
     score,
     level,
@@ -1411,13 +1433,13 @@ const driver = "Dépenses";
     st.textContent = `
       .kpi-layout { grid-template-columns: minmax(360px, 470px) minmax(0, 1fr); }
       .kpi-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; }
-      .kpi-health-card { grid-column:1 / -1; border:1px solid rgba(34,197,94,.28); border-radius:16px; padding:14px; background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(56,189,248,.08)),var(--panel2); box-shadow:0 16px 38px rgba(15,23,42,.10); }
+      .kpi-health-card { grid-column:1 / -1; border:1px solid rgba(0,0,0,0.06); border-radius:16px; padding:14px; background:rgba(0,0,0,0.015); }
       .kpi-health-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-      .kpi-health-body { display:grid; grid-template-columns:92px 1fr; gap:12px; align-items:center; margin-top:12px; }
-      .kpi-health-ring { width:92px; aspect-ratio:1; border-radius:50%; display:grid; place-items:center; box-shadow:inset 0 0 0 1px rgba(148,163,184,.20); }
-      .kpi-health-ring-inner { width:66px; aspect-ratio:1; border-radius:50%; background:var(--panel2); border:1px solid var(--border); display:grid; place-items:center; text-align:center; font-weight:900; color:var(--text); }
+      .kpi-health-body { display:grid; grid-template-columns:84px 1fr; gap:12px; align-items:center; margin-top:12px; }
+      .kpi-health-ring { width:84px; aspect-ratio:1; border-radius:50%; display:grid; place-items:center; box-shadow:inset 0 0 0 1px rgba(148,163,184,.18); }
+      .kpi-health-ring-inner { width:60px; aspect-ratio:1; border-radius:50%; background:var(--panel); border:1px solid var(--border); display:grid; place-items:center; text-align:center; font-weight:900; color:var(--text); }
       .kpi-health-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
-      .kpi-health-metric { border:1px solid rgba(148,163,184,.22); border-radius:10px; padding:9px; background:rgba(255,255,255,.04); min-width:0; }
+      .kpi-health-metric { border:1px solid var(--border); border-radius:10px; padding:9px; background:var(--panel); min-width:0; }
       .kpi-health-metric span { display:block; font-size:11px; color:var(--muted); }
       .kpi-health-metric strong { display:block; margin-top:3px; font-size:13px; color:var(--text); overflow-wrap:anywhere; }
       .kpi-pending-detail { margin-top:8px; position:relative; }
@@ -1524,7 +1546,7 @@ const driver = "Dépenses";
                 <div>
                   <div class="muted" style="font-size:12px;">Santé</div>
                   <div style="font-weight:900;font-size:22px;line-height:1.15;margin-top:3px;">Suivi du jour</div>
-                  <div class="muted" style="font-size:12px;margin-top:4px;">Nutrition · sport · travail · hydratation</div>
+                  <div class="muted" style="font-size:12px;margin-top:4px;">Nutrition · sport · travail · sommeil</div>
                 </div>
                 <span class="pill ${healthToday.level}" style="border-color:${healthToday.color};color:${healthToday.color};">${healthToday.label}</span>
               </div>
@@ -1537,9 +1559,9 @@ const driver = "Dépenses";
                     <div class="kpi-health-metric"><span>Energie</span><strong>${Math.round(healthToday.kcal)} / ${Math.round(healthToday.needsKcal)} kcal</strong></div>
                     <div class="kpi-health-metric"><span>Balance</span><strong>${Math.round(healthToday.balance)} kcal</strong></div>
                     <div class="kpi-health-metric"><span>Eau bue</span><strong>${Math.round(healthToday.drinkWaterMl)} / 2000 ml</strong></div>
-                    <div class="kpi-health-metric"><span>Charge</span><strong>${Math.round(healthToday.activityKcal)} kcal</strong></div>
+                    <div class="kpi-health-metric"><span>Sommeil</span><strong>${healthToday.sleepHours > 0 ? `${Math.round(healthToday.sleepHours * 10) / 10}h` : "Non saisi"}</strong></div>
                   </div>
-                  <div class="muted" style="font-size:12px;margin-top:9px;">${escapeHTML(healthToday.advice)} Eau aliments: ${Math.round(healthToday.foodWaterMl)} ml · Sommeil: prochaine brique.</div>
+                  <div class="muted" style="font-size:12px;margin-top:9px;">${escapeHTML(healthToday.advice)} Charge: ${Math.round(healthToday.activityKcal)} kcal · Eau aliments: ${Math.round(healthToday.foodWaterMl)} ml.</div>
                 </div>
               </div>
             </div>

@@ -150,6 +150,7 @@
   }
   function foodCacheKey() { return window.TB_CONST?.LS_KEYS?.nutrition_food_cache || "travelbudget_nutrition_food_cache_v1"; }
   function localMealKey() { return `${window.TB_CONST?.LS_KEYS?.nutrition_local_meals || "travelbudget_nutrition_local_meals_v1"}::${uid() || "anon"}`; }
+  function sleepKey() { return `${window.TB_CONST?.LS_KEYS?.nutrition_sleep || "travelbudget_nutrition_sleep_v1"}::${uid() || "anon"}`; }
   function rules() { return window.Core?.nutritionRules || {}; }
   function normalizeFood(row) { return rules().normalizeFoodRow ? rules().normalizeFoodRow(row) : row; }
   function nutritionForGrams(food, grams) { return rules().nutritionForGrams ? rules().nutritionForGrams(food, grams) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
@@ -165,6 +166,21 @@
   }
   function saveLocalMeals(rows) {
     try { localStorage.setItem(localMealKey(), JSON.stringify((rows || []).slice(0, 200))); } catch (_) {}
+  }
+  function loadSleepRows() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(sleepKey()) || "{}");
+      return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+    } catch (_) {
+      return {};
+    }
+  }
+  function saveSleepRows(rows) {
+    try { localStorage.setItem(sleepKey(), JSON.stringify(rows || {})); } catch (_) {}
+  }
+  function sleepForDay(day) {
+    const row = loadSleepRows()[String(day || selectedDateISO())] || {};
+    return { hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updatedAt || "" };
   }
   function ensureNutritionShell() {
     const tabs = document.querySelector(".tabs") || document.querySelector(".app-tabs");
@@ -244,6 +260,7 @@
     if (!window.state) window.state = {};
     window.state.nutritionMeals = CACHE.meals.slice();
     window.state.nutritionMealItems = CACHE.items.slice();
+    window.state.nutritionSleep = loadSleepRows();
     try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot(`nutrition:${reason || "load"}`); } catch (_) {}
   }
   async function loadNutrition(options = {}) {
@@ -602,6 +619,8 @@
     const catalog = catalogFoods();
     const catalogCats = ["all", "fruits", "dairy", "carbs", "protein", "snacks", "drinks", "dishes"];
     const week = weekRows(history, day);
+    const sleep = sleepForDay(day);
+    const sleepLabel = sleep.hours > 0 ? `${Math.round(sleep.hours * 10) / 10}h` : txt("non saisi", "not set");
     const editingItem = CACHE.editingItemId ? items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
     root.innerHTML = `
       <section class="tb-nutrition-shell">
@@ -691,6 +710,18 @@
               </div>
               <button class="btn primary" id="nutrition-water-only" type="button" style="width:100%;">${esc(txt("Ajouter eau", "Add water"))}</button>
             </div>
+            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
+              <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;">
+                <h3 style="margin:0;">${esc(txt("Sommeil", "Sleep"))}</h3>
+                <span class="pill">${esc(sleepLabel)}</span>
+              </div>
+              <div class="row tb-nutrition-form-row" style="gap:10px;">
+                <div class="field" style="flex:1;"><label>${esc(txt("Heures dormies", "Hours slept"))}</label><input id="nutrition-sleep-hours" type="number" min="0" max="14" step="0.25" value="${esc(String(sleep.hours || ""))}" placeholder="7.5"></div>
+                <div class="field" style="flex:1;"><label>${esc(txt("Qualite", "Quality"))}</label><select id="nutrition-sleep-quality"><option value="bad" ${sleep.quality === "bad" ? "selected" : ""}>${esc(txt("Mauvaise", "Bad"))}</option><option value="ok" ${sleep.quality === "ok" ? "selected" : ""}>${esc(txt("Correcte", "Ok"))}</option><option value="good" ${sleep.quality === "good" ? "selected" : ""}>${esc(txt("Bonne", "Good"))}</option></select></div>
+              </div>
+              <button class="btn" id="nutrition-sleep-save" type="button" style="width:100%;margin-top:8px;">${esc(txt("Enregistrer sommeil", "Save sleep"))}</button>
+              <div class="muted" style="font-size:12px;margin-top:8px;">${esc(txt("La nuit est rattachee a la date selectionnee et remonte dans le KPI Sante.", "Sleep is attached to the selected date and feeds the Health KPI."))}</div>
+            </div>
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(56,189,248,.08),rgba(15,23,42,.02)),var(--panel2);">
               <h3 style="margin:0 0 10px;">${esc(txt("Historique", "History"))}</h3>
               <div class="tb-nutrition-week-grid">
@@ -761,6 +792,7 @@
               <div class="tb-sport-stat"><span>${esc(txt("Glucides", "Carbs"))}</span><strong>${fmtMacro(total.carbs)}</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Lipides", "Fat"))}</span><strong>${fmtMacro(total.fat)}</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Eau bue", "Drunk water"))}</span><strong>${Math.round(drinkWaterMl)} ml</strong></div>
+              <div class="tb-sport-stat"><span>${esc(txt("Sommeil", "Sleep"))}</span><strong>${esc(sleepLabel)}</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Balance", "Balance"))}</span><strong>${Math.round(balance.balanceKcal)} kcal</strong></div>
             </div>
             <div class="muted" style="margin:-4px 0 12px;">
@@ -894,6 +926,8 @@
     if (cancel) cancel.onclick = () => { CACHE.editingItemId = ""; renderNutrition("edit-cancel"); };
     const waterOnly = root.querySelector("#nutrition-water-only");
     if (waterOnly) waterOnly.onclick = () => saveWaterOnly(root);
+    const sleepSave = root.querySelector("#nutrition-sleep-save");
+    if (sleepSave) sleepSave.onclick = () => saveSleep(root);
     root.querySelectorAll("[data-nutrition-water-quick]").forEach(btn => {
       btn.onclick = () => {
         const input = root.querySelector("#nutrition-water-ml");
@@ -1063,6 +1097,20 @@
       CACHE.error = e?.message || String(e);
       renderNutrition("water-error");
     }
+  }
+  function saveSleep(root) {
+    const hours = Math.max(0, Math.min(14, n(root.querySelector("#nutrition-sleep-hours")?.value, 0)));
+    const quality = String(root.querySelector("#nutrition-sleep-quality")?.value || "ok");
+    const rows = loadSleepRows();
+    if (hours > 0) {
+      rows[selectedDateISO()] = { hours, quality, updatedAt: new Date().toISOString() };
+    } else {
+      delete rows[selectedDateISO()];
+    }
+    saveSleepRows(rows);
+    publishNutrition("sleep");
+    try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+    renderNutrition("sleep");
   }
   async function deleteNutritionItem(id) {
     const key = String(id || "");
