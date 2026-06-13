@@ -34,6 +34,8 @@
     { key: "chocolate_cake", name: "Gateau chocolat", servingGrams: 80, kcalPer100g: 410, proteinPer100g: 5.5, carbsPer100g: 52, fatPer100g: 20, fiberPer100g: 2.5 },
     { key: "cookie", name: "Cookie", servingGrams: 30, kcalPer100g: 490, proteinPer100g: 6, carbsPer100g: 64, fatPer100g: 24, fiberPer100g: 2 },
     { key: "dark_chocolate", name: "Chocolat noir", servingGrams: 20, kcalPer100g: 546, proteinPer100g: 4.9, carbsPer100g: 61, fatPer100g: 31, fiberPer100g: 7 },
+    { key: "cereal_bar", name: "Barre cereales", servingGrams: 25, kcalPer100g: 390, proteinPer100g: 6, carbsPer100g: 68, fatPer100g: 10, fiberPer100g: 5 },
+    { key: "protein_bar", name: "Barre proteinee", servingGrams: 60, kcalPer100g: 350, proteinPer100g: 30, carbsPer100g: 35, fatPer100g: 11, fiberPer100g: 8 },
     { key: "jam", name: "Confiture", servingGrams: 20, kcalPer100g: 250, proteinPer100g: 0.3, carbsPer100g: 60, fatPer100g: 0.1, fiberPer100g: 1 },
     { key: "honey", name: "Miel", servingGrams: 15, kcalPer100g: 304, proteinPer100g: 0.3, carbsPer100g: 82, fatPer100g: 0 },
     { key: "banana", name: "Banane", servingGrams: 120, kcalPer100g: 89, proteinPer100g: 1.1, carbsPer100g: 22.8, fatPer100g: 0.3, fiberPer100g: 2.6 },
@@ -57,9 +59,18 @@
     { key: "cheese_grated", name: "Fromage rape", servingGrams: 30, kcalPer100g: 402, proteinPer100g: 25, carbsPer100g: 1.3, fatPer100g: 33 },
     { key: "lentils_cooked", name: "Lentilles cuites", servingGrams: 180, kcalPer100g: 116, proteinPer100g: 9, carbsPer100g: 20, fatPer100g: 0.4, fiberPer100g: 7.9 },
     { key: "chickpeas_cooked", name: "Pois chiches cuits", servingGrams: 150, kcalPer100g: 164, proteinPer100g: 8.9, carbsPer100g: 27.4, fatPer100g: 2.6, fiberPer100g: 7.6 },
+    { key: "burger_simple", name: "Burger simple", servingGrams: 220, kcalPer100g: 295, proteinPer100g: 14, carbsPer100g: 28, fatPer100g: 15, fiberPer100g: 1.7 },
+    { key: "burger_maison", name: "Burger maison", servingGrams: 280, kcalPer100g: 255, proteinPer100g: 14, carbsPer100g: 22, fatPer100g: 13, fiberPer100g: 1.8 },
+    { key: "cheeseburger", name: "Cheeseburger", servingGrams: 250, kcalPer100g: 305, proteinPer100g: 15, carbsPer100g: 27, fatPer100g: 16, fiberPer100g: 1.6 },
+    { key: "double_cheeseburger", name: "Double cheeseburger", servingGrams: 330, kcalPer100g: 310, proteinPer100g: 18, carbsPer100g: 20, fatPer100g: 19, fiberPer100g: 1.4 },
+    { key: "chicken_burger", name: "Burger poulet", servingGrams: 260, kcalPer100g: 250, proteinPer100g: 13, carbsPer100g: 28, fatPer100g: 10, fiberPer100g: 2 },
+    { key: "veggie_burger", name: "Burger vegetarien", servingGrams: 250, kcalPer100g: 220, proteinPer100g: 9, carbsPer100g: 31, fatPer100g: 7, fiberPer100g: 5 },
     { key: "olive_oil", name: "Huile olive", servingGrams: 10, kcalPer100g: 884, proteinPer100g: 0, carbsPer100g: 0, fatPer100g: 100 },
     { key: "coffee", name: "Cafe", servingGrams: 200, kcalPer100g: 1, proteinPer100g: 0.1, carbsPer100g: 0, fatPer100g: 0, waterMlPer100g: 99 },
     { key: "tea", name: "The", servingGrams: 250, kcalPer100g: 1, proteinPer100g: 0, carbsPer100g: 0.2, fatPer100g: 0, waterMlPer100g: 99 },
+    { key: "beer_blond_330", name: "Biere blonde 33cl", servingGrams: 330, kcalPer100g: 43, proteinPer100g: 0.5, carbsPer100g: 3.6, fatPer100g: 0, waterMlPer100g: 90 },
+    { key: "beer_ipa", name: "Biere IPA", servingGrams: 330, kcalPer100g: 55, proteinPer100g: 0.6, carbsPer100g: 5, fatPer100g: 0, waterMlPer100g: 88 },
+    { key: "beer_alcohol_free", name: "Biere sans alcool", servingGrams: 330, kcalPer100g: 23, proteinPer100g: 0.3, carbsPer100g: 5, fatPer100g: 0, waterMlPer100g: 94 },
     { key: "water", name: "Eau", servingGrams: 250, kcalPer100g: 0, proteinPer100g: 0, carbsPer100g: 0, fatPer100g: 0, waterMlPer100g: 100 },
   ];
 
@@ -241,8 +252,36 @@
     return (window.state?.workDays || []).filter(w => localDateISO(w.work_date) === day)
       .reduce((sum, w) => sum + n(w.estimated_kcal, 0), 0);
   }
-  function bodyBmr() {
-    try { return Number(localStorage.getItem(window.TB_CONST?.LS_KEYS?.body_bmr || "travelbudget_body_bmr_v1")) || 0; } catch (_) { return 0; }
+  function bodyWeight() {
+    try { return Number(localStorage.getItem(window.TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1")) || 70; } catch (_) { return 70; }
+  }
+  function bodyHeight() {
+    try { return Number(localStorage.getItem(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1")) || 175; } catch (_) { return 175; }
+  }
+  function bodyAge() {
+    try { return Number(localStorage.getItem(window.TB_CONST?.LS_KEYS?.body_age || "travelbudget_body_age_v1")) || 30; } catch (_) { return 30; }
+  }
+  function bodySex() {
+    try { return localStorage.getItem(window.TB_CONST?.LS_KEYS?.body_sex || "travelbudget_body_sex_v1") || "male"; } catch (_) { return "male"; }
+  }
+  function baseline() {
+    const customBmr = (() => { try { return Number(localStorage.getItem(window.TB_CONST?.LS_KEYS?.body_bmr || "travelbudget_body_bmr_v1")) || 0; } catch (_) { return 0; } })();
+    if (window.Core?.bodyEnergyRules?.resolveDailyBaselineKcal) {
+      return window.Core.bodyEnergyRules.resolveDailyBaselineKcal({
+        customBmr,
+        kg: bodyWeight(),
+        heightCm: bodyHeight(),
+        age: bodyAge(),
+        sex: bodySex(),
+        activityFactor: 1,
+      });
+    }
+    const kg = bodyWeight();
+    const heightCm = bodyHeight();
+    const age = bodyAge();
+    const offset = String(bodySex()).toLowerCase().startsWith("f") ? -161 : 5;
+    const bmr = customBmr > 0 ? customBmr : (10 * kg) + (6.25 * heightCm) - (5 * age) + offset;
+    return { bmr: Math.max(0, bmr), bmi: 0, maintenanceKcal: Math.max(0, bmr), source: customBmr > 0 ? "manual" : "estimated" };
   }
   function foodOptions(selected) {
     const q = String(CACHE.foodQuery || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -283,9 +322,13 @@
       waterMl: 0,
     } })));
     const waterMl = meals.reduce((sum, meal) => sum + n(meal.water_ml, 0), 0);
+    const base = baseline();
+    const sportKcal = todaySportKcal();
+    const workKcal = todayWorkKcal();
     const balance = rules().energyBalance
-      ? rules().energyBalance({ consumedKcal: total.kcal, sportKcal: todaySportKcal(), workKcal: todayWorkKcal(), bmr: bodyBmr() })
-      : { balanceKcal: total.kcal };
+      ? rules().energyBalance({ consumedKcal: total.kcal, sportKcal, workKcal, bmr: base.bmr })
+      : { spentKcal: base.bmr + sportKcal + workKcal, balanceKcal: total.kcal - (base.bmr + sportKcal + workKcal) };
+    const balanceLabel = balance.balanceKcal >= 0 ? txt("au-dessus", "above") : txt("en-dessous", "below");
     root.innerHTML = `
       <section class="tb-nutrition-shell">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
@@ -293,26 +336,40 @@
             <h2 style="margin:0;">${esc(txt("Alimentation", "Nutrition"))}</h2>
             <div class="muted" style="margin-top:4px;">${esc(txt("Repas, calories, macros et hydratation, sans lecture medicale.", "Meals, calories, macros and hydration, without medical interpretation."))}</div>
           </div>
-          <button class="btn" type="button" id="nutrition-refresh">${esc(txt("Rafraichir", "Refresh"))}</button>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span class="pill">${esc(txt("Base", "Base"))} ${Math.round(base.bmr || 0)} kcal</span>
+            <button class="btn" type="button" id="nutrition-refresh">${esc(txt("Rafraichir", "Refresh"))}</button>
+          </div>
         </div>
         <div class="tb-work-grid" style="display:grid;grid-template-columns:minmax(280px,390px) 1fr;gap:14px;margin-top:14px;">
-          <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-            <h3 style="margin:0 0 10px;">${esc(txt("Ajout rapide", "Quick add"))}</h3>
-            <div class="field"><label>${esc(txt("Chercher", "Search"))}</label><input id="nutrition-search" value="${esc(CACHE.foodQuery)}" placeholder="${esc(txt("Riz, poulet, banane...", "Rice, chicken, banana..."))}"></div>
-            <div class="field"><label>${esc(txt("Aliment", "Food"))}</label><select id="nutrition-food">${foodOptions()}</select></div>
-            <div class="row" style="gap:10px;">
-              <div class="field" style="flex:1;"><label>${esc(txt("Mode", "Mode"))}</label><select id="nutrition-amount-mode"><option value="portion">${esc(txt("Portions", "Servings"))}</option><option value="grams">${esc(txt("Grammes", "Grams"))}</option></select></div>
-              <div class="field" style="flex:1;"><label>${esc(txt("Quantite", "Quantity"))}</label><input id="nutrition-quantity" type="number" min="0" step="0.25" value="1"></div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
+              <h3 style="margin:0 0 10px;">${esc(txt("Ajout rapide", "Quick add"))}</h3>
+              <div class="field"><label>${esc(txt("Chercher", "Search"))}</label><input id="nutrition-search" value="${esc(CACHE.foodQuery)}" placeholder="${esc(txt("Riz, poulet, banane...", "Rice, chicken, banana..."))}"></div>
+              <div class="field"><label>${esc(txt("Aliment", "Food"))}</label><select id="nutrition-food">${foodOptions()}</select></div>
+              <div class="row" style="gap:10px;">
+                <div class="field" style="flex:1;"><label>${esc(txt("Mode", "Mode"))}</label><select id="nutrition-amount-mode"><option value="portion">${esc(txt("Portions", "Servings"))}</option><option value="grams">${esc(txt("Grammes", "Grams"))}</option></select></div>
+                <div class="field" style="flex:1;"><label>${esc(txt("Quantite", "Quantity"))}</label><input id="nutrition-quantity" type="number" min="0" step="0.25" value="1"></div>
+              </div>
+              <div class="row" style="gap:10px;">
+                <div class="field" style="flex:1;"><label>${esc(txt("Grammes estimes", "Estimated grams"))}</label><input id="nutrition-grams" type="number" min="0" step="5" value="100"></div>
+                <div class="field" style="flex:1;"><label>${esc(txt("Repas", "Meal"))}</label><select id="nutrition-type"><option value="breakfast">${esc(txt("Petit-dej", "Breakfast"))}</option><option value="lunch">${esc(txt("Dejeuner", "Lunch"))}</option><option value="dinner">${esc(txt("Diner", "Dinner"))}</option><option value="snack">${esc(txt("Snack", "Snack"))}</option></select></div>
+              </div>
+              <div class="pill" id="nutrition-preview">0 kcal</div>
+              <button class="btn primary" id="nutrition-save" type="button" style="width:100%;margin-top:10px;">${esc(txt("Ajouter", "Add"))}</button>
+              ${CACHE.error ? `<div class="muted" style="margin-top:10px;">${esc(CACHE.error)}</div>` : ""}
             </div>
-            <div class="row" style="gap:10px;">
-              <div class="field" style="flex:1;"><label>${esc(txt("Grammes estimes", "Estimated grams"))}</label><input id="nutrition-grams" type="number" min="0" step="5" value="100"></div>
-              <div class="field" style="flex:1;"><label>${esc(txt("Repas", "Meal"))}</label><select id="nutrition-type"><option value="breakfast">${esc(txt("Petit-dej", "Breakfast"))}</option><option value="lunch">${esc(txt("Dejeuner", "Lunch"))}</option><option value="dinner">${esc(txt("Diner", "Dinner"))}</option><option value="snack">${esc(txt("Snack", "Snack"))}</option></select></div>
+            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
+              <h3 style="margin:0 0 10px;">${esc(txt("Hydratation", "Hydration"))}</h3>
+              <div class="field"><label>${esc(txt("Eau ml", "Water ml"))}</label><input id="nutrition-water-ml" type="number" min="0" step="50" value="250"></div>
+              <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px;">
+                <button class="btn small" type="button" data-nutrition-water-quick="250">250</button>
+                <button class="btn small" type="button" data-nutrition-water-quick="500">500</button>
+                <button class="btn small" type="button" data-nutrition-water-quick="1000">1L</button>
+                <button class="btn small" type="button" data-nutrition-water-quick="2000">2L</button>
+              </div>
+              <button class="btn primary" id="nutrition-water-only" type="button" style="width:100%;">${esc(txt("Ajouter eau", "Add water"))}</button>
             </div>
-            <div class="field"><label>${esc(txt("Eau ml", "Water ml"))}</label><input id="nutrition-water" type="number" min="0" step="50" value="0"></div>
-            <div class="pill" id="nutrition-preview">0 kcal</div>
-            <button class="btn primary" id="nutrition-save" type="button" style="width:100%;margin-top:10px;">${esc(txt("Ajouter", "Add"))}</button>
-            <button class="btn" id="nutrition-water-only" type="button" style="width:100%;margin-top:8px;">${esc(txt("Ajouter seulement l'eau", "Add water only"))}</button>
-            ${CACHE.error ? `<div class="muted" style="margin-top:10px;">${esc(CACHE.error)}</div>` : ""}
           </div>
           <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
             <h3 style="margin:0 0 10px;">${esc(txt("Aujourd hui", "Today"))}</h3>
@@ -323,6 +380,13 @@
               <div class="tb-sport-stat"><span>${esc(txt("Lipides", "Fat"))}</span><strong>${fmtMacro(total.fat)}</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Eau", "Water"))}</span><strong>${Math.round(waterMl)} ml</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Balance", "Balance"))}</span><strong>${Math.round(balance.balanceKcal)} kcal</strong></div>
+            </div>
+            <div class="muted" style="margin:-4px 0 12px;">
+              ${esc(txt("Depense estimee", "Estimated spend"))}: ${Math.round(balance.spentKcal || 0)} kcal =
+              ${esc(txt("base", "base"))} ${Math.round(base.bmr || 0)}
+              + sport ${Math.round(sportKcal)}
+              + ${esc(txt("travail", "work"))} ${Math.round(workKcal)}.
+              ${esc(txt("Tu es", "You are"))} ${esc(balanceLabel)} ${Math.abs(Math.round(balance.balanceKcal || 0))} kcal.
             </div>
             ${items.length ? items.map(item => `
               <div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--border);padding:9px 0;align-items:flex-start;">
@@ -387,6 +451,13 @@
     if (save) save.onclick = () => saveNutritionMeal(root);
     const waterOnly = root.querySelector("#nutrition-water-only");
     if (waterOnly) waterOnly.onclick = () => saveWaterOnly(root);
+    root.querySelectorAll("[data-nutrition-water-quick]").forEach(btn => {
+      btn.onclick = () => {
+        const input = root.querySelector("#nutrition-water-ml");
+        if (input) input.value = btn.getAttribute("data-nutrition-water-quick") || "250";
+        saveWaterOnly(root);
+      };
+    });
     root.querySelectorAll("[data-nutrition-delete]").forEach(btn => {
       btn.onclick = () => deleteNutritionItem(btn.getAttribute("data-nutrition-delete"));
     });
@@ -396,7 +467,7 @@
     syncNutritionAmount(root);
     const grams = n(root.querySelector("#nutrition-grams")?.value, food?.servingGrams || 100);
     const nut = nutritionForGrams(food, grams);
-    const waterMl = n(root.querySelector("#nutrition-water")?.value, 0) + n(nut.waterMl, 0);
+    const waterMl = n(nut.waterMl, 0);
     const c = client();
     try {
       if (c && uid()) {
@@ -442,7 +513,7 @@
     }
   }
   async function saveWaterOnly(root) {
-    const water = n(root.querySelector("#nutrition-water")?.value, 0) || n(selectedFood(root)?.servingGrams, 250);
+    const water = n(root.querySelector("#nutrition-water-ml")?.value, 0) || 250;
     const c = client();
     try {
       if (c && uid()) {
