@@ -153,6 +153,9 @@ function _kpiNutritionSummaryForDate(dateISO) {
 
 function _kpiSleepSummaryForDate(dateISO) {
   const day = String(dateISO || "").slice(0, 10);
+  const d = new Date(`${day || (new Date()).toISOString().slice(0, 10)}T00:00:00`);
+  d.setDate(d.getDate() - 1);
+  const nightDay = d.toISOString().slice(0, 10);
   const readRows = () => {
     try {
       if (window.state?.nutritionSleep && typeof window.state.nutritionSleep === "object") return window.state.nutritionSleep;
@@ -163,8 +166,9 @@ function _kpiSleepSummaryForDate(dateISO) {
       return {};
     }
   };
-  const row = readRows()[day] || {};
-  return { hours: Number(row.hours) || 0, quality: String(row.quality || "ok") };
+  const rows = readRows();
+  const row = rows[nightDay] || rows[day] || {};
+  return { hours: Number(row.hours) || 0, quality: String(row.quality || "ok"), nightDay };
 }
 
 function _kpiHealthSummaryForDate(dateISO, activity) {
@@ -193,8 +197,14 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
   const score = Math.max(0, Math.min(100, Math.round(kcalScore + hydrationScore + proteinScore + loadScore + sleepScore - 8)));
   const level = score >= 78 ? "good" : score >= 58 ? "warn" : "bad";
   const label = score >= 78 ? "Equilibre" : score >= 58 ? "A surveiller" : "A corriger";
+  const reasons = [];
+  if (kcalScore < 14) reasons.push("energie eloignee de l'objectif actuel");
+  if (hydrationScore < 10) reasons.push("eau bue faible");
+  if (proteinScore < 10) reasons.push("proteines sous cible");
+  if (sleep.hours > 0 && sleepScore < 10) reasons.push("recuperation courte");
   let advice = "Equilibre correct entre besoins, nutrition, eau et charge.";
   if (!nutrition.mealCount) advice = "Ajoute tes repas pour activer une lecture sante fiable.";
+  else if (reasons.length) advice = `Score bas surtout: ${reasons.slice(0, 3).join(", ")}.`;
   else if (nutrition.drinkWaterMl < 1400) advice = "Hydratation a completer : l'objectif suit l'eau bue, pas l'eau des aliments.";
   else if (balance < -450 && activityKcal > 250) advice = "Deficit marque avec activite : prevois proteines et glucides utiles.";
   else if (balance > 450) advice = "Journee haute en kcal : vise leger, eau et legumes au prochain repas.";
@@ -211,6 +221,12 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
     activityKcal,
     sleepHours: sleep.hours,
     sleepQuality: sleep.quality,
+    sleepNightDay: sleep.nightDay,
+    kcalScore,
+    hydrationScore,
+    proteinScore,
+    loadScore,
+    sleepScore,
     proteinTarget,
     score,
     level,
@@ -1580,10 +1596,14 @@ const driver = "Dépenses";
                     <div class="kpi-health-detail-grid">
                       <div>Besoin jour complet: <strong style="color:var(--text);">${Math.round(healthToday.needsKcal)} kcal</strong></div>
                       <div>Objectif a cette heure: <strong style="color:var(--text);">${Math.round(healthToday.dayProgress * 100)}%</strong></div>
+                      <div>Score energie: <strong style="color:var(--text);">${Math.round(healthToday.kcalScore)} / 42</strong></div>
+                      <div>Score eau: <strong style="color:var(--text);">${Math.round(healthToday.hydrationScore)} / 24</strong></div>
+                      <div>Score proteines: <strong style="color:var(--text);">${Math.round(healthToday.proteinScore)} / 18</strong></div>
+                      <div>Score sommeil: <strong style="color:var(--text);">${Math.round(healthToday.sleepScore)} / 18</strong></div>
                       <div>Base metabolique: <strong style="color:var(--text);">${Math.round(healthToday.baseline)} kcal</strong></div>
                       <div>Sport + travail: <strong style="color:var(--text);">${Math.round(healthToday.activityKcal)} kcal</strong></div>
                       <div>Proteines: <strong style="color:var(--text);">${Math.round(healthToday.protein)} / ${Math.round(healthToday.proteinTarget)}g</strong></div>
-                      <div>Sommeil: <strong style="color:var(--text);">${healthToday.sleepHours > 0 ? `${Math.round(healthToday.sleepHours * 10) / 10}h · ${escapeHTML(healthToday.sleepQuality)}` : "Non saisi"}</strong></div>
+                      <div>Sommeil: <strong style="color:var(--text);">${healthToday.sleepHours > 0 ? `${Math.round(healthToday.sleepHours * 10) / 10}h · ${escapeHTML(healthToday.sleepQuality)} · nuit du ${escapeHTML(String(healthToday.sleepNightDay || "").slice(5).replace("-", "/"))}` : "Non saisi"}</strong></div>
                     </div>
                   </details>
                 </div>

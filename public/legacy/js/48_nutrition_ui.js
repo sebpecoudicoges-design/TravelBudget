@@ -179,8 +179,11 @@
     try { localStorage.setItem(sleepKey(), JSON.stringify(rows || {})); } catch (_) {}
   }
   function sleepForDay(day) {
-    const row = loadSleepRows()[String(day || selectedDateISO())] || {};
-    return { hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updatedAt || "" };
+    const targetDay = String(day || selectedDateISO());
+    const nightDay = offsetDateISO(targetDay, -1);
+    const rows = loadSleepRows();
+    const row = rows[nightDay] || rows[targetDay] || {};
+    return { hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updatedAt || "", nightDay };
   }
   function ensureNutritionShell() {
     const tabs = document.querySelector(".tabs") || document.querySelector(".app-tabs");
@@ -620,6 +623,7 @@
     const sleep = sleepForDay(day);
     const sleepWeek = week.map(row => ({ day: row.day, ...sleepForDay(row.day) }));
     const sleepLabel = sleep.hours > 0 ? `${Math.round(sleep.hours * 10) / 10}h` : txt("non saisi", "not set");
+    const sleepNightLabel = sleep.nightDay ? sleep.nightDay.slice(5).replace("-", "/") : offsetDateISO(day, -1).slice(5).replace("-", "/");
     const editingItem = CACHE.editingItemId ? items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
     root.innerHTML = `
       <section class="tb-nutrition-shell">
@@ -694,6 +698,7 @@
                 <h3 style="margin:0;">${esc(txt("Sommeil", "Sleep"))}</h3>
                 <span class="pill">${esc(sleepLabel)}</span>
               </div>
+              <div class="muted" style="font-size:12px;margin:-4px 0 8px;">${esc(txt("Nuit du", "Night of"))} ${esc(sleepNightLabel)} → ${esc(day.slice(5).replace("-", "/"))}</div>
               <div class="row tb-nutrition-form-row" style="gap:10px;">
                 <div class="field" style="flex:1;"><label>${esc(txt("Heures dormies", "Hours slept"))}</label><input id="nutrition-sleep-hours" type="number" min="0" max="14" step="0.25" value="${esc(String(sleep.hours || ""))}" placeholder="7.5"></div>
                 <div class="field" style="flex:1;"><label>${esc(txt("Qualite", "Quality"))}</label><select id="nutrition-sleep-quality"><option value="bad" ${sleep.quality === "bad" ? "selected" : ""}>${esc(txt("Mauvaise", "Bad"))}</option><option value="ok" ${sleep.quality === "ok" ? "selected" : ""}>${esc(txt("Correcte", "Ok"))}</option><option value="good" ${sleep.quality === "good" ? "selected" : ""}>${esc(txt("Bonne", "Good"))}</option></select></div>
@@ -705,13 +710,13 @@
                   const height = Math.max(8, Math.min(74, sleepPct * 0.74));
                   const active = row.day === day;
                   const label = row.hours > 0 ? `${Math.round(row.hours * 10) / 10}h · ${row.quality}` : txt("non saisi", "not set");
-                  return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(row.day)} · ${esc(label)} · objectif 7.5h" style="height:92px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${active ? "border-color:var(--accent);" : ""}">
+                  return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(txt("Nuit du", "Night of"))} ${esc(row.nightDay || offsetDateISO(row.day, -1))} → ${esc(row.day)} · ${esc(label)} · objectif 7.5h" style="height:92px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${active ? "border-color:var(--accent);" : ""}">
                     <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,#8b5cf6,#38bdf8);"></span>
                     <small>${esc(row.day.slice(5).replace("-", "/"))}</small>
                   </button>`;
                 }).join("")}
               </div>
-              <div class="muted" style="font-size:12px;margin-top:8px;">${esc(txt("La nuit est rattachee a la date selectionnee et remonte dans le KPI Sante.", "Sleep is attached to the selected date and feeds the Health KPI."))}</div>
+              <div class="muted" style="font-size:12px;margin-top:8px;">${esc(txt("La saisie est rattachee a la nuit precedente de la date selectionnee et remonte dans le KPI Sante.", "The entry is attached to the previous night of the selected date and feeds the Health KPI."))}</div>
             </div>
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(56,189,248,.08),rgba(15,23,42,.02)),var(--panel2);">
               <h3 style="margin:0 0 10px;">${esc(txt("Historique", "History"))}</h3>
@@ -1067,10 +1072,11 @@
     const hours = Math.max(0, Math.min(14, n(root.querySelector("#nutrition-sleep-hours")?.value, 0)));
     const quality = String(root.querySelector("#nutrition-sleep-quality")?.value || "ok");
     const rows = loadSleepRows();
+    const nightDay = offsetDateISO(selectedDateISO(), -1);
     if (hours > 0) {
-      rows[selectedDateISO()] = { hours, quality, updatedAt: new Date().toISOString() };
+      rows[nightDay] = { hours, quality, updatedAt: new Date().toISOString() };
     } else {
-      delete rows[selectedDateISO()];
+      delete rows[nightDay];
     }
     saveSleepRows(rows);
     publishNutrition("sleep");
