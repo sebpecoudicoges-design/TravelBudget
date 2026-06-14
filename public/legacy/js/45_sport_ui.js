@@ -2011,7 +2011,7 @@
       .slice()
       .sort((a, b) => n(a.sort_order, 0) - n(b.sort_order, 0));
     const itemIndexById = new Map(sessionItems.map((item, idx) => [String(item.id || ""), idx]));
-    return (CACHE.sets || [])
+    const storedSets = (CACHE.sets || [])
       .filter(set => itemIndexById.has(String(set.item_id || "")))
       .slice()
       .sort((a, b) => {
@@ -2031,6 +2031,22 @@
         distanceM: n(set.distance_m, 0),
         completedAt: set.completed_at || new Date().toISOString(),
       }));
+    if (storedSets.length) return storedSets;
+    return sessionItems.flatMap((item, idx) => {
+      const plannedSets = Math.max(1, Math.round(n(item.planned_sets, 1)));
+      return Array.from({ length: plannedSets }, (_, setIdx) => ({
+        itemIndex: baseOffset + idx,
+        setIndex: setIdx + 1,
+        id: null,
+        itemId: item.id || null,
+        reps: String(item.mode || "") === "reps" ? n(item.target_reps, 0) : null,
+        durationSeconds: n(item.target_seconds, String(item.mode || "") === "reps" ? 45 : 0),
+        weightKg: 0,
+        distanceM: n(item.distance_m, 0),
+        completedAt: new Date().toISOString(),
+        estimated: true,
+      }));
+    });
   }
   async function mergeTodaySportSessions() {
     const all = (CACHE.sessions || []).concat((CACHE.localSessions || []).filter(isLocalWorkoutUnsynced).map(localToHistorySession));
