@@ -12,11 +12,9 @@ function num(value, fallback = 0) {
 
 export function kcalFromWorkMet({ met = 4.8, kg = 70, minutes = 0, restMinutes = 0, restMet = 1.3 } = {}) {
   const active = Math.max(0, num(minutes, 0));
-  const rest = Math.max(0, num(restMinutes, 0));
   const weight = Math.max(1, num(kg, 70));
-  const activeKcal = (Math.max(0, num(met, 4.8)) * 3.5 * weight / 200) * active;
-  const restKcal = (Math.max(0, num(restMet, 1.3)) * 3.5 * weight / 200) * rest;
-  return Math.max(0, activeKcal + restKcal);
+  const netMet = Math.max(0, num(met, 4.8) - 1);
+  return Math.max(0, netMet * weight * (active / 60));
 }
 
 export function estimateWorkDayKcal({ hours = 0, breakMinutes = 0, met = 4.8, kg = 70 } = {}) {

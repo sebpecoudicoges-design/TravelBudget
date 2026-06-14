@@ -29,7 +29,25 @@
   function bodyHeight() {
     try { return Number(localStorage.getItem(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1")) || 175; } catch (_) { return 175; }
   }
+  function bodyBirthDate() {
+    try { return localStorage.getItem(window.TB_CONST?.LS_KEYS?.body_birthdate || "travelbudget_body_birthdate_v1") || ""; } catch (_) { return ""; }
+  }
+  function ageFromBirthDate(v) {
+    if (window.Core?.bodyEnergyRules?.ageFromBirthDate) return window.Core.bodyEnergyRules.ageFromBirthDate(v);
+    const raw = String(v || "").trim();
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return 0;
+    const now = new Date();
+    let age = now.getFullYear() - Number(m[1]);
+    const month = Number(m[2]);
+    const day = Number(m[3]);
+    const currentMonth = now.getMonth() + 1;
+    if (currentMonth < month || (currentMonth === month && now.getDate() < day)) age -= 1;
+    return age > 0 && age < 130 ? age : 0;
+  }
   function bodyAge() {
+    const fromBirthDate = ageFromBirthDate(bodyBirthDate());
+    if (fromBirthDate) return fromBirthDate;
     try { return Number(localStorage.getItem(window.TB_CONST?.LS_KEYS?.body_age || "travelbudget_body_age_v1")) || 30; } catch (_) { return 30; }
   }
   function bodySex() {
@@ -51,8 +69,8 @@
     if (window.Core?.workRules?.estimateWorkDayKcal) {
       return window.Core.workRules.estimateWorkDayKcal({ hours, breakMinutes: breaks, met, kg: bodyWeight() });
     }
-    const minutes = Math.max(0, Number(hours || 0) * 60 - Number(breaks || 0));
-    return Math.max(0, (Number(met || 4.8) * 3.5 * bodyWeight() / 200) * minutes);
+    const netHours = Math.max(0, Number(hours || 0) - (Number(breaks || 0) / 60));
+    return Math.max(0, (Number(met || 4.8) - 1) * bodyWeight() * netHours);
   }
   function baseline() {
     if (window.Core?.bodyEnergyRules?.resolveDailyBaselineKcal) {
@@ -60,6 +78,7 @@
         customBmr: bodyBmr(),
         kg: bodyWeight(),
         heightCm: bodyHeight(),
+        birthDate: bodyBirthDate(),
         age: bodyAge(),
         sex: bodySex(),
       });

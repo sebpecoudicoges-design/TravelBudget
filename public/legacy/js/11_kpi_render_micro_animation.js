@@ -101,9 +101,10 @@ function _kpiBodyMetric(key, fallback) {
     const map = {
       weight: ls.sport_body_weight || "travelbudget_sport_body_weight_v1",
       height: ls.sport_body_height || "travelbudget_sport_body_height_v1",
-      age: ls.sport_body_age || "travelbudget_sport_body_age_v1",
-      sex: ls.sport_body_sex || "travelbudget_sport_body_sex_v1",
-      bmr: ls.sport_body_bmr || "travelbudget_sport_body_bmr_v1",
+      birthdate: ls.body_birthdate || "travelbudget_body_birthdate_v1",
+      age: ls.body_age || "travelbudget_body_age_v1",
+      sex: ls.body_sex || "travelbudget_body_sex_v1",
+      bmr: ls.body_bmr || "travelbudget_body_bmr_v1",
     };
     const raw = localStorage.getItem(map[key]);
     return raw === null || raw === "" ? fallback : raw;
@@ -112,12 +113,25 @@ function _kpiBodyMetric(key, fallback) {
   }
 }
 
+function _kpiAgeFromBirthDate(value) {
+  if (window.Core?.bodyEnergyRules?.ageFromBirthDate) return window.Core.bodyEnergyRules.ageFromBirthDate(value);
+  const m = String(value || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return 0;
+  const now = new Date();
+  let age = now.getFullYear() - Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const currentMonth = now.getMonth() + 1;
+  if (currentMonth < month || (currentMonth === month && now.getDate() < day)) age -= 1;
+  return age > 0 && age < 130 ? age : 0;
+}
+
 function _kpiBaselineKcal() {
   const custom = Number(_kpiBodyMetric("bmr", 0));
   if (Number.isFinite(custom) && custom > 900) return custom;
   const weight = Number(_kpiBodyMetric("weight", 70));
   const height = Number(_kpiBodyMetric("height", 175));
-  const age = Number(_kpiBodyMetric("age", 35));
+  const age = _kpiAgeFromBirthDate(_kpiBodyMetric("birthdate", "")) || Number(_kpiBodyMetric("age", 35));
   const sex = String(_kpiBodyMetric("sex", "male")).toLowerCase();
   const offset = sex === "female" || sex === "f" ? -161 : 5;
   const bmr = 10 * (Number.isFinite(weight) ? weight : 70)

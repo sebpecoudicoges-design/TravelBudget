@@ -644,6 +644,10 @@ function renderSettings(){
       const notifPrefs = (typeof window.tbGetNotificationPrefs === "function")
         ? window.tbGetNotificationPrefs()
         : { inbox:true, trip:true, dailyBudget:false, morningBudget:false, eveningSummary:false, serverPush:true, lowBudget:true, localDevice:false };
+      const birthDateKey = TB_CONST?.LS_KEYS?.body_birthdate || "travelbudget_body_birthdate_v1";
+      const savedBirthDate = (() => {
+        try { return String(state?.user?.birthDate || localStorage.getItem(birthDateKey) || "").slice(0, 10); } catch (_) { return String(state?.user?.birthDate || "").slice(0, 10); }
+      })();
 
       box.innerHTML = `
         <div class="muted" style="margin-bottom:10px;">${T("settings.account.summary")}</div>
@@ -667,6 +671,12 @@ function renderSettings(){
   <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">Format international, ex. +33612345678.</small>
 </div>
 
+          <div class="field" style="min-width:180px;">
+            <label>Date de naissance</label>
+            <input id="tb-account-birthdate" type="date" value="${escapeHTML(savedBirthDate)}" />
+            <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">Utilisee pour le BMR et le suivi sante.</small>
+          </div>
+
           <div class="field" style="min-width:160px;">
             <label>${T("settings.account.base_currency")}</label>
             <select id="tb-user-basecur">
@@ -684,6 +694,7 @@ function renderSettings(){
 
           <button class="btn" id="tb-user-basecur-save" type="button">${T("settings.account.save")}</button>
           <button class="btn" id="tb-user-whatsapp-save" type="button">Enregistrer WhatsApp</button>
+          <button class="btn" id="tb-user-birthdate-save" type="button">Enregistrer naissance</button>
           <button class="btn" id="tb-user-uimode-save" type="button">${T("settings.account.save_mode")}</button>
           <button class="btn" id="tb-user-resetpwd" type="button">${T("settings.account.reset_password")}</button>
         </div>
@@ -745,6 +756,7 @@ function renderSettings(){
           id: u.id || u.user?.id || state?.profile?.id || state?.user?.id || "",
           email: u.email || u.user?.email || state?.profile?.email || state?.user?.email || "",
           whatsapp: state?.profile?.whatsapp_phone_e164 || state?.user?.whatsappPhone || "",
+          birthDate: state?.user?.birthDate || (() => { try { return localStorage.getItem(birthDateKey) || ""; } catch (_) { return ""; } })(),
         };
       };
 
@@ -754,15 +766,23 @@ function renderSettings(){
         if (em) em.value = cached.email || "—";
         const wa = box.querySelector("#tb-account-whatsapp");
         if (wa && !wa.value) wa.value = cached.whatsapp || "";
+        const bd = box.querySelector("#tb-account-birthdate");
+        if (bd && !bd.value) bd.value = String(cached.birthDate || "").slice(0, 10);
       };
 
-      const _rememberAccount = (user, phone) => {
+      const _rememberAccount = (user, phone, birthDate) => {
         const uid = user?.id || user?.user?.id || state?.profile?.id || "";
         const email = user?.email || user?.user?.email || state?.profile?.email || state?.user?.email || null;
         state.profile = Object.assign({}, state.profile || {}, { id: uid, email, whatsapp_phone_e164: phone || "" });
         if (!state.user) state.user = {};
         state.user.email = email;
         state.user.whatsappPhone = phone || "";
+        const nextBirthDate = birthDate === undefined ? (state.user.birthDate || (() => { try { return localStorage.getItem(birthDateKey) || ""; } catch (_) { return ""; } })()) : birthDate;
+        state.user.birthDate = String(nextBirthDate || "").slice(0, 10);
+        try {
+          if (state.user.birthDate) localStorage.setItem(birthDateKey, state.user.birthDate);
+          else localStorage.removeItem(birthDateKey);
+        } catch (_) {}
         try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("settings:account"); } catch (_) {}
       };
 
@@ -784,17 +804,28 @@ function renderSettings(){
     const uid = u?.id;
     if (!uid) return;
 
-    const { data, error } = await s
+    const [{ data, error }, settingsRes] = await Promise.all([
+      s
       .from(TB_CONST.TABLES.profiles)
       .select("whatsapp_phone_e164")
       .eq("id", uid)
-      .maybeSingle();
+      .maybeSingle(),
+      s
+        .from(TB_CONST.TABLES.settings)
+        .select("birth_date")
+        .eq("user_id", uid)
+        .maybeSingle()
+        .catch(() => ({ data: null, error: null })),
+    ]);
 
     if (error) throw error;
 
     const inp = box.querySelector("#tb-account-whatsapp");
     if (inp) inp.value = String(data?.whatsapp_phone_e164 || "");
-    _rememberAccount(u, data?.whatsapp_phone_e164 || "");
+    const birthDate = String(settingsRes?.data?.birth_date || "").slice(0, 10);
+    const bd = box.querySelector("#tb-account-birthdate");
+    if (bd && birthDate) bd.value = birthDate;
+    _rememberAccount(u, data?.whatsapp_phone_e164 || "", birthDate || undefined);
   } catch (e) {
     _fillCachedAccount();
     if (!_settingsOffline() && !/failed to fetch|offline|network/i.test(String(e?.message || e))) {
@@ -833,6 +864,28 @@ if (btnWhatsapp) {
     alert("Numéro WhatsApp enregistré.");
   });
 }
+
+      const btnBirthDate = box.querySelector("#tb-user-birthdate-save");
+      if (btnBirthDate) {
+        btnBirthDate.onclick = () => safeCall("Enregistrer date de naissance", async () => {
+          if (_settingsOffline()) throw new Error("Mode hors ligne : reconnecte-toi pour enregistrer la date de naissance.");
+          const s = _getSb();
+          const u = (await s.auth.getUser()).data?.user;
+          const uid = u?.id;
+          if (!uid) throw new Error("Non authentifié");
+          const raw = String(box.querySelector("#tb-account-birthdate")?.value || "").slice(0, 10);
+          if (raw && !/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new Error("Date de naissance invalide.");
+          const { error } = await s.from(TB_CONST.TABLES.settings).upsert({
+            user_id: uid,
+            birth_date: raw || null,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "user_id" });
+          if (error) throw error;
+          _rememberAccount(u, state?.profile?.whatsapp_phone_e164 || state?.user?.whatsappPhone || "", raw);
+          if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("settings:birth_date"); else renderAll();
+          alert("Date de naissance enregistrée.");
+        });
+      }
 
       const btnSave = box.querySelector("#tb-user-basecur-save");
       if (btnSave) {

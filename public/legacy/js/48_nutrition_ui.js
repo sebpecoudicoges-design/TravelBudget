@@ -267,6 +267,8 @@
     window.state.nutritionMealItems = CACHE.items.slice();
     window.state.nutritionSleep = loadSleepRows();
     try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot(`nutrition:${reason || "load"}`); } catch (_) {}
+    try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent("tb:nutrition:data_loaded", { detail: { reason: reason || "load" } })); } catch (_) {}
   }
   async function loadNutrition(options = {}) {
     if (CACHE.loading || (CACHE.loaded && !options.force)) return false;
@@ -418,7 +420,24 @@
   function bodyHeight() {
     try { return Number(localStorage.getItem(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1")) || 175; } catch (_) { return 175; }
   }
+  function bodyBirthDate() {
+    try { return localStorage.getItem(window.TB_CONST?.LS_KEYS?.body_birthdate || "travelbudget_body_birthdate_v1") || ""; } catch (_) { return ""; }
+  }
+  function ageFromBirthDate(v) {
+    if (window.Core?.bodyEnergyRules?.ageFromBirthDate) return window.Core.bodyEnergyRules.ageFromBirthDate(v);
+    const m = String(v || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return 0;
+    const now = new Date();
+    let age = now.getFullYear() - Number(m[1]);
+    const month = Number(m[2]);
+    const day = Number(m[3]);
+    const currentMonth = now.getMonth() + 1;
+    if (currentMonth < month || (currentMonth === month && now.getDate() < day)) age -= 1;
+    return age > 0 && age < 130 ? age : 0;
+  }
   function bodyAge() {
+    const fromBirthDate = ageFromBirthDate(bodyBirthDate());
+    if (fromBirthDate) return fromBirthDate;
     try { return Number(localStorage.getItem(window.TB_CONST?.LS_KEYS?.body_age || "travelbudget_body_age_v1")) || 30; } catch (_) { return 30; }
   }
   function bodySex() {
@@ -431,6 +450,7 @@
         customBmr,
         kg: bodyWeight(),
         heightCm: bodyHeight(),
+        birthDate: bodyBirthDate(),
         age: bodyAge(),
         sex: bodySex(),
         activityFactor: 1,
@@ -1114,6 +1134,8 @@
     return { meals: CACHE.meals.slice(), items: CACHE.items.slice() };
   };
   window.addEventListener("tb:auth_scope_changed", () => { CACHE.loaded = false; CACHE.meals = []; CACHE.items = []; });
+  try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadNutrition(); } catch (_) {} }); } catch (_) {}
+  setTimeout(() => { try { if (uid()) loadNutrition().catch(() => {}); } catch (_) {} }, 450);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ensureNutritionShell);
   else ensureNutritionShell();
 })();

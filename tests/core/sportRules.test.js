@@ -32,12 +32,13 @@ describe('sport rules core', () => {
   });
 
   it('estimates physical work days from MET and body weight', () => {
-    expect(Math.round(estimateWorkDayKcal({ hours: 8, met: 4.8, kg: 70 }))).toBe(2822);
-    expect(Math.round(estimateWorkDayKcal({ hours: 8, breakMinutes: 45, met: 4.8, kg: 70 }))).toBe(2629);
+    expect(Math.round(estimateWorkDayKcal({ hours: 8, met: 4.8, kg: 70 }))).toBe(2128);
+    expect(Math.round(estimateWorkDayKcal({ hours: 8, breakMinutes: 45, met: 4.8, kg: 70 }))).toBe(1929);
   });
 
   it('keeps basal metabolism estimable but user-overridable', () => {
     expect(Math.round(resolveDailyBaselineKcal({ kg: 70, heightCm: 175, age: 30, sex: 'male' }).bmr)).toBe(1649);
+    expect(Math.round(resolveDailyBaselineKcal({ kg: 70, heightCm: 175, birthDate: '1997-06-22', sex: 'male', today: new Date('2026-06-14T12:00:00') }).bmr)).toBe(1659);
     expect(resolveDailyBaselineKcal({ customBmr: 1800 }).source).toBe('manual');
   });
 });

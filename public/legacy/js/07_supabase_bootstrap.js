@@ -901,11 +901,19 @@ const settingsPromise = perfPromise("supabase:q:settings", async () => {
   const baseSel = "theme,palette_json,palette_preset,base_currency";
   const withUiMode = `${baseSel},ui_mode`;
   const withNotifications = `${withUiMode},notification_prefs`;
+  const withBirthDate = `${withNotifications},birth_date`;
   let res = await sb
     .from(TB_CONST.TABLES.settings)
-    .select(withNotifications)
+    .select(withBirthDate)
     .eq("user_id", sbUser.id)
     .maybeSingle();
+  if (res?.error && /birth_date|ui_mode|notification_prefs/i.test(String(res.error.message || ''))) {
+    res = await sb
+      .from(TB_CONST.TABLES.settings)
+      .select(withNotifications)
+      .eq("user_id", sbUser.id)
+      .maybeSingle();
+  }
   if (res?.error && /ui_mode|notification_prefs/i.test(String(res.error.message || ''))) {
     res = await sb
       .from(TB_CONST.TABLES.settings)
@@ -977,6 +985,15 @@ if (s) {
     } else if (prefs) {
       state.user.notificationPrefs = prefs;
       try { localStorage.setItem(TB_CONST?.LS_KEYS?.notification_prefs || "travelbudget_notification_prefs_v1", JSON.stringify(prefs)); } catch (_) {}
+    }
+  } catch (_) {}
+
+  try {
+    const birthDate = String(s.birth_date || "").slice(0, 10);
+    if (birthDate) {
+      if (!state.user) state.user = {};
+      state.user.birthDate = birthDate;
+      try { localStorage.setItem(TB_CONST?.LS_KEYS?.body_birthdate || "travelbudget_body_birthdate_v1", birthDate); } catch (_) {}
     }
   } catch (_) {}
 
