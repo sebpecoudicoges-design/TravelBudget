@@ -1,4 +1,4 @@
-window.TB_VERSION = window.TB_VERSION || "10.5.26";
+window.TB_VERSION = window.TB_VERSION || "10.5.27";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
 window.tbApplyVersionLabels = function tbApplyVersionLabels(root) {
@@ -67,6 +67,7 @@ try {
     nutrition_foods: "nutrition_foods",
     nutrition_meals: "nutrition_meals",
     nutrition_meal_items: "nutrition_meal_items",
+    nutrition_sleep: "nutrition_sleep",
     sport_exercises: "sport_exercises",
     sport_exercise_favorites: "sport_exercise_favorites",
     sport_sessions: "sport_sessions",
@@ -269,6 +270,7 @@ try {
     sport_library: "travelbudget_sport_library_v1",
     nutrition_local_meals: "travelbudget_nutrition_local_meals_v1",
     nutrition_food_cache: "travelbudget_nutrition_food_cache_v1",
+    nutrition_sleep: "travelbudget_nutrition_sleep_v1",
     sport_body_weight: "travelbudget_sport_body_weight_v1",
     sport_body_height: "travelbudget_sport_body_height_v1",
     body_birthdate: "travelbudget_body_birthdate_v1",

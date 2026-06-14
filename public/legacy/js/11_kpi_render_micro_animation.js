@@ -1,4 +1,4 @@
-﻿/* =========================
+/* =========================
    KPI + Render (micro animation)
    ========================= */
 
@@ -266,6 +266,12 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
   };
 }
 
+
+try {
+  window.tbComputeHealthSummaryForDate = function tbComputeHealthSummaryForDate(dateISO, activity) {
+    return _kpiHealthSummaryForDate(dateISO, activity || _kpiActivitySummaryForDate(dateISO));
+  };
+} catch (_) {}
 function remainingBudgetBaseFrom(dateStr) {
   const start = parseISODateOrNull(dateStr);
   const end = parseISODateOrNull(state.period.end);

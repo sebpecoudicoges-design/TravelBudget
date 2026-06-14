@@ -180,6 +180,15 @@
   function saveSleepRows(rows) {
     try { localStorage.setItem(sleepKey(), JSON.stringify(rows || {})); } catch (_) {}
   }
+  function mergeSleepRows(rows) {
+    const current = loadSleepRows();
+    Object.entries(rows || {}).forEach(([day, row]) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ""))) return;
+      current[day] = { hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updatedAt || row.updated_at || new Date().toISOString() };
+    });
+    saveSleepRows(current);
+    return current;
+  }
   function sleepForDay(day) {
     const targetDay = String(day || selectedDateISO());
     const nightDay = offsetDateISO(targetDay, -1);
@@ -299,6 +308,24 @@
       }
       if (c && uid()) {
         try {
+          const sleepSince = offsetDateISO(selectedDateISO(), -21);
+          const sleep = await c.from(table("nutrition_sleep"))
+            .select("sleep_date,hours,quality,updated_at")
+            .eq("user_id", uid())
+            .gte("sleep_date", sleepSince)
+            .order("sleep_date", { ascending: false });
+          if (!sleep.error) {
+            const remoteSleep = {};
+            (sleep.data || []).forEach(row => {
+              const sleepDay = localDateISO(row.sleep_date);
+              if (sleepDay) remoteSleep[sleepDay] = { hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updated_at || "" };
+            });
+            mergeSleepRows(remoteSleep);
+          }
+        } catch (e) {
+          console.warn("[nutrition] sleep fallback", e?.message || e);
+        }
+        try {
           const recentSince = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
           const selectedSince = offsetDateISO(selectedDateISO(), -1);
           const since = selectedSince < recentSince ? selectedSince : recentSince;
@@ -404,16 +431,18 @@
       typeRows: typeOrder.map(type => row.types[type]).filter(Boolean),
     })).sort((a, b) => String(b.day).localeCompare(String(a.day))).slice(0, 21);
   }
-  function todaySportKcal() {
-    const day = selectedDateISO();
-    return (window.state?.sportSessions || []).filter(s => localDateISO(s.started_at || s.startedAt) === day)
+  function sportKcalForDay(day) {
+    const targetDay = String(day || selectedDateISO()).slice(0, 10);
+    return (window.state?.sportSessions || []).filter(s => localDateISO(s.started_at || s.startedAt) === targetDay)
       .reduce((sum, s) => sum + n(s.estimated_kcal || s.estimatedKcal, 0), 0);
   }
-  function todayWorkKcal() {
-    const day = selectedDateISO();
-    return (window.state?.workDays || []).filter(w => localDateISO(w.work_date) === day)
-      .reduce((sum, w) => sum + n(w.estimated_kcal, 0), 0);
+  function todaySportKcal() { return sportKcalForDay(selectedDateISO()); }
+  function workKcalForDay(day) {
+    const targetDay = String(day || selectedDateISO()).slice(0, 10);
+    return (window.state?.workDays || []).filter(w => localDateISO(w.work_date || w.workDate) === targetDay)
+      .reduce((sum, w) => sum + n(w.estimated_kcal || w.estimatedKcal, 0), 0);
   }
+  function todayWorkKcal() { return workKcalForDay(selectedDateISO()); }
   function bodyWeight() {
     try { return Number(window.tbReadScopedLocalStorage?.(window.TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1", 70)) || 70; } catch (_) { return 70; }
   }
@@ -580,6 +609,24 @@
     }
     return rows;
   }
+  function healthHistoryRows(history, selectedDay) {
+    const byDay = new Map(history.map(row => [row.day, row]));
+    const rows = [];
+    for (let i = 7; i >= 0; i -= 1) {
+      const rowDay = offsetDateISO(selectedDay, -i);
+      const nutrition = byDay.get(rowDay) || { day: rowDay, kcal: 0, protein: 0, carbs: 0, fat: 0, waterMl: 0, typeRows: [] };
+      const activity = { sportKcal: sportKcalForDay(rowDay), workKcal: workKcalForDay(rowDay) };
+      const health = typeof window.tbComputeHealthSummaryForDate === "function" ? window.tbComputeHealthSummaryForDate(rowDay, activity) : null;
+      const needsKcal = health?.needsKcal || Math.max(1200, baseline().bmr + activity.sportKcal + activity.workKcal);
+      const kcalScore = Math.min(42, (n(nutrition.kcal, 0) / Math.max(1, needsKcal)) * 42);
+      const waterScore = Math.min(24, (n(health?.drinkWaterMl ?? nutrition.waterMl, 0) / 2000) * 24);
+      const proteinScore = Math.min(18, (n(nutrition.protein, 0) / Math.max(70, bodyWeight() * 1.35)) * 18);
+      const score = health?.score ?? Math.round(Math.max(0, Math.min(100, kcalScore + waterScore + proteinScore + 16)));
+      const level = health?.level || (score >= 78 ? "good" : score >= 58 ? "warn" : "bad");
+      rows.push({ ...nutrition, ...activity, health, needsKcal, score, level, color: health?.color || (level === "good" ? "#22c55e" : level === "warn" ? "#f59e0b" : "#ef4444") });
+    }
+    return rows;
+  }
   function itemMeal(item) {
     const mealId = String(item?.meal_id || "");
     return CACHE.meals.find(meal => String(meal.id || "") === mealId) || null;
@@ -644,6 +691,7 @@
     const week = weekRows(history, day);
     const sleep = sleepForDay(day);
     const sleepWeek = week.map(row => ({ day: row.day, ...sleepForDay(row.day) }));
+    const healthWeek = healthHistoryRows(history, day);
     const sleepLabel = sleep.hours > 0 ? `${Math.round(sleep.hours * 10) / 10}h` : txt("non saisi", "not set");
     const sleepNightLabel = sleep.nightDay ? sleep.nightDay.slice(5).replace("-", "/") : offsetDateISO(day, -1).slice(5).replace("-", "/");
     const editingItem = CACHE.editingItemId ? items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
@@ -754,6 +802,36 @@
                 }).join("")}
               </div>
               <div class="muted" style="font-size:12px;">${esc(txt("Survole une barre pour le detail du jour.", "Hover a bar for day details."))}</div>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(34,197,94,.08),rgba(56,189,248,.05)),var(--panel2);">
+              <h3 style="margin:0 0 10px;">${esc(txt("Sante par jour", "Daily health"))}</h3>
+              <div style="display:grid;gap:8px;">
+                ${healthWeek.map(row => {
+                  const h = row.health || {};
+                  const water = n(h.drinkWaterMl, row.waterMl);
+                  const sleepHours = n(h.sleepHours, sleepForDay(row.day).hours);
+                  const detail = `${row.day} | score ${row.score}/100 | kcal ${Math.round(n(h.kcal, row.kcal))}/${Math.round(row.needsKcal)} | eau ${Math.round(water)} ml | proteines ${Math.round(n(h.protein, row.protein))} g | sommeil ${sleepHours ? `${Math.round(sleepHours * 10) / 10}h` : "non saisi"} | sport+travail ${Math.round(row.sportKcal + row.workKcal)} kcal`;
+                  return `<details ${row.day === day ? "open" : ""} style="border:1px solid ${row.color}66;border-radius:8px;background:rgba(255,255,255,.04);overflow:hidden;">
+                    <summary data-nutrition-history-date="${esc(row.day)}" title="${esc(detail)}" style="cursor:pointer;list-style:none;display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center;padding:10px;">
+                      <span style="width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(${row.color} ${Math.max(0, Math.min(100, row.score))}%, rgba(148,163,184,.20) 0);"><strong style="font-size:13px;">${Math.round(row.score)}</strong></span>
+                      <span style="display:grid;gap:4px;min-width:0;"><strong>${esc(row.day.slice(5).replace("-", "/"))}</strong><span style="height:7px;border-radius:999px;background:rgba(148,163,184,.16);overflow:hidden;"><span style="display:block;height:100%;width:${Math.min(100, pct(n(h.kcal, row.kcal), row.needsKcal))}%;background:${row.color};"></span></span></span>
+                      <span class="pill" style="border-color:${row.color};color:${row.color};">${Math.round(n(h.kcal, row.kcal))}/${Math.round(row.needsKcal)}</span>
+                    </summary>
+                    <div style="padding:0 10px 10px;display:grid;gap:8px;">
+                      <div class="tb-sport-stats">
+                        <div class="tb-sport-stat"><span>kcal</span><strong>${Math.round(n(h.kcal, row.kcal))}</strong></div>
+                        <div class="tb-sport-stat"><span>${esc(txt("Eau", "Water"))}</span><strong>${Math.round(water)} ml</strong></div>
+                        <div class="tb-sport-stat"><span>${esc(txt("Proteines", "Protein"))}</span><strong>${Math.round(n(h.protein, row.protein))} g</strong></div>
+                        <div class="tb-sport-stat"><span>${esc(txt("Sommeil", "Sleep"))}</span><strong>${sleepHours ? `${Math.round(sleepHours * 10) / 10}h` : "-"}</strong></div>
+                        <div class="tb-sport-stat"><span>Sport</span><strong>${Math.round(row.sportKcal)}</strong></div>
+                        <div class="tb-sport-stat"><span>${esc(txt("Travail", "Work"))}</span><strong>${Math.round(row.workKcal)}</strong></div>
+                      </div>
+                      <div class="muted" style="font-size:12px;">${esc(h.advice || txt("Score calcule avec repas, eau bue, sport, travail et sommeil.", "Score calculated with meals, drunk water, sport, work and sleep."))}</div>
+                      ${row.typeRows?.length ? `<div class="tb-nutrition-history-type-grid">${row.typeRows.map(typeRow => `<div class="pill" style="justify-content:space-between;"><span>${esc(mealTypeLabel(typeRow.type))}</span><strong>${Math.round(typeRow.kcal)} kcal</strong></div>`).join("")}</div>` : ""}
+                    </div>
+                  </details>`;
+                }).join("")}
+              </div>
             </div>
           </div>
           <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
@@ -1094,7 +1172,7 @@
       renderNutrition("water-error");
     }
   }
-  function saveSleep(root) {
+  async function saveSleep(root) {
     const hours = Math.max(0, Math.min(14, n(root.querySelector("#nutrition-sleep-hours")?.value, 0)));
     const quality = String(root.querySelector("#nutrition-sleep-quality")?.value || "ok");
     const rows = loadSleepRows();
@@ -1105,6 +1183,26 @@
       delete rows[nightDay];
     }
     saveSleepRows(rows);
+    const c = client();
+    if (c && uid()) {
+      try {
+        if (hours > 0) {
+          const { error } = await c.from(table("nutrition_sleep")).upsert({
+            user_id: uid(),
+            sleep_date: nightDay,
+            hours,
+            quality,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "user_id,sleep_date" });
+          if (error) throw error;
+        } else {
+          const { error } = await c.from(table("nutrition_sleep")).delete().eq("user_id", uid()).eq("sleep_date", nightDay);
+          if (error) throw error;
+        }
+      } catch (e) {
+        CACHE.error = e?.message || String(e);
+      }
+    }
     publishNutrition("sleep");
     try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
     renderNutrition("sleep");
