@@ -190,13 +190,23 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
   const expectedKcalNow = Math.max(250, needsKcal * dayProgress);
   const balance = nutrition.kcal - needsKcal;
   const currentBalance = nutrition.kcal - expectedKcalNow;
-  const kcalTolerance = Math.max(220, expectedKcalNow * 0.20);
-  const kcalScore = Math.max(0, 42 - (Math.abs(currentBalance) / kcalTolerance) * 22);
+  const kcalGap = Math.abs(currentBalance);
+  const kcalFreeBand = Math.max(260, expectedKcalNow * 0.18);
+  const kcalWideBand = Math.max(850, expectedKcalNow * 0.55);
+  const kcalScore = kcalGap <= kcalFreeBand
+    ? 42
+    : Math.max(0, 42 - ((kcalGap - kcalFreeBand) / Math.max(1, kcalWideBand - kcalFreeBand)) * 34);
   const hydrationScore = Math.min(24, (nutrition.drinkWaterMl / 2000) * 24);
   const proteinTarget = Math.max(70, (Number(_kpiBodyMetric("weight", 70)) || 70) * 1.35);
   const proteinScore = Math.min(18, (nutrition.protein / proteinTarget) * 18);
   const loadScore = activityKcal > 1200 ? 8 : activityKcal > 850 ? 12 : activityKcal > 200 ? 16 : 12;
-  const sleepBase = sleep.hours > 0 ? Math.max(0, 16 - Math.abs(sleep.hours - 7.5) * 4) : 8;
+  const sleepBase = sleep.hours <= 0
+    ? 8
+    : (sleep.hours >= 7 && sleep.hours <= 9)
+      ? 16
+      : sleep.hours < 7
+        ? Math.max(0, 16 - (7 - sleep.hours) * 5)
+        : Math.max(0, 16 - (sleep.hours - 9) * 3);
   const sleepScore = sleep.quality === "bad" ? Math.max(0, sleepBase - 5) : sleep.quality === "good" ? Math.min(18, sleepBase + 2) : sleepBase;
   const score = Math.max(0, Math.min(100, Math.round(kcalScore + hydrationScore + proteinScore + loadScore + sleepScore - 8)));
   const level = score >= 78 ? "good" : score >= 58 ? "warn" : "bad";
