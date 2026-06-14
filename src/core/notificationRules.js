@@ -16,6 +16,7 @@ export function normalizeNotificationPrefs(input = {}) {
     motivationalTone: prefs.motivationalTone !== false,
     sportReminder: prefs.sportReminder !== false,
     workReminder: prefs.workReminder !== false,
+    healthMealReminders: prefs.healthMealReminders === true || prefs.nutritionReminders === true,
     timezone: typeof prefs.timezone === 'string' && prefs.timezone.trim() ? prefs.timezone.trim() : '',
   };
 }
@@ -131,5 +132,101 @@ export function composeDailyBudgetNotification({ slot = 'morning', remainingToda
     titleEn,
     bodyFr: `${budgetLineFr}${morningSpendFr}${nudge?.fr ? ` ${nudge.fr}` : ''}`.trim(),
     bodyEn: `${budgetLineEn}${morningSpendEn}${nudge?.en ? ` ${nudge.en}` : ''}`.trim(),
+  };
+}
+
+export const HEALTH_MEAL_SLOTS = Object.freeze([
+  { slot: 'breakfast', mealType: 'breakfast', time: '08:00', expectedPct: 0.22, waterPct: 0.22, proteinPct: 0.20, titleFr: 'Petit dej', titleEn: 'Breakfast' },
+  { slot: 'morning_snack', mealType: 'morning_snack', time: '10:00', expectedPct: 0.34, waterPct: 0.36, proteinPct: 0.30, titleFr: 'Pause 10h', titleEn: '10am snack' },
+  { slot: 'lunch', mealType: 'lunch', time: '12:30', expectedPct: 0.58, waterPct: 0.56, proteinPct: 0.58, titleFr: 'Dejeuner', titleEn: 'Lunch' },
+  { slot: 'afternoon_snack', mealType: 'afternoon_snack', time: '16:00', expectedPct: 0.72, waterPct: 0.75, proteinPct: 0.72, titleFr: 'Gouter', titleEn: 'Afternoon snack' },
+  { slot: 'dinner', mealType: 'dinner', time: '19:30', expectedPct: 0.90, waterPct: 0.92, proteinPct: 0.92, titleFr: 'Diner', titleEn: 'Dinner' },
+]);
+
+function mealSlotMeta(slot) {
+  const clean = String(slot || '').toLowerCase();
+  return HEALTH_MEAL_SLOTS.find((row) => row.slot === clean || row.mealType === clean) || HEALTH_MEAL_SLOTS[0];
+}
+
+export function composeHealthMealNotification({
+  slot = 'breakfast',
+  consumedKcal = 0,
+  needsKcal = 0,
+  drinkWaterMl = 0,
+  waterTargetMl = 2000,
+  protein = 0,
+  proteinTarget = 95,
+  prefs = {},
+} = {}) {
+  const p = normalizeNotificationPrefs(prefs);
+  const meta = mealSlotMeta(slot);
+  const kcalTargetNow = Math.max(250, (Number(needsKcal) || 2000) * Number(meta.expectedPct || 0));
+  const kcalGap = kcalTargetNow - (Number(consumedKcal) || 0);
+  const waterTargetNow = Math.max(250, (Number(waterTargetMl) || 2000) * Number(meta.waterPct || 0));
+  const waterGap = waterTargetNow - (Number(drinkWaterMl) || 0);
+  const proteinTargetNow = Math.max(12, (Number(proteinTarget) || 95) * Number(meta.proteinPct || 0));
+  const proteinGap = proteinTargetNow - (Number(protein) || 0);
+  const kcalGapText = `${Math.abs(Math.round(kcalGap))} kcal`;
+  const waterGapText = `${Math.max(0, Math.round(waterGap / 50) * 50)} ml`;
+  const proteinGapText = `${Math.max(0, Math.round(proteinGap))} g`;
+  const titleBaseFr = meta.titleFr || 'Repas';
+  const titleBaseEn = meta.titleEn || titleBaseFr;
+
+  if (kcalGap < -280) {
+    return {
+      tone: 'light',
+      titleFr: withEmoji(`${titleBaseFr} leger`, '🟠', p.emojis),
+      titleEn: withEmoji(`${titleBaseEn}: go light`, '🟠', p.emojis),
+      bodyFr: `Tu es deja haut pour cette heure. Vise eau, legumes ou proteines legeres.`,
+      bodyEn: `You are already high for this time. Aim for water, vegetables or lean protein.`,
+      slot: meta.slot,
+      mealType: meta.mealType,
+    };
+  }
+
+  if (proteinGap > 14) {
+    return {
+      tone: 'protein',
+      titleFr: withEmoji(`${titleBaseFr}: proteines`, '💪', p.emojis),
+      titleEn: withEmoji(`${titleBaseEn}: protein`, '💪', p.emojis),
+      bodyFr: `Objectif simple: ajoute environ ${proteinGapText} de proteines et garde le repas propre.`,
+      bodyEn: `Simple target: add about ${proteinGapText} protein and keep the meal clean.`,
+      slot: meta.slot,
+      mealType: meta.mealType,
+    };
+  }
+
+  if (waterGap > 300) {
+    return {
+      tone: 'hydration',
+      titleFr: withEmoji(`${titleBaseFr}: hydratation`, '💧', p.emojis),
+      titleEn: withEmoji(`${titleBaseEn}: hydration`, '💧', p.emojis),
+      bodyFr: `Il manque environ ${waterGapText} d'eau bue pour rester dans le rythme.`,
+      bodyEn: `About ${waterGapText} of drunk water is missing to stay on pace.`,
+      slot: meta.slot,
+      mealType: meta.mealType,
+    };
+  }
+
+  if (kcalGap > 260) {
+    return {
+      tone: 'energy',
+      titleFr: withEmoji(`${titleBaseFr}: energie utile`, '⚡', p.emojis),
+      titleEn: withEmoji(`${titleBaseEn}: useful energy`, '⚡', p.emojis),
+      bodyFr: `Il reste environ ${kcalGapText} a cette heure. Choisis simple: feculent + proteine + fruit/legumes.`,
+      bodyEn: `About ${kcalGapText} left for this time. Keep it simple: carbs + protein + fruit/veg.`,
+      slot: meta.slot,
+      mealType: meta.mealType,
+    };
+  }
+
+  return {
+    tone: 'steady',
+    titleFr: withEmoji(`${titleBaseFr}: bon rythme`, '✅', p.emojis),
+    titleEn: withEmoji(`${titleBaseEn}: on pace`, '✅', p.emojis),
+    bodyFr: `Tu es proche du bon rythme. Continue simple, eau a portee et portions propres.`,
+    bodyEn: `You are close to the right pace. Keep it simple, water nearby and clean portions.`,
+    slot: meta.slot,
+    mealType: meta.mealType,
   };
 }

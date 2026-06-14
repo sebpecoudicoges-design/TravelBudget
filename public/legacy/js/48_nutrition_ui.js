@@ -130,8 +130,10 @@
     return raw.slice(0, 10);
   }
   function offsetDateISO(day, offsetDays) {
-    const d = new Date(`${day || todayISO()}T00:00:00`);
-    d.setDate(d.getDate() + offsetDays);
+    const base = /^\d{4}-\d{2}-\d{2}$/.test(String(day || "")) ? String(day) : todayISO();
+    const [y, m, d0] = base.split("-").map(Number);
+    const d = new Date(Date.UTC(y, (m || 1) - 1, d0 || 1));
+    d.setUTCDate(d.getUTCDate() + (Number(offsetDays) || 0));
     return d.toISOString().slice(0, 10);
   }
   function n(v, fallback) { const x = Number(v); return Number.isFinite(x) ? x : (fallback || 0); }
@@ -1033,6 +1035,8 @@
         saveLocalMeals(rows);
       }
       await loadNutrition({ force: true });
+      try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+      try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
       renderNutrition("save");
     } catch (e) {
       CACHE.error = e?.message || String(e);
@@ -1062,6 +1066,8 @@
         saveLocalMeals(rows);
       }
       await loadNutrition({ force: true });
+      try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+      try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
       renderNutrition("water-only");
     } catch (e) {
       CACHE.error = e?.message || String(e);

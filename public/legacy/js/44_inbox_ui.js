@@ -184,6 +184,7 @@
     motivationalTone: true,
     sportReminder: true,
     workReminder: true,
+    healthMealReminders: false,
     timezone: '',
   });
 
@@ -217,6 +218,7 @@
       motivationalTone: src.motivationalTone !== false,
       sportReminder: src.sportReminder !== false,
       workReminder: src.workReminder !== false,
+      healthMealReminders: src.healthMealReminders === true || src.nutritionReminders === true,
       timezone,
     };
   }
@@ -443,6 +445,11 @@
 
   function nextDailyBudgetNotificationDate(timeValue){
     const clean = /^\d{2}:\d{2}$/.test(String(timeValue || '')) ? String(timeValue) : NOTIF_PREF_DEFAULTS.dailyBudgetTime;
+    return nextNotificationDateForTime(clean);
+  }
+
+  function nextNotificationDateForTime(timeValue){
+    const clean = /^\d{2}:\d{2}$/.test(String(timeValue || '')) ? String(timeValue) : '20:00';
     const [hh, mm] = clean.split(':').map((v) => Number(v));
     const next = new Date();
     next.setHours(Number.isFinite(hh) ? hh : 20, Number.isFinite(mm) ? mm : 0, 0, 0);
@@ -468,6 +475,125 @@
     );
   }
 
+  function healthMealSlots(){
+    const slots = window.Core?.notificationRules?.HEALTH_MEAL_SLOTS;
+    if (Array.isArray(slots) && slots.length) return slots;
+    return [
+      { slot: 'breakfast', mealType: 'breakfast', time: '08:00', expectedPct: 0.22, waterPct: 0.22, proteinPct: 0.20 },
+      { slot: 'morning_snack', mealType: 'morning_snack', time: '10:00', expectedPct: 0.34, waterPct: 0.36, proteinPct: 0.30 },
+      { slot: 'lunch', mealType: 'lunch', time: '12:30', expectedPct: 0.58, waterPct: 0.56, proteinPct: 0.58 },
+      { slot: 'afternoon_snack', mealType: 'afternoon_snack', time: '16:00', expectedPct: 0.72, waterPct: 0.75, proteinPct: 0.72 },
+      { slot: 'dinner', mealType: 'dinner', time: '19:30', expectedPct: 0.90, waterPct: 0.92, proteinPct: 0.92 },
+    ];
+  }
+
+  function bodyMetricForHealth(key, fallback){
+    try {
+      const ls = window.TB_CONST?.LS_KEYS || {};
+      const map = {
+        weight: ls.sport_body_weight || 'travelbudget_sport_body_weight_v1',
+        height: ls.sport_body_height || 'travelbudget_sport_body_height_v1',
+        age: ls.sport_body_age || 'travelbudget_sport_body_age_v1',
+        sex: ls.sport_body_sex || 'travelbudget_sport_body_sex_v1',
+        bmr: ls.sport_body_bmr || 'travelbudget_sport_body_bmr_v1',
+      };
+      const raw = localStorage.getItem(map[key]);
+      return raw === null || raw === '' ? fallback : raw;
+    } catch(_) { return fallback; }
+  }
+
+  function baselineKcalForHealth(){
+    const custom = Number(bodyMetricForHealth('bmr', 0));
+    if (Number.isFinite(custom) && custom > 900) return custom;
+    const weight = Number(bodyMetricForHealth('weight', 70));
+    const height = Number(bodyMetricForHealth('height', 175));
+    const age = Number(bodyMetricForHealth('age', 35));
+    const sex = String(bodyMetricForHealth('sex', 'male')).toLowerCase();
+    const offset = sex === 'female' || sex === 'f' ? -161 : 5;
+    return Math.max(1200, Math.round(10 * (Number.isFinite(weight) ? weight : 70) + 6.25 * (Number.isFinite(height) ? height : 175) - 5 * (Number.isFinite(age) ? age : 35) + offset));
+  }
+
+  function nutritionNotificationSummary(){
+    const today = todayISO();
+    const sameDay = (v) => String(v || '').slice(0, 10) === today;
+    const meals = (Array.isArray(window.state?.nutritionMeals) ? window.state.nutritionMeals : []).filter((meal) => sameDay(meal.meal_date || meal.mealDate));
+    const mealIds = new Set(meals.map((meal) => String(meal.id || '')));
+    const items = (Array.isArray(window.state?.nutritionMealItems) ? window.state.nutritionMealItems : []).filter((item) => mealIds.has(String(item.meal_id || item.mealId || '')));
+    const itemMealIds = new Set(items.map((item) => String(item.meal_id || item.mealId || '')));
+    const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const isWaterOnly = (meal) => !itemMealIds.has(String(meal.id || '')) && ['eau', 'water'].includes(norm(meal.label));
+    const sum = (keyA, keyB) => items.reduce((acc, item) => acc + (Number(item?.[keyA] ?? item?.[keyB]) || 0), 0);
+    const activity = todayActivitySummary();
+    const needsKcal = Math.max(1200, baselineKcalForHealth() + (Number(activity.sportKcal) || 0) + (Number(activity.workKcal) || 0));
+    const weight = Number(bodyMetricForHealth('weight', 70));
+    return {
+      today,
+      consumedKcal: sum('kcal', 'kcal'),
+      protein: sum('protein_g', 'proteinG'),
+      proteinTarget: Math.max(70, (Number.isFinite(weight) ? weight : 70) * 1.35),
+      drinkWaterMl: meals.reduce((acc, meal) => acc + (isWaterOnly(meal) ? (Number(meal?.water_ml ?? meal?.waterMl) || 0) : 0), 0),
+      waterTargetMl: 2000,
+      needsKcal,
+    };
+  }
+
+  async function buildHealthMealPushPayload(slot){
+    const prefs = getNotificationPrefs();
+    const summary = nutritionNotificationSummary();
+    const composed = window.Core?.notificationRules?.composeHealthMealNotification
+      ? window.Core.notificationRules.composeHealthMealNotification({ slot: slot?.slot || slot?.mealType || slot, prefs, ...summary })
+      : null;
+    const title = composed ? tr(composed.titleFr, composed.titleEn) : tr('Point nutrition', 'Nutrition check');
+    const body = composed ? tr(composed.bodyFr, composed.bodyEn) : tr('Ouvre Alimentation pour ajuster le prochain repas.', 'Open Nutrition to adjust the next meal.');
+    const slotKey = String(slot?.slot || composed?.slot || 'meal');
+    return {
+      title,
+      body,
+      source: 'health_meal',
+      view: 'nutrition',
+      slot: slotKey,
+      meal_type: String(slot?.mealType || composed?.mealType || slotKey),
+      notification_key: `health-meal:${slotKey}:${summary.today}`,
+      data: {
+        kind: 'health_meal',
+        slot: slotKey,
+        today: summary.today,
+        consumed_kcal: Math.round(summary.consumedKcal),
+        needs_kcal: Math.round(summary.needsKcal),
+        drink_water_ml: Math.round(summary.drinkWaterMl),
+        protein_g: Math.round(summary.protein),
+        tone: composed?.tone || 'steady',
+      },
+    };
+  }
+
+  async function scheduleHealthMealLocalNotifications(){
+    const prefs = getNotificationPrefs();
+    if (!prefs.healthMealReminders || !prefs.localDevice) return false;
+    const LocalNotifications = localNotificationPlugin();
+    if (!isNativeApp() || !LocalNotifications?.schedule) return false;
+    const slots = healthMealSlots();
+    try {
+      if (LocalNotifications.cancel) {
+        await LocalNotifications.cancel({ notifications: slots.map((_, idx) => ({ id: 1301 + idx })) });
+      }
+    } catch(_) {}
+    let delivered = false;
+    for (let idx = 0; idx < slots.length; idx += 1) {
+      const slot = slots[idx];
+      const msg = await buildHealthMealPushPayload(slot);
+      const at = nextNotificationDateForTime(slot.time || '12:00');
+      const ok = await sendLocalNotification(
+        msg.title,
+        msg.body,
+        Object.assign({ tag: `travelbudget-health-${slot.slot || idx}`, view: 'nutrition' }, msg.data || {}),
+        { id: 1301 + idx, schedule: { at, repeats: true, every: 'day', allowWhileIdle: true } }
+      );
+      delivered = delivered || ok;
+    }
+    return delivered;
+  }
+
   function syncPreferenceDrivenNotifications(){
     const prefs = getNotificationPrefs();
     const rows = [];
@@ -487,7 +613,25 @@
       }
     }
     window.tbSetNotificationBucket('daily-budget', rows);
+    if (prefs.healthMealReminders) {
+      const now = new Date();
+      const day = todayISO();
+      const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const healthRows = healthMealSlots()
+        .filter((slot) => hhmm >= String(slot.time || '23:59'))
+        .slice(-1)
+        .map((slot) => ({
+          notificationKey: `health-meal:${slot.slot}:${day}`,
+          title: tr('Point alimentation', 'Nutrition check'),
+          body: tr('Un rappel simple pour ajuster eau, energie et proteines selon l’heure.', 'A simple reminder to adjust water, energy and protein for this time.'),
+          view: 'nutrition',
+        }));
+      window.tbSetNotificationBucket('health-meal', healthRows);
+    } else {
+      window.tbSetNotificationBucket('health-meal', []);
+    }
     try { if ((prefs.dailyBudget || prefs.morningBudget || prefs.eveningSummary) && prefs.localDevice) scheduleDailyBudgetLocalNotification(); } catch(_) {}
+    try { if (prefs.healthMealReminders && prefs.localDevice) scheduleHealthMealLocalNotifications(); } catch(_) {}
   }
 
   async function triggerDailyBudgetNotificationTest(){
@@ -674,6 +818,8 @@
   window.tbTriggerDailyBudgetNotificationTest = triggerDailyBudgetNotificationTest;
   window.tbBuildMorningBudgetPushPayload = buildMorningBudgetPushPayload;
   window.tbScheduleDailyBudgetLocalNotification = scheduleDailyBudgetLocalNotification;
+  window.tbScheduleHealthMealLocalNotifications = scheduleHealthMealLocalNotifications;
+  window.tbBuildHealthMealPushPayload = buildHealthMealPushPayload;
   window.tbSendMobilePushNotification = sendMobilePushNotification;
   window.tbSyncPreferenceDrivenNotifications = syncPreferenceDrivenNotifications;
   window.tbInitMobilePushNotifications = initMobilePushNotifications;

@@ -705,6 +705,14 @@ function renderSettings(){
             </div>
             <button class="btn primary" id="tb-notif-test" type="button">Envoyer un test</button>
           </div>
+          <div style="margin-top:12px;display:grid;gap:8px;">
+            <label class="pill" style="display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;">
+              <input id="tb-notif-health" type="checkbox" ${notifPrefs.healthMealReminders ? "checked" : ""} />
+              Rappels alimentation / sante
+            </label>
+            <div class="muted" style="font-size:12px;line-height:1.35;">5 nudges simples : petit dej, 10h, dejeuner, gouter et diner. Ils ouvrent directement Alimentation.</div>
+            <button class="btn" id="tb-notif-save" type="button" style="width:max-content;max-width:100%;">Activer les rappels</button>
+          </div>
           <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;">
             <span class="muted" style="font-size:12px;font-weight:800;">Notification reçue ?</span>
             <button class="btn" id="tb-notif-test-yes" type="button">Oui</button>
@@ -892,6 +900,7 @@ if (btnWhatsapp) {
         motivationalTone: true,
         sportReminder: true,
         workReminder: true,
+        healthMealReminders: box.querySelector("#tb-notif-health")?.checked === true,
         morningBudget: true,
         eveningSummary: true,
         dailyBudget: true,
@@ -914,6 +923,9 @@ if (btnWhatsapp) {
           }
           if (prefs.dailyBudget && prefs.localDevice && typeof window.tbScheduleDailyBudgetLocalNotification === "function") {
             await window.tbScheduleDailyBudgetLocalNotification();
+          }
+          if (prefs.healthMealReminders && prefs.localDevice && typeof window.tbScheduleHealthMealLocalNotifications === "function") {
+            await window.tbScheduleHealthMealLocalNotifications();
           }
           alert("Préférences notifications enregistrées.");
         });

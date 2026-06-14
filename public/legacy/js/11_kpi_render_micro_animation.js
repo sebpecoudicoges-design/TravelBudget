@@ -153,8 +153,12 @@ function _kpiNutritionSummaryForDate(dateISO) {
 
 function _kpiSleepSummaryForDate(dateISO) {
   const day = String(dateISO || "").slice(0, 10);
-  const d = new Date(`${day || (new Date()).toISOString().slice(0, 10)}T00:00:00`);
-  d.setDate(d.getDate() - 1);
+  const base = /^\d{4}-\d{2}-\d{2}$/.test(day)
+    ? day
+    : (typeof window.toLocalISODate === "function" ? window.toLocalISODate(new Date()) : new Date().toISOString().slice(0, 10));
+  const [y, m, d0] = base.split("-").map(Number);
+  const d = new Date(Date.UTC(y, (m || 1) - 1, d0 || 1));
+  d.setUTCDate(d.getUTCDate() - 1);
   const nightDay = d.toISOString().slice(0, 10);
   const readRows = () => {
     try {

@@ -32,7 +32,7 @@
     { key: "jump_rope", fr: "Corde a sauter", en: "Jump rope", met: 12.0, mode: "time", equipment: "rope" },
     { key: "basketball", fr: "Basket", en: "Basketball", met: 6.5, mode: "time", equipment: "outdoor" },
     { key: "table_tennis", fr: "Ping-pong", en: "Table tennis", met: 4.0, mode: "time", equipment: "mixed" },
-    { key: "boxing", fr: "Boxe", en: "Boxing", met: 7.8, mode: "time", equipment: "boxing" },
+    { key: "boxing", fr: "Boxe", en: "Boxing", met: 12.8, mode: "time", equipment: "boxing" },
     { key: "hiit", fr: "HIIT", en: "HIIT", met: 7.8, mode: "time", equipment: "mixed" },
     { key: "yoga", fr: "Yoga", en: "Yoga", met: 2.5, mode: "time", equipment: "mat" },
     { key: "mobility", fr: "Mobilite", en: "Mobility", met: 2.0, mode: "time", equipment: "mat" },
@@ -189,7 +189,7 @@
     { key: "swim_drill_kick", goal: "swim", equipment: "pool", activityKey: "swimming", fr: "Battements jambes", en: "Kick drill", mode: "time", seconds: 90, sets: 6, rest: 30, distanceM: 50 },
     { key: "swim_pull", goal: "swim", equipment: "pool", activityKey: "swimming", fr: "Pull nage", en: "Pull swim", mode: "time", seconds: 120, sets: 5, rest: 45, distanceM: 50 },
     { key: "swim_endurance", goal: "swim", equipment: "pool", activityKey: "swimming", fr: "Endurance continue", en: "Continuous endurance swim", mode: "time", seconds: 1200, sets: 1, rest: 0, distanceM: 800 },
-    { key: "boxing_heavy_bag", goal: "boxing", equipment: "boxing", activityKey: "boxing", fr: "Sac de frappe", en: "Heavy bag rounds", mode: "time", seconds: 180, sets: 6, rest: 60, metValue: 7.8 },
+    { key: "boxing_heavy_bag", goal: "boxing", equipment: "boxing", activityKey: "boxing", fr: "Sac de frappe", en: "Heavy bag rounds", mode: "time", seconds: 180, sets: 6, rest: 60, metValue: 12.8 },
     { key: "boxing_speed_bag", goal: "boxing", equipment: "boxing", activityKey: "boxing", fr: "Poire de vitesse", en: "Speed bag", mode: "time", seconds: 120, sets: 5, rest: 45, metValue: 5.8 },
     { key: "boxing_shadow", goal: "boxing", equipment: "bodyweight", activityKey: "boxing", fr: "Shadow boxing", en: "Shadow boxing", mode: "time", seconds: 180, sets: 5, rest: 45, metValue: 7.0 },
     { key: "boxing_mitts", goal: "boxing", equipment: "boxing", activityKey: "boxing", fr: "Pattes d ours", en: "Focus mitts", mode: "time", seconds: 180, sets: 6, rest: 60, metValue: 8.0 },
@@ -198,7 +198,7 @@
     { key: "boxing_slips", goal: "boxing", equipment: "bodyweight", activityKey: "boxing", fr: "Esquives et slips", en: "Slips and defensive drills", mode: "time", seconds: 90, sets: 6, rest: 30, metValue: 5.8 },
     { key: "boxing_burpees", goal: "boxing", equipment: "bodyweight", activityKey: "hiit", fr: "Burpees boxe", en: "Boxing burpees", mode: "reps", reps: 8, sets: 5, rest: 45, metValue: 8.5 },
     { key: "boxing_jump_rope", goal: "boxing", equipment: "rope", activityKey: "jump_rope", fr: "Corde a sauter boxe", en: "Boxing jump rope", mode: "time", seconds: 180, sets: 5, rest: 45, metValue: 11.8 },
-    { key: "boxing_bag_combo_rounds", goal: "boxing", equipment: "boxing", activityKey: "boxing", fr: "Rounds combo au sac", en: "Heavy bag combo rounds", mode: "time", seconds: 180, sets: 8, rest: 60, metValue: 8.3 },
+    { key: "boxing_bag_combo_rounds", goal: "boxing", equipment: "boxing", activityKey: "boxing", fr: "Rounds combo au sac", en: "Heavy bag combo rounds", mode: "time", seconds: 180, sets: 8, rest: 60, metValue: 12.8 },
     { key: "pullup", goal: "strength", equipment: "bodyweight", activityKey: "bodyweight_strength", fr: "Tractions", en: "Pull-up", mode: "reps", reps: 6, sets: 4, rest: 90, metValue: 6.0 },
     { key: "chinup", goal: "strength", equipment: "bodyweight", activityKey: "bodyweight_strength", fr: "Chin-up", en: "Chin-up", mode: "reps", reps: 6, sets: 4, rest: 90, metValue: 6.0 },
     { key: "australian_pullup", goal: "strength", equipment: "bodyweight", activityKey: "bodyweight_strength", fr: "Tractions australiennes", en: "Australian pull-up", mode: "reps", reps: 10, sets: 3, rest: 75, metValue: 5.4 },
@@ -536,7 +536,10 @@
     try {
       const raw = localStorage.getItem(HISTORY_KEY());
       const parsed = raw ? JSON.parse(raw) : null;
-      return Array.isArray(parsed) ? parsed.slice(0, 50) : [];
+      if (!Array.isArray(parsed)) return [];
+      const migrated = recalibrateHeavyBagLocalWorkouts(parsed.slice(0, 50));
+      if (migrated.changed) saveLocalHistory(migrated.rows);
+      return migrated.rows;
     } catch (_) { return []; }
   }
   function loadAnonHistory() {
@@ -564,6 +567,29 @@
   function saveAnonHistory(rows) {
     try { localStorage.setItem(ANON_HISTORY_KEY(), JSON.stringify((rows || []).slice(0, 50))); } catch (_) {}
     try { localStorage.removeItem(baseHistoryKey()); } catch (_) {}
+  }
+  function isHeavyBagPlanItem(item) {
+    const text = `${item?.exerciseName || ""} ${item?.label || ""} ${item?.key || ""}`.toLowerCase();
+    return text.includes("sac de frappe") || text.includes("heavy bag") || text.includes("combo au sac") || text.includes("boxing_heavy_bag") || text.includes("boxing_bag_combo");
+  }
+  function recalibrateHeavyBagLocalWorkouts(rows) {
+    let changed = false;
+    const next = (rows || []).map(row => {
+      const plan = Array.isArray(row?.plan) ? row.plan : [];
+      if (!plan.some(isHeavyBagPlanItem)) return row;
+      const nextPlan = plan.map(item => isHeavyBagPlanItem(item) ? Object.assign({}, item, { activityKey: item.activityKey || "boxing", metValue: 12.8 }) : item);
+      const doneSets = Array.isArray(row?.doneSets) ? row.doneSets : [];
+      const kg = n(row?.bodyWeightKg || row?.body_weight_kg, bodyWeight());
+      const duration = n(row?.durationSeconds || row?.duration_seconds, 0);
+      const estimatedKcal = Math.max(1, Math.round(sessionKcalEstimate(nextPlan, doneSets, kg, duration)));
+      changed = changed || JSON.stringify(nextPlan) !== JSON.stringify(plan) || Math.round(n(row?.estimatedKcal || row?.estimated_kcal, 0)) !== estimatedKcal;
+      return Object.assign({}, row, {
+        plan: nextPlan,
+        estimatedKcal,
+        estimated_kcal: estimatedKcal,
+      });
+    });
+    return { rows: next, changed };
   }
   function loadPendingDeletes() {
     try {
