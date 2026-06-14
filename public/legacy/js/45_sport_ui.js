@@ -1522,9 +1522,14 @@
           <div class="clock">${esc(displayValue)}</div>
           ${amrap ? `<div class="hint">${esc(txt("AMRAP restant", "AMRAP left"))}: ${fmtSec(amrapRemaining)} - ${esc(txt("Tours valides", "Rounds counted"))}: ${n(timer.roundsCompleted, 0)}</div>` : ""}
           <div class="hint">${esc(txt("Temps total", "Total time"))}: ${fmtSec(elapsed)} ${step?.kind === "work" ? `- ${esc(labelEquipment(step.item.equipment))}` : ""}</div>
+          ${step?.kind === "work" ? `<label class="hint" style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;">
+            ${esc(txt("Charge serie", "Set load"))}
+            <input id="sport-step-load" type="number" step="0.5" inputmode="decimal" value="${esc(String(n(timer.stepLoadKg ?? effectiveLoadKg(step.item, timer.bodyWeightKg), 0)))}" style="width:96px;min-height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.12);color:white;text-align:center;font-weight:900;" />
+            kg
+          </label>` : ""}
           <div class="tb-sport-next">${esc(txt("Ensuite", "Next"))}: ${esc(nextStepLabel())}</div>
           <div class="tb-sport-actions" style="justify-content:center;">
-            ${step?.kind === "work" && step?.item?.mode === "reps" ? `<button class="btn primary" type="button" id="sport-step-done">${esc(txt("Fini", "Done"))}</button>` : ""}
+            ${step?.kind === "work" ? `<button class="btn primary" type="button" id="sport-step-done">${esc(txt("Fini", "Done"))}</button>` : ""}
             ${amrap ? `<button class="btn primary" type="button" id="sport-round-count">+ ${esc(txt("Tour", "Round"))}</button>` : ""}
             ${isRest ? `<button class="btn primary" type="button" id="sport-skip-rest">${esc(txt("Sauter le repos", "Skip rest"))}</button>` : ""}
             ${step?.duration ? `<button class="btn" type="button" id="sport-minus-time">-15s</button><button class="btn" type="button" id="sport-plus-time">+30s</button>` : ""}
@@ -1618,6 +1623,7 @@
           ${s.mood_after ? `<div class="muted" style="margin-top:8px;">${esc(txt("Apres", "After"))}: ${esc(s.mood_after)}</div>` : ""}
           <div class="tb-sport-actions" style="margin-top:10px;">
             <button class="btn primary" type="button" data-sport-repeat-session="${esc(String(s.id || ""))}">${esc(txt("Refaire", "Repeat"))}</button>
+            <button class="btn" type="button" data-sport-edit-session="${esc(String(s.id || ""))}">${esc(txt("Ajuster", "Adjust"))}</button>
             <button class="btn" type="button" data-sport-edit-date="${esc(String(s.id || ""))}" data-sport-date="${esc(String(s.started_at || "").slice(0, 10))}">${esc(txt("Modifier date", "Edit date"))}</button>
             <button class="btn danger" type="button" data-sport-delete-session="${esc(String(s.id || ""))}">${esc(txt("Supprimer", "Delete"))}</button>
           </div>
@@ -1876,6 +1882,10 @@
     });
     const done = root.querySelector("#sport-step-done");
     if (done) done.onclick = completeStep;
+    const stepLoad = root.querySelector("#sport-step-load");
+    if (stepLoad) stepLoad.oninput = () => {
+      if (CACHE.timer) CACHE.timer.stepLoadKg = n(stepLoad.value, 0);
+    };
     const skipRest = root.querySelector("#sport-skip-rest");
     if (skipRest) skipRest.onclick = skipRestStep;
     const roundCount = root.querySelector("#sport-round-count");
@@ -1898,6 +1908,9 @@
     });
     root.querySelectorAll("[data-sport-repeat-session]").forEach(btn => {
       btn.onclick = () => repeatSportSession(btn.getAttribute("data-sport-repeat-session"));
+    });
+    root.querySelectorAll("[data-sport-edit-session]").forEach(btn => {
+      btn.onclick = () => openSportSessionSandbox(btn.getAttribute("data-sport-edit-session"));
     });
     root.querySelectorAll("[data-sport-edit-date]").forEach(btn => {
       btn.onclick = () => editSportSessionDate(btn.getAttribute("data-sport-edit-date"), btn.getAttribute("data-sport-date"));
@@ -1978,6 +1991,8 @@
       .map(set => ({
         itemIndex: baseOffset + (itemIndexById.get(String(set.item_id || "")) || 0),
         setIndex: n(set.set_index, 1),
+        id: set.id || null,
+        itemId: set.item_id || null,
         reps: set.reps ?? null,
         durationSeconds: n(set.duration_seconds, 0),
         weightKg: n(set.weight_kg, 0),
@@ -2073,6 +2088,7 @@
       timeCapEndAt: CACHE.circuit?.enabled && n(CACHE.circuit?.amrapMinutes, 0) > 0 ? Date.now() + n(CACHE.circuit.amrapMinutes, 0) * 60000 : null,
       bodyWeightKg: bodyWeight(),
       bodyHeightCm: bodyHeight(),
+      stepLoadKg: seq[0]?.kind === "work" ? effectiveLoadKg(seq[0].item, bodyWeight()) : 0,
     };
     requestWakeLock();
     sportFeedback(txt("Seance lancee", "Workout started"), txt("Timer sport lance. Bon entrainement.", "Sport timer started. Good workout."), { persistNotification: true });
@@ -2162,6 +2178,7 @@
       if (timer.timeCapEndAt && Date.now() >= timer.timeCapEndAt) return finishWorkout();
       if (step.duration && Date.now() >= timer.stepEndAt) completeStep();
       else if ((typeof activeView === "string" ? activeView : "") === "sport") {
+        if (document.activeElement?.id === "sport-step-load") return;
         const root = document.getElementById("sport-root");
         const card = root?.querySelector(".tb-sport-grid .tb-sport-card:nth-child(2)");
         if (card) {
@@ -2219,7 +2236,12 @@
       setTimeout(() => { try { osc.stop(); ctx.close(); } catch (_) {} }, kind === "finish" ? 220 : 140);
     } catch (_) {}
   }
-  function recordWorkStep(timer, step, durationOverride) {
+  function readTimerStepLoadKg(timer, step) {
+    const el = document.getElementById("sport-step-load");
+    if (el) timer.stepLoadKg = n(el.value, 0);
+    return n(timer?.stepLoadKg, effectiveLoadKg(step?.item || {}, timer?.bodyWeightKg || bodyWeight()));
+  }
+  function recordWorkStep(timer, step, durationOverride, loadOverride) {
     if (!timer || !step || step.kind !== "work") return;
     const exists = timer.doneSets.some(done =>
       Number(done.itemIndex) === Number(step.itemIndex) && Number(done.setIndex) === Number(step.setIndex)
@@ -2233,16 +2255,17 @@
       setIndex: step.setIndex,
       reps: step.item.mode === "reps" ? n(step.item.targetReps, 0) : null,
       durationSeconds: duration,
-      weightKg: effectiveLoadKg(step.item, timer.bodyWeightKg),
+      weightKg: n(loadOverride, effectiveLoadKg(step.item, timer.bodyWeightKg)),
       distanceM: n(step.item.distanceM, 0),
       completedAt: new Date().toISOString(),
     });
+    timer.stepLoadKg = effectiveLoadKg(step.item, timer.bodyWeightKg);
   }
   function completeStep() {
     const timer = CACHE.timer;
     const step = currentTimerStep();
     if (!timer || !step) return;
-    recordWorkStep(timer, step);
+    recordWorkStep(timer, step, null, readTimerStepLoadKg(timer, step));
     timer.index += 1;
     const next = currentTimerStep();
     beep(next?.kind === "rest" ? "rest" : "work");
@@ -2251,6 +2274,7 @@
       timer.index = 0;
       const first = currentTimerStep();
       sportFeedback(txt("Tour valide", "Round counted"), `${txt("Tour", "Round")} ${timer.roundsCompleted} - ${stepLabel(first)}`, { persistNotification: true });
+      timer.stepLoadKg = first?.kind === "work" ? effectiveLoadKg(first.item, timer.bodyWeightKg) : 0;
       timer.stepStartedAt = Date.now();
       timer.stepEndAt = first?.duration ? Date.now() + (first.duration * 1000) : null;
       renderSport("amrap-loop");
@@ -2261,6 +2285,7 @@
       return;
     }
     sportFeedback(step.kind === "work" ? txt("Serie terminee", "Set complete") : txt("Repos termine", "Rest complete"), `${stepLabel(next)} - ${next.duration ? fmtSec(next.duration) : txt("a valider", "to validate")}`, { toast: step.kind === "rest", persistNotification: true });
+    timer.stepLoadKg = next?.kind === "work" ? effectiveLoadKg(next.item, timer.bodyWeightKg) : 0;
     timer.stepStartedAt = Date.now();
     timer.stepEndAt = next.duration ? Date.now() + (next.duration * 1000) : null;
     renderSport("step");
@@ -2319,7 +2344,7 @@
     if (step && step.kind === "work") {
       const elapsedStepSeconds = Math.max(1, Math.round((endedAt - timer.stepStartedAt) / 1000));
       const cappedStepSeconds = step.duration ? Math.min(n(step.duration, elapsedStepSeconds), elapsedStepSeconds) : elapsedStepSeconds;
-      recordWorkStep(timer, step, cappedStepSeconds);
+      recordWorkStep(timer, step, cappedStepSeconds, readTimerStepLoadKg(timer, step));
     }
     const summary = {
       startedAt: new Date(timer.startedAt).toISOString(),
@@ -2687,6 +2712,120 @@
       console.warn("[sport] date update failed", CACHE.error);
     }
     renderSport("edit-session-date");
+  }
+
+  function sessionRuntimeRow(sessionId) {
+    const id = String(sessionId || "");
+    return (CACHE.sessions || []).find(s => String(s.id || "") === id)
+      || (CACHE.localSessions || []).find(s => String(s.localId || s.id || "") === id || String(s.remoteId || "") === id)
+      || null;
+  }
+
+  function closeSportSessionSandbox() {
+    const old = document.getElementById("tb-sport-session-sandbox");
+    if (old) old.remove();
+  }
+
+  function openSportSessionSandbox(sessionId) {
+    const id = String(sessionId || "");
+    const session = sessionRuntimeRow(id);
+    const plan = planFromStoredSession(id);
+    const doneSets = doneSetsFromStoredSession(id, 0);
+    if (!session || !plan.length || !doneSets.length) {
+      sportFeedback(txt("Modification impossible", "Edit unavailable"), txt("Aucune serie detaillee trouvee pour cette seance.", "No detailed set found for this workout."), { kind: "warn" });
+      return;
+    }
+    closeSportSessionSandbox();
+    const durationSeconds = n(session.duration_seconds || session.durationSeconds, doneSets.reduce((sum, set) => sum + n(set.durationSeconds, 0), 0));
+    const weightKg = n(session.body_weight_kg || session.bodyWeightKg, bodyWeight());
+    const wrap = document.createElement("div");
+    wrap.id = "tb-sport-session-sandbox";
+    wrap.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);display:grid;place-items:center;padding:16px;";
+    wrap.innerHTML = `
+      <div style="width:min(760px,100%);max-height:min(86vh,760px);overflow:auto;border-radius:18px;background:var(--panel);color:var(--text);border:1px solid var(--border);box-shadow:0 28px 90px rgba(15,23,42,.32);padding:16px;">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+          <div>
+            <h3 style="margin:0;">${esc(txt("Sandbox seance", "Workout sandbox"))}</h3>
+            <div class="muted" style="margin-top:4px;">${esc(txt("Ajuste les charges de chaque serie, puis sauvegarde pour recalculer les kcal.", "Adjust each set load, then save to recalculate calories."))}</div>
+          </div>
+          <button class="btn" type="button" id="sport-sandbox-close">×</button>
+        </div>
+        <div class="tb-sport-stats" style="margin:12px 0;">
+          <div class="tb-sport-stat"><span>${esc(txt("Avant", "Before"))}</span><strong>${Math.round(n(session.estimated_kcal || session.estimatedKcal, 0))} kcal</strong></div>
+          <div class="tb-sport-stat"><span>${esc(txt("Apres", "After"))}</span><strong id="sport-sandbox-kcal">0 kcal</strong></div>
+          <div class="tb-sport-stat"><span>${esc(txt("Series", "Sets"))}</span><strong>${doneSets.length}</strong></div>
+          <div class="tb-sport-stat"><span>${esc(txt("Poids corps", "Body weight"))}</span><strong>${Math.round(weightKg * 10) / 10} kg</strong></div>
+        </div>
+        <div style="display:grid;gap:8px;">
+          ${doneSets.map((set, idx) => {
+            const item = plan[Math.max(0, Math.round(n(set.itemIndex, 0)))] || {};
+            return `<div style="display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--panel2);">
+              <div>
+                <strong>${esc(item.exerciseName || labelActivity(item.activityKey || "strength"))}</strong>
+                <div class="muted">${esc(txt("Serie", "Set"))} ${esc(String(set.setIndex || idx + 1))} · ${fmtSec(set.durationSeconds || 0)} · MET ${esc(String(Math.round(n(item.metValue, 0) * 10) / 10))}</div>
+              </div>
+              <label style="display:grid;gap:4px;">
+                <span class="muted" style="font-size:12px;">kg</span>
+                <input data-sport-sandbox-load="${idx}" type="number" step="0.5" inputmode="decimal" value="${esc(String(n(set.weightKg, 0)))}" />
+              </label>
+            </div>`;
+          }).join("")}
+        </div>
+        <div class="tb-sport-actions" style="justify-content:flex-end;margin-top:14px;">
+          <button class="btn" type="button" id="sport-sandbox-cancel">${esc(txt("Annuler", "Cancel"))}</button>
+          <button class="btn primary" type="button" id="sport-sandbox-save">${esc(txt("Sauvegarder", "Save"))}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const readNextSets = () => doneSets.map((set, idx) => Object.assign({}, set, {
+      weightKg: n(wrap.querySelector(`[data-sport-sandbox-load="${idx}"]`)?.value, 0),
+    }));
+    const refreshPreview = () => {
+      const kcal = Math.max(1, Math.round(sessionKcalEstimate(plan, readNextSets(), weightKg, durationSeconds)));
+      const out = wrap.querySelector("#sport-sandbox-kcal");
+      if (out) out.textContent = `${kcal} kcal`;
+      return kcal;
+    };
+    wrap.querySelectorAll("[data-sport-sandbox-load]").forEach(input => { input.oninput = refreshPreview; });
+    wrap.querySelector("#sport-sandbox-close").onclick = closeSportSessionSandbox;
+    wrap.querySelector("#sport-sandbox-cancel").onclick = closeSportSessionSandbox;
+    wrap.querySelector("#sport-sandbox-save").onclick = () => saveSportSessionSandbox(id, plan, readNextSets(), weightKg, durationSeconds);
+    refreshPreview();
+  }
+
+  async function saveSportSessionSandbox(sessionId, plan, nextSets, weightKg, durationSeconds) {
+    const id = String(sessionId || "");
+    const estimatedKcal = Math.max(1, Math.round(sessionKcalEstimate(plan, nextSets, weightKg, durationSeconds)));
+    const c = client();
+    try {
+      const localIdx = (CACHE.localSessions || []).findIndex(s => String(s.localId || s.id || "") === id || String(s.remoteId || "") === id);
+      if (localIdx >= 0 && id.startsWith("local_")) {
+        CACHE.localSessions[localIdx] = Object.assign({}, CACHE.localSessions[localIdx], {
+          doneSets: nextSets,
+          estimatedKcal,
+          estimated_kcal: estimatedKcal,
+        });
+        saveLocalHistory(CACHE.localSessions);
+      } else {
+        if (!c) throw new Error("Supabase indisponible");
+        for (const set of nextSets) {
+          if (!set.id) continue;
+          const res = await c.from(table("sport_sets")).update({ weight_kg: n(set.weightKg, 0) || null }).eq("id", set.id);
+          if (res.error) throw res.error;
+        }
+        const sess = await c.from(table("sport_sessions")).update({ estimated_kcal: estimatedKcal }).eq("id", id);
+        if (sess.error) throw sess.error;
+      }
+      CACHE.loaded = false;
+      CACHE.status = txt("Seance ajustee et kcal recalcules.", "Workout adjusted and calories recalculated.");
+      closeSportSessionSandbox();
+      await loadHistory();
+    } catch (e) {
+      CACHE.error = e?.message || String(e);
+      CACHE.status = txt("Ajustement local impossible a synchroniser pour le moment.", "Adjustment could not sync for now.");
+      console.warn("[sport] sandbox save failed", CACHE.error);
+    }
+    renderSport("session-sandbox-save");
   }
 
   async function requestWakeLock() {
