@@ -106,7 +106,9 @@ function _kpiBodyMetric(key, fallback) {
       sex: ls.body_sex || "travelbudget_body_sex_v1",
       bmr: ls.body_bmr || "travelbudget_body_bmr_v1",
     };
-    const raw = localStorage.getItem(map[key]);
+    const raw = (key === "weight" || key === "height")
+      ? (window.tbReadScopedLocalStorage ? window.tbReadScopedLocalStorage(map[key], fallback) : localStorage.getItem(map[key]))
+      : localStorage.getItem(map[key]);
     return raw === null || raw === "" ? fallback : raw;
   } catch (_) {
     return fallback;

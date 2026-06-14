@@ -645,8 +645,16 @@ function renderSettings(){
         ? window.tbGetNotificationPrefs()
         : { inbox:true, trip:true, dailyBudget:false, morningBudget:false, eveningSummary:false, serverPush:true, lowBudget:true, localDevice:false };
       const birthDateKey = TB_CONST?.LS_KEYS?.body_birthdate || "travelbudget_body_birthdate_v1";
+      const bodyWeightKey = TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1";
+      const bodyHeightKey = TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1";
       const savedBirthDate = (() => {
         try { return String(state?.user?.birthDate || localStorage.getItem(birthDateKey) || "").slice(0, 10); } catch (_) { return String(state?.user?.birthDate || "").slice(0, 10); }
+      })();
+      const savedBodyWeight = (() => {
+        try { return String(state?.user?.bodyWeightKg || window.tbReadScopedLocalStorage?.(bodyWeightKey, "") || "").trim(); } catch (_) { return String(state?.user?.bodyWeightKg || "").trim(); }
+      })();
+      const savedBodyHeight = (() => {
+        try { return String(state?.user?.bodyHeightCm || window.tbReadScopedLocalStorage?.(bodyHeightKey, "") || "").trim(); } catch (_) { return String(state?.user?.bodyHeightCm || "").trim(); }
       })();
 
       box.innerHTML = `
@@ -677,6 +685,16 @@ function renderSettings(){
             <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">Utilisee pour le BMR et le suivi sante.</small>
           </div>
 
+          <div class="field" style="min-width:120px;">
+            <label>Poids kg</label>
+            <input id="tb-account-body-weight" type="number" min="1" step="0.1" value="${escapeHTML(savedBodyWeight)}" />
+          </div>
+
+          <div class="field" style="min-width:120px;">
+            <label>Taille cm</label>
+            <input id="tb-account-body-height" type="number" min="60" step="1" value="${escapeHTML(savedBodyHeight)}" />
+          </div>
+
           <div class="field" style="min-width:160px;">
             <label>${T("settings.account.base_currency")}</label>
             <select id="tb-user-basecur">
@@ -694,7 +712,7 @@ function renderSettings(){
 
           <button class="btn" id="tb-user-basecur-save" type="button">${T("settings.account.save")}</button>
           <button class="btn" id="tb-user-whatsapp-save" type="button">Enregistrer WhatsApp</button>
-          <button class="btn" id="tb-user-birthdate-save" type="button">Enregistrer naissance</button>
+          <button class="btn" id="tb-user-birthdate-save" type="button">Enregistrer santé</button>
           <button class="btn" id="tb-user-uimode-save" type="button">${T("settings.account.save_mode")}</button>
           <button class="btn" id="tb-user-resetpwd" type="button">${T("settings.account.reset_password")}</button>
         </div>
@@ -757,6 +775,8 @@ function renderSettings(){
           email: u.email || u.user?.email || state?.profile?.email || state?.user?.email || "",
           whatsapp: state?.profile?.whatsapp_phone_e164 || state?.user?.whatsappPhone || "",
           birthDate: state?.user?.birthDate || (() => { try { return localStorage.getItem(birthDateKey) || ""; } catch (_) { return ""; } })(),
+          bodyWeightKg: state?.user?.bodyWeightKg || (() => { try { return window.tbReadScopedLocalStorage?.(bodyWeightKey, "") || ""; } catch (_) { return ""; } })(),
+          bodyHeightCm: state?.user?.bodyHeightCm || (() => { try { return window.tbReadScopedLocalStorage?.(bodyHeightKey, "") || ""; } catch (_) { return ""; } })(),
         };
       };
 
@@ -768,6 +788,10 @@ function renderSettings(){
         if (wa && !wa.value) wa.value = cached.whatsapp || "";
         const bd = box.querySelector("#tb-account-birthdate");
         if (bd && !bd.value) bd.value = String(cached.birthDate || "").slice(0, 10);
+        const bw = box.querySelector("#tb-account-body-weight");
+        if (bw && !bw.value) bw.value = String(cached.bodyWeightKg || "");
+        const bh = box.querySelector("#tb-account-body-height");
+        if (bh && !bh.value) bh.value = String(cached.bodyHeightCm || "");
       };
 
       const _rememberAccount = (user, phone, birthDate) => {
@@ -784,6 +808,20 @@ function renderSettings(){
           else localStorage.removeItem(birthDateKey);
         } catch (_) {}
         try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot("settings:account"); } catch (_) {}
+      };
+
+      const _rememberBodyProfile = (weightKg, heightCm) => {
+        if (!state.user) state.user = {};
+        const w = Number(weightKg);
+        const h = Number(heightCm);
+        if (Number.isFinite(w) && w > 0) {
+          state.user.bodyWeightKg = w;
+          try { window.tbWriteScopedLocalStorage?.(bodyWeightKey, String(w)); } catch (_) {}
+        }
+        if (Number.isFinite(h) && h > 0) {
+          state.user.bodyHeightCm = h;
+          try { window.tbWriteScopedLocalStorage?.(bodyHeightKey, String(h)); } catch (_) {}
+        }
       };
 
       _fillCachedAccount();
@@ -812,7 +850,7 @@ function renderSettings(){
       .maybeSingle(),
       s
         .from(TB_CONST.TABLES.settings)
-        .select("birth_date")
+        .select("birth_date,body_weight_kg,body_height_cm")
         .eq("user_id", uid)
         .maybeSingle()
         .catch(() => ({ data: null, error: null })),
@@ -825,7 +863,18 @@ function renderSettings(){
     const birthDate = String(settingsRes?.data?.birth_date || "").slice(0, 10);
     const bd = box.querySelector("#tb-account-birthdate");
     if (bd && birthDate) bd.value = birthDate;
+    const bodyWeightKg = Number(settingsRes?.data?.body_weight_kg);
+    const bodyHeightCm = Number(settingsRes?.data?.body_height_cm);
+    if (Number.isFinite(bodyWeightKg) && bodyWeightKg > 0) {
+      const bw = box.querySelector("#tb-account-body-weight");
+      if (bw) bw.value = String(bodyWeightKg);
+    }
+    if (Number.isFinite(bodyHeightCm) && bodyHeightCm > 0) {
+      const bh = box.querySelector("#tb-account-body-height");
+      if (bh) bh.value = String(bodyHeightCm);
+    }
     _rememberAccount(u, data?.whatsapp_phone_e164 || "", birthDate || undefined);
+    _rememberBodyProfile(bodyWeightKg, bodyHeightCm);
   } catch (e) {
     _fillCachedAccount();
     if (!_settingsOffline() && !/failed to fetch|offline|network/i.test(String(e?.message || e))) {
@@ -867,23 +916,30 @@ if (btnWhatsapp) {
 
       const btnBirthDate = box.querySelector("#tb-user-birthdate-save");
       if (btnBirthDate) {
-        btnBirthDate.onclick = () => safeCall("Enregistrer date de naissance", async () => {
-          if (_settingsOffline()) throw new Error("Mode hors ligne : reconnecte-toi pour enregistrer la date de naissance.");
+        btnBirthDate.onclick = () => safeCall("Enregistrer profil santé", async () => {
+          if (_settingsOffline()) throw new Error("Mode hors ligne : reconnecte-toi pour enregistrer le profil santé.");
           const s = _getSb();
           const u = (await s.auth.getUser()).data?.user;
           const uid = u?.id;
           if (!uid) throw new Error("Non authentifié");
           const raw = String(box.querySelector("#tb-account-birthdate")?.value || "").slice(0, 10);
           if (raw && !/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new Error("Date de naissance invalide.");
+          const weightKg = Number(String(box.querySelector("#tb-account-body-weight")?.value || "").replace(",", "."));
+          const heightCm = Number(String(box.querySelector("#tb-account-body-height")?.value || "").replace(",", "."));
+          if (!Number.isFinite(weightKg) || weightKg <= 0) throw new Error("Poids invalide.");
+          if (!Number.isFinite(heightCm) || heightCm < 60) throw new Error("Taille invalide.");
           const { error } = await s.from(TB_CONST.TABLES.settings).upsert({
             user_id: uid,
             birth_date: raw || null,
+            body_weight_kg: Math.round(weightKg * 10) / 10,
+            body_height_cm: Math.round(heightCm),
             updated_at: new Date().toISOString(),
           }, { onConflict: "user_id" });
           if (error) throw error;
           _rememberAccount(u, state?.profile?.whatsapp_phone_e164 || state?.user?.whatsappPhone || "", raw);
-          if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("settings:birth_date"); else renderAll();
-          alert("Date de naissance enregistrée.");
+          _rememberBodyProfile(weightKg, heightCm);
+          if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("settings:body_profile"); else renderAll();
+          alert("Profil santé enregistré.");
         });
       }
 

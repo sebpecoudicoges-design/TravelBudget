@@ -1,4 +1,4 @@
-window.TB_VERSION = window.TB_VERSION || "10.5.25";
+window.TB_VERSION = window.TB_VERSION || "10.5.26";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
 window.tbApplyVersionLabels = function tbApplyVersionLabels(root) {
@@ -358,6 +358,42 @@ try {
   window.TB_TABLES = window.TB_CONST.TABLES;
   window.TB_COLS = window.TB_CONST.COLS;
   window.TB_KEYS = window.TB_CONST.LS_KEYS;
+
+  window.tbCurrentUserScopedStorageSuffix = window.tbCurrentUserScopedStorageSuffix || function tbCurrentUserScopedStorageSuffix() {
+    try {
+      const id = window.sbUser?.id || window.state?.profile?.id || window.state?.user?.id || "";
+      return id ? `user:${id}` : "anon";
+    } catch (_) {
+      return "anon";
+    }
+  };
+
+  window.tbReadScopedLocalStorage = window.tbReadScopedLocalStorage || function tbReadScopedLocalStorage(baseKey, fallback = "") {
+    const key = String(baseKey || "");
+    if (!key) return fallback;
+    try {
+      const scope = window.tbCurrentUserScopedStorageSuffix();
+      const candidates = scope && scope !== "anon"
+        ? [`${key}::${scope}`, key, `${key}::anon`]
+        : [`${key}::anon`, key];
+      for (const candidate of candidates) {
+        const raw = localStorage.getItem(candidate);
+        if (raw !== null && raw !== "") return raw;
+      }
+    } catch (_) {}
+    return fallback;
+  };
+
+  window.tbWriteScopedLocalStorage = window.tbWriteScopedLocalStorage || function tbWriteScopedLocalStorage(baseKey, value) {
+    const key = String(baseKey || "");
+    if (!key) return;
+    const raw = String(value ?? "");
+    try {
+      localStorage.setItem(key, raw);
+      const scope = window.tbCurrentUserScopedStorageSuffix();
+      if (scope) localStorage.setItem(`${key}::${scope}`, raw);
+    } catch (_) {}
+  };
 
   window.tbResolveTransactionTravelId = function tbResolveTransactionTravelId(tx) {
     try {

@@ -376,13 +376,19 @@
     try { return n(localStorage.getItem(WEIGHT_KEY()), 70); } catch (_) { return 70; }
   }
   function saveBodyWeight(v) {
-    try { localStorage.setItem(WEIGHT_KEY(), String(Math.max(1, n(v, 70)))); } catch (_) {}
+    const value = String(Math.max(1, n(v, 70)));
+    try { localStorage.setItem(WEIGHT_KEY(), value); } catch (_) {}
+    try { window.tbWriteScopedLocalStorage?.(window.TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1", value); } catch (_) {}
+    try { if (!window.state.user) window.state.user = {}; window.state.user.bodyWeightKg = Number(value); } catch (_) {}
   }
   function bodyHeight() {
     try { return n(localStorage.getItem(HEIGHT_KEY()), 175); } catch (_) { return 175; }
   }
   function saveBodyHeight(v) {
-    try { localStorage.setItem(HEIGHT_KEY(), String(Math.max(60, n(v, 175)))); } catch (_) {}
+    const value = String(Math.max(60, n(v, 175)));
+    try { localStorage.setItem(HEIGHT_KEY(), value); } catch (_) {}
+    try { window.tbWriteScopedLocalStorage?.(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1", value); } catch (_) {}
+    try { if (!window.state.user) window.state.user = {}; window.state.user.bodyHeightCm = Number(value); } catch (_) {}
   }
   function loadGlobalRest() {
     try { return Math.max(0, Math.round(n(localStorage.getItem(GLOBAL_REST_KEY()), 60))); } catch (_) { return 60; }

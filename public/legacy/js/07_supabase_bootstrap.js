@@ -901,13 +901,13 @@ const settingsPromise = perfPromise("supabase:q:settings", async () => {
   const baseSel = "theme,palette_json,palette_preset,base_currency";
   const withUiMode = `${baseSel},ui_mode`;
   const withNotifications = `${withUiMode},notification_prefs`;
-  const withBirthDate = `${withNotifications},birth_date`;
+  const withBodyProfile = `${withNotifications},birth_date,body_weight_kg,body_height_cm`;
   let res = await sb
     .from(TB_CONST.TABLES.settings)
-    .select(withBirthDate)
+    .select(withBodyProfile)
     .eq("user_id", sbUser.id)
     .maybeSingle();
-  if (res?.error && /birth_date|ui_mode|notification_prefs/i.test(String(res.error.message || ''))) {
+  if (res?.error && /birth_date|body_weight_kg|body_height_cm|ui_mode|notification_prefs/i.test(String(res.error.message || ''))) {
     res = await sb
       .from(TB_CONST.TABLES.settings)
       .select(withNotifications)
@@ -994,6 +994,20 @@ if (s) {
       if (!state.user) state.user = {};
       state.user.birthDate = birthDate;
       try { localStorage.setItem(TB_CONST?.LS_KEYS?.body_birthdate || "travelbudget_body_birthdate_v1", birthDate); } catch (_) {}
+    }
+  } catch (_) {}
+
+  try {
+    const bodyWeightKg = Number(s.body_weight_kg);
+    const bodyHeightCm = Number(s.body_height_cm);
+    if (!state.user) state.user = {};
+    if (Number.isFinite(bodyWeightKg) && bodyWeightKg > 0) {
+      state.user.bodyWeightKg = bodyWeightKg;
+      try { (window.tbWriteScopedLocalStorage || ((k, v) => localStorage.setItem(k, String(v))))(TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1", String(bodyWeightKg)); } catch (_) {}
+    }
+    if (Number.isFinite(bodyHeightCm) && bodyHeightCm > 0) {
+      state.user.bodyHeightCm = bodyHeightCm;
+      try { (window.tbWriteScopedLocalStorage || ((k, v) => localStorage.setItem(k, String(v))))(TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1", String(bodyHeightCm)); } catch (_) {}
     }
   } catch (_) {}
 
