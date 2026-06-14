@@ -175,9 +175,15 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
   const activityKcal = sportKcal + workKcal;
   const baseline = _kpiBaselineKcal();
   const needsKcal = Math.max(1200, baseline + activityKcal);
+  const day = String(dateISO || "").slice(0, 10);
+  const today = (typeof window.toLocalISODate === "function" ? window.toLocalISODate(new Date()) : new Date().toISOString().slice(0, 10));
+  const hourNow = day === today ? (new Date().getHours() + new Date().getMinutes() / 60) : 23.99;
+  const dayProgress = hourNow < 9 ? 0.18 : hourNow < 12 ? 0.34 : hourNow < 15 ? 0.58 : hourNow < 18 ? 0.72 : hourNow < 21 ? 0.90 : 1;
+  const expectedKcalNow = Math.max(250, needsKcal * dayProgress);
   const balance = nutrition.kcal - needsKcal;
-  const kcalTolerance = Math.max(260, needsKcal * 0.16);
-  const kcalScore = Math.max(0, 42 - (Math.abs(balance) / kcalTolerance) * 22);
+  const currentBalance = nutrition.kcal - expectedKcalNow;
+  const kcalTolerance = Math.max(220, expectedKcalNow * 0.20);
+  const kcalScore = Math.max(0, 42 - (Math.abs(currentBalance) / kcalTolerance) * 22);
   const hydrationScore = Math.min(24, (nutrition.drinkWaterMl / 2000) * 24);
   const proteinTarget = Math.max(70, (Number(_kpiBodyMetric("weight", 70)) || 70) * 1.35);
   const proteinScore = Math.min(18, (nutrition.protein / proteinTarget) * 18);
@@ -198,7 +204,10 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
     ...nutrition,
     baseline,
     needsKcal,
+    expectedKcalNow,
+    dayProgress,
     balance,
+    currentBalance,
     activityKcal,
     sleepHours: sleep.hours,
     sleepQuality: sleep.quality,
@@ -1420,10 +1429,11 @@ const driver = "Dépenses";
   const pilot = _pilotageInsights({ kind: _parsedScope.kind, startISO: _rrPilot.startISO, endISO: _rrPilot.endISO });
 
   const miniCardStyle = `
-    border:1px solid rgba(0,0,0,0.06);
+    border:1px solid rgba(148,163,184,.22);
     border-radius:16px;
     padding:14px;
-    background:rgba(0,0,0,0.015);
+    background:linear-gradient(135deg,rgba(56,189,248,.07),rgba(34,197,94,.05)),var(--panel2);
+    box-shadow:0 14px 32px rgba(15,23,42,.07);
   `;
 
   // Inject responsive CSS once
@@ -1433,7 +1443,7 @@ const driver = "Dépenses";
     st.textContent = `
       .kpi-layout { grid-template-columns: minmax(360px, 470px) minmax(0, 1fr); }
       .kpi-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; }
-      .kpi-health-card { grid-column:1 / -1; border:1px solid rgba(0,0,0,0.06); border-radius:16px; padding:14px; background:rgba(0,0,0,0.015); }
+      .kpi-health-card { grid-column:1 / -1; border:1px solid rgba(148,163,184,.22); border-radius:16px; padding:14px; background:linear-gradient(135deg,rgba(56,189,248,.07),rgba(34,197,94,.05)),var(--panel2); box-shadow:0 14px 32px rgba(15,23,42,.07); }
       .kpi-health-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
       .kpi-health-body { display:grid; grid-template-columns:84px 1fr; gap:12px; align-items:center; margin-top:12px; }
       .kpi-health-ring { width:84px; aspect-ratio:1; border-radius:50%; display:grid; place-items:center; box-shadow:inset 0 0 0 1px rgba(148,163,184,.18); }
@@ -1442,6 +1452,9 @@ const driver = "Dépenses";
       .kpi-health-metric { border:1px solid var(--border); border-radius:10px; padding:9px; background:var(--panel); min-width:0; }
       .kpi-health-metric span { display:block; font-size:11px; color:var(--muted); }
       .kpi-health-metric strong { display:block; margin-top:3px; font-size:13px; color:var(--text); overflow-wrap:anywhere; }
+      .kpi-health-detail { margin-top:10px; border-top:1px solid var(--border); padding-top:9px; }
+      .kpi-health-detail summary { cursor:pointer; font-size:12px; color:var(--muted); }
+      .kpi-health-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:8px; font-size:12px; color:var(--muted); }
       .kpi-pending-detail { margin-top:8px; position:relative; }
       .kpi-pending-detail summary { cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; color:var(--muted); }
       .kpi-pending-detail summary::-webkit-details-marker { display:none; }
@@ -1556,12 +1569,23 @@ const driver = "Dépenses";
                 </div>
                 <div>
                   <div class="kpi-health-grid">
-                    <div class="kpi-health-metric"><span>Energie</span><strong>${Math.round(healthToday.kcal)} / ${Math.round(healthToday.needsKcal)} kcal</strong></div>
-                    <div class="kpi-health-metric"><span>Balance</span><strong>${Math.round(healthToday.balance)} kcal</strong></div>
+                    <div class="kpi-health-metric"><span>Energie a maintenant</span><strong>${Math.round(healthToday.kcal)} / ${Math.round(healthToday.expectedKcalNow)} kcal</strong></div>
+                    <div class="kpi-health-metric"><span>Balance actuelle</span><strong>${Math.round(healthToday.currentBalance)} kcal</strong></div>
                     <div class="kpi-health-metric"><span>Eau bue</span><strong>${Math.round(healthToday.drinkWaterMl)} / 2000 ml</strong></div>
                     <div class="kpi-health-metric"><span>Sommeil</span><strong>${healthToday.sleepHours > 0 ? `${Math.round(healthToday.sleepHours * 10) / 10}h` : "Non saisi"}</strong></div>
                   </div>
                   <div class="muted" style="font-size:12px;margin-top:9px;">${escapeHTML(healthToday.advice)} Charge: ${Math.round(healthToday.activityKcal)} kcal · Eau aliments: ${Math.round(healthToday.foodWaterMl)} ml.</div>
+                  <details class="kpi-health-detail">
+                    <summary>Comprendre le score</summary>
+                    <div class="kpi-health-detail-grid">
+                      <div>Besoin jour complet: <strong style="color:var(--text);">${Math.round(healthToday.needsKcal)} kcal</strong></div>
+                      <div>Objectif a cette heure: <strong style="color:var(--text);">${Math.round(healthToday.dayProgress * 100)}%</strong></div>
+                      <div>Base metabolique: <strong style="color:var(--text);">${Math.round(healthToday.baseline)} kcal</strong></div>
+                      <div>Sport + travail: <strong style="color:var(--text);">${Math.round(healthToday.activityKcal)} kcal</strong></div>
+                      <div>Proteines: <strong style="color:var(--text);">${Math.round(healthToday.protein)} / ${Math.round(healthToday.proteinTarget)}g</strong></div>
+                      <div>Sommeil: <strong style="color:var(--text);">${healthToday.sleepHours > 0 ? `${Math.round(healthToday.sleepHours * 10) / 10}h · ${escapeHTML(healthToday.sleepQuality)}` : "Non saisi"}</strong></div>
+                    </div>
+                  </details>
                 </div>
               </div>
             </div>

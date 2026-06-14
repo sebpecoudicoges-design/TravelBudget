@@ -616,10 +616,9 @@
     const typeTotals = typeTotalsForDay(meals, items);
     const kcalPct = Math.min(100, pct(consumedKcal, needsKcal));
     const kcalRingColor = kcalDelta > 250 ? "#ef4444" : (kcalDelta < -350 ? "#f59e0b" : "#22c55e");
-    const catalog = catalogFoods();
-    const catalogCats = ["all", "fruits", "dairy", "carbs", "protein", "snacks", "drinks", "dishes"];
     const week = weekRows(history, day);
     const sleep = sleepForDay(day);
+    const sleepWeek = week.map(row => ({ day: row.day, ...sleepForDay(row.day) }));
     const sleepLabel = sleep.hours > 0 ? `${Math.round(sleep.hours * 10) / 10}h` : txt("non saisi", "not set");
     const editingItem = CACHE.editingItemId ? items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
     root.innerHTML = `
@@ -679,26 +678,6 @@
               ${editingItem ? `<button class="btn" id="nutrition-edit-cancel" type="button" style="width:100%;margin-top:8px;">${esc(txt("Annuler la modification", "Cancel edit"))}</button>` : ""}
               ${CACHE.error ? `<div class="muted" style="margin-top:10px;">${esc(CACHE.error)}</div>` : ""}
             </div>
-            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(168,85,247,.08),rgba(34,197,94,.05)),var(--panel2);">
-              <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;">
-                <h3 style="margin:0;">${esc(txt("Catalogue", "Catalog"))}</h3>
-                <span class="pill">${CACHE.foods.length} ${esc(txt("aliments", "foods"))}</span>
-              </div>
-              <div style="display:flex;gap:6px;overflow:auto;padding-bottom:6px;margin-bottom:8px;">
-                ${catalogCats.map(cat => `<button class="btn small" type="button" data-nutrition-food-filter="${esc(cat)}" style="white-space:nowrap;${CACHE.foodCategory === cat ? "border-color:var(--accent);background:rgba(34,197,94,.12);" : ""}">${esc(foodCategoryLabel(cat))}</button>`).join("")}
-              </div>
-              <div class="tb-nutrition-catalog-grid">
-                ${catalog.length ? catalog.map(food => {
-                  const serving = Math.round(n(food.servingGrams, 100));
-                  const one = nutritionForGrams(food, serving);
-                  return `<button class="btn" type="button" data-nutrition-pick-food="${esc(food.key)}" style="display:grid;gap:5px;text-align:left;align-content:start;min-height:92px;background:rgba(15,23,42,.035);">
-                    <strong>${esc(food.name)}</strong>
-                    <span class="muted">${esc(txt("1 portion", "1 serving"))} · ${serving}g</span>
-                    <span>${Math.round(one.kcal)} kcal · P ${fmtMacro(one.protein)}</span>
-                  </button>`;
-                }).join("") : `<div class="muted">${esc(txt("Aucun aliment dans ce filtre.", "No food in this filter."))}</div>`}
-              </div>
-            </div>
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
               <h3 style="margin:0 0 10px;">${esc(txt("Hydratation", "Hydration"))}</h3>
               <div class="field"><label>${esc(txt("Eau ml", "Water ml"))}</label><input id="nutrition-water-ml" type="number" min="0" step="50" value="250"></div>
@@ -720,6 +699,18 @@
                 <div class="field" style="flex:1;"><label>${esc(txt("Qualite", "Quality"))}</label><select id="nutrition-sleep-quality"><option value="bad" ${sleep.quality === "bad" ? "selected" : ""}>${esc(txt("Mauvaise", "Bad"))}</option><option value="ok" ${sleep.quality === "ok" ? "selected" : ""}>${esc(txt("Correcte", "Ok"))}</option><option value="good" ${sleep.quality === "good" ? "selected" : ""}>${esc(txt("Bonne", "Good"))}</option></select></div>
               </div>
               <button class="btn" id="nutrition-sleep-save" type="button" style="width:100%;margin-top:8px;">${esc(txt("Enregistrer sommeil", "Save sleep"))}</button>
+              <div class="tb-nutrition-week-grid" style="margin-top:10px;margin-bottom:0;">
+                ${sleepWeek.map(row => {
+                  const sleepPct = Math.max(0, Math.min(100, (n(row.hours, 0) / 7.5) * 100));
+                  const height = Math.max(8, Math.min(74, sleepPct * 0.74));
+                  const active = row.day === day;
+                  const label = row.hours > 0 ? `${Math.round(row.hours * 10) / 10}h · ${row.quality}` : txt("non saisi", "not set");
+                  return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(row.day)} · ${esc(label)} · objectif 7.5h" style="height:92px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${active ? "border-color:var(--accent);" : ""}">
+                    <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,#8b5cf6,#38bdf8);"></span>
+                    <small>${esc(row.day.slice(5).replace("-", "/"))}</small>
+                  </button>`;
+                }).join("")}
+              </div>
               <div class="muted" style="font-size:12px;margin-top:8px;">${esc(txt("La nuit est rattachee a la date selectionnee et remonte dans le KPI Sante.", "Sleep is attached to the selected date and feeds the Health KPI."))}</div>
             </div>
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(56,189,248,.08),rgba(15,23,42,.02)),var(--panel2);">
@@ -728,40 +719,14 @@
                 ${week.map(row => {
                   const height = Math.max(8, Math.min(74, pct(row.kcal, needsKcal) * 0.74));
                   const active = row.day === day;
-                  return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(row.day)} · ${Math.round(row.kcal)} kcal" style="height:98px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${active ? "border-color:var(--accent);" : ""}">
+                  const detail = row.typeRows.map(typeRow => `${mealTypeLabel(typeRow.type)} ${Math.round(typeRow.kcal)} kcal`).join(" · ");
+                  return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(row.day)} · ${Math.round(row.kcal)} kcal · ${Math.round(row.waterMl)} ml${detail ? ` · ${esc(detail)}` : ""}" style="height:98px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${active ? "border-color:var(--accent);" : ""}">
                     <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,#22c55e,#38bdf8);"></span>
                     <small>${esc(row.day.slice(5).replace("-", "/"))}</small>
                   </button>`;
                 }).join("")}
               </div>
-              ${history.length ? history.map(row => {
-                const expanded = CACHE.expandedHistory === row.day;
-                return `
-                  <button class="btn" type="button" data-nutrition-history-date="${esc(row.day)}" style="width:100%;display:flex;justify-content:space-between;gap:8px;margin-top:6px;${row.day === day ? "border-color:var(--accent);" : ""}">
-                    <span>${esc(row.day)}</span>
-                    <span>${Math.round(row.kcal)} kcal · ${Math.round(row.waterMl)} ml</span>
-                  </button>
-                  <div class="tb-nutrition-history-type-grid">
-                    ${row.typeRows.map(typeRow => `
-                      <button class="btn small" type="button" data-nutrition-history-type="${esc(row.day)}::${esc(typeRow.type)}" style="display:flex;justify-content:space-between;gap:6px;${expanded ? "border-color:rgba(56,189,248,.55);" : ""}">
-                        <span>${esc(mealTypeLabel(typeRow.type))}</span>
-                        <strong>${Math.round(typeRow.kcal)} kcal</strong>
-                      </button>
-                    `).join("")}
-                  </div>
-                  ${expanded ? `
-                    <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:6px;background:rgba(15,23,42,.05);">
-                      ${row.typeRows.map(typeRow => `
-                        <div style="margin-bottom:8px;">
-                          <strong>${esc(mealTypeLabel(typeRow.type))}</strong>
-                          <div class="muted">${Math.round(typeRow.kcal)} kcal · ${Math.round(typeRow.waterMl)} ml · P ${fmtMacro(typeRow.protein)} · G ${fmtMacro(typeRow.carbs)} · L ${fmtMacro(typeRow.fat)}</div>
-                          ${typeRow.items.length ? typeRow.items.map(item => `<div class="muted" style="display:flex;justify-content:space-between;gap:8px;margin-top:3px;"><span>${esc(item.label || item.food_key || "Aliment")}</span><span>${Math.round(n(item.grams, 0))}g · ${Math.round(n(item.kcal, 0))} kcal</span></div>`).join("") : ""}
-                        </div>
-                      `).join("")}
-                    </div>
-                  ` : ""}
-                `;
-              }).join("") : `<div class="muted">${esc(txt("Aucun historique charge.", "No loaded history."))}</div>`}
+              <div class="muted" style="font-size:12px;">${esc(txt("Survole une barre pour le detail du jour.", "Hover a bar for day details."))}</div>
             </div>
           </div>
           <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
@@ -822,9 +787,9 @@
                     <div style="margin:10px 0;">${progressBar("kcal", consumed.kcal, target.kcal, "")}</div>
                     <div class="pill" style="margin-bottom:8px;background:rgba(255,255,255,.06);">${esc(suggestion)}</div>
                     ${rowItems.length ? rowItems.map(item => `
-                      <div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid rgba(148,163,184,.22);padding:8px 0;align-items:flex-start;">
+                      <div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid rgba(148,163,184,.22);padding:8px 0;align-items:flex-start;flex-wrap:wrap;">
                         <div><strong>${esc(item.label || item.food_key || "Aliment")}</strong><div class="muted">${Math.round(n(item.grams, 0))}g · P ${fmtMacro(item.protein_g)} · G ${fmtMacro(item.carbs_g)} · L ${fmtMacro(item.fat_g)}</div></div>
-                        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;"><strong>${Math.round(n(item.kcal, 0))} kcal</strong><button class="btn small" type="button" data-nutrition-edit="${esc(String(item.id || ""))}">${esc(txt("Modifier", "Edit"))}</button><button class="btn small" type="button" data-nutrition-delete="${esc(String(item.id || ""))}">${esc(txt("Supprimer", "Delete"))}</button></div>
+                        <div style="display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap;"><strong>${Math.round(n(item.kcal, 0))} kcal</strong><button class="btn small" type="button" data-nutrition-edit="${esc(String(item.id || ""))}">${esc(txt("Modifier", "Edit"))}</button><button class="btn small" type="button" data-nutrition-delete="${esc(String(item.id || ""))}">${esc(txt("Supprimer", "Delete"))}</button></div>
                       </div>`).join("") : `<div class="muted">${esc(txt("Aucun aliment sur ce moment.", "No food for this moment."))}</div>`}
                   </div>
                 </div>`;
