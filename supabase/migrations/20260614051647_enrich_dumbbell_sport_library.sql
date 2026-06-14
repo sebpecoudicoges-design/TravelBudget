@@ -1,0 +1,36 @@
+insert into public.sport_exercises
+  (key, goal, equipment, activity_key, name_fr, name_en, mode, default_reps, default_seconds, default_sets, default_rest_seconds, distance_m, met_value, tags, sort_order)
+values
+  ('dumbbell_row', 'strength', 'dumbbell', 'strength', 'Rowing haltere', 'Dumbbell row', 'reps', 10, null, 3, 75, null, 6.2, array['dos','tirage','haltere'], 250),
+  ('one_arm_dumbbell_row', 'strength', 'dumbbell', 'strength', 'Rowing haltere un bras', 'One-arm dumbbell row', 'reps', 10, null, 3, 75, null, 6.2, array['dos','tirage','haltere','unilateral'], 251),
+  ('chest_supported_dumbbell_row', 'strength', 'dumbbell', 'strength', 'Rowing halteres buste appuye', 'Chest-supported dumbbell row', 'reps', 10, null, 3, 75, null, 5.8, array['dos','tirage','halteres'], 252),
+  ('dumbbell_press', 'strength', 'dumbbell', 'strength', 'Developpe halteres', 'Dumbbell press', 'reps', 10, null, 3, 75, null, 5.8, array['pectoraux','push','halteres'], 260),
+  ('dumbbell_floor_press', 'strength', 'dumbbell', 'strength', 'Developpe au sol halteres', 'Dumbbell floor press', 'reps', 10, null, 3, 75, null, 5.6, array['pectoraux','push','halteres'], 261),
+  ('dumbbell_shoulder_press', 'strength', 'dumbbell', 'strength', 'Developpe epaules halteres', 'Dumbbell shoulder press', 'reps', 10, null, 3, 75, null, 5.8, array['epaules','push','halteres'], 262),
+  ('dumbbell_goblet_squat', 'strength', 'dumbbell', 'strength', 'Goblet squat haltere', 'Dumbbell goblet squat', 'reps', 10, null, 3, 75, null, 6.0, array['jambes','squat','haltere'], 270),
+  ('dumbbell_rdl', 'strength', 'dumbbell', 'strength', 'Souleve de terre roumain halteres', 'Dumbbell Romanian deadlift', 'reps', 10, null, 3, 90, null, 6.0, array['ischios','chaine posterieure','halteres'], 271),
+  ('dumbbell_lunge', 'strength', 'dumbbell', 'strength', 'Fentes halteres', 'Dumbbell lunges', 'reps', 10, null, 3, 75, null, 6.2, array['jambes','unilateral','halteres'], 272),
+  ('dumbbell_step_up', 'strength', 'dumbbell', 'strength', 'Step-up halteres', 'Dumbbell step-up', 'reps', 10, null, 3, 75, null, 6.4, array['jambes','unilateral','halteres'], 273),
+  ('dumbbell_biceps_curl', 'strength', 'dumbbell', 'strength', 'Curl biceps halteres', 'Dumbbell biceps curl', 'reps', 12, null, 3, 60, null, 4.8, array['bras','biceps','halteres'], 280),
+  ('dumbbell_triceps_extension', 'strength', 'dumbbell', 'strength', 'Extension triceps haltere', 'Dumbbell triceps extension', 'reps', 12, null, 3, 60, null, 4.8, array['bras','triceps','haltere'], 281),
+  ('dumbbell_lateral_raise', 'strength', 'dumbbell', 'strength', 'Elevation laterale halteres', 'Dumbbell lateral raise', 'reps', 12, null, 3, 60, null, 4.6, array['epaules','halteres'], 282),
+  ('dumbbell_carry', 'strength', 'dumbbell', 'strength', 'Farmer carry halteres', 'Dumbbell farmer carry', 'time', null, 40, 4, 60, null, 6.8, array['grip','gainage','halteres'], 290),
+  ('dumbbell_renegade_row', 'strength', 'dumbbell', 'strength', 'Renegade row halteres', 'Dumbbell renegade row', 'reps', 8, null, 3, 90, null, 7.0, array['dos','gainage','halteres'], 291),
+  ('dumbbell_thruster', 'cardio', 'dumbbell', 'hiit', 'Thruster halteres', 'Dumbbell thruster', 'reps', 10, null, 4, 60, null, 8.0, array['crossfit','jambes','push','halteres'], 330)
+on conflict (key) do update set
+  goal = excluded.goal,
+  equipment = excluded.equipment,
+  activity_key = excluded.activity_key,
+  name_fr = excluded.name_fr,
+  name_en = excluded.name_en,
+  mode = excluded.mode,
+  default_reps = excluded.default_reps,
+  default_seconds = excluded.default_seconds,
+  default_sets = excluded.default_sets,
+  default_rest_seconds = excluded.default_rest_seconds,
+  distance_m = excluded.distance_m,
+  met_value = excluded.met_value,
+  tags = excluded.tags,
+  sort_order = excluded.sort_order,
+  is_active = true,
+  updated_at = now();

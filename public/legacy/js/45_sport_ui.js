@@ -12,6 +12,7 @@
   const LIBRARY_KEY = () => window.TB_CONST?.LS_KEYS?.sport_library || "travelbudget_sport_library_v1";
   const CIRCUIT_KEY = () => scopedKey("travelbudget_sport_circuit_v1");
   const DELETE_QUEUE_KEY = () => scopedKey("travelbudget_sport_delete_queue_v1");
+  const LOAD_HISTORY_KEY = () => scopedKey("travelbudget_sport_load_history_v1");
   const HISTORY_KEY = () => scopedKey(baseHistoryKey());
   const ANON_HISTORY_KEY = () => `${baseHistoryKey()}::anon`;
   const RECOVERY_MET = 1.3;
@@ -419,9 +420,40 @@
     return n(kg, 0) / (h * h);
   }
   function effectiveLoadKg(item, bodyKg) {
-    const equipment = String(item?.equipment || "");
-    if (equipment === "band") return 0;
+    if (!supportsExternalLoad(item)) return 0;
     return Math.max(0, n(item?.weightKg, 0));
+  }
+  function supportsExternalLoad(item) {
+    const equipment = String(item?.equipment || "");
+    return ["bodyweight", "dumbbell", "barbell", "kettlebell", "machine"].includes(equipment);
+  }
+  function exerciseLoadKey(item) {
+    return String(item?.exerciseName || item?.key || item?.activityKey || "exercise")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 80);
+  }
+  function loadHistoryMap() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(LOAD_HISTORY_KEY()) || "{}");
+      return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+    } catch (_) { return {}; }
+  }
+  function lastLoadForExercise(item, fallback) {
+    if (!supportsExternalLoad(item)) return 0;
+    const value = Number(loadHistoryMap()[exerciseLoadKey(item)]);
+    return Number.isFinite(value) && value >= 0 ? value : Math.max(0, n(fallback, 0));
+  }
+  function rememberLoadForExercise(item, loadKg) {
+    if (!supportsExternalLoad(item)) return;
+    try {
+      const map = loadHistoryMap();
+      map[exerciseLoadKey(item)] = Math.max(0, n(loadKg, 0));
+      localStorage.setItem(LOAD_HISTORY_KEY(), JSON.stringify(map));
+    } catch (_) {}
   }
   function setWorkSeconds(item, actualSeconds) {
     if (Number.isFinite(Number(actualSeconds)) && Number(actualSeconds) > 0) return Math.max(1, Math.round(Number(actualSeconds)));
@@ -1522,11 +1554,11 @@
           <div class="clock">${esc(displayValue)}</div>
           ${amrap ? `<div class="hint">${esc(txt("AMRAP restant", "AMRAP left"))}: ${fmtSec(amrapRemaining)} - ${esc(txt("Tours valides", "Rounds counted"))}: ${n(timer.roundsCompleted, 0)}</div>` : ""}
           <div class="hint">${esc(txt("Temps total", "Total time"))}: ${fmtSec(elapsed)} ${step?.kind === "work" ? `- ${esc(labelEquipment(step.item.equipment))}` : ""}</div>
-          ${step?.kind === "work" ? `<label class="hint" style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;">
+          ${step?.kind === "work" ? (supportsExternalLoad(step.item) ? `<label class="hint" style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;">
             ${esc(txt("Charge serie", "Set load"))}
-            <input id="sport-step-load" type="number" step="0.5" inputmode="decimal" value="${esc(String(n(timer.stepLoadKg ?? effectiveLoadKg(step.item, timer.bodyWeightKg), 0)))}" style="width:96px;min-height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.12);color:white;text-align:center;font-weight:900;" />
+            <input id="sport-step-load" type="number" step="0.5" inputmode="decimal" value="${esc(String(n(timer.stepLoadKg ?? lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)), 0)))}" style="width:96px;min-height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.12);color:white;text-align:center;font-weight:900;" />
             kg
-          </label>` : ""}
+          </label>` : `<div class="hint">${esc(txt("Charge externe", "External load"))}: 0 kg</div>`) : ""}
           <div class="tb-sport-next">${esc(txt("Ensuite", "Next"))}: ${esc(nextStepLabel())}</div>
           <div class="tb-sport-actions" style="justify-content:center;">
             ${step?.kind === "work" ? `<button class="btn primary" type="button" id="sport-step-done">${esc(txt("Fini", "Done"))}</button>` : ""}
@@ -2088,7 +2120,7 @@
       timeCapEndAt: CACHE.circuit?.enabled && n(CACHE.circuit?.amrapMinutes, 0) > 0 ? Date.now() + n(CACHE.circuit.amrapMinutes, 0) * 60000 : null,
       bodyWeightKg: bodyWeight(),
       bodyHeightCm: bodyHeight(),
-      stepLoadKg: seq[0]?.kind === "work" ? effectiveLoadKg(seq[0].item, bodyWeight()) : 0,
+      stepLoadKg: seq[0]?.kind === "work" ? lastLoadForExercise(seq[0].item, effectiveLoadKg(seq[0].item, bodyWeight())) : 0,
     };
     requestWakeLock();
     sportFeedback(txt("Seance lancee", "Workout started"), txt("Timer sport lance. Bon entrainement.", "Sport timer started. Good workout."), { persistNotification: true });
@@ -2239,7 +2271,8 @@
   function readTimerStepLoadKg(timer, step) {
     const el = document.getElementById("sport-step-load");
     if (el) timer.stepLoadKg = n(el.value, 0);
-    return n(timer?.stepLoadKg, effectiveLoadKg(step?.item || {}, timer?.bodyWeightKg || bodyWeight()));
+    if (!supportsExternalLoad(step?.item || {})) return 0;
+    return n(timer?.stepLoadKg, lastLoadForExercise(step?.item || {}, effectiveLoadKg(step?.item || {}, timer?.bodyWeightKg || bodyWeight())));
   }
   function recordWorkStep(timer, step, durationOverride, loadOverride) {
     if (!timer || !step || step.kind !== "work") return;
@@ -2255,11 +2288,12 @@
       setIndex: step.setIndex,
       reps: step.item.mode === "reps" ? n(step.item.targetReps, 0) : null,
       durationSeconds: duration,
-      weightKg: n(loadOverride, effectiveLoadKg(step.item, timer.bodyWeightKg)),
+      weightKg: supportsExternalLoad(step.item) ? n(loadOverride, lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg))) : 0,
       distanceM: n(step.item.distanceM, 0),
       completedAt: new Date().toISOString(),
     });
-    timer.stepLoadKg = effectiveLoadKg(step.item, timer.bodyWeightKg);
+    rememberLoadForExercise(step.item, timer.doneSets[timer.doneSets.length - 1]?.weightKg || 0);
+    timer.stepLoadKg = lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg));
   }
   function completeStep() {
     const timer = CACHE.timer;
@@ -2274,7 +2308,7 @@
       timer.index = 0;
       const first = currentTimerStep();
       sportFeedback(txt("Tour valide", "Round counted"), `${txt("Tour", "Round")} ${timer.roundsCompleted} - ${stepLabel(first)}`, { persistNotification: true });
-      timer.stepLoadKg = first?.kind === "work" ? effectiveLoadKg(first.item, timer.bodyWeightKg) : 0;
+      timer.stepLoadKg = first?.kind === "work" ? lastLoadForExercise(first.item, effectiveLoadKg(first.item, timer.bodyWeightKg)) : 0;
       timer.stepStartedAt = Date.now();
       timer.stepEndAt = first?.duration ? Date.now() + (first.duration * 1000) : null;
       renderSport("amrap-loop");
@@ -2285,7 +2319,7 @@
       return;
     }
     sportFeedback(step.kind === "work" ? txt("Serie terminee", "Set complete") : txt("Repos termine", "Rest complete"), `${stepLabel(next)} - ${next.duration ? fmtSec(next.duration) : txt("a valider", "to validate")}`, { toast: step.kind === "rest", persistNotification: true });
-    timer.stepLoadKg = next?.kind === "work" ? effectiveLoadKg(next.item, timer.bodyWeightKg) : 0;
+    timer.stepLoadKg = next?.kind === "work" ? lastLoadForExercise(next.item, effectiveLoadKg(next.item, timer.bodyWeightKg)) : 0;
     timer.stepStartedAt = Date.now();
     timer.stepEndAt = next.duration ? Date.now() + (next.duration * 1000) : null;
     renderSport("step");
@@ -2766,7 +2800,7 @@
               </div>
               <label style="display:grid;gap:4px;">
                 <span class="muted" style="font-size:12px;">kg</span>
-                <input data-sport-sandbox-load="${idx}" type="number" step="0.5" inputmode="decimal" value="${esc(String(n(set.weightKg, 0)))}" />
+                <input data-sport-sandbox-load="${idx}" type="number" step="0.5" inputmode="decimal" value="${esc(String(supportsExternalLoad(item) ? (n(set.weightKg, 0) > 0 ? n(set.weightKg, 0) : lastLoadForExercise(item, set.weightKg)) : 0))}" ${supportsExternalLoad(item) ? "" : "disabled"} />
               </label>
             </div>`;
           }).join("")}
@@ -2816,6 +2850,10 @@
         const sess = await c.from(table("sport_sessions")).update({ estimated_kcal: estimatedKcal }).eq("id", id);
         if (sess.error) throw sess.error;
       }
+      nextSets.forEach(set => {
+        const item = plan[Math.max(0, Math.round(n(set.itemIndex, 0)))] || {};
+        rememberLoadForExercise(item, set.weightKg);
+      });
       CACHE.loaded = false;
       CACHE.status = txt("Seance ajustee et kcal recalcules.", "Workout adjusted and calories recalculated.");
       closeSportSessionSandbox();
