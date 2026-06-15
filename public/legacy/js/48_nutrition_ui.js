@@ -153,6 +153,7 @@
   function foodCacheKey() { return window.TB_CONST?.LS_KEYS?.nutrition_food_cache || "travelbudget_nutrition_food_cache_v1"; }
   function localMealKey() { return `${window.TB_CONST?.LS_KEYS?.nutrition_local_meals || "travelbudget_nutrition_local_meals_v1"}::${uid() || "anon"}`; }
   function sleepKey() { return `${window.TB_CONST?.LS_KEYS?.nutrition_sleep || "travelbudget_nutrition_sleep_v1"}::${uid() || "anon"}`; }
+  function nutritionPrefsKey(kind) { return `travelbudget_nutrition_${kind}_v1::${uid() || "anon"}`; }
   function rules() { return window.Core?.nutritionRules || {}; }
   function normalizeFood(row) { return rules().normalizeFoodRow ? rules().normalizeFoodRow(row) : row; }
   function nutritionForGrams(food, grams) { return rules().nutritionForGrams ? rules().nutritionForGrams(food, grams) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
@@ -168,6 +169,41 @@
   }
   function saveLocalMeals(rows) {
     try { localStorage.setItem(localMealKey(), JSON.stringify((rows || []).slice(0, 200))); } catch (_) {}
+  }
+  function loadFoodKeys(kind) {
+    try {
+      const rows = JSON.parse(localStorage.getItem(nutritionPrefsKey(kind)) || "[]");
+      return Array.isArray(rows) ? rows.map(String).filter(Boolean) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+  function saveFoodKeys(kind, rows, limit) {
+    const seen = new Set();
+    const clean = [];
+    (rows || []).forEach(key => {
+      const v = String(key || "");
+      if (!v || seen.has(v)) return;
+      seen.add(v);
+      clean.push(v);
+    });
+    try { localStorage.setItem(nutritionPrefsKey(kind), JSON.stringify(clean.slice(0, limit || 18))); } catch (_) {}
+    return clean;
+  }
+  function toggleFoodFavorite(key) {
+    const k = String(key || "");
+    if (!k) return;
+    const favs = loadFoodKeys("favorites");
+    saveFoodKeys("favorites", favs.includes(k) ? favs.filter(row => row !== k) : [k].concat(favs), 30);
+  }
+  function rememberFoodRecent(key) {
+    const k = String(key || "");
+    if (!k || k === "water") return;
+    saveFoodKeys("recent", [k].concat(loadFoodKeys("recent")), 18);
+  }
+  function foodByKey(key) {
+    const k = String(key || "");
+    return CACHE.foods.find(food => String(food.key) === k) || null;
   }
   function loadSleepRows() {
     try {
@@ -232,6 +268,10 @@
       .tb-nutrition-week-grid { display:grid; grid-template-columns:repeat(7,minmax(26px,1fr)); gap:6px; align-items:end; margin-bottom:12px; }
       .tb-nutrition-history-type-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:6px; }
       .tb-nutrition-timeline-row { display:grid; grid-template-columns:24px 1fr; gap:10px; align-items:stretch; }
+      .tb-nutrition-chip-row { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 10px; }
+      .tb-nutrition-food-chip { border:1px solid var(--border); border-radius:999px; background:rgba(255,255,255,.08); color:inherit; padding:7px 9px; font-weight:850; cursor:pointer; max-width:100%; }
+      .tb-nutrition-food-chip strong { display:block; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .tb-nutrition-health-strip { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:10px; }
       .tb-nutrition-shell button { min-width:0; }
       .tb-nutrition-shell .btn { white-space:normal; }
       @media (max-width: 860px) {
@@ -244,6 +284,7 @@
         .tb-nutrition-week-grid { gap:4px; }
         .tb-nutrition-history-type-grid { grid-template-columns:1fr; }
         .tb-nutrition-timeline-row { grid-template-columns:18px minmax(0,1fr); gap:8px; }
+        .tb-nutrition-health-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .tb-nutrition-shell .tb-sport-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
       }
       @media (max-width: 460px) {
@@ -494,7 +535,21 @@
   }
   function foodOptions(selected) {
     const q = String(CACHE.foodQuery || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    const rows = CACHE.foods.filter(food => !q || String(food.name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q)).slice(0, 80);
+    const favs = loadFoodKeys("favorites");
+    const recent = loadFoodKeys("recent");
+    const rank = food => {
+      const key = String(food?.key || "");
+      const favIdx = favs.indexOf(key);
+      const recentIdx = recent.indexOf(key);
+      if (favIdx >= 0) return favIdx;
+      if (recentIdx >= 0) return 100 + recentIdx;
+      return 1000;
+    };
+    const rows = CACHE.foods
+      .filter(food => !q || String(food.name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q))
+      .slice()
+      .sort((a, b) => rank(a) - rank(b) || String(a.name || "").localeCompare(String(b.name || ""), "fr", { sensitivity: "base" }))
+      .slice(0, 80);
     return rows.map(food => `<option value="${esc(food.key)}" ${String(food.key) === String(selected || "") ? "selected" : ""}>${esc(food.name)} · ${Math.round(n(food.kcalPer100g, 0))} kcal/100g</option>`).join("");
   }
   function renderFoodOptions(root, preferredKey) {
@@ -609,6 +664,54 @@
     }
     return rows;
   }
+  function quickFoodRows() {
+    const favs = loadFoodKeys("favorites").map(foodByKey).filter(Boolean);
+    const recent = loadFoodKeys("recent").map(foodByKey).filter(Boolean).filter(food => !favs.some(row => row.key === food.key));
+    return { favs: favs.slice(0, 8), recent: recent.slice(0, 8) };
+  }
+  function foodChipHTML(food, kind) {
+    const label = kind === "favorite" ? "★" : "↺";
+    return `<button class="tb-nutrition-food-chip" type="button" data-nutrition-pick-food="${esc(food.key)}" title="${esc(food.name)} · ${Math.round(n(food.servingGrams, 100))}g"><span>${label}</span> ${esc(food.name)}</button>`;
+  }
+  function currentMealType() {
+    const h = new Date().getHours();
+    if (h < 10) return "breakfast";
+    if (h < 12) return "morning_snack";
+    if (h < 15) return "lunch";
+    if (h < 18) return "afternoon_snack";
+    return "dinner";
+  }
+  function assistantFoodSuggestions(type, total, macroTargets, remainingKcal) {
+    const proteinGap = n(macroTargets?.protein, 0) - n(total?.protein, 0);
+    const waterGap = 2000 - n(total?.waterMl, 0);
+    const wantsProtein = proteinGap > 20;
+    const wantsLight = remainingKcal < 180;
+    const needles = {
+      breakfast: wantsProtein ? ["skyr", "fromage_blanc_0", "egg", "oats", "banana"] : ["muesli", "banana", "yogurt_natural", "pain_perdu"],
+      morning_snack: wantsProtein ? ["skyr", "fromage_blanc_0", "protein_bar"] : ["banana", "apple", "rice_cake", "belvita"],
+      lunch: wantsProtein ? ["chicken_breast", "tuna_natural", "ground_beef_5", "tofu_firm"] : ["pasta_cooked", "rice_cooked", "chicken_wrap", "poke_bowl_salmon"],
+      afternoon_snack: wantsLight ? ["apple", "pear", "yogurt_natural"] : ["belvita", "banana", "fromage_blanc_0", "rice_cake"],
+      dinner: wantsLight ? ["vegetable_soup", "zucchini", "cod_fillet"] : ["rice_onion_zucchini", "chicken_potatoes_vegetables", "salmon_potatoes_greenbeans"],
+    };
+    const keys = waterGap > 900 ? ["water"].concat(needles[type] || []) : (needles[type] || []);
+    return keys.map(foodByKey).filter(Boolean).slice(0, 4);
+  }
+  function mealAssistantHTML(mealTargets, typeTotals, total, macroTargets) {
+    const type = currentMealType();
+    const target = mealTargets.find(row => row.type === type) || mealTargets[0];
+    const consumed = typeTotals[type] || { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+    const remaining = n(target?.kcal, 0) - n(consumed.kcal, 0);
+    const suggestion = mealMomentSuggestion(type, consumed, target?.kcal || 0, total, macroTargets);
+    const foods = assistantFoodSuggestions(type, total, macroTargets, remaining);
+    return `<div style="border:1px solid rgba(37,99,235,.25);border-radius:8px;padding:12px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(34,197,94,.08)),var(--panel2);grid-column:1/-1;">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+        <div><div class="muted" style="font-size:12px;">${esc(txt("Assistant maintenant", "Assistant now"))}</div><strong>${esc(mealTypeLabel(type))}</strong></div>
+        <span class="pill">${remaining >= 0 ? esc(txt("reste", "left")) : esc(txt("surplus", "surplus"))} ${Math.abs(Math.round(remaining))} kcal</span>
+      </div>
+      <div class="muted" style="margin-top:8px;">${esc(suggestion)}</div>
+      ${foods.length ? `<div class="tb-nutrition-chip-row">${foods.map(food => foodChipHTML(food, "recent")).join("")}</div>` : ""}
+    </div>`;
+  }
   function healthHistoryRows(history, selectedDay) {
     const byDay = new Map(history.map(row => [row.day, row]));
     const rows = [];
@@ -695,6 +798,11 @@
     const sleepLabel = sleep.hours > 0 ? `${Math.round(sleep.hours * 10) / 10}h` : txt("non saisi", "not set");
     const sleepNightLabel = sleep.nightDay ? sleep.nightDay.slice(5).replace("-", "/") : offsetDateISO(day, -1).slice(5).replace("-", "/");
     const editingItem = CACHE.editingItemId ? items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
+    const quickFoods = quickFoodRows();
+    const healthAvg = healthWeek.length ? healthWeek.reduce((sum, row) => sum + n(row.score, 0), 0) / healthWeek.length : 0;
+    const healthWaterDays = healthWeek.filter(row => n(row.health?.drinkWaterMl ?? row.waterMl, 0) >= 2000).length;
+    const healthSleepAvg = healthWeek.length ? healthWeek.reduce((sum, row) => sum + n(row.health?.sleepHours, sleepForDay(row.day).hours), 0) / healthWeek.length : 0;
+    const healthActivityKcal = healthWeek.reduce((sum, row) => sum + n(row.sportKcal, 0) + n(row.workKcal, 0), 0);
     root.innerHTML = `
       <section class="tb-nutrition-shell">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
@@ -731,6 +839,7 @@
               <strong>${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))} = ${Math.round(needsKcal)} kcal</strong>
               <div class="muted" style="font-size:12px;margin-top:6px;">${esc(txt("Hydratation : objectif 2 L en eau bue. Eau des aliments", "Hydration: 2 L target from drunk water. Food water"))} ${Math.round(foodWaterMl)} ml.</div>
             </div>
+            ${mealAssistantHTML(mealTargets, typeTotals, { ...total, waterMl: drinkWaterMl }, { protein: proteinTarget, carbs: carbsTarget, fat: fatTarget })}
           </div>
         </div>
         <div class="tb-nutrition-layout">
@@ -739,6 +848,11 @@
               <h3 style="margin:0 0 10px;">${esc(editingItem ? txt("Modifier", "Edit") : txt("Ajout rapide", "Quick add"))}</h3>
               <div class="field"><label>${esc(txt("Chercher", "Search"))}</label><input id="nutrition-search" value="${esc(CACHE.foodQuery)}" placeholder="${esc(txt("Riz, poulet, banane...", "Rice, chicken, banana..."))}"></div>
               <div class="field"><label>${esc(txt("Aliment", "Food"))}</label><select id="nutrition-food">${foodOptions()}</select></div>
+              <div class="tb-nutrition-chip-row">
+                <button class="btn small" id="nutrition-toggle-favorite" type="button">★ ${esc(txt("Favori", "Favorite"))}</button>
+                ${quickFoods.favs.map(food => foodChipHTML(food, "favorite")).join("")}
+                ${quickFoods.recent.map(food => foodChipHTML(food, "recent")).join("")}
+              </div>
               <div class="row tb-nutrition-form-row" style="gap:10px;">
                 <div class="field" style="flex:1;"><label>${esc(txt("Mode", "Mode"))}</label><select id="nutrition-amount-mode"><option value="portion">${esc(txt("Portions", "Servings"))}</option><option value="grams">${esc(txt("Grammes", "Grams"))}</option></select></div>
                 <div class="field" style="flex:1;"><label>${esc(txt("Quantite", "Quantity"))}</label><input id="nutrition-quantity" type="number" min="0" step="0.25" value="1"></div>
@@ -805,6 +919,12 @@
             </div>
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(34,197,94,.08),rgba(56,189,248,.05)),var(--panel2);">
               <h3 style="margin:0 0 10px;">${esc(txt("Sante par jour", "Daily health"))}</h3>
+              <div class="tb-nutrition-health-strip">
+                <div class="tb-sport-stat"><span>${esc(txt("Score moyen", "Avg score"))}</span><strong>${Math.round(healthAvg)}</strong></div>
+                <div class="tb-sport-stat"><span>${esc(txt("Eau OK", "Water OK"))}</span><strong>${healthWaterDays}/${healthWeek.length}</strong></div>
+                <div class="tb-sport-stat"><span>${esc(txt("Sommeil moy.", "Avg sleep"))}</span><strong>${healthSleepAvg ? `${Math.round(healthSleepAvg * 10) / 10}h` : "-"}</strong></div>
+                <div class="tb-sport-stat"><span>${esc(txt("Charge", "Load"))}</span><strong>${Math.round(healthActivityKcal)}</strong></div>
+              </div>
               <div style="display:grid;gap:8px;">
                 ${healthWeek.map(row => {
                   const h = row.health || {};
@@ -981,9 +1101,15 @@
         const food = CACHE.foods.find(row => String(row.key) === key);
         CACHE.foodQuery = food?.name || "";
         CACHE.foodCategory = "all";
+        rememberFoodRecent(key);
         renderNutrition("food-pick");
       };
     });
+    const favorite = root.querySelector("#nutrition-toggle-favorite");
+    if (favorite) favorite.onclick = () => {
+      toggleFoodFavorite(selectedFood(root)?.key);
+      renderNutrition("favorite");
+    };
     const dateInput = root.querySelector("#nutrition-date");
     if (dateInput) dateInput.onchange = async () => {
       CACHE.selectedDate = dateInput.value || todayISO();
@@ -1056,6 +1182,7 @@
   }
   async function saveNutritionMeal(root) {
     const food = selectedFood(root);
+    rememberFoodRecent(food?.key);
     syncNutritionAmount(root);
     const grams = n(root.querySelector("#nutrition-grams")?.value, food?.servingGrams || 100);
     const nut = nutritionForGrams(food, grams);

@@ -15,6 +15,8 @@
   const LOAD_HISTORY_KEY = () => scopedKey("travelbudget_sport_load_history_v1");
   const HISTORY_KEY = () => scopedKey(baseHistoryKey());
   const ANON_HISTORY_KEY = () => `${baseHistoryKey()}::anon`;
+  const EXERCISE_FAVORITES_KEY = () => scopedKey("travelbudget_sport_exercise_favorites_v1");
+  const EXERCISE_RECENT_KEY = () => scopedKey("travelbudget_sport_exercise_recent_v1");
   const RECOVERY_MET = 1.3;
 
   const CATALOG = [
@@ -782,6 +784,49 @@
   function exerciseLabel(ex) {
     return lang() === "en" ? ex.en : ex.fr;
   }
+  function loadExerciseKeys(kind) {
+    const key = kind === "favorite" ? EXERCISE_FAVORITES_KEY() : EXERCISE_RECENT_KEY();
+    try {
+      const rows = JSON.parse(localStorage.getItem(key) || "[]");
+      return Array.isArray(rows) ? rows.map(String).filter(Boolean) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+  function saveExerciseKeys(kind, rows, limit) {
+    const key = kind === "favorite" ? EXERCISE_FAVORITES_KEY() : EXERCISE_RECENT_KEY();
+    const seen = new Set();
+    const clean = [];
+    (rows || []).forEach(row => {
+      const v = String(row || "");
+      if (!v || seen.has(v)) return;
+      seen.add(v);
+      clean.push(v);
+    });
+    try { localStorage.setItem(key, JSON.stringify(clean.slice(0, limit || 24))); } catch (_) {}
+    return clean;
+  }
+  function toggleExerciseFavorite(key) {
+    const k = String(key || "");
+    if (!k) return;
+    const rows = loadExerciseKeys("favorite");
+    saveExerciseKeys("favorite", rows.includes(k) ? rows.filter(row => row !== k) : [k].concat(rows), 40);
+  }
+  function rememberExerciseRecent(key) {
+    const k = String(key || "");
+    if (!k) return;
+    saveExerciseKeys("recent", [k].concat(loadExerciseKeys("recent")), 24);
+  }
+  function exerciseByKey(key) {
+    return EXERCISE_LIBRARY.find(row => String(row.key) === String(key || "")) || null;
+  }
+  function quickExerciseRows(equipment) {
+    const eq = String(equipment || "all");
+    const allow = ex => ex && (eq === "all" || ex.equipment === eq);
+    const favs = loadExerciseKeys("favorite").map(exerciseByKey).filter(allow).slice(0, 8);
+    const recents = loadExerciseKeys("recent").map(exerciseByKey).filter(allow).filter(ex => !favs.some(fav => fav.key === ex.key)).slice(0, 8);
+    return { favs, recents };
+  }
   function libraryToPlanItem(ex) {
     return makePlanItem(ex.activityKey, {
       exerciseName: exerciseLabel(ex),
@@ -821,6 +866,16 @@
   function visibleExercises(equipment, query) {
     const eq = String(equipment || "all");
     const q = normalizedSearch(query);
+    const favs = loadExerciseKeys("favorite");
+    const recents = loadExerciseKeys("recent");
+    const rank = ex => {
+      const key = String(ex?.key || "");
+      const favIdx = favs.indexOf(key);
+      const recentIdx = recents.indexOf(key);
+      if (favIdx >= 0) return favIdx;
+      if (recentIdx >= 0) return 100 + recentIdx;
+      return 1000;
+    };
     return EXERCISE_LIBRARY
       .filter(ex => (eq === "all" || ex.equipment === eq))
       .filter(ex => {
@@ -828,7 +883,7 @@
         return normalizedSearch(`${ex.fr} ${ex.en} ${labelEquipment(ex.equipment)}`).includes(q);
       })
       .slice()
-      .sort((a, b) => exerciseLabel(a).localeCompare(exerciseLabel(b), lang() === "en" ? "en" : "fr", { sensitivity: "base" }));
+      .sort((a, b) => rank(a) - rank(b) || exerciseLabel(a).localeCompare(exerciseLabel(b), lang() === "en" ? "en" : "fr", { sensitivity: "base" }));
   }
   function exercisePriority(ex, goal) {
     if (goal === "cardio") {
@@ -1366,6 +1421,7 @@
     const editIdx = Number.isInteger(CACHE.editingPlanIndex) ? CACHE.editingPlanIndex : null;
     const editing = editIdx !== null ? CACHE.plan[editIdx] : null;
     const rows = visibleExercises(selectedEquipment, search);
+    const quickRows = quickExerciseRows(selectedEquipment);
     const baseExercise = rows[0] || visibleExercises(selectedEquipment, "")[0] || EXERCISE_LIBRARY[0];
     const manualActivity = editing?.activityKey || baseExercise?.activityKey || "strength";
     const manualEquipment = editing?.equipment || baseExercise?.equipment || "bodyweight";
@@ -1405,11 +1461,14 @@
             <button class="tb-sport-quick-btn" type="button" data-sport-quick="jump_rope">${esc(txt("Corde", "Rope"))}</button>
             <button class="tb-sport-quick-btn" type="button" data-sport-quick="pushup">${esc(txt("Muscu", "Strength"))}</button>
             <button class="tb-sport-quick-btn" type="button" data-sport-quick="cycling_easy">${esc(txt("Velo", "Bike"))}</button>
+            ${quickRows.favs.map(ex => `<button class="tb-sport-quick-btn" type="button" data-sport-quick="${esc(ex.key)}">★ ${esc(exerciseLabel(ex))}</button>`).join("")}
+            ${quickRows.recents.map(ex => `<button class="tb-sport-quick-btn" type="button" data-sport-quick="${esc(ex.key)}">↺ ${esc(exerciseLabel(ex))}</button>`).join("")}
           </div>
           <div class="tb-sport-fields">
             <div class="tb-sport-field"><label>${esc(txt("Materiel", "Equipment"))}</label><select id="sport-library-equipment">${libraryEquipmentOptions(selectedEquipment)}</select></div>
             <div class="tb-sport-field"><label>${esc(txt("Recherche", "Search"))}</label><input id="sport-ex-search" type="search" value="${esc(search)}" placeholder="${esc(txt("Ecris le nom", "Type a name"))}"></div>
             <div class="tb-sport-field"><label>${esc(txt("Exercice", "Exercise"))}</label><select id="sport-library-ex">${libraryOptions("free", selectedEquipment, matchedExercise?.key || baseExercise?.key || "")}</select></div>
+            <div class="tb-sport-field"><label>${esc(txt("Memoire", "Memory"))}</label><button class="btn" type="button" id="sport-toggle-favorite" style="width:100%;">★ ${esc(txt("Favori", "Favorite"))}</button></div>
             <div class="tb-sport-field"><label>${esc(txt("Nom", "Name"))}</label><input id="sport-ex-name" value="${esc(manualName)}"></div>
             <input id="sport-activity" type="hidden" value="${esc(manualActivity)}">
             <input id="sport-equipment" type="hidden" value="${esc(manualEquipment)}">
@@ -1805,10 +1864,16 @@
     };
     const librarySelect = root.querySelector("#sport-library-ex");
     if (librarySelect) librarySelect.onchange = () => applyExerciseToForm(root, librarySelect.value);
+    const toggleFavorite = root.querySelector("#sport-toggle-favorite");
+    if (toggleFavorite) toggleFavorite.onclick = () => {
+      toggleExerciseFavorite(root.querySelector("#sport-library-ex")?.value || "");
+      renderSport("exercise-favorite");
+    };
     root.querySelectorAll("[data-sport-ex]").forEach(btn => {
       btn.onclick = () => {
         const ex = EXERCISE_LIBRARY.find(row => row.key === btn.getAttribute("data-sport-ex"));
         if (!ex) return;
+        rememberExerciseRecent(ex.key);
         CACHE.plan.push(libraryToPlanItem(ex));
         savePlan();
         renderSport("library-add");
@@ -1836,6 +1901,7 @@
     const add = root.querySelector("#sport-add-item");
     if (add) add.onclick = () => {
       const editIdx = Number.isInteger(CACHE.editingPlanIndex) ? CACHE.editingPlanIndex : null;
+      rememberExerciseRecent(root.querySelector("#sport-library-ex")?.value || "");
       const item = planItemFromManualForm(root, editIdx !== null ? CACHE.plan[editIdx] : null);
       if (editIdx !== null && CACHE.plan[editIdx]) {
         CACHE.plan[editIdx] = item;
@@ -1872,6 +1938,7 @@
         const key = String(btn.getAttribute("data-sport-quick") || "pushup");
         const ex = EXERCISE_LIBRARY.find(row => row.key === key);
         if (!ex) return;
+        rememberExerciseRecent(ex.key);
         CACHE.builderEquipment = ex.equipment || CACHE.builderEquipment || "all";
         CACHE.exerciseSearch = exerciseLabel(ex);
         renderSport("quick-fill");
