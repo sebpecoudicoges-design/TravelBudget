@@ -148,6 +148,54 @@ function mealSlotMeta(slot) {
   return HEALTH_MEAL_SLOTS.find((row) => row.slot === clean || row.mealType === clean) || HEALTH_MEAL_SLOTS[0];
 }
 
+function snackAdvice({ slot, kcalGap, waterGap, proteinGap, proteinGapText, kcalGapText } = {}) {
+  const key = String(slot || '').toLowerCase();
+  const morning = key === 'breakfast' || key === 'morning_snack';
+  const afternoon = key === 'afternoon_snack';
+  if (waterGap > 300) {
+    return {
+      tone: 'hydration',
+      fr: `Eau d'abord, puis encas simple si besoin: fruit ou yaourt.`,
+      en: `Water first, then a simple snack if needed: fruit or yogurt.`,
+    };
+  }
+  if (proteinGap > 14) {
+    return {
+      tone: 'protein',
+      fr: morning
+        ? `Il manque surtout ${proteinGapText} de proteines: fromage blanc + muesli ou skyr + banane.`
+        : `Il manque surtout ${proteinGapText} de proteines: fromage blanc, yaourt grec ou skyr + fruit.`,
+      en: morning
+        ? `Mostly missing ${proteinGapText} protein: fromage blanc + muesli or skyr + banana.`
+        : `Mostly missing ${proteinGapText} protein: fromage blanc, Greek yogurt or skyr + fruit.`,
+    };
+  }
+  if (kcalGap > 260) {
+    return {
+      tone: 'snack_energy',
+      fr: afternoon
+        ? `Il reste environ ${kcalGapText}: vise fruit + laitage, ou Belvita + yaourt si tu as besoin d'energie.`
+        : `Il reste environ ${kcalGapText}: fruit + laitage ou galettes de riz + fromage blanc.`
+      ,
+      en: afternoon
+        ? `About ${kcalGapText} left: aim for fruit + dairy, or Belvita + yogurt if you need energy.`
+        : `About ${kcalGapText} left: fruit + dairy or rice cakes + fromage blanc.`,
+    };
+  }
+  if (kcalGap < -280) {
+    return {
+      tone: 'light',
+      fr: `Tu es deja haut pour cette heure: eau, fruit leger ou legumes, pas de gros encas.`,
+      en: `You are already high for this time: water, light fruit or vegetables, no big snack.`,
+    };
+  }
+  return {
+    tone: 'steady',
+    fr: `Bon rythme: garde un encas mesurable et facile a repeter.`,
+    en: `Good pace: keep the snack measurable and easy to repeat.`,
+  };
+}
+
 export function composeHealthMealNotification({
   slot = 'breakfast',
   consumedKcal = 0,
@@ -171,6 +219,22 @@ export function composeHealthMealNotification({
   const proteinGapText = `${Math.max(0, Math.round(proteinGap))} g`;
   const titleBaseFr = meta.titleFr || 'Repas';
   const titleBaseEn = meta.titleEn || titleBaseFr;
+  const snackSlots = ['breakfast', 'morning_snack', 'afternoon_snack'];
+  const snack = snackSlots.includes(meta.slot)
+    ? snackAdvice({ slot: meta.slot, kcalGap, waterGap, proteinGap, proteinGapText, kcalGapText })
+    : null;
+
+  if (snack) {
+    return {
+      tone: snack.tone,
+      titleFr: withEmoji(`${titleBaseFr}: encas utile`, snack.tone === 'hydration' ? '💧' : snack.tone === 'protein' ? '💪' : snack.tone === 'light' ? '🟠' : '🍌', p.emojis),
+      titleEn: withEmoji(`${titleBaseEn}: useful snack`, snack.tone === 'hydration' ? '💧' : snack.tone === 'protein' ? '💪' : snack.tone === 'light' ? '🟠' : '🍌', p.emojis),
+      bodyFr: snack.fr,
+      bodyEn: snack.en,
+      slot: meta.slot,
+      mealType: meta.mealType,
+    };
+  }
 
   if (kcalGap < -280) {
     return {

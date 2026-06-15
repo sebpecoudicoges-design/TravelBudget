@@ -244,6 +244,16 @@
       if (ref?.parentNode === tabs) tabs.insertBefore(tab, ref.nextSibling);
       else tabs.appendChild(tab);
     }
+    if (tabs && !document.getElementById("tab-health")) {
+      const tab = document.createElement("div");
+      tab.id = "tab-health";
+      tab.className = "tab";
+      tab.textContent = txt("Sante", "Health");
+      tab.onclick = () => openHealthView();
+      const ref = document.getElementById("tab-nutrition") || document.getElementById("tab-work") || document.getElementById("tab-sport") || tabs.lastElementChild;
+      if (ref?.parentNode === tabs) tabs.insertBefore(tab, ref.nextSibling);
+      else tabs.appendChild(tab);
+    }
     const wrap = document.querySelector(".wrap") || document.body;
     if (!document.getElementById("view-nutrition")) {
       const view = document.createElement("div");
@@ -251,6 +261,15 @@
       view.className = "hidden";
       view.innerHTML = '<div id="nutrition-root" class="card"></div>';
       const ref = document.getElementById("view-work") || document.getElementById("view-sport") || wrap.lastElementChild;
+      if (ref?.parentNode === wrap) wrap.insertBefore(view, ref.nextSibling);
+      else wrap.appendChild(view);
+    }
+    if (!document.getElementById("view-health")) {
+      const view = document.createElement("div");
+      view.id = "view-health";
+      view.className = "hidden";
+      view.innerHTML = '<div id="health-root" class="card"></div>';
+      const ref = document.getElementById("view-nutrition") || document.getElementById("view-work") || document.getElementById("view-sport") || wrap.lastElementChild;
       if (ref?.parentNode === wrap) wrap.insertBefore(view, ref.nextSibling);
       else wrap.appendChild(view);
     }
@@ -275,6 +294,12 @@
       .tb-nutrition-health-day { display:grid; grid-template-columns:46px 1fr; gap:9px; align-items:center; padding:9px; border:1px solid rgba(148,163,184,.22); border-radius:8px; background:rgba(255,255,255,.04); }
       .tb-nutrition-health-bars { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:5px; align-items:end; height:42px; }
       .tb-nutrition-health-bars span { display:block; border-radius:5px 5px 2px 2px; min-height:5px; }
+      .tb-health-hero { display:grid; grid-template-columns:minmax(220px,.72fr) minmax(280px,1.28fr); gap:14px; align-items:stretch; }
+      .tb-health-ring { width:min(230px,72vw); aspect-ratio:1; border-radius:50%; display:grid; place-items:center; margin:auto; box-shadow:0 20px 54px rgba(15,23,42,.16); }
+      .tb-health-ring-inner { width:68%; aspect-ratio:1; border-radius:50%; display:grid; place-items:center; text-align:center; border:1px solid var(--border); background:var(--panel2); }
+      .tb-health-week { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:8px; align-items:end; }
+      .tb-health-bar { min-height:112px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,.04); display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:5px; padding:7px 5px; cursor:pointer; }
+      .tb-health-bar span { width:100%; border-radius:7px 7px 3px 3px; min-height:8px; }
       .tb-nutrition-shell button { min-width:0; }
       .tb-nutrition-shell .btn { white-space:normal; }
       @media (max-width: 860px) {
@@ -288,6 +313,8 @@
         .tb-nutrition-history-type-grid { grid-template-columns:1fr; }
         .tb-nutrition-timeline-row { grid-template-columns:18px minmax(0,1fr); gap:8px; }
         .tb-nutrition-health-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .tb-health-hero { grid-template-columns:1fr; }
+        .tb-health-week { grid-template-columns:repeat(4,minmax(0,1fr)); }
         .tb-nutrition-shell .tb-sport-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
       }
       @media (max-width: 460px) {
@@ -296,6 +323,7 @@
         .tb-nutrition-catalog-grid,
         .tb-nutrition-shell .tb-sport-stats { grid-template-columns:1fr; }
         .tb-nutrition-week-grid button { padding:6px 3px !important; font-size:10px !important; }
+        .tb-health-week { grid-template-columns:repeat(2,minmax(0,1fr)); }
       }
     `;
     document.head.appendChild(style);
@@ -313,6 +341,20 @@
       document.getElementById("view-nutrition")?.classList.remove("hidden");
     } catch (_) {}
     renderNutrition("tab-fallback");
+  }
+  function openHealthView() {
+    if (typeof window.showView === "function") {
+      window.showView("health");
+      return;
+    }
+    try { if (typeof activeView !== "undefined") activeView = "health"; } catch (_) {}
+    try { window.activeView = "health"; } catch (_) {}
+    try { if (typeof window.setActiveTab === "function") window.setActiveTab("health"); } catch (_) {}
+    try {
+      document.getElementById("tab-health")?.classList.add("active");
+      document.getElementById("view-health")?.classList.remove("hidden");
+    } catch (_) {}
+    renderHealth("tab-fallback");
   }
   function publishNutrition(reason) {
     if (!window.state) window.state = {};
@@ -781,6 +823,125 @@
     const hasItem = (itemsForDay || CACHE.items || []).some(item => String(item?.meal_id || "") === mealId);
     const label = String(meal.label || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     return !hasItem && (label === "eau" || label === "water");
+  }
+  function renderHealth(reason) {
+    ensureNutritionShell();
+    ensureNutritionStyles();
+    const root = document.getElementById("health-root");
+    if (!root) return;
+    if (!CACHE.loaded && !CACHE.loading) {
+      loadNutrition().then(() => {
+        if ((window.activeView || "") === "health") renderHealth("loaded");
+      }).catch(() => {});
+    }
+    const day = selectedDateISO();
+    const history = dailySummaries();
+    const healthWeek = healthHistoryRows(history, day);
+    const todayRow = healthWeek.find(row => row.day === day) || healthWeek[healthWeek.length - 1] || {};
+    const h = todayRow.health || {};
+    const kcal = n(h.kcal, todayRow.kcal);
+    const needsKcal = Math.max(1, n(todayRow.needsKcal, h.needsKcal));
+    const water = n(h.drinkWaterMl, todayRow.waterMl);
+    const sleepHours = n(h.sleepHours, sleepForDay(day).hours);
+    const protein = n(h.protein, todayRow.protein);
+    const proteinTarget = n(h.proteinTarget, Math.max(70, bodyWeight() * 1.35));
+    const score = Math.round(n(todayRow.score, h.score));
+    const color = todayRow.color || h.color || (score >= 78 ? "#22c55e" : score >= 58 ? "#f59e0b" : "#ef4444");
+    const balance = kcal - needsKcal;
+    const kcalNow = n(h.expectedKcalNow, needsKcal);
+    const balanceNow = n(h.currentBalance, kcal - kcalNow);
+    const insight = healthWeekInsight(healthWeek);
+    const scoreLabel = h.label || (score >= 78 ? txt("Equilibre", "Balanced") : score >= 58 ? txt("A surveiller", "Watch") : txt("A corriger", "To correct"));
+    root.innerHTML = `
+      <section class="tb-nutrition-shell">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+          <div>
+            <h2 style="margin:0;">${esc(txt("Sante", "Health"))}</h2>
+            <div class="muted" style="margin-top:4px;">${esc(txt("Score lisible reliant alimentation, sommeil, sport et travail.", "Readable score linking nutrition, sleep, sport and work."))}</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <label class="pill" style="display:flex;align-items:center;gap:6px;">${esc(txt("Date", "Date"))} <input id="health-date" type="date" value="${esc(day)}" style="width:142px;"></label>
+            <button class="btn" type="button" id="health-open-nutrition">${esc(txt("Saisir alimentation / sommeil", "Enter nutrition / sleep"))}</button>
+            <button class="btn" type="button" id="health-refresh">${esc(txt("Rafraichir", "Refresh"))}</button>
+          </div>
+        </div>
+        <div class="tb-health-hero" style="margin-top:14px;">
+          <div style="border:1px solid var(--border);border-radius:14px;padding:16px;background:linear-gradient(145deg,rgba(56,189,248,.12),rgba(34,197,94,.08)),var(--panel2);">
+            <div class="tb-health-ring" style="background:conic-gradient(${color} ${Math.max(0, Math.min(100, score))}%, rgba(148,163,184,.18) 0);">
+              <div class="tb-health-ring-inner">
+                <div>
+                  <div class="muted" style="font-size:12px;">${esc(scoreLabel)}</div>
+                  <strong style="font-size:44px;line-height:1;">${score}</strong>
+                  <div class="muted">/100</div>
+                </div>
+              </div>
+            </div>
+            <div class="muted" style="margin-top:12px;text-align:center;">${esc(h.advice || insight.advice)}</div>
+          </div>
+          <div style="display:grid;gap:10px;">
+            <div class="tb-sport-stats">
+              <div class="tb-sport-stat"><span>${esc(txt("Energie maintenant", "Energy now"))}</span><strong>${Math.round(kcal)} / ${Math.round(kcalNow)} kcal</strong></div>
+              <div class="tb-sport-stat"><span>${esc(txt("Jour complet", "Full day"))}</span><strong>${Math.round(kcal)} / ${Math.round(needsKcal)} kcal</strong></div>
+              <div class="tb-sport-stat"><span>${esc(txt("Balance actuelle", "Current balance"))}</span><strong>${Math.round(balanceNow)} kcal</strong></div>
+              <div class="tb-sport-stat"><span>${esc(txt("Balance jour", "Day balance"))}</span><strong>${Math.round(balance)} kcal</strong></div>
+              <div class="tb-sport-stat"><span>${esc(txt("Eau bue", "Drunk water"))}</span><strong>${Math.round(water)} / 2000 ml</strong></div>
+              <div class="tb-sport-stat"><span>${esc(txt("Proteines", "Protein"))}</span><strong>${Math.round(protein)} / ${Math.round(proteinTarget)} g</strong></div>
+              <div class="tb-sport-stat"><span>${esc(txt("Sommeil", "Sleep"))}</span><strong>${sleepHours ? `${Math.round(sleepHours * 10) / 10}h` : "-"}</strong></div>
+              <div class="tb-sport-stat"><span>${esc(txt("Charge", "Load"))}</span><strong>${Math.round(n(todayRow.sportKcal, 0) + n(todayRow.workKcal, 0))} kcal</strong></div>
+            </div>
+            <details open style="border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--panel2);">
+              <summary style="cursor:pointer;font-weight:900;">${esc(txt("Comprendre le score", "Understand the score"))}</summary>
+              <div class="tb-sport-stats" style="margin-top:10px;">
+                <div class="tb-sport-stat"><span>${esc(txt("Energie", "Energy"))}</span><strong>${Math.round(n(h.kcalScore, 0))} / 42</strong></div>
+                <div class="tb-sport-stat"><span>${esc(txt("Eau", "Water"))}</span><strong>${Math.round(n(h.hydrationScore, 0))} / 24</strong></div>
+                <div class="tb-sport-stat"><span>${esc(txt("Proteines", "Protein"))}</span><strong>${Math.round(n(h.proteinScore, 0))} / 18</strong></div>
+                <div class="tb-sport-stat"><span>${esc(txt("Sommeil", "Sleep"))}</span><strong>${Math.round(n(h.sleepScore, 0))} / 18</strong></div>
+                <div class="tb-sport-stat"><span>${esc(txt("Base metabolique", "BMR"))}</span><strong>${Math.round(n(h.baseline, baseline().bmr))} kcal</strong></div>
+                <div class="tb-sport-stat"><span>${esc(txt("Sport + travail", "Sport + work"))}</span><strong>${Math.round(n(h.activityKcal, todayRow.sportKcal + todayRow.workKcal))} kcal</strong></div>
+              </div>
+            </details>
+          </div>
+        </div>
+        <div style="border:1px solid var(--border);border-radius:14px;padding:14px;background:linear-gradient(180deg,rgba(139,92,246,.08),rgba(56,189,248,.05)),var(--panel2);margin-top:14px;">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px;">
+            <div>
+              <h3 style="margin:0;">${esc(txt("Tendance semaine", "Weekly trend"))}</h3>
+              <div class="muted" style="font-size:12px;margin-top:3px;">${esc(insight.advice)}</div>
+            </div>
+            <span class="pill" style="border-color:${insight.trend >= 0 ? "#22c55e" : "#f59e0b"};color:${insight.trend >= 0 ? "#22c55e" : "#f59e0b"};">${insight.trend >= 0 ? "+" : ""}${Math.round(insight.trend)} pts</span>
+          </div>
+          <div class="tb-health-week">
+            ${healthWeek.map(row => {
+              const rowColor = row.color || "#38bdf8";
+              const height = Math.max(8, Math.min(92, n(row.score, 0) * 0.92));
+              const detail = `${row.day} | score ${Math.round(row.score)}/100 | kcal ${Math.round(n(row.health?.kcal, row.kcal))}/${Math.round(row.needsKcal)} | eau ${Math.round(n(row.health?.drinkWaterMl, row.waterMl))} ml | sommeil ${n(row.health?.sleepHours, sleepForDay(row.day).hours) || "-"}h | charge ${Math.round(n(row.sportKcal, 0) + n(row.workKcal, 0))} kcal`;
+              return `<button class="tb-health-bar" type="button" data-health-date="${esc(row.day)}" title="${esc(detail)}" style="${row.day === day ? `border-color:${rowColor};` : ""}">
+                <span style="height:${height}px;background:linear-gradient(180deg,${rowColor},#38bdf8);"></span>
+                <strong>${Math.round(row.score)}</strong>
+                <small>${esc(row.day.slice(5).replace("-", "/"))}</small>
+              </button>`;
+            }).join("")}
+          </div>
+        </div>
+      </section>`;
+    const dateInput = root.querySelector("#health-date");
+    if (dateInput) dateInput.onchange = () => {
+      CACHE.selectedDate = String(dateInput.value || todayISO()).slice(0, 10);
+      renderHealth("date");
+    };
+    root.querySelectorAll("[data-health-date]").forEach(btn => {
+      btn.onclick = () => {
+        CACHE.selectedDate = btn.getAttribute("data-health-date") || day;
+        renderHealth("bar");
+      };
+    });
+    const openNutrition = root.querySelector("#health-open-nutrition");
+    if (openNutrition) openNutrition.onclick = () => openNutritionView();
+    const refresh = root.querySelector("#health-refresh");
+    if (refresh) refresh.onclick = async () => {
+      await loadNutrition({ force: true });
+      renderHealth("refresh");
+    };
   }
   function renderNutrition(reason) {
     ensureNutritionShell();
@@ -1322,6 +1483,7 @@
       await loadNutrition({ force: true });
       try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
       try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
+      try { if ((window.activeView || "") === "health") renderHealth("save"); } catch (_) {}
       renderNutrition("save");
     } catch (e) {
       CACHE.error = e?.message || String(e);
@@ -1353,6 +1515,7 @@
       await loadNutrition({ force: true });
       try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
       try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
+      try { if ((window.activeView || "") === "health") renderHealth("water-only"); } catch (_) {}
       renderNutrition("water-only");
     } catch (e) {
       CACHE.error = e?.message || String(e);
@@ -1392,6 +1555,8 @@
     }
     publishNutrition("sleep");
     try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+    try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
+    try { if ((window.activeView || "") === "health") renderHealth("sleep"); } catch (_) {}
     renderNutrition("sleep");
   }
   async function deleteNutritionItem(id) {
@@ -1406,6 +1571,7 @@
         saveLocalMeals(loadLocalMeals().filter(row => String(row.item?.id || "") !== key));
       }
       await loadNutrition({ force: true });
+      try { if ((window.activeView || "") === "health") renderHealth("delete"); } catch (_) {}
       renderNutrition("delete");
     } catch (e) {
       CACHE.error = e?.message || String(e);
@@ -1414,6 +1580,7 @@
   }
 
   window.renderNutrition = renderNutrition;
+  window.renderHealth = renderHealth;
   window.tbReloadNutrition = async function tbReloadNutrition() {
     await loadNutrition({ force: true });
     return { meals: CACHE.meals.slice(), items: CACHE.items.slice() };

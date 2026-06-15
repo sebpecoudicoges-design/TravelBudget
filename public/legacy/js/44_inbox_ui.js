@@ -636,12 +636,18 @@
       const healthRows = healthMealSlots()
         .filter((slot) => hhmm >= String(slot.time || '23:59'))
         .slice(-1)
-        .map((slot) => ({
-          notificationKey: `health-meal:${slot.slot}:${day}`,
-          title: tr('Point alimentation', 'Nutrition check'),
-          body: tr('Un rappel simple pour ajuster eau, energie et proteines selon l’heure.', 'A simple reminder to adjust water, energy and protein for this time.'),
-          view: 'nutrition',
-        }));
+        .map((slot) => {
+          const summary = nutritionNotificationSummary();
+          const composed = window.Core?.notificationRules?.composeHealthMealNotification
+            ? window.Core.notificationRules.composeHealthMealNotification({ slot: slot?.slot || slot?.mealType || slot, prefs, ...summary })
+            : null;
+          return {
+            notificationKey: `health-meal:${slot.slot}:${day}`,
+            title: composed ? tr(composed.titleFr, composed.titleEn) : tr('Point alimentation', 'Nutrition check'),
+            body: composed ? tr(composed.bodyFr, composed.bodyEn) : tr('Un rappel simple pour ajuster eau, energie et proteines selon l’heure.', 'A simple reminder to adjust water, energy and protein for this time.'),
+            view: 'nutrition',
+          };
+        });
       window.tbSetNotificationBucket('health-meal', healthRows);
     } else {
       window.tbSetNotificationBucket('health-meal', []);
