@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BudgetPacker - Demo interactive</title>
-  <meta name="description" content="Demo publique interactive de BudgetPacker : budget voyage, transactions, documents, patrimoine, split et arbitrage multi-devise." />
+  <title>BudgetPacker - Pilotage budget, sante et documents</title>
+  <meta name="description" content="Demo publique interactive de BudgetPacker : pilotage budget, analyse des taux, conversions, documents, patrimoine, sport, alimentation et sante." />
   <style>
     :root {
       color-scheme: light;
@@ -586,10 +586,10 @@
   <main>
     <section class="shell hero" id="top">
       <div>
-        <span class="eyebrow" data-i18n="hero.eyebrow">BudgetPacker - demo publique, donnees fictives</span>
-        <h1 data-i18n="hero.title">BudgetPacker, l'app budget pour voyager sans perdre le fil.</h1>
+        <span class="eyebrow" data-i18n="hero.eyebrow">BudgetPacker V2 - demo publique, donnees fictives</span>
+        <h1 data-i18n="hero.title">BudgetPacker, le cockpit personnel budget, documents et sante.</h1>
         <p class="lead" data-i18n="hero.lead">
-          Suivi de tresorerie, transactions, voyages partages, cautions, documents et decisions multi-devise dans une app pensee pour les semaines ou tout bouge.
+          Une app modulaire pour relier cashflow, transactions, taux de change, documents, patrimoine, sport, alimentation, sommeil et charge de travail dans une lecture simple.
         </p>
         <div class="hero-actions">
           <a class="btn primary" href="#demo" data-i18n="hero.primary">Ouvrir la demo</a>
@@ -607,9 +607,9 @@
           </div>
         </div>
         <div class="metrics">
-          <div class="metric"><strong data-i18n="metric.fx.title">Multi-devise</strong><span data-i18n="metric.fx.body">AUD, EUR, JPY et devise de base</span></div>
+          <div class="metric"><strong data-i18n="metric.fx.title">Analyse FX</strong><span data-i18n="metric.fx.body">Taux, opportunites et conversions</span></div>
           <div class="metric"><strong data-i18n="metric.docs.title">Documents Hub</strong><span data-i18n="metric.docs.body">Tags, dossiers, preuves liees</span></div>
-          <div class="metric"><strong data-i18n="metric.trip.title">Voyage</strong><span data-i18n="metric.trip.body">Budget, split, remboursements</span></div>
+          <div class="metric"><strong data-i18n="metric.trip.title">Vie mobile</strong><span data-i18n="metric.trip.body">Budget, split, remboursements</span></div>
           <div class="metric"><strong data-i18n="metric.safe.title">App + offline</strong><span data-i18n="metric.safe.body">Actions en attente et lecture hors ligne</span></div>
         </div>
         <div class="trust-strip" aria-label="Points de confiance">
@@ -641,7 +641,7 @@
               <div class="mock-grid">
                 <div class="panel">
                   <small data-i18n="mock.cashflow">Cashflow estime</small>
-                  <h3 id="mockCash">3 470 AUD</h3>
+                  <h3 id="mockCash">3 470 EUR</h3>
                   <div class="bars">
                     <div class="bar"><i id="mockBarA" style="width:70%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
                     <div class="bar"><i id="mockBarB" style="width:44%;background:linear-gradient(90deg,var(--amber),var(--pink));"></i></div>
@@ -650,7 +650,7 @@
                 </div>
                 <div class="panel">
                   <small data-i18n="mock.signal">Signal du jour</small>
-                  <h3 id="mockSignal">Garder AUD</h3>
+                  <h3 id="mockSignal">Surveiller taux</h3>
                 </div>
               </div>
               <div class="panel">
@@ -672,28 +672,28 @@
     <section id="demo" class="band">
       <div class="shell">
         <div class="section-head">
-          <h2 data-i18n="demo.title">Une demo que l'on peut manipuler.</h2>
-          <p data-i18n="demo.lead">Les valeurs sont fictives. Change le scenario, ajuste le salaire AUD et la part que tu gardes : la lecture se met a jour comme une mini-version du produit.</p>
+          <h2 data-i18n="demo.title">Analyse taux & conversions, sans le limiter a un pays.</h2>
+          <p data-i18n="demo.lead">Les valeurs sont fictives. Change le scenario, ajuste le montant source, la reserve et le taux cible : la lecture se met a jour comme une mini-version du moteur d'analyse.</p>
         </div>
 
         <div class="interactive">
           <div class="control-card">
             <div class="scenario-switch" role="tablist" aria-label="Scenarios">
-              <button class="scenario-btn active" type="button" data-scenario="pvt" data-i18n="scenario.pvt">PVT Australie</button>
+              <button class="scenario-btn active" type="button" data-scenario="pvt" data-i18n="scenario.pvt">Analyse FX</button>
               <button class="scenario-btn" type="button" data-scenario="trip" data-i18n="scenario.trip">Voyage partage</button>
               <button class="scenario-btn" type="button" data-scenario="docs" data-i18n="scenario.docs">Documents</button>
             </div>
             <div class="range-grid">
               <div class="range-line">
-                <label><span id="controlLabelA" data-i18n="demo.salary">Salaire hebdo AUD</span><output id="salaryOut">1200 AUD</output></label>
+                <label><span id="controlLabelA" data-i18n="demo.salary">Montant source</span><output id="salaryOut">1200 EUR</output></label>
                 <input id="salaryRange" type="range" min="700" max="2200" step="50" value="1200" />
               </div>
               <div class="range-line">
-                <label><span id="controlLabelB" data-i18n="demo.keep">AUD a garder</span><output id="keepOut">500 AUD</output></label>
+                <label><span id="controlLabelB" data-i18n="demo.keep">Reserve a garder</span><output id="keepOut">500 EUR</output></label>
                 <input id="keepRange" type="range" min="0" max="2200" step="50" value="500" />
               </div>
               <div class="range-line">
-                <label><span id="controlLabelC" data-i18n="demo.rate">Taux AUD/EUR simule</span><output id="rateOut">0.615 EUR</output></label>
+                <label><span id="controlLabelC" data-i18n="demo.rate">Taux cible simule</span><output id="rateOut">1.085 USD</output></label>
                 <input id="rateRange" type="range" min="0.56" max="0.68" step="0.005" value="0.615" />
               </div>
             </div>
@@ -702,15 +702,15 @@
           <div class="result-card">
             <div class="result-top">
               <div>
-                <h3 id="scenarioTitle">PVT Australie</h3>
-                <p id="scenarioText">Tu arbitres chaque semaine entre garder du cash AUD et convertir une partie en EUR.</p>
+                <h3 id="scenarioTitle">Analyse FX</h3>
+                <p id="scenarioText">Tu suis un taux, gardes une reserve et identifies le montant pertinent a convertir.</p>
               </div>
-              <span class="decision-pill" id="decisionPill">Garder AUD</span>
+              <span class="decision-pill" id="decisionPill">Surveiller taux</span>
             </div>
             <div class="result-kpis">
-              <div class="kpi"><small id="resultLabelA" data-i18n="demo.convert">A convertir</small><strong id="convertAud">700 AUD</strong></div>
-              <div class="kpi"><small id="resultLabelB" data-i18n="demo.eur">Equivalent EUR</small><strong id="convertEur">431 EUR</strong></div>
-              <div class="kpi"><small id="resultLabelC" data-i18n="demo.buffer">Buffer AUD</small><strong id="bufferAud">500 AUD</strong></div>
+              <div class="kpi"><small id="resultLabelA" data-i18n="demo.convert">A convertir</small><strong id="convertAud">700 EUR</strong></div>
+              <div class="kpi"><small id="resultLabelB" data-i18n="demo.eur">Equivalent cible</small><strong id="convertEur">760 USD</strong></div>
+              <div class="kpi"><small id="resultLabelC" data-i18n="demo.buffer">Reserve</small><strong id="bufferAud">500 EUR</strong></div>
             </div>
             <div class="demo-table" id="scenarioFeed"></div>
             <div class="bar" style="margin-top:14px;"><i id="confidenceBar" style="width:68%;background:linear-gradient(90deg,var(--green),var(--cyan));"></i></div>
@@ -722,13 +722,13 @@
     <section id="modules" class="band">
       <div class="shell">
         <div class="section-head">
-          <h2 data-i18n="modules.title">Les modules couvrent les vrais cas du voyage.</h2>
-          <p data-i18n="modules.lead">Budget quotidien, partage Trip, documents, cautions, patrimoine et notifications : chaque brique nourrit les autres au lieu de rester isolee.</p>
+          <h2 data-i18n="modules.title">Les modules couvrent le pilotage personnel complet.</h2>
+          <p data-i18n="modules.lead">Budget, conversions, documents, cautions, patrimoine, sport, alimentation, sommeil et notifications : chaque brique nourrit les autres au lieu de rester isolee.</p>
         </div>
         <div class="case-grid" aria-label="Cas d'usage principaux">
-          <article class="case-card"><strong data-i18n="case.one.kicker">Budget</strong><h3 data-i18n="case.one.title">Savoir ce qu'il reste vraiment</h3><p data-i18n="case.one.body">Wallets, transactions, budget journalier et projections donnent une lecture rapide de la tresorerie.</p></article>
-          <article class="case-card"><strong data-i18n="case.two.kicker">Trip</strong><h3 data-i18n="case.two.title">Partager sans casser les comptes</h3><p data-i18n="case.two.body">Invitations, depenses partagees et validations evitent les ajouts silencieux chez les autres membres.</p></article>
-          <article class="case-card"><strong data-i18n="case.three.kicker">Cautions</strong><h3 data-i18n="case.three.title">Suivre ce qui doit revenir</h3><p data-i18n="case.three.body">Les cautions payees, remboursements, ecarts, commentaires et documents restent rattaches au dossier.</p></article>
+          <article class="case-card"><strong data-i18n="case.one.kicker">Cashflow</strong><h3 data-i18n="case.one.title">Savoir ce qu'il reste vraiment</h3><p data-i18n="case.one.body">Wallets, transactions, budget journalier et projections donnent une lecture rapide de la tresorerie.</p></article>
+          <article class="case-card"><strong data-i18n="case.two.kicker">Conversions</strong><h3 data-i18n="case.two.title">Decider quand convertir</h3><p data-i18n="case.two.body">Le suivi des taux sert a arbitrer les conversions, pas a raconter un scenario pays unique.</p></article>
+          <article class="case-card"><strong data-i18n="case.three.kicker">Sante</strong><h3 data-i18n="case.three.title">Relier energie et charge</h3><p data-i18n="case.three.body">Alimentation, sommeil, sport et travail alimentent un recap simple pour suivre la semaine.</p></article>
         </div>
         <div class="modules-layout">
           <div class="tabs" role="tablist">
@@ -765,7 +765,7 @@
           <article class="case-card"><strong data-i18n="health.sleep.kicker">Sommeil</strong><h3 data-i18n="health.sleep.title">La bonne nuit au bon jour</h3><p data-i18n="health.sleep.body">La nuit du 13 nourrit le suivi du 14, avec objectif et historique visuel.</p></article>
           <article class="case-card"><strong data-i18n="health.load.kicker">Charge</strong><h3 data-i18n="health.load.title">Sport + travail</h3><p data-i18n="health.load.body">Les kcal de sport et de travail ajustent le besoin du jour et le score sante.</p></article>
           <article class="case-card"><strong data-i18n="health.work.kicker">Travail</strong><h3 data-i18n="health.work.title">Journees physiques</h3><p data-i18n="health.work.body">Duree, MET et kcal de travail sont historises et comptent dans le besoin energetique.</p></article>
-          <article class="case-card"><strong data-i18n="health.nudges.kicker">Notifications</strong><h3 data-i18n="health.nudges.title">5 rappels utiles</h3><p data-i18n="health.nudges.body">Petit dej, 10h, dejeuner, gouter et diner : des nudges courts selon l'heure.</p></article>
+          <article class="case-card"><strong data-i18n="health.nudges.kicker">Assistant encas</strong><h3 data-i18n="health.nudges.title">Collations simples</h3><p data-i18n="health.nudges.body">Fromage blanc, muesli, fruit, Belvita ou galettes : suggestions rapides selon l'heure et le deficit.</p></article>
           <article class="case-card"><strong data-i18n="health.sandbox.kicker">Ajustement</strong><h3 data-i18n="health.sandbox.title">Series modifiables</h3><p data-i18n="health.sandbox.body">Pendant ou apres la seance, les charges peuvent etre saisies pour recalculer les kcal.</p></article>
         </div>
       </div>
@@ -775,7 +775,7 @@
       <div class="shell">
         <div class="section-head">
           <h2 data-i18n="workflow.title">Un parcours simple : capturer, classer, decider.</h2>
-          <p data-i18n="workflow.lead">Le projet vise a reduire la friction : une depense ou un document arrive, puis il trouve sa place dans le budget, le voyage ou le patrimoine.</p>
+          <p data-i18n="workflow.lead">Le projet vise a reduire la friction : une transaction, un document, une seance ou une entree sante arrive, puis rejoint le bon module.</p>
         </div>
         <div class="workflow-grid">
           <article class="workflow-card"><b>1</b><h3 data-i18n="workflow.one.title">Capturer</h3><p data-i18n="workflow.one.body">Transaction, recu WhatsApp, facture PDF, depense Trip ou mouvement interne.</p></article>
@@ -792,13 +792,14 @@
           <p data-i18n="app.lead">La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.</p>
         </div>
         <div class="app-grid">
-          <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body">APK debug 10.5.29 build 20260615-180000 disponible pour les tests Android.</p></article>
+          <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body">APK debug 10.5.30 build 20260615-183000 disponible pour les tests Android.</p></article>
           <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.</p></article>
-          <article class="app-card"><strong>10.5.29</strong><h3 data-i18n="app.version.title">Nutrition + Sport plus rapides</h3><p data-i18n="app.version.body">Favoris, recents, assistant repas actuel, recap sante semaine et catalogues encore enrichis.</p></article>
+          <article class="app-card"><strong>10.5.30</strong><h3 data-i18n="app.version.title">Assistant encas + sante pro</h3><p data-i18n="app.version.body">Suggestions d'encas simples et suivi sante semaine plus lisible, avec correction console Settings.</p></article>
         </div>
         <div class="changelog">
           <h3 data-i18n="release.title">Dernieres versions</h3>
           <div class="release-list">
+            <div class="release-row"><strong>10.5.30</strong><span data-i18n="release.10530">Assistant encas centre sur fromage blanc, muesli, gateaux et fruits, recap Sante semaine plus professionnel et correction du chargement WhatsApp Settings.</span></div>
             <div class="release-row"><strong>10.5.29</strong><span data-i18n="release.10529">Favoris et recents Nutrition/Sport, assistant quoi manger maintenant, recap Sante semaine et nouveaux aliments/exercices sources sans doublons.</span></div>
             <div class="release-row"><strong>10.5.28</strong><span data-i18n="release.10528">Bibliotheques Sport et Alimentation enrichies, portions realistes revues, tags sources USDA/FoodData Central et Compendium MET, sans doublons de cles.</span></div>
             <div class="release-row"><strong>10.5.27</strong><span data-i18n="release.10527">Sante par jour dans Alimentation, sommeil persiste en SQL, eau 2L par jour historisee et calcul KPI Sante partage avec le Dashboard.</span></div>
@@ -851,9 +852,9 @@
         <div class="cta">
           <div>
             <h2 data-i18n="app.cta.title">App Android en test interne.</h2>
-            <p data-i18n="app.cta.body">Telecharge l'APK versionnee 10.5.29 build 20260615-180000 depuis Supabase Storage pour tester la derniere build Android.</p>
+            <p data-i18n="app.cta.body">Telecharge l'APK versionnee 10.5.30 build 20260615-183000 depuis Supabase Storage pour tester la derniere build Android.</p>
           </div>
-          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.29-20260615-180000-debug.apk" download data-i18n="app.cta.button">Telecharger l'APK 10.5.29</a>
+          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.30-20260615-183000-debug.apk" download data-i18n="app.cta.button">Telecharger l'APK 10.5.30</a>
         </div>
       </div>
     </section>
@@ -909,50 +910,50 @@
       const copy = {
         fr: {
           "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.app": "App", "nav.tech": "Technique", "nav.cta": "Tester la demo",
-          "hero.eyebrow": "BudgetPacker - demo publique, donnees fictives",
-          "hero.title": "BudgetPacker, l'app budget pour voyager sans perdre le fil.",
-          "hero.lead": "Suivi de tresorerie, transactions, voyages partages, cautions, documents et decisions multi-devise dans une app pensee pour les semaines ou tout bouge.",
+          "hero.eyebrow": "BudgetPacker V2 - demo publique, donnees fictives",
+          "hero.title": "BudgetPacker, le cockpit personnel budget, documents et sante.",
+          "hero.lead": "Une app modulaire pour relier cashflow, transactions, taux de change, documents, patrimoine, sport, alimentation, sommeil et charge de travail dans une lecture simple.",
           "hero.primary": "Ouvrir la demo", "hero.secondary": "Telecharger l'APK", "hero.apk": "App Android",
           "hero.note": "La page ci-dessous ne charge aucune donnee personnelle : elle montre le produit, les modules et la logique technique.",
           "auth.title": "Acceder a l'app complete", "auth.body": "La demo est publique. Pour synchroniser tes donnees, cree un compte ou connecte-toi.", "auth.signup": "Creer un compte", "auth.login": "Se connecter",
-          "metric.fx.title": "Multi-devise", "metric.fx.body": "AUD, EUR, JPY et devise de base",
+          "metric.fx.title": "Analyse FX", "metric.fx.body": "Taux, opportunites et conversions",
           "metric.docs.title": "Documents Hub", "metric.docs.body": "Tags, dossiers, preuves liees",
-          "metric.trip.title": "Voyage", "metric.trip.body": "Budget, split, remboursements",
+          "metric.trip.title": "Vie mobile", "metric.trip.body": "Budget, split, remboursements",
           "metric.safe.title": "App + offline", "metric.safe.body": "Actions en attente et lecture hors ligne",
           "trust.private.title": "Donnees privees", "trust.private.body": "Supabase Auth, RLS et stockage separent les comptes de chaque utilisateur.",
           "trust.mobile.title": "Mobile en test", "trust.mobile.body": "APK versionnee, flow de build nettoye et lien public de telechargement.",
           "trust.offline.title": "Usage terrain", "trust.offline.body": "Lecture hors ligne, file d'attente et synchronisation au retour reseau.",
           "mock.cashflow": "Cashflow estime", "mock.signal": "Signal du jour", "mock.projection": "Projection", "mock.feed": "Flux recent",
-          "demo.title": "Une demo que l'on peut manipuler.",
-          "demo.lead": "Les valeurs sont fictives. Change le scenario, ajuste le salaire AUD et la part que tu gardes : la lecture se met a jour comme une mini-version du produit.",
-          "scenario.pvt": "PVT Australie", "scenario.trip": "Voyage partage", "scenario.docs": "Documents",
-          "demo.salary": "Salaire hebdo AUD", "demo.keep": "AUD a garder", "demo.rate": "Taux AUD/EUR simule",
-          "demo.convert": "A convertir", "demo.eur": "Equivalent EUR", "demo.buffer": "Buffer AUD",
-          "modules.title": "Les modules couvrent les vrais cas du voyage.",
-          "modules.lead": "Budget quotidien, partage Trip, documents, cautions, patrimoine et notifications : chaque brique nourrit les autres au lieu de rester isolee.",
-          "case.one.kicker": "Budget", "case.one.title": "Savoir ce qu'il reste vraiment", "case.one.body": "Wallets, transactions, budget journalier et projections donnent une lecture rapide de la tresorerie.",
-          "case.two.kicker": "Trip", "case.two.title": "Partager sans casser les comptes", "case.two.body": "Invitations, depenses partagees et validations evitent les ajouts silencieux chez les autres membres.",
-          "case.three.kicker": "Cautions", "case.three.title": "Suivre ce qui doit revenir", "case.three.body": "Les cautions payees, remboursements, ecarts, commentaires et documents restent rattaches au dossier.",
+          "demo.title": "Analyse taux & conversions, sans le limiter a un pays.",
+          "demo.lead": "Les valeurs sont fictives. Change le scenario, ajuste le montant source, la reserve et le taux cible : la lecture se met a jour comme une mini-version du moteur d'analyse.",
+          "scenario.pvt": "Analyse FX", "scenario.trip": "Depense partagee", "scenario.docs": "Documents",
+          "demo.salary": "Montant source", "demo.keep": "Reserve a garder", "demo.rate": "Taux cible simule",
+          "demo.convert": "A convertir", "demo.eur": "Equivalent cible", "demo.buffer": "Reserve",
+          "modules.title": "Les modules couvrent le pilotage personnel complet.",
+          "modules.lead": "Budget, conversions, documents, cautions, patrimoine, sport, alimentation, sommeil et notifications : chaque brique nourrit les autres au lieu de rester isolee.",
+          "case.one.kicker": "Cashflow", "case.one.title": "Savoir ce qu'il reste vraiment", "case.one.body": "Wallets, transactions, budget journalier et projections donnent une lecture rapide de la tresorerie.",
+          "case.two.kicker": "Conversions", "case.two.title": "Decider quand convertir", "case.two.body": "Le suivi des taux sert a arbitrer les conversions, pas a raconter un scenario pays unique.",
+          "case.three.kicker": "Sante", "case.three.title": "Relier energie et charge", "case.three.body": "Alimentation, sommeil, sport et travail alimentent un recap simple pour suivre la semaine.",
           "health.title": "Le suivi sante reste simple : energie, eau, sommeil, charge.",
           "health.lead": "BudgetPacker relie alimentation, sport, travail physique et sommeil pour afficher un score comprehensible, pas une usine a gaz.",
           "health.nutrition.kicker": "Alimentation", "health.nutrition.title": "Consomme vs besoin", "health.nutrition.body": "Anneau kcal, repas par moment, eau bue separee, proteines et historique lisible.",
           "health.sleep.kicker": "Sommeil", "health.sleep.title": "La bonne nuit au bon jour", "health.sleep.body": "La nuit du 13 nourrit le suivi du 14, avec objectif et historique visuel.",
           "health.load.kicker": "Charge", "health.load.title": "Sport + travail", "health.load.body": "Les kcal de sport et de travail ajustent le besoin du jour et le score sante.",
           "health.work.kicker": "Travail", "health.work.title": "Journees physiques", "health.work.body": "Duree, MET et kcal de travail sont historises et comptent dans le besoin energetique.",
-          "health.nudges.kicker": "Notifications", "health.nudges.title": "5 rappels utiles", "health.nudges.body": "Petit dej, 10h, dejeuner, gouter et diner : des nudges courts selon l'heure.",
+          "health.nudges.kicker": "Assistant encas", "health.nudges.title": "Collations simples", "health.nudges.body": "Fromage blanc, muesli, fruit, Belvita ou galettes : suggestions rapides selon l'heure et le deficit.",
           "health.sandbox.kicker": "Ajustement", "health.sandbox.title": "Series modifiables", "health.sandbox.body": "Pendant ou apres la seance, les charges peuvent etre saisies pour recalculer les kcal.",
           "workflow.title": "Un parcours simple : capturer, classer, decider.",
-          "workflow.lead": "Le projet vise a reduire la friction : une depense ou un document arrive, puis il trouve sa place dans le budget, le voyage ou le patrimoine.",
-          "workflow.one.title": "Capturer", "workflow.one.body": "Transaction, recu WhatsApp, facture PDF, depense Trip ou mouvement interne.",
-          "workflow.two.title": "Relier", "workflow.two.body": "Les preuves peuvent etre liees aux transactions, assets ou depenses partagees.",
-          "workflow.three.title": "Piloter", "workflow.three.body": "Analyse, cashflow, conversion FX et documents importants restent lisibles.",
+          "workflow.lead": "Le projet vise a reduire la friction : une transaction, un document, une seance ou une entree sante arrive, puis rejoint le bon module.",
+          "workflow.one.title": "Capturer", "workflow.one.body": "Transaction, recu WhatsApp, facture PDF, seance sport, sommeil, repas ou mouvement interne.",
+          "workflow.two.title": "Relier", "workflow.two.body": "Les preuves, categories, charges et donnees sante alimentent le budget, les assets et les KPI.",
+          "workflow.three.title": "Piloter", "workflow.three.body": "Analyse, cashflow, conversion FX, documents et sante restent lisibles au meme endroit.",
           "app.title": "App Android de test, lien direct et version lisible.",
           "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
-          "app.apk.title": "Build Android", "app.apk.body": "APK debug 10.5.29 build 20260615-180000 disponible pour les tests Android.",
+          "app.apk.title": "Build Android", "app.apk.body": "APK debug 10.5.30 build 20260615-183000 disponible pour les tests Android.",
           "app.offline.title": "Mode hors ligne", "app.offline.body": "Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.",
-          "app.version.title": "Nutrition + Sport plus rapides", "app.version.body": "Favoris, recents, assistant repas actuel, recap sante semaine et catalogues encore enrichis.",
-          "release.title": "Dernieres versions", "release.10529": "Favoris et recents Nutrition/Sport, assistant quoi manger maintenant, recap Sante semaine et nouveaux aliments/exercices sources sans doublons.", "release.10528": "Bibliotheques Sport et Alimentation enrichies, portions realistes revues, tags sources USDA/FoodData Central et Compendium MET, sans doublons de cles.", "release.10527": "Sante par jour dans Alimentation, sommeil persiste en SQL, eau 2L par jour historisee et calcul KPI Sante partage avec le Dashboard.", "release.10526": "Profil Sante centralise : 59 kg, 162 cm et date de naissance en SQL Settings, puis lecture commune dans Sport, Nutrition, Travail, notifications et KPI Sante.", "release.10525": "Travail recalcule en kcal nettes MET - 1, date de naissance sauvegardee pour le BMR, journees travail SQL recalculees et KPI Sante hydrate Nutrition/Sommeil au demarrage.", "release.10524": "Score Sante corrige : l'energie tolere mieux les ecarts normaux selon l'heure et le sommeil valorise correctement une nuit de 7h a 9h.", "release.10523": "Bibliotheque Sport globale enrichie par familles : halteres, elastiques, poids du corps, machines, cardio, boxe, barre, kettlebell et mobilite. La seance Corde a sauter du 12/06 retrouve ses series.", "release.10522": "Bibliotheque Sport enrichie avec rowing haltere et exercices halteres, reprise automatique du dernier poids saisi par exercice et elastiques verrouilles a 0 kg.", "release.10521": "Sport permet de saisir la charge pendant la seance, d'ajuster les series faites en sandbox, recalcule correctement les kcal sac de frappe et la page projet met mieux en avant Alimentation, Sommeil, Sante et Travail.", "release.10520": "Notifications Alimentation/Sante aux 5 moments clés, sommeil lu sur la bonne nuit, KPI nutrition rafraichi apres saisie et MET sac de frappe passe a 12.8 avec recalcul des seances.", "release.10519": "Sommeil rattache a la nuit precedente, KPI Sante detaille les points du score et page projet met en avant Travail, Alimentation, Sommeil et Sante.", "release.10518": "KPI Sante explicable, besoin kcal proportionne a l'heure, historique Nutrition en barres hover, sommeil vs objectif et catalogue retire.", "release.10517": "Saisie Sommeil dans Nutrition, KPI Sante plus homogene visuellement et score enrichi avec recuperation.", "release.10516": "Nutrition mobile responsive, Pain perdu en bibliotheque SQL, hydratation eau bue separee et KPI Sante Dashboard sport/travail/alimentation.", "release.10515": "Catalogue Nutrition enrichi avec 101 plats publics, tags exploites dans les filtres et fallback mobile plus complet.", "release.10514": "Nutrition V2 visuelle : anneau kcal, timeline repas, assistant simple, catalogue filtre et mini semaine analytique.", "release.10513": "UX Nutrition plus app utilisateur, modification des repas, besoins par moment et portions realistes.", "release.10512": "Date par defaut aujourd hui, historique par categorie et comparaison besoins/consomme plus visuelle.", "release.10511": "Hydratation separee, 307 aliments Nutrition, burgers/bieres et balance kcal base + sport + travail.", "release.10510": "Recherche Alimentation stable, portions et bibliotheque enrichie.", "release.1059": "Correctif Alimentation et fusion Sport du jour en date locale.", "release.1058": "Premier ecran Nutrition et fusion des seances Sport du jour.", "release.1057": "Bibliotheque Sport SQL avec cache offline, exercices boxe et socle Nutrition aliments/repas/macros.", "release.1056": "APK Android a jour, Sport supprime mieux les seances, estime les reps/circuits/AMRAP et fiabilise le clic Marquer comme paye offline.", "release.1055": "Cashflow previsionnel, test notifications simplifie et file offline plus lisible.", "release.1054": "Bibliotheque Sport enrichie : corde a sauter, ping-pong, abdos/core et saisie plus directe.", "release.1053": "Analyse compare le budget consomme a la projection et durcit le refresh des donnees KPI/Analyse.", "release.1052": "Analyse exclut les frais estimes de mouvements internes et compare le realise paye a la projection.", "release.1051": "Analyse considere les parts Trip payees par un autre comme payees, pas a payer.", "release.1050": "Notifications plus humaines, preferences emojis/rappels, et detail des depenses a payer dans Analyse.", "release.1049": "Notifications en devise de periode, calcul serveur par segment budget, Analyse Trip/Immo et ping-pong Sport.", "release.1048": "Refresh budget Dashboard/Analyse et APK Android de test 10.4.8.", "release.1047": "Correction Analyse Immo depuis Trip, budget journalier au retour Dashboard et historique Travail modifiable.", "release.1046": "Correction chargement Travail et recalcul KPI sport/travail apres synchronisation.", "release.1045": "Module Travail physique, estimation MET/BMR, KPI sport/travail et notifications matin/soir serveur.", "release.1044": "Notifications budget diversifiees, refresh auto au retour dans l'app et liaison Trip nettoyee.", "release.1043": "Correction Trip : validation proprietaire wallet fiable pour les depenses payees par moi.", "release.1042": "Stabilisation Trip : regles core, analyse, filtres historiques, wallet et payloads RPC transaction.", "release.1041": "Creation Sport unifiee, repos par defaut, champs reps/temps conditionnels et notifications Android locales corrigees.", "release.1040": "Notifications mobiles FCM testables depuis Admin, message budget du matin et validation Trip branchee.", "release.1039": "Correction des occurrences recurrentes payees, migration de reparation et secrets FCM serveur poses.", "release.1038": "Edge Function d'envoi push FCM HTTP v1 et configuration Android Firebase finalisee.", "release.1037": "Base push mobile Android, stockage des tokens, notifications lues au clic et vidage a la deconnexion.", "release.1036": "Auth mobile Google fiabilisee, erreurs plus propres, reset mot de passe et preferences notifications utilisateur.", "release.1035": "Page projet plus claire, technique detaillee et APK de test mis a jour.", "release.1034": "Workflow APK securise : nettoyage avant sync, build propre et Storage upload.", "release.1033": "Cautions ciblees, recherche documents/transactions et ecarts corriges.",
-          "app.cta.title": "App Android en test interne.", "app.cta.body": "Telecharge l'APK versionnee 10.5.29 build 20260615-180000 depuis Supabase Storage pour tester la derniere build Android.", "app.cta.button": "Telecharger l'APK 10.5.29",
+          "app.version.title": "Assistant encas + sante pro", "app.version.body": "Suggestions d'encas simples et suivi sante semaine plus lisible, avec correction console Settings.",
+          "release.title": "Dernieres versions", "release.10530": "Assistant encas centre sur fromage blanc, muesli, gateaux et fruits, recap Sante semaine plus professionnel et correction du chargement WhatsApp Settings.", "release.10529": "Favoris et recents Nutrition/Sport, assistant quoi manger maintenant, recap Sante semaine et nouveaux aliments/exercices sources sans doublons.", "release.10528": "Bibliotheques Sport et Alimentation enrichies, portions realistes revues, tags sources USDA/FoodData Central et Compendium MET, sans doublons de cles.", "release.10527": "Sante par jour dans Alimentation, sommeil persiste en SQL, eau 2L par jour historisee et calcul KPI Sante partage avec le Dashboard.", "release.10526": "Profil Sante centralise : 59 kg, 162 cm et date de naissance en SQL Settings, puis lecture commune dans Sport, Nutrition, Travail, notifications et KPI Sante.", "release.10525": "Travail recalcule en kcal nettes MET - 1, date de naissance sauvegardee pour le BMR, journees travail SQL recalculees et KPI Sante hydrate Nutrition/Sommeil au demarrage.", "release.10524": "Score Sante corrige : l'energie tolere mieux les ecarts normaux selon l'heure et le sommeil valorise correctement une nuit de 7h a 9h.", "release.10523": "Bibliotheque Sport globale enrichie par familles : halteres, elastiques, poids du corps, machines, cardio, boxe, barre, kettlebell et mobilite. La seance Corde a sauter du 12/06 retrouve ses series.", "release.10522": "Bibliotheque Sport enrichie avec rowing haltere et exercices halteres, reprise automatique du dernier poids saisi par exercice et elastiques verrouilles a 0 kg.", "release.10521": "Sport permet de saisir la charge pendant la seance, d'ajuster les series faites en sandbox, recalcule correctement les kcal sac de frappe et la page projet met mieux en avant Alimentation, Sommeil, Sante et Travail.", "release.10520": "Notifications Alimentation/Sante aux 5 moments clés, sommeil lu sur la bonne nuit, KPI nutrition rafraichi apres saisie et MET sac de frappe passe a 12.8 avec recalcul des seances.", "release.10519": "Sommeil rattache a la nuit precedente, KPI Sante detaille les points du score et page projet met en avant Travail, Alimentation, Sommeil et Sante.", "release.10518": "KPI Sante explicable, besoin kcal proportionne a l'heure, historique Nutrition en barres hover, sommeil vs objectif et catalogue retire.", "release.10517": "Saisie Sommeil dans Nutrition, KPI Sante plus homogene visuellement et score enrichi avec recuperation.", "release.10516": "Nutrition mobile responsive, Pain perdu en bibliotheque SQL, hydratation eau bue separee et KPI Sante Dashboard sport/travail/alimentation.", "release.10515": "Catalogue Nutrition enrichi avec 101 plats publics, tags exploites dans les filtres et fallback mobile plus complet.", "release.10514": "Nutrition V2 visuelle : anneau kcal, timeline repas, assistant simple, catalogue filtre et mini semaine analytique.", "release.10513": "UX Nutrition plus app utilisateur, modification des repas, besoins par moment et portions realistes.", "release.10512": "Date par defaut aujourd hui, historique par categorie et comparaison besoins/consomme plus visuelle.", "release.10511": "Hydratation separee, 307 aliments Nutrition, burgers/bieres et balance kcal base + sport + travail.", "release.10510": "Recherche Alimentation stable, portions et bibliotheque enrichie.", "release.1059": "Correctif Alimentation et fusion Sport du jour en date locale.", "release.1058": "Premier ecran Nutrition et fusion des seances Sport du jour.", "release.1057": "Bibliotheque Sport SQL avec cache offline, exercices boxe et socle Nutrition aliments/repas/macros.", "release.1056": "APK Android a jour, Sport supprime mieux les seances, estime les reps/circuits/AMRAP et fiabilise le clic Marquer comme paye offline.", "release.1055": "Cashflow previsionnel, test notifications simplifie et file offline plus lisible.", "release.1054": "Bibliotheque Sport enrichie : corde a sauter, ping-pong, abdos/core et saisie plus directe.", "release.1053": "Analyse compare le budget consomme a la projection et durcit le refresh des donnees KPI/Analyse.", "release.1052": "Analyse exclut les frais estimes de mouvements internes et compare le realise paye a la projection.", "release.1051": "Analyse considere les parts Trip payees par un autre comme payees, pas a payer.", "release.1050": "Notifications plus humaines, preferences emojis/rappels, et detail des depenses a payer dans Analyse.", "release.1049": "Notifications en devise de periode, calcul serveur par segment budget, Analyse Trip/Immo et ping-pong Sport.", "release.1048": "Refresh budget Dashboard/Analyse et APK Android de test 10.4.8.", "release.1047": "Correction Analyse Immo depuis Trip, budget journalier au retour Dashboard et historique Travail modifiable.", "release.1046": "Correction chargement Travail et recalcul KPI sport/travail apres synchronisation.", "release.1045": "Module Travail physique, estimation MET/BMR, KPI sport/travail et notifications matin/soir serveur.", "release.1044": "Notifications budget diversifiees, refresh auto au retour dans l'app et liaison Trip nettoyee.", "release.1043": "Correction Trip : validation proprietaire wallet fiable pour les depenses payees par moi.", "release.1042": "Stabilisation Trip : regles core, analyse, filtres historiques, wallet et payloads RPC transaction.", "release.1041": "Creation Sport unifiee, repos par defaut, champs reps/temps conditionnels et notifications Android locales corrigees.", "release.1040": "Notifications mobiles FCM testables depuis Admin, message budget du matin et validation Trip branchee.", "release.1039": "Correction des occurrences recurrentes payees, migration de reparation et secrets FCM serveur poses.", "release.1038": "Edge Function d'envoi push FCM HTTP v1 et configuration Android Firebase finalisee.", "release.1037": "Base push mobile Android, stockage des tokens, notifications lues au clic et vidage a la deconnexion.", "release.1036": "Auth mobile Google fiabilisee, erreurs plus propres, reset mot de passe et preferences notifications utilisateur.", "release.1035": "Page projet plus claire, technique detaillee et APK de test mis a jour.", "release.1034": "Workflow APK securise : nettoyage avant sync, build propre et Storage upload.", "release.1033": "Cautions ciblees, recherche documents/transactions et ecarts corriges.",
+          "app.cta.title": "App Android en test interne.", "app.cta.body": "Telecharge l'APK versionnee 10.5.30 build 20260615-183000 depuis Supabase Storage pour tester la derniere build Android.", "app.cta.button": "Telecharger l'APK 10.5.30",
           "tech.title": "Une vitrine statique, une app privee structuree derriere.",
           "tech.lead": "BudgetPacker combine un front leger, Supabase pour les donnees, des RPC pour les operations sensibles, Storage pour les fichiers et Capacitor pour l'app Android.",
           "tech.db": "Postgres, RLS, RPC, Edge Functions et Storage structurent les donnees utilisateur, documents, invitations et APK.",
@@ -965,50 +966,50 @@
         },
         en: {
           "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Workflow", "nav.app": "App", "nav.tech": "Tech", "nav.cta": "Try the demo",
-          "hero.eyebrow": "BudgetPacker - public demo, fictional data",
-          "hero.title": "BudgetPacker, the travel budget app that keeps the thread.",
-          "hero.lead": "Cashflow tracking, transactions, shared trips, deposits, documents and multi-currency decisions in an app built for weeks when everything moves.",
+          "hero.eyebrow": "BudgetPacker V2 - public demo, fictional data",
+          "hero.title": "BudgetPacker, the personal cockpit for budget, documents and health.",
+          "hero.lead": "A modular app connecting cashflow, transactions, exchange-rate analysis, conversions, documents, assets, sport, nutrition, sleep and work load.",
           "hero.primary": "Open the demo", "hero.secondary": "Download APK", "hero.apk": "Android app",
           "hero.note": "This page loads no personal data: it presents the product, modules and technical logic.",
           "auth.title": "Open the full app", "auth.body": "The demo is public. To sync your own data, create an account or sign in.", "auth.signup": "Create account", "auth.login": "Sign in",
-          "metric.fx.title": "Multi-currency", "metric.fx.body": "AUD, EUR, JPY and base currency",
+          "metric.fx.title": "FX analysis", "metric.fx.body": "Rates, opportunities and conversions",
           "metric.docs.title": "Documents Hub", "metric.docs.body": "Tags, folders, linked proofs",
-          "metric.trip.title": "Travel", "metric.trip.body": "Budget, split, reimbursements",
+          "metric.trip.title": "Mobile life", "metric.trip.body": "Budget, split, reimbursements",
           "metric.safe.title": "App + offline", "metric.safe.body": "Pending actions and offline reading",
           "trust.private.title": "Private data", "trust.private.body": "Supabase Auth, RLS and storage keep each user's account separated.",
           "trust.mobile.title": "Mobile testing", "trust.mobile.body": "Versioned APK, cleaned build flow and public download link.",
           "trust.offline.title": "Field use", "trust.offline.body": "Offline reading, action queue and sync when the network returns.",
           "mock.cashflow": "Estimated cashflow", "mock.signal": "Today's signal", "mock.projection": "Projection", "mock.feed": "Recent feed",
-          "demo.title": "A demo you can actually manipulate.",
-          "demo.lead": "Values are fictional. Switch scenario, adjust AUD income and the amount you keep: the page updates like a mini version of the product.",
-          "scenario.pvt": "Australia WHV", "scenario.trip": "Shared trip", "scenario.docs": "Documents",
-          "demo.salary": "Weekly AUD income", "demo.keep": "AUD to keep", "demo.rate": "Simulated AUD/EUR rate",
-          "demo.convert": "To convert", "demo.eur": "EUR equivalent", "demo.buffer": "AUD buffer",
-          "modules.title": "Modules cover real travel cases.",
-          "modules.lead": "Daily budget, Trip sharing, documents, deposits, assets and notifications: each block feeds the others instead of staying isolated.",
-          "case.one.kicker": "Budget", "case.one.title": "Know what is really left", "case.one.body": "Wallets, transactions, daily budget and projections give a fast read of cashflow.",
-          "case.two.kicker": "Trip", "case.two.title": "Share without breaking accounts", "case.two.body": "Invitations, shared expenses and validations avoid silent additions on another member's side.",
-          "case.three.kicker": "Deposits", "case.three.title": "Track what should come back", "case.three.body": "Paid deposits, refunds, differences, comments and documents remain attached to the file.",
+          "demo.title": "FX and conversion analysis, without tying it to one country.",
+          "demo.lead": "Values are fictional. Switch scenario, adjust the source amount, reserve and target rate: the page updates like a mini version of the analysis engine.",
+          "scenario.pvt": "FX analysis", "scenario.trip": "Shared expense", "scenario.docs": "Documents",
+          "demo.salary": "Source amount", "demo.keep": "Reserve to keep", "demo.rate": "Simulated target rate",
+          "demo.convert": "To convert", "demo.eur": "Target equivalent", "demo.buffer": "Reserve",
+          "modules.title": "Modules cover full personal steering.",
+          "modules.lead": "Budget, conversions, documents, deposits, assets, sport, nutrition, sleep and notifications: each block feeds the others instead of staying isolated.",
+          "case.one.kicker": "Cashflow", "case.one.title": "Know what is really left", "case.one.body": "Wallets, transactions, daily budget and projections give a fast read of cashflow.",
+          "case.two.kicker": "Conversions", "case.two.title": "Decide when to convert", "case.two.body": "Rate tracking helps arbitrate conversions; it is not a single-country travel story.",
+          "case.three.kicker": "Health", "case.three.title": "Connect energy and load", "case.three.body": "Nutrition, sleep, sport and work feed a simple weekly recap.",
           "health.title": "Health tracking stays simple: energy, water, sleep, load.",
           "health.lead": "BudgetPacker connects nutrition, sport, physical work and sleep to show an understandable score, not a cockpit.",
           "health.nutrition.kicker": "Nutrition", "health.nutrition.title": "Consumed vs needs", "health.nutrition.body": "Kcal ring, meal moments, separated drunk water, protein and readable history.",
           "health.sleep.kicker": "Sleep", "health.sleep.title": "The right night for the right day", "health.sleep.body": "The night of June 13 feeds June 14, with target and visual history.",
           "health.load.kicker": "Load", "health.load.title": "Sport + work", "health.load.body": "Sport and work kcal adjust the day's needs and Health score.",
           "health.work.kicker": "Work", "health.work.title": "Physical work days", "health.work.body": "Duration, MET and work kcal are stored and count toward energy needs.",
-          "health.nudges.kicker": "Notifications", "health.nudges.title": "5 useful reminders", "health.nudges.body": "Breakfast, 10am, lunch, afternoon snack and dinner: short time-based nudges.",
+          "health.nudges.kicker": "Snack assistant", "health.nudges.title": "Simple snack nudges", "health.nudges.body": "Fromage blanc, muesli, fruit, Belvita or rice cakes: quick suggestions by time and deficit.",
           "health.sandbox.kicker": "Adjustment", "health.sandbox.title": "Editable sets", "health.sandbox.body": "During or after a workout, loads can be entered to recalculate calories.",
           "workflow.title": "A simple flow: capture, classify, decide.",
-          "workflow.lead": "The project reduces friction: an expense or document arrives, then finds its place in budget, trip or assets.",
-          "workflow.one.title": "Capture", "workflow.one.body": "Transaction, WhatsApp receipt, PDF invoice, Trip expense or internal transfer.",
-          "workflow.two.title": "Link", "workflow.two.body": "Proofs can be linked to transactions, assets or shared expenses.",
-          "workflow.three.title": "Drive", "workflow.three.body": "Analysis, cashflow, FX conversion and important documents remain readable.",
+          "workflow.lead": "The project reduces friction: a transaction, document, workout or health entry arrives, then joins the right module.",
+          "workflow.one.title": "Capture", "workflow.one.body": "Transaction, WhatsApp receipt, PDF invoice, workout, sleep, meal or internal transfer.",
+          "workflow.two.title": "Link", "workflow.two.body": "Proofs, categories, loads and health data feed budget, assets and KPIs.",
+          "workflow.three.title": "Drive", "workflow.three.body": "Analysis, cashflow, FX conversion, documents and health remain readable together.",
           "app.title": "Android test app, direct link and readable version.",
           "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
-          "app.apk.title": "Android build", "app.apk.body": "Debug APK 10.5.29 build 20260615-180000 is available for Android testing.",
+          "app.apk.title": "Android build", "app.apk.body": "Debug APK 10.5.30 build 20260615-183000 is available for Android testing.",
           "app.offline.title": "Offline mode", "app.offline.body": "Local data remains readable, sensitive actions queue cleanly and the first tap stays safe.",
-          "app.version.title": "Faster Nutrition + Sport", "app.version.body": "Favorites, recents, current meal assistant, weekly health recap and richer catalogs.",
-          "release.title": "Latest versions", "release.10529": "Nutrition/Sport favorites and recents, what to eat now assistant, weekly Health recap and new sourced foods/exercises without duplicate keys.", "release.10528": "Sport and Nutrition libraries enriched with realistic servings, source tags from USDA/FoodData Central and Compendium METs, without duplicate keys.", "release.10527": "Daily Health recap in Nutrition, SQL-persisted sleep, 2L water history and shared Dashboard Health KPI scoring.", "release.10526": "Centralized Health profile: 59 kg, 162 cm and birth date in SQL Settings, then shared reads across Sport, Nutrition, Work, notifications and Health KPI.", "release.10525": "Work recalculated with net MET kcal, birth date saved for BMR, SQL work days recomputed and Health KPI hydrates Nutrition/Sleep on startup.", "release.10524": "Health Score fixed: energy now better tolerates normal time-based gaps and sleep correctly rewards a 7h to 9h night.", "release.10523": "Global Sport library enriched by family: dumbbells, bands, bodyweight, machines, cardio, boxing, barbell, kettlebell and mobility. The June 12 Jump rope workout has its sets back.", "release.10522": "Sport library enriched with dumbbell row and dumbbell exercises, automatic reuse of the last entered load per exercise and resistance bands locked at 0 kg.", "release.10521": "Sport can enter load during the workout, adjust completed sets in a sandbox, correctly recalculate heavy bag calories and the project page better highlights Nutrition, Sleep, Health and Work.", "release.10520": "Nutrition/Health notifications across 5 key day moments, sleep read from the right night, KPI nutrition refresh after entry and heavy bag MET moved to 12.8 with session recalculation.", "release.10519": "Sleep now belongs to the previous night, Health KPI details score points and project page highlights Work, Nutrition, Sleep and Health.", "release.10518": "Explainable Health KPI, kcal need proportional to current time, Nutrition hover bar history, sleep vs target and catalog removed.", "release.10517": "Sleep entry in Nutrition, visually aligned Health KPI and recovery included in the score.", "release.10516": "Mobile responsive Nutrition, French toast in SQL library, separated drunk-water hydration and Dashboard Health KPI across sport/work/nutrition.", "release.10515": "Nutrition catalog enriched with 101 public dishes, tag-powered filters and a fuller mobile fallback.", "release.10514": "Visual Nutrition V2: kcal ring, meal timeline, simple assistant, filtered catalog and analytical mini week.", "release.10513": "More app-like Nutrition UX, editable meals, needs by meal moment and realistic portions.", "release.10512": "Default date is today, categorized Nutrition history and clearer needs/consumed visual comparison.", "release.10511": "Separate hydration, 307 Nutrition foods, burgers/beers and kcal balance from base + sport + work.", "release.10510": "Stable Nutrition search, servings and richer food library.", "release.1059": "Nutrition loading fix and local-date same-day Sport merge.", "release.1058": "First Nutrition screen and same-day Sport session merge.", "release.1057": "SQL-backed Sport library with offline cache, boxing exercises and Nutrition food/meal/macro foundation.", "release.1056": "Updated Android APK, stronger Sport delete flow, reps/circuit/AMRAP estimates and safer offline Mark as paid.", "release.1055": "Forecast cashflow, simpler notification test and clearer offline queue behavior.", "release.1054": "Richer Sport library: jump rope, table tennis, abs/core and more direct input.", "release.1053": "Analysis compares budget used with projection and hardens KPI/Analysis data refresh.", "release.1052": "Analysis excludes estimated internal-transfer fees and compares paid actual spend with the projection.", "release.1051": "Analysis treats Trip shares paid by someone else as paid, not unpaid.", "release.1050": "More human notifications, emoji/reminder preferences, and unpaid-expense details in Analysis.", "release.1049": "Period-currency notifications, server budget segment calculation, Trip/Immo analysis and table tennis in Sport.", "release.1048": "Dashboard/Analysis budget refresh and Android test APK 10.4.8.", "release.1047": "Fixes Trip Immo analysis, daily budget when returning to Dashboard and editable Work history.", "release.1046": "Fixes Work loading and sport/work KPI recalculation after sync.", "release.1045": "Physical Work module, MET/BMR estimates, sport/work KPIs and server morning/evening notifications.", "release.1044": "Varied budget notifications, auto refresh when returning to the app and cleaner Trip linking.", "release.1043": "Trip fix: reliable wallet ownership validation for expenses paid by me.", "release.1042": "Trip stabilization: core rules, analysis, history filters and transaction RPC payloads.", "release.1041": "Unified Sport creation, default rest, conditional reps/time fields and fixed Android local notifications.", "release.1040": "FCM mobile notifications testable from Admin, morning budget message and Trip validation push.", "release.1039": "Fixed paid recurring occurrences, repair migration, and configured server FCM secrets.", "release.1038": "FCM HTTP v1 push Edge Function and finalized Firebase Android configuration.", "release.1037": "Android mobile push base, token storage, read-on-click notifications and sign-out cleanup.", "release.1036": "More reliable mobile Google auth, cleaner errors, password reset and user notification preferences.", "release.1035": "Clearer project page, detailed technical section and updated test APK.", "release.1034": "Secured APK workflow: cleanup before sync, clean build and Storage upload.", "release.1033": "Targeted deposits, document/transaction search and corrected differences.",
-          "app.cta.title": "Android app in internal testing.", "app.cta.body": "Download the versioned 10.5.29 build 20260615-180000 APK from Supabase Storage to test the latest Android build.", "app.cta.button": "Download APK 10.5.29",
+          "app.version.title": "Snack assistant + pro health", "app.version.body": "Simple snack suggestions, clearer weekly Health recap and Settings console loading fix.",
+          "release.title": "Latest versions", "release.10530": "Snack assistant focused on fromage blanc, muesli, biscuits and fruit, more professional weekly Health recap and Settings WhatsApp loading fix.", "release.10529": "Nutrition/Sport favorites and recents, what to eat now assistant, weekly Health recap and new sourced foods/exercises without duplicate keys.", "release.10528": "Sport and Nutrition libraries enriched with realistic servings, source tags from USDA/FoodData Central and Compendium METs, without duplicate keys.", "release.10527": "Daily Health recap in Nutrition, SQL-persisted sleep, 2L water history and shared Dashboard Health KPI scoring.", "release.10526": "Centralized Health profile: 59 kg, 162 cm and birth date in SQL Settings, then shared reads across Sport, Nutrition, Work, notifications and Health KPI.", "release.10525": "Work recalculated with net MET kcal, birth date saved for BMR, SQL work days recomputed and Health KPI hydrates Nutrition/Sleep on startup.", "release.10524": "Health Score fixed: energy now better tolerates normal time-based gaps and sleep correctly rewards a 7h to 9h night.", "release.10523": "Global Sport library enriched by family: dumbbells, bands, bodyweight, machines, cardio, boxing, barbell, kettlebell and mobility. The June 12 Jump rope workout has its sets back.", "release.10522": "Sport library enriched with dumbbell row and dumbbell exercises, automatic reuse of the last entered load per exercise and resistance bands locked at 0 kg.", "release.10521": "Sport can enter load during the workout, adjust completed sets in a sandbox, correctly recalculate heavy bag calories and the project page better highlights Nutrition, Sleep, Health and Work.", "release.10520": "Nutrition/Health notifications across 5 key day moments, sleep read from the right night, KPI nutrition refresh after entry and heavy bag MET moved to 12.8 with session recalculation.", "release.10519": "Sleep now belongs to the previous night, Health KPI details score points and project page highlights Work, Nutrition, Sleep and Health.", "release.10518": "Explainable Health KPI, kcal need proportional to current time, Nutrition hover bar history, sleep vs target and catalog removed.", "release.10517": "Sleep entry in Nutrition, visually aligned Health KPI and recovery included in the score.", "release.10516": "Mobile responsive Nutrition, French toast in SQL library, separated drunk-water hydration and Dashboard Health KPI across sport/work/nutrition.", "release.10515": "Nutrition catalog enriched with 101 public dishes, tag-powered filters and a fuller mobile fallback.", "release.10514": "Visual Nutrition V2: kcal ring, meal timeline, simple assistant, filtered catalog and analytical mini week.", "release.10513": "More app-like Nutrition UX, editable meals, needs by meal moment and realistic portions.", "release.10512": "Default date is today, categorized Nutrition history and clearer needs/consumed visual comparison.", "release.10511": "Separate hydration, 307 Nutrition foods, burgers/beers and kcal balance from base + sport + work.", "release.10510": "Stable Nutrition search, servings and richer food library.", "release.1059": "Nutrition loading fix and local-date same-day Sport merge.", "release.1058": "First Nutrition screen and same-day Sport session merge.", "release.1057": "SQL-backed Sport library with offline cache, boxing exercises and Nutrition food/meal/macro foundation.", "release.1056": "Updated Android APK, stronger Sport delete flow, reps/circuit/AMRAP estimates and safer offline Mark as paid.", "release.1055": "Forecast cashflow, simpler notification test and clearer offline queue behavior.", "release.1054": "Richer Sport library: jump rope, table tennis, abs/core and more direct input.", "release.1053": "Analysis compares budget used with projection and hardens KPI/Analysis data refresh.", "release.1052": "Analysis excludes estimated internal-transfer fees and compares paid actual spend with the projection.", "release.1051": "Analysis treats Trip shares paid by someone else as paid, not unpaid.", "release.1050": "More human notifications, emoji/reminder preferences, and unpaid-expense details in Analysis.", "release.1049": "Period-currency notifications, server budget segment calculation, Trip/Immo analysis and table tennis in Sport.", "release.1048": "Dashboard/Analysis budget refresh and Android test APK 10.4.8.", "release.1047": "Fixes Trip Immo analysis, daily budget when returning to Dashboard and editable Work history.", "release.1046": "Fixes Work loading and sport/work KPI recalculation after sync.", "release.1045": "Physical Work module, MET/BMR estimates, sport/work KPIs and server morning/evening notifications.", "release.1044": "Varied budget notifications, auto refresh when returning to the app and cleaner Trip linking.", "release.1043": "Trip fix: reliable wallet ownership validation for expenses paid by me.", "release.1042": "Trip stabilization: core rules, analysis, history filters and transaction RPC payloads.", "release.1041": "Unified Sport creation, default rest, conditional reps/time fields and fixed Android local notifications.", "release.1040": "FCM mobile notifications testable from Admin, morning budget message and Trip validation push.", "release.1039": "Fixed paid recurring occurrences, repair migration, and configured server FCM secrets.", "release.1038": "FCM HTTP v1 push Edge Function and finalized Firebase Android configuration.", "release.1037": "Android mobile push base, token storage, read-on-click notifications and sign-out cleanup.", "release.1036": "More reliable mobile Google auth, cleaner errors, password reset and user notification preferences.", "release.1035": "Clearer project page, detailed technical section and updated test APK.", "release.1034": "Secured APK workflow: cleanup before sync, clean build and Storage upload.", "release.1033": "Targeted deposits, document/transaction search and corrected differences.",
+          "app.cta.title": "Android app in internal testing.", "app.cta.body": "Download the versioned 10.5.30 build 20260615-183000 APK from Supabase Storage to test the latest Android build.", "app.cta.button": "Download APK 10.5.30",
           "tech.title": "A static showcase, a structured private app behind it.",
           "tech.lead": "BudgetPacker combines a light frontend, Supabase for data, RPCs for sensitive operations, Storage for files and Capacitor for Android.",
           "tech.db": "Postgres, RLS, RPC, Edge Functions and Storage structure user data, documents, invitations and APKs.",
@@ -1024,12 +1025,12 @@
       const scenarios = {
         fr: {
           pvt: {
-            title: "PVT Australie", text: "Tu arbitres chaque semaine entre garder du cash AUD et convertir une partie en EUR.", decision: "Garder AUD",
-            feed: [["Decision FX", "Tendance favorable AUD"], ["Document", "Bulletin de paie lie"], ["Budget", "18 jours couverts"]]
+            title: "Analyse FX", text: "Tu suis un taux, gardes une reserve et identifies le montant pertinent a convertir.", decision: "Surveiller taux",
+            feed: [["Signal FX", "Taux cible approche"], ["Analyse", "Reserve conservee"], ["Conversion", "Montant propose"]]
           },
           trip: {
-            title: "Voyage partage", text: "Une depense de groupe reste pilotee par Split, avec une transaction wallet matchee si besoin.", decision: "Equilibrer le split",
-            feed: [["Depense", "Repas Sydney - 112 AUD"], ["Participant", "Dimitri doit 56 AUD"], ["Preuve", "Recu restaurant lie"]]
+            title: "Depense partagee", text: "Une depense de groupe reste pilotee par Split, avec une transaction wallet matchee si besoin.", decision: "Equilibrer le split",
+            feed: [["Depense", "Restaurant - 112 EUR"], ["Participant", "Dimitri doit 56 EUR"], ["Preuve", "Recu restaurant lie"]]
           },
           docs: {
             title: "Documents", text: "Un document peut etre range, tagge, partage et relie a une transaction ou un asset.", decision: "Classer et relier",
@@ -1038,12 +1039,12 @@
         },
         en: {
           pvt: {
-            title: "Australia WHV", text: "Each week, decide what to keep in AUD and what to convert to EUR.", decision: "Keep AUD",
-            feed: [["FX decision", "AUD trend is favorable"], ["Document", "Payslip linked"], ["Budget", "18 days covered"]]
+            title: "FX analysis", text: "Track a rate, keep a reserve and identify the right amount to convert.", decision: "Watch rate",
+            feed: [["FX signal", "Target rate is close"], ["Analysis", "Reserve preserved"], ["Conversion", "Suggested amount"]]
           },
           trip: {
-            title: "Shared trip", text: "A group expense stays managed by Split, with a matched wallet transaction when needed.", decision: "Balance split",
-            feed: [["Expense", "Sydney dinner - 112 AUD"], ["Participant", "Dimitri owes 56 AUD"], ["Proof", "Receipt linked"]]
+            title: "Shared expense", text: "A group expense stays managed by Split, with a matched wallet transaction when needed.", decision: "Balance split",
+            feed: [["Expense", "Restaurant - 112 EUR"], ["Participant", "Dimitri owes 56 EUR"], ["Proof", "Receipt linked"]]
           },
           docs: {
             title: "Documents", text: "A document can be filed, tagged, shared and linked to a transaction or an asset.", decision: "Classify and link",
@@ -1085,7 +1086,7 @@
 
       const moduleFigures = {
         fr: {
-          dashboard: [["Cash net", "3 470 AUD"], ["Budget/jour", "100 AUD"], ["A payer", "280 AUD"], ["La courbe combine solde reel, sorties futures et revenus attendus."]],
+          dashboard: [["Cash net", "3 470 EUR"], ["Budget/jour", "100 EUR"], ["A payer", "280 EUR"], ["La courbe combine solde reel, sorties futures et revenus attendus."]],
           transactions: [["Transactions", "1 045"], ["A classer", "25"], ["Factures liees", "128"], ["Les lignes Trip et mouvements internes restent protegees dans leur module source."]],
           documents: [["Documents", "91"], ["Factures", "6"], ["Liens actifs", "34"], ["Chaque fichier peut etre tagge, range et relie a une transaction ou un asset."]],
           cautions: [["En cours", "90 EUR"], ["Docs lies", "2"], ["Ecart", "A suivre"], ["Le module relie la caution payee, les revenus de retour, les commentaires et les justificatifs."]],
@@ -1094,12 +1095,12 @@
           sleep: [["Objectif", "7h30"], ["Nuit", "J-1"], ["Historique", "barres"], ["Le sommeil est rattache a la nuit precedente pour expliquer correctement le jour courant."]],
           health: [["Score", "/100"], ["Base", "BMR"], ["Charge", "sport + travail"], ["Le detail explique ce qui tire le score vers le haut ou vers le bas."]],
           work: [["MET", "4.8+"], ["Duree", "h"], ["Kcal", "charge"], ["Le travail physique augmente les besoins kcal du jour."]],
-          assets: [["Valeur totale", "7 500 AUD"], ["Documents", "2"], ["Amortissement", "-62 AUD/mois"], ["Les garanties et factures restent accessibles depuis la fiche asset."]],
-          split: [["Depense", "112 AUD"], ["Participants", "2"], ["A recevoir", "56 AUD"], ["Le matching garde le budget et les remboursements coherents."]],
+          assets: [["Valeur totale", "7 500 EUR"], ["Documents", "2"], ["Amortissement", "-62 EUR/mois"], ["Les garanties et factures restent accessibles depuis la fiche asset."]],
+          split: [["Depense", "112 EUR"], ["Participants", "2"], ["A recevoir", "56 EUR"], ["Le matching garde le budget et les remboursements coherents."]],
           assistant: [["Signaux", "6"], ["Modules lus", "5"], ["Reponses", "Locales"], ["L'assistant guide sans envoyer tes donnees vers une API externe."]]
         },
         en: {
-          dashboard: [["Net cash", "3,470 AUD"], ["Daily budget", "100 AUD"], ["To pay", "280 AUD"], ["The curve combines current balance, future outflows and expected income."]],
+          dashboard: [["Net cash", "3,470 EUR"], ["Daily budget", "100 EUR"], ["To pay", "280 EUR"], ["The curve combines current balance, future outflows and expected income."]],
           transactions: [["Transactions", "1,045"], ["To classify", "25"], ["Linked invoices", "128"], ["Trip and internal transfer rows stay protected in their source module."]],
           documents: [["Documents", "91"], ["Invoices", "6"], ["Active links", "34"], ["Each file can be tagged, filed and linked to a transaction or asset."]],
           cautions: [["Open", "90 EUR"], ["Linked docs", "2"], ["Difference", "To review"], ["The module links the paid deposit, refund income, comments and proof files."]],
@@ -1108,8 +1109,8 @@
           sleep: [["Target", "7.5h"], ["Night", "D-1"], ["History", "bars"], ["Sleep is attached to the previous night to explain the current day correctly."]],
           health: [["Score", "/100"], ["Base", "BMR"], ["Load", "sport + work"], ["The detail explains what pulls the score up or down."]],
           work: [["MET", "4.8+"], ["Duration", "h"], ["Kcal", "load"], ["Physical work increases the day's kcal needs."]],
-          assets: [["Total value", "7,500 AUD"], ["Documents", "2"], ["Depreciation", "-62 AUD/month"], ["Warranties and invoices remain available from the asset page."]],
-          split: [["Expense", "112 AUD"], ["Participants", "2"], ["To receive", "56 AUD"], ["Matching keeps budget and reimbursements consistent."]],
+          assets: [["Total value", "7,500 EUR"], ["Documents", "2"], ["Depreciation", "-62 EUR/month"], ["Warranties and invoices remain available from the asset page."]],
+          split: [["Expense", "112 EUR"], ["Participants", "2"], ["To receive", "56 EUR"], ["Matching keeps budget and reimbursements consistent."]],
           assistant: [["Signals", "6"], ["Modules read", "5"], ["Answers", "Local"], ["The assistant guides without sending your data to an external API."]]
         }
       };
@@ -1118,30 +1119,30 @@
         fr: {
           dashboard: {
             title: "Dashboard",
-            cash: "3 470 AUD",
-            signal: "Garder AUD",
-            rows: [["Cash disponible", "3 470 AUD"], ["A payer", "280 AUD"], ["Revenus attendus", "1 200 AUD"]],
+            cash: "3 470 EUR",
+            signal: "Surveiller taux",
+            rows: [["Cash disponible", "3 470 EUR"], ["A payer", "280 EUR"], ["Revenus attendus", "1 200 EUR"]],
             chips: ["Projection", "Budget/jour", "Wallets"]
           },
           transactions: {
             title: "Transactions",
             cash: "Liste filtree",
             signal: "25 a classer",
-            rows: [["Salaire semaine", "+1 200 AUD"], ["Repas Sydney", "-112 AUD"], ["Mouvement interne", "AUD -> EUR"]],
+            rows: [["Revenu semaine", "+1 200 EUR"], ["Restaurant groupe", "-112 EUR"], ["Mouvement interne", "EUR -> USD"]],
             chips: ["Filtres", "Factures", "Verrouillages"]
           },
           analysis: {
             title: "Analyse",
             cash: "Rythme reel",
             signal: "+8% vs cible",
-            rows: [["Categorie dominante", "Transport"], ["Budget source", "100 AUD/j"], ["Ecart tendance", "+8%"]],
+            rows: [["Signal conversion", "EUR/USD"], ["Taux cible", "1.085"], ["Ecart tendance", "+8%"]],
             chips: ["Categories", "Projection", "Mapping"]
           },
           assets: {
             title: "Assets",
-            cash: "7 500 AUD",
+            cash: "7 500 EUR",
             signal: "2 documents",
-            rows: [["Voiture", "7 500 AUD"], ["Amortissement", "-62 AUD/mois"], ["Garantie", "Expire dans 72 j"]],
+            rows: [["Voiture", "7 500 EUR"], ["Amortissement", "-62 EUR/mois"], ["Garantie", "Expire dans 72 j"]],
             chips: ["Valeur", "Coproprietaires", "Garanties"]
           },
           documents: {
@@ -1167,39 +1168,39 @@
           },
           split: {
             title: "Split",
-            cash: "112 AUD",
-            signal: "56 AUD a recevoir",
-            rows: [["Repas Sydney", "2 parts"], ["Moi", "+56 AUD"], ["Dimitri", "-56 AUD"]],
+            cash: "112 EUR",
+            signal: "56 EUR a recevoir",
+            rows: [["Restaurant", "2 parts"], ["Moi", "+56 EUR"], ["Dimitri", "-56 EUR"]],
             chips: ["Participants", "Matching", "Remboursements"]
           }
         },
         en: {
           dashboard: {
             title: "Dashboard",
-            cash: "3,470 AUD",
-            signal: "Keep AUD",
-            rows: [["Available cash", "3,470 AUD"], ["To pay", "280 AUD"], ["Expected income", "1,200 AUD"]],
+            cash: "3,470 EUR",
+            signal: "Watch rate",
+            rows: [["Available cash", "3,470 EUR"], ["To pay", "280 EUR"], ["Expected income", "1,200 EUR"]],
             chips: ["Projection", "Daily budget", "Wallets"]
           },
           transactions: {
             title: "Transactions",
             cash: "Filtered list",
             signal: "25 to classify",
-            rows: [["Weekly salary", "+1,200 AUD"], ["Sydney dinner", "-112 AUD"], ["Internal transfer", "AUD -> EUR"]],
+            rows: [["Weekly income", "+1,200 EUR"], ["Group restaurant", "-112 EUR"], ["Internal transfer", "EUR -> USD"]],
             chips: ["Filters", "Invoices", "Locks"]
           },
           analysis: {
             title: "Analysis",
             cash: "Actual pace",
             signal: "+8% vs target",
-            rows: [["Top category", "Transport"], ["Source budget", "100 AUD/day"], ["Trend delta", "+8%"]],
+            rows: [["Conversion signal", "EUR/USD"], ["Target rate", "1.085"], ["Trend delta", "+8%"]],
             chips: ["Categories", "Projection", "Mapping"]
           },
           assets: {
             title: "Assets",
-            cash: "7,500 AUD",
+            cash: "7,500 EUR",
             signal: "2 documents",
-            rows: [["Car", "7,500 AUD"], ["Depreciation", "-62 AUD/month"], ["Warranty", "Expires in 72 d"]],
+            rows: [["Car", "7,500 EUR"], ["Depreciation", "-62 EUR/month"], ["Warranty", "Expires in 72 d"]],
             chips: ["Value", "Co-owners", "Warranties"]
           },
           documents: {
@@ -1225,9 +1226,9 @@
           },
           split: {
             title: "Split",
-            cash: "112 AUD",
-            signal: "56 AUD to receive",
-            rows: [["Sydney dinner", "2 shares"], ["Me", "+56 AUD"], ["Dimitri", "-56 AUD"]],
+            cash: "112 EUR",
+            signal: "56 EUR to receive",
+            rows: [["Restaurant", "2 shares"], ["Me", "+56 EUR"], ["Dimitri", "-56 EUR"]],
             chips: ["Participants", "Matching", "Reimbursements"]
           }
         }
@@ -1254,7 +1255,7 @@
         if (state.scenario === "pvt") {
           setRange(a, 700, 2200, 50, reset ? 1200 : a.value);
           setRange(b, 0, Number(a.value), 50, reset ? 500 : Math.min(Number(b.value), Number(a.value)));
-          setRange(c, 0.56, 0.68, 0.005, reset ? 0.615 : c.value);
+          setRange(c, 0.95, 1.18, 0.005, reset ? 1.085 : c.value);
         } else if (state.scenario === "trip") {
           setRange(a, 40, 800, 10, reset ? 112 : a.value);
           setRange(b, 0, Number(a.value), 10, reset ? 112 : Math.min(Number(b.value), Number(a.value)));
@@ -1328,24 +1329,24 @@
           const keep = Math.min(b, salary);
           const rate = c;
           const convert = Math.max(0, salary - keep);
-          const eur = convert * rate;
-          confidence = Math.max(18, Math.min(92, 42 + ((rate - .56) / .12) * 36 + (keep / Math.max(1, salary)) * 18));
-          decision = rate >= .61 ? s.decision : (state.lang === "fr" ? "Convertir plus" : "Convert more");
-          setText("controlLabelA", state.lang === "fr" ? "Salaire hebdo AUD" : "Weekly AUD income");
-          setText("controlLabelB", state.lang === "fr" ? "AUD a garder" : "AUD to keep");
-          setText("controlLabelC", state.lang === "fr" ? "Taux AUD/EUR simule" : "Simulated AUD/EUR rate");
-          setText("salaryOut", fmt(salary, "AUD"));
-          setText("keepOut", fmt(keep, "AUD"));
-          setText("rateOut", `${rate.toFixed(3)} EUR`);
+          const target = convert * rate;
+          confidence = Math.max(18, Math.min(92, 36 + ((rate - .95) / .23) * 38 + (keep / Math.max(1, salary)) * 18));
+          decision = rate >= 1.08 ? (state.lang === "fr" ? "Convertir partiellement" : "Convert partially") : s.decision;
+          setText("controlLabelA", state.lang === "fr" ? "Montant source" : "Source amount");
+          setText("controlLabelB", state.lang === "fr" ? "Reserve a garder" : "Reserve to keep");
+          setText("controlLabelC", state.lang === "fr" ? "Taux cible simule" : "Simulated target rate");
+          setText("salaryOut", fmt(salary, "EUR"));
+          setText("keepOut", fmt(keep, "EUR"));
+          setText("rateOut", `${rate.toFixed(3)} USD`);
           setText("resultLabelA", state.lang === "fr" ? "A convertir" : "To convert");
-          setText("resultLabelB", state.lang === "fr" ? "Equivalent EUR" : "EUR equivalent");
-          setText("resultLabelC", state.lang === "fr" ? "Buffer AUD" : "AUD buffer");
-          setText("convertAud", fmt(convert, "AUD"));
-          setText("convertEur", fmt(eur, "EUR"));
-          setText("bufferAud", fmt(keep, "AUD"));
+          setText("resultLabelB", state.lang === "fr" ? "Equivalent cible" : "Target equivalent");
+          setText("resultLabelC", state.lang === "fr" ? "Reserve" : "Reserve");
+          setText("convertAud", fmt(convert, "EUR"));
+          setText("convertEur", fmt(target, "USD"));
+          setText("bufferAud", fmt(keep, "EUR"));
           feed = [
             ...s.feed,
-            [state.lang === "fr" ? "Conversion" : "Conversion", `${fmt(convert, "AUD")} -> ${fmt(eur, "EUR")}`]
+            [state.lang === "fr" ? "Conversion" : "Conversion", `${fmt(convert, "EUR")} -> ${fmt(target, "USD")}`]
           ];
         } else if (state.scenario === "trip") {
           const total = a;
@@ -1358,19 +1359,19 @@
           setText("controlLabelA", state.lang === "fr" ? "Depense totale" : "Total expense");
           setText("controlLabelB", state.lang === "fr" ? "Montant paye par moi" : "Amount I paid");
           setText("controlLabelC", state.lang === "fr" ? "Participants" : "Participants");
-          setText("salaryOut", fmt(total, "AUD"));
-          setText("keepOut", fmt(paid, "AUD"));
+          setText("salaryOut", fmt(total, "EUR"));
+          setText("keepOut", fmt(paid, "EUR"));
           setText("rateOut", String(participants));
           setText("resultLabelA", state.lang === "fr" ? "Ma part" : "My share");
           setText("resultLabelB", decision);
           setText("resultLabelC", state.lang === "fr" ? "Participants" : "Participants");
-          setText("convertAud", fmt(myShare, "AUD"));
-          setText("convertEur", fmt(Math.abs(balance), "AUD"));
+          setText("convertAud", fmt(myShare, "EUR"));
+          setText("convertEur", fmt(Math.abs(balance), "EUR"));
           setText("bufferAud", String(participants));
           feed = [
-            [state.lang === "fr" ? "Depense Trip" : "Trip expense", fmt(total, "AUD")],
-            [state.lang === "fr" ? "Part/personne" : "Share/person", fmt(myShare, "AUD")],
-            [state.lang === "fr" ? "Matching transaction" : "Matched transaction", paid > 0 ? fmt(paid, "AUD") : "-"]
+            [state.lang === "fr" ? "Depense partagee" : "Shared expense", fmt(total, "EUR")],
+            [state.lang === "fr" ? "Part/personne" : "Share/person", fmt(myShare, "EUR")],
+            [state.lang === "fr" ? "Matching transaction" : "Matched transaction", paid > 0 ? fmt(paid, "EUR") : "-"]
           ];
         } else {
           const docs = Math.round(a);
@@ -1403,7 +1404,7 @@
         if ($("confidenceBar")) $("confidenceBar").style.width = `${confidence}%`;
         if ($("scenarioFeed")) $("scenarioFeed").innerHTML = feed.map(([x,y]) => `<div class="feed-row"><strong>${x}</strong><span>${y}</span></div>`).join("");
         if (state.mockModule === "dashboard") {
-          setText("mockCash", state.scenario === "docs" ? `${Math.round(a)} docs` : fmt(Math.max(0, a - Math.min(b, a)) + 2970, "AUD"));
+          setText("mockCash", state.scenario === "docs" ? `${Math.round(a)} docs` : fmt(Math.max(0, a - Math.min(b, a)) + 2970, "EUR"));
           setText("mockSignal", decision);
           if ($("mockFeed")) $("mockFeed").innerHTML = feed.slice(0, 3).map(([x,y]) => `<div class="feed-row"><strong>${x}</strong><span>${y}</span></div>`).join("");
         }

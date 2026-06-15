@@ -842,18 +842,25 @@ function renderSettings(){
     const uid = u?.id;
     if (!uid) return;
 
+    const safeSettingsQuery = async () => {
+      try {
+        return await s
+          .from(TB_CONST.TABLES.settings)
+          .select("birth_date,body_weight_kg,body_height_cm")
+          .eq("user_id", uid)
+          .maybeSingle();
+      } catch (_) {
+        return { data: null, error: null };
+      }
+    };
+
     const [{ data, error }, settingsRes] = await Promise.all([
       s
       .from(TB_CONST.TABLES.profiles)
       .select("whatsapp_phone_e164")
       .eq("id", uid)
       .maybeSingle(),
-      s
-        .from(TB_CONST.TABLES.settings)
-        .select("birth_date,body_weight_kg,body_height_cm")
-        .eq("user_id", uid)
-        .maybeSingle()
-        .catch(() => ({ data: null, error: null })),
+      safeSettingsQuery(),
     ]);
 
     if (error) throw error;
