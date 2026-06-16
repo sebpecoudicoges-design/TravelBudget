@@ -300,6 +300,15 @@
       .tb-health-week { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:8px; align-items:end; }
       .tb-health-bar { min-height:112px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,.04); display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:5px; padding:7px 5px; cursor:pointer; }
       .tb-health-bar span { width:100%; border-radius:7px 7px 3px 3px; min-height:8px; }
+      .tb-health-focus-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; }
+      .tb-health-focus-card { border:1px solid var(--border); border-radius:12px; padding:11px; background:rgba(255,255,255,.05); display:grid; gap:7px; }
+      .tb-health-focus-card strong { font-size:15px; }
+      .tb-health-pillars { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; }
+      .tb-health-pillar { border:1px solid rgba(148,163,184,.24); border-radius:12px; padding:10px; background:rgba(255,255,255,.04); display:grid; gap:7px; }
+      .tb-health-pillar-track { height:8px; border-radius:999px; background:rgba(148,163,184,.18); overflow:hidden; border:1px solid rgba(148,163,184,.20); }
+      .tb-health-pillar-track span { display:block; height:100%; border-radius:999px; }
+      .tb-meal-smart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; margin-top:10px; }
+      .tb-meal-smart-card { border:1px solid rgba(148,163,184,.24); border-radius:10px; padding:10px; background:rgba(255,255,255,.05); display:grid; gap:7px; }
       .tb-nutrition-shell button { min-width:0; }
       .tb-nutrition-shell .btn { white-space:normal; }
       @media (max-width: 860px) {
@@ -778,6 +787,42 @@
     if (waterGap > 700) picked = [{ title: txt("Eau + encas simple", "Water + simple snack"), keys: ["water", "banana"], note: txt("hydratation d'abord", "hydration first"), kcal: 105 }].concat(picked);
     return picked.slice(0, 4).map(row => ({ ...row, foods: row.keys.map(foodByKey).filter(Boolean) })).filter(row => row.foods.length);
   }
+  function mealSmartSuggestions(type, total, macroTargets, remainingKcal, waterMl) {
+    const proteinGap = n(macroTargets?.protein, 0) - n(total?.protein, 0);
+    const waterGap = 2000 - n(waterMl, 0);
+    const rowsByType = {
+      breakfast: [
+        { title: txt("Petit dej proteine", "Protein breakfast"), keys: ["fromage_blanc_0", "muesli", "banana"], note: txt("cale sans exploser les kcal", "filling without overshooting"), kcal: 360 },
+        { title: txt("Simple rapide", "Fast simple"), keys: ["skyr", "apple"], note: txt("proteines + fruit", "protein + fruit"), kcal: 180 },
+      ],
+      morning_snack: [
+        { title: txt("Pause propre", "Clean break"), keys: ["fromage_blanc_0", "pear"], note: txt("leger et utile en proteines", "light and useful protein"), kcal: 170 },
+        { title: txt("Energie terrain", "Field energy"), keys: ["belvita", "banana"], note: txt("pratique si matin actif", "practical for an active morning"), kcal: 170 },
+      ],
+      lunch: [
+        { title: txt("Assiette equilibree", "Balanced plate"), keys: ["rice_cooked", "chicken_breast", "courgette"], note: txt("base + proteine + legume", "base + protein + vegetable"), kcal: 520 },
+        { title: txt("Pates poulet", "Chicken pasta"), keys: ["pasta_cooked", "chicken_breast", "onion"], note: txt("plus glucidique, bien si sport/travail", "more carbs, good with sport/work"), kcal: 620 },
+      ],
+      afternoon_snack: [
+        { title: txt("Gouter proteine", "Protein snack"), keys: ["skyr", "muesli"], note: txt("utile si proteines en retard", "useful when protein is behind"), kcal: 240 },
+        { title: txt("Gouter leger", "Light snack"), keys: ["yogurt_natural", "apple"], note: txt("simple si kcal deja hautes", "simple if kcal already high"), kcal: 155 },
+      ],
+      dinner: [
+        { title: txt("Diner leger", "Light dinner"), keys: ["chicken_breast", "courgette", "onion"], note: txt("proteines + legumes", "protein + vegetables"), kcal: 330 },
+        { title: txt("Diner complet", "Full dinner"), keys: ["rice_cooked", "chicken_breast", "courgette"], note: txt("si la journee est basse", "when the day is low"), kcal: 520 },
+      ],
+    };
+    let rows = rowsByType[type] || rowsByType.afternoon_snack;
+    if (proteinGap > 22) rows = rows.filter(row => row.keys.some(key => /chicken|skyr|fromage|yogurt|protein|egg|thon|tofu/.test(key))).concat(rows);
+    if (remainingKcal < 180) rows = rows.filter(row => row.kcal <= 240);
+    if (waterGap > 600) rows = [{ title: txt("Avant tout : eau", "First: water"), keys: ["water"], note: txt("objectif eau bue en retard", "drunk-water target is behind"), kcal: 0 }].concat(rows);
+    const seen = new Set();
+    return rows.filter(row => {
+      if (seen.has(row.title)) return false;
+      seen.add(row.title);
+      return true;
+    }).slice(0, 3).map(row => ({ ...row, foods: row.keys.map(foodByKey).filter(Boolean) })).filter(row => row.foods.length || row.kcal === 0);
+  }
   function mealAssistantHTML(mealTargets, typeTotals, total, macroTargets) {
     const type = currentMealType();
     const target = mealTargets.find(row => row.type === type) || mealTargets[0];
@@ -793,12 +838,20 @@
           ? txt("Hydratation en retard : eau d'abord, puis encas simple.", "Hydration is behind: water first, then a simple snack.")
           : txt("Choisis un encas simple, mesurable, facile a repeter.", "Choose a simple, measurable snack that is easy to repeat.");
     const combos = snackComboSuggestions(type, total, macroTargets, remaining);
+    const smart = mealSmartSuggestions(type, total, macroTargets, remaining, total?.waterMl);
     return `<div style="border:1px solid rgba(37,99,235,.25);border-radius:8px;padding:12px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(34,197,94,.08)),var(--panel2);grid-column:1/-1;">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
         <div><div class="muted" style="font-size:12px;">${esc(txt("Assistant encas", "Snack assistant"))}</div><strong>${esc(mealTypeLabel(type))}</strong></div>
         <span class="pill">${remaining >= 0 ? esc(txt("reste", "left")) : esc(txt("surplus", "surplus"))} ${Math.abs(Math.round(remaining))} kcal</span>
       </div>
       <div class="muted" style="margin-top:8px;">${esc(suggestion)}</div>
+      ${smart.length ? `<div class="tb-meal-smart-grid">
+        ${smart.map(row => `<div class="tb-meal-smart-card">
+          <strong>${esc(row.title)}</strong>
+          <div class="muted" style="font-size:12px;">${esc(row.note)}${row.kcal ? ` · ~${Math.round(row.kcal)} kcal` : ""}</div>
+          ${row.foods?.length ? `<div class="tb-nutrition-chip-row" style="margin:0;">${row.foods.map(food => foodChipHTML(food, "recent")).join("")}</div>` : `<div class="pill">+ ${esc(txt("eau", "water"))}</div>`}
+        </div>`).join("")}
+      </div>` : ""}
       ${combos.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:10px;">
         ${combos.map(combo => `<div style="border:1px solid rgba(148,163,184,.25);border-radius:8px;padding:9px;background:rgba(255,255,255,.05);">
           <strong>${esc(combo.title)}</strong>
@@ -842,6 +895,36 @@
     }
     return rows;
   }
+  function healthPillarRows(row, h, proteinTarget) {
+    const kcal = n(h?.kcal, row?.kcal);
+    const need = Math.max(1, n(row?.needsKcal, h?.needsKcal));
+    const water = n(h?.drinkWaterMl, row?.waterMl);
+    const protein = n(h?.protein, row?.protein);
+    const sleepHours = n(h?.sleepHours, sleepForDay(row?.day).hours);
+    const load = n(row?.sportKcal, 0) + n(row?.workKcal, 0);
+    return [
+      { key: "energy", label: txt("Energie", "Energy"), value: `${Math.round(kcal)} / ${Math.round(need)} kcal`, pct: Math.min(100, Math.abs(kcal / need) * 100), color: "#22c55e", note: kcal > need * 1.12 ? txt("au-dessus", "above") : kcal < need * 0.85 ? txt("a completer", "to complete") : txt("cale", "on track") },
+      { key: "water", label: txt("Eau bue", "Drunk water"), value: `${Math.round(water)} / 2000 ml`, pct: Math.min(100, (water / 2000) * 100), color: "#38bdf8", note: water >= 2000 ? txt("OK", "OK") : txt("a boire", "to drink") },
+      { key: "protein", label: txt("Proteines", "Protein"), value: `${Math.round(protein)} / ${Math.round(proteinTarget)} g`, pct: Math.min(100, (protein / Math.max(1, proteinTarget)) * 100), color: "#a78bfa", note: protein >= proteinTarget * 0.9 ? txt("OK", "OK") : txt("a renforcer", "to improve") },
+      { key: "sleep", label: txt("Sommeil", "Sleep"), value: sleepHours ? `${Math.round(sleepHours * 10) / 10}h / 7.5h` : txt("non saisi", "not set"), pct: Math.min(100, (sleepHours / 7.5) * 100), color: "#8b5cf6", note: sleepHours >= 7 ? txt("recup OK", "recovery OK") : txt("recup basse", "low recovery") },
+      { key: "load", label: txt("Charge", "Load"), value: `${Math.round(load)} kcal`, pct: Math.min(100, (load / 700) * 100), color: "#f59e0b", note: load > 500 ? txt("jour actif", "active day") : txt("charge calme", "quiet load") },
+    ];
+  }
+  function healthFocusCards(row, h, proteinTarget) {
+    const cards = [];
+    const kcal = n(h?.kcal, row?.kcal);
+    const need = Math.max(1, n(row?.needsKcal, h?.needsKcal));
+    const water = n(h?.drinkWaterMl, row?.waterMl);
+    const protein = n(h?.protein, row?.protein);
+    const sleepHours = n(h?.sleepHours, sleepForDay(row?.day).hours);
+    if (water < 2000) cards.push({ title: txt("Hydratation", "Hydration"), body: txt(`Encore ${Math.round(2000 - water)} ml d'eau bue a viser.`, `Aim for ${Math.round(2000 - water)} ml more drunk water.`), color: "#38bdf8" });
+    if (protein < proteinTarget * 0.9) cards.push({ title: txt("Proteines", "Protein"), body: txt(`Il manque environ ${Math.round(proteinTarget - protein)} g : skyr, fromage blanc, poulet, oeufs ou thon.`, `About ${Math.round(proteinTarget - protein)} g missing: skyr, fromage blanc, chicken, eggs or tuna.`), color: "#a78bfa" });
+    if (kcal < need * 0.85) cards.push({ title: txt("Energie", "Energy"), body: txt("Journee basse : complete avec un repas simple, pas seulement du snack.", "Low day: complete with a simple meal, not only snacks."), color: "#22c55e" });
+    if (kcal > need * 1.12) cards.push({ title: txt("Energie", "Energy"), body: txt("Journee haute : garde le prochain repas leger, hydratation et legumes.", "High day: keep the next meal light, hydration and vegetables."), color: "#f59e0b" });
+    if (sleepHours && sleepHours < 7) cards.push({ title: txt("Recuperation", "Recovery"), body: txt("Sommeil court : evite de sur-optimiser les kcal, priorite routine ce soir.", "Short sleep: avoid over-optimizing kcal, prioritize routine tonight."), color: "#8b5cf6" });
+    if (!cards.length) cards.push({ title: txt("Journee lisible", "Readable day"), body: txt("Les grands axes sont bien alignes. Continue simple : eau, proteines, sommeil.", "The main axes are aligned. Keep it simple: water, protein, sleep."), color: "#22c55e" });
+    return cards.slice(0, 3);
+  }
   function itemMeal(item) {
     const mealId = String(item?.meal_id || "");
     return CACHE.meals.find(meal => String(meal.id || "") === mealId) || null;
@@ -881,6 +964,8 @@
     const balanceNow = n(h.currentBalance, kcal - kcalNow);
     const insight = healthWeekInsight(healthWeek);
     const scoreLabel = h.label || (score >= 78 ? txt("Equilibre", "Balanced") : score >= 58 ? txt("A surveiller", "Watch") : txt("A corriger", "To correct"));
+    const pillars = healthPillarRows(todayRow, h, proteinTarget);
+    const focusCards = healthFocusCards(todayRow, h, proteinTarget);
     root.innerHTML = `
       <section class="tb-nutrition-shell">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
@@ -917,6 +1002,22 @@
               <div class="tb-sport-stat"><span>${esc(txt("Proteines", "Protein"))}</span><strong>${Math.round(protein)} / ${Math.round(proteinTarget)} g</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Sommeil", "Sleep"))}</span><strong>${sleepHours ? `${Math.round(sleepHours * 10) / 10}h` : "-"}</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Charge", "Load"))}</span><strong>${Math.round(n(todayRow.sportKcal, 0) + n(todayRow.workKcal, 0))} kcal</strong></div>
+            </div>
+            <div class="tb-health-pillars">
+              ${pillars.map(row => `<div class="tb-health-pillar">
+                <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
+                  <strong>${esc(row.label)}</strong>
+                  <small class="muted">${esc(row.note)}</small>
+                </div>
+                <div class="muted" style="font-size:12px;">${esc(row.value)}</div>
+                <div class="tb-health-pillar-track"><span style="width:${Math.max(0, Math.min(100, row.pct))}%;background:${row.color};"></span></div>
+              </div>`).join("")}
+            </div>
+            <div class="tb-health-focus-grid">
+              ${focusCards.map(card => `<div class="tb-health-focus-card" style="border-color:${card.color}66;">
+                <strong style="color:${card.color};">${esc(card.title)}</strong>
+                <div class="muted" style="font-size:12px;">${esc(card.body)}</div>
+              </div>`).join("")}
             </div>
             <details open style="border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--panel2);">
               <summary style="cursor:pointer;font-weight:900;">${esc(txt("Comprendre le score", "Understand the score"))}</summary>

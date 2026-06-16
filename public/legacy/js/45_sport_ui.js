@@ -1660,11 +1660,16 @@
           <div class="clock">${esc(displayValue)}</div>
           ${amrap ? `<div class="hint">${esc(txt("AMRAP restant", "AMRAP left"))}: ${fmtSec(amrapRemaining)} - ${esc(txt("Tours valides", "Rounds counted"))}: ${n(timer.roundsCompleted, 0)}</div>` : ""}
           <div class="hint">${esc(txt("Temps total", "Total time"))}: ${fmtSec(elapsed)} ${step?.kind === "work" ? `- ${esc(labelEquipment(step.item.equipment))}` : ""}</div>
-          ${step?.kind === "work" ? (supportsExternalLoad(step.item) ? `<label class="hint" style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;">
-            ${esc(txt("Charge serie", "Set load"))}
-            <input id="sport-step-load" type="number" step="0.5" inputmode="decimal" value="${esc(String(n(timer.stepLoadKg ?? lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)), 0)))}" style="width:96px;min-height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.12);color:white;text-align:center;font-weight:900;" />
-            kg
-          </label>` : `<div class="hint">${esc(txt("Charge externe", "External load"))}: 0 kg</div>`) : ""}
+          ${step?.kind === "work" ? (supportsExternalLoad(step.item) ? `<div class="hint" style="display:grid;gap:7px;justify-items:center;">
+            <label style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;">
+              ${esc(txt("Charge serie", "Set load"))}
+              <button class="btn small" type="button" data-sport-load-delta="-2.5">-2.5</button>
+              <input id="sport-step-load" type="number" step="0.5" inputmode="decimal" value="${esc(String(n(timer.stepLoadKg ?? lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)), 0)))}" style="width:96px;min-height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.12);color:white;text-align:center;font-weight:900;" />
+              <button class="btn small" type="button" data-sport-load-delta="2.5">+2.5</button>
+              kg
+            </label>
+            <div class="pill" style="background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);color:white;">${esc(txt("Dernier poids", "Last load"))}: ${Math.round(lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)) * 10) / 10} kg</div>
+          </div>` : `<div class="hint">${esc(txt("Charge externe", "External load"))}: 0 kg</div>`) : ""}
           <div class="tb-sport-next">${esc(txt("Ensuite", "Next"))}: ${esc(nextStepLabel())}</div>
           <div class="tb-sport-actions" style="justify-content:center;">
             ${step?.kind === "work" ? `<button class="btn primary" type="button" id="sport-step-done">${esc(txt("Fini", "Done"))}</button>` : ""}
@@ -2035,6 +2040,15 @@
     if (stepLoad) stepLoad.oninput = () => {
       if (CACHE.timer) CACHE.timer.stepLoadKg = n(stepLoad.value, 0);
     };
+    root.querySelectorAll("[data-sport-load-delta]").forEach(btn => {
+      btn.onclick = () => {
+        const input = root.querySelector("#sport-step-load");
+        if (!input) return;
+        const next = Math.max(0, n(input.value, 0) + n(btn.getAttribute("data-sport-load-delta"), 0));
+        input.value = String(Math.round(next * 10) / 10);
+        if (CACHE.timer) CACHE.timer.stepLoadKg = n(input.value, 0);
+      };
+    });
     const skipRest = root.querySelector("#sport-skip-rest");
     if (skipRest) skipRest.onclick = skipRestStep;
     const roundCount = root.querySelector("#sport-round-count");
