@@ -623,15 +623,44 @@
         </div>
       </div>`;
   }
-  function mealMomentTargets(needsKcal) {
+  function mealMomentTargets(needsKcal, typeTotals, day) {
     const rows = [
-      { type: "breakfast", pct: 0.25, color: "#38bdf8" },
-      { type: "morning_snack", pct: 0.10, color: "#a78bfa" },
-      { type: "lunch", pct: 0.35, color: "#22c55e" },
-      { type: "afternoon_snack", pct: 0.10, color: "#f59e0b" },
-      { type: "dinner", pct: 0.20, color: "#fb7185" },
+      { type: "breakfast", pct: 0.22, minPct: 0.14, maxPct: 0.30, color: "#38bdf8" },
+      { type: "morning_snack", pct: 0.08, minPct: 0.04, maxPct: 0.14, color: "#a78bfa" },
+      { type: "lunch", pct: 0.35, minPct: 0.24, maxPct: 0.44, color: "#22c55e" },
+      { type: "afternoon_snack", pct: 0.10, minPct: 0.05, maxPct: 0.16, color: "#f59e0b" },
+      { type: "dinner", pct: 0.25, minPct: 0.16, maxPct: 0.34, color: "#fb7185" },
     ];
-    return rows.map(row => ({ ...row, kcal: Math.round(n(needsKcal, 0) * row.pct) }));
+    const totalNeed = Math.max(0, n(needsKcal, 0));
+    const baseRows = rows.map(row => {
+      const baseKcal = Math.round(totalNeed * row.pct);
+      return { ...row, baseKcal, kcal: baseKcal };
+    });
+    const today = todayISO();
+    const targetType = String(day || today) === today ? currentMealType() : "dinner";
+    const currentIndex = Math.max(0, baseRows.findIndex(row => row.type === targetType));
+    const passedRows = baseRows.slice(0, currentIndex);
+    const futureRows = baseRows.slice(currentIndex);
+    const passedBase = passedRows.reduce((sum, row) => sum + n(row.baseKcal, 0), 0);
+    const passedConsumed = passedRows.reduce((sum, row) => sum + n(typeTotals?.[row.type]?.kcal, 0), 0);
+    const adjustment = passedBase - passedConsumed;
+    const futureBase = futureRows.reduce((sum, row) => sum + n(row.baseKcal, 0), 0);
+    if (!futureBase || Math.abs(adjustment) < 40) return baseRows;
+    return baseRows.map((row, idx) => {
+      if (idx < currentIndex) return row;
+      const share = n(row.baseKcal, 0) / futureBase;
+      const adapted = n(row.baseKcal, 0) + adjustment * share;
+      const min = totalNeed * n(row.minPct, row.pct * 0.65);
+      const max = totalNeed * n(row.maxPct, row.pct * 1.35);
+      return { ...row, kcal: Math.round(Math.max(min, Math.min(max, adapted))), adjustedKcal: Math.round(adapted) };
+    });
+  }
+  function mealTargetNote(target) {
+    const delta = Math.round(n(target?.kcal, 0) - n(target?.baseKcal, target?.kcal));
+    if (Math.abs(delta) < 40) return txt("Objectif standard.", "Standard target.");
+    return delta > 0
+      ? txt(`Ajuste +${delta} kcal car les repas precedents etaient plus legers.`, `Adjusted +${delta} kcal because previous meals were lighter.`)
+      : txt(`Ajuste ${delta} kcal car les repas precedents etaient plus hauts.`, `Adjusted ${delta} kcal because previous meals were higher.`);
   }
   function typeTotalsForDay(meals, items) {
     const mealTypes = new Map();
@@ -989,23 +1018,17 @@
     const proteinTarget = Math.max(70, kg * 1.6);
     const fatTarget = Math.max(45, kg * 0.8);
     const carbsTarget = Math.max(120, (needsKcal - (proteinTarget * 4) - (fatTarget * 9)) / 4);
-    const mealTargets = mealMomentTargets(needsKcal);
     const typeTotals = typeTotalsForDay(meals, items);
+    const mealTargets = mealMomentTargets(needsKcal, typeTotals, day);
     const kcalPct = Math.min(100, pct(consumedKcal, needsKcal));
     const kcalRingColor = kcalDelta > 250 ? "#ef4444" : (kcalDelta < -350 ? "#f59e0b" : "#22c55e");
     const week = weekRows(history, day);
     const sleep = sleepForDay(day);
     const sleepWeek = week.map(row => ({ day: row.day, ...sleepForDay(row.day) }));
-    const healthWeek = healthHistoryRows(history, day);
     const sleepLabel = sleep.hours > 0 ? `${Math.round(sleep.hours * 10) / 10}h` : txt("non saisi", "not set");
     const sleepNightLabel = sleep.nightDay ? sleep.nightDay.slice(5).replace("-", "/") : offsetDateISO(day, -1).slice(5).replace("-", "/");
     const editingItem = CACHE.editingItemId ? items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
     const quickFoods = quickFoodRows();
-    const healthAvg = healthWeek.length ? healthWeek.reduce((sum, row) => sum + n(row.score, 0), 0) / healthWeek.length : 0;
-    const healthWaterDays = healthWeek.filter(row => n(row.health?.drinkWaterMl ?? row.waterMl, 0) >= 2000).length;
-    const healthSleepAvg = healthWeek.length ? healthWeek.reduce((sum, row) => sum + n(row.health?.sleepHours, sleepForDay(row.day).hours), 0) / healthWeek.length : 0;
-    const healthActivityKcal = healthWeek.reduce((sum, row) => sum + n(row.sportKcal, 0) + n(row.workKcal, 0), 0);
-    const healthInsight = healthWeekInsight(healthWeek);
     root.innerHTML = `
       <section class="tb-nutrition-shell">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
@@ -1120,60 +1143,6 @@
               </div>
               <div class="muted" style="font-size:12px;">${esc(txt("Survole une barre pour le detail du jour.", "Hover a bar for day details."))}</div>
             </div>
-            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(34,197,94,.08),rgba(56,189,248,.05)),var(--panel2);">
-              <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;">
-                <div>
-                  <h3 style="margin:0;">${esc(txt("Sante semaine", "Weekly health"))}</h3>
-                  <div class="muted" style="font-size:12px;margin-top:3px;">${esc(healthInsight.advice)}</div>
-                </div>
-                <span class="pill" style="border-color:${healthInsight.trend >= 0 ? "#22c55e" : "#f59e0b"};color:${healthInsight.trend >= 0 ? "#22c55e" : "#f59e0b"};">${healthInsight.trend >= 0 ? "+" : ""}${Math.round(healthInsight.trend)} pts</span>
-              </div>
-              <div class="tb-nutrition-health-strip">
-                <div class="tb-sport-stat"><span>${esc(txt("Score moyen", "Avg score"))}</span><strong>${Math.round(healthAvg)}</strong></div>
-                <div class="tb-sport-stat"><span>${esc(txt("Eau OK", "Water OK"))}</span><strong>${healthWaterDays}/${healthWeek.length}</strong></div>
-                <div class="tb-sport-stat"><span>${esc(txt("Sommeil moy.", "Avg sleep"))}</span><strong>${healthSleepAvg ? `${Math.round(healthSleepAvg * 10) / 10}h` : "-"}</strong></div>
-                <div class="tb-sport-stat"><span>${esc(txt("Charge", "Load"))}</span><strong>${Math.round(healthActivityKcal)}</strong></div>
-              </div>
-              <div style="display:grid;gap:8px;">
-                ${healthWeek.map(row => {
-                  const h = row.health || {};
-                  const water = n(h.drinkWaterMl, row.waterMl);
-                  const sleepHours = n(h.sleepHours, sleepForDay(row.day).hours);
-                  const kcal = n(h.kcal, row.kcal);
-                  const kcalPctDay = Math.min(100, pct(kcal, row.needsKcal));
-                  const waterPctDay = Math.min(100, pct(water, 2000));
-                  const sleepPctDay = Math.min(100, pct(sleepHours, 7.5));
-                  const detail = `${row.day} | score ${row.score}/100 | kcal ${Math.round(n(h.kcal, row.kcal))}/${Math.round(row.needsKcal)} | eau ${Math.round(water)} ml | proteines ${Math.round(n(h.protein, row.protein))} g | sommeil ${sleepHours ? `${Math.round(sleepHours * 10) / 10}h` : "non saisi"} | sport+travail ${Math.round(row.sportKcal + row.workKcal)} kcal`;
-                  return `<details ${row.day === day ? "open" : ""} style="border:1px solid ${row.color}66;border-radius:8px;background:rgba(255,255,255,.04);overflow:hidden;">
-                    <summary data-nutrition-history-date="${esc(row.day)}" title="${esc(detail)}" style="cursor:pointer;list-style:none;">
-                      <div class="tb-nutrition-health-day">
-                        <span style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(${row.color} ${Math.max(0, Math.min(100, row.score))}%, rgba(148,163,184,.20) 0);"><strong style="font-size:12px;">${Math.round(row.score)}</strong></span>
-                        <span style="display:grid;gap:5px;min-width:0;">
-                          <span style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><strong>${esc(row.day.slice(5).replace("-", "/"))}</strong><small class="muted">${Math.round(kcal)} / ${Math.round(row.needsKcal)} kcal</small></span>
-                          <span class="tb-nutrition-health-bars">
-                            <span title="kcal" style="height:${Math.max(5, kcalPctDay * 0.38)}px;background:${row.color};"></span>
-                            <span title="eau" style="height:${Math.max(5, waterPctDay * 0.38)}px;background:#38bdf8;"></span>
-                            <span title="sommeil" style="height:${Math.max(5, sleepPctDay * 0.38)}px;background:#8b5cf6;"></span>
-                          </span>
-                        </span>
-                      </div>
-                    </summary>
-                    <div style="padding:0 10px 10px;display:grid;gap:8px;">
-                      <div class="tb-sport-stats">
-                        <div class="tb-sport-stat"><span>kcal</span><strong>${Math.round(kcal)}</strong></div>
-                        <div class="tb-sport-stat"><span>${esc(txt("Eau", "Water"))}</span><strong>${Math.round(water)} ml</strong></div>
-                        <div class="tb-sport-stat"><span>${esc(txt("Proteines", "Protein"))}</span><strong>${Math.round(n(h.protein, row.protein))} g</strong></div>
-                        <div class="tb-sport-stat"><span>${esc(txt("Sommeil", "Sleep"))}</span><strong>${sleepHours ? `${Math.round(sleepHours * 10) / 10}h` : "-"}</strong></div>
-                        <div class="tb-sport-stat"><span>Sport</span><strong>${Math.round(row.sportKcal)}</strong></div>
-                        <div class="tb-sport-stat"><span>${esc(txt("Travail", "Work"))}</span><strong>${Math.round(row.workKcal)}</strong></div>
-                      </div>
-                      <div class="muted" style="font-size:12px;">${esc(h.advice || txt("Score calcule avec repas, eau bue, sport, travail et sommeil.", "Score calculated with meals, drunk water, sport, work and sleep."))}</div>
-                      ${row.typeRows?.length ? `<div class="tb-nutrition-history-type-grid">${row.typeRows.map(typeRow => `<div class="pill" style="justify-content:space-between;"><span>${esc(mealTypeLabel(typeRow.type))}</span><strong>${Math.round(typeRow.kcal)} kcal</strong></div>`).join("")}</div>` : ""}
-                    </div>
-                  </details>`;
-                }).join("")}
-              </div>
-            </div>
           </div>
           <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
             <h3 style="margin:0 0 10px;">${esc(txt("Jour selectionne", "Selected day"))} · ${esc(day)}</h3>
@@ -1231,6 +1200,7 @@
                       <span class="pill">${rest >= 0 ? esc(txt("reste", "left")) : esc(txt("surplus", "surplus"))} ${Math.abs(Math.round(rest))}</span>
                     </button>
                     <div style="margin:10px 0;">${progressBar("kcal", consumed.kcal, target.kcal, "")}</div>
+                    <div class="muted" style="font-size:12px;margin:-4px 0 8px;">${esc(mealTargetNote(target))}</div>
                     <div class="pill" style="margin-bottom:8px;background:rgba(255,255,255,.06);">${esc(suggestion)}</div>
                     ${rowItems.length ? rowItems.map(item => `
                       <div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid rgba(148,163,184,.22);padding:8px 0;align-items:flex-start;flex-wrap:wrap;">
