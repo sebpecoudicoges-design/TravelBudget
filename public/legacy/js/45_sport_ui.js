@@ -13,6 +13,7 @@
   const CIRCUIT_KEY = () => scopedKey("travelbudget_sport_circuit_v1");
   const DELETE_QUEUE_KEY = () => scopedKey("travelbudget_sport_delete_queue_v1");
   const LOAD_HISTORY_KEY = () => scopedKey("travelbudget_sport_load_history_v1");
+  const TIMER_PREF_KEY = () => scopedKey("travelbudget_sport_timer_prefs_v1");
   const HISTORY_KEY = () => scopedKey(baseHistoryKey());
   const ANON_HISTORY_KEY = () => `${baseHistoryKey()}::anon`;
   const EXERCISE_FAVORITES_KEY = () => scopedKey("travelbudget_sport_exercise_favorites_v1");
@@ -275,6 +276,8 @@
     builderDuration: 35,
     builderLevel: "regular",
     builderFamily: "all",
+    timerFocus: false,
+    timerBeepVolume: loadTimerPrefs().beepVolume,
     exerciseSearch: "",
     globalRestSeconds: loadGlobalRest(),
     circuit: loadCircuit(),
@@ -325,6 +328,7 @@
     CACHE.plan = loadPlan();
     CACHE.globalRestSeconds = loadGlobalRest();
     CACHE.circuit = loadCircuit();
+    CACHE.timerBeepVolume = loadTimerPrefs().beepVolume;
   }
   function activeTravelId() { return window.state?.activeTravelId || null; }
   function table(name) { return window.TB_CONST?.TABLES?.[name] || name; }
@@ -467,6 +471,23 @@
     CACHE.circuit.amrapMinutes = Math.max(0, Math.round(n(CACHE.circuit.amrapMinutes, 0)));
     try { localStorage.setItem(CIRCUIT_KEY(), JSON.stringify(CACHE.circuit)); } catch (_) {}
     return CACHE.circuit;
+  }
+  function loadTimerPrefs() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(TIMER_PREF_KEY()) || "{}");
+      return {
+        beepVolume: Math.max(0, Math.min(100, Math.round(n(raw.beepVolume, 70)))),
+      };
+    } catch (_) {
+      return { beepVolume: 70 };
+    }
+  }
+  function saveTimerPrefs(next) {
+    const prefs = Object.assign({ beepVolume: 70 }, loadTimerPrefs(), next || {});
+    prefs.beepVolume = Math.max(0, Math.min(100, Math.round(n(prefs.beepVolume, 70))));
+    CACHE.timerBeepVolume = prefs.beepVolume;
+    try { localStorage.setItem(TIMER_PREF_KEY(), JSON.stringify(prefs)); } catch (_) {}
+    return prefs;
   }
   function bmiValue(kg, cm) {
     const h = n(cm, 0) / 100;
@@ -1273,6 +1294,13 @@
       .tb-sport-timer .name{font-size:34px;font-weight:950;line-height:1.05;}
       .tb-sport-timer .clock{font-size:56px;font-weight:950;letter-spacing:-.05em;}
       .tb-sport-timer .hint{color:#cbd5e1;font-weight:800;}
+      .tb-sport-timer-card.focus{position:fixed;inset:0;z-index:9997;border-radius:0!important;padding:clamp(14px,2.2vw,28px)!important;overflow:auto;background:#020617;}
+      .tb-sport-timer-card.focus h3{display:none;}
+      .tb-sport-timer-card.focus .tb-sport-timer{min-height:calc(100dvh - 32px);border-radius:28px;}
+      .tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);}
+      .tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(34px,5vw,74px);}
+      .tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(76px,12vw,170px);line-height:.9;}
+      .tb-sport-timer-card.focus .tb-sport-live-kpi strong{font-size:clamp(18px,2.1vw,28px);}
       .tb-sport-timer-v2{align-items:stretch;text-align:left;justify-content:flex-start;background:linear-gradient(145deg,#07111f,#0f172a 48%,#0b3b57);overflow:hidden;position:relative;}
       .tb-sport-timer-v2:before{content:"";position:absolute;inset:-80px -40px auto auto;width:210px;height:210px;border-radius:50%;background:rgba(56,189,248,.18);filter:blur(10px);}
       .tb-sport-live-head{position:relative;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;z-index:1;}
@@ -1291,6 +1319,8 @@
       .tb-sport-time-step b{font-size:11px;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
       .tb-sport-control-row{display:flex;align-items:center;gap:8px;justify-content:flex-start;flex-wrap:wrap;}
       .tb-sport-control-row input{width:86px;min-height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.12);color:white;text-align:center;font-weight:900;}
+      .tb-sport-volume-row{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;color:#dbeafe;font-weight:900;}
+      .tb-sport-volume-row input[type="range"]{width:min(220px,48vw);accent-color:#38bdf8;}
       .tb-sport-next{border-radius:16px;padding:9px 11px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#dbeafe;font-weight:850;}
       .tb-sport-modal-backdrop{position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,.58);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:18px;}
       .tb-sport-modal{width:min(560px,100%);border-radius:26px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 30px 80px rgba(15,23,42,.28);border:1px solid rgba(148,163,184,.24);padding:18px;}
@@ -1318,7 +1348,7 @@
       body.theme-dark .tb-sport-advanced summary{color:#f8fafc;}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}}
-      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}}
+      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timer-card.focus .tb-sport-timer{min-height:calc(100dvh - 20px);border-radius:20px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:72px}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:31px}}
       body.tb-capacitor-app[data-tb-view="sport"] #sport-root{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-shell{gap:10px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-hero{border-radius:22px!important;padding:16px!important;min-height:0!important;box-shadow:0 16px 34px rgba(37,99,235,.16)!important;}
@@ -1766,8 +1796,9 @@
     const roundInfo = step?.roundIndex ? ` - ${esc(txt("Tour", "Round"))} ${step.roundIndex}${step.roundTotal ? `/${step.roundTotal}` : ""}` : "";
     const amrap = CACHE.circuit?.enabled && n(CACHE.circuit?.amrapMinutes, 0) > 0;
     const amrapRemaining = amrap && timer.timeCapEndAt ? Math.max(0, Math.ceil((timer.timeCapEndAt - Date.now()) / 1000)) : 0;
+    const volume = Math.max(0, Math.min(100, Math.round(n(CACHE.timerBeepVolume, 70))));
     return `
-      <div class="tb-sport-card">
+      <div class="tb-sport-card tb-sport-timer-card ${CACHE.timerFocus ? "focus" : ""}">
         <h3>${esc(txt("Timer guide", "Guided timer"))}</h3>
         <div class="tb-sport-timer tb-sport-timer-v2">
           <div class="tb-sport-live-head">
@@ -1775,7 +1806,10 @@
               <div class="kind">${esc(isRest ? txt("Repos", "Rest") : txt("Travail", "Work"))}${roundInfo}</div>
               <div class="hint">${esc(txt("Progression", "Progress"))}: ${workDone}/${totalWork} · ${esc(txt("Temps total", "Total time"))}: ${fmtSec(elapsed)}</div>
             </div>
-            ${amrap ? `<div class="tb-sport-next">${esc(txt("AMRAP", "AMRAP"))}: ${fmtSec(amrapRemaining)} · ${esc(txt("Tours", "Rounds"))}: ${n(timer.roundsCompleted, 0)}</div>` : `<div class="tb-sport-next">${esc(txt("Ensuite", "Next"))}: ${esc(nextStepLabel())}</div>`}
+            <div class="tb-sport-actions" style="justify-content:flex-end;">
+              <button class="btn small" type="button" id="sport-timer-focus">${esc(CACHE.timerFocus ? txt("Reduire", "Exit focus") : txt("Grand ecran", "Big screen"))}</button>
+              ${amrap ? `<div class="tb-sport-next">${esc(txt("AMRAP", "AMRAP"))}: ${fmtSec(amrapRemaining)} · ${esc(txt("Tours", "Rounds"))}: ${n(timer.roundsCompleted, 0)}</div>` : `<div class="tb-sport-next">${esc(txt("Ensuite", "Next"))}: ${esc(nextStepLabel())}</div>`}
+            </div>
           </div>
           <div class="tb-sport-live-main">
             <div class="tb-sport-live-focus">
@@ -1806,6 +1840,11 @@
             </div>
           </div>
           <div class="tb-sport-timeline">${renderTimerTimeline(timer)}</div>
+          <div class="tb-sport-volume-row">
+            <span>${esc(txt("Bip", "Beep"))} ${volume}%</span>
+            <input id="sport-beep-volume" type="range" min="0" max="100" step="5" value="${esc(String(volume))}">
+            <button class="btn small" type="button" id="sport-beep-test">${esc(txt("Tester", "Test"))}</button>
+          </div>
           <div class="tb-sport-actions" style="justify-content:center;">
             ${step?.kind === "work" ? `<button class="btn primary" type="button" id="sport-step-done">${esc(txt("Fini", "Done"))}</button>` : ""}
             ${step?.item ? `<button class="btn" type="button" id="sport-add-set">+ ${esc(txt("serie", "set"))}</button>` : ""}
@@ -2176,6 +2215,19 @@
     if (done) done.onclick = completeStep;
     const addSet = root.querySelector("#sport-add-set");
     if (addSet) addSet.onclick = addTimerSetForCurrentExercise;
+    const focus = root.querySelector("#sport-timer-focus");
+    if (focus) focus.onclick = () => {
+      CACHE.timerFocus = !CACHE.timerFocus;
+      renderSport("timer-focus");
+    };
+    const beepVolume = root.querySelector("#sport-beep-volume");
+    if (beepVolume) beepVolume.oninput = () => {
+      saveTimerPrefs({ beepVolume: n(beepVolume.value, 70) });
+      const label = root.querySelector(".tb-sport-volume-row span");
+      if (label) label.textContent = `${txt("Bip", "Beep")} ${Math.round(n(beepVolume.value, 70))}%`;
+    };
+    const beepTest = root.querySelector("#sport-beep-test");
+    if (beepTest) beepTest.onclick = () => beep("work");
     const stepLoad = root.querySelector("#sport-step-load");
     if (stepLoad) stepLoad.oninput = () => {
       if (CACHE.timer) CACHE.timer.stepLoadKg = n(stepLoad.value, 0);
@@ -2498,6 +2550,7 @@
       plan: CACHE.plan.slice(),
     };
     CACHE.timer = null;
+    CACHE.timerFocus = false;
     CACHE.pendingSummary = summary;
     renderSport("mark-done");
     openFinishModal(summary);
@@ -2562,12 +2615,14 @@
       const ctx = new AC();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
+      const volume = Math.max(0, Math.min(1, n(CACHE.timerBeepVolume, 70) / 100));
+      const baseGain = kind === "finish" ? 0.24 : 0.18;
       osc.frequency.value = kind === "finish" ? 1046 : kind === "rest" ? 660 : 880;
-      gain.gain.value = kind === "finish" ? 0.11 : 0.08;
+      gain.gain.value = Math.max(0, Math.min(0.28, baseGain * volume));
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      setTimeout(() => { try { osc.stop(); ctx.close(); } catch (_) {} }, kind === "finish" ? 220 : 140);
+      setTimeout(() => { try { osc.stop(); ctx.close(); } catch (_) {} }, kind === "finish" ? 260 : 170);
     } catch (_) {}
   }
   function readTimerStepLoadKg(timer, step) {
