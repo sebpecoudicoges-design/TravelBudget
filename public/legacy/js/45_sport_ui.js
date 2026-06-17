@@ -46,6 +46,7 @@
     ["machine", "Machine", "Machine"],
     ["dumbbell", "Halteres", "Dumbbells"],
     ["barbell", "Barre", "Barbell"],
+    ["plate", "Disque / plate", "Plate"],
     ["band", "Elastique", "Resistance band"],
     ["kettlebell", "Kettlebell", "Kettlebell"],
     ["rope", "Corde a sauter", "Jump rope"],
@@ -138,10 +139,28 @@
     { key: "dumbbell_triceps_extension", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Extension triceps haltere", en: "Dumbbell triceps extension", mode: "reps", reps: 12, sets: 3, rest: 60 },
     { key: "dumbbell_renegade_row", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Renegade row", en: "Renegade row", mode: "reps", reps: 8, sets: 3, rest: 90 },
     { key: "dumbbell_thruster", goal: "cardio", equipment: "dumbbell", activityKey: "hiit", fr: "Thruster halteres", en: "Dumbbell thruster", mode: "reps", reps: 10, sets: 4, rest: 60 },
+    { key: "dumbbell_bench_press", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Developpe couche halteres", en: "Dumbbell bench press", mode: "reps", reps: 10, sets: 3, rest: 90, metValue: 5.8 },
+    { key: "dumbbell_chest_supported_row", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Rowing halteres banc incline", en: "Chest-supported dumbbell row", mode: "reps", reps: 10, sets: 3, rest: 75, metValue: 5.4 },
+    { key: "dumbbell_bulgarian_split_squat", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Bulgarian split squat halteres", en: "Dumbbell Bulgarian split squat", mode: "reps", reps: 8, sets: 3, rest: 90, metValue: 6.5 },
+    { key: "dumbbell_single_arm_snatch", goal: "cardio", equipment: "dumbbell", activityKey: "hiit", fr: "Snatch haltere un bras", en: "Single-arm dumbbell snatch", mode: "reps", reps: 8, sets: 5, rest: 60, metValue: 8.5 },
+    { key: "dumbbell_hammer_curl", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Curl marteau halteres", en: "Dumbbell hammer curl", mode: "reps", reps: 12, sets: 3, rest: 60, metValue: 4.8 },
+    { key: "dumbbell_skull_crusher", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Barre au front halteres", en: "Dumbbell skull crusher", mode: "reps", reps: 10, sets: 3, rest: 60, metValue: 4.8 },
     { key: "barbell_squat", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Squat barre", en: "Barbell squat", mode: "reps", reps: 6, sets: 4, rest: 120 },
     { key: "barbell_deadlift", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Souleve de terre barre", en: "Barbell deadlift", mode: "reps", reps: 5, sets: 4, rest: 150 },
     { key: "barbell_bench", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Developpe couche barre", en: "Barbell bench press", mode: "reps", reps: 6, sets: 4, rest: 120 },
     { key: "barbell_row", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Rowing barre", en: "Barbell row", mode: "reps", reps: 8, sets: 4, rest: 90 },
+    { key: "barbell_overhead_press", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Developpe militaire barre", en: "Barbell overhead press", mode: "reps", reps: 6, sets: 4, rest: 120, metValue: 5.6 },
+    { key: "barbell_hip_thrust", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Hip thrust barre", en: "Barbell hip thrust", mode: "reps", reps: 10, sets: 4, rest: 90, metValue: 5.6 },
+    { key: "barbell_power_clean", goal: "cardio", equipment: "barbell", activityKey: "hiit", fr: "Power clean barre", en: "Barbell power clean", mode: "reps", reps: 5, sets: 5, rest: 120, metValue: 8.0 },
+    { key: "barbell_incline_bench", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Developpe incline barre", en: "Barbell incline bench press", mode: "reps", reps: 8, sets: 4, rest: 105, metValue: 6.1 },
+    { key: "barbell_lunge", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Fentes barre", en: "Barbell lunge", mode: "reps", reps: 8, sets: 3, rest: 90, metValue: 6.2 },
+    { key: "barbell_curl", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Curl barre", en: "Barbell curl", mode: "reps", reps: 10, sets: 3, rest: 60, metValue: 4.8 },
+    { key: "plate_floor_press", goal: "strength", equipment: "plate", activityKey: "strength", fr: "Developpe plate au sol", en: "Plate floor press", mode: "reps", reps: 12, sets: 3, rest: 75, metValue: 5.4 },
+    { key: "plate_squeeze_press", goal: "strength", equipment: "plate", activityKey: "strength", fr: "Squeeze press plate", en: "Plate squeeze press", mode: "reps", reps: 12, sets: 3, rest: 60, metValue: 5.2 },
+    { key: "plate_overhead_press", goal: "strength", equipment: "plate", activityKey: "strength", fr: "Developpe epaules plate", en: "Plate overhead press", mode: "reps", reps: 10, sets: 3, rest: 75, metValue: 5.2 },
+    { key: "plate_front_raise", goal: "strength", equipment: "plate", activityKey: "strength", fr: "Elevation frontale plate", en: "Plate front raise", mode: "reps", reps: 12, sets: 3, rest: 45, metValue: 4.6 },
+    { key: "plate_russian_twist", goal: "strength", equipment: "plate", activityKey: "core_abs", fr: "Russian twist plate", en: "Plate Russian twist", mode: "reps", reps: 20, sets: 3, rest: 45, metValue: 5.0 },
+    { key: "plate_around_world", goal: "mobility", equipment: "plate", activityKey: "mobility", fr: "Tour du monde plate", en: "Plate around the world", mode: "reps", reps: 8, sets: 3, rest: 45, metValue: 4.8 },
     { key: "kettlebell_swing", goal: "strength", equipment: "kettlebell", activityKey: "hiit", fr: "Swing kettlebell", en: "Kettlebell swing", mode: "reps", reps: 15, sets: 4, rest: 60 },
     { key: "kettlebell_goblet", goal: "strength", equipment: "kettlebell", activityKey: "strength", fr: "Goblet squat kettlebell", en: "Kettlebell goblet squat", mode: "reps", reps: 12, sets: 3, rest: 75 },
     { key: "kettlebell_clean_press", goal: "strength", equipment: "kettlebell", activityKey: "strength", fr: "Clean press kettlebell", en: "Kettlebell clean and press", mode: "reps", reps: 6, sets: 3, rest: 90 },
@@ -433,7 +452,7 @@
   }
   function supportsExternalLoad(item) {
     const equipment = String(item?.equipment || "");
-    return ["bodyweight", "dumbbell", "barbell", "kettlebell", "machine"].includes(equipment);
+    return ["bodyweight", "dumbbell", "barbell", "plate", "kettlebell", "machine"].includes(equipment);
   }
   function exerciseLoadKey(item) {
     return String(item?.exerciseName || item?.key || item?.activityKey || "exercise")
@@ -464,10 +483,17 @@
     } catch (_) {}
   }
   function setWorkSeconds(item, actualSeconds) {
-    if (Number.isFinite(Number(actualSeconds)) && Number(actualSeconds) > 0) return Math.max(1, Math.round(Number(actualSeconds)));
-    if (item?.mode === "time") return Math.max(1, Math.round(n(item?.targetSeconds, 0)));
+    const planned = item?.mode === "time"
+      ? Math.max(1, Math.round(n(item?.targetSeconds, 0)))
+      : Math.max(15, Math.round(Math.max(1, Math.round(n(item?.targetReps, 10))) * 2.5));
+    if (Number.isFinite(Number(actualSeconds)) && Number(actualSeconds) > 0) {
+      const actual = Math.max(1, Math.round(Number(actualSeconds)));
+      const minReliable = item?.mode === "time" ? Math.min(15, planned * 0.25) : Math.min(12, planned * 0.45);
+      return actual < minReliable ? planned : actual;
+    }
+    if (item?.mode === "time") return planned;
     const reps = Math.max(1, Math.round(n(item?.targetReps, 10)));
-    return Math.max(15, Math.round(reps * 2.5));
+    return Math.max(planned, Math.round(reps * 2.5));
   }
   function restSecondsForItem(item) {
     const raw = Number(item?.restSeconds);
@@ -497,7 +523,7 @@
     const key = String(item?.activityKey || "");
     const equipment = String(item?.equipment || "");
     return key === "strength" || key === "bodyweight_strength" || key === "resistance_band_strength" || key === "core_abs" || key === "plank_core" ||
-      ["bodyweight", "band", "dumbbell", "barbell", "kettlebell", "machine"].includes(equipment);
+      ["bodyweight", "band", "dumbbell", "barbell", "plate", "kettlebell", "machine"].includes(equipment);
   }
   function calibratedMet(item) {
     const activity = catalogItem(item?.activityKey || "strength");
@@ -1647,7 +1673,7 @@
     const workDone = timer.doneSets.length;
     const totalWork = timer.sequence.filter(s => s.kind === "work").length;
     const isRest = step?.kind === "rest" || step?.kind === "round_rest";
-    const displayValue = isRest ? fmtSec(remaining) : (step?.item?.mode === "time" ? fmtSec(remaining) : `${n(step?.item?.targetReps, 0)} reps`);
+    const displayValue = isRest ? fmtSec(remaining) : (step?.item?.mode === "time" ? fmtSec(remaining) : `${n(timer.stepReps ?? step?.item?.targetReps, 0)} reps`);
     const roundInfo = step?.roundIndex ? ` - ${esc(txt("Tour", "Round"))} ${step.roundIndex}${step.roundTotal ? `/${step.roundTotal}` : ""}` : "";
     const amrap = CACHE.circuit?.enabled && n(CACHE.circuit?.amrapMinutes, 0) > 0;
     const amrapRemaining = amrap && timer.timeCapEndAt ? Math.max(0, Math.ceil((timer.timeCapEndAt - Date.now()) / 1000)) : 0;
@@ -1670,6 +1696,12 @@
             </label>
             <div class="pill" style="background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);color:white;">${esc(txt("Dernier poids", "Last load"))}: ${Math.round(lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)) * 10) / 10} kg</div>
           </div>` : `<div class="hint">${esc(txt("Charge externe", "External load"))}: 0 kg</div>`) : ""}
+          ${step?.kind === "work" && step?.item?.mode === "reps" ? `<div class="hint" style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;">
+            ${esc(txt("Reps serie", "Set reps"))}
+            <button class="btn small" type="button" data-sport-reps-delta="-1">-1</button>
+            <input id="sport-step-reps" type="number" step="1" inputmode="numeric" min="0" value="${esc(String(Math.max(0, Math.round(n(timer.stepReps ?? step.item.targetReps, 0)))))}" style="width:82px;min-height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.12);color:white;text-align:center;font-weight:900;" />
+            <button class="btn small" type="button" data-sport-reps-delta="1">+1</button>
+          </div>` : ""}
           <div class="tb-sport-next">${esc(txt("Ensuite", "Next"))}: ${esc(nextStepLabel())}</div>
           <div class="tb-sport-actions" style="justify-content:center;">
             ${step?.kind === "work" ? `<button class="btn primary" type="button" id="sport-step-done">${esc(txt("Fini", "Done"))}</button>` : ""}
@@ -2040,6 +2072,20 @@
     if (stepLoad) stepLoad.oninput = () => {
       if (CACHE.timer) CACHE.timer.stepLoadKg = n(stepLoad.value, 0);
     };
+    const stepReps = root.querySelector("#sport-step-reps");
+    if (stepReps) stepReps.oninput = () => {
+      if (CACHE.timer) CACHE.timer.stepReps = Math.max(0, Math.round(n(stepReps.value, 0)));
+    };
+    root.querySelectorAll("[data-sport-reps-delta]").forEach(btn => {
+      btn.onclick = () => {
+        const input = root.querySelector("#sport-step-reps");
+        if (!input) return;
+        const next = Math.max(0, Math.round(n(input.value, 0) + n(btn.getAttribute("data-sport-reps-delta"), 0)));
+        input.value = String(next);
+        if (CACHE.timer) CACHE.timer.stepReps = next;
+        renderSport("step-reps");
+      };
+    });
     root.querySelectorAll("[data-sport-load-delta]").forEach(btn => {
       btn.onclick = () => {
         const input = root.querySelector("#sport-step-load");
@@ -2268,6 +2314,7 @@
       bodyWeightKg: bodyWeight(),
       bodyHeightCm: bodyHeight(),
       stepLoadKg: seq[0]?.kind === "work" ? lastLoadForExercise(seq[0].item, effectiveLoadKg(seq[0].item, bodyWeight())) : 0,
+      stepReps: seq[0]?.kind === "work" && seq[0].item?.mode === "reps" ? Math.max(0, Math.round(n(seq[0].item.targetReps, 0))) : null,
     };
     requestWakeLock();
     sportFeedback(txt("Seance lancee", "Workout started"), txt("Timer sport lance. Bon entrainement.", "Sport timer started. Good workout."), { persistNotification: true });
@@ -2421,7 +2468,18 @@
     if (!supportsExternalLoad(step?.item || {})) return 0;
     return n(timer?.stepLoadKg, lastLoadForExercise(step?.item || {}, effectiveLoadKg(step?.item || {}, timer?.bodyWeightKg || bodyWeight())));
   }
-  function recordWorkStep(timer, step, durationOverride, loadOverride) {
+  function readTimerStepReps(timer, step) {
+    if (step?.item?.mode !== "reps") return null;
+    const el = document.getElementById("sport-step-reps");
+    if (el) timer.stepReps = Math.max(0, Math.round(n(el.value, 0)));
+    return Math.max(0, Math.round(n(timer?.stepReps, step?.item?.targetReps || 0)));
+  }
+  function setTimerStepDefaults(timer, step) {
+    if (!timer) return;
+    timer.stepLoadKg = step?.kind === "work" ? lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)) : 0;
+    timer.stepReps = step?.kind === "work" && step.item?.mode === "reps" ? Math.max(0, Math.round(n(step.item.targetReps, 0))) : null;
+  }
+  function recordWorkStep(timer, step, durationOverride, loadOverride, repsOverride) {
     if (!timer || !step || step.kind !== "work") return;
     const exists = timer.doneSets.some(done =>
       Number(done.itemIndex) === Number(step.itemIndex) && Number(done.setIndex) === Number(step.setIndex)
@@ -2433,7 +2491,7 @@
     timer.doneSets.push({
       itemIndex: step.itemIndex,
       setIndex: step.setIndex,
-      reps: step.item.mode === "reps" ? n(step.item.targetReps, 0) : null,
+      reps: step.item.mode === "reps" ? Math.max(0, Math.round(n(repsOverride, step.item.targetReps || 0))) : null,
       durationSeconds: duration,
       weightKg: supportsExternalLoad(step.item) ? n(loadOverride, lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg))) : 0,
       distanceM: n(step.item.distanceM, 0),
@@ -2446,7 +2504,7 @@
     const timer = CACHE.timer;
     const step = currentTimerStep();
     if (!timer || !step) return;
-    recordWorkStep(timer, step, null, readTimerStepLoadKg(timer, step));
+    recordWorkStep(timer, step, null, readTimerStepLoadKg(timer, step), readTimerStepReps(timer, step));
     timer.index += 1;
     const next = currentTimerStep();
     beep(next?.kind === "rest" ? "rest" : "work");
@@ -2455,7 +2513,7 @@
       timer.index = 0;
       const first = currentTimerStep();
       sportFeedback(txt("Tour valide", "Round counted"), `${txt("Tour", "Round")} ${timer.roundsCompleted} - ${stepLabel(first)}`, { persistNotification: true });
-      timer.stepLoadKg = first?.kind === "work" ? lastLoadForExercise(first.item, effectiveLoadKg(first.item, timer.bodyWeightKg)) : 0;
+      setTimerStepDefaults(timer, first);
       timer.stepStartedAt = Date.now();
       timer.stepEndAt = first?.duration ? Date.now() + (first.duration * 1000) : null;
       renderSport("amrap-loop");
@@ -2466,7 +2524,7 @@
       return;
     }
     sportFeedback(step.kind === "work" ? txt("Serie terminee", "Set complete") : txt("Repos termine", "Rest complete"), `${stepLabel(next)} - ${next.duration ? fmtSec(next.duration) : txt("a valider", "to validate")}`, { toast: step.kind === "rest", persistNotification: true });
-    timer.stepLoadKg = next?.kind === "work" ? lastLoadForExercise(next.item, effectiveLoadKg(next.item, timer.bodyWeightKg)) : 0;
+    setTimerStepDefaults(timer, next);
     timer.stepStartedAt = Date.now();
     timer.stepEndAt = next.duration ? Date.now() + (next.duration * 1000) : null;
     renderSport("step");
@@ -2483,6 +2541,7 @@
       return;
     }
     sportFeedback(txt("Repos saute", "Rest skipped"), `${stepLabel(next)} - ${next.duration ? fmtSec(next.duration) : txt("a valider", "to validate")}`, { persistNotification: true });
+    setTimerStepDefaults(timer, next);
     timer.stepStartedAt = Date.now();
     timer.stepEndAt = next.duration ? Date.now() + (next.duration * 1000) : null;
     renderSport("skip-rest");
@@ -2513,8 +2572,14 @@
     if (CACHE.plan[itemIndex]) CACHE.plan[itemIndex].sets = item.sets;
     const extra = { kind: "work", item, itemIndex, setIndex: nextSetIndex, roundIndex: step.roundIndex, roundTotal: step.roundTotal, duration: item.mode === "time" ? n(item.targetSeconds, 0) : 0 };
     const next = timer.sequence[timer.index + 1];
-    const insertAt = next?.kind === "rest" && Number(next.itemIndex) === itemIndex ? timer.index + 2 : timer.index + 1;
-    timer.sequence.splice(insertAt, 0, extra);
+    const insertAt = step.kind === "work" && next?.kind === "rest" && Number(next.itemIndex) === itemIndex ? timer.index + 2 : timer.index + 1;
+    const additions = [extra];
+    const afterExtra = timer.sequence[insertAt];
+    const restSeconds = restSecondsForItem(item);
+    if (restSeconds > 0 && afterExtra && afterExtra.kind === "work" && Number(afterExtra.itemIndex) !== itemIndex) {
+      additions.push({ kind: "rest", item, itemIndex, setIndex: nextSetIndex, duration: restSeconds, roundIndex: step.roundIndex, roundTotal: step.roundTotal });
+    }
+    timer.sequence.splice(insertAt, 0, ...additions);
     savePlan();
     sportFeedback(txt("Serie ajoutee", "Set added"), `${item.exerciseName || labelActivity(item.activityKey)} · ${txt("serie", "set")} ${nextSetIndex}`, { toast: true, persistNotification: true });
     renderSport("add-current-set");
@@ -2547,7 +2612,7 @@
     if (step && step.kind === "work") {
       const elapsedStepSeconds = Math.max(1, Math.round((endedAt - timer.stepStartedAt) / 1000));
       const cappedStepSeconds = step.duration ? Math.min(n(step.duration, elapsedStepSeconds), elapsedStepSeconds) : elapsedStepSeconds;
-      recordWorkStep(timer, step, cappedStepSeconds, readTimerStepLoadKg(timer, step));
+      recordWorkStep(timer, step, cappedStepSeconds, readTimerStepLoadKg(timer, step), readTimerStepReps(timer, step));
     }
     const summary = {
       startedAt: new Date(timer.startedAt).toISOString(),
