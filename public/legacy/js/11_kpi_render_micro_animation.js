@@ -266,6 +266,29 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
   };
 }
 
+function _kpiHealthActionRows(h) {
+  const rows = [];
+  const kcalLeftNow = Math.round(Number(h?.expectedKcalNow || 0) - Number(h?.kcal || 0));
+  const kcalLeftDay = Math.round(Number(h?.needsKcal || 0) - Number(h?.kcal || 0));
+  const waterLeft = Math.max(0, Math.round(2000 - Number(h?.drinkWaterMl || 0)));
+  const proteinLeft = Math.max(0, Math.round(Number(h?.proteinTarget || 0) - Number(h?.protein || 0)));
+  if (!Number(h?.mealCount || 0)) {
+    rows.push({ tone: "warn", title: "Saisir la journée", body: "Ajoute au moins un repas pour fiabiliser le score et les conseils." });
+  } else if (kcalLeftNow > 300) {
+    rows.push({ tone: "good", title: "Energie maintenant", body: `Il manque environ ${kcalLeftNow} kcal a cette heure. Vise un repas simple ou un encas utile.` });
+  } else if (kcalLeftNow < -350) {
+    rows.push({ tone: "warn", title: "Energie haute", body: "Tu es deja haut pour l'heure. Garde le prochain apport plus leger, eau et legumes." });
+  } else {
+    rows.push({ tone: "good", title: "Energie stable", body: `Tu es proche du rythme du jour. Reste environ ${Math.max(0, kcalLeftDay)} kcal sur la journee.` });
+  }
+  if (waterLeft > 450) rows.push({ tone: "info", title: "Hydratation", body: `Encore ${waterLeft} ml d'eau bue a viser. L'eau des aliments reste separee.` });
+  if (proteinLeft > 18) rows.push({ tone: "info", title: "Proteines", body: `Ajoute environ ${proteinLeft} g : fromage blanc, skyr, oeufs, poulet, thon ou whey.` });
+  if (Number(h?.sleepHours || 0) <= 0) rows.push({ tone: "warn", title: "Sommeil", body: "Renseigne la nuit pour que le score recuperation soit fiable." });
+  else if (Number(h.sleepHours) < 7) rows.push({ tone: "warn", title: "Recuperation", body: "Nuit courte : garde la charge raisonnable et privilegie sommeil ce soir." });
+  if (Number(h?.activityKcal || 0) > 700) rows.push({ tone: "info", title: "Charge elevee", body: "Sport + travail sont hauts : pense glucides utiles, proteines et repos." });
+  return rows.slice(0, 4);
+}
+
 
 try {
   window.tbComputeHealthSummaryForDate = function tbComputeHealthSummaryForDate(dateISO, activity) {
@@ -1463,6 +1486,7 @@ const driver = "Dépenses";
   const todayBudgetSpent = budgetSpentBaseForDate(displayDateISO);
   const activityToday = _kpiActivitySummaryForDate(displayDateISO);
   const healthToday = _kpiHealthSummaryForDate(displayDateISO, activityToday);
+  const healthActions = _kpiHealthActionRows(healthToday);
   const todayPillClass = budgetClass(todayBudget);
 
   let level = "good";
@@ -1507,6 +1531,13 @@ const driver = "Dépenses";
       .kpi-health-detail { margin-top:10px; border-top:1px solid var(--border); padding-top:9px; }
       .kpi-health-detail summary { cursor:pointer; font-size:12px; color:var(--muted); }
       .kpi-health-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:8px; font-size:12px; color:var(--muted); }
+      .kpi-health-actions { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; margin-top:10px; }
+      .kpi-health-action { border:1px solid var(--border); border-radius:12px; padding:10px; background:var(--panel); }
+      .kpi-health-action strong { display:block; font-size:13px; color:var(--text); }
+      .kpi-health-action span { display:block; margin-top:4px; font-size:12px; color:var(--muted); line-height:1.3; }
+      .kpi-health-action.good { border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.08); }
+      .kpi-health-action.warn { border-color:rgba(245,158,11,.38); background:rgba(245,158,11,.09); }
+      .kpi-health-action.info { border-color:rgba(14,165,233,.35); background:rgba(14,165,233,.08); }
       .kpi-pending-detail { margin-top:8px; position:relative; }
       .kpi-pending-detail summary { cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; color:var(--muted); }
       .kpi-pending-detail summary::-webkit-details-marker { display:none; }
@@ -1627,6 +1658,9 @@ const driver = "Dépenses";
                     <div class="kpi-health-metric"><span>Sommeil</span><strong>${healthToday.sleepHours > 0 ? `${Math.round(healthToday.sleepHours * 10) / 10}h` : "Non saisi"}</strong></div>
                   </div>
                   <div class="muted" style="font-size:12px;margin-top:9px;">${escapeHTML(healthToday.advice)} Charge: ${Math.round(healthToday.activityKcal)} kcal · Eau aliments: ${Math.round(healthToday.foodWaterMl)} ml.</div>
+                  <div class="kpi-health-actions">
+                    ${healthActions.map(row => `<div class="kpi-health-action ${escapeHTML(row.tone)}"><strong>${escapeHTML(row.title)}</strong><span>${escapeHTML(row.body)}</span></div>`).join("")}
+                  </div>
                   <details class="kpi-health-detail">
                     <summary>Comprendre le score</summary>
                     <div class="kpi-health-detail-grid">

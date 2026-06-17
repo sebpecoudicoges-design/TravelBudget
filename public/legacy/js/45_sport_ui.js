@@ -73,6 +73,16 @@
     ["regular", "Intermediaire", "Regular"],
     ["advanced", "Avance", "Advanced"],
   ];
+  const SPORT_FAMILIES = [
+    ["all", "Toutes familles", "All families"],
+    ["push", "Push", "Push"],
+    ["pull", "Pull", "Pull"],
+    ["legs", "Jambes", "Legs"],
+    ["core", "Core", "Core"],
+    ["cardio", "Cardio", "Cardio"],
+    ["boxing", "Boxe", "Boxing"],
+    ["mobility", "Mobilite", "Mobility"],
+  ];
 
   const EXERCISE_LIBRARY = [
     { key: "pushup", goal: "strength", equipment: "bodyweight", activityKey: "bodyweight_strength", fr: "Push-up", en: "Push-up", mode: "reps", reps: 15, sets: 3, rest: 60 },
@@ -122,6 +132,9 @@
     { key: "band_lat_pulldown", goal: "strength", equipment: "band", activityKey: "resistance_band_strength", fr: "Tirage vertical elastique", en: "Band lat pulldown", mode: "reps", reps: 15, sets: 3, rest: 60 },
     { key: "band_hamstring_curl", goal: "strength", equipment: "band", activityKey: "resistance_band_strength", fr: "Leg curl elastique", en: "Band hamstring curl", mode: "reps", reps: 12, sets: 3, rest: 45 },
     { key: "band_glute_kickback", goal: "strength", equipment: "band", activityKey: "resistance_band_strength", fr: "Kickback fessier elastique", en: "Band glute kickback", mode: "reps", reps: 12, sets: 3, rest: 45 },
+    { key: "band_assisted_pullup", goal: "strength", equipment: "band", activityKey: "resistance_band_strength", fr: "Traction assistee elastique", en: "Band-assisted pull-up", mode: "reps", reps: 6, sets: 4, rest: 90, metValue: 5.8 },
+    { key: "band_good_morning", goal: "strength", equipment: "band", activityKey: "resistance_band_strength", fr: "Good morning elastique", en: "Band good morning", mode: "reps", reps: 15, sets: 3, rest: 60, metValue: 4.8 },
+    { key: "band_pallof_press", goal: "strength", equipment: "band", activityKey: "core_abs", fr: "Pallof press elastique", en: "Band Pallof press", mode: "reps", reps: 10, sets: 3, rest: 45, metValue: 4.4 },
     { key: "band_external_rotation", goal: "mobility", equipment: "band", activityKey: "mobility", fr: "Rotation externe elastique", en: "Band external rotation", mode: "reps", reps: 12, sets: 2, rest: 25 },
     { key: "band_dislocates", goal: "mobility", equipment: "band", activityKey: "mobility", fr: "Passage epaules elastique", en: "Band shoulder pass-through", mode: "reps", reps: 10, sets: 2, rest: 25 },
     { key: "dumbbell_press", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Developpe halteres", en: "Dumbbell press", mode: "reps", reps: 10, sets: 3, rest: 75 },
@@ -145,22 +158,32 @@
     { key: "dumbbell_single_arm_snatch", goal: "cardio", equipment: "dumbbell", activityKey: "hiit", fr: "Snatch haltere un bras", en: "Single-arm dumbbell snatch", mode: "reps", reps: 8, sets: 5, rest: 60, metValue: 8.5 },
     { key: "dumbbell_hammer_curl", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Curl marteau halteres", en: "Dumbbell hammer curl", mode: "reps", reps: 12, sets: 3, rest: 60, metValue: 4.8 },
     { key: "dumbbell_skull_crusher", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Barre au front halteres", en: "Dumbbell skull crusher", mode: "reps", reps: 10, sets: 3, rest: 60, metValue: 4.8 },
+    { key: "dumbbell_incline_press", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Developpe incline halteres", en: "Incline dumbbell press", mode: "reps", reps: 10, sets: 3, rest: 90, metValue: 5.8 },
+    { key: "dumbbell_pullover", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Pull-over haltere", en: "Dumbbell pullover", mode: "reps", reps: 10, sets: 3, rest: 75, metValue: 5.2 },
+    { key: "dumbbell_reverse_fly", goal: "strength", equipment: "dumbbell", activityKey: "strength", fr: "Oiseau halteres", en: "Dumbbell reverse fly", mode: "reps", reps: 12, sets: 3, rest: 60, metValue: 4.8 },
     { key: "barbell_squat", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Squat barre", en: "Barbell squat", mode: "reps", reps: 6, sets: 4, rest: 120 },
     { key: "barbell_deadlift", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Souleve de terre barre", en: "Barbell deadlift", mode: "reps", reps: 5, sets: 4, rest: 150 },
     { key: "barbell_bench", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Developpe couche barre", en: "Barbell bench press", mode: "reps", reps: 6, sets: 4, rest: 120 },
     { key: "barbell_row", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Rowing barre", en: "Barbell row", mode: "reps", reps: 8, sets: 4, rest: 90 },
+    { key: "barbell_front_squat", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Front squat barre", en: "Barbell front squat", mode: "reps", reps: 6, sets: 4, rest: 120, metValue: 6.5 },
     { key: "barbell_overhead_press", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Developpe militaire barre", en: "Barbell overhead press", mode: "reps", reps: 6, sets: 4, rest: 120, metValue: 5.6 },
     { key: "barbell_hip_thrust", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Hip thrust barre", en: "Barbell hip thrust", mode: "reps", reps: 10, sets: 4, rest: 90, metValue: 5.6 },
     { key: "barbell_power_clean", goal: "cardio", equipment: "barbell", activityKey: "hiit", fr: "Power clean barre", en: "Barbell power clean", mode: "reps", reps: 5, sets: 5, rest: 120, metValue: 8.0 },
     { key: "barbell_incline_bench", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Developpe incline barre", en: "Barbell incline bench press", mode: "reps", reps: 8, sets: 4, rest: 105, metValue: 6.1 },
     { key: "barbell_lunge", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Fentes barre", en: "Barbell lunge", mode: "reps", reps: 8, sets: 3, rest: 90, metValue: 6.2 },
     { key: "barbell_curl", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Curl barre", en: "Barbell curl", mode: "reps", reps: 10, sets: 3, rest: 60, metValue: 4.8 },
+    { key: "barbell_good_morning", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Good morning barre", en: "Barbell good morning", mode: "reps", reps: 8, sets: 3, rest: 90, metValue: 5.5 },
+    { key: "barbell_close_grip_bench", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Developpe serre barre", en: "Close-grip barbell bench", mode: "reps", reps: 8, sets: 4, rest: 105, metValue: 5.8 },
+    { key: "barbell_pendlay_row", goal: "strength", equipment: "barbell", activityKey: "strength", fr: "Rowing Pendlay", en: "Pendlay row", mode: "reps", reps: 6, sets: 4, rest: 105, metValue: 5.8 },
     { key: "plate_floor_press", goal: "strength", equipment: "plate", activityKey: "strength", fr: "Developpe plate au sol", en: "Plate floor press", mode: "reps", reps: 12, sets: 3, rest: 75, metValue: 5.4 },
     { key: "plate_squeeze_press", goal: "strength", equipment: "plate", activityKey: "strength", fr: "Squeeze press plate", en: "Plate squeeze press", mode: "reps", reps: 12, sets: 3, rest: 60, metValue: 5.2 },
     { key: "plate_overhead_press", goal: "strength", equipment: "plate", activityKey: "strength", fr: "Developpe epaules plate", en: "Plate overhead press", mode: "reps", reps: 10, sets: 3, rest: 75, metValue: 5.2 },
     { key: "plate_front_raise", goal: "strength", equipment: "plate", activityKey: "strength", fr: "Elevation frontale plate", en: "Plate front raise", mode: "reps", reps: 12, sets: 3, rest: 45, metValue: 4.6 },
     { key: "plate_russian_twist", goal: "strength", equipment: "plate", activityKey: "core_abs", fr: "Russian twist plate", en: "Plate Russian twist", mode: "reps", reps: 20, sets: 3, rest: 45, metValue: 5.0 },
     { key: "plate_around_world", goal: "mobility", equipment: "plate", activityKey: "mobility", fr: "Tour du monde plate", en: "Plate around the world", mode: "reps", reps: 8, sets: 3, rest: 45, metValue: 4.8 },
+    { key: "plate_halo", goal: "mobility", equipment: "plate", activityKey: "mobility", fr: "Halo plate", en: "Plate halo", mode: "reps", reps: 10, sets: 3, rest: 45, metValue: 4.4 },
+    { key: "plate_squat", goal: "strength", equipment: "plate", activityKey: "strength", fr: "Squat plate", en: "Plate squat", mode: "reps", reps: 12, sets: 3, rest: 75, metValue: 5.8 },
+    { key: "plate_lunge", goal: "strength", equipment: "plate", activityKey: "strength", fr: "Fentes plate", en: "Plate lunge", mode: "reps", reps: 10, sets: 3, rest: 75, metValue: 5.8 },
     { key: "kettlebell_swing", goal: "strength", equipment: "kettlebell", activityKey: "hiit", fr: "Swing kettlebell", en: "Kettlebell swing", mode: "reps", reps: 15, sets: 4, rest: 60 },
     { key: "kettlebell_goblet", goal: "strength", equipment: "kettlebell", activityKey: "strength", fr: "Goblet squat kettlebell", en: "Kettlebell goblet squat", mode: "reps", reps: 12, sets: 3, rest: 75 },
     { key: "kettlebell_clean_press", goal: "strength", equipment: "kettlebell", activityKey: "strength", fr: "Clean press kettlebell", en: "Kettlebell clean and press", mode: "reps", reps: 6, sets: 3, rest: 90 },
@@ -170,6 +193,9 @@
     { key: "machine_seated_row", goal: "strength", equipment: "machine", activityKey: "strength", fr: "Rowing assis machine", en: "Seated cable row", mode: "reps", reps: 10, sets: 3, rest: 75 },
     { key: "machine_leg_curl", goal: "strength", equipment: "machine", activityKey: "strength", fr: "Leg curl", en: "Leg curl", mode: "reps", reps: 12, sets: 3, rest: 60 },
     { key: "machine_cable_triceps", goal: "strength", equipment: "machine", activityKey: "strength", fr: "Triceps poulie", en: "Cable triceps pushdown", mode: "reps", reps: 12, sets: 3, rest: 60 },
+    { key: "cable_face_pull", goal: "strength", equipment: "machine", activityKey: "strength", fr: "Face pull poulie", en: "Cable face pull", mode: "reps", reps: 15, sets: 3, rest: 45, metValue: 4.6 },
+    { key: "machine_pec_deck", goal: "strength", equipment: "machine", activityKey: "strength", fr: "Pec deck", en: "Pec deck", mode: "reps", reps: 12, sets: 3, rest: 60, metValue: 4.8 },
+    { key: "cable_low_row", goal: "strength", equipment: "machine", activityKey: "strength", fr: "Rowing poulie basse", en: "Cable low row", mode: "reps", reps: 10, sets: 3, rest: 75, metValue: 5.0 },
     { key: "easy_run", goal: "cardio", equipment: "outdoor", activityKey: "running", fr: "Course facile", en: "Easy run", mode: "time", seconds: 1200, sets: 1, rest: 0, distanceM: 3000 },
     { key: "run_intervals", goal: "cardio", equipment: "outdoor", activityKey: "running", fr: "Intervalles course", en: "Run intervals", mode: "time", seconds: 60, sets: 8, rest: 60 },
     { key: "tempo_run", goal: "cardio", equipment: "outdoor", activityKey: "running", fr: "Course tempo", en: "Tempo run", mode: "time", seconds: 900, sets: 1, rest: 0, distanceM: 2500 },
@@ -248,6 +274,7 @@
     builderEquipment: "all",
     builderDuration: 35,
     builderLevel: "regular",
+    builderFamily: "all",
     exerciseSearch: "",
     globalRestSeconds: loadGlobalRest(),
     circuit: loadCircuit(),
@@ -848,7 +875,8 @@
   }
   function quickExerciseRows(equipment) {
     const eq = String(equipment || "all");
-    const allow = ex => ex && (eq === "all" || ex.equipment === eq);
+    const family = String(CACHE.builderFamily || "all");
+    const allow = ex => ex && (eq === "all" || ex.equipment === eq) && (family === "all" || exerciseFamily(ex) === family);
     const favs = loadExerciseKeys("favorite").map(exerciseByKey).filter(allow).slice(0, 8);
     const recents = loadExerciseKeys("recent").map(exerciseByKey).filter(allow).filter(ex => !favs.some(fav => fav.key === ex.key)).slice(0, 8);
     return { favs, recents };
@@ -889,8 +917,20 @@
       .toLowerCase()
       .trim();
   }
+  function exerciseFamily(ex) {
+    const hay = normalizedSearch(`${ex?.key || ""} ${ex?.fr || ""} ${ex?.en || ""} ${(ex?.tags || []).join(" ")} ${ex?.equipment || ""} ${ex?.activityKey || ""}`);
+    if (String(ex?.goal || "") === "boxing" || hay.includes("boxing") || hay.includes("boxe") || hay.includes("sac")) return "boxing";
+    if (String(ex?.goal || "") === "cardio" || ["running", "cycling", "walking", "hiking", "rowing", "jump_rope", "hiit", "swimming", "basketball"].includes(String(ex?.activityKey || ""))) return "cardio";
+    if (String(ex?.goal || "") === "mobility" || hay.includes("mobilite") || hay.includes("stretch") || hay.includes("yoga")) return "mobility";
+    if (String(ex?.activityKey || "") === "core_abs" || String(ex?.activityKey || "") === "plank_core" || hay.includes("crunch") || hay.includes("gainage") || hay.includes("plank") || hay.includes("twist") || hay.includes("core")) return "core";
+    if (hay.includes("row") || hay.includes("rowing") || hay.includes("tirage") || hay.includes("traction") || hay.includes("pull") || hay.includes("curl") || hay.includes("biceps") || hay.includes("dos")) return "pull";
+    if (hay.includes("squat") || hay.includes("lunge") || hay.includes("fente") || hay.includes("deadlift") || hay.includes("terre") || hay.includes("leg") || hay.includes("mollet") || hay.includes("calf") || hay.includes("hip thrust") || hay.includes("step-up") || hay.includes("jamb")) return "legs";
+    if (hay.includes("press") || hay.includes("developpe") || hay.includes("push") || hay.includes("dip") || hay.includes("triceps") || hay.includes("epaules") || hay.includes("shoulder") || hay.includes("pector")) return "push";
+    return "push";
+  }
   function visibleExercises(equipment, query) {
     const eq = String(equipment || "all");
+    const family = String(CACHE.builderFamily || "all");
     const q = normalizedSearch(query);
     const favs = loadExerciseKeys("favorite");
     const recents = loadExerciseKeys("recent");
@@ -904,9 +944,10 @@
     };
     return EXERCISE_LIBRARY
       .filter(ex => (eq === "all" || ex.equipment === eq))
+      .filter(ex => family === "all" || exerciseFamily(ex) === family)
       .filter(ex => {
         if (!q) return true;
-        return normalizedSearch(`${ex.fr} ${ex.en} ${labelEquipment(ex.equipment)}`).includes(q);
+        return normalizedSearch(`${ex.fr} ${ex.en} ${labelEquipment(ex.equipment)} ${exerciseFamily(ex)} ${(ex.tags || []).join(" ")}`).includes(q);
       })
       .slice()
       .sort((a, b) => rank(a) - rank(b) || exerciseLabel(a).localeCompare(exerciseLabel(b), lang() === "en" ? "en" : "fr", { sensitivity: "base" }));
@@ -936,6 +977,9 @@
   }
   function levelOptions(selected) {
     return LEVELS.map(row => `<option value="${esc(row[0])}" ${row[0] === selected ? "selected" : ""}>${esc(lang() === "en" ? row[2] : row[1])}</option>`).join("");
+  }
+  function familyOptions(selected) {
+    return SPORT_FAMILIES.map(row => `<option value="${esc(row[0])}" ${row[0] === selected ? "selected" : ""}>${esc(lang() === "en" ? row[2] : row[1])}</option>`).join("");
   }
   function durationOptions(selected) {
     return [15, 25, 35, 45, 60, 75].map(v => `<option value="${v}" ${Number(selected) === v ? "selected" : ""}>${v} min</option>`).join("");
@@ -1229,6 +1273,24 @@
       .tb-sport-timer .name{font-size:34px;font-weight:950;line-height:1.05;}
       .tb-sport-timer .clock{font-size:56px;font-weight:950;letter-spacing:-.05em;}
       .tb-sport-timer .hint{color:#cbd5e1;font-weight:800;}
+      .tb-sport-timer-v2{align-items:stretch;text-align:left;justify-content:flex-start;background:linear-gradient(145deg,#07111f,#0f172a 48%,#0b3b57);overflow:hidden;position:relative;}
+      .tb-sport-timer-v2:before{content:"";position:absolute;inset:-80px -40px auto auto;width:210px;height:210px;border-radius:50%;background:rgba(56,189,248,.18);filter:blur(10px);}
+      .tb-sport-live-head{position:relative;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;z-index:1;}
+      .tb-sport-live-main{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(230px,.95fr);gap:12px;align-items:stretch;}
+      .tb-sport-live-focus{border:1px solid rgba(255,255,255,.14);border-radius:20px;background:rgba(255,255,255,.08);padding:14px;display:grid;gap:8px;}
+      .tb-sport-live-focus .name{font-size:30px;}
+      .tb-sport-live-panel{border:1px solid rgba(255,255,255,.14);border-radius:20px;background:rgba(255,255,255,.07);padding:12px;display:grid;gap:9px;}
+      .tb-sport-live-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+      .tb-sport-live-kpi{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.07);padding:9px;}
+      .tb-sport-live-kpi span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#bfdbfe;font-weight:900;}
+      .tb-sport-live-kpi strong{display:block;margin-top:4px;color:white;font-size:16px;overflow-wrap:anywhere;}
+      .tb-sport-timeline{position:relative;z-index:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:2px;}
+      .tb-sport-time-step{border:1px solid rgba(255,255,255,.12);border-radius:13px;background:rgba(255,255,255,.06);padding:8px;min-height:54px;display:grid;gap:3px;color:#e0f2fe;}
+      .tb-sport-time-step.active{border-color:#38bdf8;background:rgba(14,165,233,.20);}
+      .tb-sport-time-step small{color:#93c5fd;font-weight:900;text-transform:uppercase;font-size:9px;}
+      .tb-sport-time-step b{font-size:11px;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+      .tb-sport-control-row{display:flex;align-items:center;gap:8px;justify-content:flex-start;flex-wrap:wrap;}
+      .tb-sport-control-row input{width:86px;min-height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.12);color:white;text-align:center;font-weight:900;}
       .tb-sport-next{border-radius:16px;padding:9px 11px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#dbeafe;font-weight:850;}
       .tb-sport-modal-backdrop{position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,.58);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:18px;}
       .tb-sport-modal{width:min(560px,100%);border-radius:26px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 30px 80px rgba(15,23,42,.28);border:1px solid rgba(148,163,184,.24);padding:18px;}
@@ -1256,7 +1318,7 @@
       body.theme-dark .tb-sport-advanced summary{color:#f8fafc;}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}}
-      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}}
+      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}}
       body.tb-capacitor-app[data-tb-view="sport"] #sport-root{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-shell{gap:10px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-hero{border-radius:22px!important;padding:16px!important;min-height:0!important;box-shadow:0 16px 34px rgba(37,99,235,.16)!important;}
@@ -1298,6 +1360,9 @@
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer{min-height:220px!important;border-radius:18px!important;padding:14px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer .name{font-size:24px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer .clock{font-size:42px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-live-main{grid-template-columns:1fr!important;gap:8px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timeline{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-live-focus,.tb-sport-live-panel{border-radius:16px!important;padding:10px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-history{grid-template-columns:1fr!important;gap:8px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-history-card{border-radius:16px!important;padding:10px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-history-card > div:first-child{align-items:center!important;}
@@ -1491,6 +1556,7 @@
             ${quickRows.recents.map(ex => `<button class="tb-sport-quick-btn" type="button" data-sport-quick="${esc(ex.key)}">↺ ${esc(exerciseLabel(ex))}</button>`).join("")}
           </div>
           <div class="tb-sport-fields">
+            <div class="tb-sport-field"><label>${esc(txt("Famille", "Family"))}</label><select id="sport-library-family">${familyOptions(CACHE.builderFamily || "all")}</select></div>
             <div class="tb-sport-field"><label>${esc(txt("Materiel", "Equipment"))}</label><select id="sport-library-equipment">${libraryEquipmentOptions(selectedEquipment)}</select></div>
             <div class="tb-sport-field"><label>${esc(txt("Recherche", "Search"))}</label><input id="sport-ex-search" type="search" value="${esc(search)}" placeholder="${esc(txt("Ecris le nom", "Type a name"))}"></div>
             <div class="tb-sport-field"><label>${esc(txt("Exercice", "Exercise"))}</label><select id="sport-library-ex">${libraryOptions("free", selectedEquipment, matchedExercise?.key || baseExercise?.key || "")}</select></div>
@@ -1649,6 +1715,29 @@
     const next = timer.sequence[timer.index + 1];
     return next ? stepLabel(next) : txt("Fin de seance", "End of workout");
   }
+  function renderTimerTimeline(timer) {
+    const seq = timer?.sequence || [];
+    const start = Math.max(0, n(timer?.index, 0) - 1);
+    const rows = seq.slice(start, start + 5);
+    return rows.map((row, idx) => {
+      const absolute = start + idx;
+      const active = absolute === timer.index;
+      const kind = row.kind === "work" ? txt("Serie", "Set") : row.kind === "round_rest" ? txt("Tour", "Round") : txt("Repos", "Rest");
+      const detail = row.kind === "work"
+        ? `${row.setIndex || 1}/${Math.max(1, n(row.item?.sets, row.setIndex || 1))}`
+        : (row.duration ? fmtSec(row.duration) : "");
+      return `<div class="tb-sport-time-step ${active ? "active" : ""}">
+        <small>${esc(kind)} ${esc(detail)}</small>
+        <b>${esc(stepLabel(row))}</b>
+      </div>`;
+    }).join("");
+  }
+  function timerStepGoalText(step, timer) {
+    if (!step?.item) return "-";
+    if (step.kind !== "work") return step.duration ? fmtSec(step.duration) : "-";
+    if (step.item.mode === "time") return fmtSec(step.item.targetSeconds || step.duration || 0);
+    return `${Math.max(0, Math.round(n(timer?.stepReps ?? step.item.targetReps, 0)))} reps`;
+  }
 
   function renderTimer() {
     const timer = CACHE.timer;
@@ -1680,29 +1769,43 @@
     return `
       <div class="tb-sport-card">
         <h3>${esc(txt("Timer guide", "Guided timer"))}</h3>
-        <div class="tb-sport-timer">
-          <div class="kind">${esc(isRest ? txt("Repos", "Rest") : txt("Travail", "Work"))}${roundInfo} - ${workDone}/${totalWork}</div>
-          <div class="name">${esc(isRest ? stepLabel(step) : (step?.item?.exerciseName || ""))}</div>
-          <div class="clock">${esc(displayValue)}</div>
-          ${amrap ? `<div class="hint">${esc(txt("AMRAP restant", "AMRAP left"))}: ${fmtSec(amrapRemaining)} - ${esc(txt("Tours valides", "Rounds counted"))}: ${n(timer.roundsCompleted, 0)}</div>` : ""}
-          <div class="hint">${esc(txt("Temps total", "Total time"))}: ${fmtSec(elapsed)} ${step?.kind === "work" ? `- ${esc(labelEquipment(step.item.equipment))}` : ""}</div>
-          ${step?.kind === "work" ? (supportsExternalLoad(step.item) ? `<div class="hint" style="display:grid;gap:7px;justify-items:center;">
-            <label style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;">
-              ${esc(txt("Charge serie", "Set load"))}
+        <div class="tb-sport-timer tb-sport-timer-v2">
+          <div class="tb-sport-live-head">
+            <div>
+              <div class="kind">${esc(isRest ? txt("Repos", "Rest") : txt("Travail", "Work"))}${roundInfo}</div>
+              <div class="hint">${esc(txt("Progression", "Progress"))}: ${workDone}/${totalWork} · ${esc(txt("Temps total", "Total time"))}: ${fmtSec(elapsed)}</div>
+            </div>
+            ${amrap ? `<div class="tb-sport-next">${esc(txt("AMRAP", "AMRAP"))}: ${fmtSec(amrapRemaining)} · ${esc(txt("Tours", "Rounds"))}: ${n(timer.roundsCompleted, 0)}</div>` : `<div class="tb-sport-next">${esc(txt("Ensuite", "Next"))}: ${esc(nextStepLabel())}</div>`}
+          </div>
+          <div class="tb-sport-live-main">
+            <div class="tb-sport-live-focus">
+              <div class="name">${esc(isRest ? stepLabel(step) : (step?.item?.exerciseName || ""))}</div>
+              <div class="clock">${esc(displayValue)}</div>
+              <div class="hint">${step?.kind === "work" ? `${esc(labelEquipment(step.item.equipment))} · ${esc(txt("Objectif", "Target"))}: ${esc(timerStepGoalText(step, timer))}` : esc(txt("Respire, prochaine serie prete.", "Breathe, next set is ready."))}</div>
+            </div>
+            <div class="tb-sport-live-panel">
+              <div class="tb-sport-live-grid">
+                <div class="tb-sport-live-kpi"><span>${esc(txt("Serie", "Set"))}</span><strong>${step?.setIndex || "-"}${step?.item?.sets ? ` / ${Math.max(n(step.item.sets, 1), n(step.setIndex, 1))}` : ""}</strong></div>
+                <div class="tb-sport-live-kpi"><span>${esc(txt("Prochaine", "Next"))}</span><strong>${esc(nextStepLabel())}</strong></div>
+                <div class="tb-sport-live-kpi"><span>${esc(txt("Charge", "Load"))}</span><strong>${step?.kind === "work" && supportsExternalLoad(step.item) ? `${Math.round(n(timer.stepLoadKg, 0) * 10) / 10} kg` : "-"}</strong></div>
+                <div class="tb-sport-live-kpi"><span>${esc(txt("Fait", "Done"))}</span><strong>${workDone} ${esc(txt("series", "sets"))}</strong></div>
+              </div>
+              ${step?.kind === "work" ? (supportsExternalLoad(step.item) ? `<div class="tb-sport-control-row">
+              <span class="hint">${esc(txt("Charge serie", "Set load"))}</span>
               <button class="btn small" type="button" data-sport-load-delta="-2.5">-2.5</button>
-              <input id="sport-step-load" type="number" step="0.5" inputmode="decimal" value="${esc(String(n(timer.stepLoadKg ?? lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)), 0)))}" style="width:96px;min-height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.12);color:white;text-align:center;font-weight:900;" />
+              <input id="sport-step-load" type="number" step="0.5" inputmode="decimal" value="${esc(String(n(timer.stepLoadKg ?? lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)), 0)))}" />
               <button class="btn small" type="button" data-sport-load-delta="2.5">+2.5</button>
-              kg
-            </label>
-            <div class="pill" style="background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);color:white;">${esc(txt("Dernier poids", "Last load"))}: ${Math.round(lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)) * 10) / 10} kg</div>
-          </div>` : `<div class="hint">${esc(txt("Charge externe", "External load"))}: 0 kg</div>`) : ""}
-          ${step?.kind === "work" && step?.item?.mode === "reps" ? `<div class="hint" style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;">
-            ${esc(txt("Reps serie", "Set reps"))}
+              <span class="hint">kg · ${esc(txt("dernier", "last"))}: ${Math.round(lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)) * 10) / 10}</span>
+            </div>` : `<div class="hint">${esc(txt("Charge externe", "External load"))}: 0 kg</div>`) : ""}
+          ${step?.kind === "work" && step?.item?.mode === "reps" ? `<div class="tb-sport-control-row">
+            <span class="hint">${esc(txt("Reps serie", "Set reps"))}</span>
             <button class="btn small" type="button" data-sport-reps-delta="-1">-1</button>
-            <input id="sport-step-reps" type="number" step="1" inputmode="numeric" min="0" value="${esc(String(Math.max(0, Math.round(n(timer.stepReps ?? step.item.targetReps, 0)))))}" style="width:82px;min-height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.12);color:white;text-align:center;font-weight:900;" />
+            <input id="sport-step-reps" type="number" step="1" inputmode="numeric" min="0" value="${esc(String(Math.max(0, Math.round(n(timer.stepReps ?? step.item.targetReps, 0)))))}" />
             <button class="btn small" type="button" data-sport-reps-delta="1">+1</button>
           </div>` : ""}
-          <div class="tb-sport-next">${esc(txt("Ensuite", "Next"))}: ${esc(nextStepLabel())}</div>
+            </div>
+          </div>
+          <div class="tb-sport-timeline">${renderTimerTimeline(timer)}</div>
           <div class="tb-sport-actions" style="justify-content:center;">
             ${step?.kind === "work" ? `<button class="btn primary" type="button" id="sport-step-done">${esc(txt("Fini", "Done"))}</button>` : ""}
             ${step?.item ? `<button class="btn" type="button" id="sport-add-set">+ ${esc(txt("serie", "set"))}</button>` : ""}
@@ -1885,6 +1988,11 @@
     if (libraryEquipment) libraryEquipment.onchange = () => {
       CACHE.builderEquipment = libraryEquipment.value || "all";
       renderSport("library-equipment");
+    };
+    const libraryFamily = root.querySelector("#sport-library-family");
+    if (libraryFamily) libraryFamily.onchange = () => {
+      CACHE.builderFamily = libraryFamily.value || "all";
+      renderSport("library-family");
     };
     const exerciseSearch = root.querySelector("#sport-ex-search");
     if (exerciseSearch) exerciseSearch.oninput = () => {
