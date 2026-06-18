@@ -332,7 +332,11 @@
   }
   function activeTravelId() { return window.state?.activeTravelId || null; }
   function table(name) { return window.TB_CONST?.TABLES?.[name] || name; }
-  function n(v, fallback) { const x = Number(v); return Number.isFinite(x) ? x : (fallback || 0); }
+  function n(v, fallback) {
+    if (v === "" || v == null) return fallback || 0;
+    const x = Number(v);
+    return Number.isFinite(x) ? x : (fallback || 0);
+  }
   function sportLibraryRules() { return window.Core?.sportLibraryRules || null; }
   function normalizeSportExercise(row) {
     const rules = sportLibraryRules();
@@ -2648,9 +2652,12 @@
       Number(done.itemIndex) === Number(step.itemIndex) && Number(done.setIndex) === Number(step.setIndex)
     );
     if (exists) return;
-    const duration = Number.isFinite(Number(durationOverride))
+    const hasDurationOverride = Number.isFinite(Number(durationOverride)) && Number(durationOverride) > 0;
+    const duration = hasDurationOverride
       ? Math.max(1, Math.round(Number(durationOverride)))
-      : setWorkSeconds(step.item, step.item.mode === "reps" ? (Date.now() - timer.stepStartedAt) / 1000 : null);
+      : (step.item.mode === "time"
+        ? sequenceStepSeconds(step)
+        : setWorkSeconds(step.item, (Date.now() - timer.stepStartedAt) / 1000));
     timer.doneSets.push({
       itemIndex: step.itemIndex,
       setIndex: step.setIndex,
@@ -2737,9 +2744,8 @@
     const next = timer.sequence[timer.index + 1];
     const insertAt = step.kind === "work" && next?.kind === "rest" && Number(next.itemIndex) === itemIndex ? timer.index + 2 : timer.index + 1;
     const additions = [extra];
-    const afterExtra = timer.sequence[insertAt];
     const restSeconds = restSecondsForItem(item);
-    if (restSeconds > 0 && afterExtra && afterExtra.kind === "work" && Number(afterExtra.itemIndex) !== itemIndex) {
+    if (restSeconds > 0 && insertAt < timer.sequence.length) {
       additions.push({ kind: "rest", item, itemIndex, setIndex: nextSetIndex, duration: restSeconds, roundIndex: step.roundIndex, roundTotal: step.roundTotal });
     }
     timer.sequence.splice(insertAt, 0, ...additions);
