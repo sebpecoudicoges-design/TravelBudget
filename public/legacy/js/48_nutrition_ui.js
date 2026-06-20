@@ -403,8 +403,6 @@
       .tb-health-pillar { border:1px solid rgba(148,163,184,.24); border-radius:12px; padding:10px; background:rgba(255,255,255,.04); display:grid; gap:7px; }
       .tb-health-pillar-track { height:8px; border-radius:999px; background:rgba(148,163,184,.18); overflow:hidden; border:1px solid rgba(148,163,184,.20); }
       .tb-health-pillar-track span { display:block; height:100%; border-radius:999px; }
-      .tb-meal-smart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; margin-top:10px; }
-      .tb-meal-smart-card { border:1px solid rgba(148,163,184,.24); border-radius:10px; padding:10px; background:rgba(255,255,255,.05); display:grid; gap:7px; }
       .tb-nutrition-shell button { min-width:0; }
       .tb-nutrition-shell .btn { white-space:normal; }
       @media (max-width: 860px) {
@@ -861,103 +859,6 @@
     if (h < 18) return "afternoon_snack";
     return "dinner";
   }
-  function snackComboSuggestions(type, total, macroTargets, remainingKcal) {
-    const proteinGap = n(macroTargets?.protein, 0) - n(total?.protein, 0);
-    const waterGap = 2000 - n(total?.waterMl, 0);
-    const light = remainingKcal < 180;
-    const highProtein = proteinGap > 22;
-    const rows = [
-      { title: txt("Fromage blanc + muesli", "Fromage blanc + muesli"), keys: ["fromage_blanc_0", "muesli"], note: txt("proteines + glucides lents", "protein + steady carbs"), kcal: 260 },
-      { title: txt("Skyr + banane", "Skyr + banana"), keys: ["skyr", "banana"], note: txt("simple et cale bien", "simple and filling"), kcal: 195 },
-      { title: txt("Yaourt + fruit", "Yogurt + fruit"), keys: ["yogurt_natural", type === "morning_snack" ? "apple" : "pear"], note: txt("leger, frais, facile", "light, fresh, easy"), kcal: 165 },
-      { title: txt("Belvita + fruit", "Belvita + fruit"), keys: ["belvita", type === "afternoon_snack" ? "banana" : "apple"], note: txt("pratique pour la pause", "practical snack"), kcal: 170 },
-      { title: txt("Galettes de riz + fromage blanc", "Rice cakes + fromage blanc"), keys: ["rice_cake", "fromage_blanc_0"], note: txt("leger avec proteines", "light with protein"), kcal: 135 },
-      { title: txt("Amandes + fruit", "Almonds + fruit"), keys: ["almonds", "apple"], note: txt("plus dense, bonne satiété", "denser, good satiety"), kcal: 225 },
-      { title: txt("Barre proteinee", "Protein bar"), keys: ["protein_bar"], note: txt("si proteines en retard", "when protein is behind"), kcal: 210 },
-    ];
-    let picked = rows.filter(row => {
-      if (light && row.kcal > 180) return false;
-      if (highProtein) return row.keys.some(key => /fromage|skyr|protein|yogurt/.test(key));
-      return true;
-    });
-    if (!picked.length) picked = rows.slice(0, 4);
-    if (waterGap > 700) picked = [{ title: txt("Eau + encas simple", "Water + simple snack"), keys: ["water", "banana"], note: txt("hydratation d'abord", "hydration first"), kcal: 105 }].concat(picked);
-    return picked.slice(0, 4).map(row => ({ ...row, foods: row.keys.map(foodByKey).filter(Boolean) })).filter(row => row.foods.length);
-  }
-  function mealSmartSuggestions(type, total, macroTargets, remainingKcal, waterMl) {
-    const proteinGap = n(macroTargets?.protein, 0) - n(total?.protein, 0);
-    const waterGap = 2000 - n(waterMl, 0);
-    const rowsByType = {
-      breakfast: [
-        { title: txt("Petit dej proteine", "Protein breakfast"), keys: ["fromage_blanc_0", "muesli", "banana"], note: txt("cale sans exploser les kcal", "filling without overshooting"), kcal: 360 },
-        { title: txt("Simple rapide", "Fast simple"), keys: ["skyr", "apple"], note: txt("proteines + fruit", "protein + fruit"), kcal: 180 },
-      ],
-      morning_snack: [
-        { title: txt("Pause propre", "Clean break"), keys: ["fromage_blanc_0", "pear"], note: txt("leger et utile en proteines", "light and useful protein"), kcal: 170 },
-        { title: txt("Energie terrain", "Field energy"), keys: ["belvita", "banana"], note: txt("pratique si matin actif", "practical for an active morning"), kcal: 170 },
-      ],
-      lunch: [
-        { title: txt("Assiette equilibree", "Balanced plate"), keys: ["rice_cooked", "chicken_breast", "courgette"], note: txt("base + proteine + legume", "base + protein + vegetable"), kcal: 520 },
-        { title: txt("Pates poulet", "Chicken pasta"), keys: ["pasta_cooked", "chicken_breast", "onion"], note: txt("plus glucidique, bien si sport/travail", "more carbs, good with sport/work"), kcal: 620 },
-      ],
-      afternoon_snack: [
-        { title: txt("Gouter proteine", "Protein snack"), keys: ["skyr", "muesli"], note: txt("utile si proteines en retard", "useful when protein is behind"), kcal: 240 },
-        { title: txt("Gouter leger", "Light snack"), keys: ["yogurt_natural", "apple"], note: txt("simple si kcal deja hautes", "simple if kcal already high"), kcal: 155 },
-      ],
-      dinner: [
-        { title: txt("Diner leger", "Light dinner"), keys: ["chicken_breast", "courgette", "onion"], note: txt("proteines + legumes", "protein + vegetables"), kcal: 330 },
-        { title: txt("Diner complet", "Full dinner"), keys: ["rice_cooked", "chicken_breast", "courgette"], note: txt("si la journee est basse", "when the day is low"), kcal: 520 },
-      ],
-    };
-    let rows = rowsByType[type] || rowsByType.afternoon_snack;
-    if (proteinGap > 22) rows = rows.filter(row => row.keys.some(key => /chicken|skyr|fromage|yogurt|protein|egg|thon|tofu/.test(key))).concat(rows);
-    if (remainingKcal < 180) rows = rows.filter(row => row.kcal <= 240);
-    if (waterGap > 600) rows = [{ title: txt("Avant tout : eau", "First: water"), keys: ["water"], note: txt("objectif eau bue en retard", "drunk-water target is behind"), kcal: 0 }].concat(rows);
-    const seen = new Set();
-    return rows.filter(row => {
-      if (seen.has(row.title)) return false;
-      seen.add(row.title);
-      return true;
-    }).slice(0, 3).map(row => ({ ...row, foods: row.keys.map(foodByKey).filter(Boolean) })).filter(row => row.foods.length || row.kcal === 0);
-  }
-  function mealAssistantHTML(mealTargets, typeTotals, total, macroTargets) {
-    const type = currentMealType();
-    const target = mealTargets.find(row => row.type === type) || mealTargets[0];
-    const consumed = typeTotals[type] || { kcal: 0, protein: 0, carbs: 0, fat: 0 };
-    const remaining = n(target?.kcal, 0) - n(consumed.kcal, 0);
-    const proteinGap = n(macroTargets?.protein, 0) - n(total?.protein, 0);
-    const waterGap = 2000 - n(total?.waterMl, 0);
-    const suggestion = remaining < 120
-      ? txt("Vise un encas leger : fruit, yaourt nature, eau. Pas besoin de gros repas.", "Aim for a light snack: fruit, plain yogurt, water. No big meal needed.")
-      : proteinGap > 22
-        ? txt("En-cas conseille : base laitiere/proteinee + fruit ou muesli.", "Suggested snack: dairy/protein base + fruit or muesli.")
-        : waterGap > 700
-          ? txt("Hydratation en retard : eau d'abord, puis encas simple.", "Hydration is behind: water first, then a simple snack.")
-          : txt("Choisis un encas simple, mesurable, facile a repeter.", "Choose a simple, measurable snack that is easy to repeat.");
-    const combos = snackComboSuggestions(type, total, macroTargets, remaining);
-    const smart = mealSmartSuggestions(type, total, macroTargets, remaining, total?.waterMl);
-    return `<div style="border:1px solid rgba(37,99,235,.25);border-radius:8px;padding:12px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(34,197,94,.08)),var(--panel2);grid-column:1/-1;">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
-        <div><div class="muted" style="font-size:12px;">${esc(txt("Assistant encas", "Snack assistant"))}</div><strong>${esc(mealTypeLabel(type))}</strong></div>
-        <span class="pill">${remaining >= 0 ? esc(txt("reste", "left")) : esc(txt("surplus", "surplus"))} ${Math.abs(Math.round(remaining))} kcal</span>
-      </div>
-      <div class="muted" style="margin-top:8px;">${esc(suggestion)}</div>
-      ${smart.length ? `<div class="tb-meal-smart-grid">
-        ${smart.map(row => `<div class="tb-meal-smart-card">
-          <strong>${esc(row.title)}</strong>
-          <div class="muted" style="font-size:12px;">${esc(row.note)}${row.kcal ? ` · ~${Math.round(row.kcal)} kcal` : ""}</div>
-          ${row.foods?.length ? `<div class="tb-nutrition-chip-row" style="margin:0;">${row.foods.map(food => foodChipHTML(food, "recent")).join("")}</div>` : `<div class="pill">+ ${esc(txt("eau", "water"))}</div>`}
-        </div>`).join("")}
-      </div>` : ""}
-      ${combos.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:10px;">
-        ${combos.map(combo => `<div style="border:1px solid rgba(148,163,184,.25);border-radius:8px;padding:9px;background:rgba(255,255,255,.05);">
-          <strong>${esc(combo.title)}</strong>
-          <div class="muted" style="font-size:12px;margin:2px 0 7px;">${esc(combo.note)} · ~${Math.round(combo.kcal)} kcal</div>
-          <div class="tb-nutrition-chip-row" style="margin:0;">${combo.foods.map(food => foodChipHTML(food, "recent")).join("")}</div>
-        </div>`).join("")}
-      </div>` : ""}
-    </div>`;
-  }
   function healthWeekInsight(rows) {
     const avg = rows.length ? rows.reduce((sum, row) => sum + n(row.score, 0), 0) / rows.length : 0;
     const waterDays = rows.filter(row => n(row.health?.drinkWaterMl ?? row.waterMl, 0) >= 2000).length;
@@ -1263,7 +1164,6 @@
               <strong>${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))} = ${Math.round(needsKcal)} kcal</strong>
               <div class="muted" style="font-size:12px;margin-top:6px;">${esc(txt("Hydratation : objectif 2 L en eau bue. Eau des aliments", "Hydration: 2 L target from drunk water. Food water"))} ${Math.round(foodWaterMl)} ml.</div>
             </div>
-            ${mealAssistantHTML(mealTargets, typeTotals, { ...total, waterMl: drinkWaterMl }, { protein: proteinTarget, carbs: carbsTarget, fat: fatTarget })}
           </div>
         </div>
         <div class="tb-nutrition-layout">

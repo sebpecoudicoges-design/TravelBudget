@@ -3,7 +3,8 @@
    - Physical work days, separate from sport
    ========================= */
 (function () {
-  const CACHE = { loaded: false, loading: false, rows: [], error: "", editId: "" };
+  const RHYTHM_KEY = "travelbudget_work_rhythm_v1";
+  const CACHE = { loaded: false, loading: false, rows: [], error: "", editId: "", rhythm: loadWorkRhythm() };
 
   function txt(fr, en) {
     try { return String(window.TB_LANG || "fr").toLowerCase() === "en" ? en : fr; } catch (_) { return fr; }
@@ -15,6 +16,45 @@
   function todayISO() {
     try { if (typeof window.toLocalISODate === "function") return window.toLocalISODate(new Date()); } catch (_) {}
     return new Date().toISOString().slice(0, 10);
+  }
+  function offsetDateISO(day, offset) {
+    const d = new Date(`${String(day || todayISO()).slice(0, 10)}T12:00:00`);
+    d.setDate(d.getDate() + Number(offset || 0));
+    try { if (typeof window.toLocalISODate === "function") return window.toLocalISODate(d); } catch (_) {}
+    return d.toISOString().slice(0, 10);
+  }
+  function weekdayIndex(day) {
+    return new Date(`${String(day || todayISO()).slice(0, 10)}T12:00:00`).getDay();
+  }
+  function shortDay(day) {
+    const rowsFr = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+    const rowsEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const idx = weekdayIndex(day);
+    return txt(rowsFr[idx] || "", rowsEn[idx] || "");
+  }
+  function loadWorkRhythm() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(RHYTHM_KEY) || "{}");
+      return {
+        mode: String(raw.mode || "weekend_rest"),
+        manualRestDays: Array.isArray(raw.manualRestDays) ? raw.manualRestDays.map(String).slice(0, 30) : [],
+      };
+    } catch (_) {
+      return { mode: "weekend_rest", manualRestDays: [] };
+    }
+  }
+  function saveWorkRhythm(next) {
+    CACHE.rhythm = Object.assign({ mode: "weekend_rest", manualRestDays: [] }, next || {});
+    try { localStorage.setItem(RHYTHM_KEY, JSON.stringify(CACHE.rhythm)); } catch (_) {}
+  }
+  function isRestPlanned(day) {
+    const rhythm = CACHE.rhythm || { mode: "weekend_rest", manualRestDays: [] };
+    const date = String(day || todayISO()).slice(0, 10);
+    if ((rhythm.manualRestDays || []).includes(date)) return true;
+    if (rhythm.mode === "daily") return false;
+    if (rhythm.mode === "today_rest") return date === todayISO();
+    const w = weekdayIndex(date);
+    return w === 0 || w === 6;
   }
   function table(name) { return window.TB_CONST?.TABLES?.[name] || name; }
   function client() { return window.sb || null; }
@@ -114,6 +154,71 @@
     try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot(`work:${reason || "load"}`); } catch (_) {}
     try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
   }
+  function workDayRows(days = 7) {
+    const end = todayISO();
+    const byDay = new Map();
+    (CACHE.rows || []).forEach(row => {
+      const day = String(row.work_date || "").slice(0, 10);
+      if (!day) return;
+      const prev = byDay.get(day) || { day, minutes: 0, kcal: 0, count: 0, labels: [] };
+      prev.minutes += Number(row.duration_minutes || 0);
+      prev.kcal += Number(row.estimated_kcal || 0);
+      prev.count += 1;
+      if (row.label) prev.labels.push(row.label);
+      byDay.set(day, prev);
+    });
+    const rows = [];
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const day = offsetDateISO(end, -i);
+      const base = byDay.get(day) || { day, minutes: 0, kcal: 0, count: 0, labels: [] };
+      rows.push(Object.assign(base, { plannedRest: isRestPlanned(day) }));
+    }
+    return rows;
+  }
+  function renderWorkVisual() {
+    const rows = workDayRows(7);
+    const today = rows[rows.length - 1] || { kcal: 0, minutes: 0, plannedRest: false };
+    const maxKcal = Math.max(1, ...rows.map(row => Number(row.kcal || 0)));
+    const weekKcal = rows.reduce((sum, row) => sum + Number(row.kcal || 0), 0);
+    const weekHours = rows.reduce((sum, row) => sum + Number(row.minutes || 0), 0) / 60;
+    const todayLabel = today.count
+      ? txt(`Aujourd'hui : ${Math.round(today.minutes / 60 * 10) / 10}h, ${Math.round(today.kcal)} kcal`, `Today: ${Math.round(today.minutes / 60 * 10) / 10}h, ${Math.round(today.kcal)} kcal`)
+      : today.plannedRest
+        ? txt("Repos prevu aujourd'hui.", "Rest planned today.")
+        : txt("Aucun travail saisi aujourd'hui.", "No work logged today.");
+    return `<div style="border:1px solid rgba(14,165,233,.18);border-radius:18px;padding:12px;background:linear-gradient(135deg,rgba(14,165,233,.10),rgba(34,197,94,.08)),var(--panel2);margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+        <div>
+          <h3 style="margin:0 0 4px;">${esc(txt("Rythme & charge", "Rhythm & load"))}</h3>
+          <div class="muted">${esc(todayLabel)}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+          <span class="pill">${Math.round(weekKcal)} kcal</span>
+          <span class="pill">${Math.round(weekHours * 10) / 10}h</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;align-items:end;margin:12px 0 10px;">
+        ${rows.map(row => {
+          const h = row.kcal ? Math.max(16, Math.min(86, (row.kcal / maxKcal) * 86)) : 12;
+          const color = row.kcal ? "linear-gradient(180deg,#22c55e,#0ea5e9)" : row.plannedRest ? "linear-gradient(180deg,#cbd5e1,#94a3b8)" : "linear-gradient(180deg,#fde68a,#f59e0b)";
+          const title = `${row.day} | ${row.count ? `${Math.round(row.kcal)} kcal, ${Math.round(row.minutes / 60 * 10) / 10}h` : row.plannedRest ? txt("Repos", "Rest") : txt("Non saisi", "Not logged")}${row.labels.length ? ` | ${row.labels.join(", ")}` : ""}`;
+          return `<button type="button" title="${esc(title)}" style="border:0;background:transparent;padding:0;display:grid;gap:5px;align-items:end;color:inherit;">
+            <span style="height:${Math.round(h)}px;border-radius:10px 10px 5px 5px;background:${color};box-shadow:0 8px 18px rgba(15,23,42,.10);"></span>
+            <strong style="font-size:11px;">${esc(shortDay(row.day))}</strong>
+            <span class="muted" style="font-size:10px;">${row.kcal ? Math.round(row.kcal) : row.plannedRest ? esc(txt("Repos", "Rest")) : "-"}</span>
+          </button>`;
+        }).join("")}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <label class="muted" for="work-rhythm" style="font-weight:850;">${esc(txt("Rythme", "Rhythm"))}</label>
+        <select id="work-rhythm" style="border:1px solid var(--border);border-radius:999px;padding:8px 10px;background:var(--panel);font-weight:850;color:inherit;">
+          <option value="weekend_rest" ${CACHE.rhythm.mode === "weekend_rest" ? "selected" : ""}>${esc(txt("Repos samedi/dimanche", "Rest Saturday/Sunday"))}</option>
+          <option value="daily" ${CACHE.rhythm.mode === "daily" ? "selected" : ""}>${esc(txt("Travail possible tous les jours", "Work can happen every day"))}</option>
+        </select>
+        <button class="btn small" type="button" id="work-rest-today">${esc(txt("Repos aujourd'hui", "Rest today"))}</button>
+      </div>
+    </div>`;
+  }
   async function loadWorkDays(options = {}) {
     const force = !!options.force;
     if (CACHE.loading || (CACHE.loaded && !force)) return false;
@@ -176,6 +281,7 @@
           </div>
           <div class="pill">${Math.round(b.bmr || 0)} kcal BMR · IMC ${Math.round((b.bmi || 0) * 10) / 10}</div>
         </div>
+        ${renderWorkVisual()}
         <div class="tb-work-grid" style="display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:14px;margin-top:14px;">
           <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
             <div class="field"><label>${esc(txt("Date", "Date"))}</label><input id="work-date" type="date" value="${esc(initialDate)}"></div>
@@ -232,6 +338,15 @@
     });
     const save = root.querySelector("#work-save");
     if (save) save.onclick = () => saveWorkDay(root);
+    const rhythm = root.querySelector("#work-rhythm");
+    if (rhythm) rhythm.onchange = () => { saveWorkRhythm({ ...CACHE.rhythm, mode: rhythm.value }); renderWork("rhythm"); };
+    const restToday = root.querySelector("#work-rest-today");
+    if (restToday) restToday.onclick = () => {
+      const day = todayISO();
+      const days = Array.from(new Set([...(CACHE.rhythm.manualRestDays || []), day]));
+      saveWorkRhythm({ ...CACHE.rhythm, manualRestDays: days });
+      renderWork("rest-today");
+    };
     const cancel = root.querySelector("#work-cancel-edit");
     if (cancel) cancel.onclick = () => { CACHE.editId = ""; renderWork("cancel-edit"); };
     root.querySelectorAll("[data-work-edit]").forEach((btn) => {

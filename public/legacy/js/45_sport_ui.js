@@ -1372,6 +1372,13 @@
       .tb-sport-choice.active{background:linear-gradient(135deg,#1d4ed8,#0891b2);color:white;border-color:transparent;}
       .tb-sport-history{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;}
       .tb-sport-history-card{border:1px solid rgba(148,163,184,.18);border-radius:18px;background:#fff;padding:12px;}
+      .tb-sport-week{border:1px solid rgba(14,165,233,.18);border-radius:18px;padding:12px;background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(34,197,94,.08)),#f8fafc;margin-top:10px;}
+      .tb-sport-week-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;align-items:end;margin-top:10px;}
+      .tb-sport-week-day{border:0;background:transparent;color:inherit;padding:0;display:grid;gap:5px;align-items:end;min-width:0;}
+      .tb-sport-week-bar{height:12px;border-radius:10px 10px 5px 5px;background:linear-gradient(180deg,#cbd5e1,#94a3b8);box-shadow:0 8px 18px rgba(15,23,42,.10);}
+      .tb-sport-week-day.active .tb-sport-week-bar{background:linear-gradient(180deg,#22c55e,#2563eb);}
+      .tb-sport-week-day strong{font-size:11px;line-height:1;}
+      .tb-sport-week-day small{font-size:10px;color:#64748b;font-weight:850;}
       .tb-sport-status{border:1px solid rgba(14,165,233,.18);border-radius:16px;background:#e0f2fe;color:#075985;padding:10px 12px;font-weight:850;}
       body.theme-dark .tb-sport-card,body.theme-dark .tb-sport-item,body.theme-dark .tb-sport-history-card{background:#111827;color:#f8fafc;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-stat{background:#111827;border-color:rgba(255,255,255,.12);}
@@ -1388,6 +1395,8 @@
       body.theme-dark .tb-sport-quick-btn{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       body.theme-dark .tb-sport-advanced{background:rgba(15,23,42,.72);border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-advanced summary{color:#f8fafc;}
+      body.theme-dark .tb-sport-week{background:rgba(14,165,233,.08);border-color:rgba(125,211,252,.18);}
+      body.theme-dark .tb-sport-week-day small{color:#94a3b8;}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}}
       @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timer-card.focus .tb-sport-timer{min-height:calc(100dvh - 20px);border-radius:20px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:72px}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:31px}}
@@ -1922,7 +1931,7 @@
         </div>`
       : "";
     if (CACHE.error) {
-      return `<div class="tb-sport-card"><h3>${esc(txt("Historique", "History"))}</h3>${status}${recover}${sync}<div class="muted" style="margin-top:10px;">${esc(txt("Synchro Supabase indisponible, historique local conserve.", "Supabase sync unavailable, local history kept."))} ${esc(CACHE.error)}</div>${renderHistoryGrid(sessions)}</div>`;
+      return `<div class="tb-sport-card"><h3>${esc(txt("Historique", "History"))}</h3>${status}${recover}${sync}<div class="muted" style="margin-top:10px;">${esc(txt("Synchro Supabase indisponible, historique local conserve.", "Supabase sync unavailable, local history kept."))} ${esc(CACHE.error)}</div>${renderSportWeekVisual(sessions)}${renderHistoryGrid(sessions)}</div>`;
     }
     return `
       <div class="tb-sport-card">
@@ -1934,11 +1943,64 @@
           <span>${esc(txt(`${todayMergeCount} seances aujourd hui peuvent etre fusionnees.`, `${todayMergeCount} workouts today can be merged.`))}</span>
           <button class="btn primary" type="button" id="sport-merge-today">${esc(txt("Fusionner aujourd hui", "Merge today"))}</button>
         </div>` : ""}
+        ${renderSportWeekVisual(sessions)}
         ${renderHistoryGrid(sessions)}
       </div>`;
   }
   function isTodaySession(s) {
     return localDateISO(s?.started_at || s?.startedAt) === todayISO();
+  }
+  function offsetDateISO(day, offset) {
+    const d = new Date(`${String(day || todayISO()).slice(0, 10)}T12:00:00`);
+    d.setDate(d.getDate() + Number(offset || 0));
+    return localDateISO(d);
+  }
+  function shortWeekday(day) {
+    const idx = new Date(`${String(day || todayISO()).slice(0, 10)}T12:00:00`).getDay();
+    const fr = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+    const en = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return txt(fr[idx] || "", en[idx] || "");
+  }
+  function renderSportWeekVisual(sessions) {
+    const byDay = new Map();
+    (sessions || []).forEach(s => {
+      const day = localDateISO(s.started_at || s.startedAt);
+      if (!day) return;
+      const prev = byDay.get(day) || { day, count: 0, kcal: 0, seconds: 0 };
+      prev.count += 1;
+      prev.kcal += n(s.estimated_kcal || s.estimatedKcal, 0);
+      prev.seconds += n(s.duration_seconds || s.durationSeconds, 0);
+      byDay.set(day, prev);
+    });
+    const rows = [];
+    for (let i = 6; i >= 0; i -= 1) {
+      const day = offsetDateISO(todayISO(), -i);
+      rows.push(byDay.get(day) || { day, count: 0, kcal: 0, seconds: 0 });
+    }
+    const maxKcal = Math.max(1, ...rows.map(row => n(row.kcal, 0)));
+    const totalKcal = rows.reduce((sum, row) => sum + n(row.kcal, 0), 0);
+    const activeDays = rows.filter(row => row.count > 0).length;
+    return `<div class="tb-sport-week">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+        <div>
+          <h3 style="margin:0 0 4px;">${esc(txt("Semaine sport", "Sport week"))}</h3>
+          <div class="muted">${esc(txt(`${activeDays} jour(s) actifs, ${Math.round(totalKcal)} kcal brulees`, `${activeDays} active day(s), ${Math.round(totalKcal)} kcal burned`))}</div>
+        </div>
+        <span class="pill">${esc(txt("Actif / repos", "Active / rest"))}</span>
+      </div>
+      <div class="tb-sport-week-grid">
+        ${rows.map(row => {
+          const active = row.count > 0;
+          const height = active ? Math.max(18, Math.min(86, (n(row.kcal, 0) / maxKcal) * 86)) : 12;
+          const title = `${row.day} | ${active ? `${row.count} ${txt("seance(s)", "workout(s)")}, ${Math.round(row.kcal)} kcal, ${fmtSec(row.seconds)}` : txt("Repos / sans sport", "Rest / no sport")}`;
+          return `<button class="tb-sport-week-day ${active ? "active" : ""}" type="button" title="${esc(title)}">
+            <span class="tb-sport-week-bar" style="height:${Math.round(height)}px"></span>
+            <strong>${esc(shortWeekday(row.day))}</strong>
+            <small>${active ? `${Math.round(row.kcal)}` : esc(txt("Repos", "Rest"))}</small>
+          </button>`;
+        }).join("")}
+      </div>
+    </div>`;
   }
   function localToHistorySession(s) {
     return {
