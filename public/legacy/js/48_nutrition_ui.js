@@ -158,6 +158,49 @@
   function normalizeFood(row) { return rules().normalizeFoodRow ? rules().normalizeFoodRow(row) : row; }
   function nutritionForGrams(food, grams) { return rules().nutritionForGrams ? rules().nutritionForGrams(food, grams) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
   function sumNutrition(items) { return rules().sumNutrition ? rules().sumNutrition(items) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
+  function foodForItem(item) {
+    const key = String(item?.food_key || item?.foodKey || "");
+    return CACHE.foods.find(food => String(food.key || "") === key) || { key, name: item?.label || key, tags: [] };
+  }
+  function alcoholForGrams(food, grams) {
+    if (rules().alcoholForGrams) return rules().alcoholForGrams(food, grams);
+    const f = normalizeFood(food) || {};
+    const text = normalizeText(`${f.key || ""} ${f.name || ""} ${(f.tags || []).join(" ")}`);
+    if (/sans alcool|alcohol[-_ ]?free|0\s?%/.test(text)) return { gramsAlcohol: 0, standardDrinks: 0 };
+    const isAlcohol = (Array.isArray(f.tags) && f.tags.some(tag => ["alcool", "alcohol"].includes(normalizeText(tag))))
+      || /\b(biere|beer|ipa|pinte|vin|wine|cidre|cider|whisky|vodka|rhum|gin|cocktail)\b/.test(text);
+    if (!isAlcohol) return { gramsAlcohol: 0, standardDrinks: 0 };
+    const abv = /vin|wine/.test(text) ? 0.125 : (/whisky|vodka|rhum|rum|gin|spiritueux/.test(text) ? 0.40 : (/ipa/.test(text) ? 0.06 : 0.05));
+    const gramsAlcohol = Math.max(0, n(grams, f.servingGrams || 0)) * abv * 0.789;
+    return { gramsAlcohol, standardDrinks: gramsAlcohol / 10 };
+  }
+  function alcoholSummaryForItems(items) {
+    const entries = (items || []).map(item => {
+      const food = foodForItem(item);
+      const alcohol = alcoholForGrams(food, n(item?.grams, food?.servingGrams || 0));
+      if (n(alcohol.standardDrinks, 0) <= 0) return null;
+      return {
+        item,
+        food,
+        label: item?.label || food?.name || food?.key || txt("Alcool", "Alcohol"),
+        grams: n(item?.grams, food?.servingGrams || 0),
+        gramsAlcohol: n(alcohol.gramsAlcohol, 0),
+        standardDrinks: n(alcohol.standardDrinks, 0),
+      };
+    }).filter(Boolean);
+    return {
+      entries,
+      gramsAlcohol: entries.reduce((sum, row) => sum + row.gramsAlcohol, 0),
+      standardDrinks: entries.reduce((sum, row) => sum + row.standardDrinks, 0),
+    };
+  }
+  function alcoholJudgement(dayDrinks, weekDrinks, drinkingDays) {
+    if (dayDrinks > 2.01) return { level: "bad", color: "#ef4444", label: txt("Au-dessus du repere jour", "Above daily guide"), note: txt("Le repere francais est maximum 2 verres standard sur une journee.", "French guide is a maximum of 2 standard drinks in a day.") };
+    if (weekDrinks > 10.01) return { level: "bad", color: "#ef4444", label: txt("Semaine trop haute", "Week too high"), note: txt("Le repere francais est maximum 10 verres standard par semaine.", "French guide is a maximum of 10 standard drinks per week.") };
+    if (drinkingDays >= 6 && weekDrinks > 0.1) return { level: "warn", color: "#f59e0b", label: txt("Pas tous les jours", "Not every day"), note: txt("Le repere recommande aussi des jours sans alcool.", "The guide also recommends alcohol-free days.") };
+    if (dayDrinks > 0.05 || weekDrinks > 0.05) return { level: "warn", color: "#f59e0b", label: txt("Dans les reperes", "Within guide"), note: txt("Reste sous 2 verres/jour et 10/semaine, avec jours sans alcool.", "Stay below 2/day and 10/week, with alcohol-free days.") };
+    return { level: "good", color: "#22c55e", label: txt("Aucun alcool detecte", "No alcohol detected"), note: txt("Aucun aliment alcoolise lie a cette periode.", "No alcoholic food linked to this period.") };
+  }
   function loadCachedFoods() {
     try { const rows = JSON.parse(localStorage.getItem(foodCacheKey()) || "[]"); return Array.isArray(rows) ? rows : []; } catch (_) { return []; }
   }
@@ -463,6 +506,7 @@
     if (!window.state) window.state = {};
     window.state.nutritionMeals = CACHE.meals.slice();
     window.state.nutritionMealItems = CACHE.items.slice();
+    window.state.nutritionFoods = CACHE.foods.slice();
     window.state.nutritionSleep = loadSleepRows();
     try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot(`nutrition:${reason || "load"}`); } catch (_) {}
     try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
@@ -586,7 +630,7 @@
     CACHE.meals.forEach(meal => {
       const day = localDateISO(meal.meal_date);
       if (!day) return;
-      if (!byDay.has(day)) byDay.set(day, { day, meals: [], waterMl: 0, kcal: 0, protein: 0, carbs: 0, fat: 0, types: {} });
+      if (!byDay.has(day)) byDay.set(day, { day, meals: [], waterMl: 0, kcal: 0, protein: 0, carbs: 0, fat: 0, alcoholDrinks: 0, alcoholGrams: 0, alcoholEntries: [], types: {} });
       const row = byDay.get(day);
       const typeRow = ensureType(row, String(meal.meal_type || "meal"));
       row.meals.push(meal);
@@ -615,6 +659,13 @@
       row.protein += n(item.protein_g, 0);
       row.carbs += n(item.carbs_g, 0);
       row.fat += n(item.fat_g, 0);
+      const alcohol = alcoholSummaryForItems([item]);
+      if (alcohol.standardDrinks > 0) {
+        row.alcoholDrinks += alcohol.standardDrinks;
+        row.alcoholGrams += alcohol.gramsAlcohol;
+        row.alcoholEntries.push(...alcohol.entries);
+        typeRow.alcoholDrinks = n(typeRow.alcoholDrinks, 0) + alcohol.standardDrinks;
+      }
     });
     return Array.from(byDay.values()).map(row => ({
       ...row,
@@ -838,7 +889,7 @@
     const rows = [];
     for (let i = 6; i >= 0; i -= 1) {
       const day = offsetDateISO(selectedDay, -i);
-      rows.push(byDay.get(day) || { day, kcal: 0, protein: 0, carbs: 0, fat: 0, waterMl: 0, typeRows: [] });
+      rows.push(byDay.get(day) || { day, kcal: 0, protein: 0, carbs: 0, fat: 0, waterMl: 0, alcoholDrinks: 0, alcoholGrams: 0, alcoholEntries: [], typeRows: [] });
     }
     return rows;
   }
@@ -863,6 +914,8 @@
     const avg = rows.length ? rows.reduce((sum, row) => sum + n(row.score, 0), 0) / rows.length : 0;
     const waterDays = rows.filter(row => n(row.health?.drinkWaterMl ?? row.waterMl, 0) >= 2000).length;
     const sleepAvg = rows.length ? rows.reduce((sum, row) => sum + n(row.health?.sleepHours, sleepForDay(row.day).hours), 0) / rows.length : 0;
+    const alcoholWeekDrinks = rows.reduce((sum, row) => sum + n(row.health?.alcoholDrinks, row.alcoholDrinks), 0);
+    const alcoholDays = rows.filter(row => n(row.health?.alcoholDrinks, row.alcoholDrinks) > 0.05).length;
     const kcalDays = rows.filter(row => {
       const kcal = n(row.health?.kcal, row.kcal);
       const need = Math.max(1, n(row.needsKcal, 0));
@@ -870,10 +923,12 @@
     }).length;
     const trend = rows.length > 3 ? n(rows[rows.length - 1]?.score, 0) - n(rows[0]?.score, 0) : 0;
     let advice = txt("Semaine stable : continue a garder eau, sommeil et proteines lisibles.", "Stable week: keep water, sleep and protein readable.");
-    if (waterDays < Math.ceil(rows.length * 0.55)) advice = txt("Priorite semaine : remonter l'eau bue, l'objectif reste 2 L hors eau des aliments.", "Weekly priority: bring drunk water back up, target remains 2 L excluding food water.");
+    if (alcoholWeekDrinks > 10.01) advice = txt("Priorite semaine : redescendre sous 10 verres standard et ajouter des jours sans alcool.", "Weekly priority: get below 10 standard drinks and add alcohol-free days.");
+    else if (alcoholDays >= 6 && alcoholWeekDrinks > 0.1) advice = txt("Priorite semaine : garder des jours sans alcool.", "Weekly priority: keep alcohol-free days.");
+    else if (waterDays < Math.ceil(rows.length * 0.55)) advice = txt("Priorite semaine : remonter l'eau bue, l'objectif reste 2 L hors eau des aliments.", "Weekly priority: bring drunk water back up, target remains 2 L excluding food water.");
     else if (sleepAvg && sleepAvg < 7) advice = txt("Priorite semaine : sommeil. Vise une routine plus reguliere avant d'optimiser les kcal.", "Weekly priority: sleep. Aim for a steadier routine before optimizing kcal.");
     else if (kcalDays < Math.ceil(rows.length * 0.45)) advice = txt("Priorite semaine : rapprocher l'energie consommee du besoin reel, sans chercher le parfait.", "Weekly priority: bring consumed energy closer to real need, without chasing perfect.");
-    return { avg, waterDays, sleepAvg, kcalDays, trend, advice };
+    return { avg, waterDays, sleepAvg, kcalDays, alcoholWeekDrinks, alcoholDays, trend, advice };
   }
   function healthHistoryRows(history, selectedDay) {
     const byDay = new Map(history.map(row => [row.day, row]));
@@ -889,7 +944,7 @@
       const proteinScore = Math.min(18, (n(nutrition.protein, 0) / Math.max(70, bodyWeight() * 1.35)) * 18);
       const score = health?.score ?? Math.round(Math.max(0, Math.min(100, kcalScore + waterScore + proteinScore + 16)));
       const level = health?.level || (score >= 78 ? "good" : score >= 58 ? "warn" : "bad");
-      rows.push({ ...nutrition, ...activity, health, needsKcal, score, level, color: health?.color || (level === "good" ? "#22c55e" : level === "warn" ? "#f59e0b" : "#ef4444") });
+      rows.push({ ...nutrition, ...activity, health, needsKcal, score, level, alcoholDrinks: n(health?.alcoholDrinks, nutrition.alcoholDrinks), alcoholGrams: n(health?.alcoholGrams, nutrition.alcoholGrams), alcoholEntries: health?.alcoholEntries || nutrition.alcoholEntries || [], color: health?.color || (level === "good" ? "#22c55e" : level === "warn" ? "#f59e0b" : "#ef4444") });
     }
     return rows;
   }
@@ -900,11 +955,15 @@
     const protein = n(h?.protein, row?.protein);
     const sleepHours = n(h?.sleepHours, sleepForDay(row?.day).hours);
     const load = n(row?.sportKcal, 0) + n(row?.workKcal, 0);
+    const alcohol = n(h?.alcoholDrinks, row?.alcoholDrinks);
+    const alcoholWeek = n(h?.alcoholWeeklyDrinks, 0);
+    const alcoholNote = alcohol > 2.01 ? txt("jour haut", "high day") : alcoholWeek > 10.01 ? txt("semaine haute", "high week") : alcohol > 0.05 ? txt("modere", "moderate") : txt("zero", "zero");
     return [
       { key: "energy", label: txt("Energie", "Energy"), value: `${Math.round(kcal)} / ${Math.round(need)} kcal`, pct: Math.min(100, Math.abs(kcal / need) * 100), color: "#22c55e", note: kcal > need * 1.12 ? txt("au-dessus", "above") : kcal < need * 0.85 ? txt("a completer", "to complete") : txt("cale", "on track") },
       { key: "water", label: txt("Eau bue", "Drunk water"), value: `${Math.round(water)} / 2000 ml`, pct: Math.min(100, (water / 2000) * 100), color: "#38bdf8", note: water >= 2000 ? txt("OK", "OK") : txt("a boire", "to drink") },
       { key: "protein", label: txt("Proteines", "Protein"), value: `${Math.round(protein)} / ${Math.round(proteinTarget)} g`, pct: Math.min(100, (protein / Math.max(1, proteinTarget)) * 100), color: "#a78bfa", note: protein >= proteinTarget * 0.9 ? txt("OK", "OK") : txt("a renforcer", "to improve") },
       { key: "sleep", label: txt("Sommeil", "Sleep"), value: sleepHours ? `${Math.round(sleepHours * 10) / 10}h / 7.5h` : txt("non saisi", "not set"), pct: Math.min(100, (sleepHours / 7.5) * 100), color: "#8b5cf6", note: sleepHours >= 7 ? txt("recup OK", "recovery OK") : txt("recup basse", "low recovery") },
+      { key: "alcohol", label: txt("Alcool", "Alcohol"), value: `${Math.round(alcohol * 10) / 10} / 2 ${txt("verres", "drinks")}`, pct: Math.min(100, (alcohol / 2) * 100), color: alcohol > 2.01 || alcoholWeek > 10.01 ? "#ef4444" : (alcohol > 0.05 ? "#f59e0b" : "#22c55e"), note: alcoholNote },
       { key: "load", label: txt("Charge", "Load"), value: `${Math.round(load)} kcal`, pct: Math.min(100, (load / 700) * 100), color: "#f59e0b", note: load > 500 ? txt("jour actif", "active day") : txt("charge calme", "quiet load") },
     ];
   }
@@ -915,11 +974,15 @@
     const water = n(h?.drinkWaterMl, row?.waterMl);
     const protein = n(h?.protein, row?.protein);
     const sleepHours = n(h?.sleepHours, sleepForDay(row?.day).hours);
+    const alcohol = n(h?.alcoholDrinks, row?.alcoholDrinks);
+    const alcoholWeek = n(h?.alcoholWeeklyDrinks, 0);
     if (water < 2000) cards.push({ title: txt("Hydratation", "Hydration"), body: txt(`Encore ${Math.round(2000 - water)} ml d'eau bue a viser.`, `Aim for ${Math.round(2000 - water)} ml more drunk water.`), color: "#38bdf8" });
     if (protein < proteinTarget * 0.9) cards.push({ title: txt("Proteines", "Protein"), body: txt(`Il manque environ ${Math.round(proteinTarget - protein)} g : skyr, fromage blanc, poulet, oeufs ou thon.`, `About ${Math.round(proteinTarget - protein)} g missing: skyr, fromage blanc, chicken, eggs or tuna.`), color: "#a78bfa" });
     if (kcal < need * 0.85) cards.push({ title: txt("Energie", "Energy"), body: txt("Journee basse : complete avec un repas simple, pas seulement du snack.", "Low day: complete with a simple meal, not only snacks."), color: "#22c55e" });
     if (kcal > need * 1.12) cards.push({ title: txt("Energie", "Energy"), body: txt("Journee haute : garde le prochain repas leger, hydratation et legumes.", "High day: keep the next meal light, hydration and vegetables."), color: "#f59e0b" });
     if (sleepHours && sleepHours < 7) cards.push({ title: txt("Recuperation", "Recovery"), body: txt("Sommeil court : evite de sur-optimiser les kcal, priorite routine ce soir.", "Short sleep: avoid over-optimizing kcal, prioritize routine tonight."), color: "#8b5cf6" });
+    if (alcohol > 2.01) cards.push({ title: txt("Alcool", "Alcohol"), body: txt("Au-dessus du repere jour : vise eau, repas simple et un jour sans alcool.", "Above daily guide: aim for water, simple meals and an alcohol-free day."), color: "#ef4444" });
+    else if (alcoholWeek > 10.01) cards.push({ title: txt("Alcool semaine", "Weekly alcohol"), body: txt("Semaine au-dessus du repere : planifie plusieurs jours sans alcool.", "Week above guide: plan several alcohol-free days."), color: "#ef4444" });
     if (!cards.length) cards.push({ title: txt("Journee lisible", "Readable day"), body: txt("Les grands axes sont bien alignes. Continue simple : eau, proteines, sommeil.", "The main axes are aligned. Keep it simple: water, protein, sleep."), color: "#22c55e" });
     return cards.slice(0, 3);
   }
@@ -955,12 +1018,14 @@
     const sleepHours = n(h.sleepHours, sleepForDay(day).hours);
     const protein = n(h.protein, todayRow.protein);
     const proteinTarget = n(h.proteinTarget, Math.max(70, bodyWeight() * 1.35));
+    const insight = healthWeekInsight(healthWeek);
+    const alcoholDrinks = n(h.alcoholDrinks, todayRow.alcoholDrinks);
+    const alcoholWeeklyDrinks = n(h.alcoholWeeklyDrinks, insight?.alcoholWeekDrinks);
     const score = Math.round(n(todayRow.score, h.score));
     const color = todayRow.color || h.color || (score >= 78 ? "#22c55e" : score >= 58 ? "#f59e0b" : "#ef4444");
     const balance = kcal - needsKcal;
     const kcalNow = n(h.expectedKcalNow, needsKcal);
     const balanceNow = n(h.currentBalance, kcal - kcalNow);
-    const insight = healthWeekInsight(healthWeek);
     const scoreLabel = h.label || (score >= 78 ? txt("Equilibre", "Balanced") : score >= 58 ? txt("A surveiller", "Watch") : txt("A corriger", "To correct"));
     const pillars = healthPillarRows(todayRow, h, proteinTarget);
     const focusCards = healthFocusCards(todayRow, h, proteinTarget);
@@ -999,6 +1064,7 @@
               <div class="tb-sport-stat"><span>${esc(txt("Eau bue", "Drunk water"))}</span><strong>${Math.round(water)} / 2000 ml</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Proteines", "Protein"))}</span><strong>${Math.round(protein)} / ${Math.round(proteinTarget)} g</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Sommeil", "Sleep"))}</span><strong>${sleepHours ? `${Math.round(sleepHours * 10) / 10}h` : "-"}</strong></div>
+              <div class="tb-sport-stat"><span>${esc(txt("Alcool", "Alcohol"))}</span><strong>${Math.round(alcoholDrinks * 10) / 10} j / ${Math.round(alcoholWeeklyDrinks * 10) / 10} sem.</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Charge", "Load"))}</span><strong>${Math.round(n(todayRow.sportKcal, 0) + n(todayRow.workKcal, 0))} kcal</strong></div>
             </div>
             <div class="tb-health-pillars">
@@ -1024,6 +1090,7 @@
                 <div class="tb-sport-stat"><span>${esc(txt("Eau", "Water"))}</span><strong>${Math.round(n(h.hydrationScore, 0))} / 24</strong></div>
                 <div class="tb-sport-stat"><span>${esc(txt("Proteines", "Protein"))}</span><strong>${Math.round(n(h.proteinScore, 0))} / 18</strong></div>
                 <div class="tb-sport-stat"><span>${esc(txt("Sommeil", "Sleep"))}</span><strong>${Math.round(n(h.sleepScore, 0))} / 18</strong></div>
+                <div class="tb-sport-stat"><span>${esc(txt("Alcool", "Alcohol"))}</span><strong>${Math.round(n(h.alcoholScore, 0))} / 10</strong></div>
                 <div class="tb-sport-stat"><span>${esc(txt("Base metabolique", "BMR"))}</span><strong>${Math.round(n(h.baseline, baseline().bmr))} kcal</strong></div>
                 <div class="tb-sport-stat"><span>${esc(txt("Sport + travail", "Sport + work"))}</span><strong>${Math.round(n(h.activityKcal, todayRow.sportKcal + todayRow.workKcal))} kcal</strong></div>
               </div>
@@ -1042,7 +1109,7 @@
             ${healthWeek.map(row => {
               const rowColor = row.color || "#38bdf8";
               const height = Math.max(8, Math.min(92, n(row.score, 0) * 0.92));
-              const detail = `${row.day} | score ${Math.round(row.score)}/100 | kcal ${Math.round(n(row.health?.kcal, row.kcal))}/${Math.round(row.needsKcal)} | eau ${Math.round(n(row.health?.drinkWaterMl, row.waterMl))} ml | sommeil ${n(row.health?.sleepHours, sleepForDay(row.day).hours) || "-"}h | charge ${Math.round(n(row.sportKcal, 0) + n(row.workKcal, 0))} kcal`;
+              const detail = `${row.day} | score ${Math.round(row.score)}/100 | kcal ${Math.round(n(row.health?.kcal, row.kcal))}/${Math.round(row.needsKcal)} | eau ${Math.round(n(row.health?.drinkWaterMl, row.waterMl))} ml | sommeil ${n(row.health?.sleepHours, sleepForDay(row.day).hours) || "-"}h | alcool ${Math.round(n(row.health?.alcoholDrinks, row.alcoholDrinks) * 10) / 10} verre(s) | charge ${Math.round(n(row.sportKcal, 0) + n(row.workKcal, 0))} kcal`;
               return `<button class="tb-health-bar" type="button" data-health-date="${esc(row.day)}" title="${esc(detail)}" style="${row.day === day ? `border-color:${rowColor};` : ""}">
                 <span style="height:${height}px;background:linear-gradient(180deg,${rowColor},#38bdf8);"></span>
                 <strong>${Math.round(row.score)}</strong>
@@ -1122,6 +1189,10 @@
     const kcalPct = Math.min(100, pct(consumedKcal, needsKcal));
     const kcalRingColor = kcalDelta > 250 ? "#ef4444" : (kcalDelta < -350 ? "#f59e0b" : "#22c55e");
     const week = weekRows(history, day);
+    const alcoholToday = alcoholSummaryForItems(items);
+    const alcoholWeekTotal = week.reduce((sum, row) => sum + n(row.alcoholDrinks, 0), 0);
+    const alcoholDrinkingDays = week.filter(row => n(row.alcoholDrinks, 0) > 0.05).length;
+    const alcoholJudge = alcoholJudgement(alcoholToday.standardDrinks, alcoholWeekTotal, alcoholDrinkingDays);
     const sleep = sleepForDay(day);
     const sleepWeek = week.map(row => ({ day: row.day, ...sleepForDay(row.day) }));
     const sleepLabel = sleep.hours > 0 ? `${Math.round(sleep.hours * 10) / 10}h` : txt("non saisi", "not set");
@@ -1240,6 +1311,39 @@
                 }).join("")}
               </div>
               <div class="muted" style="font-size:12px;">${esc(txt("Survole une barre pour le detail du jour.", "Hover a bar for day details."))}</div>
+            </div>
+            <div style="border:1px solid ${alcoholJudge.color}66;border-radius:8px;padding:12px;background:linear-gradient(180deg,${alcoholJudge.color}14,rgba(15,23,42,.02)),var(--panel2);">
+              <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
+                <div>
+                  <h3 style="margin:0;">${esc(txt("Alcool", "Alcohol"))}</h3>
+                  <div class="muted" style="font-size:12px;margin-top:3px;">${esc(txt("Repere: 2 verres/jour, 10/semaine, pas tous les jours.", "Guide: 2 drinks/day, 10/week, not every day."))}</div>
+                </div>
+                <span class="pill" style="border-color:${alcoholJudge.color};color:${alcoholJudge.color};">${esc(alcoholJudge.label)}</span>
+              </div>
+              <div class="tb-sport-stats" style="margin-bottom:10px;">
+                <div class="tb-sport-stat"><span>${esc(txt("Aujourd'hui", "Today"))}</span><strong>${Math.round(alcoholToday.standardDrinks * 10) / 10} ${esc(txt("verres", "drinks"))}</strong></div>
+                <div class="tb-sport-stat"><span>${esc(txt("Semaine", "Week"))}</span><strong>${Math.round(alcoholWeekTotal * 10) / 10} / 10</strong></div>
+                <div class="tb-sport-stat"><span>${esc(txt("Jours avec alcool", "Drinking days"))}</span><strong>${alcoholDrinkingDays} / 7</strong></div>
+              </div>
+              <div class="tb-nutrition-week-grid" style="margin-bottom:8px;">
+                ${week.map(row => {
+                  const drinks = n(row.alcoholDrinks, 0);
+                  const height = Math.max(6, Math.min(74, (drinks / 2) * 74));
+                  const barColor = drinks > 2.01 ? "#ef4444" : drinks > 0.05 ? "#f59e0b" : "#22c55e";
+                  const detail = `${row.day} · ${Math.round(drinks * 10) / 10} verre(s) standard`;
+                  return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(detail)}" style="height:92px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${row.day === day ? `border-color:${barColor};` : ""}">
+                    <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,${barColor},#38bdf8);"></span>
+                    <small>${esc(row.day.slice(5).replace("-", "/"))}</small>
+                  </button>`;
+                }).join("")}
+              </div>
+              <div class="muted" style="font-size:12px;margin-bottom:8px;">${esc(alcoholJudge.note)} ${esc(txt("Calcul: 1 verre standard = 10 g d'alcool pur.", "Calculation: 1 standard drink = 10 g pure alcohol."))}</div>
+              ${alcoholToday.entries.length ? `<div style="display:grid;gap:6px;">
+                ${alcoholToday.entries.map(entry => `<div style="display:flex;justify-content:space-between;gap:8px;border-top:1px solid rgba(148,163,184,.22);padding-top:6px;">
+                  <span>${esc(entry.label)} <small class="muted">${Math.round(entry.grams)} ml/g</small></span>
+                  <strong>${Math.round(entry.standardDrinks * 10) / 10} ${esc(txt("verres", "drinks"))}</strong>
+                </div>`).join("")}
+              </div>` : `<div class="muted">${esc(txt("Aucun aliment alcoolise lie au jour selectionne.", "No alcoholic food linked to the selected day."))}</div>`}
             </div>
           </div>
           <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { energyBalance, normalizeFoodRow, nutritionForGrams, sumNutrition } from '../../src/core/nutritionRules.js';
+import { alcoholForGrams, energyBalance, isAlcoholFood, normalizeFoodRow, nutritionForGrams, sumNutrition } from '../../src/core/nutritionRules.js';
 
 describe('nutrition rules core', () => {
   it('normalizes a food library row', () => {
@@ -35,5 +35,14 @@ describe('nutrition rules core', () => {
       spentKcal: 2700,
       balanceKcal: -500,
     });
+  });
+
+  it('detects alcohol and estimates French standard drinks', () => {
+    const beer = { key: 'beer_blond_330', name: 'Biere blonde 33cl', servingGrams: 330, tags: ['boisson', 'alcool', 'biere'] };
+    const alcoholFree = { key: 'beer_alcohol_free', name: 'Biere sans alcool', servingGrams: 330, tags: ['boisson', 'biere'] };
+
+    expect(isAlcoholFood(beer)).toBe(true);
+    expect(isAlcoholFood(alcoholFree)).toBe(false);
+    expect(Math.round(alcoholForGrams(beer, 330).standardDrinks * 10) / 10).toBe(1.3);
   });
 });

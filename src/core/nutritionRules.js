@@ -61,3 +61,34 @@ export function energyBalance({ consumedKcal = 0, sportKcal = 0, workKcal = 0, b
   const consumed = Math.max(0, num(consumedKcal, 0));
   return { consumedKcal: consumed, spentKcal: spent, balanceKcal: consumed - spent };
 }
+
+function norm(value) {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+export function isAlcoholFood(food = {}) {
+  const f = normalizeFoodRow(food);
+  if (!f) return false;
+  const text = norm(`${f.key} ${f.name} ${(f.tags || []).join(' ')}`);
+  if (/sans alcool|alcohol[-_ ]?free|0\s?%/.test(text)) return false;
+  return (f.tags || []).some((tag) => ['alcool', 'alcohol'].includes(norm(tag)))
+    || /\b(biere|beer|ipa|pinte|vin|wine|cidre|cider|whisky|vodka|rhum|gin|cocktail)\b/.test(text);
+}
+
+export function alcoholAbv(food = {}) {
+  const f = normalizeFoodRow(food);
+  const text = norm(`${f?.key || ''} ${f?.name || ''} ${(f?.tags || []).join(' ')}`);
+  if (/vin|wine/.test(text)) return 0.125;
+  if (/whisky|vodka|rhum|rum|gin|spiritueux/.test(text)) return 0.40;
+  if (/ipa/.test(text)) return 0.06;
+  if (/cidre|cider/.test(text)) return 0.05;
+  if (/biere|beer|pinte/.test(text)) return 0.05;
+  return isAlcoholFood(f) ? 0.05 : 0;
+}
+
+export function alcoholForGrams(food = {}, grams = 0) {
+  if (!isAlcoholFood(food)) return { gramsAlcohol: 0, standardDrinks: 0 };
+  const ml = Math.max(0, num(grams, normalizeFoodRow(food)?.servingGrams || 0));
+  const gramsAlcohol = ml * alcoholAbv(food) * 0.789;
+  return { gramsAlcohol, standardDrinks: gramsAlcohol / 10 };
+}

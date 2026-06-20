@@ -46,6 +46,37 @@ function _kpiNormText(s) {
   }
 }
 
+function _kpiNutritionFoods() {
+  try {
+    if (Array.isArray(window.state?.nutritionFoods)) return window.state.nutritionFoods;
+    const key = window.TB_CONST?.LS_KEYS?.nutrition_food_cache || "travelbudget_nutrition_food_cache_v1";
+    const rows = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(rows) ? rows : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function _kpiFoodForNutritionItem(item) {
+  const key = String(item?.food_key || item?.foodKey || "");
+  return _kpiNutritionFoods().find((food) => String(food?.key || "") === key) || { key, name: item?.label || key, tags: [] };
+}
+
+function _kpiAlcoholForFood(food, grams) {
+  try {
+    if (window.Core?.nutritionRules?.alcoholForGrams) return window.Core.nutritionRules.alcoholForGrams(food, grams);
+  } catch (_) {}
+  const tags = Array.isArray(food?.tags) ? food.tags : [];
+  const text = _kpiNormText(`${food?.key || ""} ${food?.name || ""} ${tags.join(" ")}`);
+  if (/sans alcool|alcohol[-_ ]?free|0\s?%/.test(text)) return { gramsAlcohol: 0, standardDrinks: 0 };
+  const isAlcohol = tags.some((tag) => ["alcool", "alcohol"].includes(_kpiNormText(tag)))
+    || /\b(biere|beer|ipa|pinte|vin|wine|cidre|cider|whisky|vodka|rhum|gin|cocktail)\b/.test(text);
+  if (!isAlcohol) return { gramsAlcohol: 0, standardDrinks: 0 };
+  const abv = /vin|wine/.test(text) ? 0.125 : (/whisky|vodka|rhum|rum|gin|spiritueux/.test(text) ? 0.40 : (/ipa/.test(text) ? 0.06 : 0.05));
+  const gramsAlcohol = Math.max(0, Number(grams) || Number(food?.servingGrams || food?.serving_grams) || 0) * abv * 0.789;
+  return { gramsAlcohol, standardDrinks: gramsAlcohol / 10 };
+}
+
 function _kpiIsInternalMovementTx(tx) {
   if (!tx) return false;
   if (tx.internalTransferId || tx.internal_transfer_id) return true;
@@ -155,6 +186,17 @@ function _kpiNutritionSummaryForDate(dateISO) {
     return !hasItem(meal) && (label === "eau" || label === "water");
   };
   const sum = (keyA, keyB) => items.reduce((acc, item) => acc + (Number(item?.[keyA] ?? item?.[keyB]) || 0), 0);
+  const alcoholEntries = items.map((item) => {
+    const food = _kpiFoodForNutritionItem(item);
+    const alcohol = _kpiAlcoholForFood(food, Number(item?.grams) || Number(food?.servingGrams || food?.serving_grams) || 0);
+    if (!Number(alcohol.standardDrinks || 0)) return null;
+    return {
+      label: item?.label || food?.name || food?.key || "Alcool",
+      grams: Number(item?.grams) || 0,
+      gramsAlcohol: Number(alcohol.gramsAlcohol) || 0,
+      standardDrinks: Number(alcohol.standardDrinks) || 0,
+    };
+  }).filter(Boolean);
   return {
     mealCount: meals.length,
     itemCount: items.length,
@@ -164,6 +206,9 @@ function _kpiNutritionSummaryForDate(dateISO) {
     fat: sum("fat_g", "fatG"),
     drinkWaterMl: meals.reduce((acc, meal) => acc + (isWaterOnly(meal) ? (Number(meal?.water_ml ?? meal?.waterMl) || 0) : 0), 0),
     foodWaterMl: meals.reduce((acc, meal) => acc + (!isWaterOnly(meal) ? (Number(meal?.water_ml ?? meal?.waterMl) || 0) : 0), 0),
+    alcoholDrinks: alcoholEntries.reduce((acc, row) => acc + row.standardDrinks, 0),
+    alcoholGrams: alcoholEntries.reduce((acc, row) => acc + row.gramsAlcohol, 0),
+    alcoholEntries,
   };
 }
 
@@ -189,6 +234,28 @@ function _kpiSleepSummaryForDate(dateISO) {
   const rows = readRows();
   const row = rows[nightDay] || rows[day] || {};
   return { hours: Number(row.hours) || 0, quality: String(row.quality || "ok"), nightDay };
+}
+
+function _kpiOffsetDateISO(day, offsetDays) {
+  const base = /^\d{4}-\d{2}-\d{2}$/.test(String(day || "")) ? String(day) : (typeof window.toLocalISODate === "function" ? window.toLocalISODate(new Date()) : new Date().toISOString().slice(0, 10));
+  const [y, m, d0] = base.split("-").map(Number);
+  const d = new Date(Date.UTC(y, (m || 1) - 1, d0 || 1));
+  d.setUTCDate(d.getUTCDate() + (Number(offsetDays) || 0));
+  return d.toISOString().slice(0, 10);
+}
+
+function _kpiAlcoholWeekSummaryForDate(dateISO) {
+  const rows = [];
+  for (let i = 6; i >= 0; i -= 1) {
+    const day = _kpiOffsetDateISO(dateISO, -i);
+    const nutrition = _kpiNutritionSummaryForDate(day);
+    rows.push({ day, drinks: Number(nutrition.alcoholDrinks) || 0 });
+  }
+  return {
+    rows,
+    drinks: rows.reduce((sum, row) => sum + row.drinks, 0),
+    drinkingDays: rows.filter((row) => row.drinks > 0.05).length,
+  };
 }
 
 function _kpiHealthSummaryForDate(dateISO, activity) {
@@ -224,7 +291,19 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
         ? Math.max(0, 16 - (7 - sleep.hours) * 5)
         : Math.max(0, 16 - (sleep.hours - 9) * 3);
   const sleepScore = sleep.quality === "bad" ? Math.max(0, sleepBase - 5) : sleep.quality === "good" ? Math.min(18, sleepBase + 2) : sleepBase;
-  const score = Math.max(0, Math.min(100, Math.round(kcalScore + hydrationScore + proteinScore + loadScore + sleepScore - 8)));
+  const alcoholWeek = _kpiAlcoholWeekSummaryForDate(dateISO);
+  const alcoholDrinks = Number(nutrition.alcoholDrinks) || 0;
+  const alcoholWeeklyDrinks = Number(alcoholWeek.drinks) || 0;
+  const alcoholScore = alcoholDrinks > 2.01
+    ? Math.max(0, 10 - (alcoholDrinks - 2) * 5)
+    : alcoholWeeklyDrinks > 10.01
+      ? Math.max(0, 10 - (alcoholWeeklyDrinks - 10) * 1.5)
+      : alcoholWeek.drinkingDays >= 6 && alcoholWeeklyDrinks > 0.1
+        ? 7
+        : alcoholDrinks > 0.05
+          ? 9
+          : 10;
+  const score = Math.max(0, Math.min(100, Math.round(kcalScore + hydrationScore + proteinScore + loadScore + sleepScore + alcoholScore - 18)));
   const level = score >= 78 ? "good" : score >= 58 ? "warn" : "bad";
   const label = score >= 78 ? "Equilibre" : score >= 58 ? "A surveiller" : "A corriger";
   const reasons = [];
@@ -232,6 +311,8 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
   if (hydrationScore < 10) reasons.push("eau bue faible");
   if (proteinScore < 10) reasons.push("proteines sous cible");
   if (sleep.hours > 0 && sleepScore < 10) reasons.push("recuperation courte");
+  if (alcoholDrinks > 2.01) reasons.push("alcool au-dessus du repere jour");
+  else if (alcoholWeeklyDrinks > 10.01) reasons.push("alcool au-dessus du repere semaine");
   let advice = "Equilibre correct entre besoins, nutrition, eau et charge.";
   if (!nutrition.mealCount) advice = "Ajoute tes repas pour activer une lecture sante fiable.";
   else if (reasons.length) advice = `Score bas surtout: ${reasons.slice(0, 3).join(", ")}.`;
@@ -257,6 +338,12 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
     proteinScore,
     loadScore,
     sleepScore,
+    alcoholScore,
+    alcoholDrinks,
+    alcoholWeeklyDrinks,
+    alcoholDrinkingDays: alcoholWeek.drinkingDays,
+    alcoholEntries: nutrition.alcoholEntries,
+    alcoholWeekRows: alcoholWeek.rows,
     proteinTarget,
     score,
     level,
@@ -285,6 +372,8 @@ function _kpiHealthActionRows(h) {
   if (proteinLeft > 18) rows.push({ tone: "info", title: "Proteines", body: `Ajoute environ ${proteinLeft} g : fromage blanc, skyr, oeufs, poulet, thon ou whey.` });
   if (Number(h?.sleepHours || 0) <= 0) rows.push({ tone: "warn", title: "Sommeil", body: "Renseigne la nuit pour que le score recuperation soit fiable." });
   else if (Number(h.sleepHours) < 7) rows.push({ tone: "warn", title: "Recuperation", body: "Nuit courte : garde la charge raisonnable et privilegie sommeil ce soir." });
+  if (Number(h?.alcoholDrinks || 0) > 2) rows.push({ tone: "warn", title: "Alcool", body: "Tu depasses le repere jour de 2 verres standard. Vise eau, repas simple et pause alcool demain." });
+  else if (Number(h?.alcoholWeeklyDrinks || 0) > 10) rows.push({ tone: "warn", title: "Alcool semaine", body: "La semaine depasse 10 verres standard. Planifie des jours sans alcool." });
   if (Number(h?.activityKcal || 0) > 700) rows.push({ tone: "info", title: "Charge elevee", body: "Sport + travail sont hauts : pense glucides utiles, proteines et repos." });
   return rows.slice(0, 4);
 }
@@ -1670,6 +1759,8 @@ const driver = "Dépenses";
                       <div>Score eau: <strong style="color:var(--text);">${Math.round(healthToday.hydrationScore)} / 24</strong></div>
                       <div>Score proteines: <strong style="color:var(--text);">${Math.round(healthToday.proteinScore)} / 18</strong></div>
                       <div>Score sommeil: <strong style="color:var(--text);">${Math.round(healthToday.sleepScore)} / 18</strong></div>
+                      <div>Score alcool: <strong style="color:var(--text);">${Math.round(healthToday.alcoholScore || 0)} / 10</strong></div>
+                      <div>Alcool: <strong style="color:var(--text);">${Math.round((healthToday.alcoholDrinks || 0) * 10) / 10} jour / ${Math.round((healthToday.alcoholWeeklyDrinks || 0) * 10) / 10} semaine</strong></div>
                       <div>Base metabolique: <strong style="color:var(--text);">${Math.round(healthToday.baseline)} kcal</strong></div>
                       <div>Sport + travail: <strong style="color:var(--text);">${Math.round(healthToday.activityKcal)} kcal</strong></div>
                       <div>Proteines: <strong style="color:var(--text);">${Math.round(healthToday.protein)} / ${Math.round(healthToday.proteinTarget)}g</strong></div>
