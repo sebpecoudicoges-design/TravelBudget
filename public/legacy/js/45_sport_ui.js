@@ -1372,6 +1372,12 @@
       .tb-sport-choice.active{background:linear-gradient(135deg,#1d4ed8,#0891b2);color:white;border-color:transparent;}
       .tb-sport-history{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;}
       .tb-sport-history-card{border:1px solid rgba(148,163,184,.18);border-radius:18px;background:#fff;padding:12px;}
+      .tb-sport-session-details{margin-top:10px;border-top:1px solid rgba(148,163,184,.20);padding-top:10px;}
+      .tb-sport-session-details summary{cursor:pointer;font-weight:950;color:#0f172a;}
+      .tb-sport-session-content{display:grid;gap:8px;margin-top:9px;}
+      .tb-sport-session-exercise{border:1px solid rgba(148,163,184,.18);border-radius:14px;background:#f8fafc;padding:10px;}
+      .tb-sport-session-setline{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+      .tb-sport-session-setline span{border-radius:999px;background:#e0f2fe;color:#075985;padding:4px 8px;font-size:11px;font-weight:900;}
       .tb-sport-week{border:1px solid rgba(14,165,233,.18);border-radius:18px;padding:12px;background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(34,197,94,.08)),#f8fafc;margin-top:10px;}
       .tb-sport-week-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;align-items:end;margin-top:10px;}
       .tb-sport-week-day{border:0;background:transparent;color:inherit;padding:0;display:grid;gap:5px;align-items:end;min-width:0;}
@@ -1397,6 +1403,8 @@
       body.theme-dark .tb-sport-advanced summary{color:#f8fafc;}
       body.theme-dark .tb-sport-week{background:rgba(14,165,233,.08);border-color:rgba(125,211,252,.18);}
       body.theme-dark .tb-sport-week-day small{color:#94a3b8;}
+      body.theme-dark .tb-sport-session-details summary{color:#f8fafc;}
+      body.theme-dark .tb-sport-session-exercise{background:#0f172a;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}}
       @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timer-card.focus .tb-sport-timer{min-height:calc(100dvh - 20px);border-radius:20px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:72px}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:31px}}
@@ -2043,6 +2051,7 @@
             ${s.perceived_effort ? `<span class="tb-sport-chip">RPE ${esc(String(s.perceived_effort))}/10</span>` : ""}
           </div>
           ${s.mood_after ? `<div class="muted" style="margin-top:8px;">${esc(txt("Apres", "After"))}: ${esc(s.mood_after)}</div>` : ""}
+          ${renderSessionContent(s.id)}
           <div class="tb-sport-actions" style="margin-top:10px;">
             <button class="btn primary" type="button" data-sport-repeat-session="${esc(String(s.id || ""))}">${esc(txt("Refaire", "Repeat"))}</button>
             <button class="btn" type="button" data-sport-edit-session="${esc(String(s.id || ""))}">${esc(txt("Ajuster", "Adjust"))}</button>
@@ -2053,6 +2062,43 @@
       }).join("") : `<div class="muted">${esc(txt("Aucune seance enregistree.", "No saved workout yet."))}</div>`}
       ${hiddenCount ? `<div class="muted" style="margin-top:10px;">${esc(txt(`+ ${hiddenCount} seance(s) plus ancienne(s) masquee(s).`, `+ ${hiddenCount} older workout(s) hidden.`))}</div>` : ""}
     </div>`;
+  }
+  function renderSessionContent(sessionId) {
+    const id = String(sessionId || "");
+    const plan = planFromStoredSession(id);
+    if (!plan.length) return "";
+    const sets = doneSetsFromStoredSession(id, 0);
+    const byItem = new Map();
+    sets.forEach(set => {
+      const itemIndex = Math.max(0, Math.round(n(set.itemIndex, 0)));
+      const rows = byItem.get(itemIndex) || [];
+      rows.push(set);
+      byItem.set(itemIndex, rows);
+    });
+    return `<details class="tb-sport-session-details">
+      <summary>${esc(txt("Voir le contenu de la seance", "View workout content"))}</summary>
+      <div class="tb-sport-session-content">
+        ${plan.map((item, idx) => {
+          const itemSets = (byItem.get(idx) || []).slice().sort((a, b) => n(a.setIndex, 0) - n(b.setIndex, 0));
+          const setLine = itemSets.length
+            ? itemSets.map(set => {
+                const bits = [`#${Math.max(1, Math.round(n(set.setIndex, 1)))}`];
+                if (item.mode === "reps" || set.reps != null) bits.push(`${Math.round(n(set.reps, item.targetReps || 0))} reps`);
+                if (n(set.durationSeconds, 0)) bits.push(fmtSec(set.durationSeconds));
+                if (n(set.weightKg, 0)) bits.push(`${Math.round(n(set.weightKg, 0) * 10) / 10} kg`);
+                if (n(set.distanceM, 0)) bits.push(`${Math.round(n(set.distanceM, 0))} m`);
+                return `<span>${esc(bits.join(" · "))}</span>`;
+              }).join("")
+            : `<span>${esc(txt("Series non detaillees", "Sets not detailed"))}</span>`;
+          return `<div class="tb-sport-session-exercise">
+            <strong>${idx + 1}. ${esc(item.exerciseName || labelActivity(item.activityKey || "strength"))}</strong>
+            <div class="muted" style="font-size:12px;margin-top:3px;">${esc(labelActivity(item.activityKey || "strength"))} · ${esc(labelEquipment(item.equipment))} · ${item.mode === "reps" ? `${Math.round(n(item.targetReps, 0))} reps` : fmtSec(item.targetSeconds || 0)} · ${Math.max(1, Math.round(n(item.sets, itemSets.length || 1)))} ${esc(txt("series", "sets"))}</div>
+            ${item.notes ? `<div class="muted" style="font-size:12px;margin-top:3px;">${esc(item.notes)}</div>` : ""}
+            <div class="tb-sport-session-setline">${setLine}</div>
+          </div>`;
+        }).join("")}
+      </div>
+    </details>`;
   }
 
   function sportStatsHTML() {
@@ -2477,12 +2523,20 @@
         distanceM: n(set.distance_m, 0),
         completedAt: set.completed_at || new Date().toISOString(),
       }));
-    if (storedSets.length) return storedSets;
+    const storedByItem = new Map();
+    storedSets.forEach(set => {
+      const itemIndex = Math.max(0, Math.round(n(set.itemIndex, 0))) - baseOffset;
+      const rows = storedByItem.get(itemIndex) || [];
+      rows.push(set);
+      storedByItem.set(itemIndex, rows);
+    });
     return sessionItems.flatMap((item, idx) => {
+      const existing = (storedByItem.get(idx) || []).slice().sort((a, b) => n(a.setIndex, 0) - n(b.setIndex, 0));
       const plannedSets = Math.max(1, Math.round(n(item.planned_sets, 1)));
-      return Array.from({ length: plannedSets }, (_, setIdx) => ({
+      const missing = Math.max(0, plannedSets - existing.length);
+      const estimated = Array.from({ length: missing }, (_, setIdx) => ({
         itemIndex: baseOffset + idx,
-        setIndex: setIdx + 1,
+        setIndex: existing.length + setIdx + 1,
         id: null,
         itemId: item.id || null,
         reps: String(item.mode || "") === "reps" ? n(item.target_reps, 0) : null,
@@ -2492,6 +2546,7 @@
         completedAt: new Date().toISOString(),
         estimated: true,
       }));
+      return existing.concat(estimated);
     });
   }
   async function mergeTodaySportSessions() {
@@ -3345,17 +3400,36 @@
     closeSportSessionSandbox();
     const durationSeconds = n(session.duration_seconds || session.durationSeconds, doneSets.reduce((sum, set) => sum + n(set.durationSeconds, 0), 0));
     const weightKg = n(session.body_weight_kg || session.bodyWeightKg, bodyWeight());
+    const normalizeSetIndexes = () => {
+      const counters = new Map();
+      doneSets.forEach(set => {
+        const itemIndex = Math.max(0, Math.round(n(set.itemIndex, 0)));
+        const next = (counters.get(itemIndex) || 0) + 1;
+        counters.set(itemIndex, next);
+        set.setIndex = next;
+      });
+    };
     const setRowHTML = (set, idx) => {
       const item = plan[Math.max(0, Math.round(n(set.itemIndex, 0)))] || {};
-      return `<div style="display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--panel2);">
+      const isReps = item.mode === "reps" || set.reps != null;
+      return `<div style="display:grid;grid-template-columns:minmax(0,1fr) repeat(3,minmax(74px,96px)) auto;gap:8px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--panel2);">
         <div>
           <strong>${esc(item.exerciseName || labelActivity(item.activityKey || "strength"))}</strong>
           <div class="muted">${esc(txt("Serie", "Set"))} ${esc(String(set.setIndex || idx + 1))} · ${fmtSec(set.durationSeconds || 0)} · MET ${esc(String(Math.round(n(item.metValue, 0) * 10) / 10))}</div>
         </div>
         <label style="display:grid;gap:4px;">
+          <span class="muted" style="font-size:12px;">${esc(txt("Reps", "Reps"))}</span>
+          <input data-sport-sandbox-reps="${idx}" type="number" min="0" step="1" inputmode="numeric" value="${esc(String(isReps ? Math.round(n(set.reps, item.targetReps || 0)) : ""))}" ${isReps ? "" : "disabled"} />
+        </label>
+        <label style="display:grid;gap:4px;">
+          <span class="muted" style="font-size:12px;">sec</span>
+          <input data-sport-sandbox-seconds="${idx}" type="number" min="0" step="1" inputmode="numeric" value="${esc(String(Math.round(n(set.durationSeconds, setWorkSeconds(item)))))}" />
+        </label>
+        <label style="display:grid;gap:4px;">
           <span class="muted" style="font-size:12px;">kg</span>
           <input data-sport-sandbox-load="${idx}" type="number" step="0.5" inputmode="decimal" value="${esc(String(supportsExternalLoad(item) ? (n(set.weightKg, 0) > 0 ? n(set.weightKg, 0) : lastLoadForExercise(item, set.weightKg)) : 0))}" ${supportsExternalLoad(item) ? "" : "disabled"} />
         </label>
+        <button class="btn danger small" type="button" data-sport-sandbox-delete="${idx}" title="${esc(txt("Supprimer la serie", "Delete set"))}">×</button>
       </div>`;
     };
     const wrap = document.createElement("div");
@@ -3366,7 +3440,7 @@
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
           <div>
             <h3 style="margin:0;">${esc(txt("Sandbox seance", "Workout sandbox"))}</h3>
-            <div class="muted" style="margin-top:4px;">${esc(txt("Ajuste les charges de chaque serie, puis sauvegarde pour recalculer les kcal.", "Adjust each set load, then save to recalculate calories."))}</div>
+            <div class="muted" style="margin-top:4px;">${esc(txt("Ajuste reps, duree, charge, ajoute ou supprime des series, puis sauvegarde.", "Adjust reps, duration, load, add or delete sets, then save."))}</div>
           </div>
           <button class="btn" type="button" id="sport-sandbox-close">×</button>
         </div>
@@ -3394,16 +3468,43 @@
         </div>
       </div>`;
     document.body.appendChild(wrap);
-    const readNextSets = () => doneSets.map((set, idx) => Object.assign({}, set, {
-      weightKg: n(wrap.querySelector(`[data-sport-sandbox-load="${idx}"]`)?.value, 0),
-    }));
+    const readNextSets = () => doneSets.map((set, idx) => {
+      const item = plan[Math.max(0, Math.round(n(set.itemIndex, 0)))] || {};
+      const isReps = item.mode === "reps" || set.reps != null;
+      return Object.assign({}, set, {
+        reps: isReps ? Math.max(0, Math.round(n(wrap.querySelector(`[data-sport-sandbox-reps="${idx}"]`)?.value, set.reps || item.targetReps || 0))) : null,
+        durationSeconds: Math.max(0, Math.round(n(wrap.querySelector(`[data-sport-sandbox-seconds="${idx}"]`)?.value, set.durationSeconds || setWorkSeconds(item)))),
+        weightKg: n(wrap.querySelector(`[data-sport-sandbox-load="${idx}"]`)?.value, 0),
+      });
+    });
     const refreshPreview = () => {
       const kcal = Math.max(1, Math.round(sessionKcalEstimate(plan, readNextSets(), weightKg, durationSeconds)));
       const out = wrap.querySelector("#sport-sandbox-kcal");
       if (out) out.textContent = `${kcal} kcal`;
       return kcal;
     };
-    wrap.querySelectorAll("[data-sport-sandbox-load]").forEach(input => { input.oninput = refreshPreview; });
+    const renderSetList = () => {
+      normalizeSetIndexes();
+      const list = wrap.querySelector("#sport-sandbox-set-list");
+      if (list) list.innerHTML = doneSets.map(setRowHTML).join("");
+      const count = wrap.querySelector("#sport-sandbox-set-count");
+      if (count) count.textContent = String(doneSets.length);
+      wrap.querySelectorAll("[data-sport-sandbox-load],[data-sport-sandbox-reps],[data-sport-sandbox-seconds]").forEach(input => { input.oninput = refreshPreview; });
+      wrap.querySelectorAll("[data-sport-sandbox-delete]").forEach(btn => {
+        btn.onclick = () => {
+          const idx = Math.max(0, Math.round(n(btn.getAttribute("data-sport-sandbox-delete"), 0)));
+          const currentSets = readNextSets();
+          doneSets.splice(0, doneSets.length, ...currentSets);
+          doneSets.splice(idx, 1);
+          plan.forEach((item, itemIndex) => {
+            item.sets = Math.max(1, doneSets.filter(set => Math.round(n(set.itemIndex, 0)) === itemIndex).length);
+          });
+          renderSetList();
+          refreshPreview();
+        };
+      });
+    };
+    renderSetList();
     const addSetBtn = wrap.querySelector("#sport-sandbox-add-set");
     if (addSetBtn) addSetBtn.onclick = () => {
       const currentSets = readNextSets();
@@ -3411,7 +3512,7 @@
       const itemIndex = Math.max(0, Math.round(n(wrap.querySelector("#sport-sandbox-add-exercise")?.value, 0)));
       const item = plan[itemIndex] || plan[0] || {};
       const nextSetIndex = Math.max(0, ...doneSets.filter(set => Math.round(n(set.itemIndex, 0)) === itemIndex).map(set => Math.round(n(set.setIndex, 0)))) + 1;
-      doneSets.push({
+      const newSet = {
         itemIndex,
         setIndex: nextSetIndex,
         id: null,
@@ -3421,24 +3522,22 @@
         weightKg: supportsExternalLoad(item) ? lastLoadForExercise(item, effectiveLoadKg(item, weightKg)) : 0,
         distanceM: n(item.distanceM, 0),
         completedAt: new Date().toISOString(),
-      });
+      };
+      const insertAt = doneSets.reduce((last, set, idx) => Math.round(n(set.itemIndex, 0)) === itemIndex ? idx : last, -1);
+      doneSets.splice(insertAt >= 0 ? insertAt + 1 : doneSets.length, 0, newSet);
       if (plan[itemIndex]) plan[itemIndex].sets = Math.max(Math.round(n(plan[itemIndex].sets, 1)), nextSetIndex);
-      const idx = doneSets.length - 1;
-      wrap.querySelector("#sport-sandbox-set-list")?.insertAdjacentHTML("beforeend", setRowHTML(doneSets[idx], idx));
-      const count = wrap.querySelector("#sport-sandbox-set-count");
-      if (count) count.textContent = String(doneSets.length);
-      const input = wrap.querySelector(`[data-sport-sandbox-load="${idx}"]`);
-      if (input) input.oninput = refreshPreview;
+      renderSetList();
       refreshPreview();
       sportFeedback(txt("Serie ajoutee", "Set added"), `${item.exerciseName || labelActivity(item.activityKey)} · ${txt("serie", "set")} ${nextSetIndex}`, { toast: true });
     };
     wrap.querySelector("#sport-sandbox-close").onclick = closeSportSessionSandbox;
     wrap.querySelector("#sport-sandbox-cancel").onclick = closeSportSessionSandbox;
-    wrap.querySelector("#sport-sandbox-save").onclick = () => saveSportSessionSandbox(id, plan, readNextSets(), weightKg, durationSeconds);
+    const originalSetIds = new Set(doneSets.map(set => String(set.id || "")).filter(Boolean));
+    wrap.querySelector("#sport-sandbox-save").onclick = () => saveSportSessionSandbox(id, plan, readNextSets(), weightKg, durationSeconds, originalSetIds);
     refreshPreview();
   }
 
-  async function saveSportSessionSandbox(sessionId, plan, nextSets, weightKg, durationSeconds) {
+  async function saveSportSessionSandbox(sessionId, plan, nextSets, weightKg, durationSeconds, originalSetIds) {
     const id = String(sessionId || "");
     const estimatedKcal = Math.max(1, Math.round(sessionKcalEstimate(plan, nextSets, weightKg, durationSeconds)));
     const c = client();
@@ -3453,6 +3552,12 @@
         saveLocalHistory(CACHE.localSessions);
       } else {
         if (!c) throw new Error("Supabase indisponible");
+        const nextIds = new Set(nextSets.map(set => String(set.id || "")).filter(Boolean));
+        const removedIds = Array.from(originalSetIds || []).filter(id => id && !nextIds.has(id));
+        if (removedIds.length) {
+          const del = await c.from(table("sport_sets")).delete().in("id", removedIds);
+          if (del.error) throw del.error;
+        }
         for (const set of nextSets) {
           if (!set.id && !set.itemId) continue;
           const payload = {
