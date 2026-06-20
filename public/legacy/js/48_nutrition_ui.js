@@ -3,7 +3,7 @@
    - Food library, quick meals, kcal/macros, hydration
    ========================= */
 (function () {
-  const CACHE = { loaded: false, loading: false, foods: [], meals: [], items: [], error: "", foodQuery: "", foodCategory: "all", selectedDate: "", expandedHistory: "", editingItemId: "" };
+  const CACHE = { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], error: "", foodQuery: "", foodCategory: "all", selectedDate: "", expandedHistory: "", editingItemId: "" };
   const FALLBACK_FOODS = [
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
@@ -169,6 +169,102 @@
   }
   function saveLocalMeals(rows) {
     try { localStorage.setItem(localMealKey(), JSON.stringify((rows || []).slice(0, 200))); } catch (_) {}
+  }
+  function isOfflineSkipError(err) {
+    return /offline mode|supabase request skipped|failed to fetch|network/i.test(String(err?.message || err || ""));
+  }
+  function enqueueNutritionSync() {
+    try {
+      if (typeof window.tbOfflineQueueEnqueue === "function") {
+        window.tbOfflineQueueEnqueue("nutrition.sync_local", {}, { label: "nutrition" });
+      }
+    } catch (_) {}
+  }
+  function makeLocalNutritionRow({ food, grams, nut, waterMl, mealType, mealDate, label }) {
+    const stamp = Date.now() + "_" + Math.random().toString(16).slice(2);
+    const mealId = `local_meal_${stamp}`;
+    const itemId = `local_item_${stamp}`;
+    return {
+      meal: {
+        id: mealId,
+        user_id: uid(),
+        travel_id: activeTravelId(),
+        meal_date: mealDate || selectedDateISO(),
+        meal_type: mealType || "meal",
+        label: label || food?.name || txt("Repas", "Meal"),
+        water_ml: n(waterMl, 0),
+        created_at: new Date().toISOString(),
+      },
+      item: grams > 0 ? {
+        id: itemId,
+        user_id: uid(),
+        meal_id: mealId,
+        food_key: food?.key || null,
+        label: label || food?.name || "Aliment",
+        grams,
+        kcal: n(nut?.kcal, 0),
+        protein_g: n(nut?.protein, 0),
+        carbs_g: n(nut?.carbs, 0),
+        fat_g: n(nut?.fat, 0),
+        fiber_g: n(nut?.fiber, 0),
+        created_at: new Date().toISOString(),
+      } : null,
+    };
+  }
+  async function syncLocalNutritionRows(reason) {
+    const c = client();
+    const userId = uid();
+    if (!c || !userId || CACHE.syncingLocal) return 0;
+    const rows = loadLocalMeals();
+    if (!rows.length) return 0;
+    const offline = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode(`nutrition:sync:${reason || "manual"}`)
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (offline) return 0;
+    CACHE.syncingLocal = true;
+    const remaining = [];
+    let synced = 0;
+    try {
+      for (const row of rows) {
+        try {
+          const meal = row.meal || {};
+          const insertedMeal = await c.from(table("nutrition_meals")).insert({
+            user_id: userId,
+            travel_id: meal.travel_id || activeTravelId(),
+            meal_date: localDateISO(meal.meal_date) || selectedDateISO(),
+            meal_type: meal.meal_type || "meal",
+            label: meal.label || txt("Repas", "Meal"),
+            notes: meal.notes || null,
+            water_ml: n(meal.water_ml, 0),
+          }).select("id").single();
+          if (insertedMeal.error) throw insertedMeal.error;
+          if (row.item) {
+            const item = row.item;
+            const insertedItem = await c.from(table("nutrition_meal_items")).insert({
+              user_id: userId,
+              meal_id: insertedMeal.data.id,
+              food_key: item.food_key || null,
+              label: item.label || meal.label || "Aliment",
+              grams: n(item.grams, 0),
+              kcal: n(item.kcal, 0),
+              protein_g: n(item.protein_g, 0),
+              carbs_g: n(item.carbs_g, 0),
+              fat_g: n(item.fat_g, 0),
+              fiber_g: n(item.fiber_g, 0),
+            });
+            if (insertedItem.error) throw insertedItem.error;
+          }
+          synced += 1;
+        } catch (e) {
+          remaining.push(row);
+          if (!isOfflineSkipError(e)) console.warn("[nutrition] local sync failed", e?.message || e);
+        }
+      }
+      saveLocalMeals(remaining);
+      return synced;
+    } finally {
+      CACHE.syncingLocal = false;
+    }
   }
   function loadFoodKeys(kind) {
     try {
@@ -402,6 +498,7 @@
         }
       }
       if (c && uid()) {
+        await syncLocalNutritionRows("load");
         try {
           const sleepSince = offsetDateISO(selectedDateISO(), -21);
           const sleep = await c.from(table("nutrition_sleep"))
@@ -1542,14 +1639,10 @@
         saveLocalMeals(edited);
         CACHE.editingItemId = "";
       } else {
-        const mealId = `local_meal_${Date.now()}`;
-        const itemId = `local_item_${Date.now()}`;
         const rows = loadLocalMeals();
-        rows.unshift({
-          meal: { id: mealId, user_id: uid(), travel_id: activeTravelId(), meal_date: selectedDateISO(), meal_type: root.querySelector("#nutrition-type")?.value || "meal", label: food.name, water_ml: waterMl, created_at: new Date().toISOString() },
-          item: grams > 0 ? { id: itemId, user_id: uid(), meal_id: mealId, food_key: food.key, label: food.name, grams, kcal: nut.kcal, protein_g: nut.protein, carbs_g: nut.carbs, fat_g: nut.fat, fiber_g: nut.fiber, created_at: new Date().toISOString() } : null,
-        });
+        rows.unshift(makeLocalNutritionRow({ food, grams, nut, waterMl, mealType: root.querySelector("#nutrition-type")?.value || "meal" }));
         saveLocalMeals(rows);
+        enqueueNutritionSync();
       }
       await loadNutrition({ force: true });
       try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
@@ -1558,6 +1651,13 @@
       renderNutrition("save");
     } catch (e) {
       CACHE.error = e?.message || String(e);
+      if (!CACHE.editingItemId && isOfflineSkipError(e)) {
+        const rows = loadLocalMeals();
+        rows.unshift(makeLocalNutritionRow({ food, grams, nut, waterMl, mealType: root.querySelector("#nutrition-type")?.value || "meal" }));
+        saveLocalMeals(rows);
+        enqueueNutritionSync();
+        await loadNutrition({ force: true });
+      }
       renderNutrition("save-error");
     }
   }
@@ -1577,11 +1677,9 @@
         if (meal.error) throw meal.error;
       } else {
         const rows = loadLocalMeals();
-        rows.unshift({
-          meal: { id: `local_meal_${Date.now()}`, user_id: uid(), travel_id: activeTravelId(), meal_date: selectedDateISO(), meal_type: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water"), water_ml: water, created_at: new Date().toISOString() },
-          item: null,
-        });
+        rows.unshift(makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, mealType: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water") }));
         saveLocalMeals(rows);
+        enqueueNutritionSync();
       }
       await loadNutrition({ force: true });
       try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
@@ -1590,6 +1688,13 @@
       renderNutrition("water-only");
     } catch (e) {
       CACHE.error = e?.message || String(e);
+      if (isOfflineSkipError(e)) {
+        const rows = loadLocalMeals();
+        rows.unshift(makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, mealType: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water") }));
+        saveLocalMeals(rows);
+        enqueueNutritionSync();
+        await loadNutrition({ force: true });
+      }
       renderNutrition("water-error");
     }
   }
@@ -1658,6 +1763,8 @@
   };
   window.addEventListener("tb:auth_scope_changed", () => { CACHE.loaded = false; CACHE.meals = []; CACHE.items = []; });
   try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadNutrition(); } catch (_) {} }); } catch (_) {}
+  try { window.addEventListener("tb:offline_state_changed", (ev) => { if (ev?.detail?.offline === false) syncLocalNutritionRows("online").then(() => loadNutrition({ force: true })).catch(() => {}); }); } catch (_) {}
+  window.tbNutritionSyncLocal = syncLocalNutritionRows;
   setTimeout(() => { try { if (uid()) loadNutrition().catch(() => {}); } catch (_) {} }, 450);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ensureNutritionShell);
   else ensureNutritionShell();

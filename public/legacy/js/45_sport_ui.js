@@ -278,6 +278,7 @@
     builderFamily: "all",
     timerFocus: false,
     timerBeepVolume: loadTimerPrefs().beepVolume,
+    savingWorkoutKeys: new Set(),
     exerciseSearch: "",
     globalRestSeconds: loadGlobalRest(),
     circuit: loadCircuit(),
@@ -781,9 +782,14 @@
     CACHE.status = txt(`${imported.length} seance(s) locale(s) recuperee(s).`, `${imported.length} local workout(s) recovered.`);
   }
   function rememberLocalWorkout(summary, synced) {
-    const id = summary.localId || ("local_" + Date.now() + "_" + Math.random().toString(16).slice(2));
+    const fingerprint = workoutFingerprint(summary);
+    const existing = fingerprint
+      ? (CACHE.localSessions || []).find(s => String(s.fingerprint || workoutFingerprint(s)) === fingerprint)
+      : null;
+    const id = summary.localId || existing?.localId || ("local_" + Date.now() + "_" + Math.random().toString(16).slice(2));
     const row = Object.assign({}, summary, {
       localId: id,
+      fingerprint,
       localOnly: !synced,
       savedLocallyAt: new Date().toISOString(),
     });
@@ -800,6 +806,38 @@
   }
   function isLocalWorkoutUnsynced(row) {
     return !!row && !String(row.remoteId || "").trim();
+  }
+  function primaryActivityForWorkout(row) {
+    const plan = Array.isArray(row?.plan) ? row.plan : [];
+    return plan[0]?.activityKey || row?.activity_type || "strength";
+  }
+  function workoutFingerprint(row) {
+    const started = String(row?.startedAt || row?.started_at || "").slice(0, 19);
+    const ended = String(row?.endedAt || row?.ended_at || "").slice(0, 19);
+    const duration = Math.max(0, Math.round(n(row?.durationSeconds || row?.duration_seconds, 0)));
+    const kcal = Math.max(0, Math.round(n(row?.estimatedKcal || row?.estimated_kcal, 0)));
+    const plan = Array.isArray(row?.plan) ? row.plan : [];
+    const doneSets = Array.isArray(row?.doneSets) ? row.doneSets : [];
+    const activity = primaryActivityForWorkout(row);
+    if (!started || !duration) return "";
+    return [activity, started, ended, duration, kcal, plan.length, doneSets.length].join("|");
+  }
+  async function findExistingRemoteWorkout(c, userId, row) {
+    if (!c || !userId || !row) return null;
+    const started = row.startedAt || row.started_at;
+    const duration = Math.max(0, Math.round(n(row.durationSeconds || row.duration_seconds, 0)));
+    if (!started || !duration) return null;
+    const res = await c
+      .from(table("sport_sessions"))
+      .select("id,created_at")
+      .eq("user_id", userId)
+      .eq("activity_type", primaryActivityForWorkout(row))
+      .eq("started_at", started)
+      .eq("duration_seconds", duration)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (res.error) throw res.error;
+    return (res.data || [])[0]?.id || null;
   }
   function removeLocalWorkout(id) {
     const key = String(id || "");
@@ -1808,7 +1846,7 @@
           <div class="tb-sport-live-head">
             <div>
               <div class="kind">${esc(isRest ? txt("Repos", "Rest") : txt("Travail", "Work"))}${roundInfo}</div>
-              <div class="hint">${esc(txt("Progression", "Progress"))}: ${workDone}/${totalWork} · ${esc(txt("Temps total", "Total time"))}: ${fmtSec(elapsed)}</div>
+              <div class="hint" data-sport-timer-progress>${esc(txt("Progression", "Progress"))}: ${workDone}/${totalWork} · ${esc(txt("Temps total", "Total time"))}: ${fmtSec(elapsed)}</div>
             </div>
             <div class="tb-sport-actions" style="justify-content:flex-end;">
               <button class="btn small" type="button" id="sport-timer-focus">${esc(CACHE.timerFocus ? txt("Reduire", "Exit focus") : txt("Grand ecran", "Big screen"))}</button>
@@ -1818,7 +1856,7 @@
           <div class="tb-sport-live-main">
             <div class="tb-sport-live-focus">
               <div class="name">${esc(isRest ? stepLabel(step) : (step?.item?.exerciseName || ""))}</div>
-              <div class="clock">${esc(displayValue)}</div>
+              <div class="clock" data-sport-timer-clock>${esc(displayValue)}</div>
               <div class="hint">${step?.kind === "work" ? `${esc(labelEquipment(step.item.equipment))} · ${esc(txt("Objectif", "Target"))}: ${esc(timerStepGoalText(step, timer))}` : esc(txt("Respire, prochaine serie prete.", "Breathe, next set is ready."))}</div>
             </div>
             <div class="tb-sport-live-panel">
@@ -2220,8 +2258,13 @@
     const addSet = root.querySelector("#sport-add-set");
     if (addSet) addSet.onclick = addTimerSetForCurrentExercise;
     const focus = root.querySelector("#sport-timer-focus");
-    if (focus) focus.onclick = () => {
+    if (focus) focus.onclick = async () => {
       CACHE.timerFocus = !CACHE.timerFocus;
+      try {
+        const card = root.querySelector(".tb-sport-timer-card");
+        if (CACHE.timerFocus && card?.requestFullscreen && !document.fullscreenElement) await card.requestFullscreen();
+        else if (!CACHE.timerFocus && document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
+      } catch (_) {}
       renderSport("timer-focus");
     };
     const beepVolume = root.querySelector("#sport-beep-volume");
@@ -2569,17 +2612,33 @@
       if (timer.timeCapEndAt && Date.now() >= timer.timeCapEndAt) return finishWorkout();
       if (step.duration && Date.now() >= timer.stepEndAt) completeStep();
       else if ((typeof activeView === "string" ? activeView : "") === "sport") {
-        if (document.activeElement?.id === "sport-step-load") return;
-        const root = document.getElementById("sport-root");
-        const card = root?.querySelector(".tb-sport-grid .tb-sport-card:nth-child(2)");
-        if (card) {
-          const tmp = document.createElement("div");
-          tmp.innerHTML = renderTimer();
-          card.replaceWith(tmp.firstElementChild);
-          bind(root);
-        }
+        updateTimerDisplay();
       }
     }, 500);
+  }
+  function updateTimerDisplay() {
+    const timer = CACHE.timer;
+    const step = currentTimerStep();
+    if (!timer || !step) return;
+    const root = document.getElementById("sport-root");
+    if (!root) return;
+    const elapsed = Math.max(0, Math.round((Date.now() - timer.startedAt) / 1000));
+    const remaining = step.duration ? Math.max(0, Math.ceil((timer.stepEndAt - Date.now()) / 1000)) : 0;
+    const isRest = step.kind === "rest" || step.kind === "round_rest";
+    const displayValue = isRest ? fmtSec(remaining) : (step.item?.mode === "time" ? fmtSec(remaining) : `${n(timer.stepReps ?? step.item?.targetReps, 0)} reps`);
+    const clock = root.querySelector("[data-sport-timer-clock]");
+    if (clock) clock.textContent = displayValue;
+    const progress = root.querySelector("[data-sport-timer-progress]");
+    if (progress) {
+      const workDone = timer.doneSets.length;
+      const totalWork = timer.sequence.filter(s => s.kind === "work").length;
+      progress.textContent = `${txt("Progression", "Progress")}: ${workDone}/${totalWork} · ${txt("Temps total", "Total time")}: ${fmtSec(elapsed)}`;
+    }
+    const amrap = CACHE.circuit?.enabled && n(CACHE.circuit?.amrapMinutes, 0) > 0;
+    const next = root.querySelector(".tb-sport-next");
+    if (next && amrap && timer.timeCapEndAt) {
+      next.textContent = `${txt("AMRAP", "AMRAP")}: ${fmtSec(Math.max(0, Math.ceil((timer.timeCapEndAt - Date.now()) / 1000)))} · ${txt("Tours", "Rounds")}: ${n(timer.roundsCompleted, 0)}`;
+    }
   }
   function stopTicker() {
     if (CACHE.ticker) clearInterval(CACHE.ticker);
@@ -2876,6 +2935,8 @@
     if (effort) effort.oninput = () => { if (effortValue) effortValue.textContent = String(effort.value || "6"); };
     const cancel = wrap.querySelector("#sport-finish-cancel");
     if (cancel) cancel.onclick = async () => {
+      cancel.disabled = true;
+      if (save) save.disabled = true;
       const s = Object.assign({}, CACHE.pendingSummary || modalSummary, { moodAfter: "", perceivedEffort: null, notes: "" });
       CACHE.pendingSummary = null;
       closeFinishModal();
@@ -2884,6 +2945,8 @@
     };
     const save = wrap.querySelector("#sport-finish-save");
     if (save) save.onclick = async () => {
+      save.disabled = true;
+      if (cancel) cancel.disabled = true;
       const s = Object.assign({}, CACHE.pendingSummary || modalSummary, {
         moodAfter: mood,
         perceivedEffort: Math.max(1, Math.min(10, Math.round(n(effort?.value, 6)))),
@@ -2903,87 +2966,102 @@
   async function saveWorkout(summary) {
     const c = client();
     const userId = uid();
+    const fingerprint = workoutFingerprint(summary) || ("workout_" + Date.now());
+    if (CACHE.savingWorkoutKeys.has(fingerprint)) return;
+    CACHE.savingWorkoutKeys.add(fingerprint);
     const localRow = rememberLocalWorkout(summary, false);
-    CACHE.status = txt("Seance ajoutee a l'historique local. Synchro en cours...", "Workout added to local history. Syncing...");
-    if (!c || !userId) {
-      CACHE.status = txt("Seance sauvegardee localement. Connecte-toi pour synchroniser.", "Workout saved locally. Sign in to sync.");
-      try {
-        if (typeof window.tbOfflineQueueEnqueue === "function") {
-          window.tbOfflineQueueEnqueue("sport.sync_local", {}, { label: "sport" });
-        }
-      } catch (_) {}
-      return;
-    }
     try {
-      const primaryActivity = summary.plan[0]?.activityKey || "strength";
-      const sess = await c
-        .from(table("sport_sessions"))
-        .insert([{
-          user_id: userId,
-          travel_id: activeTravelId(),
-          activity_type: primaryActivity,
-          started_at: summary.startedAt,
-          ended_at: summary.endedAt,
-          duration_seconds: summary.durationSeconds,
-          mood_after: summary.moodAfter || null,
-          fatigue: summary.perceivedEffort || null,
-          body_weight_kg: summary.bodyWeightKg,
-          notes: summary.notes || null,
-          estimated_kcal: summary.estimatedKcal,
-        }])
-        .select("id")
-        .single();
-      if (sess.error) throw sess.error;
-      const sessionId = sess.data?.id;
-      markLocalSynced(localRow.localId, sessionId);
-      const itemRows = summary.plan.map((item, idx) => ({
-        user_id: userId,
-        session_id: sessionId,
-        activity_key: item.activityKey,
-        exercise_name: item.exerciseName,
-        equipment: item.equipment,
-        mode: item.mode,
-        target_reps: item.targetReps || null,
-        target_seconds: item.targetSeconds || null,
-        distance_m: item.distanceM || null,
-        planned_sets: item.sets || 1,
-        rest_seconds: item.restSeconds || 0,
-        sort_order: idx,
-        met_value: item.metValue || null,
-        notes: item.notes || null,
-      }));
-      const items = await c
-        .from(table("sport_session_items"))
-        .insert(itemRows)
-        .select("id,sort_order");
-      if (items.error) throw items.error;
-      const itemByIndex = new Map((items.data || []).map(row => [Number(row.sort_order), row.id]));
-      const setRows = summary.doneSets.map(set => ({
-        user_id: userId,
-        item_id: itemByIndex.get(Number(set.itemIndex)),
-        set_index: set.setIndex,
-        reps: set.reps,
-        duration_seconds: set.durationSeconds,
-        weight_kg: set.weightKg || null,
-        distance_m: set.distanceM || null,
-        completed_at: set.completedAt,
-      })).filter(row => row.item_id);
-      if (setRows.length) {
-        const savedSets = await c.from(table("sport_sets")).insert(setRows);
-        if (savedSets.error) throw savedSets.error;
+      CACHE.status = txt("Seance ajoutee a l'historique local. Synchro en cours...", "Workout added to local history. Syncing...");
+      if (!c || !userId) {
+        CACHE.status = txt("Seance sauvegardee localement. Connecte-toi pour synchroniser.", "Workout saved locally. Sign in to sync.");
+        try {
+          if (typeof window.tbOfflineQueueEnqueue === "function") {
+            window.tbOfflineQueueEnqueue("sport.sync_local", {}, { label: "sport" });
+          }
+        } catch (_) {}
+        return;
       }
-      CACHE.loaded = false;
-      CACHE.status = txt("Seance sauvegardee et synchronisee.", "Workout saved and synced.");
-      await loadHistory();
-    } catch (e) {
-      CACHE.error = e?.message || String(e);
-      CACHE.status = txt("Seance sauvegardee localement. Synchro Supabase a verifier.", "Workout saved locally. Supabase sync needs checking.");
+      const existingRemoteId = await findExistingRemoteWorkout(c, userId, summary);
+      if (existingRemoteId) {
+        markLocalSynced(localRow.localId, existingRemoteId);
+        CACHE.loaded = false;
+        CACHE.status = txt("Seance deja synchronisee, doublon evite.", "Workout already synced, duplicate avoided.");
+        await loadHistory();
+        return;
+      }
       try {
-        if (typeof window.tbOfflineQueueEnqueue === "function") {
-          window.tbOfflineQueueEnqueue("sport.sync_local", {}, { label: "sport" });
+        const primaryActivity = summary.plan[0]?.activityKey || "strength";
+        const sess = await c
+          .from(table("sport_sessions"))
+          .insert([{
+            user_id: userId,
+            travel_id: activeTravelId(),
+            activity_type: primaryActivity,
+            started_at: summary.startedAt,
+            ended_at: summary.endedAt,
+            duration_seconds: summary.durationSeconds,
+            mood_after: summary.moodAfter || null,
+            fatigue: summary.perceivedEffort || null,
+            body_weight_kg: summary.bodyWeightKg,
+            notes: summary.notes || null,
+            estimated_kcal: summary.estimatedKcal,
+          }])
+          .select("id")
+          .single();
+        if (sess.error) throw sess.error;
+        const sessionId = sess.data?.id;
+        markLocalSynced(localRow.localId, sessionId);
+        const itemRows = summary.plan.map((item, idx) => ({
+          user_id: userId,
+          session_id: sessionId,
+          activity_key: item.activityKey,
+          exercise_name: item.exerciseName,
+          equipment: item.equipment,
+          mode: item.mode,
+          target_reps: item.targetReps || null,
+          target_seconds: item.targetSeconds || null,
+          distance_m: item.distanceM || null,
+          planned_sets: item.sets || 1,
+          rest_seconds: item.restSeconds || 0,
+          sort_order: idx,
+          met_value: item.metValue || null,
+          notes: item.notes || null,
+        }));
+        const items = await c
+          .from(table("sport_session_items"))
+          .insert(itemRows)
+          .select("id,sort_order");
+        if (items.error) throw items.error;
+        const itemByIndex = new Map((items.data || []).map(row => [Number(row.sort_order), row.id]));
+        const setRows = summary.doneSets.map(set => ({
+          user_id: userId,
+          item_id: itemByIndex.get(Number(set.itemIndex)),
+          set_index: set.setIndex,
+          reps: set.reps,
+          duration_seconds: set.durationSeconds,
+          weight_kg: set.weightKg || null,
+          distance_m: set.distanceM || null,
+          completed_at: set.completedAt,
+        })).filter(row => row.item_id);
+        if (setRows.length) {
+          const savedSets = await c.from(table("sport_sets")).insert(setRows);
+          if (savedSets.error) throw savedSets.error;
         }
-      } catch (_) {}
-      console.warn("[sport] save failed", CACHE.error);
+        CACHE.loaded = false;
+        CACHE.status = txt("Seance sauvegardee et synchronisee.", "Workout saved and synced.");
+        await loadHistory();
+      } catch (e) {
+        CACHE.error = e?.message || String(e);
+        CACHE.status = txt("Seance sauvegardee localement. Synchro Supabase a verifier.", "Workout saved locally. Supabase sync needs checking.");
+        try {
+          if (typeof window.tbOfflineQueueEnqueue === "function") {
+            window.tbOfflineQueueEnqueue("sport.sync_local", {}, { label: "sport" });
+          }
+        } catch (_) {}
+        console.warn("[sport] save failed", CACHE.error);
+      }
+    } finally {
+      CACHE.savingWorkoutKeys.delete(fingerprint);
     }
   }
 
@@ -2995,6 +3073,11 @@
     if (!plan.length) return false;
     const doneSets = Array.isArray(row.doneSets) ? row.doneSets : [];
     const primaryActivity = plan[0]?.activityKey || row.activity_type || "strength";
+    const existingRemoteId = await findExistingRemoteWorkout(c, userId, row);
+    if (existingRemoteId) {
+      markLocalSynced(row.localId || row.id, existingRemoteId);
+      return true;
+    }
     const sess = await c
       .from(table("sport_sessions"))
       .insert([{
