@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alcoholForGrams, energyBalance, isAlcoholFood, normalizeFoodRow, nutritionForGrams, sumNutrition } from '../../src/core/nutritionRules.js';
+import { alcoholForGrams, energyBalance, isAlcoholFood, normalizeFoodRow, nutritionForGrams, nutritionGoalTargets, sumNutrition } from '../../src/core/nutritionRules.js';
 
 describe('nutrition rules core', () => {
   it('normalizes a food library row', () => {
@@ -34,6 +34,16 @@ describe('nutrition rules core', () => {
       consumedKcal: 2200,
       spentKcal: 2700,
       balanceKcal: -500,
+    });
+  });
+
+  it('adapts calories and macros for a conservative bulking goal', () => {
+    expect(nutritionGoalTargets({ spentKcal: 2100, weightKg: 59, mode: 'bulk', surplusKcal: 350 })).toMatchObject({
+      mode: 'bulk',
+      surplusKcal: 350,
+      targetKcal: 2450,
+      protein: 106,
+      fat: 53,
     });
   });
 

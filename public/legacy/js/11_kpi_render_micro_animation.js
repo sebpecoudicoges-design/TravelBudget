@@ -174,6 +174,19 @@ function _kpiBaselineKcal() {
   return Math.max(1200, Math.round(bmr));
 }
 
+function _kpiNutritionGoal() {
+  try {
+    const key = `travelbudget_nutrition_goal_v1::${window.sbUser?.id || "anon"}`;
+    const raw = JSON.parse(localStorage.getItem(key) || "{}");
+    return {
+      mode: String(raw.mode || "bulk") === "bulk" ? "bulk" : "maintenance",
+      surplusKcal: Math.max(300, Math.min(500, Math.round(Number(raw.surplusKcal) || 350))),
+    };
+  } catch (_) {
+    return { mode: "bulk", surplusKcal: 350 };
+  }
+}
+
 function _kpiNutritionSummaryForDate(dateISO) {
   const day = String(dateISO || "").slice(0, 10);
   const sameDay = (v) => String(v || "").slice(0, 10) === day;
@@ -265,7 +278,9 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
   const workKcal = Number(activity?.workKcal) || 0;
   const activityKcal = sportKcal + workKcal;
   const baseline = _kpiBaselineKcal();
-  const needsKcal = Math.max(1200, baseline + activityKcal);
+  const nutritionGoal = _kpiNutritionGoal();
+  const nutritionSurplusKcal = nutritionGoal.mode === "bulk" ? nutritionGoal.surplusKcal : 0;
+  const needsKcal = Math.max(1200, baseline + activityKcal + nutritionSurplusKcal);
   const day = String(dateISO || "").slice(0, 10);
   const today = (typeof window.toLocalISODate === "function" ? window.toLocalISODate(new Date()) : new Date().toISOString().slice(0, 10));
   const hourNow = day === today ? (new Date().getHours() + new Date().getMinutes() / 60) : 23.99;
@@ -280,7 +295,7 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
     ? 42
     : Math.max(0, 42 - ((kcalGap - kcalFreeBand) / Math.max(1, kcalWideBand - kcalFreeBand)) * 34);
   const hydrationScore = Math.min(24, (nutrition.drinkWaterMl / 2000) * 24);
-  const proteinTarget = Math.max(70, (Number(_kpiBodyMetric("weight", 70)) || 70) * 1.35);
+  const proteinTarget = Math.max(70, (Number(_kpiBodyMetric("weight", 70)) || 70) * (nutritionGoal.mode === "bulk" ? 1.8 : 1.35));
   const proteinScore = Math.min(18, (nutrition.protein / proteinTarget) * 18);
   const loadScore = activityKcal > 1200 ? 8 : activityKcal > 850 ? 12 : activityKcal > 200 ? 16 : 12;
   const sleepBase = sleep.hours <= 0
@@ -325,6 +340,8 @@ function _kpiHealthSummaryForDate(dateISO, activity) {
     ...nutrition,
     baseline,
     needsKcal,
+    nutritionGoalMode: nutritionGoal.mode,
+    nutritionSurplusKcal,
     expectedKcalNow,
     dayProgress,
     balance,
@@ -1763,6 +1780,7 @@ const driver = "Dépenses";
                       <div>Alcool: <strong style="color:var(--text);">${Math.round((healthToday.alcoholDrinks || 0) * 10) / 10} jour / ${Math.round((healthToday.alcoholWeeklyDrinks || 0) * 10) / 10} semaine</strong></div>
                       <div>Base metabolique: <strong style="color:var(--text);">${Math.round(healthToday.baseline)} kcal</strong></div>
                       <div>Sport + travail: <strong style="color:var(--text);">${Math.round(healthToday.activityKcal)} kcal</strong></div>
+                      <div>Objectif nutrition: <strong style="color:var(--text);">${healthToday.nutritionGoalMode === "bulk" ? `prise de masse +${Math.round(healthToday.nutritionSurplusKcal)} kcal` : "maintien"}</strong></div>
                       <div>Proteines: <strong style="color:var(--text);">${Math.round(healthToday.protein)} / ${Math.round(healthToday.proteinTarget)}g</strong></div>
                       <div>Sommeil: <strong style="color:var(--text);">${healthToday.sleepHours > 0 ? `${Math.round(healthToday.sleepHours * 10) / 10}h · ${escapeHTML(healthToday.sleepQuality)} · nuit du ${escapeHTML(String(healthToday.sleepNightDay || "").slice(5).replace("-", "/"))}` : "Non saisi"}</strong></div>
                     </div>

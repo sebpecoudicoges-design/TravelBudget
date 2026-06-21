@@ -154,10 +154,39 @@
   function localMealKey() { return `${window.TB_CONST?.LS_KEYS?.nutrition_local_meals || "travelbudget_nutrition_local_meals_v1"}::${uid() || "anon"}`; }
   function sleepKey() { return `${window.TB_CONST?.LS_KEYS?.nutrition_sleep || "travelbudget_nutrition_sleep_v1"}::${uid() || "anon"}`; }
   function nutritionPrefsKey(kind) { return `travelbudget_nutrition_${kind}_v1::${uid() || "anon"}`; }
+  function nutritionGoalKey() { return nutritionPrefsKey("goal"); }
   function rules() { return window.Core?.nutritionRules || {}; }
   function normalizeFood(row) { return rules().normalizeFoodRow ? rules().normalizeFoodRow(row) : row; }
   function nutritionForGrams(food, grams) { return rules().nutritionForGrams ? rules().nutritionForGrams(food, grams) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
   function sumNutrition(items) { return rules().sumNutrition ? rules().sumNutrition(items) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
+  function loadNutritionGoal() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(nutritionGoalKey()) || "{}");
+      const mode = String(raw.mode || "bulk") === "bulk" ? "bulk" : "maintenance";
+      const surplusKcal = Math.max(300, Math.min(500, Math.round(n(raw.surplusKcal, 350))));
+      return { mode, surplusKcal };
+    } catch (_) {
+      return { mode: "bulk", surplusKcal: 350 };
+    }
+  }
+  function saveNutritionGoal(next) {
+    const goal = Object.assign(loadNutritionGoal(), next || {});
+    goal.mode = String(goal.mode || "maintenance") === "bulk" ? "bulk" : "maintenance";
+    goal.surplusKcal = Math.max(300, Math.min(500, Math.round(n(goal.surplusKcal, 350))));
+    try { localStorage.setItem(nutritionGoalKey(), JSON.stringify(goal)); } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent("tb:nutrition:goal_changed", { detail: goal })); } catch (_) {}
+    try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+    return goal;
+  }
+  function nutritionGoalTargets(spentKcal, kg) {
+    const goal = loadNutritionGoal();
+    if (rules().nutritionGoalTargets) return rules().nutritionGoalTargets({ spentKcal, weightKg: kg, mode: goal.mode, surplusKcal: goal.surplusKcal });
+    const surplus = goal.mode === "bulk" ? goal.surplusKcal : 0;
+    const targetKcal = Math.max(1200, Math.round(n(spentKcal, 0) + surplus));
+    const protein = Math.max(70, Math.round(n(kg, 70) * (goal.mode === "bulk" ? 1.8 : 1.6)));
+    const fat = Math.max(45, Math.round(n(kg, 70) * (goal.mode === "bulk" ? 0.9 : 0.8)));
+    return { mode: goal.mode, surplusKcal: surplus, targetKcal, protein, fat, carbs: Math.max(120, Math.round((targetKcal - protein * 4 - fat * 9) / 4)) };
+  }
   function foodForItem(item) {
     const key = String(item?.food_key || item?.foodKey || "");
     return CACHE.foods.find(food => String(food.key || "") === key) || { key, name: item?.label || key, tags: [] };
@@ -1175,15 +1204,19 @@
     const balance = rules().energyBalance
       ? rules().energyBalance({ consumedKcal: total.kcal, sportKcal, workKcal, bmr: base.bmr })
       : { spentKcal: base.bmr + sportKcal + workKcal, balanceKcal: total.kcal - (base.bmr + sportKcal + workKcal) };
-    const balanceLabel = balance.balanceKcal >= 0 ? txt("au-dessus", "above") : txt("en-dessous", "below");
-    const needsKcal = Math.max(0, n(balance.spentKcal, base.bmr + sportKcal + workKcal));
+    const spentKcal = Math.max(0, n(balance.spentKcal, base.bmr + sportKcal + workKcal));
+    const kg = bodyWeight();
+    const goalTargets = nutritionGoalTargets(spentKcal, kg);
+    const needsKcal = Math.max(0, n(goalTargets.targetKcal, spentKcal));
+    const objectiveBalanceKcal = total.kcal - needsKcal;
+    const balanceLabel = objectiveBalanceKcal >= 0 ? txt("au-dessus", "above") : txt("en-dessous", "below");
     const consumedKcal = Math.max(0, n(total.kcal, 0));
     const kcalDelta = consumedKcal - needsKcal;
     const kcalTargetLabel = kcalDelta >= 0 ? txt("surplus", "surplus") : txt("reste", "left");
-    const kg = bodyWeight();
-    const proteinTarget = Math.max(70, kg * 1.6);
-    const fatTarget = Math.max(45, kg * 0.8);
-    const carbsTarget = Math.max(120, (needsKcal - (proteinTarget * 4) - (fatTarget * 9)) / 4);
+    const proteinTarget = goalTargets.protein;
+    const fatTarget = goalTargets.fat;
+    const carbsTarget = goalTargets.carbs;
+    const goalLabel = goalTargets.mode === "bulk" ? txt("Prise de masse douce", "Lean bulk") : txt("Maintien", "Maintenance");
     const typeTotals = typeTotalsForDay(meals, items);
     const mealTargets = mealMomentTargets(needsKcal, typeTotals, day);
     const kcalPct = Math.min(100, pct(consumedKcal, needsKcal));
@@ -1209,6 +1242,7 @@
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <label class="pill" style="display:flex;align-items:center;gap:6px;">${esc(txt("Date", "Date"))} <input id="nutrition-date" type="date" value="${esc(day)}" style="width:142px;"></label>
             <span class="pill">${esc(txt("Base", "Base"))} ${Math.round(base.bmr || 0)} kcal</span>
+            <span class="pill">${esc(goalLabel)}${goalTargets.surplusKcal ? ` +${Math.round(goalTargets.surplusKcal)} kcal` : ""}</span>
             <button class="btn" type="button" id="nutrition-refresh">${esc(txt("Rafraichir", "Refresh"))}</button>
           </div>
         </div>
@@ -1232,8 +1266,12 @@
             <div style="border:1px solid rgba(251,113,133,.35);border-radius:8px;padding:12px;background:rgba(251,113,133,.10);">${progressBar(txt("Lipides", "Fat"), total.fat, fatTarget, "g")}</div>
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);grid-column:1/-1;">
               <div class="muted" style="font-size:12px;">${esc(txt("Besoin calcule", "Calculated need"))}</div>
-              <strong>${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))} = ${Math.round(needsKcal)} kcal</strong>
+              <strong>${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))}${goalTargets.surplusKcal ? ` + ${Math.round(goalTargets.surplusKcal)} ${esc(txt("prise de masse", "bulk"))}` : ""} = ${Math.round(needsKcal)} kcal</strong>
               <div class="muted" style="font-size:12px;margin-top:6px;">${esc(txt("Hydratation : objectif 2 L en eau bue. Eau des aliments", "Hydration: 2 L target from drunk water. Food water"))} ${Math.round(foodWaterMl)} ml.</div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px;">
+                <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Objectif", "Goal"))}</span><select id="nutrition-goal-mode"><option value="bulk" ${goalTargets.mode === "bulk" ? "selected" : ""}>${esc(txt("Prise de masse douce", "Lean bulk"))}</option><option value="maintenance" ${goalTargets.mode === "maintenance" ? "selected" : ""}>${esc(txt("Maintien", "Maintenance"))}</option></select></label>
+                <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Surplus kcal", "Kcal surplus"))}</span><select id="nutrition-goal-surplus" ${goalTargets.mode === "bulk" ? "" : "disabled"}><option value="300" ${goalTargets.surplusKcal === 300 ? "selected" : ""}>+300</option><option value="350" ${goalTargets.surplusKcal === 350 ? "selected" : ""}>+350</option><option value="400" ${goalTargets.surplusKcal === 400 ? "selected" : ""}>+400</option><option value="500" ${goalTargets.surplusKcal === 500 ? "selected" : ""}>+500</option></select></label>
+              </div>
             </div>
           </div>
         </div>
@@ -1365,7 +1403,7 @@
                 </div>
               </div>
               <div class="muted" style="margin-top:10px;">
-                ${esc(txt("Besoins calcules", "Calculated needs"))}: ${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))}.
+                ${esc(txt("Besoins calcules", "Calculated needs"))}: ${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))}${goalTargets.surplusKcal ? ` + ${Math.round(goalTargets.surplusKcal)} ${esc(txt("prise de masse", "bulk"))}` : ""}.
               </div>
             </div>
             <div class="tb-sport-stats" style="margin-bottom:12px;">
@@ -1375,14 +1413,14 @@
               <div class="tb-sport-stat"><span>${esc(txt("Lipides", "Fat"))}</span><strong>${fmtMacro(total.fat)}</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Eau bue", "Drunk water"))}</span><strong>${Math.round(drinkWaterMl)} ml</strong></div>
               <div class="tb-sport-stat"><span>${esc(txt("Sommeil", "Sleep"))}</span><strong>${esc(sleepLabel)}</strong></div>
-              <div class="tb-sport-stat"><span>${esc(txt("Balance", "Balance"))}</span><strong>${Math.round(balance.balanceKcal)} kcal</strong></div>
+              <div class="tb-sport-stat"><span>${esc(txt("Balance", "Balance"))}</span><strong>${Math.round(objectiveBalanceKcal)} kcal</strong></div>
             </div>
             <div class="muted" style="margin:-4px 0 12px;">
-              ${esc(txt("Depense estimee", "Estimated spend"))}: ${Math.round(balance.spentKcal || 0)} kcal =
+              ${esc(txt("Depense estimee", "Estimated spend"))}: ${Math.round(spentKcal || 0)} kcal =
               ${esc(txt("base", "base"))} ${Math.round(base.bmr || 0)}
               + sport ${Math.round(sportKcal)}
               + ${esc(txt("travail", "work"))} ${Math.round(workKcal)}.
-              ${esc(txt("Tu es", "You are"))} ${esc(balanceLabel)} ${Math.abs(Math.round(balance.balanceKcal || 0))} kcal.
+              ${esc(txt("Tu es", "You are"))} ${esc(balanceLabel)} ${Math.abs(Math.round(objectiveBalanceKcal || 0))} kcal.
             </div>
             <div style="display:grid;gap:10px;margin-top:12px;">
               <h3 style="margin:0;">${esc(txt("Timeline repas", "Meal timeline"))}</h3>
@@ -1475,6 +1513,16 @@
     });
     const refresh = root.querySelector("#nutrition-refresh");
     if (refresh) refresh.onclick = async () => { await loadNutrition({ force: true }); renderNutrition("refresh"); };
+    const goalMode = root.querySelector("#nutrition-goal-mode");
+    if (goalMode) goalMode.onchange = () => {
+      saveNutritionGoal({ mode: goalMode.value || "maintenance" });
+      renderNutrition("goal-mode");
+    };
+    const goalSurplus = root.querySelector("#nutrition-goal-surplus");
+    if (goalSurplus) goalSurplus.onchange = () => {
+      saveNutritionGoal({ surplusKcal: n(goalSurplus.value, 350) });
+      renderNutrition("goal-surplus");
+    };
     root.querySelectorAll("[data-nutrition-pick-type]").forEach(btn => {
       btn.onclick = () => {
         const select = root.querySelector("#nutrition-type");

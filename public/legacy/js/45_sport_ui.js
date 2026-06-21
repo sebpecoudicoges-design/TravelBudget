@@ -535,6 +535,52 @@
       localStorage.setItem(LOAD_HISTORY_KEY(), JSON.stringify(map));
     } catch (_) {}
   }
+  function progressionRepRange(item) {
+    if (!item || item.mode !== "reps") return null;
+    const min = Math.max(1, Math.round(n(item.repMin || item.repsMin || item.targetRepsMin, 8)));
+    const max = Math.max(min, Math.round(n(item.repMax || item.repsMax || item.targetRepsMax, 12)));
+    return { min, max };
+  }
+  function progressionIncrementKg(item) {
+    const equipment = String(item?.equipment || "");
+    const name = `${item?.exerciseName || ""} ${item?.key || ""} ${item?.activityKey || ""}`.toLowerCase();
+    if (equipment === "dumbbell" || name.includes("haltere") || name.includes("dumbbell")) return 1;
+    if (name.includes("developpe couche") || name.includes("bench")) return 2.5;
+    if (name.includes("squat") || name.includes("souleve") || name.includes("deadlift") || name.includes("romanian")) return 5;
+    if (equipment === "barbell" || equipment === "machine" || equipment === "plate") return 2.5;
+    return 2;
+  }
+  function applyDoubleProgression(plan, doneSets) {
+    const progressions = [];
+    (plan || []).forEach((item, itemIndex) => {
+      const range = progressionRepRange(item);
+      if (!range || !supportsExternalLoad(item)) return;
+      const sets = (doneSets || [])
+        .filter(set => Math.round(n(set.itemIndex, 0)) === itemIndex)
+        .slice()
+        .sort((a, b) => n(a.setIndex, 0) - n(b.setIndex, 0));
+      const plannedSets = Math.max(1, Math.round(n(item.sets, 1)));
+      if (sets.length < plannedSets) return;
+      const relevant = sets.slice(0, plannedSets);
+      const currentLoad = Math.max(...relevant.map(set => n(set.weightKg, 0)), n(item.weightKg, 0), 0);
+      if (currentLoad <= 0) return;
+      const allAtTop = relevant.every(set => Math.round(n(set.reps, 0)) >= range.max);
+      if (!allAtTop) return;
+      const increment = progressionIncrementKg(item);
+      const nextLoad = Math.round((currentLoad + increment) * 10) / 10;
+      rememberLoadForExercise(item, nextLoad);
+      progressions.push({
+        itemIndex,
+        exerciseName: item.exerciseName || labelActivity(item.activityKey),
+        fromKg: currentLoad,
+        toKg: nextLoad,
+        incrementKg: increment,
+        repMin: range.min,
+        repMax: range.max,
+      });
+    });
+    return progressions;
+  }
   function setWorkSeconds(item, actualSeconds) {
     const planned = item?.mode === "time"
       ? Math.max(1, Math.round(n(item?.targetSeconds, 0)))
@@ -1710,6 +1756,7 @@
             <span class="tb-sport-chip">${esc(labelActivity(item.activityKey))}</span>
             <span class="tb-sport-chip">${esc(labelEquipment(item.equipment))}</span>
             <span class="tb-sport-chip">${item.mode === "time" ? `${n(item.targetSeconds,0)} sec` : `${n(item.targetReps,0)} reps`}</span>
+            ${progressionRepRange(item) ? `<span class="tb-sport-chip">${esc(txt("Progression", "Progression"))} ${progressionRepRange(item).min}-${progressionRepRange(item).max}</span>` : ""}
             <span class="tb-sport-chip">${n(item.sets,1)} ${esc(txt("series", "sets"))}</span>
             <span class="tb-sport-chip">${restSecondsForItem(item)} sec ${esc(txt("repos", "rest"))}</span>
             <span class="tb-sport-chip">${esc(txt("Intensite", "Intensity"))}: ${esc(item.intensityLabel || txt("moderee", "moderate"))}</span>
@@ -2979,12 +3026,22 @@
       notes: "",
       estimatedKcal: Math.max(1, Math.round(sessionKcalEstimate(CACHE.plan, timer.doneSets, timer.bodyWeightKg, durationSeconds))),
       doneSets: timer.doneSets.slice(),
-      plan: CACHE.plan.slice(),
+      plan: CACHE.plan.map(item => Object.assign({}, item)),
     };
+    const progressions = applyDoubleProgression(CACHE.plan, timer.doneSets);
+    if (progressions.length) {
+      CACHE.plan = CACHE.plan.map((item, idx) => {
+        const row = progressions.find(p => p.itemIndex === idx);
+        return row ? Object.assign({}, item, { targetReps: row.repMin, weightKg: row.toKg }) : item;
+      });
+      savePlan();
+      summary.progressions = progressions;
+    }
     CACHE.timer = null;
     CACHE.pendingSummary = summary;
     beep("finish");
-    sportFeedback(txt("Seance terminee", "Workout complete"), `${fmtSec(summary.durationSeconds)} - ${Math.round(n(summary.estimatedKcal, 0))} kcal`, { persistNotification: false });
+    const progressionText = progressions.length ? ` · ${progressions.length} ${txt("progression", "progression")}` : "";
+    sportFeedback(txt("Seance terminee", "Workout complete"), `${fmtSec(summary.durationSeconds)} - ${Math.round(n(summary.estimatedKcal, 0))} kcal${progressionText}`, { persistNotification: false });
     renderSport("finish");
     openFinishModal(summary);
   }
