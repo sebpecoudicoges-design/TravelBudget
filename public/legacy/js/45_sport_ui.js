@@ -13,6 +13,8 @@
   const CIRCUIT_KEY = () => scopedKey("travelbudget_sport_circuit_v1");
   const DELETE_QUEUE_KEY = () => scopedKey("travelbudget_sport_delete_queue_v1");
   const LOAD_HISTORY_KEY = () => scopedKey("travelbudget_sport_load_history_v1");
+  const SESSION_FAVORITES_KEY = () => scopedKey("travelbudget_sport_session_favorites_v1");
+  const SPORT_PROGRAM_KEY = () => scopedKey("travelbudget_sport_program_v1");
   const TIMER_PREF_KEY = () => scopedKey("travelbudget_sport_timer_prefs_v1");
   const HISTORY_KEY = () => scopedKey(baseHistoryKey());
   const ANON_HISTORY_KEY = () => `${baseHistoryKey()}::anon`;
@@ -83,6 +85,34 @@
     ["cardio", "Cardio", "Cardio"],
     ["boxing", "Boxe", "Boxing"],
     ["mobility", "Mobilite", "Mobility"],
+  ];
+
+  const PROGRAM_LOADS = [
+    ["Squat arriere", 60],
+    ["Souleve de terre roumain", 80],
+    ["Front squat", 45],
+    ["Front squat ou Goblet squat", 45],
+    ["Fentes bulgares", 32, "2 x 16 kg"],
+    ["Developpe couche", 50],
+    ["Developpe couche prise serree", 45],
+    ["Developpe incline barre", 45],
+    ["Developpe incline halteres", 40, "2 x 20 kg"],
+    ["Developpe halteres plat", 40, "2 x 20 kg"],
+    ["Developpe halteres ou pompes lestees", 40, "2 x 20 kg"],
+    ["Tractions pronation", 0, "Poids du corps"],
+    ["Tractions supination", 0, "Poids du corps"],
+    ["Tractions lestees ou poids du corps", 0, "Poids du corps"],
+    ["Rowing barre", 60],
+    ["Rowing haltere un bras", 30],
+    ["Developpe militaire barre", 35],
+    ["Developpe militaire halteres", 32, "2 x 16 kg"],
+    ["Elevations laterales", 8],
+    ["Oiseau halteres", 6],
+    ["Curl halteres", 14],
+    ["Curl marteau", 17.5],
+    ["Curl barre", 30],
+    ["Extension triceps haltere au-dessus de la tete", 20],
+    ["Extension triceps", 20],
   ];
 
   const EXERCISE_LIBRARY = [
@@ -282,6 +312,7 @@
     exerciseSearch: "",
     globalRestSeconds: loadGlobalRest(),
     circuit: loadCircuit(),
+    program: loadSportProgram(),
     editingPlanIndex: null,
     libraryLoaded: false,
     libraryLoading: false,
@@ -329,6 +360,7 @@
     CACHE.plan = loadPlan();
     CACHE.globalRestSeconds = loadGlobalRest();
     CACHE.circuit = loadCircuit();
+    CACHE.program = loadSportProgram();
     CACHE.timerBeepVolume = loadTimerPrefs().beepVolume;
   }
   function activeTravelId() { return window.state?.activeTravelId || null; }
@@ -932,16 +964,26 @@
       equipment: overrides?.equipment || a.equipment,
       mode,
       targetReps: mode === "reps" ? n(overrides?.targetReps, 10) : 0,
+      repMin: mode === "reps" ? n(overrides?.repMin ?? overrides?.repsMin ?? overrides?.targetRepsMin, overrides?.targetReps || 0) : 0,
+      repMax: mode === "reps" ? n(overrides?.repMax ?? overrides?.repsMax ?? overrides?.targetRepsMax, overrides?.targetReps || 0) : 0,
       targetSeconds: mode === "time" ? n(overrides?.targetSeconds, 45) : n(overrides?.targetSeconds, 0),
       sets: Math.max(1, Math.round(n(overrides?.sets, 1))),
       restSeconds: Math.max(0, Math.round(n(overrides?.restSeconds, CACHE.globalRestSeconds || 60))),
       weightKg: n(overrides?.weightKg, 0),
+      loadLabel: overrides?.loadLabel || "",
       distanceM: n(overrides?.distanceM, 0),
       intensity,
       intensityLabel: intensity === "light" ? txt("legere", "light") : intensity === "hard" ? txt("forte", "hard") : intensity === "max" ? txt("tres forte", "very hard") : txt("moderee", "moderate"),
       metValue: n(overrides?.metValue, a.met * intensityFactor(intensity)),
       notes: overrides?.notes || "",
     };
+  }
+  function programLoadForExercise(name) {
+    const wanted = normalizedSearch(name);
+    const exact = PROGRAM_LOADS.find(row => normalizedSearch(row[0]) === wanted);
+    if (exact) return { weightKg: n(exact[1], 0), loadLabel: exact[2] || "" };
+    const partial = PROGRAM_LOADS.find(row => wanted.includes(normalizedSearch(row[0])) || normalizedSearch(row[0]).includes(wanted));
+    return partial ? { weightKg: n(partial[1], 0), loadLabel: partial[2] || "" } : { weightKg: 0, loadLabel: "" };
   }
   function exerciseLabel(ex) {
     return lang() === "en" ? ex.en : ex.fr;
@@ -991,6 +1033,7 @@
     return { favs, recents };
   }
   function libraryToPlanItem(ex) {
+    const load = programLoadForExercise(exerciseLabel(ex));
     return makePlanItem(ex.activityKey, {
       exerciseName: exerciseLabel(ex),
       equipment: ex.equipment,
@@ -1000,7 +1043,8 @@
       sets: ex.sets || 1,
       restSeconds: ex.rest || 0,
       distanceM: ex.distanceM || 0,
-      weightKg: 0,
+      weightKg: load.weightKg,
+      loadLabel: load.loadLabel,
     });
   }
   function normalizedEquipmentForGoal(goal, equipment) {
@@ -1136,7 +1180,13 @@
     setVal("#sport-sets", n(ex.sets, 1));
     setVal("#sport-rest", n(ex.rest, CACHE.globalRestSeconds || 60) || 60);
     setVal("#sport-distance", n(ex.distanceM, 0));
-    setVal("#sport-load", 0);
+    const load = programLoadForExercise(exerciseLabel(ex));
+    setVal("#sport-load", load.weightKg);
+    const loadNote = root.querySelector("#sport-load-note");
+    if (loadNote) {
+      loadNote.textContent = load.loadLabel || "";
+      loadNote.style.display = load.loadLabel ? "" : "none";
+    }
     setVal("#sport-intensity", "moderate");
     syncLoadField(root);
     syncSimpleFields(root);
@@ -1198,6 +1248,8 @@
     const mode = String(root.querySelector("#sport-mode")?.value || existing?.mode || a.mode);
     const selectedEquipment = String(root.querySelector("#sport-library-equipment")?.value || "");
     const exerciseName = String(root.querySelector("#sport-ex-name")?.value || (libraryEx ? exerciseLabel(libraryEx) : "") || existing?.exerciseName || (lang() === "en" ? a.en : a.fr)).trim();
+    const defaultLoad = programLoadForExercise(exerciseName);
+    const loadKg = n(root.querySelector("#sport-load")?.value, existing?.weightKg || defaultLoad.weightKg || 0);
     const item = Object.assign({}, existing || {}, {
       tmpId: existing?.tmpId || ("tmp_" + Date.now() + "_" + Math.random().toString(16).slice(2)),
       activityKey: a.key,
@@ -1208,7 +1260,8 @@
       targetSeconds: mode === "time" ? n(root.querySelector("#sport-seconds")?.value, existing?.targetSeconds || 0) : n(root.querySelector("#sport-seconds")?.value, 0),
       sets: Math.max(1, Math.round(n(root.querySelector("#sport-sets")?.value, existing?.sets || 1))),
       restSeconds: Math.max(0, Math.round(n(root.querySelector("#sport-rest")?.value, restSecondsForItem(existing || {})))),
-      weightKg: n(root.querySelector("#sport-load")?.value, existing?.weightKg || 0),
+      weightKg: loadKg,
+      loadLabel: n(loadKg, 0) === n(defaultLoad.weightKg, 0) ? (existing?.loadLabel || defaultLoad.loadLabel || "") : (existing?.loadLabel || ""),
       distanceM: n(root.querySelector("#sport-distance")?.value, existing?.distanceM || 0),
       intensity,
       intensityLabel: root.querySelector("#sport-intensity")?.selectedOptions?.[0]?.textContent || existing?.intensityLabel || txt("moderee", "moderate"),
@@ -1326,6 +1379,159 @@
       makePlanItem("bodyweight_strength", { exerciseName: "Squat", mode: "reps", targetReps: 20, sets: 3, restSeconds: 60 }),
       makePlanItem("plank_core", { exerciseName: txt("Gainage", "Plank"), mode: "time", targetSeconds: 45, sets: 3, restSeconds: 90 }),
     ];
+  }
+  function programReps(name, equipment, sets, repMin, repMax, restSeconds, opts) {
+    const activityKey = opts?.activityKey || (equipment === "bodyweight" ? "bodyweight_strength" : "strength");
+    const load = programLoadForExercise(name);
+    return makePlanItem(activityKey, Object.assign({
+      exerciseName: name,
+      equipment,
+      mode: "reps",
+      targetReps: repMin,
+      repMin,
+      repMax,
+      sets,
+      restSeconds,
+      weightKg: load.weightKg,
+      loadLabel: load.loadLabel,
+    }, opts || {}));
+  }
+  function programTime(name, sets, minSeconds, maxSeconds, restSeconds, opts) {
+    const load = programLoadForExercise(name);
+    return makePlanItem(opts?.activityKey || "plank_core", Object.assign({
+      exerciseName: name,
+      equipment: opts?.equipment || "bodyweight",
+      mode: "time",
+      targetSeconds: minSeconds,
+      timeMin: minSeconds,
+      timeMax: maxSeconds,
+      sets,
+      restSeconds,
+      weightKg: load.weightKg,
+      loadLabel: load.loadLabel,
+    }, opts || {}));
+  }
+  function defaultSessionFavorites() {
+    return [
+      { id: "mass_a1", week: "A", name: "Semaine A - A1", days: ["Lundi"], plan: [
+        programReps("Squat arriere", "barbell", 3, 6, 10, 180),
+        programReps("Developpe couche", "barbell", 3, 6, 10, 180),
+        programReps("Tractions pronation", "bodyweight", 3, 6, 10, 120),
+        programReps("Developpe militaire halteres", "dumbbell", 2, 8, 12, 90),
+        programReps("Curl halteres", "dumbbell", 2, 10, 15, 60),
+        programTime("Gainage", 3, 30, 60, 60),
+      ] },
+      { id: "mass_a2", week: "A", name: "Semaine A - A2", days: ["Mercredi"], plan: [
+        programReps("Souleve de terre roumain", "barbell", 3, 6, 10, 180),
+        programReps("Developpe incline halteres", "dumbbell", 3, 8, 12, 120),
+        programReps("Rowing barre", "barbell", 3, 8, 12, 120),
+        programReps("Elevations laterales", "dumbbell", 2, 12, 20, 60),
+        programReps("Extension triceps haltere au-dessus de la tete", "dumbbell", 2, 10, 15, 60),
+        programReps("Releves de jambes", "bodyweight", 3, 10, 20, 60, { activityKey: "core_abs" }),
+      ] },
+      { id: "mass_a3", week: "A", name: "Semaine A - A3", days: ["Vendredi"], plan: [
+        programReps("Front squat ou Goblet squat", "barbell", 3, 8, 12, 120),
+        programReps("Developpe couche prise serree", "barbell", 3, 8, 12, 120),
+        programReps("Tractions supination", "bodyweight", 3, 6, 10, 120),
+        programReps("Oiseau halteres", "dumbbell", 2, 12, 20, 60),
+        programReps("Curl marteau", "dumbbell", 2, 10, 15, 60),
+        programTime("Gainage lateral", 2, 30, 60, 60),
+      ] },
+      { id: "mass_b1", week: "B", name: "Semaine B - B1", days: ["Lundi"], plan: [
+        programReps("Fentes bulgares", "dumbbell", 3, 8, 12, 120),
+        programReps("Developpe incline barre", "barbell", 3, 6, 10, 180),
+        programReps("Rowing haltere un bras", "dumbbell", 3, 8, 12, 90),
+        programReps("Developpe militaire barre", "barbell", 2, 6, 10, 120),
+        programReps("Curl barre", "barbell", 2, 10, 15, 60),
+        programReps("Abdos", "bodyweight", 3, 10, 20, 60, { activityKey: "core_abs" }),
+      ] },
+      { id: "mass_b2", week: "B", name: "Semaine B - B2", days: ["Mercredi"], plan: [
+        programReps("Souleve de terre roumain", "barbell", 3, 6, 10, 180),
+        programReps("Developpe couche", "barbell", 3, 6, 10, 180),
+        programReps("Tractions lestees ou poids du corps", "bodyweight", 3, 6, 10, 120),
+        programReps("Elevations laterales", "dumbbell", 2, 12, 20, 60),
+        programReps("Extension triceps", "dumbbell", 2, 10, 15, 60),
+        programReps("Abdos", "bodyweight", 3, 10, 20, 60, { activityKey: "core_abs" }),
+      ] },
+      { id: "mass_b3", week: "B", name: "Semaine B - B3", days: ["Vendredi"], plan: [
+        programReps("Squat arriere", "barbell", 3, 6, 10, 180),
+        programReps("Developpe halteres ou pompes lestees", "dumbbell", 3, 8, 12, 120),
+        programReps("Rowing barre", "barbell", 3, 8, 12, 120),
+        programReps("Oiseau halteres", "dumbbell", 2, 12, 20, 60),
+        programReps("Curl marteau", "dumbbell", 2, 10, 15, 60),
+        programTime("Gainage", 3, 30, 60, 60),
+      ] },
+    ];
+  }
+  function loadCustomSessionFavorites() {
+    try {
+      const rows = JSON.parse(localStorage.getItem(SESSION_FAVORITES_KEY()) || "[]");
+      return Array.isArray(rows) ? rows.filter(row => row && row.id && Array.isArray(row.plan)) : [];
+    } catch (_) { return []; }
+  }
+  function sessionFavoriteRows() {
+    const defaults = defaultSessionFavorites();
+    const custom = loadCustomSessionFavorites();
+    const ids = new Set(defaults.map(row => row.id));
+    return defaults.concat(custom.filter(row => !ids.has(row.id))).slice(0, 30);
+  }
+  function clonePlan(plan) {
+    return (plan || []).map(item => Object.assign({}, item, { tmpId: "tmp_" + Date.now() + "_" + Math.random().toString(16).slice(2) }));
+  }
+  function loadSessionFavorite(id) {
+    const fav = sessionFavoriteRows().find(row => String(row.id) === String(id));
+    if (!fav) return false;
+    CACHE.builderGoal = "strength";
+    CACHE.builderEquipment = "all";
+    CACHE.builderFamily = "all";
+    CACHE.circuit = Object.assign({}, CACHE.circuit || {}, { enabled: false });
+    saveCircuit(CACHE.circuit);
+    CACHE.plan = clonePlan(fav.plan);
+    CACHE.editingPlanIndex = null;
+    savePlan();
+    sportFeedback(txt("Seance favorite chargee", "Favorite workout loaded"), fav.name, { toast: true });
+    return true;
+  }
+  function loadSportProgram() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(SPORT_PROGRAM_KEY()) || "{}");
+      return raw && raw.enabled ? raw : { enabled: false };
+    } catch (_) { return { enabled: false }; }
+  }
+  function saveSportProgram(program) {
+    const next = Object.assign({ enabled: true, startDate: todayISO(), days: { 1: "A1", 3: "A2", 5: "A3" } }, program || {});
+    try { localStorage.setItem(SPORT_PROGRAM_KEY(), JSON.stringify(next)); } catch (_) {}
+    return next;
+  }
+  function activateMassProgram() {
+    CACHE.program = saveSportProgram({ enabled: true, startDate: nextMondayISO(todayISO()), cycle: "A/B", days: { 1: "A1/B1", 3: "A2/B2", 5: "A3/B3" } });
+    sportFeedback(txt("Planning active", "Program activated"), txt("Alternance A/B le lundi, mercredi et vendredi.", "A/B rotation on Monday, Wednesday and Friday."), { toast: true });
+  }
+  function nextMondayISO(day) {
+    const d = new Date(`${String(day || todayISO()).slice(0, 10)}T00:00:00`);
+    const diff = (8 - (d.getDay() || 7)) % 7;
+    d.setDate(d.getDate() + diff);
+    return (typeof window.toLocalISODate === "function" ? window.toLocalISODate(d) : d.toISOString().slice(0, 10));
+  }
+  function renderSessionFavorites() {
+    const rows = sessionFavoriteRows();
+    const program = CACHE.program || loadSportProgram();
+    return `<div class="tb-sport-simple" style="margin-top:12px;">
+      <div class="tb-sport-simple-title">
+        <div>
+          <strong>${esc(txt("Seances favorites", "Favorite workouts"))}</strong>
+          <div class="muted">${esc(txt("Programme prise de masse A/B : lundi, mercredi, vendredi, puis alternance.", "A/B lean bulk program: Monday, Wednesday, Friday, then rotate."))}</div>
+        </div>
+        <button class="btn" type="button" id="sport-activate-mass-program">${program.enabled ? esc(txt("Planning actif", "Program active")) : esc(txt("Activer planning", "Activate program"))}</button>
+      </div>
+      <div class="tb-sport-library-grid">
+        ${rows.map(row => `<button class="btn" type="button" data-sport-load-session-favorite="${esc(row.id)}" style="display:block;text-align:left;">
+          <strong>${esc(row.name)}</strong><br>
+          <small class="muted">${esc(row.week ? `${txt("Semaine", "Week")} ${row.week} · ` : "")}${esc((row.days || []).join(", "))} · ${row.plan.length} ${esc(txt("exercices", "exercises"))}</small>
+        </button>`).join("")}
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:8px;">${esc(txt("Progression : chaque exercice utilise sa propre plage de reps. Exemple 6-10, 10-15 ou 12-20.", "Progression: each exercise uses its own rep range, e.g. 6-10, 10-15 or 12-20."))}</div>
+    </div>`;
   }
   function quickPlanItem(kind) {
     const ex = EXERCISE_LIBRARY.find(row => row.key === kind || (kind === "pushup" && row.key === "pushup"));
@@ -1661,6 +1867,7 @@
     const manualEquipment = editing?.equipment || baseExercise?.equipment || "bodyweight";
     const manualMode = editing?.mode || baseExercise?.mode || "reps";
     const manualName = editing?.exerciseName || exerciseLabel(baseExercise) || "Push-up";
+    const manualLoad = editing ? { weightKg: n(editing.weightKg, 0), loadLabel: editing.loadLabel || "" } : programLoadForExercise(manualName);
     const manualRest = editing ? restSecondsForItem(editing) : n(CACHE.globalRestSeconds, 60);
     const manualReps = n(editing?.targetReps, baseExercise?.reps || 10);
     const manualSeconds = n(editing?.targetSeconds, baseExercise?.seconds || 45);
@@ -1713,7 +1920,7 @@
             <div class="tb-sport-field"><label>${esc(txt("Series", "Sets"))}</label><input id="sport-sets" type="number" min="1" value="${esc(String(manualSets || 3))}"></div>
             <div class="tb-sport-field"><label>${esc(txt("Repos apres serie sec", "Rest after set sec"))}</label><input id="sport-rest" type="number" min="0" value="${esc(String(manualRest || 60))}"></div>
             <input id="sport-intensity" type="hidden" value="${esc(editing?.intensity || "moderate")}">
-            <div class="tb-sport-field"><label>${esc(txt("Charge kg optionnelle", "Optional load kg"))}</label><input id="sport-load" type="number" step="0.5" value="${esc(String(n(editing?.weightKg, 0)))}"></div>
+            <div class="tb-sport-field"><label>${esc(txt("Charge kg optionnelle", "Optional load kg"))}</label><input id="sport-load" type="number" step="0.5" value="${esc(String(n(manualLoad.weightKg, 0)))}"><span id="sport-load-note" class="muted" style="font-size:12px;${manualLoad.loadLabel ? "" : "display:none;"}">${esc(manualLoad.loadLabel || "")}</span></div>
             <div class="tb-sport-field"><label>${esc(txt("Distance m optionnelle", "Optional distance m"))}</label><input id="sport-distance" type="number" value="${esc(String(n(editing?.distanceM, baseExercise?.distanceM || 0)))}"></div>
             <div class="tb-sport-field"><label>${esc(txt("Repos par defaut sec", "Default rest sec"))}</label><input id="sport-global-rest" type="number" min="0" value="${esc(String(n(CACHE.globalRestSeconds, 60)))}"></div>
           </div>
@@ -1723,6 +1930,7 @@
             <button class="btn" type="button" id="sport-clear">${esc(txt("Vider", "Clear"))}</button>
           </div>
         </div>
+        ${renderSessionFavorites()}
         <div class="tb-sport-simple" style="margin-top:12px;">
           <div class="tb-sport-simple-title">
             <div>
@@ -1748,15 +1956,21 @@
 
   function renderPlan() {
     if (!CACHE.plan.length) return `<div class="muted">${esc(txt("Ajoute un exercice pour lancer une seance guidee.", "Add an exercise to start a guided workout."))}</div>`;
-    return CACHE.plan.map((item, idx) => `
-      <div class="tb-sport-item">
+    return CACHE.plan.map((item, idx) => {
+      const range = progressionRepRange(item);
+      const timeRange = item.mode === "time" && n(item.timeMax, 0) > n(item.timeMin || item.targetSeconds, 0)
+        ? `${n(item.timeMin || item.targetSeconds, 0)}-${n(item.timeMax, 0)} sec`
+        : "";
+      return `<div class="tb-sport-item">
         <div>
           <div class="tb-sport-item-title">${idx + 1}. ${esc(item.exerciseName || labelActivity(item.activityKey))}</div>
           <div class="tb-sport-meta">
             <span class="tb-sport-chip">${esc(labelActivity(item.activityKey))}</span>
             <span class="tb-sport-chip">${esc(labelEquipment(item.equipment))}</span>
+            ${supportsExternalLoad(item) && n(item.weightKg, 0) ? `<span class="tb-sport-chip">${Math.round(n(item.weightKg, 0) * 10) / 10} kg${item.loadLabel ? ` · ${esc(item.loadLabel)}` : ""}</span>` : item.loadLabel ? `<span class="tb-sport-chip">${esc(item.loadLabel)}</span>` : ""}
             <span class="tb-sport-chip">${item.mode === "time" ? `${n(item.targetSeconds,0)} sec` : `${n(item.targetReps,0)} reps`}</span>
-            ${progressionRepRange(item) ? `<span class="tb-sport-chip">${esc(txt("Progression", "Progression"))} ${progressionRepRange(item).min}-${progressionRepRange(item).max}</span>` : ""}
+            ${range && range.max > range.min ? `<span class="tb-sport-chip">${esc(txt("Progression", "Progression"))} ${range.min}-${range.max}</span>` : ""}
+            ${timeRange ? `<span class="tb-sport-chip">${esc(txt("Cible", "Target"))} ${esc(timeRange)}</span>` : ""}
             <span class="tb-sport-chip">${n(item.sets,1)} ${esc(txt("series", "sets"))}</span>
             <span class="tb-sport-chip">${restSecondsForItem(item)} sec ${esc(txt("repos", "rest"))}</span>
             <span class="tb-sport-chip">${esc(txt("Intensite", "Intensity"))}: ${esc(item.intensityLabel || txt("moderee", "moderate"))}</span>
@@ -1769,7 +1983,8 @@
           <button class="btn small" type="button" data-sport-move="${idx}" data-dir="1">Down</button>
           <button class="btn small danger" type="button" data-sport-remove="${idx}">Del</button>
         </div>
-      </div>`).join("");
+      </div>`;
+    }).join("");
   }
 
   function makeSequence() {
@@ -1911,6 +2126,9 @@
     const amrap = CACHE.circuit?.enabled && n(CACHE.circuit?.amrapMinutes, 0) > 0;
     const amrapRemaining = amrap && timer.timeCapEndAt ? Math.max(0, Math.ceil((timer.timeCapEndAt - Date.now()) / 1000)) : 0;
     const volume = Math.max(0, Math.min(100, Math.round(n(CACHE.timerBeepVolume, 70))));
+    const loadText = step?.kind === "work" && supportsExternalLoad(step.item)
+      ? `${Math.round(n(timer.stepLoadKg, 0) * 10) / 10} kg${step.item?.loadLabel ? ` · ${step.item.loadLabel}` : ""}`
+      : "-";
     return `
       <div class="tb-sport-card tb-sport-timer-card ${CACHE.timerFocus ? "focus" : ""}">
         <h3>${esc(txt("Timer guide", "Guided timer"))}</h3>
@@ -1935,7 +2153,7 @@
               <div class="tb-sport-live-grid">
                 <div class="tb-sport-live-kpi"><span>${esc(txt("Serie", "Set"))}</span><strong>${step?.setIndex || "-"}${step?.item?.sets ? ` / ${Math.max(n(step.item.sets, 1), n(step.setIndex, 1))}` : ""}</strong></div>
                 <div class="tb-sport-live-kpi"><span>${esc(txt("Prochaine", "Next"))}</span><strong>${esc(nextStepLabel())}</strong></div>
-                <div class="tb-sport-live-kpi"><span>${esc(txt("Charge", "Load"))}</span><strong>${step?.kind === "work" && supportsExternalLoad(step.item) ? `${Math.round(n(timer.stepLoadKg, 0) * 10) / 10} kg` : "-"}</strong></div>
+                <div class="tb-sport-live-kpi"><span>${esc(txt("Charge", "Load"))}</span><strong>${esc(loadText)}</strong></div>
                 <div class="tb-sport-live-kpi"><span>${esc(txt("Fait", "Done"))}</span><strong>${workDone} ${esc(txt("series", "sets"))}</strong></div>
               </div>
               ${step?.kind === "work" ? (supportsExternalLoad(step.item) ? `<div class="tb-sport-control-row">
@@ -2364,6 +2582,16 @@
         renderSport("template");
       };
     });
+    root.querySelectorAll("[data-sport-load-session-favorite]").forEach(btn => {
+      btn.onclick = () => {
+        if (loadSessionFavorite(btn.getAttribute("data-sport-load-session-favorite"))) renderSport("session-favorite");
+      };
+    });
+    const activateProgram = root.querySelector("#sport-activate-mass-program");
+    if (activateProgram) activateProgram.onclick = () => {
+      activateMassProgram();
+      renderSport("program-activate");
+    };
     root.querySelectorAll("[data-sport-quick]").forEach(btn => {
       btn.onclick = () => {
         const key = String(btn.getAttribute("data-sport-quick") || "pushup");
