@@ -3,7 +3,7 @@
    - User templates, slash variables, upcoming previews, delivery history
    ========================= */
 (function () {
-  const CACHE = { loaded: false, loading: false, templates: [], deliveries: [], selectedId: "", error: "", focusField: "body" };
+  const CACHE = { loaded: false, loading: false, templates: [], deliveries: [], selectedId: "", error: "", focusField: "body", analysisSummary: null, analysisLoading: false };
   const DAY_LABELS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
   const VARIABLES = [
     { key: "/budgetdujour", label: "Budget du jour" },
@@ -19,6 +19,20 @@
     { key: "/proteines", label: "Proteines" },
     { key: "/sommeil", label: "Sommeil" },
     { key: "/scoreSante", label: "Score sante" },
+    { key: "/seanceprevuejour", label: "Seance prevue aujourd'hui" },
+    { key: "/kcalrestantesheure", label: "Kcal restantes maintenant" },
+    { key: "/kcalrestantesjour", label: "Kcal restantes journee" },
+    { key: "/budgetconsommeanalyse", label: "Budget consomme analyse" },
+    { key: "/rythmeapp", label: "Rythme app analyse" },
+    { key: "/rythmerefpays", label: "Rythme reference pays" },
+    { key: "/ecartapp", label: "Ecart budget app" },
+    { key: "/ecartrefpays", label: "Ecart reference pays" },
+    { key: "/sortiesapayerj1", label: "Sorties a payer J+1" },
+    { key: "/sortiesapayerj7", label: "Sorties a payer J+7" },
+    { key: "/sortiesapayerretard", label: "Sorties a payer retard" },
+    { key: "/moyennebudget", label: "Moyenne jour budget" },
+    { key: "/moyennehorsbudget", label: "Moyenne jour hors budget" },
+    { key: "/moyennetotal", label: "Moyenne jour totale" },
   ];
   const DEFAULT_TEMPLATES = [
     {
@@ -62,6 +76,27 @@
     catch (_) { return `${rounded} ${String(currency || "EUR").toUpperCase()}`; }
   }
   function n(v, fallback) { const x = Number(v); return Number.isFinite(x) ? x : (fallback || 0); }
+  function pct(value) {
+    const x = Number(value) || 0;
+    return `${x > 0 ? "+" : ""}${Math.round(x)}%`;
+  }
+  function signedMoney(value, currency) {
+    const x = Number(value) || 0;
+    const abs = money(Math.abs(x), currency);
+    return `${x > 0 ? "+" : x < 0 ? "-" : ""}${abs}`;
+  }
+  function addDaysISO(day, offset) {
+    try {
+      const d = new Date(`${day}T00:00:00`);
+      d.setDate(d.getDate() + (Number(offset) || 0));
+      return todayISOFromDate(d);
+    } catch (_) {
+      return day;
+    }
+  }
+  function todayISOFromDate(date) {
+    try { return window.toLocalISODate(date); } catch (_) { return date.toISOString().slice(0, 10); }
+  }
   function localRead() {
     try {
       const rows = JSON.parse(localStorage.getItem(lsKey()) || "[]");
@@ -99,6 +134,17 @@
       || periods[0] || {};
   }
   function dailyBudget(day) {
+    try {
+      if (typeof window.getDailyBudgetInfoForDate === "function") {
+        const info = window.getDailyBudgetInfoForDate(day) || {};
+        return {
+          value: n(info.daily, 0),
+          remaining: n(info.remaining, 0),
+          currency: String(info.baseCurrency || "EUR").toUpperCase(),
+          fromCore: true,
+        };
+      }
+    } catch (_) {}
     const p = activePeriodFor(day);
     const segs = Array.isArray(window.state?.budgetSegments) ? window.state.budgetSegments : [];
     const seg = segs.find(s => String(s.periodId || s.period_id || "") === String(p.id || "") && String(s.startDate || s.start_date || "").slice(0, 10) <= day && String(s.endDate || s.end_date || "").slice(0, 10) >= day);
@@ -135,26 +181,79 @@
   }
   function dayNutrition(day) {
     try {
-      if (typeof window.tbHealthTodaySummary === "function") return window.tbHealthTodaySummary(day) || {};
+      const activity = activitySummaryForDay(day);
+      if (typeof window.tbComputeHealthSummaryForDate === "function") return window.tbComputeHealthSummaryForDate(day, activity) || {};
     } catch (_) {}
     return window.state?.nutritionSummary || {};
   }
+  function activitySummaryForDay(day) {
+    const sessions = Array.isArray(window.state?.sportSessions) ? window.state.sportSessions : [];
+    const workDays = Array.isArray(window.state?.workDays) ? window.state.workDays : [];
+    const sportKcal = sessions.filter(s => String(s.startedAt || s.started_at || s.date || "").slice(0, 10) === day)
+      .reduce((sum, s) => sum + n(s.estimatedKcal ?? s.estimated_kcal ?? s.kcal, 0), 0);
+    const workKcal = workDays.filter(w => String(w.workDate || w.work_date || w.date || "").slice(0, 10) === day)
+      .reduce((sum, w) => sum + n(w.estimatedKcal ?? w.estimated_kcal ?? w.kcal, 0), 0);
+    return { sportKcal, workKcal, activityKcal: sportKcal + workKcal };
+  }
+  function walletBalanceFor(day, currency) {
+    const wallets = Array.isArray(window.state?.wallets) ? window.state.wallets : [];
+    return wallets.reduce((sum, w) => {
+      const amount = n(w.balance, 0);
+      const cur = String(w.currency || currency || "EUR").toUpperCase();
+      if (cur === currency) return sum + amount;
+      try {
+        if (typeof window.amountToBudgetBaseForDate === "function") return sum + n(window.amountToBudgetBaseForDate(amount, cur, day), 0);
+      } catch (_) {}
+      return sum + amount;
+    }, 0);
+  }
+  function plannedSessionForDay(day) {
+    try {
+      if (typeof window.tbSportPlannedWeekRows !== "function") return txt("Non planifie", "Not planned");
+      const rows = window.tbSportPlannedWeekRows(day) || [];
+      const row = rows.find(r => String(r.day || "") === day) || rows[0] || null;
+      if (!row || !row.planned) return txt("Repos", "Rest");
+      return [row.code, row.sessionName].filter(Boolean).join(" - ") || txt("Seance planifiee", "Planned workout");
+    } catch (_) {
+      return txt("Non planifie", "Not planned");
+    }
+  }
+  async function loadAnalysisSummary() {
+    if (CACHE.analysisLoading) return CACHE.analysisSummary;
+    CACHE.analysisLoading = true;
+    try {
+      if (typeof window.tbGetBudgetAnalysisNotificationSummary === "function") {
+        CACHE.analysisSummary = await window.tbGetBudgetAnalysisNotificationSummary();
+      } else {
+        CACHE.analysisSummary = window.__tbLastBudgetAnalysisNotificationSummary || null;
+      }
+    } catch (_) {
+      CACHE.analysisSummary = window.__tbLastBudgetAnalysisNotificationSummary || CACHE.analysisSummary || null;
+    } finally {
+      CACHE.analysisLoading = false;
+    }
+    return CACHE.analysisSummary;
+  }
+  function analysisSummary() {
+    return CACHE.analysisSummary || window.__tbLastBudgetAnalysisNotificationSummary || {};
+  }
   function resolveValues(day) {
     const budget = dailyBudget(day);
-    const spent = spentToday(day, budget.currency);
-    const remaining = budget.value - spent;
+    const spent = budget.fromCore ? Math.max(0, budget.value - n(budget.remaining, budget.value)) : spentToday(day, budget.currency);
+    const remaining = budget.fromCore ? n(budget.remaining, 0) : budget.value - spent;
     const health = dayNutrition(day);
+    const analysis = analysisSummary();
+    const analysisCurrency = String(analysis.base || budget.currency || "EUR").toUpperCase();
     const sportKcal = n(health.sportKcal ?? window.state?.health?.sportKcal, 0);
     const workKcal = n(health.workKcal ?? window.state?.health?.workKcal, 0);
     const kcalNeed = n(health.needsKcal ?? health.kcalNeed ?? window.state?.health?.needsKcal, 0);
-    const kcalIn = n(health.consumedKcal ?? health.kcalConsumed ?? window.state?.health?.consumedKcal, 0);
+    const kcalIn = n(health.kcal ?? health.consumedKcal ?? health.kcalConsumed ?? window.state?.health?.consumedKcal, 0);
+    const kcalExpectedNow = n(health.expectedKcalNow, 0);
     const protein = n(health.protein ?? health.proteinG ?? window.state?.health?.protein, 0);
     const water = n(health.drinkWaterMl ?? health.waterMl ?? window.state?.health?.drinkWaterMl, 0);
     const sleep = n(health.sleepHours ?? window.state?.health?.sleepHours, 0);
     const score = n(health.score ?? window.state?.health?.score, 0);
-    const walletBalance = Array.isArray(window.state?.wallets)
-      ? window.state.wallets.reduce((sum, w) => sum + n(w.balanceBase ?? w.balance_base ?? w.balance, 0), 0)
-      : 0;
+    const walletBalance = walletBalanceFor(day, budget.currency);
     return {
       "/budgetdujour": money(budget.value, budget.currency),
       "/budgetrestant": money(remaining, budget.currency),
@@ -169,6 +268,20 @@
       "/proteines": `${Math.round(protein)} g`,
       "/sommeil": sleep ? `${Math.round(sleep * 10) / 10}h` : "non saisi",
       "/scoreSante": score ? `${Math.round(score)}/100` : "a calculer",
+      "/seanceprevuejour": plannedSessionForDay(day),
+      "/kcalrestantesheure": `${Math.max(0, Math.round(kcalExpectedNow - kcalIn))} kcal`,
+      "/kcalrestantesjour": `${Math.max(0, Math.round(kcalNeed - kcalIn))} kcal`,
+      "/budgetconsommeanalyse": money(n(analysis.spentToToday, 0), analysisCurrency),
+      "/rythmeapp": pct(n(analysis.paceAppPct, 0)),
+      "/rythmerefpays": pct(n(analysis.paceReferencePct, 0)),
+      "/ecartapp": signedMoney(n(analysis.deltaBudgetAmount, 0), analysisCurrency),
+      "/ecartrefpays": signedMoney(n(analysis.deltaReferenceAmount, 0), analysisCurrency),
+      "/sortiesapayerj1": `${money(n(analysis.pendingJ1Amount, 0), analysisCurrency)} (${Math.round(n(analysis.pendingJ1Count, 0))})`,
+      "/sortiesapayerj7": `${money(n(analysis.pendingJ7Amount, 0), analysisCurrency)} (${Math.round(n(analysis.pendingJ7Count, 0))})`,
+      "/sortiesapayerretard": `${money(n(analysis.pendingOverdueAmount, 0), analysisCurrency)} (${Math.round(n(analysis.pendingOverdueCount, 0))})`,
+      "/moyennebudget": `${money(n(analysis.avgBudgetPerDay, 0), analysisCurrency)}/j`,
+      "/moyennehorsbudget": `${money(n(analysis.avgOutPerDay, 0), analysisCurrency)}/j`,
+      "/moyennetotal": `${money(n(analysis.avgAllPerDay, 0), analysisCurrency)}/j`,
     };
   }
   function renderText(template, values) {
@@ -210,6 +323,7 @@
     CACHE.loading = true;
     CACHE.error = "";
     try {
+      await loadAnalysisSummary();
       const c = client();
       const userId = uid();
       if (c && userId) {

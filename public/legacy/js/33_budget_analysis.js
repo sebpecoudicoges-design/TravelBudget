@@ -52,8 +52,33 @@
   }
   function _analysisNotificationSummaryFromModel(model){
     if (!model) return null;
+    const today = _iso(new Date());
+    const addDays = (iso, days) => {
+      const d = _parse(iso) || new Date();
+      d.setDate(d.getDate() + (Number(days) || 0));
+      return _iso(d);
+    };
+    const pendingRows = Array.isArray(model.unpaidTxDetails) ? model.unpaidTxDetails : [];
+    const pendingSum = (mode, maxDate) => pendingRows.reduce((sum, row) => {
+      const due = String(row?.cashDate || row?.budgetStart || '').slice(0, 10);
+      if (!due) return sum;
+      if (mode === 'overdue' && due >= today) return sum;
+      if (mode === 'future' && (due < today || due > maxDate)) return sum;
+      return sum + _safeNum(row?.visibleAmount);
+    }, 0);
+    const pendingCount = (mode, maxDate) => pendingRows.reduce((count, row) => {
+      const due = String(row?.cashDate || row?.budgetStart || '').slice(0, 10);
+      if (!due) return count;
+      if (mode === 'overdue') return count + (due < today ? 1 : 0);
+      return count + (due >= today && due <= maxDate ? 1 : 0);
+    }, 0);
     const deltaBudgetAmount = _safeNum(model.spentToToday) - _safeNum(model.targetToToday);
     const deltaBudgetPct = _signedPct(model.spentToToday, model.targetToToday);
+    const deltaReferenceAmount = _safeNum(model.spentToToday) - _safeNum(model.referenceToToday);
+    const deltaReferencePct = _signedPct(model.spentToToday, model.referenceToToday);
+    const elapsedDays = Math.max(1, _safeNum(model.elapsedDays) || 1);
+    const outAmount = _safeNum(model.outAmount);
+    const spentToToday = _safeNum(model.spentToToday);
     const remainingToday = (typeof window.getDailyBudgetInfoForDate === 'function')
       ? _safeNum(window.getDailyBudgetInfoForDate(_iso(new Date()))?.remaining)
       : _safeNum(model.remaining);
@@ -62,10 +87,31 @@
       remainingToday,
       deltaBudgetAmount,
       deltaBudgetPct,
-      spentToToday: _safeNum(model.spentToToday),
+      deltaReferenceAmount,
+      deltaReferencePct,
+      spentToToday,
       targetToToday: _safeNum(model.targetToToday),
+      referenceToToday: _safeNum(model.referenceToToday),
       projection: _safeNum(model.projection),
       totalBudget: _safeNum(model.totalBudget),
+      paceAppPct: _safeNum(model.targetToToday) > 0 ? (spentToToday / _safeNum(model.targetToToday)) * 100 : 0,
+      paceReferencePct: _safeNum(model.referenceToToday) > 0 ? (spentToToday / _safeNum(model.referenceToToday)) * 100 : 0,
+      avgBudgetPerDay: spentToToday / elapsedDays,
+      avgOutPerDay: outAmount / elapsedDays,
+      avgAllPerDay: (spentToToday + outAmount) / elapsedDays,
+      outAmount,
+      excludedPerDay: _safeNum(model.excludedPerDay),
+      unmappedPerDay: _safeNum(model.unmappedPerDay),
+      comparablePerDay: _safeNum(model.comparablePerDay),
+      referencePerDay: _safeNum(model.referencePerDay),
+      budgetPerDay: _safeNum(model.budgetPerDay),
+      pendingJ1Amount: pendingSum('future', addDays(today, 1)),
+      pendingJ1Count: pendingCount('future', addDays(today, 1)),
+      pendingJ7Amount: pendingSum('future', addDays(today, 7)),
+      pendingJ7Count: pendingCount('future', addDays(today, 7)),
+      pendingOverdueAmount: pendingSum('overdue'),
+      pendingOverdueCount: pendingCount('overdue'),
+      elapsedDays,
       filters: _loadFilters(),
     };
   }
@@ -1182,6 +1228,7 @@ deltaProjectedWithBudget,
   referenceComparisonSeries, unmappedCategorySeries, outAmount,
   spentToToday, targetToToday, referenceToToday, referenceGap,
   referenceCoverageDays, referenceContext, comparableDays,
+  elapsedDays, periodDays,
   comparableIncludedSpent, comparableExcludedSpent, unmappedComparableSpent,
   nightCoveredCount, nightCoveredPotentialSavings, nightCoveredAverageSaving,
   nightCoveredTransportSpent, nightCoveredShareOfSpent, nightCoveredRows,

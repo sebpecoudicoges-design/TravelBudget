@@ -52,11 +52,32 @@ function signedPctText(value: number) {
   return `${n > 0 ? "+" : ""}${Math.round(n)}%`;
 }
 
+function signedMoney(value: number, currency: string) {
+  const n = Number(value) || 0;
+  return `${n > 0 ? "+" : n < 0 ? "-" : ""}${money(Math.abs(n), currency)}`;
+}
+
 function dayCountInclusive(start: string, end: string) {
   const s = new Date(`${start}T00:00:00Z`);
   const e = new Date(`${end}T00:00:00Z`);
   if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime()) || e < s) return 1;
   return Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1);
+}
+
+function addDaysISO(date: string, days: number) {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function ageOnDate(birthDate: string, date: string) {
+  const birth = new Date(`${birthDate}T00:00:00Z`);
+  const now = new Date(`${date}T00:00:00Z`);
+  if (!Number.isFinite(birth.getTime()) || !Number.isFinite(now.getTime())) return 30;
+  let age = now.getUTCFullYear() - birth.getUTCFullYear();
+  const m = now.getUTCMonth() - birth.getUTCMonth();
+  if (m < 0 || (m === 0 && now.getUTCDate() < birth.getUTCDate())) age -= 1;
+  return Math.max(12, age);
 }
 
 function convertWithSnapshot(tx: Record<string, unknown>, amount: number, targetCurrency: string) {
@@ -124,21 +145,41 @@ function templateDue(template: Record<string, unknown>, slot: Slot, weekday: num
   return tplSlot === slot;
 }
 
-function composeTemplateNotification(template: Record<string, unknown>, budget: { base: string; daily: number; spent: number; remaining: number }, activity: { sportCount: number; sportKcal: number; workCount: number; workKcal: number; workMinutes: number }, date: string) {
+function composeTemplateNotification(
+  template: Record<string, unknown>,
+  budget: { base: string; daily: number; spent: number; remaining: number },
+  activity: { sportCount: number; sportKcal: number; workCount: number; workKcal: number; workMinutes: number },
+  date: string,
+  extras: Record<string, string> = {},
+) {
   const values: Record<string, string> = {
     "/budgetdujour": money(budget.daily, budget.base),
     "/budgetrestant": money(budget.remaining, budget.base),
     "/depensesjour": money(budget.spent, budget.base),
     "/date": date,
     "/solde": "",
-    "/kcalobjectif": "",
-    "/kcalconsommees": "",
+    "/kcalobjectif": extras["/kcalobjectif"] || "",
+    "/kcalconsommees": extras["/kcalconsommees"] || "",
     "/sportkcal": `${Math.round(activity.sportKcal)} kcal`,
     "/travailkcal": `${Math.round(activity.workKcal)} kcal`,
-    "/eau": "",
-    "/proteines": "",
-    "/sommeil": "",
-    "/scoreSante": "",
+    "/eau": extras["/eau"] || "",
+    "/proteines": extras["/proteines"] || "",
+    "/sommeil": extras["/sommeil"] || "",
+    "/scoreSante": extras["/scoreSante"] || "",
+    "/seanceprevuejour": extras["/seanceprevuejour"] || "Repos",
+    "/kcalrestantesheure": extras["/kcalrestantesheure"] || "",
+    "/kcalrestantesjour": extras["/kcalrestantesjour"] || "",
+    "/budgetconsommeanalyse": extras["/budgetconsommeanalyse"] || money(0, budget.base),
+    "/rythmeapp": extras["/rythmeapp"] || "0%",
+    "/rythmerefpays": extras["/rythmerefpays"] || "0%",
+    "/ecartapp": extras["/ecartapp"] || money(0, budget.base),
+    "/ecartrefpays": extras["/ecartrefpays"] || money(0, budget.base),
+    "/sortiesapayerj1": extras["/sortiesapayerj1"] || `${money(0, budget.base)} (0)`,
+    "/sortiesapayerj7": extras["/sortiesapayerj7"] || `${money(0, budget.base)} (0)`,
+    "/sortiesapayerretard": extras["/sortiesapayerretard"] || `${money(0, budget.base)} (0)`,
+    "/moyennebudget": extras["/moyennebudget"] || `${money(0, budget.base)}/j`,
+    "/moyennehorsbudget": extras["/moyennehorsbudget"] || `${money(0, budget.base)}/j`,
+    "/moyennetotal": extras["/moyennetotal"] || `${money(0, budget.base)}/j`,
   };
   const emoji = String(template.emoji || "").trim();
   const rawTitle = renderSlashTemplate(String(template.title_template || "Notification"), values).trim();
@@ -212,6 +253,146 @@ async function activitySummary(admin: ReturnType<typeof createClient>, userId: s
   };
 }
 
+async function healthTemplateValues(admin: ReturnType<typeof createClient>, userId: string, date: string, hour: number, activity: { sportKcal: number; workKcal: number }) {
+  const [{ data: meals }, { data: sleep }, { data: settings }] = await Promise.all([
+    admin.from("nutrition_meals").select("id,water_ml,nutrition_meal_items(kcal,protein_g)").eq("user_id", userId).eq("meal_date", date),
+    admin.from("nutrition_sleep").select("hours,quality").eq("user_id", userId).eq("sleep_date", addDaysISO(date, -1)).maybeSingle(),
+    admin.from("settings").select("birth_date,body_weight_kg,body_height_cm").eq("user_id", userId).maybeSingle(),
+  ]);
+  let kcal = 0;
+  let protein = 0;
+  let water = 0;
+  for (const meal of meals || []) {
+    water += Number(meal.water_ml || 0);
+    const items = Array.isArray(meal.nutrition_meal_items) ? meal.nutrition_meal_items : [];
+    for (const item of items) {
+      kcal += Number(item.kcal || 0);
+      protein += Number(item.protein_g || 0);
+    }
+  }
+  const weight = Number(settings?.body_weight_kg || 70);
+  const height = Number(settings?.body_height_cm || 175);
+  const birthDate = String(settings?.birth_date || "").slice(0, 10);
+  const age = birthDate ? ageOnDate(birthDate, date) : 30;
+  const bmr = Math.max(1200, (10 * weight) + (6.25 * height) - (5 * age) + 5);
+  const mode = "maintenance";
+  const offset = 0;
+  const needs = Math.max(1200, bmr + Number(activity.sportKcal || 0) + Number(activity.workKcal || 0) + offset);
+  const proteinTarget = Math.max(70, weight * (mode === "bulk" ? 1.8 : mode === "cut" ? 1.9 : 1.6));
+  const hydrationScore = Math.min(24, (water / 2000) * 24);
+  const proteinScore = Math.min(18, (protein / proteinTarget) * 18);
+  const kcalScore = Math.max(0, 28 - Math.min(28, Math.abs(kcal - needs) / Math.max(1, needs) * 42));
+  const sleepHours = Number(sleep?.hours || 0);
+  const sleepScore = sleepHours >= 7 && sleepHours <= 9.5 ? 18 : sleepHours > 0 ? 10 : 0;
+  const score = Math.max(0, Math.min(100, Math.round(kcalScore + hydrationScore + proteinScore + sleepScore)));
+  return {
+    "/kcalobjectif": `${Math.round(needs)} kcal`,
+    "/kcalconsommees": `${Math.round(kcal)} kcal`,
+    "/eau": `${Math.round(water)} ml`,
+    "/proteines": `${Math.round(protein)} g`,
+    "/sommeil": sleepHours ? `${Math.round(sleepHours * 10) / 10}h` : "non saisi",
+    "/scoreSante": `${score}/100`,
+    "/kcalrestantesheure": `${Math.max(0, Math.round((needs * Math.min(1, Math.max(0.08, hour / 24))) - kcal))} kcal`,
+    "/kcalrestantesjour": `${Math.max(0, Math.round(needs - kcal))} kcal`,
+  };
+}
+
+async function plannedSessionLabel(admin: ReturnType<typeof createClient>, userId: string, date: string, weekday: number) {
+  const dayOfWeek = weekday === 0 ? 7 : weekday;
+  const { data: program } = await admin
+    .from("sport_programs")
+    .select("id,start_date,cycle")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!program?.id) return "Repos";
+  const start = String(program.start_date || date).slice(0, 10);
+  const diffDays = Math.max(0, Math.floor((new Date(`${date}T00:00:00Z`).getTime() - new Date(`${start}T00:00:00Z`).getTime()) / 86400000));
+  const weekLabel = Math.floor(diffDays / 7) % 2 === 0 ? "A" : "B";
+  const { data: session } = await admin
+    .from("sport_program_sessions")
+    .select("session_key,name,week_label,day_of_week")
+    .eq("program_id", program.id)
+    .eq("day_of_week", dayOfWeek)
+    .eq("week_label", weekLabel)
+    .order("sort_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!session?.name) return "Repos";
+  return [session.session_key, session.name].filter(Boolean).join(" - ");
+}
+
+async function financeTemplateValues(admin: ReturnType<typeof createClient>, userId: string, date: string, budget: { base: string; daily: number; spent: number; remaining: number }) {
+  const { data: period } = await admin
+    .from("periods")
+    .select("id,travel_id,start_date,end_date,base_currency")
+    .eq("user_id", userId)
+    .lte("start_date", date)
+    .gte("end_date", date)
+    .order("start_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const start = String(period?.start_date || date).slice(0, 10);
+  const end = String(period?.end_date || date).slice(0, 10);
+  const elapsedDays = Math.max(1, dayCountInclusive(start, date));
+  const periodDays = Math.max(1, dayCountInclusive(start, end));
+  const { data: txRows } = await admin
+    .from("transactions")
+    .select("amount,currency,type,affects_budget,out_of_budget,budget_date_start,budget_date_end,date,pay_now,paid,travel_id,period_id,fx_rate_snapshot,fx_base_currency_snapshot,fx_tx_currency_snapshot")
+    .eq("user_id", userId)
+    .eq("type", "expense")
+    .lte("budget_date_start", end)
+    .gte("budget_date_end", start);
+  const scoped = (txRows || [])
+    .filter((tx) => !period?.travel_id || !tx.travel_id || String(tx.travel_id) === String(period.travel_id))
+    .filter((tx) => !period?.id || !tx.period_id || String(tx.period_id) === String(period.id));
+  const isPaid = (tx: Record<string, unknown>) => tx.pay_now === true || tx.paid === true;
+  const amountInWindow = (tx: Record<string, unknown>, windowEnd: string) => {
+    const txStart = String(tx.budget_date_start || tx.date || date).slice(0, 10);
+    const txEnd = String(tx.budget_date_end || txStart).slice(0, 10);
+    const visibleStart = txStart > start ? txStart : start;
+    const visibleEnd = txEnd < windowEnd ? txEnd : windowEnd;
+    if (visibleEnd < visibleStart) return 0;
+    const fullDays = dayCountInclusive(txStart, txEnd);
+    const visibleDays = dayCountInclusive(visibleStart, visibleEnd);
+    const perDay = Number(tx.amount || 0) / fullDays;
+    return convertWithSnapshot(tx, perDay * visibleDays, budget.base);
+  };
+  const budgetRows = scoped.filter((tx) => tx.affects_budget !== false && tx.out_of_budget !== true);
+  const outRows = scoped.filter((tx) => tx.out_of_budget === true);
+  const spentToToday = budgetRows.reduce((sum, tx) => sum + amountInWindow(tx as Record<string, unknown>, date), 0);
+  const outToToday = outRows.reduce((sum, tx) => sum + amountInWindow(tx as Record<string, unknown>, date), 0);
+  const targetToToday = budget.daily * elapsedDays;
+  const totalBudget = budget.daily * periodDays;
+  const pendingRows = budgetRows.filter((tx) => !isPaid(tx as Record<string, unknown>));
+  const pendingSum = (mode: "future" | "overdue", until?: string) => pendingRows.reduce((sum, tx) => {
+    const due = String(tx.date || tx.budget_date_start || date).slice(0, 10);
+    if (mode === "overdue" && due >= date) return sum;
+    if (mode === "future" && (due < date || !until || due > until)) return sum;
+    return sum + amountInWindow(tx as Record<string, unknown>, due < date ? date : due);
+  }, 0);
+  const pendingCount = (mode: "future" | "overdue", until?: string) => pendingRows.reduce((count, tx) => {
+    const due = String(tx.date || tx.budget_date_start || date).slice(0, 10);
+    if (mode === "overdue") return count + (due < date ? 1 : 0);
+    return count + (due >= date && until && due <= until ? 1 : 0);
+  }, 0);
+  return {
+    "/budgetconsommeanalyse": money(spentToToday, budget.base),
+    "/rythmeapp": signedPctText(targetToToday > 0 ? (spentToToday / targetToToday) * 100 : 0),
+    "/rythmerefpays": "0%",
+    "/ecartapp": signedMoney(spentToToday - targetToToday, budget.base),
+    "/ecartrefpays": "0",
+    "/sortiesapayerj1": `${money(pendingSum("future", addDaysISO(date, 1)), budget.base)} (${pendingCount("future", addDaysISO(date, 1))})`,
+    "/sortiesapayerj7": `${money(pendingSum("future", addDaysISO(date, 7)), budget.base)} (${pendingCount("future", addDaysISO(date, 7))})`,
+    "/sortiesapayerretard": `${money(pendingSum("overdue"), budget.base)} (${pendingCount("overdue")})`,
+    "/moyennebudget": `${money(spentToToday / elapsedDays, budget.base)}/j`,
+    "/moyennehorsbudget": `${money(outToToday / elapsedDays, budget.base)}/j`,
+    "/moyennetotal": `${money((spentToToday + outToToday) / elapsedDays, budget.base)}/j`,
+  };
+}
+
 async function sendPush(payload: Record<string, unknown>) {
   const url = Deno.env.get("SUPABASE_URL") || "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -259,6 +440,12 @@ Deno.serve(async (req: Request) => {
       if (dueTemplates.length) {
         const budget = await budgetSummary(admin, row.user_id, parts.date);
         const activity = await activitySummary(admin, row.user_id, parts.date);
+        const [financeValues, healthValues, plannedLabel] = await Promise.all([
+          financeTemplateValues(admin, row.user_id, parts.date, budget),
+          healthTemplateValues(admin, row.user_id, parts.date, parts.hour, activity),
+          plannedSessionLabel(admin, row.user_id, parts.date, parts.weekday),
+        ]);
+        const extraValues = { ...financeValues, ...healthValues, "/seanceprevuejour": plannedLabel };
         for (const tpl of dueTemplates) {
           const template = tpl as Record<string, unknown>;
           const notificationKey = `template:${template.id}:${parts.date}:${String(template.send_time || "").slice(0, 5)}`;
@@ -267,7 +454,7 @@ Deno.serve(async (req: Request) => {
             results.push({ user_id: row.user_id, template_id: template.id, slot, skipped: true, reason: "already_sent" });
             continue;
           }
-          const message = composeTemplateNotification(template, budget, activity, parts.date);
+          const message = composeTemplateNotification(template, budget, activity, parts.date, extraValues);
           if (dryRun) {
             results.push({ user_id: row.user_id, template_id: template.id, slot, dry_run: true, title: message.title, body: message.body });
             continue;
