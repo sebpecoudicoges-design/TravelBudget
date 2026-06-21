@@ -1666,19 +1666,24 @@
     const diffWeeks = Math.max(0, Math.floor(daysBetweenISO(start, monday) / 7));
     return diffWeeks % 2 === 0 ? "A" : "B";
   }
-  function renderPlannedSportWeek(rows, program) {
-    if (!program?.enabled) return "";
+  function plannedSportWeekRows(rows, program, baseDay) {
+    if (!program?.enabled) return [];
     const weekLabel = currentProgramWeek(program);
     const byCode = sessionByCode(rows);
-    const start = mondayOfWeekISO(todayISO());
-    const today = todayISO();
-    const days = Array.from({ length: 7 }, (_, idx) => {
+    const start = mondayOfWeekISO(baseDay || todayISO());
+    return Array.from({ length: 7 }, (_, idx) => {
       const day = offsetDateISO(start, idx);
       const weekday = idx + 1;
       const code = plannedSessionCodeForDay(program, weekday, weekLabel);
       const session = code ? byCode.get(code) : null;
-      return { day, weekday, code, session };
+      return { day, weekday, code, session, weekLabel, planned: Boolean(session) };
     });
+  }
+  function renderPlannedSportWeek(rows, program) {
+    const days = plannedSportWeekRows(rows, program, todayISO());
+    if (!days.length) return "";
+    const weekLabel = days[0]?.weekLabel || currentProgramWeek(program);
+    const today = todayISO();
     return `<div class="tb-sport-planned-week">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <div>
@@ -4128,6 +4133,20 @@
   });
 
   window.renderSport = renderSport;
+  window.tbSportPlannedWeekRows = function tbSportPlannedWeekRows(baseDay) {
+    const rows = sessionFavoriteRows();
+    const program = CACHE.program || loadSportProgram();
+    return plannedSportWeekRows(rows, program, baseDay || todayISO()).map(row => ({
+      day: row.day,
+      weekday: row.weekday,
+      code: row.code,
+      weekLabel: row.weekLabel,
+      planned: row.planned,
+      sessionId: row.session?.id || "",
+      sessionName: row.session?.name || "",
+      exerciseCount: Array.isArray(row.session?.plan) ? row.session.plan.length : 0,
+    }));
+  };
   window.tbReloadSportHistory = async function tbReloadSportHistory() {
     CACHE.loaded = false;
     await loadHistory();

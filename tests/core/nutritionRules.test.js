@@ -41,9 +41,21 @@ describe('nutrition rules core', () => {
     expect(nutritionGoalTargets({ spentKcal: 2100, weightKg: 59, mode: 'bulk', surplusKcal: 350 })).toMatchObject({
       mode: 'bulk',
       surplusKcal: 350,
+      offsetKcal: 350,
       targetKcal: 2450,
       protein: 106,
       fat: 53,
+    });
+  });
+
+  it('adapts calories and macros for a gentle fat loss goal', () => {
+    expect(nutritionGoalTargets({ spentKcal: 2100, weightKg: 59, mode: 'cut', deficitKcal: 300 })).toMatchObject({
+      mode: 'cut',
+      deficitKcal: 300,
+      offsetKcal: -300,
+      targetKcal: 1800,
+      protein: 112,
+      fat: 44,
     });
   });
 

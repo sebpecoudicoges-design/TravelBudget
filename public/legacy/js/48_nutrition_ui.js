@@ -154,7 +154,8 @@
   function localMealKey() { return `${window.TB_CONST?.LS_KEYS?.nutrition_local_meals || "travelbudget_nutrition_local_meals_v1"}::${uid() || "anon"}`; }
   function sleepKey() { return `${window.TB_CONST?.LS_KEYS?.nutrition_sleep || "travelbudget_nutrition_sleep_v1"}::${uid() || "anon"}`; }
   function nutritionPrefsKey(kind) { return `travelbudget_nutrition_${kind}_v1::${uid() || "anon"}`; }
-  function nutritionGoalKey() { return nutritionPrefsKey("goal"); }
+  function healthGoalKey() { return `${window.TB_CONST?.LS_KEYS?.health_goal || "travelbudget_health_goal_v1"}::${uid() || "anon"}`; }
+  function nutritionGoalKey() { return healthGoalKey(); }
   function rules() { return window.Core?.nutritionRules || {}; }
   function normalizeFood(row) { return rules().normalizeFoodRow ? rules().normalizeFoodRow(row) : row; }
   function nutritionForGrams(food, grams) { return rules().nutritionForGrams ? rules().nutritionForGrams(food, grams) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
@@ -162,30 +163,57 @@
   function loadNutritionGoal() {
     try {
       const raw = JSON.parse(localStorage.getItem(nutritionGoalKey()) || "{}");
-      const mode = String(raw.mode || "bulk") === "bulk" ? "bulk" : "maintenance";
+      const modeRaw = String(raw.mode || "bulk");
+      const mode = ["bulk", "maintenance", "cut"].includes(modeRaw) ? modeRaw : "maintenance";
       const surplusKcal = Math.max(300, Math.min(500, Math.round(n(raw.surplusKcal, 350))));
-      return { mode, surplusKcal };
+      const deficitKcal = Math.max(250, Math.min(500, Math.round(n(raw.deficitKcal, 300))));
+      return { mode, surplusKcal, deficitKcal };
     } catch (_) {
-      return { mode: "bulk", surplusKcal: 350 };
+      return { mode: "bulk", surplusKcal: 350, deficitKcal: 300 };
     }
   }
   function saveNutritionGoal(next) {
     const goal = Object.assign(loadNutritionGoal(), next || {});
-    goal.mode = String(goal.mode || "maintenance") === "bulk" ? "bulk" : "maintenance";
+    goal.mode = ["bulk", "maintenance", "cut"].includes(String(goal.mode || "")) ? String(goal.mode) : "maintenance";
     goal.surplusKcal = Math.max(300, Math.min(500, Math.round(n(goal.surplusKcal, 350))));
+    goal.deficitKcal = Math.max(250, Math.min(500, Math.round(n(goal.deficitKcal, 300))));
     try { localStorage.setItem(nutritionGoalKey(), JSON.stringify(goal)); } catch (_) {}
     try { document.dispatchEvent(new CustomEvent("tb:nutrition:goal_changed", { detail: goal })); } catch (_) {}
     try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
     return goal;
   }
+  function nutritionGoalLabel(goal = loadNutritionGoal()) {
+    if (goal.mode === "bulk") return txt("Prise de masse douce", "Lean bulk");
+    if (goal.mode === "cut") return txt("Perte de gras douce", "Gentle fat loss");
+    return txt("Maintien / recomposition", "Maintenance / recomposition");
+  }
+  function nutritionGoalOffset(goal = loadNutritionGoal()) {
+    if (goal.mode === "bulk") return n(goal.surplusKcal, 350);
+    if (goal.mode === "cut") return -n(goal.deficitKcal, 300);
+    return 0;
+  }
   function nutritionGoalTargets(spentKcal, kg) {
     const goal = loadNutritionGoal();
-    if (rules().nutritionGoalTargets) return rules().nutritionGoalTargets({ spentKcal, weightKg: kg, mode: goal.mode, surplusKcal: goal.surplusKcal });
-    const surplus = goal.mode === "bulk" ? goal.surplusKcal : 0;
-    const targetKcal = Math.max(1200, Math.round(n(spentKcal, 0) + surplus));
-    const protein = Math.max(70, Math.round(n(kg, 70) * (goal.mode === "bulk" ? 1.8 : 1.6)));
-    const fat = Math.max(45, Math.round(n(kg, 70) * (goal.mode === "bulk" ? 0.9 : 0.8)));
-    return { mode: goal.mode, surplusKcal: surplus, targetKcal, protein, fat, carbs: Math.max(120, Math.round((targetKcal - protein * 4 - fat * 9) / 4)) };
+    const spent = Math.max(0, n(spentKcal, 0));
+    const offset = nutritionGoalOffset(goal);
+    const targetKcal = Math.max(1200, Math.round(spent + offset));
+    const kgClean = Math.max(30, n(kg, 70));
+    const proteinPerKg = goal.mode === "bulk" ? 1.8 : goal.mode === "cut" ? 1.9 : 1.6;
+    const fatPerKg = goal.mode === "bulk" ? 0.9 : goal.mode === "cut" ? 0.75 : 0.8;
+    const protein = Math.max(70, Math.round(kgClean * proteinPerKg));
+    const fat = Math.max(42, Math.round(kgClean * fatPerKg));
+    return {
+      mode: goal.mode,
+      surplusKcal: goal.mode === "bulk" ? goal.surplusKcal : 0,
+      deficitKcal: goal.mode === "cut" ? goal.deficitKcal : 0,
+      offsetKcal: offset,
+      targetKcal,
+      protein,
+      proteinPerKg,
+      fat,
+      fatPerKg,
+      carbs: Math.max(90, Math.round((targetKcal - protein * 4 - fat * 9) / 4)),
+    };
   }
   function foodForItem(item) {
     const key = String(item?.food_key || item?.foodKey || "");
@@ -521,6 +549,17 @@
       .tb-health-pillar { border:1px solid rgba(148,163,184,.24); border-radius:12px; padding:10px; background:rgba(255,255,255,.04); display:grid; gap:7px; }
       .tb-health-pillar-track { height:8px; border-radius:999px; background:rgba(148,163,184,.18); overflow:hidden; border:1px solid rgba(148,163,184,.20); }
       .tb-health-pillar-track span { display:block; height:100%; border-radius:999px; }
+      .tb-health-goal { border:1px solid rgba(56,189,248,.20); border-radius:14px; padding:14px; background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(34,197,94,.08)),var(--panel2); margin-top:14px; }
+      .tb-health-goal-grid { display:grid; grid-template-columns:1.2fr repeat(3,minmax(120px,.7fr)); gap:10px; align-items:end; margin-top:12px; }
+      .tb-health-goal select { width:100%; border:1px solid var(--border); border-radius:12px; padding:9px 10px; background:var(--panel); color:var(--text); font-weight:850; }
+      .tb-health-weekboard { border:1px solid rgba(139,92,246,.18); border-radius:14px; padding:14px; background:linear-gradient(180deg,rgba(139,92,246,.08),rgba(56,189,248,.05)),var(--panel2); margin-top:14px; }
+      .tb-health-weekboard-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; align-items:stretch; }
+      .tb-health-weekboard-day { min-height:142px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.04); color:inherit; padding:9px 7px; display:grid; grid-template-rows:auto auto 1fr auto; gap:6px; text-align:left; cursor:pointer; min-width:0; }
+      .tb-health-weekboard-day.active { border-color:var(--accent); box-shadow:0 10px 28px rgba(37,99,235,.10); }
+      .tb-health-weekboard-day strong { font-size:12px; line-height:1.15; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+      .tb-health-weekboard-day small { font-size:10px; color:var(--muted); }
+      .tb-health-weekboard-bars { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; align-items:end; min-height:62px; }
+      .tb-health-weekboard-bars i { display:block; min-height:6px; border-radius:7px 7px 3px 3px; }
       .tb-nutrition-shell button { min-width:0; }
       .tb-nutrition-shell .btn { white-space:normal; }
       @media (max-width: 860px) {
@@ -535,7 +574,9 @@
         .tb-nutrition-timeline-row { grid-template-columns:18px minmax(0,1fr); gap:8px; }
         .tb-nutrition-health-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .tb-health-hero { grid-template-columns:1fr; }
+        .tb-health-goal-grid { grid-template-columns:1fr 1fr; }
         .tb-health-week { grid-template-columns:repeat(4,minmax(0,1fr)); }
+        .tb-health-weekboard-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .tb-nutrition-shell .tb-sport-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
       }
       @media (max-width: 460px) {
@@ -545,6 +586,7 @@
         .tb-nutrition-shell .tb-sport-stats { grid-template-columns:1fr; }
         .tb-nutrition-week-grid button { padding:6px 3px !important; font-size:10px !important; }
         .tb-health-week { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .tb-health-goal-grid { grid-template-columns:1fr; }
       }
     `;
     document.head.appendChild(style);
@@ -1013,7 +1055,9 @@
       const nutrition = byDay.get(rowDay) || { day: rowDay, kcal: 0, protein: 0, carbs: 0, fat: 0, waterMl: 0, typeRows: [] };
       const activity = { sportKcal: sportKcalForDay(rowDay), workKcal: workKcalForDay(rowDay) };
       const health = typeof window.tbComputeHealthSummaryForDate === "function" ? window.tbComputeHealthSummaryForDate(rowDay, activity) : null;
-      const needsKcal = health?.needsKcal || Math.max(1200, baseline().bmr + activity.sportKcal + activity.workKcal);
+      const fallbackSpent = baseline().bmr + activity.sportKcal + activity.workKcal;
+      const fallbackTargets = nutritionGoalTargets(fallbackSpent, bodyWeight());
+      const needsKcal = health?.needsKcal || Math.max(1200, fallbackTargets.targetKcal);
       const kcalScore = Math.min(42, (n(nutrition.kcal, 0) / Math.max(1, needsKcal)) * 42);
       const waterScore = Math.min(24, (n(health?.drinkWaterMl ?? nutrition.waterMl, 0) / 2000) * 24);
       const proteinScore = Math.min(18, (n(nutrition.protein, 0) / Math.max(70, bodyWeight() * 1.35)) * 18);
@@ -1061,6 +1105,79 @@
     if (!cards.length) cards.push({ title: txt("Journee lisible", "Readable day"), body: txt("Les grands axes sont bien alignes. Continue simple : eau, proteines, sommeil.", "The main axes are aligned. Keep it simple: water, protein, sleep."), color: "#22c55e" });
     return cards.slice(0, 3);
   }
+  function macroSummaryText(targets) {
+    return `${Math.round(n(targets.protein, 0))}g P · ${Math.round(n(targets.carbs, 0))}g G · ${Math.round(n(targets.fat, 0))}g L`;
+  }
+  function nextMealTarget(day, targets, total) {
+    const type = currentMealType();
+    const weights = { breakfast: 0.22, morning_snack: 0.10, lunch: 0.30, afternoon_snack: 0.12, dinner: 0.26 };
+    const order = ["breakfast", "morning_snack", "lunch", "afternoon_snack", "dinner"];
+    const consumed = n(total?.kcal, 0);
+    const target = n(targets?.targetKcal, 0);
+    const currentIndex = Math.max(0, order.indexOf(type));
+    const plannedBefore = order.slice(0, currentIndex).reduce((sum, key) => sum + target * n(weights[key], 0), 0);
+    const base = target * n(weights[type], 0.18);
+    const adjustment = Math.max(-220, Math.min(260, plannedBefore - consumed));
+    return { type, label: mealTypeLabel(type), kcal: Math.max(120, Math.round(base + adjustment)) };
+  }
+  function healthGoalAdvice(goal, targets, total, activityKcal, sleepHours) {
+    const proteinGap = Math.round(n(targets.protein, 0) - n(total.protein, 0));
+    const kcalGap = Math.round(n(targets.targetKcal, 0) - n(total.kcal, 0));
+    if (goal.mode === "bulk" && kcalGap > 500) return txt("Objectif prise de masse : complete sans forcer avec glucides utiles + proteines, surtout autour des seances.", "Lean bulk: complete gently with useful carbs + protein, especially around workouts.");
+    if (goal.mode === "cut" && kcalGap < 150) return txt("Objectif perte douce : garde le prochain repas dense en proteines, legumes et hydratation.", "Gentle cut: keep the next meal protein-dense, vegetables and hydration.");
+    if (proteinGap > 25) return txt("Priorite proteines : fromage blanc/skyr, oeufs, poulet, thon ou tofu.", "Protein priority: fromage blanc/skyr, eggs, chicken, tuna or tofu.");
+    if (activityKcal > 550 && goal.mode !== "cut") return txt("Jour charge : prevois recuperation, glucides simples a digerer et sommeil.", "High-load day: plan recovery, easy carbs and sleep.");
+    if (sleepHours && sleepHours < 7) return txt("Sommeil bas : garde l'objectif simple aujourd'hui, regularite avant optimisation.", "Low sleep: keep today simple, consistency before optimization.");
+    return txt("Objectif bien cale : suis le prochain repas cible et garde eau/proteines visibles.", "Goal on track: follow the next meal target and keep water/protein visible.");
+  }
+  function healthWeekDashboardRows(healthWeek) {
+    let planned = [];
+    try { if (typeof window.tbSportPlannedWeekRows === "function") planned = window.tbSportPlannedWeekRows(selectedDateISO()) || []; } catch (_) {}
+    const plannedByDay = new Map((planned || []).map(row => [row.day, row]));
+    return (healthWeek || []).slice(-7).map(row => {
+      const plan = plannedByDay.get(row.day) || {};
+      const kcal = n(row.health?.kcal, row.kcal);
+      const need = Math.max(1, n(row.needsKcal, 0));
+      const water = n(row.health?.drinkWaterMl, row.waterMl);
+      const sleep = n(row.health?.sleepHours, sleepForDay(row.day).hours);
+      const load = n(row.sportKcal, 0) + n(row.workKcal, 0);
+      return { row, plan, kcal, need, water, sleep, load };
+    });
+  }
+  function renderHealthWeekDashboard(healthWeek, selectedDay) {
+    const rows = healthWeekDashboardRows(healthWeek);
+    return `<div class="tb-health-weekboard">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;">
+        <div>
+          <h3 style="margin:0;">${esc(txt("Semaine active", "Active week"))}</h3>
+          <div class="muted" style="font-size:12px;">${esc(txt("Objectif, seances, nutrition, sommeil et charge au meme endroit.", "Goal, workouts, nutrition, sleep and load in one place."))}</div>
+        </div>
+        <span class="pill">${esc(txt("7 jours", "7 days"))}</span>
+      </div>
+      <div class="tb-health-weekboard-grid">
+        ${rows.map(({ row, plan, kcal, need, water, sleep, load }) => {
+          const kcalPct = Math.max(0, Math.min(100, (kcal / need) * 100));
+          const waterPct = Math.max(0, Math.min(100, (water / 2000) * 100));
+          const sleepPct = Math.max(0, Math.min(100, (sleep / 7.5) * 100));
+          const loadPct = Math.max(0, Math.min(100, (load / 700) * 100));
+          const plannedLabel = plan.planned ? `${plan.code || ""} ${plan.sessionName || ""}`.trim() : txt("Repos", "Rest");
+          const detail = `${row.day} | ${plannedLabel} | kcal ${Math.round(kcal)}/${Math.round(need)} | eau ${Math.round(water)} ml | sommeil ${sleep ? Math.round(sleep * 10) / 10 : "-"}h | charge ${Math.round(load)} kcal`;
+          return `<button class="tb-health-weekboard-day ${row.day === selectedDay ? "active" : ""}" type="button" data-health-date="${esc(row.day)}" title="${esc(detail)}">
+            <span class="muted">${esc(row.day.slice(5).replace("-", "/"))}</span>
+            <strong>${esc(plannedLabel)}</strong>
+            <div class="tb-health-weekboard-bars">
+              <i style="height:${Math.max(6, kcalPct * .56)}px;background:#22c55e;"></i>
+              <i style="height:${Math.max(6, waterPct * .56)}px;background:#38bdf8;"></i>
+              <i style="height:${Math.max(6, sleepPct * .56)}px;background:#8b5cf6;"></i>
+              <i style="height:${Math.max(6, loadPct * .56)}px;background:#f59e0b;"></i>
+            </div>
+            <small>${Math.round(kcal)} kcal · ${Math.round(row.score || 0)}/100</small>
+          </button>`;
+        }).join("")}
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:8px;">${esc(txt("Barres : kcal, eau, sommeil, charge.", "Bars: kcal, water, sleep, load."))}</div>
+    </div>`;
+  }
   function itemMeal(item) {
     const mealId = String(item?.meal_id || "");
     return CACHE.meals.find(meal => String(meal.id || "") === mealId) || null;
@@ -1104,6 +1221,11 @@
     const scoreLabel = h.label || (score >= 78 ? txt("Equilibre", "Balanced") : score >= 58 ? txt("A surveiller", "Watch") : txt("A corriger", "To correct"));
     const pillars = healthPillarRows(todayRow, h, proteinTarget);
     const focusCards = healthFocusCards(todayRow, h, proteinTarget);
+    const goal = loadNutritionGoal();
+    const goalSpentKcal = Math.max(0, n(h.baseline, baseline().bmr) + n(todayRow.sportKcal, 0) + n(todayRow.workKcal, 0));
+    const goalTargets = nutritionGoalTargets(goalSpentKcal, bodyWeight());
+    const mealTarget = nextMealTarget(day, goalTargets, todayRow);
+    const goalAdvice = healthGoalAdvice(goal, goalTargets, todayRow, n(todayRow.sportKcal, 0) + n(todayRow.workKcal, 0), sleepHours);
     root.innerHTML = `
       <section class="tb-nutrition-shell">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
@@ -1115,6 +1237,29 @@
             <label class="pill" style="display:flex;align-items:center;gap:6px;">${esc(txt("Date", "Date"))} <input id="health-date" type="date" value="${esc(day)}" style="width:142px;"></label>
             <button class="btn" type="button" id="health-open-nutrition">${esc(txt("Saisir alimentation / sommeil", "Enter nutrition / sleep"))}</button>
             <button class="btn" type="button" id="health-refresh">${esc(txt("Rafraichir", "Refresh"))}</button>
+          </div>
+        </div>
+        <div class="tb-health-goal">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+            <div>
+              <h3 style="margin:0;">${esc(txt("Objectif actif", "Active goal"))}</h3>
+              <div class="muted" style="font-size:12px;margin-top:4px;">${esc(goalAdvice)}</div>
+            </div>
+            <span class="pill">${esc(nutritionGoalLabel(goal))}${nutritionGoalOffset(goal) ? ` ${nutritionGoalOffset(goal) > 0 ? "+" : ""}${Math.round(nutritionGoalOffset(goal))} kcal` : ""}</span>
+          </div>
+          <div class="tb-health-goal-grid">
+            <label><span class="muted" style="font-size:12px;font-weight:850;">${esc(txt("Mode", "Mode"))}</span><select id="health-goal-mode"><option value="bulk" ${goal.mode === "bulk" ? "selected" : ""}>${esc(txt("Prise de masse douce", "Lean bulk"))}</option><option value="maintenance" ${goal.mode === "maintenance" ? "selected" : ""}>${esc(txt("Maintien / recomposition", "Maintenance / recomp"))}</option><option value="cut" ${goal.mode === "cut" ? "selected" : ""}>${esc(txt("Perte de gras douce", "Gentle fat loss"))}</option></select></label>
+            <label><span class="muted" style="font-size:12px;font-weight:850;">${esc(txt("Surplus", "Surplus"))}</span><select id="health-goal-surplus" ${goal.mode === "bulk" ? "" : "disabled"}><option value="300" ${goal.surplusKcal === 300 ? "selected" : ""}>+300 kcal</option><option value="350" ${goal.surplusKcal === 350 ? "selected" : ""}>+350 kcal</option><option value="400" ${goal.surplusKcal === 400 ? "selected" : ""}>+400 kcal</option><option value="500" ${goal.surplusKcal === 500 ? "selected" : ""}>+500 kcal</option></select></label>
+            <label><span class="muted" style="font-size:12px;font-weight:850;">${esc(txt("Deficit", "Deficit"))}</span><select id="health-goal-deficit" ${goal.mode === "cut" ? "" : "disabled"}><option value="250" ${goal.deficitKcal === 250 ? "selected" : ""}>-250 kcal</option><option value="300" ${goal.deficitKcal === 300 ? "selected" : ""}>-300 kcal</option><option value="400" ${goal.deficitKcal === 400 ? "selected" : ""}>-400 kcal</option><option value="500" ${goal.deficitKcal === 500 ? "selected" : ""}>-500 kcal</option></select></label>
+            <div style="border:1px solid var(--border);border-radius:12px;padding:9px 10px;background:rgba(255,255,255,.05);">
+              <span class="muted" style="font-size:12px;font-weight:850;">${esc(txt("Cible jour", "Daily target"))}</span>
+              <strong style="display:block;margin-top:3px;">${Math.round(goalTargets.targetKcal)} kcal</strong>
+              <small class="muted">${esc(macroSummaryText(goalTargets))}</small>
+            </div>
+          </div>
+          <div class="tb-health-focus-grid" style="margin-top:10px;">
+            <div class="tb-health-focus-card" style="border-color:#22c55e66;"><strong style="color:#22c55e;">${esc(txt("Prochain moment", "Next moment"))}</strong><div class="muted" style="font-size:12px;">${esc(mealTarget.label)} : ${Math.round(mealTarget.kcal)} kcal visees, a adapter selon ce que tu as deja mange.</div></div>
+            <div class="tb-health-focus-card" style="border-color:#38bdf866;"><strong style="color:#38bdf8;">${esc(txt("Plan simple", "Simple plan"))}</strong><div class="muted" style="font-size:12px;">${esc(txt("Sport planifie + nutrition + sommeil restent controles dans cette page.", "Planned sport + nutrition + sleep stay controlled on this page."))}</div></div>
           </div>
         </div>
         <div class="tb-health-hero" style="margin-top:14px;">
@@ -1172,6 +1317,7 @@
             </details>
           </div>
         </div>
+        ${renderHealthWeekDashboard(healthWeek, day)}
         <div style="border:1px solid var(--border);border-radius:14px;padding:14px;background:linear-gradient(180deg,rgba(139,92,246,.08),rgba(56,189,248,.05)),var(--panel2);margin-top:14px;">
           <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px;">
             <div>
@@ -1211,6 +1357,24 @@
     if (refresh) refresh.onclick = async () => {
       await loadNutrition({ force: true });
       renderHealth("refresh");
+    };
+    const healthGoalMode = root.querySelector("#health-goal-mode");
+    if (healthGoalMode) healthGoalMode.onchange = () => {
+      saveNutritionGoal({ mode: healthGoalMode.value || "maintenance" });
+      renderHealth("goal-mode");
+      try { if ((window.activeView || "") === "nutrition") renderNutrition("goal-mode"); } catch (_) {}
+    };
+    const healthGoalSurplus = root.querySelector("#health-goal-surplus");
+    if (healthGoalSurplus) healthGoalSurplus.onchange = () => {
+      saveNutritionGoal({ surplusKcal: n(healthGoalSurplus.value, 350) });
+      renderHealth("goal-surplus");
+      try { if ((window.activeView || "") === "nutrition") renderNutrition("goal-surplus"); } catch (_) {}
+    };
+    const healthGoalDeficit = root.querySelector("#health-goal-deficit");
+    if (healthGoalDeficit) healthGoalDeficit.onchange = () => {
+      saveNutritionGoal({ deficitKcal: n(healthGoalDeficit.value, 300) });
+      renderHealth("goal-deficit");
+      try { if ((window.activeView || "") === "nutrition") renderNutrition("goal-deficit"); } catch (_) {}
     };
   }
   function renderNutrition(reason) {
@@ -1262,7 +1426,7 @@
     const proteinTarget = goalTargets.protein;
     const fatTarget = goalTargets.fat;
     const carbsTarget = goalTargets.carbs;
-    const goalLabel = goalTargets.mode === "bulk" ? txt("Prise de masse douce", "Lean bulk") : txt("Maintien", "Maintenance");
+    const goalLabel = nutritionGoalLabel(goalTargets);
     const typeTotals = typeTotalsForDay(meals, items);
     const mealTargets = mealMomentTargets(needsKcal, typeTotals, day);
     const kcalPct = Math.min(100, pct(consumedKcal, needsKcal));
@@ -1288,7 +1452,7 @@
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <label class="pill" style="display:flex;align-items:center;gap:6px;">${esc(txt("Date", "Date"))} <input id="nutrition-date" type="date" value="${esc(day)}" style="width:142px;"></label>
             <span class="pill">${esc(txt("Base", "Base"))} ${Math.round(base.bmr || 0)} kcal</span>
-            <span class="pill">${esc(goalLabel)}${goalTargets.surplusKcal ? ` +${Math.round(goalTargets.surplusKcal)} kcal` : ""}</span>
+            <span class="pill">${esc(goalLabel)}${goalTargets.offsetKcal ? ` ${goalTargets.offsetKcal > 0 ? "+" : ""}${Math.round(goalTargets.offsetKcal)} kcal` : ""}</span>
             <button class="btn" type="button" id="nutrition-refresh">${esc(txt("Rafraichir", "Refresh"))}</button>
           </div>
         </div>
@@ -1312,11 +1476,12 @@
             <div style="border:1px solid rgba(251,113,133,.35);border-radius:8px;padding:12px;background:rgba(251,113,133,.10);">${progressBar(txt("Lipides", "Fat"), total.fat, fatTarget, "g")}</div>
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);grid-column:1/-1;">
               <div class="muted" style="font-size:12px;">${esc(txt("Besoin calcule", "Calculated need"))}</div>
-              <strong>${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))}${goalTargets.surplusKcal ? ` + ${Math.round(goalTargets.surplusKcal)} ${esc(txt("prise de masse", "bulk"))}` : ""} = ${Math.round(needsKcal)} kcal</strong>
+              <strong>${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))}${goalTargets.offsetKcal ? ` ${goalTargets.offsetKcal > 0 ? "+" : "-"} ${Math.abs(Math.round(goalTargets.offsetKcal))} ${esc(txt("objectif", "goal"))}` : ""} = ${Math.round(needsKcal)} kcal</strong>
               <div class="muted" style="font-size:12px;margin-top:6px;">${esc(txt("Hydratation : objectif 2 L en eau bue. Eau des aliments", "Hydration: 2 L target from drunk water. Food water"))} ${Math.round(foodWaterMl)} ml.</div>
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px;">
-                <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Objectif", "Goal"))}</span><select id="nutrition-goal-mode"><option value="bulk" ${goalTargets.mode === "bulk" ? "selected" : ""}>${esc(txt("Prise de masse douce", "Lean bulk"))}</option><option value="maintenance" ${goalTargets.mode === "maintenance" ? "selected" : ""}>${esc(txt("Maintien", "Maintenance"))}</option></select></label>
+                <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Objectif", "Goal"))}</span><select id="nutrition-goal-mode"><option value="bulk" ${goalTargets.mode === "bulk" ? "selected" : ""}>${esc(txt("Prise de masse douce", "Lean bulk"))}</option><option value="maintenance" ${goalTargets.mode === "maintenance" ? "selected" : ""}>${esc(txt("Maintien / recomposition", "Maintenance / recomp"))}</option><option value="cut" ${goalTargets.mode === "cut" ? "selected" : ""}>${esc(txt("Perte de gras douce", "Gentle fat loss"))}</option></select></label>
                 <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Surplus kcal", "Kcal surplus"))}</span><select id="nutrition-goal-surplus" ${goalTargets.mode === "bulk" ? "" : "disabled"}><option value="300" ${goalTargets.surplusKcal === 300 ? "selected" : ""}>+300</option><option value="350" ${goalTargets.surplusKcal === 350 ? "selected" : ""}>+350</option><option value="400" ${goalTargets.surplusKcal === 400 ? "selected" : ""}>+400</option><option value="500" ${goalTargets.surplusKcal === 500 ? "selected" : ""}>+500</option></select></label>
+                <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Deficit kcal", "Kcal deficit"))}</span><select id="nutrition-goal-deficit" ${goalTargets.mode === "cut" ? "" : "disabled"}><option value="250" ${goalTargets.deficitKcal === 250 ? "selected" : ""}>-250</option><option value="300" ${goalTargets.deficitKcal === 300 ? "selected" : ""}>-300</option><option value="400" ${goalTargets.deficitKcal === 400 ? "selected" : ""}>-400</option><option value="500" ${goalTargets.deficitKcal === 500 ? "selected" : ""}>-500</option></select></label>
               </div>
             </div>
           </div>
@@ -1449,7 +1614,7 @@
                 </div>
               </div>
               <div class="muted" style="margin-top:10px;">
-                ${esc(txt("Besoins calcules", "Calculated needs"))}: ${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))}${goalTargets.surplusKcal ? ` + ${Math.round(goalTargets.surplusKcal)} ${esc(txt("prise de masse", "bulk"))}` : ""}.
+                ${esc(txt("Besoins calcules", "Calculated needs"))}: ${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))}${goalTargets.offsetKcal ? ` ${goalTargets.offsetKcal > 0 ? "+" : "-"} ${Math.abs(Math.round(goalTargets.offsetKcal))} ${esc(txt("objectif", "goal"))}` : ""}.
               </div>
             </div>
             <div class="tb-sport-stats" style="margin-bottom:12px;">
@@ -1568,6 +1733,11 @@
     if (goalSurplus) goalSurplus.onchange = () => {
       saveNutritionGoal({ surplusKcal: n(goalSurplus.value, 350) });
       renderNutrition("goal-surplus");
+    };
+    const goalDeficit = root.querySelector("#nutrition-goal-deficit");
+    if (goalDeficit) goalDeficit.onchange = () => {
+      saveNutritionGoal({ deficitKcal: n(goalDeficit.value, 300) });
+      renderNutrition("goal-deficit");
     };
     root.querySelectorAll("[data-nutrition-pick-type]").forEach(btn => {
       btn.onclick = () => {
@@ -1859,6 +2029,11 @@
 
   window.renderNutrition = renderNutrition;
   window.renderHealth = renderHealth;
+  window.tbLoadHealthGoal = loadNutritionGoal;
+  window.tbSaveHealthGoal = saveNutritionGoal;
+  window.tbHealthGoalTargets = function tbHealthGoalTargets(spentKcal, kg) {
+    return nutritionGoalTargets(spentKcal, kg || bodyWeight());
+  };
   window.tbReloadNutrition = async function tbReloadNutrition() {
     await loadNutrition({ force: true });
     return { meals: CACHE.meals.slice(), items: CACHE.items.slice() };

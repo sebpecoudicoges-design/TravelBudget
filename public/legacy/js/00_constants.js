@@ -1,4 +1,4 @@
-window.TB_VERSION = window.TB_VERSION || "10.5.47";
+window.TB_VERSION = window.TB_VERSION || "10.5.48";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
 window.tbApplyVersionLabels = function tbApplyVersionLabels(root) {
@@ -274,6 +274,7 @@ try {
     nutrition_local_meals: "travelbudget_nutrition_local_meals_v1",
     nutrition_food_cache: "travelbudget_nutrition_food_cache_v1",
     nutrition_sleep: "travelbudget_nutrition_sleep_v1",
+    health_goal: "travelbudget_health_goal_v1",
     sport_body_weight: "travelbudget_sport_body_weight_v1",
     sport_body_height: "travelbudget_sport_body_height_v1",
     body_birthdate: "travelbudget_body_birthdate_v1",

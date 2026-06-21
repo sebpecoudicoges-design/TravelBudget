@@ -62,21 +62,28 @@ export function energyBalance({ consumedKcal = 0, sportKcal = 0, workKcal = 0, b
   return { consumedKcal: consumed, spentKcal: spent, balanceKcal: consumed - spent };
 }
 
-export function nutritionGoalTargets({ spentKcal = 0, weightKg = 70, mode = 'maintenance', surplusKcal = 0 } = {}) {
-  const cleanMode = str(mode, 'maintenance') === 'bulk' ? 'bulk' : 'maintenance';
+export function nutritionGoalTargets({ spentKcal = 0, weightKg = 70, mode = 'maintenance', surplusKcal = 0, deficitKcal = 0 } = {}) {
+  const modeRaw = str(mode, 'maintenance');
+  const cleanMode = ['bulk', 'maintenance', 'cut'].includes(modeRaw) ? modeRaw : 'maintenance';
   const kg = Math.max(30, num(weightKg, 70));
   const cleanSurplus = cleanMode === 'bulk'
     ? Math.max(300, Math.min(500, Math.round(num(surplusKcal, 350))))
     : 0;
-  const targetKcal = Math.max(1200, Math.round(num(spentKcal, 0) + cleanSurplus));
-  const proteinPerKg = cleanMode === 'bulk' ? 1.8 : 1.6;
-  const fatPerKg = cleanMode === 'bulk' ? 0.9 : 0.8;
+  const cleanDeficit = cleanMode === 'cut'
+    ? Math.max(250, Math.min(500, Math.round(num(deficitKcal, 300))))
+    : 0;
+  const offsetKcal = cleanSurplus - cleanDeficit;
+  const targetKcal = Math.max(1200, Math.round(num(spentKcal, 0) + offsetKcal));
+  const proteinPerKg = cleanMode === 'bulk' ? 1.8 : cleanMode === 'cut' ? 1.9 : 1.6;
+  const fatPerKg = cleanMode === 'bulk' ? 0.9 : cleanMode === 'cut' ? 0.75 : 0.8;
   const protein = Math.max(70, Math.round(kg * proteinPerKg));
-  const fat = Math.max(45, Math.round(kg * fatPerKg));
-  const carbs = Math.max(120, Math.round((targetKcal - protein * 4 - fat * 9) / 4));
+  const fat = Math.max(42, Math.round(kg * fatPerKg));
+  const carbs = Math.max(90, Math.round((targetKcal - protein * 4 - fat * 9) / 4));
   return {
     mode: cleanMode,
     surplusKcal: cleanSurplus,
+    deficitKcal: cleanDeficit,
+    offsetKcal,
     targetKcal,
     protein,
     proteinPerKg,
