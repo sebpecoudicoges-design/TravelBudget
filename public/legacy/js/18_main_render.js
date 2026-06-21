@@ -162,5 +162,10 @@ function renderAll() {
     return;
   }
 
+  if (view === "notifications") {
+    safeCall("Notifications", () => { if (typeof window.renderNotifications === "function") return window.renderNotifications("renderAll"); }, { containerId: "view-notifications" });
+    return;
+  }
+
   // other views (trip/members/help): their render is triggered by showView()
 }

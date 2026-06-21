@@ -1,4 +1,4 @@
-window.TB_VERSION = window.TB_VERSION || "10.5.48";
+window.TB_VERSION = window.TB_VERSION || "10.5.49";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
 window.tbApplyVersionLabels = function tbApplyVersionLabels(root) {
@@ -21,6 +21,8 @@ try {
   const TABLES = Object.freeze({
     profiles: "profiles",
     mobile_notification_campaigns: "mobile_notification_campaigns",
+    mobile_notification_deliveries: "mobile_notification_deliveries",
+    notification_templates: "notification_templates",
     mobile_push_tokens: "mobile_push_tokens",
     settings: "settings",
     travels: "travels",
@@ -216,6 +218,7 @@ try {
     palette: "travelbudget_palette_v1",
     preset: "travelbudget_palette_preset_v1",
     notification_prefs: "travelbudget_notification_prefs_v1",
+    notification_templates: "travelbudget_notification_templates_v1",
     notification_daily_sent: "travelbudget_notification_daily_sent_v1",
     notification_read: "travelbudget_notification_read_v1",
 

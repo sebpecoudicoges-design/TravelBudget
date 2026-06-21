@@ -18,6 +18,7 @@ function setActiveTab(view) {
     ["work", "tab-work", "view-work"],
     ["nutrition", "tab-nutrition", "view-nutrition"],
     ["health", "tab-health", "view-health"],
+    ["notifications", "tab-notifications", "view-notifications"],
     ["trip", "tab-trip", "view-trip"],
     ["members", "tab-members", "view-members"],
     ["help", "tab-help", "view-help"],
@@ -57,6 +58,7 @@ function showView(view) {
   if (view === "work") { if (typeof window.renderWork === "function") window.renderWork("navigation"); }
   if (view === "nutrition") { if (typeof window.renderNutrition === "function") window.renderNutrition("navigation"); }
   if (view === "health") { if (typeof window.renderHealth === "function") window.renderHealth("navigation"); }
+  if (view === "notifications") { if (typeof window.renderNotifications === "function") window.renderNotifications("navigation"); }
   if (view === "dashboard") {
     try {
       if (typeof window.tbRenderDashboardCritical === "function") window.tbRenderDashboardCritical("navigation:dashboard", { cashflow: false });

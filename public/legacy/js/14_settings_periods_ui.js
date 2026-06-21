@@ -732,7 +732,10 @@ function renderSettings(){
               <strong>Notifications mobile</strong>
               <div class="muted" style="margin-top:4px;line-height:1.35;">Test rapide mobile. Les messages sont courts pour rester lisibles sur l'écran verrouillé.</div>
             </div>
-            <button class="btn primary" id="tb-notif-test" type="button">Envoyer un test</button>
+            <div class="row" style="gap:8px;">
+              <button class="btn" id="tb-notif-open-manager" type="button">Gerer</button>
+              <button class="btn primary" id="tb-notif-test" type="button">Envoyer un test</button>
+            </div>
           </div>
           <div style="margin-top:12px;display:grid;gap:8px;">
             <label class="pill" style="display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;">
@@ -1045,6 +1048,13 @@ if (btnWhatsapp) {
           }
           alert("Préférences notifications enregistrées.");
         });
+      }
+
+      const btnNotifManager = box.querySelector("#tb-notif-open-manager");
+      if (btnNotifManager) {
+        btnNotifManager.onclick = () => {
+          try { if (typeof window.showView === "function") window.showView("notifications"); } catch (_) {}
+        };
       }
 
       const btnNotifTest = box.querySelector("#tb-notif-test");

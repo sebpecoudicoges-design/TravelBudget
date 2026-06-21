@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-type Slot = "morning" | "evening";
+type Slot = "morning" | "midday" | "evening" | "health" | "manual" | "custom";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,13 +14,15 @@ function json(body: unknown, status = 200) {
 }
 
 function localParts(timeZone: string) {
-  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false });
+  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", weekday: "short", hour12: false });
   const parts = Object.fromEntries(fmt.formatToParts(new Date()).map((p) => [p.type, p.value]));
-  return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour || 0) };
+  const dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(String(parts.weekday || ""));
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour || 0), weekday: dow >= 0 ? dow : new Date().getUTCDay() };
 }
 
 function slotForHour(hour: number): Slot | null {
   if (hour >= 7 && hour <= 10) return "morning";
+  if (hour >= 11 && hour <= 14) return "midday";
   if (hour >= 19 && hour <= 22) return "evening";
   return null;
 }
@@ -28,7 +30,9 @@ function slotForHour(hour: number): Slot | null {
 function prefEnabled(prefs: Record<string, unknown>, slot: Slot) {
   if (prefs.serverPush === false) return false;
   if (slot === "morning") return prefs.morningBudget === true || prefs.dailyBudget === true;
-  return prefs.eveningSummary === true;
+  if (slot === "evening") return prefs.eveningSummary === true;
+  if (slot === "health" || slot === "midday") return prefs.healthMealReminders === true || prefs.nutritionReminders === true;
+  return true;
 }
 
 function money(value: number, currency: string) {
@@ -101,6 +105,46 @@ function composeNotification(slot: Slot, budget: { base: string; daily: number; 
   }
 
   return { title, body: `${baseLine}${nudge ? ` ${nudge}` : ""}`.trim(), tone };
+}
+
+function renderSlashTemplate(template: string, values: Record<string, string>) {
+  let out = String(template || "");
+  for (const [key, value] of Object.entries(values)) out = out.split(key).join(value);
+  return out;
+}
+
+function templateDue(template: Record<string, unknown>, slot: Slot, weekday: number) {
+  if (template.enabled === false) return false;
+  if (String(template.channel || "mobile") !== "mobile") return false;
+  const days = Array.isArray(template.days_of_week) ? template.days_of_week.map(Number) : [0, 1, 2, 3, 4, 5, 6];
+  if (!days.includes(weekday)) return false;
+  const tplSlot = String(template.slot || "custom").toLowerCase();
+  if (tplSlot === "custom") return slot === "custom" || slot === "manual";
+  if (tplSlot === "health") return slot === "health" || slot === "midday";
+  return tplSlot === slot;
+}
+
+function composeTemplateNotification(template: Record<string, unknown>, budget: { base: string; daily: number; spent: number; remaining: number }, activity: { sportCount: number; sportKcal: number; workCount: number; workKcal: number; workMinutes: number }, date: string) {
+  const values: Record<string, string> = {
+    "/budgetdujour": money(budget.daily, budget.base),
+    "/budgetrestant": money(budget.remaining, budget.base),
+    "/depensesjour": money(budget.spent, budget.base),
+    "/date": date,
+    "/solde": "",
+    "/kcalobjectif": "",
+    "/kcalconsommees": "",
+    "/sportkcal": `${Math.round(activity.sportKcal)} kcal`,
+    "/travailkcal": `${Math.round(activity.workKcal)} kcal`,
+    "/eau": "",
+    "/proteines": "",
+    "/sommeil": "",
+    "/scoreSante": "",
+  };
+  const emoji = String(template.emoji || "").trim();
+  const rawTitle = renderSlashTemplate(String(template.title_template || "Notification"), values).trim();
+  const title = `${emoji ? `${emoji} ` : ""}${rawTitle}`.trim();
+  const body = renderSlashTemplate(String(template.body_template || ""), values).trim();
+  return { title, body, values };
 }
 
 async function budgetSummary(admin: ReturnType<typeof createClient>, userId: string, date: string) {
@@ -203,8 +247,65 @@ Deno.serve(async (req: Request) => {
     for (const row of settingsRows || []) {
       const prefs = row.notification_prefs && typeof row.notification_prefs === "object" ? row.notification_prefs as Record<string, unknown> : {};
       const parts = localParts(String(prefs.timezone || "Australia/Brisbane"));
-      const slot = (requestedSlot === "morning" || requestedSlot === "evening") ? requestedSlot as Slot : slotForHour(parts.hour);
+      const slot = (["morning", "midday", "evening", "health", "manual", "custom"].includes(requestedSlot)) ? requestedSlot as Slot : slotForHour(parts.hour);
       if (!slot || !prefEnabled(prefs, slot)) continue;
+
+      const { data: templates } = await admin
+        .from("notification_templates")
+        .select("id,name,slot,channel,enabled,send_time,days_of_week,emoji,title_template,body_template,variables")
+        .eq("user_id", row.user_id)
+        .eq("enabled", true);
+      const dueTemplates = (templates || []).filter((tpl) => templateDue(tpl as Record<string, unknown>, slot, parts.weekday));
+      if (dueTemplates.length) {
+        const budget = await budgetSummary(admin, row.user_id, parts.date);
+        const activity = await activitySummary(admin, row.user_id, parts.date);
+        for (const tpl of dueTemplates) {
+          const template = tpl as Record<string, unknown>;
+          const notificationKey = `template:${template.id}:${parts.date}:${String(template.send_time || "").slice(0, 5)}`;
+          const { data: existing } = await admin.from("mobile_notification_deliveries").select("id").eq("user_id", row.user_id).eq("notification_key", notificationKey).maybeSingle();
+          if (existing?.id) {
+            results.push({ user_id: row.user_id, template_id: template.id, slot, skipped: true, reason: "already_sent" });
+            continue;
+          }
+          const message = composeTemplateNotification(template, budget, activity, parts.date);
+          if (dryRun) {
+            results.push({ user_id: row.user_id, template_id: template.id, slot, dry_run: true, title: message.title, body: message.body });
+            continue;
+          }
+          const send = await sendPush({
+            user_id: row.user_id,
+            title: message.title,
+            body: message.body,
+            source: "template_notification",
+            view: "dashboard",
+            notification_key: notificationKey,
+            data: {
+              kind: "template_notification",
+              slot,
+              today: parts.date,
+              template_id: String(template.id || ""),
+              template_name: String(template.name || ""),
+              variables: message.values,
+            },
+          });
+          await admin.from("mobile_notification_deliveries").insert({
+            user_id: row.user_id,
+            template_id: template.id,
+            notification_key: notificationKey,
+            slot,
+            sent_for_date: parts.date,
+            status: "sent",
+            title: message.title,
+            body: message.body,
+            payload: { source: "template_notification", template_name: template.name, variables: message.values },
+          });
+          results.push({ user_id: row.user_id, template_id: template.id, slot, sent: send.sent || 0, failed: send.failed || 0 });
+        }
+        continue;
+      }
+
+      if ((templates || []).length) continue;
+      if (slot !== "morning" && slot !== "evening") continue;
 
       const notificationKey = `daily-budget:${slot}:${parts.date}`;
       const { data: existing } = await admin.from("mobile_notification_deliveries").select("id").eq("user_id", row.user_id).eq("notification_key", notificationKey).maybeSingle();
@@ -242,7 +343,7 @@ Deno.serve(async (req: Request) => {
           work_kcal: String(Math.round(activity.workKcal)),
         },
       });
-      await admin.from("mobile_notification_deliveries").insert({ user_id: row.user_id, notification_key: notificationKey, slot, sent_for_date: parts.date, status: "sent" });
+      await admin.from("mobile_notification_deliveries").insert({ user_id: row.user_id, notification_key: notificationKey, slot, sent_for_date: parts.date, status: "sent", title, body, payload: { source: "daily_budget", tone: message.tone } });
       results.push({ user_id: row.user_id, slot, sent: send.sent || 0, failed: send.failed || 0 });
     }
     return json({ ok: true, dry_run: dryRun, checked: settingsRows?.length || 0, results });
