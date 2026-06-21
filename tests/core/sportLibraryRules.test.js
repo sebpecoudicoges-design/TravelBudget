@@ -28,9 +28,41 @@ describe('sport library rules core', () => {
       seconds: 180,
       sets: 6,
       rest: 60,
+      weightKg: 0,
+      loadLabel: '',
+      repMin: 0,
+      repMax: 0,
       distanceM: 0,
       metValue: 7.8,
       tags: ['boxe', 'cardio'],
+    });
+  });
+
+  it('normalizes SQL reference loads and rep ranges', () => {
+    expect(normalizeSportExerciseRow({
+      key: 'dumbbell_incline_press',
+      name_fr: 'Developpe incline halteres',
+      name_en: 'Incline dumbbell press',
+      activity_key: 'strength',
+      goal: 'strength',
+      equipment: 'dumbbell',
+      mode: 'reps',
+      default_reps: 8,
+      default_sets: 3,
+      default_rest_seconds: 120,
+      default_weight_kg: 40,
+      load_label: '2 x 20 kg',
+      rep_min: 8,
+      rep_max: 12,
+    })).toMatchObject({
+      key: 'dumbbell_incline_press',
+      reps: 8,
+      sets: 3,
+      rest: 120,
+      weightKg: 40,
+      loadLabel: '2 x 20 kg',
+      repMin: 8,
+      repMax: 12,
     });
   });
 

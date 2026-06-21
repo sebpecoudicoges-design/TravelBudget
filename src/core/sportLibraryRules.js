@@ -29,6 +29,10 @@ export function normalizeSportExerciseRow(row = {}) {
     seconds: cleanMode === 'time' ? positiveInt(row.seconds || row.default_seconds, 45) : 0,
     sets: Math.max(1, positiveInt(row.sets || row.default_sets, 1)),
     rest: positiveInt(row.rest || row.default_rest_seconds, 0),
+    weightKg: num(row.weightKg ?? row.default_weight_kg, 0),
+    loadLabel: str(row.loadLabel || row.load_label, ''),
+    repMin: cleanMode === 'reps' ? positiveInt(row.repMin ?? row.rep_min, 0) : 0,
+    repMax: cleanMode === 'reps' ? positiveInt(row.repMax ?? row.rep_max, 0) : 0,
     distanceM: positiveInt(row.distanceM || row.distance_m, 0),
     tags: Array.isArray(row.tags) ? row.tags.map((tag) => str(tag)).filter(Boolean) : [],
   };

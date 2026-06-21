@@ -313,6 +313,10 @@
     globalRestSeconds: loadGlobalRest(),
     circuit: loadCircuit(),
     program: loadSportProgram(),
+    sqlSessionFavorites: [],
+    programLoading: false,
+    programLoaded: false,
+    programSource: "fallback",
     editingPlanIndex: null,
     libraryLoaded: false,
     libraryLoading: false,
@@ -361,6 +365,9 @@
     CACHE.globalRestSeconds = loadGlobalRest();
     CACHE.circuit = loadCircuit();
     CACHE.program = loadSportProgram();
+    CACHE.sqlSessionFavorites = [];
+    CACHE.programLoaded = false;
+    CACHE.programSource = "fallback";
     CACHE.timerBeepVolume = loadTimerPrefs().beepVolume;
   }
   function activeTravelId() { return window.state?.activeTravelId || null; }
@@ -424,7 +431,7 @@
     try {
       const res = await c
         .from(table("sport_exercises"))
-        .select("key,goal,equipment,activity_key,name_fr,name_en,mode,default_reps,default_seconds,default_sets,default_rest_seconds,distance_m,met_value,tags,sort_order")
+        .select("key,goal,equipment,activity_key,name_fr,name_en,mode,default_reps,default_seconds,default_sets,default_rest_seconds,distance_m,met_value,tags,sort_order,default_weight_kg,load_label,rep_min,rep_max")
         .eq("is_active", true)
         .order("sort_order", { ascending: true })
         .order("name_fr", { ascending: true });
@@ -1038,13 +1045,15 @@
       exerciseName: exerciseLabel(ex),
       equipment: ex.equipment,
       mode: ex.mode,
-      targetReps: ex.reps || 0,
+      targetReps: ex.repMin || ex.reps || 0,
+      repMin: ex.repMin || 0,
+      repMax: ex.repMax || 0,
       targetSeconds: ex.seconds || 0,
       sets: ex.sets || 1,
       restSeconds: ex.rest || 0,
       distanceM: ex.distanceM || 0,
-      weightKg: load.weightKg,
-      loadLabel: load.loadLabel,
+      weightKg: n(ex.weightKg, load.weightKg),
+      loadLabel: ex.loadLabel || load.loadLabel,
     });
   }
   function normalizedEquipmentForGoal(goal, equipment) {
@@ -1471,9 +1480,11 @@
   }
   function sessionFavoriteRows() {
     const defaults = defaultSessionFavorites();
+    const sqlRows = Array.isArray(CACHE.sqlSessionFavorites) ? CACHE.sqlSessionFavorites : [];
     const custom = loadCustomSessionFavorites();
     const ids = new Set(defaults.map(row => row.id));
-    return defaults.concat(custom.filter(row => !ids.has(row.id))).slice(0, 30);
+    const sqlIds = new Set(sqlRows.map(row => row.id));
+    return sqlRows.concat(defaults.filter(row => !sqlIds.has(row.id))).concat(custom.filter(row => !ids.has(row.id) && !sqlIds.has(row.id))).slice(0, 30);
   }
   function clonePlan(plan) {
     return (plan || []).map(item => Object.assign({}, item, { tmpId: "tmp_" + Date.now() + "_" + Math.random().toString(16).slice(2) }));
@@ -1498,6 +1509,105 @@
       return raw && raw.enabled ? raw : { enabled: false };
     } catch (_) { return { enabled: false }; }
   }
+  function sqlProgramExerciseToPlanItem(row) {
+    const mode = String(row?.mode || "reps");
+    return makePlanItem(row?.activity_key || "strength", {
+      exerciseName: row?.exercise_name || "",
+      equipment: row?.equipment || "mixed",
+      mode,
+      targetReps: mode === "reps" ? n(row?.target_reps ?? row?.rep_min, 0) : 0,
+      repMin: mode === "reps" ? n(row?.rep_min, row?.target_reps || 0) : 0,
+      repMax: mode === "reps" ? n(row?.rep_max, row?.target_reps || row?.rep_min || 0) : 0,
+      targetSeconds: mode === "time" ? n(row?.target_seconds ?? row?.time_min_seconds, 0) : 0,
+      timeMin: mode === "time" ? n(row?.time_min_seconds, row?.target_seconds || 0) : 0,
+      timeMax: mode === "time" ? n(row?.time_max_seconds, row?.target_seconds || row?.time_min_seconds || 0) : 0,
+      sets: n(row?.planned_sets, 1),
+      restSeconds: n(row?.rest_seconds, 0),
+      weightKg: n(row?.default_weight_kg, 0),
+      loadLabel: row?.load_label || "",
+      distanceM: n(row?.distance_m, 0),
+      metValue: n(row?.met_value, 0),
+      notes: row?.notes || "",
+    });
+  }
+  async function ensureSportProgramsLoaded(reason) {
+    if (CACHE.programLoading || CACHE.programLoaded) return false;
+    const c = client();
+    if (!c || !uid()) {
+      CACHE.programLoaded = true;
+      return false;
+    }
+    const offline = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode(`sport:programs:${reason || "render"}`)
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (offline) {
+      CACHE.programLoaded = true;
+      return false;
+    }
+    CACHE.programLoading = true;
+    try {
+      const programs = await c
+        .from(table("sport_programs"))
+        .select("id,key,name,goal,cycle,start_date,is_active")
+        .eq("key", "lean_bulk_ab")
+        .eq("is_active", true)
+        .maybeSingle();
+      if (programs.error) throw programs.error;
+      const program = programs.data;
+      if (!program?.id) return false;
+      const sessions = await c
+        .from(table("sport_program_sessions"))
+        .select("id,session_key,name,week_label,day_of_week,sort_order")
+        .eq("program_id", program.id)
+        .order("sort_order", { ascending: true });
+      if (sessions.error) throw sessions.error;
+      const sessionIds = (sessions.data || []).map(row => row.id).filter(Boolean);
+      let exercises = { data: [], error: null };
+      if (sessionIds.length) {
+        exercises = await c
+          .from(table("sport_program_exercises"))
+          .select("id,session_id,exercise_key,exercise_name,activity_key,equipment,mode,target_reps,rep_min,rep_max,target_seconds,time_min_seconds,time_max_seconds,planned_sets,rest_seconds,default_weight_kg,load_label,distance_m,met_value,sort_order,notes")
+          .in("session_id", sessionIds)
+          .order("sort_order", { ascending: true });
+        if (exercises.error) throw exercises.error;
+      }
+      CACHE.sqlSessionFavorites = (sessions.data || []).map(row => {
+        const plan = (exercises.data || [])
+          .filter(ex => String(ex.session_id) === String(row.id))
+          .sort((a, b) => n(a.sort_order, 0) - n(b.sort_order, 0))
+          .map(sqlProgramExerciseToPlanItem);
+        return {
+          id: `sql_${row.session_key}`,
+          source: "sql",
+          week: row.week_label,
+          name: row.name,
+          days: [dayNameFromNumber(row.day_of_week)],
+          plan,
+        };
+      }).filter(row => row.plan.length);
+      CACHE.program = saveSportProgram({
+        enabled: true,
+        source: "sql",
+        startDate: String(program.start_date || todayISO()).slice(0, 10),
+        cycle: program.cycle || "A/B",
+        days: { 1: "A1/B1", 3: "A2/B2", 5: "A3/B3" },
+      });
+      CACHE.programSource = "sql";
+      return CACHE.sqlSessionFavorites.length > 0;
+    } catch (e) {
+      if (!isOfflineSkipError(e)) console.warn("[sport] program load failed", e?.message || e);
+    } finally {
+      CACHE.programLoading = false;
+      CACHE.programLoaded = true;
+    }
+    return false;
+  }
+  function dayNameFromNumber(day) {
+    const fr = ["", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+    const en = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const i = Math.max(1, Math.min(7, Math.round(n(day, 1))));
+    return lang() === "en" ? en[i] : fr[i];
+  }
   function saveSportProgram(program) {
     const next = Object.assign({ enabled: true, startDate: todayISO(), days: { 1: "A1", 3: "A2", 5: "A3" } }, program || {});
     try { localStorage.setItem(SPORT_PROGRAM_KEY(), JSON.stringify(next)); } catch (_) {}
@@ -1516,11 +1626,12 @@
   function renderSessionFavorites() {
     const rows = sessionFavoriteRows();
     const program = CACHE.program || loadSportProgram();
+    const sourceLabel = CACHE.programSource === "sql" ? txt("Synchronise SQL", "SQL synced") : txt("Fallback local", "Local fallback");
     return `<div class="tb-sport-simple" style="margin-top:12px;">
       <div class="tb-sport-simple-title">
         <div>
           <strong>${esc(txt("Seances favorites", "Favorite workouts"))}</strong>
-          <div class="muted">${esc(txt("Programme prise de masse A/B : lundi, mercredi, vendredi, puis alternance.", "A/B lean bulk program: Monday, Wednesday, Friday, then rotate."))}</div>
+          <div class="muted">${esc(txt("Programme prise de masse A/B : lundi, mercredi, vendredi, puis alternance.", "A/B lean bulk program: Monday, Wednesday, Friday, then rotate."))} · ${esc(sourceLabel)}</div>
         </div>
         <button class="btn" type="button" id="sport-activate-mass-program">${program.enabled ? esc(txt("Planning actif", "Program active")) : esc(txt("Activer planning", "Activate program"))}</button>
       </div>
@@ -2409,6 +2520,11 @@
     if (!CACHE.libraryLoaded && !CACHE.libraryLoading) {
       ensureSportLibraryLoaded(reason).then((changed) => {
         if (changed && (window.activeView || "") === "sport") renderSport("library-loaded");
+      }).catch(() => {});
+    }
+    if (!CACHE.programLoaded && !CACHE.programLoading) {
+      ensureSportProgramsLoaded(reason).then((changed) => {
+        if (changed && (window.activeView || "") === "sport") renderSport("program-loaded");
       }).catch(() => {});
     }
     const kg = bodyWeight();

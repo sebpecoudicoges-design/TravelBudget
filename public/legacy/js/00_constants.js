@@ -1,4 +1,4 @@
-window.TB_VERSION = window.TB_VERSION || "10.5.45";
+window.TB_VERSION = window.TB_VERSION || "10.5.46";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
 window.tbApplyVersionLabels = function tbApplyVersionLabels(root) {
@@ -70,6 +70,9 @@ try {
     nutrition_sleep: "nutrition_sleep",
     sport_exercises: "sport_exercises",
     sport_exercise_favorites: "sport_exercise_favorites",
+    sport_programs: "sport_programs",
+    sport_program_sessions: "sport_program_sessions",
+    sport_program_exercises: "sport_program_exercises",
     sport_sessions: "sport_sessions",
     sport_session_items: "sport_session_items",
     sport_sets: "sport_sets",
