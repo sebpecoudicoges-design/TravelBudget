@@ -1482,9 +1482,12 @@
     const defaults = defaultSessionFavorites();
     const sqlRows = Array.isArray(CACHE.sqlSessionFavorites) ? CACHE.sqlSessionFavorites : [];
     const custom = loadCustomSessionFavorites();
+    if (sqlRows.length) {
+      const sqlIds = new Set(sqlRows.map(row => String(row.id || "")));
+      return sqlRows.concat(custom.filter(row => !sqlIds.has(String(row.id || "")))).slice(0, 30);
+    }
     const ids = new Set(defaults.map(row => row.id));
-    const sqlIds = new Set(sqlRows.map(row => row.id));
-    return sqlRows.concat(defaults.filter(row => !sqlIds.has(row.id))).concat(custom.filter(row => !ids.has(row.id) && !sqlIds.has(row.id))).slice(0, 30);
+    return defaults.concat(custom.filter(row => !ids.has(row.id))).slice(0, 30);
   }
   function clonePlan(plan) {
     return (plan || []).map(item => Object.assign({}, item, { tmpId: "tmp_" + Date.now() + "_" + Math.random().toString(16).slice(2) }));
@@ -1578,6 +1581,7 @@
           .map(sqlProgramExerciseToPlanItem);
         return {
           id: `sql_${row.session_key}`,
+          sessionKey: row.session_key,
           source: "sql",
           week: row.week_label,
           name: row.name,
@@ -1623,6 +1627,81 @@
     d.setDate(d.getDate() + diff);
     return (typeof window.toLocalISODate === "function" ? window.toLocalISODate(d) : d.toISOString().slice(0, 10));
   }
+  function mondayOfWeekISO(day) {
+    const d = new Date(`${String(day || todayISO()).slice(0, 10)}T12:00:00`);
+    const diff = (d.getDay() || 7) - 1;
+    d.setDate(d.getDate() - diff);
+    return localDateISO(d);
+  }
+  function daysBetweenISO(a, b) {
+    const da = new Date(`${String(a || todayISO()).slice(0, 10)}T12:00:00`);
+    const db = new Date(`${String(b || todayISO()).slice(0, 10)}T12:00:00`);
+    if (!Number.isFinite(da.getTime()) || !Number.isFinite(db.getTime())) return 0;
+    return Math.floor((db.getTime() - da.getTime()) / 86400000);
+  }
+  function sessionCode(row) {
+    const raw = String(row?.sessionKey || row?.id || row?.name || "").toUpperCase();
+    const match = raw.match(/\b([AB][123])\b|_([AB][123])\b|MASS_([AB][123])\b|SQL_([AB][123])\b/);
+    return (match?.[1] || match?.[2] || match?.[3] || match?.[4] || "").toUpperCase();
+  }
+  function sessionByCode(rows) {
+    const map = new Map();
+    (rows || []).forEach(row => {
+      const code = sessionCode(row);
+      if (code && !map.has(code)) map.set(code, row);
+    });
+    return map;
+  }
+  function plannedSessionCodeForDay(program, weekday, weekLabel) {
+    const raw = String(program?.days?.[weekday] || "");
+    if (!raw) return "";
+    const parts = raw.split("/").map(part => part.trim().toUpperCase()).filter(Boolean);
+    if (parts.length <= 1) return parts[0] || "";
+    const selected = parts.find(part => part.startsWith(String(weekLabel || "A").toUpperCase()));
+    return selected || parts[0] || "";
+  }
+  function currentProgramWeek(program) {
+    const monday = mondayOfWeekISO(todayISO());
+    const start = mondayOfWeekISO(program?.startDate || program?.start_date || todayISO());
+    const diffWeeks = Math.max(0, Math.floor(daysBetweenISO(start, monday) / 7));
+    return diffWeeks % 2 === 0 ? "A" : "B";
+  }
+  function renderPlannedSportWeek(rows, program) {
+    if (!program?.enabled) return "";
+    const weekLabel = currentProgramWeek(program);
+    const byCode = sessionByCode(rows);
+    const start = mondayOfWeekISO(todayISO());
+    const today = todayISO();
+    const days = Array.from({ length: 7 }, (_, idx) => {
+      const day = offsetDateISO(start, idx);
+      const weekday = idx + 1;
+      const code = plannedSessionCodeForDay(program, weekday, weekLabel);
+      const session = code ? byCode.get(code) : null;
+      return { day, weekday, code, session };
+    });
+    return `<div class="tb-sport-planned-week">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div>
+          <strong>${esc(txt("Semaine planifiee", "Planned week"))}</strong>
+          <div class="muted">${esc(txt(`Cycle ${weekLabel} actif : seance les lundi, mercredi et vendredi.`, `Active ${weekLabel} cycle: workout on Monday, Wednesday and Friday.`))}</div>
+        </div>
+        <span class="pill">${esc(txt("Aujourd'hui", "Today"))}</span>
+      </div>
+      <div class="tb-sport-planned-grid">
+        ${days.map(row => {
+          const isToday = row.day === today;
+          const planned = Boolean(row.session);
+          const label = planned ? (row.code || row.session.name) : txt("Repos", "Rest");
+          const detail = planned ? row.session.name : txt("Jour de repos actuel", "Current rest day");
+          return `<button class="tb-sport-planned-day ${planned ? "planned" : "rest"} ${isToday ? "today" : ""}" type="button" ${planned ? `data-sport-load-session-favorite="${esc(row.session.id)}"` : ""} title="${esc(`${row.day} | ${detail}`)}">
+            <span>${esc(shortWeekday(row.day))}</span>
+            <strong>${esc(label)}</strong>
+            <small>${esc(detail)}</small>
+          </button>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }
   function renderSessionFavorites() {
     const rows = sessionFavoriteRows();
     const program = CACHE.program || loadSportProgram();
@@ -1635,6 +1714,7 @@
         </div>
         <button class="btn" type="button" id="sport-activate-mass-program">${program.enabled ? esc(txt("Planning actif", "Program active")) : esc(txt("Activer planning", "Activate program"))}</button>
       </div>
+      ${renderPlannedSportWeek(rows, program)}
       <div class="tb-sport-library-grid">
         ${rows.map(row => `<button class="btn" type="button" data-sport-load-session-favorite="${esc(row.id)}" style="display:block;text-align:left;">
           <strong>${esc(row.name)}</strong><br>
@@ -1748,6 +1828,15 @@
       .tb-sport-week-day.active .tb-sport-week-bar{background:linear-gradient(180deg,#22c55e,#2563eb);}
       .tb-sport-week-day strong{font-size:11px;line-height:1;}
       .tb-sport-week-day small{font-size:10px;color:#64748b;font-weight:850;}
+      .tb-sport-planned-week{border:1px solid rgba(37,99,235,.14);border-radius:18px;background:linear-gradient(135deg,rgba(14,165,233,.10),rgba(34,197,94,.07));padding:12px;margin:12px 0;}
+      .tb-sport-planned-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:10px;}
+      .tb-sport-planned-day{border:1px solid rgba(148,163,184,.22);border-radius:15px;background:#fff;color:#0f172a;min-height:92px;padding:9px 7px;display:grid;grid-template-rows:auto auto 1fr;gap:5px;text-align:left;cursor:pointer;min-width:0;}
+      .tb-sport-planned-day span{font-size:10px;font-weight:950;text-transform:uppercase;color:#64748b;}
+      .tb-sport-planned-day strong{font-size:16px;line-height:1.05;color:#0f172a;}
+      .tb-sport-planned-day small{font-size:10px;line-height:1.15;color:#64748b;font-weight:850;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+      .tb-sport-planned-day.planned{border-color:rgba(37,99,235,.24);background:linear-gradient(180deg,#eff6ff,#fff);box-shadow:0 10px 24px rgba(37,99,235,.10);}
+      .tb-sport-planned-day.rest{background:#f8fafc;}
+      .tb-sport-planned-day.today{outline:3px solid rgba(34,197,94,.22);border-color:rgba(34,197,94,.45);}
       .tb-sport-status{border:1px solid rgba(14,165,233,.18);border-radius:16px;background:#e0f2fe;color:#075985;padding:10px 12px;font-weight:850;}
       body.theme-dark .tb-sport-card,body.theme-dark .tb-sport-item,body.theme-dark .tb-sport-history-card{background:#111827;color:#f8fafc;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-stat{background:#111827;border-color:rgba(255,255,255,.12);}
@@ -1766,11 +1855,16 @@
       body.theme-dark .tb-sport-advanced summary{color:#f8fafc;}
       body.theme-dark .tb-sport-week{background:rgba(14,165,233,.08);border-color:rgba(125,211,252,.18);}
       body.theme-dark .tb-sport-week-day small{color:#94a3b8;}
+      body.theme-dark .tb-sport-planned-week{background:rgba(14,165,233,.08);border-color:rgba(125,211,252,.18);}
+      body.theme-dark .tb-sport-planned-day{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.12);}
+      body.theme-dark .tb-sport-planned-day strong{color:#f8fafc;}
+      body.theme-dark .tb-sport-planned-day span,body.theme-dark .tb-sport-planned-day small{color:#94a3b8;}
+      body.theme-dark .tb-sport-planned-day.planned{background:linear-gradient(180deg,rgba(37,99,235,.22),#0f172a);}
       body.theme-dark .tb-sport-session-details summary{color:#f8fafc;}
       body.theme-dark .tb-sport-session-exercise{background:#0f172a;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}}
-      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timer-card.focus .tb-sport-timer{min-height:calc(100dvh - 20px);border-radius:20px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:72px}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:31px}}
+      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timer-card.focus .tb-sport-timer{min-height:calc(100dvh - 20px);border-radius:20px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:72px}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:31px}}
       body.tb-capacitor-app[data-tb-view="sport"] #sport-root{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-shell{gap:10px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-hero{border-radius:22px!important;padding:16px!important;min-height:0!important;box-shadow:0 16px 34px rgba(37,99,235,.16)!important;}

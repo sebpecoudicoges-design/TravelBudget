@@ -252,19 +252,37 @@
       }
     } catch (_) {}
   }
-  function makeLocalNutritionRow({ food, grams, nut, waterMl, mealType, mealDate, label }) {
-    const stamp = Date.now() + "_" + Math.random().toString(16).slice(2);
+  function nutritionSyncMarker(syncId) {
+    const id = String(syncId || "").trim();
+    return id ? `tb_sync:${id}` : "";
+  }
+  function nutritionSyncId(row) {
+    return String(row?.syncId || row?.meal?.sync_id || row?.meal?.id || "").trim();
+  }
+  function notesWithNutritionSyncId(notes, syncId) {
+    const marker = nutritionSyncMarker(syncId);
+    const base = String(notes || "").trim();
+    if (!marker) return base || null;
+    if (base.includes(marker)) return base;
+    return [base, marker].filter(Boolean).join(" ");
+  }
+  function makeLocalNutritionRow({ food, grams, nut, waterMl, mealType, mealDate, label, syncId }) {
+    const stamp = String(syncId || "").replace(/^nutrition_/, "") || (Date.now() + "_" + Math.random().toString(16).slice(2));
     const mealId = `local_meal_${stamp}`;
     const itemId = `local_item_${stamp}`;
+    const rowSyncId = syncId || `nutrition_${stamp}`;
     return {
+      syncId: rowSyncId,
       meal: {
         id: mealId,
+        sync_id: rowSyncId,
         user_id: uid(),
         travel_id: activeTravelId(),
         meal_date: mealDate || selectedDateISO(),
         meal_type: mealType || "meal",
         label: label || food?.name || txt("Repas", "Meal"),
         water_ml: n(waterMl, 0),
+        notes: notesWithNutritionSyncId("", rowSyncId),
         created_at: new Date().toISOString(),
       },
       item: grams > 0 ? {
@@ -300,31 +318,59 @@
       for (const row of rows) {
         try {
           const meal = row.meal || {};
-          const insertedMeal = await c.from(table("nutrition_meals")).insert({
-            user_id: userId,
-            travel_id: meal.travel_id || activeTravelId(),
-            meal_date: localDateISO(meal.meal_date) || selectedDateISO(),
-            meal_type: meal.meal_type || "meal",
-            label: meal.label || txt("Repas", "Meal"),
-            notes: meal.notes || null,
-            water_ml: n(meal.water_ml, 0),
-          }).select("id").single();
-          if (insertedMeal.error) throw insertedMeal.error;
+          const syncId = nutritionSyncId(row);
+          const mealNotes = notesWithNutritionSyncId(meal.notes, syncId);
+          const mealDate = localDateISO(meal.meal_date) || selectedDateISO();
+          let mealId = "";
+          if (syncId) {
+            const existingMeal = await c.from(table("nutrition_meals"))
+              .select("id")
+              .eq("user_id", userId)
+              .eq("meal_date", mealDate)
+              .eq("notes", mealNotes)
+              .maybeSingle();
+            if (existingMeal.error) throw existingMeal.error;
+            mealId = existingMeal.data?.id || "";
+          }
+          if (!mealId) {
+            const insertedMeal = await c.from(table("nutrition_meals")).insert({
+              user_id: userId,
+              travel_id: meal.travel_id || activeTravelId(),
+              meal_date: mealDate,
+              meal_type: meal.meal_type || "meal",
+              label: meal.label || txt("Repas", "Meal"),
+              notes: mealNotes,
+              water_ml: n(meal.water_ml, 0),
+            }).select("id").single();
+            if (insertedMeal.error) throw insertedMeal.error;
+            mealId = insertedMeal.data.id;
+          }
           if (row.item) {
             const item = row.item;
-            const insertedItem = await c.from(table("nutrition_meal_items")).insert({
-              user_id: userId,
-              meal_id: insertedMeal.data.id,
-              food_key: item.food_key || null,
-              label: item.label || meal.label || "Aliment",
-              grams: n(item.grams, 0),
-              kcal: n(item.kcal, 0),
-              protein_g: n(item.protein_g, 0),
-              carbs_g: n(item.carbs_g, 0),
-              fat_g: n(item.fat_g, 0),
-              fiber_g: n(item.fiber_g, 0),
-            });
-            if (insertedItem.error) throw insertedItem.error;
+            const existingItems = await c.from(table("nutrition_meal_items"))
+              .select("id")
+              .eq("user_id", userId)
+              .eq("meal_id", mealId)
+              .eq("label", item.label || meal.label || "Aliment")
+              .eq("grams", n(item.grams, 0))
+              .eq("kcal", n(item.kcal, 0))
+              .limit(1);
+            if (existingItems.error) throw existingItems.error;
+            if (!(existingItems.data || []).length) {
+              const insertedItem = await c.from(table("nutrition_meal_items")).insert({
+                user_id: userId,
+                meal_id: mealId,
+                food_key: item.food_key || null,
+                label: item.label || meal.label || "Aliment",
+                grams: n(item.grams, 0),
+                kcal: n(item.kcal, 0),
+                protein_g: n(item.protein_g, 0),
+                carbs_g: n(item.carbs_g, 0),
+                fat_g: n(item.fat_g, 0),
+                fiber_g: n(item.fiber_g, 0),
+              });
+              if (insertedItem.error) throw insertedItem.error;
+            }
           }
           synced += 1;
         } catch (e) {
@@ -1629,6 +1675,7 @@
     const nut = nutritionForGrams(food, grams);
     const waterMl = n(nut.waterMl, 0);
     const c = client();
+    const syncId = `nutrition_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     try {
       if (c && uid() && CACHE.editingItemId) {
         const existing = CACHE.items.find(item => String(item.id || "") === String(CACHE.editingItemId));
@@ -1661,6 +1708,7 @@
           meal_date: selectedDateISO(),
           meal_type: root.querySelector("#nutrition-type")?.value || "meal",
           label: food.name,
+          notes: notesWithNutritionSyncId("", syncId),
           water_ml: waterMl,
         }).select("id").single();
         if (meal.error) throw meal.error;
@@ -1692,7 +1740,7 @@
         CACHE.editingItemId = "";
       } else {
         const rows = loadLocalMeals();
-        rows.unshift(makeLocalNutritionRow({ food, grams, nut, waterMl, mealType: root.querySelector("#nutrition-type")?.value || "meal" }));
+        rows.unshift(makeLocalNutritionRow({ food, grams, nut, waterMl, mealType: root.querySelector("#nutrition-type")?.value || "meal", syncId }));
         saveLocalMeals(rows);
         enqueueNutritionSync();
       }
@@ -1705,7 +1753,7 @@
       CACHE.error = e?.message || String(e);
       if (!CACHE.editingItemId && isOfflineSkipError(e)) {
         const rows = loadLocalMeals();
-        rows.unshift(makeLocalNutritionRow({ food, grams, nut, waterMl, mealType: root.querySelector("#nutrition-type")?.value || "meal" }));
+        rows.unshift(makeLocalNutritionRow({ food, grams, nut, waterMl, mealType: root.querySelector("#nutrition-type")?.value || "meal", syncId }));
         saveLocalMeals(rows);
         enqueueNutritionSync();
         await loadNutrition({ force: true });
@@ -1716,6 +1764,7 @@
   async function saveWaterOnly(root) {
     const water = n(root.querySelector("#nutrition-water-ml")?.value, 0) || 250;
     const c = client();
+    const syncId = `nutrition_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     try {
       if (c && uid()) {
         const meal = await c.from(table("nutrition_meals")).insert({
@@ -1724,12 +1773,13 @@
           meal_date: selectedDateISO(),
           meal_type: root.querySelector("#nutrition-type")?.value || "meal",
           label: txt("Eau", "Water"),
+          notes: notesWithNutritionSyncId("", syncId),
           water_ml: water,
         });
         if (meal.error) throw meal.error;
       } else {
         const rows = loadLocalMeals();
-        rows.unshift(makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, mealType: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water") }));
+        rows.unshift(makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, mealType: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water"), syncId }));
         saveLocalMeals(rows);
         enqueueNutritionSync();
       }
@@ -1742,7 +1792,7 @@
       CACHE.error = e?.message || String(e);
       if (isOfflineSkipError(e)) {
         const rows = loadLocalMeals();
-        rows.unshift(makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, mealType: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water") }));
+        rows.unshift(makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, mealType: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water"), syncId }));
         saveLocalMeals(rows);
         enqueueNutritionSync();
         await loadNutrition({ force: true });
