@@ -1184,7 +1184,9 @@
     setVal("#sport-ex-name", exerciseLabel(ex));
     setVal("#sport-equipment", ex.equipment);
     setVal("#sport-mode", ex.mode);
-    setVal("#sport-reps", ex.mode === "reps" ? n(ex.reps, 0) : 0);
+    setVal("#sport-reps", ex.mode === "reps" ? n(ex.repMin || ex.reps, 0) : 0);
+    setVal("#sport-rep-min", ex.mode === "reps" ? n(ex.repMin || ex.reps, 0) : 0);
+    setVal("#sport-rep-max", ex.mode === "reps" ? n(ex.repMax || ex.repMin || ex.reps, 0) : 0);
     setVal("#sport-seconds", ex.mode === "time" ? n(ex.seconds, 45) : 45);
     setVal("#sport-sets", n(ex.sets, 1));
     setVal("#sport-rest", n(ex.rest, CACHE.globalRestSeconds || 60) || 60);
@@ -1242,6 +1244,7 @@
       if (el) el.style.display = visible ? "" : "none";
     };
     show("#sport-reps-wrap", !isTime);
+    show("#sport-rep-max-wrap", !isTime);
     show("#sport-seconds-wrap", isTime);
     show("#sport-simple-minutes-wrap", isTime);
     show("#sport-simple-distance-wrap", isTime);
@@ -1259,13 +1262,17 @@
     const exerciseName = String(root.querySelector("#sport-ex-name")?.value || (libraryEx ? exerciseLabel(libraryEx) : "") || existing?.exerciseName || (lang() === "en" ? a.en : a.fr)).trim();
     const defaultLoad = programLoadForExercise(exerciseName);
     const loadKg = n(root.querySelector("#sport-load")?.value, existing?.weightKg || defaultLoad.weightKg || 0);
+    const repMin = Math.max(0, Math.round(n(root.querySelector("#sport-rep-min")?.value ?? root.querySelector("#sport-reps")?.value, existing?.repMin || existing?.targetReps || 0)));
+    const repMax = Math.max(repMin, Math.round(n(root.querySelector("#sport-rep-max")?.value, existing?.repMax || repMin)));
     const item = Object.assign({}, existing || {}, {
       tmpId: existing?.tmpId || ("tmp_" + Date.now() + "_" + Math.random().toString(16).slice(2)),
       activityKey: a.key,
       exerciseName,
       equipment: String(root.querySelector("#sport-equipment")?.value || libraryEx?.equipment || (selectedEquipment && selectedEquipment !== "all" ? selectedEquipment : "") || existing?.equipment || a.equipment),
       mode,
-      targetReps: mode === "reps" ? n(root.querySelector("#sport-reps")?.value, existing?.targetReps || 0) : 0,
+      targetReps: mode === "reps" ? repMin : 0,
+      repMin: mode === "reps" ? repMin : 0,
+      repMax: mode === "reps" ? repMax : 0,
       targetSeconds: mode === "time" ? n(root.querySelector("#sport-seconds")?.value, existing?.targetSeconds || 0) : n(root.querySelector("#sport-seconds")?.value, 0),
       sets: Math.max(1, Math.round(n(root.querySelector("#sport-sets")?.value, existing?.sets || 1))),
       restSeconds: Math.max(0, Math.round(n(root.querySelector("#sport-rest")?.value, restSecondsForItem(existing || {})))),
@@ -1478,16 +1485,24 @@
       return Array.isArray(rows) ? rows.filter(row => row && row.id && Array.isArray(row.plan)) : [];
     } catch (_) { return []; }
   }
+  function saveCustomSessionFavorites(rows) {
+    try { localStorage.setItem(SESSION_FAVORITES_KEY(), JSON.stringify((rows || []).slice(0, 30))); } catch (_) {}
+  }
   function sessionFavoriteRows() {
     const defaults = defaultSessionFavorites();
     const sqlRows = Array.isArray(CACHE.sqlSessionFavorites) ? CACHE.sqlSessionFavorites : [];
     const custom = loadCustomSessionFavorites();
+    const customById = new Map(custom.map(row => [String(row.id || ""), row]));
     if (sqlRows.length) {
       const sqlIds = new Set(sqlRows.map(row => String(row.id || "")));
-      return sqlRows.concat(custom.filter(row => !sqlIds.has(String(row.id || "")))).slice(0, 30);
+      return sqlRows.map(row => customById.get(String(row.id || "")) || row)
+        .concat(custom.filter(row => !sqlIds.has(String(row.id || ""))))
+        .slice(0, 30);
     }
     const ids = new Set(defaults.map(row => row.id));
-    return defaults.concat(custom.filter(row => !ids.has(row.id))).slice(0, 30);
+    return defaults.map(row => customById.get(String(row.id || "")) || row)
+      .concat(custom.filter(row => !ids.has(row.id)))
+      .slice(0, 30);
   }
   function clonePlan(plan) {
     return (plan || []).map(item => Object.assign({}, item, { tmpId: "tmp_" + Date.now() + "_" + Math.random().toString(16).slice(2) }));
@@ -1505,6 +1520,39 @@
     savePlan();
     sportFeedback(txt("Seance favorite chargee", "Favorite workout loaded"), fav.name, { toast: true });
     return true;
+  }
+  function beginEditSessionFavorite(id) {
+    if (!loadSessionFavorite(id)) return false;
+    const fav = sessionFavoriteRows().find(row => String(row.id) === String(id));
+    CACHE.editingSessionFavoriteId = String(id || "");
+    CACHE.editingSessionFavoriteName = fav?.name || "";
+    CACHE.editingPlanIndex = null;
+    sportFeedback(txt("Seance prete a modifier", "Workout ready to edit"), fav?.name || "", { toast: true });
+    return true;
+  }
+  function saveEditingSessionFavorite() {
+    const id = String(CACHE.editingSessionFavoriteId || "").trim();
+    if (!id || !CACHE.plan?.length) return false;
+    const existing = sessionFavoriteRows().find(row => String(row.id || "") === id) || {};
+    const custom = loadCustomSessionFavorites().filter(row => String(row.id || "") !== id);
+    custom.unshift(Object.assign({}, existing, {
+      id,
+      name: CACHE.editingSessionFavoriteName || existing.name || txt("Seance personnalisee", "Custom workout"),
+      plan: clonePlan(CACHE.plan),
+      source: "custom",
+      updatedAt: new Date().toISOString(),
+    }));
+    saveCustomSessionFavorites(custom);
+    CACHE.editingSessionFavoriteId = "";
+    CACHE.editingSessionFavoriteName = "";
+    sportFeedback(txt("Seance favorite mise a jour", "Favorite workout updated"), existing.name || "", { toast: true });
+    return true;
+  }
+  function resetSessionFavoriteOverride(id) {
+    const before = loadCustomSessionFavorites();
+    const next = before.filter(row => String(row.id || "") !== String(id || ""));
+    saveCustomSessionFavorites(next);
+    return before.length !== next.length;
   }
   function loadSportProgram() {
     try {
@@ -1661,6 +1709,8 @@
     return selected || parts[0] || "";
   }
   function currentProgramWeek(program) {
+    const cycle = String(program?.cycle || "").toUpperCase();
+    if (cycle === "A" || cycle === "B") return cycle;
     const monday = mondayOfWeekISO(todayISO());
     const start = mondayOfWeekISO(program?.startDate || program?.start_date || todayISO());
     const diffWeeks = Math.max(0, Math.floor(daysBetweenISO(start, monday) / 7));
@@ -1707,6 +1757,38 @@
       </div>
     </div>`;
   }
+  function programDayOptions(value) {
+    const current = String(value || "");
+    const options = [
+      ["", txt("Repos", "Rest")],
+      ["A1/B1", "A1 / B1"],
+      ["A2/B2", "A2 / B2"],
+      ["A3/B3", "A3 / B3"],
+      ["A1", "A1"],
+      ["A2", "A2"],
+      ["A3", "A3"],
+      ["B1", "B1"],
+      ["B2", "B2"],
+      ["B3", "B3"],
+    ];
+    return options.map(row => `<option value="${esc(row[0])}" ${row[0] === current ? "selected" : ""}>${esc(row[1])}</option>`).join("");
+  }
+  function renderProgramSettings(program) {
+    const p = Object.assign({ enabled: false, startDate: nextMondayISO(todayISO()), cycle: "A/B", days: { 1: "A1/B1", 3: "A2/B2", 5: "A3/B3" } }, program || {});
+    const dayLabels = [txt("Lun", "Mon"), txt("Mar", "Tue"), txt("Mer", "Wed"), txt("Jeu", "Thu"), txt("Ven", "Fri"), txt("Sam", "Sat"), txt("Dim", "Sun")];
+    return `<details class="tb-sport-advanced" style="margin:10px 0;" ${p.enabled ? "open" : ""}>
+      <summary>${esc(txt("Regler planning et recurrence", "Configure planning and recurrence"))}</summary>
+      <div class="tb-sport-fields" style="margin-top:10px;">
+        <div class="tb-sport-field"><label>${esc(txt("Actif", "Active"))}</label><select id="sport-program-enabled"><option value="on" ${p.enabled ? "selected" : ""}>${esc(txt("Actif", "Active"))}</option><option value="off" ${!p.enabled ? "selected" : ""}>${esc(txt("Pause", "Paused"))}</option></select></div>
+        <div class="tb-sport-field"><label>${esc(txt("Debut cycle", "Cycle start"))}</label><input id="sport-program-start" type="date" value="${esc(String(p.startDate || p.start_date || todayISO()).slice(0, 10))}"></div>
+        <div class="tb-sport-field"><label>${esc(txt("Cycle", "Cycle"))}</label><select id="sport-program-cycle"><option value="A/B" ${String(p.cycle || "A/B") === "A/B" ? "selected" : ""}>A/B</option><option value="A" ${String(p.cycle || "") === "A" ? "selected" : ""}>${esc(txt("Semaine A fixe", "Fixed week A"))}</option><option value="B" ${String(p.cycle || "") === "B" ? "selected" : ""}>${esc(txt("Semaine B fixe", "Fixed week B"))}</option></select></div>
+        ${dayLabels.map((label, idx) => `<div class="tb-sport-field"><label>${esc(label)}</label><select data-sport-program-day="${idx + 1}">${programDayOptions(p.days?.[idx + 1])}</select></div>`).join("")}
+      </div>
+      <div class="tb-sport-actions" style="margin-top:10px;">
+        <button class="btn small" type="button" id="sport-program-reset">${esc(txt("Planning A/B par defaut", "Default A/B planning"))}</button>
+      </div>
+    </details>`;
+  }
   function renderSessionFavorites() {
     const rows = sessionFavoriteRows();
     const program = CACHE.program || loadSportProgram();
@@ -1720,11 +1802,20 @@
         <button class="btn" type="button" id="sport-activate-mass-program">${program.enabled ? esc(txt("Planning actif", "Program active")) : esc(txt("Activer planning", "Activate program"))}</button>
       </div>
       ${renderPlannedSportWeek(rows, program)}
+      ${renderProgramSettings(program)}
       <div class="tb-sport-library-grid">
-        ${rows.map(row => `<button class="btn" type="button" data-sport-load-session-favorite="${esc(row.id)}" style="display:block;text-align:left;">
-          <strong>${esc(row.name)}</strong><br>
-          <small class="muted">${esc(row.week ? `${txt("Semaine", "Week")} ${row.week} · ` : "")}${esc((row.days || []).join(", "))} · ${row.plan.length} ${esc(txt("exercices", "exercises"))}</small>
-        </button>`).join("")}
+        ${rows.map(row => {
+          const custom = loadCustomSessionFavorites().some(customRow => String(customRow.id || "") === String(row.id || ""));
+          return `<div class="btn" style="display:grid;text-align:left;gap:8px;">
+            <div><strong>${esc(row.name)}</strong><br>
+            <small class="muted">${esc(row.week ? `${txt("Semaine", "Week")} ${row.week} · ` : "")}${esc((row.days || []).join(", "))} · ${row.plan.length} ${esc(txt("exercices", "exercises"))}${custom ? ` · ${esc(txt("modifiee", "customized"))}` : ""}</small></div>
+            <div class="tb-sport-actions">
+              <button class="btn small primary" type="button" data-sport-load-session-favorite="${esc(row.id)}">${esc(txt("Charger", "Load"))}</button>
+              <button class="btn small" type="button" data-sport-edit-session-favorite="${esc(row.id)}">${esc(txt("Modifier", "Edit"))}</button>
+              ${custom ? `<button class="btn small" type="button" data-sport-reset-session-favorite="${esc(row.id)}">${esc(txt("Reset", "Reset"))}</button>` : ""}
+            </div>
+          </div>`;
+        }).join("")}
       </div>
       <div class="muted" style="font-size:12px;margin-top:8px;">${esc(txt("Progression : chaque exercice utilise sa propre plage de reps. Exemple 6-10, 10-15 ou 12-20.", "Progression: each exercise uses its own rep range, e.g. 6-10, 10-15 or 12-20."))}</div>
     </div>`;
@@ -2079,7 +2170,8 @@
     const manualName = editing?.exerciseName || exerciseLabel(baseExercise) || "Push-up";
     const manualLoad = editing ? { weightKg: n(editing.weightKg, 0), loadLabel: editing.loadLabel || "" } : programLoadForExercise(manualName);
     const manualRest = editing ? restSecondsForItem(editing) : n(CACHE.globalRestSeconds, 60);
-    const manualReps = n(editing?.targetReps, baseExercise?.reps || 10);
+    const manualRepMin = n(editing?.repMin ?? editing?.targetReps, baseExercise?.repMin || baseExercise?.reps || 10);
+    const manualRepMax = Math.max(manualRepMin, n(editing?.repMax, baseExercise?.repMax || manualRepMin));
     const manualSeconds = n(editing?.targetSeconds, baseExercise?.seconds || 45);
     const manualSets = n(editing?.sets, baseExercise?.sets || 3);
     const circuit = CACHE.circuit || { enabled: false, rounds: 4, roundRestSeconds: 60, amrapMinutes: 0 };
@@ -2099,6 +2191,7 @@
           </div>
         </div>
         ${editing ? `<div class="tb-sport-status" style="margin-bottom:10px;">${esc(txt(`Edition de l'exercice ${editIdx + 1}`, `Editing exercise ${editIdx + 1}`))}</div>` : ""}
+        ${CACHE.editingSessionFavoriteId ? `<div class="tb-sport-status" style="margin-bottom:10px;">${esc(txt("Edition de seance favorite", "Editing favorite workout"))}: ${esc(CACHE.editingSessionFavoriteName || "")}</div>` : ""}
         <div class="tb-sport-simple">
           <div class="tb-sport-simple-title">
             <div>
@@ -2125,7 +2218,8 @@
             <input id="sport-activity" type="hidden" value="${esc(manualActivity)}">
             <input id="sport-equipment" type="hidden" value="${esc(manualEquipment)}">
             <div class="tb-sport-field"><label>${esc(txt("Mode", "Mode"))}</label><select id="sport-mode"><option value="reps" ${manualMode === "reps" ? "selected" : ""}>${esc(txt("Repetitions", "Reps"))}</option><option value="time" ${manualMode === "time" ? "selected" : ""}>${esc(txt("Temps", "Time"))}</option></select></div>
-            <div class="tb-sport-field" id="sport-reps-wrap"><label>${esc(txt("Repetitions", "Reps"))}</label><input id="sport-reps" type="number" min="1" value="${esc(String(manualReps || 10))}"></div>
+            <div class="tb-sport-field" id="sport-reps-wrap"><label>${esc(txt("Reps min", "Min reps"))}</label><input id="sport-rep-min" type="number" min="1" value="${esc(String(manualRepMin || 10))}"><input id="sport-reps" type="hidden" value="${esc(String(manualRepMin || 10))}"></div>
+            <div class="tb-sport-field" id="sport-rep-max-wrap"><label>${esc(txt("Reps max", "Max reps"))}</label><input id="sport-rep-max" type="number" min="1" value="${esc(String(manualRepMax || manualRepMin || 10))}"></div>
             <div class="tb-sport-field" id="sport-seconds-wrap"><label>${esc(txt("Temps exercice sec", "Exercise time sec"))}</label><input id="sport-seconds" type="number" min="1" value="${esc(String(manualSeconds || 45))}"></div>
             <div class="tb-sport-field"><label>${esc(txt("Series", "Sets"))}</label><input id="sport-sets" type="number" min="1" value="${esc(String(manualSets || 3))}"></div>
             <div class="tb-sport-field"><label>${esc(txt("Repos apres serie sec", "Rest after set sec"))}</label><input id="sport-rest" type="number" min="0" value="${esc(String(manualRest || 60))}"></div>
@@ -2137,6 +2231,7 @@
           <div class="tb-sport-actions" style="margin-top:12px;">
             <button class="btn primary" type="button" id="sport-add-item">${editing ? esc(txt("Mettre a jour", "Update")) : `+ ${esc(txt("Ajouter l'exercice", "Add exercise"))}`}</button>
             ${editing ? `<button class="btn" type="button" id="sport-cancel-edit">${esc(txt("Annuler", "Cancel"))}</button>` : ""}
+            ${CACHE.editingSessionFavoriteId ? `<button class="btn" type="button" id="sport-save-session-favorite">${esc(txt("Enregistrer la seance parametree", "Save configured workout"))}</button><button class="btn" type="button" id="sport-cancel-session-favorite-edit">${esc(txt("Quitter edition seance", "Exit workout edit"))}</button>` : ""}
             <button class="btn" type="button" id="sport-clear">${esc(txt("Vider", "Clear"))}</button>
           </div>
         </div>
@@ -2178,7 +2273,7 @@
             <span class="tb-sport-chip">${esc(labelActivity(item.activityKey))}</span>
             <span class="tb-sport-chip">${esc(labelEquipment(item.equipment))}</span>
             ${supportsExternalLoad(item) && n(item.weightKg, 0) ? `<span class="tb-sport-chip">${Math.round(n(item.weightKg, 0) * 10) / 10} kg${item.loadLabel ? ` · ${esc(item.loadLabel)}` : ""}</span>` : item.loadLabel ? `<span class="tb-sport-chip">${esc(item.loadLabel)}</span>` : ""}
-            <span class="tb-sport-chip">${item.mode === "time" ? `${n(item.targetSeconds,0)} sec` : `${n(item.targetReps,0)} reps`}</span>
+            <span class="tb-sport-chip">${item.mode === "time" ? `${n(item.targetSeconds,0)} sec` : (range && range.max > range.min ? `${range.min}-${range.max} reps` : `${n(item.targetReps,0)} reps`)}</span>
             ${range && range.max > range.min ? `<span class="tb-sport-chip">${esc(txt("Progression", "Progression"))} ${range.min}-${range.max}</span>` : ""}
             ${timeRange ? `<span class="tb-sport-chip">${esc(txt("Cible", "Target"))} ${esc(timeRange)}</span>` : ""}
             <span class="tb-sport-chip">${n(item.sets,1)} ${esc(txt("series", "sets"))}</span>
@@ -2284,6 +2379,36 @@
     const next = timer.sequence[timer.index + 1];
     return next ? stepLabel(next) : txt("Fin de seance", "End of workout");
   }
+  function repRangeText(item) {
+    const range = progressionRepRange(item);
+    if (range && range.max > range.min) return `${range.min}-${range.max} reps`;
+    return `${Math.max(0, Math.round(n(item?.targetReps, 0)))} reps`;
+  }
+  function stepLoadText(step, timer) {
+    if (!step?.item || !supportsExternalLoad(step.item)) return "";
+    const kg = step === currentTimerStep()
+      ? n(timer?.stepLoadKg, lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer?.bodyWeightKg || bodyWeight())))
+      : lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer?.bodyWeightKg || bodyWeight()));
+    const label = step.item?.loadLabel ? ` · ${step.item.loadLabel}` : "";
+    return `${Math.round(kg * 10) / 10} kg${label}`;
+  }
+  function stepTargetText(step, timer) {
+    if (!step?.item) return "";
+    if (step.kind !== "work") return step.duration ? fmtSec(step.duration) : "";
+    if (step.item.mode === "time") return fmtSec(step.item.targetSeconds || step.duration || 0);
+    return repRangeText(step.item);
+  }
+  function stepPreviewText(step, timer) {
+    if (!step) return txt("Fin de seance", "End of workout");
+    if (step.kind !== "work") return `${stepLabel(step)}${step.duration ? ` · ${fmtSec(step.duration)}` : ""}`;
+    return [stepLabel(step), stepLoadText(step, timer), stepTargetText(step, timer)].filter(Boolean).join(" · ");
+  }
+  function nextStepPreview() {
+    const timer = CACHE.timer;
+    if (!timer) return "";
+    const next = timer.sequence[timer.index + 1];
+    return stepPreviewText(next, timer);
+  }
   function renderTimerTimeline(timer) {
     const seq = timer?.sequence || [];
     const start = Math.max(0, n(timer?.index, 0) - 1);
@@ -2298,6 +2423,7 @@
       return `<div class="tb-sport-time-step ${active ? "active" : ""}">
         <small>${esc(kind)} ${esc(detail)}</small>
         <b>${esc(stepLabel(row))}</b>
+        ${row.kind === "work" ? `<small>${esc([stepLoadText(row, timer), stepTargetText(row, timer)].filter(Boolean).join(" · "))}</small>` : ""}
       </div>`;
     }).join("");
   }
@@ -2305,7 +2431,9 @@
     if (!step?.item) return "-";
     if (step.kind !== "work") return step.duration ? fmtSec(step.duration) : "-";
     if (step.item.mode === "time") return fmtSec(step.item.targetSeconds || step.duration || 0);
-    return `${Math.max(0, Math.round(n(timer?.stepReps ?? step.item.targetReps, 0)))} reps`;
+    const current = Math.max(0, Math.round(n(timer?.stepReps ?? step.item.targetReps, 0)));
+    const range = repRangeText(step.item);
+    return range.includes("-") ? `${current} vise ${range}` : `${current} reps`;
   }
 
   function renderTimer() {
@@ -2350,7 +2478,7 @@
             </div>
             <div class="tb-sport-actions" style="justify-content:flex-end;">
               <button class="btn small" type="button" id="sport-timer-focus">${esc(CACHE.timerFocus ? txt("Reduire", "Exit focus") : txt("Grand ecran", "Big screen"))}</button>
-              ${amrap ? `<div class="tb-sport-next">${esc(txt("AMRAP", "AMRAP"))}: ${fmtSec(amrapRemaining)} · ${esc(txt("Tours", "Rounds"))}: ${n(timer.roundsCompleted, 0)}</div>` : `<div class="tb-sport-next">${esc(txt("Ensuite", "Next"))}: ${esc(nextStepLabel())}</div>`}
+              ${amrap ? `<div class="tb-sport-next">${esc(txt("AMRAP", "AMRAP"))}: ${fmtSec(amrapRemaining)} · ${esc(txt("Tours", "Rounds"))}: ${n(timer.roundsCompleted, 0)}</div>` : `<div class="tb-sport-next">${esc(txt("Ensuite", "Next"))}: ${esc(nextStepPreview())}</div>`}
             </div>
           </div>
           <div class="tb-sport-live-main">
@@ -2362,7 +2490,7 @@
             <div class="tb-sport-live-panel">
               <div class="tb-sport-live-grid">
                 <div class="tb-sport-live-kpi"><span>${esc(txt("Serie", "Set"))}</span><strong>${step?.setIndex || "-"}${step?.item?.sets ? ` / ${Math.max(n(step.item.sets, 1), n(step.setIndex, 1))}` : ""}</strong></div>
-                <div class="tb-sport-live-kpi"><span>${esc(txt("Prochaine", "Next"))}</span><strong>${esc(nextStepLabel())}</strong></div>
+                <div class="tb-sport-live-kpi"><span>${esc(txt("Prochaine", "Next"))}</span><strong>${esc(nextStepPreview())}</strong></div>
                 <div class="tb-sport-live-kpi"><span>${esc(txt("Charge", "Load"))}</span><strong>${esc(loadText)}</strong></div>
                 <div class="tb-sport-live-kpi"><span>${esc(txt("Fait", "Done"))}</span><strong>${workDone} ${esc(txt("series", "sets"))}</strong></div>
               </div>
@@ -2687,6 +2815,13 @@
     if (simpleFormat) simpleFormat.onchange = () => syncSimpleFields(root);
     const modeSelect = root.querySelector("#sport-mode");
     if (modeSelect) modeSelect.onchange = () => syncSimpleFields(root);
+    const repMinInput = root.querySelector("#sport-rep-min");
+    if (repMinInput) repMinInput.oninput = () => {
+      const compat = root.querySelector("#sport-reps");
+      if (compat) compat.value = repMinInput.value || "0";
+      const maxInput = root.querySelector("#sport-rep-max");
+      if (maxInput && n(maxInput.value, 0) < n(repMinInput.value, 0)) maxInput.value = repMinInput.value || "0";
+    };
     syncSimpleFields(root);
     const globalRest = root.querySelector("#sport-global-rest");
     if (globalRest) globalRest.onchange = () => {
@@ -2802,10 +2937,57 @@
         if (loadSessionFavorite(btn.getAttribute("data-sport-load-session-favorite"))) renderSport("session-favorite");
       };
     });
+    root.querySelectorAll("[data-sport-edit-session-favorite]").forEach(btn => {
+      btn.onclick = () => {
+        if (beginEditSessionFavorite(btn.getAttribute("data-sport-edit-session-favorite"))) renderSport("session-favorite-edit");
+      };
+    });
+    root.querySelectorAll("[data-sport-reset-session-favorite]").forEach(btn => {
+      btn.onclick = () => {
+        resetSessionFavoriteOverride(btn.getAttribute("data-sport-reset-session-favorite"));
+        renderSport("session-favorite-reset");
+      };
+    });
+    const saveSessionFavorite = root.querySelector("#sport-save-session-favorite");
+    if (saveSessionFavorite) saveSessionFavorite.onclick = () => {
+      if (saveEditingSessionFavorite()) renderSport("session-favorite-save");
+    };
+    const cancelSessionFavoriteEdit = root.querySelector("#sport-cancel-session-favorite-edit");
+    if (cancelSessionFavoriteEdit) cancelSessionFavoriteEdit.onclick = () => {
+      CACHE.editingSessionFavoriteId = "";
+      CACHE.editingSessionFavoriteName = "";
+      renderSport("session-favorite-cancel");
+    };
     const activateProgram = root.querySelector("#sport-activate-mass-program");
     if (activateProgram) activateProgram.onclick = () => {
       activateMassProgram();
       renderSport("program-activate");
+    };
+    const saveProgramFromForm = () => {
+      const days = {};
+      root.querySelectorAll("[data-sport-program-day]").forEach(select => {
+        const key = Number(select.getAttribute("data-sport-program-day"));
+        if (select.value) days[key] = select.value;
+      });
+      CACHE.program = saveSportProgram({
+        enabled: root.querySelector("#sport-program-enabled")?.value !== "off",
+        startDate: root.querySelector("#sport-program-start")?.value || nextMondayISO(todayISO()),
+        cycle: root.querySelector("#sport-program-cycle")?.value || "A/B",
+        days,
+      });
+      renderSport("program-settings");
+    };
+    ["#sport-program-enabled", "#sport-program-start", "#sport-program-cycle"].forEach(selector => {
+      const el = root.querySelector(selector);
+      if (el) el.onchange = saveProgramFromForm;
+    });
+    root.querySelectorAll("[data-sport-program-day]").forEach(select => {
+      select.onchange = saveProgramFromForm;
+    });
+    const programReset = root.querySelector("#sport-program-reset");
+    if (programReset) programReset.onclick = () => {
+      activateMassProgram();
+      renderSport("program-reset");
     };
     root.querySelectorAll("[data-sport-quick]").forEach(btn => {
       btn.onclick = () => {
@@ -2823,7 +3005,14 @@
       };
     });
     const clear = root.querySelector("#sport-clear");
-    if (clear) clear.onclick = () => { CACHE.plan = []; CACHE.editingPlanIndex = null; savePlan(); renderSport("clear"); };
+    if (clear) clear.onclick = () => {
+      CACHE.plan = [];
+      CACHE.editingPlanIndex = null;
+      CACHE.editingSessionFavoriteId = "";
+      CACHE.editingSessionFavoriteName = "";
+      savePlan();
+      renderSport("clear");
+    };
     root.querySelectorAll("[data-sport-edit]").forEach(btn => {
       btn.onclick = () => {
         const idx = Number(btn.getAttribute("data-sport-edit"));

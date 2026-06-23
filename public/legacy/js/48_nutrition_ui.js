@@ -3,7 +3,7 @@
    - Food library, quick meals, kcal/macros, hydration
    ========================= */
 (function () {
-  const CACHE = { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], error: "", foodQuery: "", foodCategory: "all", selectedDate: "", expandedHistory: "", editingItemId: "" };
+  const CACHE = { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], error: "", syncStatus: "", foodQuery: "", foodCategory: "all", selectedDate: "", expandedHistory: "", editingItemId: "" };
   const FALLBACK_FOODS = [
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
@@ -270,6 +270,67 @@
   function saveLocalMeals(rows) {
     try { localStorage.setItem(localMealKey(), JSON.stringify((rows || []).slice(0, 200))); } catch (_) {}
   }
+  function localNutritionRowKey(row, index) {
+    const raw = String(row?.syncId || row?.meal?.sync_id || row?.meal?.id || row?.item?.id || "").trim();
+    return raw || `idx_${Math.max(0, n(index, 0))}`;
+  }
+  function discardNutritionQueue() {
+    try { if (typeof window.tbOfflineQueueDiscardKind === "function") window.tbOfflineQueueDiscardKind("nutrition.sync_local"); } catch (_) {}
+    try { if (typeof window.tbOfflineQueueDiscardFailed === "function") window.tbOfflineQueueDiscardFailed("nutrition.sync_local"); } catch (_) {}
+  }
+  function discardLocalNutritionRow(key) {
+    const wanted = String(key || "");
+    const rows = loadLocalMeals();
+    const next = rows.filter((row, index) => localNutritionRowKey(row, index) !== wanted);
+    saveLocalMeals(next);
+    if (!next.length) discardNutritionQueue();
+    return rows.length - next.length;
+  }
+  function discardAllLocalNutritionRows() {
+    const count = loadLocalMeals().length;
+    saveLocalMeals([]);
+    discardNutritionQueue();
+    CACHE.syncStatus = count ? txt("Attentes nutrition supprimees.", "Nutrition pending entries removed.") : "";
+    return count;
+  }
+  function renderNutritionSyncPanel() {
+    const rows = loadLocalMeals();
+    if (!rows.length) return "";
+    const globalPending = (() => {
+      try {
+        return typeof window.tbOfflineQueuePending === "function"
+          ? window.tbOfflineQueuePending().filter(item => String(item?.kind || "") === "nutrition.sync_local")
+          : [];
+      } catch (_) { return []; }
+    })();
+    return `<div style="margin-top:12px;border:1px solid rgba(245,158,11,.38);border-radius:12px;padding:12px;background:linear-gradient(135deg,rgba(245,158,11,.14),rgba(56,189,248,.06)),var(--panel2);">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+        <div>
+          <strong>${esc(txt("Synchro alimentation en attente", "Pending nutrition sync"))}</strong>
+          <div class="muted" style="font-size:12px;margin-top:3px;">${rows.length} ${esc(txt("ajout(s) local(aux)", "local entry/entries"))}${globalPending.length ? ` · ${globalPending.length} ${esc(txt("action(s) file offline", "offline queue action(s)"))}` : ""}${CACHE.syncStatus ? ` · ${esc(CACHE.syncStatus)}` : ""}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn small primary" type="button" id="nutrition-sync-pending">${esc(txt("Synchroniser", "Sync"))}</button>
+          <button class="btn small danger" type="button" id="nutrition-clear-pending">${esc(txt("Vider", "Clear"))}</button>
+        </div>
+      </div>
+      <div style="display:grid;gap:6px;margin-top:10px;">
+        ${rows.slice(0, 8).map((row, index) => {
+          const meal = row.meal || {};
+          const item = row.item || {};
+          const key = localNutritionRowKey(row, index);
+          const label = item.label || meal.label || txt("Ajout nutrition", "Nutrition entry");
+          const amount = n(item.kcal, 0) > 0 ? `${Math.round(n(item.kcal, 0))} kcal` : `${Math.round(n(meal.water_ml, 0))} ml`;
+          const meta = `${localDateISO(meal.meal_date) || selectedDateISO()} · ${mealTypeLabel(meal.meal_type || "meal")} · ${amount}`;
+          return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;border-top:1px solid rgba(148,163,184,.22);padding-top:6px;">
+            <span><strong>${esc(label)}</strong><br><small class="muted">${esc(meta)}${row.syncError ? ` · ${esc(row.syncError)}` : ""}</small></span>
+            <button class="btn small" type="button" data-nutrition-discard-local="${esc(key)}">${esc(txt("Supprimer", "Delete"))}</button>
+          </div>`;
+        }).join("")}
+        ${rows.length > 8 ? `<div class="muted" style="font-size:12px;">+${rows.length - 8} ${esc(txt("autre(s) attente(s)", "other pending entry/entries"))}</div>` : ""}
+      </div>
+    </div>`;
+  }
   function isOfflineSkipError(err) {
     return /offline mode|supabase request skipped|failed to fetch|network/i.test(String(err?.message || err || ""));
   }
@@ -338,7 +399,10 @@
     const offline = (typeof window.tbShouldUseOfflineMode === "function")
       ? await window.tbShouldUseOfflineMode(`nutrition:sync:${reason || "manual"}`)
       : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
-    if (offline) return 0;
+    if (offline) {
+      CACHE.syncStatus = txt("Hors ligne, attente conservee.", "Offline, pending entries kept.");
+      return 0;
+    }
     CACHE.syncingLocal = true;
     const remaining = [];
     let synced = 0;
@@ -402,11 +466,20 @@
           }
           synced += 1;
         } catch (e) {
-          remaining.push(row);
-          if (!isOfflineSkipError(e)) console.warn("[nutrition] local sync failed", e?.message || e);
+          const msg = e?.message || String(e);
+          remaining.push(Object.assign({}, row, {
+            syncError: msg,
+            syncAttempts: Math.max(0, n(row.syncAttempts, 0)) + 1,
+            syncUpdatedAt: new Date().toISOString(),
+          }));
+          if (!isOfflineSkipError(e)) console.warn("[nutrition] local sync failed", msg);
         }
       }
       saveLocalMeals(remaining);
+      CACHE.syncStatus = remaining.length
+        ? txt(`${synced} synchronise(s), ${remaining.length} encore en attente.`, `${synced} synced, ${remaining.length} still pending.`)
+        : (synced ? txt(`${synced} ajout(s) synchronise(s).`, `${synced} entry/entries synced.`) : "");
+      if (!remaining.length) discardNutritionQueue();
       return synced;
     } finally {
       CACHE.syncingLocal = false;
@@ -1456,6 +1529,7 @@
             <button class="btn" type="button" id="nutrition-refresh">${esc(txt("Rafraichir", "Refresh"))}</button>
           </div>
         </div>
+        ${renderNutritionSyncPanel()}
         <div class="tb-nutrition-top" style="margin-top:14px;">
           <div style="border:1px solid var(--border);border-radius:8px;padding:14px;background:linear-gradient(145deg,rgba(34,197,94,.10),rgba(56,189,248,.08)),var(--panel2);display:grid;place-items:center;">
             <div style="width:min(210px,72vw);aspect-ratio:1;border-radius:50%;background:conic-gradient(${kcalRingColor} ${kcalPct}%, rgba(148,163,184,.18) 0);display:grid;place-items:center;box-shadow:0 18px 44px rgba(15,23,42,.18);">
@@ -1724,6 +1798,26 @@
     });
     const refresh = root.querySelector("#nutrition-refresh");
     if (refresh) refresh.onclick = async () => { await loadNutrition({ force: true }); renderNutrition("refresh"); };
+    const syncPending = root.querySelector("#nutrition-sync-pending");
+    if (syncPending) syncPending.onclick = async () => {
+      syncPending.disabled = true;
+      await syncLocalNutritionRows("manual");
+      await loadNutrition({ force: true });
+      renderNutrition("sync-pending");
+    };
+    const clearPending = root.querySelector("#nutrition-clear-pending");
+    if (clearPending) clearPending.onclick = async () => {
+      discardAllLocalNutritionRows();
+      await loadNutrition({ force: true });
+      renderNutrition("clear-pending");
+    };
+    root.querySelectorAll("[data-nutrition-discard-local]").forEach(btn => {
+      btn.onclick = async () => {
+        discardLocalNutritionRow(btn.getAttribute("data-nutrition-discard-local"));
+        await loadNutrition({ force: true });
+        renderNutrition("discard-local");
+      };
+    });
     const goalMode = root.querySelector("#nutrition-goal-mode");
     if (goalMode) goalMode.onchange = () => {
       saveNutritionGoal({ mode: goalMode.value || "maintenance" });
@@ -2042,6 +2136,7 @@
   try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadNutrition(); } catch (_) {} }); } catch (_) {}
   try { window.addEventListener("tb:offline_state_changed", (ev) => { if (ev?.detail?.offline === false) syncLocalNutritionRows("online").then(() => loadNutrition({ force: true })).catch(() => {}); }); } catch (_) {}
   window.tbNutritionSyncLocal = syncLocalNutritionRows;
+  window.tbNutritionDiscardPending = discardAllLocalNutritionRows;
   setTimeout(() => { try { if (uid()) loadNutrition().catch(() => {}); } catch (_) {} }, 450);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ensureNutritionShell);
   else ensureNutritionShell();

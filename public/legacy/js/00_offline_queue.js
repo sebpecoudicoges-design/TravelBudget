@@ -127,7 +127,7 @@
   }
 
   function singletonKind(kind) {
-    return String(kind || "") === "sport.sync_local";
+    return ["sport.sync_local", "nutrition.sync_local"].includes(String(kind || ""));
   }
 
   function cleanupOptimisticRows(queueId) {
@@ -288,6 +288,24 @@
     return removed;
   }
 
+  function discardKind(filterKind) {
+    const kind = String(filterKind || "").trim();
+    if (!kind) return [];
+    const before = safeRead();
+    const removed = [];
+    const next = before.filter((item) => {
+      const match = item && (String(item.kind || "") === kind || String(item.kind || "").startsWith(kind));
+      if (match) {
+        removed.push(item);
+        cleanupItemSideEffects(item);
+        return false;
+      }
+      return true;
+    });
+    if (removed.length) safeWrite(next);
+    return removed;
+  }
+
   function discardTripConflicts(options) {
     const opts = options || {};
     const before = safeRead();
@@ -347,6 +365,12 @@
     if (item.kind === "sport.sync_local") {
       if (typeof window.tbSportSyncLocalWorkouts === "function") {
         await window.tbSportSyncLocalWorkouts();
+      }
+      return true;
+    }
+    if (item.kind === "nutrition.sync_local") {
+      if (typeof window.tbNutritionSyncLocal === "function") {
+        await window.tbNutritionSyncLocal("offline-queue");
       }
       return true;
     }
@@ -429,7 +453,9 @@
   window.tbOfflineQueueSync = sync;
   window.tbOfflineQueueCount = count;
   window.tbOfflineQueuePending = pending;
+  window.tbOfflineQueueRemove = remove;
   window.tbOfflineQueueDiscardFailed = discardFailed;
+  window.tbOfflineQueueDiscardKind = discardKind;
   window.tbOfflineQueueDiscardTripConflicts = discardTripConflicts;
   window.tbOfflineQueueCleanupOptimistic = cleanupOptimisticRows;
 
