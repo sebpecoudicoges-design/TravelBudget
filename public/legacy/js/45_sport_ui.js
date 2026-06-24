@@ -16,6 +16,7 @@
   const SESSION_FAVORITES_KEY = () => scopedKey("travelbudget_sport_session_favorites_v1");
   const SPORT_PROGRAM_KEY = () => scopedKey("travelbudget_sport_program_v1");
   const TIMER_PREF_KEY = () => scopedKey("travelbudget_sport_timer_prefs_v1");
+  const BODY_MEASUREMENTS_KEY = () => scopedKey("travelbudget_health_body_measurements_v1");
   const HISTORY_KEY = () => scopedKey(baseHistoryKey());
   const ANON_HISTORY_KEY = () => `${baseHistoryKey()}::anon`;
   const EXERCISE_FAVORITES_KEY = () => scopedKey("travelbudget_sport_exercise_favorites_v1");
@@ -319,6 +320,10 @@
     programSource: "fallback",
     editingPlanIndex: null,
     sessionEditor: null,
+    bodyMeasurements: loadBodyMeasurementsLocal(),
+    bodyMeasurementEditor: null,
+    bodyMeasurementsLoading: false,
+    bodyMeasurementsLoaded: false,
     libraryLoaded: false,
     libraryLoading: false,
     librarySource: "fallback",
@@ -370,6 +375,8 @@
     CACHE.programLoaded = false;
     CACHE.programSource = "fallback";
     CACHE.timerBeepVolume = loadTimerPrefs().beepVolume;
+    CACHE.bodyMeasurements = loadBodyMeasurementsLocal();
+    CACHE.bodyMeasurementsLoaded = false;
   }
   function activeTravelId() { return window.state?.activeTravelId || null; }
   function table(name) { return window.TB_CONST?.TABLES?.[name] || name; }
@@ -486,6 +493,141 @@
     try { localStorage.setItem(HEIGHT_KEY(), value); } catch (_) {}
     try { window.tbWriteScopedLocalStorage?.(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1", value); } catch (_) {}
     try { if (!window.state.user) window.state.user = {}; window.state.user.bodyHeightCm = Number(value); } catch (_) {}
+  }
+  function cleanOptionalNumber(value, min, max) {
+    if (value === "" || value == null) return null;
+    const out = Number(String(value).replace(",", "."));
+    if (!Number.isFinite(out)) return null;
+    return Math.max(min, Math.min(max, out));
+  }
+  function loadBodyMeasurementsLocal() {
+    try {
+      const rows = JSON.parse(localStorage.getItem(BODY_MEASUREMENTS_KEY()) || "[]");
+      return Array.isArray(rows) ? rows.slice(0, 80) : [];
+    } catch (_) { return []; }
+  }
+  function saveBodyMeasurementsLocal(rows) {
+    const clean = (rows || [])
+      .filter(row => row && row.measured_on)
+      .sort((a, b) => String(b.measured_on || "").localeCompare(String(a.measured_on || "")))
+      .slice(0, 80);
+    try { localStorage.setItem(BODY_MEASUREMENTS_KEY(), JSON.stringify(clean)); } catch (_) {}
+    CACHE.bodyMeasurements = clean;
+    return clean;
+  }
+  function latestBodyMeasurement() {
+    return (CACHE.bodyMeasurements || [])
+      .slice()
+      .sort((a, b) => String(b.measured_on || "").localeCompare(String(a.measured_on || "")))[0] || null;
+  }
+  async function ensureBodyMeasurementsLoaded(reason) {
+    if (CACHE.bodyMeasurementsLoading || CACHE.bodyMeasurementsLoaded) return false;
+    const c = client();
+    if (!c || !uid()) {
+      CACHE.bodyMeasurementsLoaded = true;
+      return false;
+    }
+    const offline = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode(`health:body_measurements:${reason || "render"}`)
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (offline) {
+      CACHE.bodyMeasurementsLoaded = true;
+      return false;
+    }
+    CACHE.bodyMeasurementsLoading = true;
+    try {
+      const res = await c
+        .from(table("health_body_measurements"))
+        .select("id,user_id,measured_on,source,weight_kg,body_fat_pct,muscle_mass_kg,body_water_pct,bone_mass_kg,visceral_fat_rating,bmr_kcal,metabolic_age,notes,created_at,updated_at")
+        .eq("user_id", uid())
+        .order("measured_on", { ascending: false })
+        .limit(40);
+      if (res.error) throw res.error;
+      saveBodyMeasurementsLocal(res.data || []);
+      return true;
+    } catch (e) {
+      if (!isOfflineSkipError(e)) console.warn("[sport] body measurements load failed", e?.message || e);
+    } finally {
+      CACHE.bodyMeasurementsLoading = false;
+      CACHE.bodyMeasurementsLoaded = true;
+    }
+    return false;
+  }
+  function openBodyMeasurementEditor(row) {
+    const latest = row || latestBodyMeasurement() || {};
+    CACHE.bodyMeasurementEditor = {
+      measured_on: String(row?.measured_on || todayISO()).slice(0, 10),
+      source: latest.source || "impedance_scale",
+      weight_kg: latest.weight_kg ?? bodyWeight(),
+      body_fat_pct: latest.body_fat_pct ?? "",
+      muscle_mass_kg: latest.muscle_mass_kg ?? "",
+      body_water_pct: latest.body_water_pct ?? "",
+      bone_mass_kg: latest.bone_mass_kg ?? "",
+      visceral_fat_rating: latest.visceral_fat_rating ?? "",
+      bmr_kcal: latest.bmr_kcal ?? "",
+      metabolic_age: latest.metabolic_age ?? "",
+      notes: latest.notes || "",
+    };
+  }
+  function closeBodyMeasurementEditor() {
+    CACHE.bodyMeasurementEditor = null;
+  }
+  function readBodyMeasurementFromDom(root) {
+    const day = String(root.querySelector("#sport-body-date")?.value || todayISO()).slice(0, 10);
+    return {
+      user_id: uid(),
+      measured_on: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : todayISO(),
+      source: "impedance_scale",
+      weight_kg: cleanOptionalNumber(root.querySelector("#sport-body-weight")?.value, 20, 350),
+      body_fat_pct: cleanOptionalNumber(root.querySelector("#sport-body-fat")?.value, 2, 70),
+      muscle_mass_kg: cleanOptionalNumber(root.querySelector("#sport-body-muscle")?.value, 5, 200),
+      body_water_pct: cleanOptionalNumber(root.querySelector("#sport-body-water")?.value, 20, 80),
+      bone_mass_kg: cleanOptionalNumber(root.querySelector("#sport-body-bone")?.value, 0.5, 20),
+      visceral_fat_rating: cleanOptionalNumber(root.querySelector("#sport-body-visceral")?.value, 1, 60),
+      bmr_kcal: Math.round(cleanOptionalNumber(root.querySelector("#sport-body-bmr")?.value, 600, 6000) || 0) || null,
+      metabolic_age: Math.round(cleanOptionalNumber(root.querySelector("#sport-body-age")?.value, 10, 120) || 0) || null,
+      notes: String(root.querySelector("#sport-body-notes")?.value || "").trim().slice(0, 500) || null,
+    };
+  }
+  function mergeBodyMeasurementLocal(payload, id) {
+    const nextRow = Object.assign({}, payload, { id: id || payload.id || `local_${payload.measured_on}_${payload.source}` });
+    const rows = (CACHE.bodyMeasurements || loadBodyMeasurementsLocal())
+      .filter(row => !(String(row.measured_on) === String(nextRow.measured_on) && String(row.source || "impedance_scale") === String(nextRow.source || "impedance_scale")));
+    rows.push(nextRow);
+    saveBodyMeasurementsLocal(rows);
+    if (nextRow.weight_kg) saveBodyWeight(nextRow.weight_kg);
+  }
+  async function saveBodyMeasurementFromDom(root) {
+    const payload = readBodyMeasurementFromDom(root);
+    if (!payload.weight_kg && !payload.body_fat_pct && !payload.muscle_mass_kg && !payload.body_water_pct) {
+      sportFeedback(txt("Ajoute au moins une mesure", "Add at least one metric"), txt("Poids, masse grasse, muscle ou eau.", "Weight, body fat, muscle or water."), { toast: true });
+      return false;
+    }
+    const c = client();
+    if (!c || !uid()) {
+      mergeBodyMeasurementLocal(Object.assign({}, payload, { user_id: uid() || "local" }));
+      closeBodyMeasurementEditor();
+      sportFeedback(txt("Mesure enregistree localement", "Measurement saved locally"), payload.measured_on, { toast: true });
+      return true;
+    }
+    try {
+      const res = await c
+        .from(table("health_body_measurements"))
+        .upsert(Object.assign({}, payload, { user_id: uid(), updated_at: new Date().toISOString() }), { onConflict: "user_id,measured_on,source" })
+        .select("id,user_id,measured_on,source,weight_kg,body_fat_pct,muscle_mass_kg,body_water_pct,bone_mass_kg,visceral_fat_rating,bmr_kcal,metabolic_age,notes,created_at,updated_at")
+        .maybeSingle();
+      if (res.error) throw res.error;
+      mergeBodyMeasurementLocal(res.data || payload, res.data?.id);
+      closeBodyMeasurementEditor();
+      sportFeedback(txt("Mesure impédancemètre enregistrée", "Body measurement saved"), payload.measured_on, { toast: true });
+      return true;
+    } catch (e) {
+      console.warn("[sport] body measurement save failed", e?.message || e);
+      mergeBodyMeasurementLocal(Object.assign({}, payload, { user_id: uid() || "local" }));
+      closeBodyMeasurementEditor();
+      sportFeedback(txt("Mesure gardee hors ligne", "Measurement kept offline"), txt("Elle reste disponible localement.", "It remains available locally."), { toast: true });
+      return true;
+    }
   }
   function loadGlobalRest() {
     try { return Math.max(0, Math.round(n(localStorage.getItem(GLOBAL_REST_KEY()), 60))); } catch (_) { return 60; }
@@ -1494,15 +1636,22 @@
     const sqlRows = Array.isArray(CACHE.sqlSessionFavorites) ? CACHE.sqlSessionFavorites : [];
     const custom = loadCustomSessionFavorites();
     const customById = new Map(custom.map(row => [String(row.id || ""), row]));
+    const customByCode = new Map();
+    custom.forEach(row => {
+      const code = sessionCode(row);
+      if (code && !customByCode.has(code)) customByCode.set(code, row);
+    });
     if (sqlRows.length) {
       const sqlIds = new Set(sqlRows.map(row => String(row.id || "")));
-      return sqlRows.map(row => customById.get(String(row.id || "")) || row)
-        .concat(custom.filter(row => !sqlIds.has(String(row.id || ""))))
+      const sqlCodes = new Set(sqlRows.map(sessionCode).filter(Boolean));
+      return sqlRows.map(row => customById.get(String(row.id || "")) || customByCode.get(sessionCode(row)) || row)
+        .concat(custom.filter(row => !sqlIds.has(String(row.id || "")) && !sqlCodes.has(sessionCode(row))))
         .slice(0, 30);
     }
     const ids = new Set(defaults.map(row => row.id));
-    return defaults.map(row => customById.get(String(row.id || "")) || row)
-      .concat(custom.filter(row => !ids.has(row.id)))
+    const defaultCodes = new Set(defaults.map(sessionCode).filter(Boolean));
+    return defaults.map(row => customById.get(String(row.id || "")) || customByCode.get(sessionCode(row)) || row)
+      .concat(custom.filter(row => !ids.has(row.id) && !defaultCodes.has(sessionCode(row))))
       .slice(0, 30);
   }
   function clonePlan(plan) {
@@ -1554,6 +1703,7 @@
     const nextId = fav?.id || `custom_${Date.now().toString(36)}`;
     CACHE.sessionEditor = {
       id: String(nextId),
+      sessionKey: fav?.sessionKey || sessionCode(fav) || "",
       isNew: !fav,
       name: fav?.name || txt("Nouvelle seance", "New workout"),
       week: fav?.week || "",
@@ -1619,6 +1769,7 @@
     const custom = loadCustomSessionFavorites().filter(row => String(row.id || "") !== String(editor.id || ""));
     custom.unshift(Object.assign({}, existing, {
       id: editor.id,
+      sessionKey: editor.sessionKey || sessionCode(existing) || sessionCode({ id: editor.id, name: editor.name }),
       name: editor.name,
       week: editor.week,
       days: editor.days,
@@ -1727,13 +1878,21 @@
           plan,
         };
       }).filter(row => row.plan.length);
-      CACHE.program = saveSportProgram({
+      const sqlProgram = {
         enabled: true,
         source: "sql",
         startDate: String(program.start_date || todayISO()).slice(0, 10),
         cycle: program.cycle || "A/B",
-        days: { 1: "A1/B1", 3: "A2/B2", 5: "A3/B3" },
-      });
+        days: programDaysFromSqlSessions(sessions.data || []),
+      };
+      const localProgram = loadSportProgram();
+      CACHE.program = saveSportProgram(Object.assign({}, sqlProgram, localProgram?.enabled ? localProgram : {}, {
+        enabled: true,
+        source: "sql",
+        startDate: sqlProgram.startDate,
+        cycle: sqlProgram.cycle,
+        days: sqlProgram.days,
+      }));
       CACHE.programSource = "sql";
       return CACHE.sqlSessionFavorites.length > 0;
     } catch (e) {
@@ -1749,6 +1908,23 @@
     const en = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     const i = Math.max(1, Math.min(7, Math.round(n(day, 1))));
     return lang() === "en" ? en[i] : fr[i];
+  }
+  function programDaysFromSqlSessions(rows) {
+    const byDay = {};
+    (rows || [])
+      .slice()
+      .sort((a, b) => n(a.sort_order, 0) - n(b.sort_order, 0))
+      .forEach(row => {
+        const day = Math.max(1, Math.min(7, Math.round(n(row.day_of_week, 0))));
+        const code = sessionCode({ sessionKey: row.session_key, id: row.session_key, name: row.name });
+        if (!day || !code) return;
+        const list = byDay[day] || [];
+        if (!list.includes(code)) list.push(code);
+        byDay[day] = list;
+      });
+    const out = {};
+    Object.keys(byDay).forEach(day => { out[day] = byDay[day].join("/"); });
+    return Object.keys(out).length ? out : { 2: "A1/B1", 4: "A2/B2", 6: "A3/B3" };
   }
   function saveSportProgram(program) {
     const next = Object.assign({ enabled: true, startDate: todayISO(), days: { 1: "A1", 3: "A2", 5: "A3" } }, program || {});
@@ -1968,8 +2144,6 @@
     if (!days.length) return "";
     const weekLabel = days[0]?.weekLabel || currentProgramWeek(program);
     const today = todayISO();
-    const next = nextPlannedSportRow(days, today);
-    const todayRow = days.find(row => row.day === today);
     return `<div class="tb-sport-planned-week">
       ${renderProgramCockpit(days, program)}
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
@@ -1979,18 +2153,6 @@
         </div>
         <span class="pill">${esc(txt("Semaine", "Week"))} ${esc(weekLabel)}</span>
       </div>
-      ${next?.session ? `<div class="tb-sport-planned-next">
-        <div>
-          <span class="muted" style="font-size:11px;font-weight:900;text-transform:uppercase;">${esc(next.day === today ? txt("Aujourd'hui", "Today") : txt("Prochaine seance", "Next workout"))}</span>
-          <strong>${esc(next.code || next.session.name)} · ${esc(next.session.name)}</strong>
-          <small>${esc(sessionPlannedLoadSummary(next.session))}</small>
-          <em>${esc(sessionProgressionPreview(next.session))}</em>
-        </div>
-        <div class="tb-sport-actions" style="justify-content:flex-end;">
-          <button class="btn small" type="button" data-sport-load-session-favorite="${esc(next.session.id)}">${esc(txt("Preparer", "Prepare"))}</button>
-          ${todayRow?.session ? `<button class="btn small primary" type="button" data-sport-start-planned-today="${esc(todayRow.session.id)}">${esc(txt("Lancer la seance du jour", "Start today's workout"))}</button>` : ""}
-        </div>
-      </div>` : ""}
       <div class="tb-sport-planned-grid">
         ${days.map(row => {
           const isToday = row.day === today;
@@ -2156,6 +2318,23 @@
       .tb-sport-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr);gap:14px;}
       .tb-sport-card{border:1px solid rgba(148,163,184,.20);border-radius:22px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 14px 36px rgba(15,23,42,.06);padding:16px;}
       .tb-sport-card h3{margin:0 0 10px;font-size:18px;}
+      .tb-sport-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;}
+      .tb-sport-profile-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:14px;}
+      .tb-sport-radar-wrap{display:grid;grid-template-columns:minmax(230px,320px) minmax(0,1fr);gap:14px;align-items:center;}
+      .tb-sport-radar{width:100%;max-width:320px;min-height:230px;}
+      .tb-sport-radar text{font-size:12px;font-weight:950;fill:#334155;}
+      .tb-sport-radar-side{display:grid;gap:9px;}
+      .tb-sport-radar-side strong{font-size:18px;color:#0f172a;}
+      .tb-sport-radar-side small{color:#64748b;font-weight:800;line-height:1.35;}
+      .tb-sport-radar-bars{display:grid;gap:7px;}
+      .tb-sport-radar-bars div{position:relative;border:1px solid rgba(148,163,184,.18);border-radius:14px;background:#f8fafc;min-height:34px;overflow:hidden;padding:8px 42px 8px 10px;}
+      .tb-sport-radar-bars b{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,rgba(34,197,94,.20),rgba(14,165,233,.22));border-radius:14px;z-index:0;}
+      .tb-sport-radar-bars span,.tb-sport-radar-bars em{position:relative;z-index:1;font-size:12px;font-weight:950;color:#0f172a;font-style:normal;}
+      .tb-sport-radar-bars em{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#2563eb;}
+      .tb-sport-body-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+      .tb-sport-body-kpis>div{border:1px solid rgba(14,165,233,.16);border-radius:16px;background:linear-gradient(180deg,#f0f9ff,#fff);padding:10px;min-width:0;}
+      .tb-sport-body-kpis span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:950;}
+      .tb-sport-body-kpis strong{display:block;margin-top:5px;font-size:19px;color:#0f172a;line-height:1.05;overflow-wrap:anywhere;}
       .tb-sport-profile{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px;}
       .tb-sport-profile-note{border:1px solid rgba(14,165,233,.16);border-radius:16px;background:#e0f2fe;color:#075985;padding:10px 12px;font-weight:850;}
       .tb-sport-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
@@ -2301,6 +2480,10 @@
       body.theme-dark .tb-sport-card,body.theme-dark .tb-sport-item,body.theme-dark .tb-sport-history-card{background:#111827;color:#f8fafc;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-stat{background:#111827;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-stat strong{color:#f8fafc;}
+      body.theme-dark .tb-sport-radar text{fill:#cbd5e1;}
+      body.theme-dark .tb-sport-radar-side strong,body.theme-dark .tb-sport-radar-bars span,body.theme-dark .tb-sport-body-kpis strong{color:#f8fafc;}
+      body.theme-dark .tb-sport-radar-bars div,body.theme-dark .tb-sport-body-kpis>div{background:#0f172a;border-color:rgba(255,255,255,.12);}
+      body.theme-dark .tb-sport-body-kpis>div{background:linear-gradient(180deg,rgba(14,165,233,.12),#0f172a);}
       body.theme-dark .tb-sport-status{background:rgba(14,165,233,.14);color:#bae6fd;border-color:rgba(125,211,252,.20);}
       body.theme-dark .tb-sport-profile-note{background:rgba(14,165,233,.14);color:#bae6fd;border-color:rgba(125,211,252,.20);}
       body.theme-dark .tb-sport-library{background:rgba(14,165,233,.08);border-color:rgba(125,211,252,.18);}
@@ -2335,8 +2518,8 @@
       body.theme-dark .tb-sport-session-details summary{color:#f8fafc;}
       body.theme-dark .tb-sport-session-exercise{background:#0f172a;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
-      @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}.tb-sport-program-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-program-focus{grid-template-columns:1fr}.tb-sport-program-progression>div{grid-template-columns:1fr}.tb-sport-program-progression small,.tb-sport-program-progression b{text-align:left;white-space:normal;}.tb-sport-session-editor-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tb-sport-session-editor-meta{grid-template-columns:1fr 120px 1fr}}
-      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-next{grid-template-columns:1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-program-cockpit{padding:10px}.tb-sport-program-head strong{font-size:21px}.tb-sport-program-kpis{grid-template-columns:1fr 1fr}.tb-sport-program-loads{grid-template-columns:1fr 1fr}.tb-sport-program-catchup{align-items:flex-start;flex-direction:column}.tb-sport-session-editor-backdrop{align-items:flex-start;padding:8px}.tb-sport-session-editor{max-height:calc(100dvh - 16px);border-radius:18px;padding:10px}.tb-sport-session-editor-head{top:-10px;padding-top:10px}.tb-sport-session-editor-meta,.tb-sport-session-editor-add,.tb-sport-session-editor-grid{grid-template-columns:1fr}.tb-sport-session-editor-grid .wide{grid-column:auto}.tb-sport-session-editor-row-head{align-items:flex-start;flex-direction:column}.tb-sport-session-editor-actions{bottom:-10px}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
+      @media(max-width:980px){.tb-sport-grid,.tb-sport-profile-grid,.tb-sport-radar-wrap{grid-template-columns:1fr}.tb-sport-radar{margin:auto}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}.tb-sport-program-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-program-focus{grid-template-columns:1fr}.tb-sport-program-progression>div{grid-template-columns:1fr}.tb-sport-program-progression small,.tb-sport-program-progression b{text-align:left;white-space:normal;}.tb-sport-session-editor-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tb-sport-session-editor-meta{grid-template-columns:1fr 120px 1fr}}
+      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile,.tb-sport-body-kpis{grid-template-columns:1fr}.tb-sport-radar-wrap{gap:8px}.tb-sport-radar{max-width:280px}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-next{grid-template-columns:1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-program-cockpit{padding:10px}.tb-sport-program-head strong{font-size:21px}.tb-sport-program-kpis{grid-template-columns:1fr 1fr}.tb-sport-program-loads{grid-template-columns:1fr 1fr}.tb-sport-program-catchup{align-items:flex-start;flex-direction:column}.tb-sport-session-editor-backdrop{align-items:flex-start;padding:8px}.tb-sport-session-editor{max-height:calc(100dvh - 16px);border-radius:18px;padding:10px}.tb-sport-session-editor-head{top:-10px;padding-top:10px}.tb-sport-session-editor-meta,.tb-sport-session-editor-add,.tb-sport-session-editor-grid{grid-template-columns:1fr}.tb-sport-session-editor-grid .wide{grid-column:auto}.tb-sport-session-editor-row-head{align-items:flex-start;flex-direction:column}.tb-sport-session-editor-actions{bottom:-10px}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
       @media(max-height:700px){.tb-sport-timer-card.focus .tb-sport-timer{gap:7px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timeline{display:none}.tb-sport-timer-card.focus .tb-sport-live-grid{gap:6px}.tb-sport-timer-card.focus .tb-sport-live-kpi{padding:8px}.tb-sport-timer-card.focus .tb-sport-volume-row{display:none}}
       body.tb-capacitor-app[data-tb-view="sport"] #sport-root{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-shell{gap:10px!important;}
@@ -2906,6 +3089,16 @@
       </div>`;
   }
 
+  function allVisibleSportSessions() {
+    const remoteSessions = CACHE.sessions || [];
+    const localSessions = CACHE.localSessions || [];
+    return remoteSessions.concat(
+      localSessions
+        .filter(isLocalWorkoutUnsynced)
+        .map(localToHistorySession)
+    );
+  }
+
   function renderHistory() {
     const remoteSessions = CACHE.sessions || [];
     const localSessions = CACHE.localSessions || [];
@@ -2996,6 +3189,194 @@
             <small>${active ? `${Math.round(row.kcal)}` : esc(txt("Repos", "Rest"))}</small>
           </button>`;
         }).join("")}
+      </div>
+    </div>`;
+  }
+  function exerciseProfileBucket(item) {
+    const text = `${item?.exerciseName || ""} ${item?.activityKey || ""} ${item?.equipment || ""} ${item?.notes || ""}`.toLowerCase();
+    if (/squat|fente|bulgar|souleve|deadlift|rdl|hip|mollet|leg|jambe|lunge/.test(text)) return "lower";
+    if (/gainage|abdo|core|plank|crunch|releve|raise|twist|hollow/.test(text)) return "core";
+    if (/corde|jump|run|course|velo|bike|boxing|boxe|sac|hiit|burpee|rameur|rower|cardio|ping/.test(text)) return "cardio";
+    if (/developpe|bench|press|curl|triceps|traction|pull|rowing|row|oiseau|elevation|militaire|push|dips/.test(text)) return "upper";
+    return String(item?.mode || "") === "reps" ? "upper" : "cardio";
+  }
+  function isExplosiveExercise(item) {
+    const text = `${item?.exerciseName || ""} ${item?.activityKey || ""}`.toLowerCase();
+    return /hiit|boxe|boxing|sac|corde|jump|sprint|burpee|clean|snatch|thruster|plyo/.test(text);
+  }
+  function profileExerciseKey(item) {
+    return String(item?.libraryKey || item?.exerciseKey || item?.exerciseName || item?.activityKey || "").toLowerCase();
+  }
+  function sportProfileRadarData() {
+    const now = new Date();
+    const since = new Date(now.getTime() - 28 * 86400000);
+    const sessions = allVisibleSportSessions().filter(s => {
+      const d = new Date(s.started_at || s.startedAt || 0);
+      return Number.isFinite(d.getTime()) && d >= since && d <= now;
+    });
+    const score = { upper: 0, lower: 0, core: 0, cardio: 0, endurance: 0, speed: 0 };
+    const uniqueDays = new Set();
+    const bestByExercise = new Map();
+    let totalSeconds = 0;
+    sessions.forEach(session => {
+      const sessionId = session.id || session.localId || session.remoteId;
+      uniqueDays.add(localDateISO(session.started_at || session.startedAt));
+      totalSeconds += n(session.duration_seconds || session.durationSeconds, 0);
+      const plan = planFromStoredSession(sessionId);
+      const doneSets = doneSetsFromStoredSession(sessionId, 0);
+      const setsByItem = new Map();
+      doneSets.forEach(set => {
+        const idx = Math.max(0, Math.round(n(set.itemIndex, 0)));
+        const rows = setsByItem.get(idx) || [];
+        rows.push(set);
+        setsByItem.set(idx, rows);
+      });
+      plan.forEach((item, idx) => {
+        const bucket = exerciseProfileBucket(item);
+        const sets = setsByItem.get(idx) || [];
+        const plannedSets = Math.max(1, Math.round(n(item.sets, 1)));
+        const completedSets = Math.max(sets.length, plannedSets);
+        const setSeconds = item.mode === "time" ? n(item.targetSeconds, 45) : 45;
+        const seconds = sets.length
+          ? sets.reduce((sum, set) => sum + Math.max(20, n(set.durationSeconds, setSeconds)), 0)
+          : completedSets * setSeconds;
+        if (bucket === "upper") score.upper += completedSets;
+        if (bucket === "lower") score.lower += completedSets;
+        if (bucket === "core") score.core += completedSets;
+        if (bucket === "cardio") score.cardio += seconds / 60;
+        if (isExplosiveExercise(item)) score.speed += seconds / 60;
+        sets.forEach(set => {
+          const reps = n(set.reps, 0);
+          const load = n(set.weightKg || set.weight_kg, n(item.weightKg, 0));
+          if (reps <= 0 || load <= 0) return;
+          const key = profileExerciseKey(item);
+          const estimate = load * (1 + Math.min(reps, 15) / 30);
+          const current = bestByExercise.get(key);
+          if (!current || estimate > current.estimate) {
+            bestByExercise.set(key, {
+              name: item.exerciseName || labelActivity(item.activityKey),
+              estimate,
+              load,
+              reps,
+              bucket,
+            });
+          }
+        });
+      });
+    });
+    score.endurance = (totalSeconds / 60) + (uniqueDays.size * 18);
+    const axes = [
+      { key: "upper", label: txt("Haut", "Upper"), value: Math.min(100, Math.round((score.upper / 36) * 100)), raw: `${Math.round(score.upper)} sets` },
+      { key: "lower", label: txt("Bas", "Lower"), value: Math.min(100, Math.round((score.lower / 24) * 100)), raw: `${Math.round(score.lower)} sets` },
+      { key: "core", label: "Core", value: Math.min(100, Math.round((score.core / 14) * 100)), raw: `${Math.round(score.core)} sets` },
+      { key: "cardio", label: "Cardio", value: Math.min(100, Math.round((score.cardio / 150) * 100)), raw: `${Math.round(score.cardio)} min` },
+      { key: "endurance", label: txt("Endurance", "Endurance"), value: Math.min(100, Math.round((score.endurance / 240) * 100)), raw: `${fmtSec(totalSeconds)}` },
+      { key: "speed", label: txt("Explosif", "Power"), value: Math.min(100, Math.round((score.speed / 45) * 100)), raw: `${Math.round(score.speed)} min` },
+    ];
+    return {
+      axes,
+      sessions,
+      weakest: axes.slice().sort((a, b) => a.value - b.value)[0] || axes[0],
+      bestLoads: Array.from(bestByExercise.values()).sort((a, b) => b.estimate - a.estimate).slice(0, 3),
+      uniqueDays: uniqueDays.size,
+    };
+  }
+  function radarPoints(axes, radius, cx, cy) {
+    return (axes || []).map((axis, idx) => {
+      const angle = (-90 + idx * 360 / axes.length) * Math.PI / 180;
+      const r = radius * Math.max(0, Math.min(100, n(axis.value, 0))) / 100;
+      return `${Math.round((cx + Math.cos(angle) * r) * 10) / 10},${Math.round((cy + Math.sin(angle) * r) * 10) / 10}`;
+    }).join(" ");
+  }
+  function renderSportProfileDashboard() {
+    const data = sportProfileRadarData();
+    const axes = data.axes;
+    const cx = 140;
+    const cy = 140;
+    const rings = [40, 70, 100].map(p => `<polygon points="${radarPoints(axes.map(a => Object.assign({}, a, { value: p })), 104, cx, cy)}" fill="none" stroke="rgba(148,163,184,.28)" stroke-width="1"/>`).join("");
+    const spokes = axes.map((axis, idx) => {
+      const angle = (-90 + idx * 360 / axes.length) * Math.PI / 180;
+      const x = cx + Math.cos(angle) * 112;
+      const y = cy + Math.sin(angle) * 112;
+      const lx = cx + Math.cos(angle) * 128;
+      const ly = cy + Math.sin(angle) * 128;
+      return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="rgba(148,163,184,.24)"/><text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle">${esc(axis.label)}</text>`;
+    }).join("");
+    const latest = latestBodyMeasurement();
+    const loads = data.bestLoads.length
+      ? data.bestLoads.map(row => `<span class="tb-sport-chip">${esc(row.name)} ${Math.round(row.estimate)} kg e1RM</span>`).join("")
+      : `<span class="tb-sport-chip">${esc(txt("Charges a renseigner dans les series", "Enter loads in sets"))}</span>`;
+    return `<div class="tb-sport-profile-grid">
+      <div class="tb-sport-card tb-sport-radar-card">
+        <div class="tb-sport-card-head">
+          <div>
+            <h3>${esc(txt("Profil forces / faiblesses", "Strengths / weaknesses profile"))}</h3>
+            <div class="muted">${esc(txt("Radar indicatif sur 28 jours : renforcement, cardio, equilibre haut/bas.", "Indicative 28-day radar: strength, cardio, upper/lower balance."))}</div>
+          </div>
+          <button class="btn" type="button" id="sport-open-body-measurement">${esc(txt("Mesures", "Metrics"))}</button>
+        </div>
+        <div class="tb-sport-radar-wrap">
+          <svg class="tb-sport-radar" viewBox="0 0 280 280" role="img" aria-label="${esc(txt("Radar du profil sportif", "Sport profile radar"))}">
+            ${rings}${spokes}
+            <polygon points="${radarPoints(axes, 104, cx, cy)}" fill="rgba(37,99,235,.26)" stroke="#2563eb" stroke-width="3"/>
+            ${axes.map((axis, idx) => {
+              const angle = (-90 + idx * 360 / axes.length) * Math.PI / 180;
+              const r = 104 * axis.value / 100;
+              return `<circle cx="${cx + Math.cos(angle) * r}" cy="${cy + Math.sin(angle) * r}" r="4" fill="#0ea5e9"/>`;
+            }).join("")}
+          </svg>
+          <div class="tb-sport-radar-side">
+            <strong>${esc(txt("Axe a renforcer", "Focus axis"))}: ${esc(data.weakest.label)}</strong>
+            <small>${esc(txt("Base : reperes OMS/ACSM adaptes a ton historique. Le score reste un repere de suivi, pas un diagnostic.", "Basis: WHO/ACSM-style guidelines adapted to your history. The score is tracking guidance, not a diagnosis."))}</small>
+            <div class="tb-sport-radar-bars">
+              ${axes.map(axis => `<div><span>${esc(axis.label)} · ${esc(axis.raw)}</span><b style="width:${Math.max(6, axis.value)}%"></b><em>${axis.value}</em></div>`).join("")}
+            </div>
+          </div>
+        </div>
+        <div class="tb-sport-meta" style="margin-top:10px;">${loads}</div>
+      </div>
+      <div class="tb-sport-card tb-sport-body-card">
+        <div class="tb-sport-card-head">
+          <div>
+            <h3>${esc(txt("Impedancemetre", "Body composition"))}</h3>
+            <div class="muted">${esc(latest ? txt(`Derniere mesure : ${String(latest.measured_on).slice(0,10)}`, `Latest: ${String(latest.measured_on).slice(0,10)}`) : txt("Aucune mesure saisie", "No measurement yet"))}</div>
+          </div>
+          <button class="btn primary" type="button" id="sport-open-body-measurement-2">+ ${esc(txt("Saisir", "Add"))}</button>
+        </div>
+        <div class="tb-sport-body-kpis">
+          <div><span>${esc(txt("Poids", "Weight"))}</span><strong>${latest?.weight_kg ? `${n(latest.weight_kg,0)} kg` : `${bodyWeight()} kg`}</strong></div>
+          <div><span>${esc(txt("Masse grasse", "Body fat"))}</span><strong>${latest?.body_fat_pct ? `${n(latest.body_fat_pct,0)}%` : "-"}</strong></div>
+          <div><span>${esc(txt("Muscle", "Muscle"))}</span><strong>${latest?.muscle_mass_kg ? `${n(latest.muscle_mass_kg,0)} kg` : "-"}</strong></div>
+          <div><span>${esc(txt("Eau", "Water"))}</span><strong>${latest?.body_water_pct ? `${n(latest.body_water_pct,0)}%` : "-"}</strong></div>
+        </div>
+        <div class="muted" style="margin-top:10px;">${esc(txt("Champs limites : poids, masse grasse, muscle, eau, os, graisse viscerale, BMR, age metabolique et notes.", "Focused fields: weight, fat, muscle, water, bone, visceral fat, BMR, metabolic age and notes."))}</div>
+      </div>
+    </div>`;
+  }
+  function renderBodyMeasurementModal() {
+    const editor = CACHE.bodyMeasurementEditor;
+    if (!editor) return "";
+    const input = (id, label, value, step) => `<div class="tb-sport-field"><label>${esc(label)}</label><input id="${id}" type="number" step="${esc(step || "0.1")}" value="${esc(value ?? "")}"></div>`;
+    return `<div class="tb-sport-modal-backdrop" role="dialog" aria-modal="true">
+      <div class="tb-sport-modal tb-sport-body-modal">
+        <h3>${esc(txt("Mesure impedancemetre", "Body composition measurement"))}</h3>
+        <div class="muted">${esc(txt("Saisie datee, enregistree en SQL si connecte, sinon gardee localement.", "Dated entry, saved in SQL when online, otherwise kept locally."))}</div>
+        <div class="tb-sport-fields" style="margin-top:12px;">
+          <div class="tb-sport-field"><label>${esc(txt("Date", "Date"))}</label><input id="sport-body-date" type="date" value="${esc(editor.measured_on || todayISO())}"></div>
+          ${input("sport-body-weight", txt("Poids kg", "Weight kg"), editor.weight_kg, "0.1")}
+          ${input("sport-body-fat", txt("Masse grasse %", "Body fat %"), editor.body_fat_pct, "0.1")}
+          ${input("sport-body-muscle", txt("Masse musculaire kg", "Muscle mass kg"), editor.muscle_mass_kg, "0.1")}
+          ${input("sport-body-water", txt("Eau corporelle %", "Body water %"), editor.body_water_pct, "0.1")}
+          ${input("sport-body-bone", txt("Masse osseuse kg", "Bone mass kg"), editor.bone_mass_kg, "0.1")}
+          ${input("sport-body-visceral", txt("Graisse viscerale", "Visceral fat"), editor.visceral_fat_rating, "0.1")}
+          ${input("sport-body-bmr", "BMR kcal", editor.bmr_kcal, "1")}
+          ${input("sport-body-age", txt("Age metabolique", "Metabolic age"), editor.metabolic_age, "1")}
+          <div class="tb-sport-field" style="grid-column:1/-1;"><label>Notes</label><textarea id="sport-body-notes" rows="3">${esc(editor.notes || "")}</textarea></div>
+        </div>
+        <div class="tb-sport-actions" style="margin-top:14px;justify-content:flex-end;">
+          <button class="btn" type="button" data-sport-body-close>${esc(txt("Annuler", "Cancel"))}</button>
+          <button class="btn primary" type="button" id="sport-body-save">${esc(txt("Enregistrer", "Save"))}</button>
+        </div>
       </div>
     </div>`;
   }
@@ -3091,13 +3472,7 @@
   }
 
   function sportStatsHTML() {
-    const remoteSessions = CACHE.sessions || [];
-    const localSessions = CACHE.localSessions || [];
-    const sessions = remoteSessions.concat(
-      localSessions
-        .filter(isLocalWorkoutUnsynced)
-        .map(localToHistorySession)
-    );
+    const sessions = allVisibleSportSessions();
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -3132,6 +3507,11 @@
         if (changed && (window.activeView || "") === "sport") renderSport("program-loaded");
       }).catch(() => {});
     }
+    if (!CACHE.bodyMeasurementsLoaded && !CACHE.bodyMeasurementsLoading) {
+      ensureBodyMeasurementsLoaded(reason).then((changed) => {
+        if (changed && (window.activeView || "") === "sport") renderSport("body-measurements-loaded");
+      }).catch(() => {});
+    }
     const kg = bodyWeight();
     const planSec = totalPlanSeconds(CACHE.plan);
     const kcal = totalPlanKcal(CACHE.plan, kg);
@@ -3146,11 +3526,13 @@
           <div class="tb-sport-pill">${fmtSec(planSec)} - ${Math.round(kcal)} kcal</div>
         </div>
         ${sportStatsHTML()}
+        ${renderSportProfileDashboard()}
         <div class="tb-sport-grid">
           ${renderBuilder()}
           ${renderTimer()}
         </div>
         ${renderHistory()}
+        ${renderBodyMeasurementModal()}
       </div>`;
     bind(root);
     if (!CACHE.loaded && !CACHE.loading) {
@@ -3275,6 +3657,25 @@
     if (weight) weight.onchange = () => { saveBodyWeight(weight.value); renderSport("weight"); };
     const height = root.querySelector("#sport-height");
     if (height) height.onchange = () => { saveBodyHeight(height.value); renderSport("height"); };
+    ["#sport-open-body-measurement", "#sport-open-body-measurement-2"].forEach(selector => {
+      const btn = root.querySelector(selector);
+      if (btn) btn.onclick = () => {
+        openBodyMeasurementEditor();
+        renderSport("body-measurement-open");
+      };
+    });
+    root.querySelectorAll("[data-sport-body-close]").forEach(btn => {
+      btn.onclick = () => {
+        closeBodyMeasurementEditor();
+        renderSport("body-measurement-close");
+      };
+    });
+    const bodySave = root.querySelector("#sport-body-save");
+    if (bodySave) bodySave.onclick = async () => {
+      bodySave.disabled = true;
+      await saveBodyMeasurementFromDom(root);
+      renderSport("body-measurement-save");
+    };
     const add = root.querySelector("#sport-add-item");
     if (add) add.onclick = () => {
       const editIdx = Number.isInteger(CACHE.editingPlanIndex) ? CACHE.editingPlanIndex : null;
