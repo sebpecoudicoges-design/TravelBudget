@@ -442,14 +442,24 @@
             const existingMeal = await c.from(table("nutrition_meals"))
               .select("id")
               .eq("user_id", userId)
-              .eq("meal_date", mealDate)
-              .eq("notes", mealNotes)
+              .eq("sync_id", syncId)
               .maybeSingle();
             if (existingMeal.error) throw existingMeal.error;
             mealId = existingMeal.data?.id || "";
           }
           if (!mealId) {
-            const insertedMeal = await c.from(table("nutrition_meals")).insert({
+            const insertedMeal = syncId
+              ? await c.from(table("nutrition_meals")).upsert({
+                user_id: userId,
+                travel_id: meal.travel_id || activeTravelId(),
+                meal_date: mealDate,
+                meal_type: meal.meal_type || "meal",
+                label: meal.label || txt("Repas", "Meal"),
+                notes: mealNotes,
+                sync_id: syncId,
+                water_ml: n(meal.water_ml, 0),
+              }, { onConflict: "user_id,sync_id" }).select("id").single()
+              : await c.from(table("nutrition_meals")).insert({
               user_id: userId,
               travel_id: meal.travel_id || activeTravelId(),
               meal_date: mealDate,
@@ -650,12 +660,16 @@
       .tb-health-goal-grid { display:grid; grid-template-columns:1.2fr repeat(3,minmax(120px,.7fr)); gap:10px; align-items:end; margin-top:12px; }
       .tb-health-goal select { width:100%; border:1px solid var(--border); border-radius:12px; padding:9px 10px; background:var(--panel); color:var(--text); font-weight:850; }
       .tb-health-weekboard { border:1px solid rgba(139,92,246,.18); border-radius:14px; padding:14px; background:linear-gradient(180deg,rgba(139,92,246,.08),rgba(56,189,248,.05)),var(--panel2); margin-top:14px; }
+      .tb-health-weekboard-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:10px; }
+      .tb-health-weekboard-kpis div { border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.06); padding:9px 10px; min-width:0; }
+      .tb-health-weekboard-kpis span { display:block; color:var(--muted); font-size:10px; text-transform:uppercase; font-weight:900; }
+      .tb-health-weekboard-kpis strong { display:block; margin-top:3px; font-size:15px; line-height:1.05; }
       .tb-health-weekboard-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; align-items:stretch; }
-      .tb-health-weekboard-day { min-height:142px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.04); color:inherit; padding:9px 7px; display:grid; grid-template-rows:auto auto 1fr auto; gap:6px; text-align:left; cursor:pointer; min-width:0; }
+      .tb-health-weekboard-day { min-height:154px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.04); color:inherit; padding:9px 7px; display:grid; grid-template-rows:auto auto 1fr auto; gap:6px; text-align:left; cursor:pointer; min-width:0; }
       .tb-health-weekboard-day.active { border-color:var(--accent); box-shadow:0 10px 28px rgba(37,99,235,.10); }
       .tb-health-weekboard-day strong { font-size:12px; line-height:1.15; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
       .tb-health-weekboard-day small { font-size:10px; color:var(--muted); }
-      .tb-health-weekboard-bars { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; align-items:end; min-height:62px; }
+      .tb-health-weekboard-bars { display:grid; grid-template-columns:repeat(8,1fr); gap:3px; align-items:end; min-height:62px; }
       .tb-health-weekboard-bars i { display:block; min-height:6px; border-radius:7px 7px 3px 3px; }
       .tb-nutrition-shell button { min-width:0; }
       .tb-nutrition-shell .btn { white-space:normal; }
@@ -673,6 +687,7 @@
         .tb-health-hero { grid-template-columns:1fr; }
         .tb-health-goal-grid { grid-template-columns:1fr 1fr; }
         .tb-health-week { grid-template-columns:repeat(4,minmax(0,1fr)); }
+        .tb-health-weekboard-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .tb-health-weekboard-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .tb-nutrition-shell .tb-sport-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
       }
@@ -684,6 +699,7 @@
         .tb-nutrition-week-grid button { padding:6px 3px !important; font-size:10px !important; }
         .tb-health-week { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .tb-health-goal-grid { grid-template-columns:1fr; }
+        .tb-health-weekboard-kpis { grid-template-columns:1fr; }
       }
     `;
     document.head.appendChild(style);
@@ -1237,42 +1253,75 @@
       const need = Math.max(1, n(row.needsKcal, 0));
       const water = n(row.health?.drinkWaterMl, row.waterMl);
       const sleep = n(row.health?.sleepHours, sleepForDay(row.day).hours);
-      const load = n(row.sportKcal, 0) + n(row.workKcal, 0);
-      return { row, plan, kcal, need, water, sleep, load };
+      const protein = n(row.health?.protein, row.protein);
+      const sport = n(row.sportKcal, 0);
+      const work = n(row.workKcal, 0);
+      const alcohol = n(row.health?.alcoholDrinks, row.alcoholDrinks);
+      const score = n(row.score, row.health?.score);
+      const load = sport + work;
+      return { row, plan, kcal, need, water, sleep, protein, sport, work, alcohol, score, load };
     });
   }
   function renderHealthWeekDashboard(healthWeek, selectedDay) {
     const rows = healthWeekDashboardRows(healthWeek);
+    const count = Math.max(1, rows.length);
+    const avgScore = rows.reduce((sum, r) => sum + n(r.score, 0), 0) / count;
+    const avgKcal = rows.reduce((sum, r) => sum + n(r.kcal, 0), 0) / count;
+    const avgNeed = rows.reduce((sum, r) => sum + n(r.need, 0), 0) / count;
+    const avgProtein = rows.reduce((sum, r) => sum + n(r.protein, 0), 0) / count;
+    const avgWater = rows.reduce((sum, r) => sum + n(r.water, 0), 0) / count;
+    const avgSleep = rows.reduce((sum, r) => sum + n(r.sleep, 0), 0) / count;
+    const sportTotal = rows.reduce((sum, r) => sum + n(r.sport, 0), 0);
+    const workTotal = rows.reduce((sum, r) => sum + n(r.work, 0), 0);
+    const alcoholTotal = rows.reduce((sum, r) => sum + n(r.alcohol, 0), 0);
     return `<div class="tb-health-weekboard">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;">
         <div>
           <h3 style="margin:0;">${esc(txt("Semaine active", "Active week"))}</h3>
-          <div class="muted" style="font-size:12px;">${esc(txt("Objectif, seances, nutrition, sommeil et charge au meme endroit.", "Goal, workouts, nutrition, sleep and load in one place."))}</div>
+          <div class="muted" style="font-size:12px;">${esc(txt("Kcal, proteines, eau, sommeil, sport, travail, alcool et score au meme endroit.", "Kcal, protein, water, sleep, sport, work, alcohol and score in one place."))}</div>
         </div>
         <span class="pill">${esc(txt("7 jours", "7 days"))}</span>
       </div>
+      <div class="tb-health-weekboard-kpis">
+        <div><span>${esc(txt("Score", "Score"))}</span><strong>${Math.round(avgScore)}/100</strong></div>
+        <div><span>${esc(txt("Kcal", "Kcal"))}</span><strong>${Math.round(avgKcal)} / ${Math.round(avgNeed)}</strong></div>
+        <div><span>${esc(txt("Proteines", "Protein"))}</span><strong>${Math.round(avgProtein)}g/j</strong></div>
+        <div><span>${esc(txt("Eau", "Water"))}</span><strong>${Math.round(avgWater)}ml/j</strong></div>
+        <div><span>${esc(txt("Sommeil", "Sleep"))}</span><strong>${Math.round(avgSleep * 10) / 10}h/j</strong></div>
+        <div><span>${esc(txt("Sport", "Sport"))}</span><strong>${Math.round(sportTotal)} kcal</strong></div>
+        <div><span>${esc(txt("Travail", "Work"))}</span><strong>${Math.round(workTotal)} kcal</strong></div>
+        <div><span>${esc(txt("Alcool", "Alcohol"))}</span><strong>${Math.round(alcoholTotal * 10) / 10} verres</strong></div>
+      </div>
       <div class="tb-health-weekboard-grid">
-        ${rows.map(({ row, plan, kcal, need, water, sleep, load }) => {
+        ${rows.map(({ row, plan, kcal, need, water, sleep, protein, sport, work, alcohol, score, load }) => {
           const kcalPct = Math.max(0, Math.min(100, (kcal / need) * 100));
+          const proteinPct = Math.max(0, Math.min(100, (protein / Math.max(70, bodyWeight() * 1.35)) * 100));
           const waterPct = Math.max(0, Math.min(100, (water / 2000) * 100));
           const sleepPct = Math.max(0, Math.min(100, (sleep / 7.5) * 100));
-          const loadPct = Math.max(0, Math.min(100, (load / 700) * 100));
+          const sportPct = Math.max(0, Math.min(100, (sport / 650) * 100));
+          const workPct = Math.max(0, Math.min(100, (work / 650) * 100));
+          const alcoholPct = Math.max(0, Math.min(100, (alcohol / 3) * 100));
+          const scorePct = Math.max(0, Math.min(100, score));
           const plannedLabel = plan.planned ? `${plan.code || ""} ${plan.sessionName || ""}`.trim() : txt("Repos", "Rest");
-          const detail = `${row.day} | ${plannedLabel} | kcal ${Math.round(kcal)}/${Math.round(need)} | eau ${Math.round(water)} ml | sommeil ${sleep ? Math.round(sleep * 10) / 10 : "-"}h | charge ${Math.round(load)} kcal`;
+          const detail = `${row.day} | ${plannedLabel} | score ${Math.round(score)}/100 | kcal ${Math.round(kcal)}/${Math.round(need)} | proteines ${Math.round(protein)}g | eau ${Math.round(water)} ml | sommeil ${sleep ? Math.round(sleep * 10) / 10 : "-"}h | sport ${Math.round(sport)} kcal | travail ${Math.round(work)} kcal | alcool ${Math.round(alcohol * 10) / 10} verre(s)`;
           return `<button class="tb-health-weekboard-day ${row.day === selectedDay ? "active" : ""}" type="button" data-health-date="${esc(row.day)}" title="${esc(detail)}">
             <span class="muted">${esc(row.day.slice(5).replace("-", "/"))}</span>
             <strong>${esc(plannedLabel)}</strong>
             <div class="tb-health-weekboard-bars">
+              <i style="height:${Math.max(6, scorePct * .56)}px;background:#0f172a;"></i>
               <i style="height:${Math.max(6, kcalPct * .56)}px;background:#22c55e;"></i>
+              <i style="height:${Math.max(6, proteinPct * .56)}px;background:#14b8a6;"></i>
               <i style="height:${Math.max(6, waterPct * .56)}px;background:#38bdf8;"></i>
               <i style="height:${Math.max(6, sleepPct * .56)}px;background:#8b5cf6;"></i>
-              <i style="height:${Math.max(6, loadPct * .56)}px;background:#f59e0b;"></i>
+              <i style="height:${Math.max(6, sportPct * .56)}px;background:#f59e0b;"></i>
+              <i style="height:${Math.max(6, workPct * .56)}px;background:#ef4444;"></i>
+              <i style="height:${Math.max(3, alcoholPct * .56)}px;background:#64748b;"></i>
             </div>
             <small>${Math.round(kcal)} kcal · ${Math.round(row.score || 0)}/100</small>
           </button>`;
         }).join("")}
       </div>
-      <div class="muted" style="font-size:11px;margin-top:8px;">${esc(txt("Barres : kcal, eau, sommeil, charge.", "Bars: kcal, water, sleep, load."))}</div>
+      <div class="muted" style="font-size:11px;margin-top:8px;">${esc(txt("Barres : score, kcal, proteines, eau, sommeil, sport, travail, alcool.", "Bars: score, kcal, protein, water, sleep, sport, work, alcohol."))}</div>
     </div>`;
   }
   function itemMeal(item) {
@@ -2002,6 +2051,7 @@
           meal_type: root.querySelector("#nutrition-type")?.value || "meal",
           label: food.name,
           notes: notesWithNutritionSyncId("", syncId),
+          sync_id: syncId,
           water_ml: waterMl,
         }).select("id").single();
         if (meal.error) throw meal.error;
@@ -2072,6 +2122,7 @@
           meal_type: root.querySelector("#nutrition-type")?.value || "meal",
           label: txt("Eau", "Water"),
           notes: notesWithNutritionSyncId("", syncId),
+          sync_id: syncId,
           water_ml: water,
         });
         if (meal.error) throw meal.error;

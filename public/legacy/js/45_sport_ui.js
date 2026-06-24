@@ -1729,19 +1729,63 @@
       return { day, weekday, code, session, weekLabel, planned: Boolean(session) };
     });
   }
+  function nextPlannedSportRow(days, day) {
+    const today = String(day || todayISO()).slice(0, 10);
+    return (days || []).find(row => row.planned && row.day >= today)
+      || (days || []).find(row => row.planned)
+      || null;
+  }
+  function sessionPlannedLoadSummary(session) {
+    const rows = (session?.plan || [])
+      .filter(item => item?.mode === "reps")
+      .slice(0, 4)
+      .map(item => {
+        const load = lastLoadForExercise(item, effectiveLoadKg(item, bodyWeight()));
+        const range = progressionRepRange(item);
+        const loadLabel = item.loadLabel || item.load_label || (supportsExternalLoad(item) && load ? `${Math.round(load * 10) / 10} kg` : labelEquipment(item.equipment));
+        const reps = range ? `${range.min}-${range.max}` : Math.round(n(item.targetReps, 0));
+        return `${item.exerciseName || labelActivity(item.activityKey)} ${loadLabel} x ${reps}`;
+      });
+    return rows.length ? rows.join(" · ") : txt("Charges a preparer dans le timer.", "Loads to prepare in the timer.");
+  }
+  function sessionProgressionPreview(session) {
+    const candidate = (session?.plan || []).find(item => progressionRepRange(item) && supportsExternalLoad(item));
+    if (!candidate) return txt("Progression suivie sur les exercices avec charge.", "Progression is tracked on loaded exercises.");
+    const range = progressionRepRange(candidate);
+    const load = lastLoadForExercise(candidate, effectiveLoadKg(candidate, bodyWeight()));
+    const inc = progressionIncrementKg(candidate);
+    return txt(
+      `${candidate.exerciseName || "Exercice"} : vise ${range.min}-${range.max} reps. Si toutes les series touchent ${range.max}, prochaine fois +${inc} kg.`,
+      `${candidate.exerciseName || "Exercise"}: aim for ${range.min}-${range.max} reps. If every set reaches ${range.max}, next time +${inc} kg.`
+    ) + (load ? ` ${txt("Charge actuelle", "Current load")}: ${Math.round(load * 10) / 10} kg.` : "");
+  }
   function renderPlannedSportWeek(rows, program) {
     const days = plannedSportWeekRows(rows, program, todayISO());
     if (!days.length) return "";
     const weekLabel = days[0]?.weekLabel || currentProgramWeek(program);
     const today = todayISO();
+    const next = nextPlannedSportRow(days, today);
+    const todayRow = days.find(row => row.day === today);
     return `<div class="tb-sport-planned-week">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <div>
           <strong>${esc(txt("Semaine planifiee", "Planned week"))}</strong>
           <div class="muted">${esc(txt(`Cycle ${weekLabel} actif : seance les lundi, mercredi et vendredi.`, `Active ${weekLabel} cycle: workout on Monday, Wednesday and Friday.`))}</div>
         </div>
-        <span class="pill">${esc(txt("Aujourd'hui", "Today"))}</span>
+        <span class="pill">${esc(txt("Semaine", "Week"))} ${esc(weekLabel)}</span>
       </div>
+      ${next?.session ? `<div class="tb-sport-planned-next">
+        <div>
+          <span class="muted" style="font-size:11px;font-weight:900;text-transform:uppercase;">${esc(next.day === today ? txt("Aujourd'hui", "Today") : txt("Prochaine seance", "Next workout"))}</span>
+          <strong>${esc(next.code || next.session.name)} · ${esc(next.session.name)}</strong>
+          <small>${esc(sessionPlannedLoadSummary(next.session))}</small>
+          <em>${esc(sessionProgressionPreview(next.session))}</em>
+        </div>
+        <div class="tb-sport-actions" style="justify-content:flex-end;">
+          <button class="btn small" type="button" data-sport-load-session-favorite="${esc(next.session.id)}">${esc(txt("Preparer", "Prepare"))}</button>
+          ${todayRow?.session ? `<button class="btn small primary" type="button" data-sport-start-planned-today="${esc(todayRow.session.id)}">${esc(txt("Lancer la seance du jour", "Start today's workout"))}</button>` : ""}
+        </div>
+      </div>` : ""}
       <div class="tb-sport-planned-grid">
         ${days.map(row => {
           const isToday = row.day === today;
@@ -1927,6 +1971,10 @@
       .tb-sport-week-day small{font-size:10px;color:#64748b;font-weight:850;}
       .tb-sport-planned-week{border:1px solid rgba(37,99,235,.14);border-radius:18px;background:linear-gradient(135deg,rgba(14,165,233,.10),rgba(34,197,94,.07));padding:12px;margin:12px 0;}
       .tb-sport-planned-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:10px;}
+      .tb-sport-planned-next{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid rgba(37,99,235,.18);border-radius:16px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(34,197,94,.08)),#fff;padding:12px;margin-top:10px;}
+      .tb-sport-planned-next strong{display:block;font-size:18px;color:#0f172a;margin:2px 0;}
+      .tb-sport-planned-next small,.tb-sport-planned-next em{display:block;font-size:12px;color:#475569;line-height:1.35;}
+      .tb-sport-planned-next em{font-style:normal;margin-top:4px;font-weight:850;color:#2563eb;}
       .tb-sport-planned-day{border:1px solid rgba(148,163,184,.22);border-radius:15px;background:#fff;color:#0f172a;min-height:92px;padding:9px 7px;display:grid;grid-template-rows:auto auto 1fr;gap:5px;text-align:left;cursor:pointer;min-width:0;}
       .tb-sport-planned-day span{font-size:10px;font-weight:950;text-transform:uppercase;color:#64748b;}
       .tb-sport-planned-day strong{font-size:16px;line-height:1.05;color:#0f172a;}
@@ -1961,7 +2009,7 @@
       body.theme-dark .tb-sport-session-exercise{background:#0f172a;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}}
-      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
+      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-next{grid-template-columns:1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
       @media(max-height:700px){.tb-sport-timer-card.focus .tb-sport-timer{gap:7px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timeline{display:none}.tb-sport-timer-card.focus .tb-sport-live-grid{gap:6px}.tb-sport-timer-card.focus .tb-sport-live-kpi{padding:8px}.tb-sport-timer-card.focus .tb-sport-volume-row{display:none}}
       body.tb-capacitor-app[data-tb-view="sport"] #sport-root{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-shell{gap:10px!important;}
@@ -2937,6 +2985,16 @@
     root.querySelectorAll("[data-sport-load-session-favorite]").forEach(btn => {
       btn.onclick = () => {
         if (loadSessionFavorite(btn.getAttribute("data-sport-load-session-favorite"))) renderSport("session-favorite");
+      };
+    });
+    root.querySelectorAll("[data-sport-start-planned-today]").forEach(btn => {
+      btn.onclick = () => {
+        if (!loadSessionFavorite(btn.getAttribute("data-sport-start-planned-today"))) return;
+        savePlan();
+        renderSport("planned-start");
+        window.setTimeout(() => {
+          try { startTimer(); } catch (_) {}
+        }, 0);
       };
     });
     root.querySelectorAll("[data-sport-edit-session-favorite]").forEach(btn => {

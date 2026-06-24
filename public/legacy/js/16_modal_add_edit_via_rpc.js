@@ -164,11 +164,13 @@ function _txBuildApplyV2Args(core, fxOverride) {
   const cat = String(core.category || "").trim() || (TB_CONST?.CATS?.other || "Autre");
 
   if (window.Core?.transactionRpcPayload?.buildApplyTransactionV2Args) {
-    return window.Core.transactionRpcPayload.buildApplyTransactionV2Args(core, {
+    const built = window.Core.transactionRpcPayload.buildApplyTransactionV2Args(core, {
       fallbackCategory: cat,
       fxArgs,
       userId: uid,
     });
+    if (core.offlineDedupeKey) built.p_offline_dedupe_key = core.offlineDedupeKey;
+    return built;
   }
 
   return {
@@ -192,6 +194,7 @@ function _txBuildApplyV2Args(core, fxOverride) {
     p_trip_share_link_id: core.tripShareLinkId || null,
     // fx snapshot
     ...fxArgs,
+    p_offline_dedupe_key: core.offlineDedupeKey || null,
     // keep at end
     p_user_id: uid
   };
