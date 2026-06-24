@@ -2400,6 +2400,8 @@
       .tb-sport-modal-backdrop{position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,.58);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:18px;}
       .tb-sport-modal{width:min(560px,100%);border-radius:26px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 30px 80px rgba(15,23,42,.28);border:1px solid rgba(148,163,184,.24);padding:18px;}
       .tb-sport-modal h3{margin:0 0 6px;font-size:22px;}
+      .tb-sport-body-modal-backdrop{z-index:100050;align-items:flex-start;overflow:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 14px calc(20px + env(safe-area-inset-bottom,0px));}
+      .tb-sport-body-modal{max-height:calc(100dvh - 36px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:auto;-webkit-overflow-scrolling:touch;}
       .tb-sport-session-editor-backdrop{position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,.56);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:18px;}
       .tb-sport-session-editor{width:min(1060px,100%);max-height:min(92vh,980px);overflow:auto;border-radius:24px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 30px 90px rgba(15,23,42,.32);border:1px solid rgba(148,163,184,.24);padding:16px;color:#0f172a;}
       .tb-sport-session-editor-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px;position:sticky;top:-16px;background:linear-gradient(180deg,#fff,#fff 72%,rgba(255,255,255,.90));z-index:2;padding:16px 0 10px;}
@@ -3357,7 +3359,7 @@
     const editor = CACHE.bodyMeasurementEditor;
     if (!editor) return "";
     const input = (id, label, value, step) => `<div class="tb-sport-field"><label>${esc(label)}</label><input id="${id}" type="number" step="${esc(step || "0.1")}" value="${esc(value ?? "")}"></div>`;
-    return `<div class="tb-sport-modal-backdrop" role="dialog" aria-modal="true">
+    return `<div class="tb-sport-modal-backdrop tb-sport-body-modal-backdrop" role="dialog" aria-modal="true">
       <div class="tb-sport-modal tb-sport-body-modal">
         <h3>${esc(txt("Mesure impedancemetre", "Body composition measurement"))}</h3>
         <div class="muted">${esc(txt("Saisie datee, enregistree en SQL si connecte, sinon gardee localement.", "Dated entry, saved in SQL when online, otherwise kept locally."))}</div>
@@ -3379,6 +3381,31 @@
         </div>
       </div>
     </div>`;
+  }
+  function clearBodyMeasurementPortal() {
+    try { document.getElementById("tb-sport-body-measurement-portal")?.remove(); } catch (_) {}
+  }
+  function syncBodyMeasurementPortal() {
+    clearBodyMeasurementPortal();
+    if (!CACHE.bodyMeasurementEditor || !document?.body) return;
+    const wrap = document.createElement("div");
+    wrap.id = "tb-sport-body-measurement-portal";
+    wrap.innerHTML = renderBodyMeasurementModal();
+    document.body.appendChild(wrap);
+    wrap.querySelectorAll("[data-sport-body-close]").forEach(btn => {
+      btn.onclick = () => {
+        closeBodyMeasurementEditor();
+        clearBodyMeasurementPortal();
+        renderSport("body-measurement-close");
+      };
+    });
+    const save = wrap.querySelector("#sport-body-save");
+    if (save) save.onclick = async () => {
+      save.disabled = true;
+      await saveBodyMeasurementFromDom(wrap);
+      clearBodyMeasurementPortal();
+      renderSport("body-measurement-save");
+    };
   }
   function localToHistorySession(s) {
     return {
@@ -3532,9 +3559,9 @@
           ${renderTimer()}
         </div>
         ${renderHistory()}
-        ${renderBodyMeasurementModal()}
       </div>`;
     bind(root);
+    syncBodyMeasurementPortal();
     if (!CACHE.loaded && !CACHE.loading) {
       loadHistory().then(() => {
         if ((typeof activeView === "string" ? activeView : "") === "sport") renderSport("loaded");
@@ -3664,18 +3691,6 @@
         renderSport("body-measurement-open");
       };
     });
-    root.querySelectorAll("[data-sport-body-close]").forEach(btn => {
-      btn.onclick = () => {
-        closeBodyMeasurementEditor();
-        renderSport("body-measurement-close");
-      };
-    });
-    const bodySave = root.querySelector("#sport-body-save");
-    if (bodySave) bodySave.onclick = async () => {
-      bodySave.disabled = true;
-      await saveBodyMeasurementFromDom(root);
-      renderSport("body-measurement-save");
-    };
     const add = root.querySelector("#sport-add-item");
     if (add) add.onclick = () => {
       const editIdx = Number.isInteger(CACHE.editingPlanIndex) ? CACHE.editingPlanIndex : null;
