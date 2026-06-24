@@ -318,6 +318,7 @@
     programLoaded: false,
     programSource: "fallback",
     editingPlanIndex: null,
+    sessionEditor: null,
     libraryLoaded: false,
     libraryLoading: false,
     librarySource: "fallback",
@@ -1548,6 +1549,95 @@
     sportFeedback(txt("Seance favorite mise a jour", "Favorite workout updated"), existing.name || "", { toast: true });
     return true;
   }
+  function openSessionFavoriteEditor(id) {
+    const fav = id ? sessionFavoriteRows().find(row => String(row.id || "") === String(id || "")) : null;
+    const nextId = fav?.id || `custom_${Date.now().toString(36)}`;
+    CACHE.sessionEditor = {
+      id: String(nextId),
+      isNew: !fav,
+      name: fav?.name || txt("Nouvelle seance", "New workout"),
+      week: fav?.week || "",
+      days: Array.isArray(fav?.days) ? fav.days.slice() : [],
+      plan: clonePlan(fav?.plan?.length ? fav.plan : [quickPlanItem("pushup")]),
+    };
+    sportFeedback(txt("Fenetre de seance ouverte", "Workout editor opened"), CACHE.sessionEditor.name, { toast: true });
+    return true;
+  }
+  function closeSessionFavoriteEditor() {
+    CACHE.sessionEditor = null;
+  }
+  function sessionEditorExerciseOptions(selectedKey) {
+    return EXERCISE_LIBRARY
+      .slice()
+      .sort((a, b) => String(exerciseLabel(a)).localeCompare(String(exerciseLabel(b))))
+      .map(ex => `<option value="${esc(ex.key)}" ${String(ex.key) === String(selectedKey || "") ? "selected" : ""}>${esc(exerciseLabel(ex))} · ${esc(labelEquipment(ex.equipment))}</option>`)
+      .join("");
+  }
+  function readSessionEditorFromDom(root) {
+    const editor = CACHE.sessionEditor;
+    if (!editor || !root) return null;
+    const rows = Array.from(root.querySelectorAll("[data-sport-session-editor-row]"));
+    const existing = editor.plan || [];
+    const plan = rows.map((row, position) => {
+      const oldIndex = Math.max(0, Math.round(n(row.getAttribute("data-index"), position)));
+      const base = existing[oldIndex] || quickPlanItem("pushup");
+      const mode = row.querySelector("[data-field='mode']")?.value || base.mode || "reps";
+      const repMin = Math.max(1, Math.round(n(row.querySelector("[data-field='repMin']")?.value, base.repMin || base.targetReps || 8)));
+      const repMax = Math.max(repMin, Math.round(n(row.querySelector("[data-field='repMax']")?.value, base.repMax || repMin)));
+      const targetSeconds = Math.max(1, Math.round(n(row.querySelector("[data-field='seconds']")?.value, base.targetSeconds || 45)));
+      return Object.assign({}, base, {
+        tmpId: base.tmpId || `tmp_${Date.now()}_${position}`,
+        exerciseName: String(row.querySelector("[data-field='name']")?.value || base.exerciseName || "").trim() || sessionExerciseName(base),
+        equipment: row.querySelector("[data-field='equipment']")?.value || base.equipment || "bodyweight",
+        mode,
+        targetReps: mode === "reps" ? repMin : 0,
+        repMin: mode === "reps" ? repMin : 0,
+        repMax: mode === "reps" ? repMax : 0,
+        targetSeconds: mode === "time" ? targetSeconds : n(base.targetSeconds, 0),
+        timeMin: mode === "time" ? Math.max(1, Math.round(n(row.querySelector("[data-field='timeMin']")?.value, base.timeMin || targetSeconds))) : 0,
+        timeMax: mode === "time" ? Math.max(targetSeconds, Math.round(n(row.querySelector("[data-field='timeMax']")?.value, base.timeMax || targetSeconds))) : 0,
+        sets: Math.max(1, Math.round(n(row.querySelector("[data-field='sets']")?.value, base.sets || 1))),
+        restSeconds: Math.max(0, Math.round(n(row.querySelector("[data-field='rest']")?.value, restSecondsForItem(base)))),
+        weightKg: Math.max(0, n(row.querySelector("[data-field='weight']")?.value, base.weightKg || 0)),
+        loadLabel: String(row.querySelector("[data-field='loadLabel']")?.value || "").trim(),
+        notes: String(row.querySelector("[data-field='notes']")?.value || "").trim(),
+      });
+    });
+    editor.name = String(root.querySelector("#sport-session-editor-name")?.value || editor.name || "").trim() || txt("Seance personnalisee", "Custom workout");
+    editor.week = String(root.querySelector("#sport-session-editor-week")?.value || "").trim().toUpperCase();
+    editor.days = String(root.querySelector("#sport-session-editor-days")?.value || "")
+      .split(",")
+      .map(day => day.trim())
+      .filter(Boolean);
+    editor.plan = plan;
+    return editor;
+  }
+  function saveSessionEditorFromDom(root) {
+    const editor = readSessionEditorFromDom(root);
+    if (!editor || !editor.plan.length) return false;
+    const existing = sessionFavoriteRows().find(row => String(row.id || "") === String(editor.id || "")) || {};
+    const custom = loadCustomSessionFavorites().filter(row => String(row.id || "") !== String(editor.id || ""));
+    custom.unshift(Object.assign({}, existing, {
+      id: editor.id,
+      name: editor.name,
+      week: editor.week,
+      days: editor.days,
+      plan: clonePlan(editor.plan),
+      source: "custom",
+      updatedAt: new Date().toISOString(),
+    }));
+    saveCustomSessionFavorites(custom);
+    CACHE.sessionEditor = null;
+    sportFeedback(txt("Seance parametree enregistree", "Configured workout saved"), editor.name, { toast: true });
+    return true;
+  }
+  function mutateSessionEditorFromDom(root, mutate) {
+    const editor = readSessionEditorFromDom(root);
+    if (!editor) return false;
+    mutate(editor);
+    CACHE.sessionEditor = editor;
+    return true;
+  }
   function resetSessionFavoriteOverride(id) {
     const before = loadCustomSessionFavorites();
     const next = before.filter(row => String(row.id || "") !== String(id || ""));
@@ -1948,6 +2038,68 @@
       </div>
     </details>`;
   }
+  function renderSessionEditorModal() {
+    const editor = CACHE.sessionEditor;
+    if (!editor) return "";
+    const plan = editor.plan || [];
+    return `<div class="tb-sport-session-editor-backdrop" role="dialog" aria-modal="true">
+      <div class="tb-sport-session-editor">
+        <div class="tb-sport-session-editor-head">
+          <div>
+            <span>${esc(editor.isNew ? txt("Creation", "Creation") : txt("Modification", "Edit"))}</span>
+            <strong>${esc(txt("Seance parametree", "Configured workout"))}</strong>
+            <small>${esc(txt("Modifie la seance sans toucher a la seance en cours. Sauvegarde quand tout est pret.", "Edit the workout without touching the current workout. Save when ready."))}</small>
+          </div>
+          <button class="btn" type="button" data-sport-session-editor-close>×</button>
+        </div>
+        <div class="tb-sport-session-editor-meta">
+          <label><span>${esc(txt("Nom", "Name"))}</span><input id="sport-session-editor-name" value="${esc(editor.name || "")}"></label>
+          <label><span>${esc(txt("Semaine", "Week"))}</span><select id="sport-session-editor-week"><option value="" ${!editor.week ? "selected" : ""}>${esc(txt("Libre", "Free"))}</option><option value="A" ${editor.week === "A" ? "selected" : ""}>A</option><option value="B" ${editor.week === "B" ? "selected" : ""}>B</option></select></label>
+          <label><span>${esc(txt("Jours", "Days"))}</span><input id="sport-session-editor-days" value="${esc((editor.days || []).join(", "))}" placeholder="${esc(txt("Lundi, Mercredi", "Monday, Wednesday"))}"></label>
+        </div>
+        <div class="tb-sport-session-editor-add">
+          <label><span>${esc(txt("Ajouter depuis la bibliotheque", "Add from library"))}</span><select id="sport-session-editor-add-ex">${sessionEditorExerciseOptions("")}</select></label>
+          <button class="btn primary" type="button" id="sport-session-editor-add-btn">+ ${esc(txt("Ajouter", "Add"))}</button>
+        </div>
+        <div class="tb-sport-session-editor-list">
+          ${plan.map((item, idx) => {
+            const range = progressionRepRange(item) || { min: n(item.targetReps, 8), max: n(item.targetReps, 8) };
+            const seconds = Math.max(1, Math.round(n(item.targetSeconds, item.timeMin || 45)));
+            return `<div class="tb-sport-session-editor-row" data-sport-session-editor-row data-index="${idx}">
+              <div class="tb-sport-session-editor-row-head">
+                <strong>${idx + 1}. ${esc(sessionExerciseName(item))}</strong>
+                <div class="tb-sport-actions">
+                  <button class="btn small" type="button" data-sport-session-editor-move="${idx}" data-dir="-1">↑</button>
+                  <button class="btn small" type="button" data-sport-session-editor-move="${idx}" data-dir="1">↓</button>
+                  <button class="btn small danger" type="button" data-sport-session-editor-remove="${idx}">${esc(txt("Supprimer", "Delete"))}</button>
+                </div>
+              </div>
+              <div class="tb-sport-session-editor-grid">
+                <label><span>${esc(txt("Nom exercice", "Exercise name"))}</span><input data-field="name" value="${esc(sessionExerciseName(item))}"></label>
+                <label><span>${esc(txt("Materiel", "Equipment"))}</span><select data-field="equipment">${equipmentOptions(item.equipment || "bodyweight")}</select></label>
+                <label><span>${esc(txt("Mode", "Mode"))}</span><select data-field="mode"><option value="reps" ${item.mode === "reps" ? "selected" : ""}>${esc(txt("Reps", "Reps"))}</option><option value="time" ${item.mode === "time" ? "selected" : ""}>${esc(txt("Temps", "Time"))}</option></select></label>
+                <label><span>${esc(txt("Series", "Sets"))}</span><input data-field="sets" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(item.sets, 1)))))}"></label>
+                <label><span>${esc(txt("Reps min", "Min reps"))}</span><input data-field="repMin" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(range.min, item.targetReps || 8)))))}"></label>
+                <label><span>${esc(txt("Reps max", "Max reps"))}</span><input data-field="repMax" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(range.max, range.min || 8)))))}"></label>
+                <label><span>${esc(txt("Secondes", "Seconds"))}</span><input data-field="seconds" type="number" min="1" value="${esc(String(seconds))}"></label>
+                <label><span>${esc(txt("Temps min", "Min time"))}</span><input data-field="timeMin" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(item.timeMin, seconds)))))}"></label>
+                <label><span>${esc(txt("Temps max", "Max time"))}</span><input data-field="timeMax" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(item.timeMax, item.timeMin || seconds)))))}"></label>
+                <label><span>${esc(txt("Repos sec", "Rest sec"))}</span><input data-field="rest" type="number" min="0" value="${esc(String(restSecondsForItem(item)))}"></label>
+                <label><span>${esc(txt("Charge kg", "Load kg"))}</span><input data-field="weight" type="number" step="0.5" min="0" value="${esc(String(Math.round(n(item.weightKg, 0) * 10) / 10))}"></label>
+                <label><span>${esc(txt("Libelle charge", "Load label"))}</span><input data-field="loadLabel" value="${esc(item.loadLabel || "")}" placeholder="${esc(txt("ex: 2 x 16 kg", "e.g. 2 x 16 kg"))}"></label>
+                <label class="wide"><span>${esc(txt("Notes", "Notes"))}</span><input data-field="notes" value="${esc(item.notes || "")}"></label>
+              </div>
+            </div>`;
+          }).join("")}
+        </div>
+        <div class="tb-sport-session-editor-actions">
+          <button class="btn" type="button" data-sport-session-editor-close>${esc(txt("Annuler", "Cancel"))}</button>
+          <button class="btn" type="button" id="sport-session-editor-load-current">${esc(txt("Charger dans la seance courante", "Load into current workout"))}</button>
+          <button class="btn primary" type="button" id="sport-session-editor-save">${esc(txt("Enregistrer", "Save"))}</button>
+        </div>
+      </div>
+    </div>`;
+  }
   function renderSessionFavorites() {
     const rows = sessionFavoriteRows();
     const program = CACHE.program || loadSportProgram();
@@ -1958,7 +2110,10 @@
           <strong>${esc(txt("Seances favorites", "Favorite workouts"))}</strong>
           <div class="muted">${esc(txt("Programme prise de masse A/B : lundi, mercredi, vendredi, puis alternance.", "A/B lean bulk program: Monday, Wednesday, Friday, then rotate."))} · ${esc(sourceLabel)}</div>
         </div>
-        <button class="btn" type="button" id="sport-activate-mass-program">${program.enabled ? esc(txt("Planning actif", "Program active")) : esc(txt("Activer planning", "Activate program"))}</button>
+        <div class="tb-sport-actions">
+          <button class="btn" type="button" id="sport-new-session-favorite">+ ${esc(txt("Nouvelle seance", "New workout"))}</button>
+          <button class="btn" type="button" id="sport-activate-mass-program">${program.enabled ? esc(txt("Planning actif", "Program active")) : esc(txt("Activer planning", "Activate program"))}</button>
+        </div>
       </div>
       ${renderPlannedSportWeek(rows, program)}
       ${renderProgramSettings(program)}
@@ -1970,7 +2125,7 @@
             <small class="muted">${esc(row.week ? `${txt("Semaine", "Week")} ${row.week} · ` : "")}${esc((row.days || []).join(", "))} · ${row.plan.length} ${esc(txt("exercices", "exercises"))}${custom ? ` · ${esc(txt("modifiee", "customized"))}` : ""}</small></div>
             <div class="tb-sport-actions">
               <button class="btn small primary" type="button" data-sport-load-session-favorite="${esc(row.id)}">${esc(txt("Charger", "Load"))}</button>
-              <button class="btn small" type="button" data-sport-edit-session-favorite="${esc(row.id)}">${esc(txt("Modifier", "Edit"))}</button>
+              <button class="btn small" type="button" data-sport-open-session-editor="${esc(row.id)}">${esc(txt("Parametrer", "Configure"))}</button>
               ${custom ? `<button class="btn small" type="button" data-sport-reset-session-favorite="${esc(row.id)}">${esc(txt("Reset", "Reset"))}</button>` : ""}
             </div>
           </div>`;
@@ -2066,6 +2221,24 @@
       .tb-sport-modal-backdrop{position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,.58);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:18px;}
       .tb-sport-modal{width:min(560px,100%);border-radius:26px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 30px 80px rgba(15,23,42,.28);border:1px solid rgba(148,163,184,.24);padding:18px;}
       .tb-sport-modal h3{margin:0 0 6px;font-size:22px;}
+      .tb-sport-session-editor-backdrop{position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,.56);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:18px;}
+      .tb-sport-session-editor{width:min(1060px,100%);max-height:min(92vh,980px);overflow:auto;border-radius:24px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 30px 90px rgba(15,23,42,.32);border:1px solid rgba(148,163,184,.24);padding:16px;color:#0f172a;}
+      .tb-sport-session-editor-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px;position:sticky;top:-16px;background:linear-gradient(180deg,#fff,#fff 72%,rgba(255,255,255,.90));z-index:2;padding:16px 0 10px;}
+      .tb-sport-session-editor-head span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#2563eb;font-weight:950;}
+      .tb-sport-session-editor-head strong{display:block;font-size:24px;line-height:1;color:#0f172a;margin-top:3px;}
+      .tb-sport-session-editor-head small{display:block;margin-top:5px;color:#64748b;font-weight:800;line-height:1.35;}
+      .tb-sport-session-editor-meta,.tb-sport-session-editor-add{display:grid;grid-template-columns:1.5fr .55fr 1fr;gap:10px;margin-bottom:12px;}
+      .tb-sport-session-editor-add{grid-template-columns:minmax(0,1fr) auto;align-items:end;border:1px solid rgba(37,99,235,.12);border-radius:16px;background:#eff6ff;padding:10px;}
+      .tb-sport-session-editor label{display:grid;gap:5px;min-width:0;}
+      .tb-sport-session-editor label span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:900;color:#64748b;}
+      .tb-sport-session-editor input,.tb-sport-session-editor select{width:100%;box-sizing:border-box;border:1px solid rgba(148,163,184,.32);border-radius:12px;background:#fff;color:#0f172a;padding:9px 10px;font-weight:800;min-width:0;}
+      .tb-sport-session-editor-list{display:grid;gap:10px;}
+      .tb-sport-session-editor-row{border:1px solid rgba(148,163,184,.20);border-radius:18px;background:#fff;padding:12px;box-shadow:0 10px 24px rgba(15,23,42,.05);}
+      .tb-sport-session-editor-row-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;}
+      .tb-sport-session-editor-row-head strong{font-size:16px;color:#0f172a;line-height:1.2;}
+      .tb-sport-session-editor-grid{display:grid;grid-template-columns:1.25fr .75fr .62fr .55fr .55fr .55fr .6fr .6fr .6fr .58fr .58fr .8fr;gap:8px;align-items:end;}
+      .tb-sport-session-editor-grid .wide{grid-column:span 2;}
+      .tb-sport-session-editor-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px;position:sticky;bottom:-16px;background:linear-gradient(0deg,#fff,#fff 70%,rgba(255,255,255,.88));padding:10px 0 0;}
       .tb-sport-choice-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;}
       .tb-sport-choice{border:1px solid rgba(148,163,184,.28);border-radius:999px;background:#fff;padding:9px 12px;font-weight:900;cursor:pointer;}
       .tb-sport-choice.active{background:linear-gradient(135deg,#1d4ed8,#0891b2);color:white;border-color:transparent;}
@@ -2136,6 +2309,13 @@
       body.theme-dark .tb-sport-ex-card{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-ex-card span{color:#94a3b8;}
       body.theme-dark .tb-sport-modal{background:linear-gradient(180deg,#111827,#0f172a);color:#f8fafc;border-color:rgba(255,255,255,.12);}
+      body.theme-dark .tb-sport-session-editor{background:linear-gradient(180deg,#111827,#0f172a);color:#f8fafc;border-color:rgba(255,255,255,.12);}
+      body.theme-dark .tb-sport-session-editor-head,body.theme-dark .tb-sport-session-editor-actions{background:linear-gradient(180deg,#111827,#111827 72%,rgba(17,24,39,.90));}
+      body.theme-dark .tb-sport-session-editor-actions{background:linear-gradient(0deg,#111827,#111827 72%,rgba(17,24,39,.90));}
+      body.theme-dark .tb-sport-session-editor-head strong,body.theme-dark .tb-sport-session-editor-row-head strong{color:#f8fafc;}
+      body.theme-dark .tb-sport-session-editor-row{background:#0f172a;border-color:rgba(255,255,255,.12);}
+      body.theme-dark .tb-sport-session-editor-add{background:rgba(37,99,235,.14);border-color:rgba(125,211,252,.16);}
+      body.theme-dark .tb-sport-session-editor input,body.theme-dark .tb-sport-session-editor select{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       body.theme-dark .tb-sport-choice{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       body.theme-dark .tb-sport-quick-btn{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       body.theme-dark .tb-sport-advanced{background:rgba(15,23,42,.72);border-color:rgba(255,255,255,.12);}
@@ -2155,8 +2335,8 @@
       body.theme-dark .tb-sport-session-details summary{color:#f8fafc;}
       body.theme-dark .tb-sport-session-exercise{background:#0f172a;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
-      @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}.tb-sport-program-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-program-focus{grid-template-columns:1fr}.tb-sport-program-progression>div{grid-template-columns:1fr}.tb-sport-program-progression small,.tb-sport-program-progression b{text-align:left;white-space:normal;}}
-      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-next{grid-template-columns:1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-program-cockpit{padding:10px}.tb-sport-program-head strong{font-size:21px}.tb-sport-program-kpis{grid-template-columns:1fr 1fr}.tb-sport-program-loads{grid-template-columns:1fr 1fr}.tb-sport-program-catchup{align-items:flex-start;flex-direction:column}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
+      @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}.tb-sport-program-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-program-focus{grid-template-columns:1fr}.tb-sport-program-progression>div{grid-template-columns:1fr}.tb-sport-program-progression small,.tb-sport-program-progression b{text-align:left;white-space:normal;}.tb-sport-session-editor-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tb-sport-session-editor-meta{grid-template-columns:1fr 120px 1fr}}
+      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-next{grid-template-columns:1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-program-cockpit{padding:10px}.tb-sport-program-head strong{font-size:21px}.tb-sport-program-kpis{grid-template-columns:1fr 1fr}.tb-sport-program-loads{grid-template-columns:1fr 1fr}.tb-sport-program-catchup{align-items:flex-start;flex-direction:column}.tb-sport-session-editor-backdrop{align-items:flex-start;padding:8px}.tb-sport-session-editor{max-height:calc(100dvh - 16px);border-radius:18px;padding:10px}.tb-sport-session-editor-head{top:-10px;padding-top:10px}.tb-sport-session-editor-meta,.tb-sport-session-editor-add,.tb-sport-session-editor-grid{grid-template-columns:1fr}.tb-sport-session-editor-grid .wide{grid-column:auto}.tb-sport-session-editor-row-head{align-items:flex-start;flex-direction:column}.tb-sport-session-editor-actions{bottom:-10px}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
       @media(max-height:700px){.tb-sport-timer-card.focus .tb-sport-timer{gap:7px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timeline{display:none}.tb-sport-timer-card.focus .tb-sport-live-grid{gap:6px}.tb-sport-timer-card.focus .tb-sport-live-kpi{padding:8px}.tb-sport-timer-card.focus .tb-sport-volume-row{display:none}}
       body.tb-capacitor-app[data-tb-view="sport"] #sport-root{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-shell{gap:10px!important;}
@@ -2433,6 +2613,7 @@
           </div>
         </div>
         ${renderSessionFavorites()}
+        ${renderSessionEditorModal()}
         <div class="tb-sport-simple" style="margin-top:12px;">
           <div class="tb-sport-simple-title">
             <div>
@@ -3149,6 +3330,16 @@
         if (beginEditSessionFavorite(btn.getAttribute("data-sport-edit-session-favorite"))) renderSport("session-favorite-edit");
       };
     });
+    root.querySelectorAll("[data-sport-open-session-editor]").forEach(btn => {
+      btn.onclick = () => {
+        if (openSessionFavoriteEditor(btn.getAttribute("data-sport-open-session-editor"))) renderSport("session-editor-open");
+      };
+    });
+    const newSessionFavorite = root.querySelector("#sport-new-session-favorite");
+    if (newSessionFavorite) newSessionFavorite.onclick = () => {
+      openSessionFavoriteEditor("");
+      renderSport("session-editor-new");
+    };
     root.querySelectorAll("[data-sport-reset-session-favorite]").forEach(btn => {
       btn.onclick = () => {
         resetSessionFavoriteOverride(btn.getAttribute("data-sport-reset-session-favorite"));
@@ -3196,6 +3387,60 @@
       activateMassProgram();
       renderSport("program-reset");
     };
+    root.querySelectorAll("[data-sport-session-editor-close]").forEach(btn => {
+      btn.onclick = () => {
+        closeSessionFavoriteEditor();
+        renderSport("session-editor-close");
+      };
+    });
+    const sessionEditorSave = root.querySelector("#sport-session-editor-save");
+    if (sessionEditorSave) sessionEditorSave.onclick = () => {
+      if (saveSessionEditorFromDom(root)) renderSport("session-editor-save");
+    };
+    const sessionEditorLoadCurrent = root.querySelector("#sport-session-editor-load-current");
+    if (sessionEditorLoadCurrent) sessionEditorLoadCurrent.onclick = () => {
+      const editor = readSessionEditorFromDom(root);
+      if (!editor?.plan?.length) return;
+      CACHE.plan = clonePlan(editor.plan);
+      CACHE.editingPlanIndex = null;
+      CACHE.sessionEditor = null;
+      savePlan();
+      sportFeedback(txt("Seance chargee", "Workout loaded"), editor.name || "", { toast: true });
+      renderSport("session-editor-load-current");
+    };
+    const sessionEditorAdd = root.querySelector("#sport-session-editor-add-btn");
+    if (sessionEditorAdd) sessionEditorAdd.onclick = () => {
+      mutateSessionEditorFromDom(root, editor => {
+        const key = root.querySelector("#sport-session-editor-add-ex")?.value || "";
+        const ex = EXERCISE_LIBRARY.find(row => row.key === key) || EXERCISE_LIBRARY[0];
+        editor.plan.push(libraryToPlanItem(ex));
+      });
+      renderSport("session-editor-add");
+    };
+    root.querySelectorAll("[data-sport-session-editor-remove]").forEach(btn => {
+      btn.onclick = () => {
+        const idx = Math.round(n(btn.getAttribute("data-sport-session-editor-remove"), -1));
+        mutateSessionEditorFromDom(root, editor => {
+          if (idx >= 0 && idx < editor.plan.length) editor.plan.splice(idx, 1);
+          if (!editor.plan.length) editor.plan.push(quickPlanItem("pushup"));
+        });
+        renderSport("session-editor-remove");
+      };
+    });
+    root.querySelectorAll("[data-sport-session-editor-move]").forEach(btn => {
+      btn.onclick = () => {
+        const idx = Math.round(n(btn.getAttribute("data-sport-session-editor-move"), -1));
+        const dir = Math.round(n(btn.getAttribute("data-dir"), 0));
+        mutateSessionEditorFromDom(root, editor => {
+          const next = idx + dir;
+          if (idx < 0 || next < 0 || idx >= editor.plan.length || next >= editor.plan.length) return;
+          const tmp = editor.plan[idx];
+          editor.plan[idx] = editor.plan[next];
+          editor.plan[next] = tmp;
+        });
+        renderSport("session-editor-move");
+      };
+    });
     root.querySelectorAll("[data-sport-quick]").forEach(btn => {
       btn.onclick = () => {
         const key = String(btn.getAttribute("data-sport-quick") || "pushup");
