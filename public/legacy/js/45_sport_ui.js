@@ -1759,6 +1759,120 @@
       `${candidate.exerciseName || "Exercise"}: aim for ${range.min}-${range.max} reps. If every set reaches ${range.max}, next time +${inc} kg.`
     ) + (load ? ` ${txt("Charge actuelle", "Current load")}: ${Math.round(load * 10) / 10} kg.` : "");
   }
+  function sessionExerciseName(item) {
+    return item?.exerciseName || labelActivity(item?.activityKey || "strength");
+  }
+  function plannedExerciseLoadLabel(item) {
+    const fallback = effectiveLoadKg(item, bodyWeight());
+    const load = lastLoadForExercise(item, fallback);
+    if (item?.loadLabel || item?.load_label) return item.loadLabel || item.load_label;
+    if (supportsExternalLoad(item) && load) return `${Math.round(load * 10) / 10} kg`;
+    return labelEquipment(item?.equipment);
+  }
+  function exerciseProgressionRows(session) {
+    return (session?.plan || [])
+      .filter(item => item?.mode === "reps")
+      .slice(0, 8)
+      .map(item => {
+        const range = progressionRepRange(item);
+        const inc = supportsExternalLoad(item) ? progressionIncrementKg(item) : 0;
+        const load = lastLoadForExercise(item, effectiveLoadKg(item, bodyWeight()));
+        return {
+          name: sessionExerciseName(item),
+          sets: Math.max(1, Math.round(n(item.sets, 1))),
+          range,
+          inc,
+          load,
+          loadLabel: plannedExerciseLoadLabel(item),
+          restSeconds: restSecondsForItem(item),
+          external: supportsExternalLoad(item),
+        };
+      });
+  }
+  function sessionDoneOnDay(row) {
+    if (!row?.session) return null;
+    const code = String(row.code || sessionCode(row.session) || "").toUpperCase();
+    const day = String(row.day || "").slice(0, 10);
+    const sameDay = (CACHE.sessions || []).concat((CACHE.localSessions || []).map(localToHistorySession))
+      .filter(s => String(s.started_at || s.startedAt || "").slice(0, 10) === day);
+    return sameDay.find(s => {
+      const name = `${s.notes || ""} ${s.mood_after || ""} ${s.first_exercise || ""}`.toLowerCase();
+      return code && name.includes(code.toLowerCase());
+    }) || sameDay[0] || null;
+  }
+  function lastProgramSessionDone() {
+    return (CACHE.sessions || []).concat((CACHE.localSessions || []).map(localToHistorySession))
+      .filter(s => s && (s.started_at || s.startedAt))
+      .slice()
+      .sort((a, b) => String(b.started_at || b.startedAt || "").localeCompare(String(a.started_at || a.startedAt || "")))[0] || null;
+  }
+  function catchupPlannedSportRow(days, today) {
+    const limit = String(today || todayISO()).slice(0, 10);
+    return (days || [])
+      .filter(row => row.planned && row.day < limit && !sessionDoneOnDay(row))
+      .slice()
+      .sort((a, b) => String(b.day || "").localeCompare(String(a.day || "")))[0] || null;
+  }
+  function renderProgramCockpit(days, program) {
+    const weekLabel = days[0]?.weekLabel || currentProgramWeek(program);
+    const today = todayISO();
+    const todayRow = days.find(row => row.day === today);
+    const next = nextPlannedSportRow(days, today);
+    const target = todayRow?.session || next?.session || null;
+    const targetRow = todayRow?.session ? todayRow : next;
+    const catchup = catchupPlannedSportRow(days, today);
+    const last = lastProgramSessionDone();
+    const progressionRows = exerciseProgressionRows(target);
+    const loads = (target?.plan || []).slice(0, 8);
+    const todayLabel = todayRow?.session ? `${todayRow.code || ""} · ${todayRow.session.name}` : txt("Repos aujourd'hui", "Rest today");
+    const nextLabel = next?.session ? `${next.day === today ? txt("Aujourd'hui", "Today") : shortWeekday(next.day)} · ${next.code || ""}` : txt("Aucune seance", "No workout");
+    return `<div class="tb-sport-program-cockpit">
+      <div class="tb-sport-program-head">
+        <div>
+          <span>${esc(txt("Programme V3", "Program V3"))}</span>
+          <strong>${esc(txt("Cockpit entrainement", "Training cockpit"))}</strong>
+          <small>${esc(txt(`Cycle ${weekLabel} actif, recurrence parametrable juste dessous.`, `Active ${weekLabel} cycle, recurrence can be edited below.`))}</small>
+        </div>
+        <div class="tb-sport-actions">
+          ${todayRow?.session ? `<button class="btn small primary" type="button" data-sport-start-planned-today="${esc(todayRow.session.id)}">${esc(txt("Lancer aujourd'hui", "Start today"))}</button>` : ""}
+          ${target ? `<button class="btn small" type="button" data-sport-load-session-favorite="${esc(target.id)}">${esc(txt("Preparer", "Prepare"))}</button>` : ""}
+        </div>
+      </div>
+      <div class="tb-sport-program-kpis">
+        <div><span>${esc(txt("Semaine", "Week"))}</span><strong>${esc(weekLabel)}</strong><small>${esc(txt("Alternance A/B", "A/B rotation"))}</small></div>
+        <div><span>${esc(txt("Aujourd'hui", "Today"))}</span><strong>${esc(todayLabel)}</strong><small>${esc(todayRow?.session ? txt("Seance prevue", "Workout planned") : txt("Recuperation", "Recovery"))}</small></div>
+        <div><span>${esc(txt("Prochaine", "Next"))}</span><strong>${esc(nextLabel)}</strong><small>${esc(next?.session?.name || txt("Planning a completer", "Planning to complete"))}</small></div>
+        <div><span>${esc(txt("Derniere", "Last"))}</span><strong>${esc(last ? String(last.started_at || last.startedAt || "").slice(5, 10).replace("-", "/") : "-")}</strong><small>${esc(last ? `${Math.round(n(last.estimated_kcal, 0))} kcal` : txt("Aucune seance", "No workout"))}</small></div>
+      </div>
+      ${catchup?.session ? `<div class="tb-sport-program-catchup">
+        <div><strong>${esc(txt("Seance a rattraper", "Workout to catch up"))}</strong><small>${esc(`${catchup.day} · ${catchup.code || catchup.session.name} · ${catchup.session.name}`)}</small></div>
+        <button class="btn small" type="button" data-sport-load-session-favorite="${esc(catchup.session.id)}">${esc(txt("Charger", "Load"))}</button>
+      </div>` : ""}
+      ${target ? `<div class="tb-sport-program-focus">
+        <div>
+          <span>${esc(txt(targetRow?.day === today ? "Seance du jour" : "Prochaine seance", targetRow?.day === today ? "Today's workout" : "Next workout"))}</span>
+          <strong>${esc(target.name)}</strong>
+          <small>${esc(sessionPlannedLoadSummary(target))}</small>
+        </div>
+        <em>${esc(sessionProgressionPreview(target))}</em>
+      </div>` : ""}
+      ${loads.length ? `<div class="tb-sport-program-loads">
+        ${loads.map(item => `<div>
+          <span>${esc(sessionExerciseName(item))}</span>
+          <strong>${esc(plannedExerciseLoadLabel(item))}</strong>
+          <small>${esc(item.mode === "reps" ? `${Math.max(1, Math.round(n(item.sets, 1)))} x ${progressionRepRange(item) ? `${progressionRepRange(item).min}-${progressionRepRange(item).max}` : Math.round(n(item.targetReps, 0))} reps` : `${Math.max(1, Math.round(n(item.sets, 1)))} x ${fmtSec(item.targetSeconds || 0)}`)} · ${esc(txt("repos", "rest"))} ${esc(fmtSec(restSecondsForItem(item)))}</small>
+        </div>`).join("")}
+      </div>` : ""}
+      ${progressionRows.length ? `<div class="tb-sport-program-progression">
+        <strong>${esc(txt("Progression exercice par exercice", "Exercise-by-exercise progression"))}</strong>
+        ${progressionRows.map(row => `<div>
+          <span>${esc(row.name)}</span>
+          <small>${esc(`${row.sets} x ${row.range ? `${row.range.min}-${row.range.max}` : "-"} · ${row.loadLabel}`)}</small>
+          <b>${esc(row.external && row.range ? txt(`+${row.inc} kg quand toutes les series touchent ${row.range.max}`, `+${row.inc} kg when every set reaches ${row.range.max}`) : txt("Progression reps/temps", "Reps/time progression"))}</b>
+        </div>`).join("")}
+      </div>` : ""}
+    </div>`;
+  }
   function renderPlannedSportWeek(rows, program) {
     const days = plannedSportWeekRows(rows, program, todayISO());
     if (!days.length) return "";
@@ -1767,6 +1881,7 @@
     const next = nextPlannedSportRow(days, today);
     const todayRow = days.find(row => row.day === today);
     return `<div class="tb-sport-planned-week">
+      ${renderProgramCockpit(days, program)}
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <div>
           <strong>${esc(txt("Semaine planifiee", "Planned week"))}</strong>
@@ -1970,6 +2085,33 @@
       .tb-sport-week-day strong{font-size:11px;line-height:1;}
       .tb-sport-week-day small{font-size:10px;color:#64748b;font-weight:850;}
       .tb-sport-planned-week{border:1px solid rgba(37,99,235,.14);border-radius:18px;background:linear-gradient(135deg,rgba(14,165,233,.10),rgba(34,197,94,.07));padding:12px;margin:12px 0;}
+      .tb-sport-program-cockpit{border:1px solid rgba(15,23,42,.08);border-radius:20px;background:linear-gradient(135deg,#ffffff,#eef6ff 52%,#ecfdf5);box-shadow:0 16px 40px rgba(15,23,42,.08);padding:14px;margin-bottom:12px;display:grid;gap:12px;}
+      .tb-sport-program-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;}
+      .tb-sport-program-head span,.tb-sport-program-focus span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#2563eb;font-weight:950;}
+      .tb-sport-program-head strong{display:block;font-size:24px;line-height:1;color:#0f172a;margin-top:3px;}
+      .tb-sport-program-head small,.tb-sport-program-focus small{display:block;margin-top:5px;color:#64748b;font-weight:800;line-height:1.35;}
+      .tb-sport-program-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+      .tb-sport-program-kpis>div{border:1px solid rgba(148,163,184,.18);border-radius:15px;background:rgba(255,255,255,.82);padding:10px;min-width:0;}
+      .tb-sport-program-kpis span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:950;}
+      .tb-sport-program-kpis strong{display:block;margin-top:5px;font-size:17px;color:#0f172a;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .tb-sport-program-kpis small{display:block;margin-top:4px;color:#64748b;font-size:11px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .tb-sport-program-catchup{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid rgba(245,158,11,.24);border-radius:16px;background:#fffbeb;padding:10px 12px;color:#92400e;}
+      .tb-sport-program-catchup strong{display:block;color:#78350f;}
+      .tb-sport-program-catchup small{display:block;margin-top:2px;font-weight:800;color:#92400e;}
+      .tb-sport-program-focus{display:grid;grid-template-columns:minmax(0,1fr) minmax(210px,.8fr);gap:12px;align-items:center;border:1px solid rgba(37,99,235,.16);border-radius:18px;background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(14,165,233,.06)),#fff;padding:12px;}
+      .tb-sport-program-focus strong{display:block;font-size:20px;color:#0f172a;margin-top:2px;}
+      .tb-sport-program-focus em{font-style:normal;color:#1d4ed8;font-weight:900;line-height:1.35;font-size:13px;}
+      .tb-sport-program-loads{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;}
+      .tb-sport-program-loads>div{border:1px solid rgba(148,163,184,.18);border-radius:15px;background:#fff;padding:10px;min-width:0;}
+      .tb-sport-program-loads span{display:block;color:#64748b;font-size:11px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .tb-sport-program-loads strong{display:block;color:#0f172a;font-size:19px;margin-top:4px;line-height:1;}
+      .tb-sport-program-loads small{display:block;color:#64748b;font-weight:800;font-size:11px;margin-top:5px;line-height:1.25;}
+      .tb-sport-program-progression{border:1px solid rgba(34,197,94,.18);border-radius:18px;background:linear-gradient(180deg,#f0fdf4,#fff);padding:12px;display:grid;gap:8px;}
+      .tb-sport-program-progression>strong{font-size:14px;color:#14532d;}
+      .tb-sport-program-progression>div{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(180px,.9fr);gap:8px;align-items:center;border-top:1px solid rgba(34,197,94,.12);padding-top:8px;}
+      .tb-sport-program-progression span{font-weight:950;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .tb-sport-program-progression small{color:#64748b;font-weight:850;white-space:nowrap;}
+      .tb-sport-program-progression b{font-size:12px;color:#15803d;text-align:right;}
       .tb-sport-planned-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:10px;}
       .tb-sport-planned-next{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid rgba(37,99,235,.18);border-radius:16px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(34,197,94,.08)),#fff;padding:12px;margin-top:10px;}
       .tb-sport-planned-next strong{display:block;font-size:18px;color:#0f172a;margin:2px 0;}
@@ -2001,6 +2143,11 @@
       body.theme-dark .tb-sport-week{background:rgba(14,165,233,.08);border-color:rgba(125,211,252,.18);}
       body.theme-dark .tb-sport-week-day small{color:#94a3b8;}
       body.theme-dark .tb-sport-planned-week{background:rgba(14,165,233,.08);border-color:rgba(125,211,252,.18);}
+      body.theme-dark .tb-sport-program-cockpit{background:linear-gradient(135deg,#0f172a,#082f49 55%,#052e2b);border-color:rgba(125,211,252,.16);}
+      body.theme-dark .tb-sport-program-head strong,body.theme-dark .tb-sport-program-kpis strong,body.theme-dark .tb-sport-program-focus strong,body.theme-dark .tb-sport-program-loads strong,body.theme-dark .tb-sport-program-progression span{color:#f8fafc;}
+      body.theme-dark .tb-sport-program-kpis>div,body.theme-dark .tb-sport-program-focus,body.theme-dark .tb-sport-program-loads>div{background:rgba(15,23,42,.74);border-color:rgba(125,211,252,.14);}
+      body.theme-dark .tb-sport-program-progression{background:rgba(20,83,45,.18);border-color:rgba(134,239,172,.16);}
+      body.theme-dark .tb-sport-program-catchup{background:rgba(120,53,15,.22);border-color:rgba(251,191,36,.20);}
       body.theme-dark .tb-sport-planned-day{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-planned-day strong{color:#f8fafc;}
       body.theme-dark .tb-sport-planned-day span,body.theme-dark .tb-sport-planned-day small{color:#94a3b8;}
@@ -2008,8 +2155,8 @@
       body.theme-dark .tb-sport-session-details summary{color:#f8fafc;}
       body.theme-dark .tb-sport-session-exercise{background:#0f172a;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
-      @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}}
-      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-next{grid-template-columns:1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
+      @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}.tb-sport-program-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-program-focus{grid-template-columns:1fr}.tb-sport-program-progression>div{grid-template-columns:1fr}.tb-sport-program-progression small,.tb-sport-program-progression b{text-align:left;white-space:normal;}}
+      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-next{grid-template-columns:1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-program-cockpit{padding:10px}.tb-sport-program-head strong{font-size:21px}.tb-sport-program-kpis{grid-template-columns:1fr 1fr}.tb-sport-program-loads{grid-template-columns:1fr 1fr}.tb-sport-program-catchup{align-items:flex-start;flex-direction:column}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
       @media(max-height:700px){.tb-sport-timer-card.focus .tb-sport-timer{gap:7px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timeline{display:none}.tb-sport-timer-card.focus .tb-sport-live-grid{gap:6px}.tb-sport-timer-card.focus .tb-sport-live-kpi{padding:8px}.tb-sport-timer-card.focus .tb-sport-volume-row{display:none}}
       body.tb-capacitor-app[data-tb-view="sport"] #sport-root{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-shell{gap:10px!important;}
