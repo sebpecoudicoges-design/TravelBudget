@@ -1875,10 +1875,11 @@
       .tb-sport-timer .name{font-size:34px;font-weight:950;line-height:1.05;}
       .tb-sport-timer .clock{font-size:56px;font-weight:950;letter-spacing:-.05em;}
       .tb-sport-timer .hint{color:#cbd5e1;font-weight:800;}
-      .tb-sport-timer-card.focus{position:fixed;inset:0;z-index:9997;border-radius:0!important;padding:clamp(14px,2.2vw,28px)!important;overflow:auto;background:#020617;}
+      .tb-sport-timer-card.focus{position:fixed;inset:0;z-index:9997;border-radius:0!important;padding:clamp(8px,1.8vh,18px)!important;overflow:hidden;background:#020617;box-sizing:border-box;}
       .tb-sport-timer-card.focus h3{display:none;}
-      .tb-sport-timer-card.focus .tb-sport-timer{min-height:calc(100dvh - 32px);border-radius:28px;}
+      .tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - clamp(16px,3.6vh,36px));min-height:0;border-radius:24px;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;gap:clamp(8px,1.5vh,16px);}
       .tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);}
+      .tb-sport-timer-card.focus .tb-sport-live-focus,.tb-sport-timer-card.focus .tb-sport-live-panel{min-height:0;overflow:hidden;}
       .tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(34px,5vw,74px);}
       .tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(76px,12vw,170px);line-height:.9;}
       .tb-sport-timer-card.focus .tb-sport-live-kpi strong{font-size:clamp(18px,2.1vw,28px);}
@@ -1960,7 +1961,8 @@
       body.theme-dark .tb-sport-session-exercise{background:#0f172a;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       @media(max-width:980px){.tb-sport-grid{grid-template-columns:1fr}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}}
-      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timer-card.focus .tb-sport-timer{min-height:calc(100dvh - 20px);border-radius:20px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:72px}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:31px}}
+      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile{grid-template-columns:1fr}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
+      @media(max-height:700px){.tb-sport-timer-card.focus .tb-sport-timer{gap:7px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timeline{display:none}.tb-sport-timer-card.focus .tb-sport-live-grid{gap:6px}.tb-sport-timer-card.focus .tb-sport-live-kpi{padding:8px}.tb-sport-timer-card.focus .tb-sport-volume-row{display:none}}
       body.tb-capacitor-app[data-tb-view="sport"] #sport-root{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-shell{gap:10px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-hero{border-radius:22px!important;padding:16px!important;min-height:0!important;box-shadow:0 16px 34px rgba(37,99,235,.16)!important;}
@@ -2005,8 +2007,8 @@
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-live-main{grid-template-columns:1fr!important;gap:8px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timeline{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-live-focus,.tb-sport-live-panel{border-radius:16px!important;padding:10px!important;}
-      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus{position:fixed!important;inset:0!important;z-index:100020!important;border-radius:0!important;padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px))!important;background:#020617!important;overflow:auto!important;}
-      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-timer{min-height:calc(100dvh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;border-radius:22px!important;padding:clamp(14px,3vw,28px)!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus{position:fixed!important;inset:0!important;z-index:100020!important;border-radius:0!important;padding:calc(8px + env(safe-area-inset-top,0px)) 8px calc(8px + env(safe-area-inset-bottom,0px))!important;background:#020617!important;overflow:hidden!important;box-sizing:border-box!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;min-height:0!important;border-radius:20px!important;padding:clamp(10px,2.4vw,20px)!important;overflow:hidden!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr!important;gap:12px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-live-head{flex-direction:row!important;align-items:flex-start!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(88px,23vw,180px)!important;line-height:.9!important;letter-spacing:0!important;}
@@ -3058,8 +3060,7 @@
       const shouldFocus = CACHE.timerFocus;
       renderSport("timer-focus");
       try {
-        const card = document.querySelector("#sport-root .tb-sport-timer-card");
-        if (shouldFocus && card?.requestFullscreen && !document.fullscreenElement) await card.requestFullscreen();
+        if (shouldFocus) await keepTimerFullscreen("toggle");
         else if (!shouldFocus && document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
       } catch (_) {}
     };
@@ -3534,6 +3535,19 @@
     rememberLoadForExercise(step.item, timer.doneSets[timer.doneSets.length - 1]?.weightKg || 0);
     timer.stepLoadKg = lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg));
   }
+  async function keepTimerFullscreen(reason) {
+    if (!CACHE.timerFocus) return;
+    const target = document.documentElement;
+    if (!target?.requestFullscreen || document.fullscreenElement) return;
+    try { await target.requestFullscreen({ navigationUI: "hide" }); }
+    catch (_) {
+      try { await target.requestFullscreen(); } catch (_) {}
+    }
+  }
+  function restoreTimerFullscreen(reason) {
+    if (!CACHE.timerFocus) return;
+    window.setTimeout(() => { keepTimerFullscreen(reason); }, 60);
+  }
   function completeStep() {
     const timer = CACHE.timer;
     const step = currentTimerStep();
@@ -3551,6 +3565,7 @@
       timer.stepStartedAt = Date.now();
       timer.stepEndAt = first?.duration ? Date.now() + (first.duration * 1000) : null;
       renderSport("amrap-loop");
+      restoreTimerFullscreen("amrap-loop");
       return;
     }
     if (!next) {
@@ -3562,6 +3577,7 @@
     timer.stepStartedAt = Date.now();
     timer.stepEndAt = next.duration ? Date.now() + (next.duration * 1000) : null;
     renderSport("step");
+    restoreTimerFullscreen("step");
   }
   function skipRestStep() {
     const timer = CACHE.timer;
@@ -3579,6 +3595,7 @@
     timer.stepStartedAt = Date.now();
     timer.stepEndAt = next.duration ? Date.now() + (next.duration * 1000) : null;
     renderSport("skip-rest");
+    restoreTimerFullscreen("skip-rest");
   }
   function adjustCurrentStepSeconds(delta) {
     const timer = CACHE.timer;

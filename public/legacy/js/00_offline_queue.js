@@ -130,6 +130,12 @@
     return ["sport.sync_local", "nutrition.sync_local"].includes(String(kind || ""));
   }
 
+  function itemDedupeKey(kind, payload, meta) {
+    const direct = String(meta?.dedupeKey || payload?.dedupeKey || payload?.coreArgs?.offlineDedupeKey || payload?.args?.p_offline_dedupe_key || "").trim();
+    if (direct) return direct;
+    return "";
+  }
+
   function cleanupOptimisticRows(queueId) {
     try {
       if (!window.state || !Array.isArray(state.transactions)) return 0;
@@ -155,6 +161,23 @@
   function enqueue(kind, payload, meta) {
     const items = safeRead();
     const normalizedKind = String(kind || "unknown");
+    const dedupeKey = itemDedupeKey(normalizedKind, payload, meta);
+    if (dedupeKey) {
+      const existing = items.find((item) =>
+        item &&
+        item.kind === normalizedKind &&
+        item.status !== "done" &&
+        itemDedupeKey(item.kind, item.payload, item.meta) === dedupeKey
+      );
+      if (existing) {
+        existing.updatedAt = nowISO();
+        existing.payload = Object.assign({}, existing.payload || {}, payload || {});
+        existing.meta = Object.assign({}, existing.meta || {}, meta || {}, { dedupeKey });
+        safeWrite(items);
+        toastInfo(message("Action deja en attente. J'ai garde une seule synchro.", "Action already pending. Kept one sync only."));
+        return existing;
+      }
+    }
     if (singletonKind(normalizedKind)) {
       const existing = items.find((item) => item && item.kind === normalizedKind && item.status !== "done");
       if (existing) {

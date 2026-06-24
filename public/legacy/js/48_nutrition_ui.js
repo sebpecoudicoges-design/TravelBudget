@@ -7,8 +7,10 @@
   const FALLBACK_FOODS = [
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
+    { key: "rice_zucchini_onion_salmon", name: "Riz courgette oignon saumon", servingGrams: 380, kcalPer100g: 150, proteinPer100g: 11, carbsPer100g: 18, fatPer100g: 4.8, fiberPer100g: 2.2, tags: ["plat", "riz", "saumon", "legumes", "portion_estimee"] },
     { key: "pasta_cooked", name: "Pates cuites", servingGrams: 150, kcalPer100g: 157, proteinPer100g: 5.8, carbsPer100g: 30.9, fatPer100g: 0.9, fiberPer100g: 1.8 },
     { key: "pasta_chicken_onion_cream", name: "Pates creme fraiche oignon poulet", servingGrams: 300, kcalPer100g: 185, proteinPer100g: 12, carbsPer100g: 19, fatPer100g: 6.8, fiberPer100g: 1.2 },
+    { key: "pasta_curry_chicken", name: "Pates curry poulet", servingGrams: 380, kcalPer100g: 178, proteinPer100g: 12, carbsPer100g: 23, fatPer100g: 4.5, fiberPer100g: 2.2, tags: ["plat", "pates", "poulet", "curry", "portion_estimee"] },
     { key: "chicken_breast", name: "Blanc de poulet", servingGrams: 120, kcalPer100g: 165, proteinPer100g: 31, carbsPer100g: 0, fatPer100g: 3.6 },
     { key: "chicken_thigh", name: "Cuisse de poulet", servingGrams: 130, kcalPer100g: 209, proteinPer100g: 26, carbsPer100g: 0, fatPer100g: 10.9 },
     { key: "tuna_natural", name: "Thon naturel", servingGrams: 100, kcalPer100g: 116, proteinPer100g: 26, carbsPer100g: 0, fatPer100g: 1 },
@@ -20,6 +22,8 @@
     { key: "yogurt_natural", name: "Yaourt nature", servingGrams: 125, kcalPer100g: 61, proteinPer100g: 3.5, carbsPer100g: 4.7, fatPer100g: 3.3 },
     { key: "yogurt_greek", name: "Yaourt grec", servingGrams: 125, kcalPer100g: 97, proteinPer100g: 9, carbsPer100g: 3.6, fatPer100g: 5 },
     { key: "yogurt_fruit", name: "Yaourt aux fruits", servingGrams: 125, kcalPer100g: 95, proteinPer100g: 3.5, carbsPer100g: 15, fatPer100g: 2.5 },
+    { key: "yogurt_hipro_vanilla", name: "Yaourt HiPRO vanille", servingGrams: 160, kcalPer100g: 59, proteinPer100g: 10, carbsPer100g: 4.2, fatPer100g: 0.2, tags: ["laitage", "proteines", "yaourt", "portion_estimee"] },
+    { key: "yogurt_hipro_plain", name: "Yaourt HiPRO nature", servingGrams: 160, kcalPer100g: 57, proteinPer100g: 10, carbsPer100g: 3.8, fatPer100g: 0.2, tags: ["laitage", "proteines", "yaourt", "portion_estimee"] },
     { key: "fromage_blanc_0", name: "Fromage blanc 0%", servingGrams: 125, kcalPer100g: 45, proteinPer100g: 8, carbsPer100g: 4, fatPer100g: 0.2 },
     { key: "fromage_blanc_3", name: "Fromage blanc 3%", servingGrams: 125, kcalPer100g: 76, proteinPer100g: 7.7, carbsPer100g: 4, fatPer100g: 3 },
     { key: "skyr", name: "Skyr", servingGrams: 140, kcalPer100g: 63, proteinPer100g: 10, carbsPer100g: 4, fatPer100g: 0.2 },
@@ -389,6 +393,26 @@
         created_at: new Date().toISOString(),
       } : null,
     };
+  }
+  function upsertOptimisticNutritionRow(row) {
+    try {
+      if (!row?.meal) return;
+      const meal = Object.assign({}, row.meal, { localOnly: true, offlinePending: true });
+      const item = row.item ? Object.assign({}, row.item, { localOnly: true, offlinePending: true }) : null;
+      CACHE.meals = Array.isArray(CACHE.meals) ? CACHE.meals.filter(existing => String(existing.id || "") !== String(meal.id || "")) : [];
+      CACHE.items = Array.isArray(CACHE.items) ? CACHE.items.filter(existing => String(existing.id || "") !== String(item?.id || "")) : [];
+      CACHE.meals.unshift(meal);
+      if (item) CACHE.items.unshift(item);
+      CACHE.loaded = true;
+      publishNutrition("optimistic");
+    } catch (_) {}
+  }
+  function saveLocalNutritionRowOnce(row) {
+    if (!row) return;
+    const key = localNutritionRowKey(row, 0);
+    const rows = loadLocalMeals().filter(existing => localNutritionRowKey(existing, 0) !== key);
+    rows.unshift(row);
+    saveLocalMeals(rows);
   }
   async function syncLocalNutritionRows(reason) {
     const c = client();
@@ -1932,6 +1956,8 @@
     renderNutrition("edit");
   }
   async function saveNutritionMeal(root) {
+    const saveBtn = root?.querySelector("#nutrition-save");
+    if (saveBtn) saveBtn.disabled = true;
     const food = selectedFood(root);
     rememberFoodRecent(food?.key);
     syncNutritionAmount(root);
@@ -1940,6 +1966,7 @@
     const waterMl = n(nut.waterMl, 0);
     const c = client();
     const syncId = `nutrition_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const localRow = makeLocalNutritionRow({ food, grams, nut, waterMl, mealType: root.querySelector("#nutrition-type")?.value || "meal", syncId });
     try {
       if (c && uid() && CACHE.editingItemId) {
         const existing = CACHE.items.find(item => String(item.id || "") === String(CACHE.editingItemId));
@@ -1966,6 +1993,8 @@
         if (itemUpdate.error) throw itemUpdate.error;
         CACHE.editingItemId = "";
       } else if (c && uid()) {
+        upsertOptimisticNutritionRow(localRow);
+        renderNutrition("save-optimistic");
         const meal = await c.from(table("nutrition_meals")).insert({
           user_id: uid(),
           travel_id: activeTravelId(),
@@ -2003,9 +2032,8 @@
         saveLocalMeals(edited);
         CACHE.editingItemId = "";
       } else {
-        const rows = loadLocalMeals();
-        rows.unshift(makeLocalNutritionRow({ food, grams, nut, waterMl, mealType: root.querySelector("#nutrition-type")?.value || "meal", syncId }));
-        saveLocalMeals(rows);
+        saveLocalNutritionRowOnce(localRow);
+        upsertOptimisticNutritionRow(localRow);
         enqueueNutritionSync();
       }
       await loadNutrition({ force: true });
@@ -2016,21 +2044,27 @@
     } catch (e) {
       CACHE.error = e?.message || String(e);
       if (!CACHE.editingItemId && isOfflineSkipError(e)) {
-        const rows = loadLocalMeals();
-        rows.unshift(makeLocalNutritionRow({ food, grams, nut, waterMl, mealType: root.querySelector("#nutrition-type")?.value || "meal", syncId }));
-        saveLocalMeals(rows);
+        saveLocalNutritionRowOnce(localRow);
+        upsertOptimisticNutritionRow(localRow);
         enqueueNutritionSync();
         await loadNutrition({ force: true });
       }
       renderNutrition("save-error");
+    } finally {
+      try { if (saveBtn) saveBtn.disabled = false; } catch (_) {}
     }
   }
   async function saveWaterOnly(root) {
+    const waterBtn = root?.querySelector("#nutrition-water-only");
+    if (waterBtn) waterBtn.disabled = true;
     const water = n(root.querySelector("#nutrition-water-ml")?.value, 0) || 250;
     const c = client();
     const syncId = `nutrition_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const localRow = makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, mealType: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water"), syncId });
     try {
       if (c && uid()) {
+        upsertOptimisticNutritionRow(localRow);
+        renderNutrition("water-optimistic");
         const meal = await c.from(table("nutrition_meals")).insert({
           user_id: uid(),
           travel_id: activeTravelId(),
@@ -2042,9 +2076,8 @@
         });
         if (meal.error) throw meal.error;
       } else {
-        const rows = loadLocalMeals();
-        rows.unshift(makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, mealType: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water"), syncId }));
-        saveLocalMeals(rows);
+        saveLocalNutritionRowOnce(localRow);
+        upsertOptimisticNutritionRow(localRow);
         enqueueNutritionSync();
       }
       await loadNutrition({ force: true });
@@ -2055,13 +2088,14 @@
     } catch (e) {
       CACHE.error = e?.message || String(e);
       if (isOfflineSkipError(e)) {
-        const rows = loadLocalMeals();
-        rows.unshift(makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, mealType: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water"), syncId }));
-        saveLocalMeals(rows);
+        saveLocalNutritionRowOnce(localRow);
+        upsertOptimisticNutritionRow(localRow);
         enqueueNutritionSync();
         await loadNutrition({ force: true });
       }
       renderNutrition("water-error");
+    } finally {
+      try { if (waterBtn) waterBtn.disabled = false; } catch (_) {}
     }
   }
   async function saveSleep(root) {

@@ -447,10 +447,42 @@ function _setTxModalReadOnly(isReadOnly, reason) {
 
 let _savingTx = false;
 
+function _txDedupeHash(text) {
+  const raw = String(text || "");
+  let hash = 0;
+  for (let i = 0; i < raw.length; i += 1) {
+    hash = ((hash << 5) - hash + raw.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function _txOfflineDedupeKey(core) {
+  const amount = Math.round((Number(core?.amount) || 0) * 100) / 100;
+  const parts = [
+    "tx-create",
+    window.sbUser?.id || "",
+    core?.walletId || "",
+    core?.type || "",
+    amount.toFixed(2),
+    String(core?.currency || "").toUpperCase(),
+    core?.cashDate || core?.dateStart || "",
+    core?.budgetDateStart || core?.dateStart || "",
+    core?.budgetDateEnd || core?.dateEnd || "",
+    String(core?.category || "").trim().toLowerCase(),
+    String(core?.subcategory || "").trim().toLowerCase(),
+    String(core?.label || "").trim().toLowerCase(),
+    core?.payNow ? "pay" : "later",
+    core?.outOfBudget ? "out" : "budget",
+    core?.travelId || "",
+  ];
+  return `tx_${_txDedupeHash(parts.join("|"))}`;
+}
+
 function _txAddOptimisticOfflineRow(core, rpcArgs, queueId) {
   try {
     const qid = String(queueId || "").trim();
-    const tempId = qid || rpcArgs?.p_idempotency_key || `offline_tx_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const dedupeKey = String(core?.offlineDedupeKey || "").trim();
+    const tempId = qid || dedupeKey || `offline_tx_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     const wallet = (state.wallets || []).find((w) => String(w.id) === String(core.walletId));
     const createdAt = new Date().toISOString();
     const travelId = core.travelId || core.travel_id || state?.activeTravelId || null;
@@ -460,6 +492,8 @@ function _txAddOptimisticOfflineRow(core, rpcArgs, queueId) {
       offlinePending: true,
       offlineQueueId: qid || tempId,
       offline_queue_id: qid || tempId,
+      offlineDedupeKey: dedupeKey,
+      offline_dedupe_key: dedupeKey,
       walletId: core.walletId,
       wallet_id: core.walletId,
       travelId,
@@ -492,7 +526,11 @@ function _txAddOptimisticOfflineRow(core, rpcArgs, queueId) {
       created_at: createdAt,
     };
     state.transactions = Array.isArray(state.transactions) ? state.transactions.slice() : [];
-    state.transactions = state.transactions.filter((tx) => String(tx?.id || "") !== String(tempId));
+    state.transactions = state.transactions.filter((tx) => {
+      if (String(tx?.id || "") === String(tempId)) return false;
+      if (dedupeKey && String(tx?.offlineDedupeKey || tx?.offline_dedupe_key || "") === dedupeKey) return false;
+      return true;
+    });
     state.transactions.unshift(row);
     try {
       const map = state.walletBalanceMap || {};
@@ -1146,6 +1184,7 @@ async function saveModal() {
           tripExpenseId: null,
           tripShareLinkId: null
         };
+        coreArgs.offlineDedupeKey = _txOfflineDedupeKey(coreArgs);
         const rpcArgs = _txBuildApplyV2Args(coreArgs, { skipInteractiveFx: offlineNow });
         if (offlineNow && typeof window.tbOfflineQueueEnqueue === "function") {
           const queueItem = window.tbOfflineQueueEnqueue("transaction.apply_v2", {
@@ -1157,6 +1196,7 @@ async function saveModal() {
             amount,
             currency: wallet.currency,
             type,
+            dedupeKey: coreArgs.offlineDedupeKey,
           });
           _txAddOptimisticOfflineRow(coreArgs, rpcArgs, queueItem?.id);
         } else {
