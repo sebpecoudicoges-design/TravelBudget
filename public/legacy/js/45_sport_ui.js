@@ -3196,8 +3196,8 @@
     </div>`;
   }
   function exerciseProfileBucket(item) {
-    const text = `${item?.exerciseName || ""} ${item?.activityKey || ""} ${item?.equipment || ""} ${item?.notes || ""}`.toLowerCase();
-    if (/squat|fente|bulgar|souleve|deadlift|rdl|hip|mollet|leg|jambe|lunge/.test(text)) return "lower";
+    const text = normalizedSearch(`${item?.exerciseName || ""} ${item?.activityKey || ""} ${item?.equipment || ""} ${item?.notes || ""}`);
+    if (/squat|fente|bulgar|soulev|deadlift|rdl|hip|mollet|leg|jambe|lunge|terre/.test(text)) return "lower";
     if (/gainage|abdo|core|plank|crunch|releve|raise|twist|hollow/.test(text)) return "core";
     if (/corde|jump|run|course|velo|bike|boxing|boxe|sac|hiit|burpee|rameur|rower|cardio|ping/.test(text)) return "cardio";
     if (/developpe|bench|press|curl|triceps|traction|pull|rowing|row|oiseau|elevation|militaire|push|dips/.test(text)) return "upper";
@@ -3214,8 +3214,8 @@
     return Math.max(0, Math.min(100, Math.round((n(value, 0) / Math.max(1, n(target, 1))) * 100)));
   }
   function profileStrengthTargetRatio(item, bucket) {
-    const text = `${item?.exerciseName || ""} ${item?.activityKey || ""} ${item?.equipment || ""}`.toLowerCase();
-    if (/souleve|deadlift/.test(text)) return /roumain|romanian|rdl/.test(text) ? 1.6 : 1.9;
+    const text = normalizedSearch(`${item?.exerciseName || ""} ${item?.activityKey || ""} ${item?.equipment || ""}`);
+    if (/soulev|deadlift|terre/.test(text)) return /roumain|romanian|rdl/.test(text) ? 1.6 : 1.9;
     if (/squat|fente|bulgar|lunge/.test(text)) return /fente|bulgar|lunge/.test(text) ? 0.9 : 1.45;
     if (/developpe couche|bench/.test(text)) return 1.05;
     if (/developpe militaire|overhead|press militaire/.test(text)) return 0.7;
@@ -3229,7 +3229,8 @@
     const load = n(set?.weightKg || set?.weight_kg, n(item?.weightKg, 0));
     const duration = n(set?.durationSeconds || set?.duration_seconds, n(item?.targetSeconds, 0));
     const name = item?.exerciseName || labelActivity(item?.activityKey);
-    const text = `${name || ""} ${item?.equipment || ""}`.toLowerCase();
+    if (set?.estimated) return null;
+    const text = normalizedSearch(`${name || ""} ${item?.equipment || ""}`);
     if (bucket === "core") {
       if (duration > 0) return { score: profileScore(duration, 90), raw: `${name} ${Math.round(duration)}s`, value: duration };
       return { score: profileScore(reps, 25), raw: `${name} ${Math.round(reps)} reps`, value: reps };

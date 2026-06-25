@@ -8,6 +8,7 @@
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
     { key: "rice_zucchini_onion_salmon", name: "Riz courgette oignon saumon", servingGrams: 380, kcalPer100g: 150, proteinPer100g: 11, carbsPer100g: 18, fatPer100g: 4.8, fiberPer100g: 2.2, tags: ["plat", "riz", "saumon", "legumes", "portion_estimee"] },
+    { key: "rice_zucchini_onion_cream_salmon", name: "Riz courgette oignon creme fraiche saumon", servingGrams: 400, kcalPer100g: 183, proteinPer100g: 8.2, carbsPer100g: 12.5, fatPer100g: 9.2, fiberPer100g: 1.2, waterMlPer100g: 63, tags: ["plat", "riz", "saumon", "creme", "legumes", "portion_estimee", "source_usda_fdc"] },
     { key: "rice_carrot_broccoli_onion_lamb", name: "Riz carotte brocoli oignon agneau", servingGrams: 430, kcalPer100g: 158, proteinPer100g: 9.5, carbsPer100g: 18.5, fatPer100g: 5.2, fiberPer100g: 2.6, tags: ["plat", "riz", "agneau", "legumes", "portion_estimee", "source_usda_fdc"] },
     { key: "pasta_cooked", name: "Pates cuites", servingGrams: 150, kcalPer100g: 157, proteinPer100g: 5.8, carbsPer100g: 30.9, fatPer100g: 0.9, fiberPer100g: 1.8 },
     { key: "pasta_chicken_onion_cream", name: "Pates creme fraiche oignon poulet", servingGrams: 300, kcalPer100g: 185, proteinPer100g: 12, carbsPer100g: 19, fatPer100g: 6.8, fiberPer100g: 1.2 },
@@ -339,6 +340,9 @@
   function isOfflineSkipError(err) {
     return /offline mode|supabase request skipped|failed to fetch|network/i.test(String(err?.message || err || ""));
   }
+  function isDuplicateNutritionError(err) {
+    return String(err?.code || "") === "23505" || /duplicate key|unique constraint|nutrition_meal_items_exact_dedupe/i.test(String(err?.message || err || ""));
+  }
   function enqueueNutritionSync() {
     try {
       if (typeof window.tbOfflineQueueEnqueue === "function") {
@@ -445,13 +449,14 @@
     rows.unshift(row);
     saveLocalMeals(rows);
   }
-  async function syncLocalNutritionRows(reason) {
+  async function syncLocalNutritionRows(reason, options = {}) {
     const c = client();
     const userId = uid();
     if (!c || !userId || CACHE.syncingLocal) return 0;
     const rows = loadLocalMeals();
     if (!rows.length) return 0;
-    const offline = (typeof window.tbShouldUseOfflineMode === "function")
+    const forceOnlineAttempt = options.forceOnline === true || reason === "manual";
+    const offline = forceOnlineAttempt && navigator?.onLine !== false ? false : (typeof window.tbShouldUseOfflineMode === "function")
       ? await window.tbShouldUseOfflineMode(`nutrition:sync:${reason || "manual"}`)
       : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
     if (offline) {
@@ -469,14 +474,16 @@
           const mealNotes = notesWithNutritionSyncId(meal.notes, syncId);
           const mealDate = localDateISO(meal.meal_date) || selectedDateISO();
           let mealId = "";
+          let existingMealLabel = "";
           if (syncId) {
             const existingMeal = await c.from(table("nutrition_meals"))
-              .select("id")
+              .select("id,label")
               .eq("user_id", userId)
               .eq("sync_id", syncId)
               .maybeSingle();
             if (existingMeal.error) throw existingMeal.error;
             mealId = existingMeal.data?.id || "";
+            existingMealLabel = existingMeal.data?.label || "";
           }
           if (!mealId) {
             const insertedMeal = syncId
@@ -504,11 +511,16 @@
           }
           if (row.item) {
             const item = row.item;
+            const itemLabel = item.label || meal.label || "Aliment";
+            if (existingMealLabel && itemLabel && existingMealLabel !== itemLabel) {
+              synced += 1;
+              continue;
+            }
             const existingItems = await c.from(table("nutrition_meal_items"))
               .select("id")
               .eq("user_id", userId)
               .eq("meal_id", mealId)
-              .eq("label", item.label || meal.label || "Aliment")
+              .eq("label", itemLabel)
               .eq("grams", n(item.grams, 0))
               .eq("kcal", n(item.kcal, 0))
               .limit(1);
@@ -518,7 +530,7 @@
                 user_id: userId,
                 meal_id: mealId,
                 food_key: item.food_key || null,
-                label: item.label || meal.label || "Aliment",
+                label: itemLabel,
                 grams: n(item.grams, 0),
                 kcal: n(item.kcal, 0),
                 protein_g: n(item.protein_g, 0),
@@ -526,7 +538,7 @@
                 fat_g: n(item.fat_g, 0),
                 fiber_g: n(item.fiber_g, 0),
               });
-              if (insertedItem.error) throw insertedItem.error;
+              if (insertedItem.error && !isDuplicateNutritionError(insertedItem.error)) throw insertedItem.error;
             }
           }
           synced += 1;
@@ -1905,7 +1917,7 @@
     const syncPending = root.querySelector("#nutrition-sync-pending");
     if (syncPending) syncPending.onclick = async () => {
       syncPending.disabled = true;
-      await syncLocalNutritionRows("manual");
+      await syncLocalNutritionRows("manual", { forceOnline: true });
       await loadNutrition({ force: true });
       renderNutrition("sync-pending");
     };
