@@ -3200,8 +3200,21 @@
     if (/squat|fente|bulgar|soulev|deadlift|rdl|hip|mollet|leg|jambe|lunge|terre/.test(text)) return "lower";
     if (/gainage|abdo|core|plank|crunch|releve|raise|twist|hollow/.test(text)) return "core";
     if (/corde|jump|run|course|velo|bike|boxing|boxe|sac|hiit|burpee|rameur|rower|cardio|ping/.test(text)) return "cardio";
-    if (/developpe|bench|press|curl|triceps|traction|pull|rowing|row|oiseau|elevation|militaire|push|dips/.test(text)) return "upper";
+    if (/traction|pull|rowing|row|oiseau/.test(text)) return "pull";
+    if (/developpe|bench|press|triceps|militaire|push|dips/.test(text)) return "push";
+    if (/curl|elevation/.test(text)) return "pull";
     return String(item?.mode || "") === "reps" ? "upper" : "cardio";
+  }
+  function sportProfileAxisBasis(axis) {
+    const map = {
+      lower: txt("Squat, fentes, souleve de terre et variantes jambes.", "Squat, lunges, deadlift and lower-body variants."),
+      push: txt("Developpes, pompes, dips, triceps et presses.", "Presses, push-ups, dips, triceps and pressing work."),
+      pull: txt("Tractions, rowing, tirages, curls et arriere d'epaule.", "Pull-ups, rows, pulls, curls and rear shoulder work."),
+      core: txt("Gainage, abdos, releves et temps sous tension.", "Planks, abs, raises and time under tension."),
+      cardio: txt("Kcal/min, corde, course, velo, boxe et efforts continus.", "Kcal/min, rope, running, cycling, boxing and steady efforts."),
+      recovery: txt("Sommeil recent et regularite : utile pour savoir si la charge est absorbable.", "Recent sleep and consistency: useful to know if load is recoverable."),
+    };
+    return map[axis] || "";
   }
   function isExplosiveExercise(item) {
     const text = `${item?.exerciseName || ""} ${item?.activityKey || ""}`.toLowerCase();
@@ -3300,7 +3313,7 @@
           const reps = n(set.reps, 0);
           const load = n(set.weightKg || set.weight_kg, n(item.weightKg, 0));
           const capacity = profileExerciseCapacity(item, set, bucket, n(session.body_weight_kg || session.bodyWeightKg, bodyWeight()));
-          if (bucket === "upper" || bucket === "lower" || bucket === "core") setBestCapacity(bestAxis, bucket, capacity);
+          if (bucket === "push" || bucket === "pull" || bucket === "upper" || bucket === "lower" || bucket === "core") setBestCapacity(bestAxis, bucket === "upper" ? "push" : bucket, capacity);
           if (reps <= 0 || load <= 0) return;
           const key = profileExerciseKey(item);
           const estimate = capacity?.estimate || load * (1 + Math.min(reps, 15) / 30);
@@ -3317,13 +3330,25 @@
         });
       });
     });
+    const sleepRows = window.state?.nutritionSleep || {};
+    const recentSleep = Object.keys(sleepRows || {})
+      .sort()
+      .slice(-7)
+      .map(key => n(sleepRows[key]?.hours, 0))
+      .filter(Boolean);
+    const sleepAvg = recentSleep.length ? recentSleep.reduce((sum, h) => sum + h, 0) / recentSleep.length : 0;
+    setBestCapacity(bestAxis, "recovery", {
+      score: sleepAvg ? profileScore(sleepAvg, 7.5) : Math.min(100, uniqueDays.size * 14),
+      raw: sleepAvg ? `${Math.round(sleepAvg * 10) / 10}h sommeil` : `${uniqueDays.size} jours actifs`,
+      value: sleepAvg || uniqueDays.size,
+    });
     const axes = [
-      { key: "upper", label: txt("Haut", "Upper"), value: n(bestAxis.get("upper")?.score, 0), raw: bestAxis.get("upper")?.raw || "-" },
-      { key: "lower", label: txt("Bas", "Lower"), value: n(bestAxis.get("lower")?.score, 0), raw: bestAxis.get("lower")?.raw || "-" },
+      { key: "lower", label: txt("Jambes", "Legs"), value: n(bestAxis.get("lower")?.score, 0), raw: bestAxis.get("lower")?.raw || "-" },
+      { key: "push", label: txt("Poussee", "Push"), value: n(bestAxis.get("push")?.score, 0), raw: bestAxis.get("push")?.raw || "-" },
+      { key: "pull", label: txt("Tirage", "Pull"), value: n(bestAxis.get("pull")?.score, 0), raw: bestAxis.get("pull")?.raw || "-" },
       { key: "core", label: "Core", value: n(bestAxis.get("core")?.score, 0), raw: bestAxis.get("core")?.raw || "-" },
       { key: "cardio", label: "Cardio", value: n(bestAxis.get("cardio")?.score, 0), raw: bestAxis.get("cardio")?.raw || "-" },
-      { key: "endurance", label: txt("Endurance", "Endurance"), value: n(bestAxis.get("endurance")?.score, 0), raw: bestAxis.get("endurance")?.raw || `${Math.round(bestSessionSeconds / 60)} min` },
-      { key: "speed", label: txt("Explosif", "Power"), value: n(bestAxis.get("speed")?.score, 0), raw: bestAxis.get("speed")?.raw || "-" },
+      { key: "recovery", label: txt("Recup.", "Recovery"), value: n(bestAxis.get("recovery")?.score, 0), raw: bestAxis.get("recovery")?.raw || "-" },
     ];
     return {
       axes,
@@ -3379,11 +3404,14 @@
           </svg>
           <div class="tb-sport-radar-side">
             <strong>${esc(txt("Axe a renforcer", "Focus axis"))}: ${esc(data.weakest.label)}</strong>
-            <small>${esc(txt("Base : reperes OMS/ACSM adaptes a ton historique. Le score reste un repere de suivi, pas un diagnostic.", "Basis: WHO/ACSM-style guidelines adapted to your history. The score is tracking guidance, not a diagnosis."))}</small>
+            <small>${esc(txt("Base : capacites observees dans tes series, cardio, sommeil et regularite. Repere de suivi, pas diagnostic.", "Basis: observed set capacity, cardio, sleep and consistency. Tracking guidance, not a diagnosis."))}</small>
             <div class="tb-sport-radar-bars">
-              ${axes.map(axis => `<div><span>${esc(axis.label)} · ${esc(axis.raw)}</span><b style="width:${Math.max(6, axis.value)}%"></b><em>${axis.value}</em></div>`).join("")}
+              ${axes.map(axis => `<div title="${esc(sportProfileAxisBasis(axis.key))}"><span>${esc(axis.label)} · ${esc(axis.raw)}</span><b style="width:${Math.max(6, axis.value)}%"></b><em>${axis.value}</em></div>`).join("")}
             </div>
           </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px;">
+          ${axes.map(axis => `<div class="tb-sport-profile-note"><strong>${esc(axis.label)}</strong><br><small>${esc(sportProfileAxisBasis(axis.key))}</small></div>`).join("")}
         </div>
         <div class="tb-sport-meta" style="margin-top:10px;">${loads}</div>
       </div>

@@ -3,7 +3,7 @@
    - Food library, quick meals, kcal/macros, hydration
    ========================= */
 (function () {
-  const CACHE = { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], error: "", syncStatus: "", foodQuery: "", foodCategory: "all", selectedDate: "", expandedHistory: "", editingItemId: "" };
+  const CACHE = { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], error: "", syncStatus: "", syncPhase: "", foodQuery: "", foodCategory: "all", selectedDate: "", expandedHistory: "", editingItemId: "" };
   const FALLBACK_FOODS = [
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
@@ -160,6 +160,7 @@
   function localMealKey() { return `${window.TB_CONST?.LS_KEYS?.nutrition_local_meals || "travelbudget_nutrition_local_meals_v1"}::${uid() || "anon"}`; }
   function sleepKey() { return `${window.TB_CONST?.LS_KEYS?.nutrition_sleep || "travelbudget_nutrition_sleep_v1"}::${uid() || "anon"}`; }
   function nutritionPrefsKey(kind) { return `travelbudget_nutrition_${kind}_v1::${uid() || "anon"}`; }
+  function nutritionMealFavoritesKey() { return `travelbudget_nutrition_meal_favorites_v1::${uid() || "anon"}`; }
   function healthGoalKey() { return `${window.TB_CONST?.LS_KEYS?.health_goal || "travelbudget_health_goal_v1"}::${uid() || "anon"}`; }
   function nutritionGoalKey() { return healthGoalKey(); }
   function rules() { return window.Core?.nutritionRules || {}; }
@@ -173,9 +174,15 @@
       const mode = ["bulk", "maintenance", "cut"].includes(modeRaw) ? modeRaw : "maintenance";
       const surplusKcal = Math.max(300, Math.min(500, Math.round(n(raw.surplusKcal, 350))));
       const deficitKcal = Math.max(250, Math.min(500, Math.round(n(raw.deficitKcal, 300))));
-      return { mode, surplusKcal, deficitKcal };
+      return {
+        mode,
+        surplusKcal,
+        deficitKcal,
+        targetWeightKg: Math.max(35, Math.min(180, n(raw.targetWeightKg, bodyWeight() + 3))),
+        weeklyRateKg: Math.max(0.1, Math.min(0.8, n(raw.weeklyRateKg, 0.25))),
+      };
     } catch (_) {
-      return { mode: "bulk", surplusKcal: 350, deficitKcal: 300 };
+      return { mode: "bulk", surplusKcal: 350, deficitKcal: 300, targetWeightKg: bodyWeight() + 3, weeklyRateKg: 0.25 };
     }
   }
   function saveNutritionGoal(next) {
@@ -183,6 +190,8 @@
     goal.mode = ["bulk", "maintenance", "cut"].includes(String(goal.mode || "")) ? String(goal.mode) : "maintenance";
     goal.surplusKcal = Math.max(300, Math.min(500, Math.round(n(goal.surplusKcal, 350))));
     goal.deficitKcal = Math.max(250, Math.min(500, Math.round(n(goal.deficitKcal, 300))));
+    goal.targetWeightKg = Math.max(35, Math.min(180, Math.round(n(goal.targetWeightKg, bodyWeight() + 3) * 10) / 10));
+    goal.weeklyRateKg = Math.max(0.1, Math.min(0.8, Math.round(n(goal.weeklyRateKg, 0.25) * 100) / 100));
     try { localStorage.setItem(nutritionGoalKey(), JSON.stringify(goal)); } catch (_) {}
     try { document.dispatchEvent(new CustomEvent("tb:nutrition:goal_changed", { detail: goal })); } catch (_) {}
     try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
@@ -442,6 +451,9 @@
       publishNutrition("confirm");
     } catch (_) {}
   }
+  function mergePendingNutritionRowsIntoCache() {
+    loadLocalMeals().forEach(row => upsertOptimisticNutritionRow(row));
+  }
   function saveLocalNutritionRowOnce(row) {
     if (!row) return;
     const key = localNutritionRowKey(row, 0);
@@ -461,9 +473,13 @@
       : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
     if (offline) {
       CACHE.syncStatus = txt("Hors ligne, attente conservee.", "Offline, pending entries kept.");
+      CACHE.syncPhase = "offline";
       return 0;
     }
     CACHE.syncingLocal = true;
+    CACHE.syncPhase = "syncing";
+    CACHE.syncStatus = txt("Synchronisation en cours...", "Syncing...");
+    publishNutrition("sync-start");
     const remaining = [];
     let synced = 0;
     try {
@@ -556,6 +572,7 @@
       CACHE.syncStatus = remaining.length
         ? txt(`${synced} synchronise(s), ${remaining.length} encore en attente.`, `${synced} synced, ${remaining.length} still pending.`)
         : (synced ? txt(`${synced} ajout(s) synchronise(s).`, `${synced} entry/entries synced.`) : "");
+      CACHE.syncPhase = remaining.length ? "pending" : "done";
       if (!remaining.length) discardNutritionQueue();
       return synced;
     } finally {
@@ -596,6 +613,40 @@
   function foodByKey(key) {
     const k = String(key || "");
     return CACHE.foods.find(food => String(food.key) === k) || null;
+  }
+  function loadMealFavorites() {
+    try {
+      const rows = JSON.parse(localStorage.getItem(nutritionMealFavoritesKey()) || "[]");
+      return Array.isArray(rows) ? rows.filter(row => row && Array.isArray(row.items) && row.items.length) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+  function saveMealFavorites(rows) {
+    try { localStorage.setItem(nutritionMealFavoritesKey(), JSON.stringify((rows || []).slice(0, 12))); } catch (_) {}
+  }
+  function mealFavoriteLabel(type, items) {
+    const names = (items || []).slice(0, 3).map(item => item.label || item.food_key).filter(Boolean).join(" + ");
+    return `${mealTypeLabel(type)} · ${names || txt("repas", "meal")}`;
+  }
+  function saveFavoriteMealFromType(type) {
+    const mealType = String(type || currentMealType());
+    const { items } = selectedRows();
+    const rows = items.filter(item => String(itemMeal(item)?.meal_type || "meal") === mealType && item.food_key);
+    if (!rows.length) return;
+    const favorite = {
+      id: `meal_fav_${Date.now()}`,
+      mealType,
+      label: mealFavoriteLabel(mealType, rows),
+      items: rows.map(item => ({
+        foodKey: item.food_key,
+        label: item.label,
+        grams: n(item.grams, 0),
+      })),
+      createdAt: new Date().toISOString(),
+    };
+    const next = [favorite].concat(loadMealFavorites().filter(row => row.label !== favorite.label));
+    saveMealFavorites(next);
   }
   function loadSleepRows() {
     try {
@@ -686,6 +737,12 @@
       .tb-nutrition-health-day { display:grid; grid-template-columns:46px 1fr; gap:9px; align-items:center; padding:9px; border:1px solid rgba(148,163,184,.22); border-radius:8px; background:rgba(255,255,255,.04); }
       .tb-nutrition-health-bars { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:5px; align-items:end; height:42px; }
       .tb-nutrition-health-bars span { display:block; border-radius:5px 5px 2px 2px; min-height:5px; }
+      .tb-nutrition-goal-cockpit { border:1px solid rgba(34,197,94,.24); border-radius:14px; padding:12px; background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(56,189,248,.08)),var(--panel2); margin-top:10px; display:grid; gap:10px; }
+      .tb-nutrition-goal-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+      .tb-nutrition-goal-kpis div { border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.06); padding:9px; min-width:0; }
+      .tb-nutrition-goal-kpis span { display:block; color:var(--muted); font-size:10px; text-transform:uppercase; font-weight:900; }
+      .tb-nutrition-goal-kpis strong { display:block; margin-top:4px; font-size:18px; line-height:1.05; }
+      .tb-nutrition-goal-kpis small { display:block; margin-top:4px; color:var(--muted); font-size:11px; font-weight:750; }
       .tb-health-hero { display:grid; grid-template-columns:minmax(220px,.72fr) minmax(280px,1.28fr); gap:14px; align-items:stretch; }
       .tb-health-ring { width:min(230px,72vw); aspect-ratio:1; border-radius:50%; display:grid; place-items:center; margin:auto; box-shadow:0 20px 54px rgba(15,23,42,.16); }
       .tb-health-ring-inner { width:68%; aspect-ratio:1; border-radius:50%; display:grid; place-items:center; text-align:center; border:1px solid var(--border); background:var(--panel2); }
@@ -727,6 +784,7 @@
         .tb-nutrition-history-type-grid { grid-template-columns:1fr; }
         .tb-nutrition-timeline-row { grid-template-columns:18px minmax(0,1fr); gap:8px; }
         .tb-nutrition-health-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .tb-nutrition-goal-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .tb-health-hero { grid-template-columns:1fr; }
         .tb-health-goal-grid { grid-template-columns:1fr 1fr; }
         .tb-health-week { grid-template-columns:repeat(4,minmax(0,1fr)); }
@@ -740,6 +798,7 @@
         .tb-nutrition-catalog-grid,
         .tb-nutrition-shell .tb-sport-stats { grid-template-columns:1fr; }
         .tb-nutrition-week-grid button { padding:6px 3px !important; font-size:10px !important; }
+        .tb-nutrition-goal-kpis { grid-template-columns:1fr; }
         .tb-health-week { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .tb-health-goal-grid { grid-template-columns:1fr; }
         .tb-health-weekboard-kpis { grid-template-columns:1fr; }
@@ -881,6 +940,7 @@
       changed = true;
     } finally {
       CACHE.loading = false;
+      mergePendingNutritionRowsIntoCache();
       publishNutrition("load");
     }
     return changed;
@@ -1171,6 +1231,13 @@
     const recent = loadFoodKeys("recent").map(foodByKey).filter(Boolean).filter(food => !favs.some(row => row.key === food.key));
     return { favs: favs.slice(0, 8), recent: recent.slice(0, 8) };
   }
+  function mealFavoriteChipHTML(fav, index) {
+    const kcal = (fav.items || []).reduce((sum, item) => {
+      const food = foodByKey(item.foodKey);
+      return sum + n(nutritionForGrams(food || {}, n(item.grams, 0)).kcal, 0);
+    }, 0);
+    return `<button class="tb-nutrition-food-chip" type="button" data-nutrition-apply-meal-fav="${index}" title="${esc((fav.items || []).map(item => `${item.label || item.foodKey} ${Math.round(n(item.grams, 0))}g`).join(" · "))}"><span>☆</span> ${esc(fav.label || txt("Repas favori", "Favorite meal"))}<br><small>${Math.round(kcal)} kcal</small></button>`;
+  }
   function foodChipHTML(food, kind) {
     const label = kind === "favorite" ? "★" : "↺";
     return `<button class="tb-nutrition-food-chip" type="button" data-nutrition-pick-food="${esc(food.key)}" title="${esc(food.name)} · ${Math.round(n(food.servingGrams, 100))}g"><span>${label}</span> ${esc(food.name)}</button>`;
@@ -1263,6 +1330,46 @@
   }
   function macroSummaryText(targets) {
     return `${Math.round(n(targets.protein, 0))}g P · ${Math.round(n(targets.carbs, 0))}g G · ${Math.round(n(targets.fat, 0))}g L`;
+  }
+  function goalSevenDayInsight(goal, targets, week) {
+    const rows = (week || []).filter(row => n(row.kcal, 0) > 0);
+    if (!rows.length) return txt("Alerte 7 jours disponible des que plusieurs journees sont saisies.", "7-day alert appears once several days are logged.");
+    const avg = rows.reduce((sum, row) => sum + n(row.kcal, 0), 0) / rows.length;
+    const delta = Math.round(avg - n(targets.targetKcal, 0));
+    if (goal.mode === "bulk") {
+      if (delta < -180) return txt(`Trop bas sur 7 jours : moyenne ${Math.round(avg)} kcal, ajoute une collation simple.`, `Too low over 7 days: ${Math.round(avg)} kcal average, add a simple snack.`);
+      if (delta > 250) return txt(`Surplus fort : moyenne ${Math.round(avg)} kcal, reduis un peu les extras.`, `Strong surplus: ${Math.round(avg)} kcal average, trim extras a bit.`);
+      return txt(`Rythme propre : moyenne ${Math.round(avg)} kcal, objectif prise de masse sous controle.`, `Clean pace: ${Math.round(avg)} kcal average, lean bulk on track.`);
+    }
+    if (goal.mode === "cut" && delta > 180) return txt(`Trop haut sur 7 jours : moyenne ${Math.round(avg)} kcal, reajuste les prochains repas.`, `Too high over 7 days: ${Math.round(avg)} kcal average, adjust upcoming meals.`);
+    return txt(`Moyenne 7 jours : ${Math.round(avg)} kcal, ecart ${delta > 0 ? "+" : ""}${delta} kcal.`, `7-day average: ${Math.round(avg)} kcal, gap ${delta > 0 ? "+" : ""}${delta} kcal.`);
+  }
+  function goalCockpitHTML(goal, targets, week, total, sportKcal, workKcal) {
+    const currentWeight = bodyWeight();
+    const targetWeight = n(goal.targetWeightKg, currentWeight);
+    const remainingKg = Math.round((targetWeight - currentWeight) * 10) / 10;
+    const weeklyRate = n(goal.weeklyRateKg, 0.25);
+    const weeks = weeklyRate > 0 ? Math.max(0, Math.ceil(Math.abs(remainingKg) / weeklyRate)) : 0;
+    const kcalLeft = Math.round(n(targets.targetKcal, 0) - n(total.kcal, 0));
+    const insight = goalSevenDayInsight(goal, targets, week);
+    return `<div class="tb-nutrition-goal-cockpit">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+        <div><strong>${esc(txt("Cockpit objectif", "Goal cockpit"))}</strong><div class="muted" style="font-size:12px;">${esc(insight)}</div></div>
+        <span class="pill">${esc(nutritionGoalLabel(goal))}</span>
+      </div>
+      <div class="tb-nutrition-goal-kpis">
+        <div><span>${esc(txt("Poids cible", "Target weight"))}</span><strong>${Math.round(targetWeight * 10) / 10} kg</strong><small>${remainingKg >= 0 ? "+" : ""}${remainingKg} kg · ~${weeks} sem.</small></div>
+        <div><span>${esc(txt("Rythme", "Pace"))}</span><strong>${weeklyRate} kg/sem.</strong><small>${esc(txt("simple et controlable", "simple and controllable"))}</small></div>
+        <div><span>${esc(txt("Reste jour", "Left today"))}</span><strong>${kcalLeft >= 0 ? "+" : ""}${kcalLeft}</strong><small>kcal</small></div>
+        <div><span>${esc(txt("Charge", "Load"))}</span><strong>${Math.round(n(sportKcal, 0) + n(workKcal, 0))}</strong><small>sport + ${esc(txt("travail", "work"))}</small></div>
+      </div>
+      <div class="tb-nutrition-goal-kpis">
+        <div><span>${esc(txt("Proteines", "Protein"))}</span><strong>${Math.round(targets.protein)}g</strong><small>${Math.round(n(targets.proteinPerKg, 0) * 10) / 10} g/kg</small></div>
+        <div><span>${esc(txt("Glucides", "Carbs"))}</span><strong>${Math.round(targets.carbs)}g</strong><small>${esc(txt("ajustes par les kcal", "adjusted by kcal"))}</small></div>
+        <div><span>${esc(txt("Lipides", "Fat"))}</span><strong>${Math.round(targets.fat)}g</strong><small>${Math.round(n(targets.fatPerKg, 0) * 10) / 10} g/kg</small></div>
+        <div><span>${esc(txt("Objectif", "Target"))}</span><strong>${Math.round(targets.targetKcal)}</strong><small>kcal</small></div>
+      </div>
+    </div>`;
   }
   function nextMealTarget(day, targets, total) {
     const type = currentMealType();
@@ -1631,6 +1738,12 @@
     const sleepNightLabel = sleep.nightDay ? sleep.nightDay.slice(5).replace("-", "/") : offsetDateISO(day, -1).slice(5).replace("-", "/");
     const editingItem = CACHE.editingItemId ? items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
     const quickFoods = quickFoodRows();
+    const mealFavorites = loadMealFavorites();
+    const syncBadge = CACHE.syncingLocal
+      ? txt("Sync en cours", "Syncing")
+      : loadLocalMeals().length
+        ? txt("Ajouts en attente", "Pending entries")
+        : txt("A jour", "Up to date");
     root.innerHTML = `
       <section class="tb-nutrition-shell">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
@@ -1672,14 +1785,20 @@
                 <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Objectif", "Goal"))}</span><select id="nutrition-goal-mode"><option value="bulk" ${goalTargets.mode === "bulk" ? "selected" : ""}>${esc(txt("Prise de masse douce", "Lean bulk"))}</option><option value="maintenance" ${goalTargets.mode === "maintenance" ? "selected" : ""}>${esc(txt("Maintien / recomposition", "Maintenance / recomp"))}</option><option value="cut" ${goalTargets.mode === "cut" ? "selected" : ""}>${esc(txt("Perte de gras douce", "Gentle fat loss"))}</option></select></label>
                 <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Surplus kcal", "Kcal surplus"))}</span><select id="nutrition-goal-surplus" ${goalTargets.mode === "bulk" ? "" : "disabled"}><option value="300" ${goalTargets.surplusKcal === 300 ? "selected" : ""}>+300</option><option value="350" ${goalTargets.surplusKcal === 350 ? "selected" : ""}>+350</option><option value="400" ${goalTargets.surplusKcal === 400 ? "selected" : ""}>+400</option><option value="500" ${goalTargets.surplusKcal === 500 ? "selected" : ""}>+500</option></select></label>
                 <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Deficit kcal", "Kcal deficit"))}</span><select id="nutrition-goal-deficit" ${goalTargets.mode === "cut" ? "" : "disabled"}><option value="250" ${goalTargets.deficitKcal === 250 ? "selected" : ""}>-250</option><option value="300" ${goalTargets.deficitKcal === 300 ? "selected" : ""}>-300</option><option value="400" ${goalTargets.deficitKcal === 400 ? "selected" : ""}>-400</option><option value="500" ${goalTargets.deficitKcal === 500 ? "selected" : ""}>-500</option></select></label>
+                <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Poids cible", "Target weight"))}</span><input id="nutrition-goal-weight" type="number" min="35" max="180" step="0.1" value="${esc(String(n(loadNutritionGoal().targetWeightKg, bodyWeight() + 3)))}"></label>
+                <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Rythme kg/sem.", "Pace kg/week"))}</span><input id="nutrition-goal-rate" type="number" min="0.1" max="0.8" step="0.05" value="${esc(String(n(loadNutritionGoal().weeklyRateKg, 0.25)))}"></label>
               </div>
+              ${goalCockpitHTML(loadNutritionGoal(), goalTargets, week, total, sportKcal, workKcal)}
             </div>
           </div>
         </div>
         <div class="tb-nutrition-layout">
           <div style="display:flex;flex-direction:column;gap:12px;">
             <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-              <h3 style="margin:0 0 10px;">${esc(editingItem ? txt("Modifier", "Edit") : txt("Ajout rapide", "Quick add"))}</h3>
+              <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;">
+                <h3 style="margin:0;">${esc(editingItem ? txt("Modifier", "Edit") : txt("Ajout rapide", "Quick add"))}</h3>
+                <span class="pill">${esc(syncBadge)}</span>
+              </div>
               <div class="field"><label>${esc(txt("Chercher", "Search"))}</label><input id="nutrition-search" value="${esc(CACHE.foodQuery)}" placeholder="${esc(txt("Riz, poulet, banane...", "Rice, chicken, banana..."))}"></div>
               <div class="field"><label>${esc(txt("Aliment", "Food"))}</label><select id="nutrition-food">${foodOptions()}</select></div>
               <div class="tb-nutrition-chip-row">
@@ -1687,6 +1806,7 @@
                 ${quickFoods.favs.map(food => foodChipHTML(food, "favorite")).join("")}
                 ${quickFoods.recent.map(food => foodChipHTML(food, "recent")).join("")}
               </div>
+              ${mealFavorites.length ? `<div class="tb-nutrition-chip-row" aria-label="${esc(txt("Repas favoris", "Favorite meals"))}">${mealFavorites.slice(0, 6).map((fav, index) => mealFavoriteChipHTML(fav, index)).join("")}</div>` : ""}
               <div class="row tb-nutrition-form-row" style="gap:10px;">
                 <div class="field" style="flex:1;"><label>${esc(txt("Mode", "Mode"))}</label><select id="nutrition-amount-mode"><option value="portion">${esc(txt("Portions", "Servings"))}</option><option value="grams">${esc(txt("Grammes", "Grams"))}</option></select></div>
                 <div class="field" style="flex:1;"><label>${esc(txt("Quantite", "Quantity"))}</label><input id="nutrition-quantity" type="number" min="0" step="0.25" value="1"></div>
@@ -1840,6 +1960,7 @@
                       <span><strong>${esc(mealTypeLabel(target.type))}</strong><br><small class="muted">${Math.round(n(consumed.kcal, 0))} / ${target.kcal} kcal</small></span>
                       <span class="pill">${rest >= 0 ? esc(txt("reste", "left")) : esc(txt("surplus", "surplus"))} ${Math.abs(Math.round(rest))}</span>
                     </button>
+                    ${rowItems.length ? `<button class="btn small" type="button" data-nutrition-save-meal-fav="${esc(target.type)}" style="margin-top:8px;">☆ ${esc(txt("Garder en favori", "Save as favorite"))}</button>` : ""}
                     <div style="margin:10px 0;">${progressBar("kcal", consumed.kcal, target.kcal, "")}</div>
                     <div class="muted" style="font-size:12px;margin:-4px 0 8px;">${esc(mealTargetNote(target))}</div>
                     <div class="pill" style="margin-bottom:8px;background:rgba(255,255,255,.06);">${esc(suggestion)}</div>
@@ -1949,6 +2070,16 @@
       saveNutritionGoal({ deficitKcal: n(goalDeficit.value, 300) });
       renderNutrition("goal-deficit");
     };
+    const goalWeight = root.querySelector("#nutrition-goal-weight");
+    if (goalWeight) goalWeight.onchange = () => {
+      saveNutritionGoal({ targetWeightKg: n(goalWeight.value, bodyWeight() + 3) });
+      renderNutrition("goal-weight");
+    };
+    const goalRate = root.querySelector("#nutrition-goal-rate");
+    if (goalRate) goalRate.onchange = () => {
+      saveNutritionGoal({ weeklyRateKg: n(goalRate.value, 0.25) });
+      renderNutrition("goal-rate");
+    };
     root.querySelectorAll("[data-nutrition-pick-type]").forEach(btn => {
       btn.onclick = () => {
         const select = root.querySelector("#nutrition-type");
@@ -1971,6 +2102,15 @@
         rememberFoodRecent(key);
         renderNutrition("food-pick");
       };
+    });
+    root.querySelectorAll("[data-nutrition-save-meal-fav]").forEach(btn => {
+      btn.onclick = () => {
+        saveFavoriteMealFromType(btn.getAttribute("data-nutrition-save-meal-fav"));
+        renderNutrition("meal-fav-save");
+      };
+    });
+    root.querySelectorAll("[data-nutrition-apply-meal-fav]").forEach(btn => {
+      btn.onclick = () => applyMealFavorite(btn.getAttribute("data-nutrition-apply-meal-fav"));
     });
     const favorite = root.querySelector("#nutrition-toggle-favorite");
     if (favorite) favorite.onclick = () => {
@@ -2132,23 +2272,48 @@
         upsertOptimisticNutritionRow(localRow);
         enqueueNutritionSync();
       }
-      await loadNutrition({ force: true });
       try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
       try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
       try { if ((window.activeView || "") === "health") renderHealth("save"); } catch (_) {}
       renderNutrition("save");
+      setTimeout(() => loadNutrition({ force: true }).then(() => {
+        if ((window.activeView || "") === "nutrition") renderNutrition("save-refresh");
+      }).catch(() => {}), 350);
     } catch (e) {
       CACHE.error = e?.message || String(e);
       if (!CACHE.editingItemId && isOfflineSkipError(e)) {
         saveLocalNutritionRowOnce(localRow);
         upsertOptimisticNutritionRow(localRow);
         enqueueNutritionSync();
-        await loadNutrition({ force: true });
+        mergePendingNutritionRowsIntoCache();
       }
       renderNutrition("save-error");
     } finally {
       try { if (saveBtn) saveBtn.disabled = false; } catch (_) {}
     }
+  }
+  async function applyMealFavorite(index) {
+    const fav = loadMealFavorites()[Math.max(0, Math.round(n(index, 0)))];
+    if (!fav) return;
+    const type = rootMealTypeValue() || fav.mealType || currentMealType();
+    for (const entry of fav.items || []) {
+      const food = foodByKey(entry.foodKey);
+      if (!food) continue;
+      const grams = Math.max(0, n(entry.grams, food.servingGrams || 100));
+      const nut = nutritionForGrams(food, grams);
+      const syncId = `nutrition_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      const localRow = makeLocalNutritionRow({ food, grams, nut, waterMl: n(nut.waterMl, 0), mealType: type, syncId });
+      saveLocalNutritionRowOnce(localRow);
+      upsertOptimisticNutritionRow(localRow);
+    }
+    enqueueNutritionSync();
+    renderNutrition("meal-favorite");
+    syncLocalNutritionRows("meal-favorite", { forceOnline: true }).then(() => {
+      loadNutrition({ force: true }).then(() => renderNutrition("meal-favorite-sync")).catch(() => {});
+    }).catch(() => {});
+  }
+  function rootMealTypeValue() {
+    return String(document.getElementById("nutrition-type")?.value || "");
   }
   async function saveWaterOnly(root) {
     const waterBtn = root?.querySelector("#nutrition-water-only");
@@ -2189,7 +2354,7 @@
         saveLocalNutritionRowOnce(localRow);
         upsertOptimisticNutritionRow(localRow);
         enqueueNutritionSync();
-        await loadNutrition({ force: true });
+        mergePendingNutritionRowsIntoCache();
       }
       renderNutrition("water-error");
     } finally {
@@ -2237,6 +2402,10 @@
     const key = String(id || "");
     if (!key) return;
     const c = client();
+    const removedItem = CACHE.items.find(item => String(item.id || "") === key);
+    CACHE.items = CACHE.items.filter(item => String(item.id || "") !== key);
+    publishNutrition("delete-optimistic");
+    renderNutrition("delete-optimistic");
     try {
       if (c && uid() && !key.startsWith("local_item_")) {
         const { error } = await c.from(table("nutrition_meal_items")).delete().eq("id", key).eq("user_id", uid());
@@ -2244,10 +2413,13 @@
       } else {
         saveLocalMeals(loadLocalMeals().filter(row => String(row.item?.id || "") !== key));
       }
-      await loadNutrition({ force: true });
+      setTimeout(() => loadNutrition({ force: true }).then(() => {
+        if ((window.activeView || "") === "nutrition") renderNutrition("delete-refresh");
+      }).catch(() => {}), 250);
       try { if ((window.activeView || "") === "health") renderHealth("delete"); } catch (_) {}
       renderNutrition("delete");
     } catch (e) {
+      if (removedItem) CACHE.items.unshift(removedItem);
       CACHE.error = e?.message || String(e);
       renderNutrition("delete-error");
     }
