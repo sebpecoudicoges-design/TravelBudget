@@ -90,6 +90,7 @@
 
   const PROGRAM_LOADS = [
     ["Squat arriere", 60],
+    ["Souleve de terre", 100],
     ["Souleve de terre roumain", 80],
     ["Front squat", 45],
     ["Front squat ou Goblet squat", 45],
@@ -1581,7 +1582,7 @@
         programTime("Gainage", 3, 30, 60, 60),
       ] },
       { id: "mass_a2", week: "A", name: "Semaine A - A2", days: ["Mercredi"], plan: [
-        programReps("Souleve de terre roumain", "barbell", 3, 6, 10, 180),
+        programReps("Souleve de terre", "barbell", 3, 6, 10, 180),
         programReps("Developpe incline halteres", "dumbbell", 3, 8, 12, 120),
         programReps("Rowing barre", "barbell", 3, 8, 12, 120),
         programReps("Elevations laterales", "dumbbell", 2, 12, 20, 60),
@@ -3209,6 +3210,51 @@
   function profileExerciseKey(item) {
     return String(item?.libraryKey || item?.exerciseKey || item?.exerciseName || item?.activityKey || "").toLowerCase();
   }
+  function profileScore(value, target) {
+    return Math.max(0, Math.min(100, Math.round((n(value, 0) / Math.max(1, n(target, 1))) * 100)));
+  }
+  function profileStrengthTargetRatio(item, bucket) {
+    const text = `${item?.exerciseName || ""} ${item?.activityKey || ""} ${item?.equipment || ""}`.toLowerCase();
+    if (/souleve|deadlift/.test(text)) return /roumain|romanian|rdl/.test(text) ? 1.6 : 1.9;
+    if (/squat|fente|bulgar|lunge/.test(text)) return /fente|bulgar|lunge/.test(text) ? 0.9 : 1.45;
+    if (/developpe couche|bench/.test(text)) return 1.05;
+    if (/developpe militaire|overhead|press militaire/.test(text)) return 0.7;
+    if (/rowing|row/.test(text)) return 1.0;
+    if (/traction|pullup|pull-up|chin/.test(text)) return 10;
+    if (/curl|triceps|elevation|oiseau/.test(text)) return 0.42;
+    return bucket === "lower" ? 1.25 : 0.85;
+  }
+  function profileExerciseCapacity(item, set, bucket, kg) {
+    const reps = n(set?.reps, 0);
+    const load = n(set?.weightKg || set?.weight_kg, n(item?.weightKg, 0));
+    const duration = n(set?.durationSeconds || set?.duration_seconds, n(item?.targetSeconds, 0));
+    const name = item?.exerciseName || labelActivity(item?.activityKey);
+    const text = `${name || ""} ${item?.equipment || ""}`.toLowerCase();
+    if (bucket === "core") {
+      if (duration > 0) return { score: profileScore(duration, 90), raw: `${name} ${Math.round(duration)}s`, value: duration };
+      return { score: profileScore(reps, 25), raw: `${name} ${Math.round(reps)} reps`, value: reps };
+    }
+    if (/traction|pullup|pull-up|chin/.test(text) && load <= 0) {
+      return { score: profileScore(reps, 10), raw: `${name} ${Math.round(reps)} reps PDC`, value: reps };
+    }
+    if (reps <= 0 || load <= 0 || kg <= 0) return null;
+    const e1rm = load * (1 + Math.min(reps, 15) / 30);
+    const ratio = e1rm / kg;
+    const target = profileStrengthTargetRatio(item, bucket);
+    return {
+      score: profileScore(/traction|pullup|pull-up|chin/.test(text) ? reps : ratio, target),
+      raw: `${name} ${Math.round(e1rm)} kg e1RM`,
+      value: e1rm,
+      estimate: e1rm,
+      load,
+      reps,
+    };
+  }
+  function setBestCapacity(map, key, candidate) {
+    if (!candidate) return;
+    const current = map.get(key);
+    if (!current || n(candidate.score, 0) > n(current.score, 0)) map.set(key, candidate);
+  }
   function sportProfileRadarData() {
     const now = new Date();
     const since = new Date(now.getTime() - 28 * 86400000);
@@ -3216,14 +3262,20 @@
       const d = new Date(s.started_at || s.startedAt || 0);
       return Number.isFinite(d.getTime()) && d >= since && d <= now;
     });
-    const score = { upper: 0, lower: 0, core: 0, cardio: 0, endurance: 0, speed: 0 };
+    const bestAxis = new Map();
     const uniqueDays = new Set();
     const bestByExercise = new Map();
-    let totalSeconds = 0;
+    let bestSessionSeconds = 0;
     sessions.forEach(session => {
       const sessionId = session.id || session.localId || session.remoteId;
       uniqueDays.add(localDateISO(session.started_at || session.startedAt));
-      totalSeconds += n(session.duration_seconds || session.durationSeconds, 0);
+      const sessionSeconds = n(session.duration_seconds || session.durationSeconds, 0);
+      bestSessionSeconds = Math.max(bestSessionSeconds, sessionSeconds);
+      setBestCapacity(bestAxis, "endurance", {
+        score: profileScore(sessionSeconds / 60, 60),
+        raw: `${Math.round(sessionSeconds / 60)} min`,
+        value: sessionSeconds,
+      });
       const plan = planFromStoredSession(sessionId);
       const doneSets = doneSetsFromStoredSession(sessionId, 0);
       const setsByItem = new Map();
@@ -3233,26 +3285,24 @@
         rows.push(set);
         setsByItem.set(idx, rows);
       });
+      const sessionKcalPerMin = sessionSeconds > 0 ? n(session.estimated_kcal || session.estimatedKcal, 0) / (sessionSeconds / 60) : 0;
       plan.forEach((item, idx) => {
         const bucket = exerciseProfileBucket(item);
         const sets = setsByItem.get(idx) || [];
-        const plannedSets = Math.max(1, Math.round(n(item.sets, 1)));
-        const completedSets = Math.max(sets.length, plannedSets);
-        const setSeconds = item.mode === "time" ? n(item.targetSeconds, 45) : 45;
-        const seconds = sets.length
-          ? sets.reduce((sum, set) => sum + Math.max(20, n(set.durationSeconds, setSeconds)), 0)
-          : completedSets * setSeconds;
-        if (bucket === "upper") score.upper += completedSets;
-        if (bucket === "lower") score.lower += completedSets;
-        if (bucket === "core") score.core += completedSets;
-        if (bucket === "cardio") score.cardio += seconds / 60;
-        if (isExplosiveExercise(item)) score.speed += seconds / 60;
+        if (bucket === "cardio" && sessionKcalPerMin > 0) {
+          setBestCapacity(bestAxis, "cardio", { score: profileScore(sessionKcalPerMin, 10), raw: `${Math.round(sessionKcalPerMin * 10) / 10} kcal/min`, value: sessionKcalPerMin });
+        }
+        if (isExplosiveExercise(item) && sessionKcalPerMin > 0) {
+          setBestCapacity(bestAxis, "speed", { score: profileScore(sessionKcalPerMin, 12), raw: `${Math.round(sessionKcalPerMin * 10) / 10} kcal/min`, value: sessionKcalPerMin });
+        }
         sets.forEach(set => {
           const reps = n(set.reps, 0);
           const load = n(set.weightKg || set.weight_kg, n(item.weightKg, 0));
+          const capacity = profileExerciseCapacity(item, set, bucket, n(session.body_weight_kg || session.bodyWeightKg, bodyWeight()));
+          if (bucket === "upper" || bucket === "lower" || bucket === "core") setBestCapacity(bestAxis, bucket, capacity);
           if (reps <= 0 || load <= 0) return;
           const key = profileExerciseKey(item);
-          const estimate = load * (1 + Math.min(reps, 15) / 30);
+          const estimate = capacity?.estimate || load * (1 + Math.min(reps, 15) / 30);
           const current = bestByExercise.get(key);
           if (!current || estimate > current.estimate) {
             bestByExercise.set(key, {
@@ -3266,14 +3316,13 @@
         });
       });
     });
-    score.endurance = (totalSeconds / 60) + (uniqueDays.size * 18);
     const axes = [
-      { key: "upper", label: txt("Haut", "Upper"), value: Math.min(100, Math.round((score.upper / 36) * 100)), raw: `${Math.round(score.upper)} sets` },
-      { key: "lower", label: txt("Bas", "Lower"), value: Math.min(100, Math.round((score.lower / 24) * 100)), raw: `${Math.round(score.lower)} sets` },
-      { key: "core", label: "Core", value: Math.min(100, Math.round((score.core / 14) * 100)), raw: `${Math.round(score.core)} sets` },
-      { key: "cardio", label: "Cardio", value: Math.min(100, Math.round((score.cardio / 150) * 100)), raw: `${Math.round(score.cardio)} min` },
-      { key: "endurance", label: txt("Endurance", "Endurance"), value: Math.min(100, Math.round((score.endurance / 240) * 100)), raw: `${fmtSec(totalSeconds)}` },
-      { key: "speed", label: txt("Explosif", "Power"), value: Math.min(100, Math.round((score.speed / 45) * 100)), raw: `${Math.round(score.speed)} min` },
+      { key: "upper", label: txt("Haut", "Upper"), value: n(bestAxis.get("upper")?.score, 0), raw: bestAxis.get("upper")?.raw || "-" },
+      { key: "lower", label: txt("Bas", "Lower"), value: n(bestAxis.get("lower")?.score, 0), raw: bestAxis.get("lower")?.raw || "-" },
+      { key: "core", label: "Core", value: n(bestAxis.get("core")?.score, 0), raw: bestAxis.get("core")?.raw || "-" },
+      { key: "cardio", label: "Cardio", value: n(bestAxis.get("cardio")?.score, 0), raw: bestAxis.get("cardio")?.raw || "-" },
+      { key: "endurance", label: txt("Endurance", "Endurance"), value: n(bestAxis.get("endurance")?.score, 0), raw: bestAxis.get("endurance")?.raw || `${Math.round(bestSessionSeconds / 60)} min` },
+      { key: "speed", label: txt("Explosif", "Power"), value: n(bestAxis.get("speed")?.score, 0), raw: bestAxis.get("speed")?.raw || "-" },
     ];
     return {
       axes,
@@ -3313,7 +3362,7 @@
         <div class="tb-sport-card-head">
           <div>
             <h3>${esc(txt("Profil forces / faiblesses", "Strengths / weaknesses profile"))}</h3>
-            <div class="muted">${esc(txt("Radar indicatif sur 28 jours : renforcement, cardio, equilibre haut/bas.", "Indicative 28-day radar: strength, cardio, upper/lower balance."))}</div>
+            <div class="muted">${esc(txt("Radar indicatif sur 28 jours : meilleures capacites observees, pas volume de travail.", "Indicative 28-day radar: best observed capacities, not work volume."))}</div>
           </div>
           <button class="btn" type="button" id="sport-open-body-measurement">${esc(txt("Mesures", "Metrics"))}</button>
         </div>

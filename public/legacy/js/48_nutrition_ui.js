@@ -8,6 +8,7 @@
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
     { key: "rice_zucchini_onion_salmon", name: "Riz courgette oignon saumon", servingGrams: 380, kcalPer100g: 150, proteinPer100g: 11, carbsPer100g: 18, fatPer100g: 4.8, fiberPer100g: 2.2, tags: ["plat", "riz", "saumon", "legumes", "portion_estimee"] },
+    { key: "rice_carrot_broccoli_onion_lamb", name: "Riz carotte brocoli oignon agneau", servingGrams: 430, kcalPer100g: 158, proteinPer100g: 9.5, carbsPer100g: 18.5, fatPer100g: 5.2, fiberPer100g: 2.6, tags: ["plat", "riz", "agneau", "legumes", "portion_estimee", "source_usda_fdc"] },
     { key: "pasta_cooked", name: "Pates cuites", servingGrams: 150, kcalPer100g: 157, proteinPer100g: 5.8, carbsPer100g: 30.9, fatPer100g: 0.9, fiberPer100g: 1.8 },
     { key: "pasta_chicken_onion_cream", name: "Pates creme fraiche oignon poulet", servingGrams: 300, kcalPer100g: 185, proteinPer100g: 12, carbsPer100g: 19, fatPer100g: 6.8, fiberPer100g: 1.2 },
     { key: "pasta_curry_chicken", name: "Pates curry poulet", servingGrams: 380, kcalPer100g: 178, proteinPer100g: 12, carbsPer100g: 23, fatPer100g: 4.5, fiberPer100g: 2.2, tags: ["plat", "pates", "poulet", "curry", "portion_estimee"] },
@@ -407,6 +408,36 @@
       publishNutrition("optimistic");
     } catch (_) {}
   }
+  function confirmNutritionRow(localRow, remoteMeal, remoteItem) {
+    try {
+      const syncId = nutritionSyncId(localRow);
+      const localMealId = String(localRow?.meal?.id || "");
+      const localItemId = String(localRow?.item?.id || "");
+      const meal = Object.assign({}, localRow?.meal || {}, remoteMeal || {}, {
+        localOnly: false,
+        offlinePending: false,
+      });
+      const item = remoteItem || localRow?.item ? Object.assign({}, localRow?.item || {}, remoteItem || {}, {
+        meal_id: meal.id || remoteItem?.meal_id || localRow?.item?.meal_id,
+        localOnly: false,
+        offlinePending: false,
+      }) : null;
+      CACHE.meals = Array.isArray(CACHE.meals) ? CACHE.meals.filter(existing => {
+        const id = String(existing?.id || "");
+        const existingSync = String(existing?.sync_id || "");
+        return id !== localMealId && id !== String(meal.id || "") && (!syncId || existingSync !== syncId);
+      }) : [];
+      CACHE.items = Array.isArray(CACHE.items) ? CACHE.items.filter(existing => {
+        const id = String(existing?.id || "");
+        const mealId = String(existing?.meal_id || "");
+        return id !== localItemId && id !== String(item?.id || "") && mealId !== localMealId && mealId !== String(meal.id || "");
+      }) : [];
+      CACHE.meals.unshift(meal);
+      if (item) CACHE.items.unshift(item);
+      CACHE.loaded = true;
+      publishNutrition("confirm");
+    } catch (_) {}
+  }
   function saveLocalNutritionRowOnce(row) {
     if (!row) return;
     const key = localNutritionRowKey(row, 0);
@@ -757,7 +788,7 @@
             .select("key,name,brand,serving_grams,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,fiber_per_100g,water_ml_per_100g,tags")
             .eq("is_active", true)
             .order("name", { ascending: true })
-            .limit(500);
+            .limit(900);
           if (foods.error) throw foods.error;
           const normalizedFoods = (foods.data || []).map(normalizeFood).filter(Boolean);
           if (normalizedFoods.length) {
@@ -2053,8 +2084,9 @@
           notes: notesWithNutritionSyncId("", syncId),
           sync_id: syncId,
           water_ml: waterMl,
-        }).select("id").single();
+        }).select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,created_at,sync_id").single();
         if (meal.error) throw meal.error;
+        let insertedItem = null;
         if (grams > 0) {
           const item = await c.from(table("nutrition_meal_items")).insert({
             user_id: uid(),
@@ -2067,9 +2099,11 @@
             carbs_g: nut.carbs,
             fat_g: nut.fat,
             fiber_g: nut.fiber,
-          });
+          }).select("id,user_id,meal_id,food_key,label,grams,kcal,protein_g,carbs_g,fat_g,fiber_g,sort_order,created_at").single();
           if (item.error) throw item.error;
+          insertedItem = item.data || null;
         }
+        confirmNutritionRow(localRow, meal.data, insertedItem);
       } else if (CACHE.editingItemId) {
         const rows = loadLocalMeals();
         const edited = rows.map(row => {
@@ -2124,8 +2158,9 @@
           notes: notesWithNutritionSyncId("", syncId),
           sync_id: syncId,
           water_ml: water,
-        });
+        }).select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,created_at,sync_id").single();
         if (meal.error) throw meal.error;
+        confirmNutritionRow(localRow, meal.data, null);
       } else {
         saveLocalNutritionRowOnce(localRow);
         upsertOptimisticNutritionRow(localRow);
