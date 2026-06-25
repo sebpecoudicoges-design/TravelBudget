@@ -3,7 +3,7 @@
    - Food library, quick meals, kcal/macros, hydration
    ========================= */
 (function () {
-  const CACHE = { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], error: "", syncStatus: "", syncPhase: "", foodQuery: "", foodCategory: "all", selectedDate: "", expandedHistory: "", editingItemId: "" };
+  const CACHE = { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], error: "", syncStatus: "", syncPhase: "", foodQuery: "", foodCategory: "all", selectedMealType: "", selectedDate: "", expandedHistory: "", editingItemId: "" };
   const FALLBACK_FOODS = [
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
@@ -1250,6 +1250,11 @@
     if (h < 18) return "afternoon_snack";
     return "dinner";
   }
+  function selectedMealType(root) {
+    const value = String(root?.querySelector("#nutrition-type")?.value || CACHE.selectedMealType || currentMealType() || "meal");
+    CACHE.selectedMealType = value;
+    return value;
+  }
   function healthWeekInsight(rows) {
     const avg = rows.length ? rows.reduce((sum, row) => sum + n(row.score, 0), 0) / rows.length : 0;
     const waterDays = rows.filter(row => n(row.health?.drinkWaterMl ?? row.waterMl, 0) >= 2000).length;
@@ -1739,6 +1744,7 @@
     const editingItem = CACHE.editingItemId ? items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
     const quickFoods = quickFoodRows();
     const mealFavorites = loadMealFavorites();
+    const activeMealType = CACHE.selectedMealType || currentMealType();
     const syncBadge = CACHE.syncingLocal
       ? txt("Sync en cours", "Syncing")
       : loadLocalMeals().length
@@ -1813,7 +1819,7 @@
               </div>
               <div class="row tb-nutrition-form-row" style="gap:10px;">
                 <div class="field" style="flex:1;"><label>${esc(txt("Grammes estimes", "Estimated grams"))}</label><input id="nutrition-grams" type="number" min="0" step="5" value="100"></div>
-                <div class="field" style="flex:1;"><label>${esc(txt("Moment", "Moment"))}</label><select id="nutrition-type"><option value="breakfast">${esc(txt("Petit-dej", "Breakfast"))}</option><option value="morning_snack">${esc(txt("Pause 10h", "10am snack"))}</option><option value="lunch">${esc(txt("Dejeuner", "Lunch"))}</option><option value="afternoon_snack">${esc(txt("Gouter", "Afternoon snack"))}</option><option value="dinner">${esc(txt("Diner", "Dinner"))}</option><option value="snack">${esc(txt("Snack", "Snack"))}</option><option value="meal">${esc(txt("Repas libre", "Free meal"))}</option></select></div>
+                <div class="field" style="flex:1;"><label>${esc(txt("Moment", "Moment"))}</label><select id="nutrition-type"><option value="breakfast" ${activeMealType === "breakfast" ? "selected" : ""}>${esc(txt("Petit-dej", "Breakfast"))}</option><option value="morning_snack" ${activeMealType === "morning_snack" ? "selected" : ""}>${esc(txt("Pause 10h", "10am snack"))}</option><option value="lunch" ${activeMealType === "lunch" ? "selected" : ""}>${esc(txt("Dejeuner", "Lunch"))}</option><option value="afternoon_snack" ${activeMealType === "afternoon_snack" ? "selected" : ""}>${esc(txt("Gouter", "Afternoon snack"))}</option><option value="dinner" ${activeMealType === "dinner" ? "selected" : ""}>${esc(txt("Diner", "Dinner"))}</option><option value="snack" ${activeMealType === "snack" ? "selected" : ""}>${esc(txt("Snack", "Snack"))}</option><option value="meal" ${activeMealType === "meal" ? "selected" : ""}>${esc(txt("Repas libre", "Free meal"))}</option></select></div>
               </div>
               <div class="pill" id="nutrition-preview">0 kcal</div>
               <button class="btn primary" id="nutrition-save" type="button" style="width:100%;margin-top:10px;">${esc(editingItem ? txt("Enregistrer", "Save") : txt("Ajouter", "Add"))}</button>
@@ -2033,6 +2039,11 @@
         updateNutritionPreview(root);
       };
     });
+    const typeSelect = root.querySelector("#nutrition-type");
+    if (typeSelect) typeSelect.onchange = () => {
+      CACHE.selectedMealType = typeSelect.value || "meal";
+      updateNutritionPreview(root);
+    };
     const refresh = root.querySelector("#nutrition-refresh");
     if (refresh) refresh.onclick = async () => { await loadNutrition({ force: true }); renderNutrition("refresh"); };
     const syncPending = root.querySelector("#nutrition-sync-pending");
@@ -2083,7 +2094,8 @@
     root.querySelectorAll("[data-nutrition-pick-type]").forEach(btn => {
       btn.onclick = () => {
         const select = root.querySelector("#nutrition-type");
-        if (select) select.value = btn.getAttribute("data-nutrition-pick-type") || "meal";
+        CACHE.selectedMealType = btn.getAttribute("data-nutrition-pick-type") || "meal";
+        if (select) select.value = CACHE.selectedMealType;
         root.querySelector("#nutrition-search")?.focus();
       };
     });
@@ -2179,7 +2191,10 @@
       grams.value = Math.round(n(item.grams, food?.servingGrams || 100));
     }
     const type = root.querySelector("#nutrition-type");
-    if (type) type.value = meal?.meal_type || "meal";
+    if (type) {
+      type.value = meal?.meal_type || "meal";
+      CACHE.selectedMealType = type.value;
+    }
     updateNutritionPreview(root);
   }
   function startNutritionEdit(root, id) {
@@ -2198,7 +2213,8 @@
     const waterMl = n(nut.waterMl, 0);
     const c = client();
     const syncId = `nutrition_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    const localRow = makeLocalNutritionRow({ food, grams, nut, waterMl, mealType: root.querySelector("#nutrition-type")?.value || "meal", syncId });
+    const mealType = selectedMealType(root);
+    const localRow = makeLocalNutritionRow({ food, grams, nut, waterMl, mealType, syncId });
     try {
       if (c && uid() && CACHE.editingItemId) {
         const existing = CACHE.items.find(item => String(item.id || "") === String(CACHE.editingItemId));
@@ -2206,7 +2222,7 @@
         if (meal?.id) {
           const mealUpdate = await c.from(table("nutrition_meals")).update({
             meal_date: selectedDateISO(),
-            meal_type: root.querySelector("#nutrition-type")?.value || "meal",
+            meal_type: mealType,
             label: food.name,
             water_ml: waterMl,
           }).eq("id", meal.id).eq("user_id", uid());
@@ -2231,7 +2247,7 @@
           user_id: uid(),
           travel_id: activeTravelId(),
           meal_date: selectedDateISO(),
-          meal_type: root.querySelector("#nutrition-type")?.value || "meal",
+          meal_type: mealType,
           label: food.name,
           notes: notesWithNutritionSyncId("", syncId),
           sync_id: syncId,
@@ -2261,7 +2277,7 @@
         const edited = rows.map(row => {
           if (String(row.item?.id || "") !== String(CACHE.editingItemId)) return row;
           return {
-            meal: { ...(row.meal || {}), meal_date: selectedDateISO(), meal_type: root.querySelector("#nutrition-type")?.value || "meal", label: food.name, water_ml: waterMl },
+            meal: { ...(row.meal || {}), meal_date: selectedDateISO(), meal_type: mealType, label: food.name, water_ml: waterMl },
             item: { ...(row.item || {}), food_key: food.key, label: food.name, grams, kcal: nut.kcal, protein_g: nut.protein, carbs_g: nut.carbs, fat_g: nut.fat, fiber_g: nut.fiber },
           };
         });
@@ -2313,7 +2329,7 @@
     }).catch(() => {});
   }
   function rootMealTypeValue() {
-    return String(document.getElementById("nutrition-type")?.value || "");
+    return String(document.getElementById("nutrition-type")?.value || CACHE.selectedMealType || "");
   }
   async function saveWaterOnly(root) {
     const waterBtn = root?.querySelector("#nutrition-water-only");
@@ -2321,7 +2337,8 @@
     const water = n(root.querySelector("#nutrition-water-ml")?.value, 0) || 250;
     const c = client();
     const syncId = `nutrition_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    const localRow = makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, mealType: root.querySelector("#nutrition-type")?.value || "meal", label: txt("Eau", "Water"), syncId });
+    const mealType = selectedMealType(root);
+    const localRow = makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, mealType, label: txt("Eau", "Water"), syncId });
     try {
       if (c && uid()) {
         upsertOptimisticNutritionRow(localRow);
@@ -2330,7 +2347,7 @@
           user_id: uid(),
           travel_id: activeTravelId(),
           meal_date: selectedDateISO(),
-          meal_type: root.querySelector("#nutrition-type")?.value || "meal",
+          meal_type: mealType,
           label: txt("Eau", "Water"),
           notes: notesWithNutritionSyncId("", syncId),
           sync_id: syncId,
