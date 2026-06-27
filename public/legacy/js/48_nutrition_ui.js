@@ -52,6 +52,7 @@
     { key: "orange", name: "Orange", servingGrams: 130, kcalPer100g: 47, proteinPer100g: 0.9, carbsPer100g: 11.8, fatPer100g: 0.1, fiberPer100g: 2.4 },
     { key: "kiwi", name: "Kiwi", servingGrams: 75, kcalPer100g: 61, proteinPer100g: 1.1, carbsPer100g: 14.7, fatPer100g: 0.5, fiberPer100g: 3 },
     { key: "strawberry", name: "Fraises", servingGrams: 150, kcalPer100g: 32, proteinPer100g: 0.7, carbsPer100g: 7.7, fatPer100g: 0.3, fiberPer100g: 2 },
+    { key: "mixed_red_berries", name: "Melange de fruits rouges", servingGrams: 150, kcalPer100g: 47, proteinPer100g: 0.9, carbsPer100g: 11.4, fatPer100g: 0.4, fiberPer100g: 3.6, waterMlPer100g: 87 },
     { key: "grape", name: "Raisin", servingGrams: 120, kcalPer100g: 69, proteinPer100g: 0.7, carbsPer100g: 18, fatPer100g: 0.2, fiberPer100g: 0.9 },
     { key: "pear", name: "Poire", servingGrams: 160, kcalPer100g: 57, proteinPer100g: 0.4, carbsPer100g: 15, fatPer100g: 0.1, fiberPer100g: 3.1 },
     { key: "peach", name: "Peche", servingGrams: 150, kcalPer100g: 39, proteinPer100g: 0.9, carbsPer100g: 9.5, fatPer100g: 0.3, fiberPer100g: 1.5 },
