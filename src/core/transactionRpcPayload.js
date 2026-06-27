@@ -42,6 +42,7 @@ export function buildApplyTransactionV2Args(core = {}, options = {}) {
     p_trip_expense_id: core.tripExpenseId || null,
     p_trip_share_link_id: core.tripShareLinkId || null,
     ...fxArgs,
+    p_offline_dedupe_key: core.offlineDedupeKey || null,
     p_user_id: options.userId || null,
   };
 }

@@ -261,6 +261,7 @@ export function buildTripTransactionRpcPayload(rawArgs = {}, { userId, today } =
     p_fx_snapshot_at: (args.p_fx_snapshot_at === undefined) ? null : args.p_fx_snapshot_at,
     p_fx_base_currency_snapshot: (args.p_fx_base_currency_snapshot === undefined) ? null : args.p_fx_base_currency_snapshot,
     p_fx_tx_currency_snapshot: (args.p_fx_tx_currency_snapshot === undefined) ? null : args.p_fx_tx_currency_snapshot,
+    p_offline_dedupe_key: (args.p_offline_dedupe_key === undefined) ? null : args.p_offline_dedupe_key,
     p_user_id: args.p_user_id ?? userId ?? null,
   };
 }

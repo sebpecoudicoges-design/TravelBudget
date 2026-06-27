@@ -48,6 +48,7 @@ describe('transaction RPC payload builders', () => {
       p_affects_budget: true,
       p_trip_expense_id: null,
       p_trip_share_link_id: null,
+      p_offline_dedupe_key: null,
       p_fx_rate_snapshot: 170,
       p_fx_source_snapshot: 'test',
       p_user_id: 'user-1',
@@ -64,6 +65,14 @@ describe('transaction RPC payload builders', () => {
     });
 
     expect(payload.p_affects_budget).toBe(false);
+  });
+
+  it('preserves the server idempotency key when provided', () => {
+    const payload = buildApplyTransactionV2Args({
+      offlineDedupeKey: 'offline-tx-123',
+    });
+
+    expect(payload.p_offline_dedupe_key).toBe('offline-tx-123');
   });
 
   it('canonicalizes update_transaction_v2 args', () => {

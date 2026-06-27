@@ -204,6 +204,7 @@ describe('trip rules core', () => {
       p_affects_budget: true,
       p_trip_expense_id: null,
       p_trip_share_link_id: null,
+      p_offline_dedupe_key: null,
       p_user_id: 'u1',
     });
 
@@ -217,6 +218,12 @@ describe('trip rules core', () => {
       p_date_end: '2026-06-02',
       p_budget_date_start: '2026-06-01',
       p_budget_date_end: '2026-06-02',
+    });
+
+    expect(buildTripTransactionRpcPayload({
+      p_offline_dedupe_key: 'trip-expense-123',
+    })).toMatchObject({
+      p_offline_dedupe_key: 'trip-expense-123',
     });
   });
 

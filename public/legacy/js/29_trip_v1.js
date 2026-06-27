@@ -429,9 +429,44 @@ function _shareText(text) {
   toastInfo("[Trip] Copié (partage non supporté ici).");
 }
 
+function _tripFlashMessage(msg, kind) {
+  try {
+    const previous = document.getElementById("trip-flash-message");
+    if (previous) previous.remove();
+    const node = document.createElement("div");
+    node.id = "trip-flash-message";
+    node.setAttribute("role", kind === "warn" ? "alert" : "status");
+    node.setAttribute("aria-live", kind === "warn" ? "assertive" : "polite");
+    node.textContent = String(msg || "");
+    Object.assign(node.style, {
+      position: "fixed",
+      zIndex: "10050",
+      left: "max(12px, env(safe-area-inset-left))",
+      right: "max(12px, env(safe-area-inset-right))",
+      bottom: "max(16px, calc(env(safe-area-inset-bottom) + 12px))",
+      maxWidth: "680px",
+      margin: "0 auto",
+      padding: "12px 14px",
+      borderRadius: "8px",
+      border: kind === "warn" ? "1px solid #f59e0b" : "1px solid #22c55e",
+      background: kind === "warn" ? "#fff7ed" : "#f0fdf4",
+      color: kind === "warn" ? "#7c2d12" : "#14532d",
+      boxShadow: "0 10px 28px rgba(15, 23, 42, 0.22)",
+      fontSize: "14px",
+      lineHeight: "1.4",
+      overflowWrap: "anywhere",
+    });
+    document.body.appendChild(node);
+    window.setTimeout(() => node.remove(), kind === "warn" ? 7000 : 3500);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 function toastWarn(msg) {
   console.warn("[Trip]", msg);
-  alert("[Trip] " + msg);
+  if (!_tripFlashMessage(msg, "warn")) alert("[Trip] " + msg);
 }
 
 function toastInfo(msg) {
@@ -462,6 +497,7 @@ async function _copyToClipboard(text) {
 
   function toastOk(msg) {
     console.log("[Trip]", msg);
+    _tripFlashMessage(msg, "ok");
   }
 
   function _tripOfflineFallback() {
@@ -921,6 +957,7 @@ async function _rpcApplyTransactionV2(sb, rawArgs) {
       p_fx_snapshot_at: (args.p_fx_snapshot_at === undefined) ? null : args.p_fx_snapshot_at,
       p_fx_base_currency_snapshot: (args.p_fx_base_currency_snapshot === undefined) ? null : args.p_fx_base_currency_snapshot,
       p_fx_tx_currency_snapshot: (args.p_fx_tx_currency_snapshot === undefined) ? null : args.p_fx_tx_currency_snapshot,
+      p_offline_dedupe_key: (args.p_offline_dedupe_key === undefined) ? null : args.p_offline_dedupe_key,
       p_user_id: args.p_user_id ?? uid,
     };
 

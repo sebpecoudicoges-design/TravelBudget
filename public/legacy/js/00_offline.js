@@ -216,14 +216,16 @@
     return anon ? { apikey: anon, Authorization: `Bearer ${anon}` } : {};
   }
 
-  async function isSupabaseReachable(reason) {
+  async function isSupabaseReachable(reason, options) {
+    const forceProbe = options === true || options?.force === true;
     try {
       if (navigator && navigator.onLine === false) {
         markNetworkUnavailable(reason || "navigator-offline");
         return false;
       }
     } catch (_) {}
-    if (Date.now() < Number(networkUnavailableUntil || 0)) return false;
+    if (!forceProbe && Date.now() < Number(networkUnavailableUntil || 0)) return false;
+    if (forceProbe) networkUnavailableUntil = 0;
 
     if (reachabilityPromise) return reachabilityPromise;
     reachabilityPromise = (async () => {
@@ -231,7 +233,7 @@
       if (!url) return true;
 
       const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const timeout = controller ? setTimeout(() => controller.abort(), 1400) : null;
+      const timeout = controller ? setTimeout(() => controller.abort(), forceProbe ? 4000 : 2500) : null;
       try {
         const res = await fetch(url, {
           method: "GET",
@@ -257,7 +259,12 @@
   }
 
   async function shouldUseOfflineMode(reason) {
-    if (isOfflineMode()) return true;
+    try {
+      if (navigator && navigator.onLine === false) return true;
+    } catch (_) {}
+    if (Date.now() < Number(networkUnavailableUntil || 0)) {
+      return !(await isSupabaseReachable(reason || "offline-recheck", { force: true }));
+    }
     return !(await isSupabaseReachable(reason || "offline-check"));
   }
 

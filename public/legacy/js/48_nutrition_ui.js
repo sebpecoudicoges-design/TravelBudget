@@ -30,6 +30,8 @@
     { key: "fromage_blanc_3", name: "Fromage blanc 3%", servingGrams: 125, kcalPer100g: 76, proteinPer100g: 7.7, carbsPer100g: 4, fatPer100g: 3 },
     { key: "skyr", name: "Skyr", servingGrams: 140, kcalPer100g: 63, proteinPer100g: 10, carbsPer100g: 4, fatPer100g: 0.2 },
     { key: "muesli", name: "Muesli", servingGrams: 45, kcalPer100g: 365, proteinPer100g: 10, carbsPer100g: 62, fatPer100g: 7, fiberPer100g: 8 },
+    { key: "tinaberries_macadamia_toasted_muesli", name: "Tinaberries Macadamias Toasted Muesli", servingGrams: 30, kcalPer100g: 461, proteinPer100g: 9.5, carbsPer100g: 46.4, fatPer100g: 25.4, fiberPer100g: 0 },
+    { key: "strawberry_soft_serve_large_cone", name: "Grand cornet glace fraise", servingGrams: 250, kcalPer100g: 209, proteinPer100g: 4.1, carbsPer100g: 25.2, fatPer100g: 10.5, fiberPer100g: 0.3 },
     { key: "granola", name: "Granola", servingGrams: 45, kcalPer100g: 450, proteinPer100g: 9, carbsPer100g: 64, fatPer100g: 16, fiberPer100g: 7 },
     { key: "oats", name: "Flocons avoine", servingGrams: 50, kcalPer100g: 389, proteinPer100g: 16.9, carbsPer100g: 66.3, fatPer100g: 6.9, fiberPer100g: 10.6 },
     { key: "cornflakes", name: "Corn flakes", servingGrams: 35, kcalPer100g: 357, proteinPer100g: 7.5, carbsPer100g: 84, fatPer100g: 0.4, fiberPer100g: 3 },
