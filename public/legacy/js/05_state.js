@@ -773,18 +773,42 @@ function getAllocatedBaseForDate(dateStr) {
     .reduce((sum, a) => sum + (Number(a.amountBase) || 0), 0);
 }
 
+function getAssetBudgetAllocationsForDate(dateStr) {
+  const target = String(dateStr || '').slice(0, 10);
+  if (!target || typeof window.tbAssetBudgetTransactionsForRange !== 'function') return [];
+  try {
+    return (window.tbAssetBudgetTransactionsForRange(target, target) || []).map((row) => {
+      const amountBase = (typeof amountToBudgetBaseForDate === 'function')
+        ? amountToBudgetBaseForDate(Number(row.amount) || 0, row.currency, target)
+        : Number(row.amount) || 0;
+      return {
+        id: row.id,
+        label: row.label || 'Patrimoine',
+        amountBase: Number(amountBase) || 0,
+        baseCurrency: String(getBudgetSegmentForDate(target)?.baseCurrency || state.period.baseCurrency || 'EUR').toUpperCase(),
+        assetBudget: true,
+      };
+    }).filter((row) => row.amountBase > 0);
+  } catch (_) { return []; }
+}
+window.getAssetBudgetAllocationsForDate = getAssetBudgetAllocationsForDate;
+
 // Returns remaining budget for dateStr in that day's segment base currency.
 function getDailyBudgetForDate(dateStr) {
   const seg = getBudgetSegmentForDate(dateStr);
   if (!periodContains(dateStr) || !seg) return 0;
   const daily = Number(seg.dailyBudgetBase) || 0;
-  return daily - getAllocatedBaseForDate(dateStr);
+  const assetBudget = getAssetBudgetAllocationsForDate(dateStr)
+    .reduce((sum, row) => sum + (Number(row.amountBase) || 0), 0);
+  return daily - getAllocatedBaseForDate(dateStr) - assetBudget;
 }
 
 function getDailyBudgetInfoForDate(dateStr) {
   const seg = getBudgetSegmentForDate(dateStr);
   if (!periodContains(dateStr) || !seg) return { remaining: 0, daily: 0, baseCurrency: state.period.baseCurrency };
-  const key = [String(window.__TB_DATA_REV || 0), String(dateStr || '').slice(0,10), String(seg.baseCurrency || state.period.baseCurrency || 'EUR').toUpperCase(), Number(seg.dailyBudgetBase || 0), String(seg.fxMode || 'fixed'), Number(seg.eurBaseRateFixed || 0)].join('|');
+  const assetBudget = getAssetBudgetAllocationsForDate(dateStr)
+    .reduce((sum, row) => sum + (Number(row.amountBase) || 0), 0);
+  const key = [String(window.__TB_DATA_REV || 0), String(dateStr || '').slice(0,10), String(seg.baseCurrency || state.period.baseCurrency || 'EUR').toUpperCase(), Number(seg.dailyBudgetBase || 0), String(seg.fxMode || 'fixed'), Number(seg.eurBaseRateFixed || 0), assetBudget].join('|');
   if (__tbDailyBudgetInfoCache.has(key)) return __tbDailyBudgetInfoCache.get(key);
   const info = {
     remaining: getDailyBudgetForDate(dateStr),

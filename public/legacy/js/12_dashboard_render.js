@@ -802,7 +802,10 @@ function renderDailyBudget() {
     const baseDay = String(info.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
     const budget = Number(info.remaining) || 0;
     const spentBudget = Math.max(0, Number(info.daily || 0) - budget);
-    const details = (state.allocations || []).filter((a) => a && a.dateStr === dateStr);
+    const details = [
+      ...(state.allocations || []).filter((a) => a && a.dateStr === dateStr),
+      ...(typeof window.getAssetBudgetAllocationsForDate === 'function' ? window.getAssetBudgetAllocationsForDate(dateStr) : []),
+    ];
 
     const div = document.createElement("div");
     div.className = "day";

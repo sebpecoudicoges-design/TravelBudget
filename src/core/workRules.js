@@ -51,8 +51,20 @@ export function summarizeWorkCareer({ engagements = [], days = [], incomes = [] 
   };
 
   const bucket = (id) => byEngagement.get(String(id || '')) || unassigned;
+  const engagementForDay = (day) => {
+    const explicit = byEngagement.get(String(day?.engagement_id || ''));
+    if (explicit) return explicit;
+    const date = String(day?.work_date || day?.date || '').slice(0, 10);
+    if (!date) return unassigned;
+    const matches = (engagements || []).filter((engagement) => {
+      const start = String(engagement?.start_date || '').slice(0, 10);
+      const end = String(engagement?.end_date || '').slice(0, 10);
+      return start && date >= start && (!end || date <= end);
+    });
+    return matches.length === 1 ? bucket(matches[0].id) : unassigned;
+  };
   for (const day of days || []) {
-    const target = bucket(day.engagement_id);
+    const target = engagementForDay(day);
     target.netMinutes += workDayNetMinutes(day);
     target.workDays += 1;
   }
@@ -72,9 +84,14 @@ export function summarizeWorkCareer({ engagements = [], days = [], incomes = [] 
     acc.netMinutes += item.netMinutes;
     acc.totalReceived += item.totalReceived;
     acc.workDays += item.workDays;
+    if (item.engagement) {
+      acc.workNetMinutes += item.netMinutes;
+      acc.workReceived += item.totalReceived;
+    }
     return acc;
-  }, { netMinutes: 0, totalReceived: 0, workDays: 0 });
+  }, { netMinutes: 0, totalReceived: 0, workDays: 0, workNetMinutes: 0, workReceived: 0 });
   totals.netHours = totals.netMinutes / 60;
-  totals.hourlyNet = totals.netHours > 0 ? totals.totalReceived / totals.netHours : null;
+  totals.workNetHours = totals.workNetMinutes / 60;
+  totals.hourlyNet = totals.workNetHours > 0 ? totals.workReceived / totals.workNetHours : null;
   return { totals, engagements: visible };
 }

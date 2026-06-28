@@ -961,7 +961,10 @@ function _renderTodayDetailsHTML(dateStr) {
     : { baseCurrency: state?.period?.baseCurrency };
   const fallbackBase = String(info?.baseCurrency || state?.period?.baseCurrency || "EUR").toUpperCase();
 
-  const details = (state.allocations || []).filter(a => a && a.dateStr === dateStr);
+  const details = [
+    ...(state.allocations || []).filter(a => a && a.dateStr === dateStr),
+    ...(typeof window.getAssetBudgetAllocationsForDate === 'function' ? window.getAssetBudgetAllocationsForDate(dateStr) : []),
+  ];
 
   if (!details.length) {
     return `<div class="muted" style="margin-top:8px;">Aucun détail</div>`;

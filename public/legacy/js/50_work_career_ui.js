@@ -85,13 +85,26 @@
   }
   function closeModal(){ $('.tb-career-modal-bg')?.remove(); }
   function value(fd,name){return String(fd.get(name)||'').trim();}
+  async function linkUnassignedWorkDays(engagementId, startDate, endDate){
+    const c=sb(); if(!c||!uid()||!engagementId||!startDate)return;
+    let query=c.from(table('work_days')).update({engagement_id:engagementId})
+      .eq('user_id',uid()).is('engagement_id',null).gte('work_date',startDate);
+    if(endDate)query=query.lte('work_date',endDate);
+    const {error}=await query; if(error)throw error;
+  }
   async function saveForm(form){
     const kind=form.dataset.careerForm,id=form.dataset.id,c=sb(),fd=new FormData(form); if(!c||!uid())throw new Error(txt('Connexion requise.','Sign-in required.'));
     let target,payload;
     if(kind==='job'){target='work_engagements';payload={user_id:uid(),travel_id:window.state?.activeTravelId||null,name:value(fd,'name'),employer:value(fd,'employer')||null,role_title:value(fd,'role_title')||null,location:value(fd,'location')||null,start_date:value(fd,'start_date'),end_date:value(fd,'end_date')||null,currency:value(fd,'currency').toUpperCase()||'AUD',color:value(fd,'color')||'#0ea5e9',status:value(fd,'end_date')?'completed':'active',notes:value(fd,'notes')||null};}
     else if(kind==='income'){target='work_income_events';payload={user_id:uid(),engagement_id:value(fd,'engagement_id')||null,received_date:value(fd,'received_date'),period_start:value(fd,'period_start')||null,period_end:value(fd,'period_end')||null,net_amount:num(value(fd,'net_amount')),gross_amount:value(fd,'gross_amount')===''?null:num(value(fd,'gross_amount')),currency:value(fd,'currency').toUpperCase()||'AUD',income_type:value(fd,'income_type')||'salary',notes:value(fd,'notes')||null};}
     else{target='work_status_periods';payload={user_id:uid(),engagement_id:value(fd,'engagement_id')||null,status_type:value(fd,'status_type')||'unemployment',label:value(fd,'label'),start_date:value(fd,'start_date'),end_date:value(fd,'end_date')||null,color:value(fd,'color')||'#94a3b8',notes:value(fd,'notes')||null};}
-    const q=id?c.from(table(target)).update(payload).eq('id',id).eq('user_id',uid()):c.from(table(target)).insert(payload); const {error}=await q;if(error)throw error;closeModal();await load(true);window.renderWork?.('career-save');
+    const q=(id?c.from(table(target)).update(payload).eq('id',id).eq('user_id',uid()):c.from(table(target)).insert(payload)).select('id').single();
+    const {data,error}=await q;if(error)throw error;
+    if(kind==='job'){
+      await linkUnassignedWorkDays(data?.id||id,payload.start_date,payload.end_date);
+      if(typeof window.tbReloadWorkDays==='function')await window.tbReloadWorkDays();
+    }
+    closeModal();await load(true);window.renderWork?.('career-save');
   }
   function bindModal(){const form=$('[data-career-form]');if(!form)return;form.querySelectorAll('[data-career-close]').forEach(x=>x.onclick=closeModal);form.onsubmit=async(ev)=>{ev.preventDefault();const error=$('.tb-career-error',form);try{await saveForm(form);}catch(e){error.hidden=false;error.textContent=e?.message||String(e);}};}
   async function linkFolder(jobId){
