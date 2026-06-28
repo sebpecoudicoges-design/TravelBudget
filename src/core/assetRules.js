@@ -39,6 +39,94 @@ export function assetOwnerPercent(asset, owners = []) {
   return clamp(num(own?.ownership_percent ?? rows[0]?.ownership_percent ?? 100, 100), 0, 100);
 }
 
+function isoDate(value) {
+  const d = value instanceof Date ? value : dateValue(value);
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function monthOccurrence(year, monthIndex, day) {
+  const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+  return new Date(year, monthIndex, Math.min(Math.max(1, day), lastDay));
+}
+
+export function assetMonthlyBudgetAmount(asset, owners = []) {
+  if (!asset || asset.include_in_budget === false) return 0;
+  const method = String(asset.budget_method || 'linear').toLowerCase();
+  const base = method === 'manual'
+    ? Math.max(0, num(asset.monthly_budget_override, 0))
+    : Math.max(0, num(asset.purchase_value, 0) - num(asset.residual_value, 0))
+      / Math.max(1, Math.round(num(asset.depreciation_months, 1)));
+  return base * (assetOwnerPercent(asset, owners) / 100);
+}
+
+export function buildAssetBudgetTransactions({ assets = [], owners = [], rangeStart, rangeEnd } = {}) {
+  const start = dateValue(rangeStart);
+  const end = dateValue(rangeEnd || rangeStart);
+  if (!start || !end || end < start) return [];
+  const rows = [];
+
+  for (const asset of assets || []) {
+    if (!asset || asset.include_in_budget === false) continue;
+    if (['sold', 'archived'].includes(String(asset.status || '').toLowerCase())) continue;
+    const amount = assetMonthlyBudgetAmount(asset, owners);
+    if (!(amount > 0)) continue;
+
+    const purchaseDate = dateValue(asset.purchase_date);
+    const budgetStart = dateValue(asset.budget_start_date) || purchaseDate;
+    if (!budgetStart) continue;
+    const explicitEnd = dateValue(asset.budget_end_date);
+    const depreciationMonths = Math.max(1, Math.round(num(asset.depreciation_months, 1)));
+    const linearEnd = String(asset.budget_method || 'linear') === 'manual'
+      ? null
+      : new Date(budgetStart.getFullYear(), budgetStart.getMonth() + depreciationMonths - 1, 31);
+    const activeEnd = explicitEnd && linearEnd
+      ? (explicitEnd < linearEnd ? explicitEnd : linearEnd)
+      : (explicitEnd || linearEnd);
+    const day = Math.round(num(asset.budget_day, budgetStart.getDate()));
+
+    let cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    const lastMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+    while (cursor <= lastMonth) {
+      const occurrence = monthOccurrence(cursor.getFullYear(), cursor.getMonth(), day);
+      if (occurrence >= start && occurrence <= end && occurrence >= budgetStart && (!activeEnd || occurrence <= activeEnd)) {
+        const date = isoDate(occurrence);
+        rows.push({
+          id: `asset-budget:${asset.id}:${date}`,
+          user_id: asset.user_id || null,
+          travel_id: asset.travel_id || null,
+          type: 'expense',
+          label: `Patrimoine - ${asset.name || 'Actif'}`,
+          amount,
+          currency: normalizeCurrency(asset.currency) || 'EUR',
+          category: asset.budget_category || 'Patrimoine',
+          subcategory: asset.budget_subcategory || 'Amortissement',
+          dateStart: date,
+          dateEnd: date,
+          date_start: date,
+          date_end: date,
+          budgetDateStart: date,
+          budgetDateEnd: date,
+          payNow: true,
+          pay_now: true,
+          outOfBudget: false,
+          out_of_budget: false,
+          affectsBudget: true,
+          affects_budget: true,
+          virtualBudgetOnly: true,
+          assetBudget: true,
+          assetId: asset.id,
+        });
+      }
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+    }
+  }
+  return rows;
+}
+
 export function convertAssetAmount(amount, fromCurrency, toCurrency, options = {}) {
   const from = normalizeCurrency(fromCurrency);
   const to = normalizeCurrency(toCurrency);

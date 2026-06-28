@@ -77,7 +77,7 @@
       const tid = activeTravelId(); if(tid) q = q.or(`travel_id.eq.${tid},travel_id.is.null`);
       const { data, error } = await q; if(error) throw error;
       const assets = (data||[]).map(window.TBAssetsCore.normalizeAsset);
-      if(!assets.length){ CACHE = { assets:[], owners:[], events:[], demo:false, empty:true }; return CACHE; }
+      if(!assets.length){ CACHE = { assets:[], owners:[], events:[], documentLinks:[], demo:false, empty:true }; if(window.state){ state.assets=[]; state.assetOwners=[]; } return CACHE; }
       const ids = assets.map(a=>a.id);
       const ownersRes = await c.from(table('asset_owners','asset_owners')).select('*').in('asset_id', ids).order('created_at',{ascending:true});
       let events = [];
@@ -93,9 +93,21 @@
           state.assetDocuments = CACHE.documentLinks;
         }
         if (typeof window.tbSaveOfflineSnapshot === 'function') window.tbSaveOfflineSnapshot('assets:load');
+        if (typeof window.renderKPI === 'function') window.renderKPI();
       } catch (_) {}
       return CACHE;
     }catch(e){ console.warn('[TB][assets] fallback preview used', e); CACHE = { assets:FALLBACK_ASSETS, owners:FALLBACK_OWNERS, events:FALLBACK_EVENTS, demo:true, reason:e && (e.message || e.code) }; return CACHE; }
+  }
+
+  function assetBudgetRows(start, end){
+    try {
+      return window.Core?.assetRules?.buildAssetBudgetTransactions?.({
+        assets: CACHE.assets || window.state?.assets || [],
+        owners: CACHE.owners || window.state?.assetOwners || [],
+        rangeStart: start,
+        rangeEnd: end,
+      }) || [];
+    } catch (_) { return []; }
   }
 
   function findAsset(id){ return (CACHE.assets||[]).find(a=>String(a.id)===String(id)); }
@@ -256,7 +268,9 @@ function portfolioSummaryHtml(assets, owners){
     const pctLoss = asset.purchase_value ? Math.round(((asset.purchase_value-current)/asset.purchase_value)*100) : 0;
     const lossAmount = Math.max(0, Number(asset.purchase_value || 0) - Number(current || 0));
     const rows = ownerRows(asset, owners); const ownPct = minePercent(rows); const ownValue = core.computeOwnedValue(asset, ownPct); const width = Math.round(progress.ratio*100);
-const monthlyDep = asset.depreciation_months ? (Number(asset.purchase_value || 0) - Number(asset.residual_value || 0)) / Number(asset.depreciation_months || 1) : 0;
+const monthlyDep = window.Core?.assetRules?.assetMonthlyBudgetAmount
+  ? window.Core.assetRules.assetMonthlyBudgetAmount(asset, owners)
+  : (asset.depreciation_months ? ((Number(asset.purchase_value || 0) - Number(asset.residual_value || 0)) / Number(asset.depreciation_months || 1)) * ownPct / 100 : 0);
 const depreciationStatus = width >= 100 ? tr('assets.card.depreciated') : tr('assets.card.depreciating');
     const total = totalPercent(rows); const warning = rows.length && Math.abs(total-100) > 0.01 ? `<span class="tb-asset-owner-warning">Total parts : ${esc(total)}%</span>` : '';
     const recent = eventRows(asset).slice(0,2);
@@ -272,7 +286,8 @@ const depreciationStatus = width >= 100 ? tr('assets.card.depreciated') : tr('as
       <div class="tb-asset-facts">
   <span>${esc(tr('assets.card.purchase'))} : <strong>${esc(money(asset.purchase_value,asset.currency))}</strong></span>
   <span>${esc(tr('assets.card.residual_value'))} : <strong>${esc(money(asset.residual_value,asset.currency))}</strong></span>
-  <span>${esc(tr('assets.card.monthly_cost'))} : <strong>${esc(money(monthlyDep,asset.currency))}/${esc(tr('assets.card.month'))}</strong></span>
+  <span>${esc(atxt('Coût budget mensuel', 'Monthly budget cost'))} : <strong>${esc(money(monthlyDep,asset.currency))}/${esc(tr('assets.card.month'))}</strong></span>
+  <span class="${asset.include_in_budget ? 'done' : ''}">${esc(asset.include_in_budget ? atxt('Inclus au budget', 'Included in budget') : atxt('Hors budget', 'Outside budget'))}</span>
   <span class="${width >= 100 ? 'done' : ''}">${esc(depreciationStatus)}</span>
 </div>
 <div class="tb-asset-progress"><div><small>${esc(tr('assets.card.amortization'))}</small><small>${width >= 100 ? esc(tr('assets.card.floor_reached')) : width + '% ' + esc(tr('assets.card.used'))}</small></div><b><i style="width:${width}%"></i></b></div>
@@ -304,10 +319,10 @@ ${(() => {
   function renderCharts(assets){ if(!window.echarts) return; for(const asset of assets){ const el = document.getElementById(`asset-chart-${asset.id}`); if(!el) continue; const old = window.echarts.getInstanceByDom ? window.echarts.getInstanceByDom(el) : null; if(old) old.dispose(); const series = window.TBAssetsCore.buildValueSeries(asset, 18); const chart = window.echarts.init(el, null, { renderer:'canvas' }); chart.setOption({ grid:{left:4,right:4,top:8,bottom:6}, xAxis:{type:'category',show:false,data:series.map(x=>x.date)}, yAxis:{type:'value',show:false,min:'dataMin'}, tooltip:{trigger:'axis', valueFormatter:v=>money(v, asset.currency)}, series:[{ type:'line', smooth:true, symbol:'none', lineStyle:{ width:4, color:'#22d3ee' }, areaStyle:{ color:{ type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:'rgba(6,182,212,.22)'},{offset:1,color:'rgba(6,182,212,.02)'}] } }, data:series.map(x=>Math.round(x.value*100)/100) }] }); } }
 
   function assetFormHtml(mode, asset){
-    const a = asset || { name:'', asset_type:'car', purchase_value:'', residual_value:0, currency:'EUR', purchase_date:today(), depreciation_months:36 };
+    const a = asset || { name:'', asset_type:'car', purchase_value:'', residual_value:0, currency:'EUR', purchase_date:today(), depreciation_months:36, include_in_budget:true, budget_method:'linear', budget_start_date:today(), budget_day:Number(today().slice(8,10)) };
     const isEdit = mode === 'edit';
     return `<div class="tb-asset-modal-backdrop"><form class="tb-asset-modal" data-tb-asset-form="${isEdit?'edit':'create'}" ${isEdit?`data-asset-id="${esc(a.id)}"`:''}>
-      <div class="tb-asset-modal-head"><div><strong>${esc(isEdit ? tr('assets.modal.edit_title') : tr('assets.modal.add_title'))}</strong><p>${esc(tr('assets.modal.cash_hint'))}</p></div><button type="button" data-tb-asset-close>×</button></div>
+      <div class="tb-asset-modal-head"><div><strong>${esc(isEdit ? tr('assets.modal.edit_title') : tr('assets.modal.add_title'))}</strong><p>${esc(atxt('Le coût mensuel alimente uniquement Budget et Analyse, jamais le solde des portefeuilles.', 'The monthly cost feeds Budget and Analysis only, never wallet balances.'))}</p></div><button type="button" data-tb-asset-close>×</button></div>
       <div class="tb-asset-form-grid">
         <label>${esc(tr('assets.form.name'))}<input name="name" required placeholder="Toyota X-Trail" value="${esc(a.name)}"></label>
         <label>${esc(tr('assets.form.type'))}<select name="asset_type"><option value="car" ${a.asset_type==='car'?'selected':''}>${esc(tr('assets.type.car'))}</option><option value="real_estate" ${a.asset_type==='real_estate'?'selected':''}>${esc(tr('assets.type.real_estate'))}</option><option value="equipment" ${a.asset_type==='equipment'?'selected':''}>${esc(tr('assets.type.equipment'))}</option><option value="other" ${a.asset_type==='other'?'selected':''}>${esc(tr('assets.type.other'))}</option></select></label>
@@ -317,6 +332,12 @@ ${(() => {
         <label>${esc(tr('assets.form.purchase_date'))}<input name="purchase_date" required type="date" value="${esc(a.purchase_date||today())}"></label>
         <label>${esc(tr('assets.form.depreciation_months'))}<input name="depreciation_months" required type="number" min="1" step="1" value="${esc(a.depreciation_months||36)}"></label>
         ${isEdit ? '' : `<label>${esc(tr('assets.form.your_share'))}<input name="ownership_percent" required type="number" min="0" max="100" step="0.01" value="100"></label>`}
+        <label class="tb-asset-check"><input name="include_in_budget" type="checkbox" ${a.include_in_budget !== false ? 'checked' : ''}><span>${esc(atxt('Inclure le coût mensuel dans le budget', 'Include monthly cost in budget'))}</span></label>
+        <label>${esc(atxt('Mode de calcul', 'Calculation mode'))}<select name="budget_method"><option value="linear" ${a.budget_method!=='manual'?'selected':''}>${esc(atxt('Amortissement linéaire', 'Linear depreciation'))}</option><option value="manual" ${a.budget_method==='manual'?'selected':''}>${esc(atxt('Montant mensuel manuel', 'Manual monthly amount'))}</option></select></label>
+        <label>${esc(atxt('Montant mensuel manuel', 'Manual monthly amount'))}<input name="monthly_budget_override" type="number" min="0" step="0.01" value="${esc(a.monthly_budget_override ?? '')}" placeholder="0.00"></label>
+        <label>${esc(atxt('Début dans le budget', 'Budget start'))}<input name="budget_start_date" type="date" value="${esc(a.budget_start_date||a.purchase_date||today())}"></label>
+        <label>${esc(atxt('Fin dans le budget', 'Budget end'))}<input name="budget_end_date" type="date" value="${esc(a.budget_end_date||'')}"></label>
+        <label>${esc(atxt('Jour mensuel', 'Monthly day'))}<input name="budget_day" type="number" min="1" max="31" step="1" value="${esc(a.budget_day||Number(String(a.purchase_date||today()).slice(8,10))||1)}"></label>
       </div>
       <div class="tb-asset-modal-error" data-tb-asset-error hidden></div>
       <div class="tb-asset-modal-actions"><button type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button><button type="submit">${esc(isEdit ? tr('documents.action.save') : tr('assets.action.create_asset'))}</button></div>
@@ -800,7 +821,7 @@ async function unlinkAssetDocument(linkId){
   function focusFirst(){ const el=document.querySelector('.tb-asset-modal input, .tb-asset-modal select'); if(el) setTimeout(()=>el.focus(),0); }
   function showFormError(msg){ const el=document.querySelector('[data-tb-asset-error]'); if(el){ el.hidden=false; el.textContent=String(msg || tr('assets.error.unknown')); } }
 
-  function readAssetPayload(form){ const fd = new FormData(form); const purchase = Number(fd.get('purchase_value') || 0); const residual = Number(fd.get('residual_value') || 0); const months = Math.round(Number(fd.get('depreciation_months') || 0)); const currency = String(fd.get('currency') || 'EUR').trim().toUpperCase(); const name = String(fd.get('name') || '').trim(); if(!name) throw new Error(tr('assets.error.name_required')); if(!Number.isFinite(purchase) || purchase < 0) throw new Error(tr('assets.error.invalid_purchase')); if(!Number.isFinite(residual) || residual < 0 || residual > purchase) throw new Error(tr('assets.error.invalid_residual')); if(!Number.isFinite(months) || months < 1) throw new Error(tr('assets.error.invalid_months')); if(!/^[A-Z]{3}$/.test(currency)) throw new Error(tr('assets.error.invalid_currency')); return { name, asset_type:String(fd.get('asset_type') || 'other'), purchase_value:purchase, residual_value:residual, currency, purchase_date:String(fd.get('purchase_date') || today()).slice(0,10), depreciation_months:months, status:'active' }; }
+  function readAssetPayload(form){ const fd = new FormData(form); const purchase = Number(fd.get('purchase_value') || 0); const residual = Number(fd.get('residual_value') || 0); const months = Math.round(Number(fd.get('depreciation_months') || 0)); const currency = String(fd.get('currency') || 'EUR').trim().toUpperCase(); const name = String(fd.get('name') || '').trim(); const purchaseDate=String(fd.get('purchase_date') || today()).slice(0,10); const budgetMethod=String(fd.get('budget_method')||'linear'); const overrideRaw=String(fd.get('monthly_budget_override')||'').trim(); const override=overrideRaw===''?null:Number(overrideRaw); const budgetDay=Math.round(Number(fd.get('budget_day')||String(purchaseDate).slice(8,10)||1)); if(!name) throw new Error(tr('assets.error.name_required')); if(!Number.isFinite(purchase) || purchase < 0) throw new Error(tr('assets.error.invalid_purchase')); if(!Number.isFinite(residual) || residual < 0 || residual > purchase) throw new Error(tr('assets.error.invalid_residual')); if(!Number.isFinite(months) || months < 1) throw new Error(tr('assets.error.invalid_months')); if(!/^[A-Z]{3}$/.test(currency)) throw new Error(tr('assets.error.invalid_currency')); if(budgetMethod==='manual' && (!Number.isFinite(override)||override<0)) throw new Error(atxt('Saisis un montant mensuel valide.', 'Enter a valid monthly amount.')); if(!Number.isFinite(budgetDay)||budgetDay<1||budgetDay>31) throw new Error(atxt('Le jour mensuel doit être compris entre 1 et 31.', 'Monthly day must be between 1 and 31.')); return { name, asset_type:String(fd.get('asset_type') || 'other'), purchase_value:purchase, residual_value:residual, currency, purchase_date:purchaseDate, depreciation_months:months, status:'active', include_in_budget:fd.get('include_in_budget')==='on', budget_method:budgetMethod, monthly_budget_override:override, budget_start_date:String(fd.get('budget_start_date')||purchaseDate).slice(0,10), budget_end_date:String(fd.get('budget_end_date')||'').slice(0,10)||null, budget_day:budgetDay, budget_category:'Patrimoine', budget_subcategory:'Amortissement' }; }
   async function createAssetFromForm(form){ const c = client(); if(!c) throw new Error(tr('common.supabase_unavailable')); const uid = await currentUserId(); if(!uid) throw new Error(tr('assets.error.user_disconnected')); const payload = Object.assign(readAssetPayload(form), { user_id: uid, travel_id: activeTravelId() || null }); const ownership = Number(new FormData(form).get('ownership_percent') || 0); if(!Number.isFinite(ownership) || ownership < 0 || ownership > 100) throw new Error(tr('assets.error.share_between_0_100')); const res = await c.from(table('assets','assets')).insert([payload]).select('id').single(); if(res.error) throw res.error; const ownerPayload = { asset_id: res.data.id, user_id: uid, display_name: tr('assets.owner.me'), ownership_percent: ownership }; const ownerRes = await c.from(table('asset_owners','asset_owners')).insert([ownerPayload]); if(ownerRes.error) throw ownerRes.error; }
 async function updateAssetFromForm(form){
   const c = client();
@@ -1068,12 +1089,21 @@ await window.tbDocumentsUploadAndLinkAsset(files, asset);
 .pos{color:#16a34a;}
 .neg{color:#dc2626;}
 
-.tb-asset-modal-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.42);display:flex;align-items:center;justify-content:center;padding:18px}.tb-asset-modal{width:min(800px,100%);max-height:92vh;overflow:auto;border-radius:26px;background:#fff;color:#0f172a;box-shadow:0 30px 90px rgba(15,23,42,.28);padding:20px}.tb-asset-modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:16px}.tb-asset-modal-head strong{font-size:22px}.tb-asset-modal-head p{margin:5px 0 0;color:#64748b;font-size:13px}.tb-asset-modal-head button{border:0;background:#f1f5f9;border-radius:999px;width:34px;height:34px;font-size:22px;line-height:1;cursor:pointer}.tb-asset-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tb-asset-form-grid label{display:grid;gap:6px;color:#475569;font-size:12px;font-weight:800}.tb-asset-form-grid input,.tb-asset-form-grid select{width:100%;border:1px solid rgba(15,23,42,.12);border-radius:14px;background:#f8fafc;color:#0f172a;padding:10px 11px;font-size:14px}.tb-asset-modal-error{margin-top:12px;border:1px solid rgba(225,29,72,.25);background:#fff1f2;color:#be123c;border-radius:14px;padding:10px;font-size:13px}.tb-asset-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}.tb-asset-modal-actions button{border:0;border-radius:14px;padding:10px 13px;font-weight:900;cursor:pointer}.tb-asset-modal-actions button:first-child{background:#f1f5f9;color:#334155}.tb-asset-modal-actions button:last-child{background:#0f172a;color:#fff}.tb-asset-modal-actions button:disabled{opacity:.55;cursor:not-allowed}.tb-owner-list{display:grid;gap:10px}.tb-owner-row{display:grid;grid-template-columns:1fr 130px 38px;gap:8px}.tb-owner-row input{border:1px solid rgba(15,23,42,.12);border-radius:14px;background:#f8fafc;color:#0f172a;padding:10px 11px;font-size:14px}.tb-owner-row button,.tb-owner-add{border:0;border-radius:14px;background:#f1f5f9;color:#334155;font-weight:900;cursor:pointer}.tb-owner-add{margin-top:12px;padding:10px 12px}.tb-owner-total{margin-top:10px;font-size:13px;color:#be123c;font-weight:900}.tb-owner-total.ok{color:#0891b2}@media(max-width:720px){.tb-assets-head,.tb-assets-empty{flex-direction:column;align-items:stretch}.tb-asset-metrics,.tb-asset-form-grid,.tb-owner-row{grid-template-columns:1fr}.tb-assets-actions{align-items:flex-start}}
+.tb-asset-modal-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.42);display:flex;align-items:center;justify-content:center;padding:18px}.tb-asset-modal{width:min(800px,100%);max-height:92vh;overflow:auto;border-radius:26px;background:#fff;color:#0f172a;box-shadow:0 30px 90px rgba(15,23,42,.28);padding:20px}.tb-asset-modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:16px}.tb-asset-modal-head strong{font-size:22px}.tb-asset-modal-head p{margin:5px 0 0;color:#64748b;font-size:13px}.tb-asset-modal-head button{border:0;background:#f1f5f9;border-radius:999px;width:34px;height:34px;font-size:22px;line-height:1;cursor:pointer}.tb-asset-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tb-asset-form-grid label{display:grid;gap:6px;color:#475569;font-size:12px;font-weight:800}.tb-asset-form-grid input,.tb-asset-form-grid select{width:100%;border:1px solid rgba(15,23,42,.12);border-radius:14px;background:#f8fafc;color:#0f172a;padding:10px 11px;font-size:14px}.tb-asset-form-grid .tb-asset-check{display:flex;align-items:center;gap:9px;padding:10px 11px;border:1px solid rgba(14,165,233,.22);border-radius:14px;background:rgba(14,165,233,.07)}.tb-asset-form-grid .tb-asset-check input{width:18px;height:18px;margin:0}.tb-asset-modal-error{margin-top:12px;border:1px solid rgba(225,29,72,.25);background:#fff1f2;color:#be123c;border-radius:14px;padding:10px;font-size:13px}.tb-asset-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}.tb-asset-modal-actions button{border:0;border-radius:14px;padding:10px 13px;font-weight:900;cursor:pointer}.tb-asset-modal-actions button:first-child{background:#f1f5f9;color:#334155}.tb-asset-modal-actions button:last-child{background:#0f172a;color:#fff}.tb-asset-modal-actions button:disabled{opacity:.55;cursor:not-allowed}.tb-owner-list{display:grid;gap:10px}.tb-owner-row{display:grid;grid-template-columns:1fr 130px 38px;gap:8px}.tb-owner-row input{border:1px solid rgba(15,23,42,.12);border-radius:14px;background:#f8fafc;color:#0f172a;padding:10px 11px;font-size:14px}.tb-owner-row button,.tb-owner-add{border:0;border-radius:14px;background:#f1f5f9;color:#334155;font-weight:900;cursor:pointer}.tb-owner-add{margin-top:12px;padding:10px 12px}.tb-owner-total{margin-top:10px;font-size:13px;color:#be123c;font-weight:900}.tb-owner-total.ok{color:#0891b2}@media(max-width:720px){.tb-assets-head,.tb-assets-empty{flex-direction:column;align-items:stretch}.tb-asset-metrics,.tb-asset-form-grid,.tb-owner-row{grid-template-columns:1fr}.tb-assets-actions{align-items:flex-start}}
   `; document.head.appendChild(st); }
 
   async function renderAssets(reason){ styles(); bindOnce(); const root = document.getElementById('assets-root') || document.getElementById('view-assets'); if(!root) return; root.innerHTML = `<div class="tb-assets-shell"><div class="tb-assets-head"><div><h2>${esc(tr('assets.title'))}</h2><p>${esc(tr('common.loading'))}</p></div></div></div>`; const data = await loadAssets(); const summary = data.empty ? '' : portfolioSummaryHtml(data.assets, data.owners);
 const content = data.empty ? emptyState() : `${summary}<div class="tb-assets-grid">${data.assets.map(a=>card(a,data.owners)).join('')}</div>`; const buildLabel = window.TB_BUILD_LABEL || 'V9'; root.innerHTML = `<div class="tb-assets-shell"><div class="tb-assets-head"><div><h2>${esc(tr('assets.title'))}</h2><p>${esc(tr('assets.subtitle'))} ${data.demo ? esc(tr('assets.demo_hint')) : ''}</p></div><div class="tb-assets-actions"><button class="tb-asset-add-btn" type="button" data-tb-asset-open>${esc(tr('assets.action.add'))}</button><div class="tb-assets-badge">${esc(buildLabel)} · Assets</div></div></div>${content}</div>`; if(!data.empty) setTimeout(()=>renderCharts(data.assets),0); }
   window.renderAssets = renderAssets;
+  window.tbLoadAssets = loadAssets;
+  window.tbAssetBudgetTransactionsForRange = assetBudgetRows;
+  window.addEventListener('tb:auth_scope_changed', () => {
+    CACHE = { assets:[], owners:[], events:[], documentLinks:[], demo:false, empty:true };
+    loadAssets().then(() => { try { window.tbRequestRenderAll?.('assets:auth'); } catch (_) {} }).catch(() => {});
+  });
+  setTimeout(() => {
+    currentUserId().then(id => id ? loadAssets() : null).then(() => { try { window.renderKPI?.(); } catch (_) {} }).catch(() => {});
+  }, 700);
   try {
     window.tbOnLangChange = window.tbOnLangChange || [];
     if (!window.__tbAssetsLangBound) {

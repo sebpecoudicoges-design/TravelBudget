@@ -79,6 +79,10 @@ try {
     sport_session_items: "sport_session_items",
     sport_sets: "sport_sets",
     work_days: "work_days",
+    work_engagements: "work_engagements",
+    work_income_events: "work_income_events",
+    work_status_periods: "work_status_periods",
+    work_document_folders: "work_document_folders",
   });
 
   const COLS = Object.freeze({

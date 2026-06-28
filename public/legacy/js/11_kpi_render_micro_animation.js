@@ -429,9 +429,10 @@ function remainingBudgetBaseFrom(dateStr) {
 // - distributes multi-day expenses evenly across covered days
 function budgetSpentBaseForDate(dateStr) {
   try {
-    const txs = Array.isArray(window.state?.transactions) ? window.state.transactions : [];
+    const txs = Array.isArray(window.state?.transactions) ? window.state.transactions.slice() : [];
     const target = String(dateStr || "");
     if (!target) return 0;
+    try { txs.push(...(window.tbAssetBudgetTransactionsForRange?.(target, target) || [])); } catch (_) {}
 
     let sum = 0;
     for (const t of txs) {

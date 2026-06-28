@@ -62,6 +62,7 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/44_inbox_ui.js',
   '/legacy/js/45_sport_ui.js',
   '/legacy/js/47_work_ui.js',
+  '/legacy/js/50_work_career_ui.js',
   '/legacy/js/48_nutrition_ui.js',
   '/legacy/js/49_notifications_ui.js',
   '/legacy/js/18_main_render.js',

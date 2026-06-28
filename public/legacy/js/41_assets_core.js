@@ -1,5 +1,5 @@
-/* TravelBudget V9.6.4 - Assets core
-   Stock patrimonial only: no cashflow mutation, no budget mutation. */
+/* TravelBudget - Assets core
+   Stock patrimonial with optional virtual budget cost; never mutates cashflow. */
 (function(){
   function _num(v, fallback){ const n = Number(v); return Number.isFinite(n) ? n : (fallback || 0); }
   function _date(v){ const d = new Date(String(v || '').slice(0,10) + 'T00:00:00'); return Number.isFinite(d.getTime()) ? d : null; }
@@ -51,6 +51,15 @@
       depreciation_months: Math.max(1, Math.round(_num(row && row.depreciation_months, 36))),
       status: String(row && row.status || 'active'),
       travel_id: row && row.travel_id || null,
+      user_id: row && row.user_id || null,
+      include_in_budget: row && row.include_in_budget !== false,
+      budget_method: String(row && row.budget_method || 'linear'),
+      monthly_budget_override: row && row.monthly_budget_override == null ? null : _num(row.monthly_budget_override, 0),
+      budget_start_date: String(row && row.budget_start_date || row && row.purchase_date || '').slice(0,10),
+      budget_end_date: String(row && row.budget_end_date || '').slice(0,10),
+      budget_day: Math.min(31, Math.max(1, Math.round(_num(row && row.budget_day, new Date(String(row && row.purchase_date || '') + 'T00:00:00').getDate() || 1)))),
+      budget_category: String(row && row.budget_category || 'Patrimoine'),
+      budget_subcategory: String(row && row.budget_subcategory || 'Amortissement'),
     };
   }
   window.TBAssetsCore = Object.freeze({ computeLinearAssetValue, computeOwnedValue, computeDepreciationProgress, buildValueSeries, normalizeAsset });

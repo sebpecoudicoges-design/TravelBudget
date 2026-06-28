@@ -541,6 +541,14 @@ function _analysisBucketOrder(){
     .map((meta) => String(meta.sourced_bucket || meta.bucket || '').trim());
   return Array.from(new Set([...TB_SOURCED_BUCKET_ORDER, ...dynamic]));
 }
+  function _analysisTransactions(){
+    const base = Array.isArray(state?.transactions) ? state.transactions : [];
+    try {
+      const range = _analysisRange();
+      const virtualRows = window.tbAssetBudgetTransactionsForRange?.(range.start, range.end) || [];
+      return virtualRows.length ? base.concat(virtualRows) : base;
+    } catch (_) { return base; }
+  }
   function _allAnalysisCategories(){
     const out = [];
     const seen = new Set();
@@ -558,7 +566,7 @@ function _analysisBucketOrder(){
     add('Revenu');
     try { if (typeof getCategories === 'function') (getCategories() || []).forEach(add); } catch (_) {}
     (Array.isArray(state?.categories) ? state.categories : []).forEach(add);
-    (Array.isArray(state?.transactions) ? state.transactions : []).forEach(tx => {
+    _analysisTransactions().forEach(tx => {
       if (_isTripLinked(tx) && !_isTripBudgetShare(tx)) return;
       if (_txType(tx) === 'income') add('Revenu');
       else if (_txType(tx) === 'expense' && _txAffectsAnalysisDataset(tx)) add(tx?.category);
@@ -577,7 +585,7 @@ function _analysisBucketOrder(){
       seen.add(k);
       out.push(raw);
     };
-    (Array.isArray(state?.transactions) ? state.transactions : []).forEach(tx => {
+    _analysisTransactions().forEach(tx => {
       if (_isTripLinked(tx) && !_isTripBudgetShare(tx)) return;
       const type = _txType(tx);
       if (type !== 'expense' && type !== 'income') return;
@@ -701,7 +709,7 @@ function _analysisBucketOrder(){
   function _baseExpenseTransactions(){
     const travelId = _getSelectedTravelId();
     const { start, end } = _analysisRange();
-    return (Array.isArray(state?.transactions) ? state.transactions : []).filter(tx => {
+    return _analysisTransactions().filter(tx => {
       const txTravelId = String(tx?.travel_id || tx?.travelId || '');
       if (travelId && txTravelId && txTravelId !== String(travelId)) return false;
       if (_txType(tx) !== 'expense') return false;
@@ -2543,6 +2551,7 @@ function _openTxDrilldown(kind, key, model){
   async function _ensureAnalysisDeferredData(){
     try {
       if (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) return;
+      if (typeof window.tbLoadAssets === "function") await window.tbLoadAssets();
       const tid = String(state?.activeTravelId || state?.period?.travel_id || state?.period?.travelId || "").trim();
       if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid) return;
       if (ensureAnalysisDeferredPromise) {

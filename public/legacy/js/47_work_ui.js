@@ -229,7 +229,7 @@
     try {
       if (c && uid()) {
         const q = c.from(table("work_days"))
-          .select("id,user_id,travel_id,work_date,activity_key,label,duration_minutes,break_minutes,met_value,body_weight_kg,estimated_kcal,perceived_effort,notes,created_at,updated_at")
+          .select("id,user_id,travel_id,engagement_id,work_date,activity_key,label,duration_minutes,break_minutes,met_value,body_weight_kg,estimated_kcal,perceived_effort,notes,created_at,updated_at")
           .eq("user_id", uid())
           .order("work_date", { ascending: false })
           .limit(120);
@@ -282,8 +282,10 @@
           <div class="pill">${Math.round(b.bmr || 0)} kcal BMR · IMC ${Math.round((b.bmi || 0) * 10) / 10}</div>
         </div>
         ${renderWorkVisual()}
+        <div id="work-career-root"></div>
         <div class="tb-work-grid" style="display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:14px;margin-top:14px;">
           <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
+            <div class="field"><label>${esc(txt("Mission liée", "Linked job"))}</label><select id="work-engagement"><option value="">${esc(txt("Sans mission", "No job"))}</option>${(window.tbWorkCareerEngagements?.() || []).map(job => `<option value="${esc(job.id)}" ${String(editing?.engagement_id||'')===String(job.id)?'selected':''}>${esc(job.name || job.employer || txt('Mission','Job'))}</option>`).join('')}</select></div>
             <div class="field"><label>${esc(txt("Date", "Date"))}</label><input id="work-date" type="date" value="${esc(initialDate)}"></div>
             <div class="field"><label>${esc(txt("Type", "Type"))}</label><select id="work-type">${p.map(x => `<option value="${esc(x.key)}" data-met="${esc(String(x.met))}" ${String(x.key) === String(initialPresetKey) ? "selected" : ""}>${esc(labelPreset(x))} - MET ${esc(String(x.met))}</option>`).join("")}</select></div>
             <div class="row" style="gap:10px;">
@@ -327,6 +329,7 @@
       </section>`;
     bindWork(root);
     updatePreview(root);
+    setTimeout(() => { try { window.renderWorkCareer?.(); } catch (_) {} }, 0);
   }
   function bindWork(root) {
     const type = root.querySelector("#work-type");
@@ -377,6 +380,7 @@
     const row = {
       user_id: uid(),
       travel_id: activeTravelId(),
+      engagement_id: String(root.querySelector("#work-engagement")?.value || "") || null,
       work_date: String(root.querySelector("#work-date")?.value || todayISO()).slice(0, 10),
       activity_key: preset?.key || "farm_harvest_moderate",
       label: String(root.querySelector("#work-notes")?.value || labelPreset(preset) || "Travail").trim() || "Travail",

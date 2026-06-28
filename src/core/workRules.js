@@ -26,3 +26,55 @@ export function estimateWorkDayKcal({ hours = 0, breakMinutes = 0, met = 4.8, kg
 export function workPresetForKey(key) {
   return WORK_ACTIVITY_PRESETS.find((x) => x.key === key) || WORK_ACTIVITY_PRESETS[2];
 }
+
+export function workDayNetMinutes(day = {}) {
+  const total = Math.max(0, num(day.duration_minutes ?? day.minutes, 0));
+  return Math.max(0, total - Math.max(0, num(day.break_minutes, 0)));
+}
+
+export function summarizeWorkCareer({ engagements = [], days = [], incomes = [] } = {}) {
+  const byEngagement = new Map();
+  for (const engagement of engagements || []) {
+    byEngagement.set(String(engagement.id), {
+      engagement,
+      netMinutes: 0,
+      netHours: 0,
+      totalReceived: 0,
+      hourlyNet: null,
+      workDays: 0,
+      incomeEvents: 0,
+    });
+  }
+  const unassigned = {
+    engagement: null, netMinutes: 0, netHours: 0, totalReceived: 0,
+    hourlyNet: null, workDays: 0, incomeEvents: 0,
+  };
+
+  const bucket = (id) => byEngagement.get(String(id || '')) || unassigned;
+  for (const day of days || []) {
+    const target = bucket(day.engagement_id);
+    target.netMinutes += workDayNetMinutes(day);
+    target.workDays += 1;
+  }
+  for (const income of incomes || []) {
+    const target = bucket(income.engagement_id);
+    target.totalReceived += Math.max(0, num(income.net_amount, 0));
+    target.incomeEvents += 1;
+  }
+
+  const all = [...byEngagement.values(), unassigned];
+  for (const item of all) {
+    item.netHours = item.netMinutes / 60;
+    item.hourlyNet = item.netHours > 0 ? item.totalReceived / item.netHours : null;
+  }
+  const visible = all.filter((item) => item.engagement || item.netMinutes || item.totalReceived);
+  const totals = visible.reduce((acc, item) => {
+    acc.netMinutes += item.netMinutes;
+    acc.totalReceived += item.totalReceived;
+    acc.workDays += item.workDays;
+    return acc;
+  }, { netMinutes: 0, totalReceived: 0, workDays: 0 });
+  totals.netHours = totals.netMinutes / 60;
+  totals.hourlyNet = totals.netHours > 0 ? totals.totalReceived / totals.netHours : null;
+  return { totals, engagements: visible };
+}
