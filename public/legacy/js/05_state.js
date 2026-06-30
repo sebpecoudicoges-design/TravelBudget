@@ -795,25 +795,26 @@ window.getAssetBudgetAllocationsForDate = getAssetBudgetAllocationsForDate;
 
 // Returns remaining budget for dateStr in that day's segment base currency.
 function getDailyBudgetForDate(dateStr) {
-  const seg = getBudgetSegmentForDate(dateStr);
-  if (!periodContains(dateStr) || !seg) return 0;
-  const daily = Number(seg.dailyBudgetBase) || 0;
-  const assetBudget = getAssetBudgetAllocationsForDate(dateStr)
-    .reduce((sum, row) => sum + (Number(row.amountBase) || 0), 0);
-  return daily - getAllocatedBaseForDate(dateStr) - assetBudget;
+  return getDailyBudgetInfoForDate(dateStr).remaining;
 }
 
 function getDailyBudgetInfoForDate(dateStr) {
   const seg = getBudgetSegmentForDate(dateStr);
-  if (!periodContains(dateStr) || !seg) return { remaining: 0, daily: 0, baseCurrency: state.period.baseCurrency };
-  const assetBudget = getAssetBudgetAllocationsForDate(dateStr)
-    .reduce((sum, row) => sum + (Number(row.amountBase) || 0), 0);
-  const key = [String(window.__TB_DATA_REV || 0), String(dateStr || '').slice(0,10), String(seg.baseCurrency || state.period.baseCurrency || 'EUR').toUpperCase(), Number(seg.dailyBudgetBase || 0), String(seg.fxMode || 'fixed'), Number(seg.eurBaseRateFixed || 0), assetBudget].join('|');
+  if (!periodContains(dateStr) || !seg) return { remaining: 0, daily: 0, used: 0, rows: [], baseCurrency: state.period.baseCurrency };
+  const baseCurrency = String(seg.baseCurrency || state.period.baseCurrency || 'EUR').toUpperCase();
+  const allocations = (state.allocations || [])
+    .filter((row) => row && row.dateStr === dateStr && String(row.baseCurrency || baseCurrency).toUpperCase() === baseCurrency);
+  const assetAllocations = getAssetBudgetAllocationsForDate(dateStr);
+  const key = [String(window.__TB_DATA_REV || 0), String(dateStr || '').slice(0,10), baseCurrency, Number(seg.dailyBudgetBase || 0), String(seg.fxMode || 'fixed'), Number(seg.eurBaseRateFixed || 0), allocations.length, assetAllocations.length].join('|');
   if (__tbDailyBudgetInfoCache.has(key)) return __tbDailyBudgetInfoCache.get(key);
+  const summary = window.Core?.dailyBudgetRules?.summarizeDailyBudget({
+    dailyBudget: Number(seg.dailyBudgetBase) || 0,
+    allocations,
+    assetAllocations,
+  }) || { daily: Number(seg.dailyBudgetBase) || 0, used: getAllocatedBaseForDate(dateStr), remaining: (Number(seg.dailyBudgetBase) || 0) - getAllocatedBaseForDate(dateStr), rows: allocations };
   const info = {
-    remaining: getDailyBudgetForDate(dateStr),
-    daily: Number(seg.dailyBudgetBase) || 0,
-    baseCurrency: String(seg.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase(),
+    ...summary,
+    baseCurrency,
     fxMode: String(seg.fxMode || "fixed"),
   };
   __tbDailyBudgetInfoCache.set(key, info);

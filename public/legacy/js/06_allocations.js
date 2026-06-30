@@ -57,44 +57,28 @@ function tbGetNightCoveredInsightForTx(tx, targetCurrency) {
 }
 
 function buildAllocationsForTx(tx) {
-  const allocs = [];
-  if (tx.type !== "expense") return allocs;
-  try {
-    if (typeof window.tbTxAffectsBudget === "function" && !window.tbTxAffectsBudget(tx)) return allocs;
-  } catch (_) {}
-
-  const budgetStartISO = (typeof tbTxBudgetStart === 'function') ? tbTxBudgetStart(tx) : (tx.budgetDateStart || tx.budget_date_start || tx.dateStart || tx.date_start);
-  const budgetEndISO = (typeof tbTxBudgetEnd === 'function') ? tbTxBudgetEnd(tx) : (tx.budgetDateEnd || tx.budget_date_end || tx.dateEnd || tx.date_end || budgetStartISO);
-  const start = parseISODateOrNull(budgetStartISO) || new Date();
-  const end = parseISODateOrNull(budgetEndISO) || start;
-  const label = tx.label || tx.category || "Autre";
-
-  if (!tx.outOfBudget && !tx.out_of_budget) {
-    const days = dayCountInclusive(start, end);
-    const perDayInTxCur = (Number(tx.amount) || 0) / days;
-
-    forEachDateInclusive(start, end, (d) => {
-      const dateStr = toLocalISODate(d);
-      if (!periodContains(dateStr)) return;
-
+  const rules = window.Core?.dailyBudgetRules;
+  if (!rules) return [];
+  return rules.buildDailyBudgetAllocations(tx, {
+    idFactory: () => uid("a"),
+    includesDate: (dateStr) => periodContains(dateStr),
+    baseCurrencyForDate: (dateStr) => {
       const seg = (typeof getBudgetSegmentForDate === "function") ? getBudgetSegmentForDate(dateStr) : null;
-      const baseCur = String(seg?.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
-
-      // Prefer immutable FX snapshot when compatible with this day's base currency
-      let perDayBase = null;
+      return String(seg?.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
+    },
+    convertAmount: (amount, currency, dateStr, row, baseCurrency) => {
+      let converted = null;
       if (typeof window.fxTryConvertWithSnapshot === "function") {
-        perDayBase = window.fxTryConvertWithSnapshot(perDayInTxCur, tx, baseCur);
+        converted = window.fxTryConvertWithSnapshot(amount, row, baseCurrency);
       }
-      if (perDayBase === null || !Number.isFinite(perDayBase)) {
-        perDayBase = (typeof amountToBudgetBaseForDate === "function")
-          ? amountToBudgetBaseForDate(perDayInTxCur, tx.currency, dateStr)
-          : amountToBase(perDayInTxCur, tx.currency);
+      if (converted === null || !Number.isFinite(converted)) {
+        converted = (typeof amountToBudgetBaseForDate === "function")
+          ? amountToBudgetBaseForDate(amount, currency, dateStr)
+          : amountToBase(amount, currency);
       }
-
-      allocs.push({ id: uid("a"), txId: tx.id, dateStr, amountBase: perDayBase, baseCurrency: baseCur, label });
-    });
-  }
-  return allocs;
+      return converted;
+    },
+  });
 }
 
 function recomputeAllocations() {

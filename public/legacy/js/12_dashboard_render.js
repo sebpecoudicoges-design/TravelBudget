@@ -591,67 +591,6 @@ if (!wallets.length) {
   try { if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("wallets:rendered", null); } catch (_) {}
 }
 
-// Budget spent per day (base currency) computed from transactions.
-// Includes Trip shares (payNow=false) because they affect budget; excludes out-of-budget expenses.
-
-// Budget spent per day computed from transactions, expressed in the *segment base currency of that day*.
-function budgetSpentBaseForDateFromTx(dateStr) {
-  try {
-    const txs = Array.isArray(state.transactions)
-  ? state.transactions.filter(t => (t.travelId || t.travel_id) === state.activeTravelId)
-  : [];
-    const target = String(dateStr || "");
-    if (!target) return 0;
-
-    let sum = 0;
-    for (const t of txs) {
-      const type = String(t?.type || "").toLowerCase();
-      if (type !== "expense") continue;
-
-      if (typeof window.tbTxAffectsBudget === "function") {
-        if (!window.tbTxAffectsBudget(t)) continue;
-      } else {
-        const affectsBudget =
-          (t.affectsBudget === undefined || t.affectsBudget === null) ? true : !!t.affectsBudget;
-        if (!affectsBudget) continue;
-
-        const outOfBudget = !!t.outOfBudget || !!t.out_of_budget;
-        if (outOfBudget) continue;
-      }
-
-      const budgetStartISO = (typeof tbTxBudgetStart === 'function')
-        ? tbTxBudgetStart(t)
-        : (t.budgetDateStart || t.budget_date_start || t.dateStart || t.date_start || t.date || null);
-      const budgetEndISO = (typeof tbTxBudgetEnd === 'function')
-        ? tbTxBudgetEnd(t)
-        : (t.budgetDateEnd || t.budget_date_end || t.dateEnd || t.date_end || budgetStartISO || null);
-
-      const s = parseISODateOrNull(budgetStartISO);
-      const e = parseISODateOrNull(budgetEndISO);
-      if (!s || !e) continue;
-
-      const sds = toLocalISODate(s);
-      const eds = toLocalISODate(e);
-      if (target < sds || target > eds) continue;
-
-      const amt = Number(t.amount);
-      if (!isFinite(amt) || amt === 0) continue;
-
-      const days = dayCountInclusive(s, e);
-      const perDayInTxCur = amt / days;
-
-      const perDayBase = (typeof amountToBudgetBaseForDate === "function")
-        ? amountToBudgetBaseForDate(perDayInTxCur, t.currency, target)
-        : amountToBase(perDayInTxCur, t.currency);
-
-      sum += perDayBase;
-    }
-    return sum;
-  } catch (_) {
-    return 0;
-  }
-}
-
 const DAILY_BUDGET_VIEW_KEY = "travelbudget_daily_budget_view_v1";
 const DAILY_BUDGET_WINDOW_DAYS = 7;
 
@@ -798,14 +737,11 @@ function renderDailyBudget() {
 
   forEachDateInclusive(dStart, dEnd, (d) => {
     const dateStr = toLocalISODate(d);
-    const info = (typeof getDailyBudgetInfoForDate === "function") ? getDailyBudgetInfoForDate(dateStr) : { remaining: state.period.dailyBudgetBase - budgetSpentBaseForDateFromTx(dateStr), daily: state.period.dailyBudgetBase, baseCurrency: state.period.baseCurrency };
+    const info = (typeof getDailyBudgetInfoForDate === "function") ? getDailyBudgetInfoForDate(dateStr) : { remaining: 0, daily: 0, used: 0, rows: [], baseCurrency: state.period.baseCurrency };
     const baseDay = String(info.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
     const budget = Number(info.remaining) || 0;
-    const spentBudget = Math.max(0, Number(info.daily || 0) - budget);
-    const details = [
-      ...(state.allocations || []).filter((a) => a && a.dateStr === dateStr),
-      ...(typeof window.getAssetBudgetAllocationsForDate === 'function' ? window.getAssetBudgetAllocationsForDate(dateStr) : []),
-    ];
+    const spentBudget = Math.max(0, Number(info.used) || 0);
+    const details = Array.isArray(info.rows) ? info.rows : [];
 
     const div = document.createElement("div");
     div.className = "day";

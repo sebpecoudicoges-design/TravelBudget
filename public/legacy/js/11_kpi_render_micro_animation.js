@@ -423,56 +423,6 @@ function remainingBudgetBaseFrom(dateStr) {
   return sum;
 }
 
-// Budget spent (base currency) for a given day.
-// - includes Trip shares paid by someone else (payNow=false) because they impact budget
-// - excludes out-of-budget expenses
-// - distributes multi-day expenses evenly across covered days
-function budgetSpentBaseForDate(dateStr) {
-  try {
-    const txs = Array.isArray(window.state?.transactions) ? window.state.transactions.slice() : [];
-    const target = String(dateStr || "");
-    if (!target) return 0;
-    try { txs.push(...(window.tbAssetBudgetTransactionsForRange?.(target, target) || [])); } catch (_) {}
-
-    let sum = 0;
-    for (const t of txs) {
-      if (!_txMatchesActiveTravelKpi(t)) continue;
-      if (!_txAffectsBudgetKpi(t)) continue;
-
-      const budgetStartISO = (typeof tbTxBudgetStart === 'function')
-        ? tbTxBudgetStart(t)
-        : (t.budgetDateStart || t.budget_date_start || t.dateStart || t.date_start || t.date || null);
-      const budgetEndISO = (typeof tbTxBudgetEnd === 'function')
-        ? tbTxBudgetEnd(t)
-        : (t.budgetDateEnd || t.budget_date_end || t.dateEnd || t.date_end || budgetStartISO || null);
-
-      const s = parseISODateOrNull(budgetStartISO);
-      const e = parseISODateOrNull(budgetEndISO);
-      if (!s || !e) continue;
-
-      const sds = toLocalISODate(s);
-      const eds = toLocalISODate(e);
-      if (target < sds || target > eds) continue;
-
-      const amt = safeNum(t.amount);
-      if (!isFinite(amt) || amt === 0) continue;
-
-      const days = dayCountInclusive(s, e);
-      const perDayInTxCur = amt / days;
-
-      const perDayBase = (typeof amountToBudgetBaseForDate === "function")
-        ? amountToBudgetBaseForDate(perDayInTxCur, t.currency, target)
-        : amountToBase(perDayInTxCur, t.currency);
-
-      sum += perDayBase;
-    }
-
-    return sum;
-  } catch (_) {
-    return 0;
-  }
-}
-
 function projectedEndEUR() {
   const today = toLocalISODate(new Date());
   const remainingBase = remainingBudgetBaseFrom(today);
@@ -961,10 +911,7 @@ function _renderTodayDetailsHTML(dateStr) {
     : { baseCurrency: state?.period?.baseCurrency };
   const fallbackBase = String(info?.baseCurrency || state?.period?.baseCurrency || "EUR").toUpperCase();
 
-  const details = [
-    ...(state.allocations || []).filter(a => a && a.dateStr === dateStr),
-    ...(typeof window.getAssetBudgetAllocationsForDate === 'function' ? window.getAssetBudgetAllocationsForDate(dateStr) : []),
-  ];
+  const details = Array.isArray(info?.rows) ? info.rows : [];
 
   if (!details.length) {
     return `<div class="muted" style="margin-top:8px;">Aucun détail</div>`;
@@ -1601,7 +1548,6 @@ const driver = "Dépenses";
 
   const todayDetailsHTML = _renderTodayDetailsHTML(displayDateISO);
   const todayBudget = getDailyBudgetForDate(displayDateISO);
-  const todayBudgetSpent = budgetSpentBaseForDate(displayDateISO);
   const activityToday = _kpiActivitySummaryForDate(displayDateISO);
   const healthToday = _kpiHealthSummaryForDate(displayDateISO, activityToday);
   const healthActions = _kpiHealthActionRows(healthToday);

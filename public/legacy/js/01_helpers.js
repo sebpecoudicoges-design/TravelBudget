@@ -218,6 +218,7 @@ window.tbTxBudgetRange = tbTxBudgetRange;
 
 
 function tbIsTripBudgetShare(tx) {
+  try { if (window.Core?.dailyBudgetRules) return window.Core.dailyBudgetRules.isTripBudgetShare(tx); } catch (_) {}
   if (!tx) return false;
   const type = String(tx?.type || '').toLowerCase();
   if (type !== 'expense') return false;
@@ -235,6 +236,7 @@ function tbIsTripBudgetShare(tx) {
 }
 
 function tbIsInternalMovement(tx) {
+  try { if (window.Core?.dailyBudgetRules) return window.Core.dailyBudgetRules.isInternalMovement(tx); } catch (_) {}
   if (!tx) return false;
   const isInternal = !!(tx?.isInternal ?? tx?.is_internal);
   if (!isInternal) return false;
@@ -242,6 +244,7 @@ function tbIsInternalMovement(tx) {
 }
 
 function tbTxAffectsBudget(tx) {
+  try { if (window.Core?.dailyBudgetRules) return window.Core.dailyBudgetRules.transactionAffectsDailyBudget(tx); } catch (_) {}
   if (!tx) return false;
   const type = String(tx?.type || '').toLowerCase();
   if (type !== 'expense') return false;
@@ -253,6 +256,7 @@ function tbTxAffectsBudget(tx) {
 }
 
 function tbTxAffectsCash(tx) {
+  try { if (window.Core?.dailyBudgetRules) return window.Core.dailyBudgetRules.transactionAffectsCash(tx); } catch (_) {}
   if (!tx) return false;
   if (tbIsInternalMovement(tx)) return false;
   const payNow = (tx?.payNow ?? tx?.pay_now);
