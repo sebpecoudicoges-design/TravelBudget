@@ -1,16 +1,14 @@
 /* =========================
-   Offline mutation queue V2
-   - Minimal durable queue for safe offline writes.
-   - V2 scope: new transactions first; sport keeps its local history queue.
+   Offline mutation queue adapter
+   - Durable storage, deduplication, locks and retries live in src/data.
+   - Domain replay handlers stay here while legacy modules are migrated.
    ========================= */
 (function () {
   if (window.__TB_OFFLINE_QUEUE_V2_LOADED__) return;
   window.__TB_OFFLINE_QUEUE_V2_LOADED__ = true;
 
-  const QUEUE_VERSION = 2;
   const KEY_PREFIX = "travelbudget_offline_queue_v2";
   const LOCK_PREFIX = "travelbudget_offline_queue_v2_lock";
-  const LOCK_TTL_MS = 45000;
   const OWNER = `oq_owner_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   let syncing = false;
 
@@ -31,28 +29,31 @@
     return `${LOCK_PREFIX}_${uid() || "anon"}`;
   }
 
-  function nowISO() {
-    try { return new Date().toISOString(); } catch (_) { return ""; }
-  }
+  const queueStore = window.Data?.createMutationQueueStore?.({
+    storage: localStorage,
+    queueKey: key,
+    lockKey,
+    owner: OWNER,
+    idFactory: makeId,
+    onChange: (items, detail) => {
+      try { window.Data?.appStore?.set("offlineMutations", items); } catch (_) {}
+      try {
+        window.dispatchEvent(new CustomEvent("tb:offline_queue_changed", {
+          detail: Object.assign({ count: items.filter((item) => item.status !== "done").length }, detail || {}),
+        }));
+      } catch (_) {}
+    },
+  });
+
+  if (!queueStore) throw new Error("Mutation queue store indisponible");
 
   function safeRead() {
-    try {
-      const payload = JSON.parse(localStorage.getItem(key()) || "null");
-      if (!payload || !Array.isArray(payload.items)) return [];
-      return payload.items.filter(Boolean);
-    } catch (_) {
-      return [];
-    }
+    try { return queueStore.read(); } catch (_) { return []; }
   }
 
   function safeWrite(items) {
     try {
-      localStorage.setItem(key(), JSON.stringify({
-        version: QUEUE_VERSION,
-        savedAt: nowISO(),
-        items: Array.isArray(items) ? items : [],
-      }));
-      dispatchChanged();
+      queueStore.write(items);
       return true;
     } catch (e) {
       console.warn("[OfflineQueue] write failed", e?.message || e);
@@ -60,41 +61,12 @@
     }
   }
 
-  function readLock() {
-    try {
-      const raw = JSON.parse(localStorage.getItem(lockKey()) || "null");
-      return raw && typeof raw === "object" ? raw : null;
-    } catch (_) {
-      return null;
-    }
-  }
-
   function acquireLock(reason) {
-    const now = Date.now();
-    const current = readLock();
-    if (current?.owner && current.owner !== OWNER && Number(current.expiresAt || 0) > now) {
-      return false;
-    }
-    const next = {
-      owner: OWNER,
-      reason: String(reason || "sync"),
-      createdAt: now,
-      expiresAt: now + LOCK_TTL_MS,
-    };
-    try {
-      localStorage.setItem(lockKey(), JSON.stringify(next));
-      const check = readLock();
-      return check?.owner === OWNER;
-    } catch (_) {
-      return false;
-    }
+    try { return queueStore.acquireLock(reason); } catch (_) { return false; }
   }
 
   function releaseLock() {
-    try {
-      const current = readLock();
-      if (!current || current.owner === OWNER) localStorage.removeItem(lockKey());
-    } catch (_) {}
+    try { queueStore.releaseLock(); } catch (_) {}
   }
 
   function dispatchChanged(extra) {
@@ -130,12 +102,6 @@
     return ["sport.sync_local", "nutrition.sync_local"].includes(String(kind || ""));
   }
 
-  function itemDedupeKey(kind, payload, meta) {
-    const direct = String(meta?.dedupeKey || payload?.dedupeKey || payload?.coreArgs?.offlineDedupeKey || payload?.args?.p_offline_dedupe_key || "").trim();
-    if (direct) return direct;
-    return "";
-  }
-
   function cleanupOptimisticRows(queueId) {
     try {
       if (!window.state || !Array.isArray(state.transactions)) return 0;
@@ -159,56 +125,17 @@
   }
 
   function enqueue(kind, payload, meta) {
-    const items = safeRead();
     const normalizedKind = String(kind || "unknown");
-    const dedupeKey = itemDedupeKey(normalizedKind, payload, meta);
-    if (dedupeKey) {
-      const existing = items.find((item) =>
-        item &&
-        item.kind === normalizedKind &&
-        item.status !== "done" &&
-        itemDedupeKey(item.kind, item.payload, item.meta) === dedupeKey
-      );
-      if (existing) {
-        existing.updatedAt = nowISO();
-        existing.payload = Object.assign({}, existing.payload || {}, payload || {});
-        existing.meta = Object.assign({}, existing.meta || {}, meta || {}, { dedupeKey });
-        safeWrite(items);
-        toastInfo(message("Action deja en attente. J'ai garde une seule synchro.", "Action already pending. Kept one sync only."));
-        return existing;
-      }
-    }
-    if (singletonKind(normalizedKind)) {
-      const existing = items.find((item) => item && item.kind === normalizedKind && item.status !== "done");
-      if (existing) {
-        existing.updatedAt = nowISO();
-        existing.payload = Object.assign({}, existing.payload || {}, payload || {});
-        existing.meta = Object.assign({}, existing.meta || {}, meta || {});
-        safeWrite(items);
-        toastInfo(message("Action deja en attente. Synchro au retour reseau.", "Action already pending. It will sync when the connection returns."));
-        return existing;
-      }
-    }
-    const item = {
-      id: makeId(kind),
-      kind: normalizedKind,
-      status: "pending",
-      attempts: 0,
-      createdAt: nowISO(),
-      updatedAt: nowISO(),
-      payload: payload || {},
-      meta: meta || {},
-    };
-    items.push(item);
-    safeWrite(items);
-    toastInfo(message("Action enregistree hors ligne. Synchro au retour reseau.", "Saved offline. It will sync when the connection returns."));
-    return item;
+    const result = queueStore.enqueue(normalizedKind, payload || {}, meta || {}, { singleton: singletonKind(normalizedKind) });
+    toastInfo(result.deduplicated
+      ? message("Action deja en attente. J'ai garde une seule synchro.", "Action already pending. Kept one sync only.")
+      : message("Action enregistree hors ligne. Synchro au retour reseau.", "Saved offline. It will sync when the connection returns."));
+    return result.item;
   }
 
   function remove(id) {
     cleanupOptimisticRows(id);
-    const items = safeRead().filter((item) => String(item.id) !== String(id));
-    safeWrite(items);
+    queueStore.remove(id);
   }
 
   function count() {
@@ -358,9 +285,7 @@
       if (item.payload?.coreArgs && typeof window._txBuildApplyV2Args === "function") {
         args = window._txBuildApplyV2Args(item.payload.coreArgs, { skipInteractiveFx: false });
       }
-      if (!window.sb || typeof window.sb.rpc !== "function") throw new Error("Supabase indisponible");
-      const { error } = await window.sb.rpc(rpcName, args);
-      if (error) throw error;
+      await window.Data.supabaseRepository.rpc(rpcName, args);
       return true;
     }
     if (item.kind === "transaction.update_v2") {
@@ -370,19 +295,15 @@
         if (res?.error) throw res.error;
         return true;
       }
-      if (!window.sb || typeof window.sb.rpc !== "function") throw new Error("Supabase indisponible");
       const rpcName = item.payload?.rpcName || window.TB_CONST?.RPCS?.update_transaction_v2 || "update_transaction_v2";
-      const { error } = await window.sb.rpc(rpcName, args);
-      if (error) throw error;
+      await window.Data.supabaseRepository.rpc(rpcName, args);
       return true;
     }
     if (item.kind === "transaction.delete") {
       const txId = item.payload?.txId || item.payload?.p_tx_id;
       if (!txId) throw new Error("Transaction a supprimer introuvable");
-      if (!window.sb || typeof window.sb.rpc !== "function") throw new Error("Supabase indisponible");
       const rpcName = item.payload?.rpcName || window.TB_CONST?.RPCS?.delete_transaction || "delete_transaction";
-      const { error } = await window.sb.rpc(rpcName, { p_tx_id: txId });
-      if (error) throw error;
+      await window.Data.supabaseRepository.rpc(rpcName, { p_tx_id: txId });
       return true;
     }
     if (item.kind === "sport.sync_local") {
@@ -416,6 +337,7 @@
     if (syncing) return { ok: false, skipped: "already-syncing" };
     if (!acquireLock(reason)) return { ok: false, skipped: "locked" };
     let synced = 0;
+    let failed = 0;
     try {
       try {
         if (typeof window.tbShouldUseOfflineMode === "function" && await window.tbShouldUseOfflineMode(`offline-queue:${reason || "sync"}`)) {
@@ -425,50 +347,38 @@
         return { ok: false, skipped: "offline-check" };
       }
 
-      const items = safeRead();
-      const todo = items.filter((item) => item.status !== "done");
+      const force = ["manual", "diagnostic"].includes(String(reason || ""));
+      const todo = queueStore.runnable(force);
       if (!todo.length) return { ok: true, synced: 0 };
 
       syncing = true;
-      for (const item of todo) {
-        try {
-          item.status = "syncing";
-          item.attempts = Number(item.attempts || 0) + 1;
-          item.updatedAt = nowISO();
-          safeWrite(items);
-          await runItem(item);
-          remove(item.id);
-          synced += 1;
-        } catch (e) {
-          if (isPermanentFailure(item.kind, e)) {
-            item.status = "discarded";
-            item.error = e?.message || String(e);
-            item.updatedAt = nowISO();
-            cleanupItemSideEffects(item);
-            const remaining = safeRead().filter((x) => String(x.id) !== String(item.id));
-            safeWrite(remaining);
-            toastInfo(message("Ancienne action offline Trip ignoree car elle n'est plus rejouable.", "Old Trip offline action skipped because it is no longer replayable."));
-            continue;
-          }
-          item.status = "pending";
-          item.error = e?.message || String(e);
-          item.updatedAt = nowISO();
-          safeWrite(items);
-          throw e;
-        }
-      }
+      const result = await window.Data.flushMutationQueue({
+        store: queueStore,
+        run: runItem,
+        force,
+        isPermanentFailure: (item, error) => isPermanentFailure(item.kind, error),
+        onSuccess: (item) => {
+          if (String(item?.kind || "").startsWith("transaction.")) cleanupOptimisticRows(item.id);
+        },
+        onPermanentFailure: (item) => {
+          cleanupItemSideEffects(item);
+          toastInfo(message("Ancienne action offline Trip ignoree car elle n'est plus rejouable.", "Old Trip offline action skipped because it is no longer replayable."));
+        },
+      });
+      synced = result.synced;
+      failed = result.failed;
+      if (failed) console.warn(`[OfflineQueue] ${failed} action(s) deferred; later actions continued.`);
       if (synced) {
-        cleanupOptimisticRows("");
         toastInfo(message(`${synced} action(s) hors ligne synchronisee(s).`, `${synced} offline action(s) synced.`));
         try {
           if (typeof window.refreshFromServer === "function") await window.refreshFromServer({ force: true });
         } catch (_) {}
       }
-      return { ok: true, synced };
+      return { ok: failed === 0, synced, failed };
     } finally {
       syncing = false;
       releaseLock();
-      dispatchChanged({ synced });
+      dispatchChanged({ synced, failed });
     }
   }
 

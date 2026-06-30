@@ -26,11 +26,14 @@ Critere de fin : Dashboard, KPI et detail journalier lisent le meme resultat, et
 
 ## Chantier 2 - Couche de donnees et synchronisation
 
-- [ ] Creer un repository commun Supabase/local pour les lectures et ecritures.
-- [ ] Centraliser la file hors ligne, les retries et l'idempotence.
-- [ ] Definir un format canonique pour transactions, repas et seances.
-- [ ] Remplacer les caches locaux disperses par un store explicite.
-- [ ] Ajouter des tests de reconnexion, doublon et conflit.
+- [x] Creer un repository commun Supabase/local pour les lectures et ecritures.
+- [x] Centraliser la file hors ligne, les retries et l'idempotence.
+- [x] Definir un format canonique pour transactions, repas et seances.
+- [x] Introduire un store explicite et y migrer l'etat de la file hors ligne.
+- [ ] Migrer les caches locaux Sport, Nutrition et Trip pendant leur decoupage par domaine.
+- [x] Ajouter des tests de reconnexion, doublon et conflit.
+
+Critere de fin du socle : une action en erreur reste rejouable sans bloquer les suivantes, les doublons possedent une protection locale et serveur, et les nouveaux modules passent par `src/data`.
 
 ## Chantier 3 - Composants UI partages
 

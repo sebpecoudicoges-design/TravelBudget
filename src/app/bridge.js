@@ -17,6 +17,10 @@ import * as bodyEnergyRules from '../core/bodyEnergyRules.js';
 import * as sportLibraryRules from '../core/sportLibraryRules.js';
 import * as nutritionRules from '../core/nutritionRules.js';
 import * as dailyBudgetRules from '../core/dailyBudgetRules.js';
+import * as canonicalRecords from '../core/canonicalRecords.js';
+import { createEntityStore } from '../data/entityStore.js';
+import { createMutationQueueStore, flushMutationQueue } from '../data/mutationQueueStore.js';
+import { createSupabaseRepository } from '../data/supabaseRepository.js';
 
 window.Core = window.Core || {};
 window.Core.money = money;
@@ -37,6 +41,13 @@ window.Core.bodyEnergyRules = bodyEnergyRules;
 window.Core.sportLibraryRules = sportLibraryRules;
 window.Core.nutritionRules = nutritionRules;
 window.Core.dailyBudgetRules = dailyBudgetRules;
+window.Core.canonicalRecords = canonicalRecords;
+
+window.Data = window.Data || {};
+window.Data.appStore = window.Data.appStore || createEntityStore();
+window.Data.createMutationQueueStore = createMutationQueueStore;
+window.Data.flushMutationQueue = flushMutationQueue;
+window.Data.supabaseRepository = window.Data.supabaseRepository || createSupabaseRepository(() => window.sb);
 
 // Optional: expose money helpers directly for convenience (legacy may redefine later; that's OK)
 window.moneyRound = window.moneyRound || money.moneyRound;
