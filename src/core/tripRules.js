@@ -313,6 +313,19 @@ export function buildTripAdvanceTransactionArgs(args = {}) {
   };
 }
 
+export function linkedTripPaymentBudgetPatch({ paymentAmount = 0, personalShare = 0, payNow = false } = {}) {
+  const payment = Number(paymentAmount);
+  const share = Number(personalShare);
+  const isSharedFullPayment = payNow === true
+    && Number.isFinite(payment)
+    && Number.isFinite(share)
+    && share > 0
+    && Math.abs(payment - share) >= 0.005;
+  return isSharedFullPayment
+    ? { out_of_budget: true, affects_budget: false }
+    : null;
+}
+
 export function buildTripPersonalShareTransactionArgs(args = {}) {
   const outOfBudget = args.outOfBudget === true;
   return {

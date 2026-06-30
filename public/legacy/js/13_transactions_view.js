@@ -1349,6 +1349,12 @@ if (isBudgetOnlyInternalTransferFee) return false;
     const txChecked = TB_TX_BULK.selectedIds.has(String(tx.id));
     const linkedExpenseId = String(tx.tripExpenseId || tx.trip_expense_id || "");
     const linkedTripShareId = String(tx.tripShareLinkId || tx.trip_share_link_id || "");
+    const tripBudgetLink = linkedExpenseId
+      ? (state.tripBudgetLinks || []).find((link) => String(link?.expenseId || link?.expense_id || "") === linkedExpenseId && (link?.transactionId || link?.transaction_id))
+      : null;
+    const tripBudgetShareTx = tripBudgetLink
+      ? (state.transactions || []).find((candidate) => String(candidate?.id || "") === String(tripBudgetLink.transactionId || tripBudgetLink.transaction_id || ""))
+      : null;
     const insightDisplayCurrency = String(state?.user?.baseCurrency || state?.user?.base_currency || state?.period?.baseCurrency || tx.currency || "EUR").toUpperCase();
     const nightInsight = (tx.nightCovered && typeof window.tbGetNightCoveredInsightForTx === "function")
       ? window.tbGetNightCoveredInsightForTx(tx, insightDisplayCurrency)
@@ -1383,6 +1389,7 @@ if (isBudgetOnlyInternalTransferFee) return false;
 
         </div>
         <div class="tags">${tags.map((t) => `<span class="tag">${t}</span>`).join("")}</div>
+        ${tripBudgetShareTx ? `<div class="muted" style="margin-top:6px;font-size:12px;line-height:1.45;">${escapeHTML(_txT("transactions.trip.personal_share_in_budget", { amount: _fmtMoney(tripBudgetShareTx.amount, tripBudgetShareTx.currency) }))}</div>` : ``}
         ${nightInsight ? `<div class="muted" style="margin-top:6px;font-size:12px;line-height:1.45;">${escapeHTML(_txT("transactions.night_insight", { amount: _fmtMoney(nightInsight.amount, nightInsight.currency) }))}</div>` : ``}
         ${transferFeeTx ? `
   <div class="muted" style="margin-top:6px;font-size:12px;line-height:1.45;">

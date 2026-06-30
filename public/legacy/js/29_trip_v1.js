@@ -4114,8 +4114,13 @@ try {
              try {
                if (isFinite(myShare) && myShare > 0 && Math.abs(myShare - amt) >= 0.005) {
                  const looksLikePayment2 = (m0 && m0.pay_now === true && Math.abs(Number(m0.amount) - amt) < 0.005);
-                 if (looksLikePayment2 && m0.out_of_budget !== true) {
-                   await sb.from(TB_CONST.TABLES.transactions).update({ out_of_budget: true }).eq("id", m0.id);
+                 const budgetPatch = window.Core?.tripRules?.linkedTripPaymentBudgetPatch?.({
+                   paymentAmount: m0?.amount,
+                   personalShare: myShare,
+                   payNow: m0?.pay_now === true,
+                 }) || { out_of_budget: true, affects_budget: false };
+                 if (looksLikePayment2 && (m0.out_of_budget !== true || m0.affects_budget !== false)) {
+                   await sb.from(TB_CONST.TABLES.transactions).update(budgetPatch).eq("id", m0.id);
                  }
                }
              } catch (e) {

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildTripDeleteExpenseRpcArgs,
   buildTripAdvanceTransactionArgs,
+  linkedTripPaymentBudgetPatch,
   buildTripExpenseRpcPayload,
   buildTripFullShareTransactionArgs,
   buildTripPersonalShareTransactionArgs,
@@ -273,6 +274,19 @@ describe('trip rules core', () => {
       p_expense_id: 'e1',
     });
     expect(() => buildTripDeleteExpenseRpcArgs({ tripId: '', expenseId: 'e1' })).toThrow(/Suppression/);
+  });
+
+  it('keeps a linked full payment out of budget when a separate personal share exists', () => {
+    expect(linkedTripPaymentBudgetPatch({
+      paymentAmount: 96.16,
+      personalShare: 48.08,
+      payNow: true,
+    })).toEqual({ out_of_budget: true, affects_budget: false });
+    expect(linkedTripPaymentBudgetPatch({
+      paymentAmount: 48.08,
+      personalShare: 48.08,
+      payNow: true,
+    })).toBeNull();
   });
 
   it('builds Trip settlement RPC args with normalized currency and rounded amount', () => {
