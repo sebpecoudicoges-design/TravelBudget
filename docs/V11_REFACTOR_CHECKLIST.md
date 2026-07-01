@@ -37,10 +37,14 @@ Critere de fin du socle : une action en erreur reste rejouable sans bloquer les 
 
 ## Chantier 3 - Composants UI partages
 
-- [ ] Extraire modales, boutons, champs, onglets, cartes KPI et graphiques.
-- [ ] Centraliser les etats chargement, vide, erreur et hors ligne.
-- [ ] Supprimer les styles inline repetes.
-- [ ] Verifier mobile, tablette et grand ecran avec Playwright.
+- [x] Creer le socle partage pour modales et etats chargement, vide, erreur et hors ligne.
+- [x] Migrer la fenetre Sport `Ajuster` vers la modale partagee.
+- [x] Retirer les styles inline structurels de cette fenetre et de ses lignes de series.
+- [x] Verifier cette modale sur desktop et mobile avec Playwright, sans debordement horizontal.
+- [ ] Migrer les autres modales, boutons, champs, onglets, cartes KPI et graphiques.
+- [ ] Verifier les composants suivants sur mobile, tablette et grand ecran.
+
+Critere du premier lot : un composant partage doit etre utilise par un vrai parcours, accessible, responsive et teste avant la migration de la fenetre suivante.
 
 ## Chantier 4 - Decoupage par domaine
 

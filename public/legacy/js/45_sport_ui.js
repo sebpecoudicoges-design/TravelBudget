@@ -1110,6 +1110,7 @@
     const intensity = overrides?.intensity || "moderate";
     return {
       tmpId: "tmp_" + Date.now() + "_" + Math.random().toString(16).slice(2),
+      _sessionItemId: overrides?._sessionItemId || null,
       activityKey: a.key,
       exerciseName: overrides?.exerciseName || (lang() === "en" ? a.en : a.fr),
       equipment: overrides?.equipment || a.equipment,
@@ -4059,7 +4060,7 @@
     const pause = root.querySelector("#sport-pause");
     if (pause) pause.onclick = togglePause;
     const finish = root.querySelector("#sport-finish");
-    if (finish) finish.onclick = finishWorkout;
+    if (finish) finish.onclick = () => finishWorkout({ recordCurrent: false });
     root.querySelectorAll("[data-sport-delete-session]").forEach(btn => {
       btn.onclick = () => deleteSportSession(btn.getAttribute("data-sport-delete-session"));
     });
@@ -4102,13 +4103,17 @@
     const local = (CACHE.localSessions || []).find(s =>
       String(s.localId || s.id || "") === id || String(s.remoteId || "") === id
     );
-    if (Array.isArray(local?.plan) && local.plan.length) return local.plan.map(item => Object.assign({}, item));
-
     const sessionItems = (CACHE.items || [])
       .filter(item => String(item.session_id || "") === id)
       .slice()
       .sort((a, b) => n(a.sort_order, 0) - n(b.sort_order, 0));
+    if (Array.isArray(local?.plan) && local.plan.length) {
+      return local.plan.map((item, index) => Object.assign({}, item, {
+        _sessionItemId: sessionItems.find(row => Number(row.sort_order) === index)?.id || null,
+      }));
+    }
     return sessionItems.map(item => makePlanItem(item.activity_key || "strength", {
+      _sessionItemId: item.id || null,
       exerciseName: item.exercise_name || labelActivity(item.activity_key || "strength"),
       equipment: item.equipment || catalogItem(item.activity_key || "strength").equipment,
       mode: item.mode || "time",
@@ -4128,7 +4133,7 @@
     const local = (CACHE.localSessions || []).find(s =>
       String(s.localId || s.id || "") === id || String(s.remoteId || "") === id
     );
-    if (Array.isArray(local?.doneSets)) {
+    if (Array.isArray(local?.doneSets) && !local?.remoteId) {
       return local.doneSets.map(set => Object.assign({}, set, { itemIndex: baseOffset + Math.max(0, Math.round(n(set.itemIndex, 0))) }));
     }
     const sessionItems = (CACHE.items || [])
@@ -4156,31 +4161,7 @@
         distanceM: n(set.distance_m, 0),
         completedAt: set.completed_at || new Date().toISOString(),
       }));
-    const storedByItem = new Map();
-    storedSets.forEach(set => {
-      const itemIndex = Math.max(0, Math.round(n(set.itemIndex, 0))) - baseOffset;
-      const rows = storedByItem.get(itemIndex) || [];
-      rows.push(set);
-      storedByItem.set(itemIndex, rows);
-    });
-    return sessionItems.flatMap((item, idx) => {
-      const existing = (storedByItem.get(idx) || []).slice().sort((a, b) => n(a.setIndex, 0) - n(b.setIndex, 0));
-      const plannedSets = Math.max(1, Math.round(n(item.planned_sets, 1)));
-      const missing = Math.max(0, plannedSets - existing.length);
-      const estimated = Array.from({ length: missing }, (_, setIdx) => ({
-        itemIndex: baseOffset + idx,
-        setIndex: existing.length + setIdx + 1,
-        id: null,
-        itemId: item.id || null,
-        reps: String(item.mode || "") === "reps" ? n(item.target_reps, 0) : null,
-        durationSeconds: n(item.target_seconds, String(item.mode || "") === "reps" ? 45 : 0),
-        weightKg: 0,
-        distanceM: n(item.distance_m, 0),
-        completedAt: new Date().toISOString(),
-        estimated: true,
-      }));
-      return existing.concat(estimated);
-    });
+    return storedSets;
   }
   async function mergeTodaySportSessions() {
     const all = (CACHE.sessions || []).concat((CACHE.localSessions || []).filter(isLocalWorkoutUnsynced).map(localToHistorySession));
@@ -4359,7 +4340,7 @@
       const timer = CACHE.timer;
       const step = currentTimerStep();
       if (!timer || timer.paused || !step) return;
-      if (timer.timeCapEndAt && Date.now() >= timer.timeCapEndAt) return finishWorkout();
+      if (timer.timeCapEndAt && Date.now() >= timer.timeCapEndAt) return finishWorkout({ recordCurrent: true });
       if (step.duration && Date.now() >= timer.stepEndAt) completeStep();
       else if ((typeof activeView === "string" ? activeView : "") === "sport") {
         updateTimerDisplay();
@@ -4595,7 +4576,7 @@
     }
     renderSport("pause");
   }
-  async function finishWorkout() {
+  async function finishWorkout(options) {
     const timer = CACHE.timer;
     if (!timer) return;
     stopTicker();
@@ -4603,11 +4584,13 @@
     const endedAt = Date.now();
     const durationSeconds = Math.max(1, Math.round((endedAt - timer.startedAt) / 1000));
     const step = currentTimerStep();
-    if (step && step.kind === "work") {
+    if (options?.recordCurrent && step && step.kind === "work") {
       const elapsedStepSeconds = Math.max(1, Math.round((endedAt - timer.stepStartedAt) / 1000));
       const cappedStepSeconds = step.duration ? Math.min(n(step.duration, elapsedStepSeconds), elapsedStepSeconds) : elapsedStepSeconds;
       recordWorkStep(timer, step, cappedStepSeconds, readTimerStepLoadKg(timer, step), readTimerStepReps(timer, step));
     }
+    const completed = window.Core?.sportRules?.completedWorkout(CACHE.plan, timer.doneSets)
+      || { plan: CACHE.plan.map(item => Object.assign({}, item)), doneSets: timer.doneSets.slice() };
     const summary = {
       startedAt: new Date(timer.startedAt).toISOString(),
       endedAt: new Date(endedAt).toISOString(),
@@ -4617,9 +4600,9 @@
       moodAfter: "",
       perceivedEffort: null,
       notes: "",
-      estimatedKcal: Math.max(1, Math.round(sessionKcalEstimate(CACHE.plan, timer.doneSets, timer.bodyWeightKg, durationSeconds))),
-      doneSets: timer.doneSets.slice(),
-      plan: CACHE.plan.map(item => Object.assign({}, item)),
+      estimatedKcal: Math.max(1, Math.round(sessionKcalEstimate(completed.plan, completed.doneSets, timer.bodyWeightKg, durationSeconds))),
+      doneSets: completed.doneSets,
+      plan: completed.plan,
     };
     const progressions = applyDoubleProgression(CACHE.plan, timer.doneSets);
     if (progressions.length) {
@@ -5071,7 +5054,7 @@
     const setRowHTML = (set, idx) => {
       const item = plan[Math.max(0, Math.round(n(set.itemIndex, 0)))] || {};
       const isReps = item.mode === "reps" || set.reps != null;
-      return `<div style="display:grid;grid-template-columns:minmax(0,1fr) repeat(3,minmax(74px,96px)) auto;gap:8px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--panel2);">
+      return `<div class="tb-sport-set-editor-row">
         <div>
           <strong>${esc(item.exerciseName || labelActivity(item.activityKey || "strength"))}</strong>
           <div class="muted">${esc(txt("Serie", "Set"))} ${esc(String(set.setIndex || idx + 1))} · ${fmtSec(set.durationSeconds || 0)} · MET ${esc(String(Math.round(n(item.metValue, 0) * 10) / 10))}</div>
@@ -5091,18 +5074,13 @@
         <button class="btn danger small" type="button" data-sport-sandbox-delete="${idx}" title="${esc(txt("Supprimer la serie", "Delete set"))}">×</button>
       </div>`;
     };
-    const wrap = document.createElement("div");
-    wrap.id = "tb-sport-session-sandbox";
-    wrap.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);display:grid;place-items:center;padding:16px;";
-    wrap.innerHTML = `
-      <div style="width:min(760px,100%);max-height:min(86vh,760px);overflow:auto;border-radius:18px;background:var(--panel);color:var(--text);border:1px solid var(--border);box-shadow:0 28px 90px rgba(15,23,42,.32);padding:16px;">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
-          <div>
-            <h3 style="margin:0;">${esc(txt("Sandbox seance", "Workout sandbox"))}</h3>
-            <div class="muted" style="margin-top:4px;">${esc(txt("Ajuste reps, duree, charge, ajoute ou supprime des series, puis sauvegarde.", "Adjust reps, duration, load, add or delete sets, then save."))}</div>
-          </div>
-          <button class="btn" type="button" id="sport-sandbox-close">×</button>
-        </div>
+    const modal = window.UI?.createModal?.({
+      id: "tb-sport-session-sandbox",
+      size: "lg",
+      title: txt("Ajuster la seance", "Adjust workout"),
+      subtitle: txt("Modifie uniquement les series reellement effectuees.", "Edit completed sets only."),
+      closeLabel: txt("Fermer", "Close"),
+      contentHTML: `
         <div class="tb-sport-stats" style="margin:12px 0;">
           <div class="tb-sport-stat"><span>${esc(txt("Avant", "Before"))}</span><strong>${Math.round(n(session.estimated_kcal || session.estimatedKcal, 0))} kcal</strong></div>
           <div class="tb-sport-stat"><span>${esc(txt("Apres", "After"))}</span><strong id="sport-sandbox-kcal">0 kcal</strong></div>
@@ -5120,13 +5098,11 @@
         </div>
         <div style="display:grid;gap:8px;" id="sport-sandbox-set-list">
           ${doneSets.map(setRowHTML).join("")}
-        </div>
-        <div class="tb-sport-actions" style="justify-content:flex-end;margin-top:14px;">
-          <button class="btn" type="button" id="sport-sandbox-cancel">${esc(txt("Annuler", "Cancel"))}</button>
-          <button class="btn primary" type="button" id="sport-sandbox-save">${esc(txt("Sauvegarder", "Save"))}</button>
-        </div>
-      </div>`;
-    document.body.appendChild(wrap);
+        </div>`,
+      actionsHTML: `<button class="btn" type="button" id="sport-sandbox-cancel">${esc(txt("Annuler", "Cancel"))}</button><button class="btn primary" type="button" id="sport-sandbox-save">${esc(txt("Sauvegarder", "Save"))}</button>`,
+    });
+    if (!modal) return;
+    const wrap = modal.root;
     const readNextSets = () => doneSets.map((set, idx) => {
       const item = plan[Math.max(0, Math.round(n(set.itemIndex, 0)))] || {};
       const isReps = item.mode === "reps" || set.reps != null;
@@ -5156,7 +5132,7 @@
           doneSets.splice(0, doneSets.length, ...currentSets);
           doneSets.splice(idx, 1);
           plan.forEach((item, itemIndex) => {
-            item.sets = Math.max(1, doneSets.filter(set => Math.round(n(set.itemIndex, 0)) === itemIndex).length);
+            item.sets = doneSets.filter(set => Math.round(n(set.itemIndex, 0)) === itemIndex).length;
           });
           renderSetList();
           refreshPreview();
@@ -5189,7 +5165,6 @@
       refreshPreview();
       sportFeedback(txt("Serie ajoutee", "Set added"), `${item.exerciseName || labelActivity(item.activityKey)} · ${txt("serie", "set")} ${nextSetIndex}`, { toast: true });
     };
-    wrap.querySelector("#sport-sandbox-close").onclick = closeSportSessionSandbox;
     wrap.querySelector("#sport-sandbox-cancel").onclick = closeSportSessionSandbox;
     const originalSetIds = new Set(doneSets.map(set => String(set.id || "")).filter(Boolean));
     wrap.querySelector("#sport-sandbox-save").onclick = () => saveSportSessionSandbox(id, plan, readNextSets(), weightKg, durationSeconds, originalSetIds);
@@ -5198,7 +5173,8 @@
 
   async function saveSportSessionSandbox(sessionId, plan, nextSets, weightKg, durationSeconds, originalSetIds) {
     const id = String(sessionId || "");
-    const estimatedKcal = Math.max(1, Math.round(sessionKcalEstimate(plan, nextSets, weightKg, durationSeconds)));
+    const completed = window.Core?.sportRules?.completedWorkout(plan, nextSets) || { plan, doneSets: nextSets };
+    const estimatedKcal = Math.max(1, Math.round(sessionKcalEstimate(completed.plan, completed.doneSets, weightKg, durationSeconds)));
     const c = client();
     try {
       const localIdx = (CACHE.localSessions || []).findIndex(s => String(s.localId || s.id || "") === id || String(s.remoteId || "") === id);
@@ -5232,10 +5208,12 @@
           if (res.error) throw res.error;
         }
         for (let itemIndex = 0; itemIndex < plan.length; itemIndex += 1) {
-          const itemId = nextSets.find(set => Math.round(n(set.itemIndex, 0)) === itemIndex)?.itemId;
+          const itemId = plan[itemIndex]?._sessionItemId || nextSets.find(set => Math.round(n(set.itemIndex, 0)) === itemIndex)?.itemId;
           if (!itemId) continue;
-          const plannedSets = Math.max(1, Math.round(n(plan[itemIndex]?.sets, 1)));
-          const res = await c.from(table("sport_session_items")).update({ planned_sets: plannedSets }).eq("id", itemId);
+          const plannedSets = nextSets.filter(set => Math.round(n(set.itemIndex, 0)) === itemIndex).length;
+          const res = plannedSets > 0
+            ? await c.from(table("sport_session_items")).update({ planned_sets: plannedSets }).eq("id", itemId)
+            : await c.from(table("sport_session_items")).delete().eq("id", itemId);
           if (res.error) throw res.error;
         }
         const sess = await c.from(table("sport_sessions")).update({ estimated_kcal: estimatedKcal }).eq("id", id);

@@ -21,6 +21,9 @@ import * as canonicalRecords from '../core/canonicalRecords.js';
 import { createEntityStore } from '../data/entityStore.js';
 import { createMutationQueueStore, flushMutationQueue } from '../data/mutationQueueStore.js';
 import { createSupabaseRepository } from '../data/supabaseRepository.js';
+import * as sportRules from '../core/sportRules.js';
+import * as uiComponents from '../ui/components.js';
+import '../ui/shared.css';
 
 window.Core = window.Core || {};
 window.Core.money = money;
@@ -42,12 +45,16 @@ window.Core.sportLibraryRules = sportLibraryRules;
 window.Core.nutritionRules = nutritionRules;
 window.Core.dailyBudgetRules = dailyBudgetRules;
 window.Core.canonicalRecords = canonicalRecords;
+window.Core.sportRules = sportRules;
 
 window.Data = window.Data || {};
 window.Data.appStore = window.Data.appStore || createEntityStore();
 window.Data.createMutationQueueStore = createMutationQueueStore;
 window.Data.flushMutationQueue = flushMutationQueue;
 window.Data.supabaseRepository = window.Data.supabaseRepository || createSupabaseRepository(() => window.sb);
+
+window.UI = window.UI || {};
+Object.assign(window.UI, uiComponents);
 
 // Optional: expose money helpers directly for convenience (legacy may redefine later; that's OK)
 window.moneyRound = window.moneyRound || money.moneyRound;

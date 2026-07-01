@@ -32,3 +32,20 @@ export function totalPlanRestSeconds(items = []) {
     return sum + Math.max(0, num(item?.rest_seconds ?? item?.restSeconds, 0)) * sets;
   }, 0);
 }
+
+export function completedWorkout(plan = [], doneSets = []) {
+  const sourcePlan = Array.isArray(plan) ? plan : [];
+  const actualSets = (Array.isArray(doneSets) ? doneSets : []).filter((set) => set && set.estimated !== true);
+  const performedIndexes = [...new Set(actualSets
+    .map((set) => Math.max(0, Math.round(num(set.itemIndex, -1))))
+    .filter((index) => index >= 0 && index < sourcePlan.length))];
+  const nextIndex = new Map(performedIndexes.map((oldIndex, index) => [oldIndex, index]));
+  const completedPlan = performedIndexes.map((oldIndex) => {
+    const setCount = actualSets.filter((set) => Math.round(num(set.itemIndex, -1)) === oldIndex).length;
+    return { ...sourcePlan[oldIndex], sets: setCount };
+  });
+  const completedSets = actualSets
+    .filter((set) => nextIndex.has(Math.round(num(set.itemIndex, -1))))
+    .map((set) => ({ ...set, itemIndex: nextIndex.get(Math.round(num(set.itemIndex, -1))) }));
+  return { plan: completedPlan, doneSets: completedSets };
+}

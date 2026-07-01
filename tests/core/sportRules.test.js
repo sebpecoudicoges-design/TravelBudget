@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estimateSportSessionKcal, kcalFromMet, SPORT_REST_MET, totalPlanRestSeconds, totalPlanWorkSeconds } from '../../src/core/sportRules.js';
+import { completedWorkout, estimateSportSessionKcal, kcalFromMet, SPORT_REST_MET, totalPlanRestSeconds, totalPlanWorkSeconds } from '../../src/core/sportRules.js';
 import { estimateWorkDayKcal } from '../../src/core/workRules.js';
 import { resolveDailyBaselineKcal } from '../../src/core/bodyEnergyRules.js';
 
@@ -40,5 +40,19 @@ describe('sport rules core', () => {
     expect(Math.round(resolveDailyBaselineKcal({ kg: 70, heightCm: 175, age: 30, sex: 'male' }).bmr)).toBe(1649);
     expect(Math.round(resolveDailyBaselineKcal({ kg: 70, heightCm: 175, birthDate: '1997-06-22', sex: 'male', today: new Date('2026-06-14T12:00:00') }).bmr)).toBe(1659);
     expect(resolveDailyBaselineKcal({ customBmr: 1800 }).source).toBe('manual');
+  });
+
+  it('keeps only exercises and sets actually completed in a timer workout', () => {
+    const result = completedWorkout(
+      [{ name: 'Bench', sets: 3 }, { name: 'Abs', sets: 3 }],
+      [
+        { itemIndex: 0, setIndex: 1, reps: 10 },
+        { itemIndex: 0, setIndex: 2, reps: 8 },
+        { itemIndex: 1, setIndex: 1, reps: 20, estimated: true },
+      ],
+    );
+    expect(result.plan).toEqual([{ name: 'Bench', sets: 2 }]);
+    expect(result.doneSets).toHaveLength(2);
+    expect(result.doneSets.every((set) => set.itemIndex === 0)).toBe(true);
   });
 });
