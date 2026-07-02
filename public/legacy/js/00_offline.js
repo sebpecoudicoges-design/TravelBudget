@@ -39,6 +39,22 @@
     } catch (_) {}
   }
 
+  function writeSnapshot(keyName, raw) {
+    const safeSet = window.Data?.storageQuota?.safeSet;
+    if (typeof safeSet === "function") {
+      const result = safeSet(localStorage, keyName, raw, { protectedKeys: [keyName] });
+      if (result.ok) {
+        if (result.recovered) {
+          try { window.dispatchEvent(new CustomEvent("tb:storage_compacted", { detail: { removedKeys: result.removedKeys || [] } })); } catch (_) {}
+        }
+        return true;
+      }
+      throw result.error || new Error("Local storage quota exceeded");
+    }
+    localStorage.setItem(keyName, raw);
+    return true;
+  }
+
   function cloneStateForSnapshot() {
     const s = window.state || {};
     const slimRows = (rows, limit, mapper) => {
@@ -114,8 +130,7 @@
       };
       const raw = JSON.stringify(payload);
       try {
-        try { localStorage.removeItem(k); } catch (_) {}
-        localStorage.setItem(k, raw);
+        writeSnapshot(k, raw);
       } catch (quotaErr) {
         clearSnapshotKeys();
         payload.state.transactions = (payload.state.transactions || []).slice(0, 400);
@@ -126,9 +141,8 @@
         payload.state.tripExpenseDocuments = [];
         payload.state.assetDocuments = [];
         payload.state.sportSets = (payload.state.sportSets || []).slice(0, 300);
-        try { localStorage.removeItem(k); } catch (_) {}
         try {
-          localStorage.setItem(k, JSON.stringify(payload));
+          writeSnapshot(k, JSON.stringify(payload));
         } catch (smallErr) {
           clearSnapshotKeys();
           payload.state.transactions = (payload.state.transactions || []).slice(0, 120);
@@ -138,8 +152,7 @@
           payload.state.assets = [];
           payload.state.assetEvents = [];
           payload.state.sportSets = [];
-          try { localStorage.removeItem(k); } catch (_) {}
-          localStorage.setItem(k, JSON.stringify(payload));
+          writeSnapshot(k, JSON.stringify(payload));
         }
       }
       window.__TB_OFFLINE_SNAPSHOT__ = { savedAt: payload.savedAt, restored: false };

@@ -1026,7 +1026,15 @@ if (s) {
 
 const activeTravelId = pickActiveTravel(travels);
 if (!activeTravelId) throw new Error("Aucun voyage trouvé.");
-localStorage.setItem(activeTravelKey, activeTravelId);
+try {
+  const persisted = typeof window.tbSafeLocalStorageSet === "function"
+    ? window.tbSafeLocalStorageSet(activeTravelKey, activeTravelId)
+    : (localStorage.setItem(activeTravelKey, activeTravelId), { ok: true });
+  if (persisted?.recovered) console.info("[Storage] caches compacted", { count: persisted.removedKeys?.length || 0 });
+  if (persisted && persisted.ok === false) console.warn("[Storage] active travel not persisted", persisted.error?.message || persisted.error);
+} catch (e) {
+  console.warn("[Storage] active travel not persisted", e?.message || e);
+}
 
 const currentView = (typeof activeView === "string" && activeView)
   ? activeView
@@ -1053,7 +1061,14 @@ state.activeTravelId = activeTravelId;
 const periodsForTravel = (periods || []).filter((x) => x.travel_id === activeTravelId);
 const activePeriodId = pickActivePeriod(periodsForTravel);
 if (!activePeriodId) throw new Error("Aucune période trouvée pour le voyage actif.");
-localStorage.setItem(ACTIVE_PERIOD_KEY, activePeriodId);
+try {
+  const persisted = typeof window.tbSafeLocalStorageSet === "function"
+    ? window.tbSafeLocalStorageSet(ACTIVE_PERIOD_KEY, activePeriodId)
+    : (localStorage.setItem(ACTIVE_PERIOD_KEY, activePeriodId), { ok: true });
+  if (persisted && persisted.ok === false) console.warn("[Storage] active period not persisted", persisted.error?.message || persisted.error);
+} catch (e) {
+  console.warn("[Storage] active period not persisted", e?.message || e);
+}
 
 const p = periodsForTravel.find((x) => x.id === activePeriodId);
 if (!p) throw new Error("Période active introuvable.");

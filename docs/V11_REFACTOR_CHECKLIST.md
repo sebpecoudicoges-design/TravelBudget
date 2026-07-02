@@ -32,6 +32,7 @@ Critere de fin : Dashboard, KPI et detail journalier lisent le meme resultat, et
 - [x] Introduire un store explicite et y migrer l'etat de la file hors ligne.
 - [ ] Migrer les caches locaux Sport, Nutrition et Trip pendant leur decoupage par domaine.
 - [x] Ajouter des tests de reconnexion, doublon et conflit.
+- [x] Recuperer automatiquement un quota local sature sans supprimer les mutations, repas ou seances en attente.
 
 Critere de fin du socle : une action en erreur reste rejouable sans bloquer les suivantes, les doublons possedent une protection locale et serveur, et les nouveaux modules passent par `src/data`.
 
@@ -41,6 +42,8 @@ Critere de fin du socle : une action en erreur reste rejouable sans bloquer les 
 - [x] Migrer la fenetre Sport `Ajuster` vers la modale partagee.
 - [x] Retirer les styles inline structurels de cette fenetre et de ses lignes de series.
 - [x] Verifier cette modale sur desktop et mobile avec Playwright, sans debordement horizontal.
+- [x] Migrer la fenetre Sport de creation/modification des seances parametrees vers la modale partagee.
+- [x] Verifier cette deuxieme modale sur mobile, tablette et grand ecran, avec focus et fermeture clavier.
 - [ ] Migrer les autres modales, boutons, champs, onglets, cartes KPI et graphiques.
 - [ ] Verifier les composants suivants sur mobile, tablette et grand ecran.
 
