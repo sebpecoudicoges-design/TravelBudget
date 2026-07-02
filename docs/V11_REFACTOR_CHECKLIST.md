@@ -44,6 +44,8 @@ Critere de fin du socle : une action en erreur reste rejouable sans bloquer les 
 - [x] Verifier cette modale sur desktop et mobile avec Playwright, sans debordement horizontal.
 - [x] Migrer la fenetre Sport de creation/modification des seances parametrees vers la modale partagee.
 - [x] Verifier cette deuxieme modale sur mobile, tablette et grand ecran, avec focus et fermeture clavier.
+- [x] Migrer les formulaires Travail Mission, Revenu et Periode vers la modale partagee.
+- [x] Verifier les trois formulaires Travail sur mobile, tablette et grand ecran, avec soumission et erreurs integrees.
 - [ ] Migrer les autres modales, boutons, champs, onglets, cartes KPI et graphiques.
 - [ ] Verifier les composants suivants sur mobile, tablette et grand ecran.
 
