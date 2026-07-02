@@ -27,11 +27,12 @@ export function computeWalletBalanceRows(walletRows, transactionRows, periodId =
       const isInternal = !!(tx?.is_internal ?? tx?.isInternal);
       const payNow = (tx?.pay_now ?? tx?.payNow) !== false;
       const createdAtRaw = tx?.created_at ?? tx?.createdAt ?? null;
-      const createdAtMs = createdAtRaw ? new Date(createdAtRaw).getTime() : NaN;
+      const effectiveAtRaw = tx?.paid_at ?? tx?.paidAt ?? createdAtRaw;
+      const effectiveAtMs = effectiveAtRaw ? new Date(effectiveAtRaw).getTime() : NaN;
 
       if (!payNow) { excludedUnpaid += 1; continue; }
       if (isInternal) { excludedInternal += 1; continue; }
-      if (snapshot && Number.isFinite(createdAtMs) && createdAtMs < snapshot) {
+      if (snapshot && Number.isFinite(effectiveAtMs) && effectiveAtMs < snapshot) {
         excludedPreSnapshot += 1;
         continue;
       }
@@ -42,8 +43,8 @@ export function computeWalletBalanceRows(walletRows, transactionRows, periodId =
       else if (type === 'expense') delta -= amount;
 
       included += 1;
-      if (createdAtRaw && (!lastTxCreatedAt || String(createdAtRaw) > String(lastTxCreatedAt))) {
-        lastTxCreatedAt = createdAtRaw;
+      if (effectiveAtRaw && (!lastTxCreatedAt || String(effectiveAtRaw) > String(lastTxCreatedAt))) {
+        lastTxCreatedAt = effectiveAtRaw;
       }
     }
 

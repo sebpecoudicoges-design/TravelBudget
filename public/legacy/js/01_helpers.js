@@ -410,8 +410,8 @@ function _tbLegacyWalletEffectiveBalance(walletId) {
     if (txWid !== wid) continue;
 
     if (snapTs != null) {
-      const txCreated = tx.createdAt ?? tx.created_at ?? null;
-      const txTs = _tbToTimestamp(txCreated);
+      const txEffectiveAt = tx.paidAt ?? tx.paid_at ?? tx.createdAt ?? tx.created_at ?? null;
+      const txTs = _tbToTimestamp(txEffectiveAt);
       if (txTs == null || txTs < snapTs) continue;
     }
 

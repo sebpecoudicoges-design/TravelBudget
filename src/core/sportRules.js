@@ -49,3 +49,35 @@ export function completedWorkout(plan = [], doneSets = []) {
     .map((set) => ({ ...set, itemIndex: nextIndex.get(Math.round(num(set.itemIndex, -1))) }));
   return { plan: completedPlan, doneSets: completedSets };
 }
+
+export function appendCircuitRound(sequence = [], plan = [], options = {}) {
+  const current = Array.isArray(sequence) ? sequence.slice() : [];
+  const items = Array.isArray(plan) ? plan : [];
+  if (!items.length) return { sequence: current, roundIndex: 0 };
+
+  const previousRound = current
+    .filter((step) => step?.kind === 'work')
+    .reduce((max, step) => Math.max(max, Math.round(num(step?.roundIndex ?? step?.setIndex, 0))), 0);
+  const roundIndex = previousRound + 1;
+  const roundRestSeconds = Math.max(0, Math.round(num(options?.roundRestSeconds, 0)));
+
+  if (current.some((step) => step?.kind === 'work') && roundRestSeconds > 0) {
+    current.push({ kind: 'round_rest', roundIndex: previousRound, roundTotal: roundIndex, duration: roundRestSeconds });
+  }
+
+  items.forEach((item, itemIndex) => {
+    current.push({
+      kind: 'work', item, itemIndex, setIndex: roundIndex, roundIndex, roundTotal: roundIndex,
+      duration: item?.mode === 'time' ? Math.max(0, num(item?.targetSeconds ?? item?.target_seconds, 0)) : 0,
+    });
+    const restSeconds = Math.max(0, Math.round(num(item?.restSeconds ?? item?.rest_seconds, 0)));
+    if (itemIndex < items.length - 1 && restSeconds > 0) {
+      current.push({ kind: 'rest', item, itemIndex, setIndex: roundIndex, roundIndex, roundTotal: roundIndex, duration: restSeconds });
+    }
+  });
+
+  current.forEach((step) => {
+    if (step?.roundIndex) step.roundTotal = roundIndex;
+  });
+  return { sequence: current, roundIndex };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { completedWorkout, estimateSportSessionKcal, kcalFromMet, SPORT_REST_MET, totalPlanRestSeconds, totalPlanWorkSeconds } from '../../src/core/sportRules.js';
+import { appendCircuitRound, completedWorkout, estimateSportSessionKcal, kcalFromMet, SPORT_REST_MET, totalPlanRestSeconds, totalPlanWorkSeconds } from '../../src/core/sportRules.js';
 import { estimateWorkDayKcal } from '../../src/core/workRules.js';
 import { resolveDailyBaselineKcal } from '../../src/core/bodyEnergyRules.js';
 
@@ -54,5 +54,17 @@ describe('sport rules core', () => {
     expect(result.plan).toEqual([{ name: 'Bench', sets: 2 }]);
     expect(result.doneSets).toHaveLength(2);
     expect(result.doneSets.every((set) => set.itemIndex === 0)).toBe(true);
+  });
+
+  it('appends a complete circuit round in exercise order', () => {
+    const rope = { mode: 'time', targetSeconds: 180, restSeconds: 60 };
+    const bag = { mode: 'time', targetSeconds: 180, restSeconds: 60 };
+    const first = appendCircuitRound([], [rope, bag], { roundRestSeconds: 90 });
+    const second = appendCircuitRound(first.sequence, [rope, bag], { roundRestSeconds: 90 });
+    const work = second.sequence.filter((step) => step.kind === 'work');
+
+    expect(second.roundIndex).toBe(2);
+    expect(work.map((step) => [step.itemIndex, step.setIndex])).toEqual([[0, 1], [1, 1], [0, 2], [1, 2]]);
+    expect(second.sequence.some((step) => step.kind === 'round_rest' && step.duration === 90)).toBe(true);
   });
 });

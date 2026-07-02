@@ -59,4 +59,19 @@ describe('wallet balance rules', () => {
     expect(rows[0].effective_balance).toBe(185);
     expect(rows[0].excluded_unpaid_count).toBe(1);
   });
+
+  it('counts a pre-generated recurring expense from its actual payment time', () => {
+    const rows = computeWalletBalanceRows([{
+      id: 'wallet-1', period_id: 'period-1', currency: 'EUR', balance: 100,
+      balance_snapshot_at: '2026-03-25T10:00:00.000Z',
+    }], [{
+      wallet_id: 'wallet-1', type: 'expense', amount: 2, pay_now: true,
+      created_at: '2026-03-15T04:30:00.000Z', paid_at: '2026-07-02T05:49:00.000Z',
+    }], 'period-1');
+
+    expect(rows[0].transactions_delta).toBe(-2);
+    expect(rows[0].effective_balance).toBe(98);
+    expect(rows[0].excluded_pre_snapshot_count).toBe(0);
+    expect(rows[0].last_tx_created_at).toBe('2026-07-02T05:49:00.000Z');
+  });
 });

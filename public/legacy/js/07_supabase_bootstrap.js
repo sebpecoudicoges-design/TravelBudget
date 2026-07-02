@@ -741,7 +741,7 @@ async function loadFromSupabase(opts = {}) {
   const storedActiveTravelId = (() => {
     try { return String(localStorage.getItem(activeTravelKey) || "").trim() || null; } catch (_) { return null; }
   })();
-  const transactionSelect = "id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,internal_transfer_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,out_of_budget,night_covered,affects_budget,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status";
+  const transactionSelect = "id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,internal_transfer_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,paid_at,out_of_budget,night_covered,affects_budget,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status";
   const perfPromise = (name, fn) => {
     try { if (window.TB_PERF?.enabled) TB_PERF.mark(name); } catch (_) {}
     return Promise.resolve()
@@ -827,10 +827,11 @@ async function loadFromSupabase(opts = {}) {
         const isInternal = !!t?.is_internal;
         const payNow = t?.pay_now !== false;
         const createdAtRaw = t?.created_at || null;
-        const createdAtMs = createdAtRaw ? new Date(createdAtRaw).getTime() : NaN;
+        const effectiveAtRaw = t?.paid_at || createdAtRaw;
+        const effectiveAtMs = effectiveAtRaw ? new Date(effectiveAtRaw).getTime() : NaN;
         if (!payNow) { excludedUnpaid += 1; continue; }
         if (isInternal) { excludedInternal += 1; continue; }
-        if (snapshot && Number.isFinite(createdAtMs) && createdAtMs < snapshot) {
+        if (snapshot && Number.isFinite(effectiveAtMs) && effectiveAtMs < snapshot) {
           excludedPreSnapshot += 1;
           continue;
         }
@@ -838,7 +839,7 @@ async function loadFromSupabase(opts = {}) {
         if (String(t?.type || "") === "income") delta += amount;
         else if (String(t?.type || "") === "expense") delta -= amount;
         included += 1;
-        if (createdAtRaw && (!lastTxCreatedAt || String(createdAtRaw) > String(lastTxCreatedAt))) lastTxCreatedAt = createdAtRaw;
+        if (effectiveAtRaw && (!lastTxCreatedAt || String(effectiveAtRaw) > String(lastTxCreatedAt))) lastTxCreatedAt = effectiveAtRaw;
       }
       const baseline = Number(w?.balance || 0);
       rows.push({
@@ -1484,6 +1485,7 @@ state.wallets = (w || []).map((x) => ({
   budgetDateStart: x.budget_date_start || x.date_start,
   budgetDateEnd: x.budget_date_end || x.budget_date_start || x.date_end || x.date_start,
   payNow: x.pay_now !== false,
+  paidAt: x.paid_at || null,
   outOfBudget: !!x.out_of_budget,
   nightCovered: !!x.night_covered,
 

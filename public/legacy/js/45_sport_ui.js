@@ -3082,8 +3082,7 @@
           </div>
           <div class="tb-sport-actions" style="justify-content:center;">
             ${step?.kind === "work" ? `<button class="btn primary" type="button" id="sport-step-done">${esc(txt("Fini", "Done"))}</button>` : ""}
-            ${step?.item ? `<button class="btn" type="button" id="sport-add-set">+ ${esc(txt("serie", "set"))}</button>` : ""}
-            ${amrap ? `<button class="btn primary" type="button" id="sport-round-count">+ ${esc(txt("Tour", "Round"))}</button>` : ""}
+            ${step?.item && !amrap ? `<button class="btn" type="button" id="sport-add-set">+ ${esc(CACHE.circuit?.enabled ? txt("Tour", "Round") : txt("serie", "set"))}</button>` : ""}
             ${isRest ? `<button class="btn primary" type="button" id="sport-skip-rest">${esc(txt("Sauter le repos", "Skip rest"))}</button>` : ""}
             ${step?.duration ? `<button class="btn" type="button" id="sport-minus-time">-15s</button><button class="btn" type="button" id="sport-plus-time">+30s</button>` : ""}
             <button class="btn" type="button" id="sport-pause">${timer.paused ? esc(txt("Reprendre", "Resume")) : esc(txt("Pause", "Pause"))}</button>
@@ -3568,7 +3567,7 @@
             : `<span>${esc(txt("Series non detaillees", "Sets not detailed"))}</span>`;
           return `<div class="tb-sport-session-exercise">
             <strong>${idx + 1}. ${esc(item.exerciseName || labelActivity(item.activityKey || "strength"))}</strong>
-            <div class="muted" style="font-size:12px;margin-top:3px;">${esc(labelActivity(item.activityKey || "strength"))} · ${esc(labelEquipment(item.equipment))} · ${item.mode === "reps" ? `${Math.round(n(item.targetReps, 0))} reps` : fmtSec(item.targetSeconds || 0)} · ${Math.max(1, Math.round(n(item.sets, itemSets.length || 1)))} ${esc(txt("series", "sets"))}</div>
+            <div class="muted" style="font-size:12px;margin-top:3px;">${esc(labelActivity(item.activityKey || "strength"))} · ${esc(labelEquipment(item.equipment))} · ${item.mode === "reps" ? `${Math.round(n(item.targetReps, 0))} reps` : fmtSec(item.targetSeconds || 0)} · ${itemSets.length || Math.max(1, Math.round(n(item.sets, 1)))} ${esc(txt("series", "sets"))}</div>
             ${item.notes ? `<div class="muted" style="font-size:12px;margin-top:3px;">${esc(item.notes)}</div>` : ""}
             <div class="tb-sport-session-setline">${setLine}</div>
           </div>`;
@@ -3998,7 +3997,7 @@
     const done = root.querySelector("#sport-step-done");
     if (done) done.onclick = completeStep;
     const addSet = root.querySelector("#sport-add-set");
-    if (addSet) addSet.onclick = addTimerSetForCurrentExercise;
+    if (addSet) addSet.onclick = CACHE.circuit?.enabled ? addTimerCircuitRound : addTimerSetForCurrentExercise;
     const focus = root.querySelector("#sport-timer-focus");
     if (focus) focus.onclick = async () => {
       CACHE.timerFocus = !CACHE.timerFocus;
@@ -4046,13 +4045,6 @@
     });
     const skipRest = root.querySelector("#sport-skip-rest");
     if (skipRest) skipRest.onclick = skipRestStep;
-    const roundCount = root.querySelector("#sport-round-count");
-    if (roundCount) roundCount.onclick = () => {
-      if (!CACHE.timer) return;
-      CACHE.timer.roundsCompleted = n(CACHE.timer.roundsCompleted, 0) + 1;
-      sportFeedback(txt("Tour ajoute", "Round added"), `${txt("Tours valides", "Rounds counted")}: ${CACHE.timer.roundsCompleted}`, { toast: true, persistNotification: true });
-      renderSport("round-count");
-    };
     const minusTime = root.querySelector("#sport-minus-time");
     if (minusTime) minusTime.onclick = () => adjustCurrentStepSeconds(-15);
     const plusTime = root.querySelector("#sport-plus-time");
@@ -4483,6 +4475,11 @@
     beep(next?.kind === "rest" ? "rest" : "work");
     if (!next && timer.timeCapEndAt && Date.now() < timer.timeCapEndAt) {
       timer.roundsCompleted = n(timer.roundsCompleted, 0) + 1;
+      const nextRoundIndex = timer.roundsCompleted + 1;
+      timer.sequence.forEach(loopStep => {
+        if (loopStep.kind === "work" || loopStep.kind === "rest") loopStep.setIndex = nextRoundIndex;
+        if (loopStep.kind === "work" || loopStep.kind === "rest" || loopStep.kind === "round_rest") loopStep.roundIndex = nextRoundIndex;
+      });
       timer.index = 0;
       const first = currentTimerStep();
       sportFeedback(txt("Tour valide", "Round counted"), `${txt("Tour", "Round")} ${timer.roundsCompleted} - ${stepLabel(first)}`, { persistNotification: true });
@@ -4558,6 +4555,21 @@
     savePlan();
     sportFeedback(txt("Serie ajoutee", "Set added"), `${item.exerciseName || labelActivity(item.activityKey)} · ${txt("serie", "set")} ${nextSetIndex}`, { toast: true, persistNotification: true });
     renderSport("add-current-set");
+  }
+  function addTimerCircuitRound() {
+    const timer = CACHE.timer;
+    if (!timer || !CACHE.plan.length || !CACHE.circuit?.enabled) return;
+    const append = window.Core?.sportRules?.appendCircuitRound;
+    if (typeof append !== "function") return;
+    const result = append(timer.sequence, CACHE.plan, { roundRestSeconds: CACHE.circuit.roundRestSeconds });
+    timer.sequence = result.sequence;
+    CACHE.circuit.rounds = Math.max(Math.round(n(CACHE.circuit.rounds, 1)), result.roundIndex);
+    CACHE.plan.forEach(item => { item.sets = Math.max(Math.round(n(item.sets, 1)), result.roundIndex); });
+    saveCircuit(CACHE.circuit);
+    savePlan();
+    const order = CACHE.plan.map(item => item.exerciseName || labelActivity(item.activityKey)).join(" → ");
+    sportFeedback(txt("Tour ajoute", "Round added"), `${txt("Tour", "Round")} ${result.roundIndex} · ${order}`, { toast: true, persistNotification: true });
+    renderSport("add-circuit-round");
   }
   function togglePause() {
     const timer = CACHE.timer;
