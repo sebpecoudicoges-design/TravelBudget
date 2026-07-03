@@ -525,6 +525,25 @@
     apply();
   }
 
+  function _rrBindBudgetPeriodUi() {
+    const start = document.getElementById("rr-start-date");
+    const end = document.getElementById("rr-end-date");
+    const summary = document.getElementById("rr-budget-period-summary");
+    const formatter = window.Core?.recurringRules?.formatRecurringPeriodCoverage;
+    if (!start || !end || !summary || typeof formatter !== "function") return;
+    const render = () => {
+      summary.textContent = formatter({
+        periods: state?.periods || [],
+        travelId: state?.activeTravelId || "",
+        startDate: start.value,
+        endDate: end.value || start.value,
+      }, typeof window.tbGetLang === "function" ? window.tbGetLang() : "fr");
+    };
+    start.addEventListener("change", render);
+    end.addEventListener("change", render);
+    render();
+  }
+
   window.openRecurringRuleModal = async function openRecurringRuleModal(ruleToEdit) {
     const wallets = _rrWalletOptions();
     if (!wallets.length) throw new Error("Aucun wallet disponible sur le voyage actif.");
@@ -628,11 +647,15 @@
           <label>${escapeHTML(rrT("recurring.label.max_occurrences"))}</label>
           <input id="rr-max-occurrences" type="number" min="1" step="1" placeholder="${escapeHTML(rrT("recurring.placeholder.optional"))}" value="${escapeHTML(defaults.max_occurrences)}" />
         </div>
+        <div class="field field--span-2">
+          <div id="rr-budget-period-summary" class="muted" role="status"></div>
+        </div>
       </div>
     `);
 
     _rrBindFrequencyUi();
     _rrBindSubcategoryUi(defaults.subcategory || "");
+    _rrBindBudgetPeriodUi();
 
     const walletSel = document.getElementById("rr-wallet");
     const curInp = document.getElementById("rr-currency");
@@ -680,6 +703,10 @@
             if (!category) throw new Error("Catégorie requise.");
             if (!start_date) throw new Error("Date de début requise.");
             if (end_date && end_date < start_date) throw new Error("La date de fin doit être ≥ à la date de début.");
+            const coverage = window.Core?.recurringRules?.recurringPeriodCoverage?.({
+              periods: state?.periods || [], travelId: state?.activeTravelId || "", startDate: start_date, endDate: end_date || start_date
+            });
+            if (coverage && !coverage.covered) throw new Error("Les dates doivent appartenir aux périodes budget du voyage.");
 
             const weekday = (rule_type === "weekly") ? Number(weekdayRaw) : null;
             const monthday = (rule_type === "every_x_months") ? Number(monthdayRaw || 0) || null : null;

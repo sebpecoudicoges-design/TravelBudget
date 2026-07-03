@@ -54,6 +54,8 @@ Critere de fin du socle : une action en erreur reste rejouable sans bloquer les 
 - [x] Verifier les categories dynamiques, le verrou Trip et les trois formats d'ecran.
 - [x] Migrer les formulaires Settings Voyage, Periode, Categorie et Sous-categorie vers la modale partagee.
 - [x] Supprimer l'ancien helper `#tb-modal` et gerer focus, clavier, attente et annulation avec le composant commun.
+- [x] Migrer les fenetres Trip Depense, Rapprochement, Reglement, Detail et Documents vers la modale partagee.
+- [x] Verifier les cinq fenetres Trip sur mobile, tablette et grand ecran.
 - [ ] Migrer les autres modales, boutons, champs, onglets, cartes KPI et graphiques.
 - [ ] Verifier les composants suivants sur mobile, tablette et grand ecran.
 
@@ -67,6 +69,15 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [ ] Sante : separer score, tendances et saisies corporelles.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.
 - [ ] Patrimoine : separer actifs, cout mensuel et integration budget.
+
+## Audit transversal - Regles recurrentes
+
+- [x] Resoudre automatiquement la periode budget depuis la date de chaque occurrence.
+- [x] Reparer les occurrences generees non payees apres une modification des periodes.
+- [x] Conserver les occurrences confirmees comme historique immuable.
+- [x] Faire respecter `max_occurrences` pendant la generation SQL.
+- [x] Afficher et valider la couverture des periodes budget dans le formulaire de regle.
+- [x] Verifier les regles existantes et leurs occurrences directement sur la base distante.
 
 ## Chantier 5 - Performance et chargement
 

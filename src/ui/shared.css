@@ -12,5 +12,13 @@
 .tb-ui-state { display:grid; gap:4px; padding:12px; border:1px solid var(--border,#dbe3ee); border-left-width:4px; border-radius:6px; background:var(--panel2,#f8fafc); }
 .tb-ui-state span { color:var(--muted,#64748b); font-size:13px; }
 .tb-ui-state--loading { border-left-color:#2563eb; }.tb-ui-state--empty { border-left-color:#64748b; }.tb-ui-state--error { border-left-color:#dc2626; }.tb-ui-state--offline { border-left-color:#d97706; }
+.tb-trip-modal-form { display:grid; gap:14px; }
+.tb-trip-modal-form .field { display:grid; gap:6px; }
+.tb-trip-modal-form input,.tb-trip-modal-form select { box-sizing:border-box; width:100%; min-width:0; }
+.tb-trip-modal-form #tripSettleWalletNote { min-height:18px; font-size:12px; }
+.tb-trip-detail-body { display:grid; gap:12px; margin-top:12px; }
+.tb-trip-match-layout,.tb-trip-documents-content,.tb-trip-expense-modal .trip-expense-sheet-body { display:grid; gap:14px; }
+.tb-trip-match-content input[type="search"] { box-sizing:border-box; width:100%; min-width:0; }
+.tb-trip-shared-modal table { max-width:100%; }
 .tb-sport-set-editor-row { display:grid; grid-template-columns:minmax(0,1fr) repeat(3,minmax(74px,96px)) auto; gap:8px; align-items:center; border:1px solid var(--border); border-radius:6px; padding:10px; background:var(--panel2); }
-@media (max-width:640px) { .tb-ui-modal-backdrop { padding:0; align-items:end; } .tb-ui-modal,.tb-ui-modal--lg,.tb-ui-modal--xl { width:100%; max-height:94dvh; border-radius:8px 8px 0 0; } .tb-ui-modal__header,.tb-ui-modal__body,.tb-ui-modal__footer { padding:12px; } .tb-ui-modal__footer .btn { flex:1 1 auto; } .tb-sport-set-editor-row { grid-template-columns:repeat(3,minmax(0,1fr)) auto; } .tb-sport-set-editor-row>div:first-child { grid-column:1/-1; } .tb-sport-set-editor-row input { width:100%; min-width:0; } }
+@media (max-width:640px) { .tb-ui-modal-backdrop { padding:0; align-items:end; } .tb-ui-modal,.tb-ui-modal--lg,.tb-ui-modal--xl { width:100%; max-height:94dvh; border-radius:8px 8px 0 0; } .tb-ui-modal__header,.tb-ui-modal__body,.tb-ui-modal__footer { padding:12px; } .tb-ui-modal__footer .btn { flex:1 1 auto; } .tb-sport-set-editor-row { grid-template-columns:repeat(3,minmax(0,1fr)) auto; } .tb-sport-set-editor-row>div:first-child { grid-column:1/-1; } .tb-sport-set-editor-row input { width:100%; min-width:0; } .tb-trip-match-layout>div:first-child { grid-template-columns:1fr!important; align-items:stretch!important; } .tb-trip-expense-modal .trip-expense-row { align-items:stretch!important; } .tb-trip-expense-modal .trip-expense-row>.field { min-width:0!important; max-width:none!important; flex:1 1 100%!important; } .tb-trip-documents-modal .tb-trip-documents-content>div { min-width:0; } }

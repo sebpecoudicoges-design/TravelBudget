@@ -17,6 +17,7 @@ import * as bodyEnergyRules from '../core/bodyEnergyRules.js';
 import * as sportLibraryRules from '../core/sportLibraryRules.js';
 import * as nutritionRules from '../core/nutritionRules.js';
 import * as dailyBudgetRules from '../core/dailyBudgetRules.js';
+import * as recurringRules from '../core/recurringRules.js';
 import * as canonicalRecords from '../core/canonicalRecords.js';
 import { createEntityStore } from '../data/entityStore.js';
 import { createMutationQueueStore, flushMutationQueue } from '../data/mutationQueueStore.js';
@@ -45,6 +46,7 @@ window.Core.bodyEnergyRules = bodyEnergyRules;
 window.Core.sportLibraryRules = sportLibraryRules;
 window.Core.nutritionRules = nutritionRules;
 window.Core.dailyBudgetRules = dailyBudgetRules;
+window.Core.recurringRules = recurringRules;
 window.Core.canonicalRecords = canonicalRecords;
 window.Core.sportRules = sportRules;
 

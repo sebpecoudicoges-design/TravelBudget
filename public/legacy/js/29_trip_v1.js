@@ -542,6 +542,7 @@ async function _copyToClipboard(text) {
     _offlineReplaySaving: false,
     _tripsLoaded: false,
   };
+  let _tripExpenseEditorModal = null;
   window.__tripState = tripState;
 
   function _syncTripStateToAppState(reason) {
@@ -1347,11 +1348,9 @@ async function _findMatchingTransactions({ date, amount, currency }) {
     const rows = Array.isArray(matches) ? matches.filter(Boolean) : [];
     if (!rows.length) return resolve(null);
 
-    const existing = document.getElementById("trip-match-modal");
-    if (existing) existing.remove();
-
     let query = "";
     let exactOnly = true;
+    let settled = false;
 
     const targetDate = String(context.date || "");
     const targetAmount = Number(context.amount || 0);
@@ -1383,35 +1382,29 @@ async function _findMatchingTransactions({ date, amount, currency }) {
       }).slice(0, 40);
     }
 
-    const modal = document.createElement("div");
-    modal.id = "trip-match-modal";
-    modal.style.cssText = `
-      position:fixed;
-      inset:0;
-      z-index:10060;
-      background:rgba(15,23,42,.48);
-      display:flex;
-      align-items:flex-start;
-      justify-content:center;
-      padding:32px 16px;
-      overflow:auto;
-    `;
+    if (!window.UI?.createModal) throw new Error("Composant de fenetre indisponible.");
+    const modalHandle = window.UI.createModal({
+      id: "trip-match-modal",
+      size: "xl",
+      panelClass: "tb-trip-shared-modal tb-trip-match-modal",
+      title: "Transaction existante détectée",
+      subtitle: "Une transaction Budget ressemble à cette dépense Trip. Lie-la pour éviter un doublon.",
+      contentHTML: '<div class="tb-trip-match-content"></div>',
+      initialFocus: "#trip-match-search",
+      closeLabel: "Fermer",
+      onClose(){
+        if (settled) return;
+        settled = true;
+        resolve(null);
+      }
+    });
+    const modal = modalHandle.body.querySelector(".tb-trip-match-content");
 
     function render() {
       const list = filteredRows();
 
       modal.innerHTML = `
-        <div class="card" style="width:min(960px,100%);max-height:calc(100vh - 64px);overflow:auto;border-radius:22px;box-shadow:0 28px 80px rgba(15,23,42,.35);">
-          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px;">
-            <div>
-              <h2 style="margin:0;">Transaction existante détectée</h2>
-              <div class="muted" style="font-size:13px;margin-top:4px;">
-                Une transaction Budget ressemble à cette dépense Trip. Tu peux la lier pour éviter un doublon.
-              </div>
-            </div>
-            <button type="button" class="btn" data-trip-match-new>✕</button>
-          </div>
-
+        <div class="tb-trip-match-layout">
           <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:12px;">
             <div>
               <label class="muted" style="display:block;font-size:12px;margin-bottom:4px;">Recherche</label>
@@ -1517,15 +1510,11 @@ async function _findMatchingTransactions({ date, amount, currency }) {
     }
 
     const close = (value) => {
-      modal.remove();
+      if (settled) return;
+      settled = true;
+      modalHandle.destroy();
       resolve(value);
     };
-
-    modal.addEventListener("click", (ev) => {
-      if (ev.target === modal) close(null);
-    });
-
-    document.body.appendChild(modal);
     render();
   });
 }
@@ -2246,53 +2235,38 @@ function _tripParseLocaleAmount(raw) {
 let _settleModalState = null;
 
 function _ensureSettleModal() {
-  let modal = document.getElementById("tripSettleModal");
-  if (modal) return modal;
-  modal = document.createElement("div");
-  modal.id = "tripSettleModal";
-  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px;";
-  modal.innerHTML = `
-    <div style="background:#fff;max-width:520px;width:100%;border-radius:14px;padding:14px 14px 12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.2);">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-        <h3 style="margin:0;">Règlement</h3>
-        <button id="tripSettleClose" class="btn" type="button">✕</button>
-      </div>
-      <div class="muted" id="tripSettleContext" style="margin-top:6px;"></div>
-
-      <div style="margin-top:12px;">
-        <label class="muted" style="display:block;margin-bottom:6px;">Wallet</label>
-        <select id="tripSettleWallet" class="input" style="width:100%"></select>
-        <div class="muted" id="tripSettleWalletNote" style="margin-top:6px;font-size:12px;"></div>
-      </div>
-
-      <div style="margin-top:12px;">
-        <label class="muted" style="display:block;margin-bottom:6px;">Devise transaction</label>
-        <select id="tripSettleCurrency" class="input" style="width:100%"></select>
-      </div>
-
-      <div style="margin-top:12px;">
-        <label class="muted" style="display:block;margin-bottom:6px;">Montant (dans la devise choisie)</label>
-        <input id="tripSettleAmount" class="input" type="number" step="0.01" style="width:100%" />
-      </div>
-
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:flex-end;">
-        <button id="tripSettleOnly" class="btn" type="button">Marquer réglé (sans wallet)</button>
-        <button id="tripSettleConfirm" class="btn btn-primary" type="button">Valider</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  modal.querySelector("#tripSettleClose").onclick = () => {
-    modal.style.display = "none";
-    _settleModalState = null;
-  };
-  modal.onclick = (e) => {
-    if (e.target === modal) {
-      modal.style.display = "none";
-      _settleModalState = null;
-    }
-  };
+  if (!window.UI?.createModal) throw new Error("Composant de fenetre indisponible.");
+  const handle = window.UI.createModal({
+    id: "tripSettleModal",
+    size: "md",
+    panelClass: "tb-trip-shared-modal tb-trip-settle-modal",
+    title: "Règlement",
+    contentHTML: `
+      <div class="tb-trip-modal-form">
+        <div class="muted" id="tripSettleContext"></div>
+        <div class="field">
+          <label for="tripSettleWallet">Wallet</label>
+          <select id="tripSettleWallet" class="input"></select>
+          <div class="muted" id="tripSettleWalletNote"></div>
+        </div>
+        <div class="field">
+          <label for="tripSettleCurrency">Devise transaction</label>
+          <select id="tripSettleCurrency" class="input"></select>
+        </div>
+        <div class="field">
+          <label for="tripSettleAmount">Montant dans la devise choisie</label>
+          <input id="tripSettleAmount" class="input" type="number" step="0.01" />
+        </div>
+      </div>`,
+    actionsHTML: `
+      <button id="tripSettleOnly" class="btn" type="button">Régler sans wallet</button>
+      <button id="tripSettleConfirm" class="btn primary" type="button">Valider</button>`,
+    initialFocus: "#tripSettleWallet",
+    closeLabel: "Fermer",
+    onClose(){ _settleModalState = null; }
+  });
+  const modal = handle.root;
+  modal._tbModalHandle = handle;
   return modal;
 }
 
@@ -2356,7 +2330,7 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
   modal.querySelector("#tripSettleOnly").onclick = async () => {
     try {
       await _persistSettlementEventOnly();
-      modal.style.display = "none";
+      modal._tbModalHandle?.close();
       _settleModalState = null;
       toastOk("Règlement enregistré (sans wallet).");
     } catch (e) {
@@ -2376,7 +2350,7 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
       if (!(amtW > 0)) throw new Error("Montant invalide.");
       if (!txCur) throw new Error("Devise invalide.");
       await _persistSettlementWithWallet({ walletId: wid, walletCurrency: txCur, walletAmount: amtW, walletNativeCurrency: walletCur });
-      modal.style.display = "none";
+      modal._tbModalHandle?.close();
       _settleModalState = null;
       toastOk("Règlement enregistré.");
     } catch (e) {
@@ -2384,7 +2358,6 @@ function _openSettlementModal({ fromId, toId, currency, amount, isOut, members }
     }
   };
 
-  modal.style.display = "flex";
 }
 // =========================
 // Expense detail modal (UX)
@@ -2820,70 +2793,21 @@ async function _openTripExpenseDocumentsModal(expenseId) {
   </div>
 `;
 
-  const html = `
-  <div style="padding:4px 0;">
-    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px;">
-      <div>
-        <h2 style="margin:0;">Documents • ${escapeHTML(ex.label || "Dépense")}</h2>
-        <div class="muted" style="font-size:12px;margin-top:4px;">
-          Lier ou délier des justificatifs à cette dépense Trip.
-        </div>
-      </div>
-      <button class="btn" type="button" data-trip-doc-close>✕</button>
-    </div>
-
-    ${linkedHTML}
-
-    ${availableHTML}
-  </div>
-`;
-
-const existing = document.getElementById("trip-expense-docs-modal");
-if (existing) existing.remove();
-
-const wrap = document.createElement("div");
-wrap.id = "trip-expense-docs-modal";
-wrap.style.cssText = `
-  position: fixed;
-  inset: 0;
-  z-index: 10050;
-  background: rgba(15,23,42,.48);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 32px 16px;
-  overflow: auto;
-`;
-
-wrap.onclick = (e) => {
-  if (e.target === wrap) wrap.remove();
-};
-
-wrap.innerHTML = `
-  <div class="card" style="
-    width: min(920px, 100%);
-    max-height: calc(100vh - 64px);
-    overflow: auto;
-    margin: 0;
-    border-radius: 22px;
-    box-shadow: 0 28px 80px rgba(15,23,42,.35);
-  ">
-    ${html}
-  </div>
-`;
-
-document.body.appendChild(wrap);
-
-const modal = {
-  close: () => wrap.remove(),
-  content: wrap,
-};
-
-const root = wrap;
-
-root.querySelector("[data-trip-doc-close]")?.addEventListener("click", () => {
-  wrap.remove();
-});
+  const html = `<div class="tb-trip-documents-content">${linkedHTML}${availableHTML}</div>`;
+  if (!window.UI?.createModal) throw new Error("Composant de fenetre indisponible.");
+  const modal = window.UI.createModal({
+    id: "trip-expense-docs-modal",
+    size: "xl",
+    panelClass: "tb-trip-shared-modal tb-trip-documents-modal",
+    title: `Documents · ${ex.label || "Dépense"}`,
+    subtitle: "Lier ou délier des justificatifs à cette dépense Trip.",
+    contentHTML: html,
+    actionsHTML: '<button class="btn" type="button" data-trip-doc-close>Fermer</button>',
+    initialFocus: "#trip-doc-search",
+    closeLabel: "Fermer"
+  });
+  const root = modal.root;
+  root.querySelector("[data-trip-doc-close]")?.addEventListener("click", modal.close);
 
 const docSelect = root.querySelector("#trip-doc-select");
 const docSearch = root.querySelector("#trip-doc-search");
@@ -2904,7 +2828,7 @@ if(docSearch && docSelect){
 root.querySelector("[data-trip-doc-link-selected]")?.addEventListener("click", async () => {
   try{
     const documentId = root.querySelector("#trip-doc-select")?.value || "";
-    const relationType = root.querySelector("#trip-doc-upload-relation")?.value || "receipt";
+    const relationType = root.querySelector("#trip-doc-relation")?.value || "receipt";
 
     if(!documentId) return toastWarn("Choisis un document.");
 
@@ -2916,7 +2840,7 @@ root.querySelector("[data-trip-doc-link-selected]")?.addEventListener("click", a
     });
 
     toastOk("Document lié.");
-    wrap.remove();
+    modal.close();
     await _openTripExpenseDocumentsModal(expenseId);
   }catch(e){
     toastWarn(e?.message || String(e));
@@ -2932,12 +2856,12 @@ root.querySelector("#trip-doc-upload-input")?.addEventListener("change", async (
     const file = ev.target.files?.[0];
     if(!file) return;
 
-    const relationType = root.querySelector("#trip-doc-relation")?.value || "receipt";
+    const relationType = root.querySelector("#trip-doc-upload-relation")?.value || "receipt";
 
 await _uploadTripExpenseDocumentFile(expenseId, file, relationType);
 
     toastOk("Document ajouté et lié.");
-    wrap.remove();
+    modal.close();
     await _openTripExpenseDocumentsModal(expenseId);
   }catch(e){
     toastWarn(e?.message || String(e));
@@ -3048,33 +2972,19 @@ function _yesNoPill(v) {
 }
 
 function _ensureExpenseDetailModal() {
-  let modal = document.getElementById("tripExpenseDetailModal");
-  if (modal) return modal;
-  modal = document.createElement("div");
-  modal.id = "tripExpenseDetailModal";
-  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px;";
-  modal.innerHTML = `
-    <div style="background:#fff;max-width:620px;width:100%;border-radius:14px;padding:14px 14px 12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.2);">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-        <h3 style="margin:0;">Détail dépense</h3>
-        <button id="tripExpDetailClose" class="btn" type="button">✕</button>
-      </div>
-      <div class="muted" id="tripExpDetailMeta" style="margin-top:6px;"></div>
-      <div id="tripExpDetailBody" style="margin-top:12px;"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:flex-end;">
-        <button id="tripExpDetailOk" class="btn" type="button">OK</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  const close = () => {
-    modal.style.display = "none";
-    _expDetailModalState = null;
-  };
-  modal.querySelector("#tripExpDetailClose").onclick = close;
-  modal.querySelector("#tripExpDetailOk").onclick = close;
-  modal.onclick = (e) => { if (e.target === modal) close(); };
+  if (!window.UI?.createModal) throw new Error("Composant de fenetre indisponible.");
+  const handle = window.UI.createModal({
+    id: "tripExpenseDetailModal",
+    size: "lg",
+    panelClass: "tb-trip-shared-modal tb-trip-detail-modal",
+    title: "Détail dépense",
+    contentHTML: '<div class="muted" id="tripExpDetailMeta"></div><div id="tripExpDetailBody" class="tb-trip-detail-body"></div>',
+    actionsHTML: '<button id="tripExpDetailOk" class="btn" type="button">Fermer</button>',
+    closeLabel: "Fermer",
+    onClose(){ _expDetailModalState = null; }
+  });
+  const modal = handle.root;
+  modal.querySelector("#tripExpDetailOk").onclick = () => handle.close();
   return modal;
 }
 
@@ -3087,7 +2997,6 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
 
   modal.querySelector("#tripExpDetailMeta").textContent = `${ex.date || "—"} • payé par ${payerName}`.trim();
   modal.querySelector("#tripExpDetailBody").innerHTML = `<div class="muted">Chargement du détail…</div>`;
-  modal.style.display = "flex";
 
   const audit = await _fetchExpenseAuditDetails(ex?.id);
   if (!_expDetailModalState || _expDetailModalState.expenseId !== ex?.id) return;
@@ -3223,7 +3132,6 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
   `;
 
   modal.querySelector("#tripExpDetailBody").innerHTML = body;
-  modal.style.display = "flex";
 }
 
 
@@ -4852,19 +4760,7 @@ try {
       return `<div class="card"><h2>${title}</h2>${subtitle}${body}</div>`;
     }
 
-    return `
-      <div id="trip-edit-exp-overlay" style="position:fixed; inset:0; background:rgba(15,23,42,0.38); z-index:10020; display:flex; align-items:flex-start; justify-content:center; padding:32px 16px; overflow:auto;">
-        <div class="card trip-expense-sheet" style="width:min(920px, 100%); margin:0; box-shadow:0 18px 48px rgba(0,0,0,0.18);">
-          <div class="trip-expense-sheet-head" style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
-            <div>
-              <h2 style="margin:0;">${title}</h2>
-              ${subtitle}
-            </div>
-            <button class="btn" type="button" id="trip-edit-exp-close" aria-label="Fermer">✕</button>
-          </div>
-          <div class="trip-expense-sheet-body">${body}</div>
-        </div>
-      </div>`;
+    return `<template id="trip-expense-modal-template" data-title="${escapeHTML(title)}"><div class="trip-expense-sheet-body">${body}</div></template>`;
   }
 
 
@@ -5345,6 +5241,37 @@ return `
       </div>
       ${editExpenseModalHTML}
     `;
+
+    const expenseModalTemplate = _el("trip-expense-modal-template");
+    if (expenseModalTemplate) {
+      if (!window.UI?.createModal) throw new Error("Composant de fenetre indisponible.");
+      _tripExpenseEditorModal = window.UI.createModal({
+        id: "trip-expense-editor-modal",
+        size: "xl",
+        panelClass: "tb-trip-shared-modal tb-trip-expense-modal",
+        title: expenseModalTemplate.dataset.title || _tripT("trip.expense"),
+        subtitle: editingExpenseId ? _tripT("trip.expense.edit_hint") : _tripT("trip.expense.quick_hint"),
+        contentHTML: expenseModalTemplate.innerHTML,
+        initialFocus: "#trip-exp-label",
+        closeLabel: "Fermer",
+        onClose: async () => {
+          _tripExpenseEditorModal = null;
+          try {
+            if (tripState.editingExpenseId) await _cancelEditExpense();
+            else if (tripState.addExpenseOpen) {
+              tripState.addExpenseOpen = false;
+              await _renderUI();
+            }
+          } catch (error) {
+            toastWarn(error?.message || String(error));
+          }
+        }
+      });
+      expenseModalTemplate.remove();
+    } else if (_tripExpenseEditorModal) {
+      _tripExpenseEditorModal.destroy();
+      _tripExpenseEditorModal = null;
+    }
 
     _renderTripContextHelp(root);
 
@@ -5896,37 +5823,6 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
     const btnCancelEditExp = _el("trip-cancel-edit-exp");
     if (btnCancelEditExp) {
       btnCancelEditExp.onclick = async () => {
-        try {
-          if (editingExpenseId) await _cancelEditExpense();
-          else {
-            tripState.addExpenseOpen = false;
-            await _renderUI();
-          }
-        } catch (e) {
-          toastWarn(e?.message || String(e));
-        }
-      };
-    }
-
-    const btnCloseEditExp = _el("trip-edit-exp-close");
-    if (btnCloseEditExp) {
-      btnCloseEditExp.onclick = async () => {
-        try {
-          if (editingExpenseId) await _cancelEditExpense();
-          else {
-            tripState.addExpenseOpen = false;
-            await _renderUI();
-          }
-        } catch (e) {
-          toastWarn(e?.message || String(e));
-        }
-      };
-    }
-
-    const editOverlay = _el("trip-edit-exp-overlay");
-    if (editOverlay) {
-      editOverlay.onclick = async (ev) => {
-        if (ev.target !== editOverlay) return;
         try {
           if (editingExpenseId) await _cancelEditExpense();
           else {
