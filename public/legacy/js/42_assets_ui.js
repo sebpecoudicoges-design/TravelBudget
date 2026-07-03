@@ -7,6 +7,7 @@
   const FALLBACK_EVENTS = [];
   let CACHE = { assets:[], owners:[], events:[], documentLinks:[], demo:false };
   let TRIP_EXPENSE_CACHE = new Map();
+  let assetModal = null;
 
   function esc(v){ try { return escapeHTML(String(v ?? '')); } catch(_) { return String(v ?? '').replace(/[&<>\'"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c])); } }
   function tr(k, vars){ try { return window.tbT ? window.tbT(k, vars) : k; } catch(_) { return k; } }
@@ -318,12 +319,46 @@ ${(() => {
   function emptyState(){ return `<section class="tb-assets-empty"><div><strong>${esc(tr('assets.empty.title'))}</strong><p>${esc(tr('assets.empty.body'))}</p></div><button class="tb-asset-add-btn" type="button" data-tb-asset-open>${esc(tr('assets.action.add_asset'))}</button></section>`; }
   function renderCharts(assets){ if(!window.echarts) return; for(const asset of assets){ const el = document.getElementById(`asset-chart-${asset.id}`); if(!el) continue; const old = window.echarts.getInstanceByDom ? window.echarts.getInstanceByDom(el) : null; if(old) old.dispose(); const series = window.TBAssetsCore.buildValueSeries(asset, 18); const chart = window.echarts.init(el, null, { renderer:'canvas' }); chart.setOption({ grid:{left:4,right:4,top:8,bottom:6}, xAxis:{type:'category',show:false,data:series.map(x=>x.date)}, yAxis:{type:'value',show:false,min:'dataMin'}, tooltip:{trigger:'axis', valueFormatter:v=>money(v, asset.currency)}, series:[{ type:'line', smooth:true, symbol:'none', lineStyle:{ width:4, color:'#22d3ee' }, areaStyle:{ color:{ type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:'rgba(6,182,212,.22)'},{offset:1,color:'rgba(6,182,212,.02)'}] } }, data:series.map(x=>Math.round(x.value*100)/100) }] }); } }
 
+  function assetModalSpec({ key, title, subtitle, formAttrs, contentHTML, submitLabel, extraActionsHTML='', size='lg' }){
+    const formId=`tb-asset-${key}-form`;
+    return {
+      title,
+      subtitle,
+      size,
+      formId,
+      contentHTML:`<form id="${formId}" ${formAttrs}>${contentHTML}</form>`,
+      actionsHTML:`${extraActionsHTML}<button class="btn" type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button><button class="btn primary" type="submit" data-tb-asset-submit form="${formId}">${esc(submitLabel)}</button>`,
+    };
+  }
+
+  function mountAssetModal(spec){
+    closeModal();
+    assetModal=window.UI?.createModal?.({
+      id:'tb-assets-shared-modal',
+      size:spec.size||'lg',
+      panelClass:'tb-assets-shared-modal',
+      title:spec.title,
+      subtitle:spec.subtitle,
+      closeLabel:atxt('Fermer','Close'),
+      initialFocus:'input:not([type="color"]), select',
+      contentHTML:spec.contentHTML,
+      actionsHTML:spec.actionsHTML,
+      onClose:()=>{assetModal=null;},
+    });
+    if(!assetModal)throw new Error('Shared modal unavailable.');
+    return assetModal;
+  }
+
   function assetFormHtml(mode, asset){
     const a = asset || { name:'', asset_type:'car', purchase_value:'', residual_value:0, currency:'EUR', purchase_date:today(), depreciation_months:36, include_in_budget:true, budget_method:'linear', budget_start_date:today(), budget_day:Number(today().slice(8,10)) };
     const isEdit = mode === 'edit';
-    return `<div class="tb-asset-modal-backdrop"><form class="tb-asset-modal" data-tb-asset-form="${isEdit?'edit':'create'}" ${isEdit?`data-asset-id="${esc(a.id)}"`:''}>
-      <div class="tb-asset-modal-head"><div><strong>${esc(isEdit ? tr('assets.modal.edit_title') : tr('assets.modal.add_title'))}</strong><p>${esc(atxt('Le coût mensuel alimente uniquement Budget et Analyse, jamais le solde des portefeuilles.', 'The monthly cost feeds Budget and Analysis only, never wallet balances.'))}</p></div><button type="button" data-tb-asset-close>×</button></div>
-      <div class="tb-asset-form-grid">
+    return assetModalSpec({
+      key:'editor',
+      title:isEdit ? tr('assets.modal.edit_title') : tr('assets.modal.add_title'),
+      subtitle:atxt('Le coût mensuel alimente uniquement Budget et Analyse, jamais le solde des portefeuilles.', 'The monthly cost feeds Budget and Analysis only, never wallet balances.'),
+      formAttrs:`data-tb-asset-form="${isEdit?'edit':'create'}" ${isEdit?`data-asset-id="${esc(a.id)}"`:''}`,
+      submitLabel:isEdit ? tr('documents.action.save') : tr('assets.action.create_asset'),
+      contentHTML:`<div class="tb-asset-form-grid">
         <label>${esc(tr('assets.form.name'))}<input name="name" required placeholder="Toyota X-Trail" value="${esc(a.name)}"></label>
         <label>${esc(tr('assets.form.type'))}<select name="asset_type"><option value="car" ${a.asset_type==='car'?'selected':''}>${esc(tr('assets.type.car'))}</option><option value="real_estate" ${a.asset_type==='real_estate'?'selected':''}>${esc(tr('assets.type.real_estate'))}</option><option value="equipment" ${a.asset_type==='equipment'?'selected':''}>${esc(tr('assets.type.equipment'))}</option><option value="other" ${a.asset_type==='other'?'selected':''}>${esc(tr('assets.type.other'))}</option></select></label>
         <label>${esc(tr('assets.form.purchase_value'))}<input name="purchase_value" required type="number" min="0" step="0.01" placeholder="5000" value="${esc(a.purchase_value)}"></label>
@@ -339,28 +374,23 @@ ${(() => {
         <label>${esc(atxt('Fin dans le budget', 'Budget end'))}<input name="budget_end_date" type="date" value="${esc(a.budget_end_date||'')}"></label>
         <label>${esc(atxt('Jour mensuel', 'Monthly day'))}<input name="budget_day" type="number" min="1" max="31" step="1" value="${esc(a.budget_day||Number(String(a.purchase_date||today()).slice(8,10))||1)}"></label>
       </div>
-      <div class="tb-asset-modal-error" data-tb-asset-error hidden></div>
-      <div class="tb-asset-modal-actions"><button type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button><button type="submit">${esc(isEdit ? tr('documents.action.save') : tr('assets.action.create_asset'))}</button></div>
-    </form></div>`;
+      <div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`,
+    });
   }
   function ownerRowHtml(o){ return `<div class="tb-owner-row" data-owner-id="${esc(o.id||'')}"><input name="owner_name" required placeholder="${esc(tr('assets.form.name'))}" value="${esc(o.display_name||'')}"><input name="owner_percent" required type="number" min="0" max="100" step="0.01" value="${esc(o.ownership_percent||0)}"><button type="button" data-tb-owner-remove>×</button></div>`; }
-  function ownersModalHtml(asset){ const rows = ownerRows(asset); return `<div class="tb-asset-modal-backdrop"><form class="tb-asset-modal" data-tb-asset-owners-form data-asset-id="${esc(asset.id)}"><div class="tb-asset-modal-head"><div><strong>${esc(tr('assets.owners.title'))}</strong><p>${esc(tr('assets.owners.total_hint', { name: asset.name }))}</p></div><button type="button" data-tb-asset-close>×</button></div><div class="tb-owner-list" data-tb-owner-list>${rows.map(ownerRowHtml).join('') || ownerRowHtml({id:'', display_name:tr('assets.owner.me'), ownership_percent:100})}</div><button type="button" class="tb-owner-add" data-tb-owner-add>${esc(tr('assets.owners.add'))}</button><div class="tb-owner-total" data-tb-owner-total></div><div class="tb-asset-modal-error" data-tb-asset-error hidden></div><div class="tb-asset-modal-actions"><button type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button><button type="submit">${esc(tr('assets.owners.save'))}</button></div></form></div>`; }
+  function ownersModalHtml(asset){ const rows = ownerRows(asset); return assetModalSpec({key:'owners',title:tr('assets.owners.title'),subtitle:tr('assets.owners.total_hint',{name:asset.name}),formAttrs:`data-tb-asset-owners-form data-asset-id="${esc(asset.id)}"`,submitLabel:tr('assets.owners.save'),contentHTML:`<div class="tb-owner-list" data-tb-owner-list>${rows.map(ownerRowHtml).join('')||ownerRowHtml({id:'',display_name:tr('assets.owner.me'),ownership_percent:100})}</div><button type="button" class="tb-owner-add" data-tb-owner-add>${esc(tr('assets.owners.add'))}</button><div class="tb-owner-total" data-tb-owner-total></div><div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`}); }
   function transferModalHtml(asset, transactions){
   const rows = ownerRows(asset);
   const opts = rows.map(r=>`<option value="${esc(r.id)}">${esc(r.display_name)} · ${Number(r.ownership_percent||0)}%</option>`).join('');
   const txOpts = (transactions||[]).map(tx=>`<option value="${esc(tx.id)}">${esc(txLabel(tx))}</option>`).join('');
 
-  return `<div class="tb-asset-modal-backdrop">
-    <form class="tb-asset-modal" data-tb-asset-transfer-form data-asset-id="${esc(asset.id)}">
-      <div class="tb-asset-modal-head">
-        <div>
-          <strong>${esc(tr('assets.transfer.title'))}</strong>
-          <p>${esc(tr('assets.transfer.body'))}</p>
-        </div>
-        <button type="button" data-tb-asset-close>×</button>
-      </div>
-
-      <div class="tb-asset-form-grid">
+  return assetModalSpec({
+    key:'transfer',
+    title:tr('assets.transfer.title'),
+    subtitle:tr('assets.transfer.body'),
+    formAttrs:`data-tb-asset-transfer-form data-asset-id="${esc(asset.id)}"`,
+    submitLabel:tr('assets.transfer.submit'),
+    contentHTML:`<div class="tb-asset-form-grid">
         <label>${esc(tr('assets.form.type'))}
           <select name="event_type">
             <option value="transfer_share">${esc(tr('assets.event.transfer_share'))}</option>
@@ -405,31 +435,21 @@ ${(() => {
         </label>
       </div>
 
-      <div class="tb-asset-modal-error" data-tb-asset-error hidden></div>
-
-      <div class="tb-asset-modal-actions">
-        <button type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button>
-        <button type="submit">${esc(tr('assets.transfer.submit'))}</button>
-      </div>
-    </form>
-  </div>`;
+      <div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`,
+  });
 }
 function sellAssetModalHtml(asset, transactions){
   const assetEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
   const atxt = (fr, en) => assetEn ? en : fr;
   const txOpts = (transactions||[]).map(tx=>`<option value="${esc(tx.id)}">${esc(txLabel(tx))}</option>`).join('');
 
-  return `<div class="tb-asset-modal-backdrop">
-    <form class="tb-asset-modal" data-tb-asset-sell-form data-asset-id="${esc(asset.id)}">
-      <div class="tb-asset-modal-head">
-        <div>
-          <strong>${esc(atxt("Vendre l’asset", "Sell asset"))}</strong>
-          <p>${esc(atxt("Marque l’asset comme vendu. Le prix de vente est réparti selon les parts actuelles. Aucun cashflow n’est créé.", "Mark the asset as sold. The sale price is split according to current shares. No cashflow is created."))}</p>
-        </div>
-        <button type="button" data-tb-asset-close>×</button>
-      </div>
-
-      <div class="tb-asset-form-grid">
+  return assetModalSpec({
+    key:'sell',
+    title:atxt("Vendre l’asset", "Sell asset"),
+    subtitle:atxt("Marque l’asset comme vendu. Le prix de vente est réparti selon les parts actuelles. Aucun cashflow n’est créé.", "Mark the asset as sold. The sale price is split according to current shares. No cashflow is created."),
+    formAttrs:`data-tb-asset-sell-form data-asset-id="${esc(asset.id)}"`,
+    submitLabel:atxt("Valider la vente", "Confirm sale"),
+    contentHTML:`<div class="tb-asset-form-grid">
         <label>${esc(atxt("Date de vente", "Sale date"))}
           <input name="event_date" type="date" required value="${today()}">
         </label>
@@ -454,19 +474,13 @@ function sellAssetModalHtml(asset, transactions){
         </label>
       </div>
 
-      <div class="tb-asset-modal-error" data-tb-asset-error hidden></div>
-
-      <div class="tb-asset-modal-actions">
-        <button type="button" data-tb-asset-close>${esc(atxt("Annuler", "Cancel"))}</button>
-        <button type="submit">${esc(atxt("Valider la vente", "Confirm sale"))}</button>
-      </div>
-    </form>
-  </div>`;
+      <div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`,
+  });
 }
 
-  function closeModal(){ document.querySelectorAll('.tb-asset-modal-backdrop').forEach(n=>n.remove()); }
-  function openAssetModal(mode, assetId){ closeModal(); const asset = assetId ? findAsset(assetId) : null; document.body.insertAdjacentHTML('beforeend', assetFormHtml(mode, asset)); focusFirst(); }
-  function openOwnersModal(assetId){ const asset=findAsset(assetId); if(!asset) return; closeModal(); document.body.insertAdjacentHTML('beforeend', ownersModalHtml(asset)); refreshOwnerTotal(); focusFirst(); }
+  function closeModal(){assetModal?.close();}
+  function openAssetModal(mode, assetId){const asset=assetId?findAsset(assetId):null;mountAssetModal(assetFormHtml(mode,asset));}
+  function openOwnersModal(assetId){const asset=findAsset(assetId);if(!asset)return;mountAssetModal(ownersModalHtml(asset));refreshOwnerTotal();}
   async function openTransferModal(assetId){
   const asset = findAsset(assetId);
   if(!asset) return;
@@ -477,10 +491,8 @@ function sellAssetModalHtml(asset, transactions){
     return;
   }
 
-  closeModal();
   const transactions = await loadRecentTransactions();
-  document.body.insertAdjacentHTML('beforeend', transferModalHtml(asset, transactions));
-  focusFirst();
+  mountAssetModal(transferModalHtml(asset, transactions));
 }
 async function openSellAssetModal(assetId){
   const asset = findAsset(assetId);
@@ -492,15 +504,13 @@ async function openSellAssetModal(assetId){
     return;
   }
 
-  closeModal();
   const transactions = await loadRecentTransactions();
-  document.body.insertAdjacentHTML('beforeend', sellAssetModalHtml(asset, transactions));
-  focusFirst();
+  mountAssetModal(sellAssetModalHtml(asset, transactions));
 }
 
 async function loadDocumentCandidates(){
   const c = client();
-  if(!c) return [];
+  if(!c) return Array.isArray(window.state?.documents) ? window.state.documents : [];
   try{
     const { data, error } = await c.from(table('documents','documents')).select('*').order('created_at',{ascending:false}).limit(200);
     if(error) throw error;
@@ -513,18 +523,17 @@ async function loadDocumentCandidates(){
 
 async function fetchAssetDocumentLinks(assetId){
   const c = client();
-  if(!c) throw new Error(tr('common.supabase_unavailable'));
+  if(!c) return (CACHE.documentLinks||[]).filter(link=>String(link.asset_id||'')===String(assetId));
   const { data, error } = await c.from(assetDocLinkTable()).select('*').eq('asset_id', assetId).order('created_at',{ascending:false});
   if(error) throw error;
   return data || [];
 }
 
 async function fetchDocumentTransactionLinksForDocs(docIds){
-  const c = client();
-  if(!c) throw new Error(tr('common.supabase_unavailable'));
-
   const ids = (docIds || []).map(String).filter(Boolean);
   if(!ids.length) return [];
+  const c = client();
+  if(!c) return (Array.isArray(window.state?.transactionDocuments)?window.state.transactionDocuments:[]).filter(link=>ids.includes(String(link.document_id||'')));
 
   const { data, error } = await c
     .from(table('transaction_documents','transaction_documents'))
@@ -537,11 +546,10 @@ async function fetchDocumentTransactionLinksForDocs(docIds){
 }
 
 async function fetchDocumentTripExpenseLinksForDocs(docIds){
-  const c = client();
-  if(!c) throw new Error(tr('common.supabase_unavailable'));
-
   const ids = (docIds || []).map(String).filter(Boolean);
   if(!ids.length) return [];
+  const c = client();
+  if(!c) return (Array.isArray(window.state?.tripExpenseDocuments)?window.state.tripExpenseDocuments:[]).filter(link=>ids.includes(String(link.document_id||'')));
 
   const { data, error } = await c
     .from(table('trip_expense_documents','trip_expense_documents'))
@@ -684,17 +692,15 @@ function assetDocsModalHtml(asset, docs, links, message, txLinks, tripLinks){
   const linkedIds = new Set((links||[]).map(l=>String(l.document_id||'')));
   const candidates = (docs||[]).filter(d=>!linkedIds.has(String(d.id||''))).slice(0,80);
 
-  return `<div class="tb-asset-modal-backdrop">
-    <form class="tb-asset-modal" data-tb-asset-docs-form data-asset-id="${esc(asset.id)}">
-      <div class="tb-asset-modal-head">
-        <div>
-          <strong>${esc(atxt('Documents liés', 'Linked documents'))}</strong>
-          <p>${esc(asset.name || 'Asset')}</p>
-        </div>
-        <button type="button" data-tb-asset-close>×</button>
-      </div>
-
-      ${message ? `<div class="tb-asset-modal-error" style="border-color:rgba(8,145,178,.25);background:#ecfeff;color:#0e7490;" data-tb-asset-doc-message>${esc(message)}</div>` : ''}
+  return assetModalSpec({
+    key:'documents',
+    title:atxt('Documents liés','Linked documents'),
+    subtitle:asset.name||'Asset',
+    size:'lg',
+    formAttrs:`data-tb-asset-docs-form data-asset-id="${esc(asset.id)}"`,
+    submitLabel:atxt('Lier le document','Link document'),
+    extraActionsHTML:`<button class="btn" type="button" data-tb-asset-doc-upload="${esc(asset.id)}">+ ${esc(atxt('Ajouter un document','Add document'))}</button>`,
+    contentHTML:`${message ? `<div class="tb-asset-modal-error tb-asset-doc-message" data-tb-asset-doc-message>${esc(message)}</div>` : ''}
 
       <div class="tb-asset-doc-list">
         ${(links||[]).length ? links.map(link => {
@@ -735,17 +741,8 @@ function assetDocsModalHtml(asset, docs, links, message, txLinks, tripLinks){
         </label>
       </div>
 
-      <div class="tb-asset-modal-error" data-tb-asset-error hidden></div>
-
-      <div class="tb-asset-modal-actions">
-        <button type="button" data-tb-asset-doc-upload="${esc(asset.id)}">
-          + ${esc(atxt('Ajouter un document', 'Add document'))}
-        </button>
-        <button type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button>
-        <button type="submit">${esc(atxt('Lier le document', 'Link document'))}</button>
-      </div>
-    </form>
-  </div>`;
+      <div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`,
+  });
 }
 
 async function openAssetDocumentsModal(assetId, message){
@@ -773,12 +770,7 @@ async function openAssetDocumentsModal(assetId, message){
     console.warn('[TB][assets] document trip links unavailable', e);
   }
 
-  document.body.insertAdjacentHTML(
-    'beforeend',
-    assetDocsModalHtml(asset, docs, links, message || '', txLinks, tripLinks)
-  );
-
-  focusFirst();
+  mountAssetModal(assetDocsModalHtml(asset,docs,links,message||'',txLinks,tripLinks));
 }
 
 async function linkAssetDocumentFromForm(form){
@@ -818,8 +810,7 @@ async function unlinkAssetDocument(linkId){
   if(error) throw error;
 }
 
-  function focusFirst(){ const el=document.querySelector('.tb-asset-modal input, .tb-asset-modal select'); if(el) setTimeout(()=>el.focus(),0); }
-  function showFormError(msg){ const el=document.querySelector('[data-tb-asset-error]'); if(el){ el.hidden=false; el.textContent=String(msg || tr('assets.error.unknown')); } }
+  function showFormError(msg){ const el=assetModal?.root?.querySelector('[data-tb-asset-error]'); if(el){ el.hidden=false; el.textContent=String(msg || tr('assets.error.unknown')); } }
 
   function readAssetPayload(form){ const fd = new FormData(form); const purchase = Number(fd.get('purchase_value') || 0); const residual = Number(fd.get('residual_value') || 0); const months = Math.round(Number(fd.get('depreciation_months') || 0)); const currency = String(fd.get('currency') || 'EUR').trim().toUpperCase(); const name = String(fd.get('name') || '').trim(); const purchaseDate=String(fd.get('purchase_date') || today()).slice(0,10); const budgetMethod=String(fd.get('budget_method')||'linear'); const overrideRaw=String(fd.get('monthly_budget_override')||'').trim(); const override=overrideRaw===''?null:Number(overrideRaw); const budgetDay=Math.round(Number(fd.get('budget_day')||String(purchaseDate).slice(8,10)||1)); if(!name) throw new Error(tr('assets.error.name_required')); if(!Number.isFinite(purchase) || purchase < 0) throw new Error(tr('assets.error.invalid_purchase')); if(!Number.isFinite(residual) || residual < 0 || residual > purchase) throw new Error(tr('assets.error.invalid_residual')); if(!Number.isFinite(months) || months < 1) throw new Error(tr('assets.error.invalid_months')); if(!/^[A-Z]{3}$/.test(currency)) throw new Error(tr('assets.error.invalid_currency')); if(budgetMethod==='manual' && (!Number.isFinite(override)||override<0)) throw new Error(atxt('Saisis un montant mensuel valide.', 'Enter a valid monthly amount.')); if(!Number.isFinite(budgetDay)||budgetDay<1||budgetDay>31) throw new Error(atxt('Le jour mensuel doit être compris entre 1 et 31.', 'Monthly day must be between 1 and 31.')); return { name, asset_type:String(fd.get('asset_type') || 'other'), purchase_value:purchase, residual_value:residual, currency, purchase_date:purchaseDate, depreciation_months:months, status:'active', include_in_budget:fd.get('include_in_budget')==='on', budget_method:budgetMethod, monthly_budget_override:override, budget_start_date:String(fd.get('budget_start_date')||purchaseDate).slice(0,10), budget_end_date:String(fd.get('budget_end_date')||'').slice(0,10)||null, budget_day:budgetDay, budget_category:'Patrimoine', budget_subcategory:'Amortissement' }; }
   async function createAssetFromForm(form){ const c = client(); if(!c) throw new Error(tr('common.supabase_unavailable')); const uid = await currentUserId(); if(!uid) throw new Error(tr('assets.error.user_disconnected')); const payload = Object.assign(readAssetPayload(form), { user_id: uid, travel_id: activeTravelId() || null }); const ownership = Number(new FormData(form).get('ownership_percent') || 0); if(!Number.isFinite(ownership) || ownership < 0 || ownership > 100) throw new Error(tr('assets.error.share_between_0_100')); const res = await c.from(table('assets','assets')).insert([payload]).select('id').single(); if(res.error) throw res.error; const ownerPayload = { asset_id: res.data.id, user_id: uid, display_name: tr('assets.owner.me'), ownership_percent: ownership }; const ownerRes = await c.from(table('asset_owners','asset_owners')).insert([ownerPayload]); if(ownerRes.error) throw ownerRes.error; }
@@ -918,7 +909,7 @@ async function saveTotalAssetSaleFromForm(form){
 }
 
   function refreshOwnerTotal(){ const form = document.querySelector('[data-tb-asset-owners-form]'); const box = document.querySelector('[data-tb-owner-total]'); if(!form || !box) return; const rows = Array.from(form.querySelectorAll('[name="owner_percent"]')).map(x=>Number(x.value||0)); const total = Math.round(rows.reduce((s,x)=>s+(Number.isFinite(x)?x:0),0)*100)/100; box.textContent = `Total : ${total}%`; box.classList.toggle('ok', Math.abs(total-100)<=0.01); }
-  function bindOnce(){ if(window.__tbAssetsUiBound) return; window.__tbAssetsUiBound = true; document.addEventListener('click', async function(ev){ const open = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-open]'); if(open){ ev.preventDefault(); openAssetModal('create'); return; } const edit = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-edit]'); if(edit){ ev.preventDefault(); openAssetModal('edit', edit.getAttribute('data-tb-asset-edit')); return; } const owners = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-owners]'); if(owners){ ev.preventDefault(); openOwnersModal(owners.getAttribute('data-tb-asset-owners')); return; } 
+  function bindOnce(){ if(window.__tbAssetsUiBound) return; window.__tbAssetsUiBound = true; document.addEventListener('click', async function(ev){ const open = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-open]'); if(open){ ev.preventDefault(); openAssetModal('create'); return; } const edit = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-edit]'); if(edit){ ev.preventDefault(); openAssetModal('edit', edit.getAttribute('data-tb-asset-edit')); return; } const owners = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-owners]'); if(owners){ ev.preventDefault(); openOwnersModal(owners.getAttribute('data-tb-asset-owners')); return; } const transfer = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-transfer]'); if(transfer){ ev.preventDefault(); await openTransferModal(transfer.getAttribute('data-tb-asset-transfer')); return; }
   const docs = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-docs]'); if(docs){ ev.preventDefault(); openAssetDocumentsModal(docs.getAttribute('data-tb-asset-docs')); return; } 
   const uploadAssetDoc = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-doc-upload]');
 if(uploadAssetDoc){
@@ -952,7 +943,7 @@ if(openTripExpense){
   if(typeof showView === 'function') showView('trip');
   return;
 }
-const archive = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-archive]'); if(archive){ ev.preventDefault(); if(confirm(tr('assets.confirm.archive'))){ try{ await archiveAsset(archive.getAttribute('data-tb-asset-archive')); await renderAssets('asset-archived'); }catch(e){ alert(e && (e.message||e.code) || e); } } return; } const close = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-close]'); if(close){ ev.preventDefault(); closeModal(); return; } const addOwner = ev.target && ev.target.closest && ev.target.closest('[data-tb-owner-add]'); if(addOwner){ ev.preventDefault(); const list=document.querySelector('[data-tb-owner-list]'); if(list){ list.insertAdjacentHTML('beforeend', ownerRowHtml({id:'',display_name:'',ownership_percent:0})); refreshOwnerTotal(); } return; } const remOwner = ev.target && ev.target.closest && ev.target.closest('[data-tb-owner-remove]'); if(remOwner){ ev.preventDefault(); const row=remOwner.closest('.tb-owner-row'); if(row) row.remove(); refreshOwnerTotal(); return; } const backdrop = ev.target && ev.target.classList && ev.target.classList.contains('tb-asset-modal-backdrop'); if(backdrop){ ev.preventDefault(); closeModal(); } }); document.addEventListener('input', function(ev){ if(ev.target && ev.target.matches && ev.target.matches('[name="owner_percent"]')) refreshOwnerTotal(); }); document.addEventListener('submit', async function(ev){ const form = ev.target && ev.target.matches && ev.target.matches('[data-tb-asset-form], [data-tb-asset-owners-form], [data-tb-asset-transfer-form], [data-tb-asset-sell-form], [data-tb-asset-docs-form]') ? ev.target : null; if(!form) return; ev.preventDefault(); const submit = form.querySelector('button[type="submit"]'); const oldTxt = submit ? submit.textContent : ''; if(submit){ submit.disabled = true; submit.textContent = tr('common.saving'); } try{ if(form.matches('[data-tb-asset-owners-form]')) await saveOwnersFromForm(form); else if(form.matches('[data-tb-asset-docs-form]')){ const aid=form.getAttribute('data-asset-id'); await linkAssetDocumentFromForm(form); await renderAssets('asset-doc-linked'); await openAssetDocumentsModal(aid, atxt('Document lié.', 'Document linked.')); return; } else if(form.matches('[data-tb-asset-transfer-form]')) await saveTransferFromForm(form);
+const archive = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-archive]'); if(archive){ ev.preventDefault(); if(confirm(tr('assets.confirm.archive'))){ try{ await archiveAsset(archive.getAttribute('data-tb-asset-archive')); await renderAssets('asset-archived'); }catch(e){ alert(e && (e.message||e.code) || e); } } return; } const close = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-close]'); if(close){ ev.preventDefault(); closeModal(); return; } const addOwner = ev.target && ev.target.closest && ev.target.closest('[data-tb-owner-add]'); if(addOwner){ ev.preventDefault(); const list=document.querySelector('[data-tb-owner-list]'); if(list){ list.insertAdjacentHTML('beforeend', ownerRowHtml({id:'',display_name:'',ownership_percent:0})); refreshOwnerTotal(); } return; } const remOwner = ev.target && ev.target.closest && ev.target.closest('[data-tb-owner-remove]'); if(remOwner){ ev.preventDefault(); const row=remOwner.closest('.tb-owner-row'); if(row) row.remove(); refreshOwnerTotal(); return; } }); document.addEventListener('input', function(ev){ if(ev.target && ev.target.matches && ev.target.matches('[name="owner_percent"]')) refreshOwnerTotal(); }); document.addEventListener('submit', async function(ev){ const form = ev.target && ev.target.matches && ev.target.matches('[data-tb-asset-form], [data-tb-asset-owners-form], [data-tb-asset-transfer-form], [data-tb-asset-sell-form], [data-tb-asset-docs-form]') ? ev.target : null; if(!form) return; ev.preventDefault(); const submit = assetModal?.root?.querySelector('[data-tb-asset-submit]') || form.querySelector('button[type="submit"]'); const oldTxt = submit ? submit.textContent : ''; if(submit){ submit.disabled = true; submit.textContent = tr('common.saving'); } try{ if(form.matches('[data-tb-asset-owners-form]')) await saveOwnersFromForm(form); else if(form.matches('[data-tb-asset-docs-form]')){ const aid=form.getAttribute('data-asset-id'); await linkAssetDocumentFromForm(form); await renderAssets('asset-doc-linked'); await openAssetDocumentsModal(aid, atxt('Document lié.', 'Document linked.')); return; } else if(form.matches('[data-tb-asset-transfer-form]')) await saveTransferFromForm(form);
 else if(form.matches('[data-tb-asset-sell-form]')) await saveTotalAssetSaleFromForm(form);
 else if(form.getAttribute('data-tb-asset-form') === 'edit') await updateAssetFromForm(form); else await createAssetFromForm(form); closeModal(); await renderAssets('asset-saved'); }catch(e){ console.error('[TB][assets] save failed', e); showFormError(e && (e.message || e.details || e.code) ? (e.message || e.details || e.code) : e); } finally{ if(submit){ submit.disabled = false; submit.textContent = oldTxt || tr('documents.action.save'); } } }); }
 async function addDocumentToAsset(assetId){
@@ -1089,7 +1080,7 @@ await window.tbDocumentsUploadAndLinkAsset(files, asset);
 .pos{color:#16a34a;}
 .neg{color:#dc2626;}
 
-.tb-asset-modal-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.42);display:flex;align-items:center;justify-content:center;padding:18px}.tb-asset-modal{width:min(800px,100%);max-height:92vh;overflow:auto;border-radius:26px;background:#fff;color:#0f172a;box-shadow:0 30px 90px rgba(15,23,42,.28);padding:20px}.tb-asset-modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:16px}.tb-asset-modal-head strong{font-size:22px}.tb-asset-modal-head p{margin:5px 0 0;color:#64748b;font-size:13px}.tb-asset-modal-head button{border:0;background:#f1f5f9;border-radius:999px;width:34px;height:34px;font-size:22px;line-height:1;cursor:pointer}.tb-asset-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tb-asset-form-grid label{display:grid;gap:6px;color:#475569;font-size:12px;font-weight:800}.tb-asset-form-grid input,.tb-asset-form-grid select{width:100%;border:1px solid rgba(15,23,42,.12);border-radius:14px;background:#f8fafc;color:#0f172a;padding:10px 11px;font-size:14px}.tb-asset-form-grid .tb-asset-check{display:flex;align-items:center;gap:9px;padding:10px 11px;border:1px solid rgba(14,165,233,.22);border-radius:14px;background:rgba(14,165,233,.07)}.tb-asset-form-grid .tb-asset-check input{width:18px;height:18px;margin:0}.tb-asset-modal-error{margin-top:12px;border:1px solid rgba(225,29,72,.25);background:#fff1f2;color:#be123c;border-radius:14px;padding:10px;font-size:13px}.tb-asset-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}.tb-asset-modal-actions button{border:0;border-radius:14px;padding:10px 13px;font-weight:900;cursor:pointer}.tb-asset-modal-actions button:first-child{background:#f1f5f9;color:#334155}.tb-asset-modal-actions button:last-child{background:#0f172a;color:#fff}.tb-asset-modal-actions button:disabled{opacity:.55;cursor:not-allowed}.tb-owner-list{display:grid;gap:10px}.tb-owner-row{display:grid;grid-template-columns:1fr 130px 38px;gap:8px}.tb-owner-row input{border:1px solid rgba(15,23,42,.12);border-radius:14px;background:#f8fafc;color:#0f172a;padding:10px 11px;font-size:14px}.tb-owner-row button,.tb-owner-add{border:0;border-radius:14px;background:#f1f5f9;color:#334155;font-weight:900;cursor:pointer}.tb-owner-add{margin-top:12px;padding:10px 12px}.tb-owner-total{margin-top:10px;font-size:13px;color:#be123c;font-weight:900}.tb-owner-total.ok{color:#0891b2}@media(max-width:720px){.tb-assets-head,.tb-assets-empty{flex-direction:column;align-items:stretch}.tb-asset-metrics,.tb-asset-form-grid,.tb-owner-row{grid-template-columns:1fr}.tb-assets-actions{align-items:flex-start}}
+.tb-assets-shared-modal .tb-ui-modal__body{background:var(--panel,#fff)}.tb-asset-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tb-asset-form-grid label{display:grid;gap:6px;color:var(--muted,#475569);font-size:12px;font-weight:800}.tb-asset-form-grid input,.tb-asset-form-grid select{width:100%;border:1px solid var(--border,rgba(15,23,42,.12));border-radius:8px;background:var(--panel2,#f8fafc);color:var(--text,#0f172a);padding:10px 11px;font-size:14px}.tb-asset-form-grid .tb-asset-check{display:flex;align-items:center;gap:9px;padding:10px 11px;border:1px solid rgba(14,165,233,.22);border-radius:8px;background:rgba(14,165,233,.07)}.tb-asset-form-grid .tb-asset-check input{width:18px;height:18px;margin:0}.tb-asset-modal-error{margin-top:12px;border:1px solid rgba(225,29,72,.25);background:#fff1f2;color:#be123c;border-radius:8px;padding:10px;font-size:13px}.tb-asset-doc-message{border-color:rgba(8,145,178,.25);background:#ecfeff;color:#0e7490}.tb-owner-list{display:grid;gap:10px}.tb-owner-row{display:grid;grid-template-columns:1fr 130px 38px;gap:8px}.tb-owner-row input{border:1px solid var(--border,rgba(15,23,42,.12));border-radius:8px;background:var(--panel2,#f8fafc);color:var(--text,#0f172a);padding:10px 11px;font-size:14px}.tb-owner-row button,.tb-owner-add{border:0;border-radius:8px;background:var(--panel2,#f1f5f9);color:var(--text,#334155);font-weight:900;cursor:pointer}.tb-owner-add{margin-top:12px;padding:10px 12px}.tb-owner-total{margin-top:10px;font-size:13px;color:#be123c;font-weight:900}.tb-owner-total.ok{color:#0891b2}@media(max-width:720px){.tb-assets-head,.tb-assets-empty{flex-direction:column;align-items:stretch}.tb-asset-metrics,.tb-asset-form-grid,.tb-owner-row{grid-template-columns:1fr}.tb-assets-actions{align-items:flex-start}}
   `; document.head.appendChild(st); }
 
   async function renderAssets(reason){ styles(); bindOnce(); const root = document.getElementById('assets-root') || document.getElementById('view-assets'); if(!root) return; root.innerHTML = `<div class="tb-assets-shell"><div class="tb-assets-head"><div><h2>${esc(tr('assets.title'))}</h2><p>${esc(tr('common.loading'))}</p></div></div></div>`; const data = await loadAssets(); const summary = data.empty ? '' : portfolioSummaryHtml(data.assets, data.owners);

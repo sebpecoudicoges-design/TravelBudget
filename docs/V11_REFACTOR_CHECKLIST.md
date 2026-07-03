@@ -46,6 +46,9 @@ Critere de fin du socle : une action en erreur reste rejouable sans bloquer les 
 - [x] Verifier cette deuxieme modale sur mobile, tablette et grand ecran, avec focus et fermeture clavier.
 - [x] Migrer les formulaires Travail Mission, Revenu et Periode vers la modale partagee.
 - [x] Verifier les trois formulaires Travail sur mobile, tablette et grand ecran, avec soumission et erreurs integrees.
+- [x] Migrer les cinq fenetres Patrimoine : actif, proprietaires, transfert, vente et documents.
+- [x] Retablir l'ouverture du transfert et rendre les documents lies consultables depuis l'instantane hors ligne.
+- [x] Verifier Patrimoine sur mobile, tablette et grand ecran, avec footer, focus et fermeture clavier.
 - [ ] Migrer les autres modales, boutons, champs, onglets, cartes KPI et graphiques.
 - [ ] Verifier les composants suivants sur mobile, tablette et grand ecran.
 
