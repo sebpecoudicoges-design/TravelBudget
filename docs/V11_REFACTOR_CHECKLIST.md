@@ -49,6 +49,9 @@ Critere de fin du socle : une action en erreur reste rejouable sans bloquer les 
 - [x] Migrer les cinq fenetres Patrimoine : actif, proprietaires, transfert, vente et documents.
 - [x] Retablir l'ouverture du transfert et rendre les documents lies consultables depuis l'instantane hors ligne.
 - [x] Verifier Patrimoine sur mobile, tablette et grand ecran, avec footer, focus et fermeture clavier.
+- [x] Migrer la fenetre Transactions creation, modification et duplication vers la modale partagee.
+- [x] Supprimer l'ancien couple global overlay/modal et adapter le rendu mobile Capacitor.
+- [x] Verifier les categories dynamiques, le verrou Trip et les trois formats d'ecran.
 - [ ] Migrer les autres modales, boutons, champs, onglets, cartes KPI et graphiques.
 - [ ] Verifier les composants suivants sur mobile, tablette et grand ecran.
 

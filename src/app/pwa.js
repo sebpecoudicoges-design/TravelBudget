@@ -322,7 +322,6 @@ export function registerPwa() {
       setText(".top-actions > button:nth-of-type(2)", "Taux", "Rates");
       setText(".top-actions > button:nth-of-type(5)", "Sortir", "Logout");
 
-      setText("#modal-title", "Transaction", "Transaction");
       setLabelFor("m-type", "Type", "Type");
       setLabelFor("m-wallet", "Wallet", "Wallet");
       setLabelFor("m-amount", "Montant", "Amount");
@@ -336,10 +335,6 @@ export function registerPwa() {
       setLabelFor("m-out", "Hors budget", "Out of budget");
       setLabelFor("m-night", "Remplace nuit", "Replaces night");
 
-      const cancel = document.querySelector("#modal .modal-actions .btn:not(.primary)");
-      if (cancel) cancel.textContent = lang === "en" ? "Cancel" : "Annuler";
-      const save = document.querySelector("#modal .modal-actions .btn.primary");
-      if (save && !save.disabled) save.textContent = lang === "en" ? "Save" : "Enregistrer";
     } catch (_) {}
   };
 

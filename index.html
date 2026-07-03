@@ -508,34 +508,9 @@
       .auth-actions .btn,.auth-provider-row .btn{width:100%!important;min-width:0!important;}
     }
 
-    /* Modal */
-    #overlay{
-      position:fixed; inset:0;
-      background:rgba(0,0,0,.55);
-      display:none;
-      z-index:60;
-    }
-    #modal{
-      position:fixed;
-      left:50%; top:50%;
-      transform:translate(-50%,-50%);
-      width:min(520px, calc(100vw - 24px));
-      background: rgba(255,255,255,.88);
-      border:1px solid var(--border);
-      border-radius:18px;
-      box-shadow: var(--shadow);
-      padding:16px;
-      display:none;
-      z-index:70;
-      backdrop-filter: blur(12px);
-    }
-    body.theme-dark #modal{
-      background: rgba(30,41,59,.88);
-    }
-    #modal h3{ margin:0 0 10px; font-size:16px; }
-    .modal-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    @media (max-width:560px){ .modal-grid{ grid-template-columns:1fr; } }
-    .modal-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; flex-wrap:wrap; }
+    /* Shared transaction modal content. */
+    .tb-tx-shared-modal .modal-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    @media (max-width:560px){ .tb-tx-shared-modal .modal-grid{ grid-template-columns:1fr; } }
 
     /* Palette section */
     .palette-grid{
@@ -1076,18 +1051,17 @@
     td:last-child{ border-right:1px solid rgba(148,163,184,.14); border-radius:0 16px 16px 0; }
     body.theme-dark td{ background: linear-gradient(180deg, rgba(30,41,59,.90), rgba(22,38,58,.72)); }
     hr{ border:none; height:1px; background:linear-gradient(90deg, rgba(148,163,184,.28), rgba(148,163,184,0)); }
-    #auth-overlay, #overlay{ backdrop-filter: blur(14px); }
-    .auth-box, #modal{
+    #auth-overlay{ backdrop-filter: blur(14px); }
+    .auth-box{
       border-radius:28px;
       padding:22px;
       background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.76));
       box-shadow: 0 28px 72px rgba(2,6,23,.20);
     }
-    body.theme-dark .auth-box, body.theme-dark #modal{ background: linear-gradient(180deg, rgba(15,23,42,.94), rgba(15,23,42,.80)); }
-    .auth-box h2, #modal h3{ font-size:22px; letter-spacing:-.02em; }
+    body.theme-dark .auth-box{ background: linear-gradient(180deg, rgba(15,23,42,.94), rgba(15,23,42,.80)); }
+    .auth-box h2{ font-size:22px; letter-spacing:-.02em; }
     .auth-msg{ font-size:13px; line-height:1.5; }
-    .modal-grid{ gap:12px; }
-    .modal-actions{ margin-top:18px; gap:10px; }
+    .tb-tx-shared-modal .modal-grid{ gap:12px; }
     #view-dashboard, #view-transactions, #view-settings, #view-help, #view-trip, #view-members, #view-assets, #view-cautions, #view-documents{ display:flex; flex-direction:column; gap:18px; }
     .dashboard-panel{ min-height:100%; }
     .dashboard-panel h2{ margin-bottom:16px; }
@@ -2002,30 +1976,25 @@
       border-color:var(--bp-line) !important;
     }
     body.theme-dark td{ background:var(--bp-surface-tint) !important; }
-    #overlay,
     #auth-overlay{
       background:rgba(15,23,42,.54) !important;
       backdrop-filter:blur(16px);
     }
-    #modal,
     .auth-box{
       border-radius:26px !important;
       border-color:var(--bp-line) !important;
       background:var(--bp-surface) !important;
       box-shadow:var(--bp-shadow-pop) !important;
     }
-    body.theme-dark #modal,
     body.theme-dark .auth-box{
       background:var(--bp-surface-soft) !important;
     }
-    #modal h3,
     .auth-box h2{
       font-size:22px;
       font-weight:950;
       letter-spacing:-.03em;
     }
-    .modal-grid{ gap:12px; }
-    .modal-actions{ padding-top:4px; }
+    .tb-tx-shared-modal .modal-grid{ gap:12px; }
     .dashboard-hero-card{
       border-radius:28px;
       background:
@@ -3775,15 +3744,14 @@
     </div>
   </div>
 
-  <!-- Modal Tx -->
-  <div id="overlay" onclick="closeModal()"></div>
-  <div id="modal">
-    <h3 id="modal-title">Nouvelle transaction</h3>
+  <!-- Transaction form template, mounted by the shared modal component. -->
+  <template id="tx-modal-template">
+    <form id="tx-modal-form">
     <div id="m-lock-note" class="muted" style="display:none; margin:6px 0 10px;"></div>
 
     <div class="modal-grid">
       <div class="field">
-        <label>Type <span class="tb-help" title="Dépense = sort du wallet. Entrée = ajoute au wallet.">?</span></label>
+        <label for="m-type">Type <span class="tb-help" title="Dépense = sort du wallet. Entrée = ajoute au wallet.">?</span></label>
         <select id="m-type">
           <option value="expense">Dépense</option>
           <option value="income">Entrée</option>
@@ -3791,69 +3759,65 @@
       </div>
 
       <div class="field">
-        <label>Wallet <span class="tb-help" title="Le wallet concerné par la transaction.">?</span></label>
+        <label for="m-wallet">Wallet <span class="tb-help" title="Le wallet concerné par la transaction.">?</span></label>
         <select id="m-wallet"></select>
       </div>
 
       <div class="field">
-        <label>Montant</label>
+        <label for="m-amount">Montant</label>
         <input id="m-amount" type="number" step="0.01" placeholder="0" />
       </div>
 
       <div class="field">
-        <label>Catégorie <span class="tb-help" title="Sert aux stats (camembert). Choisis 'Autre' si tu hésites.">?</span></label>
+        <label for="m-category">Catégorie <span class="tb-help" title="Sert aux stats (camembert). Choisis 'Autre' si tu hésites.">?</span></label>
         <select id="m-category"></select>
       </div>
 
       <div class="field">
-        <label>Sous-catégorie</label>
+        <label for="m-subcategory">Sous-catégorie</label>
         <select id="m-subcategory">
           <option value="">Aucune</option>
         </select>
       </div>
 
       <div class="field">
-        <label>Date trésorerie</label>
+        <label for="m-cash-date">Date trésorerie</label>
         <input id="m-cash-date" type="date" />
       </div>
 
       <div class="field">
-        <label>Date budget début</label>
+        <label for="m-budget-start">Date budget début</label>
         <input id="m-budget-start" type="date" />
       </div>
 
       <div class="field">
-        <label>Date budget fin</label>
+        <label for="m-budget-end">Date budget fin</label>
         <input id="m-budget-end" type="date" />
       </div>
 
       <div class="field" style="grid-column:1/-1;">
-        <label>Label</label>
+        <label for="m-label">Label</label>
         <input id="m-label" type="text" placeholder="Optionnel" />
       </div>
 
       <div class="field">
-        <label>Payé maintenant <span class="tb-help" title="Coché : impact immédiat sur le solde. Décoché : c'est à payer/recevoir plus tard (prévision).">?</span></label>
+        <label for="m-paynow">Payé maintenant <span class="tb-help" title="Coché : impact immédiat sur le solde. Décoché : c'est à payer/recevoir plus tard (prévision).">?</span></label>
         <input id="m-paynow" type="checkbox" checked />
       </div>
 
       <div class="field">
-        <label>Hors budget/jour <span class="tb-help" title="Coché : n'impacte pas le budget quotidien (ex: dépense exceptionnelle).">?</span></label>
+        <label for="m-out">Hors budget/jour <span class="tb-help" title="Coché : n'impacte pas le budget quotidien (ex: dépense exceptionnelle).">?</span></label>
         <input id="m-out" type="checkbox" />
       </div>
 
       <div class="field hidden" id="m-night-block">
-        <label>Remplace une nuit d'hébergement <span class="tb-help" title="Signal analytique uniquement : n'impacte ni le budget, ni les KPI, ni la projection. Sert à afficher une économie potentielle de logement.">?</span></label>
+        <label for="m-night">Remplace une nuit d'hébergement <span class="tb-help" title="Signal analytique uniquement : n'impacte ni le budget, ni les KPI, ni la projection. Sert à afficher une économie potentielle de logement.">?</span></label>
         <input id="m-night" type="checkbox" />
       </div>
     </div>
 
-    <div class="modal-actions">
-      <button class="btn" onclick="closeModal()">Annuler</button>
-      <button id="m-resnap" class="btn" style="display:none" onclick="resnapshotModal()">↻ Re-snapshot</button>
-      <button class="btn primary" onclick="saveModal()">Enregistrer</button>
-    </div>
-  </div>
+    </form>
+  </template>
 
   <!-- App -->
   <div id="app-root">
@@ -5711,59 +5675,26 @@
           grid-template-columns:1fr!important;
         }
       }
-      body.tb-capacitor-app #overlay{
-        z-index:100010!important;
-        background:rgba(15,23,42,.48)!important;
-        backdrop-filter:blur(10px)!important;
+      body.tb-capacitor-app .tb-tx-shared-modal{
+        max-height:calc(100dvh - 82px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;
+        border-radius:18px 18px 0 0!important;
       }
-      body.tb-capacitor-app #modal{
-        position:fixed!important;
-        inset:calc(12px + env(safe-area-inset-top,0px)) 10px calc(82px + env(safe-area-inset-bottom,0px)) 10px!important;
-        transform:none!important;
-        width:auto!important;
-        max-width:none!important;
-        max-height:none!important;
-        margin:0!important;
+      body.tb-capacitor-app .tb-tx-shared-modal .tb-ui-modal__body{
         padding:12px!important;
-        z-index:100020!important;
-        overflow-y:auto!important;
-        overflow-x:hidden!important;
-        overscroll-behavior:contain!important;
-        -webkit-overflow-scrolling:touch!important;
-        border-radius:22px!important;
-        background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,252,.94))!important;
-        box-shadow:0 24px 70px rgba(15,23,42,.32)!important;
       }
-      body.theme-dark.tb-capacitor-app #modal{
-        background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(30,41,59,.94))!important;
-      }
-      body.tb-capacitor-app #modal h3{
-        position:sticky!important;
-        top:-12px!important;
-        z-index:2!important;
-        margin:-12px -12px 10px!important;
-        padding:12px 12px 10px!important;
-        font-size:17px!important;
-        line-height:1.1!important;
-        background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,255,255,.90))!important;
-        border-bottom:1px solid rgba(15,23,42,.06)!important;
-      }
-      body.theme-dark.tb-capacitor-app #modal h3{
-        background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(15,23,42,.90))!important;
-      }
-      body.tb-capacitor-app #modal .modal-grid{
+      body.tb-capacitor-app .tb-tx-shared-modal .modal-grid{
         display:grid!important;
         grid-template-columns:repeat(2,minmax(0,1fr))!important;
         gap:8px!important;
       }
-      body.tb-capacitor-app #modal .field{
+      body.tb-capacitor-app .tb-tx-shared-modal .field{
         min-width:0!important;
         margin:0!important;
       }
-      body.tb-capacitor-app #modal .field:nth-child(9){
+      body.tb-capacitor-app .tb-tx-shared-modal .field:nth-child(9){
         grid-column:1 / -1!important;
       }
-      body.tb-capacitor-app #modal label{
+      body.tb-capacitor-app .tb-tx-shared-modal label{
         display:flex!important;
         align-items:center!important;
         gap:4px!important;
@@ -5778,16 +5709,16 @@
         text-overflow:ellipsis!important;
         white-space:nowrap!important;
       }
-      body.tb-capacitor-app #modal input,
-      body.tb-capacitor-app #modal select,
-      body.tb-capacitor-app #modal textarea{
+      body.tb-capacitor-app .tb-tx-shared-modal input,
+      body.tb-capacitor-app .tb-tx-shared-modal select,
+      body.tb-capacitor-app .tb-tx-shared-modal textarea{
         width:100%!important;
         min-height:38px!important;
         padding:7px 9px!important;
         border-radius:13px!important;
         font-size:13px!important;
       }
-      body.tb-capacitor-app #modal input[type="checkbox"]{
+      body.tb-capacitor-app .tb-tx-shared-modal input[type="checkbox"]{
         width:24px!important;
         min-width:24px!important;
         height:24px!important;
@@ -5795,27 +5726,19 @@
         padding:0!important;
         border-radius:7px!important;
       }
-      body.tb-capacitor-app #modal .modal-actions{
-        position:sticky!important;
-        bottom:-12px!important;
-        z-index:3!important;
+      body.tb-capacitor-app .tb-tx-shared-modal .tb-ui-modal__footer{
         display:grid!important;
         grid-template-columns:1fr 1fr!important;
         gap:8px!important;
-        margin:10px -12px -12px!important;
         padding:12px!important;
-        background:linear-gradient(180deg,rgba(248,250,252,0),rgba(248,250,252,.98) 30%)!important;
       }
-      body.theme-dark.tb-capacitor-app #modal .modal-actions{
-        background:linear-gradient(180deg,rgba(15,23,42,0),rgba(15,23,42,.98) 30%)!important;
-      }
-      body.tb-capacitor-app #modal .modal-actions .btn{
+      body.tb-capacitor-app .tb-tx-shared-modal .tb-ui-modal__footer .btn{
         width:100%!important;
         min-height:40px!important;
-        border-radius:15px!important;
+        border-radius:8px!important;
         font-size:12px!important;
       }
-      body.tb-capacitor-app #modal .modal-actions #m-resnap{
+      body.tb-capacitor-app .tb-tx-shared-modal .tb-ui-modal__footer #m-resnap{
         grid-column:1 / -1!important;
       }
     }

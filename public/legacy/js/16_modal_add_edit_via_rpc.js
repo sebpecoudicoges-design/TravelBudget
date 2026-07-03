@@ -6,6 +6,46 @@ function _txModalT(k, vars) {
   try { return window.tbT ? window.tbT(k, vars) : k; } catch (_) { return k; }
 }
 
+function _txModalText(fr, en) {
+  try { return (window.tbGetLang?.() || window.TB_LANG || "fr") === "en" ? en : fr; } catch (_) { return fr; }
+}
+
+let txModalHandle = null;
+
+function _txSaveButton() {
+  return txModalHandle?.root?.querySelector("[data-tx-save]") || null;
+}
+
+function _mountTxModal(title, saveLabel) {
+  closeModal();
+  const template = document.getElementById("tx-modal-template");
+  if (!template) throw new Error("Transaction modal template missing.");
+  txModalHandle = window.UI?.createModal?.({
+    id: "tb-transaction-modal",
+    size: "lg",
+    panelClass: "tb-tx-shared-modal",
+    title,
+    subtitle: _txModalText("Trésorerie, dates budget et statut de paiement.", "Cash date, budget dates and payment status."),
+    closeLabel: _txModalText("Fermer", "Close"),
+    initialFocus: "#m-amount",
+    contentHTML: template.innerHTML,
+    actionsHTML: `<button class="btn" type="button" data-tx-cancel>${_txModalText("Annuler", "Cancel")}</button><button id="m-resnap" class="btn" type="button" data-tx-resnap hidden>↻ Re-snapshot</button><button class="btn primary" type="submit" data-tx-save form="tx-modal-form">${escapeHTML(saveLabel || _txModalText("Enregistrer", "Save"))}</button>`,
+    onClose: () => {
+      _setTxModalReadOnly(false);
+      _setTxModalLock(false);
+      txModalHandle = null;
+    },
+  });
+  if (!txModalHandle) throw new Error("Shared modal unavailable.");
+  txModalHandle.root.querySelector("[data-tx-cancel]")?.addEventListener("click", closeModal);
+  txModalHandle.root.querySelector("[data-tx-resnap]")?.addEventListener("click", resnapshotModal);
+  txModalHandle.root.querySelector("#tx-modal-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveModal();
+  });
+  return txModalHandle;
+}
+
 function fillModalSelects(includeWalletId) {
   const elW = document.getElementById("m-wallet");
   const elC = document.getElementById("m-category");
@@ -225,14 +265,12 @@ function wireNightLogic() {
 
 function openTxModal(type = "expense", walletId = null) {
   editingTxId = null;
+  _mountTxModal(_txModalT("transactions.modal.new"), _txModalText("Sauvegarder", "Save"));
   fillModalSelects();
   _setTxModalReadOnly(false);
   _setTxModalLock(false);
 
   const now = toLocalISODate(new Date());
-  document.getElementById("modal-title").textContent = _txModalT("transactions.modal.new");
-  const saveBtn = document.querySelector("#modal button.btn.primary");
-  if (saveBtn) saveBtn.textContent = "Sauvegarder";
   document.getElementById("m-type").value = type;
 
   const elW = document.getElementById("m-wallet");
@@ -253,8 +291,6 @@ function openTxModal(type = "expense", walletId = null) {
   wireSubcategoryLogic("");
   wireNightLogic();
 
-  document.getElementById("overlay").style.display = "block";
-  document.getElementById("modal").style.display = "block";
 }
 
 function openTxEditModal(txId) {
@@ -262,6 +298,7 @@ function openTxEditModal(txId) {
   if (!tx) return alert(_txModalT("transactions.error.not_found"));
 
   editingTxId = txId;
+  _mountTxModal(_txModalT("transactions.modal.edit"), _txModalText("Sauvegarder", "Save"));
   fillModalSelects(tx.walletId || tx.wallet_id);
 
   const lockState = _txGetLockState(tx);
@@ -272,13 +309,9 @@ function openTxEditModal(txId) {
     _setTxModalLock(false);
   }
 
-  document.getElementById("modal-title").textContent = _txModalT("transactions.modal.edit");
-  const saveBtn = document.querySelector("#modal button.btn.primary");
-  if (saveBtn) saveBtn.textContent = "Sauvegarder";
-
   const _btnResnap = document.getElementById("m-resnap");
   if (_btnResnap) {
-    _btnResnap.style.display = (_isDebugMode() && !window.TB_FREEZE && !tx.pay_now) ? "inline-block" : "none";
+    _btnResnap.hidden = !(_isDebugMode() && !window.TB_FREEZE && !tx.pay_now);
   }
   document.getElementById("m-type").value = tx.type;
 
@@ -300,8 +333,6 @@ function openTxEditModal(txId) {
   wireSubcategoryLogic(tx.subcategory || "");
   wireNightLogic();
 
-  document.getElementById("overlay").style.display = "block";
-  document.getElementById("modal").style.display = "block";
 }
 
 function openTxDuplicateModal(txId) {
@@ -321,13 +352,10 @@ function openTxDuplicateModal(txId) {
 
   editingTxId = null;
 
+  _mountTxModal(_txModalText("Dupliquer transaction", "Duplicate transaction"), _txModalText("Créer la copie", "Create copy"));
   fillModalSelects(tx.walletId || tx.wallet_id);
   _setTxModalReadOnly(false);
   _setTxModalLock(false);
-
-  document.getElementById("modal-title").textContent = "Dupliquer transaction";
-  const saveBtn = document.querySelector("#modal button.btn.primary");
-  if (saveBtn) saveBtn.textContent = "Créer la copie";
 
   document.getElementById("m-type").value = tx.type || "expense";
 
@@ -359,15 +387,10 @@ function openTxDuplicateModal(txId) {
   wireSubcategoryLogic(subcategory);
   wireNightLogic();
 
-  document.getElementById("overlay").style.display = "block";
-  document.getElementById("modal").style.display = "block";
 }
 
 function closeModal() {
-  document.getElementById("overlay").style.display = "none";
-  document.getElementById("modal").style.display = "none";
-  _setTxModalReadOnly(false);
-  _setTxModalLock(false);
+  txModalHandle?.close();
 }
 
 function _txTripExpenseId(tx) {
@@ -439,7 +462,7 @@ function _setTxModalReadOnly(isReadOnly, reason) {
     const el = document.getElementById(id);
     if (el) el.disabled = !!isReadOnly;
   }
-  const saveBtn = document.querySelector("#modal button.btn.primary");
+  const saveBtn = _txSaveButton();
   if (saveBtn) saveBtn.disabled = !!isReadOnly;
   const note = document.getElementById("m-lock-note");
   if (note) {
@@ -996,7 +1019,7 @@ async function saveModal() {
   if (_savingTx) return;
   _savingTx = true;
 
-  const btn = document.querySelector("#modal button.btn.primary");
+  const btn = _txSaveButton();
   if (btn) btn.disabled = true;
 
   try {
