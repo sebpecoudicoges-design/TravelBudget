@@ -1944,8 +1944,8 @@ async function _createVoyagePromptImpl(){
   modal.setTitle("Nouveau voyage");
   modal.setBody(`
     <div class="row">
-      <div class="field"><label>Début</label><input id="tb-vstart" type="date" value="${sugStart}" /></div>
-      <div class="field"><label>Fin</label><input id="tb-vend" type="date" value="${sugEnd}" /></div>
+      <div class="field"><label for="tb-vstart">Début</label><input id="tb-vstart" type="date" value="${sugStart}" /></div>
+      <div class="field"><label for="tb-vend">Fin</label><input id="tb-vend" type="date" value="${sugEnd}" /></div>
     </div>
     <div class="muted" style="margin-top:8px;">Le voyage doit être non chevauchant.</div>
   `);
@@ -2138,48 +2138,57 @@ La suppression n'est autorisée que si le voyage n'a ni transactions, ni échéa
 /* ---------- segments create / update / delete ---------- */
 
 function _tbEnsureModal(){
-  // very small modal helper (no dependency)
-  let el = document.getElementById("tb-modal");
-  if(!el){
-    el = document.createElement("div");
-    el.id = "tb-modal";
-    el.style.position="fixed";
-    el.style.left="0"; el.style.top="0"; el.style.right="0"; el.style.bottom="0";
-    el.style.background="rgba(0,0,0,0.45)";
-    el.style.display="none";
-    el.style.zIndex="9999";
-    el.innerHTML = `
-      <div style="width:min(860px,calc(100vw - 24px));max-height:min(88vh,900px);overflow:auto;margin:0 auto;background:var(--panel,#fff);border-radius:18px;padding:16px;box-shadow:0 24px 48px rgba(15,23,42,.22);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <h3 id="tb-modal-title" style="margin:0;font-size:18px;">Modal</h3>
-          <button class="btn" id="tb-modal-x">X</button>
-        </div>
-        <div id="tb-modal-body"></div>
-        <div id="tb-modal-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"></div>
-      </div>`;
-    document.body.appendChild(el);
-    el.querySelector("#tb-modal-x").onclick = ()=>{ el.style.display="none"; };
-    el.addEventListener("click", (e)=>{ if(e.target===el) el.style.display="none"; });
-  }
-  return {
-    open(){ el.style.display="block"; },
-    close(){ el.style.display="none"; },
-    setTitle(t){ el.querySelector("#tb-modal-title").textContent = t; },
-    setBody(html){ el.querySelector("#tb-modal-body").innerHTML = html; },
-    setActions(btns){
-      const host = el.querySelector("#tb-modal-actions");
-      host.innerHTML="";
-      (btns||[]).forEach(b=>{
-        const bt = document.createElement("button");
-        bt.className = b.className || "btn";
-        bt.textContent = b.label;
-        bt.onclick = async ()=>{
-          try{ await b.onClick?.(); }catch(err){ console.error(err); _tbToastOk(err.message||String(err)); }
-        };
-        host.appendChild(bt);
+  let handle = null;
+  let title = "Modal";
+  let body = "";
+  let actions = [];
+  let initialFocus = "input:not([disabled]),select:not([disabled]),textarea:not([disabled])";
+  let onDismiss = null;
+  let closingProgrammatically = false;
+
+  const api = {
+    open(){
+      if(!window.UI?.createModal) throw new Error("Composant de fenetre indisponible.");
+      handle = window.UI.createModal({
+        id: "tb-settings-shared-modal",
+        size: "lg",
+        panelClass: "tb-settings-shared-modal",
+        title,
+        contentHTML: `<div class="tb-settings-modal-form">${body}</div>`,
+        actionsHTML: actions.map((action, index) => `
+          <button class="${escapeHTML(action.className || "btn")}" type="button" data-tb-settings-modal-action="${index}">${escapeHTML(action.label || "")}</button>
+        `).join(""),
+        initialFocus,
+        closeLabel: "Fermer",
+        onClose(){
+          handle = null;
+          if(!closingProgrammatically) onDismiss?.();
+          closingProgrammatically = false;
+        }
       });
-    }
+      handle.root.querySelectorAll("[data-tb-settings-modal-action]").forEach(button => {
+        button.addEventListener("click", async () => {
+          const action = actions[Number(button.dataset.tbSettingsModalAction)];
+          if(!action) return;
+          button.disabled = true;
+          try{ await action.onClick?.(); }
+          catch(err){ console.error(err); _tbToastOk(err.message || String(err)); }
+          finally{ if(button.isConnected) button.disabled = false; }
+        });
+      });
+    },
+    close(){
+      if(!handle) return;
+      closingProgrammatically = true;
+      handle.close();
+    },
+    setTitle(value){ title = String(value || "Modal"); },
+    setBody(html){ body = String(html || ""); },
+    setActions(buttons){ actions = Array.isArray(buttons) ? buttons : []; },
+    setInitialFocus(selector){ initialFocus = selector || initialFocus; },
+    setOnDismiss(callback){ onDismiss = typeof callback === "function" ? callback : null; }
   };
+  return api;
 }
 
 async function _createPeriodPromptImpl(){
@@ -2204,12 +2213,12 @@ async function _createPeriodPromptImpl(){
   modal.setTitle("Ajouter une période");
   modal.setBody(`
     <div class="row">
-      <div class="field"><label>Début</label><input id="tb-pstart" type="date" value="${vStart}" min="${vStart}" max="${vEnd}" /></div>
-      <div class="field"><label>Fin</label><input id="tb-pend" type="date" value="${vEnd}" min="${vStart}" max="${vEnd}" /></div>
+      <div class="field"><label for="tb-pstart">Début</label><input id="tb-pstart" type="date" value="${vStart}" min="${vStart}" max="${vEnd}" /></div>
+      <div class="field"><label for="tb-pend">Fin</label><input id="tb-pend" type="date" value="${vEnd}" min="${vStart}" max="${vEnd}" /></div>
     </div>
     <div class="row">
-      <div class="field"><label>Devise</label><input id="tb-pcur" value="${(segs[0].base_currency||"EUR").toUpperCase()}" /></div>
-      <div class="field"><label>Budget/jour</label><input id="tb-pbud" value="${segs[0].daily_budget_base ?? 0}" /></div>
+      <div class="field"><label for="tb-pcur">Devise</label><input id="tb-pcur" value="${(segs[0].base_currency||"EUR").toUpperCase()}" /></div>
+      <div class="field"><label for="tb-pbud">Budget/jour</label><input id="tb-pbud" value="${segs[0].daily_budget_base ?? 0}" /></div>
     </div>
     <div class="muted" style="margin-top:8px;">La nouvelle période doit être incluse dans une période existante (split automatique).</div>
   `);
@@ -2897,20 +2906,21 @@ async function _saveAnalyticMappingRuleViaRpc(categoryName, subcategoryName, nex
 function _openGuidedCategoryModal(defaults = {}) {
   return new Promise((resolve) => {
     const modal = _tbEnsureModal();
+    modal.setOnDismiss(() => resolve(null));
     modal.setTitle(defaults.title || 'Nouvelle catégorie');
     modal.setBody(`
       <div class="row">
         <div class="field" style="flex:1;min-width:220px;">
-          <label>Nom</label>
+          <label for="tb-cat-create-name">Nom</label>
           <input id="tb-cat-create-name" class="input" type="text" placeholder="Ex: Santé" value="${escapeHTML(defaults.name || '')}" />
         </div>
         <div class="field" style="min-width:160px;">
-          <label>Couleur</label>
+          <label for="tb-cat-create-color">Couleur</label>
           <input id="tb-cat-create-color" class="input" type="color" value="${escapeHTML(defaults.color || '#94a3b8')}" />
         </div>
       </div>
       <div class="field">
-        <label>Mapping analytique</label>
+        <label for="tb-cat-create-mapping">Mapping analytique</label>
         <select id="tb-cat-create-mapping" class="input">${_analyticSelectOptions(defaults.mapping || '__unmapped__', false)}</select>
       </div>
       <div class="muted" style="margin-top:8px;">Choisis le rattachement analytique dès la création. “À classer” ne crée aucune règle SQL.</div>
@@ -2933,6 +2943,7 @@ function _openGuidedCategoryModal(defaults = {}) {
 function _openGuidedSubcategoryModal(categoryName, defaults = {}) {
   return new Promise((resolve) => {
     const modal = _tbEnsureModal();
+    modal.setOnDismiss(() => resolve(null));
     const category = String(categoryName || '').trim();
     modal.setTitle(defaults.title || `Nouvelle sous-catégorie · ${category}`);
     modal.setBody(`
@@ -2942,16 +2953,16 @@ function _openGuidedSubcategoryModal(categoryName, defaults = {}) {
       </div>
       <div class="row">
         <div class="field" style="flex:1;min-width:220px;">
-          <label>Nom</label>
+          <label for="tb-subcat-create-name">Nom</label>
           <input id="tb-subcat-create-name" class="input" type="text" placeholder="Ex: Visa" value="${escapeHTML(defaults.name || '')}" />
         </div>
         <div class="field" style="min-width:160px;">
-          <label>Couleur optionnelle</label>
+          <label for="tb-subcat-create-color">Couleur optionnelle</label>
           <input id="tb-subcat-create-color" class="input" type="text" placeholder="#94a3b8" value="${escapeHTML(defaults.color || '')}" />
         </div>
       </div>
       <div class="field">
-        <label>Mapping analytique</label>
+        <label for="tb-subcat-create-mapping">Mapping analytique</label>
         <select id="tb-subcat-create-mapping" class="input">${_analyticSelectOptions(defaults.mapping || '__inherit__', true)}</select>
       </div>
       <div class="muted" style="margin-top:8px;">Par défaut, une sous-catégorie hérite du mapping de sa catégorie. Aucune règle SQL n’est créée en mode héritage.</div>
