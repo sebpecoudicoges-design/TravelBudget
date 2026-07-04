@@ -64,6 +64,23 @@ describe('daily budget rules core', () => {
     ]);
   });
 
+  it('uses custom budget dates independently from the recurring cash date', () => {
+    const amaysim = {
+      id: 'amaysim', type: 'expense', amount: 25.28, currency: 'EUR',
+      dateStart: '2026-07-04', budgetDateStart: '2026-07-06', budgetDateEnd: '2026-07-06',
+    };
+    const ecolodge = {
+      id: 'ecolodge', type: 'expense', amount: 210, currency: 'AUD',
+      dateStart: '2026-07-05', budgetDateStart: '2026-07-05', budgetDateEnd: '2026-07-11',
+    };
+
+    expect(transactionAmountForDate(amaysim, '2026-07-04')).toBe(0);
+    expect(transactionAmountForDate(amaysim, '2026-07-06')).toBeCloseTo(25.28);
+    expect(buildDailyBudgetAllocations(ecolodge)).toHaveLength(7);
+    expect(transactionAmountForDate(ecolodge, '2026-07-05')).toBeCloseTo(30);
+    expect(transactionAmountForDate(ecolodge, '2026-07-11')).toBeCloseTo(30);
+  });
+
   it('combines transaction and asset rows into one daily result', () => {
     const result = summarizeDailyBudget({
       dailyBudget: 100,
@@ -87,4 +104,3 @@ describe('daily budget rules core', () => {
     expect(transactionMatchesTravel({ travel_id: 'travel-2' }, 'travel-1')).toBe(false);
   });
 });
-

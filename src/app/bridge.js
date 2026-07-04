@@ -22,6 +22,7 @@ import * as canonicalRecords from '../core/canonicalRecords.js';
 import { createEntityStore } from '../data/entityStore.js';
 import { createMutationQueueStore, flushMutationQueue } from '../data/mutationQueueStore.js';
 import { createSupabaseRepository } from '../data/supabaseRepository.js';
+import { createTripRepository } from '../data/tripRepository.js';
 import { storageQuota } from '../data/storageQuota.js';
 import * as sportRules from '../core/sportRules.js';
 import * as uiComponents from '../ui/components.js';
@@ -55,6 +56,7 @@ window.Data.appStore = window.Data.appStore || createEntityStore();
 window.Data.createMutationQueueStore = createMutationQueueStore;
 window.Data.flushMutationQueue = flushMutationQueue;
 window.Data.supabaseRepository = window.Data.supabaseRepository || createSupabaseRepository(() => window.sb);
+window.Data.tripRepository = window.Data.tripRepository || createTripRepository(() => window.sb);
 window.Data.storageQuota = storageQuota;
 window.tbSafeLocalStorageSet = (key, value, options) => storageQuota.safeSet(window.localStorage, key, value, options);
 

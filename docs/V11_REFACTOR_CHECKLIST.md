@@ -63,6 +63,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 
 ## Chantier 4 - Decoupage par domaine
 
+- [x] Trip : creer un repository dedie et y migrer le chargement de l'agregat actif.
 - [ ] Trip : separer regles, repository, store et vues.
 - [ ] Sport : separer bibliotheque, programme, timer, historique et calculs.
 - [ ] Nutrition : separer catalogue, journal, objectifs et historique.
@@ -73,6 +74,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 ## Audit transversal - Regles recurrentes
 
 - [x] Resoudre automatiquement la periode budget depuis la date de chaque occurrence.
+- [x] Preserver les dates budget personnalisees, y compris les repartitions sur plusieurs jours.
 - [x] Reparer les occurrences generees non payees apres une modification des periodes.
 - [x] Conserver les occurrences confirmees comme historique immuable.
 - [x] Faire respecter `max_occurrences` pendant la generation SQL.

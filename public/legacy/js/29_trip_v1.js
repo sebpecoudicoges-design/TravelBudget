@@ -1831,17 +1831,17 @@ async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, tar
     // Ensure my member row exists/bound for this trip (identity = auth.uid)
     await _rpcBindMe(tripId);
 
-    const [{ data: m, error: mErr }, { data: e, error: eErr }, { data: s, error: sErr }, { data: se, error: seErr }] = await Promise.all([
-      sb.from(TB_CONST.TABLES.trip_members).select("*").eq("trip_id", tripId).order("created_at", { ascending: true }),
-      sb.from(TB_CONST.TABLES.trip_expenses).select("*").eq("trip_id", tripId).order("date", { ascending: false }),
-      sb.from(TB_CONST.TABLES.trip_expense_shares).select("*").eq("trip_id", tripId),
-      sb.from(TB_CONST.TABLES.trip_settlement_events).select("*").eq("trip_id", tripId).is("cancelled_at", null),
-    ]);
-
-    if (mErr) throw mErr;
-    if (eErr) throw eErr;
-    if (sErr) throw sErr;
-    if (seErr) throw seErr;
+    const tripRepository = window.Data?.tripRepository;
+    if (!tripRepository?.loadActiveTripData) throw new Error("Trip repository indisponible");
+    const { members: m, expenses: e, shares: s, settlementEvents: se } = await tripRepository.loadActiveTripData({
+      tripId,
+      tables: {
+        members: TB_CONST.TABLES.trip_members,
+        expenses: TB_CONST.TABLES.trip_expenses,
+        shares: TB_CONST.TABLES.trip_expense_shares,
+        settlementEvents: TB_CONST.TABLES.trip_settlement_events,
+      },
+    });
 
     // Determine *exactly one* "me" member row.
     // Rationale: legacy data may have loose user_id/is_me placeholders, so auth identity/email must win.
