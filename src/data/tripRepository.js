@@ -9,6 +9,12 @@ function unwrap(result) {
   return result?.data || [];
 }
 
+function isMissingBudgetLinksError(error) {
+  if (String(error?.code || '') === 'PGRST116') return true;
+  const message = String(error?.message || error || '').toLowerCase();
+  return message.includes('trip_expense_budget_links') || message.includes('relation') || message.includes('does not exist');
+}
+
 export function createTripRepository(getClient) {
   return {
     async loadActiveTripData({ tripId, tables }) {
@@ -127,6 +133,81 @@ export function createTripRepository(getClient) {
     async deleteMember({ table, tripId, memberId }) {
       const client = requireClient(getClient);
       return unwrap(await client.from(table).delete().eq('trip_id', tripId).eq('id', memberId));
+    },
+
+    async createSettlementEvent({ table, event }) {
+      const client = requireClient(getClient);
+      return unwrap(await client.from(table).insert([event]));
+    },
+
+    async cancelSettlementEvent({ table, eventId, cancelledAt }) {
+      const client = requireClient(getClient);
+      return unwrap(await client.from(table).update({ cancelled_at: cancelledAt }).eq('id', eventId));
+    },
+
+    async findLatestTransaction({ table, match }) {
+      const client = requireClient(getClient);
+      let query = client.from(table).select('id');
+      for (const [column, value] of Object.entries(match || {})) query = query.eq(column, value);
+      return unwrap(await query.order('created_at', { ascending: false }).limit(1).maybeSingle());
+    },
+
+    async linkSettlementTransaction({ table, eventId, transactionId }) {
+      const client = requireClient(getClient);
+      return unwrap(await client.from(table).update({ transaction_id: transactionId }).eq('id', eventId));
+    },
+
+    async recordSettlementLog({ table, row }) {
+      const client = requireClient(getClient);
+      return unwrap(await client.from(table).insert(row));
+    },
+
+    async deleteExpenseFallback({ tables, deleteTransactionRpc, expenseId, transactionId }) {
+      const client = requireClient(getClient);
+      const deletedTransactionIds = new Set();
+      const deleteTransaction = async (id) => {
+        const key = String(id || '');
+        if (!key || deletedTransactionIds.has(key)) return;
+        if (typeof client.rpc !== 'function') throw new Error('Supabase RPC indisponible');
+        unwrap(await client.rpc(deleteTransactionRpc, { p_tx_id: key }));
+        deletedTransactionIds.add(key);
+      };
+
+      try {
+        const links = unwrap(await client.from(tables.budgetLinks).select('transaction_id').eq('expense_id', expenseId));
+        if (links.length) {
+          unwrap(await client.from(tables.budgetLinks).delete().eq('expense_id', expenseId));
+          for (const row of links) await deleteTransaction(row.transaction_id);
+        }
+      } catch (error) {
+        if (!isMissingBudgetLinksError(error)) throw error;
+      }
+
+      if (transactionId) {
+        unwrap(await client.from(tables.expenses).update({ transaction_id: null }).eq('id', expenseId));
+        unwrap(await client.from(tables.transactions).update({ trip_expense_id: null }).eq('id', transactionId));
+        await deleteTransaction(transactionId);
+      }
+
+      try {
+        const references = unwrap(await client.from(tables.transactions).select('id').eq('trip_expense_id', expenseId));
+        for (const row of references) await deleteTransaction(row.id);
+      } catch (_) {}
+
+      unwrap(await client.from(tables.shares).delete().eq('expense_id', expenseId));
+      unwrap(await client.from(tables.expenses).delete().eq('id', expenseId));
+    },
+
+    async moveExpense({ tables, expenseId, tripId }) {
+      const client = requireClient(getClient);
+      unwrap(await client.from(tables.expenses).update({ trip_id: tripId }).eq('id', expenseId));
+      unwrap(await client.from(tables.shares).update({ trip_id: tripId }).eq('expense_id', expenseId));
+      try {
+        unwrap(await client.from(tables.budgetLinks).update({ trip_id: tripId }).eq('expense_id', expenseId));
+        return { budgetLinkError: null };
+      } catch (budgetLinkError) {
+        return { budgetLinkError };
+      }
     },
   };
 }

@@ -543,6 +543,7 @@ async function _copyToClipboard(text) {
       expenses: TB_CONST.TABLES.trip_expenses,
       shares: TB_CONST.TABLES.trip_expense_shares,
       settlementEvents: TB_CONST.TABLES.trip_settlement_events,
+      settlements: TB_CONST.TABLES.trip_settlements,
       budgetLinks: TB_CONST.TABLES.trip_expense_budget_links,
       transactions: TB_CONST.TABLES.transactions,
     };
@@ -3037,7 +3038,7 @@ async function _createSettlementEventOnly({ tripId, currency, amount, fromId, to
 
   const uid = await _ensureSession();
   const eventId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(16).slice(2);
-  const { error: seInsErr } = await sb.from(TB_CONST.TABLES.trip_settlement_events).insert([{
+  await _tripRepository().createSettlementEvent({ table: TB_CONST.TABLES.trip_settlement_events, event: {
     id: eventId,
     trip_id: rpcArgs.p_trip_id,
     currency: rpcArgs.p_currency,
@@ -3045,8 +3046,7 @@ async function _createSettlementEventOnly({ tripId, currency, amount, fromId, to
     from_member_id: rpcArgs.p_from_member_id,
     to_member_id: rpcArgs.p_to_member_id,
     created_by: uid,
-  }]);
-  if (seInsErr) throw seInsErr;
+  } });
   return eventId;
 }
 
@@ -3060,11 +3060,11 @@ async function _cancelSettlementEvent(settlementEventId) {
     console.warn("[Trip] trip_cancel_settlement_v1 fallback", error);
   }
 
-  const { error } = await sb
-    .from(TB_CONST.TABLES.trip_settlement_events)
-    .update({ cancelled_at: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw error;
+  await _tripRepository().cancelSettlementEvent({
+    table: TB_CONST.TABLES.trip_settlement_events,
+    eventId: id,
+    cancelledAt: new Date().toISOString(),
+  });
 }
 
 async function _persistSettlementEventOnly() {
@@ -3095,7 +3095,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
   // 1) Persist settlement event (Trip currency & amount)
   const curTrip = String(walletCurrency || currency || "").trim().toUpperCase();
   const amtTrip = _round2(Number(walletAmount) || 0);
-  const { error: seInsErr } = await sb.from(TB_CONST.TABLES.trip_settlement_events).insert([{
+  await _tripRepository().createSettlementEvent({ table: TB_CONST.TABLES.trip_settlement_events, event: {
     id: eventId,
     trip_id: tripState.activeTripId,
     currency: curTrip,
@@ -3103,8 +3103,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     from_member_id: fromId,
     to_member_id: toId,
     created_by: uid,
-  }]);
-  if (seInsErr) throw seInsErr;
+  } });
 
   // 2) Create wallet transaction (wallet currency & amount)
   const nativeCur = String(walletNativeCurrency || walletCurrency || '').toUpperCase();
@@ -3141,21 +3140,16 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
 
   // 3) Best-effort link tx id back to settlement event
   try {
-    const { data: txRow } = await sb
-      .from(TB_CONST.TABLES.transactions)
-      .select("id")
-      .eq("user_id", uid)
-      .eq("label", label)
-      .eq("currency", walletCurrency)
-      .eq("amount", _round2(walletAmount))
-      .eq("date_start", date)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const txRow = await _tripRepository().findLatestTransaction({
+      table: TB_CONST.TABLES.transactions,
+      match: { user_id: uid, label, currency: walletCurrency, amount: _round2(walletAmount), date_start: date },
+    });
     if (txRow?.id) {
-      await sb.from(TB_CONST.TABLES.trip_settlement_events)
-        .update({ transaction_id: txRow.id })
-        .eq("id", eventId);
+      await _tripRepository().linkSettlementTransaction({
+        table: TB_CONST.TABLES.trip_settlement_events,
+        eventId,
+        transactionId: txRow.id,
+      });
     }
   } catch (e) {
     console.warn("[Trip] settlement tx link failed", e);
@@ -3205,7 +3199,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
       const date = _isoToday();
 
       // Persist settlement event (affects trip balances)
-      const { error: seInsErr } = await sb.from(TB_CONST.TABLES.trip_settlement_events).insert([{
+      await _tripRepository().createSettlementEvent({ table: TB_CONST.TABLES.trip_settlement_events, event: {
         id: eventId,
         trip_id: tripState.activeTripId,
         currency: cur,
@@ -3213,8 +3207,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
         from_member_id: fromId,
         to_member_id: toId,
         created_by: uid,
-      }]);
-      if (seInsErr) throw seInsErr;
+      } });
 
   
       // Create transaction affecting wallet only (out_of_budget = true)
@@ -3242,21 +3235,16 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
 
       // Update settlement event with transaction_id (best-effort)
       try {
-        const { data: txRow, error: txErr } = await sb
-          .from(TB_CONST.TABLES.transactions)
-          .select("id")
-          .eq("user_id", uid)
-          .eq("label", label)
-          .eq("currency", cur)
-          .eq("amount", amt)
-          .eq("date_start", date)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (!txErr && txRow?.id) {
-          await sb.from(TB_CONST.TABLES.trip_settlement_events)
-            .update({ transaction_id: txRow.id })
-            .eq("id", eventId);
+        const txRow = await _tripRepository().findLatestTransaction({
+          table: TB_CONST.TABLES.transactions,
+          match: { user_id: uid, label, currency: cur, amount: amt, date_start: date },
+        });
+        if (txRow?.id) {
+          await _tripRepository().linkSettlementTransaction({
+            table: TB_CONST.TABLES.trip_settlement_events,
+            eventId,
+            transactionId: txRow.id,
+          });
         }
       } catch (e) {
         console.warn("[Trip] settlement event tx link failed", e);
@@ -3265,7 +3253,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
   
       // Record in trip_settlements (personal log)
       try {
-        await sb.from(TB_CONST.TABLES.trip_settlements).insert({
+        await _tripRepository().recordSettlementLog({ table: TB_CONST.TABLES.trip_settlements, row: {
           user_id: uid,
           trip_id: tripState.activeTripId,
           date,
@@ -3274,7 +3262,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
           direction: isOut ? "out" : "in",
           wallet_id: walletId,
           mode: "virtual",
-        });
+        } });
       } catch (e) {
         // Non-blocking: even if settlement log fails, wallet tx is the source of truth
         console.warn("[Trip] settlement log insert failed", e);
@@ -4392,99 +4380,20 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
       console.warn("[Trip] trip_delete_expense_v1 fallback", error);
     }
 
-    // Fallback legacy si la RPC n'est pas disponible côté DB
     const ex = tripState.expenses.find(x => x.id === expenseId);
-
-    try {
-      const { data: links, error: lerr } = await sb
-        .from(TB_CONST.TABLES.trip_expense_budget_links)
-        .select("transaction_id")
-        .eq("expense_id", expenseId);
-
-      if (lerr && lerr.code !== "PGRST116") throw lerr;
-      if (links?.length) {
-        const { error: dlerr } = await sb
-          .from(TB_CONST.TABLES.trip_expense_budget_links)
-          .delete()
-          .eq("expense_id", expenseId);
-        if (dlerr) throw dlerr;
-
-        for (const row of links) {
-          const txId = row.transaction_id;
-          if (!txId) continue;
-          const { error: derr } = await sb.rpc(TB_CONST.RPCS.delete_transaction || "delete_transaction", { p_tx_id: txId });
-          if (derr) throw derr;
-        }
-      }
-    } catch (e) {
-      const msg = (e && (e.message || e.toString())) || "";
-      if (!msg.toLowerCase().includes("trip_expense_budget_links") &&
-          !msg.toLowerCase().includes("relation") &&
-          !msg.toLowerCase().includes("does not exist")) {
-        throw e;
-      }
-    }
-
-    if (ex?.transactionId) {
-      const txId = ex.transactionId;
-      await sb.from(TB_CONST.TABLES.trip_expenses).update({ transaction_id: null }).eq("id", expenseId);
-      await sb.from(TB_CONST.TABLES.transactions).update({ trip_expense_id: null }).eq("id", txId);
-
-      const { error: derr } = await sb.rpc(TB_CONST.RPCS.delete_transaction || "delete_transaction", { p_tx_id: txId });
-      if (derr) throw derr;
-    }
-
-    try {
-      const { data: txRefs, error: txRefErr } = await sb
-        .from(TB_CONST.TABLES.transactions)
-        .select("id")
-        .eq("trip_expense_id", expenseId);
-      if (txRefErr) throw txRefErr;
-      if (txRefs?.length) {
-        for (const row of txRefs) {
-          if (!row?.id) continue;
-          const { error: derr } = await sb.rpc(TB_CONST.RPCS.delete_transaction || "delete_transaction", { p_tx_id: row.id });
-          if (derr) throw derr;
-        }
-      }
-    } catch (_) {}
-
-    await sb.from(TB_CONST.TABLES.trip_expense_shares).delete().eq("expense_id", expenseId);
-    const { error } = await sb.from(TB_CONST.TABLES.trip_expenses).delete().eq("id", expenseId);
-    if (error) throw error;
+    await _tripRepository().deleteExpenseFallback({
+      tables: _tripRepositoryTables(),
+      deleteTransactionRpc: TB_CONST.RPCS.delete_transaction || "delete_transaction",
+      expenseId,
+      transactionId: ex?.transactionId || null,
+    });
   }
 
   async function _moveExpenseToTrip(expenseId, newTripId) {
     await _ensureSession();
     if (!expenseId || !newTripId) throw new Error("[Trip] Déplacement invalide.");
 
-    // 1) Move the expense itself
-    {
-      const { error } = await sb
-        .from(TB_CONST.TABLES.trip_expenses)
-        .update({ trip_id: newTripId })
-        .eq("id", expenseId);
-      if (error) throw error;
-    }
-
-    // 2) Keep shares consistent (shares are queried by trip_id AND expense_id in some flows)
-    {
-      const { error } = await sb
-        .from(TB_CONST.TABLES.trip_expense_shares)
-        .update({ trip_id: newTripId })
-        .eq("expense_id", expenseId);
-      if (error) throw error;
-    }
-
-    // 3) Best-effort: if budget links table exists, align trip_id as well
-    try {
-      await sb
-        .from(TB_CONST.TABLES.trip_expense_budget_links)
-        .update({ trip_id: newTripId })
-        .eq("expense_id", expenseId);
-    } catch (e) {
-      // ignore if table/column doesn't exist in this deployment
-    }
+    await _tripRepository().moveExpense({ tables: _tripRepositoryTables(), expenseId, tripId: newTripId });
   }
 
   function _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal = false }) {

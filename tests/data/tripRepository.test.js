@@ -29,10 +29,17 @@ function mutationClient(resultFor = () => ({ data: null, error: null })) {
         delete() { operation = 'delete'; calls.push({ table, method: 'delete' }); return chain; },
         eq(column, value) { calls.push({ table, method: 'eq', column, value }); return chain; },
         in(column, value) { calls.push({ table, method: 'in', column, value }); return chain; },
+        order(column, options) { calls.push({ table, method: 'order', column, options }); return chain; },
+        limit(value) { calls.push({ table, method: 'limit', value }); return chain; },
+        maybeSingle: resolve,
         single: resolve,
         then(resolvePromise, rejectPromise) { return resolve().then(resolvePromise, rejectPromise); },
       };
       return chain;
+    },
+    rpc(name, args) {
+      calls.push({ method: 'rpc', name, args });
+      return Promise.resolve(resultFor({ table: null, operation: 'rpc', payload: args, name, calls }));
     },
   };
 }
@@ -177,6 +184,65 @@ describe('trip repository', () => {
       { table: 'transactions', method: 'in', column: 'id', value: ['tx-1'] },
       { table: 'expenses', method: 'update', value: { transaction_id: null } },
       { table: 'groups', method: 'delete' },
+    ]));
+  });
+
+  it('persists, finds, links and cancels a settlement event', async () => {
+    const client = mutationClient(({ table, operation }) => ({
+      data: table === 'transactions' && operation === 'select' ? { id: 'tx-1' } : null,
+      error: null,
+    }));
+    const repository = createTripRepository(client);
+    await repository.createSettlementEvent({ table: 'events', event: { id: 'event-1', amount: 20 } });
+    const tx = await repository.findLatestTransaction({ table: 'transactions', match: { label: 'Settlement', amount: 20 } });
+    await repository.linkSettlementTransaction({ table: 'events', eventId: 'event-1', transactionId: tx.id });
+    await repository.recordSettlementLog({ table: 'settlements', row: { trip_id: 'trip-1', amount: 20 } });
+    await repository.cancelSettlementEvent({ table: 'events', eventId: 'event-1', cancelledAt: '2026-07-05T09:00:00Z' });
+    expect(client.calls).toEqual(expect.arrayContaining([
+      expect.objectContaining({ table: 'events', method: 'insert' }),
+      { table: 'events', method: 'update', value: { transaction_id: 'tx-1' } },
+      { table: 'settlements', method: 'insert', value: { trip_id: 'trip-1', amount: 20 } },
+      { table: 'events', method: 'update', value: { cancelled_at: '2026-07-05T09:00:00Z' } },
+    ]));
+  });
+
+  it('deletes an expense fallback and every linked transaction', async () => {
+    const client = mutationClient(({ table, operation }) => {
+      if (operation === 'select' && table === 'links') return { data: [{ transaction_id: 'tx-share' }], error: null };
+      if (operation === 'select' && table === 'transactions') return { data: [{ id: 'tx-payment' }, { id: 'tx-reference' }], error: null };
+      return { data: null, error: null };
+    });
+    const repository = createTripRepository(client);
+    await repository.deleteExpenseFallback({
+      tables: { budgetLinks: 'links', expenses: 'expenses', transactions: 'transactions', shares: 'shares' },
+      deleteTransactionRpc: 'delete_transaction',
+      expenseId: 'expense-1',
+      transactionId: 'tx-payment',
+    });
+    const deletedIds = client.calls
+      .filter((call) => call.method === 'rpc')
+      .map((call) => call.args.p_tx_id);
+    expect(deletedIds).toEqual(['tx-share', 'tx-payment', 'tx-reference']);
+    expect(client.calls).toEqual(expect.arrayContaining([
+      { table: 'shares', method: 'delete' },
+      { table: 'expenses', method: 'delete' },
+    ]));
+  });
+
+  it('moves an expense and its shares even when optional budget links fail', async () => {
+    const client = mutationClient(({ table, operation }) => ({
+      data: null,
+      error: table === 'links' && operation === 'update' ? new Error('links unavailable') : null,
+    }));
+    const repository = createTripRepository(client);
+    const result = await repository.moveExpense({
+      tables: { expenses: 'expenses', shares: 'shares', budgetLinks: 'links' },
+      expenseId: 'expense-1', tripId: 'trip-2',
+    });
+    expect(result.budgetLinkError).toMatchObject({ message: 'links unavailable' });
+    expect(client.calls).toEqual(expect.arrayContaining([
+      { table: 'expenses', method: 'update', value: { trip_id: 'trip-2' } },
+      { table: 'shares', method: 'update', value: { trip_id: 'trip-2' } },
     ]));
   });
 });
