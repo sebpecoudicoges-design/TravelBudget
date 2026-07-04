@@ -529,6 +529,25 @@ async function _copyToClipboard(text) {
   window.__tripState = tripState;
   window.__tripStore = tripStore;
 
+  function _tripRepository() {
+    const repository = window.Data?.tripRepository;
+    if (!repository) throw new Error("Trip repository indisponible");
+    return repository;
+  }
+
+  function _tripRepositoryTables() {
+    return {
+      groups: TB_CONST.TABLES.trip_groups,
+      participants: TB_CONST.TABLES.trip_participants,
+      members: TB_CONST.TABLES.trip_members,
+      expenses: TB_CONST.TABLES.trip_expenses,
+      shares: TB_CONST.TABLES.trip_expense_shares,
+      settlementEvents: TB_CONST.TABLES.trip_settlement_events,
+      budgetLinks: TB_CONST.TABLES.trip_expense_budget_links,
+      transactions: TB_CONST.TABLES.transactions,
+    };
+  }
+
   function _syncTripStateToAppState(reason) {
     try {
       if (!window.state) return;
@@ -1783,18 +1802,9 @@ async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, tar
     // Ensure my member row exists/bound for this trip (identity = auth.uid)
     await _rpcBindMe(tripId);
 
-    const tripRepository = window.Data?.tripRepository;
-    if (!tripRepository?.loadActiveTripData) throw new Error("Trip repository indisponible");
-    const activeData = await tripRepository.loadActiveTripData({
+    const activeData = await _tripRepository().loadActiveTripData({
       tripId,
-      tables: {
-        members: TB_CONST.TABLES.trip_members,
-        expenses: TB_CONST.TABLES.trip_expenses,
-        shares: TB_CONST.TABLES.trip_expense_shares,
-        settlementEvents: TB_CONST.TABLES.trip_settlement_events,
-        budgetLinks: TB_CONST.TABLES.trip_expense_budget_links,
-        transactions: TB_CONST.TABLES.transactions,
-      },
+      tables: _tripRepositoryTables(),
     });
     if (activeData.budgetLoadError) console.warn('[Trip] budget link preload failed', activeData.budgetLoadError);
     tripStore.hydrateRemote(activeData, {
@@ -3274,67 +3284,22 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
   async function _createTrip(name) {
     const uid = await _ensureSession();
     const baseCur = state?.period?.baseCurrency || "THB";
-
-    // trip_groups has base_currency NOT NULL in your schema
-    const { data, error } = await sb
-      .from(TB_CONST.TABLES.trip_groups)
-      .insert([{ user_id: uid, name, base_currency: baseCur }])
-      .select("*")
-      .single();
-    if (error) throw error;
-
-
-    // Access control: register owner participant (RLS) — idempotent upsert (V6.5)
-    {
-      const { error: pErr } = await sb
-        .from(TB_CONST.TABLES.trip_participants)
-        .upsert([{ trip_id: data.id, auth_user_id: uid, role: "owner" }], { onConflict: "trip_id,auth_user_id" });
-      if (pErr) throw pErr;
-    }
-
-    // default member (bound to auth user)
-try {
-  const meEmail = (sbUser && sbUser.email) ? sbUser.email : null;
-  const memPayload = { trip_id: data.id, name: "Moi", is_me: false, auth_user_id: uid, user_id: uid };
-  if (meEmail) memPayload.email = meEmail;
-  let { error: mErr } = await sb.from(TB_CONST.TABLES.trip_members).insert([memPayload]);
-  if (mErr && String(mErr.message || "").toLowerCase().includes("email")) {
-    delete memPayload.email;
-    mErr = (await sb.from(TB_CONST.TABLES.trip_members).insert([memPayload])).error;
-  }
-  if (mErr) throw mErr;
-} catch (e) {
-  console.warn("[Trip] default member insert failed (non-blocking):", e);
-}
-
-    tripState.activeTripId = data.id;
-    localStorage.setItem(TRIP_ACTIVE_KEY, data.id);
+    const result = await _tripRepository().createTrip({
+      tables: _tripRepositoryTables(),
+      userId: uid,
+      name,
+      baseCurrency: baseCur,
+      email: sbUser?.email || window.sbUser?.email || null,
+    });
+    if (result.defaultMemberError) console.warn("[Trip] default member insert failed (non-blocking):", result.defaultMemberError);
+    tripState.activeTripId = result.trip.id;
+    localStorage.setItem(TRIP_ACTIVE_KEY, result.trip.id);
   }
 
   async function _deleteTrip(tripId) {
-    const uid = await _ensureSession();
-    // defensive delete children first (avoids 409 even if cascade isn't present)
-    // 1) unlink budget transactions that reference trip expenses (if enabled)
-    try {
-      const { data: exIds } = await sb.from(TB_CONST.TABLES.trip_expenses).select("id,transaction_id").eq("trip_id", tripId);
-      const linkedTx = (exIds || []).map(x => x.transaction_id).filter(Boolean);
-      const expIds = (exIds || []).map(x => x.id);
-      if (linkedTx.length) {
-        await sb.from(TB_CONST.TABLES.transactions).update({ trip_expense_id: null }).in("id", linkedTx);
-      }
-      if (expIds.length) {
-        await sb.from(TB_CONST.TABLES.trip_expenses).update({ transaction_id: null }).in("id", expIds);
-      }
-    } catch (e) {
-      console.warn("Trip unlink before delete failed:", e);
-    }
-
-    await sb.from(TB_CONST.TABLES.trip_expense_shares).delete().eq("trip_id", tripId);
-    await sb.from(TB_CONST.TABLES.trip_expenses).delete().eq("trip_id", tripId);
-    await sb.from(TB_CONST.TABLES.trip_members).delete().eq("trip_id", tripId);
-
-    const { error } = await sb.from(TB_CONST.TABLES.trip_groups).delete().eq("id", tripId);
-    if (error) throw error;
+    await _ensureSession();
+    const result = await _tripRepository().deleteTrip({ tables: _tripRepositoryTables(), tripId });
+    if (result.unlinkError) console.warn("Trip unlink before delete failed:", result.unlinkError);
 
     if (tripState.activeTripId === tripId) tripState.activeTripId = null;
   }
@@ -3347,17 +3312,14 @@ try {
     const cleanName = String(name || "").trim();
     if (!cleanName) throw new Error("Nom requis.");
 
-    const payload = { trip_id: tripId, name: cleanName, is_me: false, auth_user_id: null, user_id: uid };
     const cleanEmail = String(email || "").trim();
-    if (cleanEmail) payload.email = cleanEmail;
-
-    let { error } = await sb.from(TB_CONST.TABLES.trip_members).insert([payload]);
-    if (error && String(error.message || "").toLowerCase().includes("email")) {
-      // tolerate unique/email constraints by inserting without email
-      delete payload.email;
-      error = (await sb.from(TB_CONST.TABLES.trip_members).insert([payload])).error;
-    }
-    if (error) throw error;
+    await _tripRepository().addMember({
+      table: TB_CONST.TABLES.trip_members,
+      tripId,
+      userId: uid,
+      name: cleanName,
+      email: cleanEmail || null,
+    });
   }
 
   async function _deleteMember(memberId) {
@@ -3373,12 +3335,7 @@ try {
       return;
     }
 
-    const { error } = await sb
-      .from(TB_CONST.TABLES.trip_members)
-      .delete()
-      .eq("trip_id", tripId)
-      .eq("id", memberId);
-    if (error) throw error;
+    await _tripRepository().deleteMember({ table: TB_CONST.TABLES.trip_members, tripId, memberId });
   }
 
   async function _renameMember(memberId, newName) {
@@ -3388,12 +3345,7 @@ try {
     const name = String(newName || "").trim();
     if (!name) throw new Error("Nom invalide.");
 
-    const { error } = await sb
-      .from(TB_CONST.TABLES.trip_members)
-      .update({ name })
-      .eq("trip_id", tripId)
-      .eq("id", memberId);
-    if (error) throw error;
+    await _tripRepository().renameMember({ table: TB_CONST.TABLES.trip_members, tripId, memberId, name });
   }
   
   async function _expenseHasBudgetLinks(expenseId) {
