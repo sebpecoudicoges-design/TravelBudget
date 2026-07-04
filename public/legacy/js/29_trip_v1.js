@@ -522,40 +522,17 @@ async function _copyToClipboard(text) {
   const TRIP_ACTIVE_KEY = "travelbudget_trip_active_id_v1";
   const TRIP_TAB_KEY = "travelbudget_trip_tab_v1";
 
-  let tripState = {
-    trips: [],
-    activeTripId: null,
-    budgetLinks: [],
-    budgetTxById: new Map(),
-    linkIssues: [],
-    members: [],
-    expenses: [],
-    shares: [],
-    myRole: null,
-    pendingInvites: [],
-    lastInviteUrl: null,
-    editingExpenseId: null,
-    editingExpenseDraft: null,
-    historyFilters: {},
-    addExpenseOpen: false,
-    _expenseSaving: false,
-    _offlineReplaySaving: false,
-    _tripsLoaded: false,
-  };
+  const tripStore = window.Data?.createTripStore?.();
+  if (!tripStore?.state) throw new Error("Trip store indisponible");
+  let tripState = tripStore.state;
   let _tripExpenseEditorModal = null;
   window.__tripState = tripState;
+  window.__tripStore = tripStore;
 
   function _syncTripStateToAppState(reason) {
     try {
       if (!window.state) return;
-      state.tripGroups = Array.isArray(tripState.trips) ? tripState.trips : [];
-      state.tripNetBalances = Array.isArray(tripState.globalNetRows) ? tripState.globalNetRows : [];
-      state.tripMembers = Array.isArray(tripState.members) ? tripState.members : [];
-      state.tripParticipants = Array.isArray(tripState.members) ? tripState.members : [];
-      state.tripExpenses = Array.isArray(tripState.expenses) ? tripState.expenses : [];
-      state.tripExpenseShares = Array.isArray(tripState.shares) ? tripState.shares : [];
-      state.tripSettlementEvents = Array.isArray(tripState.settlementEvents) ? tripState.settlementEvents : [];
-      state.tripBudgetLinks = Array.isArray(tripState.budgetLinks) ? tripState.budgetLinks : [];
+      Object.assign(state, tripStore.appSnapshot());
       if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot(reason || "trip");
     } catch (_) {}
   }
@@ -564,24 +541,8 @@ async function _copyToClipboard(text) {
   try {
     window.addEventListener("tb:auth_scope_changed", () => {
       try { localStorage.removeItem(TRIP_ACTIVE_KEY); } catch (_) {}
-      tripState.trips = [];
-      tripState.activeTripId = null;
-      tripState.budgetLinks = [];
-      tripState.budgetTxById = new Map();
-      tripState.linkIssues = [];
-      tripState.members = [];
-      tripState.expenses = [];
-      tripState.shares = [];
-      tripState.myRole = null;
-      tripState.pendingInvites = [];
+      tripStore.reset();
       _syncTripInviteNotification([]);
-      tripState.lastInviteUrl = null;
-      tripState.editingExpenseId = null;
-      tripState.editingExpenseDraft = null;
-      tripState.addExpenseOpen = false;
-      tripState._expenseSaving = false;
-      tripState._offlineReplaySaving = false;
-      tripState._tripsLoaded = false;
     });
   } catch (_) {}
 
@@ -1808,22 +1769,13 @@ async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, tar
 
   async function _loadActiveData() {
     if (await _tripShouldUseOfflineMode("trip:loadActiveData")) {
-      tripState.members = Array.isArray(state?.tripMembers) ? state.tripMembers : (Array.isArray(state?.tripParticipants) ? state.tripParticipants : []);
-      tripState.expenses = Array.isArray(state?.tripExpenses) ? state.tripExpenses : [];
-      tripState.shares = Array.isArray(state?.tripExpenseShares) ? state.tripExpenseShares : [];
-      tripState.settlementEvents = Array.isArray(state?.tripSettlementEvents) ? state.tripSettlementEvents : [];
-      tripState.budgetLinks = Array.isArray(state?.tripBudgetLinks) ? state.tripBudgetLinks : [];
-      tripState.budgetTxById = new Map();
-      tripState.linkIssues = [];
+      tripStore.hydrateOffline(state);
       return;
     }
     const uid = await _ensureSession();
     const tripId = tripState.activeTripId;
 
-    tripState.members = [];
-    tripState.expenses = [];
-    tripState.shares = [];
-    tripState.linkIssues = [];
+    tripStore.clearActive();
     if (!tripId) return;
 
     tripState.myRole = await _getMyTripRole(tripId);
@@ -1833,103 +1785,22 @@ async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, tar
 
     const tripRepository = window.Data?.tripRepository;
     if (!tripRepository?.loadActiveTripData) throw new Error("Trip repository indisponible");
-    const { members: m, expenses: e, shares: s, settlementEvents: se } = await tripRepository.loadActiveTripData({
+    const activeData = await tripRepository.loadActiveTripData({
       tripId,
       tables: {
         members: TB_CONST.TABLES.trip_members,
         expenses: TB_CONST.TABLES.trip_expenses,
         shares: TB_CONST.TABLES.trip_expense_shares,
         settlementEvents: TB_CONST.TABLES.trip_settlement_events,
+        budgetLinks: TB_CONST.TABLES.trip_expense_budget_links,
+        transactions: TB_CONST.TABLES.transactions,
       },
     });
-
-    // Determine *exactly one* "me" member row.
-    // Rationale: legacy data may have loose user_id/is_me placeholders, so auth identity/email must win.
-    const _myEmail = String(sbUser?.email || window.sbUser?.email || "").trim().toLowerCase();
-    const _meRow = (m || []).find(r => r.auth_user_id && (String(r.auth_user_id) === String(uid)))
-      || (_myEmail ? (m || []).find(r => String(r.email || "").trim().toLowerCase() === _myEmail) : null)
-      || (m || []).find(r => r.user_id && (String(r.user_id) === String(uid)))
-      || (m || []).find(r => r.is_me === true && r.user_id && (String(r.user_id) === String(uid)))
-      || null;
-    const _meId = _meRow ? _meRow.id : null;
-
-    tripState.members = (m || []).map(x => {
-      const isMe = !!(_meId && (String(x.id) === String(_meId)));
-      return {
-        id: x.id,
-        name: x.name,
-        email: x.email || ((isMe && (sbUser && sbUser.email)) ? sbUser.email : null),
-        authUserId: x.auth_user_id || null,
-        userId: x.user_id || null,
-        isMe,
-      };
+    if (activeData.budgetLoadError) console.warn('[Trip] budget link preload failed', activeData.budgetLoadError);
+    tripStore.hydrateRemote(activeData, {
+      userId: uid,
+      email: sbUser?.email || window.sbUser?.email || "",
     });
-
-    tripState.expenses = (e || []).map(x => ({
-      id: x.id,
-      date: x.date,
-      label: x.label,
-      amount: Number(x.amount),
-      currency: x.currency,
-      paidByMemberId: x.paid_by_member_id,
-      category: x.category || null,
-      subcategory: x.subcategory || null,
-      budgetDateStart: x.budget_date_start || x.date || null,
-      budgetDateEnd: x.budget_date_end || x.budget_date_start || x.date || null,
-      transactionId: x.transaction_id || null,
-      createdAt: x.created_at,
-    }));
-
-    tripState.shares = (s || []).map(x => ({
-      id: x.id,
-      expenseId: x.expense_id,
-      memberId: x.member_id,
-      shareAmount: Number(x.share_amount),
-    }));
-
-
-    tripState.settlementEvents = (se || []).map(x => ({
-      id: x.id,
-      tripId: x.trip_id,
-      currency: x.currency,
-      amount: Number(x.amount),
-      fromMemberId: x.from_member_id,
-      toMemberId: x.to_member_id,
-      transactionId: x.transaction_id || null,
-      createdBy: x.created_by || null,
-      createdAt: x.created_at,
-      cancelledAt: x.cancelled_at || null,
-    }));
-
-    tripState.budgetLinks = [];
-    tripState.budgetTxById = new Map();
-    try {
-      const expenseIds = tripState.expenses.map(x => x.id).filter(Boolean);
-      if (expenseIds.length) {
-        const { data: linksData, error: linksErr } = await sb
-          .from(TB_CONST.TABLES.trip_expense_budget_links)
-          .select('expense_id,transaction_id,member_id')
-          .eq('trip_id', tripId)
-          .in('expense_id', expenseIds);
-        if (linksErr) throw linksErr;
-        tripState.budgetLinks = (linksData || []).map((row) => ({
-          expenseId: row.expense_id,
-          transactionId: row.transaction_id,
-          memberId: row.member_id || null,
-        }));
-        const txIds = Array.from(new Set(tripState.budgetLinks.map(x => x.transactionId).filter(Boolean)));
-        if (txIds.length) {
-          const { data: txRows, error: txErr } = await sb
-            .from(TB_CONST.TABLES.transactions)
-            .select('id,category,is_internal,trip_expense_id,trip_share_link_id,pay_now,affects_budget,out_of_budget')
-            .in('id', txIds);
-          if (txErr) throw txErr;
-          for (const row of (txRows || [])) tripState.budgetTxById.set(String(row.id), row);
-        }
-      }
-    } catch (e) {
-      console.warn('[Trip] budget link preload failed', e);
-    }
 
     try {
       tripState.linkIssues = await _auditTripTransactionLinks();

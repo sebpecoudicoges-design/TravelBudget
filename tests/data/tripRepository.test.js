@@ -30,7 +30,33 @@ describe('trip repository', () => {
       expenses: rows.expenses,
       shares: rows.shares,
       settlementEvents: rows.settlements,
+      budgetLinks: [],
+      budgetTransactions: [],
     });
+  });
+
+  it('loads budget links and their transactions into the same aggregate', async () => {
+    const rows = {
+      members: [], expenses: [{ id: 'expense-1' }], shares: [], settlements: [],
+      links: [{ expense_id: 'expense-1', transaction_id: 'tx-1', member_id: 'member-1' }],
+      transactions: [{ id: 'tx-1', affects_budget: true }],
+    };
+    const client = { from: (table) => {
+      const chain = query({ data: rows[table], error: null });
+      chain.in = () => Promise.resolve({ data: rows[table], error: null });
+      return chain;
+    } };
+    const repository = createTripRepository(client);
+
+    const result = await repository.loadActiveTripData({
+      tripId: 'trip-1',
+      tables: {
+        members: 'members', expenses: 'expenses', shares: 'shares', settlementEvents: 'settlements',
+        budgetLinks: 'links', transactions: 'transactions',
+      },
+    });
+    expect(result.budgetLinks).toEqual(rows.links);
+    expect(result.budgetTransactions).toEqual(rows.transactions);
   });
 
   it('propagates a Supabase read error', async () => {
@@ -40,5 +66,27 @@ describe('trip repository', () => {
       tripId: 'trip-1',
       tables: { members: 'a', expenses: 'b', shares: 'c', settlementEvents: 'd' },
     })).rejects.toThrow('read failed');
+  });
+
+  it('keeps the main Trip aggregate when optional budget links fail', async () => {
+    const client = { from: (table) => {
+      const result = table === 'links'
+        ? { data: null, error: new Error('budget links unavailable') }
+        : { data: table === 'expenses' ? [{ id: 'expense-1' }] : [], error: null };
+      const chain = query(result);
+      chain.in = () => Promise.resolve(result);
+      return chain;
+    } };
+    const repository = createTripRepository(client);
+    const result = await repository.loadActiveTripData({
+      tripId: 'trip-1',
+      tables: {
+        members: 'members', expenses: 'expenses', shares: 'shares', settlementEvents: 'settlements',
+        budgetLinks: 'links', transactions: 'transactions',
+      },
+    });
+    expect(result.expenses).toEqual([{ id: 'expense-1' }]);
+    expect(result.budgetLinks).toEqual([]);
+    expect(result.budgetLoadError).toMatchObject({ message: 'budget links unavailable' });
   });
 });
