@@ -25,6 +25,7 @@ import { createSupabaseRepository } from '../data/supabaseRepository.js';
 import { createTripRepository } from '../data/tripRepository.js';
 import { createTripStore } from '../features/trip/tripStore.js';
 import * as tripView from '../features/trip/tripView.js';
+import * as sportCatalog from '../features/sport/sportCatalog.js';
 import { storageQuota } from '../data/storageQuota.js';
 import * as sportRules from '../core/sportRules.js';
 import * as uiComponents from '../ui/components.js';
@@ -52,6 +53,7 @@ window.Core.dailyBudgetRules = dailyBudgetRules;
 window.Core.recurringRules = recurringRules;
 window.Core.canonicalRecords = canonicalRecords;
 window.Core.sportRules = sportRules;
+window.Core.sportCatalog = sportCatalog;
 
 window.Data = window.Data || {};
 window.Data.appStore = window.Data.appStore || createEntityStore();
