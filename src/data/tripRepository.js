@@ -209,5 +209,76 @@ export function createTripRepository(getClient) {
         return { budgetLinkError };
       }
     },
+
+    async applyExpense({ rpcName, tripId, payload }) {
+      const client = requireClient(getClient);
+      if (typeof client.rpc !== 'function') throw new Error('Supabase RPC indisponible');
+      const rows = unwrap(await client.rpc(rpcName, { p_trip_id: tripId, p_payload: payload }));
+      const expenseId = (Array.isArray(rows) ? rows[0]?.expense_id : rows?.expense_id) || null;
+      if (!expenseId) throw new Error(`${rpcName} n'a pas renvoye expense_id.`);
+      return expenseId;
+    },
+
+    async getExpenseById({ table, expenseId }) {
+      const client = requireClient(getClient);
+      return unwrap(await client.from(table).select('*').eq('id', expenseId).single());
+    },
+
+    async findExpenseByFingerprint({ table, tripId, date, label, amount, currency, paidByMemberId }) {
+      const client = requireClient(getClient);
+      const rows = unwrap(await client.from(table)
+        .select('id,created_at')
+        .eq('trip_id', tripId)
+        .eq('date', date)
+        .eq('label', label)
+        .eq('amount', amount)
+        .eq('currency', currency)
+        .eq('paid_by_member_id', paidByMemberId)
+        .order('created_at', { ascending: true })
+        .limit(1));
+      return rows?.[0]?.id || null;
+    },
+
+    async linkExpenseTransaction({ tables, expenseId, transactionId }) {
+      const client = requireClient(getClient);
+      const expense = unwrap(await client.from(tables.expenses)
+        .select('id,transaction_id').eq('id', expenseId).maybeSingle());
+      if (expense?.transaction_id && expense.transaction_id !== transactionId) {
+        throw new Error('Cette depense Trip est deja liee a une transaction.');
+      }
+      const transaction = unwrap(await client.from(tables.transactions)
+        .select('id,trip_expense_id').eq('id', transactionId).maybeSingle());
+      if (transaction?.trip_expense_id && transaction.trip_expense_id !== expenseId) {
+        throw new Error('Cette transaction Budget est deja liee a une autre depense Trip.');
+      }
+
+      unwrap(await client.from(tables.expenses).update({ transaction_id: transactionId }).eq('id', expenseId));
+      try {
+        unwrap(await client.from(tables.transactions).update({ trip_expense_id: expenseId }).eq('id', transactionId));
+      } catch (error) {
+        unwrap(await client.from(tables.expenses).update({ transaction_id: null }).eq('id', expenseId));
+        throw error;
+      }
+
+      const [expenseAfter, transactionAfter] = await Promise.all([
+        client.from(tables.expenses).select('id,transaction_id').eq('id', expenseId).maybeSingle(),
+        client.from(tables.transactions).select('id,trip_expense_id').eq('id', transactionId).maybeSingle(),
+      ]);
+      const confirmedExpense = unwrap(expenseAfter);
+      const confirmedTransaction = unwrap(transactionAfter);
+      if (confirmedExpense?.transaction_id !== transactionId || confirmedTransaction?.trip_expense_id !== expenseId) {
+        await Promise.all([
+          client.from(tables.expenses).update({ transaction_id: null }).eq('id', expenseId),
+          client.from(tables.transactions).update({ trip_expense_id: null }).eq('id', transactionId),
+        ]);
+        throw new Error("Le lien avec la transaction selectionnee n'a pas pu etre confirme.");
+      }
+    },
+
+    async unlinkExpenseTransaction({ tables, expenseId, transactionId }) {
+      const client = requireClient(getClient);
+      unwrap(await client.from(tables.transactions).update({ trip_expense_id: null }).eq('id', transactionId));
+      unwrap(await client.from(tables.expenses).update({ transaction_id: null }).eq('id', expenseId));
+    },
   };
 }

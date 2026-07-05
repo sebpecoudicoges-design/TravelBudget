@@ -549,6 +549,14 @@ async function _copyToClipboard(text) {
     };
   }
 
+  async function _applyTripExpense(tripId, payload) {
+    await _ensureSession();
+    const rpcName = TB_CONST?.RPCS?.trip_apply_expense_v2
+      || TB_CONST?.RPCS?.trip_apply_expense_v1
+      || "trip_apply_expense_v1";
+    return _tripRepository().applyExpense({ rpcName, tripId, payload });
+  }
+
   function _syncTripStateToAppState(reason) {
     try {
       if (!window.state) return;
@@ -966,16 +974,6 @@ function _rpcFxSnapshotArgs(dateISO, txCurrency) {
     p_fx_base_currency_snapshot: snap.fx_base_currency_snapshot,
     p_fx_tx_currency_snapshot: snap.fx_tx_currency_snapshot
   };
-}
-
-
-// Trip Split: atomic expense+shares (prefer V8.3.1 DB-first, fallback V8.1)
-async function _rpcTripApplyExpense(sb, tripId, payload) {
-  await _ensureSession();
-  const fn = (TB_CONST && TB_CONST.RPCS && TB_CONST.RPCS.trip_apply_expense_v2)
-    ? TB_CONST.RPCS.trip_apply_expense_v2
-    : ((TB_CONST && TB_CONST.RPCS && TB_CONST.RPCS.trip_apply_expense_v1) ? TB_CONST.RPCS.trip_apply_expense_v1 : "trip_apply_expense_v1");
-  return sb.rpc(fn, { p_trip_id: tripId, p_payload: payload });
 }
 
 
@@ -1501,76 +1499,18 @@ async function _findMatchingTransactions({ date, amount, currency }) {
 }
 
   async function _linkExpenseToTransaction(expenseId, transactionId) {
-    const uid = await _ensureSession();
-
-    // Enforce 1 transaction = 1 expense (and 1 expense = 1 transaction)
-    // Defensive re-check on server to avoid races / stale state.
-    const { data: exRow, error: exErr } = await sb
-      .from(TB_CONST.TABLES.trip_expenses)
-      .select("id,transaction_id")
-      .eq("id", expenseId)
-      .maybeSingle();
-    if (exErr) throw exErr;
-    if (exRow?.transaction_id && exRow.transaction_id !== transactionId) {
-      throw new Error("Cette dépense Trip est déjà liée à une transaction.");
-    }
-
-    const { data: txRow, error: txErr } = await sb
-      .from(TB_CONST.TABLES.transactions)
-      .select("id,trip_expense_id")
-      .eq("id", transactionId)
-      .maybeSingle();
-    if (txErr) throw txErr;
-    if (txRow?.trip_expense_id && txRow.trip_expense_id !== expenseId) {
-      throw new Error("Cette transaction Budget est déjà liée à une autre dépense Trip.");
-    }
-
-    // Best-effort 2-step link; rollback on partial failure.
-    const { error: e1 } = await sb
-      .from(TB_CONST.TABLES.trip_expenses)
-      .update({ transaction_id: transactionId })
-      
-      .eq("id", expenseId);
-    if (e1) throw e1;
-
-    const { error: e2 } = await sb
-      .from(TB_CONST.TABLES.transactions)
-      .update({ trip_expense_id: expenseId })
-      
-      .eq("id", transactionId);
-    if (e2) {
-      await sb.from(TB_CONST.TABLES.trip_expenses).update({ transaction_id: null }).eq("id", expenseId);
-      throw e2;
-    }
-
-    const [{ data: exAfter, error: exAfterErr }, { data: txAfter, error: txAfterErr }] = await Promise.all([
-      sb
-        .from(TB_CONST.TABLES.trip_expenses)
-        .select("id,transaction_id")
-        .eq("id", expenseId)
-        .maybeSingle(),
-      sb
-        .from(TB_CONST.TABLES.transactions)
-        .select("id,trip_expense_id")
-        .eq("id", transactionId)
-        .maybeSingle()
-    ]);
-    if (exAfterErr) throw exAfterErr;
-    if (txAfterErr) throw txAfterErr;
-    if (exAfter?.transaction_id !== transactionId || txAfter?.trip_expense_id !== expenseId) {
-      await sb.from(TB_CONST.TABLES.trip_expenses).update({ transaction_id: null }).eq("id", expenseId);
-      await sb.from(TB_CONST.TABLES.transactions).update({ trip_expense_id: null }).eq("id", transactionId);
-      throw new Error("Le lien avec la transaction selectionnee n'a pas pu etre confirme. Aucune nouvelle transaction Budget n'a ete creee.");
-    }
+    await _ensureSession();
+    return _tripRepository().linkExpenseTransaction({
+      tables: _tripRepositoryTables(), expenseId, transactionId,
+    });
   }
 
   async function _unlinkExpenseFromTransaction(expense) {
-    const uid = await _ensureSession();
+    await _ensureSession();
     if (!expense?.transactionId) return;
-    const txId = expense.transactionId;
-
-    await sb.from(TB_CONST.TABLES.transactions).update({ trip_expense_id: null }).eq("id", txId);
-    await sb.from(TB_CONST.TABLES.trip_expenses).update({ transaction_id: null }).eq("id", expense.id);
+    await _tripRepository().unlinkExpenseTransaction({
+      tables: _tripRepositoryTables(), expenseId: expense.id, transactionId: expense.transactionId,
+    });
   }
 
 
@@ -3547,12 +3487,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
     const parts = _computeSplitParts(amt, members, split);
     _validateSplitParts(amt, parts);
 
-    const { data: ex, error: exErr } = await sb
-      .from(TB_CONST.TABLES.trip_expenses)
-      .select("*")
-      .eq("id", expenseId)
-      .single();
-    if (exErr) throw exErr;
+    const ex = await _tripRepository().getExpenseById({ table: TB_CONST.TABLES.trip_expenses, expenseId });
 
     if (paidByMe) {
       if (!walletId) throw new Error("Choisis une wallet (pour décompter le paiement).");
@@ -3729,10 +3664,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
 
     const payloadExp = _buildTripExpenseRpcPayload({ input, members, parts });
 
-    const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpense(sb, tripId, payloadExp);
-    if (rpcErr) throw rpcErr;
-    const updatedExpenseId = (Array.isArray(rpcRows) ? rpcRows[0]?.expense_id : rpcRows?.expense_id) || null;
-    if (!updatedExpenseId) throw new Error("Trip: RPC trip_apply_expense_v2 n'a pas renvoyé expense_id.");
+    const updatedExpenseId = await _applyTripExpense(tripId, payloadExp);
 
     await _integrateExpenseBudgetSideEffects({ expenseId: updatedExpenseId, date, label, amount: amt, currency: cur, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split });
     await _requestPayerApprovalIfNeeded(updatedExpenseId, paidByMemberId);
@@ -3807,17 +3739,8 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
 
             const payloadExp = _buildTripExpenseRpcPayload({ input, members, parts });
 
-            const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpense(sb, tripId, payloadExp);
-            if (rpcErr) throw rpcErr;
-            const expId = (Array.isArray(rpcRows) ? rpcRows[0]?.expense_id : rpcRows?.expense_id) || null;
-            if (!expId) throw new Error("Trip: RPC trip_apply_expense n'a pas renvoyé expense_id.");
-
-            const { data: ex, error: exErr } = await sb
-              .from(TB_CONST.TABLES.trip_expenses)
-              .select("*")
-              .eq("id", expId)
-              .single();
-            if (exErr) throw exErr;
+            const expId = await _applyTripExpense(tripId, payloadExp);
+            const ex = await _tripRepository().getExpenseById({ table: TB_CONST.TABLES.trip_expenses, expenseId: expId });
 
             await _linkExpenseToTransaction(ex.id, m0.id);
 
@@ -3958,17 +3881,8 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
 
     const payloadExp = _buildTripExpenseRpcPayload({ input, members, parts });
 
-    const { data: rpcRows, error: rpcErr } = await _rpcTripApplyExpense(sb, tripId, payloadExp);
-    if (rpcErr) throw rpcErr;
-    const expId = (Array.isArray(rpcRows) ? rpcRows[0]?.expense_id : rpcRows?.expense_id) || null;
-    if (!expId) throw new Error("Trip: RPC trip_apply_expense n'a pas renvoyé expense_id.");
-
-    const { data: ex, error: exErr } = await sb
-      .from(TB_CONST.TABLES.trip_expenses)
-      .select("*")
-      .eq("id", expId)
-      .single();
-    if (exErr) throw exErr;
+    const expId = await _applyTripExpense(tripId, payloadExp);
+    const ex = await _tripRepository().getExpenseById({ table: TB_CONST.TABLES.trip_expenses, expenseId: expId });
 
 
 
@@ -4287,19 +4201,15 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
         return candidates[0].id || candidates[0].expenseId || null;
       }
 
-      const { data, error } = await sb
-        .from(TB_CONST.TABLES.trip_expenses)
-        .select("id,created_at")
-        .eq("trip_id", normalizedTripId)
-        .eq("date", date)
-        .eq("label", label)
-        .eq("amount", amount)
-        .eq("currency", currency)
-        .eq("paid_by_member_id", paidByMemberId)
-        .order("created_at", { ascending: true })
-        .limit(1);
-      if (error) throw error;
-      return data?.[0]?.id || null;
+      return await _tripRepository().findExpenseByFingerprint({
+        table: TB_CONST.TABLES.trip_expenses,
+        tripId: normalizedTripId,
+        date,
+        label,
+        amount,
+        currency,
+        paidByMemberId,
+      });
     } catch (e) {
       console.warn("[Trip] offline replay duplicate guard failed", e);
       return null;

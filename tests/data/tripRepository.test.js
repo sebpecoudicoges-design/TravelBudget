@@ -245,4 +245,59 @@ describe('trip repository', () => {
       { table: 'shares', method: 'update', value: { trip_id: 'trip-2' } },
     ]));
   });
+
+  it('applies an expense atomically and returns its identifier', async () => {
+    const client = mutationClient(({ operation, name }) => ({
+      data: operation === 'rpc' && name === 'trip_apply_expense_v2' ? [{ expense_id: 'expense-1' }] : null,
+      error: null,
+    }));
+    const repository = createTripRepository(client);
+    await expect(repository.applyExpense({
+      rpcName: 'trip_apply_expense_v2', tripId: 'trip-1', payload: { label: 'Lunch' },
+    })).resolves.toBe('expense-1');
+    expect(client.calls).toContainEqual({
+      method: 'rpc', name: 'trip_apply_expense_v2',
+      args: { p_trip_id: 'trip-1', p_payload: { label: 'Lunch' } },
+    });
+  });
+
+  it('reads expenses by id and by offline fingerprint', async () => {
+    const client = mutationClient(({ table, operation, calls }) => {
+      if (table !== 'expenses' || operation !== 'select') return { data: null, error: null };
+      const idLookup = calls.some((call) => call.table === table && call.method === 'eq' && call.column === 'id');
+      return { data: idLookup ? { id: 'expense-1' } : [{ id: 'expense-2', created_at: '2026-07-05T09:00:00Z' }], error: null };
+    });
+    const repository = createTripRepository(client);
+    await expect(repository.getExpenseById({ table: 'expenses', expenseId: 'expense-1' })).resolves.toEqual({ id: 'expense-1' });
+    client.calls.length = 0;
+    await expect(repository.findExpenseByFingerprint({
+      table: 'expenses', tripId: 'trip-1', date: '2026-07-05', label: 'Lunch',
+      amount: 20, currency: 'AUD', paidByMemberId: 'member-1',
+    })).resolves.toBe('expense-2');
+  });
+
+  it('links and unlinks an expense transaction bidirectionally', async () => {
+    const client = mutationClient(({ table, operation, calls }) => {
+      if (operation !== 'select') return { data: null, error: null };
+      const expenseLinked = calls.some((call) => call.table === 'expenses' && call.method === 'update' && call.value?.transaction_id === 'tx-1');
+      const transactionLinked = calls.some((call) => call.table === 'transactions' && call.method === 'update' && call.value?.trip_expense_id === 'expense-1');
+      if (table === 'expenses') return { data: { id: 'expense-1', transaction_id: expenseLinked ? 'tx-1' : null }, error: null };
+      return { data: { id: 'tx-1', trip_expense_id: transactionLinked ? 'expense-1' : null }, error: null };
+    });
+    const repository = createTripRepository(client);
+    await repository.linkExpenseTransaction({
+      tables: { expenses: 'expenses', transactions: 'transactions' },
+      expenseId: 'expense-1', transactionId: 'tx-1',
+    });
+    await repository.unlinkExpenseTransaction({
+      tables: { expenses: 'expenses', transactions: 'transactions' },
+      expenseId: 'expense-1', transactionId: 'tx-1',
+    });
+    expect(client.calls).toEqual(expect.arrayContaining([
+      { table: 'expenses', method: 'update', value: { transaction_id: 'tx-1' } },
+      { table: 'transactions', method: 'update', value: { trip_expense_id: 'expense-1' } },
+      { table: 'expenses', method: 'update', value: { transaction_id: null } },
+      { table: 'transactions', method: 'update', value: { trip_expense_id: null } },
+    ]));
+  });
 });
