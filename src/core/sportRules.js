@@ -139,6 +139,103 @@ export function completedWorkout(plan = [], doneSets = []) {
   return { plan: completedPlan, doneSets: completedSets };
 }
 
+export function finalizeWorkout(input = {}) {
+  const startedAtMs = new Date(input.startedAt ?? Date.now()).getTime();
+  const endedAtMs = new Date(input.endedAt ?? Date.now()).getTime();
+  const safeStart = Number.isFinite(startedAtMs) ? startedAtMs : Date.now();
+  const safeEnd = Number.isFinite(endedAtMs) ? Math.max(safeStart, endedAtMs) : safeStart;
+  const completed = completedWorkout(input.plan, input.doneSets);
+  const durationSeconds = Math.max(1, Math.round(num(input.durationSeconds, (safeEnd - safeStart) / 1000)));
+  const estimate = typeof input.estimateKcal === 'function'
+    ? input.estimateKcal({
+      plan: completed.plan,
+      doneSets: completed.doneSets,
+      bodyWeightKg: num(input.bodyWeightKg, 70),
+      durationSeconds,
+    })
+    : input.estimatedKcal;
+
+  return {
+    startedAt: new Date(safeStart).toISOString(),
+    endedAt: new Date(safeEnd).toISOString(),
+    durationSeconds,
+    bodyWeightKg: num(input.bodyWeightKg, 70),
+    bodyHeightCm: num(input.bodyHeightCm, 0),
+    moodAfter: input.moodAfter || '',
+    perceivedEffort: input.perceivedEffort ?? null,
+    notes: input.notes || '',
+    estimatedKcal: Math.max(1, Math.round(num(estimate, 0))),
+    doneSets: completed.doneSets,
+    plan: completed.plan,
+  };
+}
+
+export function buildSportPersistenceRows(summary = {}, context = {}) {
+  const plan = Array.isArray(summary.plan) ? summary.plan : [];
+  const doneSets = Array.isArray(summary.doneSets) ? summary.doneSets : [];
+  const userId = context.userId;
+  const sessionId = context.sessionId;
+  const startedAt = summary.startedAt || summary.started_at || new Date().toISOString();
+  const endedAt = summary.endedAt || summary.ended_at || startedAt;
+  const primaryActivity = plan[0]?.activityKey || plan[0]?.activity_key || summary.activity_type || 'strength';
+
+  const session = {
+    user_id: userId,
+    travel_id: context.travelId || null,
+    activity_type: primaryActivity,
+    started_at: startedAt,
+    ended_at: endedAt,
+    duration_seconds: num(summary.durationSeconds ?? summary.duration_seconds, 0),
+    mood_after: summary.moodAfter || summary.mood_after || null,
+    fatigue: summary.perceivedEffort ?? summary.fatigue ?? null,
+    body_weight_kg: summary.bodyWeightKg ?? summary.body_weight_kg ?? null,
+    notes: summary.notes || null,
+    estimated_kcal: num(summary.estimatedKcal ?? summary.estimated_kcal, 0),
+  };
+
+  const items = plan.map((item, index) => ({
+    user_id: userId,
+    session_id: sessionId,
+    activity_key: item.activityKey || item.activity_key || primaryActivity,
+    exercise_name: item.exerciseName || item.exercise_name || item.label || primaryActivity,
+    equipment: item.equipment || 'mixed',
+    mode: item.mode || 'time',
+    target_reps: item.targetReps || item.target_reps || null,
+    target_seconds: item.targetSeconds || item.target_seconds || null,
+    distance_m: item.distanceM || item.distance_m || null,
+    planned_sets: item.sets || item.planned_sets || 1,
+    rest_seconds: item.restSeconds || item.rest_seconds || 0,
+    sort_order: index,
+    met_value: item.metValue || item.met_value || null,
+    notes: item.notes || null,
+  }));
+
+  const sets = doneSets.map((set) => ({
+    user_id: userId,
+    itemIndex: Math.max(0, Math.round(num(set.itemIndex, 0))),
+    set_index: Math.max(1, Math.round(num(set.setIndex ?? set.set_index, 1))),
+    reps: set.reps ?? null,
+    duration_seconds: num(set.durationSeconds ?? set.duration_seconds, 0),
+    weight_kg: num(set.weightKg ?? set.weight_kg, 0) || null,
+    distance_m: num(set.distanceM ?? set.distance_m, 0) || null,
+    completed_at: set.completedAt || set.completed_at || endedAt,
+  }));
+
+  return { session, items, sets };
+}
+
+export function bindSportSetRows(sets = [], itemByIndex = new Map()) {
+  return (Array.isArray(sets) ? sets : [])
+    .map((set) => {
+      const itemId = itemByIndex instanceof Map
+        ? itemByIndex.get(Number(set.itemIndex))
+        : itemByIndex?.[Number(set.itemIndex)];
+      const { itemIndex, ...row } = set;
+      return { ...row, item_id: itemId };
+    })
+    .filter((row) => row.item_id);
+}
+
 export function appendCircuitRound(sequence = [], plan = [], options = {}) {
   const current = Array.isArray(sequence) ? sequence.slice() : [];
   const items = Array.isArray(plan) ? plan : [];

@@ -4233,21 +4233,19 @@
       const cappedStepSeconds = step.duration ? Math.min(n(step.duration, elapsedStepSeconds), elapsedStepSeconds) : elapsedStepSeconds;
       recordWorkStep(timer, step, cappedStepSeconds, readTimerStepLoadKg(timer, step), readTimerStepReps(timer, step));
     }
-    const completed = window.Core?.sportRules?.completedWorkout(CACHE.plan, timer.doneSets)
-      || { plan: CACHE.plan.map(item => Object.assign({}, item)), doneSets: timer.doneSets.slice() };
-    const summary = {
-      startedAt: new Date(timer.startedAt).toISOString(),
-      endedAt: new Date(endedAt).toISOString(),
+    const finalize = window.Core?.sportRules?.finalizeWorkout;
+    if (typeof finalize !== "function") throw new Error("Sport finalization rules indisponibles");
+    const summary = finalize({
+      plan: CACHE.plan,
+      doneSets: timer.doneSets,
+      startedAt: timer.startedAt,
+      endedAt,
       durationSeconds,
       bodyWeightKg: timer.bodyWeightKg,
       bodyHeightCm: timer.bodyHeightCm,
-      moodAfter: "",
-      perceivedEffort: null,
-      notes: "",
-      estimatedKcal: Math.max(1, Math.round(sessionKcalEstimate(completed.plan, completed.doneSets, timer.bodyWeightKg, durationSeconds))),
-      doneSets: completed.doneSets,
-      plan: completed.plan,
-    };
+      estimateKcal: ({ plan, doneSets, bodyWeightKg, durationSeconds: totalSeconds }) =>
+        sessionKcalEstimate(plan, doneSets, bodyWeightKg, totalSeconds),
+    });
     const progressions = applyDoubleProgression(CACHE.plan, timer.doneSets);
     if (progressions.length) {
       CACHE.plan = CACHE.plan.map((item, idx) => {
@@ -4393,59 +4391,26 @@
         return;
       }
       try {
-        const primaryActivity = summary.plan[0]?.activityKey || "strength";
+        const buildRows = window.Core?.sportRules?.buildSportPersistenceRows;
+        const bindSets = window.Core?.sportRules?.bindSportSetRows;
+        if (typeof buildRows !== "function" || typeof bindSets !== "function") throw new Error("Sport persistence rules indisponibles");
+        const initialRows = buildRows(summary, { userId, travelId: activeTravelId() });
         const sess = await c
           .from(table("sport_sessions"))
-          .insert([{
-            user_id: userId,
-            travel_id: activeTravelId(),
-            activity_type: primaryActivity,
-            started_at: summary.startedAt,
-            ended_at: summary.endedAt,
-            duration_seconds: summary.durationSeconds,
-            mood_after: summary.moodAfter || null,
-            fatigue: summary.perceivedEffort || null,
-            body_weight_kg: summary.bodyWeightKg,
-            notes: summary.notes || null,
-            estimated_kcal: summary.estimatedKcal,
-          }])
+          .insert([initialRows.session])
           .select("id")
           .single();
         if (sess.error) throw sess.error;
         const sessionId = sess.data?.id;
         markLocalSynced(localRow.localId, sessionId);
-        const itemRows = summary.plan.map((item, idx) => ({
-          user_id: userId,
-          session_id: sessionId,
-          activity_key: item.activityKey,
-          exercise_name: item.exerciseName,
-          equipment: item.equipment,
-          mode: item.mode,
-          target_reps: item.targetReps || null,
-          target_seconds: item.targetSeconds || null,
-          distance_m: item.distanceM || null,
-          planned_sets: item.sets || 1,
-          rest_seconds: item.restSeconds || 0,
-          sort_order: idx,
-          met_value: item.metValue || null,
-          notes: item.notes || null,
-        }));
+        const rows = buildRows(summary, { userId, travelId: activeTravelId(), sessionId });
         const items = await c
           .from(table("sport_session_items"))
-          .insert(itemRows)
+          .insert(rows.items)
           .select("id,sort_order");
         if (items.error) throw items.error;
         const itemByIndex = new Map((items.data || []).map(row => [Number(row.sort_order), row.id]));
-        const setRows = summary.doneSets.map(set => ({
-          user_id: userId,
-          item_id: itemByIndex.get(Number(set.itemIndex)),
-          set_index: set.setIndex,
-          reps: set.reps,
-          duration_seconds: set.durationSeconds,
-          weight_kg: set.weightKg || null,
-          distance_m: set.distanceM || null,
-          completed_at: set.completedAt,
-        })).filter(row => row.item_id);
+        const setRows = bindSets(rows.sets, itemByIndex);
         if (setRows.length) {
           const savedSets = await c.from(table("sport_sets")).insert(setRows);
           if (savedSets.error) throw savedSets.error;
@@ -4475,60 +4440,28 @@
     const plan = Array.isArray(row.plan) ? row.plan : [];
     if (!plan.length) return false;
     const doneSets = Array.isArray(row.doneSets) ? row.doneSets : [];
-    const primaryActivity = plan[0]?.activityKey || row.activity_type || "strength";
     const existingRemoteId = await findExistingRemoteWorkout(c, userId, row);
     if (existingRemoteId) {
       markLocalSynced(row.localId || row.id, existingRemoteId);
       return true;
     }
+    const buildRows = window.Core?.sportRules?.buildSportPersistenceRows;
+    const bindSets = window.Core?.sportRules?.bindSportSetRows;
+    if (typeof buildRows !== "function" || typeof bindSets !== "function") throw new Error("Sport persistence rules indisponibles");
+    const summary = Object.assign({}, row, { plan, doneSets });
+    const initialRows = buildRows(summary, { userId, travelId: activeTravelId() });
     const sess = await c
       .from(table("sport_sessions"))
-      .insert([{
-        user_id: userId,
-        travel_id: activeTravelId(),
-        activity_type: primaryActivity,
-        started_at: row.startedAt || row.started_at || new Date().toISOString(),
-        ended_at: row.endedAt || row.ended_at || row.startedAt || row.started_at || new Date().toISOString(),
-        duration_seconds: row.durationSeconds || row.duration_seconds || 0,
-        mood_after: row.moodAfter || row.mood_after || null,
-        fatigue: row.perceivedEffort || row.fatigue || null,
-        body_weight_kg: row.bodyWeightKg || row.body_weight_kg || null,
-        notes: row.notes || null,
-        estimated_kcal: row.estimatedKcal || row.estimated_kcal || 0,
-      }])
+      .insert([initialRows.session])
       .select("id")
       .single();
     if (sess.error) throw sess.error;
     const sessionId = sess.data?.id;
-    const itemRows = plan.map((item, idx) => ({
-      user_id: userId,
-      session_id: sessionId,
-      activity_key: item.activityKey || primaryActivity,
-      exercise_name: item.exerciseName || item.label || labelActivity(item.activityKey || primaryActivity),
-      equipment: item.equipment || "mixed",
-      mode: item.mode || "time",
-      target_reps: item.targetReps || null,
-      target_seconds: item.targetSeconds || null,
-      distance_m: item.distanceM || null,
-      planned_sets: item.sets || 1,
-      rest_seconds: item.restSeconds || 0,
-      sort_order: idx,
-      met_value: item.metValue || null,
-      notes: item.notes || null,
-    }));
-    const items = await c.from(table("sport_session_items")).insert(itemRows).select("id,sort_order");
+    const rows = buildRows(summary, { userId, travelId: activeTravelId(), sessionId });
+    const items = await c.from(table("sport_session_items")).insert(rows.items).select("id,sort_order");
     if (items.error) throw items.error;
     const itemByIndex = new Map((items.data || []).map(item => [Number(item.sort_order), item.id]));
-    const setRows = doneSets.map(set => ({
-      user_id: userId,
-      item_id: itemByIndex.get(Number(set.itemIndex)),
-      set_index: set.setIndex,
-      reps: set.reps,
-      duration_seconds: set.durationSeconds,
-      weight_kg: set.weightKg || null,
-      distance_m: set.distanceM || null,
-      completed_at: set.completedAt || row.endedAt || row.ended_at || new Date().toISOString(),
-    })).filter(set => set.item_id);
+    const setRows = bindSets(rows.sets, itemByIndex);
     if (setRows.length) {
       const savedSets = await c.from(table("sport_sets")).insert(setRows);
       if (savedSets.error) throw savedSets.error;

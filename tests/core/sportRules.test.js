@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendCircuitRound, buildWorkoutSequence, completedWorkout, estimateSportSessionKcal, insertExerciseSet, kcalFromMet, SPORT_REST_MET, totalPlanRestSeconds, totalPlanWorkSeconds } from '../../src/core/sportRules.js';
+import { appendCircuitRound, bindSportSetRows, buildSportPersistenceRows, buildWorkoutSequence, completedWorkout, estimateSportSessionKcal, finalizeWorkout, insertExerciseSet, kcalFromMet, SPORT_REST_MET, totalPlanRestSeconds, totalPlanWorkSeconds } from '../../src/core/sportRules.js';
 import { estimateWorkDayKcal } from '../../src/core/workRules.js';
 import { resolveDailyBaselineKcal } from '../../src/core/bodyEnergyRules.js';
 
@@ -107,5 +107,53 @@ describe('sport rules core', () => {
 
     expect(result.sequence.map((step) => step.kind)).toEqual(['work', 'work']);
     expect(result.sequence.at(-1).setIndex).toBe(2);
+  });
+
+  it('finalizes only completed exercises after an early stop', () => {
+    const summary = finalizeWorkout({
+      plan: [{ exerciseName: 'Bench', sets: 3 }, { exerciseName: 'Abs', sets: 3 }],
+      doneSets: [
+        { itemIndex: 0, setIndex: 1, reps: 10 },
+        { itemIndex: 1, setIndex: 1, reps: 20, estimated: true },
+      ],
+      startedAt: '2026-07-05T08:00:00.000Z',
+      endedAt: '2026-07-05T08:10:00.000Z',
+      bodyWeightKg: 59,
+      estimateKcal: ({ doneSets }) => doneSets.length * 42,
+    });
+
+    expect(summary.plan).toEqual([{ exerciseName: 'Bench', sets: 1 }]);
+    expect(summary.doneSets).toHaveLength(1);
+    expect(summary.durationSeconds).toBe(600);
+    expect(summary.estimatedKcal).toBe(42);
+  });
+
+  it('builds identical SQL rows for immediate and deferred history sync', () => {
+    const summary = {
+      startedAt: '2026-07-05T08:00:00.000Z',
+      endedAt: '2026-07-05T08:10:00.000Z',
+      durationSeconds: 600,
+      bodyWeightKg: 59,
+      estimatedKcal: 120,
+      plan: [{ activityKey: 'strength', exerciseName: 'Bench', equipment: 'barbell', mode: 'reps', sets: 1, restSeconds: 90 }],
+      doneSets: [{ itemIndex: 0, setIndex: 1, reps: 10, durationSeconds: 30, weightKg: 50 }],
+    };
+    const rows = buildSportPersistenceRows(summary, { userId: 'user-1', travelId: 'travel-1', sessionId: 'session-1' });
+    const deferredRows = buildSportPersistenceRows({
+      started_at: summary.startedAt,
+      ended_at: summary.endedAt,
+      duration_seconds: 600,
+      body_weight_kg: 59,
+      estimated_kcal: 120,
+      plan: [{ activity_key: 'strength', exercise_name: 'Bench', equipment: 'barbell', mode: 'reps', planned_sets: 1, rest_seconds: 90 }],
+      doneSets: [{ itemIndex: 0, set_index: 1, reps: 10, duration_seconds: 30, weight_kg: 50 }],
+    }, { userId: 'user-1', travelId: 'travel-1', sessionId: 'session-1' });
+    const savedSets = bindSportSetRows(rows.sets, new Map([[0, 'item-1']]));
+
+    expect(deferredRows).toEqual(rows);
+    expect(rows.session).toMatchObject({ user_id: 'user-1', activity_type: 'strength', duration_seconds: 600, estimated_kcal: 120 });
+    expect(rows.items[0]).toMatchObject({ session_id: 'session-1', exercise_name: 'Bench', planned_sets: 1 });
+    expect(savedSets[0]).toMatchObject({ item_id: 'item-1', set_index: 1, reps: 10, weight_kg: 50 });
+    expect(savedSets[0]).not.toHaveProperty('itemIndex');
   });
 });
