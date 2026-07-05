@@ -33,6 +33,95 @@ export function totalPlanRestSeconds(items = []) {
   }, 0);
 }
 
+function restSecondsForItem(item, fallback = 60) {
+  const direct = Number(item?.restSeconds ?? item?.rest_seconds);
+  return Math.max(0, Math.round(Number.isFinite(direct) ? direct : num(fallback, 60)));
+}
+
+export function buildWorkoutSequence(plan = [], options = {}) {
+  const items = Array.isArray(plan) ? plan : [];
+  const sequence = [];
+  if (!items.length) return sequence;
+
+  if (options?.circuitEnabled) {
+    const rounds = Number(options?.amrapMinutes) > 0 ? 1 : Math.max(1, Math.round(num(options?.rounds, 4)));
+    const roundRestSeconds = Math.max(0, Math.round(num(options?.roundRestSeconds, 0)));
+    for (let roundIndex = 1; roundIndex <= rounds; roundIndex += 1) {
+      items.forEach((item, itemIndex) => {
+        sequence.push({
+          kind: 'work', item, itemIndex, setIndex: roundIndex, roundIndex, roundTotal: rounds,
+          duration: item?.mode === 'time' ? Math.max(0, num(item?.targetSeconds ?? item?.target_seconds, 0)) : 0,
+        });
+        const rest = restSecondsForItem(item, options?.defaultRestSeconds);
+        if (itemIndex < items.length - 1 && rest > 0) {
+          sequence.push({ kind: 'rest', item, itemIndex, setIndex: roundIndex, roundIndex, roundTotal: rounds, duration: rest });
+        }
+      });
+      if (roundIndex < rounds && roundRestSeconds > 0) {
+        sequence.push({ kind: 'round_rest', roundIndex, roundTotal: rounds, duration: roundRestSeconds });
+      }
+    }
+    return sequence;
+  }
+
+  items.forEach((item, itemIndex) => {
+    const sets = Math.max(1, Math.round(num(item?.sets ?? item?.planned_sets, 1)));
+    for (let setIndex = 1; setIndex <= sets; setIndex += 1) {
+      sequence.push({
+        kind: 'work', item, itemIndex, setIndex,
+        duration: item?.mode === 'time' ? Math.max(0, num(item?.targetSeconds ?? item?.target_seconds, 0)) : 0,
+      });
+      const hasNextWork = setIndex < sets || itemIndex < items.length - 1;
+      const rest = restSecondsForItem(item, options?.defaultRestSeconds);
+      if (hasNextWork && rest > 0) {
+        sequence.push({ kind: 'rest', item, itemIndex, setIndex, duration: rest });
+      }
+    }
+  });
+  return sequence;
+}
+
+export function insertExerciseSet(sequence = [], currentIndex = 0, doneSets = [], options = {}) {
+  const current = Array.isArray(sequence) ? sequence.slice() : [];
+  const index = Math.max(0, Math.min(current.length - 1, Math.round(num(currentIndex, 0))));
+  const step = current[index];
+  if (!step?.item || (step.kind !== 'work' && step.kind !== 'rest')) {
+    return { sequence: current, inserted: false, setIndex: 0, itemIndex: -1 };
+  }
+
+  const itemIndex = Math.max(0, Math.round(num(step.itemIndex, 0)));
+  const existingSets = current
+    .filter((row) => row?.kind === 'work' && Number(row.itemIndex) === itemIndex)
+    .map((row) => Math.round(num(row.setIndex, 1)));
+  const completedSets = (Array.isArray(doneSets) ? doneSets : [])
+    .filter((row) => Number(row?.itemIndex) === itemIndex)
+    .map((row) => Math.round(num(row?.setIndex, 1)));
+  const setIndex = Math.max(Math.round(num(step.setIndex, 1)), ...existingSets, ...completedSets) + 1;
+  const next = current[index + 1];
+  const insertAt = step.kind === 'work' && next?.kind === 'rest' && Number(next.itemIndex) === itemIndex
+    ? index + 2
+    : index + 1;
+  const extra = {
+    kind: 'work',
+    item: step.item,
+    itemIndex,
+    setIndex,
+    roundIndex: step.roundIndex,
+    roundTotal: step.roundTotal,
+    duration: step.item?.mode === 'time' ? Math.max(0, num(step.item?.targetSeconds ?? step.item?.target_seconds, 0)) : 0,
+  };
+  const additions = [extra];
+  const rest = restSecondsForItem(step.item, options?.defaultRestSeconds);
+  if (rest > 0 && insertAt < current.length) {
+    additions.push({
+      kind: 'rest', item: step.item, itemIndex, setIndex, duration: rest,
+      roundIndex: step.roundIndex, roundTotal: step.roundTotal,
+    });
+  }
+  current.splice(insertAt, 0, ...additions);
+  return { sequence: current, inserted: true, insertAt, setIndex, itemIndex };
+}
+
 export function completedWorkout(plan = [], doneSets = []) {
   const sourcePlan = Array.isArray(plan) ? plan : [];
   const actualSets = (Array.isArray(doneSets) ? doneSets : []).filter((set) => set && set.estimated !== true);

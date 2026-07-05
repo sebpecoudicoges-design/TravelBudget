@@ -2573,32 +2573,13 @@
   }
 
   function makeSequence() {
-    const seq = [];
-    if (CACHE.circuit?.enabled && CACHE.plan.length) {
-      const rounds = CACHE.circuit.amrapMinutes > 0 ? 1 : Math.max(1, Math.round(n(CACHE.circuit.rounds, 4)));
-      for (let roundIndex = 1; roundIndex <= rounds; roundIndex += 1) {
-        CACHE.plan.forEach((item, itemIndex) => {
-          seq.push({ kind: "work", item, itemIndex, setIndex: roundIndex, roundIndex, roundTotal: rounds, duration: item.mode === "time" ? n(item.targetSeconds, 0) : 0 });
-          const rest = restSecondsForItem(item);
-          const hasNextInRound = itemIndex < CACHE.plan.length - 1;
-          if (hasNextInRound && rest > 0) seq.push({ kind: "rest", item, itemIndex, setIndex: roundIndex, roundIndex, roundTotal: rounds, duration: rest });
-        });
-        if (roundIndex < rounds && n(CACHE.circuit.roundRestSeconds, 0) > 0) {
-          seq.push({ kind: "round_rest", roundIndex, roundTotal: rounds, duration: n(CACHE.circuit.roundRestSeconds, 60) });
-        }
-      }
-      return seq;
-    }
-    CACHE.plan.forEach((item, itemIndex) => {
-      const sets = Math.max(1, Math.round(n(item.sets, 1)));
-      for (let setIndex = 1; setIndex <= sets; setIndex += 1) {
-        seq.push({ kind: "work", item, itemIndex, setIndex, duration: item.mode === "time" ? n(item.targetSeconds, 0) : 0 });
-        const rest = restSecondsForItem(item);
-        const hasNextWork = setIndex < sets || itemIndex < CACHE.plan.length - 1;
-        if (hasNextWork && rest > 0) seq.push({ kind: "rest", item, itemIndex, setIndex, duration: rest });
-      }
-    });
-    return seq;
+    return window.Core?.sportRules?.buildWorkoutSequence(CACHE.plan, {
+      circuitEnabled: Boolean(CACHE.circuit?.enabled),
+      rounds: CACHE.circuit?.rounds,
+      amrapMinutes: CACHE.circuit?.amrapMinutes,
+      roundRestSeconds: CACHE.circuit?.roundRestSeconds,
+      defaultRestSeconds: CACHE.globalRestSeconds,
+    }) || [];
   }
 
   function completionExtraItem(kind) {
@@ -4195,27 +4176,16 @@
     const timer = CACHE.timer;
     const step = currentTimerStep();
     if (!timer || !step || !step.item) return;
-    const itemIndex = Math.max(0, Math.round(n(step.itemIndex, 0)));
-    const maxSet = Math.max(
-      Math.round(n(step.setIndex, 1)),
-      ...timer.sequence.filter(s => s.kind === "work" && Number(s.itemIndex) === itemIndex).map(s => Math.round(n(s.setIndex, 1))),
-      ...timer.doneSets.filter(s => Number(s.itemIndex) === itemIndex).map(s => Math.round(n(s.setIndex, 1)))
-    );
-    const nextSetIndex = maxSet + 1;
+    const insert = window.Core?.sportRules?.insertExerciseSet;
+    if (typeof insert !== "function") return;
+    const result = insert(timer.sequence, timer.index, timer.doneSets, { defaultRestSeconds: CACHE.globalRestSeconds });
+    if (!result.inserted) return;
+    timer.sequence = result.sequence;
     const item = step.item;
-    item.sets = Math.max(Math.round(n(item.sets, 1)), nextSetIndex);
-    if (CACHE.plan[itemIndex]) CACHE.plan[itemIndex].sets = item.sets;
-    const extra = { kind: "work", item, itemIndex, setIndex: nextSetIndex, roundIndex: step.roundIndex, roundTotal: step.roundTotal, duration: item.mode === "time" ? n(item.targetSeconds, 0) : 0 };
-    const next = timer.sequence[timer.index + 1];
-    const insertAt = step.kind === "work" && next?.kind === "rest" && Number(next.itemIndex) === itemIndex ? timer.index + 2 : timer.index + 1;
-    const additions = [extra];
-    const restSeconds = restSecondsForItem(item);
-    if (restSeconds > 0 && insertAt < timer.sequence.length) {
-      additions.push({ kind: "rest", item, itemIndex, setIndex: nextSetIndex, duration: restSeconds, roundIndex: step.roundIndex, roundTotal: step.roundTotal });
-    }
-    timer.sequence.splice(insertAt, 0, ...additions);
+    item.sets = Math.max(Math.round(n(item.sets, 1)), result.setIndex);
+    if (CACHE.plan[result.itemIndex]) CACHE.plan[result.itemIndex].sets = item.sets;
     savePlan();
-    sportFeedback(txt("Serie ajoutee", "Set added"), `${item.exerciseName || labelActivity(item.activityKey)} · ${txt("serie", "set")} ${nextSetIndex}`, { toast: true, persistNotification: true });
+    sportFeedback(txt("Serie ajoutee", "Set added"), `${item.exerciseName || labelActivity(item.activityKey)} · ${txt("serie", "set")} ${result.setIndex}`, { toast: true, persistNotification: true });
     renderSport("add-current-set");
   }
   function addTimerCircuitRound() {

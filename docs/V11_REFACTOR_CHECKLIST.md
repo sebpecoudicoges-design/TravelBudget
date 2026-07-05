@@ -73,6 +73,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [ ] Sport : separer bibliotheque, programme, timer, historique et calculs.
   - [x] Extraire le catalogue fallback, les MET, familles, materiels et charges de reference.
   - [x] Extraire les regles de cycle A/B, semaine planifiee, jours de repos et correspondance des seances.
+  - [x] Extraire la construction serie/repos et l'insertion d'une serie au bon exercice.
 - [ ] Nutrition : separer catalogue, journal, objectifs et historique.
 - [ ] Sante : separer score, tendances et saisies corporelles.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.

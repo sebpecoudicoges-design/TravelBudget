@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendCircuitRound, completedWorkout, estimateSportSessionKcal, kcalFromMet, SPORT_REST_MET, totalPlanRestSeconds, totalPlanWorkSeconds } from '../../src/core/sportRules.js';
+import { appendCircuitRound, buildWorkoutSequence, completedWorkout, estimateSportSessionKcal, insertExerciseSet, kcalFromMet, SPORT_REST_MET, totalPlanRestSeconds, totalPlanWorkSeconds } from '../../src/core/sportRules.js';
 import { estimateWorkDayKcal } from '../../src/core/workRules.js';
 import { resolveDailyBaselineKcal } from '../../src/core/bodyEnergyRules.js';
 
@@ -66,5 +66,46 @@ describe('sport rules core', () => {
     expect(second.roundIndex).toBe(2);
     expect(work.map((step) => [step.itemIndex, step.setIndex])).toEqual([[0, 1], [1, 1], [0, 2], [1, 2]]);
     expect(second.sequence.some((step) => step.kind === 'round_rest' && step.duration === 90)).toBe(true);
+  });
+
+  it('builds work and rest in order without trailing workout rest', () => {
+    const bench = { mode: 'reps', sets: 2, restSeconds: 90 };
+    const row = { mode: 'reps', sets: 1, restSeconds: 60 };
+    const sequence = buildWorkoutSequence([bench, row]);
+
+    expect(sequence.map((step) => [step.kind, step.itemIndex, step.setIndex])).toEqual([
+      ['work', 0, 1],
+      ['rest', 0, 1],
+      ['work', 0, 2],
+      ['rest', 0, 2],
+      ['work', 1, 1],
+    ]);
+  });
+
+  it('inserts an added set after the current rest and before the next exercise', () => {
+    const bench = { mode: 'reps', sets: 1, restSeconds: 90 };
+    const row = { mode: 'reps', sets: 1, restSeconds: 60 };
+    const initial = buildWorkoutSequence([bench, row]);
+    const duringWork = insertExerciseSet(initial, 0, []);
+    const duringRest = insertExerciseSet(initial, 1, []);
+
+    [duringWork, duringRest].forEach((result) => {
+      expect(result.inserted).toBe(true);
+      expect(result.sequence.map((step) => [step.kind, step.itemIndex, step.setIndex])).toEqual([
+        ['work', 0, 1],
+        ['rest', 0, 1],
+        ['work', 0, 2],
+        ['rest', 0, 2],
+        ['work', 1, 1],
+      ]);
+    });
+  });
+
+  it('does not add a useless rest after a new final set', () => {
+    const squat = { mode: 'reps', sets: 1, restSeconds: 120 };
+    const result = insertExerciseSet(buildWorkoutSequence([squat]), 0, []);
+
+    expect(result.sequence.map((step) => step.kind)).toEqual(['work', 'work']);
+    expect(result.sequence.at(-1).setIndex).toBe(2);
   });
 });
