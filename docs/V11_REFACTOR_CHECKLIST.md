@@ -68,6 +68,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [x] Trip : migrer les mutations Groupe et Participants vers le repository dedie.
 - [x] Trip : migrer les reglements et les suppressions/deplacements de depenses vers le repository.
 - [x] Trip : migrer l'upsert, la lecture, la deduplication offline et les liens Depense-Transaction.
+- [x] Trip : extraire les vues Invitations et Formulaire Depense dans un module pur teste.
 - [ ] Trip : separer regles, repository, store et vues.
 - [ ] Sport : separer bibliotheque, programme, timer, historique et calculs.
 - [ ] Nutrition : separer catalogue, journal, objectifs et historique.

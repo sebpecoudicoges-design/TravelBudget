@@ -24,6 +24,7 @@ import { createMutationQueueStore, flushMutationQueue } from '../data/mutationQu
 import { createSupabaseRepository } from '../data/supabaseRepository.js';
 import { createTripRepository } from '../data/tripRepository.js';
 import { createTripStore } from '../features/trip/tripStore.js';
+import * as tripView from '../features/trip/tripView.js';
 import { storageQuota } from '../data/storageQuota.js';
 import * as sportRules from '../core/sportRules.js';
 import * as uiComponents from '../ui/components.js';
@@ -64,6 +65,7 @@ window.tbSafeLocalStorageSet = (key, value, options) => storageQuota.safeSet(win
 
 window.UI = window.UI || {};
 Object.assign(window.UI, uiComponents);
+window.UI.tripView = tripView;
 
 // Optional: expose money helpers directly for convenience (legacy may redefine later; that's OK)
 window.moneyRound = window.moneyRound || money.moneyRound;
