@@ -33,6 +33,15 @@
   const PROGRAM_LOADS = sportCatalog.PROGRAM_LOADS.map((row) => row.slice());
   const EXERCISE_LIBRARY = sportCatalog.EXERCISE_LIBRARY.map((row) => ({ ...row }));
   const FALLBACK_EXERCISE_LIBRARY = EXERCISE_LIBRARY.map(row => Object.assign({}, row));
+  const sportProgramRules = window.Core?.sportProgramRules;
+  if (!sportProgramRules) throw new Error("Sport program rules indisponibles");
+  const {
+    currentProgramWeek,
+    nextPlannedSportRow,
+    plannedSportWeekRows,
+    programDaysFromSqlSessions,
+    sessionCode,
+  } = sportProgramRules;
 
   const CACHE = {
     loaded: false,
@@ -1656,98 +1665,6 @@
     const en = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     const i = Math.max(1, Math.min(7, Math.round(n(day, 1))));
     return lang() === "en" ? en[i] : fr[i];
-  }
-  function programDaysFromSqlSessions(rows) {
-    const byDay = {};
-    (rows || [])
-      .slice()
-      .sort((a, b) => n(a.sort_order, 0) - n(b.sort_order, 0))
-      .forEach(row => {
-        const day = Math.max(1, Math.min(7, Math.round(n(row.day_of_week, 0))));
-        const code = sessionCode({ sessionKey: row.session_key, id: row.session_key, name: row.name });
-        if (!day || !code) return;
-        const list = byDay[day] || [];
-        if (!list.includes(code)) list.push(code);
-        byDay[day] = list;
-      });
-    const out = {};
-    Object.keys(byDay).forEach(day => { out[day] = byDay[day].join("/"); });
-    return Object.keys(out).length ? out : { 2: "A1/B1", 4: "A2/B2", 6: "A3/B3" };
-  }
-  function saveSportProgram(program) {
-    const next = Object.assign({ enabled: true, startDate: todayISO(), days: { 1: "A1", 3: "A2", 5: "A3" } }, program || {});
-    try { localStorage.setItem(SPORT_PROGRAM_KEY(), JSON.stringify(next)); } catch (_) {}
-    return next;
-  }
-  function activateMassProgram() {
-    CACHE.program = saveSportProgram({ enabled: true, startDate: nextMondayISO(todayISO()), cycle: "A/B", days: { 1: "A1/B1", 3: "A2/B2", 5: "A3/B3" } });
-    sportFeedback(txt("Planning active", "Program activated"), txt("Alternance A/B le lundi, mercredi et vendredi.", "A/B rotation on Monday, Wednesday and Friday."), { toast: true });
-  }
-  function nextMondayISO(day) {
-    const d = new Date(`${String(day || todayISO()).slice(0, 10)}T00:00:00`);
-    const diff = (8 - (d.getDay() || 7)) % 7;
-    d.setDate(d.getDate() + diff);
-    return (typeof window.toLocalISODate === "function" ? window.toLocalISODate(d) : d.toISOString().slice(0, 10));
-  }
-  function mondayOfWeekISO(day) {
-    const d = new Date(`${String(day || todayISO()).slice(0, 10)}T12:00:00`);
-    const diff = (d.getDay() || 7) - 1;
-    d.setDate(d.getDate() - diff);
-    return localDateISO(d);
-  }
-  function daysBetweenISO(a, b) {
-    const da = new Date(`${String(a || todayISO()).slice(0, 10)}T12:00:00`);
-    const db = new Date(`${String(b || todayISO()).slice(0, 10)}T12:00:00`);
-    if (!Number.isFinite(da.getTime()) || !Number.isFinite(db.getTime())) return 0;
-    return Math.floor((db.getTime() - da.getTime()) / 86400000);
-  }
-  function sessionCode(row) {
-    const raw = String(row?.sessionKey || row?.id || row?.name || "").toUpperCase();
-    const match = raw.match(/\b([AB][123])\b|_([AB][123])\b|MASS_([AB][123])\b|SQL_([AB][123])\b/);
-    return (match?.[1] || match?.[2] || match?.[3] || match?.[4] || "").toUpperCase();
-  }
-  function sessionByCode(rows) {
-    const map = new Map();
-    (rows || []).forEach(row => {
-      const code = sessionCode(row);
-      if (code && !map.has(code)) map.set(code, row);
-    });
-    return map;
-  }
-  function plannedSessionCodeForDay(program, weekday, weekLabel) {
-    const raw = String(program?.days?.[weekday] || "");
-    if (!raw) return "";
-    const parts = raw.split("/").map(part => part.trim().toUpperCase()).filter(Boolean);
-    if (parts.length <= 1) return parts[0] || "";
-    const selected = parts.find(part => part.startsWith(String(weekLabel || "A").toUpperCase()));
-    return selected || parts[0] || "";
-  }
-  function currentProgramWeek(program) {
-    const cycle = String(program?.cycle || "").toUpperCase();
-    if (cycle === "A" || cycle === "B") return cycle;
-    const monday = mondayOfWeekISO(todayISO());
-    const start = mondayOfWeekISO(program?.startDate || program?.start_date || todayISO());
-    const diffWeeks = Math.max(0, Math.floor(daysBetweenISO(start, monday) / 7));
-    return diffWeeks % 2 === 0 ? "A" : "B";
-  }
-  function plannedSportWeekRows(rows, program, baseDay) {
-    if (!program?.enabled) return [];
-    const weekLabel = currentProgramWeek(program);
-    const byCode = sessionByCode(rows);
-    const start = mondayOfWeekISO(baseDay || todayISO());
-    return Array.from({ length: 7 }, (_, idx) => {
-      const day = offsetDateISO(start, idx);
-      const weekday = idx + 1;
-      const code = plannedSessionCodeForDay(program, weekday, weekLabel);
-      const session = code ? byCode.get(code) : null;
-      return { day, weekday, code, session, weekLabel, planned: Boolean(session) };
-    });
-  }
-  function nextPlannedSportRow(days, day) {
-    const today = String(day || todayISO()).slice(0, 10);
-    return (days || []).find(row => row.planned && row.day >= today)
-      || (days || []).find(row => row.planned)
-      || null;
   }
   function sessionPlannedLoadSummary(session) {
     const rows = (session?.plan || [])

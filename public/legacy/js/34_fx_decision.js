@@ -203,17 +203,18 @@
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 6000);
     try {
-      const res = await fetch(`https://api.frankfurter.dev/v1/${start}..${end}?base=${encodeURIComponent(f)}&symbols=${encodeURIComponent(t)}`, {
+      const frankfurter = window.Core?.frankfurterRules;
+      if (!frankfurter) throw new Error("frankfurter_rules_missing");
+      const url = frankfurter.buildFrankfurterV2RatesUrl({ base: f, quotes: [t], from: start, to: end });
+      const res = await fetch(url, {
         signal: controller.signal,
         cache: "no-store",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      const rows = normalizeAudEurRows(Object.entries(json?.rates || {})
-        .map(([date, row]) => ({ date, rate: Number(row?.[t]) }))
-      );
+      const rows = normalizeAudEurRows(frankfurter.normalizeFrankfurterSeries(json, { base: f, quote: t }));
       if (rows.length < 20) throw new Error("history_too_short");
-      return { rows, source: "frankfurter" };
+      return { rows, source: "frankfurter_v2" };
     } finally {
       clearTimeout(timer);
     }
@@ -391,9 +392,10 @@
   function renderCard(host, decision, rows, source, inputs) {
     const metrics = decision.metrics || {};
     const rate = decision.currentRate;
-    const sourceLabel = source === "db" ? T("fxdecision.source.db") : source === "frankfurter" ? T("fxdecision.source.market") : source === "cache" ? T("fxdecision.source.cache") : T("fxdecision.source.local");
-    const sourceTone = source === "db" || source === "frankfurter" ? "rgba(16,185,129,.12)" : source === "cache" ? "rgba(14,165,233,.12)" : "rgba(245,158,11,.14)";
-    const sourceBorder = source === "db" || source === "frankfurter" ? "rgba(16,185,129,.28)" : source === "cache" ? "rgba(14,165,233,.28)" : "rgba(245,158,11,.32)";
+    const isMarketSource = source === "frankfurter" || source === "frankfurter_v2";
+    const sourceLabel = source === "db" ? T("fxdecision.source.db") : isMarketSource ? T("fxdecision.source.market") : source === "cache" ? T("fxdecision.source.cache") : T("fxdecision.source.local");
+    const sourceTone = source === "db" || isMarketSource ? "rgba(16,185,129,.12)" : source === "cache" ? "rgba(14,165,233,.12)" : "rgba(245,158,11,.14)";
+    const sourceBorder = source === "db" || isMarketSource ? "rgba(16,185,129,.28)" : source === "cache" ? "rgba(14,165,233,.28)" : "rgba(245,158,11,.32)";
     const trendPct = Number(metrics.trendRatio || 0) * 100;
     const pos90Pct = Number(metrics.positionHorizon ?? metrics.position90 ?? 0) * 100;
     const volPct = Number(metrics.volatilityHorizon ?? metrics.volatility90 ?? 0) * 100;
