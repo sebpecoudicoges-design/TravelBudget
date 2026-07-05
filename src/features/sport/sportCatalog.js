@@ -20,7 +20,6 @@ export const CATALOG = [
     { key: "yoga", fr: "Yoga", en: "Yoga", met: 2.5, mode: "time", equipment: "mat" },
     { key: "mobility", fr: "Mobilite", en: "Mobility", met: 2.0, mode: "time", equipment: "mat" },
   ];
-
 export const EQUIPMENT = [
     ["bodyweight", "Poids du corps", "Bodyweight"],
     ["machine", "Machine", "Machine"],
@@ -263,4 +262,3 @@ export const EXERCISE_LIBRARY = [
     { key: "box_jump", goal: "cardio", equipment: "bodyweight", activityKey: "hiit", fr: "Box jump", en: "Box jump", mode: "reps", reps: 10, sets: 5, rest: 60, metValue: 8.0 },
     { key: "wall_ball", goal: "cardio", equipment: "mixed", activityKey: "hiit", fr: "Wall ball", en: "Wall ball", mode: "reps", reps: 15, sets: 5, rest: 60, metValue: 7.6 },
   ];
-
