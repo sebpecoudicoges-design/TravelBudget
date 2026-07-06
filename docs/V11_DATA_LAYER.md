@@ -10,6 +10,7 @@ Les modules UI ne doivent plus implementer eux-memes les appels Supabase, la fil
 - `src/data/mutationQueueStore.js` : stockage utilisateur, verrou inter-onglets, deduplication, reprise d'une synchronisation interrompue et backoff.
 - `src/data/entityStore.js` : etat explicite observable pour remplacer progressivement les caches globaux.
 - `src/data/sportRepository.js` : historique agrege, creation complete d'une seance, garde anti-doublon, suppression des enfants et modification de date.
+- `src/features/sport/sportStore.js` : source de verite Sport dans `entityStore` pour le plan, l'historique SQL/local, l'hydratation offline et les suppressions en attente.
 - `src/core/canonicalRecords.js` : formats canoniques pour transaction, entree nutrition et seance sport.
 
 Le fichier `public/legacy/js/00_offline_queue.js` est maintenant un adaptateur : il conserve les handlers metier historiques, mais delegue l'infrastructure a `src/data`.
@@ -33,4 +34,4 @@ La protection locale ameliore l'experience. Les contraintes Postgres restent la 
 
 ## Migration restante
 
-Le repository Sport est branche sur les lectures et mutations SQL principales. Son cache UI reste la prochaine migration vers `entityStore`; Nutrition et les derniers caches Trip suivront pendant leur decoupage. Ils ne doivent pas etre bascules en masse : chaque cache sera remplace avec ses tests et son parcours offline.
+Le repository et le store Sport sont branches sur les lectures, mutations, caches locaux et reprises offline principales. Les vues Timer et Historique restent a extraire du fichier legacy. Nutrition et les derniers caches Trip suivront pendant leur decoupage, avec leurs propres tests et parcours offline.

@@ -43,46 +43,10 @@
     sessionCode,
   } = sportProgramRules;
 
-  const CACHE = {
-    loaded: false,
-    loading: false,
-    error: "",
-    sessions: [],
-    items: [],
-    sets: [],
-    localSessions: loadLocalHistory(),
-    plan: loadPlan(),
-    timer: null,
-    pendingSummary: null,
-    wakeLock: null,
-    localScope: "",
-    status: "",
-    builderGoal: "strength",
-    builderEquipment: "all",
-    builderDuration: 35,
-    builderLevel: "regular",
-    builderFamily: "all",
-    timerFocus: false,
-    timerBeepVolume: loadTimerPrefs().beepVolume,
-    savingWorkoutKeys: new Set(),
-    exerciseSearch: "",
-    globalRestSeconds: loadGlobalRest(),
-    circuit: loadCircuit(),
-    program: loadSportProgram(),
-    sqlSessionFavorites: [],
-    programLoading: false,
-    programLoaded: false,
-    programSource: "fallback",
-    editingPlanIndex: null,
-    sessionEditor: null,
-    bodyMeasurements: loadBodyMeasurementsLocal(),
-    bodyMeasurementEditor: null,
-    bodyMeasurementsLoading: false,
-    bodyMeasurementsLoaded: false,
-    libraryLoaded: false,
-    libraryLoading: false,
-    librarySource: "fallback",
-  };
+  const createSportStore = window.Data?.createSportStore;
+  if (typeof createSportStore !== "function") throw new Error("Sport store indisponible");
+  const sportStore = createSportStore({}, { entityStore: window.Data?.appStore, namespace: "sport" });
+  const CACHE = sportStore.state;
   let sessionEditorModal = null;
 
   function lang() {
@@ -126,9 +90,12 @@
   function reloadScopedLocalState(force) {
     const scope = sportStorageScope();
     if (!force && CACHE.localScope === scope) return;
-    CACHE.localScope = scope;
-    CACHE.localSessions = loadLocalHistory();
-    CACHE.plan = loadPlan();
+    sportStore.hydrateScope({
+      localScope: scope,
+      localSessions: loadLocalHistory(),
+      pendingDeletes: loadPendingDeletes(),
+      plan: loadPlan(),
+    });
     CACHE.globalRestSeconds = loadGlobalRest();
     CACHE.circuit = loadCircuit();
     CACHE.program = loadSportProgram();
@@ -139,12 +106,22 @@
     CACHE.bodyMeasurements = loadBodyMeasurementsLocal();
     CACHE.bodyMeasurementsLoaded = false;
   }
+  reloadScopedLocalState(true);
   function activeTravelId() { return window.state?.activeTravelId || null; }
   function table(name) { return window.TB_CONST?.TABLES?.[name] || name; }
   function n(v, fallback) {
     if (v === "" || v == null) return fallback || 0;
     const x = Number(v);
     return Number.isFinite(x) ? x : (fallback || 0);
+  }
+  function persistSportCache(key, value) {
+    try {
+      if (typeof window.tbSafeLocalStorageSet === "function") return window.tbSafeLocalStorageSet(key, value);
+      localStorage.setItem(key, value);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error };
+    }
   }
   function sportLibraryRules() { return window.Core?.sportLibraryRules || null; }
   function normalizeSportExercise(row) {
@@ -633,7 +610,8 @@
     } catch (_) { return []; }
   }
   function savePlan() {
-    try { localStorage.setItem(PLAN_KEY(), JSON.stringify(CACHE.plan || [])); } catch (_) {}
+    const rows = sportStore.setPlan(CACHE.plan || []);
+    persistSportCache(PLAN_KEY(), JSON.stringify(rows));
   }
   function loadLocalHistory() {
     try {
@@ -665,10 +643,11 @@
     } catch (_) { return []; }
   }
   function saveLocalHistory(rows) {
-    try { localStorage.setItem(HISTORY_KEY(), JSON.stringify((rows || []).slice(0, 50))); } catch (_) {}
+    const clean = sportStore.setLocalSessions(rows);
+    persistSportCache(HISTORY_KEY(), JSON.stringify(clean));
   }
   function saveAnonHistory(rows) {
-    try { localStorage.setItem(ANON_HISTORY_KEY(), JSON.stringify((rows || []).slice(0, 50))); } catch (_) {}
+    persistSportCache(ANON_HISTORY_KEY(), JSON.stringify((rows || []).slice(0, 50)));
     try { localStorage.removeItem(baseHistoryKey()); } catch (_) {}
   }
   function isHeavyBagPlanItem(item) {
@@ -695,15 +674,16 @@
     return { rows: next, changed };
   }
   function loadPendingDeletes() {
+    if (CACHE.localScope === sportStorageScope()) return Array.isArray(CACHE.pendingDeletes) ? CACHE.pendingDeletes.slice() : [];
     try {
       const rows = JSON.parse(localStorage.getItem(DELETE_QUEUE_KEY()) || "[]");
       return Array.isArray(rows) ? rows.map(String).filter(Boolean) : [];
     } catch (_) { return []; }
   }
   function savePendingDeletes(rows) {
-    const clean = Array.from(new Set((rows || []).map(String).filter(Boolean))).slice(0, 80);
+    const clean = sportStore.setPendingDeletes(rows);
     try {
-      if (clean.length) localStorage.setItem(DELETE_QUEUE_KEY(), JSON.stringify(clean));
+      if (clean.length) persistSportCache(DELETE_QUEUE_KEY(), JSON.stringify(clean));
       else localStorage.removeItem(DELETE_QUEUE_KEY());
     } catch (_) {}
     return clean;
@@ -711,12 +691,12 @@
   function rememberPendingDelete(id) {
     const key = String(id || "");
     if (!key || key.startsWith("local_")) return;
-    savePendingDeletes(loadPendingDeletes().concat(key));
+    savePendingDeletes(sportStore.rememberPendingDelete(key));
   }
   function clearPendingDelete(id) {
     const key = String(id || "");
     if (!key) return;
-    savePendingDeletes(loadPendingDeletes().filter(x => x !== key));
+    savePendingDeletes(sportStore.clearPendingDelete(key));
   }
   function isPendingDeleted(id) {
     const key = String(id || "");
@@ -777,15 +757,13 @@
       localOnly: !synced,
       savedLocallyAt: new Date().toISOString(),
     });
-    CACHE.localSessions = [row].concat((CACHE.localSessions || []).filter(s => s.localId !== id)).slice(0, 50);
+    sportStore.rememberLocalWorkout(row);
     saveLocalHistory(CACHE.localSessions);
     return row;
   }
   function markLocalSynced(localId, remoteId) {
     if (!localId) return;
-    CACHE.localSessions = (CACHE.localSessions || []).map(s => String(s.localId) === String(localId)
-      ? Object.assign({}, s, { localOnly: false, remoteId: remoteId || s.remoteId })
-      : s);
+    sportStore.markLocalSynced(localId, remoteId);
     saveLocalHistory(CACHE.localSessions);
   }
   function isLocalWorkoutUnsynced(row) {
@@ -821,37 +799,18 @@
   }
   function removeLocalWorkout(id) {
     const key = String(id || "");
-    CACHE.localSessions = (CACHE.localSessions || []).filter(s => String(s.localId || s.id || "") !== key && String(s.remoteId || "") !== key);
+    sportStore.removeWorkout(key);
     saveLocalHistory(CACHE.localSessions);
     sportHistoryKeys().forEach(storageKey => removeWorkoutFromStoredHistory(storageKey, key));
   }
   function removeSessionFromRuntime(id) {
     const key = String(id || "");
     if (!key) return;
-    const itemIds = new Set((CACHE.items || [])
-      .filter(item => String(item.session_id || "") === key)
-      .map(item => String(item.id || ""))
-      .filter(Boolean));
-    CACHE.sessions = (CACHE.sessions || []).filter(s => String(s.id || "") !== key);
-    CACHE.items = (CACHE.items || []).filter(item => String(item.session_id || "") !== key);
-    CACHE.sets = (CACHE.sets || []).filter(set => !itemIds.has(String(set.item_id || "")));
+    sportStore.removeWorkout(key);
     publishSportHistory("delete-local");
   }
   function updateLocalWorkoutDate(id, newDate) {
-    const key = String(id || "");
-    const d = String(newDate || "").slice(0, 10);
-    if (!key || !d) return false;
-    let changed = false;
-    CACHE.localSessions = (CACHE.localSessions || []).map(s => {
-      if (String(s.localId || s.id || "") !== key && String(s.remoteId || "") !== key) return s;
-      changed = true;
-      const oldStart = String(s.startedAt || s.started_at || new Date().toISOString());
-      const oldEnd = String(s.endedAt || s.ended_at || oldStart);
-      return Object.assign({}, s, {
-        startedAt: `${d}T${oldStart.slice(11, 19) || "00:00:00"}`,
-        endedAt: `${d}T${oldEnd.slice(11, 19) || oldStart.slice(11, 19) || "00:00:00"}`,
-      });
-    });
+    const changed = sportStore.updateLocalWorkoutDate(id, newDate);
     if (changed) saveLocalHistory(CACHE.localSessions);
     return changed;
   }
@@ -2328,9 +2287,7 @@
 
   function publishSportHistory(reason) {
     if (window.state) {
-      state.sportSessions = Array.isArray(CACHE.sessions) ? CACHE.sessions : [];
-      state.sportSessionItems = Array.isArray(CACHE.items) ? CACHE.items : [];
-      state.sportSets = Array.isArray(CACHE.sets) ? CACHE.sets : [];
+      Object.assign(state, sportStore.appSnapshot());
     }
     try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
     try {
@@ -2347,22 +2304,13 @@
       ? await window.tbShouldUseOfflineMode("sport:loadHistory")
       : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
     if (offline) {
-      CACHE.sessions = Array.isArray(state?.sportSessions) ? state.sportSessions : [];
-      CACHE.items = Array.isArray(state?.sportSessionItems) ? state.sportSessionItems : [];
-      CACHE.sets = Array.isArray(state?.sportSets) ? state.sportSets : [];
-      CACHE.loaded = true;
-      CACHE.loading = false;
-      CACHE.error = "";
+      sportStore.hydrateOffline(state || {});
       CACHE.status = txt("Historique restaure hors ligne.", "History restored offline.");
       publishSportHistory("offline");
       return;
     }
     if (!c || !userId) {
-      CACHE.loaded = true;
-      CACHE.sessions = [];
-      CACHE.items = [];
-      CACHE.sets = [];
-      CACHE.error = "";
+      sportStore.hydrateRemote({ sessions: [], items: [], sets: [] }, loadPendingDeletes());
       CACHE.status = txt("Historique local uniquement pour le moment.", "Local history only for now.");
       publishSportHistory("local");
       return;
@@ -2381,14 +2329,7 @@
         limit: 20,
       });
       const pendingDeletes = new Set(loadPendingDeletes());
-      const filteredSessions = history.sessions.filter(s => !pendingDeletes.has(String(s.id || "")));
-      const sessionIds = new Set(filteredSessions.map(s => String(s.id || "")));
-      const filteredItems = history.items.filter(item => sessionIds.has(String(item.session_id || "")));
-      const itemIds = new Set(filteredItems.map(item => String(item.id || "")));
-      CACHE.sessions = filteredSessions;
-      CACHE.items = filteredItems;
-      CACHE.sets = history.sets.filter(set => itemIds.has(String(set.item_id || "")));
-      CACHE.loaded = true;
+      sportStore.hydrateRemote(history, Array.from(pendingDeletes));
       CACHE.status = CACHE.sessions.length
         ? txt(`Historique synchronise : ${CACHE.sessions.length} seance(s) SQL.`, `Synced history: ${CACHE.sessions.length} SQL workout(s).`)
         : txt("Aucune seance SQL pour ce compte. Les seances locales restent visibles tant qu'elles ne sont pas synchronisees.", "No SQL workout for this account. Local workouts remain visible until synced.");
@@ -2397,10 +2338,7 @@
       CACHE.error = e?.message || String(e);
       CACHE.loaded = true;
       if (isOfflineSkipError(CACHE.error)) {
-        CACHE.sessions = Array.isArray(state?.sportSessions) ? state.sportSessions : [];
-        CACHE.items = Array.isArray(state?.sportSessionItems) ? state.sportSessionItems : [];
-        CACHE.sets = Array.isArray(state?.sportSets) ? state.sportSets : [];
-        CACHE.error = "";
+        sportStore.hydrateOffline(state || {});
         CACHE.status = txt("Historique restaure hors ligne.", "History restored offline.");
         publishSportHistory("fallback");
       } else {
@@ -4807,13 +4745,8 @@
   }
 
   window.addEventListener("tb:auth_scope_changed", () => {
+    sportStore.resetAccountScope();
     reloadScopedLocalState(true);
-    CACHE.loaded = false;
-    CACHE.sessions = [];
-    CACHE.items = [];
-    CACHE.sets = [];
-    CACHE.error = "";
-    CACHE.status = "";
   });
 
   window.renderSport = renderSport;
