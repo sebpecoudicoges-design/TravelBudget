@@ -263,7 +263,11 @@
     _lastSyncAt = Date.now();
     try {
       const payload = todo.map(_payload);
-      const { error } = await window.sb.from("app_error_logs").insert(payload);
+      const errorLogTable = window.TB_CONST?.TABLES?.app_error_logs;
+      if (!errorLogTable) throw new Error("Table app_error_logs indisponible");
+      const { error } = await window.sb
+        .from(errorLogTable)
+        .upsert(payload, { onConflict: "id", ignoreDuplicates: true });
       if (error) throw error;
       const synced = new Set(todo.map((x) => String(x.id)));
       const next = rows.map((x) => synced.has(String(x.id)) ? { ...x, synced: true, synced_at: _now() } : x);

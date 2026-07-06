@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   currentProgramWeek,
+  nextMondayISO,
   plannedSportWeekRows,
+  progressionIncrementKg,
   programDaysFromSqlSessions,
   sessionCode,
 } from '../../../src/features/sport/sportProgramRules.js';
@@ -23,6 +25,17 @@ describe('sport program rules', () => {
     const program = { cycle: 'A/B', startDate: '2026-06-22' };
     expect(currentProgramWeek(program, '2026-06-23')).toBe('A');
     expect(currentProgramWeek(program, '2026-06-30')).toBe('B');
+  });
+
+  it('finds the next Monday without shifting an existing Monday', () => {
+    expect(nextMondayISO('2026-07-06')).toBe('2026-07-06');
+    expect(nextMondayISO('2026-07-07')).toBe('2026-07-13');
+  });
+
+  it('increments paired dumbbells per hand and keeps single dumbbells per implement', () => {
+    expect(progressionIncrementKg({ equipment: 'dumbbell', loadLabel: '2 x 15 kg' })).toBe(2);
+    expect(progressionIncrementKg({ equipment: 'dumbbell', exerciseName: 'Curl halteres' })).toBe(1);
+    expect(progressionIncrementKg({ equipment: 'barbell', exerciseName: 'Squat arriere' })).toBe(5);
   });
 
   it('builds the current week with planned and rest days', () => {

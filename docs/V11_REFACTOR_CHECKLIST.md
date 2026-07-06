@@ -75,6 +75,9 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire les regles de cycle A/B, semaine planifiee, jours de repos et correspondance des seances.
   - [x] Extraire la construction serie/repos et l'insertion d'une serie au bon exercice.
   - [x] Unifier la finalisation et les payloads d'historique entre sauvegarde immediate et resynchronisation.
+  - [x] Centraliser historique, creation, deduplication, suppression et modification de date dans `src/data/sportRepository.js`.
+  - [ ] Extraire le store Sport et migrer les caches locaux vers `entityStore`.
+  - [ ] Extraire les vues Timer et Historique hors du fichier legacy.
 - [ ] Nutrition : separer catalogue, journal, objectifs et historique.
 - [ ] Sante : separer score, tendances et saisies corporelles.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.

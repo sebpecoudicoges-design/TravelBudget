@@ -108,6 +108,11 @@
     return raw.slice(0, 10);
   }
   function client() { return window.sb || null; }
+  function sportRepository() {
+    const repository = window.Data?.sportRepository;
+    if (!repository) throw new Error("Sport repository indisponible");
+    return repository;
+  }
   function currentUser() {
     try { if (window.sbUser && window.sbUser.id) return window.sbUser; } catch (_) {}
     try { if (sbUser && sbUser.id) return sbUser; } catch (_) {}
@@ -480,13 +485,8 @@
     return { min, max };
   }
   function progressionIncrementKg(item) {
-    const equipment = String(item?.equipment || "");
-    const name = `${item?.exerciseName || ""} ${item?.key || ""} ${item?.activityKey || ""}`.toLowerCase();
-    if (equipment === "dumbbell" || name.includes("haltere") || name.includes("dumbbell")) return 1;
-    if (name.includes("developpe couche") || name.includes("bench")) return 2.5;
-    if (name.includes("squat") || name.includes("souleve") || name.includes("deadlift") || name.includes("romanian")) return 5;
-    if (equipment === "barbell" || equipment === "machine" || equipment === "plate") return 2.5;
-    return 2;
+    const rule = window.Core?.sportProgramRules?.progressionIncrementKg;
+    return typeof rule === "function" ? rule(item) : 2;
   }
   function applyDoubleProgression(plan, doneSets) {
     const progressions = [];
@@ -811,17 +811,13 @@
     const started = row.startedAt || row.started_at;
     const duration = Math.max(0, Math.round(n(row.durationSeconds || row.duration_seconds, 0)));
     if (!started || !duration) return null;
-    const res = await c
-      .from(table("sport_sessions"))
-      .select("id,created_at")
-      .eq("user_id", userId)
-      .eq("activity_type", primaryActivityForWorkout(row))
-      .eq("started_at", started)
-      .eq("duration_seconds", duration)
-      .order("created_at", { ascending: true })
-      .limit(1);
-    if (res.error) throw res.error;
-    return (res.data || [])[0]?.id || null;
+    return sportRepository().findExistingWorkout({
+      table: table("sport_sessions"),
+      userId,
+      activityType: primaryActivityForWorkout(row),
+      startedAt: started,
+      durationSeconds: duration,
+    });
   }
   function removeLocalWorkout(id) {
     const key = String(id || "");
@@ -1557,6 +1553,27 @@
       const raw = JSON.parse(localStorage.getItem(SPORT_PROGRAM_KEY()) || "{}");
       return raw && raw.enabled ? raw : { enabled: false };
     } catch (_) { return { enabled: false }; }
+  }
+  function saveSportProgram(program) {
+    const next = Object.assign({ enabled: true, startDate: todayISO(), days: { 1: "A1", 3: "A2", 5: "A3" } }, program || {});
+    try { localStorage.setItem(SPORT_PROGRAM_KEY(), JSON.stringify(next)); } catch (_) {}
+    return next;
+  }
+  function nextMondayISO(day) {
+    return sportProgramRules.nextMondayISO(day || todayISO());
+  }
+  function activateMassProgram() {
+    CACHE.program = saveSportProgram({
+      enabled: true,
+      startDate: nextMondayISO(todayISO()),
+      cycle: "A/B",
+      days: { 1: "A1/B1", 3: "A2/B2", 5: "A3/B3" },
+    });
+    sportFeedback(
+      txt("Planning active", "Program activated"),
+      txt("Alternance A/B le lundi, mercredi et vendredi.", "A/B rotation on Monday, Wednesday and Friday."),
+      { toast: true }
+    );
   }
   function sqlProgramExerciseToPlanItem(row) {
     const mode = String(row?.mode || "reps");
@@ -2354,38 +2371,23 @@
     CACHE.error = "";
     try {
       await syncPendingSportDeletes(c, userId);
-      const sess = await c
-        .from(table("sport_sessions"))
-        .select("id,user_id,travel_id,activity_type,started_at,ended_at,duration_seconds,mood_before,mood_after,energy,fatigue,pain,body_weight_kg,notes,estimated_kcal,created_at")
-        .eq("user_id", userId)
-        .order("started_at", { ascending: false })
-        .limit(20);
-      if (sess.error) throw sess.error;
+      const history = await sportRepository().loadHistory({
+        tables: {
+          sessions: table("sport_sessions"),
+          items: table("sport_session_items"),
+          sets: table("sport_sets"),
+        },
+        userId,
+        limit: 20,
+      });
       const pendingDeletes = new Set(loadPendingDeletes());
-      const filteredSessions = (sess.data || []).filter(s => !pendingDeletes.has(String(s.id || "")));
-      const sessionIds = filteredSessions.map(s => s.id).filter(Boolean);
-      let items = { data: [], error: null };
-      let sets = { data: [], error: null };
-      if (sessionIds.length) {
-        items = await c
-          .from(table("sport_session_items"))
-          .select("id,user_id,session_id,activity_key,exercise_name,equipment,mode,target_reps,target_seconds,distance_m,planned_sets,rest_seconds,sort_order,met_value,notes")
-          .in("session_id", sessionIds)
-          .order("sort_order", { ascending: true });
-        if (items.error) throw items.error;
-        const itemIds = (items.data || []).map(i => i.id).filter(Boolean);
-        if (itemIds.length) {
-          sets = await c
-            .from(table("sport_sets"))
-            .select("id,user_id,item_id,set_index,reps,duration_seconds,weight_kg,distance_m,completed_at,perceived_effort,notes")
-            .in("item_id", itemIds)
-            .order("set_index", { ascending: true });
-          if (sets.error) throw sets.error;
-        }
-      }
+      const filteredSessions = history.sessions.filter(s => !pendingDeletes.has(String(s.id || "")));
+      const sessionIds = new Set(filteredSessions.map(s => String(s.id || "")));
+      const filteredItems = history.items.filter(item => sessionIds.has(String(item.session_id || "")));
+      const itemIds = new Set(filteredItems.map(item => String(item.id || "")));
       CACHE.sessions = filteredSessions;
-      CACHE.items = items.data || [];
-      CACHE.sets = sets.data || [];
+      CACHE.items = filteredItems;
+      CACHE.sets = history.sets.filter(set => itemIds.has(String(set.item_id || "")));
       CACHE.loaded = true;
       CACHE.status = CACHE.sessions.length
         ? txt(`Historique synchronise : ${CACHE.sessions.length} seance(s) SQL.`, `Synced history: ${CACHE.sessions.length} SQL workout(s).`)
@@ -4392,29 +4394,18 @@
       }
       try {
         const buildRows = window.Core?.sportRules?.buildSportPersistenceRows;
-        const bindSets = window.Core?.sportRules?.bindSportSetRows;
-        if (typeof buildRows !== "function" || typeof bindSets !== "function") throw new Error("Sport persistence rules indisponibles");
+        if (typeof buildRows !== "function") throw new Error("Sport persistence rules indisponibles");
         const initialRows = buildRows(summary, { userId, travelId: activeTravelId() });
-        const sess = await c
-          .from(table("sport_sessions"))
-          .insert([initialRows.session])
-          .select("id")
-          .single();
-        if (sess.error) throw sess.error;
-        const sessionId = sess.data?.id;
+        const created = await sportRepository().createWorkout({
+          tables: {
+            sessions: table("sport_sessions"),
+            items: table("sport_session_items"),
+            sets: table("sport_sets"),
+          },
+          rows: initialRows,
+        });
+        const sessionId = created.sessionId;
         markLocalSynced(localRow.localId, sessionId);
-        const rows = buildRows(summary, { userId, travelId: activeTravelId(), sessionId });
-        const items = await c
-          .from(table("sport_session_items"))
-          .insert(rows.items)
-          .select("id,sort_order");
-        if (items.error) throw items.error;
-        const itemByIndex = new Map((items.data || []).map(row => [Number(row.sort_order), row.id]));
-        const setRows = bindSets(rows.sets, itemByIndex);
-        if (setRows.length) {
-          const savedSets = await c.from(table("sport_sets")).insert(setRows);
-          if (savedSets.error) throw savedSets.error;
-        }
         CACHE.loaded = false;
         CACHE.status = txt("Seance sauvegardee et synchronisee.", "Workout saved and synced.");
         await loadHistory();
@@ -4446,26 +4437,18 @@
       return true;
     }
     const buildRows = window.Core?.sportRules?.buildSportPersistenceRows;
-    const bindSets = window.Core?.sportRules?.bindSportSetRows;
-    if (typeof buildRows !== "function" || typeof bindSets !== "function") throw new Error("Sport persistence rules indisponibles");
+    if (typeof buildRows !== "function") throw new Error("Sport persistence rules indisponibles");
     const summary = Object.assign({}, row, { plan, doneSets });
     const initialRows = buildRows(summary, { userId, travelId: activeTravelId() });
-    const sess = await c
-      .from(table("sport_sessions"))
-      .insert([initialRows.session])
-      .select("id")
-      .single();
-    if (sess.error) throw sess.error;
-    const sessionId = sess.data?.id;
-    const rows = buildRows(summary, { userId, travelId: activeTravelId(), sessionId });
-    const items = await c.from(table("sport_session_items")).insert(rows.items).select("id,sort_order");
-    if (items.error) throw items.error;
-    const itemByIndex = new Map((items.data || []).map(item => [Number(item.sort_order), item.id]));
-    const setRows = bindSets(rows.sets, itemByIndex);
-    if (setRows.length) {
-      const savedSets = await c.from(table("sport_sets")).insert(setRows);
-      if (savedSets.error) throw savedSets.error;
-    }
+    const created = await sportRepository().createWorkout({
+      tables: {
+        sessions: table("sport_sessions"),
+        items: table("sport_session_items"),
+        sets: table("sport_sets"),
+      },
+      rows: initialRows,
+    });
+    const sessionId = created.sessionId;
     markLocalSynced(row.localId || row.id, sessionId);
     return true;
   }
@@ -4506,20 +4489,15 @@
       .filter(item => String(item.session_id || "") === key)
       .map(item => item.id)
       .filter(Boolean);
-    if (!itemIds.length) {
-      const found = await c.from(table("sport_session_items")).select("id").eq("session_id", key);
-      if (found.error) throw found.error;
-      itemIds = (found.data || []).map(item => item.id).filter(Boolean);
-    }
-    if (itemIds.length) {
-      const sets = await c.from(table("sport_sets")).delete().in("item_id", itemIds);
-      if (sets.error) throw sets.error;
-    }
-    const items = await c.from(table("sport_session_items")).delete().eq("session_id", key);
-    if (items.error) throw items.error;
-    const sess = await c.from(table("sport_sessions")).delete().eq("id", key);
-    if (sess.error) throw sess.error;
-    return true;
+    return sportRepository().deleteWorkout({
+      tables: {
+        sessions: table("sport_sessions"),
+        items: table("sport_session_items"),
+        sets: table("sport_sets"),
+      },
+      sessionId: key,
+      itemIds,
+    });
   }
 
   async function syncPendingSportDeletes(c, userId) {
@@ -4578,11 +4556,12 @@
     CACHE.status = txt("Date de seance mise a jour...", "Updating workout date...");
     try {
       if (c && !id.startsWith("local_")) {
-        const res = await c
-          .from(table("sport_sessions"))
-          .update({ started_at: startedAt, ended_at: endedAt })
-          .eq("id", id);
-        if (res.error) throw res.error;
+        await sportRepository().updateSessionDate({
+          table: table("sport_sessions"),
+          sessionId: id,
+          startedAt,
+          endedAt,
+        });
       }
       CACHE.loaded = false;
       CACHE.status = txt("Date de seance mise a jour.", "Workout date updated.");

@@ -23,6 +23,25 @@ export function mondayOfWeekISO(value) {
   return addDaysISO(value, 1 - weekday);
 }
 
+export function nextMondayISO(value) {
+  const timestamp = dateValue(value);
+  if (!Number.isFinite(timestamp)) return '';
+  const weekday = new Date(timestamp).getUTCDay() || 7;
+  return addDaysISO(value, (8 - weekday) % 7);
+}
+
+export function progressionIncrementKg(item) {
+  const equipment = String(item?.equipment || '').toLowerCase();
+  const name = `${item?.exerciseName || ''} ${item?.key || ''} ${item?.activityKey || ''}`.toLowerCase();
+  const pairedDumbbells = /^\s*2\s*x\s*/i.test(String(item?.loadLabel || item?.load_label || ''));
+  if (pairedDumbbells) return 2;
+  if (equipment === 'dumbbell' || name.includes('haltere') || name.includes('dumbbell')) return 1;
+  if (name.includes('developpe couche') || name.includes('bench')) return 2.5;
+  if (name.includes('squat') || name.includes('souleve') || name.includes('deadlift') || name.includes('romanian')) return 5;
+  if (equipment === 'barbell' || equipment === 'machine' || equipment === 'plate') return 2.5;
+  return 2;
+}
+
 export function daysBetweenISO(from, to) {
   const start = dateValue(from);
   const end = dateValue(to);
