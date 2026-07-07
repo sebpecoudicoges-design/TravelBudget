@@ -32,6 +32,7 @@ import * as sportCatalog from '../features/sport/sportCatalog.js';
 import * as sportProgramRules from '../features/sport/sportProgramRules.js';
 import * as sportTimerView from '../features/sport/sportTimerView.js';
 import * as sportHistoryView from '../features/sport/sportHistoryView.js';
+import * as sportSessionSandboxView from '../features/sport/sportSessionSandboxView.js';
 import { storageQuota } from '../data/storageQuota.js';
 import * as sportRules from '../core/sportRules.js';
 import * as uiComponents from '../ui/components.js';
@@ -80,6 +81,7 @@ Object.assign(window.UI, uiComponents);
 window.UI.tripView = tripView;
 window.UI.sportTimerView = sportTimerView;
 window.UI.sportHistoryView = sportHistoryView;
+window.UI.sportSessionSandboxView = sportSessionSandboxView;
 
 // Optional: expose money helpers directly for convenience (legacy may redefine later; that's OK)
 window.moneyRound = window.moneyRound || money.moneyRound;

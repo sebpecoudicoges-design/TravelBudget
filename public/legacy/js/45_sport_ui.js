@@ -4279,55 +4279,20 @@
         set.setIndex = next;
       });
     };
-    const setRowHTML = (set, idx) => {
-      const item = plan[Math.max(0, Math.round(n(set.itemIndex, 0)))] || {};
-      const isReps = item.mode === "reps" || set.reps != null;
-      return `<div class="tb-sport-set-editor-row">
-        <div>
-          <strong>${esc(item.exerciseName || labelActivity(item.activityKey || "strength"))}</strong>
-          <div class="muted">${esc(txt("Serie", "Set"))} ${esc(String(set.setIndex || idx + 1))} · ${fmtSec(set.durationSeconds || 0)} · MET ${esc(String(Math.round(n(item.metValue, 0) * 10) / 10))}</div>
-        </div>
-        <label style="display:grid;gap:4px;">
-          <span class="muted" style="font-size:12px;">${esc(txt("Reps", "Reps"))}</span>
-          <input data-sport-sandbox-reps="${idx}" type="number" min="0" step="1" inputmode="numeric" value="${esc(String(isReps ? Math.round(n(set.reps, item.targetReps || 0)) : ""))}" ${isReps ? "" : "disabled"} />
-        </label>
-        <label style="display:grid;gap:4px;">
-          <span class="muted" style="font-size:12px;">sec</span>
-          <input data-sport-sandbox-seconds="${idx}" type="number" min="0" step="1" inputmode="numeric" value="${esc(String(Math.round(n(set.durationSeconds, setWorkSeconds(item)))))}" />
-        </label>
-        <label style="display:grid;gap:4px;">
-          <span class="muted" style="font-size:12px;">kg</span>
-          <input data-sport-sandbox-load="${idx}" type="number" step="0.5" inputmode="decimal" value="${esc(String(supportsExternalLoad(item) ? (n(set.weightKg, 0) > 0 ? n(set.weightKg, 0) : lastLoadForExercise(item, set.weightKg)) : 0))}" ${supportsExternalLoad(item) ? "" : "disabled"} />
-        </label>
-        <button class="btn danger small" type="button" data-sport-sandbox-delete="${idx}" title="${esc(txt("Supprimer la serie", "Delete set"))}">×</button>
-      </div>`;
-    };
     const modal = window.UI?.createModal?.({
       id: "tb-sport-session-sandbox",
       size: "lg",
       title: txt("Ajuster la seance", "Adjust workout"),
       subtitle: txt("Modifie uniquement les series reellement effectuees.", "Edit completed sets only."),
       closeLabel: txt("Fermer", "Close"),
-      contentHTML: `
-        <div class="tb-sport-stats" style="margin:12px 0;">
-          <div class="tb-sport-stat"><span>${esc(txt("Avant", "Before"))}</span><strong>${Math.round(n(session.estimated_kcal || session.estimatedKcal, 0))} kcal</strong></div>
-          <div class="tb-sport-stat"><span>${esc(txt("Apres", "After"))}</span><strong id="sport-sandbox-kcal">0 kcal</strong></div>
-          <div class="tb-sport-stat"><span>${esc(txt("Series", "Sets"))}</span><strong id="sport-sandbox-set-count">${doneSets.length}</strong></div>
-          <div class="tb-sport-stat"><span>${esc(txt("Poids corps", "Body weight"))}</span><strong>${Math.round(weightKg * 10) / 10} kg</strong></div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:10px;">
-          <label style="display:grid;gap:4px;min-width:220px;flex:1;">
-            <span class="muted" style="font-size:12px;">${esc(txt("Ajouter une serie", "Add a set"))}</span>
-            <select id="sport-sandbox-add-exercise">
-              ${plan.map((item, idx) => `<option value="${idx}">${esc(item.exerciseName || labelActivity(item.activityKey || "strength"))}</option>`).join("")}
-            </select>
-          </label>
-          <button class="btn" type="button" id="sport-sandbox-add-set">+ ${esc(txt("Serie", "Set"))}</button>
-        </div>
-        <div style="display:grid;gap:8px;" id="sport-sandbox-set-list">
-          ${doneSets.map(setRowHTML).join("")}
-        </div>`,
-      actionsHTML: `<button class="btn" type="button" id="sport-sandbox-cancel">${esc(txt("Annuler", "Cancel"))}</button><button class="btn primary" type="button" id="sport-sandbox-save">${esc(txt("Sauvegarder", "Save"))}</button>`,
+      contentHTML: window.UI?.sportSessionSandboxView?.renderSandboxContent?.({
+        session,
+        plan,
+        doneSets,
+        weightKg,
+        api: sportViewApi(),
+      }) || "",
+      actionsHTML: window.UI?.sportSessionSandboxView?.renderSandboxActions?.({ api: sportViewApi() }) || "",
     });
     if (!modal) return;
     const wrap = modal.root;
@@ -4349,7 +4314,7 @@
     const renderSetList = () => {
       normalizeSetIndexes();
       const list = wrap.querySelector("#sport-sandbox-set-list");
-      if (list) list.innerHTML = doneSets.map(setRowHTML).join("");
+      if (list) list.innerHTML = window.UI?.sportSessionSandboxView?.renderSandboxSetList?.({ doneSets, plan, api: sportViewApi() }) || "";
       const count = wrap.querySelector("#sport-sandbox-set-count");
       if (count) count.textContent = String(doneSets.length);
       wrap.querySelectorAll("[data-sport-sandbox-load],[data-sport-sandbox-reps],[data-sport-sandbox-seconds]").forEach(input => { input.oninput = refreshPreview; });
