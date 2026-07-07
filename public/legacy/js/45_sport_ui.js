@@ -4270,15 +4270,14 @@
     closeSportSessionSandbox();
     const durationSeconds = n(session.duration_seconds || session.durationSeconds, doneSets.reduce((sum, set) => sum + n(set.durationSeconds, 0), 0));
     const weightKg = n(session.body_weight_kg || session.bodyWeightKg, bodyWeight());
-    const normalizeSetIndexes = () => {
-      const counters = new Map();
-      doneSets.forEach(set => {
-        const itemIndex = Math.max(0, Math.round(n(set.itemIndex, 0)));
-        const next = (counters.get(itemIndex) || 0) + 1;
-        counters.set(itemIndex, next);
-        set.setIndex = next;
-      });
-    };
+    const sandboxRules = window.Core?.sportSessionSandboxRules || {};
+    const sandboxRulesApi = () => ({
+      numberValue: n,
+      setWorkSeconds,
+      supportsExternalLoad,
+      lastLoadForExercise,
+      effectiveLoadKg,
+    });
     const modal = window.UI?.createModal?.({
       id: "tb-sport-session-sandbox",
       size: "lg",
@@ -4312,7 +4311,8 @@
       return kcal;
     };
     const renderSetList = () => {
-      normalizeSetIndexes();
+      const normalizedSets = sandboxRules.normalizeSandboxSetIndexes?.(doneSets) || doneSets;
+      doneSets.splice(0, doneSets.length, ...normalizedSets);
       const list = wrap.querySelector("#sport-sandbox-set-list");
       if (list) list.innerHTML = window.UI?.sportSessionSandboxView?.renderSandboxSetList?.({ doneSets, plan, api: sportViewApi() }) || "";
       const count = wrap.querySelector("#sport-sandbox-set-count");
@@ -4321,12 +4321,9 @@
       wrap.querySelectorAll("[data-sport-sandbox-delete]").forEach(btn => {
         btn.onclick = () => {
           const idx = Math.max(0, Math.round(n(btn.getAttribute("data-sport-sandbox-delete"), 0)));
-          const currentSets = readNextSets();
-          doneSets.splice(0, doneSets.length, ...currentSets);
-          doneSets.splice(idx, 1);
-          plan.forEach((item, itemIndex) => {
-            item.sets = doneSets.filter(set => Math.round(n(set.itemIndex, 0)) === itemIndex).length;
-          });
+          const result = sandboxRules.removeSandboxSet?.({ plan, doneSets: readNextSets(), index: idx }) || { plan, doneSets };
+          plan.splice(0, plan.length, ...(result.plan || plan));
+          doneSets.splice(0, doneSets.length, ...(result.doneSets || doneSets));
           renderSetList();
           refreshPreview();
         };
@@ -4335,28 +4332,23 @@
     renderSetList();
     const addSetBtn = wrap.querySelector("#sport-sandbox-add-set");
     if (addSetBtn) addSetBtn.onclick = () => {
-      const currentSets = readNextSets();
-      doneSets.splice(0, doneSets.length, ...currentSets);
       const itemIndex = Math.max(0, Math.round(n(wrap.querySelector("#sport-sandbox-add-exercise")?.value, 0)));
-      const item = plan[itemIndex] || plan[0] || {};
-      const nextSetIndex = Math.max(0, ...doneSets.filter(set => Math.round(n(set.itemIndex, 0)) === itemIndex).map(set => Math.round(n(set.setIndex, 0)))) + 1;
-      const newSet = {
+      const result = sandboxRules.addSandboxSetToExercise?.({
+        plan,
+        doneSets: readNextSets(),
         itemIndex,
-        setIndex: nextSetIndex,
-        id: null,
-        itemId: doneSets.find(set => Math.round(n(set.itemIndex, 0)) === itemIndex)?.itemId || null,
-        reps: item.mode === "reps" ? n(item.targetReps, 0) : null,
-        durationSeconds: setWorkSeconds(item),
-        weightKg: supportsExternalLoad(item) ? lastLoadForExercise(item, effectiveLoadKg(item, weightKg)) : 0,
-        distanceM: n(item.distanceM, 0),
-        completedAt: new Date().toISOString(),
-      };
-      const insertAt = doneSets.reduce((last, set, idx) => Math.round(n(set.itemIndex, 0)) === itemIndex ? idx : last, -1);
-      doneSets.splice(insertAt >= 0 ? insertAt + 1 : doneSets.length, 0, newSet);
-      if (plan[itemIndex]) plan[itemIndex].sets = Math.max(Math.round(n(plan[itemIndex].sets, 1)), nextSetIndex);
+        weightKg,
+        now: new Date().toISOString(),
+        api: sandboxRulesApi(),
+      });
+      if (!result) return;
+      plan.splice(0, plan.length, ...(result.plan || plan));
+      doneSets.splice(0, doneSets.length, ...(result.doneSets || doneSets));
       renderSetList();
       refreshPreview();
-      sportFeedback(txt("Serie ajoutee", "Set added"), `${item.exerciseName || labelActivity(item.activityKey)} · ${txt("serie", "set")} ${nextSetIndex}`, { toast: true });
+      const addedSet = result.addedSet || {};
+      const item = result.item || plan[itemIndex] || plan[0] || {};
+      sportFeedback(txt("Serie ajoutee", "Set added"), `${item.exerciseName || labelActivity(item.activityKey)} · ${txt("serie", "set")} ${addedSet.setIndex || ""}`, { toast: true });
     };
     wrap.querySelector("#sport-sandbox-cancel").onclick = closeSportSessionSandbox;
     const originalSetIds = new Set(doneSets.map(set => String(set.id || "")).filter(Boolean));

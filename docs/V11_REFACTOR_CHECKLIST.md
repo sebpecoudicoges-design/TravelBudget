@@ -79,6 +79,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire le store Sport et migrer plan, historique local, hydratation offline/SQL et suppressions en attente vers `entityStore`.
   - [x] Extraire les vues Timer et Historique hors du fichier legacy.
   - [x] Extraire la vue de la fenetre `Ajuster` hors du fichier legacy.
+  - [x] Extraire les regles pures de la fenetre `Ajuster` : renumerotation, suppression et ajout de series.
 - [ ] Nutrition : separer catalogue, journal, objectifs et historique.
 - [ ] Sante : separer score, tendances et saisies corporelles.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.
