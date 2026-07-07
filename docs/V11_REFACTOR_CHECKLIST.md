@@ -77,7 +77,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Unifier la finalisation et les payloads d'historique entre sauvegarde immediate et resynchronisation.
   - [x] Centraliser historique, creation, deduplication, suppression et modification de date dans `src/data/sportRepository.js`.
   - [x] Extraire le store Sport et migrer plan, historique local, hydratation offline/SQL et suppressions en attente vers `entityStore`.
-  - [ ] Extraire les vues Timer et Historique hors du fichier legacy.
+  - [x] Extraire les vues Timer et Historique hors du fichier legacy.
 - [ ] Nutrition : separer catalogue, journal, objectifs et historique.
 - [ ] Sante : separer score, tendances et saisies corporelles.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.

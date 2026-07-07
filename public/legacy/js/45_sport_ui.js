@@ -2574,158 +2574,34 @@
     if (step.kind === "rest") return txt("Repos", "Rest");
     return step.item?.exerciseName || labelActivity(step.item?.activityKey || "strength");
   }
-  function nextStepLabel() {
-    const timer = CACHE.timer;
-    if (!timer) return "";
-    const next = timer.sequence[timer.index + 1];
-    return next ? stepLabel(next) : txt("Fin de seance", "End of workout");
-  }
-  function repRangeText(item) {
-    const range = progressionRepRange(item);
-    if (range && range.max > range.min) return `${range.min}-${range.max} reps`;
-    return `${Math.max(0, Math.round(n(item?.targetReps, 0)))} reps`;
-  }
-  function stepLoadText(step, timer) {
-    if (!step?.item || !supportsExternalLoad(step.item)) return "";
-    const kg = step === currentTimerStep()
-      ? n(timer?.stepLoadKg, lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer?.bodyWeightKg || bodyWeight())))
-      : lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer?.bodyWeightKg || bodyWeight()));
-    const label = step.item?.loadLabel ? ` · ${step.item.loadLabel}` : "";
-    return `${Math.round(kg * 10) / 10} kg${label}`;
-  }
-  function stepTargetText(step, timer) {
-    if (!step?.item) return "";
-    if (step.kind !== "work") return step.duration ? fmtSec(step.duration) : "";
-    if (step.item.mode === "time") return fmtSec(step.item.targetSeconds || step.duration || 0);
-    return repRangeText(step.item);
-  }
-  function stepPreviewText(step, timer) {
-    if (!step) return txt("Fin de seance", "End of workout");
-    if (step.kind !== "work") return `${stepLabel(step)}${step.duration ? ` · ${fmtSec(step.duration)}` : ""}`;
-    return [stepLabel(step), stepLoadText(step, timer), stepTargetText(step, timer)].filter(Boolean).join(" · ");
-  }
-  function nextStepPreview() {
-    const timer = CACHE.timer;
-    if (!timer) return "";
-    const next = timer.sequence[timer.index + 1];
-    return stepPreviewText(next, timer);
-  }
-  function renderTimerTimeline(timer) {
-    const seq = timer?.sequence || [];
-    const start = Math.max(0, n(timer?.index, 0) - 1);
-    const rows = seq.slice(start, start + 5);
-    return rows.map((row, idx) => {
-      const absolute = start + idx;
-      const active = absolute === timer.index;
-      const kind = row.kind === "work" ? txt("Serie", "Set") : row.kind === "round_rest" ? txt("Tour", "Round") : txt("Repos", "Rest");
-      const detail = row.kind === "work"
-        ? `${row.setIndex || 1}/${Math.max(1, n(row.item?.sets, row.setIndex || 1))}`
-        : (row.duration ? fmtSec(row.duration) : "");
-      return `<div class="tb-sport-time-step ${active ? "active" : ""}">
-        <small>${esc(kind)} ${esc(detail)}</small>
-        <b>${esc(stepLabel(row))}</b>
-        ${row.kind === "work" ? `<small>${esc([stepLoadText(row, timer), stepTargetText(row, timer)].filter(Boolean).join(" · "))}</small>` : ""}
-      </div>`;
-    }).join("");
-  }
-  function timerStepGoalText(step, timer) {
-    if (!step?.item) return "-";
-    if (step.kind !== "work") return step.duration ? fmtSec(step.duration) : "-";
-    if (step.item.mode === "time") return fmtSec(step.item.targetSeconds || step.duration || 0);
-    const current = Math.max(0, Math.round(n(timer?.stepReps ?? step.item.targetReps, 0)));
-    const range = repRangeText(step.item);
-    return range.includes("-") ? `${current} vise ${range}` : `${current} reps`;
+  function sportViewApi() {
+    return {
+      escapeHTML: esc,
+      translate: txt,
+      numberValue: n,
+      formatSeconds: fmtSec,
+      labelActivity,
+      labelEquipment,
+      localDateISO,
+      todayISO,
+      supportsExternalLoad,
+      lastLoadForExercise,
+      effectiveLoadKg,
+      bodyWeight,
+      progressionRepRange,
+    };
   }
 
   function renderTimer() {
-    const timer = CACHE.timer;
-    if (!timer) {
-      return `
-        <div class="tb-sport-card">
-          <h3>${esc(txt("Timer guide", "Guided timer"))}</h3>
-          <div class="tb-sport-timer">
-            <div class="kind">${esc(txt("Pret", "Ready"))}</div>
-            <div class="name">${esc(txt("Construis ta seance", "Build your workout"))}</div>
-            <div class="hint">${esc(txt("Lance le timer apres avoir ajoute tes exercices.", "Start the timer after adding exercises."))}</div>
-            <div class="tb-sport-actions" style="justify-content:center;">
-              <button class="btn primary" type="button" id="sport-start" ${CACHE.plan.length ? "" : "disabled"}>${esc(txt("Lancer la seance", "Start workout"))}</button>
-              <button class="btn" type="button" id="sport-mark-done" ${CACHE.plan.length ? "" : "disabled"}>${esc(txt("Marquer faite", "Mark done"))}</button>
-            </div>
-          </div>
-        </div>`;
-    }
-    const step = currentTimerStep();
-    const elapsed = Math.max(0, Math.round((Date.now() - timer.startedAt) / 1000));
-    const remaining = step && step.duration ? Math.max(0, Math.ceil((timer.stepEndAt - Date.now()) / 1000)) : 0;
-    const workDone = timer.doneSets.length;
-    const totalWork = timer.sequence.filter(s => s.kind === "work").length;
-    const isRest = step?.kind === "rest" || step?.kind === "round_rest";
-    const displayValue = isRest ? fmtSec(remaining) : (step?.item?.mode === "time" ? fmtSec(remaining) : `${n(timer.stepReps ?? step?.item?.targetReps, 0)} reps`);
-    const roundInfo = step?.roundIndex ? ` - ${esc(txt("Tour", "Round"))} ${step.roundIndex}${step.roundTotal ? `/${step.roundTotal}` : ""}` : "";
-    const amrap = CACHE.circuit?.enabled && n(CACHE.circuit?.amrapMinutes, 0) > 0;
-    const amrapRemaining = amrap && timer.timeCapEndAt ? Math.max(0, Math.ceil((timer.timeCapEndAt - Date.now()) / 1000)) : 0;
-    const volume = Math.max(0, Math.min(100, Math.round(n(CACHE.timerBeepVolume, 70))));
-    const loadText = step?.kind === "work" && supportsExternalLoad(step.item)
-      ? `${Math.round(n(timer.stepLoadKg, 0) * 10) / 10} kg${step.item?.loadLabel ? ` · ${step.item.loadLabel}` : ""}`
-      : "-";
-    return `
-      <div class="tb-sport-card tb-sport-timer-card ${CACHE.timerFocus ? "focus" : ""}">
-        <h3>${esc(txt("Timer guide", "Guided timer"))}</h3>
-        <div class="tb-sport-timer tb-sport-timer-v2">
-          <div class="tb-sport-live-head">
-            <div>
-              <div class="kind">${esc(isRest ? txt("Repos", "Rest") : txt("Travail", "Work"))}${roundInfo}</div>
-              <div class="hint" data-sport-timer-progress>${esc(txt("Progression", "Progress"))}: ${workDone}/${totalWork} · ${esc(txt("Temps total", "Total time"))}: ${fmtSec(elapsed)}</div>
-            </div>
-            <div class="tb-sport-actions" style="justify-content:flex-end;">
-              <button class="btn small" type="button" id="sport-timer-focus">${esc(CACHE.timerFocus ? txt("Reduire", "Exit focus") : txt("Grand ecran", "Big screen"))}</button>
-              ${amrap ? `<div class="tb-sport-next">${esc(txt("AMRAP", "AMRAP"))}: ${fmtSec(amrapRemaining)} · ${esc(txt("Tours", "Rounds"))}: ${n(timer.roundsCompleted, 0)}</div>` : `<div class="tb-sport-next">${esc(txt("Ensuite", "Next"))}: ${esc(nextStepPreview())}</div>`}
-            </div>
-          </div>
-          <div class="tb-sport-live-main">
-            <div class="tb-sport-live-focus">
-              <div class="name">${esc(isRest ? stepLabel(step) : (step?.item?.exerciseName || ""))}</div>
-              <div class="clock" data-sport-timer-clock>${esc(displayValue)}</div>
-              <div class="hint">${step?.kind === "work" ? `${esc(labelEquipment(step.item.equipment))} · ${esc(txt("Objectif", "Target"))}: ${esc(timerStepGoalText(step, timer))}` : esc(txt("Respire, prochaine serie prete.", "Breathe, next set is ready."))}</div>
-            </div>
-            <div class="tb-sport-live-panel">
-              <div class="tb-sport-live-grid">
-                <div class="tb-sport-live-kpi"><span>${esc(txt("Serie", "Set"))}</span><strong>${step?.setIndex || "-"}${step?.item?.sets ? ` / ${Math.max(n(step.item.sets, 1), n(step.setIndex, 1))}` : ""}</strong></div>
-                <div class="tb-sport-live-kpi"><span>${esc(txt("Prochaine", "Next"))}</span><strong>${esc(nextStepPreview())}</strong></div>
-                <div class="tb-sport-live-kpi"><span>${esc(txt("Charge", "Load"))}</span><strong>${esc(loadText)}</strong></div>
-                <div class="tb-sport-live-kpi"><span>${esc(txt("Fait", "Done"))}</span><strong>${workDone} ${esc(txt("series", "sets"))}</strong></div>
-              </div>
-              ${step?.kind === "work" ? (supportsExternalLoad(step.item) ? `<div class="tb-sport-control-row">
-              <span class="hint">${esc(txt("Charge serie", "Set load"))}</span>
-              <button class="btn small" type="button" data-sport-load-delta="-2.5">-2.5</button>
-              <input id="sport-step-load" type="number" step="0.5" inputmode="decimal" value="${esc(String(n(timer.stepLoadKg ?? lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)), 0)))}" />
-              <button class="btn small" type="button" data-sport-load-delta="2.5">+2.5</button>
-              <span class="hint">kg · ${esc(txt("dernier", "last"))}: ${Math.round(lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)) * 10) / 10}</span>
-            </div>` : `<div class="hint">${esc(txt("Charge externe", "External load"))}: 0 kg</div>`) : ""}
-          ${step?.kind === "work" && step?.item?.mode === "reps" ? `<div class="tb-sport-control-row">
-            <span class="hint">${esc(txt("Reps serie", "Set reps"))}</span>
-            <button class="btn small" type="button" data-sport-reps-delta="-1">-1</button>
-            <input id="sport-step-reps" type="number" step="1" inputmode="numeric" min="0" value="${esc(String(Math.max(0, Math.round(n(timer.stepReps ?? step.item.targetReps, 0)))))}" />
-            <button class="btn small" type="button" data-sport-reps-delta="1">+1</button>
-          </div>` : ""}
-            </div>
-          </div>
-          <div class="tb-sport-timeline">${renderTimerTimeline(timer)}</div>
-          <div class="tb-sport-volume-row">
-            <span>${esc(txt("Bip", "Beep"))} ${volume}%</span>
-            <input id="sport-beep-volume" type="range" min="0" max="100" step="5" value="${esc(String(volume))}">
-            <button class="btn small" type="button" id="sport-beep-test">${esc(txt("Tester", "Test"))}</button>
-          </div>
-          <div class="tb-sport-actions" style="justify-content:center;">
-            ${step?.kind === "work" ? `<button class="btn primary" type="button" id="sport-step-done">${esc(txt("Fini", "Done"))}</button>` : ""}
-            ${step?.item && !amrap ? `<button class="btn" type="button" id="sport-add-set">+ ${esc(CACHE.circuit?.enabled ? txt("Tour", "Round") : txt("serie", "set"))}</button>` : ""}
-            ${isRest ? `<button class="btn primary" type="button" id="sport-skip-rest">${esc(txt("Sauter le repos", "Skip rest"))}</button>` : ""}
-            ${step?.duration ? `<button class="btn" type="button" id="sport-minus-time">-15s</button><button class="btn" type="button" id="sport-plus-time">+30s</button>` : ""}
-            <button class="btn" type="button" id="sport-pause">${timer.paused ? esc(txt("Reprendre", "Resume")) : esc(txt("Pause", "Pause"))}</button>
-            <button class="btn danger" type="button" id="sport-finish">${esc(txt("Terminer", "Finish"))}</button>
-          </div>
-        </div>
-      </div>`;
+    return window.UI?.sportTimerView?.renderSportTimer?.({
+      timer: CACHE.timer,
+      plan: CACHE.plan,
+      circuit: CACHE.circuit,
+      timerFocus: CACHE.timerFocus,
+      timerBeepVolume: CACHE.timerBeepVolume,
+      currentStep: currentTimerStep(),
+      api: sportViewApi(),
+    }) || "";
   }
 
   function allVisibleSportSessions() {
@@ -2745,91 +2621,25 @@
     const unsyncedLocal = localSessions.filter(isLocalWorkoutUnsynced);
     const sessions = remoteSessions.concat(unsyncedLocal.map(localToHistorySession))
       .sort((a, b) => String(b.started_at || "").localeCompare(String(a.started_at || "")));
-    const todayMergeCount = sessions.filter(isTodaySession).length;
-    const status = CACHE.status ? `<div class="tb-sport-status">${esc(CACHE.status)}</div>` : "";
-    const recover = recoverableAnonCount
-      ? `<div class="tb-sport-status" style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <span>${esc(txt(`${recoverableAnonCount} ancienne(s) seance(s) locale(s) peuvent etre recuperee(s).`, `${recoverableAnonCount} old local workout(s) can be recovered.`))}</span>
-          <button class="btn" type="button" id="sport-import-anon-history">${esc(txt("Recuperer", "Recover"))}</button>
-        </div>`
-      : "";
-    const sync = uid() && unsyncedLocal.length
-      ? `<div class="tb-sport-status" style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <span>${esc(txt(`${unsyncedLocal.length} seance(s) locale(s) a synchroniser.`, `${unsyncedLocal.length} local workout(s) to sync.`))}</span>
-          <button class="btn primary" type="button" id="sport-sync-local-history">${esc(txt("Synchroniser", "Sync"))}</button>
-        </div>`
-      : "";
-    if (CACHE.error) {
-      return `<div class="tb-sport-card"><h3>${esc(txt("Historique", "History"))}</h3>${status}${recover}${sync}<div class="muted" style="margin-top:10px;">${esc(txt("Synchro Supabase indisponible, historique local conserve.", "Supabase sync unavailable, local history kept."))} ${esc(CACHE.error)}</div>${renderSportWeekVisual(sessions)}${renderHistoryGrid(sessions)}</div>`;
-    }
-    return `
-      <div class="tb-sport-card">
-        <h3>${esc(txt("Historique", "History"))}</h3>
-        ${status}
-        ${recover}
-        ${sync}
-        ${todayMergeCount >= 2 ? `<div class="tb-sport-status" style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <span>${esc(txt(`${todayMergeCount} seances aujourd hui peuvent etre fusionnees.`, `${todayMergeCount} workouts today can be merged.`))}</span>
-          <button class="btn primary" type="button" id="sport-merge-today">${esc(txt("Fusionner aujourd hui", "Merge today"))}</button>
-        </div>` : ""}
-        ${renderSportWeekVisual(sessions)}
-        ${renderHistoryGrid(sessions)}
-      </div>`;
-  }
-  function isTodaySession(s) {
-    return localDateISO(s?.started_at || s?.startedAt) === todayISO();
-  }
-  function offsetDateISO(day, offset) {
-    const d = new Date(`${String(day || todayISO()).slice(0, 10)}T12:00:00`);
-    d.setDate(d.getDate() + Number(offset || 0));
-    return localDateISO(d);
+    return window.UI?.sportHistoryView?.renderSportHistory?.({
+      sessions,
+      items: CACHE.items || [],
+      sets: CACHE.sets || [],
+      status: CACHE.status || "",
+      error: CACHE.error || "",
+      recoverableAnonCount,
+      unsyncedLocalCount: uid() ? unsyncedLocal.length : 0,
+      todayMergeCount: sessions.filter(s => window.UI?.sportHistoryView?.isTodaySession?.(s, sportViewApi())).length,
+      planForSession: planFromStoredSession,
+      doneSetsForSession: (sessionId) => doneSetsFromStoredSession(sessionId, 0),
+      api: sportViewApi(),
+    }) || "";
   }
   function shortWeekday(day) {
     const idx = new Date(`${String(day || todayISO()).slice(0, 10)}T12:00:00`).getDay();
     const fr = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
     const en = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     return txt(fr[idx] || "", en[idx] || "");
-  }
-  function renderSportWeekVisual(sessions) {
-    const byDay = new Map();
-    (sessions || []).forEach(s => {
-      const day = localDateISO(s.started_at || s.startedAt);
-      if (!day) return;
-      const prev = byDay.get(day) || { day, count: 0, kcal: 0, seconds: 0 };
-      prev.count += 1;
-      prev.kcal += n(s.estimated_kcal || s.estimatedKcal, 0);
-      prev.seconds += n(s.duration_seconds || s.durationSeconds, 0);
-      byDay.set(day, prev);
-    });
-    const rows = [];
-    for (let i = 6; i >= 0; i -= 1) {
-      const day = offsetDateISO(todayISO(), -i);
-      rows.push(byDay.get(day) || { day, count: 0, kcal: 0, seconds: 0 });
-    }
-    const maxKcal = Math.max(1, ...rows.map(row => n(row.kcal, 0)));
-    const totalKcal = rows.reduce((sum, row) => sum + n(row.kcal, 0), 0);
-    const activeDays = rows.filter(row => row.count > 0).length;
-    return `<div class="tb-sport-week">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
-        <div>
-          <h3 style="margin:0 0 4px;">${esc(txt("Semaine sport", "Sport week"))}</h3>
-          <div class="muted">${esc(txt(`${activeDays} jour(s) actifs, ${Math.round(totalKcal)} kcal brulees`, `${activeDays} active day(s), ${Math.round(totalKcal)} kcal burned`))}</div>
-        </div>
-        <span class="pill">${esc(txt("Actif / repos", "Active / rest"))}</span>
-      </div>
-      <div class="tb-sport-week-grid">
-        ${rows.map(row => {
-          const active = row.count > 0;
-          const height = active ? Math.max(18, Math.min(86, (n(row.kcal, 0) / maxKcal) * 86)) : 12;
-          const title = `${row.day} | ${active ? `${row.count} ${txt("seance(s)", "workout(s)")}, ${Math.round(row.kcal)} kcal, ${fmtSec(row.seconds)}` : txt("Repos / sans sport", "Rest / no sport")}`;
-          return `<button class="tb-sport-week-day ${active ? "active" : ""}" type="button" title="${esc(title)}">
-            <span class="tb-sport-week-bar" style="height:${Math.round(height)}px"></span>
-            <strong>${esc(shortWeekday(row.day))}</strong>
-            <small>${active ? `${Math.round(row.kcal)}` : esc(txt("Repos", "Rest"))}</small>
-          </button>`;
-        }).join("")}
-      </div>
-    </div>`;
   }
   function exerciseProfileBucket(item) {
     const text = normalizedSearch(`${item?.exerciseName || ""} ${item?.activityKey || ""} ${item?.equipment || ""} ${item?.notes || ""}`);
@@ -3136,82 +2946,6 @@
       perceived_effort: s.perceivedEffort || null,
     };
   }
-  function renderHistoryGrid(sessions) {
-    const visibleSessions = (sessions || []).slice(0, 20);
-    const hiddenCount = Math.max(0, (sessions || []).length - visibleSessions.length);
-    return `<div class="tb-sport-history" style="margin-top:10px;">
-      ${visibleSessions.length ? visibleSessions.map(s => {
-        const items = s.localPlanCount
-          ? new Array(s.localPlanCount).fill(null)
-          : (CACHE.items || []).filter(i => String(i.session_id) === String(s.id));
-        const itemIds = new Set(items.map(i => String(i?.id || "")).filter(Boolean));
-        const setCount = s.localSetCount || (CACHE.sets || []).filter(set => itemIds.has(String(set.item_id || ""))).length;
-        const firstExercise = s.first_exercise || items.find(Boolean)?.exercise_name || "";
-        return `<div class="tb-sport-history-card">
-          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
-            <div style="font-weight:950;">${esc(labelActivity(s.activity_type || items[0]?.activity_key || "strength"))}</div>
-            <span class="tb-sport-chip">${esc(s.localOnly ? txt("local", "local") : txt("sync", "synced"))}</span>
-          </div>
-          ${firstExercise ? `<div class="muted" style="margin-top:4px;">${esc(firstExercise)}</div>` : ""}
-          <div class="muted">${esc(String(s.started_at || "").slice(0, 16).replace("T", " "))}</div>
-          <div class="tb-sport-meta">
-            <span class="tb-sport-chip">${fmtSec(s.duration_seconds || 0)}</span>
-            <span class="tb-sport-chip">${Math.round(n(s.estimated_kcal, 0))} kcal</span>
-            <span class="tb-sport-chip">${items.length} ${esc(txt("exercices", "exercises"))}</span>
-            <span class="tb-sport-chip">${setCount} ${esc(txt("series", "sets"))}</span>
-            ${s.perceived_effort ? `<span class="tb-sport-chip">RPE ${esc(String(s.perceived_effort))}/10</span>` : ""}
-          </div>
-          ${s.mood_after ? `<div class="muted" style="margin-top:8px;">${esc(txt("Apres", "After"))}: ${esc(s.mood_after)}</div>` : ""}
-          ${renderSessionContent(s.id)}
-          <div class="tb-sport-actions" style="margin-top:10px;">
-            <button class="btn primary" type="button" data-sport-repeat-session="${esc(String(s.id || ""))}">${esc(txt("Refaire", "Repeat"))}</button>
-            <button class="btn" type="button" data-sport-edit-session="${esc(String(s.id || ""))}">${esc(txt("Ajuster", "Adjust"))}</button>
-            <button class="btn" type="button" data-sport-edit-date="${esc(String(s.id || ""))}" data-sport-date="${esc(String(s.started_at || "").slice(0, 10))}">${esc(txt("Modifier date", "Edit date"))}</button>
-            <button class="btn danger" type="button" data-sport-delete-session="${esc(String(s.id || ""))}">${esc(txt("Supprimer", "Delete"))}</button>
-          </div>
-        </div>`;
-      }).join("") : `<div class="muted">${esc(txt("Aucune seance enregistree.", "No saved workout yet."))}</div>`}
-      ${hiddenCount ? `<div class="muted" style="margin-top:10px;">${esc(txt(`+ ${hiddenCount} seance(s) plus ancienne(s) masquee(s).`, `+ ${hiddenCount} older workout(s) hidden.`))}</div>` : ""}
-    </div>`;
-  }
-  function renderSessionContent(sessionId) {
-    const id = String(sessionId || "");
-    const plan = planFromStoredSession(id);
-    if (!plan.length) return "";
-    const sets = doneSetsFromStoredSession(id, 0);
-    const byItem = new Map();
-    sets.forEach(set => {
-      const itemIndex = Math.max(0, Math.round(n(set.itemIndex, 0)));
-      const rows = byItem.get(itemIndex) || [];
-      rows.push(set);
-      byItem.set(itemIndex, rows);
-    });
-    return `<details class="tb-sport-session-details">
-      <summary>${esc(txt("Voir le contenu de la seance", "View workout content"))}</summary>
-      <div class="tb-sport-session-content">
-        ${plan.map((item, idx) => {
-          const itemSets = (byItem.get(idx) || []).slice().sort((a, b) => n(a.setIndex, 0) - n(b.setIndex, 0));
-          const setLine = itemSets.length
-            ? itemSets.map(set => {
-                const bits = [`#${Math.max(1, Math.round(n(set.setIndex, 1)))}`];
-                if (item.mode === "reps" || set.reps != null) bits.push(`${Math.round(n(set.reps, item.targetReps || 0))} reps`);
-                if (n(set.durationSeconds, 0)) bits.push(fmtSec(set.durationSeconds));
-                if (n(set.weightKg, 0)) bits.push(`${Math.round(n(set.weightKg, 0) * 10) / 10} kg`);
-                if (n(set.distanceM, 0)) bits.push(`${Math.round(n(set.distanceM, 0))} m`);
-                return `<span>${esc(bits.join(" · "))}</span>`;
-              }).join("")
-            : `<span>${esc(txt("Series non detaillees", "Sets not detailed"))}</span>`;
-          return `<div class="tb-sport-session-exercise">
-            <strong>${idx + 1}. ${esc(item.exerciseName || labelActivity(item.activityKey || "strength"))}</strong>
-            <div class="muted" style="font-size:12px;margin-top:3px;">${esc(labelActivity(item.activityKey || "strength"))} · ${esc(labelEquipment(item.equipment))} · ${item.mode === "reps" ? `${Math.round(n(item.targetReps, 0))} reps` : fmtSec(item.targetSeconds || 0)} · ${itemSets.length || Math.max(1, Math.round(n(item.sets, 1)))} ${esc(txt("series", "sets"))}</div>
-            ${item.notes ? `<div class="muted" style="font-size:12px;margin-top:3px;">${esc(item.notes)}</div>` : ""}
-            <div class="tb-sport-session-setline">${setLine}</div>
-          </div>`;
-        }).join("")}
-      </div>
-    </details>`;
-  }
-
   function sportStatsHTML() {
     const sessions = allVisibleSportSessions();
     const now = new Date();

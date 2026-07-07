@@ -30,6 +30,8 @@ import { createSportStore } from '../features/sport/sportStore.js';
 import * as tripView from '../features/trip/tripView.js';
 import * as sportCatalog from '../features/sport/sportCatalog.js';
 import * as sportProgramRules from '../features/sport/sportProgramRules.js';
+import * as sportTimerView from '../features/sport/sportTimerView.js';
+import * as sportHistoryView from '../features/sport/sportHistoryView.js';
 import { storageQuota } from '../data/storageQuota.js';
 import * as sportRules from '../core/sportRules.js';
 import * as uiComponents from '../ui/components.js';
@@ -76,6 +78,8 @@ window.tbSafeLocalStorageSet = (key, value, options) => storageQuota.safeSet(win
 window.UI = window.UI || {};
 Object.assign(window.UI, uiComponents);
 window.UI.tripView = tripView;
+window.UI.sportTimerView = sportTimerView;
+window.UI.sportHistoryView = sportHistoryView;
 
 // Optional: expose money helpers directly for convenience (legacy may redefine later; that's OK)
 window.moneyRound = window.moneyRound || money.moneyRound;
