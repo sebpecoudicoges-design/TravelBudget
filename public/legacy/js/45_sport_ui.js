@@ -2564,9 +2564,15 @@
   }
 
   function currentTimerStep() {
-    const timer = CACHE.timer;
-    if (!timer) return null;
-    return timer.sequence[timer.index] || null;
+    return window.UI?.sportTimerController?.currentTimerStep?.(CACHE.timer) || null;
+  }
+  function sportTimerControllerOptions() {
+    return {
+      effectiveLoadKg,
+      lastLoadForExercise,
+      supportsExternalLoad,
+      defaultRestSeconds: CACHE.globalRestSeconds,
+    };
   }
   function stepLabel(step) {
     if (!step) return txt("Fin", "End");
@@ -3327,22 +3333,15 @@
     saveBodyWeight(document.getElementById("sport-weight")?.value || bodyWeight());
     saveBodyHeight(document.getElementById("sport-height")?.value || bodyHeight());
     const seq = makeSequence();
-    CACHE.timer = {
+    const createTimerState = window.UI?.sportTimerController?.createTimerState;
+    if (typeof createTimerState !== "function") throw new Error("Sport timer controller indisponible");
+    CACHE.timer = createTimerState(Object.assign({
       sequence: seq,
-      index: 0,
-      startedAt: Date.now(),
-      stepStartedAt: Date.now(),
-      stepEndAt: seq[0]?.duration ? Date.now() + (seq[0].duration * 1000) : null,
-      paused: false,
-      pauseStartedAt: null,
-      doneSets: [],
-      roundsCompleted: 0,
-      timeCapEndAt: CACHE.circuit?.enabled && n(CACHE.circuit?.amrapMinutes, 0) > 0 ? Date.now() + n(CACHE.circuit.amrapMinutes, 0) * 60000 : null,
+      now: Date.now(),
       bodyWeightKg: bodyWeight(),
       bodyHeightCm: bodyHeight(),
-      stepLoadKg: seq[0]?.kind === "work" ? lastLoadForExercise(seq[0].item, effectiveLoadKg(seq[0].item, bodyWeight())) : 0,
-      stepReps: seq[0]?.kind === "work" && seq[0].item?.mode === "reps" ? Math.max(0, Math.round(n(seq[0].item.targetReps, 0))) : null,
-    };
+      timeCapMinutes: CACHE.circuit?.enabled ? n(CACHE.circuit?.amrapMinutes, 0) : 0,
+    }, sportTimerControllerOptions()));
     requestWakeLock();
     sportFeedback(txt("Seance lancee", "Workout started"), txt("Timer sport lance. Bon entrainement.", "Sport timer started. Good workout."), { persistNotification: true });
     beep("work");
@@ -3521,33 +3520,28 @@
     return Math.max(0, Math.round(n(timer?.stepReps, step?.item?.targetReps || 0)));
   }
   function setTimerStepDefaults(timer, step) {
-    if (!timer) return;
-    timer.stepLoadKg = step?.kind === "work" ? lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg)) : 0;
-    timer.stepReps = step?.kind === "work" && step.item?.mode === "reps" ? Math.max(0, Math.round(n(step.item.targetReps, 0))) : null;
+    if (!timer) return timer;
+    const applyDefaults = window.UI?.sportTimerController?.applyStepDefaults;
+    if (typeof applyDefaults !== "function") return timer;
+    const next = applyDefaults(timer, step, sportTimerControllerOptions());
+    Object.assign(timer, next);
+    return timer;
   }
   function recordWorkStep(timer, step, durationOverride, loadOverride, repsOverride) {
-    if (!timer || !step || step.kind !== "work") return;
-    const exists = timer.doneSets.some(done =>
-      Number(done.itemIndex) === Number(step.itemIndex) && Number(done.setIndex) === Number(step.setIndex)
-    );
-    if (exists) return;
+    if (!timer || !step || step.kind !== "work") return null;
+    const record = window.UI?.sportTimerController?.recordWorkStep;
+    if (typeof record !== "function") return null;
     const hasDurationOverride = Number.isFinite(Number(durationOverride)) && Number(durationOverride) > 0;
-    const duration = hasDurationOverride
-      ? Math.max(1, Math.round(Number(durationOverride)))
-      : (step.item.mode === "time"
-        ? sequenceStepSeconds(step)
-        : setWorkSeconds(step.item, (Date.now() - timer.stepStartedAt) / 1000));
-    timer.doneSets.push({
-      itemIndex: step.itemIndex,
-      setIndex: step.setIndex,
-      reps: step.item.mode === "reps" ? Math.max(0, Math.round(n(repsOverride, step.item.targetReps || 0))) : null,
-      durationSeconds: duration,
-      weightKg: supportsExternalLoad(step.item) ? n(loadOverride, lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg))) : 0,
-      distanceM: n(step.item.distanceM, 0),
-      completedAt: new Date().toISOString(),
-    });
-    rememberLoadForExercise(step.item, timer.doneSets[timer.doneSets.length - 1]?.weightKg || 0);
-    timer.stepLoadKg = lastLoadForExercise(step.item, effectiveLoadKg(step.item, timer.bodyWeightKg));
+    const elapsedSeconds = (Date.now() - timer.stepStartedAt) / 1000;
+    const result = record(timer, step, Object.assign({
+      now: Date.now(),
+      durationSeconds: hasDurationOverride ? Math.max(1, Math.round(Number(durationOverride))) : (step.item?.mode === "time" ? sequenceStepSeconds(step) : setWorkSeconds(step.item, elapsedSeconds)),
+      loadKg: loadOverride,
+      reps: repsOverride,
+    }, sportTimerControllerOptions()));
+    Object.assign(timer, result.timer);
+    if (result.addedSet) rememberLoadForExercise(step.item, result.addedSet.weightKg || 0);
+    return result.addedSet || null;
   }
   async function keepTimerFullscreen(reason) {
     if (!CACHE.timerFocus) return;
@@ -3566,28 +3560,24 @@
     const timer = CACHE.timer;
     const step = currentTimerStep();
     if (!timer || !step) return;
-    recordWorkStep(timer, step, null, readTimerStepLoadKg(timer, step), readTimerStepReps(timer, step));
-    timer.index += 1;
-    const next = currentTimerStep();
+    const complete = window.UI?.sportTimerController?.completeTimerStep;
+    if (typeof complete !== "function") return;
+    const result = complete(timer, Object.assign({
+      now: Date.now(),
+      loadKg: readTimerStepLoadKg(timer, step),
+      reps: readTimerStepReps(timer, step),
+    }, sportTimerControllerOptions()));
+    CACHE.timer = result.timer;
+    if (result.addedSet) rememberLoadForExercise(step.item, result.addedSet.weightKg || 0);
+    const next = result.nextStep;
     beep(next?.kind === "rest" ? "rest" : "work");
-    if (!next && timer.timeCapEndAt && Date.now() < timer.timeCapEndAt) {
-      timer.roundsCompleted = n(timer.roundsCompleted, 0) + 1;
-      const nextRoundIndex = timer.roundsCompleted + 1;
-      timer.sequence.forEach(loopStep => {
-        if (loopStep.kind === "work" || loopStep.kind === "rest") loopStep.setIndex = nextRoundIndex;
-        if (loopStep.kind === "work" || loopStep.kind === "rest" || loopStep.kind === "round_rest") loopStep.roundIndex = nextRoundIndex;
-      });
-      timer.index = 0;
-      const first = currentTimerStep();
-      sportFeedback(txt("Tour valide", "Round counted"), `${txt("Tour", "Round")} ${timer.roundsCompleted} - ${stepLabel(first)}`, { persistNotification: true });
-      setTimerStepDefaults(timer, first);
-      timer.stepStartedAt = Date.now();
-      timer.stepEndAt = first?.duration ? Date.now() + (first.duration * 1000) : null;
+    if (result.looped) {
+      sportFeedback(txt("Tour valide", "Round counted"), `${txt("Tour", "Round")} ${CACHE.timer.roundsCompleted} - ${stepLabel(next)}`, { persistNotification: true });
       renderSport("amrap-loop");
       restoreTimerFullscreen("amrap-loop");
       return;
     }
-    if (!next) {
+    if (result.finished) {
       finishWorkout();
       return;
     }
@@ -3602,17 +3592,17 @@
     const timer = CACHE.timer;
     const step = currentTimerStep();
     if (!timer || !step || (step.kind !== "rest" && step.kind !== "round_rest")) return;
-    timer.index += 1;
-    const next = currentTimerStep();
+    const skip = window.UI?.sportTimerController?.skipRestStep;
+    if (typeof skip !== "function") return;
+    const result = skip(timer, Object.assign({ now: Date.now() }, sportTimerControllerOptions()));
+    CACHE.timer = result.timer;
+    const next = result.nextStep;
     beep("work");
-    if (!next) {
+    if (result.finished) {
       finishWorkout();
       return;
     }
     sportFeedback(txt("Repos saute", "Rest skipped"), `${stepLabel(next)} - ${next.duration ? fmtSec(next.duration) : txt("a valider", "to validate")}`, { persistNotification: true });
-    setTimerStepDefaults(timer, next);
-    timer.stepStartedAt = Date.now();
-    timer.stepEndAt = next.duration ? Date.now() + (next.duration * 1000) : null;
     renderSport("skip-rest");
     restoreTimerFullscreen("skip-rest");
   }
@@ -3620,24 +3610,23 @@
     const timer = CACHE.timer;
     const step = currentTimerStep();
     if (!timer || !step || !step.duration || timer.paused) return;
-    const now = Date.now();
-    const nextEnd = Math.max(now + 1000, (timer.stepEndAt || now) + (Number(delta) * 1000));
-    timer.stepEndAt = nextEnd;
-    step.duration = Math.max(1, Math.round((nextEnd - timer.stepStartedAt) / 1000));
-    renderSport("adjust-time");
+    const adjust = window.UI?.sportTimerController?.adjustCurrentStepSeconds;
+    if (typeof adjust !== "function") return;
+    const result = adjust(timer, delta, { now: Date.now() });
+    CACHE.timer = result.timer;
+    if (result.adjusted) renderSport("adjust-time");
   }
   function addTimerSetForCurrentExercise() {
     const timer = CACHE.timer;
     const step = currentTimerStep();
     if (!timer || !step || !step.item) return;
-    const insert = window.Core?.sportRules?.insertExerciseSet;
-    if (typeof insert !== "function") return;
-    const result = insert(timer.sequence, timer.index, timer.doneSets, { defaultRestSeconds: CACHE.globalRestSeconds });
+    const addSet = window.UI?.sportTimerController?.addSetForCurrentExercise;
+    if (typeof addSet !== "function") return;
+    const result = addSet(timer, CACHE.plan, { defaultRestSeconds: CACHE.globalRestSeconds });
     if (!result.inserted) return;
-    timer.sequence = result.sequence;
-    const item = step.item;
-    item.sets = Math.max(Math.round(n(item.sets, 1)), result.setIndex);
-    if (CACHE.plan[result.itemIndex]) CACHE.plan[result.itemIndex].sets = item.sets;
+    CACHE.timer = result.timer;
+    CACHE.plan = result.plan;
+    const item = CACHE.plan[result.itemIndex] || result.item || step.item;
     savePlan();
     sportFeedback(txt("Serie ajoutee", "Set added"), `${item.exerciseName || labelActivity(item.activityKey)} · ${txt("serie", "set")} ${result.setIndex}`, { toast: true, persistNotification: true });
     renderSport("add-current-set");
@@ -3645,12 +3634,12 @@
   function addTimerCircuitRound() {
     const timer = CACHE.timer;
     if (!timer || !CACHE.plan.length || !CACHE.circuit?.enabled) return;
-    const append = window.Core?.sportRules?.appendCircuitRound;
-    if (typeof append !== "function") return;
-    const result = append(timer.sequence, CACHE.plan, { roundRestSeconds: CACHE.circuit.roundRestSeconds });
-    timer.sequence = result.sequence;
-    CACHE.circuit.rounds = Math.max(Math.round(n(CACHE.circuit.rounds, 1)), result.roundIndex);
-    CACHE.plan.forEach(item => { item.sets = Math.max(Math.round(n(item.sets, 1)), result.roundIndex); });
+    const addRound = window.UI?.sportTimerController?.addCircuitRound;
+    if (typeof addRound !== "function") return;
+    const result = addRound(timer, CACHE.plan, CACHE.circuit);
+    CACHE.timer = result.timer;
+    CACHE.plan = result.plan;
+    CACHE.circuit = result.circuit;
     saveCircuit(CACHE.circuit);
     savePlan();
     const order = CACHE.plan.map(item => item.exerciseName || labelActivity(item.activityKey)).join(" → ");
@@ -3660,16 +3649,13 @@
   function togglePause() {
     const timer = CACHE.timer;
     if (!timer) return;
-    if (!timer.paused) {
-      timer.paused = true;
-      timer.pauseStartedAt = Date.now();
+    const toggle = window.UI?.sportTimerController?.togglePause;
+    if (typeof toggle !== "function") return;
+    const result = toggle(timer, { now: Date.now() });
+    CACHE.timer = result.timer;
+    if (result.paused) {
       sportFeedback(txt("Timer en pause", "Timer paused"), txt("Seance en pause.", "Workout paused."), { persistNotification: true });
     } else {
-      const delta = Date.now() - (timer.pauseStartedAt || Date.now());
-      timer.paused = false;
-      timer.pauseStartedAt = null;
-      if (timer.stepEndAt) timer.stepEndAt += delta;
-      if (timer.timeCapEndAt) timer.timeCapEndAt += delta;
       sportFeedback(txt("Timer repris", "Timer resumed"), txt("Seance reprise.", "Workout resumed."), { persistNotification: true });
     }
     renderSport("pause");

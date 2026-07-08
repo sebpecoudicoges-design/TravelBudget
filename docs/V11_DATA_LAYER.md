@@ -12,6 +12,7 @@ Les modules UI ne doivent plus implementer eux-memes les appels Supabase, la fil
 - `src/data/sportRepository.js` : historique agrege, creation complete d'une seance, garde anti-doublon, suppression des enfants et modification de date.
 - `src/features/sport/sportStore.js` : source de verite Sport dans `entityStore` pour le plan, l'historique SQL/local, l'hydratation offline et les suppressions en attente.
 - `src/features/sport/sportTimerView.js`, `src/features/sport/sportHistoryView.js` et `src/features/sport/sportSessionSandboxView.js` : rendu pur du Timer guide, de la semaine sport, des cartes d'historique, du detail des series et de la fenetre `Ajuster`.
+- `src/features/sport/sportTimerController.js` : orchestration pure du timer Sport pour demarrage, serie terminee, repos, pause, ajout de serie, ajout de tour circuit et ajustement du chrono.
 - `src/features/sport/sportSessionSandboxRules.js` : regles pures de la fenetre `Ajuster` pour renumeroter, supprimer et ajouter des series au bon exercice.
 - `src/features/sport/sportProfileRules.js` : calcul pur du radar forces/faiblesses, avec priorite aux mouvements principaux et reperes plus exigeants par poids du corps.
 - `src/features/sport/sportProfileView.js` : rendu pur du profil forces/faiblesses, des notes par axe et de la modale de saisie impedancemetre.
@@ -38,4 +39,4 @@ La protection locale ameliore l'experience. Les contraintes Postgres restent la 
 
 ## Migration restante
 
-Le repository, le store et les vues Timer/Historique/Ajuster Sport sont branches sur les lectures, mutations, caches locaux et reprises offline principales. Le prochain lot Sport peut isoler les handlers du timer et de l'ajustement des seances. Nutrition et les derniers caches Trip suivront pendant leur decoupage, avec leurs propres tests et parcours offline.
+Le repository, le store, les vues Timer/Historique/Ajuster et le controleur Timer Sport sont branches sur les lectures, mutations, caches locaux et reprises offline principales. Le prochain lot Sport peut isoler les handlers restants de l'ajustement des seances. Nutrition et les derniers caches Trip suivront pendant leur decoupage, avec leurs propres tests et parcours offline.
