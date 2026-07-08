@@ -213,6 +213,13 @@
   }
   function nutritionGoalTargets(spentKcal, kg) {
     const goal = loadNutritionGoal();
+    if (rules().nutritionGoalTargets) return rules().nutritionGoalTargets({
+      spentKcal,
+      weightKg: kg,
+      mode: goal.mode,
+      surplusKcal: goal.surplusKcal,
+      deficitKcal: goal.deficitKcal,
+    });
     const spent = Math.max(0, n(spentKcal, 0));
     const offset = nutritionGoalOffset(goal);
     const targetKcal = Math.max(1200, Math.round(spent + offset));
@@ -957,6 +964,14 @@
     return { meals, items };
   }
   function dailySummaries() {
+    if (rules().buildDailyNutritionSummaries) {
+      return rules().buildDailyNutritionSummaries({
+        meals: CACHE.meals,
+        items: CACHE.items,
+        foods: CACHE.foods,
+        toDay: localDateISO,
+      });
+    }
     const byDay = new Map();
     const typeOrder = ["breakfast", "morning_snack", "lunch", "afternoon_snack", "dinner", "snack", "meal"];
     function ensureType(row, type) {
@@ -1116,6 +1131,11 @@
       </div>`;
   }
   function mealMomentTargets(needsKcal, typeTotals, day) {
+    if (rules().mealMomentTargets) {
+      const today = todayISO();
+      const targetType = String(day || today) === today ? currentMealType() : "dinner";
+      return rules().mealMomentTargets({ needsKcal, typeTotals, currentType: targetType });
+    }
     const rows = [
       { type: "breakfast", pct: 0.22, minPct: 0.14, maxPct: 0.30, color: "#38bdf8" },
       { type: "morning_snack", pct: 0.08, minPct: 0.04, maxPct: 0.14, color: "#a78bfa" },
@@ -1155,6 +1175,7 @@
       : txt(`Ajuste ${delta} kcal car les repas precedents etaient plus hauts.`, `Adjusted ${delta} kcal because previous meals were higher.`);
   }
   function typeTotalsForDay(meals, items) {
+    if (rules().buildTypeTotalsForDay) return rules().buildTypeTotalsForDay(meals, items);
     const mealTypes = new Map();
     meals.forEach(meal => mealTypes.set(String(meal.id || ""), String(meal.meal_type || "meal")));
     return items.reduce((acc, item) => {
@@ -1168,9 +1189,11 @@
     }, {});
   }
   function normalizeText(value) {
+    if (rules().normalizeNutritionText) return rules().normalizeNutritionText(value);
     return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   }
   function foodCategory(food) {
+    if (rules().foodCategory) return rules().foodCategory(food);
     const tags = Array.isArray(food?.tags) ? food.tags.map(normalizeText) : [];
     if (tags.includes("plat")) return "dishes";
     if (tags.includes("fruit")) return "fruits";
@@ -1202,6 +1225,12 @@
     })[cat] || cat;
   }
   function catalogFoods() {
+    if (rules().filterCatalogFoods) return rules().filterCatalogFoods({
+      foods: CACHE.foods,
+      query: CACHE.foodQuery,
+      category: CACHE.foodCategory,
+      limit: 18,
+    });
     const q = normalizeText(CACHE.foodQuery);
     const cat = String(CACHE.foodCategory || "all");
     return CACHE.foods.filter(food => {
@@ -1247,6 +1276,7 @@
     return `<button class="tb-nutrition-food-chip" type="button" data-nutrition-pick-food="${esc(food.key)}" title="${esc(food.name)} · ${Math.round(n(food.servingGrams, 100))}g"><span>${label}</span> ${esc(food.name)}</button>`;
   }
   function currentMealType() {
+    if (rules().mealTypeFromHour) return rules().mealTypeFromHour(new Date().getHours());
     const h = new Date().getHours();
     if (h < 10) return "breakfast";
     if (h < 12) return "morning_snack";

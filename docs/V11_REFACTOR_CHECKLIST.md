@@ -85,6 +85,10 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire les handlers du timer : demarrage, serie terminee, repos, pause, ajout de serie et ajout de tour circuit.
   - [x] Transformer le radar en profil athletique : percentiles, ratios PDC, equilibres, potentiel, archetypes et priorite automatique.
 - [ ] Nutrition : separer catalogue, journal, objectifs et historique.
+  - [x] Extraire les regles pures du catalogue, des totaux par repas, du journal quotidien, des objectifs et des cibles par moment.
+  - [ ] Extraire le repository Nutrition : aliments, repas, items, sommeil et synchro offline.
+  - [ ] Extraire le store Nutrition : cache aliments, date selectionnee, repas locaux et publication KPI.
+  - [ ] Extraire les vues Nutrition : saisie, timeline, historique, eau, sommeil et objectif.
 - [ ] Sante : separer score, tendances et saisies corporelles.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.
 - [ ] Patrimoine : separer actifs, cout mensuel et integration budget.

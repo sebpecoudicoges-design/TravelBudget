@@ -16,6 +16,7 @@ Les modules UI ne doivent plus implementer eux-memes les appels Supabase, la fil
 - `src/features/sport/sportSessionSandboxRules.js` : regles pures de la fenetre `Ajuster` pour renumeroter, supprimer et ajouter des series au bon exercice.
 - `src/features/sport/sportProfileRules.js` : calcul pur du profil athletique, avec priorite aux mouvements principaux, percentiles, ratios poids du corps, equilibres, potentiel et archetypes.
 - `src/features/sport/sportProfileView.js` : rendu pur du profil athletique, des notes par axe, du diagnostic automatique et de la modale de saisie impedancemetre.
+- `src/core/nutritionRules.js` : regles pures Nutrition pour normaliser les aliments, calculer les macros, l'alcool, les objectifs, les regroupements journaliers, les totaux par moment et le filtrage catalogue.
 - `src/core/canonicalRecords.js` : formats canoniques pour transaction, entree nutrition et seance sport.
 
 Le fichier `public/legacy/js/00_offline_queue.js` est maintenant un adaptateur : il conserve les handlers metier historiques, mais delegue l'infrastructure a `src/data`.
@@ -39,4 +40,4 @@ La protection locale ameliore l'experience. Les contraintes Postgres restent la 
 
 ## Migration restante
 
-Le repository, le store, les vues Timer/Historique/Ajuster et le controleur Timer Sport sont branches sur les lectures, mutations, caches locaux et reprises offline principales. Le prochain lot Sport peut isoler les handlers restants de l'ajustement des seances. Nutrition et les derniers caches Trip suivront pendant leur decoupage, avec leurs propres tests et parcours offline.
+Le repository, le store, les vues Timer/Historique/Ajuster et le controleur Timer Sport sont branches sur les lectures, mutations, caches locaux et reprises offline principales. Nutrition commence son decoupage par les regles pures du catalogue, du journal et des objectifs. Les derniers caches Trip suivront pendant leur decoupage, avec leurs propres tests et parcours offline.
