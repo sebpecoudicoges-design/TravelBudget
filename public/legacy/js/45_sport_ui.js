@@ -2039,6 +2039,29 @@
       .tb-sport-body-kpis>div{border:1px solid rgba(14,165,233,.16);border-radius:16px;background:linear-gradient(180deg,#f0f9ff,#fff);padding:10px;min-width:0;}
       .tb-sport-body-kpis span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:950;}
       .tb-sport-body-kpis strong{display:block;margin-top:5px;font-size:19px;color:#0f172a;line-height:1.05;overflow-wrap:anywhere;}
+      .tb-sport-athletic{display:grid;gap:10px;margin-top:12px;border:1px solid rgba(37,99,235,.14);border-radius:18px;background:linear-gradient(135deg,#f8fafc,#ecfeff);padding:12px;}
+      .tb-sport-athletic-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+      .tb-sport-athletic-head strong{display:block;font-size:18px;color:#0f172a;font-weight:950;}
+      .tb-sport-athletic-head small{display:block;margin-top:3px;color:#64748b;font-weight:850;line-height:1.35;}
+      .tb-sport-athletic-priority{border:1px solid rgba(14,165,233,.22);background:#fff;border-radius:14px;padding:8px 10px;color:#075985;font-weight:950;font-size:12px;max-width:260px;}
+      .tb-sport-athletic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+      .tb-sport-athletic-panel{display:grid;gap:5px;border:1px solid rgba(148,163,184,.16);border-radius:14px;background:rgba(255,255,255,.78);padding:10px;min-width:0;}
+      .tb-sport-athletic-panel b{color:#0f172a;font-size:13px;}
+      .tb-sport-athletic-panel span{font-size:12px;font-weight:850;line-height:1.35;color:#334155;}
+      .tb-sport-athletic-panel .ok{color:#047857;}
+      .tb-sport-athletic-panel .warn{color:#b45309;}
+      .tb-sport-athletic-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;}
+      .tb-sport-athletic-metrics>div{border:1px solid rgba(14,165,233,.16);border-radius:14px;background:#fff;padding:9px;}
+      .tb-sport-athletic-metrics span,.tb-sport-athletic-metrics small{display:block;color:#64748b;font-size:11px;font-weight:850;}
+      .tb-sport-athletic-metrics strong{display:block;color:#0f172a;font-size:18px;font-weight:950;margin:2px 0;}
+      .tb-sport-athletic-balance{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+      .tb-sport-athletic-balance>div{border-radius:14px;background:#dbeafe;color:#1e3a8a;padding:9px 10px;font-weight:950;}
+      .tb-sport-athletic-balance span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#3b82f6;}
+      .tb-sport-archetypes{display:grid;gap:7px;}
+      .tb-sport-archetypes div{display:grid;grid-template-columns:96px minmax(0,1fr) 32px;align-items:center;gap:8px;font-size:12px;font-weight:950;color:#0f172a;}
+      .tb-sport-archetypes b{height:10px;border-radius:999px;background:#e2e8f0;overflow:hidden;}
+      .tb-sport-archetypes i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#2563eb,#06b6d4,#22c55e);}
+      .tb-sport-archetypes em{font-style:normal;color:#2563eb;text-align:right;}
       .tb-sport-profile{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px;}
       .tb-sport-profile-note{border:1px solid rgba(14,165,233,.16);border-radius:16px;background:#e0f2fe;color:#075985;padding:10px 12px;font-weight:850;}
       .tb-sport-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
@@ -2183,6 +2206,10 @@
       body.theme-dark .tb-sport-radar-side strong,body.theme-dark .tb-sport-radar-bars span,body.theme-dark .tb-sport-body-kpis strong{color:#f8fafc;}
       body.theme-dark .tb-sport-radar-bars div,body.theme-dark .tb-sport-body-kpis>div{background:#0f172a;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-body-kpis>div{background:linear-gradient(180deg,rgba(14,165,233,.12),#0f172a);}
+      body.theme-dark .tb-sport-athletic{background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(8,47,73,.45));border-color:rgba(125,211,252,.18);}
+      body.theme-dark .tb-sport-athletic-head strong,body.theme-dark .tb-sport-athletic-panel b,body.theme-dark .tb-sport-athletic-metrics strong,body.theme-dark .tb-sport-archetypes div{color:#f8fafc;}
+      body.theme-dark .tb-sport-athletic-panel,body.theme-dark .tb-sport-athletic-metrics>div,body.theme-dark .tb-sport-athletic-priority{background:#0f172a;border-color:rgba(255,255,255,.12);}
+      body.theme-dark .tb-sport-athletic-balance>div{background:rgba(37,99,235,.18);color:#bfdbfe;}
       body.theme-dark .tb-sport-status{background:rgba(14,165,233,.14);color:#bae6fd;border-color:rgba(125,211,252,.20);}
       body.theme-dark .tb-sport-profile-note{background:rgba(14,165,233,.14);color:#bae6fd;border-color:rgba(125,211,252,.20);}
       body.theme-dark .tb-sport-library{background:rgba(14,165,233,.08);border-color:rgba(125,211,252,.18);}
@@ -2215,7 +2242,7 @@
       body.theme-dark .tb-sport-session-exercise{background:#0f172a;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       @media(max-width:980px){.tb-sport-grid,.tb-sport-profile-grid,.tb-sport-radar-wrap{grid-template-columns:1fr}.tb-sport-radar{margin:auto}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}.tb-sport-program-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-program-focus{grid-template-columns:1fr}.tb-sport-program-progression>div{grid-template-columns:1fr}.tb-sport-program-progression small,.tb-sport-program-progression b{text-align:left;white-space:normal;}.tb-sport-session-editor-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tb-sport-session-editor-meta{grid-template-columns:1fr 120px 1fr}}
-      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile,.tb-sport-body-kpis{grid-template-columns:1fr}.tb-sport-radar-wrap{gap:8px}.tb-sport-radar{max-width:280px}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-next{grid-template-columns:1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-program-cockpit{padding:10px}.tb-sport-program-head strong{font-size:21px}.tb-sport-program-kpis{grid-template-columns:1fr 1fr}.tb-sport-program-loads{grid-template-columns:1fr 1fr}.tb-sport-program-catchup{align-items:flex-start;flex-direction:column}.tb-sport-session-editor-meta,.tb-sport-session-editor-add,.tb-sport-session-editor-grid{grid-template-columns:1fr}.tb-sport-session-editor-grid .wide{grid-column:auto}.tb-sport-session-editor-row-head{align-items:flex-start;flex-direction:column}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
+      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile,.tb-sport-body-kpis,.tb-sport-athletic-grid,.tb-sport-athletic-balance{grid-template-columns:1fr}.tb-sport-athletic-head{flex-direction:column}.tb-sport-athletic-priority{max-width:none;width:100%;}.tb-sport-archetypes div{grid-template-columns:84px minmax(0,1fr) 28px}.tb-sport-radar-wrap{gap:8px}.tb-sport-radar{max-width:280px}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-next{grid-template-columns:1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-program-cockpit{padding:10px}.tb-sport-program-head strong{font-size:21px}.tb-sport-program-kpis{grid-template-columns:1fr 1fr}.tb-sport-program-loads{grid-template-columns:1fr 1fr}.tb-sport-program-catchup{align-items:flex-start;flex-direction:column}.tb-sport-session-editor-meta,.tb-sport-session-editor-add,.tb-sport-session-editor-grid{grid-template-columns:1fr}.tb-sport-session-editor-grid .wide{grid-column:auto}.tb-sport-session-editor-row-head{align-items:flex-start;flex-direction:column}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
       @media(max-height:700px){.tb-sport-timer-card.focus .tb-sport-timer{gap:7px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timeline{display:none}.tb-sport-timer-card.focus .tb-sport-live-grid{gap:6px}.tb-sport-timer-card.focus .tb-sport-live-kpi{padding:8px}.tb-sport-timer-card.focus .tb-sport-volume-row{display:none}}
       body.tb-capacitor-app[data-tb-view="sport"] #sport-root{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-shell{gap:10px!important;}
@@ -2668,6 +2695,10 @@
       core: "Core",
       cardio: "Cardio",
       recovery: txt("Recup.", "Recovery"),
+      force: txt("Force", "Strength"),
+      endurance: txt("Endurance", "Endurance"),
+      explosive: txt("Explosivite", "Explosiveness"),
+      mobility: txt("Mobilite", "Mobility"),
     };
     const axes = (data.axes || []).map(axis => Object.assign({}, axis, { label: labelMap[axis.key] || axis.key }));
     return {
@@ -2676,6 +2707,8 @@
       weakest: axes.find(axis => axis.key === data.weakest?.key) || axes.slice().sort((a, b) => a.value - b.value)[0] || axes[0],
       bestLoads: data.bestLoads || [],
       uniqueDays: data.uniqueDays || 0,
+      athleticProfile: data.athleticProfile || null,
+      classicAxes: data.classicAxes || [],
     };
   }
   function renderSportProfileDashboard() {

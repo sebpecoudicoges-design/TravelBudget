@@ -29,6 +29,17 @@ const data = {
   ],
   weakest: { key: 'core', label: 'Core', value: 75 },
   bestLoads: [{ name: 'Squat arriere', estimate: 105 }, { name: 'Developpe couche', estimate: 73 }],
+  athleticProfile: {
+    priority: 'augmenter endurance de 10 a 12 points',
+    insights: ['Tres bon niveau de force relative.'],
+    warnings: ['Developpe militaire probablement en retard par rapport au reste.'],
+    keyMetrics: [{ label: 'DC', value: '1.24 x PDC', detail: '73 kg e1RM' }],
+    balances: [{ label: 'Poussee / Tirage', text: 'Tirage +8%' }],
+    archetypes: [
+      { label: 'Grimpeur', value: 76 },
+      { label: 'Powerlifter', value: 82 },
+    ],
+  },
 };
 
 describe('Sport profile view', () => {
@@ -45,6 +56,10 @@ describe('Sport profile view', () => {
     expect(html).toContain('Developpe couche 73 kg e1RM');
     expect(html).toContain('developpe couche 1.35 x PDC');
     expect(html).toContain('Squat arriere 105 kg e1RM');
+    expect(html).toContain('Ton profil automatique');
+    expect(html).toContain('1.24 x PDC');
+    expect(html).toContain('Grimpeur');
+    expect(html).toContain('Developpe militaire probablement en retard');
     expect(html).toContain('Derniere mesure : 2026-07-07');
     expect(html).toContain('15%');
     expect(html).toContain('id="sport-open-body-measurement"');

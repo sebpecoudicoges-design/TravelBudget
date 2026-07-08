@@ -14,8 +14,8 @@ Les modules UI ne doivent plus implementer eux-memes les appels Supabase, la fil
 - `src/features/sport/sportTimerView.js`, `src/features/sport/sportHistoryView.js` et `src/features/sport/sportSessionSandboxView.js` : rendu pur du Timer guide, de la semaine sport, des cartes d'historique, du detail des series et de la fenetre `Ajuster`.
 - `src/features/sport/sportTimerController.js` : orchestration pure du timer Sport pour demarrage, serie terminee, repos, pause, ajout de serie, ajout de tour circuit et ajustement du chrono.
 - `src/features/sport/sportSessionSandboxRules.js` : regles pures de la fenetre `Ajuster` pour renumeroter, supprimer et ajouter des series au bon exercice.
-- `src/features/sport/sportProfileRules.js` : calcul pur du radar forces/faiblesses, avec priorite aux mouvements principaux et reperes plus exigeants par poids du corps.
-- `src/features/sport/sportProfileView.js` : rendu pur du profil forces/faiblesses, des notes par axe et de la modale de saisie impedancemetre.
+- `src/features/sport/sportProfileRules.js` : calcul pur du profil athletique, avec priorite aux mouvements principaux, percentiles, ratios poids du corps, equilibres, potentiel et archetypes.
+- `src/features/sport/sportProfileView.js` : rendu pur du profil athletique, des notes par axe, du diagnostic automatique et de la modale de saisie impedancemetre.
 - `src/core/canonicalRecords.js` : formats canoniques pour transaction, entree nutrition et seance sport.
 
 Le fichier `public/legacy/js/00_offline_queue.js` est maintenant un adaptateur : il conserve les handlers metier historiques, mais delegue l'infrastructure a `src/data`.

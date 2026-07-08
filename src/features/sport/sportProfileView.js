@@ -27,8 +27,50 @@ function axisBasis(axis, h) {
     core: h.txt('Compare gainage et abdos a un repere plus strict : 120 s ou 35 reps propres.', 'Compares planks and abs against a stricter benchmark: 120 s or 35 clean reps.'),
     cardio: h.txt('Compare l intensite observee a 14 kcal/min pour eviter de surnoter une seance moderee.', 'Compares observed intensity against 14 kcal/min to avoid overrating moderate sessions.'),
     recovery: h.txt('Compare le sommeil recent a 8,5 h ou la regularite recente si le sommeil manque.', 'Compares recent sleep against 8.5 h, or recent consistency when sleep is missing.'),
+    force: h.txt('Score composite des grands mouvements : squat, souleve de terre, developpes, tractions et core.', 'Composite score from main lifts: squat, deadlift, presses, pull-ups and core.'),
+    endurance: h.txt('Score construit depuis gainage, volume musculaire, regularite et condition continue.', 'Built from core holds, muscular volume, consistency and sustained conditioning.'),
+    explosive: h.txt('Score issu des efforts rapides : corde, boxe, HIIT, sprints ou mouvements explosifs quand disponibles.', 'Built from fast efforts: jump rope, boxing, HIIT, sprints or explosive lifts when available.'),
+    mobility: h.txt('Axe volontairement bas tant que les tests simples de mobilite ne sont pas saisis.', 'Intentionally low until simple mobility tests are recorded.'),
   };
   return map[axis] || '';
+}
+
+function renderAthleticProfile(profile, h) {
+  if (!profile) return '';
+  const insights = profile.insights || [];
+  const warnings = profile.warnings || [];
+  const archetypes = profile.archetypes || [];
+  const metrics = profile.keyMetrics || [];
+  const balances = profile.balances || [];
+  const bar = (value) => `${Math.max(4, Math.min(99, h.n(value, 0)))}%`;
+  return `<div class="tb-sport-athletic">
+    <div class="tb-sport-athletic-head">
+      <div>
+        <strong>${h.esc(h.txt('Ton profil automatique', 'Your automatic profile'))}</strong>
+        <small>${h.esc(h.txt('Performance brute, ratios poids du corps, equilibres et potentiel detecte.', 'Raw performance, bodyweight ratios, balance and detected potential.'))}</small>
+      </div>
+      <div class="tb-sport-athletic-priority">${h.esc(h.txt('Priorite', 'Priority'))}: ${h.esc(profile.priority || '-')}</div>
+    </div>
+    <div class="tb-sport-athletic-grid">
+      <div class="tb-sport-athletic-panel">
+        <b>${h.esc(h.txt('Forces detectees', 'Detected strengths'))}</b>
+        ${insights.length ? insights.map((row) => `<span class="ok">OK ${h.esc(row)}</span>`).join('') : `<span>${h.esc(h.txt('Encore trop peu de donnees fiables.', 'Still too little reliable data.'))}</span>`}
+      </div>
+      <div class="tb-sport-athletic-panel">
+        <b>${h.esc(h.txt('Points a surveiller', 'Watch points'))}</b>
+        ${warnings.map((row) => `<span class="warn">! ${h.esc(row)}</span>`).join('')}
+      </div>
+    </div>
+    <div class="tb-sport-athletic-metrics">
+      ${metrics.map((row) => `<div><span>${h.esc(row.label)}</span><strong>${h.esc(row.value)}</strong><small>${h.esc(row.detail || '')}</small></div>`).join('') || `<div><span>${h.esc(h.txt('Ratios', 'Ratios'))}</span><strong>-</strong><small>${h.esc(h.txt('Ajoute des charges dans les series', 'Add loads in sets'))}</small></div>`}
+    </div>
+    <div class="tb-sport-athletic-balance">
+      ${balances.map((row) => `<div><span>${h.esc(row.label)}</span><strong>${h.esc(row.text)}</strong></div>`).join('')}
+    </div>
+    <div class="tb-sport-archetypes">
+      ${archetypes.map((row) => `<div><span>${h.esc(row.label)}</span><b><i style="width:${bar(row.value)}"></i></b><em>${h.n(row.value, 0)}</em></div>`).join('')}
+    </div>
+  </div>`;
 }
 
 export function radarPoints(axes = [], radius = 104, cx = 140, cy = 140) {
@@ -60,6 +102,7 @@ export function renderSportProfileDashboard({
     return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="rgba(148,163,184,.24)"/><text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle">${h.esc(axis.label)}</text>`;
   }).join('');
   const weakest = data.weakest || axes[0] || { label: '-' };
+  const athleticProfile = data.athleticProfile || null;
   const loads = (data.bestLoads || []).length
     ? data.bestLoads.map((row) => `<span class="tb-sport-chip">${h.esc(row.name)} ${Math.round(h.n(row.estimate, 0))} kg e1RM</span>`).join('')
     : `<span class="tb-sport-chip">${h.esc(h.txt('Charges a renseigner dans les series', 'Enter loads in sets'))}</span>`;
@@ -68,7 +111,7 @@ export function renderSportProfileDashboard({
         <div class="tb-sport-card-head">
           <div>
             <h3>${h.esc(h.txt('Profil forces / faiblesses', 'Strengths / weaknesses profile'))}</h3>
-            <div class="muted">${h.esc(h.txt('Radar indicatif sur 28 jours : meilleures capacites observees, pas volume de travail.', 'Indicative 28-day radar: best observed capacities, not work volume.'))}</div>
+            <div class="muted">${h.esc(h.txt('Profil athletique sur 28 jours : percentiles, ratios PDC, equilibres et potentiel.', '28-day athletic profile: percentiles, BW ratios, balance and potential.'))}</div>
           </div>
           <button class="btn" type="button" id="sport-open-body-measurement">${h.esc(h.txt('Mesures', 'Metrics'))}</button>
         </div>
@@ -84,12 +127,13 @@ export function renderSportProfileDashboard({
           </svg>
           <div class="tb-sport-radar-side">
             <strong>${h.esc(h.txt('Axe a renforcer', 'Focus axis'))}: ${h.esc(weakest.label)}</strong>
-            <small>${h.esc(h.txt('Base : meilleures capacites observees sur 28 jours, comparees a des reperes intermediaires exigeants par poids du corps. Repere de suivi, pas diagnostic.', 'Basis: best observed 28-day capacities, compared with demanding intermediate bodyweight benchmarks. Tracking guidance, not a diagnosis.'))}</small>
+            <small>${h.esc(h.txt('Lecture en percentiles : 50 intermediaire, 70 confirme, 85 avance, 95 tres avance, 99 elite naturel. Repere de suivi, pas diagnostic.', 'Percentile reading: 50 intermediate, 70 confirmed, 85 advanced, 95 very advanced, 99 natural elite. Tracking guidance, not a diagnosis.'))}</small>
             <div class="tb-sport-radar-bars">
-              ${axes.map((axis) => `<div title="${h.esc(`${axisBasis(axis.key, h)} ${axis.basis || ''}`)}"><span>${h.esc(axis.label)} · ${h.esc(axis.raw)}${axis.basis ? ` · ${h.esc(axis.basis)}` : ''}</span><b style="width:${Math.max(6, h.n(axis.value, 0))}%"></b><em>${h.n(axis.value, 0)}</em></div>`).join('')}
+              ${axes.map((axis) => `<div title="${h.esc(`${axisBasis(axis.key, h)} ${axis.basis || ''}`)}"><span>${h.esc(axis.label)} - ${h.esc(axis.raw)}${axis.basis ? ` - ${h.esc(axis.basis)}` : ''}</span><b style="width:${Math.max(6, Math.min(99, h.n(axis.value, 0)))}%"></b><em>P${h.n(axis.value, 0)}</em></div>`).join('')}
             </div>
           </div>
         </div>
+        ${renderAthleticProfile(athleticProfile, h)}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px;">
           ${axes.map((axis) => `<div class="tb-sport-profile-note"><strong>${h.esc(axis.label)}</strong><br><small>${h.esc(axisBasis(axis.key, h))}</small></div>`).join('')}
         </div>

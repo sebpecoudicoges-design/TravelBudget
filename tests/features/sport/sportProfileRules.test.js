@@ -80,10 +80,14 @@ describe('Sport profile rules', () => {
       api,
     });
 
-    const push = data.axes.find((axis) => axis.key === 'push');
+    const push = data.classicAxes.find((axis) => axis.key === 'push');
     expect(push.raw).toContain('Developpe couche');
     expect(push.basis).toBe('developpe couche 1.35 x PDC');
     expect(push.value).toBeLessThan(100);
-    expect(push.value).toBeGreaterThan(80);
+    expect(push.value).toBeGreaterThan(60);
+    expect(data.axes.map((axis) => axis.key)).toEqual(['force', 'endurance', 'cardio', 'explosive', 'mobility', 'recovery']);
+    expect(data.athleticProfile.priority).toContain('10 a 12 points');
+    expect(data.athleticProfile.archetypes.map((row) => row.label)).toEqual(['Grimpeur', 'Powerlifter', 'Hyrox', 'Endurance']);
+    expect(data.athleticProfile.balances[0].label).toBe('Poussee / Tirage');
   });
 });

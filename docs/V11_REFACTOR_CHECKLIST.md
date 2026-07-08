@@ -83,6 +83,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire les regles du radar forces/faiblesses et durcir les comparaisons par axe.
   - [x] Extraire la vue du profil forces/faiblesses et de la modale impedancemetre.
   - [x] Extraire les handlers du timer : demarrage, serie terminee, repos, pause, ajout de serie et ajout de tour circuit.
+  - [x] Transformer le radar en profil athletique : percentiles, ratios PDC, equilibres, potentiel, archetypes et priorite automatique.
 - [ ] Nutrition : separer catalogue, journal, objectifs et historique.
 - [ ] Sante : separer score, tendances et saisies corporelles.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.
