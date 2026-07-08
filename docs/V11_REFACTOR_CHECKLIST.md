@@ -81,6 +81,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire la vue de la fenetre `Ajuster` hors du fichier legacy.
   - [x] Extraire les regles pures de la fenetre `Ajuster` : renumerotation, suppression et ajout de series.
   - [x] Extraire les regles du radar forces/faiblesses et durcir les comparaisons par axe.
+  - [x] Extraire la vue du profil forces/faiblesses et de la modale impedancemetre.
 - [ ] Nutrition : separer catalogue, journal, objectifs et historique.
 - [ ] Sante : separer score, tendances et saisies corporelles.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.
