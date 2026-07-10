@@ -168,6 +168,7 @@
   function healthGoalKey() { return `${window.TB_CONST?.LS_KEYS?.health_goal || "travelbudget_health_goal_v1"}::${uid() || "anon"}`; }
   function nutritionGoalKey() { return healthGoalKey(); }
   function rules() { return window.Core?.nutritionRules || {}; }
+  function repository() { return window.Data?.nutritionRepository || {}; }
   function normalizeFood(row) { return rules().normalizeFoodRow ? rules().normalizeFoodRow(row) : row; }
   function nutritionForGrams(food, grams) { return rules().nutritionForGrams ? rules().nutritionForGrams(food, grams) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
   function sumNutrition(items) { return rules().sumNutrition ? rules().sumNutrition(items) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
@@ -285,18 +286,30 @@
     return { level: "good", color: "#22c55e", label: txt("Aucun alcool detecte", "No alcohol detected"), note: txt("Aucun aliment alcoolise lie a cette periode.", "No alcoholic food linked to this period.") };
   }
   function loadCachedFoods() {
+    const repo = repository();
+    if (typeof repo.loadCachedFoods === "function") return repo.loadCachedFoods({ storage: localStorage, key: foodCacheKey() });
     try { const rows = JSON.parse(localStorage.getItem(foodCacheKey()) || "[]"); return Array.isArray(rows) ? rows : []; } catch (_) { return []; }
   }
   function saveCachedFoods(rows) {
+    const repo = repository();
+    if (typeof repo.saveCachedFoods === "function") return repo.saveCachedFoods({ storage: localStorage, key: foodCacheKey(), rows });
     try { localStorage.setItem(foodCacheKey(), JSON.stringify((rows || []).slice(0, 500))); } catch (_) {}
+    return false;
   }
   function loadLocalMeals() {
+    const repo = repository();
+    if (typeof repo.loadLocalNutritionRows === "function") return repo.loadLocalNutritionRows({ storage: localStorage, key: localMealKey() });
     try { const rows = JSON.parse(localStorage.getItem(localMealKey()) || "[]"); return Array.isArray(rows) ? rows : []; } catch (_) { return []; }
   }
   function saveLocalMeals(rows) {
+    const repo = repository();
+    if (typeof repo.saveLocalNutritionRows === "function") return repo.saveLocalNutritionRows({ storage: localStorage, key: localMealKey(), rows });
     try { localStorage.setItem(localMealKey(), JSON.stringify((rows || []).slice(0, 200))); } catch (_) {}
+    return false;
   }
   function localNutritionRowKey(row, index) {
+    const repo = repository();
+    if (typeof repo.localNutritionRowKey === "function") return repo.localNutritionRowKey(row, index);
     const raw = String(row?.syncId || row?.meal?.sync_id || row?.meal?.id || row?.item?.id || "").trim();
     return raw || `idx_${Math.max(0, n(index, 0))}`;
   }
@@ -305,6 +318,14 @@
     try { if (typeof window.tbOfflineQueueDiscardFailed === "function") window.tbOfflineQueueDiscardFailed("nutrition.sync_local"); } catch (_) {}
   }
   function discardLocalNutritionRow(key) {
+    const repo = repository();
+    const result = typeof repo.discardLocalNutritionRow === "function"
+      ? repo.discardLocalNutritionRow({ storage: localStorage, key: localMealKey(), rowKey: key })
+      : null;
+    if (result) {
+      if (!result.remaining.length) discardNutritionQueue();
+      return result.removed;
+    }
     const wanted = String(key || "");
     const rows = loadLocalMeals();
     const next = rows.filter((row, index) => localNutritionRowKey(row, index) !== wanted);
@@ -313,8 +334,11 @@
     return rows.length - next.length;
   }
   function discardAllLocalNutritionRows() {
-    const count = loadLocalMeals().length;
-    saveLocalMeals([]);
+    const repo = repository();
+    const count = typeof repo.discardAllLocalNutritionRows === "function"
+      ? repo.discardAllLocalNutritionRows({ storage: localStorage, key: localMealKey() })
+      : loadLocalMeals().length;
+    if (typeof repo.discardAllLocalNutritionRows !== "function") saveLocalMeals([]);
     discardNutritionQueue();
     CACHE.syncStatus = count ? txt("Attentes nutrition supprimees.", "Nutrition pending entries removed.") : "";
     return count;
@@ -358,9 +382,13 @@
     </div>`;
   }
   function isOfflineSkipError(err) {
+    const repo = repository();
+    if (typeof repo.isOfflineSkipError === "function") return repo.isOfflineSkipError(err);
     return /offline mode|supabase request skipped|failed to fetch|network/i.test(String(err?.message || err || ""));
   }
   function isDuplicateNutritionError(err) {
+    const repo = repository();
+    if (typeof repo.isDuplicateNutritionError === "function") return repo.isDuplicateNutritionError(err);
     return String(err?.code || "") === "23505" || /duplicate key|unique constraint|nutrition_meal_items_exact_dedupe/i.test(String(err?.message || err || ""));
   }
   function enqueueNutritionSync() {
@@ -371,13 +399,19 @@
     } catch (_) {}
   }
   function nutritionSyncMarker(syncId) {
+    const repo = repository();
+    if (typeof repo.nutritionSyncMarker === "function") return repo.nutritionSyncMarker(syncId);
     const id = String(syncId || "").trim();
     return id ? `tb_sync:${id}` : "";
   }
   function nutritionSyncId(row) {
+    const repo = repository();
+    if (typeof repo.nutritionSyncId === "function") return repo.nutritionSyncId(row);
     return String(row?.syncId || row?.meal?.sync_id || row?.meal?.id || "").trim();
   }
   function notesWithNutritionSyncId(notes, syncId) {
+    const repo = repository();
+    if (typeof repo.notesWithNutritionSyncId === "function") return repo.notesWithNutritionSyncId(notes, syncId);
     const marker = nutritionSyncMarker(syncId);
     const base = String(notes || "").trim();
     if (!marker) return base || null;
@@ -385,6 +419,13 @@
     return [base, marker].filter(Boolean).join(" ");
   }
   function makeLocalNutritionRow({ food, grams, nut, waterMl, mealType, mealDate, label, syncId }) {
+    const repo = repository();
+    if (typeof repo.makeLocalNutritionRow === "function") {
+      return repo.makeLocalNutritionRow({
+        food, grams, nut, waterMl, mealType, mealDate: mealDate || selectedDateISO(), label, syncId,
+        userId: uid(), travelId: activeTravelId(),
+      });
+    }
     const stamp = String(syncId || "").replace(/^nutrition_/, "") || (Date.now() + "_" + Math.random().toString(16).slice(2));
     const mealId = `local_meal_${stamp}`;
     const itemId = `local_item_${stamp}`;
@@ -467,6 +508,11 @@
   }
   function saveLocalNutritionRowOnce(row) {
     if (!row) return;
+    const repo = repository();
+    if (typeof repo.saveLocalNutritionRowOnce === "function") {
+      repo.saveLocalNutritionRowOnce({ storage: localStorage, key: localMealKey(), row });
+      return;
+    }
     const key = localNutritionRowKey(row, 0);
     const rows = loadLocalMeals().filter(existing => localNutritionRowKey(existing, 0) !== key);
     rows.unshift(row);
@@ -498,74 +544,85 @@
         try {
           const meal = row.meal || {};
           const syncId = nutritionSyncId(row);
-          const mealNotes = notesWithNutritionSyncId(meal.notes, syncId);
           const mealDate = localDateISO(meal.meal_date) || selectedDateISO();
-          let mealId = "";
-          let existingMealLabel = "";
-          if (syncId) {
-            const existingMeal = await c.from(table("nutrition_meals"))
-              .select("id,label")
-              .eq("user_id", userId)
-              .eq("sync_id", syncId)
-              .maybeSingle();
-            if (existingMeal.error) throw existingMeal.error;
-            mealId = existingMeal.data?.id || "";
-            existingMealLabel = existingMeal.data?.label || "";
-          }
-          if (!mealId) {
-            const insertedMeal = syncId
-              ? await c.from(table("nutrition_meals")).upsert({
+          const repo = repository();
+          if (typeof repo.syncLocalRow === "function") {
+            await repo.syncLocalRow({
+              tables: { meals: table("nutrition_meals"), items: table("nutrition_meal_items") },
+              row,
+              userId,
+              travelId: activeTravelId(),
+              fallbackDate: mealDate,
+            });
+          } else {
+            const mealNotes = notesWithNutritionSyncId(meal.notes, syncId);
+            let mealId = "";
+            let existingMealLabel = "";
+            if (syncId) {
+              const existingMeal = await c.from(table("nutrition_meals"))
+                .select("id,label")
+                .eq("user_id", userId)
+                .eq("sync_id", syncId)
+                .maybeSingle();
+              if (existingMeal.error) throw existingMeal.error;
+              mealId = existingMeal.data?.id || "";
+              existingMealLabel = existingMeal.data?.label || "";
+            }
+            if (!mealId) {
+              const insertedMeal = syncId
+                ? await c.from(table("nutrition_meals")).upsert({
+                  user_id: userId,
+                  travel_id: meal.travel_id || activeTravelId(),
+                  meal_date: mealDate,
+                  meal_type: meal.meal_type || "meal",
+                  label: meal.label || txt("Repas", "Meal"),
+                  notes: mealNotes,
+                  sync_id: syncId,
+                  water_ml: n(meal.water_ml, 0),
+                }, { onConflict: "user_id,sync_id" }).select("id").single()
+                : await c.from(table("nutrition_meals")).insert({
                 user_id: userId,
                 travel_id: meal.travel_id || activeTravelId(),
                 meal_date: mealDate,
                 meal_type: meal.meal_type || "meal",
                 label: meal.label || txt("Repas", "Meal"),
                 notes: mealNotes,
-                sync_id: syncId,
                 water_ml: n(meal.water_ml, 0),
-              }, { onConflict: "user_id,sync_id" }).select("id").single()
-              : await c.from(table("nutrition_meals")).insert({
-              user_id: userId,
-              travel_id: meal.travel_id || activeTravelId(),
-              meal_date: mealDate,
-              meal_type: meal.meal_type || "meal",
-              label: meal.label || txt("Repas", "Meal"),
-              notes: mealNotes,
-              water_ml: n(meal.water_ml, 0),
-            }).select("id").single();
-            if (insertedMeal.error) throw insertedMeal.error;
-            mealId = insertedMeal.data.id;
-          }
-          if (row.item) {
-            const item = row.item;
-            const itemLabel = item.label || meal.label || "Aliment";
-            if (existingMealLabel && itemLabel && existingMealLabel !== itemLabel) {
-              synced += 1;
-              continue;
+              }).select("id").single();
+              if (insertedMeal.error) throw insertedMeal.error;
+              mealId = insertedMeal.data.id;
             }
-            const existingItems = await c.from(table("nutrition_meal_items"))
-              .select("id")
-              .eq("user_id", userId)
-              .eq("meal_id", mealId)
-              .eq("label", itemLabel)
-              .eq("grams", n(item.grams, 0))
-              .eq("kcal", n(item.kcal, 0))
-              .limit(1);
-            if (existingItems.error) throw existingItems.error;
-            if (!(existingItems.data || []).length) {
-              const insertedItem = await c.from(table("nutrition_meal_items")).insert({
-                user_id: userId,
-                meal_id: mealId,
-                food_key: item.food_key || null,
-                label: itemLabel,
-                grams: n(item.grams, 0),
-                kcal: n(item.kcal, 0),
-                protein_g: n(item.protein_g, 0),
-                carbs_g: n(item.carbs_g, 0),
-                fat_g: n(item.fat_g, 0),
-                fiber_g: n(item.fiber_g, 0),
-              });
-              if (insertedItem.error && !isDuplicateNutritionError(insertedItem.error)) throw insertedItem.error;
+            if (row.item) {
+              const item = row.item;
+              const itemLabel = item.label || meal.label || "Aliment";
+              if (existingMealLabel && itemLabel && existingMealLabel !== itemLabel) {
+                synced += 1;
+                continue;
+              }
+              const existingItems = await c.from(table("nutrition_meal_items"))
+                .select("id")
+                .eq("user_id", userId)
+                .eq("meal_id", mealId)
+                .eq("label", itemLabel)
+                .eq("grams", n(item.grams, 0))
+                .eq("kcal", n(item.kcal, 0))
+                .limit(1);
+              if (existingItems.error) throw existingItems.error;
+              if (!(existingItems.data || []).length) {
+                const insertedItem = await c.from(table("nutrition_meal_items")).insert({
+                  user_id: userId,
+                  meal_id: mealId,
+                  food_key: item.food_key || null,
+                  label: itemLabel,
+                  grams: n(item.grams, 0),
+                  kcal: n(item.kcal, 0),
+                  protein_g: n(item.protein_g, 0),
+                  carbs_g: n(item.carbs_g, 0),
+                  fat_g: n(item.fat_g, 0),
+                  fiber_g: n(item.fiber_g, 0),
+                });
+                if (insertedItem.error && !isDuplicateNutritionError(insertedItem.error)) throw insertedItem.error;
+              }
             }
           }
           synced += 1;
@@ -660,6 +717,8 @@
     saveMealFavorites(next);
   }
   function loadSleepRows() {
+    const repo = repository();
+    if (typeof repo.loadSleepRows === "function") return repo.loadSleepRows({ storage: localStorage, key: sleepKey() });
     try {
       const raw = JSON.parse(localStorage.getItem(sleepKey()) || "{}");
       return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
@@ -668,9 +727,14 @@
     }
   }
   function saveSleepRows(rows) {
+    const repo = repository();
+    if (typeof repo.saveSleepRows === "function") return repo.saveSleepRows({ storage: localStorage, key: sleepKey(), rows });
     try { localStorage.setItem(sleepKey(), JSON.stringify(rows || {})); } catch (_) {}
+    return false;
   }
   function mergeSleepRows(rows) {
+    const repo = repository();
+    if (typeof repo.mergeSleepRows === "function") return repo.mergeSleepRows({ storage: localStorage, key: sleepKey(), rows });
     const current = loadSleepRows();
     Object.entries(rows || {}).forEach(([day, row]) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ""))) return;

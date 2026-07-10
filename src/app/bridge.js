@@ -25,6 +25,7 @@ import { createMutationQueueStore, flushMutationQueue } from '../data/mutationQu
 import { createSupabaseRepository } from '../data/supabaseRepository.js';
 import { createTripRepository } from '../data/tripRepository.js';
 import { createSportRepository } from '../data/sportRepository.js';
+import { createNutritionRepository } from '../data/nutritionRepository.js';
 import { createTripStore } from '../features/trip/tripStore.js';
 import { createSportStore } from '../features/sport/sportStore.js';
 import * as tripView from '../features/trip/tripView.js';
@@ -75,6 +76,7 @@ window.Data.flushMutationQueue = flushMutationQueue;
 window.Data.supabaseRepository = window.Data.supabaseRepository || createSupabaseRepository(() => window.sb);
 window.Data.tripRepository = window.Data.tripRepository || createTripRepository(() => window.sb);
 window.Data.sportRepository = window.Data.sportRepository || createSportRepository(() => window.sb);
+window.Data.nutritionRepository = window.Data.nutritionRepository || createNutritionRepository(() => window.sb);
 window.Data.createTripStore = window.Data.createTripStore || createTripStore;
 window.Data.createSportStore = window.Data.createSportStore || createSportStore;
 window.Data.storageQuota = storageQuota;
