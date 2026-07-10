@@ -467,8 +467,8 @@
       btn.type = "button";
       btn.textContent = "Notifications";
       btn.onclick = () => { if (typeof window.showView === "function") window.showView("notifications"); };
-      const health = document.getElementById("tab-health");
-      if (health?.parentNode) health.parentNode.insertBefore(btn, health.nextSibling);
+      const ref = document.getElementById("tab-nutrition") || document.getElementById("tab-work") || document.getElementById("tab-sport");
+      if (ref?.parentNode) ref.parentNode.insertBefore(btn, ref.nextSibling);
       else nav.appendChild(btn);
     }
     const app = document.querySelector("main") || document.getElementById("app") || document.body;

@@ -17,7 +17,6 @@ function setActiveTab(view) {
     ["sport", "tab-sport", "view-sport"],
     ["work", "tab-work", "view-work"],
     ["nutrition", "tab-nutrition", "view-nutrition"],
-    ["health", "tab-health", "view-health"],
     ["notifications", "tab-notifications", "view-notifications"],
     ["trip", "tab-trip", "view-trip"],
     ["members", "tab-members", "view-members"],
@@ -32,6 +31,7 @@ function setActiveTab(view) {
 }
 function showView(view) {
   try { if (typeof window.tbApplyUiModeToDocument === "function") window.tbApplyUiModeToDocument(); } catch (_) {}
+  if (view === "health") view = "nutrition";
   if (view === "members" && String(window.sbRole || "").trim().toLowerCase() !== "admin") view = "dashboard";
   activeView = view;
   try { if (typeof window !== "undefined") window.activeView = view; } catch (_) {}
@@ -57,7 +57,6 @@ function showView(view) {
   if (view === "sport") { if (typeof window.renderSport === "function") window.renderSport("navigation"); }
   if (view === "work") { if (typeof window.renderWork === "function") window.renderWork("navigation"); }
   if (view === "nutrition") { if (typeof window.renderNutrition === "function") window.renderNutrition("navigation"); }
-  if (view === "health") { if (typeof window.renderHealth === "function") window.renderHealth("navigation"); }
   if (view === "notifications") { if (typeof window.renderNotifications === "function") window.renderNotifications("navigation"); }
   if (view === "dashboard") {
     try {

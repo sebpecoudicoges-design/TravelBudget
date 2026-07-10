@@ -94,6 +94,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
     - [x] Extraire les panneaux de vue : saisie rapide, hydratation, sommeil et historique semaine.
     - [x] Extraire les vues objectif et alcool : cockpit objectif, moyenne 7 jours et barres alcool hebdomadaires.
 - [x] Sante : supprimer le chantier autonome et garder les indicateurs dans Nutrition, Sport, Travail, notifications et KPI.
+  - [x] Retirer l'onglet, la vue et le rendu Sante autonomes du runtime ; rediriger les anciens appels vers Nutrition.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.
 - [ ] Patrimoine : separer actifs, cout mensuel et integration budget.
 
