@@ -1940,83 +1940,23 @@
         </div>
         <div class="tb-nutrition-layout">
           <div style="display:flex;flex-direction:column;gap:12px;">
-            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-              <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;">
-                <h3 style="margin:0;">${esc(editingItem ? txt("Modifier", "Edit") : txt("Ajout rapide", "Quick add"))}</h3>
-                <span class="pill">${esc(syncBadge)}</span>
-              </div>
-              <div class="field"><label>${esc(txt("Chercher", "Search"))}</label><input id="nutrition-search" value="${esc(CACHE.foodQuery)}" placeholder="${esc(txt("Riz, poulet, banane...", "Rice, chicken, banana..."))}"></div>
-              <div class="field"><label>${esc(txt("Aliment", "Food"))}</label><select id="nutrition-food">${foodOptions()}</select></div>
-              <div class="tb-nutrition-chip-row">
-                <button class="btn small" id="nutrition-toggle-favorite" type="button">★ ${esc(txt("Favori", "Favorite"))}</button>
-                ${quickFoods.favs.map(food => foodChipHTML(food, "favorite")).join("")}
-                ${quickFoods.recent.map(food => foodChipHTML(food, "recent")).join("")}
-              </div>
-              ${mealFavorites.length ? `<div class="tb-nutrition-chip-row" aria-label="${esc(txt("Repas favoris", "Favorite meals"))}">${mealFavorites.slice(0, 6).map((fav, index) => mealFavoriteChipHTML(fav, index)).join("")}</div>` : ""}
-              <div class="row tb-nutrition-form-row" style="gap:10px;">
-                <div class="field" style="flex:1;"><label>${esc(txt("Mode", "Mode"))}</label><select id="nutrition-amount-mode"><option value="portion">${esc(txt("Portions", "Servings"))}</option><option value="grams">${esc(txt("Grammes", "Grams"))}</option></select></div>
-                <div class="field" style="flex:1;"><label>${esc(txt("Quantite", "Quantity"))}</label><input id="nutrition-quantity" type="number" min="0" step="0.25" value="1"></div>
-              </div>
-              <div class="row tb-nutrition-form-row" style="gap:10px;">
-                <div class="field" style="flex:1;"><label>${esc(txt("Grammes estimes", "Estimated grams"))}</label><input id="nutrition-grams" type="number" min="0" step="5" value="100"></div>
-                <div class="field" style="flex:1;"><label>${esc(txt("Moment", "Moment"))}</label><select id="nutrition-type"><option value="breakfast" ${activeMealType === "breakfast" ? "selected" : ""}>${esc(txt("Petit-dej", "Breakfast"))}</option><option value="morning_snack" ${activeMealType === "morning_snack" ? "selected" : ""}>${esc(txt("Pause 10h", "10am snack"))}</option><option value="lunch" ${activeMealType === "lunch" ? "selected" : ""}>${esc(txt("Dejeuner", "Lunch"))}</option><option value="afternoon_snack" ${activeMealType === "afternoon_snack" ? "selected" : ""}>${esc(txt("Gouter", "Afternoon snack"))}</option><option value="dinner" ${activeMealType === "dinner" ? "selected" : ""}>${esc(txt("Diner", "Dinner"))}</option><option value="snack" ${activeMealType === "snack" ? "selected" : ""}>${esc(txt("Snack", "Snack"))}</option><option value="meal" ${activeMealType === "meal" ? "selected" : ""}>${esc(txt("Repas libre", "Free meal"))}</option></select></div>
-              </div>
-              <div class="pill" id="nutrition-preview">0 kcal</div>
-              <button class="btn primary" id="nutrition-save" type="button" style="width:100%;margin-top:10px;">${esc(editingItem ? txt("Enregistrer", "Save") : txt("Ajouter", "Add"))}</button>
-              ${editingItem ? `<button class="btn" id="nutrition-edit-cancel" type="button" style="width:100%;margin-top:8px;">${esc(txt("Annuler la modification", "Cancel edit"))}</button>` : ""}
-              ${CACHE.error ? `<div class="muted" style="margin-top:10px;">${esc(CACHE.error)}</div>` : ""}
-            </div>
-            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-              <h3 style="margin:0 0 10px;">${esc(txt("Hydratation", "Hydration"))}</h3>
-              <div class="field"><label>${esc(txt("Eau ml", "Water ml"))}</label><input id="nutrition-water-ml" type="number" min="0" step="50" value="250"></div>
-              <div class="tb-nutrition-water-grid">
-                <button class="btn small" type="button" data-nutrition-water-quick="250">250</button>
-                <button class="btn small" type="button" data-nutrition-water-quick="500">500</button>
-                <button class="btn small" type="button" data-nutrition-water-quick="1000">1L</button>
-                <button class="btn small" type="button" data-nutrition-water-quick="2000">2L</button>
-              </div>
-              <button class="btn primary" id="nutrition-water-only" type="button" style="width:100%;">${esc(txt("Ajouter eau", "Add water"))}</button>
-            </div>
-            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-              <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;">
-                <h3 style="margin:0;">${esc(txt("Sommeil", "Sleep"))}</h3>
-                <span class="pill">${esc(sleepLabel)}</span>
-              </div>
-              <div class="muted" style="font-size:12px;margin:-4px 0 8px;">${esc(txt("Nuit du", "Night of"))} ${esc(sleepNightLabel)} → ${esc(day.slice(5).replace("-", "/"))}</div>
-              <div class="row tb-nutrition-form-row" style="gap:10px;">
-                <div class="field" style="flex:1;"><label>${esc(txt("Heures dormies", "Hours slept"))}</label><input id="nutrition-sleep-hours" type="number" min="0" max="14" step="0.25" value="${esc(String(sleep.hours || ""))}" placeholder="7.5"></div>
-                <div class="field" style="flex:1;"><label>${esc(txt("Qualite", "Quality"))}</label><select id="nutrition-sleep-quality"><option value="bad" ${sleep.quality === "bad" ? "selected" : ""}>${esc(txt("Mauvaise", "Bad"))}</option><option value="ok" ${sleep.quality === "ok" ? "selected" : ""}>${esc(txt("Correcte", "Ok"))}</option><option value="good" ${sleep.quality === "good" ? "selected" : ""}>${esc(txt("Bonne", "Good"))}</option></select></div>
-              </div>
-              <button class="btn" id="nutrition-sleep-save" type="button" style="width:100%;margin-top:8px;">${esc(txt("Enregistrer sommeil", "Save sleep"))}</button>
-              <div class="tb-nutrition-week-grid" style="margin-top:10px;margin-bottom:0;">
-                ${sleepWeek.map(row => {
-                  const sleepPct = Math.max(0, Math.min(100, (n(row.hours, 0) / 7.5) * 100));
-                  const height = Math.max(8, Math.min(74, sleepPct * 0.74));
-                  const active = row.day === day;
-                  const label = row.hours > 0 ? `${Math.round(row.hours * 10) / 10}h · ${row.quality}` : txt("non saisi", "not set");
-                  return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(txt("Nuit du", "Night of"))} ${esc(row.nightDay || offsetDateISO(row.day, -1))} → ${esc(row.day)} · ${esc(label)} · objectif 7.5h" style="height:92px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${active ? "border-color:var(--accent);" : ""}">
-                    <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,#8b5cf6,#38bdf8);"></span>
-                    <small>${esc(row.day.slice(5).replace("-", "/"))}</small>
-                  </button>`;
-                }).join("")}
-              </div>
-              <div class="muted" style="font-size:12px;margin-top:8px;">${esc(txt("La saisie est rattachee a la nuit precedente de la date selectionnee et remonte dans le KPI Sante.", "The entry is attached to the previous night of the selected date and feeds the Health KPI."))}</div>
-            </div>
-            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(56,189,248,.08),rgba(15,23,42,.02)),var(--panel2);">
-              <h3 style="margin:0 0 10px;">${esc(txt("Historique", "History"))}</h3>
-              <div class="tb-nutrition-week-grid">
-                ${week.map(row => {
-                  const height = Math.max(8, Math.min(74, pct(row.kcal, needsKcal) * 0.74));
-                  const active = row.day === day;
-                  const detail = row.typeRows.map(typeRow => `${mealTypeLabel(typeRow.type)} ${Math.round(typeRow.kcal)} kcal`).join(" · ");
-                  return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(row.day)} · ${Math.round(row.kcal)} kcal · ${Math.round(row.waterMl)} ml${detail ? ` · ${esc(detail)}` : ""}" style="height:98px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${active ? "border-color:var(--accent);" : ""}">
-                    <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,#22c55e,#38bdf8);"></span>
-                    <small>${esc(row.day.slice(5).replace("-", "/"))}</small>
-                  </button>`;
-                }).join("")}
-              </div>
-              <div class="muted" style="font-size:12px;">${esc(txt("Survole une barre pour le detail du jour.", "Hover a bar for day details."))}</div>
-            </div>
+            ${view().renderQuickAddPanel({
+              editingItem,
+              syncBadge,
+              foodQuery: CACHE.foodQuery,
+              foodOptionsHtml: foodOptions(),
+              quickFoods,
+              mealFavorites,
+              activeMealType,
+              error: CACHE.error,
+              renderFoodChip: (food, kind) => foodChipHTML(food, kind),
+              renderMealFavoriteChip: (fav, index) => mealFavoriteChipHTML(fav, index),
+              esc,
+              t: txt,
+            })}
+            ${view().renderHydrationPanel({ esc, t: txt })}
+            ${view().renderSleepPanel({ sleep, sleepLabel, sleepNightLabel, day, sleepWeek, offsetDateISO, esc, t: txt })}
+            ${view().renderHistoryPanel({ week, day, needsKcal, mealTypeLabel, esc, t: txt })}
             <div style="border:1px solid ${alcoholJudge.color}66;border-radius:8px;padding:12px;background:linear-gradient(180deg,${alcoholJudge.color}14,rgba(15,23,42,.02)),var(--panel2);">
               <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
                 <div>

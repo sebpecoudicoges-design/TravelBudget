@@ -85,6 +85,141 @@ export function renderMealFavoriteChip(fav = {}, index = 0, { foodByKey, nutriti
   return `<button class="tb-nutrition-food-chip" type="button" data-nutrition-apply-meal-fav="${index}" title="${esc(title)}"><span>☆</span> ${esc(fav.label || langText('Repas favori', 'Favorite meal', t))}<br><small>${Math.round(kcal)} kcal</small></button>`;
 }
 
+export function renderMealTypeOptions(activeMealType = 'meal', { t, esc = defaultEsc } = {}) {
+  const options = [
+    ['breakfast', langText('Petit-dej', 'Breakfast', t)],
+    ['morning_snack', langText('Pause 10h', '10am snack', t)],
+    ['lunch', langText('Dejeuner', 'Lunch', t)],
+    ['afternoon_snack', langText('Gouter', 'Afternoon snack', t)],
+    ['dinner', langText('Diner', 'Dinner', t)],
+    ['snack', langText('Snack', 'Snack', t)],
+    ['meal', langText('Repas libre', 'Free meal', t)],
+  ];
+  return options.map(([value, label]) => `<option value="${esc(value)}" ${activeMealType === value ? 'selected' : ''}>${esc(label)}</option>`).join('');
+}
+
+export function renderQuickAddPanel({
+  editingItem = null,
+  syncBadge = '',
+  foodQuery = '',
+  foodOptionsHtml = '',
+  quickFoods = {},
+  mealFavorites = [],
+  activeMealType = 'meal',
+  error = '',
+  renderFoodChip: foodChip = renderFoodChip,
+  renderMealFavoriteChip: mealFavoriteChip = renderMealFavoriteChip,
+  esc = defaultEsc,
+  t,
+} = {}) {
+  const favs = Array.isArray(quickFoods.favs) ? quickFoods.favs : [];
+  const recent = Array.isArray(quickFoods.recent) ? quickFoods.recent : [];
+  return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;">
+      <h3 style="margin:0;">${esc(editingItem ? langText('Modifier', 'Edit', t) : langText('Ajout rapide', 'Quick add', t))}</h3>
+      <span class="pill">${esc(syncBadge)}</span>
+    </div>
+    <div class="field"><label>${esc(langText('Chercher', 'Search', t))}</label><input id="nutrition-search" value="${esc(foodQuery)}" placeholder="${esc(langText('Riz, poulet, banane...', 'Rice, chicken, banana...', t))}"></div>
+    <div class="field"><label>${esc(langText('Aliment', 'Food', t))}</label><select id="nutrition-food">${foodOptionsHtml}</select></div>
+    <div class="tb-nutrition-chip-row">
+      <button class="btn small" id="nutrition-toggle-favorite" type="button">★ ${esc(langText('Favori', 'Favorite', t))}</button>
+      ${favs.map(food => foodChip(food, 'favorite')).join('')}
+      ${recent.map(food => foodChip(food, 'recent')).join('')}
+    </div>
+    ${mealFavorites.length ? `<div class="tb-nutrition-chip-row" aria-label="${esc(langText('Repas favoris', 'Favorite meals', t))}">${mealFavorites.slice(0, 6).map((fav, index) => mealFavoriteChip(fav, index)).join('')}</div>` : ''}
+    <div class="row tb-nutrition-form-row" style="gap:10px;">
+      <div class="field" style="flex:1;"><label>${esc(langText('Mode', 'Mode', t))}</label><select id="nutrition-amount-mode"><option value="portion">${esc(langText('Portions', 'Servings', t))}</option><option value="grams">${esc(langText('Grammes', 'Grams', t))}</option></select></div>
+      <div class="field" style="flex:1;"><label>${esc(langText('Quantite', 'Quantity', t))}</label><input id="nutrition-quantity" type="number" min="0" step="0.25" value="1"></div>
+    </div>
+    <div class="row tb-nutrition-form-row" style="gap:10px;">
+      <div class="field" style="flex:1;"><label>${esc(langText('Grammes estimes', 'Estimated grams', t))}</label><input id="nutrition-grams" type="number" min="0" step="5" value="100"></div>
+      <div class="field" style="flex:1;"><label>${esc(langText('Moment', 'Moment', t))}</label><select id="nutrition-type">${renderMealTypeOptions(activeMealType, { t, esc })}</select></div>
+    </div>
+    <div class="pill" id="nutrition-preview">0 kcal</div>
+    <button class="btn primary" id="nutrition-save" type="button" style="width:100%;margin-top:10px;">${esc(editingItem ? langText('Enregistrer', 'Save', t) : langText('Ajouter', 'Add', t))}</button>
+    ${editingItem ? `<button class="btn" id="nutrition-edit-cancel" type="button" style="width:100%;margin-top:8px;">${esc(langText('Annuler la modification', 'Cancel edit', t))}</button>` : ''}
+    ${error ? `<div class="muted" style="margin-top:10px;">${esc(error)}</div>` : ''}
+  </div>`;
+}
+
+export function renderHydrationPanel({ esc = defaultEsc, t } = {}) {
+  return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
+    <h3 style="margin:0 0 10px;">${esc(langText('Hydratation', 'Hydration', t))}</h3>
+    <div class="field"><label>${esc(langText('Eau ml', 'Water ml', t))}</label><input id="nutrition-water-ml" type="number" min="0" step="50" value="250"></div>
+    <div class="tb-nutrition-water-grid">
+      <button class="btn small" type="button" data-nutrition-water-quick="250">250</button>
+      <button class="btn small" type="button" data-nutrition-water-quick="500">500</button>
+      <button class="btn small" type="button" data-nutrition-water-quick="1000">1L</button>
+      <button class="btn small" type="button" data-nutrition-water-quick="2000">2L</button>
+    </div>
+    <button class="btn primary" id="nutrition-water-only" type="button" style="width:100%;">${esc(langText('Ajouter eau', 'Add water', t))}</button>
+  </div>`;
+}
+
+export function renderSleepPanel({
+  sleep = {},
+  sleepLabel = '',
+  sleepNightLabel = '',
+  day = '',
+  sleepWeek = [],
+  offsetDateISO,
+  esc = defaultEsc,
+  t,
+} = {}) {
+  const dateLabel = String(day || '').slice(5).replace('-', '/');
+  return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;">
+      <h3 style="margin:0;">${esc(langText('Sommeil', 'Sleep', t))}</h3>
+      <span class="pill">${esc(sleepLabel)}</span>
+    </div>
+    <div class="muted" style="font-size:12px;margin:-4px 0 8px;">${esc(langText('Nuit du', 'Night of', t))} ${esc(sleepNightLabel)} → ${esc(dateLabel)}</div>
+    <div class="row tb-nutrition-form-row" style="gap:10px;">
+      <div class="field" style="flex:1;"><label>${esc(langText('Heures dormies', 'Hours slept', t))}</label><input id="nutrition-sleep-hours" type="number" min="0" max="14" step="0.25" value="${esc(String(sleep.hours || ''))}" placeholder="7.5"></div>
+      <div class="field" style="flex:1;"><label>${esc(langText('Qualite', 'Quality', t))}</label><select id="nutrition-sleep-quality"><option value="bad" ${sleep.quality === 'bad' ? 'selected' : ''}>${esc(langText('Mauvaise', 'Bad', t))}</option><option value="ok" ${sleep.quality === 'ok' ? 'selected' : ''}>${esc(langText('Correcte', 'Ok', t))}</option><option value="good" ${sleep.quality === 'good' ? 'selected' : ''}>${esc(langText('Bonne', 'Good', t))}</option></select></div>
+    </div>
+    <button class="btn" id="nutrition-sleep-save" type="button" style="width:100%;margin-top:8px;">${esc(langText('Enregistrer sommeil', 'Save sleep', t))}</button>
+    <div class="tb-nutrition-week-grid" style="margin-top:10px;margin-bottom:0;">
+      ${(Array.isArray(sleepWeek) ? sleepWeek : []).map(row => {
+        const sleepPct = Math.max(0, Math.min(100, (num(row.hours, 0) / 7.5) * 100));
+        const height = Math.max(8, Math.min(74, sleepPct * 0.74));
+        const active = row.day === day;
+        const label = row.hours > 0 ? `${Math.round(row.hours * 10) / 10}h · ${row.quality}` : langText('non saisi', 'not set', t);
+        const nightDay = row.nightDay || (typeof offsetDateISO === 'function' ? offsetDateISO(row.day, -1) : '');
+        return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(langText('Nuit du', 'Night of', t))} ${esc(nightDay)} → ${esc(row.day)} · ${esc(label)} · objectif 7.5h" style="height:92px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${active ? 'border-color:var(--accent);' : ''}">
+          <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,#8b5cf6,#38bdf8);"></span>
+          <small>${esc(String(row.day || '').slice(5).replace('-', '/'))}</small>
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="muted" style="font-size:12px;margin-top:8px;">${esc(langText('La saisie est rattachee a la nuit precedente de la date selectionnee et remonte dans le KPI Sante.', 'The entry is attached to the previous night of the selected date and feeds the Health KPI.', t))}</div>
+  </div>`;
+}
+
+export function renderHistoryPanel({
+  week = [],
+  day = '',
+  needsKcal = 1,
+  mealTypeLabel,
+  esc = defaultEsc,
+  t,
+} = {}) {
+  return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(56,189,248,.08),rgba(15,23,42,.02)),var(--panel2);">
+    <h3 style="margin:0 0 10px;">${esc(langText('Historique', 'History', t))}</h3>
+    <div class="tb-nutrition-week-grid">
+      ${(Array.isArray(week) ? week : []).map(row => {
+        const height = Math.max(8, Math.min(74, progressPercent(row.kcal, needsKcal, 100) * 0.74));
+        const active = row.day === day;
+        const detail = (row.typeRows || []).map(typeRow => `${typeof mealTypeLabel === 'function' ? mealTypeLabel(typeRow.type) : typeRow.type} ${Math.round(num(typeRow.kcal, 0))} kcal`).join(' · ');
+        return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(row.day)} · ${Math.round(num(row.kcal, 0))} kcal · ${Math.round(num(row.waterMl, 0))} ml${detail ? ` · ${esc(detail)}` : ''}" style="height:98px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${active ? 'border-color:var(--accent);' : ''}">
+          <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,#22c55e,#38bdf8);"></span>
+          <small>${esc(String(row.day || '').slice(5).replace('-', '/'))}</small>
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="muted" style="font-size:12px;">${esc(langText('Survole une barre pour le detail du jour.', 'Hover a bar for day details.', t))}</div>
+  </div>`;
+}
+
 export function renderMealTimeline({
   mealTargets = [],
   typeTotals = {},

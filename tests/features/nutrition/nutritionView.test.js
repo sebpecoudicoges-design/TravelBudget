@@ -6,8 +6,12 @@ import {
   mealTargetNote,
   progressPercent,
   renderFoodChip,
+  renderHistoryPanel,
+  renderHydrationPanel,
   renderMealFavoriteChip,
   renderMealTimeline,
+  renderQuickAddPanel,
+  renderSleepPanel,
   renderProgressBar,
 } from '../../../src/features/nutrition/nutritionView.js';
 
@@ -52,6 +56,55 @@ describe('Nutrition view helpers', () => {
     });
     expect(html).toContain('data-nutrition-apply-meal-fav="2"');
     expect(html).toContain('190 kcal');
+  });
+
+  it('renders the quick-add panel with stable form hooks', () => {
+    const html = renderQuickAddPanel({
+      editingItem: { id: 'i1' },
+      syncBadge: 'synchro ok',
+      foodQuery: 'riz',
+      foodOptionsHtml: '<option value="rice">Riz</option>',
+      quickFoods: { favs: [{ key: 'banana', name: 'Banane' }], recent: [] },
+      mealFavorites: [{ label: 'Bowl', items: [] }],
+      activeMealType: 'lunch',
+      error: 'Erreur test',
+      renderMealFavoriteChip: () => '<button data-nutrition-apply-meal-fav="0">Bowl</button>',
+      t,
+    });
+    expect(html).toContain('id="nutrition-search"');
+    expect(html).toContain('id="nutrition-food"');
+    expect(html).toContain('value="lunch" selected');
+    expect(html).toContain('id="nutrition-edit-cancel"');
+    expect(html).toContain('Erreur test');
+  });
+
+  it('renders hydration, sleep and weekly history panels', () => {
+    const hydration = renderHydrationPanel({ t });
+    expect(hydration).toContain('id="nutrition-water-only"');
+    expect(hydration).toContain('data-nutrition-water-quick="1000"');
+
+    const sleep = renderSleepPanel({
+      sleep: { hours: 8, quality: 'good' },
+      sleepLabel: '8h',
+      sleepNightLabel: '09/07',
+      day: '2026-07-10',
+      sleepWeek: [{ day: '2026-07-10', nightDay: '2026-07-09', hours: 8, quality: 'good' }],
+      t,
+    });
+    expect(sleep).toContain('id="nutrition-sleep-hours"');
+    expect(sleep).toContain('value="good" selected');
+    expect(sleep).toContain('data-nutrition-history-date="2026-07-10"');
+
+    const history = renderHistoryPanel({
+      week: [{ day: '2026-07-10', kcal: 1800, waterMl: 2000, typeRows: [{ type: 'lunch', kcal: 650 }] }],
+      day: '2026-07-10',
+      needsKcal: 2200,
+      mealTypeLabel: () => 'Dejeuner',
+      t,
+    });
+    expect(history).toContain('Historique');
+    expect(history).toContain('Dejeuner 650 kcal');
+    expect(history).toContain('data-nutrition-history-date="2026-07-10"');
   });
 
   it('renders the meal timeline with edit/delete actions and other entries', () => {
