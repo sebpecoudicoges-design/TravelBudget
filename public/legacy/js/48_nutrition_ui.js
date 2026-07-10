@@ -1474,47 +1474,23 @@
     return cards.slice(0, 3);
   }
   function macroSummaryText(targets) {
+    if (typeof view().macroSummaryText === "function") return view().macroSummaryText(targets);
     return `${Math.round(n(targets.protein, 0))}g P · ${Math.round(n(targets.carbs, 0))}g G · ${Math.round(n(targets.fat, 0))}g L`;
   }
-  function goalSevenDayInsight(goal, targets, week) {
-    const rows = (week || []).filter(row => n(row.kcal, 0) > 0);
-    if (!rows.length) return txt("Alerte 7 jours disponible des que plusieurs journees sont saisies.", "7-day alert appears once several days are logged.");
-    const avg = rows.reduce((sum, row) => sum + n(row.kcal, 0), 0) / rows.length;
-    const delta = Math.round(avg - n(targets.targetKcal, 0));
-    if (goal.mode === "bulk") {
-      if (delta < -180) return txt(`Trop bas sur 7 jours : moyenne ${Math.round(avg)} kcal, ajoute une collation simple.`, `Too low over 7 days: ${Math.round(avg)} kcal average, add a simple snack.`);
-      if (delta > 250) return txt(`Surplus fort : moyenne ${Math.round(avg)} kcal, reduis un peu les extras.`, `Strong surplus: ${Math.round(avg)} kcal average, trim extras a bit.`);
-      return txt(`Rythme propre : moyenne ${Math.round(avg)} kcal, objectif prise de masse sous controle.`, `Clean pace: ${Math.round(avg)} kcal average, lean bulk on track.`);
-    }
-    if (goal.mode === "cut" && delta > 180) return txt(`Trop haut sur 7 jours : moyenne ${Math.round(avg)} kcal, reajuste les prochains repas.`, `Too high over 7 days: ${Math.round(avg)} kcal average, adjust upcoming meals.`);
-    return txt(`Moyenne 7 jours : ${Math.round(avg)} kcal, ecart ${delta > 0 ? "+" : ""}${delta} kcal.`, `7-day average: ${Math.round(avg)} kcal, gap ${delta > 0 ? "+" : ""}${delta} kcal.`);
-  }
   function goalCockpitHTML(goal, targets, week, total, sportKcal, workKcal) {
-    const currentWeight = bodyWeight();
-    const targetWeight = n(goal.targetWeightKg, currentWeight);
-    const remainingKg = Math.round((targetWeight - currentWeight) * 10) / 10;
-    const weeklyRate = n(goal.weeklyRateKg, 0.25);
-    const weeks = weeklyRate > 0 ? Math.max(0, Math.ceil(Math.abs(remainingKg) / weeklyRate)) : 0;
-    const kcalLeft = Math.round(n(targets.targetKcal, 0) - n(total.kcal, 0));
-    const insight = goalSevenDayInsight(goal, targets, week);
-    return `<div class="tb-nutrition-goal-cockpit">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
-        <div><strong>${esc(txt("Cockpit objectif", "Goal cockpit"))}</strong><div class="muted" style="font-size:12px;">${esc(insight)}</div></div>
-        <span class="pill">${esc(nutritionGoalLabel(goal))}</span>
-      </div>
-      <div class="tb-nutrition-goal-kpis">
-        <div><span>${esc(txt("Poids cible", "Target weight"))}</span><strong>${Math.round(targetWeight * 10) / 10} kg</strong><small>${remainingKg >= 0 ? "+" : ""}${remainingKg} kg · ~${weeks} sem.</small></div>
-        <div><span>${esc(txt("Rythme", "Pace"))}</span><strong>${weeklyRate} kg/sem.</strong><small>${esc(txt("simple et controlable", "simple and controllable"))}</small></div>
-        <div><span>${esc(txt("Reste jour", "Left today"))}</span><strong>${kcalLeft >= 0 ? "+" : ""}${kcalLeft}</strong><small>kcal</small></div>
-        <div><span>${esc(txt("Charge", "Load"))}</span><strong>${Math.round(n(sportKcal, 0) + n(workKcal, 0))}</strong><small>sport + ${esc(txt("travail", "work"))}</small></div>
-      </div>
-      <div class="tb-nutrition-goal-kpis">
-        <div><span>${esc(txt("Proteines", "Protein"))}</span><strong>${Math.round(targets.protein)}g</strong><small>${Math.round(n(targets.proteinPerKg, 0) * 10) / 10} g/kg</small></div>
-        <div><span>${esc(txt("Glucides", "Carbs"))}</span><strong>${Math.round(targets.carbs)}g</strong><small>${esc(txt("ajustes par les kcal", "adjusted by kcal"))}</small></div>
-        <div><span>${esc(txt("Lipides", "Fat"))}</span><strong>${Math.round(targets.fat)}g</strong><small>${Math.round(n(targets.fatPerKg, 0) * 10) / 10} g/kg</small></div>
-        <div><span>${esc(txt("Objectif", "Target"))}</span><strong>${Math.round(targets.targetKcal)}</strong><small>kcal</small></div>
-      </div>
-    </div>`;
+    if (typeof view().renderGoalCockpit === "function") return view().renderGoalCockpit({
+      goal,
+      targets,
+      week,
+      total,
+      sportKcal,
+      workKcal,
+      currentWeight: bodyWeight(),
+      goalLabel: nutritionGoalLabel(goal),
+      esc,
+      t: txt,
+    });
+    return "";
   }
   function nextMealTarget(day, targets, total) {
     const type = currentMealType();
@@ -1957,39 +1933,16 @@
             ${view().renderHydrationPanel({ esc, t: txt })}
             ${view().renderSleepPanel({ sleep, sleepLabel, sleepNightLabel, day, sleepWeek, offsetDateISO, esc, t: txt })}
             ${view().renderHistoryPanel({ week, day, needsKcal, mealTypeLabel, esc, t: txt })}
-            <div style="border:1px solid ${alcoholJudge.color}66;border-radius:8px;padding:12px;background:linear-gradient(180deg,${alcoholJudge.color}14,rgba(15,23,42,.02)),var(--panel2);">
-              <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
-                <div>
-                  <h3 style="margin:0;">${esc(txt("Alcool", "Alcohol"))}</h3>
-                  <div class="muted" style="font-size:12px;margin-top:3px;">${esc(txt("Repere: 2 verres/jour, 10/semaine, pas tous les jours.", "Guide: 2 drinks/day, 10/week, not every day."))}</div>
-                </div>
-                <span class="pill" style="border-color:${alcoholJudge.color};color:${alcoholJudge.color};">${esc(alcoholJudge.label)}</span>
-              </div>
-              <div class="tb-sport-stats" style="margin-bottom:10px;">
-                <div class="tb-sport-stat"><span>${esc(txt("Aujourd'hui", "Today"))}</span><strong>${Math.round(alcoholToday.standardDrinks * 10) / 10} ${esc(txt("verres", "drinks"))}</strong></div>
-                <div class="tb-sport-stat"><span>${esc(txt("Semaine", "Week"))}</span><strong>${Math.round(alcoholWeekTotal * 10) / 10} / 10</strong></div>
-                <div class="tb-sport-stat"><span>${esc(txt("Jours avec alcool", "Drinking days"))}</span><strong>${alcoholDrinkingDays} / 7</strong></div>
-              </div>
-              <div class="tb-nutrition-week-grid" style="margin-bottom:8px;">
-                ${week.map(row => {
-                  const drinks = n(row.alcoholDrinks, 0);
-                  const height = Math.max(6, Math.min(74, (drinks / 2) * 74));
-                  const barColor = drinks > 2.01 ? "#ef4444" : drinks > 0.05 ? "#f59e0b" : "#22c55e";
-                  const detail = `${row.day} · ${Math.round(drinks * 10) / 10} verre(s) standard`;
-                  return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(detail)}" style="height:92px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${row.day === day ? `border-color:${barColor};` : ""}">
-                    <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,${barColor},#38bdf8);"></span>
-                    <small>${esc(row.day.slice(5).replace("-", "/"))}</small>
-                  </button>`;
-                }).join("")}
-              </div>
-              <div class="muted" style="font-size:12px;margin-bottom:8px;">${esc(alcoholJudge.note)} ${esc(txt("Calcul: 1 verre standard = 10 g d'alcool pur.", "Calculation: 1 standard drink = 10 g pure alcohol."))}</div>
-              ${alcoholToday.entries.length ? `<div style="display:grid;gap:6px;">
-                ${alcoholToday.entries.map(entry => `<div style="display:flex;justify-content:space-between;gap:8px;border-top:1px solid rgba(148,163,184,.22);padding-top:6px;">
-                  <span>${esc(entry.label)} <small class="muted">${Math.round(entry.grams)} ml/g</small></span>
-                  <strong>${Math.round(entry.standardDrinks * 10) / 10} ${esc(txt("verres", "drinks"))}</strong>
-                </div>`).join("")}
-              </div>` : `<div class="muted">${esc(txt("Aucun aliment alcoolise lie au jour selectionne.", "No alcoholic food linked to the selected day."))}</div>`}
-            </div>
+            ${view().renderAlcoholPanel({
+              alcoholJudge,
+              alcoholToday,
+              alcoholWeekTotal,
+              alcoholDrinkingDays,
+              week,
+              day,
+              esc,
+              t: txt,
+            })}
           </div>
           <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
             <h3 style="margin:0 0 10px;">${esc(txt("Jour selectionne", "Selected day"))} · ${esc(day)}</h3>

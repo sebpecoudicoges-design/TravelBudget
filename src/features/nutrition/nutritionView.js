@@ -220,6 +220,109 @@ export function renderHistoryPanel({
   </div>`;
 }
 
+export function macroSummaryText(targets = {}) {
+  return `${Math.round(num(targets.protein, 0))}g P · ${Math.round(num(targets.carbs, 0))}g G · ${Math.round(num(targets.fat, 0))}g L`;
+}
+
+export function goalSevenDayInsight(goal = {}, targets = {}, week = [], { t } = {}) {
+  const rows = (Array.isArray(week) ? week : []).filter(row => num(row.kcal, 0) > 0);
+  if (!rows.length) return langText('Alerte 7 jours disponible des que plusieurs journees sont saisies.', '7-day alert appears once several days are logged.', t);
+  const avg = rows.reduce((sum, row) => sum + num(row.kcal, 0), 0) / rows.length;
+  const delta = Math.round(avg - num(targets.targetKcal, 0));
+  if (goal.mode === 'bulk') {
+    if (delta < -180) return langText(`Trop bas sur 7 jours : moyenne ${Math.round(avg)} kcal, ajoute une collation simple.`, `Too low over 7 days: ${Math.round(avg)} kcal average, add a simple snack.`, t);
+    if (delta > 250) return langText(`Surplus fort : moyenne ${Math.round(avg)} kcal, reduis un peu les extras.`, `Strong surplus: ${Math.round(avg)} kcal average, trim extras a bit.`, t);
+    return langText(`Rythme propre : moyenne ${Math.round(avg)} kcal, objectif prise de masse sous controle.`, `Clean pace: ${Math.round(avg)} kcal average, lean bulk on track.`, t);
+  }
+  if (goal.mode === 'cut' && delta > 180) return langText(`Trop haut sur 7 jours : moyenne ${Math.round(avg)} kcal, reajuste les prochains repas.`, `Too high over 7 days: ${Math.round(avg)} kcal average, adjust upcoming meals.`, t);
+  return langText(`Moyenne 7 jours : ${Math.round(avg)} kcal, ecart ${delta > 0 ? '+' : ''}${delta} kcal.`, `7-day average: ${Math.round(avg)} kcal, gap ${delta > 0 ? '+' : ''}${delta} kcal.`, t);
+}
+
+export function renderGoalCockpit({
+  goal = {},
+  targets = {},
+  week = [],
+  total = {},
+  sportKcal = 0,
+  workKcal = 0,
+  currentWeight = 0,
+  goalLabel = '',
+  esc = defaultEsc,
+  t,
+} = {}) {
+  const targetWeight = num(goal.targetWeightKg, currentWeight);
+  const remainingKg = Math.round((targetWeight - num(currentWeight, 0)) * 10) / 10;
+  const weeklyRate = num(goal.weeklyRateKg, 0.25);
+  const weeks = weeklyRate > 0 ? Math.max(0, Math.ceil(Math.abs(remainingKg) / weeklyRate)) : 0;
+  const kcalLeft = Math.round(num(targets.targetKcal, 0) - num(total.kcal, 0));
+  const insight = goalSevenDayInsight(goal, targets, week, { t });
+  return `<div class="tb-nutrition-goal-cockpit">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+      <div><strong>${esc(langText('Cockpit objectif', 'Goal cockpit', t))}</strong><div class="muted" style="font-size:12px;">${esc(insight)}</div></div>
+      <span class="pill">${esc(goalLabel || goal.mode || '')}</span>
+    </div>
+    <div class="tb-nutrition-goal-kpis">
+      <div><span>${esc(langText('Poids cible', 'Target weight', t))}</span><strong>${Math.round(targetWeight * 10) / 10} kg</strong><small>${remainingKg >= 0 ? '+' : ''}${remainingKg} kg · ~${weeks} sem.</small></div>
+      <div><span>${esc(langText('Rythme', 'Pace', t))}</span><strong>${weeklyRate} kg/sem.</strong><small>${esc(langText('simple et controlable', 'simple and controllable', t))}</small></div>
+      <div><span>${esc(langText('Reste jour', 'Left today', t))}</span><strong>${kcalLeft >= 0 ? '+' : ''}${kcalLeft}</strong><small>kcal</small></div>
+      <div><span>${esc(langText('Charge', 'Load', t))}</span><strong>${Math.round(num(sportKcal, 0) + num(workKcal, 0))}</strong><small>sport + ${esc(langText('travail', 'work', t))}</small></div>
+    </div>
+    <div class="tb-nutrition-goal-kpis">
+      <div><span>${esc(langText('Proteines', 'Protein', t))}</span><strong>${Math.round(num(targets.protein, 0))}g</strong><small>${Math.round(num(targets.proteinPerKg, 0) * 10) / 10} g/kg</small></div>
+      <div><span>${esc(langText('Glucides', 'Carbs', t))}</span><strong>${Math.round(num(targets.carbs, 0))}g</strong><small>${esc(langText('ajustes par les kcal', 'adjusted by kcal', t))}</small></div>
+      <div><span>${esc(langText('Lipides', 'Fat', t))}</span><strong>${Math.round(num(targets.fat, 0))}g</strong><small>${Math.round(num(targets.fatPerKg, 0) * 10) / 10} g/kg</small></div>
+      <div><span>${esc(langText('Objectif', 'Target', t))}</span><strong>${Math.round(num(targets.targetKcal, 0))}</strong><small>kcal</small></div>
+    </div>
+  </div>`;
+}
+
+export function renderAlcoholPanel({
+  alcoholJudge = {},
+  alcoholToday = {},
+  alcoholWeekTotal = 0,
+  alcoholDrinkingDays = 0,
+  week = [],
+  day = '',
+  esc = defaultEsc,
+  t,
+} = {}) {
+  const color = alcoholJudge.color || '#22c55e';
+  const entries = Array.isArray(alcoholToday.entries) ? alcoholToday.entries : [];
+  return `<div style="border:1px solid ${color}66;border-radius:8px;padding:12px;background:linear-gradient(180deg,${color}14,rgba(15,23,42,.02)),var(--panel2);">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
+      <div>
+        <h3 style="margin:0;">${esc(langText('Alcool', 'Alcohol', t))}</h3>
+        <div class="muted" style="font-size:12px;margin-top:3px;">${esc(langText('Repere: 2 verres/jour, 10/semaine, pas tous les jours.', 'Guide: 2 drinks/day, 10/week, not every day.', t))}</div>
+      </div>
+      <span class="pill" style="border-color:${color};color:${color};">${esc(alcoholJudge.label || '')}</span>
+    </div>
+    <div class="tb-sport-stats" style="margin-bottom:10px;">
+      <div class="tb-sport-stat"><span>${esc(langText("Aujourd'hui", 'Today', t))}</span><strong>${Math.round(num(alcoholToday.standardDrinks, 0) * 10) / 10} ${esc(langText('verres', 'drinks', t))}</strong></div>
+      <div class="tb-sport-stat"><span>${esc(langText('Semaine', 'Week', t))}</span><strong>${Math.round(num(alcoholWeekTotal, 0) * 10) / 10} / 10</strong></div>
+      <div class="tb-sport-stat"><span>${esc(langText('Jours avec alcool', 'Drinking days', t))}</span><strong>${num(alcoholDrinkingDays, 0)} / 7</strong></div>
+    </div>
+    <div class="tb-nutrition-week-grid" style="margin-bottom:8px;">
+      ${(Array.isArray(week) ? week : []).map(row => {
+        const drinks = num(row.alcoholDrinks, 0);
+        const height = Math.max(6, Math.min(74, (drinks / 2) * 74));
+        const barColor = drinks > 2.01 ? '#ef4444' : drinks > 0.05 ? '#f59e0b' : '#22c55e';
+        const detail = `${row.day} · ${Math.round(drinks * 10) / 10} verre(s) standard`;
+        return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(detail)}" style="height:92px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${row.day === day ? `border-color:${barColor};` : ''}">
+          <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,${barColor},#38bdf8);"></span>
+          <small>${esc(String(row.day || '').slice(5).replace('-', '/'))}</small>
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="muted" style="font-size:12px;margin-bottom:8px;">${esc(alcoholJudge.note || '')} ${esc(langText("Calcul: 1 verre standard = 10 g d'alcool pur.", 'Calculation: 1 standard drink = 10 g pure alcohol.', t))}</div>
+    ${entries.length ? `<div style="display:grid;gap:6px;">
+      ${entries.map(entry => `<div style="display:flex;justify-content:space-between;gap:8px;border-top:1px solid rgba(148,163,184,.22);padding-top:6px;">
+        <span>${esc(entry.label)} <small class="muted">${Math.round(num(entry.grams, 0))} ml/g</small></span>
+        <strong>${Math.round(num(entry.standardDrinks, 0) * 10) / 10} ${esc(langText('verres', 'drinks', t))}</strong>
+      </div>`).join('')}
+    </div>` : `<div class="muted">${esc(langText('Aucun aliment alcoolise lie au jour selectionne.', 'No alcoholic food linked to the selected day.', t))}</div>`}
+  </div>`;
+}
+
 export function renderMealTimeline({
   mealTargets = [],
   typeTotals = {},

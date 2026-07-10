@@ -92,6 +92,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [ ] Extraire les vues Nutrition : saisie, timeline, historique, eau, sommeil et objectif.
     - [x] Extraire les composants de vue : barres, chips favoris/recents, suggestions repas, semaine et timeline repas.
     - [x] Extraire les panneaux de vue : saisie rapide, hydratation, sommeil et historique semaine.
+    - [x] Extraire les vues objectif et alcool : cockpit objectif, moyenne 7 jours et barres alcool hebdomadaires.
 - [ ] Sante : separer score, tendances et saisies corporelles.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.
 - [ ] Patrimoine : separer actifs, cout mensuel et integration budget.

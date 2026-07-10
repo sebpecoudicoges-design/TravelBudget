@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildWeekRows,
+  goalSevenDayInsight,
+  macroSummaryText,
   mealMomentSuggestion,
   mealTargetNote,
   progressPercent,
+  renderAlcoholPanel,
   renderFoodChip,
+  renderGoalCockpit,
   renderHistoryPanel,
   renderHydrationPanel,
   renderMealFavoriteChip,
@@ -127,5 +131,50 @@ describe('Nutrition view helpers', () => {
     expect(html).toContain('data-nutrition-edit="i1"');
     expect(html).toContain('data-nutrition-delete="i1"');
     expect(html).toContain('Autres ajouts');
+  });
+
+  it('renders goal cockpit and seven-day insight without legacy globals', () => {
+    expect(macroSummaryText({ protein: 95, carbs: 260, fat: 62 })).toBe('95g P · 260g G · 62g L');
+    expect(goalSevenDayInsight(
+      { mode: 'bulk' },
+      { targetKcal: 2400 },
+      [{ day: '2026-07-08', kcal: 2450 }, { day: '2026-07-09', kcal: 2520 }],
+      { t },
+    )).toContain('Rythme propre');
+
+    const html = renderGoalCockpit({
+      goal: { mode: 'bulk', targetWeightKg: 62, weeklyRateKg: 0.25 },
+      targets: { targetKcal: 2450, protein: 105, proteinPerKg: 1.8, carbs: 310, fat: 58, fatPerKg: 1 },
+      week: [{ day: '2026-07-10', kcal: 2300 }],
+      total: { kcal: 1900 },
+      sportKcal: 300,
+      workKcal: 150,
+      currentWeight: 59,
+      goalLabel: 'Prise de masse douce',
+      t,
+    });
+    expect(html).toContain('Cockpit objectif');
+    expect(html).toContain('Prise de masse douce');
+    expect(html).toContain('+550');
+    expect(html).toContain('450');
+  });
+
+  it('renders alcohol panel with standard-drink details and history hooks', () => {
+    const html = renderAlcoholPanel({
+      alcoholJudge: { color: '#f59e0b', label: 'Dans les reperes', note: 'Reste sous les reperes.' },
+      alcoholToday: {
+        standardDrinks: 1.4,
+        entries: [{ label: 'Biere', grams: 330, standardDrinks: 1.3 }],
+      },
+      alcoholWeekTotal: 5.2,
+      alcoholDrinkingDays: 2,
+      week: [{ day: '2026-07-10', alcoholDrinks: 1.4 }],
+      day: '2026-07-10',
+      t,
+    });
+    expect(html).toContain('Alcool');
+    expect(html).toContain('Biere');
+    expect(html).toContain('data-nutrition-history-date="2026-07-10"');
+    expect(html).toContain('1.3 verres');
   });
 });
