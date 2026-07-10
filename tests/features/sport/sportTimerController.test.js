@@ -6,6 +6,7 @@ import {
   adjustCurrentStepSeconds,
   completeTimerStep,
   createTimerState,
+  currentTimerStep,
   skipRestStep,
   togglePause,
 } from '../../../src/features/sport/sportTimerController.js';
@@ -13,6 +14,11 @@ import {
 const now = Date.parse('2026-07-08T08:00:00.000Z');
 
 describe('sport timer controller', () => {
+  it('tolerates an empty timer state before the workout starts', () => {
+    expect(currentTimerStep(null)).toBeNull();
+    expect(currentTimerStep({})).toBeNull();
+  });
+
   it('creates a timer with defaults for the first work step', () => {
     const bench = { exerciseName: 'Bench', mode: 'reps', targetReps: 10, sets: 1, restSeconds: 90, weightKg: 55 };
     const timer = createTimerState({

@@ -841,6 +841,7 @@
   window.tbBuildMorningBudgetPushPayload = buildMorningBudgetPushPayload;
   window.tbScheduleDailyBudgetLocalNotification = scheduleDailyBudgetLocalNotification;
   window.tbScheduleHealthMealLocalNotifications = scheduleHealthMealLocalNotifications;
+  window.tbSendLocalNotification = sendLocalNotification;
   window.tbBuildHealthMealPushPayload = buildHealthMealPushPayload;
   window.tbSendMobilePushNotification = sendMobilePushNotification;
   window.tbSyncPreferenceDrivenNotifications = syncPreferenceDrivenNotifications;

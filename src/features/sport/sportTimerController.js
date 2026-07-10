@@ -5,17 +5,23 @@ function num(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function safeTimer(timer) {
+  return timer && typeof timer === 'object' ? timer : {};
+}
+
 function cloneTimer(timer = {}) {
+  const source = safeTimer(timer);
   return {
-    ...timer,
-    sequence: Array.isArray(timer.sequence) ? timer.sequence.slice() : [],
-    doneSets: Array.isArray(timer.doneSets) ? timer.doneSets.slice() : [],
+    ...source,
+    sequence: Array.isArray(source.sequence) ? source.sequence.slice() : [],
+    doneSets: Array.isArray(source.doneSets) ? source.doneSets.slice() : [],
   };
 }
 
 export function currentTimerStep(timer = {}) {
-  const sequence = Array.isArray(timer.sequence) ? timer.sequence : [];
-  const index = Math.max(0, Math.round(num(timer.index, 0)));
+  const source = safeTimer(timer);
+  const sequence = Array.isArray(source.sequence) ? source.sequence : [];
+  const index = Math.max(0, Math.round(num(source.index, 0)));
   return sequence[index] || null;
 }
 

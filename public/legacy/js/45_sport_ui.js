@@ -16,6 +16,7 @@
   const SESSION_FAVORITES_KEY = () => scopedKey("travelbudget_sport_session_favorites_v1");
   const SPORT_PROGRAM_KEY = () => scopedKey("travelbudget_sport_program_v1");
   const TIMER_PREF_KEY = () => scopedKey("travelbudget_sport_timer_prefs_v1");
+  const TIMER_STATE_KEY = () => scopedKey("travelbudget_sport_timer_state_v1");
   const BODY_MEASUREMENTS_KEY = () => scopedKey("travelbudget_health_body_measurements_v1");
   const HISTORY_KEY = () => scopedKey(baseHistoryKey());
   const ANON_HISTORY_KEY = () => `${baseHistoryKey()}::anon`;
@@ -103,6 +104,8 @@
     CACHE.programLoaded = false;
     CACHE.programSource = "fallback";
     CACHE.timerBeepVolume = loadTimerPrefs().beepVolume;
+    CACHE.timer = loadTimerState();
+    if (CACHE.timer) startTicker();
     CACHE.bodyMeasurements = loadBodyMeasurementsLocal();
     CACHE.bodyMeasurementsLoaded = false;
   }
@@ -413,6 +416,48 @@
     CACHE.timerBeepVolume = prefs.beepVolume;
     try { localStorage.setItem(TIMER_PREF_KEY(), JSON.stringify(prefs)); } catch (_) {}
     return prefs;
+  }
+  function normalizeTimerState(raw) {
+    if (!raw || typeof raw !== "object" || !Array.isArray(raw.sequence) || !raw.sequence.length) return null;
+    const timer = Object.assign({}, raw);
+    timer.sequence = raw.sequence.slice(0, 500);
+    timer.doneSets = Array.isArray(raw.doneSets) ? raw.doneSets.slice(0, 500) : [];
+    timer.index = Math.max(0, Math.round(n(raw.index, 0)));
+    timer.startedAt = Math.max(0, n(raw.startedAt, Date.now()));
+    timer.stepStartedAt = Math.max(0, n(raw.stepStartedAt, timer.startedAt));
+    timer.stepEndAt = raw.stepEndAt == null ? null : Math.max(0, n(raw.stepEndAt, 0));
+    timer.timeCapEndAt = raw.timeCapEndAt == null ? null : Math.max(0, n(raw.timeCapEndAt, 0));
+    timer.pauseStartedAt = raw.pauseStartedAt == null ? null : Math.max(0, n(raw.pauseStartedAt, 0));
+    timer.paused = raw.paused === true;
+    return timer;
+  }
+  function loadTimerState() {
+    try { return normalizeTimerState(JSON.parse(localStorage.getItem(TIMER_STATE_KEY()) || "null")); }
+    catch (_) { return null; }
+  }
+  function saveTimerState() {
+    const timer = normalizeTimerState(CACHE.timer);
+    if (!timer) return clearTimerState();
+    persistSportCache(TIMER_STATE_KEY(), JSON.stringify({
+      savedAt: new Date().toISOString(),
+      sequence: timer.sequence,
+      index: timer.index,
+      startedAt: timer.startedAt,
+      stepStartedAt: timer.stepStartedAt,
+      stepEndAt: timer.stepEndAt,
+      paused: timer.paused,
+      pauseStartedAt: timer.pauseStartedAt,
+      doneSets: timer.doneSets,
+      roundsCompleted: timer.roundsCompleted || 0,
+      timeCapEndAt: timer.timeCapEndAt,
+      bodyWeightKg: timer.bodyWeightKg,
+      bodyHeightCm: timer.bodyHeightCm,
+      stepLoadKg: timer.stepLoadKg,
+      stepReps: timer.stepReps,
+    }));
+  }
+  function clearTimerState() {
+    try { localStorage.removeItem(TIMER_STATE_KEY()); } catch (_) {}
   }
   function bmiValue(kg, cm) {
     const h = n(cm, 0) / 100;
@@ -2095,9 +2140,9 @@
       .tb-sport-timer .name{font-size:34px;font-weight:950;line-height:1.05;}
       .tb-sport-timer .clock{font-size:56px;font-weight:950;letter-spacing:-.05em;}
       .tb-sport-timer .hint{color:#cbd5e1;font-weight:800;}
-      .tb-sport-timer-card.focus{position:fixed;inset:0;z-index:9997;border-radius:0!important;padding:clamp(8px,1.8vh,18px)!important;overflow:hidden;background:#020617;box-sizing:border-box;}
+      .tb-sport-timer-card.focus{position:fixed;inset:0;z-index:100040;border-radius:0!important;padding:calc(8px + env(safe-area-inset-top,0px)) calc(8px + env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) calc(8px + env(safe-area-inset-left,0px))!important;overflow:hidden;background:#020617;box-sizing:border-box;}
       .tb-sport-timer-card.focus h3{display:none;}
-      .tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - clamp(16px,3.6vh,36px));min-height:0;border-radius:24px;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;gap:clamp(8px,1.5vh,16px);}
+      .tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));max-height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));min-height:0;border-radius:20px;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;gap:clamp(7px,1.2vh,14px);}
       .tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);}
       .tb-sport-timer-card.focus .tb-sport-live-focus,.tb-sport-timer-card.focus .tb-sport-live-panel{min-height:0;overflow:hidden;}
       .tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(34px,5vw,74px);}
@@ -3376,6 +3421,8 @@
       timeCapMinutes: CACHE.circuit?.enabled ? n(CACHE.circuit?.amrapMinutes, 0) : 0,
     }, sportTimerControllerOptions()));
     requestWakeLock();
+    saveTimerState();
+    cancelTimerNotification();
     sportFeedback(txt("Seance lancee", "Workout started"), txt("Timer sport lance. Bon entrainement.", "Sport timer started. Good workout."), { persistNotification: true });
     beep("work");
     startTicker();
@@ -3524,6 +3571,39 @@
     if (opts?.toast !== false) sportToast(text, opts?.kind);
     syncSportNotification(title || txt("Sport", "Sport"), text || "", !!opts?.persistNotification);
   }
+  function currentTimerNotificationText() {
+    const timer = CACHE.timer;
+    const step = currentTimerStep();
+    if (!timer || !step) return "";
+    const remaining = step.duration ? Math.max(0, Math.ceil((timer.stepEndAt - Date.now()) / 1000)) : 0;
+    const label = stepLabel(step);
+    const target = step.kind === "work" && step.item?.mode === "reps"
+      ? `${n(timer.stepReps ?? step.item?.targetReps, 0)} reps`
+      : (step.duration ? fmtSec(remaining) : txt("a valider", "to validate"));
+    return `${label} · ${target}`;
+  }
+  async function notifyTimerInBackground(reason) {
+    if (!CACHE.timer || CACHE.timer.paused) return false;
+    const body = currentTimerNotificationText();
+    if (!body) return false;
+    try {
+      if (typeof window.tbSendLocalNotification === "function") {
+        return await window.tbSendLocalNotification(
+          txt("Timer sport en cours", "Sport timer running"),
+          body,
+          { view: "sport", tag: "sport-timer", source: "sport", reason: reason || "background" },
+          { id: 1701 }
+        );
+      }
+    } catch (_) {}
+    return false;
+  }
+  async function cancelTimerNotification() {
+    try {
+      const LocalNotifications = window.Capacitor?.Plugins?.LocalNotifications || null;
+      if (LocalNotifications?.cancel) await LocalNotifications.cancel({ notifications: [{ id: 1701 }] });
+    } catch (_) {}
+  }
   function beep(kind) {
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -3601,6 +3681,7 @@
       reps: readTimerStepReps(timer, step),
     }, sportTimerControllerOptions()));
     CACHE.timer = result.timer;
+    saveTimerState();
     if (result.addedSet) rememberLoadForExercise(step.item, result.addedSet.weightKg || 0);
     const next = result.nextStep;
     beep(next?.kind === "rest" ? "rest" : "work");
@@ -3629,6 +3710,7 @@
     if (typeof skip !== "function") return;
     const result = skip(timer, Object.assign({ now: Date.now() }, sportTimerControllerOptions()));
     CACHE.timer = result.timer;
+    saveTimerState();
     const next = result.nextStep;
     beep("work");
     if (result.finished) {
@@ -3647,6 +3729,7 @@
     if (typeof adjust !== "function") return;
     const result = adjust(timer, delta, { now: Date.now() });
     CACHE.timer = result.timer;
+    saveTimerState();
     if (result.adjusted) renderSport("adjust-time");
   }
   function addTimerSetForCurrentExercise() {
@@ -3659,6 +3742,7 @@
     if (!result.inserted) return;
     CACHE.timer = result.timer;
     CACHE.plan = result.plan;
+    saveTimerState();
     const item = CACHE.plan[result.itemIndex] || result.item || step.item;
     savePlan();
     sportFeedback(txt("Serie ajoutee", "Set added"), `${item.exerciseName || labelActivity(item.activityKey)} · ${txt("serie", "set")} ${result.setIndex}`, { toast: true, persistNotification: true });
@@ -3673,6 +3757,7 @@
     CACHE.timer = result.timer;
     CACHE.plan = result.plan;
     CACHE.circuit = result.circuit;
+    saveTimerState();
     saveCircuit(CACHE.circuit);
     savePlan();
     const order = CACHE.plan.map(item => item.exerciseName || labelActivity(item.activityKey)).join(" → ");
@@ -3686,6 +3771,7 @@
     if (typeof toggle !== "function") return;
     const result = toggle(timer, { now: Date.now() });
     CACHE.timer = result.timer;
+    saveTimerState();
     if (result.paused) {
       sportFeedback(txt("Timer en pause", "Timer paused"), txt("Seance en pause.", "Workout paused."), { persistNotification: true });
     } else {
@@ -3698,6 +3784,7 @@
     if (!timer) return;
     stopTicker();
     releaseWakeLock();
+    cancelTimerNotification();
     const endedAt = Date.now();
     const durationSeconds = Math.max(1, Math.round((endedAt - timer.startedAt) / 1000));
     const step = currentTimerStep();
@@ -3729,6 +3816,7 @@
       summary.progressions = progressions;
     }
     CACHE.timer = null;
+    clearTimerState();
     CACHE.pendingSummary = summary;
     beep("finish");
     const progressionText = progressions.length ? ` · ${progressions.length} ${txt("progression", "progression")}` : "";
@@ -4221,6 +4309,7 @@
 
   async function requestWakeLock() {
     try {
+      if (!CACHE.timer || document.visibilityState === "hidden") return;
       if (!("wakeLock" in navigator) || !navigator.wakeLock?.request) return;
       if (CACHE.wakeLock) return;
       CACHE.wakeLock = await navigator.wakeLock.request("screen");
@@ -4233,11 +4322,35 @@
     try { CACHE.wakeLock?.release?.(); } catch (_) {}
     CACHE.wakeLock = null;
   }
+  function handleTimerVisibilityChange(reason) {
+    if (!CACHE.timer) return;
+    saveTimerState();
+    if (document.visibilityState === "visible") {
+      cancelTimerNotification();
+      requestWakeLock();
+      startTicker();
+      if (CACHE.timerFocus) restoreTimerFullscreen(reason || "visible");
+      if ((window.activeView || "") === "sport") renderSport(reason || "visible");
+    } else {
+      notifyTimerInBackground(reason || "hidden");
+    }
+  }
 
   window.addEventListener("tb:auth_scope_changed", () => {
     sportStore.resetAccountScope();
     reloadScopedLocalState(true);
   });
+  try { document.addEventListener("visibilitychange", () => handleTimerVisibilityChange("visibility")); } catch (_) {}
+  try {
+    const App = window.Capacitor?.Plugins?.App || window.Capacitor?.App;
+    if (App?.addListener) {
+      App.addListener("appStateChange", (state) => {
+        if (state?.isActive) handleTimerVisibilityChange("app-active");
+        else notifyTimerInBackground("app-background");
+      });
+      App.addListener("resume", () => handleTimerVisibilityChange("app-resume"));
+    }
+  } catch (_) {}
 
   window.renderSport = renderSport;
   window.tbSportPlannedWeekRows = function tbSportPlannedWeekRows(baseDay) {
