@@ -3,7 +3,8 @@
    - Food library, quick meals, kcal/macros, hydration
    ========================= */
 (function () {
-  const CACHE = { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], error: "", syncStatus: "", syncPhase: "", foodQuery: "", foodCategory: "all", selectedMealType: "", selectedDate: "", expandedHistory: "", editingItemId: "" };
+  const NUTRITION_STORE = window.Data?.nutritionStore || null;
+  const CACHE = NUTRITION_STORE?.state || { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], sleep: {}, localRows: [], error: "", syncStatus: "", syncPhase: "", foodQuery: "", foodCategory: "all", selectedMealType: "", selectedDate: "", expandedHistory: "", editingItemId: "" };
   const FALLBACK_FOODS = [
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
@@ -169,6 +170,7 @@
   function nutritionGoalKey() { return healthGoalKey(); }
   function rules() { return window.Core?.nutritionRules || {}; }
   function repository() { return window.Data?.nutritionRepository || {}; }
+  function nutritionStore() { return window.Data?.nutritionStore || NUTRITION_STORE || null; }
   function normalizeFood(row) { return rules().normalizeFoodRow ? rules().normalizeFoodRow(row) : row; }
   function nutritionForGrams(food, grams) { return rules().nutritionForGrams ? rules().nutritionForGrams(food, grams) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
   function sumNutrition(items) { return rules().sumNutrition ? rules().sumNutrition(items) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
@@ -463,6 +465,12 @@
   function upsertOptimisticNutritionRow(row) {
     try {
       if (!row?.meal) return;
+      const store = nutritionStore();
+      if (typeof store?.mergeOptimisticRow === "function") {
+        store.mergeOptimisticRow(row);
+        publishNutrition("optimistic");
+        return;
+      }
       const meal = Object.assign({}, row.meal, { localOnly: true, offlinePending: true });
       const item = row.item ? Object.assign({}, row.item, { localOnly: true, offlinePending: true }) : null;
       CACHE.meals = Array.isArray(CACHE.meals) ? CACHE.meals.filter(existing => String(existing.id || "") !== String(meal.id || "")) : [];
@@ -475,6 +483,12 @@
   }
   function confirmNutritionRow(localRow, remoteMeal, remoteItem) {
     try {
+      const store = nutritionStore();
+      if (typeof store?.confirmLocalRow === "function") {
+        store.confirmLocalRow(localRow, remoteMeal, remoteItem);
+        publishNutrition("confirm");
+        return;
+      }
       const syncId = nutritionSyncId(localRow);
       const localMealId = String(localRow?.meal?.id || "");
       const localItemId = String(localRow?.item?.id || "");
@@ -911,10 +925,15 @@
   }
   function publishNutrition(reason) {
     if (!window.state) window.state = {};
-    window.state.nutritionMeals = CACHE.meals.slice();
-    window.state.nutritionMealItems = CACHE.items.slice();
-    window.state.nutritionFoods = CACHE.foods.slice();
-    window.state.nutritionSleep = loadSleepRows();
+    const store = nutritionStore();
+    if (store?.replace) store.replace({ sleep: loadSleepRows() });
+    const snapshot = typeof store?.appSnapshot === "function" ? store.appSnapshot() : {
+      nutritionMeals: CACHE.meals.slice(),
+      nutritionMealItems: CACHE.items.slice(),
+      nutritionFoods: CACHE.foods.slice(),
+      nutritionSleep: loadSleepRows(),
+    };
+    Object.assign(window.state, snapshot);
     try { if (typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot(`nutrition:${reason || "load"}`); } catch (_) {}
     try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
     try { document.dispatchEvent(new CustomEvent("tb:nutrition:data_loaded", { detail: { reason: reason || "load" } })); } catch (_) {}
@@ -926,6 +945,7 @@
     let changed = false;
     const cachedFoods = loadCachedFoods();
     CACHE.foods = (cachedFoods.length ? cachedFoods : FALLBACK_FOODS).map(normalizeFood).filter(Boolean);
+    try { nutritionStore()?.hydrateFoods?.(CACHE.foods); } catch (_) {}
     const c = client();
     try {
       if (c) {
@@ -939,6 +959,7 @@
           const normalizedFoods = (foods.data || []).map(normalizeFood).filter(Boolean);
           if (normalizedFoods.length) {
             CACHE.foods = normalizedFoods;
+            try { nutritionStore()?.hydrateFoods?.(normalizedFoods); } catch (_) {}
             saveCachedFoods(normalizedFoods);
           }
         } catch (e) {
@@ -962,6 +983,7 @@
               if (sleepDay) remoteSleep[sleepDay] = { hours: n(row.hours, 0), quality: String(row.quality || "ok"), updatedAt: row.updated_at || "" };
             });
             mergeSleepRows(remoteSleep);
+            try { nutritionStore()?.replace?.({ sleep: loadSleepRows() }); } catch (_) {}
           }
         } catch (e) {
           console.warn("[nutrition] sleep fallback", e?.message || e);
@@ -989,17 +1011,24 @@
           } else {
             CACHE.items = [];
           }
+          try { nutritionStore()?.hydrateRemote?.({ meals: CACHE.meals, items: CACHE.items, sleep: loadSleepRows() }); } catch (_) {}
         } catch (e) {
           CACHE.error = CACHE.error || e?.message || String(e);
           const local = loadLocalMeals();
-          CACHE.meals = local.map(row => row.meal).filter(Boolean);
-          CACHE.items = local.map(row => row.item).filter(Boolean);
+          if (typeof nutritionStore()?.hydrateLocal === "function") nutritionStore().hydrateLocal(local);
+          else {
+            CACHE.meals = local.map(row => row.meal).filter(Boolean);
+            CACHE.items = local.map(row => row.item).filter(Boolean);
+          }
           console.warn("[nutrition] meals fallback", e?.message || e);
         }
       } else {
         const local = loadLocalMeals();
-        CACHE.meals = local.map(row => row.meal).filter(Boolean);
-        CACHE.items = local.map(row => row.item).filter(Boolean);
+        if (typeof nutritionStore()?.hydrateLocal === "function") nutritionStore().hydrateLocal(local);
+        else {
+          CACHE.meals = local.map(row => row.meal).filter(Boolean);
+          CACHE.items = local.map(row => row.item).filter(Boolean);
+        }
       }
       CACHE.loaded = true;
       changed = true;
@@ -1008,8 +1037,11 @@
       CACHE.loaded = true;
       if (!CACHE.meals.length) {
         const local = loadLocalMeals();
-        CACHE.meals = local.map(row => row.meal).filter(Boolean);
-        CACHE.items = local.map(row => row.item).filter(Boolean);
+        if (typeof nutritionStore()?.hydrateLocal === "function") nutritionStore().hydrateLocal(local);
+        else {
+          CACHE.meals = local.map(row => row.meal).filter(Boolean);
+          CACHE.items = local.map(row => row.item).filter(Boolean);
+        }
       }
       console.warn("[nutrition] load failed", CACHE.error);
       changed = true;
@@ -1022,6 +1054,8 @@
   }
   function selectedRows() {
     const day = selectedDateISO();
+    const store = nutritionStore();
+    if (typeof store?.selectedRows === "function") return store.selectedRows(day, localDateISO);
     const meals = CACHE.meals.filter(row => localDateISO(row.meal_date) === day);
     const mealIds = new Set(meals.map(row => String(row.id || "")));
     const items = CACHE.items.filter(row => row && mealIds.has(String(row.meal_id || "")));
@@ -2551,7 +2585,10 @@
     await loadNutrition({ force: true });
     return { meals: CACHE.meals.slice(), items: CACHE.items.slice() };
   };
-  window.addEventListener("tb:auth_scope_changed", () => { CACHE.loaded = false; CACHE.meals = []; CACHE.items = []; });
+  window.addEventListener("tb:auth_scope_changed", () => {
+    if (typeof nutritionStore()?.resetAccountScope === "function") nutritionStore().resetAccountScope();
+    else { CACHE.loaded = false; CACHE.meals = []; CACHE.items = []; }
+  });
   try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadNutrition(); } catch (_) {} }); } catch (_) {}
   try { window.addEventListener("tb:offline_state_changed", (ev) => { if (ev?.detail?.offline === false) syncLocalNutritionRows("online").then(() => loadNutrition({ force: true })).catch(() => {}); }); } catch (_) {}
   window.tbNutritionSyncLocal = syncLocalNutritionRows;

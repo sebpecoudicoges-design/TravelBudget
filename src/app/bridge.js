@@ -28,6 +28,7 @@ import { createSportRepository } from '../data/sportRepository.js';
 import { createNutritionRepository } from '../data/nutritionRepository.js';
 import { createTripStore } from '../features/trip/tripStore.js';
 import { createSportStore } from '../features/sport/sportStore.js';
+import { createNutritionStore } from '../features/nutrition/nutritionStore.js';
 import * as tripView from '../features/trip/tripView.js';
 import * as sportCatalog from '../features/sport/sportCatalog.js';
 import * as sportProgramRules from '../features/sport/sportProgramRules.js';
@@ -79,6 +80,8 @@ window.Data.sportRepository = window.Data.sportRepository || createSportReposito
 window.Data.nutritionRepository = window.Data.nutritionRepository || createNutritionRepository(() => window.sb);
 window.Data.createTripStore = window.Data.createTripStore || createTripStore;
 window.Data.createSportStore = window.Data.createSportStore || createSportStore;
+window.Data.createNutritionStore = window.Data.createNutritionStore || createNutritionStore;
+window.Data.nutritionStore = window.Data.nutritionStore || createNutritionStore({}, { entityStore: window.Data.appStore });
 window.Data.storageQuota = storageQuota;
 window.tbSafeLocalStorageSet = (key, value, options) => storageQuota.safeSet(window.localStorage, key, value, options);
 

@@ -88,7 +88,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire les regles pures du catalogue, des totaux par repas, du journal quotidien, des objectifs et des cibles par moment.
   - [x] Extraire le socle repository local/offline Nutrition : cache aliments, lignes locales, sync_id, sommeil et erreurs de synchro.
   - [ ] Extraire le repository Nutrition : aliments, repas, items, sommeil et synchro offline.
-  - [ ] Extraire le store Nutrition : cache aliments, date selectionnee, repas locaux et publication KPI.
+  - [x] Extraire le store Nutrition : cache aliments, date selectionnee, repas locaux et publication KPI.
   - [ ] Extraire les vues Nutrition : saisie, timeline, historique, eau, sommeil et objectif.
 - [ ] Sante : separer score, tendances et saisies corporelles.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.
