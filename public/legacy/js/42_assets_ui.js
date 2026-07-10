@@ -243,26 +243,10 @@ function portfolioSummary(assets, owners){
 
 function portfolioSummaryHtml(assets, owners){
   const s = portfolioSummary(assets, owners);
-
-  return `<div class="tb-assets-summary">
-    <div class="tb-assets-summary-card primary">
-      <small>${esc(tr('assets.summary.your_total'))}</small>
-      <strong>${esc(money(s.totalOwned, s.currency))}</strong>
-    </div>
-    <div class="tb-assets-summary-card">
-      <small>${esc(tr('assets.summary.total_assets'))}</small>
-      <strong>${esc(money(s.totalCurrent, s.currency))}</strong>
-    </div>
-    <div class="tb-assets-summary-card">
-      <small>${esc(tr('assets.summary.estimated_depreciation'))}</small>
-      <strong class="depr">-${esc(money(s.totalDepreciation, s.currency))}</strong>
-    </div>
-    <div class="tb-assets-summary-card">
-      <small>${esc(tr('assets.summary.active_assets'))}</small>
-      <strong>${esc(s.count)}</strong>
-    </div>
-    ${s.missingCurrencies && s.missingCurrencies.length ? `<div class="tb-assets-summary-note">${esc(atxt('Conversion manquante pour : ', 'Missing conversion for: '))}${esc(s.missingCurrencies.join(', '))}. ${esc(atxt('Ces assets ne sont pas inclus dans les totaux.', 'These assets are not included in totals.'))}</div>` : ''}
-  </div>`;
+  if (window.UI?.assetView?.renderPortfolioSummary) {
+    return window.UI.assetView.renderPortfolioSummary({ summary: s, money, tr, t: atxt, esc });
+  }
+  return "";
 }
   function card(asset, owners){
     const core = window.TBAssetsCore; const current = core.computeLinearAssetValue(asset); const progress = core.computeDepreciationProgress(asset);

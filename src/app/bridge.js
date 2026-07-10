@@ -40,6 +40,8 @@ import * as sportSessionSandboxView from '../features/sport/sportSessionSandboxV
 import * as sportSessionSandboxRules from '../features/sport/sportSessionSandboxRules.js';
 import * as sportProfileRules from '../features/sport/sportProfileRules.js';
 import * as sportProfileView from '../features/sport/sportProfileView.js';
+import * as workView from '../features/work/workView.js';
+import * as assetView from '../features/assets/assetView.js';
 import { storageQuota } from '../data/storageQuota.js';
 import * as sportRules from '../core/sportRules.js';
 import * as uiComponents from '../ui/components.js';
@@ -95,6 +97,8 @@ window.UI.sportHistoryView = sportHistoryView;
 window.UI.sportSessionSandboxView = sportSessionSandboxView;
 window.UI.sportProfileView = sportProfileView;
 window.UI.nutritionView = nutritionView;
+window.UI.workView = workView;
+window.UI.assetView = assetView;
 window.Core.sportSessionSandboxRules = sportSessionSandboxRules;
 window.Core.sportProfileRules = sportProfileRules;
 

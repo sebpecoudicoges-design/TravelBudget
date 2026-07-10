@@ -93,7 +93,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
     - [x] Extraire les composants de vue : barres, chips favoris/recents, suggestions repas, semaine et timeline repas.
     - [x] Extraire les panneaux de vue : saisie rapide, hydratation, sommeil et historique semaine.
     - [x] Extraire les vues objectif et alcool : cockpit objectif, moyenne 7 jours et barres alcool hebdomadaires.
-- [ ] Sante : separer score, tendances et saisies corporelles.
+- [x] Sante : supprimer le chantier autonome et garder les indicateurs dans Nutrition, Sport, Travail, notifications et KPI.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.
 - [ ] Patrimoine : separer actifs, cout mensuel et integration budget.
 
@@ -110,7 +110,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 ## Chantier 5 - Performance et chargement
 
 - [ ] Charger Dashboard et Settings au demarrage uniquement.
-- [ ] Charger Trip, Sport, Nutrition, Sante et Travail a l'ouverture.
+- [ ] Charger Trip, Sport, Nutrition et Travail a l'ouverture.
 - [ ] Decouper les gros bundles par domaine.
 - [ ] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 

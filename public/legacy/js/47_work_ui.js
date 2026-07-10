@@ -177,47 +177,10 @@
   }
   function renderWorkVisual() {
     const rows = workDayRows(7);
-    const today = rows[rows.length - 1] || { kcal: 0, minutes: 0, plannedRest: false };
-    const maxKcal = Math.max(1, ...rows.map(row => Number(row.kcal || 0)));
-    const weekKcal = rows.reduce((sum, row) => sum + Number(row.kcal || 0), 0);
-    const weekHours = rows.reduce((sum, row) => sum + Number(row.minutes || 0), 0) / 60;
-    const todayLabel = today.count
-      ? txt(`Aujourd'hui : ${Math.round(today.minutes / 60 * 10) / 10}h, ${Math.round(today.kcal)} kcal`, `Today: ${Math.round(today.minutes / 60 * 10) / 10}h, ${Math.round(today.kcal)} kcal`)
-      : today.plannedRest
-        ? txt("Repos prevu aujourd'hui.", "Rest planned today.")
-        : txt("Aucun travail saisi aujourd'hui.", "No work logged today.");
-    return `<div style="border:1px solid rgba(14,165,233,.18);border-radius:18px;padding:12px;background:linear-gradient(135deg,rgba(14,165,233,.10),rgba(34,197,94,.08)),var(--panel2);margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
-        <div>
-          <h3 style="margin:0 0 4px;">${esc(txt("Rythme & charge", "Rhythm & load"))}</h3>
-          <div class="muted">${esc(todayLabel)}</div>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-          <span class="pill">${Math.round(weekKcal)} kcal</span>
-          <span class="pill">${Math.round(weekHours * 10) / 10}h</span>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;align-items:end;margin:12px 0 10px;">
-        ${rows.map(row => {
-          const h = row.kcal ? Math.max(16, Math.min(86, (row.kcal / maxKcal) * 86)) : 12;
-          const color = row.kcal ? "linear-gradient(180deg,#22c55e,#0ea5e9)" : row.plannedRest ? "linear-gradient(180deg,#cbd5e1,#94a3b8)" : "linear-gradient(180deg,#fde68a,#f59e0b)";
-          const title = `${row.day} | ${row.count ? `${Math.round(row.kcal)} kcal, ${Math.round(row.minutes / 60 * 10) / 10}h` : row.plannedRest ? txt("Repos", "Rest") : txt("Non saisi", "Not logged")}${row.labels.length ? ` | ${row.labels.join(", ")}` : ""}`;
-          return `<button type="button" title="${esc(title)}" style="border:0;background:transparent;padding:0;display:grid;gap:5px;align-items:end;color:inherit;">
-            <span style="height:${Math.round(h)}px;border-radius:10px 10px 5px 5px;background:${color};box-shadow:0 8px 18px rgba(15,23,42,.10);"></span>
-            <strong style="font-size:11px;">${esc(shortDay(row.day))}</strong>
-            <span class="muted" style="font-size:10px;">${row.kcal ? Math.round(row.kcal) : row.plannedRest ? esc(txt("Repos", "Rest")) : "-"}</span>
-          </button>`;
-        }).join("")}
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <label class="muted" for="work-rhythm" style="font-weight:850;">${esc(txt("Rythme", "Rhythm"))}</label>
-        <select id="work-rhythm" style="border:1px solid var(--border);border-radius:999px;padding:8px 10px;background:var(--panel);font-weight:850;color:inherit;">
-          <option value="weekend_rest" ${CACHE.rhythm.mode === "weekend_rest" ? "selected" : ""}>${esc(txt("Repos samedi/dimanche", "Rest Saturday/Sunday"))}</option>
-          <option value="daily" ${CACHE.rhythm.mode === "daily" ? "selected" : ""}>${esc(txt("Travail possible tous les jours", "Work can happen every day"))}</option>
-        </select>
-        <button class="btn small" type="button" id="work-rest-today">${esc(txt("Repos aujourd'hui", "Rest today"))}</button>
-      </div>
-    </div>`;
+    if (window.UI?.workView?.renderWorkLoadPanel) {
+      return window.UI.workView.renderWorkLoadPanel({ rows, rhythm: CACHE.rhythm, shortDay, esc, t: txt });
+    }
+    return "";
   }
   async function loadWorkDays(options = {}) {
     const force = !!options.force;

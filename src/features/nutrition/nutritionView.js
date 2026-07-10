@@ -323,6 +323,83 @@ export function renderAlcoholPanel({
   </div>`;
 }
 
+export function summarizeActiveWeek(rows = []) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const count = Math.max(1, safeRows.length);
+  return {
+    avgScore: safeRows.reduce((sum, row) => sum + num(row.score, 0), 0) / count,
+    avgKcal: safeRows.reduce((sum, row) => sum + num(row.kcal, 0), 0) / count,
+    avgNeed: safeRows.reduce((sum, row) => sum + num(row.need, 0), 0) / count,
+    avgProtein: safeRows.reduce((sum, row) => sum + num(row.protein, 0), 0) / count,
+    avgWater: safeRows.reduce((sum, row) => sum + num(row.water, 0), 0) / count,
+    avgSleep: safeRows.reduce((sum, row) => sum + num(row.sleep, 0), 0) / count,
+    sportTotal: safeRows.reduce((sum, row) => sum + num(row.sport, 0), 0),
+    workTotal: safeRows.reduce((sum, row) => sum + num(row.work, 0), 0),
+    alcoholTotal: safeRows.reduce((sum, row) => sum + num(row.alcohol, 0), 0),
+  };
+}
+
+export function renderActiveWeekDashboard({
+  rows = [],
+  selectedDay = '',
+  bodyWeight = 70,
+  esc = defaultEsc,
+  t,
+} = {}) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const summary = summarizeActiveWeek(safeRows);
+  return `<div class="tb-health-weekboard">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;">
+        <div>
+          <h3 style="margin:0;">${esc(langText('Semaine active', 'Active week', t))}</h3>
+          <div class="muted" style="font-size:12px;">${esc(langText('Kcal, proteines, eau, sommeil, sport, travail, alcool et score au meme endroit.', 'Kcal, protein, water, sleep, sport, work, alcohol and score in one place.', t))}</div>
+        </div>
+        <span class="pill">${esc(langText('7 jours', '7 days', t))}</span>
+      </div>
+      <div class="tb-health-weekboard-kpis">
+        <div><span>${esc(langText('Score', 'Score', t))}</span><strong>${Math.round(summary.avgScore)}/100</strong></div>
+        <div><span>${esc(langText('Kcal', 'Kcal', t))}</span><strong>${Math.round(summary.avgKcal)} / ${Math.round(summary.avgNeed)}</strong></div>
+        <div><span>${esc(langText('Proteines', 'Protein', t))}</span><strong>${Math.round(summary.avgProtein)}g/j</strong></div>
+        <div><span>${esc(langText('Eau', 'Water', t))}</span><strong>${Math.round(summary.avgWater)}ml/j</strong></div>
+        <div><span>${esc(langText('Sommeil', 'Sleep', t))}</span><strong>${Math.round(summary.avgSleep * 10) / 10}h/j</strong></div>
+        <div><span>${esc(langText('Sport', 'Sport', t))}</span><strong>${Math.round(summary.sportTotal)} kcal</strong></div>
+        <div><span>${esc(langText('Travail', 'Work', t))}</span><strong>${Math.round(summary.workTotal)} kcal</strong></div>
+        <div><span>${esc(langText('Alcool', 'Alcohol', t))}</span><strong>${Math.round(summary.alcoholTotal * 10) / 10} verres</strong></div>
+      </div>
+      <div class="tb-health-weekboard-grid">
+        ${safeRows.map(({ row = {}, plan = {}, kcal = 0, need = 1, water = 0, sleep = 0, protein = 0, sport = 0, work = 0, alcohol = 0, score = 0 }) => {
+          const kcalPct = Math.max(0, Math.min(100, (num(kcal, 0) / Math.max(1, num(need, 0))) * 100));
+          const proteinPct = Math.max(0, Math.min(100, (num(protein, 0) / Math.max(70, num(bodyWeight, 70) * 1.35)) * 100));
+          const waterPct = Math.max(0, Math.min(100, (num(water, 0) / 2000) * 100));
+          const sleepPct = Math.max(0, Math.min(100, (num(sleep, 0) / 7.5) * 100));
+          const sportPct = Math.max(0, Math.min(100, (num(sport, 0) / 650) * 100));
+          const workPct = Math.max(0, Math.min(100, (num(work, 0) / 650) * 100));
+          const alcoholPct = Math.max(0, Math.min(100, (num(alcohol, 0) / 3) * 100));
+          const scorePct = Math.max(0, Math.min(100, num(score, 0)));
+          const plannedLabel = plan.planned ? `${plan.code || ''} ${plan.sessionName || ''}`.trim() : langText('Repos', 'Rest', t);
+          const day = String(row.day || '');
+          const detail = `${day} | ${plannedLabel} | score ${Math.round(num(score, 0))}/100 | kcal ${Math.round(num(kcal, 0))}/${Math.round(num(need, 0))} | proteines ${Math.round(num(protein, 0))}g | eau ${Math.round(num(water, 0))} ml | sommeil ${sleep ? Math.round(num(sleep, 0) * 10) / 10 : '-'}h | sport ${Math.round(num(sport, 0))} kcal | travail ${Math.round(num(work, 0))} kcal | alcool ${Math.round(num(alcohol, 0) * 10) / 10} verre(s)`;
+          return `<button class="tb-health-weekboard-day ${day === selectedDay ? 'active' : ''}" type="button" data-health-date="${esc(day)}" title="${esc(detail)}">
+            <span class="muted">${esc(day.slice(5).replace('-', '/'))}</span>
+            <strong>${esc(plannedLabel)}</strong>
+            <div class="tb-health-weekboard-bars">
+              <i style="height:${Math.max(6, scorePct * 0.56)}px;background:#0f172a;"></i>
+              <i style="height:${Math.max(6, kcalPct * 0.56)}px;background:#22c55e;"></i>
+              <i style="height:${Math.max(6, proteinPct * 0.56)}px;background:#14b8a6;"></i>
+              <i style="height:${Math.max(6, waterPct * 0.56)}px;background:#38bdf8;"></i>
+              <i style="height:${Math.max(6, sleepPct * 0.56)}px;background:#8b5cf6;"></i>
+              <i style="height:${Math.max(6, sportPct * 0.56)}px;background:#f59e0b;"></i>
+              <i style="height:${Math.max(6, workPct * 0.56)}px;background:#ef4444;"></i>
+              <i style="height:${Math.max(3, alcoholPct * 0.56)}px;background:#64748b;"></i>
+            </div>
+            <small>${Math.round(num(kcal, 0))} kcal · ${Math.round(num(score, 0))}/100</small>
+          </button>`;
+        }).join('')}
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:8px;">${esc(langText('Barres : score, kcal, proteines, eau, sommeil, sport, travail, alcool.', 'Bars: score, kcal, protein, water, sleep, sport, work, alcohol.', t))}</div>
+    </div>`;
+}
+
 export function renderMealTimeline({
   mealTargets = [],
   typeTotals = {},
