@@ -90,6 +90,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [ ] Extraire le repository Nutrition : aliments, repas, items, sommeil et synchro offline.
   - [x] Extraire le store Nutrition : cache aliments, date selectionnee, repas locaux et publication KPI.
   - [ ] Extraire les vues Nutrition : saisie, timeline, historique, eau, sommeil et objectif.
+    - [x] Extraire les composants de vue : barres, chips favoris/recents, suggestions repas, semaine et timeline repas.
 - [ ] Sante : separer score, tendances et saisies corporelles.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.
 - [ ] Patrimoine : separer actifs, cout mensuel et integration budget.

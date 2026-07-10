@@ -171,6 +171,7 @@
   function rules() { return window.Core?.nutritionRules || {}; }
   function repository() { return window.Data?.nutritionRepository || {}; }
   function nutritionStore() { return window.Data?.nutritionStore || NUTRITION_STORE || null; }
+  function view() { return window.UI?.nutritionView || {}; }
   function normalizeFood(row) { return rules().normalizeFoodRow ? rules().normalizeFoodRow(row) : row; }
   function nutritionForGrams(food, grams) { return rules().nutritionForGrams ? rules().nutritionForGrams(food, grams) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
   function sumNutrition(items) { return rules().sumNutrition ? rules().sumNutrition(items) : { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 }; }
@@ -1211,10 +1212,12 @@
   }
   function fmtMacro(v, unit) { return `${Math.round(n(v, 0) * 10) / 10}${unit || "g"}`; }
   function pct(current, target) {
+    if (typeof view().progressPercent === "function") return view().progressPercent(current, target);
     const t = Math.max(1, n(target, 0));
     return Math.max(0, Math.min(160, (n(current, 0) / t) * 100));
   }
   function progressBar(label, current, target, unit) {
+    if (typeof view().renderProgressBar === "function") return view().renderProgressBar({ label, current, target, unit, esc });
     const percent = pct(current, target);
     const over = n(current, 0) > n(target, 0);
     return `
@@ -1266,6 +1269,7 @@
     });
   }
   function mealTargetNote(target) {
+    if (typeof view().mealTargetNote === "function") return view().mealTargetNote(target, { t: txt });
     const delta = Math.round(n(target?.kcal, 0) - n(target?.baseKcal, target?.kcal));
     if (Math.abs(delta) < 40) return txt("Objectif standard.", "Standard target.");
     return delta > 0
@@ -1338,6 +1342,7 @@
     }).slice(0, 18);
   }
   function mealMomentSuggestion(type, consumed, targetKcal, total, macroTargets) {
+    if (typeof view().mealMomentSuggestion === "function") return view().mealMomentSuggestion(type, consumed, targetKcal, total, macroTargets, { t: txt });
     const kcalGap = n(targetKcal, 0) - n(consumed?.kcal, 0);
     const proteinGap = n(macroTargets?.protein, 0) - n(total?.protein, 0);
     const waterGap = 2000 - n(total?.waterMl, 0);
@@ -1349,6 +1354,7 @@
     return txt("Moment bien cale.", "This moment is on track.");
   }
   function weekRows(history, selectedDay) {
+    if (typeof view().buildWeekRows === "function") return view().buildWeekRows(history, selectedDay, { offsetDateISO });
     const byDay = new Map(history.map(row => [row.day, row]));
     const rows = [];
     for (let i = 6; i >= 0; i -= 1) {
@@ -1363,6 +1369,7 @@
     return { favs: favs.slice(0, 8), recent: recent.slice(0, 8) };
   }
   function mealFavoriteChipHTML(fav, index) {
+    if (typeof view().renderMealFavoriteChip === "function") return view().renderMealFavoriteChip(fav, index, { foodByKey, nutritionForGrams, t: txt, esc });
     const kcal = (fav.items || []).reduce((sum, item) => {
       const food = foodByKey(item.foodKey);
       return sum + n(nutritionForGrams(food || {}, n(item.grams, 0)).kcal, 0);
@@ -1370,6 +1377,7 @@
     return `<button class="tb-nutrition-food-chip" type="button" data-nutrition-apply-meal-fav="${index}" title="${esc((fav.items || []).map(item => `${item.label || item.foodKey} ${Math.round(n(item.grams, 0))}g`).join(" · "))}"><span>☆</span> ${esc(fav.label || txt("Repas favori", "Favorite meal"))}<br><small>${Math.round(kcal)} kcal</small></button>`;
   }
   function foodChipHTML(food, kind) {
+    if (typeof view().renderFoodChip === "function") return view().renderFoodChip(food, kind, { esc });
     const label = kind === "favorite" ? "★" : "↺";
     return `<button class="tb-nutrition-food-chip" type="button" data-nutrition-pick-food="${esc(food.key)}" title="${esc(food.name)} · ${Math.round(n(food.servingGrams, 100))}g"><span>${label}</span> ${esc(food.name)}</button>`;
   }
@@ -2083,40 +2091,18 @@
             </div>
             <div style="display:grid;gap:10px;margin-top:12px;">
               <h3 style="margin:0;">${esc(txt("Timeline repas", "Meal timeline"))}</h3>
-              ${mealTargets.map((target, index) => {
-                const consumed = typeTotals[target.type] || { kcal: 0, protein: 0, carbs: 0, fat: 0 };
-                const rowItems = items.filter(item => String(itemMeal(item)?.meal_type || "meal") === target.type);
-                const rest = target.kcal - n(consumed.kcal, 0);
-                const suggestion = mealMomentSuggestion(target.type, consumed, target.kcal, { ...total, waterMl: drinkWaterMl }, { protein: proteinTarget, carbs: carbsTarget, fat: fatTarget });
-                return `<div class="tb-nutrition-timeline-row">
-                  <div style="display:grid;grid-template-rows:18px 1fr;justify-items:center;padding-top:4px;">
-                    <span style="width:16px;height:16px;border-radius:50%;background:${target.color};box-shadow:0 0 0 4px ${target.color}22;"></span>
-                    <span style="width:2px;background:${index === mealTargets.length - 1 ? "transparent" : "rgba(148,163,184,.35)"};"></span>
-                  </div>
-                  <div style="border:1px solid ${target.color}88;border-radius:8px;padding:12px;background:linear-gradient(135deg,${target.color}20,rgba(15,23,42,.02)),var(--panel2);">
-                    <button class="btn" type="button" data-nutrition-pick-type="${esc(target.type)}" style="width:100%;display:flex;justify-content:space-between;gap:10px;align-items:flex-start;text-align:left;border-color:${target.color};">
-                      <span><strong>${esc(mealTypeLabel(target.type))}</strong><br><small class="muted">${Math.round(n(consumed.kcal, 0))} / ${target.kcal} kcal</small></span>
-                      <span class="pill">${rest >= 0 ? esc(txt("reste", "left")) : esc(txt("surplus", "surplus"))} ${Math.abs(Math.round(rest))}</span>
-                    </button>
-                    ${rowItems.length ? `<button class="btn small" type="button" data-nutrition-save-meal-fav="${esc(target.type)}" style="margin-top:8px;">☆ ${esc(txt("Garder en favori", "Save as favorite"))}</button>` : ""}
-                    <div style="margin:10px 0;">${progressBar("kcal", consumed.kcal, target.kcal, "")}</div>
-                    <div class="muted" style="font-size:12px;margin:-4px 0 8px;">${esc(mealTargetNote(target))}</div>
-                    <div class="pill" style="margin-bottom:8px;background:rgba(255,255,255,.06);">${esc(suggestion)}</div>
-                    ${rowItems.length ? rowItems.map(item => `
-                      <div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid rgba(148,163,184,.22);padding:8px 0;align-items:flex-start;flex-wrap:wrap;">
-                        <div><strong>${esc(item.label || item.food_key || "Aliment")}</strong><div class="muted">${Math.round(n(item.grams, 0))}g · P ${fmtMacro(item.protein_g)} · G ${fmtMacro(item.carbs_g)} · L ${fmtMacro(item.fat_g)}</div></div>
-                        <div style="display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap;"><strong>${Math.round(n(item.kcal, 0))} kcal</strong><button class="btn small" type="button" data-nutrition-edit="${esc(String(item.id || ""))}">${esc(txt("Modifier", "Edit"))}</button><button class="btn small" type="button" data-nutrition-delete="${esc(String(item.id || ""))}">${esc(txt("Supprimer", "Delete"))}</button></div>
-                      </div>`).join("") : `<div class="muted">${esc(txt("Aucun aliment sur ce moment.", "No food for this moment."))}</div>`}
-                  </div>
-                </div>`;
-              }).join("")}
-              ${items.filter(item => !mealTargets.some(target => target.type === String(itemMeal(item)?.meal_type || "meal"))).length ? `
-                <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-                  <strong>${esc(txt("Autres ajouts", "Other entries"))}</strong>
-                  ${items.filter(item => !mealTargets.some(target => target.type === String(itemMeal(item)?.meal_type || "meal"))).map(item => `
-                    <div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--border);padding:8px 0;"><span>${esc(item.label || item.food_key || "Aliment")}</span><strong>${Math.round(n(item.kcal, 0))} kcal</strong></div>
-                  `).join("")}
-                </div>` : ""}
+              ${typeof view().renderMealTimeline === "function" ? view().renderMealTimeline({
+                mealTargets,
+                typeTotals,
+                items,
+                total,
+                drinkWaterMl,
+                macroTargets: { protein: proteinTarget, carbs: carbsTarget, fat: fatTarget },
+                itemMeal,
+                mealTypeLabel,
+                esc,
+                t: txt,
+              }) : ""}
             </div>
           </div>
         </div>

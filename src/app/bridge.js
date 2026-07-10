@@ -29,6 +29,7 @@ import { createNutritionRepository } from '../data/nutritionRepository.js';
 import { createTripStore } from '../features/trip/tripStore.js';
 import { createSportStore } from '../features/sport/sportStore.js';
 import { createNutritionStore } from '../features/nutrition/nutritionStore.js';
+import * as nutritionView from '../features/nutrition/nutritionView.js';
 import * as tripView from '../features/trip/tripView.js';
 import * as sportCatalog from '../features/sport/sportCatalog.js';
 import * as sportProgramRules from '../features/sport/sportProgramRules.js';
@@ -93,6 +94,7 @@ window.UI.sportTimerController = sportTimerController;
 window.UI.sportHistoryView = sportHistoryView;
 window.UI.sportSessionSandboxView = sportSessionSandboxView;
 window.UI.sportProfileView = sportProfileView;
+window.UI.nutritionView = nutritionView;
 window.Core.sportSessionSandboxRules = sportSessionSandboxRules;
 window.Core.sportProfileRules = sportProfileRules;
 
