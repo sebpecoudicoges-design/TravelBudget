@@ -749,48 +749,23 @@ function renderSettings(){
         const fxMeta = _tbManualFxMeta(cur);
         const periodEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
         const pt = (fr, en) => periodEn ? en : fr;
-        wrap.innerHTML = `
-          <button type="button" class="tb-period-head" data-act="toggle-period">
-            <span class="tb-period-head-main">
-              <span class="tb-period-title">${escapeHTML(pt('Période', 'Period'))} ${escapeHTML(_tbISO(seg.start)||"—")} → ${escapeHTML(_tbISO(seg.end)||"—")}</span>
-              <span class="tb-period-subtitle">${escapeHTML(String(_tbBudgetRefDurationDays(seg) || ""))} ${escapeHTML(pt('jours', 'days'))} · ${escapeHTML(pt('Pays', 'Country'))} ${escapeHTML(resolved?.country_name || resolved?.country_code || override?.country_name || override?.country_code || travel?.country_name || travel?.country_code || "—")} · ${escapeHTML(cur)} · ${escapeHTML(localDual.main)}</span>
-            </span>
-            <span class="tb-period-head-side">
-              ${fxMeta.stale ? `<span class="tb-fx-alert-badge">⚠ ${escapeHTML(pt('Taux à mettre à jour', 'Rate needs update'))}</span>` : ''}
-              <span class="tb-period-status">${escapeHTML(String(seg.dailyBudgetBase || 0))} ${escapeHTML(cur)}/${escapeHTML(pt('jour', 'day'))}</span>
-              <span class="tb-period-arrow">⌄</span>
-            </span>
-          </button>
-          <div class="tb-period-body">
-            <div class="tb-period-shell">
-              <div class="tb-settings-inline-strip tb-settings-inline-strip--period tb-settings-inline-strip--period-2col">
-                <div class="tb-settings-chipstat tb-settings-chipstat--blue"><span>${escapeHTML(pt('Devise locale', 'Local currency'))}</span><strong>${escapeHTML(cur)}</strong><small>${escapeHTML(pt('Nuit transport', 'Night transport'))} · ${escapeHTML(_tbBudgetRefFmtAmount(_tbGetNightTransportBudget(seg.id), cur, 0))}</small></div>
-                <div class="tb-settings-chipstat tb-settings-chipstat--blue"><span>${escapeHTML(pt('Change', 'Exchange rate'))}</span><strong>${escapeHTML((rateDisplay || "—"))}</strong><small>${fxMeta.stale ? `⚠ ${escapeHTML(pt('Taux à mettre à jour', 'Rate needs update'))}` : escapeHTML(pt('Bloc séparé', 'Separate block'))}</small></div>
-              </div>
-              <div data-br-inline-seg-id="${escapeHTML(String(seg.id))}"></div>
-              <div class="tb-period-editor"><div class="tb-edit-kicker">${escapeHTML(pt('Réglages modifiables', 'Editable settings'))}</div>
-                <div class="tb-settings-subgrid tb-settings-subgrid--period-edit">
-                  <div class="field field--span-2"><label>${escapeHTML(pt('Début', 'Start'))}</label><input type="date" data-k="start_date" value="${_tbISO(seg.start)||""}" /></div>
-                  <div class="field field--span-2"><label>${escapeHTML(pt('Fin', 'End'))}</label><input type="date" data-k="end_date" value="${_tbISO(seg.end)||""}" /></div>
-                  <div class="field field--span-2"><label>${escapeHTML(pt('Devise', 'Currency'))}</label><input data-k="base_currency" value="${(seg.baseCurrency||"").toUpperCase()}" /></div>
-                  <div class="field field--span-2"><label>${escapeHTML(pt('Budget / jour', 'Budget / day'))}</label><input data-k="daily_budget_base" value="${seg.dailyBudgetBase ?? ""}" /></div>
-                  <div class="field field--span-2"><label>${escapeHTML(pt('Nuit transport', 'Night transport'))} ${typeof tbHelp==='function' ? tbHelp(pt('Montant dédié aux nuits passées en transport.', 'Amount dedicated to nights spent in transport.')) : ''}</label><input data-k="night_transport_budget" value="${_tbGetNightTransportBudget(seg.id)}" /></div>
-                  <div class="field field--span-2"><label>${escapeHTML(pt('Mode', 'Mode'))}</label><select data-br="seg-mode"><option value="inherit" ${override ? '' : 'selected'}>${escapeHTML(pt('Hériter du voyage', 'Inherit from trip'))}</option><option value="custom" ${override ? 'selected' : ''}>${escapeHTML(pt('Personnaliser', 'Customize'))}</option></select></div>
-                  <div class="field field--span-2" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>${escapeHTML(pt('Pays', 'Country'))}</label><select data-br="seg-country" data-selected-country="${escapeHTML(String(resolvedCountry.country_code || ""))}" data-selected-region="${escapeHTML(String(resolvedCountry.region_code || ""))}">${_tbBudgetRefCountryOptions(resolvedCountry.country_code, resolvedCountry.region_code)}</select></div>
-                  <div class="field field--span-2" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>${escapeHTML(pt('Profil', 'Profile'))}</label><select data-br="seg-profile"><option value="solo" ${(override?.travel_profile || resolved?.travel_profile || "solo")=="solo"?"selected":""}>Solo</option><option value="couple" ${(override?.travel_profile || resolved?.travel_profile)=="couple"?"selected":""}>Couple</option><option value="family" ${(override?.travel_profile || resolved?.travel_profile)=="family"?"selected":""}>${escapeHTML(pt('Famille', 'Family'))}</option></select></div>
-                  <div class="field field--span-2" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>Style</label><select data-br="seg-style"><option value="budget" ${(override?.travel_style || resolved?.travel_style)=="budget"?"selected":""}>Budget</option><option value="standard" ${(!(override?.travel_style || resolved?.travel_style) || (override?.travel_style || resolved?.travel_style)=="standard")?"selected":""}>Standard</option><option value="comfort" ${(override?.travel_style || resolved?.travel_style)=="comfort"?"selected":""}>Comfort</option></select></div>
-                  <div class="field field--span-2" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>${escapeHTML(pt('Adultes', 'Adults'))}</label><input data-br="seg-adults" type="number" min="1" step="1" value="${escapeHTML(String(override?.adult_count ?? resolved?.adult_count ?? 1))}" /></div>
-                  <div class="field field--span-2" data-br="seg-custom" style="display:${override ? '' : 'none'};"><label>${escapeHTML(pt('Enfants', 'Children'))}</label><input data-br="seg-children" type="number" min="0" step="1" value="${escapeHTML(String(override?.child_count ?? resolved?.child_count ?? 0))}" /></div>
-                </div>
-                <div class="tb-period-inline-actions">
-                  <button class="btn" data-act="edit-cancel">${escapeHTML(pt('Annuler', 'Cancel'))}</button>
-                  <button class="btn primary" data-act="save">${escapeHTML(pt('Enregistrer', 'Save'))}</button>
-                  <button class="btn danger" data-act="del">${escapeHTML(pt('Supprimer', 'Delete'))}</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
+        wrap.innerHTML = window.TBSettingsView?.renderSettingsPeriodCard?.({
+          segment: { ...seg, start: _tbISO(seg.start), end: _tbISO(seg.end) },
+          currency: cur,
+          durationDays: _tbBudgetRefDurationDays(seg),
+          countryLabel: resolved?.country_name || resolved?.country_code || override?.country_name || override?.country_code || travel?.country_name || travel?.country_code || "—",
+          localAmountMain: localDual.main,
+          rateDisplay,
+          nightTransportBudget: _tbBudgetRefFmtAmount(_tbGetNightTransportBudget(seg.id), cur, 0),
+          fxNeedsUpdate: !!fxMeta.stale,
+          override,
+          resolvedCountry,
+          countryOptionsHtml: _tbBudgetRefCountryOptions(resolvedCountry.country_code, resolvedCountry.region_code),
+          helpHtml: typeof tbHelp==='function' ? tbHelp(pt('Montant dédié aux nuits passées en transport.', 'Amount dedicated to nights spent in transport.')) : '',
+          lang: periodEn ? 'en' : 'fr',
+          t: T,
+          esc: escapeHTML,
+        }) || "";
         _tbBudgetRefWireSegmentMode(wrap);
 
         // handlers

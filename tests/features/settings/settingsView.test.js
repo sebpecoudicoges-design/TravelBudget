@@ -7,6 +7,7 @@ import {
   renderSettingsAccountPanel,
   renderSettingsHero,
   renderSettingsManualFxPanel,
+  renderSettingsPeriodCard,
   setSettingsPanelState,
 } from '../../../src/features/settings/settingsView.js';
 
@@ -173,5 +174,64 @@ describe('Settings view helpers', () => {
 
     expect(html).toContain('Aucun taux perso');
     expect(html).toContain('tb-fx-ok-badge');
+  });
+
+  it('renders a period card with stable fields and actions', () => {
+    const html = renderSettingsPeriodCard({
+      segment: {
+        id: 'seg-1',
+        start: '2026-07-01',
+        end: '2026-07-07',
+        dailyBudgetBase: 85,
+      },
+      currency: 'aud',
+      durationDays: 7,
+      countryLabel: 'Australie',
+      localAmountMain: '85 AUD',
+      rateDisplay: '1.78',
+      nightTransportBudget: '20 AUD',
+      fxNeedsUpdate: true,
+      override: { travel_profile: 'couple', travel_style: 'comfort', adult_count: 2, child_count: 1 },
+      resolvedCountry: { country_code: 'AU', region_code: 'QLD' },
+      countryOptionsHtml: '<option value="AU" selected>Australie</option>',
+      helpHtml: '<span data-help>?</span>',
+      t,
+    });
+
+    expect(html).toContain('data-act="toggle-period"');
+    expect(html).toContain('Période 2026-07-01 → 2026-07-07');
+    expect(html).toContain('7 jours');
+    expect(html).toContain('Australie · AUD · 85 AUD');
+    expect(html).toContain('data-br-inline-seg-id="seg-1"');
+    expect(html).toContain('data-k="start_date" value="2026-07-01"');
+    expect(html).toContain('data-k="daily_budget_base" value="85"');
+    expect(html).toContain('data-br="seg-mode"');
+    expect(html).toContain('<option value="custom" selected>');
+    expect(html).toContain('data-br="seg-country"');
+    expect(html).toContain('data-act="save"');
+    expect(html).toContain('data-act="del"');
+  });
+
+  it('renders a period card in inherited English mode', () => {
+    const html = renderSettingsPeriodCard({
+      segment: { id: 'seg-2', start: '2026-08-01', end: '2026-08-02', dailyBudgetBase: 100 },
+      currency: 'usd',
+      durationDays: 2,
+      countryLabel: 'United States',
+      localAmountMain: '100 USD',
+      rateDisplay: '—',
+      nightTransportBudget: '0 USD',
+      override: null,
+      resolvedCountry: { country_code: 'US', region_code: '' },
+      lang: 'en',
+      t,
+    });
+
+    expect(html).toContain('Period 2026-08-01 → 2026-08-02');
+    expect(html).toContain('2 days');
+    expect(html).toContain('<option value="inherit" selected>');
+    expect(html).toContain('display:none;');
+    expect(html).toContain('Save');
+    expect(html).toContain('Delete');
   });
 });

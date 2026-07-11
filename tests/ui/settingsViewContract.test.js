@@ -18,6 +18,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsAccountPanel');
     expect(legacy).toContain('window.TBSettingsView?.normalizeManualFxRates');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsManualFxPanel');
+    expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodCard');
     expect(legacy).toContain('window.TBSettingsAccountController?.bindSettingsAccountPanel');
     expect(legacy).toContain('window.TBSettingsView?.getSettingsPanelState');
     expect(legacy).toContain('window.TBSettingsView?.setSettingsPanelState');
@@ -29,5 +30,6 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('const readNotificationForm = () =>');
     expect(legacy).not.toContain('const _rememberAccount =');
     expect(legacy).not.toContain('manualPanel.innerHTML = `');
+    expect(legacy).not.toContain('<button type="button" class="tb-period-head"');
   });
 });

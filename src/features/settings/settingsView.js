@@ -279,6 +279,79 @@ export function renderSettingsManualFxPanel({
     `;
 }
 
+export function renderSettingsPeriodCard({
+  segment = {},
+  currency = '',
+  durationDays = '',
+  countryLabel = '',
+  localAmountMain = '',
+  rateDisplay = '',
+  nightTransportBudget = '',
+  fxNeedsUpdate = false,
+  override = null,
+  resolvedCountry = {},
+  countryOptionsHtml = '',
+  helpHtml = '',
+  lang = 'fr',
+  t = fallbackT,
+  esc = defaultEsc,
+} = {}) {
+  const tr = typeof t === 'function' ? t : fallbackT;
+  const isEn = String(lang || '').toLowerCase() === 'en';
+  const pt = (fr, en) => (isEn ? en : fr);
+  const cur = String(currency || segment?.baseCurrency || '').toUpperCase();
+  const start = String(segment?.start || segment?.start_date || '');
+  const end = String(segment?.end || segment?.end_date || '');
+  const dailyBudget = segment?.dailyBudgetBase ?? segment?.daily_budget_base ?? '';
+  const activeOverride = !!override;
+  const resolved = resolvedCountry || {};
+  const profile = override?.travel_profile || resolved?.travel_profile || 'solo';
+  const style = override?.travel_style || resolved?.travel_style || 'standard';
+
+  return `
+          <button type="button" class="tb-period-head" data-act="toggle-period">
+            <span class="tb-period-head-main">
+              <span class="tb-period-title">${esc(pt('Période', 'Period'))} ${esc(start || "—")} → ${esc(end || "—")}</span>
+              <span class="tb-period-subtitle">${esc(String(durationDays || ""))} ${esc(pt('jours', 'days'))} · ${esc(pt('Pays', 'Country'))} ${esc(countryLabel || "—")} · ${esc(cur)} · ${esc(localAmountMain || "—")}</span>
+            </span>
+            <span class="tb-period-head-side">
+              ${fxNeedsUpdate ? `<span class="tb-fx-alert-badge">⚠ ${esc(pt('Taux à mettre à jour', 'Rate needs update'))}</span>` : ''}
+              <span class="tb-period-status">${esc(String(dailyBudget || 0))} ${esc(cur)}/${esc(pt('jour', 'day'))}</span>
+              <span class="tb-period-arrow">⌄</span>
+            </span>
+          </button>
+          <div class="tb-period-body">
+            <div class="tb-period-shell">
+              <div class="tb-settings-inline-strip tb-settings-inline-strip--period tb-settings-inline-strip--period-2col">
+                <div class="tb-settings-chipstat tb-settings-chipstat--blue"><span>${esc(pt('Devise locale', 'Local currency'))}</span><strong>${esc(cur)}</strong><small>${esc(pt('Nuit transport', 'Night transport'))} · ${esc(nightTransportBudget || "—")}</small></div>
+                <div class="tb-settings-chipstat tb-settings-chipstat--blue"><span>${esc(pt('Change', 'Exchange rate'))}</span><strong>${esc((rateDisplay || "—"))}</strong><small>${fxNeedsUpdate ? `⚠ ${esc(pt('Taux à mettre à jour', 'Rate needs update'))}` : esc(pt('Bloc séparé', 'Separate block'))}</small></div>
+              </div>
+              <div data-br-inline-seg-id="${esc(String(segment?.id || ''))}"></div>
+              <div class="tb-period-editor"><div class="tb-edit-kicker">${esc(pt('Réglages modifiables', 'Editable settings'))}</div>
+                <div class="tb-settings-subgrid tb-settings-subgrid--period-edit">
+                  <div class="field field--span-2"><label>${esc(pt('Début', 'Start'))}</label><input type="date" data-k="start_date" value="${esc(start)}" /></div>
+                  <div class="field field--span-2"><label>${esc(pt('Fin', 'End'))}</label><input type="date" data-k="end_date" value="${esc(end)}" /></div>
+                  <div class="field field--span-2"><label>${esc(pt('Devise', 'Currency'))}</label><input data-k="base_currency" value="${esc(cur)}" /></div>
+                  <div class="field field--span-2"><label>${esc(pt('Budget / jour', 'Budget / day'))}</label><input data-k="daily_budget_base" value="${esc(dailyBudget ?? "")}" /></div>
+                  <div class="field field--span-2"><label>${esc(pt('Nuit transport', 'Night transport'))} ${helpHtml || ''}</label><input data-k="night_transport_budget" value="${esc(nightTransportBudget)}" /></div>
+                  <div class="field field--span-2"><label>${esc(pt('Mode', 'Mode'))}</label><select data-br="seg-mode"><option value="inherit" ${activeOverride ? '' : 'selected'}>${esc(pt('Hériter du voyage', 'Inherit from trip'))}</option><option value="custom" ${activeOverride ? 'selected' : ''}>${esc(pt('Personnaliser', 'Customize'))}</option></select></div>
+                  <div class="field field--span-2" data-br="seg-custom" style="display:${activeOverride ? '' : 'none'};"><label>${esc(pt('Pays', 'Country'))}</label><select data-br="seg-country" data-selected-country="${esc(String(resolved.country_code || ""))}" data-selected-region="${esc(String(resolved.region_code || ""))}">${countryOptionsHtml || ''}</select></div>
+                  <div class="field field--span-2" data-br="seg-custom" style="display:${activeOverride ? '' : 'none'};"><label>${esc(pt('Profil', 'Profile'))}</label><select data-br="seg-profile"><option value="solo" ${profile === "solo" ? "selected" : ""}>Solo</option><option value="couple" ${profile === "couple" ? "selected" : ""}>Couple</option><option value="family" ${profile === "family" ? "selected" : ""}>${esc(pt('Famille', 'Family'))}</option></select></div>
+                  <div class="field field--span-2" data-br="seg-custom" style="display:${activeOverride ? '' : 'none'};"><label>Style</label><select data-br="seg-style"><option value="budget" ${style === "budget" ? "selected" : ""}>Budget</option><option value="standard" ${(!style || style === "standard") ? "selected" : ""}>Standard</option><option value="comfort" ${style === "comfort" ? "selected" : ""}>Comfort</option></select></div>
+                  <div class="field field--span-2" data-br="seg-custom" style="display:${activeOverride ? '' : 'none'};"><label>${esc(pt('Adultes', 'Adults'))}</label><input data-br="seg-adults" type="number" min="1" step="1" value="${esc(String(override?.adult_count ?? resolved.adult_count ?? 1))}" /></div>
+                  <div class="field field--span-2" data-br="seg-custom" style="display:${activeOverride ? '' : 'none'};"><label>${esc(pt('Enfants', 'Children'))}</label><input data-br="seg-children" type="number" min="0" step="1" value="${esc(String(override?.child_count ?? resolved.child_count ?? 0))}" /></div>
+                </div>
+                <div class="tb-period-inline-actions">
+                  <button class="btn" data-act="edit-cancel">${esc(pt('Annuler', 'Cancel'))}</button>
+                  <button class="btn primary" data-act="save">${esc(pt('Enregistrer', 'Save'))}</button>
+                  <button class="btn danger" data-act="del">${esc(pt('Supprimer', 'Delete'))}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+}
+
 export function ensureSettingsHero(view, {
   state = {},
   t = fallbackT,
@@ -381,6 +454,7 @@ export default {
   normalizeManualFxRates,
   renderSettingsAccountPanel,
   renderSettingsManualFxPanel,
+  renderSettingsPeriodCard,
   renderSettingsHero,
   ensureSettingsHero,
   decorateSettingsPanels,
