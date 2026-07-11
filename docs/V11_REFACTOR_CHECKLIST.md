@@ -117,6 +117,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [ ] Charger Dashboard et Settings au demarrage uniquement.
 - [ ] Charger Trip, Sport, Nutrition et Travail a l'ouverture.
 - [x] Lancer le chargement differe pilote pour Patrimoine : `41_assets_core.js` et `42_assets_ui.js` charges a l'ouverture de l'onglet.
+  - [x] Sortir Nutrition du boot : `48_nutrition_ui.js` charge au premier affichage de l'onglet Alimentation.
 - [ ] Decouper les gros bundles par domaine.
 - [ ] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 

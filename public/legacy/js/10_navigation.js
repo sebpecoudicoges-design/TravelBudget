@@ -66,7 +66,19 @@ function showView(view) {
   if (view === "documents") { if (typeof window.renderDocuments === "function") window.renderDocuments("navigation"); }
   if (view === "sport") { if (typeof window.renderSport === "function") window.renderSport("navigation"); }
   if (view === "work") { if (typeof window.renderWork === "function") window.renderWork("navigation"); }
-  if (view === "nutrition") { if (typeof window.renderNutrition === "function") window.renderNutrition("navigation"); }
+  if (view === "nutrition") {
+    if (typeof window.renderNutrition === "function") window.renderNutrition("navigation");
+    else if (typeof window.tbLoadLegacyDomain === "function") {
+      const root = document.getElementById("nutrition-root");
+      if (root) root.innerHTML = `<div class="muted">Chargement alimentation...</div>`;
+      window.tbLoadLegacyDomain("nutrition").then(() => {
+        if ((window.activeView || activeView) === "nutrition" && typeof window.renderNutrition === "function") window.renderNutrition("navigation:lazy");
+      }).catch((e) => {
+        console.error("[TB] Nutrition lazy load failed", e);
+        alert(`Alimentation indisponible : ${e?.message || e}`);
+      });
+    }
+  }
   if (view === "notifications") { if (typeof window.renderNotifications === "function") window.renderNotifications("navigation"); }
   if (view === "dashboard") {
     try {
