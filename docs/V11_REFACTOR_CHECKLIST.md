@@ -127,6 +127,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [ ] Decouper les gros bundles par domaine.
   - [x] Extraire le shell visuel Settings : hero, resumes de cartes et accordéons quittent `14_settings_periods_ui.js` vers `src/features/settings/settingsView.js`.
   - [x] Extraire le rendu du panneau Compte Settings : profil, santé, devise, mode UI, seuil cashflow et raccourcis notifications quittent le template inline legacy.
+  - [x] Extraire les handlers Compte Settings : hydratation profil, WhatsApp, santé, devise, mode UI, reset mot de passe, notifications et seuil cashflow passent dans `settingsAccountController.js`.
 - [ ] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

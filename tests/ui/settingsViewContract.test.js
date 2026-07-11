@@ -7,12 +7,16 @@ describe('settings view extraction contract', () => {
 
   it('exposes the Settings view module to the legacy runtime', () => {
     expect(main).toContain("import * as settingsView from './features/settings/settingsView.js'");
+    expect(main).toContain("import * as settingsAccountController from './features/settings/settingsAccountController.js'");
     expect(main).toContain('window.TBSettingsView');
     expect(main).toContain('...settingsView');
+    expect(main).toContain('window.TBSettingsAccountController');
+    expect(main).toContain('...settingsAccountController');
   });
 
   it('keeps legacy Settings wrappers thin and delegated', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsAccountPanel');
+    expect(legacy).toContain('window.TBSettingsAccountController?.bindSettingsAccountPanel');
     expect(legacy).toContain('window.TBSettingsView?.getSettingsPanelState');
     expect(legacy).toContain('window.TBSettingsView?.setSettingsPanelState');
     expect(legacy).toContain('window.TBSettingsView?.getSettingsCardSummary');
@@ -20,5 +24,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.decorateSettingsPanels');
     expect(legacy).not.toContain('const cards = Array.from(view.querySelectorAll');
     expect(legacy).not.toContain('box.innerHTML = `');
+    expect(legacy).not.toContain('const readNotificationForm = () =>');
+    expect(legacy).not.toContain('const _rememberAccount =');
   });
 });
