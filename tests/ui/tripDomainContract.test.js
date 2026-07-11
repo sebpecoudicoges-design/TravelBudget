@@ -1,0 +1,85 @@
+import fs from 'node:fs';
+import { describe, expect, it } from 'vitest';
+
+describe('Trip domain contract', () => {
+  const bridge = fs.readFileSync('src/app/bridge.js', 'utf8');
+  const legacy = fs.readFileSync('public/legacy/js/29_trip_v1.js', 'utf8');
+  const rules = fs.readFileSync('src/core/tripRules.js', 'utf8');
+  const repository = fs.readFileSync('src/data/tripRepository.js', 'utf8');
+  const store = fs.readFileSync('src/features/trip/tripStore.js', 'utf8');
+  const view = fs.readFileSync('src/features/trip/tripView.js', 'utf8');
+
+  it('exposes Trip rules, repository, store and view through the bridge', () => {
+    expect(bridge).toContain("import * as tripRules from '../core/tripRules.js'");
+    expect(bridge).toContain("import { createTripRepository } from '../data/tripRepository.js'");
+    expect(bridge).toContain("import { createTripStore } from '../features/trip/tripStore.js'");
+    expect(bridge).toContain("import * as tripView from '../features/trip/tripView.js'");
+    expect(bridge).toContain('window.Core.tripRules = tripRules');
+    expect(bridge).toContain('window.Data.tripRepository');
+    expect(bridge).toContain('window.Data.createTripStore');
+    expect(bridge).toContain('window.UI.tripView = tripView');
+  });
+
+  it('keeps mutation and budget rules in the core module', () => {
+    const delegatedRules = [
+      'normalizeTripExpenseInput',
+      'computeTripSplitParts',
+      'validateTripExpenseMutation',
+      'buildTripExpenseRpcPayload',
+      'buildTripTransactionRpcPayload',
+      'decideTripExpenseBudgetFlow',
+      'linkedTripPaymentBudgetPatch',
+      'computeTripAnalysis',
+      'matchesTripHistoryFilter',
+      'canUseTripWalletForExpense',
+    ];
+    for (const token of delegatedRules) {
+      expect(rules).toContain(`export function ${token}`);
+    }
+    for (const token of delegatedRules) {
+      expect(
+        legacy.includes(`tripRules.${token}`)
+        || legacy.includes(`tripRules?.${token}`)
+        || legacy.includes(`core.${token}`),
+      ).toBe(true);
+    }
+  });
+
+  it('centralizes Supabase reads and writes in the Trip repository', () => {
+    for (const token of [
+      'loadActiveTripData',
+      'createTrip',
+      'deleteTrip',
+      'addMember',
+      'renameMember',
+      'deleteMember',
+      'applyExpense',
+      'linkExpenseTransaction',
+      'unlinkExpenseTransaction',
+      'deleteExpenseFallback',
+    ]) {
+      expect(repository).toContain(`async ${token}`);
+    }
+    expect(legacy).toContain('function _tripRepository()');
+    expect(legacy).toContain('_tripRepository().loadActiveTripData');
+    expect(legacy).toContain('_tripRepository().applyExpense');
+    expect(legacy).toContain('_tripRepository().deleteExpenseFallback');
+  });
+
+  it('uses the Trip store as the bridge between remote/offline data and legacy app state', () => {
+    for (const token of ['createInitialTripState', 'createTripStore', 'hydrateOffline', 'hydrateRemote', 'appSnapshot']) {
+      expect(store).toContain(token);
+    }
+    expect(legacy).toContain('const tripStore = window.Data?.createTripStore?.()');
+    expect(legacy).toContain('tripStore.hydrateOffline(state)');
+    expect(legacy).toContain('tripStore.hydrateRemote(activeData');
+    expect(legacy).toContain('tripStore.appSnapshot()');
+  });
+
+  it('delegates the extracted Trip view surfaces to src/features/trip', () => {
+    for (const token of ['renderPendingTripInvites', 'renderTripExpenseForm']) {
+      expect(view).toContain(`export function ${token}`);
+      expect(legacy).toContain(`tripView?.${token}`);
+    }
+  });
+});
