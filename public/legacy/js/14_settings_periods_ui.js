@@ -326,125 +326,39 @@ async function refreshSegmentsForActivePeriod(){
 
 
 function _tbSettingsGetPanelState(key, fallbackOpen){
-  try {
-    const raw = localStorage.getItem(`tb_settings_open_${key}`);
-    if (raw === '1') return true;
-    if (raw === '0') return false;
-  } catch(_) {}
-  return !!fallbackOpen;
+  return window.TBSettingsView?.getSettingsPanelState?.(key, fallbackOpen, localStorage) ?? !!fallbackOpen;
 }
 
 function _tbSettingsSetPanelState(key, isOpen){
-  try { localStorage.setItem(`tb_settings_open_${key}`, isOpen ? '1' : '0'); } catch(_) {}
+  window.TBSettingsView?.setSettingsPanelState?.(key, isOpen, localStorage);
 }
 
 function _tbSettingsCardSummary(card){
   const T = window.tbT || ((k) => k);
-  const id = String(card?.id || '');
-  if (id === 'tb-account-card') {
-    const base = String(state?.user?.baseCurrency || 'EUR').toUpperCase();
-    return { kicker:T('settings.card.account'), summary:T('settings.card.account_summary', { base }), pills:[base] };
-  }
-  if (id === 'tb-travel-card') {
-    const travel = (state?.travels || []).find(t => String(t?.id||'') === String(state?.activeTravelId||''));
-    const name = String(travel?.name || state?.period?.name || T('analysis.trip.active'));
-    return { kicker:T('settings.card.travel'), summary:T('settings.card.travel_summary', { name }), pills:[name] };
-  }
-  if (id === 'tb-periods-card') {
-    const count = Array.isArray(state?.budgetSegments) ? state.budgetSegments.length : 0;
-    return { kicker:T('settings.card.periods'), summary:T('settings.card.periods_summary', { count }), pills:[T('settings.card.periods_count', { count })] };
-  }
-  if (id === 'tb-recurring-card') {
-    const count = Array.isArray(state?.recurringRules) ? state.recurringRules.length : 0;
-    return { kicker:T('settings.card.recurring'), summary:T('settings.card.recurring_summary', { count }), pills:[T('settings.card.recurring_count', { count })] };
-  }
-  if (id.includes('palette')) return { kicker:T('settings.card.palette'), summary:T('settings.card.palette_summary'), pills:[T('settings.card.visual')] };
-  if (id.includes('categories')) return { kicker:T('settings.card.categories'), summary:T('settings.card.categories_summary'), pills:[T('settings.card.classification')] };
   const title = String(card?.querySelector('h2')?.textContent || '').trim() || T('settings.hero.title');
-  return { kicker:T('settings.hero.title'), summary:title, pills:[] };
+  return window.TBSettingsView?.getSettingsCardSummary?.({
+    id: String(card?.id || card?.className || ''),
+    title,
+    state,
+    t: T,
+  }) || { kicker:T('settings.hero.title'), summary:title, pills:[] };
 }
 
 function _tbSettingsEnsureHero(view){
-  if(!view) return;
-  const travel = (state?.travels || []).find(t => String(t?.id||'') === String(state?.activeTravelId||''));
-  const segCount = Array.isArray(state?.budgetSegments) ? state.budgetSegments.length : 0;
-  const rrCount = Array.isArray(state?.recurringRules) ? state.recurringRules.length : 0;
-  let hero = view.querySelector('.tb-settings-hero');
-  if (!hero) {
-    hero = document.createElement('div');
-    hero.className = 'tb-settings-hero';
-    view.insertBefore(hero, view.firstChild);
-  }
-  hero.innerHTML = `
-    <div>
-      <div class="tb-settings-hero-title">${escapeHTML((window.tbT || ((k)=>k))('settings.hero.title'))}</div>
-      <div class="tb-settings-hero-copy">${escapeHTML((window.tbT || ((k)=>k))('settings.hero.body'))}</div>
-    </div>
-    <div class="tb-settings-hero-chips">
-      <span class="tb-settings-hero-chip">${escapeHTML(String(travel?.name || (window.tbT || ((k)=>k))('analysis.trip.active')))}</span>
-      <span class="tb-settings-hero-chip">${escapeHTML((window.tbT || ((k)=>k))('settings.card.periods_count', { count: segCount }))}</span>
-      <span class="tb-settings-hero-chip">${escapeHTML((window.tbT || ((k)=>k))('settings.card.recurring_count', { count: rrCount }))}</span>
-    </div>`;
+  return window.TBSettingsView?.ensureSettingsHero?.(view, {
+    state,
+    t: window.tbT || ((k)=>k),
+    esc: escapeHTML,
+    documentRef: document,
+  });
 }
 
 function _tbSettingsDecoratePanels(view){
-  if(!view) return;
-  const cards = Array.from(view.querySelectorAll('#tb-account-card, #tb-travel-card, #tb-periods-card, #tb-recurring-card, .tb-settings-card--palette, .tb-settings-card--categories'));
-  cards.forEach((card)=>{
-    card.classList.add('tb-settings-panel');
-    const id = String(card.id || card.className || 'settings');
-    const meta = _tbSettingsCardSummary(card);
-    let h2 = card.querySelector(':scope > h2');
-    if (!h2) h2 = card.querySelector('h2');
-    if (!h2) return;
-    let body = card.querySelector(':scope > .tb-settings-panel-body');
-    if (!body) {
-      body = document.createElement('div');
-      body.className = 'tb-settings-panel-body';
-      const nodes = [];
-      let n = h2.nextSibling;
-      while (n) { const next = n.nextSibling; nodes.push(n); n = next; }
-      nodes.forEach(node => body.appendChild(node));
-      const head = document.createElement('button');
-      head.type = 'button';
-      head.className = 'tb-settings-panel-head';
-      head.innerHTML = `
-        <span class="tb-settings-panel-head-main">
-          <span class="tb-settings-panel-kicker"></span>
-          <span class="tb-settings-panel-title"></span>
-          <span class="tb-settings-panel-summary"></span>
-        </span>
-        <span class="tb-settings-panel-side">
-          <span class="tb-settings-pill tb-settings-panel-pill"></span>
-          <span class="tb-settings-panel-arrow">⌄</span>
-        </span>`;
-      head.onclick = ()=>{
-        const isCollapsed = card.classList.toggle('is-collapsed');
-        _tbSettingsSetPanelState(id, !isCollapsed);
-      };
-      card.insertBefore(head, h2);
-      const divider = document.createElement('div');
-      divider.className = 'tb-settings-divider';
-      card.insertBefore(divider, body);
-      card.appendChild(body);
-      h2.style.display = 'none';
-    }
-    const head = card.querySelector(':scope > .tb-settings-panel-head');
-    if (head) {
-      const titleEl = head.querySelector('.tb-settings-panel-title');
-      const kickerEl = head.querySelector('.tb-settings-panel-kicker');
-      const summaryEl = head.querySelector('.tb-settings-panel-summary');
-      const pillEl = head.querySelector('.tb-settings-panel-pill');
-      if (titleEl) titleEl.textContent = String(h2.textContent || '').trim();
-      if (kickerEl) kickerEl.textContent = meta.kicker || 'Réglages';
-      if (summaryEl) summaryEl.textContent = meta.summary || '';
-      if (pillEl) {
-        pillEl.textContent = meta.pills?.[0] || 'Ouvrir';
-        pillEl.style.display = (meta.pills && meta.pills.length) ? '' : 'none';
-      }
-    }
-    const shouldOpen = _tbSettingsGetPanelState(id, id === 'tb-travel-card' || id === 'tb-periods-card');
-    card.classList.toggle('is-collapsed', !shouldOpen);
+  return window.TBSettingsView?.decorateSettingsPanels?.(view, {
+    state,
+    t: window.tbT || ((k)=>k),
+    storage: localStorage,
+    documentRef: document,
   });
 }
 
