@@ -1207,28 +1207,26 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
         Activites: rt('Activites', 'Activities'),
         'Activites': rt('Activites', 'Activities')
       })[label] || label;
-      wrap.innerHTML = `
-        <div class="tb-period-compare tb-period-compare--minimal tb-period-compare--tight">
-          <div class="tb-period-ref-head">
-            <div>
-              <h4 class="tb-period-ref-title">${escapeHTML(rt('Référence de la période', 'Period reference'))}</h4>
-              <div class="tb-period-ref-copy">${escapeHTML(rt('Lecture de la référence sur cette période.', 'Reference readout for this period.'))}</div>
-            </div>
-            <span class="tb-settings-pill ${override ? '' : 'tb-settings-pill--positive'}">${escapeHTML(sourceLabel)}</span>
-          </div>
-          <div class="tb-period-ref-grid tb-period-ref-grid--tight">
-            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(rt('Pays', 'Country'))}</span><strong>${escapeHTML(resolved?.country_name || resolved?.country_code || '—')}</strong><small>${escapeHTML(String(resolved?.travel_profile || 'solo'))} · ${escapeHTML(String(resolved?.travel_style || 'standard'))}</small></div>
-            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(rt('Reco / jour', 'Reco / day'))}</span><strong>${escapeHTML(recoDual.main)}</strong>${recoDual.secondary?`<small>${escapeHTML(recoDual.secondary)} · base</small>`:''}</div>
-            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(rt('Prévu / jour', 'Planned / day'))}</span><strong>${escapeHTML(plannedDual.main || '—')}</strong>${plannedDual.secondary?`<small>${escapeHTML(plannedDual.secondary)} · base</small>`:''}</div>
-            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(rt('Mode', 'Mode'))}</span><strong>${escapeHTML(modeText)}</strong><small>${escapeHTML(plannedDiff)}</small></div>
-          </div>
-          ${posts.length?`<div class="tb-mini-post-grid tb-mini-post-grid--tight">${posts.map(([label,val])=>`<div class="tb-mini-post"><span>${escapeHTML(postLabel(label))}</span><strong>${escapeHTML(_tbBudgetRefFmtAmount(val, resolved?.currency_code || 'EUR', 2))}</strong></div>`).join('')}</div>`:''}
-          <div class="tb-period-inline-actions">
-            <button class="btn" data-act="edit-seg">${escapeHTML(rt('Modifier', 'Edit'))}</button>
-            <button class="btn" data-br-act="seg-reset" style="display:${override ? '' : 'none'};">${escapeHTML(rt('Hériter', 'Inherit'))}</button>
-          </div>
-        </div>
-      `;
+      wrap.innerHTML = window.TBSettingsView?.renderSettingsPeriodReference?.({
+        sourceLabel,
+        inherited: !override,
+        countryName: resolved?.country_name,
+        countryCode: resolved?.country_code,
+        profile: resolved?.travel_profile || 'solo',
+        style: resolved?.travel_style || 'standard',
+        recommendedMain: recoDual.main,
+        recommendedSecondary: recoDual.secondary,
+        plannedMain: plannedDual.main,
+        plannedSecondary: plannedDual.secondary,
+        modeText,
+        plannedDiff,
+        posts: posts.map(([label,val]) => ({
+          label: postLabel(label),
+          amount: _tbBudgetRefFmtAmount(val, resolved?.currency_code || 'EUR', 2),
+        })),
+        lang: refEn ? 'en' : 'fr',
+        esc: escapeHTML,
+      }) || '';
       _tbBudgetRefWireSegmentMode(wrap);
       const btnReset = wrap.querySelector('[data-br-act="seg-reset"]');
       const btnEdit = wrap.querySelector('[data-act="edit-seg"]');

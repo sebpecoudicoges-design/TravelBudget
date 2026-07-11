@@ -352,6 +352,52 @@ export function renderSettingsPeriodCard({
         `;
 }
 
+export function renderSettingsPeriodReference({
+  sourceLabel = '',
+  inherited = false,
+  countryName = '',
+  countryCode = '',
+  profile = 'solo',
+  style = 'standard',
+  recommendedMain = '—',
+  recommendedSecondary = '',
+  plannedMain = '—',
+  plannedSecondary = '',
+  modeText = '',
+  plannedDiff = '—',
+  posts = [],
+  lang = 'fr',
+  esc = defaultEsc,
+} = {}) {
+  const isEn = String(lang || '').toLowerCase() === 'en';
+  const rt = (fr, en) => (isEn ? en : fr);
+  const postRows = Array.isArray(posts) ? posts.filter((post) => post && post.label && post.amount) : [];
+  const pillClass = inherited ? 'tb-settings-pill--positive' : '';
+
+  return `
+        <div class="tb-period-compare tb-period-compare--minimal tb-period-compare--tight">
+          <div class="tb-period-ref-head">
+            <div>
+              <h4 class="tb-period-ref-title">${esc(rt('Référence de la période', 'Period reference'))}</h4>
+              <div class="tb-period-ref-copy">${esc(rt('Lecture de la référence sur cette période.', 'Reference readout for this period.'))}</div>
+            </div>
+            <span class="tb-settings-pill ${pillClass}">${esc(sourceLabel || '—')}</span>
+          </div>
+          <div class="tb-period-ref-grid tb-period-ref-grid--tight">
+            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${esc(rt('Pays', 'Country'))}</span><strong>${esc(countryName || countryCode || '—')}</strong><small>${esc(String(profile || 'solo'))} · ${esc(String(style || 'standard'))}</small></div>
+            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${esc(rt('Reco / jour', 'Reco / day'))}</span><strong>${esc(recommendedMain || '—')}</strong>${recommendedSecondary ? `<small>${esc(recommendedSecondary)} · base</small>` : ''}</div>
+            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${esc(rt('Prévu / jour', 'Planned / day'))}</span><strong>${esc(plannedMain || '—')}</strong>${plannedSecondary ? `<small>${esc(plannedSecondary)} · base</small>` : ''}</div>
+            <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${esc(rt('Mode', 'Mode'))}</span><strong>${esc(modeText || '—')}</strong><small>${esc(plannedDiff || '—')}</small></div>
+          </div>
+          ${postRows.length ? `<div class="tb-mini-post-grid tb-mini-post-grid--tight">${postRows.map((post) => `<div class="tb-mini-post"><span>${esc(post.label)}</span><strong>${esc(post.amount)}</strong></div>`).join('')}</div>` : ''}
+          <div class="tb-period-inline-actions">
+            <button class="btn" data-act="edit-seg">${esc(rt('Modifier', 'Edit'))}</button>
+            <button class="btn" data-br-act="seg-reset" style="display:${inherited ? 'none' : ''};">${esc(rt('Hériter', 'Inherit'))}</button>
+          </div>
+        </div>
+      `;
+}
+
 export function ensureSettingsHero(view, {
   state = {},
   t = fallbackT,
@@ -455,6 +501,7 @@ export default {
   renderSettingsAccountPanel,
   renderSettingsManualFxPanel,
   renderSettingsPeriodCard,
+  renderSettingsPeriodReference,
   renderSettingsHero,
   ensureSettingsHero,
   decorateSettingsPanels,

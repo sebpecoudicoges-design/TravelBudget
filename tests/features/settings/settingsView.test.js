@@ -8,6 +8,7 @@ import {
   renderSettingsHero,
   renderSettingsManualFxPanel,
   renderSettingsPeriodCard,
+  renderSettingsPeriodReference,
   setSettingsPanelState,
 } from '../../../src/features/settings/settingsView.js';
 
@@ -233,5 +234,61 @@ describe('Settings view helpers', () => {
     expect(html).toContain('display:none;');
     expect(html).toContain('Save');
     expect(html).toContain('Delete');
+  });
+
+  it('renders a period reference summary with posts and edit actions', () => {
+    const html = renderSettingsPeriodReference({
+      sourceLabel: 'Réglage propre à cette période',
+      inherited: false,
+      countryName: 'Australie',
+      countryCode: 'AU',
+      profile: 'solo',
+      style: 'standard',
+      recommendedMain: '92 AUD',
+      recommendedSecondary: '55 EUR',
+      plannedMain: '85 AUD',
+      plannedSecondary: '51 EUR',
+      modeText: 'Personnalise',
+      plannedDiff: "-4.00 EUR d'ecart",
+      posts: [
+        { label: 'Logement', amount: '45.00 AUD' },
+        { label: 'Repas', amount: '20.00 AUD' },
+      ],
+      t,
+    });
+
+    expect(html).toContain('tb-period-compare');
+    expect(html).toContain('Référence de la période');
+    expect(html).toContain('Réglage propre à cette période');
+    expect(html).toContain('Australie');
+    expect(html).toContain('92 AUD');
+    expect(html).toContain('55 EUR · base');
+    expect(html).toContain('Logement');
+    expect(html).toContain('45.00 AUD');
+    expect(html).toContain('data-act="edit-seg"');
+    expect(html).toContain('data-br-act="seg-reset"');
+    expect(html).toContain('display:;');
+  });
+
+  it('renders an inherited English period reference with hidden reset', () => {
+    const html = renderSettingsPeriodReference({
+      sourceLabel: 'Inherited',
+      inherited: true,
+      countryCode: 'US',
+      recommendedMain: '100 USD',
+      plannedMain: '90 USD',
+      modeText: 'Inherited',
+      plannedDiff: '-10.00 USD gap',
+      lang: 'en',
+      t,
+    });
+
+    expect(html).toContain('Period reference');
+    expect(html).toContain('Country');
+    expect(html).toContain('Planned / day');
+    expect(html).toContain('Edit');
+    expect(html).toContain('Inherit');
+    expect(html).toContain('display:none;');
+    expect(html).toContain('tb-settings-pill--positive');
   });
 });
