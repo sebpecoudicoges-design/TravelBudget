@@ -31,5 +31,8 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('const _rememberAccount =');
     expect(legacy).not.toContain('manualPanel.innerHTML = `');
     expect(legacy).not.toContain('<button type="button" class="tb-period-head"');
+    expect(legacy).not.toContain('function renderManualFxBox');
+    expect(legacy).not.toContain('function tbManualFxAdd');
+    expect(legacy).not.toContain('function tbManualFxDel');
   });
 });
