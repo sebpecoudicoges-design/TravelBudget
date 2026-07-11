@@ -9,6 +9,35 @@ describe('legacy domain loader', () => {
   const inboxUi = fs.readFileSync('public/legacy/js/44_inbox_ui.js', 'utf8');
   const index = fs.readFileSync('index.html', 'utf8');
 
+  it('keeps startup focused on global shell, Dashboard and Settings while deferring heavy domains', () => {
+    const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+
+    for (const startupScript of [
+      '/legacy/js/10_navigation.js',
+      '/legacy/js/11_kpi_render_micro_animation.js',
+      '/legacy/js/12_dashboard_render.js',
+      '/legacy/js/14_settings_periods_ui.js',
+      '/legacy/js/18_main_render.js',
+      '/legacy/js/20_boot.js',
+    ]) {
+      expect(bootList).toContain(startupScript);
+      expect(domains).not.toContain(startupScript);
+    }
+
+    for (const deferredScript of [
+      '/legacy/js/29_trip_v1.js',
+      '/legacy/js/30_members_admin.js',
+      '/legacy/js/45_sport_ui.js',
+      '/legacy/js/47_work_ui.js',
+      '/legacy/js/48_nutrition_ui.js',
+      '/legacy/js/50_work_career_ui.js',
+    ]) {
+      expect(bootList).not.toContain(deferredScript);
+      expect(domains).toContain(deferredScript);
+    }
+  });
+
   it('keeps Assets out of the boot legacy list and registers it as a deferred domain', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
     const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
