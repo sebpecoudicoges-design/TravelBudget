@@ -70,7 +70,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [x] Trip : migrer l'upsert, la lecture, la deduplication offline et les liens Depense-Transaction.
 - [x] Trip : extraire les vues Invitations et Formulaire Depense dans un module pur teste.
 - [x] Trip : separer regles, repository, store et vues.
-- [ ] Sport : separer bibliotheque, programme, timer, historique et calculs.
+- [x] Sport : separer bibliotheque, programme, timer, historique et calculs.
   - [x] Extraire le catalogue fallback, les MET, familles, materiels et charges de reference.
   - [x] Extraire les regles de cycle A/B, semaine planifiee, jours de repos et correspondance des seances.
   - [x] Extraire la construction serie/repos et l'insertion d'une serie au bon exercice.
