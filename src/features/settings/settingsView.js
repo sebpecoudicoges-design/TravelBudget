@@ -398,6 +398,81 @@ export function renderSettingsPeriodReference({
       `;
 }
 
+export function renderSettingsTravelOverview({
+  travelName = '',
+  segmentCount = 0,
+  totalDays = 0,
+  baseCurrency = 'EUR',
+  budgetMain = '—',
+  budgetSecondary = '',
+  referenceMain = '—',
+  referenceSub = '',
+  recommendationMain = '—',
+  recommendationSecondary = '',
+  cadenceMain = '—',
+  cadenceSub = '',
+  startISO = '',
+  endISO = '',
+  countryOptionsHtml = '',
+  profile = 'solo',
+  style = 'standard',
+  adults = 1,
+  children = 0,
+  posts = [],
+  lang = 'fr',
+  esc = defaultEsc,
+} = {}) {
+  const isEn = String(lang || '').toLowerCase() === 'en';
+  const st = (fr, en) => (isEn ? en : fr);
+  const count = Number(segmentCount) || 0;
+  const days = Number(totalDays) || 0;
+  const postRows = Array.isArray(posts) ? posts.filter((post) => post && post.label && post.amount) : [];
+
+  return `
+        <div class="tb-settings-summary tb-settings-summary--minimal tb-travel-unified tb-travel-unified-card">
+          <div class="tb-v11-travel-hero tb-v11-travel-hero--minimal">
+            <div class="tb-v11-travel-main tb-v11-travel-main--compact">
+              <div class="tb-v11-travel-row tb-v11-travel-row--lot-a">
+                <div class="tb-v11-travel-row-title">
+                  <div class="tb-v11-travel-title">${esc(String(travelName || st('Voyage actif', 'Active trip')))}</div>
+                  <div class="tb-v11-travel-sub">${esc(st('Voyage, référence et budget dans un seul espace.', 'Trip, reference and budget in one place.'))}</div>
+                </div>
+                <div class="tb-v11-travel-meta">
+                  <span class="tb-settings-pill">${esc(String(count))} ${esc(st(count > 1 ? 'périodes' : 'période', count > 1 ? 'periods' : 'period'))}</span>
+                  <span class="tb-settings-pill">${esc(String(days))} ${esc(st('jours', 'days'))}</span>
+                  <span class="tb-settings-pill">Base · ${esc(String(baseCurrency || 'EUR').toUpperCase())}</span>
+                </div>
+              </div>
+              <div class="tb-settings-inline-strip tb-settings-inline-strip--travel tb-settings-inline-strip--travel-lot-a">
+                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${esc(st('Budget / jour', 'Budget / day'))}</span><strong id="tb-travel-budget-main">${esc(budgetMain || '—')}</strong>${budgetSecondary ? `<small id="tb-travel-budget-secondary">${esc(budgetSecondary)} · base</small>` : '<small id="tb-travel-budget-secondary" style="display:none"></small>'}</div>
+                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${esc(st('Référence', 'Reference'))}</span><strong id="tb-travel-ref-main">${esc(referenceMain || '—')}</strong><small id="tb-travel-ref-sub">${esc(referenceSub || st('À définir', 'To define'))}</small></div>
+                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${esc(st('Reco / jour', 'Reco / day'))}</span><strong id="tb-travel-reco-main">${esc(recommendationMain || '—')}</strong>${recommendationSecondary ? `<small id="tb-travel-reco-secondary">${esc(recommendationSecondary)} · base</small>` : '<small id="tb-travel-reco-secondary" style="display:none"></small>'}</div>
+                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${esc(st('Cadence', 'Pace'))}</span><strong id="tb-travel-cadence-main">${esc(cadenceMain || '—')}</strong><small id="tb-travel-cadence-sub">${esc(cadenceSub || '—')}</small></div>
+              </div>
+              <div class="tb-edit-kicker">${esc(st('Réglages modifiables', 'Editable settings'))}</div>
+              <div class="tb-settings-inline-grid tb-settings-inline-grid--travel tb-travel-edit-grid tb-travel-edit-grid--equal" style="margin-top:10px; align-items:end;">
+                <div class="field field--span-2"><label>${esc(st('Voyage', 'Trip'))}</label><select id="tb-inline-travel-select"></select></div>
+                <div class="field field--span-2"><label>${esc(st('Nom', 'Name'))}</label><input id="tb-inline-travel-name" type="text" value="${esc(String(travelName || ''))}" /></div>
+                <div class="field field--span-2"><label>${esc(st('Début', 'Start'))}</label><input id="tb-inline-travel-start" type="date" value="${esc(startISO || '')}" /></div>
+                <div class="field field--span-2"><label>${esc(st('Fin', 'End'))}</label><input id="tb-inline-travel-end" type="date" value="${esc(endISO || '')}" /></div>
+                <div class="field field--span-2"><label>${esc(st('Pays', 'Country'))}</label><select data-br="travel-country">${countryOptionsHtml || ''}</select></div>
+                <div class="field field--span-2"><label>${esc(st('Profil', 'Profile'))}</label><select data-br="travel-profile"><option value="solo" ${profile === 'solo' ? 'selected' : ''}>Solo</option><option value="couple" ${profile === 'couple' ? 'selected' : ''}>Couple</option><option value="family" ${profile === 'family' ? 'selected' : ''}>${esc(st('Famille', 'Family'))}</option></select></div>
+                <div class="field field--span-2"><label>Style</label><select data-br="travel-style"><option value="budget" ${style === 'budget' ? 'selected' : ''}>Budget</option><option value="standard" ${(!style || style === 'standard') ? 'selected' : ''}>Standard</option><option value="comfort" ${style === 'comfort' ? 'selected' : ''}>Comfort</option></select></div>
+                <div class="field field--span-2"><label>${esc(st('Adultes', 'Adults'))}</label><input data-br="travel-adults" type="number" min="1" step="1" value="${esc(String(adults ?? 1))}" /></div>
+                <div class="field field--span-2"><label>${esc(st('Enfants', 'Children'))}</label><input data-br="travel-children" type="number" min="0" step="1" value="${esc(String(children ?? 0))}" /></div>
+              </div>
+              ${postRows.length ? `<div class="tb-mini-post-grid tb-mini-post-grid--travel">${postRows.map((post) => `<div class="tb-mini-post"><span>${esc(post.label)}</span><strong>${esc(post.amount)}</strong></div>`).join('')}</div>` : ''}
+              <div class="row" style="justify-content:flex-end; margin-top:14px; gap:10px;">
+                <button class="btn" onclick="createVoyagePrompt()">+ ${esc(st('Nouveau voyage', 'New trip'))}</button>
+                <button class="btn danger" onclick="deleteActiveVoyage()">${esc(st('Supprimer voyage', 'Delete trip'))}</button>
+                <button class="btn" onclick="createPeriodPrompt()">+ ${esc(st('Ajouter période', 'Add period'))}</button>
+                <button class="btn primary" id="tb-inline-save-travel">${esc(st('Enregistrer le voyage', 'Save trip'))}</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+}
+
 export function ensureSettingsHero(view, {
   state = {},
   t = fallbackT,
@@ -502,6 +577,7 @@ export default {
   renderSettingsManualFxPanel,
   renderSettingsPeriodCard,
   renderSettingsPeriodReference,
+  renderSettingsTravelOverview,
   renderSettingsHero,
   ensureSettingsHero,
   decorateSettingsPanels,

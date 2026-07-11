@@ -9,6 +9,7 @@ import {
   renderSettingsManualFxPanel,
   renderSettingsPeriodCard,
   renderSettingsPeriodReference,
+  renderSettingsTravelOverview,
   setSettingsPanelState,
 } from '../../../src/features/settings/settingsView.js';
 
@@ -290,5 +291,42 @@ describe('Settings view helpers', () => {
     expect(html).toContain('Inherit');
     expect(html).toContain('display:none;');
     expect(html).toContain('tb-settings-pill--positive');
+  });
+
+  it('renders the travel overview with editable trip fields and reference posts', () => {
+    const html = renderSettingsTravelOverview({
+      travelName: '<BudgetTravel>',
+      segmentCount: 2,
+      totalDays: 14,
+      baseCurrency: 'aud',
+      budgetMain: '85 AUD',
+      budgetSecondary: '51 EUR',
+      referenceMain: 'Australie',
+      referenceSub: 'solo · standard',
+      recommendationMain: '92 AUD',
+      recommendationSecondary: '55 EUR',
+      cadenceMain: 'Sous la reco',
+      cadenceSub: "4.00 AUD d'ecart",
+      startISO: '2026-07-01',
+      endISO: '2026-07-14',
+      countryOptionsHtml: '<option value="AU" selected>Australie</option>',
+      profile: 'solo',
+      style: 'standard',
+      adults: 1,
+      children: 0,
+      posts: [{ label: 'Repas', amount: '25 AUD' }],
+    });
+
+    expect(html).toContain('&lt;BudgetTravel&gt;');
+    expect(html).toContain('2 périodes');
+    expect(html).toContain('14 jours');
+    expect(html).toContain('Base · AUD');
+    expect(html).toContain('id="tb-inline-travel-select"');
+    expect(html).toContain('id="tb-inline-travel-name"');
+    expect(html).toContain('data-br="travel-country"');
+    expect(html).toContain('<option value="AU" selected>Australie</option>');
+    expect(html).toContain('Repas');
+    expect(html).toContain('25 AUD');
+    expect(html).toContain('id="tb-inline-save-travel"');
   });
 });

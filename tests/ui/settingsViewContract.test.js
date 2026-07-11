@@ -20,6 +20,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsManualFxPanel');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodCard');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodReference');
+    expect(legacy).toContain('window.TBSettingsView?.renderSettingsTravelOverview');
     expect(legacy).toContain('window.TBSettingsAccountController?.bindSettingsAccountPanel');
     expect(legacy).toContain('window.TBSettingsView?.getSettingsPanelState');
     expect(legacy).toContain('window.TBSettingsView?.setSettingsPanelState');
@@ -36,5 +37,6 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('function tbManualFxAdd');
     expect(legacy).not.toContain('function tbManualFxDel');
     expect(legacy).not.toContain('tb-period-compare tb-period-compare--minimal');
+    expect(legacy).not.toContain('tb-v11-travel-hero tb-v11-travel-hero--minimal');
   });
 });

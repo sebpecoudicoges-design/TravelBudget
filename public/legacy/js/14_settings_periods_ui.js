@@ -467,49 +467,33 @@ function renderSettings(){
       ].filter((x)=>Number.isFinite(Number(x[1])) && Number(x[1])>0);
       const settingsEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
       const st = (fr, en) => settingsEn ? en : fr;
-      overview.innerHTML = `
-        <div class="tb-settings-summary tb-settings-summary--minimal tb-travel-unified tb-travel-unified-card">
-          <div class="tb-v11-travel-hero tb-v11-travel-hero--minimal">
-            <div class="tb-v11-travel-main tb-v11-travel-main--compact">
-              <div class="tb-v11-travel-row tb-v11-travel-row--lot-a">
-                <div class="tb-v11-travel-row-title">
-                  <div class="tb-v11-travel-title">${escapeHTML(String(_tbGetActiveTravelRow()?.name || st('Voyage actif', 'Active trip')))}</div>
-                  <div class="tb-v11-travel-sub">${escapeHTML(st('Voyage, référence et budget dans un seul espace.', 'Trip, reference and budget in one place.'))}</div>
-                </div>
-                <div class="tb-v11-travel-meta">
-                  <span class="tb-settings-pill">${escapeHTML(String(segCount))} ${escapeHTML(st(segCount>1?'périodes':'période', segCount>1?'periods':'period'))}</span>
-                  <span class="tb-settings-pill">${escapeHTML(String(totalDays||0))} ${escapeHTML(st('jours', 'days'))}</span>
-                  <span class="tb-settings-pill">Base · ${escapeHTML(budgetBaseCur)}</span>
-                </div>
-              </div>
-              <div class="tb-settings-inline-strip tb-settings-inline-strip--travel tb-settings-inline-strip--travel-lot-a">
-                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(st('Budget / jour', 'Budget / day'))}</span><strong id="tb-travel-budget-main">${escapeHTML(budgetDual.main || '—')}</strong>${budgetDual.secondary?`<small id="tb-travel-budget-secondary">${escapeHTML(budgetDual.secondary)} · base</small>`:`<small id="tb-travel-budget-secondary" style="display:none"></small>`}</div>
-                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(st('Référence', 'Reference'))}</span><strong id="tb-travel-ref-main">${escapeHTML(travelDefault?.country_name || travelDefault?.country_code || '—')}</strong><small id="tb-travel-ref-sub">${escapeHTML(travelDefault ? `${String(travelDefault.travel_profile||'solo')} · ${String(travelDefault.travel_style||'standard')}` : st('À définir', 'To define'))}</small></div>
-                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(st('Reco / jour', 'Reco / day'))}</span><strong id="tb-travel-reco-main">${escapeHTML(recoDual.main)}</strong>${recoDual.secondary?`<small id="tb-travel-reco-secondary">${escapeHTML(recoDual.secondary)} · base</small>`:`<small id="tb-travel-reco-secondary" style="display:none"></small>`}</div>
-                <div class="tb-settings-chipstat tb-settings-chipstat--violet"><span>${escapeHTML(st('Cadence', 'Pace'))}</span><strong id="tb-travel-cadence-main">${escapeHTML((Number.isFinite(budgetBaseAmount) && Number.isFinite(recoBaseAmount)) ? (budgetBaseAmount <= recoBaseAmount ? st('Sous la reco', 'Below reco') : st('Au-dessus', 'Above')) : st('À calibrer', 'To calibrate'))}</strong><small id="tb-travel-cadence-sub">${escapeHTML((Number.isFinite(budgetBaseAmount) && Number.isFinite(recoBaseAmount)) ? `${Math.abs(budgetBaseAmount-recoBaseAmount).toFixed(2)} ${budgetBaseCur} ${st("d'écart", 'gap')}` : st('Référence requise', 'Reference required'))}</small></div>
-              </div>
-              <div class="tb-edit-kicker">${escapeHTML(st('Réglages modifiables', 'Editable settings'))}</div>
-              <div class="tb-settings-inline-grid tb-settings-inline-grid--travel tb-travel-edit-grid tb-travel-edit-grid--equal" style="margin-top:10px; align-items:end;">
-                <div class="field field--span-2"><label>${escapeHTML(st('Voyage', 'Trip'))}</label><select id="tb-inline-travel-select"></select></div>
-                <div class="field field--span-2"><label>${escapeHTML(st('Nom', 'Name'))}</label><input id="tb-inline-travel-name" type="text" value="${escapeHTML(String(_tbGetActiveTravelRow()?.name || ''))}" /></div>
-                <div class="field field--span-2"><label>${escapeHTML(st('Début', 'Start'))}</label><input id="tb-inline-travel-start" type="date" value="${escapeHTML(startISO||'')}" /></div>
-                <div class="field field--span-2"><label>${escapeHTML(st('Fin', 'End'))}</label><input id="tb-inline-travel-end" type="date" value="${escapeHTML(endISO||'')}" /></div>
-                <div class="field field--span-2"><label>${escapeHTML(st('Pays', 'Country'))}</label><select data-br="travel-country"></select></div>
-                <div class="field field--span-2"><label>${escapeHTML(st('Profil', 'Profile'))}</label><select data-br="travel-profile"><option value="solo">Solo</option><option value="couple">Couple</option><option value="family">${escapeHTML(st('Famille', 'Family'))}</option></select></div>
-                <div class="field field--span-2"><label>Style</label><select data-br="travel-style"><option value="budget">Budget</option><option value="standard">Standard</option><option value="comfort">Comfort</option></select></div>
-                <div class="field field--span-2"><label>${escapeHTML(st('Adultes', 'Adults'))}</label><input data-br="travel-adults" type="number" min="1" step="1" value="${escapeHTML(String(travelDefault?.adult_count ?? 1))}" /></div>
-                <div class="field field--span-2"><label>${escapeHTML(st('Enfants', 'Children'))}</label><input data-br="travel-children" type="number" min="0" step="1" value="${escapeHTML(String(travelDefault?.child_count ?? 0))}" /></div>
-              </div>
-              ${perPost.length?`<div class="tb-mini-post-grid tb-mini-post-grid--travel">${perPost.map(([label,val])=>`<div class="tb-mini-post"><span>${escapeHTML(label)}</span><strong>${escapeHTML(_tbBudgetRefFmtAmount(val,recoCur,2))}</strong></div>`).join('')}</div>`:''}
-              <div class="row" style="justify-content:flex-end; margin-top:14px; gap:10px;">
-                <button class="btn" onclick="createVoyagePrompt()">+ ${escapeHTML(st('Nouveau voyage', 'New trip'))}</button>
-                <button class="btn danger" onclick="deleteActiveVoyage()">${escapeHTML(st('Supprimer voyage', 'Delete trip'))}</button>
-                <button class="btn" onclick="createPeriodPrompt()">+ ${escapeHTML(st('Ajouter période', 'Add period'))}</button>
-                <button class="btn primary" id="tb-inline-save-travel">${escapeHTML(st('Enregistrer le voyage', 'Save trip'))}</button>
-              </div>
-            </div>
-          </div>
-        </div>`;
+      overview.innerHTML = window.TBSettingsView?.renderSettingsTravelOverview?.({
+        travelName: String(_tbGetActiveTravelRow()?.name || ''),
+        segmentCount: segCount,
+        totalDays,
+        baseCurrency: budgetBaseCur,
+        budgetMain: budgetDual.main || '—',
+        budgetSecondary: budgetDual.secondary,
+        referenceMain: travelDefault?.country_name || travelDefault?.country_code || '—',
+        referenceSub: travelDefault ? `${String(travelDefault.travel_profile||'solo')} · ${String(travelDefault.travel_style||'standard')}` : st('À définir', 'To define'),
+        recommendationMain: recoDual.main,
+        recommendationSecondary: recoDual.secondary,
+        cadenceMain: (Number.isFinite(budgetBaseAmount) && Number.isFinite(recoBaseAmount)) ? (budgetBaseAmount <= recoBaseAmount ? st('Sous la reco', 'Below reco') : st('Au-dessus', 'Above')) : st('À calibrer', 'To calibrate'),
+        cadenceSub: (Number.isFinite(budgetBaseAmount) && Number.isFinite(recoBaseAmount)) ? `${Math.abs(budgetBaseAmount-recoBaseAmount).toFixed(2)} ${budgetBaseCur} ${st("d'écart", 'gap')}` : st('Référence requise', 'Reference required'),
+        startISO,
+        endISO,
+        countryOptionsHtml: _tbBudgetRefCountryOptions(travelDefault?.country_code, travelDefault?.region_code),
+        profile: travelDefault?.travel_profile || 'solo',
+        style: travelDefault?.travel_style || 'standard',
+        adults: travelDefault?.adult_count ?? 1,
+        children: travelDefault?.child_count ?? 0,
+        posts: perPost.map(([label,val]) => ({
+          label,
+          amount: _tbBudgetRefFmtAmount(val,recoCur,2),
+        })),
+        lang: settingsEn ? 'en' : 'fr',
+        esc: escapeHTML,
+      }) || '';
       const sel = overview.querySelector('#tb-inline-travel-select');
       if (sel) {
         _tbGetVisibleTravels().forEach((t)=>{ const opt=document.createElement('option'); opt.value=t.id; opt.textContent=_tbFormatTravelOptionLabel(t); sel.appendChild(opt); });
@@ -1138,7 +1122,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
     const travelStyle = document.querySelector('[data-br="travel-style"]');
     const travelAdults = document.querySelector('[data-br="travel-adults"]');
     const travelChildren = document.querySelector('[data-br="travel-children"]');
-    if (travelCountry) travelCountry.innerHTML = _tbBudgetRefCountryOptions(travel?.country_code, travel?.region_code);
+      if (travelCountry && !travelCountry.innerHTML) travelCountry.innerHTML = _tbBudgetRefCountryOptions(travel?.country_code, travel?.region_code);
     if (travelProfile) travelProfile.value = travel?.travel_profile || 'solo';
     if (travelStyle) travelStyle.value = travel?.travel_style || 'standard';
     if (travelAdults) travelAdults.value = String(travel?.adult_count ?? 1);

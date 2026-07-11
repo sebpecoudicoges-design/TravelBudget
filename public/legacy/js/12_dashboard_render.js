@@ -80,31 +80,19 @@ renderOnboardingPanel = function () {
   panel.style.border = "1px solid rgba(37,99,235,.18)";
   panel.style.background = "linear-gradient(135deg, rgba(37,99,235,.08), rgba(14,165,233,.05))";
   panel.style.borderRadius = "20px";
-  body.innerHTML = `
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;">
-      <div>
-        <div class="muted" style="margin-bottom:6px;">${tbT ? tbT("onboarding.subtitle") : "Set up the foundation in the right order."}</div>
-        <div class="pill" style="display:inline-flex;font-weight:900;">${tbT ? tbT("onboarding.progress", { done, total: rows.length }) : `${done}/${rows.length}`}</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn primary" type="button" onclick="if(typeof tbStartGuidedTour==='function')tbStartGuidedTour({mode:'dashboard'});">${tbT ? tbT("onboarding.action.guide") : "Guide"}</button>
-        <button class="btn" type="button" onclick="hideOnboardingPanel()">${tbT ? tbT("onboarding.hide") : "Hide"}</button>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:12px;">
-      ${rows.map((row) => `
-        <div style="border:1px solid ${row.ok ? "rgba(16,185,129,.28)" : "rgba(148,163,184,.25)"};background:${row.ok ? "rgba(16,185,129,.08)" : "rgba(255,255,255,.62)"};border-radius:16px;padding:12px;">
-          <div style="display:flex;gap:8px;align-items:flex-start;">
-            <span style="width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:950;background:${row.ok ? "rgba(16,185,129,.18)" : "rgba(37,99,235,.12)"};color:${row.ok ? "#047857" : "#1d4ed8"};">${row.ok ? "&#10003;" : "&bull;"}</span>
-            <div style="min-width:0;flex:1;">
-              <div style="font-weight:800;line-height:1.3;">${row.text}</div>
-              ${row.ok ? "" : `<button class="btn" type="button" style="margin-top:10px;padding:7px 10px;font-size:12px;" onclick="${row.action}">${row.label}</button>`}
-            </div>
-          </div>
-        </div>`).join("")}
-    </div>
-    <div style="margin-top:10px; opacity:.82;" class="muted">${tbT ? tbT("onboarding.tip") : "Need help? Click ?."}</div>
-  `;
+  body.innerHTML = window.TBDashboardView?.renderDashboardOnboardingPanel?.({
+    rows,
+    done,
+    total: rows.length,
+    t: window.tbT || ((key, vars) => {
+      if (key === "onboarding.subtitle") return "Set up the foundation in the right order.";
+      if (key === "onboarding.progress") return `${vars?.done || 0}/${vars?.total || 0}`;
+      if (key === "onboarding.action.guide") return "Guide";
+      if (key === "onboarding.hide") return "Hide";
+      if (key === "onboarding.tip") return "Need help? Click ?.";
+      return key;
+    }),
+  }) || "";
 };
 
 /* =========================
