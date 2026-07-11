@@ -12,11 +12,13 @@ describe('settings view extraction contract', () => {
   });
 
   it('keeps legacy Settings wrappers thin and delegated', () => {
+    expect(legacy).toContain('window.TBSettingsView?.renderSettingsAccountPanel');
     expect(legacy).toContain('window.TBSettingsView?.getSettingsPanelState');
     expect(legacy).toContain('window.TBSettingsView?.setSettingsPanelState');
     expect(legacy).toContain('window.TBSettingsView?.getSettingsCardSummary');
     expect(legacy).toContain('window.TBSettingsView?.ensureSettingsHero');
     expect(legacy).toContain('window.TBSettingsView?.decorateSettingsPanels');
     expect(legacy).not.toContain('const cards = Array.from(view.querySelectorAll');
+    expect(legacy).not.toContain('box.innerHTML = `');
   });
 });

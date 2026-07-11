@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getSettingsCardSummary,
   getSettingsPanelState,
+  renderSettingsAccountPanel,
   renderSettingsHero,
   setSettingsPanelState,
 } from '../../../src/features/settings/settingsView.js';
@@ -71,6 +72,35 @@ describe('Settings view helpers', () => {
     expect(html).toContain('&lt;BudgetTravel&gt;');
     expect(html).toContain('2 periodes');
     expect(html).toContain('1 regles');
+  });
+
+  it('renders the account panel with stable inputs and selected preferences', () => {
+    const html = renderSettingsAccountPanel({
+      baseCurrency: 'aud',
+      currencies: ['EUR', 'AUD', 'USD'],
+      savedBirthDate: '1997-06-22',
+      savedBodyWeight: '59',
+      savedBodyHeight: '162',
+      thresholdDisplay: '820',
+      thresholdEur: 500,
+      notificationPrefs: { healthMealReminders: true },
+      simpleMode: true,
+      t,
+    });
+
+    expect(html).toContain('id="tb-account-email"');
+    expect(html).toContain('id="tb-account-whatsapp"');
+    expect(html).toContain('value="1997-06-22"');
+    expect(html).toContain('id="tb-account-body-weight"');
+    expect(html).toContain('value="59"');
+    expect(html).toContain('id="tb-account-body-height"');
+    expect(html).toContain('value="162"');
+    expect(html).toContain('<option value="AUD" selected>AUD</option>');
+    expect(html).toContain('<option value="simple" selected>');
+    expect(html).toContain('id="tb-user-cfthr"');
+    expect(html).toContain('value="820"');
+    expect(html).toContain('id="tb-notif-health" type="checkbox" checked');
+    expect(html).toContain('id="tb-notif-open-manager"');
   });
 
   it('stores and restores panel open state', () => {

@@ -571,102 +571,19 @@ function renderSettings(){
         try { return String(state?.user?.bodyHeightCm || window.tbReadScopedLocalStorage?.(bodyHeightKey, "") || "").trim(); } catch (_) { return String(state?.user?.bodyHeightCm || "").trim(); }
       })();
 
-      box.innerHTML = `
-        <div class="muted" style="margin-bottom:10px;">${T("settings.account.summary")}</div>
-
-        <div class="row" style="gap:12px; align-items:end; flex-wrap:wrap;">
-          <div class="field" style="min-width:260px;">
-            <label>${T("settings.account.email")}</label>
-            <input id="tb-account-email" type="text" value="—" disabled />
-          </div>
-
-          <div class="field" style="min-width:260px;max-width:320px;">
-  <label>WhatsApp</label>
-  <input
-    id="tb-account-whatsapp"
-    type="tel"
-    placeholder="+33612345678"
-    value=""
-    autocomplete="tel"
-    style="color:var(--text);font-weight:750;background:var(--panel);opacity:1;"
-  />
-  <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">Format international, ex. +33612345678.</small>
-</div>
-
-          <div class="field" style="min-width:180px;">
-            <label>Date de naissance</label>
-            <input id="tb-account-birthdate" type="date" value="${escapeHTML(savedBirthDate)}" />
-            <small class="muted" style="display:block;margin-top:6px;line-height:1.3;">Utilisee pour le BMR et le suivi sante.</small>
-          </div>
-
-          <div class="field" style="min-width:120px;">
-            <label>Poids kg</label>
-            <input id="tb-account-body-weight" type="number" min="1" step="0.1" value="${escapeHTML(savedBodyWeight)}" />
-          </div>
-
-          <div class="field" style="min-width:120px;">
-            <label>Taille cm</label>
-            <input id="tb-account-body-height" type="number" min="60" step="1" value="${escapeHTML(savedBodyHeight)}" />
-          </div>
-
-          <div class="field" style="min-width:160px;">
-            <label>${T("settings.account.base_currency")}</label>
-            <select id="tb-user-basecur">
-              ${opts.map(c=>`<option value="${escapeHTML(c)}" ${String(c).toUpperCase()===cur?"selected":""}>${escapeHTML(c)}</option>`).join("")}
-            </select>
-          </div>
-
-          <div class="field" style="min-width:190px;">
-            <label>${T("settings.account.ui_mode")}</label>
-            <select id="tb-user-uimode">
-              <option value="simple" ${(typeof window.tbIsSimpleMode === 'function' && window.tbIsSimpleMode()) ? 'selected' : ''}>${T("settings.account.mode.simple")}</option>
-              <option value="advanced" ${(typeof window.tbIsSimpleMode === 'function' && !window.tbIsSimpleMode()) ? 'selected' : ''}>${T("settings.account.mode.advanced")}</option>
-            </select>
-          </div>
-
-          <button class="btn" id="tb-user-basecur-save" type="button">${T("settings.account.save")}</button>
-          <button class="btn" id="tb-user-whatsapp-save" type="button">Enregistrer WhatsApp</button>
-          <button class="btn" id="tb-user-birthdate-save" type="button">Enregistrer santé</button>
-          <button class="btn" id="tb-user-uimode-save" type="button">${T("settings.account.save_mode")}</button>
-          <button class="btn" id="tb-user-resetpwd" type="button">${T("settings.account.reset_password")}</button>
-        </div>
-
-        <div class="row tb-advanced-only" style="gap:12px; align-items:end; flex-wrap:wrap; margin-top:10px;">
-          <div class="field" style="min-width:220px;">
-            <label>${T("settings.account.cashflow_threshold")}</label>
-            <input id="tb-user-cfthr" type="number" min="1" step="1" value="${escapeHTML(thrDisp || "")}" />
-          </div>
-          <div class="muted" style="padding-bottom:6px;">${T("settings.account.cashflow_reference", { amount: escapeHTML(String(Math.round(thrEur))) })}</div>
-          <button class="btn" id="tb-user-cfthr-save" type="button">${T("settings.account.save_threshold")}</button>
-        </div>
-
-        <div class="tb-settings-notif-box" style="margin-top:14px;padding:12px;border:1px solid var(--border);border-radius:14px;background:rgba(37,99,235,.05);">
-          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-            <div>
-              <strong>Notifications mobile</strong>
-              <div class="muted" style="margin-top:4px;line-height:1.35;">Test rapide mobile. Les messages sont courts pour rester lisibles sur l'écran verrouillé.</div>
-            </div>
-            <div class="row" style="gap:8px;">
-              <button class="btn" id="tb-notif-open-manager" type="button">Gerer</button>
-              <button class="btn primary" id="tb-notif-test" type="button">Envoyer un test</button>
-            </div>
-          </div>
-          <div style="margin-top:12px;display:grid;gap:8px;">
-            <label class="pill" style="display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;">
-              <input id="tb-notif-health" type="checkbox" ${notifPrefs.healthMealReminders ? "checked" : ""} />
-              Rappels alimentation / sante
-            </label>
-            <div class="muted" style="font-size:12px;line-height:1.35;">5 nudges simples : petit dej, 10h, dejeuner, gouter et diner. Ils ouvrent directement Alimentation.</div>
-            <button class="btn" id="tb-notif-save" type="button" style="width:max-content;max-width:100%;">Activer les rappels</button>
-          </div>
-          <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;">
-            <span class="muted" style="font-size:12px;font-weight:800;">Notification reçue ?</span>
-            <button class="btn" id="tb-notif-test-yes" type="button">Oui</button>
-            <button class="btn" id="tb-notif-test-no" type="button">Non</button>
-          </div>
-          <div id="tb-notif-test-status" class="muted" style="font-size:12px;line-height:1.35;margin-top:8px;">Serveur actif : matin + soir selon le fuseau du téléphone. Le bouton ci-dessus force seulement un test immédiat.</div>
-        </div>
-      `;
+      box.innerHTML = window.TBSettingsView?.renderSettingsAccountPanel?.({
+        baseCurrency: cur,
+        currencies: opts,
+        savedBirthDate,
+        savedBodyWeight,
+        savedBodyHeight,
+        thresholdDisplay: thrDisp,
+        thresholdEur: thrEur,
+        notificationPrefs: notifPrefs,
+        simpleMode: (typeof window.tbIsSimpleMode === 'function' && window.tbIsSimpleMode()),
+        t: T,
+        esc: escapeHTML,
+      }) || "";
 
       const _getSb = () => {
         try {
