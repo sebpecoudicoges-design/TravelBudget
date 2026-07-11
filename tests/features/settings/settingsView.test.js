@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   getSettingsCardSummary,
   getSettingsPanelState,
+  normalizeManualFxRates,
   renderSettingsAccountPanel,
   renderSettingsHero,
+  renderSettingsManualFxPanel,
   setSettingsPanelState,
 } from '../../../src/features/settings/settingsView.js';
 
@@ -30,6 +32,19 @@ describe('Settings view helpers', () => {
       'settings.card.classification': 'Classification',
       'settings.hero.title': 'Reglages',
       'settings.hero.body': 'Pilote tes donnees',
+      'settings.fx.title': 'Taux perso',
+      'settings.fx.subtitle': 'Change manuel',
+      'settings.fx.add_title': 'Ajouter un taux',
+      'settings.fx.add': 'Ajouter',
+      'settings.fx.currency': 'Devise',
+      'settings.fx.rate': 'Taux',
+      'settings.fx.date': 'Date',
+      'settings.fx.status': 'Statut',
+      'settings.fx.actions': 'Actions',
+      'settings.fx.update_needed': 'A revoir',
+      'settings.fx.edit': 'Modifier',
+      'settings.fx.delete': 'Supprimer',
+      'settings.fx.empty': 'Aucun taux perso',
     };
     return dict[key] || key;
   };
@@ -115,5 +130,48 @@ describe('Settings view helpers', () => {
     expect(getSettingsPanelState('tb-travel-card', true, storage)).toBe(false);
     setSettingsPanelState('tb-travel-card', true, storage);
     expect(getSettingsPanelState('tb-travel-card', false, storage)).toBe(true);
+  });
+
+  it('normalizes manual FX rates for rendering', () => {
+    const list = normalizeManualFxRates({
+      manualRates: {
+        usd: { rate: 1.23456789, asOf: '2026-07-10T12:00:00Z' },
+        EUR: { rate: 1, asOf: '2026-07-10' },
+        lak: { rate: 24000, asOf: '2026-07-09' },
+        bad: { rate: 0, asOf: '2026-07-09' },
+      },
+      manualFxMeta: (currency) => ({ stale: currency === 'USD' }),
+    });
+
+    expect(list).toEqual([
+      { c: 'LAK', rate: 24000, asOf: '2026-07-09', stale: false },
+      { c: 'USD', rate: 1.23456789, asOf: '2026-07-10', stale: true },
+    ]);
+  });
+
+  it('renders manual FX panel with badges and stable actions', () => {
+    const html = renderSettingsManualFxPanel({
+      manualList: [
+        { c: 'USD', rate: 1.23456789, asOf: '2026-07-10', stale: true },
+        { c: 'AUD', rate: 1.78, asOf: '2026-07-09', stale: false },
+      ],
+      t,
+    });
+
+    expect(html).toContain('data-act="mf-toggle"');
+    expect(html).toContain('data-manual-fx-list');
+    expect(html).toContain('data-manual-fx-arrow');
+    expect(html).toContain('data-act="mf-add"');
+    expect(html).toContain('data-act="mf-edit" data-cur="USD"');
+    expect(html).toContain('data-act="mf-del" data-cur="AUD"');
+    expect(html).toContain('1.234568');
+    expect(html).toContain('A revoir');
+  });
+
+  it('renders the manual FX empty state', () => {
+    const html = renderSettingsManualFxPanel({ manualList: [], t });
+
+    expect(html).toContain('Aucun taux perso');
+    expect(html).toContain('tb-fx-ok-badge');
   });
 });

@@ -663,47 +663,15 @@ function renderSettings(){
 
     let manualRates = {};
     try { manualRates = (typeof window.tbFxGetManualRates === "function") ? (window.tbFxGetManualRates() || {}) : {}; } catch(_) { manualRates = {}; }
-
-    const manualList = Object.entries(manualRates || {})
-      .map(([c,v]) => { const meta = _tbManualFxMeta(c); return { c:String(c||"").toUpperCase(), rate:Number(v && v.rate), asOf: (v && v.asOf ? String(v.asOf).slice(0,10) : null), stale: !!meta.stale }; })
-      .filter(x => x.c && x.c !== "EUR" && Number.isFinite(x.rate) && x.rate > 0)
-      .sort((a,b)=>a.c.localeCompare(b.c));
-
-    manualPanel.innerHTML = `
-      <div data-act="mf-toggle" style="display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer;">
-        <div>
-          <b>${T("settings.fx.title")}</b>
-          <span class="muted">${T("settings.fx.subtitle")}</span>
-        </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          ${manualList.some(x=>x.stale) ? `<span class="tb-fx-alert-badge">⚠ ${T("settings.fx.update_needed")}</span>` : '<span class="tb-fx-ok-badge">OK</span>'}
-          <button class="btn" data-act="mf-add" title="${T("settings.fx.add_title")}">${T("settings.fx.add")}</button><span class="tb-recurring-arrow" data-manual-fx-arrow>›</span>
-        </div>
-      </div>
-      <div data-manual-fx-list style="margin-top:8px; overflow:auto; display:none;">
-        ${manualList.length ? `
-          <table class="table" style="width:100%; min-width:520px;">
-            <thead><tr>
-              <th>${T("settings.fx.currency")}</th><th>${T("settings.fx.rate")}</th><th>${T("settings.fx.date")}</th><th>${T("settings.fx.status")}</th><th style="text-align:right;">${T("settings.fx.actions")}</th>
-            </tr></thead>
-            <tbody>
-              ${manualList.map(x => `
-                <tr>
-                  <td><b>${escapeHTML(x.c)}</b></td>
-                  <td>${escapeHTML(String(Number(x.rate).toFixed(6)).replace(/\.0+$/,''))}</td>
-                  <td>${escapeHTML(x.asOf || "—")}</td>
-                  <td>${x.stale ? `<span class="tb-fx-alert-badge">⚠ ${T("settings.fx.update_needed")}</span>` : '<span class="tb-fx-ok-badge">OK</span>'}</td>
-                  <td style="text-align:right; white-space:nowrap;">
-                    <button class="btn" data-act="mf-edit" data-cur="${escapeHTML(x.c)}">${T("settings.fx.edit")}</button>
-                    <button class="btn danger" data-act="mf-del" data-cur="${escapeHTML(x.c)}">${T("settings.fx.delete")}</button>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        ` : `<div class="muted">${T("settings.fx.empty")}</div>`}
-      </div>
-    `;
+    const manualList = window.TBSettingsView?.normalizeManualFxRates?.({
+      manualRates,
+      manualFxMeta: _tbManualFxMeta,
+    }) || [];
+    manualPanel.innerHTML = window.TBSettingsView?.renderSettingsManualFxPanel?.({
+      manualList,
+      t: T,
+      esc: escapeHTML,
+    }) || "";
     (manualHost || host).appendChild(manualPanel);
 
     const _mfAskCur = () => {

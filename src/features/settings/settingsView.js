@@ -206,6 +206,79 @@ export function renderSettingsAccountPanel({
       `;
 }
 
+export function normalizeManualFxRates({
+  manualRates = {},
+  manualFxMeta,
+} = {}) {
+  return Object.entries(manualRates || {})
+    .map(([currency, value]) => {
+      const c = String(currency || '').toUpperCase();
+      let meta = {};
+      try {
+        meta = (typeof manualFxMeta === 'function') ? (manualFxMeta(c) || {}) : {};
+      } catch (_) {
+        meta = {};
+      }
+      return {
+        c,
+        rate: Number(value && value.rate),
+        asOf: value && value.asOf ? String(value.asOf).slice(0, 10) : null,
+        stale: !!meta.stale,
+      };
+    })
+    .filter((item) => item.c && item.c !== 'EUR' && Number.isFinite(item.rate) && item.rate > 0)
+    .sort((a, b) => a.c.localeCompare(b.c));
+}
+
+export function renderSettingsManualFxPanel({
+  manualList = [],
+  t = fallbackT,
+  esc = defaultEsc,
+} = {}) {
+  const tr = typeof t === 'function' ? t : fallbackT;
+  const list = Array.isArray(manualList) ? manualList : [];
+  const hasStaleRate = list.some((item) => item.stale);
+  const statusBadge = hasStaleRate
+    ? `<span class="tb-fx-alert-badge">⚠ ${tr('settings.fx.update_needed')}</span>`
+    : '<span class="tb-fx-ok-badge">OK</span>';
+
+  return `
+      <div data-act="mf-toggle" style="display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer;">
+        <div>
+          <b>${tr('settings.fx.title')}</b>
+          <span class="muted">${tr('settings.fx.subtitle')}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          ${statusBadge}
+          <button class="btn" data-act="mf-add" title="${tr('settings.fx.add_title')}">${tr('settings.fx.add')}</button><span class="tb-recurring-arrow" data-manual-fx-arrow>›</span>
+        </div>
+      </div>
+      <div data-manual-fx-list style="margin-top:8px; overflow:auto; display:none;">
+        ${list.length ? `
+          <table class="table" style="width:100%; min-width:520px;">
+            <thead><tr>
+              <th>${tr('settings.fx.currency')}</th><th>${tr('settings.fx.rate')}</th><th>${tr('settings.fx.date')}</th><th>${tr('settings.fx.status')}</th><th style="text-align:right;">${tr('settings.fx.actions')}</th>
+            </tr></thead>
+            <tbody>
+              ${list.map((item) => `
+                <tr>
+                  <td><b>${esc(item.c)}</b></td>
+                  <td>${esc(String(Number(item.rate).toFixed(6)).replace(/\.0+$/, ''))}</td>
+                  <td>${esc(item.asOf || "—")}</td>
+                  <td>${item.stale ? `<span class="tb-fx-alert-badge">⚠ ${tr('settings.fx.update_needed')}</span>` : '<span class="tb-fx-ok-badge">OK</span>'}</td>
+                  <td style="text-align:right; white-space:nowrap;">
+                    <button class="btn" data-act="mf-edit" data-cur="${esc(item.c)}">${tr('settings.fx.edit')}</button>
+                    <button class="btn danger" data-act="mf-del" data-cur="${esc(item.c)}">${tr('settings.fx.delete')}</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : `<div class="muted">${tr('settings.fx.empty')}</div>`}
+      </div>
+    `;
+}
+
 export function ensureSettingsHero(view, {
   state = {},
   t = fallbackT,
@@ -305,7 +378,9 @@ export function decorateSettingsPanels(view, {
 
 export default {
   getSettingsCardSummary,
+  normalizeManualFxRates,
   renderSettingsAccountPanel,
+  renderSettingsManualFxPanel,
   renderSettingsHero,
   ensureSettingsHero,
   decorateSettingsPanels,

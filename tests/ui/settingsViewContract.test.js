@@ -16,6 +16,8 @@ describe('settings view extraction contract', () => {
 
   it('keeps legacy Settings wrappers thin and delegated', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsAccountPanel');
+    expect(legacy).toContain('window.TBSettingsView?.normalizeManualFxRates');
+    expect(legacy).toContain('window.TBSettingsView?.renderSettingsManualFxPanel');
     expect(legacy).toContain('window.TBSettingsAccountController?.bindSettingsAccountPanel');
     expect(legacy).toContain('window.TBSettingsView?.getSettingsPanelState');
     expect(legacy).toContain('window.TBSettingsView?.setSettingsPanelState');
@@ -26,5 +28,6 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('box.innerHTML = `');
     expect(legacy).not.toContain('const readNotificationForm = () =>');
     expect(legacy).not.toContain('const _rememberAccount =');
+    expect(legacy).not.toContain('manualPanel.innerHTML = `');
   });
 });
