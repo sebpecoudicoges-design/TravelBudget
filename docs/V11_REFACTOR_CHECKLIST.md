@@ -98,6 +98,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [ ] Travail : separer periodes, missions, revenus et graphiques.
   - [x] Extraire le rendu du parcours professionnel : fresque, KPI, missions, revenus, periodes et dossiers lies.
 - [ ] Patrimoine : separer actifs, cout mensuel et integration budget.
+  - [x] Extraire la carte actif : valeur, amortissement, cout mensuel budget, proprietaires, evenements, documents, actions et P&L realise.
 
 ## Audit transversal - Regles recurrentes
 

@@ -113,9 +113,7 @@
 
   function findAsset(id){ return (CACHE.assets||[]).find(a=>String(a.id)===String(id)); }
   function ownerRows(assetOrId, owners){ const id = typeof assetOrId === 'object' ? assetOrId.id : assetOrId; return (owners||CACHE.owners||[]).filter(o=>String(o.asset_id)===String(id)); }
-  function eventRows(assetOrId){ const id = typeof assetOrId === 'object' ? assetOrId.id : assetOrId; return (CACHE.events||[]).filter(e=>String(e.asset_id)===String(id)); }
   function assetDocumentRows(assetOrId){ const id = typeof assetOrId === 'object' ? assetOrId.id : assetOrId; return (CACHE.documentLinks||[]).filter(x=>String(x.asset_id)===String(id)); }
-  function assetDocumentCount(assetOrId){ return assetDocumentRows(assetOrId).length; }
   function assetDocLinkTable(){ return table('asset_documents','asset_documents'); }
   function docLabel(doc){ if(!doc) return 'Document'; const name = doc.name || doc.original_filename || 'Document'; const tags = Array.isArray(doc.tags) ? doc.tags.join(', ') : ''; const date = String(doc.created_at || '').slice(0,10); return [name, tags, date].filter(Boolean).join(' · '); }
   function docNameLabel(doc){
@@ -125,44 +123,6 @@
   function minePercent(rows){ const me = rows.find(r=>/toi|moi/i.test(String(r.display_name||''))); return Number(me?.ownership_percent ?? rows[0]?.ownership_percent ?? 100); }
   function totalPercent(rows){ return Math.round((rows||[]).reduce((s,r)=>s+n(r.ownership_percent,0),0)*100)/100; }
   function eventLabel(t){ return ({ buy_share:tr('assets.event.buy_share'), sell_share:tr('assets.event.sell_share'), transfer_share:tr('assets.event.transfer_share') })[t] || tr('assets.event.share_movement'); }
-  function isMeOwnerRow(r){
-  return /toi|moi/i.test(String(r.display_name||'')) || (!!r.user_id && r.user_id === window.sbUser?.id);
-}
-
-function eventsForAsset(assetId){
-  return (CACHE.events||[]).filter(e => String(e.asset_id) === String(assetId));
-}
-
-function realizedSalesForMe(assetId){
-  // Sommes encaissées par "toi" quand tu es le vendeur
-  const evs = eventsForAsset(assetId);
-  return evs.reduce((sum,e)=>{
-    if(!e) return sum;
-    // vendeur = from_owner_id
-    const from = (CACHE.owners||[]).find(o => String(o.id) === String(e.from_owner_id));
-    if(from && isMeOwnerRow(from)){
-      return sum + Number(e.amount || 0);
-    }
-    return sum;
-  }, 0);
-}
-
-function initialCostForMe(asset, owners){
-  // coût initial = purchase_value × ta part initiale (on prend la part actuelle comme approximation MVP)
-  const rows = ownerRows(asset, owners);
-  const ownPct = minePercent(rows);
-  return Number(asset.purchase_value||0) * (Number(ownPct||0)/100);
-}
-
-function realizedPnLForMe(asset, owners){
-  const proceeds = realizedSalesForMe(asset.id);
-  const cost = initialCostForMe(asset, owners);
-  return proceeds - cost; // positif = gain, négatif = perte
-}
-
-function isAssetSold(asset){
-  return String(asset.status||'').toLowerCase() === 'sold';
-}
   function txLabel(tx){
   const date = tx.date || tx.transaction_date || tx.created_at || '';
   const amount = tx.amount ?? tx.value ?? tx.total ?? '';
@@ -249,55 +209,30 @@ function portfolioSummaryHtml(assets, owners){
   return "";
 }
   function card(asset, owners){
-    const core = window.TBAssetsCore; const current = core.computeLinearAssetValue(asset); const progress = core.computeDepreciationProgress(asset);
-    const pctLoss = asset.purchase_value ? Math.round(((asset.purchase_value-current)/asset.purchase_value)*100) : 0;
-    const lossAmount = Math.max(0, Number(asset.purchase_value || 0) - Number(current || 0));
-    const rows = ownerRows(asset, owners); const ownPct = minePercent(rows); const ownValue = core.computeOwnedValue(asset, ownPct); const width = Math.round(progress.ratio*100);
-const monthlyDep = window.Core?.assetRules?.assetMonthlyBudgetAmount
-  ? window.Core.assetRules.assetMonthlyBudgetAmount(asset, owners)
-  : (asset.depreciation_months ? ((Number(asset.purchase_value || 0) - Number(asset.residual_value || 0)) / Number(asset.depreciation_months || 1)) * ownPct / 100 : 0);
-const depreciationStatus = width >= 100 ? tr('assets.card.depreciated') : tr('assets.card.depreciating');
-    const total = totalPercent(rows); const warning = rows.length && Math.abs(total-100) > 0.01 ? `<span class="tb-asset-owner-warning">Total parts : ${esc(total)}%</span>` : '';
-    const recent = eventRows(asset).slice(0,2);
-    return `<section class="tb-asset-card" data-asset-id="${esc(asset.id)}">
-      <div class="tb-asset-top"><div><div class="tb-asset-kicker">${esc(tr('assets.card.kicker'))}</div><h3>${icon(asset.asset_type)} ${esc(asset.name)}</h3><p>${esc(tr('assets.card.purchased_on'))} ${esc(asset.purchase_date)}</p></div><span>${esc(label(asset.asset_type))}</span></div>
-      <div class="tb-asset-metrics"><div class="tb-asset-primary"><small>${esc(tr('assets.card.your_value'))}</small><strong>${esc(money(ownValue,asset.currency))}</strong><em>${ownPct}% ${esc(tr('assets.card.of_asset'))}</em></div><div>
-  <small>${esc(tr('assets.card.current_value'))}</small>
-  <strong>${esc(money(current,asset.currency))}</strong>
-  <em class="depr">
-    ${esc(tr('assets.card.depreciation'))} : -${esc(money(lossAmount,asset.currency))} · -${pctLoss}%
-  </em>
-</div></div>
-      <div class="tb-asset-facts">
-  <span>${esc(tr('assets.card.purchase'))} : <strong>${esc(money(asset.purchase_value,asset.currency))}</strong></span>
-  <span>${esc(tr('assets.card.residual_value'))} : <strong>${esc(money(asset.residual_value,asset.currency))}</strong></span>
-  <span>${esc(atxt('Coût budget mensuel', 'Monthly budget cost'))} : <strong>${esc(money(monthlyDep,asset.currency))}/${esc(tr('assets.card.month'))}</strong></span>
-  <span class="${asset.include_in_budget ? 'done' : ''}">${esc(asset.include_in_budget ? atxt('Inclus au budget', 'Included in budget') : atxt('Hors budget', 'Outside budget'))}</span>
-  <span class="${width >= 100 ? 'done' : ''}">${esc(depreciationStatus)}</span>
-</div>
-<div class="tb-asset-progress"><div><small>${esc(tr('assets.card.amortization'))}</small><small>${width >= 100 ? esc(tr('assets.card.floor_reached')) : width + '% ' + esc(tr('assets.card.used'))}</small></div><b><i style="width:${width}%"></i></b></div>
-      <div class="tb-asset-chart" id="asset-chart-${esc(asset.id)}"></div>
-      <div class="tb-asset-owners">${rows.length ? rows.map(r=>`<span>${esc(r.display_name)} · ${Number(r.ownership_percent||0)}%</span>`).join('') : `<span>${esc(tr('assets.card.ownership_missing'))}</span>`}${warning}</div>
-      ${recent.length ? `<div class="tb-asset-events">${recent.map(e=>`<span>${esc(e.event_date||'')} · ${esc(eventLabel(e.event_type))} · ${esc(n(e.percent,0))}%</span>`).join('')}</div>` : ''}
-
-${(() => {
-  const pnl = realizedPnLForMe(asset, owners);
-  const sold = isAssetSold(asset);
-
-  return sold ? `
-    <div class="tb-asset-pnl">
-      <span>${esc(tr('assets.card.realized_pnl'))}</span>
-      <strong class="${pnl >= 0 ? 'pos' : 'neg'}">
-        ${pnl >= 0 ? '+' : ''}${esc(money(pnl, asset.currency))}
-      </strong>
-    </div>
-  ` : '';
-})()}
-
-<div class="tb-asset-actions">
-<button type="button" data-tb-asset-edit="${esc(asset.id)}">${esc(tr('assets.action.edit'))}</button><button type="button" data-tb-asset-owners="${esc(asset.id)}">${esc(tr('assets.action.owners'))}</button><button type="button" data-tb-asset-transfer="${esc(asset.id)}">${esc(tr('assets.action.buy_sell'))}</button><button type="button" data-tb-asset-docs="${esc(asset.id)}">📎 ${esc(atxt('Docs', 'Docs'))} (${assetDocumentCount(asset)})</button>
-<button type="button" data-tb-asset-sell="${esc(asset.id)}">${esc(tr('assets.action.sell_asset'))}</button><button type="button" class="danger" data-tb-asset-archive="${esc(asset.id)}">${esc(tr('assets.action.archive'))}</button></div>
-    </section>`;
+    const core = window.TBAssetsCore;
+    if(window.UI?.assetView?.renderAssetCard){
+      return window.UI.assetView.renderAssetCard({
+        asset,
+        owners,
+        events:CACHE.events,
+        documentLinks:CACHE.documentLinks,
+        userId:window.sbUser?.id || '',
+        computeCurrentValue:(row)=>core.computeLinearAssetValue(row),
+        computeDepreciationProgress:(row)=>core.computeDepreciationProgress(row),
+        computeOwnedValue:(row,pct)=>core.computeOwnedValue(row,pct),
+        monthlyBudgetAmount:window.Core?.assetRules?.assetMonthlyBudgetAmount
+          ? ((row, ownerRowsArg)=>window.Core.assetRules.assetMonthlyBudgetAmount(row, ownerRowsArg))
+          : undefined,
+        money,
+        tr,
+        t:atxt,
+        esc,
+        icon,
+        label,
+        eventLabel,
+      });
+    }
+    return '';
   }
 
   function emptyState(){ return `<section class="tb-assets-empty"><div><strong>${esc(tr('assets.empty.title'))}</strong><p>${esc(tr('assets.empty.body'))}</p></div><button class="tb-asset-add-btn" type="button" data-tb-asset-open>${esc(tr('assets.action.add_asset'))}</button></section>`; }
