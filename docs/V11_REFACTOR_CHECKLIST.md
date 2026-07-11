@@ -96,6 +96,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [x] Sante : supprimer le chantier autonome et garder les indicateurs dans Nutrition, Sport, Travail, notifications et KPI.
   - [x] Retirer l'onglet, la vue et le rendu Sante autonomes du runtime ; rediriger les anciens appels vers Nutrition.
 - [ ] Travail : separer periodes, missions, revenus et graphiques.
+  - [x] Extraire le rendu du parcours professionnel : fresque, KPI, missions, revenus, periodes et dossiers lies.
 - [ ] Patrimoine : separer actifs, cout mensuel et integration budget.
 
 ## Audit transversal - Regles recurrentes

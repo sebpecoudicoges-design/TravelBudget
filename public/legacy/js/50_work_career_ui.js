@@ -43,38 +43,10 @@
   function summary(){
     return window.Core?.workRules?.summarizeWorkCareer?.({ engagements:DATA.engagements, days:window.state?.workDays||[], incomes:DATA.incomes }) || { totals:{netHours:0,totalReceived:0,hourlyNet:null,workDays:0},engagements:[] };
   }
-  function range(){
-    const dates=[]; [...DATA.engagements,...DATA.statuses].forEach(row=>{if(row.start_date)dates.push(row.start_date);if(row.end_date)dates.push(row.end_date);});
-    dates.push(today()); dates.sort(); const start=new Date(`${dates[0]||today()}T12:00:00`); const end=new Date(`${dates[dates.length-1]||today()}T12:00:00`); if(end-start<86400000*30) end.setDate(end.getDate()+30); return {start,end,span:Math.max(1,end-start)};
-  }
-  function position(start,end,r){
-    const s=new Date(`${String(start||today()).slice(0,10)}T12:00:00`); const e=new Date(`${String(end||today()).slice(0,10)}T12:00:00`); const left=Math.max(0,Math.min(100,((s-r.start)/r.span)*100)); const right=Math.max(left,Math.min(100,((e-r.start)/r.span)*100)); return {left,width:Math.max(1,right-left)};
-  }
-  function timeline(){
-    const r=range(); const rows=[...DATA.engagements.map(x=>({...x,_kind:'job'})),...DATA.statuses.map(x=>({...x,_kind:'status'}))].sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
-    if(!rows.length)return `<div class="tb-career-empty">${esc(txt('Ajoute une mission ou une période pour démarrer la fresque.','Add a job or period to start the timeline.'))}</div>`;
-    return `<div aria-label="${esc(txt('Fresque professionnelle','Career timeline'))}">${rows.map(row=>{const p=position(row.start_date,row.end_date,r);const color=row.color||(row._kind==='status'?'#94a3b8':'#0ea5e9');return `<div class="tb-career-track"><div class="tb-career-track-label" title="${esc(row.name||row.label)}">${esc(row.name||row.label)}</div><div class="tb-career-rail" title="${esc(`${shortDate(row.start_date)} - ${row.end_date?shortDate(row.end_date):txt('en cours','ongoing')}`)}"><span class="tb-career-bar" style="left:${p.left}%;width:${p.width}%;background:${esc(color)}"></span></div></div>`;}).join('')}</div>`;
-  }
-  function folderRows(job){
-    const links=DATA.links.filter(x=>String(x.engagement_id)===String(job.id));
-    return links.map(link=>{const folder=DATA.folders.find(x=>String(x.id)===String(link.folder_id));return folder?`<div class="tb-career-folder"><span>📁 ${esc(folder.name)}</span><button class="btn small" data-career-unlink="${esc(link.id)}" type="button">×</button></div>`:'';}).join('');
-  }
-  function jobsHtml(s){
-    return DATA.engagements.map(job=>{const item=s.engagements.find(x=>String(x.engagement?.id)===String(job.id))||{netHours:0,totalReceived:0,hourlyNet:null};return `<article class="tb-career-job"><div class="tb-career-job-top"><div><strong>${esc(job.name)}</strong><div class="muted">${esc(job.employer||job.role_title||'')} · ${esc(shortDate(job.start_date))}${job.end_date?` - ${esc(shortDate(job.end_date))}`:''}</div></div><span style="width:10px;height:10px;border-radius:50%;background:${esc(job.color||'#0ea5e9')}"></span></div><div class="tb-career-job-stats"><span class="pill">${Math.round(item.netHours*10)/10}h</span><span class="pill">${esc(money(item.totalReceived,job.currency))}</span><span class="pill">${item.hourlyNet==null?'--':esc(money(item.hourlyNet,job.currency))}/h</span></div>${folderRows(job)}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn small" data-career-edit-job="${esc(job.id)}" type="button">${esc(txt('Modifier','Edit'))}</button><button class="btn small" data-career-link-folder="${esc(job.id)}" type="button">${esc(txt('Lier un dossier','Link folder'))}</button><button class="btn small" data-career-delete-job="${esc(job.id)}" type="button">${esc(txt('Supprimer','Delete'))}</button></div></article>`;}).join('');
-  }
-  function activityHtml(){
-    const rows=[
-      ...DATA.incomes.map(row=>({kind:'income',id:row.id,date:row.received_date,title:jobById(row.engagement_id)?.name||txt('Revenu hors mission','Unassigned income'),detail:money(row.net_amount,row.currency),row})),
-      ...DATA.statuses.map(row=>({kind:'status',id:row.id,date:row.start_date,title:row.label,detail:`${shortDate(row.start_date)}${row.end_date?` - ${shortDate(row.end_date)}`:` · ${txt('en cours','ongoing')}`}`,row})),
-    ].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,12);
-    if(!rows.length)return '';
-    return `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px"><strong>${esc(txt('Revenus et périodes','Income and periods'))}</strong>${rows.map(item=>`<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)"><div><b>${esc(item.title)}</b><div class="muted">${esc(shortDate(item.date))} · ${esc(item.detail)}</div></div><div style="display:flex;gap:5px"><button class="btn small" type="button" data-career-edit-${item.kind}="${esc(item.id)}">${esc(txt('Modifier','Edit'))}</button><button class="btn small" type="button" data-career-delete-${item.kind}="${esc(item.id)}">×</button></div></div>`).join('')}</div>`;
-  }
-
   async function render(){
     ensureStyles(); const root=$('#work-career-root'); if(!root)return;
     if(!DATA.loaded&&!DATA.loading){root.innerHTML=`<div class="tb-career muted">${esc(txt('Chargement de la fresque...','Loading timeline...'))}</div>`;await load(); if(window.renderWork)window.renderWork('career-loaded');return;}
-    const s=summary(),t=s.totals||{}; root.innerHTML=`<section class="tb-career"><div class="tb-career-head"><div><h3 style="margin:0">${esc(txt('Parcours professionnel','Career'))}</h3><div class="muted">${esc(txt('Temps travaillé, revenus reçus et périodes de transition.','Worked time, received income and transition periods.'))}</div></div><div class="tb-career-actions"><button class="btn primary" data-career-open="job" type="button">+ ${esc(txt('Mission','Job'))}</button><button class="btn" data-career-open="income" type="button">+ ${esc(txt('Revenu','Income'))}</button><button class="btn" data-career-open="status" type="button">+ ${esc(txt('Période','Period'))}</button></div></div>${DATA.error?`<div class="tb-career-error">${esc(DATA.error)}</div>`:''}<div class="tb-career-kpis"><div class="tb-career-kpi"><small>${esc(txt('Net reçu','Net received'))}</small><strong>${esc(money(t.totalReceived||0,DATA.engagements[0]?.currency||'AUD'))}</strong></div><div class="tb-career-kpi"><small>${esc(txt('Heures nettes','Net hours'))}</small><strong>${Math.round(num(t.netHours)*10)/10}h</strong></div><div class="tb-career-kpi"><small>${esc(txt('Taux net réel','Actual net rate'))}</small><strong>${t.hourlyNet==null?'--':esc(money(t.hourlyNet,DATA.engagements[0]?.currency||'AUD'))}/h</strong></div><div class="tb-career-kpi"><small>${esc(txt('Missions','Jobs'))}</small><strong>${DATA.engagements.length}</strong></div></div>${timeline()}<div class="tb-career-jobs">${jobsHtml(s)}</div>${activityHtml()}</section>`; bind(root);
+    const s=summary(); root.innerHTML=window.UI?.workView?.renderWorkCareerPanel?.({data:DATA,careerSummary:s,today:today(),money,shortDate,esc,t:txt}) || ''; bind(root);
   }
 
   function modal(kind,row={}){
