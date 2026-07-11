@@ -51,7 +51,17 @@ function showView(view) {
     if (typeof tbRequestAnalysisRender === 'function') tbRequestAnalysisRender('navigation'); else if (typeof renderBudgetAnalysis === 'function') renderBudgetAnalysis();
     try { if (typeof window.renderFxDecision === "function") window.renderFxDecision(false); } catch (_) {}
   }
-  if (view === "assets") { if (typeof window.renderAssets === "function") window.renderAssets("navigation"); }
+  if (view === "assets") {
+    if (typeof window.renderAssets === "function") window.renderAssets("navigation");
+    else if (typeof window.tbLoadLegacyDomain === "function") {
+      window.tbLoadLegacyDomain("assets").then(() => {
+        if ((window.activeView || activeView) === "assets" && typeof window.renderAssets === "function") window.renderAssets("navigation:lazy");
+      }).catch((e) => {
+        console.error("[TB] Assets lazy load failed", e);
+        alert(`Patrimoine indisponible : ${e?.message || e}`);
+      });
+    }
+  }
   if (view === "cautions") { if (typeof window.renderCautions === "function") window.renderCautions("navigation"); }
   if (view === "documents") { if (typeof window.renderDocuments === "function") window.renderDocuments("navigation"); }
   if (view === "sport") { if (typeof window.renderSport === "function") window.renderSport("navigation"); }

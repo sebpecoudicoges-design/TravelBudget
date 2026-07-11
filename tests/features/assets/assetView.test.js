@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { renderAssetCard, renderPortfolioSummary } from '../../../src/features/assets/assetView.js';
+import {
+  renderAssetCard,
+  renderAssetEditorModalSpec,
+  renderAssetOwnersModalSpec,
+  renderPortfolioSummary,
+} from '../../../src/features/assets/assetView.js';
 
 describe('Asset view helpers', () => {
   it('renders portfolio summary cards and missing FX note', () => {
@@ -89,5 +94,31 @@ describe('Asset view helpers', () => {
     expect(html).toContain('assets.card.realized_pnl');
     expect(html).toContain('+200 EUR');
     expect(html).toContain('class="pos"');
+  });
+
+  it('renders asset editor and owners modal specs with stable form hooks', () => {
+    const editor = renderAssetEditorModalSpec({
+      mode: 'edit',
+      asset: { id: 'asset-1', name: 'Van', asset_type: 'car', purchase_value: 8000, currency: 'AUD', purchase_date: '2026-06-01', depreciation_months: 24 },
+      today: () => '2026-07-11',
+      tr: (key) => key,
+      t: (fr) => fr,
+    });
+    expect(editor.formId).toBe('tb-asset-editor-form');
+    expect(editor.contentHTML).toContain('data-tb-asset-form="edit"');
+    expect(editor.contentHTML).toContain('data-asset-id="asset-1"');
+    expect(editor.contentHTML).toContain('name="budget_day"');
+    expect(editor.contentHTML).toContain('Inclure le coût mensuel dans le budget');
+
+    const owners = renderAssetOwnersModalSpec({
+      asset: { id: 'asset-1', name: 'Van' },
+      owners: [{ id: 'owner-1', asset_id: 'asset-1', display_name: 'Moi', ownership_percent: 60 }],
+      tr: (key) => key,
+    });
+    expect(owners.formId).toBe('tb-asset-owners-form');
+    expect(owners.contentHTML).toContain('data-tb-asset-owners-form');
+    expect(owners.contentHTML).toContain('data-owner-id="owner-1"');
+    expect(owners.contentHTML).toContain('Moi');
+    expect(owners.contentHTML).toContain('data-tb-owner-add');
   });
 });

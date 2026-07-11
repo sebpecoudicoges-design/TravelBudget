@@ -1,7 +1,7 @@
 {
   "name": "travelbudget",
   "private": true,
-  "version": "10.5.106",
+  "version": "10.5.107",
   "type": "module",
   "scripts": {
     "dev": "vite",

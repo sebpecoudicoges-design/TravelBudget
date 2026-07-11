@@ -239,15 +239,7 @@ function portfolioSummaryHtml(assets, owners){
   function renderCharts(assets){ if(!window.echarts) return; for(const asset of assets){ const el = document.getElementById(`asset-chart-${asset.id}`); if(!el) continue; const old = window.echarts.getInstanceByDom ? window.echarts.getInstanceByDom(el) : null; if(old) old.dispose(); const series = window.TBAssetsCore.buildValueSeries(asset, 18); const chart = window.echarts.init(el, null, { renderer:'canvas' }); chart.setOption({ grid:{left:4,right:4,top:8,bottom:6}, xAxis:{type:'category',show:false,data:series.map(x=>x.date)}, yAxis:{type:'value',show:false,min:'dataMin'}, tooltip:{trigger:'axis', valueFormatter:v=>money(v, asset.currency)}, series:[{ type:'line', smooth:true, symbol:'none', lineStyle:{ width:4, color:'#22d3ee' }, areaStyle:{ color:{ type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:'rgba(6,182,212,.22)'},{offset:1,color:'rgba(6,182,212,.02)'}] } }, data:series.map(x=>Math.round(x.value*100)/100) }] }); } }
 
   function assetModalSpec({ key, title, subtitle, formAttrs, contentHTML, submitLabel, extraActionsHTML='', size='lg' }){
-    const formId=`tb-asset-${key}-form`;
-    return {
-      title,
-      subtitle,
-      size,
-      formId,
-      contentHTML:`<form id="${formId}" ${formAttrs}>${contentHTML}</form>`,
-      actionsHTML:`${extraActionsHTML}<button class="btn" type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button><button class="btn primary" type="submit" data-tb-asset-submit form="${formId}">${esc(submitLabel)}</button>`,
-    };
+    return window.UI?.assetView?.assetModalSpec?.({ key, title, subtitle, formAttrs, contentHTML, submitLabel, extraActionsHTML, size, tr, esc }) || {};
   }
 
   function mountAssetModal(spec){
@@ -269,35 +261,10 @@ function portfolioSummaryHtml(assets, owners){
   }
 
   function assetFormHtml(mode, asset){
-    const a = asset || { name:'', asset_type:'car', purchase_value:'', residual_value:0, currency:'EUR', purchase_date:today(), depreciation_months:36, include_in_budget:true, budget_method:'linear', budget_start_date:today(), budget_day:Number(today().slice(8,10)) };
-    const isEdit = mode === 'edit';
-    return assetModalSpec({
-      key:'editor',
-      title:isEdit ? tr('assets.modal.edit_title') : tr('assets.modal.add_title'),
-      subtitle:atxt('Le coût mensuel alimente uniquement Budget et Analyse, jamais le solde des portefeuilles.', 'The monthly cost feeds Budget and Analysis only, never wallet balances.'),
-      formAttrs:`data-tb-asset-form="${isEdit?'edit':'create'}" ${isEdit?`data-asset-id="${esc(a.id)}"`:''}`,
-      submitLabel:isEdit ? tr('documents.action.save') : tr('assets.action.create_asset'),
-      contentHTML:`<div class="tb-asset-form-grid">
-        <label>${esc(tr('assets.form.name'))}<input name="name" required placeholder="Toyota X-Trail" value="${esc(a.name)}"></label>
-        <label>${esc(tr('assets.form.type'))}<select name="asset_type"><option value="car" ${a.asset_type==='car'?'selected':''}>${esc(tr('assets.type.car'))}</option><option value="real_estate" ${a.asset_type==='real_estate'?'selected':''}>${esc(tr('assets.type.real_estate'))}</option><option value="equipment" ${a.asset_type==='equipment'?'selected':''}>${esc(tr('assets.type.equipment'))}</option><option value="other" ${a.asset_type==='other'?'selected':''}>${esc(tr('assets.type.other'))}</option></select></label>
-        <label>${esc(tr('assets.form.purchase_value'))}<input name="purchase_value" required type="number" min="0" step="0.01" placeholder="5000" value="${esc(a.purchase_value)}"></label>
-        <label>${esc(tr('assets.form.residual_value'))}<input name="residual_value" type="number" min="0" step="0.01" value="${esc(a.residual_value)}"></label>
-        <label>${esc(tr('assets.form.currency'))}<input name="currency" required maxlength="3" value="${esc(a.currency||'EUR')}"></label>
-        <label>${esc(tr('assets.form.purchase_date'))}<input name="purchase_date" required type="date" value="${esc(a.purchase_date||today())}"></label>
-        <label>${esc(tr('assets.form.depreciation_months'))}<input name="depreciation_months" required type="number" min="1" step="1" value="${esc(a.depreciation_months||36)}"></label>
-        ${isEdit ? '' : `<label>${esc(tr('assets.form.your_share'))}<input name="ownership_percent" required type="number" min="0" max="100" step="0.01" value="100"></label>`}
-        <label class="tb-asset-check"><input name="include_in_budget" type="checkbox" ${a.include_in_budget !== false ? 'checked' : ''}><span>${esc(atxt('Inclure le coût mensuel dans le budget', 'Include monthly cost in budget'))}</span></label>
-        <label>${esc(atxt('Mode de calcul', 'Calculation mode'))}<select name="budget_method"><option value="linear" ${a.budget_method!=='manual'?'selected':''}>${esc(atxt('Amortissement linéaire', 'Linear depreciation'))}</option><option value="manual" ${a.budget_method==='manual'?'selected':''}>${esc(atxt('Montant mensuel manuel', 'Manual monthly amount'))}</option></select></label>
-        <label>${esc(atxt('Montant mensuel manuel', 'Manual monthly amount'))}<input name="monthly_budget_override" type="number" min="0" step="0.01" value="${esc(a.monthly_budget_override ?? '')}" placeholder="0.00"></label>
-        <label>${esc(atxt('Début dans le budget', 'Budget start'))}<input name="budget_start_date" type="date" value="${esc(a.budget_start_date||a.purchase_date||today())}"></label>
-        <label>${esc(atxt('Fin dans le budget', 'Budget end'))}<input name="budget_end_date" type="date" value="${esc(a.budget_end_date||'')}"></label>
-        <label>${esc(atxt('Jour mensuel', 'Monthly day'))}<input name="budget_day" type="number" min="1" max="31" step="1" value="${esc(a.budget_day||Number(String(a.purchase_date||today()).slice(8,10))||1)}"></label>
-      </div>
-      <div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`,
-    });
+    return window.UI?.assetView?.renderAssetEditorModalSpec?.({ mode, asset, today, tr, t:atxt, esc });
   }
-  function ownerRowHtml(o){ return `<div class="tb-owner-row" data-owner-id="${esc(o.id||'')}"><input name="owner_name" required placeholder="${esc(tr('assets.form.name'))}" value="${esc(o.display_name||'')}"><input name="owner_percent" required type="number" min="0" max="100" step="0.01" value="${esc(o.ownership_percent||0)}"><button type="button" data-tb-owner-remove>×</button></div>`; }
-  function ownersModalHtml(asset){ const rows = ownerRows(asset); return assetModalSpec({key:'owners',title:tr('assets.owners.title'),subtitle:tr('assets.owners.total_hint',{name:asset.name}),formAttrs:`data-tb-asset-owners-form data-asset-id="${esc(asset.id)}"`,submitLabel:tr('assets.owners.save'),contentHTML:`<div class="tb-owner-list" data-tb-owner-list>${rows.map(ownerRowHtml).join('')||ownerRowHtml({id:'',display_name:tr('assets.owner.me'),ownership_percent:100})}</div><button type="button" class="tb-owner-add" data-tb-owner-add>${esc(tr('assets.owners.add'))}</button><div class="tb-owner-total" data-tb-owner-total></div><div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`}); }
+  function ownerRowHtml(o){ return window.UI?.assetView?.renderAssetOwnerRow?.(o, { tr, esc }) || ''; }
+  function ownersModalHtml(asset){ return window.UI?.assetView?.renderAssetOwnersModalSpec?.({ asset, owners:CACHE.owners, tr, esc }); }
   function transferModalHtml(asset, transactions){
   const rows = ownerRows(asset);
   const opts = rows.map(r=>`<option value="${esc(r.id)}">${esc(r.display_name)} · ${Number(r.ownership_percent||0)}%</option>`).join('');

@@ -17,7 +17,7 @@ registerPwa();
 // TravelBudget V9 entrypoint (Vite + deterministic legacy loader)
 // This preserves the original global-script semantics while removing fragile <script> ordering in index.html.
 
-const LEGACY_SCRIPTS = [
+const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/00_constants.js',
   '/legacy/js/00_offline.js',
   '/legacy/js/00_offline_queue.js',
@@ -55,8 +55,6 @@ const LEGACY_SCRIPTS = [
   '/legacy/js/17_internal_transfers.js',
   '/legacy/js/17_charts.js',
   '/legacy/js/33_budget_analysis.js',
-  '/legacy/js/41_assets_core.js',
-  '/legacy/js/42_assets_ui.js',
   '/legacy/js/46_cautions_ui.js',
   '/legacy/js/43_documents_ui.js',
   '/legacy/js/44_inbox_ui.js',
@@ -79,6 +77,13 @@ const LEGACY_SCRIPTS = [
 ];
 
 const OPTIONAL_SCRIPTS = new Set(['/legacy/js/00_perf.js']);
+const LEGACY_DOMAIN_SCRIPTS = {
+  assets: [
+    '/legacy/js/41_assets_core.js',
+    '/legacy/js/42_assets_ui.js',
+  ],
+};
+const legacyDomainPromises = new Map();
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -98,7 +103,27 @@ async function boot() {
   window.__TB_BUILD__.version = window.TB_VERSION;
   window.__TB_BUILD__.loadedAt = new Date().toISOString();
 
-  for (const src of LEGACY_SCRIPTS) {
+  window.tbLoadLegacyDomain = function tbLoadLegacyDomain(domain) {
+    const key = String(domain || '').trim();
+    const scripts = LEGACY_DOMAIN_SCRIPTS[key];
+    if (!scripts) return Promise.resolve(false);
+    if (legacyDomainPromises.has(key)) return legacyDomainPromises.get(key);
+    const promise = (async () => {
+      for (const src of scripts) {
+        // eslint-disable-next-line no-await-in-loop
+        await loadScript(src);
+      }
+      return true;
+    })();
+    legacyDomainPromises.set(key, promise);
+    return promise;
+  };
+  window.tbIsLegacyDomainLoaded = function tbIsLegacyDomainLoaded(domain) {
+    const key = String(domain || '').trim();
+    return legacyDomainPromises.has(key);
+  };
+
+  for (const src of BOOT_LEGACY_SCRIPTS) {
     // eslint-disable-next-line no-await-in-loop
     try {
       await loadScript(src);

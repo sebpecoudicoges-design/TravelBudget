@@ -145,3 +145,101 @@ export function renderAssetCard({
     </div>
   </section>`;
 }
+
+export function assetModalSpec({
+  key,
+  title,
+  subtitle,
+  formAttrs,
+  contentHTML,
+  submitLabel,
+  extraActionsHTML = '',
+  size = 'lg',
+  tr = (keyName) => keyName,
+  esc = defaultEsc,
+} = {}) {
+  const formId = `tb-asset-${key}-form`;
+  return {
+    title,
+    subtitle,
+    size,
+    formId,
+    contentHTML: `<form id="${formId}" ${formAttrs}>${contentHTML}</form>`,
+    actionsHTML: `${extraActionsHTML}<button class="btn" type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button><button class="btn primary" type="submit" data-tb-asset-submit form="${formId}">${esc(submitLabel)}</button>`,
+  };
+}
+
+export function renderAssetEditorModalSpec({
+  mode = 'create',
+  asset = {},
+  today = () => new Date().toISOString().slice(0, 10),
+  tr = (keyName) => keyName,
+  t = (fr) => fr,
+  esc = defaultEsc,
+} = {}) {
+  const now = today();
+  const a = {
+    name: '',
+    asset_type: 'car',
+    purchase_value: '',
+    residual_value: 0,
+    currency: 'EUR',
+    purchase_date: now,
+    depreciation_months: 36,
+    include_in_budget: true,
+    budget_method: 'linear',
+    budget_start_date: now,
+    budget_day: Number(now.slice(8, 10)),
+    ...asset,
+  };
+  const isEdit = mode === 'edit';
+  return assetModalSpec({
+    key: 'editor',
+    title: isEdit ? tr('assets.modal.edit_title') : tr('assets.modal.add_title'),
+    subtitle: t('Le coût mensuel alimente uniquement Budget et Analyse, jamais le solde des portefeuilles.', 'The monthly cost feeds Budget and Analysis only, never wallet balances.'),
+    formAttrs: `data-tb-asset-form="${isEdit ? 'edit' : 'create'}" ${isEdit ? `data-asset-id="${esc(a.id)}"` : ''}`,
+    submitLabel: isEdit ? tr('documents.action.save') : tr('assets.action.create_asset'),
+    tr,
+    esc,
+    contentHTML: `<div class="tb-asset-form-grid">
+      <label>${esc(tr('assets.form.name'))}<input name="name" required placeholder="Toyota X-Trail" value="${esc(a.name)}"></label>
+      <label>${esc(tr('assets.form.type'))}<select name="asset_type"><option value="car" ${a.asset_type === 'car' ? 'selected' : ''}>${esc(tr('assets.type.car'))}</option><option value="real_estate" ${a.asset_type === 'real_estate' ? 'selected' : ''}>${esc(tr('assets.type.real_estate'))}</option><option value="equipment" ${a.asset_type === 'equipment' ? 'selected' : ''}>${esc(tr('assets.type.equipment'))}</option><option value="other" ${a.asset_type === 'other' ? 'selected' : ''}>${esc(tr('assets.type.other'))}</option></select></label>
+      <label>${esc(tr('assets.form.purchase_value'))}<input name="purchase_value" required type="number" min="0" step="0.01" placeholder="5000" value="${esc(a.purchase_value)}"></label>
+      <label>${esc(tr('assets.form.residual_value'))}<input name="residual_value" type="number" min="0" step="0.01" value="${esc(a.residual_value)}"></label>
+      <label>${esc(tr('assets.form.currency'))}<input name="currency" required maxlength="3" value="${esc(a.currency || 'EUR')}"></label>
+      <label>${esc(tr('assets.form.purchase_date'))}<input name="purchase_date" required type="date" value="${esc(a.purchase_date || now)}"></label>
+      <label>${esc(tr('assets.form.depreciation_months'))}<input name="depreciation_months" required type="number" min="1" step="1" value="${esc(a.depreciation_months || 36)}"></label>
+      ${isEdit ? '' : `<label>${esc(tr('assets.form.your_share'))}<input name="ownership_percent" required type="number" min="0" max="100" step="0.01" value="100"></label>`}
+      <label class="tb-asset-check"><input name="include_in_budget" type="checkbox" ${a.include_in_budget !== false ? 'checked' : ''}><span>${esc(t('Inclure le coût mensuel dans le budget', 'Include monthly cost in budget'))}</span></label>
+      <label>${esc(t('Mode de calcul', 'Calculation mode'))}<select name="budget_method"><option value="linear" ${a.budget_method !== 'manual' ? 'selected' : ''}>${esc(t('Amortissement linéaire', 'Linear depreciation'))}</option><option value="manual" ${a.budget_method === 'manual' ? 'selected' : ''}>${esc(t('Montant mensuel manuel', 'Manual monthly amount'))}</option></select></label>
+      <label>${esc(t('Montant mensuel manuel', 'Manual monthly amount'))}<input name="monthly_budget_override" type="number" min="0" step="0.01" value="${esc(a.monthly_budget_override ?? '')}" placeholder="0.00"></label>
+      <label>${esc(t('Début dans le budget', 'Budget start'))}<input name="budget_start_date" type="date" value="${esc(a.budget_start_date || a.purchase_date || now)}"></label>
+      <label>${esc(t('Fin dans le budget', 'Budget end'))}<input name="budget_end_date" type="date" value="${esc(a.budget_end_date || '')}"></label>
+      <label>${esc(t('Jour mensuel', 'Monthly day'))}<input name="budget_day" type="number" min="1" max="31" step="1" value="${esc(a.budget_day || Number(String(a.purchase_date || now).slice(8, 10)) || 1)}"></label>
+    </div>
+    <div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`,
+  });
+}
+
+export function renderAssetOwnerRow(owner = {}, { tr = (keyName) => keyName, esc = defaultEsc } = {}) {
+  return `<div class="tb-owner-row" data-owner-id="${esc(owner.id || '')}"><input name="owner_name" required placeholder="${esc(tr('assets.form.name'))}" value="${esc(owner.display_name || '')}"><input name="owner_percent" required type="number" min="0" max="100" step="0.01" value="${esc(owner.ownership_percent || 0)}"><button type="button" data-tb-owner-remove>x</button></div>`;
+}
+
+export function renderAssetOwnersModalSpec({
+  asset = {},
+  owners = [],
+  tr = (keyName) => keyName,
+  esc = defaultEsc,
+} = {}) {
+  const rows = rowsForAsset(asset, owners);
+  return assetModalSpec({
+    key: 'owners',
+    title: tr('assets.owners.title'),
+    subtitle: tr('assets.owners.total_hint', { name: asset.name }),
+    formAttrs: `data-tb-asset-owners-form data-asset-id="${esc(asset.id)}"`,
+    submitLabel: tr('assets.owners.save'),
+    tr,
+    esc,
+    contentHTML: `<div class="tb-owner-list" data-tb-owner-list>${rows.map((owner) => renderAssetOwnerRow(owner, { tr, esc })).join('') || renderAssetOwnerRow({ id: '', display_name: tr('assets.owner.me'), ownership_percent: 100 }, { tr, esc })}</div><button type="button" class="tb-owner-add" data-tb-owner-add>${esc(tr('assets.owners.add'))}</button><div class="tb-owner-total" data-tb-owner-total></div><div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`,
+  });
+}

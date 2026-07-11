@@ -2,11 +2,14 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 describe('assets shared modal migration', () => {
-  const source = fs.readFileSync('public/legacy/js/42_assets_ui.js', 'utf8');
+  const legacySource = fs.readFileSync('public/legacy/js/42_assets_ui.js', 'utf8');
+  const viewSource = fs.readFileSync('src/features/assets/assetView.js', 'utf8');
+  const source = `${legacySource}\n${viewSource}`;
 
   it('routes every asset form through one shared modal adapter', () => {
-    expect(source).toContain("window.UI?.createModal?.({");
-    expect(source).toContain("id:'tb-assets-shared-modal'");
+    expect(legacySource).toContain("window.UI?.createModal?.({");
+    expect(legacySource).toContain("id:'tb-assets-shared-modal'");
+    expect(legacySource).toContain("window.UI?.assetView?.assetModalSpec");
     expect(source).toContain('data-tb-asset-form=');
     expect(source).toContain('data-tb-asset-owners-form');
     expect(source).toContain('data-tb-asset-transfer-form');
@@ -21,6 +24,8 @@ describe('assets shared modal migration', () => {
     expect(source).not.toContain('tb-asset-modal-head');
     expect(source).not.toContain('tb-asset-modal-actions');
     expect(source.match(/role="alert"/g)).toHaveLength(5);
+    expect(viewSource).toContain('renderAssetEditorModalSpec');
+    expect(viewSource).toContain('renderAssetOwnersModalSpec');
   });
 
   it('keeps linked documents readable from the offline snapshot', () => {

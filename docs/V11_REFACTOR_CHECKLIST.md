@@ -99,6 +99,8 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire le rendu du parcours professionnel : fresque, KPI, missions, revenus, periodes et dossiers lies.
 - [ ] Patrimoine : separer actifs, cout mensuel et integration budget.
   - [x] Extraire la carte actif : valeur, amortissement, cout mensuel budget, proprietaires, evenements, documents, actions et P&L realise.
+  - [x] Extraire les formulaires actif et proprietaires vers `assetView`.
+  - [ ] Extraire les formulaires transfert, vente et documents vers des vues pures testees.
 
 ## Audit transversal - Regles recurrentes
 
@@ -114,6 +116,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 
 - [ ] Charger Dashboard et Settings au demarrage uniquement.
 - [ ] Charger Trip, Sport, Nutrition et Travail a l'ouverture.
+- [x] Lancer le chargement differe pilote pour Patrimoine : `41_assets_core.js` et `42_assets_ui.js` charges a l'ouverture de l'onglet.
 - [ ] Decouper les gros bundles par domaine.
 - [ ] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
