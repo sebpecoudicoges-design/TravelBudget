@@ -173,7 +173,19 @@ function showView(view) {
       });
     }
   }
-  if (view === "help") { if (typeof renderHelpFaq === "function") renderHelpFaq(); }
+  if (view === "help") {
+    if (typeof renderHelpFaq === "function") renderHelpFaq();
+    else if (typeof window.tbLoadLegacyDomain === "function") {
+      const root = document.getElementById("help-root");
+      if (root) root.innerHTML = `<div class="muted">Chargement aide...</div>`;
+      window.tbLoadLegacyDomain("help").then(() => {
+        if ((window.activeView || activeView) === "help" && typeof window.renderHelpFaq === "function") window.renderHelpFaq("navigation:lazy");
+      }).catch((e) => {
+        console.error("[TB] Help lazy load failed", e);
+        alert(`Aide indisponible : ${e?.message || e}`);
+      });
+    }
+  }
 }
 
 

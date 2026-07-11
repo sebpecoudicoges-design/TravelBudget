@@ -458,6 +458,16 @@
   }
   function clearTimerState() {
     try { localStorage.removeItem(TIMER_STATE_KEY()); } catch (_) {}
+    if (!CACHE.timer) syncTimerFocusLock();
+  }
+  function syncTimerFocusLock() {
+    const enabled = !!(CACHE.timer && CACHE.timerFocus);
+    try { document.documentElement.classList.toggle("tb-sport-focus-lock", enabled); } catch (_) {}
+    try { document.body?.classList.toggle("tb-sport-focus-lock", enabled); } catch (_) {}
+    try {
+      if (enabled) document.body?.setAttribute("data-tb-sport-focus", "1");
+      else document.body?.removeAttribute("data-tb-sport-focus");
+    } catch (_) {}
   }
   function bmiValue(kg, cm) {
     const h = n(cm, 0) / 100;
@@ -2135,12 +2145,15 @@
       .tb-sport-smart-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;}
       .tb-sport-simple{border:1px solid rgba(14,165,233,.18);border-radius:22px;background:linear-gradient(180deg,#f0f9ff,#fff);padding:14px;margin:12px 0;}
       .tb-sport-simple-title{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;}
+      html.tb-sport-focus-lock,body.tb-sport-focus-lock{overflow:hidden!important;height:100%!important;overscroll-behavior:none!important;touch-action:none!important;}
+      body.tb-sport-focus-lock .wrap,body.tb-sport-focus-lock #app,body.tb-sport-focus-lock main{overflow:hidden!important;max-height:100dvh!important;}
+      body.tb-sport-focus-lock .mobile-bottom-nav,body.tb-sport-focus-lock .tabbar,body.tb-sport-focus-lock .tabs{display:none!important;}
       .tb-sport-timer{min-height:300px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:12px;border-radius:24px;background:radial-gradient(circle at 50% 0%,rgba(37,99,235,.18),transparent 38%),#0f172a;color:white;padding:18px;}
       .tb-sport-timer .kind{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#93c5fd;font-weight:950;}
       .tb-sport-timer .name{font-size:34px;font-weight:950;line-height:1.05;}
       .tb-sport-timer .clock{font-size:56px;font-weight:950;letter-spacing:-.05em;}
       .tb-sport-timer .hint{color:#cbd5e1;font-weight:800;}
-      .tb-sport-timer-card.focus{position:fixed;inset:0;z-index:100040;border-radius:0!important;padding:calc(8px + env(safe-area-inset-top,0px)) calc(8px + env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) calc(8px + env(safe-area-inset-left,0px))!important;overflow:hidden;background:#020617;box-sizing:border-box;}
+      .tb-sport-timer-card.focus{position:fixed;inset:0;z-index:100040;border-radius:0!important;padding:calc(8px + env(safe-area-inset-top,0px)) calc(8px + env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) calc(8px + env(safe-area-inset-left,0px))!important;overflow:hidden;background:#020617;box-sizing:border-box;width:100vw;height:100dvh;max-width:100vw;max-height:100dvh;}
       .tb-sport-timer-card.focus h3{display:none;}
       .tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));max-height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));min-height:0;border-radius:20px;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;gap:clamp(7px,1.2vh,14px);}
       .tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);}
@@ -2835,7 +2848,9 @@
     const root = document.getElementById("sport-root");
     if (!root) return;
     ensureStyles();
+    syncTimerFocusLock();
     reloadScopedLocalState(false);
+    syncTimerFocusLock();
     if (!CACHE.libraryLoaded && !CACHE.libraryLoading) {
       ensureSportLibraryLoaded(reason).then((changed) => {
         if (changed && (window.activeView || "") === "sport") renderSport("library-loaded");
@@ -2873,6 +2888,7 @@
         ${renderHistory()}
       </div>`;
     bind(root);
+    syncTimerFocusLock();
     syncSessionEditorPortal();
     syncBodyMeasurementPortal();
     if (!CACHE.loaded && !CACHE.loading) {
@@ -3183,11 +3199,13 @@
     if (focus) focus.onclick = async () => {
       CACHE.timerFocus = !CACHE.timerFocus;
       const shouldFocus = CACHE.timerFocus;
+      syncTimerFocusLock();
       renderSport("timer-focus");
       try {
         if (shouldFocus) await keepTimerFullscreen("toggle");
-        else if (!shouldFocus && document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
+        else if (!shouldFocus) await exitTimerFullscreen();
       } catch (_) {}
+      syncTimerFocusLock();
     };
     const beepVolume = root.querySelector("#sport-beep-volume");
     if (beepVolume) beepVolume.oninput = () => {
@@ -3497,6 +3515,7 @@
     };
     CACHE.timer = null;
     CACHE.timerFocus = false;
+    syncTimerFocusLock();
     CACHE.pendingSummary = summary;
     renderSport("mark-done");
     openFinishModal(summary);
@@ -3658,12 +3677,22 @@
   }
   async function keepTimerFullscreen(reason) {
     if (!CACHE.timerFocus) return;
-    const target = document.documentElement;
-    if (!target?.requestFullscreen || document.fullscreenElement) return;
-    try { await target.requestFullscreen({ navigationUI: "hide" }); }
-    catch (_) {
-      try { await target.requestFullscreen(); } catch (_) {}
-    }
+    syncTimerFocusLock();
+    const target = document.querySelector(".tb-sport-timer-card.focus") || document.documentElement;
+    const current = document.fullscreenElement || document.webkitFullscreenElement || null;
+    if (current) return;
+    const request = target?.requestFullscreen || target?.webkitRequestFullscreen || null;
+    if (!request) return;
+    try { await request.call(target, { navigationUI: "hide" }); }
+    catch (_) { try { await request.call(target); } catch (_) {} }
+  }
+  async function exitTimerFullscreen() {
+    syncTimerFocusLock();
+    const current = document.fullscreenElement || document.webkitFullscreenElement || null;
+    if (!current) return;
+    const exit = document.exitFullscreen || document.webkitExitFullscreen || null;
+    if (!exit) return;
+    try { await exit.call(document); } catch (_) {}
   }
   function restoreTimerFullscreen(reason) {
     if (!CACHE.timerFocus) return;
@@ -3816,6 +3845,8 @@
       summary.progressions = progressions;
     }
     CACHE.timer = null;
+    CACHE.timerFocus = false;
+    syncTimerFocusLock();
     clearTimerState();
     CACHE.pendingSummary = summary;
     beep("finish");

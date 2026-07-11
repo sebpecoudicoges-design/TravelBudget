@@ -58,6 +58,22 @@ describe('legacy domain loader', () => {
     expect(inboxUi).toContain("window.renderDocuments('inbox-classified')");
   });
 
+  it('keeps Help FAQ out of boot while preserving the global assistant and guide at startup', () => {
+    const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+
+    expect(bootList).not.toContain('/legacy/js/31_help_faq.js');
+    expect(bootList).toContain('/legacy/js/32_help_assistant.js');
+    expect(bootList).toContain('/legacy/js/35_guided_tour.js');
+    expect(domains).toContain('help:');
+    expect(domains).toContain('/legacy/js/31_help_faq.js');
+    expect(navigation).toContain('window.tbLoadLegacyDomain("help")');
+    expect(navigation).toContain('window.renderHelpFaq("navigation:lazy")');
+    expect(index).toContain('id="tab-help"');
+    expect(index).toContain('id="view-help"');
+    expect(index).toContain('id="help-root"');
+  });
+
   it('keeps Nutrition out of boot and lazy-loads it before rendering the Nutrition view', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
     const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));

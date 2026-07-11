@@ -41,7 +41,6 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/28_data_updated_bus.js',
   '/legacy/js/27_cashflow_curve.js',
   '/legacy/js/10_navigation.js',
-  '/legacy/js/31_help_faq.js',
   '/legacy/js/32_help_assistant.js',
   '/legacy/js/35_guided_tour.js',
   '/legacy/js/11_kpi_render_micro_animation.js',
@@ -78,6 +77,9 @@ const LEGACY_DOMAIN_SCRIPTS = {
   ],
   documents: [
     '/legacy/js/43_documents_ui.js',
+  ],
+  help: [
+    '/legacy/js/31_help_faq.js',
   ],
   nutrition: [
     '/legacy/js/48_nutrition_ui.js',
