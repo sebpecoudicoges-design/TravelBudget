@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   renderAssetCard,
+  renderAssetDocumentsModalSpec,
   renderAssetEditorModalSpec,
   renderAssetOwnersModalSpec,
+  renderAssetSaleModalSpec,
+  renderAssetTransferModalSpec,
   renderPortfolioSummary,
 } from '../../../src/features/assets/assetView.js';
 
@@ -120,5 +123,54 @@ describe('Asset view helpers', () => {
     expect(owners.contentHTML).toContain('data-owner-id="owner-1"');
     expect(owners.contentHTML).toContain('Moi');
     expect(owners.contentHTML).toContain('data-tb-owner-add');
+  });
+
+  it('renders transfer, sale and document modal specs with stable hooks', () => {
+    const transfer = renderAssetTransferModalSpec({
+      asset: { id: 'asset-1', name: 'Van', currency: 'AUD' },
+      owners: [
+        { id: 'owner-1', asset_id: 'asset-1', display_name: 'Moi', ownership_percent: 60 },
+        { id: 'owner-2', asset_id: 'asset-1', display_name: 'Co-owner', ownership_percent: 40 },
+      ],
+      transactions: [{ id: 'tx-1', label: 'Achat part' }],
+      today: () => '2026-07-11',
+      tr: (key) => key,
+      txLabel: (tx) => tx.label,
+    });
+    expect(transfer.formId).toBe('tb-asset-transfer-form');
+    expect(transfer.contentHTML).toContain('data-tb-asset-transfer-form');
+    expect(transfer.contentHTML).toContain('data-asset-id="asset-1"');
+    expect(transfer.contentHTML).toContain('owner-1');
+    expect(transfer.contentHTML).toContain('tx-1');
+
+    const sale = renderAssetSaleModalSpec({
+      asset: { id: 'asset-1', name: 'Van', currency: 'AUD' },
+      transactions: [{ id: 'tx-2', label: 'Vente van' }],
+      today: () => '2026-07-12',
+      tr: (key) => key,
+      t: (fr) => fr,
+      txLabel: (tx) => tx.label,
+    });
+    expect(sale.formId).toBe('tb-asset-sell-form');
+    expect(sale.contentHTML).toContain('data-tb-asset-sell-form');
+    expect(sale.contentHTML).toContain('Prix de vente total');
+    expect(sale.contentHTML).toContain('tx-2');
+
+    const docs = renderAssetDocumentsModalSpec({
+      asset: { id: 'asset-1', name: 'Van' },
+      docs: [{ id: 'doc-1', name: 'Facture.pdf', tags: ['van'], created_at: '2026-07-01' }],
+      links: [{ id: 'link-1', asset_id: 'asset-1', document_id: 'doc-2', relation_type: 'invoice' }],
+      txLinks: [{ document_id: 'doc-2', transaction_id: 'tx-3' }],
+      tr: (key) => key,
+      t: (fr) => fr,
+      findTxById: () => ({ id: 'tx-3', label: 'Paiement' }),
+      txDocLine: (tx) => tx.label,
+    });
+    expect(docs.formId).toBe('tb-asset-documents-form');
+    expect(docs.contentHTML).toContain('data-tb-asset-docs-form');
+    expect(docs.contentHTML).toContain('data-tb-asset-open-tx="tx-3"');
+    expect(docs.contentHTML).toContain('data-tb-asset-unlink-doc="link-1"');
+    expect(docs.actionsHTML).toContain('data-tb-asset-doc-upload="asset-1"');
+    expect(docs.contentHTML).toContain('Facture.pdf');
   });
 });

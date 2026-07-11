@@ -100,7 +100,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [ ] Patrimoine : separer actifs, cout mensuel et integration budget.
   - [x] Extraire la carte actif : valeur, amortissement, cout mensuel budget, proprietaires, evenements, documents, actions et P&L realise.
   - [x] Extraire les formulaires actif et proprietaires vers `assetView`.
-  - [ ] Extraire les formulaires transfert, vente et documents vers des vues pures testees.
+  - [x] Extraire les formulaires transfert, vente et documents vers des vues pures testees.
 
 ## Audit transversal - Regles recurrentes
 

@@ -243,3 +243,245 @@ export function renderAssetOwnersModalSpec({
     contentHTML: `<div class="tb-owner-list" data-tb-owner-list>${rows.map((owner) => renderAssetOwnerRow(owner, { tr, esc })).join('') || renderAssetOwnerRow({ id: '', display_name: tr('assets.owner.me'), ownership_percent: 100 }, { tr, esc })}</div><button type="button" class="tb-owner-add" data-tb-owner-add>${esc(tr('assets.owners.add'))}</button><div class="tb-owner-total" data-tb-owner-total></div><div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`,
   });
 }
+
+export function renderAssetTransferModalSpec({
+  asset = {},
+  owners = [],
+  transactions = [],
+  today = () => new Date().toISOString().slice(0, 10),
+  tr = (keyName) => keyName,
+  esc = defaultEsc,
+  txLabel = (tx) => tx?.label || tx?.id || '',
+} = {}) {
+  const rows = rowsForAsset(asset, owners);
+  const opts = rows.map((owner) => `<option value="${esc(owner.id)}">${esc(owner.display_name)} · ${num(owner.ownership_percent, 0)}%</option>`).join('');
+  const txOpts = (transactions || []).map((tx) => `<option value="${esc(tx.id)}">${esc(txLabel(tx))}</option>`).join('');
+
+  return assetModalSpec({
+    key: 'transfer',
+    title: tr('assets.transfer.title'),
+    subtitle: tr('assets.transfer.body'),
+    formAttrs: `data-tb-asset-transfer-form data-asset-id="${esc(asset.id)}"`,
+    submitLabel: tr('assets.transfer.submit'),
+    tr,
+    esc,
+    contentHTML: `<div class="tb-asset-form-grid">
+        <label>${esc(tr('assets.form.type'))}
+          <select name="event_type">
+            <option value="transfer_share">${esc(tr('assets.event.transfer_share'))}</option>
+            <option value="buy_share">${esc(tr('assets.event.buy_share'))}</option>
+            <option value="sell_share">${esc(tr('assets.event.sell_share'))}</option>
+          </select>
+        </label>
+
+        <label>${esc(tr('assets.transfer.date'))}
+          <input name="event_date" type="date" required value="${esc(today())}">
+        </label>
+
+        <label>${esc(tr('assets.transfer.seller'))}
+          <select name="from_owner_id" required>${opts}</select>
+        </label>
+
+        <label>${esc(tr('assets.transfer.buyer'))}
+          <select name="to_owner_id" required>${opts}</select>
+        </label>
+
+        <label>${esc(tr('assets.transfer.percent'))}
+          <input name="percent" required type="number" min="0.01" max="100" step="0.01" value="10">
+        </label>
+
+        <label>${esc(tr('assets.transfer.amount'))}
+          <input name="amount" type="number" min="0" step="0.01" value="0">
+        </label>
+
+        <label>${esc(tr('assets.form.currency'))}
+          <input name="currency" maxlength="3" value="${esc(asset.currency || 'EUR')}">
+        </label>
+
+        <label>${esc(tr('assets.transfer.linked_transaction'))}
+          <select name="linked_transaction_id">
+            <option value="">${esc(tr('assets.transfer.no_linked_transaction'))}</option>
+            ${txOpts}
+          </select>
+        </label>
+
+        <label>Note
+          <input name="note" placeholder="Rachat part voiture">
+        </label>
+      </div>
+
+      <div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`,
+  });
+}
+
+export function renderAssetSaleModalSpec({
+  asset = {},
+  transactions = [],
+  today = () => new Date().toISOString().slice(0, 10),
+  t = (fr) => fr,
+  tr = (keyName) => keyName,
+  esc = defaultEsc,
+  txLabel = (tx) => tx?.label || tx?.id || '',
+} = {}) {
+  const txOpts = (transactions || []).map((tx) => `<option value="${esc(tx.id)}">${esc(txLabel(tx))}</option>`).join('');
+
+  return assetModalSpec({
+    key: 'sell',
+    title: t("Vendre l’asset", 'Sell asset'),
+    subtitle: t("Marque l’asset comme vendu. Le prix de vente est réparti selon les parts actuelles. Aucun cashflow n’est créé.", 'Mark the asset as sold. The sale price is split according to current shares. No cashflow is created.'),
+    formAttrs: `data-tb-asset-sell-form data-asset-id="${esc(asset.id)}"`,
+    submitLabel: t('Valider la vente', 'Confirm sale'),
+    tr,
+    esc,
+    contentHTML: `<div class="tb-asset-form-grid">
+        <label>${esc(t('Date de vente', 'Sale date'))}
+          <input name="event_date" type="date" required value="${esc(today())}">
+        </label>
+
+        <label>${esc(t('Prix de vente total', 'Total sale price'))}
+          <input name="amount" type="number" min="0" step="0.01" required value="0">
+        </label>
+
+        <label>${esc(t('Devise', 'Currency'))}
+          <input name="currency" maxlength="3" required value="${esc(asset.currency || 'EUR')}">
+        </label>
+
+        <label>${esc(t('Transaction liée', 'Linked transaction'))}
+          <select name="linked_transaction_id">
+            <option value="">${esc(t('Aucune transaction liée', 'No linked transaction'))}</option>
+            ${txOpts}
+          </select>
+        </label>
+
+        <label>Note
+          <input name="note" placeholder="${esc(t("Vente totale de l’asset", 'Full asset sale'))}">
+        </label>
+      </div>
+
+      <div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`,
+  });
+}
+
+function defaultDocNameLabel(doc) {
+  return doc?.name || doc?.original_filename || 'Document';
+}
+
+function defaultDocLabel(doc) {
+  if (!doc) return 'Document';
+  return [doc.name || doc.original_filename || 'Document', Array.isArray(doc.tags) ? doc.tags.join(', ') : '', String(doc.created_at || '').slice(0, 10)].filter(Boolean).join(' · ');
+}
+
+function renderLinkedMovementsHtml(docId, txLinks = [], tripLinks = [], helpers = {}) {
+  const {
+    t = (fr) => fr,
+    esc = defaultEsc,
+    findTxById = () => null,
+    findTripExpenseById = () => null,
+    isTripLinkedTransaction = () => false,
+    txDocLine = () => 'Transaction',
+    tripDocLine = () => 'Trip',
+  } = helpers;
+  const normal = (txLinks || []).filter((link) => String(link.document_id || '') === String(docId));
+  const trips = (tripLinks || []).filter((link) => String(link.document_id || '') === String(docId));
+
+  if (!normal.length && !trips.length) {
+    return `<div class="tb-asset-doc-linked-empty">${esc(t('Aucune transaction liée à ce document.', 'No transaction linked to this document.'))}</div>`;
+  }
+
+  return `<div class="tb-asset-doc-linked-tree">
+    <strong>${esc(t('Transactions liées au document', 'Transactions linked to document'))}</strong>
+    ${normal.map((link) => {
+      const tx = findTxById(link.transaction_id);
+      const isTripTx = isTripLinkedTransaction(tx);
+      return `<div class="tb-asset-doc-linked-line">
+    <span class="${isTripTx ? 'trip' : ''}">
+      ${esc(isTripTx ? t('Transaction Trip', 'Trip transaction') : t('Transaction', 'Transaction'))}
+    </span>
+    <button type="button" data-tb-asset-open-tx="${esc(link.transaction_id)}">${esc(txDocLine(tx))}</button>
+  </div>`;
+    }).join('')}
+    ${trips.map((link) => {
+      const expense = findTripExpenseById(link.expense_id);
+      return `<div class="tb-asset-doc-linked-line">
+        <span class="trip">${esc(t('Transaction Trip', 'Trip transaction'))}</span>
+        <button type="button" data-tb-asset-open-trip-expense="${esc(link.expense_id)}">${esc(tripDocLine(expense))}</button>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+export function renderAssetDocumentsModalSpec({
+  asset = {},
+  docs = [],
+  links = [],
+  message = '',
+  txLinks = [],
+  tripLinks = [],
+  tr = (keyName) => keyName,
+  t = (fr) => fr,
+  esc = defaultEsc,
+  docLabel = defaultDocLabel,
+  docNameLabel = defaultDocNameLabel,
+  findTxById,
+  findTripExpenseById,
+  isTripLinkedTransaction,
+  txDocLine,
+  tripDocLine,
+} = {}) {
+  const linkedIds = new Set((links || []).map((link) => String(link.document_id || '')));
+  const candidates = (docs || []).filter((doc) => !linkedIds.has(String(doc.id || ''))).slice(0, 80);
+  const linkedHelpers = { t, esc, findTxById, findTripExpenseById, isTripLinkedTransaction, txDocLine, tripDocLine };
+
+  return assetModalSpec({
+    key: 'documents',
+    title: t('Documents liés', 'Linked documents'),
+    subtitle: asset.name || 'Asset',
+    size: 'lg',
+    formAttrs: `data-tb-asset-docs-form data-asset-id="${esc(asset.id)}"`,
+    submitLabel: t('Lier le document', 'Link document'),
+    extraActionsHTML: `<button class="btn" type="button" data-tb-asset-doc-upload="${esc(asset.id)}">+ ${esc(t('Ajouter un document', 'Add document'))}</button>`,
+    tr,
+    esc,
+    contentHTML: `${message ? `<div class="tb-asset-modal-error tb-asset-doc-message" data-tb-asset-doc-message>${esc(message)}</div>` : ''}
+
+      <div class="tb-asset-doc-list">
+        ${(links || []).length ? links.map((link) => {
+          const doc = (docs || []).find((item) => String(item.id || '') === String(link.document_id || ''));
+          return `<div class="tb-asset-doc-row tree">
+            <div>
+              <strong>📄 ${esc(docNameLabel(doc))}</strong>
+              <br>
+              <span>${esc(t('Type', 'Type'))} : ${esc(tr(`documents.relation.${link.relation_type || 'proof'}`))}</span>
+              ${renderLinkedMovementsHtml(link.document_id, txLinks, tripLinks, linkedHelpers)}
+            </div>
+
+            <div>
+              <button type="button" data-tb-asset-open-doc="${esc(link.document_id)}">${esc(t('Ouvrir', 'Open'))}</button>
+              <button type="button" data-tb-asset-unlink-doc="${esc(link.id)}">${esc(t('Délier', 'Unlink'))}</button>
+            </div>
+          </div>`;
+        }).join('') : `<div class="tb-asset-doc-empty">${esc(t('Aucun document lié.', 'No linked document.'))}</div>`}
+      </div>
+
+      <div class="tb-asset-form-grid" style="margin-top:14px;">
+        <label>${esc(t('Ajouter un document existant', 'Add existing document'))}
+          <select name="document_id" required>
+            <option value="">${esc(t('Choisir un document', 'Choose a document'))}</option>
+            ${candidates.map((doc) => `<option value="${esc(doc.id)}">${esc(docLabel(doc))}</option>`).join('')}
+          </select>
+        </label>
+
+        <label>${esc(t('Relation', 'Relation'))}
+          <select name="relation_type">
+            <option value="invoice">${esc(tr('documents.relation.invoice'))}</option>
+            <option value="receipt">${esc(tr('documents.relation.receipt'))}</option>
+            <option value="warranty">${esc(tr('documents.relation.warranty'))}</option>
+            <option value="proof" selected>${esc(tr('documents.relation.proof'))}</option>
+            <option value="other">${esc(tr('documents.relation.other'))}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`,
+  });
+}
