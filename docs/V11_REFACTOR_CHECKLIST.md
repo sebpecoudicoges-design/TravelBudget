@@ -122,6 +122,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Sortir Trip du boot : `29_trip_v1.js` et `30_members_admin.js` charges au premier affichage de Partage ou Membres.
   - [x] Sortir Sport du boot : `45_sport_ui.js` charge au premier affichage de l'onglet Sport, avec replay offline qui charge le domaine avant synchro.
   - [x] Sortir Notifications du boot : `49_notifications_ui.js` charge au premier affichage de l'onglet Notifications.
+  - [x] Sortir Documents et Cautions du boot : `43_documents_ui.js` et `46_cautions_ui.js` chargent au premier affichage, avec liens Patrimoine/Inbox compatibles lazy.
 - [ ] Decouper les gros bundles par domaine.
 - [ ] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 

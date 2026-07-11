@@ -55,8 +55,6 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/17_internal_transfers.js',
   '/legacy/js/17_charts.js',
   '/legacy/js/33_budget_analysis.js',
-  '/legacy/js/46_cautions_ui.js',
-  '/legacy/js/43_documents_ui.js',
   '/legacy/js/44_inbox_ui.js',
   '/legacy/js/18_main_render.js',
   '/legacy/js/08_refresh.js',
@@ -74,6 +72,12 @@ const LEGACY_DOMAIN_SCRIPTS = {
   assets: [
     '/legacy/js/41_assets_core.js',
     '/legacy/js/42_assets_ui.js',
+  ],
+  cautions: [
+    '/legacy/js/46_cautions_ui.js',
+  ],
+  documents: [
+    '/legacy/js/43_documents_ui.js',
   ],
   nutrition: [
     '/legacy/js/48_nutrition_ui.js',

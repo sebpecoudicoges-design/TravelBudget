@@ -5,6 +5,8 @@ describe('legacy domain loader', () => {
   const main = fs.readFileSync('src/main.js', 'utf8');
   const navigation = fs.readFileSync('public/legacy/js/10_navigation.js', 'utf8');
   const offlineQueue = fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8');
+  const assetsUi = fs.readFileSync('public/legacy/js/42_assets_ui.js', 'utf8');
+  const inboxUi = fs.readFileSync('public/legacy/js/44_inbox_ui.js', 'utf8');
   const index = fs.readFileSync('index.html', 'utf8');
 
   it('keeps Assets out of the boot legacy list and registers it as a deferred domain', () => {
@@ -22,6 +24,38 @@ describe('legacy domain loader', () => {
   it('loads the Assets domain before rendering the Assets view when needed', () => {
     expect(navigation).toContain('window.tbLoadLegacyDomain("assets")');
     expect(navigation).toContain('renderAssets("navigation:lazy")');
+  });
+
+  it('keeps Cautions out of boot and lazy-loads it before rendering the Cautions view', () => {
+    const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+
+    expect(bootList).not.toContain('/legacy/js/46_cautions_ui.js');
+    expect(domains).toContain('cautions:');
+    expect(domains).toContain('/legacy/js/46_cautions_ui.js');
+    expect(navigation).toContain('window.tbLoadLegacyDomain("cautions")');
+    expect(navigation).toContain('renderCautions("navigation:lazy")');
+    expect(index).toContain('id="tab-cautions"');
+    expect(index).toContain('id="view-cautions"');
+    expect(index).toContain('id="cautions-root"');
+  });
+
+  it('keeps Documents out of boot and lazy-loads it before rendering the Documents view', () => {
+    const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+
+    expect(bootList).not.toContain('/legacy/js/43_documents_ui.js');
+    expect(domains).toContain('documents:');
+    expect(domains).toContain('/legacy/js/43_documents_ui.js');
+    expect(navigation).toContain('window.tbLoadLegacyDomain("documents")');
+    expect(navigation).toContain('renderDocuments("navigation:lazy")');
+    expect(index).toContain('id="tab-documents"');
+    expect(index).toContain('id="view-documents"');
+    expect(index).toContain('id="documents-root"');
+    expect(assetsUi).toContain("await window.tbLoadLegacyDomain('documents')");
+    expect(assetsUi).toContain('window.tbDocumentsPreview?.(docId)');
+    expect(inboxUi).toContain("await window.tbLoadLegacyDomain('documents')");
+    expect(inboxUi).toContain("window.renderDocuments('inbox-classified')");
   });
 
   it('keeps Nutrition out of boot and lazy-loads it before rendering the Nutrition view', () => {

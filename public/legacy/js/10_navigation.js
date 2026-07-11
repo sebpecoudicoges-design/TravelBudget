@@ -62,8 +62,32 @@ function showView(view) {
       });
     }
   }
-  if (view === "cautions") { if (typeof window.renderCautions === "function") window.renderCautions("navigation"); }
-  if (view === "documents") { if (typeof window.renderDocuments === "function") window.renderDocuments("navigation"); }
+  if (view === "cautions") {
+    if (typeof window.renderCautions === "function") window.renderCautions("navigation");
+    else if (typeof window.tbLoadLegacyDomain === "function") {
+      const root = document.getElementById("cautions-root");
+      if (root) root.innerHTML = `<div class="muted">Chargement cautions...</div>`;
+      window.tbLoadLegacyDomain("cautions").then(() => {
+        if ((window.activeView || activeView) === "cautions" && typeof window.renderCautions === "function") window.renderCautions("navigation:lazy");
+      }).catch((e) => {
+        console.error("[TB] Cautions lazy load failed", e);
+        alert(`Cautions indisponibles : ${e?.message || e}`);
+      });
+    }
+  }
+  if (view === "documents") {
+    if (typeof window.renderDocuments === "function") window.renderDocuments("navigation");
+    else if (typeof window.tbLoadLegacyDomain === "function") {
+      const root = document.getElementById("documents-root");
+      if (root) root.innerHTML = `<div class="muted">Chargement documents...</div>`;
+      window.tbLoadLegacyDomain("documents").then(() => {
+        if ((window.activeView || activeView) === "documents" && typeof window.renderDocuments === "function") window.renderDocuments("navigation:lazy");
+      }).catch((e) => {
+        console.error("[TB] Documents lazy load failed", e);
+        alert(`Documents indisponibles : ${e?.message || e}`);
+      });
+    }
+  }
   if (view === "sport") {
     if (typeof window.renderSport === "function") window.renderSport("navigation");
     else if (typeof window.tbLoadLegacyDomain === "function") {

@@ -1512,7 +1512,12 @@
       target_id:docId,
       error_message:null
     });
-    try { if(typeof window.renderDocuments === 'function') window.renderDocuments(); } catch(_) {}
+    try {
+      if (typeof window.renderDocuments !== 'function' && typeof window.tbLoadLegacyDomain === 'function') {
+        await window.tbLoadLegacyDomain('documents');
+      }
+      if(typeof window.renderDocuments === 'function') window.renderDocuments('inbox-classified');
+    } catch(_) {}
     alert(tr('Document classé.', 'Document filed.'));
   }
 
