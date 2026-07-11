@@ -84,20 +84,20 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire la vue du profil forces/faiblesses et de la modale impedancemetre.
   - [x] Extraire les handlers du timer : demarrage, serie terminee, repos, pause, ajout de serie et ajout de tour circuit.
   - [x] Transformer le radar en profil athletique : percentiles, ratios PDC, equilibres, potentiel, archetypes et priorite automatique.
-- [ ] Nutrition : separer catalogue, journal, objectifs et historique.
+- [x] Nutrition : separer catalogue, journal, objectifs et historique.
   - [x] Extraire les regles pures du catalogue, des totaux par repas, du journal quotidien, des objectifs et des cibles par moment.
   - [x] Extraire le socle repository local/offline Nutrition : cache aliments, lignes locales, sync_id, sommeil et erreurs de synchro.
-  - [ ] Extraire le repository Nutrition : aliments, repas, items, sommeil et synchro offline.
+  - [x] Extraire le repository Nutrition : aliments, repas, items, sommeil et synchro offline.
   - [x] Extraire le store Nutrition : cache aliments, date selectionnee, repas locaux et publication KPI.
-  - [ ] Extraire les vues Nutrition : saisie, timeline, historique, eau, sommeil et objectif.
+  - [x] Extraire les vues Nutrition : saisie, timeline, historique, eau, sommeil et objectif.
     - [x] Extraire les composants de vue : barres, chips favoris/recents, suggestions repas, semaine et timeline repas.
     - [x] Extraire les panneaux de vue : saisie rapide, hydratation, sommeil et historique semaine.
     - [x] Extraire les vues objectif et alcool : cockpit objectif, moyenne 7 jours et barres alcool hebdomadaires.
 - [x] Sante : supprimer le chantier autonome et garder les indicateurs dans Nutrition, Sport, Travail, notifications et KPI.
   - [x] Retirer l'onglet, la vue et le rendu Sante autonomes du runtime ; rediriger les anciens appels vers Nutrition.
-- [ ] Travail : separer periodes, missions, revenus et graphiques.
+- [x] Travail : separer periodes, missions, revenus et graphiques.
   - [x] Extraire le rendu du parcours professionnel : fresque, KPI, missions, revenus, periodes et dossiers lies.
-- [ ] Patrimoine : separer actifs, cout mensuel et integration budget.
+- [x] Patrimoine : separer actifs, cout mensuel et integration budget.
   - [x] Extraire la carte actif : valeur, amortissement, cout mensuel budget, proprietaires, evenements, documents, actions et P&L realise.
   - [x] Extraire les formulaires actif et proprietaires vers `assetView`.
   - [x] Extraire les formulaires transfert, vente et documents vers des vues pures testees.
