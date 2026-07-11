@@ -89,4 +89,18 @@ describe('legacy domain loader', () => {
     expect(index).toContain('id="view-sport"');
     expect(index).toContain('id="sport-root"');
   });
+
+  it('keeps Notifications settings out of boot and lazy-loads them before rendering the Notifications view', () => {
+    const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+
+    expect(bootList).not.toContain('/legacy/js/49_notifications_ui.js');
+    expect(domains).toContain('notifications:');
+    expect(domains).toContain('/legacy/js/49_notifications_ui.js');
+    expect(navigation).toContain('window.tbLoadLegacyDomain("notifications")');
+    expect(navigation).toContain('renderNotifications("navigation:lazy")');
+    expect(index).toContain('id="tab-notifications"');
+    expect(index).toContain('id="view-notifications"');
+    expect(index).toContain('id="notifications-root"');
+  });
 });

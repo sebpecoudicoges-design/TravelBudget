@@ -103,7 +103,19 @@ function showView(view) {
       });
     }
   }
-  if (view === "notifications") { if (typeof window.renderNotifications === "function") window.renderNotifications("navigation"); }
+  if (view === "notifications") {
+    if (typeof window.renderNotifications === "function") window.renderNotifications("navigation");
+    else if (typeof window.tbLoadLegacyDomain === "function") {
+      const root = document.getElementById("notifications-root");
+      if (root) root.innerHTML = `<div class="card"><div class="muted">Chargement notifications...</div></div>`;
+      window.tbLoadLegacyDomain("notifications").then(() => {
+        if ((window.activeView || activeView) === "notifications" && typeof window.renderNotifications === "function") window.renderNotifications("navigation:lazy");
+      }).catch((e) => {
+        console.error("[TB] Notifications lazy load failed", e);
+        alert(`Notifications indisponibles : ${e?.message || e}`);
+      });
+    }
+  }
   if (view === "dashboard") {
     try {
       if (typeof window.tbRenderDashboardCritical === "function") window.tbRenderDashboardCritical("navigation:dashboard", { cashflow: false });
