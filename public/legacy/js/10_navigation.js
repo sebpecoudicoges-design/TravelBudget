@@ -64,7 +64,19 @@ function showView(view) {
   }
   if (view === "cautions") { if (typeof window.renderCautions === "function") window.renderCautions("navigation"); }
   if (view === "documents") { if (typeof window.renderDocuments === "function") window.renderDocuments("navigation"); }
-  if (view === "sport") { if (typeof window.renderSport === "function") window.renderSport("navigation"); }
+  if (view === "sport") {
+    if (typeof window.renderSport === "function") window.renderSport("navigation");
+    else if (typeof window.tbLoadLegacyDomain === "function") {
+      const root = document.getElementById("sport-root");
+      if (root) root.innerHTML = `<div class="muted">Chargement sport...</div>`;
+      window.tbLoadLegacyDomain("sport").then(() => {
+        if ((window.activeView || activeView) === "sport" && typeof window.renderSport === "function") window.renderSport("navigation:lazy");
+      }).catch((e) => {
+        console.error("[TB] Sport lazy load failed", e);
+        alert(`Sport indisponible : ${e?.message || e}`);
+      });
+    }
+  }
   if (view === "work") {
     if (typeof window.renderWork === "function") window.renderWork("navigation");
     else if (typeof window.tbLoadLegacyDomain === "function") {

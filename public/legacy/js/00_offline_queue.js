@@ -307,6 +307,9 @@
       return true;
     }
     if (item.kind === "sport.sync_local") {
+      if (typeof window.tbSportSyncLocalWorkouts !== "function" && typeof window.tbLoadLegacyDomain === "function") {
+        await window.tbLoadLegacyDomain("sport");
+      }
       if (typeof window.tbSportSyncLocalWorkouts === "function") {
         await window.tbSportSyncLocalWorkouts();
       }

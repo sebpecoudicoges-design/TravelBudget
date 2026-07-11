@@ -4,6 +4,7 @@ import fs from 'node:fs';
 describe('legacy domain loader', () => {
   const main = fs.readFileSync('src/main.js', 'utf8');
   const navigation = fs.readFileSync('public/legacy/js/10_navigation.js', 'utf8');
+  const offlineQueue = fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8');
   const index = fs.readFileSync('index.html', 'utf8');
 
   it('keeps Assets out of the boot legacy list and registers it as a deferred domain', () => {
@@ -71,5 +72,21 @@ describe('legacy domain loader', () => {
     expect(index).toContain('id="tab-members"');
     expect(index).toContain('id="view-members"');
     expect(index).toContain('id="members-root"');
+  });
+
+  it('keeps Sport out of boot and lazy-loads it before rendering or replaying local sync', () => {
+    const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+
+    expect(bootList).not.toContain('/legacy/js/45_sport_ui.js');
+    expect(domains).toContain('sport:');
+    expect(domains).toContain('/legacy/js/45_sport_ui.js');
+    expect(navigation).toContain('window.tbLoadLegacyDomain("sport")');
+    expect(navigation).toContain('renderSport("navigation:lazy")');
+    expect(offlineQueue).toContain('await window.tbLoadLegacyDomain("sport")');
+    expect(offlineQueue).toContain('await window.tbSportSyncLocalWorkouts()');
+    expect(index).toContain('id="tab-sport"');
+    expect(index).toContain('id="view-sport"');
+    expect(index).toContain('id="sport-root"');
   });
 });

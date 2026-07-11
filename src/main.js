@@ -58,7 +58,6 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/46_cautions_ui.js',
   '/legacy/js/43_documents_ui.js',
   '/legacy/js/44_inbox_ui.js',
-  '/legacy/js/45_sport_ui.js',
   '/legacy/js/49_notifications_ui.js',
   '/legacy/js/18_main_render.js',
   '/legacy/js/08_refresh.js',
@@ -87,6 +86,9 @@ const LEGACY_DOMAIN_SCRIPTS = {
   trip: [
     '/legacy/js/29_trip_v1.js',
     '/legacy/js/30_members_admin.js',
+  ],
+  sport: [
+    '/legacy/js/45_sport_ui.js',
   ],
 };
 const legacyDomainPromises = new Map();

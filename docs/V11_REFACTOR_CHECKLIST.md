@@ -120,6 +120,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Sortir Nutrition du boot : `48_nutrition_ui.js` charge au premier affichage de l'onglet Alimentation.
   - [x] Sortir Travail du boot : `47_work_ui.js` et `50_work_career_ui.js` charges au premier affichage de l'onglet Travail.
   - [x] Sortir Trip du boot : `29_trip_v1.js` et `30_members_admin.js` charges au premier affichage de Partage ou Membres.
+  - [x] Sortir Sport du boot : `45_sport_ui.js` charge au premier affichage de l'onglet Sport, avec replay offline qui charge le domaine avant synchro.
 - [ ] Decouper les gros bundles par domaine.
 - [ ] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
