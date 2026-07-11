@@ -52,4 +52,24 @@ describe('legacy domain loader', () => {
     expect(index).toContain('id="view-work"');
     expect(index).toContain('id="work-root"');
   });
+
+  it('keeps Trip and Members out of boot and lazy-loads them before rendering related views', () => {
+    const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+
+    expect(bootList).not.toContain('/legacy/js/29_trip_v1.js');
+    expect(bootList).not.toContain('/legacy/js/30_members_admin.js');
+    expect(domains).toContain('trip:');
+    expect(domains).toContain('/legacy/js/29_trip_v1.js');
+    expect(domains).toContain('/legacy/js/30_members_admin.js');
+    expect(navigation).toContain('window.tbLoadLegacyDomain("trip")');
+    expect(navigation).toContain('window.renderTrip("navigation:lazy")');
+    expect(navigation).toContain('window.renderMembersAdmin("navigation:lazy")');
+    expect(index).toContain('id="tab-trip"');
+    expect(index).toContain('id="view-trip"');
+    expect(index).toContain('id="trip-root"');
+    expect(index).toContain('id="tab-members"');
+    expect(index).toContain('id="view-members"');
+    expect(index).toContain('id="members-root"');
+  });
 });

@@ -68,8 +68,6 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/20_boot.js',
   '/legacy/js/21_dashboard_drag.js',
   '/legacy/js/22_budget_consistency_audit.js',
-  '/legacy/js/29_trip_v1.js',
-  '/legacy/js/30_members_admin.js',
   '/legacy/js/31_wallet_balance.js'
 ];
 
@@ -85,6 +83,10 @@ const LEGACY_DOMAIN_SCRIPTS = {
   work: [
     '/legacy/js/47_work_ui.js',
     '/legacy/js/50_work_career_ui.js',
+  ],
+  trip: [
+    '/legacy/js/29_trip_v1.js',
+    '/legacy/js/30_members_admin.js',
   ],
 };
 const legacyDomainPromises = new Map();

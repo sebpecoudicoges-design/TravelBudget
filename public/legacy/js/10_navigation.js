@@ -99,8 +99,32 @@ function showView(view) {
     } catch (_) {}
     if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("10_navigation.js"); else redrawCharts();
   }
-  if (view === "trip") renderTrip();
-  if (view === "members") renderMembersAdmin();
+  if (view === "trip") {
+    if (typeof window.renderTrip === "function") window.renderTrip();
+    else if (typeof window.tbLoadLegacyDomain === "function") {
+      const root = document.getElementById("trip-root");
+      if (root) root.innerHTML = `<div class="card"><div class="muted">Chargement partage...</div></div>`;
+      window.tbLoadLegacyDomain("trip").then(() => {
+        if ((window.activeView || activeView) === "trip" && typeof window.renderTrip === "function") window.renderTrip("navigation:lazy");
+      }).catch((e) => {
+        console.error("[TB] Trip lazy load failed", e);
+        alert(`Partage indisponible : ${e?.message || e}`);
+      });
+    }
+  }
+  if (view === "members") {
+    if (typeof window.renderMembersAdmin === "function") window.renderMembersAdmin();
+    else if (typeof window.tbLoadLegacyDomain === "function") {
+      const root = document.getElementById("members-root");
+      if (root) root.innerHTML = `<div class="card"><div class="muted">Chargement membres...</div></div>`;
+      window.tbLoadLegacyDomain("trip").then(() => {
+        if ((window.activeView || activeView) === "members" && typeof window.renderMembersAdmin === "function") window.renderMembersAdmin("navigation:lazy");
+      }).catch((e) => {
+        console.error("[TB] Members lazy load failed", e);
+        alert(`Membres indisponible : ${e?.message || e}`);
+      });
+    }
+  }
   if (view === "help") { if (typeof renderHelpFaq === "function") renderHelpFaq(); }
 }
 
