@@ -65,7 +65,19 @@ function showView(view) {
   if (view === "cautions") { if (typeof window.renderCautions === "function") window.renderCautions("navigation"); }
   if (view === "documents") { if (typeof window.renderDocuments === "function") window.renderDocuments("navigation"); }
   if (view === "sport") { if (typeof window.renderSport === "function") window.renderSport("navigation"); }
-  if (view === "work") { if (typeof window.renderWork === "function") window.renderWork("navigation"); }
+  if (view === "work") {
+    if (typeof window.renderWork === "function") window.renderWork("navigation");
+    else if (typeof window.tbLoadLegacyDomain === "function") {
+      const root = document.getElementById("work-root");
+      if (root) root.innerHTML = `<div class="muted">Chargement travail...</div>`;
+      window.tbLoadLegacyDomain("work").then(() => {
+        if ((window.activeView || activeView) === "work" && typeof window.renderWork === "function") window.renderWork("navigation:lazy");
+      }).catch((e) => {
+        console.error("[TB] Work lazy load failed", e);
+        alert(`Travail indisponible : ${e?.message || e}`);
+      });
+    }
+  }
   if (view === "nutrition") {
     if (typeof window.renderNutrition === "function") window.renderNutrition("navigation");
     else if (typeof window.tbLoadLegacyDomain === "function") {
