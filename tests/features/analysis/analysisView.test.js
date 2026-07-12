@@ -4,10 +4,14 @@ import {
   buildAnalysisInsights,
   buildAnalysisNightCoveredRows,
   buildAnalysisOverviewCards,
+  buildAnalysisReferenceContext,
+  buildAnalysisReferenceRows,
   buildAnalysisSubcategoryRows,
   renderAnalysisInsights,
   renderAnalysisNightCovered,
   renderAnalysisOverviewStrip,
+  renderAnalysisReferenceMix,
+  renderAnalysisReferenceSummary,
   renderAnalysisSubcategoryBreakdown,
 } from '../../../src/features/analysis/analysisView.js';
 
@@ -204,5 +208,65 @@ describe('Analysis view helpers', () => {
     const html = renderAnalysisSubcategoryBreakdown({ model: { subcategorySeries: [] } });
 
     expect(html).toContain('Aucune sous-catégorie exploitée');
+  });
+
+  it('renders the reference summary with coverage, delta and context', () => {
+    const model = {
+      base: 'AUD',
+      days: [{}, {}, {}, {}],
+      referenceCoverageDays: 3,
+      referencePerDay: 30,
+      comparablePerDay: 42,
+      referenceContext: {
+        countryLabel: '<Australie>',
+        profileLabel: 'Solo',
+        styleLabel: 'Simple',
+        adultsLabel: '1 ad.',
+        childrenLabel: '0 enf.',
+      },
+    };
+
+    expect(buildAnalysisReferenceContext(model)).toContain('<Australie>');
+
+    const html = renderAnalysisReferenceSummary({
+      model,
+      formatCurrency: (value, currency) => `${Number(value).toFixed(0)} ${currency}`,
+    });
+
+    expect(html).toContain('Sourcé / jour');
+    expect(html).toContain('3/4 jours couverts');
+    expect(html).toContain('12 AUD');
+    expect(html).toContain('Au-dessus de la référence');
+    expect(html).toContain('&lt;Australie&gt;');
+    expect(html).toContain('1 adulte(s)');
+  });
+
+  it('renders reference comparison cards and empty state', () => {
+    const model = {
+      base: 'AUD',
+      referenceComparisonSeries: [
+        { name: '<Repas>', actualPerDay: 45, referencePerDay: 30 },
+        { name: 'Logement', actualPerDay: 10, referencePerDay: 25 },
+        { name: 'Ignored', actualPerDay: 0, referencePerDay: 0 },
+      ],
+      unmappedPerDay: 8,
+      excludedPerDay: 4,
+    };
+
+    expect(buildAnalysisReferenceRows(model)).toHaveLength(2);
+
+    const html = renderAnalysisReferenceMix({
+      model,
+      formatCurrency: (value, currency) => `${Number(value).toFixed(0)} ${currency}`,
+    });
+
+    expect(html).toContain('&lt;Repas&gt;');
+    expect(html).toContain('analysis-reference-metal--warn');
+    expect(html).toContain('analysis-reference-metal--good');
+    expect(html).toContain('Non référencé');
+    expect(html).toContain('Exclu du comparatif');
+    expect(html).not.toContain('Ignored');
+
+    expect(renderAnalysisReferenceMix({ model: { referenceComparisonSeries: [] } })).toContain('Aucune référence pays active');
   });
 });

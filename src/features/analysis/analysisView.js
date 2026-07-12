@@ -293,3 +293,120 @@ export function renderAnalysisSubcategoryBreakdown({
     </div>
   `).join('');
 }
+
+export function buildAnalysisReferenceContext(model = {}) {
+  const country = model.referenceContext?.countryLabel && model.referenceContext.countryLabel !== 'Pays —'
+    ? model.referenceContext.countryLabel
+    : 'Aucune référence pays active';
+  const profile = model.referenceContext?.profileLabel && model.referenceContext.profileLabel !== 'Profil —'
+    ? model.referenceContext.profileLabel
+    : null;
+  const style = model.referenceContext?.styleLabel && model.referenceContext.styleLabel !== 'Style —'
+    ? model.referenceContext.styleLabel
+    : null;
+  const adults = model.referenceContext?.adultsLabel && model.referenceContext.adultsLabel !== 'ad. —'
+    ? String(model.referenceContext.adultsLabel).replace('ad.', 'adulte(s)')
+    : null;
+  const children = model.referenceContext?.childrenLabel && model.referenceContext.childrenLabel !== 'enf. —'
+    ? String(model.referenceContext.childrenLabel).replace('enf.', 'enfant(s)')
+    : null;
+
+  return [
+    country,
+    profile && `Profil ${profile}`,
+    style && `Style ${style}`,
+    adults,
+    children,
+  ].filter(Boolean).join(' • ');
+}
+
+export function buildAnalysisReferenceRows(model = {}) {
+  return (Array.isArray(model.referenceComparisonSeries) ? model.referenceComparisonSeries : [])
+    .filter((row) => safeNum(row?.actualPerDay) > 0 || safeNum(row?.referencePerDay) > 0);
+}
+
+export function renderAnalysisReferenceSummary({
+  model = {},
+  formatCurrency,
+} = {}) {
+  const money = (value) => formatMoney(formatCurrency, value, model.base);
+  const days = Array.isArray(model.days) ? model.days.length : 0;
+  const coverage = model.referenceCoverageDays && days ? `${model.referenceCoverageDays}/${days} jours couverts` : 'Aucune source active';
+  const delta = safeNum(model.comparablePerDay) - safeNum(model.referencePerDay);
+  const deltaTone = delta <= 0 ? 'Sous la référence' : 'Au-dessus de la référence';
+  const context = buildAnalysisReferenceContext(model);
+
+  return `
+        <div class="analysis-reference-stat">
+          <span>Sourcé / jour</span>
+          <strong>${escapeHtml(money(model.referencePerDay))}</strong>
+          <small>${escapeHtml(coverage)}</small>
+        </div>
+        <div class="analysis-reference-stat">
+          <span>Réel / jour</span>
+          <strong>${escapeHtml(money(model.comparablePerDay))}</strong>
+          <small>Comparatif net des catégories exclues</small>
+        </div>
+        <div class="analysis-reference-stat">
+          <span>Écart / jour</span>
+          <strong>${escapeHtml(money(delta))}</strong>
+          <small>${escapeHtml(deltaTone)}</small>
+        </div>
+                <div class="analysis-reference-inline">
+          <div class="analysis-reference-context" style="font-size:1rem;font-weight:700;line-height:1.35;padding:.7rem .9rem;border-radius:16px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18);">
+            Contexte : ${escapeHtml(context)}
+          </div>
+        </div>`;
+}
+
+export function renderAnalysisReferenceMix({
+  model = {},
+  formatCurrency,
+} = {}) {
+  const rows = buildAnalysisReferenceRows(model);
+  const money = (value) => formatMoney(formatCurrency, value, model.base);
+
+  if (!rows.length) {
+    return `<div class="analysis-reference-empty">Aucune référence pays active sur cette plage.</div>`;
+  }
+
+  return `
+      <div class="analysis-reference-metal-grid">
+        ${rows.map((row) => {
+          const ref = safeNum(row?.referencePerDay);
+          const actual = safeNum(row?.actualPerDay);
+          const diff = actual - ref;
+          const tone = diff <= 0 ? 'good' : 'warn';
+          return `<div class="analysis-reference-metal analysis-reference-metal--${tone}">
+            <div class="analysis-reference-metal-head">
+              <span>${escapeHtml(row?.name)}</span>
+              <strong>${escapeHtml(money(diff))}</strong>
+            </div>
+            <div class="analysis-reference-metal-body">
+              <div><small>Réel / jour</small><b>${escapeHtml(money(actual))}</b></div>
+              <div><small>Sourcé / jour</small><b>${escapeHtml(money(ref))}</b></div>
+            </div>
+          </div>`;
+        }).join('')}
+        ${safeNum(model.unmappedPerDay) > 0 ? `<div class="analysis-reference-metal analysis-reference-metal--neutral">
+          <div class="analysis-reference-metal-head">
+            <span>Non référencé</span>
+            <strong>${escapeHtml(money(model.unmappedPerDay))}</strong>
+          </div>
+          <div class="analysis-reference-metal-body">
+            <div><small>Réel / jour</small><b>${escapeHtml(money(model.unmappedPerDay))}</b></div>
+            <div><small>Sourcé / jour</small><b>${escapeHtml(money(0))}</b></div>
+          </div>
+        </div>` : ''}
+        ${safeNum(model.excludedPerDay) > 0 ? `<div class="analysis-reference-metal analysis-reference-metal--neutral">
+          <div class="analysis-reference-metal-head">
+            <span>Exclu du comparatif</span>
+            <strong>${escapeHtml(money(model.excludedPerDay))}</strong>
+          </div>
+          <div class="analysis-reference-metal-body">
+            <div><small>Réel / jour</small><b>${escapeHtml(money(model.excludedPerDay))}</b></div>
+            <div><small>Traitement</small><b>Hors comparaison sourcée</b></div>
+          </div>
+        </div>` : ''}
+      </div>`;
+}

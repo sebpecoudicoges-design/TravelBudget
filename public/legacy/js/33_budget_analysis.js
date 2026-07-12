@@ -2041,104 +2041,19 @@ function _openTxDrilldown(kind, key, model){
     const summary = _el('analysis-reference-summary');
     const chartEl = _el('analysis-reference-mix-chart');
     const chart = charts.referenceMix;
-    const rows = (model.referenceComparisonSeries || []).filter(r => _safeNum(r.actualPerDay) > 0 || _safeNum(r.referencePerDay) > 0);
-    const coverage = model.referenceCoverageDays && model.days.length ? `${model.referenceCoverageDays}/${model.days.length} jours couverts` : 'Aucune source active';
-    const deltaTone = (model.comparablePerDay - model.referencePerDay) <= 0 ? 'Sous la référence' : 'Au-dessus de la référence';
-    const referenceCountry = model.referenceContext?.countryLabel && model.referenceContext.countryLabel !== 'Pays —'
-      ? model.referenceContext.countryLabel
-      : 'Aucune référence pays active';
-
-    const referenceProfile = model.referenceContext?.profileLabel && model.referenceContext.profileLabel !== 'Profil —'
-      ? model.referenceContext.profileLabel
-      : null;
-
-    const referenceStyle = model.referenceContext?.styleLabel && model.referenceContext.styleLabel !== 'Style —'
-      ? model.referenceContext.styleLabel
-      : null;
-
-    const referenceAdults = model.referenceContext?.adultsLabel && model.referenceContext.adultsLabel !== 'ad. —'
-      ? model.referenceContext.adultsLabel.replace('ad.', 'adulte(s)')
-      : null;
-
-    const referenceChildren = model.referenceContext?.childrenLabel && model.referenceContext.childrenLabel !== 'enf. —'
-      ? model.referenceContext.childrenLabel.replace('enf.', 'enfant(s)')
-      : null;
-
-    const referenceContextLabel = [
-      referenceCountry,
-      referenceProfile && `Profil ${referenceProfile}`,
-      referenceStyle && `Style ${referenceStyle}`,
-      referenceAdults,
-      referenceChildren
-    ].filter(Boolean).join(' • ');
+    const analysisView = window.TBAnalysisView;
     if (summary) {
-      summary.innerHTML = `
-        <div class="analysis-reference-stat">
-          <span>Sourcé / jour</span>
-          <strong>${escapeHTML(_fmtMoney(model.referencePerDay, model.base))}</strong>
-          <small>${escapeHTML(coverage)}</small>
-        </div>
-        <div class="analysis-reference-stat">
-          <span>Réel / jour</span>
-          <strong>${escapeHTML(_fmtMoney(model.comparablePerDay, model.base))}</strong>
-          <small>Comparatif net des catégories exclues</small>
-        </div>
-        <div class="analysis-reference-stat">
-          <span>Écart / jour</span>
-          <strong>${escapeHTML(_fmtMoney(model.comparablePerDay - model.referencePerDay, model.base))}</strong>
-          <small>${escapeHTML(deltaTone)}</small>
-        </div>
-                <div class="analysis-reference-inline">
-          <div class="analysis-reference-context" style="font-size:1rem;font-weight:700;line-height:1.35;padding:.7rem .9rem;border-radius:16px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18);">
-            Contexte : ${escapeHTML(referenceContextLabel)}
-          </div>
-        </div>`;
+      summary.innerHTML = analysisView?.renderAnalysisReferenceSummary?.({
+        model,
+        formatCurrency: _fmtMoney,
+      }) || '';
     }
     if (chart && chart.dispose) { try { chart.dispose(); } catch(_) {} delete charts.referenceMix; }
     if (!chartEl) return;
-    if (!rows.length) {
-      chartEl.innerHTML = `<div class="analysis-reference-empty">Aucune référence pays active sur cette plage.</div>`;
-      return;
-    }
-    chartEl.innerHTML = `
-      <div class="analysis-reference-metal-grid">
-        ${rows.map((row)=>{
-          const ref = _safeNum(row.referencePerDay);
-          const actual = _safeNum(row.actualPerDay);
-          const diff = actual - ref;
-          const tone = diff <= 0 ? 'good' : 'warn';
-          return `<div class="analysis-reference-metal analysis-reference-metal--${tone}">
-            <div class="analysis-reference-metal-head">
-              <span>${escapeHTML(row.name)}</span>
-              <strong>${escapeHTML(_fmtMoney(diff, model.base))}</strong>
-            </div>
-            <div class="analysis-reference-metal-body">
-              <div><small>Réel / jour</small><b>${escapeHTML(_fmtMoney(actual, model.base))}</b></div>
-              <div><small>Sourcé / jour</small><b>${escapeHTML(_fmtMoney(ref, model.base))}</b></div>
-            </div>
-          </div>`;
-        }).join('')}
-        ${model.unmappedPerDay > 0 ? `<div class="analysis-reference-metal analysis-reference-metal--neutral">
-          <div class="analysis-reference-metal-head">
-            <span>Non référencé</span>
-            <strong>${escapeHTML(_fmtMoney(model.unmappedPerDay, model.base))}</strong>
-          </div>
-          <div class="analysis-reference-metal-body">
-            <div><small>Réel / jour</small><b>${escapeHTML(_fmtMoney(model.unmappedPerDay, model.base))}</b></div>
-            <div><small>Sourcé / jour</small><b>${escapeHTML(_fmtMoney(0, model.base))}</b></div>
-          </div>
-        </div>` : ''}
-        ${model.excludedPerDay > 0 ? `<div class="analysis-reference-metal analysis-reference-metal--neutral">
-          <div class="analysis-reference-metal-head">
-            <span>Exclu du comparatif</span>
-            <strong>${escapeHTML(_fmtMoney(model.excludedPerDay, model.base))}</strong>
-          </div>
-          <div class="analysis-reference-metal-body">
-            <div><small>Réel / jour</small><b>${escapeHTML(_fmtMoney(model.excludedPerDay, model.base))}</b></div>
-            <div><small>Traitement</small><b>Hors comparaison sourcée</b></div>
-          </div>
-        </div>` : ''}
-      </div>`;
+    chartEl.innerHTML = analysisView?.renderAnalysisReferenceMix?.({
+      model,
+      formatCurrency: _fmtMoney,
+    }) || '';
   }
 
   function _renderNightCovered(model){

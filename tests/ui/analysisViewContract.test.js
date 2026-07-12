@@ -35,4 +35,11 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).not.toContain('rows.map((row, idx)');
     expect(legacy).not.toContain('data-subkey="${escapeHTML(row.key)}"');
   });
+
+  it('keeps the Analysis reference panel delegated out of the legacy file', () => {
+    expect(legacy).toContain('analysisView?.renderAnalysisReferenceSummary');
+    expect(legacy).toContain('analysisView?.renderAnalysisReferenceMix');
+    expect(legacy).not.toContain('referenceContextLabel');
+    expect(legacy).not.toContain('analysis-reference-metal--${tone}');
+  });
 });
