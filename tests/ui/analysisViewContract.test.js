@@ -16,4 +16,11 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).not.toContain('const rangeText = `${model.start');
     expect(legacy).not.toContain('analysis-overview-card--${escapeHTML(card.accent)}');
   });
+
+  it('keeps the Analysis insights delegated out of the legacy file', () => {
+    expect(legacy).toContain('analysisView?.renderAnalysisInsights');
+    expect(legacy).toContain('analysisView?.buildAnalysisInsights');
+    expect(legacy).not.toContain('const sourcedGap = model.comparablePerDay - model.referencePerDay');
+    expect(legacy).not.toContain('analysis-insight-title');
+  });
 });

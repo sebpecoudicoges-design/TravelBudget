@@ -2201,69 +2201,17 @@ function _openTxDrilldown(kind, key, model){
     const host = _el('analysis-insights');
     if (!host) return;
     const isEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
-    const day = isEn ? 'day' : 'jour';
-    const delta = model.projection - model.totalBudget;
-    const sourcedGap = model.comparablePerDay - model.referencePerDay;
-    const top = model.topCategories[0];
-    const topUnmapped = (model.unmappedCategorySeries || [])[0] || null;
-    const nightLine = Number(model?.nightCoveredCount || 0) > 0
-      ? {
-          icon: '🌙',
-          title: isEn ? `Night transports: ${model.nightCoveredCount} case(s)` : `Transports de nuit : ${model.nightCoveredCount} cas`,
-          body: isEn
-            ? `${_fmtMoney(model.nightCoveredPotentialSavings, model.base)} in potential accommodation savings remains visible separately, without adjusting the main budget.`
-            : `${_fmtMoney(model.nightCoveredPotentialSavings, model.base)} d'économie potentielle logement restent visibles à part, sans corriger le budget principal.`
-        }
-      : null;
-    const insights = [
-      ...(nightLine ? [nightLine] : []),
-      {
-        icon: sourcedGap > 0 ? '🧭' : '🌿',
-        title: sourcedGap > 0 ? (isEn ? 'Actual above reference' : 'Réel au-dessus du sourcé') : (isEn ? 'Actual below reference' : 'Réel sous le sourcé'),
-        body: sourcedGap > 0
-          ? (isEn ? `On the comparable scope, you spend ${_fmtMoney(model.comparablePerDay, model.base)}/${day} versus a country reference of ${_fmtMoney(model.referencePerDay, model.base)}/${day}, so ${_fmtMoney(sourcedGap, model.base)}/${day} above.` : `Sur le périmètre comparable, tu dépenses ${_fmtMoney(model.comparablePerDay, model.base)}/jour contre une référence pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour, soit ${_fmtMoney(sourcedGap, model.base)}/jour au-dessus.`)
-          : (isEn ? `On the comparable scope, you spend ${_fmtMoney(model.comparablePerDay, model.base)}/${day} versus a country reference of ${_fmtMoney(model.referencePerDay, model.base)}/${day}, so ${_fmtMoney(Math.abs(sourcedGap), model.base)}/${day} below.` : `Sur le périmètre comparable, tu dépenses ${_fmtMoney(model.comparablePerDay, model.base)}/jour contre une référence pays de ${_fmtMoney(model.referencePerDay, model.base)}/jour, soit ${_fmtMoney(Math.abs(sourcedGap), model.base)}/jour en dessous.`)
-      },
-      {
-        icon: model.avgPerDay > model.budgetPerDay ? '⚠️' : '✅',
-        title: model.avgPerDay > model.budgetPerDay ? (isEn ? 'Pace above target' : 'Cadence au-dessus de la cible') : (isEn ? 'Pace under control' : 'Cadence maîtrisée'),
-        body: model.avgPerDay > model.budgetPerDay
-          ? (isEn ? `Overall, you are running at ${_fmtMoney(model.avgPerDay, model.base)}/${day} for an app target of ${_fmtMoney(model.budgetPerDay, model.base)}/${day}. On the referenced comparable scope, you are at ${_fmtMoney(model.comparablePerDay, model.base)}/${day}.` : `Globalement, tu tournes à ${_fmtMoney(model.avgPerDay, model.base)}/jour pour une cible app de ${_fmtMoney(model.budgetPerDay, model.base)}/jour. Sur le comparable sourcé, tu es à ${_fmtMoney(model.comparablePerDay, model.base)}/jour.`)
-          : (isEn ? `Overall, you stay below target with ${_fmtMoney(model.avgPerDay, model.base)}/${day} versus ${_fmtMoney(model.budgetPerDay, model.base)}/${day} targeted. On the referenced comparable scope, you are at ${_fmtMoney(model.comparablePerDay, model.base)}/${day}.` : `Globalement, tu restes sous la cible avec ${_fmtMoney(model.avgPerDay, model.base)}/jour contre ${_fmtMoney(model.budgetPerDay, model.base)}/jour visés. Sur le comparable sourcé, tu es à ${_fmtMoney(model.comparablePerDay, model.base)}/jour.`)
-      },
-      {
-        icon: top ? '🧲' : '•',
-        title: top ? `${isEn ? 'Dominant category' : 'Catégorie dominante'} : ${top[0]}` : (isEn ? 'No dominant category' : 'Aucune catégorie dominante'),
-        body: top ? (isEn ? `${_fmtMoney(top[1], model.base)} committed, ${((top[1]/Math.max(model.spent,1))*100).toFixed(1)}% of the analyzed total.` : `${_fmtMoney(top[1], model.base)} engagés, soit ${((top[1]/Math.max(model.spent,1))*100).toFixed(1)}% du total analysé.`) : (isEn ? `Add a few expenses to reveal trends.` : `Ajoute quelques dépenses pour faire émerger les tendances.`)
-      },
-      {
-        icon: delta > 0 ? '📈' : '🌿',
-        title: delta > 0 ? (isEn ? 'Projection above cap' : 'Projection au-dessus du cap') : (isEn ? 'Projection on track' : 'Projection dans la trajectoire'),
-        body: delta > 0 ? (isEn ? `At the current pace, you would end at ${_fmtMoney(model.projection, model.base)}, ${_fmtMoney(delta, model.base)} above budget.` : `Au rythme actuel, tu finirais à ${_fmtMoney(model.projection, model.base)}, soit ${_fmtMoney(delta, model.base)} au-dessus du budget.`) : (isEn ? `The projection ends at ${_fmtMoney(model.projection, model.base)}. You keep a margin of about ${_fmtMoney(Math.abs(delta), model.base)}.` : `La projection termine à ${_fmtMoney(model.projection, model.base)}. Tu gardes une marge d’environ ${_fmtMoney(Math.abs(delta), model.base)}.`)
-      },
-      {
-        icon: topUnmapped ? '🧩' : (model.excludedPerDay > 0 ? '🪶' : (model.outAmount > 0 ? '🎯' : '🧭')),
-        title: topUnmapped ? `${isEn ? 'Map next' : 'À mapper ensuite'} : ${topUnmapped.name}` : (model.excludedPerDay > 0 ? (isEn ? 'Comparable view cleaned from exclusions' : 'Comparatif nettoyé des exclus') : (model.outAmount > 0 ? (isEn ? 'Out-of-budget visible' : 'Hors budget visible') : (isEn ? 'Clean budget reading' : 'Lecture budgétaire propre'))),
-        body: topUnmapped
-          ? (isEn ? `${_fmtMoney(topUnmapped.actual, model.base)} remains in an unmapped category. It stays visible separately and does not mix into the mapped comparison.` : `${_fmtMoney(topUnmapped.actual, model.base)} restent dans une catégorie non référencée. Elle est visible à part et ne se mélange pas au comparatif mappé.`)
-          : (model.excludedPerDay > 0
-            ? (isEn ? `${_fmtMoney(model.excludedPerDay, model.base)}/${day} are excluded from the referenced comparison by the centralized mapping, while remaining visible in the global steering view.` : `${_fmtMoney(model.excludedPerDay, model.base)}/jour sont exclus du comparatif sourcé selon le mapping centralisé, tout en restant visibles dans le pilotage global.`)
-            : (model.outAmount > 0
-              ? (isEn ? `${_fmtMoney(model.outAmount, model.base)} out of budget on the range. You can exclude categories without polluting the trajectory.` : `${_fmtMoney(model.outAmount, model.base)} hors budget sur la plage. Tu peux exclure des catégories sans polluer la trajectoire.`)
-              : (isEn ? `No notable out-of-budget expense on the current range.` : `Aucune dépense hors budget notable sur la plage courante.`)))
-      }
-    ];
-    host.innerHTML = insights.map(i => `
-      <div class="analysis-insight">
-        <div class="analysis-insight-badge">${i.icon}</div>
-        <div>
-          <p class="analysis-insight-title">${escapeHTML(i.title)}</p>
-          <p class="analysis-insight-body">${escapeHTML(i.body)}</p>
-        </div>
-      </div>
-    `).join('');
+    const analysisView = window.TBAnalysisView;
+    host.innerHTML = analysisView?.renderAnalysisInsights?.({
+      model,
+      isEn,
+      formatCurrency: _fmtMoney,
+    }) || '';
     const pill = _el('analysis-live-pill');
-    if (pill) pill.textContent = isEn ? `${model.txs.length} expenses • ${model.days.length} days • ${model.base}` : `${model.txs.length} dépenses • ${model.days.length} jours • ${model.base}`;
+    if (pill) {
+      const meta = analysisView?.buildAnalysisInsights?.({ model, isEn, formatCurrency: _fmtMoney });
+      pill.textContent = meta?.livePill || '';
+    }
   }
 
   function _renderAll(){

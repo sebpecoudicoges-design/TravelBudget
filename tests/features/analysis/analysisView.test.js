@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildAnalysisOverviewCards, renderAnalysisOverviewStrip } from '../../../src/features/analysis/analysisView.js';
+import {
+  buildAnalysisInsights,
+  buildAnalysisOverviewCards,
+  renderAnalysisInsights,
+  renderAnalysisOverviewStrip,
+} from '../../../src/features/analysis/analysisView.js';
 
 describe('Analysis view helpers', () => {
   const t = (key, vars = {}) => {
@@ -65,5 +70,61 @@ describe('Analysis view helpers', () => {
     expect(html).toContain('analysis-overview-card--travel');
     expect(html).toContain('&lt;BudgetTravel&gt;');
     expect(html).toContain('Référence absente');
+  });
+
+  it('builds actionable insights from the analysis model', () => {
+    const model = {
+      base: 'AUD',
+      projection: 1400,
+      totalBudget: 1200,
+      comparablePerDay: 42,
+      referencePerDay: 35,
+      avgPerDay: 58,
+      budgetPerDay: 50,
+      spent: 580,
+      outAmount: 20,
+      excludedPerDay: 0,
+      nightCoveredCount: 1,
+      nightCoveredPotentialSavings: 80,
+      topCategories: [['Transport', 250]],
+      unmappedCategorySeries: [{ name: 'Divers', actual: 45 }],
+      txs: [{}, {}],
+      days: [{}, {}, {}],
+    };
+    const formatCurrency = (value, currency) => `${Number(value).toFixed(0)} ${currency}`;
+
+    const result = buildAnalysisInsights({ model, isEn: true, formatCurrency });
+
+    expect(result.livePill).toBe('2 expenses • 3 days • AUD');
+    expect(result.insights[0].title).toBe('Night transports: 1 case(s)');
+    expect(result.insights.some((item) => item.title === 'Actual above reference')).toBe(true);
+    expect(result.insights.some((item) => item.title === 'Pace above target')).toBe(true);
+    expect(result.insights.some((item) => item.title === 'Dominant category : Transport')).toBe(true);
+    expect(result.insights.some((item) => item.title === 'Projection above cap')).toBe(true);
+    expect(result.insights.some((item) => item.title === 'Map next : Divers')).toBe(true);
+  });
+
+  it('renders escaped insight HTML for the legacy Analysis host', () => {
+    const html = renderAnalysisInsights({
+      model: {
+        base: 'EUR',
+        projection: 800,
+        totalBudget: 1000,
+        comparablePerDay: 20,
+        referencePerDay: 30,
+        avgPerDay: 25,
+        budgetPerDay: 40,
+        spent: 100,
+        topCategories: [['<Food>', 50]],
+        txs: [],
+        days: [],
+      },
+      isEn: true,
+      formatCurrency: (value, currency) => `${Number(value).toFixed(0)} ${currency}`,
+    });
+
+    expect(html).toContain('analysis-insight');
+    expect(html).toContain('&lt;Food&gt;');
+    expect(html).toContain('Projection on track');
   });
 });
