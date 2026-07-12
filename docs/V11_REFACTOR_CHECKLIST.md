@@ -57,7 +57,7 @@ Critere de fin du socle : une action en erreur reste rejouable sans bloquer les 
 - [x] Migrer les fenetres Trip Depense, Rapprochement, Reglement, Detail et Documents vers la modale partagee.
 - [x] Verifier les cinq fenetres Trip sur mobile, tablette et grand ecran.
 - [ ] Migrer les autres modales, boutons, champs, onglets, cartes KPI et graphiques.
-- [ ] Verifier les composants suivants sur mobile, tablette et grand ecran.
+- [x] Verifier les composants suivants sur mobile, tablette et grand ecran.
 
 Critere du premier lot : un composant partage doit etre utilise par un vrai parcours, accessible, responsive et teste avant la migration de la fenetre suivante.
 
@@ -101,6 +101,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire la carte actif : valeur, amortissement, cout mensuel budget, proprietaires, evenements, documents, actions et P&L realise.
   - [x] Extraire les formulaires actif et proprietaires vers `assetView`.
   - [x] Extraire les formulaires transfert, vente et documents vers des vues pures testees.
+  - [x] Lier assets, transactions et depenses Trip avec exclusion budget optionnelle pour eviter le double comptage achat/amortissement.
 
 ## Audit transversal - Regles recurrentes
 
@@ -140,7 +141,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 
 - [ ] Ajouter lint et formatage sans reformatage massif initial.
 - [x] Fixer un budget de taille par module.
-- [ ] Ajouter les parcours critiques Playwright.
+- [x] Ajouter les parcours critiques Playwright.
 - [x] Documenter architecture, conventions et procedure de migration.
 - [ ] Retirer un fichier legacy uniquement quand son remplacement est valide.
 - [ ] Maintenir `public/projet.html`, l'APK et Git a chaque livraison.

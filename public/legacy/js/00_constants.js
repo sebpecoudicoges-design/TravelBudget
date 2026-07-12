@@ -1,4 +1,4 @@
-window.TB_VERSION = window.TB_VERSION || "10.5.129";
+window.TB_VERSION = window.TB_VERSION || "10.5.130";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
 window.tbApplyVersionLabels = function tbApplyVersionLabels(root) {
@@ -62,6 +62,7 @@ try {
     asset_owners: "asset_owners",
     asset_ownership_events: "asset_ownership_events",
     asset_documents: "asset_documents",
+    asset_transaction_links: "asset_transaction_links",
     caution_deposits: "caution_deposits",
     document_folders: "document_folders",
     documents: "documents",

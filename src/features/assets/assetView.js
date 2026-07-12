@@ -410,6 +410,75 @@ function renderLinkedMovementsHtml(docId, txLinks = [], tripLinks = [], helpers 
   </div>`;
 }
 
+function renderAssetMovementLinksHtml({
+  asset = {},
+  movementLinks = [],
+  transactions = [],
+  tripExpenses = [],
+  t = (fr) => fr,
+  esc = defaultEsc,
+  txDocLine = () => 'Transaction',
+  tripDocLine = () => 'Trip',
+} = {}) {
+  const txById = new Map((transactions || []).map((tx) => [String(tx?.id || ''), tx]));
+  const tripById = new Map((tripExpenses || []).map((expense) => [String(expense?.id || ''), expense]));
+  const linked = (movementLinks || []).filter((link) => String(link?.asset_id || link?.assetId || '') === String(asset?.id || ''));
+  const txOptions = (transactions || []).slice(0, 80).map((tx) => `<option value="${esc(tx.id)}">${esc(txDocLine(tx))}</option>`).join('');
+  const tripOptions = (tripExpenses || []).slice(0, 80).map((expense) => `<option value="${esc(expense.id)}">${esc(tripDocLine(expense))}</option>`).join('');
+
+  return `<div class="tb-asset-movement-panel">
+    <div class="tb-asset-movement-head">
+      <strong>${esc(t('Mouvements liés à l’asset', 'Asset linked movements'))}</strong>
+      <span>${esc(t('Achat exclu du budget, amortissement compté mensuellement. Les coûts annexes restent des dépenses normales.', 'Purchase can be excluded from budget, monthly depreciation is counted. Extra costs stay normal expenses.'))}</span>
+    </div>
+
+    <div class="tb-asset-movement-list">
+      ${linked.length ? linked.map((link) => {
+        const tx = txById.get(String(link.transaction_id || link.transactionId || ''));
+        const trip = tripById.get(String(link.trip_expense_id || link.tripExpenseId || ''));
+        const relation = String(link.relation_type || link.relationType || 'purchase');
+        const excluded = !!(link.exclude_from_budget ?? link.excludeFromBudget);
+        return `<div class="tb-asset-movement-row">
+          <div>
+            <strong>${esc(t(relation === 'purchase' ? 'Achat asset' : relation === 'extra_cost' ? 'Dépense annexe' : relation === 'sale' ? 'Vente' : 'Mouvement asset', relation))}</strong>
+            <span>${esc(tx ? txDocLine(tx) : trip ? tripDocLine(trip) : t('Mouvement introuvable', 'Movement not found'))}</span>
+            ${excluded ? `<em>${esc(t('Sorti du budget pour éviter le double comptage.', 'Excluded from budget to avoid double counting.'))}</em>` : ''}
+          </div>
+          <button type="button" data-tb-asset-unlink-movement="${esc(link.id || '')}">${esc(t('Délier', 'Unlink'))}</button>
+        </div>`;
+      }).join('') : `<div class="tb-asset-doc-empty">${esc(t('Aucun mouvement lié à cet asset.', 'No movement linked to this asset.'))}</div>`}
+    </div>
+
+    <div class="tb-asset-form-grid" style="margin-top:14px;">
+      <label>${esc(t('Type de lien', 'Link type'))}
+        <select name="asset_movement_relation_type">
+          <option value="purchase">${esc(t('Achat / prix initial', 'Purchase / initial price'))}</option>
+          <option value="extra_cost">${esc(t('Dépense annexe', 'Extra cost'))}</option>
+          <option value="maintenance">${esc(t('Maintenance', 'Maintenance'))}</option>
+          <option value="insurance">${esc(t('Assurance', 'Insurance'))}</option>
+          <option value="sale">${esc(t('Vente', 'Sale'))}</option>
+          <option value="trip_expense">${esc(t('Dépense Trip', 'Trip expense'))}</option>
+          <option value="other">${esc(t('Autre', 'Other'))}</option>
+        </select>
+      </label>
+      <label>${esc(t('Transaction wallet', 'Wallet transaction'))}
+        <select name="asset_movement_transaction_id">
+          <option value="">${esc(t('Aucune transaction', 'No transaction'))}</option>
+          ${txOptions}
+        </select>
+      </label>
+      <label>${esc(t('Dépense Trip', 'Trip expense'))}
+        <select name="asset_movement_trip_expense_id">
+          <option value="">${esc(t('Aucune dépense Trip', 'No Trip expense'))}</option>
+          ${tripOptions}
+        </select>
+      </label>
+      <label class="tb-asset-check"><input name="asset_movement_exclude_budget" type="checkbox" checked><span>${esc(t('Sortir la transaction d’achat du budget', 'Exclude purchase transaction from budget'))}</span></label>
+    </div>
+    <button type="button" class="tb-asset-link-movement-btn" data-tb-asset-link-movement>${esc(t('Lier le mouvement', 'Link movement'))}</button>
+  </div>`;
+}
+
 export function renderAssetDocumentsModalSpec({
   asset = {},
   docs = [],
@@ -417,6 +486,9 @@ export function renderAssetDocumentsModalSpec({
   message = '',
   txLinks = [],
   tripLinks = [],
+  assetTransactionLinks = [],
+  transactions = [],
+  tripExpenses = [],
   tr = (keyName) => keyName,
   t = (fr) => fr,
   esc = defaultEsc,
@@ -431,10 +503,20 @@ export function renderAssetDocumentsModalSpec({
   const linkedIds = new Set((links || []).map((link) => String(link.document_id || '')));
   const candidates = (docs || []).filter((doc) => !linkedIds.has(String(doc.id || ''))).slice(0, 80);
   const linkedHelpers = { t, esc, findTxById, findTripExpenseById, isTripLinkedTransaction, txDocLine, tripDocLine };
+  const movementsHtml = renderAssetMovementLinksHtml({
+    asset,
+    movementLinks: assetTransactionLinks,
+    transactions,
+    tripExpenses,
+    t,
+    esc,
+    txDocLine,
+    tripDocLine,
+  });
 
   return assetModalSpec({
     key: 'documents',
-    title: t('Documents liés', 'Linked documents'),
+    title: t('Documents et mouvements liés', 'Linked documents and movements'),
     subtitle: asset.name || 'Asset',
     size: 'lg',
     formAttrs: `data-tb-asset-docs-form data-asset-id="${esc(asset.id)}"`,
@@ -444,7 +526,9 @@ export function renderAssetDocumentsModalSpec({
     esc,
     contentHTML: `${message ? `<div class="tb-asset-modal-error tb-asset-doc-message" data-tb-asset-doc-message>${esc(message)}</div>` : ''}
 
-      <div class="tb-asset-doc-list">
+      ${movementsHtml}
+
+      <div class="tb-asset-doc-list" style="margin-top:16px;">
         ${(links || []).length ? links.map((link) => {
           const doc = (docs || []).find((item) => String(item.id || '') === String(link.document_id || ''));
           return `<div class="tb-asset-doc-row tree">

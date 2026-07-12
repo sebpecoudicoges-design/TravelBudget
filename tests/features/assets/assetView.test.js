@@ -161,6 +161,8 @@ describe('Asset view helpers', () => {
       docs: [{ id: 'doc-1', name: 'Facture.pdf', tags: ['van'], created_at: '2026-07-01' }],
       links: [{ id: 'link-1', asset_id: 'asset-1', document_id: 'doc-2', relation_type: 'invoice' }],
       txLinks: [{ document_id: 'doc-2', transaction_id: 'tx-3' }],
+      assetTransactionLinks: [{ id: 'asset-tx-1', asset_id: 'asset-1', transaction_id: 'tx-4', relation_type: 'purchase', exclude_from_budget: true }],
+      transactions: [{ id: 'tx-4', label: 'Achat Van', amount: 8000, currency: 'AUD' }],
       tr: (key) => key,
       t: (fr) => fr,
       findTxById: () => ({ id: 'tx-3', label: 'Paiement' }),
@@ -170,6 +172,10 @@ describe('Asset view helpers', () => {
     expect(docs.contentHTML).toContain('data-tb-asset-docs-form');
     expect(docs.contentHTML).toContain('data-tb-asset-open-tx="tx-3"');
     expect(docs.contentHTML).toContain('data-tb-asset-unlink-doc="link-1"');
+    expect(docs.contentHTML).toContain('Mouvements liés à l’asset');
+    expect(docs.contentHTML).toContain('data-tb-asset-link-movement');
+    expect(docs.contentHTML).toContain('data-tb-asset-unlink-movement="asset-tx-1"');
+    expect(docs.contentHTML).toContain('Sorti du budget pour éviter le double comptage.');
     expect(docs.actionsHTML).toContain('data-tb-asset-doc-upload="asset-1"');
     expect(docs.contentHTML).toContain('Facture.pdf');
   });

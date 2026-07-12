@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyAssetTransactionLinksToBudget,
   assetMonthlyBudgetAmount,
+  buildAssetLinkedTransactionBudgetPatch,
   buildAssetBudgetTransactions,
   convertAssetAmount,
   summarizeAssetPortfolio,
@@ -108,5 +110,38 @@ describe('asset rules core', () => {
       rangeEnd: '2026-01-31',
     });
     expect(rows).toEqual([]);
+  });
+
+  it('excludes only asset purchase links from budget while keeping extra costs normal', () => {
+    const rows = applyAssetTransactionLinksToBudget([
+      { id: 'tx-purchase', type: 'expense', outOfBudget: false, affectsBudget: true },
+      { id: 'tx-extra', type: 'expense', outOfBudget: false, affectsBudget: true },
+    ], [
+      { asset_id: 'asset-1', transaction_id: 'tx-purchase', relation_type: 'purchase', exclude_from_budget: true },
+      { asset_id: 'asset-1', transaction_id: 'tx-extra', relation_type: 'extra_cost', exclude_from_budget: true },
+    ]);
+
+    expect(rows[0]).toMatchObject({
+      outOfBudget: true,
+      out_of_budget: true,
+      affectsBudget: false,
+      affects_budget: false,
+      assetBudgetExcluded: true,
+    });
+    expect(rows[1]).toMatchObject({ outOfBudget: false, affectsBudget: true });
+  });
+
+  it('returns the direct transaction patch for an asset acquisition', () => {
+    expect(buildAssetLinkedTransactionBudgetPatch({
+      transaction_id: 'tx-1',
+      relation_type: 'purchase',
+      exclude_from_budget: true,
+    })).toEqual({ out_of_budget: true, affects_budget: false });
+
+    expect(buildAssetLinkedTransactionBudgetPatch({
+      transaction_id: 'tx-2',
+      relation_type: 'maintenance',
+      exclude_from_budget: true,
+    })).toEqual({ out_of_budget: false, affects_budget: true });
   });
 });

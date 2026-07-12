@@ -5,7 +5,7 @@
   const FALLBACK_ASSETS = [{ id:'demo-car', name:'Toyota X-Trail', asset_type:'car', purchase_value:5000, residual_value:1400, currency:'EUR', purchase_date:new Date(new Date().getFullYear(), Math.max(0,new Date().getMonth()-3), 1).toISOString().slice(0,10), depreciation_months:36, status:'active' }];
   const FALLBACK_OWNERS = [{ id:'demo-owner-me', asset_id:'demo-car', display_name:'Toi', ownership_percent:50 }, { id:'demo-owner-co', asset_id:'demo-car', display_name:'Co-owner', ownership_percent:50 }];
   const FALLBACK_EVENTS = [];
-  let CACHE = { assets:[], owners:[], events:[], documentLinks:[], demo:false };
+  let CACHE = { assets:[], owners:[], events:[], documentLinks:[], transactionLinks:[], demo:false };
   let TRIP_EXPENSE_CACHE = new Map();
   let assetModal = null;
 
@@ -66,6 +66,7 @@
         owners: Array.isArray(state?.assetOwners) ? state.assetOwners : [],
         events: Array.isArray(state?.assetEvents) ? state.assetEvents : [],
         documentLinks: Array.isArray(state?.assetDocuments) ? state.assetDocuments : [],
+        transactionLinks: Array.isArray(state?.assetTransactionLinks) ? state.assetTransactionLinks : [],
         demo: false,
         empty: !(Array.isArray(state?.assets) && state.assets.length)
       };
@@ -78,26 +79,29 @@
       const tid = activeTravelId(); if(tid) q = q.or(`travel_id.eq.${tid},travel_id.is.null`);
       const { data, error } = await q; if(error) throw error;
       const assets = (data||[]).map(window.TBAssetsCore.normalizeAsset);
-      if(!assets.length){ CACHE = { assets:[], owners:[], events:[], documentLinks:[], demo:false, empty:true }; if(window.state){ state.assets=[]; state.assetOwners=[]; } return CACHE; }
+      if(!assets.length){ CACHE = { assets:[], owners:[], events:[], documentLinks:[], transactionLinks:[], demo:false, empty:true }; if(window.state){ state.assets=[]; state.assetOwners=[]; state.assetTransactionLinks=[]; } return CACHE; }
       const ids = assets.map(a=>a.id);
       const ownersRes = await c.from(table('asset_owners','asset_owners')).select('*').in('asset_id', ids).order('created_at',{ascending:true});
       let events = [];
       try{ const evRes = await c.from(table('asset_ownership_events','asset_ownership_events')).select('*').in('asset_id', ids).order('event_date',{ascending:false}).limit(50); events = evRes.error ? [] : (evRes.data||[]); }catch(_){ events = []; }
       let documentLinks = [];
       try{ const docRes = await c.from(table('asset_documents','asset_documents')).select('*').in('asset_id', ids).order('created_at',{ascending:false}); documentLinks = docRes.error ? [] : (docRes.data||[]); }catch(e){ console.warn('[TB][assets] document links unavailable', e); documentLinks = []; }
-      CACHE = { assets, owners: ownersRes.error ? [] : (ownersRes.data||[]), events, documentLinks, demo:false, empty:false };
+      let transactionLinks = [];
+      try{ const txLinkRes = await c.from(table('asset_transaction_links','asset_transaction_links')).select('*').in('asset_id', ids).order('created_at',{ascending:false}); transactionLinks = txLinkRes.error ? [] : (txLinkRes.data||[]); }catch(e){ console.warn('[TB][assets] transaction links unavailable', e); transactionLinks = []; }
+      CACHE = { assets, owners: ownersRes.error ? [] : (ownersRes.data||[]), events, documentLinks, transactionLinks, demo:false, empty:false };
       try {
         if (window.state) {
           state.assets = CACHE.assets;
           state.assetOwners = CACHE.owners;
           state.assetEvents = CACHE.events;
           state.assetDocuments = CACHE.documentLinks;
+          state.assetTransactionLinks = CACHE.transactionLinks;
         }
         if (typeof window.tbSaveOfflineSnapshot === 'function') window.tbSaveOfflineSnapshot('assets:load');
         if (typeof window.renderKPI === 'function') window.renderKPI();
       } catch (_) {}
       return CACHE;
-    }catch(e){ console.warn('[TB][assets] fallback preview used', e); CACHE = { assets:FALLBACK_ASSETS, owners:FALLBACK_OWNERS, events:FALLBACK_EVENTS, demo:true, reason:e && (e.message || e.code) }; return CACHE; }
+    }catch(e){ console.warn('[TB][assets] fallback preview used', e); CACHE = { assets:FALLBACK_ASSETS, owners:FALLBACK_OWNERS, events:FALLBACK_EVENTS, documentLinks:[], transactionLinks:[], demo:true, reason:e && (e.message || e.code) }; return CACHE; }
   }
 
   function assetBudgetRows(start, end){
@@ -443,6 +447,70 @@ function txDocLine(tx){
   return [date, label, amount].filter(Boolean).join(' · ');
 }
 
+function assetTransactionLinkTable(){ return table('asset_transaction_links','asset_transaction_links'); }
+
+async function fetchAssetTransactionLinks(assetId){
+  const c = client();
+  if(!c) return (CACHE.transactionLinks||[]).filter(link=>String(link.asset_id||'')===String(assetId));
+  const { data, error } = await c.from(assetTransactionLinkTable()).select('*').eq('asset_id', assetId).order('created_at',{ascending:false});
+  if(error) throw error;
+  return data || [];
+}
+
+async function loadTripExpenseCandidates(){
+  const c = client();
+  if(!c) return [];
+  try{
+    let q = c.from(table('trip_expenses','trip_expenses'))
+      .select('id,date,label,amount,currency,category,subcategory,paid_by_member_id,transaction_id,budget_date_start,budget_date_end,trip_id')
+      .order('date',{ascending:false})
+      .limit(60);
+    const tid = activeTravelId();
+    if(tid) q = q.eq('trip_id', tid);
+    const { data, error } = await q;
+    if(error) throw error;
+    rememberTripExpenses(data || []);
+    return (data || []).map(normalizeTripExpenseRow);
+  }catch(e){
+    console.warn('[TB][assets] trip expense candidates unavailable', e);
+    return [];
+  }
+}
+
+function transactionBudgetPatchForAssetLink(link){
+  try{
+    return window.Core?.assetRules?.buildAssetLinkedTransactionBudgetPatch?.(link) || { out_of_budget:false, affects_budget:true };
+  }catch(_){
+    const relation = String(link?.relation_type || '').toLowerCase();
+    const exclude = !!link?.exclude_from_budget;
+    return exclude && ['purchase','sale','financing'].includes(relation)
+      ? { out_of_budget:true, affects_budget:false }
+      : { out_of_budget:false, affects_budget:true };
+  }
+}
+
+async function updateLinkedTransactionBudgetFlags(transactionId, link){
+  const txId = String(transactionId || '').trim();
+  if(!txId) return;
+  const c = client();
+  if(!c) return;
+  const patch = transactionBudgetPatchForAssetLink(link);
+  if(!patch.out_of_budget) return;
+  const { error } = await c.from(table('transactions','transactions')).update(patch).eq('id', txId);
+  if(error) throw error;
+  try{
+    const row = (Array.isArray(window.state?.transactions) ? window.state.transactions : []).find(tx => String(tx?.id || '') === txId);
+    if(row){
+      row.outOfBudget = patch.out_of_budget;
+      row.out_of_budget = patch.out_of_budget;
+      row.affectsBudget = patch.affects_budget;
+      row.affects_budget = patch.affects_budget;
+      row.assetBudgetExcluded = true;
+      row.asset_budget_excluded = true;
+    }
+  }catch(_){}
+}
+
 function findTripExpenseById(id){
   const sid = String(id || '');
 
@@ -467,7 +535,7 @@ function tripDocLine(ex){
   return [date, label, amount].filter(Boolean).join(' · ');
 }
 
-function assetDocsModalHtml(asset, docs, links, message, txLinks, tripLinks){
+function assetDocsModalHtml(asset, docs, links, message, txLinks, tripLinks, assetTransactionLinks, transactions, tripExpenses){
   return window.UI?.assetView?.renderAssetDocumentsModalSpec?.({
     asset,
     docs,
@@ -475,6 +543,9 @@ function assetDocsModalHtml(asset, docs, links, message, txLinks, tripLinks){
     message,
     txLinks,
     tripLinks,
+    assetTransactionLinks,
+    transactions,
+    tripExpenses,
     tr,
     t:atxt,
     esc,
@@ -497,6 +568,9 @@ async function openAssetDocumentsModal(assetId, message){
   const docs = await loadDocumentCandidates();
   const links = await fetchAssetDocumentLinks(assetId);
   const docIds = links.map(l => String(l.document_id || '')).filter(Boolean);
+  const assetTransactionLinks = await fetchAssetTransactionLinks(assetId);
+  const transactions = await loadRecentTransactions();
+  const tripExpenses = await loadTripExpenseCandidates();
 
   let txLinks = [];
   let tripLinks = [];
@@ -513,7 +587,7 @@ async function openAssetDocumentsModal(assetId, message){
     console.warn('[TB][assets] document trip links unavailable', e);
   }
 
-  mountAssetModal(assetDocsModalHtml(asset,docs,links,message||'',txLinks,tripLinks));
+  mountAssetModal(assetDocsModalHtml(asset,docs,links,message||'',txLinks,tripLinks,assetTransactionLinks,transactions,tripExpenses));
 }
 
 async function linkAssetDocumentFromForm(form){
@@ -550,6 +624,47 @@ async function unlinkAssetDocument(linkId){
   const c = client();
   if(!c) throw new Error(tr('common.supabase_unavailable'));
   const { error } = await c.from(assetDocLinkTable()).delete().eq('id', linkId);
+  if(error) throw error;
+}
+
+async function linkAssetMovementFromForm(form){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+
+  const uid = await currentUserId();
+  if(!uid) throw new Error(tr('transactions.documents.user_missing'));
+
+  const assetId = form.getAttribute('data-asset-id');
+  const fd = new FormData(form);
+  const relationType = String(fd.get('asset_movement_relation_type') || 'purchase');
+  const txId = String(fd.get('asset_movement_transaction_id') || '').trim();
+  const tripExpenseId = String(fd.get('asset_movement_trip_expense_id') || '').trim();
+  if(!assetId || (!txId && !tripExpenseId)) throw new Error(atxt('Choisis une transaction ou une dépense Trip.', 'Choose a transaction or Trip expense.'));
+
+  let resolvedTxId = txId || null;
+  if(!resolvedTxId && tripExpenseId){
+    const trip = findTripExpenseById(tripExpenseId);
+    resolvedTxId = String(trip?.transactionId || trip?.transaction_id || '').trim() || null;
+  }
+
+  const payload = {
+    user_id: uid,
+    asset_id: assetId,
+    transaction_id: resolvedTxId,
+    trip_expense_id: tripExpenseId || null,
+    relation_type: tripExpenseId && relationType === 'purchase' ? 'trip_expense' : relationType,
+    exclude_from_budget: fd.get('asset_movement_exclude_budget') === 'on',
+  };
+
+  const { error } = await c.from(assetTransactionLinkTable()).insert([payload]);
+  if(error) throw error;
+  await updateLinkedTransactionBudgetFlags(resolvedTxId, payload);
+}
+
+async function unlinkAssetMovement(linkId){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+  const { error } = await c.from(assetTransactionLinkTable()).delete().eq('id', linkId);
   if(error) throw error;
 }
 
@@ -660,6 +775,36 @@ if(uploadAssetDoc){
   addDocumentToAsset(uploadAssetDoc.getAttribute('data-tb-asset-doc-upload'));
   return;
 }
+const linkMovement = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-link-movement]');
+if(linkMovement){
+  ev.preventDefault();
+  const form = linkMovement.closest('[data-tb-asset-docs-form]');
+  const aid = form?.getAttribute('data-asset-id') || '';
+  try{
+    await linkAssetMovementFromForm(form);
+    await renderAssets('asset-movement-linked');
+    await openAssetDocumentsModal(aid, atxt('Mouvement lié à l’asset.', 'Movement linked to asset.'));
+  }catch(e){
+    alert(e && (e.message || e.code) || e);
+  }
+  return;
+}
+const unlinkMovement = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-unlink-movement]');
+if(unlinkMovement){
+  ev.preventDefault();
+  const form = unlinkMovement.closest('[data-tb-asset-docs-form]');
+  const aid = form?.getAttribute('data-asset-id') || '';
+  if(confirm(atxt('Délier ce mouvement ?', 'Unlink this movement?'))){
+    try{
+      await unlinkAssetMovement(unlinkMovement.getAttribute('data-tb-asset-unlink-movement'));
+      await renderAssets('asset-movement-unlinked');
+      await openAssetDocumentsModal(aid, atxt('Mouvement délié.', 'Movement unlinked.'));
+    }catch(e){
+      alert(e && (e.message || e.code) || e);
+    }
+  }
+  return;
+}
   
   const openDoc = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-open-doc]'); if(openDoc){ ev.preventDefault(); const docId=openDoc.getAttribute('data-tb-asset-open-doc'); closeModal(); if(typeof showView==='function') showView('documents'); try{ if(typeof window.tbDocumentsPreview !== 'function' && typeof window.tbLoadLegacyDomain === 'function') await window.tbLoadLegacyDomain('documents'); window.tbDocumentsPreview?.(docId); }catch(_){} return; } const unlinkDoc = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-unlink-doc]'); if(unlinkDoc){ ev.preventDefault(); const form=unlinkDoc.closest('[data-tb-asset-docs-form]'); const aid=form?.getAttribute('data-asset-id')||''; if(confirm(atxt('Délier ce document ?', 'Unlink this document?'))){ try{ await unlinkAssetDocument(unlinkDoc.getAttribute('data-tb-asset-unlink-doc')); await renderAssets('asset-doc-unlinked'); await openAssetDocumentsModal(aid, atxt('Document délié.', 'Document unlinked.')); }catch(e){ alert(e && (e.message||e.code) || e); } } return; } const sellAsset = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-sell]');
 if(sellAsset){
@@ -765,11 +910,6 @@ await window.tbDocumentsUploadAndLinkAsset(files, asset);
 }
 
 .tb-asset-doc-linked-line span{
-.tb-asset-doc-linked-line span.trip{
-  color:#7c3aed;
-  border-color:rgba(124,58,237,.18);
-  background:#ede9fe;
-}
   font-size:11px;
   font-weight:900;
   color:#0891b2;
@@ -777,6 +917,12 @@ await window.tbDocumentsUploadAndLinkAsset(files, asset);
   background:#e0f7fb;
   border-radius:999px;
   padding:4px 7px;
+}
+
+.tb-asset-doc-linked-line span.trip{
+  color:#7c3aed;
+  border-color:rgba(124,58,237,.18);
+  background:#ede9fe;
 }
 
 .tb-asset-doc-linked-line button{
@@ -799,6 +945,8 @@ await window.tbDocumentsUploadAndLinkAsset(files, asset);
   font-size:12px;
   color:#94a3b8;
 }
+.tb-asset-movement-panel{display:grid;gap:12px;border:1px solid rgba(14,165,233,.16);border-radius:18px;background:linear-gradient(180deg,#f0fdfa,#f8fafc);padding:12px;margin-bottom:14px}
+.tb-asset-movement-head{display:grid;gap:4px}.tb-asset-movement-head strong{font-size:14px;color:#0f172a}.tb-asset-movement-head span{font-size:12px;color:#64748b;line-height:1.35}.tb-asset-movement-list{display:grid;gap:8px}.tb-asset-movement-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border:1px solid rgba(15,23,42,.08);border-radius:14px;background:#fff;padding:10px}.tb-asset-movement-row div{display:grid;gap:3px}.tb-asset-movement-row strong{font-size:13px;color:#0f172a}.tb-asset-movement-row span,.tb-asset-movement-row em{font-size:12px;color:#64748b;font-style:normal}.tb-asset-movement-row em{color:#0f766e;font-weight:800}.tb-asset-movement-row button,.tb-asset-link-movement-btn{border:1px solid rgba(15,23,42,.10);background:#fff;color:#0f172a;border-radius:12px;padding:7px 9px;font-size:12px;font-weight:900;cursor:pointer}.tb-asset-link-movement-btn{justify-self:flex-start;background:#0f172a;color:#fff}
 .tb-asset-pnl{
   display:flex;
   justify-content:space-between;
@@ -832,7 +980,7 @@ const content = data.empty ? emptyState() : `${summary}<div class="tb-assets-gri
   window.tbLoadAssets = loadAssets;
   window.tbAssetBudgetTransactionsForRange = assetBudgetRows;
   window.addEventListener('tb:auth_scope_changed', () => {
-    CACHE = { assets:[], owners:[], events:[], documentLinks:[], demo:false, empty:true };
+    CACHE = { assets:[], owners:[], events:[], documentLinks:[], transactionLinks:[], demo:false, empty:true };
     loadAssets().then(() => { try { window.tbRequestRenderAll?.('assets:auth'); } catch (_) {} }).catch(() => {});
   });
   setTimeout(() => {

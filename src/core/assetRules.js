@@ -63,6 +63,59 @@ export function assetMonthlyBudgetAmount(asset, owners = []) {
   return base * (assetOwnerPercent(asset, owners) / 100);
 }
 
+export function normalizeAssetTransactionLink(link = {}) {
+  const relationType = String(link.relation_type || link.relationType || 'purchase').toLowerCase();
+  const known = new Set(['purchase', 'extra_cost', 'sale', 'maintenance', 'insurance', 'financing', 'trip_expense', 'other']);
+  return {
+    id: link.id || null,
+    user_id: link.user_id || link.userId || null,
+    asset_id: link.asset_id || link.assetId || null,
+    transaction_id: link.transaction_id || link.transactionId || null,
+    trip_expense_id: link.trip_expense_id || link.tripExpenseId || null,
+    relation_type: known.has(relationType) ? relationType : 'other',
+    exclude_from_budget: !!(link.exclude_from_budget ?? link.excludeFromBudget),
+    note: link.note || null,
+  };
+}
+
+export function shouldExcludeAssetLinkedTransaction(link = {}) {
+  const row = normalizeAssetTransactionLink(link);
+  return !!row.transaction_id
+    && row.exclude_from_budget
+    && ['purchase', 'sale', 'financing'].includes(row.relation_type);
+}
+
+export function buildAssetLinkedTransactionBudgetPatch(link = {}) {
+  if (!shouldExcludeAssetLinkedTransaction(link)) {
+    return { out_of_budget: false, affects_budget: true };
+  }
+  return { out_of_budget: true, affects_budget: false };
+}
+
+export function applyAssetTransactionLinksToBudget(transactions = [], links = []) {
+  const byTx = new Map();
+  for (const link of links || []) {
+    const row = normalizeAssetTransactionLink(link);
+    if (!row.transaction_id) continue;
+    if (!byTx.has(String(row.transaction_id))) byTx.set(String(row.transaction_id), []);
+    byTx.get(String(row.transaction_id)).push(row);
+  }
+
+  return (transactions || []).map((tx) => {
+    const rows = byTx.get(String(tx?.id || '')) || [];
+    if (!rows.some(shouldExcludeAssetLinkedTransaction)) return tx;
+    return {
+      ...tx,
+      outOfBudget: true,
+      out_of_budget: true,
+      affectsBudget: false,
+      affects_budget: false,
+      assetBudgetExcluded: true,
+      asset_budget_excluded: true,
+    };
+  });
+}
+
 export function buildAssetBudgetTransactions({ assets = [], owners = [], rangeStart, rangeEnd } = {}) {
   const start = dateValue(rangeStart);
   const end = dateValue(rangeEnd || rangeStart);

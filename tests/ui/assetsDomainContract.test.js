@@ -24,6 +24,8 @@ describe('assets domain extraction contract', () => {
     expect(legacy).toContain('window.UI?.assetView?.renderAssetSaleModalSpec');
     expect(legacy).toContain('window.UI?.assetView?.renderAssetDocumentsModalSpec');
     expect(legacy).toContain('window.Core?.assetRules?.assetMonthlyBudgetAmount');
+    expect(legacy).toContain("assetTransactionLinkTable(){ return table('asset_transaction_links','asset_transaction_links'); }");
+    expect(legacy).toContain('updateLinkedTransactionBudgetFlags');
   });
 
   it('keeps monthly budget cost normalized in core and rendered in extracted views', () => {
@@ -32,6 +34,7 @@ describe('assets domain extraction contract', () => {
     expect(core).toContain('budget_category');
     expect(rules).toContain('assetMonthlyBudgetAmount');
     expect(rules).toContain('buildAssetBudgetTransactions');
+    expect(rules).toContain('buildAssetLinkedTransactionBudgetPatch');
     expect(rules).toContain('assetBudget: true');
     expect(view).toContain('renderPortfolioSummary');
     expect(view).toContain('renderAssetCard');
