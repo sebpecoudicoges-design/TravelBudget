@@ -141,7 +141,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [ ] Ajouter lint et formatage sans reformatage massif initial.
 - [ ] Fixer un budget de taille par module.
 - [ ] Ajouter les parcours critiques Playwright.
-- [ ] Documenter architecture, conventions et procedure de migration.
+- [x] Documenter architecture, conventions et procedure de migration.
 - [ ] Retirer un fichier legacy uniquement quand son remplacement est valide.
 - [ ] Maintenir `public/projet.html`, l'APK et Git a chaque livraison.
 
