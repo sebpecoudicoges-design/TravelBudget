@@ -106,3 +106,8 @@ window.Core.sportProfileRules = sportProfileRules;
 window.moneyRound = window.moneyRound || money.moneyRound;
 window.moneyAdd = window.moneyAdd || money.moneyAdd;
 window.fmtMoney = window.fmtMoney || money.fmtMoney;
+
+window.__tbBridgeReady = true;
+try {
+  window.dispatchEvent(new CustomEvent('tb:bridge_ready'));
+} catch (_) {}

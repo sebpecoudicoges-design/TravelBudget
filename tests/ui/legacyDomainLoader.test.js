@@ -7,6 +7,7 @@ describe('legacy domain loader', () => {
   const offlineQueue = fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8');
   const assetsUi = fs.readFileSync('public/legacy/js/42_assets_ui.js', 'utf8');
   const inboxUi = fs.readFileSync('public/legacy/js/44_inbox_ui.js', 'utf8');
+  const bridge = fs.readFileSync('src/app/bridge.js', 'utf8');
   const index = fs.readFileSync('index.html', 'utf8');
 
   it('keeps startup focused on global shell, Dashboard and Settings while deferring heavy domains', () => {
@@ -48,6 +49,22 @@ describe('legacy domain loader', () => {
     expect(domains).toContain('/legacy/js/41_assets_core.js');
     expect(domains).toContain('/legacy/js/42_assets_ui.js');
     expect(main).toContain('window.tbLoadLegacyDomain');
+  });
+
+  it('waits for the Vite bridge before loading boot or deferred legacy scripts', () => {
+    expect(bridge).toContain('window.__tbBridgeReady = true');
+    expect(bridge).toContain("new CustomEvent('tb:bridge_ready')");
+    expect(main).toContain('function waitForBridgeReady()');
+    expect(main).toContain('window.Data?.createMutationQueueStore');
+    expect(main).toContain('window.Data?.createTripStore');
+    expect(main).toContain('window.Core?.sportCatalog');
+
+    const domainLoader = main.slice(main.indexOf('window.tbLoadLegacyDomain'), main.indexOf('window.tbIsLegacyDomainLoaded'));
+    expect(domainLoader).toContain('await waitForBridgeReady();');
+
+    const bootLoader = main.slice(main.indexOf('await waitForBridgeReady();'), main.indexOf('boot().catch'));
+    expect(bootLoader).toContain('for (const src of BOOT_LEGACY_SCRIPTS)');
+    expect(bootLoader.indexOf('await waitForBridgeReady();')).toBeLessThan(bootLoader.indexOf('for (const src of BOOT_LEGACY_SCRIPTS)'));
   });
 
   it('loads the Assets domain before rendering the Assets view when needed', () => {

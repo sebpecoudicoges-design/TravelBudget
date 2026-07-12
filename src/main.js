@@ -115,6 +115,36 @@ const LEGACY_DOMAIN_SCRIPTS = {
   ],
 };
 const legacyDomainPromises = new Map();
+let bridgeReadyPromise = null;
+
+function hasRequiredBridgeGlobals() {
+  return Boolean(
+    window.__tbBridgeReady &&
+      window.Data?.createMutationQueueStore &&
+      window.Data?.createTripStore &&
+      window.Core?.sportCatalog
+  );
+}
+
+function waitForBridgeReady() {
+  if (hasRequiredBridgeGlobals()) return Promise.resolve(true);
+  if (bridgeReadyPromise) return bridgeReadyPromise;
+  bridgeReadyPromise = new Promise((resolve, reject) => {
+    let timer = null;
+    const done = () => {
+      window.removeEventListener('tb:bridge_ready', done);
+      if (timer) window.clearTimeout(timer);
+      if (hasRequiredBridgeGlobals()) {
+        resolve(true);
+        return;
+      }
+      reject(new Error('TravelBudget bridge indisponible avant chargement legacy'));
+    };
+    window.addEventListener('tb:bridge_ready', done, { once: true });
+    timer = window.setTimeout(done, 2500);
+  });
+  return bridgeReadyPromise;
+}
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -140,6 +170,7 @@ async function boot() {
     if (!scripts) return Promise.resolve(false);
     if (legacyDomainPromises.has(key)) return legacyDomainPromises.get(key);
     const promise = (async () => {
+      await waitForBridgeReady();
       for (const src of scripts) {
         // eslint-disable-next-line no-await-in-loop
         await loadScript(src);
@@ -154,6 +185,7 @@ async function boot() {
     return legacyDomainPromises.has(key);
   };
 
+  await waitForBridgeReady();
   for (const src of BOOT_LEGACY_SCRIPTS) {
     // eslint-disable-next-line no-await-in-loop
     try {
