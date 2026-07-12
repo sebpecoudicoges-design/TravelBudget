@@ -210,3 +210,53 @@ export function renderAnalysisInsights(options = {}) {
       </div>
     `).join('');
 }
+
+export function buildAnalysisNightCoveredRows(model = {}) {
+  return (Array.isArray(model.nightCoveredRows) ? model.nightCoveredRows : [])
+    .slice()
+    .sort((a, b) => String(b?.date || '').localeCompare(String(a?.date || '')))
+    .slice(0, 6);
+}
+
+export function renderAnalysisNightCovered({
+  model = {},
+  formatCurrency,
+} = {}) {
+  const count = safeNum(model.nightCoveredCount);
+  const money = (value) => formatMoney(formatCurrency, value, model.base);
+
+  if (!count) {
+    return `<div class="muted">Aucun transport marqué comme remplaçant une nuit d'hébergement sur la plage analysée.</div>`;
+  }
+
+  const rows = buildAnalysisNightCoveredRows(model);
+  return `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px;">
+        <div style="padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(59,130,246,.08), rgba(255,255,255,.5));">
+          <div class="muted" style="font-size:12px;">Transports concernés</div>
+          <div style="font-size:24px;font-weight:800;">${count}</div>
+        </div>
+        <div style="padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(16,185,129,.10), rgba(255,255,255,.5));">
+          <div class="muted" style="font-size:12px;">Économie potentielle logement</div>
+          <div style="font-size:24px;font-weight:800;">${escapeHtml(money(model.nightCoveredPotentialSavings))}</div>
+        </div>
+        <div style="padding:12px 14px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg, rgba(245,158,11,.10), rgba(255,255,255,.5));">
+          <div class="muted" style="font-size:12px;">Moyenne par nuit remplacée</div>
+          <div style="font-size:24px;font-weight:800;">${escapeHtml(money(model.nightCoveredAverageSaving))}</div>
+        </div>
+      </div>
+      <div class="muted" style="margin-bottom:10px;font-size:12px;line-height:1.45;">Signal analytique uniquement : ces montants n'altèrent ni le budget, ni les KPI, ni la projection. Ils servent à expliquer le logement potentiellement évité par des transports de nuit.</div>
+      <div style="display:grid;gap:8px;">
+        ${rows.map((row) => `
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--border);">
+            <div style="min-width:0;">
+              <div style="font-weight:700;">${escapeHtml(row?.label)}</div>
+              <div class="muted" style="font-size:12px;">${escapeHtml(row?.date)} • ${escapeHtml(row?.category)}</div>
+            </div>
+            <div style="text-align:right;white-space:nowrap;">
+              <div style="font-weight:700;">${escapeHtml(money(row?.saving))}</div>
+              <div class="muted" style="font-size:12px;">transport ${escapeHtml(money(row?.spent))}</div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+}

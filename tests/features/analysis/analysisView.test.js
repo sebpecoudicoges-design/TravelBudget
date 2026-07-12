@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildAnalysisInsights,
+  buildAnalysisNightCoveredRows,
   buildAnalysisOverviewCards,
   renderAnalysisInsights,
+  renderAnalysisNightCovered,
   renderAnalysisOverviewStrip,
 } from '../../../src/features/analysis/analysisView.js';
 
@@ -126,5 +128,43 @@ describe('Analysis view helpers', () => {
     expect(html).toContain('analysis-insight');
     expect(html).toContain('&lt;Food&gt;');
     expect(html).toContain('Projection on track');
+  });
+
+  it('renders the empty night transport panel state', () => {
+    const html = renderAnalysisNightCovered({ model: { nightCoveredCount: 0 } });
+
+    expect(html).toContain('Aucun transport marqué comme remplaçant une nuit');
+  });
+
+  it('sorts, limits and escapes night transport rows', () => {
+    const rows = [
+      { label: 'Old bus', date: '2026-07-01', category: 'Transport', saving: 40, spent: 12 },
+      { label: '<Night train>', date: '2026-07-08', category: '<Train>', saving: 90, spent: 35 },
+      { label: 'Ferry', date: '2026-07-07', category: 'Transport', saving: 70, spent: 28 },
+      { label: 'Coach', date: '2026-07-06', category: 'Transport', saving: 65, spent: 20 },
+      { label: 'Bus', date: '2026-07-05', category: 'Transport', saving: 55, spent: 18 },
+      { label: 'Rail', date: '2026-07-04', category: 'Transport', saving: 50, spent: 16 },
+      { label: 'Late flight', date: '2026-07-03', category: 'Transport', saving: 45, spent: 25 },
+    ];
+
+    expect(buildAnalysisNightCoveredRows({ nightCoveredRows: rows })).toHaveLength(6);
+
+    const html = renderAnalysisNightCovered({
+      model: {
+        base: 'AUD',
+        nightCoveredCount: 7,
+        nightCoveredPotentialSavings: 415,
+        nightCoveredAverageSaving: 59.29,
+        nightCoveredRows: rows,
+      },
+      formatCurrency: (value, currency) => `${Number(value).toFixed(0)} ${currency}`,
+    });
+
+    expect(html).toContain('Transports concernés');
+    expect(html).toContain('415 AUD');
+    expect(html).toContain('&lt;Night train&gt;');
+    expect(html).toContain('&lt;Train&gt;');
+    expect(html).not.toContain('Old bus');
+    expect(html.indexOf('&lt;Night train&gt;')).toBeLessThan(html.indexOf('Ferry'));
   });
 });

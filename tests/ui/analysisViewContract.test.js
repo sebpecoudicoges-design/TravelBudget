@@ -23,4 +23,10 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).not.toContain('const sourcedGap = model.comparablePerDay - model.referencePerDay');
     expect(legacy).not.toContain('analysis-insight-title');
   });
+
+  it('keeps the Analysis night transport panel delegated out of the legacy file', () => {
+    expect(legacy).toContain('window.TBAnalysisView?.renderAnalysisNightCovered');
+    expect(legacy).not.toContain('Transports concernés');
+    expect(legacy).not.toContain('Signal analytique uniquement');
+  });
 });
