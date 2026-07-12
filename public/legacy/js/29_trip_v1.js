@@ -5632,6 +5632,19 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
   }
     // Expose for modal callbacks
     window.__tripRefresh = refresh;
+    window.tbTripEditExpense = async function tbTripEditExpense(expenseId, opts = {}) {
+      const id = String(expenseId || '').trim();
+      if (!id) throw new Error("Dépense introuvable.");
+      const requestedTripId = String(opts?.tripId || '').trim();
+      if (requestedTripId && requestedTripId !== String(tripState.activeTripId || '')) {
+        tripState.activeTripId = requestedTripId;
+        localStorage.setItem(TRIP_ACTIVE_KEY, requestedTripId);
+        await refresh({ activeOnly: true });
+      } else if (!(tripState.expenses || []).some((ex) => String(ex?.id || '') === id)) {
+        await refresh({ activeOnly: true });
+      }
+      await _beginEditExpense(id);
+    };
 
 
   // Exposed function expected by navigation

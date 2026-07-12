@@ -442,13 +442,19 @@ function renderAssetMovementLinksHtml({
         const trip = tripById.get(String(link.trip_expense_id || link.tripExpenseId || ''));
         const relation = String(link.relation_type || link.relationType || 'purchase');
         const excluded = !!(link.exclude_from_budget ?? link.excludeFromBudget);
+        const txId = String(link.transaction_id || link.transactionId || tx?.id || '');
+        const tripId = String(link.trip_expense_id || link.tripExpenseId || trip?.id || '');
         return `<div class="tb-asset-movement-row">
           <div>
             <strong>${esc(t(relation === 'purchase' ? 'Achat asset' : relation === 'extra_cost' ? 'Dépense annexe' : relation === 'sale' ? 'Vente' : 'Mouvement asset', relation))}</strong>
             <span>${esc(tx ? txDocLine(tx) : trip ? tripDocLine(trip) : t('Mouvement introuvable', 'Movement not found'))}</span>
             ${excluded ? `<em>${esc(t('Sorti du budget pour éviter le double comptage.', 'Excluded from budget to avoid double counting.'))}</em>` : ''}
           </div>
-          <button type="button" data-tb-asset-unlink-movement="${esc(link.id || '')}">${esc(t('Délier', 'Unlink'))}</button>
+          <div class="tb-asset-movement-actions">
+            ${txId ? `<button type="button" data-tb-asset-open-tx="${esc(txId)}">${esc(t('Modifier transaction', 'Edit transaction'))}</button>` : ''}
+            ${tripId ? `<button type="button" data-tb-asset-open-trip-expense="${esc(tripId)}">${esc(t('Modifier Trip', 'Edit Trip'))}</button>` : ''}
+            <button type="button" data-tb-asset-unlink-movement="${esc(link.id || '')}">${esc(t('Délier', 'Unlink'))}</button>
+          </div>
         </div>`;
       }).join('') : `<div class="tb-asset-doc-empty">${esc(t('Aucun mouvement lié à cet asset.', 'No movement linked to this asset.'))}</div>`}
     </div>

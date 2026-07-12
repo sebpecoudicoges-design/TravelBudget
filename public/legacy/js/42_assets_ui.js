@@ -16,6 +16,7 @@
   function label(t){ return ({ car:tr('assets.type.car'), real_estate:tr('assets.type.real_estate'), equipment:tr('assets.type.equipment'), other:tr('assets.type.other') })[t] || tr('assets.type.other'); }
   function client(){ try{ if(typeof sb !== 'undefined' && sb && sb.from) return sb; }catch(_){} try{ if(window.sb && window.sb.from) return window.sb; }catch(_){} return null; }
   function activeTravelId(){ try{ return String(window.state?.activeTravelId || window.state?.period?.travel_id || '').trim(); }catch(_){ return ''; } }
+  function activeTripId(){ try{ return String(window.__tripState?.activeTripId || window.tripState?.activeTripId || '').trim(); }catch(_){ return ''; } }
   function today(){ return new Date().toISOString().slice(0,10); }
   function n(v, fallback){ const x=Number(v); return Number.isFinite(x) ? x : (fallback||0); }
   function table(name, fallback){ return (window.TB_CONST && window.TB_CONST.TABLES && window.TB_CONST.TABLES[name]) || fallback || name; }
@@ -148,6 +149,40 @@ async function loadRecentTransactions(){
   }catch(e){
     console.warn('[TB][assets] transactions candidates unavailable', e);
     return [];
+  }
+}
+async function loadTransactionsByIds(ids){
+  const wanted = Array.from(new Set((ids || []).map(id => String(id || '').trim()).filter(Boolean)));
+  if(!wanted.length) return [];
+
+  const existing = Array.isArray(window.state?.transactions)
+    ? window.state.transactions.filter(tx => wanted.includes(String(tx?.id || '')))
+    : [];
+  const existingIds = new Set(existing.map(tx => String(tx?.id || '')));
+  const missing = wanted.filter(id => !existingIds.has(id));
+  if(!missing.length) return existing;
+
+  const c = client();
+  if(!c) return existing;
+
+  try{
+    const { data, error } = await c
+      .from(table('transactions','transactions'))
+      .select('*')
+      .in('id', missing);
+    if(error) throw error;
+    const rows = data || [];
+    if(window.state){
+      state.transactions = Array.isArray(state.transactions) ? state.transactions : [];
+      const known = new Set(state.transactions.map(tx => String(tx?.id || '')));
+      for(const row of rows){
+        if(!known.has(String(row?.id || ''))) state.transactions.push(row);
+      }
+    }
+    return existing.concat(rows);
+  }catch(e){
+    console.warn('[TB][assets] linked transactions unavailable', e);
+    return existing;
   }
 }
 function portfolioSummary(assets, owners){
@@ -418,6 +453,33 @@ async function cacheTripExpensesForLinks(links){
   }
 }
 
+async function loadTripExpensesByIds(ids){
+  const wanted = Array.from(new Set((ids || []).map(id => String(id || '').trim()).filter(Boolean)));
+  if(!wanted.length) return [];
+
+  try{ rememberTripExpenses(window.__tripState?.expenses || []); }catch(_){}
+  const existing = wanted.map(id => TRIP_EXPENSE_CACHE.get(id)).filter(Boolean);
+  const existingIds = new Set(existing.map(ex => String(ex?.id || '')));
+  const missing = wanted.filter(id => !existingIds.has(id));
+  if(!missing.length) return existing.map(normalizeTripExpenseRow);
+
+  const c = client();
+  if(!c) return existing.map(normalizeTripExpenseRow);
+
+  try{
+    const { data, error } = await c
+      .from(table('trip_expenses','trip_expenses'))
+      .select('id,date,label,amount,currency,category,subcategory,paid_by_member_id,transaction_id,budget_date_start,budget_date_end,trip_id')
+      .in('id', missing);
+    if(error) throw error;
+    rememberTripExpenses(data || []);
+    return wanted.map(id => TRIP_EXPENSE_CACHE.get(id)).filter(Boolean).map(normalizeTripExpenseRow);
+  }catch(e){
+    console.warn('[TB][assets] linked trip expenses unavailable', e);
+    return existing.map(normalizeTripExpenseRow);
+  }
+}
+
 function findTxById(id){
   const sid = String(id || '');
   return (Array.isArray(window.state?.transactions) ? window.state.transactions : [])
@@ -465,7 +527,7 @@ async function loadTripExpenseCandidates(){
       .select('id,date,label,amount,currency,category,subcategory,paid_by_member_id,transaction_id,budget_date_start,budget_date_end,trip_id')
       .order('date',{ascending:false})
       .limit(60);
-    const tid = activeTravelId();
+    const tid = activeTripId();
     if(tid) q = q.eq('trip_id', tid);
     const { data, error } = await q;
     if(error) throw error;
@@ -571,6 +633,12 @@ async function openAssetDocumentsModal(assetId, message){
   const assetTransactionLinks = await fetchAssetTransactionLinks(assetId);
   const transactions = await loadRecentTransactions();
   const tripExpenses = await loadTripExpenseCandidates();
+  const linkedTxIds = assetTransactionLinks.map(link => String(link.transaction_id || link.transactionId || '').trim()).filter(Boolean);
+  const linkedTripIds = assetTransactionLinks.map(link => String(link.trip_expense_id || link.tripExpenseId || '').trim()).filter(Boolean);
+  const explicitTransactions = await loadTransactionsByIds(linkedTxIds);
+  const explicitTripExpenses = await loadTripExpensesByIds(linkedTripIds);
+  const transactionMap = new Map(transactions.concat(explicitTransactions).map(tx => [String(tx?.id || ''), tx]));
+  const tripMap = new Map(tripExpenses.concat(explicitTripExpenses).map(ex => [String(ex?.id || ''), ex]));
 
   let txLinks = [];
   let tripLinks = [];
@@ -587,7 +655,7 @@ async function openAssetDocumentsModal(assetId, message){
     console.warn('[TB][assets] document trip links unavailable', e);
   }
 
-  mountAssetModal(assetDocsModalHtml(asset,docs,links,message||'',txLinks,tripLinks,assetTransactionLinks,transactions,tripExpenses));
+  mountAssetModal(assetDocsModalHtml(asset,docs,links,message||'',txLinks,tripLinks,assetTransactionLinks,Array.from(transactionMap.values()),Array.from(tripMap.values())));
 }
 
 async function linkAssetDocumentFromForm(form){
@@ -666,6 +734,36 @@ async function unlinkAssetMovement(linkId){
   if(!c) throw new Error(tr('common.supabase_unavailable'));
   const { error } = await c.from(assetTransactionLinkTable()).delete().eq('id', linkId);
   if(error) throw error;
+}
+
+async function openLinkedTransactionEditor(txId){
+  const id = String(txId || '').trim();
+  if(!id) return;
+  await loadTransactionsByIds([id]);
+  closeModal();
+  if(typeof window.openTxEditModal === 'function'){
+    window.openTxEditModal(id);
+    return;
+  }
+  window.__tbFocusTransactionId = id;
+  if(typeof showView === 'function') showView('transactions');
+}
+
+async function openLinkedTripExpenseEditor(expenseId){
+  const id = String(expenseId || '').trim();
+  if(!id) return;
+  const rows = await loadTripExpensesByIds([id]);
+  const expense = rows.find(row => String(row?.id || '') === id) || findTripExpenseById(id);
+  closeModal();
+  if(typeof showView === 'function') showView('trip');
+  try{
+    if(typeof window.tbLoadLegacyDomain === 'function') await window.tbLoadLegacyDomain('trip');
+  }catch(_){}
+  if(typeof window.tbTripEditExpense === 'function'){
+    await window.tbTripEditExpense(id, { tripId: expense?.trip_id || expense?.tripId || null });
+    return;
+  }
+  window.__tbFocusTripExpenseId = id;
 }
 
   function showFormError(msg){ const el=assetModal?.root?.querySelector('[data-tb-asset-error]'); if(el){ el.hidden=false; el.textContent=String(msg || tr('assets.error.unknown')); } }
@@ -816,9 +914,7 @@ const openTx = ev.target && ev.target.closest && ev.target.closest('[data-tb-ass
 if(openTx){
   ev.preventDefault();
   const txId = openTx.getAttribute('data-tb-asset-open-tx');
-  closeModal();
-  window.__tbFocusTransactionId = String(txId || '');
-  if(typeof showView === 'function') showView('transactions');
+  await openLinkedTransactionEditor(txId);
   return;
 }
 
@@ -826,9 +922,7 @@ const openTripExpense = ev.target && ev.target.closest && ev.target.closest('[da
 if(openTripExpense){
   ev.preventDefault();
   const expenseId = openTripExpense.getAttribute('data-tb-asset-open-trip-expense');
-  closeModal();
-  window.__tbFocusTripExpenseId = String(expenseId || '');
-  if(typeof showView === 'function') showView('trip');
+  await openLinkedTripExpenseEditor(expenseId);
   return;
 }
 const archive = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-archive]'); if(archive){ ev.preventDefault(); if(confirm(tr('assets.confirm.archive'))){ try{ await archiveAsset(archive.getAttribute('data-tb-asset-archive')); await renderAssets('asset-archived'); }catch(e){ alert(e && (e.message||e.code) || e); } } return; } const close = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-close]'); if(close){ ev.preventDefault(); closeModal(); return; } const addOwner = ev.target && ev.target.closest && ev.target.closest('[data-tb-owner-add]'); if(addOwner){ ev.preventDefault(); const list=document.querySelector('[data-tb-owner-list]'); if(list){ list.insertAdjacentHTML('beforeend', ownerRowHtml({id:'',display_name:'',ownership_percent:0})); refreshOwnerTotal(); } return; } const remOwner = ev.target && ev.target.closest && ev.target.closest('[data-tb-owner-remove]'); if(remOwner){ ev.preventDefault(); const row=remOwner.closest('.tb-owner-row'); if(row) row.remove(); refreshOwnerTotal(); return; } }); document.addEventListener('input', function(ev){ if(ev.target && ev.target.matches && ev.target.matches('[name="owner_percent"]')) refreshOwnerTotal(); }); document.addEventListener('submit', async function(ev){ const form = ev.target && ev.target.matches && ev.target.matches('[data-tb-asset-form], [data-tb-asset-owners-form], [data-tb-asset-transfer-form], [data-tb-asset-sell-form], [data-tb-asset-docs-form]') ? ev.target : null; if(!form) return; ev.preventDefault(); const submit = assetModal?.root?.querySelector('[data-tb-asset-submit]') || form.querySelector('button[type="submit"]'); const oldTxt = submit ? submit.textContent : ''; if(submit){ submit.disabled = true; submit.textContent = tr('common.saving'); } try{ if(form.matches('[data-tb-asset-owners-form]')) await saveOwnersFromForm(form); else if(form.matches('[data-tb-asset-docs-form]')){ const aid=form.getAttribute('data-asset-id'); await linkAssetDocumentFromForm(form); await renderAssets('asset-doc-linked'); await openAssetDocumentsModal(aid, atxt('Document lié.', 'Document linked.')); return; } else if(form.matches('[data-tb-asset-transfer-form]')) await saveTransferFromForm(form);
@@ -949,7 +1043,7 @@ async function addDocumentToAsset(assetId){
   color:#94a3b8;
 }
 .tb-asset-movement-panel{display:grid;gap:12px;border:1px solid rgba(14,165,233,.16);border-radius:18px;background:linear-gradient(180deg,#f0fdfa,#f8fafc);padding:12px;margin-bottom:14px}
-.tb-asset-movement-head{display:grid;gap:4px}.tb-asset-movement-head strong{font-size:14px;color:#0f172a}.tb-asset-movement-head span{font-size:12px;color:#64748b;line-height:1.35}.tb-asset-movement-list{display:grid;gap:8px}.tb-asset-movement-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border:1px solid rgba(15,23,42,.08);border-radius:14px;background:#fff;padding:10px}.tb-asset-movement-row div{display:grid;gap:3px}.tb-asset-movement-row strong{font-size:13px;color:#0f172a}.tb-asset-movement-row span,.tb-asset-movement-row em{font-size:12px;color:#64748b;font-style:normal}.tb-asset-movement-row em{color:#0f766e;font-weight:800}.tb-asset-movement-row button,.tb-asset-link-movement-btn{border:1px solid rgba(15,23,42,.10);background:#fff;color:#0f172a;border-radius:12px;padding:7px 9px;font-size:12px;font-weight:900;cursor:pointer}.tb-asset-link-movement-btn{justify-self:flex-start;background:#0f172a;color:#fff}
+.tb-asset-movement-head{display:grid;gap:4px}.tb-asset-movement-head strong{font-size:14px;color:#0f172a}.tb-asset-movement-head span{font-size:12px;color:#64748b;line-height:1.35}.tb-asset-movement-list{display:grid;gap:8px}.tb-asset-movement-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border:1px solid rgba(15,23,42,.08);border-radius:14px;background:#fff;padding:10px}.tb-asset-movement-row div{display:grid;gap:3px}.tb-asset-movement-row strong{font-size:13px;color:#0f172a}.tb-asset-movement-row span,.tb-asset-movement-row em{font-size:12px;color:#64748b;font-style:normal}.tb-asset-movement-row em{color:#0f766e;font-weight:800}.tb-asset-movement-actions{display:flex!important;flex-wrap:wrap;justify-content:flex-end;gap:6px;min-width:130px}.tb-asset-movement-row button,.tb-asset-link-movement-btn{border:1px solid rgba(15,23,42,.10);background:#fff;color:#0f172a;border-radius:12px;padding:7px 9px;font-size:12px;font-weight:900;cursor:pointer}.tb-asset-link-movement-btn{justify-self:flex-start;background:#0f172a;color:#fff}
 .tb-asset-pnl{
   display:flex;
   justify-content:space-between;
