@@ -1,7 +1,7 @@
 {
   "name": "travelbudget",
   "private": true,
-  "version": "10.5.128",
+  "version": "10.5.129",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,7 @@
     "preview": "vite preview --port 4173",
     "test": "vitest run",
     "test:watch": "vitest",
+    "perf:budget": "node scripts/check-module-budgets.mjs",
     "lint:db": "node scripts/lint_db_strings.cjs",
     "cap:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",

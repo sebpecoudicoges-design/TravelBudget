@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
+  "dist": {
+    "totalJsMaxKiB": 380,
+    "totalCssMaxKiB": 8,
+    "mainJsGzipMaxKiB": 110
+  },
+  "sourceGroups": [
+    {
+      "name": "boot-legacy",
+      "maxKiB": 1500,
+      "paths": [
+        "public/legacy/js/00_constants.js",
+        "public/legacy/js/00_offline.js",
+        "public/legacy/js/00_offline_queue.js",
+        "public/legacy/js/00_i18n.js",
+        "public/legacy/js/00_perf.js",
+        "public/legacy/js/98_error_bus.js",
+        "public/legacy/js/00_supabase_config.js",
+        "public/legacy/js/01_helpers.js",
+        "public/legacy/js/97_ui_errors.js",
+        "public/legacy/js/02_palette_local_server_sync_robuste.js",
+        "public/legacy/js/03_ui_auth.js",
+        "public/legacy/js/04_theme.js",
+        "public/legacy/js/05_state.js",
+        "public/legacy/js/06_travel_context.js",
+        "public/legacy/js/06_allocations.js",
+        "public/legacy/js/07_supabase_bootstrap.js",
+        "public/legacy/js/09_fx.js",
+        "public/legacy/js/09_fx_snapshot.js",
+        "public/legacy/js/26_fx_crossrate.js",
+        "public/legacy/js/24_tx_fx_snapshot.js",
+        "public/legacy/js/28_data_updated_bus.js",
+        "public/legacy/js/27_cashflow_curve.js",
+        "public/legacy/js/10_navigation.js",
+        "public/legacy/js/32_help_assistant.js",
+        "public/legacy/js/35_guided_tour.js",
+        "public/legacy/js/11_kpi_render_micro_animation.js",
+        "public/legacy/js/12_dashboard_render.js",
+        "public/legacy/js/34_fx_decision.js",
+        "public/legacy/js/16_modal_add_edit_via_rpc.js",
+        "public/legacy/js/13_transactions_view.js",
+        "public/legacy/js/14_settings_periods_ui.js",
+        "public/legacy/js/15_recurring_rules_ui.js",
+        "public/legacy/js/15_wallet_adjust.js",
+        "public/legacy/js/17_internal_transfers.js",
+        "public/legacy/js/17_charts.js",
+        "public/legacy/js/33_budget_analysis.js",
+        "public/legacy/js/44_inbox_ui.js",
+        "public/legacy/js/18_main_render.js",
+        "public/legacy/js/08_refresh.js",
+        "public/legacy/js/19_backup_export_import.js",
+        "public/legacy/js/25_health_check.js",
+        "public/legacy/js/99_doctor.js",
+        "public/legacy/js/20_boot.js",
+        "public/legacy/js/21_dashboard_drag.js",
+        "public/legacy/js/22_budget_consistency_audit.js",
+        "public/legacy/js/31_wallet_balance.js"
+      ]
+    },
+    {
+      "name": "dashboard-settings",
+      "maxKiB": 360,
+      "paths": [
+        "public/legacy/js/11_kpi_render_micro_animation.js",
+        "public/legacy/js/12_dashboard_render.js",
+        "public/legacy/js/14_settings_periods_ui.js",
+        "src/features/dashboard/dashboardView.js",
+        "src/features/settings/settingsView.js",
+        "src/features/settings/settingsAccountController.js"
+      ]
+    },
+    {
+      "name": "trip-domain",
+      "maxKiB": 340,
+      "paths": [
+        "public/legacy/js/29_trip_v1.js",
+        "public/legacy/js/30_members_admin.js",
+        "src/core/tripRules.js",
+        "src/data/tripRepository.js",
+        "src/features/trip/tripStore.js",
+        "src/features/trip/tripView.js"
+      ]
+    },
+    {
+      "name": "sport-domain",
+      "maxKiB": 450,
+      "paths": [
+        "public/legacy/js/45_sport_ui.js",
+        "src/core/sportRules.js",
+        "src/data/sportRepository.js",
+        "src/features/sport/sportCatalog.js",
+        "src/features/sport/sportHistoryView.js",
+        "src/features/sport/sportProfileRules.js",
+        "src/features/sport/sportProfileView.js",
+        "src/features/sport/sportStore.js",
+        "src/features/sport/sportTimerController.js",
+        "src/features/sport/sportTimerView.js"
+      ]
+    },
+    {
+      "name": "nutrition-domain",
+      "maxKiB": 235,
+      "paths": [
+        "public/legacy/js/48_nutrition_ui.js",
+        "src/core/nutritionRules.js",
+        "src/data/nutritionRepository.js",
+        "src/features/nutrition/nutritionStore.js",
+        "src/features/nutrition/nutritionView.js"
+      ]
+    },
+    {
+      "name": "work-domain",
+      "maxKiB": 90,
+      "paths": [
+        "public/legacy/js/47_work_ui.js",
+        "public/legacy/js/50_work_career_ui.js",
+        "src/core/workRules.js",
+        "src/features/work/workView.js"
+      ]
+    },
+    {
+      "name": "assets-domain",
+      "maxKiB": 125,
+      "paths": [
+        "public/legacy/js/41_assets_core.js",
+        "public/legacy/js/42_assets_ui.js",
+        "src/core/assetRules.js",
+        "src/features/assets/assetView.js"
+      ]
+    }
+  ]
+}
