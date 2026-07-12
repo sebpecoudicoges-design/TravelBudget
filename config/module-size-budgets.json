@@ -38,6 +38,7 @@
         "public/legacy/js/35_guided_tour.js",
         "public/legacy/js/11_kpi_render_micro_animation.js",
         "public/legacy/js/12_dashboard_render.js",
+        "src/features/analysis/analysisView.js",
         "public/legacy/js/34_fx_decision.js",
         "public/legacy/js/16_modal_add_edit_via_rpc.js",
         "public/legacy/js/13_transactions_view.js",

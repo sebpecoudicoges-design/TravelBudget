@@ -1282,43 +1282,15 @@ categoryTxMap, subcategoryTxMap
     const scope = _el('analysis-scope')?.value || 'budget';
     const mode = _el('analysis-mode')?.value || 'planned';
     const currencyMode = _el('analysis-currency')?.value || 'account';
-    const rangeText = `${model.start || '—'} → ${model.end || '—'}`;
-    const scopeText = scope === 'all' ? _t('analysis.scope.budget_out') : (scope === 'out' ? _t('analysis.scope.out') : _t('analysis.scope.budget'));
-    const modeText = mode === 'expenses' ? _t('analysis.mode.expenses') : _t('analysis.mode.planned');
-    const periodText = periodId === 'active' ? _t('analysis.period.active') : (periodId === 'all' ? _t('analysis.period.all_trip') : (periodId === 'range' ? _t('analysis.filter.range') : _t('analysis.period.targeted')));
-    const cards = [
-      {
-        label: _t('analysis.filter.travel'),
-        value: String(travel?.name || _t('analysis.trip.active')),
-        meta: `${periodText} • ${rangeText}`,
-        accent: 'travel'
-      },
-      {
-        label: _t('analysis.overview.reading'),
-        value: scopeText,
-        meta: `${modeText} • ${_t('analysis.days_analyzed', { count: model.days.length })}`,
-        accent: 'scope'
-      },
-      {
-        label: _t('analysis.filter.currency'),
-        value: model.base,
-        meta: currencyMode === 'account' ? _t('analysis.currency.account_pivot') : _t('analysis.currency.period_segment'),
-        accent: 'currency'
-      },
-      {
-        label: _t('analysis.overview.coverage'),
-        value: _t('analysis.expenses_count', { count: model.txs.length }),
-        meta: model.comparableDays > 0 ? _t('analysis.reference.comparable_days', { count: model.comparableDays }) : _t('analysis.reference.missing_range'),
-        accent: 'coverage'
-      }
-    ];
-    host.innerHTML = cards.map((card) => `
-      <div class="analysis-overview-card analysis-overview-card--${escapeHTML(card.accent)}">
-        <div class="analysis-overview-label">${escapeHTML(card.label)}</div>
-        <div class="analysis-overview-value">${escapeHTML(card.value)}</div>
-        <div class="analysis-overview-meta">${escapeHTML(card.meta)}</div>
-      </div>
-    `).join('');
+    host.innerHTML = window.TBAnalysisView?.renderAnalysisOverviewStrip?.({
+      model,
+      travel,
+      periodId,
+      scope,
+      mode,
+      currencyMode,
+      t: _t,
+    }) || '';
   }
 
   function _buildSummary(model){

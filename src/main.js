@@ -2,6 +2,7 @@ import pkg from '../package.json';
 import './app/bridge.js';
 import { registerPwa } from './app/pwa.js';
 import * as budgetAnalysisRules from './core/budgetAnalysisRules.js';
+import * as analysisView from './features/analysis/analysisView.js';
 import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as settingsView from './features/settings/settingsView.js';
 import * as settingsAccountController from './features/settings/settingsAccountController.js';
@@ -12,6 +13,10 @@ window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.TBCore = {
   ...(window.TBCore || {}),
   budgetAnalysisRules,
+};
+window.TBAnalysisView = {
+  ...(window.TBAnalysisView || {}),
+  ...analysisView,
 };
 window.TBDashboardView = {
   ...(window.TBDashboardView || {}),
