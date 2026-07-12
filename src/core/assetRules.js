@@ -85,11 +85,14 @@ export function shouldExcludeAssetLinkedTransaction(link = {}) {
     && ['purchase', 'sale', 'financing'].includes(row.relation_type);
 }
 
+export function buildAssetLinkedTransactionBudgetPatchFromLinks(links = []) {
+  return (links || []).some(shouldExcludeAssetLinkedTransaction)
+    ? { out_of_budget: true, affects_budget: false }
+    : { out_of_budget: false, affects_budget: true };
+}
+
 export function buildAssetLinkedTransactionBudgetPatch(link = {}) {
-  if (!shouldExcludeAssetLinkedTransaction(link)) {
-    return { out_of_budget: false, affects_budget: true };
-  }
-  return { out_of_budget: true, affects_budget: false };
+  return buildAssetLinkedTransactionBudgetPatchFromLinks([link]);
 }
 
 export function applyAssetTransactionLinksToBudget(transactions = [], links = []) {

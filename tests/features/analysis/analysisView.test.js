@@ -4,9 +4,11 @@ import {
   buildAnalysisInsights,
   buildAnalysisNightCoveredRows,
   buildAnalysisOverviewCards,
+  buildAnalysisSubcategoryRows,
   renderAnalysisInsights,
   renderAnalysisNightCovered,
   renderAnalysisOverviewStrip,
+  renderAnalysisSubcategoryBreakdown,
 } from '../../../src/features/analysis/analysisView.js';
 
 describe('Analysis view helpers', () => {
@@ -166,5 +168,41 @@ describe('Analysis view helpers', () => {
     expect(html).toContain('&lt;Train&gt;');
     expect(html).not.toContain('Old bus');
     expect(html.indexOf('&lt;Night train&gt;')).toBeLessThan(html.indexOf('Ferry'));
+  });
+
+  it('renders escaped clickable subcategory rows for the legacy drilldown host', () => {
+    const rows = [
+      { key: '<food>', subcategoryName: '<Cafe>', categoryName: 'Food', actual: 42, color: '#123456' },
+      { key: 'transport', subcategoryName: 'Bus', categoryName: 'Transport', actual: 12 },
+      { key: 'hidden', subcategoryName: 'Hidden', categoryName: 'Other', actual: 1 },
+      { key: 'hidden2', subcategoryName: 'Hidden2', categoryName: 'Other', actual: 1 },
+      { key: 'hidden3', subcategoryName: 'Hidden3', categoryName: 'Other', actual: 1 },
+      { key: 'hidden4', subcategoryName: 'Hidden4', categoryName: 'Other', actual: 1 },
+      { key: 'hidden5', subcategoryName: 'Hidden5', categoryName: 'Other', actual: 1 },
+      { key: 'hidden6', subcategoryName: 'Hidden6', categoryName: 'Other', actual: 1 },
+      { key: 'hidden7', subcategoryName: 'Hidden7', categoryName: 'Other', actual: 1 },
+      { key: 'hidden8', subcategoryName: 'Hidden8', categoryName: 'Other', actual: 1 },
+      { key: 'overflow', subcategoryName: 'Overflow', categoryName: 'Other', actual: 1 },
+    ];
+
+    expect(buildAnalysisSubcategoryRows({ subcategorySeries: rows })).toHaveLength(10);
+
+    const html = renderAnalysisSubcategoryBreakdown({
+      model: { base: 'AUD', subcategorySeries: rows },
+      formatCurrency: (value, currency) => `${Number(value).toFixed(0)} ${currency}`,
+      accent: '#abcdef',
+    });
+
+    expect(html).toContain('data-subkey="&lt;food&gt;"');
+    expect(html).toContain('&lt;Cafe&gt;');
+    expect(html).toContain('42 AUD');
+    expect(html).toContain('tb-analysis-detail-btn');
+    expect(html).not.toContain('Overflow');
+  });
+
+  it('renders the empty subcategory state', () => {
+    const html = renderAnalysisSubcategoryBreakdown({ model: { subcategorySeries: [] } });
+
+    expect(html).toContain('Aucune sous-catégorie exploitée');
   });
 });

@@ -260,3 +260,36 @@ export function renderAnalysisNightCovered({
           </div>`).join('')}
       </div>`;
 }
+
+export function buildAnalysisSubcategoryRows(model = {}) {
+  return (Array.isArray(model.subcategorySeries) ? model.subcategorySeries : []).slice(0, 10);
+}
+
+export function renderAnalysisSubcategoryBreakdown({
+  model = {},
+  formatCurrency,
+  accent = '#3b82f6',
+} = {}) {
+  const rows = buildAnalysisSubcategoryRows(model);
+  const money = (value) => formatMoney(formatCurrency, value, model.base);
+
+  if (!rows.length) {
+    return `<div class="muted">Aucune sous-catégorie exploitée sur la plage actuelle.</div>`;
+  }
+
+  return rows.map((row, idx) => `
+    <div class="tb-analysis-clickable" data-subkey="${escapeHtml(row?.key)}" style="display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 8px;border-radius:14px;border:1px solid transparent;border-top:${idx ? '1px solid var(--border)' : '1px solid transparent'};">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${escapeHtml(row?.color || accent)};flex:0 0 auto;"></span>
+        <div style="min-width:0;">
+          <div style="font-weight:600;">${escapeHtml(row?.subcategoryName || 'Sans sous-catégorie')}</div>
+          <div class="muted" style="font-size:12px;">${escapeHtml(row?.categoryName || 'Autre')}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+        <div style="font-weight:700;">${escapeHtml(money(row?.actual))}</div>
+        <button type="button" class="tb-analysis-detail-btn">Détail</button>
+      </div>
+    </div>
+  `).join('');
+}

@@ -551,13 +551,31 @@ function transactionBudgetPatchForAssetLink(link){
   }
 }
 
-async function updateLinkedTransactionBudgetFlags(transactionId, link){
+function transactionBudgetPatchForAssetLinks(links){
+  try{
+    return window.Core?.assetRules?.buildAssetLinkedTransactionBudgetPatchFromLinks?.(links) || { out_of_budget:false, affects_budget:true };
+  }catch(_){
+    return (links || []).some((link) => transactionBudgetPatchForAssetLink(link).out_of_budget)
+      ? { out_of_budget:true, affects_budget:false }
+      : { out_of_budget:false, affects_budget:true };
+  }
+}
+
+async function fetchAssetLinksForTransaction(transactionId){
+  const txId = String(transactionId || '').trim();
+  if(!txId) return [];
+  const c = client();
+  if(!c) return (CACHE.transactionLinks || []).filter(link => String(link?.transaction_id || link?.transactionId || '') === txId);
+  const { data, error } = await c.from(assetTransactionLinkTable()).select('*').eq('transaction_id', txId);
+  if(error) throw error;
+  return data || [];
+}
+
+async function applyLinkedTransactionBudgetPatch(transactionId, patch){
   const txId = String(transactionId || '').trim();
   if(!txId) return;
   const c = client();
   if(!c) return;
-  const patch = transactionBudgetPatchForAssetLink(link);
-  if(!patch.out_of_budget) return;
   const { error } = await c.from(table('transactions','transactions')).update(patch).eq('id', txId);
   if(error) throw error;
   try{
@@ -567,10 +585,25 @@ async function updateLinkedTransactionBudgetFlags(transactionId, link){
       row.out_of_budget = patch.out_of_budget;
       row.affectsBudget = patch.affects_budget;
       row.affects_budget = patch.affects_budget;
-      row.assetBudgetExcluded = true;
-      row.asset_budget_excluded = true;
+      row.assetBudgetExcluded = !!patch.out_of_budget;
+      row.asset_budget_excluded = !!patch.out_of_budget;
     }
   }catch(_){}
+}
+
+async function updateLinkedTransactionBudgetFlags(transactionId, link){
+  const txId = String(transactionId || '').trim();
+  if(!txId) return;
+  const links = await fetchAssetLinksForTransaction(txId);
+  const nextLinks = links.length ? links.map(row => String(row?.id || '') === String(link?.id || '') ? Object.assign({}, row, link) : row) : [link];
+  await applyLinkedTransactionBudgetPatch(txId, transactionBudgetPatchForAssetLinks(nextLinks));
+}
+
+async function refreshLinkedTransactionBudgetFlags(transactionId){
+  const txId = String(transactionId || '').trim();
+  if(!txId) return;
+  const links = await fetchAssetLinksForTransaction(txId);
+  await applyLinkedTransactionBudgetPatch(txId, transactionBudgetPatchForAssetLinks(links));
 }
 
 function findTripExpenseById(id){
@@ -729,11 +762,35 @@ async function linkAssetMovementFromForm(form){
   await updateLinkedTransactionBudgetFlags(resolvedTxId, payload);
 }
 
+function findCachedAssetMovement(linkId){
+  const id = String(linkId || '').trim();
+  return (CACHE.transactionLinks || []).find(link => String(link?.id || '') === id) || null;
+}
+
+async function updateAssetMovementFromRow(row){
+  const c = client();
+  if(!c) throw new Error(tr('common.supabase_unavailable'));
+  const linkId = String(row?.getAttribute('data-tb-asset-movement-row') || '').trim();
+  if(!linkId) throw new Error(atxt('Lien introuvable.', 'Link not found.'));
+  const relationType = String(row.querySelector('[data-tb-asset-link-relation]')?.value || 'purchase');
+  const exclude = !!row.querySelector('[data-tb-asset-link-exclude]')?.checked;
+  const patch = {
+    relation_type: relationType,
+    exclude_from_budget: exclude,
+  };
+  const { data, error } = await c.from(assetTransactionLinkTable()).update(patch).eq('id', linkId).select('*').maybeSingle();
+  if(error) throw error;
+  const next = data || Object.assign({}, findCachedAssetMovement(linkId) || {}, patch, { id: linkId });
+  await updateLinkedTransactionBudgetFlags(next.transaction_id || next.transactionId, next);
+}
+
 async function unlinkAssetMovement(linkId){
   const c = client();
   if(!c) throw new Error(tr('common.supabase_unavailable'));
+  const existing = findCachedAssetMovement(linkId) || null;
   const { error } = await c.from(assetTransactionLinkTable()).delete().eq('id', linkId);
   if(error) throw error;
+  await refreshLinkedTransactionBudgetFlags(existing?.transaction_id || existing?.transactionId);
 }
 
 async function openLinkedTransactionEditor(txId){
@@ -882,6 +939,21 @@ if(linkMovement){
     await linkAssetMovementFromForm(form);
     await renderAssets('asset-movement-linked');
     await openAssetDocumentsModal(aid, atxt('Mouvement lié à l’asset.', 'Movement linked to asset.'));
+  }catch(e){
+    alert(e && (e.message || e.code) || e);
+  }
+  return;
+}
+const updateMovement = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-update-movement]');
+if(updateMovement){
+  ev.preventDefault();
+  const form = updateMovement.closest('[data-tb-asset-docs-form]');
+  const aid = form?.getAttribute('data-asset-id') || '';
+  const row = updateMovement.closest('[data-tb-asset-movement-row]');
+  try{
+    await updateAssetMovementFromRow(row);
+    await renderAssets('asset-movement-updated');
+    await openAssetDocumentsModal(aid, atxt('Lien patrimoine mis à jour.', 'Asset link updated.'));
   }catch(e){
     alert(e && (e.message || e.code) || e);
   }
@@ -1043,7 +1115,7 @@ async function addDocumentToAsset(assetId){
   color:#94a3b8;
 }
 .tb-asset-movement-panel{display:grid;gap:12px;border:1px solid rgba(14,165,233,.16);border-radius:18px;background:linear-gradient(180deg,#f0fdfa,#f8fafc);padding:12px;margin-bottom:14px}
-.tb-asset-movement-head{display:grid;gap:4px}.tb-asset-movement-head strong{font-size:14px;color:#0f172a}.tb-asset-movement-head span{font-size:12px;color:#64748b;line-height:1.35}.tb-asset-movement-list{display:grid;gap:8px}.tb-asset-movement-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border:1px solid rgba(15,23,42,.08);border-radius:14px;background:#fff;padding:10px}.tb-asset-movement-row div{display:grid;gap:3px}.tb-asset-movement-row strong{font-size:13px;color:#0f172a}.tb-asset-movement-row span,.tb-asset-movement-row em{font-size:12px;color:#64748b;font-style:normal}.tb-asset-movement-row em{color:#0f766e;font-weight:800}.tb-asset-movement-actions{display:flex!important;flex-wrap:wrap;justify-content:flex-end;gap:6px;min-width:130px}.tb-asset-movement-row button,.tb-asset-link-movement-btn{border:1px solid rgba(15,23,42,.10);background:#fff;color:#0f172a;border-radius:12px;padding:7px 9px;font-size:12px;font-weight:900;cursor:pointer}.tb-asset-link-movement-btn{justify-self:flex-start;background:#0f172a;color:#fff}
+.tb-asset-movement-head{display:grid;gap:4px}.tb-asset-movement-head strong{font-size:14px;color:#0f172a}.tb-asset-movement-head span{font-size:12px;color:#64748b;line-height:1.35}.tb-asset-movement-list{display:grid;gap:8px}.tb-asset-movement-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border:1px solid rgba(15,23,42,.08);border-radius:14px;background:#fff;padding:10px}.tb-asset-movement-row div{display:grid;gap:3px}.tb-asset-movement-row strong{font-size:13px;color:#0f172a}.tb-asset-movement-row span,.tb-asset-movement-row em{font-size:12px;color:#64748b;font-style:normal}.tb-asset-movement-row em{color:#0f766e;font-weight:800}.tb-asset-movement-edit{display:grid!important;grid-template-columns:minmax(140px,1fr) minmax(180px,1.1fr);gap:8px;margin-top:7px}.tb-asset-movement-edit label{display:grid;gap:4px;font-size:11px;color:#64748b;font-weight:900}.tb-asset-movement-edit select{border:1px solid rgba(15,23,42,.12);border-radius:10px;background:#f8fafc;color:#0f172a;padding:7px 8px;font-size:12px}.tb-asset-movement-actions{display:flex!important;flex-wrap:wrap;justify-content:flex-end;gap:6px;min-width:130px}.tb-asset-movement-row button,.tb-asset-link-movement-btn{border:1px solid rgba(15,23,42,.10);background:#fff;color:#0f172a;border-radius:12px;padding:7px 9px;font-size:12px;font-weight:900;cursor:pointer}.tb-asset-link-movement-btn{justify-self:flex-start;background:#0f172a;color:#fff}
 .tb-asset-pnl{
   display:flex;
   justify-content:space-between;

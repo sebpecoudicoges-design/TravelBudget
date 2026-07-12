@@ -185,8 +185,12 @@ describe('Asset view helpers', () => {
     expect(docs.contentHTML).toContain('Transactions, dépenses annexes et Trip liés à l’asset');
     expect(docs.contentHTML).toContain('data-tb-asset-link-movement');
     expect(docs.contentHTML).toContain('data-tb-asset-unlink-movement="asset-tx-1"');
+    expect(docs.contentHTML).toContain('data-tb-asset-update-movement="asset-tx-1"');
+    expect(docs.contentHTML).toContain('data-tb-asset-link-relation');
+    expect(docs.contentHTML).toContain('data-tb-asset-link-exclude');
     expect(docs.contentHTML).toContain('data-tb-asset-open-tx="tx-4"');
     expect(docs.contentHTML).toContain('Modifier transaction');
+    expect(docs.contentHTML).toContain('Enregistrer lien');
     expect(docs.contentHTML).toContain('data-tb-asset-open-trip-expense="trip-1"');
     expect(docs.contentHTML).toContain('Modifier Trip');
     expect(docs.contentHTML).toContain('Sorti du budget pour éviter le double comptage.');

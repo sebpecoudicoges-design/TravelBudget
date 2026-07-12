@@ -429,6 +429,16 @@ function renderAssetMovementLinksHtml({
   const linked = (movementLinks || []).filter((link) => String(link?.asset_id || link?.assetId || '') === String(asset?.id || ''));
   const txOptions = (transactions || []).slice(0, 80).map((tx) => `<option value="${esc(tx.id)}">${esc(txDocLine(tx))}</option>`).join('');
   const tripOptions = (tripExpenses || []).slice(0, 80).map((expense) => `<option value="${esc(expense.id)}">${esc(tripDocLine(expense))}</option>`).join('');
+  const relationOptions = (selected = 'purchase') => [
+    ['purchase', t('Achat / prix initial', 'Purchase / initial price')],
+    ['extra_cost', t('Dépense annexe', 'Extra cost')],
+    ['maintenance', t('Maintenance', 'Maintenance')],
+    ['insurance', t('Assurance', 'Insurance')],
+    ['sale', t('Vente', 'Sale')],
+    ['financing', t('Financement', 'Financing')],
+    ['trip_expense', t('Dépense Trip', 'Trip expense')],
+    ['other', t('Autre', 'Other')],
+  ].map(([value, label]) => `<option value="${esc(value)}" ${String(selected) === value ? 'selected' : ''}>${esc(label)}</option>`).join('');
 
   return `<div class="tb-asset-movement-panel">
     <div class="tb-asset-movement-head">
@@ -444,15 +454,20 @@ function renderAssetMovementLinksHtml({
         const excluded = !!(link.exclude_from_budget ?? link.excludeFromBudget);
         const txId = String(link.transaction_id || link.transactionId || tx?.id || '');
         const tripId = String(link.trip_expense_id || link.tripExpenseId || trip?.id || '');
-        return `<div class="tb-asset-movement-row">
+        return `<div class="tb-asset-movement-row" data-tb-asset-movement-row="${esc(link.id || '')}">
           <div>
             <strong>${esc(t(relation === 'purchase' ? 'Achat asset' : relation === 'extra_cost' ? 'Dépense annexe' : relation === 'sale' ? 'Vente' : 'Mouvement asset', relation))}</strong>
             <span>${esc(tx ? txDocLine(tx) : trip ? tripDocLine(trip) : t('Mouvement introuvable', 'Movement not found'))}</span>
             ${excluded ? `<em>${esc(t('Sorti du budget pour éviter le double comptage.', 'Excluded from budget to avoid double counting.'))}</em>` : ''}
+            <div class="tb-asset-movement-edit">
+              <label>${esc(t('Nature', 'Type'))}<select data-tb-asset-link-relation>${relationOptions(relation)}</select></label>
+              <label class="tb-asset-check"><input type="checkbox" data-tb-asset-link-exclude ${excluded ? 'checked' : ''}><span>${esc(t('Exclure cette transaction du budget', 'Exclude this transaction from budget'))}</span></label>
+            </div>
           </div>
           <div class="tb-asset-movement-actions">
             ${txId ? `<button type="button" data-tb-asset-open-tx="${esc(txId)}">${esc(t('Modifier transaction', 'Edit transaction'))}</button>` : ''}
             ${tripId ? `<button type="button" data-tb-asset-open-trip-expense="${esc(tripId)}">${esc(t('Modifier Trip', 'Edit Trip'))}</button>` : ''}
+            <button type="button" data-tb-asset-update-movement="${esc(link.id || '')}">${esc(t('Enregistrer lien', 'Save link'))}</button>
             <button type="button" data-tb-asset-unlink-movement="${esc(link.id || '')}">${esc(t('Délier', 'Unlink'))}</button>
           </div>
         </div>`;
@@ -462,13 +477,7 @@ function renderAssetMovementLinksHtml({
     <div class="tb-asset-form-grid" style="margin-top:14px;">
       <label>${esc(t('Type de lien', 'Link type'))}
         <select name="asset_movement_relation_type">
-          <option value="purchase">${esc(t('Achat / prix initial', 'Purchase / initial price'))}</option>
-          <option value="extra_cost">${esc(t('Dépense annexe', 'Extra cost'))}</option>
-          <option value="maintenance">${esc(t('Maintenance', 'Maintenance'))}</option>
-          <option value="insurance">${esc(t('Assurance', 'Insurance'))}</option>
-          <option value="sale">${esc(t('Vente', 'Sale'))}</option>
-          <option value="trip_expense">${esc(t('Dépense Trip', 'Trip expense'))}</option>
-          <option value="other">${esc(t('Autre', 'Other'))}</option>
+          ${relationOptions('purchase')}
         </select>
       </label>
       <label>${esc(t('Transaction wallet', 'Wallet transaction'))}

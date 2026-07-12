@@ -3,6 +3,7 @@ import {
   applyAssetTransactionLinksToBudget,
   assetMonthlyBudgetAmount,
   buildAssetLinkedTransactionBudgetPatch,
+  buildAssetLinkedTransactionBudgetPatchFromLinks,
   buildAssetBudgetTransactions,
   convertAssetAmount,
   summarizeAssetPortfolio,
@@ -143,5 +144,17 @@ describe('asset rules core', () => {
       relation_type: 'maintenance',
       exclude_from_budget: true,
     })).toEqual({ out_of_budget: false, affects_budget: true });
+  });
+
+  it('keeps a transaction excluded while any asset purchase link still excludes it', () => {
+    expect(buildAssetLinkedTransactionBudgetPatchFromLinks([
+      { transaction_id: 'tx-1', relation_type: 'purchase', exclude_from_budget: false },
+      { transaction_id: 'tx-1', relation_type: 'sale', exclude_from_budget: true },
+    ])).toEqual({ out_of_budget: true, affects_budget: false });
+
+    expect(buildAssetLinkedTransactionBudgetPatchFromLinks([
+      { transaction_id: 'tx-1', relation_type: 'purchase', exclude_from_budget: false },
+      { transaction_id: 'tx-1', relation_type: 'extra_cost', exclude_from_budget: true },
+    ])).toEqual({ out_of_budget: false, affects_budget: true });
   });
 });

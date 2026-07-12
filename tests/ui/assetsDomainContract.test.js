@@ -26,6 +26,8 @@ describe('assets domain extraction contract', () => {
     expect(legacy).toContain('window.Core?.assetRules?.assetMonthlyBudgetAmount');
     expect(legacy).toContain("assetTransactionLinkTable(){ return table('asset_transaction_links','asset_transaction_links'); }");
     expect(legacy).toContain('updateLinkedTransactionBudgetFlags');
+    expect(legacy).toContain('updateAssetMovementFromRow');
+    expect(legacy).toContain('data-tb-asset-update-movement');
   });
 
   it('keeps monthly budget cost normalized in core and rendered in extracted views', () => {
@@ -35,6 +37,7 @@ describe('assets domain extraction contract', () => {
     expect(rules).toContain('assetMonthlyBudgetAmount');
     expect(rules).toContain('buildAssetBudgetTransactions');
     expect(rules).toContain('buildAssetLinkedTransactionBudgetPatch');
+    expect(rules).toContain('buildAssetLinkedTransactionBudgetPatchFromLinks');
     expect(rules).toContain('assetBudget: true');
     expect(view).toContain('renderPortfolioSummary');
     expect(view).toContain('renderAssetCard');

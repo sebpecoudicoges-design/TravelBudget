@@ -138,6 +138,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Demarrer l'extraction Analyse : l'overview de lecture quitte `33_budget_analysis.js` vers `analysisView.js`.
   - [x] Extraire les insights Analyse : messages de tendance, reference, categorie dominante et projection quittent `33_budget_analysis.js`.
   - [x] Extraire le panneau Analyse Transports de nuit : economies potentielles, moyenne et lignes detaillees quittent `33_budget_analysis.js`.
+  - [x] Extraire la liste Analyse Sous-categories : lignes cliquables, montants et etat vide quittent `33_budget_analysis.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

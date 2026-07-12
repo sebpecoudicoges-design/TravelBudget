@@ -1972,30 +1972,14 @@ function _openTxDrilldown(kind, key, model){
   const host = _el('analysis-subcategory-breakdown');
   if (!host) return;
 
-  const rows = (model.subcategorySeries || []).slice(0, 10);
+  host.innerHTML = window.TBAnalysisView?.renderAnalysisSubcategoryBreakdown?.({
+    model,
+    formatCurrency: _fmtMoney,
+    accent: _themeAccent(),
+  }) || '';
 
-  if (!rows.length) {
-    host.innerHTML = `<div class="muted">Aucune sous-catégorie exploitée sur la plage actuelle.</div>`;
-    return;
-  }
-
+  if (!(model.subcategorySeries || []).length) return;
   _ensureTxDrilldownStyles();
-
-  host.innerHTML = rows.map((row, idx) => `
-    <div class="tb-analysis-clickable" data-subkey="${escapeHTML(row.key)}" style="display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 8px;border-radius:14px;border:1px solid transparent;border-top:${idx ? '1px solid var(--border)' : '1px solid transparent'};">
-      <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-        <span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${escapeHTML(row.color || _themeAccent())};flex:0 0 auto;"></span>
-        <div style="min-width:0;">
-          <div style="font-weight:600;">${escapeHTML(row.subcategoryName || 'Sans sous-catégorie')}</div>
-          <div class="muted" style="font-size:12px;">${escapeHTML(row.categoryName || 'Autre')}</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
-        <div style="font-weight:700;">${escapeHTML(_fmtMoney(row.actual, model.base))}</div>
-        <button type="button" class="tb-analysis-detail-btn">Détail</button>
-      </div>
-    </div>
-  `).join('');
 
   host.querySelectorAll('[data-subkey]').forEach((node) => {
     node.addEventListener('click', (ev) => {

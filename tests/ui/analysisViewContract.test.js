@@ -29,4 +29,10 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).not.toContain('Transports concernés');
     expect(legacy).not.toContain('Signal analytique uniquement');
   });
+
+  it('keeps the Analysis subcategory breakdown delegated out of the legacy file', () => {
+    expect(legacy).toContain('window.TBAnalysisView?.renderAnalysisSubcategoryBreakdown');
+    expect(legacy).not.toContain('rows.map((row, idx)');
+    expect(legacy).not.toContain('data-subkey="${escapeHTML(row.key)}"');
+  });
 });
