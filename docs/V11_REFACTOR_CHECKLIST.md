@@ -6,7 +6,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 
 - [x] Conserver la migration progressive Vite + modules ES.
 - [x] Mesurer l'existant avant de supprimer : 59 scripts legacy, environ 2,5 Mo de JavaScript.
-- [ ] Ne plus ajouter de nouvelle regle metier dans `public/legacy/js`.
+- [x] Ne plus ajouter de nouvelle regle metier dans `public/legacy/js`.
 - [ ] Chaque extraction doit avoir des tests avant suppression du code historique.
 - [ ] Une seule source de verite par calcul, synchronisation ou format de donnee.
 - [ ] Mettre a jour cette checklist a chaque lot livre.

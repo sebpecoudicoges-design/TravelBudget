@@ -68,10 +68,13 @@ describe('Asset view helpers', () => {
     expect(html).toContain('28% assets.card.used');
     expect(html).toContain('Moi · 50%');
     expect(html).toContain('2026-07-01 · Achat de part · 10%');
-    expect(html).toContain('Modifier / Budget');
+    expect(html).toContain('Budget / amortissement');
+    expect(html).toContain('Achats liés');
+    expect(html).toContain('Dépenses annexes');
+    expect(html).toContain('Budget, achat initial');
     expect(html).toContain('data-tb-asset-edit="asset-1"');
     expect(html).toContain('data-tb-asset-docs="asset-1"');
-    expect(html).toContain('Docs &amp; mouvements');
+    expect(html).toContain('Achats liés (1)');
   });
 
   it('renders realized PnL for sold assets', () => {
