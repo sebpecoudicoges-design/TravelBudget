@@ -201,6 +201,7 @@ describe('Settings view helpers', () => {
     });
 
     expect(html).toContain('data-act="toggle-period"');
+    expect(html).toContain('Modifier la période');
     expect(html).toContain('Période 2026-07-01 → 2026-07-07');
     expect(html).toContain('7 jours');
     expect(html).toContain('Australie · AUD · 85 AUD');

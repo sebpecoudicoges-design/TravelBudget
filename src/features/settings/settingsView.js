@@ -320,6 +320,10 @@ export function renderSettingsPeriodCard({
               <span class="tb-period-arrow">⌄</span>
             </span>
           </button>
+          <div class="tb-period-quick-actions">
+            <button class="btn primary" type="button" data-act="edit-seg">${esc(pt('Modifier la période', 'Edit period'))}</button>
+            <span>${esc(pt('Dates, devise, budget par jour, nuit transport et référence.', 'Dates, currency, daily budget, night transport and reference.'))}</span>
+          </div>
           <div class="tb-period-body">
             <div class="tb-period-shell">
               <div class="tb-settings-inline-strip tb-settings-inline-strip--period tb-settings-inline-strip--period-2col">

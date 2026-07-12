@@ -117,6 +117,9 @@ export function renderAssetCard({
     : '';
   const recent = rowsForAsset(asset, events).slice(0, 2);
   const docsCount = rowsForAsset(asset, documentLinks).length;
+  const budgetStatus = asset.include_in_budget !== false
+    ? t('Budget: amortissement inclus', 'Budget: depreciation included')
+    : t('Budget: amortissement exclu', 'Budget: depreciation excluded');
   const sold = String(asset.status || '').toLowerCase() === 'sold';
   const pnl = realizedPnLForMe(asset, owners, events, userId);
 
@@ -131,7 +134,7 @@ export function renderAssetCard({
       <span>${esc(tr('assets.card.purchase'))} : <strong>${esc(money(asset.purchase_value, asset.currency))}</strong></span>
       <span>${esc(tr('assets.card.residual_value'))} : <strong>${esc(money(asset.residual_value, asset.currency))}</strong></span>
       <span>${esc(t('Coût budget mensuel', 'Monthly budget cost'))} : <strong>${esc(money(monthlyCost, asset.currency))}/${esc(tr('assets.card.month'))}</strong></span>
-      <span class="${asset.include_in_budget ? 'done' : ''}">${esc(asset.include_in_budget ? t('Inclus au budget', 'Included in budget') : t('Hors budget', 'Outside budget'))}</span>
+      <span class="${asset.include_in_budget !== false ? 'done' : ''}">${esc(budgetStatus)}</span>
       <span class="${width >= 100 ? 'done' : ''}">${esc(depreciationStatus)}</span>
     </div>
     <div class="tb-asset-progress"><div><small>${esc(tr('assets.card.amortization'))}</small><small>${width >= 100 ? esc(tr('assets.card.floor_reached')) : width + '% ' + esc(tr('assets.card.used'))}</small></div><b><i style="width:${width}%"></i></b></div>
@@ -140,7 +143,7 @@ export function renderAssetCard({
     ${recent.length ? `<div class="tb-asset-events">${recent.map((event) => `<span>${esc(event.event_date || '')} · ${esc(eventLabel(event.event_type))} · ${esc(num(event.percent, 0))}%</span>`).join('')}</div>` : ''}
     ${sold ? `<div class="tb-asset-pnl"><span>${esc(tr('assets.card.realized_pnl'))}</span><strong class="${pnl >= 0 ? 'pos' : 'neg'}">${pnl >= 0 ? '+' : ''}${esc(money(pnl, asset.currency))}</strong></div>` : ''}
     <div class="tb-asset-actions">
-      <button type="button" data-tb-asset-edit="${esc(asset.id)}">${esc(tr('assets.action.edit'))}</button><button type="button" data-tb-asset-owners="${esc(asset.id)}">${esc(tr('assets.action.owners'))}</button><button type="button" data-tb-asset-transfer="${esc(asset.id)}">${esc(tr('assets.action.buy_sell'))}</button><button type="button" data-tb-asset-docs="${esc(asset.id)}">Docs (${docsCount})</button>
+      <button type="button" class="primary" data-tb-asset-edit="${esc(asset.id)}">${esc(t('Modifier / Budget', 'Edit / Budget'))}</button><button type="button" data-tb-asset-owners="${esc(asset.id)}">${esc(tr('assets.action.owners'))}</button><button type="button" data-tb-asset-transfer="${esc(asset.id)}">${esc(tr('assets.action.buy_sell'))}</button><button type="button" class="primary" data-tb-asset-docs="${esc(asset.id)}">${esc(t('Docs & mouvements', 'Docs & movements'))} (${docsCount})</button>
       <button type="button" data-tb-asset-sell="${esc(asset.id)}">${esc(tr('assets.action.sell_asset'))}</button><button type="button" class="danger" data-tb-asset-archive="${esc(asset.id)}">${esc(tr('assets.action.archive'))}</button>
     </div>
   </section>`;
@@ -196,7 +199,7 @@ export function renderAssetEditorModalSpec({
   return assetModalSpec({
     key: 'editor',
     title: isEdit ? tr('assets.modal.edit_title') : tr('assets.modal.add_title'),
-    subtitle: t('Le coût mensuel alimente uniquement Budget et Analyse, jamais le solde des portefeuilles.', 'The monthly cost feeds Budget and Analysis only, never wallet balances.'),
+    subtitle: t('Budget : coche "Inclure" pour compter l’amortissement mensuel. Les transactions d’achat se lient dans Docs & mouvements pour éviter le double comptage.', 'Budget: tick "Include" to count monthly depreciation. Purchase transactions are linked in Docs & movements to avoid double counting.'),
     formAttrs: `data-tb-asset-form="${isEdit ? 'edit' : 'create'}" ${isEdit ? `data-asset-id="${esc(a.id)}"` : ''}`,
     submitLabel: isEdit ? tr('documents.action.save') : tr('assets.action.create_asset'),
     tr,
@@ -210,7 +213,7 @@ export function renderAssetEditorModalSpec({
       <label>${esc(tr('assets.form.purchase_date'))}<input name="purchase_date" required type="date" value="${esc(a.purchase_date || now)}"></label>
       <label>${esc(tr('assets.form.depreciation_months'))}<input name="depreciation_months" required type="number" min="1" step="1" value="${esc(a.depreciation_months || 36)}"></label>
       ${isEdit ? '' : `<label>${esc(tr('assets.form.your_share'))}<input name="ownership_percent" required type="number" min="0" max="100" step="0.01" value="100"></label>`}
-      <label class="tb-asset-check"><input name="include_in_budget" type="checkbox" ${a.include_in_budget !== false ? 'checked' : ''}><span>${esc(t('Inclure le coût mensuel dans le budget', 'Include monthly cost in budget'))}</span></label>
+      <label class="tb-asset-check tb-asset-budget-toggle"><input name="include_in_budget" type="checkbox" ${a.include_in_budget !== false ? 'checked' : ''}><span><strong>${esc(t('Inclure / exclure du budget', 'Include / exclude from budget'))}</strong><small>${esc(t('Compte uniquement l’amortissement mensuel, pas le prix d’achat complet.', 'Counts only monthly depreciation, not the full purchase price.'))}</small></span></label>
       <label>${esc(t('Mode de calcul', 'Calculation mode'))}<select name="budget_method"><option value="linear" ${a.budget_method !== 'manual' ? 'selected' : ''}>${esc(t('Amortissement linéaire', 'Linear depreciation'))}</option><option value="manual" ${a.budget_method === 'manual' ? 'selected' : ''}>${esc(t('Montant mensuel manuel', 'Manual monthly amount'))}</option></select></label>
       <label>${esc(t('Montant mensuel manuel', 'Manual monthly amount'))}<input name="monthly_budget_override" type="number" min="0" step="0.01" value="${esc(a.monthly_budget_override ?? '')}" placeholder="0.00"></label>
       <label>${esc(t('Début dans le budget', 'Budget start'))}<input name="budget_start_date" type="date" value="${esc(a.budget_start_date || a.purchase_date || now)}"></label>
@@ -428,8 +431,8 @@ function renderAssetMovementLinksHtml({
 
   return `<div class="tb-asset-movement-panel">
     <div class="tb-asset-movement-head">
-      <strong>${esc(t('Mouvements liés à l’asset', 'Asset linked movements'))}</strong>
-      <span>${esc(t('Achat exclu du budget, amortissement compté mensuellement. Les coûts annexes restent des dépenses normales.', 'Purchase can be excluded from budget, monthly depreciation is counted. Extra costs stay normal expenses.'))}</span>
+      <strong>${esc(t('Transactions, dépenses annexes et Trip liés à l’asset', 'Transactions, extra costs and Trip linked to the asset'))}</strong>
+      <span>${esc(t('Achat : à exclure du budget pour éviter le double comptage. Dépense annexe : à lier ici, mais elle reste une dépense normale et ne change pas l’amortissement.', 'Purchase: exclude from budget to avoid double counting. Extra cost: link it here, but it stays a normal expense and does not change depreciation.'))}</span>
     </div>
 
     <div class="tb-asset-movement-list">

@@ -64,12 +64,14 @@ describe('Asset view helpers', () => {
     expect(html).toContain('2250 AUD');
     expect(html).toContain('Coût budget mensuel');
     expect(html).toContain('50 AUD/assets.card.month');
+    expect(html).toContain('Budget: amortissement inclus');
     expect(html).toContain('28% assets.card.used');
     expect(html).toContain('Moi · 50%');
     expect(html).toContain('2026-07-01 · Achat de part · 10%');
-    expect(html).toContain('Docs (1)');
+    expect(html).toContain('Modifier / Budget');
     expect(html).toContain('data-tb-asset-edit="asset-1"');
     expect(html).toContain('data-tb-asset-docs="asset-1"');
+    expect(html).toContain('Docs &amp; mouvements');
   });
 
   it('renders realized PnL for sold assets', () => {
@@ -111,7 +113,8 @@ describe('Asset view helpers', () => {
     expect(editor.contentHTML).toContain('data-tb-asset-form="edit"');
     expect(editor.contentHTML).toContain('data-asset-id="asset-1"');
     expect(editor.contentHTML).toContain('name="budget_day"');
-    expect(editor.contentHTML).toContain('Inclure le coût mensuel dans le budget');
+    expect(editor.contentHTML).toContain('Inclure / exclure du budget');
+    expect(editor.contentHTML).toContain('pas le prix d’achat complet');
 
     const owners = renderAssetOwnersModalSpec({
       asset: { id: 'asset-1', name: 'Van' },
@@ -172,7 +175,7 @@ describe('Asset view helpers', () => {
     expect(docs.contentHTML).toContain('data-tb-asset-docs-form');
     expect(docs.contentHTML).toContain('data-tb-asset-open-tx="tx-3"');
     expect(docs.contentHTML).toContain('data-tb-asset-unlink-doc="link-1"');
-    expect(docs.contentHTML).toContain('Mouvements liés à l’asset');
+    expect(docs.contentHTML).toContain('Transactions, dépenses annexes et Trip liés à l’asset');
     expect(docs.contentHTML).toContain('data-tb-asset-link-movement');
     expect(docs.contentHTML).toContain('data-tb-asset-unlink-movement="asset-tx-1"');
     expect(docs.contentHTML).toContain('Sorti du budget pour éviter le double comptage.');

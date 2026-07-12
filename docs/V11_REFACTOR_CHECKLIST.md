@@ -139,7 +139,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 
 ## Chantier 6 - Qualite et livraison
 
-- [ ] Ajouter lint et formatage sans reformatage massif initial.
+- [x] Ajouter lint et formatage sans reformatage massif initial.
 - [x] Fixer un budget de taille par module.
 - [x] Ajouter les parcours critiques Playwright.
 - [x] Documenter architecture, conventions et procedure de migration.
