@@ -464,10 +464,17 @@
     const enabled = !!(CACHE.timer && CACHE.timerFocus);
     try { document.documentElement.classList.toggle("tb-sport-focus-lock", enabled); } catch (_) {}
     try { document.body?.classList.toggle("tb-sport-focus-lock", enabled); } catch (_) {}
+    try { sportTimerFullscreenTarget()?.classList?.toggle("tb-sport-focus-root", enabled); } catch (_) {}
     try {
       if (enabled) document.body?.setAttribute("data-tb-sport-focus", "1");
       else document.body?.removeAttribute("data-tb-sport-focus");
     } catch (_) {}
+  }
+  function sportTimerFullscreenTarget() {
+    return document.getElementById("sport-root")
+      || document.getElementById("view-sport")
+      || document.querySelector("[data-view='sport']")
+      || document.documentElement;
   }
   function bmiValue(kg, cm) {
     const h = n(cm, 0) / 100;
@@ -3678,7 +3685,7 @@
   async function keepTimerFullscreen(reason) {
     if (!CACHE.timerFocus) return;
     syncTimerFocusLock();
-    const target = document.querySelector(".tb-sport-timer-card.focus") || document.documentElement;
+    const target = sportTimerFullscreenTarget();
     const current = document.fullscreenElement || document.webkitFullscreenElement || null;
     if (current) return;
     const request = target?.requestFullscreen || target?.webkitRequestFullscreen || null;

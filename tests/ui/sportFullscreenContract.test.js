@@ -9,7 +9,10 @@ describe('sport fullscreen focus contract', () => {
     expect(sport).toContain('tb-sport-focus-lock');
     expect(sport).toContain('body.tb-sport-focus-lock .mobile-bottom-nav');
     expect(sport).toContain('width:100vw;height:100dvh');
-    expect(sport).toContain('document.querySelector(".tb-sport-timer-card.focus")');
+    expect(sport).toContain('function sportTimerFullscreenTarget()');
+    expect(sport).toContain('document.getElementById("sport-root")');
+    expect(sport).toContain('const target = sportTimerFullscreenTarget()');
+    expect(sport).not.toContain('document.querySelector(".tb-sport-timer-card.focus")');
     expect(sport).toContain('target?.webkitRequestFullscreen');
     expect(sport).toContain('document.webkitExitFullscreen');
     expect(sport).toContain('async function exitTimerFullscreen()');
