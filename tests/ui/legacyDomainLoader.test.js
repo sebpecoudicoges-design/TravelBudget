@@ -51,6 +51,18 @@ describe('legacy domain loader', () => {
     expect(main).toContain('window.tbLoadLegacyDomain');
   });
 
+  it('keeps Cashflow out of boot and lazy-loads it when Dashboard needs the curve', () => {
+    const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+
+    expect(bootList).not.toContain('/legacy/js/27_cashflow_curve.js');
+    expect(domains).toContain('cashflow:');
+    expect(domains).toContain('/legacy/js/27_cashflow_curve.js');
+    expect(main).toContain('window.tbEnsureCashflowCurve');
+    expect(main).toContain("window.tbLoadLegacyDomain('cashflow')");
+    expect(navigation).toContain('window.tbEnsureCashflowCurve("navigation:dashboard")');
+  });
+
   it('waits for the Vite bridge before loading boot or deferred legacy scripts', () => {
     expect(bridge).toContain('window.__tbBridgeReady = true');
     expect(bridge).toContain("new CustomEvent('tb:bridge_ready')");

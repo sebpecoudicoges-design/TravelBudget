@@ -9,7 +9,8 @@ function applyTheme(theme) {
   // Redraw charts + cashflow curve on theme change so colors/contrast update immediately.
   if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("04_theme.js"); else redrawCharts();
   try {
-    if (typeof window.tbRequestCashflowCurveRender === "function") window.tbRequestCashflowCurveRender("theme");
+    if ((typeof activeView === 'string' ? activeView : '') === 'dashboard' && typeof window.tbEnsureCashflowCurve === "function") window.tbEnsureCashflowCurve("theme");
+    else if (typeof window.tbRequestCashflowCurveRender === "function") window.tbRequestCashflowCurveRender("theme");
     else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
   } catch (_) {}
   try {
@@ -28,4 +29,3 @@ function toggleTheme() {
 async function saveThemeToServer(theme) {
   await sb.from(TB_CONST.TABLES.settings).update({ theme, updated_at: new Date().toISOString() }).eq("user_id", sbUser.id);
 }
-

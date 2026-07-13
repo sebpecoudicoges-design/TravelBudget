@@ -1331,7 +1331,7 @@ dataLabels: { enabled: false },
         try {
           if (window.__tbDebugRender) console.log("[TB] cashflow:render", { reason: reason || "unknown", key: k2 });
         } catch (_) {}
-        if (typeof renderCashflowCurve === "function") renderCashflowCurve();
+        if (typeof renderCashflowChart === "function") renderCashflowChart();
       } catch (e) {
         console.error("CashflowCurve render failed:", e);
       }

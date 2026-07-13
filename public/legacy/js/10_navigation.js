@@ -159,6 +159,7 @@ function showView(view) {
       if (typeof window.tbRenderDashboardCritical === "function") window.tbRenderDashboardCritical("navigation:dashboard", { cashflow: false });
       else if (typeof window.renderAll === "function") window.renderAll();
     } catch (_) {}
+    try { if (typeof window.tbEnsureCashflowCurve === "function") window.tbEnsureCashflowCurve("navigation:dashboard"); } catch (_) {}
     if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("10_navigation.js"); else redrawCharts();
   }
   if (view === "trip") {

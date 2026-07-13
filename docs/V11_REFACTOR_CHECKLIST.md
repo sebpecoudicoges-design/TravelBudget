@@ -126,6 +126,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Sortir Documents et Cautions du boot : `43_documents_ui.js` et `46_cautions_ui.js` chargent au premier affichage, avec liens Patrimoine/Inbox compatibles lazy.
   - [x] Sortir la FAQ Aide du boot : `31_help_faq.js` charge a l'ouverture de l'onglet Aide, tout en gardant l'assistant et le guide global au demarrage.
   - [x] Sortir Analyse du boot : filtres, tiroir et page Analyse chargent a l'ouverture, avec modules Vite Analyse importes a la demande.
+  - [x] Sortir Cashflow du boot : `27_cashflow_curve.js` charge a la demande sur Dashboard via `tbEnsureCashflowCurve`, avec theme, KPI, boot-release et navigation compatibles lazy.
 - [ ] Decouper les gros bundles par domaine.
   - [x] Extraire le shell visuel Settings : hero, resumes de cartes et accordéons quittent `14_settings_periods_ui.js` vers `src/features/settings/settingsView.js`.
   - [x] Extraire le rendu du panneau Compte Settings : profil, santé, devise, mode UI, seuil cashflow et raccourcis notifications quittent le template inline legacy.

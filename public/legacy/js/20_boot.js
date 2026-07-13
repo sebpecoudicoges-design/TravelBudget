@@ -272,9 +272,10 @@ window.onload = async function () {
     window.__TB_BOOTING = false;
     window.__TB_BOOT_COMPLETED__ = true;
     try { if (typeof window.tbReleaseBootRenders === "function") window.tbReleaseBootRenders();
-  if (window.__TB_BOOT_NEEDS_CASHFLOW_CURVE && typeof tbRequestCashflowCurveRender === "function") {
+  if (window.__TB_BOOT_NEEDS_CASHFLOW_CURVE) {
     window.__TB_BOOT_NEEDS_CASHFLOW_CURVE = false;
-    tbRequestCashflowCurveRender("boot-release");
+    if (typeof window.tbEnsureCashflowCurve === "function") window.tbEnsureCashflowCurve("boot-release");
+    else if (typeof tbRequestCashflowCurveRender === "function") tbRequestCashflowCurveRender("boot-release");
   }
  } catch (_) {}
 

@@ -29,8 +29,9 @@ window.tbRenderDashboardCritical = function tbRenderDashboardCritical(reason, op
   } catch (_) {}
   try {
     const view = (typeof activeView === "string" && activeView) ? activeView : "dashboard";
-    if (options.cashflow !== false && view === "dashboard" && typeof tbRequestCashflowCurveRender === "function") {
-      tbRequestCashflowCurveRender(reason || "financialState");
+    if (options.cashflow !== false && view === "dashboard") {
+      if (typeof window.tbEnsureCashflowCurve === "function") window.tbEnsureCashflowCurve(reason || "financialState");
+      else if (typeof tbRequestCashflowCurveRender === "function") tbRequestCashflowCurveRender(reason || "financialState");
     }
   } catch (_) {}
 };
@@ -59,7 +60,7 @@ function renderAll() {
       try { if (typeof renderWallets === "function") renderWallets(); } catch (e) { console.warn("[renderAll] renderWallets failed", e); }
       try { if (typeof renderDailyBudget === "function") renderDailyBudget(); } catch (e) { console.warn("[renderAll] renderDailyBudget failed", e); }
       try { if (typeof renderKPI === "function") renderKPI(); } catch (e) { console.warn("[renderAll] renderKPI failed", e); }
-      try { if (typeof tbRequestCashflowCurveRender === "function") tbRequestCashflowCurveRender("renderAll"); else if (typeof renderCashflowCurve === "function") renderCashflowCurve(); } catch (e) { console.warn("[renderAll] renderCashflowCurve failed", e); }
+      try { if (typeof window.tbEnsureCashflowCurve === "function") window.tbEnsureCashflowCurve("renderAll"); else if (typeof tbRequestCashflowCurveRender === "function") tbRequestCashflowCurveRender("renderAll"); else if (typeof renderCashflowChart === "function") renderCashflowChart(); } catch (e) { console.warn("[renderAll] renderCashflowCurve failed", e); }
       try { if (typeof renderCharts === "function") renderCharts(); } catch (e) { console.warn("[renderAll] renderCharts failed", e); }
       try { if (typeof tbRequestRedrawCharts === "function") tbRequestRedrawCharts("renderAll");
       else if (typeof redrawCharts === "function") redrawCharts(); } catch (e) { console.warn("[renderAll] redrawCharts failed", e); }
@@ -105,8 +106,9 @@ function renderAll() {
       if ((typeof activeView === "string" ? activeView : "dashboard") !== "dashboard") return;
 
       safeCall("Cashflow curve", () => {
+        if (typeof window.tbEnsureCashflowCurve === "function") return window.tbEnsureCashflowCurve("renderAll:deferred");
         if (typeof tbRequestCashflowCurveRender === "function") return tbRequestCashflowCurveRender("renderAll:deferred");
-        if (typeof renderCashflowCurve === "function") return renderCashflowCurve();
+        if (typeof renderCashflowChart === "function") return renderCashflowChart();
       }, { containerId: "view-dashboard" });
 
       safeCall("Charts", () => {

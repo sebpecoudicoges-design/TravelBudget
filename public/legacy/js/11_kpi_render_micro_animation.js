@@ -1919,7 +1919,8 @@ try {
           if (opts.apply) {
             try { if (typeof renderKPI === "function") renderKPI(); } catch (_) {}
             try {
-              if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("kpi-range-change");
+              if (typeof window.tbEnsureCashflowCurve === "function") window.tbEnsureCashflowCurve("kpi-range-change");
+              else if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("kpi-range-change");
               else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
               else if (typeof renderCashflowChart === "function") renderCashflowChart();
             } catch (_) {}
@@ -1964,7 +1965,8 @@ try {
         try { if (typeof renderKPI === "function") renderKPI(); } catch (_) {}
         // Keep curve aligned with KPI scope (no separate curve filter)
         try {
-          if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("kpi-scope-change");
+          if (typeof window.tbEnsureCashflowCurve === "function") window.tbEnsureCashflowCurve("kpi-scope-change");
+          else if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("kpi-scope-change");
           else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
           else if (typeof renderCashflowChart === "function") renderCashflowChart();
         } catch (_) {}

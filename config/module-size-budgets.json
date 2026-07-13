@@ -34,7 +34,6 @@
         "public/legacy/js/26_fx_crossrate.js",
         "public/legacy/js/24_tx_fx_snapshot.js",
         "public/legacy/js/28_data_updated_bus.js",
-        "public/legacy/js/27_cashflow_curve.js",
         "public/legacy/js/10_navigation.js",
         "public/legacy/js/32_help_assistant.js",
         "public/legacy/js/35_guided_tour.js",
@@ -58,6 +57,13 @@
         "public/legacy/js/21_dashboard_drag.js",
         "public/legacy/js/22_budget_consistency_audit.js",
         "public/legacy/js/31_wallet_balance.js"
+      ]
+    },
+    {
+      "name": "cashflow-domain",
+      "maxKiB": 70,
+      "paths": [
+        "public/legacy/js/27_cashflow_curve.js"
       ]
     },
     {

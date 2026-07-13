@@ -9,6 +9,7 @@ describe('module size budgets', () => {
     const names = config.sourceGroups.map((group) => group.name);
     expect(names).toEqual(expect.arrayContaining([
       'boot-legacy',
+      'cashflow-domain',
       'analysis-domain',
       'dashboard-settings',
       'trip-domain',

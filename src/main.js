@@ -5,7 +5,7 @@ import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as settingsView from './features/settings/settingsView.js';
 import * as settingsAccountController from './features/settings/settingsAccountController.js';
 
-const TB_APP_VERSION = '10.5.145';
+const TB_APP_VERSION = '10.5.146';
 window.TB_VERSION = window.TB_VERSION || TB_APP_VERSION;
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.TBCore = {
@@ -52,7 +52,6 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/26_fx_crossrate.js',
   '/legacy/js/24_tx_fx_snapshot.js',
   '/legacy/js/28_data_updated_bus.js',
-  '/legacy/js/27_cashflow_curve.js',
   '/legacy/js/10_navigation.js',
   '/legacy/js/32_help_assistant.js',
   '/legacy/js/35_guided_tour.js',
@@ -84,6 +83,9 @@ const LEGACY_DOMAIN_SCRIPTS = {
     '/legacy/js/33_analysis_filter_view.js',
     '/legacy/js/33_analysis_drilldown_view.js',
     '/legacy/js/33_budget_analysis.js',
+  ],
+  cashflow: [
+    '/legacy/js/27_cashflow_curve.js',
   ],
   assets: [
     '/legacy/js/41_assets_core.js',
@@ -189,6 +191,29 @@ async function boot() {
   window.tbIsLegacyDomainLoaded = function tbIsLegacyDomainLoaded(domain) {
     const key = String(domain || '').trim();
     return legacyDomainPromises.has(key);
+  };
+  window.tbEnsureCashflowCurve = function tbEnsureCashflowCurve(reason) {
+    const currentView = String(window.activeView || '').trim();
+    if (currentView && currentView !== 'dashboard') return Promise.resolve(false);
+    if (typeof window.tbRequestCashflowCurveRender === 'function') {
+      window.tbRequestCashflowCurveRender(reason || 'ensure');
+      return Promise.resolve(true);
+    }
+    if (typeof window.renderCashflowChart === 'function') {
+      window.renderCashflowChart();
+      return Promise.resolve(true);
+    }
+    return window.tbLoadLegacyDomain('cashflow').then(() => {
+      if (typeof window.tbRequestCashflowCurveRender === 'function') {
+        window.tbRequestCashflowCurveRender(reason || 'ensure:lazy');
+        return true;
+      }
+      if (typeof window.renderCashflowChart === 'function') {
+        window.renderCashflowChart();
+        return true;
+      }
+      return false;
+    });
   };
 
   await waitForBridgeReady();
