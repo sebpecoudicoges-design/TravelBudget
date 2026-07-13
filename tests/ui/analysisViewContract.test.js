@@ -11,6 +11,12 @@ describe('Analysis view extraction contract', () => {
     expect(main).toContain('...analysisView');
   });
 
+  it('exposes the Analysis chart option module to the legacy runtime', () => {
+    expect(main).toContain("import * as analysisChartOptions from './features/analysis/analysisChartOptions.js'");
+    expect(main).toContain('window.TBAnalysisCharts');
+    expect(main).toContain('...analysisChartOptions');
+  });
+
   it('keeps the Analysis overview strip delegated out of the legacy file', () => {
     expect(legacy).toContain('window.TBAnalysisView?.renderAnalysisOverviewStrip');
     expect(legacy).not.toContain('const rangeText = `${model.start');
@@ -41,5 +47,16 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).toContain('analysisView?.renderAnalysisReferenceMix');
     expect(legacy).not.toContain('referenceContextLabel');
     expect(legacy).not.toContain('analysis-reference-metal--${tone}');
+  });
+
+  it('keeps the Analysis ECharts option builders delegated out of the legacy file', () => {
+    expect(legacy).toContain('window.TBAnalysisCharts?.buildAnalysisTrajectoryOption');
+    expect(legacy).toContain('window.TBAnalysisCharts?.buildAnalysisCategoryPieOption');
+    expect(legacy).toContain('window.TBAnalysisCharts?.buildAnalysisCategoryBarsOption');
+    expect(legacy).toContain('window.TBAnalysisCharts?.buildAnalysisVelocityOption');
+    expect(legacy).toContain('window.TBAnalysisCharts?.buildAnalysisHeatmapOption');
+    expect(legacy).not.toContain("legend: { top: 6");
+    expect(legacy).not.toContain("roseType: 'area'");
+    expect(legacy).not.toContain('visualMap: { min: 0');
   });
 });

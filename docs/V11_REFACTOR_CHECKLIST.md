@@ -140,6 +140,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire le panneau Analyse Transports de nuit : economies potentielles, moyenne et lignes detaillees quittent `33_budget_analysis.js`.
   - [x] Extraire la liste Analyse Sous-categories : lignes cliquables, montants et etat vide quittent `33_budget_analysis.js`.
   - [x] Extraire le panneau Analyse Reference pays : resume, contexte, grille de comparaison et etat vide quittent `33_budget_analysis.js`.
+  - [x] Extraire les options ECharts Analyse : trajectoire, categories, cadence et heatmap quittent `33_budget_analysis.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

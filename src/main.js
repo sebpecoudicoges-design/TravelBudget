@@ -2,6 +2,7 @@ import pkg from '../package.json';
 import './app/bridge.js';
 import { registerPwa } from './app/pwa.js';
 import * as budgetAnalysisRules from './core/budgetAnalysisRules.js';
+import * as analysisChartOptions from './features/analysis/analysisChartOptions.js';
 import * as analysisView from './features/analysis/analysisView.js';
 import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as settingsView from './features/settings/settingsView.js';
@@ -17,6 +18,10 @@ window.TBCore = {
 window.TBAnalysisView = {
   ...(window.TBAnalysisView || {}),
   ...analysisView,
+};
+window.TBAnalysisCharts = {
+  ...(window.TBAnalysisCharts || {}),
+  ...analysisChartOptions,
 };
 window.TBDashboardView = {
   ...(window.TBDashboardView || {}),

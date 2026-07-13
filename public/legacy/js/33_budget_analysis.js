@@ -1838,6 +1838,17 @@ function _openTxDrilldown(kind, key, model){
   function _themeGood(){ return getComputedStyle(document.body).getPropertyValue('--good').trim() || '#22c55e'; }
   function _themeWarn(){ return getComputedStyle(document.body).getPropertyValue('--warn').trim() || '#f59e0b'; }
   function _themeBad(){ return getComputedStyle(document.body).getPropertyValue('--bad').trim() || '#ef4444'; }
+  function _analysisChartTheme(){
+    return {
+      text: _themeText(),
+      muted: _themeMuted(),
+      grid: _themeGrid(),
+      accent: _themeAccent(),
+      good: _themeGood(),
+      warn: _themeWarn(),
+      bad: _themeBad(),
+    };
+  }
   function _ensureChart(name, id){
     const el = _el(id);
     if (!el || !window.echarts) return null;
@@ -1847,29 +1858,19 @@ function _openTxDrilldown(kind, key, model){
   function _renderTrajectory(model){
     const chart = _ensureChart('trajectory','analysis-trajectory-chart');
     if (!chart) return;
-    const todayLabel = _iso(new Date()).slice(5);
-    chart.setOption({
-      animationDuration: 900,
-      animationEasing: 'cubicOut',
-      tooltip: { trigger:'axis', backgroundColor:'rgba(15,23,42,.92)', borderWidth:0, textStyle:{ color:'#fff' } },
-      legend: { top: 6, textStyle:{ color:_themeMuted(), fontSize:11 }, itemWidth:14, itemHeight:8, data:['Réel cumulé','Cible cumulée'] },
-      grid: { left: 24, right: 24, top: 52, bottom: 30, containLabel:true },
-      xAxis: { type:'category', boundaryGap:false, data:model.days.map(d=>d.slice(5)), axisLine:{ lineStyle:{ color:_themeGrid() } }, axisLabel:{ color:_themeMuted(), fontSize:10, margin:8 } },
-      yAxis: { type:'value', axisLabel:{ color:_themeMuted(), fontSize:10, formatter:(v)=>_fmtMoney(v, model.base) }, splitLine:{ lineStyle:{ color:_themeGrid() } } },
-      series: [
-        { name:'Cible cumulée', type:'line', smooth:false, symbol:'none', lineStyle:{ width:3, color:_themeGood(), opacity:.95, type:'dashed' }, areaStyle:{ color:'transparent' }, data:model.cumTarget,
-          markLine: model.days.length ? { symbol:'none', lineStyle:{ type:'dashed', color:_themeGrid() }, label:{ show:false }, data:[{ xAxis: todayLabel }] } : undefined },
-        { name:'Réel cumulé', type:'line', smooth:true, symbol:'circle', symbolSize:6, lineStyle:{ width:4, color:_themeAccent() }, areaStyle:{ color: { type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{ offset:0, color:'rgba(59,130,246,.34)' },{ offset:1, color:'rgba(59,130,246,.03)' }] } }, emphasis:{ focus:'series' }, data:model.cumSpent,
-          markPoint:{ symbol:'circle', symbolSize:16, itemStyle:{ color:_themeAccent(), shadowBlur:18, shadowColor:'rgba(59,130,246,.45)' }, data: model.cumSpent.length ? [{ coord:[model.days.length-1, model.cumSpent[model.cumSpent.length-1]] }] : [] }
-        }
-      ]
-    });
+    chart.setOption(window.TBAnalysisCharts?.buildAnalysisTrajectoryOption?.({
+      model,
+      todayLabel: _iso(new Date()).slice(5),
+      theme: _analysisChartTheme(),
+      formatCurrency: _fmtMoney,
+    }) || {});
     const meta = _el('analysis-trajectory-meta');
     if (meta) {
+      const detail = window.TBAnalysisCharts?.buildAnalysisTrajectoryMeta?.(model) || {};
       meta.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:center;">
-        <span>${escapeHTML(model.start || '—')} → ${escapeHTML(model.end || '—')}</span>
-        <span>${escapeHTML(model.days.length + ' jours')}</span>
-        <span>${escapeHTML(model.base)}</span>
+        <span>${escapeHTML(detail.start || '—')} → ${escapeHTML(detail.end || '—')}</span>
+        <span>${escapeHTML((detail.days || 0) + ' jours')}</span>
+        <span>${escapeHTML(detail.currency || model.base || '')}</span>
       </div>`;
       meta.style.marginTop = '.65rem';
     }
@@ -1878,38 +1879,12 @@ function _openTxDrilldown(kind, key, model){
   const chart = _ensureChart('category','analysis-category-chart');
   if (!chart) return;
 
-  const data = model.topCategories.map((it) => ({
-    name: it[0],
-    value: Number(it[1].toFixed(2)),
-    itemStyle:{ color: _categoryColor(it[0]) }
-  }));
-
-  chart.setOption({
-    animationDuration: 1000,
-    tooltip: {
-      trigger:'item',
-      backgroundColor:'rgba(15,23,42,.92)',
-      borderWidth:0,
-      textStyle:{ color:'#fff' },
-      formatter:(p)=>`${p.name}<br>${_fmtMoney(p.value, model.base)} • ${p.percent}%`
-    },
-    series:[{
-      type:'pie',
-      radius:['34%','78%'],
-      center:['50%','56%'],
-      roseType:'area',
-      avoidLabelOverlap:true,
-      itemStyle:{ borderRadius:10, borderColor:'rgba(255,255,255,.06)', borderWidth:2 },
-      label:{ color:_themeText(), formatter:(p)=>`${p.name}\n${p.percent}%`, fontWeight:700 },
-      labelLine:{ length:10, length2:8 },
-      data: data.length ? data : [{
-        name:'Aucune dépense',
-        value:1,
-        itemStyle:{ color:'rgba(148,163,184,.25)' },
-        label:{ color:_themeMuted() }
-      }]
-    }]
-  });
+  chart.setOption(window.TBAnalysisCharts?.buildAnalysisCategoryPieOption?.({
+    model,
+    categoryColor: _categoryColor,
+    theme: _analysisChartTheme(),
+    formatCurrency: _fmtMoney,
+  }) || {});
 
   try {
     chart.off('click');
@@ -1924,39 +1899,11 @@ function _openTxDrilldown(kind, key, model){
   const chart = _ensureChart('categoryBars','analysis-category-bars-chart');
   if (!chart) return;
 
-  const rows = (model.categorySeries || []).slice(0, 12).reverse();
-
-  chart.setOption({
-    animationDuration: 900,
-    tooltip:{
-      trigger:'axis',
-      axisPointer:{ type:'shadow' },
-      backgroundColor:'rgba(15,23,42,.92)',
-      borderWidth:0,
-      textStyle:{ color:'#fff' },
-      formatter:(p)=>`${p?.[0]?.axisValue || ''}<br>${_fmtMoney(p?.[0]?.value || 0, model.base)}`
-    },
-    grid:{ left: 110, right: 20, top: 10, bottom: 20, containLabel:false },
-    xAxis:{
-      type:'value',
-      axisLabel:{ color:_themeMuted(), formatter:(v)=>_fmtMoney(v, model.base) },
-      splitLine:{ lineStyle:{ color:_themeGrid() } }
-    },
-    yAxis:{
-      type:'category',
-      data: rows.map(r => r.name),
-      axisLabel:{ color:_themeText() }
-    },
-    series:[{
-      name:'Réel',
-      type:'bar',
-      data: rows.map(r => ({
-        value:Number(r.actual.toFixed(2)),
-        itemStyle:{ color:r.color || _themeAccent(), borderRadius:[0,10,10,0] }
-      })),
-      barMaxWidth:18
-    }]
-  });
+  chart.setOption(window.TBAnalysisCharts?.buildAnalysisCategoryBarsOption?.({
+    model,
+    theme: _analysisChartTheme(),
+    formatCurrency: _fmtMoney,
+  }) || {});
 
   try {
     chart.off('click');
@@ -1992,51 +1939,21 @@ function _openTxDrilldown(kind, key, model){
   function _renderVelocity(model){
     const chart = _ensureChart('velocity','analysis-velocity-chart');
     if (!chart) return;
-    chart.setOption({
-      animationDuration: 900,
-      tooltip:{ trigger:'axis', backgroundColor:'rgba(15,23,42,.92)', borderWidth:0, textStyle:{ color:'#fff' } },
-      grid:{ left:18, right:12, top:12, bottom:24, containLabel:true },
-      xAxis:{ type:'category', data:model.days.map(d=>d.slice(5)), axisLabel:{ color:_themeMuted() }, axisLine:{ lineStyle:{ color:_themeGrid() } } },
-      yAxis:{ type:'value', axisLabel:{ color:_themeMuted(), formatter:(v)=>_fmtMoney(v, model.base) }, splitLine:{ lineStyle:{ color:_themeGrid() } } },
-      series:[
-        { type:'bar', barMaxWidth:22, data:model.velocity, itemStyle:{ borderRadius:[8,8,0,0], color: new window.echarts.graphic.LinearGradient(0,0,0,1,[{ offset:0,color:_themeAccent() },{ offset:1,color:'rgba(59,130,246,.25)' }]) } },
-        { type:'line', smooth:true, symbol:'none', data:model.days.map(()=>Number(model.budgetPerDay.toFixed(2))), lineStyle:{ color:_themeWarn(), width:2, type:'dashed' } }
-      ]
-    });
+    chart.setOption(window.TBAnalysisCharts?.buildAnalysisVelocityOption?.({
+      model,
+      theme: _analysisChartTheme(),
+      formatCurrency: _fmtMoney,
+    }) || {});
   }
   function _renderHeatmap(model){
     const chart = _ensureChart('heatmap','analysis-heatmap-chart');
     if (!chart) return;
-    chart.setOption({
-      animationDuration: 950,
-      tooltip:{ position:'top', backgroundColor:'rgba(15,23,42,.92)', borderWidth:0, textStyle:{ color:'#fff' }, formatter:(p)=>`${model.days[p.data[0]]}<br>${_fmtMoney(p.data[2], model.base)}` },
-      grid:{ left:8, right:8, top:10, bottom:22, containLabel:true },
-      xAxis:{ type:'category', data:model.days.map(d=>d.slice(5)), splitArea:{ show:false }, axisLabel:{ color:_themeMuted(), interval: Math.max(0, Math.floor(model.days.length/10)) }, axisLine:{ lineStyle:{ color:_themeGrid() } } },
-      yAxis:{ type:'category', data:['Intensité'], axisLabel:{ color:_themeMuted() }, axisLine:{ lineStyle:{ color:_themeGrid() } } },
-      visualMap:{ min:0, max:Math.max(...model.heat.map(h=>h[2]), 1), show:false, inRange:{ color:['rgba(30,41,59,.18)', 'rgba(59,130,246,.28)', 'rgba(59,130,246,.92)'] } },
-      series:[{ type:'heatmap', data:model.heat, label:{ show:false }, itemStyle:{ borderRadius:8, borderColor:'rgba(255,255,255,.05)', borderWidth:2 } }]
-    });
+    chart.setOption(window.TBAnalysisCharts?.buildAnalysisHeatmapOption?.({
+      model,
+      theme: _analysisChartTheme(),
+      formatCurrency: _fmtMoney,
+    }) || {});
   }
-  function _wrapAxisLabel(label){
-    const txt = String(label || '');
-    if (txt.length <= 14) return txt;
-    const words = txt.split(/\s+/).filter(Boolean);
-    if (words.length <= 1) return txt;
-    const lines = [];
-    let line = '';
-    words.forEach((word) => {
-      const next = line ? `${line} ${word}` : word;
-      if (next.length > 14 && line) {
-        lines.push(line);
-        line = word;
-      } else {
-        line = next;
-      }
-    });
-    if (line) lines.push(line);
-    return lines.slice(0, 2).join('\n');
-  }
-
   function _renderReferencePanel(model){
     const summary = _el('analysis-reference-summary');
     const chartEl = _el('analysis-reference-mix-chart');

@@ -1652,10 +1652,11 @@ const driver = "Dépenses";
     ${scopeOptionsHTML}
   </select>
   ${ (typeof window.tbHelp === "function" && window.tbT) ? tbHelp(tbT("dashboard.help.scope")) : "" }
-  <div id="kpiRangeBox" style="display:${String(_scopeValForSelect)==="range" ? "flex" : "none"}; gap:6px; align-items:center;">
+  <div id="kpiRangeBox" style="display:${String(_scopeValForSelect)==="range" ? "flex" : "none"}; gap:6px; align-items:center;" data-kpi-range-box="1">
     <input id="kpiRangeStart" type="date" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);" />
     <span class="muted" style="font-size:12px;">→</span>
     <input id="kpiRangeEnd" type="date" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);" />
+    <button id="kpiRangeApply" type="button" style="padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);font-weight:800;cursor:pointer;">Appliquer</button>
   </div>
   <div class="muted" style="font-size:12px;">${displayDateISO}</div>
 </div>
@@ -1898,6 +1899,7 @@ try {
   const box = kpi.querySelector("#kpiRangeBox");
   const aEl = kpi.querySelector("#kpiRangeStart");
   const bEl = kpi.querySelector("#kpiRangeEnd");
+  const applyEl = kpi.querySelector("#kpiRangeApply");
   if (box && aEl && bEl) {
     const si = _kpiParseScope(kpiScope);
     const rr = _kpiResolveRange(si, displayDateISO);
@@ -1907,24 +1909,29 @@ try {
 
     if (!box.dataset.bound) {
       box.dataset.bound = "1";
-      const saveRange = () => {
+      const saveRange = (opts = {}) => {
         const SCOPE_KEY = (TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.kpi_projection_scope) || "travelbudget_kpi_projection_scope_v1";
         const a = String(aEl.value || "");
         const b = String(bEl.value || "");
         if (a && b) {
           const vv = `range:${a}:${b}`;
           try { localStorage.setItem(SCOPE_KEY, vv); } catch (_) {}
-          try { if (typeof renderKPI === "function") renderKPI(); } catch (_) {}
-          try {
-            if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("kpi-range-change");
-            else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
-            else if (typeof renderCashflowChart === "function") renderCashflowChart();
-          } catch (_) {}
-          try { if (typeof window.redrawCharts === "function") window.redrawCharts(); } catch (_) {}
+          if (opts.apply) {
+            try { if (typeof renderKPI === "function") renderKPI(); } catch (_) {}
+            try {
+              if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("kpi-range-change");
+              else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
+              else if (typeof renderCashflowChart === "function") renderCashflowChart();
+            } catch (_) {}
+            try { if (typeof window.redrawCharts === "function") window.redrawCharts(); } catch (_) {}
+          }
         }
       };
-      aEl.addEventListener("change", saveRange);
-      bEl.addEventListener("change", saveRange);
+      box.addEventListener("pointerdown", (ev) => { try { ev.stopPropagation(); } catch (_) {} });
+      box.addEventListener("mousedown", (ev) => { try { ev.stopPropagation(); } catch (_) {} });
+      aEl.addEventListener("change", () => saveRange());
+      bEl.addEventListener("change", () => saveRange());
+      if (applyEl) applyEl.addEventListener("click", () => saveRange({ apply: true }));
     }
   }
 } catch (_) {}
@@ -1950,6 +1957,7 @@ try {
             const vv = (a && b) ? `range:${a}:${b}` : "range";
             localStorage.setItem(SCOPE_KEY, vv);
           } catch (_) {}
+          return;
         } else {
           try { localStorage.setItem(SCOPE_KEY, v); } catch (_) {}
         }
