@@ -1722,27 +1722,7 @@ function _ensureTxDrilldownStyles(){
 
   const style = document.createElement('style');
   style.id = 'tb-analysis-tx-drilldown-style';
-  style.textContent = `
-    .tb-analysis-clickable{cursor:pointer;transition:transform .16s ease, background .16s ease, border-color .16s ease;}
-    .tb-analysis-clickable:hover{transform:translateY(-1px);background:rgba(59,130,246,.06)!important;border-color:rgba(59,130,246,.22)!important;}
-    .tb-analysis-detail-btn{border:1px solid rgba(148,163,184,.28);background:rgba(255,255,255,.64);border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;color:rgba(15,23,42,.68);cursor:pointer;white-space:nowrap;}
-    .tb-analysis-detail-btn:hover{background:rgba(59,130,246,.10);border-color:rgba(59,130,246,.28);color:#0f172a;}
-    .tb-analysis-tx-overlay{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.42);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;padding:18px;}
-    .tb-analysis-tx-drawer{width:min(980px,100%);max-height:min(82vh,760px);overflow:hidden;border-radius:28px 28px 20px 20px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,252,.96));border:1px solid rgba(255,255,255,.78);box-shadow:0 28px 80px rgba(15,23,42,.28);display:flex;flex-direction:column;color:#0f172a;}
-    .tb-analysis-tx-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;padding:20px 22px 14px;border-bottom:1px solid rgba(148,163,184,.18);}
-    .tb-analysis-tx-title{font-size:20px;font-weight:950;line-height:1.15;margin:0;}
-    .tb-analysis-tx-meta{margin-top:6px;font-size:12px;color:rgba(15,23,42,.58);display:flex;flex-wrap:wrap;gap:8px;}
-    .tb-analysis-tx-close{border:0;background:rgba(15,23,42,.07);color:#0f172a;width:34px;height:34px;border-radius:999px;cursor:pointer;font-size:20px;line-height:1;}
-    .tb-analysis-tx-body{overflow:auto;padding:8px 22px 20px;display:grid;gap:10px;}
-    .tb-analysis-tx-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:flex-start;padding:13px 0;border-bottom:1px solid rgba(148,163,184,.18);}
-    .tb-analysis-tx-label{font-size:14px;font-weight:850;line-height:1.25;}
-    .tb-analysis-tx-sub{margin-top:5px;font-size:12px;color:rgba(15,23,42,.56);display:flex;flex-wrap:wrap;gap:7px;}
-    .tb-analysis-tx-pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;background:rgba(148,163,184,.12);font-size:11px;font-weight:750;color:rgba(15,23,42,.62);}
-    .tb-analysis-tx-amount{text-align:right;white-space:nowrap;}
-    .tb-analysis-tx-visible{font-size:15px;font-weight:950;}
-    .tb-analysis-tx-original{margin-top:4px;font-size:12px;color:rgba(15,23,42,.52);}
-    @media (max-width:640px){.tb-analysis-tx-overlay{padding:0;align-items:stretch}.tb-analysis-tx-drawer{max-height:100vh;border-radius:0}.tb-analysis-tx-row{grid-template-columns:1fr}.tb-analysis-tx-amount{text-align:left}}
-  `;
+  style.textContent = window.TBAnalysisDrilldownView?.getTransactionDrilldownStyles?.() || '';
   document.head.appendChild(style);
 }
 
@@ -1755,12 +1735,8 @@ function _openTxDrilldown(kind, key, model){
   const entries = map instanceof Map ? (map.get(key) || []) : [];
   const base = sourceModel.base || _currency();
 
-  const title = isSub
-    ? (() => {
-        const [cat, sub] = String(key || '').split('|||');
-        return `${sub || 'Sans sous-catégorie'} · ${cat || 'Autre'}`;
-      })()
-    : String(key || 'Catégorie');
+  const title = window.TBAnalysisDrilldownView?.buildTransactionDrilldownTitle?.(kind, key)
+    || String(key || 'Catégorie');
 
   const total = entries.reduce((sum, row) => sum + _safeNum(row?.visibleAmount), 0);
   const sorted = entries.slice().sort((a,b) =>
@@ -1775,58 +1751,37 @@ function _openTxDrilldown(kind, key, model){
     document.body.appendChild(overlay);
   }
 
-  overlay.innerHTML = `
-    <div class="tb-analysis-tx-drawer" role="dialog" aria-modal="true" aria-label="Transactions correspondantes">
-      <div class="tb-analysis-tx-head">
-        <div>
-          <h3 class="tb-analysis-tx-title">${escapeHTML(title)}</h3>
-          <div class="tb-analysis-tx-meta">
-            <span>${escapeHTML(sorted.length + ' transaction' + (sorted.length > 1 ? 's' : ''))}</span>
-            <span>•</span>
-            <span>Total visible : <strong>${escapeHTML(_fmtMoney(total, base))}</strong></span>
-            <span>•</span>
-            <span>${escapeHTML(sourceModel.start || '—')} → ${escapeHTML(sourceModel.end || '—')}</span>
-          </div>
-        </div>
-        <button type="button" class="tb-analysis-tx-close" data-close="1" aria-label="Fermer">×</button>
-      </div>
+  const rows = sorted.map((row, idx) => {
+    const tx = row.tx || {};
+    const budgetRange = row.budgetStart && row.budgetEnd && row.budgetStart !== row.budgetEnd
+      ? `${row.budgetStart} → ${row.budgetEnd}`
+      : (row.budgetStart || '—');
+    const visibleRange = Array.isArray(row.visibleBudgetDays) && row.visibleBudgetDays.length
+      ? (row.visibleBudgetDays.length === 1
+        ? row.visibleBudgetDays[0]
+        : `${row.visibleBudgetDays[0]} → ${row.visibleBudgetDays[row.visibleBudgetDays.length - 1]}`)
+      : '—';
+    return {
+      id: _txDrilldownId(tx, idx),
+      label: tx.label || tx.category || 'Transaction',
+      budgetRange,
+      visibleRange,
+      cashDate: row.cashDate || _txCashDate(tx) || '—',
+      paidLabel: _entryPaidLabel(tx),
+      budgetLabel: _entryBudgetLabel(tx),
+      tripLabel: _entryTripLabel(tx),
+      visibleAmount: _fmtMoney(row.visibleAmount, base),
+      originalAmount: `${_safeNum(tx.amount).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} ${_upper(tx.currency || base)}`,
+    };
+  });
 
-      <div class="tb-analysis-tx-body">
-        ${sorted.length ? sorted.map((row, idx) => {
-          const tx = row.tx || {};
-          const budgetRange = row.budgetStart && row.budgetEnd && row.budgetStart !== row.budgetEnd
-            ? `${row.budgetStart} → ${row.budgetEnd}`
-            : (row.budgetStart || '—');
-
-          const visibleRange = Array.isArray(row.visibleBudgetDays) && row.visibleBudgetDays.length
-            ? (row.visibleBudgetDays.length === 1
-              ? row.visibleBudgetDays[0]
-              : `${row.visibleBudgetDays[0]} → ${row.visibleBudgetDays[row.visibleBudgetDays.length - 1]}`)
-            : '—';
-
-          const original = `${_safeNum(tx.amount).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} ${_upper(tx.currency || base)}`;
-
-          return `
-            <div class="tb-analysis-tx-row" data-tx-row="${escapeHTML(_txDrilldownId(tx, idx))}">
-              <div style="min-width:0;">
-                <div class="tb-analysis-tx-label">${escapeHTML(tx.label || tx.category || 'Transaction')}</div>
-                <div class="tb-analysis-tx-sub">
-                  <span class="tb-analysis-tx-pill">Budget : ${escapeHTML(budgetRange)}</span>
-                  <span class="tb-analysis-tx-pill">Visible : ${escapeHTML(visibleRange)}</span>
-                  <span class="tb-analysis-tx-pill">Cash : ${escapeHTML(row.cashDate || _txCashDate(tx) || '—')}</span>
-                  <span class="tb-analysis-tx-pill">${escapeHTML(_entryPaidLabel(tx))}</span>
-                  <span class="tb-analysis-tx-pill">${escapeHTML(_entryBudgetLabel(tx))}</span>
-                  <span class="tb-analysis-tx-pill">${escapeHTML(_entryTripLabel(tx))}</span>
-                </div>
-              </div>
-              <div class="tb-analysis-tx-amount">
-                <div class="tb-analysis-tx-visible">${escapeHTML(_fmtMoney(row.visibleAmount, base))}</div>
-                <div class="tb-analysis-tx-original">${escapeHTML(original)}</div>
-              </div>
-            </div>`;
-        }).join('') : `<div class="muted" style="padding:18px 0;">Aucune transaction correspondante dans le modèle courant.</div>`}
-      </div>
-    </div>`;
+  overlay.innerHTML = window.TBAnalysisDrilldownView?.renderTransactionDrilldown?.({
+    title,
+    rows,
+    total: _fmtMoney(total, base),
+    start: sourceModel.start,
+    end: sourceModel.end,
+  }) || '';
 
   const close = () => { overlay.remove(); };
   overlay.querySelector('[data-close]')?.addEventListener('click', close);
