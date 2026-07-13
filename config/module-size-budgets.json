@@ -2,7 +2,9 @@
   "version": 1,
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
-    "totalJsMaxKiB": 380,
+    "initialJsMaxKiB": 380,
+    "lazyJsMaxKiB": 40,
+    "totalJsMaxKiB": 410,
     "totalCssMaxKiB": 8,
     "mainJsGzipMaxKiB": 110
   },
@@ -38,7 +40,6 @@
         "public/legacy/js/35_guided_tour.js",
         "public/legacy/js/11_kpi_render_micro_animation.js",
         "public/legacy/js/12_dashboard_render.js",
-        "src/features/analysis/analysisView.js",
         "public/legacy/js/34_fx_decision.js",
         "public/legacy/js/16_modal_add_edit_via_rpc.js",
         "public/legacy/js/13_transactions_view.js",
@@ -47,7 +48,6 @@
         "public/legacy/js/15_wallet_adjust.js",
         "public/legacy/js/17_internal_transfers.js",
         "public/legacy/js/17_charts.js",
-        "public/legacy/js/33_budget_analysis.js",
         "public/legacy/js/44_inbox_ui.js",
         "public/legacy/js/18_main_render.js",
         "public/legacy/js/08_refresh.js",
@@ -58,6 +58,19 @@
         "public/legacy/js/21_dashboard_drag.js",
         "public/legacy/js/22_budget_consistency_audit.js",
         "public/legacy/js/31_wallet_balance.js"
+      ]
+    },
+    {
+      "name": "analysis-domain",
+      "maxKiB": 160,
+      "paths": [
+        "public/legacy/js/33_analysis_filter_view.js",
+        "public/legacy/js/33_analysis_drilldown_view.js",
+        "public/legacy/js/33_budget_analysis.js",
+        "src/core/budgetAnalysisRules.js",
+        "src/features/analysis/analysisChartOptions.js",
+        "src/features/analysis/analysisRuntime.js",
+        "src/features/analysis/analysisView.js"
       ]
     },
     {

@@ -222,6 +222,9 @@
     if (CACHE.analysisLoading) return CACHE.analysisSummary;
     CACHE.analysisLoading = true;
     try {
+      if (typeof window.tbGetBudgetAnalysisNotificationSummary !== "function" && typeof window.tbLoadLegacyDomain === "function") {
+        await window.tbLoadLegacyDomain("analysis");
+      }
       if (typeof window.tbGetBudgetAnalysisNotificationSummary === "function") {
         CACHE.analysisSummary = await window.tbGetBudgetAnalysisNotificationSummary();
       } else {

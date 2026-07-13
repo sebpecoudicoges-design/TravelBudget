@@ -9,6 +9,7 @@ describe('module size budgets', () => {
     const names = config.sourceGroups.map((group) => group.name);
     expect(names).toEqual(expect.arrayContaining([
       'boot-legacy',
+      'analysis-domain',
       'dashboard-settings',
       'trip-domain',
       'sport-domain',
@@ -28,5 +29,7 @@ describe('module size budgets', () => {
     const report = collectBudgetReport(config);
     expect(formatReport(report)).toContain('Module size budget report');
     expect(formatReport(report)).toContain('boot-legacy');
+    expect(formatReport(report)).toContain('Initial JS');
+    expect(formatReport(report)).toContain('Lazy JS');
   });
 });

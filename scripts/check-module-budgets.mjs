@@ -53,9 +53,14 @@ function measureDist(config = readConfig()) {
   const js = files.filter((file) => file.type === 'js');
   const css = files.filter((file) => file.type === 'css');
   const mainJs = js.slice().sort((a, b) => b.bytes - a.bytes)[0] || null;
+  const totalJsBytes = js.reduce((sum, file) => sum + file.bytes, 0);
+  const initialJsBytes = mainJs ? mainJs.bytes : 0;
+  const lazyJsBytes = Math.max(0, totalJsBytes - initialJsBytes);
   return {
     available: true,
-    totalJsKiB: bytesToKiB(js.reduce((sum, file) => sum + file.bytes, 0)),
+    initialJsKiB: bytesToKiB(initialJsBytes),
+    lazyJsKiB: bytesToKiB(lazyJsBytes),
+    totalJsKiB: bytesToKiB(totalJsBytes),
     totalCssKiB: bytesToKiB(css.reduce((sum, file) => sum + file.bytes, 0)),
     mainJsGzipKiB: mainJs ? bytesToKiB(mainJs.gzipBytes) : 0,
     budgets: config.dist,
@@ -74,6 +79,8 @@ function collectBudgetReport(config = readConfig()) {
   }
 
   if (dist.available) {
+    if (dist.initialJsKiB > dist.budgets.initialJsMaxKiB) failures.push(`initial js: ${dist.initialJsKiB} KiB > ${dist.budgets.initialJsMaxKiB} KiB`);
+    if (dist.lazyJsKiB > dist.budgets.lazyJsMaxKiB) failures.push(`lazy js: ${dist.lazyJsKiB} KiB > ${dist.budgets.lazyJsMaxKiB} KiB`);
     if (dist.totalJsKiB > dist.budgets.totalJsMaxKiB) failures.push(`dist js: ${dist.totalJsKiB} KiB > ${dist.budgets.totalJsMaxKiB} KiB`);
     if (dist.totalCssKiB > dist.budgets.totalCssMaxKiB) failures.push(`dist css: ${dist.totalCssKiB} KiB > ${dist.budgets.totalCssMaxKiB} KiB`);
     if (dist.mainJsGzipKiB > dist.budgets.mainJsGzipMaxKiB) failures.push(`main js gzip: ${dist.mainJsGzipKiB} KiB > ${dist.budgets.mainJsGzipMaxKiB} KiB`);
@@ -92,6 +99,8 @@ function formatReport(report) {
   }
   lines.push('');
   if (report.dist.available) {
+    lines.push(`Initial JS: ${report.dist.initialJsKiB} / ${report.dist.budgets.initialJsMaxKiB} KiB`);
+    lines.push(`Lazy JS: ${report.dist.lazyJsKiB} / ${report.dist.budgets.lazyJsMaxKiB} KiB`);
     lines.push(`Dist JS: ${report.dist.totalJsKiB} / ${report.dist.budgets.totalJsMaxKiB} KiB`);
     lines.push(`Dist CSS: ${report.dist.totalCssKiB} / ${report.dist.budgets.totalCssMaxKiB} KiB`);
     lines.push(`Main JS gzip: ${report.dist.mainJsGzipKiB} / ${report.dist.budgets.mainJsGzipMaxKiB} KiB`);

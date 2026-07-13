@@ -14,8 +14,11 @@ describe('Analysis transaction drilldown view contract', () => {
   }
 
   it('loads the drilldown view before the Analysis legacy page', () => {
-    expect(main.indexOf('/legacy/js/33_analysis_drilldown_view.js')).toBeGreaterThan(-1);
-    expect(main.indexOf('/legacy/js/33_analysis_drilldown_view.js')).toBeLessThan(main.indexOf('/legacy/js/33_budget_analysis.js'));
+    const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+    expect(bootList).not.toContain('/legacy/js/33_analysis_drilldown_view.js');
+    expect(domains.indexOf('/legacy/js/33_analysis_drilldown_view.js')).toBeGreaterThan(-1);
+    expect(domains.indexOf('/legacy/js/33_analysis_drilldown_view.js')).toBeLessThan(domains.indexOf('/legacy/js/33_budget_analysis.js'));
   });
 
   it('renders escaped transaction drawer rows', () => {

@@ -3,18 +3,23 @@ import fs from 'node:fs';
 
 describe('Analysis view extraction contract', () => {
   const main = fs.readFileSync('src/main.js', 'utf8');
+  const runtime = fs.readFileSync('src/features/analysis/analysisRuntime.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/33_budget_analysis.js', 'utf8');
 
-  it('exposes the Analysis view module to the legacy runtime', () => {
-    expect(main).toContain("import * as analysisView from './features/analysis/analysisView.js'");
-    expect(main).toContain('window.TBAnalysisView');
-    expect(main).toContain('...analysisView');
+  it('exposes the Analysis view module to the legacy runtime on demand', () => {
+    expect(main).toContain("import('./features/analysis/analysisRuntime.js')");
+    expect(main).toContain('function ensureAnalysisModules()');
+    expect(runtime).toContain("import * as analysisView from './analysisView.js'");
+    expect(runtime).toContain('target.TBAnalysisView');
+    expect(runtime).toContain('...analysisView');
   });
 
-  it('exposes the Analysis chart option module to the legacy runtime', () => {
-    expect(main).toContain("import * as analysisChartOptions from './features/analysis/analysisChartOptions.js'");
-    expect(main).toContain('window.TBAnalysisCharts');
-    expect(main).toContain('...analysisChartOptions');
+  it('exposes the Analysis chart option module to the legacy runtime on demand', () => {
+    expect(main).toContain("import('./features/analysis/analysisRuntime.js')");
+    expect(main).toContain("if (key === 'analysis') await ensureAnalysisModules();");
+    expect(runtime).toContain("import * as analysisChartOptions from './analysisChartOptions.js'");
+    expect(runtime).toContain('target.TBAnalysisCharts');
+    expect(runtime).toContain('...analysisChartOptions');
   });
 
   it('keeps the Analysis overview strip delegated out of the legacy file', () => {

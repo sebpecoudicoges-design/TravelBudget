@@ -1,26 +1,16 @@
 import './app/bridge.js';
 import { registerPwa } from './app/pwa.js';
 import * as budgetAnalysisRules from './core/budgetAnalysisRules.js';
-import * as analysisChartOptions from './features/analysis/analysisChartOptions.js';
-import * as analysisView from './features/analysis/analysisView.js';
 import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as settingsView from './features/settings/settingsView.js';
 import * as settingsAccountController from './features/settings/settingsAccountController.js';
 
-const TB_APP_VERSION = '10.5.144';
+const TB_APP_VERSION = '10.5.145';
 window.TB_VERSION = window.TB_VERSION || TB_APP_VERSION;
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.TBCore = {
   ...(window.TBCore || {}),
   budgetAnalysisRules,
-};
-window.TBAnalysisView = {
-  ...(window.TBAnalysisView || {}),
-  ...analysisView,
-};
-window.TBAnalysisCharts = {
-  ...(window.TBAnalysisCharts || {}),
-  ...analysisChartOptions,
 };
 window.TBDashboardView = {
   ...(window.TBDashboardView || {}),
@@ -76,9 +66,6 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/15_wallet_adjust.js',
   '/legacy/js/17_internal_transfers.js',
   '/legacy/js/17_charts.js',
-  '/legacy/js/33_analysis_filter_view.js',
-  '/legacy/js/33_analysis_drilldown_view.js',
-  '/legacy/js/33_budget_analysis.js',
   '/legacy/js/44_inbox_ui.js',
   '/legacy/js/18_main_render.js',
   '/legacy/js/08_refresh.js',
@@ -93,6 +80,11 @@ const BOOT_LEGACY_SCRIPTS = [
 
 const OPTIONAL_SCRIPTS = new Set(['/legacy/js/00_perf.js']);
 const LEGACY_DOMAIN_SCRIPTS = {
+  analysis: [
+    '/legacy/js/33_analysis_filter_view.js',
+    '/legacy/js/33_analysis_drilldown_view.js',
+    '/legacy/js/33_budget_analysis.js',
+  ],
   assets: [
     '/legacy/js/41_assets_core.js',
     '/legacy/js/42_assets_ui.js',
@@ -126,6 +118,7 @@ const LEGACY_DOMAIN_SCRIPTS = {
 };
 const legacyDomainPromises = new Map();
 let bridgeReadyPromise = null;
+let analysisModulesPromise = null;
 
 function hasRequiredBridgeGlobals() {
   return Boolean(
@@ -167,6 +160,14 @@ function loadScript(src) {
   });
 }
 
+async function ensureAnalysisModules() {
+  if (window.TBAnalysisView && window.TBAnalysisCharts) return true;
+  if (analysisModulesPromise) return analysisModulesPromise;
+  analysisModulesPromise = import('./features/analysis/analysisRuntime.js')
+    .then((runtime) => runtime.installAnalysisRuntime(window));
+  return analysisModulesPromise;
+}
+
 async function boot() {
   window.tbLoadLegacyDomain = function tbLoadLegacyDomain(domain) {
     const key = String(domain || '').trim();
@@ -175,6 +176,7 @@ async function boot() {
     if (legacyDomainPromises.has(key)) return legacyDomainPromises.get(key);
     const promise = (async () => {
       await waitForBridgeReady();
+      if (key === 'analysis') await ensureAnalysisModules();
       for (const src of scripts) {
         // eslint-disable-next-line no-await-in-loop
         await loadScript(src);

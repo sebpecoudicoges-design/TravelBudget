@@ -199,4 +199,21 @@ describe('legacy domain loader', () => {
     expect(index).toContain('id="view-notifications"');
     expect(index).toContain('id="notifications-root"');
   });
+
+  it('keeps Analysis out of boot and lazy-loads it with its Vite view modules', () => {
+    const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+
+    expect(bootList).not.toContain('/legacy/js/33_analysis_filter_view.js');
+    expect(bootList).not.toContain('/legacy/js/33_analysis_drilldown_view.js');
+    expect(bootList).not.toContain('/legacy/js/33_budget_analysis.js');
+    expect(domains).toContain('analysis:');
+    expect(domains).toContain('/legacy/js/33_analysis_filter_view.js');
+    expect(domains).toContain('/legacy/js/33_analysis_drilldown_view.js');
+    expect(domains).toContain('/legacy/js/33_budget_analysis.js');
+    expect(main).toContain('function ensureAnalysisModules()');
+    expect(main).toContain("if (key === 'analysis') await ensureAnalysisModules();");
+    expect(navigation).toContain('window.tbLoadLegacyDomain("analysis")');
+    expect(navigation).toContain('window.tbRequestAnalysisRender("navigation:lazy")');
+  });
 });
