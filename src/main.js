@@ -1,4 +1,3 @@
-import pkg from '../package.json';
 import './app/bridge.js';
 import { registerPwa } from './app/pwa.js';
 import * as budgetAnalysisRules from './core/budgetAnalysisRules.js';
@@ -8,7 +7,7 @@ import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as settingsView from './features/settings/settingsView.js';
 import * as settingsAccountController from './features/settings/settingsAccountController.js';
 
-const TB_APP_VERSION = String(pkg?.version || 'dev');
+const TB_APP_VERSION = '10.5.142';
 window.TB_VERSION = window.TB_VERSION || TB_APP_VERSION;
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.TBCore = {
@@ -36,7 +35,6 @@ window.TBSettingsAccountController = {
   ...settingsAccountController,
 };
 
-console.log(`TB BUILD ${window.TB_VERSION}`);
 registerPwa();
 
 // TravelBudget V9 entrypoint (Vite + deterministic legacy loader)
@@ -78,6 +76,7 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/15_wallet_adjust.js',
   '/legacy/js/17_internal_transfers.js',
   '/legacy/js/17_charts.js',
+  '/legacy/js/33_analysis_filter_view.js',
   '/legacy/js/33_budget_analysis.js',
   '/legacy/js/44_inbox_ui.js',
   '/legacy/js/18_main_render.js',
@@ -168,12 +167,6 @@ function loadScript(src) {
 }
 
 async function boot() {
-  // Simple marker for debugging
-  window.__TB_BUILD__ = window.__TB_BUILD__ || {};
-  window.__TB_BUILD__.entry = `v9-vite-legacy-loader-${window.TB_VERSION}`;
-  window.__TB_BUILD__.version = window.TB_VERSION;
-  window.__TB_BUILD__.loadedAt = new Date().toISOString();
-
   window.tbLoadLegacyDomain = function tbLoadLegacyDomain(domain) {
     const key = String(domain || '').trim();
     const scripts = LEGACY_DOMAIN_SCRIPTS[key];
@@ -214,10 +207,6 @@ boot().catch((err) => {
   console.error('[TB V9] Fatal boot error', err);
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;inset:0;background:#111;color:#fff;padding:16px;font-family:system-ui;z-index:99999;overflow:auto;';
-  const title = document.createElement('h2');
-  title.textContent = 'TravelBudget boot failed';
-  const details = document.createElement('pre');
-  details.textContent = String(err?.stack || err);
-  el.append(title, details);
+  el.textContent = `TravelBudget boot failed\n${String(err?.stack || err)}`;
   document.body.appendChild(el);
 });

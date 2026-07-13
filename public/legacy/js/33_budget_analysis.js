@@ -599,21 +599,24 @@ function _analysisBucketOrder(){
   function _renderAnalysisFilterSelects(){
     const catSel = _el('analysis-category-filter');
     const subSel = _el('analysis-subcategory-filter');
+    const analysisFilterView = window.TBAnalysisFilterView;
     if (catSel) {
       const current = catSel.value || 'all';
       const cats = _allAnalysisCategories();
-      catSel.innerHTML = `<option value="all">${escapeHTML(_t('common.all'))}</option><option value="__income">${escapeHTML(_t('analysis.filter.income'))}</option>` + cats
-        .filter(cat => _normKey(cat) !== 'revenu')
-        .map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`)
-        .join('');
+      catSel.innerHTML = analysisFilterView?.renderCategoryFilterOptions?.({
+        categories: cats,
+        t: _t,
+        normalizeKey: _normKey,
+      }) || '';
       catSel.value = [...catSel.options].some(o => o.value === current) ? current : 'all';
     }
     if (subSel) {
       const current = subSel.value || 'all';
       const subs = _allAnalysisSubcategories();
-      subSel.innerHTML = `<option value="all">${escapeHTML(_t('common.all'))}</option><option value="__none__">${escapeHTML(_t('analysis.filter.no_subcategory'))}</option>` + subs
-        .map(sub => `<option value="${escapeHTML(sub)}">${escapeHTML(sub)}</option>`)
-        .join('');
+      subSel.innerHTML = analysisFilterView?.renderSubcategoryFilterOptions?.({
+        subcategories: subs,
+        t: _t,
+      }) || '';
       subSel.value = [...subSel.options].some(o => o.value === current) ? current : 'all';
     }
   }
@@ -624,8 +627,7 @@ function _analysisBucketOrder(){
     const total = _allAnalysisCategories().length;
     const count = excludedCats.size;
     if (summary) {
-      if (!count) summary.textContent = total ? `Aucune catégorie exclue • ${total} catégories disponibles` : 'Aucune catégorie';
-      else summary.textContent = `${count} catégorie${count > 1 ? 's' : ''} exclue${count > 1 ? 's' : ''} • ${Math.max(total - count, 0)} incluse${(total - count) > 1 ? 's' : ''}`;
+      summary.textContent = window.TBAnalysisFilterView?.buildCategoryExcludeSummary?.({ total, count }) || '';
     }
     if (badge) badge.textContent = String(count);
     if (toggle) toggle.textContent = excludePanelOpen ? 'Masquer' : 'Gérer';
@@ -638,12 +640,19 @@ function _analysisBucketOrder(){
     const host = _el('analysis-category-exclude-box');
     if (!host) return;
     const categories = _allAnalysisCategories();
-    host.innerHTML = categories.map(cat => {
-      const excluded = excludedCats.has(cat);
-      const color = _categoryColor(cat);
-      return `<button type="button" class="analysis-chip${excluded ? ' is-excluded' : ''}" data-cat="${escapeHTML(cat)}" style="border-color:${escapeHTML(color)}44;background:linear-gradient(180deg, ${escapeHTML(color)}22, rgba(255,255,255,.03));box-shadow:inset 0 0 0 1px ${escapeHTML(color)}22;"><span class="analysis-chip-dot" style="background:${escapeHTML(color)};"></span>${escapeHTML(cat)}</button>`;
-    }).join('');
+    host.innerHTML = window.TBAnalysisFilterView?.renderCategoryExcludeChips?.({
+      categories,
+      excluded: Array.from(excludedCats),
+    }) || '';
     host.querySelectorAll('[data-cat]').forEach(btn => {
+      const color = _categoryColor(btn.getAttribute('data-cat'));
+      try {
+        btn.style.setProperty('--c', color);
+        btn.style.borderColor = `${color}44`;
+        btn.style.background = `${color}22`;
+        const dot = btn.querySelector('.analysis-chip-dot');
+        if (dot) dot.style.background = color;
+      } catch (_) {}
       btn.onclick = () => {
         const cat = _norm(btn.getAttribute('data-cat'));
         if (!cat) return;

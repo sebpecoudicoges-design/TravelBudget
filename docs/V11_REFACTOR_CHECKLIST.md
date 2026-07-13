@@ -141,6 +141,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire la liste Analyse Sous-categories : lignes cliquables, montants et etat vide quittent `33_budget_analysis.js`.
   - [x] Extraire le panneau Analyse Reference pays : resume, contexte, grille de comparaison et etat vide quittent `33_budget_analysis.js`.
   - [x] Extraire les options ECharts Analyse : trajectoire, categories, cadence et heatmap quittent `33_budget_analysis.js`.
+  - [x] Extraire les filtres Analyse : options categorie/sous-categorie, resume et chips d'exclusion quittent `33_budget_analysis.js` vers `33_analysis_filter_view.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison
