@@ -7,7 +7,7 @@ import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as settingsView from './features/settings/settingsView.js';
 import * as settingsAccountController from './features/settings/settingsAccountController.js';
 
-const TB_APP_VERSION = '10.5.143';
+const TB_APP_VERSION = '10.5.144';
 window.TB_VERSION = window.TB_VERSION || TB_APP_VERSION;
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.TBCore = {

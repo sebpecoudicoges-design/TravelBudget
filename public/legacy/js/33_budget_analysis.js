@@ -2134,12 +2134,15 @@ function _openTxDrilldown(kind, key, model){
     const activeLabel = activePeriod
       ? `Période active (${_norm(activePeriod.start_date || activePeriod.start)} → ${_norm(activePeriod.end_date || activePeriod.end)})`
       : 'Période active';
-    sel.innerHTML = `<option value="active">${escapeHTML(activeLabel)}</option><option value="all">Tout le voyage</option>` + periods.map((p, idx) => {
-      const s = _norm(p.start_date || p.start);
-      const e = _norm(p.end_date || p.end);
-      const base = _upper(p.base_currency || p.baseCurrency || '');
-      return `<option value="${escapeHTML(String(p.id))}">${escapeHTML(`Période ${idx+1} • ${s} → ${e}${base ? ' • ' + base : ''}`)}</option>`;
-    }).join('') + `<option value="range">Date à date</option>`;
+    sel.innerHTML = window.TBAnalysisFilterView?.renderPeriodFilterOptions?.({
+      activeLabel,
+      periods: periods.map((p) => ({
+        id: p.id,
+        start: _norm(p.start_date || p.start),
+        end: _norm(p.end_date || p.end),
+        base: _upper(p.base_currency || p.baseCurrency || ''),
+      })),
+    }) || '';
     const candidate = wanted || 'active';
     if ([...sel.options].some(o => o.value === candidate)) sel.value = candidate;
     _toggleRangeBox();

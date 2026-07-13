@@ -28,6 +28,17 @@
       .join('');
     return `<option value="all">${esc(tr(t, 'common.all'))}</option><option value="__none__">${esc(tr(t, 'analysis.filter.no_subcategory'))}</option>${rows}`;
   }
+  function renderPeriodFilterOptions({ periods = [], activeLabel = 'Période active' } = {}) {
+    const rows = (Array.isArray(periods) ? periods : []).map((period, idx) => {
+      const id = String(period?.id ?? '');
+      const start = String(period?.start ?? '');
+      const end = String(period?.end ?? '');
+      const base = String(period?.base ?? '').trim().toUpperCase();
+      const label = `Période ${idx + 1} • ${start} → ${end}${base ? ' • ' + base : ''}`;
+      return `<option value="${esc(id)}">${esc(label)}</option>`;
+    }).join('');
+    return `<option value="active">${esc(activeLabel)}</option><option value="all">Tout le voyage</option>${rows}<option value="range">Date à date</option>`;
+  }
   function buildCategoryExcludeSummary({ total = 0, count = 0 } = {}) {
     const safeTotal = Math.max(0, Math.round(num(total)));
     const safeCount = Math.max(0, Math.round(num(count)));
@@ -49,6 +60,7 @@
     buildCategoryExcludeSummary,
     renderCategoryExcludeChips,
     renderCategoryFilterOptions,
+    renderPeriodFilterOptions,
     renderSubcategoryFilterOptions,
   };
 })();

@@ -36,6 +36,10 @@ describe('Analysis filter view contract', () => {
       subcategories: ['<Cafe>', 'Bus'],
       t,
     });
+    const periodHtml = api.renderPeriodFilterOptions({
+      activeLabel: 'Active <now>',
+      periods: [{ id: 'p<1>', start: '2026-07-01', end: '2026-07-05', base: 'aud' }],
+    });
     const chipHtml = api.renderCategoryExcludeChips({
       categories: ['Food', '<Transport>'],
       excluded: ['<Transport>'],
@@ -47,6 +51,10 @@ describe('Analysis filter view contract', () => {
     expect(categoryHtml).toContain('value="&lt;Food&gt;"');
     expect(subcategoryHtml).toContain('<option value="__none__">Sans sous-catégorie</option>');
     expect(subcategoryHtml).toContain('value="&lt;Cafe&gt;"');
+    expect(periodHtml).toContain('<option value="active">Active &lt;now&gt;</option>');
+    expect(periodHtml).toContain('value="p&lt;1&gt;"');
+    expect(periodHtml).toContain('Période 1 • 2026-07-01 → 2026-07-05 • AUD');
+    expect(periodHtml).toContain('<option value="range">Date à date</option>');
     expect(chipHtml).toContain('data-cat="&lt;Transport&gt;"');
     expect(chipHtml).toContain('is-excluded');
     expect(api.buildCategoryExcludeSummary({ total: 4, count: 2 })).toBe('2 catégories exclues • 2 incluses');
@@ -55,6 +63,8 @@ describe('Analysis filter view contract', () => {
   it('keeps filter HTML out of 33_budget_analysis.js', () => {
     expect(legacy).toContain('window.TBAnalysisFilterView');
     expect(legacy).not.toContain('<option value="__income">${escapeHTML');
+    expect(legacy).not.toContain('<option value="active">${escapeHTML(activeLabel)');
+    expect(legacy).not.toContain("Période ${idx+1}");
     expect(legacy).not.toContain('class="analysis-chip${excluded');
     expect(legacy).not.toContain('Aucune catégorie exclue • ${total}');
   });
