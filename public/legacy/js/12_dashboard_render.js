@@ -279,10 +279,6 @@ archiveToggleBtn.type = "button";
 archiveToggleBtn.textContent = showArchivedWallets ? T("wallet.action.hide_archived") : T("wallet.action.show_archived");
 archiveToggleBtn.onclick = () => toggleArchivedWallets();
 actions.appendChild(archiveToggleBtn);
-try {
-  if (typeof renderKpis === "function") renderKpis();
-
-} catch (_) {}
 const kpiHost = document.getElementById("kpis-container");
 if (kpiHost && typeof renderKpis === "function") {
   try { renderKpis(); } catch (_) {}

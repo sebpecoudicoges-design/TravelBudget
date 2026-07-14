@@ -31,6 +31,8 @@ describe('dashboard view extraction contract', () => {
   it('keeps wallet card rendering delegated to the Dashboard view module', () => {
     expect(legacy).toContain('window.TBDashboardView?.renderWalletCard');
     expect(legacy).toContain('data-wallet-archive-action');
+    const renderKpiCalls = legacy.match(/renderKpis\(\)/g) || [];
+    expect(renderKpiCalls).toHaveLength(1);
     expect(legacy).not.toContain('flex:1 1 520px;');
     expect(legacy).not.toContain("openTxModal('expense','${w.id}')");
     expect(legacy).not.toContain("adjustWalletBalance('${w.id}')");
