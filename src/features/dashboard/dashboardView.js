@@ -174,10 +174,67 @@ export function renderWalletCard({
   `;
 }
 
+export function renderDailyBudgetControls({
+  viewStartISO = '',
+  viewEndISO = '',
+  t = fallbackT,
+  esc = defaultEsc,
+} = {}) {
+  const tr = typeof t === 'function' ? t : fallbackT;
+  return `
+    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between;">
+      <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+        <button class="btn" id="db-prev">${esc(tr('common.previous'))}</button>
+        <button class="btn" id="db-today">${esc(tr('kpi.today'))}</button>
+        <button class="btn" id="db-next">${esc(tr('common.next'))}</button>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+        <span class="muted" style="font-size:12px;">${esc(tr('dashboard.daily.display'))} :</span>
+        <select class="input" id="db-mode" style="min-width:170px;">
+          <option value="segment">${esc(tr('dashboard.daily.current_period'))}</option>
+          <option value="voyage">${esc(tr('analysis.period.all_trip'))}</option>
+        </select>
+        <span class="muted" style="font-size:12px;">${esc(viewStartISO)} &rarr; ${esc(viewEndISO)}</span>
+      </div>
+    </div>
+  `;
+}
+
+export function renderDailyBudgetDay({
+  date = '',
+  budget = 0,
+  budgetClassName = '',
+  used = 0,
+  daily = 0,
+  baseCurrency = 'EUR',
+  details = [],
+  t = fallbackT,
+  esc = defaultEsc,
+} = {}) {
+  const tr = typeof t === 'function' ? t : fallbackT;
+  const base = String(baseCurrency || 'EUR').toUpperCase();
+  const detailRows = Array.isArray(details) ? details : [];
+  return `
+    <div class="top">
+      <div><strong>${esc(date)}</strong></div>
+      <div class="pill ${esc(budgetClassName)}"><span class="dot"></span>${esc((Number(budget) || 0).toFixed(0))} ${esc(base)}</div>
+    </div>
+    <div style="margin-top:6px; color:#6b7280; font-size:12px; display:flex; justify-content:space-between; gap:10px;">
+      <div>${esc(tr('dashboard.daily.used'))} : <b style="color:#111827;">${esc((Number(used) || 0).toFixed(0))} ${esc(base)}</b></div>
+      <div>${esc(tr('dashboard.daily.target'))} : <b style="color:#111827;">${esc((Number(daily) || 0).toFixed(0))} ${esc(base)}</b></div>
+    </div>
+    ${detailRows.length
+      ? `<div class="details">${detailRows.map((item) => `&bull; ${esc(item?.label || '')} : ${esc((Number(item?.amountBase) || 0).toFixed(0))} ${esc(item?.baseCurrency || base)}`).join('<br>')}</div>`
+      : `<div class="details">${esc(tr('dashboard.daily.no_allocation'))}</div>`}
+  `;
+}
+
 export default {
   renderDashboardOnboardingPanel,
   renderDashboardContextHelp,
   renderWalletEmptyState,
   renderWalletQuickOnboarding,
   renderWalletCard,
+  renderDailyBudgetControls,
+  renderDailyBudgetDay,
 };

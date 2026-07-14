@@ -512,23 +512,11 @@ function renderDailyBudget() {
   ctrl.className = "card";
   ctrl.style.marginBottom = "10px";
   ctrl.style.padding = "10px";
-  ctrl.innerHTML = `
-    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between;">
-      <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-        <button class="btn" id="db-prev">${T("common.previous")}</button>
-        <button class="btn" id="db-today">${T("kpi.today")}</button>
-        <button class="btn" id="db-next">${T("common.next")}</button>
-      </div>
-      <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-        <span class="muted" style="font-size:12px;">${T("dashboard.daily.display")} :</span>
-        <select class="input" id="db-mode" style="min-width:170px;">
-          <option value="segment">${T("dashboard.daily.current_period")}</option>
-          <option value="voyage">${T("analysis.period.all_trip")}</option>
-        </select>
-        <span class="muted" style="font-size:12px;">${viewStartISO} → ${viewEndISO}</span>
-      </div>
-    </div>
-  `;
+  ctrl.innerHTML = window.TBDashboardView?.renderDailyBudgetControls?.({
+    viewStartISO,
+    viewEndISO,
+    t: T,
+  }) || "";
   container.appendChild(ctrl);
 
   const modeSel = ctrl.querySelector("#db-mode");
@@ -581,19 +569,16 @@ function renderDailyBudget() {
 
     const div = document.createElement("div");
     div.className = "day";
-    div.innerHTML = `
-      <div class="top">
-        <div><strong>${dateStr}</strong></div>
-        <div class="pill ${budgetClass(budget)}"><span class="dot"></span>${budget.toFixed(0)} ${baseDay}</div>
-      </div>
-      <div style="margin-top:6px; color:#6b7280; font-size:12px; display:flex; justify-content:space-between; gap:10px;">
-        <div>${T("dashboard.daily.used")} : <b style="color:#111827;">${spentBudget.toFixed(0)} ${baseDay}</b></div>
-        <div>${T("dashboard.daily.target")} : <b style="color:#111827;">${Number(info.daily).toFixed(0)} ${baseDay}</b></div>
-      </div>
-      ${details.length
-        ? `<div class="details">${details.map((x) => `• ${x.label} : ${Number(x.amountBase).toFixed(0)} ${x.baseCurrency || baseDay}`).join("<br>")}</div>`
-        : `<div class="details">${T("dashboard.daily.no_allocation")}</div>`}
-    `;
+    div.innerHTML = window.TBDashboardView?.renderDailyBudgetDay?.({
+      date: dateStr,
+      budget,
+      budgetClassName: budgetClass(budget),
+      used: spentBudget,
+      daily: Number(info.daily) || 0,
+      baseCurrency: baseDay,
+      details,
+      t: T,
+    }) || "";
     container.appendChild(div);
   });
 }

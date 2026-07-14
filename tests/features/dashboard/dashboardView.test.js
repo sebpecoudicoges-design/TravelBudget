@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   renderDashboardContextHelp,
   renderDashboardOnboardingPanel,
+  renderDailyBudgetControls,
+  renderDailyBudgetDay,
   renderWalletCard,
   renderWalletEmptyState,
   renderWalletQuickOnboarding,
@@ -102,5 +104,44 @@ describe('Dashboard view helpers', () => {
     expect(html).not.toContain("openTxModal('expense'");
     expect(html).not.toContain("openTxModal('income'");
     expect(html).not.toContain('adjustWalletBalance');
+  });
+
+  it('renders daily budget controls with stable ids and date window', () => {
+    const html = renderDailyBudgetControls({
+      viewStartISO: '2026-07-11',
+      viewEndISO: '2026-07-17',
+      t,
+    });
+
+    expect(html).toContain('id="db-prev"');
+    expect(html).toContain('id="db-today"');
+    expect(html).toContain('id="db-next"');
+    expect(html).toContain('id="db-mode"');
+    expect(html).toContain('value="segment"');
+    expect(html).toContain('value="voyage"');
+    expect(html).toContain('2026-07-11');
+    expect(html).toContain('2026-07-17');
+  });
+
+  it('renders a daily budget day with details or an empty allocation state', () => {
+    const html = renderDailyBudgetDay({
+      date: '2026-07-14',
+      budget: 42,
+      budgetClassName: 'ok',
+      used: 58,
+      daily: 100,
+      baseCurrency: 'AUD',
+      details: [{ label: 'Asset cost', amountBase: 12.4, baseCurrency: 'AUD' }],
+      t,
+    });
+    const empty = renderDailyBudgetDay({ date: '2026-07-15', baseCurrency: 'EUR', t });
+
+    expect(html).toContain('2026-07-14');
+    expect(html).toContain('pill ok');
+    expect(html).toContain('42 AUD');
+    expect(html).toContain('58 AUD');
+    expect(html).toContain('100 AUD');
+    expect(html).toContain('Asset cost : 12 AUD');
+    expect(empty).toContain('dashboard.daily.no_allocation');
   });
 });

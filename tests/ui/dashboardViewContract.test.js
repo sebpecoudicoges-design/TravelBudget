@@ -32,6 +32,14 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).not.toContain("adjustWalletBalance('${w.id}')");
   });
 
+  it('keeps daily budget controls and day rows delegated', () => {
+    expect(legacy).toContain('window.TBDashboardView?.renderDailyBudgetControls');
+    expect(legacy).toContain('window.TBDashboardView?.renderDailyBudgetDay');
+    expect(legacy).not.toContain('<button class="btn" id="db-prev">${T("common.previous")}</button>');
+    expect(legacy).not.toContain('<div class="pill ${budgetClass(budget)}">');
+    expect(legacy).not.toContain('details.map((x) =>');
+  });
+
   it('keeps a single wallet activity renderer in the Dashboard legacy file', () => {
     const matches = legacy.match(/function _walletRecentTransactionsHTML/g) || [];
     expect(matches).toHaveLength(1);
