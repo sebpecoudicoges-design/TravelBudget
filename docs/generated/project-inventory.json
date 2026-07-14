@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "001c0abd6d568d0607d4a21960aed5c8465ba837",
-  "snapshotFingerprint": "dd063cdb890613498fca8fe6276b88f22e9b64b99dbabc2339eb1ebfa786beeb",
-  "generatedAt": "2026-07-14T11:04:21.165Z",
+  "commit": "835791ee1173521ac5f262dadcfe57e8fdc0a0cb",
+  "snapshotFingerprint": "5544da2b06f378241e52a4cc7ed8b649a867d1b2511953ce80f5ffb596e0ce64",
+  "generatedAt": "2026-07-14T11:24:39.607Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.157"
+    "version": "10.5.158"
   },
   "npmScripts": {
     "dev": "vite",
@@ -170,6 +170,7 @@
     "analysis",
     "assets",
     "dashboard",
+    "kpi",
     "nutrition",
     "settings",
     "sport",
@@ -182,6 +183,7 @@
     "src/features/analysis/analysisView.js",
     "src/features/assets/assetView.js",
     "src/features/dashboard/dashboardView.js",
+    "src/features/kpi/kpiView.js",
     "src/features/nutrition/nutritionStore.js",
     "src/features/nutrition/nutritionView.js",
     "src/features/settings/settingsAccountController.js",
@@ -239,6 +241,7 @@
     "tests/features/analysis/analysisView.test.js",
     "tests/features/assets/assetView.test.js",
     "tests/features/dashboard/dashboardView.test.js",
+    "tests/features/kpi/kpiView.test.js",
     "tests/features/nutrition/nutritionStore.test.js",
     "tests/features/nutrition/nutritionView.test.js",
     "tests/features/settings/settingsAccountController.test.js",
@@ -265,6 +268,7 @@
     "tests/ui/dashboardViewContract.test.js",
     "tests/ui/errorBusContract.test.js",
     "tests/ui/kpiRangePickerContract.test.js",
+    "tests/ui/kpiViewContract.test.js",
     "tests/ui/legacyBusinessRulesContract.test.js",
     "tests/ui/legacyDomainLoader.test.js",
     "tests/ui/moduleSizeBudgetsContract.test.js",
@@ -299,6 +303,7 @@
     "tests/ui/dashboardViewContract.test.js",
     "tests/ui/errorBusContract.test.js",
     "tests/ui/kpiRangePickerContract.test.js",
+    "tests/ui/kpiViewContract.test.js",
     "tests/ui/legacyBusinessRulesContract.test.js",
     "tests/ui/moduleSizeBudgetsContract.test.js",
     "tests/ui/nutritionDomainContract.test.js",

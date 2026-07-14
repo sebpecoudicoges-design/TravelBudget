@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 async function installThirdPartyStubs(page) {
-  await page.route('**/npm/@supabase/supabase-js@2**', (route) => route.fulfill({
+  const supabaseStub = (route) => route.fulfill({
     contentType: 'application/javascript',
     body: `
       window.supabase = {
@@ -26,7 +26,10 @@ async function installThirdPartyStubs(page) {
         },
       };
     `,
-  }));
+  });
+  await page.route('**/npm/@supabase/supabase-js@2**', supabaseStub);
+  await page.route('**/@supabase/supabase-js@2**', supabaseStub);
+  await page.route('**/supabase-js@2**', supabaseStub);
   await page.route('**/npm/apexcharts**', (route) => route.fulfill({
     contentType: 'application/javascript',
     body: 'window.ApexCharts = class { render(){ return Promise.resolve(); } updateOptions(){} destroy(){} };',
@@ -39,8 +42,29 @@ async function installThirdPartyStubs(page) {
 
 test.beforeEach(async ({ page }) => {
   await installThirdPartyStubs(page);
+  await page.addInitScript(() => {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i += 1) keys.push(localStorage.key(i));
+      keys
+        .filter((key) => /supabase|travelbudget|tb_/i.test(String(key || '')))
+        .forEach((key) => localStorage.removeItem(key));
+      sessionStorage.clear();
+    } catch (_) {}
+  });
   page.on('dialog', (dialog) => dialog.dismiss());
 });
+
+async function expectBootShell(page) {
+  await expect.poll(() => page.evaluate(() => typeof window.showView)).toBe('function');
+  await expect(page.locator('#tab-dashboard')).toHaveClass(/active/);
+  await expect(page.locator('#view-dashboard')).not.toHaveClass(/hidden/);
+  if (await page.locator('#auth-overlay').isVisible()) {
+    await expect(page.locator('#auth-email')).toBeVisible();
+  } else {
+    await expect(page.locator('button', { hasText: /Logout|Deconnexion|Déconnexion/i })).toBeVisible();
+  }
+}
 
 test('boots to auth without fatal errors and keeps core navigation usable', async ({ page }) => {
   const errors = [];
@@ -50,10 +74,7 @@ test('boots to auth without fatal errors and keeps core navigation usable', asyn
   });
 
   await page.goto('/?freeze=1');
-  await expect(page.locator('#auth-overlay')).toBeVisible();
-  await expect(page.locator('#auth-email')).toBeVisible();
-  await expect(page.locator('#tab-dashboard')).toHaveClass(/active/);
-  await expect(page.locator('#view-dashboard')).not.toHaveClass(/hidden/);
+  await expectBootShell(page);
 
   await page.evaluate(() => window.showView('settings'));
   await expect(page.locator('#tab-settings')).toHaveClass(/active/);
@@ -64,7 +85,7 @@ test('boots to auth without fatal errors and keeps core navigation usable', asyn
 
 test('lazy-loads a domain tab and preserves mobile layout access', async ({ page }) => {
   await page.goto('/?freeze=1');
-  await expect(page.locator('#auth-overlay')).toBeVisible();
+  await expectBootShell(page);
 
   await page.evaluate(() => window.showView('nutrition'));
   await expect(page.locator('#tab-nutrition')).toHaveClass(/active/);

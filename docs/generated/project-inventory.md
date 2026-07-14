@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `001c0abd6d568d0607d4a21960aed5c8465ba837`
-> Empreinte du snapshot : `dd063cdb890613498fca8fe6276b88f22e9b64b99dbabc2339eb1ebfa786beeb`
-> Généré le : `2026-07-14T11:04:21.165Z`
+> Commit analysé : `835791ee1173521ac5f262dadcfe57e8fdc0a0cb`
+> Empreinte du snapshot : `5544da2b06f378241e52a4cc7ed8b649a867d1b2511953ce80f5ffb596e0ce64`
+> Généré le : `2026-07-14T11:24:39.607Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.157` |
+| Version | `10.5.158` |
 | Écrans déclarés | 14 |
 | Scripts legacy référencés | 60 |
 | Modules core | 24 |
 | Modules data | 7 |
-| Modules features | 22 |
-| Fichiers de tests | 87 |
+| Modules features | 23 |
+| Fichiers de tests | 89 |
 | Migrations Supabase | 82 |
 | Fonctions Edge | 8 |
 | Projet Android présent | Oui |
@@ -197,6 +197,7 @@ Domaines :
 - `analysis`
 - `assets`
 - `dashboard`
+- `kpi`
 - `nutrition`
 - `settings`
 - `sport`
@@ -210,6 +211,7 @@ Modules :
 - `src/features/analysis/analysisView.js`
 - `src/features/assets/assetView.js`
 - `src/features/dashboard/dashboardView.js`
+- `src/features/kpi/kpiView.js`
 - `src/features/nutrition/nutritionStore.js`
 - `src/features/nutrition/nutritionView.js`
 - `src/features/settings/settingsAccountController.js`
@@ -241,6 +243,7 @@ Modules :
 - `tests/ui/dashboardViewContract.test.js`
 - `tests/ui/errorBusContract.test.js`
 - `tests/ui/kpiRangePickerContract.test.js`
+- `tests/ui/kpiViewContract.test.js`
 - `tests/ui/legacyBusinessRulesContract.test.js`
 - `tests/ui/moduleSizeBudgetsContract.test.js`
 - `tests/ui/nutritionDomainContract.test.js`
@@ -307,6 +310,7 @@ Modules :
 - `tests/features/analysis/analysisView.test.js`
 - `tests/features/assets/assetView.test.js`
 - `tests/features/dashboard/dashboardView.test.js`
+- `tests/features/kpi/kpiView.test.js`
 - `tests/features/nutrition/nutritionStore.test.js`
 - `tests/features/nutrition/nutritionView.test.js`
 - `tests/features/settings/settingsAccountController.test.js`
@@ -333,6 +337,7 @@ Modules :
 - `tests/ui/dashboardViewContract.test.js`
 - `tests/ui/errorBusContract.test.js`
 - `tests/ui/kpiRangePickerContract.test.js`
+- `tests/ui/kpiViewContract.test.js`
 - `tests/ui/legacyBusinessRulesContract.test.js`
 - `tests/ui/legacyDomainLoader.test.js`
 - `tests/ui/moduleSizeBudgetsContract.test.js`
