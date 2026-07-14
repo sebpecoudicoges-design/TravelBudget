@@ -401,49 +401,21 @@ if (!wallets.length) {
     const div = document.createElement("div");
     div.className = "wallet wallet-item";
     div.dataset.walletId = w.id;
-    div.innerHTML = `
-      <div style="display:flex; justify-content:space-between; gap:18px; align-items:flex-start; flex-wrap:wrap;">
-        <div style="min-width:280px; flex:1 1 520px;">
-          <h3>${w.name} (${w.currency}) ${w.archived ? `<span class="pill">${T("wallet.archived")}</span>` : ""}</h3>
-          <p>${T("wallet.balance")} : <strong style="color:var(--text);">${fmtMoney((typeof window.tbGetWalletEffectiveBalance === "function" ? window.tbGetWalletEffectiveBalance(w.id) : w.balance), w.currency)}</strong></p>
-          ${isBase
-            ? `<p class="muted">${T("wallet.today_budget", { date: today })} <strong>${budgetToday.toFixed(2)} ${base}</strong></p>`
-            : `<p class="muted">${T("wallet.daily_budget_base", { currency: base })}</p>`}
-          <div style="margin-top:12px;max-width:620px;">
-            <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:800;">${T("wallet.recent.title")}</div>
-            ${_walletRecentTransactionsHTML(w.id, today, T)}
-          </div>
-          ${isBase ? `
-            <div class="bar" style="margin-top:12px;"><div style="width:${barPct.toFixed(0)}%;"></div></div>
-            <div class="muted" style="margin-top:6px;">${T("wallet.budget_level")}</div>
-          ` : ""}
-        </div>
-        <div class="tb-wallet-action-col" style="display:flex; flex-direction:column; gap:8px; flex:0 0 200px;">
-          <button class="btn primary" onclick="openTxModal('expense','${w.id}')">${T("wallet.action.add_expense")}</button>
-          <button class="btn" onclick="openTxModal('income','${w.id}')">${T("wallet.action.add_income")}</button>
-          <button class="btn" onclick="editWallet('${w.id}')">✏️ ${T("wallet.action.edit")}</button>
-          <button class="btn" onclick="adjustWalletBalance('${w.id}')">⚙ ${T("wallet.action.adjust")}</button>
-          <button class="btn" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" onclick="deleteWallet('${w.id}')">🗑 ${T("wallet.action.delete")}</button>
-        </div>
-      </div>
-
-    `;
-    const actionCol = div.querySelector(".tb-wallet-action-col");
-    if (actionCol) {
-      if (w.archived) {
-        actionCol.querySelectorAll("button").forEach((btn) => {
-          const action = String(btn.getAttribute("onclick") || "");
-          if (action.includes("openTxModal") || action.includes("adjustWalletBalance")) btn.remove();
-        });
-      }
-      const archiveBtn = document.createElement("button");
-      archiveBtn.className = "btn";
-      archiveBtn.textContent = w.archived ? T("wallet.action.unarchive") : T("wallet.action.archive");
-      archiveBtn.onclick = () => w.archived ? unarchiveWallet(w.id) : archiveWallet(w.id);
-      const deleteBtn = actionCol.querySelector("button[onclick^='deleteWallet']");
-      if (deleteBtn) actionCol.insertBefore(archiveBtn, deleteBtn);
-      else actionCol.appendChild(archiveBtn);
-    }
+    div.innerHTML = window.TBDashboardView?.renderWalletCard?.({
+      wallet: w,
+      isBase,
+      today,
+      budgetToday,
+      daily,
+      baseCurrency: base,
+      balance: fmtMoney((typeof window.tbGetWalletEffectiveBalance === "function" ? window.tbGetWalletEffectiveBalance(w.id) : w.balance), w.currency),
+      recentHtml: _walletRecentTransactionsHTML(w.id, today, T),
+      archived: !!w.archived,
+      barPct,
+      t: T,
+    }) || "";
+    const archiveAction = div.querySelector("[data-wallet-archive-action]");
+    if (archiveAction) archiveAction.onclick = () => w.archived ? unarchiveWallet(w.id) : archiveWallet(w.id);
     listEl.appendChild(div);
   }
 

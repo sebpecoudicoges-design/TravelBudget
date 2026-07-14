@@ -115,9 +115,69 @@ export function renderWalletQuickOnboarding({
   `;
 }
 
+export function renderWalletCard({
+  wallet = {},
+  isBase = false,
+  today = '',
+  budgetToday = 0,
+  daily = 1,
+  baseCurrency = 'EUR',
+  balance = '',
+  recentHtml = '',
+  archived = false,
+  barPct = 0,
+  t = fallbackT,
+  esc = defaultEsc,
+} = {}) {
+  const tr = typeof t === 'function' ? t : fallbackT;
+  const id = String(wallet?.id || '');
+  const name = String(wallet?.name || '');
+  const currency = String(wallet?.currency || baseCurrency || '');
+  const base = String(baseCurrency || currency || 'EUR').toUpperCase();
+  const pct = Math.max(0, Math.min(100, Number(barPct) || 0));
+  const actionButtons = archived
+    ? `
+      <button class="btn" onclick="editWallet('${esc(id)}')">&#9998; ${esc(tr('wallet.action.edit'))}</button>
+      <button class="btn" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" onclick="deleteWallet('${esc(id)}')">&#128465; ${esc(tr('wallet.action.delete'))}</button>
+      <button class="btn" type="button" data-wallet-archive-action="unarchive">${esc(tr('wallet.action.unarchive'))}</button>
+    `
+    : `
+      <button class="btn primary" onclick="openTxModal('expense','${esc(id)}')">${esc(tr('wallet.action.add_expense'))}</button>
+      <button class="btn" onclick="openTxModal('income','${esc(id)}')">${esc(tr('wallet.action.add_income'))}</button>
+      <button class="btn" onclick="editWallet('${esc(id)}')">&#9998; ${esc(tr('wallet.action.edit'))}</button>
+      <button class="btn" onclick="adjustWalletBalance('${esc(id)}')">&#9881; ${esc(tr('wallet.action.adjust'))}</button>
+      <button class="btn" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" onclick="deleteWallet('${esc(id)}')">&#128465; ${esc(tr('wallet.action.delete'))}</button>
+      <button class="btn" type="button" data-wallet-archive-action="archive">${esc(tr('wallet.action.archive'))}</button>
+    `;
+
+  return `
+    <div style="display:flex; justify-content:space-between; gap:18px; align-items:flex-start; flex-wrap:wrap;">
+      <div style="min-width:280px; flex:1 1 520px;">
+        <h3>${esc(name)} (${esc(currency)}) ${archived ? `<span class="pill">${esc(tr('wallet.archived'))}</span>` : ''}</h3>
+        <p>${esc(tr('wallet.balance'))} : <strong style="color:var(--text);">${esc(balance)}</strong></p>
+        ${isBase
+          ? `<p class="muted">${esc(tr('wallet.today_budget', { date: today }))} <strong>${esc((Number(budgetToday) || 0).toFixed(2))} ${esc(base)}</strong></p>`
+          : `<p class="muted">${esc(tr('wallet.daily_budget_base', { currency: base }))}</p>`}
+        <div style="margin-top:12px;max-width:620px;">
+          <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:800;">${esc(tr('wallet.recent.title'))}</div>
+          ${recentHtml || `<div class="muted" style="font-size:12px;">${esc(tr('wallet.recent.empty'))}</div>`}
+        </div>
+        ${isBase ? `
+          <div class="bar" style="margin-top:12px;"><div style="width:${pct.toFixed(0)}%;"></div></div>
+          <div class="muted" style="margin-top:6px;">${esc(tr('wallet.budget_level'))}</div>
+        ` : ''}
+      </div>
+      <div class="tb-wallet-action-col" style="display:flex; flex-direction:column; gap:8px; flex:0 0 200px;">
+        ${actionButtons}
+      </div>
+    </div>
+  `;
+}
+
 export default {
   renderDashboardOnboardingPanel,
   renderDashboardContextHelp,
   renderWalletEmptyState,
   renderWalletQuickOnboarding,
+  renderWalletCard,
 };

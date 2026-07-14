@@ -24,6 +24,14 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).not.toContain('T("onboarding.step.wallet")}</div>');
   });
 
+  it('keeps wallet card rendering delegated to the Dashboard view module', () => {
+    expect(legacy).toContain('window.TBDashboardView?.renderWalletCard');
+    expect(legacy).toContain('data-wallet-archive-action');
+    expect(legacy).not.toContain('flex:1 1 520px;');
+    expect(legacy).not.toContain("openTxModal('expense','${w.id}')");
+    expect(legacy).not.toContain("adjustWalletBalance('${w.id}')");
+  });
+
   it('keeps a single wallet activity renderer in the Dashboard legacy file', () => {
     const matches = legacy.match(/function _walletRecentTransactionsHTML/g) || [];
     expect(matches).toHaveLength(1);
