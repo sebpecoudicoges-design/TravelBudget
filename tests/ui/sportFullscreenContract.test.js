@@ -24,4 +24,15 @@ describe('sport fullscreen focus contract', () => {
     expect(sport).toContain('CACHE.timerFocus = false;\n    syncTimerFocusLock();\n    CACHE.pendingSummary = summary');
     expect(sport).toContain('CACHE.timerFocus = false;\n    syncTimerFocusLock();\n    clearTimerState()');
   });
+
+  it('keeps the free sport timer persistent, fullscreen-capable and background-aware', () => {
+    expect(sport).toContain('FREE_TIMER_STATE_KEY');
+    expect(sport).toContain('function renderFreeTimer()');
+    expect(sport).toContain('id="sport-free-focus"');
+    expect(sport).toContain('tb-sport-free-card.focus');
+    expect(sport).toContain('saveFreeTimerState();');
+    expect(sport).toContain('loadFreeTimerState()');
+    expect(sport).toContain('if ((!CACHE.timer || CACHE.timer.paused) && (!CACHE.freeTimer || CACHE.freeTimer.paused || CACHE.freeTimer.stoppedAt)) return false;');
+    expect(sport).toContain('if ((!CACHE.timer && !CACHE.freeTimer) || document.visibilityState === "hidden") return;');
+  });
 });

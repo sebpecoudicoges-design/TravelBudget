@@ -17,6 +17,7 @@
   const SPORT_PROGRAM_KEY = () => scopedKey("travelbudget_sport_program_v1");
   const TIMER_PREF_KEY = () => scopedKey("travelbudget_sport_timer_prefs_v1");
   const TIMER_STATE_KEY = () => scopedKey("travelbudget_sport_timer_state_v1");
+  const FREE_TIMER_STATE_KEY = () => scopedKey("travelbudget_sport_free_timer_state_v1");
   const BODY_MEASUREMENTS_KEY = () => scopedKey("travelbudget_health_body_measurements_v1");
   const HISTORY_KEY = () => scopedKey(baseHistoryKey());
   const ANON_HISTORY_KEY = () => `${baseHistoryKey()}::anon`;
@@ -105,7 +106,8 @@
     CACHE.programSource = "fallback";
     CACHE.timerBeepVolume = loadTimerPrefs().beepVolume;
     CACHE.timer = loadTimerState();
-    if (CACHE.timer) startTicker();
+    CACHE.freeTimer = loadFreeTimerState();
+    if (CACHE.timer || CACHE.freeTimer) startTicker();
     CACHE.bodyMeasurements = loadBodyMeasurementsLocal();
     CACHE.bodyMeasurementsLoaded = false;
   }
@@ -460,8 +462,59 @@
     try { localStorage.removeItem(TIMER_STATE_KEY()); } catch (_) {}
     if (!CACHE.timer) syncTimerFocusLock();
   }
+  function normalizeFreeTimerState(raw) {
+    if (!raw || typeof raw !== "object" || !raw.item) return null;
+    const startedAt = Math.max(0, n(raw.startedAt, Date.now()));
+    const pausedAccumMs = Math.max(0, n(raw.pausedAccumMs, 0));
+    return {
+      item: Object.assign({}, raw.item),
+      startedAt,
+      stoppedAt: raw.stoppedAt == null ? null : Math.max(startedAt, n(raw.stoppedAt, Date.now())),
+      paused: raw.paused === true,
+      pauseStartedAt: raw.pauseStartedAt == null ? null : Math.max(0, n(raw.pauseStartedAt, 0)),
+      pausedAccumMs,
+      bodyWeightKg: n(raw.bodyWeightKg, bodyWeight()),
+      bodyHeightCm: n(raw.bodyHeightCm, bodyHeight()),
+      resultReps: raw.resultReps == null ? null : Math.max(0, Math.round(n(raw.resultReps, 0))),
+      resultWeightKg: raw.resultWeightKg == null ? null : Math.max(0, n(raw.resultWeightKg, 0)),
+      resultDistanceM: raw.resultDistanceM == null ? null : Math.max(0, Math.round(n(raw.resultDistanceM, 0))),
+    };
+  }
+  function freeTimerElapsedSeconds(timer, at) {
+    const ft = normalizeFreeTimerState(timer);
+    if (!ft) return 0;
+    const now = Math.max(ft.startedAt, n(at, Date.now()));
+    const end = ft.stoppedAt || (ft.paused && ft.pauseStartedAt ? ft.pauseStartedAt : now);
+    return Math.max(0, Math.round((end - ft.startedAt - n(ft.pausedAccumMs, 0)) / 1000));
+  }
+  function loadFreeTimerState() {
+    try { return normalizeFreeTimerState(JSON.parse(localStorage.getItem(FREE_TIMER_STATE_KEY()) || "null")); }
+    catch (_) { return null; }
+  }
+  function saveFreeTimerState() {
+    const timer = normalizeFreeTimerState(CACHE.freeTimer);
+    if (!timer) return clearFreeTimerState();
+    persistSportCache(FREE_TIMER_STATE_KEY(), JSON.stringify({
+      savedAt: new Date().toISOString(),
+      item: timer.item,
+      startedAt: timer.startedAt,
+      stoppedAt: timer.stoppedAt,
+      paused: timer.paused,
+      pauseStartedAt: timer.pauseStartedAt,
+      pausedAccumMs: timer.pausedAccumMs,
+      bodyWeightKg: timer.bodyWeightKg,
+      bodyHeightCm: timer.bodyHeightCm,
+      resultReps: timer.resultReps,
+      resultWeightKg: timer.resultWeightKg,
+      resultDistanceM: timer.resultDistanceM,
+    }));
+  }
+  function clearFreeTimerState() {
+    try { localStorage.removeItem(FREE_TIMER_STATE_KEY()); } catch (_) {}
+    if (!CACHE.timer) syncTimerFocusLock();
+  }
   function syncTimerFocusLock() {
-    const enabled = !!(CACHE.timer && CACHE.timerFocus);
+    const enabled = !!((CACHE.timer || CACHE.freeTimer) && CACHE.timerFocus);
     try { document.documentElement.classList.toggle("tb-sport-focus-lock", enabled); } catch (_) {}
     try { document.body?.classList.toggle("tb-sport-focus-lock", enabled); } catch (_) {}
     try { sportTimerFullscreenTarget()?.classList?.toggle("tb-sport-focus-root", enabled); } catch (_) {}
@@ -2160,13 +2213,13 @@
       .tb-sport-timer .name{font-size:34px;font-weight:950;line-height:1.05;}
       .tb-sport-timer .clock{font-size:56px;font-weight:950;letter-spacing:-.05em;}
       .tb-sport-timer .hint{color:#cbd5e1;font-weight:800;}
-      .tb-sport-timer-card.focus{position:fixed;inset:0;z-index:100040;border-radius:0!important;padding:calc(8px + env(safe-area-inset-top,0px)) calc(8px + env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) calc(8px + env(safe-area-inset-left,0px))!important;overflow:hidden;background:#020617;box-sizing:border-box;width:100vw;height:100dvh;max-width:100vw;max-height:100dvh;}
-      .tb-sport-timer-card.focus h3{display:none;}
-      .tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));max-height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));min-height:0;border-radius:20px;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;gap:clamp(7px,1.2vh,14px);}
+      .tb-sport-timer-card.focus,.tb-sport-free-card.focus{position:fixed;inset:0;z-index:100040;border-radius:0!important;padding:calc(8px + env(safe-area-inset-top,0px)) calc(8px + env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) calc(8px + env(safe-area-inset-left,0px))!important;overflow:hidden;background:#020617;box-sizing:border-box;width:100vw;height:100dvh;max-width:100vw;max-height:100dvh;}
+      .tb-sport-timer-card.focus h3,.tb-sport-free-card.focus h3{display:none;}
+      .tb-sport-timer-card.focus .tb-sport-timer,.tb-sport-free-card.focus .tb-sport-timer{height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));max-height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));min-height:0;border-radius:20px;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;gap:clamp(7px,1.2vh,14px);}
       .tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);}
       .tb-sport-timer-card.focus .tb-sport-live-focus,.tb-sport-timer-card.focus .tb-sport-live-panel{min-height:0;overflow:hidden;}
-      .tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(34px,5vw,74px);}
-      .tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(76px,12vw,170px);line-height:.9;}
+      .tb-sport-timer-card.focus .tb-sport-live-focus .name,.tb-sport-free-card.focus .tb-sport-live-focus .name{font-size:clamp(34px,5vw,74px);}
+      .tb-sport-timer-card.focus .tb-sport-timer .clock,.tb-sport-free-card.focus .tb-sport-timer .clock{font-size:clamp(76px,12vw,170px);line-height:.9;}
       .tb-sport-timer-card.focus .tb-sport-live-kpi strong{font-size:clamp(18px,2.1vw,28px);}
       .tb-sport-timer-v2{align-items:stretch;text-align:left;justify-content:flex-start;background:linear-gradient(145deg,#07111f,#0f172a 48%,#0b3b57);overflow:hidden;position:relative;}
       .tb-sport-timer-v2:before{content:"";position:absolute;inset:-80px -40px auto auto;width:210px;height:210px;border-radius:50%;background:rgba(56,189,248,.18);filter:blur(10px);}
@@ -2307,8 +2360,8 @@
       body.theme-dark .tb-sport-session-exercise{background:#0f172a;border-color:rgba(255,255,255,.12);}
       body.theme-dark .tb-sport-field input,body.theme-dark .tb-sport-field select,body.theme-dark .tb-sport-field textarea{background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,.14);}
       @media(max-width:980px){.tb-sport-grid,.tb-sport-profile-grid,.tb-sport-radar-wrap{grid-template-columns:1fr}.tb-sport-radar{margin:auto}.tb-sport-fields,.tb-sport-profile{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-hero{flex-direction:column}.tb-sport-program-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-program-focus{grid-template-columns:1fr}.tb-sport-program-progression>div{grid-template-columns:1fr}.tb-sport-program-progression small,.tb-sport-program-progression b{text-align:left;white-space:normal;}.tb-sport-session-editor-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tb-sport-session-editor-meta{grid-template-columns:1fr 120px 1fr}}
-      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile,.tb-sport-body-kpis,.tb-sport-athletic-grid,.tb-sport-athletic-balance{grid-template-columns:1fr}.tb-sport-athletic-head{flex-direction:column}.tb-sport-athletic-priority{max-width:none;width:100%;}.tb-sport-archetypes div{grid-template-columns:84px minmax(0,1fr) 28px}.tb-sport-radar-wrap{gap:8px}.tb-sport-radar{max-width:280px}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-next{grid-template-columns:1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-program-cockpit{padding:10px}.tb-sport-program-head strong{font-size:21px}.tb-sport-program-kpis{grid-template-columns:1fr 1fr}.tb-sport-program-loads{grid-template-columns:1fr 1fr}.tb-sport-program-catchup{align-items:flex-start;flex-direction:column}.tb-sport-session-editor-meta,.tb-sport-session-editor-add,.tb-sport-session-editor-grid{grid-template-columns:1fr}.tb-sport-session-editor-grid .wide{grid-column:auto}.tb-sport-session-editor-row-head{align-items:flex-start;flex-direction:column}.tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
-      @media(max-height:700px){.tb-sport-timer-card.focus .tb-sport-timer{gap:7px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timeline{display:none}.tb-sport-timer-card.focus .tb-sport-live-grid{gap:6px}.tb-sport-timer-card.focus .tb-sport-live-kpi{padding:8px}.tb-sport-timer-card.focus .tb-sport-volume-row{display:none}}
+      @media(max-width:620px){.tb-sport-fields,.tb-sport-profile,.tb-sport-body-kpis,.tb-sport-athletic-grid,.tb-sport-athletic-balance{grid-template-columns:1fr}.tb-sport-athletic-head{flex-direction:column}.tb-sport-athletic-priority{max-width:none;width:100%;}.tb-sport-archetypes div{grid-template-columns:84px minmax(0,1fr) 28px}.tb-sport-radar-wrap{gap:8px}.tb-sport-radar{max-width:280px}.tb-sport-timer .clock{font-size:44px}.tb-sport-timer .name{font-size:26px}.tb-sport-live-main{grid-template-columns:1fr}.tb-sport-timeline{grid-template-columns:1fr 1fr}.tb-sport-live-head{flex-direction:column}.tb-sport-live-grid{grid-template-columns:1fr 1fr}.tb-sport-planned-next{grid-template-columns:1fr}.tb-sport-planned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-sport-planned-day{min-height:76px}.tb-sport-program-cockpit{padding:10px}.tb-sport-program-head strong{font-size:21px}.tb-sport-program-kpis{grid-template-columns:1fr 1fr}.tb-sport-program-loads{grid-template-columns:1fr 1fr}.tb-sport-program-catchup{align-items:flex-start;flex-direction:column}.tb-sport-session-editor-meta,.tb-sport-session-editor-add,.tb-sport-session-editor-grid{grid-template-columns:1fr}.tb-sport-session-editor-grid .wide{grid-column:auto}.tb-sport-session-editor-row-head{align-items:flex-start;flex-direction:column}.tb-sport-timer-card.focus .tb-sport-live-main,.tb-sport-free-card.focus .tb-sport-live-main{grid-template-columns:1fr;gap:8px}.tb-sport-timer-card.focus .tb-sport-timer,.tb-sport-free-card.focus .tb-sport-timer{height:calc(100dvh - 16px);min-height:0;border-radius:18px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timer .clock,.tb-sport-free-card.focus .tb-sport-timer .clock{font-size:clamp(58px,18vw,84px)}.tb-sport-timer-card.focus .tb-sport-live-focus .name,.tb-sport-free-card.focus .tb-sport-live-focus .name{font-size:clamp(24px,7vw,34px)}.tb-sport-timer-card.focus .tb-sport-actions,.tb-sport-free-card.focus .tb-sport-actions{width:100%;justify-content:space-between!important}.tb-sport-timer-card.focus .tb-sport-timeline{max-height:70px;overflow:hidden}}
+      @media(max-height:700px){.tb-sport-timer-card.focus .tb-sport-timer,.tb-sport-free-card.focus .tb-sport-timer{gap:7px;padding:10px}.tb-sport-timer-card.focus .tb-sport-timeline{display:none}.tb-sport-timer-card.focus .tb-sport-live-grid{gap:6px}.tb-sport-timer-card.focus .tb-sport-live-kpi{padding:8px}.tb-sport-timer-card.focus .tb-sport-volume-row{display:none}}
       body.tb-capacitor-app[data-tb-view="sport"] #sport-root{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-shell{gap:10px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-hero{border-radius:22px!important;padding:16px!important;min-height:0!important;box-shadow:0 16px 34px rgba(37,99,235,.16)!important;}
@@ -2353,12 +2406,12 @@
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-live-main{grid-template-columns:1fr!important;gap:8px!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timeline{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-live-focus,.tb-sport-live-panel{border-radius:16px!important;padding:10px!important;}
-      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus{position:fixed!important;inset:0!important;z-index:100020!important;border-radius:0!important;padding:calc(8px + env(safe-area-inset-top,0px)) 8px calc(8px + env(safe-area-inset-bottom,0px))!important;background:#020617!important;overflow:hidden!important;box-sizing:border-box!important;}
-      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-timer{height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;min-height:0!important;border-radius:20px!important;padding:clamp(10px,2.4vw,20px)!important;overflow:hidden!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important;}
-      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-live-main{grid-template-columns:1fr!important;gap:12px!important;}
-      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-live-head{flex-direction:row!important;align-items:flex-start!important;}
-      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-timer .clock{font-size:clamp(88px,23vw,180px)!important;line-height:.9!important;letter-spacing:0!important;}
-      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-live-focus .name{font-size:clamp(34px,9vw,72px)!important;line-height:1.02!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus,body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-free-card.focus{position:fixed!important;inset:0!important;z-index:100020!important;border-radius:0!important;padding:calc(8px + env(safe-area-inset-top,0px)) 8px calc(8px + env(safe-area-inset-bottom,0px))!important;background:#020617!important;overflow:hidden!important;box-sizing:border-box!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-timer,body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-free-card.focus .tb-sport-timer{height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;min-height:0!important;border-radius:20px!important;padding:clamp(10px,2.4vw,20px)!important;overflow:hidden!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-live-main,body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-free-card.focus .tb-sport-live-main{grid-template-columns:1fr!important;gap:12px!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-live-head,body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-free-card.focus .tb-sport-live-head{flex-direction:row!important;align-items:flex-start!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-timer .clock,body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-free-card.focus .tb-sport-timer .clock{font-size:clamp(88px,23vw,180px)!important;line-height:.9!important;letter-spacing:0!important;}
+      body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-live-focus .name,body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-free-card.focus .tb-sport-live-focus .name{font-size:clamp(34px,9vw,72px)!important;line-height:1.02!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-live-kpi strong{font-size:clamp(18px,5vw,28px)!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus .tb-sport-timeline{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
       body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-history{grid-template-columns:1fr!important;gap:8px!important;}
@@ -2702,6 +2755,66 @@
     }) || "";
   }
 
+  function freeTimerSelectedExercise() {
+    const key = String(CACHE.freeTimerExerciseKey || CACHE.freeTimer?.item?.libraryKey || CACHE.freeTimer?.item?.key || "easy_run");
+    return EXERCISE_LIBRARY.find(ex => String(ex.key) === key) || EXERCISE_LIBRARY.find(ex => ex.key === "easy_run") || EXERCISE_LIBRARY[0];
+  }
+  function renderFreeTimer() {
+    const running = normalizeFreeTimerState(CACHE.freeTimer);
+    const selected = running?.item || libraryToPlanItem(freeTimerSelectedExercise());
+    const selectedKey = selected.libraryKey || selected.key || freeTimerSelectedExercise()?.key || "";
+    const elapsed = running ? freeTimerElapsedSeconds(running) : 0;
+    const stopped = !!running?.stoppedAt;
+    const mode = String(selected?.mode || "time");
+    const load = n(running?.resultWeightKg ?? selected?.weightKg, 0);
+    const reps = n(running?.resultReps ?? selected?.targetReps, 0);
+    const distance = n(running?.resultDistanceM ?? selected?.distanceM, 0);
+    const supportsLoad = supportsExternalLoad(selected);
+    const resultFields = stopped ? `
+      <div class="tb-sport-fields" style="margin-top:12px;">
+        ${mode === "reps" ? `<div class="tb-sport-field"><label>${esc(txt("Repetitions faites", "Completed reps"))}</label><input id="sport-free-reps" type="number" min="0" inputmode="numeric" value="${esc(String(Math.max(0, Math.round(reps || 0))))}"></div>` : ""}
+        ${supportsLoad ? `<div class="tb-sport-field"><label>${esc(txt("Charge kg", "Load kg"))}</label><input id="sport-free-load" type="number" step="0.5" inputmode="decimal" value="${esc(String(Math.round(load * 10) / 10))}"></div>` : ""}
+        <div class="tb-sport-field"><label>${esc(txt("Distance metres", "Distance meters"))}</label><input id="sport-free-distance" type="number" min="0" inputmode="numeric" value="${esc(String(Math.max(0, Math.round(distance || 0))))}" placeholder="${esc(txt("Ex : 5000 pour 5 km", "E.g. 5000 for 5 km"))}"></div>
+        <div class="tb-sport-field"><label>${esc(txt("Effort /10", "Effort /10"))}</label><input id="sport-free-effort" type="range" min="1" max="10" value="6"></div>
+      </div>
+      <div class="tb-sport-actions" style="justify-content:center;margin-top:12px;">
+        <button class="btn primary" type="button" id="sport-free-save">${esc(txt("Sauvegarder", "Save"))}</button>
+        <button class="btn" type="button" id="sport-free-discard">${esc(txt("Annuler", "Cancel"))}</button>
+      </div>` : "";
+    return `
+      <div class="tb-sport-card tb-sport-free-card ${CACHE.timerFocus && running ? "focus" : ""}">
+        <h3>${esc(txt("Chrono libre", "Free timer"))}</h3>
+        <div class="tb-sport-timer tb-sport-free-timer">
+          <div class="tb-sport-live-head">
+            <div>
+              <div class="kind">${esc(stopped ? txt("A sauvegarder", "Ready to save") : running ? txt("Chrono en cours", "Timer running") : txt("Libre", "Free"))}</div>
+              <div class="hint">${esc(txt("Choisis un exercice, lance le chrono reel, puis saisis distance, reps ou charge a la fin.", "Choose an exercise, start the real timer, then enter distance, reps or load at the end."))}</div>
+            </div>
+            <div class="tb-sport-actions">
+              ${running ? `<button class="btn small" type="button" id="sport-free-focus">${esc(CACHE.timerFocus ? txt("Reduire", "Exit focus") : txt("Grand ecran", "Big screen"))}</button>` : ""}
+            </div>
+          </div>
+          <div class="tb-sport-live-focus">
+            <div class="name">${esc(selected.exerciseName || labelActivity(selected.activityKey))}</div>
+            <div class="clock" data-sport-free-clock>${fmtSec(elapsed)}</div>
+            <div class="hint">${esc(labelActivity(selected.activityKey))} · ${esc(labelEquipment(selected.equipment))}${distance ? ` · ${Math.round(distance / 10) / 100} km` : ""}</div>
+          </div>
+          ${!running ? `<div class="tb-sport-fields" style="margin-top:12px;">
+            <div class="tb-sport-field"><label>${esc(txt("Exercice", "Exercise"))}</label><select id="sport-free-exercise">${libraryOptions("free", "all", selectedKey)}</select></div>
+          </div>
+          <div class="tb-sport-actions" style="justify-content:center;margin-top:12px;">
+            <button class="btn primary" type="button" id="sport-free-start">${esc(txt("Demarrer chrono", "Start timer"))}</button>
+          </div>` : ""}
+          ${running && !stopped ? `<div class="tb-sport-actions" style="justify-content:center;margin-top:12px;">
+            <button class="btn primary" type="button" id="sport-free-stop">${esc(txt("Arreter", "Stop"))}</button>
+            <button class="btn" type="button" id="sport-free-pause">${esc(running.paused ? txt("Reprendre", "Resume") : txt("Pause", "Pause"))}</button>
+            <button class="btn danger" type="button" id="sport-free-cancel">${esc(txt("Abandonner", "Discard"))}</button>
+          </div>` : ""}
+          ${resultFields}
+        </div>
+      </div>`;
+  }
+
   function allVisibleSportSessions() {
     const remoteSessions = CACHE.sessions || [];
     const localSessions = CACHE.localSessions || [];
@@ -2890,6 +3003,7 @@
         ${renderSportProfileDashboard()}
         <div class="tb-sport-grid">
           ${renderBuilder()}
+          ${renderFreeTimer()}
           ${renderTimer()}
         </div>
         ${renderHistory()}
@@ -3198,6 +3312,38 @@
     root.querySelectorAll("#sport-mark-done,#sport-mark-done-builder").forEach(btn => {
       btn.onclick = completePlanWithoutTimer;
     });
+    const freeExercise = root.querySelector("#sport-free-exercise");
+    if (freeExercise) freeExercise.onchange = () => {
+      CACHE.freeTimerExerciseKey = freeExercise.value || "";
+      renderSport("free-exercise");
+    };
+    const freeStart = root.querySelector("#sport-free-start");
+    if (freeStart) freeStart.onclick = startFreeTimer;
+    const freeStop = root.querySelector("#sport-free-stop");
+    if (freeStop) freeStop.onclick = stopFreeTimer;
+    const freePause = root.querySelector("#sport-free-pause");
+    if (freePause) freePause.onclick = toggleFreeTimerPause;
+    const freeCancel = root.querySelector("#sport-free-cancel");
+    if (freeCancel) freeCancel.onclick = discardFreeTimer;
+    const freeDiscard = root.querySelector("#sport-free-discard");
+    if (freeDiscard) freeDiscard.onclick = discardFreeTimer;
+    const freeSave = root.querySelector("#sport-free-save");
+    if (freeSave) freeSave.onclick = async () => {
+      freeSave.disabled = true;
+      await saveFreeTimerWorkout(root);
+    };
+    const freeFocus = root.querySelector("#sport-free-focus");
+    if (freeFocus) freeFocus.onclick = async () => {
+      CACHE.timerFocus = !CACHE.timerFocus;
+      const shouldFocus = CACHE.timerFocus;
+      syncTimerFocusLock();
+      renderSport("free-focus");
+      try {
+        if (shouldFocus) await keepTimerFullscreen("free-toggle");
+        else await exitTimerFullscreen();
+      } catch (_) {}
+      syncTimerFocusLock();
+    };
     const done = root.querySelector("#sport-step-done");
     if (done) done.onclick = completeStep;
     const addSet = root.querySelector("#sport-add-set");
@@ -3528,9 +3674,138 @@
     openFinishModal(summary);
   }
 
+  function startFreeTimer() {
+    if (CACHE.timer) {
+      sportFeedback(txt("Timer guide en cours", "Guided timer running"), txt("Termine ou annule la seance guidee avant de lancer un chrono libre.", "Finish or cancel the guided workout before starting a free timer."), { kind: "warn" });
+      return;
+    }
+    const select = document.getElementById("sport-free-exercise");
+    const ex = EXERCISE_LIBRARY.find(row => String(row.key) === String(select?.value || "")) || freeTimerSelectedExercise();
+    const item = libraryToPlanItem(ex);
+    const load = programLoadForExercise(item.exerciseName);
+    item.weightKg = n(load.weightKg, item.weightKg || 0);
+    item.loadLabel = load.loadLabel || item.loadLabel || "";
+    item.sets = 1;
+    item.restSeconds = 0;
+    saveBodyWeight(document.getElementById("sport-weight")?.value || bodyWeight());
+    saveBodyHeight(document.getElementById("sport-height")?.value || bodyHeight());
+    CACHE.freeTimerExerciseKey = ex?.key || item.libraryKey || "";
+    CACHE.freeTimer = normalizeFreeTimerState({
+      item,
+      startedAt: Date.now(),
+      paused: false,
+      pausedAccumMs: 0,
+      bodyWeightKg: bodyWeight(),
+      bodyHeightCm: bodyHeight(),
+      resultReps: item.mode === "reps" ? n(item.targetReps, 0) : null,
+      resultWeightKg: supportsExternalLoad(item) ? effectiveLoadKg(item, bodyWeight()) : 0,
+      resultDistanceM: n(item.distanceM, 0),
+    });
+    requestWakeLock();
+    saveFreeTimerState();
+    cancelTimerNotification();
+    sportFeedback(txt("Chrono libre lance", "Free timer started"), item.exerciseName || labelActivity(item.activityKey), { persistNotification: true });
+    startTicker();
+    renderSport("free-start");
+  }
+  function toggleFreeTimerPause() {
+    const ft = normalizeFreeTimerState(CACHE.freeTimer);
+    if (!ft || ft.stoppedAt) return;
+    const now = Date.now();
+    if (ft.paused) {
+      ft.pausedAccumMs += Math.max(0, now - n(ft.pauseStartedAt, now));
+      ft.pauseStartedAt = null;
+      ft.paused = false;
+    } else {
+      ft.paused = true;
+      ft.pauseStartedAt = now;
+    }
+    CACHE.freeTimer = ft;
+    saveFreeTimerState();
+    sportFeedback(ft.paused ? txt("Chrono en pause", "Timer paused") : txt("Chrono repris", "Timer resumed"), ft.item?.exerciseName || "", { persistNotification: true });
+    renderSport("free-pause");
+  }
+  function stopFreeTimer() {
+    const ft = normalizeFreeTimerState(CACHE.freeTimer);
+    if (!ft || ft.stoppedAt) return;
+    const now = Date.now();
+    if (ft.paused && ft.pauseStartedAt) {
+      ft.pausedAccumMs += Math.max(0, now - n(ft.pauseStartedAt, now));
+      ft.pauseStartedAt = null;
+    }
+    ft.paused = false;
+    ft.stoppedAt = now;
+    CACHE.freeTimer = ft;
+    saveFreeTimerState();
+    releaseWakeLock();
+    cancelTimerNotification();
+    sportFeedback(txt("Chrono arrete", "Timer stopped"), `${ft.item?.exerciseName || ""} · ${fmtSec(freeTimerElapsedSeconds(ft, now))}`, { toast: true });
+    renderSport("free-stop");
+  }
+  function discardFreeTimer() {
+    CACHE.freeTimer = null;
+    CACHE.timerFocus = false;
+    clearFreeTimerState();
+    releaseWakeLock();
+    cancelTimerNotification();
+    syncTimerFocusLock();
+    sportFeedback(txt("Chrono annule", "Timer discarded"), txt("Aucune seance ajoutee.", "No workout added."), { toast: true });
+    renderSport("free-discard");
+  }
+  async function saveFreeTimerWorkout(root) {
+    const ft = normalizeFreeTimerState(CACHE.freeTimer);
+    if (!ft || !ft.stoppedAt) return;
+    const item = Object.assign({}, ft.item || {});
+    const durationSeconds = Math.max(1, freeTimerElapsedSeconds(ft, ft.stoppedAt));
+    const reps = item.mode === "reps"
+      ? Math.max(0, Math.round(n(root.querySelector("#sport-free-reps")?.value, ft.resultReps ?? item.targetReps ?? 0)))
+      : null;
+    const loadKg = supportsExternalLoad(item)
+      ? Math.max(0, n(root.querySelector("#sport-free-load")?.value, ft.resultWeightKg ?? effectiveLoadKg(item, ft.bodyWeightKg)))
+      : 0;
+    const distanceM = Math.max(0, Math.round(n(root.querySelector("#sport-free-distance")?.value, ft.resultDistanceM ?? item.distanceM ?? 0)));
+    item.targetSeconds = item.mode === "time" ? durationSeconds : n(item.targetSeconds, durationSeconds);
+    item.distanceM = distanceM;
+    item.weightKg = loadKg;
+    item.sets = 1;
+    const doneSets = [{
+      itemIndex: 0,
+      setIndex: 1,
+      reps,
+      durationSeconds,
+      weightKg: loadKg,
+      distanceM,
+      completedAt: new Date(ft.stoppedAt).toISOString(),
+    }];
+    const summary = {
+      startedAt: new Date(ft.startedAt).toISOString(),
+      endedAt: new Date(ft.stoppedAt).toISOString(),
+      durationSeconds,
+      bodyWeightKg: ft.bodyWeightKg,
+      bodyHeightCm: ft.bodyHeightCm,
+      moodAfter: txt("Libre", "Free"),
+      perceivedEffort: Math.max(1, Math.min(10, Math.round(n(root.querySelector("#sport-free-effort")?.value, 6)))),
+      notes: txt("Chrono libre", "Free timer"),
+      estimatedKcal: Math.max(1, Math.round(sessionKcalEstimate([item], doneSets, ft.bodyWeightKg, durationSeconds))),
+      doneSets,
+      plan: [item],
+    };
+    rememberLoadForExercise(item, loadKg);
+    CACHE.freeTimer = null;
+    CACHE.timerFocus = false;
+    clearFreeTimerState();
+    syncTimerFocusLock();
+    await saveWorkout(summary);
+    sportFeedback(txt("Seance libre sauvegardee", "Free workout saved"), `${item.exerciseName || labelActivity(item.activityKey)} · ${fmtSec(durationSeconds)}`, { toast: true });
+    renderSport("free-save");
+  }
+
   function startTicker() {
     stopTicker();
     CACHE.ticker = setInterval(() => {
+      if (CACHE.freeTimer && !CACHE.freeTimer.paused && !CACHE.freeTimer.stoppedAt) {
+        if ((typeof activeView === "string" ? activeView : "") === "sport") updateFreeTimerDisplay();
+      }
       const timer = CACHE.timer;
       const step = currentTimerStep();
       if (!timer || timer.paused || !step) return;
@@ -3540,6 +3815,14 @@
         updateTimerDisplay();
       }
     }, 500);
+  }
+  function updateFreeTimerDisplay() {
+    const ft = normalizeFreeTimerState(CACHE.freeTimer);
+    if (!ft) return;
+    const root = document.getElementById("sport-root");
+    if (!root) return;
+    const clock = root.querySelector("[data-sport-free-clock]");
+    if (clock) clock.textContent = fmtSec(freeTimerElapsedSeconds(ft));
   }
   function updateTimerDisplay() {
     const timer = CACHE.timer;
@@ -3598,6 +3881,8 @@
     syncSportNotification(title || txt("Sport", "Sport"), text || "", !!opts?.persistNotification);
   }
   function currentTimerNotificationText() {
+    const ft = normalizeFreeTimerState(CACHE.freeTimer);
+    if (ft && !ft.stoppedAt) return `${txt("Chrono libre", "Free timer")} · ${ft.item?.exerciseName || labelActivity(ft.item?.activityKey || "strength")} · ${fmtSec(freeTimerElapsedSeconds(ft))}`;
     const timer = CACHE.timer;
     const step = currentTimerStep();
     if (!timer || !step) return "";
@@ -3609,7 +3894,7 @@
     return `${label} · ${target}`;
   }
   async function notifyTimerInBackground(reason) {
-    if (!CACHE.timer || CACHE.timer.paused) return false;
+    if ((!CACHE.timer || CACHE.timer.paused) && (!CACHE.freeTimer || CACHE.freeTimer.paused || CACHE.freeTimer.stoppedAt)) return false;
     const body = currentTimerNotificationText();
     if (!body) return false;
     try {
@@ -4347,7 +4632,7 @@
 
   async function requestWakeLock() {
     try {
-      if (!CACHE.timer || document.visibilityState === "hidden") return;
+      if ((!CACHE.timer && !CACHE.freeTimer) || document.visibilityState === "hidden") return;
       if (!("wakeLock" in navigator) || !navigator.wakeLock?.request) return;
       if (CACHE.wakeLock) return;
       CACHE.wakeLock = await navigator.wakeLock.request("screen");
@@ -4361,8 +4646,9 @@
     CACHE.wakeLock = null;
   }
   function handleTimerVisibilityChange(reason) {
-    if (!CACHE.timer) return;
+    if (!CACHE.timer && !CACHE.freeTimer) return;
     saveTimerState();
+    saveFreeTimerState();
     if (document.visibilityState === "visible") {
       cancelTimerNotification();
       requestWakeLock();

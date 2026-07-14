@@ -13,6 +13,7 @@ export function createInitialSportState() {
     pendingDeletes: [],
     plan: [],
     timer: null,
+    freeTimer: null,
     pendingSummary: null,
     wakeLock: null,
     localScope: '',
