@@ -6,8 +6,11 @@ import {
   renderDailyBudgetControls,
   renderDailyBudgetDay,
   renderWalletCard,
+  renderWalletCreateDialog,
+  renderWalletEditDialog,
   renderWalletEmptyState,
   renderWalletQuickOnboarding,
+  renderWalletTypesFixDialog,
 } from '../../../src/features/dashboard/dashboardView.js';
 
 describe('Dashboard view helpers', () => {
@@ -143,5 +146,44 @@ describe('Dashboard view helpers', () => {
     expect(html).toContain('100 AUD');
     expect(html).toContain('Asset cost : 12 AUD');
     expect(empty).toContain('dashboard.daily.no_allocation');
+  });
+
+  it('renders wallet create and edit dialogs with stable field ids', () => {
+    const createHtml = renderWalletCreateDialog();
+    const editHtml = renderWalletEditDialog({
+      wallet: { name: 'Banque AU', currency: 'AUD', type: 'bank' },
+    });
+
+    expect(createHtml).toContain('id="tbWName"');
+    expect(createHtml).toContain('id="tbWCur"');
+    expect(createHtml).toContain('id="tbWType"');
+    expect(createHtml).toContain('id="tbWBal"');
+    expect(createHtml).toContain('id="tbWCancel"');
+    expect(createHtml).toContain('id="tbWCreate"');
+    expect(editHtml).toContain('id="tbWEditName"');
+    expect(editHtml).toContain('value="Banque AU"');
+    expect(editHtml).toContain('value="AUD" disabled');
+    expect(editHtml).toContain('value="bank" selected');
+    expect(editHtml).toContain('id="tbWEditOk"');
+  });
+
+  it('renders the wallet type fix dialog with suggested defaults', () => {
+    const html = renderWalletTypesFixDialog({
+      wallets: [
+        { id: 'w1', name: 'Cash poche', currency: 'AUD' },
+        { id: 'w2', name: 'Wise bank', currency: 'EUR' },
+      ],
+      inferType: (name) => (String(name).includes('Cash') ? 'cash' : 'bank'),
+      typeLabel: (value) => value.toUpperCase(),
+    });
+
+    expect(html).toContain('id="tbWFixCancel"');
+    expect(html).toContain('id="tbWFixApply"');
+    expect(html).toContain('data-wid="w1"');
+    expect(html).toContain('data-wid="w2"');
+    expect(html).toContain('value="cash" selected');
+    expect(html).toContain('value="bank" selected');
+    expect(html).toContain('CASH');
+    expect(html).toContain('BANK');
   });
 });

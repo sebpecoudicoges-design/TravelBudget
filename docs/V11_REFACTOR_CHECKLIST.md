@@ -151,6 +151,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire les etats d'aide et d'onboarding Dashboard : aide contexte, etat aucun wallet et onboarding rapide quittent `12_dashboard_render.js`.
   - [x] Extraire le rendu des cartes wallet Dashboard : contenu, actions, archive et barre budget quittent `12_dashboard_render.js`.
   - [x] Extraire le rendu du budget journalier Dashboard : controles de periode et lignes jour quittent `12_dashboard_render.js`.
+  - [x] Extraire les dialogues wallet Dashboard : creation, edition et correction des types quittent `12_dashboard_render.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

@@ -594,42 +594,7 @@ function tbOpenWalletDialog() {
 
     const backdrop = document.createElement("div");
     backdrop.className = "tb-dlg-backdrop";
-    backdrop.innerHTML = `
-      <div class="tb-dlg" role="dialog" aria-modal="true" aria-label="Créer un wallet">
-        <div class="tb-dlg-h">Créer un wallet</div>
-        <div class="tb-dlg-b">
-          <div class="tb-dlg-row">
-            <label>Nom</label>
-            <input id="tbWName" type="text" placeholder="ex: Cash (THB), Banque EUR" />
-          </div>
-          <div class="tb-dlg-row">
-            <label>Devise</label>
-            <input id="tbWCur" type="text" placeholder="ex: EUR, THB, VND" maxlength="6" />
-            <div class="hint">Code devise (ISO) — ex: EUR, THB.</div>
-          </div>
-          <div class="tb-dlg-row">
-            <label>Type</label>
-            <select id="tbWType">
-              <option value="cash">Espèces (cash)</option>
-              <option value="bank">Banque (bank)</option>
-              <option value="card">Carte (card)</option>
-              <option value="savings">Épargne (savings)</option>
-              <option value="other">Autre (other)</option>
-            </select>
-            <div class="hint">Le type sert au calcul du KPI “Cash” et du runway (burn).</div>
-          </div>
-          <div class="tb-dlg-row">
-            <label>Solde initial</label>
-            <input id="tbWBal" type="text" inputmode="decimal" placeholder="0" value="0" />
-          </div>
-          <div id="tbWErr" class="tb-dlg-err"></div>
-        </div>
-        <div class="tb-dlg-f">
-          <button class="tb-dlg-btn" id="tbWCancel" type="button">Annuler</button>
-          <button class="tb-dlg-btn primary" id="tbWCreate" type="button">Créer</button>
-        </div>
-      </div>
-    `;
+    backdrop.innerHTML = window.TBDashboardView?.renderWalletCreateDialog?.() || "";
     document.body.appendChild(backdrop);
 
     const $ = (id) => backdrop.querySelector(id);
@@ -779,36 +744,7 @@ function tbOpenWalletEditDialog(wallet) {
     const dlg = document.createElement("div");
     dlg.className = "tb-dlg";
 
-    dlg.innerHTML = `
-      <div class="tb-dlg-h">Modifier wallet</div>
-      <div class="tb-dlg-b">
-        <div class="tb-dlg-row">
-          <label>Nom</label>
-          <input id="tbWEditName" type="text" value="${tbEscHTML(w.name || "")}" />
-        </div>
-
-        <div class="tb-dlg-row">
-          <label>Devise</label>
-          <input type="text" value="${tbEscHTML(w.currency || "")}" disabled />
-          <div class="hint">La devise n'est pas modifiable ici (évite les incohérences).</div>
-        </div>
-
-        <div class="tb-dlg-row">
-          <label>Type</label>
-          <select id="tbWEditType">
-            <option value="cash">Cash (espèces)</option>
-            <option value="bank">Banque</option>
-            <option value="card">Carte</option>
-            <option value="savings">Épargne</option>
-            <option value="other">Autre</option>
-          </select>
-        </div>
-      </div>
-      <div class="tb-dlg-f">
-        <button class="tb-dlg-btn" id="tbWEditCancel">Annuler</button>
-        <button class="tb-dlg-btn primary" id="tbWEditOk">Enregistrer</button>
-      </div>
-    `;
+    dlg.innerHTML = window.TBDashboardView?.renderWalletEditDialog?.({ wallet: w }) || "";
 
     back.appendChild(dlg);
     document.body.appendChild(back);
@@ -847,10 +783,7 @@ function openWalletTypesFix() {
   const missing = wallets.filter(w => !String(w?.type || "").trim());
   if (!missing.length) return alert("Tous les wallets ont déjà un type.");
 
-  // ensure styles
-  if (!document.getElementById("tbWalletDlgStyles")) {
-    tbOpenWalletDialog().then(() => {});
-  }
+  tbEnsureWalletDlgStyles();
 
   const back = document.createElement("div");
   back.className = "tb-dlg-backdrop";
@@ -858,49 +791,14 @@ function openWalletTypesFix() {
   const dlg = document.createElement("div");
   dlg.className = "tb-dlg";
 
-  const rowsHtml = missing.map((w, i) => {
-    const sug = tbInferWalletTypeFromName(w.name);
-    return `
-      <div class="tb-dlg-row" style="display:grid; grid-template-columns: 1fr 170px; gap:10px; align-items:center;">
-        <div>
-          <div style="font-weight:700;">${tbEscHTML(w.name || "")}</div>
-          <div class="hint">${tbEscHTML(w.currency || "")} • suggestion : <b>${tbEscHTML(tbWalletTypeLabel(sug))}</b></div>
-        </div>
-        <select data-wid="${tbEscHTML(w.id)}">
-          <option value="cash">Cash (espèces)</option>
-          <option value="bank">Banque</option>
-          <option value="card">Carte</option>
-          <option value="savings">Épargne</option>
-          <option value="other">Autre</option>
-        </select>
-      </div>
-    `;
-  }).join("");
-
-  dlg.innerHTML = `
-    <div class="tb-dlg-h">Corriger les types de wallets</div>
-    <div class="tb-dlg-b">
-      <div class="hint" style="margin-bottom:12px;">
-        On a détecté des wallets sans type. Sélectionne le bon type (pré-suggéré) puis “Appliquer”.
-      </div>
-      ${rowsHtml}
-    </div>
-    <div class="tb-dlg-f">
-      <button class="tb-dlg-btn" id="tbWFixCancel">Annuler</button>
-      <button class="tb-dlg-btn primary" id="tbWFixApply">Appliquer</button>
-    </div>
-  `;
+  dlg.innerHTML = window.TBDashboardView?.renderWalletTypesFixDialog?.({
+    wallets: missing,
+    inferType: tbInferWalletTypeFromName,
+    typeLabel: tbWalletTypeLabel,
+  }) || "";
 
   back.appendChild(dlg);
   document.body.appendChild(back);
-
-  // set suggestions as default selection
-  dlg.querySelectorAll("select[data-wid]").forEach(sel => {
-    const wid = sel.getAttribute("data-wid");
-    const w = missing.find(x => String(x.id) === String(wid));
-    const sug = tbInferWalletTypeFromName(w?.name);
-    sel.value = sug;
-  });
 
   function close() {
     try { document.body.removeChild(back); } catch (_) {}

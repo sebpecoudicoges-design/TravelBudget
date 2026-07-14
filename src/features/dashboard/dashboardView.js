@@ -17,6 +17,22 @@ function fallbackT(key, vars) {
   return out;
 }
 
+function renderWalletTypeOptions({
+  selected = '',
+  labels = {},
+  esc = defaultEsc,
+} = {}) {
+  const value = String(selected || '').toLowerCase();
+  const opts = [
+    ['cash', labels.cash || 'Espèces (cash)'],
+    ['bank', labels.bank || 'Banque (bank)'],
+    ['card', labels.card || 'Carte (card)'],
+    ['savings', labels.savings || 'Épargne (savings)'],
+    ['other', labels.other || 'Autre (other)'],
+  ];
+  return opts.map(([key, label]) => `<option value="${esc(key)}"${value === key ? ' selected' : ''}>${esc(label)}</option>`).join('');
+}
+
 export function renderDashboardOnboardingPanel({
   rows = [],
   done = 0,
@@ -229,6 +245,116 @@ export function renderDailyBudgetDay({
   `;
 }
 
+export function renderWalletCreateDialog({
+  labels = {},
+  esc = defaultEsc,
+} = {}) {
+  return `
+      <div class="tb-dlg" role="dialog" aria-modal="true" aria-label="${esc(labels.title || 'Créer un wallet')}">
+        <div class="tb-dlg-h">${esc(labels.title || 'Créer un wallet')}</div>
+        <div class="tb-dlg-b">
+          <div class="tb-dlg-row">
+            <label>${esc(labels.name || 'Nom')}</label>
+            <input id="tbWName" type="text" placeholder="${esc(labels.namePlaceholder || 'ex: Cash (THB), Banque EUR')}" />
+          </div>
+          <div class="tb-dlg-row">
+            <label>${esc(labels.currency || 'Devise')}</label>
+            <input id="tbWCur" type="text" placeholder="${esc(labels.currencyPlaceholder || 'ex: EUR, THB, VND')}" maxlength="6" />
+            <div class="hint">${esc(labels.currencyHint || 'Code devise (ISO) - ex: EUR, THB.')}</div>
+          </div>
+          <div class="tb-dlg-row">
+            <label>${esc(labels.type || 'Type')}</label>
+            <select id="tbWType">
+              ${renderWalletTypeOptions({ labels: labels.typeOptions, esc })}
+            </select>
+            <div class="hint">${esc(labels.typeHint || 'Le type sert au calcul du KPI Cash et du runway.')}</div>
+          </div>
+          <div class="tb-dlg-row">
+            <label>${esc(labels.balance || 'Solde initial')}</label>
+            <input id="tbWBal" type="text" inputmode="decimal" placeholder="0" value="0" />
+          </div>
+          <div id="tbWErr" class="tb-dlg-err"></div>
+        </div>
+        <div class="tb-dlg-f">
+          <button class="tb-dlg-btn" id="tbWCancel" type="button">${esc(labels.cancel || 'Annuler')}</button>
+          <button class="tb-dlg-btn primary" id="tbWCreate" type="button">${esc(labels.create || 'Créer')}</button>
+        </div>
+      </div>
+    `;
+}
+
+export function renderWalletEditDialog({
+  wallet = {},
+  labels = {},
+  esc = defaultEsc,
+} = {}) {
+  const type = String(wallet?.type || 'other').toLowerCase();
+  return `
+      <div class="tb-dlg-h">${esc(labels.title || 'Modifier wallet')}</div>
+      <div class="tb-dlg-b">
+        <div class="tb-dlg-row">
+          <label>${esc(labels.name || 'Nom')}</label>
+          <input id="tbWEditName" type="text" value="${esc(wallet?.name || '')}" />
+        </div>
+
+        <div class="tb-dlg-row">
+          <label>${esc(labels.currency || 'Devise')}</label>
+          <input type="text" value="${esc(wallet?.currency || '')}" disabled />
+          <div class="hint">${esc(labels.currencyLocked || "La devise n'est pas modifiable ici.")}</div>
+        </div>
+
+        <div class="tb-dlg-row">
+          <label>${esc(labels.type || 'Type')}</label>
+          <select id="tbWEditType">
+            ${renderWalletTypeOptions({ selected: type, labels: labels.typeOptions, esc })}
+          </select>
+        </div>
+      </div>
+      <div class="tb-dlg-f">
+        <button class="tb-dlg-btn" id="tbWEditCancel">${esc(labels.cancel || 'Annuler')}</button>
+        <button class="tb-dlg-btn primary" id="tbWEditOk">${esc(labels.save || 'Enregistrer')}</button>
+      </div>
+    `;
+}
+
+export function renderWalletTypesFixDialog({
+  wallets = [],
+  labels = {},
+  inferType = () => 'other',
+  typeLabel = (value) => value,
+  esc = defaultEsc,
+} = {}) {
+  const list = Array.isArray(wallets) ? wallets : [];
+  const rowsHtml = list.map((wallet) => {
+    const suggested = String(inferType(wallet?.name) || 'other').toLowerCase();
+    return `
+      <div class="tb-dlg-row" style="display:grid; grid-template-columns: 1fr 170px; gap:10px; align-items:center;">
+        <div>
+          <div style="font-weight:700;">${esc(wallet?.name || '')}</div>
+          <div class="hint">${esc(wallet?.currency || '')} &bull; ${esc(labels.suggestion || 'suggestion')} : <b>${esc(typeLabel(suggested))}</b></div>
+        </div>
+        <select data-wid="${esc(wallet?.id || '')}">
+          ${renderWalletTypeOptions({ selected: suggested, labels: labels.typeOptions, esc })}
+        </select>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="tb-dlg-h">${esc(labels.title || 'Corriger les types de wallets')}</div>
+    <div class="tb-dlg-b">
+      <div class="hint" style="margin-bottom:12px;">
+        ${esc(labels.intro || 'On a détecté des wallets sans type. Sélectionne le bon type puis applique.')}
+      </div>
+      ${rowsHtml}
+    </div>
+    <div class="tb-dlg-f">
+      <button class="tb-dlg-btn" id="tbWFixCancel">${esc(labels.cancel || 'Annuler')}</button>
+      <button class="tb-dlg-btn primary" id="tbWFixApply">${esc(labels.apply || 'Appliquer')}</button>
+    </div>
+  `;
+}
+
 export default {
   renderDashboardOnboardingPanel,
   renderDashboardContextHelp,
@@ -237,4 +363,7 @@ export default {
   renderWalletCard,
   renderDailyBudgetControls,
   renderDailyBudgetDay,
+  renderWalletCreateDialog,
+  renderWalletEditDialog,
+  renderWalletTypesFixDialog,
 };
