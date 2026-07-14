@@ -112,6 +112,9 @@ function _kpiIsCashPendingProjectionTx(tx) {
 function _kpiActivitySummaryForDate(dateISO) {
   const day = String(dateISO || '').slice(0, 10);
   const sameDay = (v) => String(v || '').slice(0, 10) === day;
+  const activityKcal = (typeof window.tbActivityKcalForDay === "function")
+    ? window.tbActivityKcalForDay(day)
+    : null;
   const sportRows = Array.isArray(window.state?.sportSessions) ? window.state.sportSessions : [];
   const workRows = Array.isArray(window.state?.workDays) ? window.state.workDays : [];
   const sumKeys = (rows, keys) => rows.reduce((acc, row) => acc + keys.reduce((v, k) => Number.isFinite(Number(row?.[k])) ? Number(row[k]) : v, 0), 0);
@@ -119,9 +122,9 @@ function _kpiActivitySummaryForDate(dateISO) {
   const work = workRows.filter((x) => sameDay(x.work_date || x.workDate));
   return {
     sportCount: sport.length,
-    sportKcal: sumKeys(sport, ['estimated_kcal', 'estimatedKcal']),
+    sportKcal: Number(activityKcal?.sportKcal ?? sumKeys(sport, ['estimated_kcal', 'estimatedKcal'])) || 0,
     workCount: work.length,
-    workKcal: sumKeys(work, ['estimated_kcal', 'estimatedKcal']),
+    workKcal: Number(activityKcal?.workKcal ?? sumKeys(work, ['estimated_kcal', 'estimatedKcal'])) || 0,
     workMinutes: sumKeys(work, ['duration_minutes', 'durationMinutes']),
   };
 }
@@ -1202,6 +1205,20 @@ function renderKPI() {
   const today = toLocalISODate(new Date());
   // Display date can later be driven by UI (state.uiDateISO). If absent, it defaults to today.
   const displayDateISO = (typeof window.getDisplayDateISO === "function") ? window.getDisplayDateISO() : today;
+  try {
+    const hasActivity = window.state?.activityDataLoaded === true
+      && Array.isArray(window.state?.sportSessions)
+      && Array.isArray(window.state?.workDays);
+    if (!hasActivity && !window.__TB_KPI_ACTIVITY_LOADING__ && typeof window.tbEnsureActivityData === "function") {
+      window.__TB_KPI_ACTIVITY_LOADING__ = true;
+      window.tbEnsureActivityData({ reason: "kpi" })
+        .then((result) => {
+          window.__TB_KPI_ACTIVITY_LOADING__ = false;
+          if (result?.loaded && typeof renderKPI === "function") renderKPI();
+        })
+        .catch(() => { window.__TB_KPI_ACTIVITY_LOADING__ = false; });
+    }
+  } catch (_) {}
   const infoToday = (typeof getDailyBudgetInfoForDate === "function")
     ? getDailyBudgetInfoForDate(displayDateISO)
     : { remaining: getDailyBudgetForDate(displayDateISO), daily: state.period.dailyBudgetBase, baseCurrency: state.period.baseCurrency };

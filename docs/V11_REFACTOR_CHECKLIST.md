@@ -9,6 +9,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Ne plus ajouter de nouvelle regle metier dans `public/legacy/js`.
 - [ ] Chaque extraction doit avoir des tests avant suppression du code historique.
 - [ ] Une seule source de verite par calcul, synchronisation ou format de donnee.
+  - [x] Aligner les calories d'activite KPI sur le loader transversal Sport/Travail deja utilise par Nutrition.
 - [ ] Mettre a jour cette checklist a chaque lot livre.
 
 ## Chantier 1 - Budget journalier et transactions

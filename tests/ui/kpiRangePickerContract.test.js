@@ -17,4 +17,13 @@ describe('KPI range picker contract', () => {
     expect(legacy).toContain('return;');
     expect(legacy).toContain('try { if (typeof renderKPI === "function") renderKPI(); } catch (_) {}');
   });
+
+  it('uses the shared activity calorie source for Sport and Work KPI totals', () => {
+    expect(legacy).toContain('window.tbEnsureActivityData({ reason: "kpi" })');
+    expect(legacy).toContain('window.__TB_KPI_ACTIVITY_LOADING__');
+    expect(legacy).toContain('typeof window.tbActivityKcalForDay === "function"');
+    expect(legacy).toContain('window.tbActivityKcalForDay(day)');
+    expect(legacy).toContain('activityKcal?.sportKcal');
+    expect(legacy).toContain('activityKcal?.workKcal');
+  });
 });

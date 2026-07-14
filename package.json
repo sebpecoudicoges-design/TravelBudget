@@ -1,7 +1,7 @@
 {
   "name": "travelbudget",
   "private": true,
-  "version": "10.5.156",
+  "version": "10.5.157",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "node scripts/run-playwright.mjs",
+    "atlas:generate": "node scripts/generate-project-atlas.mjs",
+    "docs:check": "node scripts/check-project-docs.mjs",
     "perf:budget": "node scripts/check-module-budgets.mjs",
     "lint:syntax": "node scripts/check-js-syntax.mjs",
     "lint:db": "node scripts/lint_db_strings.cjs",
