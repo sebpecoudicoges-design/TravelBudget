@@ -239,22 +239,7 @@ function renderDashboardContextHelp(container) {
   box.style.borderRadius = '14px';
   box.style.background = 'rgba(0,0,0,.03)';
   box.style.marginBottom = '12px';
-  box.innerHTML = `
-    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
-      <div style="min-width:260px; flex:1;">
-        <div style="font-weight:700; margin-bottom:6px;">${T("dashboard.help.title")}</div>
-        <div class="muted">
-          <div>• ${T("dashboard.help.wallets")}</div>
-          <div>• ${T("dashboard.help.daily")}</div>
-          <div>• ${T("dashboard.help.trip")}</div>
-        </div>
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn" type="button" onclick="showView('help')">${T("nav.help")}</button>
-        <button class="btn" type="button" onclick="showView('trip')">${T("nav.trip")}</button>
-        <button class="btn" type="button" data-tb-help-close="dashboard_overview">${T("common.hide")}</button>
-      </div>
-    </div>`;
+  box.innerHTML = window.TBDashboardView?.renderDashboardContextHelp?.({ t: T }) || "";
   container.prepend(box);
   const close = box.querySelector('[data-tb-help-close]');
   if (close) close.onclick = () => { try { (window.tbUxDismiss || _tbUxDismiss)('dashboard_overview'); } catch(_) {} box.remove(); };
@@ -379,10 +364,7 @@ if (!wallets.length) {
   empty.style.border = "1px dashed rgba(0,0,0,.25)";
   empty.style.borderRadius = "10px";
   empty.style.background = "rgba(0,0,0,.02)";
-  empty.innerHTML = `
-    <b>${tbT ? tbT("wallet.empty.title") : "Aucun wallet."}</b><br/>
-    ${tbT ? tbT("wallet.empty.body") : "Crée au moins 1 wallet pour suivre ton solde (ex : Cash THB, Banque EUR)."}
-  `;
+  empty.innerHTML = window.TBDashboardView?.renderWalletEmptyState?.({ t: T }) || "";
   container.appendChild(empty);
 
   // Quick onboarding block
@@ -393,21 +375,7 @@ if (!wallets.length) {
   ob.style.borderRadius = "12px";
   ob.style.background = "rgba(0,0,0,.02)";
   ob.style.marginTop = "10px";
-  ob.innerHTML = `
-    <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
-      <div style="font-weight:600;">${T("onboarding.title")}</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn" type="button" onclick="showView('settings')">${T("nav.settings")}</button>
-        <button class="btn" type="button" onclick="showView('help')">${T("nav.help")}</button>
-      </div>
-    </div>
-    <div style="margin-top:8px;" class="muted">
-      <div>${T("onboarding.step.wallet")}</div>
-      <div>${T("onboarding.step.period")}</div>
-      <div>${T("onboarding.step.tx")}</div>
-      <div style="margin-top:6px;">${T("onboarding.tip")}</div>
-    </div>
-  `;
+  ob.innerHTML = window.TBDashboardView?.renderWalletQuickOnboarding?.({ t: T }) || "";
   container.appendChild(ob);
 }
 

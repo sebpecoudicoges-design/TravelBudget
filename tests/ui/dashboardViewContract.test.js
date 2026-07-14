@@ -16,6 +16,14 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).not.toContain('grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:12px;');
   });
 
+  it('keeps dashboard help and wallet empty states delegated', () => {
+    expect(legacy).toContain('window.TBDashboardView?.renderDashboardContextHelp');
+    expect(legacy).toContain('window.TBDashboardView?.renderWalletEmptyState');
+    expect(legacy).toContain('window.TBDashboardView?.renderWalletQuickOnboarding');
+    expect(legacy).not.toContain('data-tb-help-close="dashboard_overview">${T("common.hide")}');
+    expect(legacy).not.toContain('T("onboarding.step.wallet")}</div>');
+  });
+
   it('keeps a single wallet activity renderer in the Dashboard legacy file', () => {
     const matches = legacy.match(/function _walletRecentTransactionsHTML/g) || [];
     expect(matches).toHaveLength(1);

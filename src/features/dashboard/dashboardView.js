@@ -59,6 +59,65 @@ export function renderDashboardOnboardingPanel({
   `;
 }
 
+export function renderDashboardContextHelp({
+  t = fallbackT,
+  esc = defaultEsc,
+} = {}) {
+  const tr = typeof t === 'function' ? t : fallbackT;
+  return `
+    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+      <div style="min-width:260px; flex:1;">
+        <div style="font-weight:700; margin-bottom:6px;">${esc(tr('dashboard.help.title'))}</div>
+        <div class="muted">
+          <div>&bull; ${esc(tr('dashboard.help.wallets'))}</div>
+          <div>&bull; ${esc(tr('dashboard.help.daily'))}</div>
+          <div>&bull; ${esc(tr('dashboard.help.trip'))}</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" type="button" onclick="showView('help')">${esc(tr('nav.help'))}</button>
+        <button class="btn" type="button" onclick="showView('trip')">${esc(tr('nav.trip'))}</button>
+        <button class="btn" type="button" data-tb-help-close="dashboard_overview">${esc(tr('common.hide'))}</button>
+      </div>
+    </div>`;
+}
+
+export function renderWalletEmptyState({
+  t = fallbackT,
+  esc = defaultEsc,
+} = {}) {
+  const tr = typeof t === 'function' ? t : fallbackT;
+  return `
+    <b>${esc(tr('wallet.empty.title'))}</b><br/>
+    ${esc(tr('wallet.empty.body'))}
+  `;
+}
+
+export function renderWalletQuickOnboarding({
+  t = fallbackT,
+  esc = defaultEsc,
+} = {}) {
+  const tr = typeof t === 'function' ? t : fallbackT;
+  return `
+    <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
+      <div style="font-weight:600;">${esc(tr('onboarding.title'))}</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" type="button" onclick="showView('settings')">${esc(tr('nav.settings'))}</button>
+        <button class="btn" type="button" onclick="showView('help')">${esc(tr('nav.help'))}</button>
+      </div>
+    </div>
+    <div style="margin-top:8px;" class="muted">
+      <div>${esc(tr('onboarding.step.wallet'))}</div>
+      <div>${esc(tr('onboarding.step.period'))}</div>
+      <div>${esc(tr('onboarding.step.tx'))}</div>
+      <div style="margin-top:6px;">${esc(tr('onboarding.tip'))}</div>
+    </div>
+  `;
+}
+
 export default {
   renderDashboardOnboardingPanel,
+  renderDashboardContextHelp,
+  renderWalletEmptyState,
+  renderWalletQuickOnboarding,
 };
