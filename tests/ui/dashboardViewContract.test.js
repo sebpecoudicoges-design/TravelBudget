@@ -12,7 +12,11 @@ describe('dashboard view extraction contract', () => {
   });
 
   it('keeps dashboard onboarding rendering delegated', () => {
+    const matches = legacy.match(/function renderOnboardingPanel/g) || [];
+    expect(matches).toHaveLength(1);
     expect(legacy).toContain('window.TBDashboardView?.renderDashboardOnboardingPanel');
+    expect(legacy).not.toContain('Crée un <b>wallet</b>');
+    expect(legacy).not.toContain('steps.join("<br/>")');
     expect(legacy).not.toContain('grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:12px;');
   });
 

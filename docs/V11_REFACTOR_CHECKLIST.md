@@ -154,6 +154,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire le rendu du budget journalier Dashboard : controles de periode et lignes jour quittent `12_dashboard_render.js`.
   - [x] Extraire les dialogues wallet Dashboard : creation, edition et correction des types quittent `12_dashboard_render.js`.
   - [x] Extraire le rendu des transactions recentes des cartes wallet Dashboard vers `dashboardView.js`.
+  - [x] Supprimer l'ancien rendu onboarding Dashboard mort, remplace par le rendu delegue unique.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

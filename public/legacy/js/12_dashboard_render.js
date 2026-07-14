@@ -12,45 +12,6 @@ function renderOnboardingPanel() {
   const body = document.getElementById("onboarding-panel-body");
   if (!panel || !body) return;
 
-  // User can hide it.
-  try {
-    if (localStorage.getItem("tb_onboarding_hide_v1") === "1") {
-      panel.style.display = "none";
-      return;
-    }
-  } catch (_) {}
-
-  const wallets = (window.state && Array.isArray(state.wallets)) ? state.wallets : [];
-  const txs = (window.state && Array.isArray(state.transactions))
-  ? state.transactions.filter(t => (t.travelId || t.travel_id) === state.activeTravelId)
-  : [];
-
-  // "Periods" heuristic: we consider segments/settings present if we have at least one segment or at least one setting row.
-  const hasSegments = !!(window.state && Array.isArray(state.segments) && state.segments.length);
-  const hasSettings = !!(window.state && Array.isArray(state.settings) && state.settings.length);
-
-  const steps = [];
-  if (!wallets.length) steps.push(tbT ? tbT("onboarding.step.wallet") : "1) Crée un <b>wallet</b> (ex : Cash THB).");
-  if (!hasSegments && !hasSettings) steps.push(tbT ? tbT("onboarding.step.period") : "2) Configure ta <b>période</b> et ta devise principale.");
-  if (!txs.length) steps.push(tbT ? tbT("onboarding.step.tx") : "3) Ajoute une première transaction (ex : <i>Déjeuner 120 THB</i>).");
-
-  if (!steps.length) {
-    panel.style.display = "none";
-    return;
-  }
-
-  panel.style.display = "block";
-  body.innerHTML = `
-    <div>${steps.join("<br/>")}</div>
-    <div style="margin-top:6px; opacity:.8;">${tbT ? tbT("onboarding.tip") : "Astuce : sur chaque champ sensible, clique sur le <b>?</b> pour une explication."}</div>
-  `;
-}
-
-renderOnboardingPanel = function () {
-  const panel = document.getElementById("onboarding-panel");
-  const body = document.getElementById("onboarding-panel-body");
-  if (!panel || !body) return;
-
   try {
     if (localStorage.getItem("tb_onboarding_hide_v1") === "1") {
       panel.style.display = "none";
@@ -93,7 +54,7 @@ renderOnboardingPanel = function () {
       return key;
     }),
   }) || "";
-};
+}
 
 /* =========================
    UX contextual help
