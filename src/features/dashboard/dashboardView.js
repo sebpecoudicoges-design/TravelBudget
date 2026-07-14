@@ -190,6 +190,55 @@ export function renderWalletCard({
   `;
 }
 
+export function renderWalletRecentTransactions({
+  rows = [],
+  t = fallbackT,
+  lang = 'fr',
+  fmtMoney = (amount, currency) => `${amount} ${currency || ''}`.trim(),
+  esc = defaultEsc,
+} = {}) {
+  const tr = typeof t === 'function' ? t : fallbackT;
+  const format = typeof fmtMoney === 'function' ? fmtMoney : ((amount, currency) => `${amount} ${currency || ''}`.trim());
+  const list = Array.isArray(rows) ? rows : [];
+  const isEn = String(lang || '').toLowerCase().startsWith('en');
+  if (!list.length) {
+    return `<div class="muted" style="font-size:12px;">${esc(tr('wallet.recent.empty'))}</div>`;
+  }
+
+  return list.map((row) => {
+    const tx = row?.tx || {};
+    const type = String(tx?.type || '').toLowerCase();
+    const sign = type === 'expense' ? '-' : '+';
+    const statusColor = row?.isFutureSoon
+      ? 'rgba(59,130,246,.12)'
+      : (row?.isPaid ? 'rgba(16,185,129,.12)' : 'rgba(245,158,11,.14)');
+    const statusBorder = row?.isFutureSoon
+      ? 'rgba(59,130,246,.35)'
+      : (row?.isPaid ? 'rgba(16,185,129,.35)' : 'rgba(245,158,11,.38)');
+    const statusText = row?.isFutureSoon
+      ? (isEn ? 'Upcoming' : 'A venir')
+      : (row?.isPaid ? tr('wallet.recent.paid') : tr('wallet.recent.unpaid'));
+    const warningText = isEn ? '! Overdraft risk' : '! Risque de decouvert';
+    const warningTitle = isEn ? 'Overdraft risk' : 'Risque de decouvert';
+    const warningChip = row?.isFutureSoon && row?.projectedNegative
+      ? `<span title="${esc(warningTitle)}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid rgba(244,63,94,.38);background:rgba(244,63,94,.10);border-radius:999px;padding:2px 7px;color:#be123c;font-size:11px;font-weight:850;">${esc(warningText)}</span>`
+      : '';
+    const label = String(tx?.label || tx?.category || 'Transaction');
+    const date = String(row?.date || '');
+    const amount = `${sign}${format(Math.abs(Number(tx?.amount) || 0), tx?.currency || '')}`;
+    const amountColor = type === 'expense' ? '#b42335' : '#047857';
+    return `
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid rgba(15,23,42,.07);">
+        <div style="min-width:0;">
+          <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(label)}</div>
+          <div class="muted" style="font-size:12px;">${esc(date)} - <span style="display:inline-flex;align-items:center;border:1px solid ${statusBorder};background:${statusColor};border-radius:999px;padding:1px 7px;color:var(--text);font-weight:700;">${esc(statusText)}</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-weight:800;white-space:nowrap;color:${amountColor};">${esc(amount)}${warningChip}</div>
+      </div>
+    `;
+  }).join('');
+}
+
 export function renderDailyBudgetControls({
   viewStartISO = '',
   viewEndISO = '',

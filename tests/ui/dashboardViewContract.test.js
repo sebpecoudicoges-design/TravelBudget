@@ -54,7 +54,10 @@ describe('dashboard view extraction contract', () => {
   it('keeps a single wallet activity renderer in the Dashboard legacy file', () => {
     const matches = legacy.match(/function _walletRecentTransactionsHTML/g) || [];
     expect(matches).toHaveLength(1);
+    expect(legacy).toContain('window.TBDashboardView?.renderWalletRecentTransactions');
     expect(legacy).toContain('isPastUnpaid');
-    expect(legacy).toContain('row.projectedNegative');
+    expect(legacy).toContain('projectedNegative: projectedFutureBalance < 0');
+    expect(legacy).not.toContain('const statusColor = row.isFutureSoon');
+    expect(legacy).not.toContain('Risque de decouvert")}</span>');
   });
 });

@@ -9,6 +9,7 @@ import {
   renderWalletCreateDialog,
   renderWalletEditDialog,
   renderWalletEmptyState,
+  renderWalletRecentTransactions,
   renderWalletQuickOnboarding,
   renderWalletTypesFixDialog,
 } from '../../../src/features/dashboard/dashboardView.js';
@@ -107,6 +108,38 @@ describe('Dashboard view helpers', () => {
     expect(html).not.toContain("openTxModal('expense'");
     expect(html).not.toContain("openTxModal('income'");
     expect(html).not.toContain('adjustWalletBalance');
+  });
+
+  it('renders wallet recent transactions with status and overdraft warning', () => {
+    const html = renderWalletRecentTransactions({
+      rows: [
+        {
+          date: '2026-07-15',
+          isFutureSoon: true,
+          isPaid: false,
+          projectedNegative: true,
+          tx: { type: 'expense', label: 'Amasym', amount: 25, currency: 'AUD' },
+        },
+        {
+          date: '2026-07-13',
+          isFutureSoon: false,
+          isPaid: true,
+          tx: { type: 'income', label: 'Remboursement', amount: 12, currency: 'AUD' },
+        },
+      ],
+      t,
+      fmtMoney: (amount, currency) => `${amount.toFixed(2)} ${currency}`,
+    });
+    const empty = renderWalletRecentTransactions({ rows: [], t });
+
+    expect(html).toContain('Amasym');
+    expect(html).toContain('-25.00 AUD');
+    expect(html).toContain('A venir');
+    expect(html).toContain('Risque de decouvert');
+    expect(html).toContain('Remboursement');
+    expect(html).toContain('+12.00 AUD');
+    expect(html).toContain('wallet.recent.paid');
+    expect(empty).toContain('wallet.recent.empty');
   });
 
   it('renders daily budget controls with stable ids and date window', () => {

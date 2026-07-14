@@ -191,39 +191,17 @@ function _walletRecentTransactionsHTML(walletId, today, T) {
     });
 
   if (!rows.length) {
-    return `<div class="muted" style="font-size:12px;">${T("wallet.recent.empty")}</div>`;
+    return window.TBDashboardView?.renderWalletRecentTransactions?.({ rows: [], t: T, esc: escapeHTML })
+      || `<div class="muted" style="font-size:12px;">${T("wallet.recent.empty")}</div>`;
   }
 
-  return rows.map((row) => {
-    const tx = row.tx;
-    const type = String(tx?.type || "").toLowerCase();
-    const sign = type === "expense" ? "-" : "+";
-    const statusColor = row.isFutureSoon
-      ? "rgba(59,130,246,.12)"
-      : (row.isPaid ? "rgba(16,185,129,.12)" : "rgba(245,158,11,.14)");
-    const statusBorder = row.isFutureSoon
-      ? "rgba(59,130,246,.35)"
-      : (row.isPaid ? "rgba(16,185,129,.35)" : "rgba(245,158,11,.38)");
-    const statusText = row.isFutureSoon
-      ? ((window.tbGetLang && window.tbGetLang() === "en") ? "Upcoming" : "A venir")
-      : (row.isPaid ? T("wallet.recent.paid") : T("wallet.recent.unpaid"));
-    const warningChip = row.isFutureSoon && row.projectedNegative
-      ? `<span title="${escapeHTML((window.tbGetLang && window.tbGetLang() === "en") ? "Overdraft risk" : "Risque de decouvert")}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid rgba(244,63,94,.38);background:rgba(244,63,94,.10);border-radius:999px;padding:2px 7px;color:#be123c;font-size:11px;font-weight:850;">${escapeHTML((window.tbGetLang && window.tbGetLang() === "en") ? "! Overdraft risk" : "! Risque de decouvert")}</span>`
-      : "";
-    const label = escapeHTML(String(tx?.label || tx?.category || "Transaction"));
-    const date = escapeHTML(row.date);
-    const amount = escapeHTML(`${sign}${fmtMoney(Math.abs(Number(tx?.amount) || 0), tx?.currency || "")}`);
-    const amountColor = type === "expense" ? "#b42335" : "#047857";
-    return `
-      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid rgba(15,23,42,.07);">
-        <div style="min-width:0;">
-          <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
-          <div class="muted" style="font-size:12px;">${date} - <span style="display:inline-flex;align-items:center;border:1px solid ${statusBorder};background:${statusColor};border-radius:999px;padding:1px 7px;color:var(--text);font-weight:700;">${escapeHTML(statusText)}</span></div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-weight:800;white-space:nowrap;color:${amountColor};">${amount}${warningChip}</div>
-      </div>
-    `;
-  }).join("");
+  return window.TBDashboardView?.renderWalletRecentTransactions?.({
+    rows,
+    t: T,
+    lang: (window.tbGetLang && window.tbGetLang()) || "fr",
+    fmtMoney,
+    esc: escapeHTML,
+  }) || "";
 }
 
 function renderDashboardContextHelp(container) {
