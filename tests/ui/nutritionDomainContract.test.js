@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 
 describe('nutrition domain extraction contract', () => {
+  const bootstrap = fs.readFileSync('public/legacy/js/07_supabase_bootstrap.js', 'utf8');
   const bridge = fs.readFileSync('src/app/bridge.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/48_nutrition_ui.js', 'utf8');
   const repository = fs.readFileSync('src/data/nutritionRepository.js', 'utf8');
@@ -30,6 +31,19 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('view().renderGoalCockpit');
     expect(legacy).toContain('view().renderAlcoholPanel');
     expect(legacy).toContain('view().renderActiveWeekDashboard');
+  });
+
+  it('hydrates Sport and Work activity calories without loading their UI domains first', () => {
+    expect(bootstrap).toContain('window.tbEnsureActivityData');
+    expect(bootstrap).toContain('tables.sport_sessions');
+    expect(bootstrap).toContain('tables.work_days');
+    expect(bootstrap).toContain('window.tbActivityKcalForDay');
+    expect(bootstrap).toContain('state.activityDataLoaded = true');
+    expect(bootstrap).toContain('const canUseActivityCache = !force && window.state.activityDataLoaded === true;');
+    expect(legacy).toContain('ensureActivityDataForNutrition');
+    expect(legacy).toContain('window.tbEnsureActivityData({ reason: `nutrition:${reason || "render"}` })');
+    expect(legacy).toContain('window.tbActivityKcalForDay(day)?.sportKcal');
+    expect(legacy).toContain('window.tbActivityKcalForDay(day)?.workKcal');
   });
 
   it('keeps the extracted modules responsible for their domain surfaces', () => {

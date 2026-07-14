@@ -9,6 +9,108 @@ function addDays(date, days) {
   return d;
 }
 
+function tbActivityLocalDateISO(value) {
+  const raw = String(value || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const d = raw ? new Date(raw) : null;
+  if (!d || Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function tbPublishActivityRows({ sportSessions, workDays, reason } = {}) {
+  if (!window.state) window.state = {};
+  if (Array.isArray(sportSessions)) {
+    window.state.sportSessions = sportSessions.map((row) => ({
+      ...row,
+      startedAt: row.started_at || row.startedAt || row.session_date || null,
+      endedAt: row.ended_at || row.endedAt || null,
+      estimatedKcal: Number(row.estimated_kcal ?? row.estimatedKcal ?? row.kcal ?? 0) || 0,
+      durationSeconds: Number(row.duration_seconds ?? row.durationSeconds ?? 0) || 0,
+    }));
+  }
+  if (Array.isArray(workDays)) {
+    window.state.workDays = workDays.map((row) => ({
+      ...row,
+      workDate: row.work_date || row.workDate || row.date || null,
+      estimatedKcal: Number(row.estimated_kcal ?? row.estimatedKcal ?? row.kcal ?? 0) || 0,
+    }));
+  }
+  window.state.activityDataLoaded = true;
+  try {
+    if (reason && typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot(`activity:${reason}`);
+  } catch (_) {}
+}
+
+window.tbEnsureActivityData = async function tbEnsureActivityData(options = {}) {
+  const force = !!options.force;
+  const reason = String(options.reason || "activity");
+  if (!window.state) window.state = {};
+  if (window.__TB_ACTIVITY_LOAD_PROMISE__ && !force) return window.__TB_ACTIVITY_LOAD_PROMISE__;
+  if (!force && window.state.activityDataLoaded === true && Array.isArray(window.state.sportSessions) && Array.isArray(window.state.workDays)) {
+    return { loaded: false, cached: true, sportCount: window.state.sportSessions.length, workCount: window.state.workDays.length };
+  }
+  const run = (async () => {
+    const client = window.sb;
+    const userId = window.sbUser?.id;
+    if (!client || !userId || !window.TB_CONST?.TABLES) {
+      return { loaded: false, skipped: true, reason: "missing-client" };
+    }
+    const tables = window.TB_CONST.TABLES;
+    const shouldSkipNetwork = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode(`activity:${reason}`)
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (shouldSkipNetwork) return { loaded: false, skipped: true, reason: "offline" };
+
+    const canUseActivityCache = !force && window.state.activityDataLoaded === true;
+    const sportPromise = (canUseActivityCache && Array.isArray(window.state.sportSessions))
+      ? Promise.resolve({ data: window.state.sportSessions, error: null, cached: true })
+      : client
+        .from(tables.sport_sessions)
+        .select("id,user_id,started_at,ended_at,duration_seconds,estimated_kcal,activity_type,created_at,updated_at")
+        .eq("user_id", userId)
+        .order("started_at", { ascending: false })
+        .limit(120);
+    const workPromise = (canUseActivityCache && Array.isArray(window.state.workDays))
+      ? Promise.resolve({ data: window.state.workDays, error: null, cached: true })
+      : client
+        .from(tables.work_days)
+        .select("id,user_id,travel_id,engagement_id,work_date,activity_key,label,duration_minutes,break_minutes,met_value,body_weight_kg,estimated_kcal,perceived_effort,notes,created_at,updated_at")
+        .eq("user_id", userId)
+        .order("work_date", { ascending: false })
+        .limit(120);
+
+    const [sport, work] = await Promise.all([sportPromise, workPromise]);
+    if (sport?.error) throw sport.error;
+    if (work?.error) throw work.error;
+    tbPublishActivityRows({ sportSessions: sport?.data || [], workDays: work?.data || [], reason });
+    try { window.dispatchEvent(new CustomEvent("tb:activity:data_loaded", { detail: { reason } })); } catch (_) {}
+    try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+    return {
+      loaded: true,
+      sportCount: (window.state.sportSessions || []).length,
+      workCount: (window.state.workDays || []).length,
+    };
+  })();
+  window.__TB_ACTIVITY_LOAD_PROMISE__ = run.finally(() => {
+    if (window.__TB_ACTIVITY_LOAD_PROMISE__ === run) window.__TB_ACTIVITY_LOAD_PROMISE__ = null;
+  });
+  return window.__TB_ACTIVITY_LOAD_PROMISE__;
+};
+
+window.tbActivityKcalForDay = function tbActivityKcalForDay(day) {
+  const targetDay = String(day || "").slice(0, 10);
+  const sportKcal = (Array.isArray(window.state?.sportSessions) ? window.state.sportSessions : [])
+    .filter((row) => tbActivityLocalDateISO(row.started_at || row.startedAt || row.session_date || row.date) === targetDay)
+    .reduce((sum, row) => sum + (Number(row.estimated_kcal ?? row.estimatedKcal ?? row.kcal ?? 0) || 0), 0);
+  const workKcal = (Array.isArray(window.state?.workDays) ? window.state.workDays : [])
+    .filter((row) => tbActivityLocalDateISO(row.work_date || row.workDate || row.date) === targetDay)
+    .reduce((sum, row) => sum + (Number(row.estimated_kcal ?? row.estimatedKcal ?? row.kcal ?? 0) || 0), 0);
+  return { sportKcal, workKcal, activityKcal: sportKcal + workKcal };
+};
+
 
 
 // --- First-time onboarding wizard (V6.6.14) ---

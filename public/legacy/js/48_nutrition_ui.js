@@ -1070,17 +1070,36 @@
     })).sort((a, b) => String(b.day).localeCompare(String(a.day))).slice(0, 21);
   }
   function sportKcalForDay(day) {
+    if (typeof window.tbActivityKcalForDay === "function") return n(window.tbActivityKcalForDay(day)?.sportKcal, 0);
     const targetDay = String(day || selectedDateISO()).slice(0, 10);
     return (window.state?.sportSessions || []).filter(s => localDateISO(s.started_at || s.startedAt) === targetDay)
       .reduce((sum, s) => sum + n(s.estimated_kcal || s.estimatedKcal, 0), 0);
   }
   function todaySportKcal() { return sportKcalForDay(selectedDateISO()); }
   function workKcalForDay(day) {
+    if (typeof window.tbActivityKcalForDay === "function") return n(window.tbActivityKcalForDay(day)?.workKcal, 0);
     const targetDay = String(day || selectedDateISO()).slice(0, 10);
     return (window.state?.workDays || []).filter(w => localDateISO(w.work_date || w.workDate) === targetDay)
       .reduce((sum, w) => sum + n(w.estimated_kcal || w.estimatedKcal, 0), 0);
   }
   function todayWorkKcal() { return workKcalForDay(selectedDateISO()); }
+  function ensureActivityDataForNutrition(reason) {
+    if (CACHE.activityLoading) return;
+    const hasSport = window.state?.activityDataLoaded === true && Array.isArray(window.state?.sportSessions);
+    const hasWork = window.state?.activityDataLoaded === true && Array.isArray(window.state?.workDays);
+    if (hasSport && hasWork) return;
+    if (typeof window.tbEnsureActivityData !== "function") return;
+    CACHE.activityLoading = true;
+    window.tbEnsureActivityData({ reason: `nutrition:${reason || "render"}` })
+      .then((result) => {
+        CACHE.activityLoading = false;
+        if (result?.loaded && (window.activeView || "") === "nutrition") renderNutrition("activity-loaded");
+      })
+      .catch((e) => {
+        CACHE.activityLoading = false;
+        if (!isOfflineSkipError(e)) console.warn("[nutrition] activity load failed", e?.message || e);
+      });
+  }
   function bodyWeight() {
     try { return Number(window.tbReadScopedLocalStorage?.(window.TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1", 70)) || 70; } catch (_) { return 70; }
   }
@@ -1441,6 +1460,7 @@
     ensureNutritionStyles();
     const root = document.getElementById("nutrition-root");
     if (!root) return;
+    ensureActivityDataForNutrition(reason);
     if (!CACHE.loaded && !CACHE.loading) {
       loadNutrition().then((changed) => {
         if (changed && (window.activeView || "") === "nutrition") {
