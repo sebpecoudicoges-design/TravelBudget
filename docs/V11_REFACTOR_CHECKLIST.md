@@ -146,6 +146,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire les filtres Analyse : options categorie/sous-categorie, resume et chips d'exclusion quittent `33_budget_analysis.js` vers `33_analysis_filter_view.js`.
   - [x] Extraire le tiroir de transactions Analyse : CSS, titre, et lignes de detail quittent `33_budget_analysis.js` vers `33_analysis_drilldown_view.js`.
   - [x] Extraire les options de periode Analyse : periode active, tout le voyage, periodes datees et date-a-date passent dans `33_analysis_filter_view.js`.
+  - [x] Nettoyer Dashboard : supprimer le rendu wallet activity duplique et les helpers morts associes, avec contrat anti-doublon.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison
