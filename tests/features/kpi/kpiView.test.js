@@ -5,6 +5,7 @@ import {
   renderKpiMiniCard,
   renderKpiPendingDetail,
   renderKpiResponsiveStyles,
+  renderKpiTodayPanel,
 } from '../../../src/features/kpi/kpiView.js';
 
 describe('KPI view helpers', () => {
@@ -100,5 +101,51 @@ describe('KPI view helpers', () => {
     expect(html).toContain('+18 AUD');
     expect(html).toContain('+1 autre(s)');
     expect(html).not.toContain('Hostel');
+  });
+
+  it('renders today panel with steering and cash summary', () => {
+    const html = renderKpiTodayPanel({
+      dateISO: '2026-07-15',
+      todayLabel: 'Aujourd hui',
+      steeringLabel: 'Pilotage',
+      dailyBudget: 42,
+      base: 'AUD',
+      todayPillClass: 'good',
+      todayDetailsHtml: '<div data-today-details>Details</div>',
+      pilot: {
+        kind: 'period',
+        decisionLevel: 'warn',
+        decision: 'Ajuster',
+        recommendedDaily: 31.5,
+        base: 'AUD',
+        projectedEndBalance: -12,
+        zeroDate: '2026-07-20',
+        daysRemaining: 5,
+      },
+      recommendedBudgetLabel: 'Budget recommande',
+      endBalanceLabel: 'Solde fin',
+      estimatedBreakLabel: 'Rupture estimee',
+      daysRemainingLabel: 'Jours restants',
+      cashLabel: 'Cash',
+      daysLabel: 'jours',
+      stockLabel: 'Stock',
+      burnLabel: 'Burn',
+      cashDaysText: '9',
+      cashLevel: 'good',
+      cashDriver: 'Depenses',
+      cashTotalText: '100 AUD',
+      cashBurnText: '11 AUD',
+      fxNote: 'FX exclu : USD',
+      moneyText: (value, currency) => `${value} ${currency}`,
+      signPillClass: (value) => (value < 0 ? 'bad' : 'good'),
+    });
+
+    expect(html).toContain('kpi-mini-card');
+    expect(html).toContain('2026-07-15');
+    expect(html).toContain('data-today-details');
+    expect(html).toContain('Budget recommande');
+    expect(html).toContain('31.5 AUD/j');
+    expect(html).toContain('Rupture estimee');
+    expect(html).toContain('FX exclu : USD');
   });
 });

@@ -205,9 +205,119 @@ export function renderKpiPendingDetail({
   `;
 }
 
+export function renderKpiTodayPanel({
+  dateISO = '',
+  todayLabel = "Aujourd'hui",
+  steeringLabel = 'Pilotage',
+  dailyBudget = 0,
+  base = '',
+  todayPillClass = '',
+  todayDetailsHtml = '',
+  pilot = null,
+  recommendedBudgetLabel = 'Budget recommande',
+  recommendedBudgetRangeLabel = 'Budget recommande',
+  endBalanceLabel = 'Solde fin',
+  rangeEndBalanceLabel = 'Solde fin plage',
+  estimatedBreakLabel = 'Rupture estimee',
+  daysRemainingLabel = 'Jours restants',
+  cashLabel = 'Cash',
+  daysLabel = 'jours',
+  stockLabel = 'Stock',
+  burnLabel = 'Burn',
+  cashDaysText = '',
+  cashLevel = '',
+  cashDriver = '',
+  cashTotalText = '',
+  cashBurnText = '',
+  fxNote = '',
+  moneyText,
+  signPillClass,
+  esc = defaultEsc,
+} = {}) {
+  const safe = typeof esc === 'function' ? esc : defaultEsc;
+  const fmtMoney = typeof moneyText === 'function'
+    ? moneyText
+    : ((value, currency) => `${Math.round(Number(value) || 0)} ${currency || ''}`.trim());
+  const signClass = typeof signPillClass === 'function'
+    ? signPillClass
+    : (() => '');
+
+  return `
+    <div class="kpi-mini-card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+        <div>
+          <div style="font-weight:800; font-size:16px; color:var(--text);">${safe(todayLabel)}</div>
+          <div class="muted" style="font-size:12px; margin-top:2px;">${safe(dateISO)}</div>
+        </div>
+        <span class="pill ${safe(todayPillClass)}">
+          <span class="dot"></span>${Number(dailyBudget || 0).toFixed(0)} ${safe(base)}
+        </span>
+      </div>
+
+      ${todayDetailsHtml || ''}
+      ${pilot ? `
+        <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,0,0,0.06);">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px;">
+            <div style="font-weight:800; font-size:16px; color:var(--text);">${safe(steeringLabel)}</div>
+            <span class="pill ${safe(pilot.decisionLevel || '')}">
+              <span class="dot"></span>${safe(pilot.decision || '')}
+            </span>
+          </div>
+
+          <div class="muted" style="font-size:12px; margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; gap:10px;">
+              <span>${safe(pilot.kind === 'range' ? recommendedBudgetRangeLabel : recommendedBudgetLabel)}</span>
+              <strong style="color:var(--text);">${safe(fmtMoney(pilot.recommendedDaily, pilot.base))}/j</strong>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
+              <span>${safe(pilot.kind === 'range' ? rangeEndBalanceLabel : endBalanceLabel)}</span>
+              <span class="pill ${safe(signClass(pilot.projectedEndBalance))}" style="padding:4px 10px;">
+                <span class="dot"></span>${safe(fmtMoney(pilot.projectedEndBalance, pilot.base))}
+              </span>
+            </div>
+
+            ${pilot.kind === 'range' ? '' : `
+              <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
+                <span>${safe(estimatedBreakLabel)}</span>
+                <strong style="color:var(--text);">${safe(pilot.zeroDate || '')}</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
+                <span>${safe(daysRemainingLabel)}</span>
+                <strong style="color:var(--text);">${safe(pilot.daysRemaining ?? '')}</strong>
+              </div>
+            `}
+          </div>
+        </div>
+      ` : ''}
+
+      <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,0,0,0.06);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+          <div>
+            <div class="muted" style="font-size:12px;">${safe(cashLabel)}</div>
+            <div style="display:flex; align-items:baseline; gap:8px; margin-top:6px;">
+              <div style="font-weight:900; font-size:30px; line-height:1; color:var(--text);">${safe(cashDaysText)}</div>
+              <div class="muted" style="font-weight:700;">${safe(daysLabel)}</div>
+            </div>
+          </div>
+          <span class="pill ${safe(cashLevel)}">
+            <span class="dot"></span>${safe(cashDriver)}
+          </span>
+        </div>
+        <div class="muted" style="font-size:12px; margin-top:8px; display:flex; flex-wrap:wrap; gap:8px 14px;">
+          <span>${safe(stockLabel)} : <strong style="color:var(--text);">${safe(cashTotalText)}</strong></span>
+          <span>${safe(burnLabel)} : <strong style="color:var(--text);">${safe(cashBurnText)}/j</strong></span>
+        </div>
+        ${fxNote ? `<div class="muted" style="font-size:12px; margin-top:6px; color:var(--warn);">${safe(fxNote)}</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
 export default {
   renderKpiHealthCard,
   renderKpiMiniCard,
   renderKpiPendingDetail,
+  renderKpiTodayPanel,
   renderKpiResponsiveStyles,
 };

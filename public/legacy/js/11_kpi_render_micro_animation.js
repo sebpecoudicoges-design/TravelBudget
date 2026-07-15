@@ -1674,104 +1674,37 @@ const driver = "Dépenses";
 	            </div>
           </div>
 
-          <!-- CASH card -->
-          <div style="${miniCardStyle} margin-top:14px; display:none;">
-            <div class="muted" style="font-size:12px;">Cash</div>
-
-            <div style="display:flex; align-items:baseline; gap:10px; margin-top:8px;">
-              <div style="font-weight:900; font-size:36px; line-height:1; color:var(--text);">
-                ${daysText}
-              </div>
-              <div class="muted" style="font-weight:700;">${T("kpi.days")}</div>
-
-              <span class="pill ${level}" style="margin-left:auto;">
-                <span class="dot"></span>${driver}
-              </span>
-            </div>
-
-            <div class="muted" style="font-size:12px; margin-top:8px;">
-              ${T("kpi.stock")} : <strong style="color:var(--text);">${fmtMoney(cashTotalBase, base)}</strong>
-              <span style="margin:0 8px;">•</span>
-              ${T("kpi.burn")} : <strong style="color:var(--text);">${fmtMoney(cashBurnBase, base)}/j</strong>
-            </div>
-
-            ${fxNote ? `<div class="muted" style="font-size:12px; margin-top:6px; color:var(--warn);">${fxNote}</div>` : ``}
-          </div>
         </div>
 
-        <!-- RIGHT: Today details -->
-        <div style="${miniCardStyle}">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
-            <div>
-              <div style="font-weight:800; font-size:16px; color:var(--text);">${T("kpi.today")}</div>
-              <div class="muted" style="font-size:12px; margin-top:2px;">${displayDateISO}</div>
-            </div>
-            <span class="pill ${todayPillClass}">
-              <span class="dot"></span>${todayBudget.toFixed(0)} ${base}
-            </span>
-          </div>
-
-          ${todayDetailsHTML}
-          ${pilot ? `
-            <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,0,0,0.06);">
-              <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px;">
-                <div style="font-weight:800; font-size:16px; color:var(--text);">${T("kpi.steering")}</div>
-                <span class="pill ${pilot.decisionLevel}">
-                  <span class="dot"></span>${pilot.decision}
-                </span>
-              </div>
-
-              <div class="muted" style="font-size:12px; margin-top:8px;">
-                <div style="display:flex; justify-content:space-between; gap:10px;">
-                  <span>${pilot.kind === "range" ? T("kpi.recommended_budget_range") : T("kpi.recommended_budget")}</span>
-                  <strong style="color:var(--text);">${fmtMoney(pilot.recommendedDaily, pilot.base)}/j</strong>
-                </div>
-
-                <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
-                  <span>${pilot.kind === "range" ? T("kpi.range_end_balance") : T("kpi.end_balance")}</span>
-                  <span class="pill ${_signPillClass(pilot.projectedEndBalance)}" style="padding:4px 10px;">
-                    <span class="dot"></span>${fmtMoney(pilot.projectedEndBalance, pilot.base)}
-                  </span>
-                </div>
-
-                ${pilot.kind === "range" ? `` : `
-                  <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
-                    <span>${T("kpi.estimated_break")}</span>
-                    <strong style="color:var(--text);">${pilot.zeroDate}</strong>
-                  </div>
-                `}
-
-
-	                ${pilot.kind === "range" ? `` : `
-	                  <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px;">
-	                    <span>${T("kpi.days_remaining")}</span>
-	                    <strong style="color:var(--text);">${pilot.daysRemaining}</strong>
-	                  </div>
-	                `}
-              </div>
-            </div>
-          ` : ``}
-
-          <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,0,0,0.06);">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
-              <div>
-                <div class="muted" style="font-size:12px;">Cash</div>
-                <div style="display:flex; align-items:baseline; gap:8px; margin-top:6px;">
-                  <div style="font-weight:900; font-size:30px; line-height:1; color:var(--text);">${daysText}</div>
-                  <div class="muted" style="font-weight:700;">${T("kpi.days")}</div>
-                </div>
-              </div>
-              <span class="pill ${level}">
-                <span class="dot"></span>${driver}
-              </span>
-            </div>
-            <div class="muted" style="font-size:12px; margin-top:8px; display:flex; flex-wrap:wrap; gap:8px 14px;">
-              <span>${T("kpi.stock")} : <strong style="color:var(--text);">${fmtMoney(cashTotalBase, base)}</strong></span>
-              <span>${T("kpi.burn")} : <strong style="color:var(--text);">${fmtMoney(cashBurnBase, base)}/j</strong></span>
-            </div>
-            ${fxNote ? `<div class="muted" style="font-size:12px; margin-top:6px; color:var(--warn);">${fxNote}</div>` : ``}
-          </div>
-        </div>
+        ${window.TBKpiView?.renderKpiTodayPanel?.({
+          dateISO: displayDateISO,
+          todayLabel: T("kpi.today"),
+          steeringLabel: T("kpi.steering"),
+          dailyBudget: todayBudget,
+          base,
+          todayPillClass,
+          todayDetailsHtml: todayDetailsHTML,
+          pilot,
+          recommendedBudgetLabel: T("kpi.recommended_budget"),
+          recommendedBudgetRangeLabel: T("kpi.recommended_budget_range"),
+          endBalanceLabel: T("kpi.end_balance"),
+          rangeEndBalanceLabel: T("kpi.range_end_balance"),
+          estimatedBreakLabel: T("kpi.estimated_break"),
+          daysRemainingLabel: T("kpi.days_remaining"),
+          cashLabel: "Cash",
+          daysLabel: T("kpi.days"),
+          stockLabel: T("kpi.stock"),
+          burnLabel: T("kpi.burn"),
+          cashDaysText: daysText,
+          cashLevel: level,
+          cashDriver: driver,
+          cashTotalText: fmtMoney(cashTotalBase, base),
+          cashBurnText: fmtMoney(cashBurnBase, base),
+          fxNote,
+          moneyText: fmtMoney,
+          signPillClass: _signPillClass,
+          esc: escapeHTML,
+        }) || ""}
       </div>
   `;
 

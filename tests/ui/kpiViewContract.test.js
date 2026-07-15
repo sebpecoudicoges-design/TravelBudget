@@ -35,4 +35,13 @@ describe('KPI view extraction contract', () => {
     expect(legacy).not.toContain('<div class="muted" style="font-size:12px;">Sport fait</div>');
     expect(legacy).not.toContain('<div class="muted" style="font-size:12px;">Travail fait</div>');
   });
+
+  it('delegates the KPI today steering panel', () => {
+    expect(legacy).toContain('window.TBKpiView?.renderKpiTodayPanel');
+    expect(legacy).toContain('todayDetailsHtml: todayDetailsHTML');
+    expect(legacy).toContain('signPillClass: _signPillClass');
+    expect(legacy).not.toContain('<!-- RIGHT: Today details -->');
+    expect(legacy).not.toContain('${pilot ? `');
+    expect(legacy).not.toContain('<div class="muted" style="font-size:12px;">Cash</div>');
+  });
 });

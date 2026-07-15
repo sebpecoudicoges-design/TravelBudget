@@ -160,6 +160,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire le rendu visuel KPI Sante et les styles responsive KPI vers `kpiView.js`.
   - [x] Extraire le detail des projections KPI impayees et Trip vers `kpiView.js`.
   - [x] Extraire les mini-cartes KPI repetees vers `kpiView.js`.
+  - [x] Extraire le panneau KPI Aujourd'hui, pilotage et cash vers `kpiView.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison
