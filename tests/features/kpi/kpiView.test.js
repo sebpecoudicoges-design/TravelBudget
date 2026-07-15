@@ -2,11 +2,27 @@ import { describe, expect, it } from 'vitest';
 
 import {
   renderKpiHealthCard,
+  renderKpiMiniCard,
   renderKpiPendingDetail,
   renderKpiResponsiveStyles,
 } from '../../../src/features/kpi/kpiView.js';
 
 describe('KPI view helpers', () => {
+  it('renders reusable KPI mini cards with values and extra controls', () => {
+    const html = renderKpiMiniCard({
+      title: 'Sport fait',
+      valueHtml: '320 <span class="muted kpi-mini-unit">kcal</span>',
+      footerHtml: '1 seance',
+      extraHtml: '<label><input id="toggle" type="checkbox" /> Inclure</label>',
+    });
+
+    expect(html).toContain('kpi-mini-card');
+    expect(html).toContain('Sport fait');
+    expect(html).toContain('320 <span class="muted kpi-mini-unit">kcal</span>');
+    expect(html).toContain('1 seance');
+    expect(html).toContain('id="toggle"');
+  });
+
   it('renders the health card with score, goals and actions', () => {
     const html = renderKpiHealthCard({
       healthToday: {
@@ -56,6 +72,7 @@ describe('KPI view helpers', () => {
     const css = renderKpiResponsiveStyles();
 
     expect(css).toContain('.kpi-health-card');
+    expect(css).toContain('.kpi-mini-card');
     expect(css).toContain('.kpi-pending-detail');
     expect(css).toContain('@media (max-width: 720px)');
   });

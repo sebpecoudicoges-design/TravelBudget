@@ -34,6 +34,12 @@ export function renderKpiResponsiveStyles() {
   return `
     .kpi-layout { grid-template-columns: minmax(360px, 470px) minmax(0, 1fr); }
     .kpi-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; }
+    .kpi-mini-card { border:1px solid rgba(148,163,184,.22); border-radius:16px; padding:14px; background:linear-gradient(135deg,rgba(56,189,248,.07),rgba(34,197,94,.05)),var(--panel2); box-shadow:0 14px 32px rgba(15,23,42,.07); }
+    .kpi-mini-title { font-size:12px; }
+    .kpi-mini-value { font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text); }
+    .kpi-mini-value.compact { font-size:18px; line-height:1.2; }
+    .kpi-mini-unit { font-weight:700; font-size:14px; }
+    .kpi-mini-footer { font-size:12px; margin-top:6px; }
     .kpi-health-card { grid-column:1 / -1; border:1px solid rgba(148,163,184,.22); border-radius:16px; padding:14px; background:linear-gradient(135deg,rgba(56,189,248,.07),rgba(34,197,94,.05)),var(--panel2); box-shadow:0 14px 32px rgba(15,23,42,.07); }
     .kpi-health-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .kpi-health-body { display:grid; grid-template-columns:84px 1fr; gap:12px; align-items:center; margin-top:12px; }
@@ -141,6 +147,26 @@ export function renderKpiHealthCard({
   `;
 }
 
+export function renderKpiMiniCard({
+  title = '',
+  valueHtml = '',
+  footerHtml = '',
+  extraHtml = '',
+  compact = false,
+  hidden = false,
+  esc = defaultEsc,
+} = {}) {
+  const safe = typeof esc === 'function' ? esc : defaultEsc;
+  return `
+    <div class="kpi-mini-card"${hidden ? ' style="display:none;"' : ''}>
+      <div class="muted kpi-mini-title">${safe(title)}</div>
+      ${valueHtml ? `<div class="kpi-mini-value${compact ? ' compact' : ''}">${valueHtml}</div>` : ''}
+      ${footerHtml ? `<div class="muted kpi-mini-footer">${footerHtml}</div>` : ''}
+      ${extraHtml || ''}
+    </div>
+  `;
+}
+
 export function renderKpiPendingDetail({
   items = [],
   max = 8,
@@ -181,6 +207,7 @@ export function renderKpiPendingDetail({
 
 export default {
   renderKpiHealthCard,
+  renderKpiMiniCard,
   renderKpiPendingDetail,
   renderKpiResponsiveStyles,
 };

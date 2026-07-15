@@ -1580,6 +1580,7 @@ const driver = "Dépenses";
   const fxNote = exclCurrencies.length ? `FX exclu : ${exclCurrencies.join(", ")}` : "";
   const pilot = _pilotageInsights({ kind: _parsedScope.kind, startISO: _rrPilot.startISO, endISO: _rrPilot.endISO });
 
+  const renderKpiMiniCard = (opts) => window.TBKpiView?.renderKpiMiniCard?.({ esc: escapeHTML, ...opts }) || "";
   const miniCardStyle = `
     border:1px solid rgba(148,163,184,.22);
     border-radius:16px;
@@ -1637,61 +1638,26 @@ const driver = "Dépenses";
         <div>
           <!-- KPI mini-cards -->
           <div class="kpi-mini-grid" style="display:grid; gap:14px;">
-            <div style="${miniCardStyle}">
-              <div class="muted" style="font-size:12px;">${T("kpi.available_budget")}</div>
-              <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
-                ${budgetToday.toFixed(0)} <span style="font-weight:700; font-size:14px;" class="muted">${base}</span>
-              </div>
-              <div class="muted" style="font-size:12px; margin-top:6px;">${T("kpi.today")}</div>
-            </div>
+            ${renderKpiMiniCard({ title: T("kpi.available_budget"), valueHtml: `${budgetToday.toFixed(0)} <span class="muted kpi-mini-unit">${escapeHTML(base)}</span>`, footerHtml: escapeHTML(T("kpi.today")) })}
 
-            <div style="${miniCardStyle}">
-              <div class="muted" style="font-size:12px;">Total wallets</div>
-              <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
-                ${fmtKPICompact(walletTotalEUR)} <span style="font-weight:700; font-size:14px;" class="muted">${displayCurPivot}</span>
-              </div>
-	              <div class="muted" style="font-size:12px; margin-top:6px;">
-	                ≈ ${fmtKPICompact(walletTotalBase)} ${displayCur}
-	              </div>
-	            </div>
+            ${renderKpiMiniCard({ title: "Total wallets", valueHtml: `${escapeHTML(fmtKPICompact(walletTotalEUR))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: `≈ ${escapeHTML(fmtKPICompact(walletTotalBase))} ${escapeHTML(displayCur)}` })}
 
-            <div style="${miniCardStyle}">
-              <div class="muted" style="font-size:12px;">Sport fait</div>
-              <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
-                ${Math.round(activityToday.sportKcal)} <span style="font-weight:700; font-size:14px;" class="muted">kcal</span>
-              </div>
-              <div class="muted" style="font-size:12px; margin-top:6px;">${activityToday.sportCount} séance(s)</div>
-            </div>
+            ${renderKpiMiniCard({ title: "Sport fait", valueHtml: `${Math.round(activityToday.sportKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.sportCount)} séance(s)` })}
 
-            <div style="${miniCardStyle}">
-              <div class="muted" style="font-size:12px;">Travail fait</div>
-              <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
-                ${Math.round(activityToday.workKcal)} <span style="font-weight:700; font-size:14px;" class="muted">kcal</span>
-              </div>
-              <div class="muted" style="font-size:12px; margin-top:6px;">${Math.round(activityToday.workMinutes / 60 * 10) / 10}h · ${activityToday.workCount} journée(s)</div>
-            </div>
+            ${renderKpiMiniCard({ title: "Travail fait", valueHtml: `${Math.round(activityToday.workKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.workMinutes / 60 * 10) / 10}h · ${Math.round(activityToday.workCount)} journée(s)` })}
 
             ${window.TBKpiView?.renderKpiHealthCard?.({ healthToday, healthActions, esc: escapeHTML }) || ""}
 
-            <div style="${miniCardStyle}">
-              <div class="muted" style="font-size:12px;">${T("kpi.period_end")}</div>
-              <div style="font-weight:800; font-size:26px; line-height:1.1; margin-top:6px; color:var(--text);">
-                ${fmtKPICompact(projEndDisplay)} <span style="font-weight:700; font-size:14px;" class="muted">${displayCurPivot}</span>
-              </div>
-              <div class="muted" style="font-size:12px; margin-top:6px;">${T("kpi.projection")}</div>
+            ${renderKpiMiniCard({ title: T("kpi.period_end"), valueHtml: `${escapeHTML(fmtKPICompact(projEndDisplay))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: escapeHTML(T("kpi.projection")), extraHtml: `
               <label class="muted" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;user-select:none;">
                 <input id="kpiIncludeUnpaidToggle" type="checkbox" ${includeUnpaid ? "checked" : ""} />
-                ${T("kpi.include_pending")}
+                ${escapeHTML(T("kpi.include_pending"))}
                 ${includeUnpaid ? `<span style="margin-left:auto;opacity:.85;">Net: <strong style="color:var(--text);">${Math.round(pendingDisplay)} ${displayCurPivot}</strong></span>` : ``}
               </label>
               ${pendingDetailHTML}
-            </div>
+            ` })}
 
-	            <div style="${miniCardStyle}">
-	              <div class="muted" style="font-size:12px;">${T("kpi.fx_period")}</div>
-	              <div style="font-weight:800; font-size:18px; line-height:1.2; margin-top:6px; color:var(--text);">${escapeHTML(fxRateText)}</div>
-	              <div class="muted" style="font-size:12px; margin-top:6px;">${T("kpi.fx_period_hint")}</div>
-	            </div>
+	            ${renderKpiMiniCard({ title: T("kpi.fx_period"), valueHtml: escapeHTML(fxRateText), footerHtml: escapeHTML(T("kpi.fx_period_hint")), compact: true })}
 
 	            <!-- FX calculator (quick) -->
 	            <div style="${miniCardStyle}">

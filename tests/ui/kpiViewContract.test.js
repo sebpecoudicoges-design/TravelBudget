@@ -27,4 +27,12 @@ describe('KPI view extraction contract', () => {
     expect(legacy).not.toContain('shown.map((it)');
     expect(legacy).not.toContain('<details class="kpi-pending-detail">');
   });
+
+  it('delegates repeated KPI mini cards', () => {
+    expect(legacy).toContain('window.TBKpiView?.renderKpiMiniCard');
+    expect(legacy).toContain('renderKpiMiniCard({ title: T("kpi.available_budget")');
+    expect(legacy).not.toContain('<div class="muted" style="font-size:12px;">${T("kpi.available_budget")}</div>');
+    expect(legacy).not.toContain('<div class="muted" style="font-size:12px;">Sport fait</div>');
+    expect(legacy).not.toContain('<div class="muted" style="font-size:12px;">Travail fait</div>');
+  });
 });

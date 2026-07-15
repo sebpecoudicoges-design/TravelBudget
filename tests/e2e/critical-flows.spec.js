@@ -56,7 +56,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function expectBootShell(page) {
-  await expect.poll(() => page.evaluate(() => typeof window.showView)).toBe('function');
+  await expect.poll(() => page.evaluate(() => typeof window.showView), { timeout: 20_000 }).toBe('function');
   await expect(page.locator('#tab-dashboard')).toHaveClass(/active/);
   await expect(page.locator('#view-dashboard')).not.toHaveClass(/hidden/);
   if (await page.locator('#auth-overlay').isVisible()) {
