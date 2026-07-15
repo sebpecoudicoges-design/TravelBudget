@@ -8,9 +8,21 @@ describe('KPI view extraction contract', () => {
   it('exposes the KPI view module to the legacy runtime', () => {
     expect(main).toContain("import('./features/kpi/kpiView.js')");
     expect(main).toContain('async function ensureKpiView()');
-    expect(main).toContain('await ensureKpiView();');
+    expect(main).toContain('ensureKpiView();');
+    expect(main).not.toContain('await ensureKpiView();');
     expect(main).toContain('window.TBKpiView');
     expect(main).toContain('...kpiView');
+  });
+
+  it('does not let the extracted KPI view block mobile boot', () => {
+    const module = fs.readFileSync('src/features/kpi/kpiView.js', 'utf8');
+
+    expect(main).toContain('function ensureKpiStylesheet()');
+    expect(main).toContain("./legacy/css/kpi_view.css");
+    expect(main).toContain('.catch((error)');
+    expect(main).toContain("console.error('[TB][boot] KPI view load failed'");
+    expect(main).toContain('return false;');
+    expect(module).not.toContain("import './kpiView.css'");
   });
 
   it('delegates the visual health card and responsive styles', () => {

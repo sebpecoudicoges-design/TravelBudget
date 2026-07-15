@@ -5,7 +5,7 @@ import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as settingsView from './features/settings/settingsView.js';
 import * as settingsAccountController from './features/settings/settingsAccountController.js';
 
-const TB_APP_VERSION = '10.5.163';
+const TB_APP_VERSION = '10.5.164';
 window.TB_VERSION = window.TB_VERSION || TB_APP_VERSION;
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.TBCore = {
@@ -123,16 +123,34 @@ let bridgeReadyPromise = null;
 let analysisModulesPromise = null;
 let kpiViewPromise = null;
 
+function ensureKpiStylesheet() {
+  if (document.getElementById('tb-kpi-view-css')) return true;
+  const link = document.createElement('link');
+  link.id = 'tb-kpi-view-css';
+  link.rel = 'stylesheet';
+  link.href = './legacy/css/kpi_view.css';
+  document.head.appendChild(link);
+  return true;
+}
+
 async function ensureKpiView() {
+  try { ensureKpiStylesheet(); } catch (_) {}
   if (window.TBKpiView?.renderKpiHealthCard) return true;
   if (!kpiViewPromise) {
-    kpiViewPromise = import('./features/kpi/kpiView.js').then((kpiView) => {
-      window.TBKpiView = {
-        ...(window.TBKpiView || {}),
-        ...kpiView,
-      };
-      return true;
-    });
+    kpiViewPromise = import('./features/kpi/kpiView.js')
+      .then((kpiView) => {
+        window.TBKpiView = {
+          ...(window.TBKpiView || {}),
+          ...kpiView,
+        };
+        return true;
+      })
+      .catch((error) => {
+        kpiViewPromise = null;
+        window.TBKpiView = window.TBKpiView || {};
+        try { console.error('[TB][boot] KPI view load failed', error); } catch (_) {}
+        return false;
+      });
   }
   return kpiViewPromise;
 }
@@ -186,7 +204,7 @@ async function ensureAnalysisModules() {
 }
 
 async function boot() {
-  await ensureKpiView();
+  ensureKpiView();
   window.tbLoadLegacyDomain = function tbLoadLegacyDomain(domain) {
     const key = String(domain || '').trim();
     const scripts = LEGACY_DOMAIN_SCRIPTS[key];

@@ -106,7 +106,7 @@ describe('KPI view helpers', () => {
   });
 
   it('keeps KPI responsive styles outside the legacy file', () => {
-    const css = fs.readFileSync('src/features/kpi/kpiView.css', 'utf8');
+    const css = fs.readFileSync('public/legacy/css/kpi_view.css', 'utf8');
 
     expect(css).toContain('.kpi-health-card');
     expect(css).toContain('.kpi-mini-card');
