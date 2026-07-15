@@ -1515,25 +1515,20 @@ function renderKPI() {
   projEndDisplay = _toPivot(projEndEUR, "EUR", displayDateISO);
   if (includeUnpaid) {
     const items = _pendingProjectionItems(_pendingRangeStartISO, _pendingRangeEndISO);
-    const max = 8;
-    const shown = items.slice(0, max);
-    const more = items.length - shown.length;
     const empty = _lang === "en" ? "No receivable/payable item in this range." : "Aucun élément à recevoir / à payer dans cette plage.";
     const detailLabel = _lang === "en" ? "Details" : "Détail";
     const rangeLabel = `${_pendingRangeStartISO} → ${_pendingRangeEndISO}`;
-    pendingDetailHTML = `
-      <details class="kpi-pending-detail">
-        <summary>${escapeHTML(detailLabel)} <span>${escapeHTML(rangeLabel)}</span></summary>
-        <div class="kpi-pending-pop">
-          ${shown.length ? shown.map((it) => `
-            <div class="kpi-pending-row">
-              <span><strong>${escapeHTML(it.source)}</strong><small>${escapeHTML(it.label)}${it.count > 1 ? ` x${it.count}` : ``}</small></span>
-              <b class="${it.value >= 0 ? "pos" : "neg"}">${escapeHTML(_pendingAmountText(it.value, displayCurPivot))}</b>
-            </div>
-          `).join("") : `<div class="muted" style="font-size:12px;">${escapeHTML(empty)}</div>`}
-          ${more > 0 ? `<div class="muted" style="font-size:12px;margin-top:6px;">+${more} ${_lang === "en" ? "more" : "autre(s)"}</div>` : ``}
-        </div>
-      </details>`;
+    pendingDetailHTML = window.TBKpiView?.renderKpiPendingDetail?.({
+      items,
+      max: 8,
+      rangeLabel,
+      detailLabel,
+      emptyLabel: empty,
+      moreLabel: _lang === "en" ? "more" : "autre(s)",
+      currency: displayCurPivot,
+      amountText: _pendingAmountText,
+      esc: escapeHTML,
+    }) || "";
   }
   const scopeOptionsHTML = [
     `<option value="segment">${_labSeg}</option>`,

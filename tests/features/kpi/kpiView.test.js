@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   renderKpiHealthCard,
+  renderKpiPendingDetail,
   renderKpiResponsiveStyles,
 } from '../../../src/features/kpi/kpiView.js';
 
@@ -57,5 +58,30 @@ describe('KPI view helpers', () => {
     expect(css).toContain('.kpi-health-card');
     expect(css).toContain('.kpi-pending-detail');
     expect(css).toContain('@media (max-width: 720px)');
+  });
+
+  it('renders pending projection details with grouping count and overflow', () => {
+    const html = renderKpiPendingDetail({
+      items: [
+        { source: 'A payer', label: 'Bus', value: -42, count: 2 },
+        { source: 'A recevoir', label: 'Trip', value: 18, count: 1 },
+        { source: 'A payer', label: 'Hostel', value: -55, count: 1 },
+      ],
+      max: 2,
+      rangeLabel: '2026-07-15 -> 2026-07-20',
+      detailLabel: 'Detail',
+      emptyLabel: 'Vide',
+      moreLabel: 'autre(s)',
+      currency: 'AUD',
+      amountText: (value, currency) => `${value > 0 ? '+' : ''}${value} ${currency}`,
+    });
+
+    expect(html).toContain('kpi-pending-detail');
+    expect(html).toContain('2026-07-15 -&gt; 2026-07-20');
+    expect(html).toContain('Bus x2');
+    expect(html).toContain('-42 AUD');
+    expect(html).toContain('+18 AUD');
+    expect(html).toContain('+1 autre(s)');
+    expect(html).not.toContain('Hostel');
   });
 });

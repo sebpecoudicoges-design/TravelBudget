@@ -20,4 +20,11 @@ describe('KPI view extraction contract', () => {
     expect(legacy).not.toContain('healthActions.map(row =>');
     expect(legacy).not.toContain('.kpi-health-action.good {');
   });
+
+  it('delegates pending projection detail rendering', () => {
+    expect(legacy).toContain('window.TBKpiView?.renderKpiPendingDetail');
+    expect(legacy).toContain('amountText: _pendingAmountText');
+    expect(legacy).not.toContain('shown.map((it)');
+    expect(legacy).not.toContain('<details class="kpi-pending-detail">');
+  });
 });

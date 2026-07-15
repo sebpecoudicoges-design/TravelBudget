@@ -141,7 +141,46 @@ export function renderKpiHealthCard({
   `;
 }
 
+export function renderKpiPendingDetail({
+  items = [],
+  max = 8,
+  rangeLabel = '',
+  detailLabel = 'Detail',
+  emptyLabel = 'Aucun element',
+  moreLabel = 'autre(s)',
+  currency = '',
+  amountText,
+  esc = defaultEsc,
+} = {}) {
+  const safe = typeof esc === 'function' ? esc : defaultEsc;
+  const list = Array.isArray(items) ? items : [];
+  const limit = Math.max(0, Number(max) || 0);
+  const shown = list.slice(0, limit);
+  const more = Math.max(0, list.length - shown.length);
+  const formatAmount = typeof amountText === 'function'
+    ? amountText
+    : ((value, cur) => `${Math.round(Number(value) || 0)} ${cur || ''}`.trim());
+
+  return `
+    <details class="kpi-pending-detail">
+      <summary>${safe(detailLabel)} <span>${safe(rangeLabel)}</span></summary>
+      <div class="kpi-pending-pop">
+        ${shown.length ? shown.map((item) => {
+          const value = Number(item?.value) || 0;
+          return `
+          <div class="kpi-pending-row">
+            <span><strong>${safe(item?.source || '')}</strong><small>${safe(item?.label || '')}${Number(item?.count || 0) > 1 ? ` x${Number(item.count)}` : ''}</small></span>
+            <b class="${value >= 0 ? 'pos' : 'neg'}">${safe(formatAmount(value, currency))}</b>
+          </div>`;
+        }).join('') : `<div class="muted" style="font-size:12px;">${safe(emptyLabel)}</div>`}
+        ${more > 0 ? `<div class="muted" style="font-size:12px;margin-top:6px;">+${more} ${safe(moreLabel)}</div>` : ''}
+      </div>
+    </details>
+  `;
+}
+
 export default {
   renderKpiHealthCard,
+  renderKpiPendingDetail,
   renderKpiResponsiveStyles,
 };
