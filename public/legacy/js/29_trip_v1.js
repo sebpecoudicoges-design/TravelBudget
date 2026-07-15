@@ -1,15 +1,4 @@
-/* =========================
-   Trip (V1) - simple & stable
-   - Supabase sync
-   - Linkage to budget transactions (optional, prevents duplicates)
-   - Equal split across all members
-   Notes:
-     Unified schema uses trip_id only (group_id removed).
-   ========================= */
-
 (function () {
-  // ---------- tiny utils (self-contained) ----------
-  // ---------- participants / sharing ----------
   async function _getMyTripRole(tripId) {
     try {
       const uid = await _ensureSession();
@@ -34,7 +23,6 @@
   const createdBy = await _ensureSession();
 
   // Create (optional) placeholder member for this invite, to keep a stable "who is who" mapping.
-  // If trip_members.email column doesn't exist yet, we retry without it (backward compatible).
   let memberId = null;
   try {
     const name = String(inviteeName || "").trim() || "Invité";
@@ -57,7 +45,6 @@
       .single();
 
     if (mErr && String(mErr.message || "").toLowerCase().includes("column") && String(mErr.message || "").toLowerCase().includes("email")) {
-      // Retry if email column not present yet
       delete memberPayload.email;
       const retry = await sb.from(TB_CONST.TABLES.trip_members).insert([memberPayload]).select("id").single();
       mData = retry.data;
@@ -176,11 +163,9 @@
     try {
       await _rpcAcceptInvite(token);
 
-      // remove invite param from hash (avoid re-accept on reload)
       const cleaned = hash.replace(/([#&?])invite=[^&]+&?/g, "$1").replace(/[#&?]$/, "");
       window.location.hash = cleaned || "#trip";
       toastOk("[Trip] Invitation acceptée.");
-      // New membership/visibility: reload trip list on next refresh
       try { tripState._tripsLoaded = false; } catch (_) {}
       return true;
     } catch (e) {
@@ -190,7 +175,6 @@
   }
 
 async function _rpcAcceptInvite(token) {
-  // Prefer new RPC names, fallback to legacy if DB not migrated.
   const rpcName = TB_CONST?.RPCS?.accept_trip_invite || "accept_trip_invite";
   const legacy = TB_CONST?.RPCS?.trip_accept_invite || "trip_accept_invite";
   let { error } = await sb.rpc(rpcName, { p_token: token });
@@ -1044,7 +1028,7 @@ function _normalizeCurrency(cur) {
   }
   function _computeSplitParts(amt, members, split) {
   const core = window.Core?.tripRules;
-  if (core?.computeTripSplitParts) return core.computeTripSplitParts(amt, members, split);
+  if (core?.computeTripSplitParts && split?.mode !== "amount_auto") return core.computeTripSplitParts(amt, members, split);
 
   const ids = members.map(m => m.id);
   const selectedIds = Array.isArray(split?.selectedMemberIds)
@@ -1105,6 +1089,31 @@ function _normalizeCurrency(cur) {
     }
 
     return cents.map(c => c / 100);
+  }
+
+  if (mode === "amount_auto") {
+    const amts = split?.amounts || {};
+    const byId = new Map();
+    activeIds.map(String).forEach(id => {
+      const raw = amts[id];
+      const v = (raw === "" || raw == null) ? NaN : Number(raw);
+      if (isFinite(v) && v >= 0) byId.set(String(id), Math.round(v * 100));
+    });
+    const remainingIds = activeIds.map(String).filter(id => !byId.has(id));
+    const sum = () => Array.from(byId.values()).reduce((a,b)=>a+b,0);
+    const used = sum();
+    const left = totalCents - used;
+    if (left < -1) throw new Error("Montants > total.");
+    if (remainingIds.length) {
+      _splitEqual(Math.max(0, left) / 100, remainingIds).forEach((part, i) => byId.set(remainingIds[i], Math.round(part * 100)));
+      const diff = totalCents - sum();
+      if (diff) byId.set(remainingIds[remainingIds.length - 1], (byId.get(remainingIds[remainingIds.length - 1]) || 0) + diff);
+    } else {
+      if (Math.abs(left) > 1) throw new Error("Somme differente du total.");
+      const lastId = Array.from(byId.keys()).pop() || String(activeIds[activeIds.length - 1] || "");
+      if (left && lastId) byId.set(lastId, (byId.get(lastId) || 0) + left);
+    }
+    return ids.map(id => (byId.get(String(id)) || 0) / 100);
   }
 
   if (mode === "amount") {
@@ -5165,7 +5174,8 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
       const prevAmt = {};
       members.forEach(m => {
         const p = _el(`trip-split-pct-${m.id}`)?.value;
-        const a = _el(`trip-split-amt-${m.id}`)?.value;
+        const amtInput = _el(`trip-split-amt-${m.id}`);
+        const a = amtInput && amtInput.dataset.auto !== "1" ? amtInput.value : undefined;
         if (p !== undefined) prevPct[m.id] = p;
         if (a !== undefined) prevAmt[m.id] = a;
       });
@@ -5201,26 +5211,47 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
       }
 
       if (mode === "amount") {
-        const def = members.length ? (amt / members.length) : 0;
+        box.dataset.auto = "1";
+        const autoParts = _computeSplitParts(amt, members, {
+          mode: "amount_auto",
+          selectedMemberIds: selectedIds,
+          amounts: members.reduce((acc, m) => {
+            const seedAmt = editingDraft?.split?.amounts?.[m.id];
+            acc[m.id] = prevAmt[m.id] ?? seedAmt ?? "";
+            return acc;
+          }, {}),
+        });
         members.forEach(m => {
-          const disabled = selectedSet.has(String(m.id)) ? "" : "disabled";
+          const isActive = selectedSet.has(String(m.id));
+          const disabled = isActive ? "" : "disabled";
           const seedAmt = editingDraft?.split?.amounts?.[m.id];
-          const v = (prevAmt[m.id] ?? seedAmt ?? (def ? def.toFixed(2) : "")).toString();
+          const autoValue = autoParts[members.indexOf(m)] ?? 0;
+          const hasManualValue = prevAmt[m.id] !== undefined || seedAmt !== undefined;
+          const v = hasManualValue
+            ? (prevAmt[m.id] ?? seedAmt ?? "").toString()
+            : (isActive ? Number(autoValue || 0).toFixed(2) : "0");
+          const autoAttr = !hasManualValue && isActive ? `data-auto="1"` : `data-auto="0"`;
           rows += `<tr>
             <td style="padding:6px 8px;">${escapeHTML(m.name || "—")}${m.isMe ? " <span class='muted'>(moi)</span>" : ""}</td>
             <td style="padding:6px 8px; text-align:right;">
-              <input id="trip-split-amt-${m.id}" type="number" step="0.01" min="0" style="max-width:140px;" value="${escapeHTML(disabled ? "0" : v)}" ${disabled} />
+              <input id="trip-split-amt-${m.id}" type="number" step="0.01" min="0" style="max-width:140px;" value="${escapeHTML(disabled ? "0" : v)}" ${autoAttr} ${disabled} />
             </td>
           </tr>`;
         });
         box.innerHTML = `
-          <div class="muted" style="margin-bottom:6px;">Somme = total</div>
           <table style="width:100%; border-collapse:collapse;">
             <thead><tr><th style="text-align:left; padding:6px 8px;">Participant</th><th style="text-align:right; padding:6px 8px;">Montant</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
-          <div class="muted" style="margin-top:6px;">La somme doit égaler le total (à 0,01 près).</div>
         `;
+        members.forEach(m => {
+          const input = _el(`trip-split-amt-${m.id}`);
+          if (input && !input.disabled) {
+            input.oninput = () => { input.dataset.auto = "0"; };
+            input.onchange = _renderSplitBox;
+            input.onblur = _renderSplitBox;
+          }
+        });
         return;
       }
 
@@ -5276,7 +5307,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
         });
       }
       return {
-  mode,
+  mode: mode === "amount" && _el("trip-split-box")?.dataset?.auto === "1" ? "amount_auto" : mode,
   percents,
   amounts,
   selectedMemberIds

@@ -75,7 +75,7 @@ describe('KPI view helpers', () => {
     expect(css).toContain('.kpi-health-card');
     expect(css).toContain('.kpi-mini-card');
     expect(css).toContain('.kpi-pending-detail');
-    expect(css).toContain('@media (max-width: 720px)');
+    expect(css).toContain('@media(max-width:720px)');
   });
 
   it('renders pending projection details with grouping count and overflow', () => {

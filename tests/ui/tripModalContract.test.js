@@ -26,4 +26,11 @@ describe('Trip shared modal migration', () => {
     expect(source).toContain('for="tripSettleCurrency"');
     expect(source).toContain('for="tripSettleAmount"');
   });
+
+  it('keeps the visible amount mode while delegating smart remaining split to rules', () => {
+    expect(source).toContain('mode: "amount_auto"');
+    expect(source).toContain('box.dataset.auto = "1"');
+    expect(source).toContain('data-auto="1"');
+    expect(source).toContain('mode: mode === "amount" && _el("trip-split-box")?.dataset?.auto === "1" ? "amount_auto" : mode');
+  });
 });
