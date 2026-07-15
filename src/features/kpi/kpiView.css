@@ -1,0 +1,50 @@
+.kpi-layout{grid-template-columns:minmax(360px,470px) minmax(0,1fr)}
+.kpi-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.kpi-actions,.kpi-fx-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kpi-actions{justify-content:flex-end}
+.kpi-range{gap:6px;align-items:center}
+.kpi-select,.kpi-input{padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;color:var(--text)}
+.kpi-select{background:var(--panel2)}
+.kpi-input{background:var(--panel)}
+.kpi-period{opacity:.9;cursor:not-allowed;min-width:240px}
+.kpi-fx-row{margin-top:8px}
+.kpi-fx-amount{width:120px}
+.kpi-mini-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.kpi-mini-card,.kpi-health-card{border:1px solid rgba(148,163,184,.22);border-radius:16px;padding:14px;background:linear-gradient(135deg,rgba(56,189,248,.07),rgba(34,197,94,.05)),var(--panel2);box-shadow:0 14px 32px rgba(15,23,42,.07)}
+.kpi-mini-title,.kpi-mini-footer{font-size:12px}
+.kpi-mini-value{font-weight:800;font-size:26px;line-height:1.1;margin-top:6px;color:var(--text)}
+.kpi-mini-value.compact{font-size:18px;line-height:1.2}
+.kpi-mini-unit{font-weight:700;font-size:14px}
+.kpi-mini-footer{margin-top:6px}
+.kpi-health-card{grid-column:1/-1}
+.kpi-health-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.kpi-health-body{display:grid;grid-template-columns:84px 1fr;gap:12px;align-items:center;margin-top:12px}
+.kpi-health-ring{width:84px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(148,163,184,.18)}
+.kpi-health-ring-inner{width:60px;aspect-ratio:1;border-radius:50%;background:var(--panel);border:1px solid var(--border);display:grid;place-items:center;text-align:center;font-weight:900;color:var(--text)}
+.kpi-health-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.kpi-health-metric{border:1px solid var(--border);border-radius:10px;padding:9px;background:var(--panel);min-width:0}
+.kpi-health-metric span{display:block;font-size:11px;color:var(--muted)}
+.kpi-health-metric strong{display:block;margin-top:3px;font-size:13px;color:var(--text);overflow-wrap:anywhere}
+.kpi-health-detail{margin-top:10px;border-top:1px solid var(--border);padding-top:9px}
+.kpi-health-detail summary{cursor:pointer;font-size:12px;color:var(--muted)}
+.kpi-health-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px;font-size:12px;color:var(--muted)}
+.kpi-health-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px}
+.kpi-health-action{border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--panel)}
+.kpi-health-action strong{display:block;font-size:13px;color:var(--text)}
+.kpi-health-action span{display:block;margin-top:4px;font-size:12px;color:var(--muted);line-height:1.3}
+.kpi-health-action.good{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.08)}
+.kpi-health-action.warn{border-color:rgba(245,158,11,.38);background:rgba(245,158,11,.09)}
+.kpi-health-action.info{border-color:rgba(14,165,233,.35);background:rgba(14,165,233,.08)}
+.kpi-pending-detail{margin-top:8px;position:relative}
+.kpi-pending-detail summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
+.kpi-pending-detail summary::-webkit-details-marker{display:none}
+.kpi-pending-detail summary span{font-size:11px;opacity:.8}
+.kpi-pending-pop{margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:14px;background:var(--panel);box-shadow:0 14px 28px rgba(15,23,42,.08);display:grid;gap:8px}
+.kpi-pending-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;font-size:12px}
+.kpi-pending-row small{display:block;margin-top:2px;color:var(--muted);line-height:1.25}
+.kpi-pending-row b{white-space:nowrap}
+.kpi-pending-row b.pos{color:#059669}
+.kpi-pending-row b.neg{color:#e11d48}
+@media(max-width:1100px){.kpi-layout{grid-template-columns:1fr}}
+@media(max-width:720px){.kpi-mini-grid,.kpi-health-body{grid-template-columns:1fr}.kpi-health-ring{margin:auto}.kpi-health-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.kpi-health-head{align-items:flex-start;flex-direction:column}.kpi-health-grid{grid-template-columns:1fr}}

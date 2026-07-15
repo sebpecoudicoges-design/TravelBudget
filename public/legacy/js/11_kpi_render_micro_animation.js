@@ -1581,56 +1581,33 @@ const driver = "Dépenses";
   const pilot = _pilotageInsights({ kind: _parsedScope.kind, startISO: _rrPilot.startISO, endISO: _rrPilot.endISO });
 
   const renderKpiMiniCard = (opts) => window.TBKpiView?.renderKpiMiniCard?.({ esc: escapeHTML, ...opts }) || "";
-  const miniCardStyle = `
-    border:1px solid rgba(148,163,184,.22);
-    border-radius:16px;
-    padding:14px;
-    background:linear-gradient(135deg,rgba(56,189,248,.07),rgba(34,197,94,.05)),var(--panel2);
-    box-shadow:0 14px 32px rgba(15,23,42,.07);
-  `;
+  const activeTravel = (state.travels || []).find(x => String(x.id) === String(state?.activeTravelId || "")) || null;
+  const activeTravelLabel = activeTravel
+    ? String(activeTravel.name || "").trim() || `Voyage ${String(activeTravel.start || "").slice(0,10)} -> ${String(activeTravel.end || "").slice(0,10)}`
+    : `Voyage ${String(state?.period?.start || "").slice(0,10)} -> ${String(state?.period?.end || "").slice(0,10)}`;
+  const activeTravelValue = String(state?.activeTravelId || state?.period?.id || "");
+  const travelOptionHTML = `<option value="${escapeHTML(activeTravelValue)}" selected>${escapeHTML(activeTravelLabel)}</option>`;
+  const scopeHelpHTML = (typeof window.tbHelp === "function" && window.tbT) ? tbHelp(tbT("dashboard.help.scope")) : "";
 
   // Inject responsive CSS once
   if (!document.getElementById("kpiResponsiveStyles")) {
     const st = document.createElement("style");
     st.id = "kpiResponsiveStyles";
-    st.textContent = window.TBKpiView?.renderKpiResponsiveStyles?.() || `
-      .kpi-layout { grid-template-columns: minmax(360px, 470px) minmax(0, 1fr); }
-      .kpi-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; }
-      .kpi-pending-detail { margin-top:8px; position:relative; }
-      @media (max-width: 1100px) { .kpi-layout { grid-template-columns: 1fr; } }
-      @media (max-width: 720px) { .kpi-mini-grid { grid-template-columns: 1fr; } }
-    `;
+    st.textContent = window.TBKpiView?.renderKpiResponsiveStyles?.() || "";
     document.head.appendChild(st);
   }
 
   // #kpi container is already a .card in index.html; avoid nesting cards.
   kpi.innerHTML = `
-      <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:12px;">
-        <h2 style="margin:0;">KPIs</h2>
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
-  <select id="kpiPeriodSelect" disabled title="Changer de voyage depuis Settings" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);opacity:.9;cursor:not-allowed;min-width:240px;">
-    ${(() => {
-      const t = (state.travels || []).find(x => String(x.id) === String(state?.activeTravelId || "")) || null;
-      const label = t
-        ? String(t.name || "").trim() || `Voyage ${String(t.start || "").slice(0,10)} → ${String(t.end || "").slice(0,10)}`
-        : `Voyage ${String(state?.period?.start || "").slice(0,10)} → ${String(state?.period?.end || "").slice(0,10)}`;
-      const value = String(state?.activeTravelId || state?.period?.id || "");
-      return `<option value="${value}" selected>${label}</option>`;
-    })()}
-  </select>
-  <select id="kpiScopeSelect" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);">
-    ${scopeOptionsHTML}
-  </select>
-  ${ (typeof window.tbHelp === "function" && window.tbT) ? tbHelp(tbT("dashboard.help.scope")) : "" }
-  <div id="kpiRangeBox" style="display:${String(_scopeValForSelect)==="range" ? "flex" : "none"}; gap:6px; align-items:center;" data-kpi-range-box="1">
-    <input id="kpiRangeStart" type="date" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);" />
-    <span class="muted" style="font-size:12px;">→</span>
-    <input id="kpiRangeEnd" type="date" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel2);color:var(--text);" />
-    <button id="kpiRangeApply" type="button" style="padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);font-weight:800;cursor:pointer;">Appliquer</button>
-  </div>
-  <div class="muted" style="font-size:12px;">${displayDateISO}</div>
-</div>
-      </div>
+      ${window.TBKpiView?.renderKpiHeader?.({
+        title: "KPIs",
+        travelOptionHtml: travelOptionHTML,
+        scopeOptionsHtml: scopeOptionsHTML,
+        scopeValue: _scopeValForSelect,
+        helpHtml: scopeHelpHTML,
+        dateISO: displayDateISO,
+        esc: escapeHTML,
+      }) || ""}
 
       <div class="kpi-layout" style="display:grid; gap:16px; margin-top:14px; align-items:start;">
 
@@ -1659,19 +1636,10 @@ const driver = "Dépenses";
 
 	            ${renderKpiMiniCard({ title: T("kpi.fx_period"), valueHtml: escapeHTML(fxRateText), footerHtml: escapeHTML(T("kpi.fx_period_hint")), compact: true })}
 
-	            <!-- FX calculator (quick) -->
-	            <div style="${miniCardStyle}">
-	              <div class="muted" style="font-size:12px;">${tbT ? tbT("kpi.fxcalc.title") : "Convertisseur"}</div>
-	              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
-	                <input id="kpiFxCalcAmount" type="number" inputmode="decimal" placeholder="0" style="width:120px; padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);" />
-	                <select id="kpiFxCalcFrom" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);"></select>
-	                <button id="kpiFxCalcSwap" type="button" title="Intervertir les devises" aria-label="Intervertir les devises" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);cursor:pointer;">↔</button>
-                  <select id="kpiFxCalcTo" style="padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:12px;background:var(--panel);color:var(--text);"></select>
-	              </div>
-	              <div class="muted" style="font-size:12px; margin-top:8px;">
-	                <span id="kpiFxCalcOut">—</span>
-	              </div>
-	            </div>
+	            ${window.TBKpiView?.renderKpiFxCalculator?.({
+                title: tbT ? tbT("kpi.fxcalc.title") : "Convertisseur",
+                esc: escapeHTML,
+              }) || ""}
           </div>
 
         </div>

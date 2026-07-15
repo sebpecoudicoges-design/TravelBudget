@@ -44,4 +44,13 @@ describe('KPI view extraction contract', () => {
     expect(legacy).not.toContain('${pilot ? `');
     expect(legacy).not.toContain('<div class="muted" style="font-size:12px;">Cash</div>');
   });
+
+  it('delegates the KPI header and FX calculator rendering', () => {
+    expect(legacy).toContain('window.TBKpiView?.renderKpiHeader');
+    expect(legacy).toContain('travelOptionHtml: travelOptionHTML');
+    expect(legacy).toContain('scopeOptionsHtml: scopeOptionsHTML');
+    expect(legacy).toContain('window.TBKpiView?.renderKpiFxCalculator');
+    expect(legacy).not.toContain('<select id="kpiPeriodSelect" disabled');
+    expect(legacy).not.toContain('<input id="kpiFxCalcAmount"');
+  });
 });

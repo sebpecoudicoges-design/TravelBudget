@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
 
 import {
+  renderKpiFxCalculator,
+  renderKpiHeader,
   renderKpiHealthCard,
   renderKpiMiniCard,
   renderKpiPendingDetail,
@@ -22,6 +25,39 @@ describe('KPI view helpers', () => {
     expect(html).toContain('320 <span class="muted kpi-mini-unit">kcal</span>');
     expect(html).toContain('1 seance');
     expect(html).toContain('id="toggle"');
+  });
+
+  it('renders the KPI header with range controls preserved for legacy handlers', () => {
+    const html = renderKpiHeader({
+      title: 'KPIs',
+      travelOptionHtml: '<option value="trip-1" selected>Voyage test</option>',
+      scopeOptionsHtml: '<option value="segment">Periode</option><option value="range">Date a date</option>',
+      scopeValue: 'range',
+      helpHtml: '<button data-help>?</button>',
+      dateISO: '2026-07-15',
+    });
+
+    expect(html).toContain('id="kpiPeriodSelect"');
+    expect(html).toContain('id="kpiScopeSelect"');
+    expect(html).toContain('id="kpiRangeBox"');
+    expect(html).toContain('display:flex');
+    expect(html).toContain('id="kpiRangeStart"');
+    expect(html).toContain('id="kpiRangeEnd"');
+    expect(html).toContain('id="kpiRangeApply"');
+    expect(html).toContain('Voyage test');
+    expect(html).toContain('2026-07-15');
+  });
+
+  it('renders the KPI FX calculator with stable ids for binding', () => {
+    const html = renderKpiFxCalculator({ title: 'Convertisseur' });
+
+    expect(html).toContain('kpi-mini-card');
+    expect(html).toContain('Convertisseur');
+    expect(html).toContain('id="kpiFxCalcAmount"');
+    expect(html).toContain('id="kpiFxCalcFrom"');
+    expect(html).toContain('id="kpiFxCalcSwap"');
+    expect(html).toContain('id="kpiFxCalcTo"');
+    expect(html).toContain('id="kpiFxCalcOut"');
   });
 
   it('renders the health card with score, goals and actions', () => {
@@ -70,12 +106,13 @@ describe('KPI view helpers', () => {
   });
 
   it('keeps KPI responsive styles outside the legacy file', () => {
-    const css = renderKpiResponsiveStyles();
+    const css = fs.readFileSync('src/features/kpi/kpiView.css', 'utf8');
 
     expect(css).toContain('.kpi-health-card');
     expect(css).toContain('.kpi-mini-card');
     expect(css).toContain('.kpi-pending-detail');
     expect(css).toContain('@media(max-width:720px)');
+    expect(renderKpiResponsiveStyles()).toBe('');
   });
 
   it('renders pending projection details with grouping count and overflow', () => {
