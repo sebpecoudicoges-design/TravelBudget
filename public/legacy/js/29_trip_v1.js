@@ -4314,22 +4314,20 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
       card.setAttribute('data-tb-help', 'trip-overview');
       card.className = 'card';
       card.style.marginBottom = '12px';
-      card.innerHTML = `
-        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
-          <div style="min-width:280px; flex:1;">
-            <h2 style="margin:0 0 8px 0;">${escapeHTML(_tripT("trip.help.title"))}</h2>
-            <div class="muted">
-              <div>• ${escapeHTML(_tripT("trip.help.paid_by_me"))}</div>
-              <div>• ${escapeHTML(_tripT("trip.help.budget"))}</div>
-              <div>• ${escapeHTML(_tripT("trip.help.settlement"))}</div>
-            </div>
-          </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn" type="button" onclick="showView('help')">${escapeHTML(_tripT("trip.help.open"))}</button>
-            <button class="btn" type="button" data-trip-help-close="1">${escapeHTML(_tripT("trip.help.hide"))}</button>
-          </div>
-        </div>`;
+      card.innerHTML = window.UI?.tripView?.renderTripContextHelp({
+        title: _tripT("trip.help.title"),
+        bullets: [
+          _tripT("trip.help.paid_by_me"),
+          _tripT("trip.help.budget"),
+          _tripT("trip.help.settlement"),
+        ],
+        openLabel: _tripT("trip.help.open"),
+        hideLabel: _tripT("trip.help.hide"),
+        escapeHTML,
+      }) || "";
       root.prepend(card);
+      const open = card.querySelector('[data-trip-help-open]');
+      if (open) open.onclick = () => { try { showView('help'); } catch (_) {} };
       const close = card.querySelector('[data-trip-help-close]');
       if (close) close.onclick = () => { try { if (window.tbUxDismiss) window.tbUxDismiss('trip_overview'); } catch(_) {} card.remove(); };
     } catch (_) {}

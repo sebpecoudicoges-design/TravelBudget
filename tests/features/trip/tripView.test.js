@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderPendingTripInvites, renderTripExpenseForm } from '../../../src/features/trip/tripView.js';
+import { renderPendingTripInvites, renderTripContextHelp, renderTripExpenseForm } from '../../../src/features/trip/tripView.js';
 
 describe('Trip view', () => {
   it('renders pending invitations and escapes remote content', () => {
@@ -54,5 +54,20 @@ describe('Trip view', () => {
       translate: (key) => key,
     });
     expect(html).toContain('id="trip-add-exp" disabled');
+  });
+
+  it('renders context help with stable action hooks and escaped copy', () => {
+    const html = renderTripContextHelp({
+      title: '<Trip help>',
+      bullets: ['Paid by me', '<Budget>'],
+      openLabel: 'Open help',
+      hideLabel: 'Hide',
+    });
+    expect(html).toContain('trip-help-card-row');
+    expect(html).toContain('&lt;Trip help&gt;');
+    expect(html).toContain('&lt;Budget&gt;');
+    expect(html).toContain('data-trip-help-open="1"');
+    expect(html).toContain('data-trip-help-close="1"');
+    expect(html).not.toContain('onclick=');
   });
 });

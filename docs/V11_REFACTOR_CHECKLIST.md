@@ -71,6 +71,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [x] Trip : migrer l'upsert, la lecture, la deduplication offline et les liens Depense-Transaction.
 - [x] Trip : extraire les vues Invitations et Formulaire Depense dans un module pur teste.
 - [x] Trip : rendre le split Montants intelligent avec reste partage automatiquement entre les participants non saisis.
+- [x] Trip : extraire le panneau d'aide contexte vers `tripView` et supprimer le `onclick` inline associe.
 - [x] Trip : separer regles, repository, store et vues.
 - [x] Sport : separer bibliotheque, programme, timer, historique et calculs.
   - [x] Extraire le catalogue fallback, les MET, familles, materiels et charges de reference.

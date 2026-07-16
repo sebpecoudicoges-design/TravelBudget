@@ -77,9 +77,11 @@ describe('Trip domain contract', () => {
   });
 
   it('delegates the extracted Trip view surfaces to src/features/trip', () => {
-    for (const token of ['renderPendingTripInvites', 'renderTripExpenseForm']) {
+    for (const token of ['renderPendingTripInvites', 'renderTripExpenseForm', 'renderTripContextHelp']) {
       expect(view).toContain(`export function ${token}`);
       expect(legacy).toContain(`tripView?.${token}`);
     }
+    expect(legacy).toContain('data-trip-help-open');
+    expect(legacy).not.toContain('onclick="showView(\'help\')"');
   });
 });

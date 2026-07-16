@@ -102,3 +102,26 @@ export function renderTripExpenseForm({
   if (!modal) return `<div class="card"><h2>${title}</h2>${subtitle}${body}</div>`;
   return `<template id="trip-expense-modal-template" data-title="${escapeHTML(title)}"><div class="trip-expense-sheet-body">${body}</div></template>`;
 }
+
+export function renderTripContextHelp({
+  title,
+  bullets,
+  openLabel,
+  hideLabel,
+  escapeHTML = fallbackEscape,
+}) {
+  const lines = Array.isArray(bullets) ? bullets.filter(Boolean) : [];
+  return `
+    <div class="trip-help-card-row">
+      <div class="trip-help-card-copy">
+        <h2>${escapeHTML(title)}</h2>
+        <div class="muted">
+          ${lines.map((line) => `<div>• ${escapeHTML(line)}</div>`).join('')}
+        </div>
+      </div>
+      <div class="trip-help-card-actions">
+        <button class="btn" type="button" data-trip-help-open="1">${escapeHTML(openLabel)}</button>
+        <button class="btn" type="button" data-trip-help-close="1">${escapeHTML(hideLabel)}</button>
+      </div>
+    </div>`;
+}
