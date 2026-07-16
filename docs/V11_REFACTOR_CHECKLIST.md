@@ -88,6 +88,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Transformer le radar en profil athletique : percentiles, ratios PDC, equilibres, potentiel, archetypes et priorite automatique.
   - [x] Ajouter le chrono libre : choix d'exercice, grand ecran, persistance locale, notification arriere-plan, saisie reps/charge/distance et sauvegarde historique.
   - [x] Extraire le CSS mobile/fullscreen Sport Capacitor vers `sport_mobile.css`.
+  - [x] Extraire le CSS general Sport vers `sport.css` et supprimer le style inline du legacy.
 - [x] Nutrition : separer catalogue, journal, objectifs et historique.
   - [x] Extraire les regles pures du catalogue, des totaux par repas, du journal quotidien, des objectifs et des cibles par moment.
   - [x] Extraire le socle repository local/offline Nutrition : cache aliments, lignes locales, sync_id, sommeil et erreurs de synchro.
