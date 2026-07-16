@@ -169,6 +169,13 @@ export function renderKpiPendingToggle({
   return `<label class="muted" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;user-select:none;"><input id="kpiIncludeUnpaidToggle" type="checkbox" ${includeUnpaid ? 'checked' : ''} />${safe(label)}${netHtml}</label>${pendingDetailHtml || ''}`;
 }
 
+export function renderKpiMainLayout({
+  cardsHtml = '',
+  todayPanelHtml = '',
+} = {}) {
+  return `<div class="kpi-layout" style="display:grid; gap:16px; margin-top:14px; align-items:start;"><div><div class="kpi-mini-grid" style="display:grid; gap:14px;">${cardsHtml || ''}</div></div>${todayPanelHtml || ''}</div>`;
+}
+
 export function renderKpiTodayPanel({
   dateISO = '',
   todayLabel = "Aujourd'hui",

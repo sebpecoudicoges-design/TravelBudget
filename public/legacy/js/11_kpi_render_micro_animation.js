@@ -1573,6 +1573,57 @@ const driver = "Dépenses";
     document.head.appendChild(st);
   }
 
+  const kpiCardsHTML = `
+            ${renderKpiMiniCard({ title: T("kpi.available_budget"), valueHtml: `${budgetToday.toFixed(0)} <span class="muted kpi-mini-unit">${escapeHTML(base)}</span>`, footerHtml: escapeHTML(T("kpi.today")) })}
+            ${renderKpiMiniCard({ title: "Total wallets", valueHtml: `${escapeHTML(fmtKPICompact(walletTotalEUR))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: `≈ ${escapeHTML(fmtKPICompact(walletTotalBase))} ${escapeHTML(displayCur)}` })}
+            ${renderKpiMiniCard({ title: "Sport fait", valueHtml: `${Math.round(activityToday.sportKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.sportCount)} séance(s)` })}
+            ${renderKpiMiniCard({ title: "Travail fait", valueHtml: `${Math.round(activityToday.workKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.workMinutes / 60 * 10) / 10}h · ${Math.round(activityToday.workCount)} journée(s)` })}
+            ${window.TBKpiView?.renderKpiHealthCard?.({ healthToday, healthActions, esc: escapeHTML }) || ""}
+            ${renderKpiMiniCard({ title: T("kpi.period_end"), valueHtml: `${escapeHTML(fmtKPICompact(projEndDisplay))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: escapeHTML(T("kpi.projection")), extraHtml: window.TBKpiView?.renderKpiPendingToggle?.({
+              includeUnpaid,
+              label: T("kpi.include_pending"),
+              netLabel: "Net",
+              pendingDisplay,
+              currency: displayCurPivot,
+              pendingDetailHtml: pendingDetailHTML,
+              esc: escapeHTML,
+            }) || "" })}
+            ${renderKpiMiniCard({ title: T("kpi.fx_period"), valueHtml: escapeHTML(fxRateText), footerHtml: escapeHTML(T("kpi.fx_period_hint")), compact: true })}
+            ${window.TBKpiView?.renderKpiFxCalculator?.({
+              title: tbT ? tbT("kpi.fxcalc.title") : "Convertisseur",
+              esc: escapeHTML,
+            }) || ""}`;
+
+  const todayPanelHTML = window.TBKpiView?.renderKpiTodayPanel?.({
+    dateISO: displayDateISO,
+    todayLabel: T("kpi.today"),
+    steeringLabel: T("kpi.steering"),
+    dailyBudget: todayBudget,
+    base,
+    todayPillClass,
+    todayDetailsHtml: todayDetailsHTML,
+    pilot,
+    recommendedBudgetLabel: T("kpi.recommended_budget"),
+    recommendedBudgetRangeLabel: T("kpi.recommended_budget_range"),
+    endBalanceLabel: T("kpi.end_balance"),
+    rangeEndBalanceLabel: T("kpi.range_end_balance"),
+    estimatedBreakLabel: T("kpi.estimated_break"),
+    daysRemainingLabel: T("kpi.days_remaining"),
+    cashLabel: "Cash",
+    daysLabel: T("kpi.days"),
+    stockLabel: T("kpi.stock"),
+    burnLabel: T("kpi.burn"),
+    cashDaysText: daysText,
+    cashLevel: level,
+    cashDriver: driver,
+    cashTotalText: fmtMoney(cashTotalBase, base),
+    cashBurnText: fmtMoney(cashBurnBase, base),
+    fxNote,
+    moneyText: fmtMoney,
+    signPillClass: _signPillClass,
+    esc: escapeHTML,
+  }) || "";
+
   // #kpi container is already a .card in index.html; avoid nesting cards.
   kpi.innerHTML = `
       ${window.TBKpiView?.renderKpiHeader?.({
@@ -1585,72 +1636,10 @@ const driver = "Dépenses";
         esc: escapeHTML,
       }) || ""}
 
-      <div class="kpi-layout" style="display:grid; gap:16px; margin-top:14px; align-items:start;">
-
-        <!-- LEFT: KPIs -->
-        <div>
-          <!-- KPI mini-cards -->
-          <div class="kpi-mini-grid" style="display:grid; gap:14px;">
-            ${renderKpiMiniCard({ title: T("kpi.available_budget"), valueHtml: `${budgetToday.toFixed(0)} <span class="muted kpi-mini-unit">${escapeHTML(base)}</span>`, footerHtml: escapeHTML(T("kpi.today")) })}
-
-            ${renderKpiMiniCard({ title: "Total wallets", valueHtml: `${escapeHTML(fmtKPICompact(walletTotalEUR))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: `≈ ${escapeHTML(fmtKPICompact(walletTotalBase))} ${escapeHTML(displayCur)}` })}
-
-            ${renderKpiMiniCard({ title: "Sport fait", valueHtml: `${Math.round(activityToday.sportKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.sportCount)} séance(s)` })}
-
-            ${renderKpiMiniCard({ title: "Travail fait", valueHtml: `${Math.round(activityToday.workKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.workMinutes / 60 * 10) / 10}h · ${Math.round(activityToday.workCount)} journée(s)` })}
-
-            ${window.TBKpiView?.renderKpiHealthCard?.({ healthToday, healthActions, esc: escapeHTML }) || ""}
-
-            ${renderKpiMiniCard({ title: T("kpi.period_end"), valueHtml: `${escapeHTML(fmtKPICompact(projEndDisplay))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: escapeHTML(T("kpi.projection")), extraHtml: window.TBKpiView?.renderKpiPendingToggle?.({
-              includeUnpaid,
-              label: T("kpi.include_pending"),
-              netLabel: "Net",
-              pendingDisplay,
-              currency: displayCurPivot,
-              pendingDetailHtml: pendingDetailHTML,
-              esc: escapeHTML,
-            }) || "" })}
-
-	            ${renderKpiMiniCard({ title: T("kpi.fx_period"), valueHtml: escapeHTML(fxRateText), footerHtml: escapeHTML(T("kpi.fx_period_hint")), compact: true })}
-
-	            ${window.TBKpiView?.renderKpiFxCalculator?.({
-                title: tbT ? tbT("kpi.fxcalc.title") : "Convertisseur",
-                esc: escapeHTML,
-              }) || ""}
-          </div>
-
-        </div>
-
-        ${window.TBKpiView?.renderKpiTodayPanel?.({
-          dateISO: displayDateISO,
-          todayLabel: T("kpi.today"),
-          steeringLabel: T("kpi.steering"),
-          dailyBudget: todayBudget,
-          base,
-          todayPillClass,
-          todayDetailsHtml: todayDetailsHTML,
-          pilot,
-          recommendedBudgetLabel: T("kpi.recommended_budget"),
-          recommendedBudgetRangeLabel: T("kpi.recommended_budget_range"),
-          endBalanceLabel: T("kpi.end_balance"),
-          rangeEndBalanceLabel: T("kpi.range_end_balance"),
-          estimatedBreakLabel: T("kpi.estimated_break"),
-          daysRemainingLabel: T("kpi.days_remaining"),
-          cashLabel: "Cash",
-          daysLabel: T("kpi.days"),
-          stockLabel: T("kpi.stock"),
-          burnLabel: T("kpi.burn"),
-          cashDaysText: daysText,
-          cashLevel: level,
-          cashDriver: driver,
-          cashTotalText: fmtMoney(cashTotalBase, base),
-          cashBurnText: fmtMoney(cashBurnBase, base),
-          fxNote,
-          moneyText: fmtMoney,
-          signPillClass: _signPillClass,
-          esc: escapeHTML,
-        }) || ""}
-      </div>
+      ${window.TBKpiView?.renderKpiMainLayout?.({
+        cardsHtml: kpiCardsHTML,
+        todayPanelHtml: todayPanelHTML,
+      }) || ""}
   `;
 
   // Bind KPI selectors (period + scope) for projection horizon

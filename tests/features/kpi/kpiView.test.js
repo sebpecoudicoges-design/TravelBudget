@@ -5,6 +5,7 @@ import {
   renderKpiFxCalculator,
   renderKpiHeader,
   renderKpiHealthCard,
+  renderKpiMainLayout,
   renderKpiMiniCard,
   renderKpiPendingDetail,
   renderKpiPendingToggle,
@@ -81,6 +82,18 @@ describe('KPI view helpers', () => {
     expect(html).toContain('<option value="seg:seg-&lt;2&gt;">Periode 2 : 2026-07-16 → 2026-07-31</option>');
     expect(html).toContain('<option value="range">Date a date...</option>');
     expect(html).not.toContain('<voyage>');
+  });
+
+  it('renders the KPI main layout from provided cards and today panel', () => {
+    const html = renderKpiMainLayout({
+      cardsHtml: '<article data-card>Card</article>',
+      todayPanelHtml: '<aside data-today>Today</aside>',
+    });
+
+    expect(html).toContain('class="kpi-layout"');
+    expect(html).toContain('class="kpi-mini-grid"');
+    expect(html).toContain('<article data-card>Card</article>');
+    expect(html).toContain('<aside data-today>Today</aside>');
   });
 
   it('renders today budget details without exposing raw labels', () => {
