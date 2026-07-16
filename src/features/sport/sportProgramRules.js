@@ -70,7 +70,7 @@ export function programDaysFromSqlSessions(rows) {
     });
   const result = {};
   Object.keys(byDay).forEach((day) => { result[day] = byDay[day].join('/'); });
-  return Object.keys(result).length ? result : { 2: 'A1/B1', 4: 'A2/B2', 6: 'A3/B3' };
+  return Object.keys(result).length ? result : { 1: 'A1/B1', 3: 'A2/B2', 5: 'A3/B3' };
 }
 
 export function currentProgramWeek(program, day) {

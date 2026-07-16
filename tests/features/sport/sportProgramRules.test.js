@@ -50,9 +50,13 @@ describe('sport program rules', () => {
 
   it('derives editable planning days from SQL sessions', () => {
     expect(programDaysFromSqlSessions([
-      { session_key: 'A1', day_of_week: 2, sort_order: 1 },
-      { session_key: 'B1', day_of_week: 2, sort_order: 2 },
-      { session_key: 'A2', day_of_week: 4, sort_order: 3 },
-    ])).toEqual({ 2: 'A1/B1', 4: 'A2' });
+      { session_key: 'A1', day_of_week: 1, sort_order: 1 },
+      { session_key: 'B1', day_of_week: 1, sort_order: 2 },
+      { session_key: 'A2', day_of_week: 3, sort_order: 3 },
+    ])).toEqual({ 1: 'A1/B1', 3: 'A2' });
+  });
+
+  it('falls back to Monday, Wednesday and Friday planning', () => {
+    expect(programDaysFromSqlSessions([])).toEqual({ 1: 'A1/B1', 3: 'A2/B2', 5: 'A3/B3' });
   });
 });

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `344845c0a114b89695919aef968c96d0a67950df`
-> Empreinte du snapshot : `7a3e69383d4feaed312336a99f60c0d0ba32dd63b21774579d52998ab86f145e`
-> Généré le : `2026-07-16T08:56:27.550Z`
+> Commit analysé : `786c11bfa36d711e31959e1a3458c06400f8efa9`
+> Empreinte du snapshot : `16d22a42184d401d23dbe2b409d0fa8732fb0031317b1aeecd5387d746adcc92`
+> Généré le : `2026-07-16T09:27:41.518Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.174` |
+| Version | `10.5.175` |
 | Écrans déclarés | 14 |
 | Scripts legacy référencés | 61 |
 | Modules core | 24 |
 | Modules data | 7 |
 | Modules features | 23 |
 | Fichiers de tests | 89 |
-| Migrations Supabase | 82 |
+| Migrations Supabase | 85 |
 | Fonctions Edge | 8 |
 | Projet Android présent | Oui |
 
@@ -460,6 +460,9 @@ Modules :
 - `supabase/migrations/20260704223726_preserve_recurring_budget_dates.sql`
 - `supabase/migrations/20260706083000_complete_a1_workout_progression.sql`
 - `supabase/migrations/20260712004235_asset_transaction_links_budget_policy.sql`
+- `supabase/migrations/20260716090801_sport_volume_intensity_program.sql`
+- `supabase/migrations/20260716091238_sport_integrate_a3_b3_volume_intensity.sql`
+- `supabase/migrations/20260716092537_sport_tune_volume_intensity_loads.sql`
 
 ## Android et budgets de modules
 

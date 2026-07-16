@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "344845c0a114b89695919aef968c96d0a67950df",
-  "snapshotFingerprint": "7a3e69383d4feaed312336a99f60c0d0ba32dd63b21774579d52998ab86f145e",
-  "generatedAt": "2026-07-16T08:56:27.550Z",
+  "commit": "786c11bfa36d711e31959e1a3458c06400f8efa9",
+  "snapshotFingerprint": "16d22a42184d401d23dbe2b409d0fa8732fb0031317b1aeecd5387d746adcc92",
+  "generatedAt": "2026-07-16T09:27:41.518Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.174"
+    "version": "10.5.175"
   },
   "npmScripts": {
     "dev": "vite",
@@ -412,7 +412,10 @@
     "supabase/migrations/20260703123941_secure_wallet_views.sql",
     "supabase/migrations/20260704223726_preserve_recurring_budget_dates.sql",
     "supabase/migrations/20260706083000_complete_a1_workout_progression.sql",
-    "supabase/migrations/20260712004235_asset_transaction_links_budget_policy.sql"
+    "supabase/migrations/20260712004235_asset_transaction_links_budget_policy.sql",
+    "supabase/migrations/20260716090801_sport_volume_intensity_program.sql",
+    "supabase/migrations/20260716091238_sport_integrate_a3_b3_volume_intensity.sql",
+    "supabase/migrations/20260716092537_sport_tune_volume_intensity_loads.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",
