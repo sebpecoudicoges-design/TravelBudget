@@ -5,7 +5,7 @@ import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as settingsView from './features/settings/settingsView.js';
 import * as settingsAccountController from './features/settings/settingsAccountController.js';
 
-const TB_APP_VERSION = '10.5.177';
+const TB_APP_VERSION = '10.5.178';
 window.TB_VERSION = window.TB_VERSION || TB_APP_VERSION;
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.TBCore = {
@@ -20,6 +20,14 @@ window.TBSettingsView = {
   ...(window.TBSettingsView || {}),
   ...settingsView,
 };
+window.TBLoadSettingsCategoriesView = window.TBLoadSettingsCategoriesView || (async () => {
+  const mod = await import('./features/settings/settingsCategoriesView.js');
+  window.TBSettingsCategoriesView = {
+    ...(window.TBSettingsCategoriesView || {}),
+    ...mod,
+  };
+  return window.TBSettingsCategoriesView;
+});
 window.TBSettingsAccountController = {
   ...(window.TBSettingsAccountController || {}),
   ...settingsAccountController,

@@ -12,6 +12,7 @@ import {
   renderSettingsTravelOverview,
   setSettingsPanelState,
 } from '../../../src/features/settings/settingsView.js';
+import { renderSettingsCategoriesList } from '../../../src/features/settings/settingsCategoriesView.js';
 
 describe('Settings view helpers', () => {
   const t = (key, vars = {}) => {
@@ -176,6 +177,39 @@ describe('Settings view helpers', () => {
 
     expect(html).toContain('Aucun taux perso');
     expect(html).toContain('tb-fx-ok-badge');
+  });
+
+  it('renders category and subcategory settings with stable actions', () => {
+    const html = renderSettingsCategoriesList({
+      categories: ['Food'],
+      colors: { Food: '#22c55e' },
+      simpleMode: true,
+      getSubRows: () => [
+        { id: 'sub-1', name: 'Restaurant', color: '#f97316', isActive: true, source: 'sql' },
+        { name: '<Detected>', isActive: false, source: 'fallback' },
+      ],
+      getMapping: (_category, subcategory) => subcategory
+        ? { explicit: true, mappingStatus: 'mapped', analyticFamily: 'food', sourceLabel: 'Manuel' }
+        : { mappingStatus: 'excluded', sourceLabel: 'Catégorie' },
+      getUsage: (_category, subcategory) => ({ txCount: subcategory ? 2 : 5 }),
+      analyticSelectOptions: (value) => `<option selected>${value}</option>`,
+      analyticStatusPillHtml: (mapping) => `<span data-status>${mapping.mappingStatus}</span>`,
+      analyticUsagePillHtml: (count) => `<span data-usage>${count}</span>`,
+      analyticFamilyLabel: () => 'Alimentation',
+    });
+
+    expect(html).toContain('tb-simple-mode-note');
+    expect(html).toContain('tb-category-card');
+    expect(html).toContain('Food');
+    expect(html).toContain('2 sous-catégories');
+    expect(html).toContain('5 transactions');
+    expect(html).toContain('tb-subcat-row');
+    expect(html).toContain('Restaurant');
+    expect(html).toContain('&lt;Detected&gt;');
+    expect(html).toContain("saveAnalyticCategoryMapping('Food', this.value)");
+    expect(html).toContain("saveAnalyticSubcategoryMapping('Food','Restaurant', this.value)");
+    expect(html).toContain("moveSubcategory('sub-1','up')");
+    expect(html).toContain("importExistingSubcategory('Food','&lt;Detected&gt;')");
   });
 
   it('renders a period card with stable fields and actions', () => {

@@ -10,6 +10,8 @@ describe('settings view extraction contract', () => {
     expect(main).toContain("import * as settingsAccountController from './features/settings/settingsAccountController.js'");
     expect(main).toContain('window.TBSettingsView');
     expect(main).toContain('...settingsView');
+    expect(main).toContain('window.TBLoadSettingsCategoriesView');
+    expect(main).toContain("import('./features/settings/settingsCategoriesView.js')");
     expect(main).toContain('window.TBSettingsAccountController');
     expect(main).toContain('...settingsAccountController');
   });
@@ -27,6 +29,8 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.getSettingsCardSummary');
     expect(legacy).toContain('window.TBSettingsView?.ensureSettingsHero');
     expect(legacy).toContain('window.TBSettingsView?.decorateSettingsPanels');
+    expect(legacy).toContain('window.TBLoadSettingsCategoriesView');
+    expect(legacy).toContain('window.TBSettingsCategoriesView?.renderSettingsCategoriesList');
     expect(legacy).not.toContain('const cards = Array.from(view.querySelectorAll');
     expect(legacy).not.toContain('box.innerHTML = `');
     expect(legacy).not.toContain('const readNotificationForm = () =>');
@@ -38,5 +42,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('function tbManualFxDel');
     expect(legacy).not.toContain('tb-period-compare tb-period-compare--minimal');
     expect(legacy).not.toContain('tb-v11-travel-hero tb-v11-travel-hero--minimal');
+    expect(legacy).not.toContain('<div class="tb-subcat-row">');
+    expect(legacy).not.toContain('<details class="tb-category-card"');
   });
 });

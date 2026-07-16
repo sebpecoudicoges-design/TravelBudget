@@ -4,7 +4,7 @@
   "dist": {
     "initialJsMaxKiB": 380,
     "lazyJsMaxKiB": 40,
-    "totalJsMaxKiB": 411,
+    "totalJsMaxKiB": 417,
     "totalCssMaxKiB": 8,
     "mainJsGzipMaxKiB": 110
   },
@@ -88,6 +88,7 @@
         "public/legacy/js/14_settings_periods_ui.js",
         "src/features/dashboard/dashboardView.js",
         "src/features/settings/settingsView.js",
+        "src/features/settings/settingsCategoriesView.js",
         "src/features/settings/settingsAccountController.js"
       ]
     },

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `6e0d5156bdc09b8dabaf9a86b6d417b121e3198c`
-> Empreinte du snapshot : `7cf08df62668946750b7ab2674cb2fd0dd33ba238e5ec88dc7793b47e994ea23`
-> Généré le : `2026-07-16T10:40:01.645Z`
+> Commit analysé : `0f0aa0a67e684ac8f2b215fb6f7abc2b98eb58f9`
+> Empreinte du snapshot : `73614c100b552516f0fc916775189f0a56d80e98816fc2332bb82ece18989773`
+> Généré le : `2026-07-16T20:42:48.538Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,12 +11,12 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.177` |
+| Version | `10.5.178` |
 | Écrans déclarés | 14 |
 | Scripts legacy référencés | 61 |
 | Modules core | 24 |
 | Modules data | 7 |
-| Modules features | 23 |
+| Modules features | 24 |
 | Fichiers de tests | 89 |
 | Migrations Supabase | 86 |
 | Fonctions Edge | 8 |
@@ -216,6 +216,7 @@ Modules :
 - `src/features/nutrition/nutritionStore.js`
 - `src/features/nutrition/nutritionView.js`
 - `src/features/settings/settingsAccountController.js`
+- `src/features/settings/settingsCategoriesView.js`
 - `src/features/settings/settingsView.js`
 - `src/features/sport/sportCatalog.js`
 - `src/features/sport/sportHistoryView.js`
