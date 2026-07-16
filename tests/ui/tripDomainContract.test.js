@@ -8,6 +8,8 @@ describe('Trip domain contract', () => {
   const repository = fs.readFileSync('src/data/tripRepository.js', 'utf8');
   const store = fs.readFileSync('src/features/trip/tripStore.js', 'utf8');
   const view = fs.readFileSync('src/features/trip/tripView.js', 'utf8');
+  const documentView = fs.readFileSync('public/legacy/js/29_trip_document_view.js', 'utf8');
+  const main = fs.readFileSync('src/main.js', 'utf8');
 
   it('exposes Trip rules, repository, store and view through the bridge', () => {
     expect(bridge).toContain("import * as tripRules from '../core/tripRules.js'");
@@ -81,8 +83,14 @@ describe('Trip domain contract', () => {
       expect(view).toContain(`export function ${token}`);
       expect(legacy).toContain(`tripView?.${token}`);
     }
+    expect(documentView).toContain('function renderTripExpenseDocumentsContent');
+    expect(documentView).toContain('window.UI.tripDocumentView');
+    expect(main).toContain("'/legacy/js/29_trip_document_view.js'");
+    expect(legacy).toContain('tripDocumentView?.renderTripExpenseDocumentsContent');
     expect(legacy).toContain('data-trip-help-open');
     expect(legacy).not.toContain('onclick="showView(\'help\')"');
     expect(legacy).not.toContain('class="card" style="margin-top:12px;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08);"');
+    expect(legacy).not.toContain('const linkedHTML = links.length');
+    expect(legacy).not.toContain('Ajouter ou lier un document');
   });
 });

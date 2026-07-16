@@ -73,6 +73,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [x] Trip : rendre le split Montants intelligent avec reste partage automatiquement entre les participants non saisis.
 - [x] Trip : extraire le panneau d'aide contexte vers `tripView` et supprimer le `onclick` inline associe.
 - [x] Trip : extraire la carte d'audit des liens budget/transactions vers `tripView`.
+- [x] Trip : extraire le contenu de la fenetre Documents de depense vers une vue chargee a la demande.
 - [x] Trip : separer regles, repository, store et vues.
 - [x] Sport : separer bibliotheque, programme, timer, historique et calculs.
   - [x] Extraire le catalogue fallback, les MET, familles, materiels et charges de reference.

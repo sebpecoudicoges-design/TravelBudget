@@ -1,5 +1,18 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
-import { renderPendingTripInvites, renderTripContextHelp, renderTripExpenseForm, renderTripLinkAuditCard } from '../../../src/features/trip/tripView.js';
+import {
+  renderPendingTripInvites,
+  renderTripContextHelp,
+  renderTripExpenseForm,
+  renderTripLinkAuditCard,
+} from '../../../src/features/trip/tripView.js';
+
+function loadTripDocumentView() {
+  const sandbox = { window: { UI: {} } };
+  vm.runInNewContext(fs.readFileSync('public/legacy/js/29_trip_document_view.js', 'utf8'), sandbox);
+  return sandbox.window.UI.tripDocumentView;
+}
 
 describe('Trip view', () => {
   it('renders pending invitations and escapes remote content', () => {
@@ -82,5 +95,29 @@ describe('Trip view', () => {
     expect(html).toContain('&lt;Audit&gt;');
     expect(html).toContain('2 &lt;issues&gt;');
     expect(html).toContain('<span class="trip-badge">2</span>');
+  });
+
+  it('renders expense document links with stable hooks and escaped names', () => {
+    const html = loadTripDocumentView().renderTripExpenseDocumentsContent({
+      links: [
+        { id: 'link-1', relation_type: 'receipt', document_id: 'doc-1', document: { id: 'doc-1', name: '<Receipt>' } },
+        { id: 'link-2', relation_type: 'proof', document_id: 'doc-2', document: null },
+      ],
+      availableDocs: [{ id: 'doc-3', name: 'Invoice' }],
+      documentName: (doc) => doc.name,
+      relationLabel: (type) => `Relation ${type}`,
+    });
+    expect(html).toContain('tb-trip-documents-content');
+    expect(html).toContain('&lt;Receipt&gt;');
+    expect(html).toContain('Relation receipt');
+    expect(html).toContain('data-open-trip-doc="doc-1"');
+    expect(html).toContain('data-unlink-trip-doc="link-1"');
+    expect(html).toContain('Document supprimé');
+    expect(html).toContain('id="trip-doc-search"');
+    expect(html).toContain('id="trip-doc-select"');
+    expect(html).toContain('value="doc-3"');
+    expect(html).toContain('data-trip-doc-link-selected');
+    expect(html).toContain('data-trip-doc-upload-btn');
+    expect(html).toContain('id="trip-doc-upload-input"');
   });
 });

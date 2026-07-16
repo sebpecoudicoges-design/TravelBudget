@@ -2505,96 +2505,13 @@ async function _openTripExpenseDocumentsModal(expenseId) {
     doc => !linkedIds.has(String(doc.id))
   );
 
-  const linkedHTML = links.length
-    ? links.map(link => {
-        const doc = link.document;
-
-        if (!doc) {
-          return `
-            <div class="card" style="margin-bottom:8px;">
-              <div class="muted">Document supprimé</div>
-            </div>
-          `;
-        }
-
-        return `
-          <div class="card" style="margin-bottom:8px;">
-            <div class="row" style="justify-content:space-between;gap:10px;">
-              <div>
-                <strong>${escapeHTML(_tripDocumentName(doc))}</strong>
-                <div class="muted" style="font-size:12px;">
-                  ${escapeHTML(_tripDocumentRelationLabel(link.relation_type))}
-                </div>
-              </div>
-
-              <div class="row" style="gap:6px;">
-                <button class="btn" data-open-trip-doc="${doc.id}">
-                  Ouvrir
-                </button>
-
-                <button class="btn danger" data-unlink-trip-doc="${link.id}">
-                  Délier
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join("")
-    : `<div class="muted">Aucun document lié.</div>`;
-
-  const availableHTML = `
-  <div style="margin-top:14px;border-top:1px solid rgba(148,163,184,.25);padding-top:14px;">
-    <h3 style="margin:0 0 10px;">Ajouter ou lier un document</h3>
-
-    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;">
-      <div>
-        <label class="muted" style="display:block;font-size:12px;margin-bottom:4px;">Document existant</label>
-        <input id="trip-doc-search" class="input" type="search" placeholder="Rechercher un document…" style="width:100%;margin-bottom:8px;" />
-
-        <select id="trip-doc-select" class="input" style="width:100%;">
-          ${availableDocs.map(doc => `
-            <option value="${escapeHTML(doc.id)}">
-              ${escapeHTML(_tripDocumentName(doc))}
-            </option>
-          `).join("")}
-        </select>
-      </div>
-
-      <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
-        <select id="trip-doc-relation" class="input">
-          <option value="receipt">Reçu</option>
-          <option value="invoice">Facture</option>
-          <option value="proof">Justificatif</option>
-          <option value="warranty">Garantie</option>
-          <option value="other">Autre</option>
-        </select>
-
-        <button class="btn primary" type="button" data-trip-doc-link-selected>
-          Lier
-        </button>
-      </div>
-    </div>
-
-    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <select id="trip-doc-upload-relation" class="input">
-  <option value="receipt">Reçu</option>
-  <option value="invoice">Facture</option>
-  <option value="proof">Justificatif</option>
-  <option value="warranty">Garantie</option>
-  <option value="other">Autre</option>
-</select>
-
-<button class="btn" type="button" data-trip-doc-upload-btn>
-  + Ajouter un document
-</button>
-
-<input id="trip-doc-upload-input" type="file" accept="application/pdf,image/*" style="display:none;" />
-      <span class="muted" style="font-size:12px;">PDF ou image. Le fichier sera ajouté au coffre Documents puis lié à cette dépense.</span>
-    </div>
-  </div>
-`;
-
-  const html = `<div class="tb-trip-documents-content">${linkedHTML}${availableHTML}</div>`;
+  const html = window.UI?.tripDocumentView?.renderTripExpenseDocumentsContent?.({
+    links,
+    availableDocs,
+    documentName: _tripDocumentName,
+    relationLabel: _tripDocumentRelationLabel,
+    escapeHTML
+  }) || `<div class="tb-trip-documents-content"><div class="muted">Documents indisponibles.</div></div>`;
   if (!window.UI?.createModal) throw new Error("Composant de fenetre indisponible.");
   const modal = window.UI.createModal({
     id: "trip-expense-docs-modal",

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `abb5100dabe2305374405dd57987bcb1759a5062`
-> Empreinte du snapshot : `b92a451ee2254aeda7adfcf6eeaa666ac2ddc8d613c51c4ec70909759fa1dc42`
-> Généré le : `2026-07-16T08:11:48.626Z`
+> Commit analysé : `344845c0a114b89695919aef968c96d0a67950df`
+> Empreinte du snapshot : `7a3e69383d4feaed312336a99f60c0d0ba32dd63b21774579d52998ab86f145e`
+> Généré le : `2026-07-16T08:56:27.550Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,9 +11,9 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.173` |
+| Version | `10.5.174` |
 | Écrans déclarés | 14 |
-| Scripts legacy référencés | 60 |
+| Scripts legacy référencés | 61 |
 | Modules core | 24 |
 | Modules data | 7 |
 | Modules features | 23 |
@@ -129,6 +129,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `public/legacy/js/26_fx_crossrate.js`
 - `public/legacy/js/27_cashflow_curve.js`
 - `public/legacy/js/28_data_updated_bus.js`
+- `public/legacy/js/29_trip_document_view.js`
 - `public/legacy/js/29_trip_v1.js`
 - `public/legacy/js/30_members_admin.js`
 - `public/legacy/js/31_help_faq.js`
