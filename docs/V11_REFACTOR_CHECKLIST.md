@@ -75,6 +75,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [x] Trip : extraire le panneau d'aide contexte vers `tripView` et supprimer le `onclick` inline associe.
 - [x] Trip : extraire la carte d'audit des liens budget/transactions vers `tripView`.
 - [x] Trip : extraire le contenu de la fenetre Documents de depense vers une vue chargee a la demande.
+  - [x] Extraire le rendu des onglets Recap/Historique vers `tripView`.
 - [x] Trip : separer regles, repository, store et vues.
 - [x] Sport : separer bibliotheque, programme, timer, historique et calculs.
   - [x] Extraire le catalogue fallback, les MET, familles, materiels et charges de reference.
@@ -93,6 +94,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Ajouter le chrono libre : choix d'exercice, grand ecran, persistance locale, notification arriere-plan, saisie reps/charge/distance et sauvegarde historique.
   - [x] Extraire le CSS mobile/fullscreen Sport Capacitor vers `sport_mobile.css`.
   - [x] Extraire le CSS general Sport vers `sport.css` et supprimer le style inline du legacy.
+  - [x] Realigner le programme SQL A/B en trois dominantes : Poussee, Chaine posterieure et Variantes.
 - [x] Nutrition : separer catalogue, journal, objectifs et historique.
   - [x] Extraire les regles pures du catalogue, des totaux par repas, du journal quotidien, des objectifs et des cibles par moment.
   - [x] Extraire le socle repository local/offline Nutrition : cache aliments, lignes locales, sync_id, sommeil et erreurs de synchro.

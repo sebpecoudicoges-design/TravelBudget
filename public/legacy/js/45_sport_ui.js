@@ -1399,53 +1399,53 @@
   }
   function defaultSessionFavorites() {
     return [
-      { id: "mass_a1", week: "A", name: "Semaine A - A1 Volume haut", days: ["Lundi"], plan: [
-        programReps("Developpe couche", "barbell", 3, 6, 10, 180, { weightKg: 60 }),
-        programReps("Rowing barre", "barbell", 3, 6, 10, 180, { weightKg: 60 }),
-        programReps("Developpe militaire", "barbell", 3, 6, 10, 180, { weightKg: 35 }),
-        programReps("Tractions", "bodyweight", 3, 6, 10, 150, { loadLabel: "Poids du corps" }),
-        programReps("Curl marteau", "dumbbell", 3, 10, 15, 60, { weightKg: 17.5 }),
-        programReps("Extension triceps", "dumbbell", 3, 10, 15, 60, { weightKg: 20 }),
-        programReps("Elevations laterales", "dumbbell", 3, 10, 15, 60, { weightKg: 7 }),
-      ] },
-      { id: "mass_a2", week: "A", name: "Semaine A - A2 Volume bas", days: ["Mercredi"], plan: [
+      { id: "mass_a1", week: "A", name: "Semaine A - A1 Poussee Volume", days: ["Lundi"], plan: [
         programReps("Squat arriere", "barbell", 3, 6, 10, 180, { weightKg: 75 }),
-        programReps("Souleve de terre", "barbell", 3, 6, 10, 180, { weightKg: 115 }),
-        programReps("Fentes bulgares", "dumbbell", 3, 8, 12, 120, { weightKg: 32, loadLabel: "2 x 16 kg" }),
-        programReps("Mollets", "machine", 3, 10, 15, 60, { loadLabel: "Charge actuelle" }),
+        programReps("Developpe couche", "barbell", 3, 6, 10, 180, { weightKg: 60 }),
+        programReps("Tractions pronation", "bodyweight", 3, 6, 10, 150, { loadLabel: "Poids du corps" }),
+        programReps("Developpe militaire", "barbell", 3, 6, 10, 180, { weightKg: 35 }),
+        programReps("Curl marteau", "dumbbell", 3, 10, 15, 60, { weightKg: 17.5 }),
         programTime("Gainage", 3, 30, 90, 60),
       ] },
-      { id: "mass_a3", week: "A", name: "Semaine A - A3 Volume haut", days: ["Vendredi"], plan: [
-        programReps("Front squat ou Goblet squat", "barbell", 3, 6, 10, 180, { weightKg: 45 }),
+      { id: "mass_a2", week: "A", name: "Semaine A - A2 Chaine posterieure Volume", days: ["Mercredi"], plan: [
+        programReps("Souleve de terre", "barbell", 3, 6, 10, 180, { weightKg: 115 }),
+        programReps("Developpe incline halteres", "dumbbell", 3, 6, 10, 150, { weightKg: 40, loadLabel: "2 x 20 kg" }),
+        programReps("Rowing barre", "barbell", 3, 6, 10, 150, { weightKg: 60 }),
+        programReps("Elevations laterales", "dumbbell", 3, 10, 15, 60, { weightKg: 7 }),
+        programReps("Extension triceps", "dumbbell", 3, 10, 15, 60, { weightKg: 20 }),
+        programReps("Releves de jambes", "bodyweight", 3, 10, 20, 60, { activityKey: "core_abs" }),
+      ] },
+      { id: "mass_a3", week: "A", name: "Semaine A - A3 Variantes Volume", days: ["Vendredi"], plan: [
+        programReps("Front squat", "barbell", 3, 6, 10, 180, { weightKg: 45 }),
         programReps("Developpe couche prise serree", "barbell", 3, 6, 10, 180, { weightKg: 50 }),
         programReps("Tractions supination", "bodyweight", 3, 6, 10, 150, { loadLabel: "Poids du corps" }),
-        programReps("Oiseau halteres", "dumbbell", 2, 10, 15, 60, { weightKg: 6 }),
-        programReps("Curl marteau", "dumbbell", 2, 10, 15, 60, { weightKg: 17.5 }),
+        programReps("Oiseau halteres", "dumbbell", 3, 10, 15, 60, { weightKg: 6 }),
+        programReps("Curl marteau", "dumbbell", 3, 10, 15, 60, { weightKg: 17.5 }),
         programTime("Gainage lateral", 2, 30, 60, 60),
       ] },
-      { id: "mass_b1", week: "B", name: "Semaine B - B1 Intensite haut", days: ["Lundi"], plan: [
+      { id: "mass_b1", week: "B", name: "Semaine B - B1 Poussee Intensite", days: ["Lundi"], plan: [
+        programReps("Squat arriere", "barbell", 3, 4, 6, 240, { weightKg: 82.5 }),
         programReps("Developpe couche", "barbell", 3, 4, 6, 240, { weightKg: 65 }),
-        programReps("Rowing barre", "barbell", 3, 4, 6, 210, { weightKg: 67.5 }),
+        programReps("Tractions pronation lestees", "bodyweight", 3, 4, 6, 180, { weightKg: 5, loadLabel: "+5 kg ou PDC" }),
         programReps("Developpe militaire", "barbell", 3, 4, 6, 210, { weightKg: 37.5 }),
-        programReps("Tractions lestees", "bodyweight", 3, 4, 6, 180, { weightKg: 5, loadLabel: "+5 kg ou PDC" }),
         programReps("Curl marteau", "dumbbell", 3, 10, 15, 60, { weightKg: 17.5 }),
-        programReps("Extension triceps", "dumbbell", 3, 10, 15, 60, { weightKg: 20 }),
-        programReps("Elevations laterales", "dumbbell", 3, 10, 15, 60, { weightKg: 7 }),
-      ] },
-      { id: "mass_b2", week: "B", name: "Semaine B - B2 Intensite bas", days: ["Mercredi"], plan: [
-        programReps("Front squat", "barbell", 3, 4, 6, 240, { weightKg: 50 }),
-        programReps("Souleve de terre", "barbell", 3, 4, 6, 240, { weightKg: 125 }),
-        programReps("Fentes bulgares", "dumbbell", 3, 8, 12, 120, { weightKg: 32, loadLabel: "2 x 16 kg" }),
-        programReps("Mollets", "machine", 3, 10, 15, 60, { loadLabel: "Charge actuelle" }),
         programTime("Gainage", 3, 30, 90, 60),
       ] },
-      { id: "mass_b3", week: "B", name: "Semaine B - B3 Intensite haut", days: ["Vendredi"], plan: [
-        programReps("Squat arriere", "barbell", 3, 4, 6, 240, { weightKg: 82.5 }),
-        programReps("Developpe halteres ou pompes lestees", "dumbbell", 3, 4, 6, 180, { weightKg: 45, loadLabel: "45 kg" }),
-        programReps("Rowing barre", "barbell", 3, 4, 6, 210, { weightKg: 67.5 }),
-        programReps("Oiseau halteres", "dumbbell", 2, 10, 15, 60, { weightKg: 6 }),
-        programReps("Curl marteau", "dumbbell", 2, 10, 15, 60, { weightKg: 17.5 }),
-        programTime("Gainage", 3, 30, 60, 60),
+      { id: "mass_b2", week: "B", name: "Semaine B - B2 Chaine posterieure Intensite", days: ["Mercredi"], plan: [
+        programReps("Souleve de terre", "barbell", 3, 4, 6, 240, { weightKg: 125 }),
+        programReps("Developpe incline halteres", "dumbbell", 3, 4, 6, 180, { weightKg: 45, loadLabel: "2 x 22.5 kg" }),
+        programReps("Rowing barre", "barbell", 3, 4, 6, 180, { weightKg: 67.5 }),
+        programReps("Elevations laterales", "dumbbell", 3, 10, 15, 60, { weightKg: 7 }),
+        programReps("Extension triceps", "dumbbell", 3, 10, 15, 60, { weightKg: 20 }),
+        programReps("Releves de jambes", "bodyweight", 3, 10, 20, 60, { activityKey: "core_abs" }),
+      ] },
+      { id: "mass_b3", week: "B", name: "Semaine B - B3 Variantes Intensite", days: ["Vendredi"], plan: [
+        programReps("Front squat", "barbell", 3, 4, 6, 240, { weightKg: 50 }),
+        programReps("Developpe couche prise serree", "barbell", 3, 4, 6, 180, { weightKg: 55 }),
+        programReps("Tractions supination lestees", "bodyweight", 3, 4, 6, 180, { weightKg: 5, loadLabel: "+5 kg ou PDC" }),
+        programReps("Oiseau halteres", "dumbbell", 3, 10, 15, 60, { weightKg: 6 }),
+        programReps("Curl marteau", "dumbbell", 3, 10, 15, 60, { weightKg: 17.5 }),
+        programTime("Gainage lateral", 2, 30, 60, 60),
       ] },
     ];
   }

@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import {
   renderPendingTripInvites,
+  renderTripTabs,
   renderTripContextHelp,
   renderTripExpenseForm,
   renderTripLinkAuditCard,
@@ -95,6 +96,15 @@ describe('Trip view', () => {
     expect(html).toContain('&lt;Audit&gt;');
     expect(html).toContain('2 &lt;issues&gt;');
     expect(html).toContain('<span class="trip-badge">2</span>');
+  });
+
+  it('renders Trip tabs with stable ids and escaped labels', () => {
+    const html = renderTripTabs({ recapLabel: '<Recap>', historyLabel: 'History' });
+    expect(html).toContain('class="trip-tabs"');
+    expect(html).toContain('id="trip-tab-recap"');
+    expect(html).toContain('id="trip-tab-history"');
+    expect(html).toContain('&lt;Recap&gt;');
+    expect(html).not.toContain('onclick=');
   });
 
   it('renders expense document links with stable hooks and escaped names', () => {

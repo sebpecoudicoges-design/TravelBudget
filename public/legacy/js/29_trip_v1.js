@@ -4667,10 +4667,15 @@ return `
       <div class="card" style="margin-top:12px;">
         <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
           <h2 style="margin:0;">${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Recap / History" : "Récap / Historique")}</h2>
-          <div class="trip-tabs">
-            <button class="btn primary" id="trip-tab-recap" type="button">${escapeHTML(_tripT("trip.tabs.recap"))}</button>
-            <button class="btn trip-tab-btn" id="trip-tab-history" type="button">${escapeHTML(_tripT("trip.tabs.history"))}</button>
-          </div>
+          ${(window.UI?.tripView?.renderTripTabs || ((options) => `
+            <div class="trip-tabs">
+              <button class="btn primary" id="trip-tab-recap" type="button">${escapeHTML(options.recapLabel)}</button>
+              <button class="btn trip-tab-btn" id="trip-tab-history" type="button">${escapeHTML(options.historyLabel)}</button>
+            </div>`))({
+              recapLabel: _tripT("trip.tabs.recap"),
+              historyLabel: _tripT("trip.tabs.history"),
+              escapeHTML,
+            })}
         </div>
 
         <div id="trip-tab-content-recap" style="margin-top:10px; display:grid; gap:14px;">
@@ -4783,8 +4788,6 @@ return `
       const t = _setTripStoredTab(tab);
       if (boxRecap) boxRecap.style.display = (t === "recap") ? "" : "none";
       if (boxHist) boxHist.style.display = (t === "history") ? "" : "none";
-
-      // simple visual state
       if (btnTabRecap) {
         btnTabRecap.classList.toggle("primary", t === "recap");
         btnTabRecap.classList.toggle("trip-tab-btn", t !== "recap");
