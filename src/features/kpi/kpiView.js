@@ -73,6 +73,15 @@ export function renderKpiHeader({
   return `<div class="kpi-head"><h2 style="margin:0;">${safe(title)}</h2><div class="kpi-actions"><select id="kpiPeriodSelect" class="kpi-select kpi-period" disabled title="Changer de voyage depuis Settings">${travelOptionHtml}</select><select id="kpiScopeSelect" class="kpi-select">${scopeOptionsHtml}</select>${helpHtml || ''}<div id="kpiRangeBox" class="kpi-range" style="display:${showRange ? 'flex' : 'none'};" data-kpi-range-box="1"><input id="kpiRangeStart" class="kpi-select" type="date" /><span class="muted" style="font-size:12px;">-&gt;</span><input id="kpiRangeEnd" class="kpi-select" type="date" /><button id="kpiRangeApply" class="kpi-input" type="button" style="font-weight:800;cursor:pointer;">Appliquer</button></div><div class="muted" style="font-size:12px;">${safe(dateISO)}</div></div></div>`;
 }
 
+export function renderKpiTravelOption({
+  value = '',
+  label = '',
+  esc = defaultEsc,
+} = {}) {
+  const safe = typeof esc === 'function' ? esc : defaultEsc;
+  return `<option value="${safe(value)}" selected>${safe(label)}</option>`;
+}
+
 export function renderKpiScopeOptions({
   segments = [],
   segmentLabel = 'Periode active',

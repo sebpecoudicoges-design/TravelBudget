@@ -168,6 +168,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire le toggle KPI des impayes/projections vers `kpiView.js`.
   - [x] Extraire les options de portee KPI, segments et date-a-date vers `kpiView.js`.
   - [x] Extraire le layout principal KPI vers `kpiView.js`.
+  - [x] Extraire l'option Voyage actif KPI vers `kpiView.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

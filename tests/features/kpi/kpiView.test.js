@@ -13,6 +13,7 @@ import {
   renderKpiScopeOptions,
   renderKpiTodayDetails,
   renderKpiTodayPanel,
+  renderKpiTravelOption,
 } from '../../../src/features/kpi/kpiView.js';
 
 describe('KPI view helpers', () => {
@@ -50,6 +51,16 @@ describe('KPI view helpers', () => {
     expect(html).toContain('id="kpiRangeApply"');
     expect(html).toContain('Voyage test');
     expect(html).toContain('2026-07-15');
+  });
+
+  it('renders the active travel option with escaped value and label', () => {
+    const html = renderKpiTravelOption({
+      value: 'trip-<1>',
+      label: 'Voyage <test>',
+    });
+
+    expect(html).toBe('<option value="trip-&lt;1&gt;" selected>Voyage &lt;test&gt;</option>');
+    expect(html).not.toContain('<test>');
   });
 
   it('renders the KPI FX calculator with stable ids for binding', () => {

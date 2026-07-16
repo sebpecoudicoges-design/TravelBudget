@@ -74,12 +74,14 @@ describe('KPI view extraction contract', () => {
 
   it('delegates the KPI header and FX calculator rendering', () => {
     expect(legacy).toContain('window.TBKpiView?.renderKpiHeader');
+    expect(legacy).toContain('window.TBKpiView?.renderKpiTravelOption');
     expect(legacy).toContain('window.TBKpiView?.renderKpiScopeOptions');
     expect(legacy).toContain('travelOptionHtml: travelOptionHTML');
     expect(legacy).toContain('scopeOptionsHtml: scopeOptionsHTML');
     expect(legacy).toContain('window.TBKpiView?.renderKpiFxCalculator');
     expect(legacy).not.toContain('<select id="kpiPeriodSelect" disabled');
     expect(legacy).not.toContain('<input id="kpiFxCalcAmount"');
+    expect(legacy).not.toContain('<option value="${escapeHTML(activeTravelValue)}" selected>');
     expect(legacy).not.toContain('..._segs.map((s, idx)');
     expect(legacy).not.toContain('<option value="seg:${id}">');
   });

@@ -1562,7 +1562,11 @@ const driver = "Dépenses";
     ? String(activeTravel.name || "").trim() || `Voyage ${String(activeTravel.start || "").slice(0,10)} -> ${String(activeTravel.end || "").slice(0,10)}`
     : `Voyage ${String(state?.period?.start || "").slice(0,10)} -> ${String(state?.period?.end || "").slice(0,10)}`;
   const activeTravelValue = String(state?.activeTravelId || state?.period?.id || "");
-  const travelOptionHTML = `<option value="${escapeHTML(activeTravelValue)}" selected>${escapeHTML(activeTravelLabel)}</option>`;
+  const travelOptionHTML = window.TBKpiView?.renderKpiTravelOption?.({
+    value: activeTravelValue,
+    label: activeTravelLabel,
+    esc: escapeHTML,
+  }) || "";
   const scopeHelpHTML = (typeof window.tbHelp === "function" && window.tbT) ? tbHelp(tbT("dashboard.help.scope")) : "";
 
   // Inject responsive CSS once
