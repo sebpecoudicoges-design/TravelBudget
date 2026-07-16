@@ -57,6 +57,15 @@ describe('KPI view extraction contract', () => {
     expect(legacy).not.toContain('<div class="muted" style="font-size:12px;">Cash</div>');
   });
 
+  it('delegates the KPI today budget detail rendering', () => {
+    expect(legacy).toContain('window.TBKpiView?.renderKpiTodayDetails');
+    expect(legacy).toContain('rows: details');
+    expect(legacy).toContain('fallbackBase');
+    expect(legacy).not.toContain('escapeHtml(x.label)');
+    expect(legacy).not.toContain('details.map(x =>');
+    expect(legacy).not.toContain('function escapeHtml(str)');
+  });
+
   it('delegates the KPI header and FX calculator rendering', () => {
     expect(legacy).toContain('window.TBKpiView?.renderKpiHeader');
     expect(legacy).toContain('travelOptionHtml: travelOptionHTML');

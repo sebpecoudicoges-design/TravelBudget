@@ -8,6 +8,7 @@ import {
   renderKpiMiniCard,
   renderKpiPendingDetail,
   renderKpiResponsiveStyles,
+  renderKpiTodayDetails,
   renderKpiTodayPanel,
 } from '../../../src/features/kpi/kpiView.js';
 
@@ -58,6 +59,28 @@ describe('KPI view helpers', () => {
     expect(html).toContain('id="kpiFxCalcSwap"');
     expect(html).toContain('id="kpiFxCalcTo"');
     expect(html).toContain('id="kpiFxCalcOut"');
+  });
+
+  it('renders today budget details without exposing raw labels', () => {
+    const html = renderKpiTodayDetails({
+      rows: [
+        { label: 'Base <script>', amountBase: 41.8, baseCurrency: 'aud' },
+        { label: 'Patrimoine', amountBase: -12.2 },
+      ],
+      fallbackBase: 'EUR',
+    });
+
+    expect(html).toContain('Base &lt;script&gt; : 42 AUD');
+    expect(html).toContain('Patrimoine : -12 EUR');
+    expect(html).toContain('<br>');
+    expect(html).not.toContain('<script>');
+  });
+
+  it('renders an empty today budget detail state', () => {
+    const html = renderKpiTodayDetails({ rows: [], emptyLabel: 'Vide' });
+
+    expect(html).toContain('class="muted"');
+    expect(html).toContain('Vide');
   });
 
   it('renders the health card with score, goals and actions', () => {

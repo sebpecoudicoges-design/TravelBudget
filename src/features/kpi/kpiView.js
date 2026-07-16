@@ -81,6 +81,26 @@ export function renderKpiFxCalculator({
   return `<div class="kpi-mini-card"><div class="muted kpi-mini-title">${safe(title)}</div><div class="kpi-fx-row"><input id="kpiFxCalcAmount" class="kpi-input kpi-fx-amount" type="number" inputmode="decimal" placeholder="0" /><select id="kpiFxCalcFrom" class="kpi-input"></select><button id="kpiFxCalcSwap" class="kpi-input" type="button" title="Intervertir les devises" aria-label="Intervertir les devises" style="cursor:pointer;">↔</button><select id="kpiFxCalcTo" class="kpi-input"></select></div><div class="muted" style="font-size:12px;margin-top:8px;"><span id="kpiFxCalcOut">—</span></div></div>`;
 }
 
+export function renderKpiTodayDetails({
+  rows = [],
+  fallbackBase = 'EUR',
+  emptyLabel = 'Aucun detail',
+  esc = defaultEsc,
+} = {}) {
+  const safe = typeof esc === 'function' ? esc : defaultEsc;
+  const list = Array.isArray(rows) ? rows : [];
+  if (!list.length) {
+    return `<div class="muted" style="margin-top:8px;">${safe(emptyLabel)}</div>`;
+  }
+  const base = String(fallbackBase || 'EUR').toUpperCase();
+  return `<div style="margin-top:10px; line-height:1.55;">${list.map((row) => {
+    const label = safe(row?.label || '');
+    const amount = Math.round(Number(row?.amountBase) || 0);
+    const currency = String(row?.baseCurrency || base).toUpperCase();
+    return `• ${label} : ${amount} ${safe(currency)}`;
+  }).join('<br>')}</div>`;
+}
+
 export function renderKpiPendingDetail({
   items = [],
   max = 8,

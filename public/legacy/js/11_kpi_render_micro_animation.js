@@ -908,36 +908,16 @@ function _daysPill(daysLeft, labelPrefix) {
 }
 
 function _renderTodayDetailsHTML(dateStr) {
-  // Reprend la logique "allocations" (ce que tu vois dans Budget journalier)
   const info = (typeof getDailyBudgetInfoForDate === "function")
     ? getDailyBudgetInfoForDate(dateStr)
     : { baseCurrency: state?.period?.baseCurrency };
   const fallbackBase = String(info?.baseCurrency || state?.period?.baseCurrency || "EUR").toUpperCase();
-
   const details = Array.isArray(info?.rows) ? info.rows : [];
-
-  if (!details.length) {
-    return `<div class="muted" style="margin-top:8px;">Aucun détail</div>`;
-  }
-
-  // Même rendu que ton budget journalier : liste à puces
-  return `
-    <div style="margin-top:10px; line-height:1.55;">
-      ${details.map(x =>
-        `• ${escapeHtml(x.label)} : ${Math.round(x.amountBase)} ${String(x.baseCurrency || fallbackBase).toUpperCase()}`
-      ).join("<br>")}
-    </div>
-  `;
-}
-
-// mini helper: évite l'injection HTML via label
-function escapeHtml(str) {
-  return String(str || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return window.TBKpiView?.renderKpiTodayDetails?.({
+    rows: details,
+    fallbackBase,
+    emptyLabel: "Aucun détail",
+  }) || "";
 }
 
 function _sumWalletsDisplay(dateStr) {
