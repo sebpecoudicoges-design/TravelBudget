@@ -125,3 +125,23 @@ export function renderTripContextHelp({
       </div>
     </div>`;
 }
+
+export function renderTripLinkAuditCard({
+  count = 0,
+  title,
+  body,
+  escapeHTML = fallbackEscape,
+}) {
+  const n = Number(count) || 0;
+  if (n <= 0) return '';
+  return `
+    <div class="card trip-link-audit-card">
+      <div class="trip-link-audit-card-row">
+        <div>
+          <h2>${escapeHTML(title)}</h2>
+          <div class="muted">${escapeHTML(body)}</div>
+        </div>
+        <span class="trip-badge">${escapeHTML(String(n))}</span>
+      </div>
+    </div>`;
+}

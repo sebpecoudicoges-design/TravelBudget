@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderPendingTripInvites, renderTripContextHelp, renderTripExpenseForm } from '../../../src/features/trip/tripView.js';
+import { renderPendingTripInvites, renderTripContextHelp, renderTripExpenseForm, renderTripLinkAuditCard } from '../../../src/features/trip/tripView.js';
 
 describe('Trip view', () => {
   it('renders pending invitations and escapes remote content', () => {
@@ -69,5 +69,18 @@ describe('Trip view', () => {
     expect(html).toContain('data-trip-help-open="1"');
     expect(html).toContain('data-trip-help-close="1"');
     expect(html).not.toContain('onclick=');
+  });
+
+  it('renders the link audit card only when issues exist', () => {
+    expect(renderTripLinkAuditCard({ count: 0 })).toBe('');
+    const html = renderTripLinkAuditCard({
+      count: 2,
+      title: '<Audit>',
+      body: '2 <issues>',
+    });
+    expect(html).toContain('trip-link-audit-card');
+    expect(html).toContain('&lt;Audit&gt;');
+    expect(html).toContain('2 &lt;issues&gt;');
+    expect(html).toContain('<span class="trip-badge">2</span>');
   });
 });

@@ -4551,17 +4551,12 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
     const filteredExpenses = expenses.filter((ex) => _tripHistoryMatch(ex, tripTxMap, membersById, sharesByExpenseForHistory, historyFilters));
     const linkIssues = Array.isArray(tripState.linkIssues) ? tripState.linkIssues : [];
     const linkIssueExpenseIds = new Set(linkIssues.map((issue) => String(issue?.expenseId || "")).filter(Boolean));
-    const linkAuditHTML = linkIssues.length ? `
-      <div class="card" style="margin-top:12px;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08);">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-          <div>
-            <h2 style="margin:0 0 6px 0;">${escapeHTML(_tripT("trip.linked.audit_title"))}</h2>
-            <div class="muted">${escapeHTML(_tripT("trip.linked.audit_body", { count: linkIssues.length }))}</div>
-          </div>
-          <span class="trip-badge">${linkIssues.length}</span>
-        </div>
-      </div>
-    ` : "";
+    const linkAuditHTML = window.UI?.tripView?.renderTripLinkAuditCard({
+      count: linkIssues.length,
+      title: _tripT("trip.linked.audit_title"),
+      body: _tripT("trip.linked.audit_body", { count: linkIssues.length }),
+      escapeHTML,
+    }) || "";
 
 const tripDocCountsByExpense = new Map();
 
