@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 describe('sport fullscreen focus contract', () => {
   const sport = fs.readFileSync('public/legacy/js/45_sport_ui.js', 'utf8');
+  const mobileCss = fs.readFileSync('public/legacy/css/sport_mobile.css', 'utf8');
 
   it('uses a CSS focus lock fallback in addition to the native Fullscreen API', () => {
     expect(sport).toContain('function syncTimerFocusLock()');
@@ -16,6 +17,12 @@ describe('sport fullscreen focus contract', () => {
     expect(sport).toContain('target?.webkitRequestFullscreen');
     expect(sport).toContain('document.webkitExitFullscreen');
     expect(sport).toContain('async function exitTimerFullscreen()');
+    expect(sport).toContain('tb-sport-mobile-css');
+    expect(sport).toContain('./legacy/css/sport_mobile.css');
+    expect(mobileCss).toContain('body.tb-capacitor-app[data-tb-view="sport"] .tb-sport-timer-card.focus');
+    expect(mobileCss).toContain('height:calc(100dvh - 16px');
+    expect(mobileCss).toContain('overflow:hidden!important');
+    expect(sport).not.toContain('body.tb-capacitor-app[data-tb-view="sport"] #sport-root{padding:0!important');
   });
 
   it('syncs and clears the focus lock around timer focus and completion', () => {
