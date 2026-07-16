@@ -48,4 +48,28 @@ describe('Trip store', () => {
       tripExpenses: [{ id: 'expense-1' }],
     });
   });
+
+  it('centralizes active trip and tab persistence', () => {
+    const values = new Map();
+    const storage = {
+      getItem: (key) => values.get(key) || null,
+      setItem: (key, value) => values.set(key, String(value)),
+      removeItem: (key) => values.delete(key),
+    };
+    const store = createTripStore({ trips: [{ id: 'trip-1' }, { id: 'trip-2' }] });
+
+    expect(store.resolveActiveTripId(storage)).toBe('trip-1');
+    expect(store.setActiveTripId('trip-2', storage)).toBe('trip-2');
+    expect(store.readActiveTripId(storage)).toBe('trip-2');
+    expect(store.resolveActiveTripId(storage)).toBe('trip-2');
+
+    expect(store.setTab('history', storage)).toBe('history');
+    expect(store.readTab(storage)).toBe('history');
+    expect(store.setTab('unknown', storage)).toBe('recap');
+    expect(store.readTab(storage)).toBe('recap');
+
+    store.clearActiveTripId(storage);
+    expect(store.state.activeTripId).toBeNull();
+    expect(store.readActiveTripId(storage)).toBeNull();
+  });
 });

@@ -473,15 +473,43 @@ async function _copyToClipboard(text) {
     return _tripOfflineFallback();
   }
 
-  const TRIP_ACTIVE_KEY = "travelbudget_trip_active_id_v1";
-  const TRIP_TAB_KEY = "travelbudget_trip_tab_v1";
-
   const tripStore = window.Data?.createTripStore?.();
   if (!tripStore?.state) throw new Error("Trip store indisponible");
   let tripState = tripStore.state;
   let _tripExpenseEditorModal = null;
   window.__tripState = tripState;
   window.__tripStore = tripStore;
+
+  function _setActiveTripId(id) {
+    if (typeof tripStore.setActiveTripId === "function") return tripStore.setActiveTripId(id, localStorage);
+    tripState.activeTripId = id || null;
+    return tripState.activeTripId;
+  }
+
+  function _resolveActiveTripId() {
+    if (typeof tripStore.resolveActiveTripId === "function") return tripStore.resolveActiveTripId(localStorage);
+    const stored = localStorage.getItem("travelbudget_trip_active_id_v1");
+    tripState.activeTripId = stored && (tripState.trips || []).some(t => t.id === stored) ? stored : tripState.trips[0]?.id || null;
+    return tripState.activeTripId;
+  }
+
+  function _clearActiveTripId() {
+    if (typeof tripStore.clearActiveTripId === "function") return tripStore.clearActiveTripId(localStorage);
+    tripState.activeTripId = null;
+    try { localStorage.removeItem("travelbudget_trip_active_id_v1"); } catch (_) {}
+  }
+
+  function _setTripStoredTab(tab) {
+    if (typeof tripStore.setTab === "function") return tripStore.setTab(tab, localStorage);
+    const t = tab === "history" ? "history" : "recap";
+    try { localStorage.setItem("travelbudget_trip_tab_v1", t); } catch (_) {}
+    return t;
+  }
+
+  function _readTripStoredTab() {
+    if (typeof tripStore.readTab === "function") return tripStore.readTab(localStorage);
+    try { return localStorage.getItem("travelbudget_trip_tab_v1") || "recap"; } catch (_) { return "recap"; }
+  }
 
   function _tripRepository() {
     const repository = window.Data?.tripRepository;
@@ -522,7 +550,7 @@ async function _copyToClipboard(text) {
   // Reset Trip state on auth account switch (prevents cross-account UI bleed)
   try {
     window.addEventListener("tb:auth_scope_changed", () => {
-      try { localStorage.removeItem(TRIP_ACTIVE_KEY); } catch (_) {}
+      _clearActiveTripId();
       tripStore.reset();
       _syncTripInviteNotification([]);
     });
@@ -1613,9 +1641,7 @@ async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, tar
     if (await _tripShouldUseOfflineMode("trip:loadTrips")) {
       tripState.trips = Array.isArray(state?.tripGroups) ? state.tripGroups : [];
       tripState.globalNetRows = Array.isArray(state?.tripNetBalances) ? state.tripNetBalances : [];
-      const stored = localStorage.getItem(TRIP_ACTIVE_KEY);
-      if (stored && tripState.trips.some(t => t.id === stored)) tripState.activeTripId = stored;
-      else tripState.activeTripId = tripState.trips[0]?.id || null;
+      _resolveActiveTripId();
       tripState._tripsLoaded = true;
       return;
     }
@@ -1641,12 +1667,7 @@ async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, tar
 
 
 
-    const stored = localStorage.getItem(TRIP_ACTIVE_KEY);
-    if (stored && tripState.trips.some(t => t.id === stored)) {
-      tripState.activeTripId = stored;
-    } else {
-      tripState.activeTripId = tripState.trips[0]?.id || null;
-    }
+    _resolveActiveTripId();
 
     tripState._tripsLoaded = true;
     _syncTripStateToAppState("trip:list");
@@ -3116,8 +3137,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
       email: sbUser?.email || window.sbUser?.email || null,
     });
     if (result.defaultMemberError) console.warn("[Trip] default member insert failed (non-blocking):", result.defaultMemberError);
-    tripState.activeTripId = result.trip.id;
-    localStorage.setItem(TRIP_ACTIVE_KEY, result.trip.id);
+    _setActiveTripId(result.trip.id);
   }
 
   async function _deleteTrip(tripId) {
@@ -4120,8 +4140,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
     const previousTripId = tripState.activeTripId;
     try {
       if (tripState.activeTripId !== tripId) {
-        tripState.activeTripId = tripId;
-        localStorage.setItem(TRIP_ACTIVE_KEY, tripId);
+        _setActiveTripId(tripId);
       }
       await _loadActiveData();
       if (!(tripState.members || []).length && Array.isArray(payload?.members) && payload.members.length) {
@@ -4146,8 +4165,7 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
       tripState._offlineReplaySaving = false;
       if (previousTripId && previousTripId !== tripState.activeTripId) {
         try {
-          tripState.activeTripId = previousTripId;
-          localStorage.setItem(TRIP_ACTIVE_KEY, previousTripId);
+          _setActiveTripId(previousTripId);
           await _loadActiveData();
         } catch (e) {
           console.warn("[Trip] restore active trip after offline replay failed", e);
@@ -4749,8 +4767,7 @@ return `
     const sel = _el("trip-active");
     if (sel) {
       sel.onchange = async () => {
-        tripState.activeTripId = sel.value || null;
-        localStorage.setItem(TRIP_ACTIVE_KEY, tripState.activeTripId || "");
+        _setActiveTripId(sel.value || null);
         if (typeof window.__tripRefresh === "function") await window.__tripRefresh({ activeOnly: true });
 };
     }
@@ -4763,8 +4780,7 @@ return `
     const boxHist = _el("trip-tab-content-history");
 
     function _setTripTab(tab) {
-      const t = (tab === "history") ? "history" : "recap";
-      try { localStorage.setItem(TRIP_TAB_KEY, t); } catch (_) {}
+      const t = _setTripStoredTab(tab);
       if (boxRecap) boxRecap.style.display = (t === "recap") ? "" : "none";
       if (boxHist) boxHist.style.display = (t === "history") ? "" : "none";
 
@@ -4806,8 +4822,7 @@ return `
       _setTripTab('history');
     };
 
-    let initialTab = "recap";
-    try { initialTab = localStorage.getItem(TRIP_TAB_KEY) || "recap"; } catch (_) {}
+    let initialTab = _readTripStoredTab();
     _setTripTab(initialTab);
 
     const btnCreate = _el("trip-create");
@@ -5565,7 +5580,7 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
       tripState.activeTripId = tripState.trips[0]?.id || null;
     }
 
-    if (tripState.activeTripId) localStorage.setItem(TRIP_ACTIVE_KEY, tripState.activeTripId);
+    if (tripState.activeTripId) _setActiveTripId(tripState.activeTripId);
     tripState.pendingInvites = await _loadPendingTripInvites();
     _syncTripInviteNotification(tripState.pendingInvites);
     await _loadActiveData();
@@ -5578,8 +5593,7 @@ Cette suppression retirera aussi les liens budget/wallet associés.`
       if (!id) throw new Error("Dépense introuvable.");
       const requestedTripId = String(opts?.tripId || '').trim();
       if (requestedTripId && requestedTripId !== String(tripState.activeTripId || '')) {
-        tripState.activeTripId = requestedTripId;
-        localStorage.setItem(TRIP_ACTIVE_KEY, requestedTripId);
+        _setActiveTripId(requestedTripId);
         await refresh({ activeOnly: true });
       } else if (!(tripState.expenses || []).some((ex) => String(ex?.id || '') === id)) {
         await refresh({ activeOnly: true });

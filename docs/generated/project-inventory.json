@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "786c11bfa36d711e31959e1a3458c06400f8efa9",
-  "snapshotFingerprint": "16d22a42184d401d23dbe2b409d0fa8732fb0031317b1aeecd5387d746adcc92",
-  "generatedAt": "2026-07-16T09:27:41.518Z",
+  "commit": "b198a1cf0e2ba92bc2c5bdf07c3b86b796236348",
+  "snapshotFingerprint": "1d4ffb8e7163a4d1367c45583151e1170a7132c8cc9740b598cb3dd87f008bf6",
+  "generatedAt": "2026-07-16T10:06:18.449Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.175"
+    "version": "10.5.176"
   },
   "npmScripts": {
     "dev": "vite",

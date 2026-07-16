@@ -31,7 +31,8 @@ Critere de fin : Dashboard, KPI et detail journalier lisent le meme resultat, et
 - [x] Centraliser la file hors ligne, les retries et l'idempotence.
 - [x] Definir un format canonique pour transactions, repas et seances.
 - [x] Introduire un store explicite et y migrer l'etat de la file hors ligne.
-- [ ] Migrer les caches locaux Sport, Nutrition et Trip pendant leur decoupage par domaine.
+- [x] Migrer les caches locaux Sport, Nutrition et Trip pendant leur decoupage par domaine.
+  - [x] Centraliser le voyage Trip actif et l'onglet Trip dans `tripStore`, avec fallbacks legacy limites.
 - [x] Ajouter des tests de reconnexion, doublon et conflit.
 - [x] Recuperer automatiquement un quota local sature sans supprimer les mutations, repas ou seances en attente.
 

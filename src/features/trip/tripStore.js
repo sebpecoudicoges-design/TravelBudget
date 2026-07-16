@@ -23,6 +23,33 @@ export function createInitialTripState() {
   };
 }
 
+export const TRIP_ACTIVE_STORAGE_KEY = 'travelbudget_trip_active_id_v1';
+export const TRIP_TAB_STORAGE_KEY = 'travelbudget_trip_tab_v1';
+
+function safeStorageGet(storage, key) {
+  try {
+    return storage?.getItem ? storage.getItem(key) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function safeStorageSet(storage, key, value) {
+  try {
+    if (storage?.setItem) storage.setItem(key, value);
+  } catch (_) {}
+}
+
+function safeStorageRemove(storage, key) {
+  try {
+    if (storage?.removeItem) storage.removeItem(key);
+  } catch (_) {}
+}
+
+function normalizeTripTab(tab) {
+  return tab === 'history' ? 'history' : 'recap';
+}
+
 function replaceState(target, next) {
   for (const key of Object.keys(target)) delete target[key];
   Object.assign(target, next);
@@ -106,6 +133,36 @@ export function createTripStore(initialState = {}) {
         budgetLinks: [], budgetTxById: new Map(), linkIssues: [],
       });
       return state;
+    },
+    readActiveTripId(storage) {
+      return safeStorageGet(storage, TRIP_ACTIVE_STORAGE_KEY);
+    },
+    setActiveTripId(tripId, storage) {
+      state.activeTripId = tripId ? String(tripId) : null;
+      if (state.activeTripId) safeStorageSet(storage, TRIP_ACTIVE_STORAGE_KEY, state.activeTripId);
+      else safeStorageSet(storage, TRIP_ACTIVE_STORAGE_KEY, '');
+      return state.activeTripId;
+    },
+    clearActiveTripId(storage) {
+      state.activeTripId = null;
+      safeStorageRemove(storage, TRIP_ACTIVE_STORAGE_KEY);
+    },
+    resolveActiveTripId(storage) {
+      const trips = Array.isArray(state.trips) ? state.trips : [];
+      const stored = safeStorageGet(storage, TRIP_ACTIVE_STORAGE_KEY);
+      const active = stored && trips.some((trip) => String(trip?.id || '') === String(stored))
+        ? stored
+        : trips[0]?.id || null;
+      state.activeTripId = active;
+      return active;
+    },
+    readTab(storage) {
+      return normalizeTripTab(safeStorageGet(storage, TRIP_TAB_STORAGE_KEY));
+    },
+    setTab(tab, storage) {
+      const normalized = normalizeTripTab(tab);
+      safeStorageSet(storage, TRIP_TAB_STORAGE_KEY, normalized);
+      return normalized;
     },
     hydrateOffline(snapshot = {}) {
       Object.assign(state, {

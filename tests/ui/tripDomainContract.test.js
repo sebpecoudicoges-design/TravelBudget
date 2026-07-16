@@ -69,10 +69,14 @@ describe('Trip domain contract', () => {
   });
 
   it('uses the Trip store as the bridge between remote/offline data and legacy app state', () => {
-    for (const token of ['createInitialTripState', 'createTripStore', 'hydrateOffline', 'hydrateRemote', 'appSnapshot']) {
+    for (const token of ['createInitialTripState', 'createTripStore', 'hydrateOffline', 'hydrateRemote', 'appSnapshot', 'resolveActiveTripId', 'setActiveTripId', 'readTab', 'setTab']) {
       expect(store).toContain(token);
     }
     expect(legacy).toContain('const tripStore = window.Data?.createTripStore?.()');
+    expect(legacy).toContain('tripStore.resolveActiveTripId');
+    expect(legacy).toContain('tripStore.setActiveTripId');
+    expect(legacy).toContain('tripStore.readTab');
+    expect(legacy).toContain('tripStore.setTab');
     expect(legacy).toContain('tripStore.hydrateOffline(state)');
     expect(legacy).toContain('tripStore.hydrateRemote(activeData');
     expect(legacy).toContain('tripStore.appSnapshot()');
