@@ -127,6 +127,23 @@ export function renderKpiPendingDetail({
 }).join('') : `<div class="muted" style="font-size:12px;">${safe(emptyLabel)}</div>`}${more > 0 ? `<div class="muted" style="font-size:12px;margin-top:6px;">+${more} ${safe(moreLabel)}</div>` : ''}</div></details>`;
 }
 
+export function renderKpiPendingToggle({
+  includeUnpaid = false,
+  label = 'Inclure les impayes',
+  netLabel = 'Net',
+  pendingDisplay = 0,
+  currency = '',
+  pendingDetailHtml = '',
+  esc = defaultEsc,
+} = {}) {
+  const safe = typeof esc === 'function' ? esc : defaultEsc;
+  const net = Math.round(Number(pendingDisplay) || 0);
+  const netHtml = includeUnpaid
+    ? `<span style="margin-left:auto;opacity:.85;">${safe(netLabel)}: <strong style="color:var(--text);">${net} ${safe(currency)}</strong></span>`
+    : '';
+  return `<label class="muted" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;user-select:none;"><input id="kpiIncludeUnpaidToggle" type="checkbox" ${includeUnpaid ? 'checked' : ''} />${safe(label)}${netHtml}</label>${pendingDetailHtml || ''}`;
+}
+
 export function renderKpiTodayPanel({
   dateISO = '',
   todayLabel = "Aujourd'hui",

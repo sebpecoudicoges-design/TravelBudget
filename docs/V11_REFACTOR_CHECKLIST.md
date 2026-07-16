@@ -165,6 +165,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire l'en-tete KPI, le selecteur date-a-date et le convertisseur FX vers `kpiView.js`.
   - [x] Durcir le boot mobile : le module KPI et sa CSS publique ne bloquent plus l'ecran de chargement.
   - [x] Extraire le detail du budget du jour KPI vers `kpiView.js`.
+  - [x] Extraire le toggle KPI des impayes/projections vers `kpiView.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

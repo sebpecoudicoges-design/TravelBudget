@@ -7,6 +7,7 @@ import {
   renderKpiHealthCard,
   renderKpiMiniCard,
   renderKpiPendingDetail,
+  renderKpiPendingToggle,
   renderKpiResponsiveStyles,
   renderKpiTodayDetails,
   renderKpiTodayPanel,
@@ -161,6 +162,38 @@ describe('KPI view helpers', () => {
     expect(html).toContain('+18 AUD');
     expect(html).toContain('+1 autre(s)');
     expect(html).not.toContain('Hostel');
+  });
+
+  it('renders the pending projection toggle and net value', () => {
+    const html = renderKpiPendingToggle({
+      includeUnpaid: true,
+      label: 'Inclure <pending>',
+      netLabel: 'Net',
+      pendingDisplay: -42.4,
+      currency: 'AUD',
+      pendingDetailHtml: '<details data-test>Detail</details>',
+    });
+
+    expect(html).toContain('id="kpiIncludeUnpaidToggle"');
+    expect(html).toContain('checked');
+    expect(html).toContain('Inclure &lt;pending&gt;');
+    expect(html).toContain('Net:');
+    expect(html).toContain('-42 AUD');
+    expect(html).toContain('<details data-test>Detail</details>');
+  });
+
+  it('renders the pending projection toggle without net when disabled', () => {
+    const html = renderKpiPendingToggle({
+      includeUnpaid: false,
+      label: 'Inclure',
+      pendingDisplay: 12,
+      currency: 'EUR',
+    });
+
+    expect(html).toContain('id="kpiIncludeUnpaidToggle"');
+    expect(html).not.toContain('checked');
+    expect(html).not.toContain('Net:');
+    expect(html).not.toContain('12 EUR');
   });
 
   it('renders today panel with steering and cash summary', () => {

@@ -1605,14 +1605,15 @@ const driver = "Dépenses";
 
             ${window.TBKpiView?.renderKpiHealthCard?.({ healthToday, healthActions, esc: escapeHTML }) || ""}
 
-            ${renderKpiMiniCard({ title: T("kpi.period_end"), valueHtml: `${escapeHTML(fmtKPICompact(projEndDisplay))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: escapeHTML(T("kpi.projection")), extraHtml: `
-              <label class="muted" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;user-select:none;">
-                <input id="kpiIncludeUnpaidToggle" type="checkbox" ${includeUnpaid ? "checked" : ""} />
-                ${escapeHTML(T("kpi.include_pending"))}
-                ${includeUnpaid ? `<span style="margin-left:auto;opacity:.85;">Net: <strong style="color:var(--text);">${Math.round(pendingDisplay)} ${displayCurPivot}</strong></span>` : ``}
-              </label>
-              ${pendingDetailHTML}
-            ` })}
+            ${renderKpiMiniCard({ title: T("kpi.period_end"), valueHtml: `${escapeHTML(fmtKPICompact(projEndDisplay))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: escapeHTML(T("kpi.projection")), extraHtml: window.TBKpiView?.renderKpiPendingToggle?.({
+              includeUnpaid,
+              label: T("kpi.include_pending"),
+              netLabel: "Net",
+              pendingDisplay,
+              currency: displayCurPivot,
+              pendingDetailHtml: pendingDetailHTML,
+              esc: escapeHTML,
+            }) || "" })}
 
 	            ${renderKpiMiniCard({ title: T("kpi.fx_period"), valueHtml: escapeHTML(fxRateText), footerHtml: escapeHTML(T("kpi.fx_period_hint")), compact: true })}
 
