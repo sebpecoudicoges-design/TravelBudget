@@ -1510,18 +1510,14 @@ function renderKPI() {
       esc: escapeHTML,
     }) || "";
   }
-  const scopeOptionsHTML = [
-    `<option value="segment">${_labSeg}</option>`,
-    `<option value="period">${_labPeriod}</option>`,
-    ..._segs.map((s, idx) => {
-      const id = String(s.id || "");
-      const ss = String(s.start || s.start_date || "").slice(0,10);
-      const ee = String(s.end || s.end_date || "").slice(0,10);
-      const label = `${_labPer} ${idx+1} : ${ss} → ${ee}`;
-      return `<option value="seg:${id}">${label}</option>`;
-    }),
-    `<option value="range">${_labRange}</option>`
-  ].join("");
+  const scopeOptionsHTML = window.TBKpiView?.renderKpiScopeOptions?.({
+    segments: _segs,
+    segmentLabel: _labSeg,
+    periodLabel: _labPeriod,
+    segmentPrefix: _labPer,
+    rangeLabel: _labRange,
+    esc: escapeHTML,
+  }) || "";
 
   const runway = cashRunwayInfo();        // dépenses cash réelles
   const cover  = cashConservativeInfo();  // burn prudent (budget/alloc)

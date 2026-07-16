@@ -73,6 +73,31 @@ export function renderKpiHeader({
   return `<div class="kpi-head"><h2 style="margin:0;">${safe(title)}</h2><div class="kpi-actions"><select id="kpiPeriodSelect" class="kpi-select kpi-period" disabled title="Changer de voyage depuis Settings">${travelOptionHtml}</select><select id="kpiScopeSelect" class="kpi-select">${scopeOptionsHtml}</select>${helpHtml || ''}<div id="kpiRangeBox" class="kpi-range" style="display:${showRange ? 'flex' : 'none'};" data-kpi-range-box="1"><input id="kpiRangeStart" class="kpi-select" type="date" /><span class="muted" style="font-size:12px;">-&gt;</span><input id="kpiRangeEnd" class="kpi-select" type="date" /><button id="kpiRangeApply" class="kpi-input" type="button" style="font-weight:800;cursor:pointer;">Appliquer</button></div><div class="muted" style="font-size:12px;">${safe(dateISO)}</div></div></div>`;
 }
 
+export function renderKpiScopeOptions({
+  segments = [],
+  segmentLabel = 'Periode active',
+  periodLabel = 'Tout le voyage',
+  segmentPrefix = 'Periode',
+  rangeLabel = 'Date a date...',
+  esc = defaultEsc,
+} = {}) {
+  const safe = typeof esc === 'function' ? esc : defaultEsc;
+  const list = Array.isArray(segments) ? segments : [];
+  const segmentOptions = list.map((segment, index) => {
+    const id = safe(segment?.id || '');
+    const start = safe(String(segment?.start || segment?.start_date || '').slice(0, 10));
+    const end = safe(String(segment?.end || segment?.end_date || '').slice(0, 10));
+    return `<option value="seg:${id}">${safe(segmentPrefix)} ${index + 1} : ${start} → ${end}</option>`;
+  });
+
+  return [
+    `<option value="segment">${safe(segmentLabel)}</option>`,
+    `<option value="period">${safe(periodLabel)}</option>`,
+    ...segmentOptions,
+    `<option value="range">${safe(rangeLabel)}</option>`,
+  ].join('');
+}
+
 export function renderKpiFxCalculator({
   title = 'Convertisseur',
   esc = defaultEsc,

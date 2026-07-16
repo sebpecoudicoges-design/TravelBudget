@@ -9,6 +9,7 @@ import {
   renderKpiPendingDetail,
   renderKpiPendingToggle,
   renderKpiResponsiveStyles,
+  renderKpiScopeOptions,
   renderKpiTodayDetails,
   renderKpiTodayPanel,
 } from '../../../src/features/kpi/kpiView.js';
@@ -60,6 +61,26 @@ describe('KPI view helpers', () => {
     expect(html).toContain('id="kpiFxCalcSwap"');
     expect(html).toContain('id="kpiFxCalcTo"');
     expect(html).toContain('id="kpiFxCalcOut"');
+  });
+
+  it('renders KPI scope options with segments and escaped labels', () => {
+    const html = renderKpiScopeOptions({
+      segments: [
+        { id: 'seg-1', start: '2026-07-01', end: '2026-07-15' },
+        { id: 'seg-<2>', start_date: '2026-07-16', end_date: '2026-07-31' },
+      ],
+      segmentLabel: 'Segment actif',
+      periodLabel: 'Tout <voyage>',
+      segmentPrefix: 'Periode',
+      rangeLabel: 'Date a date...',
+    });
+
+    expect(html).toContain('<option value="segment">Segment actif</option>');
+    expect(html).toContain('<option value="period">Tout &lt;voyage&gt;</option>');
+    expect(html).toContain('<option value="seg:seg-1">Periode 1 : 2026-07-01 → 2026-07-15</option>');
+    expect(html).toContain('<option value="seg:seg-&lt;2&gt;">Periode 2 : 2026-07-16 → 2026-07-31</option>');
+    expect(html).toContain('<option value="range">Date a date...</option>');
+    expect(html).not.toContain('<voyage>');
   });
 
   it('renders today budget details without exposing raw labels', () => {
