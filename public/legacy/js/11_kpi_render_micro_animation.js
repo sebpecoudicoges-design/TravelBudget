@@ -1556,7 +1556,6 @@ const driver = "Dépenses";
   const fxNote = exclCurrencies.length ? `FX exclu : ${exclCurrencies.join(", ")}` : "";
   const pilot = _pilotageInsights({ kind: _parsedScope.kind, startISO: _rrPilot.startISO, endISO: _rrPilot.endISO });
 
-  const renderKpiMiniCard = (opts) => window.TBKpiView?.renderKpiMiniCard?.({ esc: escapeHTML, ...opts }) || "";
   const activeTravel = (state.travels || []).find(x => String(x.id) === String(state?.activeTravelId || "")) || null;
   const activeTravelLabel = activeTravel
     ? String(activeTravel.name || "").trim() || `Voyage ${String(activeTravel.start || "").slice(0,10)} -> ${String(activeTravel.end || "").slice(0,10)}`
@@ -1577,26 +1576,30 @@ const driver = "Dépenses";
     document.head.appendChild(st);
   }
 
-  const kpiCardsHTML = `
-            ${renderKpiMiniCard({ title: T("kpi.available_budget"), valueHtml: `${budgetToday.toFixed(0)} <span class="muted kpi-mini-unit">${escapeHTML(base)}</span>`, footerHtml: escapeHTML(T("kpi.today")) })}
-            ${renderKpiMiniCard({ title: "Total wallets", valueHtml: `${escapeHTML(fmtKPICompact(walletTotalEUR))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: `≈ ${escapeHTML(fmtKPICompact(walletTotalBase))} ${escapeHTML(displayCur)}` })}
-            ${renderKpiMiniCard({ title: "Sport fait", valueHtml: `${Math.round(activityToday.sportKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.sportCount)} séance(s)` })}
-            ${renderKpiMiniCard({ title: "Travail fait", valueHtml: `${Math.round(activityToday.workKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.workMinutes / 60 * 10) / 10}h · ${Math.round(activityToday.workCount)} journée(s)` })}
-            ${window.TBKpiView?.renderKpiHealthCard?.({ healthToday, healthActions, esc: escapeHTML }) || ""}
-            ${renderKpiMiniCard({ title: T("kpi.period_end"), valueHtml: `${escapeHTML(fmtKPICompact(projEndDisplay))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: escapeHTML(T("kpi.projection")), extraHtml: window.TBKpiView?.renderKpiPendingToggle?.({
-              includeUnpaid,
-              label: T("kpi.include_pending"),
-              netLabel: "Net",
-              pendingDisplay,
-              currency: displayCurPivot,
-              pendingDetailHtml: pendingDetailHTML,
-              esc: escapeHTML,
-            }) || "" })}
-            ${renderKpiMiniCard({ title: T("kpi.fx_period"), valueHtml: escapeHTML(fxRateText), footerHtml: escapeHTML(T("kpi.fx_period_hint")), compact: true })}
-            ${window.TBKpiView?.renderKpiFxCalculator?.({
-              title: tbT ? tbT("kpi.fxcalc.title") : "Convertisseur",
-              esc: escapeHTML,
-            }) || ""}`;
+  const kpiCardsHTML = window.TBKpiView?.renderKpiCards?.({
+    cards: [
+      { title: T("kpi.available_budget"), valueHtml: `${budgetToday.toFixed(0)} <span class="muted kpi-mini-unit">${escapeHTML(base)}</span>`, footerHtml: escapeHTML(T("kpi.today")) },
+      { title: "Total wallets", valueHtml: `${escapeHTML(fmtKPICompact(walletTotalEUR))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: `≈ ${escapeHTML(fmtKPICompact(walletTotalBase))} ${escapeHTML(displayCur)}` },
+      { title: "Sport fait", valueHtml: `${Math.round(activityToday.sportKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.sportCount)} séance(s)` },
+      { title: "Travail fait", valueHtml: `${Math.round(activityToday.workKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.workMinutes / 60 * 10) / 10}h · ${Math.round(activityToday.workCount)} journée(s)` },
+      { title: T("kpi.fx_period"), valueHtml: escapeHTML(fxRateText), footerHtml: escapeHTML(T("kpi.fx_period_hint")), compact: true },
+    ],
+    healthToday,
+    healthActions,
+    pendingToggle: {
+      card: { title: T("kpi.period_end"), valueHtml: `${escapeHTML(fmtKPICompact(projEndDisplay))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: escapeHTML(T("kpi.projection")) },
+      toggle: {
+        includeUnpaid,
+        label: T("kpi.include_pending"),
+        netLabel: "Net",
+        pendingDisplay,
+        currency: displayCurPivot,
+        pendingDetailHtml: pendingDetailHTML,
+      },
+    },
+    fxCalculatorTitle: tbT ? tbT("kpi.fxcalc.title") : "Convertisseur",
+    esc: escapeHTML,
+  }) || "";
 
   const todayPanelHTML = window.TBKpiView?.renderKpiTodayPanel?.({
     dateISO: displayDateISO,

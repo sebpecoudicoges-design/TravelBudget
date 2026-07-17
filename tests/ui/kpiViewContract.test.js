@@ -4,6 +4,7 @@ import fs from 'node:fs';
 describe('KPI view extraction contract', () => {
   const main = fs.readFileSync('src/main.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/11_kpi_render_micro_animation.js', 'utf8');
+  const module = fs.readFileSync('src/features/kpi/kpiView.js', 'utf8');
 
   it('exposes the KPI view module to the legacy runtime', () => {
     expect(main).toContain("import('./features/kpi/kpiView.js')");
@@ -27,7 +28,8 @@ describe('KPI view extraction contract', () => {
 
   it('delegates the visual health card and responsive styles', () => {
     expect(legacy).toContain('window.TBKpiView?.renderKpiResponsiveStyles');
-    expect(legacy).toContain('window.TBKpiView?.renderKpiHealthCard');
+    expect(legacy).toContain('window.TBKpiView?.renderKpiCards');
+    expect(module).toContain('renderKpiHealthCard({ healthToday, healthActions');
     expect(legacy).not.toContain('nutritionGoalMode === "bulk" ?');
     expect(legacy).not.toContain('healthActions.map(row =>');
     expect(legacy).not.toContain('.kpi-health-action.good {');
@@ -35,7 +37,8 @@ describe('KPI view extraction contract', () => {
 
   it('delegates pending projection detail rendering', () => {
     expect(legacy).toContain('window.TBKpiView?.renderKpiPendingDetail');
-    expect(legacy).toContain('window.TBKpiView?.renderKpiPendingToggle');
+    expect(legacy).toContain('window.TBKpiView?.renderKpiCards');
+    expect(module).toContain('renderKpiPendingToggle({ esc: safe');
     expect(legacy).toContain('amountText: _pendingAmountText');
     expect(legacy).not.toContain('shown.map((it)');
     expect(legacy).not.toContain('<details class="kpi-pending-detail">');
@@ -44,8 +47,12 @@ describe('KPI view extraction contract', () => {
   });
 
   it('delegates repeated KPI mini cards', () => {
-    expect(legacy).toContain('window.TBKpiView?.renderKpiMiniCard');
-    expect(legacy).toContain('renderKpiMiniCard({ title: T("kpi.available_budget")');
+    expect(legacy).toContain('window.TBKpiView?.renderKpiCards');
+    expect(module).toContain('export function renderKpiCards');
+    expect(module).toContain('renderKpiMiniCard({ esc: safe, ...card })');
+    expect(module).toContain('renderKpiPendingToggle({ esc: safe');
+    expect(legacy).not.toContain('const renderKpiMiniCard = (opts)');
+    expect(legacy).not.toContain('renderKpiMiniCard({ title: T("kpi.available_budget")');
     expect(legacy).not.toContain('<div class="muted" style="font-size:12px;">${T("kpi.available_budget")}</div>');
     expect(legacy).not.toContain('<div class="muted" style="font-size:12px;">Sport fait</div>');
     expect(legacy).not.toContain('<div class="muted" style="font-size:12px;">Travail fait</div>');
@@ -78,7 +85,8 @@ describe('KPI view extraction contract', () => {
     expect(legacy).toContain('window.TBKpiView?.renderKpiScopeOptions');
     expect(legacy).toContain('travelOptionHtml: travelOptionHTML');
     expect(legacy).toContain('scopeOptionsHtml: scopeOptionsHTML');
-    expect(legacy).toContain('window.TBKpiView?.renderKpiFxCalculator');
+    expect(legacy).toContain('window.TBKpiView?.renderKpiCards');
+    expect(module).toContain('renderKpiFxCalculator({ title: fxCalculatorTitle');
     expect(legacy).not.toContain('<select id="kpiPeriodSelect" disabled');
     expect(legacy).not.toContain('<input id="kpiFxCalcAmount"');
     expect(legacy).not.toContain('<option value="${escapeHTML(activeTravelValue)}" selected>');

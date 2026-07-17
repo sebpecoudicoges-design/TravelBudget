@@ -59,6 +59,29 @@ export function renderKpiMiniCard({
   return `<div class="kpi-mini-card"${hidden ? ' style="display:none;"' : ''}><div class="muted kpi-mini-title">${safe(title)}</div>${valueHtml ? `<div class="kpi-mini-value${compact ? ' compact' : ''}">${valueHtml}</div>` : ''}${footerHtml ? `<div class="muted kpi-mini-footer">${footerHtml}</div>` : ''}${extraHtml || ''}</div>`;
 }
 
+export function renderKpiCards({
+  cards = [],
+  healthToday = {},
+  healthActions = [],
+  pendingToggle = {},
+  fxCalculatorTitle = 'Convertisseur',
+  esc = defaultEsc,
+} = {}) {
+  const safe = typeof esc === 'function' ? esc : defaultEsc;
+  const list = Array.isArray(cards) ? cards : [];
+  const renderedCards = list.map((card) => renderKpiMiniCard({ esc: safe, ...card })).join('');
+  const healthCard = renderKpiHealthCard({ healthToday, healthActions, esc: safe });
+  const pendingCard = pendingToggle?.card
+    ? renderKpiMiniCard({
+        esc: safe,
+        ...pendingToggle.card,
+        extraHtml: renderKpiPendingToggle({ esc: safe, ...(pendingToggle.toggle || {}) }),
+      })
+    : '';
+  const fxCard = renderKpiFxCalculator({ title: fxCalculatorTitle, esc: safe });
+  return `${renderedCards}${healthCard}${pendingCard}${fxCard}`;
+}
+
 export function renderKpiHeader({
   title = 'KPIs',
   travelOptionHtml = '',
