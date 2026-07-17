@@ -230,6 +230,7 @@ describe('legacy domain loader', () => {
     expect(navigation).toContain('await window.tbEnsureDeferredData("analysis")');
     expect(fs.readFileSync('public/legacy/js/00_constants.js', 'utf8')).toContain('console.info(`TB BUILD ${window.TB_VERSION}`)');
     expect(fs.readFileSync('public/legacy/js/00_constants.js', 'utf8')).toContain('window.__tbBuildLogged');
+    expect(index).toContain('console.warn("TB BUILD/TB VERSION " + window.TB_VERSION)');
     expect(fs.readFileSync('public/legacy/js/08_refresh.js', 'utf8')).toContain('state.transactions.some((tx) => String(tx?.travel_id || tx?.travelId || "") === tid)');
     expect(navigation).toContain('window.tbRequestAnalysisRender("navigation")');
     expect(analysis).toContain('window.tbRequestAnalysisRender = function tbRequestAnalysisRender');
