@@ -131,6 +131,21 @@ export function renderWalletQuickOnboarding({
   `;
 }
 
+export function renderWalletActions({
+  showArchivedWallets = false,
+  missingTypeCount = 0,
+  t = fallbackT,
+  esc = defaultEsc,
+} = {}) {
+  const tr = typeof t === 'function' ? t : fallbackT;
+  const missing = Number(missingTypeCount) || 0;
+  return `
+  <button class="btn primary" onclick="createWallet()">+ Wallet</button>
+  <button class="btn" type="button" onclick="openInternalTransferModal()">↔ ${esc(tr('transactions.action.internal_transfer'))}</button>
+  <button class="btn" type="button" onclick="toggleArchivedWallets()">${esc(showArchivedWallets ? tr('wallet.action.hide_archived') : tr('wallet.action.show_archived'))}</button>
+  ${missing > 0 ? `<button class="btn" type="button" onclick="openWalletTypesFix()">⚙ Corriger types (${esc(String(missing))})</button>` : ''}`;
+}
+
 export function renderWalletCard({
   wallet = {},
   isBase = false,

@@ -254,6 +254,10 @@ renderOnboardingPanel();
 
 container.innerHTML = "";
 
+const allWallets = Array.isArray(state.wallets) ? state.wallets : [];
+const showArchivedWallets = !!window.__tbShowArchivedWallets;
+const wallets = allWallets.filter(w => showArchivedWallets || w.archived !== true);
+const missingType = wallets.filter(w => !String(w?.type || "").trim());
 // Actions
 const actions = document.createElement("div");
 actions.className = "tb-wallet-actions";
@@ -261,37 +265,18 @@ actions.style.display = "flex";
 actions.style.gap = "10px";
 actions.style.flexWrap = "wrap";
 actions.style.marginBottom = "12px";
-actions.innerHTML = `
-  <button class="btn primary" onclick="createWallet()">+ Wallet</button>
-  <button class="btn" type="button" onclick="openInternalTransferModal()">
-    ↔ ${T("transactions.action.internal_transfer")}
-  </button> 
-`;
+actions.innerHTML = window.TBDashboardView?.renderWalletActions?.({
+  showArchivedWallets,
+  missingTypeCount: missingType.length,
+  t: T,
+  esc: escapeHTML,
+}) || "";
 container.appendChild(actions);
-
-
-const allWallets = Array.isArray(state.wallets) ? state.wallets : [];
-const showArchivedWallets = !!window.__tbShowArchivedWallets;
-const wallets = allWallets.filter(w => showArchivedWallets || w.archived !== true);
-const archiveToggleBtn = document.createElement("button");
-archiveToggleBtn.className = "btn";
-archiveToggleBtn.type = "button";
-archiveToggleBtn.textContent = showArchivedWallets ? T("wallet.action.hide_archived") : T("wallet.action.show_archived");
-archiveToggleBtn.onclick = () => toggleArchivedWallets();
-actions.appendChild(archiveToggleBtn);
 const kpiHost = document.getElementById("kpis-container");
 if (kpiHost && typeof renderKpis === "function") {
   try { renderKpis(); } catch (_) {}
 }
 // If some wallets are missing a type, propose a guided fix (soft migration).
-const missingType = wallets.filter(w => !String(w?.type || "").trim());
-if (missingType.length) {
-  const btn = document.createElement("button");
-  btn.className = "btn";
-  btn.textContent = `⚙ Corriger types (${missingType.length})`;
-  btn.onclick = () => openWalletTypesFix();
-  actions.appendChild(btn);
-}
 if (!wallets.length) {
   const empty = document.createElement("div");
   empty.className = "hint";

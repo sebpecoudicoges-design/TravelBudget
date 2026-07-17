@@ -165,6 +165,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire le rendu du budget journalier Dashboard : controles de periode et lignes jour quittent `12_dashboard_render.js`.
   - [x] Extraire les dialogues wallet Dashboard : creation, edition et correction des types quittent `12_dashboard_render.js`.
   - [x] Extraire le rendu des transactions recentes des cartes wallet Dashboard vers `dashboardView.js`.
+  - [x] Extraire la barre d actions Wallet Dashboard : creation, transfert interne, archives et correction des types quittent `12_dashboard_render.js`.
   - [x] Supprimer l'ancien rendu onboarding Dashboard mort, remplace par le rendu delegue unique.
   - [x] Supprimer le double rendu KPI pendant `renderWallets`, avec contrat anti-retour.
   - [x] Extraire le rendu visuel KPI Sante et les styles responsive KPI vers `kpiView.js`.

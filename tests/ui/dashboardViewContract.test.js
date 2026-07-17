@@ -29,6 +29,7 @@ describe('dashboard view extraction contract', () => {
   });
 
   it('keeps wallet card rendering delegated to the Dashboard view module', () => {
+    expect(legacy).toContain('window.TBDashboardView?.renderWalletActions');
     expect(legacy).toContain('window.TBDashboardView?.renderWalletCard');
     expect(legacy).toContain('data-wallet-archive-action');
     const renderKpiCalls = legacy.match(/renderKpis\(\)/g) || [];
@@ -36,6 +37,9 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).not.toContain('flex:1 1 520px;');
     expect(legacy).not.toContain("openTxModal('expense','${w.id}')");
     expect(legacy).not.toContain("adjustWalletBalance('${w.id}')");
+    expect(legacy).not.toContain('<button class="btn primary" onclick="createWallet()">+ Wallet</button>');
+    expect(legacy).not.toContain('archiveToggleBtn.onclick');
+    expect(legacy).not.toContain('btn.onclick = () => openWalletTypesFix()');
   });
 
   it('keeps daily budget controls and day rows delegated', () => {

@@ -5,6 +5,7 @@ import {
   renderDashboardOnboardingPanel,
   renderDailyBudgetControls,
   renderDailyBudgetDay,
+  renderWalletActions,
   renderWalletCard,
   renderWalletCreateDialog,
   renderWalletEditDialog,
@@ -69,6 +70,25 @@ describe('Dashboard view helpers', () => {
     expect(html).toContain('onboarding.step.wallet');
     expect(html).toContain('onboarding.step.period');
     expect(html).toContain('onboarding.step.tx');
+  });
+
+  it('renders wallet dashboard actions with archive and type-fix actions', () => {
+    const html = renderWalletActions({
+      showArchivedWallets: true,
+      missingTypeCount: 2,
+      t,
+    });
+    const compact = renderWalletActions({ showArchivedWallets: false, missingTypeCount: 0, t });
+
+    expect(html).toContain('onclick="createWallet()"');
+    expect(html).toContain('openInternalTransferModal()');
+    expect(html).toContain('transactions.action.internal_transfer');
+    expect(html).toContain('toggleArchivedWallets()');
+    expect(html).toContain('wallet.action.hide_archived');
+    expect(html).toContain('openWalletTypesFix()');
+    expect(html).toContain('Corriger types (2)');
+    expect(compact).toContain('wallet.action.show_archived');
+    expect(compact).not.toContain('openWalletTypesFix()');
   });
 
   it('renders a base wallet card with budget, recent rows and stable actions', () => {
