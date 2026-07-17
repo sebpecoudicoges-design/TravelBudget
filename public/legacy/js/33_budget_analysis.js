@@ -1353,19 +1353,6 @@ categoryTxMap, subcategoryTxMap
     const deltaReferenceTone = deltaReferencePct > 0 ? _themeBad() : (deltaReferencePct < 0 ? _themeGood() : _themeMuted());
     const deltaBudgetAmount = _safeNum(model.spentToToday) - _safeNum(model.targetToToday);
     const deltaReferenceAmount = _safeNum(model.spentToToday) - _safeNum(model.totalReferenceElapsed);
-    const formatSignedPct = (value) => {
-      const pct = Number(value) || 0;
-      const abs = Math.abs(pct);
-      const decimals = abs > 0 && abs < 10 ? 1 : 0;
-      const rounded = Number(pct.toFixed(decimals));
-      const prefix = rounded > 0 ? '+' : '';
-      return `${prefix}${rounded.toFixed(decimals).replace('.', ',')} %`;
-    };
-    const deltaAmountText = (amount, positiveLabel, negativeLabel, neutralLabel) => {
-      const value = _safeNum(amount);
-      if (Math.abs(value) < 0.005) return `${neutralLabel} : ${_fmtMoney(0, model.base)}`;
-      return `${value > 0 ? positiveLabel : negativeLabel} : ${_fmtMoney(Math.abs(value), model.base)}`;
-    };
     const isEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
     const trA = (fr, en) => isEn ? en : fr;
     const dayWord = trA('jours', 'days');
@@ -1415,77 +1402,7 @@ categoryTxMap, subcategoryTxMap
       }
     ];
 
-    const renderGlassCard = (c, idx) => {
-      const pct = clampPct(c.pct);
-      const liquidTop = Math.max(0, 100 - pct);
-      return `
-      <div class="analysis-stat analysis-stat--glass analysis-stat--glass-${escapeHTML(c.tint)}" title="${escapeHTML(c.title)}" style="animation:analysisGrow .55s ease ${idx*60}ms both; position:relative; isolation:isolate; overflow:hidden; padding:18px 18px 16px; border-radius:24px; border:1px solid rgba(255,255,255,.74); background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.90)); box-shadow:0 14px 34px rgba(148,163,184,.16), inset 0 1px 0 rgba(255,255,255,.88); min-height:196px; display:flex; flex-direction:column; justify-content:space-between; gap:14px;">
-        <span aria-hidden="true" style="position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 20% 12%, rgba(255,255,255,.94), rgba(255,255,255,0) 36%), radial-gradient(circle at 82% 18%, ${escapeHTML(c.glow)}, rgba(255,255,255,0) 38%), linear-gradient(180deg, rgba(255,255,255,.76), rgba(255,255,255,.36)); pointer-events:none;"></span>
-        <span aria-hidden="true" style="position:absolute; left:10px; right:10px; bottom:10px; top:10px; border-radius:20px; background:rgba(255,255,255,.16); border:1px solid ${escapeHTML(c.shell)}; box-shadow:inset 0 0 0 1px rgba(255,255,255,.24); pointer-events:none;"></span>
-        <span aria-hidden="true" style="position:absolute; left:10px; right:10px; bottom:10px; height:${pct}%; min-height:${pct > 0 ? 20 : 0}px; border-radius:0 0 20px 20px; overflow:hidden; pointer-events:none;">
-  <span style="position:absolute; inset:0; background:${escapeHTML(c.liquid)};"></span>
-
-  <span class="tb-water-glow" style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.18), rgba(255,255,255,0)); filter:blur(1px); animation:tbWaterGlow 6.2s linear infinite;"></span>
-
-  <svg class="tb-water-wave-back" viewBox="0 0 240 28" preserveAspectRatio="none"
-    style="position:absolute; left:-6px; bottom:0px; width:calc(100% + 140px); height:36px; opacity:.55; animation:tbWaveDriftBack 7.2s linear infinite;">
-    <path d="M0,16 C20,8 40,8 60,16 C80,24 100,24 120,16 C140,8 160,8 180,16 C200,24 220,24 240,16 L240,28 L0,28 Z"
-      fill="rgba(255,255,255,.45)"></path>
-  </svg>
-
-  <svg class="tb-water-wave-front" viewBox="0 0 320 34" preserveAspectRatio="none"
-    style="position:absolute; left:-8px; bottom:0px; width:calc(100% + 180px); height:42px; opacity:.92; animation:tbWaveDriftFront 5.1s linear infinite;">
-    <path d="M0,18 C24,8 48,8 72,18 C96,28 120,28 144,18 C168,8 192,8 216,18 C240,28 264,28 288,18 C304,12 312,12 320,18 L320,34 L0,34 Z"
-      fill="rgba(255,255,255,.65)"></path>
-  </svg>
-
-  <span class="tb-water-bubble" style="position:absolute; left:18%; bottom:12px; width:6px; height:6px; border-radius:999px; background:rgba(255,255,255,.14); animation:tbBubbleRise 5.0s ease-in infinite;"></span>
-  <span class="tb-water-bubble" style="position:absolute; left:61%; bottom:10px; width:4px; height:4px; border-radius:999px; background:rgba(255,255,255,.12); animation:tbBubbleRise 6.0s ease-in infinite 1.2s;"></span>
-  <span class="tb-water-bubble" style="position:absolute; left:77%; bottom:14px; width:5px; height:5px; border-radius:999px; background:rgba(255,255,255,.10); animation:tbBubbleRise 5.6s ease-in infinite 2.0s;"></span>
-</span>
-<span aria-hidden="true" style="position:absolute; left:10px; right:10px; top:calc(${liquidTop}% - 2px); height:24px; pointer-events:none; opacity:${pct > 3 ? '.98' : '0'};">
-  <svg viewBox="0 0 320 24" preserveAspectRatio="none" style="width:100%; height:100%; display:block;">
-    <path d="M0,14 C28,6 56,6 84,14 C112,22 140,22 168,14 C196,6 224,6 252,14 C280,22 300,22 320,14"
-      fill="none" stroke="rgba(255,255,255,.95)" stroke-width="4" stroke-linecap="round"></path>
-    <path d="M0,16 C28,9 56,9 84,16 C112,23 140,23 168,16 C196,9 224,9 252,16 C280,23 300,23 320,16"
-      fill="none" stroke="rgba(255,255,255,.34)" stroke-width="6" stroke-linecap="round" style="filter:blur(2px);"></path>
-  </svg>
-</span>
-        <span aria-hidden="true" style="position:absolute; left:26px; top:26px; bottom:26px; width:18px; border-radius:999px; background:${escapeHTML(c.haze)}; opacity:.58; pointer-events:none;"></span>
-        <div style="position:relative; z-index:1; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
-          <div>
-            <div class="analysis-stat-label" style="font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:rgba(15,23,42,.72);">${escapeHTML(c.label)}</div>
-            <div class="analysis-stat-meta" style="margin-top:4px; font-size:12px; color:rgba(15,23,42,.58);">${escapeHTML(c.hint)}</div>
-          </div>
-          <div style="font-size:11px; font-weight:800; color:rgba(15,23,42,.60);">${pct.toFixed(0)}%</div>
-        </div>
-        <div style="position:relative; z-index:1; display:flex; flex-direction:column; justify-content:flex-end; gap:8px; min-width:0; flex:1;">
-          <div class="analysis-stat-value" style="font-size:25px; line-height:1.14; color:#0f172a; text-shadow:0 1px 0 rgba(255,255,255,.40);">${escapeHTML(c.value)}</div>
-          <div class="analysis-stat-meta" style="font-size:12px; color:rgba(15,23,42,.66);">${escapeHTML(c.footer)}</div>
-        </div>
-      </div>`;
-    };
-
-    const renderDeltaCard = (idx) => `
-      <div class="analysis-stat analysis-stat--delta" style="animation:analysisGrow .55s ease ${idx*60}ms both; position:relative; overflow:hidden; padding:18px 18px 16px; border-radius:24px; border:1px solid rgba(255,255,255,.68); background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.88)); box-shadow:0 14px 34px rgba(148,163,184,.16), inset 0 1px 0 rgba(255,255,255,.84); min-height:196px; display:flex; flex-direction:column; justify-content:space-between; gap:14px;">
-        <span aria-hidden="true" style="position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 18% 14%, rgba(255,255,255,.92), rgba(255,255,255,0) 34%), linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.34)); pointer-events:none;"></span>
-        <div style="position:relative; z-index:1;">
-          <div class="analysis-stat-label" style="font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:rgba(15,23,42,.72);">${escapeHTML(trA('Écart de tendance', 'Trend gap'))}</div>
-          <div class="analysis-stat-meta" style="margin-top:4px; font-size:12px; color:rgba(15,23,42,.58);">${escapeHTML(trA('Projection finale comparée au budget app et à la référence pays.', 'Final projection compared with app budget and country reference.'))}</div>
-        </div>
-        <div style="position:relative; z-index:1; display:flex; flex-direction:column; gap:12px;">
-          <div style="padding:12px 14px; border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.38)); border:1px solid rgba(255,255,255,.78); box-shadow:inset 0 1px 0 rgba(255,255,255,.78);">
-            <div style="font-size:12px; color:rgba(15,23,42,.58);">${escapeHTML(trA('Vs budget app', 'Vs app budget'))}</div>
-            <div style="margin-top:4px; font-size:24px; font-weight:800; color:${escapeHTML(deltaBudgetTone)};">${escapeHTML(formatSignedPct(deltaBudgetPct))}</div>
-            <div style="margin-top:4px; font-size:12px; font-weight:750; color:rgba(15,23,42,.62);">${escapeHTML(deltaAmountText(deltaBudgetAmount, trA('Dépassement', 'Over budget'), trA('Économisé', 'Saved'), trA('Écart', 'Gap')))}</div>
-          </div>
-          <div style="padding:12px 14px; border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.38)); border:1px solid rgba(255,255,255,.78); box-shadow:inset 0 1px 0 rgba(255,255,255,.78);">
-            <div style="font-size:12px; color:rgba(15,23,42,.58);">${escapeHTML(trA('Vs référence pays', 'Vs country reference'))}</div>
-            <div style="margin-top:4px; font-size:24px; font-weight:800; color:${escapeHTML(deltaReferenceTone)};">${escapeHTML(formatSignedPct(deltaReferencePct))}</div>
-            <div style="margin-top:4px; font-size:12px; font-weight:750; color:rgba(15,23,42,.62);">${escapeHTML(deltaAmountText(deltaReferenceAmount, trA('Au-dessus', 'Above'), trA('Sous référence', 'Below reference'), trA('Écart', 'Gap')))}</div>
-          </div>
-        </div>
-      </div>`;
+    const progressView = window.TBAnalysisView;
 
     host.style.display = 'grid';
     host.style.gridTemplateColumns = 'repeat(auto-fit, minmax(250px, 1fr))';
@@ -1697,7 +1614,23 @@ categoryTxMap, subcategoryTxMap
         </div>
       </div>` : '';
 
-host.innerHTML = progressCards.map((c, idx) => renderGlassCard(c, idx)).join('') + renderDeltaCard(progressCards.length) + cashflowBlock + unpaidBlock + cashOnlyBlock;
+host.innerHTML = progressView?.renderAnalysisProgressPanels?.({
+  progressCards,
+  delta: {
+    deltaBudgetTone,
+    deltaBudgetPct,
+    deltaBudgetAmount,
+    deltaReferenceTone,
+    deltaReferencePct,
+    deltaReferenceAmount,
+  },
+  cashflowBlock,
+  unpaidBlock,
+  cashOnlyBlock,
+  formatCurrency: _fmtMoney,
+  currency: model.base,
+  isEn,
+}) || '';
   }
   function _txDrilldownId(tx, idx){
   return String(tx?.id || tx?.transaction_id || tx?.local_id || `${_txBudgetStart(tx)}|${tx?.label || ''}|${tx?.amount || ''}|${idx || 0}`);

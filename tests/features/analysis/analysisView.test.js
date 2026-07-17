@@ -10,6 +10,9 @@ import {
   renderAnalysisInsights,
   renderAnalysisNightCovered,
   renderAnalysisOverviewStrip,
+  renderAnalysisProgressDeltaCard,
+  renderAnalysisProgressGlassCard,
+  renderAnalysisProgressPanels,
   renderAnalysisReferenceMix,
   renderAnalysisReferenceSummary,
   renderAnalysisSubcategoryBreakdown,
@@ -211,6 +214,66 @@ describe('Analysis view helpers', () => {
     const html = renderAnalysisSubcategoryBreakdown({ model: { subcategorySeries: [] } });
 
     expect(html).toContain('Aucune sous-catégorie exploitée');
+  });
+
+  it('renders escaped Analysis progress glass cards', () => {
+    const html = renderAnalysisProgressGlassCard({
+      label: '<Budget>',
+      title: '<title>',
+      hint: '<hint>',
+      value: '120 AUD / 200 AUD',
+      footer: '<footer>',
+      pct: 125,
+      tint: 'blue',
+      glow: 'rgba(1,2,3,.2)',
+      shell: 'rgba(1,2,3,.3)',
+      liquid: 'linear-gradient(red, blue)',
+      haze: 'linear-gradient(white, blue)',
+    }, 2);
+
+    expect(html).toContain('analysis-stat--glass-blue');
+    expect(html).toContain('100%');
+    expect(html).toContain('&lt;Budget&gt;');
+    expect(html).toContain('&lt;title&gt;');
+    expect(html).toContain('tb-water-wave-front');
+  });
+
+  it('renders the progress delta card with localized labels and currency values', () => {
+    const html = renderAnalysisProgressDeltaCard({
+      deltaBudgetTone: '#ef4444',
+      deltaBudgetPct: 12.4,
+      deltaBudgetAmount: 34,
+      deltaReferenceTone: '#10b981',
+      deltaReferencePct: -5.2,
+      deltaReferenceAmount: -10,
+      currency: 'AUD',
+      isEn: true,
+      formatCurrency: (value, currency) => `${Number(value).toFixed(0)} ${currency}`,
+    });
+
+    expect(html).toContain('Trend gap');
+    expect(html).toContain('+12 %');
+    expect(html).toContain('-5,2 %');
+    expect(html).toContain('Over budget : 34 AUD');
+    expect(html).toContain('Below reference : 10 AUD');
+  });
+
+  it('assembles progress panels and preserves legacy cash blocks', () => {
+    const html = renderAnalysisProgressPanels({
+      progressCards: [{ label: 'Budget', value: '1 / 2', pct: 50, tint: 'rose' }],
+      delta: { deltaBudgetPct: 0, deltaReferencePct: 0 },
+      cashflowBlock: '<section data-cash>cash</section>',
+      unpaidBlock: '<section data-unpaid>unpaid</section>',
+      cashOnlyBlock: '<section data-cash-only>cash-only</section>',
+      formatCurrency: (value, currency) => `${Number(value).toFixed(0)} ${currency}`,
+      currency: 'EUR',
+    });
+
+    expect(html).toContain('analysis-stat--glass-rose');
+    expect(html).toContain('analysis-stat--delta');
+    expect(html).toContain('data-cash');
+    expect(html).toContain('data-unpaid');
+    expect(html).toContain('data-cash-only');
   });
 
   it('renders the reference summary with coverage, delta and context', () => {

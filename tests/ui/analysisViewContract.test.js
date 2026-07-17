@@ -47,6 +47,14 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).not.toContain('data-subkey="${escapeHTML(row.key)}"');
   });
 
+  it('keeps the Analysis progress cards delegated out of the legacy file', () => {
+    expect(legacy).toContain('progressView?.renderAnalysisProgressPanels');
+    expect(runtime).toContain('...analysisView');
+    expect(legacy).not.toContain('const renderGlassCard');
+    expect(legacy).not.toContain('const renderDeltaCard');
+    expect(legacy).not.toContain('analysis-stat--glass-${escapeHTML');
+  });
+
   it('keeps the Analysis reference panel delegated out of the legacy file', () => {
     expect(legacy).toContain('analysisView?.renderAnalysisReferenceSummary');
     expect(legacy).toContain('analysisView?.renderAnalysisReferenceMix');
