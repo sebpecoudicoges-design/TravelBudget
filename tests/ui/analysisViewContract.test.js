@@ -94,4 +94,12 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).not.toContain("roseType: 'area'");
     expect(legacy).not.toContain('visualMap: { min: 0');
   });
+
+  it('recovers from stale empty Analysis filters after lazy loading', () => {
+    expect(legacy).toContain('function _autoBroadenEmptyAnalysis()');
+    expect(legacy).toContain("['analysis-period','all']");
+    expect(legacy).toContain("['analysis-scope','all']");
+    expect(legacy).toContain("['analysis-mode','planned']");
+    expect(legacy).toContain('if (_autoBroadenEmptyAnalysis()) _renderAnalysisFilterSelects();');
+  });
 });

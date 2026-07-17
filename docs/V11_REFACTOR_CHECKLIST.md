@@ -141,6 +141,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Sortir Analyse du boot : filtres, tiroir et page Analyse chargent a l'ouverture, avec modules Vite Analyse importes a la demande.
   - [x] Rendre la navigation Analyse deterministe : attendre les donnees differees/gouvernance avant rendu.
   - [x] Ajouter une file de rendu Analyse (`tbRequestAnalysisRender`) avec retry DOM et relance apres donnees chargees.
+  - [x] Stabiliser Analyse quand les donnees/filtres locaux sont incoherents : refresh si transactions absentes et auto-elargissement des filtres vides.
   - [x] Sortir Cashflow du boot : `27_cashflow_curve.js` charge a la demande sur Dashboard via `tbEnsureCashflowCurve`, avec theme, KPI, boot-release et navigation compatibles lazy.
   - [x] Ajouter un loader transversal Sport/Travail leger pour que Nutrition, KPI et notifications lisent les calories d'activite sans ouvrir les onglets Sport ou Travail.
   - [x] Retirer le pre-cache CDN du service worker pour supprimer les violations CSP `connect-src` sur `cdn.jsdelivr.net`.

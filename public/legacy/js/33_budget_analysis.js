@@ -1,6 +1,3 @@
-/* =========================
-   Budget Analysis — immersive ECharts page
-   ========================= */
 (function () {
   const LS_KEY = 'tb_budget_analysis_filters_v1';
   const charts = { trajectory: null, category: null, categoryBars: null, velocity: null, heatmap: null, referenceMix: null };
@@ -227,8 +224,6 @@
     const { end } = _analysisRange();
     const today = _iso(new Date());
 
-    // Sur "période active", l’analyse doit s’arrêter à aujourd’hui
-    // pour éviter d’inclure le futur budgété dans les KPIs / catégories.
     if (_getSelectedPeriodId() === 'active' && end && today && end > today) {
       return today;
     }
@@ -676,8 +671,6 @@ function _analysisBucketOrder(){
     ? getBudgetSegmentForDate(dateISO)
     : null;
 
-  // Priorité à la conversion canonique utilisée par le reste de l’app.
-  // C’est important pour aligner Analyse et Dashboard.
   try {
     if (typeof window.amountToBudgetBaseForDate === 'function' && seg) {
       const inSegBase = window.amountToBudgetBaseForDate(a, from, dateISO);
@@ -692,7 +685,6 @@ function _analysisBucketOrder(){
     }
   } catch (_) {}
 
-  // Fallback FX direct uniquement si la conversion canonique n’est pas disponible.
   try {
     if (typeof window.tbFxConvertForDateCached === 'function') {
       const out = window.tbFxConvertForDateCached(a, from, base, dateISO);
@@ -815,6 +807,25 @@ function _sumTxArray(txs, base){
       if (excluded.size && excluded.has(cat)) return false;
       return true;
     });
+  }
+  function _hasAnalysisRowsForTravel(){
+    const id = String(_getSelectedTravelId() || '');
+    return _analysisTransactions().some(tx => {
+      const tid = String(tx?.travel_id || tx?.travelId || '');
+      const type = _txType(tx);
+      return (!id || !tid || tid === id) && ['expense','income'].includes(type) && (type !== 'expense' || (_txAffectsAnalysisDataset(tx) && !_isAnalysisInternalMovement(tx))) && !!(_txBudgetStart(tx) && _txBudgetEnd(tx));
+    });
+  }
+  function _autoBroadenEmptyAnalysis(){
+    if (_filteredTransactions().length || _filteredIncomeTransactions().length || !_hasAnalysisRowsForTravel()) return false;
+    let changed = false;
+    for (const [id, val] of [['analysis-period','all'],['analysis-scope','all'],['analysis-mode','planned'],['analysis-category-filter','all'],['analysis-subcategory-filter','all']]) {
+      const el = _el(id);
+      if (el && el.value !== val && [...el.options].some(o => o.value === val)) { el.value = val; changed = true; }
+    }
+    if (excludedCats.size) { excludedCats.clear(); changed = true; _renderCategoryExcludeChips([]); }
+    if (changed) _toggleRangeBox();
+    return changed;
   }
   function _outBudgetTransactions(){
     const mode = _el('analysis-mode')?.value || 'planned';
@@ -1176,8 +1187,6 @@ const todayBudgetConsumed = todayIdx >= 0
 
       const cashDate = _txCashDate(tx);
 
-      // Important : on divise par la durée complète de la dépense,
-      // pas seulement par les jours visibles dans le filtre.
       const fullBudgetDays = _daysInclusive(budgetStart, budgetEnd);
 
       if (!fullBudgetDays.length) return sum;
@@ -1225,7 +1234,7 @@ return {
   base, start, end, days, txs, spent, paidSpent,
 
   incomeReal: incomeRealAmount,
-  incomeToDate: incomeRealAmount, // ✅ AJOUT ICI
+  incomeToDate: incomeRealAmount,
   incomePlanned: incomePlannedAmount,
   expenseReal: paidSpent,
 expenseToDate: spentToToday,
@@ -1973,7 +1982,7 @@ function _openTxDrilldown(kind, key, model){
       if (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) return;
       if (typeof window.tbLoadAssets === "function") await window.tbLoadAssets();
       const tid = String(state?.activeTravelId || state?.period?.travel_id || state?.period?.travelId || "").trim();
-      if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid) return;
+      if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid && state?.transactions?.length) return;
       if (ensureAnalysisDeferredPromise) {
         await ensureAnalysisDeferredPromise;
         return;
@@ -2050,6 +2059,7 @@ function _openTxDrilldown(kind, key, model){
     excludePanelOpen = false;
     _renderCategoryExcludeChips(Array.isArray(filters.excludedCats) ? filters.excludedCats : []);
     _ensureEvents();
+    if (_autoBroadenEmptyAnalysis()) _renderAnalysisFilterSelects();
     await _loadReferenceCache();
     _renderAll();
   };
@@ -2097,13 +2107,4 @@ function _openTxDrilldown(kind, key, model){
       });
     }
   } catch (_) {}
-})();function forceSingleColumnMobile() {
-  if (window.innerWidth < 640) {
-    document.querySelectorAll(".kpi-grid").forEach(el => {
-      el.style.gridTemplateColumns = "1fr";
-    });
-  }
-}
-
-window.addEventListener("resize", forceSingleColumnMobile);
-forceSingleColumnMobile();
+})();
