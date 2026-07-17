@@ -1,4 +1,4 @@
-const TB_SW_VERSION = "travelbudget-pwa-v2";
+const TB_SW_VERSION = "travelbudget-pwa-10.5.188";
 const TB_STATIC_CACHE = `${TB_SW_VERSION}-static`;
 const TB_RUNTIME_CACHE = `${TB_SW_VERSION}-runtime`;
 
@@ -64,6 +64,21 @@ async function networkFirstNavigation(request) {
   }
 }
 
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request, { cache: "no-store" });
+    if (shouldCache(request) && response && response.ok) {
+      const cache = await caches.open(TB_RUNTIME_CACHE);
+      cache.put(request, response.clone()).catch(() => {});
+    }
+    return response;
+  } catch (error) {
+    const fallback = await caches.match(request);
+    if (fallback) return fallback;
+    throw error;
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.mode === "navigate") {
@@ -71,6 +86,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (!shouldCache(request)) return;
+  if (["script", "style", "worker"].includes(request.destination)) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
   event.respondWith(cacheFirst(request));
 });
 

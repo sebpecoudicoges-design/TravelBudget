@@ -228,6 +228,9 @@ describe('legacy domain loader', () => {
     expect(main).toContain("if (key === 'analysis') await ensureAnalysisModules();");
     expect(navigation).toContain('window.tbLoadLegacyDomain("analysis")');
     expect(navigation).toContain('await window.tbEnsureDeferredData("analysis")');
+    expect(fs.readFileSync('public/legacy/js/00_constants.js', 'utf8')).toContain('console.info(`TB BUILD ${window.TB_VERSION}`)');
+    expect(fs.readFileSync('public/legacy/js/00_constants.js', 'utf8')).toContain('window.__tbBuildLogged');
+    expect(fs.readFileSync('public/legacy/js/08_refresh.js', 'utf8')).toContain('state.transactions.some((tx) => String(tx?.travel_id || tx?.travelId || "") === tid)');
     expect(navigation).toContain('window.tbRequestAnalysisRender("navigation")');
     expect(analysis).toContain('window.tbRequestAnalysisRender = function tbRequestAnalysisRender');
     expect(analysis).toContain("window.tbRequestAnalysisRender?.('data-loaded')");

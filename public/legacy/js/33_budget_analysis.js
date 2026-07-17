@@ -808,16 +808,13 @@ function _sumTxArray(txs, base){
       return true;
     });
   }
-  function _hasAnalysisRowsForTravel(){
-    const id = String(_getSelectedTravelId() || '');
-    return _analysisTransactions().some(tx => {
-      const tid = String(tx?.travel_id || tx?.travelId || '');
-      const type = _txType(tx);
-      return (!id || !tid || tid === id) && ['expense','income'].includes(type) && (type !== 'expense' || (_txAffectsAnalysisDataset(tx) && !_isAnalysisInternalMovement(tx))) && !!(_txBudgetStart(tx) && _txBudgetEnd(tx));
-    });
-  }
   function _autoBroadenEmptyAnalysis(){
-    if (_filteredTransactions().length || _filteredIncomeTransactions().length || !_hasAnalysisRowsForTravel()) return false;
+    const id = String(_getSelectedTravelId() || '');
+    const any = _analysisTransactions().some(tx => {
+      const tid = String(tx?.travel_id || tx?.travelId || ''), type = _txType(tx);
+      return (!id || !tid || tid === id) && ['expense','income'].includes(type) && (type !== 'expense' || (_txAffectsAnalysisDataset(tx) && !_isAnalysisInternalMovement(tx))) && _txBudgetStart(tx) && _txBudgetEnd(tx);
+    });
+    if (_filteredTransactions().length || _filteredIncomeTransactions().length || !any) return false;
     let changed = false;
     for (const [id, val] of [['analysis-period','all'],['analysis-scope','all'],['analysis-mode','planned'],['analysis-category-filter','all'],['analysis-subcategory-filter','all']]) {
       const el = _el(id);
@@ -1982,7 +1979,7 @@ function _openTxDrilldown(kind, key, model){
       if (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) return;
       if (typeof window.tbLoadAssets === "function") await window.tbLoadAssets();
       const tid = String(state?.activeTravelId || state?.period?.travel_id || state?.period?.travelId || "").trim();
-      if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid && state?.transactions?.length) return;
+      if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid && state?.transactions?.some((tx) => String(tx?.travel_id || tx?.travelId || "") === tid)) return;
       if (ensureAnalysisDeferredPromise) {
         await ensureAnalysisDeferredPromise;
         return;

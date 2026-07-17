@@ -49,7 +49,8 @@ window.tbEnsureDeferredData = async function tbEnsureDeferredData(reason) {
   try {
     if (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) return;
     const tid = String(window.state?.activeTravelId || "");
-    if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid) return;
+    const hasTx = !tid || (Array.isArray(window.state?.transactions) && window.state.transactions.some((tx) => String(tx?.travel_id || tx?.travelId || "") === tid));
+    if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid && hasTx) return;
     await refreshFromServer({ includeDeferredData: true, includeGovernance: reason === "analysis" || reason === "settings" });
   } catch (e) {
     console.warn("[TB] deferred data refresh failed:", e?.message || e);
