@@ -160,6 +160,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire le tiroir de transactions Analyse : CSS, titre, et lignes de detail quittent `33_budget_analysis.js` vers `33_analysis_drilldown_view.js`.
   - [x] Extraire les options de periode Analyse : periode active, tout le voyage, periodes datees et date-a-date passent dans `33_analysis_filter_view.js`.
   - [x] Extraire les cartes de progression Analyse : cartes liquides, delta budget/reference et assemblage quittent `33_budget_analysis.js` vers `analysisView.js`.
+  - [x] Extraire les panneaux Analyse cashflow et tresorerie pure : lecture projetee, reste budget, categories cash et couverture quittent `33_budget_analysis.js`.
   - [x] Nettoyer Dashboard : supprimer le rendu wallet activity duplique et les helpers morts associes, avec contrat anti-doublon.
   - [x] Extraire les etats d'aide et d'onboarding Dashboard : aide contexte, etat aucun wallet et onboarding rapide quittent `12_dashboard_render.js`.
   - [x] Extraire le rendu des cartes wallet Dashboard : contenu, actions, archive et barre budget quittent `12_dashboard_render.js`.

@@ -5,6 +5,7 @@ describe('Analysis view extraction contract', () => {
   const main = fs.readFileSync('src/main.js', 'utf8');
   const runtime = fs.readFileSync('src/features/analysis/analysisRuntime.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/33_budget_analysis.js', 'utf8');
+  const filterView = fs.readFileSync('public/legacy/js/33_analysis_filter_view.js', 'utf8');
 
   it('exposes the Analysis view module to the legacy runtime on demand', () => {
     expect(main).toContain("import('./features/analysis/analysisRuntime.js')");
@@ -53,6 +54,19 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).not.toContain('const renderGlassCard');
     expect(legacy).not.toContain('const renderDeltaCard');
     expect(legacy).not.toContain('analysis-stat--glass-${escapeHTML');
+  });
+
+  it('keeps the Analysis cashflow panels delegated out of the legacy file', () => {
+    expect(legacy).toContain('progressView?.renderAnalysisCashflowBlock');
+    expect(legacy).toContain('progressView?.renderAnalysisCashOnlyBlock');
+    expect(main).toContain("'/legacy/js/33_analysis_filter_view.js'");
+    expect(filterView).toContain('renderAnalysisCashflowBlock');
+    expect(filterView).toContain('renderAnalysisCashOnlyBlock');
+    expect(filterView).toContain('analysis-stat--cashflow');
+    expect(filterView).toContain('analysis-stat--cash-only');
+    expect(legacy).not.toContain('const cashIn = _safeNum(model.incomeReal)');
+    expect(legacy).not.toContain('analysis-stat--cashflow"');
+    expect(legacy).not.toContain('analysis-stat--cash-only"');
   });
 
   it('keeps the Analysis reference panel delegated out of the legacy file', () => {
