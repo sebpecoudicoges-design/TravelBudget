@@ -1993,9 +1993,34 @@ function _openTxDrilldown(kind, key, model){
     }
   }
 
-  window.renderBudgetAnalysis = async function renderBudgetAnalysis(){
+  let analysisRenderTimer = null;
+  let analysisRenderPromise = null;
+
+  window.tbRequestAnalysisRender = function tbRequestAnalysisRender(reason){
+    try {
+      if (analysisRenderTimer) clearTimeout(analysisRenderTimer);
+      analysisRenderTimer = setTimeout(() => {
+        analysisRenderTimer = null;
+        const view = (typeof activeView === 'string' && activeView) ? activeView : (window.activeView || '');
+        if (view !== 'analysis') return;
+        if (analysisRenderPromise) return;
+        analysisRenderPromise = Promise.resolve()
+          .then(() => window.renderBudgetAnalysis?.(reason || 'request'))
+          .catch((err) => console.warn('[analysis] requested render failed', err?.message || err))
+          .finally(() => { analysisRenderPromise = null; });
+      }, 30);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  window.renderBudgetAnalysis = async function renderBudgetAnalysis(reason){
     const travelSel = _el('analysis-travel');
-    if (!travelSel) return;
+    if (!travelSel) {
+      if (reason !== 'dom-retry') setTimeout(() => window.tbRequestAnalysisRender?.('dom-retry'), 60);
+      return;
+    }
     await _ensureAnalysisDeferredData();
     const filters = _loadFilters();
     const travels = _travelList();
@@ -2068,8 +2093,7 @@ function _openTxDrilldown(kind, key, model){
         referenceCache.loaded = false;
         const view = (typeof activeView === 'string' && activeView) ? activeView : (window.activeView || '');
         if (view !== 'analysis') return;
-        if (typeof window.tbRequestAnalysisRender === 'function') window.tbRequestAnalysisRender('data-loaded');
-        else if (typeof window.renderBudgetAnalysis === 'function') window.renderBudgetAnalysis();
+        window.tbRequestAnalysisRender?.('data-loaded');
       });
     }
   } catch (_) {}

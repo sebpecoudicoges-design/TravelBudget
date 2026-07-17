@@ -140,6 +140,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Sortir la FAQ Aide du boot : `31_help_faq.js` charge a l'ouverture de l'onglet Aide, tout en gardant l'assistant et le guide global au demarrage.
   - [x] Sortir Analyse du boot : filtres, tiroir et page Analyse chargent a l'ouverture, avec modules Vite Analyse importes a la demande.
   - [x] Rendre la navigation Analyse deterministe : attendre les donnees differees/gouvernance avant rendu.
+  - [x] Ajouter une file de rendu Analyse (`tbRequestAnalysisRender`) avec retry DOM et relance apres donnees chargees.
   - [x] Sortir Cashflow du boot : `27_cashflow_curve.js` charge a la demande sur Dashboard via `tbEnsureCashflowCurve`, avec theme, KPI, boot-release et navigation compatibles lazy.
   - [x] Ajouter un loader transversal Sport/Travail leger pour que Nutrition, KPI et notifications lisent les calories d'activite sans ouvrir les onglets Sport ou Travail.
   - [x] Retirer le pre-cache CDN du service worker pour supprimer les violations CSP `connect-src` sur `cdn.jsdelivr.net`.

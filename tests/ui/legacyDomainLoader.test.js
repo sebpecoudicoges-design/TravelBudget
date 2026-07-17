@@ -7,6 +7,7 @@ describe('legacy domain loader', () => {
   const offlineQueue = fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8');
   const assetsUi = fs.readFileSync('public/legacy/js/42_assets_ui.js', 'utf8');
   const inboxUi = fs.readFileSync('public/legacy/js/44_inbox_ui.js', 'utf8');
+  const analysis = fs.readFileSync('public/legacy/js/33_budget_analysis.js', 'utf8');
   const bridge = fs.readFileSync('src/app/bridge.js', 'utf8');
   const index = fs.readFileSync('index.html', 'utf8');
 
@@ -228,5 +229,8 @@ describe('legacy domain loader', () => {
     expect(navigation).toContain('window.tbLoadLegacyDomain("analysis")');
     expect(navigation).toContain('await window.tbEnsureDeferredData("analysis")');
     expect(navigation).toContain('window.tbRequestAnalysisRender("navigation")');
+    expect(analysis).toContain('window.tbRequestAnalysisRender = function tbRequestAnalysisRender');
+    expect(analysis).toContain("window.tbRequestAnalysisRender?.('data-loaded')");
+    expect(analysis).toContain("window.tbRequestAnalysisRender?.('dom-retry')");
   });
 });
