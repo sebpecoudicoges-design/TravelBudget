@@ -73,6 +73,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [x] Trip : extraire les vues Invitations et Formulaire Depense dans un module pur teste.
 - [x] Trip : rendre le split Montants intelligent avec reste partage automatiquement entre les participants non saisis.
   - [x] Extraire le rendu des participants du split Trip vers `tripView`, avec hooks stables et contrat anti-retour legacy.
+  - [x] Extraire le tableau Equal/Pourcentage/Montant du split Trip vers `tripView`, en gardant calculs et evenements dans le legacy.
 - [x] Trip : extraire le panneau d'aide contexte vers `tripView` et supprimer le `onclick` inline associe.
 - [x] Trip : extraire la carte d'audit des liens budget/transactions vers `tripView`.
 - [x] Trip : extraire le contenu de la fenetre Documents de depense vers une vue chargee a la demande.
@@ -138,8 +139,10 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Sortir Documents et Cautions du boot : `43_documents_ui.js` et `46_cautions_ui.js` chargent au premier affichage, avec liens Patrimoine/Inbox compatibles lazy.
   - [x] Sortir la FAQ Aide du boot : `31_help_faq.js` charge a l'ouverture de l'onglet Aide, tout en gardant l'assistant et le guide global au demarrage.
   - [x] Sortir Analyse du boot : filtres, tiroir et page Analyse chargent a l'ouverture, avec modules Vite Analyse importes a la demande.
+  - [x] Rendre la navigation Analyse deterministe : attendre les donnees differees/gouvernance avant rendu.
   - [x] Sortir Cashflow du boot : `27_cashflow_curve.js` charge a la demande sur Dashboard via `tbEnsureCashflowCurve`, avec theme, KPI, boot-release et navigation compatibles lazy.
   - [x] Ajouter un loader transversal Sport/Travail leger pour que Nutrition, KPI et notifications lisent les calories d'activite sans ouvrir les onglets Sport ou Travail.
+  - [x] Retirer le pre-cache CDN du service worker pour supprimer les violations CSP `connect-src` sur `cdn.jsdelivr.net`.
 - [ ] Decouper les gros bundles par domaine.
   - [x] Extraire le shell visuel Settings : hero, resumes de cartes et accordéons quittent `14_settings_periods_ui.js` vers `src/features/settings/settingsView.js`.
   - [x] Extraire le rendu du panneau Compte Settings : profil, santé, devise, mode UI, seuil cashflow et raccourcis notifications quittent le template inline legacy.

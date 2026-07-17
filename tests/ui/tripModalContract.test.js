@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('Trip shared modal migration', () => {
   const source = fs.readFileSync('public/legacy/js/29_trip_v1.js', 'utf8');
+  const tripView = fs.readFileSync('src/features/trip/tripView.js', 'utf8');
 
   it('routes the five priority Trip windows through the shared modal', () => {
     expect(source.match(/window\.UI\.createModal\(\{/g)).toHaveLength(5);
@@ -30,7 +31,8 @@ describe('Trip shared modal migration', () => {
   it('keeps the visible amount mode while delegating smart remaining split to rules', () => {
     expect(source).toContain('mode: "amount_auto"');
     expect(source).toContain('box.dataset.auto = "1"');
-    expect(source).toContain('data-auto="1"');
+    expect(source).toContain('tripView?.renderTripSplitBox');
+    expect(tripView).toContain('data-auto="1"');
     expect(source).toContain('mode: mode === "amount" && _el("trip-split-box")?.dataset?.auto === "1" ? "amount_auto" : mode');
   });
 });

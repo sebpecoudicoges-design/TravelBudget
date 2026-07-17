@@ -33,9 +33,7 @@ function shouldCache(request) {
   if (request.method !== "GET") return false;
   const url = new URL(request.url);
   if (url.origin === self.location.origin) return true;
-  return [
-    "cdn.jsdelivr.net"
-  ].includes(url.hostname);
+  return false;
 }
 
 async function cacheFirst(request) {

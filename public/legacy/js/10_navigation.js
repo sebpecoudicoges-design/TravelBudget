@@ -47,18 +47,23 @@ function showView(view) {
     try { if (typeof window.tbEnsureGovernanceData === "function") window.tbEnsureGovernanceData("settings"); } catch (_) {}
   }
   if (view === "analysis") {
-    try { if (typeof window.tbEnsureGovernanceData === "function") window.tbEnsureGovernanceData("analysis"); } catch (_) {}
-    if (typeof tbRequestAnalysisRender === 'function') tbRequestAnalysisRender('navigation');
-    else if (typeof renderBudgetAnalysis === 'function') renderBudgetAnalysis();
-    else if (typeof window.tbLoadLegacyDomain === "function") {
-      const root = document.getElementById("analysis-summary");
-      if (root) root.innerHTML = `<div class="muted">Chargement analyse...</div>`;
-      window.tbLoadLegacyDomain("analysis").then(() => {
-        if ((window.activeView || activeView) === "analysis") {
-          if (typeof window.tbRequestAnalysisRender === "function") window.tbRequestAnalysisRender("navigation:lazy");
-          else if (typeof window.renderBudgetAnalysis === "function") window.renderBudgetAnalysis();
-        }
-      }).catch((e) => {
+    const root = document.getElementById("analysis-summary");
+    if (root) root.innerHTML = `<div class="muted">Chargement analyse...</div>`;
+    const renderAnalysis = async () => {
+      try {
+        if (typeof window.tbEnsureDeferredData === "function") await window.tbEnsureDeferredData("analysis");
+        if ((window.activeView || activeView) !== "analysis") return;
+        if (typeof window.tbRequestAnalysisRender === "function") window.tbRequestAnalysisRender("navigation");
+        else if (typeof window.renderBudgetAnalysis === "function") await window.renderBudgetAnalysis();
+      } catch (e) {
+        console.error("[TB] Analysis render failed", e);
+        alert(`Analyse indisponible : ${e?.message || e}`);
+      }
+    };
+    if (typeof window.renderBudgetAnalysis === "function" || typeof window.tbRequestAnalysisRender === "function") {
+      renderAnalysis();
+    } else if (typeof window.tbLoadLegacyDomain === "function") {
+      window.tbLoadLegacyDomain("analysis").then(renderAnalysis).catch((e) => {
         console.error("[TB] Analysis lazy load failed", e);
         alert(`Analyse indisponible : ${e?.message || e}`);
       });

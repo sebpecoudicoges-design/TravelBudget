@@ -7,6 +7,7 @@ import {
   renderTripContextHelp,
   renderTripExpenseForm,
   renderTripLinkAuditCard,
+  renderTripSplitBox,
   renderTripSplitParticipants,
 } from '../../../src/features/trip/tripView.js';
 
@@ -122,6 +123,47 @@ describe('Trip view', () => {
     expect(html).toContain('Seb (moi)');
     expect(html).toContain('&lt;Alex&gt;');
     expect(html).toContain('En mode égal');
+  });
+
+  it('renders the percent split table with stable inputs', () => {
+    const html = renderTripSplitBox({
+      mode: 'percent',
+      members: [
+        { id: 'seb', name: 'Seb', isMe: true },
+        { id: 'alex', name: '<Alex>' },
+      ],
+      selectedMemberIds: ['alex'],
+      activeCount: 1,
+      previousPercents: { alex: '100' },
+    });
+    expect(html).toContain('Somme = 100%');
+    expect(html).toContain('trip-split-pct-seb');
+    expect(html).toContain('value="0" disabled');
+    expect(html).toContain('trip-split-pct-alex');
+    expect(html).toContain('value="100"');
+    expect(html).toContain('&lt;Alex&gt;');
+    expect(html).toContain('Les montants seront arrondis');
+  });
+
+  it('renders the amount split table with auto and manual values', () => {
+    const html = renderTripSplitBox({
+      mode: 'amount',
+      members: [
+        { id: 'seb', name: 'Seb', isMe: true },
+        { id: 'alex', name: 'Alex' },
+        { id: 'sam', name: 'Sam' },
+      ],
+      selectedMemberIds: ['seb', 'alex'],
+      amountAutoParts: [8.5, 6.25, 0],
+      previousAmounts: { alex: '7.00' },
+    });
+    expect(html).toContain('trip-split-amt-seb');
+    expect(html).toContain('value="8.50" data-auto="1"');
+    expect(html).toContain('trip-split-amt-alex');
+    expect(html).toContain('value="7.00" data-auto="0"');
+    expect(html).toContain('trip-split-amt-sam');
+    expect(html).toContain('value="0" data-auto="0" disabled');
+    expect(html).toContain('Montant');
   });
 
   it('renders expense document links with stable hooks and escaped names', () => {

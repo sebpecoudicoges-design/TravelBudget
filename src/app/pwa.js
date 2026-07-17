@@ -2,29 +2,14 @@ export function registerPwa() {
   if (typeof window === "undefined") return;
   let offlineBadgeTimer = null;
 
-  const collectCacheUrls = () => {
-    const urls = new Set([
+  const collectCacheUrls = () => [
       "/",
       "/index.html",
       "/offline.html",
       "/manifest.webmanifest",
       "/favicon.ico",
       "/pwa-icon.svg",
-    ]);
-    try {
-      document.querySelectorAll("script[src],link[href]").forEach((el) => {
-        const raw = el.getAttribute("src") || el.getAttribute("href") || "";
-        if (raw) urls.add(new URL(raw, window.location.origin).toString());
-      });
-      performance.getEntriesByType("resource").forEach((entry) => {
-        const name = String(entry?.name || "");
-        if (!name) return;
-        const url = new URL(name, window.location.origin);
-        if (url.origin === window.location.origin || url.hostname === "cdn.jsdelivr.net") urls.add(url.toString());
-      });
-    } catch (_) {}
-    return Array.from(urls);
-  };
+    ];
 
   const requestCacheWarmup = async (registration) => {
     try {

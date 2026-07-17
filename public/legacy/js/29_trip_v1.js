@@ -5095,70 +5095,39 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
         if (a !== undefined) prevAmt[m.id] = a;
       });
 
-      if (mode === "equal") {
-  box.innerHTML = `<div class="muted">Égal entre ${activeMembers.length} participant(s) coché(s).</div>`;
-  return;
-}
-
-      let rows = "";
-      if (mode === "percent") {
-        const def = activeMembers.length ? (100 / activeMembers.length) : 0;
-        members.forEach(m => {
-          const disabled = selectedSet.has(String(m.id)) ? "" : "disabled";
-          const seedPct = editingDraft?.split?.percents?.[m.id];
-          const v = (prevPct[m.id] ?? seedPct ?? def).toString();
-          rows += `<tr>
-            <td style="padding:6px 8px;">${escapeHTML(m.name || "—")}${m.isMe ? " <span class='muted'>(moi)</span>" : ""}</td>
-            <td style="padding:6px 8px; text-align:right;">
-              <input id="trip-split-pct-${m.id}" type="number" step="0.01" min="0" style="max-width:120px;" value="${escapeHTML(disabled ? "0" : v)}" ${disabled} />
-            </td>
-          </tr>`;
-        });
-        box.innerHTML = `
-          <div class="muted" style="margin-bottom:6px;">Somme = 100%</div>
-          <table style="width:100%; border-collapse:collapse;">
-            <thead><tr><th style="text-align:left; padding:6px 8px;">Participant</th><th style="text-align:right; padding:6px 8px;">%</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-          <div class="muted" style="margin-top:6px;">Les montants seront arrondis au centime et ajustés pour retomber exactement sur le total.</div>
-        `;
-        return;
+      const seedAmounts = members.reduce((acc, m) => {
+        const seedAmt = editingDraft?.split?.amounts?.[m.id];
+        acc[m.id] = prevAmt[m.id] ?? seedAmt ?? "";
+        return acc;
+      }, {});
+      let autoParts = [];
+      if (mode !== "amount") {
+        box.dataset.auto = "0";
       }
 
       if (mode === "amount") {
         box.dataset.auto = "1";
-        const autoParts = _computeSplitParts(amt, members, {
+        autoParts = _computeSplitParts(amt, members, {
           mode: "amount_auto",
           selectedMemberIds: selectedIds,
-          amounts: members.reduce((acc, m) => {
-            const seedAmt = editingDraft?.split?.amounts?.[m.id];
-            acc[m.id] = prevAmt[m.id] ?? seedAmt ?? "";
-            return acc;
-          }, {}),
+          amounts: seedAmounts,
         });
-        members.forEach(m => {
-          const isActive = selectedSet.has(String(m.id));
-          const disabled = isActive ? "" : "disabled";
-          const seedAmt = editingDraft?.split?.amounts?.[m.id];
-          const autoValue = autoParts[members.indexOf(m)] ?? 0;
-          const hasManualValue = prevAmt[m.id] !== undefined || seedAmt !== undefined;
-          const v = hasManualValue
-            ? (prevAmt[m.id] ?? seedAmt ?? "").toString()
-            : (isActive ? Number(autoValue || 0).toFixed(2) : "0");
-          const autoAttr = !hasManualValue && isActive ? `data-auto="1"` : `data-auto="0"`;
-          rows += `<tr>
-            <td style="padding:6px 8px;">${escapeHTML(m.name || "—")}${m.isMe ? " <span class='muted'>(moi)</span>" : ""}</td>
-            <td style="padding:6px 8px; text-align:right;">
-              <input id="trip-split-amt-${m.id}" type="number" step="0.01" min="0" style="max-width:140px;" value="${escapeHTML(disabled ? "0" : v)}" ${autoAttr} ${disabled} />
-            </td>
-          </tr>`;
-        });
-        box.innerHTML = `
-          <table style="width:100%; border-collapse:collapse;">
-            <thead><tr><th style="text-align:left; padding:6px 8px;">Participant</th><th style="text-align:right; padding:6px 8px;">Montant</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        `;
+      }
+
+      box.innerHTML = window.UI?.tripView?.renderTripSplitBox({
+        mode,
+        members,
+        selectedMemberIds: selectedIds,
+        activeCount: activeMembers.length,
+        amountAutoParts: autoParts,
+        previousPercents: prevPct,
+        previousAmounts: prevAmt,
+        seedPercents: editingDraft?.split?.percents || {},
+        seedAmounts,
+        escapeHTML,
+      }) || "";
+
+      if (mode === "amount") {
         members.forEach(m => {
           const input = _el(`trip-split-amt-${m.id}`);
           if (input && !input.disabled) {
@@ -5169,8 +5138,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
         });
         return;
       }
-
-      box.innerHTML = "";
+      return;
     }
 
     const splitModeSel = _el("trip-split-mode");

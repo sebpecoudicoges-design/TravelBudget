@@ -83,7 +83,7 @@ describe('Trip domain contract', () => {
   });
 
   it('delegates the extracted Trip view surfaces to src/features/trip', () => {
-    for (const token of ['renderPendingTripInvites', 'renderTripExpenseForm', 'renderTripContextHelp', 'renderTripLinkAuditCard', 'renderTripTabs', 'renderTripSplitParticipants']) {
+    for (const token of ['renderPendingTripInvites', 'renderTripExpenseForm', 'renderTripContextHelp', 'renderTripLinkAuditCard', 'renderTripTabs', 'renderTripSplitParticipants', 'renderTripSplitBox']) {
       expect(view).toContain(`export function ${token}`);
       expect(legacy).toContain(`tripView?.${token}`);
     }
@@ -98,5 +98,7 @@ describe('Trip domain contract', () => {
     expect(legacy).not.toContain('Ajouter ou lier un document');
     expect(legacy).not.toContain('<div class="trip-tabs">\\n            <button class="btn primary" id="trip-tab-recap"');
     expect(legacy).not.toContain('En mode égal, le total est réparti seulement entre les participants cochés');
+    expect(legacy).not.toContain('Somme = 100%');
+    expect(legacy).not.toContain('Les montants seront arrondis au centime');
   });
 });

@@ -226,6 +226,7 @@ describe('legacy domain loader', () => {
     expect(main).toContain('function ensureAnalysisModules()');
     expect(main).toContain("if (key === 'analysis') await ensureAnalysisModules();");
     expect(navigation).toContain('window.tbLoadLegacyDomain("analysis")');
-    expect(navigation).toContain('window.tbRequestAnalysisRender("navigation:lazy")');
+    expect(navigation).toContain('await window.tbEnsureDeferredData("analysis")');
+    expect(navigation).toContain('window.tbRequestAnalysisRender("navigation")');
   });
 });

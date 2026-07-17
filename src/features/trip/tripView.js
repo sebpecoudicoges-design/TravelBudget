@@ -114,3 +114,81 @@ export function renderTripSplitParticipants({
     <div class="muted" style="font-size:12px;margin-top:6px;">${escapeHTML(hint)}</div>
   `;
 }
+
+export function renderTripSplitBox({
+  mode = 'equal',
+  members,
+  selectedMemberIds,
+  activeCount,
+  amountAutoParts,
+  previousPercents,
+  previousAmounts,
+  seedPercents,
+  seedAmounts,
+  escapeHTML = fallbackEscape,
+}) {
+  const rows = Array.isArray(members) ? members : [];
+  const selected = new Set(Array.isArray(selectedMemberIds) ? selectedMemberIds.map(String) : []);
+  const activeRows = Number(activeCount) || rows.filter((member) => selected.has(String(member?.id ?? ''))).length;
+  const previousPct = previousPercents || {}, previousAmt = previousAmounts || {}, seededPct = seedPercents || {}, seededAmt = seedAmounts || {};
+  const nameCell = (member) => `${escapeHTML(member?.name || '—')}${member?.isMe ? " <span class='muted'>(moi)</span>" : ''}`;
+
+  if (mode === 'equal') {
+    return `<div class="muted">Égal entre ${activeRows} participant(s) coché(s).</div>`;
+  }
+
+  if (mode === 'percent') {
+    const def = activeRows ? (100 / activeRows) : 0;
+    const body = rows.map((member) => {
+      const id = String(member?.id ?? '');
+      const isActive = selected.has(id);
+      const disabled = isActive ? '' : 'disabled';
+      const value = (previousPct[id] ?? seededPct[id] ?? def).toString();
+      return `<tr>
+            <td style="padding:6px 8px;">${nameCell(member)}</td>
+            <td style="padding:6px 8px; text-align:right;">
+              <input id="trip-split-pct-${escapeHTML(id)}" type="number" step="0.01" min="0" style="max-width:120px;" value="${escapeHTML(isActive ? value : '0')}" ${disabled} />
+            </td>
+          </tr>`;
+    }).join('');
+
+    return `
+          <div class="muted" style="margin-bottom:6px;">Somme = 100%</div>
+          <table style="width:100%; border-collapse:collapse;">
+            <thead><tr><th style="text-align:left; padding:6px 8px;">Participant</th><th style="text-align:right; padding:6px 8px;">%</th></tr></thead>
+            <tbody>${body}</tbody>
+          </table>
+          <div class="muted" style="margin-top:6px;">Les montants seront arrondis au centime et ajustés pour retomber exactement sur le total.</div>
+        `;
+  }
+
+  if (mode === 'amount') {
+    const autoParts = Array.isArray(amountAutoParts) ? amountAutoParts : [];
+    const body = rows.map((member, index) => {
+      const id = String(member?.id ?? '');
+      const isActive = selected.has(id);
+      const disabled = isActive ? '' : 'disabled';
+      const autoValue = autoParts[index] ?? 0;
+      const hasManualValue = previousAmt[id] !== undefined || seededAmt[id] !== undefined;
+      const value = hasManualValue
+        ? (previousAmt[id] ?? seededAmt[id] ?? '').toString()
+        : (isActive ? Number(autoValue || 0).toFixed(2) : '0');
+      const autoAttr = !hasManualValue && isActive ? 'data-auto="1"' : 'data-auto="0"';
+      return `<tr>
+            <td style="padding:6px 8px;">${nameCell(member)}</td>
+            <td style="padding:6px 8px; text-align:right;">
+              <input id="trip-split-amt-${escapeHTML(id)}" type="number" step="0.01" min="0" style="max-width:140px;" value="${escapeHTML(isActive ? value : '0')}" ${autoAttr} ${disabled} />
+            </td>
+          </tr>`;
+    }).join('');
+
+    return `
+          <table style="width:100%; border-collapse:collapse;">
+            <thead><tr><th style="text-align:left; padding:6px 8px;">Participant</th><th style="text-align:right; padding:6px 8px;">Montant</th></tr></thead>
+            <tbody>${body}</tbody>
+          </table>
+        `;
+  }
+
+  return '';
+}
