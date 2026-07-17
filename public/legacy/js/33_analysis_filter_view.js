@@ -191,10 +191,76 @@
       </div>`;
   }
 
+  function renderUnpaidBlock({
+    model = {},
+    formatCurrency,
+    isEn = false,
+    categoryLabel,
+    subcategoryLabel,
+    tripLabel,
+  } = {}){
+    const unpaidRows = Array.isArray(model.unpaidTxDetails) ? model.unpaidTxDetails : [];
+    if (!unpaidRows.length) return "";
+    const tr = (fr, en) => isEn ? en : fr;
+    const money = (value) => formatMoney(formatCurrency, value, model.base);
+    const category = typeof categoryLabel === "function" ? categoryLabel : (tx) => tx?.category || "";
+    const subcategory = typeof subcategoryLabel === "function" ? subcategoryLabel : (tx) => tx?.subcategory || "";
+    const trip = typeof tripLabel === "function" ? tripLabel : () => "";
+
+    const rows = unpaidRows.slice(0, 8).map((row) => {
+      const tx = row?.tx || {};
+      const budgetRange = row?.budgetStart && row?.budgetEnd && row.budgetStart !== row.budgetEnd
+        ? `${row.budgetStart} -> ${row.budgetEnd}`
+        : (row?.budgetStart || "-");
+      const originalAmount = safeNum(tx.amount).toLocaleString("fr-FR", { maximumFractionDigits: 2 });
+      const originalCurrency = String(tx.currency || model.base || "").toUpperCase();
+      const sub = subcategory(tx);
+      return `
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid rgba(245,158,11,.18);">
+          <div style="min-width:0;">
+            <div style="font-size:13px;font-weight:900;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(tx.label || tx.category || "Transaction")}</div>
+            <div style="margin-top:4px;font-size:12px;color:rgba(120,53,15,.72);display:flex;gap:6px;flex-wrap:wrap;">
+              <span>Budget : ${escapeHTML(budgetRange)}</span>
+              <span>&middot;</span>
+              <span>${escapeHTML(category(tx) || "Autre")}${sub ? ` / ${escapeHTML(sub)}` : ""}</span>
+              <span>&middot;</span>
+              <span>${escapeHTML(trip(tx))}</span>
+            </div>
+          </div>
+          <div style="text-align:right;white-space:nowrap;">
+            <div style="font-size:14px;font-weight:950;color:#b45309;">${escapeHTML(money(row?.visibleAmount))}</div>
+            <div style="font-size:12px;color:rgba(120,53,15,.62);">${escapeHTML(`${originalAmount} ${originalCurrency}`)}</div>
+          </div>
+        </div>`;
+    }).join("");
+
+    const overflow = unpaidRows.length > 8
+      ? `<div style="font-size:12px;color:rgba(120,53,15,.72);padding-top:4px;">${escapeHTML(tr(`+ ${unpaidRows.length - 8} autre(s) ligne(s) dans la periode.`, `+ ${unpaidRows.length - 8} other row(s) in the period.`))}</div>`
+      : "";
+
+    return `
+      <div class="analysis-stat analysis-stat--unpaid"
+        style="grid-column:1 / -1; padding:18px 20px; border-radius:24px; border:1px solid rgba(245,158,11,.24); background:linear-gradient(135deg, rgba(255,251,235,.96), rgba(255,255,255,.88)); box-shadow:0 16px 38px rgba(245,158,11,.12);">
+        <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+          <div>
+            <div style="font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(120,53,15,.62);">${escapeHTML(tr("Sorties a payer identifiees", "Identified unpaid expenses"))}</div>
+            <h3 style="margin:5px 0 4px;font-size:23px;line-height:1.15;color:#78350f;">${escapeHTML(money(model.expensePlanned))}</h3>
+            <div style="font-size:13px;color:rgba(120,53,15,.72);">${escapeHTML(tr('Ces lignes expliquent l ecart entre "payees" et "payees + a payer" dans le filtre courant.', "These rows explain the gap between paid and paid + unpaid in the current filter."))}</div>
+          </div>
+          <div style="font-size:12px;font-weight:850;color:#92400e;">${escapeHTML(unpaidRows.length)} ${escapeHTML(tr("ligne(s)", "row(s)"))}</div>
+        </div>
+        <div style="margin-top:12px;display:grid;gap:8px;">
+          ${rows}
+          ${overflow}
+        </div>
+      </div>`;
+  }
+
   window.TBAnalysisView = {
     ...(window.TBAnalysisView || {}),
     renderAnalysisCashflowBlock: renderCashflowBlock,
     renderAnalysisCashOnlyBlock: renderCashOnlyBlock,
+    renderAnalysisUnpaidBlock: renderUnpaidBlock,
   };
 
   window.TBAnalysisFilterView = {

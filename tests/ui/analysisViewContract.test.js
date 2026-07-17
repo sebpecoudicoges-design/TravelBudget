@@ -69,6 +69,14 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).not.toContain('analysis-stat--cash-only"');
   });
 
+  it('keeps the Analysis unpaid panel delegated out of the legacy file', () => {
+    expect(legacy).toContain('progressView?.renderAnalysisUnpaidBlock');
+    expect(filterView).toContain('renderAnalysisUnpaidBlock');
+    expect(filterView).toContain('analysis-stat--unpaid');
+    expect(legacy).not.toContain('Identified unpaid expenses');
+    expect(legacy).not.toContain('unpaidRows.slice(0, 8)');
+  });
+
   it('keeps the Analysis reference panel delegated out of the legacy file', () => {
     expect(legacy).toContain('analysisView?.renderAnalysisReferenceSummary');
     expect(legacy).toContain('analysisView?.renderAnalysisReferenceMix');
