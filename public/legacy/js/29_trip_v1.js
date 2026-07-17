@@ -5055,24 +5055,11 @@ function _renderSplitParticipantsBox() {
   if (!box) return;
 
   const members = tripState.members || [];
-  const selected = new Set(
-    Array.isArray(tripState.editingExpenseDraft?.split?.selectedMemberIds)
-      ? tripState.editingExpenseDraft.split.selectedMemberIds.map(String)
-      : members.map(m => String(m.id))
-  );
-
-  box.innerHTML = `
-    <div class="muted" style="margin-bottom:6px;">Participants concernés</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;">
-      ${members.map(m => `
-        <label style="display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(148,163,184,.28);border-radius:999px;padding:6px 10px;background:rgba(255,255,255,.72);cursor:pointer;">
-          <input type="checkbox" data-trip-split-member="${escapeHTML(m.id)}" ${selected.has(String(m.id)) ? "checked" : ""} />
-          <span>${escapeHTML(m.name || "—")}${m.isMe ? " (moi)" : ""}</span>
-        </label>
-      `).join("")}
-    </div>
-    <div class="muted" style="font-size:12px;margin-top:6px;">En mode égal, le total est réparti seulement entre les participants cochés. Les autres ont une part à 0.</div>
-  `;
+  box.innerHTML = window.UI?.tripView?.renderTripSplitParticipants({
+    members,
+    selectedMemberIds: tripState.editingExpenseDraft?.split?.selectedMemberIds,
+    escapeHTML,
+  }) || "";
 
   box.querySelectorAll("[data-trip-split-member]").forEach(input => {
     input.onchange = () => _renderSplitBox();

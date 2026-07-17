@@ -72,6 +72,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
 - [x] Trip : migrer l'upsert, la lecture, la deduplication offline et les liens Depense-Transaction.
 - [x] Trip : extraire les vues Invitations et Formulaire Depense dans un module pur teste.
 - [x] Trip : rendre le split Montants intelligent avec reste partage automatiquement entre les participants non saisis.
+  - [x] Extraire le rendu des participants du split Trip vers `tripView`, avec hooks stables et contrat anti-retour legacy.
 - [x] Trip : extraire le panneau d'aide contexte vers `tripView` et supprimer le `onclick` inline associe.
 - [x] Trip : extraire la carte d'audit des liens budget/transactions vers `tripView`.
 - [x] Trip : extraire le contenu de la fenetre Documents de depense vers une vue chargee a la demande.

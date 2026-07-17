@@ -78,3 +78,39 @@ export function renderTripTabs(options) {
   const escapeHTML = options.escapeHTML || fallbackEscape;
   return `<div class="trip-tabs"><button class="btn primary" id="trip-tab-recap" type="button">${escapeHTML(options.recapLabel)}</button><button class="btn trip-tab-btn" id="trip-tab-history" type="button">${escapeHTML(options.historyLabel)}</button></div>`;
 }
+
+export function renderTripSplitParticipants({
+  members,
+  selectedMemberIds,
+  title = 'Participants concernés',
+  hint = 'En mode égal, le total est réparti seulement entre les participants cochés. Les autres ont une part à 0.',
+  meLabel = '(moi)',
+  emptyLabel = '—',
+  escapeHTML = fallbackEscape,
+}) {
+  const rows = Array.isArray(members) ? members : [];
+  const defaultSelected = rows.map((member) => String(member?.id ?? '')).filter(Boolean);
+  const selected = new Set(
+    Array.isArray(selectedMemberIds)
+      ? selectedMemberIds.map(String)
+      : defaultSelected,
+  );
+
+  return `
+    <div class="muted" style="margin-bottom:6px;">${escapeHTML(title)}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      ${rows.map((member) => {
+        const id = String(member?.id ?? '');
+        const checked = selected.has(id) ? 'checked' : '';
+        const name = member?.name || emptyLabel;
+        const suffix = member?.isMe ? ` ${meLabel}` : '';
+        return `
+        <label style="display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(148,163,184,.28);border-radius:999px;padding:6px 10px;background:rgba(255,255,255,.72);cursor:pointer;">
+          <input type="checkbox" data-trip-split-member="${escapeHTML(id)}" ${checked} />
+          <span>${escapeHTML(name)}${escapeHTML(suffix)}</span>
+        </label>`;
+      }).join('')}
+    </div>
+    <div class="muted" style="font-size:12px;margin-top:6px;">${escapeHTML(hint)}</div>
+  `;
+}

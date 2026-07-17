@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `92d7aacd15d06d929fc7439310fce5d3e376cc54`
-> Empreinte du snapshot : `d1eeb201208354306ec9145b1016dd8b94a03b555ca660421be3c6bca4131151`
-> Généré le : `2026-07-17T10:59:18.697Z`
+> Commit analysé : `f1f2252f93d120c64daef7ae3ff24d7e47c50855`
+> Empreinte du snapshot : `8631d3bc67e0306b53851ff931d81e9067f44f1493112c327aebd75691d81006`
+> Généré le : `2026-07-17T11:12:46.602Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.183` |
+| Version | `10.5.184` |
 | Écrans déclarés | 14 |
 | Scripts legacy référencés | 61 |
 | Modules core | 24 |
 | Modules data | 7 |
 | Modules features | 24 |
-| Fichiers de tests | 89 |
+| Fichiers de tests | 90 |
 | Migrations Supabase | 86 |
 | Fonctions Edge | 8 |
 | Projet Android présent | Oui |
@@ -242,6 +242,7 @@ Modules :
 - `tests/ui/architectureDocsContract.test.js`
 - `tests/ui/assetsDomainContract.test.js`
 - `tests/ui/assetsModalContract.test.js`
+- `tests/ui/cspContract.test.js`
 - `tests/ui/dashboardViewContract.test.js`
 - `tests/ui/errorBusContract.test.js`
 - `tests/ui/kpiRangePickerContract.test.js`
@@ -336,6 +337,7 @@ Modules :
 - `tests/ui/assetsDomainContract.test.js`
 - `tests/ui/assetsModalContract.test.js`
 - `tests/ui/components.test.js`
+- `tests/ui/cspContract.test.js`
 - `tests/ui/dashboardViewContract.test.js`
 - `tests/ui/errorBusContract.test.js`
 - `tests/ui/kpiRangePickerContract.test.js`

@@ -7,6 +7,7 @@ import {
   renderTripContextHelp,
   renderTripExpenseForm,
   renderTripLinkAuditCard,
+  renderTripSplitParticipants,
 } from '../../../src/features/trip/tripView.js';
 
 function loadTripDocumentView() {
@@ -105,6 +106,22 @@ describe('Trip view', () => {
     expect(html).toContain('id="trip-tab-history"');
     expect(html).toContain('&lt;Recap&gt;');
     expect(html).not.toContain('onclick=');
+  });
+
+  it('renders split participants with stable checkbox hooks', () => {
+    const html = renderTripSplitParticipants({
+      members: [
+        { id: 'seb', name: 'Seb', isMe: true },
+        { id: 'alex', name: '<Alex>' },
+      ],
+      selectedMemberIds: ['alex'],
+    });
+    expect(html).toContain('Participants concernés');
+    expect(html).toContain('data-trip-split-member="seb"');
+    expect(html).toContain('data-trip-split-member="alex" checked');
+    expect(html).toContain('Seb (moi)');
+    expect(html).toContain('&lt;Alex&gt;');
+    expect(html).toContain('En mode égal');
   });
 
   it('renders expense document links with stable hooks and escaped names', () => {
