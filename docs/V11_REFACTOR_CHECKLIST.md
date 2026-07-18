@@ -158,6 +158,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire le rendu Reference de periode Settings : pays, recommandation, prevu, ecart, postes et actions passent dans `settingsView.js`.
   - [x] Extraire l'overview Voyage Settings : resume voyage, reference, cadence, champs editables et postes quittent `14_settings_periods_ui.js`.
   - [x] Extraire le rendu Categories/Sous-categories Settings : cartes, actions, mapping analytique et sous-listes quittent `14_settings_periods_ui.js`.
+  - [x] Extraire les corps des modales guidees Categories/Sous-categories Settings vers `settingsCategoriesView.js`.
   - [x] Demarrer l'extraction Dashboard : le rendu onboarding quitte `12_dashboard_render.js` vers `dashboardView.js`.
   - [x] Demarrer l'extraction Analyse : l'overview de lecture quitte `33_budget_analysis.js` vers `analysisView.js`.
   - [x] Extraire les insights Analyse : messages de tendance, reference, categorie dominante et projection quittent `33_budget_analysis.js`.

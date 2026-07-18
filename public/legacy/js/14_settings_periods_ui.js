@@ -2304,23 +2304,13 @@ function _openGuidedCategoryModal(defaults = {}) {
     const modal = _tbEnsureModal();
     modal.setOnDismiss(() => resolve(null));
     modal.setTitle(defaults.title || 'Nouvelle catégorie');
-    modal.setBody(`
-      <div class="row">
-        <div class="field" style="flex:1;min-width:220px;">
-          <label for="tb-cat-create-name">Nom</label>
-          <input id="tb-cat-create-name" class="input" type="text" placeholder="Ex: Santé" value="${escapeHTML(defaults.name || '')}" />
-        </div>
-        <div class="field" style="min-width:160px;">
-          <label for="tb-cat-create-color">Couleur</label>
-          <input id="tb-cat-create-color" class="input" type="color" value="${escapeHTML(defaults.color || '#94a3b8')}" />
-        </div>
-      </div>
-      <div class="field">
-        <label for="tb-cat-create-mapping">Mapping analytique</label>
-        <select id="tb-cat-create-mapping" class="input">${_analyticSelectOptions(defaults.mapping || '__unmapped__', false)}</select>
-      </div>
-      <div class="muted" style="margin-top:8px;">Choisis le rattachement analytique dès la création. “À classer” ne crée aucune règle SQL.</div>
-    `);
+    modal.setBody(window.TBSettingsCategoriesView?.renderGuidedCategoryModalBody?.({
+      name: defaults.name || '',
+      color: defaults.color || '#94a3b8',
+      mapping: defaults.mapping || '__unmapped__',
+      analyticSelectOptions: _analyticSelectOptions,
+      esc: escapeHTML,
+    }) || '<div class="muted">Module catégories indisponible.</div>');
     modal.setActions([
       { label: 'Annuler', onClick: () => { modal.close(); resolve(null); } },
       { label: defaults.confirmLabel || 'Créer', className: 'btn primary', onClick: () => {
@@ -2342,27 +2332,14 @@ function _openGuidedSubcategoryModal(categoryName, defaults = {}) {
     modal.setOnDismiss(() => resolve(null));
     const category = String(categoryName || '').trim();
     modal.setTitle(defaults.title || `Nouvelle sous-catégorie · ${category}`);
-    modal.setBody(`
-      <div class="field">
-        <label>Catégorie</label>
-        <input class="input" type="text" value="${escapeHTML(category)}" disabled />
-      </div>
-      <div class="row">
-        <div class="field" style="flex:1;min-width:220px;">
-          <label for="tb-subcat-create-name">Nom</label>
-          <input id="tb-subcat-create-name" class="input" type="text" placeholder="Ex: Visa" value="${escapeHTML(defaults.name || '')}" />
-        </div>
-        <div class="field" style="min-width:160px;">
-          <label for="tb-subcat-create-color">Couleur optionnelle</label>
-          <input id="tb-subcat-create-color" class="input" type="text" placeholder="#94a3b8" value="${escapeHTML(defaults.color || '')}" />
-        </div>
-      </div>
-      <div class="field">
-        <label for="tb-subcat-create-mapping">Mapping analytique</label>
-        <select id="tb-subcat-create-mapping" class="input">${_analyticSelectOptions(defaults.mapping || '__inherit__', true)}</select>
-      </div>
-      <div class="muted" style="margin-top:8px;">Par défaut, une sous-catégorie hérite du mapping de sa catégorie. Aucune règle SQL n’est créée en mode héritage.</div>
-    `);
+    modal.setBody(window.TBSettingsCategoriesView?.renderGuidedSubcategoryModalBody?.({
+      category,
+      name: defaults.name || '',
+      color: defaults.color || '',
+      mapping: defaults.mapping || '__inherit__',
+      analyticSelectOptions: _analyticSelectOptions,
+      esc: escapeHTML,
+    }) || '<div class="muted">Module catégories indisponible.</div>');
     modal.setActions([
       { label: 'Annuler', onClick: () => { modal.close(); resolve(null); } },
       { label: defaults.confirmLabel || 'Créer', className: 'btn primary', onClick: () => {

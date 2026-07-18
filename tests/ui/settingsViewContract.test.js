@@ -31,6 +31,8 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.decorateSettingsPanels');
     expect(legacy).toContain('window.TBLoadSettingsCategoriesView');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderSettingsCategoriesList');
+    expect(legacy).toContain('window.TBSettingsCategoriesView?.renderGuidedCategoryModalBody');
+    expect(legacy).toContain('window.TBSettingsCategoriesView?.renderGuidedSubcategoryModalBody');
     expect(legacy).not.toContain('const cards = Array.from(view.querySelectorAll');
     expect(legacy).not.toContain('box.innerHTML = `');
     expect(legacy).not.toContain('const readNotificationForm = () =>');
@@ -44,5 +46,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('tb-v11-travel-hero tb-v11-travel-hero--minimal');
     expect(legacy).not.toContain('<div class="tb-subcat-row">');
     expect(legacy).not.toContain('<details class="tb-category-card"');
+    expect(legacy).not.toContain('<input id="tb-cat-create-name"');
+    expect(legacy).not.toContain('<input id="tb-subcat-create-name"');
   });
 });

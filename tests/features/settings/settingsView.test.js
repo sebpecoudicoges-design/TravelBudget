@@ -12,7 +12,11 @@ import {
   renderSettingsTravelOverview,
   setSettingsPanelState,
 } from '../../../src/features/settings/settingsView.js';
-import { renderSettingsCategoriesList } from '../../../src/features/settings/settingsCategoriesView.js';
+import {
+  renderGuidedCategoryModalBody,
+  renderGuidedSubcategoryModalBody,
+  renderSettingsCategoriesList,
+} from '../../../src/features/settings/settingsCategoriesView.js';
 
 describe('Settings view helpers', () => {
   const t = (key, vars = {}) => {
@@ -210,6 +214,31 @@ describe('Settings view helpers', () => {
     expect(html).toContain("saveAnalyticSubcategoryMapping('Food','Restaurant', this.value)");
     expect(html).toContain("moveSubcategory('sub-1','up')");
     expect(html).toContain("importExistingSubcategory('Food','&lt;Detected&gt;')");
+  });
+
+  it('renders guided category and subcategory modal bodies', () => {
+    const categoryHtml = renderGuidedCategoryModalBody({
+      name: '<Santé>',
+      color: '#ef4444',
+      mapping: 'food',
+      analyticSelectOptions: (value, inherit) => `<option data-inherit="${inherit}">${value}</option>`,
+    });
+    expect(categoryHtml).toContain('tb-cat-create-name');
+    expect(categoryHtml).toContain('&lt;Santé&gt;');
+    expect(categoryHtml).toContain('value="#ef4444"');
+    expect(categoryHtml).toContain('<option data-inherit="false">food</option>');
+
+    const subcategoryHtml = renderGuidedSubcategoryModalBody({
+      category: 'Food',
+      name: 'Visa',
+      color: '#94a3b8',
+      mapping: '__inherit__',
+      analyticSelectOptions: (value, inherit) => `<option data-inherit="${inherit}">${value}</option>`,
+    });
+    expect(subcategoryHtml).toContain('tb-subcat-create-name');
+    expect(subcategoryHtml).toContain('value="Food" disabled');
+    expect(subcategoryHtml).toContain('value="Visa"');
+    expect(subcategoryHtml).toContain('<option data-inherit="true">__inherit__</option>');
   });
 
   it('renders a period card with stable fields and actions', () => {

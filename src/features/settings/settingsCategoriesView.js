@@ -116,4 +116,65 @@ export function renderSettingsCategoriesList({
   return simpleNote + (body || '<div class="muted">Aucune catégorie. Ajoute-en une ci-dessus.</div>');
 }
 
-export default { renderSettingsCategoriesList };
+export function renderGuidedCategoryModalBody({
+  name = '',
+  color = '#94a3b8',
+  mapping = '__unmapped__',
+  analyticSelectOptions = () => '',
+  esc = defaultEsc,
+} = {}) {
+  return `
+      <div class="row">
+        <div class="field" style="flex:1;min-width:220px;">
+          <label for="tb-cat-create-name">Nom</label>
+          <input id="tb-cat-create-name" class="input" type="text" placeholder="Ex: Santé" value="${esc(name)}" />
+        </div>
+        <div class="field" style="min-width:160px;">
+          <label for="tb-cat-create-color">Couleur</label>
+          <input id="tb-cat-create-color" class="input" type="color" value="${esc(color || '#94a3b8')}" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="tb-cat-create-mapping">Mapping analytique</label>
+        <select id="tb-cat-create-mapping" class="input">${analyticSelectOptions(mapping || '__unmapped__', false)}</select>
+      </div>
+      <div class="muted" style="margin-top:8px;">Choisis le rattachement analytique dès la création. “À classer” ne crée aucune règle SQL.</div>
+    `;
+}
+
+export function renderGuidedSubcategoryModalBody({
+  category = '',
+  name = '',
+  color = '',
+  mapping = '__inherit__',
+  analyticSelectOptions = () => '',
+  esc = defaultEsc,
+} = {}) {
+  return `
+      <div class="field">
+        <label>Catégorie</label>
+        <input class="input" type="text" value="${esc(category)}" disabled />
+      </div>
+      <div class="row">
+        <div class="field" style="flex:1;min-width:220px;">
+          <label for="tb-subcat-create-name">Nom</label>
+          <input id="tb-subcat-create-name" class="input" type="text" placeholder="Ex: Visa" value="${esc(name)}" />
+        </div>
+        <div class="field" style="min-width:160px;">
+          <label for="tb-subcat-create-color">Couleur optionnelle</label>
+          <input id="tb-subcat-create-color" class="input" type="text" placeholder="#94a3b8" value="${esc(color)}" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="tb-subcat-create-mapping">Mapping analytique</label>
+        <select id="tb-subcat-create-mapping" class="input">${analyticSelectOptions(mapping || '__inherit__', true)}</select>
+      </div>
+      <div class="muted" style="margin-top:8px;">Par défaut, une sous-catégorie hérite du mapping de sa catégorie. Aucune règle SQL n’est créée en mode héritage.</div>
+    `;
+}
+
+export default {
+  renderGuidedCategoryModalBody,
+  renderGuidedSubcategoryModalBody,
+  renderSettingsCategoriesList,
+};
