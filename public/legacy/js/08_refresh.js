@@ -52,8 +52,47 @@ window.tbEnsureDeferredData = async function tbEnsureDeferredData(reason) {
     const hasTx = !tid || (Array.isArray(window.state?.transactions) && window.state.transactions.some((tx) => String(tx?.travel_id || tx?.travelId || "") === tid));
     if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid && hasTx) return;
     await refreshFromServer({ includeDeferredData: true, includeGovernance: reason === "analysis" || reason === "settings" });
+    await window.tbEnsureActiveTravelTransactions?.(reason || "deferred");
   } catch (e) {
     console.warn("[TB] deferred data refresh failed:", e?.message || e);
+  }
+};
+
+window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTransactions(reason) {
+  try {
+    const tid = String(window.state?.activeTravelId || "");
+    if (!tid || (window.state?.transactions || []).some((tx) => String(tx?.travel_id || tx?.travelId || "") === tid)) return false;
+    const sbc = window.sb || window.__TB_SB__;
+    const user = (await sbc?.auth?.getUser?.())?.data?.user;
+    if (!sbc || !user?.id) return false;
+    const sel = "id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,internal_transfer_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,paid_at,out_of_budget,night_covered,affects_budget,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status";
+    let from = 0, rows = [];
+    while (true) {
+      const { data, error } = await sbc.from(TB_CONST.TABLES.transactions).select(sel).eq("user_id", user.id).eq("travel_id", tid).order("created_at", { ascending: true }).range(from, from + 999);
+      if (error) throw error;
+      rows = rows.concat(data || []);
+      if (!data || data.length < 1000) break;
+      from += 1000;
+    }
+    if (!rows.length) return false;
+    const mapped = rows.map((x) => ({
+      id: x.id, travelId: x.travel_id || null, travel_id: x.travel_id || null, periodId: x.period_id || null, period_id: x.period_id || null, walletId: x.wallet_id, wallet_id: x.wallet_id,
+      type: x.type, amount: Number(x.amount), currency: x.currency, category: x.category, subcategory: x.subcategory || null, label: x.label || "",
+      tripExpenseId: x.trip_expense_id || null, trip_expense_id: x.trip_expense_id || null, tripShareLinkId: x.trip_share_link_id || null, trip_share_link_id: x.trip_share_link_id || null,
+      internalTransferId: x.internal_transfer_id || null, internal_transfer_id: x.internal_transfer_id || null, isInternal: !!x.is_internal, is_internal: !!x.is_internal,
+      affectsBudget: x.affects_budget !== false, affects_budget: x.affects_budget !== false, dateStart: x.date_start, date_start: x.date_start, dateEnd: x.date_end, date_end: x.date_end,
+      budgetDateStart: x.budget_date_start || x.date_start, budget_date_start: x.budget_date_start || x.date_start, budgetDateEnd: x.budget_date_end || x.budget_date_start || x.date_end || x.date_start, budget_date_end: x.budget_date_end || x.budget_date_start || x.date_end || x.date_start,
+      payNow: x.pay_now !== false, pay_now: x.pay_now !== false, paidAt: x.paid_at || null, paid_at: x.paid_at || null, outOfBudget: !!x.out_of_budget, out_of_budget: !!x.out_of_budget, nightCovered: !!x.night_covered, night_covered: !!x.night_covered,
+      recurringRuleId: x.recurring_rule_id || null, recurring_rule_id: x.recurring_rule_id || null, occurrenceDate: x.occurrence_date || null, occurrence_date: x.occurrence_date || null, generatedByRule: !!x.generated_by_rule, generated_by_rule: !!x.generated_by_rule, recurringInstanceStatus: x.recurring_instance_status || null, recurring_instance_status: x.recurring_instance_status || null,
+      createdAt: new Date(x.created_at).getTime(), created_at: x.created_at, date: x.date_start ? new Date(String(x.date_start) + "T00:00:00").getTime() : new Date(x.created_at).getTime()
+    }));
+    window.state.transactions = (window.state.transactions || []).filter((tx) => String(tx?.travel_id || tx?.travelId || "") !== tid).concat(mapped);
+    window.__tbDeferredDataLoadedForTravel = tid;
+    console.info("[TB] active travel transactions loaded", { reason, travelId: tid, count: mapped.length });
+    return true;
+  } catch (e) {
+    console.warn("[TB] active travel transactions fallback failed:", e?.message || e);
+    return false;
   }
 };
 
