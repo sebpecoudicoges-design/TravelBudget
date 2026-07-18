@@ -243,6 +243,8 @@ describe('legacy domain loader', () => {
     const refresh = fs.readFileSync('public/legacy/js/08_refresh.js', 'utf8');
     expect(refresh).toContain('window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTransactions');
     expect(refresh).toContain('travelId || window.state?.activeTravelId');
+    expect(refresh).toContain('String(reason || "").startsWith("analysis")');
+    expect(refresh).toContain('__tbAnalysisTransactionsHydratedForTravel');
     expect(refresh).toContain('sbc.from(TB_CONST.TABLES.transactions)');
     expect(refresh).toContain('window.state.transactions = (window.state.transactions || []).filter');
     expect(refresh).toContain('active travel transactions loaded');

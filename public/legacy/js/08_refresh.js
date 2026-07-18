@@ -61,7 +61,9 @@ window.tbEnsureDeferredData = async function tbEnsureDeferredData(reason) {
 window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTransactions(reason, travelId) {
   try {
     const tid = String(travelId || window.state?.activeTravelId || window.state?.period?.travel_id || window.state?.period?.travelId || "").trim();
-    if (!tid || (window.state?.transactions || []).some((tx) => String(tx?.travel_id || tx?.travelId || "") === tid)) return false;
+    const isAnalysis = String(reason || "").startsWith("analysis");
+    const txCount = (window.state?.transactions || []).filter((tx) => String(tx?.travel_id || tx?.travelId || "") === tid).length;
+    if (!tid || (txCount && !isAnalysis) || (isAnalysis && String(window.__tbAnalysisTransactionsHydratedForTravel || "") === tid && txCount > 100)) return false;
     const sbc = window.sb || window.__TB_SB__;
     const user = (await sbc?.auth?.getUser?.())?.data?.user;
     if (!sbc || !user?.id) return false;
@@ -88,7 +90,8 @@ window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTra
     }));
     window.state.transactions = (window.state.transactions || []).filter((tx) => String(tx?.travel_id || tx?.travelId || "") !== tid).concat(mapped);
     window.__tbDeferredDataLoadedForTravel = tid;
-    console.info("[TB] active travel transactions loaded", { reason, travelId: tid, count: mapped.length });
+    if (isAnalysis) window.__tbAnalysisTransactionsHydratedForTravel = tid;
+    console.info("[TB] active travel transactions loaded", { reason, travelId: tid, before: txCount, count: mapped.length });
     return true;
   } catch (e) {
     console.warn("[TB] active travel transactions fallback failed:", e?.message || e);
