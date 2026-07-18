@@ -58,9 +58,9 @@ window.tbEnsureDeferredData = async function tbEnsureDeferredData(reason) {
   }
 };
 
-window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTransactions(reason) {
+window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTransactions(reason, travelId) {
   try {
-    const tid = String(window.state?.activeTravelId || "");
+    const tid = String(travelId || window.state?.activeTravelId || window.state?.period?.travel_id || window.state?.period?.travelId || "").trim();
     if (!tid || (window.state?.transactions || []).some((tx) => String(tx?.travel_id || tx?.travelId || "") === tid)) return false;
     const sbc = window.sb || window.__TB_SB__;
     const user = (await sbc?.auth?.getUser?.())?.data?.user;

@@ -113,12 +113,7 @@
     };
   }
   function _rangeInputs(){
-    
-    return {
-      start: _el('analysis-range-start'),
-      end: _el('analysis-range-end'),
-      box: _el('analysis-range-box')
-    };
+    return { start: _el('analysis-range-start'), end: _el('analysis-range-end'), box: _el('analysis-range-box') };
   }
   function _allSegments(){ return Array.isArray(state?.budgetSegments) ? state.budgetSegments.filter(Boolean) : []; }
   function _segmentsForTravel(travelId){
@@ -1979,22 +1974,15 @@ function _openTxDrilldown(kind, key, model){
     try {
       if (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) return;
       if (typeof window.tbLoadAssets === "function") await window.tbLoadAssets();
-      const tid = String(state?.activeTravelId || state?.period?.travel_id || state?.period?.travelId || "").trim();
-      if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid && state?.transactions?.some((tx) => String(tx?.travel_id || tx?.travelId || "") === tid)) return;
+      const tid=String(_el('analysis-travel')?.value||state?.activeTravelId||state?.period?.travel_id||state?.period?.travelId||'').trim();
+      if(tid&&String(window.__tbDeferredDataLoadedForTravel||"")===tid&&state?.transactions?.some((tx)=>String(tx?.travel_id||tx?.travelId||"")===tid))return;
       if (ensureAnalysisDeferredPromise) {
         await ensureAnalysisDeferredPromise;
         return;
       }
-      if (typeof refreshFromServer !== "function") return;
-      ensureAnalysisDeferredPromise = refreshFromServer({
-        includeDeferredData: true,
-        includeGovernance: true,
-        skipRender: true,
-        skipFinancialRender: true,
-      });
-      await ensureAnalysisDeferredPromise;
+      if(typeof refreshFromServer==="function"){ensureAnalysisDeferredPromise=refreshFromServer({includeDeferredData:true,includeGovernance:true,skipRender:true,skipFinancialRender:true});await ensureAnalysisDeferredPromise;}
     } catch (err) {
-      console.warn("[analysis] deferred mapping refresh failed", err?.message || err);
+      console.warn("[analysis] deferred refresh failed", err?.message || err);
     } finally {
       ensureAnalysisDeferredPromise = null;
     }
@@ -2043,6 +2031,7 @@ function _openTxDrilldown(kind, key, model){
       else if (!travelSel.value && travels[0]?.id) travelSel.value = String(travels[0].id);
     }
     _fillPeriodSelect(travelSel.value || String(state?.activeTravelId || ''), filters.periodId || 'active');
+    await window.tbEnsureActiveTravelTransactions?.("analysis", travelSel.value || state?.activeTravelId);
     const range = _rangeInputs();
     if (range.start) range.start.value = filters.rangeStart || '';
     if (range.end) range.end.value = filters.rangeEnd || '';

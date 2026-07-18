@@ -242,9 +242,11 @@ describe('legacy domain loader', () => {
   it('keeps a direct transaction hydration fallback for Analysis', () => {
     const refresh = fs.readFileSync('public/legacy/js/08_refresh.js', 'utf8');
     expect(refresh).toContain('window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTransactions');
+    expect(refresh).toContain('travelId || window.state?.activeTravelId');
     expect(refresh).toContain('sbc.from(TB_CONST.TABLES.transactions)');
     expect(refresh).toContain('window.state.transactions = (window.state.transactions || []).filter');
     expect(refresh).toContain('active travel transactions loaded');
+    expect(analysis).toContain('await window.tbEnsureActiveTravelTransactions?.("analysis", travelSel.value');
   });
 
   it('keeps Sport program edits in SQL and Analysis on a usable trip context', () => {
