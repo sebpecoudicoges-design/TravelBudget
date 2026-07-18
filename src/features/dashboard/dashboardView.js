@@ -1,10 +1,6 @@
+const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 function defaultEsc(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ESC[char]);
 }
 
 function fallbackT(key, vars) {
@@ -418,16 +414,3 @@ export function renderWalletTypesFixDialog({
     </div>
   `;
 }
-
-export default {
-  renderDashboardOnboardingPanel,
-  renderDashboardContextHelp,
-  renderWalletEmptyState,
-  renderWalletQuickOnboarding,
-  renderWalletCard,
-  renderDailyBudgetControls,
-  renderDailyBudgetDay,
-  renderWalletCreateDialog,
-  renderWalletEditDialog,
-  renderWalletTypesFixDialog,
-};

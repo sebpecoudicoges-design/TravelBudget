@@ -380,10 +380,3 @@ export function bindSettingsAccountPanel({
     });
   }
 }
-
-export default {
-  bindSettingsAccountPanel,
-  buildSettingsNotificationPrefs,
-  isValidWhatsappPhone,
-  normalizeWhatsappPhone,
-};

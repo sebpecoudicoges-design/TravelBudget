@@ -23,6 +23,8 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodCard');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodReference');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsTravelOverview');
+    expect(legacy).toContain('window.TBSettingsView?.renderCreateVoyageModalBody');
+    expect(legacy).toContain('window.TBSettingsView?.renderCreatePeriodModalBody');
     expect(legacy).toContain('window.TBSettingsAccountController?.bindSettingsAccountPanel');
     expect(legacy).toContain('window.TBSettingsView?.getSettingsPanelState');
     expect(legacy).toContain('window.TBSettingsView?.setSettingsPanelState');
@@ -48,5 +50,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('<details class="tb-category-card"');
     expect(legacy).not.toContain('<input id="tb-cat-create-name"');
     expect(legacy).not.toContain('<input id="tb-subcat-create-name"');
+    expect(legacy).not.toContain('<input id="tb-vstart"');
+    expect(legacy).not.toContain('<input id="tb-pstart"');
   });
 });

@@ -1338,13 +1338,11 @@ async function _createVoyagePromptImpl(){
 
   const modal = _tbEnsureModal();
   modal.setTitle("Nouveau voyage");
-  modal.setBody(`
-    <div class="row">
-      <div class="field"><label for="tb-vstart">Début</label><input id="tb-vstart" type="date" value="${sugStart}" /></div>
-      <div class="field"><label for="tb-vend">Fin</label><input id="tb-vend" type="date" value="${sugEnd}" /></div>
-    </div>
-    <div class="muted" style="margin-top:8px;">Le voyage doit être non chevauchant.</div>
-  `);
+  modal.setBody(window.TBSettingsView?.renderCreateVoyageModalBody?.({
+    start: sugStart,
+    end: sugEnd,
+    esc: escapeHTML,
+  }) || '<div class="muted">Module Settings indisponible.</div>');
 
   modal.setActions([
     { label:"Annuler", className:"btn", onClick:()=>modal.close() },
@@ -1607,17 +1605,13 @@ async function _createPeriodPromptImpl(){
 
   const modal = _tbEnsureModal();
   modal.setTitle("Ajouter une période");
-  modal.setBody(`
-    <div class="row">
-      <div class="field"><label for="tb-pstart">Début</label><input id="tb-pstart" type="date" value="${vStart}" min="${vStart}" max="${vEnd}" /></div>
-      <div class="field"><label for="tb-pend">Fin</label><input id="tb-pend" type="date" value="${vEnd}" min="${vStart}" max="${vEnd}" /></div>
-    </div>
-    <div class="row">
-      <div class="field"><label for="tb-pcur">Devise</label><input id="tb-pcur" value="${(segs[0].base_currency||"EUR").toUpperCase()}" /></div>
-      <div class="field"><label for="tb-pbud">Budget/jour</label><input id="tb-pbud" value="${segs[0].daily_budget_base ?? 0}" /></div>
-    </div>
-    <div class="muted" style="margin-top:8px;">La nouvelle période doit être incluse dans une période existante (split automatique).</div>
-  `);
+  modal.setBody(window.TBSettingsView?.renderCreatePeriodModalBody?.({
+    start: vStart,
+    end: vEnd,
+    currency: segs[0].base_currency || "EUR",
+    dailyBudget: segs[0].daily_budget_base ?? 0,
+    esc: escapeHTML,
+  }) || '<div class="muted">Module Settings indisponible.</div>');
   modal.setActions([
     { label:"Annuler", className:"btn", onClick:()=>modal.close() },
     { label:"Ajouter", className:"btn primary", onClick:async ()=>{

@@ -1,10 +1,6 @@
+const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 function defaultEsc(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ESC[char]);
 }
 
 export function renderSettingsCategoriesList({
@@ -22,7 +18,7 @@ export function renderSettingsCategoriesList({
 } = {}) {
   const cats = Array.isArray(categories) ? categories : [];
   const simpleNote = simpleMode
-    ? '<div class="tb-simple-mode-note">Mode simple : les réglages analytiques avancés sont masqués ici. Passe en mode avancé pour gouverner le mapping analytique.</div>'
+    ? '<div class="tb-simple-mode-note">Mode simple : mapping analytique masqué. Passe en mode avancé pour le gérer.</div>'
     : '';
   const body = cats.map((category) => {
     const name = String(category || '').trim();
@@ -50,68 +46,15 @@ export function renderSettingsCategoriesList({
           const subSelectValue = subMapping.explicit
             ? (subMapping.mappingStatus === 'mapped' ? String(subMapping.analyticFamily || '').trim().toLowerCase() : '__excluded__')
             : '__inherit__';
-          return `
-            <div class="tb-subcat-row">
-              <div class="tb-subcat-main">
-                <strong>${esc(subName)}</strong>
-                <div class="tb-subcat-meta">
-                  <span class="tb-settings-pill ${active ? 'tb-settings-pill--positive' : ''}">${active ? 'Active' : 'Inactive'}</span>
-                  <span class="tb-settings-pill">${sourceLabel}</span>
-                  <span class="tb-settings-pill tb-advanced-only">${esc(subMapping.sourceLabel || 'À classer')}</span>
-                  <span class="tb-advanced-only">${analyticStatusPillHtml(subMapping)}</span>
-                  <span class="tb-advanced-only">${analyticUsagePillHtml(subUsage.txCount)}</span>
-                  ${subColor ? `<span class="tb-subcat-color" title="${esc(subColor)}" style="background:${esc(subColor)}"></span>` : ''}
-                </div>
-                <div class="muted tb-advanced-only" style="margin-top:6px;">Analyse : ${esc(subMapping.mappingStatus === 'mapped' ? analyticFamilyLabel(subMapping.analyticFamily) : (subMapping.mappingStatus === 'excluded' ? 'Exclue' : 'À classer'))}</div>
-              </div>
-              <div class="tb-subcat-actions" style="align-items:flex-end; gap:6px;">
-                <select class="input tb-advanced-only" style="min-width:190px;" onchange="saveAnalyticSubcategoryMapping('${esc(name)}','${esc(subName)}', this.value)">${analyticSelectOptions(subSelectValue, true)}</select>
-                <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end;">
-                  ${isSql
-                    ? `<button class="btn" onclick="moveSubcategory('${esc(String(row?.id || ''))}','up')">↑</button>
-                       <button class="btn" onclick="moveSubcategory('${esc(String(row?.id || ''))}','down')">↓</button>
-                       <button class="btn" onclick="editSubcategory('${esc(String(row?.id || ''))}')">Modifier</button>
-                       <button class="btn" onclick="toggleSubcategoryActive('${esc(String(row?.id || ''))}', ${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button>`
-                    : `<button class="btn" onclick="importExistingSubcategory('${esc(name)}','${esc(subName)}')">Enregistrer</button>`}
-                </div>
-              </div>
-            </div>`;
+          const id = esc(String(row?.id || ''));
+          const actions = isSql
+            ? `<button class="btn" onclick="moveSubcategory('${id}','up')">↑</button><button class="btn" onclick="moveSubcategory('${id}','down')">↓</button><button class="btn" onclick="editSubcategory('${id}')">Modifier</button><button class="btn" onclick="toggleSubcategoryActive('${id}',${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button>`
+            : `<button class="btn" onclick="importExistingSubcategory('${esc(name)}','${esc(subName)}')">Enregistrer</button>`;
+          return `<div class="tb-subcat-row"><div class="tb-subcat-main"><strong>${esc(subName)}</strong><div class="tb-subcat-meta"><span class="tb-settings-pill ${active ? 'tb-settings-pill--positive' : ''}">${active ? 'Active' : 'Inactive'}</span><span class="tb-settings-pill">${sourceLabel}</span><span class="tb-settings-pill tb-advanced-only">${esc(subMapping.sourceLabel || 'À classer')}</span><span class="tb-advanced-only">${analyticStatusPillHtml(subMapping)}</span><span class="tb-advanced-only">${analyticUsagePillHtml(subUsage.txCount)}</span>${subColor ? `<span class="tb-subcat-color" title="${esc(subColor)}" style="background:${esc(subColor)}"></span>` : ''}</div><div class="muted tb-advanced-only" style="margin-top:6px">Analyse : ${esc(subMapping.mappingStatus === 'mapped' ? analyticFamilyLabel(subMapping.analyticFamily) : (subMapping.mappingStatus === 'excluded' ? 'Exclue' : 'À classer'))}</div></div><div class="tb-subcat-actions" style="align-items:flex-end;gap:6px"><select class="input tb-advanced-only" style="min-width:190px" onchange="saveAnalyticSubcategoryMapping('${esc(name)}','${esc(subName)}',this.value)">${analyticSelectOptions(subSelectValue, true)}</select><div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end">${actions}</div></div></div>`;
         }).join('')
       : '<div class="muted" style="padding:8px 0;">Aucune sous-catégorie.</div>';
 
-    return `
-      <details class="tb-category-card" ${subRows.length ? '' : 'open'}>
-        <summary class="tb-category-head">
-          <div class="tb-category-head-left">
-            <span class="tb-category-swatch" style="background:${esc(col)}"></span>
-            <div>
-              <div class="tb-category-name">${esc(name)}</div>
-              <div class="tb-category-meta">${esc(String(subRows.length))} sous-catégorie${subRows.length > 1 ? 's' : ''} · ${esc(String(activeCount))} active${activeCount > 1 ? 's' : ''}${categoryUsageText}</div>
-            </div>
-          </div>
-          <div class="tb-category-head-actions">
-            <button class="btn" type="button" onclick="event.preventDefault(); event.stopPropagation(); addSubcategory('${esc(name)}')">+ Sous-catégorie</button>
-            <button class="btn" type="button" onclick="event.preventDefault(); event.stopPropagation(); deleteCategory('${esc(name)}')">Supprimer</button>
-          </div>
-        </summary>
-        <div class="tb-category-body">
-          <div class="tb-category-toolbar" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between;">
-            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-              <span class="muted">Couleur</span>
-              <span class="tb-category-swatch" style="background:${esc(col)}"></span>
-              <input type="color" value="${esc(col)}" style="width:44px;height:30px;padding:0;border:none;background:transparent;cursor:pointer;" onchange="setCategoryColor('${esc(name)}', this.value)" />
-              <span class="tb-advanced-only">${analyticStatusPillHtml(categoryMapping)}</span>
-              <span class="tb-advanced-only">${analyticUsagePillHtml(categoryUsage.txCount)}</span>
-              <span class="tb-settings-pill tb-advanced-only">${esc(categoryMapping.sourceLabel || 'À classer')}</span>
-            </div>
-            <div class="tb-advanced-only" style="display:flex; gap:8px; align-items:center;">
-              <span class="muted">Analyse</span>
-              <select class="input" style="min-width:190px;" onchange="saveAnalyticCategoryMapping('${esc(name)}', this.value)">${analyticSelectOptions(categorySelectValue, false)}</select>
-            </div>
-          </div>
-          <div class="tb-category-sublist">${subHtml}</div>
-        </div>
-      </details>`;
+    return `<details class="tb-category-card" ${subRows.length ? '' : 'open'}><summary class="tb-category-head"><div class="tb-category-head-left"><span class="tb-category-swatch" style="background:${esc(col)}"></span><div><div class="tb-category-name">${esc(name)}</div><div class="tb-category-meta">${esc(String(subRows.length))} sous-catégorie${subRows.length > 1 ? 's' : ''} · ${esc(String(activeCount))} active${activeCount > 1 ? 's' : ''}${categoryUsageText}</div></div></div><div class="tb-category-head-actions"><button class="btn" type="button" onclick="event.preventDefault();event.stopPropagation();addSubcategory('${esc(name)}')">+ Sous-catégorie</button><button class="btn" type="button" onclick="event.preventDefault();event.stopPropagation();deleteCategory('${esc(name)}')">Supprimer</button></div></summary><div class="tb-category-body"><div class="tb-category-toolbar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span class="muted">Couleur</span><span class="tb-category-swatch" style="background:${esc(col)}"></span><input type="color" value="${esc(col)}" style="width:44px;height:30px;padding:0;border:none;background:transparent;cursor:pointer" onchange="setCategoryColor('${esc(name)}',this.value)" /><span class="tb-advanced-only">${analyticStatusPillHtml(categoryMapping)}</span><span class="tb-advanced-only">${analyticUsagePillHtml(categoryUsage.txCount)}</span><span class="tb-settings-pill tb-advanced-only">${esc(categoryMapping.sourceLabel || 'À classer')}</span></div><div class="tb-advanced-only" style="display:flex;gap:8px;align-items:center"><span class="muted">Analyse</span><select class="input" style="min-width:190px" onchange="saveAnalyticCategoryMapping('${esc(name)}',this.value)">${analyticSelectOptions(categorySelectValue, false)}</select></div></div><div class="tb-category-sublist">${subHtml}</div></div></details>`;
   }).join('');
   return simpleNote + (body || '<div class="muted">Aucune catégorie. Ajoute-en une ci-dessus.</div>');
 }
@@ -123,23 +66,7 @@ export function renderGuidedCategoryModalBody({
   analyticSelectOptions = () => '',
   esc = defaultEsc,
 } = {}) {
-  return `
-      <div class="row">
-        <div class="field" style="flex:1;min-width:220px;">
-          <label for="tb-cat-create-name">Nom</label>
-          <input id="tb-cat-create-name" class="input" type="text" placeholder="Ex: Santé" value="${esc(name)}" />
-        </div>
-        <div class="field" style="min-width:160px;">
-          <label for="tb-cat-create-color">Couleur</label>
-          <input id="tb-cat-create-color" class="input" type="color" value="${esc(color || '#94a3b8')}" />
-        </div>
-      </div>
-      <div class="field">
-        <label for="tb-cat-create-mapping">Mapping analytique</label>
-        <select id="tb-cat-create-mapping" class="input">${analyticSelectOptions(mapping || '__unmapped__', false)}</select>
-      </div>
-      <div class="muted" style="margin-top:8px;">Choisis le rattachement analytique dès la création. “À classer” ne crée aucune règle SQL.</div>
-    `;
+  return `<div class="row"><div class="field" style="flex:1;min-width:220px"><label for="tb-cat-create-name">Nom</label><input id="tb-cat-create-name" class="input" type="text" placeholder="Ex: Santé" value="${esc(name)}" /></div><div class="field" style="min-width:160px"><label for="tb-cat-create-color">Couleur</label><input id="tb-cat-create-color" class="input" type="color" value="${esc(color || '#94a3b8')}" /></div></div><div class="field"><label for="tb-cat-create-mapping">Mapping analytique</label><select id="tb-cat-create-mapping" class="input">${analyticSelectOptions(mapping || '__unmapped__', false)}</select></div><div class="muted" style="margin-top:8px">Choisis le rattachement analytique. “À classer” ne crée aucune règle SQL.</div>`;
 }
 
 export function renderGuidedSubcategoryModalBody({
@@ -150,31 +77,5 @@ export function renderGuidedSubcategoryModalBody({
   analyticSelectOptions = () => '',
   esc = defaultEsc,
 } = {}) {
-  return `
-      <div class="field">
-        <label>Catégorie</label>
-        <input class="input" type="text" value="${esc(category)}" disabled />
-      </div>
-      <div class="row">
-        <div class="field" style="flex:1;min-width:220px;">
-          <label for="tb-subcat-create-name">Nom</label>
-          <input id="tb-subcat-create-name" class="input" type="text" placeholder="Ex: Visa" value="${esc(name)}" />
-        </div>
-        <div class="field" style="min-width:160px;">
-          <label for="tb-subcat-create-color">Couleur optionnelle</label>
-          <input id="tb-subcat-create-color" class="input" type="text" placeholder="#94a3b8" value="${esc(color)}" />
-        </div>
-      </div>
-      <div class="field">
-        <label for="tb-subcat-create-mapping">Mapping analytique</label>
-        <select id="tb-subcat-create-mapping" class="input">${analyticSelectOptions(mapping || '__inherit__', true)}</select>
-      </div>
-      <div class="muted" style="margin-top:8px;">Par défaut, une sous-catégorie hérite du mapping de sa catégorie. Aucune règle SQL n’est créée en mode héritage.</div>
-    `;
+  return `<div class="field"><label>Catégorie</label><input class="input" type="text" value="${esc(category)}" disabled /></div><div class="row"><div class="field" style="flex:1;min-width:220px"><label for="tb-subcat-create-name">Nom</label><input id="tb-subcat-create-name" class="input" type="text" placeholder="Ex: Visa" value="${esc(name)}" /></div><div class="field" style="min-width:160px"><label for="tb-subcat-create-color">Couleur optionnelle</label><input id="tb-subcat-create-color" class="input" type="text" placeholder="#94a3b8" value="${esc(color)}" /></div></div><div class="field"><label for="tb-subcat-create-mapping">Mapping analytique</label><select id="tb-subcat-create-mapping" class="input">${analyticSelectOptions(mapping || '__inherit__', true)}</select></div><div class="muted" style="margin-top:8px">Par défaut, héritage du mapping catégorie. Aucune règle SQL en héritage.</div>`;
 }
-
-export default {
-  renderGuidedCategoryModalBody,
-  renderGuidedSubcategoryModalBody,
-  renderSettingsCategoriesList,
-};

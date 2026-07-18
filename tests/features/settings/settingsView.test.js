@@ -4,6 +4,8 @@ import {
   getSettingsCardSummary,
   getSettingsPanelState,
   normalizeManualFxRates,
+  renderCreatePeriodModalBody,
+  renderCreateVoyageModalBody,
   renderSettingsAccountPanel,
   renderSettingsHero,
   renderSettingsManualFxPanel,
@@ -126,6 +128,33 @@ describe('Settings view helpers', () => {
     expect(html).toContain('id="tb-notif-open-manager"');
   });
 
+  it('renders create voyage and period modal bodies with stable fields', () => {
+    const voyageHtml = renderCreateVoyageModalBody({
+      start: '2026-07-18',
+      end: '2026-08-17',
+    });
+    expect(voyageHtml).toContain('id="tb-vstart"');
+    expect(voyageHtml).toContain('value="2026-07-18"');
+    expect(voyageHtml).toContain('id="tb-vend"');
+    expect(voyageHtml).toContain('value="2026-08-17"');
+    expect(voyageHtml).toContain('non chevauchant');
+
+    const periodHtml = renderCreatePeriodModalBody({
+      start: '2026-07-01',
+      end: '2026-07-31',
+      currency: '<aud>',
+      dailyBudget: '<85>',
+    });
+    expect(periodHtml).toContain('id="tb-pstart"');
+    expect(periodHtml).toContain('min="2026-07-01"');
+    expect(periodHtml).toContain('max="2026-07-31"');
+    expect(periodHtml).toContain('id="tb-pcur"');
+    expect(periodHtml).toContain('value="&lt;AUD&gt;"');
+    expect(periodHtml).toContain('id="tb-pbud"');
+    expect(periodHtml).toContain('value="&lt;85&gt;"');
+    expect(periodHtml).toContain('split automatique');
+  });
+
   it('stores and restores panel open state', () => {
     const map = new Map();
     const storage = {
@@ -210,8 +239,8 @@ describe('Settings view helpers', () => {
     expect(html).toContain('tb-subcat-row');
     expect(html).toContain('Restaurant');
     expect(html).toContain('&lt;Detected&gt;');
-    expect(html).toContain("saveAnalyticCategoryMapping('Food', this.value)");
-    expect(html).toContain("saveAnalyticSubcategoryMapping('Food','Restaurant', this.value)");
+    expect(html).toContain("saveAnalyticCategoryMapping('Food',this.value)");
+    expect(html).toContain("saveAnalyticSubcategoryMapping('Food','Restaurant',this.value)");
     expect(html).toContain("moveSubcategory('sub-1','up')");
     expect(html).toContain("importExistingSubcategory('Food','&lt;Detected&gt;')");
   });

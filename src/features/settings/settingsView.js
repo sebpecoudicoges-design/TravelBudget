@@ -1,10 +1,6 @@
+const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 function defaultEsc(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ESC[char]);
 }
 
 function fallbackT(key, vars) {
@@ -204,6 +200,25 @@ export function renderSettingsAccountPanel({
           <div id="tb-notif-test-status" class="muted" style="font-size:12px;line-height:1.35;margin-top:8px;">Serveur actif : matin + soir selon le fuseau du téléphone. Le bouton ci-dessus force seulement un test immédiat.</div>
         </div>
       `;
+}
+
+export function renderCreateVoyageModalBody({
+  start = '',
+  end = '',
+  esc = defaultEsc,
+} = {}) {
+  return `<div class="row"><div class="field"><label for="tb-vstart">Début</label><input id="tb-vstart" type="date" value="${esc(start)}" /></div><div class="field"><label for="tb-vend">Fin</label><input id="tb-vend" type="date" value="${esc(end)}" /></div></div><div class="muted" style="margin-top:8px;">Le voyage doit être non chevauchant.</div>`;
+}
+
+export function renderCreatePeriodModalBody({
+  start = '',
+  end = '',
+  currency = 'EUR',
+  dailyBudget = 0,
+  esc = defaultEsc,
+} = {}) {
+  const cur = String(currency || 'EUR').toUpperCase();
+  return `<div class="row"><div class="field"><label for="tb-pstart">Début</label><input id="tb-pstart" type="date" value="${esc(start)}" min="${esc(start)}" max="${esc(end)}" /></div><div class="field"><label for="tb-pend">Fin</label><input id="tb-pend" type="date" value="${esc(end)}" min="${esc(start)}" max="${esc(end)}" /></div></div><div class="row"><div class="field"><label for="tb-pcur">Devise</label><input id="tb-pcur" value="${esc(cur)}" /></div><div class="field"><label for="tb-pbud">Budget/jour</label><input id="tb-pbud" value="${esc(dailyBudget)}" /></div></div><div class="muted" style="margin-top:8px;">La nouvelle période doit être incluse dans une période existante (split automatique).</div>`;
 }
 
 export function normalizeManualFxRates({
@@ -573,18 +588,3 @@ export function decorateSettingsPanels(view, {
     card.classList.toggle('is-collapsed', !shouldOpen);
   });
 }
-
-export default {
-  getSettingsCardSummary,
-  normalizeManualFxRates,
-  renderSettingsAccountPanel,
-  renderSettingsManualFxPanel,
-  renderSettingsPeriodCard,
-  renderSettingsPeriodReference,
-  renderSettingsTravelOverview,
-  renderSettingsHero,
-  ensureSettingsHero,
-  decorateSettingsPanels,
-  getSettingsPanelState,
-  setSettingsPanelState,
-};
