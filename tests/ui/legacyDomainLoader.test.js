@@ -8,6 +8,7 @@ describe('legacy domain loader', () => {
   const assetsUi = fs.readFileSync('public/legacy/js/42_assets_ui.js', 'utf8');
   const inboxUi = fs.readFileSync('public/legacy/js/44_inbox_ui.js', 'utf8');
   const analysis = fs.readFileSync('public/legacy/js/33_budget_analysis.js', 'utf8');
+  const bootstrap = fs.readFileSync('public/legacy/js/07_supabase_bootstrap.js', 'utf8');
   const bridge = fs.readFileSync('src/app/bridge.js', 'utf8');
   const index = fs.readFileSync('index.html', 'utf8');
 
@@ -236,5 +237,16 @@ describe('legacy domain loader', () => {
     expect(analysis).toContain('window.tbRequestAnalysisRender = function tbRequestAnalysisRender');
     expect(analysis).toContain("window.tbRequestAnalysisRender?.('data-loaded')");
     expect(analysis).toContain("window.tbRequestAnalysisRender?.('dom-retry')");
+  });
+
+  it('keeps Sport program edits in SQL and Analysis on a usable trip context', () => {
+    const sport = fs.readFileSync('public/legacy/js/45_sport_ui.js', 'utf8');
+    expect(sport).toContain('async function saveProgramSessionEditorToSql');
+    expect(sport).toContain('.from(table("sport_program_sessions")).upsert');
+    expect(sport).toContain('.from(table("sport_program_exercises")).delete().eq("session_id", sessionId)');
+    expect(sport).toContain('syncLocalProgramOverridesToSql("program-load")');
+    expect(analysis).toContain('for (const r of [].concat(state?.wallets || [], state?.transactions || []))');
+    expect(bootstrap).toContain('const containsToday = (t) =>');
+    expect(bootstrap).toContain('if (current?.id) return current.id;');
   });
 });

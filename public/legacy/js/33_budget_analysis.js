@@ -171,6 +171,7 @@
     for (const seg of (Array.isArray(state?.budgetSegments) ? state.budgetSegments : [])) {
       push(seg?.travel_id || seg?.travelId, seg?.travel_name || seg?.travelName || 'Voyage');
     }
+    for (const r of [].concat(state?.wallets || [], state?.transactions || [])) push(r?.travel_id || r?.travelId);
 
     return Array.from(byId.values());
   }

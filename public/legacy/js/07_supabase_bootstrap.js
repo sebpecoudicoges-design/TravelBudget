@@ -827,11 +827,19 @@ function pickActivePeriod(periods) {
 function pickActiveTravel(travels) {
   if (!Array.isArray(travels) || travels.length === 0) return null;
 
+  const today = toLocalISODate(new Date());
+  const containsToday = (t) => {
+    const start = String(t?.start_date || t?.start || "").slice(0, 10);
+    const end = String(t?.end_date || t?.end || "").slice(0, 10);
+    return (!start || start <= today) && (!end || today <= end);
+  };
+  const current = travels.find(containsToday);
   const key = "travelbudget_active_travel_id_v1";
   const stored = localStorage.getItem(key);
-  if (stored && travels.some((t) => t.id === stored)) return stored;
+  if (stored && travels.some((t) => t.id === stored) && (!current || containsToday(travels.find((t) => t.id === stored)))) return stored;
+  if (current?.id) return current.id;
 
-  // Default = most recent
+  // Default = most recent start date.
   return travels[0].id;
 }
 

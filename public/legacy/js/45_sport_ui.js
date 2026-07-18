@@ -1458,6 +1458,102 @@
   function saveCustomSessionFavorites(rows) {
     try { localStorage.setItem(SESSION_FAVORITES_KEY(), JSON.stringify((rows || []).slice(0, 30))); } catch (_) {}
   }
+  function dayNumberFromName(day) {
+    const key = normalizedSearch(day || "");
+    const rows = [
+      ["lundi", "monday", 1], ["mardi", "tuesday", 2], ["mercredi", "wednesday", 3],
+      ["jeudi", "thursday", 4], ["vendredi", "friday", 5], ["samedi", "saturday", 6], ["dimanche", "sunday", 7],
+    ];
+    return rows.find(row => key === row[0] || key === row[1])?.[2] || 1;
+  }
+  function editorSessionCode(editor) {
+    return String(editor?.sessionKey || sessionCode(editor) || "").replace(/^SQL[_-]/i, "").toUpperCase();
+  }
+  function planItemSqlPayload(item, sessionId, index) {
+    const mode = String(item?.mode || "reps");
+    const repMin = mode === "reps" ? Math.max(1, Math.round(n(item?.repMin ?? item?.targetReps, 1))) : null;
+    const repMax = mode === "reps" ? Math.max(repMin || 1, Math.round(n(item?.repMax ?? item?.targetReps ?? repMin, repMin || 1))) : null;
+    const seconds = mode === "time" ? Math.max(1, Math.round(n(item?.targetSeconds ?? item?.timeMin, 45))) : null;
+    const timeMin = mode === "time" ? Math.max(1, Math.round(n(item?.timeMin, seconds || 45))) : null;
+    const timeMax = mode === "time" ? Math.max(timeMin || 1, Math.round(n(item?.timeMax, seconds || timeMin || 45))) : null;
+    return {
+      session_id: sessionId,
+      exercise_key: null,
+      exercise_name: sessionExerciseName(item),
+      activity_key: item?.activityKey || (mode === "time" ? "plank_core" : "strength"),
+      equipment: item?.equipment || "mixed",
+      mode,
+      target_reps: repMin,
+      rep_min: repMin,
+      rep_max: repMax,
+      target_seconds: seconds,
+      time_min_seconds: timeMin,
+      time_max_seconds: timeMax,
+      planned_sets: Math.max(1, Math.round(n(item?.sets, 1))),
+      rest_seconds: Math.max(0, Math.round(n(item?.restSeconds, 0))),
+      default_weight_kg: n(item?.weightKg, 0) || 0,
+      load_label: item?.loadLabel || null,
+      distance_m: n(item?.distanceM, 0) || null,
+      met_value: n(item?.metValue, 0) || null,
+      sort_order: index + 1,
+      notes: item?.notes || null,
+    };
+  }
+  async function saveProgramSessionEditorToSql(editor, opts) {
+    const c = client();
+    const userId = uid();
+    const code = editorSessionCode(editor);
+    if (!c || !userId || !code || !editor?.plan?.length) return false;
+    const offline = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode(`sport:program-save:${code}`)
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (offline) return false;
+    const programRes = await c.from(table("sport_programs")).select("id").eq("user_id", userId).eq("key", "lean_bulk_ab").eq("is_active", true).maybeSingle();
+    if (programRes.error) throw programRes.error;
+    const programId = programRes.data?.id;
+    if (!programId) return false;
+    const day = dayNumberFromName((editor.days || [])[0] || "");
+    const sessionPayload = {
+      program_id: programId,
+      session_key: code,
+      name: editor.name || code,
+      week_label: editor.week || code.slice(0, 1) || "A",
+      day_of_week: day,
+      sort_order: code.endsWith("1") ? (code.startsWith("B") ? 4 : 1) : code.endsWith("2") ? (code.startsWith("B") ? 5 : 2) : (code.startsWith("B") ? 6 : 3),
+    };
+    const sessionRes = await c.from(table("sport_program_sessions")).upsert(sessionPayload, { onConflict: "program_id,session_key" }).select("id").single();
+    if (sessionRes.error) throw sessionRes.error;
+    const sessionId = sessionRes.data?.id;
+    if (!sessionId) return false;
+    const del = await c.from(table("sport_program_exercises")).delete().eq("session_id", sessionId);
+    if (del.error) throw del.error;
+    const rows = editor.plan.map((item, idx) => planItemSqlPayload(item, sessionId, idx));
+    const ins = await c.from(table("sport_program_exercises")).insert(rows);
+    if (ins.error) throw ins.error;
+    CACHE.programLoaded = false;
+    CACHE.sqlSessionFavorites = [];
+    try { if (!opts?.keepLocalOverride) resetSessionFavoriteOverride(editor.id); } catch (_) {}
+    await ensureSportProgramsLoaded("program-save");
+    return true;
+  }
+  async function syncLocalProgramOverridesToSql(reason) {
+    if (CACHE.localProgramOverridesSynced || CACHE.programSource !== "sql") return;
+    const custom = loadCustomSessionFavorites().filter(row => row?.plan?.length && editorSessionCode(row) && ["A1","A2","A3","B1","B2","B3"].includes(editorSessionCode(row)));
+    if (!custom.length) {
+      CACHE.localProgramOverridesSynced = true;
+      return;
+    }
+    CACHE.localProgramOverridesSynced = true;
+    for (const row of custom) {
+      try {
+        await saveProgramSessionEditorToSql(row, { keepLocalOverride: false, reason });
+      } catch (e) {
+        console.warn("[sport] local program override sync failed", editorSessionCode(row), e?.message || e);
+        CACHE.localProgramOverridesSynced = false;
+        return;
+      }
+    }
+  }
   function sessionFavoriteRows() {
     const defaults = defaultSessionFavorites();
     const sqlRows = Array.isArray(CACHE.sqlSessionFavorites) ? CACHE.sqlSessionFavorites : [];
@@ -1589,7 +1685,7 @@
     editor.plan = plan;
     return editor;
   }
-  function saveSessionEditorFromDom(root) {
+  async function saveSessionEditorFromDom(root) {
     const editor = readSessionEditorFromDom(root);
     if (!editor || !editor.plan.length) return false;
     const existing = sessionFavoriteRows().find(row => String(row.id || "") === String(editor.id || "")) || {};
@@ -1605,6 +1701,16 @@
       updatedAt: new Date().toISOString(),
     }));
     saveCustomSessionFavorites(custom);
+    const code = editorSessionCode(editor);
+    if (["A1","A2","A3","B1","B2","B3"].includes(code)) {
+      try {
+        const savedSql = await saveProgramSessionEditorToSql(editor, { keepLocalOverride: false });
+        if (savedSql) sportFeedback(txt("Seance programmee synchronisee SQL", "Program workout synced to SQL"), editor.name, { toast: true });
+      } catch (e) {
+        console.warn("[sport] program session SQL save failed", e?.message || e);
+        sportFeedback(txt("Sauvee localement, sync SQL a retenter", "Saved locally, SQL sync to retry"), e?.message || "", { toast: true });
+      }
+    }
     CACHE.sessionEditor = null;
     sportFeedback(txt("Seance parametree enregistree", "Configured workout saved"), editor.name, { toast: true });
     return true;
@@ -1742,6 +1848,7 @@
         days: sqlProgram.days,
       }));
       CACHE.programSource = "sql";
+      setTimeout(() => syncLocalProgramOverridesToSql("program-load"), 80);
       return CACHE.sqlSessionFavorites.length > 0;
     } catch (e) {
       if (!isOfflineSkipError(e)) console.warn("[sport] program load failed", e?.message || e);
@@ -2007,8 +2114,13 @@
       btn.onclick = () => sessionEditorModal?.close();
     });
     const save = root.querySelector("#sport-session-editor-save");
-    if (save) save.onclick = () => {
-      if (saveSessionEditorFromDom(root)) renderSport("session-editor-save");
+    if (save) save.onclick = async () => {
+      save.disabled = true;
+      try {
+        if (await saveSessionEditorFromDom(root)) renderSport("session-editor-save");
+      } finally {
+        save.disabled = false;
+      }
     };
     const loadCurrent = root.querySelector("#sport-session-editor-load-current");
     if (loadCurrent) loadCurrent.onclick = () => {
