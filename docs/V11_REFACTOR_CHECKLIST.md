@@ -11,6 +11,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [ ] Une seule source de verite par calcul, synchronisation ou format de donnee.
   - [x] Aligner les calories d'activite KPI sur le loader transversal Sport/Travail deja utilise par Nutrition.
 - [ ] Mettre a jour cette checklist a chaque lot livre.
+- [ ] Ajouter a chaque livraison une verification utilisateur simple : ecran a ouvrir, action a faire, resultat attendu, console attendue si pertinent.
 
 ## Chantier 1 - Budget journalier et transactions
 
@@ -141,6 +142,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Sortir Analyse du boot : filtres, tiroir et page Analyse chargent a l'ouverture, avec modules Vite Analyse importes a la demande.
   - [x] Rendre la navigation Analyse deterministe : attendre les donnees differees/gouvernance avant rendu.
   - [x] Ajouter une file de rendu Analyse (`tbRequestAnalysisRender`) avec retry DOM et relance apres donnees chargees.
+  - [x] Eviter le double refresh Analyse : un seul filet SQL transactions par voyage et chargement du domaine lazy avant rendu.
   - [x] Stabiliser Analyse quand les donnees/filtres locaux sont incoherents : refresh si transactions absentes et auto-elargissement des filtres vides.
   - [x] Stabiliser le boot mobile/PWA : log `TB BUILD`, cache service worker versionne et refresh Analyse lie aux transactions du voyage actif.
   - [x] Sortir Cashflow du boot : `27_cashflow_curve.js` charge a la demande sur Dashboard via `tbEnsureCashflowCurve`, avec theme, KPI, boot-release et navigation compatibles lazy.

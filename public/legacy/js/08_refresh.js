@@ -52,7 +52,7 @@ window.tbEnsureDeferredData = async function tbEnsureDeferredData(reason) {
     const hasTx = !tid || (Array.isArray(window.state?.transactions) && window.state.transactions.some((tx) => String(tx?.travel_id || tx?.travelId || "") === tid));
     if (tid && String(window.__tbDeferredDataLoadedForTravel || "") === tid && hasTx) return;
     await refreshFromServer({ includeDeferredData: true, includeGovernance: reason === "analysis" || reason === "settings" });
-    await window.tbEnsureActiveTravelTransactions?.(reason || "deferred");
+    if (reason !== "analysis") await window.tbEnsureActiveTravelTransactions?.(reason || "deferred");
   } catch (e) {
     console.warn("[TB] deferred data refresh failed:", e?.message || e);
   }
@@ -63,7 +63,10 @@ window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTra
     const tid = String(travelId || window.state?.activeTravelId || window.state?.period?.travel_id || window.state?.period?.travelId || "").trim();
     const isAnalysis = String(reason || "").startsWith("analysis");
     const txCount = (window.state?.transactions || []).filter((tx) => String(tx?.travel_id || tx?.travelId || "") === tid).length;
-    if (!tid || (txCount && !isAnalysis) || (isAnalysis && String(window.__tbAnalysisTransactionsHydratedForTravel || "") === tid && txCount > 100)) return false;
+    if (!tid || (txCount && !isAnalysis) || (isAnalysis && String(window.__tbAnalysisTransactionsHydratedForTravel || "") === tid && txCount > 0)) return false;
+    window.__tbActiveTravelTransactionsInFlight = window.__tbActiveTravelTransactionsInFlight || {};
+    if (window.__tbActiveTravelTransactionsInFlight[tid]) return await window.__tbActiveTravelTransactionsInFlight[tid];
+    window.__tbActiveTravelTransactionsInFlight[tid] = (async () => {
     const sbc = window.sb || window.__TB_SB__;
     const user = window.sbUser || window.__tbUser || (await sbc?.auth?.getUser?.())?.data?.user;
     if (!sbc || !user?.id) return false;
@@ -93,9 +96,16 @@ window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTra
     if (isAnalysis) window.__tbAnalysisTransactionsHydratedForTravel = tid;
     console.info("[TB] active travel transactions loaded", { reason, travelId: tid, before: txCount, count: mapped.length });
     return true;
+    })();
+    return await window.__tbActiveTravelTransactionsInFlight[tid];
   } catch (e) {
     console.warn("[TB] active travel transactions fallback failed:", e?.message || e);
     return false;
+  } finally {
+    try {
+      const tid = String(travelId || window.state?.activeTravelId || window.state?.period?.travel_id || window.state?.period?.travelId || "").trim();
+      if (tid && window.__tbActiveTravelTransactionsInFlight) delete window.__tbActiveTravelTransactionsInFlight[tid];
+    } catch (_) {}
   }
 };
 
