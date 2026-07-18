@@ -157,6 +157,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Supprimer l'ancien rendu FX manuel inline `renderManualFxBox`, remplace par le panneau Settings deja extrait et teste.
   - [x] Extraire le rendu Reference de periode Settings : pays, recommandation, prevu, ecart, postes et actions passent dans `settingsView.js`.
   - [x] Extraire l'overview Voyage Settings : resume voyage, reference, cadence, champs editables et postes quittent `14_settings_periods_ui.js`.
+  - [x] Centraliser la garde de suppression des periodes Settings : derniere periode refusee avant `safeCall`, sans erreur console non attrapee.
   - [x] Extraire le rendu Categories/Sous-categories Settings : cartes, actions, mapping analytique et sous-listes quittent `14_settings_periods_ui.js`.
   - [x] Extraire les corps des modales guidees Categories/Sous-categories Settings vers `settingsCategoriesView.js`.
   - [x] Extraire les corps des modales Creation voyage et Creation periode Settings vers `settingsView.js`.

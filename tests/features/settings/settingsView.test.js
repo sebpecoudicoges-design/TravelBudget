@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getSettingsCardSummary,
   getSettingsPanelState,
+  getBudgetSegmentDeleteReadiness,
   normalizeManualFxRates,
   renderCreatePeriodModalBody,
   renderCreateVoyageModalBody,
@@ -153,6 +154,23 @@ describe('Settings view helpers', () => {
     expect(periodHtml).toContain('id="tb-pbud"');
     expect(periodHtml).toContain('value="&lt;85&gt;"');
     expect(periodHtml).toContain('split automatique');
+  });
+
+  it('checks budget segment deletion readiness before legacy safeCall', () => {
+    expect(getBudgetSegmentDeleteReadiness({
+      segments: [{ id: 'seg-1' }],
+      segmentId: 'seg-1',
+    })).toEqual({ ok: false, reason: 'Impossible: au moins 1 période requise.' });
+
+    expect(getBudgetSegmentDeleteReadiness({
+      segments: [{ id: 'seg-1' }, { id: 'seg-2' }],
+      segmentId: 'missing',
+    })).toEqual({ ok: false, reason: 'Période introuvable.' });
+
+    expect(getBudgetSegmentDeleteReadiness({
+      segments: [{ id: 'seg-1' }, { id: 'seg-2' }],
+      segmentId: 'seg-2',
+    })).toEqual({ ok: true, reason: '' });
   });
 
   it('stores and restores panel open state', () => {

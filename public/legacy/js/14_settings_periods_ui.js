@@ -796,7 +796,17 @@ function renderSettings(){
             renderSettings();
           });
         }
-        wrap.querySelector('[data-act="del"]').onclick = ()=>safeCall("Supprimer période", ()=>deleteBudgetSegment(seg.id));
+        wrap.querySelector('[data-act="del"]').onclick = () => {
+          const readiness = window.TBSettingsView?.getBudgetSegmentDeleteReadiness?.({
+            segments: state.budgetSegments || [],
+            segmentId: seg.id,
+          });
+          if (readiness && !readiness.ok) {
+            _tbToastOk(readiness.reason || "Suppression impossible.");
+            return;
+          }
+          safeCall("Supprimer période", () => deleteBudgetSegment(seg.id));
+        };
         host.appendChild(wrap);
       });
     }
@@ -1886,7 +1896,9 @@ async function deleteBudgetSegment(segId){
   if(!pid) throw new Error("Période non sélectionnée.");
 
   const segs = (state.budgetSegments||[]).slice().sort((a,b)=>String(a.start).localeCompare(String(b.start)));
-  if(segs.length<=1) throw new Error("Impossible: au moins 1 période requise.");
+  const readiness = window.TBSettingsView?.getBudgetSegmentDeleteReadiness?.({ segments: segs, segmentId: segId });
+  if(readiness && !readiness.ok) throw new Error(readiness.reason || "Suppression impossible.");
+  if(!readiness && segs.length<=1) throw new Error("Impossible: au moins 1 période requise.");
 
   const idx = segs.findIndex(x=>x.id===segId);
   if(idx<0) throw new Error("Période introuvable.");

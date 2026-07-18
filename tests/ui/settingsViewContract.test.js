@@ -25,6 +25,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsTravelOverview');
     expect(legacy).toContain('window.TBSettingsView?.renderCreateVoyageModalBody');
     expect(legacy).toContain('window.TBSettingsView?.renderCreatePeriodModalBody');
+    expect(legacy).toContain('window.TBSettingsView?.getBudgetSegmentDeleteReadiness');
     expect(legacy).toContain('window.TBSettingsAccountController?.bindSettingsAccountPanel');
     expect(legacy).toContain('window.TBSettingsView?.getSettingsPanelState');
     expect(legacy).toContain('window.TBSettingsView?.setSettingsPanelState');

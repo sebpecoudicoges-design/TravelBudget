@@ -221,6 +221,17 @@ export function renderCreatePeriodModalBody({
   return `<div class="row"><div class="field"><label for="tb-pstart">Début</label><input id="tb-pstart" type="date" value="${esc(start)}" min="${esc(start)}" max="${esc(end)}" /></div><div class="field"><label for="tb-pend">Fin</label><input id="tb-pend" type="date" value="${esc(end)}" min="${esc(start)}" max="${esc(end)}" /></div></div><div class="row"><div class="field"><label for="tb-pcur">Devise</label><input id="tb-pcur" value="${esc(cur)}" /></div><div class="field"><label for="tb-pbud">Budget/jour</label><input id="tb-pbud" value="${esc(dailyBudget)}" /></div></div><div class="muted" style="margin-top:8px;">La nouvelle période doit être incluse dans une période existante (split automatique).</div>`;
 }
 
+export function getBudgetSegmentDeleteReadiness({
+  segments = [],
+  segmentId = '',
+} = {}) {
+  const list = Array.isArray(segments) ? segments : [];
+  if (list.length <= 1) return { ok: false, reason: 'Impossible: au moins 1 période requise.' };
+  const exists = list.some((segment) => String(segment?.id || '') === String(segmentId || ''));
+  if (!exists) return { ok: false, reason: 'Période introuvable.' };
+  return { ok: true, reason: '' };
+}
+
 export function normalizeManualFxRates({
   manualRates = {},
   manualFxMeta,
