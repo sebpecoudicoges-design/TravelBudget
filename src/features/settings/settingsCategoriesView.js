@@ -80,6 +80,17 @@ export function renderGuidedSubcategoryModalBody({
   return `<div class="field"><label>Catégorie</label><input class="input" type="text" value="${esc(category)}" disabled /></div><div class="row"><div class="field" style="flex:1;min-width:220px"><label for="tb-subcat-create-name">Nom</label><input id="tb-subcat-create-name" class="input" type="text" placeholder="Ex: Visa" value="${esc(name)}" /></div><div class="field" style="min-width:160px"><label for="tb-subcat-create-color">Couleur optionnelle</label><input id="tb-subcat-create-color" class="input" type="text" placeholder="#94a3b8" value="${esc(color)}" /></div></div><div class="field"><label for="tb-subcat-create-mapping">Mapping analytique</label><select id="tb-subcat-create-mapping" class="input">${analyticSelectOptions(mapping || '__inherit__', true)}</select></div><div class="muted" style="margin-top:8px">Par défaut, héritage du mapping catégorie. Aucune règle SQL en héritage.</div>`;
 }
 
+export function validateCategoryDraft({
+  name = '',
+  color = '#94a3b8',
+} = {}) {
+  const cleanName = String(name || '').trim();
+  const cleanColor = String(color || '#94a3b8').trim() || '#94a3b8';
+  if (!cleanName) return { ok: false, reason: 'Nom de catégorie vide.' };
+  if (!/^#[0-9a-fA-F]{6}$/.test(cleanColor)) return { ok: false, reason: 'Couleur invalide.' };
+  return { ok: true, reason: '', name: cleanName, color: cleanColor };
+}
+
 export function validateSubcategoryDraft({
   category = '',
   name = '',

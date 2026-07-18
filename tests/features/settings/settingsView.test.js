@@ -19,6 +19,7 @@ import {
   renderGuidedCategoryModalBody,
   renderGuidedSubcategoryModalBody,
   renderSettingsCategoriesList,
+  validateCategoryDraft,
   validateSubcategoryDraft,
 } from '../../../src/features/settings/settingsCategoriesView.js';
 
@@ -318,6 +319,29 @@ describe('Settings view helpers', () => {
     expect(validateSubcategoryDraft({ category: 'Food', name: 'restaurant', rows, currentId: 'sub-1' })).toMatchObject({
       ok: true,
       name: 'restaurant',
+    });
+  });
+
+  it('validates category drafts before legacy writes', () => {
+    expect(validateCategoryDraft({ name: '' })).toEqual({
+      ok: false,
+      reason: 'Nom de catégorie vide.',
+    });
+    expect(validateCategoryDraft({ name: 'Food', color: 'blue' })).toEqual({
+      ok: false,
+      reason: 'Couleur invalide.',
+    });
+    expect(validateCategoryDraft({ name: '  Food  ', color: '' })).toEqual({
+      ok: true,
+      reason: '',
+      name: 'Food',
+      color: '#94a3b8',
+    });
+    expect(validateCategoryDraft({ name: 'Food', color: '#22c55e' })).toEqual({
+      ok: true,
+      reason: '',
+      name: 'Food',
+      color: '#22c55e',
     });
   });
 

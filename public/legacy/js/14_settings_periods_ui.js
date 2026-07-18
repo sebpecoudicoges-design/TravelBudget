@@ -2442,10 +2442,15 @@ function addCategory() {
     };
     const result = await _openGuidedCategoryModal(defaults);
     if (!result) return;
-    const name = String(result?.name || "").trim();
-    const color = String(result?.color || "#94a3b8");
+    const readiness = window.TBSettingsCategoriesView?.validateCategoryDraft?.({
+      name: result?.name,
+      color: result?.color,
+    });
+    if (readiness && !readiness.ok) throw new Error(readiness.reason || "Catégorie invalide.");
+    if (!readiness && !String(result?.name || "").trim()) throw new Error("Nom de catégorie vide.");
+    const name = readiness?.name || String(result?.name || "").trim();
+    const color = readiness?.color || String(result?.color || "#94a3b8");
     const mapping = String(result?.mapping || '__unmapped__').trim() || '__unmapped__';
-    if (!name) throw new Error("Nom de catégorie vide.");
 
     const existing = (state.categories || []).find(c => String(c).toLowerCase() === name.toLowerCase()) || null;
     if (existing) {
@@ -2487,12 +2492,15 @@ Cela supprimera aussi ses sous-catégories SQL et ses règles analytiques liées
 
 function setCategoryColor(name, color) {
   safeCall("Set category color", async () => {
-    const n = String(name || "").trim();
-    if (!n) return;
+    const readiness = window.TBSettingsCategoriesView?.validateCategoryDraft?.({ name, color });
+    if (readiness && !readiness.ok) throw new Error(readiness.reason || "Catégorie invalide.");
+    const n = readiness?.name || String(name || "").trim();
+    const cleanColor = readiness?.color || String(color || "#94a3b8");
+    if (!readiness && !n) return;
     const existing = (state.categories || []).find(c => String(c).toLowerCase() === n.toLowerCase()) || n;
     const { error: upErr } = await sb
       .from(TB_CONST.TABLES.categories)
-      .update({ color: String(color || "#94a3b8"), updated_at: new Date().toISOString() })
+      .update({ color: cleanColor, updated_at: new Date().toISOString() })
       .eq("user_id", sbUser.id)
       .eq("name", existing);
     if (upErr) throw upErr;
