@@ -245,6 +245,7 @@ describe('legacy domain loader', () => {
     expect(refresh).toContain('travelId || window.state?.activeTravelId');
     expect(refresh).toContain('String(reason || "").startsWith("analysis")');
     expect(refresh).toContain('__tbAnalysisTransactionsHydratedForTravel');
+    expect(refresh).toContain('window.sbUser || window.__tbUser');
     expect(refresh).toContain('sbc.from(TB_CONST.TABLES.transactions)');
     expect(refresh).toContain('window.state.transactions = (window.state.transactions || []).filter');
     expect(refresh).toContain('active travel transactions loaded');

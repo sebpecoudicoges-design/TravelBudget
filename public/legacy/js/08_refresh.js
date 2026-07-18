@@ -65,7 +65,7 @@ window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTra
     const txCount = (window.state?.transactions || []).filter((tx) => String(tx?.travel_id || tx?.travelId || "") === tid).length;
     if (!tid || (txCount && !isAnalysis) || (isAnalysis && String(window.__tbAnalysisTransactionsHydratedForTravel || "") === tid && txCount > 100)) return false;
     const sbc = window.sb || window.__TB_SB__;
-    const user = (await sbc?.auth?.getUser?.())?.data?.user;
+    const user = window.sbUser || window.__tbUser || (await sbc?.auth?.getUser?.())?.data?.user;
     if (!sbc || !user?.id) return false;
     const sel = "id,travel_id,period_id,wallet_id,type,amount,currency,category,subcategory,label,trip_expense_id,trip_share_link_id,internal_transfer_id,is_internal,date_start,date_end,budget_date_start,budget_date_end,pay_now,paid_at,out_of_budget,night_covered,affects_budget,created_at,recurring_rule_id,occurrence_date,generated_by_rule,recurring_instance_status";
     let from = 0, rows = [];

@@ -102,4 +102,12 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).toContain("['analysis-mode','planned']");
     expect(legacy).toContain('if (_autoBroadenEmptyAnalysis()) _renderAnalysisFilterSelects();');
   });
+
+  it('escapes stale empty trip filters by selecting a usable Analysis trip', () => {
+    expect(legacy).toContain('function _analysisTravelTxCount(travelId)');
+    expect(legacy).toContain('function _pickAnalysisTravelId(travels, filterTravelId)');
+    expect(legacy).toContain('filtered === active || _analysisTravelTxCount(filtered)');
+    expect(legacy).toContain('const withTx = ids.find(id => _analysisTravelTxCount(id));');
+    expect(legacy).toContain('const wantedTravel = _pickAnalysisTravelId(travels, filters.travelId);');
+  });
 });

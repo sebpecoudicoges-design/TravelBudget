@@ -146,29 +146,34 @@
     return list[0] || null;
   }
   function _travelList(){
-    const direct = Array.isArray(state?.travels) ? state.travels.filter(Boolean) : [];
-    if (direct.length) return direct;
-
     const byId = new Map();
     const push = (id, name) => {
       const key = String(id || '').trim();
       if (!key) return;
       if (!byId.has(key)) byId.set(key, { id: key, name: String(name || 'Voyage').trim() || 'Voyage' });
     };
-
+    for (const t of (Array.isArray(state?.travels) ? state.travels.filter(Boolean) : [])) push(t?.id || t?.travel_id || t?.travelId, t?.name || t?.label || 'Voyage');
     const activeTravelId = String(state?.activeTravelId || '').trim();
     const activeTravelName = String(state?.travel?.name || state?.travelName || '').trim();
     if (activeTravelId) push(activeTravelId, activeTravelName || 'Voyage actif');
-
-    for (const p of (Array.isArray(state?.periods) ? state.periods : [])) {
-      push(p?.travel_id || p?.travelId, p?.travel_name || p?.travelName || p?.name || 'Voyage');
-    }
-    for (const seg of (Array.isArray(state?.budgetSegments) ? state.budgetSegments : [])) {
-      push(seg?.travel_id || seg?.travelId, seg?.travel_name || seg?.travelName || 'Voyage');
-    }
+    for (const p of (Array.isArray(state?.periods) ? state.periods : [])) push(p?.travel_id || p?.travelId, p?.travel_name || p?.travelName || p?.name || 'Voyage');
+    for (const seg of (Array.isArray(state?.budgetSegments) ? state.budgetSegments : [])) push(seg?.travel_id || seg?.travelId, seg?.travel_name || seg?.travelName || 'Voyage');
     for (const r of [].concat(state?.wallets || [], state?.transactions || [])) push(r?.travel_id || r?.travelId);
-
     return Array.from(byId.values());
+  }
+  function _analysisTravelTxCount(travelId){
+    const wanted = String(travelId || '').trim();
+    return wanted ? (Array.isArray(state?.transactions) ? state.transactions : []).reduce((count, tx) => count + (String(tx?.travel_id || tx?.travelId || '') === wanted ? 1 : 0), 0) : 0;
+  }
+  function _pickAnalysisTravelId(travels, filterTravelId){
+    const ids = travels.map(t => String(t?.id || '')).filter(Boolean);
+    const has = (id) => ids.includes(String(id || ''));
+    const filtered = String(filterTravelId || '').trim();
+    const active = String(state?.activeTravelId || state?.period?.travel_id || state?.period?.travelId || '').trim();
+    if (_isUUID(filtered) && has(filtered) && (filtered === active || _analysisTravelTxCount(filtered))) return filtered;
+    if (active && has(active)) return active;
+    const withTx = ids.find(id => _analysisTravelTxCount(id));
+    return withTx || (has(filtered) ? filtered : ids[0] || '');
   }
   function _periodList(travelId){
     const wanted = String(travelId || state?.activeTravelId || '');
@@ -1362,42 +1367,39 @@ categoryTxMap, subcategoryTxMap
     const progressCards = [
       {
         label: trA('Rythme budget app', 'App budget pace'),
-        title: trA('Part du budget app déjà ouverte à date dans la période analysée', 'Share of app budget already opened to date in the analyzed period'),
+        title: trA('Budget app ouvert à date', 'App budget opened to date'),
         value: ratioText(model.targetToToday, model.totalBudget),
-        hint: trA('Budget prévu à date comparé au budget total.', 'Planned budget to date compared with the total budget.'),
+        hint: trA('Prévu à date vs total.', 'To date vs total.'),
         pct: model.totalBudget > 0 ? clampPct((model.targetToToday / model.totalBudget) * 100) : 0,
-        footer: trA(`Cible de dépense sur ${model.days.length} jours analysés`, `Spending target over ${model.days.length} analyzed ${dayWord}`),
+        footer: trA(`${model.days.length} jours analysés`, `${model.days.length} analyzed ${dayWord}`),
         tint:'rose',
         liquid:'linear-gradient(180deg, rgba(251,113,133,.34) 0%, rgba(244,114,182,.46) 34%, rgba(236,72,153,.54) 70%, rgba(219,39,119,.66) 100%)',
-        liquidAlt:'linear-gradient(180deg, rgba(255,255,255,.00) 0%, rgba(255,255,255,.18) 22%, rgba(255,255,255,.00) 55%, rgba(255,255,255,.12) 100%)',
         glow:'rgba(244,114,182,.22)',
         shell:'rgba(251,207,232,.72)',
         haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.42))'
       },
       {
         label: trA('Rythme référence pays', 'Country reference pace'),
-        title: trA('Part de la référence pays déjà consommée à date sur la période analysée', 'Share of the country reference already consumed to date in the analyzed period'),
+        title: trA('Référence à date', 'Reference to date'),
         value: ratioText(model.totalReferenceElapsed, model.totalReferencePeriod),
-        hint: trA('Référence à date comparée à la référence totale.', 'Reference to date compared with the total reference.'),
+        hint: trA('Repère externe.', 'External benchmark.'),
         pct: model.totalReferencePeriod > 0 ? clampPct((model.totalReferenceElapsed / model.totalReferencePeriod) * 100) : 0,
         footer: trA('Repère externe basé sur les jours déjà écoulés', 'External benchmark based on elapsed days'),
         tint:'green',
         liquid:'linear-gradient(180deg, rgba(110,231,183,.30) 0%, rgba(74,222,128,.44) 34%, rgba(34,197,94,.52) 70%, rgba(22,163,74,.62) 100%)',
-        liquidAlt:'linear-gradient(180deg, rgba(255,255,255,.00) 0%, rgba(255,255,255,.20) 24%, rgba(255,255,255,.00) 58%, rgba(255,255,255,.10) 100%)',
         glow:'rgba(74,222,128,.20)',
         shell:'rgba(187,247,208,.78)',
         haze:'linear-gradient(180deg, rgba(255,255,255,.82), rgba(236,253,245,.40))'
       },
       {
         label: trA('Budget consommé vs projection', 'Budget used vs projection'),
-        title: trA('Part du budget alloué à la période déjà consommée dans la projection', 'Share of period-allocated budget already consumed in the projection'),
+        title: trA('Consommé vs projection', 'Used vs projection'),
         value: ratioText(model.spentToToday, model.projection),
-        hint: trA('Budget ventilé sur les dates analysées comparé à la projection finale.', 'Budget allocated over analyzed dates compared with the final projection.'),
+        hint: trA('Dates analysées vs final.', 'Analyzed dates vs final.'),
         pct: model.projection > 0 ? clampPct((model.spentToToday / model.projection) * 100) : 0,
         footer: model.projection > model.totalBudget ? trA('Tendance finale au-dessus du budget app', 'Final trend above app budget') : trA('Tendance finale contenue dans le budget app', 'Final trend within app budget'),
         tint:'blue',
         liquid:'linear-gradient(180deg, rgba(147,197,253,.30) 0%, rgba(125,211,252,.42) 34%, rgba(56,189,248,.52) 70%, rgba(14,165,233,.62) 100%)',
-        liquidAlt:'linear-gradient(180deg, rgba(255,255,255,.00) 0%, rgba(255,255,255,.22) 24%, rgba(255,255,255,.00) 60%, rgba(255,255,255,.10) 100%)',
         glow:'rgba(56,189,248,.20)',
         shell:'rgba(186,230,253,.76)',
         haze:'linear-gradient(180deg, rgba(255,255,255,.84), rgba(239,246,255,.40))'
@@ -2026,7 +2028,7 @@ function _openTxDrilldown(kind, key, model){
       if (fallbackId) travelSel.value = fallbackId;
     } else {
       travelSel.innerHTML = travels.map(t => `<option value="${escapeHTML(String(t.id))}">${escapeHTML(String(t.name || 'Voyage'))}</option>`).join('');
-      const wantedTravel = (_isUUID(filters.travelId) && travels.some(t => String(t.id) === String(filters.travelId))) ? filters.travelId : (state?.activeTravelId || travels[0]?.id || '');
+      const wantedTravel = _pickAnalysisTravelId(travels, filters.travelId);
       if (wantedTravel && [...travelSel.options].some(o => o.value === String(wantedTravel))) travelSel.value = String(wantedTravel);
       else if (!travelSel.value && travels[0]?.id) travelSel.value = String(travels[0].id);
     }
