@@ -229,6 +229,8 @@ describe('legacy domain loader', () => {
     expect(main).toContain("if (key === 'analysis') await ensureAnalysisModules();");
     expect(navigation).toContain('window.tbLoadLegacyDomain("analysis")');
     expect(navigation).toContain('await window.tbEnsureDeferredData("analysis")');
+    expect(navigation).toContain('if (typeof window.renderBudgetAnalysis === "function")');
+    expect(navigation).not.toContain('typeof window.renderBudgetAnalysis === "function" || typeof window.tbRequestAnalysisRender === "function"');
     expect(fs.readFileSync('public/legacy/js/00_constants.js', 'utf8')).toContain('console.info(`TB BUILD ${window.TB_VERSION}`)');
     expect(fs.readFileSync('public/legacy/js/00_constants.js', 'utf8')).toContain('window.__tbBuildLogged');
     expect(index).toContain('console.warn("TB BUILD/TB VERSION " + window.TB_VERSION)');

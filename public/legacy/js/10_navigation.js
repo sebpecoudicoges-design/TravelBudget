@@ -60,7 +60,7 @@ function showView(view) {
         alert(`Analyse indisponible : ${e?.message || e}`);
       }
     };
-    if (typeof window.renderBudgetAnalysis === "function" || typeof window.tbRequestAnalysisRender === "function") {
+    if (typeof window.renderBudgetAnalysis === "function") {
       renderAnalysis();
     } else if (typeof window.tbLoadLegacyDomain === "function") {
       window.tbLoadLegacyDomain("analysis").then(renderAnalysis).catch((e) => {
