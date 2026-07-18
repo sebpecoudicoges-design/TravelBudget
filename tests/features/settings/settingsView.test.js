@@ -19,6 +19,7 @@ import {
   renderGuidedCategoryModalBody,
   renderGuidedSubcategoryModalBody,
   renderSettingsCategoriesList,
+  validateSubcategoryDraft,
 } from '../../../src/features/settings/settingsCategoriesView.js';
 
 describe('Settings view helpers', () => {
@@ -286,6 +287,38 @@ describe('Settings view helpers', () => {
     expect(subcategoryHtml).toContain('value="Food" disabled');
     expect(subcategoryHtml).toContain('value="Visa"');
     expect(subcategoryHtml).toContain('<option data-inherit="true">__inherit__</option>');
+  });
+
+  it('validates subcategory drafts before legacy writes', () => {
+    const rows = [
+      { id: 'sub-1', name: 'Restaurant' },
+      { name: 'Detected' },
+    ];
+
+    expect(validateSubcategoryDraft({ category: '', name: 'Visa' })).toMatchObject({
+      ok: false,
+      reason: 'Sous-catégorie invalide.',
+    });
+    expect(validateSubcategoryDraft({ category: 'Food', name: 'Visa', color: 'blue' })).toMatchObject({
+      ok: false,
+      reason: 'Couleur invalide.',
+    });
+    expect(validateSubcategoryDraft({ category: 'Food', name: 'Restaurant', rows })).toMatchObject({
+      ok: false,
+      reason: 'Cette sous-catégorie existe déjà pour cette catégorie.',
+    });
+    expect(validateSubcategoryDraft({ category: 'Food', name: 'Restaurant', rows, sqlOnly: true })).toMatchObject({
+      ok: false,
+      reason: 'Cette sous-catégorie existe déjà en SQL pour cette catégorie.',
+    });
+    expect(validateSubcategoryDraft({ category: 'Food', name: 'Detected', rows, sqlOnly: true })).toMatchObject({
+      ok: true,
+      name: 'Detected',
+    });
+    expect(validateSubcategoryDraft({ category: 'Food', name: 'restaurant', rows, currentId: 'sub-1' })).toMatchObject({
+      ok: true,
+      name: 'restaurant',
+    });
   });
 
   it('renders a period card with stable fields and actions', () => {

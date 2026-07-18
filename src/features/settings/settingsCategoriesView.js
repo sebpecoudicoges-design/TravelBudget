@@ -79,3 +79,34 @@ export function renderGuidedSubcategoryModalBody({
 } = {}) {
   return `<div class="field"><label>Catégorie</label><input class="input" type="text" value="${esc(category)}" disabled /></div><div class="row"><div class="field" style="flex:1;min-width:220px"><label for="tb-subcat-create-name">Nom</label><input id="tb-subcat-create-name" class="input" type="text" placeholder="Ex: Visa" value="${esc(name)}" /></div><div class="field" style="min-width:160px"><label for="tb-subcat-create-color">Couleur optionnelle</label><input id="tb-subcat-create-color" class="input" type="text" placeholder="#94a3b8" value="${esc(color)}" /></div></div><div class="field"><label for="tb-subcat-create-mapping">Mapping analytique</label><select id="tb-subcat-create-mapping" class="input">${analyticSelectOptions(mapping || '__inherit__', true)}</select></div><div class="muted" style="margin-top:8px">Par défaut, héritage du mapping catégorie. Aucune règle SQL en héritage.</div>`;
 }
+
+export function validateSubcategoryDraft({
+  category = '',
+  name = '',
+  color = '',
+  rows = [],
+  currentId = '',
+  sqlOnly = false,
+} = {}) {
+  const cleanCategory = String(category || '').trim();
+  const cleanName = String(name || '').trim();
+  const cleanColor = String(color || '').trim();
+  const current = String(currentId || '');
+  const list = Array.isArray(rows) ? rows : [];
+  if (!cleanCategory || !cleanName) return { ok: false, reason: 'Sous-catégorie invalide.' };
+  if (cleanColor && !/^#[0-9a-fA-F]{6}$/.test(cleanColor)) return { ok: false, reason: 'Couleur invalide.' };
+  const duplicate = list.find((row) => {
+    if (current && String(row?.id || '') === current) return false;
+    if (sqlOnly && !row?.id) return false;
+    return String(row?.name || '').trim().toLowerCase() === cleanName.toLowerCase();
+  });
+  if (duplicate) {
+    return {
+      ok: false,
+      reason: sqlOnly
+        ? 'Cette sous-catégorie existe déjà en SQL pour cette catégorie.'
+        : (current ? 'Une autre sous-catégorie porte déjà ce nom dans cette catégorie.' : 'Cette sous-catégorie existe déjà pour cette catégorie.'),
+    };
+  }
+  return { ok: true, reason: '', category: cleanCategory, name: cleanName, color: cleanColor };
+}

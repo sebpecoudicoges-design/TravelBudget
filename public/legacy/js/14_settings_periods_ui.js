@@ -2506,10 +2506,10 @@ async function importExistingSubcategory(categoryName, subcategoryName) {
   return safeCall("Import subcategory", async () => {
     const category = String(categoryName || '').trim();
     const name = String(subcategoryName || '').trim();
-    if (!category || !name) throw new Error('Sous-catégorie invalide.');
     const existingRows = _subcategoriesForSettings(category, true);
-    const duplicateSql = existingRows.find((row) => row?.id && String(row?.name || '').trim().toLowerCase() === name.toLowerCase());
-    if (duplicateSql) throw new Error('Cette sous-catégorie existe déjà en SQL pour cette catégorie.');
+    const readiness = window.TBSettingsCategoriesView?.validateSubcategoryDraft?.({ category, name, rows: existingRows, sqlOnly: true });
+    if (readiness && !readiness.ok) throw new Error(readiness.reason || 'Sous-catégorie invalide.');
+    if (!readiness && (!category || !name)) throw new Error('Sous-catégorie invalide.');
     const sortOrder = existingRows.reduce((max, row) => Math.max(max, Number(row?.sortOrder ?? row?.sort_order ?? 0)), -1) + 1;
     const payload = {
       user_id: sbUser.id,
@@ -2536,11 +2536,13 @@ async function addSubcategory(categoryName) {
     const name = String(result?.name || '').trim();
     const color = String(result?.color || '').trim();
     const mapping = String(result?.mapping || '__inherit__').trim() || '__inherit__';
-    if (!name) throw new Error('Nom de sous-catégorie vide.');
-    if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) throw new Error('Couleur invalide.');
     const existingRows = _subcategoriesForSettings(category, true);
-    const duplicate = existingRows.find((row) => String(row?.name || '').trim().toLowerCase() === name.toLowerCase());
-    if (duplicate) throw new Error('Cette sous-catégorie existe déjà pour cette catégorie.');
+    const readiness = window.TBSettingsCategoriesView?.validateSubcategoryDraft?.({ category, name, color, rows: existingRows });
+    if (readiness && !readiness.ok) throw new Error(readiness.reason || 'Sous-catégorie invalide.');
+    if (!readiness) {
+      if (!name) throw new Error('Nom de sous-catégorie vide.');
+      if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) throw new Error('Couleur invalide.');
+    }
     const sortOrder = existingRows.reduce((max, row) => Math.max(max, Number(row?.sortOrder ?? row?.sort_order ?? 0)), -1) + 1;
     const payload = {
       user_id: sbUser.id,
@@ -2573,9 +2575,15 @@ async function editSubcategory(id) {
     const colorRaw = prompt('Couleur hexadécimale optionnelle (ex: #94a3b8). Laisse vide pour aucune couleur.', String(row?.color || ''));
     if (colorRaw === null) return;
     const color = String(colorRaw || '').trim();
-    if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) throw new Error('Couleur invalide.');
-    const duplicate = _subcategoriesForSettings(category, true).find((x) => String(x?.id) !== String(id) && String(x?.name || '').trim().toLowerCase() === name.toLowerCase());
-    if (duplicate) throw new Error('Une autre sous-catégorie porte déjà ce nom dans cette catégorie.');
+    const readiness = window.TBSettingsCategoriesView?.validateSubcategoryDraft?.({
+      category,
+      name,
+      color,
+      rows: _subcategoriesForSettings(category, true),
+      currentId: id,
+    });
+    if (readiness && !readiness.ok) throw new Error(readiness.reason || 'Sous-catégorie invalide.');
+    if (!readiness && color && !/^#[0-9a-fA-F]{6}$/.test(color)) throw new Error('Couleur invalide.');
     const payload = {
       name,
       color: color || null,

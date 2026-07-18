@@ -36,6 +36,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderSettingsCategoriesList');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderGuidedCategoryModalBody');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderGuidedSubcategoryModalBody');
+    expect(legacy).toContain('window.TBSettingsCategoriesView?.validateSubcategoryDraft');
     expect(legacy).not.toContain('const cards = Array.from(view.querySelectorAll');
     expect(legacy).not.toContain('box.innerHTML = `');
     expect(legacy).not.toContain('const readNotificationForm = () =>');
@@ -53,5 +54,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('<input id="tb-subcat-create-name"');
     expect(legacy).not.toContain('<input id="tb-vstart"');
     expect(legacy).not.toContain('<input id="tb-pstart"');
+    expect(legacy).not.toContain('const duplicate = existingRows.find');
+    expect(legacy).not.toContain('const duplicateSql = existingRows.find');
   });
 });
