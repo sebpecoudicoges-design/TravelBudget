@@ -39,6 +39,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsCategoriesView?.validateCategoryDraft');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.validateSubcategoryDraft');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.notifySettingsValidation');
+    expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareSubcategoryEditDraft');
     expect(legacy).not.toContain('const cards = Array.from(view.querySelectorAll');
     expect(legacy).not.toContain('box.innerHTML = `');
     expect(legacy).not.toContain('const readNotificationForm = () =>');
@@ -65,5 +66,6 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain("throw new Error(readiness.reason || 'Sous-catégorie invalide.')");
     expect(legacy).not.toContain("throw new Error('Nom de sous-catégorie vide.')");
     expect(legacy).not.toContain("throw new Error('Couleur invalide.')");
+    expect(legacy).not.toContain('rows: _subcategoriesForSettings(category, true),\\n      currentId: id,\\n    });\\n    if (readiness');
   });
 });

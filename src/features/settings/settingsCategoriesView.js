@@ -114,6 +114,44 @@ export function notifySettingsValidation({
   return { ok: false, method: 'none', message: text };
 }
 
+export function prepareSubcategoryEditDraft({
+  row = null,
+  name = '',
+  color = '',
+  rows = [],
+  currentId = '',
+  resolveCategoryId = () => null,
+  now = () => new Date().toISOString(),
+} = {}) {
+  if (!row) return { ok: false, reason: 'Sous-catégorie introuvable.' };
+  const category = String(row?.categoryName || row?.category_name || '').trim();
+  const cleanName = String(name || '').trim();
+  const cleanColor = String(color || '').trim();
+  if (!cleanName) return { ok: false, reason: 'Nom de sous-catégorie vide.' };
+  const readiness = validateSubcategoryDraft({
+    category,
+    name: cleanName,
+    color: cleanColor,
+    rows,
+    currentId,
+  });
+  if (!readiness.ok) return readiness;
+  return {
+    ok: true,
+    reason: '',
+    category,
+    name: readiness.name,
+    color: readiness.color,
+    payload: {
+      name: readiness.name,
+      color: readiness.color || null,
+      category_id: row?.categoryId || row?.category_id || resolveCategoryId(category),
+      category_name: category,
+      updated_at: now(),
+    },
+  };
+}
+
 export function validateSubcategoryDraft({
   category = '',
   name = '',

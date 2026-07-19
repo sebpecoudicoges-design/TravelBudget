@@ -20,6 +20,7 @@ import {
   renderGuidedSubcategoryModalBody,
   renderSettingsCategoriesList,
   notifySettingsValidation,
+  prepareSubcategoryEditDraft,
   validateCategoryDraft,
   validateSubcategoryDraft,
 } from '../../../src/features/settings/settingsCategoriesView.js';
@@ -368,6 +369,54 @@ describe('Settings view helpers', () => {
       ok: false,
       method: 'none',
       message: 'Nom vide',
+    });
+  });
+
+  it('prepares subcategory edit payloads before legacy writes', () => {
+    const row = {
+      id: 'sub-1',
+      categoryName: 'Food',
+      name: 'Restaurant',
+      categoryId: 'cat-1',
+      color: '#f97316',
+    };
+    const rows = [
+      row,
+      { id: 'sub-2', categoryName: 'Food', name: 'Cafe' },
+    ];
+
+    expect(prepareSubcategoryEditDraft({ row: null })).toEqual({
+      ok: false,
+      reason: 'Sous-catégorie introuvable.',
+    });
+    expect(prepareSubcategoryEditDraft({ row, name: '', rows, currentId: 'sub-1' })).toEqual({
+      ok: false,
+      reason: 'Nom de sous-catégorie vide.',
+    });
+    expect(prepareSubcategoryEditDraft({ row, name: 'Cafe', rows, currentId: 'sub-1' })).toMatchObject({
+      ok: false,
+      reason: 'Une autre sous-catégorie porte déjà ce nom dans cette catégorie.',
+    });
+    expect(prepareSubcategoryEditDraft({
+      row,
+      name: '  Brunch  ',
+      color: '#22c55e',
+      rows,
+      currentId: 'sub-1',
+      now: () => '2026-07-19T00:00:00.000Z',
+    })).toEqual({
+      ok: true,
+      reason: '',
+      category: 'Food',
+      name: 'Brunch',
+      color: '#22c55e',
+      payload: {
+        name: 'Brunch',
+        color: '#22c55e',
+        category_id: 'cat-1',
+        category_name: 'Food',
+        updated_at: '2026-07-19T00:00:00.000Z',
+      },
     });
   });
 

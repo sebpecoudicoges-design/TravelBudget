@@ -6,6 +6,7 @@ Statuts proposes : `a faire`, `ok`, `a revoir`.
 
 | Version | Module | Scenario | Etapes utilisateur | Resultat attendu | Console attendue | Statut |
 | --- | --- | --- | --- | --- | --- | --- |
+| 10.5.204 | Settings | Edition sous-categorie | Ouvrir Reglages > Categories, modifier une sous-categorie existante, changer son nom ou sa couleur puis valider. | La modification est sauvegardee, les doublons/couleurs invalides restent refuses proprement. | Aucun `[safeCall/async]`, aucun `Uncaught`. | a faire |
 | 10.5.203 | Settings | Notice validation modulee | Ouvrir Reglages > Categories, ajouter/editer une sous-categorie avec `blue` comme couleur. | Le meme message propre apparait, sans regression visuelle. | Aucun `[safeCall/async]`, aucun `Uncaught`. | a faire |
 | 10.5.202 | Settings | Refus propre validation categories | Ouvrir Reglages > Categories, creer une categorie sans nom, puis ajouter/editer une sous-categorie avec `blue` comme couleur. | Message utilisateur propre : nom vide ou couleur invalide. Aucune ecriture SQL. | Aucun `[safeCall/async]`, aucun `Uncaught`. | a faire |
 | 10.5.200 | Settings | Validation sous-categorie | Ouvrir Reglages > Categories, tenter d'ajouter une sous-categorie sans nom puis avec une couleur invalide via le champ texte. | Refus lisible avant ecriture SQL : sous-categorie invalide ou couleur invalide. | Aucun `Uncaught`; pas de bruit `safeCall/async` non gere. | a faire |

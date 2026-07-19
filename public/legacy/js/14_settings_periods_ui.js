@@ -2632,22 +2632,19 @@ async function editSubcategory(id) {
     const colorRaw = prompt('Couleur hexadécimale optionnelle (ex: #94a3b8). Laisse vide pour aucune couleur.', String(row?.color || ''));
     if (colorRaw === null) return;
     const color = String(colorRaw || '').trim();
-    const readiness = window.TBSettingsCategoriesView?.validateSubcategoryDraft?.({
-      category,
+    const editDraft = window.TBSettingsCategoriesView?.prepareSubcategoryEditDraft?.({
+      row,
       name,
       color,
       rows: _subcategoriesForSettings(category, true),
       currentId: id,
+      resolveCategoryId: _categoryIdByName,
     });
-    if (readiness && !readiness.ok) {
-      _settingsValidationNotice(readiness.reason || 'Sous-catégorie invalide.');
+    if (editDraft && !editDraft.ok) {
+      _settingsValidationNotice(editDraft.reason || 'Sous-catégorie invalide.');
       return;
     }
-    if (!readiness && color && !/^#[0-9a-fA-F]{6}$/.test(color)) {
-      _settingsValidationNotice('Couleur invalide.');
-      return;
-    }
-    const payload = {
+    const payload = editDraft?.payload || {
       name,
       color: color || null,
       category_id: row?.categoryId || row?.category_id || _categoryIdByName(category),
