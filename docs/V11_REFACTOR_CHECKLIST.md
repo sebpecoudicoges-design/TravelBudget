@@ -165,6 +165,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Ajouter un loader transversal Sport/Travail leger pour que Nutrition, KPI et notifications lisent les calories d'activite sans ouvrir les onglets Sport ou Travail.
   - [x] Retirer le pre-cache CDN du service worker pour supprimer les violations CSP `connect-src` sur `cdn.jsdelivr.net`.
   - [x] Sortir FX Decision du boot : `34_fx_decision.js` charge avec Analyse et possede un budget dedie.
+  - [x] Stabiliser le changement manuel de voyage Settings : le voyage choisi reste actif apres refresh, meme si un autre voyage contient la date du jour.
 - [ ] Decouper les gros bundles par domaine.
   - [x] Extraire le shell visuel Settings : hero, resumes de cartes et accordéons quittent `14_settings_periods_ui.js` vers `src/features/settings/settingsView.js`.
   - [x] Extraire le rendu du panneau Compte Settings : profil, santé, devise, mode UI, seuil cashflow et raccourcis notifications quittent le template inline legacy.

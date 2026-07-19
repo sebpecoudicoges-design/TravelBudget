@@ -277,6 +277,8 @@ describe('legacy domain loader', () => {
     expect(sport).toContain('syncLocalProgramOverridesToSql("program-load")');
     expect(analysis).toContain('for (const r of [].concat(state?.wallets || [], state?.transactions || []))');
     expect(bootstrap).toContain('const containsToday = (t) =>');
+    expect(bootstrap).toContain('A manual Settings switch must stay active');
+    expect(bootstrap).toContain('if (stored && travels.some((t) => t.id === stored)) return stored;');
     expect(bootstrap).toContain('if (current?.id) return current.id;');
   });
 });

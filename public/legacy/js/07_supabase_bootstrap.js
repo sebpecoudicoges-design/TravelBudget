@@ -836,7 +836,10 @@ function pickActiveTravel(travels) {
   const current = travels.find(containsToday);
   const key = "travelbudget_active_travel_id_v1";
   const stored = localStorage.getItem(key);
-  if (stored && travels.some((t) => t.id === stored) && (!current || containsToday(travels.find((t) => t.id === stored)))) return stored;
+  // A manual Settings switch must stay active even when the selected trip is
+  // outside today's date range. Otherwise refreshing immediately snaps back to
+  // the current trip and the selector appears broken.
+  if (stored && travels.some((t) => t.id === stored)) return stored;
   if (current?.id) return current.id;
 
   // Default = most recent start date.
