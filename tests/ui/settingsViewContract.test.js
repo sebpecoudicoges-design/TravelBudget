@@ -27,11 +27,6 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderCreatePeriodModalBody');
     expect(legacy).toContain('window.TBSettingsView?.getBudgetSegmentDeleteReadiness');
     expect(legacy).toContain('window.TBSettingsAccountController?.bindSettingsAccountPanel');
-    expect(legacy).toContain('window.TBSettingsView?.getSettingsPanelState');
-    expect(legacy).toContain('window.TBSettingsView?.setSettingsPanelState');
-    expect(legacy).toContain('window.TBSettingsView?.getSettingsCardSummary');
-    expect(legacy).toContain('window.TBSettingsView?.ensureSettingsHero');
-    expect(legacy).toContain('window.TBSettingsView?.decorateSettingsPanels');
     expect(legacy).toContain('window.TBLoadSettingsCategoriesView');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderSettingsCategoriesList');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderGuidedCategoryModalBody');
@@ -78,6 +73,14 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('Supprimer la catégorie "${n}"');
     expect(legacy).not.toContain('const n = String(name || "").trim();');
     expect(legacy).not.toContain('const catLower = category.toLowerCase();');
+    expect(legacy).not.toContain('function _tbSaveActiveTravelName');
+    expect(legacy).not.toContain('function _tbSettingsGetPanelState');
+    expect(legacy).not.toContain('function _tbSettingsSetPanelState');
+    expect(legacy).not.toContain('function _tbSettingsCardSummary');
+    expect(legacy).not.toContain('function _tbSettingsEnsureHero');
+    expect(legacy).not.toContain('function _tbSettingsDecoratePanels');
+    expect(legacy).not.toContain('function _tbBudgetRefSummaryHtml');
+    expect(legacy).not.toContain('function _tbBudgetRefRenderSkeleton');
     expect(legacy).not.toContain("throw new Error(readiness.reason || 'Sous-catégorie invalide.')");
     expect(legacy).not.toContain("throw new Error('Nom de sous-catégorie vide.')");
     expect(legacy).not.toContain("throw new Error('Couleur invalide.')");

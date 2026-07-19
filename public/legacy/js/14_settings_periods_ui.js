@@ -220,30 +220,6 @@ function _tbSetActiveTravelAndPeriod(travelId, periodId) {
   }
 }
 
-async function _tbSaveActiveTravelName(name) {
-  const s = _tbGetSB();
-  if (!s) throw new Error("Supabase non prêt.");
-
-  const tid = String(state?.activeTravelId || "");
-  if (!tid) throw new Error("Aucun voyage actif.");
-
-  const clean = String(name || "").trim();
-  if (!clean) throw new Error("Nom du voyage requis.");
-
-  const { error } = await s
-    .from(TB_CONST.TABLES.travels)
-    .update({
-      name: clean,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", tid);
-
-  if (error) throw error;
-
-  const row = (state.travels || []).find(t => String(t.id) === tid);
-  if (row) row.name = clean;
-}
-
 /* ---------- data loaders ---------- */
 
 async function loadPeriodsListIntoUI(){
@@ -324,43 +300,6 @@ async function refreshSegmentsForActivePeriod(){
 
 /* ---------- render ---------- */
 
-
-function _tbSettingsGetPanelState(key, fallbackOpen){
-  return window.TBSettingsView?.getSettingsPanelState?.(key, fallbackOpen, localStorage) ?? !!fallbackOpen;
-}
-
-function _tbSettingsSetPanelState(key, isOpen){
-  window.TBSettingsView?.setSettingsPanelState?.(key, isOpen, localStorage);
-}
-
-function _tbSettingsCardSummary(card){
-  const T = window.tbT || ((k) => k);
-  const title = String(card?.querySelector('h2')?.textContent || '').trim() || T('settings.hero.title');
-  return window.TBSettingsView?.getSettingsCardSummary?.({
-    id: String(card?.id || card?.className || ''),
-    title,
-    state,
-    t: T,
-  }) || { kicker:T('settings.hero.title'), summary:title, pills:[] };
-}
-
-function _tbSettingsEnsureHero(view){
-  return window.TBSettingsView?.ensureSettingsHero?.(view, {
-    state,
-    t: window.tbT || ((k)=>k),
-    esc: escapeHTML,
-    documentRef: document,
-  });
-}
-
-function _tbSettingsDecoratePanels(view){
-  return window.TBSettingsView?.decorateSettingsPanels?.(view, {
-    state,
-    t: window.tbT || ((k)=>k),
-    storage: localStorage,
-    documentRef: document,
-  });
-}
 
 function renderSettings(){
   const T = (window.tbT ? tbT : (k, vars) => {
@@ -959,37 +898,6 @@ function _tbBudgetRefCountryOptions(selectedCode, selectedRegion){
   return opts.join('');
 }
 
-function _tbBudgetRefSummaryHtml(rec, label, inheritText){
-  const st = _tbBudgetRefStyle();
-  const amount = Number(rec?.recommended_daily_amount);
-  const country = rec?.country_name || rec?.country_code || '—';
-  const profile = rec?.travel_profile || 'solo';
-  const style = rec?.travel_style || 'standard';
-  const source = label || 'Configuration';
-  const hint = inheritText ? `<div style="${st.helper}; margin-top:10px;">${escapeHTML(inheritText)}</div>` : '';
-  return `
-    <div class="row" style="gap:10px; flex-wrap:wrap; align-items:stretch;">
-      <div style="${st.metric}">
-        <span class="muted" style="font-size:12px;">Source</span>
-        <strong>${escapeHTML(source)}</strong>
-      </div>
-      <div style="${st.metric}">
-        <span class="muted" style="font-size:12px;">Pays</span>
-        <strong>${escapeHTML(country)}</strong>
-      </div>
-      <div style="${st.metric}">
-        <span class="muted" style="font-size:12px;">Profil</span>
-        <strong>${escapeHTML(profile)} · ${escapeHTML(style)}</strong>
-      </div>
-      <div style="${st.metric}">
-        <span class="muted" style="font-size:12px;">Reco / jour</span>
-        <strong>${Number.isFinite(amount) ? escapeHTML(String(amount)) : '—'}</strong>
-      </div>
-    </div>
-    ${hint}
-  `;
-}
-
 async function _tbBudgetRefLoadState(){
   const s = _tbGetSB();
   if(!s) throw new Error('Supabase non prêt.');
@@ -1102,11 +1010,6 @@ function _tbBudgetRefWireSegmentMode(wrap){
   mode.onchange = sync;
   sync();
 }
-
-function _tbBudgetRefRenderSkeleton(host){
-  host.innerHTML = `<div class="muted">Chargement du budget de référence…</div>`;
-}
-
 
 window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
   const travelHost = document.getElementById('tb-travel-budget-reference-inline');

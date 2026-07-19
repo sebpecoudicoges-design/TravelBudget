@@ -175,6 +175,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire la decision de nettoyage de l'ancien mapping apres renommage Sous-categorie vers `settingsCategoriesView.js`.
   - [x] Extraire la preparation de suppression Categorie (confirmation, SQL/fallback) vers `settingsCategoriesView.js`.
   - [x] Extraire les corps des modales Creation voyage et Creation periode Settings vers `settingsView.js`.
+  - [x] Supprimer les helpers Settings morts : wrappers panneaux obsoletes, sauvegarde nom voyage inutilisee, resume/skeleton budget reference.
   - [x] Demarrer l'extraction Dashboard : le rendu onboarding quitte `12_dashboard_render.js` vers `dashboardView.js`.
   - [x] Demarrer l'extraction Analyse : l'overview de lecture quitte `33_budget_analysis.js` vers `analysisView.js`.
   - [x] Extraire les insights Analyse : messages de tendance, reference, categorie dominante et projection quittent `33_budget_analysis.js`.
