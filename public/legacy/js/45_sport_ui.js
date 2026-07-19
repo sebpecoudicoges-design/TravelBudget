@@ -1976,126 +1976,32 @@
       .slice()
       .sort((a, b) => String(b.day || "").localeCompare(String(a.day || "")))[0] || null;
   }
-  function renderProgramCockpit(days, program) {
-    const weekLabel = days[0]?.weekLabel || currentProgramWeek(program);
-    const today = todayISO();
-    const todayRow = days.find(row => row.day === today);
-    const next = nextPlannedSportRow(days, today);
-    const target = todayRow?.session || next?.session || null;
-    const targetRow = todayRow?.session ? todayRow : next;
-    const catchup = catchupPlannedSportRow(days, today);
-    const last = lastProgramSessionDone();
-    const progressionRows = exerciseProgressionRows(target);
-    const loads = (target?.plan || []).slice(0, 8);
-    const todayLabel = todayRow?.session ? `${todayRow.code || ""} · ${todayRow.session.name}` : txt("Repos aujourd'hui", "Rest today");
-    const nextLabel = next?.session ? `${next.day === today ? txt("Aujourd'hui", "Today") : shortWeekday(next.day)} · ${next.code || ""}` : txt("Aucune seance", "No workout");
-    return `<div class="tb-sport-program-cockpit">
-      <div class="tb-sport-program-head">
-        <div>
-          <span>${esc(txt("Programme V3", "Program V3"))}</span>
-          <strong>${esc(txt("Cockpit entrainement", "Training cockpit"))}</strong>
-          <small>${esc(txt(`Cycle ${weekLabel} actif, recurrence parametrable juste dessous.`, `Active ${weekLabel} cycle, recurrence can be edited below.`))}</small>
-        </div>
-        <div class="tb-sport-actions">
-          ${todayRow?.session ? `<button class="btn small primary" type="button" data-sport-start-planned-today="${esc(todayRow.session.id)}">${esc(txt("Lancer aujourd'hui", "Start today"))}</button>` : ""}
-          ${target ? `<button class="btn small" type="button" data-sport-load-session-favorite="${esc(target.id)}">${esc(txt("Preparer", "Prepare"))}</button>` : ""}
-        </div>
-      </div>
-      <div class="tb-sport-program-kpis">
-        <div><span>${esc(txt("Semaine", "Week"))}</span><strong>${esc(weekLabel)}</strong><small>${esc(txt("Alternance A/B", "A/B rotation"))}</small></div>
-        <div><span>${esc(txt("Aujourd'hui", "Today"))}</span><strong>${esc(todayLabel)}</strong><small>${esc(todayRow?.session ? txt("Seance prevue", "Workout planned") : txt("Recuperation", "Recovery"))}</small></div>
-        <div><span>${esc(txt("Prochaine", "Next"))}</span><strong>${esc(nextLabel)}</strong><small>${esc(next?.session?.name || txt("Planning a completer", "Planning to complete"))}</small></div>
-        <div><span>${esc(txt("Derniere", "Last"))}</span><strong>${esc(last ? String(last.started_at || last.startedAt || "").slice(5, 10).replace("-", "/") : "-")}</strong><small>${esc(last ? `${Math.round(n(last.estimated_kcal, 0))} kcal` : txt("Aucune seance", "No workout"))}</small></div>
-      </div>
-      ${catchup?.session ? `<div class="tb-sport-program-catchup">
-        <div><strong>${esc(txt("Seance a rattraper", "Workout to catch up"))}</strong><small>${esc(`${catchup.day} · ${catchup.code || catchup.session.name} · ${catchup.session.name}`)}</small></div>
-        <button class="btn small" type="button" data-sport-load-session-favorite="${esc(catchup.session.id)}">${esc(txt("Charger", "Load"))}</button>
-      </div>` : ""}
-      ${target ? `<div class="tb-sport-program-focus">
-        <div>
-          <span>${esc(txt(targetRow?.day === today ? "Seance du jour" : "Prochaine seance", targetRow?.day === today ? "Today's workout" : "Next workout"))}</span>
-          <strong>${esc(target.name)}</strong>
-          <small>${esc(sessionPlannedLoadSummary(target))}</small>
-        </div>
-        <em>${esc(sessionProgressionPreview(target))}</em>
-      </div>` : ""}
-      ${loads.length ? `<div class="tb-sport-program-loads">
-        ${loads.map(item => `<div>
-          <span>${esc(sessionExerciseName(item))}</span>
-          <strong>${esc(plannedExerciseLoadLabel(item))}</strong>
-          <small>${esc(item.mode === "reps" ? `${Math.max(1, Math.round(n(item.sets, 1)))} x ${progressionRepRange(item) ? `${progressionRepRange(item).min}-${progressionRepRange(item).max}` : Math.round(n(item.targetReps, 0))} reps` : `${Math.max(1, Math.round(n(item.sets, 1)))} x ${fmtSec(item.targetSeconds || 0)}`)} · ${esc(txt("repos", "rest"))} ${esc(fmtSec(restSecondsForItem(item)))}</small>
-        </div>`).join("")}
-      </div>` : ""}
-      ${progressionRows.length ? `<div class="tb-sport-program-progression">
-        <strong>${esc(txt("Progression exercice par exercice", "Exercise-by-exercise progression"))}</strong>
-        ${progressionRows.map(row => `<div>
-          <span>${esc(row.name)}</span>
-          <small>${esc(`${row.sets} x ${row.range ? `${row.range.min}-${row.range.max}` : "-"} · ${row.loadLabel}`)}</small>
-          <b>${esc(row.external && row.range ? txt(`+${row.inc} kg quand toutes les series touchent ${row.range.max}`, `+${row.inc} kg when every set reaches ${row.range.max}`) : txt("Progression reps/temps", "Reps/time progression"))}</b>
-        </div>`).join("")}
-      </div>` : ""}
-    </div>`;
-  }
   function renderPlannedSportWeek(rows, program) {
     const days = plannedSportWeekRows(rows, program, todayISO());
-    if (!days.length) return "";
-    const weekLabel = days[0]?.weekLabel || currentProgramWeek(program);
-    const today = todayISO();
-    return `<div class="tb-sport-planned-week">
-      ${renderProgramCockpit(days, program)}
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-        <div>
-          <strong>${esc(txt("Semaine planifiee", "Planned week"))}</strong>
-          <div class="muted">${esc(txt(`Cycle ${weekLabel} actif : seance les lundi, mercredi et vendredi.`, `Active ${weekLabel} cycle: workout on Monday, Wednesday and Friday.`))}</div>
-        </div>
-        <span class="pill">${esc(txt("Semaine", "Week"))} ${esc(weekLabel)}</span>
-      </div>
-      <div class="tb-sport-planned-grid">
-        ${days.map(row => {
-          const isToday = row.day === today;
-          const planned = Boolean(row.session);
-          const label = planned ? (row.code || row.session.name) : txt("Repos", "Rest");
-          const detail = planned ? row.session.name : txt("Jour de repos actuel", "Current rest day");
-          return `<button class="tb-sport-planned-day ${planned ? "planned" : "rest"} ${isToday ? "today" : ""}" type="button" ${planned ? `data-sport-load-session-favorite="${esc(row.session.id)}"` : ""} title="${esc(`${row.day} | ${detail}`)}">
-            <span>${esc(shortWeekday(row.day))}</span>
-            <strong>${esc(label)}</strong>
-            <small>${esc(detail)}</small>
-          </button>`;
-        }).join("")}
-      </div>
-    </div>`;
-  }
-  function programDayOptions(value) {
-    const current = String(value || "");
-    const options = [
-      ["", txt("Repos", "Rest")],
-      ["A1/B1", "A1 / B1"],
-      ["A2/B2", "A2 / B2"],
-      ["A3/B3", "A3 / B3"],
-      ["A1", "A1"],
-      ["A2", "A2"],
-      ["A3", "A3"],
-      ["B1", "B1"],
-      ["B2", "B2"],
-      ["B3", "B3"],
-    ];
-    return options.map(row => `<option value="${esc(row[0])}" ${row[0] === current ? "selected" : ""}>${esc(row[1])}</option>`).join("");
+    return window.UI?.sportProgramView?.renderPlannedSportWeek?.({
+      days,
+      program,
+      api: Object.assign(sportViewApi(), {
+        currentProgramWeek,
+        nextPlannedSportRow,
+        catchupPlannedSportRow,
+        lastProgramSessionDone,
+        exerciseProgressionRows,
+        sessionPlannedLoadSummary,
+        sessionProgressionPreview,
+        sessionExerciseName,
+        plannedExerciseLoadLabel,
+        progressionRepRange,
+        restSecondsForItem,
+        nextMondayISO,
+      }),
+    }) || "";
   }
   function renderProgramSettings(program) {
-    const p = Object.assign({ enabled: false, startDate: nextMondayISO(todayISO()), cycle: "A/B", days: { 1: "A1/B1", 3: "A2/B2", 5: "A3/B3" } }, program || {});
-    const dayLabels = [txt("Lun", "Mon"), txt("Mar", "Tue"), txt("Mer", "Wed"), txt("Jeu", "Thu"), txt("Ven", "Fri"), txt("Sam", "Sat"), txt("Dim", "Sun")];
-    return `<details class="tb-sport-advanced" style="margin:10px 0;" ${p.enabled ? "open" : ""}>
-      <summary>${esc(txt("Regler planning et recurrence", "Configure planning and recurrence"))}</summary>
-      <div class="tb-sport-fields" style="margin-top:10px;">
-        <div class="tb-sport-field"><label>${esc(txt("Actif", "Active"))}</label><select id="sport-program-enabled"><option value="on" ${p.enabled ? "selected" : ""}>${esc(txt("Actif", "Active"))}</option><option value="off" ${!p.enabled ? "selected" : ""}>${esc(txt("Pause", "Paused"))}</option></select></div>
-        <div class="tb-sport-field"><label>${esc(txt("Debut cycle", "Cycle start"))}</label><input id="sport-program-start" type="date" value="${esc(String(p.startDate || p.start_date || todayISO()).slice(0, 10))}"></div>
-        <div class="tb-sport-field"><label>${esc(txt("Cycle", "Cycle"))}</label><select id="sport-program-cycle"><option value="A/B" ${String(p.cycle || "A/B") === "A/B" ? "selected" : ""}>A/B</option><option value="A" ${String(p.cycle || "") === "A" ? "selected" : ""}>${esc(txt("Semaine A fixe", "Fixed week A"))}</option><option value="B" ${String(p.cycle || "") === "B" ? "selected" : ""}>${esc(txt("Semaine B fixe", "Fixed week B"))}</option></select></div>
-        ${dayLabels.map((label, idx) => `<div class="tb-sport-field"><label>${esc(label)}</label><select data-sport-program-day="${idx + 1}">${programDayOptions(p.days?.[idx + 1])}</select></div>`).join("")}
-      </div>
-      <div class="tb-sport-actions" style="margin-top:10px;">
-        <button class="btn small" type="button" id="sport-program-reset">${esc(txt("Planning A/B par defaut", "Default A/B planning"))}</button>
-      </div>
-    </details>`;
+    return window.UI?.sportProgramView?.renderProgramSettings?.({
+      program,
+      api: Object.assign(sportViewApi(), { nextMondayISO }),
+    }) || "";
   }
   function renderSessionEditorModal() {
     const editor = CACHE.sessionEditor;
@@ -2584,6 +2490,7 @@
       labelEquipment,
       localDateISO,
       todayISO,
+      shortWeekday,
       supportsExternalLoad,
       lastLoadForExercise,
       effectiveLoadKg,

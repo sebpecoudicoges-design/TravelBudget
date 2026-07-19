@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderSportHistory } from '../../../src/features/sport/sportHistoryView.js';
+import { renderPlannedSportWeek, renderProgramSettings } from '../../../src/features/sport/sportProgramView.js';
 import { renderSportTimer } from '../../../src/features/sport/sportTimerView.js';
 
 const api = {
@@ -21,6 +22,25 @@ const api = {
   effectiveLoadKg: () => 50,
   bodyWeight: () => 59,
   progressionRepRange: (item) => item?.repMin ? { min: item.repMin, max: item.repMax } : null,
+  restSecondsForItem: (item) => item?.restSeconds || 90,
+  shortWeekday: (day) => ({ '2026-07-06': 'Lun', '2026-07-07': 'Mar' }[day] || day),
+  currentProgramWeek: () => 'A',
+  nextPlannedSportRow: (days, day) => days.find((row) => row.planned && row.day >= day) || null,
+  catchupPlannedSportRow: () => null,
+  lastProgramSessionDone: () => ({ started_at: '2026-07-01T06:00:00', estimated_kcal: 310 }),
+  sessionPlannedLoadSummary: () => 'Developpe couche 60 kg x 6-10',
+  sessionProgressionPreview: () => 'Developpe couche : vise 6-10 reps.',
+  sessionExerciseName: (item) => item?.exerciseName || '',
+  plannedExerciseLoadLabel: () => '60 kg',
+  exerciseProgressionRows: (session) => (session?.plan || []).map((item) => ({
+    name: item.exerciseName,
+    sets: item.sets,
+    range: { min: item.repMin, max: item.repMax },
+    inc: 2.5,
+    loadLabel: '60 kg',
+    external: true,
+  })),
+  nextMondayISO: () => '2026-07-13',
 };
 
 describe('Sport timer view', () => {
@@ -111,5 +131,35 @@ describe('Sport history view', () => {
     expect(html).toContain('sport-sync-local-history');
     expect(html).toContain('Synchro Supabase indisponible');
     expect(html).toContain('Aucune seance enregistree');
+  });
+});
+
+describe('Sport program view', () => {
+  it('renders planned week cockpit with start, prepare and load hints', () => {
+    const days = [
+      { day: '2026-07-06', weekday: 1, code: 'A1', weekLabel: 'A', planned: true, session: { id: 'a1', name: 'A1 Poussee', plan: [{ exerciseName: 'Developpe couche', equipment: 'barbell', mode: 'reps', sets: 3, repMin: 6, repMax: 10, restSeconds: 180 }] } },
+      { day: '2026-07-07', weekday: 2, code: '', weekLabel: 'A', planned: false, session: null },
+    ];
+
+    const html = renderPlannedSportWeek({ days, program: { enabled: true }, api: { ...api, todayISO: () => '2026-07-06' } });
+
+    expect(html).toContain('Cockpit entrainement');
+    expect(html).toContain('data-sport-load-session-favorite="a1"');
+    expect(html).toContain('Developpe couche 60 kg x 6-10');
+    expect(html).toContain('+2.5 kg quand toutes les series touchent 10');
+    expect(html).toContain('Repos');
+  });
+
+  it('renders editable A/B planning controls', () => {
+    const html = renderProgramSettings({
+      program: { enabled: true, startDate: '2026-07-06', cycle: 'A/B', days: { 1: 'A1/B1', 5: 'A3/B3' } },
+      api,
+    });
+
+    expect(html).toContain('id="sport-program-enabled"');
+    expect(html).toContain('id="sport-program-start" type="date" value="2026-07-06"');
+    expect(html).toContain('data-sport-program-day="1"');
+    expect(html).toContain('<option value="A1/B1" selected>A1 / B1</option>');
+    expect(html).toContain('id="sport-program-reset"');
   });
 });

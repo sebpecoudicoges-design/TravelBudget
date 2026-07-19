@@ -11,6 +11,7 @@ describe('Sport domain contract', () => {
   const store = fs.readFileSync('src/features/sport/sportStore.js', 'utf8');
   const catalog = fs.readFileSync('src/features/sport/sportCatalog.js', 'utf8');
   const programRules = fs.readFileSync('src/features/sport/sportProgramRules.js', 'utf8');
+  const programView = fs.readFileSync('src/features/sport/sportProgramView.js', 'utf8');
   const timerController = fs.readFileSync('src/features/sport/sportTimerController.js', 'utf8');
   const timerView = fs.readFileSync('src/features/sport/sportTimerView.js', 'utf8');
   const historyView = fs.readFileSync('src/features/sport/sportHistoryView.js', 'utf8');
@@ -90,13 +91,20 @@ describe('Sport domain contract', () => {
     expect(legacy).toContain('sportStore.appSnapshot()');
 
     for (const token of ['currentProgramWeek', 'plannedSportWeekRows', 'nextPlannedSportRow', 'progressionIncrementKg']) {
-      expect(programRules).toContain(`export function ${token}`);
+    expect(programRules).toContain(`export function ${token}`);
       expect(
         legacy.includes(`sportProgramRules.${token}`)
         || legacy.includes(`sportProgramRules?.${token}`)
         || legacy.includes(token),
       ).toBe(true);
     }
+    expect(programView).toContain('export function renderPlannedSportWeek');
+    expect(programView).toContain('export function renderProgramSettings');
+    expect(legacy).toContain('sportProgramView?.renderPlannedSportWeek');
+    expect(legacy).toContain('sportProgramView?.renderProgramSettings');
+    expect(main).toContain("import('./features/sport/sportProgramView.js')");
+    expect(main).toContain('window.UI.sportProgramView');
+    expect(bridge).not.toContain("import * as sportProgramView from '../features/sport/sportProgramView.js'");
   });
 
   it('delegates timer, history, sandbox and profile UI to feature modules', () => {

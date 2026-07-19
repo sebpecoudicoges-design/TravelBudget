@@ -251,10 +251,17 @@ async function ensureDomainModules(domain) {
       };
     }
     if (key === 'sport') {
-      const sportFormView = await import('./features/sport/sportFormView.js');
+      const [sportFormView, sportProgramView] = await Promise.all([
+        import('./features/sport/sportFormView.js'),
+        import('./features/sport/sportProgramView.js'),
+      ]);
       window.UI.sportFormView = {
         ...(window.UI.sportFormView || {}),
         ...sportFormView,
+      };
+      window.UI.sportProgramView = {
+        ...(window.UI.sportProgramView || {}),
+        ...sportProgramView,
       };
     }
     return true;

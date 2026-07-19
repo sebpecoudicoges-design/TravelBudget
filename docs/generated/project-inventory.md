@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `b9c4c16fc1ce63056fe8fa85efea8179afec52bb`
-> Empreinte du snapshot : `da497bf924468d13fab8bc9e4b135bd29cb319f093edc0d1701317ba2173cd7a`
-> Généré le : `2026-07-19T09:27:37.069Z`
+> Commit analysé : `af6605f542a5058d7052f5a598719a88390fd0a1`
+> Empreinte du snapshot : `adeb1b1a6c20a7c3c90bb165bc959a2b1c346d4b35b2096d84f0dcaa8910f91a`
+> Généré le : `2026-07-19T09:45:27.915Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,12 +11,12 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.230` |
+| Version | `10.5.231` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 62 |
 | Modules core | 24 |
 | Modules data | 7 |
-| Modules features | 29 |
+| Modules features | 30 |
 | Fichiers de tests | 96 |
 | Migrations Supabase | 86 |
 | Fonctions Edge | 8 |
@@ -232,6 +232,7 @@ Modules :
 - `src/features/sport/sportProfileRules.js`
 - `src/features/sport/sportProfileView.js`
 - `src/features/sport/sportProgramRules.js`
+- `src/features/sport/sportProgramView.js`
 - `src/features/sport/sportSessionSandboxRules.js`
 - `src/features/sport/sportSessionSandboxView.js`
 - `src/features/sport/sportStore.js`
