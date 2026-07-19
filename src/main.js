@@ -13,6 +13,14 @@ window.TBDashboardView = {
   ...(window.TBDashboardView || {}),
   ...dashboardView,
 };
+window.TBLoadDashboardWalletRules = window.TBLoadDashboardWalletRules || (async () => {
+  const mod = await import('./features/dashboard/dashboardWalletRules.js');
+  window.TBDashboardWalletRules = {
+    ...(window.TBDashboardWalletRules || {}),
+    ...mod,
+  };
+  return window.TBDashboardWalletRules;
+});
 window.TBSettingsView = {
   ...(window.TBSettingsView || {}),
   ...settingsView,

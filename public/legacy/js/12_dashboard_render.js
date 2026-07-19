@@ -508,9 +508,10 @@ function renderDailyBudget() {
    - Lightweight modal (no external deps)
    ========================= */
 function tbOpenWalletDialog() {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     // inject styles once
     tbEnsureWalletDlgStyles();
+    try { if (typeof window.TBLoadDashboardWalletRules === "function") await window.TBLoadDashboardWalletRules(); } catch (_) {}
 
     const backdrop = document.createElement("div");
     backdrop.className = "tb-dlg-backdrop";
@@ -535,23 +536,16 @@ function tbOpenWalletDialog() {
     }
 
     function validateAndReturn() {
-      const name = String(nameEl.value || "").trim();
-      if (!name) return showErr("Nom requis.");
-
-      const currency = String(curEl.value || "").trim().toUpperCase();
-      if (!currency) return showErr("Devise requise.");
-      if (!/^[A-Z]{3,6}$/.test(currency)) return showErr("Devise invalide (ex: EUR, THB).");
-
-      const type = String(typeEl.value || "").trim().toLowerCase();
-      const allowed = ["cash", "bank", "card", "savings", "other"];
-      if (!allowed.includes(type)) return showErr("Type invalide.");
-
-      const balStr = String(balEl.value || "0").replace(",", ".").trim();
-      const balance = Number(balStr);
-      if (!isFinite(balance)) return showErr("Solde invalide.");
+      const result = window.TBDashboardWalletRules?.validateWalletCreateInput?.({
+        name: nameEl.value,
+        currency: curEl.value,
+        type: typeEl.value,
+        balance: balEl.value,
+      });
+      if (!result?.ok) return showErr(result?.error || "Wallet invalide.");
 
       showErr("");
-      close({ name, currency, type, balance });
+      close(result.value);
     }
 
     // close on backdrop click (outside)
@@ -591,40 +585,11 @@ function tbEscHTML(str) {
 }
 
 function tbInferWalletTypeFromName(name) {
-  const raw = String(name || "");
-  let s = raw.toLowerCase();
-  try {
-    s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  } catch (_) {}
-  s = s.replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
-
-  const has = (w) => s.includes(w);
-
-  // cash
-  if (has("cash") || has("espece") || has("especes") || has("liquide") || has("billet") || has("poche")) return "cash";
-  // bank
-  if (has("bank") || has("banque") || has("compte") || has("rib") || has("bnp") || has("revolut") || has("wise") || has("n26")) return "bank";
-  // card
-  if (has("card") || has("carte") || has("cb") || has("visa") || has("mastercard")) return "card";
-  // savings
-  if (has("savings") || has("epargne") || has("livret") || has("saving")) return "savings";
-
-  return "other";
+  return window.TBDashboardWalletRules?.inferWalletTypeFromName?.(name) || "other";
 }
 
 function tbWalletTypeLabel(t) {
-  const x = String(t || "").toLowerCase();
-  if (window.tbT) {
-    // optional i18n keys if you add them later
-    const k = "wallet.type." + x;
-    const tr = tbT(k);
-    if (tr && tr !== k) return tr;
-  }
-  if (x === "cash") return "Cash (espèces)";
-  if (x === "bank") return "Banque";
-  if (x === "card") return "Carte";
-  if (x === "savings") return "Épargne";
-  return "Autre";
+  return window.TBDashboardWalletRules?.walletTypeLabel?.(t, window.tbT) || "Autre";
 }
 
 // Inject wallet dialog styles once, without opening any dialog.
@@ -653,10 +618,11 @@ function tbEnsureWalletDlgStyles() {
 }
 
 function tbOpenWalletEditDialog(wallet) {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     const w = wallet || {};
     // ensure styles exist without opening the create dialog
     tbEnsureWalletDlgStyles();
+    try { if (typeof window.TBLoadDashboardWalletRules === "function") await window.TBLoadDashboardWalletRules(); } catch (_) {}
 
     const back = document.createElement("div");
     back.className = "tb-dlg-backdrop";
@@ -684,19 +650,18 @@ function tbOpenWalletEditDialog(wallet) {
     back.onclick = (e) => { if (e.target === back) close(null); };
 
     $("#tbWEditOk").onclick = () => {
-      const name = String($("#tbWEditName").value || "").trim();
-      const type = String($("#tbWEditType").value || "").toLowerCase();
+      const result = window.TBDashboardWalletRules?.validateWalletEditInput?.({
+        name: $("#tbWEditName").value,
+        type: $("#tbWEditType").value,
+      });
+      if (!result?.ok) return alert(result?.error || "Wallet invalide.");
 
-      const allowed = ["cash", "bank", "card", "savings", "other"];
-      if (!name) return alert("Nom requis.");
-      if (!allowed.includes(type)) return alert("Type invalide.");
-
-      close({ name, type });
+      close(result.value);
     };
   });
 }
 
-function openWalletTypesFix() {
+async function openWalletTypesFix() {
   const wallets = Array.isArray(state.wallets)
   ? state.wallets.filter(w => (w.travelId || w.travel_id) === state.activeTravelId)
   : [];
@@ -704,6 +669,7 @@ function openWalletTypesFix() {
   if (!missing.length) return alert("Tous les wallets ont déjà un type.");
 
   tbEnsureWalletDlgStyles();
+  try { if (typeof window.TBLoadDashboardWalletRules === "function") await window.TBLoadDashboardWalletRules(); } catch (_) {}
 
   const back = document.createElement("div");
   back.className = "tb-dlg-backdrop";
@@ -736,9 +702,8 @@ function openWalletTypesFix() {
         updates.push({ wid, type });
       });
 
-      const allowed = ["cash", "bank", "card", "savings", "other"];
       for (const u of updates) {
-        if (!allowed.includes(u.type)) throw new Error("Type invalide pour " + u.wid);
+        if (!window.TBDashboardWalletRules?.normalizeWalletType?.(u.type)) throw new Error("Type invalide pour " + u.wid);
       }
 
       for (const u of updates) {

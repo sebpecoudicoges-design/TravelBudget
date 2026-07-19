@@ -3,7 +3,7 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 381,
-  "lazyJsMaxKiB": 56,
+    "lazyJsMaxKiB": 58,
     "totalJsMaxKiB": 439,
     "totalCssMaxKiB": 8,
     "mainJsGzipMaxKiB": 110
@@ -95,6 +95,7 @@
         "public/legacy/js/12_dashboard_render.js",
         "public/legacy/js/14_settings_periods_ui.js",
         "src/features/dashboard/dashboardView.js",
+        "src/features/dashboard/dashboardWalletRules.js",
         "src/features/settings/settingsView.js",
         "src/features/settings/settingsCategoriesView.js",
         "src/features/settings/settingsAccountController.js"

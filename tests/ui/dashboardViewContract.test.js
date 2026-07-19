@@ -11,6 +11,14 @@ describe('dashboard view extraction contract', () => {
     expect(main).toContain('...dashboardView');
   });
 
+  it('loads Dashboard wallet rules on demand instead of booting them eagerly', () => {
+    expect(main).toContain('window.TBDashboardWalletRules');
+    expect(main).toContain('window.TBLoadDashboardWalletRules');
+    expect(main).toContain("await import('./features/dashboard/dashboardWalletRules.js')");
+    expect(main).not.toContain("import * as dashboardWalletRules from './features/dashboard/dashboardWalletRules.js'");
+    expect(legacy).toContain('await window.TBLoadDashboardWalletRules();');
+  });
+
   it('keeps dashboard onboarding rendering delegated', () => {
     const matches = legacy.match(/function renderOnboardingPanel/g) || [];
     expect(matches).toHaveLength(1);
@@ -54,11 +62,15 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).toContain('window.TBDashboardView?.renderWalletCreateDialog');
     expect(legacy).toContain('window.TBDashboardView?.renderWalletEditDialog');
     expect(legacy).toContain('window.TBDashboardView?.renderWalletTypesFixDialog');
+    expect(legacy).toContain('window.TBDashboardWalletRules?.validateWalletCreateInput');
+    expect(legacy).toContain('window.TBDashboardWalletRules?.validateWalletEditInput');
+    expect(legacy).toContain('window.TBDashboardWalletRules?.inferWalletTypeFromName');
     expect(legacy).toContain('tbEnsureWalletDlgStyles();');
     expect(legacy).not.toContain('tbOpenWalletDialog().then(() => {});');
     expect(legacy).not.toContain('<input id="tbWName" type="text"');
     expect(legacy).not.toContain('<input id="tbWEditName" type="text"');
     expect(legacy).not.toContain('On a détecté des wallets sans type');
+    expect(legacy).not.toContain('const allowed = ["cash", "bank", "card", "savings", "other"]');
   });
 
   it('keeps a single wallet activity renderer in the Dashboard legacy file', () => {

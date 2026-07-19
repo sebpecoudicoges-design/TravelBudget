@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "63e99aa45a9556303c562d5de08b48b541989219",
-  "snapshotFingerprint": "b1e0d5ecbe3fbf261a5b09392bafc36686addd63cd17c8de5ddede8e0cbba2f7",
-  "generatedAt": "2026-07-19T03:48:39.298Z",
+  "commit": "3c57c50f2282b2b50269a302a78cdff8d930ea2b",
+  "snapshotFingerprint": "ecf8635c4c8eeb4a8a11df0b236ae42b4e16259e2a71eb6cfdbfdb4d46e0df7d",
+  "generatedAt": "2026-07-19T04:50:29.935Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.217"
+    "version": "10.5.218"
   },
   "npmScripts": {
     "dev": "vite",
@@ -185,6 +185,7 @@
     "src/features/analysis/analysisView.js",
     "src/features/assets/assetView.js",
     "src/features/dashboard/dashboardView.js",
+    "src/features/dashboard/dashboardWalletRules.js",
     "src/features/kpi/kpiView.js",
     "src/features/nutrition/nutritionStore.js",
     "src/features/nutrition/nutritionView.js",
@@ -244,6 +245,7 @@
     "tests/features/analysis/analysisView.test.js",
     "tests/features/assets/assetView.test.js",
     "tests/features/dashboard/dashboardView.test.js",
+    "tests/features/dashboard/dashboardWalletRules.test.js",
     "tests/features/kpi/kpiController.test.js",
     "tests/features/kpi/kpiView.test.js",
     "tests/features/nutrition/nutritionStore.test.js",
