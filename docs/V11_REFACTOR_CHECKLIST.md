@@ -167,6 +167,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire la preparation du payload d'edition Sous-categorie vers `settingsCategoriesView.js`.
   - [x] Remplacer les prompts d'edition Sous-categorie par la modale guidee partagee.
   - [x] Extraire la preparation des regles de mapping analytique Categories/Sous-categories vers `settingsCategoriesView.js`.
+  - [x] Extraire la preparation des payloads creation/import Sous-categorie vers `settingsCategoriesView.js`.
   - [x] Extraire les corps des modales Creation voyage et Creation periode Settings vers `settingsView.js`.
   - [x] Demarrer l'extraction Dashboard : le rendu onboarding quitte `12_dashboard_render.js` vers `dashboardView.js`.
   - [x] Demarrer l'extraction Analyse : l'overview de lecture quitte `33_budget_analysis.js` vers `analysisView.js`.

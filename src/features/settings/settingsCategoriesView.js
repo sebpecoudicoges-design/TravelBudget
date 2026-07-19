@@ -197,6 +197,56 @@ export function prepareAnalyticMappingRuleDraft({
   };
 }
 
+function prepareSubcategoryInsertDraft({
+  category = '',
+  name = '',
+  color = '',
+  rows = [],
+  userId = '',
+  resolveCategoryId = () => null,
+  now = () => new Date().toISOString(),
+  sqlOnly = false,
+} = {}) {
+  const list = Array.isArray(rows) ? rows : [];
+  const readiness = validateSubcategoryDraft({
+    category,
+    name,
+    color,
+    rows: list,
+    sqlOnly,
+  });
+  if (!readiness.ok) return readiness;
+  const sortOrder = list.reduce((max, row) => Math.max(max, Number(row?.sortOrder ?? row?.sort_order ?? 0)), -1) + 1;
+  const payload = {
+    user_id: String(userId || '').trim(),
+    category_id: resolveCategoryId(readiness.category),
+    category_name: readiness.category,
+    name: readiness.name,
+    sort_order: sortOrder,
+    is_active: true,
+    updated_at: now(),
+  };
+  if (!sqlOnly) payload.color = readiness.color || null;
+  const draft = {
+    ok: true,
+    reason: '',
+    category: readiness.category,
+    name: readiness.name,
+    sortOrder,
+    payload,
+  };
+  if (!sqlOnly) draft.color = readiness.color;
+  return draft;
+}
+
+export function prepareSubcategoryImportDraft(options = {}) {
+  return prepareSubcategoryInsertDraft({ ...options, sqlOnly: true });
+}
+
+export function prepareSubcategoryCreateDraft(options = {}) {
+  return prepareSubcategoryInsertDraft({ ...options, sqlOnly: false });
+}
+
 export function validateSubcategoryDraft({
   category = '',
   name = '',

@@ -2545,25 +2545,22 @@ async function importExistingSubcategory(categoryName, subcategoryName) {
     const category = String(categoryName || '').trim();
     const name = String(subcategoryName || '').trim();
     const existingRows = _subcategoriesForSettings(category, true);
-    const readiness = window.TBSettingsCategoriesView?.validateSubcategoryDraft?.({ category, name, rows: existingRows, sqlOnly: true });
-    if (readiness && !readiness.ok) {
-      _settingsValidationNotice(readiness.reason || 'Sous-catégorie invalide.');
-      return;
-    }
-    if (!readiness && (!category || !name)) {
-      _settingsValidationNotice('Sous-catégorie invalide.');
-      return;
-    }
-    const sortOrder = existingRows.reduce((max, row) => Math.max(max, Number(row?.sortOrder ?? row?.sort_order ?? 0)), -1) + 1;
-    const payload = {
-      user_id: sbUser.id,
-      category_id: _categoryIdByName(category),
-      category_name: category,
+    const importDraft = window.TBSettingsCategoriesView?.prepareSubcategoryImportDraft?.({
+      category,
       name,
-      sort_order: sortOrder,
-      is_active: true,
-      updated_at: new Date().toISOString(),
-    };
+      rows: existingRows,
+      userId: sbUser.id,
+      resolveCategoryId: _categoryIdByName,
+    });
+    if (importDraft && !importDraft.ok) {
+      _settingsValidationNotice(importDraft.reason || 'Sous-catégorie invalide.');
+      return;
+    }
+    if (!importDraft) {
+      _settingsValidationNotice('Module catégories indisponible.');
+      return;
+    }
+    const payload = importDraft.payload;
     const { error } = await sb.from(TB_CONST.TABLES.category_subcategories).insert([payload]);
     if (error) throw error;
     await refreshFromServer();
@@ -2584,32 +2581,23 @@ async function addSubcategory(categoryName) {
     const color = String(result?.color || '').trim();
     const mapping = String(result?.mapping || '__inherit__').trim() || '__inherit__';
     const existingRows = _subcategoriesForSettings(category, true);
-    const readiness = window.TBSettingsCategoriesView?.validateSubcategoryDraft?.({ category, name, color, rows: existingRows });
-    if (readiness && !readiness.ok) {
-      _settingsValidationNotice(readiness.reason || 'Sous-catégorie invalide.');
+    const createDraft = window.TBSettingsCategoriesView?.prepareSubcategoryCreateDraft?.({
+      category,
+      name,
+      color,
+      rows: existingRows,
+      userId: sbUser.id,
+      resolveCategoryId: _categoryIdByName,
+    });
+    if (createDraft && !createDraft.ok) {
+      _settingsValidationNotice(createDraft.reason || 'Sous-catégorie invalide.');
       return;
     }
-    if (!readiness) {
-      if (!name) {
-        _settingsValidationNotice('Nom de sous-catégorie vide.');
-        return;
-      }
-      if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) {
-        _settingsValidationNotice('Couleur invalide.');
-        return;
-      }
+    if (!createDraft) {
+      _settingsValidationNotice('Module catégories indisponible.');
+      return;
     }
-    const sortOrder = existingRows.reduce((max, row) => Math.max(max, Number(row?.sortOrder ?? row?.sort_order ?? 0)), -1) + 1;
-    const payload = {
-      user_id: sbUser.id,
-      category_id: _categoryIdByName(category),
-      category_name: category,
-      name,
-      color: color || null,
-      sort_order: sortOrder,
-      is_active: true,
-      updated_at: new Date().toISOString(),
-    };
+    const payload = createDraft.payload;
     const { error } = await sb.from(TB_CONST.TABLES.category_subcategories).insert([payload]);
     if (error) throw error;
     await _saveAnalyticMappingRuleViaRpc(category, name, mapping);

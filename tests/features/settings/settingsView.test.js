@@ -21,6 +21,8 @@ import {
   renderSettingsCategoriesList,
   notifySettingsValidation,
   prepareAnalyticMappingRuleDraft,
+  prepareSubcategoryCreateDraft,
+  prepareSubcategoryImportDraft,
   prepareSubcategoryEditDraft,
   validateCategoryDraft,
   validateSubcategoryDraft,
@@ -484,6 +486,98 @@ describe('Settings view helpers', () => {
       ok: true,
       mappingStatus: 'unmapped',
       analyticFamily: null,
+    });
+  });
+
+  it('prepares subcategory import payloads before legacy writes', () => {
+    const rows = [
+      { id: 'sub-1', name: 'Restaurant', sortOrder: 2 },
+      { name: 'Visa', sort_order: 4 },
+    ];
+
+    expect(prepareSubcategoryImportDraft({
+      category: '',
+      name: 'Detected',
+      rows,
+    })).toEqual({
+      ok: false,
+      reason: 'Sous-catégorie invalide.',
+    });
+
+    expect(prepareSubcategoryImportDraft({
+      category: 'Food',
+      name: 'Restaurant',
+      rows,
+    })).toEqual({
+      ok: false,
+      reason: 'Cette sous-catégorie existe déjà en SQL pour cette catégorie.',
+    });
+
+    expect(prepareSubcategoryImportDraft({
+      category: ' Food ',
+      name: ' Detected ',
+      rows,
+      userId: 'user-1',
+      resolveCategoryId: (category) => `cat-${category.toLowerCase()}`,
+      now: () => '2026-07-19T02:00:00.000Z',
+    })).toEqual({
+      ok: true,
+      reason: '',
+      category: 'Food',
+      name: 'Detected',
+      sortOrder: 5,
+      payload: {
+        user_id: 'user-1',
+        category_id: 'cat-food',
+        category_name: 'Food',
+        name: 'Detected',
+        sort_order: 5,
+        is_active: true,
+        updated_at: '2026-07-19T02:00:00.000Z',
+      },
+    });
+  });
+
+  it('prepares subcategory create payloads before legacy writes', () => {
+    const rows = [
+      { id: 'sub-1', name: 'Restaurant', sortOrder: 10 },
+      { id: 'sub-2', name: 'Cafe', sort_order: 20 },
+    ];
+
+    expect(prepareSubcategoryCreateDraft({
+      category: 'Food',
+      name: 'Cafe',
+      rows,
+    })).toEqual({
+      ok: false,
+      reason: 'Cette sous-catégorie existe déjà pour cette catégorie.',
+    });
+
+    expect(prepareSubcategoryCreateDraft({
+      category: ' Food ',
+      name: ' Brunch ',
+      color: '#22c55e',
+      rows,
+      userId: 'user-1',
+      resolveCategoryId: (category) => `cat-${category.toLowerCase()}`,
+      now: () => '2026-07-19T03:00:00.000Z',
+    })).toEqual({
+      ok: true,
+      reason: '',
+      category: 'Food',
+      name: 'Brunch',
+      color: '#22c55e',
+      sortOrder: 21,
+      payload: {
+        user_id: 'user-1',
+        category_id: 'cat-food',
+        category_name: 'Food',
+        name: 'Brunch',
+        color: '#22c55e',
+        sort_order: 21,
+        is_active: true,
+        updated_at: '2026-07-19T03:00:00.000Z',
+      },
     });
   });
 
