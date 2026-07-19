@@ -4,6 +4,7 @@ import fs from 'node:fs';
 describe('nutrition domain extraction contract', () => {
   const bootstrap = fs.readFileSync('public/legacy/js/07_supabase_bootstrap.js', 'utf8');
   const bridge = fs.readFileSync('src/app/bridge.js', 'utf8');
+  const main = fs.readFileSync('src/main.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/48_nutrition_ui.js', 'utf8');
   const repository = fs.readFileSync('src/data/nutritionRepository.js', 'utf8');
   const store = fs.readFileSync('src/features/nutrition/nutritionStore.js', 'utf8');
@@ -12,10 +13,11 @@ describe('nutrition domain extraction contract', () => {
   it('exposes repository, store and views through the modular bridge', () => {
     expect(bridge).toContain("import { createNutritionRepository } from '../data/nutritionRepository.js'");
     expect(bridge).toContain("import { createNutritionStore } from '../features/nutrition/nutritionStore.js'");
-    expect(bridge).toContain("import * as nutritionView from '../features/nutrition/nutritionView.js'");
     expect(bridge).toContain('window.Data.nutritionRepository');
     expect(bridge).toContain('window.Data.nutritionStore');
-    expect(bridge).toContain('window.UI.nutritionView = nutritionView');
+    expect(main).toContain("import('./features/nutrition/nutritionView.js')");
+    expect(main).toContain('window.UI.nutritionView');
+    expect(bridge).not.toContain("import * as nutritionView from '../features/nutrition/nutritionView.js'");
   });
 
   it('keeps legacy Nutrition routed through repository, store and extracted view panels', () => {
@@ -25,6 +27,7 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('nutritionStore()?.hydrateRemote');
     expect(legacy).toContain('nutritionStore()?.hydrateLocal');
     expect(legacy).toContain('view().renderQuickAddPanel');
+    expect(legacy).toContain('view().renderNutritionSyncPanel');
     expect(legacy).toContain('view().renderMealTimeline');
     expect(legacy).toContain('view().renderHydrationPanel');
     expect(legacy).toContain('view().renderSleepPanel');
@@ -55,10 +58,13 @@ describe('nutrition domain extraction contract', () => {
     expect(store).toContain('hydrateLocal');
     expect(store).toContain('appSnapshot');
     expect(view).toContain('renderQuickAddPanel');
+    expect(view).toContain('renderNutritionSyncPanel');
     expect(view).toContain('renderMealTimeline');
     expect(view).toContain('renderHistoryPanel');
     expect(view).toContain('renderHydrationPanel');
     expect(view).toContain('renderSleepPanel');
     expect(view).toContain('renderGoalCockpit');
+    expect(legacy).not.toContain('Synchro alimentation en attente", "Pending nutrition sync');
+    expect(legacy).not.toContain('rows.slice(0, 8).map((row, index)');
   });
 });

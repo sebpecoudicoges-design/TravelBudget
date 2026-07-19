@@ -15,6 +15,7 @@ import {
   renderHydrationPanel,
   renderMealFavoriteChip,
   renderMealTimeline,
+  renderNutritionSyncPanel,
   renderQuickAddPanel,
   renderSleepPanel,
   renderProgressBar,
@@ -62,6 +63,37 @@ describe('Nutrition view helpers', () => {
     });
     expect(html).toContain('data-nutrition-apply-meal-fav="2"');
     expect(html).toContain('190 kcal');
+  });
+
+  it('renders the pending sync panel with stable actions and discard hooks', () => {
+    const html = renderNutritionSyncPanel({
+      rows: [
+        {
+          meal: { meal_date: '2026-07-19', meal_type: 'lunch' },
+          item: { label: '<Riz>', kcal: 420 },
+          syncError: 'Failed to fetch',
+        },
+        {
+          meal: { meal_date: '2026-07-19', meal_type: 'snack', water_ml: 250 },
+          item: {},
+        },
+      ],
+      globalPendingCount: 1,
+      syncStatus: 'Hors ligne',
+      selectedDate: '2026-07-19',
+      localNutritionRowKey: (_row, index) => `local-${index}`,
+      mealTypeLabel: (type) => ({ lunch: 'Dejeuner', snack: 'Snack' }[type] || type),
+      t,
+    });
+
+    expect(html).toContain('Synchro alimentation en attente');
+    expect(html).toContain('2 ajout(s) local(aux) · 1 action(s) file offline · Hors ligne');
+    expect(html).toContain('id="nutrition-sync-pending"');
+    expect(html).toContain('id="nutrition-clear-pending"');
+    expect(html).toContain('&lt;Riz&gt;');
+    expect(html).toContain('Dejeuner · 420 kcal');
+    expect(html).toContain('Snack · 250 ml');
+    expect(html).toContain('data-nutrition-discard-local="local-0"');
   });
 
   it('renders the quick-add panel with stable form hooks', () => {

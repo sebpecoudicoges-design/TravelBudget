@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('Sport domain contract', () => {
   const bridge = fs.readFileSync('src/app/bridge.js', 'utf8');
+  const main = fs.readFileSync('src/main.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/45_sport_ui.js', 'utf8');
   const rules = fs.readFileSync('src/core/sportRules.js', 'utf8');
   const libraryRules = fs.readFileSync('src/core/sportLibraryRules.js', 'utf8');
@@ -30,7 +31,6 @@ describe('Sport domain contract', () => {
       'sportTimerController',
       'sportTimerView',
       'sportHistoryView',
-      'sportFormView',
       'sportSessionSandboxRules',
       'sportSessionSandboxView',
       'sportProfileRules',
@@ -43,7 +43,9 @@ describe('Sport domain contract', () => {
     expect(bridge).toContain('window.Data.createSportStore');
     expect(bridge).toContain('window.UI.sportTimerView');
     expect(bridge).toContain('window.UI.sportHistoryView');
-    expect(bridge).toContain('window.UI.sportFormView');
+    expect(main).toContain("import('./features/sport/sportFormView.js')");
+    expect(main).toContain('window.UI.sportFormView');
+    expect(bridge).not.toContain("import * as sportFormView from '../features/sport/sportFormView.js'");
   });
 
   it('keeps catalog and library normalization out of the legacy file', () => {

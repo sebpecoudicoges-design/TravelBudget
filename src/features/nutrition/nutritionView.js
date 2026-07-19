@@ -98,6 +98,55 @@ export function renderMealTypeOptions(activeMealType = 'meal', { t, esc = defaul
   return options.map(([value, label]) => `<option value="${esc(value)}" ${activeMealType === value ? 'selected' : ''}>${esc(label)}</option>`).join('');
 }
 
+export function renderNutritionSyncPanel({
+  rows = [],
+  globalPendingCount = 0,
+  syncStatus = '',
+  selectedDate = '',
+  localNutritionRowKey = (_row, index) => `idx_${index}`,
+  localDateISO = (value) => String(value || '').slice(0, 10),
+  mealTypeLabel = (type) => type,
+  esc = defaultEsc,
+  t,
+} = {}) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  if (!safeRows.length) return '';
+  const pendingCount = Math.max(0, Math.round(num(globalPendingCount, 0)));
+  const metaParts = [
+    `${safeRows.length} ${langText('ajout(s) local(aux)', 'local entry/entries', t)}`,
+    pendingCount ? `${pendingCount} ${langText('action(s) file offline', 'offline queue action(s)', t)}` : '',
+    syncStatus || '',
+  ].filter(Boolean);
+
+  return `<div style="margin-top:12px;border:1px solid rgba(245,158,11,.38);border-radius:12px;padding:12px;background:linear-gradient(135deg,rgba(245,158,11,.14),rgba(56,189,248,.06)),var(--panel2);">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+        <div>
+          <strong>${esc(langText('Synchro alimentation en attente', 'Pending nutrition sync', t))}</strong>
+          <div class="muted" style="font-size:12px;margin-top:3px;">${esc(metaParts.join(' · '))}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn small primary" type="button" id="nutrition-sync-pending">${esc(langText('Synchroniser', 'Sync', t))}</button>
+          <button class="btn small danger" type="button" id="nutrition-clear-pending">${esc(langText('Vider', 'Clear', t))}</button>
+        </div>
+      </div>
+      <div style="display:grid;gap:6px;margin-top:10px;">
+        ${safeRows.slice(0, 8).map((row, index) => {
+          const meal = row?.meal || {};
+          const item = row?.item || {};
+          const key = localNutritionRowKey(row, index);
+          const label = item.label || meal.label || langText('Ajout nutrition', 'Nutrition entry', t);
+          const amount = num(item.kcal, 0) > 0 ? `${Math.round(num(item.kcal, 0))} kcal` : `${Math.round(num(meal.water_ml, 0))} ml`;
+          const meta = `${localDateISO(meal.meal_date) || selectedDate} · ${mealTypeLabel(meal.meal_type || 'meal')} · ${amount}`;
+          return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;border-top:1px solid rgba(148,163,184,.22);padding-top:6px;">
+            <span><strong>${esc(label)}</strong><br><small class="muted">${esc(meta)}${row?.syncError ? ` · ${esc(row.syncError)}` : ''}</small></span>
+            <button class="btn small" type="button" data-nutrition-discard-local="${esc(key)}">${esc(langText('Supprimer', 'Delete', t))}</button>
+          </div>`;
+        }).join('')}
+        ${safeRows.length > 8 ? `<div class="muted" style="font-size:12px;">+${safeRows.length - 8} ${esc(langText('autre(s) attente(s)', 'other pending entry/entries', t))}</div>` : ''}
+      </div>
+    </div>`;
+}
+
 export function renderQuickAddPanel({
   editingItem = null,
   syncBadge = '',

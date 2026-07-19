@@ -88,6 +88,7 @@ describe('legacy domain loader', () => {
 
     const domainLoader = main.slice(main.indexOf('window.tbLoadLegacyDomain'), main.indexOf('window.tbIsLegacyDomainLoaded'));
     expect(domainLoader).toContain('await waitForBridgeReady();');
+    expect(domainLoader).toContain('await ensureDomainModules(key);');
 
     const bootLoader = main.slice(main.indexOf('await waitForBridgeReady();'), main.indexOf('boot().catch'));
     expect(bootLoader).toContain('for (const src of BOOT_LEGACY_SCRIPTS)');
@@ -168,6 +169,8 @@ describe('legacy domain loader', () => {
     expect(bootList).not.toContain('/legacy/js/48_nutrition_ui.js');
     expect(domains).toContain('nutrition:');
     expect(domains).toContain('/legacy/js/48_nutrition_ui.js');
+    expect(main).toContain("import('./features/nutrition/nutritionView.js')");
+    expect(main).toContain('window.UI.nutritionView');
     expect(navigation).toContain('window.tbLoadLegacyDomain("nutrition")');
     expect(navigation).toContain('renderNutrition("navigation:lazy")');
     expect(index).toContain('id="tab-nutrition"');
@@ -218,6 +221,8 @@ describe('legacy domain loader', () => {
     expect(bootList).not.toContain('/legacy/js/45_sport_ui.js');
     expect(domains).toContain('sport:');
     expect(domains).toContain('/legacy/js/45_sport_ui.js');
+    expect(main).toContain("import('./features/sport/sportFormView.js')");
+    expect(main).toContain('window.UI.sportFormView');
     expect(navigation).toContain('window.tbLoadLegacyDomain("sport")');
     expect(navigation).toContain('renderSport("navigation:lazy")');
     expect(offlineQueue).toContain('await window.tbLoadLegacyDomain("sport")');

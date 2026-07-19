@@ -123,6 +123,7 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
     - [x] Extraire les composants de vue : barres, chips favoris/recents, suggestions repas, semaine et timeline repas.
     - [x] Extraire les panneaux de vue : saisie rapide, hydratation, sommeil et historique semaine.
     - [x] Extraire les vues objectif et alcool : cockpit objectif, moyenne 7 jours et barres alcool hebdomadaires.
+    - [x] Extraire le panneau Synchro alimentation en attente vers `nutritionView.js`, avec actions sync/vider/supprimer conservees.
 - [x] Sante : supprimer le chantier autonome et garder les indicateurs dans Nutrition, Sport, Travail, notifications et KPI.
   - [x] Retirer l'onglet, la vue et le rendu Sante autonomes du runtime ; rediriger les anciens appels vers Nutrition.
 - [x] Travail : separer periodes, missions, revenus et graphiques.

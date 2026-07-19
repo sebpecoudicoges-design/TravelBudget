@@ -138,6 +138,7 @@ const LEGACY_DOMAIN_SCRIPTS = {
 const legacyDomainPromises = new Map();
 let bridgeReadyPromise = null;
 let analysisModulesPromise = null;
+const domainModulePromises = new Map();
 let kpiViewPromise = null;
 
 function ensureKpiStylesheet() {
@@ -237,6 +238,34 @@ async function ensureAnalysisModules() {
   return analysisModulesPromise;
 }
 
+async function ensureDomainModules(domain) {
+  const key = String(domain || '').trim();
+  if (domainModulePromises.has(key)) return domainModulePromises.get(key);
+  const promise = (async () => {
+    window.UI = window.UI || {};
+    if (key === 'nutrition') {
+      const nutritionView = await import('./features/nutrition/nutritionView.js');
+      window.UI.nutritionView = {
+        ...(window.UI.nutritionView || {}),
+        ...nutritionView,
+      };
+    }
+    if (key === 'sport') {
+      const sportFormView = await import('./features/sport/sportFormView.js');
+      window.UI.sportFormView = {
+        ...(window.UI.sportFormView || {}),
+        ...sportFormView,
+      };
+    }
+    return true;
+  })().catch((error) => {
+    domainModulePromises.delete(key);
+    throw error;
+  });
+  domainModulePromises.set(key, promise);
+  return promise;
+}
+
 async function boot() {
   ensureKpiView();
   window.tbLoadLegacyDomain = function tbLoadLegacyDomain(domain) {
@@ -247,6 +276,7 @@ async function boot() {
     const promise = (async () => {
       await waitForBridgeReady();
       if (key === 'analysis') await ensureAnalysisModules();
+      await ensureDomainModules(key);
       for (const src of scripts) {
         // eslint-disable-next-line no-await-in-loop
         await loadScript(src);

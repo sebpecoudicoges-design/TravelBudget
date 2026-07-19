@@ -356,33 +356,17 @@
           : [];
       } catch (_) { return []; }
     })();
-    return `<div style="margin-top:12px;border:1px solid rgba(245,158,11,.38);border-radius:12px;padding:12px;background:linear-gradient(135deg,rgba(245,158,11,.14),rgba(56,189,248,.06)),var(--panel2);">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
-        <div>
-          <strong>${esc(txt("Synchro alimentation en attente", "Pending nutrition sync"))}</strong>
-          <div class="muted" style="font-size:12px;margin-top:3px;">${rows.length} ${esc(txt("ajout(s) local(aux)", "local entry/entries"))}${globalPending.length ? ` · ${globalPending.length} ${esc(txt("action(s) file offline", "offline queue action(s)"))}` : ""}${CACHE.syncStatus ? ` · ${esc(CACHE.syncStatus)}` : ""}</div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn small primary" type="button" id="nutrition-sync-pending">${esc(txt("Synchroniser", "Sync"))}</button>
-          <button class="btn small danger" type="button" id="nutrition-clear-pending">${esc(txt("Vider", "Clear"))}</button>
-        </div>
-      </div>
-      <div style="display:grid;gap:6px;margin-top:10px;">
-        ${rows.slice(0, 8).map((row, index) => {
-          const meal = row.meal || {};
-          const item = row.item || {};
-          const key = localNutritionRowKey(row, index);
-          const label = item.label || meal.label || txt("Ajout nutrition", "Nutrition entry");
-          const amount = n(item.kcal, 0) > 0 ? `${Math.round(n(item.kcal, 0))} kcal` : `${Math.round(n(meal.water_ml, 0))} ml`;
-          const meta = `${localDateISO(meal.meal_date) || selectedDateISO()} · ${mealTypeLabel(meal.meal_type || "meal")} · ${amount}`;
-          return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;border-top:1px solid rgba(148,163,184,.22);padding-top:6px;">
-            <span><strong>${esc(label)}</strong><br><small class="muted">${esc(meta)}${row.syncError ? ` · ${esc(row.syncError)}` : ""}</small></span>
-            <button class="btn small" type="button" data-nutrition-discard-local="${esc(key)}">${esc(txt("Supprimer", "Delete"))}</button>
-          </div>`;
-        }).join("")}
-        ${rows.length > 8 ? `<div class="muted" style="font-size:12px;">+${rows.length - 8} ${esc(txt("autre(s) attente(s)", "other pending entry/entries"))}</div>` : ""}
-      </div>
-    </div>`;
+    return view().renderNutritionSyncPanel?.({
+      rows,
+      globalPendingCount: globalPending.length,
+      syncStatus: CACHE.syncStatus,
+      selectedDate: selectedDateISO(),
+      localNutritionRowKey,
+      localDateISO,
+      mealTypeLabel,
+      esc,
+      t: txt,
+    }) || "";
   }
   function isOfflineSkipError(err) {
     const repo = repository();
