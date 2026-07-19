@@ -2251,17 +2251,22 @@ async function _deleteCategoryBundleViaRpc(categoryName) {
 }
 
 async function _saveAnalyticMappingRuleViaRpc(categoryName, subcategoryName, nextValue) {
-  const category = String(categoryName || '').trim();
-  const subcategory = (subcategoryName === undefined || subcategoryName === null || String(subcategoryName || '').trim() === '')
-    ? null
-    : String(subcategoryName || '').trim();
-  const value = String(nextValue || '').trim();
-  if (!category) throw new Error('Catégorie invalide.');
-  const mappingStatus = (value === '__unmapped__' || value === '__inherit__')
-    ? 'unmapped'
-    : (value === '__excluded__' ? 'excluded' : 'mapped');
-  const analyticFamily = mappingStatus === 'mapped' ? value : null;
-  const rpcPayload = {
+  const draft = window.TBSettingsCategoriesView?.prepareAnalyticMappingRuleDraft?.({
+    categoryName,
+    subcategoryName,
+    nextValue,
+    userId: sbUser.id,
+  });
+  const category = draft?.category || String(categoryName || '').trim();
+  const subcategory = draft
+    ? draft.subcategory
+    : ((subcategoryName === undefined || subcategoryName === null || String(subcategoryName || '').trim() === '') ? null : String(subcategoryName || '').trim());
+  const value = draft?.value || String(nextValue || '').trim();
+  if (draft && !draft.ok) throw new Error(draft.reason || 'Catégorie invalide.');
+  if (!draft && !category) throw new Error('Catégorie invalide.');
+  const mappingStatus = draft?.mappingStatus || ((value === '__unmapped__' || value === '__inherit__') ? 'unmapped' : (value === '__excluded__' ? 'excluded' : 'mapped'));
+  const analyticFamily = draft ? draft.analyticFamily : (mappingStatus === 'mapped' ? value : null);
+  const rpcPayload = draft?.rpcPayload || {
     p_user_id: sbUser.id,
     p_category_name: category,
     p_subcategory_name: subcategory,
@@ -2287,7 +2292,7 @@ async function _saveAnalyticMappingRuleViaRpc(categoryName, subcategoryName, nex
     return;
   }
 
-  const payload = {
+  const payload = draft?.tablePayload || {
     user_id: sbUser.id,
     category_name: category,
     subcategory_name: subcategory,

@@ -152,6 +152,51 @@ export function prepareSubcategoryEditDraft({
   };
 }
 
+export function prepareAnalyticMappingRuleDraft({
+  categoryName = '',
+  subcategoryName = null,
+  nextValue = '',
+  userId = '',
+  now = () => new Date().toISOString(),
+} = {}) {
+  const category = String(categoryName || '').trim();
+  const subcategory = (subcategoryName === undefined || subcategoryName === null || String(subcategoryName || '').trim() === '')
+    ? null
+    : String(subcategoryName || '').trim();
+  const value = String(nextValue || '').trim();
+  const cleanUserId = String(userId || '').trim();
+  if (!category) return { ok: false, reason: 'Catégorie invalide.' };
+  const mappingStatus = (value === '__unmapped__' || value === '__inherit__')
+    ? 'unmapped'
+    : (value === '__excluded__' ? 'excluded' : 'mapped');
+  const analyticFamily = mappingStatus === 'mapped' ? value : null;
+  return {
+    ok: true,
+    reason: '',
+    category,
+    subcategory,
+    value,
+    mappingStatus,
+    analyticFamily,
+    rpcPayload: {
+      p_user_id: cleanUserId,
+      p_category_name: category,
+      p_subcategory_name: subcategory,
+      p_mapping_status: mappingStatus,
+      p_analytic_family: analyticFamily,
+    },
+    tablePayload: {
+      user_id: cleanUserId,
+      category_name: category,
+      subcategory_name: subcategory,
+      mapping_status: mappingStatus,
+      analytic_family: analyticFamily,
+      notes: null,
+      updated_at: now(),
+    },
+  };
+}
+
 export function validateSubcategoryDraft({
   category = '',
   name = '',

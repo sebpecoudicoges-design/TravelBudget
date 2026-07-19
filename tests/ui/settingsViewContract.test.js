@@ -40,6 +40,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsCategoriesView?.validateSubcategoryDraft');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.notifySettingsValidation');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareSubcategoryEditDraft');
+    expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareAnalyticMappingRuleDraft');
     expect(legacy).not.toContain('const cards = Array.from(view.querySelectorAll');
     expect(legacy).not.toContain('box.innerHTML = `');
     expect(legacy).not.toContain('const readNotificationForm = () =>');
@@ -70,5 +71,6 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('Renommer la sous-catégorie');
     expect(legacy).not.toContain('Couleur hexadécimale optionnelle');
     expect(legacy).toContain('Modifier sous-catégorie ·');
+    expect(legacy).not.toContain("const mappingStatus = (value === '__unmapped__' || value === '__inherit__')");
   });
 });

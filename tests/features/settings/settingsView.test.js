@@ -20,6 +20,7 @@ import {
   renderGuidedSubcategoryModalBody,
   renderSettingsCategoriesList,
   notifySettingsValidation,
+  prepareAnalyticMappingRuleDraft,
   prepareSubcategoryEditDraft,
   validateCategoryDraft,
   validateSubcategoryDraft,
@@ -417,6 +418,72 @@ describe('Settings view helpers', () => {
         category_name: 'Food',
         updated_at: '2026-07-19T00:00:00.000Z',
       },
+    });
+  });
+
+  it('prepares analytic mapping RPC and table payloads before legacy writes', () => {
+    expect(prepareAnalyticMappingRuleDraft({ categoryName: '' })).toEqual({
+      ok: false,
+      reason: 'Catégorie invalide.',
+    });
+
+    expect(prepareAnalyticMappingRuleDraft({
+      categoryName: ' Food ',
+      subcategoryName: ' Restaurant ',
+      nextValue: 'transport',
+      userId: 'user-1',
+      now: () => '2026-07-19T01:00:00.000Z',
+    })).toEqual({
+      ok: true,
+      reason: '',
+      category: 'Food',
+      subcategory: 'Restaurant',
+      value: 'transport',
+      mappingStatus: 'mapped',
+      analyticFamily: 'transport',
+      rpcPayload: {
+        p_user_id: 'user-1',
+        p_category_name: 'Food',
+        p_subcategory_name: 'Restaurant',
+        p_mapping_status: 'mapped',
+        p_analytic_family: 'transport',
+      },
+      tablePayload: {
+        user_id: 'user-1',
+        category_name: 'Food',
+        subcategory_name: 'Restaurant',
+        mapping_status: 'mapped',
+        analytic_family: 'transport',
+        notes: null,
+        updated_at: '2026-07-19T01:00:00.000Z',
+      },
+    });
+
+    expect(prepareAnalyticMappingRuleDraft({
+      categoryName: 'Food',
+      nextValue: '__excluded__',
+      userId: 'user-1',
+    })).toMatchObject({
+      ok: true,
+      subcategory: null,
+      mappingStatus: 'excluded',
+      analyticFamily: null,
+      rpcPayload: {
+        p_subcategory_name: null,
+        p_mapping_status: 'excluded',
+        p_analytic_family: null,
+      },
+    });
+
+    expect(prepareAnalyticMappingRuleDraft({
+      categoryName: 'Food',
+      subcategoryName: 'Cafe',
+      nextValue: '__inherit__',
+      userId: 'user-1',
+    })).toMatchObject({
+      ok: true,
+      mappingStatus: 'unmapped',
+      analyticFamily: null,
     });
   });
 
