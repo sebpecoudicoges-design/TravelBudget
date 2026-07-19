@@ -57,5 +57,10 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('<input id="tb-pstart"');
     expect(legacy).not.toContain('const duplicate = existingRows.find');
     expect(legacy).not.toContain('const duplicateSql = existingRows.find');
+    expect(legacy).toContain('function _settingsValidationNotice');
+    expect(legacy).not.toContain('throw new Error(readiness.reason || "Catégorie invalide.")');
+    expect(legacy).not.toContain("throw new Error(readiness.reason || 'Sous-catégorie invalide.')");
+    expect(legacy).not.toContain("throw new Error('Nom de sous-catégorie vide.')");
+    expect(legacy).not.toContain("throw new Error('Couleur invalide.')");
   });
 });

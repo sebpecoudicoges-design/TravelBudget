@@ -2429,6 +2429,20 @@ function renderCategoriesSettingsUI() {
   host.innerHTML = `<div class="muted">Aucune catégorie. Ajoute-en une ci-dessus.</div>`;
 }
 
+function _settingsValidationNotice(message) {
+  const text = String(message || "Valeur invalide.").trim();
+  if (!text) return;
+  if (typeof window.toastWarn === "function") {
+    window.toastWarn(text);
+    return;
+  }
+  if (typeof window.toastInfo === "function") {
+    window.toastInfo(text);
+    return;
+  }
+  alert(text);
+}
+
 function addCategory() {
   safeCall("Add category", async () => {
     const nameEl = document.getElementById("cat-name");
@@ -2446,8 +2460,14 @@ function addCategory() {
       name: result?.name,
       color: result?.color,
     });
-    if (readiness && !readiness.ok) throw new Error(readiness.reason || "Catégorie invalide.");
-    if (!readiness && !String(result?.name || "").trim()) throw new Error("Nom de catégorie vide.");
+    if (readiness && !readiness.ok) {
+      _settingsValidationNotice(readiness.reason || "Catégorie invalide.");
+      return;
+    }
+    if (!readiness && !String(result?.name || "").trim()) {
+      _settingsValidationNotice("Nom de catégorie vide.");
+      return;
+    }
     const name = readiness?.name || String(result?.name || "").trim();
     const color = readiness?.color || String(result?.color || "#94a3b8");
     const mapping = String(result?.mapping || '__unmapped__').trim() || '__unmapped__';
@@ -2493,7 +2513,10 @@ Cela supprimera aussi ses sous-catégories SQL et ses règles analytiques liées
 function setCategoryColor(name, color) {
   safeCall("Set category color", async () => {
     const readiness = window.TBSettingsCategoriesView?.validateCategoryDraft?.({ name, color });
-    if (readiness && !readiness.ok) throw new Error(readiness.reason || "Catégorie invalide.");
+    if (readiness && !readiness.ok) {
+      _settingsValidationNotice(readiness.reason || "Catégorie invalide.");
+      return;
+    }
     const n = readiness?.name || String(name || "").trim();
     const cleanColor = readiness?.color || String(color || "#94a3b8");
     if (!readiness && !n) return;
@@ -2516,8 +2539,14 @@ async function importExistingSubcategory(categoryName, subcategoryName) {
     const name = String(subcategoryName || '').trim();
     const existingRows = _subcategoriesForSettings(category, true);
     const readiness = window.TBSettingsCategoriesView?.validateSubcategoryDraft?.({ category, name, rows: existingRows, sqlOnly: true });
-    if (readiness && !readiness.ok) throw new Error(readiness.reason || 'Sous-catégorie invalide.');
-    if (!readiness && (!category || !name)) throw new Error('Sous-catégorie invalide.');
+    if (readiness && !readiness.ok) {
+      _settingsValidationNotice(readiness.reason || 'Sous-catégorie invalide.');
+      return;
+    }
+    if (!readiness && (!category || !name)) {
+      _settingsValidationNotice('Sous-catégorie invalide.');
+      return;
+    }
     const sortOrder = existingRows.reduce((max, row) => Math.max(max, Number(row?.sortOrder ?? row?.sort_order ?? 0)), -1) + 1;
     const payload = {
       user_id: sbUser.id,
@@ -2538,7 +2567,10 @@ async function importExistingSubcategory(categoryName, subcategoryName) {
 async function addSubcategory(categoryName) {
   return safeCall("Add subcategory", async () => {
     const category = String(categoryName || '').trim();
-    if (!category) throw new Error('Catégorie invalide.');
+    if (!category) {
+      _settingsValidationNotice('Catégorie invalide.');
+      return;
+    }
     const result = await _openGuidedSubcategoryModal(category, { mapping: '__inherit__', title: `Nouvelle sous-catégorie · ${category}`, confirmLabel: 'Créer' });
     if (!result) return;
     const name = String(result?.name || '').trim();
@@ -2546,10 +2578,19 @@ async function addSubcategory(categoryName) {
     const mapping = String(result?.mapping || '__inherit__').trim() || '__inherit__';
     const existingRows = _subcategoriesForSettings(category, true);
     const readiness = window.TBSettingsCategoriesView?.validateSubcategoryDraft?.({ category, name, color, rows: existingRows });
-    if (readiness && !readiness.ok) throw new Error(readiness.reason || 'Sous-catégorie invalide.');
+    if (readiness && !readiness.ok) {
+      _settingsValidationNotice(readiness.reason || 'Sous-catégorie invalide.');
+      return;
+    }
     if (!readiness) {
-      if (!name) throw new Error('Nom de sous-catégorie vide.');
-      if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) throw new Error('Couleur invalide.');
+      if (!name) {
+        _settingsValidationNotice('Nom de sous-catégorie vide.');
+        return;
+      }
+      if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) {
+        _settingsValidationNotice('Couleur invalide.');
+        return;
+      }
     }
     const sortOrder = existingRows.reduce((max, row) => Math.max(max, Number(row?.sortOrder ?? row?.sort_order ?? 0)), -1) + 1;
     const payload = {
@@ -2573,13 +2614,19 @@ async function addSubcategory(categoryName) {
 async function editSubcategory(id) {
   return safeCall("Edit subcategory", async () => {
     const row = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).find((x) => String(x?.id) === String(id));
-    if (!row) throw new Error('Sous-catégorie introuvable.');
+    if (!row) {
+      _settingsValidationNotice('Sous-catégorie introuvable.');
+      return;
+    }
     const category = String(row?.categoryName || row?.category_name || '').trim();
     const currentName = String(row?.name || '').trim();
     const rawName = prompt(`Renommer la sous-catégorie de "${category}"`, currentName);
     if (rawName === null) return;
     const name = String(rawName || '').trim();
-    if (!name) throw new Error('Nom de sous-catégorie vide.');
+    if (!name) {
+      _settingsValidationNotice('Nom de sous-catégorie vide.');
+      return;
+    }
     const colorRaw = prompt('Couleur hexadécimale optionnelle (ex: #94a3b8). Laisse vide pour aucune couleur.', String(row?.color || ''));
     if (colorRaw === null) return;
     const color = String(colorRaw || '').trim();
@@ -2590,8 +2637,14 @@ async function editSubcategory(id) {
       rows: _subcategoriesForSettings(category, true),
       currentId: id,
     });
-    if (readiness && !readiness.ok) throw new Error(readiness.reason || 'Sous-catégorie invalide.');
-    if (!readiness && color && !/^#[0-9a-fA-F]{6}$/.test(color)) throw new Error('Couleur invalide.');
+    if (readiness && !readiness.ok) {
+      _settingsValidationNotice(readiness.reason || 'Sous-catégorie invalide.');
+      return;
+    }
+    if (!readiness && color && !/^#[0-9a-fA-F]{6}$/.test(color)) {
+      _settingsValidationNotice('Couleur invalide.');
+      return;
+    }
     const payload = {
       name,
       color: color || null,

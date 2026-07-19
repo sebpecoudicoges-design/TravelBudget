@@ -162,6 +162,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire les corps des modales guidees Categories/Sous-categories Settings vers `settingsCategoriesView.js`.
   - [x] Centraliser la validation des categories Settings : nom et couleur avant ecriture SQL.
   - [x] Centraliser la validation des sous-categories Settings : categorie, nom, couleur et doublons avant ecriture SQL.
+  - [x] Afficher les refus de validation Settings comme messages utilisateur sans `safeCall/async` ni `Uncaught`.
   - [x] Extraire les corps des modales Creation voyage et Creation periode Settings vers `settingsView.js`.
   - [x] Demarrer l'extraction Dashboard : le rendu onboarding quitte `12_dashboard_render.js` vers `dashboardView.js`.
   - [x] Demarrer l'extraction Analyse : l'overview de lecture quitte `33_budget_analysis.js` vers `analysisView.js`.
