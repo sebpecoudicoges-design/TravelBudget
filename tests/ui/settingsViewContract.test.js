@@ -38,6 +38,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderGuidedSubcategoryModalBody');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.validateCategoryDraft');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.validateSubcategoryDraft');
+    expect(legacy).toContain('window.TBSettingsCategoriesView?.notifySettingsValidation');
     expect(legacy).not.toContain('const cards = Array.from(view.querySelectorAll');
     expect(legacy).not.toContain('box.innerHTML = `');
     expect(legacy).not.toContain('const readNotificationForm = () =>');
@@ -58,6 +59,8 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('const duplicate = existingRows.find');
     expect(legacy).not.toContain('const duplicateSql = existingRows.find');
     expect(legacy).toContain('function _settingsValidationNotice');
+    expect(legacy).not.toContain('if (typeof window.toastWarn === "function")');
+    expect(legacy).not.toContain('if (typeof window.toastInfo === "function")');
     expect(legacy).not.toContain('throw new Error(readiness.reason || "Catégorie invalide.")');
     expect(legacy).not.toContain("throw new Error(readiness.reason || 'Sous-catégorie invalide.')");
     expect(legacy).not.toContain("throw new Error('Nom de sous-catégorie vide.')");

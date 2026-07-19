@@ -19,6 +19,7 @@ import {
   renderGuidedCategoryModalBody,
   renderGuidedSubcategoryModalBody,
   renderSettingsCategoriesList,
+  notifySettingsValidation,
   validateCategoryDraft,
   validateSubcategoryDraft,
 } from '../../../src/features/settings/settingsCategoriesView.js';
@@ -342,6 +343,31 @@ describe('Settings view helpers', () => {
       reason: '',
       name: 'Food',
       color: '#22c55e',
+    });
+  });
+
+  it('notifies Settings validation with the best available channel', () => {
+    const calls = [];
+
+    expect(notifySettingsValidation({
+      message: ' Couleur invalide. ',
+      toastWarn: (message) => calls.push(['warn', message]),
+      toastInfo: (message) => calls.push(['info', message]),
+      alertFn: (message) => calls.push(['alert', message]),
+    })).toEqual({ ok: true, method: 'toastWarn', message: 'Couleur invalide.' });
+    expect(calls).toEqual([['warn', 'Couleur invalide.']]);
+
+    calls.length = 0;
+    expect(notifySettingsValidation({
+      message: '',
+      toastInfo: (message) => calls.push(['info', message]),
+    })).toEqual({ ok: true, method: 'toastInfo', message: 'Valeur invalide.' });
+    expect(calls).toEqual([['info', 'Valeur invalide.']]);
+
+    expect(notifySettingsValidation({ message: 'Nom vide' })).toEqual({
+      ok: false,
+      method: 'none',
+      message: 'Nom vide',
     });
   });
 

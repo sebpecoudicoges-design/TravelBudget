@@ -91,6 +91,29 @@ export function validateCategoryDraft({
   return { ok: true, reason: '', name: cleanName, color: cleanColor };
 }
 
+export function notifySettingsValidation({
+  message = '',
+  toastWarn = null,
+  toastInfo = null,
+  alertFn = null,
+} = {}) {
+  const text = String(message || 'Valeur invalide.').trim();
+  if (!text) return { ok: false, method: 'none', message: '' };
+  if (typeof toastWarn === 'function') {
+    toastWarn(text);
+    return { ok: true, method: 'toastWarn', message: text };
+  }
+  if (typeof toastInfo === 'function') {
+    toastInfo(text);
+    return { ok: true, method: 'toastInfo', message: text };
+  }
+  if (typeof alertFn === 'function') {
+    alertFn(text);
+    return { ok: true, method: 'alert', message: text };
+  }
+  return { ok: false, method: 'none', message: text };
+}
+
 export function validateSubcategoryDraft({
   category = '',
   name = '',

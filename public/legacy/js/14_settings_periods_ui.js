@@ -2432,12 +2432,14 @@ function renderCategoriesSettingsUI() {
 function _settingsValidationNotice(message) {
   const text = String(message || "Valeur invalide.").trim();
   if (!text) return;
-  if (typeof window.toastWarn === "function") {
-    window.toastWarn(text);
-    return;
-  }
-  if (typeof window.toastInfo === "function") {
-    window.toastInfo(text);
+  const notifier = window.TBSettingsCategoriesView?.notifySettingsValidation;
+  if (typeof notifier === "function") {
+    notifier({
+      message: text,
+      toastWarn: window.toastWarn,
+      toastInfo: window.toastInfo,
+      alertFn: (value) => alert(value),
+    });
     return;
   }
   alert(text);
