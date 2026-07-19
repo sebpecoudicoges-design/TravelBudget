@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `361541795495f0dda9501bb44b326347c13c1b72`
-> Empreinte du snapshot : `f4568d74cf6c3e3236a04e64a0bb2272a8d6660007945ea826316127c14e9d58`
-> Généré le : `2026-07-19T07:53:10.318Z`
+> Commit analysé : `48ee3d3bb627c4a0f1d23577ab02473182f42a1b`
+> Empreinte du snapshot : `1e82d96283b933b90b87837b06b0a0acaf61bd09662228a016b4fb242b3b28fc`
+> Généré le : `2026-07-19T08:28:28.324Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,8 +11,8 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.226` |
-| Écrans déclarés | 14 |
+| Version | `10.5.227` |
+| Écrans déclarés | 15 |
 | Scripts legacy référencés | 62 |
 | Modules core | 24 |
 | Modules data | 7 |
@@ -50,6 +50,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `dashboard`
 - `documents`
 - `help`
+- `inbox`
 - `members`
 - `notifications`
 - `nutrition`
@@ -67,6 +68,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `dashboard`
 - `documents`
 - `help`
+- `inbox`
 - `members`
 - `notifications`
 - `nutrition`
@@ -84,6 +86,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `cautions`
 - `documents`
 - `help`
+- `inbox`
 - `notifications`
 - `nutrition`
 - `sport`

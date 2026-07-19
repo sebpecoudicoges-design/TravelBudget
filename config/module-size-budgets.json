@@ -47,7 +47,6 @@
         "public/legacy/js/15_wallet_adjust.js",
         "public/legacy/js/17_internal_transfers.js",
         "public/legacy/js/17_charts.js",
-        "public/legacy/js/44_inbox_ui.js",
         "public/legacy/js/18_main_render.js",
         "public/legacy/js/08_refresh.js",
         "public/legacy/js/19_backup_export_import.js",
@@ -103,6 +102,14 @@
         "src/features/settings/settingsView.js",
         "src/features/settings/settingsCategoriesView.js",
         "src/features/settings/settingsAccountController.js"
+      ]
+    },
+    {
+      "name": "inbox-domain",
+      "maxKiB": 110,
+      "paths": [
+        "public/legacy/js/44_inbox_ui.js",
+        "src/core/inboxRules.js"
       ]
     },
     {

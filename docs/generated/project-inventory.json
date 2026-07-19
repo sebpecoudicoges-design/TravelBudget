@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "361541795495f0dda9501bb44b326347c13c1b72",
-  "snapshotFingerprint": "f4568d74cf6c3e3236a04e64a0bb2272a8d6660007945ea826316127c14e9d58",
-  "generatedAt": "2026-07-19T07:53:10.318Z",
+  "commit": "48ee3d3bb627c4a0f1d23577ab02473182f42a1b",
+  "snapshotFingerprint": "1e82d96283b933b90b87837b06b0a0acaf61bd09662228a016b4fb242b3b28fc",
+  "generatedAt": "2026-07-19T08:28:28.324Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.226"
+    "version": "10.5.227"
   },
   "npmScripts": {
     "dev": "vite",
@@ -31,6 +31,7 @@
     "dashboard",
     "documents",
     "help",
+    "inbox",
     "members",
     "notifications",
     "nutrition",
@@ -47,6 +48,7 @@
     "dashboard",
     "documents",
     "help",
+    "inbox",
     "members",
     "notifications",
     "nutrition",
@@ -127,6 +129,7 @@
     "cautions",
     "documents",
     "help",
+    "inbox",
     "notifications",
     "nutrition",
     "sport",

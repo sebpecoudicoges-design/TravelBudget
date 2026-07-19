@@ -10,6 +10,7 @@ describe('module size budgets', () => {
     expect(names).toEqual(expect.arrayContaining([
       'boot-legacy',
       'cashflow-domain',
+      'inbox-domain',
       'analysis-domain',
       'dashboard-settings',
       'trip-domain',

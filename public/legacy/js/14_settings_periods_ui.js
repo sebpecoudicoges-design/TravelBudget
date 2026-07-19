@@ -792,6 +792,12 @@ window.__tbBudgetReferenceCache = window.__tbBudgetReferenceCache || {
   seq: 0,
 };
 
+function _tbIsBudgetReferenceMissingSegmentError(err){
+  const code = String(err?.code || '').trim();
+  const msg = String(err?.message || err || '').toLowerCase();
+  return code === 'P0001' && msg.includes('budget segment') && msg.includes('not found');
+}
+
 
 function _tbSettingsBaseCurrency(){
   return String(state?.user?.baseCurrency || state?.period?.baseCurrency || 'EUR').toUpperCase();
@@ -928,7 +934,14 @@ async function _tbBudgetRefLoadState(){
   cache.segmentResolved = {};
   const calls = segIds.map(async (segId)=>{
     const { data, error } = await s.rpc(TB_CONST.RPCS.budget_reference_resolve_for_budget_segment, { p_budget_segment_id: segId });
-    if (error) throw error;
+    if (error) {
+      if (_tbIsBudgetReferenceMissingSegmentError(error)) {
+        delete cache.segmentOverrides[segId];
+        delete cache.segmentResolved[segId];
+        return;
+      }
+      throw error;
+    }
     cache.segmentResolved[segId] = Array.isArray(data) ? (data[0] || null) : data;
   });
   await Promise.all(calls);
@@ -1169,6 +1182,10 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       if (travelSave) travelSave.textContent = 'Enregistrer le voyage';
     } catch(_) {}
   } catch (err) {
+    if (_tbIsBudgetReferenceMissingSegmentError(err)) {
+      travelHost.innerHTML = `<div class="muted">Référence budget en cours de synchronisation.</div>`;
+      return;
+    }
     console.error('[TB][budget-reference]', err);
     travelHost.innerHTML = `<div class="muted">Budget de référence indisponible. ${escapeHTML(err?.message || String(err))}</div>`;
   }
@@ -1430,6 +1447,16 @@ La suppression n'est autorisée que si le voyage n'a ni transactions, ni échéa
   try {
     localStorage.removeItem("travelbudget_active_travel_id_v1");
     localStorage.removeItem("travelbudget_active_period_id_v1");
+    const cache = window.__tbBudgetReferenceCache || {};
+    window.__tbBudgetReferenceCache = {
+      countries: Array.isArray(cache.countries) ? cache.countries : null,
+      travelDefault: null,
+      segmentOverrides: {},
+      segmentResolved: {},
+      travelId: null,
+      loading: false,
+      seq: 0,
+    };
   } catch (_) {}
 
   if (typeof window.refreshFromServer === "function") {

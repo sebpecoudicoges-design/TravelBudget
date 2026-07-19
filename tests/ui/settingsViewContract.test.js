@@ -81,6 +81,9 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('function _tbSettingsDecoratePanels');
     expect(legacy).not.toContain('function _tbBudgetRefSummaryHtml');
     expect(legacy).not.toContain('function _tbBudgetRefRenderSkeleton');
+    expect(legacy).toContain('function _tbIsBudgetReferenceMissingSegmentError');
+    expect(legacy).toContain('if (_tbIsBudgetReferenceMissingSegmentError(error))');
+    expect(legacy).toContain('if (_tbIsBudgetReferenceMissingSegmentError(err))');
     expect(legacy).not.toContain("throw new Error(readiness.reason || 'Sous-catégorie invalide.')");
     expect(legacy).not.toContain("throw new Error('Nom de sous-catégorie vide.')");
     expect(legacy).not.toContain("throw new Error('Couleur invalide.')");

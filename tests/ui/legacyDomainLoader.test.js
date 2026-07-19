@@ -36,6 +36,7 @@ describe('legacy domain loader', () => {
       '/legacy/js/47_work_ui.js',
       '/legacy/js/48_nutrition_ui.js',
       '/legacy/js/50_work_career_ui.js',
+      '/legacy/js/44_inbox_ui.js',
     ]) {
       expect(bootList).not.toContain(deferredScript);
       expect(domains).toContain(deferredScript);
@@ -128,6 +129,20 @@ describe('legacy domain loader', () => {
     expect(assetsUi).toContain('window.tbDocumentsPreview?.(docId)');
     expect(inboxUi).toContain("await window.tbLoadLegacyDomain('documents')");
     expect(inboxUi).toContain("window.renderDocuments('inbox-classified')");
+  });
+
+  it('keeps Inbox out of boot and lazy-loads it before rendering the Inbox view', () => {
+    const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
+    const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
+
+    expect(bootList).not.toContain('/legacy/js/44_inbox_ui.js');
+    expect(domains).toContain('inbox:');
+    expect(domains).toContain('/legacy/js/44_inbox_ui.js');
+    expect(navigation).toContain('window.tbLoadLegacyDomain("inbox")');
+    expect(navigation).toContain('renderInbox("navigation:lazy")');
+    expect(index).toContain('id="tab-inbox"');
+    expect(index).toContain('id="view-inbox"');
+    expect(index).toContain('id="inbox-root"');
   });
 
   it('keeps Help FAQ out of boot while preserving the global assistant and guide at startup', () => {

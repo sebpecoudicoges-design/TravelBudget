@@ -14,6 +14,7 @@ function setActiveTab(view) {
     ["assets", "tab-assets", "view-assets"],
     ["cautions", "tab-cautions", "view-cautions"],
     ["documents", "tab-documents", "view-documents"],
+    ["inbox", "tab-inbox", "view-inbox"],
     ["sport", "tab-sport", "view-sport"],
     ["work", "tab-work", "view-work"],
     ["nutrition", "tab-nutrition", "view-nutrition"],
@@ -104,6 +105,19 @@ function showView(view) {
       }).catch((e) => {
         console.error("[TB] Documents lazy load failed", e);
         alert(`Documents indisponibles : ${e?.message || e}`);
+      });
+    }
+  }
+  if (view === "inbox") {
+    if (typeof window.renderInbox === "function") window.renderInbox("navigation");
+    else if (typeof window.tbLoadLegacyDomain === "function") {
+      const root = document.getElementById("inbox-root");
+      if (root) root.innerHTML = `<div class="muted">Chargement à traiter...</div>`;
+      window.tbLoadLegacyDomain("inbox").then(() => {
+        if ((window.activeView || activeView) === "inbox" && typeof window.renderInbox === "function") window.renderInbox("navigation:lazy");
+      }).catch((e) => {
+        console.error("[TB] Inbox lazy load failed", e);
+        alert(`À traiter indisponible : ${e?.message || e}`);
       });
     }
   }

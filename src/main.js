@@ -78,7 +78,6 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/15_wallet_adjust.js',
   '/legacy/js/17_internal_transfers.js',
   '/legacy/js/17_charts.js',
-  '/legacy/js/44_inbox_ui.js',
   '/legacy/js/18_main_render.js',
   '/legacy/js/08_refresh.js',
   '/legacy/js/19_backup_export_import.js',
@@ -110,6 +109,9 @@ const LEGACY_DOMAIN_SCRIPTS = {
   ],
   documents: [
     '/legacy/js/43_documents_ui.js',
+  ],
+  inbox: [
+    '/legacy/js/44_inbox_ui.js',
   ],
   help: [
     '/legacy/js/31_help_faq.js',
