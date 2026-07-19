@@ -152,11 +152,18 @@ async function ensureKpiView() {
   try { ensureKpiStylesheet(); } catch (_) {}
   if (window.TBKpiView?.renderKpiHealthCard) return true;
   if (!kpiViewPromise) {
-    kpiViewPromise = import('./features/kpi/kpiView.js')
-      .then((kpiView) => {
+    kpiViewPromise = Promise.all([
+      import('./features/kpi/kpiView.js'),
+      import('./features/kpi/kpiHealthRules.js'),
+    ])
+      .then(([kpiView, kpiHealthRules]) => {
         window.TBKpiView = {
           ...(window.TBKpiView || {}),
           ...kpiView,
+        };
+        window.TBKpiHealthRules = {
+          ...(window.TBKpiHealthRules || {}),
+          ...kpiHealthRules,
         };
         return true;
       })

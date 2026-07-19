@@ -5,6 +5,7 @@ describe('KPI range picker contract', () => {
   const legacy = fs.readFileSync('public/legacy/js/11_kpi_render_micro_animation.js', 'utf8');
   const controller = fs.readFileSync('public/legacy/js/11_kpi_controller.js', 'utf8');
   const view = fs.readFileSync('src/features/kpi/kpiView.js', 'utf8');
+  const healthRules = fs.readFileSync('src/features/kpi/kpiHealthRules.js', 'utf8');
 
   it('keeps date range selection stable until the user applies it', () => {
     expect(view).toContain('id="kpiRangeApply"');
@@ -26,7 +27,8 @@ describe('KPI range picker contract', () => {
     expect(legacy).toContain('window.__TB_KPI_ACTIVITY_LOADING__');
     expect(legacy).toContain('typeof window.tbActivityKcalForDay === "function"');
     expect(legacy).toContain('window.tbActivityKcalForDay(day)');
-    expect(legacy).toContain('activityKcal?.sportKcal');
-    expect(legacy).toContain('activityKcal?.workKcal');
+    expect(legacy).toContain('window.TBKpiHealthRules?.activitySummaryForDate');
+    expect(healthRules).toContain('activityKcal?.sportKcal');
+    expect(healthRules).toContain('activityKcal?.workKcal');
   });
 });

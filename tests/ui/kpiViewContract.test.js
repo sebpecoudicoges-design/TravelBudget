@@ -6,16 +6,32 @@ describe('KPI view extraction contract', () => {
   const legacy = fs.readFileSync('public/legacy/js/11_kpi_render_micro_animation.js', 'utf8');
   const controller = fs.readFileSync('public/legacy/js/11_kpi_controller.js', 'utf8');
   const module = fs.readFileSync('src/features/kpi/kpiView.js', 'utf8');
+  const healthRules = fs.readFileSync('src/features/kpi/kpiHealthRules.js', 'utf8');
 
   it('exposes the KPI view module to the legacy runtime', () => {
     expect(main).toContain("import('./features/kpi/kpiView.js')");
+    expect(main).toContain("import('./features/kpi/kpiHealthRules.js')");
     expect(main).toContain("'/legacy/js/11_kpi_controller.js'");
     expect(main).not.toContain("import('./features/kpi/kpiController.js')");
     expect(main).toContain('async function ensureKpiView()');
     expect(main).toContain('ensureKpiView();');
     expect(main).not.toContain('await ensureKpiView();');
     expect(main).toContain('window.TBKpiView');
+    expect(main).toContain('window.TBKpiHealthRules');
     expect(main).toContain('...kpiView');
+    expect(main).toContain('...kpiHealthRules');
+  });
+
+  it('delegates KPI health and transaction rules to a tested module', () => {
+    expect(healthRules).toContain('export function healthSummaryForDate');
+    expect(healthRules).toContain('export function isCashPendingProjectionTx');
+    expect(legacy).toContain('window.TBKpiHealthRules?.healthSummaryForDate');
+    expect(legacy).toContain('window.TBKpiHealthRules?.isCashPendingProjectionTx');
+    expect(legacy).toContain('window.TBKpiHealthRules?.txAffectsBudget');
+    expect(legacy).not.toContain('const kcalFreeBand = Math.max(260');
+    expect(legacy).not.toContain('const alcoholScore = alcoholDrinks > 2.01');
+    expect(legacy).not.toContain('const type = String(tx?.type ||');
+    expect(legacy).not.toContain('const isAlcohol = tags.some');
   });
 
   it('does not let the extracted KPI view block mobile boot', () => {

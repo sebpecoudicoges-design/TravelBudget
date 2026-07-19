@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `a08d095d5cc59d36c5615c89bd63097fe97fd009`
-> Empreinte du snapshot : `faa48bb90b02cb5833a3aaee16ab00ba3ccf46898926cb0a3b4cb9bb047138b9`
-> Généré le : `2026-07-19T05:07:22.086Z`
+> Commit analysé : `23a1769e1f4521a5b308a91b3fef16aeca6690c2`
+> Empreinte du snapshot : `6dc5c6c5717f396cdc8fac2cd02c32e203ecb1b8a66f163bae89466289a8e188`
+> Généré le : `2026-07-19T06:06:19.643Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.219` |
+| Version | `10.5.220` |
 | Écrans déclarés | 14 |
 | Scripts legacy référencés | 62 |
 | Modules core | 24 |
 | Modules data | 7 |
-| Modules features | 25 |
-| Fichiers de tests | 92 |
+| Modules features | 26 |
+| Fichiers de tests | 93 |
 | Migrations Supabase | 86 |
 | Fonctions Edge | 8 |
 | Projet Android présent | Oui |
@@ -214,6 +214,7 @@ Modules :
 - `src/features/assets/assetView.js`
 - `src/features/dashboard/dashboardView.js`
 - `src/features/dashboard/dashboardWalletRules.js`
+- `src/features/kpi/kpiHealthRules.js`
 - `src/features/kpi/kpiView.js`
 - `src/features/nutrition/nutritionStore.js`
 - `src/features/nutrition/nutritionView.js`
@@ -317,6 +318,7 @@ Modules :
 - `tests/features/dashboard/dashboardView.test.js`
 - `tests/features/dashboard/dashboardWalletRules.test.js`
 - `tests/features/kpi/kpiController.test.js`
+- `tests/features/kpi/kpiHealthRules.test.js`
 - `tests/features/kpi/kpiView.test.js`
 - `tests/features/nutrition/nutritionStore.test.js`
 - `tests/features/nutrition/nutritionView.test.js`

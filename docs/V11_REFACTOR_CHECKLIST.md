@@ -18,6 +18,8 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Sortir FX Decision du boot et le charger avec le domaine Analyse : boot legacy 1085.3 -> 1044.9 KiB.
 - [x] Extraire les regles Wallet Dashboard : validation creation/edition, type automatique et libelles passent dans `dashboardWalletRules.js`.
 - [x] Extraire les payloads Wallet Dashboard : creation, edition, archivage, suppression et correction de types passent dans `dashboardWalletRules.js`.
+- [x] Extraire les regles KPI Sante/Nutrition/Sommeil/Alcool vers `kpiHealthRules.js`.
+- [x] Extraire les helpers KPI budget/cash/trip pending vers `kpiHealthRules.js`.
 
 ## Chantier 1 - Budget journalier et transactions
 
@@ -219,6 +221,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire les bindings KPI : date-a-date, scope, toggle impayes et convertisseur FX vers `11_kpi_controller.js`.
   - [x] Extraire les regles Wallet Dashboard : validation creation/edition, type automatique et libelles quittent `12_dashboard_render.js`.
   - [x] Extraire les mutations Wallet Dashboard : payloads SQL, archivage, garde de suppression et normalisation des corrections de type quittent `12_dashboard_render.js`.
+  - [x] Extraire les regles KPI Sante/Nutrition/Sommeil/Alcool et classification budget/cash/trip pending vers `kpiHealthRules.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison
