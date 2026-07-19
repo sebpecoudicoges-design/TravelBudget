@@ -6,6 +6,7 @@ Statuts proposes : `a faire`, `ok`, `a revoir`.
 
 | Version | Module | Scenario | Etapes utilisateur | Resultat attendu | Console attendue | Statut |
 | --- | --- | --- | --- | --- | --- | --- |
+| 10.5.212 | Page projet | Fresque APK interactive | Ouvrir `public/projet.html`, aller a App, cliquer plusieurs filtres puis une version dans la fresque. | La fresque affiche toutes les versions, le spotlight change, le detail s'ouvre et le rendu reste lisible mobile/desktop. | Aucun `Uncaught`; aucun message JS dans la page. | a faire |
 | 10.5.211 | Settings | Renommage sous-categorie mappee | Ouvrir Reglages > Categories, renommer une sous-categorie qui avait un mapping explicite. | Le nouveau nom et son mapping sont conserves apres rafraichissement; l'ancien mapping ne reste pas en doublon. | Aucun `[safeCall/async]`, aucun `Uncaught`. | a faire |
 | 10.5.210 | Settings | Activation sous-categorie | Ouvrir Reglages > Categories, desactiver puis reactiver une sous-categorie SQL. | Le statut change, reste apres rafraichissement et les actions restent disponibles. | Aucun `[safeCall/async]`, aucun `Uncaught`. | a faire |
 | 10.5.209 | Settings | Ordre sous-categories | Ouvrir Reglages > Categories, utiliser les boutons haut/bas sur une sous-categorie SQL. | L'ordre change instantanement, reste apres rafraichissement et les lignes detectees non SQL ne sont pas modifiees. | Aucun `[safeCall/async]`, aucun `Uncaught`. | a faire |

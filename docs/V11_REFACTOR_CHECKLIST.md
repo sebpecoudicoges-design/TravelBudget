@@ -12,6 +12,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
   - [x] Aligner les calories d'activite KPI sur le loader transversal Sport/Travail deja utilise par Nutrition.
 - [ ] Mettre a jour cette checklist a chaque lot livre.
 - [ ] Ajouter a chaque livraison une verification utilisateur simple : ecran a ouvrir, action a faire, resultat attendu, console attendue si pertinent.
+- [x] Remplacer la liste brute des APK de `public/projet.html` par une fresque chronologique interactive, detaillee et filtrable.
 
 ## Chantier 1 - Budget journalier et transactions
 
