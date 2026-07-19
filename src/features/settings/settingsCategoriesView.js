@@ -164,11 +164,13 @@ export function prepareSubcategoryEditDraft({
   color = '',
   rows = [],
   currentId = '',
+  previousRule = null,
   resolveCategoryId = () => null,
   now = () => new Date().toISOString(),
 } = {}) {
   if (!row) return { ok: false, reason: 'Sous-catégorie introuvable.' };
   const category = String(row?.categoryName || row?.category_name || '').trim();
+  const currentName = String(row?.name || '').trim();
   const cleanName = String(name || '').trim();
   const cleanColor = String(color || '').trim();
   if (!cleanName) return { ok: false, reason: 'Nom de sous-catégorie vide.' };
@@ -180,12 +182,16 @@ export function prepareSubcategoryEditDraft({
     currentId,
   });
   if (!readiness.ok) return readiness;
+  const previousMappingRuleId = previousRule?.id && currentName.toLowerCase() !== readiness.name.toLowerCase()
+    ? String(previousRule.id)
+    : null;
   return {
     ok: true,
     reason: '',
     category,
     name: readiness.name,
     color: readiness.color,
+    previousMappingRuleId,
     payload: {
       name: readiness.name,
       color: readiness.color || null,

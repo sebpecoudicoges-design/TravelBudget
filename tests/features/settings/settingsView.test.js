@@ -468,6 +468,7 @@ describe('Settings view helpers', () => {
       category: 'Food',
       name: 'Brunch',
       color: '#22c55e',
+      previousMappingRuleId: null,
       payload: {
         name: 'Brunch',
         color: '#22c55e',
@@ -475,6 +476,28 @@ describe('Settings view helpers', () => {
         category_name: 'Food',
         updated_at: '2026-07-19T00:00:00.000Z',
       },
+    });
+    expect(prepareSubcategoryEditDraft({
+      row,
+      name: 'Brunch',
+      color: '#22c55e',
+      rows,
+      currentId: 'sub-1',
+      previousRule: { id: 'map-1' },
+    })).toMatchObject({
+      ok: true,
+      previousMappingRuleId: 'map-1',
+    });
+    expect(prepareSubcategoryEditDraft({
+      row,
+      name: 'Restaurant',
+      color: '#22c55e',
+      rows,
+      currentId: 'sub-1',
+      previousRule: { id: 'map-1' },
+    })).toMatchObject({
+      ok: true,
+      previousMappingRuleId: null,
     });
   });
 

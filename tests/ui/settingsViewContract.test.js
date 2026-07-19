@@ -67,6 +67,8 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('const swapIndex = direction ===');
     expect(legacy).not.toContain('const updates = ordered.map');
     expect(legacy).not.toContain('.update({ is_active: !!nextActive, updated_at: new Date().toISOString() })');
+    expect(legacy).not.toContain('const payload = editDraft?.payload ||');
+    expect(legacy).not.toContain('currentName.toLowerCase() !== name.toLowerCase()');
     expect(legacy).toContain('function _settingsValidationNotice');
     expect(legacy).not.toContain('if (typeof window.toastWarn === "function")');
     expect(legacy).not.toContain('if (typeof window.toastInfo === "function")');

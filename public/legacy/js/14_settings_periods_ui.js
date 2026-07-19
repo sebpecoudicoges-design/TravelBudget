@@ -2641,31 +2641,26 @@ async function editSubcategory(id) {
       color,
       rows: _subcategoriesForSettings(category, true),
       currentId: id,
+      previousRule: _findAnalyticRule(category, currentName),
       resolveCategoryId: _categoryIdByName,
     });
     if (editDraft && !editDraft.ok) {
       _settingsValidationNotice(editDraft.reason || 'Sous-catégorie invalide.');
       return;
     }
-    const payload = editDraft?.payload || {
-      name,
-      color: color || null,
-      category_id: row?.categoryId || row?.category_id || _categoryIdByName(category),
-      category_name: category,
-      updated_at: new Date().toISOString(),
-    };
-    const { error } = await sb.from(TB_CONST.TABLES.category_subcategories).update(payload).eq('id', id).eq('user_id', sbUser.id);
+    if (!editDraft) {
+      _settingsValidationNotice('Module catégories indisponible.');
+      return;
+    }
+    const { error } = await sb.from(TB_CONST.TABLES.category_subcategories).update(editDraft.payload).eq('id', id).eq('user_id', sbUser.id);
     if (error) throw error;
-    if (currentName.toLowerCase() !== name.toLowerCase()) {
-      const previousRule = _findAnalyticRule(category, currentName);
-      if (previousRule?.id) {
-        const { error: delMapErr } = await sb
-          .from(TB_CONST.TABLES.analytic_category_mappings)
-          .delete()
-          .eq('id', previousRule.id)
-          .eq('user_id', sbUser.id);
-        if (delMapErr) throw delMapErr;
-      }
+    if (editDraft.previousMappingRuleId) {
+      const { error: delMapErr } = await sb
+        .from(TB_CONST.TABLES.analytic_category_mappings)
+        .delete()
+        .eq('id', editDraft.previousMappingRuleId)
+        .eq('user_id', sbUser.id);
+      if (delMapErr) throw delMapErr;
     }
     await _saveAnalyticMappingRuleViaRpc(category, name, mapping);
     await refreshFromServer();
