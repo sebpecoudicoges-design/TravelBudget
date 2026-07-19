@@ -67,5 +67,8 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain("throw new Error('Nom de sous-catégorie vide.')");
     expect(legacy).not.toContain("throw new Error('Couleur invalide.')");
     expect(legacy).not.toContain('rows: _subcategoriesForSettings(category, true),\\n      currentId: id,\\n    });\\n    if (readiness');
+    expect(legacy).not.toContain('Renommer la sous-catégorie');
+    expect(legacy).not.toContain('Couleur hexadécimale optionnelle');
+    expect(legacy).toContain('Modifier sous-catégorie ·');
   });
 });

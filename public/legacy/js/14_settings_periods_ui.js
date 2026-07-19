@@ -2622,16 +2622,21 @@ async function editSubcategory(id) {
     }
     const category = String(row?.categoryName || row?.category_name || '').trim();
     const currentName = String(row?.name || '').trim();
-    const rawName = prompt(`Renommer la sous-catégorie de "${category}"`, currentName);
-    if (rawName === null) return;
-    const name = String(rawName || '').trim();
-    if (!name) {
-      _settingsValidationNotice('Nom de sous-catégorie vide.');
-      return;
-    }
-    const colorRaw = prompt('Couleur hexadécimale optionnelle (ex: #94a3b8). Laisse vide pour aucune couleur.', String(row?.color || ''));
-    if (colorRaw === null) return;
-    const color = String(colorRaw || '').trim();
+    const currentMapping = _effectiveAnalyticMappingFor(category, currentName);
+    const currentMappingValue = currentMapping?.explicit
+      ? (currentMapping.mappingStatus === 'mapped' ? String(currentMapping.analyticFamily || '').trim().toLowerCase() : '__excluded__')
+      : '__inherit__';
+    const result = await _openGuidedSubcategoryModal(category, {
+      name: currentName,
+      color: String(row?.color || ''),
+      mapping: currentMappingValue,
+      title: `Modifier sous-catégorie · ${category}`,
+      confirmLabel: 'Enregistrer',
+    });
+    if (!result) return;
+    const name = String(result?.name || '').trim();
+    const color = String(result?.color || '').trim();
+    const mapping = String(result?.mapping || '__inherit__').trim() || '__inherit__';
     const editDraft = window.TBSettingsCategoriesView?.prepareSubcategoryEditDraft?.({
       row,
       name,
@@ -2653,6 +2658,18 @@ async function editSubcategory(id) {
     };
     const { error } = await sb.from(TB_CONST.TABLES.category_subcategories).update(payload).eq('id', id).eq('user_id', sbUser.id);
     if (error) throw error;
+    if (currentName.toLowerCase() !== name.toLowerCase()) {
+      const previousRule = _findAnalyticRule(category, currentName);
+      if (previousRule?.id) {
+        const { error: delMapErr } = await sb
+          .from(TB_CONST.TABLES.analytic_category_mappings)
+          .delete()
+          .eq('id', previousRule.id)
+          .eq('user_id', sbUser.id);
+        if (delMapErr) throw delMapErr;
+      }
+    }
+    await _saveAnalyticMappingRuleViaRpc(category, name, mapping);
     await refreshFromServer();
     renderSettings();
   });

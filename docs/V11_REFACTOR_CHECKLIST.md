@@ -165,6 +165,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Afficher les refus de validation Settings comme messages utilisateur sans `safeCall/async` ni `Uncaught`.
   - [x] Extraire le routage des notices de validation Categories/Sous-categories vers `settingsCategoriesView.js`.
   - [x] Extraire la preparation du payload d'edition Sous-categorie vers `settingsCategoriesView.js`.
+  - [x] Remplacer les prompts d'edition Sous-categorie par la modale guidee partagee.
   - [x] Extraire les corps des modales Creation voyage et Creation periode Settings vers `settingsView.js`.
   - [x] Demarrer l'extraction Dashboard : le rendu onboarding quitte `12_dashboard_render.js` vers `dashboardView.js`.
   - [x] Demarrer l'extraction Analyse : l'overview de lecture quitte `33_budget_analysis.js` vers `analysisView.js`.
