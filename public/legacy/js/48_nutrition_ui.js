@@ -1512,140 +1512,67 @@
       : loadLocalMeals().length
         ? txt("Ajouts en attente", "Pending entries")
         : txt("A jour", "Up to date");
-    root.innerHTML = `
-      <section class="tb-nutrition-shell">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-          <div>
-            <h2 style="margin:0;">${esc(txt("Alimentation", "Nutrition"))}</h2>
-            <div class="muted" style="margin-top:4px;">${esc(txt("Repas, calories, macros et hydratation, sans lecture medicale.", "Meals, calories, macros and hydration, without medical interpretation."))}</div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <label class="pill" style="display:flex;align-items:center;gap:6px;">${esc(txt("Date", "Date"))} <input id="nutrition-date" type="date" value="${esc(day)}" style="width:142px;"></label>
-            <span class="pill">${esc(txt("Base", "Base"))} ${Math.round(base.bmr || 0)} kcal</span>
-            <span class="pill">${esc(goalLabel)}${goalTargets.offsetKcal ? ` ${goalTargets.offsetKcal > 0 ? "+" : ""}${Math.round(goalTargets.offsetKcal)} kcal` : ""}</span>
-            <button class="btn" type="button" id="nutrition-refresh">${esc(txt("Rafraichir", "Refresh"))}</button>
-          </div>
-        </div>
-        ${renderNutritionSyncPanel()}
-        <div class="tb-nutrition-top" style="margin-top:14px;">
-          <div style="border:1px solid var(--border);border-radius:8px;padding:14px;background:linear-gradient(145deg,rgba(34,197,94,.10),rgba(56,189,248,.08)),var(--panel2);display:grid;place-items:center;">
-            <div style="width:min(210px,72vw);aspect-ratio:1;border-radius:50%;background:conic-gradient(${kcalRingColor} ${kcalPct}%, rgba(148,163,184,.18) 0);display:grid;place-items:center;box-shadow:0 18px 44px rgba(15,23,42,.18);">
-              <div style="width:68%;aspect-ratio:1;border-radius:50%;background:var(--panel2);display:grid;place-items:center;text-align:center;border:1px solid var(--border);">
-                <div>
-                  <div class="muted" style="font-size:12px;">${esc(txt("Aujourd'hui", "Today"))}</div>
-                  <strong style="display:block;font-size:32px;line-height:1;">${Math.round(consumedKcal)}</strong>
-                  <span class="muted">/ ${Math.round(needsKcal)} kcal</span>
-                  <div class="pill" style="margin-top:8px;color:${kcalRingColor};border-color:${kcalRingColor};">${esc(kcalTargetLabel)} ${Math.abs(Math.round(kcalDelta))}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="tb-nutrition-macro-grid">
-            <div style="border:1px solid rgba(56,189,248,.35);border-radius:8px;padding:12px;background:rgba(56,189,248,.10);">${progressBar(txt("Eau bue", "Drunk water"), drinkWaterMl, 2000, "ml")}</div>
-            <div style="border:1px solid rgba(34,197,94,.35);border-radius:8px;padding:12px;background:rgba(34,197,94,.10);">${progressBar(txt("Proteines", "Protein"), total.protein, proteinTarget, "g")}</div>
-            <div style="border:1px solid rgba(245,158,11,.35);border-radius:8px;padding:12px;background:rgba(245,158,11,.10);">${progressBar(txt("Glucides", "Carbs"), total.carbs, carbsTarget, "g")}</div>
-            <div style="border:1px solid rgba(251,113,133,.35);border-radius:8px;padding:12px;background:rgba(251,113,133,.10);">${progressBar(txt("Lipides", "Fat"), total.fat, fatTarget, "g")}</div>
-            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);grid-column:1/-1;">
-              <div class="muted" style="font-size:12px;">${esc(txt("Besoin calcule", "Calculated need"))}</div>
-              <strong>${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))}${goalTargets.offsetKcal ? ` ${goalTargets.offsetKcal > 0 ? "+" : "-"} ${Math.abs(Math.round(goalTargets.offsetKcal))} ${esc(txt("objectif", "goal"))}` : ""} = ${Math.round(needsKcal)} kcal</strong>
-              <div class="muted" style="font-size:12px;margin-top:6px;">${esc(txt("Hydratation : objectif 2 L en eau bue. Eau des aliments", "Hydration: 2 L target from drunk water. Food water"))} ${Math.round(foodWaterMl)} ml.</div>
-              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px;">
-                <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Objectif", "Goal"))}</span><select id="nutrition-goal-mode"><option value="bulk" ${goalTargets.mode === "bulk" ? "selected" : ""}>${esc(txt("Prise de masse douce", "Lean bulk"))}</option><option value="maintenance" ${goalTargets.mode === "maintenance" ? "selected" : ""}>${esc(txt("Maintien / recomposition", "Maintenance / recomp"))}</option><option value="cut" ${goalTargets.mode === "cut" ? "selected" : ""}>${esc(txt("Perte de gras douce", "Gentle fat loss"))}</option></select></label>
-                <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Surplus kcal", "Kcal surplus"))}</span><select id="nutrition-goal-surplus" ${goalTargets.mode === "bulk" ? "" : "disabled"}><option value="300" ${goalTargets.surplusKcal === 300 ? "selected" : ""}>+300</option><option value="350" ${goalTargets.surplusKcal === 350 ? "selected" : ""}>+350</option><option value="400" ${goalTargets.surplusKcal === 400 ? "selected" : ""}>+400</option><option value="500" ${goalTargets.surplusKcal === 500 ? "selected" : ""}>+500</option></select></label>
-                <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Deficit kcal", "Kcal deficit"))}</span><select id="nutrition-goal-deficit" ${goalTargets.mode === "cut" ? "" : "disabled"}><option value="250" ${goalTargets.deficitKcal === 250 ? "selected" : ""}>-250</option><option value="300" ${goalTargets.deficitKcal === 300 ? "selected" : ""}>-300</option><option value="400" ${goalTargets.deficitKcal === 400 ? "selected" : ""}>-400</option><option value="500" ${goalTargets.deficitKcal === 500 ? "selected" : ""}>-500</option></select></label>
-                <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Poids cible", "Target weight"))}</span><input id="nutrition-goal-weight" type="number" min="35" max="180" step="0.1" value="${esc(String(n(loadNutritionGoal().targetWeightKg, bodyWeight() + 3)))}"></label>
-                <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(txt("Rythme kg/sem.", "Pace kg/week"))}</span><input id="nutrition-goal-rate" type="number" min="0.1" max="0.8" step="0.05" value="${esc(String(n(loadNutritionGoal().weeklyRateKg, 0.25)))}"></label>
-              </div>
-              ${goalCockpitHTML(loadNutritionGoal(), goalTargets, week, total, sportKcal, workKcal)}
-            </div>
-          </div>
-        </div>
-        <div class="tb-nutrition-layout">
-          <div style="display:flex;flex-direction:column;gap:12px;">
-            ${view().renderQuickAddPanel({
-              editingItem,
-              syncBadge,
-              foodQuery: CACHE.foodQuery,
-              foodOptionsHtml: foodOptions(),
-              quickFoods,
-              mealFavorites,
-              activeMealType,
-              error: CACHE.error,
-              renderFoodChip: (food, kind) => foodChipHTML(food, kind),
-              renderMealFavoriteChip: (fav, index) => mealFavoriteChipHTML(fav, index),
-              esc,
-              t: txt,
-            })}
-            ${view().renderHydrationPanel({ esc, t: txt })}
-            ${view().renderSleepPanel({ sleep, sleepLabel, sleepNightLabel, day, sleepWeek, offsetDateISO, esc, t: txt })}
-            ${view().renderHistoryPanel({ week, day, needsKcal, mealTypeLabel, esc, t: txt })}
-            ${view().renderAlcoholPanel({
-              alcoholJudge,
-              alcoholToday,
-              alcoholWeekTotal,
-              alcoholDrinkingDays,
-              week,
-              day,
-              esc,
-              t: txt,
-            })}
-          </div>
-          <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-            <h3 style="margin:0 0 10px;">${esc(txt("Jour selectionne", "Selected day"))} · ${esc(day)}</h3>
-            <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;background:rgba(15,23,42,.04);">
-              <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;">
-                <div>
-                  <div class="muted" style="font-size:12px;">${esc(txt("Comparaison besoins / consomme", "Needs / consumed comparison"))}</div>
-                  <strong style="font-size:22px;">${Math.round(consumedKcal)} / ${Math.round(needsKcal)} kcal</strong>
-                </div>
-                <div class="pill">${esc(kcalTargetLabel)} ${Math.abs(Math.round(kcalDelta))} kcal</div>
-              </div>
-              <div style="display:grid;gap:10px;">
-                ${progressBar("kcal", consumedKcal, needsKcal, "")}
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
-                  ${progressBar(txt("Proteines", "Protein"), total.protein, proteinTarget, "g")}
-                  ${progressBar(txt("Glucides", "Carbs"), total.carbs, carbsTarget, "g")}
-                  ${progressBar(txt("Lipides", "Fat"), total.fat, fatTarget, "g")}
-                </div>
-              </div>
-              <div class="muted" style="margin-top:10px;">
-                ${esc(txt("Besoins calcules", "Calculated needs"))}: ${Math.round(base.bmr || 0)} ${esc(txt("base", "base"))} + ${Math.round(sportKcal)} sport + ${Math.round(workKcal)} ${esc(txt("travail", "work"))}${goalTargets.offsetKcal ? ` ${goalTargets.offsetKcal > 0 ? "+" : "-"} ${Math.abs(Math.round(goalTargets.offsetKcal))} ${esc(txt("objectif", "goal"))}` : ""}.
-              </div>
-            </div>
-            <div class="tb-sport-stats" style="margin-bottom:12px;">
-              <div class="tb-sport-stat"><span>kcal</span><strong>${Math.round(total.kcal)}</strong></div>
-              <div class="tb-sport-stat"><span>${esc(txt("Proteines", "Protein"))}</span><strong>${fmtMacro(total.protein)}</strong></div>
-              <div class="tb-sport-stat"><span>${esc(txt("Glucides", "Carbs"))}</span><strong>${fmtMacro(total.carbs)}</strong></div>
-              <div class="tb-sport-stat"><span>${esc(txt("Lipides", "Fat"))}</span><strong>${fmtMacro(total.fat)}</strong></div>
-              <div class="tb-sport-stat"><span>${esc(txt("Eau bue", "Drunk water"))}</span><strong>${Math.round(drinkWaterMl)} ml</strong></div>
-              <div class="tb-sport-stat"><span>${esc(txt("Sommeil", "Sleep"))}</span><strong>${esc(sleepLabel)}</strong></div>
-              <div class="tb-sport-stat"><span>${esc(txt("Balance", "Balance"))}</span><strong>${Math.round(objectiveBalanceKcal)} kcal</strong></div>
-            </div>
-            <div class="muted" style="margin:-4px 0 12px;">
-              ${esc(txt("Depense estimee", "Estimated spend"))}: ${Math.round(spentKcal || 0)} kcal =
-              ${esc(txt("base", "base"))} ${Math.round(base.bmr || 0)}
-              + sport ${Math.round(sportKcal)}
-              + ${esc(txt("travail", "work"))} ${Math.round(workKcal)}.
-              ${esc(txt("Tu es", "You are"))} ${esc(balanceLabel)} ${Math.abs(Math.round(objectiveBalanceKcal || 0))} kcal.
-            </div>
-            <div style="display:grid;gap:10px;margin-top:12px;">
-              <h3 style="margin:0;">${esc(txt("Timeline repas", "Meal timeline"))}</h3>
-              ${typeof view().renderMealTimeline === "function" ? view().renderMealTimeline({
-                mealTargets,
-                typeTotals,
-                items,
-                total,
-                drinkWaterMl,
-                macroTargets: { protein: proteinTarget, carbs: carbsTarget, fat: fatTarget },
-                itemMeal,
-                mealTypeLabel,
-                esc,
-                t: txt,
-              }) : ""}
-            </div>
-          </div>
-        </div>
-      </section>`;
+    const nutritionGoal = loadNutritionGoal();
+    root.innerHTML = view().renderNutritionShell?.({
+      day,
+      base,
+      goalLabel,
+      goalTargets,
+      goalSettings: {
+        targetWeightKg: n(nutritionGoal.targetWeightKg, bodyWeight() + 3),
+        weeklyRateKg: n(nutritionGoal.weeklyRateKg, 0.25),
+      },
+      syncPanelHtml: renderNutritionSyncPanel(),
+      kcalRingColor,
+      kcalPct,
+      consumedKcal,
+      needsKcal,
+      kcalTargetLabel,
+      kcalDelta,
+      drinkWaterMl,
+      foodWaterMl,
+      proteinTarget,
+      carbsTarget,
+      fatTarget,
+      total,
+      sportKcal,
+      workKcal,
+      goalCockpitHtml: goalCockpitHTML(nutritionGoal, goalTargets, week, total, sportKcal, workKcal),
+      quickAdd: {
+        editingItem,
+        syncBadge,
+        foodQuery: CACHE.foodQuery,
+        foodOptionsHtml: foodOptions(),
+        quickFoods,
+        mealFavorites,
+        activeMealType,
+        error: CACHE.error,
+        renderFoodChip: (food, kind) => foodChipHTML(food, kind),
+        renderMealFavoriteChip: (fav, index) => mealFavoriteChipHTML(fav, index),
+      },
+      hydrationPanelHtml: view().renderHydrationPanel({ esc, t: txt }),
+      sleepPanelHtml: view().renderSleepPanel({ sleep, sleepLabel, sleepNightLabel, day, sleepWeek, offsetDateISO, esc, t: txt }),
+      historyPanelHtml: view().renderHistoryPanel({ week, day, needsKcal, mealTypeLabel, esc, t: txt }),
+      alcoholPanelHtml: view().renderAlcoholPanel({ alcoholJudge, alcoholToday, alcoholWeekTotal, alcoholDrinkingDays, week, day, esc, t: txt }),
+      sleepLabel,
+      spentKcal,
+      objectiveBalanceKcal,
+      balanceLabel,
+      mealTimelineHtml: view().renderMealTimeline({
+        mealTargets,
+        typeTotals,
+        items,
+        total,
+        drinkWaterMl,
+        macroTargets: { protein: proteinTarget, carbs: carbsTarget, fat: fatTarget },
+        itemMeal,
+        mealTypeLabel,
+        esc,
+        t: txt,
+      }),
+      esc,
+      t: txt,
+    }) || "";
     bindNutrition(root);
     updateNutritionPreview(root);
   }

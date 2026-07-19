@@ -305,6 +305,30 @@ export function renderSettingsManualFxPanel({
     `;
 }
 
+export function renderSettingsBudgetReferenceState({
+  state = 'loading',
+  message = '',
+  error = '',
+  esc = defaultEsc,
+  t,
+} = {}) {
+  const pick = (fr, en) => {
+    if (typeof t === 'function') {
+      const translated = t(fr, en);
+      if (translated && translated !== fr) return translated;
+    }
+    return fr;
+  };
+  const text = message || ({
+    offline: pick('Mode hors ligne : reference budget en lecture locale indisponible.', 'Offline mode: budget reference is unavailable from local data.'),
+    syncing: pick('Reference budget en cours de synchronisation.', 'Budget reference is syncing.'),
+    unavailable: pick('Budget de reference indisponible.', 'Budget reference unavailable.'),
+    loading: pick('Reference budget en cours de chargement.', 'Budget reference is loading.'),
+  }[state] || pick('Reference budget en cours de chargement.', 'Budget reference is loading.'));
+  const suffix = error ? ` ${error}` : '';
+  return `<div class="muted">${esc(text)}${suffix ? ` ${esc(suffix.trim())}` : ''}</div>`;
+}
+
 export function renderSettingsPeriodCard({
   segment = {},
   currency = '',

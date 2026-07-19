@@ -22,6 +22,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsManualFxPanel');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodCard');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodReference');
+    expect(legacy).toContain('window.TBSettingsView?.renderSettingsBudgetReferenceState');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsTravelOverview');
     expect(legacy).toContain('window.TBSettingsView?.renderCreateVoyageModalBody');
     expect(legacy).toContain('window.TBSettingsView?.renderCreatePeriodModalBody');
@@ -81,6 +82,9 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('function _tbSettingsDecoratePanels');
     expect(legacy).not.toContain('function _tbBudgetRefSummaryHtml');
     expect(legacy).not.toContain('function _tbBudgetRefRenderSkeleton');
+    expect(legacy).not.toContain('travelHost.innerHTML = `<div class="muted">Mode hors ligne');
+    expect(legacy).not.toContain('travelHost.innerHTML = `<div class="muted">Référence budget en cours de synchronisation');
+    expect(legacy).not.toContain('travelHost.innerHTML = `<div class="muted">Budget de référence indisponible');
     expect(legacy).toContain('function _tbIsBudgetReferenceMissingSegmentError');
     expect(legacy).toContain('if (_tbIsBudgetReferenceMissingSegmentError(error))');
     expect(legacy).toContain('if (_tbIsBudgetReferenceMissingSegmentError(err))');

@@ -123,7 +123,8 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
     - [x] Extraire les composants de vue : barres, chips favoris/recents, suggestions repas, semaine et timeline repas.
     - [x] Extraire les panneaux de vue : saisie rapide, hydratation, sommeil et historique semaine.
     - [x] Extraire les vues objectif et alcool : cockpit objectif, moyenne 7 jours et barres alcool hebdomadaires.
-    - [x] Extraire le panneau Synchro alimentation en attente vers `nutritionView.js`, avec actions sync/vider/supprimer conservees.
+  - [x] Extraire le panneau Synchro alimentation en attente vers `nutritionView.js`, avec actions sync/vider/supprimer conservees.
+  - [x] Extraire le shell principal Nutrition vers `nutritionView.js` : en-tete, anneau kcal, macros, objectif, comparaison et slots de panneaux.
 - [x] Sante : supprimer le chantier autonome et garder les indicateurs dans Nutrition, Sport, Travail, notifications et KPI.
   - [x] Retirer l'onglet, la vue et le rendu Sante autonomes du runtime ; rediriger les anciens appels vers Nutrition.
 - [x] Travail : separer periodes, missions, revenus et graphiques.
@@ -196,6 +197,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire la decision de nettoyage de l'ancien mapping apres renommage Sous-categorie vers `settingsCategoriesView.js`.
   - [x] Extraire la preparation de suppression Categorie (confirmation, SQL/fallback) vers `settingsCategoriesView.js`.
   - [x] Extraire les corps des modales Creation voyage et Creation periode Settings vers `settingsView.js`.
+  - [x] Extraire les etats Reference budget Settings : hors ligne, synchronisation et indisponible passent dans `settingsView.js`.
   - [x] Supprimer les helpers Settings morts : wrappers panneaux obsoletes, sauvegarde nom voyage inutilisee, resume/skeleton budget reference.
   - [x] Demarrer l'extraction Dashboard : le rendu onboarding quitte `12_dashboard_render.js` vers `dashboardView.js`.
   - [x] Demarrer l'extraction Analyse : l'overview de lecture quitte `33_budget_analysis.js` vers `analysisView.js`.

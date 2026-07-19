@@ -1032,7 +1032,11 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
 
   try {
     if ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false)) {
-      travelHost.innerHTML = `<div class="muted">Mode hors ligne : référence budget en lecture locale indisponible.</div>`;
+      travelHost.innerHTML = window.TBSettingsView?.renderSettingsBudgetReferenceState?.({
+        state: 'offline',
+        esc: escapeHTML,
+        t: (fr, en) => (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? en : fr,
+      }) || `<div class="muted">Mode hors ligne : référence budget en lecture locale indisponible.</div>`;
       return;
     }
     await _tbBudgetRefLoadCountries();
@@ -1183,11 +1187,20 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
     } catch(_) {}
   } catch (err) {
     if (_tbIsBudgetReferenceMissingSegmentError(err)) {
-      travelHost.innerHTML = `<div class="muted">Référence budget en cours de synchronisation.</div>`;
+      travelHost.innerHTML = window.TBSettingsView?.renderSettingsBudgetReferenceState?.({
+        state: 'syncing',
+        esc: escapeHTML,
+        t: (fr, en) => (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? en : fr,
+      }) || `<div class="muted">Référence budget en cours de synchronisation.</div>`;
       return;
     }
     console.error('[TB][budget-reference]', err);
-    travelHost.innerHTML = `<div class="muted">Budget de référence indisponible. ${escapeHTML(err?.message || String(err))}</div>`;
+    travelHost.innerHTML = window.TBSettingsView?.renderSettingsBudgetReferenceState?.({
+      state: 'unavailable',
+      error: err?.message || String(err),
+      esc: escapeHTML,
+      t: (fr, en) => (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? en : fr,
+    }) || `<div class="muted">Budget de référence indisponible. ${escapeHTML(err?.message || String(err))}</div>`;
   }
 };
 

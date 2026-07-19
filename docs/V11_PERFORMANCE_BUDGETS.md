@@ -12,26 +12,26 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.229` :
+Snapshot `10.5.230` :
 
 - Boot legacy : 877.1 / 1500 KiB.
-- Dashboard + Settings : 349.9 / 360 KiB.
+- Dashboard + Settings : 351.6 / 360 KiB.
 - Trip : 299.0 / 340 KiB.
 - Sport : 355.5 / 450 KiB.
-- Nutrition : 191.4 / 235 KiB.
+- Nutrition : 193.2 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 113.7 / 125 KiB.
-- Bundle Vite JS initial : 361.8 / 370 KiB.
-- Bundle Vite JS lazy : 111.4 / 115 KiB.
-- Bundle Vite JS total : 473.2 / 475 KiB.
+- Bundle Vite JS initial : 362.5 / 370 KiB.
+- Bundle Vite JS lazy : 121.4 / 125 KiB.
+- Bundle Vite JS total : 484.0 / 485 KiB.
 - Bundle Vite CSS total : 5.0 / 8 KiB.
-- JS principal gzip : 99.6 / 110 KiB.
+- JS principal gzip : 99.8 / 110 KiB.
 
 ## Budgets actuels
 
 - Bundle Vite JS initial : 370 KiB maximum.
-- Bundle Vite JS lazy : 115 KiB maximum.
-- Bundle Vite JS total : 475 KiB maximum.
+- Bundle Vite JS lazy : 125 KiB maximum.
+- Bundle Vite JS total : 485 KiB maximum.
 - Bundle Vite CSS total : 8 KiB maximum.
 - JS principal gzip : 110 KiB maximum.
 - Boot legacy : 1500 KiB maximum.

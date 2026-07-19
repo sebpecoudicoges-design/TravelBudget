@@ -6,9 +6,9 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.229`.
+- Version à valider : `10.5.230`.
 - Bilan : 8 parcours `ok`, 2 parcours `à faire`.
-- Retour corrigé à revalider : le panneau Synchro alimentation en attente doit rester actionnable après extraction hors legacy.
+- Retour corrigé à revalider : Alimentation doit garder le meme rendu apres extraction du shell, et Reglages doit afficher proprement les etats Reference budget.
 - Les 29 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
 - Consigner les anomalies et retours détaillés dans `docs/ADMIN_TEST_RETURNS.md`.
@@ -28,6 +28,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 9 | 10.5.227 | Performance : À traiter | Depuis un chargement frais, vérifier que l'onglet **À traiter** est visible, puis l'ouvrir. | L'onglet charge la boîte À traiter à la demande. Le premier écran reste rapide et le module Inbox n'est plus chargé au boot. | `TB BUILD 10.5.227` ; aucun `Inbox lazy load failed`, aucun `Uncaught`. | à faire |
 | 10 | 10.5.228 | Trip + Sport | Ouvrir Trip > Analyse et vérifier les barres catégories/participants. Puis ouvrir Sport, créer ou modifier une séance libre/programmée et ouvrir les sélecteurs objectif, niveau, famille, durée, format, matériel et exercice. | Les barres Trip gardent les mêmes montants, couleurs et libellés. Les listes Sport sont remplies, sélectionnables et échappent les libellés spéciaux. | `TB BUILD 10.5.228` ; aucun `Uncaught`, aucun module `tripView` ou `sportFormView` manquant. | à faire |
 | 11 | 10.5.229 | Alimentation : synchro locale | Simuler ou conserver un ajout alimentation en attente, ouvrir Alimentation, puis utiliser **Synchroniser**, **Vider** ou **Supprimer** sur une ligne locale. | Le panneau d'attente s'affiche avec le bon nombre d'ajouts, les erreurs restent lisibles et les actions répondent sans bloquer la saisie. | `TB BUILD 10.5.229` ; aucun `Uncaught`, aucun module `nutritionView` manquant. | à faire |
+| 12 | 10.5.230 | Alimentation + Réglages | Ouvrir Alimentation, changer la date, modifier l'objectif nutrition, ajouter eau/aliment et ouvrir la timeline. Puis ouvrir Réglages > Voyage avec ou sans réseau et vérifier le bloc Référence budget. | Le shell Alimentation reste identique et tous les boutons/champs répondent. Référence budget affiche un état hors ligne, synchronisation ou erreur sans alerte brute ni HTML cassé. | `TB BUILD 10.5.230` ; aucun `Uncaught`, aucun module `nutritionView` ou `TBSettingsView` manquant. | à faire |
 
 ## À ajouter à chaque livraison
 

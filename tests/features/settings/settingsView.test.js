@@ -8,6 +8,7 @@ import {
   renderCreatePeriodModalBody,
   renderCreateVoyageModalBody,
   renderSettingsAccountPanel,
+  renderSettingsBudgetReferenceState,
   renderSettingsHero,
   renderSettingsManualFxPanel,
   renderSettingsPeriodCard,
@@ -875,6 +876,16 @@ describe('Settings view helpers', () => {
     expect(html).toContain('Inherit');
     expect(html).toContain('display:none;');
     expect(html).toContain('tb-settings-pill--positive');
+  });
+
+  it('renders budget reference transient states without legacy inline HTML', () => {
+    expect(renderSettingsBudgetReferenceState({ state: 'offline', t }))
+      .toContain('Mode hors ligne : reference budget en lecture locale indisponible.');
+    expect(renderSettingsBudgetReferenceState({ state: 'syncing', t }))
+      .toContain('Reference budget en cours de synchronisation.');
+    const error = renderSettingsBudgetReferenceState({ state: 'unavailable', error: '<SQL>', t });
+    expect(error).toContain('Budget de reference indisponible.');
+    expect(error).toContain('&lt;SQL&gt;');
   });
 
   it('renders the travel overview with editable trip fields and reference posts', () => {

@@ -26,11 +26,8 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('window.UI?.nutritionView');
     expect(legacy).toContain('nutritionStore()?.hydrateRemote');
     expect(legacy).toContain('nutritionStore()?.hydrateLocal');
-    expect(legacy).toContain('view().renderQuickAddPanel');
+    expect(legacy).toContain('view().renderNutritionShell');
     expect(legacy).toContain('view().renderNutritionSyncPanel');
-    expect(legacy).toContain('view().renderMealTimeline');
-    expect(legacy).toContain('view().renderHydrationPanel');
-    expect(legacy).toContain('view().renderSleepPanel');
     expect(legacy).toContain('view().renderGoalCockpit');
     expect(legacy).toContain('view().renderAlcoholPanel');
     expect(legacy).toContain('view().renderActiveWeekDashboard');
@@ -58,6 +55,7 @@ describe('nutrition domain extraction contract', () => {
     expect(store).toContain('hydrateLocal');
     expect(store).toContain('appSnapshot');
     expect(view).toContain('renderQuickAddPanel');
+    expect(view).toContain('renderNutritionShell');
     expect(view).toContain('renderNutritionSyncPanel');
     expect(view).toContain('renderMealTimeline');
     expect(view).toContain('renderHistoryPanel');
@@ -66,5 +64,7 @@ describe('nutrition domain extraction contract', () => {
     expect(view).toContain('renderGoalCockpit');
     expect(legacy).not.toContain('Synchro alimentation en attente", "Pending nutrition sync');
     expect(legacy).not.toContain('rows.slice(0, 8).map((row, index)');
+    expect(legacy).not.toContain('<section class="tb-nutrition-shell">');
+    expect(legacy).not.toContain('Comparaison besoins / consomme');
   });
 });

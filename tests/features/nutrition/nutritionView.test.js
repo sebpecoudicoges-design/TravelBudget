@@ -15,6 +15,7 @@ import {
   renderHydrationPanel,
   renderMealFavoriteChip,
   renderMealTimeline,
+  renderNutritionShell,
   renderNutritionSyncPanel,
   renderQuickAddPanel,
   renderSleepPanel,
@@ -247,5 +248,53 @@ describe('Nutrition view helpers', () => {
     expect(html).toContain('A1 Full body');
     expect(html).toContain('data-health-date="2026-07-10"');
     expect(html).toContain('650 kcal');
+  });
+
+  it('renders the main Nutrition shell with stable hooks and delegated slots', () => {
+    const html = renderNutritionShell({
+      day: '2026-07-19',
+      base: { bmr: 1624 },
+      goalLabel: 'Prise de masse douce',
+      goalTargets: { mode: 'bulk', offsetKcal: 350, surplusKcal: 350, deficitKcal: 300 },
+      goalSettings: { targetWeightKg: 62, weeklyRateKg: 0.25 },
+      syncPanelHtml: '<div id="nutrition-sync-pending">sync</div>',
+      consumedKcal: 1089,
+      needsKcal: 2400,
+      kcalTargetLabel: 'Reste',
+      kcalDelta: -1311,
+      drinkWaterMl: 1200,
+      foodWaterMl: 416,
+      proteinTarget: 95,
+      carbsTarget: 300,
+      fatTarget: 70,
+      total: { kcal: 1089, protein: 43, carbs: 130, fat: 35 },
+      sportKcal: 250,
+      workKcal: 120,
+      goalCockpitHtml: '<div id="goal-cockpit">objectif</div>',
+      quickAdd: {
+        syncBadge: 'A jour',
+        foodOptionsHtml: '<option value="water">Eau</option>',
+        quickFoods: { favs: [], recent: [] },
+        mealFavorites: [],
+        activeMealType: 'lunch',
+      },
+      hydrationPanelHtml: '<section id="hydration-panel">eau</section>',
+      sleepPanelHtml: '<section id="sleep-panel">sommeil</section>',
+      historyPanelHtml: '<section id="history-panel">historique</section>',
+      alcoholPanelHtml: '<section id="alcohol-panel">alcool</section>',
+      sleepLabel: '8h',
+      spentKcal: 1994,
+      objectiveBalanceKcal: -561,
+      balanceLabel: 'sous objectif de',
+      mealTimelineHtml: '<div data-nutrition-pick-type="lunch">timeline</div>',
+      t,
+    });
+    expect(html).toContain('id="nutrition-date"');
+    expect(html).toContain('id="nutrition-refresh"');
+    expect(html).toContain('id="nutrition-goal-mode"');
+    expect(html).toContain('id="nutrition-search"');
+    expect(html).toContain('id="nutrition-sync-pending"');
+    expect(html).toContain('data-nutrition-pick-type="lunch"');
+    expect(html).toContain('1089 / 2400 kcal');
   });
 });
