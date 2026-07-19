@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `a8b25a75a6f2c2874cd9b2a5bdbc91d03af18947`
-> Empreinte du snapshot : `ae16264ba245cc1d2f37fc3782ea69aa5e690841ed35a9743aa330acda3979d8`
-> Généré le : `2026-07-19T03:19:06.352Z`
+> Commit analysé : `b145ac91cb6ef156c217db6709f8da10bbb30ac4`
+> Empreinte du snapshot : `7679aed85eb3523c8812a104dfc45e5b8419aa470a9c81de2a0a0c0cd2ca22ca`
+> Généré le : `2026-07-19T03:36:37.713Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.215` |
+| Version | `10.5.216` |
 | Écrans déclarés | 14 |
-| Scripts legacy référencés | 61 |
+| Scripts legacy référencés | 62 |
 | Modules core | 24 |
 | Modules data | 7 |
 | Modules features | 24 |
-| Fichiers de tests | 90 |
+| Fichiers de tests | 91 |
 | Migrations Supabase | 86 |
 | Fonctions Edge | 8 |
 | Projet Android présent | Oui |
@@ -110,6 +110,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `public/legacy/js/09_fx.js`
 - `public/legacy/js/09_fx_snapshot.js`
 - `public/legacy/js/10_navigation.js`
+- `public/legacy/js/11_kpi_controller.js`
 - `public/legacy/js/11_kpi_render_micro_animation.js`
 - `public/legacy/js/12_dashboard_render.js`
 - `public/legacy/js/13_transactions_view.js`
@@ -313,6 +314,7 @@ Modules :
 - `tests/features/analysis/analysisView.test.js`
 - `tests/features/assets/assetView.test.js`
 - `tests/features/dashboard/dashboardView.test.js`
+- `tests/features/kpi/kpiController.test.js`
 - `tests/features/kpi/kpiView.test.js`
 - `tests/features/nutrition/nutritionStore.test.js`
 - `tests/features/nutrition/nutritionView.test.js`

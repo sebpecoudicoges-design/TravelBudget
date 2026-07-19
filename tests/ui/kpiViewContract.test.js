@@ -4,10 +4,13 @@ import fs from 'node:fs';
 describe('KPI view extraction contract', () => {
   const main = fs.readFileSync('src/main.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/11_kpi_render_micro_animation.js', 'utf8');
+  const controller = fs.readFileSync('public/legacy/js/11_kpi_controller.js', 'utf8');
   const module = fs.readFileSync('src/features/kpi/kpiView.js', 'utf8');
 
   it('exposes the KPI view module to the legacy runtime', () => {
     expect(main).toContain("import('./features/kpi/kpiView.js')");
+    expect(main).toContain("'/legacy/js/11_kpi_controller.js'");
+    expect(main).not.toContain("import('./features/kpi/kpiController.js')");
     expect(main).toContain('async function ensureKpiView()');
     expect(main).toContain('ensureKpiView();');
     expect(main).not.toContain('await ensureKpiView();');
@@ -92,5 +95,20 @@ describe('KPI view extraction contract', () => {
     expect(legacy).not.toContain('<option value="${escapeHTML(activeTravelValue)}" selected>');
     expect(legacy).not.toContain('..._segs.map((s, idx)');
     expect(legacy).not.toContain('<option value="seg:${id}">');
+  });
+
+  it('delegates KPI interaction bindings to the modular controller', () => {
+    expect(legacy).toContain('window.TBKpiView?.bindKpiInteractions');
+    expect(legacy).toContain('parseScope: _kpiParseScope');
+    expect(legacy).toContain('resolveRange: _kpiResolveRange');
+    expect(controller).toContain('function bindKpiInteractions');
+    expect(controller).toContain('function bindKpiRangeControls');
+    expect(controller).toContain('function bindKpiScopeSelector');
+    expect(controller).toContain('function bindKpiFxCalculator');
+    expect(controller).toContain('window.TBKpiView = {');
+    expect(legacy).not.toContain('const saveRange = (opts = {}) =>');
+    expect(legacy).not.toContain('selS.addEventListener("change"');
+    expect(legacy).not.toContain('const curSet = new Set(["EUR"])');
+    expect(legacy).not.toContain('sEl.addEventListener("click"');
   });
 });

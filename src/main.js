@@ -60,6 +60,7 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/10_navigation.js',
   '/legacy/js/32_help_assistant.js',
   '/legacy/js/35_guided_tour.js',
+  '/legacy/js/11_kpi_controller.js',
   '/legacy/js/11_kpi_render_micro_animation.js',
   '/legacy/js/12_dashboard_render.js',
   '/legacy/js/34_fx_decision.js',

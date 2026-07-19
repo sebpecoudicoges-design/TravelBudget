@@ -37,6 +37,7 @@
         "public/legacy/js/10_navigation.js",
         "public/legacy/js/32_help_assistant.js",
         "public/legacy/js/35_guided_tour.js",
+        "public/legacy/js/11_kpi_controller.js",
         "public/legacy/js/11_kpi_render_micro_animation.js",
         "public/legacy/js/12_dashboard_render.js",
         "public/legacy/js/34_fx_decision.js",
@@ -84,6 +85,7 @@
       "maxKiB": 360,
       "paths": [
         "public/legacy/js/11_kpi_render_micro_animation.js",
+        "public/legacy/js/11_kpi_controller.js",
         "public/legacy/js/12_dashboard_render.js",
         "public/legacy/js/14_settings_periods_ui.js",
         "src/features/dashboard/dashboardView.js",

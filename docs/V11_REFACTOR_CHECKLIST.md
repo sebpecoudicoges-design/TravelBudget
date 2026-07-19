@@ -14,6 +14,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [ ] Ajouter a chaque livraison une verification utilisateur simple : ecran a ouvrir, action a faire, resultat attendu, console attendue si pertinent.
 - [x] Remplacer la liste brute des APK de `public/projet.html` par une fresque chronologique interactive, detaillee et filtrable.
 - [x] Realigner le contrat Settings Modal sur les modules extraits et verifier la suite complete : 89 fichiers, 459 tests.
+- [x] Extraire les interactions KPI date-a-date, scope, impayes et convertisseur FX vers un controleur module, avec tests.
 
 ## Chantier 1 - Budget journalier et transactions
 
@@ -211,6 +212,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire le layout principal KPI vers `kpiView.js`.
   - [x] Extraire l'option Voyage actif KPI vers `kpiView.js`.
   - [x] Extraire l'assemblage des cartes KPI vers `kpiView.js`.
+  - [x] Extraire les bindings KPI : date-a-date, scope, toggle impayes et convertisseur FX vers `11_kpi_controller.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

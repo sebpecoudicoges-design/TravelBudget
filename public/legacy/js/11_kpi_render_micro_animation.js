@@ -1649,214 +1649,28 @@ const driver = "Dépenses";
       }) || ""}
   `;
 
-  // Bind KPI selectors (period + scope) for projection horizon
-  try {
-    const selP = kpi.querySelector("#kpiPeriodSelect");
-    const selS = kpi.querySelector("#kpiScopeSelect");
-
-    // Keep UI aligned with persisted values after each render
-    if (selS) {
-      try { selS.value = String((_scopeValForSelect || "segment")); } catch (_) {}
-    }
-
-// Range UI setup
-try {
-  const box = kpi.querySelector("#kpiRangeBox");
-  const aEl = kpi.querySelector("#kpiRangeStart");
-  const bEl = kpi.querySelector("#kpiRangeEnd");
-  const applyEl = kpi.querySelector("#kpiRangeApply");
-  if (box && aEl && bEl) {
-    const si = _kpiParseScope(kpiScope);
-    const rr = _kpiResolveRange(si, displayDateISO);
-    aEl.value = rr.startISO || "";
-    bEl.value = rr.endISO || "";
-    box.style.display = (String((_scopeValForSelect||"")) === "range") ? "flex" : "none";
-
-    if (!box.dataset.bound) {
-      box.dataset.bound = "1";
-      const saveRange = (opts = {}) => {
-        const SCOPE_KEY = (TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.kpi_projection_scope) || "travelbudget_kpi_projection_scope_v1";
-        const a = String(aEl.value || "");
-        const b = String(bEl.value || "");
-        if (a && b) {
-          const vv = `range:${a}:${b}`;
-          try { localStorage.setItem(SCOPE_KEY, vv); } catch (_) {}
-          if (opts.apply) {
-            try { if (typeof renderKPI === "function") renderKPI(); } catch (_) {}
-            try {
-              if (typeof window.tbEnsureCashflowCurve === "function") window.tbEnsureCashflowCurve("kpi-range-change");
-              else if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("kpi-range-change");
-              else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
-              else if (typeof renderCashflowChart === "function") renderCashflowChart();
-            } catch (_) {}
-            try { if (typeof window.redrawCharts === "function") window.redrawCharts(); } catch (_) {}
-          }
-        }
-      };
-      box.addEventListener("pointerdown", (ev) => { try { ev.stopPropagation(); } catch (_) {} });
-      box.addEventListener("mousedown", (ev) => { try { ev.stopPropagation(); } catch (_) {} });
-      aEl.addEventListener("change", () => saveRange());
-      bEl.addEventListener("change", () => saveRange());
-      if (applyEl) applyEl.addEventListener("click", () => saveRange({ apply: true }));
-    }
-  }
-} catch (_) {}
-
-    if (selP) {
-      selP.dataset.bound = "1";
-    }
-
-    if (selS && !selS.dataset.bound) {
-      selS.dataset.bound = "1";
-      selS.addEventListener("change", (e) => {
-        const v = String(e?.target?.value || "segment");
-        try {
-          const box = document.getElementById("kpiRangeBox");
-          if (box) box.style.display = (v === "range") ? "flex" : "none";
-        } catch (_) {}
-        const SCOPE_KEY = (TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.kpi_projection_scope) || "travelbudget_kpi_projection_scope_v1";
-        // Range mode stores as "range:YYYY-MM-DD:YYYY-MM-DD"
-        if (v === "range") {
-          try {
-            const a = String((document.getElementById("kpiRangeStart")||{}).value || "");
-            const b = String((document.getElementById("kpiRangeEnd")||{}).value || "");
-            const vv = (a && b) ? `range:${a}:${b}` : "range";
-            localStorage.setItem(SCOPE_KEY, vv);
-          } catch (_) {}
-          return;
-        } else {
-          try { localStorage.setItem(SCOPE_KEY, v); } catch (_) {}
-        }
-        try { if (typeof renderKPI === "function") renderKPI(); } catch (_) {}
-        // Keep curve aligned with KPI scope (no separate curve filter)
-        try {
-          if (typeof window.tbEnsureCashflowCurve === "function") window.tbEnsureCashflowCurve("kpi-scope-change");
-          else if (typeof window.tbRequestCashflowRender === "function") window.tbRequestCashflowRender("kpi-scope-change");
-          else if (typeof window.renderCashflowChart === "function") window.renderCashflowChart();
-          else if (typeof renderCashflowChart === "function") renderCashflowChart();
-        } catch (_) {}
-
-        // Keep pie chart aligned too, if charts exist.
-        try { if (typeof window.redrawCharts === "function") window.redrawCharts(); } catch (_) {}
-});
-    }
-
-    // FX calculator binding
-    try {
-      const aEl = kpi.querySelector("#kpiFxCalcAmount");
-      const fEl = kpi.querySelector("#kpiFxCalcFrom");
-      const tEl = kpi.querySelector("#kpiFxCalcTo");
-      const sEl = kpi.querySelector("#kpiFxCalcSwap");
-      const oEl = kpi.querySelector("#kpiFxCalcOut");
-      if (aEl && fEl && tEl && oEl && !aEl.dataset.bound) {
-        aEl.dataset.bound = "1";
-        const AKEY = (TB_CONST?.LS_KEYS?.fx_calc_amount) || "travelbudget_fx_calc_amount_v1";
-        const FKEY = (TB_CONST?.LS_KEYS?.fx_calc_from) || "travelbudget_fx_calc_from_v1";
-        const TKEY = (TB_CONST?.LS_KEYS?.fx_calc_to) || "travelbudget_fx_calc_to_v1";
-
-        const rates = (typeof window.fxGetEurRates === "function") ? (window.fxGetEurRates() || {}) : {};
-        const curSet = new Set(["EUR"]);
-        try { Object.keys(rates || {}).forEach(k => curSet.add(String(k || "").toUpperCase())); } catch (_) {}
-        try { (state.wallets || []).forEach(w => curSet.add(String(w?.currency || "").toUpperCase())); } catch (_) {}
-        try { (state.budgetSegments || state.segments || []).forEach(s => curSet.add(String(s?.baseCurrency || s?.base_currency || "").toUpperCase())); } catch (_) {}
-        curSet.add(String(state?.period?.baseCurrency || state?.period?.base_currency || "").toUpperCase());
-        const curs = Array.from(curSet).filter(Boolean).sort();
-
-        const optHTML = curs.map(c => `<option value="${c}">${c}</option>`).join("");
-        fEl.innerHTML = optHTML;
-        tEl.innerHTML = optHTML;
-
-        // Defaults: from = account currency, to = current period/segment currency
-        const accountBase = String(
-  state?.settings?.baseCurrency ||
-  state?.settings?.base_currency ||
-  state?.profile?.baseCurrency ||
-  state?.profile?.base_currency ||
-  state?.account?.baseCurrency ||
-  state?.account?.base_currency ||
-  base ||
-  "EUR"
-).toUpperCase();
-        const periodBase = String(
-          (window.__TB_ACTIVE_SEG && (__TB_ACTIVE_SEG.baseCurrency || __TB_ACTIVE_SEG.base_currency)) ||
-          base ||
-          state?.period?.baseCurrency ||
-          state?.period?.base_currency ||
-          "EUR"
-        ).toUpperCase();
-
-        const savedA = (localStorage.getItem(AKEY) || "").trim();
-        const savedF = (localStorage.getItem(FKEY) || "").trim().toUpperCase();
-        const savedT = (localStorage.getItem(TKEY) || "").trim().toUpperCase();
-
-        aEl.value = savedA || "";
-        const fallbackCurrency = curs.includes(accountBase)
-  ? accountBase
-  : (curs.includes(periodBase) ? periodBase : curs[0]);
-
-fEl.value = curs.includes(savedF) ? savedF : fallbackCurrency;
-tEl.value = curs.includes(savedT)
-  ? savedT
-  : (curs.includes(periodBase) ? periodBase : fallbackCurrency);
-
-        const fmtOut = (x, cur) => {
-          const n = Number(x);
-          if (!isFinite(n)) return "—";
-          const s = (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
-          return `${s} ${cur}`;
-        };
-
-        const compute = () => {
-          const amt = Number(aEl.value);
-          const from = String(fEl.value || "EUR");
-          const to = String(tEl.value || "EUR");
-          if (!isFinite(amt)) { oEl.textContent = "—"; return; }
-          let out = null;
-          try {
-            if (typeof window.fxConvert === "function") out = window.fxConvert(amt, from, to, rates);
-          } catch (_) {}
-          // Fallbacks using existing pivots
-          if (out === null || !isFinite(out)) {
-            try {
-              if (to === "EUR") out = amountToEUR(amt, from);
-              else if (from === "EUR") out = eurToAmount(amt, to);
-            } catch (_) {}
-          }
-          oEl.textContent = fmtOut(out, to);
-
-          try { localStorage.setItem(AKEY, String(aEl.value || "")); } catch (_) {}
-          try { localStorage.setItem(FKEY, from); } catch (_) {}
-          try { localStorage.setItem(TKEY, to); } catch (_) {}
-        };
-
-        [aEl, fEl, tEl].forEach(el => el.addEventListener("input", compute));
-        [aEl, fEl, tEl].forEach(el => el.addEventListener("change", compute));
-
-        if (sEl && !sEl.dataset.bound) {
-         sEl.dataset.bound = "1";
-         sEl.addEventListener("click", () => {
-           const from = fEl.value;
-           fEl.value = tEl.value;
-           tEl.value = from;
-           compute();
-         });
-        }
-
-compute();
-      }
-    } catch (_) {}
-  } catch (e) {
-    console.warn(e);
-  }
-
-  // Toggle: include unpaid (forecast) in KPI projection
-  const _tog = document.getElementById("kpiIncludeUnpaidToggle");
-  if (_tog) {
-    _tog.onchange = () => {
-      localStorage.setItem((TB_CONST && TB_CONST.LS_KEYS && TB_CONST.LS_KEYS.kpi_projection_include_unpaid) || "travelbudget_kpi_projection_include_unpaid_v1", _tog.checked ? "1" : "0");
-      if (window.tbRequestRenderAll) tbRequestRenderAll("kpi:toggle"); else renderKPI();
-    };
-  }
+  window.TBKpiView?.bindKpiInteractions?.({
+    root: kpi,
+    scope: kpiScope,
+    scopeValue: _scopeValForSelect,
+    displayDateISO,
+    parseScope: _kpiParseScope,
+    resolveRange: _kpiResolveRange,
+    constants: TB_CONST,
+    storage: localStorage,
+    state,
+    base,
+    rates: (typeof window.fxGetEurRates === "function") ? (window.fxGetEurRates() || {}) : {},
+    fxConvert: window.fxConvert,
+    amountToEUR: (typeof amountToEUR === "function") ? amountToEUR : null,
+    eurToAmount: (typeof eurToAmount === "function") ? eurToAmount : null,
+    renderKPI,
+    requestRenderAll: window.tbRequestRenderAll,
+    ensureCashflowCurve: window.tbEnsureCashflowCurve,
+    requestCashflowRender: window.tbRequestCashflowRender,
+    renderCashflowChart: window.renderCashflowChart || (typeof renderCashflowChart === "function" ? renderCashflowChart : null),
+    redrawCharts: window.redrawCharts,
+  });
 
   })();
   try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("kpi:render"); } catch (_) {}
