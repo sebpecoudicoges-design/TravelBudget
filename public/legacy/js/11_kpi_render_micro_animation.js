@@ -197,63 +197,32 @@ try {
   };
 } catch (_) {}
 function remainingBudgetBaseFrom(dateStr) {
-  const start = parseISODateOrNull(dateStr);
-  const end = parseISODateOrNull(state.period.end);
-  if (!start || !end) return 0;
-
-  let sum = 0;
-  forEachDateInclusive(start, end, (d) => {
-    const ds = toLocalISODate(d);
-    const b = getDailyBudgetForDate(ds);
-    sum += Math.max(0, b);
-  });
-  return sum;
+  return window.TBKpiProjectionRules?.sumRemainingDailyBudget?.({
+    startISO: dateStr,
+    endISO: state.period.end,
+    getDailyBudgetForDate,
+    toISO: toLocalISODate,
+  }) || 0;
 }
 
 function projectedEndEUR() {
   const today = toLocalISODate(new Date());
   const remainingBase = remainingBudgetBaseFrom(today);
-  const remainingEUR = amountToEUR(remainingBase, state.period.baseCurrency);
-  return totalInEUR() - remainingEUR;
+  return window.TBKpiProjectionRules?.projectedEndAmount?.({
+    currentTotal: totalInEUR(),
+    remainingBudget: remainingBase,
+    convertRemainingBudget: (amount) => amountToEUR(amount, state.period.baseCurrency),
+  }) ?? (totalInEUR() - amountToEUR(remainingBase, state.period.baseCurrency));
 }
 
 function netPendingEUR(rangeStartISO, rangeEndISO) {
-  // Net of unpaid items (pay_now=false) within an optional date range:
-  // + unpaid incomes, - unpaid expenses
-  // Excludes internal/shadow rows (isInternal=true)
-  //
-  // A tx is included if its [dateStart,dateEnd] overlaps [rangeStartISO,rangeEndISO].
-  // If no range is provided, includes all unpaid tx in the active period.
-  const rs = rangeStartISO ? parseISODateOrNull(rangeStartISO) : null;
-  const re = rangeEndISO ? parseISODateOrNull(rangeEndISO) : null;
-
-  function _txOverlaps(tx) {
-    if (!rs && !re) return true;
-    const ds = parseISODateOrNull(tx.dateStart) || (tx.date ? new Date(Number(tx.date)) : null);
-    const de = parseISODateOrNull(tx.dateEnd) || ds;
-    if (!ds) return false;
-
-    const a = clampMidnight(ds);
-    const b = clampMidnight(de || ds);
-
-    const r0 = rs ? clampMidnight(rs) : null;
-    const r1 = re ? clampMidnight(re) : null;
-
-    if (r0 && b < r0) return false;
-    if (r1 && a > r1) return false;
-    return true;
-  }
-
-  let net = 0;
-  for (const tx of (state.transactions || [])) {
-    if (!_kpiIsCashPendingProjectionTx(tx)) continue;
-    if (!_txOverlaps(tx)) continue;
-
-    const v = amountToEUR(Number(tx.amount) || 0, tx.currency);
-    if (tx.type === "income") net += v;
-    else if (tx.type === "expense") net -= v;
-  }
-  return net;
+  return window.TBKpiProjectionRules?.netPendingAmount?.({
+    transactions: state.transactions || [],
+    rangeStartISO,
+    rangeEndISO,
+    isPendingTransaction: _kpiIsCashPendingProjectionTx,
+    convertAmount: (amount, currency) => amountToEUR(amount, currency),
+  }) || 0;
 }
 
 function _kpiDatesOverlap(aStartISO, aEndISO, bStartISO, bEndISO) {
@@ -327,29 +296,20 @@ const todayISO = (typeof window.getDisplayDateISO === "function") ? window.getDi
     const rows = Array.isArray(state?.tripNetBalances) && state.tripNetBalances.length
       ? state.tripNetBalances
       : (Array.isArray(window.__tripState?.globalNetRows) ? window.__tripState.globalNetRows : []);
-    const byTrip = new Map();
-    for (const row of rows) {
-      const net = Number(row?.net || 0);
-      if (!Number.isFinite(net) || Math.abs(net) < 0.000001) continue;
-      if (!_kpiTripNetRowInRange(row, rangeStartISO, rangeEndISO)) continue;
-      const cur = String(row?.currency || state?.period?.baseCurrency || "EUR").toUpperCase();
-      let converted = null;
-      if (cur === "EUR") {
-        converted = net;
-      } else {
+    return window.TBKpiProjectionRules?.tripNetBalancesAmount?.({
+      rows,
+      periods: Array.isArray(state?.periods) ? state.periods : [],
+      rangeStartISO,
+      rangeEndISO,
+      baseCurrency: state?.period?.baseCurrency || "EUR",
+      convertAmount: (amount, currency) => {
+        if (String(currency || "EUR").toUpperCase() === "EUR") return Number(amount) || 0;
         try {
-          if (typeof window.fxConvert === "function") converted = window.fxConvert(net, cur, "EUR");
+          if (typeof window.fxConvert === "function") return window.fxConvert(amount, currency, "EUR");
         } catch (_) {}
-      }
-      if (converted === null || !Number.isFinite(converted)) continue;
-      const key = String(row?.tripId || row?.trip_id || row?.tripName || row?.trip_name || "trip");
-      byTrip.set(key, (byTrip.get(key) || 0) + converted);
-    }
-    let out = 0;
-    for (const v of byTrip.values()) {
-      if (Math.abs(Number(v) || 0) >= 1) out += v;
-    }
-    return out;
+        return NaN;
+      },
+    }) || 0;
   }
 
   // Total wallets now in EUR
@@ -555,28 +515,21 @@ function _renderTodayDetailsHTML(dateStr) {
 
 function _sumWalletsDisplay(dateStr) {
   const base = (typeof window.getDisplayCurrency === "function") ? window.getDisplayCurrency(dateStr) : (state?.period?.baseCurrency || "EUR");
-  let total = 0;
-  for (const w of (state.wallets || [])) {
-    const bal = (typeof window.tbGetWalletEffectiveBalance === "function")
-      ? Number(window.tbGetWalletEffectiveBalance(w.id) || 0)
-      : (Number(w.balance) || 0);
-    const cur = w.currency || base;
-    if (typeof window.amountToDisplayForDate === "function") {
-      total += window.amountToDisplayForDate(bal, cur, dateStr);
-    } else {
-      total += amountToBase(bal, cur);
-    }
-  }
-  return total;
+  return window.TBKpiProjectionRules?.sumWalletsDisplay?.({
+    wallets: state.wallets || [],
+    dateISO: dateStr,
+    baseCurrency: base,
+    effectiveBalance: (wallet) => (typeof window.tbGetWalletEffectiveBalance === "function")
+      ? window.tbGetWalletEffectiveBalance(wallet.id)
+      : wallet?.balance,
+    amountToDisplayForDate: (typeof window.amountToDisplayForDate === "function") ? window.amountToDisplayForDate : null,
+    amountToBase,
+  }) || 0;
 }
 
 
 function _addDaysISO(dateStr, days) {
-  const d = parseISODateOrNull(dateStr);
-  if (!d) return dateStr;
-  const x = new Date(d);
-  x.setDate(x.getDate() + (Number(days) || 0));
-  return toLocalISODate(x);
+  return window.TBKpiProjectionRules?.addDaysISO?.(dateStr, days, toLocalISODate) || dateStr;
 }
 
 function _pilotageInsights(scopeMeta) {
@@ -674,28 +627,23 @@ function _pilotageInsights(scopeMeta) {
       const rows = Array.isArray(state?.tripNetBalances) && state.tripNetBalances.length
         ? state.tripNetBalances
         : (Array.isArray(window.__tripState?.globalNetRows) ? window.__tripState.globalNetRows : []);
-      const byTrip = new Map();
-      for (const row of rows) {
-        const net = Number(row?.net || 0);
-        if (!_kpiTripNetRowInRange(row, anchorISO, endISO)) continue;
-        if (Number.isFinite(net) && Math.abs(net) > 0.000001) {
-          const cur = String(row?.currency || state?.period?.baseCurrency || "EUR").toUpperCase();
-          let converted = null;
+      pendingEUR += window.TBKpiProjectionRules?.tripNetBalancesAmount?.({
+        rows,
+        periods: Array.isArray(state?.periods) ? state.periods : [],
+        rangeStartISO: anchorISO,
+        rangeEndISO: endISO,
+        baseCurrency: state?.period?.baseCurrency || "EUR",
+        convertAmount: (amount, currency) => {
           try {
             if (typeof window.fxConvert === "function") {
-              converted = window.fxConvert(net, cur, "EUR");
-              if (converted === null || !Number.isFinite(converted)) converted = window.fxConvert(net, cur, "EUR", _pilotRatesForDate(anchorISO));
+              const direct = window.fxConvert(amount, currency, "EUR");
+              if (direct !== null && Number.isFinite(direct)) return direct;
+              return window.fxConvert(amount, currency, "EUR", _pilotRatesForDate(anchorISO));
             }
           } catch (_) {}
-          if (converted !== null && Number.isFinite(converted)) {
-            const key = String(row?.tripId || row?.trip_id || row?.tripName || row?.trip_name || "trip");
-            byTrip.set(key, (byTrip.get(key) || 0) + converted);
-          }
-        }
-      }
-      for (const v of byTrip.values()) {
-        if (Math.abs(Number(v) || 0) >= 1) pendingEUR += v;
-      }
+          return NaN;
+        },
+      }) || 0;
     }
   } catch (_) {}
 
@@ -928,21 +876,14 @@ function renderKPI() {
     const rows = Array.isArray(state?.tripNetBalances) && state.tripNetBalances.length
       ? state.tripNetBalances
       : (Array.isArray(window.__tripState?.globalNetRows) ? window.__tripState.globalNetRows : []);
-    const byTrip = new Map();
-    for (const row of rows) {
-      const net = Number(row?.net || 0);
-      if (!Number.isFinite(net) || Math.abs(net) < 0.000001) continue;
-      if (!_kpiTripNetRowInRange(row, rangeStartISO, rangeEndISO)) continue;
-      const converted = _toPivotStrict(net, row?.currency || state?.period?.baseCurrency || "EUR", dateISO);
-      if (converted === null || !isFinite(converted)) continue;
-      const key = String(row?.tripId || row?.trip_id || row?.tripName || row?.trip_name || "trip");
-      byTrip.set(key, (byTrip.get(key) || 0) + converted);
-    }
-    let out = 0;
-    for (const v of byTrip.values()) {
-      if (Math.abs(Number(v) || 0) >= 1) out += v;
-    }
-    return out;
+    return window.TBKpiProjectionRules?.tripNetBalancesAmount?.({
+      rows,
+      periods: Array.isArray(state?.periods) ? state.periods : [],
+      rangeStartISO,
+      rangeEndISO,
+      baseCurrency: state?.period?.baseCurrency || "EUR",
+      convertAmount: (amount, currency) => _toPivotStrict(amount, currency, dateISO),
+    }) || 0;
   }
 
   // Total wallets:

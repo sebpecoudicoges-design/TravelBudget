@@ -44,14 +44,23 @@ describe('KPI view extraction contract', () => {
 
   it('delegates KPI projection, scope and pending rules to a tested module', () => {
     expect(projectionRules).toContain('export function pendingProjectionItems');
+    expect(projectionRules).toContain('export function netPendingAmount');
+    expect(projectionRules).toContain('export function tripNetBalancesAmount');
+    expect(projectionRules).toContain('export function sumWalletsDisplay');
     expect(projectionRules).toContain('export function parseKpiScope');
     expect(projectionRules).toContain('export function daysPill');
     expect(legacy).toContain('window.TBKpiProjectionRules?.pendingProjectionItems');
+    expect(legacy).toContain('window.TBKpiProjectionRules?.netPendingAmount');
+    expect(legacy).toContain('window.TBKpiProjectionRules?.tripNetBalancesAmount');
+    expect(legacy).toContain('window.TBKpiProjectionRules?.sumWalletsDisplay');
     expect(legacy).toContain('window.TBKpiProjectionRules?.resolveKpiRange');
     expect(legacy).toContain('window.TBKpiProjectionRules?.daysPill');
     expect(legacy).not.toContain('const grouped = new Map();');
     expect(legacy).not.toContain('const thresholds = { warn: 7, urgent: 4, critical: 2 };');
     expect(legacy).not.toContain('if (s.startsWith("range:"))');
+    expect(legacy).not.toContain('const rs = rangeStartISO ? parseISODateOrNull(rangeStartISO)');
+    expect(legacy).not.toContain('byTrip.set(key, (byTrip.get(key) || 0) + converted)');
+    expect(legacy).not.toContain('let total = 0;\\n  for (const w of (state.wallets || []))');
   });
 
   it('delegates KPI cash runway and conservative cover rules to a tested module', () => {

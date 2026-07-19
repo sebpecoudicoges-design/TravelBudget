@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  addDaysISO,
   datesOverlap,
   daysPill,
   fmtKpiCompact,
+  netPendingAmount,
   parseKpiScope,
   pendingAmountText,
   pendingProjectionItems,
+  projectedEndAmount,
   resolveKpiRange,
   signPillClass,
+  sumRemainingDailyBudget,
+  sumWalletsDisplay,
+  tripNetBalancesAmount,
   tripNetRowInRange,
 } from '../../../src/features/kpi/kpiProjectionRules.js';
 
@@ -66,6 +72,63 @@ describe('KPI projection rules', () => {
     expect(items.find((item) => item.label === 'Salaire')).toMatchObject({ value: 100, kind: 'receive' });
     expect(items.find((item) => item.label === 'Weekend')).toMatchObject({ value: -35, source: 'À payer Trip' });
     expect(pendingAmountText(-1234, 'AUD')).toMatch(/- .*AUD/);
+  });
+
+  it('computes remaining budget, projected end and pending net as pure values', () => {
+    expect(addDaysISO('2026-07-10', 3)).toBe('2026-07-13');
+    expect(sumRemainingDailyBudget({
+      startISO: '2026-07-01',
+      endISO: '2026-07-03',
+      getDailyBudgetForDate: (date) => ({ '2026-07-01': 20, '2026-07-02': -10, '2026-07-03': 30 }[date] || 0),
+    })).toBe(50);
+    expect(projectedEndAmount({
+      currentTotal: 500,
+      remainingBudget: 200,
+      convertRemainingBudget: (amount) => amount / 2,
+    })).toBe(400);
+
+    const net = netPendingAmount({
+      transactions: [
+        { type: 'income', amount: 120, currency: 'EUR', dateStart: '2026-07-02' },
+        { type: 'expense', amount: 40, currency: 'EUR', dateStart: '2026-07-03' },
+        { type: 'expense', amount: 999, currency: 'EUR', dateStart: '2026-08-01' },
+      ],
+      rangeStartISO: '2026-07-01',
+      rangeEndISO: '2026-07-10',
+      isPendingTransaction: () => true,
+      convertAmount: (amount) => amount,
+    });
+    expect(net).toBe(80);
+  });
+
+  it('computes wallet display totals and trip net balances without global state', () => {
+    expect(sumWalletsDisplay({
+      wallets: [
+        { id: 'w1', balance: 10, currency: 'EUR' },
+        { id: 'w2', balance: 20, currency: 'AUD' },
+      ],
+      dateISO: '2026-07-10',
+      baseCurrency: 'EUR',
+      effectiveBalance: (wallet) => (wallet.id === 'w2' ? 25 : wallet.balance),
+      amountToDisplayForDate: (amount, currency) => (currency === 'AUD' ? amount / 2 : amount),
+    })).toBe(22.5);
+
+    expect(tripNetBalancesAmount({
+      rows: [
+        { tripId: 't1', tripName: 'Trip 1', net: 30, currency: 'EUR', periodId: 'p1' },
+        { tripId: 't1', tripName: 'Trip 1', net: -5, currency: 'EUR', periodId: 'p1' },
+        { tripId: 't2', tripName: 'Trip 2', net: 9, currency: 'AUD', periodId: 'p2' },
+        { tripId: 't3', tripName: 'Old', net: 100, currency: 'EUR', periodId: 'old' },
+      ],
+      periods: [
+        { id: 'p1', start: '2026-07-01', end: '2026-07-31' },
+        { id: 'p2', start: '2026-07-01', end: '2026-07-31' },
+        { id: 'old', start: '2026-06-01', end: '2026-06-30' },
+      ],
+      rangeStartISO: '2026-07-01',
+      rangeEndISO: '2026-07-31',
+      convertAmount: (amount, currency) => (currency === 'AUD' ? amount / 3 : amount),
+    })).toBe(28);
   });
 
   it('classifies cash and sign pills without reading global state', () => {

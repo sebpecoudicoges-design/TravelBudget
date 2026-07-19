@@ -23,6 +23,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Extraire les regles KPI projection impayes, regroupement Trip et format de montants vers `kpiProjectionRules.js`.
 - [x] Extraire les regles KPI scope date-a-date, horizon, pastilles cash et signe vers `kpiProjectionRules.js`.
 - [x] Extraire les regles KPI wallets cash, conversion fiable, runway et couverture prudente vers `kpiCashRules.js`.
+- [x] Extraire les calculs KPI budget restant, impayes nets, wallets display et soldes Trip pivot vers `kpiProjectionRules.js`.
 - [x] Ajouter un espace de retours membres admins avec fichier stable `docs/ADMIN_TEST_RETURNS.md`.
 
 ## Chantier 1 - Budget journalier et transactions

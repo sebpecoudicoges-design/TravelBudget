@@ -43,6 +43,120 @@ export function pendingTxOverlaps(tx, rangeStartISO, rangeEndISO) {
   return datesOverlap(start, end, rangeStartISO, rangeEndISO);
 }
 
+export function addDaysISO(dateISO, days, toISO = null) {
+  const iso = String(dateISO || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return dateISO;
+  const [year, month, day] = iso.split('-').map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  if (Number.isNaN(d.getTime())) return dateISO;
+  d.setUTCDate(d.getUTCDate() + (Number(days) || 0));
+  if (typeof toISO === 'function') return toISO(d);
+  return d.toISOString().slice(0, 10);
+}
+
+export function sumRemainingDailyBudget({
+  startISO = '',
+  endISO = '',
+  getDailyBudgetForDate = () => 0,
+  toISO = null,
+} = {}) {
+  const parseUTC = (value) => {
+    const iso = String(value || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+    const [year, month, day] = iso.split('-').map(Number);
+    const d = new Date(Date.UTC(year, month - 1, day));
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+  const start = parseUTC(startISO);
+  const end = parseUTC(endISO);
+  if (!start || !end || start > end) return 0;
+  let sum = 0;
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    const ds = typeof toISO === 'function' ? toISO(cursor) : cursor.toISOString().slice(0, 10);
+    sum += Math.max(0, Number(getDailyBudgetForDate(ds)) || 0);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return sum;
+}
+
+export function projectedEndAmount({
+  currentTotal = 0,
+  remainingBudget = 0,
+  convertRemainingBudget = (value) => Number(value) || 0,
+} = {}) {
+  return (Number(currentTotal) || 0) - (Number(convertRemainingBudget(remainingBudget)) || 0);
+}
+
+export function netPendingAmount({
+  transactions = [],
+  rangeStartISO = '',
+  rangeEndISO = '',
+  isPendingTransaction = () => false,
+  convertAmount = (amount) => Number(amount) || 0,
+} = {}) {
+  let net = 0;
+  for (const tx of Array.isArray(transactions) ? transactions : []) {
+    if (!isPendingTransaction(tx)) continue;
+    if (!pendingTxOverlaps(tx, rangeStartISO, rangeEndISO)) continue;
+    const value = Number(convertAmount(Number(tx?.amount) || 0, tx?.currency || 'EUR', tx?.dateStart || tx?.date_start || rangeStartISO)) || 0;
+    const type = String(tx?.type || '').toLowerCase();
+    if (type === 'income') net += value;
+    else if (type === 'expense') net -= value;
+  }
+  return net;
+}
+
+export function tripNetBalancesAmount({
+  rows = [],
+  periods = [],
+  rangeStartISO = '',
+  rangeEndISO = '',
+  baseCurrency = 'EUR',
+  convertAmount = (amount) => Number(amount) || 0,
+  minAbs = 1,
+} = {}) {
+  const byTrip = new Map();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const net = Number(row?.net || 0);
+    if (!Number.isFinite(net) || Math.abs(net) < 0.000001) continue;
+    if (!tripNetRowInRange(row, rangeStartISO, rangeEndISO, periods)) continue;
+    const currency = String(row?.currency || baseCurrency || 'EUR').toUpperCase();
+    const converted = convertAmount(net, currency, rangeStartISO);
+    if (!Number.isFinite(Number(converted))) continue;
+    const key = String(row?.tripId || row?.trip_id || row?.tripName || row?.trip_name || 'trip');
+    byTrip.set(key, (byTrip.get(key) || 0) + (Number(converted) || 0));
+  }
+  let total = 0;
+  for (const value of byTrip.values()) {
+    if (Math.abs(Number(value) || 0) >= minAbs) total += value;
+  }
+  return total;
+}
+
+export function sumWalletsDisplay({
+  wallets = [],
+  dateISO = '',
+  baseCurrency = 'EUR',
+  effectiveBalance = null,
+  amountToDisplayForDate = null,
+  amountToBase = (amount) => Number(amount) || 0,
+} = {}) {
+  let total = 0;
+  for (const wallet of Array.isArray(wallets) ? wallets : []) {
+    const balance = typeof effectiveBalance === 'function'
+      ? Number(effectiveBalance(wallet) || 0)
+      : (Number(wallet?.balance) || 0);
+    const currency = wallet?.currency || baseCurrency;
+    if (typeof amountToDisplayForDate === 'function') {
+      total += Number(amountToDisplayForDate(balance, currency, dateISO)) || 0;
+    } else {
+      total += Number(amountToBase(balance, currency)) || 0;
+    }
+  }
+  return total;
+}
+
 export function pendingAmountText(value, currency = '', formatter = Intl.NumberFormat) {
   const n = Number(value) || 0;
   const sign = n >= 0 ? '+' : '-';
