@@ -20,6 +20,7 @@ import {
   renderGuidedSubcategoryModalBody,
   renderSettingsCategoriesList,
   notifySettingsValidation,
+  prepareCategoryUpsertDraft,
   prepareAnalyticMappingRuleDraft,
   prepareSubcategoryCreateDraft,
   prepareSubcategoryImportDraft,
@@ -347,6 +348,58 @@ describe('Settings view helpers', () => {
       reason: '',
       name: 'Food',
       color: '#22c55e',
+    });
+  });
+
+  it('prepares category upsert payloads before legacy writes', () => {
+    expect(prepareCategoryUpsertDraft({
+      name: '',
+      color: '#22c55e',
+    })).toEqual({
+      ok: false,
+      reason: 'Nom de catégorie vide.',
+    });
+
+    expect(prepareCategoryUpsertDraft({
+      name: ' Food ',
+      color: '#22c55e',
+      categories: ['food'],
+      userId: 'user-1',
+      now: () => '2026-07-19T04:00:00.000Z',
+    })).toEqual({
+      ok: true,
+      reason: '',
+      mode: 'update',
+      name: 'Food',
+      existingName: 'food',
+      color: '#22c55e',
+      payload: {
+        color: '#22c55e',
+        updated_at: '2026-07-19T04:00:00.000Z',
+      },
+    });
+
+    expect(prepareCategoryUpsertDraft({
+      name: 'Transport',
+      color: '',
+      categories: ['Food', 'Housing'],
+      userId: 'user-1',
+      now: () => '2026-07-19T04:30:00.000Z',
+    })).toEqual({
+      ok: true,
+      reason: '',
+      mode: 'insert',
+      name: 'Transport',
+      existingName: null,
+      color: '#94a3b8',
+      payload: {
+        user_id: 'user-1',
+        name: 'Transport',
+        color: '#94a3b8',
+        sort_order: 2,
+        created_at: '2026-07-19T04:30:00.000Z',
+        updated_at: '2026-07-19T04:30:00.000Z',
+      },
     });
   });
 

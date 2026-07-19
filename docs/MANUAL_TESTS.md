@@ -6,6 +6,7 @@ Statuts proposes : `a faire`, `ok`, `a revoir`.
 
 | Version | Module | Scenario | Etapes utilisateur | Resultat attendu | Console attendue | Statut |
 | --- | --- | --- | --- | --- | --- | --- |
+| 10.5.208 | Settings | Creation/couleur categorie | Ouvrir Reglages > Categories, creer une categorie puis changer sa couleur. | La categorie est creee ou mise a jour, couleur conservee apres rafraichissement. | Aucun `[safeCall/async]`, aucun `Uncaught`. | a faire |
 | 10.5.207 | Settings | Creation/import sous-categorie | Ouvrir Reglages > Categories, creer une sous-categorie puis enregistrer une sous-categorie detectee. | Les sous-categories sont ajoutees dans le bon ordre et restent visibles apres rafraichissement. | Aucun `[safeCall/async]`, aucun `Uncaught`. | a faire |
 | 10.5.206 | Settings | Mapping analytique categorie | Ouvrir Reglages > Categories, changer le mapping d'une categorie puis d'une sous-categorie. | Le mapping est sauvegarde, puis reste visible apres rafraichissement. | Aucun `[safeCall/async]`, aucun `Uncaught`. | a faire |
 | 10.5.205 | Settings | Edition sous-categorie en modale | Ouvrir Reglages > Categories, cliquer Modifier sur une sous-categorie. | Une modale s'ouvre avec nom, couleur et mapping pre-remplis; enregistrer sauvegarde et ferme la modale. | Aucun prompt navigateur, aucun `[safeCall/async]`, aucun `Uncaught`. | a faire |

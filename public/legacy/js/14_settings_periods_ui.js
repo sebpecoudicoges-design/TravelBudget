@@ -2463,35 +2463,35 @@ function addCategory() {
     };
     const result = await _openGuidedCategoryModal(defaults);
     if (!result) return;
-    const readiness = window.TBSettingsCategoriesView?.validateCategoryDraft?.({
+    const categoryDraft = window.TBSettingsCategoriesView?.prepareCategoryUpsertDraft?.({
       name: result?.name,
       color: result?.color,
+      categories: state.categories || [],
+      userId: sbUser.id,
     });
-    if (readiness && !readiness.ok) {
-      _settingsValidationNotice(readiness.reason || "Catégorie invalide.");
+    if (categoryDraft && !categoryDraft.ok) {
+      _settingsValidationNotice(categoryDraft.reason || "Catégorie invalide.");
       return;
     }
-    if (!readiness && !String(result?.name || "").trim()) {
-      _settingsValidationNotice("Nom de catégorie vide.");
+    if (!categoryDraft) {
+      _settingsValidationNotice("Module catégories indisponible.");
       return;
     }
-    const name = readiness?.name || String(result?.name || "").trim();
-    const color = readiness?.color || String(result?.color || "#94a3b8");
+    const name = categoryDraft.name;
+    const color = categoryDraft.color;
     const mapping = String(result?.mapping || '__unmapped__').trim() || '__unmapped__';
 
-    const existing = (state.categories || []).find(c => String(c).toLowerCase() === name.toLowerCase()) || null;
-    if (existing) {
+    if (categoryDraft.mode === 'update') {
       const { error: upErr } = await sb
         .from(TB_CONST.TABLES.categories)
-        .update({ color, updated_at: new Date().toISOString() })
+        .update(categoryDraft.payload)
         .eq("user_id", sbUser.id)
-        .eq("name", existing);
+        .eq("name", categoryDraft.existingName);
       if (upErr) throw upErr;
     } else {
-      const maxSort = (state.categories || []).length;
       const { error: insErr } = await sb
         .from(TB_CONST.TABLES.categories)
-        .insert([{ user_id: sbUser.id, name, color, sort_order: maxSort, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
+        .insert([categoryDraft.payload]);
       if (insErr) throw insErr;
     }
 
@@ -2519,20 +2519,25 @@ Cela supprimera aussi ses sous-catégories SQL et ses règles analytiques liées
 
 function setCategoryColor(name, color) {
   safeCall("Set category color", async () => {
-    const readiness = window.TBSettingsCategoriesView?.validateCategoryDraft?.({ name, color });
-    if (readiness && !readiness.ok) {
-      _settingsValidationNotice(readiness.reason || "Catégorie invalide.");
+    const categoryDraft = window.TBSettingsCategoriesView?.prepareCategoryUpsertDraft?.({
+      name,
+      color,
+      categories: state.categories || [],
+      userId: sbUser.id,
+    });
+    if (categoryDraft && !categoryDraft.ok) {
+      _settingsValidationNotice(categoryDraft.reason || "Catégorie invalide.");
       return;
     }
-    const n = readiness?.name || String(name || "").trim();
-    const cleanColor = readiness?.color || String(color || "#94a3b8");
-    if (!readiness && !n) return;
-    const existing = (state.categories || []).find(c => String(c).toLowerCase() === n.toLowerCase()) || n;
+    if (!categoryDraft) {
+      _settingsValidationNotice("Module catégories indisponible.");
+      return;
+    }
     const { error: upErr } = await sb
       .from(TB_CONST.TABLES.categories)
-      .update({ color: cleanColor, updated_at: new Date().toISOString() })
+      .update({ color: categoryDraft.color, updated_at: categoryDraft.payload.updated_at })
       .eq("user_id", sbUser.id)
-      .eq("name", existing);
+      .eq("name", categoryDraft.existingName || categoryDraft.name);
     if (upErr) throw upErr;
 
     await refreshFromServer();

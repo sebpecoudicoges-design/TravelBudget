@@ -91,6 +91,50 @@ export function validateCategoryDraft({
   return { ok: true, reason: '', name: cleanName, color: cleanColor };
 }
 
+export function prepareCategoryUpsertDraft({
+  name = '',
+  color = '#94a3b8',
+  categories = [],
+  userId = '',
+  now = () => new Date().toISOString(),
+} = {}) {
+  const readiness = validateCategoryDraft({ name, color });
+  if (!readiness.ok) return readiness;
+  const existingName = (Array.isArray(categories) ? categories : [])
+    .find((category) => String(category || '').trim().toLowerCase() === readiness.name.toLowerCase()) || null;
+  const timestamp = now();
+  if (existingName) {
+    return {
+      ok: true,
+      reason: '',
+      mode: 'update',
+      name: readiness.name,
+      existingName,
+      color: readiness.color,
+      payload: {
+        color: readiness.color,
+        updated_at: timestamp,
+      },
+    };
+  }
+  return {
+    ok: true,
+    reason: '',
+    mode: 'insert',
+    name: readiness.name,
+    existingName: null,
+    color: readiness.color,
+    payload: {
+      user_id: String(userId || '').trim(),
+      name: readiness.name,
+      color: readiness.color,
+      sort_order: Array.isArray(categories) ? categories.length : 0,
+      created_at: timestamp,
+      updated_at: timestamp,
+    },
+  };
+}
+
 export function notifySettingsValidation({
   message = '',
   toastWarn = null,
