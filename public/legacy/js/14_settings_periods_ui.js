@@ -2682,25 +2682,12 @@ async function moveSubcategory(id, direction) {
   if (!category) return;
 
   const sqlRows = _subcategoriesForSettings(category, true).filter((row) => row?.id);
-  if (sqlRows.length <= 1) return;
-
-  const currentIndex = sqlRows.findIndex((row) => String(row?.id) === String(id));
-  if (currentIndex < 0) return;
-
-  const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-  if (swapIndex < 0 || swapIndex >= sqlRows.length) return;
-
-  const ordered = sqlRows.slice();
-  const tmp = ordered[currentIndex];
-  ordered[currentIndex] = ordered[swapIndex];
-  ordered[swapIndex] = tmp;
-
-  const updates = ordered.map((row, idx) => ({
-    id: row.id,
-    sort_order: (idx + 1) * 10,
-  }));
-
-  const byId = new Map(updates.map((x) => [String(x.id), x.sort_order]));
+  const moveDraft = window.TBSettingsCategoriesView?.prepareSubcategoryMoveDraft?.({
+    rows: sqlRows,
+    id,
+    direction,
+  });
+  if (!moveDraft?.ok) return;
 
   const previousSnapshot = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).map((row) => ({
     ...row,
@@ -2708,21 +2695,14 @@ async function moveSubcategory(id, direction) {
     sort_order: row?.sort_order,
   }));
 
-  state.categorySubcategories = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).map((row) => {
-    const nextSort = byId.get(String(row?.id || ''));
-    if (nextSort === undefined) return row;
-    return {
-      ...row,
-      sortOrder: nextSort,
-      sort_order: nextSort,
-    };
-  });
+  const nextSortById = new Map(moveDraft.nextRows.map((row) => [String(row?.id || ''), row]));
+  state.categorySubcategories = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).map((row) => nextSortById.get(String(row?.id || '')) || row);
 
   renderSettings();
 
   try {
     const nowIso = new Date().toISOString();
-    for (const row of updates) {
+    for (const row of moveDraft.updates) {
       const { error } = await sb
         .from(TB_CONST.TABLES.category_subcategories)
         .update({ sort_order: row.sort_order, updated_at: nowIso })

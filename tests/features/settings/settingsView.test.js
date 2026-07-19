@@ -24,6 +24,7 @@ import {
   prepareAnalyticMappingRuleDraft,
   prepareSubcategoryCreateDraft,
   prepareSubcategoryImportDraft,
+  prepareSubcategoryMoveDraft,
   prepareSubcategoryEditDraft,
   validateCategoryDraft,
   validateSubcategoryDraft,
@@ -631,6 +632,50 @@ describe('Settings view helpers', () => {
         is_active: true,
         updated_at: '2026-07-19T03:00:00.000Z',
       },
+    });
+  });
+
+  it('prepares subcategory move updates before legacy writes', () => {
+    const rows = [
+      { id: 'sub-1', name: 'Breakfast', sortOrder: 10 },
+      { id: 'sub-2', name: 'Lunch', sort_order: 20 },
+      { name: 'Detected only' },
+    ];
+
+    expect(prepareSubcategoryMoveDraft({
+      rows,
+      id: 'sub-1',
+      direction: 'up',
+    })).toEqual({
+      ok: false,
+      reason: 'Déplacement impossible.',
+    });
+
+    expect(prepareSubcategoryMoveDraft({
+      rows,
+      id: 'missing',
+      direction: 'down',
+    })).toEqual({
+      ok: false,
+      reason: 'Sous-catégorie introuvable.',
+    });
+
+    expect(prepareSubcategoryMoveDraft({
+      rows,
+      id: 'sub-2',
+      direction: 'up',
+    })).toEqual({
+      ok: true,
+      reason: '',
+      updates: [
+        { id: 'sub-2', sort_order: 10 },
+        { id: 'sub-1', sort_order: 20 },
+      ],
+      nextRows: [
+        { id: 'sub-1', name: 'Breakfast', sortOrder: 20, sort_order: 20 },
+        { id: 'sub-2', name: 'Lunch', sort_order: 10, sortOrder: 10 },
+        { name: 'Detected only' },
+      ],
     });
   });
 

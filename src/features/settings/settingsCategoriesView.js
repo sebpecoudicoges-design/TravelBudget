@@ -291,6 +291,39 @@ export function prepareSubcategoryCreateDraft(options = {}) {
   return prepareSubcategoryInsertDraft({ ...options, sqlOnly: false });
 }
 
+export function prepareSubcategoryMoveDraft({
+  rows = [],
+  id = '',
+  direction = '',
+} = {}) {
+  const list = (Array.isArray(rows) ? rows : []).filter((row) => row?.id);
+  if (list.length <= 1) return { ok: false, reason: 'Ordre inchangé.' };
+  const targetId = String(id || '');
+  const currentIndex = list.findIndex((row) => String(row?.id) === targetId);
+  if (currentIndex < 0) return { ok: false, reason: 'Sous-catégorie introuvable.' };
+  const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+  if (swapIndex < 0 || swapIndex >= list.length) return { ok: false, reason: 'Déplacement impossible.' };
+  const ordered = list.slice();
+  [ordered[currentIndex], ordered[swapIndex]] = [ordered[swapIndex], ordered[currentIndex]];
+  const updates = ordered.map((row, index) => ({
+    id: row.id,
+    sort_order: (index + 1) * 10,
+  }));
+  const sortById = new Map(updates.map((row) => [String(row.id), row.sort_order]));
+  const nextRows = (Array.isArray(rows) ? rows : []).map((row) => {
+    const nextSort = sortById.get(String(row?.id || ''));
+    return nextSort === undefined
+      ? row
+      : { ...row, sortOrder: nextSort, sort_order: nextSort };
+  });
+  return {
+    ok: true,
+    reason: '',
+    updates,
+    nextRows,
+  };
+}
+
 export function validateSubcategoryDraft({
   category = '',
   name = '',
