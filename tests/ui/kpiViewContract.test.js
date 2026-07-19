@@ -7,10 +7,12 @@ describe('KPI view extraction contract', () => {
   const controller = fs.readFileSync('public/legacy/js/11_kpi_controller.js', 'utf8');
   const module = fs.readFileSync('src/features/kpi/kpiView.js', 'utf8');
   const healthRules = fs.readFileSync('src/features/kpi/kpiHealthRules.js', 'utf8');
+  const projectionRules = fs.readFileSync('src/features/kpi/kpiProjectionRules.js', 'utf8');
 
   it('exposes the KPI view module to the legacy runtime', () => {
     expect(main).toContain("import('./features/kpi/kpiView.js')");
     expect(main).toContain("import('./features/kpi/kpiHealthRules.js')");
+    expect(main).toContain("import('./features/kpi/kpiProjectionRules.js')");
     expect(main).toContain("'/legacy/js/11_kpi_controller.js'");
     expect(main).not.toContain("import('./features/kpi/kpiController.js')");
     expect(main).toContain('async function ensureKpiView()');
@@ -18,8 +20,10 @@ describe('KPI view extraction contract', () => {
     expect(main).not.toContain('await ensureKpiView();');
     expect(main).toContain('window.TBKpiView');
     expect(main).toContain('window.TBKpiHealthRules');
+    expect(main).toContain('window.TBKpiProjectionRules');
     expect(main).toContain('...kpiView');
     expect(main).toContain('...kpiHealthRules');
+    expect(main).toContain('...kpiProjectionRules');
   });
 
   it('delegates KPI health and transaction rules to a tested module', () => {
@@ -32,6 +36,18 @@ describe('KPI view extraction contract', () => {
     expect(legacy).not.toContain('const alcoholScore = alcoholDrinks > 2.01');
     expect(legacy).not.toContain('const type = String(tx?.type ||');
     expect(legacy).not.toContain('const isAlcohol = tags.some');
+  });
+
+  it('delegates KPI projection, scope and pending rules to a tested module', () => {
+    expect(projectionRules).toContain('export function pendingProjectionItems');
+    expect(projectionRules).toContain('export function parseKpiScope');
+    expect(projectionRules).toContain('export function daysPill');
+    expect(legacy).toContain('window.TBKpiProjectionRules?.pendingProjectionItems');
+    expect(legacy).toContain('window.TBKpiProjectionRules?.resolveKpiRange');
+    expect(legacy).toContain('window.TBKpiProjectionRules?.daysPill');
+    expect(legacy).not.toContain('const grouped = new Map();');
+    expect(legacy).not.toContain('const thresholds = { warn: 7, urgent: 4, critical: 2 };');
+    expect(legacy).not.toContain('if (s.startsWith("range:"))');
   });
 
   it('does not let the extracted KPI view block mobile boot', () => {

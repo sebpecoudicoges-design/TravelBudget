@@ -155,8 +155,9 @@ async function ensureKpiView() {
     kpiViewPromise = Promise.all([
       import('./features/kpi/kpiView.js'),
       import('./features/kpi/kpiHealthRules.js'),
+      import('./features/kpi/kpiProjectionRules.js'),
     ])
-      .then(([kpiView, kpiHealthRules]) => {
+      .then(([kpiView, kpiHealthRules, kpiProjectionRules]) => {
         window.TBKpiView = {
           ...(window.TBKpiView || {}),
           ...kpiView,
@@ -164,6 +165,10 @@ async function ensureKpiView() {
         window.TBKpiHealthRules = {
           ...(window.TBKpiHealthRules || {}),
           ...kpiHealthRules,
+        };
+        window.TBKpiProjectionRules = {
+          ...(window.TBKpiProjectionRules || {}),
+          ...kpiProjectionRules,
         };
         return true;
       })

@@ -20,6 +20,8 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Extraire les payloads Wallet Dashboard : creation, edition, archivage, suppression et correction de types passent dans `dashboardWalletRules.js`.
 - [x] Extraire les regles KPI Sante/Nutrition/Sommeil/Alcool vers `kpiHealthRules.js`.
 - [x] Extraire les helpers KPI budget/cash/trip pending vers `kpiHealthRules.js`.
+- [x] Extraire les regles KPI projection impayes, regroupement Trip et format de montants vers `kpiProjectionRules.js`.
+- [x] Extraire les regles KPI scope date-a-date, horizon, pastilles cash et signe vers `kpiProjectionRules.js`.
 
 ## Chantier 1 - Budget journalier et transactions
 
@@ -222,6 +224,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire les regles Wallet Dashboard : validation creation/edition, type automatique et libelles quittent `12_dashboard_render.js`.
   - [x] Extraire les mutations Wallet Dashboard : payloads SQL, archivage, garde de suppression et normalisation des corrections de type quittent `12_dashboard_render.js`.
   - [x] Extraire les regles KPI Sante/Nutrition/Sommeil/Alcool et classification budget/cash/trip pending vers `kpiHealthRules.js`.
+  - [x] Extraire les regles KPI projection/pending, Trip net, scopes et pastilles cash vers `kpiProjectionRules.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

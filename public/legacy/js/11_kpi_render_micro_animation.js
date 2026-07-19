@@ -257,39 +257,15 @@ function netPendingEUR(rangeStartISO, rangeEndISO) {
 }
 
 function _kpiDatesOverlap(aStartISO, aEndISO, bStartISO, bEndISO) {
-  const as = parseISODateOrNull(aStartISO);
-  const ae = parseISODateOrNull(aEndISO || aStartISO);
-  const bs = parseISODateOrNull(bStartISO);
-  const be = parseISODateOrNull(bEndISO || bStartISO);
-  if (!as || !ae || !bs || !be) return true;
-  const a0 = clampMidnight(as);
-  const a1 = clampMidnight(ae);
-  const b0 = clampMidnight(bs);
-  const b1 = clampMidnight(be);
-  return !(a1 < b0 || a0 > b1);
+  return window.TBKpiProjectionRules?.datesOverlap?.(aStartISO, aEndISO, bStartISO, bEndISO) ?? true;
 }
 
 function _kpiTripNetRowInRange(row, rangeStartISO, rangeEndISO) {
-  // Trip net balances are currently stored as a whole-trip balance. We scope them
-  // by the trip's linked period so the KPI filter does not pull unrelated trips.
-  const periodId = String(row?.periodId || row?.period_id || "");
-  if (!periodId) return true;
-  const periods = Array.isArray(state?.periods) ? state.periods : [];
-  const p = periods.find((x) => String(x?.id || "") === periodId);
-  if (!p) return true;
-  return _kpiDatesOverlap(p.start || p.start_date, p.end || p.end_date, rangeStartISO, rangeEndISO);
+  return window.TBKpiProjectionRules?.tripNetRowInRange?.(row, rangeStartISO, rangeEndISO, Array.isArray(state?.periods) ? state.periods : []) ?? true;
 }
 
 function fmtKPICompact(v) {
-  const n = Number(v);
-  if (!isFinite(n)) return "0";
-  const abs = Math.abs(n);
-  if (abs >= 1e7) {
-    try {
-      return new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(n);
-    } catch (_) {}
-  }
-  return String(Math.round(n));
+  return window.TBKpiProjectionRules?.fmtKpiCompact?.(v) ?? String(Math.round(Number(v) || 0));
 }
 
 function projectedEndDisplayWithOptions(opts) {
@@ -676,19 +652,8 @@ function cashConservativeInfo() {
 }
 
 function _daysPill(daysLeft, labelPrefix) {
-  const thresholds = { warn: 7, urgent: 4, critical: 2 };
-
-  if (!isFinite(daysLeft)) {
-    return { level: "good", text: `${labelPrefix}: ∞` };
-  }
-
-  const dl = Math.max(0, daysLeft);
-  const j = Math.ceil(dl);
-
-  if (dl <= thresholds.critical) return { level: "bad", text: `${labelPrefix}: J-${j} (URGENT)` };
-  if (dl <= thresholds.urgent) return { level: "warn", text: `${labelPrefix}: J-${j} (bientôt)` };
-  if (dl <= thresholds.warn) return { level: "warn", text: `${labelPrefix}: J-${j}` };
-  return { level: "good", text: `${labelPrefix}: ~${Math.floor(dl)} j` };
+  return window.TBKpiProjectionRules?.daysPill?.(daysLeft, labelPrefix)
+    || { level: "good", text: `${labelPrefix}: ∞` };
 }
 
 function _renderTodayDetailsHTML(dateStr) {
@@ -946,11 +911,7 @@ function _pilotageInsights(scopeMeta) {
 }
 
 function _signPillClass(v) {
-  if (v >= 0) return "good";
-  // négatif : on passe warn puis bad
-  const abs = Math.abs(v);
-  if (abs < (state.period.dailyBudgetBase || 1) * 3) return "warn";
-  return "bad";
+  return window.TBKpiProjectionRules?.signPillClass?.(v, state?.period?.dailyBudgetBase || 1) || "good";
 }
 
 /* =========================
@@ -1123,14 +1084,10 @@ function renderKPI() {
   }
 
   function _kpiResolveHorizonEndISO(scope, todayISO) {
-    let endISO = state?.period?.end;
-    try {
-      if (String(scope||"segment").toLowerCase() !== "period" && typeof getBudgetSegmentForDate === "function") {
-        const seg0 = getBudgetSegmentForDate(todayISO);
-        if (seg0 && (seg0.end || seg0.end_date)) endISO = String(seg0.end || seg0.end_date);
-      }
-    } catch (_) {}
-    return endISO;
+    return window.TBKpiProjectionRules?.resolveKpiHorizonEnd?.(scope, todayISO, {
+      period: state?.period || {},
+      getBudgetSegmentForDate: (typeof getBudgetSegmentForDate === "function") ? getBudgetSegmentForDate : null,
+    }) ?? state?.period?.end;
   }
   const _kpiHorizonEndISO = _kpiResolveHorizonEndISO(kpiScope, displayDateISO);
   let pendingTransactionsEUR = 0;
@@ -1147,35 +1104,14 @@ function renderKPI() {
   // - supports: segment / period / seg:<id> / range:<start>:<end>
   // =========================
   function _kpiParseScope(raw) {
-    const s = String(raw || "segment");
-    const low = s.toLowerCase();
-    if (low === "segment" || low === "period") return { kind: low, raw: s };
-    if (s.startsWith("seg:")) return { kind: "seg", segId: s.slice(4), raw: s };
-    if (s.startsWith("range:")) {
-      const p = s.split(":");
-      return { kind: "range", startISO: p[1] || "", endISO: p[2] || "", raw: s };
-    }
-    if (low === "range") return { kind: "range", startISO: "", endISO: "", raw: s };
-    return { kind: "segment", raw: s };
+    return window.TBKpiProjectionRules?.parseKpiScope?.(raw) || { kind: "segment", raw: String(raw || "segment") };
   }
 
   function _kpiResolveRange(parsed, refISO) {
-    // Default custom range = current segment of ref date, or period bounds.
-    let startISO = String(parsed?.startISO || "");
-    let endISO = String(parsed?.endISO || "");
-    if (startISO && endISO) return { startISO, endISO };
-    try {
-      if (typeof getBudgetSegmentForDate === "function") {
-        const seg = getBudgetSegmentForDate(refISO);
-        if (seg) {
-          startISO = String(seg.start || seg.start_date || "").slice(0,10);
-          endISO = String(seg.end || seg.end_date || "").slice(0,10);
-        }
-      }
-    } catch (_) {}
-    if (!startISO) startISO = String(state?.period?.start || "").slice(0,10);
-    if (!endISO) endISO = String(state?.period?.end || "").slice(0,10);
-    return { startISO, endISO };
+    return window.TBKpiProjectionRules?.resolveKpiRange?.(parsed, refISO, {
+      period: state?.period || {},
+      getBudgetSegmentForDate: (typeof getBudgetSegmentForDate === "function") ? getBudgetSegmentForDate : null,
+    }) || { startISO: String(state?.period?.start || "").slice(0,10), endISO: String(state?.period?.end || "").slice(0,10) };
   }
 
   const _parsedScope = _kpiParseScope(kpiScope);
@@ -1196,77 +1132,31 @@ function renderKPI() {
   const _labPer = (_lang === "en") ? "Period" : "Periode";
 
   function _pendingTxOverlaps(tx, rangeStartISO, rangeEndISO) {
-    const ds = String(tx?.dateStart || tx?.date_start || tx?.date || "").slice(0, 10);
-    const de = String(tx?.dateEnd || tx?.date_end || ds || "").slice(0, 10);
-    return _kpiDatesOverlap(ds, de, rangeStartISO, rangeEndISO);
+    return window.TBKpiProjectionRules?.pendingTxOverlaps?.(tx, rangeStartISO, rangeEndISO) ?? true;
   }
 
   function _pendingAmountText(value, cur) {
-    const n = Number(value) || 0;
-    const sign = n >= 0 ? "+" : "-";
-    let amount = String(Math.round(Math.abs(n)));
-    try {
-      amount = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.abs(n));
-    } catch (_) {}
-    return `${sign} ${amount} ${cur}`;
+    return window.TBKpiProjectionRules?.pendingAmountText?.(value, cur) || `${Math.round(Number(value) || 0)} ${cur || ""}`.trim();
   }
 
   function _pendingProjectionItems(rangeStartISO, rangeEndISO) {
-    const items = [];
-    for (const tx of (state.transactions || [])) {
-      if (!_kpiIsCashPendingProjectionTx(tx)) continue;
-      if (!_pendingTxOverlaps(tx, rangeStartISO, rangeEndISO)) continue;
-      const type = String(tx.type || "").toLowerCase();
-      const label = String(tx.label || tx.subcategory || tx.category || (type === "income" ? "Entrée prévue" : "Dépense prévue"));
-      const dateISO = String(tx.dateStart || tx.date_start || rangeStartISO || displayDateISO).slice(0, 10);
-      const amount = _toPivot(Number(tx.amount) || 0, tx.currency || "EUR", dateISO);
-      items.push({
-        kind: type === "income" ? "receive" : "pay",
-        source: type === "income" ? (_lang === "en" ? "Receivable" : "À recevoir") : (_lang === "en" ? "Payable" : "À payer"),
-        label,
-        value: type === "income" ? amount : -amount,
-      });
-    }
-
     const tripRows = Array.isArray(state?.tripNetBalances) && state.tripNetBalances.length
       ? state.tripNetBalances
       : (Array.isArray(window.__tripState?.globalNetRows) ? window.__tripState.globalNetRows : []);
-    const tripItems = new Map();
-    for (const row of tripRows) {
-      const net = Number(row?.net || 0);
-      if (!Number.isFinite(net) || Math.abs(net) < 0.000001) continue;
-      if (!_kpiTripNetRowInRange(row, rangeStartISO, rangeEndISO)) continue;
-      const v = _toPivotStrict(net, row?.currency || state?.period?.baseCurrency || "EUR", rangeStartISO || displayDateISO);
-      if (v === null || !isFinite(v)) continue;
-      const tripName = String(row?.tripName || row?.trip_name || "Trip");
-      const key = String(row?.tripId || row?.trip_id || tripName);
-      const prev = tripItems.get(key) || { label: tripName, value: 0 };
-      prev.value += v;
-      tripItems.set(key, prev);
-    }
-    for (const it of tripItems.values()) {
-      if (Math.abs(Number(it.value) || 0) < 1) continue;
-      items.push({
-        kind: it.value >= 0 ? "receive" : "pay",
-        source: it.value >= 0 ? (_lang === "en" ? "Trip receivable" : "À recevoir Trip") : (_lang === "en" ? "Trip payable" : "À payer Trip"),
-        label: it.label,
-        value: it.value,
-      });
-    }
-    const grouped = new Map();
-    for (const it of items) {
-      const key = [it.kind, _kpiNormText(it.source), _kpiNormText(it.label)].join("|");
-      const prev = grouped.get(key);
-      if (prev) {
-        prev.value += Number(it.value || 0);
-        prev.count += 1;
-      } else {
-        grouped.set(key, Object.assign({ count: 1 }, it));
-      }
-    }
-    return Array.from(grouped.values())
-      .filter((it) => Math.abs(Number(it.value || 0)) >= 1)
-      .sort((a, b) => Math.abs(Number(b.value || 0)) - Math.abs(Number(a.value || 0)));
+    return window.TBKpiProjectionRules?.pendingProjectionItems?.({
+      transactions: state.transactions || [],
+      tripRows,
+      periods: state.periods || [],
+      rangeStartISO,
+      rangeEndISO,
+      displayDateISO,
+      baseCurrency: state?.period?.baseCurrency || "EUR",
+      lang: _lang,
+      isPendingTransaction: _kpiIsCashPendingProjectionTx,
+      toPivot: _toPivot,
+      toPivotStrict: _toPivotStrict,
+      normalizeText: _kpiNormText,
+    }) || [];
   }
 
   const _pendingRangeStartISO = String(_rrPilot.startISO || displayDateISO).slice(0, 10);
