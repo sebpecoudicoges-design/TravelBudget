@@ -15,6 +15,11 @@ import {
 } from '../../../src/features/trip/tripView.js';
 import { renderTripExpenseDetailContent } from '../../../src/features/trip/tripExpenseDetailView.js';
 import { renderTripExpenseDocumentsContent } from '../../../src/features/trip/tripDocumentView.js';
+import {
+  renderTripBalancesPanel,
+  renderTripHistoryToolbar,
+  renderTripSettlementsPanel,
+} from '../../../src/features/trip/tripRecapView.js';
 
 describe('Trip view', () => {
   it('renders pending invitations and escapes remote content', () => {
@@ -77,6 +82,89 @@ describe('Trip view', () => {
     expect(html).toContain('data-resend-invite="alex"');
     expect(html).toContain('data-rename-member="alex"');
     expect(html).toContain('data-del-member="alex"');
+    expect(html).not.toContain('onclick=');
+  });
+
+  it('renders balances and settlements recap with stable action hooks', () => {
+    const balancesByCur = new Map([
+      ['AUD', new Map([['seb', 12], ['alex', -12]])],
+    ]);
+    const settlementsByCur = new Map([
+      ['AUD', [{ fromId: 'alex', toId: 'seb', amount: 12 }]],
+    ]);
+    const members = [
+      { id: 'seb', name: 'Seb', isMe: true },
+      { id: 'alex', name: '<Alex>' },
+    ];
+    const balances = renderTripBalancesPanel({
+      members,
+      balancesByCur,
+      title: '<Balances>',
+      formatMoney: (amount, currency) => `${Number(amount).toFixed(0)} ${currency}`,
+    });
+    const settlements = renderTripSettlementsPanel({
+      members,
+      settlementsByCur,
+      settlementEvents: [{ id: 'settle-1', fromMemberId: 'alex', toMemberId: 'seb', amount: 5, currency: 'AUD', createdBy: 'user-1' }],
+      canWrite: true,
+      myRole: 'owner',
+      currentUserId: 'user-1',
+      formatMoney: (amount, currency) => `${Number(amount).toFixed(0)} ${currency}`,
+    });
+
+    expect(balances).toContain('&lt;Balances&gt;');
+    expect(balances).toContain('&lt;Alex&gt;');
+    expect(balances).toContain('good');
+    expect(balances).toContain('bad');
+    expect(settlements).toContain('id="trip-copy-settlements"');
+    expect(settlements).toContain('id="trip-share-settlements"');
+    expect(settlements).toContain('data-settle-from="alex"');
+    expect(settlements).toContain('data-settle-to="seb"');
+    expect(settlements).toContain('data-settle-only="1"');
+    expect(settlements).toContain('data-cancel-settle="settle-1"');
+    expect(settlements).not.toContain('onclick=');
+  });
+
+  it('renders Trip history toolbar with filters and stable ids', () => {
+    const html = renderTripHistoryToolbar({
+      categories: ['Food', '<Transport>'],
+      members: [{ id: 'seb', name: 'Seb' }, { id: 'alex', name: '<Alex>' }],
+      filters: {
+        category: '<Transport>',
+        payer: 'seb',
+        participant: 'alex',
+        dateFrom: '2026-07-01',
+        dateTo: '2026-07-10',
+        amountMin: '5',
+        amountMax: '50',
+        q: '<beer>',
+      },
+      filteredCount: 2,
+      totalCount: 5,
+      labels: {
+        category: 'Category',
+        payer: 'Payer',
+        participant: 'Participant',
+        apply: 'Apply',
+        reset: 'Reset',
+      },
+    });
+
+    expect(html).toContain('trip-history-toolbar');
+    expect(html).toContain('id="trip-hist-category"');
+    expect(html).toContain('id="trip-hist-payer"');
+    expect(html).toContain('id="trip-hist-participant"');
+    expect(html).toContain('id="trip-hist-date-from"');
+    expect(html).toContain('id="trip-hist-date-to"');
+    expect(html).toContain('id="trip-hist-amount-min"');
+    expect(html).toContain('id="trip-hist-amount-max"');
+    expect(html).toContain('id="trip-hist-q"');
+    expect(html).toContain('id="trip-hist-apply"');
+    expect(html).toContain('id="trip-hist-reset"');
+    expect(html).toContain('&lt;Transport&gt;');
+    expect(html).toContain('&lt;Alex&gt;');
+    expect(html).toContain('value="&lt;beer&gt;"');
+    expect(html).toContain('2 / 5');
     expect(html).not.toContain('onclick=');
   });
 

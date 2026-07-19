@@ -278,9 +278,10 @@ async function ensureDomainModules(domain) {
       };
     }
     if (key === 'trip') {
-      const [tripDocumentView, tripExpenseDetailView] = await Promise.all([
+      const [tripDocumentView, tripExpenseDetailView, tripRecapView] = await Promise.all([
         import('./features/trip/tripDocumentView.js'),
         import('./features/trip/tripExpenseDetailView.js'),
+        import('./features/trip/tripRecapView.js'),
       ]);
       window.UI.tripDocumentView = {
         ...(window.UI.tripDocumentView || {}),
@@ -289,6 +290,10 @@ async function ensureDomainModules(domain) {
       window.UI.tripExpenseDetailView = {
         ...(window.UI.tripExpenseDetailView || {}),
         ...tripExpenseDetailView,
+      };
+      window.UI.tripRecapView = {
+        ...(window.UI.tripRecapView || {}),
+        ...tripRecapView,
       };
     }
     return true;

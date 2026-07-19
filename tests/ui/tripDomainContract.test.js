@@ -10,6 +10,7 @@ describe('Trip domain contract', () => {
   const view = fs.readFileSync('src/features/trip/tripView.js', 'utf8');
   const documentView = fs.readFileSync('src/features/trip/tripDocumentView.js', 'utf8');
   const detailView = fs.readFileSync('src/features/trip/tripExpenseDetailView.js', 'utf8');
+  const recapView = fs.readFileSync('src/features/trip/tripRecapView.js', 'utf8');
   const main = fs.readFileSync('src/main.js', 'utf8');
 
   it('exposes Trip rules, repository, store and view through the bridge', () => {
@@ -88,6 +89,11 @@ describe('Trip domain contract', () => {
       expect(view).toContain(`export function ${token}`);
       expect(legacy).toContain(`tripView?.${token}`);
     }
+    for (const token of ['renderTripBalancesPanel', 'renderTripSettlementsPanel', 'renderTripHistoryToolbar']) {
+      expect(recapView).toContain(`export function ${token}`);
+      expect(legacy).toContain(`tripRecapView?.${token}`);
+    }
+    expect(main).toContain("import('./features/trip/tripRecapView.js')");
     expect(detailView).toContain('export function renderTripExpenseDetailContent');
     expect(main).toContain("import('./features/trip/tripExpenseDetailView.js')");
     expect(legacy).toContain('tripExpenseDetailView?.renderTripExpenseDetailContent');
@@ -108,6 +114,10 @@ describe('Trip domain contract', () => {
     expect(legacy).not.toContain('En mode égal, le total est réparti seulement entre les participants cochés');
     expect(legacy).not.toContain('id="trip-members-list"');
     expect(legacy).not.toContain('data-resend-invite="${m.id}"');
+    expect(legacy).not.toContain('const balHTML = (() =>');
+    expect(legacy).not.toContain('const settlementsHTML = (() =>');
+    expect(legacy).not.toContain('<div class="card trip-history-toolbar">');
+    expect(legacy).not.toContain('historyCategoryOptions.map((cat)');
     expect(legacy).not.toContain('Somme = 100%');
     expect(legacy).not.toContain('Les montants seront arrondis au centime');
     expect(legacy).not.toContain('const participantHTML = participants.length');

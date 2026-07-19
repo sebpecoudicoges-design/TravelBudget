@@ -4014,139 +4014,40 @@ async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
       memberCount: Array.isArray(members) ? members.length : 0,
     };
 
-    const balHTML = (() => {
-      if (!members.length) return `<div class="muted">Ajoute des participants.</div>`;
-      const parts = [];
-      for (const [cur, m] of balancesByCur.entries()) {
-        parts.push(`<div class="muted" style="margin-top:8px;">${escapeHTML(cur)}</div>`);
-        for (const mem of members) {
-          const v = m.get(mem.id) || 0;
-          const cls = v < -1e-9 ? "bad" : (v > 1e-9 ? "good" : "");
-          parts.push(
-            `<div class="trip-balance-row" style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
-              <span class="trip-balance-name">${escapeHTML(mem.name)}${mem.isMe ? " (moi)" : ""}</span>
-              <strong class="trip-balance-amount ${cls}">${_fmtMoney(v, cur)}</strong>
-            </div>`
-          );
-        }
-      }
-
-
-      // NOTE: settlements history is rendered once below the suggested settlements section
-      // to avoid duplicate "Historique règlements" blocks.
-
-      return parts.join("");
-    })();
-
-    const settlementsHTML = (() => {
-      if (!members.length) return "";
-      const me = members.find(x => x.isMe);
-      const tripName = (tripState.trips.find(t => t.id === tripState.activeTripId)?.name) || "Trip";
-      const parts = [];
-
-      function _memName(id) {
-        return (members.find(x => x.id === id)?.name) || "—";
-      }
-
-      // NEW (V8.2.0): optimized suggestions from DB (net_raw)
-      if (Array.isArray(settlementSuggestionsRaw) && settlementSuggestionsRaw.length) {
-        const receive = [];
-        const pay = [];
-        for (const row of settlementSuggestionsRaw) {
-          const cur = String(row.out_currency || row.currency || "").toUpperCase();
-          const fromId = row.from_member_id || row.fromMemberId;
-          const toId = row.to_member_id || row.toMemberId;
-          const amt = Number(row.amount || 0);
-          if (!cur || !fromId || !toId || !(amt > 0)) continue;
-          const line = `<div class="tb-share-row"><span>${escapeHTML(_memName(fromId))} → ${escapeHTML(_memName(toId))}</span><strong>${_fmtMoney(amt, cur)}</strong></div>`;
-          if (me && toId === me.id) receive.push(line); else if (me && fromId === me.id) pay.push(line); else pay.push(line);
-        }
-      }
-
-      const hasAny = (() => {
-        for (const [, transfers] of settlementsByCur.entries()) if (transfers?.length) return true;
-        return false;
-      })();
-      const tripUiEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
-      const stxt = (fr, en) => tripUiEn ? en : fr;
-
-      // Share / copy controls (even if no settlements)
-      parts.push(`<div style="display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
-        <button class="btn" id="trip-copy-settlements" type="button">${escapeHTML(stxt("Copier les règlements", "Copy settlements"))}</button>
-        <button class="btn" id="trip-share-settlements" type="button">${escapeHTML(stxt("Partager", "Share"))}</button>
-        <span class="muted">${escapeHTML(hasAny ? stxt("Format simple", "Simple format") : stxt("Rien à régler pour l'instant", "Nothing to settle for now"))}</span>
-      </div>`);
-
-      if (hasAny) for (const [cur, transfers] of settlementsByCur.entries()) {
-        if (!transfers.length) continue;
-        parts.push(`<div class="muted" style="margin-top:10px;">${escapeHTML(stxt("Règlements suggérés", "Suggested settlements"))} • ${escapeHTML(cur)}</div>`);
-        for (const t of transfers) {
-          const from = members.find(x => x.id === t.fromId);
-          const to = members.find(x => x.id === t.toId);
-
-          const isMeInvolved = !!me && (t.fromId === me.id || t.toId === me.id);
-          let actionBtn = "";
-          let actionOnlyBtn = "";
-
-          // Wallet-based settlement only makes sense when I am involved (it creates a Budget transaction in MY wallets).
-          if (isMeInvolved) {
-            const actionLabel = (t.fromId === me.id) ? `${escapeHTML(stxt("Je paie", "I pay"))} ${escapeHTML(to?.name || "—")}` : `${escapeHTML(stxt("Je reçois de", "I receive from"))} ${escapeHTML(from?.name || "—")}`;
-            actionBtn = `<button class="btn" type="button"
-                          data-settle-from="${t.fromId}"
-                          data-settle-to="${t.toId}"
-                          data-settle-cur="${escapeHTML(cur)}"
-                          data-settle-amt="${t.amount}">${actionLabel}</button>`;
-          }
-
-          // NEW: allow recording a manual settlement even when neither side is "me" (tiers ↔ tiers).
-          // This only records a trip_settlement_event, and does NOT touch wallets.
-          if (canWrite) {
-            const labelOnly = isMeInvolved ? stxt("Solder (sans wallet)", "Settle (without wallet)") : stxt("Marquer comme réglé", "Mark as settled");
-            actionOnlyBtn = `<button class="btn" type="button" style="background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);"
-                          data-settle-only="1"
-                          data-settle-from="${t.fromId}"
-                          data-settle-to="${t.toId}"
-                          data-settle-cur="${escapeHTML(cur)}"
-                          data-settle-amt="${t.amount}">${labelOnly}</button>`;
-          }
-
-          parts.push(
-            `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
-              <span>${escapeHTML(from?.name || "—")} → ${escapeHTML(to?.name || "—")}</span>
-              <div style="display:flex; align-items:center; gap:10px;">
-                <strong>${_fmtMoney(t.amount, cur)}${(String(cur).toUpperCase()==="THB" ? ` <span class="muted" style="font-weight:400;">(≈ ${_fmtMoney(_safeFx(t.amount, "THB", "EUR"), "EUR")})</span>` : "")}</strong>
-                ${actionBtn}${actionOnlyBtn}
-              </div>
-            </div>`
-          );
-        }
-      }
-
-
-      // Persisted settlements history (affects balances)
-      const histRows = (tripState.settlementEvents || []).filter(x => !x.cancelledAt);
-      if (histRows.length) {
-        parts.push(`<div class="muted" style="margin-top:14px;">${escapeHTML(stxt("Historique règlements", "Settlement history"))}</div>`);
-        const byDate = histRows.slice().sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
-        for (const ev of byDate) {
-          const from = members.find(x => x.id === ev.fromMemberId);
-          const to = members.find(x => x.id === ev.toMemberId);
-          const canCancel = canWrite && (myRole === "owner" || (sbUser && ev.createdBy === sbUser.id));
-          const btn = canCancel ? `<button class="btn" type="button" data-cancel-settle="${ev.id}">Annuler</button>` : "";
-          parts.push(
-            `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
-              <span class="muted">${escapeHTML(from?.name || "—")} → ${escapeHTML(to?.name || "—")}</span>
-              <div style="display:flex; align-items:center; gap:10px;">
-                <strong>${_fmtMoney(ev.amount, ev.currency)}</strong>
-                ${btn}
-              </div>
-            </div>`
-          );
-        }
-      }
-
-      return parts.join("");
-    })();
+    const tripUiEnForSummary = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
+    const stxtSummary = (fr, en) => tripUiEnForSummary ? en : fr;
+    const balHTML = window.UI?.tripRecapView?.renderTripBalancesPanel?.({
+      members,
+      balancesByCur,
+      title: _tripT("trip.balances"),
+      meLabel: stxtSummary("moi", "me"),
+      formatMoney: _fmtMoney,
+      escapeHTML,
+    }) || "";
+    const settlementsHTML = window.UI?.tripRecapView?.renderTripSettlementsPanel?.({
+      members,
+      settlementsByCur,
+      settlementEvents: tripState.settlementEvents || [],
+      canWrite,
+      myRole,
+      currentUserId: sbUser?.id || "",
+      labels: {
+        copy: stxtSummary("Copier les règlements", "Copy settlements"),
+        share: stxtSummary("Partager", "Share"),
+        simpleFormat: stxtSummary("Format simple", "Simple format"),
+        nothing: stxtSummary("Rien à régler pour l'instant", "Nothing to settle for now"),
+        suggested: stxtSummary("Règlements suggérés", "Suggested settlements"),
+        iPay: stxtSummary("Je paie", "I pay"),
+        iReceive: stxtSummary("Je reçois de", "I receive from"),
+        settleWithoutWallet: stxtSummary("Solder (sans wallet)", "Settle (without wallet)"),
+        markSettled: stxtSummary("Marquer comme réglé", "Mark as settled"),
+        history: stxtSummary("Historique règlements", "Settlement history"),
+        cancel: stxtSummary("Annuler", "Cancel"),
+      },
+      formatMoney: _fmtMoney,
+      safeFx: _safeFx,
+      escapeHTML,
+    }) || "";
 
 
     const tripAnalysis = _buildTripAnalysis(expenses, members, tripState.shares || []);
@@ -4275,6 +4176,31 @@ return `
       ? _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal: true })
       : "";
     const tripQuickAddLabel = escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "+ Shared expense" : "+ Depense partagee");
+    const tripHistoryToolbarHTML = window.UI?.tripRecapView?.renderTripHistoryToolbar?.({
+      categories: historyCategoryOptions,
+      members,
+      filters: historyFilters,
+      filteredCount: filteredExpenses.length,
+      totalCount: expenses.length,
+      isEnglish: typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en',
+      labels: {
+        copy: "Filtres d'audit du trip actif. Ils ne portent que sur l'historique du partage sélectionné.",
+        category: _tripT("trip.history.category"),
+        payer: _tripT("trip.history.payer"),
+        participant: _tripT("trip.history.participant"),
+        dateFrom: _tripT("trip.history.date_from"),
+        dateTo: _tripT("trip.history.date_to"),
+        amountMin: _tripT("trip.history.amount_min"),
+        amountMax: _tripT("trip.history.amount_max"),
+        search: _tripT("trip.history.search"),
+        searchPlaceholder: _tripT("trip.history.search_placeholder"),
+        all: _tripT("common.all"),
+        allMembers: _tripT("common.all_m"),
+        apply: _tripT("trip.history.apply"),
+        reset: _tripT("trip.history.reset"),
+      },
+      escapeHTML,
+    }) || "";
     const tripManagementHTML = window.UI?.tripView?.renderTripManagementCard?.({
       title: _tripT("trip.title"),
       members,
@@ -4352,7 +4278,6 @@ return `
         <div id="trip-tab-content-recap" style="margin-top:10px; display:grid; gap:14px;">
           <div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">
             <div style="flex:1 1 260px; min-width:260px;">
-              <h3 style="margin:0 0 8px 0;">${escapeHTML(_tripT("trip.balances"))}</h3>
               ${balHTML}
             </div>
             <div style="flex:2 1 320px; min-width:320px;">
@@ -4363,24 +4288,7 @@ return `
         </div>
 
         <div id="trip-tab-content-history" style="margin-top:10px; display:none;">
-          <div class="card trip-history-toolbar">
-            <div class="muted trip-history-toolbar-copy">Filtres d'audit du trip actif. Ils ne portent que sur l'historique du partage sélectionné.</div>
-            <div class="trip-filter-grid">
-              <div class="field"><label>${escapeHTML(_tripT("trip.history.category"))}</label><select id="trip-hist-category"><option value="">${escapeHTML(_tripT("common.all"))}</option>${historyCategoryOptions.map((cat) => `<option value="${escapeHTML(cat)}" ${historyFilters.category === cat ? 'selected' : ''}>${escapeHTML(cat)}</option>`).join('')}</select></div>
-              <div class="field"><label>${escapeHTML(_tripT("trip.history.payer"))}</label><select id="trip-hist-payer"><option value="">${escapeHTML(_tripT("common.all_m"))}</option>${members.map((m) => `<option value="${m.id}" ${historyFilters.payer === String(m.id) ? 'selected' : ''}>${escapeHTML(m.name)}</option>`).join('')}</select></div>
-              <div class="field"><label>${escapeHTML(_tripT("trip.history.participant"))}</label><select id="trip-hist-participant"><option value="">${escapeHTML(_tripT("common.all_m"))}</option>${members.map((m) => `<option value="${m.id}" ${historyFilters.participant === String(m.id) ? 'selected' : ''}>${escapeHTML(m.name)}</option>`).join('')}</select></div>
-              <div class="field"><label>${escapeHTML(_tripT("trip.history.date_from"))}</label><input id="trip-hist-date-from" type="date" value="${escapeHTML(historyFilters.dateFrom)}" /></div>
-              <div class="field"><label>${escapeHTML(_tripT("trip.history.date_to"))}</label><input id="trip-hist-date-to" type="date" value="${escapeHTML(historyFilters.dateTo)}" /></div>
-              <div class="field"><label>${escapeHTML(_tripT("trip.history.amount_min"))}</label><input id="trip-hist-amount-min" type="number" step="0.01" value="${escapeHTML(historyFilters.amountMin)}" placeholder="0" /></div>
-              <div class="field"><label>${escapeHTML(_tripT("trip.history.amount_max"))}</label><input id="trip-hist-amount-max" type="number" step="0.01" value="${escapeHTML(historyFilters.amountMax)}" placeholder="0" /></div>
-              <div class="field"><label>${escapeHTML(_tripT("trip.history.search"))}</label><input id="trip-hist-q" type="text" value="${escapeHTML(historyFilters.q)}" placeholder="${escapeHTML(_tripT("trip.history.search_placeholder"))}" /></div>
-            </div>
-            <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-              <button class="btn" type="button" id="trip-hist-apply">${escapeHTML(_tripT("trip.history.apply"))}</button>
-              <button class="btn" type="button" id="trip-hist-reset" style="background:#fff; color:#111; border:1px solid rgba(0,0,0,0.15);">${escapeHTML(_tripT("trip.history.reset"))}</button>
-              <span class="muted">${filteredExpenses.length} / ${expenses.length} ${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "expense(s)" : "dépense(s)")}</span>
-            </div>
-          </div>
+          ${tripHistoryToolbarHTML}
           ${expensesHTMLJoined}
         </div>
       </div>

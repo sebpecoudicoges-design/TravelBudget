@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `83e4413c902b015afaf67ec872eb74bb1700b447`
-> Empreinte du snapshot : `d661b0a4c875df345f4e5e756511d475b248640e8f5ff876011e3ff48ffb7fbe`
-> Généré le : `2026-07-19T11:55:26.505Z`
+> Commit analysé : `f64d7368e71e6c69170e2e93718e103aef6e3ed8`
+> Empreinte du snapshot : `a5fcd501124bbfe67b46b7ed84d26a3788f8c0ce02f79d5c3aabb0a14dc71229`
+> Généré le : `2026-07-19T12:18:46.173Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,12 +11,12 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.236` |
+| Version | `10.5.237` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 61 |
 | Modules core | 24 |
 | Modules data | 7 |
-| Modules features | 32 |
+| Modules features | 33 |
 | Fichiers de tests | 96 |
 | Migrations Supabase | 86 |
 | Fonctions Edge | 8 |
@@ -239,6 +239,7 @@ Modules :
 - `src/features/sport/sportTimerView.js`
 - `src/features/trip/tripDocumentView.js`
 - `src/features/trip/tripExpenseDetailView.js`
+- `src/features/trip/tripRecapView.js`
 - `src/features/trip/tripStore.js`
 - `src/features/trip/tripView.js`
 - `src/features/work/workView.js`
