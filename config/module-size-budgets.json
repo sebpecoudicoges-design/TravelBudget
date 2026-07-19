@@ -3,8 +3,8 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 340,
-    "lazyJsMaxKiB": 174,
-    "totalJsMaxKiB": 505,
+    "lazyJsMaxKiB": 176,
+    "totalJsMaxKiB": 508,
     "totalCssMaxKiB": 8,
     "mainJsGzipMaxKiB": 110
   },
@@ -120,6 +120,8 @@
         "public/legacy/js/30_members_admin.js",
         "src/core/tripRules.js",
         "src/data/tripRepository.js",
+        "src/features/trip/tripDocumentView.js",
+        "src/features/trip/tripExpenseDetailView.js",
         "src/features/trip/tripStore.js",
         "src/features/trip/tripView.js"
       ]

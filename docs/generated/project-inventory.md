@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `d0d9d5cc5a71ddd661ecdf1bc7a9f3cfcb71ac39`
-> Empreinte du snapshot : `afe5fc592c8c3083c8406652ce2dad48c4db68600da4edb743ff6015aef2985f`
-> Généré le : `2026-07-19T11:35:58.401Z`
+> Commit analysé : `5b2f0f963efcdd510e060ca517532402798ffd04`
+> Empreinte du snapshot : `898acf45135565e5ab8cb0f9b08f611e21eda3f4da5bd46dc29c877e2957a290`
+> Généré le : `2026-07-19T11:43:30.675Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,12 +11,12 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.234` |
+| Version | `10.5.235` |
 | Écrans déclarés | 15 |
-| Scripts legacy référencés | 62 |
+| Scripts legacy référencés | 61 |
 | Modules core | 24 |
 | Modules data | 7 |
-| Modules features | 31 |
+| Modules features | 32 |
 | Fichiers de tests | 96 |
 | Migrations Supabase | 86 |
 | Fonctions Edge | 8 |
@@ -133,7 +133,6 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `public/legacy/js/26_fx_crossrate.js`
 - `public/legacy/js/27_cashflow_curve.js`
 - `public/legacy/js/28_data_updated_bus.js`
-- `public/legacy/js/29_trip_document_view.js`
 - `public/legacy/js/29_trip_v1.js`
 - `public/legacy/js/30_members_admin.js`
 - `public/legacy/js/31_help_faq.js`
@@ -238,6 +237,7 @@ Modules :
 - `src/features/sport/sportStore.js`
 - `src/features/sport/sportTimerController.js`
 - `src/features/sport/sportTimerView.js`
+- `src/features/trip/tripDocumentView.js`
 - `src/features/trip/tripExpenseDetailView.js`
 - `src/features/trip/tripStore.js`
 - `src/features/trip/tripView.js`

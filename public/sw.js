@@ -1,4 +1,4 @@
-const TB_SW_VERSION = "travelbudget-pwa-10.5.234";
+const TB_SW_VERSION = "travelbudget-pwa-10.5.235";
 const TB_STATIC_CACHE = `${TB_SW_VERSION}-static`;
 const TB_RUNTIME_CACHE = `${TB_SW_VERSION}-runtime`;
 

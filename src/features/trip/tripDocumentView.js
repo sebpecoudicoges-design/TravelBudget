@@ -1,40 +1,37 @@
-(function () {
-  "use strict";
+function fallbackEscape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]);
+}
 
-  function fallbackEscape(value) {
-    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
-    })[char]);
-  }
+const defaultRelationOptions = [
+  ['receipt', 'Reçu'],
+  ['invoice', 'Facture'],
+  ['proof', 'Justificatif'],
+  ['warranty', 'Garantie'],
+  ['other', 'Autre'],
+];
 
-  const defaultRelationOptions = [
-    ["receipt", "Reçu"],
-    ["invoice", "Facture"],
-    ["proof", "Justificatif"],
-    ["warranty", "Garantie"],
-    ["other", "Autre"]
-  ];
+function relationOptionsHTML(options, escapeHTML) {
+  return options.map(([value, label]) => `<option value="${escapeHTML(value)}">${escapeHTML(label)}</option>`).join('');
+}
 
-  function relationOptionsHTML(options, escapeHTML) {
-    return options.map(([value, label]) => `<option value="${escapeHTML(value)}">${escapeHTML(label)}</option>`).join("");
-  }
-
-  function renderTripExpenseDocumentsContent({
-    links = [],
-    availableDocs = [],
-    documentName = (doc) => doc?.name || doc?.title || doc?.filename || "Document",
-    relationLabel = (type) => type || "Document",
-    relationOptions = defaultRelationOptions,
-    escapeHTML = fallbackEscape
-  }) {
-    const safeLinks = Array.isArray(links) ? links : [];
-    const safeDocs = Array.isArray(availableDocs) ? availableDocs : [];
-    const optionsHTML = relationOptionsHTML(relationOptions, escapeHTML);
-    const linkedHTML = safeLinks.length
-      ? safeLinks.map((link) => {
-        const doc = link?.document;
-        if (!doc) return '<div class="card trip-doc-linked-card"><div class="muted">Document supprimé</div></div>';
-        return `
+export function renderTripExpenseDocumentsContent({
+  links = [],
+  availableDocs = [],
+  documentName = (doc) => doc?.name || doc?.title || doc?.filename || 'Document',
+  relationLabel = (type) => type || 'Document',
+  relationOptions = defaultRelationOptions,
+  escapeHTML = fallbackEscape,
+}) {
+  const safeLinks = Array.isArray(links) ? links : [];
+  const safeDocs = Array.isArray(availableDocs) ? availableDocs : [];
+  const optionsHTML = relationOptionsHTML(relationOptions, escapeHTML);
+  const linkedHTML = safeLinks.length
+    ? safeLinks.map((link) => {
+      const doc = link?.document;
+      if (!doc) return '<div class="card trip-doc-linked-card"><div class="muted">Document supprimé</div></div>';
+      return `
           <div class="card trip-doc-linked-card">
             <div class="trip-doc-linked-row">
               <div>
@@ -47,10 +44,10 @@
               </div>
             </div>
           </div>`;
-      }).join("")
-      : '<div class="muted">Aucun document lié.</div>';
+    }).join('')
+    : '<div class="muted">Aucun document lié.</div>';
 
-    return `<div class="tb-trip-documents-content">${linkedHTML}
+  return `<div class="tb-trip-documents-content">${linkedHTML}
       <div class="trip-doc-link-panel">
         <h3>Ajouter ou lier un document</h3>
         <div class="trip-doc-link-grid">
@@ -58,7 +55,7 @@
             <label class="muted trip-doc-label">Document existant</label>
             <input id="trip-doc-search" class="input trip-doc-search" type="search" placeholder="Rechercher un document…" />
             <select id="trip-doc-select" class="input trip-doc-select">
-              ${safeDocs.map((doc) => `<option value="${escapeHTML(doc.id)}">${escapeHTML(documentName(doc))}</option>`).join("")}
+              ${safeDocs.map((doc) => `<option value="${escapeHTML(doc.id)}">${escapeHTML(documentName(doc))}</option>`).join('')}
             </select>
           </div>
           <div class="trip-doc-link-actions">
@@ -74,10 +71,4 @@
         </div>
       </div>
     </div>`;
-  }
-
-  window.UI = window.UI || {};
-  window.UI.tripDocumentView = {
-    renderTripExpenseDocumentsContent
-  };
-})();
+}

@@ -124,7 +124,6 @@ const LEGACY_DOMAIN_SCRIPTS = {
     '/legacy/js/50_work_career_ui.js',
   ],
   trip: [
-    '/legacy/js/29_trip_document_view.js',
     '/legacy/js/29_trip_v1.js',
     '/legacy/js/30_members_admin.js',
   ],
@@ -279,7 +278,14 @@ async function ensureDomainModules(domain) {
       };
     }
     if (key === 'trip') {
-      const tripExpenseDetailView = await import('./features/trip/tripExpenseDetailView.js');
+      const [tripDocumentView, tripExpenseDetailView] = await Promise.all([
+        import('./features/trip/tripDocumentView.js'),
+        import('./features/trip/tripExpenseDetailView.js'),
+      ]);
+      window.UI.tripDocumentView = {
+        ...(window.UI.tripDocumentView || {}),
+        ...tripDocumentView,
+      };
       window.UI.tripExpenseDetailView = {
         ...(window.UI.tripExpenseDetailView || {}),
         ...tripExpenseDetailView,

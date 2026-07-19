@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import {
   renderPendingTripInvites,
@@ -15,12 +13,7 @@ import {
   renderTripSplitParticipants,
 } from '../../../src/features/trip/tripView.js';
 import { renderTripExpenseDetailContent } from '../../../src/features/trip/tripExpenseDetailView.js';
-
-function loadTripDocumentView() {
-  const sandbox = { window: { UI: {} } };
-  vm.runInNewContext(fs.readFileSync('public/legacy/js/29_trip_document_view.js', 'utf8'), sandbox);
-  return sandbox.window.UI.tripDocumentView;
-}
+import { renderTripExpenseDocumentsContent } from '../../../src/features/trip/tripDocumentView.js';
 
 describe('Trip view', () => {
   it('renders pending invitations and escapes remote content', () => {
@@ -298,7 +291,7 @@ describe('Trip view', () => {
   });
 
   it('renders expense document links with stable hooks and escaped names', () => {
-    const html = loadTripDocumentView().renderTripExpenseDocumentsContent({
+    const html = renderTripExpenseDocumentsContent({
       links: [
         { id: 'link-1', relation_type: 'receipt', document_id: 'doc-1', document: { id: 'doc-1', name: '<Receipt>' } },
         { id: 'link-2', relation_type: 'proof', document_id: 'doc-2', document: null },

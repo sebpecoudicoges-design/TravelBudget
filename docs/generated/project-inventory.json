@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "d0d9d5cc5a71ddd661ecdf1bc7a9f3cfcb71ac39",
-  "snapshotFingerprint": "afe5fc592c8c3083c8406652ce2dad48c4db68600da4edb743ff6015aef2985f",
-  "generatedAt": "2026-07-19T11:35:58.401Z",
+  "commit": "5b2f0f963efcdd510e060ca517532402798ffd04",
+  "snapshotFingerprint": "898acf45135565e5ab8cb0f9b08f611e21eda3f4da5bd46dc29c877e2957a290",
+  "generatedAt": "2026-07-19T11:43:30.675Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.234"
+    "version": "10.5.235"
   },
   "npmScripts": {
     "dev": "vite",
@@ -97,7 +97,6 @@
     "public/legacy/js/26_fx_crossrate.js",
     "public/legacy/js/27_cashflow_curve.js",
     "public/legacy/js/28_data_updated_bus.js",
-    "public/legacy/js/29_trip_document_view.js",
     "public/legacy/js/29_trip_v1.js",
     "public/legacy/js/30_members_admin.js",
     "public/legacy/js/31_help_faq.js",
@@ -210,6 +209,7 @@
     "src/features/sport/sportStore.js",
     "src/features/sport/sportTimerController.js",
     "src/features/sport/sportTimerView.js",
+    "src/features/trip/tripDocumentView.js",
     "src/features/trip/tripExpenseDetailView.js",
     "src/features/trip/tripStore.js",
     "src/features/trip/tripView.js",
