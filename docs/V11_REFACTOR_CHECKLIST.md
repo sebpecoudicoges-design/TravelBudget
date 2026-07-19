@@ -232,6 +232,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire les regles KPI Sante/Nutrition/Sommeil/Alcool et classification budget/cash/trip pending vers `kpiHealthRules.js`.
   - [x] Extraire les regles KPI projection/pending, Trip net, scopes et pastilles cash vers `kpiProjectionRules.js`.
   - [x] Extraire les regles KPI wallets cash, runway et couverture prudente vers `kpiCashRules.js`.
+  - [x] Sortir le dictionnaire anglais i18n du boot : `00_i18n.js` garde le francais, `00_i18n_en.js` charge l'anglais a la demande ; boot legacy 1025.3 -> 977.2 KiB.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison
