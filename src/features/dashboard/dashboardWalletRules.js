@@ -1,4 +1,7 @@
 export const WALLET_TYPES = Object.freeze(['cash', 'bank', 'card', 'savings', 'other']);
+const LABELS = { cash: 'Cash (espèces)', bank: 'Banque', card: 'Carte', savings: 'Épargne', other: 'Autre' };
+const ok = (value) => ({ ok: true, value });
+const err = (error) => ({ ok: false, error });
 
 export function normalizeWalletType(value) {
   const type = String(value || '').trim().toLowerCase();
@@ -29,36 +32,85 @@ export function walletTypeLabel(type, translate) {
     const translated = translate(key);
     if (translated && translated !== key) return translated;
   }
-  if (value === 'cash') return 'Cash (espèces)';
-  if (value === 'bank') return 'Banque';
-  if (value === 'card') return 'Carte';
-  if (value === 'savings') return 'Épargne';
-  return 'Autre';
+  return LABELS[value] || LABELS.other;
 }
 
 export function validateWalletCreateInput(input = {}) {
   const name = String(input.name || '').trim();
-  if (!name) return { ok: false, error: 'Nom requis.' };
+  if (!name) return err('Nom requis.');
 
   const currency = String(input.currency || '').trim().toUpperCase();
-  if (!currency) return { ok: false, error: 'Devise requise.' };
-  if (!/^[A-Z]{3,6}$/.test(currency)) return { ok: false, error: 'Devise invalide (ex: EUR, THB).' };
+  if (!currency) return err('Devise requise.');
+  if (!/^[A-Z]{3,6}$/.test(currency)) return err('Devise invalide (ex: EUR, THB).');
 
   const type = normalizeWalletType(input.type);
-  if (!type) return { ok: false, error: 'Type invalide.' };
+  if (!type) return err('Type invalide.');
 
   const balance = Number(String(input.balance ?? '0').replace(',', '.').trim());
-  if (!Number.isFinite(balance)) return { ok: false, error: 'Solde invalide.' };
+  if (!Number.isFinite(balance)) return err('Solde invalide.');
 
-  return { ok: true, value: { name, currency, type, balance } };
+  return ok({ name, currency, type, balance });
 }
 
 export function validateWalletEditInput(input = {}) {
   const name = String(input.name || '').trim();
-  if (!name) return { ok: false, error: 'Nom requis.' };
+  if (!name) return err('Nom requis.');
 
   const type = normalizeWalletType(input.type);
-  if (!type) return { ok: false, error: 'Type invalide.' };
+  if (!type) return err('Type invalide.');
 
-  return { ok: true, value: { name, type } };
+  return ok({ name, type });
+}
+
+export function buildWalletCreateRow(input = {}, context = {}) {
+  const result = validateWalletCreateInput(input);
+  if (!result.ok) return result;
+
+  const userId = String(context.userId || '').trim();
+  if (!userId) return err('Utilisateur introuvable.');
+
+  const travelId = String(context.travelId || '').trim();
+  if (!travelId) return err('Aucun voyage actif (travel_id introuvable).');
+
+  return ok({
+    user_id: userId,
+    travel_id: travelId,
+    period_id: context.periodId ? String(context.periodId) : null,
+    name: result.value.name,
+    currency: result.value.currency,
+    type: result.value.type,
+    balance: result.value.balance,
+  });
+}
+
+export function buildWalletEditPatch(input = {}) {
+  const result = validateWalletEditInput(input);
+  if (!result.ok) return result;
+  return ok({ name: result.value.name, type: result.value.type });
+}
+
+export function buildWalletArchivePatch({ archived = true, now = () => new Date().toISOString() } = {}) {
+  const isArchived = archived !== false;
+  return {
+    archived: isArchived,
+    archived_at: isArchived ? now() : null,
+  };
+}
+
+export function canDeleteWallet({ transactions = [] } = {}) {
+  return Array.isArray(transactions) && transactions.length
+    ? err('Impossible de supprimer : des transactions existent sur ce wallet.')
+    : { ok: true };
+}
+
+export function normalizeWalletTypeUpdates(updates = []) {
+  const rows = [];
+  for (const update of Array.isArray(updates) ? updates : []) {
+    const walletId = String(update?.wid || update?.walletId || '').trim();
+    const type = normalizeWalletType(update?.type);
+    if (!walletId) return err('Wallet introuvable.');
+    if (!type) return err(`Type invalide pour ${walletId}`);
+    rows.push({ wid: walletId, type });
+  }
+  return ok(rows);
 }

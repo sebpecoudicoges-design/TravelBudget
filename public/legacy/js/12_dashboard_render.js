@@ -702,11 +702,10 @@ async function openWalletTypesFix() {
         updates.push({ wid, type });
       });
 
-      for (const u of updates) {
-        if (!window.TBDashboardWalletRules?.normalizeWalletType?.(u.type)) throw new Error("Type invalide pour " + u.wid);
-      }
+      const normalized = window.TBDashboardWalletRules?.normalizeWalletTypeUpdates?.(updates);
+      if (!normalized?.ok) throw new Error(normalized?.error || "Types invalides.");
 
-      for (const u of updates) {
+      for (const u of normalized.value) {
         const { error } = await sb
           .from(TB_CONST.TABLES.wallets)
           .update({ type: u.type })
@@ -730,10 +729,12 @@ async function editWallet(walletId) {
 
     const data = await tbOpenWalletEditDialog(w);
     if (!data) return;
+    const patch = window.TBDashboardWalletRules?.buildWalletEditPatch?.(data);
+    if (!patch?.ok) return alert(patch?.error || "Wallet invalide.");
 
     const { error } = await sb
       .from(TB_CONST.TABLES.wallets)
-      .update({ name: data.name, type: data.type })
+      .update(patch.value)
       .eq("id", walletId);
     if (error) throw error;
 
@@ -754,9 +755,10 @@ async function archiveWallet(walletId) {
     const w = (state.wallets || []).find(x => String(x.id) === String(walletId));
     if (!w) return;
     if (!confirm(`${(window.tbT ? tbT("wallet.action.archive") : "Archiver")} "${w.name} (${w.currency})" ?`)) return;
+    try { if (typeof window.TBLoadDashboardWalletRules === "function") await window.TBLoadDashboardWalletRules(); } catch (_) {}
     const { error } = await sb
       .from(TB_CONST.TABLES.wallets)
-      .update({ archived: true, archived_at: new Date().toISOString() })
+      .update(window.TBDashboardWalletRules?.buildWalletArchivePatch?.({ archived: true }) || { archived: true, archived_at: new Date().toISOString() })
       .eq("id", walletId);
     if (error) throw error;
     await refreshFromServer();
@@ -768,9 +770,10 @@ async function archiveWallet(walletId) {
 
 async function unarchiveWallet(walletId) {
   try {
+    try { if (typeof window.TBLoadDashboardWalletRules === "function") await window.TBLoadDashboardWalletRules(); } catch (_) {}
     const { error } = await sb
       .from(TB_CONST.TABLES.wallets)
-      .update({ archived: false, archived_at: null })
+      .update(window.TBDashboardWalletRules?.buildWalletArchivePatch?.({ archived: false }) || { archived: false, archived_at: null })
       .eq("id", walletId);
     if (error) throw error;
     await refreshFromServer();
@@ -787,24 +790,14 @@ async function createWallet() {
   try {
     const data = await tbOpenWalletDialog();
     if (!data) return;
+    const row = window.TBDashboardWalletRules?.buildWalletCreateRow?.(data, {
+      userId: sbUser?.id,
+      travelId: state?.activeTravelId || null,
+      periodId: state?.period?.id || null,
+    });
+    if (!row?.ok) return alert(row?.error || "Wallet invalide.");
 
-    const name = data.name;
-    const currency = data.currency;
-    const typeRaw = data.type;
-    const balance = data.balance;
-
-    const travelId = state?.activeTravelId || null;
-    if (!travelId) return alert("Aucun voyage actif (travel_id introuvable).");
-
-    const { error } = await sb.from(TB_CONST.TABLES.wallets).insert([{
-     user_id: sbUser.id,
-     travel_id: travelId,
-     period_id: state?.period?.id || null,
-     name,
-     currency,
-     type: typeRaw,
-      balance
-    }]); 
+    const { error } = await sb.from(TB_CONST.TABLES.wallets).insert([row.value]);
     if (error) throw error;
 
     await refreshFromServer();
@@ -826,9 +819,9 @@ async function deleteWallet(walletId) {
       .limit(1);
 
     if (tErr) throw tErr;
-    if (tx && tx.length) {
-      return alert("Impossible de supprimer : des transactions existent sur ce wallet.");
-    }
+    try { if (typeof window.TBLoadDashboardWalletRules === "function") await window.TBLoadDashboardWalletRules(); } catch (_) {}
+    const readiness = window.TBDashboardWalletRules?.canDeleteWallet?.({ transactions: tx || [] });
+    if (!readiness?.ok) return alert(readiness?.error || "Impossible de supprimer ce wallet.");
 
     if (!confirm(`Supprimer le wallet "${w.name} (${w.currency})" ?`)) return;
 

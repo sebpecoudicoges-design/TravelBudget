@@ -17,6 +17,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Extraire les interactions KPI date-a-date, scope, impayes et convertisseur FX vers un controleur module, avec tests.
 - [x] Sortir FX Decision du boot et le charger avec le domaine Analyse : boot legacy 1085.3 -> 1044.9 KiB.
 - [x] Extraire les regles Wallet Dashboard : validation creation/edition, type automatique et libelles passent dans `dashboardWalletRules.js`.
+- [x] Extraire les payloads Wallet Dashboard : creation, edition, archivage, suppression et correction de types passent dans `dashboardWalletRules.js`.
 
 ## Chantier 1 - Budget journalier et transactions
 
@@ -217,6 +218,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire l'assemblage des cartes KPI vers `kpiView.js`.
   - [x] Extraire les bindings KPI : date-a-date, scope, toggle impayes et convertisseur FX vers `11_kpi_controller.js`.
   - [x] Extraire les regles Wallet Dashboard : validation creation/edition, type automatique et libelles quittent `12_dashboard_render.js`.
+  - [x] Extraire les mutations Wallet Dashboard : payloads SQL, archivage, garde de suppression et normalisation des corrections de type quittent `12_dashboard_render.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

@@ -65,12 +65,21 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).toContain('window.TBDashboardWalletRules?.validateWalletCreateInput');
     expect(legacy).toContain('window.TBDashboardWalletRules?.validateWalletEditInput');
     expect(legacy).toContain('window.TBDashboardWalletRules?.inferWalletTypeFromName');
+    expect(legacy).toContain('window.TBDashboardWalletRules?.buildWalletCreateRow');
+    expect(legacy).toContain('window.TBDashboardWalletRules?.buildWalletEditPatch');
+    expect(legacy).toContain('window.TBDashboardWalletRules?.buildWalletArchivePatch');
+    expect(legacy).toContain('window.TBDashboardWalletRules?.canDeleteWallet');
+    expect(legacy).toContain('window.TBDashboardWalletRules?.normalizeWalletTypeUpdates');
     expect(legacy).toContain('tbEnsureWalletDlgStyles();');
     expect(legacy).not.toContain('tbOpenWalletDialog().then(() => {});');
     expect(legacy).not.toContain('<input id="tbWName" type="text"');
     expect(legacy).not.toContain('<input id="tbWEditName" type="text"');
     expect(legacy).not.toContain('On a détecté des wallets sans type');
     expect(legacy).not.toContain('const allowed = ["cash", "bank", "card", "savings", "other"]');
+    expect(legacy).not.toContain('user_id: sbUser.id');
+    expect(legacy).not.toContain('.update({ name: data.name, type: data.type })');
+    expect(legacy).not.toContain('.update({ archived: true, archived_at: new Date().toISOString() })');
+    expect(legacy).not.toContain('.update({ archived: false, archived_at: null })');
   });
 
   it('keeps a single wallet activity renderer in the Dashboard legacy file', () => {
