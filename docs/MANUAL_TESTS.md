@@ -6,6 +6,7 @@ Statuts proposes : `a faire`, `ok`, `a revoir`.
 
 | Version | Module | Scenario | Etapes utilisateur | Resultat attendu | Console attendue | Statut |
 | --- | --- | --- | --- | --- | --- | --- |
+| 10.5.217 | Analyse | FX Decision lazy | Ouvrir Dashboard, verifier que le boot arrive normalement, puis ouvrir Analyse. | Le panneau Analyse s'affiche et le bloc FX Decision apparait sous l'analyse sans rechargement manuel. | Aucun `Uncaught`, aucun `FX decision indisponible`. | a faire |
 | 10.5.216 | KPI | Date-a-date et FX | Ouvrir Dashboard/KPIs, choisir `Date a date`, selectionner deux dates, cliquer `Appliquer`, puis saisir `10` dans le convertisseur FX et intervertir les devises. | La plage reste ouverte jusqu'a validation, les KPI se recalculent apres `Appliquer`, le convertisseur affiche un resultat et le bouton inverse les devises. | Aucun `Uncaught`, aucune fermeture immediate du calendrier. | a faire |
 | 10.5.215 | Settings | Modales extraites | Ouvrir Reglages, creer un voyage et une periode, puis ouvrir les modales Categorie/Sous-categorie sans enregistrer. | Chaque champ a un libelle visible, la modale partagee reste utilisable et Annuler ferme proprement. | Aucun `Uncaught`, aucun champ sans module. | a faire |
 | 10.5.214 | Settings | Regression apres nettoyage legacy | Ouvrir Reglages, changer de voyage si plusieurs existent, ouvrir Categories puis Budget reference. | La page se rend normalement, les categories restent visibles, les periodes/budget reference restent utilisables. | Aucun `Uncaught`, aucun module Settings manquant. | a faire |

@@ -63,7 +63,6 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/11_kpi_controller.js',
   '/legacy/js/11_kpi_render_micro_animation.js',
   '/legacy/js/12_dashboard_render.js',
-  '/legacy/js/34_fx_decision.js',
   '/legacy/js/16_modal_add_edit_via_rpc.js',
   '/legacy/js/13_transactions_view.js',
   '/legacy/js/14_settings_periods_ui.js',
@@ -89,6 +88,7 @@ const LEGACY_DOMAIN_SCRIPTS = {
     '/legacy/js/33_analysis_filter_view.js',
     '/legacy/js/33_analysis_drilldown_view.js',
     '/legacy/js/33_budget_analysis.js',
+    '/legacy/js/34_fx_decision.js',
   ],
   cashflow: [
     '/legacy/js/27_cashflow_curve.js',

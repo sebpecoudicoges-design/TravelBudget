@@ -15,6 +15,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Remplacer la liste brute des APK de `public/projet.html` par une fresque chronologique interactive, detaillee et filtrable.
 - [x] Realigner le contrat Settings Modal sur les modules extraits et verifier la suite complete : 89 fichiers, 459 tests.
 - [x] Extraire les interactions KPI date-a-date, scope, impayes et convertisseur FX vers un controleur module, avec tests.
+- [x] Sortir FX Decision du boot et le charger avec le domaine Analyse : boot legacy 1085.3 -> 1044.9 KiB.
 
 ## Chantier 1 - Budget journalier et transactions
 
@@ -151,6 +152,7 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Sortir Cashflow du boot : `27_cashflow_curve.js` charge a la demande sur Dashboard via `tbEnsureCashflowCurve`, avec theme, KPI, boot-release et navigation compatibles lazy.
   - [x] Ajouter un loader transversal Sport/Travail leger pour que Nutrition, KPI et notifications lisent les calories d'activite sans ouvrir les onglets Sport ou Travail.
   - [x] Retirer le pre-cache CDN du service worker pour supprimer les violations CSP `connect-src` sur `cdn.jsdelivr.net`.
+  - [x] Sortir FX Decision du boot : `34_fx_decision.js` charge avec Analyse et possede un budget dedie.
 - [ ] Decouper les gros bundles par domaine.
   - [x] Extraire le shell visuel Settings : hero, resumes de cartes et accordéons quittent `14_settings_periods_ui.js` vers `src/features/settings/settingsView.js`.
   - [x] Extraire le rendu du panneau Compte Settings : profil, santé, devise, mode UI, seuil cashflow et raccourcis notifications quittent le template inline legacy.

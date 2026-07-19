@@ -40,7 +40,6 @@
         "public/legacy/js/11_kpi_controller.js",
         "public/legacy/js/11_kpi_render_micro_animation.js",
         "public/legacy/js/12_dashboard_render.js",
-        "public/legacy/js/34_fx_decision.js",
         "public/legacy/js/16_modal_add_edit_via_rpc.js",
         "public/legacy/js/13_transactions_view.js",
         "public/legacy/js/14_settings_periods_ui.js",
@@ -78,6 +77,13 @@
         "src/features/analysis/analysisChartOptions.js",
         "src/features/analysis/analysisRuntime.js",
         "src/features/analysis/analysisView.js"
+      ]
+    },
+    {
+      "name": "fx-decision-domain",
+      "maxKiB": 45,
+      "paths": [
+        "public/legacy/js/34_fx_decision.js"
       ]
     },
     {
