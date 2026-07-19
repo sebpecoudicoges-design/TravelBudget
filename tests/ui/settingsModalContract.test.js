@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 describe('settings shared modal migration', () => {
   const source = fs.readFileSync('public/legacy/js/14_settings_periods_ui.js', 'utf8');
+  const settingsView = fs.readFileSync('src/features/settings/settingsView.js', 'utf8');
+  const categoriesView = fs.readFileSync('src/features/settings/settingsCategoriesView.js', 'utf8');
 
   it('routes Settings forms through the shared accessible modal', () => {
     expect(source).toContain('window.UI.createModal({');
@@ -27,9 +29,13 @@ describe('settings shared modal migration', () => {
   });
 
   it('associates each editable Settings field with its label', () => {
-    for (const id of ['tb-vstart', 'tb-vend', 'tb-pstart', 'tb-pend', 'tb-pcur', 'tb-pbud', 'tb-cat-create-name', 'tb-cat-create-color', 'tb-cat-create-mapping', 'tb-subcat-create-name', 'tb-subcat-create-color', 'tb-subcat-create-mapping']) {
-      expect(source).toContain(`for="${id}"`);
-      expect(source).toContain(`id="${id}"`);
+    for (const id of ['tb-vstart', 'tb-vend', 'tb-pstart', 'tb-pend', 'tb-pcur', 'tb-pbud']) {
+      expect(settingsView).toContain(`for="${id}"`);
+      expect(settingsView).toContain(`id="${id}"`);
+    }
+    for (const id of ['tb-cat-create-name', 'tb-cat-create-color', 'tb-cat-create-mapping', 'tb-subcat-create-name', 'tb-subcat-create-color', 'tb-subcat-create-mapping']) {
+      expect(categoriesView).toContain(`for="${id}"`);
+      expect(categoriesView).toContain(`id="${id}"`);
     }
   });
 });

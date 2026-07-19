@@ -6,6 +6,7 @@ Statuts proposes : `a faire`, `ok`, `a revoir`.
 
 | Version | Module | Scenario | Etapes utilisateur | Resultat attendu | Console attendue | Statut |
 | --- | --- | --- | --- | --- | --- | --- |
+| 10.5.215 | Settings | Modales extraites | Ouvrir Reglages, creer un voyage et une periode, puis ouvrir les modales Categorie/Sous-categorie sans enregistrer. | Chaque champ a un libelle visible, la modale partagee reste utilisable et Annuler ferme proprement. | Aucun `Uncaught`, aucun champ sans module. | a faire |
 | 10.5.214 | Settings | Regression apres nettoyage legacy | Ouvrir Reglages, changer de voyage si plusieurs existent, ouvrir Categories puis Budget reference. | La page se rend normalement, les categories restent visibles, les periodes/budget reference restent utilisables. | Aucun `Uncaught`, aucun module Settings manquant. | a faire |
 | 10.5.213 | Settings | Suppression categorie | Ouvrir Reglages > Categories, supprimer une categorie SQL puis une categorie detectee si disponible. | La confirmation est lisible, SQL supprime categorie/sous-categories/mappings, fallback masque la categorie detectee; apres refresh elle ne revient pas. | Aucun `[safeCall/async]`, aucun `Uncaught`. | a faire |
 | 10.5.212 | Page projet | Fresque APK interactive | Ouvrir `public/projet.html`, aller a App, cliquer plusieurs filtres puis une version dans la fresque. | La fresque affiche toutes les versions, le spotlight change, le detail s'ouvre et le rendu reste lisible mobile/desktop. | Aucun `Uncaught`; aucun message JS dans la page. | a faire |

@@ -13,6 +13,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [ ] Mettre a jour cette checklist a chaque lot livre.
 - [ ] Ajouter a chaque livraison une verification utilisateur simple : ecran a ouvrir, action a faire, resultat attendu, console attendue si pertinent.
 - [x] Remplacer la liste brute des APK de `public/projet.html` par une fresque chronologique interactive, detaillee et filtrable.
+- [x] Realigner le contrat Settings Modal sur les modules extraits et verifier la suite complete : 89 fichiers, 459 tests.
 
 ## Chantier 1 - Budget journalier et transactions
 
