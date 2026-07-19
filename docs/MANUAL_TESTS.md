@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.233`.
-- Bilan : 8 parcours `ok`, 2 parcours `à faire`.
+- Version à valider : `10.5.234`.
+- Bilan : 7 parcours `ok`, 8 parcours `à faire`.
 - Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
 - Les 29 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -31,6 +31,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 12 | 10.5.230 | Alimentation + Réglages | Ouvrir Alimentation, changer la date, modifier l'objectif nutrition, ajouter eau/aliment et ouvrir la timeline. Puis ouvrir Réglages > Voyage avec ou sans réseau et vérifier le bloc Référence budget. | Le shell Alimentation reste identique et tous les boutons/champs répondent. Référence budget affiche un état hors ligne, synchronisation ou erreur sans alerte brute ni HTML cassé. | `TB BUILD 10.5.230` ; aucun `Uncaught`, aucun module `nutritionView` ou `TBSettingsView` manquant. | à faire |
 | 13 | 10.5.232 | Trip : matching et règlement | Dans Trip, créer une dépense proche d'une transaction existante pour ouvrir la fenêtre de matching, utiliser recherche, décocher **Match exact date + montant**, puis annuler ou lier. Ouvrir ensuite un règlement suggéré et vérifier wallet, devise, montant, **Régler sans wallet** et **Valider**. | La recherche garde le focus, la liste se met à jour, les boutons lier/créer répondent. La fenêtre règlement conserve les champs et actions, sans changer les écritures wallet/settlement. | `TB BUILD 10.5.232` ; aucun `Uncaught`, aucun module `tripView` manquant. | à faire |
 | 14 | 10.5.233 | Trip mobile : dépense partagée | Sur Android/mobile, ouvrir Partage puis **+ Dépense partagée**. Saisir libellé, montant, devise, passer en split **Montant**, modifier plusieurs parts et ouvrir les options avancées. | La fenêtre occupe le format téléphone sans débordement horizontal, les champs restent pleine largeur, le tableau de split devient lisible en lignes empilées et le bouton d'ajout reste accessible en bas. | `TB BUILD 10.5.233` ; aucun `Uncaught`, aucun scroll horizontal dans la modale. | à faire |
+| 15 | 10.5.234 | Trip : détail dépense + lazy domaines | Dans Partage, ouvrir l'historique puis le détail d'une dépense liée à une transaction budget/wallet. Sur mobile, vérifier Répartition et Liens budget, puis ouvrir une transaction depuis le détail. Ouvrir aussi Travail et Patrimoine après chargement frais. | Le détail affiche total, parts, cohérence, liens wallet/budget et audit. Les boutons **Ouvrir transaction** répondent. Travail et Patrimoine chargent leurs vues sans écran bloqué. | `TB BUILD 10.5.234` ; aucun `Uncaught`, aucun `onclick` inline régressif, aucun module `tripExpenseDetailView`, `workView` ou `assetView` manquant. | à faire |
 
 ## À ajouter à chaque livraison
 

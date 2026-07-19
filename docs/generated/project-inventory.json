@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "34d837d59bdf7d6eee7b51d7e3aaeeeabf58f66f",
-  "snapshotFingerprint": "d26e999666d7527623b596e0a6998900ee4bc4c02cde0ae730f9fccc07c4fa44",
-  "generatedAt": "2026-07-19T11:11:18.119Z",
+  "commit": "d0d9d5cc5a71ddd661ecdf1bc7a9f3cfcb71ac39",
+  "snapshotFingerprint": "afe5fc592c8c3083c8406652ce2dad48c4db68600da4edb743ff6015aef2985f",
+  "generatedAt": "2026-07-19T11:35:58.401Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.233"
+    "version": "10.5.234"
   },
   "npmScripts": {
     "dev": "vite",
@@ -210,6 +210,7 @@
     "src/features/sport/sportStore.js",
     "src/features/sport/sportTimerController.js",
     "src/features/sport/sportTimerView.js",
+    "src/features/trip/tripExpenseDetailView.js",
     "src/features/trip/tripStore.js",
     "src/features/trip/tripView.js",
     "src/features/work/workView.js"

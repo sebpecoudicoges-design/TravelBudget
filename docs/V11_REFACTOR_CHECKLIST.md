@@ -167,6 +167,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Stabiliser le boot mobile/PWA : log `TB BUILD`, cache service worker versionne et refresh Analyse lie aux transactions du voyage actif.
   - [x] Sortir Cashflow du boot : `27_cashflow_curve.js` charge a la demande sur Dashboard via `tbEnsureCashflowCurve`, avec theme, KPI, boot-release et navigation compatibles lazy.
   - [x] Ajouter un loader transversal Sport/Travail leger pour que Nutrition, KPI et notifications lisent les calories d'activite sans ouvrir les onglets Sport ou Travail.
+  - [x] Charger `workView.js` et `assetView.js` avec leurs domaines lazy au lieu du bridge initial.
   - [x] Retirer le pre-cache CDN du service worker pour supprimer les violations CSP `connect-src` sur `cdn.jsdelivr.net`.
   - [x] Sortir FX Decision du boot : `34_fx_decision.js` charge avec Analyse et possede un budget dedie.
   - [x] Stabiliser le changement manuel de voyage Settings : le voyage choisi reste actif apres refresh, meme si un autre voyage contient la date du jour.
@@ -201,6 +202,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire le cockpit programme Sport : semaine A/B, charges prevues, progression et reglages recurrence passent dans `sportProgramView.js`.
   - [x] Extraire les fenetres Trip matching transaction et reglement : contenus et actions passent dans `tripView.js`.
   - [x] Stabiliser la modale mobile Depense partagee Trip : formulaire en grille CSS, split responsive et actions collantes.
+  - [x] Extraire le detail de depense Trip vers `tripView.js` : repartition, liens budget/wallet, audit et ouverture transaction passent par hooks `data-*`.
   - [x] Supprimer les helpers Settings morts : wrappers panneaux obsoletes, sauvegarde nom voyage inutilisee, resume/skeleton budget reference.
   - [x] Demarrer l'extraction Dashboard : le rendu onboarding quitte `12_dashboard_render.js` vers `dashboardView.js`.
   - [x] Demarrer l'extraction Analyse : l'overview de lecture quitte `33_budget_analysis.js` vers `analysisView.js`.

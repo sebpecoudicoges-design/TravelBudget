@@ -2530,12 +2530,6 @@ function _tripBindExpenseSubcategoryUi(initialValue) {
   categoryEl.onchange = () => render('');
 }
 
-function _yesNoPill(v) {
-  return v
-    ? '<span class="pill" style="font-size:12px;">Oui</span>'
-    : '<span class="pill" style="font-size:12px; background:rgba(0,0,0,0.06); color:#333;">Non</span>';
-}
-
 function _ensureExpenseDetailModal() {
   if (!window.UI?.createModal) throw new Error("Composant de fenetre indisponible.");
   const handle = window.UI.createModal({
@@ -2566,137 +2560,27 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
   const audit = await _fetchExpenseAuditDetails(ex?.id);
   if (!_expDetailModalState || _expDetailModalState.expenseId !== ex?.id) return;
 
-  const amt = Number(ex.amount) || 0;
-  const cur = ex.currency;
-
-  let sum = 0;
-  const rows = (shares || []).map(sh => {
-    const m = members.find(mm => mm.id === sh.memberId);
-    const shareAmt = Number(sh.shareAmount) || 0;
-    sum += shareAmt;
-    const pct = (amt > 0) ? (shareAmt / amt * 100) : 0;
-    return `
-      <tr>
-        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${escapeHTML(m?.name || "—")}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);text-align:right;white-space:nowrap;">${_fmtMoney(shareAmt, cur)}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);text-align:right;white-space:nowrap;">${_round2(pct)}%</td>
-      </tr>
-    `;
-  }).join("");
-
-  const diff = _round2(sum - amt);
-  const warn = (Math.abs(diff) >= 0.01)
-    ? `<div class="muted" style="margin-top:10px;padding:10px;border-radius:10px;background:rgba(255,165,0,.12);">
-         ⚠ Somme des parts = ${_fmtMoney(sum, cur)} (écart ${_fmtMoney(diff, cur)}). Vérifie la répartition.
-       </div>`
-    : "";
   const localLinkIssues = (tripState.linkIssues || []).filter((issue) => String(issue?.expenseId || "") === String(ex?.id || ""));
-  const linkIssueHTML = localLinkIssues.length
-    ? `<div style="margin-top:12px;padding:10px;border-radius:12px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.28);">
-         <div style="font-weight:800;margin-bottom:6px;">${escapeHTML(_tripT("trip.linked.audit_title"))}</div>
-         ${localLinkIssues.map((issue) => `<div class="muted" style="font-size:12px;">${escapeHTML(issue.type || "link_issue")} • tx ${escapeHTML(String(issue.transactionId || "—"))}</div>`).join("")}
-       </div>`
-    : "";
-
-  const mainTx = audit.walletTransaction;
-  const mainTxWallet = mainTx?.walletId ? _walletNameById(mainTx.walletId) : null;
-  const budgetRows = (audit.budgetLinks || []).map(link => {
-    const member = members.find(mm => mm.id === link.memberId) || null;
-    const tx = audit.budgetTransactionsById.get(link.transactionId) || null;
-    const walletName = tx?.walletId ? _walletNameById(tx.walletId) : null;
-    return `
-      <tr>
-        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${escapeHTML(member?.name || "—")}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);text-align:right;white-space:nowrap;">${tx ? _fmtMoney(tx.amount, tx.currency) : "—"}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${escapeHTML(tx?.category || "—")}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${escapeHTML(walletName || "—")}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${tx ? `${_yesNoPill(tx.payNow)} / ${_yesNoPill(tx.outOfBudget)}` : "—"}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.06);">${tx ? `<button class="btn small" type="button" onclick="tbOpenTransactionFromTrip('${escapeHTML(String(tx.id || ""))}')">${escapeHTML(_tripT("trip.linked.open_transaction"))}</button>` : "—"}</td>
-      </tr>
-    `;
-  }).join("");
-
-  const body = `
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
-      <div style="min-width:0;">
-        <div style="font-weight:700;font-size:16px;">${escapeHTML(ex.label || "Dépense")}</div>
-        <div class="muted" style="font-size:12px;margin-top:2px;">Trip expense</div>
-      </div>
-      <div style="font-weight:800;font-size:18px;white-space:nowrap;">${_fmtMoney(amt, cur)}</div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px;">
-      <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;">
-        <div class="muted" style="font-size:12px;margin-bottom:6px;">Lien wallet principal</div>
-        <div style="font-weight:700;">${mainTx ? "Oui" : "Non"}</div>
-        <div class="muted" style="font-size:12px;margin-top:6px;">${mainTx ? `${escapeHTML(mainTxWallet || "Wallet inconnue")} • ${escapeHTML(mainTx.category || "—")}` : "Aucune transaction wallet principale liée."}</div>
-        ${mainTx ? `<div class="muted" style="font-size:12px;margin-top:6px;">${_fmtMoney(mainTx.amount, mainTx.currency)} • pay_now ${mainTx.payNow ? "oui" : "non"} • out_of_budget ${mainTx.outOfBudget ? "oui" : "non"}</div>` : ``}
-        ${mainTx ? `<button class="btn small" type="button" style="margin-top:8px;" onclick="tbOpenTransactionFromTrip('${escapeHTML(String(mainTx.id || ""))}')">${escapeHTML(_tripT("trip.linked.open_transaction"))}</button>` : ``}
-      </div>
-
-      <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;">
-        <div class="muted" style="font-size:12px;margin-bottom:6px;">Liens budget de parts</div>
-        <div style="font-weight:700;">${audit.budgetLinks.length}</div>
-        <div class="muted" style="font-size:12px;margin-top:6px;">${audit.myShareLink ? "Ta part budget est liée à une transaction." : "Aucun lien trouvé pour ta part."}</div>
-      </div>
-
-      <div style="border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;">
-        <div class="muted" style="font-size:12px;margin-bottom:6px;">Cohérence répartition</div>
-        <div style="font-weight:700;">${Math.abs(diff) < 0.01 ? "OK" : "À vérifier"}</div>
-        <div class="muted" style="font-size:12px;margin-top:6px;">Somme parts ${_fmtMoney(sum || 0, cur)} • total ${_fmtMoney(amt, cur)}</div>
-      </div>
-    </div>
-    ${linkIssueHTML}
-
-    <div style="margin-top:12px;">
-      <div class="muted" style="font-size:12px;margin-bottom:6px;">Répartition</div>
-      <div style="overflow:auto;border:1px solid rgba(0,0,0,.08);border-radius:12px;">
-        <table style="width:100%;border-collapse:collapse;min-width:420px;">
-          <thead>
-            <tr>
-              <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Participant</th>
-              <th style="text-align:right;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Part</th>
-              <th style="text-align:right;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">%</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows || `<tr><td colspan="3" class="muted" style="padding:10px;">Aucune répartition trouvée.</td></tr>`}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td style="padding:8px;font-weight:700;">Total</td>
-              <td style="padding:8px;text-align:right;font-weight:700;white-space:nowrap;">${_fmtMoney(sum || 0, cur)}</td>
-              <td style="padding:8px;text-align:right;font-weight:700;">${amt > 0 ? _round2((sum/amt)*100) : 0}%</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-      ${warn}
-    </div>
-
-    <div style="margin-top:12px;">
-      <div class="muted" style="font-size:12px;margin-bottom:6px;">Liens budget</div>
-      <div style="overflow:auto;border:1px solid rgba(0,0,0,.08);border-radius:12px;">
-        <table style="width:100%;border-collapse:collapse;min-width:620px;">
-          <thead>
-            <tr>
-              <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Participant</th>
-              <th style="text-align:right;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Montant tx</th>
-              <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Catégorie</th>
-              <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">Wallet</th>
-              <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);">pay_now / out</th>
-              <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,.08);"></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${budgetRows || `<tr><td colspan="6" class="muted" style="padding:10px;">Aucun lien budget enregistré pour cette dépense.</td></tr>`}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-
-  modal.querySelector("#tripExpDetailBody").innerHTML = body;
+  const body = window.UI?.tripExpenseDetailView?.renderTripExpenseDetailContent?.({
+    ex,
+    shares,
+    members,
+    audit,
+    linkIssues: localLinkIssues,
+    walletNameById: _walletNameById,
+    formatMoney: _fmtMoney,
+    round2: _round2,
+    translate: _tripT,
+    escapeHTML,
+  }) || `<div class="muted">Détail indisponible.</div>`;
+  const bodyEl = modal.querySelector("#tripExpDetailBody");
+  bodyEl.innerHTML = body;
+  bodyEl.querySelectorAll("[data-trip-detail-open-tx]").forEach((button) => {
+    button.onclick = () => {
+      const id = button.getAttribute("data-trip-detail-open-tx");
+      if (id && typeof window.tbOpenTransactionFromTrip === "function") window.tbOpenTransactionFromTrip(id);
+    };
+  });
 }
 
 

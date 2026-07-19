@@ -3,15 +3,17 @@ import fs from 'node:fs';
 
 describe('work domain extraction contract', () => {
   const bridge = fs.readFileSync('src/app/bridge.js', 'utf8');
+  const main = fs.readFileSync('src/main.js', 'utf8');
   const work = fs.readFileSync('public/legacy/js/47_work_ui.js', 'utf8');
   const career = fs.readFileSync('public/legacy/js/50_work_career_ui.js', 'utf8');
   const view = fs.readFileSync('src/features/work/workView.js', 'utf8');
 
-  it('exposes the Work view module and pure rules to legacy', () => {
+  it('exposes Work rules at boot and lazy-loads the Work view before the domain legacy scripts', () => {
     expect(bridge).toContain("import * as workRules from '../core/workRules.js'");
-    expect(bridge).toContain("import * as workView from '../features/work/workView.js'");
     expect(bridge).toContain('window.Core.workRules = workRules');
-    expect(bridge).toContain('window.UI.workView = workView');
+    expect(bridge).not.toContain("import * as workView from '../features/work/workView.js'");
+    expect(main).toContain("import('./features/work/workView.js')");
+    expect(main).toContain('window.UI.workView');
   });
 
   it('delegates Work visuals and career timeline to workView', () => {

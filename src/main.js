@@ -250,6 +250,20 @@ async function ensureDomainModules(domain) {
         ...nutritionView,
       };
     }
+    if (key === 'assets') {
+      const assetView = await import('./features/assets/assetView.js');
+      window.UI.assetView = {
+        ...(window.UI.assetView || {}),
+        ...assetView,
+      };
+    }
+    if (key === 'work') {
+      const workView = await import('./features/work/workView.js');
+      window.UI.workView = {
+        ...(window.UI.workView || {}),
+        ...workView,
+      };
+    }
     if (key === 'sport') {
       const [sportFormView, sportProgramView] = await Promise.all([
         import('./features/sport/sportFormView.js'),
@@ -262,6 +276,13 @@ async function ensureDomainModules(domain) {
       window.UI.sportProgramView = {
         ...(window.UI.sportProgramView || {}),
         ...sportProgramView,
+      };
+    }
+    if (key === 'trip') {
+      const tripExpenseDetailView = await import('./features/trip/tripExpenseDetailView.js');
+      window.UI.tripExpenseDetailView = {
+        ...(window.UI.tripExpenseDetailView || {}),
+        ...tripExpenseDetailView,
       };
     }
     return true;

@@ -3,16 +3,18 @@ import fs from 'node:fs';
 
 describe('assets domain extraction contract', () => {
   const bridge = fs.readFileSync('src/app/bridge.js', 'utf8');
+  const main = fs.readFileSync('src/main.js', 'utf8');
   const core = fs.readFileSync('public/legacy/js/41_assets_core.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/42_assets_ui.js', 'utf8');
   const rules = fs.readFileSync('src/core/assetRules.js', 'utf8');
   const view = fs.readFileSync('src/features/assets/assetView.js', 'utf8');
 
-  it('exposes asset rules and views through the modular bridge', () => {
+  it('exposes asset rules at boot and lazy-loads asset views before the domain legacy scripts', () => {
     expect(bridge).toContain("import * as assetRules from '../core/assetRules.js'");
-    expect(bridge).toContain("import * as assetView from '../features/assets/assetView.js'");
     expect(bridge).toContain('window.Core.assetRules = assetRules');
-    expect(bridge).toContain('window.UI.assetView = assetView');
+    expect(bridge).not.toContain("import * as assetView from '../features/assets/assetView.js'");
+    expect(main).toContain("import('./features/assets/assetView.js')");
+    expect(main).toContain('window.UI.assetView');
   });
 
   it('keeps asset cards, summaries and forms delegated to assetView', () => {

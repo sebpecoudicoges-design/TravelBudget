@@ -14,6 +14,7 @@ import {
   renderTripSplitBox,
   renderTripSplitParticipants,
 } from '../../../src/features/trip/tripView.js';
+import { renderTripExpenseDetailContent } from '../../../src/features/trip/tripExpenseDetailView.js';
 
 function loadTripDocumentView() {
   const sandbox = { window: { UI: {} } };
@@ -69,6 +70,45 @@ describe('Trip view', () => {
     expect(html).not.toContain('id="trip-add-exp" disabled');
     expect(html).not.toContain('min-width:220px');
     expect(html).not.toContain('max-width:160px');
+  });
+
+  it('renders expense details with split, budget links and stable transaction hooks', () => {
+    const html = renderTripExpenseDetailContent({
+      ex: { id: 'ex-1', label: '<Beer>', amount: 30, currency: 'AUD' },
+      shares: [
+        { memberId: 'seb', shareAmount: 10 },
+        { memberId: 'alex', shareAmount: 20 },
+      ],
+      members: [
+        { id: 'seb', name: 'Seb' },
+        { id: 'alex', name: '<Alex>' },
+      ],
+      audit: {
+        walletTransaction: { id: 'tx-main', amount: -30, currency: 'AUD', walletId: 'wallet-1', category: 'Sorties', payNow: true, outOfBudget: false },
+        budgetLinks: [{ memberId: 'seb', transactionId: 'tx-share' }],
+        budgetTransactionsById: new Map([
+          ['tx-share', { id: 'tx-share', amount: -10, currency: 'AUD', walletId: 'wallet-1', category: '<Trip>', payNow: false, outOfBudget: true }],
+        ]),
+        myShareLink: true,
+      },
+      linkIssues: [{ type: '<missing>', transactionId: 'tx-x' }],
+      walletNameById: () => '<Bank>',
+      formatMoney: (amount, currency) => `${Number(amount).toFixed(0)} ${currency}`,
+      round2: (value) => Math.round(Number(value) * 100) / 100,
+      translate: (key) => key === 'trip.linked.open_transaction' ? 'Open tx' : '<Audit>',
+    });
+
+    expect(html).toContain('&lt;Beer&gt;');
+    expect(html).toContain('&lt;Alex&gt;');
+    expect(html).toContain('&lt;Bank&gt;');
+    expect(html).toContain('&lt;Trip&gt;');
+    expect(html).toContain('&lt;missing&gt;');
+    expect(html).toContain('data-trip-detail-open-tx="tx-main"');
+    expect(html).toContain('data-trip-detail-open-tx="tx-share"');
+    expect(html).toContain('data-label="Participant"');
+    expect(html).toContain('data-label="Montant tx"');
+    expect(html).toContain('30 AUD');
+    expect(html).not.toContain('onclick=');
   });
 
   it('disables expense submission without write access or an active Trip', () => {

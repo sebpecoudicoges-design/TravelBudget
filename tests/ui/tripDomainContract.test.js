@@ -8,6 +8,7 @@ describe('Trip domain contract', () => {
   const repository = fs.readFileSync('src/data/tripRepository.js', 'utf8');
   const store = fs.readFileSync('src/features/trip/tripStore.js', 'utf8');
   const view = fs.readFileSync('src/features/trip/tripView.js', 'utf8');
+  const detailView = fs.readFileSync('src/features/trip/tripExpenseDetailView.js', 'utf8');
   const documentView = fs.readFileSync('public/legacy/js/29_trip_document_view.js', 'utf8');
   const main = fs.readFileSync('src/main.js', 'utf8');
 
@@ -87,6 +88,9 @@ describe('Trip domain contract', () => {
       expect(view).toContain(`export function ${token}`);
       expect(legacy).toContain(`tripView?.${token}`);
     }
+    expect(detailView).toContain('export function renderTripExpenseDetailContent');
+    expect(main).toContain("import('./features/trip/tripExpenseDetailView.js')");
+    expect(legacy).toContain('tripExpenseDetailView?.renderTripExpenseDetailContent');
     expect(documentView).toContain('function renderTripExpenseDocumentsContent');
     expect(documentView).toContain('window.UI.tripDocumentView');
     expect(main).toContain("'/legacy/js/29_trip_document_view.js'");
@@ -105,5 +109,8 @@ describe('Trip domain contract', () => {
     expect(legacy).not.toContain('Somme = 100%');
     expect(legacy).not.toContain('Les montants seront arrondis au centime');
     expect(legacy).not.toContain('const participantHTML = participants.length');
+    expect(legacy).not.toContain('onclick="tbOpenTransactionFromTrip');
+    expect(view).not.toContain('data-trip-detail-open-tx');
+    expect(detailView).toContain('data-trip-detail-open-tx');
   });
 });
