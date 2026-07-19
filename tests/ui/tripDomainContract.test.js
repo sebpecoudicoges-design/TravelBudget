@@ -83,7 +83,7 @@ describe('Trip domain contract', () => {
   });
 
   it('delegates the extracted Trip view surfaces to src/features/trip', () => {
-    for (const token of ['renderPendingTripInvites', 'renderTripExpenseForm', 'renderTripContextHelp', 'renderTripLinkAuditCard', 'renderTripAnalysisBars', 'renderTripTabs', 'renderTripSplitParticipants', 'renderTripSplitBox']) {
+    for (const token of ['renderPendingTripInvites', 'renderTripExpenseForm', 'renderTripContextHelp', 'renderTripLinkAuditCard', 'renderTripTransactionMatchContent', 'renderTripSettlementModalContent', 'renderTripSettlementModalActions', 'renderTripAnalysisBars', 'renderTripTabs', 'renderTripSplitParticipants', 'renderTripSplitBox']) {
       expect(view).toContain(`export function ${token}`);
       expect(legacy).toContain(`tripView?.${token}`);
     }
@@ -94,6 +94,10 @@ describe('Trip domain contract', () => {
     expect(legacy).toContain('data-trip-help-open');
     expect(legacy).not.toContain('onclick="showView(\'help\')"');
     expect(legacy).not.toContain('class="card" style="margin-top:12px;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08);"');
+    expect(legacy).not.toContain('class="tb-trip-match-layout"');
+    expect(legacy).not.toContain('Match exact date + montant');
+    expect(legacy).not.toContain('<label for="tripSettleCurrency">Devise transaction</label>');
+    expect(legacy).not.toContain('<button id="tripSettleOnly" class="btn" type="button">Régler sans wallet</button>');
     expect(legacy).not.toContain('const linkedHTML = links.length');
     expect(legacy).not.toContain('Ajouter ou lier un document');
     expect(legacy).not.toContain('<div class="trip-tabs">\\n            <button class="btn primary" id="trip-tab-recap"');

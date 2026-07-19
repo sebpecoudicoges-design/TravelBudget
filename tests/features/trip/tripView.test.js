@@ -8,6 +8,9 @@ import {
   renderTripExpenseForm,
   renderTripAnalysisBars,
   renderTripLinkAuditCard,
+  renderTripTransactionMatchContent,
+  renderTripSettlementModalActions,
+  renderTripSettlementModalContent,
   renderTripSplitBox,
   renderTripSplitParticipants,
 } from '../../../src/features/trip/tripView.js';
@@ -124,6 +127,58 @@ describe('Trip view', () => {
     expect(html).toContain('150 AUD');
     expect(html).toContain('Seb (moi)');
     expect(html).toContain('&lt;Alex&gt; doit 30 AUD');
+  });
+
+  it('renders transaction match candidates with stable search and link hooks', () => {
+    const html = renderTripTransactionMatchContent({
+      query: '<beer>',
+      exactOnly: true,
+      targetDate: '2026-07-10',
+      targetAmount: 42,
+      targetCurrency: 'AUD',
+      rows: [
+        {
+          id: 'tx-1',
+          label: '<Biere>',
+          amount: 42,
+          currency: 'AUD',
+          category: 'Sorties',
+          subcategory: 'Bar',
+          date_start: '2026-07-10',
+          date_end: '2026-07-10',
+          wallet_id: 'wallet-1',
+        },
+      ],
+      walletName: () => '<Bank AUD>',
+      matchSubtitle: () => 'paye · budget',
+      formatMoney: (amount, currency) => `${Number(amount).toFixed(0)} ${currency}`,
+    });
+
+    expect(html).toContain('id="trip-match-search"');
+    expect(html).toContain('value="&lt;beer&gt;"');
+    expect(html).toContain('id="trip-match-exact" type="checkbox" checked');
+    expect(html).toContain('&lt;Biere&gt;');
+    expect(html).toContain('&lt;Bank AUD&gt;');
+    expect(html).toContain('Même date');
+    expect(html).toContain('Même montant');
+    expect(html).toContain('Recommandé');
+    expect(html).toContain('data-trip-match-new');
+    expect(html).toContain('data-trip-match-link');
+  });
+
+  it('renders settlement modal content and actions with stable ids', () => {
+    const content = renderTripSettlementModalContent();
+    const actions = renderTripSettlementModalActions();
+
+    expect(content).toContain('id="tripSettleContext"');
+    expect(content).toContain('for="tripSettleWallet"');
+    expect(content).toContain('id="tripSettleWallet"');
+    expect(content).toContain('id="tripSettleCurrency"');
+    expect(content).toContain('id="tripSettleAmount"');
+    expect(actions).toContain('id="tripSettleOnly"');
+    expect(actions).toContain('Régler sans wallet');
+    expect(actions).toContain('id="tripSettleConfirm"');
+    expect(actions).toContain('Valider');
   });
 
   it('renders Trip tabs with stable ids and escaped labels', () => {

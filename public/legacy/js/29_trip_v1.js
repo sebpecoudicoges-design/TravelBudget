@@ -1290,75 +1290,18 @@ async function _findMatchingTransactions({ date, amount, currency }) {
     function render() {
       const list = filteredRows();
 
-      modal.innerHTML = `
-        <div class="tb-trip-match-layout">
-          <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:12px;">
-            <div>
-              <label class="muted" style="display:block;font-size:12px;margin-bottom:4px;">Recherche</label>
-              <input id="trip-match-search" class="input" type="search" value="${escapeHTML(query)}" placeholder="Libellé, catégorie, wallet, montant…" style="width:100%;" />
-            </div>
-
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;">
-              <input id="trip-match-exact" type="checkbox" ${exactOnly ? "checked" : ""} />
-              Match exact date + montant
-            </label>
-          </div>
-
-          <div class="muted" style="font-size:12px;margin-bottom:10px;">
-            Dépense Trip : ${escapeHTML(targetDate || "—")} · ${escapeHTML(_fmtMoney(targetAmount, targetCurrency))}
-          </div>
-
-          <div style="display:grid;gap:10px;">
-            ${list.length ? list.map((tx, index) => {
-              const checked = index === 0 ? "checked" : "";
-              const label = tx.label || _tripT("trip.match.none_label");
-              const wallet = _tripTxWalletName(tx.wallet_id || tx.walletId);
-              const category = [tx.category || "—", tx.subcategory || ""].filter(Boolean).join(" / ");
-              const dates = tx.date_start === tx.date_end ? tx.date_start : `${tx.date_start || "—"} → ${tx.date_end || tx.date_start || "—"}`;
-              const sameDate = String(tx.date_start || "") === targetDate;
-              const sameAmount = Math.abs(Number(tx.amount || 0) - targetAmount) < 0.005;
-
-              return `
-                <label style="display:grid;grid-template-columns:auto 1fr;gap:10px;border:1px solid rgba(15,23,42,.12);border-radius:16px;padding:12px;background:${index === 0 ? "rgba(59,130,246,.06)" : "rgba(255,255,255,.78)"};cursor:pointer;">
-                  <input type="radio" name="trip-match-tx" value="${escapeHTML(tx.id)}" ${checked} style="margin-top:4px;" />
-                  <span>
-                    <span style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
-                      <strong>${escapeHTML(label)}</strong>
-                      <strong>${escapeHTML(_fmtMoney(Number(tx.amount || 0), tx.currency || ""))}</strong>
-                    </span>
-
-                    <span class="muted" style="display:block;margin-top:4px;font-size:12px;">
-                      ${escapeHTML(_tripTxMatchSubtitle(tx))}
-                    </span>
-
-                    <span style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:9px;font-size:12px;color:#475569;">
-                      <span>Wallet : <b>${escapeHTML(wallet)}</b></span>
-                      <span>Catégorie : <b>${escapeHTML(category)}</b></span>
-                      <span>Date : <b>${escapeHTML(dates)}</b></span>
-                      <span>Montant : <b>${escapeHTML(String(tx.amount || 0))} ${escapeHTML(tx.currency || "")}</b></span>
-                    </span>
-
-                    <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
-                      ${sameDate ? `<span class="pill" style="font-size:12px;">Même date</span>` : ""}
-                      ${sameAmount ? `<span class="pill" style="font-size:12px;">Même montant</span>` : ""}
-                      ${index === 0 ? `<span class="pill" style="font-size:12px;">Recommandé</span>` : ""}
-                    </span>
-                  </span>
-                </label>
-              `;
-            }).join("") : `
-              <div class="muted" style="padding:18px;border:1px dashed rgba(148,163,184,.35);border-radius:16px;">
-                Aucun résultat avec ces filtres.
-              </div>
-            `}
-          </div>
-
-          <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:16px;">
-            <button type="button" class="btn" data-trip-match-new>Créer une nouvelle transaction</button>
-            <button type="button" class="btn primary" data-trip-match-link ${list.length ? "" : "disabled"}>Lier la sélection</button>
-          </div>
-        </div>
-      `;
+      modal.innerHTML = window.UI?.tripView?.renderTripTransactionMatchContent?.({
+        rows: list,
+        query,
+        exactOnly,
+        targetDate,
+        targetAmount,
+        targetCurrency,
+        walletName: _tripTxWalletName,
+        matchSubtitle: _tripTxMatchSubtitle,
+        formatMoney: _fmtMoney,
+        escapeHTML,
+      }) || "";
 
       const search = modal.querySelector("#trip-match-search");
       if (search) {
@@ -1964,26 +1907,8 @@ function _ensureSettleModal() {
     size: "md",
     panelClass: "tb-trip-shared-modal tb-trip-settle-modal",
     title: "Règlement",
-    contentHTML: `
-      <div class="tb-trip-modal-form">
-        <div class="muted" id="tripSettleContext"></div>
-        <div class="field">
-          <label for="tripSettleWallet">Wallet</label>
-          <select id="tripSettleWallet" class="input"></select>
-          <div class="muted" id="tripSettleWalletNote"></div>
-        </div>
-        <div class="field">
-          <label for="tripSettleCurrency">Devise transaction</label>
-          <select id="tripSettleCurrency" class="input"></select>
-        </div>
-        <div class="field">
-          <label for="tripSettleAmount">Montant dans la devise choisie</label>
-          <input id="tripSettleAmount" class="input" type="number" step="0.01" />
-        </div>
-      </div>`,
-    actionsHTML: `
-      <button id="tripSettleOnly" class="btn" type="button">Régler sans wallet</button>
-      <button id="tripSettleConfirm" class="btn primary" type="button">Valider</button>`,
+    contentHTML: window.UI?.tripView?.renderTripSettlementModalContent?.({ escapeHTML }) || "",
+    actionsHTML: window.UI?.tripView?.renderTripSettlementModalActions?.({ escapeHTML }) || "",
     initialFocus: "#tripSettleWallet",
     closeLabel: "Fermer",
     onClose(){ _settleModalState = null; }

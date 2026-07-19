@@ -23,9 +23,9 @@ describe('Trip shared modal migration', () => {
     expect(source).toContain('initialFocus: "#trip-match-search"');
     expect(source).toContain('initialFocus: "#tripSettleWallet"');
     expect(source).toContain('initialFocus: "#trip-exp-label"');
-    expect(source).toContain('for="tripSettleWallet"');
-    expect(source).toContain('for="tripSettleCurrency"');
-    expect(source).toContain('for="tripSettleAmount"');
+    expect(tripView).toContain('for="tripSettleWallet"');
+    expect(tripView).toContain('for="tripSettleCurrency"');
+    expect(tripView).toContain('for="tripSettleAmount"');
   });
 
   it('keeps the visible amount mode while delegating smart remaining split to rules', () => {

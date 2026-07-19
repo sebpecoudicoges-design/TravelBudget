@@ -199,6 +199,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire les corps des modales Creation voyage et Creation periode Settings vers `settingsView.js`.
   - [x] Extraire les etats Reference budget Settings : hors ligne, synchronisation et indisponible passent dans `settingsView.js`.
   - [x] Extraire le cockpit programme Sport : semaine A/B, charges prevues, progression et reglages recurrence passent dans `sportProgramView.js`.
+  - [x] Extraire les fenetres Trip matching transaction et reglement : contenus et actions passent dans `tripView.js`.
   - [x] Supprimer les helpers Settings morts : wrappers panneaux obsoletes, sauvegarde nom voyage inutilisee, resume/skeleton budget reference.
   - [x] Demarrer l'extraction Dashboard : le rendu onboarding quitte `12_dashboard_render.js` vers `dashboardView.js`.
   - [x] Demarrer l'extraction Analyse : l'overview de lecture quitte `33_budget_analysis.js` vers `analysisView.js`.

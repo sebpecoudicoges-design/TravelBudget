@@ -6,9 +6,9 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.231`.
+- Version à valider : `10.5.232`.
 - Bilan : 8 parcours `ok`, 2 parcours `à faire`.
-- Retour corrigé à revalider : Sport doit garder le meme cockpit programme/planning A/B apres extraction de la vue, avec boutons lancer/charger et reglages recurrence actifs.
+- Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
 - Les 29 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
 - Consigner les anomalies et retours détaillés dans `docs/ADMIN_TEST_RETURNS.md`.
@@ -29,6 +29,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 10 | 10.5.228, 10.5.231 | Trip + Sport | Ouvrir Trip > Analyse et vérifier les barres catégories/participants. Puis ouvrir Sport, créer ou modifier une séance libre/programmée, ouvrir les sélecteurs objectif, niveau, famille, durée, format, matériel et exercice. Vérifier aussi le cockpit planning A/B : bouton **Lancer aujourd'hui**, **Préparer**, semaine planifiée et réglages de récurrence. | Les barres Trip gardent les mêmes montants, couleurs et libellés. Les listes Sport sont remplies, sélectionnables et échappent les libellés spéciaux. Le planning A/B conserve les bonnes séances, charges, repos et actions. | `TB BUILD 10.5.231` ; aucun `Uncaught`, aucun module `tripView`, `sportFormView` ou `sportProgramView` manquant. | à faire |
 | 11 | 10.5.229 | Alimentation : synchro locale | Simuler ou conserver un ajout alimentation en attente, ouvrir Alimentation, puis utiliser **Synchroniser**, **Vider** ou **Supprimer** sur une ligne locale. | Le panneau d'attente s'affiche avec le bon nombre d'ajouts, les erreurs restent lisibles et les actions répondent sans bloquer la saisie. | `TB BUILD 10.5.229` ; aucun `Uncaught`, aucun module `nutritionView` manquant. | à faire |
 | 12 | 10.5.230 | Alimentation + Réglages | Ouvrir Alimentation, changer la date, modifier l'objectif nutrition, ajouter eau/aliment et ouvrir la timeline. Puis ouvrir Réglages > Voyage avec ou sans réseau et vérifier le bloc Référence budget. | Le shell Alimentation reste identique et tous les boutons/champs répondent. Référence budget affiche un état hors ligne, synchronisation ou erreur sans alerte brute ni HTML cassé. | `TB BUILD 10.5.230` ; aucun `Uncaught`, aucun module `nutritionView` ou `TBSettingsView` manquant. | à faire |
+| 13 | 10.5.232 | Trip : matching et règlement | Dans Trip, créer une dépense proche d'une transaction existante pour ouvrir la fenêtre de matching, utiliser recherche, décocher **Match exact date + montant**, puis annuler ou lier. Ouvrir ensuite un règlement suggéré et vérifier wallet, devise, montant, **Régler sans wallet** et **Valider**. | La recherche garde le focus, la liste se met à jour, les boutons lier/créer répondent. La fenêtre règlement conserve les champs et actions, sans changer les écritures wallet/settlement. | `TB BUILD 10.5.232` ; aucun `Uncaught`, aucun module `tripView` manquant. | à faire |
 
 ## À ajouter à chaque livraison
 

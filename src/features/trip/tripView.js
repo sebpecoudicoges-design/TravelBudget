@@ -74,6 +74,116 @@ export function renderTripLinkAuditCard({
 <div class="card trip-link-audit-card"><div class="trip-link-audit-card-row"><div><h2>${escapeHTML(title)}</h2><div class="muted">${escapeHTML(body)}</div></div><span class="trip-badge">${escapeHTML(String(n))}</span></div></div>`;
 }
 
+export function renderTripTransactionMatchContent({
+  rows,
+  query = '',
+  exactOnly = true,
+  targetDate = '',
+  targetAmount = 0,
+  targetCurrency = '',
+  walletName = () => 'Wallet',
+  matchSubtitle = () => '',
+  formatMoney = (amount, currency) => `${amount} ${currency || ''}`.trim(),
+  escapeHTML = fallbackEscape,
+}) {
+  const list = Array.isArray(rows) ? rows : [];
+  return `
+        <div class="tb-trip-match-layout">
+          <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:12px;">
+            <div>
+              <label class="muted" style="display:block;font-size:12px;margin-bottom:4px;">Recherche</label>
+              <input id="trip-match-search" class="input" type="search" value="${escapeHTML(query)}" placeholder="Libellé, catégorie, wallet, montant…" style="width:100%;" />
+            </div>
+
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;">
+              <input id="trip-match-exact" type="checkbox" ${exactOnly ? 'checked' : ''} />
+              Match exact date + montant
+            </label>
+          </div>
+
+          <div class="muted" style="font-size:12px;margin-bottom:10px;">
+            Dépense Trip : ${escapeHTML(targetDate || '—')} · ${escapeHTML(formatMoney(targetAmount, targetCurrency))}
+          </div>
+
+          <div style="display:grid;gap:10px;">
+            ${list.length ? list.map((tx, index) => {
+              const checked = index === 0 ? 'checked' : '';
+              const label = tx.label || 'Sans libellé';
+              const wallet = walletName(tx.wallet_id || tx.walletId);
+              const category = [tx.category || '—', tx.subcategory || ''].filter(Boolean).join(' / ');
+              const dates = tx.date_start === tx.date_end ? tx.date_start : `${tx.date_start || '—'} → ${tx.date_end || tx.date_start || '—'}`;
+              const sameDate = String(tx.date_start || '') === String(targetDate || '');
+              const sameAmount = Math.abs(Number(tx.amount || 0) - Number(targetAmount || 0)) < 0.005;
+
+              return `
+                <label style="display:grid;grid-template-columns:auto 1fr;gap:10px;border:1px solid rgba(15,23,42,.12);border-radius:16px;padding:12px;background:${index === 0 ? 'rgba(59,130,246,.06)' : 'rgba(255,255,255,.78)'};cursor:pointer;">
+                  <input type="radio" name="trip-match-tx" value="${escapeHTML(tx.id)}" ${checked} style="margin-top:4px;" />
+                  <span>
+                    <span style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+                      <strong>${escapeHTML(label)}</strong>
+                      <strong>${escapeHTML(formatMoney(Number(tx.amount || 0), tx.currency || ''))}</strong>
+                    </span>
+
+                    <span class="muted" style="display:block;margin-top:4px;font-size:12px;">
+                      ${escapeHTML(matchSubtitle(tx))}
+                    </span>
+
+                    <span style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:9px;font-size:12px;color:#475569;">
+                      <span>Wallet : <b>${escapeHTML(wallet)}</b></span>
+                      <span>Catégorie : <b>${escapeHTML(category)}</b></span>
+                      <span>Date : <b>${escapeHTML(dates)}</b></span>
+                      <span>Montant : <b>${escapeHTML(String(tx.amount || 0))} ${escapeHTML(tx.currency || '')}</b></span>
+                    </span>
+
+                    <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+                      ${sameDate ? '<span class="pill" style="font-size:12px;">Même date</span>' : ''}
+                      ${sameAmount ? '<span class="pill" style="font-size:12px;">Même montant</span>' : ''}
+                      ${index === 0 ? '<span class="pill" style="font-size:12px;">Recommandé</span>' : ''}
+                    </span>
+                  </span>
+                </label>
+              `;
+            }).join('') : `
+              <div class="muted" style="padding:18px;border:1px dashed rgba(148,163,184,.35);border-radius:16px;">
+                Aucun résultat avec ces filtres.
+              </div>
+            `}
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:16px;">
+            <button type="button" class="btn" data-trip-match-new>Créer une nouvelle transaction</button>
+            <button type="button" class="btn primary" data-trip-match-link ${list.length ? '' : 'disabled'}>Lier la sélection</button>
+          </div>
+        </div>
+      `;
+}
+
+export function renderTripSettlementModalContent({ escapeHTML = fallbackEscape } = {}) {
+  return `
+      <div class="tb-trip-modal-form">
+        <div class="muted" id="tripSettleContext"></div>
+        <div class="field">
+          <label for="tripSettleWallet">${escapeHTML('Wallet')}</label>
+          <select id="tripSettleWallet" class="input"></select>
+          <div class="muted" id="tripSettleWalletNote"></div>
+        </div>
+        <div class="field">
+          <label for="tripSettleCurrency">${escapeHTML('Devise transaction')}</label>
+          <select id="tripSettleCurrency" class="input"></select>
+        </div>
+        <div class="field">
+          <label for="tripSettleAmount">${escapeHTML('Montant dans la devise choisie')}</label>
+          <input id="tripSettleAmount" class="input" type="number" step="0.01" />
+        </div>
+      </div>`;
+}
+
+export function renderTripSettlementModalActions({ escapeHTML = fallbackEscape } = {}) {
+  return `
+      <button id="tripSettleOnly" class="btn" type="button">${escapeHTML('Régler sans wallet')}</button>
+      <button id="tripSettleConfirm" class="btn primary" type="button">${escapeHTML('Valider')}</button>`;
+}
+
 export function renderTripAnalysisBars({
   data,
   pivotCurrency,
