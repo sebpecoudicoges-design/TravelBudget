@@ -2720,10 +2720,22 @@ async function moveSubcategory(id, direction) {
 
 async function toggleSubcategoryActive(id, nextActive) {
   return safeCall("Toggle subcategory", async () => {
+    const activeDraft = window.TBSettingsCategoriesView?.prepareSubcategoryActiveDraft?.({
+      id,
+      nextActive,
+    });
+    if (activeDraft && !activeDraft.ok) {
+      _settingsValidationNotice(activeDraft.reason || 'Sous-catégorie introuvable.');
+      return;
+    }
+    if (!activeDraft) {
+      _settingsValidationNotice('Module catégories indisponible.');
+      return;
+    }
     const { error } = await sb
       .from(TB_CONST.TABLES.category_subcategories)
-      .update({ is_active: !!nextActive, updated_at: new Date().toISOString() })
-      .eq('id', id)
+      .update(activeDraft.payload)
+      .eq('id', activeDraft.id)
       .eq('user_id', sbUser.id);
     if (error) throw error;
     await refreshFromServer();

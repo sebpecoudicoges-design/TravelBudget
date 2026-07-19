@@ -43,6 +43,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareSubcategoryImportDraft');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareSubcategoryCreateDraft');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareSubcategoryMoveDraft');
+    expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareSubcategoryActiveDraft');
     expect(legacy).not.toContain('const cards = Array.from(view.querySelectorAll');
     expect(legacy).not.toContain('box.innerHTML = `');
     expect(legacy).not.toContain('const readNotificationForm = () =>');
@@ -65,6 +66,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('existingRows.reduce');
     expect(legacy).not.toContain('const swapIndex = direction ===');
     expect(legacy).not.toContain('const updates = ordered.map');
+    expect(legacy).not.toContain('.update({ is_active: !!nextActive, updated_at: new Date().toISOString() })');
     expect(legacy).toContain('function _settingsValidationNotice');
     expect(legacy).not.toContain('if (typeof window.toastWarn === "function")');
     expect(legacy).not.toContain('if (typeof window.toastInfo === "function")');

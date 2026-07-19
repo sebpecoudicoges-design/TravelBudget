@@ -25,6 +25,7 @@ import {
   prepareSubcategoryCreateDraft,
   prepareSubcategoryImportDraft,
   prepareSubcategoryMoveDraft,
+  prepareSubcategoryActiveDraft,
   prepareSubcategoryEditDraft,
   validateCategoryDraft,
   validateSubcategoryDraft,
@@ -676,6 +677,41 @@ describe('Settings view helpers', () => {
         { id: 'sub-2', name: 'Lunch', sort_order: 10, sortOrder: 10 },
         { name: 'Detected only' },
       ],
+    });
+  });
+
+  it('prepares subcategory active payloads before legacy writes', () => {
+    expect(prepareSubcategoryActiveDraft({ id: '' })).toEqual({
+      ok: false,
+      reason: 'Sous-catégorie introuvable.',
+    });
+
+    expect(prepareSubcategoryActiveDraft({
+      id: ' sub-1 ',
+      nextActive: true,
+      now: () => '2026-07-19T05:00:00.000Z',
+    })).toEqual({
+      ok: true,
+      reason: '',
+      id: 'sub-1',
+      payload: {
+        is_active: true,
+        updated_at: '2026-07-19T05:00:00.000Z',
+      },
+    });
+
+    expect(prepareSubcategoryActiveDraft({
+      id: 'sub-1',
+      nextActive: 0,
+      now: () => '2026-07-19T05:30:00.000Z',
+    })).toEqual({
+      ok: true,
+      reason: '',
+      id: 'sub-1',
+      payload: {
+        is_active: false,
+        updated_at: '2026-07-19T05:30:00.000Z',
+      },
     });
   });
 

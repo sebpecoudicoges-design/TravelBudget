@@ -324,6 +324,24 @@ export function prepareSubcategoryMoveDraft({
   };
 }
 
+export function prepareSubcategoryActiveDraft({
+  id = '',
+  nextActive = false,
+  now = () => new Date().toISOString(),
+} = {}) {
+  const cleanId = String(id || '').trim();
+  if (!cleanId) return { ok: false, reason: 'Sous-catégorie introuvable.' };
+  return {
+    ok: true,
+    reason: '',
+    id: cleanId,
+    payload: {
+      is_active: !!nextActive,
+      updated_at: now(),
+    },
+  };
+}
+
 export function validateSubcategoryDraft({
   category = '',
   name = '',
