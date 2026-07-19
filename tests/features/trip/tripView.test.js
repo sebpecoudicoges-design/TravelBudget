@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   renderPendingTripInvites,
+  renderTripManagementCard,
   renderTripTabs,
   renderTripContextHelp,
   renderTripExpenseForm,
@@ -28,6 +29,55 @@ describe('Trip view', () => {
     expect(html).toContain('&lt;Road trip&gt;');
     expect(html).toContain('data-accept-pending-invite="token-1"');
     expect(html).toContain('proprietaire');
+  });
+
+  it('renders the Trip management card with stable controls and escaped members', () => {
+    const html = renderTripManagementCard({
+      title: '<Trip>',
+      members: [
+        { id: 'seb', name: 'Seb', email: 'seb@example.com', isMe: true },
+        { id: 'alex', name: '<Alex>', email: '' },
+      ],
+      tripOptions: '<option value="trip-1">Road</option>',
+      tripStatusHTML: '<span class="trip-badge">ok</span>',
+      trip: { id: 'trip-1' },
+      tripClosed: false,
+      myRole: 'owner',
+      canWrite: true,
+      isMobile: false,
+      labels: {
+        quickAddExpense: '+ Shared expense',
+        manageSummary: 'Manage split',
+        activeTrip: 'Active trip',
+        newTrip: 'New trip',
+        createTrip: 'Create',
+        delete: 'Delete',
+        closeInline: 'Close / freeze',
+        participants: 'Participants',
+        memberName: 'Name',
+        memberEmail: 'Email',
+        addMember: 'Add',
+        resendInvite: 'Resend invite',
+        renameMember: 'Rename',
+        pendingInvite: 'pending invitation',
+      },
+    });
+
+    expect(html).toContain('&lt;Trip&gt;');
+    expect(html).toContain('&lt;Alex&gt;');
+    expect(html).toContain('id="trip-active"');
+    expect(html).toContain('id="trip-new-name"');
+    expect(html).toContain('id="trip-create"');
+    expect(html).toContain('id="trip-delete"');
+    expect(html).toContain('id="trip-close"');
+    expect(html).toContain('id="trip-member-name"');
+    expect(html).toContain('id="trip-member-email"');
+    expect(html).toContain('id="trip-add-member"');
+    expect(html).toContain('data-trip-open-add-exp');
+    expect(html).toContain('data-resend-invite="alex"');
+    expect(html).toContain('data-rename-member="alex"');
+    expect(html).toContain('data-del-member="alex"');
+    expect(html).not.toContain('onclick=');
   });
 
   it('does not render an invitation block without valid rows', () => {

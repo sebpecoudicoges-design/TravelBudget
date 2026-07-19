@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.235`.
-- Bilan : 7 parcours `ok`, 9 parcours `à faire`.
+- Version à valider : `10.5.236`.
+- Bilan : 7 parcours `ok`, 10 parcours `à faire`.
 - Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
 - Les 29 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -33,6 +33,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 14 | 10.5.233 | Trip mobile : dépense partagée | Sur Android/mobile, ouvrir Partage puis **+ Dépense partagée**. Saisir libellé, montant, devise, passer en split **Montant**, modifier plusieurs parts et ouvrir les options avancées. | La fenêtre occupe le format téléphone sans débordement horizontal, les champs restent pleine largeur, le tableau de split devient lisible en lignes empilées et le bouton d'ajout reste accessible en bas. | `TB BUILD 10.5.233` ; aucun `Uncaught`, aucun scroll horizontal dans la modale. | à faire |
 | 15 | 10.5.234 | Trip : détail dépense + lazy domaines | Dans Partage, ouvrir l'historique puis le détail d'une dépense liée à une transaction budget/wallet. Sur mobile, vérifier Répartition et Liens budget, puis ouvrir une transaction depuis le détail. Ouvrir aussi Travail et Patrimoine après chargement frais. | Le détail affiche total, parts, cohérence, liens wallet/budget et audit. Les boutons **Ouvrir transaction** répondent. Travail et Patrimoine chargent leurs vues sans écran bloqué. | `TB BUILD 10.5.234` ; aucun `Uncaught`, aucun `onclick` inline régressif, aucun module `tripExpenseDetailView`, `workView` ou `assetView` manquant. | à faire |
 | 16 | 10.5.235 | Trip : documents de dépense | Dans Partage, ouvrir une dépense, puis la fenêtre Documents. Rechercher un document existant, changer le type de relation, fermer sans lier, puis rouvrir. | La fenêtre Documents s'affiche comme avant, les documents liés et supprimés restent lisibles, les boutons **Ouvrir**, **Délier**, **Lier** et **+ Ajouter un document** restent présents. | `TB BUILD 10.5.235` ; aucun `Uncaught`, aucun chargement réseau de `29_trip_document_view.js`, aucun module `tripDocumentView` manquant. | à faire |
+| 17 | 10.5.236 | Trip : gestion du partage | Dans Partage, ouvrir le panneau **Gérer le partage**. Changer le voyage actif si possible, tenter de créer puis annuler/supprimer un voyage de test, ajouter un participant de test puis utiliser renommer, renvoyer invitation et supprimer. | Le panneau conserve les mêmes champs, boutons et participants. Les actions répondent comme avant, les participants restent visibles sur mobile et desktop. | `TB BUILD 10.5.236` ; aucun `Uncaught`, aucun module `tripView` manquant, aucun bouton `trip-active`, `trip-create`, `trip-add-member` ou `data-resend-invite` absent. | à faire |
 
 ## À ajouter à chaque livraison
 

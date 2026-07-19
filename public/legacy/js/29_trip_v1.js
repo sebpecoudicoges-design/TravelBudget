@@ -4274,11 +4274,39 @@ return `
     const editExpenseModalHTML = (editingExpenseId || addExpenseOpen)
       ? _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal: true })
       : "";
-    const memberPillsHTML = members.length
-      ? `<div class="trip-mobile-member-pills">${members.map(m => `<span class="trip-participant-pill">${escapeHTML(m.name)}${m.isMe ? ` · ${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "me" : "moi")}` : ""}</span>`).join("")}</div>`
-      : `<div class="muted">Aucun participant.</div>`;
-    const tripManageSummary = escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Manage split" : "Gerer le partage");
     const tripQuickAddLabel = escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "+ Shared expense" : "+ Depense partagee");
+    const tripManagementHTML = window.UI?.tripView?.renderTripManagementCard?.({
+      title: _tripT("trip.title"),
+      members,
+      tripOptions,
+      tripStatusHTML,
+      trip,
+      tripClosed,
+      myRole,
+      canWrite,
+      isMobile: isTripMobileApp,
+      labels: {
+        me: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "me" : "moi",
+        mePill: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Me" : "Moi",
+        noParticipants: "Aucun participant.",
+        quickAddExpense: tripQuickAddLabel,
+        manageSummary: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Manage split" : "Gerer le partage",
+        activeTrip: _tripT("trip.active"),
+        newTrip: _tripT("trip.new"),
+        createTrip: _tripT("trip.create"),
+        delete: _tripT("trip.delete"),
+        reopenInline: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Reopen / unfreeze" : "Reouvrir / defiger",
+        closeInline: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Close / freeze" : "Clore / figer",
+        participants: _tripT("trip.participants"),
+        memberName: _tripT("trip.member.name"),
+        memberEmail: _tripT("trip.member.email"),
+        addMember: _tripT("trip.member.add"),
+        pendingInvite: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "pending invitation" : "invitation en attente",
+        resendInvite: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Resend invite" : "Renvoyer invitation",
+        renameMember: _tripT("trip.member.rename"),
+      },
+      escapeHTML,
+    }) || "";
 
     root.innerHTML = `
       ${globalNetHTML}
@@ -4293,74 +4321,7 @@ return `
         </div>
       </div>` : ""}
       <div class="grid">
-        <div class="card">
-          <div class="trip-mobile-title-row">
-            <div>
-              <h2>${escapeHTML(_tripT("trip.title"))}</h2>
-              ${memberPillsHTML}
-            </div>
-            <button class="btn primary trip-mobile-add-expense" type="button" data-trip-open-add-exp ${trip && canWrite ? "" : "disabled"}>${tripQuickAddLabel}</button>
-          </div>
-          <details class="trip-manage-panel" ${isTripMobileApp ? "" : "open"}>
-            <summary>${tripManageSummary}</summary>
-          <div class="row" style="margin-bottom:10px;">
-            <div class="field" style="min-width:260px;">
-              <label>${escapeHTML(_tripT("trip.active"))}</label>
-              <select id="trip-active">${tripOptions || ""}</select>
-              ${tripStatusHTML}
-            </div>
-            <div class="field" style="flex:1;">
-              <label>${escapeHTML(_tripT("trip.new"))}</label>
-              <input id="trip-new-name" placeholder="Ex: Laos" />
-            </div>
-            <div class="field" style="align-self:flex-end;">
-              <button class="btn primary" id="trip-create">${escapeHTML(_tripT("trip.create"))}</button>
-            </div>
-            <div class="field" style="align-self:flex-end;">
-              <button class="btn danger" id="trip-delete" ${trip ? "" : "disabled"}>${escapeHTML(_tripT("trip.delete"))}</button>
-            </div>
-            <div class="field" style="align-self:flex-end;">
-              ${tripClosed
-                ? `<button class="btn" id="trip-reopen-inline" ${trip && myRole !== "viewer" ? "" : "disabled"}>${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Reopen / unfreeze" : "Reouvrir / defiger")}</button>`
-                : `<button class="btn" id="trip-close" ${trip && myRole !== "viewer" ? "" : "disabled"}>${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Close / freeze" : "Clore / figer")}</button>`}
-            </div>
-          </div>
-
-          <h2 style="margin-top:14px;">${escapeHTML(_tripT("trip.participants"))}</h2>
-          <div class="row" style="margin-bottom:10px;">
-            <div class="field" style="flex:1;">
-              <label>${escapeHTML(_tripT("trip.member.name"))}</label>
-              <input id="trip-member-name" placeholder="Ex: Paul" />
-            </div>
-            <div class="field" style="min-width:240px;">
-              <label>${escapeHTML(_tripT("trip.member.email"))}</label>
-              <input id="trip-member-email" placeholder="ex: paul@email.com" />
-            </div>
-            <div class="field" style="align-self:flex-end;">
-              <button class="btn" id="trip-add-member" ${trip && !tripClosed ? "" : "disabled"}>${escapeHTML(_tripT("trip.member.add"))}</button>
-            </div>
-          </div>
-
-          <div id="trip-members-list">
-            ${members.length ? members.map(m => `
-              <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.04); gap:12px;">
-                <div style="min-width:0;">
-                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <strong>${escapeHTML(m.name)}</strong>
-                    ${m.isMe ? `<span class="pill" style="font-size:12px;">Moi</span>` : ``}
-                  </div>
-                  <div class="muted" style="font-size:12px; ${m.isMe ? "font-weight:600;" : ""}">
-                    ${m.email ? escapeHTML(m.email) : `<em>invitation en attente</em>`}
-                  </div>
-                </div>
-                ${canWrite && !m.isMe ? `<button class="btn" type="button" data-resend-invite="${m.id}">${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Resend invite" : "Renvoyer invitation")}</button>` : ``}
-                ${canWrite ? `<button class="btn" type="button" data-rename-member="${m.id}">${escapeHTML(_tripT("trip.member.rename"))}</button>` : ``}
-                ${canWrite ? `<button class="btn danger" data-del-member="${m.id}">${escapeHTML(_tripT("trip.delete"))}</button>` : ``}
-              </div>
-            `).join("") : `<div class="muted">Aucun participant.</div>`}
-          </div>
-          </details>
-        </div>
+        ${tripManagementHTML}
 
         ${editingExpenseId
           ? `<div class="card"><h2>${escapeHTML(_tripT("trip.expense"))}</h2><div class="muted">${escapeHTML(_tripT("trip.expense.quick_hint"))}</div></div>`

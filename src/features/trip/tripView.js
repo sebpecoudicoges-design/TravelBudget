@@ -18,6 +18,103 @@ export function renderPendingTripInvites({ invites, language = 'fr', escapeHTML 
 <div class="card" style="margin-bottom:12px;border-color:rgba(59,130,246,.35);background:rgba(59,130,246,.08);"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div><h2 style="margin:0 0 6px 0;">${escapeHTML(en ? 'Pending Trip invitation' : 'Invitation Trip en attente')}</h2><div class="muted">${escapeHTML(en ? 'You have been invited to join a shared trip.' : 'Tu as une invitation pour rejoindre un partage Trip.')}</div></div><span class="trip-badge">${rows.length}</span></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">${rows.map((invite) => `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;"><div><strong>${escapeHTML(invite.tripName)}</strong><div class="muted" style="font-size:12px;">${escapeHTML(en ? 'Invited by' : 'Invité par')} ${escapeHTML(invite.inviterName || invite.inviterEmail || 'TravelBudget')} &middot; ${escapeHTML(en ? 'as' : 'en tant que')} ${escapeHTML(invite.memberName)} &middot; ${escapeHTML(roleLabel(invite.role))}</div></div><button class="btn primary" type="button" data-accept-pending-invite="${escapeHTML(invite.token)}">${escapeHTML(en ? 'Join' : 'Rejoindre')}</button></div>`).join('')}</div></div>`;
 }
 
+export function renderTripManagementCard({
+  title = 'Trip',
+  members,
+  tripOptions = '',
+  tripStatusHTML = '',
+  trip,
+  tripClosed = false,
+  myRole = 'viewer',
+  canWrite = false,
+  isMobile = false,
+  labels = {},
+  escapeHTML = fallbackEscape,
+}) {
+  const rows = Array.isArray(members) ? members : [];
+  const txt = (key, fallback) => labels[key] || fallback;
+  const canManageTrip = trip && myRole !== 'viewer';
+  const memberPillsHTML = rows.length
+    ? `<div class="trip-mobile-member-pills">${rows.map((member) => `<span class="trip-participant-pill">${escapeHTML(member?.name || '—')}${member?.isMe ? ` · ${escapeHTML(txt('me', 'moi'))}` : ''}</span>`).join('')}</div>`
+    : `<div class="muted">${escapeHTML(txt('noParticipants', 'Aucun participant.'))}</div>`;
+  const memberRowsHTML = rows.length
+    ? rows.map((member) => {
+      const id = String(member?.id || '');
+      return `
+              <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.04); gap:12px;">
+                <div style="min-width:0;">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <strong>${escapeHTML(member?.name || '—')}</strong>
+                    ${member?.isMe ? `<span class="pill" style="font-size:12px;">${escapeHTML(txt('mePill', 'Moi'))}</span>` : ''}
+                  </div>
+                  <div class="muted" style="font-size:12px; ${member?.isMe ? 'font-weight:600;' : ''}">
+                    ${member?.email ? escapeHTML(member.email) : `<em>${escapeHTML(txt('pendingInvite', 'invitation en attente'))}</em>`}
+                  </div>
+                </div>
+                ${canWrite && !member?.isMe ? `<button class="btn" type="button" data-resend-invite="${escapeHTML(id)}">${escapeHTML(txt('resendInvite', 'Renvoyer invitation'))}</button>` : ''}
+                ${canWrite ? `<button class="btn" type="button" data-rename-member="${escapeHTML(id)}">${escapeHTML(txt('renameMember', 'Renommer'))}</button>` : ''}
+                ${canWrite ? `<button class="btn danger" type="button" data-del-member="${escapeHTML(id)}">${escapeHTML(txt('delete', 'Supprimer'))}</button>` : ''}
+              </div>
+            `;
+    }).join('')
+    : `<div class="muted">${escapeHTML(txt('noParticipants', 'Aucun participant.'))}</div>`;
+
+  return `
+        <div class="card">
+          <div class="trip-mobile-title-row">
+            <div>
+              <h2>${escapeHTML(title)}</h2>
+              ${memberPillsHTML}
+            </div>
+            <button class="btn primary trip-mobile-add-expense" type="button" data-trip-open-add-exp ${trip && canWrite ? '' : 'disabled'}>${escapeHTML(txt('quickAddExpense', '+ Depense partagee'))}</button>
+          </div>
+          <details class="trip-manage-panel" ${isMobile ? '' : 'open'}>
+            <summary>${escapeHTML(txt('manageSummary', 'Gerer le partage'))}</summary>
+            <div class="row" style="margin-bottom:10px;">
+              <div class="field" style="min-width:260px;">
+                <label>${escapeHTML(txt('activeTrip', 'Voyage actif'))}</label>
+                <select id="trip-active">${tripOptions || ''}</select>
+                ${tripStatusHTML || ''}
+              </div>
+              <div class="field" style="flex:1;">
+                <label>${escapeHTML(txt('newTrip', 'Nouveau voyage'))}</label>
+                <input id="trip-new-name" placeholder="${escapeHTML(txt('newTripPlaceholder', 'Ex: Laos'))}" />
+              </div>
+              <div class="field" style="align-self:flex-end;">
+                <button class="btn primary" id="trip-create" type="button">${escapeHTML(txt('createTrip', 'Creer'))}</button>
+              </div>
+              <div class="field" style="align-self:flex-end;">
+                <button class="btn danger" id="trip-delete" type="button" ${trip ? '' : 'disabled'}>${escapeHTML(txt('delete', 'Supprimer'))}</button>
+              </div>
+              <div class="field" style="align-self:flex-end;">
+                ${tripClosed
+                  ? `<button class="btn" id="trip-reopen-inline" type="button" ${canManageTrip ? '' : 'disabled'}>${escapeHTML(txt('reopenInline', 'Reouvrir / defiger'))}</button>`
+                  : `<button class="btn" id="trip-close" type="button" ${canManageTrip ? '' : 'disabled'}>${escapeHTML(txt('closeInline', 'Clore / figer'))}</button>`}
+              </div>
+            </div>
+
+            <h2 style="margin-top:14px;">${escapeHTML(txt('participants', 'Participants'))}</h2>
+            <div class="row" style="margin-bottom:10px;">
+              <div class="field" style="flex:1;">
+                <label>${escapeHTML(txt('memberName', 'Nom'))}</label>
+                <input id="trip-member-name" placeholder="${escapeHTML(txt('memberNamePlaceholder', 'Ex: Paul'))}" />
+              </div>
+              <div class="field" style="min-width:240px;">
+                <label>${escapeHTML(txt('memberEmail', 'Email'))}</label>
+                <input id="trip-member-email" placeholder="${escapeHTML(txt('memberEmailPlaceholder', 'ex: paul@email.com'))}" />
+              </div>
+              <div class="field" style="align-self:flex-end;">
+                <button class="btn" id="trip-add-member" type="button" ${trip && !tripClosed ? '' : 'disabled'}>${escapeHTML(txt('addMember', 'Ajouter'))}</button>
+              </div>
+            </div>
+
+            <div id="trip-members-list">
+              ${memberRowsHTML}
+            </div>
+          </details>
+        </div>`;
+}
+
 export function renderTripExpenseForm({
   editingExpenseId,
   editingDraft,
