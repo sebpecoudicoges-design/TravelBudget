@@ -544,6 +544,60 @@
     render();
   }
 
+  function _rrEnsureModal() {
+    let handle = null;
+    let title = "Modal";
+    let body = "";
+    let actions = [];
+    let initialFocus = "input:not([disabled]),select:not([disabled]),textarea:not([disabled])";
+    let closingProgrammatically = false;
+
+    return {
+      open() {
+        if (!window.UI?.createModal) throw new Error("Composant de fenetre indisponible.");
+        handle = window.UI.createModal({
+          id: "tb-recurring-shared-modal",
+          size: "lg",
+          panelClass: "tb-settings-shared-modal tb-recurring-shared-modal",
+          title,
+          contentHTML: `<div class="tb-settings-modal-form">${body}</div>`,
+          actionsHTML: actions.map((action, index) => `
+            <button class="${escapeHTML(action.className || "btn")}" type="button" data-tb-recurring-modal-action="${index}">${escapeHTML(action.label || "")}</button>
+          `).join(""),
+          initialFocus,
+          closeLabel: "Fermer",
+          onClose() {
+            handle = null;
+            closingProgrammatically = false;
+          }
+        });
+        handle.root.querySelectorAll("[data-tb-recurring-modal-action]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const action = actions[Number(button.dataset.tbRecurringModalAction)];
+            if (!action) return;
+            button.disabled = true;
+            try { await action.onClick?.(); }
+            catch (err) {
+              console.error(err);
+              _tbToastOk(err?.message || String(err));
+            } finally {
+              if (button.isConnected) button.disabled = false;
+            }
+          });
+        });
+      },
+      close() {
+        if (!handle) return;
+        closingProgrammatically = true;
+        handle.close();
+      },
+      setTitle(value) { title = String(value || "Modal"); },
+      setBody(html) { body = String(html || ""); },
+      setActions(buttons) { actions = Array.isArray(buttons) ? buttons : []; },
+      setInitialFocus(selector) { initialFocus = selector || initialFocus; }
+    };
+  }
+
   window.openRecurringRuleModal = async function openRecurringRuleModal(ruleToEdit) {
     const wallets = _rrWalletOptions();
     if (!wallets.length) throw new Error("Aucun wallet disponible sur le voyage actif.");
@@ -553,7 +607,7 @@
     const fetchedCats = await _rrCategoryOptions();
     const cats = Array.isArray(fetchedCats) ? fetchedCats.slice() : [];
     if (!cats.length) cats.push(...((state?.categories || []).map((c)=> typeof c === 'string' ? c : (c?.name || c?.label || c?.category || '')).filter(Boolean)));
-    const modal = (typeof _tbEnsureModal === "function") ? _tbEnsureModal() : null;
+    const modal = _rrEnsureModal();
     if (!modal) throw new Error("Modal indisponible.");
     const today = _tbISO(new Date());
     const defaults = _rrRuleToFormDefaults(ruleToEdit || null, String(wallets[0]?.currency || baseCur || "EUR").toUpperCase());

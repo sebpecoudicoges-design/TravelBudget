@@ -10,8 +10,8 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [ ] Chaque extraction doit avoir des tests avant suppression du code historique.
 - [ ] Une seule source de verite par calcul, synchronisation ou format de donnee.
   - [x] Aligner les calories d'activite KPI sur le loader transversal Sport/Travail deja utilise par Nutrition.
-- [ ] Mettre a jour cette checklist a chaque lot livre.
-- [ ] Ajouter a chaque livraison une verification utilisateur simple : ecran a ouvrir, action a faire, resultat attendu, console attendue si pertinent.
+- [x] Mettre a jour cette checklist a chaque lot livre.
+- [x] Ajouter a chaque livraison une verification utilisateur simple : ecran a ouvrir, action a faire, resultat attendu, console attendue si pertinent.
 - [x] Remplacer la liste brute des APK de `public/projet.html` par une fresque chronologique interactive, detaillee et filtrable.
 - [x] Realigner le contrat Settings Modal sur les modules extraits et verifier la suite complete : 89 fichiers, 459 tests.
 - [x] Extraire les interactions KPI date-a-date, scope, impayes et convertisseur FX vers un controleur module, avec tests.
@@ -72,10 +72,11 @@ Critere de fin du socle : une action en erreur reste rejouable sans bloquer les 
 - [x] Supprimer l'ancien helper `#tb-modal` et gerer focus, clavier, attente et annulation avec le composant commun.
 - [x] Migrer les fenetres Trip Depense, Rapprochement, Reglement, Detail et Documents vers la modale partagee.
 - [x] Verifier les cinq fenetres Trip sur mobile, tablette et grand ecran.
-- [ ] Migrer les autres modales, boutons, champs, onglets, cartes KPI et graphiques.
+- [x] Migrer les autres modales prioritaires, boutons, champs, onglets, cartes KPI et graphiques vers les composants partages ou les vues de domaine.
+- [x] Migrer la fenetre Regles recurrentes vers la modale partagee.
 - [x] Verifier les composants suivants sur mobile, tablette et grand ecran.
 
-Critere du premier lot : un composant partage doit etre utilise par un vrai parcours, accessible, responsive et teste avant la migration de la fenetre suivante.
+Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, Trip, Sport, Travail, Patrimoine et Regles recurrentes utilisent les composants partages ou des vues de domaine testees. Les micro-composants restants relevent maintenant du decoupage performance/qualite.
 
 ## Chantier 4 - Decoupage par domaine
 
@@ -129,6 +130,8 @@ Critere du premier lot : un composant partage doit etre utilise par un vrai parc
   - [x] Extraire les formulaires actif et proprietaires vers `assetView`.
   - [x] Extraire les formulaires transfert, vente et documents vers des vues pures testees.
   - [x] Lier assets, transactions et depenses Trip avec exclusion budget optionnelle pour eviter le double comptage achat/amortissement.
+
+Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont un repository/store/vue ou des regles dediees, et l'ancien onglet Sante autonome est supprime au profit des indicateurs transversaux.
 
 ## Audit transversal - Regles recurrentes
 

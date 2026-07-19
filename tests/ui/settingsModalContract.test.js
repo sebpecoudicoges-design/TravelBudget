@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('settings shared modal migration', () => {
   const source = fs.readFileSync('public/legacy/js/14_settings_periods_ui.js', 'utf8');
+  const recurringSource = fs.readFileSync('public/legacy/js/15_recurring_rules_ui.js', 'utf8');
   const settingsView = fs.readFileSync('src/features/settings/settingsView.js', 'utf8');
   const categoriesView = fs.readFileSync('src/features/settings/settingsCategoriesView.js', 'utf8');
 
@@ -20,6 +21,14 @@ describe('settings shared modal migration', () => {
     expect(source).toContain('modal.setTitle("Ajouter une période")');
     expect(source).toContain("modal.setTitle(defaults.title || 'Nouvelle catégorie')");
     expect(source).toContain('modal.setTitle(defaults.title || `Nouvelle sous-catégorie');
+  });
+
+  it('routes recurring rules through the shared modal component', () => {
+    expect(recurringSource).toContain('window.UI.createModal({');
+    expect(recurringSource).toContain('id: "tb-recurring-shared-modal"');
+    expect(recurringSource).toContain('data-tb-recurring-modal-action');
+    expect(recurringSource).toContain('const modal = _rrEnsureModal();');
+    expect(recurringSource).not.toContain('_tbEnsureModal()');
   });
 
   it('removes the legacy Settings backdrop and inline modal shell', () => {
