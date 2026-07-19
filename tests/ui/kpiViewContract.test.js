@@ -8,11 +8,13 @@ describe('KPI view extraction contract', () => {
   const module = fs.readFileSync('src/features/kpi/kpiView.js', 'utf8');
   const healthRules = fs.readFileSync('src/features/kpi/kpiHealthRules.js', 'utf8');
   const projectionRules = fs.readFileSync('src/features/kpi/kpiProjectionRules.js', 'utf8');
+  const cashRules = fs.readFileSync('src/features/kpi/kpiCashRules.js', 'utf8');
 
   it('exposes the KPI view module to the legacy runtime', () => {
     expect(main).toContain("import('./features/kpi/kpiView.js')");
     expect(main).toContain("import('./features/kpi/kpiHealthRules.js')");
     expect(main).toContain("import('./features/kpi/kpiProjectionRules.js')");
+    expect(main).toContain("import('./features/kpi/kpiCashRules.js')");
     expect(main).toContain("'/legacy/js/11_kpi_controller.js'");
     expect(main).not.toContain("import('./features/kpi/kpiController.js')");
     expect(main).toContain('async function ensureKpiView()');
@@ -21,9 +23,11 @@ describe('KPI view extraction contract', () => {
     expect(main).toContain('window.TBKpiView');
     expect(main).toContain('window.TBKpiHealthRules');
     expect(main).toContain('window.TBKpiProjectionRules');
+    expect(main).toContain('window.TBKpiCashRules');
     expect(main).toContain('...kpiView');
     expect(main).toContain('...kpiHealthRules');
     expect(main).toContain('...kpiProjectionRules');
+    expect(main).toContain('...kpiCashRules');
   });
 
   it('delegates KPI health and transaction rules to a tested module', () => {
@@ -48,6 +52,17 @@ describe('KPI view extraction contract', () => {
     expect(legacy).not.toContain('const grouped = new Map();');
     expect(legacy).not.toContain('const thresholds = { warn: 7, urgent: 4, critical: 2 };');
     expect(legacy).not.toContain('if (s.startsWith("range:"))');
+  });
+
+  it('delegates KPI cash runway and conservative cover rules to a tested module', () => {
+    expect(cashRules).toContain('export function cashRunwayInfo');
+    expect(cashRules).toContain('export function cashConservativeInfo');
+    expect(legacy).toContain('window.TBKpiCashRules?.cashRunwayInfo');
+    expect(legacy).toContain('window.TBKpiCashRules?.cashConservativeInfo');
+    expect(legacy).toContain('window.TBKpiCashRules?.sumCashWalletsBase');
+    expect(legacy).not.toContain('const cashWalletIds = new Set(cashWallets.map');
+    expect(legacy).not.toContain('let sumExpenseBase = 0;');
+    expect(legacy).not.toContain('let sumAllocated = 0;');
   });
 
   it('does not let the extracted KPI view block mobile boot', () => {

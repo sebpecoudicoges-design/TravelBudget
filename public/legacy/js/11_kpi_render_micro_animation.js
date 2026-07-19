@@ -461,9 +461,8 @@ function _toBaseForDate(amount, cur, dateISO) {
 // - Prefer explicit wallet.type === 'cash' (Option 2)
 // - Fallback: name contains "cash" (legacy)
 function _getCashWallets() {
-  const ws = (state.wallets || []);
-  // Strict and deterministic: cash KPI = wallets explicitly typed as cash.
-  return ws.filter(w => String(w?.type || "").toLowerCase() === "cash");
+  return window.TBKpiCashRules?.getCashWallets?.(state.wallets || [])
+    || (state.wallets || []).filter(w => String(w?.type || "").toLowerCase() === "cash");
 }
 
 // Amount convertible to BASE with current engine:
@@ -472,183 +471,68 @@ function _getCashWallets() {
 // Otherwise: not convertible (FX missing)
 function _toBaseSafe(amount, currency) {
   const base = (typeof window.getDisplayCurrency === 'function') ? window.getDisplayCurrency(window.getDisplayDateISO()) : state?.period?.baseCurrency;
-  const cur = String(currency || "");
-  const amt = Number(amount) || 0;
-
-  if (!base || !cur) return { ok: false, v: 0 };
-
-  // ✅ If cross-rate plugin is present, use it
-  if (typeof window.fxConvert === "function") {
-    const out = window.fxConvert(amt, cur, base);
-    if (out === null) return { ok: false, v: 0 };
-    return { ok: true, v: out };
-  }
-
-  // Fallback (old engine)
-  if (cur === base) return { ok: true, v: amt };
-  if (cur === "EUR") {
-    const r = Number(state.exchangeRates["EUR-BASE"]) || 0;
-    if (!r) return { ok: false, v: 0 };
-    return { ok: true, v: amt * r };
-  }
-
-  return { ok: false, v: 0 };
+  return window.TBKpiCashRules?.toBaseSafe?.(amount, currency, {
+    baseCurrency: base,
+    exchangeRates: state.exchangeRates || {},
+    fxConvert: (typeof window.fxConvert === "function") ? window.fxConvert : null,
+  }) || { ok: false, v: 0 };
 }
 
 
 function _sumCashWalletsBase() {
   const base = (typeof window.getDisplayCurrency === 'function') ? window.getDisplayCurrency(window.getDisplayDateISO()) : state?.period?.baseCurrency;
-  let totalBase = 0;
-  const excluded = []; // {name,currency,balance}
-
-  for (const w of _getCashWallets()) {
-    const cur = w.currency || base;
-    const bal = (typeof window.tbGetWalletEffectiveBalance === "function")
-      ? Number(window.tbGetWalletEffectiveBalance(w.id) || 0)
-      : (Number(w.balance) || 0);
-
-    // If the wallet is empty, don't surface it as "FX exclu"
-    if (!bal) continue;
-
-    const conv = _toBaseSafe(bal, cur);
-
-    if (conv.ok) totalBase += conv.v;
-    else excluded.push({ name: w.name || "Wallet", currency: cur, balance: bal });
-  }
-
-  return { totalBase, excluded };
+  return window.TBKpiCashRules?.sumCashWalletsBase?.(state.wallets || [], {
+    baseCurrency: base,
+    exchangeRates: state.exchangeRates || {},
+    fxConvert: (typeof window.fxConvert === "function") ? window.fxConvert : null,
+    effectiveBalance: (typeof window.tbGetWalletEffectiveBalance === "function")
+      ? (wallet) => window.tbGetWalletEffectiveBalance(wallet.id)
+      : null,
+  }) || { totalBase: 0, excluded: [] };
 }
 
 /* =========================
    Cash runway (UX): based on real cash expenses
    ========================= */
 function cashRunwayInfo(windowDays = 7) {
-  const cashWallets = _getCashWallets();
-  if (!cashWallets.length) return null;
-
-  const { totalBase, excluded } = _sumCashWalletsBase();
   const base = state.period.baseCurrency;
-
-  const cashWalletIds = new Set(cashWallets.map(w => w.id));
-
-  const today = clampMidnight(new Date());
-
-  // Prefer since period start; else last N days
-  const ps = parseISODateOrNull(state?.period?.start);
-  const start = ps ? clampMidnight(ps) : (() => {
-    const s = new Date(today);
-    s.setDate(s.getDate() - Math.max(1, Number(windowDays) || 7) + 1);
-    return clampMidnight(s);
-  })();
-
-  let sumExpenseBase = 0;
-
-  function _normStr(s) {
-    try {
-      return String(s || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .trim();
-    } catch (_) {
-      return String(s || "").toLowerCase().trim();
-    }
-  }
-
-  function _isInternalMovement(tx) {
-    // Exclude internal transfers from "burn" (cash runway), e.g. cash↔bank moves.
-    const cat = _normStr(tx?.category);
-    const label = _normStr(tx?.label);
-    if (cat === "mouvement interne" || cat === "internal movement") return true;
-    if (label.includes("[internal]") || label.includes("mouvement interne")) return true;
-    return false;
-  }
-
-
-  for (const tx of (state.transactions || [])) {
-    if (!tx) continue;
-    if (!_txMatchesActiveTravelKpi(tx)) continue;
-    if (tx.type !== "expense") continue;
-    try { if (typeof window.tbIsInternalMovement === 'function' ? window.tbIsInternalMovement(tx) : _isInternalMovement(tx)) continue; } catch (_) { if (_isInternalMovement(tx)) continue; }
-    const _paid2 = _txAffectsCashKpi(tx);
-    if (!_paid2) continue; // runway = real cash out
-
-    const walletId = String(tx?.walletId ?? tx?.wallet_id ?? '');
-    if (cashWalletIds.size && walletId && !cashWalletIds.has(walletId)) continue;
-
-    const d = parseISODateOrNull((typeof tbTxCashDate === 'function') ? tbTxCashDate(tx) : tx.dateStart);
-    if (!d) continue;
-    const dd = clampMidnight(d);
-    if (dd < start || dd > today) continue;
-
-    const cur = tx.currency || base;
-    const conv = _toBaseSafe(Number(tx.amount) || 0, cur);
-    if (conv.ok) sumExpenseBase += conv.v;
-  }
-
-  const days = Math.max(1, dayCountInclusive(start, today));
-  const burnPerDay = sumExpenseBase / days;
-
-  const daysLeft = (burnPerDay > 0) ? (totalBase / burnPerDay) : Infinity;
-
-  return {
-    totalBase,
-    burnPerDay,
-    daysLeft,
-    excluded,
-    windowDays: days,
-  };
+  return window.TBKpiCashRules?.cashRunwayInfo?.({
+    wallets: state.wallets || [],
+    transactions: state.transactions || [],
+    period: state.period || {},
+    baseCurrency: base,
+    exchangeRates: state.exchangeRates || {},
+    fxConvert: (typeof window.fxConvert === "function") ? window.fxConvert : null,
+    effectiveBalance: (typeof window.tbGetWalletEffectiveBalance === "function") ? (wallet) => window.tbGetWalletEffectiveBalance(wallet.id) : null,
+    activeTravelId: _activeTravelIdKpi(),
+    txMatchesActiveTravel: _txMatchesActiveTravelKpi,
+    txAffectsCash: _txAffectsCashKpi,
+    isInternalMovement: (tx) => {
+      try { return (typeof window.tbIsInternalMovement === 'function') ? window.tbIsInternalMovement(tx) : _kpiIsInternalMovementTx(tx); }
+      catch (_) { return _kpiIsInternalMovementTx(tx); }
+    },
+    txCashDate: (tx) => (typeof tbTxCashDate === 'function') ? tbTxCashDate(tx) : tx.dateStart,
+    windowDays,
+    now: new Date(),
+  }) || null;
 }
 
 /* =========================
    Cash conservative cover (UX): based on allocations/budget usage
    ========================= */
 function cashConservativeInfo() {
-  const cashWallets = _getCashWallets();
-  if (!cashWallets.length) return null;
-
-  const { totalBase, excluded } = _sumCashWalletsBase();
   const base = state.period.baseCurrency;
-
-  const today = clampMidnight(new Date());
-  const ps = parseISODateOrNull(state?.period?.start);
-  const start = ps ? clampMidnight(ps) : clampMidnight(new Date(today));
-
-  // measure completed days (to yesterday)
-  const end = new Date(today);
-  end.setDate(end.getDate() - 1);
-
-  let sumAllocated = 0;
-  let activeDays = 0;
-
-  const s = start;
-  const e = (end >= start) ? end : today;
-
-  forEachDateInclusive(s, e, (d) => {
-    const ds = toLocalISODate(d);
-    if (!periodContains(ds)) return;
-
-    const remaining = getDailyBudgetForDate(ds);
-    const allocated = (Number(state.period.dailyBudgetBase || 0) - remaining);
-
-    if (allocated > 0) {
-      sumAllocated += allocated;
-      activeDays += 1;
-    }
-  });
-
-  const burnPerDay =
-    (activeDays > 0) ? (sumAllocated / activeDays) : Number(state.period.dailyBudgetBase || 0);
-
-  const daysLeft = (burnPerDay > 0) ? (totalBase / burnPerDay) : Infinity;
-
-  return {
-    totalBase,
-    burnPerDay,
-    daysLeft,
-    excluded,
-    activeDays,
-  };
+  return window.TBKpiCashRules?.cashConservativeInfo?.({
+    wallets: state.wallets || [],
+    period: state.period || {},
+    baseCurrency: base,
+    exchangeRates: state.exchangeRates || {},
+    fxConvert: (typeof window.fxConvert === "function") ? window.fxConvert : null,
+    effectiveBalance: (typeof window.tbGetWalletEffectiveBalance === "function") ? (wallet) => window.tbGetWalletEffectiveBalance(wallet.id) : null,
+    periodContains: (typeof periodContains === "function") ? periodContains : (() => true),
+    getDailyBudgetForDate: (typeof getDailyBudgetForDate === "function") ? getDailyBudgetForDate : (() => 0),
+    now: new Date(),
+  }) || null;
 }
 
 function _daysPill(daysLeft, labelPrefix) {

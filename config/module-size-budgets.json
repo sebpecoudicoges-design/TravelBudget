@@ -3,8 +3,8 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 382,
-    "lazyJsMaxKiB": 77,
-    "totalJsMaxKiB": 458,
+    "lazyJsMaxKiB": 80,
+    "totalJsMaxKiB": 462,
     "totalCssMaxKiB": 8,
     "mainJsGzipMaxKiB": 110
   },
@@ -96,6 +96,7 @@
         "public/legacy/js/14_settings_periods_ui.js",
         "src/features/dashboard/dashboardView.js",
         "src/features/dashboard/dashboardWalletRules.js",
+        "src/features/kpi/kpiCashRules.js",
         "src/features/kpi/kpiHealthRules.js",
         "src/features/kpi/kpiProjectionRules.js",
         "src/features/kpi/kpiView.js",

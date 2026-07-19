@@ -156,8 +156,9 @@ async function ensureKpiView() {
       import('./features/kpi/kpiView.js'),
       import('./features/kpi/kpiHealthRules.js'),
       import('./features/kpi/kpiProjectionRules.js'),
+      import('./features/kpi/kpiCashRules.js'),
     ])
-      .then(([kpiView, kpiHealthRules, kpiProjectionRules]) => {
+      .then(([kpiView, kpiHealthRules, kpiProjectionRules, kpiCashRules]) => {
         window.TBKpiView = {
           ...(window.TBKpiView || {}),
           ...kpiView,
@@ -169,6 +170,10 @@ async function ensureKpiView() {
         window.TBKpiProjectionRules = {
           ...(window.TBKpiProjectionRules || {}),
           ...kpiProjectionRules,
+        };
+        window.TBKpiCashRules = {
+          ...(window.TBKpiCashRules || {}),
+          ...kpiCashRules,
         };
         return true;
       })
