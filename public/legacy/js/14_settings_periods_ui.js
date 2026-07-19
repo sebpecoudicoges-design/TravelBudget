@@ -2211,8 +2211,13 @@ function _analyticUsagePillHtml(txCount) {
 }
 
 async function _deleteCategoryBundleViaRpc(categoryName) {
-  const category = String(categoryName || '').trim();
-  if (!category) throw new Error('Catégorie invalide.');
+  const deleteDraft = window.TBSettingsCategoriesView?.prepareCategoryDeleteDraft?.({
+    name: categoryName,
+    categoryRows: state?.categoriesRows || [],
+  });
+  const category = deleteDraft?.category || String(categoryName || '').trim();
+  if (deleteDraft && !deleteDraft.ok) throw new Error(deleteDraft.reason || 'Catégorie invalide.');
+  if (!deleteDraft && !category) throw new Error('Catégorie invalide.');
   try {
     const rpcName = TB_CONST?.RPCS?.delete_category_bundle || 'delete_category_bundle';
     const { error } = await sb.rpc(rpcName, { p_category_name: category });
@@ -2222,7 +2227,6 @@ async function _deleteCategoryBundleViaRpc(categoryName) {
     console.warn('[categories] delete bundle RPC unavailable, fallback to direct deletes', rpcErr?.message || rpcErr);
   }
 
-  const catLower = category.toLowerCase();
   const { error: mapErr } = await sb
     .from(TB_CONST.TABLES.analytic_category_mappings)
     .delete()
@@ -2237,15 +2241,14 @@ async function _deleteCategoryBundleViaRpc(categoryName) {
     .ilike('category_name', category);
   if (subErr) throw subErr;
 
-  const sqlRow = (Array.isArray(state?.categoriesRows) ? state.categoriesRows : []).find((row) => String(row?.name || '').trim().toLowerCase() === catLower);
-  if (sqlRow) {
+  if (deleteDraft?.sqlCategoryId) {
     const { error: delErr } = await sb
       .from(TB_CONST.TABLES.categories)
       .delete()
       .eq('user_id', sbUser.id)
-      .eq('id', sqlRow.id);
+      .eq('id', deleteDraft.sqlCategoryId);
     if (delErr) throw delErr;
-  } else if (typeof setCategoryHidden === 'function') {
+  } else if (!deleteDraft?.sqlCategoryId && typeof setCategoryHidden === 'function') {
     setCategoryHidden(category, true);
   }
 }
@@ -2506,12 +2509,20 @@ function addCategory() {
 
 function deleteCategory(name) {
   safeCall("Delete category", async () => {
-    const n = String(name || "").trim();
-    if (!n) return;
-    if (!confirm(`Supprimer la catégorie "${n}" ?
-
-Cela supprimera aussi ses sous-catégories SQL et ses règles analytiques liées.`)) return;
-    await _deleteCategoryBundleViaRpc(n);
+    const deleteDraft = window.TBSettingsCategoriesView?.prepareCategoryDeleteDraft?.({
+      name,
+      categoryRows: state?.categoriesRows || [],
+    });
+    if (deleteDraft && !deleteDraft.ok) {
+      _settingsValidationNotice(deleteDraft.reason || 'Catégorie invalide.');
+      return;
+    }
+    if (!deleteDraft) {
+      _settingsValidationNotice('Module catégories indisponible.');
+      return;
+    }
+    if (!confirm(`Supprimer "${deleteDraft.category}" ?`)) return;
+    await _deleteCategoryBundleViaRpc(deleteDraft.category);
     await refreshFromServer();
     renderSettings();
   });

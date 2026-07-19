@@ -135,6 +135,22 @@ export function prepareCategoryUpsertDraft({
   };
 }
 
+export function prepareCategoryDeleteDraft({
+  name = '',
+  categoryRows = [],
+} = {}) {
+  const category = String(name || '').trim();
+  if (!category) return { ok: false };
+  const categoryKey = category.toLowerCase();
+  const sqlRow = (Array.isArray(categoryRows) ? categoryRows : [])
+    .find((row) => String(row?.name || '').trim().toLowerCase() === categoryKey);
+  return {
+    ok: true,
+    category,
+    sqlCategoryId: sqlRow?.id || null,
+  };
+}
+
 export function notifySettingsValidation({
   message = '',
   toastWarn = null,

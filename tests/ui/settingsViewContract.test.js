@@ -37,6 +37,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderGuidedCategoryModalBody');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderGuidedSubcategoryModalBody');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareCategoryUpsertDraft');
+    expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareCategoryDeleteDraft');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.notifySettingsValidation');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareSubcategoryEditDraft');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareAnalyticMappingRuleDraft');
@@ -74,6 +75,9 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('if (typeof window.toastInfo === "function")');
     expect(legacy).not.toContain('throw new Error(readiness.reason || "Catégorie invalide.")');
     expect(legacy).not.toContain('const maxSort = (state.categories || []).length');
+    expect(legacy).not.toContain('Supprimer la catégorie "${n}"');
+    expect(legacy).not.toContain('const n = String(name || "").trim();');
+    expect(legacy).not.toContain('const catLower = category.toLowerCase();');
     expect(legacy).not.toContain("throw new Error(readiness.reason || 'Sous-catégorie invalide.')");
     expect(legacy).not.toContain("throw new Error('Nom de sous-catégorie vide.')");
     expect(legacy).not.toContain("throw new Error('Couleur invalide.')");

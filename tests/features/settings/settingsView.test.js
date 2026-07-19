@@ -20,6 +20,7 @@ import {
   renderGuidedSubcategoryModalBody,
   renderSettingsCategoriesList,
   notifySettingsValidation,
+  prepareCategoryDeleteDraft,
   prepareCategoryUpsertDraft,
   prepareAnalyticMappingRuleDraft,
   prepareSubcategoryCreateDraft,
@@ -402,6 +403,28 @@ describe('Settings view helpers', () => {
         created_at: '2026-07-19T04:30:00.000Z',
         updated_at: '2026-07-19T04:30:00.000Z',
       },
+    });
+  });
+
+  it('prepares category delete confirmation and fallback decisions before legacy writes', () => {
+    expect(prepareCategoryDeleteDraft({ name: '' })).toEqual({ ok: false });
+
+    expect(prepareCategoryDeleteDraft({
+      name: ' Food ',
+      categoryRows: [{ id: 'cat-1', name: 'food' }],
+    })).toEqual({
+      ok: true,
+      category: 'Food',
+      sqlCategoryId: 'cat-1',
+    });
+
+    expect(prepareCategoryDeleteDraft({
+      name: 'Detected',
+      categoryRows: [{ id: 'cat-1', name: 'Food' }],
+    })).toMatchObject({
+      ok: true,
+      category: 'Detected',
+      sqlCategoryId: null,
     });
   });
 
