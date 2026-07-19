@@ -13,6 +13,7 @@ describe('Sport domain contract', () => {
   const timerController = fs.readFileSync('src/features/sport/sportTimerController.js', 'utf8');
   const timerView = fs.readFileSync('src/features/sport/sportTimerView.js', 'utf8');
   const historyView = fs.readFileSync('src/features/sport/sportHistoryView.js', 'utf8');
+  const formView = fs.readFileSync('src/features/sport/sportFormView.js', 'utf8');
   const sandboxRules = fs.readFileSync('src/features/sport/sportSessionSandboxRules.js', 'utf8');
   const sandboxView = fs.readFileSync('src/features/sport/sportSessionSandboxView.js', 'utf8');
   const profileRules = fs.readFileSync('src/features/sport/sportProfileRules.js', 'utf8');
@@ -29,6 +30,7 @@ describe('Sport domain contract', () => {
       'sportTimerController',
       'sportTimerView',
       'sportHistoryView',
+      'sportFormView',
       'sportSessionSandboxRules',
       'sportSessionSandboxView',
       'sportProfileRules',
@@ -41,6 +43,7 @@ describe('Sport domain contract', () => {
     expect(bridge).toContain('window.Data.createSportStore');
     expect(bridge).toContain('window.UI.sportTimerView');
     expect(bridge).toContain('window.UI.sportHistoryView');
+    expect(bridge).toContain('window.UI.sportFormView');
   });
 
   it('keeps catalog and library normalization out of the legacy file', () => {
@@ -116,5 +119,12 @@ describe('Sport domain contract', () => {
     expect(profileView).toContain('export function renderSportProfileDashboard');
     expect(legacy).toContain('sportProfileRules?.buildSportProfileRadarData');
     expect(legacy).toContain('sportProfileView?.renderSportProfileDashboard');
+  });
+
+  it('delegates Sport builder form option rendering to sportFormView', () => {
+    for (const token of ['renderOptionRows', 'renderDurationOptions', 'renderExerciseOptions', 'renderFormatOptions', 'renderEquipmentOptions']) {
+      expect(formView).toContain(`export function ${token}`);
+      expect(legacy).toContain(`sportFormView?.${token}`);
+    }
   });
 });

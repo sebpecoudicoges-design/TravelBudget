@@ -89,6 +89,7 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
 - [x] Trip : rendre le split Montants intelligent avec reste partage automatiquement entre les participants non saisis.
   - [x] Extraire le rendu des participants du split Trip vers `tripView`, avec hooks stables et contrat anti-retour legacy.
   - [x] Extraire le tableau Equal/Pourcentage/Montant du split Trip vers `tripView`, en gardant calculs et evenements dans le legacy.
+  - [x] Extraire le rendu Analyse Trip categories/participants vers `tripView`, avec contrat anti-retour legacy.
 - [x] Trip : extraire le panneau d'aide contexte vers `tripView` et supprimer le `onclick` inline associe.
 - [x] Trip : extraire la carte d'audit des liens budget/transactions vers `tripView`.
 - [x] Trip : extraire le contenu de la fenetre Documents de depense vers une vue chargee a la demande.
@@ -112,6 +113,7 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
   - [x] Extraire le CSS mobile/fullscreen Sport Capacitor vers `sport_mobile.css`.
   - [x] Extraire le CSS general Sport vers `sport.css` et supprimer le style inline du legacy.
   - [x] Realigner le programme SQL A/B en trois dominantes : Poussee, Chaine posterieure et Variantes.
+  - [x] Extraire les options du builder Sport vers `sportFormView.js` : objectifs, niveaux, familles, durees, formats, materiels et exercices.
 - [x] Nutrition : separer catalogue, journal, objectifs et historique.
   - [x] Extraire les regles pures du catalogue, des totaux par repas, du journal quotidien, des objectifs et des cibles par moment.
   - [x] Extraire le socle repository local/offline Nutrition : cache aliments, lignes locales, sync_id, sommeil et erreurs de synchro.

@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "48ee3d3bb627c4a0f1d23577ab02473182f42a1b",
-  "snapshotFingerprint": "1e82d96283b933b90b87837b06b0a0acaf61bd09662228a016b4fb242b3b28fc",
-  "generatedAt": "2026-07-19T08:28:28.324Z",
+  "commit": "95d0bbd9127f8f59d6582c5292fe2d19dfac0bf4",
+  "snapshotFingerprint": "8a31e699fcbbf79066aeb4fa71f087dfa6e7ed7b46b264df5c0fe5180c8d0660",
+  "generatedAt": "2026-07-19T08:49:09.247Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.227"
+    "version": "10.5.228"
   },
   "npmScripts": {
     "dev": "vite",
@@ -199,6 +199,7 @@
     "src/features/settings/settingsCategoriesView.js",
     "src/features/settings/settingsView.js",
     "src/features/sport/sportCatalog.js",
+    "src/features/sport/sportFormView.js",
     "src/features/sport/sportHistoryView.js",
     "src/features/sport/sportProfileRules.js",
     "src/features/sport/sportProfileView.js",
@@ -262,6 +263,7 @@
     "tests/features/settings/settingsAccountController.test.js",
     "tests/features/settings/settingsView.test.js",
     "tests/features/sport/sportCatalog.test.js",
+    "tests/features/sport/sportFormView.test.js",
     "tests/features/sport/sportProfileRules.test.js",
     "tests/features/sport/sportProfileView.test.js",
     "tests/features/sport/sportProgramRules.test.js",

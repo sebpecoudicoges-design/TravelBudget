@@ -6,6 +6,7 @@ import {
   renderTripTabs,
   renderTripContextHelp,
   renderTripExpenseForm,
+  renderTripAnalysisBars,
   renderTripLinkAuditCard,
   renderTripSplitBox,
   renderTripSplitParticipants,
@@ -98,6 +99,31 @@ describe('Trip view', () => {
     expect(html).toContain('&lt;Audit&gt;');
     expect(html).toContain('2 &lt;issues&gt;');
     expect(html).toContain('<span class="trip-badge">2</span>');
+  });
+
+  it('renders Trip analysis bars with category and participant balances', () => {
+    const html = renderTripAnalysisBars({
+      data: {
+        pivot: 'AUD',
+        categories: [
+          { name: '<Food>', amount: 120 },
+          { name: 'Transport', amount: 30 },
+        ],
+        participants: [
+          { name: 'Seb', isMe: true, paid: 100, owed: 70, net: 30, expenseCount: 2 },
+          { name: '<Alex>', paid: 50, owed: 80, net: -30, expenseCount: 1 },
+        ],
+      },
+      formatMoney: (amount, currency) => `${Number(amount).toFixed(0)} ${currency}`,
+    });
+
+    expect(html).toContain('trip-analysis-shell');
+    expect(html).toContain('&lt;Food&gt;');
+    expect(html).toContain('&lt;Alex&gt;');
+    expect(html).toContain('Total du trip');
+    expect(html).toContain('150 AUD');
+    expect(html).toContain('Seb (moi)');
+    expect(html).toContain('&lt;Alex&gt; doit 30 AUD');
   });
 
   it('renders Trip tabs with stable ids and escaped labels', () => {

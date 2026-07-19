@@ -6,9 +6,9 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.227`.
-- Bilan : 8 parcours `ok`, 1 parcours `à faire`.
-- Retour corrigé à revalider : après suppression d'un voyage, aucune erreur console `[TB][budget-reference]` ne doit apparaître si l'ancien segment budget n'existe plus.
+- Version à valider : `10.5.228`.
+- Bilan : 8 parcours `ok`, 2 parcours `à faire`.
+- Retour corrigé à revalider : les vues Trip Analyse et Sport builder doivent rester identiques après extraction hors legacy.
 - Les 29 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
 - Consigner les anomalies et retours détaillés dans `docs/ADMIN_TEST_RETURNS.md`.
@@ -26,6 +26,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 7 | 10.5.200, 10.5.202 à 10.5.204, 10.5.213 | Réglages : validations et suppression | Tenter de créer ou modifier une catégorie/sous-catégorie avec un nom vide, un doublon ou la couleur `blue`. Puis supprimer une catégorie SQL et, si disponible, une catégorie détectée ; rafraîchir. | Chaque saisie invalide est refusée avec un message lisible et sans écriture SQL. La suppression SQL retire catégorie, sous-catégories et mappings ; le fallback masque durablement la catégorie détectée. | Aucun `[safeCall/async]`, aucun `Uncaught`. | ok |
 | 8 | 10.5.212, 10.5.222 | Page projet | Ouvrir `public/projet.html` sur mobile et desktop. Dans App, tester plusieurs filtres et ouvrir le détail d'une version. Vérifier le bloc Membres admins. | Fresque, spotlight et détail restent lisibles. Le bloc admins renvoie vers `docs/ADMIN_TEST_RETURNS.md` avec le statut `à finir`. | Aucun `Uncaught` et aucun message JavaScript affiché dans la page. | ok |
 | 9 | 10.5.227 | Performance : À traiter | Depuis un chargement frais, vérifier que l'onglet **À traiter** est visible, puis l'ouvrir. | L'onglet charge la boîte À traiter à la demande. Le premier écran reste rapide et le module Inbox n'est plus chargé au boot. | `TB BUILD 10.5.227` ; aucun `Inbox lazy load failed`, aucun `Uncaught`. | à faire |
+| 10 | 10.5.228 | Trip + Sport | Ouvrir Trip > Analyse et vérifier les barres catégories/participants. Puis ouvrir Sport, créer ou modifier une séance libre/programmée et ouvrir les sélecteurs objectif, niveau, famille, durée, format, matériel et exercice. | Les barres Trip gardent les mêmes montants, couleurs et libellés. Les listes Sport sont remplies, sélectionnables et échappent les libellés spéciaux. | `TB BUILD 10.5.228` ; aucun `Uncaught`, aucun module `tripView` ou `sportFormView` manquant. | à faire |
 
 ## À ajouter à chaque livraison
 

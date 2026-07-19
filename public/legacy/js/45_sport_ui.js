@@ -1105,43 +1105,77 @@
     return 5;
   }
   function goalOptions(selected) {
-    return GOALS.map(g => `<option value="${esc(g[0])}" ${g[0] === selected ? "selected" : ""}>${esc(lang() === "en" ? g[2] : g[1])}</option>`).join("");
+    return window.UI?.sportFormView?.renderOptionRows?.({
+      rows: GOALS,
+      selected,
+      language: lang(),
+      escapeHTML: esc,
+    }) || "";
   }
   function levelOptions(selected) {
-    return LEVELS.map(row => `<option value="${esc(row[0])}" ${row[0] === selected ? "selected" : ""}>${esc(lang() === "en" ? row[2] : row[1])}</option>`).join("");
+    return window.UI?.sportFormView?.renderOptionRows?.({
+      rows: LEVELS,
+      selected,
+      language: lang(),
+      escapeHTML: esc,
+    }) || "";
   }
   function familyOptions(selected) {
-    return SPORT_FAMILIES.map(row => `<option value="${esc(row[0])}" ${row[0] === selected ? "selected" : ""}>${esc(lang() === "en" ? row[2] : row[1])}</option>`).join("");
+    return window.UI?.sportFormView?.renderOptionRows?.({
+      rows: SPORT_FAMILIES,
+      selected,
+      language: lang(),
+      escapeHTML: esc,
+    }) || "";
   }
   function durationOptions(selected) {
-    return [15, 25, 35, 45, 60, 75].map(v => `<option value="${v}" ${Number(selected) === v ? "selected" : ""}>${v} min</option>`).join("");
+    return window.UI?.sportFormView?.renderDurationOptions?.({
+      selected,
+      escapeHTML: esc,
+    }) || "";
   }
   function libraryOptions(goal, equipment, selected) {
     const rows = visibleExercises(equipment, CACHE.exerciseSearch || "");
-    return `<option value="">${esc(txt("Choisir un exercice", "Choose an exercise"))}</option>` + rows.map(ex => `<option value="${esc(ex.key)}" ${ex.key === selected ? "selected" : ""}>${esc(exerciseLabel(ex))}</option>`).join("");
+    return window.UI?.sportFormView?.renderExerciseOptions?.({
+      exercises: rows,
+      selected,
+      emptyLabel: txt("Choisir un exercice", "Choose an exercise"),
+      exerciseLabel,
+      escapeHTML: esc,
+    }) || "";
   }
   function simpleExerciseOptions(goal, equipment, selected) {
     const rows = filteredExercises(goal, equipment);
     const list = rows.length ? rows : filteredExercises(goal, "all");
-    return list.map(ex => `<option value="${esc(ex.key)}" ${ex.key === selected ? "selected" : ""}>${esc(exerciseLabel(ex))}</option>`).join("");
+    return window.UI?.sportFormView?.renderExerciseOptions?.({
+      exercises: list,
+      selected,
+      exerciseLabel,
+      escapeHTML: esc,
+    }) || "";
   }
   function defaultFormat(goal) {
     return goal === "strength" || goal === "free" ? "reps" : "time";
   }
   function formatOptions(selected) {
-    const rows = [
-      ["time", txt("Duree", "Duration")],
-      ["reps", txt("Repetitions", "Reps")],
-      ["max_reps", txt("Max reps", "Max reps")],
-    ];
-    return rows.map(row => `<option value="${esc(row[0])}" ${row[0] === selected ? "selected" : ""}>${esc(row[1])}</option>`).join("");
+    return window.UI?.sportFormView?.renderFormatOptions?.({
+      selected,
+      labels: {
+        time: txt("Duree", "Duration"),
+        reps: txt("Repetitions", "Reps"),
+        maxReps: txt("Max reps", "Max reps"),
+      },
+      escapeHTML: esc,
+    }) || "";
   }
   function libraryEquipmentOptions(selected) {
-    const opts = [`<option value="all" ${selected === "all" ? "selected" : ""}>${esc(txt("Tous les materiels", "All equipment"))}</option>`];
-    EQUIPMENT.forEach(row => {
-      opts.push(`<option value="${esc(row[0])}" ${row[0] === selected ? "selected" : ""}>${esc(lang() === "en" ? row[2] : row[1])}</option>`);
-    });
-    return opts.join("");
+    return window.UI?.sportFormView?.renderEquipmentOptions?.({
+      equipment: EQUIPMENT,
+      selected,
+      allLabel: txt("Tous les materiels", "All equipment"),
+      language: lang(),
+      escapeHTML: esc,
+    }) || "";
   }
   function applyExerciseToForm(root, key) {
     const ex = EXERCISE_LIBRARY.find(row => row.key === key);

@@ -83,7 +83,7 @@ describe('Trip domain contract', () => {
   });
 
   it('delegates the extracted Trip view surfaces to src/features/trip', () => {
-    for (const token of ['renderPendingTripInvites', 'renderTripExpenseForm', 'renderTripContextHelp', 'renderTripLinkAuditCard', 'renderTripTabs', 'renderTripSplitParticipants', 'renderTripSplitBox']) {
+    for (const token of ['renderPendingTripInvites', 'renderTripExpenseForm', 'renderTripContextHelp', 'renderTripLinkAuditCard', 'renderTripAnalysisBars', 'renderTripTabs', 'renderTripSplitParticipants', 'renderTripSplitBox']) {
       expect(view).toContain(`export function ${token}`);
       expect(legacy).toContain(`tripView?.${token}`);
     }
@@ -100,5 +100,6 @@ describe('Trip domain contract', () => {
     expect(legacy).not.toContain('En mode égal, le total est réparti seulement entre les participants cochés');
     expect(legacy).not.toContain('Somme = 100%');
     expect(legacy).not.toContain('Les montants seront arrondis au centime');
+    expect(legacy).not.toContain('const participantHTML = participants.length');
   });
 });

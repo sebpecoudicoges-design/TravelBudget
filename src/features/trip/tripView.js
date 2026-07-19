@@ -74,6 +74,128 @@ export function renderTripLinkAuditCard({
 <div class="card trip-link-audit-card"><div class="trip-link-audit-card-row"><div><h2>${escapeHTML(title)}</h2><div class="muted">${escapeHTML(body)}</div></div><span class="trip-badge">${escapeHTML(String(n))}</span></div></div>`;
 }
 
+export function renderTripAnalysisBars({
+  data,
+  pivotCurrency,
+  language = 'fr',
+  formatMoney = (amount, currency) => `${amount} ${currency || ''}`.trim(),
+  escapeHTML = fallbackEscape,
+}) {
+  const pivot = String(data?.pivot || pivotCurrency || '').toUpperCase();
+  const isEn = language === 'en';
+  const txt = (fr, en) => (isEn ? en : fr);
+  const categories = Array.isArray(data?.categories) ? data.categories : [];
+  const participants = Array.isArray(data?.participants) ? data.participants : [];
+  const totalCat = categories.reduce((sum, row) => sum + (Number(row?.amount) || 0), 0);
+  const maxCat = Math.max(1, ...categories.map((row) => Number(row?.amount) || 0));
+  const maxParticipant = Math.max(1, ...participants.map((row) => Math.max(Math.abs(Number(row?.net) || 0), Number(row?.paid) || 0, Number(row?.owed) || 0)));
+  const topCategory = categories[0] || null;
+  const highestAdvance = [...participants].sort((a, b) => (Number(b?.net) || 0) - (Number(a?.net) || 0))[0] || null;
+  const highestDebt = [...participants].sort((a, b) => (Number(a?.net) || 0) - (Number(b?.net) || 0))[0] || null;
+  const settledParticipants = participants.filter((row) => Math.abs(Number(row?.net) || 0) < 0.01).length;
+
+  const catHTML = categories.length
+    ? categories.map((row) => {
+      const amount = Number(row?.amount) || 0;
+      const pct = totalCat > 0 ? (amount / totalCat) * 100 : 0;
+      const width = Math.max(8, Math.min(100, (amount / maxCat) * 100));
+      return `
+            <div class="trip-analysis-row">
+              <div class="trip-analysis-row-head">
+                <strong class="trip-analysis-row-title">${escapeHTML(row?.name)}</strong>
+                <div class="trip-analysis-row-values">
+                  <strong>${escapeHTML(formatMoney(amount, pivot))}</strong>
+                  <div class="muted" style="font-size:12px;">${pct.toFixed(1)}%</div>
+                </div>
+              </div>
+              <div class="trip-analysis-meter"><span style="width:${width.toFixed(1)}%;"></span></div>
+            </div>`;
+    }).join('')
+    : `<div class="muted">${escapeHTML(txt("Aucune dépense exploitable pour l’analyse catégorie.", 'No usable expense for category analysis.'))}</div>`;
+
+  const participantHTML = participants.length
+    ? participants.map((row) => {
+      const net = Number(row?.net) || 0;
+      const tone = net > 0.009 ? '#16a34a' : (net < -0.009 ? '#dc2626' : '#475569');
+      const widthPaid = Math.max(6, Math.min(100, ((Number(row?.paid) || 0) / maxParticipant) * 100));
+      const widthOwed = Math.max(6, Math.min(100, ((Number(row?.owed) || 0) / maxParticipant) * 100));
+      return `
+            <div class="trip-analysis-row">
+              <div class="trip-analysis-row-head">
+                <div>
+                  <strong class="trip-analysis-row-title">${escapeHTML(row?.name)}${row?.isMe ? ` (${escapeHTML(txt('moi', 'me'))})` : ''}</strong>
+                  <div class="muted" style="font-size:12px;">${Number(row?.expenseCount) || 0} ${escapeHTML(txt('dépense(s) payée(s)', 'paid expense(s)'))}</div>
+                </div>
+                <div class="trip-analysis-row-values">
+                  <strong style="color:${tone};">${escapeHTML(formatMoney(net, pivot))}</strong>
+                  <div class="muted" style="font-size:12px;">${escapeHTML(txt('Net = payé - part due', 'Net = paid - owed share'))}</div>
+                </div>
+              </div>
+              <div style="display:grid; gap:6px;">
+                <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;"><span class="muted">${escapeHTML(txt('Payé', 'Paid'))}</span><span>${escapeHTML(formatMoney(row?.paid, pivot))}</span></div>
+                <div class="trip-analysis-meter trip-analysis-meter--paid"><span style="width:${widthPaid.toFixed(1)}%;"></span></div>
+                <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;"><span class="muted">${escapeHTML(txt('Part due', 'Owed share'))}</span><span>${escapeHTML(formatMoney(row?.owed, pivot))}</span></div>
+                <div class="trip-analysis-meter trip-analysis-meter--owed"><span style="width:${widthOwed.toFixed(1)}%;"></span></div>
+              </div>
+            </div>`;
+    }).join('')
+    : `<div class="muted">${escapeHTML(txt('Aucune donnée exploitable pour l’analyse participant.', 'No usable data for participant analysis.'))}</div>`;
+
+  const debtCopy = highestDebt
+    ? (isEn
+      ? `${escapeHTML(highestDebt.name)} owes ${escapeHTML(formatMoney(Math.abs(Number(highestDebt.net) || 0), pivot))}`
+      : `${escapeHTML(highestDebt.name)} doit ${escapeHTML(formatMoney(Math.abs(Number(highestDebt.net) || 0), pivot))}`)
+    : escapeHTML(txt('Aucun écart notable', 'No notable gap'));
+
+  return `
+      <div class="trip-analysis-shell">
+        <div class="trip-analysis-summary">
+          <div class="trip-analysis-kpi">
+            <span>${escapeHTML(txt('Total du trip', 'Trip total'))}</span>
+            <strong>${escapeHTML(formatMoney(totalCat, pivot))}</strong>
+            <small>${categories.length} ${escapeHTML(txt('catégorie(s)', 'category/categories'))} · ${participants.length} ${escapeHTML(txt('participant(s)', 'participant(s)'))}</small>
+          </div>
+          <div class="trip-analysis-kpi">
+            <span>${escapeHTML(txt('Catégorie dominante', 'Dominant category'))}</span>
+            <strong>${escapeHTML(topCategory?.name || '—')}</strong>
+            <small>${topCategory ? escapeHTML(formatMoney(topCategory.amount, pivot)) : escapeHTML(txt('Aucune donnée', 'No data'))}</small>
+          </div>
+          <div class="trip-analysis-kpi">
+            <span>${escapeHTML(txt('Avance la plus forte', 'Highest advance'))}</span>
+            <strong>${escapeHTML(highestAdvance?.name || '—')}</strong>
+            <small>${highestAdvance ? escapeHTML(formatMoney(highestAdvance.net, pivot)) : escapeHTML(txt('Aucune donnée', 'No data'))}</small>
+          </div>
+          <div class="trip-analysis-kpi">
+            <span>${escapeHTML(txt('Équilibre', 'Balance'))}</span>
+            <strong>${settledParticipants}/${participants.length || 0}</strong>
+            <small>${debtCopy}</small>
+          </div>
+        </div>
+        <div class="trip-analysis-grid">
+          <div class="trip-analysis-card">
+            <div class="trip-analysis-card-head">
+              <div>
+                <h3 style="margin:0;">${escapeHTML(txt('Analyse catégorie', 'Category analysis'))}</h3>
+                <div class="muted" style="font-size:12px;">${escapeHTML(txt('Lecture du trip en devise pivot du compte.', 'Trip readout in the account pivot currency.'))}</div>
+              </div>
+              <div class="pill">${escapeHTML(pivot)}</div>
+            </div>
+            ${catHTML}
+          </div>
+          <div class="trip-analysis-card">
+            <div class="trip-analysis-card-head">
+              <div>
+                <h3 style="margin:0;">${escapeHTML(txt('Analyse participant', 'Participant analysis'))}</h3>
+                <div class="muted" style="font-size:12px;">${escapeHTML(txt('Qui paie, qui consomme, qui avance.', 'Who pays, who consumes, who advances.'))}</div>
+              </div>
+              <div class="pill">${escapeHTML(txt('Pivot', 'Pivot'))} ${escapeHTML(pivot)}</div>
+            </div>
+            ${participantHTML}
+          </div>
+        </div>
+      </div>`;
+}
+
 export function renderTripTabs(options) {
   const escapeHTML = options.escapeHTML || fallbackEscape;
   return `<div class="trip-tabs"><button class="btn primary" id="trip-tab-recap" type="button">${escapeHTML(options.recapLabel)}</button><button class="btn trip-tab-btn" id="trip-tab-history" type="button">${escapeHTML(options.historyLabel)}</button></div>`;
