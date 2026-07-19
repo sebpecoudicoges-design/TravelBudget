@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 describe('Trip shared modal migration', () => {
   const source = fs.readFileSync('public/legacy/js/29_trip_v1.js', 'utf8');
   const tripView = fs.readFileSync('src/features/trip/tripView.js', 'utf8');
+  const sharedCss = fs.readFileSync('src/ui/shared.css', 'utf8');
 
   it('routes the five priority Trip windows through the shared modal', () => {
     expect(source.match(/window\.UI\.createModal\(\{/g)).toHaveLength(5);
@@ -34,5 +35,16 @@ describe('Trip shared modal migration', () => {
     expect(source).toContain('tripView?.renderTripSplitBox');
     expect(tripView).toContain('data-auto="1"');
     expect(source).toContain('mode: mode === "amount" && _el("trip-split-box")?.dataset?.auto === "1" ? "amount_auto" : mode');
+  });
+
+  it('keeps the Trip expense sheet adapted to mobile screens', () => {
+    expect(tripView).toContain('trip-expense-form-grid--amount');
+    expect(tripView).toContain('class="trip-split-table"');
+    expect(tripView).toContain('data-label="Montant"');
+    expect(sharedCss).toContain('@media (max-width: 640px)');
+    expect(sharedCss).toContain('.tb-trip-expense-modal');
+    expect(sharedCss).toContain('max-height: 100dvh');
+    expect(sharedCss).toContain('.tb-trip-expense-modal .trip-split-table thead');
+    expect(sharedCss).toContain('position: sticky');
   });
 });

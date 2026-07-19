@@ -59,11 +59,16 @@ describe('Trip view', () => {
       currencyOptionsHTML: (currency) => `<option>${currency}</option>`,
     });
     expect(html).toContain('id="trip-expense-modal-template"');
+    expect(html).toContain('trip-expense-form-grid--meta');
+    expect(html).toContain('trip-expense-form-grid--amount');
+    expect(html).toContain('trip-expense-actions-row');
     expect(html).toContain('id="trip-exp-label"');
     expect(html).toContain('value="2026-07-06"');
     expect(html).toContain('value="2026-07-08"');
     expect(html).toContain('id="trip-cancel-edit-exp"');
     expect(html).not.toContain('id="trip-add-exp" disabled');
+    expect(html).not.toContain('min-width:220px');
+    expect(html).not.toContain('max-width:160px');
   });
 
   it('disables expense submission without write access or an active Trip', () => {
@@ -222,6 +227,9 @@ describe('Trip view', () => {
     expect(html).toContain('value="0" disabled');
     expect(html).toContain('trip-split-pct-alex');
     expect(html).toContain('value="100"');
+    expect(html).toContain('class="trip-split-table"');
+    expect(html).toContain('data-label="Participant"');
+    expect(html).toContain('data-label="%"');
     expect(html).toContain('&lt;Alex&gt;');
     expect(html).toContain('Les montants seront arrondis');
   });
@@ -244,6 +252,8 @@ describe('Trip view', () => {
     expect(html).toContain('value="7.00" data-auto="0"');
     expect(html).toContain('trip-split-amt-sam');
     expect(html).toContain('value="0" data-auto="0" disabled');
+    expect(html).toContain('class="trip-split-table"');
+    expect(html).toContain('data-label="Montant"');
     expect(html).toContain('Montant');
   });
 

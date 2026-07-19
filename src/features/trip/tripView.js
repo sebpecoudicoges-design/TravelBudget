@@ -43,7 +43,82 @@ export function renderTripExpenseForm({
   const budgetEnd = editingDraft?.budgetDateEnd || budgetStart;
   const selectedCurrency = editingDraft?.currency || trip?.base_currency || defaultCurrency;
   const submitDisabled = canWrite && trip ? '' : 'disabled';
-  const body = `<div class="row trip-expense-row trip-expense-row--payer"><div class="field" style="min-width:220px;"><label>${escapeHTML(translate('trip.expense.paid_by'))}</label><select id="trip-exp-paidby">${memberOptions}</select></div></div><div class="row trip-expense-row trip-expense-row--meta"><div class="field" style="min-width:220px;"><label>${escapeHTML(translate('trip.expense.wallet'))}</label><select id="trip-exp-wallet"><option value="">&mdash;</option>${walletOptions}</select></div><div class="field" style="min-width:200px;"><label>${escapeHTML(translate('trip.expense.category'))}</label><select id="trip-exp-category">${categoryOptions}</select></div><div class="field" style="min-width:220px;"><label>${escapeHTML(translate('trip.expense.subcategory'))}</label><select id="trip-exp-subcategory"></select></div></div><div class="row trip-expense-row trip-expense-row--amount"><div class="field" style="flex:1;"><label>${escapeHTML(translate('trip.expense.label'))}</label><input id="trip-exp-label" placeholder="${escapeHTML(translate('trip.expense.label_placeholder'))}" value="${escapeHTML(editingDraft?.label || '')}" /></div><div class="field" style="max-width:160px;"><label>${escapeHTML(translate('trip.expense.amount'))}</label><input id="trip-exp-amount" type="number" step="0.01" placeholder="0" value="${escapeHTML(editingDraft?.amount ?? '')}" /></div><div class="field" style="max-width:180px;"><label>${escapeHTML(translate('trip.expense.currency'))}</label><select id="trip-exp-currency">${currencyOptionsHTML(selectedCurrency)}</select><div id="trip-exp-currency-help" class="muted" style="font-size:12px;margin-top:4px;"></div></div></div><div class="row trip-expense-row trip-expense-row--dates"><div class="field"><label>${escapeHTML(translate('trip.expense.cash_date'))}</label><input id="trip-exp-date" type="date" value="${escapeHTML(date)}" /></div></div><details class="trip-expense-advanced" ${modal ? '' : 'open'}><summary>${escapeHTML(language === 'en' ? 'Advanced' : 'Avance')}</summary><div class="row trip-expense-row trip-expense-row--advanced"><div class="field" style="min-width:180px;"><label>${escapeHTML(translate('trip.expense.out_budget'))}</label><select id="trip-exp-out"><option value="no">Non</option><option value="yes">Oui</option></select></div><div class="field"><label>${escapeHTML(translate('trip.expense.budget_start'))}</label><input id="trip-exp-budget-start" type="date" value="${escapeHTML(budgetStart)}" /></div><div class="field"><label>${escapeHTML(translate('trip.expense.budget_end'))}</label><input id="trip-exp-budget-end" type="date" value="${escapeHTML(budgetEnd)}" /></div></div></details><div class="row trip-expense-row trip-expense-row--split" style="align-items:flex-end;gap:12px;margin-top:6px;"><div class="field" style="min-width:220px;"><label>${escapeHTML(translate('trip.expense.split'))}</label><select id="trip-split-mode"><option value="equal">${escapeHTML(translate('trip.expense.split_equal'))}</option><option value="percent">%</option><option value="amount">${escapeHTML(translate('trip.expense.split_amounts'))}</option></select></div></div><div id="trip-split-participants-box" style="margin-top:6px;"></div><div id="trip-split-box" style="margin-top:6px;"></div><div class="muted" style="margin-top:6px;">${escapeHTML(translate('trip.expense.budget_hint'))}</div><div class="row trip-expense-row trip-expense-actions-row" style="justify-content:flex-end;margin-top:10px;gap:8px;">${editingExpenseId ? `<button class="btn" type="button" id="trip-cancel-edit-exp">${escapeHTML(translate('trip.expense.cancel_edit'))}</button>` : ''}<button class="btn primary" id="trip-add-exp" ${submitDisabled}>${escapeHTML(editingExpenseId ? translate('trip.expense.save_edit') : translate('trip.expense.add'))}</button></div>`;
+  const body = `
+    <div class="trip-expense-form-grid trip-expense-form-grid--payer">
+      <div class="field">
+        <label>${escapeHTML(translate('trip.expense.paid_by'))}</label>
+        <select id="trip-exp-paidby">${memberOptions}</select>
+      </div>
+    </div>
+    <div class="trip-expense-form-grid trip-expense-form-grid--meta">
+      <div class="field">
+        <label>${escapeHTML(translate('trip.expense.wallet'))}</label>
+        <select id="trip-exp-wallet"><option value="">&mdash;</option>${walletOptions}</select>
+      </div>
+      <div class="field">
+        <label>${escapeHTML(translate('trip.expense.category'))}</label>
+        <select id="trip-exp-category">${categoryOptions}</select>
+      </div>
+      <div class="field">
+        <label>${escapeHTML(translate('trip.expense.subcategory'))}</label>
+        <select id="trip-exp-subcategory"></select>
+      </div>
+    </div>
+    <div class="trip-expense-form-grid trip-expense-form-grid--amount">
+      <div class="field trip-expense-field--label">
+        <label>${escapeHTML(translate('trip.expense.label'))}</label>
+        <input id="trip-exp-label" placeholder="${escapeHTML(translate('trip.expense.label_placeholder'))}" value="${escapeHTML(editingDraft?.label || '')}" />
+      </div>
+      <div class="field">
+        <label>${escapeHTML(translate('trip.expense.amount'))}</label>
+        <input id="trip-exp-amount" type="number" step="0.01" placeholder="0" value="${escapeHTML(editingDraft?.amount ?? '')}" />
+      </div>
+      <div class="field">
+        <label>${escapeHTML(translate('trip.expense.currency'))}</label>
+        <select id="trip-exp-currency">${currencyOptionsHTML(selectedCurrency)}</select>
+        <div id="trip-exp-currency-help" class="muted trip-expense-help"></div>
+      </div>
+    </div>
+    <div class="trip-expense-form-grid trip-expense-form-grid--dates">
+      <div class="field">
+        <label>${escapeHTML(translate('trip.expense.cash_date'))}</label>
+        <input id="trip-exp-date" type="date" value="${escapeHTML(date)}" />
+      </div>
+    </div>
+    <details class="trip-expense-advanced" ${modal ? '' : 'open'}>
+      <summary>${escapeHTML(language === 'en' ? 'Advanced' : 'Avance')}</summary>
+      <div class="trip-expense-form-grid trip-expense-form-grid--advanced">
+        <div class="field">
+          <label>${escapeHTML(translate('trip.expense.out_budget'))}</label>
+          <select id="trip-exp-out"><option value="no">Non</option><option value="yes">Oui</option></select>
+        </div>
+        <div class="field">
+          <label>${escapeHTML(translate('trip.expense.budget_start'))}</label>
+          <input id="trip-exp-budget-start" type="date" value="${escapeHTML(budgetStart)}" />
+        </div>
+        <div class="field">
+          <label>${escapeHTML(translate('trip.expense.budget_end'))}</label>
+          <input id="trip-exp-budget-end" type="date" value="${escapeHTML(budgetEnd)}" />
+        </div>
+      </div>
+    </details>
+    <div class="trip-expense-form-grid trip-expense-form-grid--split">
+      <div class="field">
+        <label>${escapeHTML(translate('trip.expense.split'))}</label>
+        <select id="trip-split-mode">
+          <option value="equal">${escapeHTML(translate('trip.expense.split_equal'))}</option>
+          <option value="percent">%</option>
+          <option value="amount">${escapeHTML(translate('trip.expense.split_amounts'))}</option>
+        </select>
+      </div>
+    </div>
+    <div id="trip-split-participants-box" class="trip-split-participants-box"></div>
+    <div id="trip-split-box" class="trip-split-box"></div>
+    <div class="muted trip-expense-budget-hint">${escapeHTML(translate('trip.expense.budget_hint'))}</div>
+    <div class="trip-expense-actions-row">
+      ${editingExpenseId ? `<button class="btn" type="button" id="trip-cancel-edit-exp">${escapeHTML(translate('trip.expense.cancel_edit'))}</button>` : ''}
+      <button class="btn primary" id="trip-add-exp" ${submitDisabled}>${escapeHTML(editingExpenseId ? translate('trip.expense.save_edit') : translate('trip.expense.add'))}</button>
+    </div>`;
 
   return modal
     ? `<template id="trip-expense-modal-template" data-title="${escapeHTML(title)}"><div class="trip-expense-sheet-body">${body}</div></template>`
@@ -329,21 +404,21 @@ export function renderTripSplitParticipants({
   );
 
   return `
-    <div class="muted" style="margin-bottom:6px;">${escapeHTML(title)}</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+    <div class="muted trip-split-participants-title">${escapeHTML(title)}</div>
+    <div class="trip-split-participants-list">
       ${rows.map((member) => {
         const id = String(member?.id ?? '');
         const checked = selected.has(id) ? 'checked' : '';
         const name = member?.name || emptyLabel;
         const suffix = member?.isMe ? ` ${meLabel}` : '';
         return `
-        <label style="display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(148,163,184,.28);border-radius:999px;padding:6px 10px;background:rgba(255,255,255,.72);cursor:pointer;">
+        <label class="trip-split-participant-choice">
           <input type="checkbox" data-trip-split-member="${escapeHTML(id)}" ${checked} />
           <span>${escapeHTML(name)}${escapeHTML(suffix)}</span>
         </label>`;
       }).join('')}
     </div>
-    <div class="muted" style="font-size:12px;margin-top:6px;">${escapeHTML(hint)}</div>
+    <div class="muted trip-split-participants-hint">${escapeHTML(hint)}</div>
   `;
 }
 
@@ -377,20 +452,20 @@ export function renderTripSplitBox({
       const disabled = isActive ? '' : 'disabled';
       const value = (previousPct[id] ?? seededPct[id] ?? def).toString();
       return `<tr>
-            <td style="padding:6px 8px;">${nameCell(member)}</td>
-            <td style="padding:6px 8px; text-align:right;">
-              <input id="trip-split-pct-${escapeHTML(id)}" type="number" step="0.01" min="0" style="max-width:120px;" value="${escapeHTML(isActive ? value : '0')}" ${disabled} />
+            <td data-label="Participant">${nameCell(member)}</td>
+            <td data-label="%">
+              <input id="trip-split-pct-${escapeHTML(id)}" type="number" step="0.01" min="0" value="${escapeHTML(isActive ? value : '0')}" ${disabled} />
             </td>
           </tr>`;
     }).join('');
 
     return `
-          <div class="muted" style="margin-bottom:6px;">Somme = 100%</div>
-          <table style="width:100%; border-collapse:collapse;">
-            <thead><tr><th style="text-align:left; padding:6px 8px;">Participant</th><th style="text-align:right; padding:6px 8px;">%</th></tr></thead>
+          <div class="muted trip-split-table-note">Somme = 100%</div>
+          <table class="trip-split-table">
+            <thead><tr><th>Participant</th><th>%</th></tr></thead>
             <tbody>${body}</tbody>
           </table>
-          <div class="muted" style="margin-top:6px;">Les montants seront arrondis au centime et ajustés pour retomber exactement sur le total.</div>
+          <div class="muted trip-split-table-note">Les montants seront arrondis au centime et ajustés pour retomber exactement sur le total.</div>
         `;
   }
 
@@ -407,16 +482,16 @@ export function renderTripSplitBox({
         : (isActive ? Number(autoValue || 0).toFixed(2) : '0');
       const autoAttr = !hasManualValue && isActive ? 'data-auto="1"' : 'data-auto="0"';
       return `<tr>
-            <td style="padding:6px 8px;">${nameCell(member)}</td>
-            <td style="padding:6px 8px; text-align:right;">
-              <input id="trip-split-amt-${escapeHTML(id)}" type="number" step="0.01" min="0" style="max-width:140px;" value="${escapeHTML(isActive ? value : '0')}" ${autoAttr} ${disabled} />
+            <td data-label="Participant">${nameCell(member)}</td>
+            <td data-label="Montant">
+              <input id="trip-split-amt-${escapeHTML(id)}" type="number" step="0.01" min="0" value="${escapeHTML(isActive ? value : '0')}" ${autoAttr} ${disabled} />
             </td>
           </tr>`;
     }).join('');
 
     return `
-          <table style="width:100%; border-collapse:collapse;">
-            <thead><tr><th style="text-align:left; padding:6px 8px;">Participant</th><th style="text-align:right; padding:6px 8px;">Montant</th></tr></thead>
+          <table class="trip-split-table">
+            <thead><tr><th>Participant</th><th>Montant</th></tr></thead>
             <tbody>${body}</tbody>
           </table>
         `;
