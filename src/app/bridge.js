@@ -67,6 +67,7 @@ window.Core.dailyBudgetRules = dailyBudgetRules;
 window.Core.recurringRules = recurringRules;
 window.Core.canonicalRecords = canonicalRecords;
 window.Core.sportRules = sportRules;
+window.Core.loadSportProgressionRules = () => import('../core/sportProgressionRules.js');
 window.Core.sportCatalog = sportCatalog;
 window.Core.sportProgramRules = sportProgramRules;
 

@@ -89,5 +89,105 @@ export function createSportRepository(getClient) {
       unwrap(await client.from(table).update({ started_at: startedAt, ended_at: endedAt }).eq('id', sessionId));
       return true;
     },
+
+    async loadProgressionContext({ tables, userId, exerciseIds, historyLimit = 20, recentDays = 90 }) {
+      const client = requireClient(getClient);
+      const ids = [...new Set((exerciseIds || []).filter(Boolean))];
+      if (!ids.length) return { metrics: [], history: [] };
+      const metrics = unwrap(await client.from(tables.metrics)
+        .select('exercise_id,smoothed_e1rm_kg,best_recent_weight_kg,best_recent_reps,best_recent_e1rm_kg,best_all_time_e1rm_kg,training_max_percentage,reference_weight_kg,calculated_at')
+        .eq('user_id', userId)
+        .in('exercise_id', ids));
+      const recentSince = new Date(Date.now() - Math.max(1, recentDays) * 86400000).toISOString();
+      const history = unwrap(await client.from(tables.history)
+        .select('exercise_id,estimated_1rm_kg,created_at')
+        .eq('user_id', userId)
+        .in('exercise_id', ids)
+        .gte('created_at', recentSince)
+        .order('created_at', { ascending: false })
+        .limit(historyLimit));
+      return { metrics, history };
+    },
+
+    async saveProgression({ tables, rows }) {
+      const client = requireClient(getClient);
+      if (rows.metrics?.length) {
+        unwrap(await client.from(tables.metrics).upsert(rows.metrics, { onConflict: 'user_id,exercise_id' }));
+      }
+      if (rows.history?.length) unwrap(await client.from(tables.history).insert(rows.history));
+      if (rows.recommendations?.length) {
+        unwrap(await client.from(tables.recommendations).upsert(rows.recommendations, {
+          onConflict: 'user_id,exercise_id,source_session_id,program_exercise_id',
+          ignoreDuplicates: false,
+        }));
+      }
+      return true;
+    },
+
+    async loadRecommendations({ table, userId, status = 'pending', limit = 30 }) {
+      const client = requireClient(getClient);
+      return unwrap(await client.from(table)
+        .select('id,user_id,exercise_id,program_exercise_id,source_session_id,current_program_weight_kg,heaviest_successful_weight_kg,heaviest_attempted_weight_kg,sets_at_heaviest_weight,recommended_weight_kg,increment_kg,reason_code,reason_text,confidence,status,accepted_at,created_at')
+        .eq('user_id', userId)
+        .eq('status', status)
+        .order('created_at', { ascending: false })
+        .limit(limit));
+    },
+
+    async setRecommendationStatus({ tables, recommendationId, userId, status }) {
+      const client = requireClient(getClient);
+      const allowed = new Set(['pending', 'accepted', 'rejected']);
+      if (!allowed.has(status)) throw new Error('Statut de recommandation invalide');
+      const timestamp = new Date().toISOString();
+      const patch = { status, updated_at: timestamp };
+      if (status === 'accepted') patch.accepted_at = timestamp;
+      unwrap(await client.from(tables.recommendations).update(patch)
+        .eq('id', recommendationId).eq('user_id', userId));
+      return true;
+    },
+
+    async applyRecommendation({ tables, recommendation, userId, weightKg, scope = 'session_variant' }) {
+      const client = requireClient(getClient);
+      if (!recommendation?.id || !recommendation?.program_exercise_id) throw new Error('Recommandation non applicable');
+      const nextWeight = Number(weightKg ?? recommendation.recommended_weight_kg);
+      if (!Number.isFinite(nextWeight) || nextWeight < 0) throw new Error('Charge recommandee invalide');
+      const timestamp = new Date().toISOString();
+      let programUpdate = client.from(tables.programExercises).update({ default_weight_kg: nextWeight, updated_at: timestamp });
+      if (scope === 'compatible_occurrences') {
+        if (!tables.programSessions) throw new Error('Table sessions programme indisponible');
+        const sourceRows = unwrap(await client.from(tables.programExercises)
+          .select('id,session_id')
+          .eq('id', recommendation.program_exercise_id)
+          .limit(1));
+        const sourceSessionId = sourceRows[0]?.session_id;
+        if (!sourceSessionId) throw new Error('Seance programme source introuvable');
+        const sessionRows = unwrap(await client.from(tables.programSessions)
+          .select('id,program_id')
+          .eq('id', sourceSessionId)
+          .limit(1));
+        const programId = sessionRows[0]?.program_id;
+        if (!programId) throw new Error('Programme source introuvable');
+        const compatibleSessions = unwrap(await client.from(tables.programSessions)
+          .select('id')
+          .eq('program_id', programId));
+        const compatibleSessionIds = compatibleSessions.map((row) => row.id).filter(Boolean);
+        if (!compatibleSessionIds.length) throw new Error('Aucune seance compatible');
+        programUpdate = programUpdate.eq('exercise_key', recommendation.exercise_id).in('session_id', compatibleSessionIds);
+      } else {
+        programUpdate = programUpdate.eq('id', recommendation.program_exercise_id);
+      }
+      unwrap(await programUpdate);
+      unwrap(await client.from(tables.recommendations).update({
+        status: 'applied',
+        accepted_at: recommendation.accepted_at || timestamp,
+        applied_at: timestamp,
+        updated_at: timestamp,
+        application_scope: scope,
+        previous_program_weight_kg: recommendation.current_program_weight_kg,
+        recommended_weight_kg: nextWeight,
+        modification_source: 'accepted_recommendation',
+      }).eq('id', recommendation.id).eq('user_id', userId));
+      return true;
+    },
   };
 }

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `f64d7368e71e6c69170e2e93718e103aef6e3ed8`
-> Empreinte du snapshot : `a5fcd501124bbfe67b46b7ed84d26a3788f8c0ce02f79d5c3aabb0a14dc71229`
-> Généré le : `2026-07-19T12:18:46.173Z`
+> Commit analysé : `41b717b70fff54e0f66449e6b031e5c4aba0d5ad`
+> Empreinte du snapshot : `6f2ea3685364ef65c58005ed7363d8390a86e4a71b94319df9a6e2099e5df69c`
+> Généré le : `2026-07-22T08:29:00.557Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.237` |
+| Version | `10.5.238` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 61 |
-| Modules core | 24 |
+| Modules core | 25 |
 | Modules data | 7 |
 | Modules features | 33 |
 | Fichiers de tests | 96 |
-| Migrations Supabase | 86 |
+| Migrations Supabase | 87 |
 | Fonctions Edge | 8 |
 | Projet Android présent | Oui |
 
@@ -175,6 +175,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `src/core/nutritionRules.js`
 - `src/core/recurringRules.js`
 - `src/core/sportLibraryRules.js`
+- `src/core/sportProgressionRules.js`
 - `src/core/sportRules.js`
 - `src/core/transactionGuards.js`
 - `src/core/transactionRpcPayload.js`
@@ -485,6 +486,7 @@ Modules :
 - `supabase/migrations/20260716091238_sport_integrate_a3_b3_volume_intensity.sql`
 - `supabase/migrations/20260716092537_sport_tune_volume_intensity_loads.sql`
 - `supabase/migrations/20260716101927_sport_update_ab_program_push_posterior_variant.sql`
+- `supabase/migrations/20260720043529_sport_load_progression_recommendations.sql`
 
 ## Android et budgets de modules
 

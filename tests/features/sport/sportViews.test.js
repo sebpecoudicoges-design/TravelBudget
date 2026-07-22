@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderSportHistory } from '../../../src/features/sport/sportHistoryView.js';
-import { renderPlannedSportWeek, renderProgramSettings } from '../../../src/features/sport/sportProgramView.js';
+import { renderLoadRecommendations, renderPlannedSportWeek, renderProgramSettings } from '../../../src/features/sport/sportProgramView.js';
 import { renderSportTimer } from '../../../src/features/sport/sportTimerView.js';
 
 const api = {
@@ -161,5 +161,28 @@ describe('Sport program view', () => {
     expect(html).toContain('data-sport-program-day="1"');
     expect(html).toContain('<option value="A1/B1" selected>A1 / B1</option>');
     expect(html).toContain('id="sport-program-reset"');
+  });
+});
+
+describe('Sport progression view', () => {
+  it('renders load recommendations with stable action hooks', () => {
+    const html = renderLoadRecommendations({
+      recommendations: [{
+        id: 'rec-1',
+        exercise_id: 'barbell_bench_press',
+        program_exercise_id: 'program-ex-1',
+        recommended_weight_kg: 65,
+        reason_text: 'Haut de plage atteint.',
+      }],
+      api,
+    });
+
+    expect(html).toContain('Recommandations de charge');
+    expect(html).toContain('barbell_bench_press');
+    expect(html).toContain('65 kg');
+    expect(html).toContain('data-sport-apply-load-recommendation="rec-1"');
+    expect(html).toContain('data-sport-apply-all-load-recommendation="rec-1"');
+    expect(html).toContain('data-sport-modify-load-recommendation="rec-1"');
+    expect(html).toContain('data-sport-reject-load-recommendation="rec-1"');
   });
 });

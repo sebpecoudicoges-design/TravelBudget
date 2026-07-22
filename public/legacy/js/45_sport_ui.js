@@ -102,6 +102,7 @@
     CACHE.circuit = loadCircuit();
     CACHE.program = loadSportProgram();
     CACHE.sqlSessionFavorites = [];
+    CACHE.loadRecommendations = [];
     CACHE.programLoaded = false;
     CACHE.programSource = "fallback";
     CACHE.timerBeepVolume = loadTimerPrefs().beepVolume;
@@ -936,6 +937,8 @@
     return {
       tmpId: "tmp_" + Date.now() + "_" + Math.random().toString(16).slice(2),
       _sessionItemId: overrides?._sessionItemId || null,
+      exerciseKey: overrides?.exerciseKey || overrides?.exercise_key || "",
+      programExerciseId: overrides?.programExerciseId || overrides?.program_exercise_id || null,
       activityKey: a.key,
       exerciseName: overrides?.exerciseName || (lang() === "en" ? a.en : a.fr),
       equipment: overrides?.equipment || a.equipment,
@@ -953,6 +956,8 @@
       intensityLabel: intensity === "light" ? txt("legere", "light") : intensity === "hard" ? txt("forte", "hard") : intensity === "max" ? txt("tres forte", "very hard") : txt("moderee", "moderate"),
       metValue: n(overrides?.metValue, a.met * intensityFactor(intensity)),
       notes: overrides?.notes || "",
+      incrementKg: n(overrides?.incrementKg ?? overrides?.progression_increment_kg, 0) || null,
+      trainingMaxPercentage: n(overrides?.trainingMaxPercentage ?? overrides?.training_max_percentage, 0) || null,
     };
   }
   function programLoadForExercise(name) {
@@ -1792,6 +1797,8 @@
   function sqlProgramExerciseToPlanItem(row) {
     const mode = String(row?.mode || "reps");
     return makePlanItem(row?.activity_key || "strength", {
+      exerciseKey: row?.exercise_key || "",
+      programExerciseId: row?.id || null,
       exerciseName: row?.exercise_name || "",
       equipment: row?.equipment || "mixed",
       mode,
@@ -1808,6 +1815,8 @@
       distanceM: n(row?.distance_m, 0),
       metValue: n(row?.met_value, 0),
       notes: row?.notes || "",
+      incrementKg: n(row?.progression_increment_kg, 0) || null,
+      trainingMaxPercentage: n(row?.training_max_percentage, 0) || null,
     });
   }
   async function ensureSportProgramsLoaded(reason) {
@@ -1846,7 +1855,7 @@
       if (sessionIds.length) {
         exercises = await c
           .from(table("sport_program_exercises"))
-          .select("id,session_id,exercise_key,exercise_name,activity_key,equipment,mode,target_reps,rep_min,rep_max,target_seconds,time_min_seconds,time_max_seconds,planned_sets,rest_seconds,default_weight_kg,load_label,distance_m,met_value,sort_order,notes")
+          .select("id,session_id,exercise_key,exercise_name,activity_key,equipment,mode,target_reps,rep_min,rep_max,target_seconds,time_min_seconds,time_max_seconds,planned_sets,rest_seconds,default_weight_kg,load_label,distance_m,met_value,sort_order,notes,progression_increment_kg,training_max_percentage")
           .in("session_id", sessionIds)
           .order("sort_order", { ascending: true });
         if (exercises.error) throw exercises.error;
@@ -1866,6 +1875,11 @@
           plan,
         };
       }).filter(row => row.plan.length);
+      CACHE.loadRecommendations = await sportRepository().loadRecommendations({
+        table: table("sport_load_recommendations"),
+        userId: uid(),
+        status: "pending",
+      });
       const sqlProgram = {
         enabled: true,
         source: "sql",
@@ -2150,6 +2164,7 @@
       </div>
       ${renderPlannedSportWeek(rows, program)}
       ${renderProgramSettings(program)}
+      ${renderLoadRecommendations()}
       <div class="tb-sport-library-grid">
         ${rows.map(row => {
           const custom = loadCustomSessionFavorites().some(customRow => String(customRow.id || "") === String(row.id || ""));
@@ -2166,6 +2181,16 @@
       </div>
       <div class="muted" style="font-size:12px;margin-top:8px;">${esc(txt("Progression : chaque exercice utilise sa propre plage de reps. Exemple 6-10, 10-15 ou 12-20.", "Progression: each exercise uses its own rep range, e.g. 6-10, 10-15 or 12-20."))}</div>
     </div>`;
+  }
+  function renderLoadRecommendations() {
+    return window.UI?.sportProgramView?.renderLoadRecommendations?.({
+      recommendations: CACHE.loadRecommendations,
+      api: {
+        translate: txt,
+        escapeHTML: esc,
+        numberValue: n,
+      },
+    }) || "";
   }
   function quickPlanItem(kind) {
     const ex = EXERCISE_LIBRARY.find(row => row.key === kind || (kind === "pushup" && row.key === "pushup"));
@@ -2983,6 +3008,50 @@
       activateMassProgram();
       renderSport("program-activate");
     };
+    const recommendationById = id => (CACHE.loadRecommendations || []).find(row => String(row.id) === String(id));
+    root.querySelectorAll("[data-sport-reject-load-recommendation]").forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute("data-sport-reject-load-recommendation");
+        await sportRepository().setRecommendationStatus({
+          tables: { recommendations: table("sport_load_recommendations") }, recommendationId: id, userId: uid(), status: "rejected",
+        });
+        CACHE.loadRecommendations = (CACHE.loadRecommendations || []).filter(row => String(row.id) !== String(id));
+        renderSport("load-recommendation-rejected");
+      };
+    });
+    const applyLoadRecommendation = async (id, adjustedWeight, scope) => {
+      const recommendation = recommendationById(id);
+      if (!recommendation) return;
+      await sportRepository().applyRecommendation({
+        tables: { recommendations: table("sport_load_recommendations"), programExercises: table("sport_program_exercises"), programSessions: table("sport_program_sessions") },
+        recommendation,
+        userId: uid(),
+        weightKg: adjustedWeight,
+        scope: scope || "session_variant",
+      });
+      CACHE.loadRecommendations = (CACHE.loadRecommendations || []).filter(row => String(row.id) !== String(id));
+      CACHE.programLoaded = false;
+      CACHE.sqlSessionFavorites = [];
+      await ensureSportProgramsLoaded("load-recommendation-applied");
+      renderSport("load-recommendation-applied");
+    };
+    root.querySelectorAll("[data-sport-apply-load-recommendation]").forEach(btn => {
+      btn.onclick = () => applyLoadRecommendation(btn.getAttribute("data-sport-apply-load-recommendation"));
+    });
+    root.querySelectorAll("[data-sport-apply-all-load-recommendation]").forEach(btn => {
+      btn.onclick = () => applyLoadRecommendation(btn.getAttribute("data-sport-apply-all-load-recommendation"), undefined, "compatible_occurrences");
+    });
+    root.querySelectorAll("[data-sport-modify-load-recommendation]").forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.getAttribute("data-sport-modify-load-recommendation");
+        const recommendation = recommendationById(id);
+        const value = prompt(txt("Charge a appliquer (kg)", "Load to apply (kg)"), String(n(recommendation?.recommended_weight_kg, 0)));
+        if (value == null) return;
+        const adjusted = Number(String(value).replace(",", "."));
+        if (!Number.isFinite(adjusted) || adjusted < 0) return;
+        applyLoadRecommendation(id, adjusted);
+      };
+    });
     const saveProgramFromForm = () => {
       const days = {};
       root.querySelectorAll("[data-sport-program-day]").forEach(select => {
@@ -4004,6 +4073,56 @@
     if (old) old.remove();
   }
 
+  async function syncWorkoutLoadProgression(summary, sessionId, userId) {
+    const rules = await window.Core?.loadSportProgressionRules?.();
+    if (!rules?.analyzeWorkoutLoadProgression || !rules?.buildLoadProgressionPersistenceRows) return [];
+    const exerciseIds = [...new Set((summary?.plan || []).map(item => item?.exerciseKey).filter(Boolean))];
+    if (!exerciseIds.length) return [];
+    const tables = {
+      metrics: table("sport_exercise_metrics"),
+      history: table("sport_exercise_metric_history"),
+      recommendations: table("sport_load_recommendations"),
+    };
+    const existing = await sportRepository().loadProgressionContext({ tables, userId, exerciseIds });
+    const metricsByExercise = new Map((existing.metrics || []).map(row => [String(row.exercise_id), row]));
+    const historyByExercise = new Map();
+    (existing.history || []).forEach(row => {
+      const key = String(row.exercise_id || "");
+      if (!key) return;
+      const list = historyByExercise.get(key) || [];
+      if (n(row.estimated_1rm_kg, 0) > 0 && list.length < 4) list.push(n(row.estimated_1rm_kg, 0));
+      historyByExercise.set(key, list);
+    });
+    const byExerciseKey = {};
+    exerciseIds.forEach(key => {
+      const metric = metricsByExercise.get(String(key)) || {};
+      byExerciseKey[key] = {
+        smoothedE1rmKg: n(metric.smoothed_e1rm_kg, 0),
+        bestAllTimeE1rmKg: n(metric.best_all_time_e1rm_kg, 0),
+        bestRecentWeightKg: n(metric.best_recent_weight_kg, 0),
+        bestRecentReps: n(metric.best_recent_reps, 0),
+        bestRecentE1rmKg: n(metric.best_recent_e1rm_kg, 0),
+        bestRecentIsCurrent: Date.now() - new Date(metric.calculated_at || 0).getTime() <= 90 * 86400000,
+        trainingMaxPercentage: n(metric.training_max_percentage, 0) || 0.95,
+        recentSessionE1rms: historyByExercise.get(String(key)) || [],
+      };
+    });
+    const analyses = rules.analyzeWorkoutLoadProgression(summary, { byExerciseKey });
+    analyses.forEach(row => {
+      const previous = byExerciseKey[row.exerciseKey] || {};
+      row.bestAllTimeE1rmKg = previous.bestAllTimeE1rmKg || 0;
+      if (previous.bestRecentIsCurrent && previous.bestRecentE1rmKg > row.latestE1rmKg) {
+        row.bestRecentWeightKg = previous.bestRecentWeightKg;
+        row.bestRecentReps = previous.bestRecentReps;
+        row.bestRecentE1rmKg = previous.bestRecentE1rmKg;
+      }
+    });
+    const rows = rules.buildLoadProgressionPersistenceRows(analyses, { userId, sessionId });
+    await sportRepository().saveProgression({ tables, rows });
+    CACHE.loadRecommendations = await sportRepository().loadRecommendations({ table: tables.recommendations, userId, status: "pending" });
+    return analyses;
+  }
+
   async function saveWorkout(summary) {
     const c = client();
     const userId = uid();
@@ -4043,9 +4162,18 @@
           rows: initialRows,
         });
         const sessionId = created.sessionId;
+        let recommendationCount = 0;
+        try {
+          const recommendations = await syncWorkoutLoadProgression(summary, sessionId, userId);
+          recommendationCount = recommendations.length;
+        } catch (progressionError) {
+          console.warn("[sport] load progression failed", progressionError?.message || progressionError);
+        }
         markLocalSynced(localRow.localId, sessionId);
         CACHE.loaded = false;
-        CACHE.status = txt("Seance sauvegardee et synchronisee.", "Workout saved and synced.");
+        CACHE.status = recommendationCount
+          ? txt(`Seance synchronisee · ${recommendationCount} recommandation(s) de charge en attente.`, `Workout synced · ${recommendationCount} load recommendation(s) pending.`)
+          : txt("Seance sauvegardee et synchronisee.", "Workout saved and synced.");
         await loadHistory();
       } catch (e) {
         CACHE.error = e?.message || String(e);
@@ -4087,6 +4215,7 @@
       rows: initialRows,
     });
     const sessionId = created.sessionId;
+    try { await syncWorkoutLoadProgression(summary, sessionId, userId); } catch (progressionError) { console.warn("[sport] load progression failed", progressionError?.message || progressionError); }
     markLocalSynced(row.localId || row.id, sessionId);
     return true;
   }

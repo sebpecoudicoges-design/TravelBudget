@@ -165,3 +165,27 @@ export function renderProgramSettings({ program, api = {} }) {
       </div>
     </details>`;
 }
+
+export function renderLoadRecommendations({ recommendations = [], api = {} } = {}) {
+  const rows = Array.isArray(recommendations) ? recommendations : [];
+  if (!rows.length) return '';
+  const helpers = baseApi(api);
+  const t = helpers.translate;
+  const esc = helpers.escapeHTML;
+  const n = helpers.numberValue;
+  return `<div class="tb-sport-simple" style="margin:12px 0;">
+      <strong>${esc(t('Recommandations de charge', 'Load recommendations'))}</strong>
+      <div class="tb-sport-library-grid" style="margin-top:10px;">
+        ${rows.map((row) => `<div class="btn" style="display:grid;text-align:left;gap:7px;">
+          <div><strong>${esc(row.exercise_id)}</strong> · ${esc(String(n(row.recommended_weight_kg, 0)))} kg</div>
+          <small class="muted">${esc(row.reason_text || '')}</small>
+          <div class="tb-sport-actions">
+            ${row.program_exercise_id ? `<button class="btn small primary" type="button" data-sport-apply-load-recommendation="${esc(row.id)}">${esc(t('Accepter et appliquer', 'Accept and apply'))}</button>
+            <button class="btn small" type="button" data-sport-apply-all-load-recommendation="${esc(row.id)}">${esc(t('Appliquer aux variantes compatibles', 'Apply to compatible variants'))}</button>
+            <button class="btn small" type="button" data-sport-modify-load-recommendation="${esc(row.id)}">${esc(t('Modifier', 'Adjust'))}</button>` : ''}
+            <button class="btn small" type="button" data-sport-reject-load-recommendation="${esc(row.id)}">${esc(t('Conserver la charge', 'Keep current load'))}</button>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+}

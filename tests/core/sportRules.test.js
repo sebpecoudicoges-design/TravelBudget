@@ -1,9 +1,66 @@
 import { describe, expect, it } from 'vitest';
 import { appendCircuitRound, bindSportSetRows, buildSportPersistenceRows, buildWorkoutSequence, completedWorkout, estimateSportSessionKcal, finalizeWorkout, insertExerciseSet, kcalFromMet, SPORT_REST_MET, totalPlanRestSeconds, totalPlanWorkSeconds } from '../../src/core/sportRules.js';
+import { analyzeExerciseLoadProgression, estimatedOneRepMax } from '../../src/core/sportProgressionRules.js';
 import { estimateWorkDayKcal } from '../../src/core/workRules.js';
 import { resolveDailyBaselineKcal } from '../../src/core/bodyEnergyRules.js';
 
 describe('sport rules core', () => {
+  it('estimates one rep max with Epley', () => {
+    expect(estimatedOneRepMax(90, 10)).toBe(120);
+  });
+
+  it('keeps a single successful pyramid top set as the next reference load', () => {
+    const result = analyzeExerciseLoadProgression({
+      sets: [{ weightKg: 80, reps: 10 }, { weightKg: 85, reps: 10 }, { weightKg: 90, reps: 10 }],
+      repMin: 6, repMax: 10, plannedSets: 3, incrementKg: 5,
+    });
+    expect(result).toMatchObject({
+      latestE1rmKg: 120,
+      referenceWeightKg: 90,
+      recommendedWeightKg: 90,
+      setsAtReferenceWeight: 1,
+      reasonCode: 'TOP_RANGE_SINGLE_HEAVY_SET',
+    });
+  });
+
+  it('increases only after every planned set reaches the top of the range', () => {
+    const complete = analyzeExerciseLoadProgression({
+      sets: [{ weightKg: 90, reps: 10 }, { weightKg: 90, reps: 10 }, { weightKg: 90, reps: 10 }],
+      repMin: 6, repMax: 10, plannedSets: 3, incrementKg: 5,
+    });
+    const partial = analyzeExerciseLoadProgression({
+      sets: [{ weightKg: 90, reps: 10 }, { weightKg: 90, reps: 9 }, { weightKg: 90, reps: 8 }],
+      repMin: 6, repMax: 10, plannedSets: 3, incrementKg: 5,
+    });
+    expect(complete).toMatchObject({ recommendedWeightKg: 95, reasonCode: 'TOP_RANGE_ALL_SETS' });
+    expect(partial).toMatchObject({ recommendedWeightKg: 90, reasonCode: 'KEEP_WEIGHT_BUILD_REPS' });
+  });
+
+  it('does not promote a heaviest attempt below the minimum repetitions', () => {
+    const result = analyzeExerciseLoadProgression({
+      sets: [{ weightKg: 80, reps: 10 }, { weightKg: 85, reps: 8 }, { weightKg: 90, reps: 4 }],
+      repMin: 6, repMax: 10, plannedSets: 3,
+    });
+    expect(result).toMatchObject({
+      heaviestAttemptedWeightKg: 90,
+      referenceWeightKg: 85,
+      recommendedWeightKg: 85,
+      reasonCode: 'HEAVIEST_SET_BELOW_MIN_REPS',
+    });
+  });
+
+  it('excludes warmups, failed and invalid sets from the reference load', () => {
+    const result = analyzeExerciseLoadProgression({
+      sets: [
+        { weightKg: 50, reps: 10, warmup: true },
+        { weightKg: 90, reps: 10, failed: true },
+        { weightKg: 85, reps: 8, completed: true },
+      ],
+      repMin: 6, repMax: 10, plannedSets: 3,
+    });
+    expect(result.referenceWeightKg).toBe(85);
+    expect(result.latestWeightKg).toBe(85);
+  });
   it('uses the standard MET kcal formula', () => {
     expect(Math.round(kcalFromMet({ met: 5, kg: 70, minutes: 60 }))).toBe(368);
     expect(Math.round(kcalFromMet({ met: 12, kg: 70, minutes: 60 }))).toBe(882);

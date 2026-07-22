@@ -100,11 +100,14 @@ describe('Sport domain contract', () => {
     }
     expect(programView).toContain('export function renderPlannedSportWeek');
     expect(programView).toContain('export function renderProgramSettings');
+    expect(programView).toContain('export function renderLoadRecommendations');
     expect(legacy).toContain('sportProgramView?.renderPlannedSportWeek');
     expect(legacy).toContain('sportProgramView?.renderProgramSettings');
+    expect(legacy).toContain('sportProgramView?.renderLoadRecommendations');
     expect(main).toContain("import('./features/sport/sportProgramView.js')");
     expect(main).toContain('window.UI.sportProgramView');
     expect(bridge).not.toContain("import * as sportProgramView from '../features/sport/sportProgramView.js'");
+    expect(legacy).not.toContain('recommendations.map(row => `<div class="btn" style="display:grid;text-align:left;gap:7px;">');
   });
 
   it('delegates timer, history, sandbox and profile UI to feature modules', () => {
