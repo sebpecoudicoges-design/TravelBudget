@@ -264,9 +264,11 @@ async function ensureDomainModules(domain) {
       };
     }
     if (key === 'sport') {
-      const [sportFormView, sportProgramView] = await Promise.all([
+      const [sportFormView, sportProgramView, sportProfileRules, sportProfileView] = await Promise.all([
         import('./features/sport/sportFormView.js'),
         import('./features/sport/sportProgramView.js'),
+        import('./features/sport/sportProfileRules.js'),
+        import('./features/sport/sportProfileView.js'),
       ]);
       window.UI.sportFormView = {
         ...(window.UI.sportFormView || {}),
@@ -275,6 +277,15 @@ async function ensureDomainModules(domain) {
       window.UI.sportProgramView = {
         ...(window.UI.sportProgramView || {}),
         ...sportProgramView,
+      };
+      window.Core = window.Core || {};
+      window.Core.sportProfileRules = {
+        ...(window.Core.sportProfileRules || {}),
+        ...sportProfileRules,
+      };
+      window.UI.sportProfileView = {
+        ...(window.UI.sportProfileView || {}),
+        ...sportProfileView,
       };
     }
     if (key === 'trip') {

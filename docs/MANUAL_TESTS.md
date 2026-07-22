@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.243`.
-- Bilan : 7 parcours `ok`, 15 parcours `à faire`.
+- Version à valider : `10.5.244`.
+- Bilan : 7 parcours `ok`, 16 parcours `à faire`.
 - Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
 - Les 29 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -39,6 +39,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 20 | 10.5.239 | À traiter : rendu cartes et shell | Depuis un chargement frais, ouvrir **À traiter**, changer le filtre de statut, saisir une recherche, ouvrir une carte avec document et une demande Trip si disponible. | Le shell, les compteurs, les cartes WhatsApp/documents et les cartes Trip gardent les mêmes actions. La recherche ne perd pas le focus et les boutons répondent comme avant. | `TB BUILD 10.5.239` ; aucun `Uncaught`, aucun module `inboxView` manquant, aucune carte vide après changement de filtre. | à faire |
 | 21 | 10.5.240 | Notifications : centre flottant | Déclencher ou conserver une notification visible, puis ouvrir le bouton flottant **Notifications**. Cliquer sur une notification liée à un écran si disponible. | Le bouton, le compteur et le panneau restent visibles comme avant. Le clic marque la notification comme lue et ouvre l'écran cible sans bloquer À traiter. | `TB BUILD 10.5.240` ; aucun `Uncaught`, aucun module `inboxView` manquant, aucun panneau vide avec notifications actives. | à faire |
 | 22 | 10.5.243 | Sport + Patrimoine | Ouvrir **Sport** : vérifier la carte **Analyse progression charges**, changer le filtre exercice et ouvrir **Mesures** pour saisir une mesure impédancemètre complète avec protocole. Puis ouvrir **Patrimoine**, un asset, **Documents / transactions**, rechercher une transaction par montant/libellé/date et une dépense Trip par libellé/montant. | Les e1RM par date s'affichent pour les gros mouvements, le filtre garde la sélection, la mesure affiche un indice qualité et se sauvegarde. Patrimoine filtre les candidats sans perdre la sélection, et l'option exclusion budget reste disponible. | `TB BUILD 10.5.243` ; aucun `Uncaught`, aucune table `health_body_measurements` ou `sport_exercise_metric_history` manquante, aucun écran Sport/Patrimoine bloqué. | à faire |
+| 23 | 10.5.244 | Performance Sport lazy | Depuis un chargement frais, ouvrir Dashboard puis **Sport**. Aller sur le profil athlétique et **Analyse progression charges**, changer un filtre et revenir au timer. | Le premier écran reste léger, Sport charge ses modules profil/progression à l'ouverture et toutes les cartes Sport restent disponibles. | `TB BUILD 10.5.244` ; aucun `sportProfileRules` ou `sportProfileView` manquant, aucun `Uncaught`. | à faire |
 
 ## À ajouter à chaque livraison
 

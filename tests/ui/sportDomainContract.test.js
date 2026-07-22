@@ -34,8 +34,6 @@ describe('Sport domain contract', () => {
       'sportHistoryView',
       'sportSessionSandboxRules',
       'sportSessionSandboxView',
-      'sportProfileRules',
-      'sportProfileView',
     ]) {
       expect(bridge).toContain(token);
     }
@@ -46,7 +44,13 @@ describe('Sport domain contract', () => {
     expect(bridge).toContain('window.UI.sportHistoryView');
     expect(main).toContain("import('./features/sport/sportFormView.js')");
     expect(main).toContain('window.UI.sportFormView');
+    expect(main).toContain("import('./features/sport/sportProfileRules.js')");
+    expect(main).toContain("import('./features/sport/sportProfileView.js')");
+    expect(main).toContain('window.Core.sportProfileRules');
+    expect(main).toContain('window.UI.sportProfileView');
     expect(bridge).not.toContain("import * as sportFormView from '../features/sport/sportFormView.js'");
+    expect(bridge).not.toContain("import * as sportProfileRules from '../features/sport/sportProfileRules.js'");
+    expect(bridge).not.toContain("import * as sportProfileView from '../features/sport/sportProfileView.js'");
   });
 
   it('keeps catalog and library normalization out of the legacy file', () => {

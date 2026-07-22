@@ -37,8 +37,6 @@ import * as sportTimerController from '../features/sport/sportTimerController.js
 import * as sportHistoryView from '../features/sport/sportHistoryView.js';
 import * as sportSessionSandboxView from '../features/sport/sportSessionSandboxView.js';
 import * as sportSessionSandboxRules from '../features/sport/sportSessionSandboxRules.js';
-import * as sportProfileRules from '../features/sport/sportProfileRules.js';
-import * as sportProfileView from '../features/sport/sportProfileView.js';
 import { storageQuota } from '../data/storageQuota.js';
 import * as sportRules from '../core/sportRules.js';
 import * as uiComponents from '../ui/components.js';
@@ -93,9 +91,7 @@ window.UI.sportTimerView = sportTimerView;
 window.UI.sportTimerController = sportTimerController;
 window.UI.sportHistoryView = sportHistoryView;
 window.UI.sportSessionSandboxView = sportSessionSandboxView;
-window.UI.sportProfileView = sportProfileView;
 window.Core.sportSessionSandboxRules = sportSessionSandboxRules;
-window.Core.sportProfileRules = sportProfileRules;
 
 // Optional: expose money helpers directly for convenience (legacy may redefine later; that's OK)
 window.moneyRound = window.moneyRound || money.moneyRound;
