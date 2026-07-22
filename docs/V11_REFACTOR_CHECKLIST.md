@@ -253,6 +253,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Sortir le dictionnaire anglais i18n du boot : `00_i18n.js` garde le francais, `00_i18n_en.js` charge l'anglais a la demande ; boot legacy 1025.3 -> 977.2 KiB.
   - [x] Extraire le rendu Inbox / A traiter : shell, previews, cartes WhatsApp/documents et cartes Trip passent dans `inboxView.js`.
   - [x] Extraire le rendu du centre de notifications Inbox : styles, host, compteur et lignes de notification passent dans `inboxView.js`.
+  - [x] Extraire les modales Inbox transaction, liaison document-transaction et approbation Trip vers `inboxView.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

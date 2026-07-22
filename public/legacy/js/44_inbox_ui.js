@@ -1055,24 +1055,15 @@
     const wrap = document.createElement('div');
     wrap.className = 'tb-inbox-modal-backdrop';
     wrap.onclick = (e) => { if(e.target === wrap) closeInboxModal(); };
-    wrap.innerHTML = `
-      <div class="tb-inbox-modal" role="dialog" aria-modal="true">
-        <div class="tb-inbox-modal-head">
-          <div><h3>${esc(createsCash ? tr('Ajouter la dépense Trip', 'Add Trip expense') : tr('Ajouter ma part Budget Trip', 'Add my Trip budget share'))}</h3><div class="tb-inbox-note">${esc(createsCash ? tr('Cette action crée le paiement cash complet et ta part Budget.', 'This creates the full cash payment and your Budget share.') : tr('Cette action ajoute uniquement ta part au Budget. Elle ne débite pas ta wallet et ne crée pas de paiement cash.', 'This only adds your share to Budget. It does not debit your wallet or create a cash payment.'))}</div></div>
-          <button class="btn" type="button" data-inbox-modal-close>×</button>
-        </div>
-        <div class="tb-inbox-form-grid">
-          <div class="field span-2"><label>${esc(tr('Partage', 'Shared trip'))}</label><input type="text" value="${esc(meta.trip_name || 'Trip')}" disabled></div>
-          <div class="field span-2"><label>${esc(tr('Dépense', 'Expense'))}</label><input type="text" value="${esc(meta.expense_label || '')}" disabled></div>
-          <div class="field"><label>${esc(createsCash ? tr('Montant à débiter', 'Amount to debit') : tr('Montant déclaré payé', 'Declared paid amount'))}</label><input type="text" value="${esc(`${amount || ''} ${currency}`.trim())}" disabled></div>
-          <div class="field"><label>${esc(tr('Ta part budget', 'Your budget share'))}</label><input type="text" value="${esc(`${Number(meta.payer_share_amount || 0) || 0} ${currency}`)}" disabled></div>
-          <div class="field span-2"><label>${esc(createsCash ? tr('Wallet à débiter', 'Wallet to debit') : tr('Wallet de référence (non débitée)', 'Reference wallet (not debited)'))}</label><select id="tb-trip-approval-wallet">${wallets.map(w => `<option value="${esc(w.id || w.wallet_id)}">${esc(w.name || 'Wallet')} · ${esc(w.currency || '')}</option>`).join('')}</select></div>
-        </div>
-        <div class="tb-inbox-modal-actions">
-          <button class="btn" type="button" data-inbox-modal-close>${esc(tr('Annuler', 'Cancel'))}</button>
-          <button class="btn primary" type="button" id="tb-trip-approval-save">${esc(tripApprovalActionLabel(item))}</button>
-        </div>
-      </div>`;
+    wrap.innerHTML = window.UI?.inboxView?.renderTripApprovalModal?.({
+      meta,
+      createsCash,
+      amount,
+      currency,
+      wallets,
+      actionLabel: tripApprovalActionLabel(item),
+      api: inboxViewApi(),
+    }) || '';
     document.body.appendChild(wrap);
     wrap.querySelectorAll('[data-inbox-modal-close]').forEach(b => b.onclick = closeInboxModal);
     const save = wrap.querySelector('#tb-trip-approval-save');
@@ -1311,31 +1302,16 @@
     const wrap = document.createElement('div');
     wrap.className = 'tb-inbox-modal-backdrop';
     wrap.onclick = (e) => { if(e.target === wrap) closeInboxModal(); };
-    wrap.innerHTML = `
-      <div class="tb-inbox-modal" role="dialog" aria-modal="true">
-        <div class="tb-inbox-modal-head">
-          <div><h3>${esc(tr('Créer une transaction', 'Create transaction'))}</h3><div class="tb-inbox-note">${esc(tr('Prérempli depuis À traiter. Vérifie avant validation.', 'Prefilled from Inbox. Review before saving.'))}</div></div>
-          <button class="btn" type="button" data-inbox-modal-close>×</button>
-        </div>
-        <div class="tb-inbox-form-grid">
-          <div class="field"><label>${esc(tr('Type', 'Type'))}</label><select id="tb-inbox-tx-type"><option value="expense" ${initialType==='expense'?'selected':''}>${esc(tr('Dépense', 'Expense'))}</option><option value="income">${esc(tr('Entrée', 'Income'))}</option></select></div>
-          <div class="field"><label>${esc(tr('Wallet', 'Wallet'))}</label><select id="tb-inbox-tx-wallet">${walletOptionsHtml(preferredCurrency)}</select></div>
-          <div class="field"><label>${esc(tr('Devise', 'Currency'))}</label><input id="tb-inbox-tx-currency" type="text" value="" disabled style="opacity:1;font-weight:800;"></div>
-          <div class="field"><label>${esc(tr('Montant', 'Amount'))}</label><input id="tb-inbox-tx-amount" type="number" step="0.01" value="${esc(draft.amount || '')}"></div>
-          <div class="field span-2"><label>${esc(tr('Libellé', 'Label'))}</label><input id="tb-inbox-tx-label" type="text" value="${esc(label)}"></div>
-          <div class="field"><label>${esc(tr('Date paiement début', 'Cash start date'))}</label><input id="tb-inbox-tx-cash-start" type="date" value="${esc(date)}"></div>
-          <div class="field"><label>${esc(tr('Date paiement fin', 'Cash end date'))}</label><input id="tb-inbox-tx-cash-end" type="date" value="${esc(date)}"></div>
-          <div class="field"><label>${esc(tr('Budget du', 'Budget from'))}</label><input id="tb-inbox-tx-budget-start" type="date" value="${esc(date)}"></div>
-          <div class="field"><label>${esc(tr('Budget au', 'Budget to'))}</label><input id="tb-inbox-tx-budget-end" type="date" value="${esc(date)}"></div>
-          <div class="field"><label>${esc(tr('Catégorie', 'Category'))}</label><select id="tb-inbox-tx-category">${categoryOptionsHtml(initialCategory)}</select></div>
-          <div class="field"><label>${esc(tr('Sous-catégorie', 'Subcategory'))}</label><select id="tb-inbox-tx-subcategory">${subcategoryOptionsHtml(initialCategory, '')}</select></div>
-          <div class="field span-2"><label>${esc(tr('Options', 'Options'))}</label><div style="display:flex;gap:14px;flex-wrap:wrap;"><label style="display:flex;gap:8px;align-items:center;color:var(--text);font-weight:700;"><input id="tb-inbox-tx-paynow" type="checkbox" checked> ${esc(tr('Payée maintenant', 'Paid now'))}</label><label style="display:flex;gap:8px;align-items:center;color:var(--text);font-weight:700;"><input id="tb-inbox-tx-out" type="checkbox"> ${esc(tr('Hors budget', 'Out of budget'))}</label></div></div>
-        </div>
-        <div class="tb-inbox-modal-actions">
-          <button class="btn" type="button" data-inbox-modal-close>${esc(tr('Annuler', 'Cancel'))}</button>
-          <button class="btn primary" type="button" id="tb-inbox-tx-save">${esc(tr('Créer transaction', 'Create transaction'))}</button>
-        </div>
-      </div>`;
+    wrap.innerHTML = window.UI?.inboxView?.renderTransactionModal?.({
+      initialType,
+      walletOptions: walletOptionsHtml(preferredCurrency),
+      amount: draft.amount || '',
+      label,
+      date,
+      categoryOptions: categoryOptionsHtml(initialCategory),
+      subcategoryOptions: subcategoryOptionsHtml(initialCategory, ''),
+      api: inboxViewApi(),
+    }) || '';
     document.body.appendChild(wrap);
     const walletEl = wrap.querySelector('#tb-inbox-tx-wallet');
     const currencyEl = wrap.querySelector('#tb-inbox-tx-currency');
@@ -1449,27 +1425,10 @@
     const wrap = document.createElement('div');
     wrap.className = 'tb-inbox-modal-backdrop';
     wrap.onclick = (e) => { if(e.target === wrap) closeInboxModal(); };
-    wrap.innerHTML = `
-      <div class="tb-inbox-modal" role="dialog" aria-modal="true">
-        <div class="tb-inbox-modal-head">
-          <div><h3>${esc(tr('Lier à une transaction', 'Link to a transaction'))}</h3><div class="tb-inbox-note">${esc(tr('Les transactions les plus probables sont en haut selon montant, devise, date et libellé. Le document sera classé comme facture puis lié à la transaction choisie.', 'Likely transactions are shown first using amount, currency, date and label. The document will be filed as an invoice and linked to the selected transaction.'))}</div></div>
-          <button class="btn" type="button" data-inbox-modal-close>×</button>
-        </div>
-        <div class="tb-inbox-form-grid">
-          <div class="field span-2">
-            <label>${esc(tr('Rechercher', 'Search'))}</label>
-            <input id="tb-inbox-link-search" type="search" placeholder="${esc(tr('Ex. auberge, 12.50, 2026-05, AUD...', 'Ex. hostel, 12.50, 2026-05, AUD...'))}" autocomplete="off" />
-          </div>
-          <div class="field span-2">
-            <label>${esc(tr('Transaction', 'Transaction'))}</label>
-            <select id="tb-inbox-link-tx">${buildOptions('')}</select>
-          </div>
-        </div>
-        <div class="tb-inbox-modal-actions">
-          <button class="btn" type="button" data-inbox-modal-close>${esc(tr('Annuler', 'Cancel'))}</button>
-          <button class="btn primary" type="button" id="tb-inbox-link-save">${esc(tr('Lier et classer', 'Link and file'))}</button>
-        </div>
-      </div>`;
+    wrap.innerHTML = window.UI?.inboxView?.renderLinkTransactionModal?.({
+      optionsHtml: buildOptions(''),
+      api: inboxViewApi(),
+    }) || '';
     document.body.appendChild(wrap);
     const searchEl = wrap.querySelector('#tb-inbox-link-search');
     const selectEl = wrap.querySelector('#tb-inbox-link-tx');

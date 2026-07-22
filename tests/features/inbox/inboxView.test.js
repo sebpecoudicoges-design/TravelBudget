@@ -4,8 +4,11 @@ import {
   renderInboxCard,
   renderInboxPreview,
   renderInboxShell,
+  renderLinkTransactionModal,
   renderNotificationCenterHost,
   renderNotificationCenterPanel,
+  renderTransactionModal,
+  renderTripApprovalModal,
 } from '../../../src/features/inbox/inboxView.js';
 
 const api = {
@@ -85,5 +88,45 @@ describe('inboxView', () => {
     expect(panel).toContain('data-notification-idx="0"');
     expect(panel).toContain('Il reste 20 AUD');
     expect(empty).toContain('Aucune notification.');
+  });
+
+  it('renders Inbox modal bodies with stable field hooks', () => {
+    const trip = renderTripApprovalModal({
+      meta: {
+        trip_name: 'BudgetTravel',
+        expense_label: 'Biere',
+        payer_share_amount: 12.5,
+      },
+      createsCash: true,
+      amount: 81.38,
+      currency: 'AUD',
+      wallets: [{ id: 'w1', name: 'Banque Australie', currency: 'AUD' }],
+      actionLabel: 'Ajouter la dépense',
+      api,
+    });
+    const tx = renderTransactionModal({
+      initialType: 'income',
+      walletOptions: '<option value="w1">Wallet</option>',
+      amount: 18.9,
+      label: 'Cafe',
+      date: '2026-07-22',
+      categoryOptions: '<option>Revenu</option>',
+      subcategoryOptions: '<option>Extra</option>',
+      api,
+    });
+    const link = renderLinkTransactionModal({
+      optionsHtml: '<option value="tx1">2026-07-22 · Cafe</option>',
+      api,
+    });
+
+    expect(trip).toContain('BudgetTravel');
+    expect(trip).toContain('id="tb-trip-approval-wallet"');
+    expect(trip).toContain('id="tb-trip-approval-save"');
+    expect(tx).toContain('id="tb-inbox-tx-wallet"');
+    expect(tx).toContain('id="tb-inbox-tx-save"');
+    expect(tx).toContain('value="income" selected');
+    expect(link).toContain('id="tb-inbox-link-search"');
+    expect(link).toContain('id="tb-inbox-link-save"');
+    expect(link).toContain('tx1');
   });
 });

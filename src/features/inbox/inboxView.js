@@ -8,6 +8,23 @@ function fallbackText(fr, en) {
   return fr || en || '';
 }
 
+function renderModalFrame({ title, note, body, saveId, saveLabel, api = {} }) {
+  const escapeHTML = api.escapeHTML || fallbackEscape;
+  const tr = api.translate || fallbackText;
+  return `
+      <div class="tb-inbox-modal" role="dialog" aria-modal="true">
+        <div class="tb-inbox-modal-head">
+          <div><h3>${escapeHTML(title)}</h3><div class="tb-inbox-note">${escapeHTML(note)}</div></div>
+          <button class="btn" type="button" data-inbox-modal-close>×</button>
+        </div>
+        <div class="tb-inbox-form-grid">${body}</div>
+        <div class="tb-inbox-modal-actions">
+          <button class="btn" type="button" data-inbox-modal-close>${escapeHTML(tr('Annuler', 'Cancel'))}</button>
+          <button class="btn primary" type="button" id="${escapeHTML(saveId)}">${escapeHTML(saveLabel)}</button>
+        </div>
+      </div>`;
+}
+
 export function notificationCenterStyles() {
   return `
       #tb-notification-center{position:fixed;right:16px;top:82px;z-index:99998;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-family:inherit;}
@@ -44,6 +61,99 @@ export function renderNotificationCenterPanel({ rows, api = {} }) {
             <small>${escapeHTML(row?.body || '')}</small>
           </button>
         `).join('');
+}
+
+export function renderTripApprovalModal({
+  meta = {},
+  createsCash = false,
+  amount = 0,
+  currency = '',
+  wallets = [],
+  actionLabel = '',
+  api = {},
+} = {}) {
+  const escapeHTML = api.escapeHTML || fallbackEscape;
+  const tr = api.translate || fallbackText;
+  const title = createsCash ? tr('Ajouter la dépense Trip', 'Add Trip expense') : tr('Ajouter ma part Budget Trip', 'Add my Trip budget share');
+  const note = createsCash
+    ? tr('Cette action crée le paiement cash complet et ta part Budget.', 'This creates the full cash payment and your Budget share.')
+    : tr('Cette action ajoute uniquement ta part au Budget. Elle ne débite pas ta wallet et ne crée pas de paiement cash.', 'This only adds your share to Budget. It does not debit your wallet or create a cash payment.');
+  const walletLabel = createsCash ? tr('Wallet à débiter', 'Wallet to debit') : tr('Wallet de référence (non débitée)', 'Reference wallet (not debited)');
+  const walletOptions = (Array.isArray(wallets) ? wallets : [])
+    .map((wallet) => `<option value="${escapeHTML(wallet?.id || wallet?.wallet_id)}">${escapeHTML(wallet?.name || 'Wallet')} · ${escapeHTML(wallet?.currency || '')}</option>`)
+    .join('');
+
+  return renderModalFrame({
+    title,
+    note,
+    saveId: 'tb-trip-approval-save',
+    saveLabel: actionLabel || tr('Valider', 'Approve'),
+    api,
+    body: `
+          <div class="field span-2"><label>${escapeHTML(tr('Partage', 'Shared trip'))}</label><input type="text" value="${escapeHTML(meta.trip_name || 'Trip')}" disabled></div>
+          <div class="field span-2"><label>${escapeHTML(tr('Dépense', 'Expense'))}</label><input type="text" value="${escapeHTML(meta.expense_label || '')}" disabled></div>
+          <div class="field"><label>${escapeHTML(createsCash ? tr('Montant à débiter', 'Amount to debit') : tr('Montant déclaré payé', 'Declared paid amount'))}</label><input type="text" value="${escapeHTML(`${amount || ''} ${currency}`.trim())}" disabled></div>
+          <div class="field"><label>${escapeHTML(tr('Ta part budget', 'Your budget share'))}</label><input type="text" value="${escapeHTML(`${Number(meta.payer_share_amount || 0) || 0} ${currency}`)}" disabled></div>
+          <div class="field span-2"><label>${escapeHTML(walletLabel)}</label><select id="tb-trip-approval-wallet">${walletOptions}</select></div>`,
+  });
+}
+
+export function renderTransactionModal({
+  initialType = 'expense',
+  walletOptions = '',
+  amount = '',
+  label = '',
+  date = '',
+  categoryOptions = '',
+  subcategoryOptions = '',
+  api = {},
+} = {}) {
+  const escapeHTML = api.escapeHTML || fallbackEscape;
+  const tr = api.translate || fallbackText;
+  return renderModalFrame({
+    title: tr('Créer une transaction', 'Create transaction'),
+    note: tr('Prérempli depuis À traiter. Vérifie avant validation.', 'Prefilled from Inbox. Review before saving.'),
+    saveId: 'tb-inbox-tx-save',
+    saveLabel: tr('Créer transaction', 'Create transaction'),
+    api,
+    body: `
+          <div class="field"><label>${escapeHTML(tr('Type', 'Type'))}</label><select id="tb-inbox-tx-type"><option value="expense" ${initialType === 'expense' ? 'selected' : ''}>${escapeHTML(tr('Dépense', 'Expense'))}</option><option value="income" ${initialType === 'income' ? 'selected' : ''}>${escapeHTML(tr('Entrée', 'Income'))}</option></select></div>
+          <div class="field"><label>${escapeHTML(tr('Wallet', 'Wallet'))}</label><select id="tb-inbox-tx-wallet">${walletOptions}</select></div>
+          <div class="field"><label>${escapeHTML(tr('Devise', 'Currency'))}</label><input id="tb-inbox-tx-currency" type="text" value="" disabled style="opacity:1;font-weight:800;"></div>
+          <div class="field"><label>${escapeHTML(tr('Montant', 'Amount'))}</label><input id="tb-inbox-tx-amount" type="number" step="0.01" value="${escapeHTML(amount)}"></div>
+          <div class="field span-2"><label>${escapeHTML(tr('Libellé', 'Label'))}</label><input id="tb-inbox-tx-label" type="text" value="${escapeHTML(label)}"></div>
+          <div class="field"><label>${escapeHTML(tr('Date paiement début', 'Cash start date'))}</label><input id="tb-inbox-tx-cash-start" type="date" value="${escapeHTML(date)}"></div>
+          <div class="field"><label>${escapeHTML(tr('Date paiement fin', 'Cash end date'))}</label><input id="tb-inbox-tx-cash-end" type="date" value="${escapeHTML(date)}"></div>
+          <div class="field"><label>${escapeHTML(tr('Budget du', 'Budget from'))}</label><input id="tb-inbox-tx-budget-start" type="date" value="${escapeHTML(date)}"></div>
+          <div class="field"><label>${escapeHTML(tr('Budget au', 'Budget to'))}</label><input id="tb-inbox-tx-budget-end" type="date" value="${escapeHTML(date)}"></div>
+          <div class="field"><label>${escapeHTML(tr('Catégorie', 'Category'))}</label><select id="tb-inbox-tx-category">${categoryOptions}</select></div>
+          <div class="field"><label>${escapeHTML(tr('Sous-catégorie', 'Subcategory'))}</label><select id="tb-inbox-tx-subcategory">${subcategoryOptions}</select></div>
+          <div class="field span-2"><label>${escapeHTML(tr('Options', 'Options'))}</label><div style="display:flex;gap:14px;flex-wrap:wrap;"><label style="display:flex;gap:8px;align-items:center;color:var(--text);font-weight:700;"><input id="tb-inbox-tx-paynow" type="checkbox" checked> ${escapeHTML(tr('Payée maintenant', 'Paid now'))}</label><label style="display:flex;gap:8px;align-items:center;color:var(--text);font-weight:700;"><input id="tb-inbox-tx-out" type="checkbox"> ${escapeHTML(tr('Hors budget', 'Out of budget'))}</label></div></div>`,
+  });
+}
+
+export function renderLinkTransactionModal({
+  optionsHtml = '',
+  api = {},
+} = {}) {
+  const escapeHTML = api.escapeHTML || fallbackEscape;
+  const tr = api.translate || fallbackText;
+  return renderModalFrame({
+    title: tr('Lier à une transaction', 'Link to a transaction'),
+    note: tr('Les transactions les plus probables sont en haut selon montant, devise, date et libellé. Le document sera classé comme facture puis lié à la transaction choisie.', 'Likely transactions are shown first using amount, currency, date and label. The document will be filed as an invoice and linked to the selected transaction.'),
+    saveId: 'tb-inbox-link-save',
+    saveLabel: tr('Lier et classer', 'Link and file'),
+    api,
+    body: `
+          <div class="field span-2">
+            <label>${escapeHTML(tr('Rechercher', 'Search'))}</label>
+            <input id="tb-inbox-link-search" type="search" placeholder="${escapeHTML(tr('Ex. auberge, 12.50, 2026-05, AUD...', 'Ex. hostel, 12.50, 2026-05, AUD...'))}" autocomplete="off" />
+          </div>
+          <div class="field span-2">
+            <label>${escapeHTML(tr('Transaction', 'Transaction'))}</label>
+            <select id="tb-inbox-link-tx">${optionsHtml}</select>
+          </div>`,
+  });
 }
 
 export function renderInboxPreview({ item, signedUrls, api = {} }) {

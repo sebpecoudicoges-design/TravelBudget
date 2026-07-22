@@ -13,7 +13,7 @@ describe('Inbox domain contract', () => {
   });
 
   it('delegates Inbox cards, previews and shell rendering to the view module', () => {
-    for (const token of ['renderInboxPreview', 'renderInboxCard', 'renderInboxShell', 'notificationCenterStyles', 'renderNotificationCenterHost', 'renderNotificationCenterPanel']) {
+    for (const token of ['renderInboxPreview', 'renderInboxCard', 'renderInboxShell', 'notificationCenterStyles', 'renderNotificationCenterHost', 'renderNotificationCenterPanel', 'renderTripApprovalModal', 'renderTransactionModal', 'renderLinkTransactionModal']) {
       expect(view).toContain(`export function ${token}`);
       expect(legacy).toContain(`inboxView?.${token}`);
     }
@@ -23,5 +23,8 @@ describe('Inbox domain contract', () => {
     expect(legacy).not.toContain('function renderCard(item){\n    if(isTripPayerApproval(item)){');
     expect(legacy).not.toContain('#tb-notification-center{position:fixed;right:16px;top:82px;');
     expect(legacy).not.toContain('tb-notification-row" type="button" data-notification-idx="${idx}"');
+    expect(legacy).not.toContain('Prérempli depuis À traiter. Vérifie avant validation.');
+    expect(legacy).not.toContain('Les transactions les plus probables sont en haut selon montant');
+    expect(legacy).not.toContain('Cette action crée le paiement cash complet et ta part Budget.');
   });
 });
