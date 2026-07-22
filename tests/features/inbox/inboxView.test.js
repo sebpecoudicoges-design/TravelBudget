@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { renderInboxCard, renderInboxPreview, renderInboxShell } from '../../../src/features/inbox/inboxView.js';
+import {
+  notificationCenterStyles,
+  renderInboxCard,
+  renderInboxPreview,
+  renderInboxShell,
+  renderNotificationCenterHost,
+  renderNotificationCenterPanel,
+} from '../../../src/features/inbox/inboxView.js';
 
 const api = {
   translate: (fr) => fr,
@@ -61,5 +68,22 @@ describe('inboxView', () => {
     expect(html).toContain('BudgetTravel');
     expect(html).toContain('data-inbox-action="trip-payer-approve"');
     expect(html).toContain('Valider Trip');
+  });
+
+  it('renders the notification center host, panel and responsive styles', () => {
+    const host = renderNotificationCenterHost({ label: 'Notifications', count: 2 });
+    const panel = renderNotificationCenterPanel({
+      rows: [{ title: 'Budget', body: 'Il reste 20 AUD' }],
+      api,
+    });
+    const empty = renderNotificationCenterPanel({ rows: [], api });
+
+    expect(notificationCenterStyles()).toContain('#tb-notification-center');
+    expect(notificationCenterStyles()).toContain('@media(max-width:720px)');
+    expect(host).toContain('id="tb-notification-button"');
+    expect(host).toContain('tb-notification-dot">2');
+    expect(panel).toContain('data-notification-idx="0"');
+    expect(panel).toContain('Il reste 20 AUD');
+    expect(empty).toContain('Aucune notification.');
   });
 });

@@ -95,21 +95,7 @@
     if(document.getElementById('tb-notification-center-style')) return;
     const style = document.createElement('style');
     style.id = 'tb-notification-center-style';
-    style.textContent = `
-      #tb-notification-center{position:fixed;right:16px;top:82px;z-index:99998;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-family:inherit;}
-      #tb-notification-button{border:1px solid rgba(37,99,235,.24);border-radius:999px;background:rgba(255,255,255,.97);color:#0f172a;box-shadow:0 16px 48px rgba(15,23,42,.18);padding:9px 12px;display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-weight:900;font-size:13px;}
-      body.theme-dark #tb-notification-button{background:rgba(15,23,42,.96);color:#f8fafc;border-color:rgba(148,163,184,.28);}
-      .tb-notification-dot{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:900;}
-      #tb-notification-panel{width:min(380px,calc(100vw - 32px));max-height:min(460px,calc(100vh - 132px));overflow:auto;border:1px solid rgba(15,23,42,.10);border-radius:8px;background:rgba(255,255,255,.98);box-shadow:0 24px 70px rgba(15,23,42,.24);padding:12px;color:#0f172a;display:none;}
-      body.theme-dark #tb-notification-panel{background:rgba(15,23,42,.98);color:#f8fafc;border-color:rgba(148,163,184,.22);}
-      .tb-notification-row{border:1px solid rgba(15,23,42,.08);border-radius:8px;padding:10px;background:rgba(248,250,252,.92);display:flex;flex-direction:column;gap:4px;cursor:pointer;margin-top:8px;}
-      body.theme-dark .tb-notification-row{background:rgba(30,41,59,.72);border-color:rgba(148,163,184,.16);}
-      .tb-notification-row strong{font-size:13px;line-height:1.25;}
-      .tb-notification-row small{font-size:12px;color:#64748b;line-height:1.35;}
-      body.theme-dark .tb-notification-row small{color:#cbd5e1;}
-      .tb-notification-empty{font-size:13px;color:#64748b;padding:8px;}
-      @media(max-width:720px){#tb-notification-center{right:12px;top:72px;}#tb-notification-button{padding:8px 10px;}.tb-notification-label{display:none;}}
-    `;
+    style.textContent = window.UI?.inboxView?.notificationCenterStyles?.() || '';
     document.head.appendChild(style);
   }
 
@@ -124,7 +110,11 @@
       if(!host){
         host = document.createElement('div');
         host.id = 'tb-notification-center';
-        host.innerHTML = '<button id="tb-notification-button" type="button"><span class="tb-notification-dot">0</span><span class="tb-notification-label">Notifications</span></button><div id="tb-notification-panel"></div>';
+        host.innerHTML = window.UI?.inboxView?.renderNotificationCenterHost?.({
+          label: tr('Notifications', 'Notifications'),
+          count: 0,
+          api: { escapeHTML: esc },
+        }) || '';
         document.body.appendChild(host);
         host.querySelector('#tb-notification-button')?.addEventListener('click', () => {
           const panel = document.getElementById('tb-notification-panel');
@@ -137,12 +127,10 @@
       if(dot) dot.textContent = String(total);
       const panel = host.querySelector('#tb-notification-panel');
       if(panel){
-        panel.innerHTML = total ? rows.map((row, idx) => `
-          <button class="tb-notification-row" type="button" data-notification-idx="${idx}">
-            <strong>${esc(row.title || tr('Notification', 'Notification'))}</strong>
-            <small>${esc(row.body || '')}</small>
-          </button>
-        `).join('') : `<div class="tb-notification-empty">${esc(tr('Aucune notification.', 'No notifications.'))}</div>`;
+        panel.innerHTML = window.UI?.inboxView?.renderNotificationCenterPanel?.({
+          rows,
+          api: { escapeHTML: esc, translate: tr },
+        }) || '';
         panel.querySelectorAll('[data-notification-idx]').forEach((btn) => {
           btn.addEventListener('click', () => {
             const row = rows[Number(btn.getAttribute('data-notification-idx') || 0)];

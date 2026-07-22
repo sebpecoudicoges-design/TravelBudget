@@ -13,7 +13,7 @@ describe('Inbox domain contract', () => {
   });
 
   it('delegates Inbox cards, previews and shell rendering to the view module', () => {
-    for (const token of ['renderInboxPreview', 'renderInboxCard', 'renderInboxShell']) {
+    for (const token of ['renderInboxPreview', 'renderInboxCard', 'renderInboxShell', 'notificationCenterStyles', 'renderNotificationCenterHost', 'renderNotificationCenterPanel']) {
       expect(view).toContain(`export function ${token}`);
       expect(legacy).toContain(`inboxView?.${token}`);
     }
@@ -21,5 +21,7 @@ describe('Inbox domain contract', () => {
     expect(legacy).not.toContain('items.map(renderCard).join');
     expect(legacy).not.toContain('Messages WhatsApp, reçus, photos et PDF à classer plus tard.');
     expect(legacy).not.toContain('function renderCard(item){\n    if(isTripPayerApproval(item)){');
+    expect(legacy).not.toContain('#tb-notification-center{position:fixed;right:16px;top:82px;');
+    expect(legacy).not.toContain('tb-notification-row" type="button" data-notification-idx="${idx}"');
   });
 });
