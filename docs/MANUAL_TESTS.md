@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.238`.
-- Bilan : 7 parcours `ok`, 12 parcours `à faire`.
+- Version à valider : `10.5.239`.
+- Bilan : 7 parcours `ok`, 13 parcours `à faire`.
 - Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
 - Les 29 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -36,6 +36,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 17 | 10.5.236 | Trip : gestion du partage | Dans Partage, ouvrir le panneau **Gérer le partage**. Changer le voyage actif si possible, tenter de créer puis annuler/supprimer un voyage de test, ajouter un participant de test puis utiliser renommer, renvoyer invitation et supprimer. | Le panneau conserve les mêmes champs, boutons et participants. Les actions répondent comme avant, les participants restent visibles sur mobile et desktop. | `TB BUILD 10.5.236` ; aucun `Uncaught`, aucun module `tripView` manquant, aucun bouton `trip-active`, `trip-create`, `trip-add-member` ou `data-resend-invite` absent. | à faire |
 | 18 | 10.5.237 | Trip : récap et historique | Dans Partage, ouvrir **Récap / Historique**. Vérifier balances, règlements suggérés, copier/partager, puis passer sur Historique et appliquer/réinitialiser les filtres catégorie, participant, dates, montant et recherche. | Les balances, règlements et filtres gardent les mêmes montants, libellés et boutons. Les actions copier/partager/régler et les filtres `trip-hist-*` répondent comme avant. | `TB BUILD 10.5.237` ; aucun `Uncaught`, aucun module `tripView` manquant, aucun bouton `trip-copy-settlements`, `trip-share-settlements`, `trip-hist-apply` ou `trip-hist-reset` absent. | à faire |
 | 19 | 10.5.238 | Sport : moteur progression charges | Terminer une séance avec séries chargées, dont au moins un exercice en haut de plage. Ouvrir le cockpit programme Sport et vérifier les recommandations de charge. Tester **Accepter et appliquer**, **Modifier**, **Appliquer aux variantes compatibles** et **Conserver la charge** sur une recommandation de test. | Les métriques e1RM/Training Max sont générées après synchro, le programme ne change pas tant qu'une recommandation n'est pas appliquée, et les variantes compatibles restent limitées au même programme. | `TB BUILD 10.5.238` ; aucun `Uncaught`, aucune table progression manquante, aucune recommandation dupliquée après refresh, aucun update hors programme actif. | à faire |
+| 20 | 10.5.239 | À traiter : rendu cartes et shell | Depuis un chargement frais, ouvrir **À traiter**, changer le filtre de statut, saisir une recherche, ouvrir une carte avec document et une demande Trip si disponible. | Le shell, les compteurs, les cartes WhatsApp/documents et les cartes Trip gardent les mêmes actions. La recherche ne perd pas le focus et les boutons répondent comme avant. | `TB BUILD 10.5.239` ; aucun `Uncaught`, aucun module `inboxView` manquant, aucune carte vide après changement de filtre. | à faire |
 
 ## À ajouter à chaque livraison
 

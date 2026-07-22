@@ -1811,85 +1811,36 @@
     return items;
   }
 
+  function inboxViewApi(){
+    return {
+      escapeHTML: esc,
+      translate: tr,
+      formatDateTime: fmtDateTime,
+      statusLabel,
+      parseQuickText,
+      isImage,
+      isPdf,
+      isTripPayerApproval,
+      tripApprovalMeta,
+      tripApprovalCreatesCash,
+      tripApprovalActionLabel,
+    };
+  }
+
   function renderPreview(item){
-    if(!item.storage_path && !item.media_url) return '';
-
-    if(!item.storage_path && item.media_url){
-      return `<div class="tb-inbox-preview"><div class="tb-inbox-file">⚠️ ${esc(tr('Document reçu, non copié dans Storage', 'Document received, not copied to Storage'))}</div></div>`;
-    }
-
-    const url = item.storage_path ? CACHE.signedUrls[item.storage_path] : '';
-    if(!url){
-      return `<div class="tb-inbox-preview"><div class="tb-inbox-file">📎 ${esc(item.media_content_type || 'Document')} · ${esc(tr('aperçu indisponible', 'preview unavailable'))}</div></div>`;
-    }
-
-    if(isImage(item)) return `<div class="tb-inbox-preview"><a href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" alt="${esc(tr('Aperçu document reçu', 'Received document preview'))}" loading="lazy"></a></div>`;
-    const icon = isPdf(item) ? '📄' : '📎';
-    return `<div class="tb-inbox-preview"><a class="tb-inbox-file" href="${esc(url)}" target="_blank" rel="noopener">${icon} ${esc(item.raw_text || item.storage_path || 'Document')}</a></div>`;
+    return window.UI?.inboxView?.renderInboxPreview?.({
+      item,
+      signedUrls: CACHE.signedUrls,
+      api: inboxViewApi(),
+    }) || '';
   }
 
   function renderCard(item){
-    if(isTripPayerApproval(item)){
-      const meta = tripApprovalMeta(item);
-      const createsCash = tripApprovalCreatesCash(item);
-      const amount = `${meta.amount || ''} ${meta.currency || ''}`.trim();
-      const title = `${createsCash ? tr('Dépense Trip à ajouter', 'Trip expense to add') : tr('Part Budget Trip à ajouter', 'Trip budget share to add')} · ${meta.trip_name || 'Trip'}`;
-      const detail = `${meta.expense_label || tr('Dépense', 'Expense')} · ${amount}`;
-      return `
-        <article class="tb-inbox-card" data-id="${esc(item.id)}" data-status="${esc(item.status || 'pending')}">
-          <div class="tb-inbox-meta">
-            <span class="tb-inbox-badge">${esc(statusLabel(item.status))}</span>
-            <span>${esc(fmtDateTime(item.created_at))}</span>
-          </div>
-          <div class="tb-inbox-text">${esc(title)}</div>
-          <div class="tb-inbox-parse">
-            <span class="tb-inbox-chip">Trip</span>
-            <span class="tb-inbox-chip">${esc(detail)}</span>
-            <span class="tb-inbox-chip">${esc(tr('Demandé par', 'Requested by'))} ${esc(meta.created_by_email || item.source_from || 'TravelBudget')}</span>
-          </div>
-          <div class="tb-inbox-note">${esc(createsCash ? tr('Ajoute le paiement cash complet et ta part Budget.', 'Adds the full cash payment and your Budget share.') : tr('Ajoute uniquement ta part au Budget. Aucun paiement cash ne sera créé.', 'Only adds your share to Budget. No cash payment will be created.'))}</div>
-          ${item.error_message ? `<div class="tb-inbox-note">${esc(item.error_message)}</div>` : ''}
-          <div class="tb-inbox-buttons">
-            <button class="primary" type="button" data-inbox-action="trip-payer-approve" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' || item.status === 'error' ? 'disabled' : ''}>${esc(tripApprovalActionLabel(item))}</button>
-            <button type="button" data-inbox-action="trip-payer-decline" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' || item.status === 'error' ? 'disabled' : ''}>${esc(tr('Refuser', 'Decline'))}</button>
-            <button type="button" data-inbox-action="snooze" data-id="${esc(item.id)}" ${item.status === 'deleted' ? 'disabled' : ''}>${esc(tr('Reporter', 'Snooze'))}</button>
-            <button class="danger" type="button" data-inbox-action="delete" data-id="${esc(item.id)}" ${item.status === 'deleted' ? 'disabled' : ''}>${esc(tr('Supprimer', 'Delete'))}</button>
-          </div>
-        </article>
-      `;
-    }
-    const parsed = parseQuickText(item.raw_text);
-    const text = String(item.raw_text || '').trim();
-    const title = text || (item.media_count ? tr('Document reçu', 'Received document') : tr('Élément reçu', 'Received item'));
-    const mediaBadge = item.media_count ? `${item.media_count} doc · ${item.media_content_type || 'media'}` : tr('Texte', 'Text');
-    const snoozeInfo = item.status === 'snoozed' && item.snoozed_until ? `<span class="tb-inbox-badge">⏰ ${esc(fmtDateTime(item.snoozed_until))}</span>` : '';
-
-    return `
-      <article class="tb-inbox-card" data-id="${esc(item.id)}" data-status="${esc(item.status || 'pending')}">
-        <div class="tb-inbox-meta">
-          <span class="tb-inbox-badge">${esc(statusLabel(item.status))}</span>
-          <span>${esc(fmtDateTime(item.created_at))}</span>
-        </div>
-        <div class="tb-inbox-text">${esc(title)}</div>
-        <div class="tb-inbox-parse">
-          <span class="tb-inbox-chip">WhatsApp</span>
-          <span class="tb-inbox-chip">${esc(mediaBadge)}</span>
-          ${parsed ? `<span class="tb-inbox-chip">${esc(parsed.amount)} ${esc(parsed.currency || '')}</span>` : ''}
-          ${parsed?.label ? `<span class="tb-inbox-chip">${esc(parsed.label)}</span>` : ''}
-          ${snoozeInfo}
-        </div>
-        ${renderPreview(item)}
-        <div class="tb-inbox-note">${esc(item.source_from || '')}${item.storage_path ? ` · ${esc(tr('Storage OK', 'Storage OK'))}` : (item.media_count ? ` · ${esc(tr('Storage manquant', 'Missing Storage'))}` : '')}</div>
-        <div class="tb-inbox-buttons">
-          <button class="primary" type="button" data-inbox-action="transaction" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' ? 'disabled' : ''}>${esc(tr('Créer transaction', 'Create transaction'))}</button>
-          <button type="button" data-inbox-action="document" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' || !item.storage_path ? 'disabled' : ''}>${esc(tr('Classer document', 'File document'))}</button>
-          <button type="button" data-inbox-action="link-transaction" data-id="${esc(item.id)}" ${item.status === 'deleted' || item.status === 'processed' || !item.storage_path ? 'disabled' : ''}>${esc(tr('Lier à transaction', 'Link transaction'))}</button>
-          <button type="button" disabled title="${esc(tr('En cours de développement', 'Work in progress'))}">${esc(tr('Dépense partagée', 'Shared expense'))}</button>
-          <button type="button" data-inbox-action="snooze" data-id="${esc(item.id)}" ${item.status === 'deleted' ? 'disabled' : ''}>${esc(tr('Reporter', 'Snooze'))}</button>
-          <button class="danger" type="button" data-inbox-action="delete" data-id="${esc(item.id)}" ${item.status === 'deleted' ? 'disabled' : ''}>${esc(tr('Supprimer', 'Delete'))}</button>
-        </div>
-      </article>
-    `;
+    return window.UI?.inboxView?.renderInboxCard?.({
+      item,
+      signedUrls: CACHE.signedUrls,
+      api: inboxViewApi(),
+    }) || '';
   }
 
   function renderInboxShell(){
@@ -1897,39 +1848,16 @@
     const el = root();
     if(!el) return;
     const items = filteredItems();
-    const pendingCount = (CACHE.items || []).filter(x => x.status === 'pending').length;
-    const snoozedCount = (CACHE.items || []).filter(x => x.status === 'snoozed').length;
-
-    el.innerHTML = `
-      <section class="tb-inbox-shell">
-        <div class="tb-inbox-head">
-          <div class="tb-inbox-title">
-            <h2>${esc(tr('À traiter', 'Inbox'))}</h2>
-            <p>${esc(tr('Messages WhatsApp, reçus, photos et PDF à classer plus tard.', 'WhatsApp messages, receipts, images and PDFs to process later.'))}</p>
-          </div>
-          <div class="tb-inbox-actions">
-            <select id="inbox-status-filter" aria-label="${esc(tr('Statut', 'Status'))}">
-              <option value="active" ${CACHE.status==='active'?'selected':''}>${esc(tr('Actifs', 'Active'))}</option>
-              <option value="pending" ${CACHE.status==='pending'?'selected':''}>${esc(tr('À traiter', 'Pending'))}</option>
-              <option value="snoozed" ${CACHE.status==='snoozed'?'selected':''}>${esc(tr('Reportés', 'Snoozed'))}</option>
-              <option value="error" ${CACHE.status==='error'?'selected':''}>${esc(tr('Refusés / erreurs', 'Declined / errors'))}</option>
-              <option value="deleted" ${CACHE.status==='deleted'?'selected':''}>${esc(tr('Supprimés', 'Deleted'))}</option>
-              <option value="all" ${CACHE.status==='all'?'selected':''}>${esc(tr('Tous', 'All'))}</option>
-            </select>
-            <input id="inbox-search" value="${esc(CACHE.search)}" placeholder="${esc(tr('Rechercher...', 'Search...'))}">
-            <button type="button" id="inbox-refresh" class="btn">${esc(tr('Actualiser', 'Refresh'))}</button>
-          </div>
-        </div>
-        <div class="tb-inbox-parse">
-          <span class="tb-inbox-chip">${pendingCount} ${esc(tr('à traiter', 'pending'))}</span>
-          <span class="tb-inbox-chip">${snoozedCount} ${esc(tr('reportés', 'snoozed'))}</span>
-        </div>
-        ${CACHE.loading ? `<div class="tb-inbox-empty">${esc(tr('Chargement...', 'Loading...'))}</div>` : ''}
-        ${CACHE.error ? `<div class="tb-inbox-empty">${esc(CACHE.error)}</div>` : ''}
-        ${!CACHE.loading && !CACHE.error && items.length === 0 ? `<div class="tb-inbox-empty">${esc(tr('Aucun élément à traiter.', 'No item to process.'))}</div>` : ''}
-        ${!CACHE.loading && !CACHE.error && items.length ? `<div class="tb-inbox-list">${items.map(renderCard).join('')}</div>` : ''}
-      </section>
-    `;
+    el.innerHTML = window.UI?.inboxView?.renderInboxShell?.({
+      items,
+      allItems: CACHE.items,
+      status: CACHE.status,
+      search: CACHE.search,
+      loading: CACHE.loading,
+      error: CACHE.error,
+      signedUrls: CACHE.signedUrls,
+      api: inboxViewApi(),
+    }) || '';
 
     const statusEl = document.getElementById('inbox-status-filter');
     if(statusEl) statusEl.onchange = () => { CACHE.status = statusEl.value; loadInbox().catch(showError); };

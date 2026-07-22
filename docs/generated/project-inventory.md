@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `41b717b70fff54e0f66449e6b031e5c4aba0d5ad`
-> Empreinte du snapshot : `6f2ea3685364ef65c58005ed7363d8390a86e4a71b94319df9a6e2099e5df69c`
-> Généré le : `2026-07-22T08:29:00.557Z`
+> Commit analysé : `6056a497297c392487e10c5230f54f48dda33f10`
+> Empreinte du snapshot : `17327bd4ec2a8cb9b15e5dc851158c582870563d40d20772c4b4de5cb079ba9f`
+> Généré le : `2026-07-22T08:56:05.179Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.238` |
+| Version | `10.5.239` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 61 |
 | Modules core | 25 |
 | Modules data | 7 |
-| Modules features | 33 |
-| Fichiers de tests | 96 |
+| Modules features | 34 |
+| Fichiers de tests | 98 |
 | Migrations Supabase | 87 |
 | Fonctions Edge | 8 |
 | Projet Android présent | Oui |
@@ -202,6 +202,7 @@ Domaines :
 - `analysis`
 - `assets`
 - `dashboard`
+- `inbox`
 - `kpi`
 - `nutrition`
 - `settings`
@@ -217,6 +218,7 @@ Modules :
 - `src/features/assets/assetView.js`
 - `src/features/dashboard/dashboardView.js`
 - `src/features/dashboard/dashboardWalletRules.js`
+- `src/features/inbox/inboxView.js`
 - `src/features/kpi/kpiCashRules.js`
 - `src/features/kpi/kpiHealthRules.js`
 - `src/features/kpi/kpiProjectionRules.js`
@@ -258,6 +260,7 @@ Modules :
 - `tests/ui/cspContract.test.js`
 - `tests/ui/dashboardViewContract.test.js`
 - `tests/ui/errorBusContract.test.js`
+- `tests/ui/inboxDomainContract.test.js`
 - `tests/ui/kpiRangePickerContract.test.js`
 - `tests/ui/kpiViewContract.test.js`
 - `tests/ui/legacyBusinessRulesContract.test.js`
@@ -327,6 +330,7 @@ Modules :
 - `tests/features/assets/assetView.test.js`
 - `tests/features/dashboard/dashboardView.test.js`
 - `tests/features/dashboard/dashboardWalletRules.test.js`
+- `tests/features/inbox/inboxView.test.js`
 - `tests/features/kpi/kpiCashRules.test.js`
 - `tests/features/kpi/kpiController.test.js`
 - `tests/features/kpi/kpiHealthRules.test.js`
@@ -359,6 +363,7 @@ Modules :
 - `tests/ui/cspContract.test.js`
 - `tests/ui/dashboardViewContract.test.js`
 - `tests/ui/errorBusContract.test.js`
+- `tests/ui/inboxDomainContract.test.js`
 - `tests/ui/kpiRangePickerContract.test.js`
 - `tests/ui/kpiViewContract.test.js`
 - `tests/ui/legacyBusinessRulesContract.test.js`

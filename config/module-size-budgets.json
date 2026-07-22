@@ -3,8 +3,8 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 344,
-    "lazyJsMaxKiB": 193,
-    "totalJsMaxKiB": 532,
+    "lazyJsMaxKiB": 202,
+    "totalJsMaxKiB": 542,
     "totalCssMaxKiB": 8,
     "mainJsGzipMaxKiB": 110
   },
@@ -106,10 +106,11 @@
     },
     {
       "name": "inbox-domain",
-      "maxKiB": 110,
+      "maxKiB": 112,
       "paths": [
         "public/legacy/js/44_inbox_ui.js",
-        "src/core/inboxRules.js"
+        "src/core/inboxRules.js",
+        "src/features/inbox/inboxView.js"
       ]
     },
     {

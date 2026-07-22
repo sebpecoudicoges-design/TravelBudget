@@ -296,6 +296,13 @@ async function ensureDomainModules(domain) {
         ...tripRecapView,
       };
     }
+    if (key === 'inbox') {
+      const inboxView = await import('./features/inbox/inboxView.js');
+      window.UI.inboxView = {
+        ...(window.UI.inboxView || {}),
+        ...inboxView,
+      };
+    }
     return true;
   })().catch((error) => {
     domainModulePromises.delete(key);
