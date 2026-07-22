@@ -16,7 +16,8 @@ describe('Sport profile view bridge', () => {
     expect(sportUi).toContain('window.UI?.sportProfileView?.renderBodyMeasurementModal?.({');
     expect(sportUi).toContain('window.UI?.sportProfileView?.bodyMeasurementQuality?.(payload, sportViewApi())');
     expect(sportUi).toContain('data: sportProfileRadarData()');
-    expect(sportUi).toContain('buildExerciseProgressionAnalysis?.(CACHE.exerciseMetricHistory || [],');
+    expect(sportUi).toContain('buildExerciseProgressionRowsFromSessions?.({');
+    expect(sportUi).toContain('buildExerciseProgressionAnalysis?.(analysisRows,');
     expect(sportUi).toContain('editor: CACHE.bodyMeasurementEditor');
     expect(sportUi).not.toContain('function radarPoints(');
     expect(sportUi).not.toContain('function sportProfileAxisBasis(');

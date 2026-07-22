@@ -2325,7 +2325,7 @@
           sets: table("sport_sets"),
         },
         userId,
-        limit: 20,
+        limit: 120,
       });
       const pendingDeletes = new Set(loadPendingDeletes());
       sportStore.hydrateRemote(history, Array.from(pendingDeletes));
@@ -2753,7 +2753,13 @@
     }) || "";
   }
   function renderExerciseProgressionAnalysis() {
-    const analysis = window.Core?.sportProfileRules?.buildExerciseProgressionAnalysis?.(CACHE.exerciseMetricHistory || [], {
+    const fallbackRows = window.Core?.sportProfileRules?.buildExerciseProgressionRowsFromSessions?.({
+      sessions: allVisibleSportSessions(),
+      planForSession: (sessionId, session) => planFromStoredSession(sessionId || session?.id),
+      doneSetsForSession: (sessionId, session) => doneSetsFromStoredSession(sessionId || session?.id, 0),
+    }) || [];
+    const analysisRows = (CACHE.exerciseMetricHistory || []).concat(fallbackRows);
+    const analysis = window.Core?.sportProfileRules?.buildExerciseProgressionAnalysis?.(analysisRows, {
       selectedExercise: CACHE.progressionExerciseFilter || "",
       limitPerExercise: 70,
     }) || { exercises: [], options: [] };

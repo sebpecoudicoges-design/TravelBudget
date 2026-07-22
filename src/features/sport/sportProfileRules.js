@@ -354,6 +354,12 @@ export function normalizeExerciseProgressionKey(value) {
     .replace(/^_+|_+$/g, '');
 }
 
+function estimatedProgressionOneRepMax(weightKg, reps) {
+  const weight = Math.max(0, numberValue(weightKg, 0));
+  const repetitions = Math.max(0, numberValue(reps, 0));
+  return weight && repetitions ? weight * (1 + repetitions / 30) : 0;
+}
+
 export function exerciseProgressionPriority(exerciseId = '') {
   const key = normalizeExerciseProgressionKey(exerciseId);
   if (/squat/.test(key) && !/front|goblet/.test(key)) return 100;
@@ -420,4 +426,39 @@ export function buildExerciseProgressionAnalysis(rows = [], { selectedExercise =
     totalRows: (rows || []).length,
     options: exercises.map((row) => ({ key: row.key, label: row.label, priority: row.priority })),
   };
+}
+
+export function buildExerciseProgressionRowsFromSessions({
+  sessions = [],
+  planForSession = () => [],
+  doneSetsForSession = () => [],
+} = {}) {
+  const rows = [];
+  (sessions || []).forEach((session) => {
+    const sessionId = session?.id || session?.localId || session?.remoteId || '';
+    const sessionDate = String(session?.started_at || session?.startedAt || session?.created_at || session?.createdAt || '').slice(0, 10);
+    const plan = planForSession(sessionId, session) || [];
+    const sets = doneSetsForSession(sessionId, session) || [];
+    sets.forEach((set) => {
+      const itemIndex = Math.max(0, Math.round(numberValue(set?.itemIndex ?? set?.item_index, 0)));
+      const item = plan[itemIndex] || {};
+      const exerciseId = item.exerciseKey || item.exercise_key || item.libraryKey || item.library_key || item.exerciseName || item.exercise_name || item.activityKey || item.activity_key || '';
+      const weightKg = numberValue(set?.weightKg ?? set?.weight_kg, 0);
+      const reps = Math.round(numberValue(set?.reps, 0));
+      const estimated = estimatedProgressionOneRepMax(weightKg, reps);
+      const createdAt = set?.completedAt || set?.completed_at || session?.started_at || session?.startedAt || session?.created_at || session?.createdAt || '';
+      if (!exerciseId || !sessionDate || estimated <= 0) return;
+      rows.push({
+        id: `${sessionId || 'session'}_${itemIndex}_${set?.setIndex ?? set?.set_index ?? rows.length}`,
+        exercise_id: exerciseId,
+        session_id: sessionId || null,
+        weight_kg: weightKg,
+        reps,
+        estimated_1rm_kg: Math.round(estimated * 10) / 10,
+        calculation_method: 'epley_set_fallback',
+        created_at: createdAt || `${sessionDate}T00:00:00.000Z`,
+      });
+    });
+  });
+  return rows;
 }

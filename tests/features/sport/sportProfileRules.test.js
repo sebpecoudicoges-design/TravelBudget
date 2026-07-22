@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildExerciseProgressionRowsFromSessions,
   buildExerciseProgressionAnalysis,
   buildSportProfileRadarData,
   chooseBestCapacity,
@@ -109,5 +110,27 @@ describe('Sport profile rules', () => {
     const filtered = buildExerciseProgressionAnalysis(rows, { selectedExercise: 'barbell_bench_press' });
     expect(filtered.exercises).toHaveLength(1);
     expect(filtered.exercises[0].best.estimated_1rm_kg).toBe(76);
+  });
+
+  it('rebuilds e1RM progression rows from stored workout sets when metric history is empty', () => {
+    const rows = buildExerciseProgressionRowsFromSessions({
+      sessions: [{ id: 'session-1', started_at: '2026-07-10T06:00:00Z' }],
+      planForSession: () => [
+        { exerciseName: 'Squat arriere', exerciseKey: 'barbell_back_squat' },
+        { exerciseName: 'Developpe couche', exerciseKey: 'barbell_bench_press' },
+      ],
+      doneSetsForSession: () => [
+        { itemIndex: 0, setIndex: 1, reps: 8, weightKg: 80, completedAt: '2026-07-10T06:10:00Z' },
+        { itemIndex: 1, setIndex: 1, reps: 6, weightKg: 60, completedAt: '2026-07-10T06:20:00Z' },
+      ],
+    });
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      exercise_id: 'barbell_back_squat',
+      session_id: 'session-1',
+      estimated_1rm_kg: 101.3,
+      calculation_method: 'epley_set_fallback',
+    });
   });
 });

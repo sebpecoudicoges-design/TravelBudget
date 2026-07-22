@@ -35,9 +35,13 @@ describe('assets shared modal migration', () => {
     expect(source).toContain('window.state?.tripExpenseDocuments');
   });
 
-  it('keeps asset movement links editable and resolves Trip expenses by active trip id', () => {
+  it('keeps asset movement links editable and searchable outside the active travel context', () => {
     expect(legacySource).toContain('function activeTripId()');
-    expect(legacySource).toContain('if(tid) q = q.eq(\'trip_id\', tid);');
+    expect(legacySource).toContain('normalizeAssetSearchText');
+    expect(legacySource).toContain(".limit(1000)");
+    expect(legacySource).toContain(".limit(500)");
+    expect(legacySource).not.toContain("if(tid) q = q.eq('trip_id', tid);");
+    expect(legacySource).not.toContain("q = q.eq('travel_id', tid)");
     expect(legacySource).toContain('loadTransactionsByIds(linkedTxIds)');
     expect(legacySource).toContain('loadTripExpensesByIds(linkedTripIds)');
     expect(legacySource).toContain('openLinkedTransactionEditor');

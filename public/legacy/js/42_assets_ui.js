@@ -137,28 +137,43 @@ function txLabel(tx){
   const label = tx.label || tx.description || tx.note || tx.title || 'Transaction';
   return `${String(date).slice(0,10)} · ${amount} ${cur} · ${label}`;
 }
+function normalizeAssetSearchText(value){
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[,]/g, '.');
+}
 function txSearchText(tx){
   return [
     txLabel(tx),
     tx.category,
     tx.subcategory,
+    tx.category_label,
+    tx.subcategory_label,
     tx.wallet_name,
     tx.walletName,
     tx.type,
     tx.payee,
     tx.merchant,
+    tx.description,
+    tx.note,
     tx.id,
-  ].map(v => String(v || '').toLowerCase()).join(' ');
+  ].map(normalizeAssetSearchText).join(' ');
 }
 function tripSearchText(ex){
   return [
     tripDocLine(ex),
     ex.category,
     ex.subcategory,
+    ex.category_label,
+    ex.subcategory_label,
     ex.paidBy,
     ex.paid_by,
+    ex.description,
+    ex.note,
     ex.id,
-  ].map(v => String(v || '').toLowerCase()).join(' ');
+  ].map(normalizeAssetSearchText).join(' ');
 }
 function mergeById(rows){
   const out = new Map();
@@ -174,12 +189,10 @@ async function loadRecentTransactions(){
   const stateRows = Array.isArray(window.state?.transactions) ? window.state.transactions : [];
   if(!c) return stateRows.slice(0, 250);
   try{
-    let q = c.from(table('transactions','transactions')).select('*').order('created_at',{ascending:false}).limit(250);
-    const tid = activeTravelId();
-    if(tid) q = q.eq('travel_id', tid);
+    const q = c.from(table('transactions','transactions')).select('*').order('created_at',{ascending:false}).limit(1000);
     const { data, error } = await q;
     if(error) throw error;
-    return mergeById((data || []).concat(stateRows)).slice(0, 300);
+    return mergeById((data || []).concat(stateRows)).slice(0, 1100);
   }catch(e){
     console.warn('[TB][assets] transactions candidates unavailable', e);
     return stateRows.slice(0, 250);
@@ -560,9 +573,7 @@ async function loadTripExpenseCandidates(){
     let q = c.from(table('trip_expenses','trip_expenses'))
       .select('id,date,label,amount,currency,category,subcategory,paid_by_member_id,transaction_id,budget_date_start,budget_date_end,trip_id')
       .order('date',{ascending:false})
-      .limit(60);
-    const tid = activeTripId();
-    if(tid) q = q.eq('trip_id', tid);
+      .limit(500);
     const { data, error } = await q;
     if(error) throw error;
     rememberTripExpenses(data || []);
@@ -696,7 +707,7 @@ function refreshAssetMovementTransactionSelect(form){
   const select = form.querySelector('select[name="asset_movement_transaction_id"]');
   if(!select) return;
   const current = select.value || '';
-  const needle = String(input?.value || '').trim().toLowerCase();
+  const needle = normalizeAssetSearchText(input?.value || '').trim();
   const rows = (ASSET_MOVEMENT_TX_CANDIDATES || [])
     .filter(tx => !needle || txSearchText(tx).includes(needle))
     .slice(0, 80);
@@ -714,7 +725,7 @@ function refreshAssetMovementTripSelect(form){
   const select = form.querySelector('select[name="asset_movement_trip_expense_id"]');
   if(!select) return;
   const current = select.value || '';
-  const needle = String(input?.value || '').trim().toLowerCase();
+  const needle = normalizeAssetSearchText(input?.value || '').trim();
   const rows = (ASSET_MOVEMENT_TRIP_CANDIDATES || [])
     .filter(ex => !needle || tripSearchText(ex).includes(needle))
     .slice(0, 80);
