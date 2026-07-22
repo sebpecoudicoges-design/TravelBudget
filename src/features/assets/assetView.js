@@ -481,12 +481,14 @@ function renderAssetMovementLinksHtml({
         </select>
       </label>
       <label>${esc(t('Transaction wallet', 'Wallet transaction'))}
+        <input name="asset_movement_transaction_search" data-tb-asset-movement-tx-search type="search" placeholder="${esc(t('Rechercher nom, montant, date, catégorie...', 'Search name, amount, date, category...'))}">
         <select name="asset_movement_transaction_id">
           <option value="">${esc(t('Aucune transaction', 'No transaction'))}</option>
           ${txOptions}
         </select>
       </label>
       <label>${esc(t('Dépense Trip', 'Trip expense'))}
+        <input name="asset_movement_trip_search" data-tb-asset-movement-trip-search type="search" placeholder="${esc(t('Rechercher Trip, montant, date...', 'Search Trip, amount, date...'))}">
         <select name="asset_movement_trip_expense_id">
           <option value="">${esc(t('Aucune dépense Trip', 'No Trip expense'))}</option>
           ${tripOptions}

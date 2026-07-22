@@ -184,6 +184,9 @@ describe('Asset view helpers', () => {
     expect(docs.contentHTML).toContain('data-tb-asset-unlink-doc="link-1"');
     expect(docs.contentHTML).toContain('Transactions, dépenses annexes et Trip liés à l’asset');
     expect(docs.contentHTML).toContain('data-tb-asset-link-movement');
+    expect(docs.contentHTML).toContain('data-tb-asset-movement-tx-search');
+    expect(docs.contentHTML).toContain('data-tb-asset-movement-trip-search');
+    expect(docs.contentHTML).toContain('Rechercher nom, montant, date');
     expect(docs.contentHTML).toContain('data-tb-asset-unlink-movement="asset-tx-1"');
     expect(docs.contentHTML).toContain('data-tb-asset-update-movement="asset-tx-1"');
     expect(docs.contentHTML).toContain('data-tb-asset-link-relation');

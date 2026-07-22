@@ -134,6 +134,15 @@ export function createSportRepository(getClient) {
         .limit(limit));
     },
 
+    async loadExerciseMetricHistory({ table, userId, limit = 240 }) {
+      const client = requireClient(getClient);
+      return unwrap(await client.from(table)
+        .select('id,user_id,exercise_id,session_id,weight_kg,reps,estimated_1rm_kg,smoothed_e1rm_kg,training_max_kg,reference_weight_kg,recommended_weight_kg,calculation_method,created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit));
+    },
+
     async setRecommendationStatus({ tables, recommendationId, userId, status }) {
       const client = requireClient(getClient);
       const allowed = new Set(['pending', 'accepted', 'rejected']);

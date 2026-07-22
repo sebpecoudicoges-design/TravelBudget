@@ -12,8 +12,11 @@ describe('Sport profile view bridge', () => {
 
   it('delegates profile dashboard and body measurement modal rendering to the modular view', () => {
     expect(sportUi).toContain('window.UI?.sportProfileView?.renderSportProfileDashboard?.({');
+    expect(sportUi).toContain('window.UI?.sportProfileView?.renderExerciseProgressionAnalysis?.({');
     expect(sportUi).toContain('window.UI?.sportProfileView?.renderBodyMeasurementModal?.({');
+    expect(sportUi).toContain('window.UI?.sportProfileView?.bodyMeasurementQuality?.(payload, sportViewApi())');
     expect(sportUi).toContain('data: sportProfileRadarData()');
+    expect(sportUi).toContain('buildExerciseProgressionAnalysis?.(CACHE.exerciseMetricHistory || [],');
     expect(sportUi).toContain('editor: CACHE.bodyMeasurementEditor');
     expect(sportUi).not.toContain('function radarPoints(');
     expect(sportUi).not.toContain('function sportProfileAxisBasis(');

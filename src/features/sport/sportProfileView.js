@@ -158,27 +158,144 @@ export function renderSportProfileDashboard({
     </div>`;
 }
 
+function progressionLabel(value = '') {
+  return String(value || '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+export function renderExerciseProgressionAnalysis({ analysis = {}, selectedExercise = '', api = {} } = {}) {
+  const h = helpers(api);
+  const rows = Array.isArray(analysis.exercises) ? analysis.exercises : [];
+  const options = Array.isArray(analysis.options) && analysis.options.length
+    ? analysis.options
+    : rows.map((row) => ({ key: row.key, label: row.label }));
+  const selected = String(selectedExercise || analysis.selectedExercise || '');
+  const visible = selected ? rows.filter((row) => String(row.key) === selected) : rows.slice(0, 6);
+  const maxValue = Math.max(1, ...visible.flatMap((row) => (row.rows || []).map((point) => h.n(point.estimated_1rm_kg, 0))));
+  const sparkline = (points = []) => {
+    const clean = points.slice(-12);
+    if (!clean.length) return '';
+    return clean.map((point, idx) => {
+      const height = Math.max(6, Math.round((h.n(point.estimated_1rm_kg, 0) / maxValue) * 54));
+      return `<i title="${h.esc(`${point.date} - ${h.n(point.estimated_1rm_kg, 0)} kg e1RM`)}" style="height:${height}px" data-idx="${idx}"></i>`;
+    }).join('');
+  };
+  return `<div class="tb-sport-card tb-sport-progress-card">
+    <div class="tb-sport-card-head">
+      <div>
+        <h3>${h.esc(h.txt('Analyse progression charges', 'Load progression analysis'))}</h3>
+        <div class="muted">${h.esc(h.txt('e1RM estime par date, calcule avec Epley depuis les series chargees. Priorite aux gros mouvements.', 'Estimated e1RM by date, calculated with Epley from loaded sets. Main lifts first.'))}</div>
+      </div>
+      <div class="tb-sport-progress-filter">
+        <label>${h.esc(h.txt('Exercice', 'Exercise'))}</label>
+        <select id="sport-progress-exercise">
+          <option value="">${h.esc(h.txt('Priorite gros lifts', 'Main lifts first'))}</option>
+          ${options.map((row) => `<option value="${h.esc(row.key)}" ${selected === String(row.key) ? 'selected' : ''}>${h.esc(progressionLabel(row.label))}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    ${visible.length ? `<div class="tb-sport-progress-list">
+      ${visible.map((row) => {
+        const last = row.last || {};
+        const best = row.best || {};
+        const positive = h.n(row.delta, 0) >= 0;
+        return `<article class="tb-sport-progress-row">
+          <div class="tb-sport-progress-main">
+            <strong>${h.esc(progressionLabel(row.label))}</strong>
+            <span>${h.esc(h.txt('Dernier', 'Latest'))}: ${h.n(last.estimated_1rm_kg, 0)} kg · ${h.esc(h.txt('Meilleur', 'Best'))}: ${h.n(best.estimated_1rm_kg, 0)} kg</span>
+            <small>${h.esc((row.rows || []).length)} ${h.esc(h.txt('point(s)', 'point(s)'))} · ${h.esc(firstLastDate(row))}</small>
+          </div>
+          <div class="tb-sport-progress-bars">${sparkline(row.rows || [])}</div>
+          <div class="tb-sport-progress-delta ${positive ? 'up' : 'down'}">${positive ? '+' : ''}${h.n(row.delta, 0)} kg<br><small>${positive ? '+' : ''}${h.n(row.deltaPct, 0)}%</small></div>
+        </article>`;
+      }).join('')}
+    </div>` : `<div class="tb-sport-empty">${h.esc(h.txt('Pas encore assez de series chargees pour tracer une progression.', 'Not enough loaded sets yet to chart progression.'))}</div>`}
+  </div>`;
+}
+
+function firstLastDate(row = {}) {
+  const first = row.first?.date || '';
+  const last = row.last?.date || '';
+  return first && last && first !== last ? `${first} -> ${last}` : (last || first || '');
+}
+
 function bodyInput(id, label, value, step, h) {
   return `<div class="tb-sport-field"><label>${h.esc(label)}</label><input id="${id}" type="number" step="${h.esc(step || '0.1')}" value="${h.esc(value ?? '')}"></div>`;
+}
+
+export function bodyMeasurementQuality(input = {}, api = {}) {
+  const h = helpers(api);
+  const time = String(input.measurement_time || input.measurementTime || 'morning');
+  let score = 0;
+  if (time === 'morning') score += 25;
+  else if (time === 'after_breakfast') score += 12;
+  else if (time === 'after_sport') score -= 5;
+  else if (time === 'evening') score += 0;
+  ['after_toilet', 'before_food', 'before_drink', 'before_activity', 'same_scale', 'hard_flat_floor', 'dry_feet'].forEach((key) => {
+    if (input[key] === true || input[key] === 'on') score += key === 'same_scale' || key === 'hard_flat_floor' ? 10 : 9;
+  });
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  const label = score >= 88
+    ? h.txt('Reference', 'Reference')
+    : score >= 65
+      ? h.txt('Moyenne', 'Average')
+      : score >= 40
+        ? h.txt('Faible', 'Low')
+        : h.txt('Tres faible', 'Very low');
+  return { score, label };
 }
 
 export function renderBodyMeasurementModal({ editor = null, api = {} } = {}) {
   if (!editor) return '';
   const h = helpers(api);
+  const quality = bodyMeasurementQuality(editor, api);
+  const timeOptions = [
+    ['morning', h.txt('Matin au reveil', 'Morning on waking')],
+    ['after_breakfast', h.txt('Matin apres petit-dejeuner', 'Morning after breakfast')],
+    ['after_sport', h.txt('Apres sport', 'After sport')],
+    ['evening', h.txt('Soir apres diner', 'Evening after dinner')],
+  ];
+  const check = (key) => editor[key] !== false ? 'checked' : '';
   return `<div class="tb-sport-modal-backdrop tb-sport-body-modal-backdrop" role="dialog" aria-modal="true">
       <div class="tb-sport-modal tb-sport-body-modal">
         <h3>${h.esc(h.txt('Mesure impedancemetre', 'Body composition measurement'))}</h3>
-        <div class="muted">${h.esc(h.txt('Saisie datee, enregistree en SQL si connecte, sinon gardee localement.', 'Dated entry, saved in SQL when online, otherwise kept locally.'))}</div>
+        <div class="muted">${h.esc(h.txt('Saisie datee, enregistree en SQL si connecte, sinon gardee localement. 1 mesure par jour maximum.', 'Dated entry, saved in SQL when online, otherwise kept locally. One measurement per day max.'))}</div>
+        <div class="tb-sport-body-quality">
+          <strong>${h.esc(h.txt('Qualite mesure', 'Measurement quality'))}: ${h.esc(quality.label)}</strong>
+          <span>${quality.score}/100 · ${h.esc(h.txt('Reference = reveil, toilettes, avant boire/manger/sport, meme balance, sol dur, pieds secs.', 'Reference = waking, toilet, before drinking/eating/sport, same scale, hard floor, dry feet.'))}</span>
+        </div>
         <div class="tb-sport-fields" style="margin-top:12px;">
           <div class="tb-sport-field"><label>${h.esc(h.txt('Date', 'Date'))}</label><input id="sport-body-date" type="date" value="${h.esc(editor.measured_on || h.todayISO())}"></div>
+          <div class="tb-sport-field"><label>${h.esc(h.txt('Moment', 'Timing'))}</label><select id="sport-body-time">${timeOptions.map(([value, label]) => `<option value="${h.esc(value)}" ${String(editor.measurement_time || 'morning') === value ? 'selected' : ''}>${h.esc(label)}</option>`).join('')}</select></div>
           ${bodyInput('sport-body-weight', h.txt('Poids kg', 'Weight kg'), editor.weight_kg, '0.1', h)}
+          ${bodyInput('sport-body-bmi', 'IMC', editor.bmi, '0.1', h)}
           ${bodyInput('sport-body-fat', h.txt('Masse grasse %', 'Body fat %'), editor.body_fat_pct, '0.1', h)}
+          ${bodyInput('sport-body-fat-mass', h.txt('Masse graisseuse kg', 'Fat mass kg'), editor.fat_mass_kg, '0.1', h)}
           ${bodyInput('sport-body-muscle', h.txt('Masse musculaire kg', 'Muscle mass kg'), editor.muscle_mass_kg, '0.1', h)}
+          ${bodyInput('sport-body-lean', h.txt('Masse maigre kg', 'Lean mass kg'), editor.lean_mass_kg, '0.1', h)}
           ${bodyInput('sport-body-water', h.txt('Eau corporelle %', 'Body water %'), editor.body_water_pct, '0.1', h)}
+          ${bodyInput('sport-body-water-kg', h.txt('Eau corporelle kg', 'Body water kg'), editor.body_water_kg, '0.1', h)}
           ${bodyInput('sport-body-bone', h.txt('Masse osseuse kg', 'Bone mass kg'), editor.bone_mass_kg, '0.1', h)}
           ${bodyInput('sport-body-visceral', h.txt('Graisse viscerale', 'Visceral fat'), editor.visceral_fat_rating, '0.1', h)}
           ${bodyInput('sport-body-bmr', 'BMR kcal', editor.bmr_kcal, '1', h)}
           ${bodyInput('sport-body-age', h.txt('Age metabolique', 'Metabolic age'), editor.metabolic_age, '1', h)}
+          ${bodyInput('sport-body-protein-pct', h.txt('Proteines %', 'Protein %'), editor.protein_pct, '0.1', h)}
+          ${bodyInput('sport-body-protein-mass', h.txt('Masse proteique kg', 'Protein mass kg'), editor.protein_mass_kg, '0.1', h)}
+          ${bodyInput('sport-body-subfat', h.txt('Graisse sous-cutanee %', 'Subcutaneous fat %'), editor.subcutaneous_fat_pct, '0.1', h)}
+          ${bodyInput('sport-body-ideal-weight', h.txt('Poids ideal kg', 'Ideal weight kg'), editor.ideal_weight_kg, '0.1', h)}
+          <div class="tb-sport-field"><label>${h.esc(h.txt('Body Type', 'Body Type'))}</label><input id="sport-body-type" type="text" value="${h.esc(editor.body_type || '')}"></div>
+          <div class="tb-sport-protocol" style="grid-column:1/-1;">
+            ${[
+              ['after_toilet', h.txt('Apres toilettes', 'After toilet')],
+              ['before_food', h.txt('Avant manger', 'Before eating')],
+              ['before_drink', h.txt('Avant boire', 'Before drinking')],
+              ['before_activity', h.txt('Avant activite physique', 'Before activity')],
+              ['same_scale', h.txt('Meme balance', 'Same scale')],
+              ['hard_flat_floor', h.txt('Sol dur et plat', 'Hard flat floor')],
+              ['dry_feet', h.txt('Pieds secs', 'Dry feet')],
+            ].map(([key, label]) => `<label><input id="sport-body-${h.esc(key.replace(/_/g, '-'))}" type="checkbox" ${check(key)}> ${h.esc(label)}</label>`).join('')}
+          </div>
           <div class="tb-sport-field" style="grid-column:1/-1;"><label>Notes</label><textarea id="sport-body-notes" rows="3">${h.esc(editor.notes || '')}</textarea></div>
         </div>
         <div class="tb-sport-actions" style="margin-top:14px;justify-content:flex-end;">

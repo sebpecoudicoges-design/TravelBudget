@@ -347,3 +347,77 @@ export function buildSportProfileRadarData({
     bestSessionSeconds,
   };
 }
+
+export function normalizeExerciseProgressionKey(value) {
+  return normalizedSportProfileText(value)
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+export function exerciseProgressionPriority(exerciseId = '') {
+  const key = normalizeExerciseProgressionKey(exerciseId);
+  if (/squat/.test(key) && !/front|goblet/.test(key)) return 100;
+  if (/developpe_couche|bench/.test(key) && !/serree|close|incline/.test(key)) return 95;
+  if (/souleve_de_terre|deadlift/.test(key) && !/roumain|romanian|rdl/.test(key)) return 92;
+  if (/rowing_barre|barbell_row/.test(key)) return 86;
+  if (/traction|pullup|pull_up|chin/.test(key)) return 84;
+  if (/developpe_militaire|overhead|military/.test(key)) return 80;
+  if (/front_squat/.test(key)) return 78;
+  if (/souleve_de_terre_roumain|rdl|romanian/.test(key)) return 76;
+  if (/developpe_incline/.test(key)) return 74;
+  return 30;
+}
+
+export function buildExerciseProgressionAnalysis(rows = [], { selectedExercise = '', limitPerExercise = 60 } = {}) {
+  const selected = normalizeExerciseProgressionKey(selectedExercise);
+  const grouped = new Map();
+  (rows || []).forEach((row) => {
+    const exerciseId = String(row?.exercise_id || row?.exerciseId || '').trim();
+    const key = normalizeExerciseProgressionKey(exerciseId);
+    const value = numberValue(row?.estimated_1rm_kg ?? row?.estimated1rmKg, 0);
+    const date = String(row?.created_at || row?.createdAt || row?.date || '').slice(0, 10);
+    if (!key || value <= 0 || !date) return;
+    if (selected && key !== selected) return;
+    const item = {
+      ...row,
+      exercise_id: exerciseId,
+      key,
+      date,
+      estimated_1rm_kg: Math.round(value * 10) / 10,
+      weight_kg: numberValue(row?.weight_kg ?? row?.weightKg, 0),
+      reps: Math.round(numberValue(row?.reps, 0)),
+    };
+    const list = grouped.get(key) || [];
+    list.push(item);
+    grouped.set(key, list);
+  });
+
+  const exercises = Array.from(grouped.entries()).map(([key, list]) => {
+    const sorted = list
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.created_at || '').localeCompare(String(b.created_at || '')))
+      .slice(-Math.max(2, limitPerExercise));
+    const first = sorted[0] || {};
+    const last = sorted[sorted.length - 1] || {};
+    const best = sorted.slice().sort((a, b) => numberValue(b.estimated_1rm_kg, 0) - numberValue(a.estimated_1rm_kg, 0))[0] || {};
+    const delta = numberValue(last.estimated_1rm_kg, 0) - numberValue(first.estimated_1rm_kg, 0);
+    return {
+      key,
+      exerciseId: sorted[0]?.exercise_id || key,
+      label: sorted[0]?.exercise_id || key,
+      priority: exerciseProgressionPriority(sorted[0]?.exercise_id || key),
+      rows: sorted,
+      first,
+      last,
+      best,
+      delta: Math.round(delta * 10) / 10,
+      deltaPct: first.estimated_1rm_kg ? Math.round((delta / first.estimated_1rm_kg) * 1000) / 10 : 0,
+    };
+  }).sort((a, b) => b.priority - a.priority || numberValue(b.best?.estimated_1rm_kg, 0) - numberValue(a.best?.estimated_1rm_kg, 0));
+
+  return {
+    exercises,
+    selectedExercise: selected,
+    totalRows: (rows || []).length,
+    options: exercises.map((row) => ({ key: row.key, label: row.label, priority: row.priority })),
+  };
+}

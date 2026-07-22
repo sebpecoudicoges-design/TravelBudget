@@ -24,6 +24,7 @@
   const EXERCISE_FAVORITES_KEY = () => scopedKey("travelbudget_sport_exercise_favorites_v1");
   const EXERCISE_RECENT_KEY = () => scopedKey("travelbudget_sport_exercise_recent_v1");
   const RECOVERY_MET = 1.3;
+  const BODY_MEASUREMENT_COLUMNS = "id,user_id,measured_on,source,weight_kg,bmi,body_fat_pct,fat_mass_kg,muscle_mass_kg,lean_mass_kg,body_water_pct,body_water_kg,bone_mass_kg,visceral_fat_rating,bmr_kcal,metabolic_age,protein_pct,protein_mass_kg,subcutaneous_fat_pct,ideal_weight_kg,body_type,measurement_time,after_toilet,before_food,before_drink,before_activity,same_scale,hard_flat_floor,dry_feet,protocol_quality_score,protocol_quality_label,notes,created_at,updated_at";
 
   const sportCatalog = window.Core?.sportCatalog;
   if (!sportCatalog) throw new Error("Sport catalog indisponible");
@@ -111,6 +112,10 @@
     if (CACHE.timer || CACHE.freeTimer) startTicker();
     CACHE.bodyMeasurements = loadBodyMeasurementsLocal();
     CACHE.bodyMeasurementsLoaded = false;
+    CACHE.exerciseMetricHistory = [];
+    CACHE.exerciseMetricHistoryLoaded = false;
+    CACHE.exerciseMetricHistoryLoading = false;
+    CACHE.progressionExerciseFilter = "";
   }
   reloadScopedLocalState(true);
   function activeTravelId() { return window.state?.activeTravelId || null; }
@@ -282,7 +287,7 @@
     try {
       const res = await c
         .from(table("health_body_measurements"))
-        .select("id,user_id,measured_on,source,weight_kg,body_fat_pct,muscle_mass_kg,body_water_pct,bone_mass_kg,visceral_fat_rating,bmr_kcal,metabolic_age,notes,created_at,updated_at")
+        .select(BODY_MEASUREMENT_COLUMNS)
         .eq("user_id", uid())
         .order("measured_on", { ascending: false })
         .limit(40);
@@ -297,19 +302,67 @@
     }
     return false;
   }
+  async function ensureExerciseMetricHistoryLoaded(reason) {
+    if (CACHE.exerciseMetricHistoryLoading || CACHE.exerciseMetricHistoryLoaded) return false;
+    const c = client();
+    const userId = uid();
+    if (!c || !userId) {
+      CACHE.exerciseMetricHistoryLoaded = true;
+      return false;
+    }
+    const offline = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode(`sport:metric_history:${reason || "render"}`)
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+    if (offline) {
+      CACHE.exerciseMetricHistoryLoaded = true;
+      return false;
+    }
+    CACHE.exerciseMetricHistoryLoading = true;
+    try {
+      CACHE.exerciseMetricHistory = await sportRepository().loadExerciseMetricHistory({
+        table: table("sport_exercise_metric_history"),
+        userId,
+        limit: 320,
+      });
+      return true;
+    } catch (e) {
+      if (!isOfflineSkipError(e)) console.warn("[sport] exercise metric history load failed", e?.message || e);
+    } finally {
+      CACHE.exerciseMetricHistoryLoading = false;
+      CACHE.exerciseMetricHistoryLoaded = true;
+    }
+    return false;
+  }
   function openBodyMeasurementEditor(row) {
     const latest = row || latestBodyMeasurement() || {};
     CACHE.bodyMeasurementEditor = {
       measured_on: String(row?.measured_on || todayISO()).slice(0, 10),
       source: latest.source || "impedance_scale",
       weight_kg: latest.weight_kg ?? bodyWeight(),
+      bmi: latest.bmi ?? "",
       body_fat_pct: latest.body_fat_pct ?? "",
+      fat_mass_kg: latest.fat_mass_kg ?? "",
       muscle_mass_kg: latest.muscle_mass_kg ?? "",
+      lean_mass_kg: latest.lean_mass_kg ?? "",
       body_water_pct: latest.body_water_pct ?? "",
+      body_water_kg: latest.body_water_kg ?? "",
       bone_mass_kg: latest.bone_mass_kg ?? "",
       visceral_fat_rating: latest.visceral_fat_rating ?? "",
       bmr_kcal: latest.bmr_kcal ?? "",
       metabolic_age: latest.metabolic_age ?? "",
+      protein_pct: latest.protein_pct ?? "",
+      protein_mass_kg: latest.protein_mass_kg ?? "",
+      subcutaneous_fat_pct: latest.subcutaneous_fat_pct ?? "",
+      ideal_weight_kg: latest.ideal_weight_kg ?? "",
+      body_type: latest.body_type || "",
+      measurement_time: latest.measurement_time || "morning",
+      after_toilet: latest.after_toilet ?? true,
+      before_food: latest.before_food ?? true,
+      before_drink: latest.before_drink ?? true,
+      before_activity: latest.before_activity ?? true,
+      same_scale: latest.same_scale ?? true,
+      hard_flat_floor: latest.hard_flat_floor ?? true,
+      dry_feet: latest.dry_feet ?? true,
       notes: latest.notes || "",
     };
   }
@@ -318,20 +371,41 @@
   }
   function readBodyMeasurementFromDom(root) {
     const day = String(root.querySelector("#sport-body-date")?.value || todayISO()).slice(0, 10);
-    return {
+    const payload = {
       user_id: uid(),
       measured_on: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : todayISO(),
       source: "impedance_scale",
       weight_kg: cleanOptionalNumber(root.querySelector("#sport-body-weight")?.value, 20, 350),
+      bmi: cleanOptionalNumber(root.querySelector("#sport-body-bmi")?.value, 10, 80),
       body_fat_pct: cleanOptionalNumber(root.querySelector("#sport-body-fat")?.value, 2, 70),
+      fat_mass_kg: cleanOptionalNumber(root.querySelector("#sport-body-fat-mass")?.value, 0, 250),
       muscle_mass_kg: cleanOptionalNumber(root.querySelector("#sport-body-muscle")?.value, 5, 200),
+      lean_mass_kg: cleanOptionalNumber(root.querySelector("#sport-body-lean")?.value, 0, 300),
       body_water_pct: cleanOptionalNumber(root.querySelector("#sport-body-water")?.value, 20, 80),
+      body_water_kg: cleanOptionalNumber(root.querySelector("#sport-body-water-kg")?.value, 0, 250),
       bone_mass_kg: cleanOptionalNumber(root.querySelector("#sport-body-bone")?.value, 0.5, 20),
       visceral_fat_rating: cleanOptionalNumber(root.querySelector("#sport-body-visceral")?.value, 1, 60),
       bmr_kcal: Math.round(cleanOptionalNumber(root.querySelector("#sport-body-bmr")?.value, 600, 6000) || 0) || null,
       metabolic_age: Math.round(cleanOptionalNumber(root.querySelector("#sport-body-age")?.value, 10, 120) || 0) || null,
+      protein_pct: cleanOptionalNumber(root.querySelector("#sport-body-protein-pct")?.value, 0, 40),
+      protein_mass_kg: cleanOptionalNumber(root.querySelector("#sport-body-protein-mass")?.value, 0, 120),
+      subcutaneous_fat_pct: cleanOptionalNumber(root.querySelector("#sport-body-subfat")?.value, 0, 70),
+      ideal_weight_kg: cleanOptionalNumber(root.querySelector("#sport-body-ideal-weight")?.value, 20, 250),
+      body_type: String(root.querySelector("#sport-body-type")?.value || "").trim().slice(0, 80) || null,
+      measurement_time: String(root.querySelector("#sport-body-time")?.value || "morning"),
+      after_toilet: !!root.querySelector("#sport-body-after-toilet")?.checked,
+      before_food: !!root.querySelector("#sport-body-before-food")?.checked,
+      before_drink: !!root.querySelector("#sport-body-before-drink")?.checked,
+      before_activity: !!root.querySelector("#sport-body-before-activity")?.checked,
+      same_scale: !!root.querySelector("#sport-body-same-scale")?.checked,
+      hard_flat_floor: !!root.querySelector("#sport-body-hard-flat-floor")?.checked,
+      dry_feet: !!root.querySelector("#sport-body-dry-feet")?.checked,
       notes: String(root.querySelector("#sport-body-notes")?.value || "").trim().slice(0, 500) || null,
     };
+    const quality = window.UI?.sportProfileView?.bodyMeasurementQuality?.(payload, sportViewApi()) || { score: null, label: null };
+    payload.protocol_quality_score = quality.score;
+    payload.protocol_quality_label = quality.label;
+    return payload;
   }
   function mergeBodyMeasurementLocal(payload, id) {
     const nextRow = Object.assign({}, payload, { id: id || payload.id || `local_${payload.measured_on}_${payload.source}` });
@@ -358,7 +432,7 @@
       const res = await c
         .from(table("health_body_measurements"))
         .upsert(Object.assign({}, payload, { user_id: uid(), updated_at: new Date().toISOString() }), { onConflict: "user_id,measured_on,source" })
-        .select("id,user_id,measured_on,source,weight_kg,body_fat_pct,muscle_mass_kg,body_water_pct,bone_mass_kg,visceral_fat_rating,bmr_kcal,metabolic_age,notes,created_at,updated_at")
+        .select(BODY_MEASUREMENT_COLUMNS)
         .maybeSingle();
       if (res.error) throw res.error;
       mergeBodyMeasurementLocal(res.data || payload, res.data?.id);
@@ -2678,6 +2752,17 @@
       api: sportViewApi(),
     }) || "";
   }
+  function renderExerciseProgressionAnalysis() {
+    const analysis = window.Core?.sportProfileRules?.buildExerciseProgressionAnalysis?.(CACHE.exerciseMetricHistory || [], {
+      selectedExercise: CACHE.progressionExerciseFilter || "",
+      limitPerExercise: 70,
+    }) || { exercises: [], options: [] };
+    return window.UI?.sportProfileView?.renderExerciseProgressionAnalysis?.({
+      analysis,
+      selectedExercise: CACHE.progressionExerciseFilter || "",
+      api: sportViewApi(),
+    }) || "";
+  }
   function renderBodyMeasurementModal() {
     return window.UI?.sportProfileView?.renderBodyMeasurementModal?.({
       editor: CACHE.bodyMeasurementEditor,
@@ -2767,6 +2852,11 @@
         if (changed && (window.activeView || "") === "sport") renderSport("body-measurements-loaded");
       }).catch(() => {});
     }
+    if (!CACHE.exerciseMetricHistoryLoaded && !CACHE.exerciseMetricHistoryLoading) {
+      ensureExerciseMetricHistoryLoaded(reason).then((changed) => {
+        if (changed && (window.activeView || "") === "sport") renderSport("metric-history-loaded");
+      }).catch(() => {});
+    }
     const kg = bodyWeight();
     const planSec = totalPlanSeconds(CACHE.plan);
     const kcal = totalPlanKcal(CACHE.plan, kg);
@@ -2782,6 +2872,7 @@
         </div>
         ${sportStatsHTML()}
         ${renderSportProfileDashboard()}
+        ${renderExerciseProgressionAnalysis()}
         <div class="tb-sport-grid">
           ${renderBuilder()}
           ${renderFreeTimer()}
@@ -2801,6 +2892,11 @@
   }
 
   function bind(root) {
+    const progressionExercise = root.querySelector("#sport-progress-exercise");
+    if (progressionExercise) progressionExercise.onchange = () => {
+      CACHE.progressionExerciseFilter = progressionExercise.value || "";
+      renderSport("progression-filter");
+    };
     const goalSelect = root.querySelector("#sport-goal");
     if (goalSelect) goalSelect.onchange = () => {
       CACHE.builderGoal = goalSelect.value || "strength";

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  bodyMeasurementQuality,
   radarPoints,
   renderBodyMeasurementModal,
+  renderExerciseProgressionAnalysis,
   renderSportProfileDashboard,
 } from '../../../src/features/sport/sportProfileView.js';
 
@@ -89,9 +91,60 @@ describe('Sport profile view', () => {
     expect(html).toContain('value="2026-07-08"');
     expect(html).toContain('id="sport-body-weight"');
     expect(html).toContain('value="59"');
+    expect(html).toContain('id="sport-body-bmi"');
+    expect(html).toContain('id="sport-body-fat-mass"');
+    expect(html).toContain('id="sport-body-protein-pct"');
+    expect(html).toContain('id="sport-body-subfat"');
+    expect(html).toContain('id="sport-body-after-toilet"');
+    expect(html).toContain('Qualite mesure');
     expect(html).toContain('id="sport-body-save"');
     expect(html).toContain('data-sport-body-close');
     expect(html).toContain('matin');
+  });
+
+  it('scores body measurement protocol quality', () => {
+    const quality = bodyMeasurementQuality({
+      measurement_time: 'morning',
+      after_toilet: true,
+      before_food: true,
+      before_drink: true,
+      before_activity: true,
+      same_scale: true,
+      hard_flat_floor: true,
+      dry_feet: true,
+    }, api);
+
+    expect(quality.score).toBeGreaterThanOrEqual(88);
+    expect(quality.label).toBe('Reference');
+  });
+
+  it('renders exercise e1RM progression with a filter', () => {
+    const html = renderExerciseProgressionAnalysis({
+      selectedExercise: 'barbell_bench_press',
+      analysis: {
+        selectedExercise: 'barbell_bench_press',
+        options: [{ key: 'barbell_bench_press', label: 'barbell_bench_press' }],
+        exercises: [{
+          key: 'barbell_bench_press',
+          label: 'barbell_bench_press',
+          first: { date: '2026-07-01', estimated_1rm_kg: 72 },
+          last: { date: '2026-07-08', estimated_1rm_kg: 76 },
+          best: { date: '2026-07-08', estimated_1rm_kg: 76 },
+          delta: 4,
+          deltaPct: 5.6,
+          rows: [
+            { date: '2026-07-01', estimated_1rm_kg: 72 },
+            { date: '2026-07-08', estimated_1rm_kg: 76 },
+          ],
+        }],
+      },
+      api,
+    });
+
+    expect(html).toContain('Analyse progression charges');
+    expect(html).toContain('id="sport-progress-exercise"');
+    expect(html).toContain('Barbell Bench Press');
+    expect(html).toContain('+4 kg');
   });
 
   it('keeps radar point generation deterministic', () => {

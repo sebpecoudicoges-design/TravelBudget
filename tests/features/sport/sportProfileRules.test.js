@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildExerciseProgressionAnalysis,
   buildSportProfileRadarData,
   chooseBestCapacity,
   exerciseProfileBucket,
@@ -89,5 +90,24 @@ describe('Sport profile rules', () => {
     expect(data.athleticProfile.priority).toContain('10 a 12 points');
     expect(data.athleticProfile.archetypes.map((row) => row.label)).toEqual(['Grimpeur', 'Powerlifter', 'Hyrox', 'Endurance']);
     expect(data.athleticProfile.balances[0].label).toBe('Poussee / Tirage');
+  });
+
+  it('builds load progression analysis with main lifts first and exercise filtering', () => {
+    const rows = [
+      { exercise_id: 'extension_triceps', estimated_1rm_kg: 32, weight_kg: 25, reps: 8, created_at: '2026-07-05T08:00:00Z' },
+      { exercise_id: 'barbell_bench_press', estimated_1rm_kg: 72, weight_kg: 60, reps: 6, created_at: '2026-07-02T08:00:00Z' },
+      { exercise_id: 'barbell_bench_press', estimated_1rm_kg: 76, weight_kg: 62.5, reps: 6, created_at: '2026-07-09T08:00:00Z' },
+      { exercise_id: 'barbell_back_squat', estimated_1rm_kg: 104, weight_kg: 82.5, reps: 8, created_at: '2026-07-06T08:00:00Z' },
+    ];
+
+    const all = buildExerciseProgressionAnalysis(rows);
+    expect(all.exercises[0].key).toBe('barbell_back_squat');
+    expect(all.exercises[1].key).toBe('barbell_bench_press');
+    expect(all.exercises[1].delta).toBe(4);
+    expect(all.options.map((row) => row.key)).toContain('barbell_bench_press');
+
+    const filtered = buildExerciseProgressionAnalysis(rows, { selectedExercise: 'barbell_bench_press' });
+    expect(filtered.exercises).toHaveLength(1);
+    expect(filtered.exercises[0].best.estimated_1rm_kg).toBe(76);
   });
 });

@@ -7,6 +7,8 @@
   const FALLBACK_EVENTS = [];
   let CACHE = { assets:[], owners:[], events:[], documentLinks:[], transactionLinks:[], demo:false };
   let TRIP_EXPENSE_CACHE = new Map();
+  let ASSET_MOVEMENT_TX_CANDIDATES = [];
+  let ASSET_MOVEMENT_TRIP_CANDIDATES = [];
   let assetModal = null;
 
   function esc(v){ try { return escapeHTML(String(v ?? '')); } catch(_) { return String(v ?? '').replace(/[&<>\'"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c])); } }
@@ -128,27 +130,59 @@
   function minePercent(rows){ const me = rows.find(r=>/toi|moi/i.test(String(r.display_name||''))); return Number(me?.ownership_percent ?? rows[0]?.ownership_percent ?? 100); }
   function totalPercent(rows){ return Math.round((rows||[]).reduce((s,r)=>s+n(r.ownership_percent,0),0)*100)/100; }
   function eventLabel(t){ return ({ buy_share:tr('assets.event.buy_share'), sell_share:tr('assets.event.sell_share'), transfer_share:tr('assets.event.transfer_share') })[t] || tr('assets.event.share_movement'); }
-  function txLabel(tx){
+function txLabel(tx){
   const date = tx.date || tx.transaction_date || tx.created_at || '';
   const amount = tx.amount ?? tx.value ?? tx.total ?? '';
   const cur = tx.currency || tx.original_currency || '';
   const label = tx.label || tx.description || tx.note || tx.title || 'Transaction';
   return `${String(date).slice(0,10)} · ${amount} ${cur} · ${label}`;
 }
+function txSearchText(tx){
+  return [
+    txLabel(tx),
+    tx.category,
+    tx.subcategory,
+    tx.wallet_name,
+    tx.walletName,
+    tx.type,
+    tx.payee,
+    tx.merchant,
+    tx.id,
+  ].map(v => String(v || '').toLowerCase()).join(' ');
+}
+function tripSearchText(ex){
+  return [
+    tripDocLine(ex),
+    ex.category,
+    ex.subcategory,
+    ex.paidBy,
+    ex.paid_by,
+    ex.id,
+  ].map(v => String(v || '').toLowerCase()).join(' ');
+}
+function mergeById(rows){
+  const out = new Map();
+  (rows || []).forEach(row => {
+    const id = String(row?.id || '').trim();
+    if(id && !out.has(id)) out.set(id, row);
+  });
+  return Array.from(out.values());
+}
 
 async function loadRecentTransactions(){
   const c = client();
-  if(!c) return [];
+  const stateRows = Array.isArray(window.state?.transactions) ? window.state.transactions : [];
+  if(!c) return stateRows.slice(0, 250);
   try{
-    let q = c.from(table('transactions','transactions')).select('*').order('created_at',{ascending:false}).limit(30);
+    let q = c.from(table('transactions','transactions')).select('*').order('created_at',{ascending:false}).limit(250);
     const tid = activeTravelId();
     if(tid) q = q.eq('travel_id', tid);
     const { data, error } = await q;
     if(error) throw error;
-    return data || [];
+    return mergeById((data || []).concat(stateRows)).slice(0, 300);
   }catch(e){
     console.warn('[TB][assets] transactions candidates unavailable', e);
-    return [];
+    return stateRows.slice(0, 250);
   }
 }
 async function loadTransactionsByIds(ids){
@@ -631,6 +665,8 @@ function tripDocLine(ex){
 }
 
 function assetDocsModalHtml(asset, docs, links, message, txLinks, tripLinks, assetTransactionLinks, transactions, tripExpenses){
+  ASSET_MOVEMENT_TX_CANDIDATES = transactions || [];
+  ASSET_MOVEMENT_TRIP_CANDIDATES = tripExpenses || [];
   return window.UI?.assetView?.renderAssetDocumentsModalSpec?.({
     asset,
     docs,
@@ -652,6 +688,42 @@ function assetDocsModalHtml(asset, docs, links, message, txLinks, tripLinks, ass
     txDocLine,
     tripDocLine,
   });
+}
+
+function refreshAssetMovementTransactionSelect(form){
+  if(!form) return;
+  const input = form.querySelector('[data-tb-asset-movement-tx-search]');
+  const select = form.querySelector('select[name="asset_movement_transaction_id"]');
+  if(!select) return;
+  const current = select.value || '';
+  const needle = String(input?.value || '').trim().toLowerCase();
+  const rows = (ASSET_MOVEMENT_TX_CANDIDATES || [])
+    .filter(tx => !needle || txSearchText(tx).includes(needle))
+    .slice(0, 80);
+  const selectedInRows = rows.some(tx => String(tx?.id || '') === current);
+  const currentRow = !selectedInRows && current
+    ? (ASSET_MOVEMENT_TX_CANDIDATES || []).find(tx => String(tx?.id || '') === current)
+    : null;
+  const merged = currentRow ? [currentRow].concat(rows) : rows;
+  select.innerHTML = `<option value="">${esc(atxt('Aucune transaction', 'No transaction'))}</option>` + merged.map(tx => `<option value="${esc(tx.id)}" ${String(tx.id) === current ? 'selected' : ''}>${esc(txLabel(tx))}</option>`).join('');
+}
+
+function refreshAssetMovementTripSelect(form){
+  if(!form) return;
+  const input = form.querySelector('[data-tb-asset-movement-trip-search]');
+  const select = form.querySelector('select[name="asset_movement_trip_expense_id"]');
+  if(!select) return;
+  const current = select.value || '';
+  const needle = String(input?.value || '').trim().toLowerCase();
+  const rows = (ASSET_MOVEMENT_TRIP_CANDIDATES || [])
+    .filter(ex => !needle || tripSearchText(ex).includes(needle))
+    .slice(0, 80);
+  const selectedInRows = rows.some(ex => String(ex?.id || '') === current);
+  const currentRow = !selectedInRows && current
+    ? (ASSET_MOVEMENT_TRIP_CANDIDATES || []).find(ex => String(ex?.id || '') === current)
+    : null;
+  const merged = currentRow ? [currentRow].concat(rows) : rows;
+  select.innerHTML = `<option value="">${esc(atxt('Aucune dépense Trip', 'No Trip expense'))}</option>` + merged.map(ex => `<option value="${esc(ex.id)}" ${String(ex.id) === current ? 'selected' : ''}>${esc(tripDocLine(ex))}</option>`).join('');
 }
 
 async function openAssetDocumentsModal(assetId, message){
@@ -922,7 +994,12 @@ async function saveTotalAssetSaleFromForm(form){
 }
 
   function refreshOwnerTotal(){ const form = document.querySelector('[data-tb-asset-owners-form]'); const box = document.querySelector('[data-tb-owner-total]'); if(!form || !box) return; const rows = Array.from(form.querySelectorAll('[name="owner_percent"]')).map(x=>Number(x.value||0)); const total = Math.round(rows.reduce((s,x)=>s+(Number.isFinite(x)?x:0),0)*100)/100; box.textContent = `Total : ${total}%`; box.classList.toggle('ok', Math.abs(total-100)<=0.01); }
-  function bindOnce(){ if(window.__tbAssetsUiBound) return; window.__tbAssetsUiBound = true; document.addEventListener('click', async function(ev){ const open = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-open]'); if(open){ ev.preventDefault(); openAssetModal('create'); return; } const edit = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-edit]'); if(edit){ ev.preventDefault(); openAssetModal('edit', edit.getAttribute('data-tb-asset-edit')); return; } const owners = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-owners]'); if(owners){ ev.preventDefault(); openOwnersModal(owners.getAttribute('data-tb-asset-owners')); return; } const transfer = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-transfer]'); if(transfer){ ev.preventDefault(); await openTransferModal(transfer.getAttribute('data-tb-asset-transfer')); return; }
+  function bindOnce(){ if(window.__tbAssetsUiBound) return; window.__tbAssetsUiBound = true; document.addEventListener('input', function(ev){
+  const txSearch = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-movement-tx-search]');
+  if(txSearch){ refreshAssetMovementTransactionSelect(txSearch.closest('[data-tb-asset-docs-form]')); return; }
+  const tripSearch = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-movement-trip-search]');
+  if(tripSearch){ refreshAssetMovementTripSelect(tripSearch.closest('[data-tb-asset-docs-form]')); }
+}); document.addEventListener('click', async function(ev){ const open = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-open]'); if(open){ ev.preventDefault(); openAssetModal('create'); return; } const edit = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-edit]'); if(edit){ ev.preventDefault(); openAssetModal('edit', edit.getAttribute('data-tb-asset-edit')); return; } const owners = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-owners]'); if(owners){ ev.preventDefault(); openOwnersModal(owners.getAttribute('data-tb-asset-owners')); return; } const transfer = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-transfer]'); if(transfer){ ev.preventDefault(); await openTransferModal(transfer.getAttribute('data-tb-asset-transfer')); return; }
   const docs = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-docs]'); if(docs){ ev.preventDefault(); openAssetDocumentsModal(docs.getAttribute('data-tb-asset-docs')); return; } 
   const uploadAssetDoc = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-doc-upload]');
 if(uploadAssetDoc){

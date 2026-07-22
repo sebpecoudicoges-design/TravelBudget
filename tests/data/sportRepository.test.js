@@ -108,6 +108,24 @@ describe('sport repository', () => {
     expect(client.calls.some((call) => call.table === 'sport_program_exercises')).toBe(false);
   });
 
+  it('loads exercise metric history for progression charts', async () => {
+    const rows = [{ id: 'hist-1', exercise_id: 'barbell_bench_press', estimated_1rm_kg: 76 }];
+    const client = clientWith(({ table }) => ({ data: table === 'metric_history' ? rows : [], error: null }));
+    const repository = createSportRepository(client);
+
+    await expect(repository.loadExerciseMetricHistory({
+      table: 'metric_history',
+      userId: 'user-1',
+      limit: 120,
+    })).resolves.toEqual(rows);
+
+    expect(client.calls).toEqual(expect.arrayContaining([
+      { table: 'metric_history', method: 'eq', column: 'user_id', value: 'user-1' },
+      { table: 'metric_history', method: 'order', column: 'created_at', options: { ascending: false } },
+      { table: 'metric_history', method: 'limit', value: 120 },
+    ]));
+  });
+
   it('applies compatible load recommendations only inside the source program', async () => {
     let programSessionSelectCount = 0;
     const client = clientWith(({ table, operation, calls }) => {
