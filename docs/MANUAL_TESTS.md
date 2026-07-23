@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.245`.
-- Bilan : 7 parcours `ok`, 17 parcours `à faire`.
+- Version à valider : `10.5.246`.
+- Bilan : 7 parcours `ok`, 18 parcours `à faire`.
 - Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
 - Les 29 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -41,6 +41,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 22 | 10.5.243 | Sport + Patrimoine | Ouvrir **Sport** : vérifier la carte **Analyse progression charges**, changer le filtre exercice et ouvrir **Mesures** pour saisir une mesure impédancemètre complète avec protocole. Puis ouvrir **Patrimoine**, un asset, **Documents / transactions**, rechercher une transaction par montant/libellé/date et une dépense Trip par libellé/montant. | Les e1RM par date s'affichent pour les gros mouvements, le filtre garde la sélection, la mesure affiche un indice qualité et se sauvegarde. Patrimoine filtre les candidats sans perdre la sélection, et l'option exclusion budget reste disponible. | `TB BUILD 10.5.243` ; aucun `Uncaught`, aucune table `health_body_measurements` ou `sport_exercise_metric_history` manquante, aucun écran Sport/Patrimoine bloqué. | à faire |
 | 23 | 10.5.244 | Performance Sport lazy | Depuis un chargement frais, ouvrir Dashboard puis **Sport**. Aller sur le profil athlétique et **Analyse progression charges**, changer un filtre et revenir au timer. | Le premier écran reste léger, Sport charge ses modules profil/progression à l'ouverture et toutes les cartes Sport restent disponibles. | `TB BUILD 10.5.244` ; aucun `sportProfileRules` ou `sportProfileView` manquant, aucun `Uncaught`. | à faire |
 | 24 | 10.5.245 | Sport : VMA, impédancemètre, mobilité | Ouvrir **Sport > Profil athlétique**. Saisir une VMA mesurée dans **Mesures**, enregistrer, puis saisir les 5 tests mobilité avec une douleur sur un test. Rafraîchir et revenir sur le profil. | Le cardio affiche la VMA mesurée en priorité, ou une VMA estimée avec vitesse moyenne quand une course exploitable existe. Les tendances impédancemétriques affichent qualité, masse maigre/graisse et alertes. La mobilité affiche le score `/10`, la douleur et persiste après refresh. | `TB BUILD 10.5.245` ; aucun `sportMobilityController` manquant, aucune colonne `vma_kmh` manquante, aucune table `mobility_assessments` manquante, aucun `Uncaught`. | à faire |
+| 25 | 10.5.246 | Sport : fin de séance | Lancer une séance Sport courte, terminer, puis dans la fenêtre de fin ajouter planche ou stretch, choisir humeur, régler effort et sauvegarder. Refaire le parcours avec **Ignorer**. | La fenêtre de fin s'ouvre comme avant, le résumé se met à jour après planche/stretch, les boutons sauvegarde/ignorer persistent la séance et aucun champ n'a disparu. | `TB BUILD 10.5.246` ; aucun `renderFinishWorkoutModal` manquant, aucun `Uncaught`. | à faire |
 
 ## À ajouter à chaque livraison
 

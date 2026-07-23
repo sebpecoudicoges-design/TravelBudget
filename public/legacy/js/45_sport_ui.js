@@ -4134,40 +4134,10 @@
     const wrap = document.createElement("div");
     wrap.className = "tb-sport-modal-backdrop";
     wrap.id = "tb-sport-finish-modal";
-    wrap.innerHTML = `
-      <div class="tb-sport-modal">
-        <h3>${esc(txt("Seance terminee", "Workout complete"))}</h3>
-        <div class="muted" id="sport-finish-summary-line">${fmtSec(summary.durationSeconds)} - ${Math.round(n(summary.estimatedKcal, 0))} kcal - ${summary.doneSets.length} ${esc(txt("series", "sets"))}</div>
-        <div class="tb-sport-field" style="margin-top:12px;">
-          <label>${esc(txt("Ajouter a la fin", "Add at the end"))}</label>
-          <div class="tb-sport-choice-row">
-            <button class="tb-sport-choice" type="button" id="sport-finish-add-plank">+ ${esc(txt("Planche 1 min", "Plank 1 min"))}</button>
-            <button class="tb-sport-choice" type="button" id="sport-finish-add-stretch">+ ${esc(txt("Stretch 5 min", "Stretch 5 min"))}</button>
-          </div>
-        </div>
-        <div class="tb-sport-field" style="margin-top:14px;">
-          <label>${esc(txt("Comment tu te sens ?", "How do you feel?"))}</label>
-          <div class="tb-sport-choice-row" id="sport-finish-mood">
-            <button class="tb-sport-choice" type="button" data-mood="${esc(txt("Tres bien", "Great"))}">${esc(txt("Tres bien", "Great"))}</button>
-            <button class="tb-sport-choice" type="button" data-mood="${esc(txt("OK", "OK"))}">${esc(txt("OK", "OK"))}</button>
-            <button class="tb-sport-choice" type="button" data-mood="${esc(txt("Dur", "Hard"))}">${esc(txt("Dur", "Hard"))}</button>
-            <button class="tb-sport-choice" type="button" data-mood="${esc(txt("Douleur", "Pain"))}">${esc(txt("Douleur", "Pain"))}</button>
-          </div>
-        </div>
-        <div class="tb-sport-field">
-          <label>${esc(txt("Effort ressenti /10", "Perceived effort /10"))}</label>
-          <input id="sport-finish-effort" type="range" min="1" max="10" value="6">
-          <div class="muted"><span id="sport-finish-effort-value">6</span>/10</div>
-        </div>
-        <div class="tb-sport-field" style="margin-top:10px;">
-          <label>${esc(txt("Notes", "Notes"))}</label>
-          <textarea id="sport-finish-notes" rows="3" placeholder="${esc(txt("Ex : bonne forme, epaule sensible, a refaire...", "E.g. felt good, shoulder sensitive, repeat this..."))}"></textarea>
-        </div>
-        <div class="tb-sport-actions" style="justify-content:flex-end;margin-top:14px;">
-          <button class="btn" type="button" id="sport-finish-cancel">${esc(txt("Ignorer", "Skip"))}</button>
-          <button class="btn primary" type="button" id="sport-finish-save">${esc(txt("Sauvegarder", "Save"))}</button>
-        </div>
-      </div>`;
+    wrap.innerHTML = window.UI?.sportTimerView?.renderFinishWorkoutModal?.({
+      summary,
+      api: sportViewApi(),
+    }) || "";
     document.body.appendChild(wrap);
     let modalSummary = recalcWorkoutSummary(Object.assign({}, CACHE.pendingSummary || summary));
     const refreshFinishSummaryLine = () => {

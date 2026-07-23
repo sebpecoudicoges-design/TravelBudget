@@ -206,3 +206,48 @@ export function renderSportTimer({
         </div>
       </div>`;
 }
+
+export function renderFinishWorkoutModal({
+  summary = {},
+  api = {},
+} = {}) {
+  const h = helpers(api);
+  const durationSeconds = h.n(summary.durationSeconds ?? summary.duration_seconds, 0);
+  const estimatedKcal = h.n(summary.estimatedKcal ?? summary.estimated_kcal, 0);
+  const doneSets = Array.isArray(summary.doneSets) ? summary.doneSets : [];
+
+  return `
+      <div class="tb-sport-modal">
+        <h3>${h.esc(h.txt('Seance terminee', 'Workout complete'))}</h3>
+        <div class="muted" id="sport-finish-summary-line">${h.fmtSec(durationSeconds)} - ${Math.round(estimatedKcal)} kcal - ${doneSets.length} ${h.esc(h.txt('series', 'sets'))}</div>
+        <div class="tb-sport-field" style="margin-top:12px;">
+          <label>${h.esc(h.txt('Ajouter a la fin', 'Add at the end'))}</label>
+          <div class="tb-sport-choice-row">
+            <button class="tb-sport-choice" type="button" id="sport-finish-add-plank">+ ${h.esc(h.txt('Planche 1 min', 'Plank 1 min'))}</button>
+            <button class="tb-sport-choice" type="button" id="sport-finish-add-stretch">+ ${h.esc(h.txt('Stretch 5 min', 'Stretch 5 min'))}</button>
+          </div>
+        </div>
+        <div class="tb-sport-field" style="margin-top:14px;">
+          <label>${h.esc(h.txt('Comment tu te sens ?', 'How do you feel?'))}</label>
+          <div class="tb-sport-choice-row" id="sport-finish-mood">
+            <button class="tb-sport-choice" type="button" data-mood="${h.esc(h.txt('Tres bien', 'Great'))}">${h.esc(h.txt('Tres bien', 'Great'))}</button>
+            <button class="tb-sport-choice" type="button" data-mood="${h.esc(h.txt('OK', 'OK'))}">${h.esc(h.txt('OK', 'OK'))}</button>
+            <button class="tb-sport-choice" type="button" data-mood="${h.esc(h.txt('Dur', 'Hard'))}">${h.esc(h.txt('Dur', 'Hard'))}</button>
+            <button class="tb-sport-choice" type="button" data-mood="${h.esc(h.txt('Douleur', 'Pain'))}">${h.esc(h.txt('Douleur', 'Pain'))}</button>
+          </div>
+        </div>
+        <div class="tb-sport-field">
+          <label>${h.esc(h.txt('Effort ressenti /10', 'Perceived effort /10'))}</label>
+          <input id="sport-finish-effort" type="range" min="1" max="10" value="6">
+          <div class="muted"><span id="sport-finish-effort-value">6</span>/10</div>
+        </div>
+        <div class="tb-sport-field" style="margin-top:10px;">
+          <label>${h.esc(h.txt('Notes', 'Notes'))}</label>
+          <textarea id="sport-finish-notes" rows="3" placeholder="${h.esc(h.txt('Ex : bonne forme, epaule sensible, a refaire...', 'E.g. felt good, shoulder sensitive, repeat this...'))}"></textarea>
+        </div>
+        <div class="tb-sport-actions" style="justify-content:flex-end;margin-top:14px;">
+          <button class="btn" type="button" id="sport-finish-cancel">${h.esc(h.txt('Ignorer', 'Skip'))}</button>
+          <button class="btn primary" type="button" id="sport-finish-save">${h.esc(h.txt('Sauvegarder', 'Save'))}</button>
+        </div>
+      </div>`;
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderSportHistory } from '../../../src/features/sport/sportHistoryView.js';
 import { renderLoadRecommendations, renderPlannedSportWeek, renderProgramSettings } from '../../../src/features/sport/sportProgramView.js';
-import { renderSportTimer } from '../../../src/features/sport/sportTimerView.js';
+import { renderFinishWorkoutModal, renderSportTimer } from '../../../src/features/sport/sportTimerView.js';
 
 const api = {
   translate: (fr) => fr,
@@ -83,6 +83,21 @@ describe('Sport timer view', () => {
     expect(html).toContain('id="sport-step-reps"');
     expect(html).toContain('id="sport-add-set"');
     expect(html).toContain('Bip');
+  });
+
+  it('renders the finish modal through the timer view with stable hooks', () => {
+    const html = renderFinishWorkoutModal({
+      summary: { durationSeconds: 1800, estimatedKcal: 320, doneSets: [{}, {}, {}] },
+      api,
+    });
+
+    expect(html).toContain('Seance terminee');
+    expect(html).toContain('1800s - 320 kcal - 3 series');
+    expect(html).toContain('id="sport-finish-add-plank"');
+    expect(html).toContain('id="sport-finish-add-stretch"');
+    expect(html).toContain('data-mood="Tres bien"');
+    expect(html).toContain('id="sport-finish-effort"');
+    expect(html).toContain('id="sport-finish-save"');
   });
 });
 
