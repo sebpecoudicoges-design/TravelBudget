@@ -32,11 +32,6 @@ import { createNutritionStore } from '../features/nutrition/nutritionStore.js';
 import * as tripView from '../features/trip/tripView.js';
 import * as sportCatalog from '../features/sport/sportCatalog.js';
 import * as sportProgramRules from '../features/sport/sportProgramRules.js';
-import * as sportTimerView from '../features/sport/sportTimerView.js';
-import * as sportTimerController from '../features/sport/sportTimerController.js';
-import * as sportHistoryView from '../features/sport/sportHistoryView.js';
-import * as sportSessionSandboxView from '../features/sport/sportSessionSandboxView.js';
-import * as sportSessionSandboxRules from '../features/sport/sportSessionSandboxRules.js';
 import { storageQuota } from '../data/storageQuota.js';
 import * as sportRules from '../core/sportRules.js';
 import * as uiComponents from '../ui/components.js';
@@ -87,11 +82,6 @@ window.tbSafeLocalStorageSet = (key, value, options) => storageQuota.safeSet(win
 window.UI = window.UI || {};
 Object.assign(window.UI, uiComponents);
 window.UI.tripView = tripView;
-window.UI.sportTimerView = sportTimerView;
-window.UI.sportTimerController = sportTimerController;
-window.UI.sportHistoryView = sportHistoryView;
-window.UI.sportSessionSandboxView = sportSessionSandboxView;
-window.Core.sportSessionSandboxRules = sportSessionSandboxRules;
 
 // Optional: expose money helpers directly for convenience (legacy may redefine later; that's OK)
 window.moneyRound = window.moneyRound || money.moneyRound;

@@ -4,11 +4,13 @@ import { readFileSync } from 'node:fs';
 const sportUi = readFileSync(new URL('../../public/legacy/js/45_sport_ui.js', import.meta.url), 'utf8');
 const bridge = readFileSync(new URL('../../src/app/bridge.js', import.meta.url), 'utf8');
 const main = readFileSync(new URL('../../src/main.js', import.meta.url), 'utf8');
+const runtime = readFileSync(new URL('../../src/features/sport/sportRuntime.js', import.meta.url), 'utf8');
 
 describe('Sport profile rules bridge', () => {
   it('loads the Sport profile rules module with the Sport domain', () => {
-    expect(main).toContain("import('./features/sport/sportProfileRules.js')");
-    expect(main).toContain('window.Core.sportProfileRules');
+    expect(main).toContain("import('./features/sport/sportRuntime.js')");
+    expect(runtime).toContain("import * as sportProfileRules from './sportProfileRules.js'");
+    expect(runtime).toContain('target.Core.sportProfileRules');
     expect(bridge).not.toContain("import * as sportProfileRules from '../features/sport/sportProfileRules.js'");
     expect(bridge).not.toContain('window.Core.sportProfileRules = sportProfileRules');
   });

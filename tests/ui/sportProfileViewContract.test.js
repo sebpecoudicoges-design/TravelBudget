@@ -4,11 +4,13 @@ import { readFileSync } from 'node:fs';
 const sportUi = readFileSync(new URL('../../public/legacy/js/45_sport_ui.js', import.meta.url), 'utf8');
 const bridge = readFileSync(new URL('../../src/app/bridge.js', import.meta.url), 'utf8');
 const main = readFileSync(new URL('../../src/main.js', import.meta.url), 'utf8');
+const runtime = readFileSync(new URL('../../src/features/sport/sportRuntime.js', import.meta.url), 'utf8');
 
 describe('Sport profile view bridge', () => {
   it('loads the Sport profile view with the Sport domain', () => {
-    expect(main).toContain("import('./features/sport/sportProfileView.js')");
-    expect(main).toContain('window.UI.sportProfileView');
+    expect(main).toContain("import('./features/sport/sportRuntime.js')");
+    expect(runtime).toContain("import * as sportProfileView from './sportProfileView.js'");
+    expect(runtime).toContain('target.UI.sportProfileView');
     expect(bridge).not.toContain("import * as sportProfileView from '../features/sport/sportProfileView.js'");
     expect(bridge).not.toContain('window.UI.sportProfileView = sportProfileView');
   });

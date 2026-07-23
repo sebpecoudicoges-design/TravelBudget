@@ -264,34 +264,8 @@ async function ensureDomainModules(domain) {
       };
     }
     if (key === 'sport') {
-      const [sportFormView, sportProgramView, sportProfileRules, sportProfileView, sportMobilityController] = await Promise.all([
-        import('./features/sport/sportFormView.js'),
-        import('./features/sport/sportProgramView.js'),
-        import('./features/sport/sportProfileRules.js'),
-        import('./features/sport/sportProfileView.js'),
-        import('./features/sport/sportMobilityController.js'),
-      ]);
-      window.UI.sportFormView = {
-        ...(window.UI.sportFormView || {}),
-        ...sportFormView,
-      };
-      window.UI.sportProgramView = {
-        ...(window.UI.sportProgramView || {}),
-        ...sportProgramView,
-      };
-      window.Core = window.Core || {};
-      window.Core.sportProfileRules = {
-        ...(window.Core.sportProfileRules || {}),
-        ...sportProfileRules,
-      };
-      window.UI.sportProfileView = {
-        ...(window.UI.sportProfileView || {}),
-        ...sportProfileView,
-      };
-      window.UI.sportMobilityController = {
-        ...(window.UI.sportMobilityController || {}),
-        ...sportMobilityController,
-      };
+      const sportRuntime = await import('./features/sport/sportRuntime.js');
+      sportRuntime.installSportRuntime(window);
     }
     if (key === 'trip') {
       const [tripDocumentView, tripExpenseDetailView, tripRecapView] = await Promise.all([

@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "f21d218f33dde96e5fc0b1b2837e0c136dbe4846",
-  "snapshotFingerprint": "aa9e8f0455114e8315121170ab326e0cad6746d5de2a4f023f90873262ddd2b3",
-  "generatedAt": "2026-07-23T09:22:21.153Z",
+  "commit": "c9c28a71a7abb088a8cf4acb99572e8716cd8873",
+  "snapshotFingerprint": "a4701e800fa153deb3703348d2f44af9d5acc93de0cec48790b77d4cf3336342",
+  "generatedAt": "2026-07-23T09:33:28.420Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.247"
+    "version": "10.5.248"
   },
   "npmScripts": {
     "dev": "vite",
@@ -208,6 +208,7 @@
     "src/features/sport/sportProfileView.js",
     "src/features/sport/sportProgramRules.js",
     "src/features/sport/sportProgramView.js",
+    "src/features/sport/sportRuntime.js",
     "src/features/sport/sportSessionSandboxRules.js",
     "src/features/sport/sportSessionSandboxView.js",
     "src/features/sport/sportStore.js",

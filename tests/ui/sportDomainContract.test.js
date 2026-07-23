@@ -21,8 +21,9 @@ describe('Sport domain contract', () => {
   const mobilityController = fs.readFileSync('src/features/sport/sportMobilityController.js', 'utf8');
   const profileRules = fs.readFileSync('src/features/sport/sportProfileRules.js', 'utf8');
   const profileView = fs.readFileSync('src/features/sport/sportProfileView.js', 'utf8');
+  const runtime = fs.readFileSync('src/features/sport/sportRuntime.js', 'utf8');
 
-  it('exposes Sport rules, data, store and views through the bridge', () => {
+  it('exposes Sport rules, data and store through the bridge while lazy-loading Sport views', () => {
     for (const token of [
       'sportRules',
       'sportLibraryRules',
@@ -30,28 +31,32 @@ describe('Sport domain contract', () => {
       'createSportStore',
       'sportCatalog',
       'sportProgramRules',
-      'sportTimerController',
-      'sportTimerView',
-      'sportHistoryView',
-      'sportSessionSandboxRules',
-      'sportSessionSandboxView',
     ]) {
       expect(bridge).toContain(token);
     }
     expect(bridge).toContain('window.Core.sportRules = sportRules');
     expect(bridge).toContain('window.Data.sportRepository');
     expect(bridge).toContain('window.Data.createSportStore');
-    expect(bridge).toContain('window.UI.sportTimerView');
-    expect(bridge).toContain('window.UI.sportHistoryView');
-    expect(main).toContain("import('./features/sport/sportFormView.js')");
-    expect(main).toContain('window.UI.sportFormView');
-    expect(main).toContain("import('./features/sport/sportProfileRules.js')");
-    expect(main).toContain("import('./features/sport/sportProfileView.js')");
-    expect(main).toContain("import('./features/sport/sportMobilityController.js')");
-    expect(main).toContain('window.Core.sportProfileRules');
-    expect(main).toContain('window.UI.sportProfileView');
-    expect(main).toContain('window.UI.sportMobilityController');
+    expect(main).toContain("import('./features/sport/sportRuntime.js')");
+    for (const token of [
+      'sportFormView',
+      'sportTimerController',
+      'sportTimerView',
+      'sportHistoryView',
+      'sportSessionSandboxRules',
+      'sportSessionSandboxView',
+      'sportProfileRules',
+      'sportProfileView',
+      'sportMobilityController',
+    ]) {
+      expect(runtime).toContain(token);
+    }
     expect(bridge).not.toContain("import * as sportFormView from '../features/sport/sportFormView.js'");
+    expect(bridge).not.toContain("import * as sportTimerController from '../features/sport/sportTimerController.js'");
+    expect(bridge).not.toContain("import * as sportTimerView from '../features/sport/sportTimerView.js'");
+    expect(bridge).not.toContain("import * as sportHistoryView from '../features/sport/sportHistoryView.js'");
+    expect(bridge).not.toContain("import * as sportSessionSandboxRules from '../features/sport/sportSessionSandboxRules.js'");
+    expect(bridge).not.toContain("import * as sportSessionSandboxView from '../features/sport/sportSessionSandboxView.js'");
     expect(bridge).not.toContain("import * as sportProfileRules from '../features/sport/sportProfileRules.js'");
     expect(bridge).not.toContain("import * as sportProfileView from '../features/sport/sportProfileView.js'");
     expect(bridge).not.toContain("import * as sportMobilityController from '../features/sport/sportMobilityController.js'");
@@ -112,8 +117,9 @@ describe('Sport domain contract', () => {
     expect(legacy).toContain('sportProgramView?.renderPlannedSportWeek');
     expect(legacy).toContain('sportProgramView?.renderProgramSettings');
     expect(legacy).toContain('sportProgramView?.renderLoadRecommendations');
-    expect(main).toContain("import('./features/sport/sportProgramView.js')");
-    expect(main).toContain('window.UI.sportProgramView');
+    expect(main).toContain("import('./features/sport/sportRuntime.js')");
+    expect(runtime).toContain("import * as sportProgramView from './sportProgramView.js'");
+    expect(runtime).toContain('target.UI.sportProgramView');
     expect(bridge).not.toContain("import * as sportProgramView from '../features/sport/sportProgramView.js'");
     expect(legacy).not.toContain('recommendations.map(row => `<div class="btn" style="display:grid;text-align:left;gap:7px;">');
   });

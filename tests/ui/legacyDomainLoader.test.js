@@ -10,6 +10,7 @@ describe('legacy domain loader', () => {
   const analysis = fs.readFileSync('public/legacy/js/33_budget_analysis.js', 'utf8');
   const bootstrap = fs.readFileSync('public/legacy/js/07_supabase_bootstrap.js', 'utf8');
   const bridge = fs.readFileSync('src/app/bridge.js', 'utf8');
+  const sportRuntime = fs.readFileSync('src/features/sport/sportRuntime.js', 'utf8');
   const index = fs.readFileSync('index.html', 'utf8');
 
   it('keeps startup focused on global shell, Dashboard and Settings while deferring heavy domains', () => {
@@ -221,8 +222,9 @@ describe('legacy domain loader', () => {
     expect(bootList).not.toContain('/legacy/js/45_sport_ui.js');
     expect(domains).toContain('sport:');
     expect(domains).toContain('/legacy/js/45_sport_ui.js');
-    expect(main).toContain("import('./features/sport/sportFormView.js')");
-    expect(main).toContain('window.UI.sportFormView');
+    expect(main).toContain("import('./features/sport/sportRuntime.js')");
+    expect(sportRuntime).toContain("import * as sportFormView from './sportFormView.js'");
+    expect(sportRuntime).toContain('target.UI.sportFormView');
     expect(navigation).toContain('window.tbLoadLegacyDomain("sport")');
     expect(navigation).toContain('renderSport("navigation:lazy")');
     expect(offlineQueue).toContain('await window.tbLoadLegacyDomain("sport")');

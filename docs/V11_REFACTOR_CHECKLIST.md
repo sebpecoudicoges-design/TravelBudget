@@ -261,6 +261,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Ajouter le controleur Sport mobilite en lazy avec le domaine Sport, sans gonfler le bundle initial : 317.4 KiB.
   - [x] Extraire la fenetre de fin de seance Sport : le legacy garde les handlers, le HTML passe dans `sportTimerView.js`.
   - [x] Extraire le chrono libre Sport : selection, grand ecran, actions stop/pause/cancel et champs resultat passent dans `sportTimerView.js`.
+  - [x] Regrouper les vues Sport extraites dans un runtime lazy unique : initial JS 320.1 -> 283.6 KiB, main gzip 86.9 -> 78.2 KiB.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison
