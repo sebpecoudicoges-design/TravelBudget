@@ -18,6 +18,7 @@ describe('Sport domain contract', () => {
   const formView = fs.readFileSync('src/features/sport/sportFormView.js', 'utf8');
   const sandboxRules = fs.readFileSync('src/features/sport/sportSessionSandboxRules.js', 'utf8');
   const sandboxView = fs.readFileSync('src/features/sport/sportSessionSandboxView.js', 'utf8');
+  const mobilityController = fs.readFileSync('src/features/sport/sportMobilityController.js', 'utf8');
   const profileRules = fs.readFileSync('src/features/sport/sportProfileRules.js', 'utf8');
   const profileView = fs.readFileSync('src/features/sport/sportProfileView.js', 'utf8');
 
@@ -46,11 +47,14 @@ describe('Sport domain contract', () => {
     expect(main).toContain('window.UI.sportFormView');
     expect(main).toContain("import('./features/sport/sportProfileRules.js')");
     expect(main).toContain("import('./features/sport/sportProfileView.js')");
+    expect(main).toContain("import('./features/sport/sportMobilityController.js')");
     expect(main).toContain('window.Core.sportProfileRules');
     expect(main).toContain('window.UI.sportProfileView');
+    expect(main).toContain('window.UI.sportMobilityController');
     expect(bridge).not.toContain("import * as sportFormView from '../features/sport/sportFormView.js'");
     expect(bridge).not.toContain("import * as sportProfileRules from '../features/sport/sportProfileRules.js'");
     expect(bridge).not.toContain("import * as sportProfileView from '../features/sport/sportProfileView.js'");
+    expect(bridge).not.toContain("import * as sportMobilityController from '../features/sport/sportMobilityController.js'");
   });
 
   it('keeps catalog and library normalization out of the legacy file', () => {
@@ -134,8 +138,10 @@ describe('Sport domain contract', () => {
 
     expect(profileRules).toContain('export function buildSportProfileRadarData');
     expect(profileView).toContain('export function renderSportProfileDashboard');
+    expect(mobilityController).toContain('export async function saveMobilityAssessment');
     expect(legacy).toContain('sportProfileRules?.buildSportProfileRadarData');
     expect(legacy).toContain('sportProfileView?.renderSportProfileDashboard');
+    expect(legacy).toContain('sportMobilityController?.saveMobilityAssessment');
   });
 
   it('delegates Sport builder form option rendering to sportFormView', () => {

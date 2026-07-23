@@ -19,12 +19,13 @@
   const TIMER_STATE_KEY = () => scopedKey("travelbudget_sport_timer_state_v1");
   const FREE_TIMER_STATE_KEY = () => scopedKey("travelbudget_sport_free_timer_state_v1");
   const BODY_MEASUREMENTS_KEY = () => scopedKey("travelbudget_health_body_measurements_v1");
+  const MOBILITY_ASSESSMENTS_KEY = () => scopedKey("travelbudget_sport_mobility_assessments_v1");
   const HISTORY_KEY = () => scopedKey(baseHistoryKey());
   const ANON_HISTORY_KEY = () => `${baseHistoryKey()}::anon`;
   const EXERCISE_FAVORITES_KEY = () => scopedKey("travelbudget_sport_exercise_favorites_v1");
   const EXERCISE_RECENT_KEY = () => scopedKey("travelbudget_sport_exercise_recent_v1");
   const RECOVERY_MET = 1.3;
-  const BODY_MEASUREMENT_COLUMNS = "id,user_id,measured_on,source,weight_kg,bmi,body_fat_pct,fat_mass_kg,muscle_mass_kg,lean_mass_kg,body_water_pct,body_water_kg,bone_mass_kg,visceral_fat_rating,bmr_kcal,metabolic_age,protein_pct,protein_mass_kg,subcutaneous_fat_pct,ideal_weight_kg,body_type,measurement_time,after_toilet,before_food,before_drink,before_activity,same_scale,hard_flat_floor,dry_feet,protocol_quality_score,protocol_quality_label,notes,created_at,updated_at";
+  const BODY_MEASUREMENT_COLUMNS = "id,user_id,measured_on,source,weight_kg,bmi,body_fat_pct,fat_mass_kg,muscle_mass_kg,lean_mass_kg,body_water_pct,body_water_kg,bone_mass_kg,visceral_fat_rating,bmr_kcal,metabolic_age,protein_pct,protein_mass_kg,subcutaneous_fat_pct,ideal_weight_kg,body_type,vma_kmh,vma_source,measurement_time,after_toilet,before_food,before_drink,before_activity,same_scale,hard_flat_floor,dry_feet,protocol_quality_score,protocol_quality_label,notes,created_at,updated_at";
 
   const sportCatalog = window.Core?.sportCatalog;
   if (!sportCatalog) throw new Error("Sport catalog indisponible");
@@ -112,6 +113,9 @@
     if (CACHE.timer || CACHE.freeTimer) startTicker();
     CACHE.bodyMeasurements = loadBodyMeasurementsLocal();
     CACHE.bodyMeasurementsLoaded = false;
+    CACHE.mobilityAssessments = loadMobilityAssessmentsLocal();
+    CACHE.mobilityAssessmentsLoaded = false;
+    CACHE.mobilityAssessmentsLoading = false;
     CACHE.exerciseMetricHistory = [];
     CACHE.exerciseMetricHistoryLoaded = false;
     CACHE.exerciseMetricHistoryLoading = false;
@@ -302,6 +306,40 @@
     }
     return false;
   }
+  function loadMobilityAssessmentsLocal() {
+    return window.UI?.sportMobilityController?.loadMobilityAssessmentsLocal?.(MOBILITY_ASSESSMENTS_KEY()) || [];
+  }
+  async function ensureMobilityAssessmentsLoaded(reason) {
+    return window.UI?.sportMobilityController?.ensureMobilityAssessmentsLoaded?.({
+      cache: CACHE,
+      client: client(),
+      userId: uid(),
+      tableName: table("mobility_assessments"),
+      reason,
+      storageKey: MOBILITY_ASSESSMENTS_KEY(),
+      shouldUseOfflineMode: window.tbShouldUseOfflineMode,
+      isOfflineMode: window.tbIsOfflineMode,
+      isOfflineError: isOfflineSkipError,
+    }) || false;
+  }
+  async function saveMobilityAssessmentFromDom(root) {
+    const result = await window.UI?.sportMobilityController?.saveMobilityAssessment?.({
+      root,
+      cache: CACHE,
+      client: client(),
+      userId: uid(),
+      tableName: table("mobility_assessments"),
+      storageKey: MOBILITY_ASSESSMENTS_KEY(),
+      numberValue: n,
+      isOfflineError: isOfflineSkipError,
+    });
+    if (!result?.ok) {
+      sportFeedback(txt("Bilan incomplet", "Incomplete assessment"), txt("Renseigne les 5 tests avant d enregistrer.", "Complete all 5 tests before saving."), { kind: "warn", toast: true });
+      return;
+    }
+    sportFeedback(txt("Bilan mobilite enregistre", "Mobility assessment saved"), `${result.score10}/10`, { toast: true });
+    renderSport("mobility-saved");
+  }
   async function ensureExerciseMetricHistoryLoaded(reason) {
     if (CACHE.exerciseMetricHistoryLoading || CACHE.exerciseMetricHistoryLoaded) return false;
     const c = client();
@@ -355,6 +393,8 @@
       subcutaneous_fat_pct: latest.subcutaneous_fat_pct ?? "",
       ideal_weight_kg: latest.ideal_weight_kg ?? "",
       body_type: latest.body_type || "",
+      vma_kmh: latest.vma_kmh ?? "",
+      vma_source: latest.vma_source || "measured",
       measurement_time: latest.measurement_time || "morning",
       after_toilet: latest.after_toilet ?? true,
       before_food: latest.before_food ?? true,
@@ -392,6 +432,8 @@
       subcutaneous_fat_pct: cleanOptionalNumber(root.querySelector("#sport-body-subfat")?.value, 0, 70),
       ideal_weight_kg: cleanOptionalNumber(root.querySelector("#sport-body-ideal-weight")?.value, 20, 250),
       body_type: String(root.querySelector("#sport-body-type")?.value || "").trim().slice(0, 80) || null,
+      vma_kmh: cleanOptionalNumber(root.querySelector("#sport-body-vma")?.value, 6, 30),
+      vma_source: root.querySelector("#sport-body-vma")?.value ? "measured" : null,
       measurement_time: String(root.querySelector("#sport-body-time")?.value || "morning"),
       after_toilet: !!root.querySelector("#sport-body-after-toilet")?.checked,
       before_food: !!root.querySelector("#sport-body-before-food")?.checked,
@@ -2714,6 +2756,9 @@
       doneSetsForSession: (sessionId) => doneSetsFromStoredSession(sessionId, 0),
       bodyWeightKg: bodyWeight(),
       sleepRows: window.state?.nutritionSleep || {},
+      measuredVmaKmh: latestBodyMeasurement()?.vma_kmh || 0,
+      mobilityAssessments: CACHE.mobilityAssessments || [],
+      bodyMeasurements: CACHE.bodyMeasurements || [],
       now: new Date(),
       api: {
         numberValue: n,
@@ -2741,6 +2786,8 @@
       bestLoads: data.bestLoads || [],
       uniqueDays: data.uniqueDays || 0,
       athleticProfile: data.athleticProfile || null,
+      mobilityAnalysis: data.mobilityAnalysis || null,
+      bodyCompositionAnalysis: data.bodyCompositionAnalysis || null,
       classicAxes: data.classicAxes || [],
     };
   }
@@ -2856,6 +2903,11 @@
     if (!CACHE.bodyMeasurementsLoaded && !CACHE.bodyMeasurementsLoading) {
       ensureBodyMeasurementsLoaded(reason).then((changed) => {
         if (changed && (window.activeView || "") === "sport") renderSport("body-measurements-loaded");
+      }).catch(() => {});
+    }
+    if (!CACHE.mobilityAssessmentsLoaded && !CACHE.mobilityAssessmentsLoading) {
+      ensureMobilityAssessmentsLoaded(reason).then((changed) => {
+        if (changed && (window.activeView || "") === "sport") renderSport("mobility-loaded");
       }).catch(() => {});
     }
     if (!CACHE.exerciseMetricHistoryLoaded && !CACHE.exerciseMetricHistoryLoading) {
@@ -3024,6 +3076,8 @@
         renderSport("body-measurement-open");
       };
     });
+    const saveMobility = root.querySelector("#sport-save-mobility");
+    if (saveMobility) saveMobility.onclick = () => saveMobilityAssessmentFromDom(root);
     const add = root.querySelector("#sport-add-item");
     if (add) add.onclick = () => {
       const editIdx = Number.isInteger(CACHE.editingPlanIndex) ? CACHE.editingPlanIndex : null;

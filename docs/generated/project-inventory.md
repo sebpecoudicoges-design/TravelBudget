@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `dea233d02cdf775f64d3caf85ad46af416593469`
-> Empreinte du snapshot : `c37f0ae0241f70e16dc081ef1e7b8301756b52ef64a75f2da7977b5f52210c6c`
-> Généré le : `2026-07-22T11:13:12.211Z`
+> Commit analysé : `2a1c2a07377d3770ce80c197fa5d127dbf913be5`
+> Empreinte du snapshot : `6f96a2953295b0791d9d05a32d8e368227f12e718cba158d4b65e8ab578676bd`
+> Généré le : `2026-07-23T08:19:59.569Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.244` |
+| Version | `10.5.245` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 61 |
 | Modules core | 25 |
 | Modules data | 7 |
-| Modules features | 34 |
-| Fichiers de tests | 98 |
-| Migrations Supabase | 88 |
+| Modules features | 35 |
+| Fichiers de tests | 99 |
+| Migrations Supabase | 90 |
 | Fonctions Edge | 8 |
 | Projet Android présent | Oui |
 
@@ -231,6 +231,7 @@ Modules :
 - `src/features/sport/sportCatalog.js`
 - `src/features/sport/sportFormView.js`
 - `src/features/sport/sportHistoryView.js`
+- `src/features/sport/sportMobilityController.js`
 - `src/features/sport/sportProfileRules.js`
 - `src/features/sport/sportProfileView.js`
 - `src/features/sport/sportProgramRules.js`
@@ -342,6 +343,7 @@ Modules :
 - `tests/features/settings/settingsView.test.js`
 - `tests/features/sport/sportCatalog.test.js`
 - `tests/features/sport/sportFormView.test.js`
+- `tests/features/sport/sportMobilityController.test.js`
 - `tests/features/sport/sportProfileRules.test.js`
 - `tests/features/sport/sportProfileView.test.js`
 - `tests/features/sport/sportProgramRules.test.js`
@@ -493,6 +495,8 @@ Modules :
 - `supabase/migrations/20260716101927_sport_update_ab_program_push_posterior_variant.sql`
 - `supabase/migrations/20260720043529_sport_load_progression_recommendations.sql`
 - `supabase/migrations/20260722102355_sport_body_measurement_analysis_v2.sql`
+- `supabase/migrations/20260723184500_sport_profile_vma.sql`
+- `supabase/migrations/20260723184600_sport_mobility_assessments.sql`
 
 ## Android et budgets de modules
 

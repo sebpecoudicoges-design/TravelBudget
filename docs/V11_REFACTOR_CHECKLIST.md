@@ -109,6 +109,7 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
   - [x] Extraire la vue du profil forces/faiblesses et de la modale impedancemetre.
   - [x] Extraire les handlers du timer : demarrage, serie terminee, repos, pause, ajout de serie et ajout de tour circuit.
   - [x] Transformer le radar en profil athletique : percentiles, ratios PDC, equilibres, potentiel, archetypes et priorite automatique.
+  - [x] Ajouter le profil Sport VMA/mobilite/composition : VMA mesuree/estimee, tendances impedance, score mobilite simple et RLS SQL.
   - [x] Ajouter le chrono libre : choix d'exercice, grand ecran, persistance locale, notification arriere-plan, saisie reps/charge/distance et sauvegarde historique.
   - [x] Extraire le CSS mobile/fullscreen Sport Capacitor vers `sport_mobile.css`.
   - [x] Extraire le CSS general Sport vers `sport.css` et supprimer le style inline du legacy.
@@ -255,6 +256,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire le rendu du centre de notifications Inbox : styles, host, compteur et lignes de notification passent dans `inboxView.js`.
   - [x] Extraire les modales Inbox transaction, liaison document-transaction et approbation Trip vers `inboxView.js`.
   - [x] Charger le profil et l'analyse progression Sport avec le domaine Sport au lieu du bridge initial : bundle initial 349.6 -> 317.2 KiB.
+  - [x] Ajouter le controleur Sport mobilite en lazy avec le domaine Sport, sans gonfler le bundle initial : 317.4 KiB.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

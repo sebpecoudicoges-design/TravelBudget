@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   buildExerciseProgressionRowsFromSessions,
   buildExerciseProgressionAnalysis,
+  buildBodyCompositionAnalysis,
+  buildCardioCapacity,
+  buildMobilityAnalysis,
   buildSportProfileRadarData,
   chooseBestCapacity,
   exerciseProfileBucket,
   profileExerciseCapacity,
+  estimateVmaFromRun,
 } from '../../../src/features/sport/sportProfileRules.js';
 
 const api = {
@@ -91,6 +95,96 @@ describe('Sport profile rules', () => {
     expect(data.athleticProfile.priority).toContain('10 a 12 points');
     expect(data.athleticProfile.archetypes.map((row) => row.label)).toEqual(['Grimpeur', 'Powerlifter', 'Hyrox', 'Endurance']);
     expect(data.athleticProfile.balances[0].label).toBe('Poussee / Tirage');
+  });
+
+  it('prioritizes measured VMA, then estimated VMA, then kcal per minute', () => {
+    const sessions = [{
+      id: 'run-1',
+      duration_seconds: 360,
+      estimated_kcal: 90,
+      perceived_effort: 9,
+    }];
+    const planForSession = () => [{ exerciseName: 'Test course 6 min', activityKey: 'running', mode: 'time' }];
+    const doneSetsForSession = () => [{ itemIndex: 0, durationSeconds: 360, distanceM: 1500 }];
+
+    const measured = buildCardioCapacity({
+      measuredVmaKmh: 17.2,
+      sessions,
+      planForSession,
+      doneSetsForSession,
+    });
+    expect(measured.source).toBe('measured_vma');
+    expect(measured.vmaKmh).toBe(17.2);
+
+    const estimated = buildCardioCapacity({ sessions, planForSession, doneSetsForSession });
+    expect(estimated.source).toBe('estimated_vma');
+    expect(estimated.vmaKmh).toBe(15);
+    expect(estimated.averageSpeedKmh).toBe(15);
+
+    const fallback = buildCardioCapacity({
+      sessions: [{ id: 'bike-1', duration_seconds: 600, estimated_kcal: 120 }],
+      planForSession: () => [{ exerciseName: 'Velo', activityKey: 'cycling' }],
+      doneSetsForSession: () => [],
+    });
+    expect(fallback.source).toBe('kcal_per_min');
+    expect(fallback.raw).toBe('12 kcal/min');
+  });
+
+  it('only estimates VMA from a credible test or high perceived effort', () => {
+    expect(estimateVmaFromRun({
+      distanceM: 1500,
+      durationSeconds: 360,
+      perceivedEffort: 6,
+      label: 'Footing facile',
+    })).toBeNull();
+    expect(estimateVmaFromRun({
+      distanceM: 1500,
+      durationSeconds: 360,
+      perceivedEffort: 9,
+      label: 'Course',
+    })).toMatchObject({ vmaKmh: 15, averageSpeedKmh: 15 });
+  });
+
+  it('analyzes comparable impedance trends and warns about hydration shifts', () => {
+    const analysis = buildBodyCompositionAnalysis([
+      {
+        measured_on: '2026-07-01',
+        weight_kg: 70,
+        body_fat_pct: 20,
+        lean_mass_kg: 56,
+        body_water_pct: 55,
+        protocol_quality_score: 90,
+      },
+      {
+        measured_on: '2026-07-22',
+        weight_kg: 71,
+        body_fat_pct: 19.5,
+        lean_mass_kg: 57.2,
+        body_water_pct: 57.2,
+        protocol_quality_score: 92,
+      },
+    ]);
+
+    expect(analysis.previous.measured_on).toBe('2026-07-01');
+    expect(analysis.metrics.find((row) => row.key === 'lean_mass_kg').delta).toBe(1.2);
+    expect(analysis.insights.join(' ')).toContain('masse maigre');
+    expect(analysis.warnings.join(' ')).toContain('Variation d eau');
+  });
+
+  it('builds the simple five-test mobility score and exposes pain separately', () => {
+    const performed_at = '2026-07-23T08:00:00Z';
+    const analysis = buildMobilityAnalysis([
+      { performed_at, test_code: 'toe_touch', central_value: 2, central_pain: 0 },
+      { performed_at, test_code: 'deep_squat', central_value: 1, central_pain: 0 },
+      { performed_at, test_code: 'shoulder_reach', central_value: 2, central_pain: 0 },
+      { performed_at, test_code: 'trunk_rotation', central_value: 1, central_pain: 2 },
+      { performed_at, test_code: 'ankle_wall', central_value: 1, central_pain: 0 },
+    ]);
+
+    expect(analysis.score10).toBe(7);
+    expect(analysis.radarScore).toBe(70);
+    expect(analysis.label).toBe('correcte');
+    expect(analysis.warnings).toEqual(['Rotation du tronc: douleur 2/10']);
   });
 
   it('builds load progression analysis with main lifts first and exercise filtering', () => {

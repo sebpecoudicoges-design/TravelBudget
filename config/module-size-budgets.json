@@ -3,8 +3,8 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 325,
-    "lazyJsMaxKiB": 245,
-    "totalJsMaxKiB": 560,
+    "lazyJsMaxKiB": 258,
+    "totalJsMaxKiB": 575,
     "totalCssMaxKiB": 8,
     "mainJsGzipMaxKiB": 110
   },
@@ -138,6 +138,7 @@
         "src/data/sportRepository.js",
         "src/features/sport/sportCatalog.js",
         "src/features/sport/sportHistoryView.js",
+        "src/features/sport/sportMobilityController.js",
         "src/features/sport/sportProgramView.js",
         "src/features/sport/sportProfileRules.js",
         "src/features/sport/sportProfileView.js",

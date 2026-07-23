@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "dea233d02cdf775f64d3caf85ad46af416593469",
-  "snapshotFingerprint": "c37f0ae0241f70e16dc081ef1e7b8301756b52ef64a75f2da7977b5f52210c6c",
-  "generatedAt": "2026-07-22T11:13:12.211Z",
+  "commit": "2a1c2a07377d3770ce80c197fa5d127dbf913be5",
+  "snapshotFingerprint": "6f96a2953295b0791d9d05a32d8e368227f12e718cba158d4b65e8ab578676bd",
+  "generatedAt": "2026-07-23T08:19:59.569Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.244"
+    "version": "10.5.245"
   },
   "npmScripts": {
     "dev": "vite",
@@ -203,6 +203,7 @@
     "src/features/sport/sportCatalog.js",
     "src/features/sport/sportFormView.js",
     "src/features/sport/sportHistoryView.js",
+    "src/features/sport/sportMobilityController.js",
     "src/features/sport/sportProfileRules.js",
     "src/features/sport/sportProfileView.js",
     "src/features/sport/sportProgramRules.js",
@@ -271,6 +272,7 @@
     "tests/features/settings/settingsView.test.js",
     "tests/features/sport/sportCatalog.test.js",
     "tests/features/sport/sportFormView.test.js",
+    "tests/features/sport/sportMobilityController.test.js",
     "tests/features/sport/sportProfileRules.test.js",
     "tests/features/sport/sportProfileView.test.js",
     "tests/features/sport/sportProgramRules.test.js",
@@ -445,7 +447,9 @@
     "supabase/migrations/20260716092537_sport_tune_volume_intensity_loads.sql",
     "supabase/migrations/20260716101927_sport_update_ab_program_push_posterior_variant.sql",
     "supabase/migrations/20260720043529_sport_load_progression_recommendations.sql",
-    "supabase/migrations/20260722102355_sport_body_measurement_analysis_v2.sql"
+    "supabase/migrations/20260722102355_sport_body_measurement_analysis_v2.sql",
+    "supabase/migrations/20260723184500_sport_profile_vma.sql",
+    "supabase/migrations/20260723184600_sport_mobility_assessments.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

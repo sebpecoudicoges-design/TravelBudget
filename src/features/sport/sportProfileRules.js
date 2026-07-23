@@ -144,6 +144,216 @@ function avg(values = []) {
   return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : 0;
 }
 
+function roundOne(value) {
+  return Math.round(numberValue(value, 0) * 10) / 10;
+}
+
+function runningLike(item = {}) {
+  const text = normalizedSportProfileText(`${item.exerciseName || ''} ${item.activityKey || ''} ${item.libraryKey || ''}`);
+  return /run|course|running|sprint|cooper|vma/.test(text);
+}
+
+export function estimateVmaFromRun({ distanceM = 0, durationSeconds = 0, perceivedEffort = 0, label = '' } = {}) {
+  const distance = numberValue(distanceM, 0);
+  const duration = numberValue(durationSeconds, 0);
+  const effort = numberValue(perceivedEffort, 0);
+  const text = normalizedSportProfileText(label);
+  if (distance < 400 || duration < 150 || duration > 900) return null;
+
+  const averageSpeedKmh = (distance / 1000) / (duration / 3600);
+  const explicitTest = /vma|demi.?cooper|cooper|test/.test(text);
+  if (!explicitTest && effort < 8) return null;
+
+  let vmaKmh = averageSpeedKmh;
+  let method = 'effort maximal';
+  if (/cooper/.test(text) && !/demi/.test(text) && duration >= 600) {
+    const vo2max = (distance - 504.9) / 44.73;
+    vmaKmh = vo2max > 0 ? vo2max / 3.5 : 0;
+    method = 'test Cooper 12 min';
+  } else if (duration >= 300 && duration <= 480) {
+    method = 'test 5-8 min';
+  } else {
+    const sustainedFraction = duration <= 300 ? 1.02 : duration <= 480 ? 1 : duration <= 720 ? 0.95 : 0.92;
+    vmaKmh = averageSpeedKmh / sustainedFraction;
+  }
+  if (vmaKmh < 6 || vmaKmh > 30) return null;
+  return {
+    vmaKmh: roundOne(vmaKmh),
+    averageSpeedKmh: roundOne(averageSpeedKmh),
+    distanceM: Math.round(distance),
+    durationSeconds: Math.round(duration),
+    method,
+  };
+}
+
+export function buildCardioCapacity({
+  measuredVmaKmh = 0,
+  sessions = [],
+  planForSession = () => [],
+  doneSetsForSession = () => [],
+} = {}) {
+  const measured = numberValue(measuredVmaKmh, 0);
+  if (measured >= 6 && measured <= 30) {
+    return {
+      score: profileScore(measured, 16),
+      raw: `VMA ${roundOne(measured)} km/h`,
+      value: measured,
+      vmaKmh: measured,
+      source: 'measured_vma',
+      priority: 4,
+      basis: 'VMA mesuree, repere 16 km/h',
+    };
+  }
+
+  let bestEstimate = null;
+  let bestKcal = null;
+  (sessions || []).forEach((session) => {
+    const sessionId = session.id || session.localId || session.remoteId;
+    const plan = planForSession(sessionId, session) || [];
+    const sets = doneSetsForSession(sessionId, session) || [];
+    const sessionSeconds = numberValue(session.duration_seconds || session.durationSeconds, 0);
+    const kcalPerMin = sessionSeconds > 0
+      ? numberValue(session.estimated_kcal || session.estimatedKcal, 0) / (sessionSeconds / 60)
+      : 0;
+
+    plan.forEach((item, itemIndex) => {
+      if (exerciseProfileBucket(item) === 'cardio' && kcalPerMin > numberValue(bestKcal?.value, 0)) {
+        bestKcal = {
+          score: profileScore(kcalPerMin, 14),
+          raw: `${roundOne(kcalPerMin)} kcal/min`,
+          value: kcalPerMin,
+          source: 'kcal_per_min',
+          priority: 2,
+          basis: 'secours kcal/min, repere 14 kcal/min',
+        };
+      }
+      if (!runningLike(item)) return;
+      sets.filter((set) => numberValue(set.itemIndex, 0) === itemIndex).forEach((set) => {
+        const estimate = estimateVmaFromRun({
+          distanceM: set.distanceM ?? set.distance_m ?? item.distanceM ?? item.distance_m,
+          durationSeconds: set.durationSeconds ?? set.duration_seconds ?? item.targetSeconds,
+          perceivedEffort: set.perceivedEffort ?? set.perceived_effort ?? session.perceived_effort ?? session.perceivedEffort,
+          label: `${item.exerciseName || ''} ${item.activityKey || ''}`,
+        });
+        if (!estimate || estimate.vmaKmh <= numberValue(bestEstimate?.vmaKmh, 0)) return;
+        bestEstimate = {
+          score: profileScore(estimate.vmaKmh, 16),
+          raw: `VMA estimee ${estimate.vmaKmh} km/h (moy. ${estimate.averageSpeedKmh} km/h)`,
+          value: estimate.vmaKmh,
+          vmaKmh: estimate.vmaKmh,
+          averageSpeedKmh: estimate.averageSpeedKmh,
+          source: 'estimated_vma',
+          priority: 3,
+          basis: `${estimate.method}, repere VMA 16 km/h`,
+        };
+      });
+    });
+  });
+  return bestEstimate || bestKcal;
+}
+
+function bodyMetric(row, key, fallback = 0) {
+  const direct = numberValue(row?.[key], 0);
+  if (direct > 0) return direct;
+  const weight = numberValue(row?.weight_kg, 0);
+  const fatPct = numberValue(row?.body_fat_pct, 0);
+  if (key === 'fat_mass_kg' && weight && fatPct) return weight * fatPct / 100;
+  if (key === 'lean_mass_kg' && weight && fatPct) return weight * (1 - fatPct / 100);
+  return fallback;
+}
+
+export function buildBodyCompositionAnalysis(measurements = []) {
+  const rows = (measurements || [])
+    .filter((row) => row && (row.measured_on || row.created_at))
+    .slice()
+    .sort((a, b) => String(a.measured_on || a.created_at).localeCompare(String(b.measured_on || b.created_at)));
+  const latest = rows.at(-1) || null;
+  if (!latest) return { latest: null, previous: null, metrics: [], insights: [], warnings: [] };
+
+  const latestQuality = numberValue(latest.protocol_quality_score, 0);
+  const comparable = rows.filter((row) => {
+    const quality = numberValue(row.protocol_quality_score, 0);
+    return row === latest || !latestQuality || !quality || Math.abs(quality - latestQuality) <= 25;
+  });
+  const previous = comparable.length > 1 ? comparable.at(-2) : null;
+  const definitions = [
+    ['weight_kg', 'Poids', 'kg'],
+    ['body_fat_pct', 'Masse grasse', '%'],
+    ['fat_mass_kg', 'Masse graisseuse', 'kg'],
+    ['lean_mass_kg', 'Masse maigre', 'kg'],
+    ['muscle_mass_kg', 'Muscle', 'kg'],
+    ['body_water_pct', 'Eau', '%'],
+    ['visceral_fat_rating', 'Graisse viscerale', ''],
+  ];
+  const metrics = definitions.map(([key, label, unit]) => {
+    const current = bodyMetric(latest, key);
+    const before = previous ? bodyMetric(previous, key) : 0;
+    return current > 0 ? { key, label, unit, value: roundOne(current), delta: before > 0 ? roundOne(current - before) : null } : null;
+  }).filter(Boolean);
+  const getDelta = (key) => metrics.find((row) => row.key === key)?.delta;
+  const weightDelta = getDelta('weight_kg');
+  const leanDelta = getDelta('lean_mass_kg') ?? getDelta('muscle_mass_kg');
+  const fatDelta = getDelta('fat_mass_kg');
+  const insights = [];
+  const warnings = [];
+
+  if (previous && weightDelta > 0 && leanDelta > 0 && (!fatDelta || leanDelta >= fatDelta)) {
+    insights.push('Hausse du poids principalement accompagnee par la masse maigre sur les mesures comparables.');
+  }
+  if (previous && leanDelta > 0.3) insights.push(`Masse maigre en hausse de ${roundOne(leanDelta)} kg.`);
+  if (previous && fatDelta < -0.3) insights.push(`Masse graisseuse en baisse de ${Math.abs(roundOne(fatDelta))} kg.`);
+  if (latestQuality && latestQuality < 65) warnings.push('Protocole de mesure insuffisamment comparable : interpréter les variations avec prudence.');
+  if (previous && Math.abs(numberValue(getDelta('body_water_pct'), 0)) >= 2) warnings.push('Variation d eau importante : elle peut déplacer artificiellement les estimations de graisse et de muscle.');
+  if (previous && fatDelta > 0.5 && (!leanDelta || fatDelta > leanDelta)) warnings.push('La hausse récente semble davantage portée par la masse graisseuse que par la masse maigre.');
+  if (!previous) warnings.push('Une deuxième mesure réalisée avec le même protocole est nécessaire pour analyser une tendance.');
+  if (!insights.length && previous) insights.push('Composition globalement stable entre les deux mesures comparables.');
+
+  return {
+    latest,
+    previous,
+    qualityScore: latestQuality || null,
+    qualityLabel: latest.protocol_quality_label || '',
+    metrics,
+    insights,
+    warnings,
+  };
+}
+
+export const SIMPLE_MOBILITY_TESTS = [
+  { code: 'toe_touch', label: 'Ischio-jambiers' },
+  { code: 'deep_squat', label: 'Squat profond' },
+  { code: 'shoulder_reach', label: 'Epaules' },
+  { code: 'trunk_rotation', label: 'Rotation du tronc' },
+  { code: 'ankle_wall', label: 'Chevilles' },
+];
+
+export function buildMobilityAnalysis(assessments = []) {
+  const rows = (assessments || []).filter((row) => row?.test_code && (row.performed_at || row.created_at));
+  const latestDay = rows.map((row) => String(row.performed_at || row.created_at).slice(0, 10)).sort().at(-1) || '';
+  const latest = rows.filter((row) => String(row.performed_at || row.created_at).slice(0, 10) === latestDay);
+  const byCode = new Map(latest.map((row) => [row.test_code, row]));
+  const results = SIMPLE_MOBILITY_TESTS.map((test) => {
+    const row = byCode.get(test.code);
+    const level = row ? Math.max(0, Math.min(2, Math.round(numberValue(row.central_value, 0)))) : null;
+    const pain = row ? Math.max(0, Math.min(10, Math.round(numberValue(row.central_pain, 0)))) : 0;
+    return { ...test, level, pain };
+  });
+  const completed = results.filter((row) => row.level !== null);
+  const score10 = completed.length === SIMPLE_MOBILITY_TESTS.length
+    ? completed.reduce((sum, row) => sum + row.level, 0)
+    : null;
+  const painful = completed.filter((row) => row.pain > 0);
+  return {
+    latestDay,
+    results,
+    completed: completed.length,
+    score10,
+    radarScore: score10 === null ? 0 : score10 * 10,
+    label: score10 === null ? 'tests a saisir' : score10 >= 10 ? 'excellente' : score10 >= 8 ? 'bonne' : score10 >= 5 ? 'correcte' : 'a ameliorer',
+    warnings: painful.map((row) => `${row.label}: douleur ${row.pain}/10`),
+  };
+}
+
 function weightedScore(entries = []) {
   let weight = 0;
   let total = 0;
@@ -163,7 +373,7 @@ function bestNamed(bestByExercise, pattern) {
     .sort((a, b) => numberValue(b.ratio, 0) - numberValue(a.ratio, 0))[0] || null;
 }
 
-export function buildAthleticProfile({ bestAxis = new Map(), bestByExercise = new Map(), bodyWeightKg = 0, uniqueDays = 0 } = {}) {
+export function buildAthleticProfile({ bestAxis = new Map(), bestByExercise = new Map(), bodyWeightKg = 0, uniqueDays = 0, mobilityAnalysis = null } = {}) {
   const lower = bestAxis.get('lower') || {};
   const push = bestAxis.get('push') || {};
   const pull = bestAxis.get('pull') || {};
@@ -174,14 +384,14 @@ export function buildAthleticProfile({ bestAxis = new Map(), bestByExercise = ne
   const force = weightedScore([[lower.score, 30], [push.score, 25], [pull.score, 25], [core.score, 10]]);
   const endurance = Math.round(avg([core.score, cardio.score, uniqueDays ? Math.min(85, uniqueDays * 10) : 0]));
   const explosive = Math.round(avg([speed.score, cardio.score ? Math.max(20, cardio.score - 8) : 0]));
-  const mobility = 35;
+  const mobility = numberValue(mobilityAnalysis?.radarScore, 0);
   const recoveryScore = Math.round(numberValue(recovery.score, 0));
   const athleticAxes = [
     { key: 'force', label: 'Force', value: force, raw: percentileBand(force), basis: 'squat, souleve de terre, developpes, tractions' },
     { key: 'endurance', label: 'Endurance', value: endurance, raw: percentileBand(endurance), basis: 'gainage, volume musculaire, regularite' },
     { key: 'cardio', label: 'Cardio', value: Math.round(numberValue(cardio.score, 0)), raw: cardio.raw || '-', basis: cardio.basis || 'kcal/min observe' },
     { key: 'explosive', label: 'Explosivite', value: explosive, raw: speed.raw || cardio.raw || '-', basis: speed.basis || 'corde, boxe, HIIT, efforts rapides' },
-    { key: 'mobility', label: 'Mobilite', value: mobility, raw: 'tests a saisir', basis: 'chevilles, hanches, epaules, squat profond' },
+    { key: 'mobility', label: 'Mobilite', value: mobility, raw: mobilityAnalysis?.score10 === null ? 'tests a saisir' : `${mobilityAnalysis.score10}/10 - ${mobilityAnalysis.label}`, basis: '5 tests simples, douleur et qualite d execution' },
     { key: 'recovery', label: 'Recup.', value: recoveryScore, raw: recovery.raw || '-', basis: recovery.basis || 'sommeil, fatigue, douleurs, charge 7 jours' },
   ];
 
@@ -245,6 +455,9 @@ export function buildSportProfileRadarData({
   doneSetsForSession = () => [],
   bodyWeightKg = 0,
   sleepRows = {},
+  measuredVmaKmh = 0,
+  mobilityAssessments = [],
+  bodyMeasurements = [],
   now = new Date(),
   api = {},
 } = {}) {
@@ -274,13 +487,10 @@ export function buildSportProfileRadarData({
       rows.push(set);
       setsByItem.set(idx, rows);
     });
-    const sessionKcalPerMin = sessionSeconds > 0 ? n(session.estimated_kcal || session.estimatedKcal, 0) / (sessionSeconds / 60) : 0;
     plan.forEach((item, idx) => {
       const bucket = exerciseProfileBucket(item);
       const sets = setsByItem.get(idx) || [];
-      if (bucket === 'cardio' && sessionKcalPerMin > 0) {
-        setBestCapacity(bestAxis, 'cardio', { score: profileScore(sessionKcalPerMin, 14), raw: `${Math.round(sessionKcalPerMin * 10) / 10} kcal/min`, value: sessionKcalPerMin, priority: 2, basis: 'cardio 14 kcal/min' });
-      }
+      const sessionKcalPerMin = sessionSeconds > 0 ? n(session.estimated_kcal || session.estimatedKcal, 0) / (sessionSeconds / 60) : 0;
       if (isExplosiveExercise(item) && sessionKcalPerMin > 0) {
         setBestCapacity(bestAxis, 'speed', { score: profileScore(sessionKcalPerMin, 16), raw: `${Math.round(sessionKcalPerMin * 10) / 10} kcal/min`, value: sessionKcalPerMin, priority: 2, basis: 'effort explosif 16 kcal/min' });
       }
@@ -309,6 +519,14 @@ export function buildSportProfileRadarData({
     });
   });
 
+  const cardioCapacity = buildCardioCapacity({
+    measuredVmaKmh,
+    sessions: visibleSessions,
+    planForSession,
+    doneSetsForSession,
+  });
+  if (cardioCapacity) bestAxis.set('cardio', cardioCapacity);
+
   const recentSleep = Object.keys(sleepRows || {})
     .sort()
     .slice(-7)
@@ -333,13 +551,17 @@ export function buildSportProfileRadarData({
       priority: n(row.priority, 0),
     };
   });
-  const athleticProfile = buildAthleticProfile({ bestAxis, bestByExercise, bodyWeightKg, uniqueDays: uniqueDays.size });
+  const mobilityAnalysis = buildMobilityAnalysis(mobilityAssessments);
+  const bodyCompositionAnalysis = buildBodyCompositionAnalysis(bodyMeasurements);
+  const athleticProfile = buildAthleticProfile({ bestAxis, bestByExercise, bodyWeightKg, uniqueDays: uniqueDays.size, mobilityAnalysis });
   const axes = athleticProfile.axes;
 
   return {
     axes,
     classicAxes,
     athleticProfile,
+    mobilityAnalysis,
+    bodyCompositionAnalysis,
     sessions: visibleSessions,
     weakest: axes.slice().sort((a, b) => a.value - b.value)[0] || axes[0],
     bestLoads: Array.from(bestByExercise.values()).sort((a, b) => b.estimate - a.estimate).slice(0, 3),

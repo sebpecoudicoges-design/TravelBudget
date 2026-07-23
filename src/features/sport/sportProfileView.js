@@ -25,7 +25,7 @@ function axisBasis(axis, h) {
     push: h.txt('Priorite aux mouvements de poussee complets : developpe couche, incline, militaire, dips ou pompes. Les isolations triceps ne servent qu en secours.', 'Prioritizes full push movements: bench, incline press, overhead press, dips or push-ups. Triceps isolation is fallback only.'),
     pull: h.txt('Compare tractions et rowing/tirages ; les curls ne servent qu en absence de vrai mouvement de tirage.', 'Compares pull-ups and rows/pulls; curls are fallback only when no main pull movement exists.'),
     core: h.txt('Compare gainage et abdos a un repere plus strict : 120 s ou 35 reps propres.', 'Compares planks and abs against a stricter benchmark: 120 s or 35 clean reps.'),
-    cardio: h.txt('Compare l intensite observee a 14 kcal/min pour eviter de surnoter une seance moderee.', 'Compares observed intensity against 14 kcal/min to avoid overrating moderate sessions.'),
+    cardio: h.txt('Priorite a la VMA mesuree, puis a une VMA estimee depuis une course maximale ; les kcal/min ne servent qu en dernier recours.', 'Prioritizes measured VMA, then VMA estimated from a maximal run; kcal/min is only a fallback.'),
     recovery: h.txt('Compare le sommeil recent a 8,5 h ou la regularite recente si le sommeil manque.', 'Compares recent sleep against 8.5 h, or recent consistency when sleep is missing.'),
     force: h.txt('Score composite des grands mouvements : squat, souleve de terre, developpes, tractions et core.', 'Composite score from main lifts: squat, deadlift, presses, pull-ups and core.'),
     endurance: h.txt('Score construit depuis gainage, volume musculaire, regularite et condition continue.', 'Built from core holds, muscular volume, consistency and sustained conditioning.'),
@@ -73,6 +73,38 @@ function renderAthleticProfile(profile, h) {
   </div>`;
 }
 
+function renderMobilityAssessment(analysis = {}, h) {
+  const results = analysis.results || [];
+  const levelOptions = (selected) => [
+    ['', h.txt('Choisir', 'Choose')],
+    ['2', h.txt('Facile', 'Easy')],
+    ['1', h.txt('Difficile', 'Difficult')],
+    ['0', h.txt('Impossible', 'Unable')],
+  ].map(([value, label]) => `<option value="${value}" ${String(selected ?? '') === value ? 'selected' : ''}>${h.esc(label)}</option>`).join('');
+  return `<div class="tb-sport-card tb-sport-mobility-card">
+    <div class="tb-sport-card-head">
+      <div>
+        <h3>${h.esc(h.txt('Bilan mobilite rapide', 'Quick mobility assessment'))}</h3>
+        <div class="muted">${h.esc(h.txt('5 tests, environ 2 minutes. Facile = 2, difficile = 1, impossible = 0. Une douleur doit faire interrompre le test.', '5 tests, about 2 minutes. Easy = 2, difficult = 1, unable = 0. Stop a test if it causes pain.'))}</div>
+      </div>
+      <strong>${analysis.score10 === null || analysis.score10 === undefined ? '-/10' : `${h.n(analysis.score10, 0)}/10`}</strong>
+    </div>
+    <div class="tb-sport-fields">
+      ${results.map((row) => `<div class="tb-sport-field">
+        <label>${h.esc(row.label)}</label>
+        <select data-sport-mobility-level="${h.esc(row.code)}">${levelOptions(row.level)}</select>
+        <small>${h.esc(h.txt('Douleur /10', 'Pain /10'))}</small>
+        <input data-sport-mobility-pain="${h.esc(row.code)}" type="number" min="0" max="10" step="1" value="${h.esc(String(h.n(row.pain, 0)))}">
+      </div>`).join('')}
+    </div>
+    ${(analysis.warnings || []).length ? `<div class="tb-sport-status warn">${(analysis.warnings || []).map((row) => h.esc(row)).join(' · ')}</div>` : ''}
+    <div class="tb-sport-actions" style="margin-top:10px;justify-content:flex-end;">
+      <button class="btn primary" type="button" id="sport-save-mobility">${h.esc(h.txt('Enregistrer le bilan', 'Save assessment'))}</button>
+    </div>
+    <div class="muted" style="margin-top:8px;">${h.esc(h.txt('Score interne de suivi, pas une evaluation clinique. A refaire idealement toutes les 2 a 4 semaines dans les memes conditions.', 'Internal tracking score, not a clinical assessment. Ideally repeat every 2 to 4 weeks under the same conditions.'))}</div>
+  </div>`;
+}
+
 export function radarPoints(axes = [], radius = 104, cx = 140, cy = 140) {
   const count = Math.max(1, axes.length);
   return (axes || []).map((axis, idx) => {
@@ -103,6 +135,7 @@ export function renderSportProfileDashboard({
   }).join('');
   const weakest = data.weakest || axes[0] || { label: '-' };
   const athleticProfile = data.athleticProfile || null;
+  const bodyAnalysis = data.bodyCompositionAnalysis || { metrics: [], insights: [], warnings: [] };
   const loads = (data.bestLoads || []).length
     ? data.bestLoads.map((row) => `<span class="tb-sport-chip">${h.esc(row.name)} ${Math.round(h.n(row.estimate, 0))} kg e1RM</span>`).join('')
     : `<span class="tb-sport-chip">${h.esc(h.txt('Charges a renseigner dans les series', 'Enter loads in sets'))}</span>`;
@@ -153,8 +186,22 @@ export function renderSportProfileDashboard({
           <div><span>${h.esc(h.txt('Muscle', 'Muscle'))}</span><strong>${latest?.muscle_mass_kg ? `${h.n(latest.muscle_mass_kg, 0)} kg` : '-'}</strong></div>
           <div><span>${h.esc(h.txt('Eau', 'Water'))}</span><strong>${latest?.body_water_pct ? `${h.n(latest.body_water_pct, 0)}%` : '-'}</strong></div>
         </div>
-        <div class="muted" style="margin-top:10px;">${h.esc(h.txt('Champs limites : poids, masse grasse, muscle, eau, os, graisse viscerale, BMR, age metabolique et notes.', 'Focused fields: weight, fat, muscle, water, bone, visceral fat, BMR, metabolic age and notes.'))}</div>
+        ${bodyAnalysis.metrics.length ? `<div class="tb-sport-athletic-metrics" style="margin-top:10px;">
+          ${bodyAnalysis.metrics.slice(0, 6).map((row) => `<div><span>${h.esc(row.label)}</span><strong>${h.esc(`${row.value}${row.unit ? ` ${row.unit}` : ''}`)}</strong><small>${row.delta === null ? h.esc(h.txt('Premiere reference', 'First reference')) : h.esc(`${row.delta > 0 ? '+' : ''}${row.delta}${row.unit ? ` ${row.unit}` : ''}`)}</small></div>`).join('')}
+        </div>` : ''}
+        <div class="tb-sport-athletic-grid" style="margin-top:10px;">
+          <div class="tb-sport-athletic-panel">
+            <b>${h.esc(h.txt('Analyse composition', 'Composition analysis'))}</b>
+            ${(bodyAnalysis.insights || []).map((row) => `<span class="ok">OK ${h.esc(row)}</span>`).join('') || `<span>${h.esc(h.txt('Ajoute une seconde mesure comparable pour analyser la tendance.', 'Add a second comparable measurement to analyze the trend.'))}</span>`}
+          </div>
+          <div class="tb-sport-athletic-panel">
+            <b>${h.esc(h.txt('Fiabilite / vigilance', 'Reliability / watch points'))}</b>
+            ${(bodyAnalysis.warnings || []).map((row) => `<span class="warn">! ${h.esc(row)}</span>`).join('') || `<span>${h.esc(h.txt('Protocole coherent.', 'Consistent protocol.'))}</span>`}
+          </div>
+        </div>
+        <div class="muted" style="margin-top:10px;">${h.esc(h.txt('Les tendances de balance impedancemetrique restent indicatives et sont comparees seulement avec un protocole suffisamment proche.', 'Impedance-scale trends remain indicative and are compared only when the protocol is sufficiently similar.'))}</div>
       </div>
+      ${renderMobilityAssessment(data.mobilityAnalysis || {}, h)}
     </div>`;
 }
 
@@ -285,6 +332,7 @@ export function renderBodyMeasurementModal({ editor = null, api = {} } = {}) {
           ${bodyInput('sport-body-subfat', h.txt('Graisse sous-cutanee %', 'Subcutaneous fat %'), editor.subcutaneous_fat_pct, '0.1', h)}
           ${bodyInput('sport-body-ideal-weight', h.txt('Poids ideal kg', 'Ideal weight kg'), editor.ideal_weight_kg, '0.1', h)}
           <div class="tb-sport-field"><label>${h.esc(h.txt('Body Type', 'Body Type'))}</label><input id="sport-body-type" type="text" value="${h.esc(editor.body_type || '')}"></div>
+          ${bodyInput('sport-body-vma', h.txt('VMA mesuree km/h', 'Measured VMA km/h'), editor.vma_kmh, '0.1', h)}
           <div class="tb-sport-protocol" style="grid-column:1/-1;">
             ${[
               ['after_toilet', h.txt('Apres toilettes', 'After toilet')],

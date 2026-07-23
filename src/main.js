@@ -264,11 +264,12 @@ async function ensureDomainModules(domain) {
       };
     }
     if (key === 'sport') {
-      const [sportFormView, sportProgramView, sportProfileRules, sportProfileView] = await Promise.all([
+      const [sportFormView, sportProgramView, sportProfileRules, sportProfileView, sportMobilityController] = await Promise.all([
         import('./features/sport/sportFormView.js'),
         import('./features/sport/sportProgramView.js'),
         import('./features/sport/sportProfileRules.js'),
         import('./features/sport/sportProfileView.js'),
+        import('./features/sport/sportMobilityController.js'),
       ]);
       window.UI.sportFormView = {
         ...(window.UI.sportFormView || {}),
@@ -286,6 +287,10 @@ async function ensureDomainModules(domain) {
       window.UI.sportProfileView = {
         ...(window.UI.sportProfileView || {}),
         ...sportProfileView,
+      };
+      window.UI.sportMobilityController = {
+        ...(window.UI.sportMobilityController || {}),
+        ...sportMobilityController,
       };
     }
     if (key === 'trip') {
