@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderSportHistory } from '../../../src/features/sport/sportHistoryView.js';
-import { renderLoadRecommendations, renderPlannedSportWeek, renderProgramSettings } from '../../../src/features/sport/sportProgramView.js';
+import { renderLoadRecommendations, renderPlannedSportWeek, renderProgramSettings, renderSessionEditorModal } from '../../../src/features/sport/sportProgramView.js';
 import { renderFinishWorkoutModal, renderFreeTimer, renderSportTimer } from '../../../src/features/sport/sportTimerView.js';
 
 const api = {
@@ -31,6 +31,8 @@ const api = {
   sessionPlannedLoadSummary: () => 'Developpe couche 60 kg x 6-10',
   sessionProgressionPreview: () => 'Developpe couche : vise 6-10 reps.',
   sessionExerciseName: (item) => item?.exerciseName || '',
+  sessionEditorExerciseOptions: () => '<option value="bench">Developpe couche</option>',
+  equipmentOptions: (selected) => `<option value="${selected}" selected>${selected}</option>`,
   plannedExerciseLoadLabel: () => '60 kg',
   exerciseProgressionRows: (session) => (session?.plan || []).map((item) => ({
     name: item.exerciseName,
@@ -220,6 +222,39 @@ describe('Sport program view', () => {
     expect(html).toContain('data-sport-program-day="1"');
     expect(html).toContain('<option value="A1/B1" selected>A1 / B1</option>');
     expect(html).toContain('id="sport-program-reset"');
+  });
+
+  it('renders the configured workout editor modal with stable hooks', () => {
+    const html = renderSessionEditorModal({
+      editor: {
+        name: 'A1 Poussee',
+        week: 'A',
+        days: ['Lundi', 'Mercredi'],
+        plan: [{
+          exerciseName: 'Developpe couche',
+          equipment: 'barbell',
+          mode: 'reps',
+          sets: 3,
+          repMin: 6,
+          repMax: 10,
+          restSeconds: 180,
+          weightKg: 60,
+          loadLabel: '60 kg',
+          notes: 'Volume',
+        }],
+      },
+      api,
+    });
+
+    expect(html).toContain('id="sport-session-editor-name"');
+    expect(html).toContain('id="sport-session-editor-week"');
+    expect(html).toContain('id="sport-session-editor-add-ex"');
+    expect(html).toContain('id="sport-session-editor-add-btn"');
+    expect(html).toContain('data-sport-session-editor-row');
+    expect(html).toContain('data-sport-session-editor-move="0"');
+    expect(html).toContain('data-sport-session-editor-remove="0"');
+    expect(html).toContain('data-field="repMin"');
+    expect(html).toContain('value="60"');
   });
 });
 

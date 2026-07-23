@@ -189,3 +189,54 @@ export function renderLoadRecommendations({ recommendations = [], api = {} } = {
       </div>
     </div>`;
 }
+
+export function renderSessionEditorModal({ editor, api = {} } = {}) {
+  if (!editor) return '';
+  const helpers = baseApi(api);
+  const t = helpers.translate;
+  const esc = helpers.escapeHTML;
+  const n = helpers.numberValue;
+  const plan = Array.isArray(editor.plan) ? editor.plan : [];
+  const exerciseOptions = helpers.sessionEditorExerciseOptions?.('') || '';
+  return `<div class="tb-sport-session-editor-meta">
+          <label><span>${esc(t('Nom', 'Name'))}</span><input id="sport-session-editor-name" value="${esc(editor.name || '')}"></label>
+          <label><span>${esc(t('Semaine', 'Week'))}</span><select id="sport-session-editor-week"><option value="" ${!editor.week ? 'selected' : ''}>${esc(t('Libre', 'Free'))}</option><option value="A" ${editor.week === 'A' ? 'selected' : ''}>A</option><option value="B" ${editor.week === 'B' ? 'selected' : ''}>B</option></select></label>
+          <label><span>${esc(t('Jours', 'Days'))}</span><input id="sport-session-editor-days" value="${esc((editor.days || []).join(', '))}" placeholder="${esc(t('Lundi, Mercredi', 'Monday, Wednesday'))}"></label>
+        </div>
+        <div class="tb-sport-session-editor-add">
+          <label><span>${esc(t('Ajouter depuis la bibliotheque', 'Add from library'))}</span><select id="sport-session-editor-add-ex">${exerciseOptions}</select></label>
+          <button class="btn primary" type="button" id="sport-session-editor-add-btn">+ ${esc(t('Ajouter', 'Add'))}</button>
+        </div>
+        <div class="tb-sport-session-editor-list">
+          ${plan.map((item, idx) => {
+            const range = helpers.progressionRepRange?.(item) || { min: n(item.targetReps, 8), max: n(item.targetReps, 8) };
+            const seconds = Math.max(1, Math.round(n(item.targetSeconds, item.timeMin || 45)));
+            const name = helpers.sessionExerciseName?.(item) || item?.exerciseName || item?.name || '';
+            return `<div class="tb-sport-session-editor-row" data-sport-session-editor-row data-index="${idx}">
+              <div class="tb-sport-session-editor-row-head">
+                <strong>${idx + 1}. ${esc(name)}</strong>
+                <div class="tb-sport-actions">
+                  <button class="btn small" type="button" data-sport-session-editor-move="${idx}" data-dir="-1">↑</button>
+                  <button class="btn small" type="button" data-sport-session-editor-move="${idx}" data-dir="1">↓</button>
+                  <button class="btn small danger" type="button" data-sport-session-editor-remove="${idx}">${esc(t('Supprimer', 'Delete'))}</button>
+                </div>
+              </div>
+              <div class="tb-sport-session-editor-grid">
+                <label><span>${esc(t('Nom exercice', 'Exercise name'))}</span><input data-field="name" value="${esc(name)}"></label>
+                <label><span>${esc(t('Materiel', 'Equipment'))}</span><select data-field="equipment">${helpers.equipmentOptions?.(item.equipment || 'bodyweight') || ''}</select></label>
+                <label><span>${esc(t('Mode', 'Mode'))}</span><select data-field="mode"><option value="reps" ${item.mode === 'reps' ? 'selected' : ''}>${esc(t('Reps', 'Reps'))}</option><option value="time" ${item.mode === 'time' ? 'selected' : ''}>${esc(t('Temps', 'Time'))}</option></select></label>
+                <label><span>${esc(t('Series', 'Sets'))}</span><input data-field="sets" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(item.sets, 1)))))}"></label>
+                <label><span>${esc(t('Reps min', 'Min reps'))}</span><input data-field="repMin" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(range.min, item.targetReps || 8)))))}"></label>
+                <label><span>${esc(t('Reps max', 'Max reps'))}</span><input data-field="repMax" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(range.max, range.min || 8)))))}"></label>
+                <label><span>${esc(t('Secondes', 'Seconds'))}</span><input data-field="seconds" type="number" min="1" value="${esc(String(seconds))}"></label>
+                <label><span>${esc(t('Temps min', 'Min time'))}</span><input data-field="timeMin" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(item.timeMin, seconds)))))}"></label>
+                <label><span>${esc(t('Temps max', 'Max time'))}</span><input data-field="timeMax" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(item.timeMax, item.timeMin || seconds)))))}"></label>
+                <label><span>${esc(t('Repos sec', 'Rest sec'))}</span><input data-field="rest" type="number" min="0" value="${esc(String(helpers.restSecondsForItem?.(item) || 0))}"></label>
+                <label><span>${esc(t('Charge kg', 'Load kg'))}</span><input data-field="weight" type="number" step="0.5" min="0" value="${esc(String(Math.round(n(item.weightKg, 0) * 10) / 10))}"></label>
+                <label><span>${esc(t('Libelle charge', 'Load label'))}</span><input data-field="loadLabel" value="${esc(item.loadLabel || '')}" placeholder="${esc(t('ex: 2 x 16 kg', 'e.g. 2 x 16 kg'))}"></label>
+                <label class="wide"><span>${esc(t('Notes', 'Notes'))}</span><input data-field="notes" value="${esc(item.notes || '')}"></label>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
+}

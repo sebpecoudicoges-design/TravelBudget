@@ -2136,47 +2136,16 @@
   function renderSessionEditorModal() {
     const editor = CACHE.sessionEditor;
     if (!editor) return "";
-    const plan = editor.plan || [];
-    return `<div class="tb-sport-session-editor-meta">
-          <label><span>${esc(txt("Nom", "Name"))}</span><input id="sport-session-editor-name" value="${esc(editor.name || "")}"></label>
-          <label><span>${esc(txt("Semaine", "Week"))}</span><select id="sport-session-editor-week"><option value="" ${!editor.week ? "selected" : ""}>${esc(txt("Libre", "Free"))}</option><option value="A" ${editor.week === "A" ? "selected" : ""}>A</option><option value="B" ${editor.week === "B" ? "selected" : ""}>B</option></select></label>
-          <label><span>${esc(txt("Jours", "Days"))}</span><input id="sport-session-editor-days" value="${esc((editor.days || []).join(", "))}" placeholder="${esc(txt("Lundi, Mercredi", "Monday, Wednesday"))}"></label>
-        </div>
-        <div class="tb-sport-session-editor-add">
-          <label><span>${esc(txt("Ajouter depuis la bibliotheque", "Add from library"))}</span><select id="sport-session-editor-add-ex">${sessionEditorExerciseOptions("")}</select></label>
-          <button class="btn primary" type="button" id="sport-session-editor-add-btn">+ ${esc(txt("Ajouter", "Add"))}</button>
-        </div>
-        <div class="tb-sport-session-editor-list">
-          ${plan.map((item, idx) => {
-            const range = progressionRepRange(item) || { min: n(item.targetReps, 8), max: n(item.targetReps, 8) };
-            const seconds = Math.max(1, Math.round(n(item.targetSeconds, item.timeMin || 45)));
-            return `<div class="tb-sport-session-editor-row" data-sport-session-editor-row data-index="${idx}">
-              <div class="tb-sport-session-editor-row-head">
-                <strong>${idx + 1}. ${esc(sessionExerciseName(item))}</strong>
-                <div class="tb-sport-actions">
-                  <button class="btn small" type="button" data-sport-session-editor-move="${idx}" data-dir="-1">↑</button>
-                  <button class="btn small" type="button" data-sport-session-editor-move="${idx}" data-dir="1">↓</button>
-                  <button class="btn small danger" type="button" data-sport-session-editor-remove="${idx}">${esc(txt("Supprimer", "Delete"))}</button>
-                </div>
-              </div>
-              <div class="tb-sport-session-editor-grid">
-                <label><span>${esc(txt("Nom exercice", "Exercise name"))}</span><input data-field="name" value="${esc(sessionExerciseName(item))}"></label>
-                <label><span>${esc(txt("Materiel", "Equipment"))}</span><select data-field="equipment">${equipmentOptions(item.equipment || "bodyweight")}</select></label>
-                <label><span>${esc(txt("Mode", "Mode"))}</span><select data-field="mode"><option value="reps" ${item.mode === "reps" ? "selected" : ""}>${esc(txt("Reps", "Reps"))}</option><option value="time" ${item.mode === "time" ? "selected" : ""}>${esc(txt("Temps", "Time"))}</option></select></label>
-                <label><span>${esc(txt("Series", "Sets"))}</span><input data-field="sets" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(item.sets, 1)))))}"></label>
-                <label><span>${esc(txt("Reps min", "Min reps"))}</span><input data-field="repMin" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(range.min, item.targetReps || 8)))))}"></label>
-                <label><span>${esc(txt("Reps max", "Max reps"))}</span><input data-field="repMax" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(range.max, range.min || 8)))))}"></label>
-                <label><span>${esc(txt("Secondes", "Seconds"))}</span><input data-field="seconds" type="number" min="1" value="${esc(String(seconds))}"></label>
-                <label><span>${esc(txt("Temps min", "Min time"))}</span><input data-field="timeMin" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(item.timeMin, seconds)))))}"></label>
-                <label><span>${esc(txt("Temps max", "Max time"))}</span><input data-field="timeMax" type="number" min="1" value="${esc(String(Math.max(1, Math.round(n(item.timeMax, item.timeMin || seconds)))))}"></label>
-                <label><span>${esc(txt("Repos sec", "Rest sec"))}</span><input data-field="rest" type="number" min="0" value="${esc(String(restSecondsForItem(item)))}"></label>
-                <label><span>${esc(txt("Charge kg", "Load kg"))}</span><input data-field="weight" type="number" step="0.5" min="0" value="${esc(String(Math.round(n(item.weightKg, 0) * 10) / 10))}"></label>
-                <label><span>${esc(txt("Libelle charge", "Load label"))}</span><input data-field="loadLabel" value="${esc(item.loadLabel || "")}" placeholder="${esc(txt("ex: 2 x 16 kg", "e.g. 2 x 16 kg"))}"></label>
-                <label class="wide"><span>${esc(txt("Notes", "Notes"))}</span><input data-field="notes" value="${esc(item.notes || "")}"></label>
-              </div>
-            </div>`;
-          }).join("")}
-        </div>`;
+    return window.UI?.sportProgramView?.renderSessionEditorModal?.({
+      editor,
+      api: Object.assign(sportViewApi(), {
+        sessionEditorExerciseOptions,
+        progressionRepRange,
+        sessionExerciseName,
+        restSecondsForItem,
+        equipmentOptions,
+      }),
+    }) || "";
   }
   function bindSessionEditor(root) {
     if (!root) return;

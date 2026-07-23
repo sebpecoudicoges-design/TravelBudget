@@ -114,14 +114,17 @@ describe('Sport domain contract', () => {
     expect(programView).toContain('export function renderPlannedSportWeek');
     expect(programView).toContain('export function renderProgramSettings');
     expect(programView).toContain('export function renderLoadRecommendations');
+    expect(programView).toContain('export function renderSessionEditorModal');
     expect(legacy).toContain('sportProgramView?.renderPlannedSportWeek');
     expect(legacy).toContain('sportProgramView?.renderProgramSettings');
     expect(legacy).toContain('sportProgramView?.renderLoadRecommendations');
+    expect(legacy).toContain('sportProgramView?.renderSessionEditorModal');
     expect(main).toContain("import('./features/sport/sportRuntime.js')");
     expect(runtime).toContain("import * as sportProgramView from './sportProgramView.js'");
     expect(runtime).toContain('target.UI.sportProgramView');
     expect(bridge).not.toContain("import * as sportProgramView from '../features/sport/sportProgramView.js'");
     expect(legacy).not.toContain('recommendations.map(row => `<div class="btn" style="display:grid;text-align:left;gap:7px;">');
+    expect(legacy).not.toContain('const plan = editor.plan || []');
   });
 
   it('delegates timer, history, sandbox and profile UI to feature modules', () => {

@@ -22,6 +22,7 @@ describe('Sport view extraction bridge', () => {
   it('delegates legacy Sport Timer and History rendering to modular views', () => {
     expect(sportUi).toContain('window.UI?.sportProgramView?.renderPlannedSportWeek?.({');
     expect(sportUi).toContain('window.UI?.sportProgramView?.renderProgramSettings?.({');
+    expect(sportUi).toContain('window.UI?.sportProgramView?.renderSessionEditorModal?.({');
     expect(sportUi).toContain('window.UI?.sportTimerView?.renderSportTimer?.({');
     expect(sportUi).toContain('window.UI?.sportTimerView?.renderFreeTimer?.({');
     expect(sportUi).toContain('window.UI?.sportTimerView?.renderFinishWorkoutModal?.({');
@@ -29,6 +30,8 @@ describe('Sport view extraction bridge', () => {
     expect(sportUi).toContain('api: sportViewApi()');
     expect(sportUi).not.toContain('function renderProgramCockpit(');
     expect(sportUi).not.toContain('function programDayOptions(');
+    expect(sportUi).not.toContain('const plan = editor.plan || []');
+    expect(sportUi).not.toContain('id="sport-session-editor-add-ex">${sessionEditorExerciseOptions("")}</select>');
     expect(sportUi).not.toContain('function renderTimerTimeline(');
     expect(sportUi).not.toContain('id="sport-free-start"');
     expect(sportUi).not.toContain('function renderHistoryGrid(');

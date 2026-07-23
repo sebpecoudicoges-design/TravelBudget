@@ -6,7 +6,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.248`.
+- Version à valider : `10.5.249`.
 - Bilan : 7 parcours `ok`, 20 parcours `à faire`.
 - Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
 - Les 29 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
@@ -44,6 +44,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 25 | 10.5.246 | Sport : fin de séance | Lancer une séance Sport courte, terminer, puis dans la fenêtre de fin ajouter planche ou stretch, choisir humeur, régler effort et sauvegarder. Refaire le parcours avec **Ignorer**. | La fenêtre de fin s'ouvre comme avant, le résumé se met à jour après planche/stretch, les boutons sauvegarde/ignorer persistent la séance et aucun champ n'a disparu. | `TB BUILD 10.5.246` ; aucun `renderFinishWorkoutModal` manquant, aucun `Uncaught`. | à faire |
 | 26 | 10.5.247 | Sport : chrono libre | Ouvrir **Sport**, choisir un exercice dans **Chrono libre**, démarrer, passer en grand écran, arrêter, saisir distance/reps/charge selon l'exercice, sauvegarder. | Le chrono libre garde le rendu et les boutons d'avant, le grand écran reste disponible, les champs de résultat s'affichent après arrêt et la séance sauvegardée rejoint l'historique. | `TB BUILD 10.5.247` ; aucun `renderFreeTimer` manquant, aucun `Uncaught`. | à faire |
 | 27 | 10.5.248 | Performance : Sport lazy runtime | Depuis un chargement frais, ouvrir Dashboard puis attendre le boot. Ouvrir ensuite **Sport**, vérifier Timer, Chrono libre, Historique, Ajuster, Profil athlétique et Programme. | Le premier écran charge plus léger. Sport charge ses vues au premier accès, sans écran vide ni module manquant. | `TB BUILD 10.5.248` ; aucun `sportRuntime` load failed, aucun `sportTimerView`, `sportHistoryView` ou `sportSessionSandboxView` manquant, aucun `Uncaught`. | à faire |
+| 28 | 10.5.249 | Sport : éditeur séances programmées | Ouvrir **Sport**, aller dans les séances favorites/programme, modifier une séance A/B, ajouter un exercice, changer reps min/max, charge, repos, puis enregistrer. | La fenêtre garde le même comportement, les champs restent remplis, l’ordre des exercices et les hooks modifier/supprimer fonctionnent. | `TB BUILD 10.5.249` ; aucun `renderSessionEditorModal` manquant, aucun `Uncaught`. | à faire |
 
 ## À ajouter à chaque livraison
 
