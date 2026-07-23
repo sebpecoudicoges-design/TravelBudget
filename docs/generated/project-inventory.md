@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `96b91400b5aec43b324e59caaa65357267e1fe8b`
-> Empreinte du snapshot : `da3e6078ac74af9906c3f78d221bcc6eea65b9b37bae861310f966ccada9ff73`
-> Généré le : `2026-07-23T10:39:28.034Z`
+> Commit analysé : `abe4ca7af30d70f5a22a0c65aa5178e619046bfc`
+> Empreinte du snapshot : `e5d837286a5abe1ed239c2275aac37beba27302f25160db9a590cbe262207094`
+> Généré le : `2026-07-23T11:01:19.400Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.251` |
+| Version | `10.5.252` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 61 |
 | Modules core | 25 |
 | Modules data | 7 |
-| Modules features | 36 |
-| Fichiers de tests | 99 |
+| Modules features | 37 |
+| Fichiers de tests | 100 |
 | Migrations Supabase | 90 |
 | Fonctions Edge | 8 |
 | Projet Android présent | Oui |
@@ -228,6 +228,7 @@ Modules :
 - `src/features/settings/settingsAccountController.js`
 - `src/features/settings/settingsCategoriesView.js`
 - `src/features/settings/settingsView.js`
+- `src/features/sport/sportBodyMeasurementController.js`
 - `src/features/sport/sportCatalog.js`
 - `src/features/sport/sportFormView.js`
 - `src/features/sport/sportHistoryView.js`
@@ -342,6 +343,7 @@ Modules :
 - `tests/features/nutrition/nutritionView.test.js`
 - `tests/features/settings/settingsAccountController.test.js`
 - `tests/features/settings/settingsView.test.js`
+- `tests/features/sport/sportBodyMeasurementController.test.js`
 - `tests/features/sport/sportCatalog.test.js`
 - `tests/features/sport/sportFormView.test.js`
 - `tests/features/sport/sportMobilityController.test.js`

@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "96b91400b5aec43b324e59caaa65357267e1fe8b",
-  "snapshotFingerprint": "da3e6078ac74af9906c3f78d221bcc6eea65b9b37bae861310f966ccada9ff73",
-  "generatedAt": "2026-07-23T10:39:28.034Z",
+  "commit": "abe4ca7af30d70f5a22a0c65aa5178e619046bfc",
+  "snapshotFingerprint": "e5d837286a5abe1ed239c2275aac37beba27302f25160db9a590cbe262207094",
+  "generatedAt": "2026-07-23T11:01:19.400Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.251"
+    "version": "10.5.252"
   },
   "npmScripts": {
     "dev": "vite",
@@ -200,6 +200,7 @@
     "src/features/settings/settingsAccountController.js",
     "src/features/settings/settingsCategoriesView.js",
     "src/features/settings/settingsView.js",
+    "src/features/sport/sportBodyMeasurementController.js",
     "src/features/sport/sportCatalog.js",
     "src/features/sport/sportFormView.js",
     "src/features/sport/sportHistoryView.js",
@@ -271,6 +272,7 @@
     "tests/features/nutrition/nutritionView.test.js",
     "tests/features/settings/settingsAccountController.test.js",
     "tests/features/settings/settingsView.test.js",
+    "tests/features/sport/sportBodyMeasurementController.test.js",
     "tests/features/sport/sportCatalog.test.js",
     "tests/features/sport/sportFormView.test.js",
     "tests/features/sport/sportMobilityController.test.js",

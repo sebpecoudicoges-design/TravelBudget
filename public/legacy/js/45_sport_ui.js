@@ -247,64 +247,28 @@
     try { window.tbWriteScopedLocalStorage?.(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1", value); } catch (_) {}
     try { if (!window.state.user) window.state.user = {}; window.state.user.bodyHeightCm = Number(value); } catch (_) {}
   }
-  function cleanOptionalNumber(value, min, max) {
-    if (value === "" || value == null) return null;
-    const out = Number(String(value).replace(",", "."));
-    if (!Number.isFinite(out)) return null;
-    return Math.max(min, Math.min(max, out));
-  }
   function loadBodyMeasurementsLocal() {
-    try {
-      const rows = JSON.parse(localStorage.getItem(BODY_MEASUREMENTS_KEY()) || "[]");
-      return Array.isArray(rows) ? rows.slice(0, 80) : [];
-    } catch (_) { return []; }
+    return window.UI?.sportBodyMeasurementController?.loadBodyMeasurementsLocal?.(BODY_MEASUREMENTS_KEY()) || [];
   }
   function saveBodyMeasurementsLocal(rows) {
-    const clean = (rows || [])
-      .filter(row => row && row.measured_on)
-      .sort((a, b) => String(b.measured_on || "").localeCompare(String(a.measured_on || "")))
-      .slice(0, 80);
-    try { localStorage.setItem(BODY_MEASUREMENTS_KEY(), JSON.stringify(clean)); } catch (_) {}
-    CACHE.bodyMeasurements = clean;
-    return clean;
+    return window.UI?.sportBodyMeasurementController?.saveBodyMeasurementsLocal?.(rows, { storageKey: BODY_MEASUREMENTS_KEY(), cache: CACHE }) || [];
   }
   function latestBodyMeasurement() {
-    return (CACHE.bodyMeasurements || [])
-      .slice()
-      .sort((a, b) => String(b.measured_on || "").localeCompare(String(a.measured_on || "")))[0] || null;
+    return window.UI?.sportBodyMeasurementController?.latestBodyMeasurement?.(CACHE.bodyMeasurements || []) || null;
   }
   async function ensureBodyMeasurementsLoaded(reason) {
-    if (CACHE.bodyMeasurementsLoading || CACHE.bodyMeasurementsLoaded) return false;
-    const c = client();
-    if (!c || !uid()) {
-      CACHE.bodyMeasurementsLoaded = true;
-      return false;
-    }
-    const offline = (typeof window.tbShouldUseOfflineMode === "function")
-      ? await window.tbShouldUseOfflineMode(`health:body_measurements:${reason || "render"}`)
-      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
-    if (offline) {
-      CACHE.bodyMeasurementsLoaded = true;
-      return false;
-    }
-    CACHE.bodyMeasurementsLoading = true;
-    try {
-      const res = await c
-        .from(table("health_body_measurements"))
-        .select(BODY_MEASUREMENT_COLUMNS)
-        .eq("user_id", uid())
-        .order("measured_on", { ascending: false })
-        .limit(40);
-      if (res.error) throw res.error;
-      saveBodyMeasurementsLocal(res.data || []);
-      return true;
-    } catch (e) {
-      if (!isOfflineSkipError(e)) console.warn("[sport] body measurements load failed", e?.message || e);
-    } finally {
-      CACHE.bodyMeasurementsLoading = false;
-      CACHE.bodyMeasurementsLoaded = true;
-    }
-    return false;
+    return window.UI?.sportBodyMeasurementController?.ensureBodyMeasurementsLoaded?.({
+      cache: CACHE,
+      client: client(),
+      userId: uid(),
+      tableName: table("health_body_measurements"),
+      columns: BODY_MEASUREMENT_COLUMNS,
+      reason,
+      storageKey: BODY_MEASUREMENTS_KEY(),
+      shouldUseOfflineMode: window.tbShouldUseOfflineMode,
+      isOfflineMode: window.tbIsOfflineMode,
+      isOfflineError: isOfflineSkipError,
+    }) || false;
   }
   function loadMobilityAssessmentsLocal() {
     return window.UI?.sportMobilityController?.loadMobilityAssessmentsLocal?.(MOBILITY_ASSESSMENTS_KEY()) || [];
@@ -372,122 +336,49 @@
     return false;
   }
   function openBodyMeasurementEditor(row) {
-    const latest = row || latestBodyMeasurement() || {};
-    CACHE.bodyMeasurementEditor = {
-      measured_on: String(row?.measured_on || todayISO()).slice(0, 10),
-      source: latest.source || "impedance_scale",
-      weight_kg: latest.weight_kg ?? bodyWeight(),
-      bmi: latest.bmi ?? "",
-      body_fat_pct: latest.body_fat_pct ?? "",
-      fat_mass_kg: latest.fat_mass_kg ?? "",
-      muscle_mass_kg: latest.muscle_mass_kg ?? "",
-      lean_mass_kg: latest.lean_mass_kg ?? "",
-      body_water_pct: latest.body_water_pct ?? "",
-      body_water_kg: latest.body_water_kg ?? "",
-      bone_mass_kg: latest.bone_mass_kg ?? "",
-      visceral_fat_rating: latest.visceral_fat_rating ?? "",
-      bmr_kcal: latest.bmr_kcal ?? "",
-      metabolic_age: latest.metabolic_age ?? "",
-      protein_pct: latest.protein_pct ?? "",
-      protein_mass_kg: latest.protein_mass_kg ?? "",
-      subcutaneous_fat_pct: latest.subcutaneous_fat_pct ?? "",
-      ideal_weight_kg: latest.ideal_weight_kg ?? "",
-      body_type: latest.body_type || "",
-      vma_kmh: latest.vma_kmh ?? "",
-      vma_source: latest.vma_source || "measured",
-      measurement_time: latest.measurement_time || "morning",
-      after_toilet: latest.after_toilet ?? true,
-      before_food: latest.before_food ?? true,
-      before_drink: latest.before_drink ?? true,
-      before_activity: latest.before_activity ?? true,
-      same_scale: latest.same_scale ?? true,
-      hard_flat_floor: latest.hard_flat_floor ?? true,
-      dry_feet: latest.dry_feet ?? true,
-      notes: latest.notes || "",
-    };
+    CACHE.bodyMeasurementEditor = window.UI?.sportBodyMeasurementController?.buildBodyMeasurementEditor?.({
+      row,
+      latest: latestBodyMeasurement(),
+      today: todayISO(),
+      weightKg: bodyWeight(),
+    }) || null;
   }
   function closeBodyMeasurementEditor() {
     CACHE.bodyMeasurementEditor = null;
   }
-  function readBodyMeasurementFromDom(root) {
-    const day = String(root.querySelector("#sport-body-date")?.value || todayISO()).slice(0, 10);
-    const payload = {
-      user_id: uid(),
-      measured_on: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : todayISO(),
-      source: "impedance_scale",
-      weight_kg: cleanOptionalNumber(root.querySelector("#sport-body-weight")?.value, 20, 350),
-      bmi: cleanOptionalNumber(root.querySelector("#sport-body-bmi")?.value, 10, 80),
-      body_fat_pct: cleanOptionalNumber(root.querySelector("#sport-body-fat")?.value, 2, 70),
-      fat_mass_kg: cleanOptionalNumber(root.querySelector("#sport-body-fat-mass")?.value, 0, 250),
-      muscle_mass_kg: cleanOptionalNumber(root.querySelector("#sport-body-muscle")?.value, 5, 200),
-      lean_mass_kg: cleanOptionalNumber(root.querySelector("#sport-body-lean")?.value, 0, 300),
-      body_water_pct: cleanOptionalNumber(root.querySelector("#sport-body-water")?.value, 20, 80),
-      body_water_kg: cleanOptionalNumber(root.querySelector("#sport-body-water-kg")?.value, 0, 250),
-      bone_mass_kg: cleanOptionalNumber(root.querySelector("#sport-body-bone")?.value, 0.5, 20),
-      visceral_fat_rating: cleanOptionalNumber(root.querySelector("#sport-body-visceral")?.value, 1, 60),
-      bmr_kcal: Math.round(cleanOptionalNumber(root.querySelector("#sport-body-bmr")?.value, 600, 6000) || 0) || null,
-      metabolic_age: Math.round(cleanOptionalNumber(root.querySelector("#sport-body-age")?.value, 10, 120) || 0) || null,
-      protein_pct: cleanOptionalNumber(root.querySelector("#sport-body-protein-pct")?.value, 0, 40),
-      protein_mass_kg: cleanOptionalNumber(root.querySelector("#sport-body-protein-mass")?.value, 0, 120),
-      subcutaneous_fat_pct: cleanOptionalNumber(root.querySelector("#sport-body-subfat")?.value, 0, 70),
-      ideal_weight_kg: cleanOptionalNumber(root.querySelector("#sport-body-ideal-weight")?.value, 20, 250),
-      body_type: String(root.querySelector("#sport-body-type")?.value || "").trim().slice(0, 80) || null,
-      vma_kmh: cleanOptionalNumber(root.querySelector("#sport-body-vma")?.value, 6, 30),
-      vma_source: root.querySelector("#sport-body-vma")?.value ? "measured" : null,
-      measurement_time: String(root.querySelector("#sport-body-time")?.value || "morning"),
-      after_toilet: !!root.querySelector("#sport-body-after-toilet")?.checked,
-      before_food: !!root.querySelector("#sport-body-before-food")?.checked,
-      before_drink: !!root.querySelector("#sport-body-before-drink")?.checked,
-      before_activity: !!root.querySelector("#sport-body-before-activity")?.checked,
-      same_scale: !!root.querySelector("#sport-body-same-scale")?.checked,
-      hard_flat_floor: !!root.querySelector("#sport-body-hard-flat-floor")?.checked,
-      dry_feet: !!root.querySelector("#sport-body-dry-feet")?.checked,
-      notes: String(root.querySelector("#sport-body-notes")?.value || "").trim().slice(0, 500) || null,
-    };
-    const quality = window.UI?.sportProfileView?.bodyMeasurementQuality?.(payload, sportViewApi()) || { score: null, label: null };
-    payload.protocol_quality_score = quality.score;
-    payload.protocol_quality_label = quality.label;
-    return payload;
-  }
-  function mergeBodyMeasurementLocal(payload, id) {
-    const nextRow = Object.assign({}, payload, { id: id || payload.id || `local_${payload.measured_on}_${payload.source}` });
-    const rows = (CACHE.bodyMeasurements || loadBodyMeasurementsLocal())
-      .filter(row => !(String(row.measured_on) === String(nextRow.measured_on) && String(row.source || "impedance_scale") === String(nextRow.source || "impedance_scale")));
-    rows.push(nextRow);
-    saveBodyMeasurementsLocal(rows);
-    if (nextRow.weight_kg) saveBodyWeight(nextRow.weight_kg);
-  }
   async function saveBodyMeasurementFromDom(root) {
-    const payload = readBodyMeasurementFromDom(root);
-    if (!payload.weight_kg && !payload.body_fat_pct && !payload.muscle_mass_kg && !payload.body_water_pct) {
+    const result = await window.UI?.sportBodyMeasurementController?.saveBodyMeasurement?.({
+      root,
+      cache: CACHE,
+      client: client(),
+      userId: uid(),
+      tableName: table("health_body_measurements"),
+      columns: BODY_MEASUREMENT_COLUMNS,
+      storageKey: BODY_MEASUREMENTS_KEY(),
+      today: todayISO(),
+      qualityFn: (payload) => window.UI?.sportProfileView?.bodyMeasurementQuality?.(payload, sportViewApi()),
+      isOfflineError: isOfflineSkipError,
+      onWeight: saveBodyWeight,
+    });
+    const payload = result?.payload || {};
+    if (!result?.ok && result?.reason === "empty") {
       sportFeedback(txt("Ajoute au moins une mesure", "Add at least one metric"), txt("Poids, masse grasse, muscle ou eau.", "Weight, body fat, muscle or water."), { toast: true });
       return false;
     }
-    const c = client();
-    if (!c || !uid()) {
-      mergeBodyMeasurementLocal(Object.assign({}, payload, { user_id: uid() || "local" }));
-      closeBodyMeasurementEditor();
+    closeBodyMeasurementEditor();
+    if (result?.mode === "local") {
       sportFeedback(txt("Mesure enregistree localement", "Measurement saved locally"), payload.measured_on, { toast: true });
       return true;
     }
-    try {
-      const res = await c
-        .from(table("health_body_measurements"))
-        .upsert(Object.assign({}, payload, { user_id: uid(), updated_at: new Date().toISOString() }), { onConflict: "user_id,measured_on,source" })
-        .select(BODY_MEASUREMENT_COLUMNS)
-        .maybeSingle();
-      if (res.error) throw res.error;
-      mergeBodyMeasurementLocal(res.data || payload, res.data?.id);
-      closeBodyMeasurementEditor();
+    if (result?.mode === "remote") {
       sportFeedback(txt("Mesure impédancemètre enregistrée", "Body measurement saved"), payload.measured_on, { toast: true });
       return true;
-    } catch (e) {
-      console.warn("[sport] body measurement save failed", e?.message || e);
-      mergeBodyMeasurementLocal(Object.assign({}, payload, { user_id: uid() || "local" }));
-      closeBodyMeasurementEditor();
+    }
+    if (result?.mode === "offline") {
       sportFeedback(txt("Mesure gardee hors ligne", "Measurement kept offline"), txt("Elle reste disponible localement.", "It remains available locally."), { toast: true });
       return true;
     }
+    return false;
   }
   function loadGlobalRest() {
     try { return Math.max(0, Math.round(n(localStorage.getItem(GLOBAL_REST_KEY()), 60))); } catch (_) { return 60; }
@@ -2681,7 +2572,7 @@
     return txt(fr[idx] || "", en[idx] || "");
   }
   function isSportProfileRuntimeReady() {
-    return Boolean(window.Core?.sportProfileRules?.buildSportProfileRadarData && window.UI?.sportProfileView?.renderSportProfileDashboard);
+    return Boolean(window.Core?.sportProfileRules?.buildSportProfileRadarData && window.UI?.sportProfileView?.renderSportProfileDashboard && window.UI?.sportBodyMeasurementController?.saveBodyMeasurement);
   }
   function ensureSportProfileRuntimeLoaded(reason) {
     if (isSportProfileRuntimeReady()) return Promise.resolve(false);
@@ -2690,6 +2581,8 @@
     if (typeof loader !== "function") return Promise.resolve(false);
     CACHE.sportProfileRuntimeLoading = loader()
       .then(() => {
+        CACHE.bodyMeasurements = loadBodyMeasurementsLocal();
+        CACHE.bodyMeasurementsLoaded = false;
         CACHE.mobilityAssessments = loadMobilityAssessmentsLocal();
         CACHE.mobilityAssessmentsLoaded = false;
         CACHE.exerciseMetricHistoryLoaded = false;

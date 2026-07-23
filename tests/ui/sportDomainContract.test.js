@@ -19,6 +19,7 @@ describe('Sport domain contract', () => {
   const sandboxRules = fs.readFileSync('src/features/sport/sportSessionSandboxRules.js', 'utf8');
   const sandboxView = fs.readFileSync('src/features/sport/sportSessionSandboxView.js', 'utf8');
   const mobilityController = fs.readFileSync('src/features/sport/sportMobilityController.js', 'utf8');
+  const bodyMeasurementController = fs.readFileSync('src/features/sport/sportBodyMeasurementController.js', 'utf8');
   const profileRules = fs.readFileSync('src/features/sport/sportProfileRules.js', 'utf8');
   const profileView = fs.readFileSync('src/features/sport/sportProfileView.js', 'utf8');
   const runtime = fs.readFileSync('src/features/sport/sportRuntime.js', 'utf8');
@@ -54,6 +55,7 @@ describe('Sport domain contract', () => {
     expect(runtime).toContain("import('./sportProfileRules.js')");
     expect(runtime).toContain("import('./sportProfileView.js')");
     expect(runtime).toContain("import('./sportMobilityController.js')");
+    expect(runtime).toContain("import('./sportBodyMeasurementController.js')");
     expect(runtime).toContain('target.TBLoadSportProfileRuntime');
     expect(bridge).not.toContain("import * as sportFormView from '../features/sport/sportFormView.js'");
     expect(bridge).not.toContain("import * as sportTimerController from '../features/sport/sportTimerController.js'");
@@ -64,6 +66,7 @@ describe('Sport domain contract', () => {
     expect(bridge).not.toContain("import * as sportProfileRules from '../features/sport/sportProfileRules.js'");
     expect(bridge).not.toContain("import * as sportProfileView from '../features/sport/sportProfileView.js'");
     expect(bridge).not.toContain("import * as sportMobilityController from '../features/sport/sportMobilityController.js'");
+    expect(bridge).not.toContain("import * as sportBodyMeasurementController from '../features/sport/sportBodyMeasurementController.js'");
   });
 
   it('keeps catalog and library normalization out of the legacy file', () => {
@@ -152,13 +155,16 @@ describe('Sport domain contract', () => {
     expect(profileRules).toContain('export function buildSportProfileRadarData');
     expect(profileView).toContain('export function renderSportProfileDashboard');
     expect(mobilityController).toContain('export async function saveMobilityAssessment');
+    expect(bodyMeasurementController).toContain('export async function saveBodyMeasurement');
     expect(runtime).toContain("import('./sportProfileRules.js')");
     expect(runtime).toContain("import('./sportProfileView.js')");
     expect(runtime).toContain("import('./sportMobilityController.js')");
+    expect(runtime).toContain("import('./sportBodyMeasurementController.js')");
     expect(legacy).toContain('ensureSportProfileRuntimeLoaded(reason)');
     expect(legacy).toContain('sportProfileRules?.buildSportProfileRadarData');
     expect(legacy).toContain('sportProfileView?.renderSportProfileDashboard');
     expect(legacy).toContain('sportMobilityController?.saveMobilityAssessment');
+    expect(legacy).toContain('sportBodyMeasurementController?.saveBodyMeasurement');
   });
 
   it('delegates Sport builder form option rendering to sportFormView', () => {

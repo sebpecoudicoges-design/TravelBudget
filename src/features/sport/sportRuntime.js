@@ -18,7 +18,8 @@ export function installSportProfileRuntime(target = window) {
     import('./sportProfileRules.js'),
     import('./sportProfileView.js'),
     import('./sportMobilityController.js'),
-  ]).then(([sportProfileRules, sportProfileView, sportMobilityController]) => {
+    import('./sportBodyMeasurementController.js'),
+  ]).then(([sportProfileRules, sportProfileView, sportMobilityController, sportBodyMeasurementController]) => {
     target.UI = target.UI || {};
     target.Core = target.Core || {};
     target.Core.sportProfileRules = {
@@ -32,6 +33,10 @@ export function installSportProfileRuntime(target = window) {
     target.UI.sportMobilityController = {
       ...(target.UI.sportMobilityController || {}),
       ...sportMobilityController,
+    };
+    target.UI.sportBodyMeasurementController = {
+      ...(target.UI.sportBodyMeasurementController || {}),
+      ...sportBodyMeasurementController,
     };
     return true;
   }).catch((error) => {
