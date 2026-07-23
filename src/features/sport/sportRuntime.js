@@ -6,9 +6,40 @@ import * as sportTimerController from './sportTimerController.js';
 import * as sportHistoryView from './sportHistoryView.js';
 import * as sportSessionSandboxView from './sportSessionSandboxView.js';
 import * as sportSessionSandboxRules from './sportSessionSandboxRules.js';
-import * as sportProfileRules from './sportProfileRules.js';
-import * as sportProfileView from './sportProfileView.js';
-import * as sportMobilityController from './sportMobilityController.js';
+
+let sportProfileRuntimePromise = null;
+
+export function installSportProfileRuntime(target = window) {
+  if (target.Core?.sportProfileRules && target.UI?.sportProfileView && target.UI?.sportMobilityController) {
+    return Promise.resolve(true);
+  }
+  if (sportProfileRuntimePromise) return sportProfileRuntimePromise;
+  sportProfileRuntimePromise = Promise.all([
+    import('./sportProfileRules.js'),
+    import('./sportProfileView.js'),
+    import('./sportMobilityController.js'),
+  ]).then(([sportProfileRules, sportProfileView, sportMobilityController]) => {
+    target.UI = target.UI || {};
+    target.Core = target.Core || {};
+    target.Core.sportProfileRules = {
+      ...(target.Core.sportProfileRules || {}),
+      ...sportProfileRules,
+    };
+    target.UI.sportProfileView = {
+      ...(target.UI.sportProfileView || {}),
+      ...sportProfileView,
+    };
+    target.UI.sportMobilityController = {
+      ...(target.UI.sportMobilityController || {}),
+      ...sportMobilityController,
+    };
+    return true;
+  }).catch((error) => {
+    sportProfileRuntimePromise = null;
+    throw error;
+  });
+  return sportProfileRuntimePromise;
+}
 
 export function installSportRuntime(target = window) {
   target.UI = target.UI || {};
@@ -45,17 +76,6 @@ export function installSportRuntime(target = window) {
     ...(target.Core.sportSessionSandboxRules || {}),
     ...sportSessionSandboxRules,
   };
-  target.Core.sportProfileRules = {
-    ...(target.Core.sportProfileRules || {}),
-    ...sportProfileRules,
-  };
-  target.UI.sportProfileView = {
-    ...(target.UI.sportProfileView || {}),
-    ...sportProfileView,
-  };
-  target.UI.sportMobilityController = {
-    ...(target.UI.sportMobilityController || {}),
-    ...sportMobilityController,
-  };
+  target.TBLoadSportProfileRuntime = target.TBLoadSportProfileRuntime || (() => installSportProfileRuntime(target));
   return true;
 }

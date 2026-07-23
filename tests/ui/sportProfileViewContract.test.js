@@ -9,13 +9,16 @@ const runtime = readFileSync(new URL('../../src/features/sport/sportRuntime.js',
 describe('Sport profile view bridge', () => {
   it('loads the Sport profile view with the Sport domain', () => {
     expect(main).toContain("import('./features/sport/sportRuntime.js')");
-    expect(runtime).toContain("import * as sportProfileView from './sportProfileView.js'");
+    expect(runtime).toContain("import('./sportProfileView.js')");
     expect(runtime).toContain('target.UI.sportProfileView');
+    expect(runtime).toContain('target.TBLoadSportProfileRuntime');
     expect(bridge).not.toContain("import * as sportProfileView from '../features/sport/sportProfileView.js'");
     expect(bridge).not.toContain('window.UI.sportProfileView = sportProfileView');
   });
 
   it('delegates profile dashboard and body measurement modal rendering to the modular view', () => {
+    expect(sportUi).toContain('ensureSportProfileRuntimeLoaded(reason)');
+    expect(sportUi).toContain('isSportProfileRuntimeReady()');
     expect(sportUi).toContain('window.UI?.sportProfileView?.renderSportProfileDashboard?.({');
     expect(sportUi).toContain('window.UI?.sportProfileView?.renderExerciseProgressionAnalysis?.({');
     expect(sportUi).toContain('window.UI?.sportProfileView?.renderBodyMeasurementModal?.({');

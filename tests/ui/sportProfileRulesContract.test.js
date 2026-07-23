@@ -9,8 +9,9 @@ const runtime = readFileSync(new URL('../../src/features/sport/sportRuntime.js',
 describe('Sport profile rules bridge', () => {
   it('loads the Sport profile rules module with the Sport domain', () => {
     expect(main).toContain("import('./features/sport/sportRuntime.js')");
-    expect(runtime).toContain("import * as sportProfileRules from './sportProfileRules.js'");
+    expect(runtime).toContain("import('./sportProfileRules.js')");
     expect(runtime).toContain('target.Core.sportProfileRules');
+    expect(runtime).toContain('target.TBLoadSportProfileRuntime');
     expect(bridge).not.toContain("import * as sportProfileRules from '../features/sport/sportProfileRules.js'");
     expect(bridge).not.toContain('window.Core.sportProfileRules = sportProfileRules');
   });

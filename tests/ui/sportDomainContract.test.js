@@ -48,12 +48,13 @@ describe('Sport domain contract', () => {
       'sportHistoryView',
       'sportSessionSandboxRules',
       'sportSessionSandboxView',
-      'sportProfileRules',
-      'sportProfileView',
-      'sportMobilityController',
     ]) {
       expect(runtime).toContain(token);
     }
+    expect(runtime).toContain("import('./sportProfileRules.js')");
+    expect(runtime).toContain("import('./sportProfileView.js')");
+    expect(runtime).toContain("import('./sportMobilityController.js')");
+    expect(runtime).toContain('target.TBLoadSportProfileRuntime');
     expect(bridge).not.toContain("import * as sportFormView from '../features/sport/sportFormView.js'");
     expect(bridge).not.toContain("import * as sportTimerController from '../features/sport/sportTimerController.js'");
     expect(bridge).not.toContain("import * as sportTimerView from '../features/sport/sportTimerView.js'");
@@ -151,6 +152,10 @@ describe('Sport domain contract', () => {
     expect(profileRules).toContain('export function buildSportProfileRadarData');
     expect(profileView).toContain('export function renderSportProfileDashboard');
     expect(mobilityController).toContain('export async function saveMobilityAssessment');
+    expect(runtime).toContain("import('./sportProfileRules.js')");
+    expect(runtime).toContain("import('./sportProfileView.js')");
+    expect(runtime).toContain("import('./sportMobilityController.js')");
+    expect(legacy).toContain('ensureSportProfileRuntimeLoaded(reason)');
     expect(legacy).toContain('sportProfileRules?.buildSportProfileRadarData');
     expect(legacy).toContain('sportProfileView?.renderSportProfileDashboard');
     expect(legacy).toContain('sportMobilityController?.saveMobilityAssessment');

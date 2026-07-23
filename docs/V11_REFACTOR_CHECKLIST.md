@@ -117,6 +117,7 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
   - [x] Extraire le CSS general Sport vers `sport.css` et supprimer le style inline du legacy.
   - [x] Realigner le programme SQL A/B en trois dominantes : Poussee, Chaine posterieure et Variantes.
   - [x] Extraire les options du builder Sport vers `sportFormView.js` : objectifs, niveaux, familles, durees, formats, materiels et exercices.
+  - [x] Fractionner le profil Sport en sous-runtime lazy : timer, programme, historique et catalogue chargent avant radar, progression, impedance et mobilite.
 - [x] Nutrition : separer catalogue, journal, objectifs et historique.
   - [x] Extraire les regles pures du catalogue, des totaux par repas, du journal quotidien, des objectifs et des cibles par moment.
   - [x] Extraire le socle repository local/offline Nutrition : cache aliments, lignes locales, sync_id, sommeil et erreurs de synchro.

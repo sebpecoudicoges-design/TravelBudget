@@ -2680,6 +2680,30 @@
     const en = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     return txt(fr[idx] || "", en[idx] || "");
   }
+  function isSportProfileRuntimeReady() {
+    return Boolean(window.Core?.sportProfileRules?.buildSportProfileRadarData && window.UI?.sportProfileView?.renderSportProfileDashboard);
+  }
+  function ensureSportProfileRuntimeLoaded(reason) {
+    if (isSportProfileRuntimeReady()) return Promise.resolve(false);
+    if (CACHE.sportProfileRuntimeLoading) return CACHE.sportProfileRuntimeLoading;
+    const loader = window.TBLoadSportProfileRuntime;
+    if (typeof loader !== "function") return Promise.resolve(false);
+    CACHE.sportProfileRuntimeLoading = loader()
+      .then(() => {
+        CACHE.mobilityAssessments = loadMobilityAssessmentsLocal();
+        CACHE.mobilityAssessmentsLoaded = false;
+        CACHE.exerciseMetricHistoryLoaded = false;
+        return true;
+      })
+      .catch((error) => {
+        console.warn("[sport] profile runtime load failed", error?.message || error);
+        return false;
+      })
+      .finally(() => {
+        CACHE.sportProfileRuntimeLoading = null;
+      });
+    return CACHE.sportProfileRuntimeLoading;
+  }
   function sportProfileRadarData() {
     const data = window.Core?.sportProfileRules?.buildSportProfileRadarData?.({
       sessions: allVisibleSportSessions(),
@@ -2723,6 +2747,9 @@
     };
   }
   function renderSportProfileDashboard() {
+    if (!isSportProfileRuntimeReady()) {
+      return `<div class="tb-sport-profile-grid"><div class="tb-sport-card"><strong>${esc(txt("Profil sportif", "Sport profile"))}</strong><div class="muted">${esc(txt("Chargement du profil, de la progression et des mesures...", "Loading profile, progression and measurements..."))}</div></div></div>`;
+    }
     return window.UI?.sportProfileView?.renderSportProfileDashboard?.({
       data: sportProfileRadarData(),
       latest: latestBodyMeasurement(),
@@ -2731,6 +2758,7 @@
     }) || "";
   }
   function renderExerciseProgressionAnalysis() {
+    if (!isSportProfileRuntimeReady()) return "";
     const fallbackRows = window.Core?.sportProfileRules?.buildExerciseProgressionRowsFromSessions?.({
       sessions: allVisibleSportSessions(),
       planForSession: (sessionId, session) => planFromStoredSession(sessionId || session?.id),
@@ -2748,6 +2776,7 @@
     }) || "";
   }
   function renderBodyMeasurementModal() {
+    if (!isSportProfileRuntimeReady()) return "";
     return window.UI?.sportProfileView?.renderBodyMeasurementModal?.({
       editor: CACHE.bodyMeasurementEditor,
       api: sportViewApi(),
@@ -2831,17 +2860,22 @@
         if (changed && (window.activeView || "") === "sport") renderSport("program-loaded");
       }).catch(() => {});
     }
-    if (!CACHE.bodyMeasurementsLoaded && !CACHE.bodyMeasurementsLoading) {
+    if (!isSportProfileRuntimeReady()) {
+      ensureSportProfileRuntimeLoaded(reason).then((changed) => {
+        if (changed && (window.activeView || "") === "sport") renderSport("profile-runtime-loaded");
+      }).catch(() => {});
+    }
+    if (isSportProfileRuntimeReady() && !CACHE.bodyMeasurementsLoaded && !CACHE.bodyMeasurementsLoading) {
       ensureBodyMeasurementsLoaded(reason).then((changed) => {
         if (changed && (window.activeView || "") === "sport") renderSport("body-measurements-loaded");
       }).catch(() => {});
     }
-    if (!CACHE.mobilityAssessmentsLoaded && !CACHE.mobilityAssessmentsLoading) {
+    if (isSportProfileRuntimeReady() && !CACHE.mobilityAssessmentsLoaded && !CACHE.mobilityAssessmentsLoading) {
       ensureMobilityAssessmentsLoaded(reason).then((changed) => {
         if (changed && (window.activeView || "") === "sport") renderSport("mobility-loaded");
       }).catch(() => {});
     }
-    if (!CACHE.exerciseMetricHistoryLoaded && !CACHE.exerciseMetricHistoryLoading) {
+    if (isSportProfileRuntimeReady() && !CACHE.exerciseMetricHistoryLoaded && !CACHE.exerciseMetricHistoryLoading) {
       ensureExerciseMetricHistoryLoaded(reason).then((changed) => {
         if (changed && (window.activeView || "") === "sport") renderSport("metric-history-loaded");
       }).catch(() => {});

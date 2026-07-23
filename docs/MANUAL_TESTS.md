@@ -6,10 +6,10 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.250`.
-- Bilan : 7 parcours `ok`, 20 parcours `à faire`.
+- Version à valider : `10.5.251`.
+- Bilan : 7 parcours `ok`, 21 parcours `à faire`.
 - Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
-- Les 29 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
+- Les 30 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
 - Consigner les anomalies et retours détaillés dans `docs/ADMIN_TEST_RETURNS.md`.
 
@@ -46,6 +46,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 27 | 10.5.248 | Performance : Sport lazy runtime | Depuis un chargement frais, ouvrir Dashboard puis attendre le boot. Ouvrir ensuite **Sport**, vérifier Timer, Chrono libre, Historique, Ajuster, Profil athlétique et Programme. | Le premier écran charge plus léger. Sport charge ses vues au premier accès, sans écran vide ni module manquant. | `TB BUILD 10.5.248` ; aucun `sportRuntime` load failed, aucun `sportTimerView`, `sportHistoryView` ou `sportSessionSandboxView` manquant, aucun `Uncaught`. | à faire |
 | 28 | 10.5.249 | Sport : éditeur séances programmées | Ouvrir **Sport**, aller dans les séances favorites/programme, modifier une séance A/B, ajouter un exercice, changer reps min/max, charge, repos, puis enregistrer. | La fenêtre garde le même comportement, les champs restent remplis, l’ordre des exercices et les hooks modifier/supprimer fonctionnent. | `TB BUILD 10.5.249` ; aucun `renderSessionEditorModal` manquant, aucun `Uncaught`. | à faire |
 | 29 | 10.5.250 | Performance : catalogue Sport lazy | Depuis un chargement frais, ouvrir Dashboard puis vérifier la console. Ouvrir ensuite **Sport** et ajouter un exercice depuis la bibliothèque. | Le premier écran charge plus léger. Le catalogue Sport apparaît seulement à l’ouverture de Sport, sans erreur `Sport catalog indisponible`. | `TB BUILD 10.5.250` ; Sport s’ouvre, les exercices apparaissent, aucun `Uncaught`. | à faire |
+| 30 | 10.5.251 | Sport : profil en sous-runtime | Depuis un chargement frais, ouvrir Dashboard puis **Sport**. Vérifier Timer, Programme et Historique immédiatement, puis ouvrir Profil athlétique, Analyse progression charges, Mesures et Mobilité. | Sport reste utilisable avant le profil complet. Le profil/radar/progression/mesures apparaissent automatiquement sans recharger la page. | `TB BUILD 10.5.251` ; aucun `sport profile runtime load failed`, aucun module `sportProfileView` ou `sportMobilityController` manquant, aucun `Uncaught`. | à faire |
 
 ## À ajouter à chaque livraison
 
