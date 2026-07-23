@@ -193,8 +193,7 @@ function hasRequiredBridgeGlobals() {
   return Boolean(
     window.__tbBridgeReady &&
       window.Data?.createMutationQueueStore &&
-      window.Data?.createTripStore &&
-      window.Core?.sportCatalog
+      window.Data?.createTripStore
   );
 }
 

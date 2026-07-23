@@ -12,26 +12,26 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.249` :
+Snapshot `10.5.250` :
 
 - Boot legacy : 877.8 / 1500 KiB.
 - Inbox : 111.9 / 112 KiB.
 - Dashboard + Settings : 351.6 / 360 KiB.
 - Trip : 309.4 / 340 KiB.
-- Sport : 424.6 / 450 KiB.
+- Sport : 424.8 / 450 KiB.
 - Nutrition : 193.2 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
-- Bundle Vite JS initial : 283.6 / 295 KiB.
-- Bundle Vite JS lazy : 300.3 / 302 KiB.
+- Bundle Vite JS initial : 252.2 / 260 KiB.
+- Bundle Vite JS lazy : 331.7 / 335 KiB.
 - Bundle Vite JS total : 583.9 / 585 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
-- JS principal gzip : 78.2 / 110 KiB.
+- JS principal gzip : 72.2 / 110 KiB.
 
 ## Budgets actuels
 
-- Bundle Vite JS initial : 295 KiB maximum.
-- Bundle Vite JS lazy : 302 KiB maximum.
+- Bundle Vite JS initial : 260 KiB maximum.
+- Bundle Vite JS lazy : 335 KiB maximum.
 - Bundle Vite JS total : 585 KiB maximum.
 - Bundle Vite CSS total : 8 KiB maximum.
 - JS principal gzip : 110 KiB maximum.
@@ -47,4 +47,4 @@ Ces plafonds ne sont pas des objectifs finaux. Ils sont volontairement proches d
 
 ## Regle de suivi
 
-Un lot qui ajoute du poids a un domaine doit expliquer pourquoi. Pour 10.5.249, le rendu de la fenetre Sport de modification des seances programmees quitte le legacy et passe dans `sportProgramView.js`, avec tests. Le premier ecran reste stable a 283.6 KiB et le main gzip reste a 78.2 KiB, mais le lazy monte a 300.3 KiB et le total a 583.9 KiB. Cette hausse est acceptee comme dette legacy transformee en module teste ; le prochain lot doit compenser ce cout par une reduction de bundle ou par une extraction sans hausse Vite. Un lot qui extrait une responsabilite vers `src` doit verifier que le budget reste vert, puis ajuster le plafond uniquement si le gain de qualite est explicite ou si le gain de poids est confirme par `npm run perf:budget`.
+Un lot qui ajoute du poids a un domaine doit expliquer pourquoi. Pour 10.5.250, le catalogue Sport quitte le bridge initial et est installe par `sportRuntime.js` uniquement quand l'onglet Sport est demande. Le JS initial descend a 252.2 KiB et le main gzip a 72.2 KiB. Le lazy monte a 331.7 KiB sans hausse du total, car le poids est deplace vers un domaine charge a la demande. Le prochain lot doit continuer a proteger le premier ecran, ou fractionner Sport pour reduire le chunk Sport lui-meme. Un lot qui extrait une responsabilite vers `src` doit verifier que le budget reste vert, puis ajuster le plafond uniquement si le gain de qualite est explicite ou si le gain de poids est confirme par `npm run perf:budget`.

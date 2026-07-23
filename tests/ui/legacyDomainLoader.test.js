@@ -85,7 +85,7 @@ describe('legacy domain loader', () => {
     expect(main).toContain('function waitForBridgeReady()');
     expect(main).toContain('window.Data?.createMutationQueueStore');
     expect(main).toContain('window.Data?.createTripStore');
-    expect(main).toContain('window.Core?.sportCatalog');
+    expect(main).not.toContain('window.Core?.sportCatalog');
 
     const domainLoader = main.slice(main.indexOf('window.tbLoadLegacyDomain'), main.indexOf('window.tbIsLegacyDomainLoaded'));
     expect(domainLoader).toContain('await waitForBridgeReady();');

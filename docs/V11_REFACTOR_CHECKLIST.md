@@ -263,6 +263,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire le chrono libre Sport : selection, grand ecran, actions stop/pause/cancel et champs resultat passent dans `sportTimerView.js`.
   - [x] Regrouper les vues Sport extraites dans un runtime lazy unique : initial JS 320.1 -> 283.6 KiB, main gzip 86.9 -> 78.2 KiB.
   - [x] Extraire la fenetre d'edition des seances programmees Sport vers `sportProgramView.js`, avec hooks stables et test anti-retour legacy.
+  - [x] Sortir le catalogue Sport du bridge initial vers `sportRuntime.js` : initial JS 283.6 -> 252.2 KiB, main gzip 78.2 -> 72.2 KiB.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

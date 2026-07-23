@@ -1,3 +1,4 @@
+import * as sportCatalog from './sportCatalog.js';
 import * as sportFormView from './sportFormView.js';
 import * as sportProgramView from './sportProgramView.js';
 import * as sportTimerView from './sportTimerView.js';
@@ -12,6 +13,10 @@ import * as sportMobilityController from './sportMobilityController.js';
 export function installSportRuntime(target = window) {
   target.UI = target.UI || {};
   target.Core = target.Core || {};
+  target.Core.sportCatalog = {
+    ...(target.Core.sportCatalog || {}),
+    ...sportCatalog,
+  };
   target.UI.sportFormView = {
     ...(target.UI.sportFormView || {}),
     ...sportFormView,

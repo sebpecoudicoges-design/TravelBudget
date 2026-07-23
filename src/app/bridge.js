@@ -30,7 +30,6 @@ import { createTripStore } from '../features/trip/tripStore.js';
 import { createSportStore } from '../features/sport/sportStore.js';
 import { createNutritionStore } from '../features/nutrition/nutritionStore.js';
 import * as tripView from '../features/trip/tripView.js';
-import * as sportCatalog from '../features/sport/sportCatalog.js';
 import * as sportProgramRules from '../features/sport/sportProgramRules.js';
 import { storageQuota } from '../data/storageQuota.js';
 import * as sportRules from '../core/sportRules.js';
@@ -61,7 +60,6 @@ window.Core.recurringRules = recurringRules;
 window.Core.canonicalRecords = canonicalRecords;
 window.Core.sportRules = sportRules;
 window.Core.loadSportProgressionRules = () => import('../core/sportProgressionRules.js');
-window.Core.sportCatalog = sportCatalog;
 window.Core.sportProgramRules = sportProgramRules;
 
 window.Data = window.Data || {};

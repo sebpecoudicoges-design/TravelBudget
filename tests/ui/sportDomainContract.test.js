@@ -29,7 +29,6 @@ describe('Sport domain contract', () => {
       'sportLibraryRules',
       'createSportRepository',
       'createSportStore',
-      'sportCatalog',
       'sportProgramRules',
     ]) {
       expect(bridge).toContain(token);
@@ -38,6 +37,10 @@ describe('Sport domain contract', () => {
     expect(bridge).toContain('window.Data.sportRepository');
     expect(bridge).toContain('window.Data.createSportStore');
     expect(main).toContain("import('./features/sport/sportRuntime.js')");
+    expect(runtime).toContain("import * as sportCatalog from './sportCatalog.js'");
+    expect(runtime).toContain('target.Core.sportCatalog');
+    expect(bridge).not.toContain("import * as sportCatalog from '../features/sport/sportCatalog.js'");
+    expect(bridge).not.toContain('window.Core.sportCatalog = sportCatalog');
     for (const token of [
       'sportFormView',
       'sportTimerController',
