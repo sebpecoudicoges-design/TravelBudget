@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 describe('sport fullscreen focus contract', () => {
   const sport = fs.readFileSync('public/legacy/js/45_sport_ui.js', 'utf8');
+  const sportTimerView = fs.readFileSync('src/features/sport/sportTimerView.js', 'utf8');
   const sportCss = fs.readFileSync('public/legacy/css/sport.css', 'utf8');
   const mobileCss = fs.readFileSync('public/legacy/css/sport_mobile.css', 'utf8');
 
@@ -39,8 +40,8 @@ describe('sport fullscreen focus contract', () => {
 
   it('keeps the free sport timer persistent, fullscreen-capable and background-aware', () => {
     expect(sport).toContain('FREE_TIMER_STATE_KEY');
-    expect(sport).toContain('function renderFreeTimer()');
-    expect(sport).toContain('id="sport-free-focus"');
+    expect(sport).toContain('window.UI?.sportTimerView?.renderFreeTimer?.({');
+    expect(sportTimerView).toContain('id="sport-free-focus"');
     expect(sportCss).toContain('tb-sport-free-card.focus');
     expect(sport).toContain('saveFreeTimerState();');
     expect(sport).toContain('loadFreeTimerState()');

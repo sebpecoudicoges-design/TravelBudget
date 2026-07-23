@@ -19,12 +19,14 @@ describe('Sport view extraction bridge', () => {
     expect(sportUi).toContain('window.UI?.sportProgramView?.renderPlannedSportWeek?.({');
     expect(sportUi).toContain('window.UI?.sportProgramView?.renderProgramSettings?.({');
     expect(sportUi).toContain('window.UI?.sportTimerView?.renderSportTimer?.({');
+    expect(sportUi).toContain('window.UI?.sportTimerView?.renderFreeTimer?.({');
     expect(sportUi).toContain('window.UI?.sportTimerView?.renderFinishWorkoutModal?.({');
     expect(sportUi).toContain('window.UI?.sportHistoryView?.renderSportHistory?.({');
     expect(sportUi).toContain('api: sportViewApi()');
     expect(sportUi).not.toContain('function renderProgramCockpit(');
     expect(sportUi).not.toContain('function programDayOptions(');
     expect(sportUi).not.toContain('function renderTimerTimeline(');
+    expect(sportUi).not.toContain('id="sport-free-start"');
     expect(sportUi).not.toContain('function renderHistoryGrid(');
     expect(sportUi).not.toContain('function renderSessionContent(');
     expect(sportUi).not.toContain('id="sport-finish-notes" rows="3"');

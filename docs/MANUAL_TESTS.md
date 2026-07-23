@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.246`.
-- Bilan : 7 parcours `ok`, 18 parcours `à faire`.
+- Version à valider : `10.5.247`.
+- Bilan : 7 parcours `ok`, 19 parcours `à faire`.
 - Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
 - Les 29 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -42,6 +42,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 23 | 10.5.244 | Performance Sport lazy | Depuis un chargement frais, ouvrir Dashboard puis **Sport**. Aller sur le profil athlétique et **Analyse progression charges**, changer un filtre et revenir au timer. | Le premier écran reste léger, Sport charge ses modules profil/progression à l'ouverture et toutes les cartes Sport restent disponibles. | `TB BUILD 10.5.244` ; aucun `sportProfileRules` ou `sportProfileView` manquant, aucun `Uncaught`. | à faire |
 | 24 | 10.5.245 | Sport : VMA, impédancemètre, mobilité | Ouvrir **Sport > Profil athlétique**. Saisir une VMA mesurée dans **Mesures**, enregistrer, puis saisir les 5 tests mobilité avec une douleur sur un test. Rafraîchir et revenir sur le profil. | Le cardio affiche la VMA mesurée en priorité, ou une VMA estimée avec vitesse moyenne quand une course exploitable existe. Les tendances impédancemétriques affichent qualité, masse maigre/graisse et alertes. La mobilité affiche le score `/10`, la douleur et persiste après refresh. | `TB BUILD 10.5.245` ; aucun `sportMobilityController` manquant, aucune colonne `vma_kmh` manquante, aucune table `mobility_assessments` manquante, aucun `Uncaught`. | à faire |
 | 25 | 10.5.246 | Sport : fin de séance | Lancer une séance Sport courte, terminer, puis dans la fenêtre de fin ajouter planche ou stretch, choisir humeur, régler effort et sauvegarder. Refaire le parcours avec **Ignorer**. | La fenêtre de fin s'ouvre comme avant, le résumé se met à jour après planche/stretch, les boutons sauvegarde/ignorer persistent la séance et aucun champ n'a disparu. | `TB BUILD 10.5.246` ; aucun `renderFinishWorkoutModal` manquant, aucun `Uncaught`. | à faire |
+| 26 | 10.5.247 | Sport : chrono libre | Ouvrir **Sport**, choisir un exercice dans **Chrono libre**, démarrer, passer en grand écran, arrêter, saisir distance/reps/charge selon l'exercice, sauvegarder. | Le chrono libre garde le rendu et les boutons d'avant, le grand écran reste disponible, les champs de résultat s'affichent après arrêt et la séance sauvegardée rejoint l'historique. | `TB BUILD 10.5.247` ; aucun `renderFreeTimer` manquant, aucun `Uncaught`. | à faire |
 
 ## À ajouter à chaque livraison
 

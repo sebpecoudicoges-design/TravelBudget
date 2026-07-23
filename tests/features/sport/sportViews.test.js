@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderSportHistory } from '../../../src/features/sport/sportHistoryView.js';
 import { renderLoadRecommendations, renderPlannedSportWeek, renderProgramSettings } from '../../../src/features/sport/sportProgramView.js';
-import { renderFinishWorkoutModal, renderSportTimer } from '../../../src/features/sport/sportTimerView.js';
+import { renderFinishWorkoutModal, renderFreeTimer, renderSportTimer } from '../../../src/features/sport/sportTimerView.js';
 
 const api = {
   translate: (fr) => fr,
@@ -98,6 +98,50 @@ describe('Sport timer view', () => {
     expect(html).toContain('data-mood="Tres bien"');
     expect(html).toContain('id="sport-finish-effort"');
     expect(html).toContain('id="sport-finish-save"');
+  });
+
+  it('renders the free timer selector and running actions with stable hooks', () => {
+    const selected = { exerciseName: 'Course facile', activityKey: 'cardio', equipment: 'none', mode: 'time' };
+    const idle = renderFreeTimer({
+      selected,
+      selectedKey: 'easy_run',
+      exerciseOptionsHTML: '<option value="easy_run" selected>Course facile</option>',
+      api,
+    });
+    expect(idle).toContain('Chrono libre');
+    expect(idle).toContain('id="sport-free-exercise"');
+    expect(idle).toContain('id="sport-free-start"');
+
+    const running = renderFreeTimer({
+      running: { paused: false },
+      selected,
+      elapsedSeconds: 90,
+      timerFocus: true,
+      api,
+    });
+    expect(running).toContain('tb-sport-free-card focus');
+    expect(running).toContain('90s');
+    expect(running).toContain('id="sport-free-focus"');
+    expect(running).toContain('id="sport-free-stop"');
+    expect(running).toContain('id="sport-free-pause"');
+    expect(running).toContain('id="sport-free-cancel"');
+  });
+
+  it('renders free timer result fields when stopped', () => {
+    const html = renderFreeTimer({
+      running: { stoppedAt: 1000, resultReps: 12, resultWeightKg: 55, resultDistanceM: 5000 },
+      selected: { exerciseName: 'Developpe couche', activityKey: 'strength', equipment: 'barbell', mode: 'reps' },
+      elapsedSeconds: 120,
+      stopped: true,
+      api,
+    });
+
+    expect(html).toContain('id="sport-free-reps"');
+    expect(html).toContain('id="sport-free-load"');
+    expect(html).toContain('id="sport-free-distance"');
+    expect(html).toContain('id="sport-free-effort"');
+    expect(html).toContain('id="sport-free-save"');
+    expect(html).toContain('5 km');
   });
 });
 

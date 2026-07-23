@@ -104,6 +104,7 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
   - [x] Extraire le store Sport et migrer plan, historique local, hydratation offline/SQL et suppressions en attente vers `entityStore`.
   - [x] Extraire les vues Timer et Historique hors du fichier legacy.
   - [x] Extraire le rendu de la fenetre de fin de seance Sport vers `sportTimerView.js`.
+  - [x] Extraire le rendu du chrono libre Sport vers `sportTimerView.js`.
   - [x] Extraire la vue de la fenetre `Ajuster` hors du fichier legacy.
   - [x] Extraire les regles pures de la fenetre `Ajuster` : renumerotation, suppression et ajout de series.
   - [x] Extraire les regles du radar forces/faiblesses et durcir les comparaisons par axe.
@@ -259,6 +260,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Charger le profil et l'analyse progression Sport avec le domaine Sport au lieu du bridge initial : bundle initial 349.6 -> 317.2 KiB.
   - [x] Ajouter le controleur Sport mobilite en lazy avec le domaine Sport, sans gonfler le bundle initial : 317.4 KiB.
   - [x] Extraire la fenetre de fin de seance Sport : le legacy garde les handlers, le HTML passe dans `sportTimerView.js`.
+  - [x] Extraire le chrono libre Sport : selection, grand ecran, actions stop/pause/cancel et champs resultat passent dans `sportTimerView.js`.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
 ## Chantier 6 - Qualite et livraison

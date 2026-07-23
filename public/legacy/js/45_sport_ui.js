@@ -2662,54 +2662,16 @@
     const selectedKey = selected.libraryKey || selected.key || freeTimerSelectedExercise()?.key || "";
     const elapsed = running ? freeTimerElapsedSeconds(running) : 0;
     const stopped = !!running?.stoppedAt;
-    const mode = String(selected?.mode || "time");
-    const load = n(running?.resultWeightKg ?? selected?.weightKg, 0);
-    const reps = n(running?.resultReps ?? selected?.targetReps, 0);
-    const distance = n(running?.resultDistanceM ?? selected?.distanceM, 0);
-    const supportsLoad = supportsExternalLoad(selected);
-    const resultFields = stopped ? `
-      <div class="tb-sport-fields" style="margin-top:12px;">
-        ${mode === "reps" ? `<div class="tb-sport-field"><label>${esc(txt("Repetitions faites", "Completed reps"))}</label><input id="sport-free-reps" type="number" min="0" inputmode="numeric" value="${esc(String(Math.max(0, Math.round(reps || 0))))}"></div>` : ""}
-        ${supportsLoad ? `<div class="tb-sport-field"><label>${esc(txt("Charge kg", "Load kg"))}</label><input id="sport-free-load" type="number" step="0.5" inputmode="decimal" value="${esc(String(Math.round(load * 10) / 10))}"></div>` : ""}
-        <div class="tb-sport-field"><label>${esc(txt("Distance metres", "Distance meters"))}</label><input id="sport-free-distance" type="number" min="0" inputmode="numeric" value="${esc(String(Math.max(0, Math.round(distance || 0))))}" placeholder="${esc(txt("Ex : 5000 pour 5 km", "E.g. 5000 for 5 km"))}"></div>
-        <div class="tb-sport-field"><label>${esc(txt("Effort /10", "Effort /10"))}</label><input id="sport-free-effort" type="range" min="1" max="10" value="6"></div>
-      </div>
-      <div class="tb-sport-actions" style="justify-content:center;margin-top:12px;">
-        <button class="btn primary" type="button" id="sport-free-save">${esc(txt("Sauvegarder", "Save"))}</button>
-        <button class="btn" type="button" id="sport-free-discard">${esc(txt("Annuler", "Cancel"))}</button>
-      </div>` : "";
-    return `
-      <div class="tb-sport-card tb-sport-free-card ${CACHE.timerFocus && running ? "focus" : ""}">
-        <h3>${esc(txt("Chrono libre", "Free timer"))}</h3>
-        <div class="tb-sport-timer tb-sport-free-timer">
-          <div class="tb-sport-live-head">
-            <div>
-              <div class="kind">${esc(stopped ? txt("A sauvegarder", "Ready to save") : running ? txt("Chrono en cours", "Timer running") : txt("Libre", "Free"))}</div>
-              <div class="hint">${esc(txt("Choisis un exercice, lance le chrono reel, puis saisis distance, reps ou charge a la fin.", "Choose an exercise, start the real timer, then enter distance, reps or load at the end."))}</div>
-            </div>
-            <div class="tb-sport-actions">
-              ${running ? `<button class="btn small" type="button" id="sport-free-focus">${esc(CACHE.timerFocus ? txt("Reduire", "Exit focus") : txt("Grand ecran", "Big screen"))}</button>` : ""}
-            </div>
-          </div>
-          <div class="tb-sport-live-focus">
-            <div class="name">${esc(selected.exerciseName || labelActivity(selected.activityKey))}</div>
-            <div class="clock" data-sport-free-clock>${fmtSec(elapsed)}</div>
-            <div class="hint">${esc(labelActivity(selected.activityKey))} · ${esc(labelEquipment(selected.equipment))}${distance ? ` · ${Math.round(distance / 10) / 100} km` : ""}</div>
-          </div>
-          ${!running ? `<div class="tb-sport-fields" style="margin-top:12px;">
-            <div class="tb-sport-field"><label>${esc(txt("Exercice", "Exercise"))}</label><select id="sport-free-exercise">${libraryOptions("free", "all", selectedKey)}</select></div>
-          </div>
-          <div class="tb-sport-actions" style="justify-content:center;margin-top:12px;">
-            <button class="btn primary" type="button" id="sport-free-start">${esc(txt("Demarrer chrono", "Start timer"))}</button>
-          </div>` : ""}
-          ${running && !stopped ? `<div class="tb-sport-actions" style="justify-content:center;margin-top:12px;">
-            <button class="btn primary" type="button" id="sport-free-stop">${esc(txt("Arreter", "Stop"))}</button>
-            <button class="btn" type="button" id="sport-free-pause">${esc(running.paused ? txt("Reprendre", "Resume") : txt("Pause", "Pause"))}</button>
-            <button class="btn danger" type="button" id="sport-free-cancel">${esc(txt("Abandonner", "Discard"))}</button>
-          </div>` : ""}
-          ${resultFields}
-        </div>
-      </div>`;
+    return window.UI?.sportTimerView?.renderFreeTimer?.({
+      running,
+      selected,
+      selectedKey,
+      elapsedSeconds: elapsed,
+      stopped,
+      timerFocus: CACHE.timerFocus,
+      exerciseOptionsHTML: libraryOptions("free", "all", selectedKey),
+      api: sportViewApi(),
+    }) || "";
   }
 
   function allVisibleSportSessions() {
