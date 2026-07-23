@@ -119,6 +119,7 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
   - [x] Extraire les options du builder Sport vers `sportFormView.js` : objectifs, niveaux, familles, durees, formats, materiels et exercices.
   - [x] Fractionner le profil Sport en sous-runtime lazy : timer, programme, historique et catalogue chargent avant radar, progression, impedance et mobilite.
   - [x] Extraire le controleur des mesures impedancemetriques Sport : lecture DOM, cache local, upsert SQL et reference poids quittent `45_sport_ui.js`.
+  - [x] Extraire la persistance timer Sport : preferences bip, timer guide, chrono libre, normalisation et clear quittent `45_sport_ui.js` vers `sportTimerController.js`.
 - [x] Nutrition : separer catalogue, journal, objectifs et historique.
   - [x] Extraire les regles pures du catalogue, des totaux par repas, du journal quotidien, des objectifs et des cibles par moment.
   - [x] Extraire le socle repository local/offline Nutrition : cache aliments, lignes locales, sync_id, sommeil et erreurs de synchro.

@@ -355,6 +355,490 @@
     }
     .mock-doc-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
 
+    .cash-dashboard {
+      position: relative;
+      min-height: 484px;
+      padding: 18px;
+      border: 1px solid rgba(94, 234, 212, .16);
+      border-radius: 24px;
+      overflow: hidden;
+      color: #e8f7ff;
+      background:
+        radial-gradient(circle at 78% 14%, rgba(34, 211, 238, .16), transparent 28%),
+        radial-gradient(circle at 16% 82%, rgba(139, 92, 246, .15), transparent 34%),
+        linear-gradient(145deg, #07101e 0%, #0a1628 58%, #07111f 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 24px 60px rgba(2, 8, 23, .22);
+      isolation: isolate;
+    }
+    .cash-dashboard::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      opacity: .24;
+      background-image:
+        linear-gradient(rgba(125, 211, 252, .09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(125, 211, 252, .09) 1px, transparent 1px);
+      background-size: 34px 34px;
+      mask-image: linear-gradient(to bottom, #000, transparent 94%);
+    }
+    .cash-topline,
+    .cash-heading,
+    .cash-periods,
+    .cash-stats,
+    .cash-bottom {
+      display: flex;
+      align-items: center;
+    }
+    .cash-topline { justify-content: space-between; gap: 12px; }
+    .cash-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #a5f3fc;
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .cash-live i {
+      width: 7px;
+      height: 7px;
+      border-radius: 99px;
+      background: #2dd4bf;
+      box-shadow: 0 0 0 5px rgba(45, 212, 191, .11), 0 0 18px #2dd4bf;
+      animation: cashPulse 1.8s ease-in-out infinite;
+    }
+    .cash-ai {
+      color: #8da5bd;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 10px;
+      letter-spacing: .05em;
+    }
+    .cash-heading {
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      margin-top: 22px;
+    }
+    .cash-heading small {
+      display: block;
+      color: #7f97af;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .cash-heading h3 {
+      margin: 7px 0 0;
+      color: #f8fdff;
+      font-size: clamp(34px, 5vw, 48px);
+      line-height: .95;
+      letter-spacing: -.045em;
+      text-shadow: 0 0 28px rgba(103, 232, 249, .16);
+    }
+    .cash-delta {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 11px;
+      border: 1px solid rgba(45, 212, 191, .22);
+      border-radius: 999px;
+      color: #5eead4;
+      background: rgba(15, 118, 110, .12);
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .cash-periods {
+      gap: 4px;
+      margin: 17px 0 10px;
+      padding: 4px;
+      width: max-content;
+      border: 1px solid rgba(148, 163, 184, .13);
+      border-radius: 999px;
+      background: rgba(3, 12, 24, .42);
+    }
+    .cash-period {
+      min-width: 43px;
+      min-height: 28px;
+      border: 0;
+      border-radius: 999px;
+      color: #7189a1;
+      background: transparent;
+      font-size: 10px;
+      font-weight: 950;
+      cursor: pointer;
+    }
+    .cash-period:hover { color: #dff8ff; }
+    .cash-period.active {
+      color: #dffcff;
+      background: rgba(34, 211, 238, .13);
+      box-shadow: inset 0 0 0 1px rgba(103, 232, 249, .17), 0 0 20px rgba(34, 211, 238, .08);
+    }
+    .cash-canvas-wrap {
+      position: relative;
+      height: 178px;
+      margin: 0 -4px;
+      border-radius: 18px;
+      cursor: crosshair;
+    }
+    #cashCanvas { display: block; width: 100%; height: 100%; }
+    .cash-tooltip {
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: 2;
+      min-width: 92px;
+      padding: 8px 10px;
+      border: 1px solid rgba(103, 232, 249, .25);
+      border-radius: 11px;
+      color: #dffcff;
+      background: rgba(3, 10, 21, .88);
+      box-shadow: 0 12px 28px rgba(0,0,0,.28);
+      backdrop-filter: blur(12px);
+      font-size: 10px;
+      line-height: 1.4;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(-50%, -115%);
+      transition: opacity .16s ease;
+    }
+    .cash-tooltip strong { display: block; color: #fff; font-size: 12px; }
+    .cash-tooltip.visible { opacity: 1; }
+    .cash-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .cash-stat {
+      min-width: 0;
+      padding: 10px 11px;
+      border: 1px solid rgba(148, 163, 184, .12);
+      border-radius: 14px;
+      background: rgba(255,255,255,.035);
+    }
+    .cash-stat span {
+      display: block;
+      overflow: hidden;
+      color: #7189a1;
+      font-size: 9px;
+      font-weight: 850;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .cash-stat strong {
+      display: block;
+      margin-top: 5px;
+      overflow: hidden;
+      color: #e8f7ff;
+      font-size: 13px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .cash-bottom {
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 13px;
+      padding-top: 13px;
+      border-top: 1px solid rgba(148, 163, 184, .10);
+    }
+    .cash-signal {
+      min-width: 0;
+      color: #7890a8;
+      font-size: 10px;
+      font-weight: 800;
+    }
+    .cash-signal strong {
+      display: block;
+      margin-top: 3px;
+      overflow: hidden;
+      color: #dceef8;
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .cash-confidence {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #7f97af;
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .cash-confidence i {
+      position: relative;
+      display: block;
+      width: 48px;
+      height: 3px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: rgba(148, 163, 184, .18);
+    }
+    .cash-confidence i::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      width: var(--cash-confidence, 74%);
+      border-radius: inherit;
+      background: linear-gradient(90deg, #8b5cf6, #22d3ee, #2dd4bf);
+      box-shadow: 0 0 12px #22d3ee;
+    }
+    @keyframes cashPulse {
+      50% { opacity: .55; transform: scale(.82); }
+    }
+
+    .atlas-shell {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(280px, .72fr);
+      min-height: 590px;
+      border: 1px solid rgba(96, 165, 250, .16);
+      border-radius: 30px;
+      overflow: hidden;
+      color: #e7f5ff;
+      background:
+        radial-gradient(circle at 30% 45%, rgba(37, 99, 235, .14), transparent 35%),
+        radial-gradient(circle at 76% 18%, rgba(124, 58, 237, .13), transparent 29%),
+        linear-gradient(145deg, #060d19, #091426 54%, #07101d);
+      box-shadow: 0 30px 90px rgba(15, 23, 42, .19);
+    }
+    .atlas-stage {
+      position: relative;
+      min-height: 590px;
+      overflow: hidden;
+      border-right: 1px solid rgba(148, 163, 184, .11);
+      background-image:
+        radial-gradient(circle, rgba(125, 211, 252, .16) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .atlas-stage::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at center, transparent 0 28%, rgba(2, 8, 23, .2) 72%, rgba(2, 8, 23, .62));
+    }
+    .atlas-toolbar {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      right: 18px;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .atlas-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #7dd3fc;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .atlas-status i {
+      width: 7px;
+      height: 7px;
+      border-radius: 99px;
+      background: #38bdf8;
+      box-shadow: 0 0 16px #38bdf8;
+    }
+    .atlas-filters {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid rgba(148, 163, 184, .13);
+      border-radius: 999px;
+      background: rgba(2, 8, 23, .66);
+      backdrop-filter: blur(14px);
+    }
+    .atlas-filter {
+      min-height: 30px;
+      padding: 0 11px;
+      border: 0;
+      border-radius: 999px;
+      color: #7890a8;
+      background: transparent;
+      font-size: 10px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .atlas-filter:hover { color: #e0f2fe; }
+    .atlas-filter.active {
+      color: #ecfeff;
+      background: rgba(14, 165, 233, .15);
+      box-shadow: inset 0 0 0 1px rgba(125, 211, 252, .18);
+    }
+    #atlasCanvas {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .atlas-nodes { position: absolute; inset: 0; z-index: 3; }
+    .atlas-node {
+      --node-color: #38bdf8;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 108px;
+      min-height: 56px;
+      padding: 8px 10px;
+      border: 1px solid color-mix(in srgb, var(--node-color) 40%, transparent);
+      border-radius: 15px;
+      color: #dceffc;
+      background: rgba(7, 18, 34, .88);
+      box-shadow: 0 12px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.045);
+      backdrop-filter: blur(10px);
+      text-align: left;
+      cursor: pointer;
+      transform: translate(-50%, -50%);
+      transition: opacity .22s ease, border-color .22s ease, box-shadow .22s ease, transform .22s ease;
+    }
+    .atlas-node::before {
+      content: "";
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 99px;
+      background: var(--node-color);
+      box-shadow: 0 0 13px var(--node-color);
+    }
+    .atlas-node small {
+      display: block;
+      margin-left: 11px;
+      overflow: hidden;
+      color: color-mix(in srgb, var(--node-color) 78%, white);
+      font-size: 8px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .atlas-node strong {
+      display: block;
+      margin-top: 6px;
+      overflow: hidden;
+      font-size: 11px;
+      line-height: 1.15;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .atlas-node:hover,
+    .atlas-node.active {
+      z-index: 2;
+      border-color: var(--node-color);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--node-color) 10%, transparent), 0 0 28px color-mix(in srgb, var(--node-color) 24%, transparent);
+      transform: translate(-50%, -50%) scale(1.055);
+    }
+    .atlas-node.muted { opacity: .17; }
+    .atlas-core {
+      position: absolute;
+      left: 50%;
+      top: 51%;
+      z-index: 4;
+      width: 126px;
+      height: 126px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(103, 232, 249, .28);
+      border-radius: 50%;
+      color: #ecfeff;
+      background:
+        radial-gradient(circle, rgba(34, 211, 238, .17), rgba(30, 64, 175, .11) 45%, rgba(2, 8, 23, .9) 72%);
+      box-shadow: inset 0 0 28px rgba(34, 211, 238, .09), 0 0 45px rgba(37, 99, 235, .16);
+      text-align: center;
+      transform: translate(-50%, -50%);
+    }
+    .atlas-core::before,
+    .atlas-core::after {
+      content: "";
+      position: absolute;
+      inset: -12px;
+      border: 1px dashed rgba(125, 211, 252, .18);
+      border-radius: 50%;
+      animation: atlasOrbit 18s linear infinite;
+    }
+    .atlas-core::after {
+      inset: -25px;
+      border-color: rgba(167, 139, 250, .12);
+      animation-direction: reverse;
+      animation-duration: 28s;
+    }
+    .atlas-core span { display: block; color: #7dd3fc; font-size: 9px; font-weight: 900; letter-spacing: .15em; }
+    .atlas-core strong { display: block; margin-top: 5px; font-size: 24px; letter-spacing: -.04em; }
+    .atlas-core small { display: block; margin-top: 3px; color: #7189a1; font-size: 9px; font-weight: 800; }
+    .atlas-panel {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      background: rgba(3, 10, 20, .38);
+    }
+    .atlas-panel-kicker {
+      color: #7dd3fc;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .atlas-panel h3 { margin: 10px 0 4px; font-size: 28px; line-height: 1.05; letter-spacing: -.025em; }
+    .atlas-id { color: #748ba1; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; }
+    .atlas-description { margin: 18px 0; color: #9aafc1; font-size: 13px; line-height: 1.58; }
+    .atlas-impact-title { margin: 4px 0 9px; color: #70869b; font-size: 9px; font-weight: 900; text-transform: uppercase; }
+    .atlas-impacts { display: flex; flex-wrap: wrap; gap: 6px; }
+    .atlas-impact {
+      display: inline-flex;
+      align-items: center;
+      min-height: 27px;
+      padding: 0 9px;
+      border: 1px solid rgba(148, 163, 184, .12);
+      border-radius: 999px;
+      color: #bcd0df;
+      background: rgba(255,255,255,.035);
+      font-size: 9px;
+      font-weight: 850;
+    }
+    .atlas-facts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 22px;
+    }
+    .atlas-fact {
+      padding: 11px;
+      border: 1px solid rgba(148, 163, 184, .1);
+      border-radius: 14px;
+      background: rgba(255,255,255,.025);
+    }
+    .atlas-fact strong { display: block; color: #e0f2fe; font-size: 18px; }
+    .atlas-fact span { display: block; margin-top: 3px; color: #647b91; font-size: 9px; font-weight: 850; text-transform: uppercase; }
+    .atlas-source {
+      margin-top: 12px;
+      color: #527087;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 8px;
+      text-align: center;
+    }
+    @keyframes atlasOrbit { to { transform: rotate(360deg); } }
+
     section.band { padding: 78px 0; }
     .section-head {
       display: flex;
@@ -777,6 +1261,9 @@
       .mock-side strong { display: none; }
       .mock-side button { width: auto; white-space: nowrap; margin: 0; }
       .workflow-grid, .tech-grid, .app-grid, .case-grid, .tech-stack { grid-template-columns: 1fr; }
+      .atlas-shell { grid-template-columns: 1fr; }
+      .atlas-stage { min-height: 560px; border-right: 0; border-bottom: 1px solid rgba(148, 163, 184, .11); }
+      .atlas-panel { min-height: 380px; }
       .trust-strip { grid-template-columns: 1fr; }
       .project-strip { grid-template-columns: 1fr; }
       .release-command, .release-spotlight { grid-template-columns: 1fr; }
@@ -802,12 +1289,35 @@
       section.band { padding: 54px 0; }
       .mock-screen { min-height: auto; }
       .mock-main { padding: 12px; }
+      .cash-dashboard { min-height: 0; padding: 15px; }
+      .cash-heading { align-items: flex-start; }
+      .cash-heading h3 { font-size: 36px; }
+      .cash-canvas-wrap { height: 160px; }
+      .cash-stats { grid-template-columns: 1fr; }
+      .cash-stat { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      .cash-stat strong { margin-top: 0; }
+      .cash-ai { display: none; }
+      .atlas-shell { border-radius: 22px; }
+      .atlas-stage { min-height: 500px; }
+      .atlas-toolbar { align-items: flex-start; flex-direction: column; }
+      .atlas-filters { width: 100%; overflow-x: auto; }
+      .atlas-filter { flex: 1; min-width: max-content; }
+      .atlas-node { width: 91px; min-height: 50px; padding: 7px 8px; }
+      .atlas-node strong { font-size: 10px; }
+      .atlas-core { width: 100px; height: 100px; }
+      .atlas-core strong { font-size: 20px; }
+      .atlas-panel { padding: 20px; }
       .tech-list li { grid-template-columns: 1fr; gap: 4px; }
       .release-timeline { max-height: 620px; padding-left: 26px; }
       .release-timeline::before { left: 10px; }
       .release-card::before { left: -22px; }
       .release-card-head { grid-template-columns: 1fr; }
       .release-version { min-width: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .cash-live i { animation: none; }
+      .cash-tooltip { transition: none; }
+      .atlas-core::before, .atlas-core::after { animation: none; }
     }
   </style>
 </head>
@@ -822,6 +1332,7 @@
         <a href="#demo" data-i18n="nav.demo">Demo</a>
         <a href="#modules" data-i18n="nav.modules">Modules</a>
         <a href="#workflow" data-i18n="nav.workflow">Parcours</a>
+        <a href="#atlas" data-i18n="nav.atlas">Atlas</a>
         <a href="#app" data-i18n="nav.app">App</a>
         <a href="#tech" data-i18n="nav.tech">Technique</a>
       </nav>
@@ -1032,6 +1543,43 @@
       </div>
     </section>
 
+    <section id="atlas" class="band">
+      <div class="shell">
+        <div class="section-head">
+          <h2 data-i18n="atlas.title">L'Atlas vivant du projet.</h2>
+          <p data-i18n="atlas.lead">Explore les dix fonctions critiques, leurs domaines et les impacts a verifier avant chaque evolution.</p>
+        </div>
+        <div class="atlas-shell">
+          <div class="atlas-stage" id="atlasStage">
+            <div class="atlas-toolbar">
+              <span class="atlas-status"><i aria-hidden="true"></i><span data-i18n="atlas.status">Architecture V11 indexee</span></span>
+              <div class="atlas-filters" id="atlasFilters" role="group" aria-label="Filtres Atlas"></div>
+            </div>
+            <canvas id="atlasCanvas" aria-hidden="true"></canvas>
+            <div class="atlas-core" aria-label="Coeur de l'Atlas">
+              <div><span>PROJECT</span><strong>ATLAS</strong><small>V11 / 10.5.253</small></div>
+            </div>
+            <div class="atlas-nodes" id="atlasNodes"></div>
+          </div>
+          <aside class="atlas-panel" aria-live="polite">
+            <span class="atlas-panel-kicker" id="atlasLayer">Budget domain</span>
+            <h3 id="atlasTitle">Transactions</h3>
+            <span class="atlas-id" id="atlasId">budget.transaction</span>
+            <p class="atlas-description" id="atlasDescription"></p>
+            <div class="atlas-impact-title" data-i18n="atlas.impacts">Impacts a verifier</div>
+            <div class="atlas-impacts" id="atlasImpacts"></div>
+            <div class="atlas-facts">
+              <div class="atlas-fact"><strong>15</strong><span data-i18n="atlas.screens">Ecrans</span></div>
+              <div class="atlas-fact"><strong>10</strong><span data-i18n="atlas.critical">Fonctions critiques</span></div>
+              <div class="atlas-fact"><strong>101</strong><span data-i18n="atlas.tests">Fichiers de tests</span></div>
+              <div class="atlas-fact"><strong>90</strong><span data-i18n="atlas.migrations">Migrations</span></div>
+            </div>
+            <div class="atlas-source">docs/PROJECT_ATLAS.md // snapshot 10.5.253</div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
     <section id="app" class="band">
       <div class="shell">
         <div class="section-head">
@@ -1039,9 +1587,9 @@
           <p data-i18n="app.lead">La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.</p>
         </div>
         <div class="app-grid">
-          <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body">APK debug 10.5.252 prete pour les tests Android.</p></article>
+          <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body">APK debug 10.5.253 prete pour les tests Android.</p></article>
           <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.</p></article>
-          <article class="app-card"><strong>10.5.252</strong><h3 data-i18n="app.version.title">Sport plus modulaire</h3><p data-i18n="app.version.body">Les mesures impedancemetriques Sport quittent le legacy et chargent avec le profil.</p></article>
+          <article class="app-card"><strong>10.5.253</strong><h3 data-i18n="app.version.title">Timer Sport stabilise</h3><p data-i18n="app.version.body">La persistance du timer guide et du chrono libre passe dans sportTimerController.</p></article>
         </div>
         <div class="changelog">
           <div class="release-command">
@@ -1054,6 +1602,7 @@
           <div class="release-spotlight" id="releaseSpotlight"></div>
           <div class="release-timeline" id="releaseTimeline" aria-live="polite"></div>
           <div class="release-list" id="releaseSource" hidden>
+            <div class="release-row"><strong>10.5.253</strong><span data-i18n="release.105253">Sport : la persistance du timer quitte 45_sport_ui.js vers sportTimerController.js. Preferences bip, timer guide, chrono libre, normalisation et clear sont testes. Legacy Sport : 220.8 -> 217.9 KiB ; domaine mesure : 432.8 KiB.</span></div>
             <div class="release-row"><strong>10.5.252</strong><span data-i18n="release.105252">Sport : les mesures impedancemetriques quittent 45_sport_ui.js vers sportBodyMeasurementController.js. Lecture DOM, cache local, upsert SQL et reference poids sont testes. Legacy Sport : 227.2 -> 220.8 KiB ; domaine mesure : 430.2 KiB.</span></div>
             <div class="release-row"><strong>10.5.251</strong><span data-i18n="release.105251">Performance : profil Sport fractionne en sous-runtime lazy. Timer, programme, historique et catalogue s'affichent avant radar, progression, mesures et mobilite. Chunk sportRuntime : 91.6 KiB ; JS initial stable a 252.2 KiB.</span></div>
             <div class="release-row"><strong>10.5.250</strong><span data-i18n="release.105250">Performance : le catalogue Sport quitte le bridge initial et rejoint sportRuntime.js. Initial JS : 283.6 -> 252.2 KiB, main gzip : 78.2 -> 72.2 KiB. Le poids Sport charge uniquement a l'ouverture de l'onglet Sport.</span></div>
@@ -1344,9 +1893,9 @@
         <div class="cta">
           <div>
             <h2 data-i18n="app.cta.title">App Android en test interne.</h2>
-            <p data-i18n="app.cta.body">Telecharge l'APK versionnee 10.5.252 depuis Supabase Storage pour tester la derniere build Android.</p>
+            <p data-i18n="app.cta.body">Telecharge l'APK versionnee 10.5.253 depuis Supabase Storage pour tester la derniere build Android.</p>
           </div>
-          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.252-20260723-210515-debug.apk" download data-i18n="app.cta.button">Telecharger l'APK 10.5.252</a>
+          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.253-20260723-211724-debug.apk" download data-i18n="app.cta.button">Telecharger l'APK 10.5.253</a>
         </div>
       </div>
     </section>
@@ -1394,14 +1943,14 @@
   </main>
 
   <footer>
-    <div class="shell" data-i18n="footer">BudgetPacker - demo publique interactive</div>
+    <div class="shell"><span data-i18n="footer">BudgetPacker - demo publique interactive</span> · <a href="/privacy.html" data-i18n="footer.privacy">Confidentialite</a></div>
   </footer>
 
   <script>
     (() => {
       const copy = {
         fr: {
-          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.app": "App", "nav.tech": "Technique", "nav.cta": "Tester la demo",
+          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.atlas": "Atlas", "nav.app": "App", "nav.tech": "Technique", "nav.cta": "Tester la demo",
           "hero.eyebrow": "BudgetPacker V2 - demo publique, donnees fictives",
           "hero.title": "BudgetPacker, le cockpit personnel budget, documents et objectifs.",
           "hero.lead": "Une app modulaire pour relier cashflow, transactions, taux de change, documents, patrimoine, sport, alimentation, sommeil et charge de travail dans une lecture simple.",
@@ -1432,11 +1981,13 @@
           "workflow.one.title": "Capturer", "workflow.one.body": "Transaction, recu WhatsApp, facture PDF, seance sport, sommeil, repas ou mouvement interne.",
           "workflow.two.title": "Relier", "workflow.two.body": "Les preuves, categories, charges et donnees d'objectifs alimentent le budget, les assets et les KPI.",
           "workflow.three.title": "Piloter", "workflow.three.body": "Analyse, cashflow, conversion FX, documents et objectifs restent lisibles au meme endroit.",
+          "atlas.title": "L'Atlas vivant du projet.", "atlas.lead": "Explore les dix fonctions critiques, leurs domaines et les impacts a verifier avant chaque evolution.", "atlas.status": "Architecture V11 indexee", "atlas.impacts": "Impacts a verifier", "atlas.screens": "Ecrans", "atlas.critical": "Fonctions critiques", "atlas.tests": "Fichiers de tests", "atlas.migrations": "Migrations",
           "app.title": "App Android de test, lien direct et version lisible.",
           "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
-          "app.apk.title": "Build Android", "app.apk.body": "APK debug 10.5.252 prete pour les tests Android.",
+          "app.apk.title": "Build Android", "app.apk.body": "APK debug 10.5.253 prete pour les tests Android.",
           "app.offline.title": "Mode hors ligne", "app.offline.body": "Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.",
-          "app.version.title": "Sport plus modulaire", "app.version.body": "Les mesures impedancemetriques Sport quittent le legacy et chargent avec le profil.",
+          "app.version.title": "Timer Sport stabilise", "app.version.body": "La persistance du timer guide et du chrono libre passe dans sportTimerController.",
+          "release.105253": "Sport : la persistance du timer quitte 45_sport_ui.js vers sportTimerController.js. Preferences bip, timer guide, chrono libre, normalisation et clear sont testes. Legacy Sport : 220.8 -> 217.9 KiB ; domaine mesure : 432.8 KiB.",
           "release.105252": "Sport : les mesures impedancemetriques quittent 45_sport_ui.js vers sportBodyMeasurementController.js. Lecture DOM, cache local, upsert SQL et reference poids sont testes. Legacy Sport : 227.2 -> 220.8 KiB ; domaine mesure : 430.2 KiB.",
           "release.105251": "Performance : profil Sport fractionne en sous-runtime lazy. Timer, programme, historique et catalogue s'affichent avant radar, progression, mesures et mobilite. Chunk sportRuntime : 91.6 KiB ; JS initial stable a 252.2 KiB.",
           "release.105250": "Performance : le catalogue Sport quitte le bridge initial et rejoint sportRuntime.js. Initial JS : 283.6 -> 252.2 KiB, main gzip : 78.2 -> 72.2 KiB. Le poids Sport charge uniquement a l'ouverture de l'onglet Sport.",
@@ -1532,7 +2083,7 @@
           "release.105132": "Patrimoine rend les actions visibles : Budget / amortissement, Achats lies, Depenses annexes et bandeau Patrimoine V2. Le chantier qualite ajoute un contrat anti-nouvelles-regles-metier dans legacy.",
           "release.105131": "Correctif Patrimoine et Settings : les documents d'asset chargent Documents a la demande, les actions Budget et Docs & mouvements sont visibles, les periodes affichent Modifier la periode, et un lint syntaxe initial verrouille le code modulaire.",
           "release.105130": "Chantier qualite et Patrimoine : Playwright ajoute les parcours critiques desktop/mobile/tablette. Les assets peuvent lier transactions et depenses Trip, exclure un achat du budget et garder l'amortissement mensuel au prorata des parts.", "release.105129": "Chantier performance : budgets par module, mesure source/dist/gzip, commande npm run perf:budget et documentation de suivi sont ajoutes.", "release.105128": "Chantier documentation : architecture V11, couches, domaines verrouilles, lazy-load, procedure de migration et regles de garde sont formalises et testes.", "release.105127": "Chantier performance : le contrat de boot verrouille Dashboard/Settings au demarrage et Trip, Sport, Nutrition, Travail en chargement a l'ouverture.", "release.105126": "Chantier Sport : le domaine est verrouille par contrat avec bibliotheque, programme, timer, historique, sandbox, profil et calculs separes.", "release.105125": "Chantier Trip : le domaine est verrouille par contrat avec regles, repository, store, hydratation offline/SQL, formulaire depense et invitations extraits.", "release.105124": "Chantier domaines : Nutrition est fermee avec repository, store et vues; Travail et Patrimoine sont completes cote separation domaine, avec contrats de delegation.", "release.105123": "Chantier Settings + Dashboard : l overview Voyage migre vers settingsView.js et le rendu onboarding Dashboard demarre dans dashboardView.js, avec contrats et tests dedies.", "release.105122": "Chantier Settings : le rendu Reference de periode migre vers settingsView.js. Pays, recommandation, prevu, ecart, postes et boutons modifier/heriter sont testes.", "release.105121": "Chantier Settings : l'ancien renderManualFxBox et ses helpers globaux sont supprimes. Le panneau FX manuel extrait reste la source unique et le fichier legacy descend encore.", "release.105120": "Chantier Settings : les cartes de periodes migrent vers settingsView.js. Entete, recap, edition budget/devise, reference pays, actions enregistrer/supprimer et etat anglais/francais sont testes.", "release.105119": "Chantier Settings : le rendu FX manuel migre vers settingsView.js. Normalisation des taux, badges, tableau, actions modifier/supprimer et etat vide sont testes.", "release.105118": "Chantier Settings : les handlers du panneau Compte migrent vers settingsAccountController.js. Hydratation profil, WhatsApp, sante, devise, mode UI, reset mot de passe, notifications et seuil cashflow sont testes.", "release.105117": "Chantier Settings : le panneau Compte sort du template inline legacy vers settingsView.js. Les champs profil, sante, devise, mode UI, cashflow et notifications gardent leurs hooks stables.", "release.105116": "Chantier Settings : le shell visuel des reglages sort de 14_settings_periods_ui.js vers settingsView.js. Hero, resumes de cartes, accordéons et etat ouvert/ferme sont testes.", "release.105115": "Sport corrige le plein ecran du timer avec un verrou CSS global, fallback Android/WebKit et nettoyage a la fin. Performance : 31_help_faq.js sort du boot et charge a l'ouverture de l'Aide.", "release.105114": "Chantier performance : Documents et Cautions sortent du demarrage. 43_documents_ui.js et 46_cautions_ui.js chargent seulement a l'ouverture, avec liens Patrimoine et Inbox compatibles lazy.", "release.105113": "Chantier performance : l'ecran Notifications sort du demarrage. 49_notifications_ui.js charge seulement a l'ouverture de l'onglet, pendant que le centre de notifications global reste porte par Inbox.", "release.105112": "Chantier performance : Sport sort du demarrage. 45_sport_ui.js se charge a l'ouverture de l'onglet Sport, et le replay offline charge le domaine avant de synchroniser les seances locales.", "release.105111": "Chantier performance : Trip sort du demarrage. Partage et Membres restent disponibles au boot, puis 29_trip_v1.js et 30_members_admin.js se chargent seulement a l'ouverture avec rendu lazy teste.", "release.105110": "Chantier performance : Travail sort du demarrage. L'onglet Travail reste disponible au boot, puis 47_work_ui.js et 50_work_career_ui.js se chargent seulement a l'ouverture avec rendu lazy teste.", "release.105109": "Chantier performance : Nutrition sort du demarrage. L'onglet Alimentation reste disponible au boot, puis 48_nutrition_ui.js se charge seulement a l'ouverture avec rendu lazy teste.",
-          "adminTests.title": "Membres admins - tests a faire", "adminTests.lead": "Espace de validation avant de cloturer une version : chacun teste, note son retour, puis indique si le point est fini ou non.", "adminTests.status": "Statut global : a finir", "adminTests.card1.title": "1. Parcours critique", "adminTests.card1.body": "Ouvrir Dashboard, KPIs, Analyse, Trip, Sport, Alimentation, Travail et Patrimoine. Verifier qu aucun ecran ne reste bloque.", "adminTests.card2.title": "2. Action reelle", "adminTests.card2.body": "Tester une action utile : ajout, modification, suppression ou filtre selon le module concerne par la version.", "adminTests.card3.title": "3. Retour admin", "adminTests.card3.body": "Noter version, module, appareil, resultat attendu, resultat reel, console et decision : fini ou non.", "adminTests.returnBox": "Retours a renseigner dans docs/ADMIN_TEST_RETURNS.md. Quand tu me diras que c est fait, je lirai ce fichier et je traiterai les points ouverts.", "app.cta.title": "App Android en test interne.", "app.cta.body": "Telecharge l'APK versionnee 10.5.252 depuis Supabase Storage pour tester la derniere build Android.", "app.cta.button": "Telecharger l'APK 10.5.252",
+          "adminTests.title": "Membres admins - tests a faire", "adminTests.lead": "Espace de validation avant de cloturer une version : chacun teste, note son retour, puis indique si le point est fini ou non.", "adminTests.status": "Statut global : a finir", "adminTests.card1.title": "1. Parcours critique", "adminTests.card1.body": "Ouvrir Dashboard, KPIs, Analyse, Trip, Sport, Alimentation, Travail et Patrimoine. Verifier qu aucun ecran ne reste bloque.", "adminTests.card2.title": "2. Action reelle", "adminTests.card2.body": "Tester une action utile : ajout, modification, suppression ou filtre selon le module concerne par la version.", "adminTests.card3.title": "3. Retour admin", "adminTests.card3.body": "Noter version, module, appareil, resultat attendu, resultat reel, console et decision : fini ou non.", "adminTests.returnBox": "Retours a renseigner dans docs/ADMIN_TEST_RETURNS.md. Quand tu me diras que c est fait, je lirai ce fichier et je traiterai les points ouverts.", "app.cta.title": "App Android en test interne.", "app.cta.body": "Telecharge l'APK versionnee 10.5.253 depuis Supabase Storage pour tester la derniere build Android.", "app.cta.button": "Telecharger l'APK 10.5.253",
           "tech.title": "Une vitrine statique, une app privee structuree derriere.",
           "tech.lead": "BudgetPacker combine un front leger, Supabase pour les donnees, des RPC pour les operations sensibles, Storage pour les fichiers et Capacitor pour l'app Android.",
           "tech.db": "Postgres, RLS, RPC, Edge Functions et Storage structurent les donnees utilisateur, documents, invitations et APK.",
@@ -1541,10 +2092,10 @@
           "tech.data.title": "Donnees et securite", "tech.auth": "Supabase Auth gere email, mot de passe, Google OAuth et redirections mobile/web.", "tech.rls": "Les tables exposees restent filtrees par utilisateur ou membership Trip.", "tech.rpc": "Les actions sensibles passent par des fonctions controlees : invitations, acceptations, validations.", "tech.storage": "Documents, preuves et APK versionnees sont stockes dans des buckets dedies.",
           "tech.delivery.title": "Build, mobile et fiabilite", "tech.vite": "Build statique rapide, page projet autonome et assets synchronises vers Android.", "tech.apkflow": "Le script nettoie les APK locaux avant sync, verifie les assets puis upload la release.", "tech.offline": "Lecture locale et actions en attente reduisent les blocages terrain.", "tech.tests": "Vitest couvre les regles metier : transactions, documents, Trip, FX, inbox et wallet.",
           "cta.title": "Pret a montrer le projet.", "cta.body": "Cette page explique BudgetPacker sans compte, sans connexion et sans exposer tes donnees.", "cta.button": "Rejouer la demo",
-          "footer": "BudgetPacker - demo publique interactive"
+          "footer": "BudgetPacker - demo publique interactive", "footer.privacy": "Confidentialite"
         },
         en: {
-          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Workflow", "nav.app": "App", "nav.tech": "Tech", "nav.cta": "Try the demo",
+          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Workflow", "nav.atlas": "Atlas", "nav.app": "App", "nav.tech": "Tech", "nav.cta": "Try the demo",
           "hero.eyebrow": "BudgetPacker V2 - public demo, fictional data",
           "hero.title": "BudgetPacker, the personal cockpit for budget, documents and goals.",
           "hero.lead": "A modular app connecting cashflow, transactions, exchange-rate analysis, conversions, documents, assets, sport, nutrition, sleep and work load.",
@@ -1575,10 +2126,12 @@
           "workflow.one.title": "Capture", "workflow.one.body": "Transaction, WhatsApp receipt, PDF invoice, workout, sleep, meal or internal transfer.",
           "workflow.two.title": "Link", "workflow.two.body": "Proofs, categories, loads and objective data feed budget, assets and KPIs.",
           "workflow.three.title": "Drive", "workflow.three.body": "Analysis, cashflow, FX conversion, documents and goals remain readable together.",
+          "atlas.title": "The project's living Atlas.", "atlas.lead": "Explore ten critical capabilities, their domains and the impacts to verify before every change.", "atlas.status": "V11 architecture indexed", "atlas.impacts": "Impacts to verify", "atlas.screens": "Screens", "atlas.critical": "Critical capabilities", "atlas.tests": "Test files", "atlas.migrations": "Migrations",
           "app.title": "Android test app, direct link and readable version.",
           "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
-          "app.apk.title": "Android build", "app.apk.body": "Debug APK 10.5.252 is ready for Android testing.",
-          "app.version.title": "More modular Sport", "app.version.body": "Sport body measurements leave legacy and load with the profile runtime.",
+          "app.apk.title": "Android build", "app.apk.body": "Debug APK 10.5.253 is ready for Android testing.",
+          "app.version.title": "Stable Sport timer", "app.version.body": "Guided timer and free timer persistence now live in sportTimerController.",
+          "release.105253": "Sport: timer persistence moves from 45_sport_ui.js to sportTimerController.js. Beep preferences, guided timer, free timer, normalization and clear are tested. Sport legacy: 220.8 -> 217.9 KiB; measured domain: 432.8 KiB.",
           "release.105252": "Sport: body measurements move from 45_sport_ui.js to sportBodyMeasurementController.js. DOM reading, local cache, SQL upsert and weight reference are tested. Sport legacy: 227.2 -> 220.8 KiB; measured domain: 430.2 KiB.",
           "release.105251": "Performance: Sport profile is split into an on-demand sub-runtime. Timer, program, history and catalog render before radar, progression, measurements and mobility. sportRuntime chunk: 91.6 KiB; initial JS stays at 252.2 KiB.",
           "release.105250": "Performance: the Sport catalog leaves the initial bridge and moves into sportRuntime.js. Initial JS: 283.6 -> 252.2 KiB, main gzip: 78.2 -> 72.2 KiB. Sport weight loads only when opening the Sport tab.",
@@ -1665,7 +2218,7 @@
           "release.title": "APK chronological timeline", "release.lead": "Each version keeps its context: touched domain, work done, expected result and verification trace.", "release.105229": "Nutrition: the pending nutrition sync panel leaves 48_nutrition_ui.js for nutritionView.js, keeping sync, clear and delete actions. Nutrition legacy drops to 126.2 KiB.", "release.105228": "Refactor: Trip category/participant analysis bars leave 29_trip_v1.js and Sport builder options leave 45_sport_ui.js. Trip legacy drops to 223.6 KiB and Sport to 228.9 KiB.", "release.105227": "Settings: deleting a trip no longer logs a budget-reference error for a removed segment. Performance: Inbox leaves boot, with boot legacy 979 -> 877.1 KiB.", "release.105226": "Settings: the manually selected trip remains the priority after refresh, even when another trip covers today. User test to rerun on Settings trips/periods.", "release.105139": "Analysis phase: the Country reference panel leaves 33_budget_analysis.js for analysisView.js. Summary, context, comparison grid and empty state are rendered by a tested module.", "release.105138": "Assets can now edit transaction/Trip links, their relation type and budget inclusion. Analysis also extracts the Subcategories list to analysisView.js with tests.", "release.105137": "Analysis phase: the Night transports panel leaves 33_budget_analysis.js for analysisView.js. Potential savings, averages and detailed rows are rendered by a tested module.", "release.105136": "Analysis phase: trend, reference, dominant category, projection and out-of-budget insights leave 33_budget_analysis.js for analysisView.js with tests and a legacy anti-return contract.", "release.105135": "Analysis phase: the reading overview leaves 33_budget_analysis.js for analysisView.js. Rendering is tested, exposed to legacy through TBAnalysisView and counted in the V11 size budget.", "release.105134": "Bootstrap fixes loading order: Offline, Trip and Sport scripts now wait for the Vite bridge before reading stores and catalogs. The phase adds a legacy loader regression contract.", "release.105133": "Assets fix linked movements: linked transactions open in edit mode, Trip expenses use the real active trip and old links are reloaded by ID. The phase adds an Assets-Trip regression contract.",
           "release.105132": "Patrimoine rend les actions visibles : Budget / amortissement, Achats lies, Depenses annexes et bandeau Patrimoine V2. Le chantier qualite ajoute un contrat anti-nouvelles-regles-metier dans legacy.",
           "release.105131": "Assets and Settings fix: asset documents lazy-load Documents, Budget and Docs & movements actions are visible, periods show Edit period, and an initial syntax lint protects modular code.", "release.105130": "Quality and Assets phase: Playwright adds critical desktop/mobile/tablet paths. Assets can link wallet transactions and Trip expenses, exclude a purchase from budget and keep monthly depreciation prorated by ownership share.", "release.105129": "Performance phase: module budgets, source/dist/gzip measurement, npm run perf:budget and tracking documentation are added.", "release.105128": "Documentation phase: V11 architecture, layers, locked domains, lazy loading, migration procedure and guard rules are formalized and tested.", "release.105127": "Performance phase: the boot contract locks Dashboard/Settings at startup and Trip, Sport, Nutrition, Work as open-on-demand domains.", "release.105126": "Sport phase: the domain is locked by contract with library, program, timer, history, sandbox, profile and calculations separated.", "release.105125": "Trip phase: the domain is locked by contract with rules, repository, store, offline/SQL hydration, expense form and invitations extracted.", "release.105124": "Domain phase: Nutrition is closed with repository, store and views; Work and Assets are completed on domain separation, with delegation contracts.", "release.105123": "Settings + Dashboard phase: Trip overview moves to settingsView.js and Dashboard onboarding rendering starts in dashboardView.js, with dedicated contracts and tests.", "release.105122": "Settings phase: period reference rendering moves to settingsView.js. Country, recommendation, planned amount, gap, posts and edit/inherit buttons are tested.", "release.105121": "Settings phase: the old renderManualFxBox and global helpers are removed. The extracted manual FX panel remains the single source and the legacy file gets smaller again.", "release.105120": "Settings phase: period cards move to settingsView.js. Header, summary, budget/currency editing, country reference, save/delete actions and French/English states are tested.", "release.105119": "Settings phase: manual FX rendering moves to settingsView.js. Rate normalization, badges, table, edit/delete actions and empty state are tested.", "release.105118": "Settings phase: Account panel handlers move to settingsAccountController.js. Profile hydration, WhatsApp, health, currency, UI mode, password reset, notifications and cashflow threshold are tested.", "release.105117": "Settings phase: the Account panel leaves the inline legacy template for settingsView.js. Profile, health, currency, UI mode, cashflow and notification fields keep stable hooks.", "release.105116": "Settings phase: the visual settings shell leaves 14_settings_periods_ui.js for settingsView.js. Hero, card summaries, accordions and open/closed state are tested.", "release.105115": "Sport fixes timer fullscreen with a global CSS lock, Android/WebKit fallback and cleanup at completion. Performance: 31_help_faq.js leaves startup and loads when Help opens.", "release.105114": "Performance phase: Documents and Deposits leave startup. 43_documents_ui.js and 46_cautions_ui.js load only when opened, with lazy-safe links from Assets and Inbox.", "release.105113": "Performance phase: the Notifications screen leaves startup. 49_notifications_ui.js loads only when the tab opens, while the global notification center remains handled by Inbox.", "release.105112": "Performance phase: Sport leaves startup. 45_sport_ui.js loads when the Sport tab opens, and offline replay loads the domain before syncing local workouts.", "release.105111": "Performance phase: Trip leaves startup. Trip and Members remain available at boot, then 29_trip_v1.js and 30_members_admin.js load only when opened with a tested lazy render.", "release.105110": "Performance phase: Work leaves startup. The Work tab remains available at boot, then 47_work_ui.js and 50_work_career_ui.js load only when the tab opens with a tested lazy render.", "release.105109": "Performance phase: Nutrition leaves startup. The Nutrition tab remains available at boot, then 48_nutrition_ui.js loads only when the tab opens with a tested lazy render.", "release.105108": "Assets phase: transfer, sale and documents join assetView. All five Assets windows now render as tested pure views while preserving transaction, Trip and document links.", "release.105107": "Mixed phase: Asset and owner forms extracted to assetView, and pilot lazy loading loads the Assets domain only when its tab opens.", "release.105106": "Assets phase: the asset card extracts value, depreciation, monthly budget cost, owners, events, documents, actions and realized P&L into a tested pure view.", "release.105105": "Work phase: the career panel extracts its timeline, KPIs, jobs, income, periods and linked folders into a tested pure view.", "release.105104": "Standalone Health removed from runtime: no dedicated tab or view, old calls redirect to Nutrition, and 315 legacy lines are removed.", "release.105103": "Domain phase: Nutrition extracts the active week, Work extracts the weekly load visual, Assets extracts the portfolio summary and Health leaves the standalone roadmap.", "release.105102": "Nutrition phase: goal cockpit, 7-day average and weekly alcohol panel move to nutritionView, with dedicated tests.", "release.105101": "Nutrition phase: quick add, hydration, sleep and weekly history views move to nutritionView with dedicated rendering tests.", "release.105100": "Nutrition phase: view components extracted for progress bars, favorite/recent chips, meal suggestions, week window and meal timeline with dedicated tests.", "release.10599": "Nutrition phase: dedicated store extracted for food cache, meals, items, sleep, selected date, local rows and KPI publishing through entityStore.", "release.10598": "Nutrition phase: local/offline repository foundation extracted for food cache, local rows, sync_id, deduplication, sleep and sync errors, with tests.", "release.10597": "Sport fix: sequence crash fixed, timer state is saved/restored, wake lock and local background notification are wired. Trip forces expense creation back into a mobile-sized sheet.", "release.10596": "Nutrition phase: pure rules extracted for the daily journal, meal-type totals, meal-moment targets, filtered catalog and kcal/macro goals.", "release.10595": "Sport Athletic Profile: the radar becomes a percentile diagnostic with bodyweight ratios, balance, potential, archetypes and automatic priority.", "release.10594": "Sport phase 4: timer handlers leave legacy with tests for start, sets, rests, pause, added set, rope/boxing circuit rounds and early stop.", "release.10593": "Sport phase 4: the strength/weakness profile rendering, per-axis notes and body-composition modal leave legacy with dedicated tests.", "release.10592": "Sport phase 4: the strength/weakness radar leaves legacy, fixes Push by prioritizing bench/incline/overhead press before triceps, and displays stricter bodyweight benchmarks.", "release.10591": "Sport phase 4: pure Adjust-window rules leave legacy. Renumbering, deletion and adding sets to the right exercise are centralized and tested.", "release.10561": "Nutrition fix: the selected meal moment from the timeline or select, such as Lunch, Afternoon snack or Dinner, is preserved during search, add, water and edit instead of falling back to Breakfast.", "release.10560": "Nutrition adds smoother optimistic display, sync status, favorite meals, instant deletion and a lean-bulk goal cockpit with target weight, pace, macros and 7-day alert. Sport moves to radar V2: legs, push, pull, core, cardio and recovery with per-axis explanation.", "release.10559": "Sport fixes the lower-body radar so squat/deadlift count correctly while estimated sets are ignored. Nutrition hardens offline sync, deduplicates server items and fixes June 25 with HiPRO snack and rice, zucchini, onion, creme fraiche and salmon dinner.", "release.10558": "Sport bases the strengths/weaknesses radar on best observed capacities, switches A2 to a 100 kg deadlift, fixes today's workout and Nutrition confirms new entries immediately with a rice, carrot, broccoli, onion and lamb dish.", "release.10557": "Sport fixes the body-composition window: it is rendered outside the module, attached to the body and opens at the top of the screen without scrolling.", "release.10556": "Sport stabilizes the SQL-driven Tuesday-Thursday-Saturday A/B program, avoids configured-workout duplicates, adds a strengths/weaknesses radar and dated body-composition SQL entry.", "release.10555": "Sport adds a real configured-workout editor: editable exercises, library add, ordering, deletion, saving and loading into the current workout.", "release.10554": "Sport Program V3: A/B cockpit, today's workout, catch-up, loads to prepare, exercise-level progression and clearer planning.", "release.10549": "Notifications V2: create, edit and delete templates, slash variables like /budgetdujour and /budgetrestant, upcoming sends, sent history and server-side template rendering.", "release.10548": "Health becomes the goal module: lean bulk, maintenance/recomposition or gentle fat loss, kcal/macro targets, adapted next meal, active Sport/Nutrition/Sleep/Load week and aligned Health KPIs.", "release.10547": "Sport no longer shows the local fallback when the SQL program is loaded, adds a planned week with rest/A-B workouts, and makes Nutrition offline sync idempotent to avoid duplicate foods or water.", "release.10546": "Sport moves the A/B lean-bulk program to SQL: program/session/exercise tables, 6 sessions and 36 exercises for the account, reference loads in sport_exercises and Supabase reads in the app.", "release.10545": "Sport pre-fills the A/B program reference loads: squat 60 kg, bench 50 kg, RDL 80 kg, dumbbells as 2 x kg, explicit bodyweight, builder and timer display.", "release.10544": "Sport adds A/B lean-bulk favorite workouts, Monday-Wednesday-Friday planning and automatic progression on each rep range: 6-10, 8-12, 10-15 or 12-20.", "release.10543": "Nutrition adds lean bulk mode (+300 to +500 kcal) with adapted macros, aligned Health KPI and automatic Sport 8-12 double progression.", "release.10542": "Sport fixes the timer big screen: mobile/Capacitor focus styles are no longer overridden and native fullscreen is requested after render.", "release.10541": "Nutrition adds sourced alcohol tracking: 1 standard drink = 10 g, 7-day chart, daily/weekly judgement, linked alcoholic foods and direct impact on Health/KPI scoring.", "release.10540": "Detailed Sport history, Adjust sandbox with reps/duration/load, add/delete sets, and June 19 strength/plank set backfill with one-arm dumbbell row at 30 kg.", "release.10539": "Removes the snack assistant, adds daily Sport/Work visuals, Work rhythm with weekend rest or rest today, and SQL-merges the 3 June 19 workouts.", "release.10538": "Sport removes June 19 duplicates, blocks repeated saves, stabilizes the timer without flicker, enables native big screen and adds Nutrition offline sync.", "release.10537": "Sport fixes kcal for time-based exercises, applies rest after an added set, repairs June 18 data and adds the Belvita snack.", "release.10536": "Sport timer big screen: focus mode during workouts, much larger clock, adjustable beep volume and sound test button.", "release.10535": "Sport V2: clearer timer timeline, Push/Pull/Legs/Core/Cardio/Boxing filters, richer library and actionable Health KPI cards.", "release.10534": "Stabilized live Sport: add sets in the right position, edit reps, add barbell/dumbbell/plate exercises, align Supabase and repair workout kcal.", "release.10533": "Supabase CLI 2.106.0, local/remote migrations aligned, db push verified, Health V2, smarter Nutrition assistant and live Sport load controls.", "release.10532": "Nutrition removes the duplicate Health recap and adapts upcoming meal kcal targets from meals already logged.", "release.10531": "Snack notifications V2, dedicated Health page, add sets during or after Sport workouts, plus plank and stretch at workout end.", "release.10530": "Snack assistant focused on fromage blanc, muesli, biscuits and fruit, more professional weekly Health recap and Settings WhatsApp loading fix.", "release.10529": "Nutrition/Sport favorites and recents, what to eat now assistant, weekly Health recap and new sourced foods/exercises without duplicate keys.", "release.10528": "Sport and Nutrition libraries enriched with realistic servings, source tags from USDA/FoodData Central and Compendium METs, without duplicate keys.", "release.10527": "Daily Health recap in Nutrition, SQL-persisted sleep, 2L water history and shared Dashboard Health KPI scoring.", "release.10526": "Centralized Health profile: 59 kg, 162 cm and birth date in SQL Settings, then shared reads across Sport, Nutrition, Work, notifications and Health KPI.", "release.10525": "Work recalculated with net MET kcal, birth date saved for BMR, SQL work days recomputed and Health KPI hydrates Nutrition/Sleep on startup.", "release.10524": "Health Score fixed: energy now better tolerates normal time-based gaps and sleep correctly rewards a 7h to 9h night.", "release.10523": "Global Sport library enriched by family: dumbbells, bands, bodyweight, machines, cardio, boxing, barbell, kettlebell and mobility. The June 12 Jump rope workout has its sets back.", "release.10522": "Sport library enriched with dumbbell row and dumbbell exercises, automatic reuse of the last entered load per exercise and resistance bands locked to 0 kg.", "release.10521": "Sport can enter load during the workout, adjust completed sets in a sandbox, correctly recalculate heavy bag calories and the project page better highlights Nutrition, Sleep, Health and Work.", "release.10520": "Nutrition/Health notifications across 5 key day moments, sleep read from the right night, KPI nutrition refresh after entry and heavy bag MET moved to 12.8 with session recalculation.", "release.10519": "Sleep now belongs to the previous night, Health KPI details score points and project page highlights Work, Nutrition and Health.", "release.10518": "Explainable Health KPI, kcal need proportional to current time, Nutrition hover bar history, sleep vs target and catalog removed.", "release.10517": "Sleep entry in Nutrition, visually aligned Health KPI and recovery included in the score.", "release.10516": "Mobile responsive Nutrition, French toast in SQL library, separated drunk-water hydration and Dashboard Health KPI across sport/work/nutrition.", "release.10515": "Nutrition catalog enriched with 101 public dishes, tag-powered filters and a fuller mobile fallback.", "release.10514": "Visual Nutrition V2: kcal ring, meal timeline, simple assistant, filtered catalog and analytical mini week.", "release.10513": "More app-like Nutrition UX, editable meals, needs by meal moment and realistic portions.", "release.10512": "Default date is today, categorized Nutrition history and clearer needs/consumed visual comparison.", "release.10511": "Separate hydration, 307 Nutrition foods, burgers/beers and kcal balance from base + sport + work.", "release.10510": "Stable Nutrition search, servings and richer food library.", "release.1059": "Nutrition loading fix and local-date same-day Sport merge.", "release.1058": "First Nutrition screen and same-day Sport session merge.", "release.1057": "SQL-backed Sport library with offline cache, boxing exercises and Nutrition food/meal/macro foundation.", "release.1056": "Updated Android APK, stronger Sport delete flow, reps/circuit/AMRAP estimates and safer offline Mark as paid.", "release.1055": "Forecast cashflow, simpler notification test and clearer offline queue behavior.", "release.1054": "Richer Sport library: jump rope, table tennis, abs/core and more direct input.", "release.1053": "Analysis compares budget used with projection and hardens KPI/Analysis data refresh.", "release.1052": "Analysis excludes estimated internal-transfer fees and compares paid actual spend with the projection.", "release.1051": "Analysis treats Trip shares paid by someone else as paid, not unpaid.", "release.1050": "More human notifications, emoji/reminder preferences, and unpaid-expense details in Analysis.", "release.1049": "Period-currency notifications, server budget segment calculation, Trip/Immo analysis and table tennis in Sport.", "release.1048": "Dashboard/Analysis budget refresh and Android test APK 10.4.8.", "release.1047": "Fixes Trip Immo analysis, daily budget when returning to Dashboard and editable Work history.", "release.1046": "Fixes Work loading and sport/work KPI recalculation after sync.", "release.1045": "Physical Work module, MET/BMR estimates, sport/work KPIs and server morning/evening notifications.", "release.1044": "Varied budget notifications, auto refresh when returning to the app and cleaner Trip linking.", "release.1043": "Trip fix: reliable wallet ownership validation for expenses paid by me.", "release.1042": "Trip stabilization: core rules, analysis, history filters and transaction RPC payloads.", "release.1041": "Unified Sport creation, default rest, conditional reps/time fields and fixed Android local notifications.", "release.1040": "FCM mobile notifications testable from Admin, morning budget message and Trip validation push.", "release.1039": "Fixed paid recurring occurrences, repair migration, and configured server FCM secrets.", "release.1038": "FCM HTTP v1 push Edge Function and finalized Firebase Android configuration.", "release.1037": "Android mobile push base, token storage, read-on-click notifications and sign-out cleanup.", "release.1036": "More reliable mobile Google auth, cleaner errors, password reset and user notification preferences.", "release.1035": "Clearer project page, detailed technical section and updated APK.", "release.1034": "Secured APK workflow: cleanup before sync, clean build and Storage upload.", "release.1033": "Targeted deposits, document/transaction search and corrected differences.",
-          "adminTests.title": "Admin members - tests to run", "adminTests.lead": "Validation space before closing a version: each admin tests, writes feedback, then marks whether the point is done or not.", "adminTests.status": "Global status: to finish", "adminTests.card1.title": "1. Critical path", "adminTests.card1.body": "Open Dashboard, KPIs, Analysis, Trip, Sport, Nutrition, Work and Assets. Check that no screen stays blocked.", "adminTests.card2.title": "2. Real action", "adminTests.card2.body": "Test one useful action: add, edit, delete or filter depending on the module touched by the version.", "adminTests.card3.title": "3. Admin feedback", "adminTests.card3.body": "Write version, module, device, expected result, actual result, console and decision: done or not done.", "adminTests.returnBox": "Feedback goes in docs/ADMIN_TEST_RETURNS.md. When you tell me it is done, I will read that file and process open points.", "app.cta.title": "Android app in internal testing.", "app.cta.body": "Download the versioned 10.5.252 APK from Supabase Storage to test the latest Android build.", "app.cta.button": "Download APK 10.5.252",
+          "adminTests.title": "Admin members - tests to run", "adminTests.lead": "Validation space before closing a version: each admin tests, writes feedback, then marks whether the point is done or not.", "adminTests.status": "Global status: to finish", "adminTests.card1.title": "1. Critical path", "adminTests.card1.body": "Open Dashboard, KPIs, Analysis, Trip, Sport, Nutrition, Work and Assets. Check that no screen stays blocked.", "adminTests.card2.title": "2. Real action", "adminTests.card2.body": "Test one useful action: add, edit, delete or filter depending on the module touched by the version.", "adminTests.card3.title": "3. Admin feedback", "adminTests.card3.body": "Write version, module, device, expected result, actual result, console and decision: done or not done.", "adminTests.returnBox": "Feedback goes in docs/ADMIN_TEST_RETURNS.md. When you tell me it is done, I will read that file and process open points.", "app.cta.title": "Android app in internal testing.", "app.cta.body": "Download the versioned 10.5.253 APK from Supabase Storage to test the latest Android build.", "app.cta.button": "Download APK 10.5.253",
           "tech.title": "A static showcase, a structured private app behind it.",
           "tech.lead": "BudgetPacker combines a light frontend, Supabase for data, RPCs for sensitive operations, Storage for files and Capacitor for Android.",
           "tech.db": "Postgres, RLS, RPC, Edge Functions and Storage structure user data, documents, invitations and APKs.",
@@ -1674,7 +2227,7 @@
           "tech.data.title": "Data and security", "tech.auth": "Supabase Auth handles email, password, Google OAuth and mobile/web redirects.", "tech.rls": "Exposed tables remain filtered by user or Trip membership.", "tech.rpc": "Sensitive actions go through controlled functions: invitations, acceptances, validations.", "tech.storage": "Documents, proofs and versioned APKs are stored in dedicated buckets.",
           "tech.delivery.title": "Build, mobile and reliability", "tech.vite": "Fast static build, autonomous project page and assets synced to Android.", "tech.apkflow": "The script cleans local APKs before sync, checks assets, then uploads the release.", "tech.offline": "Local reading and queued actions reduce field blockers.", "tech.tests": "Vitest covers business rules: transactions, documents, Trip, FX, inbox and wallet.",
           "cta.title": "Ready to share the project.", "cta.body": "This page explains BudgetPacker without account, login or personal data exposure.", "cta.button": "Replay the demo",
-          "footer": "BudgetPacker - interactive public demo"
+          "footer": "BudgetPacker - interactive public demo", "footer.privacy": "Privacy"
         }
       };
 
@@ -1886,7 +2439,9 @@
         }
       };
 
-      const state = { lang: "fr", scenario: "pvt", module: "dashboard", mockModule: "dashboard", releaseFilter: "all", activeRelease: "" };
+      const state = { lang: "fr", scenario: "pvt", module: "dashboard", mockModule: "dashboard", cashRange: "30d", atlasGroup: "all", atlasSelected: "budget.transaction", releaseFilter: "all", activeRelease: "" };
+      let cashVisual = null;
+      let atlasVisual = null;
       const $ = (id) => document.getElementById(id);
       const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
       const fmt = (n, cur) => `${Math.round(n).toLocaleString(state.lang === "fr" ? "fr-FR" : "en-US")} ${cur}`;
@@ -1930,6 +2485,7 @@
         renderMockModule();
         renderScenario();
         renderModule();
+        renderAtlas();
         renderReleaseTimeline();
       }
 
@@ -2099,6 +2655,71 @@
       function renderMockModule() {
         const data = mockModules[state.lang][state.mockModule] || mockModules[state.lang].dashboard;
         $("mockTitle").textContent = data.title;
+        if (cashVisual) {
+          cashVisual.destroy();
+          cashVisual = null;
+        }
+        if (state.mockModule === "dashboard") {
+          const labels = state.lang === "fr"
+            ? {
+                live: "Cash pulse actif", available: "Cash disponible", inflow: "Entrees prevues",
+                outflow: "Sorties prevues", signal: "Signal temps reel", confidence: "Confiance",
+                delta: "+8,4% ce mois", inspect: "Survole la courbe"
+              }
+            : {
+                live: "Cash pulse live", available: "Available cash", inflow: "Expected inflow",
+                outflow: "Expected outflow", signal: "Live signal", confidence: "Confidence",
+                delta: "+8.4% this month", inspect: "Hover over the curve"
+              };
+          $("mockMain").innerHTML = `
+            <div class="cash-dashboard">
+              <div class="cash-topline">
+                <span class="cash-live"><i aria-hidden="true"></i>${labels.live}</span>
+                <span class="cash-ai">FORECAST ENGINE // 03</span>
+              </div>
+              <div class="cash-heading">
+                <div>
+                  <small>${labels.available}</small>
+                  <h3 id="mockCash">${data.cash}</h3>
+                </div>
+                <span class="cash-delta" id="cashDelta">${labels.delta}</span>
+              </div>
+              <div class="cash-periods" role="group" aria-label="${state.lang === "fr" ? "Periode de projection" : "Forecast period"}">
+                <button class="cash-period" type="button" data-cash-range="7d">7J</button>
+                <button class="cash-period active" type="button" data-cash-range="30d">30J</button>
+                <button class="cash-period" type="button" data-cash-range="90d">90J</button>
+              </div>
+              <div class="cash-canvas-wrap" id="cashCanvasWrap" aria-label="${labels.inspect}">
+                <canvas id="cashCanvas"></canvas>
+                <div class="cash-tooltip" id="cashTooltip" role="status"></div>
+              </div>
+              <div class="cash-stats">
+                <div class="cash-stat"><span>${labels.available}</span><strong id="cashAvailable">${data.rows[0][1]}</strong></div>
+                <div class="cash-stat"><span>${labels.inflow}</span><strong id="cashInflow">${data.rows[2][1]}</strong></div>
+                <div class="cash-stat"><span>${labels.outflow}</span><strong id="cashOutflow">${data.rows[1][1]}</strong></div>
+              </div>
+              <div class="cash-bottom">
+                <div class="cash-signal">${labels.signal}<strong id="mockSignal">${data.signal}</strong></div>
+                <div class="cash-confidence">${labels.confidence}<i id="cashConfidence" aria-hidden="true"></i><span id="cashConfidenceLabel">74%</span></div>
+              </div>
+              <div class="feed" id="mockFeed" hidden></div>
+            </div>
+          `;
+          document.querySelectorAll("[data-cash-range]").forEach((button) => {
+            button.classList.toggle("active", button.dataset.cashRange === state.cashRange);
+            button.addEventListener("click", () => {
+              state.cashRange = button.dataset.cashRange;
+              document.querySelectorAll("[data-cash-range]").forEach((item) => item.classList.toggle("active", item === button));
+              if (cashVisual) cashVisual.setRange(state.cashRange);
+            });
+          });
+          cashVisual = createCashVisual();
+          updateCashVisual();
+          document.querySelectorAll("[data-mock-module]").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.mockModule === state.mockModule);
+          });
+          return;
+        }
         $("mockMain").innerHTML = `
           <div class="mock-grid">
             <div class="panel">
@@ -2129,6 +2750,377 @@
         document.querySelectorAll("[data-mock-module]").forEach((btn) => {
           btn.classList.toggle("active", btn.dataset.mockModule === state.mockModule);
         });
+      }
+
+      function createCashVisual() {
+        const canvas = $("cashCanvas");
+        const wrap = $("cashCanvasWrap");
+        const tooltip = $("cashTooltip");
+        if (!canvas || !wrap) return null;
+        const context = canvas.getContext("2d");
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        let frame = 0;
+        let width = 0;
+        let height = 0;
+        let hoverIndex = -1;
+        let range = state.cashRange;
+        let model = { base: 3470, inflow: 1200, outflow: 280, confidence: 74 };
+        let points = [];
+
+        const profiles = {
+          "7d": [0, .04, .025, .11, .08, .17, .23],
+          "30d": [0, .05, .02, .16, .12, .24, .2, .31, .29, .42, .5],
+          "90d": [0, .08, .04, .18, .13, .29, .22, .39, .34, .51, .47, .62, .7]
+        };
+
+        function resize() {
+          const rect = wrap.getBoundingClientRect();
+          const ratio = Math.min(2, window.devicePixelRatio || 1);
+          width = Math.max(1, rect.width);
+          height = Math.max(1, rect.height);
+          canvas.width = Math.round(width * ratio);
+          canvas.height = Math.round(height * ratio);
+          canvas.style.width = `${width}px`;
+          canvas.style.height = `${height}px`;
+          context.setTransform(ratio, 0, 0, ratio, 0, 0);
+          makePoints();
+          if (reducedMotion) draw(0);
+        }
+
+        function makePoints() {
+          const profile = profiles[range] || profiles["30d"];
+          const span = Math.max(260, model.inflow - model.outflow);
+          const values = profile.map((value, index) => model.base + value * span + Math.sin(index * 1.7) * span * .045);
+          const min = Math.min(...values) - span * .08;
+          const max = Math.max(...values) + span * .08;
+          points = values.map((value, index) => ({
+            x: 10 + index * ((width - 20) / Math.max(1, values.length - 1)),
+            y: height - 14 - ((value - min) / Math.max(1, max - min)) * (height - 34),
+            value
+          }));
+        }
+
+        function traceLine() {
+          context.beginPath();
+          points.forEach((point, index) => {
+            if (index === 0) context.moveTo(point.x, point.y);
+            else {
+              const previous = points[index - 1];
+              const middle = (previous.x + point.x) / 2;
+              context.bezierCurveTo(middle, previous.y, middle, point.y, point.x, point.y);
+            }
+          });
+        }
+
+        function draw(time) {
+          context.clearRect(0, 0, width, height);
+          if (!points.length) return;
+          const gradient = context.createLinearGradient(0, 0, width, 0);
+          gradient.addColorStop(0, "#8b5cf6");
+          gradient.addColorStop(.48, "#22d3ee");
+          gradient.addColorStop(1, "#2dd4bf");
+
+          traceLine();
+          context.lineWidth = 8;
+          context.strokeStyle = "rgba(34, 211, 238, .08)";
+          context.stroke();
+          traceLine();
+          context.lineWidth = 2;
+          context.strokeStyle = gradient;
+          context.shadowColor = "rgba(34, 211, 238, .65)";
+          context.shadowBlur = 13;
+          context.stroke();
+          context.shadowBlur = 0;
+
+          const area = context.createLinearGradient(0, 0, 0, height);
+          area.addColorStop(0, "rgba(34, 211, 238, .22)");
+          area.addColorStop(1, "rgba(34, 211, 238, 0)");
+          traceLine();
+          context.lineTo(points[points.length - 1].x, height);
+          context.lineTo(points[0].x, height);
+          context.closePath();
+          context.fillStyle = area;
+          context.fill();
+
+          points.forEach((point, index) => {
+            const active = index === hoverIndex;
+            context.beginPath();
+            context.arc(point.x, point.y, active ? 5 : 2.4, 0, Math.PI * 2);
+            context.fillStyle = active ? "#ffffff" : "#67e8f9";
+            context.shadowColor = "#22d3ee";
+            context.shadowBlur = active ? 18 : 8;
+            context.fill();
+            context.shadowBlur = 0;
+          });
+
+          if (!reducedMotion && points.length > 1) {
+            const progress = (time * .00012) % 1;
+            const segment = Math.min(points.length - 2, Math.floor(progress * (points.length - 1)));
+            const local = progress * (points.length - 1) - segment;
+            const start = points[segment];
+            const end = points[segment + 1];
+            context.beginPath();
+            context.arc(start.x + (end.x - start.x) * local, start.y + (end.y - start.y) * local, 3.4, 0, Math.PI * 2);
+            context.fillStyle = "#ffffff";
+            context.shadowColor = "#67e8f9";
+            context.shadowBlur = 18;
+            context.fill();
+            context.shadowBlur = 0;
+            frame = requestAnimationFrame(draw);
+          }
+        }
+
+        function move(event) {
+          const rect = canvas.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+          let nearest = -1;
+          let distance = 34;
+          points.forEach((point, index) => {
+            const nextDistance = Math.hypot(point.x - x, point.y - y);
+            if (nextDistance < distance) {
+              nearest = index;
+              distance = nextDistance;
+            }
+          });
+          hoverIndex = nearest;
+          if (nearest >= 0) {
+            const point = points[nearest];
+            const suffix = state.lang === "fr" ? "Projection" : "Forecast";
+            tooltip.innerHTML = `<strong>${fmt(point.value, "EUR")}</strong>${suffix} ${nearest + 1}/${points.length}`;
+            tooltip.style.left = `${point.x}px`;
+            tooltip.style.top = `${point.y}px`;
+            tooltip.classList.add("visible");
+          } else {
+            tooltip.classList.remove("visible");
+          }
+          if (reducedMotion) draw(0);
+        }
+
+        const observer = typeof ResizeObserver === "function" ? new ResizeObserver(resize) : null;
+        if (observer) observer.observe(wrap);
+        else window.addEventListener("resize", resize);
+        canvas.addEventListener("pointermove", move);
+        canvas.addEventListener("pointerleave", () => {
+          hoverIndex = -1;
+          tooltip.classList.remove("visible");
+          if (reducedMotion) draw(0);
+        });
+        resize();
+        if (!reducedMotion) frame = requestAnimationFrame(draw);
+
+        return {
+          setRange(nextRange) {
+            range = nextRange;
+            makePoints();
+            if (reducedMotion) draw(0);
+          },
+          update(nextModel) {
+            model = { ...model, ...nextModel };
+            makePoints();
+            if (reducedMotion) draw(0);
+          },
+          destroy() {
+            cancelAnimationFrame(frame);
+            if (observer) observer.disconnect();
+            else window.removeEventListener("resize", resize);
+          }
+        };
+      }
+
+      function updateCashVisual(confidence = 74) {
+        if (state.mockModule !== "dashboard") return;
+        const amount = Number($("salaryRange")?.value || 1200);
+        const reserved = Math.min(Number($("keepRange")?.value || 500), amount);
+        const available = Math.max(0, amount - reserved) + 2970;
+        const inflow = state.scenario === "docs" ? Math.round(amount) : amount;
+        const outflow = state.scenario === "docs" ? Math.round(amount - (amount * reserved / 100)) : reserved;
+        setText("cashAvailable", state.scenario === "docs" ? `${Math.round(amount)} docs` : fmt(available, "EUR"));
+        setText("cashInflow", state.scenario === "docs" ? `${Math.round(reserved)}%` : fmt(inflow, "EUR"));
+        setText("cashOutflow", state.scenario === "docs" ? `${Math.round(Number($("rateRange")?.value || 0))} alertes` : fmt(outflow, "EUR"));
+        setText("cashConfidenceLabel", `${Math.round(confidence)}%`);
+        if ($("cashConfidence")) $("cashConfidence").style.setProperty("--cash-confidence", `${Math.round(confidence)}%`);
+        if ($("cashDelta")) {
+          const delta = Math.max(-9.9, Math.min(18.9, ((amount - reserved) / Math.max(1, amount)) * 12));
+          $("cashDelta").textContent = `${delta >= 0 ? "+" : ""}${delta.toLocaleString(state.lang === "fr" ? "fr-FR" : "en-US", { maximumFractionDigits: 1 })}%`;
+        }
+        if (cashVisual) cashVisual.update({ base: available, inflow: Math.max(180, inflow), outflow: Math.max(60, outflow), confidence });
+      }
+
+      const atlasCatalog = {
+        fr: [
+          { id: "budget.transaction", title: "Transactions", layer: "Domaine Budget", group: "budget", color: "#22d3ee", description: "Le point d'entree central des mouvements. Une evolution peut toucher les soldes, le budget journalier, l'analyse, Trip et la synchronisation.", impacts: ["Wallet", "Budget/jour", "Analyse", "Trip", "Offline", "Android"] },
+          { id: "budget.daily", title: "Budget journalier", layer: "Domaine Budget", group: "budget", color: "#38bdf8", description: "La lecture quotidienne relie periode, depenses reelles et projection. Son contrat traverse l'analyse et les vues mobiles.", impacts: ["Budget/jour", "Analyse", "Trip", "Offline", "Android"] },
+          { id: "wallet.balance", title: "Solde wallet", layer: "Domaine Budget", group: "budget", color: "#2dd4bf", description: "Le solde consolide les mouvements reels sans absorber les projections. Il reste un pivot pour le cash et le mode hors ligne.", impacts: ["Wallet", "Offline", "Android", "Analyse possible"] },
+          { id: "analysis.budget-actual", title: "Budget / reel", layer: "Domaine Analyse", group: "budget", color: "#60a5fa", description: "La comparaison explique l'ecart entre reference, reel paye et projection, avec une attention particuliere aux depenses Trip.", impacts: ["Budget/jour", "Analyse", "Trip", "Android"] },
+          { id: "trip.budget-link", title: "Liaison Trip", layer: "Domaine Voyage", group: "life", color: "#a78bfa", description: "Cette liaison evite qu'une depense partagee soit comptee deux fois et garde matching, remboursements et budget coherents.", impacts: ["Wallet", "Budget/jour", "Analyse", "Trip", "Offline", "Android"] },
+          { id: "work.income", title: "Revenus Travail", layer: "Domaine Vie", group: "life", color: "#c084fc", description: "Missions, periodes et revenus alimentent le budget et la projection sans confondre montant attendu et montant recu.", impacts: ["Budget/jour", "Analyse", "Offline", "Android"] },
+          { id: "sport.session", title: "Seance Sport", layer: "Domaine Sante", group: "life", color: "#f472b6", description: "La seance relie exercices, timer, calories et historique. Ses donnees remontent dans les KPI Sante.", impacts: ["KPI Analyse", "Offline", "Android"] },
+          { id: "nutrition.meal", title: "Repas Nutrition", layer: "Domaine Sante", group: "life", color: "#fb7185", description: "Repas, macros et hydratation nourrissent le cockpit Sante et doivent rester utilisables sans reseau.", impacts: ["KPI Analyse", "Offline", "Android"] },
+          { id: "assets.movement", title: "Mouvement patrimoine", layer: "Domaine Patrimoine", group: "platform", color: "#f59e0b", description: "Les achats, depenses annexes et amortissements se relient aux transactions sans modifier artificiellement le cash disponible.", impacts: ["Wallet", "Budget/jour", "Analyse", "Trip possible", "Offline", "Android"] },
+          { id: "sync.offline", title: "Synchro offline", layer: "Socle Plateforme", group: "platform", color: "#34d399", description: "La file locale rejoue les actions au retour reseau. Elle traverse presque tous les parcours critiques de l'application mobile.", impacts: ["Wallet", "Budget/jour", "Trip", "Offline", "Android", "Analyse possible"] }
+        ],
+        en: [
+          { id: "budget.transaction", title: "Transactions", layer: "Budget domain", group: "budget", color: "#22d3ee", description: "The central entry point for money movements. A change can affect balances, daily budget, analysis, Trip and synchronization.", impacts: ["Wallet", "Daily budget", "Analysis", "Trip", "Offline", "Android"] },
+          { id: "budget.daily", title: "Daily budget", layer: "Budget domain", group: "budget", color: "#38bdf8", description: "The daily view connects period, actual spending and projection. Its contract spans analysis and mobile views.", impacts: ["Daily budget", "Analysis", "Trip", "Offline", "Android"] },
+          { id: "wallet.balance", title: "Wallet balance", layer: "Budget domain", group: "budget", color: "#2dd4bf", description: "The balance consolidates actual movements without absorbing projections. It remains a pivot for cash and offline mode.", impacts: ["Wallet", "Offline", "Android", "Analysis possible"] },
+          { id: "analysis.budget-actual", title: "Budget / actual", layer: "Analysis domain", group: "budget", color: "#60a5fa", description: "The comparison explains gaps between reference, paid actuals and forecast, with special attention to Trip expenses.", impacts: ["Daily budget", "Analysis", "Trip", "Android"] },
+          { id: "trip.budget-link", title: "Trip link", layer: "Travel domain", group: "life", color: "#a78bfa", description: "This link prevents shared expenses from being counted twice and keeps matching, reimbursements and budget consistent.", impacts: ["Wallet", "Daily budget", "Analysis", "Trip", "Offline", "Android"] },
+          { id: "work.income", title: "Work income", layer: "Life domain", group: "life", color: "#c084fc", description: "Jobs, periods and income feed budget and forecast without confusing expected and received amounts.", impacts: ["Daily budget", "Analysis", "Offline", "Android"] },
+          { id: "sport.session", title: "Sport session", layer: "Health domain", group: "life", color: "#f472b6", description: "A session connects exercises, timer, calories and history. Its data feeds the Health KPIs.", impacts: ["Analysis KPI", "Offline", "Android"] },
+          { id: "nutrition.meal", title: "Nutrition meal", layer: "Health domain", group: "life", color: "#fb7185", description: "Meals, macros and hydration feed the Health cockpit and must remain usable without a network.", impacts: ["Analysis KPI", "Offline", "Android"] },
+          { id: "assets.movement", title: "Asset movement", layer: "Assets domain", group: "platform", color: "#f59e0b", description: "Purchases, related costs and depreciation link to transactions without artificially changing available cash.", impacts: ["Wallet", "Daily budget", "Analysis", "Trip possible", "Offline", "Android"] },
+          { id: "sync.offline", title: "Offline sync", layer: "Platform foundation", group: "platform", color: "#34d399", description: "The local queue replays actions when the network returns. It crosses nearly every critical mobile journey.", impacts: ["Wallet", "Daily budget", "Trip", "Offline", "Android", "Analysis possible"] }
+        ]
+      };
+
+      function updateAtlasPanel() {
+        const entries = atlasCatalog[state.lang];
+        const entry = entries.find((item) => item.id === state.atlasSelected) || entries[0];
+        state.atlasSelected = entry.id;
+        setText("atlasLayer", entry.layer);
+        setText("atlasTitle", entry.title);
+        setText("atlasId", entry.id);
+        setText("atlasDescription", entry.description);
+        if ($("atlasImpacts")) {
+          $("atlasImpacts").innerHTML = entry.impacts.map((impact) => `<span class="atlas-impact">${escapeHtml(impact)}</span>`).join("");
+        }
+        document.querySelectorAll("[data-atlas-id]").forEach((node) => {
+          node.classList.toggle("active", node.dataset.atlasId === entry.id);
+        });
+        if (atlasVisual) atlasVisual.refresh();
+      }
+
+      function renderAtlas() {
+        const nodesHost = $("atlasNodes");
+        const filtersHost = $("atlasFilters");
+        if (!nodesHost || !filtersHost) return;
+        if (atlasVisual) {
+          atlasVisual.destroy();
+          atlasVisual = null;
+        }
+        const filterLabels = state.lang === "fr"
+          ? { all: "Tout", budget: "Budget", life: "Vie", platform: "Socle" }
+          : { all: "All", budget: "Budget", life: "Life", platform: "Platform" };
+        const entries = atlasCatalog[state.lang];
+        const visibleEntries = state.atlasGroup === "all" ? entries : entries.filter((entry) => entry.group === state.atlasGroup);
+        if (!visibleEntries.some((entry) => entry.id === state.atlasSelected)) state.atlasSelected = visibleEntries[0]?.id || entries[0].id;
+        filtersHost.innerHTML = Object.entries(filterLabels).map(([key, label]) => (
+          `<button class="atlas-filter${state.atlasGroup === key ? " active" : ""}" type="button" data-atlas-group="${key}" aria-pressed="${state.atlasGroup === key}">${label}</button>`
+        )).join("");
+        nodesHost.innerHTML = entries.map((entry) => `
+          <button class="atlas-node${entry.id === state.atlasSelected ? " active" : ""}${state.atlasGroup !== "all" && entry.group !== state.atlasGroup ? " muted" : ""}"
+            type="button" data-atlas-id="${escapeHtml(entry.id)}" data-atlas-group="${entry.group}" style="--node-color:${entry.color}">
+            <small>${escapeHtml(entry.layer)}</small><strong>${escapeHtml(entry.title)}</strong>
+          </button>
+        `).join("");
+        filtersHost.querySelectorAll("[data-atlas-group]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.atlasGroup = button.dataset.atlasGroup;
+            renderAtlas();
+          });
+        });
+        nodesHost.querySelectorAll("[data-atlas-id]").forEach((node) => {
+          node.addEventListener("click", () => {
+            if (node.classList.contains("muted")) {
+              state.atlasGroup = "all";
+              state.atlasSelected = node.dataset.atlasId;
+              renderAtlas();
+              return;
+            }
+            state.atlasSelected = node.dataset.atlasId;
+            updateAtlasPanel();
+          });
+        });
+        atlasVisual = createAtlasVisual();
+        updateAtlasPanel();
+      }
+
+      function createAtlasVisual() {
+        const stage = $("atlasStage");
+        const canvas = $("atlasCanvas");
+        const core = stage?.querySelector(".atlas-core");
+        if (!stage || !canvas || !core) return null;
+        const context = canvas.getContext("2d");
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        let width = 1;
+        let height = 1;
+        let frame = 0;
+        let nodePoints = [];
+
+        function layout() {
+          const rect = stage.getBoundingClientRect();
+          const ratio = Math.min(2, window.devicePixelRatio || 1);
+          width = Math.max(1, rect.width);
+          height = Math.max(1, rect.height);
+          canvas.width = Math.round(width * ratio);
+          canvas.height = Math.round(height * ratio);
+          context.setTransform(ratio, 0, 0, ratio, 0, 0);
+          const centerX = width / 2;
+          const centerY = height * .53;
+          const radiusX = Math.min(width * .38, 270);
+          const radiusY = Math.min(height * .34, 195);
+          const nodes = [...stage.querySelectorAll(".atlas-node")];
+          nodePoints = nodes.map((node, index) => {
+            const angle = -Math.PI / 2 + index * (Math.PI * 2 / nodes.length);
+            const point = { node, x: centerX + Math.cos(angle) * radiusX, y: centerY + Math.sin(angle) * radiusY };
+            node.style.left = `${point.x}px`;
+            node.style.top = `${point.y}px`;
+            return point;
+          });
+          cancelAnimationFrame(frame);
+          draw(0);
+        }
+
+        function draw(time) {
+          context.clearRect(0, 0, width, height);
+          const center = { x: width / 2, y: height * .53 };
+          const selected = nodePoints.find((point) => point.node.dataset.atlasId === state.atlasSelected);
+          nodePoints.forEach((point) => {
+            const muted = point.node.classList.contains("muted");
+            const active = point === selected;
+            const gradient = context.createLinearGradient(center.x, center.y, point.x, point.y);
+            gradient.addColorStop(0, active ? "rgba(103,232,249,.72)" : "rgba(96,165,250,.20)");
+            gradient.addColorStop(1, active ? point.node.style.getPropertyValue("--node-color") : "rgba(148,163,184,.10)");
+            context.beginPath();
+            context.moveTo(center.x, center.y);
+            context.lineTo(point.x, point.y);
+            context.strokeStyle = muted ? "rgba(148,163,184,.035)" : gradient;
+            context.lineWidth = active ? 1.6 : .8;
+            context.setLineDash(active ? [] : [3, 7]);
+            context.stroke();
+          });
+          context.setLineDash([]);
+          if (selected && !reducedMotion) {
+            const progress = (time * .00028) % 1;
+            const x = center.x + (selected.x - center.x) * progress;
+            const y = center.y + (selected.y - center.y) * progress;
+            context.beginPath();
+            context.arc(x, y, 3.2, 0, Math.PI * 2);
+            context.fillStyle = "#ffffff";
+            context.shadowColor = "#67e8f9";
+            context.shadowBlur = 16;
+            context.fill();
+            context.shadowBlur = 0;
+            frame = requestAnimationFrame(draw);
+          }
+        }
+
+        const observer = typeof ResizeObserver === "function" ? new ResizeObserver(layout) : null;
+        if (observer) observer.observe(stage);
+        else window.addEventListener("resize", layout);
+        layout();
+        return {
+          refresh() {
+            cancelAnimationFrame(frame);
+            draw(0);
+          },
+          destroy() {
+            cancelAnimationFrame(frame);
+            if (observer) observer.disconnect();
+            else window.removeEventListener("resize", layout);
+          }
+        };
       }
 
       function renderScenario() {
@@ -2230,6 +3222,7 @@
         if ($("mockBarA")) $("mockBarA").style.width = `${Math.max(20, Math.min(95, (b / Math.max(1, a)) * 100))}%`;
         if ($("mockBarB")) $("mockBarB").style.width = `${Math.max(20, Math.min(95, ((a - Math.min(b, a)) / Math.max(1, a)) * 100))}%`;
         if ($("mockBarC")) $("mockBarC").style.width = `${Math.round(confidence)}%`;
+        updateCashVisual(confidence);
         document.querySelectorAll("[data-scenario]").forEach((btn) => btn.classList.toggle("active", btn.dataset.scenario === state.scenario));
       }
 

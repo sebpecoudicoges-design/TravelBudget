@@ -410,115 +410,44 @@
     try { localStorage.setItem(CIRCUIT_KEY(), JSON.stringify(CACHE.circuit)); } catch (_) {}
     return CACHE.circuit;
   }
+  function sportTimerController() {
+    return window.UI?.sportTimerController || null;
+  }
   function loadTimerPrefs() {
-    try {
-      const raw = JSON.parse(localStorage.getItem(TIMER_PREF_KEY()) || "{}");
-      return {
-        beepVolume: Math.max(0, Math.min(100, Math.round(n(raw.beepVolume, 70)))),
-      };
-    } catch (_) {
-      return { beepVolume: 70 };
-    }
+    return sportTimerController()?.loadTimerPrefs?.(TIMER_PREF_KEY()) || { beepVolume: 70 };
   }
   function saveTimerPrefs(next) {
-    const prefs = Object.assign({ beepVolume: 70 }, loadTimerPrefs(), next || {});
-    prefs.beepVolume = Math.max(0, Math.min(100, Math.round(n(prefs.beepVolume, 70))));
-    CACHE.timerBeepVolume = prefs.beepVolume;
-    try { localStorage.setItem(TIMER_PREF_KEY(), JSON.stringify(prefs)); } catch (_) {}
-    return prefs;
+    return sportTimerController()?.saveTimerPrefs?.(next, { storageKey: TIMER_PREF_KEY(), currentPrefs: loadTimerPrefs(), cache: CACHE }) || { beepVolume: 70 };
   }
   function normalizeTimerState(raw) {
-    if (!raw || typeof raw !== "object" || !Array.isArray(raw.sequence) || !raw.sequence.length) return null;
-    const timer = Object.assign({}, raw);
-    timer.sequence = raw.sequence.slice(0, 500);
-    timer.doneSets = Array.isArray(raw.doneSets) ? raw.doneSets.slice(0, 500) : [];
-    timer.index = Math.max(0, Math.round(n(raw.index, 0)));
-    timer.startedAt = Math.max(0, n(raw.startedAt, Date.now()));
-    timer.stepStartedAt = Math.max(0, n(raw.stepStartedAt, timer.startedAt));
-    timer.stepEndAt = raw.stepEndAt == null ? null : Math.max(0, n(raw.stepEndAt, 0));
-    timer.timeCapEndAt = raw.timeCapEndAt == null ? null : Math.max(0, n(raw.timeCapEndAt, 0));
-    timer.pauseStartedAt = raw.pauseStartedAt == null ? null : Math.max(0, n(raw.pauseStartedAt, 0));
-    timer.paused = raw.paused === true;
-    return timer;
+    return sportTimerController()?.normalizeTimerState?.(raw) || null;
   }
   function loadTimerState() {
-    try { return normalizeTimerState(JSON.parse(localStorage.getItem(TIMER_STATE_KEY()) || "null")); }
-    catch (_) { return null; }
+    return sportTimerController()?.loadTimerState?.(TIMER_STATE_KEY()) || null;
   }
   function saveTimerState() {
-    const timer = normalizeTimerState(CACHE.timer);
-    if (!timer) return clearTimerState();
-    persistSportCache(TIMER_STATE_KEY(), JSON.stringify({
-      savedAt: new Date().toISOString(),
-      sequence: timer.sequence,
-      index: timer.index,
-      startedAt: timer.startedAt,
-      stepStartedAt: timer.stepStartedAt,
-      stepEndAt: timer.stepEndAt,
-      paused: timer.paused,
-      pauseStartedAt: timer.pauseStartedAt,
-      doneSets: timer.doneSets,
-      roundsCompleted: timer.roundsCompleted || 0,
-      timeCapEndAt: timer.timeCapEndAt,
-      bodyWeightKg: timer.bodyWeightKg,
-      bodyHeightCm: timer.bodyHeightCm,
-      stepLoadKg: timer.stepLoadKg,
-      stepReps: timer.stepReps,
-    }));
+    const saved = sportTimerController()?.persistTimerState?.(CACHE.timer, { storageKey: TIMER_STATE_KEY(), persist: persistSportCache });
+    if (!saved) clearTimerState();
   }
   function clearTimerState() {
-    try { localStorage.removeItem(TIMER_STATE_KEY()); } catch (_) {}
+    sportTimerController()?.clearTimerState?.(TIMER_STATE_KEY());
     if (!CACHE.timer) syncTimerFocusLock();
   }
   function normalizeFreeTimerState(raw) {
-    if (!raw || typeof raw !== "object" || !raw.item) return null;
-    const startedAt = Math.max(0, n(raw.startedAt, Date.now()));
-    const pausedAccumMs = Math.max(0, n(raw.pausedAccumMs, 0));
-    return {
-      item: Object.assign({}, raw.item),
-      startedAt,
-      stoppedAt: raw.stoppedAt == null ? null : Math.max(startedAt, n(raw.stoppedAt, Date.now())),
-      paused: raw.paused === true,
-      pauseStartedAt: raw.pauseStartedAt == null ? null : Math.max(0, n(raw.pauseStartedAt, 0)),
-      pausedAccumMs,
-      bodyWeightKg: n(raw.bodyWeightKg, bodyWeight()),
-      bodyHeightCm: n(raw.bodyHeightCm, bodyHeight()),
-      resultReps: raw.resultReps == null ? null : Math.max(0, Math.round(n(raw.resultReps, 0))),
-      resultWeightKg: raw.resultWeightKg == null ? null : Math.max(0, n(raw.resultWeightKg, 0)),
-      resultDistanceM: raw.resultDistanceM == null ? null : Math.max(0, Math.round(n(raw.resultDistanceM, 0))),
-    };
+    return sportTimerController()?.normalizeFreeTimerState?.(raw, { bodyWeightKg: bodyWeight(), bodyHeightCm: bodyHeight() }) || null;
   }
   function freeTimerElapsedSeconds(timer, at) {
-    const ft = normalizeFreeTimerState(timer);
-    if (!ft) return 0;
-    const now = Math.max(ft.startedAt, n(at, Date.now()));
-    const end = ft.stoppedAt || (ft.paused && ft.pauseStartedAt ? ft.pauseStartedAt : now);
-    return Math.max(0, Math.round((end - ft.startedAt - n(ft.pausedAccumMs, 0)) / 1000));
+    return sportTimerController()?.freeTimerElapsedSeconds?.(timer, at) || 0;
   }
   function loadFreeTimerState() {
-    try { return normalizeFreeTimerState(JSON.parse(localStorage.getItem(FREE_TIMER_STATE_KEY()) || "null")); }
-    catch (_) { return null; }
+    return sportTimerController()?.loadFreeTimerState?.(FREE_TIMER_STATE_KEY(), { bodyWeightKg: bodyWeight(), bodyHeightCm: bodyHeight() }) || null;
   }
   function saveFreeTimerState() {
-    const timer = normalizeFreeTimerState(CACHE.freeTimer);
-    if (!timer) return clearFreeTimerState();
-    persistSportCache(FREE_TIMER_STATE_KEY(), JSON.stringify({
-      savedAt: new Date().toISOString(),
-      item: timer.item,
-      startedAt: timer.startedAt,
-      stoppedAt: timer.stoppedAt,
-      paused: timer.paused,
-      pauseStartedAt: timer.pauseStartedAt,
-      pausedAccumMs: timer.pausedAccumMs,
-      bodyWeightKg: timer.bodyWeightKg,
-      bodyHeightCm: timer.bodyHeightCm,
-      resultReps: timer.resultReps,
-      resultWeightKg: timer.resultWeightKg,
-      resultDistanceM: timer.resultDistanceM,
-    }));
+    const saved = sportTimerController()?.persistFreeTimerState?.(CACHE.freeTimer, { storageKey: FREE_TIMER_STATE_KEY(), persist: persistSportCache, bodyWeightKg: bodyWeight(), bodyHeightCm: bodyHeight() });
+    if (!saved) clearFreeTimerState();
   }
   function clearFreeTimerState() {
-    try { localStorage.removeItem(FREE_TIMER_STATE_KEY()); } catch (_) {}
+    sportTimerController()?.clearFreeTimerState?.(FREE_TIMER_STATE_KEY());
     if (!CACHE.timer) syncTimerFocusLock();
   }
   function syncTimerFocusLock() {

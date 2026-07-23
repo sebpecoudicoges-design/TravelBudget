@@ -5,6 +5,10 @@ function num(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function safeStorage() {
+  try { return globalThis.localStorage || null; } catch (_) { return null; }
+}
+
 function safeTimer(timer) {
   return timer && typeof timer === 'object' ? timer : {};
 }
@@ -23,6 +27,137 @@ export function currentTimerStep(timer = {}) {
   const sequence = Array.isArray(source.sequence) ? source.sequence : [];
   const index = Math.max(0, Math.round(num(source.index, 0)));
   return sequence[index] || null;
+}
+
+export function loadTimerPrefs(storageKey) {
+  try {
+    const raw = JSON.parse(safeStorage()?.getItem(storageKey) || '{}');
+    return {
+      beepVolume: Math.max(0, Math.min(100, Math.round(num(raw.beepVolume, 70)))),
+    };
+  } catch (_) {
+    return { beepVolume: 70 };
+  }
+}
+
+export function saveTimerPrefs(next = {}, { storageKey, currentPrefs, cache } = {}) {
+  const prefs = { beepVolume: 70, ...(currentPrefs || loadTimerPrefs(storageKey)), ...(next || {}) };
+  prefs.beepVolume = Math.max(0, Math.min(100, Math.round(num(prefs.beepVolume, 70))));
+  if (cache) cache.timerBeepVolume = prefs.beepVolume;
+  try { safeStorage()?.setItem(storageKey, JSON.stringify(prefs)); } catch (_) {}
+  return prefs;
+}
+
+export function normalizeTimerState(raw, { now = Date.now() } = {}) {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.sequence) || !raw.sequence.length) return null;
+  const timer = { ...raw };
+  timer.sequence = raw.sequence.slice(0, 500);
+  timer.doneSets = Array.isArray(raw.doneSets) ? raw.doneSets.slice(0, 500) : [];
+  timer.index = Math.max(0, Math.round(num(raw.index, 0)));
+  timer.startedAt = Math.max(0, num(raw.startedAt, now));
+  timer.stepStartedAt = Math.max(0, num(raw.stepStartedAt, timer.startedAt));
+  timer.stepEndAt = raw.stepEndAt == null ? null : Math.max(0, num(raw.stepEndAt, 0));
+  timer.timeCapEndAt = raw.timeCapEndAt == null ? null : Math.max(0, num(raw.timeCapEndAt, 0));
+  timer.pauseStartedAt = raw.pauseStartedAt == null ? null : Math.max(0, num(raw.pauseStartedAt, 0));
+  timer.paused = raw.paused === true;
+  return timer;
+}
+
+export function loadTimerState(storageKey) {
+  try { return normalizeTimerState(JSON.parse(safeStorage()?.getItem(storageKey) || 'null')); } catch (_) { return null; }
+}
+
+export function persistTimerState(timer, { storageKey, persist } = {}) {
+  const normalized = normalizeTimerState(timer);
+  if (!normalized) {
+    try { safeStorage()?.removeItem(storageKey); } catch (_) {}
+    return false;
+  }
+  const payload = {
+    savedAt: new Date().toISOString(),
+    sequence: normalized.sequence,
+    index: normalized.index,
+    startedAt: normalized.startedAt,
+    stepStartedAt: normalized.stepStartedAt,
+    stepEndAt: normalized.stepEndAt,
+    paused: normalized.paused,
+    pauseStartedAt: normalized.pauseStartedAt,
+    doneSets: normalized.doneSets,
+    roundsCompleted: normalized.roundsCompleted || 0,
+    timeCapEndAt: normalized.timeCapEndAt,
+    bodyWeightKg: normalized.bodyWeightKg,
+    bodyHeightCm: normalized.bodyHeightCm,
+    stepLoadKg: normalized.stepLoadKg,
+    stepReps: normalized.stepReps,
+  };
+  const value = JSON.stringify(payload);
+  if (typeof persist === 'function') persist(storageKey, value);
+  else safeStorage()?.setItem(storageKey, value);
+  return true;
+}
+
+export function clearTimerState(storageKey) {
+  try { safeStorage()?.removeItem(storageKey); } catch (_) {}
+}
+
+export function normalizeFreeTimerState(raw, { now = Date.now(), bodyWeightKg = 70, bodyHeightCm = 0 } = {}) {
+  if (!raw || typeof raw !== 'object' || !raw.item) return null;
+  const startedAt = Math.max(0, num(raw.startedAt, now));
+  const pausedAccumMs = Math.max(0, num(raw.pausedAccumMs, 0));
+  return {
+    item: { ...raw.item },
+    startedAt,
+    stoppedAt: raw.stoppedAt == null ? null : Math.max(startedAt, num(raw.stoppedAt, now)),
+    paused: raw.paused === true,
+    pauseStartedAt: raw.pauseStartedAt == null ? null : Math.max(0, num(raw.pauseStartedAt, 0)),
+    pausedAccumMs,
+    bodyWeightKg: num(raw.bodyWeightKg, bodyWeightKg),
+    bodyHeightCm: num(raw.bodyHeightCm, bodyHeightCm),
+    resultReps: raw.resultReps == null ? null : Math.max(0, Math.round(num(raw.resultReps, 0))),
+    resultWeightKg: raw.resultWeightKg == null ? null : Math.max(0, num(raw.resultWeightKg, 0)),
+    resultDistanceM: raw.resultDistanceM == null ? null : Math.max(0, Math.round(num(raw.resultDistanceM, 0))),
+  };
+}
+
+export function freeTimerElapsedSeconds(timer, at) {
+  const ft = normalizeFreeTimerState(timer);
+  if (!ft) return 0;
+  const now = Math.max(ft.startedAt, num(at, Date.now()));
+  const end = ft.stoppedAt || (ft.paused && ft.pauseStartedAt ? ft.pauseStartedAt : now);
+  return Math.max(0, Math.round((end - ft.startedAt - num(ft.pausedAccumMs, 0)) / 1000));
+}
+
+export function loadFreeTimerState(storageKey, options = {}) {
+  try { return normalizeFreeTimerState(JSON.parse(safeStorage()?.getItem(storageKey) || 'null'), options); } catch (_) { return null; }
+}
+
+export function persistFreeTimerState(timer, { storageKey, persist, bodyWeightKg = 70, bodyHeightCm = 0 } = {}) {
+  const normalized = normalizeFreeTimerState(timer, { bodyWeightKg, bodyHeightCm });
+  if (!normalized) {
+    try { safeStorage()?.removeItem(storageKey); } catch (_) {}
+    return false;
+  }
+  const value = JSON.stringify({
+    savedAt: new Date().toISOString(),
+    item: normalized.item,
+    startedAt: normalized.startedAt,
+    stoppedAt: normalized.stoppedAt,
+    paused: normalized.paused,
+    pauseStartedAt: normalized.pauseStartedAt,
+    pausedAccumMs: normalized.pausedAccumMs,
+    bodyWeightKg: normalized.bodyWeightKg,
+    bodyHeightCm: normalized.bodyHeightCm,
+    resultReps: normalized.resultReps,
+    resultWeightKg: normalized.resultWeightKg,
+    resultDistanceM: normalized.resultDistanceM,
+  });
+  if (typeof persist === 'function') persist(storageKey, value);
+  else safeStorage()?.setItem(storageKey, value);
+  return true;
+}
+
+export function clearFreeTimerState(storageKey) {
+  try { safeStorage()?.removeItem(storageKey); } catch (_) {}
 }
 
 export function defaultStepValues(step = {}, options = {}) {

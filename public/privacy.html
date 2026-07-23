@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Politique de confidentialité — Travel Budget</title>
+  <meta name="description" content="Politique de confidentialité de l'application Travel Budget (BudgetPacker), incluant la collecte, l'utilisation et la suppression des données." />
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #0b1220;
+      --muted: #5e6d82;
+      --line: rgba(15, 23, 42, .11);
+      --panel: rgba(255, 255, 255, .88);
+      --soft: #eef4fb;
+      --blue: #2563eb;
+      --cyan: #0891b2;
+      --green: #059669;
+      --danger: #be123c;
+      --shadow: 0 24px 70px rgba(15, 23, 42, .11);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 5%, rgba(37, 99, 235, .14), transparent 28%),
+        radial-gradient(circle at 88% 18%, rgba(8, 145, 178, .11), transparent 26%),
+        linear-gradient(180deg, #edf4fb, #fff 34%, #f7fafc);
+    }
+    a { color: inherit; }
+    button { font: inherit; }
+    .shell { width: min(1020px, calc(100% - 32px)); margin: 0 auto; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid var(--line);
+      background: rgba(248, 250, 252, .84);
+      backdrop-filter: blur(18px);
+    }
+    .nav {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 950; }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      color: #fff;
+      background: linear-gradient(135deg, #0f172a, var(--blue), var(--cyan));
+      box-shadow: 0 13px 32px rgba(37, 99, 235, .22);
+    }
+    .nav-actions { display: flex; align-items: center; gap: 8px; }
+    .lang-switch { display: flex; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
+    .lang-btn {
+      min-width: 42px;
+      min-height: 34px;
+      border: 0;
+      border-radius: 999px;
+      color: var(--muted);
+      background: transparent;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .lang-btn.active { color: #fff; background: #111827; }
+    .back {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    .hero { padding: 74px 0 42px; text-align: center; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid rgba(37, 99, 235, .17);
+      border-radius: 999px;
+      color: #1d4ed8;
+      background: rgba(255, 255, 255, .74);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+    h1 { margin: 18px auto 14px; max-width: 820px; font-size: clamp(40px, 7vw, 70px); line-height: .98; letter-spacing: -.05em; }
+    .hero p { max-width: 720px; margin: 0 auto; color: var(--muted); font-size: 17px; line-height: 1.65; }
+    .meta { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .meta span { padding: 8px 11px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.7); color: var(--muted); font-size: 11px; font-weight: 850; }
+    .layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 22px; align-items: start; padding-bottom: 74px; }
+    .toc {
+      position: sticky;
+      top: 90px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255,255,255,.76);
+      box-shadow: 0 16px 42px rgba(15, 23, 42, .07);
+      backdrop-filter: blur(12px);
+    }
+    .toc strong { display: block; margin: 2px 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    .toc a { display: block; padding: 8px; border-radius: 10px; color: var(--muted); text-decoration: none; font-size: 12px; font-weight: 760; }
+    .toc a:hover { color: var(--ink); background: var(--soft); }
+    .content { display: grid; gap: 14px; }
+    .card {
+      scroll-margin-top: 90px;
+      padding: 26px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .card h2 { margin: 0 0 13px; font-size: 25px; letter-spacing: -.025em; }
+    .card h3 { margin: 21px 0 8px; font-size: 16px; }
+    .card p, .card li { color: #45556b; font-size: 14px; line-height: 1.68; }
+    .card p { margin: 10px 0; }
+    .card ul { margin: 9px 0; padding-left: 20px; }
+    .card li + li { margin-top: 6px; }
+    .data-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 15px; }
+    .data-item { padding: 15px; border: 1px solid var(--line); border-radius: 16px; background: #f8fafc; }
+    .data-item strong { display: block; margin-bottom: 5px; font-size: 13px; }
+    .data-item span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .notice { padding: 15px; border: 1px solid rgba(5, 150, 105, .16); border-radius: 16px; color: #065f46; background: rgba(209, 250, 229, .55); font-size: 13px; line-height: 1.55; }
+    .deletion {
+      border-color: rgba(190, 18, 60, .18);
+      background:
+        radial-gradient(circle at 90% 10%, rgba(251, 113, 133, .1), transparent 30%),
+        rgba(255,255,255,.92);
+    }
+    .delete-action {
+      margin-top: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 17px;
+      border: 1px solid rgba(190, 18, 60, .16);
+      border-radius: 18px;
+      background: rgba(255, 241, 242, .72);
+    }
+    .delete-action strong { display: block; color: #881337; font-size: 14px; }
+    .delete-action span { display: block; margin-top: 4px; color: #9f1239; font-size: 12px; line-height: 1.45; }
+    .delete-btn {
+      flex: none;
+      min-height: 43px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 15px;
+      border-radius: 999px;
+      color: #fff;
+      background: #be123c;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: 0 12px 28px rgba(190, 18, 60, .18);
+    }
+    .contact-link { color: #1d4ed8; font-weight: 850; }
+    footer { padding: 0 0 40px; color: var(--muted); text-align: center; font-size: 12px; }
+    [data-lang-content] { display: none; }
+    [data-lang-content].active { display: block; }
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 22px, 1020px); }
+      .layout { grid-template-columns: 1fr; }
+      .toc { position: static; display: flex; gap: 4px; overflow-x: auto; }
+      .toc strong { display: none; }
+      .toc a { flex: none; }
+      .data-grid { grid-template-columns: 1fr; }
+      .delete-action { align-items: flex-start; flex-direction: column; }
+      .delete-btn { width: 100%; }
+      .back span { display: none; }
+      .hero { padding-top: 48px; }
+      .card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell nav">
+      <a class="brand" href="/projet.html">
+        <span class="brand-mark">TB</span>
+        <span>Travel Budget</span>
+      </a>
+      <div class="nav-actions">
+        <div class="lang-switch" aria-label="Language">
+          <button class="lang-btn active" type="button" data-lang="fr">FR</button>
+          <button class="lang-btn" type="button" data-lang="en">EN</button>
+        </div>
+        <a class="back" href="/projet.html">← <span data-label-fr="Retour au projet" data-label-en="Back to project">Retour au projet</span></a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div data-lang-content="fr" class="active">
+      <section class="shell hero">
+        <span class="eyebrow">Confidentialité & contrôle</span>
+        <h1>Vos données restent les vôtres.</h1>
+        <p>Cette politique explique quelles données Travel Budget (également présenté sous le nom BudgetPacker) traite, pourquoi elles sont nécessaires et comment demander leur suppression.</p>
+        <div class="meta"><span>Version 1.0</span><span>Dernière mise à jour : 23 juillet 2026</span><span>Application : com.travelbudget.app</span></div>
+      </section>
+      <div class="shell layout">
+        <nav class="toc" aria-label="Sommaire">
+          <strong>Sommaire</strong>
+          <a href="#fr-responsable">Responsable</a>
+          <a href="#fr-donnees">Données</a>
+          <a href="#fr-usages">Utilisation</a>
+          <a href="#fr-partage">Prestataires</a>
+          <a href="#fr-securite">Sécurité</a>
+          <a href="#fr-suppression">Suppression</a>
+          <a href="#fr-droits">Vos droits</a>
+        </nav>
+        <div class="content">
+          <section class="card" id="fr-responsable">
+            <h2>1. Responsable et périmètre</h2>
+            <p>La présente politique s’applique à l’application Android et web <strong>Travel Budget / BudgetPacker</strong>, éditée par le développeur de Travel Budget. Pour toute question relative à la confidentialité, écrivez à <a class="contact-link" href="mailto:seb.pecoud.icoges@gmail.com">seb.pecoud.icoges@gmail.com</a>.</p>
+            <p>Travel Budget est un outil personnel de pilotage budgétaire, de voyage, de documents, de patrimoine, de sport, de nutrition, de sommeil et de travail. Il ne fournit ni conseil financier réglementé ni diagnostic médical.</p>
+          </section>
+
+          <section class="card" id="fr-donnees">
+            <h2>2. Données traitées</h2>
+            <p>Les données dépendent des modules que vous utilisez. Vous choisissez l’essentiel du contenu enregistré.</p>
+            <div class="data-grid">
+              <div class="data-item"><strong>Compte et profil</strong><span>Adresse e-mail, identifiant de compte, informations Google OAuth si utilisé, devise principale et préférences d’interface.</span></div>
+              <div class="data-item"><strong>Budget et finances personnelles</strong><span>Wallets, budgets, transactions, catégories, revenus attendus, taux de change, cautions et règles récurrentes. Travel Budget ne collecte pas vos identifiants bancaires.</span></div>
+              <div class="data-item"><strong>Voyages et partages</strong><span>Voyages, participants, noms ou e-mails invités, dépenses partagées, parts, remboursements et liens avec le budget.</span></div>
+              <div class="data-item"><strong>Documents et messages</strong><span>Fichiers, factures, justificatifs, tags, dossiers et pièces reçues via l’intégration WhatsApp lorsque vous choisissez de l’utiliser.</span></div>
+              <div class="data-item"><strong>Bien-être et activité</strong><span>Repas, nutrition, hydratation, alcool, sommeil, séances sportives, performances, poids, taille, date de naissance et mesures corporelles saisis volontairement.</span></div>
+              <div class="data-item"><strong>Travail et patrimoine</strong><span>Missions, horaires, revenus, actifs, estimations de valeur, dépenses liées, propriétaires et amortissements.</span></div>
+              <div class="data-item"><strong>Appareil et fonctionnement</strong><span>Jeton de notification push, préférences de notification, état de synchronisation, file hors ligne et diagnostics d’erreur nécessaires à la fiabilité.</span></div>
+              <div class="data-item"><strong>Données locales</strong><span>Des caches et actions en attente peuvent rester sur votre appareil pour permettre la lecture et la saisie hors ligne.</span></div>
+            </div>
+            <h3>Permissions Android</h3>
+            <p>L’application demande uniquement l’accès Internet et, avec votre accord, l’autorisation d’envoyer des notifications. Elle ne demande pas l’accès à la localisation, au microphone, à la caméra, aux contacts ou aux SMS.</p>
+          </section>
+
+          <section class="card" id="fr-usages">
+            <h2>3. Pourquoi ces données sont utilisées</h2>
+            <ul>
+              <li>Créer et sécuriser votre compte, puis synchroniser vos données entre vos appareils.</li>
+              <li>Calculer soldes, budgets, projections, conversions, répartitions Trip et indicateurs choisis.</li>
+              <li>Afficher vos documents, historiques, séances, repas et autres contenus personnels.</li>
+              <li>Envoyer les notifications que vous avez activées et assurer la synchronisation hors ligne.</li>
+              <li>Prévenir les abus, diagnostiquer les erreurs et maintenir la sécurité du service.</li>
+            </ul>
+            <div class="notice">Travel Budget ne vend pas vos données, n’affiche pas de publicité et n’utilise pas vos informations financières ou de bien-être pour du ciblage publicitaire.</div>
+          </section>
+
+          <section class="card" id="fr-partage">
+            <h2>4. Prestataires et partage</h2>
+            <p>Les données ne sont partagées que lorsque cela est nécessaire au fonctionnement du service ou lorsque vous déclenchez vous-même un partage.</p>
+            <ul>
+              <li><strong>Supabase</strong> : authentification, base de données, stockage de fichiers et fonctions serveur.</li>
+              <li><strong>Google</strong> : connexion Google facultative et Firebase Cloud Messaging pour les notifications push.</li>
+              <li><strong>Twilio / WhatsApp</strong> : réception de messages et pièces jointes uniquement si vous utilisez cette intégration.</li>
+              <li><strong>Netlify</strong> : hébergement de la partie web et fonctions techniques associées.</li>
+              <li><strong>Frankfurter / Banque centrale européenne</strong> : taux de change publics ; aucune donnée de compte n’est volontairement envoyée avec une requête de taux.</li>
+            </ul>
+            <p>Des données de voyage peuvent être visibles par les membres du groupe concerné selon les fonctions de partage utilisées. Les prestataires peuvent traiter des données dans d’autres pays conformément à leurs conditions et aux garanties applicables.</p>
+          </section>
+
+          <section class="card" id="fr-securite">
+            <h2>5. Conservation et sécurité</h2>
+            <p>Les données sont conservées pendant que votre compte reste actif ou aussi longtemps qu’elles sont nécessaires aux fonctions demandées. Les échanges utilisent HTTPS. L’accès aux données synchronisées repose sur l’authentification Supabase et des règles de sécurité au niveau des lignes afin de séparer les comptes.</p>
+            <p>Après suppression, certaines copies techniques peuvent subsister temporairement dans les sauvegardes du prestataire jusqu’à leur rotation normale. Elles ne sont pas réutilisées pour les fonctions courantes. Les journaux strictement nécessaires à la sécurité ou au respect d’une obligation légale peuvent être conservés pendant la durée justifiée par cette finalité.</p>
+            <p>La sécurité absolue n’existe pas : protégez votre mot de passe et ne transmettez jamais d’informations sensibles par e-mail lors d’une demande d’assistance.</p>
+          </section>
+
+          <section class="card deletion" id="fr-suppression">
+            <h2>6. Suppression du compte et des données</h2>
+            <p>Vous pouvez demander la suppression de votre compte Travel Budget et des données qui lui sont associées. La demande couvre notamment le profil, les budgets, transactions, documents, activités, données de bien-être, jetons push et contenus personnels.</p>
+            <p>Pour les données partagées avec d’autres membres d’un voyage, les éléments nécessaires à leur historique peuvent être supprimés ou dissociés de votre identité lorsque leur suppression complète porterait atteinte aux données des autres participants.</p>
+            <div class="delete-action">
+              <div><strong>Demander la suppression</strong><span>Envoyez la demande depuis l’adresse du compte concerné. Indiquez uniquement l’e-mail du compte — jamais votre mot de passe ni vos documents.</span></div>
+              <a class="delete-btn" href="mailto:seb.pecoud.icoges@gmail.com?subject=%5BTravel%20Budget%5D%20Suppression%20de%20compte&body=Bonjour%2C%0A%0AJe%20demande%20la%20suppression%20de%20mon%20compte%20Travel%20Budget%20associ%C3%A9%20%C3%A0%20l%27adresse%20%3A%20%0A%0AMerci.">Envoyer la demande</a>
+            </div>
+            <p>Une vérification d’identité peut être demandée afin d’éviter la suppression frauduleuse d’un compte. Une fois la demande vérifiée, le compte n’est pas simplement désactivé : les données associées sont supprimées, sous réserve des exceptions de conservation décrites ci-dessus.</p>
+          </section>
+
+          <section class="card" id="fr-droits">
+            <h2>7. Vos choix et vos droits</h2>
+            <p>Selon la loi applicable, vous pouvez demander l’accès, la correction, l’export, la limitation ou la suppression de vos données, et retirer un consentement donné. Vous pouvez désactiver les notifications dans l’application ou dans les réglages Android.</p>
+            <p>Pour exercer un droit ou signaler un problème : <a class="contact-link" href="mailto:seb.pecoud.icoges@gmail.com?subject=%5BTravel%20Budget%5D%20Confidentialit%C3%A9">seb.pecoud.icoges@gmail.com</a>.</p>
+            <h3>Enfants</h3>
+            <p>L’application n’est pas conçue ni commercialisée spécifiquement pour les enfants. Un mineur ne doit l’utiliser que si la loi de son pays l’autorise et, lorsque nécessaire, avec l’accord de son représentant légal.</p>
+            <h3>Évolutions de cette politique</h3>
+            <p>Cette politique peut être mise à jour lorsque les fonctions, prestataires ou règles applicables changent. La date affichée en haut de page indique la dernière révision.</p>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div data-lang-content="en">
+      <section class="shell hero">
+        <span class="eyebrow">Privacy & control</span>
+        <h1>Your data remains yours.</h1>
+        <p>This policy explains what data Travel Budget (also presented as BudgetPacker) processes, why it is needed, and how to request deletion.</p>
+        <div class="meta"><span>Version 1.0</span><span>Last updated: July 23, 2026</span><span>Application: com.travelbudget.app</span></div>
+      </section>
+      <div class="shell layout">
+        <nav class="toc" aria-label="Contents">
+          <strong>Contents</strong>
+          <a href="#en-controller">Controller</a>
+          <a href="#en-data">Data</a>
+          <a href="#en-use">Use</a>
+          <a href="#en-sharing">Providers</a>
+          <a href="#en-security">Security</a>
+          <a href="#en-deletion">Deletion</a>
+          <a href="#en-rights">Your rights</a>
+        </nav>
+        <div class="content">
+          <section class="card" id="en-controller">
+            <h2>1. Controller and scope</h2>
+            <p>This policy applies to the Android and web application <strong>Travel Budget / BudgetPacker</strong>, published by the Travel Budget developer. For privacy questions, contact <a class="contact-link" href="mailto:seb.pecoud.icoges@gmail.com">seb.pecoud.icoges@gmail.com</a>.</p>
+            <p>Travel Budget is a personal tool for budget, travel, documents, assets, sport, nutrition, sleep and work tracking. It does not provide regulated financial advice or medical diagnosis.</p>
+          </section>
+          <section class="card" id="en-data">
+            <h2>2. Data we process</h2>
+            <p>The data depends on the modules you use. You choose most of the content that is saved.</p>
+            <div class="data-grid">
+              <div class="data-item"><strong>Account and profile</strong><span>Email address, account identifier, Google OAuth information when used, base currency and interface preferences.</span></div>
+              <div class="data-item"><strong>Personal finances</strong><span>Wallets, budgets, transactions, categories, expected income, exchange rates, deposits and recurring rules. Travel Budget does not collect bank login credentials.</span></div>
+              <div class="data-item"><strong>Trips and sharing</strong><span>Trips, participants, invited names or emails, shared expenses, shares, reimbursements and budget links.</span></div>
+              <div class="data-item"><strong>Documents and messages</strong><span>Files, invoices, proofs, tags, folders and attachments received through the WhatsApp integration when you choose to use it.</span></div>
+              <div class="data-item"><strong>Wellbeing and activity</strong><span>Meals, nutrition, hydration, alcohol, sleep, workouts, performance, weight, height, birth date and voluntarily entered body measurements.</span></div>
+              <div class="data-item"><strong>Work and assets</strong><span>Jobs, working time, income, assets, value estimates, linked costs, owners and depreciation.</span></div>
+              <div class="data-item"><strong>Device and operation</strong><span>Push token, notification choices, sync state, offline queue and error diagnostics required for reliability.</span></div>
+              <div class="data-item"><strong>Local data</strong><span>Caches and pending actions may remain on your device to enable offline reading and entry.</span></div>
+            </div>
+            <h3>Android permissions</h3>
+            <p>The app only requests Internet access and, with your permission, the ability to send notifications. It does not request access to location, microphone, camera, contacts or SMS.</p>
+          </section>
+          <section class="card" id="en-use">
+            <h2>3. How data is used</h2>
+            <ul>
+              <li>Create and secure your account and synchronize data between your devices.</li>
+              <li>Calculate balances, budgets, forecasts, conversions, Trip splits and selected indicators.</li>
+              <li>Display your documents, history, workouts, meals and other personal content.</li>
+              <li>Send notifications you enable and provide offline synchronization.</li>
+              <li>Prevent abuse, diagnose errors and maintain service security.</li>
+            </ul>
+            <div class="notice">Travel Budget does not sell your data, display advertising, or use financial or wellbeing information for advertising targeting.</div>
+          </section>
+          <section class="card" id="en-sharing">
+            <h2>4. Service providers and sharing</h2>
+            <p>Data is only shared where needed to operate the service or when you initiate a share yourself.</p>
+            <ul>
+              <li><strong>Supabase</strong>: authentication, database, file storage and server functions.</li>
+              <li><strong>Google</strong>: optional Google sign-in and Firebase Cloud Messaging for push notifications.</li>
+              <li><strong>Twilio / WhatsApp</strong>: message and attachment reception only when you use this integration.</li>
+              <li><strong>Netlify</strong>: web hosting and related technical functions.</li>
+              <li><strong>Frankfurter / European Central Bank</strong>: public exchange rates; no account data is intentionally sent with a rate request.</li>
+            </ul>
+            <p>Trip data may be visible to members of the relevant group depending on the sharing features used. Providers may process data in other countries under their terms and applicable safeguards.</p>
+          </section>
+          <section class="card" id="en-security">
+            <h2>5. Retention and security</h2>
+            <p>Data is retained while your account is active or as long as needed for requested features. Transfers use HTTPS. Access to synchronized data relies on Supabase authentication and row-level security rules that separate accounts.</p>
+            <p>After deletion, some technical copies may temporarily remain in provider backups until normal rotation. They are not reused for ordinary features. Logs strictly required for security or a legal obligation may be retained for the period justified by that purpose.</p>
+            <p>No system is perfectly secure: protect your password and never send sensitive information by email when requesting support.</p>
+          </section>
+          <section class="card deletion" id="en-deletion">
+            <h2>6. Account and data deletion</h2>
+            <p>You may request deletion of your Travel Budget account and associated data, including profile, budgets, transactions, documents, activities, wellbeing data, push tokens and personal content.</p>
+            <p>For data shared with other trip members, information needed for their history may be deleted or dissociated from your identity where complete removal would affect other participants’ data.</p>
+            <div class="delete-action">
+              <div><strong>Request deletion</strong><span>Send the request from the email address of the relevant account. Include only the account email — never your password or documents.</span></div>
+              <a class="delete-btn" href="mailto:seb.pecoud.icoges@gmail.com?subject=%5BTravel%20Budget%5D%20Account%20deletion&body=Hello%2C%0A%0AI%20request%20deletion%20of%20my%20Travel%20Budget%20account%20associated%20with%3A%20%0A%0AThank%20you.">Send request</a>
+            </div>
+            <p>Identity verification may be required to prevent fraudulent deletion. Once verified, the account is not merely disabled: associated data is deleted, subject to the retention exceptions described above.</p>
+          </section>
+          <section class="card" id="en-rights">
+            <h2>7. Your choices and rights</h2>
+            <p>Depending on applicable law, you may request access, correction, export, restriction or deletion of your data and withdraw consent. Notifications can be disabled in the app or Android settings.</p>
+            <p>To exercise a right or report an issue: <a class="contact-link" href="mailto:seb.pecoud.icoges@gmail.com?subject=%5BTravel%20Budget%5D%20Privacy">seb.pecoud.icoges@gmail.com</a>.</p>
+            <h3>Children</h3>
+            <p>The app is not specifically designed or marketed for children. A minor should only use it where permitted by local law and, when required, with consent from a legal guardian.</p>
+            <h3>Policy updates</h3>
+            <p>This policy may be updated when features, providers or applicable rules change. The date at the top shows the latest revision.</p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>Travel Budget / BudgetPacker · Confidentialité · 2026</footer>
+  <script>
+    (() => {
+      const buttons = document.querySelectorAll("[data-lang]");
+      const contents = document.querySelectorAll("[data-lang-content]");
+      const backLabel = document.querySelector(".back span");
+      function applyLanguage(lang) {
+        document.documentElement.lang = lang;
+        buttons.forEach((button) => button.classList.toggle("active", button.dataset.lang === lang));
+        contents.forEach((content) => content.classList.toggle("active", content.dataset.langContent === lang));
+        if (backLabel) backLabel.textContent = lang === "fr" ? backLabel.dataset.labelFr : backLabel.dataset.labelEn;
+        document.title = lang === "fr"
+          ? "Politique de confidentialité — Travel Budget"
+          : "Privacy Policy — Travel Budget";
+        try { localStorage.setItem("travelbudget_privacy_lang", lang); } catch (_) {}
+        window.scrollTo({ top: 0, behavior: "instant" });
+      }
+      buttons.forEach((button) => button.addEventListener("click", () => applyLanguage(button.dataset.lang)));
+      let initial = "fr";
+      try { initial = localStorage.getItem("travelbudget_privacy_lang") || (navigator.language?.startsWith("fr") ? "fr" : "en"); } catch (_) {}
+      applyLanguage(initial === "en" ? "en" : "fr");
+    })();
+  </script>
+</body>
+</html>

@@ -162,6 +162,7 @@ export function renderSettingsAccountPanel({
           <button class="btn" id="tb-user-birthdate-save" type="button">Enregistrer santé</button>
           <button class="btn" id="tb-user-uimode-save" type="button">${tr('settings.account.save_mode')}</button>
           <button class="btn" id="tb-user-resetpwd" type="button">${tr('settings.account.reset_password')}</button>
+          <a class="btn" href="/privacy.html" target="_blank" rel="noopener">Confidentialité / Privacy · Suppression du compte</a>
         </div>
 
         <div class="row tb-advanced-only" style="gap:12px; align-items:end; flex-wrap:wrap; margin-top:10px;">

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `abe4ca7af30d70f5a22a0c65aa5178e619046bfc`
-> Empreinte du snapshot : `e5d837286a5abe1ed239c2275aac37beba27302f25160db9a590cbe262207094`
-> Généré le : `2026-07-23T11:01:19.400Z`
+> Commit analysé : `815edb6808a4eb78f7f604e2bc0e75de4ff8d194`
+> Empreinte du snapshot : `c443c4a287ff5cdbdc6213303a0bb739359c45fe5955bd2ef7f2c1565fd93437`
+> Généré le : `2026-07-23T11:20:24.050Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.252` |
+| Version | `10.5.253` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 61 |
 | Modules core | 25 |
 | Modules data | 7 |
 | Modules features | 37 |
-| Fichiers de tests | 100 |
+| Fichiers de tests | 101 |
 | Migrations Supabase | 90 |
 | Fonctions Edge | 8 |
 | Projet Android présent | Oui |
@@ -354,6 +354,7 @@ Modules :
 - `tests/features/sport/sportSessionSandboxView.test.js`
 - `tests/features/sport/sportStore.test.js`
 - `tests/features/sport/sportTimerController.test.js`
+- `tests/features/sport/sportTimerPersistence.test.js`
 - `tests/features/sport/sportViews.test.js`
 - `tests/features/trip/tripStore.test.js`
 - `tests/features/trip/tripView.test.js`
