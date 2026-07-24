@@ -8,6 +8,7 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(SCRIPT_DIR, '..');
 export const GENERATED_DIR = path.join(ROOT, 'docs', 'generated');
 export const FEATURE_DIR = path.join(ROOT, 'docs', 'features');
+export const PUBLIC_ATLAS_PATH = path.join(ROOT, 'public', 'project-atlas.json');
 export const WARNING = 'Fichier généré automatiquement. Ne pas modifier manuellement.';
 
 function posix(relativePath) {
@@ -196,6 +197,29 @@ export function writeInventory(inventory = collectInventory()) {
   fs.mkdirSync(GENERATED_DIR, { recursive: true });
   fs.writeFileSync(path.join(GENERATED_DIR, 'project-inventory.json'), `${JSON.stringify(inventory, null, 2)}\n`);
   fs.writeFileSync(path.join(GENERATED_DIR, 'project-inventory.md'), renderMarkdown(inventory));
+  const publicAtlas = {
+    _generatedWarning: WARNING,
+    version: inventory.package.version,
+    commit: inventory.commit,
+    generatedAt: inventory.generatedAt,
+    counts: {
+      screens: inventory.screens.length,
+      criticalFeatures: inventory.criticalFeatures.length,
+      tests: inventory.testFiles.length,
+      migrations: inventory.supabaseMigrations.length,
+      featureModules: inventory.featureModules.length,
+      coreModules: inventory.coreModules.length,
+      dataModules: inventory.dataModules.length,
+      edgeFunctions: inventory.edgeFunctions.length,
+    },
+    domains: inventory.featureDomains,
+    criticalFeatures: inventory.criticalFeatures.map((feature) => ({
+      id: feature.id,
+      impacts: feature.impacts || {},
+      document: feature.document,
+    })),
+  };
+  fs.writeFileSync(PUBLIC_ATLAS_PATH, `${JSON.stringify(publicAtlas, null, 2)}\n`);
   return inventory;
 }
 

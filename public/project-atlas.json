@@ -1,0 +1,150 @@
+{
+  "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
+  "version": "10.5.254",
+  "commit": "a5bb8737580b784ea62c70b20eb23991140148b4",
+  "generatedAt": "2026-07-24T09:18:36.141Z",
+  "counts": {
+    "screens": 15,
+    "criticalFeatures": 10,
+    "tests": 101,
+    "migrations": 90,
+    "featureModules": 37,
+    "coreModules": 25,
+    "dataModules": 7,
+    "edgeFunctions": 8
+  },
+  "domains": [
+    "analysis",
+    "assets",
+    "dashboard",
+    "inbox",
+    "kpi",
+    "nutrition",
+    "settings",
+    "sport",
+    "trip",
+    "work"
+  ],
+  "criticalFeatures": [
+    {
+      "id": "analysis.budget-actual",
+      "impacts": {
+        "wallet": "none",
+        "dailyBudget": "required",
+        "analysis": "required",
+        "trip": "required",
+        "offline": "possible",
+        "android": "required"
+      },
+      "document": "docs/features/budget-analysis.md"
+    },
+    {
+      "id": "assets.movement",
+      "impacts": {
+        "wallet": "required",
+        "dailyBudget": "required",
+        "analysis": "required",
+        "trip": "possible",
+        "offline": "required",
+        "android": "required"
+      },
+      "document": "docs/features/asset-movement.md"
+    },
+    {
+      "id": "budget.daily",
+      "impacts": {
+        "wallet": "possible",
+        "dailyBudget": "required",
+        "analysis": "required",
+        "trip": "required",
+        "offline": "required",
+        "android": "required"
+      },
+      "document": "docs/features/daily-budget.md"
+    },
+    {
+      "id": "budget.transaction",
+      "impacts": {
+        "wallet": "required",
+        "dailyBudget": "required",
+        "analysis": "required",
+        "trip": "required",
+        "offline": "required",
+        "android": "required"
+      },
+      "document": "docs/features/transactions.md"
+    },
+    {
+      "id": "nutrition.meal",
+      "impacts": {
+        "wallet": "none",
+        "dailyBudget": "none",
+        "analysis": "kpi",
+        "trip": "none",
+        "offline": "required",
+        "android": "required"
+      },
+      "document": "docs/features/nutrition-meal.md"
+    },
+    {
+      "id": "sport.session",
+      "impacts": {
+        "wallet": "none",
+        "dailyBudget": "none",
+        "analysis": "kpi",
+        "trip": "none",
+        "offline": "required",
+        "android": "required"
+      },
+      "document": "docs/features/sport-session.md"
+    },
+    {
+      "id": "sync.offline",
+      "impacts": {
+        "wallet": "required",
+        "dailyBudget": "required",
+        "analysis": "possible",
+        "trip": "required",
+        "offline": "required",
+        "android": "required"
+      },
+      "document": "docs/features/offline-sync.md"
+    },
+    {
+      "id": "trip.budget-link",
+      "impacts": {
+        "wallet": "required",
+        "dailyBudget": "required",
+        "analysis": "required",
+        "trip": "required",
+        "offline": "required",
+        "android": "required"
+      },
+      "document": "docs/features/trip-budget-link.md"
+    },
+    {
+      "id": "wallet.balance",
+      "impacts": {
+        "wallet": "required",
+        "dailyBudget": "possible",
+        "analysis": "possible",
+        "trip": "possible",
+        "offline": "required",
+        "android": "required"
+      },
+      "document": "docs/features/wallet-balance.md"
+    },
+    {
+      "id": "work.income",
+      "impacts": {
+        "wallet": "possible",
+        "dailyBudget": "required",
+        "analysis": "required",
+        "trip": "none",
+        "offline": "required",
+        "android": "required"
+      },
+      "document": "docs/features/work-income.md"
+    }
+  ]
+}

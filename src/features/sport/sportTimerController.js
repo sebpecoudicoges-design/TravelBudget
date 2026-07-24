@@ -13,12 +13,23 @@ function safeTimer(timer) {
   return timer && typeof timer === 'object' ? timer : {};
 }
 
+function snapshotPlanFromSequence(sequence = []) {
+  const plan = [];
+  (Array.isArray(sequence) ? sequence : []).forEach((step) => {
+    if (step?.kind !== 'work' || !step.item) return;
+    const itemIndex = Math.max(0, Math.round(num(step.itemIndex, 0)));
+    if (!plan[itemIndex]) plan[itemIndex] = { ...step.item };
+  });
+  return plan;
+}
+
 function cloneTimer(timer = {}) {
   const source = safeTimer(timer);
   return {
     ...source,
     sequence: Array.isArray(source.sequence) ? source.sequence.slice() : [],
     doneSets: Array.isArray(source.doneSets) ? source.doneSets.slice() : [],
+    planSnapshot: Array.isArray(source.planSnapshot) ? source.planSnapshot.map((item) => ({ ...item })) : [],
   };
 }
 
@@ -53,6 +64,11 @@ export function normalizeTimerState(raw, { now = Date.now() } = {}) {
   const timer = { ...raw };
   timer.sequence = raw.sequence.slice(0, 500);
   timer.doneSets = Array.isArray(raw.doneSets) ? raw.doneSets.slice(0, 500) : [];
+  timer.planSnapshot = (Array.isArray(raw.planSnapshot) && raw.planSnapshot.length
+    ? raw.planSnapshot
+    : snapshotPlanFromSequence(timer.sequence))
+    .slice(0, 80)
+    .map((item) => ({ ...item }));
   timer.index = Math.max(0, Math.round(num(raw.index, 0)));
   timer.startedAt = Math.max(0, num(raw.startedAt, now));
   timer.stepStartedAt = Math.max(0, num(raw.stepStartedAt, timer.startedAt));
@@ -76,6 +92,7 @@ export function persistTimerState(timer, { storageKey, persist } = {}) {
   const payload = {
     savedAt: new Date().toISOString(),
     sequence: normalized.sequence,
+    planSnapshot: normalized.planSnapshot,
     index: normalized.index,
     startedAt: normalized.startedAt,
     stepStartedAt: normalized.stepStartedAt,
@@ -179,6 +196,11 @@ export function defaultStepValues(step = {}, options = {}) {
 
 export function createTimerState(input = {}) {
   const sequence = Array.isArray(input.sequence) ? input.sequence : [];
+  const planSnapshot = (Array.isArray(input.planSnapshot) && input.planSnapshot.length
+    ? input.planSnapshot
+    : snapshotPlanFromSequence(sequence))
+    .slice(0, 80)
+    .map((item) => ({ ...item }));
   const now = Math.max(0, num(input.now, Date.now()));
   const first = sequence[0] || null;
   const defaults = defaultStepValues(first, {
@@ -188,6 +210,7 @@ export function createTimerState(input = {}) {
   });
   return {
     sequence,
+    planSnapshot,
     index: 0,
     startedAt: now,
     stepStartedAt: now,

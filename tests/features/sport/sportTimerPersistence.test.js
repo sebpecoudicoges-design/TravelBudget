@@ -41,7 +41,8 @@ describe('Sport timer persistence', () => {
 
   it('normalizes, persists and clears guided timer state', () => {
     const timer = normalizeTimerState({
-      sequence: [{ kind: 'work', duration: 30 }],
+      sequence: [{ kind: 'work', itemIndex: 0, item: { exerciseName: 'Bench' }, duration: 30 }],
+      planSnapshot: [{ exerciseName: 'Bench' }],
       doneSets: new Array(600).fill({ reps: 10 }),
       index: '2.7',
       startedAt: '1000',
@@ -53,7 +54,11 @@ describe('Sport timer persistence', () => {
     expect(timer.index).toBe(3);
     expect(timer.doneSets).toHaveLength(500);
     expect(persistTimerState(timer, { storageKey: 'timer' })).toBe(true);
-    expect(loadTimerState('timer')).toMatchObject({ index: 3, paused: true, sequence: [{ kind: 'work', duration: 30 }] });
+    expect(loadTimerState('timer')).toMatchObject({
+      index: 3,
+      paused: true,
+      planSnapshot: [{ exerciseName: 'Bench' }],
+    });
     clearTimerState('timer');
     expect(loadTimerState('timer')).toBe(null);
   });

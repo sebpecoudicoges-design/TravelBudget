@@ -3354,6 +3354,7 @@
     if (typeof createTimerState !== "function") throw new Error("Sport timer controller indisponible");
     CACHE.timer = createTimerState(Object.assign({
       sequence: seq,
+      planSnapshot: CACHE.plan,
       now: Date.now(),
       bodyWeightKg: bodyWeight(),
       bodyHeightCm: bodyHeight(),
@@ -3383,43 +3384,22 @@
     let cursor = startedAt;
     const doneSets = [];
 
-    const circuitSequence = CACHE.circuit?.enabled ? makeSequence().filter(step => step.kind === "work") : null;
-    if (circuitSequence?.length) {
-      estimatedCompletionSequence().forEach((step) => {
-        const stepSeconds = sequenceStepSeconds(step);
-        cursor += stepSeconds * 1000;
-        if (step.kind === "work") {
-          const item = step.item;
-          doneSets.push({
-            itemIndex: step.itemIndex,
-            setIndex: step.setIndex,
-            reps: item.mode === "reps" ? n(item.targetReps, 0) : null,
-            durationSeconds: stepSeconds,
-            weightKg: effectiveLoadKg(item, weightKg),
-            distanceM: n(item.distanceM, 0),
-            completedAt: new Date(Math.min(cursor, endedAt)).toISOString(),
-          });
-        }
-      });
-    } else {
-    (CACHE.plan || []).forEach((item, itemIndex) => {
-      const sets = Math.max(1, Math.round(n(item.sets, 1)));
-      for (let setIndex = 0; setIndex < sets; setIndex += 1) {
-        const workSeconds = setWorkSeconds(item);
-        cursor += workSeconds * 1000;
+    estimatedCompletionSequence().forEach((step) => {
+      const stepSeconds = sequenceStepSeconds(step);
+      cursor += stepSeconds * 1000;
+      if (step.kind === "work") {
+        const item = step.item;
         doneSets.push({
-          itemIndex,
-          setIndex,
+          itemIndex: step.itemIndex,
+          setIndex: step.setIndex,
           reps: item.mode === "reps" ? n(item.targetReps, 0) : null,
-          durationSeconds: workSeconds,
+          durationSeconds: stepSeconds,
           weightKg: effectiveLoadKg(item, weightKg),
           distanceM: n(item.distanceM, 0),
           completedAt: new Date(Math.min(cursor, endedAt)).toISOString(),
         });
-        cursor += Math.max(0, restSecondsForItem(item)) * 1000;
       }
     });
-    }
 
     const summary = {
       startedAt: new Date(startedAt).toISOString(),
@@ -3884,8 +3864,11 @@
     }
     const finalize = window.Core?.sportRules?.finalizeWorkout;
     if (typeof finalize !== "function") throw new Error("Sport finalization rules indisponibles");
+    const workoutPlan = Array.isArray(timer.planSnapshot) && timer.planSnapshot.length
+      ? timer.planSnapshot
+      : CACHE.plan;
     const summary = finalize({
-      plan: CACHE.plan,
+      plan: workoutPlan,
       doneSets: timer.doneSets,
       startedAt: timer.startedAt,
       endedAt,
@@ -3895,7 +3878,7 @@
       estimateKcal: ({ plan, doneSets, bodyWeightKg, durationSeconds: totalSeconds }) =>
         sessionKcalEstimate(plan, doneSets, bodyWeightKg, totalSeconds),
     });
-    const progressions = applyDoubleProgression(CACHE.plan, timer.doneSets);
+    const progressions = applyDoubleProgression(workoutPlan, timer.doneSets);
     if (progressions.length) {
       CACHE.plan = CACHE.plan.map((item, idx) => {
         const row = progressions.find(p => p.itemIndex === idx);

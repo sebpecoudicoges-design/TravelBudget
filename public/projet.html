@@ -1320,6 +1320,7 @@
       .atlas-core::before, .atlas-core::after { animation: none; }
     }
   </style>
+  <link rel="stylesheet" href="/project-enhancements.css" />
 </head>
 <body>
   <header>
@@ -1332,9 +1333,11 @@
         <a href="#demo" data-i18n="nav.demo">Demo</a>
         <a href="#modules" data-i18n="nav.modules">Modules</a>
         <a href="#workflow" data-i18n="nav.workflow">Parcours</a>
+        <a href="#lab" data-i18n="nav.lab">Lab</a>
         <a href="#atlas" data-i18n="nav.atlas">Atlas</a>
         <a href="#app" data-i18n="nav.app">App</a>
-        <a href="#tech" data-i18n="nav.tech">Technique</a>
+        <a href="#checklist" data-i18n="nav.checklist">Checklist</a>
+        <a href="/privacy.html" data-i18n="nav.privacy">Confidentialite</a>
       </nav>
       <div class="nav-actions">
         <div class="lang-switch" aria-label="Language">
@@ -1540,6 +1543,29 @@
           <article class="workflow-card"><b>2</b><h3 data-i18n="workflow.two.title">Relier</h3><p data-i18n="workflow.two.body">Les preuves peuvent etre liees aux transactions, assets ou depenses partagees.</p></article>
           <article class="workflow-card"><b>3</b><h3 data-i18n="workflow.three.title">Piloter</h3><p data-i18n="workflow.three.body">Analyse, cashflow, conversion FX et documents importants restent lisibles.</p></article>
         </div>
+        <div class="journey-lab">
+          <div class="journey-tabs" id="journeyTabs" role="tablist" aria-label="Parcours utilisateur"></div>
+          <div class="journey-stage">
+            <div class="journey-steps" id="journeySteps"></div>
+            <article class="journey-preview" id="journeyPreview" aria-live="polite"></article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="lab" class="band">
+      <div class="shell">
+        <div class="section-head">
+          <h2 data-i18n="lab.title">Un laboratoire produit a manipuler.</h2>
+          <p data-i18n="lab.lead">Teste quatre gestes reels de BudgetPacker avec des donnees fictives : transaction, partage, entrainement et nutrition.</p>
+        </div>
+        <div class="product-lab">
+          <div class="lab-head">
+            <div><h3 data-i18n="lab.panel.title">Simulateur de modules</h3><p data-i18n="lab.panel.body">Chaque calcul reste local a cette page et ne sauvegarde aucune donnee.</p></div>
+          </div>
+          <div class="lab-tabs" id="productLabTabs" role="tablist" aria-label="Mini demonstrations"></div>
+          <div class="lab-stage" id="productLabStage"></div>
+        </div>
       </div>
     </section>
 
@@ -1557,7 +1583,7 @@
             </div>
             <canvas id="atlasCanvas" aria-hidden="true"></canvas>
             <div class="atlas-core" aria-label="Coeur de l'Atlas">
-              <div><span>PROJECT</span><strong>ATLAS</strong><small>V11 / 10.5.253</small></div>
+              <div><span>PROJECT</span><strong>ATLAS</strong><small id="atlasVersion">V11 / 10.5.254</small></div>
             </div>
             <div class="atlas-nodes" id="atlasNodes"></div>
           </div>
@@ -1569,12 +1595,12 @@
             <div class="atlas-impact-title" data-i18n="atlas.impacts">Impacts a verifier</div>
             <div class="atlas-impacts" id="atlasImpacts"></div>
             <div class="atlas-facts">
-              <div class="atlas-fact"><strong>15</strong><span data-i18n="atlas.screens">Ecrans</span></div>
-              <div class="atlas-fact"><strong>10</strong><span data-i18n="atlas.critical">Fonctions critiques</span></div>
-              <div class="atlas-fact"><strong>101</strong><span data-i18n="atlas.tests">Fichiers de tests</span></div>
-              <div class="atlas-fact"><strong>90</strong><span data-i18n="atlas.migrations">Migrations</span></div>
+              <div class="atlas-fact"><strong id="atlasScreens">15</strong><span data-i18n="atlas.screens">Ecrans</span></div>
+              <div class="atlas-fact"><strong id="atlasCritical">10</strong><span data-i18n="atlas.critical">Fonctions critiques</span></div>
+              <div class="atlas-fact"><strong id="atlasTests">101</strong><span data-i18n="atlas.tests">Fichiers de tests</span></div>
+              <div class="atlas-fact"><strong id="atlasMigrations">90</strong><span data-i18n="atlas.migrations">Migrations</span></div>
             </div>
-            <div class="atlas-source">docs/PROJECT_ATLAS.md // snapshot 10.5.253</div>
+            <div class="atlas-source" id="atlasSource">public/project-atlas.json // snapshot 10.5.254</div>
           </aside>
         </div>
       </div>
@@ -1587,9 +1613,15 @@
           <p data-i18n="app.lead">La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.</p>
         </div>
         <div class="app-grid">
-          <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body">APK debug 10.5.253 prete pour les tests Android.</p></article>
+          <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body">APK debug 10.5.254 prete pour les tests Android.</p></article>
           <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.</p></article>
-          <article class="app-card"><strong>10.5.253</strong><h3 data-i18n="app.version.title">Timer Sport stabilise</h3><p data-i18n="app.version.body">La persistance du timer guide et du chrono libre passe dans sportTimerController.</p></article>
+          <article class="app-card"><strong>10.5.254</strong><h3 data-i18n="app.version.title">Projet Atlas public</h3><p data-i18n="app.version.body">La page projet lit l'Atlas genere, les mini-labs et la checklist Play Store.</p></article>
+        </div>
+        <div class="release-pulse">
+          <div class="release-pulse-head">
+            <div><h3 data-i18n="release.pulse.title">Les cinq dernieres evolutions, en clair.</h3><p data-i18n="release.pulse.body">Une lecture courte du benefice utilisateur avant d'ouvrir la fresque technique complete.</p></div>
+          </div>
+          <div class="release-pulse-grid" id="releasePulseGrid"></div>
         </div>
         <div class="changelog">
           <div class="release-command">
@@ -1602,6 +1634,7 @@
           <div class="release-spotlight" id="releaseSpotlight"></div>
           <div class="release-timeline" id="releaseTimeline" aria-live="polite"></div>
           <div class="release-list" id="releaseSource" hidden>
+            <div class="release-row"><strong>10.5.254</strong><span data-i18n="release.105254">Page projet : l'Atlas public project-atlas.json est genere avec l'inventaire, la page lit ses compteurs, et les mini-labs, release pulse, centre de confiance et checklist Play Store deviennent interactifs. Sport : le timer conserve le plan capture au lancement pour finaliser les bonnes series.</span></div>
             <div class="release-row"><strong>10.5.253</strong><span data-i18n="release.105253">Sport : la persistance du timer quitte 45_sport_ui.js vers sportTimerController.js. Preferences bip, timer guide, chrono libre, normalisation et clear sont testes. Legacy Sport : 220.8 -> 217.9 KiB ; domaine mesure : 432.8 KiB.</span></div>
             <div class="release-row"><strong>10.5.252</strong><span data-i18n="release.105252">Sport : les mesures impedancemetriques quittent 45_sport_ui.js vers sportBodyMeasurementController.js. Lecture DOM, cache local, upsert SQL et reference poids sont testes. Legacy Sport : 227.2 -> 220.8 KiB ; domaine mesure : 430.2 KiB.</span></div>
             <div class="release-row"><strong>10.5.251</strong><span data-i18n="release.105251">Performance : profil Sport fractionne en sous-runtime lazy. Timer, programme, historique et catalogue s'affichent avant radar, progression, mesures et mobilite. Chunk sportRuntime : 91.6 KiB ; JS initial stable a 252.2 KiB.</span></div>
@@ -1893,9 +1926,33 @@
         <div class="cta">
           <div>
             <h2 data-i18n="app.cta.title">App Android en test interne.</h2>
-            <p data-i18n="app.cta.body">Telecharge l'APK versionnee 10.5.253 depuis Supabase Storage pour tester la derniere build Android.</p>
+            <p data-i18n="app.cta.body">Telecharge l'APK versionnee 10.5.254 depuis Supabase Storage pour tester la derniere build Android.</p>
           </div>
-          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.253-20260723-211724-debug.apk" download data-i18n="app.cta.button">Telecharger l'APK 10.5.253</a>
+          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.254-20260724-191835-debug.apk" download data-i18n="app.cta.button">Telecharger l'APK 10.5.254</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="trust" class="band">
+      <div class="shell">
+        <div class="section-head">
+          <h2 data-i18n="trusthub.title">Confiance, donnees et diffusion Android.</h2>
+          <p data-i18n="trusthub.lead">Les points essentiels avant installation : confidentialite, permissions, suppression du compte et statut Play Store.</p>
+        </div>
+        <div class="trust-hub">
+          <div class="trust-head"><div><h3 data-i18n="trusthub.panel.title">Centre de confiance</h3><p data-i18n="trusthub.panel.body">Des acces directs, sans cacher les limites actuelles du projet.</p></div></div>
+          <div class="trust-grid">
+            <article class="trust-card"><b>01</b><strong data-i18n="trusthub.privacy.title">Politique FR/EN</strong><span data-i18n="trusthub.privacy.body">Donnees traitees, prestataires, conservation et droits.</span></article>
+            <article class="trust-card"><b>02</b><strong data-i18n="trusthub.delete.title">Suppression du compte</strong><span data-i18n="trusthub.delete.body">Demande externe accessible et lien present dans les reglages.</span></article>
+            <article class="trust-card"><b>03</b><strong data-i18n="trusthub.permissions.title">Permissions minimales</strong><span data-i18n="trusthub.permissions.body">Internet et notifications uniquement, sans localisation ni micro.</span></article>
+            <article class="trust-card"><b>04</b><strong data-i18n="trusthub.play.title">Play Store en preparation</strong><span data-i18n="trusthub.play.body">APK de test disponible ; fiche, AAB et test ferme restent a finaliser.</span></article>
+          </div>
+          <div class="trust-actions">
+            <a class="trust-action primary" href="/privacy.html" data-i18n="trusthub.openprivacy">Ouvrir la confidentialite</a>
+            <a class="trust-action" href="/privacy.html#fr-suppression" data-i18n="trusthub.deleteaction">Supprimer mon compte</a>
+            <a class="trust-action" id="trustApkLink" href="#app" data-i18n="trusthub.apk">Telecharger l'APK</a>
+            <span class="trust-action disabled" data-i18n="trusthub.pending">Lien Play Store a venir</span>
+          </div>
         </div>
       </div>
     </section>
@@ -1940,6 +1997,27 @@
         </div>
       </div>
     </section>
+
+    <section id="checklist" class="band">
+      <div class="shell">
+        <div class="section-head">
+          <h2 data-i18n="checklist.title">Checklist de mise en ligne.</h2>
+          <p data-i18n="checklist.lead">Un suivi concret du produit, de la confidentialite, d'Android et de la qualite. Les coches restent uniquement sur cet appareil.</p>
+        </div>
+        <div class="project-checklist">
+          <div class="checklist-head">
+            <div><h3 data-i18n="checklist.panel.title">Road to Play Store</h3><p data-i18n="checklist.panel.body">Les elements deja livres sont pre-coches ; complete les validations restantes au fil du projet.</p></div>
+            <div class="checklist-progress">
+              <div class="checklist-progress-top"><span data-i18n="checklist.progress">Progression</span><strong id="checklistProgressLabel">0%</strong></div>
+              <div class="checklist-bar"><i id="checklistProgressBar"></i></div>
+            </div>
+          </div>
+          <div class="checklist-filters" id="checklistFilters"></div>
+          <div class="checklist-grid" id="checklistGrid"></div>
+          <div class="checklist-foot"><span data-i18n="checklist.local">Sauvegarde locale uniquement · source partagee : docs/PROJECT_PAGE_CHECKLIST.md</span><button class="checklist-reset" id="checklistReset" type="button" data-i18n="checklist.reset">Reinitialiser les coches</button></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer>
@@ -1950,7 +2028,7 @@
     (() => {
       const copy = {
         fr: {
-          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.atlas": "Atlas", "nav.app": "App", "nav.tech": "Technique", "nav.cta": "Tester la demo",
+          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Parcours", "nav.lab": "Lab", "nav.atlas": "Atlas", "nav.app": "App", "nav.checklist": "Checklist", "nav.privacy": "Confidentialite", "nav.tech": "Technique", "nav.cta": "Tester la demo",
           "hero.eyebrow": "BudgetPacker V2 - demo publique, donnees fictives",
           "hero.title": "BudgetPacker, le cockpit personnel budget, documents et objectifs.",
           "hero.lead": "Une app modulaire pour relier cashflow, transactions, taux de change, documents, patrimoine, sport, alimentation, sommeil et charge de travail dans une lecture simple.",
@@ -1981,12 +2059,15 @@
           "workflow.one.title": "Capturer", "workflow.one.body": "Transaction, recu WhatsApp, facture PDF, seance sport, sommeil, repas ou mouvement interne.",
           "workflow.two.title": "Relier", "workflow.two.body": "Les preuves, categories, charges et donnees d'objectifs alimentent le budget, les assets et les KPI.",
           "workflow.three.title": "Piloter", "workflow.three.body": "Analyse, cashflow, conversion FX, documents et objectifs restent lisibles au meme endroit.",
+          "lab.title": "Un laboratoire produit a manipuler.", "lab.lead": "Teste quatre gestes reels de BudgetPacker avec des donnees fictives : transaction, partage, entrainement et nutrition.", "lab.panel.title": "Simulateur de modules", "lab.panel.body": "Chaque calcul reste local a cette page et ne sauvegarde aucune donnee.",
           "atlas.title": "L'Atlas vivant du projet.", "atlas.lead": "Explore les dix fonctions critiques, leurs domaines et les impacts a verifier avant chaque evolution.", "atlas.status": "Architecture V11 indexee", "atlas.impacts": "Impacts a verifier", "atlas.screens": "Ecrans", "atlas.critical": "Fonctions critiques", "atlas.tests": "Fichiers de tests", "atlas.migrations": "Migrations",
           "app.title": "App Android de test, lien direct et version lisible.",
           "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
-          "app.apk.title": "Build Android", "app.apk.body": "APK debug 10.5.253 prete pour les tests Android.",
+          "app.apk.title": "Build Android", "app.apk.body": "APK debug 10.5.254 prete pour les tests Android.",
           "app.offline.title": "Mode hors ligne", "app.offline.body": "Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.",
-          "app.version.title": "Timer Sport stabilise", "app.version.body": "La persistance du timer guide et du chrono libre passe dans sportTimerController.",
+          "app.version.title": "Projet Atlas public", "app.version.body": "La page projet lit l'Atlas genere, les mini-labs et la checklist Play Store.",
+          "release.105254": "Page projet : l'Atlas public project-atlas.json est genere avec l'inventaire, la page lit ses compteurs, et les mini-labs, release pulse, centre de confiance et checklist Play Store deviennent interactifs. Sport : le timer conserve le plan capture au lancement pour finaliser les bonnes series.",
+          "release.pulse.title": "Les cinq dernieres evolutions, en clair.", "release.pulse.body": "Une lecture courte du benefice utilisateur avant d'ouvrir la fresque technique complete.",
           "release.105253": "Sport : la persistance du timer quitte 45_sport_ui.js vers sportTimerController.js. Preferences bip, timer guide, chrono libre, normalisation et clear sont testes. Legacy Sport : 220.8 -> 217.9 KiB ; domaine mesure : 432.8 KiB.",
           "release.105252": "Sport : les mesures impedancemetriques quittent 45_sport_ui.js vers sportBodyMeasurementController.js. Lecture DOM, cache local, upsert SQL et reference poids sont testes. Legacy Sport : 227.2 -> 220.8 KiB ; domaine mesure : 430.2 KiB.",
           "release.105251": "Performance : profil Sport fractionne en sous-runtime lazy. Timer, programme, historique et catalogue s'affichent avant radar, progression, mesures et mobilite. Chunk sportRuntime : 91.6 KiB ; JS initial stable a 252.2 KiB.",
@@ -2083,7 +2164,9 @@
           "release.105132": "Patrimoine rend les actions visibles : Budget / amortissement, Achats lies, Depenses annexes et bandeau Patrimoine V2. Le chantier qualite ajoute un contrat anti-nouvelles-regles-metier dans legacy.",
           "release.105131": "Correctif Patrimoine et Settings : les documents d'asset chargent Documents a la demande, les actions Budget et Docs & mouvements sont visibles, les periodes affichent Modifier la periode, et un lint syntaxe initial verrouille le code modulaire.",
           "release.105130": "Chantier qualite et Patrimoine : Playwright ajoute les parcours critiques desktop/mobile/tablette. Les assets peuvent lier transactions et depenses Trip, exclure un achat du budget et garder l'amortissement mensuel au prorata des parts.", "release.105129": "Chantier performance : budgets par module, mesure source/dist/gzip, commande npm run perf:budget et documentation de suivi sont ajoutes.", "release.105128": "Chantier documentation : architecture V11, couches, domaines verrouilles, lazy-load, procedure de migration et regles de garde sont formalises et testes.", "release.105127": "Chantier performance : le contrat de boot verrouille Dashboard/Settings au demarrage et Trip, Sport, Nutrition, Travail en chargement a l'ouverture.", "release.105126": "Chantier Sport : le domaine est verrouille par contrat avec bibliotheque, programme, timer, historique, sandbox, profil et calculs separes.", "release.105125": "Chantier Trip : le domaine est verrouille par contrat avec regles, repository, store, hydratation offline/SQL, formulaire depense et invitations extraits.", "release.105124": "Chantier domaines : Nutrition est fermee avec repository, store et vues; Travail et Patrimoine sont completes cote separation domaine, avec contrats de delegation.", "release.105123": "Chantier Settings + Dashboard : l overview Voyage migre vers settingsView.js et le rendu onboarding Dashboard demarre dans dashboardView.js, avec contrats et tests dedies.", "release.105122": "Chantier Settings : le rendu Reference de periode migre vers settingsView.js. Pays, recommandation, prevu, ecart, postes et boutons modifier/heriter sont testes.", "release.105121": "Chantier Settings : l'ancien renderManualFxBox et ses helpers globaux sont supprimes. Le panneau FX manuel extrait reste la source unique et le fichier legacy descend encore.", "release.105120": "Chantier Settings : les cartes de periodes migrent vers settingsView.js. Entete, recap, edition budget/devise, reference pays, actions enregistrer/supprimer et etat anglais/francais sont testes.", "release.105119": "Chantier Settings : le rendu FX manuel migre vers settingsView.js. Normalisation des taux, badges, tableau, actions modifier/supprimer et etat vide sont testes.", "release.105118": "Chantier Settings : les handlers du panneau Compte migrent vers settingsAccountController.js. Hydratation profil, WhatsApp, sante, devise, mode UI, reset mot de passe, notifications et seuil cashflow sont testes.", "release.105117": "Chantier Settings : le panneau Compte sort du template inline legacy vers settingsView.js. Les champs profil, sante, devise, mode UI, cashflow et notifications gardent leurs hooks stables.", "release.105116": "Chantier Settings : le shell visuel des reglages sort de 14_settings_periods_ui.js vers settingsView.js. Hero, resumes de cartes, accordéons et etat ouvert/ferme sont testes.", "release.105115": "Sport corrige le plein ecran du timer avec un verrou CSS global, fallback Android/WebKit et nettoyage a la fin. Performance : 31_help_faq.js sort du boot et charge a l'ouverture de l'Aide.", "release.105114": "Chantier performance : Documents et Cautions sortent du demarrage. 43_documents_ui.js et 46_cautions_ui.js chargent seulement a l'ouverture, avec liens Patrimoine et Inbox compatibles lazy.", "release.105113": "Chantier performance : l'ecran Notifications sort du demarrage. 49_notifications_ui.js charge seulement a l'ouverture de l'onglet, pendant que le centre de notifications global reste porte par Inbox.", "release.105112": "Chantier performance : Sport sort du demarrage. 45_sport_ui.js se charge a l'ouverture de l'onglet Sport, et le replay offline charge le domaine avant de synchroniser les seances locales.", "release.105111": "Chantier performance : Trip sort du demarrage. Partage et Membres restent disponibles au boot, puis 29_trip_v1.js et 30_members_admin.js se chargent seulement a l'ouverture avec rendu lazy teste.", "release.105110": "Chantier performance : Travail sort du demarrage. L'onglet Travail reste disponible au boot, puis 47_work_ui.js et 50_work_career_ui.js se chargent seulement a l'ouverture avec rendu lazy teste.", "release.105109": "Chantier performance : Nutrition sort du demarrage. L'onglet Alimentation reste disponible au boot, puis 48_nutrition_ui.js se charge seulement a l'ouverture avec rendu lazy teste.",
-          "adminTests.title": "Membres admins - tests a faire", "adminTests.lead": "Espace de validation avant de cloturer une version : chacun teste, note son retour, puis indique si le point est fini ou non.", "adminTests.status": "Statut global : a finir", "adminTests.card1.title": "1. Parcours critique", "adminTests.card1.body": "Ouvrir Dashboard, KPIs, Analyse, Trip, Sport, Alimentation, Travail et Patrimoine. Verifier qu aucun ecran ne reste bloque.", "adminTests.card2.title": "2. Action reelle", "adminTests.card2.body": "Tester une action utile : ajout, modification, suppression ou filtre selon le module concerne par la version.", "adminTests.card3.title": "3. Retour admin", "adminTests.card3.body": "Noter version, module, appareil, resultat attendu, resultat reel, console et decision : fini ou non.", "adminTests.returnBox": "Retours a renseigner dans docs/ADMIN_TEST_RETURNS.md. Quand tu me diras que c est fait, je lirai ce fichier et je traiterai les points ouverts.", "app.cta.title": "App Android en test interne.", "app.cta.body": "Telecharge l'APK versionnee 10.5.253 depuis Supabase Storage pour tester la derniere build Android.", "app.cta.button": "Telecharger l'APK 10.5.253",
+          "adminTests.title": "Membres admins - tests a faire", "adminTests.lead": "Espace de validation avant de cloturer une version : chacun teste, note son retour, puis indique si le point est fini ou non.", "adminTests.status": "Statut global : a finir", "adminTests.card1.title": "1. Parcours critique", "adminTests.card1.body": "Ouvrir Dashboard, KPIs, Analyse, Trip, Sport, Alimentation, Travail et Patrimoine. Verifier qu aucun ecran ne reste bloque.", "adminTests.card2.title": "2. Action reelle", "adminTests.card2.body": "Tester une action utile : ajout, modification, suppression ou filtre selon le module concerne par la version.", "adminTests.card3.title": "3. Retour admin", "adminTests.card3.body": "Noter version, module, appareil, resultat attendu, resultat reel, console et decision : fini ou non.", "adminTests.returnBox": "Retours a renseigner dans docs/ADMIN_TEST_RETURNS.md. Quand tu me diras que c est fait, je lirai ce fichier et je traiterai les points ouverts.", "app.cta.title": "App Android en test interne.", "app.cta.body": "Telecharge l'APK versionnee 10.5.254 depuis Supabase Storage pour tester la derniere build Android.", "app.cta.button": "Telecharger l'APK 10.5.254",
+          "trusthub.title": "Confiance, donnees et diffusion Android.", "trusthub.lead": "Les points essentiels avant installation : confidentialite, permissions, suppression du compte et statut Play Store.", "trusthub.panel.title": "Centre de confiance", "trusthub.panel.body": "Des acces directs, sans cacher les limites actuelles du projet.", "trusthub.privacy.title": "Politique FR/EN", "trusthub.privacy.body": "Donnees traitees, prestataires, conservation et droits.", "trusthub.delete.title": "Suppression du compte", "trusthub.delete.body": "Demande externe accessible et lien present dans les reglages.", "trusthub.permissions.title": "Permissions minimales", "trusthub.permissions.body": "Internet et notifications uniquement, sans localisation ni micro.", "trusthub.play.title": "Play Store en preparation", "trusthub.play.body": "APK de test disponible ; fiche, AAB et test ferme restent a finaliser.", "trusthub.openprivacy": "Ouvrir la confidentialite", "trusthub.deleteaction": "Supprimer mon compte", "trusthub.apk": "Telecharger l'APK", "trusthub.pending": "Lien Play Store a venir",
+          "checklist.title": "Checklist de mise en ligne.", "checklist.lead": "Un suivi concret du produit, de la confidentialite, d'Android et de la qualite. Les coches restent uniquement sur cet appareil.", "checklist.panel.title": "Road to Play Store", "checklist.panel.body": "Les elements deja livres sont pre-coches ; complete les validations restantes au fil du projet.", "checklist.progress": "Progression", "checklist.local": "Sauvegarde locale uniquement · source partagee : docs/PROJECT_PAGE_CHECKLIST.md", "checklist.reset": "Reinitialiser les coches",
           "tech.title": "Une vitrine statique, une app privee structuree derriere.",
           "tech.lead": "BudgetPacker combine un front leger, Supabase pour les donnees, des RPC pour les operations sensibles, Storage pour les fichiers et Capacitor pour l'app Android.",
           "tech.db": "Postgres, RLS, RPC, Edge Functions et Storage structurent les donnees utilisateur, documents, invitations et APK.",
@@ -2095,7 +2178,7 @@
           "footer": "BudgetPacker - demo publique interactive", "footer.privacy": "Confidentialite"
         },
         en: {
-          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Workflow", "nav.atlas": "Atlas", "nav.app": "App", "nav.tech": "Tech", "nav.cta": "Try the demo",
+          "nav.demo": "Demo", "nav.modules": "Modules", "nav.workflow": "Journeys", "nav.lab": "Lab", "nav.atlas": "Atlas", "nav.app": "App", "nav.checklist": "Checklist", "nav.privacy": "Privacy", "nav.tech": "Tech", "nav.cta": "Try the demo",
           "hero.eyebrow": "BudgetPacker V2 - public demo, fictional data",
           "hero.title": "BudgetPacker, the personal cockpit for budget, documents and goals.",
           "hero.lead": "A modular app connecting cashflow, transactions, exchange-rate analysis, conversions, documents, assets, sport, nutrition, sleep and work load.",
@@ -2126,11 +2209,14 @@
           "workflow.one.title": "Capture", "workflow.one.body": "Transaction, WhatsApp receipt, PDF invoice, workout, sleep, meal or internal transfer.",
           "workflow.two.title": "Link", "workflow.two.body": "Proofs, categories, loads and objective data feed budget, assets and KPIs.",
           "workflow.three.title": "Drive", "workflow.three.body": "Analysis, cashflow, FX conversion, documents and goals remain readable together.",
+          "lab.title": "A product lab you can manipulate.", "lab.lead": "Try four real BudgetPacker actions with fictional data: transaction, split, workout and nutrition.", "lab.panel.title": "Module simulator", "lab.panel.body": "Every calculation stays local to this page and no data is saved.",
           "atlas.title": "The project's living Atlas.", "atlas.lead": "Explore ten critical capabilities, their domains and the impacts to verify before every change.", "atlas.status": "V11 architecture indexed", "atlas.impacts": "Impacts to verify", "atlas.screens": "Screens", "atlas.critical": "Critical capabilities", "atlas.tests": "Test files", "atlas.migrations": "Migrations",
           "app.title": "Android test app, direct link and readable version.",
           "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
-          "app.apk.title": "Android build", "app.apk.body": "Debug APK 10.5.253 is ready for Android testing.",
-          "app.version.title": "Stable Sport timer", "app.version.body": "Guided timer and free timer persistence now live in sportTimerController.",
+          "app.apk.title": "Android build", "app.apk.body": "Debug APK 10.5.254 is ready for Android testing.",
+          "app.version.title": "Public Project Atlas", "app.version.body": "The project page reads the generated Atlas, mini labs and Play Store checklist.",
+          "release.105254": "Project page: the public project-atlas.json is generated with the inventory, the page reads its counters, and mini labs, release pulse, trust center and Play Store checklist are interactive. Sport: the timer keeps the plan captured at launch to finalize the right sets.",
+          "release.pulse.title": "The five latest changes, clearly.", "release.pulse.body": "A short user-benefit view before opening the full technical timeline.",
           "release.105253": "Sport: timer persistence moves from 45_sport_ui.js to sportTimerController.js. Beep preferences, guided timer, free timer, normalization and clear are tested. Sport legacy: 220.8 -> 217.9 KiB; measured domain: 432.8 KiB.",
           "release.105252": "Sport: body measurements move from 45_sport_ui.js to sportBodyMeasurementController.js. DOM reading, local cache, SQL upsert and weight reference are tested. Sport legacy: 227.2 -> 220.8 KiB; measured domain: 430.2 KiB.",
           "release.105251": "Performance: Sport profile is split into an on-demand sub-runtime. Timer, program, history and catalog render before radar, progression, measurements and mobility. sportRuntime chunk: 91.6 KiB; initial JS stays at 252.2 KiB.",
@@ -2218,7 +2304,9 @@
           "release.title": "APK chronological timeline", "release.lead": "Each version keeps its context: touched domain, work done, expected result and verification trace.", "release.105229": "Nutrition: the pending nutrition sync panel leaves 48_nutrition_ui.js for nutritionView.js, keeping sync, clear and delete actions. Nutrition legacy drops to 126.2 KiB.", "release.105228": "Refactor: Trip category/participant analysis bars leave 29_trip_v1.js and Sport builder options leave 45_sport_ui.js. Trip legacy drops to 223.6 KiB and Sport to 228.9 KiB.", "release.105227": "Settings: deleting a trip no longer logs a budget-reference error for a removed segment. Performance: Inbox leaves boot, with boot legacy 979 -> 877.1 KiB.", "release.105226": "Settings: the manually selected trip remains the priority after refresh, even when another trip covers today. User test to rerun on Settings trips/periods.", "release.105139": "Analysis phase: the Country reference panel leaves 33_budget_analysis.js for analysisView.js. Summary, context, comparison grid and empty state are rendered by a tested module.", "release.105138": "Assets can now edit transaction/Trip links, their relation type and budget inclusion. Analysis also extracts the Subcategories list to analysisView.js with tests.", "release.105137": "Analysis phase: the Night transports panel leaves 33_budget_analysis.js for analysisView.js. Potential savings, averages and detailed rows are rendered by a tested module.", "release.105136": "Analysis phase: trend, reference, dominant category, projection and out-of-budget insights leave 33_budget_analysis.js for analysisView.js with tests and a legacy anti-return contract.", "release.105135": "Analysis phase: the reading overview leaves 33_budget_analysis.js for analysisView.js. Rendering is tested, exposed to legacy through TBAnalysisView and counted in the V11 size budget.", "release.105134": "Bootstrap fixes loading order: Offline, Trip and Sport scripts now wait for the Vite bridge before reading stores and catalogs. The phase adds a legacy loader regression contract.", "release.105133": "Assets fix linked movements: linked transactions open in edit mode, Trip expenses use the real active trip and old links are reloaded by ID. The phase adds an Assets-Trip regression contract.",
           "release.105132": "Patrimoine rend les actions visibles : Budget / amortissement, Achats lies, Depenses annexes et bandeau Patrimoine V2. Le chantier qualite ajoute un contrat anti-nouvelles-regles-metier dans legacy.",
           "release.105131": "Assets and Settings fix: asset documents lazy-load Documents, Budget and Docs & movements actions are visible, periods show Edit period, and an initial syntax lint protects modular code.", "release.105130": "Quality and Assets phase: Playwright adds critical desktop/mobile/tablet paths. Assets can link wallet transactions and Trip expenses, exclude a purchase from budget and keep monthly depreciation prorated by ownership share.", "release.105129": "Performance phase: module budgets, source/dist/gzip measurement, npm run perf:budget and tracking documentation are added.", "release.105128": "Documentation phase: V11 architecture, layers, locked domains, lazy loading, migration procedure and guard rules are formalized and tested.", "release.105127": "Performance phase: the boot contract locks Dashboard/Settings at startup and Trip, Sport, Nutrition, Work as open-on-demand domains.", "release.105126": "Sport phase: the domain is locked by contract with library, program, timer, history, sandbox, profile and calculations separated.", "release.105125": "Trip phase: the domain is locked by contract with rules, repository, store, offline/SQL hydration, expense form and invitations extracted.", "release.105124": "Domain phase: Nutrition is closed with repository, store and views; Work and Assets are completed on domain separation, with delegation contracts.", "release.105123": "Settings + Dashboard phase: Trip overview moves to settingsView.js and Dashboard onboarding rendering starts in dashboardView.js, with dedicated contracts and tests.", "release.105122": "Settings phase: period reference rendering moves to settingsView.js. Country, recommendation, planned amount, gap, posts and edit/inherit buttons are tested.", "release.105121": "Settings phase: the old renderManualFxBox and global helpers are removed. The extracted manual FX panel remains the single source and the legacy file gets smaller again.", "release.105120": "Settings phase: period cards move to settingsView.js. Header, summary, budget/currency editing, country reference, save/delete actions and French/English states are tested.", "release.105119": "Settings phase: manual FX rendering moves to settingsView.js. Rate normalization, badges, table, edit/delete actions and empty state are tested.", "release.105118": "Settings phase: Account panel handlers move to settingsAccountController.js. Profile hydration, WhatsApp, health, currency, UI mode, password reset, notifications and cashflow threshold are tested.", "release.105117": "Settings phase: the Account panel leaves the inline legacy template for settingsView.js. Profile, health, currency, UI mode, cashflow and notification fields keep stable hooks.", "release.105116": "Settings phase: the visual settings shell leaves 14_settings_periods_ui.js for settingsView.js. Hero, card summaries, accordions and open/closed state are tested.", "release.105115": "Sport fixes timer fullscreen with a global CSS lock, Android/WebKit fallback and cleanup at completion. Performance: 31_help_faq.js leaves startup and loads when Help opens.", "release.105114": "Performance phase: Documents and Deposits leave startup. 43_documents_ui.js and 46_cautions_ui.js load only when opened, with lazy-safe links from Assets and Inbox.", "release.105113": "Performance phase: the Notifications screen leaves startup. 49_notifications_ui.js loads only when the tab opens, while the global notification center remains handled by Inbox.", "release.105112": "Performance phase: Sport leaves startup. 45_sport_ui.js loads when the Sport tab opens, and offline replay loads the domain before syncing local workouts.", "release.105111": "Performance phase: Trip leaves startup. Trip and Members remain available at boot, then 29_trip_v1.js and 30_members_admin.js load only when opened with a tested lazy render.", "release.105110": "Performance phase: Work leaves startup. The Work tab remains available at boot, then 47_work_ui.js and 50_work_career_ui.js load only when the tab opens with a tested lazy render.", "release.105109": "Performance phase: Nutrition leaves startup. The Nutrition tab remains available at boot, then 48_nutrition_ui.js loads only when the tab opens with a tested lazy render.", "release.105108": "Assets phase: transfer, sale and documents join assetView. All five Assets windows now render as tested pure views while preserving transaction, Trip and document links.", "release.105107": "Mixed phase: Asset and owner forms extracted to assetView, and pilot lazy loading loads the Assets domain only when its tab opens.", "release.105106": "Assets phase: the asset card extracts value, depreciation, monthly budget cost, owners, events, documents, actions and realized P&L into a tested pure view.", "release.105105": "Work phase: the career panel extracts its timeline, KPIs, jobs, income, periods and linked folders into a tested pure view.", "release.105104": "Standalone Health removed from runtime: no dedicated tab or view, old calls redirect to Nutrition, and 315 legacy lines are removed.", "release.105103": "Domain phase: Nutrition extracts the active week, Work extracts the weekly load visual, Assets extracts the portfolio summary and Health leaves the standalone roadmap.", "release.105102": "Nutrition phase: goal cockpit, 7-day average and weekly alcohol panel move to nutritionView, with dedicated tests.", "release.105101": "Nutrition phase: quick add, hydration, sleep and weekly history views move to nutritionView with dedicated rendering tests.", "release.105100": "Nutrition phase: view components extracted for progress bars, favorite/recent chips, meal suggestions, week window and meal timeline with dedicated tests.", "release.10599": "Nutrition phase: dedicated store extracted for food cache, meals, items, sleep, selected date, local rows and KPI publishing through entityStore.", "release.10598": "Nutrition phase: local/offline repository foundation extracted for food cache, local rows, sync_id, deduplication, sleep and sync errors, with tests.", "release.10597": "Sport fix: sequence crash fixed, timer state is saved/restored, wake lock and local background notification are wired. Trip forces expense creation back into a mobile-sized sheet.", "release.10596": "Nutrition phase: pure rules extracted for the daily journal, meal-type totals, meal-moment targets, filtered catalog and kcal/macro goals.", "release.10595": "Sport Athletic Profile: the radar becomes a percentile diagnostic with bodyweight ratios, balance, potential, archetypes and automatic priority.", "release.10594": "Sport phase 4: timer handlers leave legacy with tests for start, sets, rests, pause, added set, rope/boxing circuit rounds and early stop.", "release.10593": "Sport phase 4: the strength/weakness profile rendering, per-axis notes and body-composition modal leave legacy with dedicated tests.", "release.10592": "Sport phase 4: the strength/weakness radar leaves legacy, fixes Push by prioritizing bench/incline/overhead press before triceps, and displays stricter bodyweight benchmarks.", "release.10591": "Sport phase 4: pure Adjust-window rules leave legacy. Renumbering, deletion and adding sets to the right exercise are centralized and tested.", "release.10561": "Nutrition fix: the selected meal moment from the timeline or select, such as Lunch, Afternoon snack or Dinner, is preserved during search, add, water and edit instead of falling back to Breakfast.", "release.10560": "Nutrition adds smoother optimistic display, sync status, favorite meals, instant deletion and a lean-bulk goal cockpit with target weight, pace, macros and 7-day alert. Sport moves to radar V2: legs, push, pull, core, cardio and recovery with per-axis explanation.", "release.10559": "Sport fixes the lower-body radar so squat/deadlift count correctly while estimated sets are ignored. Nutrition hardens offline sync, deduplicates server items and fixes June 25 with HiPRO snack and rice, zucchini, onion, creme fraiche and salmon dinner.", "release.10558": "Sport bases the strengths/weaknesses radar on best observed capacities, switches A2 to a 100 kg deadlift, fixes today's workout and Nutrition confirms new entries immediately with a rice, carrot, broccoli, onion and lamb dish.", "release.10557": "Sport fixes the body-composition window: it is rendered outside the module, attached to the body and opens at the top of the screen without scrolling.", "release.10556": "Sport stabilizes the SQL-driven Tuesday-Thursday-Saturday A/B program, avoids configured-workout duplicates, adds a strengths/weaknesses radar and dated body-composition SQL entry.", "release.10555": "Sport adds a real configured-workout editor: editable exercises, library add, ordering, deletion, saving and loading into the current workout.", "release.10554": "Sport Program V3: A/B cockpit, today's workout, catch-up, loads to prepare, exercise-level progression and clearer planning.", "release.10549": "Notifications V2: create, edit and delete templates, slash variables like /budgetdujour and /budgetrestant, upcoming sends, sent history and server-side template rendering.", "release.10548": "Health becomes the goal module: lean bulk, maintenance/recomposition or gentle fat loss, kcal/macro targets, adapted next meal, active Sport/Nutrition/Sleep/Load week and aligned Health KPIs.", "release.10547": "Sport no longer shows the local fallback when the SQL program is loaded, adds a planned week with rest/A-B workouts, and makes Nutrition offline sync idempotent to avoid duplicate foods or water.", "release.10546": "Sport moves the A/B lean-bulk program to SQL: program/session/exercise tables, 6 sessions and 36 exercises for the account, reference loads in sport_exercises and Supabase reads in the app.", "release.10545": "Sport pre-fills the A/B program reference loads: squat 60 kg, bench 50 kg, RDL 80 kg, dumbbells as 2 x kg, explicit bodyweight, builder and timer display.", "release.10544": "Sport adds A/B lean-bulk favorite workouts, Monday-Wednesday-Friday planning and automatic progression on each rep range: 6-10, 8-12, 10-15 or 12-20.", "release.10543": "Nutrition adds lean bulk mode (+300 to +500 kcal) with adapted macros, aligned Health KPI and automatic Sport 8-12 double progression.", "release.10542": "Sport fixes the timer big screen: mobile/Capacitor focus styles are no longer overridden and native fullscreen is requested after render.", "release.10541": "Nutrition adds sourced alcohol tracking: 1 standard drink = 10 g, 7-day chart, daily/weekly judgement, linked alcoholic foods and direct impact on Health/KPI scoring.", "release.10540": "Detailed Sport history, Adjust sandbox with reps/duration/load, add/delete sets, and June 19 strength/plank set backfill with one-arm dumbbell row at 30 kg.", "release.10539": "Removes the snack assistant, adds daily Sport/Work visuals, Work rhythm with weekend rest or rest today, and SQL-merges the 3 June 19 workouts.", "release.10538": "Sport removes June 19 duplicates, blocks repeated saves, stabilizes the timer without flicker, enables native big screen and adds Nutrition offline sync.", "release.10537": "Sport fixes kcal for time-based exercises, applies rest after an added set, repairs June 18 data and adds the Belvita snack.", "release.10536": "Sport timer big screen: focus mode during workouts, much larger clock, adjustable beep volume and sound test button.", "release.10535": "Sport V2: clearer timer timeline, Push/Pull/Legs/Core/Cardio/Boxing filters, richer library and actionable Health KPI cards.", "release.10534": "Stabilized live Sport: add sets in the right position, edit reps, add barbell/dumbbell/plate exercises, align Supabase and repair workout kcal.", "release.10533": "Supabase CLI 2.106.0, local/remote migrations aligned, db push verified, Health V2, smarter Nutrition assistant and live Sport load controls.", "release.10532": "Nutrition removes the duplicate Health recap and adapts upcoming meal kcal targets from meals already logged.", "release.10531": "Snack notifications V2, dedicated Health page, add sets during or after Sport workouts, plus plank and stretch at workout end.", "release.10530": "Snack assistant focused on fromage blanc, muesli, biscuits and fruit, more professional weekly Health recap and Settings WhatsApp loading fix.", "release.10529": "Nutrition/Sport favorites and recents, what to eat now assistant, weekly Health recap and new sourced foods/exercises without duplicate keys.", "release.10528": "Sport and Nutrition libraries enriched with realistic servings, source tags from USDA/FoodData Central and Compendium METs, without duplicate keys.", "release.10527": "Daily Health recap in Nutrition, SQL-persisted sleep, 2L water history and shared Dashboard Health KPI scoring.", "release.10526": "Centralized Health profile: 59 kg, 162 cm and birth date in SQL Settings, then shared reads across Sport, Nutrition, Work, notifications and Health KPI.", "release.10525": "Work recalculated with net MET kcal, birth date saved for BMR, SQL work days recomputed and Health KPI hydrates Nutrition/Sleep on startup.", "release.10524": "Health Score fixed: energy now better tolerates normal time-based gaps and sleep correctly rewards a 7h to 9h night.", "release.10523": "Global Sport library enriched by family: dumbbells, bands, bodyweight, machines, cardio, boxing, barbell, kettlebell and mobility. The June 12 Jump rope workout has its sets back.", "release.10522": "Sport library enriched with dumbbell row and dumbbell exercises, automatic reuse of the last entered load per exercise and resistance bands locked to 0 kg.", "release.10521": "Sport can enter load during the workout, adjust completed sets in a sandbox, correctly recalculate heavy bag calories and the project page better highlights Nutrition, Sleep, Health and Work.", "release.10520": "Nutrition/Health notifications across 5 key day moments, sleep read from the right night, KPI nutrition refresh after entry and heavy bag MET moved to 12.8 with session recalculation.", "release.10519": "Sleep now belongs to the previous night, Health KPI details score points and project page highlights Work, Nutrition and Health.", "release.10518": "Explainable Health KPI, kcal need proportional to current time, Nutrition hover bar history, sleep vs target and catalog removed.", "release.10517": "Sleep entry in Nutrition, visually aligned Health KPI and recovery included in the score.", "release.10516": "Mobile responsive Nutrition, French toast in SQL library, separated drunk-water hydration and Dashboard Health KPI across sport/work/nutrition.", "release.10515": "Nutrition catalog enriched with 101 public dishes, tag-powered filters and a fuller mobile fallback.", "release.10514": "Visual Nutrition V2: kcal ring, meal timeline, simple assistant, filtered catalog and analytical mini week.", "release.10513": "More app-like Nutrition UX, editable meals, needs by meal moment and realistic portions.", "release.10512": "Default date is today, categorized Nutrition history and clearer needs/consumed visual comparison.", "release.10511": "Separate hydration, 307 Nutrition foods, burgers/beers and kcal balance from base + sport + work.", "release.10510": "Stable Nutrition search, servings and richer food library.", "release.1059": "Nutrition loading fix and local-date same-day Sport merge.", "release.1058": "First Nutrition screen and same-day Sport session merge.", "release.1057": "SQL-backed Sport library with offline cache, boxing exercises and Nutrition food/meal/macro foundation.", "release.1056": "Updated Android APK, stronger Sport delete flow, reps/circuit/AMRAP estimates and safer offline Mark as paid.", "release.1055": "Forecast cashflow, simpler notification test and clearer offline queue behavior.", "release.1054": "Richer Sport library: jump rope, table tennis, abs/core and more direct input.", "release.1053": "Analysis compares budget used with projection and hardens KPI/Analysis data refresh.", "release.1052": "Analysis excludes estimated internal-transfer fees and compares paid actual spend with the projection.", "release.1051": "Analysis treats Trip shares paid by someone else as paid, not unpaid.", "release.1050": "More human notifications, emoji/reminder preferences, and unpaid-expense details in Analysis.", "release.1049": "Period-currency notifications, server budget segment calculation, Trip/Immo analysis and table tennis in Sport.", "release.1048": "Dashboard/Analysis budget refresh and Android test APK 10.4.8.", "release.1047": "Fixes Trip Immo analysis, daily budget when returning to Dashboard and editable Work history.", "release.1046": "Fixes Work loading and sport/work KPI recalculation after sync.", "release.1045": "Physical Work module, MET/BMR estimates, sport/work KPIs and server morning/evening notifications.", "release.1044": "Varied budget notifications, auto refresh when returning to the app and cleaner Trip linking.", "release.1043": "Trip fix: reliable wallet ownership validation for expenses paid by me.", "release.1042": "Trip stabilization: core rules, analysis, history filters and transaction RPC payloads.", "release.1041": "Unified Sport creation, default rest, conditional reps/time fields and fixed Android local notifications.", "release.1040": "FCM mobile notifications testable from Admin, morning budget message and Trip validation push.", "release.1039": "Fixed paid recurring occurrences, repair migration, and configured server FCM secrets.", "release.1038": "FCM HTTP v1 push Edge Function and finalized Firebase Android configuration.", "release.1037": "Android mobile push base, token storage, read-on-click notifications and sign-out cleanup.", "release.1036": "More reliable mobile Google auth, cleaner errors, password reset and user notification preferences.", "release.1035": "Clearer project page, detailed technical section and updated APK.", "release.1034": "Secured APK workflow: cleanup before sync, clean build and Storage upload.", "release.1033": "Targeted deposits, document/transaction search and corrected differences.",
-          "adminTests.title": "Admin members - tests to run", "adminTests.lead": "Validation space before closing a version: each admin tests, writes feedback, then marks whether the point is done or not.", "adminTests.status": "Global status: to finish", "adminTests.card1.title": "1. Critical path", "adminTests.card1.body": "Open Dashboard, KPIs, Analysis, Trip, Sport, Nutrition, Work and Assets. Check that no screen stays blocked.", "adminTests.card2.title": "2. Real action", "adminTests.card2.body": "Test one useful action: add, edit, delete or filter depending on the module touched by the version.", "adminTests.card3.title": "3. Admin feedback", "adminTests.card3.body": "Write version, module, device, expected result, actual result, console and decision: done or not done.", "adminTests.returnBox": "Feedback goes in docs/ADMIN_TEST_RETURNS.md. When you tell me it is done, I will read that file and process open points.", "app.cta.title": "Android app in internal testing.", "app.cta.body": "Download the versioned 10.5.253 APK from Supabase Storage to test the latest Android build.", "app.cta.button": "Download APK 10.5.253",
+          "adminTests.title": "Admin members - tests to run", "adminTests.lead": "Validation space before closing a version: each admin tests, writes feedback, then marks whether the point is done or not.", "adminTests.status": "Global status: to finish", "adminTests.card1.title": "1. Critical path", "adminTests.card1.body": "Open Dashboard, KPIs, Analysis, Trip, Sport, Nutrition, Work and Assets. Check that no screen stays blocked.", "adminTests.card2.title": "2. Real action", "adminTests.card2.body": "Test one useful action: add, edit, delete or filter depending on the module touched by the version.", "adminTests.card3.title": "3. Admin feedback", "adminTests.card3.body": "Write version, module, device, expected result, actual result, console and decision: done or not done.", "adminTests.returnBox": "Feedback goes in docs/ADMIN_TEST_RETURNS.md. When you tell me it is done, I will read that file and process open points.", "app.cta.title": "Android app in internal testing.", "app.cta.body": "Download the versioned 10.5.254 APK from Supabase Storage to test the latest Android build.", "app.cta.button": "Download APK 10.5.254",
+          "trusthub.title": "Trust, data and Android distribution.", "trusthub.lead": "What matters before installing: privacy, permissions, account deletion and Play Store status.", "trusthub.panel.title": "Trust center", "trusthub.panel.body": "Direct access without hiding the project's current limits.", "trusthub.privacy.title": "FR/EN policy", "trusthub.privacy.body": "Processed data, providers, retention and rights.", "trusthub.delete.title": "Account deletion", "trusthub.delete.body": "External request path and a link available in Settings.", "trusthub.permissions.title": "Minimal permissions", "trusthub.permissions.body": "Internet and notifications only, with no location or microphone.", "trusthub.play.title": "Play Store in progress", "trusthub.play.body": "Test APK available; listing, AAB and closed test still need completion.", "trusthub.openprivacy": "Open privacy policy", "trusthub.deleteaction": "Delete my account", "trusthub.apk": "Download APK", "trusthub.pending": "Play Store link coming soon",
+          "checklist.title": "Release checklist.", "checklist.lead": "A concrete product, privacy, Android and quality tracker. Checks stay on this device only.", "checklist.panel.title": "Road to Play Store", "checklist.panel.body": "Delivered items start checked; complete the remaining validations as the project moves forward.", "checklist.progress": "Progress", "checklist.local": "Local storage only · shared source: docs/PROJECT_PAGE_CHECKLIST.md", "checklist.reset": "Reset checks",
           "tech.title": "A static showcase, a structured private app behind it.",
           "tech.lead": "BudgetPacker combines a light frontend, Supabase for data, RPCs for sensitive operations, Storage for files and Capacitor for Android.",
           "tech.db": "Postgres, RLS, RPC, Edge Functions and Storage structure user data, documents, invitations and APKs.",
@@ -2439,7 +2527,7 @@
         }
       };
 
-      const state = { lang: "fr", scenario: "pvt", module: "dashboard", mockModule: "dashboard", cashRange: "30d", atlasGroup: "all", atlasSelected: "budget.transaction", releaseFilter: "all", activeRelease: "" };
+      const state = { lang: "fr", scenario: "pvt", module: "dashboard", mockModule: "dashboard", cashRange: "30d", atlasGroup: "all", atlasSelected: "budget.transaction", atlasMeta: null, releaseFilter: "all", activeRelease: "" };
       let cashVisual = null;
       let atlasVisual = null;
       const $ = (id) => document.getElementById(id);
@@ -2947,6 +3035,33 @@
         if (cashVisual) cashVisual.update({ base: available, inflow: Math.max(180, inflow), outflow: Math.max(60, outflow), confidence });
       }
 
+      function applyPublicAtlasMeta() {
+        const meta = state.atlasMeta;
+        if (!meta || typeof meta !== "object") return;
+        const counts = meta.counts || {};
+        setText("atlasScreens", String(counts.screens || 0));
+        setText("atlasCritical", String(counts.criticalFeatures || 0));
+        setText("atlasTests", String(counts.tests || 0));
+        setText("atlasMigrations", String(counts.migrations || 0));
+        setText("atlasVersion", `V11 / ${meta.version || "snapshot"}`);
+        const commit = meta.commit ? String(meta.commit).slice(0, 12) : "local";
+        setText("atlasSource", `public/project-atlas.json // ${meta.version || "snapshot"} // ${commit}`);
+      }
+
+      async function loadPublicAtlasMeta() {
+        try {
+          const response = await fetch("/project-atlas.json", { cache: "no-store" });
+          if (!response.ok) return;
+          const meta = await response.json();
+          if (!meta || !meta.counts || !Array.isArray(meta.criticalFeatures)) return;
+          state.atlasMeta = meta;
+          applyPublicAtlasMeta();
+          renderAtlas();
+        } catch (_) {
+          state.atlasMeta = null;
+        }
+      }
+
       const atlasCatalog = {
         fr: [
           { id: "budget.transaction", title: "Transactions", layer: "Domaine Budget", group: "budget", color: "#22d3ee", description: "Le point d'entree central des mouvements. Une evolution peut toucher les soldes, le budget journalier, l'analyse, Trip et la synchronisation.", impacts: ["Wallet", "Budget/jour", "Analyse", "Trip", "Offline", "Android"] },
@@ -2974,8 +3089,25 @@
         ]
       };
 
+      function getAtlasEntries() {
+        const catalogEntries = atlasCatalog[state.lang];
+        const liveFeatures = state.atlasMeta?.criticalFeatures || [];
+        if (!liveFeatures.length) return catalogEntries;
+        const impactLabels = state.lang === "fr"
+          ? { wallet: "Wallet", dailyBudget: "Budget/jour", analysis: "Analyse", trip: "Trip", offline: "Offline", android: "Android" }
+          : { wallet: "Wallet", dailyBudget: "Daily budget", analysis: "Analysis", trip: "Trip", offline: "Offline", android: "Android" };
+        return liveFeatures.map((feature) => {
+          const known = catalogEntries.find((entry) => entry.id === feature.id);
+          if (!known) return null;
+          const impacts = Object.entries(feature.impacts || {})
+            .filter(([, value]) => value && value !== "none")
+            .map(([key, value]) => `${impactLabels[key] || key}${value === "possible" ? ` ${state.lang === "fr" ? "possible" : "possible"}` : value === "kpi" ? " KPI" : ""}`);
+          return { ...known, impacts: impacts.length ? impacts : known.impacts };
+        }).filter(Boolean);
+      }
+
       function updateAtlasPanel() {
-        const entries = atlasCatalog[state.lang];
+        const entries = getAtlasEntries();
         const entry = entries.find((item) => item.id === state.atlasSelected) || entries[0];
         state.atlasSelected = entry.id;
         setText("atlasLayer", entry.layer);
@@ -3002,7 +3134,8 @@
         const filterLabels = state.lang === "fr"
           ? { all: "Tout", budget: "Budget", life: "Vie", platform: "Socle" }
           : { all: "All", budget: "Budget", life: "Life", platform: "Platform" };
-        const entries = atlasCatalog[state.lang];
+        applyPublicAtlasMeta();
+        const entries = getAtlasEntries();
         const visibleEntries = state.atlasGroup === "all" ? entries : entries.filter((entry) => entry.group === state.atlasGroup);
         if (!visibleEntries.some((entry) => entry.id === state.atlasSelected)) state.atlasSelected = visibleEntries[0]?.id || entries[0].id;
         filtersHost.innerHTML = Object.entries(filterLabels).map(([key, label]) => (
@@ -3244,7 +3377,9 @@
       document.querySelectorAll("[data-mock-module]").forEach((btn) => btn.addEventListener("click", () => { state.mockModule = btn.dataset.mockModule; renderMockModule(); renderScenario(); }));
       ["salaryRange", "keepRange", "rateRange"].forEach((id) => $(id).addEventListener("input", renderScenario));
       applyLang("fr");
+      loadPublicAtlasMeta();
     })();
 </script>
+  <script src="/project-enhancements.js"></script>
 </body>
 </html>

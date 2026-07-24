@@ -32,6 +32,7 @@ for (const required of [
   'docs/ARCHITECTURE_DECISIONS.md',
   'docs/generated/project-inventory.md',
   'docs/generated/project-inventory.json',
+  'public/project-atlas.json',
 ]) {
   if (!exists(required)) fail(`${required}: fichier requis absent`);
 }
@@ -122,6 +123,23 @@ if (exists('docs/generated/project-inventory.json')) {
     if (JSON.stringify(stable(saved)) !== JSON.stringify(stable(current))) fail('project-inventory.json: snapshot différent du dépôt courant; exécuter npm run atlas:generate');
   } catch (error) {
     fail(`project-inventory.json: ${error.message}`);
+  }
+}
+
+if (exists('public/project-atlas.json')) {
+  try {
+    const publicAtlas = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/project-atlas.json'), 'utf8'));
+    const current = collectInventory({ generatedAt: publicAtlas.generatedAt });
+    if (publicAtlas._generatedWarning !== WARNING) fail('public/project-atlas.json: avertissement généré absent');
+    if (publicAtlas.version !== current.package.version) fail('public/project-atlas.json: version différente du package courant');
+    if (publicAtlas.counts?.screens !== current.screens.length) fail('public/project-atlas.json: compteur écrans obsolète');
+    if (publicAtlas.counts?.criticalFeatures !== current.criticalFeatures.length) fail('public/project-atlas.json: compteur fonctions critiques obsolète');
+    if (publicAtlas.counts?.tests !== current.testFiles.length) fail('public/project-atlas.json: compteur tests obsolète');
+    if (publicAtlas.counts?.migrations !== current.supabaseMigrations.length) fail('public/project-atlas.json: compteur migrations obsolète');
+    const publicIds = (publicAtlas.criticalFeatures || []).map((feature) => feature.id).sort();
+    if (JSON.stringify(publicIds) !== JSON.stringify(EXPECTED_IDS)) fail('public/project-atlas.json: registre critique incorrect');
+  } catch (error) {
+    fail(`public/project-atlas.json: ${error.message}`);
   }
 }
 

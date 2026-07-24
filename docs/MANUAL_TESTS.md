@@ -6,10 +6,10 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.253`.
-- Bilan : 7 parcours `ok`, 23 parcours `à faire`.
+- Version à valider : `10.5.254`.
+- Bilan : 7 parcours `ok`, 25 parcours `à faire`.
 - Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
-- Les 32 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
+- Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
 - Consigner les anomalies et retours détaillés dans `docs/ADMIN_TEST_RETURNS.md`.
 
@@ -49,6 +49,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 30 | 10.5.251 | Sport : profil en sous-runtime | Depuis un chargement frais, ouvrir Dashboard puis **Sport**. Vérifier Timer, Programme et Historique immédiatement, puis ouvrir Profil athlétique, Analyse progression charges, Mesures et Mobilité. | Sport reste utilisable avant le profil complet. Le profil/radar/progression/mesures apparaissent automatiquement sans recharger la page. | `TB BUILD 10.5.251` ; aucun `sport profile runtime load failed`, aucun module `sportProfileView` ou `sportMobilityController` manquant, aucun `Uncaught`. | à faire |
 | 31 | 10.5.252 | Sport : mesures impédancemètre | Ouvrir **Sport > Profil athlétique > Mesures**, saisir poids, masse grasse ou muscle, changer quelques champs protocole, enregistrer, rafraîchir puis revenir sur Sport. | La mesure reste visible, le poids met à jour la référence Sport, l'indice qualité s'affiche et l'écran Sport ne dépend plus du code impédancemètre legacy. | `TB BUILD 10.5.252` ; aucun `sportBodyMeasurementController` manquant, aucun `body measurement save failed` en ligne, aucun `Uncaught`. | à faire |
 | 32 | 10.5.253 | Sport : persistance timer | Ouvrir Sport, lancer une séance guidée, changer le volume bip, passer pause/reprise, rafraîchir puis revenir sur Sport. Tester aussi Chrono libre pause/stop/sauvegarde. | Le timer guidé et le chrono libre reprennent l'état attendu, le volume reste mémorisé, le grand écran garde le bon état après refresh. | `TB BUILD 10.5.253` ; aucun `sportTimerController` manquant, aucun `Uncaught`. | à faire |
+| 33 | 10.5.254 | Page projet : Atlas public | Ouvrir `public/projet.html` ou la page projet déployée, vérifier Lab, Atlas, Release pulse, Checklist et Confidentialité. Ouvrir aussi `/project-atlas.json`. | Les compteurs Atlas viennent du JSON public, les mini-démos répondent, la checklist se coche localement et les liens APK/confidentialité restent valides. | `TB BUILD 10.5.254` si app ouverte ; aucun 404 sur `project-enhancements.js`, `project-enhancements.css` ou `project-atlas.json`, aucun `Uncaught`. | à faire |
+| 34 | 10.5.254 | Sport : finalisation timer | Lancer une séance guidée, modifier ensuite le plan ou les exercices affichés, puis terminer la séance. Refaire avec un circuit corde/boxe si disponible. | La séance terminée utilise le plan capturé au lancement, les séries restent rattachées aux bons exercices et les progressions ne se basent pas sur un plan modifié après coup. | `TB BUILD 10.5.254` ; aucun `Sport finalization rules indisponibles`, aucun `Uncaught`, aucune série déplacée. | à faire |
 
 ## À ajouter à chaque livraison
 

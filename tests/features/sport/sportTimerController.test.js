@@ -23,6 +23,7 @@ describe('sport timer controller', () => {
     const bench = { exerciseName: 'Bench', mode: 'reps', targetReps: 10, sets: 1, restSeconds: 90, weightKg: 55 };
     const timer = createTimerState({
       sequence: buildWorkoutSequence([bench]),
+      planSnapshot: [bench],
       now,
       bodyWeightKg: 59,
       bodyHeightCm: 162,
@@ -34,6 +35,25 @@ describe('sport timer controller', () => {
     expect(timer.stepReps).toBe(10);
     expect(timer.stepLoadKg).toBe(60);
     expect(timer.bodyHeightCm).toBe(162);
+    expect(timer.planSnapshot).toEqual([bench]);
+    expect(timer.planSnapshot[0]).not.toBe(bench);
+  });
+
+  it('keeps the workout plan captured at start when the editable plan changes', () => {
+    const originalPlan = [
+      { exerciseName: 'Front squat', mode: 'reps', targetReps: 10, sets: 1 },
+      { exerciseName: 'Bench', mode: 'reps', targetReps: 8, sets: 1 },
+    ];
+    const timer = createTimerState({
+      sequence: buildWorkoutSequence(originalPlan),
+      planSnapshot: originalPlan,
+      now,
+      bodyWeightKg: 59,
+    });
+
+    originalPlan.splice(0, 1);
+
+    expect(timer.planSnapshot.map((item) => item.exerciseName)).toEqual(['Front squat', 'Bench']);
   });
 
   it('completes a work step, records the actual reps/load and moves to rest', () => {

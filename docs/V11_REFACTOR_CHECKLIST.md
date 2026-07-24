@@ -13,6 +13,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Mettre a jour cette checklist a chaque lot livre.
 - [x] Ajouter a chaque livraison une verification utilisateur simple : ecran a ouvrir, action a faire, resultat attendu, console attendue si pertinent.
 - [x] Remplacer la liste brute des APK de `public/projet.html` par une fresque chronologique interactive, detaillee et filtrable.
+- [x] Raccorder `public/projet.html` a l'Atlas public genere : `public/project-atlas.json`, chiffres factuels, checklist Play Store et mini-labs projet.
 - [x] Realigner le contrat Settings Modal sur les modules extraits et verifier la suite complete : 89 fichiers, 459 tests.
 - [x] Extraire les interactions KPI date-a-date, scope, impayes et convertisseur FX vers un controleur module, avec tests.
 - [x] Sortir FX Decision du boot et le charger avec le domaine Analyse : boot legacy 1085.3 -> 1044.9 KiB.
@@ -120,6 +121,7 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
   - [x] Fractionner le profil Sport en sous-runtime lazy : timer, programme, historique et catalogue chargent avant radar, progression, impedance et mobilite.
   - [x] Extraire le controleur des mesures impedancemetriques Sport : lecture DOM, cache local, upsert SQL et reference poids quittent `45_sport_ui.js`.
   - [x] Extraire la persistance timer Sport : preferences bip, timer guide, chrono libre, normalisation et clear quittent `45_sport_ui.js` vers `sportTimerController.js`.
+  - [x] Stabiliser la finalisation timer Sport avec un instantane du plan de depart, pour eviter qu'un plan modifie fausse les series et progressions.
 - [x] Nutrition : separer catalogue, journal, objectifs et historique.
   - [x] Extraire les regles pures du catalogue, des totaux par repas, du journal quotidien, des objectifs et des cibles par moment.
   - [x] Extraire le socle repository local/offline Nutrition : cache aliments, lignes locales, sync_id, sommeil et erreurs de synchro.

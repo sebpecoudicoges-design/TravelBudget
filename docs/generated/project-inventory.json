@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "815edb6808a4eb78f7f604e2bc0e75de4ff8d194",
-  "snapshotFingerprint": "c443c4a287ff5cdbdc6213303a0bb739359c45fe5955bd2ef7f2c1565fd93437",
-  "generatedAt": "2026-07-23T11:20:24.050Z",
+  "commit": "a5bb8737580b784ea62c70b20eb23991140148b4",
+  "snapshotFingerprint": "d50ac578a935782d265ddab42ce125691a15a720d605f17ea29babfb5f335a99",
+  "generatedAt": "2026-07-24T09:18:36.141Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.253"
+    "version": "10.5.254"
   },
   "npmScripts": {
     "dev": "vite",
@@ -479,6 +479,7 @@
     "docs/ARCHITECTURE_DECISIONS.md",
     "docs/MANUAL_TESTS.md",
     "docs/PROJECT_ATLAS.md",
+    "docs/PROJECT_PAGE_CHECKLIST.md",
     "docs/README.md",
     "docs/V11_ARCHITECTURE.md",
     "docs/V11_DATA_LAYER.md",
