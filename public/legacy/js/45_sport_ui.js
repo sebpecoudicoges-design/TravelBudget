@@ -572,18 +572,10 @@
     if (Number.isFinite(direct) && direct > 0) return Math.max(1, Math.round(direct));
     return step.kind === "work" ? setWorkSeconds(step.item) : 0;
   }
-  function estimatedCompletionSequence() {
-    const base = makeSequence();
+  function estimatedCompletionSequence(sequence) {
+    const base = Array.isArray(sequence) ? sequence : makeSequence();
     const capSeconds = CACHE.circuit?.enabled ? Math.max(0, Math.round(n(CACHE.circuit.amrapMinutes, 0) * 60)) : 0;
-    if (!capSeconds || !base.length) return base;
-    const baseSeconds = base.reduce((sum, step) => sum + sequenceStepSeconds(step), 0);
-    if (baseSeconds <= 0) return base;
-    const rounds = Math.max(1, Math.floor(capSeconds / baseSeconds));
-    const out = [];
-    for (let round = 1; round <= Math.min(rounds, 100); round += 1) {
-      base.forEach(step => out.push(Object.assign({}, step, { setIndex: round, roundIndex: round, roundTotal: rounds })));
-    }
-    return out.length ? out : base;
+    return sportTimerController()?.estimateCompletionSequence?.(base, { capSeconds, sequenceStepSeconds }) || base;
   }
   function isStrengthLike(item) {
     const key = String(item?.activityKey || "");
@@ -3381,25 +3373,16 @@
     const durationSeconds = Math.max(1, Math.round(totalPlanSeconds(CACHE.plan)));
     const endedAt = Date.now();
     const startedAt = endedAt - durationSeconds * 1000;
-    let cursor = startedAt;
-    const doneSets = [];
-
-    estimatedCompletionSequence().forEach((step) => {
-      const stepSeconds = sequenceStepSeconds(step);
-      cursor += stepSeconds * 1000;
-      if (step.kind === "work") {
-        const item = step.item;
-        doneSets.push({
-          itemIndex: step.itemIndex,
-          setIndex: step.setIndex,
-          reps: item.mode === "reps" ? n(item.targetReps, 0) : null,
-          durationSeconds: stepSeconds,
-          weightKg: effectiveLoadKg(item, weightKg),
-          distanceM: n(item.distanceM, 0),
-          completedAt: new Date(Math.min(cursor, endedAt)).toISOString(),
-        });
-      }
-    });
+    const sequence = makeSequence();
+    const doneSets = sportTimerController()?.buildEstimatedDoneSets?.({
+      sequence,
+      capSeconds: CACHE.circuit?.enabled ? Math.max(0, Math.round(n(CACHE.circuit.amrapMinutes, 0) * 60)) : 0,
+      startedAt,
+      endedAt,
+      bodyWeightKg: weightKg,
+      sequenceStepSeconds,
+      effectiveLoadKg,
+    }) || [];
 
     const summary = {
       startedAt: new Date(startedAt).toISOString(),

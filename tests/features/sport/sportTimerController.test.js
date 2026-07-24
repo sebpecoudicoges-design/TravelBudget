@@ -4,9 +4,11 @@ import {
   addCircuitRound,
   addSetForCurrentExercise,
   adjustCurrentStepSeconds,
+  buildEstimatedDoneSets,
   completeTimerStep,
   createTimerState,
   currentTimerStep,
+  estimateCompletionSequence,
   skipRestStep,
   togglePause,
 } from '../../../src/features/sport/sportTimerController.js';
@@ -100,6 +102,48 @@ describe('sport timer controller', () => {
     expect(result.roundIndex).toBe(2);
     expect(result.plan.map((item) => item.sets)).toEqual([2, 2]);
     expect(work.map((step) => [step.itemIndex, step.setIndex])).toEqual([[0, 1], [1, 1], [0, 2], [1, 2]]);
+  });
+
+  it('estimates AMRAP completion rounds from a base sequence', () => {
+    const sequence = [
+      { kind: 'work', item: { exerciseName: 'Corde' }, itemIndex: 0, setIndex: 1, duration: 20 },
+      { kind: 'rest', itemIndex: 0, setIndex: 1, duration: 10 },
+    ];
+    const estimated = estimateCompletionSequence(sequence, {
+      capSeconds: 65,
+      sequenceStepSeconds: (step) => step.duration || 0,
+    });
+
+    expect(estimated).toHaveLength(4);
+    expect(estimated.filter((step) => step.kind === 'work').map((step) => step.setIndex)).toEqual([1, 2]);
+    expect(estimated.every((step) => step.roundTotal === 2)).toBe(true);
+  });
+
+  it('builds estimated done sets for plan completion without a running timer', () => {
+    const startedAt = Date.parse('2026-07-08T08:00:00.000Z');
+    const endedAt = Date.parse('2026-07-08T08:01:00.000Z');
+    const sequence = [
+      { kind: 'work', item: { mode: 'reps', targetReps: 12, weightKg: 40 }, itemIndex: 0, setIndex: 1, duration: 30 },
+      { kind: 'rest', itemIndex: 0, setIndex: 1, duration: 20 },
+    ];
+    const sets = buildEstimatedDoneSets({
+      sequence,
+      startedAt,
+      endedAt,
+      bodyWeightKg: 59,
+      sequenceStepSeconds: (step) => step.duration || 0,
+      effectiveLoadKg: (item) => item.weightKg + 5,
+    });
+
+    expect(sets).toEqual([{
+      itemIndex: 0,
+      setIndex: 1,
+      reps: 12,
+      durationSeconds: 30,
+      weightKg: 45,
+      distanceM: 0,
+      completedAt: new Date(startedAt + 30_000).toISOString(),
+    }]);
   });
 
   it('skips rest and applies defaults to the next work step', () => {

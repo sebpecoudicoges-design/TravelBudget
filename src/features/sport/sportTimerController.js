@@ -330,6 +330,56 @@ export function completeTimerStep(timer = {}, options = {}) {
   return { timer: nextTimer, step, nextStep, addedSet, finished: false, looped: false };
 }
 
+export function estimateCompletionSequence(sequence = [], options = {}) {
+  const base = Array.isArray(sequence) ? sequence : [];
+  const capSeconds = Math.max(0, Math.round(num(options.capSeconds, 0)));
+  const sequenceStepSeconds = typeof options.sequenceStepSeconds === 'function'
+    ? options.sequenceStepSeconds
+    : (step) => Math.max(0, Math.round(num(step?.duration, 0)));
+  if (!capSeconds || !base.length) return base.slice();
+  const baseSeconds = base.reduce((sum, step) => sum + Math.max(0, sequenceStepSeconds(step)), 0);
+  if (baseSeconds <= 0) return base.slice();
+  const rounds = Math.max(1, Math.floor(capSeconds / baseSeconds));
+  const out = [];
+  for (let round = 1; round <= Math.min(rounds, 100); round += 1) {
+    base.forEach((step) => out.push({ ...step, setIndex: round, roundIndex: round, roundTotal: rounds }));
+  }
+  return out.length ? out : base.slice();
+}
+
+export function buildEstimatedDoneSets(input = {}) {
+  const startedAt = Math.max(0, num(input.startedAt, Date.now()));
+  const endedAt = Math.max(startedAt, num(input.endedAt, startedAt));
+  const bodyWeightKg = num(input.bodyWeightKg, 70);
+  const sequence = estimateCompletionSequence(input.sequence, {
+    capSeconds: input.capSeconds,
+    sequenceStepSeconds: input.sequenceStepSeconds,
+  });
+  const sequenceStepSeconds = typeof input.sequenceStepSeconds === 'function'
+    ? input.sequenceStepSeconds
+    : (step) => Math.max(0, Math.round(num(step?.duration, 0)));
+  const effectiveLoadKg = typeof input.effectiveLoadKg === 'function'
+    ? input.effectiveLoadKg
+    : (item) => num(item?.weightKg ?? item?.weight_kg, 0);
+  let cursor = startedAt;
+  return sequence.reduce((sets, step) => {
+    const stepSeconds = Math.max(0, sequenceStepSeconds(step));
+    cursor += stepSeconds * 1000;
+    if (step?.kind !== 'work') return sets;
+    const item = step.item || {};
+    sets.push({
+      itemIndex: Math.max(0, Math.round(num(step.itemIndex, 0))),
+      setIndex: Math.max(1, Math.round(num(step.setIndex, 1))),
+      reps: item.mode === 'reps' ? num(item.targetReps ?? item.target_reps, 0) : null,
+      durationSeconds: stepSeconds,
+      weightKg: effectiveLoadKg(item, bodyWeightKg),
+      distanceM: num(item.distanceM ?? item.distance_m, 0),
+      completedAt: new Date(Math.min(cursor, endedAt)).toISOString(),
+    });
+    return sets;
+  }, []);
+}
+
 export function skipRestStep(timer = {}, options = {}) {
   const now = Math.max(0, num(options.now, Date.now()));
   let nextTimer = cloneTimer(timer);

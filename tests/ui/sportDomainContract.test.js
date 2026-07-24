@@ -139,6 +139,10 @@ describe('Sport domain contract', () => {
       expect(timerController).toContain(`export function ${token}`);
       expect(legacy).toContain(`sportTimerController?.${token}`);
     }
+    for (const token of ['estimateCompletionSequence', 'buildEstimatedDoneSets']) {
+      expect(timerController).toContain(`export function ${token}`);
+      expect(legacy).toContain(`sportTimerController()?.${token}`);
+    }
     for (const token of ['loadTimerPrefs', 'persistTimerState', 'loadFreeTimerState', 'persistFreeTimerState']) {
       expect(timerController).toContain(`export function ${token}`);
       expect(legacy).toContain(`sportTimerController()?.${token}`);
