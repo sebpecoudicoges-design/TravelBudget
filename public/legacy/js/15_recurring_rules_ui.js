@@ -112,6 +112,58 @@
     }
   }
 
+  function _rrTextKey(value) {
+    return String(value || "")
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  }
+
+  async function _rrFetchDbSubcategories() {
+    const s = _rrGetSB();
+    if (!s) return [];
+    try {
+      const uid = await _tbAuthUid();
+      if (!uid) return [];
+      const { data, error } = await s
+        .from(TB_CONST.TABLES.category_subcategories)
+        .select("id,category_id,category_name,name,color,sort_order,is_active,created_at,updated_at")
+        .eq("user_id", uid)
+        .order("category_name", { ascending: true })
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data || []).map((row, idx) => ({
+        id: row.id || null,
+        categoryId: row.category_id || null,
+        categoryName: String(row.category_name || "").trim(),
+        name: String(row.name || "").trim(),
+        color: row.color || null,
+        sortOrder: Number(row.sort_order ?? idx),
+        isActive: row.is_active !== false,
+        createdAt: row.created_at || null,
+        updatedAt: row.updated_at || null,
+      })).filter((row) => row.categoryName && row.name);
+    } catch (e) {
+      console.warn("[RR subcategories] db fetch failed", e?.message || e);
+      return [];
+    }
+  }
+
+  async function _rrEnsureSubcategoriesLoaded() {
+    if (Array.isArray(state?.categorySubcategories) && state.categorySubcategories.length) return state.categorySubcategories;
+    const rows = await _rrFetchDbSubcategories();
+    if (rows.length) {
+      state.categorySubcategories = rows;
+      try {
+        if (typeof window.normalizeAppState === "function") window.normalizeAppState();
+        else if (typeof normalizeAppState === "function") normalizeAppState();
+      } catch (_) {}
+    }
+    return Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : [];
+  }
+
   function _rrShouldKeepTxCategory(tx) {
     if (!tx) return false;
     if (tx.tripExpenseId || tx.trip_expense_id) return false;
@@ -174,7 +226,37 @@
   }
 
   function _rrSubcategoryOptions(categoryName, selectedValue) {
-    const rows = (typeof getCategorySubcategories === 'function') ? getCategorySubcategories(categoryName) : [];
+    const wantedCategory = _rrTextKey(categoryName);
+    const rows = [];
+    const seen = new Set();
+    const push = (row) => {
+      const name = String(row?.name || row?.subcategory || "").trim();
+      if (!name) return;
+      const key = _rrTextKey(name);
+      if (seen.has(key)) return;
+      seen.add(key);
+      rows.push({
+        name,
+        sortOrder: Number(row?.sortOrder ?? row?.sort_order ?? 9999),
+        isActive: row?.isActive !== false && row?.is_active !== false,
+      });
+    };
+    try {
+      if (typeof getCategorySubcategories === 'function') {
+        (getCategorySubcategories(categoryName, { activeOnly: true }) || []).forEach(push);
+      }
+    } catch (_) {}
+    (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : [])
+      .filter((row) => _rrTextKey(row?.categoryName || row?.category_name) === wantedCategory)
+      .filter((row) => row?.isActive !== false && row?.is_active !== false)
+      .forEach(push);
+    (Array.isArray(state?.transactions) ? state.transactions : [])
+      .filter((row) => _rrTextKey(row?.category) === wantedCategory)
+      .forEach((row) => push({ name: row?.subcategory, sortOrder: 9998, isActive: true }));
+    (Array.isArray(state?.recurringRules) ? state.recurringRules : [])
+      .filter((row) => _rrTextKey(row?.category) === wantedCategory)
+      .forEach((row) => push({ name: row?.subcategory, sortOrder: 9998, isActive: true }));
+    rows.sort((a, b) => (a.sortOrder - b.sortOrder) || String(a.name || '').localeCompare(String(b.name || ''), 'fr', { sensitivity: 'base' }));
     const selected = String(selectedValue || '').trim();
     const options = ['<option value="">Aucune</option>'];
     for (const row of rows) {
@@ -607,6 +689,7 @@
     const fetchedCats = await _rrCategoryOptions();
     const cats = Array.isArray(fetchedCats) ? fetchedCats.slice() : [];
     if (!cats.length) cats.push(...((state?.categories || []).map((c)=> typeof c === 'string' ? c : (c?.name || c?.label || c?.category || '')).filter(Boolean)));
+    await _rrEnsureSubcategoriesLoaded();
     const modal = _rrEnsureModal();
     if (!modal) throw new Error("Modal indisponible.");
     const today = _tbISO(new Date());

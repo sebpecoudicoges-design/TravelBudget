@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "59e19c5de68be75ed3f55e663010945466d86513",
-  "snapshotFingerprint": "5ea38e76f10e91f1e4f9f887692defdcd1c60d9956ce3e2f11b431fdd69225d5",
-  "generatedAt": "2026-07-25T00:02:20.371Z",
+  "commit": "486da87fec6730b4be3070fb1ae08d1486988e1f",
+  "snapshotFingerprint": "057c0e28984cebafdebb3143faf51383b6d340563393628c90e416fde27025d7",
+  "generatedAt": "2026-07-25T00:14:41.121Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.256"
+    "version": "10.5.257"
   },
   "npmScripts": {
     "dev": "vite",
@@ -308,6 +308,7 @@
     "tests/ui/legacyDomainLoader.test.js",
     "tests/ui/moduleSizeBudgetsContract.test.js",
     "tests/ui/nutritionDomainContract.test.js",
+    "tests/ui/recurringRulesSubcategoriesContract.test.js",
     "tests/ui/settingsModalContract.test.js",
     "tests/ui/settingsViewContract.test.js",
     "tests/ui/sportDomainContract.test.js",
@@ -344,6 +345,7 @@
     "tests/ui/legacyBusinessRulesContract.test.js",
     "tests/ui/moduleSizeBudgetsContract.test.js",
     "tests/ui/nutritionDomainContract.test.js",
+    "tests/ui/recurringRulesSubcategoriesContract.test.js",
     "tests/ui/settingsModalContract.test.js",
     "tests/ui/settingsViewContract.test.js",
     "tests/ui/sportDomainContract.test.js",

@@ -209,6 +209,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire la preparation de suppression Categorie (confirmation, SQL/fallback) vers `settingsCategoriesView.js`.
   - [x] Extraire les corps des modales Creation voyage et Creation periode Settings vers `settingsView.js`.
   - [x] Extraire les etats Reference budget Settings : hors ligne, synchronisation et indisponible passent dans `settingsView.js`.
+  - [x] Stabiliser les sous-categories des regles recurrentes Settings : prechargement SQL et fallback local avant rendu modal.
   - [x] Extraire le cockpit programme Sport : semaine A/B, charges prevues, progression et reglages recurrence passent dans `sportProgramView.js`.
   - [x] Ajouter le moteur progression Sport : e1RM Epley, lissage, Training Max, recommandations SQL et application explicite.
   - [x] Extraire le rendu des recommandations de charge Sport vers `sportProgramView.js`.
