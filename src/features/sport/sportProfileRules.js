@@ -253,13 +253,70 @@ export function buildCardioCapacity({
 }
 
 function bodyMetric(row, key, fallback = 0) {
-  const direct = numberValue(row?.[key], 0);
-  if (direct > 0) return direct;
   const weight = numberValue(row?.weight_kg, 0);
   const fatPct = numberValue(row?.body_fat_pct, 0);
-  if (key === 'fat_mass_kg' && weight && fatPct) return weight * fatPct / 100;
-  if (key === 'lean_mass_kg' && weight && fatPct) return weight * (1 - fatPct / 100);
+  const direct = numberValue(row?.[key], 0);
+  if (key === 'fat_mass_kg' && weight && fatPct) {
+    const expected = weight * fatPct / 100;
+    return direct > 0 && Math.abs(direct - expected) <= Math.max(0.4, expected * 0.08) ? direct : expected;
+  }
+  if (key === 'lean_mass_kg' && weight && fatPct) {
+    const expected = weight * (1 - fatPct / 100);
+    return direct > 0 && Math.abs(direct - expected) <= Math.max(0.4, expected * 0.04) ? direct : expected;
+  }
+  if (direct > 0) return direct;
   return fallback;
+}
+
+export function bodyMeasurementConsistency(row = {}) {
+  const warnings = [];
+  const weight = numberValue(row?.weight_kg, 0);
+  const fatPct = numberValue(row?.body_fat_pct, 0);
+  const fatMass = numberValue(row?.fat_mass_kg, 0);
+  const leanMass = numberValue(row?.lean_mass_kg, 0);
+  if (weight && fatPct && fatMass) {
+    const expected = weight * fatPct / 100;
+    const gap = Math.abs(fatMass - expected);
+    if (gap > Math.max(0.4, expected * 0.08)) {
+      warnings.push(`Masse grasse kg incoherente le ${String(row.measured_on || row.created_at || '').slice(0, 10)} : ${roundOne(fatMass)} kg saisi, attendu ${roundOne(expected)} kg avec ${roundOne(weight)} kg et ${roundOne(fatPct)}%.`);
+    }
+  }
+  if (weight && fatPct && leanMass) {
+    const expected = weight * (1 - fatPct / 100);
+    const gap = Math.abs(leanMass - expected);
+    if (gap > Math.max(0.4, expected * 0.04)) {
+      warnings.push(`Masse maigre kg incoherente le ${String(row.measured_on || row.created_at || '').slice(0, 10)} : ${roundOne(leanMass)} kg saisi, attendu ${roundOne(expected)} kg.`);
+    }
+  }
+  return { ok: !warnings.length, warnings };
+}
+
+function bodyMusclePct(row = {}) {
+  const direct = numberValue(row?.muscle_pct || row?.skeletal_muscle_pct || row?.skeletal_muscle_percent, 0);
+  if (direct > 0) return direct;
+  const notes = String(row?.notes || '');
+  const match = notes.match(/muscle\s+squelettique\s*:?\s*([0-9]+(?:[,.][0-9]+)?)\s*%/i);
+  if (match) return numberValue(match[1].replace(',', '.'), 0);
+  return 0;
+}
+
+export function buildBodyCompositionTrend(measurements = []) {
+  const rows = (measurements || [])
+    .filter((row) => row && (row.measured_on || row.created_at))
+    .slice()
+    .sort((a, b) => String(a.measured_on || a.created_at).localeCompare(String(b.measured_on || b.created_at)))
+    .slice(-12);
+  return rows.map((row) => ({
+    date: String(row.measured_on || row.created_at || '').slice(0, 10),
+    weightKg: roundOne(row.weight_kg),
+    bodyFatPct: roundOne(row.body_fat_pct),
+    musclePct: roundOne(bodyMusclePct(row)),
+    musclePctSource: numberValue(row?.muscle_pct || row?.skeletal_muscle_pct || row?.skeletal_muscle_percent, 0) > 0 || /muscle\s+squelettique/i.test(String(row?.notes || ''))
+      ? 'direct'
+      : 'missing',
+    qualityScore: numberValue(row.protocol_quality_score, 0) || null,
+    qualityLabel: row.protocol_quality_label || '',
+  })).filter((row) => row.weightKg || row.bodyFatPct || row.musclePct);
 }
 
 export function buildBodyCompositionAnalysis(measurements = []) {
@@ -268,7 +325,7 @@ export function buildBodyCompositionAnalysis(measurements = []) {
     .slice()
     .sort((a, b) => String(a.measured_on || a.created_at).localeCompare(String(b.measured_on || b.created_at)));
   const latest = rows.at(-1) || null;
-  if (!latest) return { latest: null, previous: null, metrics: [], insights: [], warnings: [] };
+  if (!latest) return { latest: null, previous: null, metrics: [], insights: [], warnings: [], trend: [] };
 
   const latestQuality = numberValue(latest.protocol_quality_score, 0);
   const comparable = rows.filter((row) => {
@@ -296,6 +353,7 @@ export function buildBodyCompositionAnalysis(measurements = []) {
   const fatDelta = getDelta('fat_mass_kg');
   const insights = [];
   const warnings = [];
+  const consistencyWarnings = rows.flatMap((row) => bodyMeasurementConsistency(row).warnings);
 
   if (previous && weightDelta > 0 && leanDelta > 0 && (!fatDelta || leanDelta >= fatDelta)) {
     insights.push('Hausse du poids principalement accompagnee par la masse maigre sur les mesures comparables.');
@@ -303,9 +361,11 @@ export function buildBodyCompositionAnalysis(measurements = []) {
   if (previous && leanDelta > 0.3) insights.push(`Masse maigre en hausse de ${roundOne(leanDelta)} kg.`);
   if (previous && fatDelta < -0.3) insights.push(`Masse graisseuse en baisse de ${Math.abs(roundOne(fatDelta))} kg.`);
   if (latestQuality && latestQuality < 65) warnings.push('Protocole de mesure insuffisamment comparable : interpréter les variations avec prudence.');
+  if (!latestQuality) warnings.push('Qualite protocole non renseignee sur la derniere mesure : tendance utile, mais comparaison moins fiable.');
   if (previous && Math.abs(numberValue(getDelta('body_water_pct'), 0)) >= 2) warnings.push('Variation d eau importante : elle peut déplacer artificiellement les estimations de graisse et de muscle.');
   if (previous && fatDelta > 0.5 && (!leanDelta || fatDelta > leanDelta)) warnings.push('La hausse récente semble davantage portée par la masse graisseuse que par la masse maigre.');
   if (!previous) warnings.push('Une deuxième mesure réalisée avec le même protocole est nécessaire pour analyser une tendance.');
+  warnings.push(...consistencyWarnings.slice(0, 4));
   if (!insights.length && previous) insights.push('Composition globalement stable entre les deux mesures comparables.');
 
   return {
@@ -314,6 +374,8 @@ export function buildBodyCompositionAnalysis(measurements = []) {
     qualityScore: latestQuality || null,
     qualityLabel: latest.protocol_quality_label || '',
     metrics,
+    trend: buildBodyCompositionTrend(rows),
+    consistencyWarnings,
     insights,
     warnings,
   };

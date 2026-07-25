@@ -105,6 +105,53 @@ function renderMobilityAssessment(analysis = {}, h) {
   </div>`;
 }
 
+function renderBodyTrendChart(trend = [], h) {
+  const rows = Array.isArray(trend) ? trend.filter(Boolean) : [];
+  if (!rows.length) return '';
+  const series = [
+    { key: 'weightKg', label: h.txt('Poids', 'Weight'), unit: 'kg', cls: 'weight' },
+    { key: 'bodyFatPct', label: h.txt('Graisse', 'Fat'), unit: '%', cls: 'fat' },
+    { key: 'musclePct', label: h.txt('Muscle', 'Muscle'), unit: '%', cls: 'muscle' },
+  ].map((serie) => {
+    const values = rows.map((row) => h.n(row[serie.key], 0)).filter((value) => value > 0);
+    const min = values.length ? Math.min(...values) : 0;
+    const max = values.length ? Math.max(...values) : 0;
+    return { ...serie, min, max };
+  });
+  const barHeight = (value, serie) => {
+    const v = h.n(value, 0);
+    if (!v) return 0;
+    if (serie.max <= serie.min) return 54;
+    return Math.max(12, Math.round(16 + ((v - serie.min) / (serie.max - serie.min)) * 42));
+  };
+  const latest = rows.at(-1) || {};
+  const hasMissingMuscle = rows.some((row) => !h.n(row.musclePct, 0));
+  return `<div class="tb-sport-body-trend">
+    <div class="tb-sport-body-trend-head">
+      <strong>${h.esc(h.txt('Evolution composition', 'Composition trend'))}</strong>
+      <small>${h.esc(h.txt('12 dernieres mesures', 'Last 12 measurements'))}</small>
+    </div>
+    ${series.map((serie) => {
+      const latestValue = h.n(latest[serie.key], 0);
+      return `<div class="tb-sport-body-trend-row">
+        <span>${h.esc(serie.label)}</span>
+        <div class="tb-sport-body-trend-bars ${h.esc(serie.cls)}">
+          ${rows.map((row) => {
+            const value = h.n(row[serie.key], 0);
+            const label = value ? `${row.date} - ${h.n(value, 0)}${serie.unit}` : `${row.date} - non renseigne`;
+            return `<i title="${h.esc(label)}" style="height:${barHeight(value, serie)}px;opacity:${value ? 1 : 0.22}"></i>`;
+          }).join('')}
+        </div>
+        <b>${latestValue ? `${h.n(latestValue, 0)}${serie.unit}` : '-'}</b>
+      </div>`;
+    }).join('')}
+    <div class="tb-sport-body-trend-dates">
+      <span>${h.esc(rows[0]?.date || '')}</span><span>${h.esc(rows.at(-1)?.date || '')}</span>
+    </div>
+    ${hasMissingMuscle ? `<small class="tb-sport-body-trend-note">${h.esc(h.txt('Muscle % trace uniquement quand la balance le fournit directement ou dans la note.', 'Muscle % is charted only when the scale provides it directly or in the note.'))}</small>` : ''}
+  </div>`;
+}
+
 export function radarPoints(axes = [], radius = 104, cx = 140, cy = 140) {
   const count = Math.max(1, axes.length);
   return (axes || []).map((axis, idx) => {
@@ -189,6 +236,7 @@ export function renderSportProfileDashboard({
         ${bodyAnalysis.metrics.length ? `<div class="tb-sport-athletic-metrics" style="margin-top:10px;">
           ${bodyAnalysis.metrics.slice(0, 6).map((row) => `<div><span>${h.esc(row.label)}</span><strong>${h.esc(`${row.value}${row.unit ? ` ${row.unit}` : ''}`)}</strong><small>${row.delta === null ? h.esc(h.txt('Premiere reference', 'First reference')) : h.esc(`${row.delta > 0 ? '+' : ''}${row.delta}${row.unit ? ` ${row.unit}` : ''}`)}</small></div>`).join('')}
         </div>` : ''}
+        ${renderBodyTrendChart(bodyAnalysis.trend || [], h)}
         <div class="tb-sport-athletic-grid" style="margin-top:10px;">
           <div class="tb-sport-athletic-panel">
             <b>${h.esc(h.txt('Analyse composition', 'Composition analysis'))}</b>

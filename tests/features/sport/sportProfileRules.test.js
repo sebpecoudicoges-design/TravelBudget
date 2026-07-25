@@ -3,9 +3,11 @@ import {
   buildExerciseProgressionRowsFromSessions,
   buildExerciseProgressionAnalysis,
   buildBodyCompositionAnalysis,
+  buildBodyCompositionTrend,
   buildCardioCapacity,
   buildMobilityAnalysis,
   buildSportProfileRadarData,
+  bodyMeasurementConsistency,
   chooseBestCapacity,
   exerciseProfileBucket,
   profileExerciseCapacity,
@@ -169,6 +171,45 @@ describe('Sport profile rules', () => {
     expect(analysis.metrics.find((row) => row.key === 'lean_mass_kg').delta).toBe(1.2);
     expect(analysis.insights.join(' ')).toContain('masse maigre');
     expect(analysis.warnings.join(' ')).toContain('Variation d eau');
+  });
+
+  it('detects incoherent impedance fat mass and derives safer trend values', () => {
+    const bad = {
+      measured_on: '2026-07-24',
+      weight_kg: 62.4,
+      body_fat_pct: 22.5,
+      fat_mass_kg: 4,
+      lean_mass_kg: 48.61,
+      muscle_mass_kg: 46.4,
+    };
+    const consistency = bodyMeasurementConsistency(bad);
+    expect(consistency.ok).toBe(false);
+    expect(consistency.warnings.join(' ')).toContain('attendu 14');
+
+    const analysis = buildBodyCompositionAnalysis([bad, {
+      measured_on: '2026-07-26',
+      weight_kg: 63.85,
+      body_fat_pct: 23,
+      fat_mass_kg: 14.69,
+      lean_mass_kg: 49.16,
+      muscle_mass_kg: 46.67,
+      notes: 'Muscle squelettique: 49,6 %',
+    }]);
+    expect(analysis.metrics.find((row) => row.key === 'fat_mass_kg').delta).toBe(0.7);
+    expect(analysis.consistencyWarnings.join(' ')).toContain('Masse grasse kg incoherente');
+    expect(analysis.trend.at(-1).musclePct).toBe(49.6);
+    expect(analysis.trend.at(-1).musclePctSource).toBe('direct');
+  });
+
+  it('charts muscle percentage only when provided by the scale data', () => {
+    const trend = buildBodyCompositionTrend([
+      { measured_on: '2026-07-24', weight_kg: 62.4, body_fat_pct: 22.5, muscle_mass_kg: 46.4 },
+      { measured_on: '2026-07-26', weight_kg: 63.85, body_fat_pct: 23, notes: 'Muscle squelettique: 49,6 %' },
+    ]);
+
+    expect(trend[0].musclePct).toBe(0);
+    expect(trend[0].musclePctSource).toBe('missing');
+    expect(trend[1].musclePct).toBe(49.6);
   });
 
   it('builds the simple five-test mobility score and exposes pain separately', () => {

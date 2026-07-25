@@ -42,6 +42,18 @@ const data = {
       { label: 'Powerlifter', value: 82 },
     ],
   },
+  bodyCompositionAnalysis: {
+    metrics: [
+      { key: 'weight_kg', label: 'Poids', unit: 'kg', value: 63.9, delta: 1.5 },
+      { key: 'body_fat_pct', label: 'Masse grasse', unit: '%', value: 23, delta: 0.5 },
+    ],
+    trend: [
+      { date: '2026-07-24', weightKg: 62.4, bodyFatPct: 22.5, musclePct: 0, musclePctSource: 'missing' },
+      { date: '2026-07-26', weightKg: 63.9, bodyFatPct: 23, musclePct: 49.6, musclePctSource: 'direct' },
+    ],
+    insights: ['Composition globalement stable.'],
+    warnings: ['Qualite protocole non renseignee.'],
+  },
 };
 
 describe('Sport profile view', () => {
@@ -64,6 +76,9 @@ describe('Sport profile view', () => {
     expect(html).toContain('Developpe militaire probablement en retard');
     expect(html).toContain('Derniere mesure : 2026-07-07');
     expect(html).toContain('15%');
+    expect(html).toContain('Evolution composition');
+    expect(html).toContain('Graisse');
+    expect(html).toContain('Muscle % trace uniquement');
     expect(html).toContain('id="sport-open-body-measurement"');
   });
 
