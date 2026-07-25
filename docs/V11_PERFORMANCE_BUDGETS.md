@@ -12,17 +12,17 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.256` :
+Snapshot `10.5.258` :
 
-- Boot legacy : 877.8 / 1500 KiB.
+- Boot legacy : 878.5 / 1500 KiB.
 - Inbox : 111.9 / 112 KiB.
-- Dashboard + Settings : 351.8 / 360 KiB.
+- Dashboard + Settings : 352.5 / 360 KiB.
 - Trip : 309.4 / 340 KiB.
 - Sport : 434.7 / 450 KiB.
 - Nutrition : 193.2 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
-- Documents : 111.3 / 115 KiB.
+- Documents : 112.4 / 115 KiB.
 - Bundle Vite JS initial : 252.5 / 260 KiB.
 - Bundle Vite JS lazy : 348.7 / 350 KiB.
 - Bundle Vite JS total : 601.2 / 605 KiB.
@@ -49,4 +49,4 @@ Ces plafonds ne sont pas des objectifs finaux. Ils sont volontairement proches d
 
 ## Regle de suivi
 
-Un lot qui ajoute du poids a un domaine doit expliquer pourquoi. Pour 10.5.256, le legacy Documents baisse de 101.5 a 98.2 KiB en sortant la carte document vers `documentView.js`. Le build ajoute un chunk lazy dedie de 3.86 KiB, charge seulement avec le domaine Documents. Le plafond lazy passe de 345 a 350 KiB et le total JS de 598 a 605 KiB pour accepter cette extraction testee. Un lot qui extrait une responsabilite vers `src` doit verifier que le budget reste vert, puis ajuster le plafond uniquement si le gain de qualite est explicite ou si le gain de poids est confirme par `npm run perf:budget`.
+Un lot qui ajoute du poids a un domaine doit expliquer pourquoi. Pour 10.5.258, la preparation des transactions recentes wallet quitte `12_dashboard_render.js` vers `dashboardView.js` : le boot legacy descend de 881.2 a 878.5 KiB, tandis que Dashboard + Settings monte legerement a 352.5 KiB car la logique devient testee dans le module deja charge avec Dashboard. Un lot qui extrait une responsabilite vers `src` doit verifier que le budget reste vert, puis ajuster le plafond uniquement si le gain de qualite est explicite ou si le gain de poids est confirme par `npm run perf:budget`.

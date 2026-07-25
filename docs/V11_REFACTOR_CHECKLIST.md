@@ -240,6 +240,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire le rendu du budget journalier Dashboard : controles de periode et lignes jour quittent `12_dashboard_render.js`.
   - [x] Extraire les dialogues wallet Dashboard : creation, edition et correction des types quittent `12_dashboard_render.js`.
   - [x] Extraire le rendu des transactions recentes des cartes wallet Dashboard vers `dashboardView.js`.
+  - [x] Extraire la preparation des transactions recentes wallet Dashboard : tri, fenetre 7 jours, impayes et risque decouvert quittent `12_dashboard_render.js`.
   - [x] Extraire la barre d actions Wallet Dashboard : creation, transfert interne, archives et correction des types quittent `12_dashboard_render.js`.
   - [x] Supprimer l'ancien rendu onboarding Dashboard mort, remplace par le rendu delegue unique.
   - [x] Supprimer le double rendu KPI pendant `renderWallets`, avec contrat anti-retour.

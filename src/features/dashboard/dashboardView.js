@@ -250,6 +250,86 @@ export function renderWalletRecentTransactions({
   }).join('');
 }
 
+function walletRecentTxDate(tx) {
+  return String(tx?.dateStart || tx?.date_start || tx?.budgetDateStart || tx?.budget_date_start || '').slice(0, 10);
+}
+
+function addDaysISO(iso, days, toISODate) {
+  const d = new Date(`${String(iso || '').slice(0, 10)}T12:00:00`);
+  if (!Number.isFinite(d.getTime())) return String(iso || '').slice(0, 10);
+  d.setDate(d.getDate() + (Number(days) || 0));
+  return typeof toISODate === 'function' ? toISODate(d) : d.toISOString().slice(0, 10);
+}
+
+export function walletRecentTxTouchesWallet(tx, { isTripBudgetShare } = {}) {
+  if (!tx) return false;
+  if (tx.isInternal || tx.is_internal) return false;
+  try {
+    if (typeof isTripBudgetShare === 'function' && isTripBudgetShare(tx)) return false;
+  } catch (_) {}
+  const internalTransferId = tx.internalTransferId || tx.internal_transfer_id || null;
+  const budgetOnlyInternalTransferFee =
+    !!internalTransferId &&
+    String(tx.type || '').toLowerCase() === 'expense' &&
+    (tx.payNow === false || tx.pay_now === false) &&
+    (tx.outOfBudget === false || tx.out_of_budget === false) &&
+    (tx.affectsBudget === true || tx.affects_budget === true);
+  return !budgetOnlyInternalTransferFee;
+}
+
+export function prepareWalletRecentTransactions({
+  walletId,
+  wallets = [],
+  transactions = [],
+  activeTravelId = null,
+  today,
+  getWalletEffectiveBalance,
+  isTripBudgetShare,
+  toISODate,
+} = {}) {
+  const wid = String(walletId || '');
+  const todayIso = String(today || (typeof toISODate === 'function' ? toISODate(new Date()) : new Date().toISOString().slice(0, 10))).slice(0, 10);
+  const maxFutureDate = addDaysISO(todayIso, 7, toISODate);
+  const wallet = (Array.isArray(wallets) ? wallets : []).find((w) => String(w?.id || '') === wid);
+  let projectedFutureBalance = Number(
+    typeof getWalletEffectiveBalance === 'function'
+      ? getWalletEffectiveBalance(walletId)
+      : wallet?.balance
+  ) || 0;
+
+  return (Array.isArray(transactions) ? transactions : [])
+    .filter((tx) => String(tx?.walletId || tx?.wallet_id || '') === wid)
+    .filter((tx) => (tx?.travelId || tx?.travel_id || null) === activeTravelId)
+    .filter((tx) => walletRecentTxTouchesWallet(tx, { isTripBudgetShare }))
+    .map((tx) => {
+      const date = walletRecentTxDate(tx);
+      const isPaid = tx?.payNow !== false;
+      const isFutureSoon = !!date && date > todayIso && date <= maxFutureDate;
+      const isPastUnpaid = !!date && date <= todayIso && !isPaid;
+      return { tx, date, isPaid, isFutureSoon, isPastUnpaid };
+    })
+    .filter((row) => !!row.date && (row.date <= todayIso || row.isFutureSoon))
+    .sort((a, b) => {
+      const pa = a.isFutureSoon ? 0 : (a.isPastUnpaid ? 1 : 2);
+      const pb = b.isFutureSoon ? 0 : (b.isPastUnpaid ? 1 : 2);
+      if (pa !== pb) return pa - pb;
+      if (a.isFutureSoon || a.isPastUnpaid) {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+      } else if (a.date !== b.date) {
+        return b.date.localeCompare(a.date);
+      }
+      return String(a.tx?.label || '').localeCompare(String(b.tx?.label || ''));
+    })
+    .slice(0, 5)
+    .map((row) => {
+      if (!row.isFutureSoon) return row;
+      const type = String(row.tx?.type || '').toLowerCase();
+      const amount = Math.abs(Number(row.tx?.amount) || 0);
+      projectedFutureBalance += type === 'expense' ? -amount : amount;
+      return { ...row, projectedNegative: projectedFutureBalance < 0 };
+    });
+}
+
 export function renderDailyBudgetControls({
   viewStartISO = '',
   viewEndISO = '',

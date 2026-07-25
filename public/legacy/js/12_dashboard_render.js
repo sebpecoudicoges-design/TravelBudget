@@ -81,75 +81,17 @@ function _tbUxDismiss(id) {
 window.tbUxDismiss = window.tbUxDismiss || _tbUxDismiss;
 window.tbUxIsDismissed = window.tbUxIsDismissed || _tbUxIsDismissed;
 
-function _walletRecentTxDate(tx) {
-  return String(tx?.dateStart || tx?.date_start || tx?.budgetDateStart || tx?.budget_date_start || "").slice(0, 10);
-}
-
-function _walletRecentTxTouchesWallet(tx) {
-  if (!tx) return false;
-  if (tx.isInternal || tx.is_internal) return false;
-  try {
-    if (typeof window.tbIsTripBudgetShare === "function" && window.tbIsTripBudgetShare(tx)) return false;
-  } catch (_) {}
-  const internalTransferId = tx.internalTransferId || tx.internal_transfer_id || null;
-  const budgetOnlyInternalTransferFee =
-    !!internalTransferId &&
-    String(tx.type || "").toLowerCase() === "expense" &&
-    (tx.payNow === false || tx.pay_now === false) &&
-    (tx.outOfBudget === false || tx.out_of_budget === false) &&
-    (tx.affectsBudget === true || tx.affects_budget === true);
-  if (budgetOnlyInternalTransferFee) return false;
-  return true;
-}
-
-function _walletRecentAddDaysISO(iso, days) {
-  const d = new Date(`${String(iso || "").slice(0, 10)}T12:00:00`);
-  if (!Number.isFinite(d.getTime())) return String(iso || "").slice(0, 10);
-  d.setDate(d.getDate() + (Number(days) || 0));
-  return toLocalISODate(d);
-}
-
 function _walletRecentTransactionsHTML(walletId, today, T) {
-  const wid = String(walletId || "");
-  const todayIso = String(today || toLocalISODate(new Date()));
-  const maxFutureDate = _walletRecentAddDaysISO(todayIso, 7);
-  const wallet = (Array.isArray(state?.wallets) ? state.wallets : [])
-    .find((w) => String(w?.id || "") === wid);
-  let projectedFutureBalance = Number((typeof window.tbGetWalletEffectiveBalance === "function")
-    ? window.tbGetWalletEffectiveBalance(walletId)
-    : wallet?.balance) || 0;
-
-  const rows = (Array.isArray(state?.transactions) ? state.transactions : [])
-    .filter((tx) => String(tx?.walletId || tx?.wallet_id || "") === wid)
-    .filter((tx) => (tx?.travelId || tx?.travel_id || null) === state.activeTravelId)
-    .filter(_walletRecentTxTouchesWallet)
-    .map((tx) => {
-      const date = _walletRecentTxDate(tx);
-      const isPaid = tx?.payNow !== false;
-      const isFutureSoon = !!date && date > todayIso && date <= maxFutureDate;
-      const isPastUnpaid = !!date && date <= todayIso && !isPaid;
-      return { tx, date, isPaid, isFutureSoon, isPastUnpaid };
-    })
-    .filter((row) => !!row.date && (row.date <= todayIso || row.isFutureSoon))
-    .sort((a, b) => {
-      const pa = a.isFutureSoon ? 0 : (a.isPastUnpaid ? 1 : 2);
-      const pb = b.isFutureSoon ? 0 : (b.isPastUnpaid ? 1 : 2);
-      if (pa !== pb) return pa - pb;
-      if (a.isFutureSoon || a.isPastUnpaid) {
-        if (a.date !== b.date) return a.date.localeCompare(b.date);
-      } else if (a.date !== b.date) {
-        return b.date.localeCompare(a.date);
-      }
-      return String(a.tx?.label || "").localeCompare(String(b.tx?.label || ""));
-    })
-    .slice(0, 5)
-    .map((row) => {
-      if (!row.isFutureSoon) return row;
-      const type = String(row.tx?.type || "").toLowerCase();
-      const amount = Math.abs(Number(row.tx?.amount) || 0);
-      projectedFutureBalance += type === "expense" ? -amount : amount;
-      return { ...row, projectedNegative: projectedFutureBalance < 0 };
-    });
+  const rows = window.TBDashboardView?.prepareWalletRecentTransactions?.({
+    walletId,
+    wallets: state?.wallets || [],
+    transactions: state?.transactions || [],
+    activeTravelId: state?.activeTravelId || null,
+    today,
+    getWalletEffectiveBalance: window.tbGetWalletEffectiveBalance,
+    isTripBudgetShare: window.tbIsTripBudgetShare,
+    toISODate: toLocalISODate,
+  }) || [];
 
   if (!rows.length) {
     return window.TBDashboardView?.renderWalletRecentTransactions?.({ rows: [], t: T, esc: escapeHTML })

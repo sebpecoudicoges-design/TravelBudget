@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.257`.
-- Bilan : 7 parcours `ok`, 28 parcours `à faire`.
+- Version à valider : `10.5.258`.
+- Bilan : 7 parcours `ok`, 29 parcours `à faire`.
 - Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -54,6 +54,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 35 | 10.5.255 | Sport : terminer sans timer | Construire une séance, utiliser **Terminer sans timer**, puis vérifier l'historique. Refaire avec un circuit AMRAP court. | Les séries estimées apparaissent dans l'ordre, le nombre de tours AMRAP respecte la durée cible et les kcal restent cohérentes avec les séries générées. | `TB BUILD 10.5.255` ; aucun `sportTimerController` manquant, aucun `Uncaught`. | à faire |
 | 36 | 10.5.256 | Documents : carte document | Ouvrir **Documents**, vérifier plusieurs cartes avec image/PDF, favori, tags, expiration, liens transactions/assets, déplacement de dossier et menu **Plus**. | Les cartes gardent les mêmes actions et miniatures, le module Documents charge à la demande et aucun bouton ne disparaît. | `TB BUILD 10.5.256` ; aucun `documentView` manquant, aucun `Uncaught`. | à faire |
 | 37 | 10.5.257 | Réglages : règles récurrentes | Ouvrir **Réglages > Règles récurrentes**, créer ou modifier une règle, choisir une catégorie qui possède des sous-catégories SQL, puis ouvrir le select sous-catégorie. | Les sous-catégories actives remontent sans devoir ouvrir d'abord **Catégories** ; une valeur existante reste sélectionnable. | `TB BUILD 10.5.257` ; aucun `Uncaught`, aucun select sous-catégorie vide quand la catégorie en a. | à faire |
+| 38 | 10.5.258 | Dashboard : transactions récentes wallet | Ouvrir Dashboard avec un wallet contenant une dépense future proche, une dépense impayée passée et une transaction payée récente. | Les lignes récentes gardent le même ordre : futur proche, impayé passé, puis payé récent. Les risques de découvert restent visibles. | `TB BUILD 10.5.258` ; aucun `Uncaught`, aucun module `TBDashboardView` manquant. | à faire |
 
 ## À ajouter à chaque livraison
 

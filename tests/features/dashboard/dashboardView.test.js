@@ -5,6 +5,7 @@ import {
   renderDashboardOnboardingPanel,
   renderDailyBudgetControls,
   renderDailyBudgetDay,
+  prepareWalletRecentTransactions,
   renderWalletActions,
   renderWalletCard,
   renderWalletCreateDialog,
@@ -13,6 +14,7 @@ import {
   renderWalletRecentTransactions,
   renderWalletQuickOnboarding,
   renderWalletTypesFixDialog,
+  walletRecentTxTouchesWallet,
 } from '../../../src/features/dashboard/dashboardView.js';
 
 describe('Dashboard view helpers', () => {
@@ -160,6 +162,31 @@ describe('Dashboard view helpers', () => {
     expect(html).toContain('+12.00 AUD');
     expect(html).toContain('wallet.recent.paid');
     expect(empty).toContain('wallet.recent.empty');
+  });
+
+  it('prepares wallet recent transactions outside the legacy dashboard file', () => {
+    const rows = prepareWalletRecentTransactions({
+      walletId: 'w1',
+      wallets: [{ id: 'w1', balance: 20 }],
+      activeTravelId: 'trip-1',
+      today: '2026-07-25',
+      toISODate: (date) => date.toISOString().slice(0, 10),
+      transactions: [
+        { id: 'old-paid', walletId: 'w1', travelId: 'trip-1', type: 'expense', amount: 5, label: 'Old paid', dateStart: '2026-07-20', payNow: true },
+        { id: 'future-soon', walletId: 'w1', travelId: 'trip-1', type: 'expense', amount: 30, label: 'Future', dateStart: '2026-07-27', payNow: false },
+        { id: 'future-late', walletId: 'w1', travelId: 'trip-1', type: 'expense', amount: 5, label: 'Too late', dateStart: '2026-08-10', payNow: false },
+        { id: 'past-unpaid', walletId: 'w1', travelId: 'trip-1', type: 'expense', amount: 8, label: 'Past unpaid', dateStart: '2026-07-24', payNow: false },
+        { id: 'other-wallet', walletId: 'w2', travelId: 'trip-1', type: 'expense', amount: 8, label: 'Other', dateStart: '2026-07-24', payNow: false },
+        { id: 'other-trip', walletId: 'w1', travelId: 'trip-2', type: 'expense', amount: 8, label: 'Other trip', dateStart: '2026-07-24', payNow: false },
+        { id: 'internal-fee', walletId: 'w1', travelId: 'trip-1', type: 'expense', amount: 2, label: 'Fee', dateStart: '2026-07-24', payNow: false, outOfBudget: false, affectsBudget: true, internalTransferId: 'it-1' },
+      ],
+    });
+
+    expect(rows.map((row) => row.tx.id)).toEqual(['future-soon', 'past-unpaid', 'old-paid']);
+    expect(rows[0]).toMatchObject({ isFutureSoon: true, projectedNegative: true });
+    expect(rows[1]).toMatchObject({ isPastUnpaid: true });
+    expect(walletRecentTxTouchesWallet({ isInternal: true })).toBe(false);
+    expect(walletRecentTxTouchesWallet({ label: 'Trip' }, { isTripBudgetShare: () => true })).toBe(false);
   });
 
   it('renders daily budget controls with stable ids and date window', () => {
