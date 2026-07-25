@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.259`.
-- Bilan : 7 parcours `ok`, 30 parcours `à faire`.
+- Version à valider : `10.5.260`.
+- Bilan : 7 parcours `ok`, 31 parcours `à faire`.
 - Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -56,6 +56,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 37 | 10.5.257 | Réglages : règles récurrentes | Ouvrir **Réglages > Règles récurrentes**, créer ou modifier une règle, choisir une catégorie qui possède des sous-catégories SQL, puis ouvrir le select sous-catégorie. | Les sous-catégories actives remontent sans devoir ouvrir d'abord **Catégories** ; une valeur existante reste sélectionnable. | `TB BUILD 10.5.257` ; aucun `Uncaught`, aucun select sous-catégorie vide quand la catégorie en a. | à faire |
 | 38 | 10.5.258 | Dashboard : transactions récentes wallet | Ouvrir Dashboard avec un wallet contenant une dépense future proche, une dépense impayée passée et une transaction payée récente. | Les lignes récentes gardent le même ordre : futur proche, impayé passé, puis payé récent. Les risques de découvert restent visibles. | `TB BUILD 10.5.258` ; aucun `Uncaught`, aucun module `TBDashboardView` manquant. | à faire |
 | 39 | 10.5.259 | Sport : impédancemètre | Ouvrir **Sport > Profil athlétique**, vérifier la carte **Impédancemètre** et le bloc **Évolution composition**. | La mesure du 24/07 affiche une masse grasse cohérente autour de `14,0 kg`, la courbe montre poids, graisse % et muscle % quand disponible, et les incohérences de saisie sont signalées. | `TB BUILD 10.5.259` ; aucun `Uncaught`, aucun module `sportProfileView` manquant. | à faire |
+| 40 | 10.5.260 | Sport : modifier une pesée | Ouvrir **Sport > Profil athlétique > Impédancemètre**, cliquer **Modifier** sur une pesée récente, changer une valeur puis enregistrer. Refaire en changeant la date de la pesée. | La modale s'ouvre préremplie, la pesée est remplacée dans la liste et la courbe se met à jour. Si la date change, l'ancienne ligne ne reste pas en doublon. | `TB BUILD 10.5.260` ; aucun `Uncaught`, aucun `body measurement save failed` en ligne. | à faire |
 
 ## À ajouter à chaque livraison
 

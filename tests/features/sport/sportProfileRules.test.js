@@ -3,6 +3,7 @@ import {
   buildExerciseProgressionRowsFromSessions,
   buildExerciseProgressionAnalysis,
   buildBodyCompositionAnalysis,
+  buildBodyMeasurementHistory,
   buildBodyCompositionTrend,
   buildCardioCapacity,
   buildMobilityAnalysis,
@@ -210,6 +211,22 @@ describe('Sport profile rules', () => {
     expect(trend[0].musclePct).toBe(0);
     expect(trend[0].musclePctSource).toBe('missing');
     expect(trend[1].musclePct).toBe(49.6);
+  });
+
+  it('builds recent body measurement history for editing', () => {
+    const history = buildBodyMeasurementHistory([
+      { id: 'old', measured_on: '2026-07-20', source: 'impedance_scale', weight_kg: 61 },
+      { id: 'new', measured_on: '2026-07-26', source: 'impedance_scale', weight_kg: 63.85, body_fat_pct: 23, muscle_mass_kg: 46.67, protocol_quality_label: 'Reference' },
+    ]);
+
+    expect(history[0]).toMatchObject({
+      id: 'new',
+      date: '2026-07-26',
+      weightKg: 63.9,
+      bodyFatPct: 23,
+      muscleMassKg: 46.7,
+      qualityLabel: 'Reference',
+    });
   });
 
   it('builds the simple five-test mobility score and exposes pain separately', () => {

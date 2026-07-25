@@ -12,20 +12,20 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.259` :
+Snapshot `10.5.260` :
 
 - Boot legacy : 878.5 / 1500 KiB.
 - Inbox : 111.9 / 112 KiB.
 - Dashboard + Settings : 352.5 / 360 KiB.
 - Trip : 309.4 / 340 KiB.
-- Sport : 440.2 / 450 KiB.
+- Sport : 443.7 / 450 KiB.
 - Nutrition : 193.2 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 112.4 / 115 KiB.
 - Bundle Vite JS initial : 254.7 / 260 KiB.
-- Bundle Vite JS lazy : 352.5 / 355 KiB.
-- Bundle Vite JS total : 607.2 / 610 KiB.
+- Bundle Vite JS lazy : 354.7 / 355 KiB.
+- Bundle Vite JS total : 609.4 / 610 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
 - JS principal gzip : 73 / 110 KiB.
 
@@ -49,4 +49,4 @@ Ces plafonds ne sont pas des objectifs finaux. Ils sont volontairement proches d
 
 ## Regle de suivi
 
-Un lot qui ajoute du poids a un domaine doit expliquer pourquoi. Pour 10.5.259, le domaine Sport monte de 434.7 a 440.2 KiB car l'impedancemetre ajoute une evolution visuelle poids/graisse/muscle et des gardes de coherence testees. Tous les budgets restent verts. Un lot qui extrait une responsabilite vers `src` doit verifier que le budget reste vert, puis ajuster le plafond uniquement si le gain de qualite est explicite ou si le gain de poids est confirme par `npm run perf:budget`.
+Un lot qui ajoute du poids a un domaine doit expliquer pourquoi. Pour 10.5.260, le domaine Sport monte a 443.7 KiB car l'impedancemetre ajoute la modification des pesees recentes, le remplacement local/SQL et la prevention des doublons en cas de changement de date. Tous les budgets restent verts. Un lot qui extrait une responsabilite vers `src` doit verifier que le budget reste vert, puis ajuster le plafond uniquement si le gain de qualite est explicite ou si le gain de poids est confirme par `npm run perf:budget`.

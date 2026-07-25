@@ -121,6 +121,7 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
   - [x] Fractionner le profil Sport en sous-runtime lazy : timer, programme, historique et catalogue chargent avant radar, progression, impedance et mobilite.
   - [x] Extraire le controleur des mesures impedancemetriques Sport : lecture DOM, cache local, upsert SQL et reference poids quittent `45_sport_ui.js`.
   - [x] Ajouter le suivi visuel impédancemètre Sport : évolution poids, graisse %, muscle % direct et garde de cohérence masse grasse/maigre.
+  - [x] Permettre la modification d'une pesée impédancemètre depuis Sport, y compris changement de date sans doublon.
   - [x] Extraire la persistance timer Sport : preferences bip, timer guide, chrono libre, normalisation et clear quittent `45_sport_ui.js` vers `sportTimerController.js`.
   - [x] Stabiliser la finalisation timer Sport avec un instantane du plan de depart, pour eviter qu'un plan modifie fausse les series et progressions.
   - [x] Extraire l'estimation de completion Sport : sequence AMRAP et series terminees sans timer quittent `45_sport_ui.js` vers `sportTimerController.js`.

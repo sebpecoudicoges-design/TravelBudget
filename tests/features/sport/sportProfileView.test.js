@@ -51,6 +51,10 @@ const data = {
       { date: '2026-07-24', weightKg: 62.4, bodyFatPct: 22.5, musclePct: 0, musclePctSource: 'missing' },
       { date: '2026-07-26', weightKg: 63.9, bodyFatPct: 23, musclePct: 49.6, musclePctSource: 'direct' },
     ],
+    history: [
+      { id: 'm2', date: '2026-07-26', source: 'impedance_scale', weightKg: 63.9, bodyFatPct: 23, muscleMassKg: 46.7, qualityLabel: 'Reference' },
+      { id: 'm1', date: '2026-07-24', source: 'impedance_scale', weightKg: 62.4, bodyFatPct: 22.5, muscleMassKg: 46.4, qualityLabel: 'Faible' },
+    ],
     insights: ['Composition globalement stable.'],
     warnings: ['Qualite protocole non renseignee.'],
   },
@@ -79,6 +83,9 @@ describe('Sport profile view', () => {
     expect(html).toContain('Evolution composition');
     expect(html).toContain('Graisse');
     expect(html).toContain('Muscle % trace uniquement');
+    expect(html).toContain('Pesées récentes');
+    expect(html).toContain('data-sport-body-edit="2026-07-26"');
+    expect(html).toContain('Modifier');
     expect(html).toContain('id="sport-open-body-measurement"');
   });
 

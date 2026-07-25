@@ -319,13 +319,31 @@ export function buildBodyCompositionTrend(measurements = []) {
   })).filter((row) => row.weightKg || row.bodyFatPct || row.musclePct);
 }
 
+export function buildBodyMeasurementHistory(measurements = []) {
+  return (measurements || [])
+    .filter((row) => row && (row.measured_on || row.created_at))
+    .slice()
+    .sort((a, b) => String(b.measured_on || b.created_at).localeCompare(String(a.measured_on || a.created_at)))
+    .slice(0, 8)
+    .map((row) => ({
+      id: row.id || '',
+      date: String(row.measured_on || row.created_at || '').slice(0, 10),
+      source: row.source || 'impedance_scale',
+      weightKg: roundOne(row.weight_kg),
+      bodyFatPct: roundOne(row.body_fat_pct),
+      muscleMassKg: roundOne(row.muscle_mass_kg),
+      qualityLabel: row.protocol_quality_label || '',
+      qualityScore: numberValue(row.protocol_quality_score, 0) || null,
+    }));
+}
+
 export function buildBodyCompositionAnalysis(measurements = []) {
   const rows = (measurements || [])
     .filter((row) => row && (row.measured_on || row.created_at))
     .slice()
     .sort((a, b) => String(a.measured_on || a.created_at).localeCompare(String(b.measured_on || b.created_at)));
   const latest = rows.at(-1) || null;
-  if (!latest) return { latest: null, previous: null, metrics: [], insights: [], warnings: [], trend: [] };
+  if (!latest) return { latest: null, previous: null, metrics: [], insights: [], warnings: [], trend: [], history: [] };
 
   const latestQuality = numberValue(latest.protocol_quality_score, 0);
   const comparable = rows.filter((row) => {
@@ -375,6 +393,7 @@ export function buildBodyCompositionAnalysis(measurements = []) {
     qualityLabel: latest.protocol_quality_label || '',
     metrics,
     trend: buildBodyCompositionTrend(rows),
+    history: buildBodyMeasurementHistory(rows),
     consistencyWarnings,
     insights,
     warnings,

@@ -33,6 +33,9 @@ export function latestBodyMeasurement(rows = []) {
 export function buildBodyMeasurementEditor({ row, latest, today, weightKg } = {}) {
   const source = row || latest || {};
   return {
+    id: row?.id || '',
+    original_measured_on: row?.measured_on || '',
+    original_source: row?.source || '',
     measured_on: String(row?.measured_on || today || '').slice(0, 10),
     source: source.source || 'impedance_scale',
     weight_kg: source.weight_kg ?? weightKg,
@@ -108,11 +111,13 @@ export function readBodyMeasurementFromDom({ root, today, userId, qualityFn } = 
   return payload;
 }
 
-export function mergeBodyMeasurementLocal({ payload, id, cache, storageKey, onWeight } = {}) {
+export function mergeBodyMeasurementLocal({ payload, id, previous, cache, storageKey, onWeight } = {}) {
   const nextRow = { ...payload, id: id || payload.id || `local_${payload.measured_on}_${payload.source}` };
   const rows = (cache?.bodyMeasurements || loadBodyMeasurementsLocal(storageKey))
     .filter((row) => !(String(row.measured_on) === String(nextRow.measured_on)
-      && String(row.source || 'impedance_scale') === String(nextRow.source || 'impedance_scale')));
+      && String(row.source || 'impedance_scale') === String(nextRow.source || 'impedance_scale')))
+    .filter((row) => !previous || !(String(row.measured_on) === String(previous.measured_on || previous.original_measured_on)
+      && String(row.source || 'impedance_scale') === String(previous.source || previous.original_source || 'impedance_scale')));
   rows.push(nextRow);
   saveBodyMeasurementsLocal(rows, { storageKey, cache });
   if (nextRow.weight_kg && typeof onWeight === 'function') onWeight(nextRow.weight_kg);
@@ -174,13 +179,14 @@ export async function saveBodyMeasurement({
   qualityFn,
   isOfflineError = () => false,
   onWeight,
+  previous = null,
 } = {}) {
   const payload = readBodyMeasurementFromDom({ root, today, userId, qualityFn });
   if (!payload.weight_kg && !payload.body_fat_pct && !payload.muscle_mass_kg && !payload.body_water_pct) {
     return { ok: false, reason: 'empty', payload };
   }
   if (!client || !userId) {
-    const row = mergeBodyMeasurementLocal({ payload: { ...payload, user_id: userId || 'local' }, cache, storageKey, onWeight });
+    const row = mergeBodyMeasurementLocal({ payload: { ...payload, user_id: userId || 'local' }, previous, cache, storageKey, onWeight });
     return { ok: true, mode: 'local', payload, row };
   }
   try {
@@ -189,11 +195,22 @@ export async function saveBodyMeasurement({
       .select(columns)
       .maybeSingle();
     if (response.error) throw response.error;
-    const row = mergeBodyMeasurementLocal({ payload: response.data || payload, id: response.data?.id, cache, storageKey, onWeight });
+    const saved = response.data || payload;
+    const prevDay = String(previous?.measured_on || previous?.original_measured_on || '').slice(0, 10);
+    const prevSource = String(previous?.source || previous?.original_source || 'impedance_scale');
+    if (prevDay && (prevDay !== String(payload.measured_on) || prevSource !== String(payload.source || 'impedance_scale'))) {
+      const del = await client.from(tableName)
+        .delete()
+        .eq('user_id', userId)
+        .eq('measured_on', prevDay)
+        .eq('source', prevSource);
+      if (del.error) throw del.error;
+    }
+    const row = mergeBodyMeasurementLocal({ payload: saved, id: saved?.id, previous, cache, storageKey, onWeight });
     return { ok: true, mode: 'remote', payload, row };
   } catch (error) {
     if (!isOfflineError(error)) console.warn('[sport] body measurement save failed', error?.message || error);
-    const row = mergeBodyMeasurementLocal({ payload: { ...payload, user_id: userId || 'local' }, cache, storageKey, onWeight });
+    const row = mergeBodyMeasurementLocal({ payload: { ...payload, user_id: userId || 'local' }, previous, cache, storageKey, onWeight });
     return { ok: true, mode: 'offline', payload, row, error };
   }
 }

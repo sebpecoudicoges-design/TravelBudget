@@ -40,6 +40,15 @@
 .tb-sport-body-trend-bars.fat i{background:linear-gradient(180deg,#fb7185,#f97316);}
 .tb-sport-body-trend-bars.muscle i{background:linear-gradient(180deg,#34d399,#10b981);}
 .tb-sport-body-trend-dates{display:flex;justify-content:space-between;color:#64748b;font-size:10px;font-weight:850;}
+.tb-sport-body-history{display:grid;gap:8px;margin-top:10px;}
+.tb-sport-body-history-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:#64748b;font-size:11px;font-weight:850;}
+.tb-sport-body-history-head strong{color:#0f172a;font-size:13px;font-weight:950;}
+.tb-sport-body-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid rgba(148,163,184,.16);border-radius:14px;background:rgba(255,255,255,.82);padding:9px;min-width:0;}
+.tb-sport-body-history-row strong,.tb-sport-body-history-row span,.tb-sport-body-history-row small{display:block;line-height:1.25;}
+.tb-sport-body-history-row strong{color:#0f172a;font-size:13px;font-weight:950;}
+.tb-sport-body-history-row span{margin-top:2px;color:#334155;font-size:12px;font-weight:850;overflow-wrap:anywhere;}
+.tb-sport-body-history-row small{margin-top:2px;color:#64748b;font-size:11px;font-weight:800;}
+.tb-sport-body-history-row .btn{min-height:34px;padding:0 11px;font-size:12px;}
 .tb-sport-athletic{display:grid;gap:10px;margin-top:12px;border:1px solid rgba(37,99,235,.14);border-radius:18px;background:linear-gradient(135deg,#f8fafc,#ecfeff);padding:12px;}
 .tb-sport-athletic-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
 .tb-sport-athletic-head strong{display:block;font-size:18px;color:#0f172a;font-weight:950;}
@@ -234,6 +243,9 @@ body.theme-dark .tb-sport-body-trend{background:linear-gradient(135deg,rgba(15,2
 body.theme-dark .tb-sport-body-trend-head strong,body.theme-dark .tb-sport-body-trend-row>b{color:#f8fafc;}
 body.theme-dark .tb-sport-body-trend-row>span{color:#cbd5e1;}
 body.theme-dark .tb-sport-body-trend-bars{background:rgba(15,23,42,.78);}
+body.theme-dark .tb-sport-body-history-head strong,body.theme-dark .tb-sport-body-history-row strong{color:#f8fafc;}
+body.theme-dark .tb-sport-body-history-row{background:#0f172a;border-color:rgba(255,255,255,.12);}
+body.theme-dark .tb-sport-body-history-row span{color:#cbd5e1;}
 body.theme-dark .tb-sport-athletic{background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(8,47,73,.45));border-color:rgba(125,211,252,.18);}
 body.theme-dark .tb-sport-athletic-head strong,body.theme-dark .tb-sport-athletic-panel b,body.theme-dark .tb-sport-athletic-metrics strong,body.theme-dark .tb-sport-archetypes div{color:#f8fafc;}
 body.theme-dark .tb-sport-athletic-panel,body.theme-dark .tb-sport-athletic-metrics>div,body.theme-dark .tb-sport-athletic-priority{background:#0f172a;border-color:rgba(255,255,255,.12);}

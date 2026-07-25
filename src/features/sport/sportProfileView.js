@@ -152,6 +152,25 @@ function renderBodyTrendChart(trend = [], h) {
   </div>`;
 }
 
+function renderBodyMeasurementHistory(history = [], h) {
+  const rows = Array.isArray(history) ? history.filter(Boolean) : [];
+  if (!rows.length) return '';
+  return `<div class="tb-sport-body-history">
+    <div class="tb-sport-body-history-head">
+      <strong>${h.esc(h.txt('Pesées récentes', 'Recent weigh-ins'))}</strong>
+      <small>${h.esc(h.txt('Modifier une mesure', 'Edit a measurement'))}</small>
+    </div>
+    ${rows.map((row) => `<article class="tb-sport-body-history-row">
+      <div>
+        <strong>${h.esc(row.date)}</strong>
+        <span>${row.weightKg ? `${h.n(row.weightKg, 0)} kg` : '-'} · ${row.bodyFatPct ? `${h.n(row.bodyFatPct, 0)}% MG` : '-'} · ${row.muscleMassKg ? `${h.n(row.muscleMassKg, 0)} kg muscle` : '-'}</span>
+        <small>${h.esc(row.qualityLabel || h.txt('Qualité non renseignée', 'Quality missing'))}</small>
+      </div>
+      <button class="btn" type="button" data-sport-body-edit="${h.esc(row.date)}" data-sport-body-source="${h.esc(row.source || 'impedance_scale')}">${h.esc(h.txt('Modifier', 'Edit'))}</button>
+    </article>`).join('')}
+  </div>`;
+}
+
 export function radarPoints(axes = [], radius = 104, cx = 140, cy = 140) {
   const count = Math.max(1, axes.length);
   return (axes || []).map((axis, idx) => {
@@ -237,6 +256,7 @@ export function renderSportProfileDashboard({
           ${bodyAnalysis.metrics.slice(0, 6).map((row) => `<div><span>${h.esc(row.label)}</span><strong>${h.esc(`${row.value}${row.unit ? ` ${row.unit}` : ''}`)}</strong><small>${row.delta === null ? h.esc(h.txt('Premiere reference', 'First reference')) : h.esc(`${row.delta > 0 ? '+' : ''}${row.delta}${row.unit ? ` ${row.unit}` : ''}`)}</small></div>`).join('')}
         </div>` : ''}
         ${renderBodyTrendChart(bodyAnalysis.trend || [], h)}
+        ${renderBodyMeasurementHistory(bodyAnalysis.history || [], h)}
         <div class="tb-sport-athletic-grid" style="margin-top:10px;">
           <div class="tb-sport-athletic-panel">
             <b>${h.esc(h.txt('Analyse composition', 'Composition analysis'))}</b>

@@ -343,6 +343,13 @@
       weightKg: bodyWeight(),
     }) || null;
   }
+  function openBodyMeasurementEditorByKey(day, source) {
+    const row = (CACHE.bodyMeasurements || []).find(item =>
+      String(item.measured_on || "").slice(0, 10) === String(day || "").slice(0, 10)
+      && String(item.source || "impedance_scale") === String(source || "impedance_scale")
+    ) || null;
+    openBodyMeasurementEditor(row);
+  }
   function closeBodyMeasurementEditor() {
     CACHE.bodyMeasurementEditor = null;
   }
@@ -359,6 +366,7 @@
       qualityFn: (payload) => window.UI?.sportProfileView?.bodyMeasurementQuality?.(payload, sportViewApi()),
       isOfflineError: isOfflineSkipError,
       onWeight: saveBodyWeight,
+      previous: CACHE.bodyMeasurementEditor,
     });
     const payload = result?.payload || {};
     if (!result?.ok && result?.reason === "empty") {
@@ -2853,6 +2861,12 @@
       if (btn) btn.onclick = () => {
         openBodyMeasurementEditor();
         renderSport("body-measurement-open");
+      };
+    });
+    root.querySelectorAll("[data-sport-body-edit]").forEach(btn => {
+      btn.onclick = () => {
+        openBodyMeasurementEditorByKey(btn.getAttribute("data-sport-body-edit"), btn.getAttribute("data-sport-body-source"));
+        renderSport("body-measurement-edit");
       };
     });
     const saveMobility = root.querySelector("#sport-save-mobility");

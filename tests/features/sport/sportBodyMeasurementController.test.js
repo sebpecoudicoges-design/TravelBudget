@@ -49,6 +49,18 @@ describe('Sport body measurement controller', () => {
 
   it('builds an editor from a selected row, latest row and body weight fallback', () => {
     expect(buildBodyMeasurementEditor({
+      row: { id: 'm1', measured_on: '2026-07-22', source: 'impedance_scale', weight_kg: 61 },
+      today: '2026-07-23',
+      weightKg: 59,
+    })).toMatchObject({
+      id: 'm1',
+      original_measured_on: '2026-07-22',
+      original_source: 'impedance_scale',
+      measured_on: '2026-07-22',
+      weight_kg: 61,
+    });
+
+    expect(buildBodyMeasurementEditor({
       today: '2026-07-23',
       weightKg: 59,
       latest: { weight_kg: 60, body_fat_pct: 15 },
@@ -104,6 +116,59 @@ describe('Sport body measurement controller', () => {
     expect(result).toMatchObject({ ok: true, mode: 'local' });
     expect(cache.bodyMeasurements).toHaveLength(1);
     expect(onWeight).toHaveBeenCalledWith(59);
+  });
+
+  it('replaces the edited local measurement instead of keeping the old date', async () => {
+    const cache = { bodyMeasurements: [{ measured_on: '2026-07-22', source: 'impedance_scale', weight_kg: 58 }] };
+    const result = await saveBodyMeasurement({
+      cache,
+      storageKey: 'body',
+      today: '2026-07-24',
+      previous: { measured_on: '2026-07-22', source: 'impedance_scale' },
+      root: bodyRoot({
+        'sport-body-date': { value: '2026-07-24' },
+        'sport-body-weight': { value: '60' },
+      }),
+    });
+
+    expect(result).toMatchObject({ ok: true, mode: 'local' });
+    expect(cache.bodyMeasurements).toHaveLength(1);
+    expect(cache.bodyMeasurements[0]).toMatchObject({ measured_on: '2026-07-24', weight_kg: 60 });
+  });
+
+  it('deletes the previous remote row when an edited measurement changes date', async () => {
+    const cache = { bodyMeasurements: [{ measured_on: '2026-07-22', source: 'impedance_scale', weight_kg: 58 }] };
+    const upsertChain = {
+      upsert: vi.fn(() => upsertChain),
+      select: vi.fn(() => upsertChain),
+      maybeSingle: vi.fn(async () => ({ data: { id: 'new-id', measured_on: '2026-07-24', source: 'impedance_scale', weight_kg: 60 } })),
+    };
+    const deleteChain = {
+      delete: vi.fn(() => deleteChain),
+      eq: vi.fn(() => deleteChain),
+      then(resolve) { return Promise.resolve({ data: [] }).then(resolve); },
+    };
+    const client = {
+      from: vi.fn(() => (client.from.mock.calls.length === 1 ? upsertChain : deleteChain)),
+    };
+
+    const result = await saveBodyMeasurement({
+      cache,
+      client,
+      userId: 'u1',
+      storageKey: 'body',
+      today: '2026-07-24',
+      previous: { measured_on: '2026-07-22', source: 'impedance_scale' },
+      root: bodyRoot({
+        'sport-body-date': { value: '2026-07-24' },
+        'sport-body-weight': { value: '60' },
+      }),
+    });
+
+    expect(result).toMatchObject({ ok: true, mode: 'remote' });
+    expect(deleteChain.delete).toHaveBeenCalled();
+    expect(deleteChain.eq).toHaveBeenCalledWith('measured_on', '2026-07-22');
+    expect(cache.bodyMeasurements).toEqual([{ id: 'new-id', measured_on: '2026-07-24', source: 'impedance_scale', weight_kg: 60 }]);
   });
 
   it('loads remote rows once and stores them locally', async () => {
