@@ -5,6 +5,7 @@ import {
   renderExerciseOptions,
   renderFormatOptions,
   renderOptionRows,
+  renderSportPlan,
 } from '../../../src/features/sport/sportFormView.js';
 
 describe('Sport form view', () => {
@@ -43,5 +44,62 @@ describe('Sport form view', () => {
     expect(exercises).toContain('value=""');
     expect(exercises).toContain('value="bench" selected');
     expect(exercises).toContain('&lt;Developpe&gt;');
+  });
+
+  it('renders a delegated workout plan with controls and progression chips', () => {
+    const html = renderSportPlan({
+      plan: [{
+        activityKey: 'strength',
+        equipment: 'barbell',
+        exerciseName: 'Developpe couche',
+        mode: 'reps',
+        targetReps: 8,
+        repMin: 6,
+        repMax: 10,
+        sets: 3,
+        restSeconds: 180,
+        weightKg: 60,
+        loadLabel: 'barre',
+        intensityLabel: 'forte',
+      }],
+      labels: {
+        progression: 'Progression',
+        sets: 'series',
+        rest: 'repos',
+        intensity: 'Intensite',
+        edit: 'Modifier',
+      },
+      helpers: {
+        n: (value, fallback = 0) => {
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? parsed : fallback;
+        },
+        progressionRepRange: () => ({ min: 6, max: 10 }),
+        labelActivity: () => 'Force',
+        labelEquipment: () => 'Barre',
+        supportsExternalLoad: () => true,
+        restSecondsForItem: () => 180,
+        calibratedMet: () => 5.45,
+      },
+    });
+
+    expect(html).toContain('1. Developpe couche');
+    expect(html).toContain('60 kg');
+    expect(html).toContain('6-10 reps');
+    expect(html).toContain('3 series');
+    expect(html).toContain('180 sec repos');
+    expect(html).toContain('MET 5.5');
+    expect(html).toContain('data-sport-edit="0"');
+    expect(html).toContain('data-sport-remove="0"');
+  });
+
+  it('renders an empty workout plan message', () => {
+    const html = renderSportPlan({
+      plan: [],
+      labels: { emptyPlan: 'Ajoute un exercice' },
+    });
+
+    expect(html).toContain('class="muted"');
+    expect(html).toContain('Ajoute un exercice');
   });
 });

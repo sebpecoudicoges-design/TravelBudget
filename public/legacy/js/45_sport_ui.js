@@ -2179,21 +2179,6 @@
     }
   }
 
-  function activityOptions(selected) {
-    return CATALOG.map(a => `<option value="${esc(a.key)}" ${a.key === selected ? "selected" : ""}>${esc(lang() === "en" ? a.en : a.fr)}</option>`).join("");
-  }
-  function equipmentOptions(selected) {
-    return EQUIPMENT.map(e => `<option value="${esc(e[0])}" ${e[0] === selected ? "selected" : ""}>${esc(lang() === "en" ? e[2] : e[1])}</option>`).join("");
-  }
-  function intensityOptions(selected) {
-    const rows = [
-      ["light", txt("Legere", "Light"), 0.82],
-      ["moderate", txt("Moderee", "Moderate"), 1],
-      ["hard", txt("Forte", "Hard"), 1.18],
-      ["max", txt("Tres forte", "Very hard"), 1.35],
-    ];
-    return rows.map(r => `<option value="${esc(r[0])}" data-factor="${r[2]}" ${r[0] === selected ? "selected" : ""}>${esc(r[1])}</option>`).join("");
-  }
   function intensityFactor(key) {
     if (key === "light") return 0.82;
     if (key === "hard") return 1.18;
@@ -2310,36 +2295,29 @@
   }
 
   function renderPlan() {
-    if (!CACHE.plan.length) return `<div class="muted">${esc(txt("Ajoute un exercice pour lancer une seance guidee.", "Add an exercise to start a guided workout."))}</div>`;
-    return CACHE.plan.map((item, idx) => {
-      const range = progressionRepRange(item);
-      const timeRange = item.mode === "time" && n(item.timeMax, 0) > n(item.timeMin || item.targetSeconds, 0)
-        ? `${n(item.timeMin || item.targetSeconds, 0)}-${n(item.timeMax, 0)} sec`
-        : "";
-      return `<div class="tb-sport-item">
-        <div>
-          <div class="tb-sport-item-title">${idx + 1}. ${esc(item.exerciseName || labelActivity(item.activityKey))}</div>
-          <div class="tb-sport-meta">
-            <span class="tb-sport-chip">${esc(labelActivity(item.activityKey))}</span>
-            <span class="tb-sport-chip">${esc(labelEquipment(item.equipment))}</span>
-            ${supportsExternalLoad(item) && n(item.weightKg, 0) ? `<span class="tb-sport-chip">${Math.round(n(item.weightKg, 0) * 10) / 10} kg${item.loadLabel ? ` · ${esc(item.loadLabel)}` : ""}</span>` : item.loadLabel ? `<span class="tb-sport-chip">${esc(item.loadLabel)}</span>` : ""}
-            <span class="tb-sport-chip">${item.mode === "time" ? `${n(item.targetSeconds,0)} sec` : (range && range.max > range.min ? `${range.min}-${range.max} reps` : `${n(item.targetReps,0)} reps`)}</span>
-            ${range && range.max > range.min ? `<span class="tb-sport-chip">${esc(txt("Progression", "Progression"))} ${range.min}-${range.max}</span>` : ""}
-            ${timeRange ? `<span class="tb-sport-chip">${esc(txt("Cible", "Target"))} ${esc(timeRange)}</span>` : ""}
-            <span class="tb-sport-chip">${n(item.sets,1)} ${esc(txt("series", "sets"))}</span>
-            <span class="tb-sport-chip">${restSecondsForItem(item)} sec ${esc(txt("repos", "rest"))}</span>
-            <span class="tb-sport-chip">${esc(txt("Intensite", "Intensity"))}: ${esc(item.intensityLabel || txt("moderee", "moderate"))}</span>
-            <span class="tb-sport-chip">MET ${calibratedMet(item).toFixed(1)}</span>
-          </div>
-        </div>
-        <div class="tb-sport-actions">
-          <button class="btn small" type="button" data-sport-edit="${idx}">${esc(txt("Modifier", "Edit"))}</button>
-          <button class="btn small" type="button" data-sport-move="${idx}" data-dir="-1">Up</button>
-          <button class="btn small" type="button" data-sport-move="${idx}" data-dir="1">Down</button>
-          <button class="btn small danger" type="button" data-sport-remove="${idx}">Del</button>
-        </div>
-      </div>`;
-    }).join("");
+    return window.UI?.sportFormView?.renderSportPlan?.({
+      plan: CACHE.plan,
+      escapeHTML: esc,
+      labels: {
+        emptyPlan: txt("Ajoute un exercice pour lancer une seance guidee.", "Add an exercise to start a guided workout."),
+        progression: txt("Progression", "Progression"),
+        target: txt("Cible", "Target"),
+        sets: txt("series", "sets"),
+        rest: txt("repos", "rest"),
+        intensity: txt("Intensite", "Intensity"),
+        moderate: txt("moderee", "moderate"),
+        edit: txt("Modifier", "Edit"),
+      },
+      helpers: {
+        n,
+        progressionRepRange,
+        labelActivity,
+        labelEquipment,
+        supportsExternalLoad,
+        restSecondsForItem,
+        calibratedMet,
+      },
+    }) || "";
   }
 
   function makeSequence() {

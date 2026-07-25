@@ -176,7 +176,7 @@ describe('Sport domain contract', () => {
   });
 
   it('delegates Sport builder form option rendering to sportFormView', () => {
-    for (const token of ['renderOptionRows', 'renderDurationOptions', 'renderExerciseOptions', 'renderFormatOptions', 'renderEquipmentOptions']) {
+    for (const token of ['renderOptionRows', 'renderDurationOptions', 'renderExerciseOptions', 'renderFormatOptions', 'renderEquipmentOptions', 'renderSportPlan']) {
       expect(formView).toContain(`export function ${token}`);
       expect(legacy).toContain(`sportFormView?.${token}`);
     }

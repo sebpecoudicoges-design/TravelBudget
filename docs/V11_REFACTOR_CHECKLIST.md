@@ -215,6 +215,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire le cockpit programme Sport : semaine A/B, charges prevues, progression et reglages recurrence passent dans `sportProgramView.js`.
   - [x] Ajouter le moteur progression Sport : e1RM Epley, lissage, Training Max, recommandations SQL et application explicite.
   - [x] Extraire le rendu des recommandations de charge Sport vers `sportProgramView.js`.
+  - [x] Extraire le rendu du plan du builder Sport vers `sportFormView.js`, avec contrôles modifier/deplacer/supprimer et chips progression couverts par tests.
   - [x] Extraire les fenetres Trip matching transaction et reglement : contenus et actions passent dans `tripView.js`.
   - [x] Stabiliser la modale mobile Depense partagee Trip : formulaire en grille CSS, split responsive et actions collantes.
   - [x] Extraire le detail de depense Trip vers `tripExpenseDetailView.js` : repartition, liens budget/wallet, audit et ouverture transaction passent par hooks `data-*`.
