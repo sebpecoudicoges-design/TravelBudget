@@ -131,6 +131,8 @@ describe('legacy domain loader', () => {
     expect(assetsUi).toContain('window.tbDocumentsPreview?.(docId)');
     expect(inboxUi).toContain("await window.tbLoadLegacyDomain('documents')");
     expect(inboxUi).toContain("window.renderDocuments('inbox-classified')");
+    expect(main).toContain("import('./features/documents/documentView.js')");
+    expect(main).toContain('window.UI.documentView');
   });
 
   it('keeps Inbox out of boot and lazy-loads it before rendering the Inbox view', () => {

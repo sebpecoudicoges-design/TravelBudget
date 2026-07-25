@@ -710,97 +710,22 @@ function setSelectedSort(v){
 }
 
   function renderDocCard(d){
-  const name = d.name || d.original_filename || 'Document';
-  const mime = d.mime_type || '';
-
-  const icon =
-    isPdf(mime,name)
-      ? 'PDF'
-      : (isImg(mime) ? 'IMG' : 'DOC');
-
-  const moveOptions = [
-    `<option value="">${esc(tr('documents.folder.unclassified'))}</option>`,
-    ...(CACHE.folders || []).map(f=>`
-      <option
-        value="${esc(f.id)}"
-        ${String(f.id)===String(d.folder_id||'')?'selected':''}>
-        ${esc(f.name)}
-      </option>
-    `)
-  ].join('');
-
-  const thumb = isImg(mime)
-    ? `<div class="tb-doc-thumb" data-thumb-path="${esc(d.storage_path)}" data-thumb-bucket="${esc(d.storage_bucket || BUCKET)}">${icon}</div>`
-    : `<div class="tb-doc-thumb">${icon}</div>`;
-
-  const tags = Array.isArray(d.tags) ? d.tags : [];
-  const expiry = fmtExpiry(d.expires_at);
-  const notePreview = String(d.notes || '').trim();
-  const counts = CACHE.linkCounts?.[String(d.id)] || {};
-const txCount = Number(counts.transactions || 0) + Number(counts.tripTransactions || 0);
-const assetCount = Number(counts.assets || 0);
-  const linkBadges = [
-    txCount ? `<span class="tb-doc-link-badge">${esc(atxt('Transactions', 'Transactions'))} ${esc(txCount)}</span>` : '',
-    assetCount ? `<span class="tb-doc-link-badge">${esc(atxt('Assets', 'Assets'))} ${esc(assetCount)}</span>` : ''
-  ].filter(Boolean).join('');
-
-  return `<article class="tb-doc-card" data-doc-id="${esc(d.id)}">
-    <div class="tb-doc-top">
-  <label class="tb-doc-select">
-    <input type="checkbox"
-      ${isSelected(d.id) ? 'checked' : ''}
-      onchange="window.tbDocumentsToggleSelect('${esc(d.id)}')" />
-  </label>
-
-  ${thumb}
-
-  <button class="tb-doc-fav"
-        type="button"
-        title="${esc(atxt('Favori', 'Favorite'))}"
-        onclick="window.tbDocumentsToggleFavorite('${esc(d.id)}')">
-        ${esc(d.is_favorite ? atxt('Favori', 'Saved') : atxt('Favori', 'Save'))}
-      </button>
-    </div>
-
-    <div class="tb-doc-name">${esc(name)}</div>
-
-    <div class="tb-doc-meta">
-      <span>${esc(fmtDate(d.created_at))}</span>
-      <span>-</span>
-      <span>${esc(fmtSize(d.size_bytes))}</span>
-    </div>
-
-    ${linkBadges ? `<div class="tb-doc-link-badges">${linkBadges}</div>` : ''}
-
-    ${tags.length ? `<div class="tb-doc-tags">${tags.map(t=>`<span class="tb-doc-tag">${esc(t)}</span>`).join('')}</div>` : ''}
-
-    ${expiry ? `<div class="tb-doc-expiry">${esc(expiry)}</div>` : ''}
-    ${notePreview ? `<div class="tb-doc-note">${esc(notePreview.length > 90 ? notePreview.slice(0,90) + '...' : notePreview)}</div>` : ''}
-
-    <select class="input"
-      title="${esc(tr('documents.action.move'))}"
-      onchange="window.tbDocumentsMove('${esc(d.id)}', this.value)">
-      ${moveOptions}
-    </select>
-
-    <div class="tb-doc-card-actions">
-      <button class="btn primary" type="button" onclick="window.tbDocumentsPreview('${esc(d.id)}')">${esc(tr('documents.action.open'))}</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsEditMeta('${esc(d.id)}')">${esc(tr('documents.action.info'))}</button>
-      <details class="tb-doc-more">
-        <summary>${esc(atxt('Plus', 'More'))}</summary>
-        <div>
-          <button class="btn" type="button" onclick="window.tbDocumentsRename('${esc(d.id)}')">${esc(tr('documents.action.rename'))}</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsOpenTransactionLinks('${esc(d.id)}')">
-     ${esc(tr('documents.linked_transactions.title'))} (${esc(txCount)})
-      </button>
-      <button class="btn" type="button" onclick="window.tbDocumentsOpenAssetLinks('${esc(d.id)}')">
-       ${esc(atxt('Assets', 'Linked assets'))} (${esc(assetCount)})
-</button>
-      <button class="btn danger" type="button" onclick="window.tbDocumentsDelete('${esc(d.id)}')">${esc(tr('documents.action.delete'))}</button>
-        </div>
-      </details>
-    </div>
-  </article>`;
+  const view = window.UI?.documentView;
+  if(view?.renderDocumentCard) return view.renderDocumentCard(d, {
+    folders: CACHE.folders || [],
+    linkCounts: CACHE.linkCounts || {},
+    bucket: BUCKET,
+    esc,
+    tr,
+    atxt,
+    fmtDate,
+    fmtSize,
+    fmtExpiry,
+    isPdf,
+    isImg,
+    isSelected,
+  });
+  return `<article class="tb-doc-card" data-doc-id="${esc(d.id)}"><div class="tb-doc-name">${esc(d.name || d.original_filename || 'Document')}</div></article>`;
 }
 
   function renderMain(){

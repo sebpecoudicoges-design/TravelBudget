@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `fc29de0d026a0c822dcc03124fc19473e42e0671`
-> Empreinte du snapshot : `700bb04b08fad8d8534638d81ebdb7d70f5b6d14df50ef43d423a04f78bdedb9`
-> Généré le : `2026-07-24T23:50:33.740Z`
+> Commit analysé : `59e19c5de68be75ed3f55e663010945466d86513`
+> Empreinte du snapshot : `5ea38e76f10e91f1e4f9f887692defdcd1c60d9956ce3e2f11b431fdd69225d5`
+> Généré le : `2026-07-25T00:02:20.371Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.255` |
+| Version | `10.5.256` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 61 |
 | Modules core | 25 |
 | Modules data | 7 |
-| Modules features | 37 |
-| Fichiers de tests | 101 |
+| Modules features | 38 |
+| Fichiers de tests | 102 |
 | Migrations Supabase | 90 |
 | Fonctions Edge | 8 |
 | Projet Android présent | Oui |
@@ -202,6 +202,7 @@ Domaines :
 - `analysis`
 - `assets`
 - `dashboard`
+- `documents`
 - `inbox`
 - `kpi`
 - `nutrition`
@@ -218,6 +219,7 @@ Modules :
 - `src/features/assets/assetView.js`
 - `src/features/dashboard/dashboardView.js`
 - `src/features/dashboard/dashboardWalletRules.js`
+- `src/features/documents/documentView.js`
 - `src/features/inbox/inboxView.js`
 - `src/features/kpi/kpiCashRules.js`
 - `src/features/kpi/kpiHealthRules.js`
@@ -333,6 +335,7 @@ Modules :
 - `tests/features/assets/assetView.test.js`
 - `tests/features/dashboard/dashboardView.test.js`
 - `tests/features/dashboard/dashboardWalletRules.test.js`
+- `tests/features/documents/documentView.test.js`
 - `tests/features/inbox/inboxView.test.js`
 - `tests/features/kpi/kpiCashRules.test.js`
 - `tests/features/kpi/kpiController.test.js`

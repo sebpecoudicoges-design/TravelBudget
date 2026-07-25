@@ -18,6 +18,7 @@ describe('module size budgets', () => {
       'nutrition-domain',
       'work-domain',
       'assets-domain',
+      'documents-domain',
     ]));
   });
 

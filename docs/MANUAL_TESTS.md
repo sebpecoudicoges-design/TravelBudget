@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.255`.
-- Bilan : 7 parcours `ok`, 26 parcours `à faire`.
+- Version à valider : `10.5.256`.
+- Bilan : 7 parcours `ok`, 27 parcours `à faire`.
 - Retour corrigé à revalider : Trip doit garder le matching transaction et la fenetre de reglement apres extraction des vues.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -52,6 +52,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 33 | 10.5.254 | Page projet : Atlas public | Ouvrir `public/projet.html` ou la page projet déployée, vérifier Lab, Atlas, Release pulse, Checklist et Confidentialité. Ouvrir aussi `/project-atlas.json`. | Les compteurs Atlas viennent du JSON public, les mini-démos répondent, la checklist se coche localement et les liens APK/confidentialité restent valides. | `TB BUILD 10.5.254` si app ouverte ; aucun 404 sur `project-enhancements.js`, `project-enhancements.css` ou `project-atlas.json`, aucun `Uncaught`. | à faire |
 | 34 | 10.5.254 | Sport : finalisation timer | Lancer une séance guidée, modifier ensuite le plan ou les exercices affichés, puis terminer la séance. Refaire avec un circuit corde/boxe si disponible. | La séance terminée utilise le plan capturé au lancement, les séries restent rattachées aux bons exercices et les progressions ne se basent pas sur un plan modifié après coup. | `TB BUILD 10.5.254` ; aucun `Sport finalization rules indisponibles`, aucun `Uncaught`, aucune série déplacée. | à faire |
 | 35 | 10.5.255 | Sport : terminer sans timer | Construire une séance, utiliser **Terminer sans timer**, puis vérifier l'historique. Refaire avec un circuit AMRAP court. | Les séries estimées apparaissent dans l'ordre, le nombre de tours AMRAP respecte la durée cible et les kcal restent cohérentes avec les séries générées. | `TB BUILD 10.5.255` ; aucun `sportTimerController` manquant, aucun `Uncaught`. | à faire |
+| 36 | 10.5.256 | Documents : carte document | Ouvrir **Documents**, vérifier plusieurs cartes avec image/PDF, favori, tags, expiration, liens transactions/assets, déplacement de dossier et menu **Plus**. | Les cartes gardent les mêmes actions et miniatures, le module Documents charge à la demande et aucun bouton ne disparaît. | `TB BUILD 10.5.256` ; aucun `documentView` manquant, aucun `Uncaught`. | à faire |
 
 ## À ajouter à chaque livraison
 

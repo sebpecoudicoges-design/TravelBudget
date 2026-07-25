@@ -262,6 +262,13 @@ async function ensureDomainModules(domain) {
         ...workView,
       };
     }
+    if (key === 'documents') {
+      const documentView = await import('./features/documents/documentView.js');
+      window.UI.documentView = {
+        ...(window.UI.documentView || {}),
+        ...documentView,
+      };
+    }
     if (key === 'sport') {
       const sportRuntime = await import('./features/sport/sportRuntime.js');
       sportRuntime.installSportRuntime(window);

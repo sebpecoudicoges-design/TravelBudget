@@ -1,14 +1,14 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "version": "10.5.255",
-  "commit": "fc29de0d026a0c822dcc03124fc19473e42e0671",
-  "generatedAt": "2026-07-24T23:50:33.740Z",
+  "version": "10.5.256",
+  "commit": "59e19c5de68be75ed3f55e663010945466d86513",
+  "generatedAt": "2026-07-25T00:02:20.371Z",
   "counts": {
     "screens": 15,
     "criticalFeatures": 10,
-    "tests": 101,
+    "tests": 102,
     "migrations": 90,
-    "featureModules": 37,
+    "featureModules": 38,
     "coreModules": 25,
     "dataModules": 7,
     "edgeFunctions": 8
@@ -17,6 +17,7 @@
     "analysis",
     "assets",
     "dashboard",
+    "documents",
     "inbox",
     "kpi",
     "nutrition",
