@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `a846734cec88f285c16d070e5e6376b9c3203595`
-> Empreinte du snapshot : `df2e045daff9ac171473d7e2aab3e6906034df8886debdd18d1e56275a312b80`
-> Généré le : `2026-07-25T23:36:34.048Z`
+> Commit analysé : `1436795bd5a38ce9f36ffae8745d04761bd806ba`
+> Empreinte du snapshot : `2534d51acf605d50c6d9b367626dfaf04933440572569965466237394390c186`
+> Généré le : `2026-07-26T00:01:06.120Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,22 +11,25 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.261` |
+| Version | `10.5.262` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 61 |
 | Modules core | 25 |
 | Modules data | 7 |
 | Modules features | 38 |
-| Fichiers de tests | 103 |
-| Migrations Supabase | 90 |
-| Fonctions Edge | 8 |
+| Fichiers de tests | 104 |
+| Migrations Supabase | 91 |
+| Fonctions Edge | 11 |
 | Projet Android présent | Oui |
 
 ## Scripts npm
 
 | Script | Commande |
 |---|---|
+| `version:sync` | `node scripts/sync-version.mjs` |
+| `predev` | `npm run version:sync` |
 | `dev` | `vite` |
+| `prebuild` | `npm run version:sync` |
 | `build` | `vite build` |
 | `preview` | `vite preview --port 4173` |
 | `test` | `vitest run` |
@@ -288,6 +291,7 @@ Modules :
 - `tests/ui/transactionModalContract.test.js`
 - `tests/ui/tripDomainContract.test.js`
 - `tests/ui/tripModalContract.test.js`
+- `tests/ui/versionSyncContract.test.js`
 - `tests/ui/workCareerModalContract.test.js`
 - `tests/ui/workDomainContract.test.js`
 
@@ -398,6 +402,7 @@ Modules :
 - `tests/ui/transactionModalContract.test.js`
 - `tests/ui/tripDomainContract.test.js`
 - `tests/ui/tripModalContract.test.js`
+- `tests/ui/versionSyncContract.test.js`
 - `tests/ui/workCareerModalContract.test.js`
 - `tests/ui/workDomainContract.test.js`
 
@@ -410,7 +415,10 @@ Modules :
 - `admin-invite`
 - `admin-wipe-user`
 - `dispatch-mobile-notifications`
+- `export-account-data`
 - `fx-latest`
+- `process-account-deletions`
+- `request-account-deletion`
 - `send-mobile-notification`
 - `whatsapp-inbox`
 
@@ -506,6 +514,7 @@ Modules :
 - `supabase/migrations/20260722102355_sport_body_measurement_analysis_v2.sql`
 - `supabase/migrations/20260723184500_sport_profile_vma.sql`
 - `supabase/migrations/20260723184600_sport_mobility_assessments.sql`
+- `supabase/migrations/20260725234344_account_data_requests.sql`
 
 ## Android et budgets de modules
 
@@ -517,6 +526,7 @@ Modules :
 
 ## Documents d'architecture et de navigation
 
+- `docs/ACCOUNT_DATA_LIFECYCLE.md`
 - `docs/ADMIN_TEST_RETURNS.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/MANUAL_TESTS.md`

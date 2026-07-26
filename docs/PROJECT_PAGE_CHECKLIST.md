@@ -18,6 +18,8 @@ Cette checklist accompagne la page publique `public/projet.html`. Les cases inte
 - [x] Politique de confidentialité publique FR/EN créée.
 - [x] Demande externe de suppression de compte accessible.
 - [x] Lien vers la confidentialité présent dans l’application.
+- [x] Export complet du compte et manifeste des fichiers préparés.
+- [x] Demande et annulation de suppression préparées dans l’application.
 - [ ] Tester une suppression complète sur un compte de démonstration.
 - [ ] Publier l’URL HTTPS définitive de la politique.
 - [ ] Reporter exactement les traitements dans le formulaire Data safety Google Play.

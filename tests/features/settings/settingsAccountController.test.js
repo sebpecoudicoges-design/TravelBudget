@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  accountExportFilename,
   bindSettingsAccountPanel,
   buildSettingsNotificationPrefs,
+  collectLocalAccountData,
+  formatDeletionStatus,
   isValidWhatsappPhone,
   normalizeWhatsappPhone,
 } from '../../../src/features/settings/settingsAccountController.js';
@@ -43,6 +46,33 @@ describe('Settings account controller', () => {
       healthMealReminders: true,
       timezone: 'Australia/Brisbane',
     });
+  });
+
+  it('exports only Travel Budget device data and keeps structured values', () => {
+    const values = new Map([
+      ['travelbudget_cache_v1', '{"pending":2}'],
+      ['tb:offline:queue', '[1,2]'],
+      ['unrelated-site-key', 'secret'],
+    ]);
+    const storage = {
+      length: values.size,
+      key: (index) => [...values.keys()][index],
+      getItem: (key) => values.get(key) ?? null,
+    };
+
+    expect(collectLocalAccountData(storage)).toEqual({
+      travelbudget_cache_v1: { pending: 2 },
+      'tb:offline:queue': [1, 2],
+    });
+    expect(accountExportFilename(new Date('2026-07-26T01:02:03Z')))
+      .toBe('travelbudget-account-export-2026-07-26.json');
+  });
+
+  it('formats pending and terminal deletion states', () => {
+    expect(formatDeletionStatus({ status: 'pending', execute_after: '2026-08-02T00:00:00Z' }, 'fr-FR'))
+      .toContain('02/08/2026');
+    expect(formatDeletionStatus({ status: 'cancelled' })).toBe('Demande annulée.');
+    expect(formatDeletionStatus({ status: 'processing' })).toBe('Suppression en cours.');
   });
 
   it('binds account actions while preserving injected side effects', async () => {

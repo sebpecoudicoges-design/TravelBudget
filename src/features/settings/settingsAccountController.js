@@ -9,6 +9,49 @@ function setValue(box, selector, value) {
   if (input) input.value = value ?? '';
 }
 
+export function collectLocalAccountData(storage) {
+  const values = {};
+  if (!storage || typeof storage.length !== 'number') return values;
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (!key || !/^(travelbudget|tb[_:-])/i.test(key)) continue;
+    const raw = storage.getItem(key);
+    try { values[key] = JSON.parse(raw); }
+    catch (_) { values[key] = raw; }
+  }
+  return values;
+}
+
+export function accountExportFilename(date = new Date()) {
+  const isoDate = date.toISOString().slice(0, 10);
+  return `travelbudget-account-export-${isoDate}.json`;
+}
+
+export function formatDeletionStatus(request, locale = 'fr-FR') {
+  if (!request) return '';
+  if (request.status === 'cancelled') return 'Demande annulée.';
+  if (request.status === 'completed') return 'Compte supprimé.';
+  if (request.status === 'failed') return 'La suppression nécessite une intervention du support.';
+  if (request.status === 'processing') return 'Suppression en cours.';
+  const date = request.execute_after ? new Date(request.execute_after) : null;
+  const formatted = date && !Number.isNaN(date.getTime())
+    ? date.toLocaleDateString(locale)
+    : '';
+  return formatted ? `Suppression programmée le ${formatted}.` : 'Suppression programmée.';
+}
+
+function downloadJson(documentRef, filename, value) {
+  const blob = new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = documentRef.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  documentRef.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function normalizeWhatsappPhone(value) {
   return String(value || '')
     .trim()
@@ -299,6 +342,92 @@ export function bindSettingsAccountPanel({
       const redirectTo = (typeof windowRef?.tbAuthWebRedirectUrl === 'function') ? windowRef.tbAuthWebRedirectUrl() : `${windowRef.location?.origin || ''}${windowRef.location?.pathname || ''}`;
       await s.auth.resetPasswordForEmail(email, { redirectTo });
       alertFn('Email de réinitialisation envoyé.');
+    });
+  }
+
+  const deletionStatus = box.querySelector('#tb-user-deletion-status');
+  const cancelDeletion = box.querySelector('#tb-user-cancel-deletion');
+  const deleteAccount = box.querySelector('#tb-user-delete-account');
+  const renderDeletionRequest = (request) => {
+    const active = request?.status === 'pending' || request?.status === 'processing';
+    if (deletionStatus) deletionStatus.textContent = formatDeletionStatus(request);
+    if (cancelDeletion) cancelDeletion.hidden = !active || request?.status !== 'pending';
+    if (deleteAccount) deleteAccount.hidden = !!active;
+  };
+
+  const invokeDeletion = async (body) => {
+    if (offline()) throw new Error('Mode hors ligne : reconnecte-toi pour gérer la suppression du compte.');
+    const s = getSb();
+    const { data, error } = await s.functions.invoke('request-account-deletion', { body });
+    if (error) throw error;
+    return data;
+  };
+
+  (async () => {
+    try {
+      if (offline()) return;
+      const data = await invokeDeletion({ action: 'status' });
+      renderDeletionRequest(data?.request || null);
+    } catch (error) {
+      if (!/failed to fetch|offline|network/i.test(String(error?.message || error))) {
+        consoleRef?.warn?.('[TB][settings] deletion status unavailable', error);
+      }
+    }
+  })();
+
+  const btnExportAll = box.querySelector('#tb-user-export-all');
+  if (btnExportAll) {
+    btnExportAll.onclick = () => safeCall('Exporter toutes les données', async () => {
+      if (offline()) throw new Error("Mode hors ligne : reconnecte-toi pour générer l'export complet.");
+      const s = getSb();
+      const { data, error } = await s.functions.invoke('export-account-data', { body: {} });
+      if (error) throw error;
+      const payload = {
+        ...data,
+        deviceExportedAt: new Date().toISOString(),
+        localData: collectLocalAccountData(LS),
+      };
+      downloadJson(windowRef.document, accountExportFilename(), payload);
+      const fileCount = Array.isArray(data?.storageFiles) ? data.storageFiles.length : 0;
+      alertFn(
+        `Export complet téléchargé.${fileCount
+          ? ` Il contient le manifeste de ${fileCount} fichier(s) avec des liens valables 1 heure.`
+          : ''}`,
+      );
+    });
+  }
+
+  if (deleteAccount) {
+    deleteAccount.onclick = () => safeCall('Demander la suppression du compte', async () => {
+      const shouldExport = windowRef.confirm?.(
+        "As-tu déjà exporté les données que tu souhaites conserver ?\n\nOK : continuer vers la suppression.\nAnnuler : revenir sans envoyer de demande.",
+      );
+      if (!shouldExport) return;
+      const confirmation = windowRef.prompt?.(
+        'Cette action supprimera définitivement le compte et ses données après 7 jours.\nTape SUPPRIMER pour confirmer.',
+        '',
+      );
+      if (confirmation !== 'SUPPRIMER') {
+        if (confirmation) alertFn('Confirmation incorrecte. La demande n’a pas été envoyée.');
+        return;
+      }
+      const data = await invokeDeletion({
+        action: 'request',
+        confirmation,
+        requestedFrom: 'app',
+        exportRequested: true,
+      });
+      renderDeletionRequest(data?.request || null);
+      alertFn('Demande enregistrée. Tu peux encore l’annuler pendant le délai indiqué.');
+    });
+  }
+
+  if (cancelDeletion) {
+    cancelDeletion.onclick = () => safeCall('Annuler la suppression du compte', async () => {
+      if (!windowRef.confirm?.('Annuler la demande de suppression du compte ?')) return;
+      const data = await invokeDeletion({ action: 'cancel' });
+      renderDeletionRequest(data?.request || { status: 'cancelled' });
+      alertFn(data?.cancelled ? 'Demande de suppression annulée.' : 'Aucune demande en attente.');
     });
   }
 

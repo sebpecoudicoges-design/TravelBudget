@@ -1,10 +1,13 @@
 {
   "name": "travelbudget",
   "private": true,
-  "version": "10.5.261",
+  "version": "10.5.262",
   "type": "module",
   "scripts": {
+    "version:sync": "node scripts/sync-version.mjs",
+    "predev": "npm run version:sync",
     "dev": "vite",
+    "prebuild": "npm run version:sync",
     "build": "vite build",
     "preview": "vite preview --port 4173",
     "test": "vitest run",

@@ -5,6 +5,10 @@ import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as settingsView from './features/settings/settingsView.js';
 import * as settingsAccountController from './features/settings/settingsAccountController.js';
 
+window.TB_VERSION = typeof __TB_VERSION__ !== 'undefined'
+  ? __TB_VERSION__
+  : (window.TB_VERSION || '0.0.0');
+
 window.TBCore = {
   ...(window.TBCore || {}),
   budgetAnalysisRules,

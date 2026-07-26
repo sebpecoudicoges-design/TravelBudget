@@ -96,6 +96,15 @@ describe('Settings view helpers', () => {
     expect(getSettingsCardSummary({ id: 'tb-recurring-card', state, t }).pills).toEqual(['1 regles']);
   });
 
+  it('renders complete account export and cancellable deletion controls', () => {
+    const html = renderSettingsAccountPanel({ state, t });
+    expect(html).toContain('id="tb-user-export-all"');
+    expect(html).toContain('id="tb-user-delete-account"');
+    expect(html).toContain('id="tb-user-cancel-deletion"');
+    expect(html).toContain('id="tb-user-deletion-status"');
+    expect(html).toContain('délai de 7 jours');
+  });
+
   it('renders the settings hero with escaped state values and counters', () => {
     const html = renderSettingsHero({
       state: {

@@ -162,7 +162,21 @@ export function renderSettingsAccountPanel({
           <button class="btn" id="tb-user-birthdate-save" type="button">Enregistrer santé</button>
           <button class="btn" id="tb-user-uimode-save" type="button">${tr('settings.account.save_mode')}</button>
           <button class="btn" id="tb-user-resetpwd" type="button">${tr('settings.account.reset_password')}</button>
-          <a class="btn" href="/privacy.html" target="_blank" rel="noopener">Confidentialité / Privacy · Suppression du compte</a>
+          <button class="btn" id="tb-user-export-all" type="button">Exporter toutes mes données</button>
+          <a class="btn" href="/privacy.html" target="_blank" rel="noopener">Confidentialité / Privacy</a>
+        </div>
+
+        <div style="margin-top:14px;padding:12px;border:1px solid rgba(220,38,38,.35);border-radius:14px;background:rgba(220,38,38,.05);">
+          <strong>Suppression du compte</strong>
+          <div class="muted" style="margin-top:4px;line-height:1.4;">
+            La demande couvre les données synchronisées et les fichiers. Un délai de 7 jours permet de l'annuler.
+            Pense à exporter tes données avant de confirmer.
+          </div>
+          <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+            <button class="btn" id="tb-user-delete-account" type="button" style="border-color:rgba(220,38,38,.65);color:#b91c1c;">Demander la suppression</button>
+            <button class="btn" id="tb-user-cancel-deletion" type="button" hidden>Annuler la demande</button>
+            <span id="tb-user-deletion-status" class="muted" style="font-size:12px;"></span>
+          </div>
         </div>
 
         <div class="row tb-advanced-only" style="gap:12px; align-items:end; flex-wrap:wrap; margin-top:10px;">
