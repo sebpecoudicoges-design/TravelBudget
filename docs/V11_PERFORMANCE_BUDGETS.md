@@ -12,7 +12,7 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.270` :
+Snapshot `10.5.271` :
 
 - Boot legacy : 876.8 / 1500 KiB.
 - Analyse : 159.7 / 160 KiB.
@@ -23,7 +23,7 @@ Snapshot `10.5.270` :
 - Nutrition : 187.5 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
-- Documents : 112.4 / 115 KiB.
+- Documents : 107.8 / 115 KiB.
 - Bundle Vite JS initial : 244.2 / 260 KiB.
 - Bundle Vite JS lazy : 375.6 / 380 KiB.
 - Bundle Vite JS total : 619.8 / 620 KiB.
@@ -71,3 +71,5 @@ En 10.5.268, le meme module `dashboardDailyBudgetState.js` est compacte : les ad
 En 10.5.269, les doublons legacy `_norm`/`_normKey` dans Analyse et `todayISO` dans Inbox sont supprimes, puis l'etat lazy du budget journalier Dashboard est raccourci. Analyse baisse a 159.7 KiB, Inbox a 111.8 KiB, le lazy descend a 375.6 KiB et le total JS a 619.8 / 620 KiB.
 
 En 10.5.270, des fallbacks legacy morts sont supprimes dans Inbox et Nutrition : helpers budget locaux Inbox et anciens panneaux Nutrition non appeles. Inbox baisse a 110.5 KiB et Nutrition a 187.5 KiB. Le bundle Vite reste stable a 619.8 / 620 KiB, ce qui recupere de la marge source sans changer le comportement utilisateur.
+
+En 10.5.271, les anciennes actions batch Documents basees sur `prompt` sont supprimees : elles etaient ecrasees par les modales actuelles partager/deplacer/taguer. Documents baisse de 112.4 a 107.8 KiB, avec un contrat anti-retour qui impose une seule definition par action batch.

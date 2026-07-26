@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "7bf6db26a889061ff584975a8ee4fa5a03238742",
-  "snapshotFingerprint": "a18c21ba4e0735f7b7ba1c4a0a04e595ab81c84beaa8abcfbc868ea7320202ac",
-  "generatedAt": "2026-07-26T09:15:30.388Z",
+  "commit": "bb6cb0ca7400276f6825c2832a2200a1d4c56157",
+  "snapshotFingerprint": "ff0352eb6c2ec60d8a903700d500766dc7760cfdaea6196bfc8779eabdfe833a",
+  "generatedAt": "2026-07-26T10:06:44.060Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.270"
+    "version": "10.5.271"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -304,6 +304,7 @@
     "tests/ui/components.test.js",
     "tests/ui/cspContract.test.js",
     "tests/ui/dashboardViewContract.test.js",
+    "tests/ui/documentsDomainContract.test.js",
     "tests/ui/errorBusContract.test.js",
     "tests/ui/inboxDomainContract.test.js",
     "tests/ui/kpiRangePickerContract.test.js",
@@ -343,6 +344,7 @@
     "tests/ui/assetsModalContract.test.js",
     "tests/ui/cspContract.test.js",
     "tests/ui/dashboardViewContract.test.js",
+    "tests/ui/documentsDomainContract.test.js",
     "tests/ui/errorBusContract.test.js",
     "tests/ui/inboxDomainContract.test.js",
     "tests/ui/kpiRangePickerContract.test.js",
