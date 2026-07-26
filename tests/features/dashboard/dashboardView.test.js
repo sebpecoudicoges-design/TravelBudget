@@ -17,6 +17,12 @@ import {
   renderWalletTypesFixDialog,
   walletRecentTxTouchesWallet,
 } from '../../../src/features/dashboard/dashboardView.js';
+import {
+  addDashboardDays,
+  clampDashboardISO,
+  loadDailyBudgetView,
+  saveDailyBudgetView,
+} from '../../../src/features/dashboard/dashboardDailyBudgetState.js';
 
 describe('Dashboard view helpers', () => {
   const t = (key, vars = {}) => {
@@ -214,6 +220,29 @@ describe('Dashboard view helpers', () => {
     expect(html).toContain('value="voyage"');
     expect(html).toContain('2026-07-11');
     expect(html).toContain('2026-07-17');
+  });
+
+  it('keeps daily budget date window helpers outside the legacy file', () => {
+    expect(addDashboardDays('2026-07-11', 6)).toBe('2026-07-17');
+    expect(addDashboardDays('bad-date', 2)).toBe('bad-date');
+    expect(clampDashboardISO('2026-07-10', '2026-07-11', '2026-07-20')).toBe('2026-07-11');
+    expect(clampDashboardISO('2026-07-21', '2026-07-11', '2026-07-20')).toBe('2026-07-20');
+    expect(clampDashboardISO('2026-07-15', '2026-07-11', '2026-07-20')).toBe('2026-07-15');
+  });
+
+  it('loads and saves the daily budget view through an injectable storage', () => {
+    const store = new Map();
+    const storage = {
+      getItem: (key) => store.get(key) || null,
+      setItem: (key, value) => store.set(key, value),
+    };
+
+    expect(loadDailyBudgetView(storage)).toBeNull();
+
+    saveDailyBudgetView({ mode: 'segment', startISO: '2026-07-14' }, storage);
+
+    expect(store.has('travelbudget_daily_budget_view_v1')).toBe(true);
+    expect(loadDailyBudgetView(storage)).toEqual({ mode: 'segment', startISO: '2026-07-14' });
   });
 
   it('renders a daily budget day with details or an empty allocation state', () => {

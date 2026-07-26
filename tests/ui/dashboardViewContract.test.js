@@ -11,6 +11,14 @@ describe('dashboard view extraction contract', () => {
     expect(main).toContain('...dashboardView');
   });
 
+  it('loads Dashboard daily budget state on demand instead of booting it eagerly', () => {
+    expect(main).toContain('window.TBLoadDashboardDailyBudgetState');
+    expect(main).toContain("await import('./features/dashboard/dashboardDailyBudgetState.js')");
+    expect(main).not.toContain("import * as dashboardDailyBudgetState from './features/dashboard/dashboardDailyBudgetState.js'");
+    expect(legacy).toContain('window.TBLoadDashboardDailyBudgetState');
+    expect(legacy).toContain('window.TBDashboardDailyBudgetState');
+  });
+
   it('loads Dashboard wallet rules on demand instead of booting them eagerly', () => {
     expect(main).toContain('window.TBDashboardWalletRules');
     expect(main).toContain('window.TBLoadDashboardWalletRules');
@@ -53,9 +61,17 @@ describe('dashboard view extraction contract', () => {
   it('keeps daily budget controls and day rows delegated', () => {
     expect(legacy).toContain('window.TBDashboardView?.renderDailyBudgetControls');
     expect(legacy).toContain('window.TBDashboardView?.renderDailyBudgetDay');
+    expect(legacy).toContain('dailyState?.loadDailyBudgetView');
+    expect(legacy).toContain('dailyState?.addDashboardDays');
+    expect(legacy).toContain('dailyState?.clampDashboardISO');
+    expect(legacy).toContain('dailyState?.saveDailyBudgetView');
     expect(legacy).not.toContain('<button class="btn" id="db-prev">${T("common.previous")}</button>');
     expect(legacy).not.toContain('<div class="pill ${budgetClass(budget)}">');
     expect(legacy).not.toContain('details.map((x) =>');
+    expect(legacy).not.toContain('function _dbAddDays');
+    expect(legacy).not.toContain('function _dbClampISO');
+    expect(legacy).not.toContain('function _dbLoadView');
+    expect(legacy).not.toContain('travelbudget_daily_budget_view_v1');
   });
 
   it('keeps wallet dialog rendering delegated and style injection side-effect free', () => {

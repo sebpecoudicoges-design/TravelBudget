@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `dc3e8901ac4e4adce6ffd7ff6db65975c7fa4350`
-> Empreinte du snapshot : `ba3b2e6b65c9eb8c2a5506c419756a0322f24f9dfc3dd3951c0ea43662a86703`
-> Généré le : `2026-07-26T05:26:10.659Z`
+> Commit analysé : `e9a4e7c0c563aa8524885d16e882c33d7887f3d4`
+> Empreinte du snapshot : `7c8b8078ea88fb38c93d2f4d7522011c397376abfc1cf61573e00fd17b69efe2`
+> Généré le : `2026-07-26T05:41:02.270Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,12 +11,12 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.266` |
+| Version | `10.5.267` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 61 |
 | Modules core | 25 |
 | Modules data | 7 |
-| Modules features | 38 |
+| Modules features | 39 |
 | Fichiers de tests | 104 |
 | Migrations Supabase | 91 |
 | Fonctions Edge | 11 |
@@ -220,6 +220,7 @@ Modules :
 - `src/features/analysis/analysisRuntime.js`
 - `src/features/analysis/analysisView.js`
 - `src/features/assets/assetView.js`
+- `src/features/dashboard/dashboardDailyBudgetState.js`
 - `src/features/dashboard/dashboardView.js`
 - `src/features/dashboard/dashboardWalletRules.js`
 - `src/features/documents/documentView.js`

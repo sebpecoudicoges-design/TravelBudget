@@ -289,42 +289,18 @@ if (!wallets.length) {
   try { if (window.tbBus && typeof tbBus.emit === "function") tbBus.emit("wallets:rendered", null); } catch (_) {}
 }
 
-const DAILY_BUDGET_VIEW_KEY = "travelbudget_daily_budget_view_v1";
-const DAILY_BUDGET_WINDOW_DAYS = 7;
-
-function _dbParseISO(iso) { return (typeof parseISODateOrNull === "function") ? parseISODateOrNull(iso) : null; }
-function _dbISO(d){ return (typeof toLocalISODate === "function") ? toLocalISODate(d) : ""; }
-function _dbAddDays(dateISO, delta){
-  const d = _dbParseISO(dateISO);
-  if (!d) return dateISO;
-  const x = new Date(d);
-  x.setDate(x.getDate() + (Number(delta)||0));
-  return _dbISO(x);
-}
-function _dbClampISO(dateISO, minISO, maxISO){
-  const d=_dbParseISO(dateISO), mi=_dbParseISO(minISO), ma=_dbParseISO(maxISO);
-  if(!d||!mi||!ma) return dateISO;
-  if(d<mi) return minISO;
-  if(d>ma) return maxISO;
-  return dateISO;
-}
-function _dbLoadView(){
-  try{
-    const raw=localStorage.getItem(DAILY_BUDGET_VIEW_KEY);
-    if(!raw) return null;
-    const o=JSON.parse(raw);
-    if(o && typeof o.startISO==="string") return o;
-  }catch(_){}
-  return null;
-}
-function _dbSaveView(view){
-  try{ localStorage.setItem(DAILY_BUDGET_VIEW_KEY, JSON.stringify(view||{})); }catch(_){}
-}
-
 function renderDailyBudget() {
   const T = window.tbT || ((k) => k);
   const container = document.getElementById("daily-budget-container");
   if (!container) return; // page reset / dom partiel
+  if (!window.TBDashboardDailyBudgetState?.loadDailyBudgetView) {
+    try {
+      window.TBLoadDashboardDailyBudgetState?.()
+        ?.then(() => renderDailyBudget())
+        ?.catch((error) => console.error("[TB][dashboard] daily budget state load failed", error));
+    } catch (_) {}
+    return;
+  }
   container.innerHTML = "";
 
   const start = parseISODateOrNull(state?.period?.start);
@@ -352,22 +328,33 @@ function renderDailyBudget() {
     }
   } catch (_) {}
 
-  let view = _dbLoadView();
+  const dailyState = window.TBDashboardDailyBudgetState;
+  const dailyBudgetWindowDays = dailyState?.DAILY_BUDGET_WINDOW_DAYS || 7;
+  const dateAdapters = {
+    parseISO: (typeof parseISODateOrNull === "function") ? parseISODateOrNull : null,
+    formatISO: (typeof toLocalISODate === "function") ? toLocalISODate : null,
+  };
+  const addDays = (dateISO, delta) => dailyState?.addDashboardDays?.(dateISO, delta, dateAdapters) || dateISO;
+  const clampISO = (dateISO, minISO, maxISO) => dailyState?.clampDashboardISO?.(dateISO, minISO, maxISO, dateAdapters) || dateISO;
+  const parseISO = (dateISO) => dateAdapters.parseISO?.(dateISO) || null;
+  const saveView = (nextView) => dailyState?.saveDailyBudgetView?.(nextView);
+
+  let view = dailyState?.loadDailyBudgetView?.();
   if (!view || !view.startISO) {
-    const baseStart = _dbAddDays(todayISO, -3);
+    const baseStart = addDays(todayISO, -3);
     const minISO = segStartISO || periodStartISO;
     const maxISO = segEndISO || periodEndISO;
-    const clampedStart = _dbClampISO(baseStart, minISO, maxISO);
+    const clampedStart = clampISO(baseStart, minISO, maxISO);
     view = { mode: (segStartISO && segEndISO) ? "segment" : "voyage", startISO: clampedStart };
-    _dbSaveView(view);
+    saveView(view);
   }
 
   const boundMinISO = (view.mode === "voyage") ? periodStartISO : (segStartISO || periodStartISO);
   const boundMaxISO = (view.mode === "voyage") ? periodEndISO : (segEndISO || periodEndISO);
 
-  let viewStartISO = _dbClampISO(view.startISO, boundMinISO, boundMaxISO);
-  let viewEndISO = _dbAddDays(viewStartISO, DAILY_BUDGET_WINDOW_DAYS - 1);
-  viewEndISO = _dbClampISO(viewEndISO, boundMinISO, boundMaxISO);
+  let viewStartISO = clampISO(view.startISO, boundMinISO, boundMaxISO);
+  let viewEndISO = addDays(viewStartISO, dailyBudgetWindowDays - 1);
+  viewEndISO = clampISO(viewEndISO, boundMinISO, boundMaxISO);
 
   // Controls
   const ctrl = document.createElement("div");
@@ -386,11 +373,11 @@ function renderDailyBudget() {
     modeSel.value = (view.mode === "voyage") ? "voyage" : "segment";
     modeSel.onchange = () => {
       const v = (modeSel.value === "voyage") ? "voyage" : "segment";
-      const baseStart = _dbAddDays(todayISO, -3);
+      const baseStart = addDays(todayISO, -3);
       const minISO = (v === "voyage") ? periodStartISO : (segStartISO || periodStartISO);
       const maxISO = (v === "voyage") ? periodEndISO : (segEndISO || periodEndISO);
-      const clampedStart = _dbClampISO(baseStart, minISO, maxISO);
-      _dbSaveView({ mode: v, startISO: clampedStart });
+      const clampedStart = clampISO(baseStart, minISO, maxISO);
+      saveView({ mode: v, startISO: clampedStart });
       renderDailyBudget();
     };
   }
@@ -399,26 +386,26 @@ function renderDailyBudget() {
   const nextBtn = ctrl.querySelector("#db-next");
   const todayBtn = ctrl.querySelector("#db-today");
   if (prevBtn) prevBtn.onclick = () => {
-    const newStart = _dbAddDays(viewStartISO, -DAILY_BUDGET_WINDOW_DAYS);
-    _dbSaveView({ mode: view.mode, startISO: newStart });
+    const newStart = addDays(viewStartISO, -dailyBudgetWindowDays);
+    saveView({ mode: view.mode, startISO: newStart });
     renderDailyBudget();
   };
   if (nextBtn) nextBtn.onclick = () => {
-    const newStart = _dbAddDays(viewStartISO, DAILY_BUDGET_WINDOW_DAYS);
-    _dbSaveView({ mode: view.mode, startISO: newStart });
+    const newStart = addDays(viewStartISO, dailyBudgetWindowDays);
+    saveView({ mode: view.mode, startISO: newStart });
     renderDailyBudget();
   };
   if (todayBtn) todayBtn.onclick = () => {
-    const baseStart = _dbAddDays(todayISO, -3);
+    const baseStart = addDays(todayISO, -3);
     const minISO = (view.mode === "voyage") ? periodStartISO : (segStartISO || periodStartISO);
     const maxISO = (view.mode === "voyage") ? periodEndISO : (segEndISO || periodEndISO);
-    const clampedStart = _dbClampISO(baseStart, minISO, maxISO);
-    _dbSaveView({ mode: view.mode, startISO: clampedStart });
+    const clampedStart = clampISO(baseStart, minISO, maxISO);
+    saveView({ mode: view.mode, startISO: clampedStart });
     renderDailyBudget();
   };
 
-  const dStart = _dbParseISO(viewStartISO);
-  const dEnd = _dbParseISO(viewEndISO);
+  const dStart = parseISO(viewStartISO);
+  const dEnd = parseISO(viewEndISO);
   if (!dStart || !dEnd) return;
 
   forEachDateInclusive(dStart, dEnd, (d) => {

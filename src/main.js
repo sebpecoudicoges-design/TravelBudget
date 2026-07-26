@@ -24,6 +24,9 @@ window.TBLoadDashboardWalletRules = window.TBLoadDashboardWalletRules || (async 
   };
   return window.TBDashboardWalletRules;
 });
+window.TBLoadDashboardDailyBudgetState = window.TBLoadDashboardDailyBudgetState || (async () => (
+  window.TBDashboardDailyBudgetState ||= await import('./features/dashboard/dashboardDailyBudgetState.js')
+));
 window.TBSettingsView = {
   ...(window.TBSettingsView || {}),
   ...settingsView,
