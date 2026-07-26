@@ -29,6 +29,12 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).not.toContain('analysis-overview-card--${escapeHTML(card.accent)}');
   });
 
+  it('keeps the Analysis trajectory metadata delegated out of the legacy file', () => {
+    expect(legacy).toContain('window.TBAnalysisView?.renderAnalysisTrajectoryMeta');
+    expect(legacy).not.toContain('style="display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:center;"');
+    expect(legacy).not.toContain("(detail.days || 0) + ' jours'");
+  });
+
   it('keeps the Analysis insights delegated out of the legacy file', () => {
     expect(legacy).toContain('analysisView?.renderAnalysisInsights');
     expect(legacy).toContain('analysisView?.buildAnalysisInsights');

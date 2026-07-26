@@ -16,6 +16,7 @@ import {
   renderAnalysisReferenceMix,
   renderAnalysisReferenceSummary,
   renderAnalysisSubcategoryBreakdown,
+  renderAnalysisTrajectoryMeta,
 } from '../../../src/features/analysis/analysisView.js';
 
 describe('Analysis view helpers', () => {
@@ -84,6 +85,21 @@ describe('Analysis view helpers', () => {
     expect(html).toContain('analysis-overview-card--travel');
     expect(html).toContain('&lt;BudgetTravel&gt;');
     expect(html).toContain('Référence absente');
+  });
+
+  it('renders escaped trajectory metadata for the Analysis chart host', () => {
+    const html = renderAnalysisTrajectoryMeta({
+      start: '<2026-07-01>',
+      end: '2026-07-12',
+      days: 12,
+      currency: '<AUD>',
+    });
+
+    expect(html).toContain('analysis-trajectory-meta-row');
+    expect(html).toContain('&lt;2026-07-01&gt;');
+    expect(html).toContain('12 jours');
+    expect(html).toContain('&lt;AUD&gt;');
+    expect(html).not.toContain('<AUD>');
   });
 
   it('builds actionable insights from the analysis model', () => {

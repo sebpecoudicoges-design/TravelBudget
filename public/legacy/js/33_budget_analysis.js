@@ -1583,11 +1583,10 @@ function _openTxDrilldown(kind, key, model){
     const meta = _el('analysis-trajectory-meta');
     if (meta) {
       const detail = window.TBAnalysisCharts?.buildAnalysisTrajectoryMeta?.(model) || {};
-      meta.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:center;">
-        <span>${escapeHTML(detail.start || '—')} → ${escapeHTML(detail.end || '—')}</span>
-        <span>${escapeHTML((detail.days || 0) + ' jours')}</span>
-        <span>${escapeHTML(detail.currency || model.base || '')}</span>
-      </div>`;
+      meta.innerHTML = window.TBAnalysisView?.renderAnalysisTrajectoryMeta?.({
+        ...detail,
+        currency: detail.currency || model.base || '',
+      }) || '';
       meta.style.marginTop = '.65rem';
     }
   }

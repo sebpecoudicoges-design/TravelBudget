@@ -12,9 +12,10 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.263` :
+Snapshot `10.5.264` :
 
 - Boot legacy : 878.8 / 1500 KiB.
+- Analyse : 160.0 / 160 KiB.
 - Inbox : 111.9 / 112 KiB.
 - Dashboard + Settings : 359.1 / 360 KiB.
 - Trip : 309.4 / 340 KiB.
@@ -24,8 +25,8 @@ Snapshot `10.5.263` :
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 112.4 / 115 KiB.
 - Bundle Vite JS initial : 242.6 / 260 KiB.
-- Bundle Vite JS lazy : 374.5 / 380 KiB.
-- Bundle Vite JS total : 617.1 / 620 KiB.
+- Bundle Vite JS lazy : 374.7 / 380 KiB.
+- Bundle Vite JS total : 617.4 / 620 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
 - JS principal gzip : 69.5 / 110 KiB.
 
@@ -56,3 +57,5 @@ En 10.5.261, le rendu du plan builder Sport est extrait vers `sportFormView.js`.
 Le flux local de gestion du compte ajoute ensuite l'export complet, la demande et l'annulation de suppression, ainsi que leur etat dans Settings. Le bundle total passe a 617 KiB et le plafond total a 620 KiB. Le plafond initial reste a 260 KiB : le prochain chantier Settings devra deplacer la gestion de compte hors du chargement initial pour recuperer de la marge.
 
 En 10.5.263, `settingsAccountController.js` quitte le bundle initial et charge via `TBLoadSettingsAccountController` lorsque le panneau Compte est rendu. Le JS initial baisse de 259.3 a 242.6 KiB et le JS principal gzip de 74.6 a 69.5 KiB. Le lazy monte a 374.5 KiB car le controleur devient un chunk separe ; le plafond lazy passe donc a 380 KiB en gardant le total a 620 KiB. Prochain axe : reduire `dashboard-settings` et fractionner un chunk lazy existant pour rebaisser ce plafond.
+
+En 10.5.264, Analyse extrait la meta du graphique trajectoire vers `analysisView.js`. Le domaine Analyse atteint 160.0 / 160 KiB et le lazy passe a 374.7 KiB. Aucun plafond n'est augmente : le prochain lot Analyse doit supprimer du legacy ou deplacer un bloc vers un sous-module dedie avant toute nouvelle fonctionnalite.

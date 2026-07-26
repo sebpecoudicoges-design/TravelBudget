@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `9655a86939a7d45fd055bf7984ff5d1522f374e0`
-> Empreinte du snapshot : `ef589322db502e8797bc1d8c6cc98052fb37ef33fb83fe669c303ecbf35bb931`
-> Généré le : `2026-07-26T00:17:41.987Z`
+> Commit analysé : `6134e29e375e22c6bf432a8e53ecfde39c982e2c`
+> Empreinte du snapshot : `1d5ca4bc5eec7d97aba8cf763795b7f91a80e5159c074b907371fecc037d0d4d`
+> Généré le : `2026-07-26T00:28:39.899Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,7 +11,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.263` |
+| Version | `10.5.264` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 61 |
 | Modules core | 25 |

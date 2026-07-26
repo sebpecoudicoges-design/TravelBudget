@@ -87,6 +87,19 @@ export function renderAnalysisOverviewStrip(options = {}) {
     `).join('');
 }
 
+export function renderAnalysisTrajectoryMeta({
+  start = '',
+  end = '',
+  days = 0,
+  currency = '',
+} = {}) {
+  return `<div class="analysis-trajectory-meta-row">
+        <span>${escapeHtml(start || '—')} → ${escapeHtml(end || '—')}</span>
+        <span>${escapeHtml(`${safeNum(days)} jours`)}</span>
+        <span>${escapeHtml(currency || '')}</span>
+      </div>`;
+}
+
 export function buildAnalysisInsights({
   model = {},
   isEn = false,
