@@ -5,6 +5,7 @@ import {
   renderDashboardOnboardingPanel,
   renderDailyBudgetControls,
   renderDailyBudgetDay,
+  getWalletDialogStyles,
   prepareWalletRecentTransactions,
   renderWalletActions,
   renderWalletCard,
@@ -91,6 +92,15 @@ describe('Dashboard view helpers', () => {
     expect(html).toContain('Corriger types (2)');
     expect(compact).toContain('wallet.action.show_archived');
     expect(compact).not.toContain('openWalletTypesFix()');
+  });
+
+  it('exposes wallet dialog styles outside the legacy file', () => {
+    const css = getWalletDialogStyles();
+
+    expect(css).toContain('.tb-dlg-backdrop');
+    expect(css).toContain('.tb-dlg-btn.primary');
+    expect(css).toContain('var(--panel)');
+    expect(css).toContain('var(--bad)');
   });
 
   it('renders a base wallet card with budget, recent rows and stable actions', () => {

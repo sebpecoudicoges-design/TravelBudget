@@ -12,9 +12,9 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.264` :
+Snapshot `10.5.265` :
 
-- Boot legacy : 878.8 / 1500 KiB.
+- Boot legacy : 877.5 / 1500 KiB.
 - Analyse : 160.0 / 160 KiB.
 - Inbox : 111.9 / 112 KiB.
 - Dashboard + Settings : 359.1 / 360 KiB.
@@ -24,11 +24,11 @@ Snapshot `10.5.264` :
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 112.4 / 115 KiB.
-- Bundle Vite JS initial : 242.6 / 260 KiB.
+- Bundle Vite JS initial : 244.0 / 260 KiB.
 - Bundle Vite JS lazy : 374.7 / 380 KiB.
-- Bundle Vite JS total : 617.4 / 620 KiB.
+- Bundle Vite JS total : 618.7 / 620 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
-- JS principal gzip : 69.5 / 110 KiB.
+- JS principal gzip : 69.9 / 110 KiB.
 
 ## Budgets actuels
 
@@ -59,3 +59,5 @@ Le flux local de gestion du compte ajoute ensuite l'export complet, la demande e
 En 10.5.263, `settingsAccountController.js` quitte le bundle initial et charge via `TBLoadSettingsAccountController` lorsque le panneau Compte est rendu. Le JS initial baisse de 259.3 a 242.6 KiB et le JS principal gzip de 74.6 a 69.5 KiB. Le lazy monte a 374.5 KiB car le controleur devient un chunk separe ; le plafond lazy passe donc a 380 KiB en gardant le total a 620 KiB. Prochain axe : reduire `dashboard-settings` et fractionner un chunk lazy existant pour rebaisser ce plafond.
 
 En 10.5.264, Analyse extrait la meta du graphique trajectoire vers `analysisView.js`. Le domaine Analyse atteint 160.0 / 160 KiB et le lazy passe a 374.7 KiB. Aucun plafond n'est augmente : le prochain lot Analyse doit supprimer du legacy ou deplacer un bloc vers un sous-module dedie avant toute nouvelle fonctionnalite.
+
+En 10.5.265, les styles des modales Wallet Dashboard quittent `12_dashboard_render.js` vers `dashboardView.js`. Le boot legacy baisse de 878.8 a 877.5 KiB sans modifier les plafonds. Les modales restent injectees a la demande par `tbEnsureWalletDlgStyles`. Le total Vite monte a 618.7 / 620 KiB car `dashboardView.js` est dans le bundle initial : le prochain lot Dashboard devra supprimer du legacy mort ou fractionner une vue avant de deplacer d'autres blocs.

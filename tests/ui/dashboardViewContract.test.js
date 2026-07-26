@@ -59,6 +59,7 @@ describe('dashboard view extraction contract', () => {
   });
 
   it('keeps wallet dialog rendering delegated and style injection side-effect free', () => {
+    expect(legacy).toContain('window.TBDashboardView?.getWalletDialogStyles');
     expect(legacy).toContain('window.TBDashboardView?.renderWalletCreateDialog');
     expect(legacy).toContain('window.TBDashboardView?.renderWalletEditDialog');
     expect(legacy).toContain('window.TBDashboardView?.renderWalletTypesFixDialog');
@@ -72,6 +73,7 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).toContain('window.TBDashboardWalletRules?.normalizeWalletTypeUpdates');
     expect(legacy).toContain('tbEnsureWalletDlgStyles();');
     expect(legacy).not.toContain('tbOpenWalletDialog().then(() => {});');
+    expect(legacy).not.toContain('.tb-dlg-backdrop{position:fixed');
     expect(legacy).not.toContain('<input id="tbWName" type="text"');
     expect(legacy).not.toContain('<input id="tbWEditName" type="text"');
     expect(legacy).not.toContain('On a détecté des wallets sans type');

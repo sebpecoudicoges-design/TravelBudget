@@ -1,7 +1,7 @@
 {
   "name": "travelbudget",
   "private": true,
-  "version": "10.5.264",
+  "version": "10.5.265",
   "type": "module",
   "scripts": {
     "version:sync": "node scripts/sync-version.mjs",
