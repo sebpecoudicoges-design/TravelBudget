@@ -6,9 +6,9 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.261`.
-- Bilan : 7 parcours `ok`, 32 parcours `à faire`.
-- Retour corrigé à revalider : Sport doit garder le rendu du plan builder, ses chips et les actions modifier/deplacer/supprimer apres extraction de vue.
+- Version à valider : `10.5.263`.
+- Bilan : 7 parcours `ok`, 34 parcours `à faire`.
+- Retour corrigé à revalider : Réglages > Compte doit afficher et binder ses actions après chargement lazy du contrôleur, sans erreur console.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
 - Consigner les anomalies et retours détaillés dans `docs/ADMIN_TEST_RETURNS.md`.
@@ -58,6 +58,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 39 | 10.5.259 | Sport : impédancemètre | Ouvrir **Sport > Profil athlétique**, vérifier la carte **Impédancemètre** et le bloc **Évolution composition**. | La mesure du 24/07 affiche une masse grasse cohérente autour de `14,0 kg`, la courbe montre poids, graisse % et muscle % quand disponible, et les incohérences de saisie sont signalées. | `TB BUILD 10.5.259` ; aucun `Uncaught`, aucun module `sportProfileView` manquant. | à faire |
 | 40 | 10.5.260 | Sport : modifier une pesée | Ouvrir **Sport > Profil athlétique > Impédancemètre**, cliquer **Modifier** sur une pesée récente, changer une valeur puis enregistrer. Refaire en changeant la date de la pesée. | La modale s'ouvre préremplie, la pesée est remplacée dans la liste et la courbe se met à jour. Si la date change, l'ancienne ligne ne reste pas en doublon. | `TB BUILD 10.5.260` ; aucun `Uncaught`, aucun `body measurement save failed` en ligne. | à faire |
 | 41 | 10.5.261 | Sport : plan builder | Ouvrir **Sport**, ajouter deux exercices au builder, vérifier les chips activité/matériel/charge/reps/repos/MET, puis utiliser **Modifier**, **Up**, **Down** et **Del**. | Le plan reste identique visuellement, l'ordre change correctement, la modification préremplit le formulaire et la suppression retire uniquement l'exercice ciblé. | `TB BUILD 10.5.261` ; aucun `Uncaught`, aucun module `sportFormView` manquant. | à faire |
+| 42 | 10.5.263 | Réglages : compte lazy | Depuis un chargement frais, ouvrir **Réglages > Compte**. Vérifier profil, WhatsApp, santé, devise, mode interface, seuil cashflow, notifications, export de données, demande/annulation de suppression. | Le panneau s'affiche immédiatement, puis les boutons et champs répondent après chargement lazy du contrôleur Compte. Le boot initial reste plus léger. | `TB BUILD 10.5.263` ; aucun `account controller load failed`, aucun `TBLoadSettingsAccountController` manquant, aucun `Uncaught`. | à faire |
 
 ## À ajouter à chaque livraison
 

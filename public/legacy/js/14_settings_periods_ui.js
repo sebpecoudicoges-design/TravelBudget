@@ -508,7 +508,10 @@ function renderSettings(){
         esc: escapeHTML,
       }) || "";
 
-      window.TBSettingsAccountController?.bindSettingsAccountPanel?.({
+      Promise.resolve(typeof window.TBLoadSettingsAccountController === "function"
+        ? window.TBLoadSettingsAccountController()
+        : window.TBSettingsAccountController
+      ).then((accountController) => accountController?.bindSettingsAccountPanel?.({
         box,
         state,
         constants: TB_CONST,
@@ -535,6 +538,8 @@ function renderSettings(){
         syncTabsForRole: (typeof syncTabsForRole === "function") ? syncTabsForRole : (() => {}),
         alertFn: (message) => alert(message),
         consoleRef: console,
+      })).catch((error) => {
+        try { console.warn("[TB][settings] account controller load failed", error); } catch (_) {}
       });
     }
   } catch (_) {}

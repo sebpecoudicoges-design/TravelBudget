@@ -12,27 +12,27 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.262` :
+Snapshot `10.5.263` :
 
-- Boot legacy : 878.5 / 1500 KiB.
+- Boot legacy : 878.8 / 1500 KiB.
 - Inbox : 111.9 / 112 KiB.
-- Dashboard + Settings : 358.8 / 360 KiB.
+- Dashboard + Settings : 359.1 / 360 KiB.
 - Trip : 309.4 / 340 KiB.
 - Sport : 441.1 / 450 KiB.
 - Nutrition : 193.2 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 112.4 / 115 KiB.
-- Bundle Vite JS initial : 259.3 / 260 KiB.
-- Bundle Vite JS lazy : 357.7 / 360 KiB.
-- Bundle Vite JS total : 617 / 620 KiB.
+- Bundle Vite JS initial : 242.6 / 260 KiB.
+- Bundle Vite JS lazy : 374.5 / 380 KiB.
+- Bundle Vite JS total : 617.1 / 620 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
-- JS principal gzip : 74.6 / 110 KiB.
+- JS principal gzip : 69.5 / 110 KiB.
 
 ## Budgets actuels
 
 - Bundle Vite JS initial : 260 KiB maximum.
-- Bundle Vite JS lazy : 360 KiB maximum.
+- Bundle Vite JS lazy : 380 KiB maximum.
 - Bundle Vite JS total : 620 KiB maximum.
 - Bundle Vite CSS total : 8 KiB maximum.
 - JS principal gzip : 110 KiB maximum.
@@ -54,3 +54,5 @@ Un lot qui ajoute du poids a un domaine doit expliquer pourquoi. Pour 10.5.260, 
 En 10.5.261, le rendu du plan builder Sport est extrait vers `sportFormView.js`. Le legacy Sport baisse de 443.7 a 441.1 KiB, mais le poids Vite lazy monte de 354.7 a 357.7 KiB car ce rendu devient un module teste du runtime Sport. Le palier lazy/total est donc ajuste a 360/615 KiB, avec objectif de le rebaisser au prochain decoupage qui sortira un pan de runtime ou supprimera du template duplique.
 
 Le flux local de gestion du compte ajoute ensuite l'export complet, la demande et l'annulation de suppression, ainsi que leur etat dans Settings. Le bundle total passe a 617 KiB et le plafond total a 620 KiB. Le plafond initial reste a 260 KiB : le prochain chantier Settings devra deplacer la gestion de compte hors du chargement initial pour recuperer de la marge.
+
+En 10.5.263, `settingsAccountController.js` quitte le bundle initial et charge via `TBLoadSettingsAccountController` lorsque le panneau Compte est rendu. Le JS initial baisse de 259.3 a 242.6 KiB et le JS principal gzip de 74.6 a 69.5 KiB. Le lazy monte a 374.5 KiB car le controleur devient un chunk separe ; le plafond lazy passe donc a 380 KiB en gardant le total a 620 KiB. Prochain axe : reduire `dashboard-settings` et fractionner un chunk lazy existant pour rebaisser ce plafond.

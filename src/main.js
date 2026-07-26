@@ -3,7 +3,6 @@ import { registerPwa } from './app/pwa.js';
 import * as budgetAnalysisRules from './core/budgetAnalysisRules.js';
 import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as settingsView from './features/settings/settingsView.js';
-import * as settingsAccountController from './features/settings/settingsAccountController.js';
 
 window.TB_VERSION = typeof __TB_VERSION__ !== 'undefined'
   ? __TB_VERSION__
@@ -37,10 +36,15 @@ window.TBLoadSettingsCategoriesView = window.TBLoadSettingsCategoriesView || (as
   };
   return window.TBSettingsCategoriesView;
 });
-window.TBSettingsAccountController = {
-  ...(window.TBSettingsAccountController || {}),
-  ...settingsAccountController,
-};
+window.TBLoadSettingsAccountController = window.TBLoadSettingsAccountController || (async () => {
+  if (window.TBSettingsAccountController?.bindSettingsAccountPanel) return window.TBSettingsAccountController;
+  const mod = await import('./features/settings/settingsAccountController.js');
+  window.TBSettingsAccountController = {
+    ...(window.TBSettingsAccountController || {}),
+    ...mod,
+  };
+  return window.TBSettingsAccountController;
+});
 
 registerPwa();
 

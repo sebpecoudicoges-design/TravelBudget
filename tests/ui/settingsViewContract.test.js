@@ -7,13 +7,14 @@ describe('settings view extraction contract', () => {
 
   it('exposes the Settings view module to the legacy runtime', () => {
     expect(main).toContain("import * as settingsView from './features/settings/settingsView.js'");
-    expect(main).toContain("import * as settingsAccountController from './features/settings/settingsAccountController.js'");
+    expect(main).not.toContain("import * as settingsAccountController from './features/settings/settingsAccountController.js'");
     expect(main).toContain('window.TBSettingsView');
     expect(main).toContain('...settingsView');
     expect(main).toContain('window.TBLoadSettingsCategoriesView');
     expect(main).toContain("import('./features/settings/settingsCategoriesView.js')");
+    expect(main).toContain('window.TBLoadSettingsAccountController');
+    expect(main).toContain("import('./features/settings/settingsAccountController.js')");
     expect(main).toContain('window.TBSettingsAccountController');
-    expect(main).toContain('...settingsAccountController');
   });
 
   it('keeps legacy Settings wrappers thin and delegated', () => {
@@ -27,7 +28,8 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderCreateVoyageModalBody');
     expect(legacy).toContain('window.TBSettingsView?.renderCreatePeriodModalBody');
     expect(legacy).toContain('window.TBSettingsView?.getBudgetSegmentDeleteReadiness');
-    expect(legacy).toContain('window.TBSettingsAccountController?.bindSettingsAccountPanel');
+    expect(legacy).toContain('window.TBLoadSettingsAccountController');
+    expect(legacy).toContain('bindSettingsAccountPanel');
     expect(legacy).toContain('window.TBLoadSettingsCategoriesView');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderSettingsCategoriesList');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderGuidedCategoryModalBody');
