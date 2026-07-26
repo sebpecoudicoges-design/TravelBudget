@@ -71,29 +71,6 @@ export function renderDashboardOnboardingPanel({
   `;
 }
 
-export function renderDashboardContextHelp({
-  t = fallbackT,
-  esc = defaultEsc,
-} = {}) {
-  const tr = typeof t === 'function' ? t : fallbackT;
-  return `
-    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
-      <div style="min-width:260px; flex:1;">
-        <div style="font-weight:700; margin-bottom:6px;">${esc(tr('dashboard.help.title'))}</div>
-        <div class="muted">
-          <div>&bull; ${esc(tr('dashboard.help.wallets'))}</div>
-          <div>&bull; ${esc(tr('dashboard.help.daily'))}</div>
-          <div>&bull; ${esc(tr('dashboard.help.trip'))}</div>
-        </div>
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn" type="button" onclick="showView('help')">${esc(tr('nav.help'))}</button>
-        <button class="btn" type="button" onclick="showView('trip')">${esc(tr('nav.trip'))}</button>
-        <button class="btn" type="button" data-tb-help-close="dashboard_overview">${esc(tr('common.hide'))}</button>
-      </div>
-    </div>`;
-}
-
 export function renderWalletEmptyState({
   t = fallbackT,
   esc = defaultEsc,

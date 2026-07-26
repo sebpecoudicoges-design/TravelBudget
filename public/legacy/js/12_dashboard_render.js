@@ -107,26 +107,6 @@ function _walletRecentTransactionsHTML(walletId, today, T) {
   }) || "";
 }
 
-function renderDashboardContextHelp(container) {
-  if (!container) return;
-  if ((window.tbUxIsDismissed || _tbUxIsDismissed)("dashboard_overview")) return;
-  if (container.querySelector('[data-tb-help="dashboard-overview"]')) return;
-  const T = window.tbT || ((k) => k);
-  const box = document.createElement('div');
-  box.setAttribute('data-tb-help', 'dashboard-overview');
-  box.className = 'hint';
-  box.style.padding = '12px';
-  box.style.border = '1px solid rgba(0,0,0,.10)';
-  box.style.borderRadius = '14px';
-  box.style.background = 'rgba(0,0,0,.03)';
-  box.style.marginBottom = '12px';
-  box.innerHTML = window.TBDashboardView?.renderDashboardContextHelp?.({ t: T }) || "";
-  container.prepend(box);
-  const close = box.querySelector('[data-tb-help-close]');
-  if (close) close.onclick = () => { try { (window.tbUxDismiss || _tbUxDismiss)('dashboard_overview'); } catch(_) {} box.remove(); };
-}
-
-
 function tbMoveDashboardHeroToTop() {
   try {
     const heroShell = document.getElementById("dashboard-hero-shell");

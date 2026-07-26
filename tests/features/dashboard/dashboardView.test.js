@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  renderDashboardContextHelp,
   renderDashboardOnboardingPanel,
   renderDailyBudgetControls,
   renderDailyBudgetDay,
@@ -55,15 +54,6 @@ describe('Dashboard view helpers', () => {
     expect(html).toContain('Créer wallet');
     expect(html).toContain('onclick="createWallet()"');
     expect(html).toContain('Wallet');
-  });
-
-  it('renders dashboard contextual help with stable navigation actions', () => {
-    const html = renderDashboardContextHelp({ t });
-
-    expect(html).toContain('dashboard.help.title');
-    expect(html).toContain("showView('help')");
-    expect(html).toContain("showView('trip')");
-    expect(html).toContain('data-tb-help-close="dashboard_overview"');
   });
 
   it('renders wallet empty and quick onboarding states outside the legacy file', () => {

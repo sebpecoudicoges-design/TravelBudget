@@ -12,23 +12,23 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.271` :
+Snapshot `10.5.272` :
 
-- Boot legacy : 876.8 / 1500 KiB.
+- Boot legacy : 876.0 / 1500 KiB.
 - Analyse : 159.7 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
-- Dashboard + Settings : 358.5 / 360 KiB.
+- Dashboard + Settings : 356.5 / 360 KiB.
 - Trip : 309.4 / 340 KiB.
 - Sport : 441.1 / 450 KiB.
 - Nutrition : 187.5 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 107.8 / 115 KiB.
-- Bundle Vite JS initial : 244.2 / 260 KiB.
+- Bundle Vite JS initial : 243.2 / 260 KiB.
 - Bundle Vite JS lazy : 375.6 / 380 KiB.
-- Bundle Vite JS total : 619.8 / 620 KiB.
+- Bundle Vite JS total : 618.9 / 620 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
-- JS principal gzip : 69.9 / 110 KiB.
+- JS principal gzip : 69.8 / 110 KiB.
 
 ## Budgets actuels
 
@@ -73,3 +73,5 @@ En 10.5.269, les doublons legacy `_norm`/`_normKey` dans Analyse et `todayISO` d
 En 10.5.270, des fallbacks legacy morts sont supprimes dans Inbox et Nutrition : helpers budget locaux Inbox et anciens panneaux Nutrition non appeles. Inbox baisse a 110.5 KiB et Nutrition a 187.5 KiB. Le bundle Vite reste stable a 619.8 / 620 KiB, ce qui recupere de la marge source sans changer le comportement utilisateur.
 
 En 10.5.271, les anciennes actions batch Documents basees sur `prompt` sont supprimees : elles etaient ecrasees par les modales actuelles partager/deplacer/taguer. Documents baisse de 112.4 a 107.8 KiB, avec un contrat anti-retour qui impose une seule definition par action batch.
+
+En 10.5.272, le panneau d'aide contextuelle Dashboard, devenu inatteignable, est retire du legacy et de `dashboardView.js`. Les helpers `tbUxDismiss` restent conserves pour Transactions et Trip. Dashboard + Settings baisse a 356.5 KiB, le JS initial a 243.2 KiB et le JS total a 618.9 / 620 KiB.
