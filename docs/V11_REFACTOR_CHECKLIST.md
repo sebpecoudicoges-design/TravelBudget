@@ -264,6 +264,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire les regles Wallet Dashboard : validation creation/edition, type automatique et libelles quittent `12_dashboard_render.js`.
   - [x] Extraire les mutations Wallet Dashboard : payloads SQL, archivage, garde de suppression et normalisation des corrections de type quittent `12_dashboard_render.js`.
   - [x] Extraire les styles des modales Wallet Dashboard vers `dashboardView.js` : injection CSS conservee, boot legacy 878.8 -> 877.5 KiB.
+  - [x] Nettoyer les wrappers morts Wallet Dashboard : correction de type branchee directement sur `dashboardWalletRules.js`, boot legacy 877.5 -> 877.1 KiB.
   - [x] Extraire les regles KPI Sante/Nutrition/Sommeil/Alcool et classification budget/cash/trip pending vers `kpiHealthRules.js`.
   - [x] Extraire les regles KPI projection/pending, Trip net, scopes et pastilles cash vers `kpiProjectionRules.js`.
   - [x] Extraire les regles KPI wallets cash, runway et couverture prudente vers `kpiCashRules.js`.

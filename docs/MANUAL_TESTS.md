@@ -6,9 +6,9 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.265`.
-- Bilan : 7 parcours `ok`, 36 parcours `à faire`.
-- Retour corrigé à revalider : Dashboard doit garder les modales wallet lisibles après extraction des styles.
+- Version à valider : `10.5.266`.
+- Bilan : 7 parcours `ok`, 37 parcours `à faire`.
+- Retour corrigé à revalider : Dashboard doit garder la correction de types wallet fonctionnelle après suppression des wrappers legacy.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
 - Consigner les anomalies et retours détaillés dans `docs/ADMIN_TEST_RETURNS.md`.
@@ -61,6 +61,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 42 | 10.5.263 | Réglages : compte lazy | Depuis un chargement frais, ouvrir **Réglages > Compte**. Vérifier profil, WhatsApp, santé, devise, mode interface, seuil cashflow, notifications, export de données, demande/annulation de suppression. | Le panneau s'affiche immédiatement, puis les boutons et champs répondent après chargement lazy du contrôleur Compte. Le boot initial reste plus léger. | `TB BUILD 10.5.263` ; aucun `account controller load failed`, aucun `TBLoadSettingsAccountController` manquant, aucun `Uncaught`. | à faire |
 | 43 | 10.5.264 | Analyse : meta trajectoire | Ouvrir **Analyse** avec un voyage contenant des transactions, vérifier le grand graphique de trajectoire et changer période/scope si possible. | La ligne date début → date fin, nombre de jours et devise reste visible et alignée sous le titre du graphique. Les courbes et filtres restent inchangés. | `TB BUILD 10.5.264` ; aucun `renderAnalysisTrajectoryMeta` manquant, aucun `Uncaught`, l'écran ne reste pas sur chargement. | à faire |
 | 44 | 10.5.265 | Dashboard : modales wallet | Ouvrir **Dashboard**, créer un wallet puis annuler, modifier un wallet existant puis annuler, et si disponible ouvrir la correction des types. | Les modales gardent fond, bordures, champs, boutons et lisibilité thème clair/sombre. Aucune ouverture fantôme du dialogue création. | `TB BUILD 10.5.265` ; aucun `getWalletDialogStyles` manquant, aucun `Uncaught`. | à faire |
+| 45 | 10.5.266 | Dashboard : correction types wallet | Ouvrir **Dashboard**, afficher les wallets archives si besoin, puis ouvrir **Corriger types** quand un wallet sans type existe. Modifier une valeur et annuler ou sauvegarder sur un wallet de test. | La fenêtre s'ouvre sans wrapper legacy, les types proposés restent cohérents avec le nom du wallet et la sauvegarde ne casse pas les autres wallets. | `TB BUILD 10.5.266` ; aucun `tbInferWalletTypeFromName` manquant, aucun `TBDashboardWalletRules` manquant, aucun `Uncaught`. | à faire |
 
 ## À ajouter à chaque livraison
 

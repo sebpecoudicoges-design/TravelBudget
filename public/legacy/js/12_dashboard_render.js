@@ -516,24 +516,6 @@ function tbOpenWalletDialog() {
    Wallet Type (soft migration) + Edit Dialog
    ========================= */
 
-function tbEscHTML(str) {
-  if (str === null || str === undefined) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function tbInferWalletTypeFromName(name) {
-  return window.TBDashboardWalletRules?.inferWalletTypeFromName?.(name) || "other";
-}
-
-function tbWalletTypeLabel(t) {
-  return window.TBDashboardWalletRules?.walletTypeLabel?.(t, window.tbT) || "Autre";
-}
-
 // Inject wallet dialog styles once, without opening any dialog.
 function tbEnsureWalletDlgStyles() {
   try {
@@ -607,8 +589,8 @@ async function openWalletTypesFix() {
 
   dlg.innerHTML = window.TBDashboardView?.renderWalletTypesFixDialog?.({
     wallets: missing,
-    inferType: tbInferWalletTypeFromName,
-    typeLabel: tbWalletTypeLabel,
+    inferType: window.TBDashboardWalletRules?.inferWalletTypeFromName || (() => "other"),
+    typeLabel: (type) => window.TBDashboardWalletRules?.walletTypeLabel?.(type, window.tbT) || "Autre",
   }) || "";
 
   back.appendChild(dlg);

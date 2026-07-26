@@ -12,12 +12,12 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.265` :
+Snapshot `10.5.266` :
 
-- Boot legacy : 877.5 / 1500 KiB.
+- Boot legacy : 877.1 / 1500 KiB.
 - Analyse : 160.0 / 160 KiB.
 - Inbox : 111.9 / 112 KiB.
-- Dashboard + Settings : 359.1 / 360 KiB.
+- Dashboard + Settings : 358.7 / 360 KiB.
 - Trip : 309.4 / 340 KiB.
 - Sport : 441.1 / 450 KiB.
 - Nutrition : 193.2 / 235 KiB.
@@ -61,3 +61,5 @@ En 10.5.263, `settingsAccountController.js` quitte le bundle initial et charge v
 En 10.5.264, Analyse extrait la meta du graphique trajectoire vers `analysisView.js`. Le domaine Analyse atteint 160.0 / 160 KiB et le lazy passe a 374.7 KiB. Aucun plafond n'est augmente : le prochain lot Analyse doit supprimer du legacy ou deplacer un bloc vers un sous-module dedie avant toute nouvelle fonctionnalite.
 
 En 10.5.265, les styles des modales Wallet Dashboard quittent `12_dashboard_render.js` vers `dashboardView.js`. Le boot legacy baisse de 878.8 a 877.5 KiB sans modifier les plafonds. Les modales restent injectees a la demande par `tbEnsureWalletDlgStyles`. Le total Vite monte a 618.7 / 620 KiB car `dashboardView.js` est dans le bundle initial : le prochain lot Dashboard devra supprimer du legacy mort ou fractionner une vue avant de deplacer d'autres blocs.
+
+En 10.5.266, les wrappers morts Wallet Dashboard `tbEscHTML`, `tbInferWalletTypeFromName` et `tbWalletTypeLabel` sont supprimes du legacy. La correction de types appelle directement `dashboardWalletRules.js`. Boot legacy : 877.5 -> 877.1 KiB ; Dashboard + Settings : 359.1 -> 358.7 KiB. Les plafonds restent inchanges.

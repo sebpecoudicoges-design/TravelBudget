@@ -77,6 +77,9 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).not.toContain('<input id="tbWName" type="text"');
     expect(legacy).not.toContain('<input id="tbWEditName" type="text"');
     expect(legacy).not.toContain('On a détecté des wallets sans type');
+    expect(legacy).not.toContain('function tbEscHTML');
+    expect(legacy).not.toContain('function tbInferWalletTypeFromName');
+    expect(legacy).not.toContain('function tbWalletTypeLabel');
     expect(legacy).not.toContain('const allowed = ["cash", "bank", "card", "savings", "other"]');
     expect(legacy).not.toContain('user_id: sbUser.id');
     expect(legacy).not.toContain('.update({ name: data.name, type: data.type })');
