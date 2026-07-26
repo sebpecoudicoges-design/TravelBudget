@@ -1,8 +1,7 @@
 const DAILY_BUDGET_VIEW_KEY = 'travelbudget_daily_budget_view_v1';
 export const DAILY_BUDGET_WINDOW_DAYS = 7;
 
-function parseISODate(iso, parseISO) {
-  if (typeof parseISO === 'function') return parseISO(iso);
+function parseISODate(iso) {
   const date = iso ? new Date(`${iso}T00:00:00`) : null;
   return date && !Number.isNaN(date.getTime()) ? date : null;
 }
@@ -11,22 +10,18 @@ function formatISODate(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-export function addDashboardDays(dateISO, delta, {
-  parseISO = null,
-} = {}) {
-  const date = parseISODate(dateISO, parseISO);
+export function addDashboardDays(dateISO, delta) {
+  const date = parseISODate(dateISO);
   if (!date) return dateISO;
   const next = new Date(date);
   next.setDate(next.getDate() + (Number(delta) || 0));
   return formatISODate(next);
 }
 
-export function clampDashboardISO(dateISO, minISO, maxISO, {
-  parseISO = null,
-} = {}) {
-  const date = parseISODate(dateISO, parseISO);
-  const min = parseISODate(minISO, parseISO);
-  const max = parseISODate(maxISO, parseISO);
+export function clampDashboardISO(dateISO, minISO, maxISO) {
+  const date = parseISODate(dateISO);
+  const min = parseISODate(minISO);
+  const max = parseISODate(maxISO);
   if (!date || !min || !max) return dateISO;
   return date < min ? minISO : (date > max ? maxISO : dateISO);
 }

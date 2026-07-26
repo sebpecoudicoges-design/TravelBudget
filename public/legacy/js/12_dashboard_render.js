@@ -330,13 +330,9 @@ function renderDailyBudget() {
 
   const dailyState = window.TBDashboardDailyBudgetState;
   const dailyBudgetWindowDays = dailyState?.DAILY_BUDGET_WINDOW_DAYS || 7;
-  const dateAdapters = {
-    parseISO: (typeof parseISODateOrNull === "function") ? parseISODateOrNull : null,
-    formatISO: (typeof toLocalISODate === "function") ? toLocalISODate : null,
-  };
-  const addDays = (dateISO, delta) => dailyState?.addDashboardDays?.(dateISO, delta, dateAdapters) || dateISO;
-  const clampISO = (dateISO, minISO, maxISO) => dailyState?.clampDashboardISO?.(dateISO, minISO, maxISO, dateAdapters) || dateISO;
-  const parseISO = (dateISO) => dateAdapters.parseISO?.(dateISO) || null;
+  const addDays = (dateISO, delta) => dailyState?.addDashboardDays?.(dateISO, delta) || dateISO;
+  const clampISO = (dateISO, minISO, maxISO) => dailyState?.clampDashboardISO?.(dateISO, minISO, maxISO) || dateISO;
+  const parseISO = (dateISO) => (typeof parseISODateOrNull === "function" ? parseISODateOrNull(dateISO) : null);
   const saveView = (nextView) => dailyState?.saveDailyBudgetView?.(nextView);
 
   let view = dailyState?.loadDailyBudgetView?.();

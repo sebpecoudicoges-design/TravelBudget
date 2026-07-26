@@ -12,12 +12,12 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.267` :
+Snapshot `10.5.268` :
 
-- Boot legacy : 877.0 / 1500 KiB.
+- Boot legacy : 876.8 / 1500 KiB.
 - Analyse : 160.0 / 160 KiB.
 - Inbox : 111.9 / 112 KiB.
-- Dashboard + Settings : 358.6 / 360 KiB.
+- Dashboard + Settings : 358.5 / 360 KiB.
 - Trip : 309.4 / 340 KiB.
 - Sport : 441.1 / 450 KiB.
 - Nutrition : 193.2 / 235 KiB.
@@ -25,8 +25,8 @@ Snapshot `10.5.267` :
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 112.4 / 115 KiB.
 - Bundle Vite JS initial : 244.2 / 260 KiB.
-- Bundle Vite JS lazy : 375.8 / 380 KiB.
-- Bundle Vite JS total : 620.0 / 620 KiB.
+- Bundle Vite JS lazy : 375.7 / 380 KiB.
+- Bundle Vite JS total : 619.9 / 620 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
 - JS principal gzip : 69.9 / 110 KiB.
 
@@ -65,3 +65,5 @@ En 10.5.265, les styles des modales Wallet Dashboard quittent `12_dashboard_rend
 En 10.5.266, les wrappers morts Wallet Dashboard `tbEscHTML`, `tbInferWalletTypeFromName` et `tbWalletTypeLabel` sont supprimes du legacy. La correction de types appelle directement `dashboardWalletRules.js`. Boot legacy : 877.5 -> 877.1 KiB ; Dashboard + Settings : 359.1 -> 358.7 KiB. Les plafonds restent inchanges.
 
 En 10.5.267, l'etat de pagination du budget journalier Dashboard quitte `12_dashboard_render.js` vers `dashboardDailyBudgetState.js`, charge a la demande. Le boot legacy passe a 877.0 KiB et Dashboard + Settings a 358.6 KiB, tout en sortant les helpers `_db*` du fichier historique. Le total JS atteint 620.0 / 620 KiB : le prochain lot devra d'abord supprimer ou fractionner avant tout nouveau module.
+
+En 10.5.268, le meme module `dashboardDailyBudgetState.js` est compacte : les adaptateurs de date inutiles quittent le legacy et le module lazy. Boot legacy : 876.8 KiB ; Dashboard + Settings : 358.5 KiB ; total JS : 619.9 / 620 KiB. La marge redevient positive, mais reste minimale.
