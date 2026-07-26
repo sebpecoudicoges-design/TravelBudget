@@ -267,6 +267,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Nettoyer les wrappers morts Wallet Dashboard : correction de type branchee directement sur `dashboardWalletRules.js`, boot legacy 877.5 -> 877.1 KiB.
   - [x] Extraire l'etat de pagination du budget journalier Dashboard vers un sous-module lazy `dashboardDailyBudgetState.js`.
   - [x] Compacter l'etat lazy du budget journalier Dashboard : retrait des adaptateurs inutiles, JS total 620.0 -> 619.9 KiB.
+  - [x] Nettoyer les doublons legacy Analyse/Inbox et raccourcir l'etat Dashboard lazy : Analyse 159.7 KiB, Inbox 111.8 KiB, total JS 619.8 KiB.
   - [x] Extraire les regles KPI Sante/Nutrition/Sommeil/Alcool et classification budget/cash/trip pending vers `kpiHealthRules.js`.
   - [x] Extraire les regles KPI projection/pending, Trip net, scopes et pastilles cash vers `kpiProjectionRules.js`.
   - [x] Extraire les regles KPI wallets cash, runway et couverture prudente vers `kpiCashRules.js`.

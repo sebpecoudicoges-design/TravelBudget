@@ -1,4 +1,4 @@
-const DAILY_BUDGET_VIEW_KEY = 'travelbudget_daily_budget_view_v1';
+const DAILY_BUDGET_VIEW_KEY = 'tb_daily_budget_view_v1';
 export const DAILY_BUDGET_WINDOW_DAYS = 7;
 
 function parseISODate(iso) {
@@ -10,6 +10,10 @@ function formatISODate(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+function dailyBudgetStore(storage) {
+  return storage || localStorage;
+}
+
 export function addDashboardDays(dateISO, delta) {
   const date = parseISODate(dateISO);
   if (!date) return dateISO;
@@ -19,17 +23,13 @@ export function addDashboardDays(dateISO, delta) {
 }
 
 export function clampDashboardISO(dateISO, minISO, maxISO) {
-  const date = parseISODate(dateISO);
-  const min = parseISODate(minISO);
-  const max = parseISODate(maxISO);
-  if (!date || !min || !max) return dateISO;
-  return date < min ? minISO : (date > max ? maxISO : dateISO);
+  if (!dateISO || !minISO || !maxISO) return dateISO;
+  return dateISO < minISO ? minISO : (dateISO > maxISO ? maxISO : dateISO);
 }
 
 export function loadDailyBudgetView(storage = null) {
   try {
-    const store = storage || globalThis?.localStorage;
-    const raw = store?.getItem?.(DAILY_BUDGET_VIEW_KEY);
+    const raw = dailyBudgetStore(storage)?.getItem?.(DAILY_BUDGET_VIEW_KEY);
     if (!raw) return null;
     const value = JSON.parse(raw);
     return value && typeof value.startISO === 'string' ? value : null;
@@ -40,7 +40,6 @@ export function loadDailyBudgetView(storage = null) {
 
 export function saveDailyBudgetView(view, storage = null) {
   try {
-    const store = storage || globalThis?.localStorage;
-    store?.setItem?.(DAILY_BUDGET_VIEW_KEY, JSON.stringify(view || {}));
+    dailyBudgetStore(storage)?.setItem?.(DAILY_BUDGET_VIEW_KEY, JSON.stringify(view || {}));
   } catch (_) {}
 }

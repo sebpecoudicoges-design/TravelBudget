@@ -469,20 +469,6 @@
     } catch (_) {}
     return '#94a3b8';
   }
-  function _norm(s){ 
-  return String(s || '').trim(); 
-}
-
-function _normKey(s){
-  const core = window.TBCore?.budgetAnalysisRules;
-  if (core?.normalizeAnalysisKey) return core.normalizeAnalysisKey(s);
-  return String(s || '')
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
-}
-
 function _sqlAnalyticFamilyToBucket(family) {
   const core = window.TBCore?.budgetAnalysisRules;
   if (core?.sqlAnalyticFamilyToBucket) return core.sqlAnalyticFamilyToBucket(family);

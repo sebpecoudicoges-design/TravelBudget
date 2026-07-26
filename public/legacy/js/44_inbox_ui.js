@@ -904,10 +904,6 @@
     try { return window.state?.activeTravelId || window.state?.travel?.id || window.state?.currentTravelId || ''; } catch(_) { return ''; }
   }
 
-  function todayISO(){
-    try { return new Date().toISOString().slice(0,10); } catch(_) { return ''; }
-  }
-
   function cleanFilename(name){
     return String(name || 'document')
       .normalize('NFD')

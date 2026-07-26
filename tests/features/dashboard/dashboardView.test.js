@@ -241,7 +241,7 @@ describe('Dashboard view helpers', () => {
 
     saveDailyBudgetView({ mode: 'segment', startISO: '2026-07-14' }, storage);
 
-    expect(store.has('travelbudget_daily_budget_view_v1')).toBe(true);
+    expect(store.has('tb_daily_budget_view_v1')).toBe(true);
     expect(loadDailyBudgetView(storage)).toEqual({ mode: 'segment', startISO: '2026-07-14' });
   });
 
