@@ -30,7 +30,8 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('view().renderNutritionSyncPanel');
     expect(legacy).toContain('view().renderGoalCockpit');
     expect(legacy).toContain('view().renderAlcoholPanel');
-    expect(legacy).toContain('view().renderActiveWeekDashboard');
+    expect(view).toContain('renderActiveWeekDashboard');
+    expect(legacy).not.toContain('view().renderActiveWeekDashboard');
   });
 
   it('hydrates Sport and Work activity calories without loading their UI domains first', () => {

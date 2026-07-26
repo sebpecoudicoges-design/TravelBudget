@@ -1165,21 +1165,6 @@
     const t = Math.max(1, n(target, 0));
     return Math.max(0, Math.min(160, (n(current, 0) / t) * 100));
   }
-  function progressBar(label, current, target, unit) {
-    if (typeof view().renderProgressBar === "function") return view().renderProgressBar({ label, current, target, unit, esc });
-    const percent = pct(current, target);
-    const over = n(current, 0) > n(target, 0);
-    return `
-      <div style="display:grid;gap:5px;">
-        <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;">
-          <span>${esc(label)}</span>
-          <strong>${Math.round(n(current, 0))}/${Math.round(n(target, 0))}${esc(unit || "")}</strong>
-        </div>
-        <div style="height:8px;border:1px solid var(--border);border-radius:999px;overflow:hidden;background:rgba(148,163,184,.12);">
-          <div style="height:100%;width:${Math.min(100, percent)}%;background:${over ? "var(--danger,#ef4444)" : "var(--accent,#22c55e)"};"></div>
-        </div>
-      </div>`;
-  }
   function mealMomentTargets(needsKcal, typeTotals, day) {
     if (rules().mealMomentTargets) {
       const today = todayISO();
@@ -1263,33 +1248,6 @@
     if (/burger|sandwich|wrap|bowl|pizza|salade|soupe|curry|chili|lasagne|kebab|tacos|burrito|omelette|plat|croque|panini|gratin|hachis|tartiflette|raclette|paella|risotto|dahl|falafel|shakshuka|saumon pommes|poulet pommes|bourguignon|blanquette|couscous|moussaka|ravioli|gnocchi|ramen|pad thai|bo bun|fajitas|quesadilla|hot dog|sushi/.test(s)) return "dishes";
     return "all";
   }
-  function foodCategoryLabel(cat) {
-    return ({
-      all: txt("Tous", "All"),
-      fruits: txt("Fruits", "Fruits"),
-      dairy: txt("Laitages", "Dairy"),
-      carbs: txt("Feculents", "Carbs"),
-      protein: txt("Proteines", "Protein"),
-      snacks: txt("Snacks", "Snacks"),
-      drinks: txt("Boissons", "Drinks"),
-      dishes: txt("Plats", "Dishes"),
-    })[cat] || cat;
-  }
-  function catalogFoods() {
-    if (rules().filterCatalogFoods) return rules().filterCatalogFoods({
-      foods: CACHE.foods,
-      query: CACHE.foodQuery,
-      category: CACHE.foodCategory,
-      limit: 18,
-    });
-    const q = normalizeText(CACHE.foodQuery);
-    const cat = String(CACHE.foodCategory || "all");
-    return CACHE.foods.filter(food => {
-      const matchesText = !q || normalizeText(food.name).includes(q) || normalizeText(food.key).includes(q);
-      const matchesCat = cat === "all" || foodCategory(food) === cat;
-      return matchesText && matchesCat;
-    }).slice(0, 18);
-  }
   function mealMomentSuggestion(type, consumed, targetKcal, total, macroTargets) {
     if (typeof view().mealMomentSuggestion === "function") return view().mealMomentSuggestion(type, consumed, targetKcal, total, macroTargets, { t: txt });
     const kcalGap = n(targetKcal, 0) - n(consumed?.kcal, 0);
@@ -1344,26 +1302,6 @@
     CACHE.selectedMealType = value;
     return value;
   }
-  function healthHistoryRows(history, selectedDay) {
-    const byDay = new Map(history.map(row => [row.day, row]));
-    const rows = [];
-    for (let i = 7; i >= 0; i -= 1) {
-      const rowDay = offsetDateISO(selectedDay, -i);
-      const nutrition = byDay.get(rowDay) || { day: rowDay, kcal: 0, protein: 0, carbs: 0, fat: 0, waterMl: 0, typeRows: [] };
-      const activity = { sportKcal: sportKcalForDay(rowDay), workKcal: workKcalForDay(rowDay) };
-      const health = typeof window.tbComputeHealthSummaryForDate === "function" ? window.tbComputeHealthSummaryForDate(rowDay, activity) : null;
-      const fallbackSpent = baseline().bmr + activity.sportKcal + activity.workKcal;
-      const fallbackTargets = nutritionGoalTargets(fallbackSpent, bodyWeight());
-      const needsKcal = health?.needsKcal || Math.max(1200, fallbackTargets.targetKcal);
-      const kcalScore = Math.min(42, (n(nutrition.kcal, 0) / Math.max(1, needsKcal)) * 42);
-      const waterScore = Math.min(24, (n(health?.drinkWaterMl ?? nutrition.waterMl, 0) / 2000) * 24);
-      const proteinScore = Math.min(18, (n(nutrition.protein, 0) / Math.max(70, bodyWeight() * 1.35)) * 18);
-      const score = health?.score ?? Math.round(Math.max(0, Math.min(100, kcalScore + waterScore + proteinScore + 16)));
-      const level = health?.level || (score >= 78 ? "good" : score >= 58 ? "warn" : "bad");
-      rows.push({ ...nutrition, ...activity, health, needsKcal, score, level, alcoholDrinks: n(health?.alcoholDrinks, nutrition.alcoholDrinks), alcoholGrams: n(health?.alcoholGrams, nutrition.alcoholGrams), alcoholEntries: health?.alcoholEntries || nutrition.alcoholEntries || [], color: health?.color || (level === "good" ? "#22c55e" : level === "warn" ? "#f59e0b" : "#ef4444") });
-    }
-    return rows;
-  }
   function macroSummaryText(targets) {
     if (typeof view().macroSummaryText === "function") return view().macroSummaryText(targets);
     return `${Math.round(n(targets.protein, 0))}g P · ${Math.round(n(targets.carbs, 0))}g G · ${Math.round(n(targets.fat, 0))}g L`;
@@ -1381,44 +1319,6 @@
       esc,
       t: txt,
     });
-    return "";
-  }
-  function nextMealTarget(day, targets, total) {
-    const type = currentMealType();
-    const weights = { breakfast: 0.22, morning_snack: 0.10, lunch: 0.30, afternoon_snack: 0.12, dinner: 0.26 };
-    const order = ["breakfast", "morning_snack", "lunch", "afternoon_snack", "dinner"];
-    const consumed = n(total?.kcal, 0);
-    const target = n(targets?.targetKcal, 0);
-    const currentIndex = Math.max(0, order.indexOf(type));
-    const plannedBefore = order.slice(0, currentIndex).reduce((sum, key) => sum + target * n(weights[key], 0), 0);
-    const base = target * n(weights[type], 0.18);
-    const adjustment = Math.max(-220, Math.min(260, plannedBefore - consumed));
-    return { type, label: mealTypeLabel(type), kcal: Math.max(120, Math.round(base + adjustment)) };
-  }
-  function healthWeekDashboardRows(healthWeek) {
-    let planned = [];
-    try { if (typeof window.tbSportPlannedWeekRows === "function") planned = window.tbSportPlannedWeekRows(selectedDateISO()) || []; } catch (_) {}
-    const plannedByDay = new Map((planned || []).map(row => [row.day, row]));
-    return (healthWeek || []).slice(-7).map(row => {
-      const plan = plannedByDay.get(row.day) || {};
-      const kcal = n(row.health?.kcal, row.kcal);
-      const need = Math.max(1, n(row.needsKcal, 0));
-      const water = n(row.health?.drinkWaterMl, row.waterMl);
-      const sleep = n(row.health?.sleepHours, sleepForDay(row.day).hours);
-      const protein = n(row.health?.protein, row.protein);
-      const sport = n(row.sportKcal, 0);
-      const work = n(row.workKcal, 0);
-      const alcohol = n(row.health?.alcoholDrinks, row.alcoholDrinks);
-      const score = n(row.score, row.health?.score);
-      const load = sport + work;
-      return { row, plan, kcal, need, water, sleep, protein, sport, work, alcohol, score, load };
-    });
-  }
-  function renderHealthWeekDashboard(healthWeek, selectedDay) {
-    const rows = healthWeekDashboardRows(healthWeek);
-    if (typeof view().renderActiveWeekDashboard === "function") {
-      return view().renderActiveWeekDashboard({ rows, selectedDay, bodyWeight: bodyWeight(), esc, t: txt });
-    }
     return "";
   }
   function itemMeal(item) {

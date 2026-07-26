@@ -663,39 +663,6 @@
     return new Date().toISOString().slice(0, 10);
   }
 
-  function dateDiffDaysInclusive(start, end){
-    const s = new Date(`${String(start || '').slice(0, 10)}T00:00:00`);
-    const e = new Date(`${String(end || '').slice(0, 10)}T00:00:00`);
-    if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime()) || e < s) return 0;
-    return Math.floor((e - s) / 86400000) + 1;
-  }
-
-  function txBudgetDate(tx){
-    return String(tx?.budgetDateStart || tx?.budget_date_start || tx?.dateStart || tx?.date_start || '').slice(0, 10);
-  }
-
-  function txAffectsBudget(tx){
-    if (tx?.affectsBudget === false || tx?.affects_budget === false) return false;
-    if (tx?.outOfBudget === true || tx?.out_of_budget === true) return false;
-    return true;
-  }
-
-  function txIsBudgetExpense(tx){
-    return String(tx?.type || '').toLowerCase() === 'expense' && txAffectsBudget(tx);
-  }
-
-  function txAmountInBudgetBase(tx, dateISO, fallbackCurrency){
-    const amount = Math.abs(Number(tx?.amount || 0)) || 0;
-    const cur = String(tx?.currency || fallbackCurrency || '').toUpperCase();
-    try {
-      if (typeof window.amountToBudgetBaseForDate === 'function') {
-        const out = window.amountToBudgetBaseForDate(amount, cur, dateISO);
-        if (Number.isFinite(Number(out))) return Number(out);
-      }
-    } catch(_) {}
-    return amount;
-  }
-
   function signedPctText(value){
     const n = Number(value) || 0;
     const sign = n > 0 ? '+' : '';
