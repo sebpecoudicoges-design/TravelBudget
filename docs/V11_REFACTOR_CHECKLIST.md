@@ -271,6 +271,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Supprimer les fallbacks legacy morts Inbox/Nutrition : helpers budget locaux et anciens panneaux Nutrition non appeles ; Inbox 110.5 KiB, Nutrition 187.5 KiB.
   - [x] Nettoyer les anciennes actions batch Documents ecrasees par les modales actuelles : Documents 112.4 -> 107.8 KiB.
   - [x] Retirer le panneau d'aide Dashboard inatteignable tout en gardant `tbUxDismiss` pour Trip/Transactions : Dashboard + Settings 358.5 -> 356.5 KiB, JS total 618.9 KiB.
+  - [x] Supprimer les anciens helpers Dashboard de remount hero/KPI devenus sans appel : Dashboard + Settings 356.5 -> 354.7 KiB, boot legacy 876.0 -> 874.2 KiB.
   - [x] Extraire les regles KPI Sante/Nutrition/Sommeil/Alcool et classification budget/cash/trip pending vers `kpiHealthRules.js`.
   - [x] Extraire les regles KPI projection/pending, Trip net, scopes et pastilles cash vers `kpiProjectionRules.js`.
   - [x] Extraire les regles KPI wallets cash, runway et couverture prudente vers `kpiCashRules.js`.

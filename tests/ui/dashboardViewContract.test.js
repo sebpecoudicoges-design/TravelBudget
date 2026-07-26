@@ -47,6 +47,13 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).not.toContain('T("onboarding.step.wallet")}</div>');
   });
 
+  it('keeps obsolete dashboard hero remount helpers removed', () => {
+    expect(legacy).not.toContain('function tbMoveDashboardHeroToTop');
+    expect(legacy).not.toContain('function tbMountExistingKpisIntoHero');
+    expect(legacy).not.toContain('dashboard-kpi-embed-slot');
+    expect(legacy).not.toContain('oldParent.style.display = "none"');
+  });
+
   it('keeps wallet card rendering delegated to the Dashboard view module', () => {
     expect(legacy).toContain('window.TBDashboardView?.renderWalletActions');
     expect(legacy).toContain('window.TBDashboardView?.renderWalletCard');

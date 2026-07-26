@@ -107,57 +107,6 @@ function _walletRecentTransactionsHTML(walletId, today, T) {
   }) || "";
 }
 
-function tbMoveDashboardHeroToTop() {
-  try {
-    const heroShell = document.getElementById("dashboard-hero-shell");
-    const walletsContainer = document.getElementById("wallets-container");
-    if (!heroShell || !walletsContainer) return;
-
-    const dashboardRoot = walletsContainer.parentElement || walletsContainer;
-    if (dashboardRoot.firstElementChild !== heroShell) {
-      dashboardRoot.insertBefore(heroShell, dashboardRoot.firstElementChild || null);
-    }
-  } catch (_) {}
-}
-
-function tbMountExistingKpisIntoHero() {
-  try {
-    const heroKpiSlot = document.getElementById("dashboard-kpi-embed-slot");
-    const kpiContainer = document.getElementById("kpis-container");
-    if (!heroKpiSlot || !kpiContainer) return;
-
-    // Si le container KPI est déjà dans le hero, ne rien faire
-    if (heroKpiSlot.contains(kpiContainer)) return;
-
-    const oldParent = kpiContainer.parentElement;
-    heroKpiSlot.appendChild(kpiContainer);
-
-    // Tenter de masquer l'ancien wrapper KPI s'il devient vide / inutile
-    if (oldParent && oldParent !== heroKpiSlot) {
-      const txt = String(oldParent.textContent || "").trim().toLowerCase();
-      const hasOnlyKpiTitle =
-        txt === "kpis" ||
-        txt === "kpi" ||
-        txt.startsWith("kpis");
-
-      // masque les titres KPI résiduels
-      Array.from(oldParent.children || []).forEach((child) => {
-        if (child !== kpiContainer) {
-          const childTxt = String(child.textContent || "").trim().toLowerCase();
-          if (childTxt === "kpis" || childTxt === "kpi" || childTxt.startsWith("kpis")) {
-            child.style.display = "none";
-          }
-        }
-      });
-
-      // si c'était clairement un wrapper KPI, on le masque
-      if (hasOnlyKpiTitle || oldParent.children.length <= 1) {
-        oldParent.style.display = "none";
-      }
-    }
-  } catch (_) {}
-}
-
 /* =========================
    Dashboard render
    ========================= */
