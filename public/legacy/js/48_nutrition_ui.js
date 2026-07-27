@@ -1917,10 +1917,6 @@
 
   window.renderNutrition = renderNutrition;
   window.tbLoadHealthGoal = loadNutritionGoal;
-  window.tbSaveHealthGoal = saveNutritionGoal;
-  window.tbHealthGoalTargets = function tbHealthGoalTargets(spentKcal, kg) {
-    return nutritionGoalTargets(spentKcal, kg || bodyWeight());
-  };
   window.tbReloadNutrition = async function tbReloadNutrition() {
     await loadNutrition({ force: true });
     return { meals: CACHE.meals.slice(), items: CACHE.items.slice() };

@@ -24,6 +24,9 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('window.Data?.nutritionRepository');
     expect(legacy).toContain('window.Data?.nutritionStore');
     expect(legacy).toContain('window.UI?.nutritionView');
+    expect(legacy).toContain('window.tbLoadHealthGoal = loadNutritionGoal;');
+    expect(legacy).not.toContain('window.tbSaveHealthGoal');
+    expect(legacy).not.toContain('window.tbHealthGoalTargets');
     expect(legacy).toContain('nutritionStore()?.hydrateRemote');
     expect(legacy).toContain('nutritionStore()?.hydrateLocal');
     expect(legacy).toContain('view().renderNutritionShell');
