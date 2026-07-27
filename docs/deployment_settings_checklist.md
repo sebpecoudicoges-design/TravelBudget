@@ -44,3 +44,15 @@ This project uses `npm` for deployment:
 - Publish directory: `dist`
 
 Keep only one package manager lockfile long term to avoid editor and CI ambiguity.
+
+## Public Links
+
+Before a Play Store submission or a public project-page update, run:
+
+- `npm run links:check`
+
+Expected result:
+
+- `public/projet.html` links resolve locally or over HTTPS.
+- `public/privacy.html` anchors and support links remain valid.
+- The current APK link responds before it is referenced from the public page.

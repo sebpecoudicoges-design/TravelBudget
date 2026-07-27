@@ -12,7 +12,7 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.275` :
+Snapshot `10.5.276` :
 
 - Boot legacy : 874.2 / 1500 KiB.
 - Analyse : 159.7 / 160 KiB.
@@ -81,3 +81,5 @@ En 10.5.273, les anciens helpers Dashboard `tbMoveDashboardHeroToTop` et `tbMoun
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.
+
+En 10.5.276, le chantier Play Store ajoute `npm run links:check`. Ce controle verifie automatiquement les liens publics de `public/projet.html` et `public/privacy.html`, dont l'APK Supabase, les ancres de confidentialite et les liens locaux. Aucun bundle applicatif n'est alourdi.

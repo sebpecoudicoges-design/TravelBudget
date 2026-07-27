@@ -1,7 +1,7 @@
 {
   "name": "travelbudget",
   "private": true,
-  "version": "10.5.275",
+  "version": "10.5.276",
   "type": "module",
   "scripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -15,6 +15,7 @@
     "test:e2e": "node scripts/run-playwright.mjs",
     "atlas:generate": "node scripts/generate-project-atlas.mjs",
     "docs:check": "node scripts/check-project-docs.mjs",
+    "links:check": "node scripts/check-public-links.mjs",
     "perf:budget": "node scripts/check-module-budgets.mjs",
     "lint:syntax": "node scripts/check-js-syntax.mjs",
     "lint:db": "node scripts/lint_db_strings.cjs",

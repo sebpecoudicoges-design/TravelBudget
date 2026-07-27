@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "5d14d5a5e1b85ef6a62893eff85c7dd374af83aa",
-  "snapshotFingerprint": "c278b0b81b543c8a61bddf0724f776c2d08d1210773312da61e03dcb8fea2548",
-  "generatedAt": "2026-07-27T09:39:17.113Z",
+  "commit": "403d961adc9153e2476e546e9b12cc0163731edc",
+  "snapshotFingerprint": "70b286ab8ac393cefba893674458a09f19c27c197b33db28a54e936c844b99e6",
+  "generatedAt": "2026-07-27T10:36:25.963Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.275"
+    "version": "10.5.276"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -19,6 +19,7 @@
     "test:e2e": "node scripts/run-playwright.mjs",
     "atlas:generate": "node scripts/generate-project-atlas.mjs",
     "docs:check": "node scripts/check-project-docs.mjs",
+    "links:check": "node scripts/check-public-links.mjs",
     "perf:budget": "node scripts/check-module-budgets.mjs",
     "lint:syntax": "node scripts/check-js-syntax.mjs",
     "lint:db": "node scripts/lint_db_strings.cjs",
@@ -313,6 +314,7 @@
     "tests/ui/legacyDomainLoader.test.js",
     "tests/ui/moduleSizeBudgetsContract.test.js",
     "tests/ui/nutritionDomainContract.test.js",
+    "tests/ui/publicLinksContract.test.js",
     "tests/ui/recurringRulesSubcategoriesContract.test.js",
     "tests/ui/settingsModalContract.test.js",
     "tests/ui/settingsViewContract.test.js",
@@ -352,6 +354,7 @@
     "tests/ui/legacyBusinessRulesContract.test.js",
     "tests/ui/moduleSizeBudgetsContract.test.js",
     "tests/ui/nutritionDomainContract.test.js",
+    "tests/ui/publicLinksContract.test.js",
     "tests/ui/recurringRulesSubcategoriesContract.test.js",
     "tests/ui/settingsModalContract.test.js",
     "tests/ui/settingsViewContract.test.js",

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `5d14d5a5e1b85ef6a62893eff85c7dd374af83aa`
-> Empreinte du snapshot : `c278b0b81b543c8a61bddf0724f776c2d08d1210773312da61e03dcb8fea2548`
-> Généré le : `2026-07-27T09:39:17.113Z`
+> Commit analysé : `403d961adc9153e2476e546e9b12cc0163731edc`
+> Empreinte du snapshot : `70b286ab8ac393cefba893674458a09f19c27c197b33db28a54e936c844b99e6`
+> Généré le : `2026-07-27T10:36:25.963Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.275` |
+| Version | `10.5.276` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 61 |
 | Modules core | 25 |
 | Modules data | 7 |
 | Modules features | 39 |
-| Fichiers de tests | 105 |
+| Fichiers de tests | 106 |
 | Migrations Supabase | 91 |
 | Fonctions Edge | 11 |
 | Projet Android présent | Oui |
@@ -37,6 +37,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `test:e2e` | `node scripts/run-playwright.mjs` |
 | `atlas:generate` | `node scripts/generate-project-atlas.mjs` |
 | `docs:check` | `node scripts/check-project-docs.mjs` |
+| `links:check` | `node scripts/check-public-links.mjs` |
 | `perf:budget` | `node scripts/check-module-budgets.mjs` |
 | `lint:syntax` | `node scripts/check-js-syntax.mjs` |
 | `lint:db` | `node scripts/lint_db_strings.cjs` |
@@ -276,6 +277,7 @@ Modules :
 - `tests/ui/legacyBusinessRulesContract.test.js`
 - `tests/ui/moduleSizeBudgetsContract.test.js`
 - `tests/ui/nutritionDomainContract.test.js`
+- `tests/ui/publicLinksContract.test.js`
 - `tests/ui/recurringRulesSubcategoriesContract.test.js`
 - `tests/ui/settingsModalContract.test.js`
 - `tests/ui/settingsViewContract.test.js`
@@ -387,6 +389,7 @@ Modules :
 - `tests/ui/legacyDomainLoader.test.js`
 - `tests/ui/moduleSizeBudgetsContract.test.js`
 - `tests/ui/nutritionDomainContract.test.js`
+- `tests/ui/publicLinksContract.test.js`
 - `tests/ui/recurringRulesSubcategoriesContract.test.js`
 - `tests/ui/settingsModalContract.test.js`
 - `tests/ui/settingsViewContract.test.js`

@@ -14,6 +14,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Ajouter a chaque livraison une verification utilisateur simple : ecran a ouvrir, action a faire, resultat attendu, console attendue si pertinent.
 - [x] Remplacer la liste brute des APK de `public/projet.html` par une fresque chronologique interactive, detaillee et filtrable.
 - [x] Raccorder `public/projet.html` a l'Atlas public genere : `public/project-atlas.json`, chiffres factuels, checklist Play Store et mini-labs projet.
+- [x] Ajouter `npm run links:check` pour verifier automatiquement les liens publics projet/confidentialite/APK avant soumission Play Store.
 - [x] Realigner le contrat Settings Modal sur les modules extraits et verifier la suite complete : 89 fichiers, 459 tests.
 - [x] Extraire les interactions KPI date-a-date, scope, impayes et convertisseur FX vers un controleur module, avec tests.
 - [x] Sortir FX Decision du boot et le charger avec le domaine Analyse : boot legacy 1085.3 -> 1044.9 KiB.

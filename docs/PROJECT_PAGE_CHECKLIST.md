@@ -39,7 +39,7 @@ Cette checklist accompagne la page publique `public/projet.html`. Les cases inte
 - [x] Build Vite et contrôles de syntaxe disponibles.
 - [x] Inventaire Atlas et documentation vérifiables par script.
 - [ ] Tester la page projet sur téléphone, tablette et desktop réels.
-- [ ] Ajouter une vérification automatique des liens publics.
-- [ ] Mettre à jour la checklist à chaque publication majeure.
+- [x] Ajouter une vérification automatique des liens publics.
+- [x] Mettre à jour la checklist à chaque publication majeure.
 
-Dernière révision : 24 juillet 2026.
+Dernière révision : 27 juillet 2026.
