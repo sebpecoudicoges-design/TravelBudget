@@ -29,7 +29,8 @@ Cette checklist accompagne la page publique `public/projet.html`. Les cases inte
 
 - [x] APK de test versionnée disponible.
 - [x] Permissions Android limitées à Internet et notifications.
-- [ ] Produire et signer un Android App Bundle de production.
+- [x] Ajouter un workflow reproductible pour produire et vérifier l’Android App Bundle.
+- [ ] Produire et signer un Android App Bundle de production avec la keystore Play Store.
 - [ ] Préparer icône, bannière et captures Play Store finales.
 - [ ] Ajouter l’URL Play Store dès que la fiche est publiée.
 - [ ] Terminer une campagne de test fermé et centraliser les retours.

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `403d961adc9153e2476e546e9b12cc0163731edc`
-> Empreinte du snapshot : `70b286ab8ac393cefba893674458a09f19c27c197b33db28a54e936c844b99e6`
-> Généré le : `2026-07-27T10:36:25.963Z`
+> Commit analysé : `e6792d698994f13df11ab05037ed0cde79194f9e`
+> Empreinte du snapshot : `fb13ff067260b43a4e87c8f0b3a3a512b53ee7b0e9aabed2eba30af9436157c4`
+> Généré le : `2026-07-27T11:18:44.934Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.276` |
+| Version | `10.5.277` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 61 |
 | Modules core | 25 |
 | Modules data | 7 |
 | Modules features | 39 |
-| Fichiers de tests | 106 |
+| Fichiers de tests | 107 |
 | Migrations Supabase | 91 |
 | Fonctions Edge | 11 |
 | Projet Android présent | Oui |
@@ -45,6 +45,8 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | `android:open` | `npx cap open android` |
 | `android:build-debug` | `powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1` |
 | `android:release-debug` | `powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1 -UploadSupabase` |
+| `android:bundle-check` | `powershell -ExecutionPolicy Bypass -File scripts/build-android-release-bundle.ps1` |
+| `android:bundle-release` | `powershell -ExecutionPolicy Bypass -File scripts/build-android-release-bundle.ps1 -RequireSigned` |
 
 ## Écrans déclarés dans index.html
 
@@ -264,6 +266,7 @@ Modules :
 - `tests/ui/analysisDrilldownViewContract.test.js`
 - `tests/ui/analysisFilterViewContract.test.js`
 - `tests/ui/analysisViewContract.test.js`
+- `tests/ui/androidReleaseBundleContract.test.js`
 - `tests/ui/architectureDocsContract.test.js`
 - `tests/ui/assetsDomainContract.test.js`
 - `tests/ui/assetsModalContract.test.js`
@@ -374,6 +377,7 @@ Modules :
 - `tests/ui/analysisDrilldownViewContract.test.js`
 - `tests/ui/analysisFilterViewContract.test.js`
 - `tests/ui/analysisViewContract.test.js`
+- `tests/ui/androidReleaseBundleContract.test.js`
 - `tests/ui/architectureDocsContract.test.js`
 - `tests/ui/assetsDomainContract.test.js`
 - `tests/ui/assetsModalContract.test.js`

@@ -1,7 +1,7 @@
 {
   "name": "travelbudget",
   "private": true,
-  "version": "10.5.276",
+  "version": "10.5.277",
   "type": "module",
   "scripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -22,7 +22,9 @@
     "cap:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",
     "android:build-debug": "powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1",
-    "android:release-debug": "powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1 -UploadSupabase"
+    "android:release-debug": "powershell -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1 -UploadSupabase",
+    "android:bundle-check": "powershell -ExecutionPolicy Bypass -File scripts/build-android-release-bundle.ps1",
+    "android:bundle-release": "powershell -ExecutionPolicy Bypass -File scripts/build-android-release-bundle.ps1 -RequireSigned"
   },
   "devDependencies": {
     "@capacitor/android": "^8.3.4",

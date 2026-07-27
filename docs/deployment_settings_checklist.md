@@ -56,3 +56,24 @@ Expected result:
 - `public/projet.html` links resolve locally or over HTTPS.
 - `public/privacy.html` anchors and support links remain valid.
 - The current APK link responds before it is referenced from the public page.
+
+## Android App Bundle
+
+Use the debug APK for fast device tests, then the AAB workflow for Play Store readiness.
+
+- Local unsigned/sanity bundle: `npm run android:bundle-check`
+- Signed Play Store bundle: `npm run android:bundle-release`
+
+The signed command requires these local environment variables. Keep the keystore and passwords out of Git.
+
+- `TB_ANDROID_KEYSTORE_PATH`
+- `TB_ANDROID_KEYSTORE_PASSWORD`
+- `TB_ANDROID_KEY_ALIAS`
+- `TB_ANDROID_KEY_PASSWORD`
+
+Expected result:
+
+- `public/downloads/travelbudget-<version>-<stamp>-release.aab` exists.
+- The script prints file size and SHA-256.
+- Signed builds run `jarsigner -verify -certs`.
+- `versionName` and `versionCode` still derive from `package.json`.

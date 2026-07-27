@@ -42,17 +42,18 @@ Push-Location $ProjectRoot
 try {
   New-Item -ItemType Directory -Path $DownloadsDir -Force | Out-Null
   Get-ChildItem -LiteralPath $DownloadsDir -Filter "*.apk" -File -ErrorAction SilentlyContinue | Remove-Item -Force
+  Get-ChildItem -LiteralPath $DownloadsDir -Filter "*.aab" -File -ErrorAction SilentlyContinue | Remove-Item -Force
 
   npm.cmd run build
   npx.cmd cap sync android
 
   $NestedApks = @()
   if (Test-Path $AndroidPublicDir) {
-    $NestedApks = @(Get-ChildItem -LiteralPath $AndroidPublicDir -Recurse -Filter "*.apk" -File -ErrorAction SilentlyContinue)
+    $NestedApks = @(Get-ChildItem -LiteralPath $AndroidPublicDir -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in @(".apk", ".aab") })
   }
   if ($NestedApks.Count -gt 0) {
-    $NestedApks | ForEach-Object { Write-Host "APK imbrique detecte: $($_.FullName)" }
-    throw "Des APK sont presents dans les assets Android. Nettoie public/downloads avant cap sync."
+    $NestedApks | ForEach-Object { Write-Host "Package Android imbrique detecte: $($_.FullName)" }
+    throw "Des packages Android sont presents dans les assets Android. Nettoie public/downloads avant cap sync."
   }
 
   Push-Location "android"
@@ -76,7 +77,12 @@ try {
   if ($UploadSupabase) {
     $LocalUploadPath = "public\downloads\$ApkName"
     $RemotePath = "$SupabaseBucketPath/$ApkName"
-    supabase --experimental storage cp --content-type "application/vnd.android.package-archive" $LocalUploadPath $RemotePath
+    $env:SUPABASE_TELEMETRY_DISABLED = "1"
+    supabase --experimental --yes storage rm $RemotePath | Out-Host
+    supabase --experimental --yes storage cp --content-type "application/vnd.android.package-archive" $LocalUploadPath $RemotePath
+    if ($LASTEXITCODE -ne 0) {
+      throw "Upload Supabase Storage echoue pour $RemotePath"
+    }
     Write-Host "APK Supabase Storage: https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/$ApkName"
   }
 } finally {

@@ -9,6 +9,11 @@ if (appVersionParts.size() != 3) {
     throw new GradleException("Version package.json invalide: ${appVersionName}")
 }
 def appVersionCode = appVersionParts[0] * 1000000 + appVersionParts[1] * 10000 + appVersionParts[2]
+def releaseKeystorePath = System.getenv("TB_ANDROID_KEYSTORE_PATH")
+def releaseKeystorePassword = System.getenv("TB_ANDROID_KEYSTORE_PASSWORD")
+def releaseKeyAlias = System.getenv("TB_ANDROID_KEY_ALIAS")
+def releaseKeyPassword = System.getenv("TB_ANDROID_KEY_PASSWORD")
+def hasReleaseSigning = releaseKeystorePath && releaseKeystorePassword && releaseKeyAlias && releaseKeyPassword
 
 android {
     namespace = "com.travelbudget.app"
@@ -26,9 +31,22 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseKeystorePath)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
