@@ -131,6 +131,7 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
   - [x] Extraire le repository Nutrition : aliments, repas, items, sommeil et synchro offline.
   - [x] Extraire le store Nutrition : cache aliments, date selectionnee, repas locaux et publication KPI.
   - [x] Extraire les vues Nutrition : saisie, timeline, historique, eau, sommeil et objectif.
+  - [x] Supprimer l'ancien alias `renderHealth` : la navigation redirige toujours `health` vers Alimentation, sans point d'entree Nutrition obsolete.
     - [x] Extraire les composants de vue : barres, chips favoris/recents, suggestions repas, semaine et timeline repas.
     - [x] Extraire les panneaux de vue : saisie rapide, hydratation, sommeil et historique semaine.
     - [x] Extraire les vues objectif et alcool : cockpit objectif, moyenne 7 jours et barres alcool hebdomadaires.
@@ -269,6 +270,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Compacter l'etat lazy du budget journalier Dashboard : retrait des adaptateurs inutiles, JS total 620.0 -> 619.9 KiB.
   - [x] Nettoyer les doublons legacy Analyse/Inbox et raccourcir l'etat Dashboard lazy : Analyse 159.7 KiB, Inbox 111.8 KiB, total JS 619.8 KiB.
   - [x] Supprimer les fallbacks legacy morts Inbox/Nutrition : helpers budget locaux et anciens panneaux Nutrition non appeles ; Inbox 110.5 KiB, Nutrition 187.5 KiB.
+  - [x] Supprimer le wrapper Nutrition `renderHealth` devenu sans appel ; Nutrition 187.2 KiB.
   - [x] Nettoyer les anciennes actions batch Documents ecrasees par les modales actuelles : Documents 112.4 -> 107.8 KiB.
   - [x] Retirer le panneau d'aide Dashboard inatteignable tout en gardant `tbUxDismiss` pour Trip/Transactions : Dashboard + Settings 358.5 -> 356.5 KiB, JS total 618.9 KiB.
   - [x] Supprimer les anciens helpers Dashboard de remount hero/KPI devenus sans appel : Dashboard + Settings 356.5 -> 354.7 KiB, boot legacy 876.0 -> 874.2 KiB.

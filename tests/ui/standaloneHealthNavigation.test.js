@@ -17,8 +17,8 @@ describe('Standalone Health navigation', () => {
     expect(nutrition).not.toContain('tab.id = "tab-health"');
     expect(nutrition).not.toContain('view.id = "view-health"');
     expect(nutrition).not.toContain('id="health-root"');
+    expect(nutrition).not.toContain('window.renderHealth');
     expect(notifications).not.toContain('getElementById("tab-health")');
     expect(navigation).toContain('if (view === "health") view = "nutrition";');
-    expect(nutrition).toContain('window.renderHealth = renderHealth;');
   });
 });

@@ -1332,13 +1332,6 @@
     const label = String(meal.label || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     return !hasItem && (label === "eau" || label === "water");
   }
-  function renderHealth(reason) {
-    if ((window.activeView || "") === "health") {
-      try { window.activeView = "nutrition"; } catch (_) {}
-      try { if (typeof activeView !== "undefined") activeView = "nutrition"; } catch (_) {}
-    }
-    renderNutrition(reason || "health-redirect");
-  }
   function renderNutrition(reason) {
     ensureNutritionShell();
     ensureNutritionStyles();
@@ -1923,7 +1916,6 @@
   }
 
   window.renderNutrition = renderNutrition;
-  window.renderHealth = renderHealth;
   window.tbLoadHealthGoal = loadNutritionGoal;
   window.tbSaveHealthGoal = saveNutritionGoal;
   window.tbHealthGoalTargets = function tbHealthGoalTargets(spentKcal, kg) {

@@ -12,7 +12,7 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.273` :
+Snapshot `10.5.274` :
 
 - Boot legacy : 874.2 / 1500 KiB.
 - Analyse : 159.7 / 160 KiB.
@@ -20,7 +20,7 @@ Snapshot `10.5.273` :
 - Dashboard + Settings : 354.7 / 360 KiB.
 - Trip : 309.4 / 340 KiB.
 - Sport : 441.1 / 450 KiB.
-- Nutrition : 187.5 / 235 KiB.
+- Nutrition : 187.2 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 107.8 / 115 KiB.
@@ -77,3 +77,5 @@ En 10.5.271, les anciennes actions batch Documents basees sur `prompt` sont supp
 En 10.5.272, le panneau d'aide contextuelle Dashboard, devenu inatteignable, est retire du legacy et de `dashboardView.js`. Les helpers `tbUxDismiss` restent conserves pour Transactions et Trip. Dashboard + Settings baisse a 356.5 KiB, le JS initial a 243.2 KiB et le JS total a 618.9 / 620 KiB.
 
 En 10.5.273, les anciens helpers Dashboard `tbMoveDashboardHeroToTop` et `tbMountExistingKpisIntoHero`, sans appel dans le projet, sont supprimes. Le DOM Dashboard garde sa structure fixe, Dashboard + Settings descend a 354.7 KiB et le boot legacy a 874.2 KiB.
+
+En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
