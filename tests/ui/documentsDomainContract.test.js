@@ -8,6 +8,19 @@ function occurrences(source, pattern) {
 }
 
 describe('documents domain legacy contract', () => {
+  it('delegates linked transaction, Trip and asset modals to documentView', () => {
+    const source = legacy();
+    const view = fs.readFileSync('src/features/documents/documentView.js', 'utf8');
+
+    expect(view).toContain('export function renderDocumentTransactionsModal');
+    expect(view).toContain('export function renderDocumentAssetsModal');
+    expect(source).toContain('window.UI?.documentView?.renderDocumentTransactionsModal');
+    expect(source).toContain('window.UI?.documentView?.renderDocumentAssetsModal');
+    expect(source).not.toContain('<strong>Dépenses Trip liées</strong>');
+    expect(source).not.toContain('candidates.length ? candidates.map(tx =>');
+    expect(source).not.toContain('candidates.length ? candidates.map(a =>');
+  });
+
   it('keeps batch document actions on the current modal flow without duplicate legacy prompts', () => {
     const source = legacy();
 

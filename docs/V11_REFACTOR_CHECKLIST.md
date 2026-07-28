@@ -288,6 +288,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire le rendu Inbox / A traiter : shell, previews, cartes WhatsApp/documents et cartes Trip passent dans `inboxView.js`.
   - [x] Extraire le rendu du centre de notifications Inbox : styles, host, compteur et lignes de notification passent dans `inboxView.js`.
   - [x] Extraire les modales Inbox transaction, liaison document-transaction et approbation Trip vers `inboxView.js`.
+  - [x] Extraire les modales Documents de liaison transactions, depenses Trip et assets vers `documentView.js`, avec contrat anti-retour legacy.
   - [x] Charger le profil et l'analyse progression Sport avec le domaine Sport au lieu du bridge initial : bundle initial 349.6 -> 317.2 KiB.
   - [x] Ajouter le controleur Sport mobilite en lazy avec le domaine Sport, sans gonfler le bundle initial : 317.4 KiB.
   - [x] Extraire la fenetre de fin de seance Sport : le legacy garde les handlers, le HTML passe dans `sportTimerView.js`.

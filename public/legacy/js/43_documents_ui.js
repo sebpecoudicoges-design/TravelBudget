@@ -1671,71 +1671,20 @@ function renderDocumentTransactionsModal(doc, links, message, tripLinks = []){
   wrap.className = 'tb-doc-modal-backdrop';
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
 
-  wrap.innerHTML = `
-    <div class="tb-doc-modal">
-      <h3>${esc(tr('documents.linked_transactions.title'))}</h3>
-      <p class="muted" style="font-size:13px;margin-top:-6px;">${esc(doc.name || doc.original_filename || 'Document')}</p>
-      ${message ? `<div class="tb-doc-uploading">${esc(message)}</div>` : ''}
-
-      <div style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;margin-bottom:12px;">
-        ${(links || []).length ? links.map(link => {
-          const tx = findTxById(link.transaction_id);
-          return `
-            <div class="tb-doc-share-link">
-              <strong>${esc(txLabel(tx))}</strong><br>
-              <span class="muted">${esc(tr('documents.relation.' + (link.relation_type || 'invoice')))}</span>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
-                ${tx ? `<button class="btn small primary" type="button" onclick="window.tbOpenTransactionFromDocument('${esc(link.transaction_id)}')">${esc(tr('documents.linked_transactions.open'))}</button>` : ''}
-                <button class="btn small" type="button" onclick="window.tbDocumentsUnlinkTransaction('${esc(link.id)}','${esc(doc.id)}')">${esc(tr('transactions.documents.unlink'))}</button>
-              </div>
-            </div>
-          `;
-        }).join('') : `<div class="tb-doc-empty">${esc(tr('documents.linked_transactions.empty'))}</div>`}
-      </div>
-              <div style="margin:10px 0 12px;">
-        <strong>Dépenses Trip liées</strong>
-        <div style="display:flex;flex-direction:column;gap:8px;max-height:180px;overflow:auto;margin-top:8px;">
-          ${(tripLinks || []).length ? tripLinks.map(link => {
-            const ex = findTripExpenseById(link.expense_id);
-            return `
-              <div class="tb-doc-share-link">
-                <strong>${esc(tripExpenseLabel(ex))}</strong><br>
-                <span class="muted">${esc(tr('documents.relation.' + (link.relation_type || 'receipt')))}</span>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
-                  <button class="btn small primary" type="button" onclick="window.tbOpenTripExpenseFromDocument('${esc(link.expense_id)}')">Ouvrir Trip</button>
-                  <button class="btn small" type="button" onclick="window.tbDocumentsUnlinkTripExpense('${esc(link.id)}','${esc(doc.id)}')">${esc(tr('transactions.documents.unlink'))}</button>
-                </div>
-              </div>
-            `;
-          }).join('') : `<div class="tb-doc-empty">Aucune dépense Trip liée.</div>`}
-        </div>
-      </div>
-      <div class="tb-doc-form">
-        <label>${esc(tr('documents.linked_transactions.add'))}</label>
-        <input id="tb-doc-link-tx-search" class="input" type="search" value="${esc(searchQuery)}" placeholder="${esc(tr('documents.linked_transactions.search_placeholder'))}" oninput="window.tbDocumentsFilterTransactionSearch('${esc(doc.id)}', this.value)" autocomplete="off" />
-        <select id="tb-doc-link-tx-id" class="input" size="${Math.min(Math.max(candidates.length || 1, 4), 8)}">
-          ${candidates.length ? candidates.map(tx => `
-            <option value="${esc(tx.id)}">
-              ${esc(txLabel(tx))}
-            </option>
-          `).join('') : `<option value="">${esc(searchQuery ? tr('documents.linked_transactions.no_result') : tr('documents.linked_transactions.search_first'))}</option>`}
-        </select>
-        <div class="muted" style="font-size:12px;line-height:1.35;">${esc(tr('documents.linked_transactions.search_hint'))}</div>
-        <select id="tb-doc-link-type" class="input">
-          <option value="invoice">${esc(tr('documents.relation.invoice'))}</option>
-          <option value="receipt">${esc(tr('documents.relation.receipt'))}</option>
-          <option value="warranty">${esc(tr('documents.relation.warranty'))}</option>
-          <option value="proof">${esc(tr('documents.relation.proof'))}</option>
-          <option value="other">${esc(tr('documents.relation.other'))}</option>
-        </select>
-      </div>
-
-      <div class="tb-doc-modal-actions">
-        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
-        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyLinkTransaction('${esc(doc.id)}')">${esc(tr('documents.linked_transactions.link'))}</button>
-      </div>
-    </div>
-  `;
+  wrap.innerHTML = window.UI?.documentView?.renderDocumentTransactionsModal?.({
+    doc,
+    links: links || [],
+    tripLinks: tripLinks || [],
+    candidates,
+    searchQuery,
+    message,
+    findTxById,
+    txLabel,
+    findTripExpenseById,
+    tripExpenseLabel,
+    esc,
+    tr,
+  }) || '';
 
   if(!wrap.parentNode) document.body.appendChild(wrap);
 }
@@ -1825,35 +1774,17 @@ function renderDocumentAssetsModal(doc, links, assets, message){
   wrap.id = 'tb-doc-asset-modal';
   wrap.className = 'tb-doc-modal-backdrop';
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
-  wrap.innerHTML = `
-    <div class="tb-doc-modal">
-      <h3>${esc(atxt('Assets', 'Linked assets'))}</h3>
-      <p class="muted" style="font-size:13px;margin-top:-6px;">${esc(doc.name || doc.original_filename || 'Document')}</p>
-      ${message ? `<div class="tb-doc-uploading">${esc(message)}</div>` : ''}
-      <div style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;margin-bottom:12px;">
-        ${(links || []).length ? links.map(link => {
-          const asset = (assets || []).find(a => String(a.id || '') === String(link.asset_id || ''));
-          return `<div class="tb-doc-share-link"><strong>${esc(assetLabel(asset))}</strong><br><span class="muted">${esc(tr('documents.relation.' + (link.relation_type || 'proof')))}</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="btn small primary" type="button" onclick="window.tbOpenAssetFromDocument('${esc(link.asset_id)}')">${esc(atxt('Ouvrir Patrimoine', 'Open Assets'))}</button><button class="btn small" type="button" onclick="window.tbDocumentsUnlinkAsset('${esc(link.id)}','${esc(doc.id)}')">${esc(tr('transactions.documents.unlink'))}</button></div></div>`;
-        }).join('') : `<div class="tb-doc-empty">${esc(atxt('Aucun asset lié.', 'No linked asset.'))}</div>`}
-      </div>
-      <div class="tb-doc-form">
-        <label>${esc(atxt('Ajouter un asset', 'Add asset'))}</label>
-        <select id="tb-doc-link-asset-id" class="input">
-          ${candidates.length ? candidates.map(a => `<option value="${esc(a.id)}">${esc(assetLabel(a))}</option>`).join('') : `<option value="">${esc(atxt('Aucun asset disponible', 'No available asset'))}</option>`}
-        </select>
-        <select id="tb-doc-link-asset-type" class="input">
-          <option value="invoice">${esc(tr('documents.relation.invoice'))}</option>
-          <option value="receipt">${esc(tr('documents.relation.receipt'))}</option>
-          <option value="warranty">${esc(tr('documents.relation.warranty'))}</option>
-          <option value="proof" selected>${esc(tr('documents.relation.proof'))}</option>
-          <option value="other">${esc(tr('documents.relation.other'))}</option>
-        </select>
-      </div>
-      <div class="tb-doc-modal-actions">
-        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
-        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyLinkAsset('${esc(doc.id)}')">${esc(atxt('Lier l’asset', 'Link asset'))}</button>
-      </div>
-    </div>`;
+  wrap.innerHTML = window.UI?.documentView?.renderDocumentAssetsModal?.({
+    doc,
+    links: links || [],
+    assets: assets || [],
+    candidates,
+    message,
+    assetLabel,
+    esc,
+    tr,
+    atxt,
+  }) || '';
   if(!wrap.parentNode) document.body.appendChild(wrap);
 }
 
