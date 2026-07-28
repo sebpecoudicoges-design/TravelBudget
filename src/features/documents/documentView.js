@@ -111,6 +111,211 @@ export function renderDocumentCard(doc = {}, options = {}) {
   </article>`;
 }
 
+export function renderDocumentFolders({
+  folders = [],
+  allCount = 0,
+  selectedFolderId = '',
+  esc = defaultEsc,
+  tr = defaultText,
+}) {
+  const selected = String(selectedFolderId || '');
+  const folderRows = folders.map((folder) => {
+    const children = Array.isArray(folder.children) ? folder.children : [];
+    const collapsed = !!folder.collapsed;
+    const childRows = collapsed ? '' : children.map((child) => `
+        <div class="tb-doc-folder-row sub">
+          <span class="tb-doc-folder-icon-placeholder"></span>
+          <button class="tb-doc-folder${String(child.id) === selected ? ' active' : ''}"
+            type="button"
+            onclick="window.tbDocumentsSelectFolder('${esc(child.id)}')">
+            <span>${esc(child.name)}</span>
+            <small>${esc(child.count || 0)}</small>
+          </button>
+          <div class="tb-doc-folder-tools">
+            <button class="tb-doc-folder-icon" type="button" title="${esc(tr('documents.folder.rename'))}" onclick="window.tbDocumentsRenameFolder('${esc(child.id)}')">Edit</button>
+            <button class="tb-doc-folder-icon danger" type="button" title="${esc(tr('documents.folder.delete'))}" onclick="window.tbDocumentsDeleteFolder('${esc(child.id)}')">Del</button>
+          </div>
+        </div>
+      `).join('');
+
+    return `
+      <div class="tb-doc-folder-row">
+        ${children.length ? `<button class="tb-doc-folder-icon" type="button" title="${esc(collapsed ? tr('documents.folder.expand') : tr('documents.folder.collapse'))}" onclick="window.tbDocumentsToggleFolderCollapsed('${esc(folder.id)}')">${collapsed ? '+' : '-'}</button>` : `<span class="tb-doc-folder-icon-placeholder"></span>`}
+        <button class="tb-doc-folder${String(folder.id) === selected ? ' active' : ''}"
+          type="button"
+          onclick="window.tbDocumentsSelectFolder('${esc(folder.id)}')">
+          <span>${esc(folder.name)}</span>
+          <small>${esc(folder.count || 0)}</small>
+        </button>
+        <div class="tb-doc-folder-tools">
+          <button class="tb-doc-folder-icon" type="button" title="${esc(tr('documents.folder.subfolder'))}" onclick="window.tbDocumentsCreateSubFolder('${esc(folder.id)}')">+</button>
+          <button class="tb-doc-folder-icon" type="button" title="${esc(tr('documents.folder.rename'))}" onclick="window.tbDocumentsRenameFolder('${esc(folder.id)}')">Edit</button>
+          <button class="tb-doc-folder-icon danger" type="button" title="${esc(tr('documents.folder.delete'))}" onclick="window.tbDocumentsDeleteFolder('${esc(folder.id)}')">Del</button>
+        </div>
+      </div>
+      ${childRows}
+    `;
+  }).join('');
+
+  return `<div class="tb-doc-sidebar">
+    <div class="tb-doc-sidebar-head">
+      <strong>${esc(tr('documents.folders'))}</strong>
+      <button class="btn" type="button" onclick="window.tbDocumentsCreateFolder()">${esc(tr('documents.folder.create'))}</button>
+    </div>
+
+    <button class="tb-doc-folder${selected ? '' : ' active'}" type="button" onclick="window.tbDocumentsSelectFolder('')">
+      <span>${esc(tr('documents.folder.all'))}</span>
+      <small>${esc(allCount)}</small>
+    </button>
+
+    ${folderRows}
+  </div>`;
+}
+
+export function renderDocumentMain({
+  folderName = '',
+  documentCount = 0,
+  sort = 'date_desc',
+  search = '',
+  tags = [],
+  tagFilter = '',
+  tagFilterKey = '',
+  onlyFavorites = false,
+  onlyExpiring = false,
+  selectedCount = 0,
+  uploading = '',
+  loading = false,
+  error = '',
+  documentCards = '',
+  dropTargetLabel = '',
+  esc = defaultEsc,
+  tr = defaultText,
+  atxt = (fr, en) => fr || en || '',
+}) {
+  const title = folderName || tr('documents.folder.all');
+  const sortedTags = Array.isArray(tags) ? tags : [];
+  const activeTagKey = String(tagFilterKey || tagFilter || '').toLowerCase();
+
+  return `<div class="tb-doc-main"
+    ondragover="event.preventDefault()"
+    ondrop="event.preventDefault(); window.tbDocumentsHandleDrop(event)">
+
+    <div class="tb-doc-toolbar">
+      <div>
+        <strong>${esc(title)}</strong>
+        <div class="muted" style="font-size:12px;">
+          ${esc(documentCount)} document(s)
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select class="input"
+          onchange="window.tbDocumentsSetSort(this.value)">
+          <option value="date_desc" ${sort === 'date_desc' ? 'selected' : ''}>
+            ${esc(tr('documents.sort.date_desc'))}
+          </option>
+          <option value="name_asc" ${sort === 'name_asc' ? 'selected' : ''}>
+            ${esc(tr('documents.sort.name_asc'))}
+          </option>
+          <option value="size_desc" ${sort === 'size_desc' ? 'selected' : ''}>
+            ${esc(tr('documents.sort.size_desc'))}
+          </option>
+        </select>
+
+        <input
+          id="tb-doc-search"
+          class="tb-doc-search"
+          type="search"
+          value="${esc(search)}"
+          placeholder="${esc(tr('documents.search.placeholder'))}"
+          oninput="window.tbDocumentsSetSearch(this.value)"
+        />
+      </div>
+    </div>
+
+    <div class="tb-doc-dropzone"
+      onclick="document.getElementById('tb-doc-file-input')?.click()">
+      <div>
+        <strong>${esc(tr('documents.drop.title'))}</strong>
+        <span>${esc(dropTargetLabel)}</span>
+      </div>
+      <button class="btn primary" type="button" onclick="event.stopPropagation(); document.getElementById('tb-doc-file-input')?.click()">${esc(tr('documents.drop.add'))}</button>
+    </div>
+
+    <div class="tb-doc-filters">
+      <select class="input" onchange="window.tbDocumentsSetTagFilter(this.value)" title="${esc(tr('documents.filter.tag_title'))}">
+        <option value="" ${!tagFilter ? 'selected' : ''}>${esc(tr('documents.filter.all_tags'))}</option>
+        ${sortedTags.map((item) => {
+          const value = typeof item === 'object' && item ? item.value : item;
+          const key = typeof item === 'object' && item ? item.key : value;
+          return `<option value="${esc(value)}" ${String(key || '').toLowerCase() === activeTagKey ? 'selected' : ''}>${esc(value)}</option>`;
+        }).join('')}
+      </select>
+      <button class="btn ${onlyFavorites ? 'primary' : ''}" type="button" onclick="window.tbDocumentsToggleFavoritesFilter()">
+        ${esc(tr('documents.filter.favorites'))}
+      </button>
+      <button class="btn ${onlyExpiring ? 'primary' : ''}" type="button" onclick="window.tbDocumentsToggleExpiringFilter()">
+        ${esc(tr('documents.filter.expiring'))}
+      </button>
+      ${tagFilter ? `<button class="btn" type="button" onclick="window.tbDocumentsSetTagFilter('')">Tag: ${esc(tagFilter)} x</button>` : ''}
+    </div>
+
+    ${selectedCount ? `
+      <div class="tb-doc-batchbar">
+        <strong>${esc(tr('documents.batch.selected', { count: selectedCount }))}</strong>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn" type="button" onclick="window.tbDocumentsSelectVisible()">${esc(tr('documents.action.select_visible'))}</button>
+          <button class="btn primary" type="button" onclick="window.tbDocumentsShareSelected()">${esc(tr('documents.action.share'))}</button>
+          <button class="btn" type="button" onclick="window.tbDocumentsAddTagSelected()">${esc(tr('documents.action.add_tag'))}</button>
+          <button class="btn" type="button" onclick="window.tbDocumentsMoveSelected()">${esc(tr('documents.action.move'))}</button>
+          <button class="btn" type="button" onclick="window.tbDocumentsDeleteSelected()">${esc(tr('documents.action.delete'))}</button>
+          <button class="btn" type="button" onclick="window.tbDocumentsClearSelection()">${esc(tr('documents.action.cancel'))}</button>
+        </div>
+      </div>
+    ` : ''}
+
+    ${uploading ? `<div class="tb-doc-uploading">${esc(uploading)}</div>` : ''}
+    ${loading ? `<div class="tb-doc-empty">${esc(tr('documents.loading'))}</div>` : ''}
+
+    ${error ? `
+      <div class="tb-doc-empty">
+        <strong>${esc(atxt('Module Documents non initialise.', 'Documents module not initialized.'))}</strong>
+        <br><br>
+        ${esc(error)}
+        <br><br>
+        <span>
+          ${esc(atxt('Applique d abord le patch SQL V9.6.5, puis recharge l application.', 'Apply the SQL V9.6.5 patch first, then reload the app.'))}
+        </span>
+      </div>
+    ` : ''}
+
+    ${(!loading && !error && !documentCount)
+      ? `<div class="tb-doc-empty">${esc(tr('documents.empty'))}</div>`
+      : ''}
+
+    ${(!loading && !error && documentCount)
+      ? `<div class="tb-doc-grid">${documentCards}</div>`
+      : ''}
+  </div>`;
+}
+
+export function renderDocumentShell({
+  foldersHtml = '',
+  mainHtml = '',
+  esc = defaultEsc,
+  tr = defaultText,
+}) {
+  return `<div class="tb-doc-hero">
+    <div><div class="tb-doc-kicker">${esc(tr('documents.kicker'))}</div><h2>${esc(tr('documents.title'))}</h2><p>${esc(tr('documents.subtitle'))}</p></div>
+    <div class="tb-doc-actions">
+      <button class="btn" type="button" onclick="window.tbDocumentsCreateFolder()">${esc(tr('documents.folder.create'))}</button>
+      <button class="btn primary" type="button" onclick="document.getElementById('tb-doc-file-input')?.click()">${esc(tr('documents.action.add_document'))}</button>
+      <input id="tb-doc-file-input" class="tb-doc-hidden-input" type="file" multiple accept="application/pdf,image/*" onchange="window.tbDocumentsUpload(this.files); this.value=''" />
+    </div>
+  </div>
+  <div class="tb-doc-layout">${foldersHtml}${mainHtml}</div>`;
+}
+
 function relationOptions({ tr, esc, selected = '' }) {
   return ['invoice', 'receipt', 'warranty', 'proof', 'other']
     .map((type) => `<option value="${esc(type)}" ${String(selected) === type ? 'selected' : ''}>${esc(tr(`documents.relation.${type}`))}</option>`)

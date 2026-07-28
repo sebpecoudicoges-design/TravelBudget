@@ -660,53 +660,27 @@ function setSelectedSort(v){
 
  function renderFolders(){
   const folders = rootFolders();
-  const allActive = !CACHE.selectedFolderId ? ' active' : '';
-  return `<div class="tb-doc-sidebar">
-    <div class="tb-doc-sidebar-head">
-      <strong>${esc(tr('documents.folders'))}</strong>
-      <button class="btn" type="button" onclick="window.tbDocumentsCreateFolder()">${esc(tr('documents.folder.create'))}</button>
-    </div>
-
-    <button class="tb-doc-folder${allActive}" type="button" onclick="window.tbDocumentsSelectFolder('')">
-      <span>${esc(tr('documents.folder.all'))}</span>
-      <small>${esc((CACHE.documents||[]).length)}</small>
-    </button>
-
-    ${folders.map(f=>{
+  const rows = folders.map(f=>{
       const children = childFolders(f.id);
-      const collapsed = isFolderCollapsed(f.id);
-      return `
-      <div class="tb-doc-folder-row">
-        ${children.length ? `<button class="tb-doc-folder-icon" type="button" title="${esc(collapsed ? tr('documents.folder.expand') : tr('documents.folder.collapse'))}" onclick="window.tbDocumentsToggleFolderCollapsed('${esc(f.id)}')">${collapsed ? '+' : '-'}</button>` : `<span class="tb-doc-folder-icon-placeholder"></span>`}
-        <button class="tb-doc-folder${String(f.id)===String(CACHE.selectedFolderId)?' active':''}"
-          type="button"
-          onclick="window.tbDocumentsSelectFolder('${esc(f.id)}')">
-          <span>${esc(f.name)}</span>
-          <small>${esc(folderCount(f.id))}</small>
-        </button>
-        <div class="tb-doc-folder-tools">
-          <button class="tb-doc-folder-icon" type="button" title="${esc(tr('documents.folder.subfolder'))}" onclick="window.tbDocumentsCreateSubFolder('${esc(f.id)}')">+</button>
-          <button class="tb-doc-folder-icon" type="button" title="${esc(tr('documents.folder.rename'))}" onclick="window.tbDocumentsRenameFolder('${esc(f.id)}')">Edit</button>
-          <button class="tb-doc-folder-icon danger" type="button" title="${esc(tr('documents.folder.delete'))}" onclick="window.tbDocumentsDeleteFolder('${esc(f.id)}')">Del</button>
-        </div>
-      </div>
-      ${collapsed ? '' : children.map(sub => `
-        <div class="tb-doc-folder-row sub">
-          <span class="tb-doc-folder-icon-placeholder"></span>
-          <button class="tb-doc-folder${String(sub.id)===String(CACHE.selectedFolderId)?' active':''}"
-            type="button"
-            onclick="window.tbDocumentsSelectFolder('${esc(sub.id)}')">
-            <span>${esc(sub.name)}</span>
-            <small>${esc(folderCount(sub.id))}</small>
-          </button>
-          <div class="tb-doc-folder-tools">
-            <button class="tb-doc-folder-icon" type="button" title="${esc(tr('documents.folder.rename'))}" onclick="window.tbDocumentsRenameFolder('${esc(sub.id)}')">Edit</button>
-            <button class="tb-doc-folder-icon danger" type="button" title="${esc(tr('documents.folder.delete'))}" onclick="window.tbDocumentsDeleteFolder('${esc(sub.id)}')">Del</button>
-          </div>
-        </div>
-      `).join('')}
-    `}).join('')}
-  </div>`;
+      return {
+        id: f.id,
+        name: f.name,
+        count: folderCount(f.id),
+        collapsed: isFolderCollapsed(f.id),
+        children: children.map(sub => ({
+          id: sub.id,
+          name: sub.name,
+          count: folderCount(sub.id),
+        })),
+      };
+    });
+  return window.UI?.documentView?.renderDocumentFolders?.({
+    folders: rows,
+    allCount: (CACHE.documents||[]).length,
+    selectedFolderId: CACHE.selectedFolderId || '',
+    esc,
+    tr,
+  }) || `<div class="tb-doc-sidebar"><strong>${esc(tr('documents.folders'))}</strong></div>`;
 }
 
   function renderDocCard(d){
@@ -749,116 +723,40 @@ function setSelectedSort(v){
     return new Date(b.created_at||0) - new Date(a.created_at||0);
   });
 
-  return `<div class="tb-doc-main"
-    ondragover="event.preventDefault()"
-    ondrop="event.preventDefault(); window.tbDocumentsHandleDrop(event)">
-
-    <div class="tb-doc-toolbar">
-      <div>
-        <strong>${esc(folder ? folder.name : tr('documents.folder.all'))}</strong>
-        <div class="muted" style="font-size:12px;">
-          ${esc(docs.length)} document(s)
-        </div>
-      </div>
-
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <select class="input"
-          onchange="window.tbDocumentsSetSort(this.value)">
-          <option value="date_desc" ${sort==='date_desc'?'selected':''}>
-            ${esc(tr('documents.sort.date_desc'))}
-          </option>
-          <option value="name_asc" ${sort==='name_asc'?'selected':''}>
-            ${esc(tr('documents.sort.name_asc'))}
-          </option>
-          <option value="size_desc" ${sort==='size_desc'?'selected':''}>
-            ${esc(tr('documents.sort.size_desc'))}
-          </option>
-        </select>
-
-        <input
-          id="tb-doc-search"
-          class="tb-doc-search"
-          type="search"
-          value="${esc(CACHE.search||'')}"
-          placeholder="${esc(tr('documents.search.placeholder'))}"
-          oninput="window.tbDocumentsSetSearch(this.value)"
-        />
-      </div>
-    </div>
-
-    <div class="tb-doc-dropzone"
-      onclick="document.getElementById('tb-doc-file-input')?.click()">
-      <div>
-        <strong>${esc(tr('documents.drop.title'))}</strong>
-        <span>${esc(folder ? tr('documents.drop.target_folder', { folder: folder.name }) : tr('documents.drop.target_unclassified'))}</span>
-      </div>
-      <button class="btn primary" type="button" onclick="event.stopPropagation(); document.getElementById('tb-doc-file-input')?.click()">${esc(tr('documents.drop.add'))}</button>
-    </div>
-    <div class="tb-doc-filters">
-  <select class="input" onchange="window.tbDocumentsSetTagFilter(this.value)" title="${esc(tr('documents.filter.tag_title'))}">
-    <option value="" ${!tagFilter ? 'selected' : ''}>${esc(tr('documents.filter.all_tags'))}</option>
-    ${tags.map(t => `<option value="${esc(t)}" ${tagKey(t) === tagKey(tagFilter) ? 'selected' : ''}>${esc(t)}</option>`).join('')}
-  </select>
-  <button class="btn ${CACHE.onlyFavorites ? 'primary' : ''}" type="button" onclick="window.tbDocumentsToggleFavoritesFilter()">
-    ${esc(tr('documents.filter.favorites'))}
-  </button>
-  <button class="btn ${CACHE.onlyExpiring ? 'primary' : ''}" type="button" onclick="window.tbDocumentsToggleExpiringFilter()">
-    ${esc(tr('documents.filter.expiring'))}
-  </button>
-  ${tagFilter ? `<button class="btn" type="button" onclick="window.tbDocumentsSetTagFilter('')">Tag: ${esc(tagFilter)} x</button>` : ''}
-</div>
-    ${(CACHE.selectedIds || []).length ? `
-  <div class="tb-doc-batchbar">
-    <strong>${esc(tr('documents.batch.selected', { count: (CACHE.selectedIds || []).length }))}</strong>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <button class="btn" type="button" onclick="window.tbDocumentsSelectVisible()">${esc(tr('documents.action.select_visible'))}</button>
-      <button class="btn primary" type="button" onclick="window.tbDocumentsShareSelected()">${esc(tr('documents.action.share'))}</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsAddTagSelected()">${esc(tr('documents.action.add_tag'))}</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsMoveSelected()">${esc(tr('documents.action.move'))}</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsDeleteSelected()">${esc(tr('documents.action.delete'))}</button>
-      <button class="btn" type="button" onclick="window.tbDocumentsClearSelection()">${esc(tr('documents.action.cancel'))}</button>
-    </div>
-  </div>
-` : ''}
-    ${CACHE.uploading ? `<div class="tb-doc-uploading">${esc(CACHE.uploading)}</div>` : ''}
-
-    ${CACHE.loading ? `<div class="tb-doc-empty">${esc(tr('documents.loading'))}</div>` : ''}
-
-    ${CACHE.error ? `
-      <div class="tb-doc-empty">
-        <strong>${esc(atxt('Module Documents non initialise.', 'Documents module not initialized.'))}</strong>
-        <br><br>
-        ${esc(CACHE.error)}
-        <br><br>
-        <span>
-          ${esc(atxt('Applique d abord le patch SQL V9.6.5, puis recharge l application.', 'Apply the SQL V9.6.5 patch first, then reload the app.'))}
-        </span>
-      </div>
-    ` : ''}
-
-    ${(!CACHE.loading && !CACHE.error && !docs.length)
-      ? `<div class="tb-doc-empty">${esc(tr('documents.empty'))}</div>`
-      : ''}
-
-    ${(!CACHE.loading && !CACHE.error && docs.length)
-      ? `<div class="tb-doc-grid">${docs.map(renderDocCard).join('')}</div>`
-      : ''}
-  </div>`;
+  return window.UI?.documentView?.renderDocumentMain?.({
+    folderName: folder ? folder.name : '',
+    documentCount: docs.length,
+    sort,
+    search: CACHE.search || '',
+    tags: tags.map(t => ({ value: t, key: tagKey(t) })),
+    tagFilter,
+    tagFilterKey: tagKey(tagFilter),
+    onlyFavorites: CACHE.onlyFavorites,
+    onlyExpiring: CACHE.onlyExpiring,
+    selectedCount: (CACHE.selectedIds || []).length,
+    uploading: CACHE.uploading || '',
+    loading: CACHE.loading,
+    error: CACHE.error || '',
+    documentCards: docs.map(renderDocCard).join(''),
+    dropTargetLabel: folder ? tr('documents.drop.target_folder', { folder: folder.name }) : tr('documents.drop.target_unclassified'),
+    esc,
+    tr,
+    atxt,
+  }) || `<div class="tb-doc-main"><div class="tb-doc-grid">${docs.map(renderDocCard).join('')}</div></div>`;
 }
 
   function renderShell(){
     injectStyles();
     const el = root(); if(!el) return;
     el.className = 'card tb-doc-shell';
-    el.innerHTML = `<div class="tb-doc-hero">
-      <div><div class="tb-doc-kicker">${esc(tr('documents.kicker'))}</div><h2>${esc(tr('documents.title'))}</h2><p>${esc(tr('documents.subtitle'))}</p></div>
-      <div class="tb-doc-actions">
-        <button class="btn" type="button" onclick="window.tbDocumentsCreateFolder()">${esc(tr('documents.folder.create'))}</button>
-        <button class="btn primary" type="button" onclick="document.getElementById('tb-doc-file-input')?.click()">${esc(tr('documents.action.add_document'))}</button>
-        <input id="tb-doc-file-input" class="tb-doc-hidden-input" type="file" multiple accept="application/pdf,image/*" onchange="window.tbDocumentsUpload(this.files); this.value=''" />
-      </div>
-    </div>
-    <div class="tb-doc-layout">${renderFolders()}${renderMain()}</div>`;
+    const foldersHtml = renderFolders();
+    const mainHtml = renderMain();
+    el.innerHTML = window.UI?.documentView?.renderDocumentShell?.({
+      foldersHtml,
+      mainHtml,
+      esc,
+      tr,
+    }) || `${foldersHtml}${mainHtml}`;
     setTimeout(hydrateImageThumbs, 0);
   }
 

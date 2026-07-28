@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   renderDocumentAssetsModal,
   renderDocumentCard,
+  renderDocumentFolders,
+  renderDocumentMain,
+  renderDocumentShell,
   renderDocumentTransactionsModal,
 } from '../../../src/features/documents/documentView.js';
 
@@ -99,5 +102,62 @@ describe('document view', () => {
     expect(html).toContain('value="asset-2"');
     expect(html).toContain("window.tbDocumentsApplyLinkAsset('doc-2')");
     expect(html).toContain('selected');
+  });
+
+  it('renders folder navigation with nested folders and active state', () => {
+    const html = renderDocumentFolders({
+      folders: [{
+        id: 'root-1',
+        name: 'Administratif',
+        count: 3,
+        collapsed: false,
+        children: [{ id: 'child-1', name: 'Factures', count: 2 }],
+      }],
+      allCount: 5,
+      selectedFolderId: 'child-1',
+      ...api,
+    });
+
+    expect(html).toContain('Administratif');
+    expect(html).toContain('Factures');
+    expect(html).toContain("window.tbDocumentsSelectFolder('child-1')");
+    expect(html).toContain('tb-doc-folder active');
+  });
+
+  it('renders main document area with filters, batch actions and cards', () => {
+    const html = renderDocumentMain({
+      folderName: 'Factures',
+      documentCount: 1,
+      sort: 'name_asc',
+      search: 'visa',
+      tags: [{ value: 'Trip Australie', key: 'trip-australie' }],
+      tagFilter: 'Trip Australie',
+      tagFilterKey: 'trip-australie',
+      onlyFavorites: true,
+      selectedCount: 2,
+      documentCards: '<article data-doc-id="doc-1"></article>',
+      dropTargetLabel: 'Vers Factures',
+      ...api,
+    });
+
+    expect(html).toContain('Factures');
+    expect(html).toContain('value="visa"');
+    expect(html).toContain('Trip Australie');
+    expect(html).toContain('selected');
+    expect(html).toContain('tb-doc-batchbar');
+    expect(html).toContain('data-doc-id="doc-1"');
+  });
+
+  it('renders the document shell around delegated slots', () => {
+    const html = renderDocumentShell({
+      foldersHtml: '<aside>Folders</aside>',
+      mainHtml: '<main>Docs</main>',
+      ...api,
+    });
+
+    expect(html).toContain('tb-doc-hero');
+    expect(html).toContain('<aside>Folders</aside>');
+    expect(html).toContain('<main>Docs</main>');
+    expect(html).toContain('tb-doc-file-input');
   });
 });
