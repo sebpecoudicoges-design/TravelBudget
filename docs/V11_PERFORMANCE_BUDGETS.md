@@ -12,9 +12,9 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.278` :
+Snapshot `10.5.279` :
 
-- Boot legacy : 878.5 / 1500 KiB.
+- Boot legacy : 875.8 / 1500 KiB.
 - Analyse : 159.7 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
 - Dashboard + Settings : 354.7 / 360 KiB.
@@ -87,3 +87,5 @@ En 10.5.276, le chantier Play Store ajoute `npm run links:check`. Ce controle ve
 En 10.5.277, le chantier Play Store ajoute le workflow AAB de production. `android:bundle-check` genere un bundle de controle local, `android:bundle-release` exige une keystore via variables d'environnement et verifie la signature avec `jarsigner`. Le changement touche Gradle et les scripts de livraison, sans alourdir le bundle web.
 
 En 10.5.278, le chantier V11 reprend le boot initial : l'ecran de chargement affiche la version TB, une progression par phases et un passage a 100% avant disparition. Le boot legacy remonte a 878.5 KiB a cause du HTML/CSS/JS du loader, mais le budget reste tres large face au plafond de 1500 KiB. Le CSS dist reste proche du plafond a 7.8 / 8 KiB : le prochain lot visuel devra donc supprimer ou deplacer du style avant d'en ajouter.
+
+En 10.5.279, le fallback du loader initial est compacte : le design complet reste dans `index.html`, tandis que `20_boot.js` ne garde qu'un style minimal de secours si le bloc doit etre recree. Boot legacy : 878.5 -> 875.8 KiB. L'UX normale du premier ecran ne change pas, et le contrat verifie que le CSS futuriste n'est plus duplique dans le legacy.

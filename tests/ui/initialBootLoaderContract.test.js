@@ -26,4 +26,14 @@ describe('initial boot loader contract', () => {
     expect(boot).toContain('tbShowBootOverlay("Connexion et synchronisation…", 34, "data")');
     expect(boot).toContain('tbShowBootOverlay("Chargement des transactions, wallets et graphiques…", 72, "sync")');
   });
+
+  it('keeps the complete futuristic skin in index.html instead of duplicating it in legacy boot', () => {
+    const index = read('index.html');
+    const boot = read('public/legacy/js/20_boot.js');
+
+    expect(index).toContain('@keyframes tbBootSweep');
+    expect(index).toContain('repeating-linear-gradient(90deg');
+    expect(boot).not.toContain('@keyframes tbBootSweep');
+    expect(boot).not.toContain('repeating-linear-gradient(90deg');
+  });
 });

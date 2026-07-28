@@ -6,7 +6,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.278`.
+- Version à valider : `10.5.279`.
 - Bilan : 7 parcours `ok`, 40 parcours `à faire`.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
@@ -64,7 +64,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 44 | 10.5.265 | Dashboard : modales wallet | Ouvrir **Dashboard**, créer un wallet puis annuler, modifier un wallet existant puis annuler, et si disponible ouvrir la correction des types. | Les modales gardent fond, bordures, champs, boutons et lisibilité thème clair/sombre. Aucune ouverture fantôme du dialogue création. | `TB BUILD 10.5.265` ; aucun `getWalletDialogStyles` manquant, aucun `Uncaught`. | à faire |
 | 45 | 10.5.266 | Dashboard : correction types wallet | Ouvrir **Dashboard**, afficher les wallets archives si besoin, puis ouvrir **Corriger types** quand un wallet sans type existe. Modifier une valeur et annuler ou sauvegarder sur un wallet de test. | La fenêtre s'ouvre sans wrapper legacy, les types proposés restent cohérents avec le nom du wallet et la sauvegarde ne casse pas les autres wallets. | `TB BUILD 10.5.266` ; aucun `tbInferWalletTypeFromName` manquant, aucun `TBDashboardWalletRules` manquant, aucun `Uncaught`. | à faire |
 | 46 | 10.5.267 à 10.5.269, 10.5.272 à 10.5.273 | Dashboard + Analyse + À traiter | Ouvrir **Dashboard**, vérifier le bloc Budget journalier, utiliser **Précédent**, **Aujourd'hui**, **Suivant**, puis passer de Segment à Voyage. Vérifier qu'aucun panneau d'aide Dashboard inattendu n'apparaît et que KPI, wallets et budget journalier restent à leur emplacement actuel. Rafraîchir la page. Ouvrir ensuite **Analyse** puis **À traiter**. | La fenêtre de 7 jours se déplace correctement, le choix Segment/Voyage reste mémorisé et les montants par jour restent affichés. Analyse et À traiter s'ouvrent normalement. Le retrait des anciens helpers hero/KPI sans appel ne change pas l'écran. | `TB BUILD 10.5.273` ; aucun `daily budget state load failed`, aucun `TBDashboardDailyBudgetState` manquant, aucun `Uncaught`. | à faire |
-| 47 | 10.5.278 | Boot mobile/PWA | Fermer complètement l'app, rouvrir sur Android ou navigateur mobile avec une session connectée, puis attendre le Dashboard. Refaire une fois en mode réseau faible si possible. | L'écran initial affiche la version TB, une progression visible jusqu'à `100%`, puis disparaît sans rester bloqué. | `TB BUILD 10.5.278` ; aucun `Uncaught`, aucune erreur de boot et aucune page figée sur le chargement. | à faire |
+| 47 | 10.5.278 à 10.5.279 | Boot mobile/PWA | Fermer complètement l'app, rouvrir sur Android ou navigateur mobile avec une session connectée, puis attendre le Dashboard. Refaire une fois en mode réseau faible si possible. | L'écran initial affiche la version TB, une progression visible jusqu'à `100%`, puis disparaît sans rester bloqué. | `TB BUILD 10.5.279` ; aucun `Uncaught`, aucune erreur de boot et aucune page figée sur le chargement. | à faire |
 
 ## À ajouter à chaque livraison
 

@@ -48,27 +48,7 @@ function tbEnsureBootOverlay() {
     if (!document.getElementById("tb-boot-overlay-style")) {
       const style = document.createElement("style");
       style.id = "tb-boot-overlay-style";
-      style.textContent = `
-        #tb-boot-overlay{padding:22px;overflow:hidden;color:#e0f2fe;background:linear-gradient(115deg,rgba(2,6,23,.94),rgba(8,47,73,.92) 46%,rgba(15,23,42,.96)),repeating-linear-gradient(90deg,rgba(125,211,252,.08) 0 1px,transparent 1px 64px),repeating-linear-gradient(0deg,rgba(34,197,94,.045) 0 1px,transparent 1px 56px)!important;}
-        #tb-boot-overlay::before{content:"";position:absolute;inset:-35% -20%;background:linear-gradient(90deg,transparent 28%,rgba(56,189,248,.18),rgba(34,197,94,.12),transparent 72%);transform:rotate(-12deg);animation:tbBootSweep 2.8s linear infinite;pointer-events:none;}
-        #tb-boot-overlay::after{content:"";position:absolute;inset:18px;border:1px solid rgba(125,211,252,.18);border-radius:30px;box-shadow:inset 0 0 42px rgba(14,165,233,.12);pointer-events:none;}
-        #tb-boot-overlay .tb-boot-card{position:relative;z-index:1;width:min(430px,92vw);padding:22px;border-radius:24px;background:rgba(15,23,42,.74);color:#f8fafc;box-shadow:0 28px 80px rgba(2,6,23,.44),inset 0 1px 0 rgba(255,255,255,.10);display:flex;flex-direction:column;gap:14px;text-align:left;border:1px solid rgba(125,211,252,.22);overflow:hidden;}
-        #tb-boot-overlay .tb-boot-card::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,#22c55e,#38bdf8,#2563eb);}
-        #tb-boot-overlay .tb-boot-head{display:flex;align-items:center;justify-content:space-between;gap:14px;}
-        #tb-boot-overlay .tb-boot-mark{width:44px;height:44px;border-radius:16px;display:grid;place-items:center;color:#bae6fd;font-weight:950;letter-spacing:.02em;background:linear-gradient(145deg,rgba(14,165,233,.28),rgba(34,197,94,.16));border:1px solid rgba(186,230,253,.28);box-shadow:0 0 32px rgba(14,165,233,.18);}
-        #tb-boot-overlay .tb-boot-copy{min-width:0;flex:1;}
-        #tb-boot-overlay .tb-boot-title{font-weight:900;font-size:18px;line-height:1.08;}
-        #tb-boot-overlay .tb-boot-version{margin-top:4px;font-size:11px;color:#93c5fd;font-weight:850;}
-        #tb-boot-overlay .tb-boot-percent{font-size:30px;line-height:1;font-weight:950;color:#fff;min-width:74px;text-align:right;}
-        #tb-boot-overlay .tb-boot-track{height:12px;border-radius:999px;overflow:hidden;background:rgba(148,163,184,.18);border:1px solid rgba(125,211,252,.18);}
-        #tb-boot-overlay .tb-boot-bar{display:block;width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#22c55e,#38bdf8,#60a5fa);box-shadow:0 0 24px rgba(56,189,248,.42);transition:width .28s ease;}
-        #tb-boot-overlay .tb-boot-text{font-size:13px;color:#cbd5e1;font-weight:720;min-height:18px;}
-        #tb-boot-overlay .tb-boot-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-        #tb-boot-overlay .tb-boot-step{height:5px;border-radius:999px;background:rgba(148,163,184,.20);overflow:hidden;}
-        #tb-boot-overlay .tb-boot-step i{display:block;height:100%;width:0%;border-radius:inherit;background:#38bdf8;transition:width .3s ease;}
-        #tb-boot-overlay[data-phase="data"] .tb-boot-step:nth-child(1) i,#tb-boot-overlay[data-phase="views"] .tb-boot-step:nth-child(-n+2) i,#tb-boot-overlay[data-phase="sync"] .tb-boot-step:nth-child(-n+3) i,#tb-boot-overlay[data-phase="ready"] .tb-boot-step i{width:100%;}
-        @keyframes tbBootSweep{from{transform:translateX(-45%) rotate(-12deg)}to{transform:translateX(45%) rotate(-12deg)}}
-      `;
+      style.textContent = '#tb-boot-overlay .tb-boot-card{min-width:240px;max-width:86vw;padding:18px 20px;border-radius:20px;background:rgba(17,24,39,.92);color:#fff;display:flex;flex-direction:column;gap:12px;border:1px solid rgba(255,255,255,.08)}#tb-boot-overlay .tb-boot-head{display:flex;align-items:center;justify-content:space-between;gap:12px}#tb-boot-overlay .tb-boot-mark{font-weight:900}#tb-boot-overlay .tb-boot-progress,#tb-boot-overlay .tb-boot-track{height:10px;border-radius:999px;background:rgba(255,255,255,.14);overflow:hidden}#tb-boot-overlay .tb-boot-bar{display:block;height:100%;width:0;background:#38bdf8;transition:width .28s ease}#tb-boot-overlay .tb-boot-steps{display:none}';
       document.head.appendChild(style);
     }
     document.body.appendChild(el);

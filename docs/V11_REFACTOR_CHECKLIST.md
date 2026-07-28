@@ -181,6 +181,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Stabiliser Analyse quand les donnees/filtres locaux sont incoherents : refresh si transactions absentes et auto-elargissement des filtres vides.
   - [x] Stabiliser le boot mobile/PWA : log `TB BUILD`, cache service worker versionne et refresh Analyse lie aux transactions du voyage actif.
   - [x] Rendre l'ecran de chargement initial evolutif : version TB visible, progression par phases et passage a 100% avant disparition.
+  - [x] Compacter le fallback du loader initial : retrait du CSS futuriste duplique dans `20_boot.js`, boot legacy 878.5 -> 875.8 KiB.
   - [x] Sortir Cashflow du boot : `27_cashflow_curve.js` charge a la demande sur Dashboard via `tbEnsureCashflowCurve`, avec theme, KPI, boot-release et navigation compatibles lazy.
   - [x] Ajouter un loader transversal Sport/Travail leger pour que Nutrition, KPI et notifications lisent les calories d'activite sans ouvrir les onglets Sport ou Travail.
   - [x] Charger `workView.js` et `assetView.js` avec leurs domaines lazy au lieu du bridge initial.
