@@ -111,6 +111,7 @@ describe('Trip domain contract', () => {
     expect(legacy).not.toContain('const linkedHTML = links.length');
     expect(legacy).not.toContain('Ajouter ou lier un document');
     expect(legacy).not.toContain('<div class="trip-tabs">\\n            <button class="btn primary" id="trip-tab-recap"');
+    expect(legacy).not.toContain('window.UI?.tripView?.renderTripTabs ||');
     expect(legacy).not.toContain('En mode égal, le total est réparti seulement entre les participants cochés');
     expect(legacy).not.toContain('id="trip-members-list"');
     expect(legacy).not.toContain('data-resend-invite="${m.id}"');

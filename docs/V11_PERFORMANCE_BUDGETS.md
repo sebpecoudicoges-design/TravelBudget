@@ -12,13 +12,13 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.279` :
+Snapshot `10.5.280` :
 
 - Boot legacy : 875.8 / 1500 KiB.
 - Analyse : 159.7 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
 - Dashboard + Settings : 354.7 / 360 KiB.
-- Trip : 309.4 / 340 KiB.
+- Trip : 309.1 / 340 KiB.
 - Sport : 441.1 / 450 KiB.
 - Nutrition : 187.0 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
@@ -89,3 +89,5 @@ En 10.5.277, le chantier Play Store ajoute le workflow AAB de production. `andro
 En 10.5.278, le chantier V11 reprend le boot initial : l'ecran de chargement affiche la version TB, une progression par phases et un passage a 100% avant disparition. Le boot legacy remonte a 878.5 KiB a cause du HTML/CSS/JS du loader, mais le budget reste tres large face au plafond de 1500 KiB. Le CSS dist reste proche du plafond a 7.8 / 8 KiB : le prochain lot visuel devra donc supprimer ou deplacer du style avant d'en ajouter.
 
 En 10.5.279, le fallback du loader initial est compacte : le design complet reste dans `index.html`, tandis que `20_boot.js` ne garde qu'un style minimal de secours si le bloc doit etre recree. Boot legacy : 878.5 -> 875.8 KiB. L'UX normale du premier ecran ne change pas, et le contrat verifie que le CSS futuriste n'est plus duplique dans le legacy.
+
+En 10.5.280, le fallback inline des onglets Trip Recap/Historique est supprime du legacy. `29_trip_v1.js` appelle uniquement `tripView.renderTripTabs`, deja expose par le bridge et teste. Trip baisse de 309.4 a 309.1 KiB, sans modifier le comportement attendu des onglets.

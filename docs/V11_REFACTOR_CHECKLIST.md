@@ -97,6 +97,7 @@ Critere ferme : les parcours critiques Dashboard, KPI, Settings, Transactions, T
 - [x] Trip : extraire la carte d'audit des liens budget/transactions vers `tripView`.
 - [x] Trip : extraire le contenu de la fenetre Documents de depense vers une vue chargee a la demande.
   - [x] Extraire le rendu des onglets Recap/Historique vers `tripView`.
+  - [x] Supprimer le fallback inline des onglets Recap/Historique Trip pour garder `tripView.renderTripTabs` comme source unique.
 - [x] Trip : separer regles, repository, store et vues.
 - [x] Sport : separer bibliotheque, programme, timer, historique et calculs.
   - [x] Extraire le catalogue fallback, les MET, familles, materiels et charges de reference.
