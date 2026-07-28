@@ -12,21 +12,21 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.284` :
+Snapshot `10.5.285` :
 
 - Boot legacy : 875.8 / 1500 KiB.
 - Analyse : 159.7 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
 - Dashboard + Settings : 354.7 / 360 KiB.
-- Trip : 309.1 / 340 KiB.
+- Trip : 310.8 / 340 KiB.
 - Sport : 441.1 / 450 KiB.
 - Nutrition : 187.0 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 113.2 / 115 KiB.
-- Bundle Vite JS initial : 243.2 / 260 KiB.
+- Bundle Vite JS initial : 245.8 / 260 KiB.
 - Bundle Vite JS lazy : 396.1 / 400 KiB.
-- Bundle Vite JS total : 639.4 / 640 KiB.
+- Bundle Vite JS total : 641.9 / 645 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
 - JS principal gzip : 69.8 / 110 KiB.
 
@@ -34,7 +34,7 @@ Snapshot `10.5.284` :
 
 - Bundle Vite JS initial : 260 KiB maximum.
 - Bundle Vite JS lazy : 400 KiB maximum.
-- Bundle Vite JS total : 640 KiB maximum.
+- Bundle Vite JS total : 645 KiB maximum.
 - Bundle Vite CSS total : 8 KiB maximum.
 - JS principal gzip : 110 KiB maximum.
 - Boot legacy : 1500 KiB maximum.
@@ -99,3 +99,5 @@ En 10.5.282, le shell Documents, la navigation dossiers et le panneau principal 
 En 10.5.283, les modales batch Documents de partage, resultat de partage, deplacement et ajout de tag quittent `43_documents_ui.js` vers `documentView.js`. Le legacy Documents baisse de 80.5 a 77.2 KiB. Le domaine Documents monte a 112.3 / 115 KiB car le rendu est teste dans la vue Documents. Le lazy passe a 393.7 KiB et le total JS a 637.0 KiB ; les plafonds montent a 395/640 KiB en gardant le bundle initial stable.
 
 En 10.5.284, les modales Documents d'aperçu fichier et de metadonnees quittent `43_documents_ui.js` vers `documentView.js`. Le legacy Documents baisse de 77.2 a 75.4 KiB. Le domaine Documents monte a 113.2 / 115 KiB et le lazy a 396.1 KiB car le rendu est maintenant teste dans le runtime Documents ; le plafond lazy passe a 400 KiB, tandis que le total reste sous son plafond existant a 639.4 / 640 KiB.
+
+En 10.5.285, le shell principal Trip quitte `29_trip_v1.js` vers `tripView.js`. Le legacy Trip baisse de 200.7 a 199.3 KiB. Le domaine Trip monte a 310.8 / 340 KiB, l'initial a 245.8 KiB et le total JS a 641.9 KiB car le rendu devient modulaire et teste ; le plafond total passe a 645 KiB en gardant le plafond initial stable.

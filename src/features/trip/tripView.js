@@ -246,6 +246,88 @@ export function renderTripLinkAuditCard({
 <div class="card trip-link-audit-card"><div class="trip-link-audit-card-row"><div><h2>${escapeHTML(title)}</h2><div class="muted">${escapeHTML(body)}</div></div><span class="trip-badge">${escapeHTML(String(n))}</span></div></div>`;
 }
 
+export function renderTripShell({
+  globalNetHTML = '',
+  pendingInvitesHTML = '',
+  tripClosed = false,
+  closedAt = '',
+  myRole = 'viewer',
+  labels = {},
+  tripManagementHTML = '',
+  editingExpenseId = '',
+  isMobile = false,
+  canWrite = false,
+  hasTrip = false,
+  quickAddLabel = '',
+  expenseFormHTML = '',
+  linkAuditHTML = '',
+  tabsHTML = '',
+  balancesHTML = '',
+  settlementsHTML = '',
+  analysisHTML = '',
+  historyToolbarHTML = '',
+  expensesHTML = '',
+  editExpenseModalHTML = '',
+  escapeHTML = fallbackEscape,
+}) {
+  const txt = (key, fallback) => labels[key] || fallback;
+  const closedHTML = tripClosed ? `<div class="card" style="margin-bottom:12px;border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.08);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <h2 style="margin:0 0 4px 0;">${escapeHTML(txt('closedTitle', 'Partage clos'))}</h2>
+            <div class="muted">${escapeHTML(txt('closedBody', 'Les balances sont figées depuis le snapshot de clôture.'))} ${escapeHTML(String(closedAt || '').slice(0, 10))}</div>
+          </div>
+          ${myRole !== 'viewer' ? `<button class="btn" id="trip-reopen" type="button">${escapeHTML(txt('reopen', 'Réouvrir'))}</button>` : ''}
+        </div>
+      </div>` : '';
+  const expenseHTML = editingExpenseId
+    ? `<div class="card"><h2>${escapeHTML(txt('expenseTitle', 'Dépense'))}</h2><div class="muted">${escapeHTML(txt('expenseHint', 'Ajout rapide'))}</div></div>`
+    : (isMobile
+      ? `<div class="card trip-mobile-expense-launcher">
+                  <h2>${escapeHTML(txt('expenseTitle', 'Dépense'))}</h2>
+                  <div class="muted">${escapeHTML(txt('expenseHint', 'Ajout rapide'))}</div>
+                  <button class="btn primary" type="button" data-trip-open-add-exp ${hasTrip && canWrite ? '' : 'disabled'}>${escapeHTML(quickAddLabel)}</button>
+                </div>`
+      : expenseFormHTML);
+
+  return `
+      ${globalNetHTML}
+      ${pendingInvitesHTML}
+      ${closedHTML}
+      <div class="grid">
+        ${tripManagementHTML}
+
+        ${expenseHTML}
+      </div>
+      ${linkAuditHTML}
+
+      <div class="card" style="margin-top:12px;">
+        <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+          <h2 style="margin:0;">${escapeHTML(txt('recapHistoryTitle', 'Récap / Historique'))}</h2>
+          ${tabsHTML}
+        </div>
+
+        <div id="trip-tab-content-recap" style="margin-top:10px; display:grid; gap:14px;">
+          <div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">
+            <div style="flex:1 1 260px; min-width:260px;">
+              ${balancesHTML}
+            </div>
+            <div style="flex:2 1 320px; min-width:320px;">
+              ${settlementsHTML}
+            </div>
+          </div>
+          ${analysisHTML}
+        </div>
+
+        <div id="trip-tab-content-history" style="margin-top:10px; display:none;">
+          ${historyToolbarHTML}
+          ${expensesHTML}
+        </div>
+      </div>
+      ${editExpenseModalHTML}
+    `;
+}
+
 export function renderTripTransactionMatchContent({
   rows,
   query = '',

@@ -85,7 +85,7 @@ describe('Trip domain contract', () => {
   });
 
   it('delegates the extracted Trip view surfaces to src/features/trip', () => {
-    for (const token of ['renderPendingTripInvites', 'renderTripManagementCard', 'renderTripExpenseForm', 'renderTripContextHelp', 'renderTripLinkAuditCard', 'renderTripTransactionMatchContent', 'renderTripSettlementModalContent', 'renderTripSettlementModalActions', 'renderTripAnalysisBars', 'renderTripTabs', 'renderTripSplitParticipants', 'renderTripSplitBox']) {
+    for (const token of ['renderPendingTripInvites', 'renderTripManagementCard', 'renderTripExpenseForm', 'renderTripContextHelp', 'renderTripLinkAuditCard', 'renderTripShell', 'renderTripTransactionMatchContent', 'renderTripSettlementModalContent', 'renderTripSettlementModalActions', 'renderTripAnalysisBars', 'renderTripTabs', 'renderTripSplitParticipants', 'renderTripSplitBox']) {
       expect(view).toContain(`export function ${token}`);
       expect(legacy).toContain(`tripView?.${token}`);
     }
@@ -125,5 +125,8 @@ describe('Trip domain contract', () => {
     expect(legacy).not.toContain('onclick="tbOpenTransactionFromTrip');
     expect(view).not.toContain('data-trip-detail-open-tx');
     expect(detailView).toContain('data-trip-detail-open-tx');
+    expect(legacy).not.toContain('id="trip-tab-content-recap" style="margin-top:10px; display:grid; gap:14px;"');
+    expect(legacy).not.toContain('class="card trip-mobile-expense-launcher"');
+    expect(legacy).not.toContain('border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.08);');
   });
 });

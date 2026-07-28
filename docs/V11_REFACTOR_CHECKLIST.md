@@ -230,6 +230,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire le rendu de gestion du partage Trip : voyage actif, creation/suppression, participants et invitations passent dans `tripView.js`.
   - [x] Extraire le rendu Récap Trip : balances, règlements suggérés et historique des règlements passent dans `tripRecapView.js`.
   - [x] Extraire la toolbar Historique Trip : filtres catégorie, participant, dates, montants et recherche passent dans `tripRecapView.js`.
+  - [x] Extraire le shell principal Trip : fermeture, grille gestion/formulaire, recap/historique et template modal passent dans `tripView.js`.
   - [x] Supprimer les helpers Settings morts : wrappers panneaux obsoletes, sauvegarde nom voyage inutilisee, resume/skeleton budget reference.
   - [x] Demarrer l'extraction Dashboard : le rendu onboarding quitte `12_dashboard_render.js` vers `dashboardView.js`.
   - [x] Demarrer l'extraction Analyse : l'overview de lecture quitte `33_budget_analysis.js` vers `analysisView.js`.

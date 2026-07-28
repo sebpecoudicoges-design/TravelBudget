@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   renderPendingTripInvites,
   renderTripManagementCard,
+  renderTripShell,
   renderTripTabs,
   renderTripContextHelp,
   renderTripExpenseForm,
@@ -83,6 +84,47 @@ describe('Trip view', () => {
     expect(html).toContain('data-rename-member="alex"');
     expect(html).toContain('data-del-member="alex"');
     expect(html).not.toContain('onclick=');
+  });
+
+  it('renders the main Trip shell from delegated HTML slots', () => {
+    const html = renderTripShell({
+      globalNetHTML: '<section data-slot="global"></section>',
+      pendingInvitesHTML: '<section data-slot="invites"></section>',
+      tripClosed: true,
+      closedAt: '2026-07-28T10:00:00Z',
+      myRole: 'owner',
+      labels: {
+        closedTitle: '<Closed>',
+        closedBody: 'Frozen <snapshot>',
+        reopen: 'Reopen',
+        expenseTitle: 'Expense',
+        expenseHint: 'Quick add',
+        recapHistoryTitle: 'Recap / History',
+      },
+      tripManagementHTML: '<article data-slot="management"></article>',
+      isMobile: true,
+      canWrite: true,
+      hasTrip: true,
+      quickAddLabel: '+ Add',
+      linkAuditHTML: '<article data-slot="audit"></article>',
+      tabsHTML: '<nav data-slot="tabs"></nav>',
+      balancesHTML: '<div data-slot="balances"></div>',
+      settlementsHTML: '<div data-slot="settlements"></div>',
+      analysisHTML: '<div data-slot="analysis"></div>',
+      historyToolbarHTML: '<div data-slot="toolbar"></div>',
+      expensesHTML: '<div data-slot="expenses"></div>',
+      editExpenseModalHTML: '<template id="trip-expense-modal-template"></template>',
+    });
+
+    expect(html).toContain('data-slot="global"');
+    expect(html).toContain('&lt;Closed&gt;');
+    expect(html).toContain('Frozen &lt;snapshot&gt; 2026-07-28');
+    expect(html).toContain('id="trip-reopen"');
+    expect(html).toContain('data-trip-open-add-exp');
+    expect(html).toContain('data-slot="management"');
+    expect(html).toContain('id="trip-tab-content-recap"');
+    expect(html).toContain('id="trip-tab-content-history"');
+    expect(html).toContain('data-slot="expenses"');
   });
 
   it('renders balances and settlements recap with stable action hooks', () => {

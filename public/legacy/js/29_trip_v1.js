@@ -4234,62 +4234,41 @@ return `
       escapeHTML,
     }) || "";
 
-    root.innerHTML = `
-      ${globalNetHTML}
-      ${pendingInvitesHTML}
-      ${tripClosed ? `<div class="card" style="margin-bottom:12px;border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.08);">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-          <div>
-            <h2 style="margin:0 0 4px 0;">${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Closed split" : "Partage clos")}</h2>
-            <div class="muted">${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Balances are frozen from the closing snapshot." : "Les balances sont figées depuis le snapshot de clôture.")} ${escapeHTML(String(trip.closed_at || "").slice(0, 10))}</div>
-          </div>
-          ${myRole !== "viewer" ? `<button class="btn" id="trip-reopen" type="button">${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Reopen" : "Réouvrir")}</button>` : ""}
-        </div>
-      </div>` : ""}
-      <div class="grid">
-        ${tripManagementHTML}
-
-        ${editingExpenseId
-          ? `<div class="card"><h2>${escapeHTML(_tripT("trip.expense"))}</h2><div class="muted">${escapeHTML(_tripT("trip.expense.quick_hint"))}</div></div>`
-          : (isTripMobileApp
-              ? `<div class="card trip-mobile-expense-launcher">
-                  <h2>${escapeHTML(_tripT("trip.expense"))}</h2>
-                  <div class="muted">${escapeHTML(_tripT("trip.expense.quick_hint"))}</div>
-                  <button class="btn primary" type="button" data-trip-open-add-exp ${trip && canWrite ? "" : "disabled"}>${tripQuickAddLabel}</button>
-                </div>`
-              : _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal: false }))}
-      </div>
-      ${linkAuditHTML}
-
-      <div class="card" style="margin-top:12px;">
-        <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
-          <h2 style="margin:0;">${escapeHTML((typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Recap / History" : "Récap / Historique")}</h2>
-          ${window.UI?.tripView?.renderTripTabs?.({
-              recapLabel: _tripT("trip.tabs.recap"),
-              historyLabel: _tripT("trip.tabs.history"),
-              escapeHTML,
-            }) || ""}
-        </div>
-
-        <div id="trip-tab-content-recap" style="margin-top:10px; display:grid; gap:14px;">
-          <div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">
-            <div style="flex:1 1 260px; min-width:260px;">
-              ${balHTML}
-            </div>
-            <div style="flex:2 1 320px; min-width:320px;">
-              ${settlementsHTML}
-            </div>
-          </div>
-          ${tripAnalysisHTML}
-        </div>
-
-        <div id="trip-tab-content-history" style="margin-top:10px; display:none;">
-          ${tripHistoryToolbarHTML}
-          ${expensesHTMLJoined}
-        </div>
-      </div>
-      ${editExpenseModalHTML}
-    `;
+    root.innerHTML = window.UI?.tripView?.renderTripShell?.({
+      globalNetHTML,
+      pendingInvitesHTML,
+      tripClosed,
+      closedAt: trip.closed_at || "",
+      myRole,
+      labels: {
+        closedTitle: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Closed split" : "Partage clos",
+        closedBody: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Balances are frozen from the closing snapshot." : "Les balances sont figées depuis le snapshot de clôture.",
+        reopen: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Reopen" : "Réouvrir",
+        expenseTitle: _tripT("trip.expense"),
+        expenseHint: _tripT("trip.expense.quick_hint"),
+        recapHistoryTitle: (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? "Recap / History" : "Récap / Historique",
+      },
+      tripManagementHTML,
+      editingExpenseId,
+      isMobile: isTripMobileApp,
+      canWrite,
+      hasTrip: !!trip,
+      quickAddLabel: tripQuickAddLabel,
+      expenseFormHTML: _expenseFormHTML({ editingExpenseId, editingDraft, trip, canWrite, memberOptions, walletOptions, categoryOptions, modal: false }),
+      linkAuditHTML,
+      tabsHTML: window.UI?.tripView?.renderTripTabs?.({
+        recapLabel: _tripT("trip.tabs.recap"),
+        historyLabel: _tripT("trip.tabs.history"),
+        escapeHTML,
+      }) || "",
+      balancesHTML: balHTML,
+      settlementsHTML,
+      analysisHTML: tripAnalysisHTML,
+      historyToolbarHTML: tripHistoryToolbarHTML,
+      expensesHTML: expensesHTMLJoined,
+      editExpenseModalHTML,
+      escapeHTML,
+    }) || `<div class="grid">${tripManagementHTML}</div>${linkAuditHTML}`;
 
     const expenseModalTemplate = _el("trip-expense-modal-template");
     if (expenseModalTemplate) {
