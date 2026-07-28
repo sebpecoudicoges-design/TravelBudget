@@ -2683,26 +2683,19 @@
     const kg = bodyWeight();
     const planSec = totalPlanSeconds(CACHE.plan);
     const kcal = totalPlanKcal(CACHE.plan, kg);
-    root.innerHTML = `
-      <div class="tb-sport-shell">
-        <div class="tb-sport-hero">
-          <div>
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:950;color:rgba(255,255,255,.72);">Sport</div>
-            <h2>${esc(txt("Seances et timer guide", "Workouts and guided timer"))}</h2>
-            <p>${esc(txt("Construis une seance, enchaine reps/temps/repos, puis sauvegarde ton ressenti et les calories estimees.", "Build a workout, chain reps/time/rest, then save how you felt and estimated calories."))}</p>
-          </div>
-          <div class="tb-sport-pill">${fmtSec(planSec)} - ${Math.round(kcal)} kcal</div>
-        </div>
-        ${sportStatsHTML()}
-        ${renderSportProfileDashboard()}
-        ${renderExerciseProgressionAnalysis()}
-        <div class="tb-sport-grid">
-          ${renderBuilder()}
-          ${renderFreeTimer()}
-          ${renderTimer()}
-        </div>
-        ${renderHistory()}
-      </div>`;
+    root.innerHTML = window.UI?.sportView?.renderSportShell?.({
+      title: txt("Seances et timer guide", "Workouts and guided timer"),
+      subtitle: txt("Construis une seance, enchaine reps/temps/repos, puis sauvegarde ton ressenti et les calories estimees.", "Build a workout, chain reps/time/rest, then save how you felt and estimated calories."),
+      planSummary: `${fmtSec(planSec)} - ${Math.round(kcal)} kcal`,
+      statsHTML: sportStatsHTML(),
+      profileHTML: renderSportProfileDashboard(),
+      progressionHTML: renderExerciseProgressionAnalysis(),
+      builderHTML: renderBuilder(),
+      freeTimerHTML: renderFreeTimer(),
+      timerHTML: renderTimer(),
+      historyHTML: renderHistory(),
+      escapeHTML: esc,
+    }) || "";
     bind(root);
     syncTimerFocusLock();
     syncSessionEditorPortal();

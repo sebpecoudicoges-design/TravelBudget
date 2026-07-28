@@ -6,6 +6,7 @@ import * as sportTimerController from './sportTimerController.js';
 import * as sportHistoryView from './sportHistoryView.js';
 import * as sportSessionSandboxView from './sportSessionSandboxView.js';
 import * as sportSessionSandboxRules from './sportSessionSandboxRules.js';
+import * as sportView from './sportView.js';
 
 let sportProfileRuntimePromise = null;
 
@@ -76,6 +77,10 @@ export function installSportRuntime(target = window) {
   target.UI.sportSessionSandboxView = {
     ...(target.UI.sportSessionSandboxView || {}),
     ...sportSessionSandboxView,
+  };
+  target.UI.sportView = {
+    ...(target.UI.sportView || {}),
+    ...sportView,
   };
   target.Core.sportSessionSandboxRules = {
     ...(target.Core.sportSessionSandboxRules || {}),

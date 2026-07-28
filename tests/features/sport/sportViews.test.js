@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { renderSportHistory } from '../../../src/features/sport/sportHistoryView.js';
 import { renderLoadRecommendations, renderPlannedSportWeek, renderProgramSettings, renderSessionEditorModal } from '../../../src/features/sport/sportProgramView.js';
 import { renderFinishWorkoutModal, renderFreeTimer, renderSportTimer } from '../../../src/features/sport/sportTimerView.js';
+import { renderSportShell } from '../../../src/features/sport/sportView.js';
 
 const api = {
   translate: (fr) => fr,
@@ -46,6 +47,30 @@ const api = {
 };
 
 describe('Sport timer view', () => {
+  it('renders the global Sport shell from delegated slots', () => {
+    const html = renderSportShell({
+      title: 'Sport <guide>',
+      subtitle: 'Construis <seance>',
+      planSummary: '45:00 - 320 kcal',
+      statsHTML: '<section data-slot="stats"></section>',
+      profileHTML: '<section data-slot="profile"></section>',
+      progressionHTML: '<section data-slot="progression"></section>',
+      builderHTML: '<section data-slot="builder"></section>',
+      freeTimerHTML: '<section data-slot="free"></section>',
+      timerHTML: '<section data-slot="timer"></section>',
+      historyHTML: '<section data-slot="history"></section>',
+      escapeHTML: api.escapeHTML,
+    });
+
+    expect(html).toContain('tb-sport-shell');
+    expect(html).toContain('Sport &lt;guide&gt;');
+    expect(html).toContain('Construis &lt;seance&gt;');
+    expect(html).toContain('45:00 - 320 kcal');
+    expect(html).toContain('data-slot="stats"');
+    expect(html).toContain('data-slot="builder"');
+    expect(html).toContain('data-slot="history"');
+  });
+
   it('renders the idle timer with disabled controls when no plan exists', () => {
     const html = renderSportTimer({ timer: null, plan: [], api });
 

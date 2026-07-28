@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   renderPendingTripInvites,
+  renderTripInviteNotice,
   renderTripManagementCard,
   renderTripShell,
   renderTripTabs,
@@ -35,6 +36,23 @@ describe('Trip view', () => {
     expect(html).toContain('&lt;Road trip&gt;');
     expect(html).toContain('data-accept-pending-invite="token-1"');
     expect(html).toContain('proprietaire');
+  });
+
+  it('renders the floating invite notice from the Trip view module', () => {
+    const html = renderTripInviteNotice({
+      language: 'en',
+      invites: [{
+        token: 'token-1',
+        tripId: 'trip-1',
+        tripName: '<Road trip>',
+        inviterName: '<Alex>',
+      }],
+    });
+
+    expect(html).toContain('tb-trip-invite-dot');
+    expect(html).toContain('Trip invitation');
+    expect(html).toContain('&lt;Road trip&gt;');
+    expect(html).toContain('&lt;Alex&gt;');
   });
 
   it('renders the Trip management card with stable controls and escaped members', () => {

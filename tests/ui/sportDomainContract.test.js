@@ -15,6 +15,7 @@ describe('Sport domain contract', () => {
   const timerController = fs.readFileSync('src/features/sport/sportTimerController.js', 'utf8');
   const timerView = fs.readFileSync('src/features/sport/sportTimerView.js', 'utf8');
   const historyView = fs.readFileSync('src/features/sport/sportHistoryView.js', 'utf8');
+  const sportView = fs.readFileSync('src/features/sport/sportView.js', 'utf8');
   const formView = fs.readFileSync('src/features/sport/sportFormView.js', 'utf8');
   const sandboxRules = fs.readFileSync('src/features/sport/sportSessionSandboxRules.js', 'utf8');
   const sandboxView = fs.readFileSync('src/features/sport/sportSessionSandboxView.js', 'utf8');
@@ -49,6 +50,7 @@ describe('Sport domain contract', () => {
       'sportHistoryView',
       'sportSessionSandboxRules',
       'sportSessionSandboxView',
+      'sportView',
     ]) {
       expect(runtime).toContain(token);
     }
@@ -63,6 +65,7 @@ describe('Sport domain contract', () => {
     expect(bridge).not.toContain("import * as sportHistoryView from '../features/sport/sportHistoryView.js'");
     expect(bridge).not.toContain("import * as sportSessionSandboxRules from '../features/sport/sportSessionSandboxRules.js'");
     expect(bridge).not.toContain("import * as sportSessionSandboxView from '../features/sport/sportSessionSandboxView.js'");
+    expect(bridge).not.toContain("import * as sportView from '../features/sport/sportView.js'");
     expect(bridge).not.toContain("import * as sportProfileRules from '../features/sport/sportProfileRules.js'");
     expect(bridge).not.toContain("import * as sportProfileView from '../features/sport/sportProfileView.js'");
     expect(bridge).not.toContain("import * as sportMobilityController from '../features/sport/sportMobilityController.js'");
@@ -148,10 +151,14 @@ describe('Sport domain contract', () => {
       expect(legacy).toContain(`sportTimerController()?.${token}`);
     }
     expect(timerView).toContain('export function renderSportTimer');
+    expect(sportView).toContain('export function renderSportShell');
     expect(historyView).toContain('export function renderSportHistory');
     expect(historyView).toContain('export function isTodaySession');
     expect(legacy).toContain('sportTimerView?.renderSportTimer');
+    expect(legacy).toContain('sportView?.renderSportShell');
     expect(legacy).toContain('sportHistoryView?.renderSportHistory');
+    expect(legacy).not.toContain('<div class="tb-sport-shell">');
+    expect(legacy).not.toContain('<div class="tb-sport-grid">');
 
     for (const token of ['removeSandboxSet', 'addSandboxSetToExercise']) {
       expect(sandboxRules).toContain(`export function ${token}`);

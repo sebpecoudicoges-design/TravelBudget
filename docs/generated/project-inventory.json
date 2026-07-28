@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "dda6717e2917e25f9bedb01faec7ec7a9abf2d0d",
-  "snapshotFingerprint": "d2a7165237441b885053d3ee9f80a100197fe3898780778300a516ef078f0d09",
-  "generatedAt": "2026-07-28T11:21:29.499Z",
+  "commit": "c9eeda47efa4bdff6800a582c117114bbd1a67fe",
+  "snapshotFingerprint": "eda94b2ad6cbe3d23fe9d7cbc9429b0f8de5ba24604450adedf9f0070e214ef4",
+  "generatedAt": "2026-07-28T11:36:56.250Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.285"
+    "version": "10.5.286"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -224,6 +224,7 @@
     "src/features/sport/sportStore.js",
     "src/features/sport/sportTimerController.js",
     "src/features/sport/sportTimerView.js",
+    "src/features/sport/sportView.js",
     "src/features/trip/tripDocumentView.js",
     "src/features/trip/tripExpenseDetailView.js",
     "src/features/trip/tripRecapView.js",

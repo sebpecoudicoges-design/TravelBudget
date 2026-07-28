@@ -85,7 +85,7 @@ describe('Trip domain contract', () => {
   });
 
   it('delegates the extracted Trip view surfaces to src/features/trip', () => {
-    for (const token of ['renderPendingTripInvites', 'renderTripManagementCard', 'renderTripExpenseForm', 'renderTripContextHelp', 'renderTripLinkAuditCard', 'renderTripShell', 'renderTripTransactionMatchContent', 'renderTripSettlementModalContent', 'renderTripSettlementModalActions', 'renderTripAnalysisBars', 'renderTripTabs', 'renderTripSplitParticipants', 'renderTripSplitBox']) {
+    for (const token of ['renderPendingTripInvites', 'renderTripInviteNotice', 'renderTripManagementCard', 'renderTripExpenseForm', 'renderTripContextHelp', 'renderTripLinkAuditCard', 'renderTripShell', 'renderTripTransactionMatchContent', 'renderTripSettlementModalContent', 'renderTripSettlementModalActions', 'renderTripAnalysisBars', 'renderTripTabs', 'renderTripSplitParticipants', 'renderTripSplitBox']) {
       expect(view).toContain(`export function ${token}`);
       expect(legacy).toContain(`tripView?.${token}`);
     }
@@ -115,6 +115,7 @@ describe('Trip domain contract', () => {
     expect(legacy).not.toContain('En mode égal, le total est réparti seulement entre les participants cochés');
     expect(legacy).not.toContain('id="trip-members-list"');
     expect(legacy).not.toContain('data-resend-invite="${m.id}"');
+    expect(legacy).not.toContain('<span class="tb-trip-invite-dot">${rows.length}</span>');
     expect(legacy).not.toContain('const balHTML = (() =>');
     expect(legacy).not.toContain('const settlementsHTML = (() =>');
     expect(legacy).not.toContain('<div class="card trip-history-toolbar">');

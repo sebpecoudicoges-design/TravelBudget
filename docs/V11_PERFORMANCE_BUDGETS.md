@@ -12,23 +12,23 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.285` :
+Snapshot `10.5.286` :
 
 - Boot legacy : 875.8 / 1500 KiB.
 - Analyse : 159.7 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
 - Dashboard + Settings : 354.7 / 360 KiB.
-- Trip : 310.8 / 340 KiB.
-- Sport : 441.1 / 450 KiB.
+- Trip : 311.2 / 340 KiB.
+- Sport : 441.0 / 450 KiB.
 - Nutrition : 187.0 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 113.2 / 115 KiB.
-- Bundle Vite JS initial : 245.8 / 260 KiB.
-- Bundle Vite JS lazy : 396.1 / 400 KiB.
-- Bundle Vite JS total : 641.9 / 645 KiB.
+- Bundle Vite JS initial : 246.3 / 260 KiB.
+- Bundle Vite JS lazy : 397.2 / 400 KiB.
+- Bundle Vite JS total : 643.4 / 645 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
-- JS principal gzip : 69.8 / 110 KiB.
+- JS principal gzip : 70.5 / 110 KiB.
 
 ## Budgets actuels
 
@@ -101,3 +101,5 @@ En 10.5.283, les modales batch Documents de partage, resultat de partage, deplac
 En 10.5.284, les modales Documents d'aperçu fichier et de metadonnees quittent `43_documents_ui.js` vers `documentView.js`. Le legacy Documents baisse de 77.2 a 75.4 KiB. Le domaine Documents monte a 113.2 / 115 KiB et le lazy a 396.1 KiB car le rendu est maintenant teste dans le runtime Documents ; le plafond lazy passe a 400 KiB, tandis que le total reste sous son plafond existant a 639.4 / 640 KiB.
 
 En 10.5.285, le shell principal Trip quitte `29_trip_v1.js` vers `tripView.js`. Le legacy Trip baisse de 200.7 a 199.3 KiB. Le domaine Trip monte a 310.8 / 340 KiB, l'initial a 245.8 KiB et le total JS a 641.9 KiB car le rendu devient modulaire et teste ; le plafond total passe a 645 KiB en gardant le plafond initial stable.
+
+En 10.5.286, le shell principal Sport quitte `45_sport_ui.js` vers `sportView.js` et le bandeau flottant Invitations Trip quitte `29_trip_v1.js` vers `tripView.js`. Trip legacy baisse de 199.3 a 199.1 KiB, Sport legacy reste a 214.4 KiB mais possede une nouvelle frontiere testee pour extraire les sous-panneaux suivants. Les budgets restent verts : initial 246.3 / 260 KiB, lazy 397.2 / 400 KiB, total 643.4 / 645 KiB. La marge totale est volontairement surveillee de pres : le prochain lot devra supprimer ou fractionner avant d'ajouter du rendu.

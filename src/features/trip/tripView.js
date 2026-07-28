@@ -18,6 +18,20 @@ export function renderPendingTripInvites({ invites, language = 'fr', escapeHTML 
 <div class="card" style="margin-bottom:12px;border-color:rgba(59,130,246,.35);background:rgba(59,130,246,.08);"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div><h2 style="margin:0 0 6px 0;">${escapeHTML(en ? 'Pending Trip invitation' : 'Invitation Trip en attente')}</h2><div class="muted">${escapeHTML(en ? 'You have been invited to join a shared trip.' : 'Tu as une invitation pour rejoindre un partage Trip.')}</div></div><span class="trip-badge">${rows.length}</span></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">${rows.map((invite) => `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;"><div><strong>${escapeHTML(invite.tripName)}</strong><div class="muted" style="font-size:12px;">${escapeHTML(en ? 'Invited by' : 'Invité par')} ${escapeHTML(invite.inviterName || invite.inviterEmail || 'TravelBudget')} &middot; ${escapeHTML(en ? 'as' : 'en tant que')} ${escapeHTML(invite.memberName)} &middot; ${escapeHTML(roleLabel(invite.role))}</div></div><button class="btn primary" type="button" data-accept-pending-invite="${escapeHTML(invite.token)}">${escapeHTML(en ? 'Join' : 'Rejoindre')}</button></div>`).join('')}</div></div>`;
 }
 
+export function renderTripInviteNotice({ invites, language = 'fr', escapeHTML = fallbackEscape }) {
+  const rows = Array.isArray(invites) ? invites.filter((row) => row?.token && row?.tripId) : [];
+  if (!rows.length) return '';
+  const en = language === 'en';
+  const first = rows[0] || {};
+  return `
+        <span class="tb-trip-invite-dot">${rows.length}</span>
+        <span class="tb-trip-invite-copy">
+          <strong>${escapeHTML(en ? 'Trip invitation' : 'Invitation Trip')}</strong>
+          <small>${escapeHTML(first.tripName || 'Trip')} · ${escapeHTML(first.inviterName || first.inviterEmail || 'TravelBudget')}</small>
+        </span>
+      `;
+}
+
 export function renderTripManagementCard({
   title = 'Trip',
   members,

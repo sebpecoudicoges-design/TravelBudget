@@ -310,14 +310,11 @@ async function _rpcAcceptInvite(token) {
         });
         document.body.appendChild(box);
       }
-      const first = rows[0];
-      box.innerHTML = `
-        <span class="tb-trip-invite-dot">${rows.length}</span>
-        <span class="tb-trip-invite-copy">
-          <strong>${escapeHTML(en ? "Trip invitation" : "Invitation Trip")}</strong>
-          <small>${escapeHTML(first.tripName || "Trip")} · ${escapeHTML(first.inviterName || first.inviterEmail || "TravelBudget")}</small>
-        </span>
-      `;
+      box.innerHTML = window.UI?.tripView?.renderTripInviteNotice?.({
+        invites: rows,
+        language: en ? "en" : "fr",
+        escapeHTML,
+      }) || "";
       box.style.display = "inline-flex";
     } catch (e) {
       console.warn("[Trip] invite notification sync failed:", e);
