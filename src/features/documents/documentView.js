@@ -316,6 +316,122 @@ export function renderDocumentShell({
   <div class="tb-doc-layout">${foldersHtml}${mainHtml}</div>`;
 }
 
+export function renderDocumentShareModal({
+  count = 0,
+  esc = defaultEsc,
+  tr = defaultText,
+}) {
+  return `
+    <div class="tb-doc-modal">
+      <h3>${esc(tr('documents.share.title', { count }))}</h3>
+      <div class="tb-doc-form">
+        <label for="tb-doc-share-duration">${esc(tr('documents.share.duration'))}</label>
+        <select id="tb-doc-share-duration" class="input">
+          <option value="10m">${esc(tr('documents.share.10m'))}</option>
+          <option value="1h" selected>${esc(tr('documents.share.1h'))}</option>
+          <option value="24h">${esc(tr('documents.share.24h'))}</option>
+        </select>
+        <p class="muted" style="font-size:13px;margin:0;">
+          ${esc(tr('documents.share.hint'))}
+        </p>
+      </div>
+      <div class="tb-doc-modal-actions">
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsGenerateShareLinks()">${esc(tr('documents.action.create_links'))}</button>
+      </div>
+    </div>
+  `;
+}
+
+export function renderDocumentShareResultModal({
+  count = 0,
+  duration = '1h',
+  bodyText = '',
+  links = [],
+  esc = defaultEsc,
+  tr = defaultText,
+}) {
+  return `
+    <div class="tb-doc-modal">
+      <h3>${esc(tr('documents.share.title', { count }))}</h3>
+      <p class="muted" style="font-size:13px;margin-top:-4px;">
+        ${esc(tr('documents.share.private_hint'))}
+      </p>
+      <div class="tb-doc-modal-actions between" style="margin-top:10px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn primary" type="button" onclick="window.tbDocumentsOpenShareEmail()">${esc(tr('documents.action.prepare_email'))}</button>
+          <button class="btn" type="button" onclick="window.tbDocumentsCopyShareLinks()">${esc(tr('documents.action.copy_links'))}</button>
+          <button class="btn" type="button" onclick="window.tbDocumentsCopyShareBody()">${esc(tr('documents.action.copy_message'))}</button>
+        </div>
+        <small class="muted">${esc(duration || '1h')}</small>
+      </div>
+      <textarea class="input tb-doc-share-body" readonly>${esc(bodyText)}</textarea>
+      <div class="tb-doc-share-links">
+        ${links.map((link) => `
+          <div class="tb-doc-share-link">
+            <strong>${esc(link.name)}</strong><br>
+            ${esc(link.url || '')}
+          </div>
+        `).join('')}
+      </div>
+      <div class="tb-doc-modal-actions">
+        <button class="btn" type="button" onclick="window.tbDocumentsShareSelected()">${esc(tr('documents.action.recreate'))}</button>
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.close'))}</button>
+      </div>
+    </div>
+  `;
+}
+
+export function renderDocumentMoveSelectedModal({
+  count = 0,
+  folderOptions = [],
+  esc = defaultEsc,
+  tr = defaultText,
+}) {
+  return `
+    <div class="tb-doc-modal">
+      <h3>${esc(tr('documents.move.title', { count }))}</h3>
+      <div class="tb-doc-form">
+        <label for="tb-doc-batch-folder">${esc(tr('documents.move.destination'))}</label>
+        <select id="tb-doc-batch-folder" class="input">
+          ${folderOptions.map(([id, label]) => `<option value="${esc(id)}">${esc(label)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="tb-doc-modal-actions">
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyMoveSelected()">${esc(tr('documents.action.move'))}</button>
+      </div>
+    </div>
+  `;
+}
+
+export function renderDocumentAddTagSelectedModal({
+  count = 0,
+  tags = [],
+  esc = defaultEsc,
+  tr = defaultText,
+}) {
+  return `
+    <div class="tb-doc-modal">
+      <h3>${esc(tr('documents.tag.title', { count }))}</h3>
+      <div class="tb-doc-form">
+        <label for="tb-doc-batch-tag">${esc(tr('documents.tag.label'))}</label>
+        <input id="tb-doc-batch-tag" class="input" list="tb-doc-known-tags" placeholder="${esc(tr('documents.tag.placeholder'))}" autocomplete="off" />
+        <datalist id="tb-doc-known-tags">
+          ${tags.map((tag) => `<option value="${esc(tag)}"></option>`).join('')}
+        </datalist>
+        <p class="muted" style="font-size:13px;margin:0;">
+          ${esc(tr('documents.tag.hint'))}
+        </p>
+      </div>
+      <div class="tb-doc-modal-actions">
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyAddTagSelected()">${esc(tr('documents.drop.add'))}</button>
+      </div>
+    </div>
+  `;
+}
+
 function relationOptions({ tr, esc, selected = '' }) {
   return ['invoice', 'receipt', 'warranty', 'proof', 'other']
     .map((type) => `<option value="${esc(type)}" ${String(selected) === type ? 'selected' : ''}>${esc(tr(`documents.relation.${type}`))}</option>`)

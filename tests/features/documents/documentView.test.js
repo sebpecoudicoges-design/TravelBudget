@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   renderDocumentAssetsModal,
+  renderDocumentAddTagSelectedModal,
   renderDocumentCard,
   renderDocumentFolders,
   renderDocumentMain,
+  renderDocumentMoveSelectedModal,
+  renderDocumentShareModal,
+  renderDocumentShareResultModal,
   renderDocumentShell,
   renderDocumentTransactionsModal,
 } from '../../../src/features/documents/documentView.js';
@@ -159,5 +163,42 @@ describe('document view', () => {
     expect(html).toContain('<aside>Folders</aside>');
     expect(html).toContain('<main>Docs</main>');
     expect(html).toContain('tb-doc-file-input');
+  });
+
+  it('renders share setup and share result modals', () => {
+    const setup = renderDocumentShareModal({ count: 2, ...api });
+    const result = renderDocumentShareResultModal({
+      count: 2,
+      duration: '24h',
+      bodyText: 'Hello <links>',
+      links: [{ name: 'Facture', url: 'https://example.test/doc' }],
+      ...api,
+    });
+
+    expect(setup).toContain('tb-doc-share-duration');
+    expect(setup).toContain("window.tbDocumentsGenerateShareLinks()");
+    expect(result).toContain('Hello &lt;links&gt;');
+    expect(result).toContain('https://example.test/doc');
+    expect(result).toContain("window.tbDocumentsCopyShareLinks()");
+  });
+
+  it('renders batch move and tag modals', () => {
+    const move = renderDocumentMoveSelectedModal({
+      count: 3,
+      folderOptions: [['', 'Sans dossier'], ['folder-1', 'Factures']],
+      ...api,
+    });
+    const tag = renderDocumentAddTagSelectedModal({
+      count: 3,
+      tags: ['trip', 'garantie'],
+      ...api,
+    });
+
+    expect(move).toContain('tb-doc-batch-folder');
+    expect(move).toContain('value="folder-1"');
+    expect(move).toContain("window.tbDocumentsApplyMoveSelected()");
+    expect(tag).toContain('tb-doc-batch-tag');
+    expect(tag).toContain('value="garantie"');
+    expect(tag).toContain("window.tbDocumentsApplyAddTagSelected()");
   });
 });

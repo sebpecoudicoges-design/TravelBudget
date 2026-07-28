@@ -1132,26 +1132,11 @@ async function shareSelected(){
   const wrap = document.createElement('div');
   wrap.className = 'tb-doc-modal-backdrop';
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
-  wrap.innerHTML = `
-    <div class="tb-doc-modal">
-      <h3>${esc(tr('documents.share.title', { count: docs.length }))}</h3>
-      <div class="tb-doc-form">
-        <label for="tb-doc-share-duration">${esc(tr('documents.share.duration'))}</label>
-        <select id="tb-doc-share-duration" class="input">
-          <option value="10m">${esc(tr('documents.share.10m'))}</option>
-          <option value="1h" selected>${esc(tr('documents.share.1h'))}</option>
-          <option value="24h">${esc(tr('documents.share.24h'))}</option>
-        </select>
-        <p class="muted" style="font-size:13px;margin:0;">
-          ${esc(tr('documents.share.hint'))}
-        </p>
-      </div>
-      <div class="tb-doc-modal-actions">
-        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
-        <button class="btn primary" type="button" onclick="window.tbDocumentsGenerateShareLinks()">${esc(tr('documents.action.create_links'))}</button>
-      </div>
-    </div>
-  `;
+  wrap.innerHTML = window.UI?.documentView?.renderDocumentShareModal?.({
+    count: docs.length,
+    esc,
+    tr,
+  }) || `<div class="tb-doc-modal"><h3>${esc(tr('documents.share.title', { count: docs.length }))}</h3></div>`;
   document.body.appendChild(wrap);
 }
 
@@ -1186,35 +1171,14 @@ async function generateShareLinksSelected(){
     const wrap = document.querySelector('.tb-doc-modal-backdrop') || document.createElement('div');
     wrap.className = 'tb-doc-modal-backdrop';
     wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
-    wrap.innerHTML = `
-      <div class="tb-doc-modal">
-        <h3>${esc(tr('documents.share.title', { count: links.length }))}</h3>
-        <p class="muted" style="font-size:13px;margin-top:-4px;">
-          ${esc(tr('documents.share.private_hint'))}
-        </p>
-        <div class="tb-doc-modal-actions between" style="margin-top:10px;">
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn primary" type="button" onclick="window.tbDocumentsOpenShareEmail()">${esc(tr('documents.action.prepare_email'))}</button>
-            <button class="btn" type="button" onclick="window.tbDocumentsCopyShareLinks()">${esc(tr('documents.action.copy_links'))}</button>
-            <button class="btn" type="button" onclick="window.tbDocumentsCopyShareBody()">${esc(tr('documents.action.copy_message'))}</button>
-          </div>
-          <small class="muted">${esc(duration || '1h')}</small>
-        </div>
-        <textarea class="input tb-doc-share-body" readonly>${esc(bodyText)}</textarea>
-        <div class="tb-doc-share-links">
-          ${links.map(x=>`
-            <div class="tb-doc-share-link">
-              <strong>${esc(x.name)}</strong><br>
-              ${esc(x.url || '')}
-            </div>
-          `).join('')}
-        </div>
-        <div class="tb-doc-modal-actions">
-          <button class="btn" type="button" onclick="window.tbDocumentsShareSelected()">${esc(tr('documents.action.recreate'))}</button>
-          <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.close'))}</button>
-        </div>
-      </div>
-    `;
+    wrap.innerHTML = window.UI?.documentView?.renderDocumentShareResultModal?.({
+      count: links.length,
+      duration,
+      bodyText,
+      links,
+      esc,
+      tr,
+    }) || `<div class="tb-doc-modal"><textarea class="input tb-doc-share-body" readonly>${esc(bodyText)}</textarea></div>`;
     if(!wrap.parentNode) document.body.appendChild(wrap);
   }catch(e){
     setActionMessage('');
@@ -1234,21 +1198,12 @@ async function moveSelected(){
   const wrap = document.createElement('div');
   wrap.className = 'tb-doc-modal-backdrop';
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
-  wrap.innerHTML = `
-    <div class="tb-doc-modal">
-      <h3>${esc(tr('documents.move.title', { count: docs.length }))}</h3>
-      <div class="tb-doc-form">
-        <label for="tb-doc-batch-folder">${esc(tr('documents.move.destination'))}</label>
-        <select id="tb-doc-batch-folder" class="input">
-          ${folderOptions.map(([id,label]) => `<option value="${esc(id)}">${esc(label)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="tb-doc-modal-actions">
-        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
-        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyMoveSelected()">${esc(tr('documents.action.move'))}</button>
-      </div>
-    </div>
-  `;
+  wrap.innerHTML = window.UI?.documentView?.renderDocumentMoveSelectedModal?.({
+    count: docs.length,
+    folderOptions,
+    esc,
+    tr,
+  }) || `<div class="tb-doc-modal"><select id="tb-doc-batch-folder" class="input">${folderOptions.map(([id,label]) => `<option value="${esc(id)}">${esc(label)}</option>`).join('')}</select></div>`;
   document.body.appendChild(wrap);
 }
 
@@ -1295,25 +1250,12 @@ async function addTagSelected(){
   const wrap = document.createElement('div');
   wrap.className = 'tb-doc-modal-backdrop';
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
-  wrap.innerHTML = `
-    <div class="tb-doc-modal">
-      <h3>${esc(tr('documents.tag.title', { count: docs.length }))}</h3>
-      <div class="tb-doc-form">
-        <label for="tb-doc-batch-tag">${esc(tr('documents.tag.label'))}</label>
-        <input id="tb-doc-batch-tag" class="input" list="tb-doc-known-tags" placeholder="${esc(tr('documents.tag.placeholder'))}" autocomplete="off" />
-        <datalist id="tb-doc-known-tags">
-          ${tags.map(t => `<option value="${esc(t)}"></option>`).join('')}
-        </datalist>
-        <p class="muted" style="font-size:13px;margin:0;">
-          ${esc(tr('documents.tag.hint'))}
-        </p>
-      </div>
-      <div class="tb-doc-modal-actions">
-        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
-        <button class="btn primary" type="button" onclick="window.tbDocumentsApplyAddTagSelected()">${esc(tr('documents.drop.add'))}</button>
-      </div>
-    </div>
-  `;
+  wrap.innerHTML = window.UI?.documentView?.renderDocumentAddTagSelectedModal?.({
+    count: docs.length,
+    tags,
+    esc,
+    tr,
+  }) || `<div class="tb-doc-modal"><input id="tb-doc-batch-tag" class="input" /></div>`;
   document.body.appendChild(wrap);
   setTimeout(()=>document.getElementById('tb-doc-batch-tag')?.focus(), 0);
 }

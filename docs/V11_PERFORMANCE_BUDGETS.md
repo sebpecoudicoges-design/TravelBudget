@@ -12,7 +12,7 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.282` :
+Snapshot `10.5.283` :
 
 - Boot legacy : 875.8 / 1500 KiB.
 - Analyse : 159.7 / 160 KiB.
@@ -23,18 +23,18 @@ Snapshot `10.5.282` :
 - Nutrition : 187.0 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
-- Documents : 110.9 / 115 KiB.
+- Documents : 112.3 / 115 KiB.
 - Bundle Vite JS initial : 243.2 / 260 KiB.
-- Bundle Vite JS lazy : 389.3 / 390 KiB.
-- Bundle Vite JS total : 632.5 / 635 KiB.
+- Bundle Vite JS lazy : 393.7 / 395 KiB.
+- Bundle Vite JS total : 637.0 / 640 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
 - JS principal gzip : 69.8 / 110 KiB.
 
 ## Budgets actuels
 
 - Bundle Vite JS initial : 260 KiB maximum.
-- Bundle Vite JS lazy : 390 KiB maximum.
-- Bundle Vite JS total : 635 KiB maximum.
+- Bundle Vite JS lazy : 395 KiB maximum.
+- Bundle Vite JS total : 640 KiB maximum.
 - Bundle Vite CSS total : 8 KiB maximum.
 - JS principal gzip : 110 KiB maximum.
 - Boot legacy : 1500 KiB maximum.
@@ -95,3 +95,5 @@ En 10.5.280, le fallback inline des onglets Trip Recap/Historique est supprime d
 En 10.5.281, les modales Documents de liaison transactions, depenses Trip et assets quittent `43_documents_ui.js` vers `documentView.js`. Le fichier legacy Documents baisse fortement, de 93.6 a 87.2 KiB. Le domaine Documents passe de 107.8 a 108.2 KiB car le rendu est maintenant dans un module pur teste. Le chunk Vite lazy passe a 381.2 KiB et le total JS a 624.5 KiB ; leurs plafonds sont ajustes a 385 et 625 KiB, sans toucher au plafond initial.
 
 En 10.5.282, le shell Documents, la navigation dossiers et le panneau principal quittent `43_documents_ui.js` vers `documentView.js`. Le legacy Documents baisse de 87.2 a 80.5 KiB. Le domaine Documents passe de 108.2 a 110.9 KiB, le lazy a 389.3 KiB et le total JS a 632.5 KiB, car le rendu est maintenant teste dans le runtime Documents. Les plafonds lazy/total passent a 390/635 KiB, sans toucher au bundle initial.
+
+En 10.5.283, les modales batch Documents de partage, resultat de partage, deplacement et ajout de tag quittent `43_documents_ui.js` vers `documentView.js`. Le legacy Documents baisse de 80.5 a 77.2 KiB. Le domaine Documents monte a 112.3 / 115 KiB car le rendu est teste dans la vue Documents. Le lazy passe a 393.7 KiB et le total JS a 637.0 KiB ; les plafonds montent a 395/640 KiB en gardant le bundle initial stable.

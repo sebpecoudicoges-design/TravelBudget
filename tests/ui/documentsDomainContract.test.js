@@ -38,7 +38,16 @@ describe('documents domain legacy contract', () => {
 
   it('keeps batch document actions on the current modal flow without duplicate legacy prompts', () => {
     const source = legacy();
+    const view = fs.readFileSync('src/features/documents/documentView.js', 'utf8');
 
+    expect(view).toContain('export function renderDocumentShareModal');
+    expect(view).toContain('export function renderDocumentShareResultModal');
+    expect(view).toContain('export function renderDocumentMoveSelectedModal');
+    expect(view).toContain('export function renderDocumentAddTagSelectedModal');
+    expect(source).toContain('window.UI?.documentView?.renderDocumentShareModal');
+    expect(source).toContain('window.UI?.documentView?.renderDocumentShareResultModal');
+    expect(source).toContain('window.UI?.documentView?.renderDocumentMoveSelectedModal');
+    expect(source).toContain('window.UI?.documentView?.renderDocumentAddTagSelectedModal');
     expect(occurrences(source, /async function shareSelected\(/g)).toBe(1);
     expect(occurrences(source, /async function moveSelected\(/g)).toBe(1);
     expect(occurrences(source, /async function addTagSelected\(/g)).toBe(1);
@@ -48,5 +57,8 @@ describe('documents domain legacy contract', () => {
     expect(source).toContain('window.tbDocumentsApplyAddTagSelected = applyAddTagSelected');
     expect(source).not.toContain('Durée du lien temporaire ? 10m, 1h ou 24h');
     expect(source).not.toContain('Tag a ajouter aux documents selectionnes ?');
+    expect(source).not.toContain('<label for="tb-doc-share-duration">');
+    expect(source).not.toContain('<label for="tb-doc-batch-folder">');
+    expect(source).not.toContain('<label for="tb-doc-batch-tag">');
   });
 });
