@@ -316,6 +316,77 @@ export function renderDocumentShell({
   <div class="tb-doc-layout">${foldersHtml}${mainHtml}</div>`;
 }
 
+export function renderDocumentPreviewModal({
+  name = 'Document',
+  url = '',
+  body = '',
+  esc = defaultEsc,
+  tr = defaultText,
+}) {
+  return `<div class="tb-doc-preview">
+    <div class="tb-doc-preview-head">
+      <strong>${esc(name)}</strong>
+      <div style="display:flex;gap:8px;">
+        <a class="btn" href="${esc(url)}" target="_blank" rel="noopener">${esc(tr('documents.action.new_tab'))}</a>
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-preview-backdrop').remove()">${esc(tr('documents.action.close'))}</button>
+      </div>
+    </div>
+    <div class="tb-doc-preview-body">${body}</div>
+  </div>`;
+}
+
+export function renderDocumentInfoModal({
+  doc = {},
+  currentTags = '',
+  currentExpiry = '',
+  currentNotes = '',
+  suggestions = [],
+  folderOptionsHtml = '',
+  esc = defaultEsc,
+  tr = defaultText,
+}) {
+  return `
+    <div class="tb-doc-modal">
+      <h3>${esc(tr('documents.modal.info_title'))}</h3>
+
+      <div class="tb-doc-form">
+        <div>
+          <label>${esc(tr('documents.modal.tags'))}</label>
+          <input id="tb-doc-info-tags" class="input" type="text" value="${esc(currentTags)}" placeholder="Australie, WHV, Banque" />
+          ${suggestions.length ? `
+            <div class="tb-doc-tags" style="margin-top:8px;">
+              ${suggestions.map((tag) => `<button class="btn" type="button" data-tag="${esc(tag)}" onclick="window.tbDocumentsToggleSuggestedTag(this.dataset.tag)">${esc(tag)}</button>`).join('')}
+            </div>
+            <div class="muted" style="font-size:12px;margin-top:4px;">${esc(tr('documents.modal.suggestions_hint'))}</div>
+          ` : ''}
+        </div>
+
+        <div>
+          <label>${esc(tr('documents.modal.folder'))}</label>
+          <select id="tb-doc-info-folder" class="input">
+            ${folderOptionsHtml}
+          </select>
+        </div>
+
+        <div>
+          <label>${esc(tr('documents.modal.expiry'))}</label>
+          <input id="tb-doc-info-expiry" class="input" type="date" value="${esc(currentExpiry)}" />
+        </div>
+
+        <div>
+          <label>${esc(tr('documents.modal.notes'))}</label>
+          <textarea id="tb-doc-info-notes" class="input" placeholder="Ex : original papier chez parents, contrat à renouveler...">${esc(currentNotes)}</textarea>
+        </div>
+      </div>
+
+      <div class="tb-doc-modal-actions">
+        <button class="btn" type="button" onclick="this.closest('.tb-doc-modal-backdrop').remove()">${esc(tr('documents.action.cancel'))}</button>
+        <button class="btn primary" type="button" onclick="window.tbDocumentsSaveInfo('${esc(doc.id)}')">${esc(tr('documents.action.save'))}</button>
+      </div>
+    </div>
+  `;
+}
+
 export function renderDocumentShareModal({
   count = 0,
   esc = defaultEsc,

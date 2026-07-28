@@ -4,8 +4,10 @@ import {
   renderDocumentAddTagSelectedModal,
   renderDocumentCard,
   renderDocumentFolders,
+  renderDocumentInfoModal,
   renderDocumentMain,
   renderDocumentMoveSelectedModal,
+  renderDocumentPreviewModal,
   renderDocumentShareModal,
   renderDocumentShareResultModal,
   renderDocumentShell,
@@ -163,6 +165,32 @@ describe('document view', () => {
     expect(html).toContain('<aside>Folders</aside>');
     expect(html).toContain('<main>Docs</main>');
     expect(html).toContain('tb-doc-file-input');
+  });
+
+  it('renders preview and metadata modals from the document view module', () => {
+    const preview = renderDocumentPreviewModal({
+      name: 'Passeport <scan>',
+      url: 'https://example.test/file?x=<1>',
+      body: '<iframe src="about:blank"></iframe>',
+      ...api,
+    });
+    const info = renderDocumentInfoModal({
+      doc: { id: 'doc-1' },
+      currentTags: 'visa, <scan>',
+      currentExpiry: '2027-01-02',
+      currentNotes: 'Original chez parents',
+      suggestions: ['Australie', 'Banque'],
+      folderOptionsHtml: '<option value="">Sans dossier</option>',
+      ...api,
+    });
+
+    expect(preview).toContain('Passeport &lt;scan&gt;');
+    expect(preview).toContain('https://example.test/file?x=&lt;1&gt;');
+    expect(preview).toContain('documents.action.new_tab');
+    expect(info).toContain('tb-doc-info-tags');
+    expect(info).toContain('visa, &lt;scan&gt;');
+    expect(info).toContain('value="2027-01-02"');
+    expect(info).toContain('window.tbDocumentsSaveInfo');
   });
 
   it('renders share setup and share result modals', () => {

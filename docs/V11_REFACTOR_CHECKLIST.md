@@ -291,6 +291,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire les modales Documents de liaison transactions, depenses Trip et assets vers `documentView.js`, avec contrat anti-retour legacy.
   - [x] Extraire le shell Documents, la navigation dossiers et le panneau principal vers `documentView.js`, avec contrat anti-retour legacy.
   - [x] Extraire les modales batch Documents partage, resultat de partage, deplacement et ajout de tag vers `documentView.js`.
+  - [x] Extraire les modales Documents aperçu fichier et métadonnées vers `documentView.js`, avec contrat anti-retour legacy.
   - [x] Charger le profil et l'analyse progression Sport avec le domaine Sport au lieu du bridge initial : bundle initial 349.6 -> 317.2 KiB.
   - [x] Ajouter le controleur Sport mobilite en lazy avec le domaine Sport, sans gonfler le bundle initial : 317.4 KiB.
   - [x] Extraire la fenetre de fin de seance Sport : le legacy garde les handlers, le HTML passe dans `sportTimerView.js`.

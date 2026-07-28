@@ -61,4 +61,17 @@ describe('documents domain legacy contract', () => {
     expect(source).not.toContain('<label for="tb-doc-batch-folder">');
     expect(source).not.toContain('<label for="tb-doc-batch-tag">');
   });
+
+  it('delegates preview and metadata modals to documentView', () => {
+    const source = legacy();
+    const view = fs.readFileSync('src/features/documents/documentView.js', 'utf8');
+
+    expect(view).toContain('export function renderDocumentPreviewModal');
+    expect(view).toContain('export function renderDocumentInfoModal');
+    expect(source).toContain('window.UI?.documentView?.renderDocumentPreviewModal');
+    expect(source).toContain('window.UI?.documentView?.renderDocumentInfoModal');
+    expect(source).not.toContain('<div class="tb-doc-preview"><div class="tb-doc-preview-head">');
+    expect(source).not.toContain('<input id="tb-doc-info-tags"');
+    expect(source).not.toContain('<textarea id="tb-doc-info-notes"');
+  });
 });
