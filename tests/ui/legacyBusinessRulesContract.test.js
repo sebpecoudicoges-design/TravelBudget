@@ -57,4 +57,13 @@ describe('legacy business rules contract', () => {
     expect(main).not.toContain('/legacy/js/06_travel_context.js');
     expect(budgets).not.toContain('public/legacy/js/06_travel_context.js');
   });
+
+  it('keeps the removed legacy wallet balance helper out of startup', () => {
+    const main = fs.readFileSync('src/main.js', 'utf8');
+    const budgets = fs.readFileSync('config/module-size-budgets.json', 'utf8');
+
+    expect(fs.existsSync('public/legacy/js/31_wallet_balance.js')).toBe(false);
+    expect(main).not.toContain('/legacy/js/31_wallet_balance.js');
+    expect(budgets).not.toContain('public/legacy/js/31_wallet_balance.js');
+  });
 });

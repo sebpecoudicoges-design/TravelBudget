@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "version": "10.5.289",
-  "commit": "d0d4b47d1a2296f82366651a34aa1cd20e25c971",
-  "generatedAt": "2026-07-29T08:59:51.299Z",
+  "version": "10.5.290",
+  "commit": "07e0326438b05db45c91ffc53a692d6e826a1275",
+  "generatedAt": "2026-07-29T09:26:23.242Z",
   "counts": {
     "screens": 15,
     "criticalFeatures": 10,

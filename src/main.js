@@ -96,7 +96,6 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/20_boot.js',
   '/legacy/js/21_dashboard_drag.js',
   '/legacy/js/22_budget_consistency_audit.js',
-  '/legacy/js/31_wallet_balance.js'
 ];
 
 const OPTIONAL_SCRIPTS = new Set(['/legacy/js/00_perf.js']);

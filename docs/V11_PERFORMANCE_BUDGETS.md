@@ -12,9 +12,9 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.289` :
+Snapshot `10.5.290` :
 
-- Boot legacy : 874.7 / 1500 KiB.
+- Boot legacy : 874.2 / 1500 KiB.
 - Analyse : 159.4 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
 - Dashboard + Settings : 354.7 / 360 KiB.
@@ -24,7 +24,7 @@ Snapshot `10.5.289` :
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 113.1 / 115 KiB.
-- Bundle Vite JS initial : 246.3 / 260 KiB.
+- Bundle Vite JS initial : 246.2 / 260 KiB.
 - Bundle Vite JS lazy : 397.2 / 400 KiB.
 - Bundle Vite JS total : 643.4 / 645 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
@@ -109,3 +109,5 @@ En 10.5.287, le chantier 6 demarre par suppression de code mort verifiee : ancie
 En 10.5.288, le nettoyage continue sur Analyse et Documents avec deux helpers sans appel retires. `33_budget_analysis.js` baisse de 88.50 a 88.16 KiB, `43_documents_ui.js` de 75.40 a 75.32 KiB. Les groupes restent sous plafond : Analyse 159.4 / 160 KiB et Documents 113.1 / 115 KiB. Un contrat anti-retour verrouille l'absence de `_referenceDailyForDate` et `extFromName`.
 
 En 10.5.289, l'ancien script de contexte voyage `06_travel_context.js` quitte totalement le boot. Les fonctions `getActiveTravel`, `filterByActiveTravel` et `loadTravelContext` n'avaient plus d'appel depuis la migration vers l'etat voyage centralise. Le boot legacy baisse de 875.8 a 874.7 KiB, et le contrat verifie que le fichier ne revient ni dans `src/main.js`, ni dans les budgets.
+
+En 10.5.290, `31_wallet_balance.js` quitte le boot et le depot. L'ancien `computeWalletBalance` n'etait plus appele : les soldes passent par les regles centrales et les helpers effectifs existants. Boot legacy : 874.7 -> 874.2 KiB ; JS initial : 246.3 -> 246.2 KiB. Le contrat anti-retour verifie que le fichier ne revient pas dans le boot ni dans les budgets.

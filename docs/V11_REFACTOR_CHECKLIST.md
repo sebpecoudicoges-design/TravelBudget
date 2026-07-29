@@ -319,6 +319,7 @@ Critere ferme : le boot initial est stabilise, les domaines lourds sont charges 
 - [ ] Continuer la suppression de code mort sur Dashboard, Settings, Analyse et Documents avec mesure avant/apres.
   - [x] Nettoyer Analyse/Documents : `_referenceDailyForDate` et `extFromName` retires, Analyse 88.50 -> 88.16 KiB et Documents 75.40 -> 75.32 KiB, contrat anti-retour ajoute.
   - [x] Retirer l'ancien script de contexte voyage `06_travel_context.js` du boot : fichier sans appel supprime, boot legacy 875.8 -> 874.7 KiB, contrat anti-retour ajoute.
+  - [x] Retirer l'ancien helper `31_wallet_balance.js` du boot : soldes wallet portes par les regles centrales, boot legacy 874.7 -> 874.2 KiB et JS initial 246.3 -> 246.2 KiB.
 
 ## Indicateurs
 

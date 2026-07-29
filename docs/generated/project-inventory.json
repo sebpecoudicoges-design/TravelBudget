@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "d0d4b47d1a2296f82366651a34aa1cd20e25c971",
-  "snapshotFingerprint": "e7474dd42c2da294d77b41eb72185471e5ebb624ddbdd30ac80754730fdfb841",
-  "generatedAt": "2026-07-29T08:59:51.299Z",
+  "commit": "07e0326438b05db45c91ffc53a692d6e826a1275",
+  "snapshotFingerprint": "a434fb31f94ee4bd7acbf508c13800de34e83cfc8be62c4b40ed03d0603b94c8",
+  "generatedAt": "2026-07-29T09:26:23.242Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.289"
+    "version": "10.5.290"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -105,7 +105,6 @@
     "public/legacy/js/29_trip_v1.js",
     "public/legacy/js/30_members_admin.js",
     "public/legacy/js/31_help_faq.js",
-    "public/legacy/js/31_wallet_balance.js",
     "public/legacy/js/32_help_assistant.js",
     "public/legacy/js/33_analysis_drilldown_view.js",
     "public/legacy/js/33_analysis_filter_view.js",
@@ -847,7 +846,6 @@
       },
       "files": [
         "src/core/walletBalanceRules.js",
-        "public/legacy/js/31_wallet_balance.js",
         "public/legacy/js/15_wallet_adjust.js",
         "public/legacy/js/05_state.js"
       ],
