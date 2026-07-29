@@ -321,6 +321,7 @@ Critere ferme : le boot initial est stabilise, les domaines lourds sont charges 
   - [x] Retirer l'ancien script de contexte voyage `06_travel_context.js` du boot : fichier sans appel supprime, boot legacy 875.8 -> 874.7 KiB, contrat anti-retour ajoute.
   - [x] Retirer l'ancien helper `31_wallet_balance.js` du boot : soldes wallet portes par les regles centrales, boot legacy 874.7 -> 874.2 KiB et JS initial 246.3 -> 246.2 KiB.
   - [x] Retirer l'ancien badge flottant `22_budget_consistency_audit.js` du boot : audit budget obsolete non appele par les vues actuelles, boot legacy 874.2 -> 870.8 KiB, contrat anti-retour ajoute.
+  - [x] Retirer l'ancien badge flottant `25_health_check.js` du boot : controle local obsolete sans appel direct, boot legacy 870.8 -> 867.2 KiB et JS total 643.4 -> 643.3 KiB, contrat anti-retour ajoute.
 
 ## Indicateurs
 

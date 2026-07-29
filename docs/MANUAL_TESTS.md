@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.291`.
-- Bilan : 7 parcours `ok`, 46 parcours `à faire`.
+- Version à valider : `10.5.292`.
+- Bilan : 7 parcours `ok`, 47 parcours `à faire`.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -72,6 +72,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 52 | 10.5.289 | Boot : ancien contexte voyage retiré | Depuis un chargement frais, ouvrir Dashboard, changer de voyage dans Réglages si possible, puis ouvrir Analyse et KPI. | Le voyage actif, les transactions et les périodes restent cohérents. Aucun écran ne dépend de l'ancien script `06_travel_context.js`. | `TB BUILD 10.5.289` ; aucun `Uncaught`, aucun `loadTravelContext is not defined`. | à faire |
 | 53 | 10.5.290 | Boot + wallets : ancien helper solde retiré | Depuis un chargement frais, ouvrir Dashboard avec plusieurs wallets, vérifier les soldes, ouvrir un wallet et utiliser **Ajuster solde** sur un wallet de test si possible. | Les soldes restent identiques et l'ajustement passe toujours par l'action actuelle. Aucun écran ne dépend de `computeWalletBalance`. | `TB BUILD 10.5.290` ; aucun `Uncaught`, aucun `computeWalletBalance is not defined`. | à faire |
 | 54 | 10.5.291 | Boot : ancien badge audit budget retiré | Depuis un chargement frais, ouvrir Dashboard puis Analyse/KPI. Vérifier que la page ne montre plus de badge flottant `Budget OK` en bas à droite. | Dashboard, Analyse et KPI restent utilisables. Les contrôles d'analyse actuels remplacent l'ancien audit flottant, sans badge parasite ni alerte obsolète. | `TB BUILD 10.5.291` ; aucun `Uncaught`, aucun `budgetAuditBadge`, aucun `runBudgetAudit is not defined`. | à faire |
+| 55 | 10.5.292 | Boot : ancien badge health-check retiré | Depuis un chargement frais, ouvrir Dashboard puis Réglages et KPI. Vérifier que la page ne montre plus de badge flottant `Données OK` en bas à gauche. | Les diagnostics modernes restent accessibles via Doctor/debug et les vues KPI/Analyse. Aucun badge health-check obsolète ne recouvre l'interface. | `TB BUILD 10.5.292` ; aucun `Uncaught`, aucun `healthBadge`, aucun `runHealthCheck is not defined`. | à faire |
 
 ## À ajouter à chaque livraison
 

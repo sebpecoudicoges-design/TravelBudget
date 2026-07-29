@@ -49,7 +49,6 @@
         "public/legacy/js/18_main_render.js",
         "public/legacy/js/08_refresh.js",
         "public/legacy/js/19_backup_export_import.js",
-        "public/legacy/js/25_health_check.js",
         "public/legacy/js/99_doctor.js",
         "public/legacy/js/20_boot.js",
         "public/legacy/js/21_dashboard_drag.js"

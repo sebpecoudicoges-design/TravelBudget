@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `7891d60058d00b459341c17e5560392d8e64cca1`
-> Empreinte du snapshot : `008fa7bc06877eaec6b7a96522218f2a79803034dcca3840770158422bc8e0eb`
-> Généré le : `2026-07-29T09:46:48.789Z`
+> Commit analysé : `d6220f07bff2ba27bca3a3d6c130704826b364c8`
+> Empreinte du snapshot : `11ac3b6a341db80183f808662a05fcca3f9cad0be762f9079ebaca73756d644d`
+> Généré le : `2026-07-29T09:53:00.206Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,9 +11,9 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.291` |
+| Version | `10.5.292` |
 | Écrans déclarés | 15 |
-| Scripts legacy référencés | 58 |
+| Scripts legacy référencés | 57 |
 | Modules core | 25 |
 | Modules data | 7 |
 | Modules features | 40 |
@@ -133,7 +133,6 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `public/legacy/js/20_boot.js`
 - `public/legacy/js/21_dashboard_drag.js`
 - `public/legacy/js/24_tx_fx_snapshot.js`
-- `public/legacy/js/25_health_check.js`
 - `public/legacy/js/26_fx_crossrate.js`
 - `public/legacy/js/27_cashflow_curve.js`
 - `public/legacy/js/28_data_updated_bus.js`

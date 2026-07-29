@@ -91,7 +91,6 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/18_main_render.js',
   '/legacy/js/08_refresh.js',
   '/legacy/js/19_backup_export_import.js',
-  '/legacy/js/25_health_check.js',
   '/legacy/js/99_doctor.js',
   '/legacy/js/20_boot.js',
   '/legacy/js/21_dashboard_drag.js',

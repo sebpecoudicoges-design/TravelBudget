@@ -12,9 +12,9 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.291` :
+Snapshot `10.5.292` :
 
-- Boot legacy : 870.8 / 1500 KiB.
+- Boot legacy : 867.2 / 1500 KiB.
 - Analyse : 159.4 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
 - Dashboard + Settings : 354.7 / 360 KiB.
@@ -26,9 +26,9 @@ Snapshot `10.5.291` :
 - Documents : 113.1 / 115 KiB.
 - Bundle Vite JS initial : 246.2 / 260 KiB.
 - Bundle Vite JS lazy : 397.2 / 400 KiB.
-- Bundle Vite JS total : 643.4 / 645 KiB.
+- Bundle Vite JS total : 643.3 / 645 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
-- JS principal gzip : 70.5 / 110 KiB.
+- JS principal gzip : 70.4 / 110 KiB.
 
 ## Budgets actuels
 
@@ -113,3 +113,5 @@ En 10.5.289, l'ancien script de contexte voyage `06_travel_context.js` quitte to
 En 10.5.290, `31_wallet_balance.js` quitte le boot et le depot. L'ancien `computeWalletBalance` n'etait plus appele : les soldes passent par les regles centrales et les helpers effectifs existants. Boot legacy : 874.7 -> 874.2 KiB ; JS initial : 246.3 -> 246.2 KiB. Le contrat anti-retour verifie que le fichier ne revient pas dans le boot ni dans les budgets.
 
 En 10.5.291, `22_budget_consistency_audit.js` quitte le boot et le depot. Cet ancien badge flottant `Budget OK/anomalies` utilisait un audit local obsolete, non raccorde aux vues Analyse/KPI actuelles et sans appel direct. Boot legacy : 874.2 -> 870.8 KiB. Le contrat anti-retour verifie que le fichier ne revient pas dans le boot ni dans les budgets.
+
+En 10.5.292, `25_health_check.js` quitte le boot et le depot. Cet ancien badge flottant `Donnees OK/alertes` patchait `refreshAll` et doublonnait les diagnostics modernes sans point d'appel direct dans les vues. Boot legacy : 870.8 -> 867.2 KiB ; JS total : 643.4 -> 643.3 KiB. Le contrat anti-retour verifie que le fichier ne revient pas dans le boot ni dans les budgets.

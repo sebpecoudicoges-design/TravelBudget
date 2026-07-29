@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "7891d60058d00b459341c17e5560392d8e64cca1",
-  "snapshotFingerprint": "008fa7bc06877eaec6b7a96522218f2a79803034dcca3840770158422bc8e0eb",
-  "generatedAt": "2026-07-29T09:46:48.789Z",
+  "commit": "d6220f07bff2ba27bca3a3d6c130704826b364c8",
+  "snapshotFingerprint": "11ac3b6a341db80183f808662a05fcca3f9cad0be762f9079ebaca73756d644d",
+  "generatedAt": "2026-07-29T09:53:00.206Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.291"
+    "version": "10.5.292"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -97,7 +97,6 @@
     "public/legacy/js/20_boot.js",
     "public/legacy/js/21_dashboard_drag.js",
     "public/legacy/js/24_tx_fx_snapshot.js",
-    "public/legacy/js/25_health_check.js",
     "public/legacy/js/26_fx_crossrate.js",
     "public/legacy/js/27_cashflow_curve.js",
     "public/legacy/js/28_data_updated_bus.js",
