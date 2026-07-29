@@ -185,7 +185,14 @@ describe('Sport domain contract', () => {
   it('delegates Sport builder form option rendering to sportFormView', () => {
     for (const token of ['renderOptionRows', 'renderDurationOptions', 'renderExerciseOptions', 'renderFormatOptions', 'renderEquipmentOptions', 'renderSportPlan']) {
       expect(formView).toContain(`export function ${token}`);
+    }
+
+    for (const token of ['renderOptionRows', 'renderExerciseOptions', 'renderEquipmentOptions', 'renderSportPlan']) {
       expect(legacy).toContain(`sportFormView?.${token}`);
+    }
+
+    for (const token of ['goalOptions', 'durationOptions', 'simpleExerciseOptions', 'formatOptions']) {
+      expect(legacy).not.toContain(`function ${token}`);
     }
   });
 });

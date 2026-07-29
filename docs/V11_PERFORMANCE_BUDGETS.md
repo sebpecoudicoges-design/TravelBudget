@@ -12,14 +12,14 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.286` :
+Snapshot `10.5.287` :
 
 - Boot legacy : 875.8 / 1500 KiB.
 - Analyse : 159.7 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
 - Dashboard + Settings : 354.7 / 360 KiB.
-- Trip : 311.2 / 340 KiB.
-- Sport : 441.0 / 450 KiB.
+- Trip : 304.2 / 340 KiB.
+- Sport : 439.9 / 450 KiB.
 - Nutrition : 187.0 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
@@ -103,3 +103,5 @@ En 10.5.284, les modales Documents d'aperçu fichier et de metadonnees quittent 
 En 10.5.285, le shell principal Trip quitte `29_trip_v1.js` vers `tripView.js`. Le legacy Trip baisse de 200.7 a 199.3 KiB. Le domaine Trip monte a 310.8 / 340 KiB, l'initial a 245.8 KiB et le total JS a 641.9 KiB car le rendu devient modulaire et teste ; le plafond total passe a 645 KiB en gardant le plafond initial stable.
 
 En 10.5.286, le shell principal Sport quitte `45_sport_ui.js` vers `sportView.js` et le bandeau flottant Invitations Trip quitte `29_trip_v1.js` vers `tripView.js`. Trip legacy baisse de 199.3 a 199.1 KiB, Sport legacy reste a 214.4 KiB mais possede une nouvelle frontiere testee pour extraire les sous-panneaux suivants. Les budgets restent verts : initial 246.3 / 260 KiB, lazy 397.2 / 400 KiB, total 643.4 / 645 KiB. La marge totale est volontairement surveillee de pres : le prochain lot devra supprimer ou fractionner avant d'ajouter du rendu.
+
+En 10.5.287, le chantier 6 demarre par suppression de code mort verifiee : anciens RPC Trip balances/suggestions non appeles, ancien chemin settlement wallet non appele, et wrappers d'options Sport builder inutilises. `29_trip_v1.js` baisse de 199.1 a 192.1 KiB, `45_sport_ui.js` de 214.4 a 213.3 KiB, soit environ 8.1 KiB de legacy direct retire et 261 lignes nettes supprimees. Les domaines mesurés passent a Trip 304.2 / 340 KiB et Sport 439.9 / 450 KiB. Les bundles distribues restent stables : initial 246.3 / 260 KiB, lazy 397.2 / 400 KiB, total 643.4 / 645 KiB.

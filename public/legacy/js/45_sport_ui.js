@@ -750,10 +750,6 @@
     if (!key) return;
     savePendingDeletes(sportStore.clearPendingDelete(key));
   }
-  function isPendingDeleted(id) {
-    const key = String(id || "");
-    return !!key && loadPendingDeletes().includes(key);
-  }
   function sportHistoryKeys() {
     const keys = new Set([HISTORY_KEY(), ANON_HISTORY_KEY(), baseHistoryKey()]);
     try {
@@ -1045,14 +1041,6 @@
     }
     return 5;
   }
-  function goalOptions(selected) {
-    return window.UI?.sportFormView?.renderOptionRows?.({
-      rows: GOALS,
-      selected,
-      language: lang(),
-      escapeHTML: esc,
-    }) || "";
-  }
   function levelOptions(selected) {
     return window.UI?.sportFormView?.renderOptionRows?.({
       rows: LEVELS,
@@ -1069,12 +1057,6 @@
       escapeHTML: esc,
     }) || "";
   }
-  function durationOptions(selected) {
-    return window.UI?.sportFormView?.renderDurationOptions?.({
-      selected,
-      escapeHTML: esc,
-    }) || "";
-  }
   function libraryOptions(goal, equipment, selected) {
     const rows = visibleExercises(equipment, CACHE.exerciseSearch || "");
     return window.UI?.sportFormView?.renderExerciseOptions?.({
@@ -1085,29 +1067,8 @@
       escapeHTML: esc,
     }) || "";
   }
-  function simpleExerciseOptions(goal, equipment, selected) {
-    const rows = filteredExercises(goal, equipment);
-    const list = rows.length ? rows : filteredExercises(goal, "all");
-    return window.UI?.sportFormView?.renderExerciseOptions?.({
-      exercises: list,
-      selected,
-      exerciseLabel,
-      escapeHTML: esc,
-    }) || "";
-  }
   function defaultFormat(goal) {
     return goal === "strength" || goal === "free" ? "reps" : "time";
-  }
-  function formatOptions(selected) {
-    return window.UI?.sportFormView?.renderFormatOptions?.({
-      selected,
-      labels: {
-        time: txt("Duree", "Duration"),
-        reps: txt("Repetitions", "Reps"),
-        maxReps: txt("Max reps", "Max reps"),
-      },
-      escapeHTML: esc,
-    }) || "";
   }
   function libraryEquipmentOptions(selected) {
     return window.UI?.sportFormView?.renderEquipmentOptions?.({

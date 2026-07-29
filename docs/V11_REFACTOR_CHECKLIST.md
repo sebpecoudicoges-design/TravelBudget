@@ -305,6 +305,8 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire le bandeau flottant Invitations Trip vers `tripView.js`, avec contrat anti-retour legacy.
 - [x] Mesurer temps de demarrage, taille du bundle et memoire mobile.
 
+Critere ferme : le boot initial est stabilise, les domaines lourds sont charges a la demande, Analyse ne double plus son refresh normal, et les budgets restent mesures a chaque livraison. Chantier clos en 10.5.287.
+
 ## Chantier 6 - Qualite et livraison
 
 - [x] Ajouter lint et formatage sans reformatage massif initial.
@@ -312,7 +314,9 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
 - [x] Ajouter les parcours critiques Playwright.
 - [x] Documenter architecture, conventions et procedure de migration.
 - [x] Retirer un fichier legacy uniquement quand son remplacement est valide.
-- [ ] Maintenir `public/projet.html`, l'APK et Git a chaque livraison.
+- [x] Maintenir `public/projet.html`, l'APK et Git a chaque livraison.
+- [x] Demarrer la suppression de code mort : anciens helpers Trip/Sport sans appels retires, 261 lignes nettes supprimees, contrats anti-retour ajoutes.
+- [ ] Continuer la suppression de code mort sur Dashboard, Settings, Analyse et Documents avec mesure avant/apres.
 
 ## Indicateurs
 

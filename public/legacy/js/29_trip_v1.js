@@ -370,16 +370,6 @@ async function _rpcBindMe(tripId) {
   }
 
   
-function _shareText(text) {
-  try {
-    if (navigator && navigator.share) {
-      return navigator.share({ text });
-    }
-  } catch (e) {}
-  _copyToClipboard(text);
-  toastInfo("[Trip] Copié (partage non supporté ici).");
-}
-
 function _tripFlashMessage(msg, kind) {
   try {
     const previous = document.getElementById("trip-flash-message");
@@ -1353,15 +1343,6 @@ async function _findMatchingTransactions({ date, amount, currency }) {
     });
   }
 
-  async function _unlinkExpenseFromTransaction(expense) {
-    await _ensureSession();
-    if (!expense?.transactionId) return;
-    await _tripRepository().unlinkExpenseTransaction({
-      tables: _tripRepositoryTables(), expenseId: expense.id, transactionId: expense.transactionId,
-    });
-  }
-
-
   function _groupBy(arr, keyFn) {
     const m = new Map();
     for (const x of arr) {
@@ -1640,96 +1621,6 @@ async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, tar
 
 return byCurrency;
   }
-
-  async function _fetchBalancesFromDb(tripId) {
-    try {
-      if (!tripId) {
-        console.warn("[Trip] trip_get_balances_v1 skipped: missing active trip id");
-        return null;
-      }
-if (!sb?.rpc) return null;
-      if (!TB_CONST?.RPCS?.trip_get_balances_v1) return null;
-
-      console.log("[Trip] RPC trip_get_balances_v1:start", { tripId });
-
-const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_get_balances_v1, { p_trip_id: tripId });
-
-console.log("[Trip] RPC trip_get_balances_v1:done", {
-  tripId,
-  rows: Array.isArray(data) ? data.length : null,
-  hasError: !!error
-});
-
-if (error) {
-  console.warn("[Trip] RPC trip_get_balances_v1 failed", {
-    tripId,
-    message: error.message || null,
-    details: error.details || null,
-    hint: error.hint || null,
-    code: error.code || null,
-  });
-  return null;
-}
-
-if (!Array.isArray(data)) return null;
-
-      const out = new Map(); // cur -> Map(memberId -> net)
-      for (const row of data) {
-        const cur = String(row.currency || "").toUpperCase();
-        const memberId = row.member_id || row.memberId;
-        const net = Number(row.net || 0);
-        if (!cur || !memberId) continue;
-        if (!out.has(cur)) out.set(cur, new Map());
-        const m = out.get(cur);
-        m.set(memberId, (m.get(memberId) || 0) + net);
-      }
-      return out;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  async function _fetchSettlementSuggestionsFromDb(tripId, useNetRaw = true) {
-  try {
-    if (!tripId) {
-      console.warn("[Trip] trip_suggest_settlements_v1 skipped: missing active trip id");
-      return null;
-    }
-    if (!sb?.rpc) return null;
-    if (!TB_CONST?.RPCS?.trip_suggest_settlements_v1) return null;
-
-    console.log("[Trip] RPC trip_suggest_settlements_v1:start", { tripId, useNetRaw: !!useNetRaw });
-
-    const { data, error } = await sb.rpc(TB_CONST.RPCS.trip_suggest_settlements_v1, {
-      p_trip_id: tripId,
-      p_use_net_raw: !!useNetRaw,
-    });
-    
-    console.log("[Trip] RPC trip_suggest_settlements_v1:done", {
-      tripId,
-      rows: Array.isArray(data) ? data.length : null,
-      hasError: !!error
-    });
-
-    if (error) {
-      console.warn("[Trip] RPC trip_suggest_settlements_v1 failed", {
-        tripId,
-        useNetRaw: !!useNetRaw,
-        message: error.message || null,
-        details: error.details || null,
-        hint: error.hint || null,
-        code: error.code || null,
-      });
-      return null;
-    }
-
-    if (!Array.isArray(data)) return null;
-    return data;
-  } catch (e) {
-    return null;
-  }
-}
-
 
   // Unify balances into the user's display currency.
   // Goal: the UI follows the account base currency (or period base if missing), instead of forcing THB.
@@ -2725,113 +2616,6 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     await window.__tripRefresh({ activeOnly: true });
   }
 }
-
-// Rename a trip member (participant) — minimal UX (prompt)
-
-async function _recordSettlementAndTx({ fromId, toId, amount, currency }) {
-      const uid = await _ensureSession();
-      const members = tripState.members || [];
-      const me = members.find(x => x.isMe);
-      if (!me) throw new Error("Aucun participant 'moi' défini dans ce trip.");
-  
-      const isOut = fromId === me.id;
-      const isIn = toId === me.id;
-      if (!isOut && !isIn) {
-        throw new Error("Tu ne peux enregistrer qu’un règlement qui te concerne (payer ou recevoir).");
-      }
-  
-      const cur = String(currency || "").trim().toUpperCase();
-      const amt = _round2(Number(amount) || 0);
-      if (!(amt > 0)) throw new Error("Montant invalide.");
-  
-      // Choose wallet (required)
-      const walletId = tripState.settlementWalletId || state.activeWalletId || (_activeWallets()?.[0]?.id || "");
-      if (!walletId) throw new Error("Aucune wallet disponible. Crée/sélectionne une wallet.");
-  
-      const w = (state.wallets || []).find(x => x.id === walletId);
-      if (!w) throw new Error("Wallet introuvable.");
-      if (String(w.currency || "").toUpperCase() !== cur) {
-        toastWarn(`Conversion manuelle requise : règlement ${cur}, wallet ${w.currency}.`);
-      }
-  
-      const eventId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(16).slice(2);
-
-      const label = isOut
-        ? `[Trip] SETTLE:${eventId} • Règlement à ${(members.find(x => x.id === toId)?.name) || "—"}`
-        : `[Trip] SETTLE:${eventId} • Règlement reçu de ${(members.find(x => x.id === fromId)?.name) || "—"}`;
-
-      const date = _isoToday();
-
-      // Persist settlement event (affects trip balances)
-      await _tripRepository().createSettlementEvent({ table: TB_CONST.TABLES.trip_settlement_events, event: {
-        id: eventId,
-        trip_id: tripState.activeTripId,
-        currency: cur,
-        amount: amt,
-        from_member_id: fromId,
-        to_member_id: toId,
-        created_by: uid,
-      } });
-
-  
-      // Create transaction affecting wallet only (out_of_budget = true)
-      const txType = isOut ? "expense" : "income";
-      const { error: rpcErr } = await _rpcApplyTransactionV2(sb, {
-        p_user_id: uid,
-        p_wallet_id: walletId,
-        p_type: txType,
-        p_label: label,
-        p_amount: amt,
-        p_currency: cur,
-        p_date_start: date,
-        p_date_end: date,
-        p_category: (TB_CONST?.CATS?.trip || "Trip"),
-        p_subcategory: null,
-        p_pay_now: true,
-        p_out_of_budget: true,
-        p_night_covered: false,
-        p_affects_budget: false,
-        p_trip_expense_id: null,
-        p_trip_share_link_id: null,
-        ..._rpcFxSnapshotArgs(date, cur)
-      });
-      if (rpcErr) throw rpcErr;
-
-      // Update settlement event with transaction_id (best-effort)
-      try {
-        const txRow = await _tripRepository().findLatestTransaction({
-          table: TB_CONST.TABLES.transactions,
-          match: { user_id: uid, label, currency: cur, amount: amt, date_start: date },
-        });
-        if (txRow?.id) {
-          await _tripRepository().linkSettlementTransaction({
-            table: TB_CONST.TABLES.trip_settlement_events,
-            eventId,
-            transactionId: txRow.id,
-          });
-        }
-      } catch (e) {
-        console.warn("[Trip] settlement event tx link failed", e);
-      }
-
-  
-      // Record in trip_settlements (personal log)
-      try {
-        await _tripRepository().recordSettlementLog({ table: TB_CONST.TABLES.trip_settlements, row: {
-          user_id: uid,
-          trip_id: tripState.activeTripId,
-          date,
-          amount: amt,
-          currency: cur,
-          direction: isOut ? "out" : "in",
-          wallet_id: walletId,
-          mode: "virtual",
-        } });
-      } catch (e) {
-        // Non-blocking: even if settlement log fails, wallet tx is the source of truth
-        console.warn("[Trip] settlement log insert failed", e);
-      }
-    }
 
   async function _createTrip(name) {
     const uid = await _ensureSession();

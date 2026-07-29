@@ -15,4 +15,29 @@ describe('legacy business rules contract', () => {
       expect(source, file).not.toContain('export const');
     }
   });
+
+  it('keeps removed dead legacy helpers out of Trip and Sport', () => {
+    const trip = fs.readFileSync('public/legacy/js/29_trip_v1.js', 'utf8');
+    const sport = fs.readFileSync('public/legacy/js/45_sport_ui.js', 'utf8');
+
+    for (const token of [
+      'function _shareText',
+      'function _unlinkExpenseFromTransaction',
+      'function _fetchBalancesFromDb',
+      'function _fetchSettlementSuggestionsFromDb',
+      'function _recordSettlementAndTx',
+    ]) {
+      expect(trip).not.toContain(token);
+    }
+
+    for (const token of [
+      'function isPendingDeleted',
+      'function goalOptions',
+      'function durationOptions',
+      'function simpleExerciseOptions',
+      'function formatOptions',
+    ]) {
+      expect(sport).not.toContain(token);
+    }
+  });
 });
