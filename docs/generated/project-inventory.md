@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `e0a2c8e382c08cd9ca9655fe3823a191c645e180`
-> Empreinte du snapshot : `f597a0f01cd195ff3ca7746886589cf34ae94fca34fa058f9308a329bcb0358d`
-> Généré le : `2026-07-29T08:38:43.323Z`
+> Commit analysé : `dbeb087186b6c543dffca9a2afbb8756925bbbac`
+> Empreinte du snapshot : `e7474dd42c2da294d77b41eb72185471e5ebb624ddbdd30ac80754730fdfb841`
+> Généré le : `2026-07-29T08:55:18.507Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,9 +11,9 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.288` |
+| Version | `10.5.289` |
 | Écrans déclarés | 15 |
-| Scripts legacy référencés | 61 |
+| Scripts legacy référencés | 60 |
 | Modules core | 25 |
 | Modules data | 7 |
 | Modules features | 40 |
@@ -113,7 +113,6 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `public/legacy/js/04_theme.js`
 - `public/legacy/js/05_state.js`
 - `public/legacy/js/06_allocations.js`
-- `public/legacy/js/06_travel_context.js`
 - `public/legacy/js/07_supabase_bootstrap.js`
 - `public/legacy/js/08_refresh.js`
 - `public/legacy/js/09_fx.js`

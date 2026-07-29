@@ -68,7 +68,6 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/03_ui_auth.js',
   '/legacy/js/04_theme.js',
   '/legacy/js/05_state.js',
-  '/legacy/js/06_travel_context.js',
   '/legacy/js/06_allocations.js',
   '/legacy/js/07_supabase_bootstrap.js',
   '/legacy/js/09_fx.js',

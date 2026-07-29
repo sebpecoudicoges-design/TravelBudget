@@ -26,7 +26,6 @@
         "public/legacy/js/03_ui_auth.js",
         "public/legacy/js/04_theme.js",
         "public/legacy/js/05_state.js",
-        "public/legacy/js/06_travel_context.js",
         "public/legacy/js/06_allocations.js",
         "public/legacy/js/07_supabase_bootstrap.js",
         "public/legacy/js/09_fx.js",

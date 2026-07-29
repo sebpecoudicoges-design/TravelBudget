@@ -12,9 +12,9 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.288` :
+Snapshot `10.5.289` :
 
-- Boot legacy : 875.8 / 1500 KiB.
+- Boot legacy : 874.7 / 1500 KiB.
 - Analyse : 159.4 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
 - Dashboard + Settings : 354.7 / 360 KiB.
@@ -107,3 +107,5 @@ En 10.5.286, le shell principal Sport quitte `45_sport_ui.js` vers `sportView.js
 En 10.5.287, le chantier 6 demarre par suppression de code mort verifiee : anciens RPC Trip balances/suggestions non appeles, ancien chemin settlement wallet non appele, et wrappers d'options Sport builder inutilises. `29_trip_v1.js` baisse de 199.1 a 192.1 KiB, `45_sport_ui.js` de 214.4 a 213.3 KiB, soit environ 8.1 KiB de legacy direct retire et 261 lignes nettes supprimees. Les domaines mesurés passent a Trip 304.2 / 340 KiB et Sport 439.9 / 450 KiB. Les bundles distribues restent stables : initial 246.3 / 260 KiB, lazy 397.2 / 400 KiB, total 643.4 / 645 KiB.
 
 En 10.5.288, le nettoyage continue sur Analyse et Documents avec deux helpers sans appel retires. `33_budget_analysis.js` baisse de 88.50 a 88.16 KiB, `43_documents_ui.js` de 75.40 a 75.32 KiB. Les groupes restent sous plafond : Analyse 159.4 / 160 KiB et Documents 113.1 / 115 KiB. Un contrat anti-retour verrouille l'absence de `_referenceDailyForDate` et `extFromName`.
+
+En 10.5.289, l'ancien script de contexte voyage `06_travel_context.js` quitte totalement le boot. Les fonctions `getActiveTravel`, `filterByActiveTravel` et `loadTravelContext` n'avaient plus d'appel depuis la migration vers l'etat voyage centralise. Le boot legacy baisse de 875.8 a 874.7 KiB, et le contrat verifie que le fichier ne revient ni dans `src/main.js`, ni dans les budgets.

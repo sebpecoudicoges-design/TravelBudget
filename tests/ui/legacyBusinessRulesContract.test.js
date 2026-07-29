@@ -48,4 +48,13 @@ describe('legacy business rules contract', () => {
     expect(analysis).not.toContain('function _referenceDailyForDate');
     expect(documents).not.toContain('function extFromName');
   });
+
+  it('keeps the removed Travel Context boot script out of startup', () => {
+    const main = fs.readFileSync('src/main.js', 'utf8');
+    const budgets = fs.readFileSync('config/module-size-budgets.json', 'utf8');
+
+    expect(fs.existsSync('public/legacy/js/06_travel_context.js')).toBe(false);
+    expect(main).not.toContain('/legacy/js/06_travel_context.js');
+    expect(budgets).not.toContain('public/legacy/js/06_travel_context.js');
+  });
 });
