@@ -899,6 +899,48 @@ function _normalizeCurrency(cur) {
     return _normalizeCurrency(currencySel.value);
   }
 
+  function _normalizeTripEntryKind(kind) {
+    const core = window.Core?.tripRules;
+    if (core?.normalizeTripEntryKind) return core.normalizeTripEntryKind(kind);
+    const value = String(kind || "").trim().toLowerCase();
+    return value === "income" || value === "revenue" || value === "entry" ? "income" : "expense";
+  }
+
+  function _tripEntrySign(kind) {
+    const core = window.Core?.tripRules;
+    if (core?.tripEntrySign) return core.tripEntrySign(kind);
+    return _normalizeTripEntryKind(kind) === "income" ? -1 : 1;
+  }
+
+  function _normalizeTripIncomeSource(source) {
+    const core = window.Core?.tripRules;
+    if (core?.normalizeTripIncomeSource) return core.normalizeTripIncomeSource(source);
+    return String(source || "").trim().toLowerCase() === "participant" ? "participant" : "external";
+  }
+
+  function _tripIncomeDueBack(value) {
+    return value === false || String(value || "").trim().toLowerCase() === "no" ? false : true;
+  }
+
+  function _tripBalanceSign(entry) {
+    const core = window.Core?.tripRules;
+    if (core?.tripBalanceSign) return core.tripBalanceSign(entry);
+    if (_normalizeTripEntryKind(entry?.kind) !== "income") return 1;
+    return _tripIncomeDueBack(entry?.incomeDueBack ?? entry?.income_due_back) ? -1 : 0;
+  }
+
+  function _tripBudgetTxType(kind) {
+    return _normalizeTripEntryKind(kind) === "income" ? "income" : "expense";
+  }
+
+  function _tripBudgetLabel(label, kind, mode) {
+    const clean = String(label || "").trim();
+    if (_normalizeTripEntryKind(kind) !== "income") return mode === "advance" ? `[Trip] Avance - ${clean}` : `[Trip] ${clean}`;
+    if (mode === "advance") return `[Trip] Entree recue - ${clean}`;
+    if (mode === "share") return `[Trip] Part entree - ${clean}`;
+    return `[Trip] Entree - ${clean}`;
+  }
+
 
 
   function _findPeriodIdForDate(dateStr) {
@@ -1097,10 +1139,13 @@ function _normalizeCurrency(cur) {
     const paidByMemberId = String(input?.paidByMemberId || "").trim();
     if (!date) throw new Error("Date requise.");
     if (!label) throw new Error("Libellé requis.");
-    if (!isFinite(amount) || amount <= 0) throw new Error("Montant dépense invalide.");
+    if (!isFinite(amount) || amount <= 0) throw new Error("Montant invalide.");
     if (!paidByMemberId) throw new Error("Sélectionne qui a payé.");
     return {
       expenseId: input?.expenseId || null,
+      kind: _normalizeTripEntryKind(input?.kind),
+      incomeSource: _normalizeTripIncomeSource(input?.incomeSource || input?.income_source),
+      incomeDueBack: _tripIncomeDueBack(input?.incomeDueBack ?? input?.income_due_back),
       date,
       label,
       amount,
@@ -1151,6 +1196,9 @@ function _normalizeCurrency(cur) {
 
     return {
       expense_id: input.expenseId || null,
+      kind: _normalizeTripEntryKind(input.kind),
+      income_source: _normalizeTripIncomeSource(input.incomeSource || input.income_source),
+      income_due_back: _tripIncomeDueBack(input.incomeDueBack ?? input.income_due_back),
       date: input.date,
       label: input.label,
       amount: input.amount,
@@ -1165,7 +1213,22 @@ function _normalizeCurrency(cur) {
     };
   }
 
-async function _findMatchingTransactions({ date, amount, currency }) {
+async function _persistTripExpenseKind(expenseId, input) {
+  const kind = input?.kind ?? input;
+  const entryKind = _normalizeTripEntryKind(kind);
+  if (!expenseId || entryKind === "expense") return;
+  const { error } = await sb
+    .from(TB_CONST.TABLES.trip_expenses)
+    .update({
+      kind: entryKind,
+      income_source: _normalizeTripIncomeSource(input?.incomeSource || input?.income_source),
+      income_due_back: _tripIncomeDueBack(input?.incomeDueBack ?? input?.income_due_back),
+    })
+    .eq("id", expenseId);
+  if (error) throw error;
+}
+
+async function _findMatchingTransactions({ date, amount, currency, kind }) {
   await _ensureSession();
 
   const cur = _normalizeCurrency(currency);
@@ -1175,7 +1238,7 @@ async function _findMatchingTransactions({ date, amount, currency }) {
   const { data, error } = await sb
     .from(TB_CONST.TABLES.transactions)
     .select("id,label,category,subcategory,wallet_id,trip_expense_id,date_start,date_end,amount,currency,pay_now,out_of_budget,travel_id,created_at")
-    .eq("type", "expense")
+    .eq("type", _tripBudgetTxType(kind))
     .eq("currency", cur)
     .is("trip_expense_id", null)
     .order("date_start", { ascending: false })
@@ -1380,12 +1443,12 @@ async function _linkShareToTransaction({ expenseId, memberId, transactionId }) {
   if (error) throw error;
 }
 
-async function _findTripBudgetTransaction({ walletId, amount, currency, category, label, date, payNow, outOfBudget, requireUnlinkedExpense = true }) {
+async function _findTripBudgetTransaction({ walletId, amount, currency, category, label, date, payNow, outOfBudget, kind, requireUnlinkedExpense = true }) {
   let query = sb
     .from(TB_CONST.TABLES.transactions)
     .select("id,travel_id,period_id")
     .eq("wallet_id", walletId)
-    .eq("type", "expense")
+    .eq("type", _tripBudgetTxType(kind))
     .eq("amount", amount)
     .eq("currency", currency)
     .eq("category", category)
@@ -1601,11 +1664,12 @@ async function _linkCreatedShareTransaction({ tx, expenseId, memberId, date, tar
     for (const ex of tripState.expenses) {
       const cur = ex.currency || (state?.period?.baseCurrency || "");
       const paidBy = ex.paidByMemberId;
+      const sign = _tripBalanceSign(ex);
 
-      if (paidBy) add(cur, paidBy, Number(ex.amount) || 0);
+      if (paidBy) add(cur, paidBy, (Number(ex.amount) || 0) * sign);
 
       const sh = sharesByExpense.get(ex.id) || [];
-      for (const row of sh) add(cur, row.memberId, -(Number(row.shareAmount) || 0));
+      for (const row of sh) add(cur, row.memberId, -(Number(row.shareAmount) || 0) * sign);
     }
 
     
@@ -2743,6 +2807,9 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
 
     return {
       expenseId: ex.id,
+      kind: _normalizeTripEntryKind(ex.kind),
+      incomeSource: _normalizeTripIncomeSource(ex.incomeSource || ex.income_source),
+      incomeDueBack: _tripIncomeDueBack(ex.incomeDueBack ?? ex.income_due_back),
       date: ex.date || _isoToday(),
       label: ex.label || "",
       amount: Number(ex.amount || 0),
@@ -2878,12 +2945,13 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     }
   }
 
-  async function _integrateExpenseBudgetSideEffects({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
+  async function _integrateExpenseBudgetSideEffects({ expenseId, kind, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
     const uid = await _ensureSession();
     const members = tripState.members || [];
     const memberIds = members.map(m => m.id);
     const amt = Number(amount);
     const cur = _normalizeCurrency(currency);
+    const entryKind = _normalizeTripEntryKind(kind);
     const cat = (category || "Autre");
     const out = !!outOfBudget;
     const subcat = String(subcategory || "").trim() || null;
@@ -2921,13 +2989,13 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
       if (isFullShare) {
         const { error: rpcErr } = await _rpcApplyTransactionV2(sb, {
           ...(window.Core?.tripRules?.buildTripFullShareTransactionArgs
-            ? window.Core.tripRules.buildTripFullShareTransactionArgs({ userId: uid, walletId, label, amount: amt, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, outOfBudget: out })
-            : { p_user_id: uid, p_wallet_id: walletId, p_type: "expense", p_label: `[Trip] ${label}`, p_amount: amt, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: true, p_out_of_budget: out, p_night_covered: false, p_affects_budget: !out, p_trip_expense_id: null, p_trip_share_link_id: null }),
+            ? window.Core.tripRules.buildTripFullShareTransactionArgs({ userId: uid, walletId, label, amount: amt, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, outOfBudget: out, kind: entryKind })
+            : { p_user_id: uid, p_wallet_id: walletId, p_type: _tripBudgetTxType(entryKind), p_label: _tripBudgetLabel(label, entryKind, "full"), p_amount: amt, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: true, p_out_of_budget: out, p_night_covered: false, p_affects_budget: !out, p_trip_expense_id: null, p_trip_share_link_id: null }),
           ..._rpcFxSnapshotArgs(date, cur)
         });
         if (rpcErr) throw rpcErr;
 
-        const tx = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: `[Trip] ${label}`, date, payNow: true, outOfBudget: out });
+        const tx = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: _tripBudgetLabel(label, entryKind, "full"), date, payNow: true, outOfBudget: out, kind: entryKind });
         await _linkCreatedExpenseTransaction({ tx, expenseId: ex.id, date, targetPeriodId });
       } else {
         if (!me) {
@@ -2935,8 +3003,8 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
         }
 
         const advanceArgs = window.Core?.tripRules?.buildTripAdvanceTransactionArgs
-          ? window.Core.tripRules.buildTripAdvanceTransactionArgs({ userId: uid, walletId, label, amount: amt, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat })
-          : { p_user_id: uid, p_wallet_id: walletId, p_type: "expense", p_label: `[Trip] Avance - ${label}`, p_amount: amt, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: true, p_out_of_budget: true, p_night_covered: false, p_affects_budget: false, p_trip_expense_id: null, p_trip_share_link_id: null };
+          ? window.Core.tripRules.buildTripAdvanceTransactionArgs({ userId: uid, walletId, label, amount: amt, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, kind: entryKind })
+          : { p_user_id: uid, p_wallet_id: walletId, p_type: _tripBudgetTxType(entryKind), p_label: _tripBudgetLabel(label, entryKind, "advance"), p_amount: amt, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: true, p_out_of_budget: true, p_night_covered: false, p_affects_budget: false, p_trip_expense_id: null, p_trip_share_link_id: null };
         const advanceLabel = advanceArgs.p_label;
         const { error: rpcErrA } = await _rpcApplyTransactionV2(sb, {
           ...advanceArgs,
@@ -2944,13 +3012,13 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
         });
         if (rpcErrA) throw rpcErrA;
 
-        const txA = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: advanceLabel, date, payNow: true, outOfBudget: true });
+        const txA = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: advanceLabel, date, payNow: true, outOfBudget: true, kind: entryKind });
         await _linkCreatedExpenseTransaction({ tx: txA, expenseId: ex.id, date, targetPeriodId });
 
         if (me && myIdx >= 0 && budgetFlow.hasMyShare) {
           const shareArgs = window.Core?.tripRules?.buildTripPersonalShareTransactionArgs
-            ? window.Core.tripRules.buildTripPersonalShareTransactionArgs({ userId: uid, walletId, label, myShare, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, outOfBudget: out })
-            : { p_user_id: uid, p_wallet_id: walletId, p_type: "expense", p_label: `[Trip] ${label}`, p_amount: myShare, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: false, p_out_of_budget: out, p_night_covered: false, p_affects_budget: !out, p_trip_expense_id: null, p_trip_share_link_id: null };
+            ? window.Core.tripRules.buildTripPersonalShareTransactionArgs({ userId: uid, walletId, label, myShare, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, outOfBudget: out, kind: entryKind })
+            : { p_user_id: uid, p_wallet_id: walletId, p_type: _tripBudgetTxType(entryKind), p_label: _tripBudgetLabel(label, entryKind, "share"), p_amount: myShare, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: false, p_out_of_budget: out, p_night_covered: false, p_affects_budget: !out, p_trip_expense_id: null, p_trip_share_link_id: null };
           const consLabel = shareArgs.p_label;
           const { error: rpcErrB } = await _rpcApplyTransactionV2(sb, {
             ...shareArgs,
@@ -2958,7 +3026,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
           });
           if (rpcErrB) throw rpcErrB;
 
-          const txB = await _findTripBudgetTransaction({ walletId, amount: myShare, currency: cur, category: cat, label: consLabel, date, payNow: false, outOfBudget: out });
+          const txB = await _findTripBudgetTransaction({ walletId, amount: myShare, currency: cur, category: cat, label: consLabel, date, payNow: false, outOfBudget: out, kind: entryKind });
           await _linkCreatedShareTransaction({ tx: txB, expenseId: ex.id, memberId: me.id, date, targetPeriodId });
         }
       }
@@ -2980,11 +3048,11 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
             toastWarn(`[Trip] Devise wallet (${w.currency}) différente de ta part (${cur}). Choisis une wallet ${cur}.`);
           } else {
             const targetPeriodId = _findPeriodIdForDate(date);
-            const budgetLabel = `[Trip] ${label}`;
+            const budgetLabel = _tripBudgetLabel(label, entryKind, "share");
             const { error: rpcErr2 } = await _rpcApplyTransactionV2(sb, {
               p_user_id: uid,
               p_wallet_id: wId,
-              p_type: "expense",
+              p_type: _tripBudgetTxType(entryKind),
               p_label: budgetLabel,
               p_amount: myShare,
               p_currency: cur,
@@ -3008,7 +3076,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
               .from(TB_CONST.TABLES.transactions)
               .select("id,travel_id,period_id")
               .eq("wallet_id", wId)
-              .eq("type", "expense")
+              .eq("type", _tripBudgetTxType(entryKind))
               .eq("amount", myShare)
               .eq("currency", cur)
               .eq("category", cat)
@@ -3045,7 +3113,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     }
   }
 
-  async function _updateExpense({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
+  async function _updateExpense({ expenseId, kind, incomeSource, incomeDueBack, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split }) {
     await _ensureSession();
     const tripId = tripState.activeTripId;
     if (!tripId || !expenseId) throw new Error("Édition invalide.");
@@ -3060,7 +3128,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     const currentEx = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!currentEx) throw new Error("Dépense introuvable.");
 
-    const input = _normalizeTripExpenseForMutation({ expenseId, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget });
+    const input = _normalizeTripExpenseForMutation({ expenseId, kind, incomeSource, incomeDueBack, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget });
     const payer = members.find(m => m.id === input.paidByMemberId) || null;
     const wallet = input.walletId ? findWallet(input.walletId) : null;
     const cur = _normalizeCurrency(currency);
@@ -3072,16 +3140,17 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     const payloadExp = _buildTripExpenseRpcPayload({ input, members, parts });
 
     const updatedExpenseId = await _applyTripExpense(tripId, payloadExp);
+    await _persistTripExpenseKind(updatedExpenseId, input);
 
-    await _integrateExpenseBudgetSideEffects({ expenseId: updatedExpenseId, date, label, amount: amt, currency: cur, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split });
-    await _requestPayerApprovalIfNeeded(updatedExpenseId, paidByMemberId);
+    await _integrateExpenseBudgetSideEffects({ expenseId: updatedExpenseId, kind: input.kind, date, label, amount: amt, currency: cur, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split });
+    if (input.kind !== "income") await _requestPayerApprovalIfNeeded(updatedExpenseId, paidByMemberId);
 
     tripState.editingExpenseId = null;
     tripState.editingExpenseDraft = null;
     return updatedExpenseId;
   }
 
-  async function _addExpense({ date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split, skipDuplicateCheck }) {
+  async function _addExpense({ kind, incomeSource, incomeDueBack, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split, skipDuplicateCheck }) {
   const uid = await _ensureSession();
   const tripId = tripState.activeTripId;
   if (!tripId) return;
@@ -3093,7 +3162,8 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
   if (!date || !isFinite(amt) || amt <= 0) throw new Error("Date et montant (>0) requis.");
   if (!paidByMemberId) throw new Error("Sélectionne qui a payé.");
 
-  const input = _normalizeTripExpenseForMutation({ date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget });
+  const input = _normalizeTripExpenseForMutation({ kind, incomeSource, incomeDueBack, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget });
+  const entryKind = input.kind;
   const cur = _normalizeCurrency(currency);
   const payer = members.find(m => m.id === paidByMemberId) || null;
   const paidByMe = !!payer?.isMe;
@@ -3129,7 +3199,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
       let selectedExistingTransaction = false;
       if (!skipDuplicateCheck) {
       try {
-        const matches = await _findMatchingTransactions({ date, amount: amt, currency: cur });
+        const matches = await _findMatchingTransactions({ date, amount: amt, currency: cur, kind: entryKind });
         if (matches.length) {
           const m0 = await _chooseMatchingTransaction(matches, {
             date,
@@ -3147,6 +3217,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
             const payloadExp = _buildTripExpenseRpcPayload({ input, members, parts });
 
             const expId = await _applyTripExpense(tripId, payloadExp);
+            await _persistTripExpenseKind(expId, input);
             const ex = await _tripRepository().getExpenseById({ table: TB_CONST.TABLES.trip_expenses, expenseId: expId });
 
             await _linkExpenseToTransaction(ex.id, m0.id);
@@ -3198,11 +3269,11 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
                   } else if (looksLikeShare) {
                     await _linkShareToTransaction({ expenseId: ex.id, memberId: me.id, transactionId: m0.id });
                   } else if (looksLikePayment) {
-                    const consLabel = `[Trip] ${label}`;
+                    const consLabel = _tripBudgetLabel(label, entryKind, "share");
                     const { error: rpcErrB } = await _rpcApplyTransactionV2(sb, {
                       p_user_id: uid,
                       p_wallet_id: walletId,
-                      p_type: "expense",
+                      p_type: _tripBudgetTxType(entryKind),
                       p_label: consLabel,
                       p_amount: myShare2,
                       p_currency: cur,
@@ -3226,7 +3297,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
                       .from(TB_CONST.TABLES.transactions)
                       .select("id,travel_id,period_id")
                       .eq("wallet_id", walletId)
-                      .eq("type", "expense")
+                      .eq("type", _tripBudgetTxType(entryKind))
                       .eq("amount", myShare2)
                       .eq("currency", cur)
                       .eq("category", cat)
@@ -3289,6 +3360,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     const payloadExp = _buildTripExpenseRpcPayload({ input, members, parts });
 
     const expId = await _applyTripExpense(tripId, payloadExp);
+    await _persistTripExpenseKind(expId, input);
     const ex = await _tripRepository().getExpenseById({ table: TB_CONST.TABLES.trip_expenses, expenseId: expId });
 
 
@@ -3318,15 +3390,15 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
 
       if (isFullShare) {
         const fullShareArgs = window.Core?.tripRules?.buildTripFullShareTransactionArgs
-          ? window.Core.tripRules.buildTripFullShareTransactionArgs({ userId: uid, walletId, label, amount: amt, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, outOfBudget: out })
-          : { p_user_id: uid, p_wallet_id: walletId, p_type: "expense", p_label: `[Trip] ${label}`, p_amount: amt, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: true, p_out_of_budget: out, p_night_covered: false, p_affects_budget: !out, p_trip_expense_id: null, p_trip_share_link_id: null };
+          ? window.Core.tripRules.buildTripFullShareTransactionArgs({ userId: uid, walletId, label, amount: amt, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, outOfBudget: out, kind: entryKind })
+          : { p_user_id: uid, p_wallet_id: walletId, p_type: _tripBudgetTxType(entryKind), p_label: _tripBudgetLabel(label, entryKind, "full"), p_amount: amt, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: true, p_out_of_budget: out, p_night_covered: false, p_affects_budget: !out, p_trip_expense_id: null, p_trip_share_link_id: null };
         const { error: rpcErr } = await _rpcApplyTransactionV2(sb, {
           ...fullShareArgs,
           ..._rpcFxSnapshotArgs(date, cur)
         });
         if (rpcErr) throw rpcErr;
 
-        const tx = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: fullShareArgs.p_label, date, payNow: true, outOfBudget: out });
+        const tx = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: fullShareArgs.p_label, date, payNow: true, outOfBudget: out, kind: entryKind });
         await _linkCreatedExpenseTransaction({ tx, expenseId: ex.id, date, targetPeriodId, missingMessage: "Budget tx created but not found for linking." });
       } else {
         if (!me) {
@@ -3335,8 +3407,8 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
 
         // A) Cashflow advance (decrement wallet, NOT in budget)
         const advanceArgs = window.Core?.tripRules?.buildTripAdvanceTransactionArgs
-          ? window.Core.tripRules.buildTripAdvanceTransactionArgs({ userId: uid, walletId, label, amount: amt, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat })
-          : { p_user_id: uid, p_wallet_id: walletId, p_type: "expense", p_label: `[Trip] Avance - ${label}`, p_amount: amt, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: true, p_out_of_budget: true, p_night_covered: false, p_affects_budget: false, p_trip_expense_id: null, p_trip_share_link_id: null };
+          ? window.Core.tripRules.buildTripAdvanceTransactionArgs({ userId: uid, walletId, label, amount: amt, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, kind: entryKind })
+          : { p_user_id: uid, p_wallet_id: walletId, p_type: _tripBudgetTxType(entryKind), p_label: _tripBudgetLabel(label, entryKind, "advance"), p_amount: amt, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: true, p_out_of_budget: true, p_night_covered: false, p_affects_budget: false, p_trip_expense_id: null, p_trip_share_link_id: null };
         const advanceLabel = advanceArgs.p_label;
         const { error: rpcErrA } = await _rpcApplyTransactionV2(sb, {
           ...advanceArgs,
@@ -3344,7 +3416,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
         });
         if (rpcErrA) throw rpcErrA;
 
-        const txA = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: advanceLabel, date, payNow: true, outOfBudget: true });
+        const txA = await _findTripBudgetTransaction({ walletId, amount: amt, currency: cur, category: cat, label: advanceLabel, date, payNow: true, outOfBudget: true, kind: entryKind });
         await _linkCreatedExpenseTransaction({ tx: txA, expenseId: ex.id, date, targetPeriodId, missingMessage: "Advance tx created but not found for linking." });
 
         // B) My consumption share (budget/allocation, but pay_now=false so wallet isn't decremented twice)
@@ -3352,8 +3424,8 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
           const existing = await _getShareBudgetLink(ex.id, me.id);
           if (!existing) {
             const shareArgs = window.Core?.tripRules?.buildTripPersonalShareTransactionArgs
-              ? window.Core.tripRules.buildTripPersonalShareTransactionArgs({ userId: uid, walletId, label, myShare, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, outOfBudget: out })
-              : { p_user_id: uid, p_wallet_id: walletId, p_type: "expense", p_label: `[Trip] ${label}`, p_amount: myShare, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: false, p_out_of_budget: out, p_night_covered: false, p_affects_budget: !out, p_trip_expense_id: null, p_trip_share_link_id: null };
+              ? window.Core.tripRules.buildTripPersonalShareTransactionArgs({ userId: uid, walletId, label, myShare, currency: cur, date, budgetDateStart: budgetStart, budgetDateEnd: budgetEnd, category: cat, subcategory: subcat, outOfBudget: out, kind: entryKind })
+              : { p_user_id: uid, p_wallet_id: walletId, p_type: _tripBudgetTxType(entryKind), p_label: _tripBudgetLabel(label, entryKind, "share"), p_amount: myShare, p_currency: cur, p_date_start: date, p_date_end: date, p_budget_date_start: budgetStart, p_budget_date_end: budgetEnd, p_category: cat, p_subcategory: subcat, p_pay_now: false, p_out_of_budget: out, p_night_covered: false, p_affects_budget: !out, p_trip_expense_id: null, p_trip_share_link_id: null };
             const consLabel = shareArgs.p_label;
             const { error: rpcErrB } = await _rpcApplyTransactionV2(sb, {
               ...shareArgs,
@@ -3361,7 +3433,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
             });
             if (rpcErrB) throw rpcErrB;
 
-            const txB = await _findTripBudgetTransaction({ walletId, amount: myShare, currency: cur, category: cat, label: consLabel, date, payNow: false, outOfBudget: out });
+            const txB = await _findTripBudgetTransaction({ walletId, amount: myShare, currency: cur, category: cat, label: consLabel, date, payNow: false, outOfBudget: out, kind: entryKind });
             await _linkCreatedShareTransaction({ tx: txB, expenseId: ex.id, memberId: me.id, date, targetPeriodId });
           }
         }
@@ -3390,12 +3462,12 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
               toastWarn(`[Trip] Devise wallet (${w.currency}) différente de ta part (${cur}). Choisis une wallet ${cur} (conversion FX non implémentée).`);
             } else {
               const targetPeriodId = _findPeriodIdForDate(date);
-              const budgetLabel = `[Trip] ${label}`;
+              const budgetLabel = _tripBudgetLabel(label, entryKind, "share");
 
               const { error: rpcErr2 } = await _rpcApplyTransactionV2(sb, {
                 p_user_id: uid,
                 p_wallet_id: wId,
-                p_type: "expense",
+                p_type: _tripBudgetTxType(entryKind),
                 p_label: budgetLabel,
                 p_amount: myShare,
                 p_currency: cur,
@@ -3421,7 +3493,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
                 .select("id,travel_id,period_id")
                 
                 .eq("wallet_id", wId)
-                .eq("type", "expense")
+                .eq("type", _tripBudgetTxType(entryKind))
                 .eq("amount", myShare)
                 .eq("currency", cur)
                 .eq("category", cat)
@@ -3459,12 +3531,15 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
 
     }
 
-    await _requestPayerApprovalIfNeeded(ex.id, paidByMemberId);
+    if (entryKind !== "income") await _requestPayerApprovalIfNeeded(ex.id, paidByMemberId);
     return ex.id;
   }
 
   function _tripExpenseFormForQueue(form) {
     return {
+      kind: _normalizeTripEntryKind(form?.kind),
+      incomeSource: _normalizeTripIncomeSource(form?.incomeSource || form?.income_source),
+      incomeDueBack: _tripIncomeDueBack(form?.incomeDueBack ?? form?.income_due_back),
       date: String(form?.date || "").slice(0, 10),
       label: String(form?.label || "").trim(),
       amount: Number(form?.amount || 0),
@@ -3513,6 +3588,9 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     const row = {
       id,
       tripId,
+      kind: input.kind,
+      incomeSource: input.incomeSource,
+      incomeDueBack: input.incomeDueBack,
       date: input.date,
       label: input.label,
       amount: Number(input.amount),
@@ -3601,7 +3679,8 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
           && String(ex.label || "").trim().toLowerCase() === label.toLowerCase()
           && Math.abs(Number(ex.amount || 0) - amount) < 0.005
           && _normalizeCurrency(ex.currency) === currency
-          && String(ex.paidByMemberId || ex.paid_by_member_id || "") === paidByMemberId;
+          && String(ex.paidByMemberId || ex.paid_by_member_id || "") === paidByMemberId
+          && _normalizeTripEntryKind(ex.kind) === _normalizeTripEntryKind(form?.kind);
       });
       if (candidates.length) {
         candidates.sort((a, b) => String(a.createdAt || a.created_at || "").localeCompare(String(b.createdAt || b.created_at || "")));
@@ -3616,6 +3695,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
         amount,
         currency,
         paidByMemberId,
+        kind: _normalizeTripEntryKind(form?.kind),
       });
     } catch (e) {
       console.warn("[Trip] offline replay duplicate guard failed", e);
@@ -3929,15 +4009,21 @@ try {
           const participantNames = shareRows.map((row) => membersById.get(String(row.memberId))?.name).filter(Boolean);
           const participantLabel = participantNames.length ? ` • participants: ${escapeHTML(participantNames.join(', '))}` : '';
           const editBtn = canWrite ? `<button class="btn" type="button" data-edit-exp="${ex.id}" title="${isLinked ? "Édition complète (wallet/budget inclus)" : "Modifier"}">Modifier</button>` : "";
+          const entryKind = _normalizeTripEntryKind(ex.kind);
+          const entryBadge = entryKind === "income" ? `<span class="trip-badge" style="background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.35);">Entrée</span>` : `<span class="trip-badge">Dépense</span>`;
+          const incomeSourceBadge = entryKind === "income" ? `<span class="trip-badge">${_normalizeTripIncomeSource(ex.incomeSource || ex.income_source) === "participant" ? "Participant" : "Externe"}</span>` : "";
+          const incomeDueBadge = entryKind === "income" ? `<span class="trip-badge">${_tripIncomeDueBack(ex.incomeDueBack ?? ex.income_due_back) ? "A redistribuer" : "Non du"}</span>` : "";
+          const payerCopy = entryKind === "income" ? "reçu par" : "payé par";
+          const amountCopy = `${entryKind === "income" ? "+" : ""}${_fmtMoney(ex.amount, ex.currency)}`;
 return `
             <div class="trip-history-row" data-trip-expense-row="${escapeHTML(String(ex.id || ""))}">
               <div class="trip-history-copy">
-                <div class="trip-history-title">${escapeHTML(ex.label)}<span class="trip-badge">${escapeHTML(resolvedCategory || 'Autre')}</span>${resolvedSubcategory ? `<span class="trip-badge">${escapeHTML(resolvedSubcategory)}</span>` : ''}${linkedBadges}</div>
-                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • payé par ${escapeHTML(payer.name)}` : ""}${budgetWindowLabel}</div>
+                <div class="trip-history-title">${escapeHTML(ex.label)}${entryBadge}${incomeSourceBadge}${incomeDueBadge}<span class="trip-badge">${escapeHTML(resolvedCategory || 'Autre')}</span>${resolvedSubcategory ? `<span class="trip-badge">${escapeHTML(resolvedSubcategory)}</span>` : ''}${linkedBadges}</div>
+                <div class="muted" style="font-size:12px;">${escapeHTML(ex.date)}${payer ? ` • ${payerCopy} ${escapeHTML(payer.name)}` : ""}${budgetWindowLabel}</div>
                 ${participantNames.length ? `<div class="trip-history-participants">${participantNames.map((name) => `<span class="trip-participant-pill">${escapeHTML(name)}</span>`).join('')}</div>` : ''}
               </div>
               <div class="trip-history-actions">
-                <strong class="trip-history-amount">${_fmtMoney(ex.amount, ex.currency)}</strong>
+                <strong class="trip-history-amount ${entryKind === "income" ? "good" : ""}">${amountCopy}</strong>
                 ${moveUI}
                 <button class="btn" type="button" data-exp-detail="${ex.id}">Détail</button>
                 <button class="btn" type="button" data-exp-docs="${ex.id}">
@@ -4497,6 +4583,9 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
     btnAddExp.disabled = true;
 
     const date = _el("trip-exp-date").value;
+    const kind = _normalizeTripEntryKind(_el("trip-exp-kind")?.value || tripState.editingExpenseDraft?.kind || "expense");
+    const incomeSource = _normalizeTripIncomeSource(_el("trip-exp-income-source")?.value || tripState.editingExpenseDraft?.incomeSource || "external");
+    const incomeDueBack = _tripIncomeDueBack(_el("trip-exp-income-due")?.value || (tripState.editingExpenseDraft?.incomeDueBack === false ? "no" : "yes"));
     const label = _el("trip-exp-label").value.trim();
     const amount = _el("trip-exp-amount").value;
     const currency = _tripResolveExpenseCurrency();
@@ -4533,7 +4622,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
     })();
 
     if (editingExpenseId) {
-      const expenseForm = { date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split };
+      const expenseForm = { kind, incomeSource, incomeDueBack, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split };
       const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
         ? await window.tbShouldUseOfflineMode("trip:update_expense")
         : (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode());
@@ -4547,6 +4636,9 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
       }
       const updatedExpenseId = await _updateExpense({
         expenseId: editingExpenseId,
+        kind,
+        incomeSource,
+        incomeDueBack,
         date,
         label,
         amount,
@@ -4561,9 +4653,9 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
         split
       });
       await _refreshAfterTripMutation("trip:update_expense", { expectExpenseId: updatedExpenseId || editingExpenseId });
-      toastOk("Dépense modifiée.");
+      toastOk(kind === "income" ? "Entrée modifiée." : "Dépense modifiée.");
     } else {
-      const expenseForm = { date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split };
+      const expenseForm = { kind, incomeSource, incomeDueBack, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget, split };
       const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
         ? await window.tbShouldUseOfflineMode("trip:add_expense")
         : (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode());
@@ -4575,6 +4667,9 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
         return;
       }
       const createdExpenseId = await _addExpense({
+        kind,
+        incomeSource,
+        incomeDueBack,
         date,
         label,
         amount,
@@ -4590,7 +4685,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
       });
       tripState.addExpenseOpen = false;
       await _refreshAfterTripMutation("trip:add_expense", { expectExpenseId: createdExpenseId });
-      toastOk("Dépense ajoutée.");
+      toastOk(kind === "income" ? "Entrée ajoutée." : "Dépense ajoutée.");
     }
   } catch (e) {
     toastWarn(e?.message || String(e));
@@ -4621,7 +4716,21 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
         try {
           tripState.addExpenseOpen = true;
           tripState.editingExpenseId = null;
-          tripState.editingExpenseDraft = null;
+          tripState.editingExpenseDraft = { kind: "expense" };
+          await _renderUI();
+          setTimeout(() => { try { _el("trip-exp-label")?.focus(); } catch (_) {} }, 50);
+        } catch (e) {
+          toastWarn(e?.message || String(e));
+        }
+      };
+    });
+
+    root.querySelectorAll("[data-trip-open-add-income]").forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          tripState.addExpenseOpen = true;
+          tripState.editingExpenseId = null;
+          tripState.editingExpenseDraft = { kind: "income", incomeSource: "external", incomeDueBack: true };
           await _renderUI();
           setTimeout(() => { try { _el("trip-exp-label")?.focus(); } catch (_) {} }, 50);
         } catch (e) {

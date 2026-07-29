@@ -11,7 +11,7 @@ describe('Trip store', () => {
       ],
       expenses: [{
         id: 'expense-1', date: '2026-07-05', label: 'Ecolodge', amount: '210', currency: 'AUD',
-        paid_by_member_id: 'member-1', budget_date_start: '2026-07-05', budget_date_end: '2026-07-11',
+        paid_by_member_id: 'member-1', kind: 'income', income_source: 'participant', income_due_back: false, budget_date_start: '2026-07-05', budget_date_end: '2026-07-11',
       }],
       shares: [{ id: 'share-1', expense_id: 'expense-1', member_id: 'member-1', share_amount: '105' }],
       settlementEvents: [{ id: 'settlement-1', trip_id: 'trip-1', amount: '20', currency: 'AUD' }],
@@ -20,7 +20,7 @@ describe('Trip store', () => {
     }, { userId: 'user-1', email: 'seb@example.com' });
 
     expect(store.state.members[0]).toMatchObject({ id: 'member-1', isMe: true, email: 'seb@example.com' });
-    expect(store.state.expenses[0]).toMatchObject({ amount: 210, budgetDateEnd: '2026-07-11' });
+    expect(store.state.expenses[0]).toMatchObject({ amount: 210, kind: 'income', incomeSource: 'participant', incomeDueBack: false, budgetDateEnd: '2026-07-11' });
     expect(store.state.shares[0]).toMatchObject({ expenseId: 'expense-1', shareAmount: 105 });
     expect(store.state.budgetLinks[0]).toMatchObject({ transactionId: 'tx-1' });
     expect(store.state.budgetTxById.get('tx-1')).toMatchObject({ affects_budget: true });

@@ -69,6 +69,29 @@ export function normalizeTripCurrency(currency, fallback = 'EUR') {
   return /^[A-Z]{3}$/.test(value) ? value : fb;
 }
 
+export function normalizeTripEntryKind(kind) {
+  const value = String(kind || '').trim().toLowerCase();
+  return value === 'income' || value === 'revenue' || value === 'entry' ? 'income' : 'expense';
+}
+
+export function tripEntrySign(kind) {
+  return normalizeTripEntryKind(kind) === 'income' ? -1 : 1;
+}
+
+export function normalizeTripIncomeSource(source) {
+  return String(source || '').trim().toLowerCase() === 'participant' ? 'participant' : 'external';
+}
+
+export function shouldTripIncomeAffectBalances(entry = {}) {
+  if (normalizeTripEntryKind(entry?.kind) !== 'income') return true;
+  return entry?.incomeDueBack !== false && entry?.income_due_back !== false;
+}
+
+export function tripBalanceSign(entry = {}) {
+  if (normalizeTripEntryKind(entry?.kind) !== 'income') return 1;
+  return shouldTripIncomeAffectBalances(entry) ? -1 : 0;
+}
+
 export function normalizeTripExpenseInput(input = {}, options = {}) {
   const fallbackCurrency = options.fallbackCurrency || 'EUR';
   const amount = Number(input.amount);
@@ -80,11 +103,14 @@ export function normalizeTripExpenseInput(input = {}, options = {}) {
 
   if (!date) throw new Error('Date requise.');
   if (!label) throw new Error('Libelle requis.');
-  if (!Number.isFinite(amount) || amount <= 0) throw new Error('Montant depense invalide.');
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error('Montant invalide.');
   if (!paidByMemberId) throw new Error('Selectionne qui a paye.');
 
   return {
     expenseId: input.expenseId || null,
+    kind: normalizeTripEntryKind(input.kind),
+    incomeSource: normalizeTripIncomeSource(input.incomeSource || input.income_source),
+    incomeDueBack: input.incomeDueBack === false || input.income_due_back === false ? false : true,
     date,
     label,
     amount,
@@ -215,6 +241,9 @@ export function validateTripExpenseMutation({ input, members = [], shares, payer
 export function buildTripExpenseRpcPayload({ input, members = [], shares = [], walletTxEnabled = false }) {
   return {
     expense_id: input?.expenseId || null,
+    kind: normalizeTripEntryKind(input?.kind),
+    income_source: normalizeTripIncomeSource(input?.incomeSource || input?.income_source),
+    income_due_back: input?.incomeDueBack === false || input?.income_due_back === false ? false : true,
     date: input.date,
     label: input.label,
     amount: input.amount,
@@ -266,11 +295,12 @@ export function buildTripTransactionRpcPayload(rawArgs = {}, { userId, today } =
   };
 }
 
-function baseTripExpenseTransactionArgs({ userId, walletId, label, amount, currency, date, budgetDateStart, budgetDateEnd, category, subcategory }) {
+function baseTripExpenseTransactionArgs({ userId, walletId, label, amount, currency, date, budgetDateStart, budgetDateEnd, category, subcategory, kind }) {
+  const entryKind = normalizeTripEntryKind(kind);
   return {
     p_user_id: userId ?? null,
     p_wallet_id: walletId,
-    p_type: 'expense',
+    p_type: entryKind === 'income' ? 'income' : 'expense',
     p_label: label,
     p_amount: amount,
     p_currency: currency,
@@ -288,10 +318,13 @@ function baseTripExpenseTransactionArgs({ userId, walletId, label, amount, curre
 
 export function buildTripFullShareTransactionArgs(args = {}) {
   const outOfBudget = args.outOfBudget === true;
+  const kind = normalizeTripEntryKind(args.kind);
+  const labelPrefix = kind === 'income' ? '[Trip] Entree - ' : '[Trip] ';
   return {
     ...baseTripExpenseTransactionArgs({
       ...args,
-      label: `[Trip] ${String(args.label || '').trim()}`,
+      kind,
+      label: `${labelPrefix}${String(args.label || '').trim()}`,
       amount: args.amount,
     }),
     p_pay_now: true,
@@ -301,10 +334,13 @@ export function buildTripFullShareTransactionArgs(args = {}) {
 }
 
 export function buildTripAdvanceTransactionArgs(args = {}) {
+  const kind = normalizeTripEntryKind(args.kind);
+  const labelPrefix = kind === 'income' ? '[Trip] Entree recue - ' : '[Trip] Avance - ';
   return {
     ...baseTripExpenseTransactionArgs({
       ...args,
-      label: `[Trip] Avance - ${String(args.label || '').trim()}`,
+      kind,
+      label: `${labelPrefix}${String(args.label || '').trim()}`,
       amount: args.amount,
     }),
     p_pay_now: true,
@@ -328,10 +364,13 @@ export function linkedTripPaymentBudgetPatch({ paymentAmount = 0, personalShare 
 
 export function buildTripPersonalShareTransactionArgs(args = {}) {
   const outOfBudget = args.outOfBudget === true;
+  const kind = normalizeTripEntryKind(args.kind);
+  const labelPrefix = kind === 'income' ? '[Trip] Part entree - ' : '[Trip] ';
   return {
     ...baseTripExpenseTransactionArgs({
       ...args,
-      label: `[Trip] ${String(args.label || '').trim()}`,
+      kind,
+      label: `${labelPrefix}${String(args.label || '').trim()}`,
       amount: args.myShare ?? args.amount,
     }),
     p_pay_now: false,
@@ -407,28 +446,30 @@ export function computeTripAnalysis({ expenses = [], members = [], shares = [], 
 
   for (const expense of expenses || []) {
     const expenseId = String(expense?.id || '');
-    const amountPivot = Number(toPivot(expense?.amount, expense?.currency, expense)) || 0;
+    const categorySign = tripEntrySign(expense?.kind);
+    const balanceSign = tripBalanceSign(expense);
+    const amountPivot = (Number(toPivot(expense?.amount, expense?.currency, expense)) || 0) * categorySign;
     const category = String(getCategory(expense) || '').trim() || 'Autre';
     categoryTotals.set(category, (categoryTotals.get(category) || 0) + amountPivot);
 
     const payerId = String(expense?.paidByMemberId || '');
     if (payerId && participantTotals.has(payerId)) {
       const payerRow = participantTotals.get(payerId);
-      payerRow.paid += amountPivot;
+      payerRow.paid += (Number(toPivot(expense?.amount, expense?.currency, expense)) || 0) * balanceSign;
       payerRow.expenseCount += 1;
     }
 
     for (const share of sharesByExpense.get(expenseId) || []) {
       const memberId = String(share?.memberId || '');
       if (!memberId || !participantTotals.has(memberId)) continue;
-      participantTotals.get(memberId).owed += Number(toPivot(share?.shareAmount, expense?.currency, expense)) || 0;
+      participantTotals.get(memberId).owed += (Number(toPivot(share?.shareAmount, expense?.currency, expense)) || 0) * balanceSign;
     }
   }
 
   const categories = Array.from(categoryTotals.entries())
     .map(([name, amount]) => ({ name, amount: round2(amount) }))
-    .filter((row) => row.amount > 0.004)
-    .sort((a, b) => b.amount - a.amount);
+    .filter((row) => Math.abs(row.amount) > 0.004)
+    .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
 
   const participants = Array.from(participantTotals.entries())
     .map(([id, row]) => ({
@@ -496,6 +537,7 @@ export function matchesTripHistoryFilter({ expense, category, membersById, share
       .join(' ');
     const haystack = [
       expense?.label || '',
+      normalizeTripEntryKind(expense?.kind) === 'income' ? 'entree revenu income revenue' : 'depense expense',
       category || '',
       expense?.currency || '',
       payerName,

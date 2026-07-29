@@ -224,16 +224,18 @@ export function createTripRepository(getClient) {
       return unwrap(await client.from(table).select('*').eq('id', expenseId).single());
     },
 
-    async findExpenseByFingerprint({ table, tripId, date, label, amount, currency, paidByMemberId }) {
+    async findExpenseByFingerprint({ table, tripId, date, label, amount, currency, paidByMemberId, kind }) {
       const client = requireClient(getClient);
-      const rows = unwrap(await client.from(table)
+      let query = client.from(table)
         .select('id,created_at')
         .eq('trip_id', tripId)
         .eq('date', date)
         .eq('label', label)
         .eq('amount', amount)
         .eq('currency', currency)
-        .eq('paid_by_member_id', paidByMemberId)
+        .eq('paid_by_member_id', paidByMemberId);
+      if (kind) query = query.eq('kind', kind === 'income' ? 'income' : 'expense');
+      const rows = unwrap(await query
         .order('created_at', { ascending: true })
         .limit(1));
       return rows?.[0]?.id || null;

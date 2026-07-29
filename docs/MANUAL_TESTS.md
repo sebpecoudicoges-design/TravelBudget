@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.292`.
-- Bilan : 7 parcours `ok`, 47 parcours `à faire`.
+- Version à valider : `10.5.293`.
+- Bilan : 7 parcours `ok`, 49 parcours `à faire`.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -73,6 +73,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 53 | 10.5.290 | Boot + wallets : ancien helper solde retiré | Depuis un chargement frais, ouvrir Dashboard avec plusieurs wallets, vérifier les soldes, ouvrir un wallet et utiliser **Ajuster solde** sur un wallet de test si possible. | Les soldes restent identiques et l'ajustement passe toujours par l'action actuelle. Aucun écran ne dépend de `computeWalletBalance`. | `TB BUILD 10.5.290` ; aucun `Uncaught`, aucun `computeWalletBalance is not defined`. | à faire |
 | 54 | 10.5.291 | Boot : ancien badge audit budget retiré | Depuis un chargement frais, ouvrir Dashboard puis Analyse/KPI. Vérifier que la page ne montre plus de badge flottant `Budget OK` en bas à droite. | Dashboard, Analyse et KPI restent utilisables. Les contrôles d'analyse actuels remplacent l'ancien audit flottant, sans badge parasite ni alerte obsolète. | `TB BUILD 10.5.291` ; aucun `Uncaught`, aucun `budgetAuditBadge`, aucun `runBudgetAudit is not defined`. | à faire |
 | 55 | 10.5.292 | Boot : ancien badge health-check retiré | Depuis un chargement frais, ouvrir Dashboard puis Réglages et KPI. Vérifier que la page ne montre plus de badge flottant `Données OK` en bas à gauche. | Les diagnostics modernes restent accessibles via Doctor/debug et les vues KPI/Analyse. Aucun badge health-check obsolète ne recouvre l'interface. | `TB BUILD 10.5.292` ; aucun `Uncaught`, aucun `healthBadge`, aucun `runHealthCheck is not defined`. | à faire |
+| 56 | 10.5.293 | Cashflow : ancien fallback Apex retiré | Depuis un chargement frais, ouvrir Dashboard puis le graphique cashflow si disponible. Ouvrir aussi Analyse/KPI pour vérifier les projections. | Le cashflow actuel reste rendu par `27_cashflow_curve.js` ou le domaine lazy dédié. Aucun ancien moteur `23_cashflow_chart.js` n'est chargé. | `TB BUILD 10.5.293` ; aucun `Uncaught`, aucun chargement réseau de `23_cashflow_chart.js`, aucun `renderCashflowChart is not defined`. | à faire |
+| 57 | 10.5.293 | Trip : entrées partagées | Dans **Partager**, ouvrir **+ Entrée partagée**. Créer une entrée source externe à redistribuer, vérifier que les balances se comportent comme un remboursement partagé. Puis créer une entrée source participant avec **Non dû en retour**. | Les deux entrées restent positives en historique et créent des transactions Budget `income`. L'entrée redistribuée modifie les balances Trip ; l'entrée non due apparaît dans l'analyse mais ne crée aucune dette entre participants. | `TB BUILD 10.5.293` ; aucun `Uncaught`, colonne `kind` présente, aucun revenu traité comme `expense`. | à faire |
 
 ## À ajouter à chaque livraison
 

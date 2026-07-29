@@ -322,6 +322,8 @@ Critere ferme : le boot initial est stabilise, les domaines lourds sont charges 
   - [x] Retirer l'ancien helper `31_wallet_balance.js` du boot : soldes wallet portes par les regles centrales, boot legacy 874.7 -> 874.2 KiB et JS initial 246.3 -> 246.2 KiB.
   - [x] Retirer l'ancien badge flottant `22_budget_consistency_audit.js` du boot : audit budget obsolete non appele par les vues actuelles, boot legacy 874.2 -> 870.8 KiB, contrat anti-retour ajoute.
   - [x] Retirer l'ancien badge flottant `25_health_check.js` du boot : controle local obsolete sans appel direct, boot legacy 870.8 -> 867.2 KiB et JS total 643.4 -> 643.3 KiB, contrat anti-retour ajoute.
+- [x] Retirer l'ancien fallback `23_cashflow_chart.js` : moteur Apex cashflow remplace par `27_cashflow_curve.js`, fichier sans reference supprime, 115 lignes et 4.0 KiB retires du depot, fichiers legacy 59 -> 58.
+- [x] Ajouter les entrees Trip partagees : meme formulaire que les depenses, type `income`, source externe ou participant, option `non du` pour creer un revenu Budget sans dette Trip artificielle.
 
 ## Indicateurs
 

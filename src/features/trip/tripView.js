@@ -80,7 +80,10 @@ export function renderTripManagementCard({
               <h2>${escapeHTML(title)}</h2>
               ${memberPillsHTML}
             </div>
-            <button class="btn primary trip-mobile-add-expense" type="button" data-trip-open-add-exp ${trip && canWrite ? '' : 'disabled'}>${escapeHTML(txt('quickAddExpense', '+ Depense partagee'))}</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+              <button class="btn primary trip-mobile-add-expense" type="button" data-trip-open-add-exp ${trip && canWrite ? '' : 'disabled'}>${escapeHTML(txt('quickAddExpense', '+ Depense partagee'))}</button>
+              <button class="btn trip-mobile-add-income" type="button" data-trip-open-add-income ${trip && canWrite ? '' : 'disabled'}>${escapeHTML(txt('quickAddIncome', '+ Entree partagee'))}</button>
+            </div>
           </div>
           <details class="trip-manage-panel" ${isMobile ? '' : 'open'}>
             <summary>${escapeHTML(txt('manageSummary', 'Gerer le partage'))}</summary>
@@ -145,7 +148,10 @@ export function renderTripExpenseForm({
   escapeHTML = fallbackEscape,
   currencyOptionsHTML = () => '',
 }) {
-  const title = editingExpenseId ? translate('trip.expense.edit') : translate('trip.expense');
+  const kind = editingDraft?.kind === 'income' ? 'income' : 'expense';
+  const incomeSource = editingDraft?.incomeSource === 'participant' ? 'participant' : 'external';
+  const incomeDueBack = editingDraft?.incomeDueBack === false ? false : true;
+  const title = editingExpenseId ? translate('trip.expense.edit') : (kind === 'income' ? (language === 'en' ? 'Shared income' : 'Entree partagee') : translate('trip.expense'));
   const subtitle = editingExpenseId
     ? `<div class="muted" style="margin:4px 0 10px 0;">${escapeHTML(translate('trip.expense.edit_hint'))}</div>`
     : '';
@@ -156,6 +162,27 @@ export function renderTripExpenseForm({
   const submitDisabled = canWrite && trip ? '' : 'disabled';
   const body = `
     <div class="trip-expense-form-grid trip-expense-form-grid--payer">
+      <div class="field">
+        <label>${escapeHTML(language === 'en' ? 'Type' : 'Type')}</label>
+        <select id="trip-exp-kind">
+          <option value="expense" ${kind === 'expense' ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'Shared expense' : 'Depense partagee')}</option>
+          <option value="income" ${kind === 'income' ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'Shared income' : 'Entree / revenu partage')}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>${escapeHTML(language === 'en' ? 'Income source' : 'Source entree')}</label>
+        <select id="trip-exp-income-source">
+          <option value="external" ${incomeSource === 'external' ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'External source' : 'Source externe')}</option>
+          <option value="participant" ${incomeSource === 'participant' ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'Participant' : 'Participant')}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>${escapeHTML(language === 'en' ? 'Trip balance' : 'Balance Trip')}</label>
+        <select id="trip-exp-income-due">
+          <option value="yes" ${incomeDueBack ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'To redistribute' : 'A redistribuer')}</option>
+          <option value="no" ${!incomeDueBack ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'Not due back' : 'Non du en retour')}</option>
+        </select>
+      </div>
       <div class="field">
         <label>${escapeHTML(translate('trip.expense.paid_by'))}</label>
         <select id="trip-exp-paidby">${memberOptions}</select>
@@ -300,7 +327,10 @@ export function renderTripShell({
       ? `<div class="card trip-mobile-expense-launcher">
                   <h2>${escapeHTML(txt('expenseTitle', 'Dépense'))}</h2>
                   <div class="muted">${escapeHTML(txt('expenseHint', 'Ajout rapide'))}</div>
-                  <button class="btn primary" type="button" data-trip-open-add-exp ${hasTrip && canWrite ? '' : 'disabled'}>${escapeHTML(quickAddLabel)}</button>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn primary" type="button" data-trip-open-add-exp ${hasTrip && canWrite ? '' : 'disabled'}>${escapeHTML(quickAddLabel)}</button>
+                    <button class="btn" type="button" data-trip-open-add-income ${hasTrip && canWrite ? '' : 'disabled'}>${escapeHTML(txt('quickAddIncome', '+ Entree partagee'))}</button>
+                  </div>
                 </div>`
       : expenseFormHTML);
 
@@ -465,7 +495,8 @@ export function renderTripAnalysisBars({
   const categories = Array.isArray(data?.categories) ? data.categories : [];
   const participants = Array.isArray(data?.participants) ? data.participants : [];
   const totalCat = categories.reduce((sum, row) => sum + (Number(row?.amount) || 0), 0);
-  const maxCat = Math.max(1, ...categories.map((row) => Number(row?.amount) || 0));
+  const totalCatAbs = categories.reduce((sum, row) => sum + Math.abs(Number(row?.amount) || 0), 0);
+  const maxCat = Math.max(1, ...categories.map((row) => Math.abs(Number(row?.amount) || 0)));
   const maxParticipant = Math.max(1, ...participants.map((row) => Math.max(Math.abs(Number(row?.net) || 0), Number(row?.paid) || 0, Number(row?.owed) || 0)));
   const topCategory = categories[0] || null;
   const highestAdvance = [...participants].sort((a, b) => (Number(b?.net) || 0) - (Number(a?.net) || 0))[0] || null;
@@ -475,8 +506,8 @@ export function renderTripAnalysisBars({
   const catHTML = categories.length
     ? categories.map((row) => {
       const amount = Number(row?.amount) || 0;
-      const pct = totalCat > 0 ? (amount / totalCat) * 100 : 0;
-      const width = Math.max(8, Math.min(100, (amount / maxCat) * 100));
+      const pct = totalCatAbs > 0 ? (Math.abs(amount) / totalCatAbs) * 100 : 0;
+      const width = Math.max(8, Math.min(100, (Math.abs(amount) / maxCat) * 100));
       return `
             <div class="trip-analysis-row">
               <div class="trip-analysis-row-head">

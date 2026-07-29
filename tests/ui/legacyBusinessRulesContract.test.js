@@ -84,4 +84,13 @@ describe('legacy business rules contract', () => {
     expect(main).not.toContain('/legacy/js/25_health_check.js');
     expect(budgets).not.toContain('public/legacy/js/25_health_check.js');
   });
+
+  it('keeps the removed legacy Apex cashflow fallback out of the app', () => {
+    const main = fs.readFileSync('src/main.js', 'utf8');
+    const budgets = fs.readFileSync('config/module-size-budgets.json', 'utf8');
+
+    expect(fs.existsSync('public/legacy/js/23_cashflow_chart.js')).toBe(false);
+    expect(main).not.toContain('/legacy/js/23_cashflow_chart.js');
+    expect(budgets).not.toContain('public/legacy/js/23_cashflow_chart.js');
+  });
 });

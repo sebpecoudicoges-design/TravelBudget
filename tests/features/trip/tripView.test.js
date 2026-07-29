@@ -71,6 +71,7 @@ describe('Trip view', () => {
       isMobile: false,
       labels: {
         quickAddExpense: '+ Shared expense',
+        quickAddIncome: '+ Shared income',
         manageSummary: 'Manage split',
         activeTrip: 'Active trip',
         newTrip: 'New trip',
@@ -98,6 +99,7 @@ describe('Trip view', () => {
     expect(html).toContain('id="trip-member-email"');
     expect(html).toContain('id="trip-add-member"');
     expect(html).toContain('data-trip-open-add-exp');
+    expect(html).toContain('data-trip-open-add-income');
     expect(html).toContain('data-resend-invite="alex"');
     expect(html).toContain('data-rename-member="alex"');
     expect(html).toContain('data-del-member="alex"');
@@ -139,6 +141,7 @@ describe('Trip view', () => {
     expect(html).toContain('Frozen &lt;snapshot&gt; 2026-07-28');
     expect(html).toContain('id="trip-reopen"');
     expect(html).toContain('data-trip-open-add-exp');
+    expect(html).toContain('data-trip-open-add-income');
     expect(html).toContain('data-slot="management"');
     expect(html).toContain('id="trip-tab-content-recap"');
     expect(html).toContain('id="trip-tab-content-history"');
@@ -236,7 +239,7 @@ describe('Trip view', () => {
     const html = renderTripExpenseForm({
       editingExpenseId: 'expense-1',
       editingDraft: {
-        label: 'Lunch', amount: 24, currency: 'AUD', date: '2026-07-05',
+        kind: 'income', incomeSource: 'participant', incomeDueBack: false, label: 'Lunch', amount: 24, currency: 'AUD', date: '2026-07-05',
         budgetDateStart: '2026-07-06', budgetDateEnd: '2026-07-08',
       },
       trip: { id: 'trip-1', base_currency: 'AUD' },
@@ -252,6 +255,12 @@ describe('Trip view', () => {
     });
     expect(html).toContain('id="trip-expense-modal-template"');
     expect(html).toContain('trip-expense-form-grid--meta');
+    expect(html).toContain('id="trip-exp-kind"');
+    expect(html).toContain('<option value="income" selected>');
+    expect(html).toContain('id="trip-exp-income-source"');
+    expect(html).toContain('<option value="participant" selected>');
+    expect(html).toContain('id="trip-exp-income-due"');
+    expect(html).toContain('<option value="no" selected>');
     expect(html).toContain('trip-expense-form-grid--amount');
     expect(html).toContain('trip-expense-actions-row');
     expect(html).toContain('id="trip-exp-label"');

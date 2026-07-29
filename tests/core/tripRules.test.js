@@ -13,12 +13,17 @@ import {
   computeTripSplitParts,
   decideTripExpenseBudgetFlow,
   matchesTripHistoryFilter,
+  normalizeTripEntryKind,
   normalizeTripHistoryFilters,
   normalizeTripExpenseInput,
+  normalizeTripIncomeSource,
+  shouldTripIncomeAffectBalances,
   shouldAutoCashflowOnly,
   validateOneToOneLink,
   validateSplitTotal,
   validateTripExpenseMutation,
+  tripEntrySign,
+  tripBalanceSign,
 } from '../../src/core/tripRules.js';
 
 describe('trip rules core', () => {
@@ -93,6 +98,34 @@ describe('trip rules core', () => {
     })).toThrow(/Libelle requis/);
   });
 
+  it('normalizes shared income entries without negative stored amounts', () => {
+    expect(normalizeTripEntryKind('revenue')).toBe('income');
+    expect(normalizeTripIncomeSource('participant')).toBe('participant');
+    expect(normalizeTripEntryKind('unknown')).toBe('expense');
+    expect(tripEntrySign('income')).toBe(-1);
+    expect(tripBalanceSign({ kind: 'income', incomeDueBack: false })).toBe(0);
+    expect(shouldTripIncomeAffectBalances({ kind: 'income', incomeDueBack: false })).toBe(false);
+
+    const input = normalizeTripExpenseInput({
+      kind: 'income',
+      incomeSource: 'participant',
+      incomeDueBack: false,
+      date: '2026-05-07',
+      label: 'Refund',
+      amount: '90',
+      currency: 'aud',
+      paidByMemberId: 'm1',
+    });
+
+    expect(input).toMatchObject({
+      kind: 'income',
+      incomeSource: 'participant',
+      incomeDueBack: false,
+      amount: 90,
+      currency: 'AUD',
+    });
+  });
+
   it('computes equal split with cent-safe rounding and selected participants', () => {
     const members = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
     expect(computeTripSplitParts(10, members, { mode: 'equal' })).toEqual([3.34, 3.33, 3.33]);
@@ -163,6 +196,7 @@ describe('trip rules core', () => {
 
     expect(payload).toMatchObject({
       expense_id: 'ex1',
+      kind: 'expense',
       date: '2026-05-07',
       currency: 'JPY',
       paid_by_member_id: 'a',
@@ -265,6 +299,20 @@ describe('trip rules core', () => {
       p_pay_now: false,
       p_out_of_budget: true,
       p_affects_budget: false,
+    });
+
+    expect(buildTripFullShareTransactionArgs({ ...base, kind: 'income', label: 'Refund' })).toMatchObject({
+      p_type: 'income',
+      p_label: '[Trip] Entree - Refund',
+      p_amount: 100,
+      p_pay_now: true,
+    });
+
+    expect(buildTripPersonalShareTransactionArgs({ ...base, kind: 'income', label: 'Refund' })).toMatchObject({
+      p_type: 'income',
+      p_label: '[Trip] Part entree - Refund',
+      p_amount: 40,
+      p_pay_now: false,
     });
   });
 
@@ -370,6 +418,52 @@ describe('trip rules core', () => {
     expect(data.participants).toEqual([
       { id: 'me', name: 'Moi', isMe: true, paid: 100, owed: 55, net: 45, expenseCount: 1 },
       { id: 'b', name: 'Ben', isMe: false, paid: 10, owed: 55, net: -45, expenseCount: 1 },
+    ]);
+  });
+
+  it('computes shared income as the mirror of an expense when it is due back', () => {
+    const data = computeTripAnalysis({
+      pivot: 'AUD',
+      members: [
+        { id: 'me', name: 'Moi', isMe: true },
+        { id: 'b', name: 'Ben' },
+      ],
+      expenses: [
+        { id: 'e1', kind: 'income', amount: 100, currency: 'AUD', paidByMemberId: 'me', category: 'Refund' },
+      ],
+      shares: [
+        { expenseId: 'e1', memberId: 'me', shareAmount: 50 },
+        { expenseId: 'e1', memberId: 'b', shareAmount: 50 },
+      ],
+    });
+
+    expect(data.categories).toEqual([{ name: 'Refund', amount: -100 }]);
+    expect(data.participants).toEqual([
+      { id: 'b', name: 'Ben', isMe: false, paid: 0, owed: -50, net: 50, expenseCount: 0 },
+      { id: 'me', name: 'Moi', isMe: true, paid: -100, owed: -50, net: -50, expenseCount: 1 },
+    ]);
+  });
+
+  it('keeps non-due shared income out of Trip balances', () => {
+    const data = computeTripAnalysis({
+      pivot: 'AUD',
+      members: [
+        { id: 'me', name: 'Moi', isMe: true },
+        { id: 'b', name: 'Ben' },
+      ],
+      expenses: [
+        { id: 'e1', kind: 'income', incomeSource: 'participant', incomeDueBack: false, amount: 100, currency: 'AUD', paidByMemberId: 'me', category: 'Contribution' },
+      ],
+      shares: [
+        { expenseId: 'e1', memberId: 'me', shareAmount: 50 },
+        { expenseId: 'e1', memberId: 'b', shareAmount: 50 },
+      ],
+    });
+
+    expect(data.categories).toEqual([{ name: 'Contribution', amount: -100 }]);
+    expect(data.participants).toEqual([
+      { id: 'b', name: 'Ben', isMe: false, paid: 0, owed: 0, net: 0, expenseCount: 0 },
+      { id: 'me', name: 'Moi', isMe: true, paid: 0, owed: 0, net: 0, expenseCount: 1 },
     ]);
   });
 

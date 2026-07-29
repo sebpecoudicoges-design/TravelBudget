@@ -272,8 +272,9 @@ describe('trip repository', () => {
     client.calls.length = 0;
     await expect(repository.findExpenseByFingerprint({
       table: 'expenses', tripId: 'trip-1', date: '2026-07-05', label: 'Lunch',
-      amount: 20, currency: 'AUD', paidByMemberId: 'member-1',
+      amount: 20, currency: 'AUD', paidByMemberId: 'member-1', kind: 'income',
     })).resolves.toBe('expense-2');
+    expect(client.calls).toContainEqual({ table: 'expenses', method: 'eq', column: 'kind', value: 'income' });
   });
 
   it('links and unlinks an expense transaction bidirectionally', async () => {
