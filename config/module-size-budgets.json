@@ -52,8 +52,7 @@
         "public/legacy/js/25_health_check.js",
         "public/legacy/js/99_doctor.js",
         "public/legacy/js/20_boot.js",
-        "public/legacy/js/21_dashboard_drag.js",
-        "public/legacy/js/22_budget_consistency_audit.js"
+        "public/legacy/js/21_dashboard_drag.js"
       ]
     },
     {

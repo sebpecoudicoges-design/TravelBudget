@@ -12,9 +12,9 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.290` :
+Snapshot `10.5.291` :
 
-- Boot legacy : 874.2 / 1500 KiB.
+- Boot legacy : 870.8 / 1500 KiB.
 - Analyse : 159.4 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
 - Dashboard + Settings : 354.7 / 360 KiB.
@@ -111,3 +111,5 @@ En 10.5.288, le nettoyage continue sur Analyse et Documents avec deux helpers sa
 En 10.5.289, l'ancien script de contexte voyage `06_travel_context.js` quitte totalement le boot. Les fonctions `getActiveTravel`, `filterByActiveTravel` et `loadTravelContext` n'avaient plus d'appel depuis la migration vers l'etat voyage centralise. Le boot legacy baisse de 875.8 a 874.7 KiB, et le contrat verifie que le fichier ne revient ni dans `src/main.js`, ni dans les budgets.
 
 En 10.5.290, `31_wallet_balance.js` quitte le boot et le depot. L'ancien `computeWalletBalance` n'etait plus appele : les soldes passent par les regles centrales et les helpers effectifs existants. Boot legacy : 874.7 -> 874.2 KiB ; JS initial : 246.3 -> 246.2 KiB. Le contrat anti-retour verifie que le fichier ne revient pas dans le boot ni dans les budgets.
+
+En 10.5.291, `22_budget_consistency_audit.js` quitte le boot et le depot. Cet ancien badge flottant `Budget OK/anomalies` utilisait un audit local obsolete, non raccorde aux vues Analyse/KPI actuelles et sans appel direct. Boot legacy : 874.2 -> 870.8 KiB. Le contrat anti-retour verifie que le fichier ne revient pas dans le boot ni dans les budgets.

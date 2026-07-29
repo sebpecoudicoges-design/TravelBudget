@@ -66,4 +66,13 @@ describe('legacy business rules contract', () => {
     expect(main).not.toContain('/legacy/js/31_wallet_balance.js');
     expect(budgets).not.toContain('public/legacy/js/31_wallet_balance.js');
   });
+
+  it('keeps the removed legacy budget audit badge out of startup', () => {
+    const main = fs.readFileSync('src/main.js', 'utf8');
+    const budgets = fs.readFileSync('config/module-size-budgets.json', 'utf8');
+
+    expect(fs.existsSync('public/legacy/js/22_budget_consistency_audit.js')).toBe(false);
+    expect(main).not.toContain('/legacy/js/22_budget_consistency_audit.js');
+    expect(budgets).not.toContain('public/legacy/js/22_budget_consistency_audit.js');
+  });
 });
