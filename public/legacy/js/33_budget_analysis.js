@@ -324,14 +324,6 @@
     if (!seg) return null;
     return referenceCache.bySegment[String(seg.id)] || null;
   }
-  function _referenceDailyForDate(dateISO, analysisBase){
-    const row = _referenceRowForDate(dateISO);
-    const amount = _safeNum(row?.recommended_daily_amount);
-    const cur = _upper(row?.currency_code || '');
-    if (!amount || !cur) return 0;
-    return _convert(amount, cur, dateISO, analysisBase);
-  }
-
     function _hasReferenceForDate(dateISO){
     const row = _referenceRowForDate(dateISO);
     return !!(_safeNum(row?.recommended_daily_amount) > 0 && _upper(row?.currency_code || ''));

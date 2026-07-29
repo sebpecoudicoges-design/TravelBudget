@@ -40,4 +40,12 @@ describe('legacy business rules contract', () => {
       expect(sport).not.toContain(token);
     }
   });
+
+  it('keeps removed dead legacy helpers out of Analysis and Documents', () => {
+    const analysis = fs.readFileSync('public/legacy/js/33_budget_analysis.js', 'utf8');
+    const documents = fs.readFileSync('public/legacy/js/43_documents_ui.js', 'utf8');
+
+    expect(analysis).not.toContain('function _referenceDailyForDate');
+    expect(documents).not.toContain('function extFromName');
+  });
 });

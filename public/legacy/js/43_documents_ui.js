@@ -803,8 +803,6 @@ function setSelectedSort(v){
   }
 
   function cleanFilename(name){ return String(name||'document').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,120) || 'document'; }
-  function extFromName(name){ const m = String(name||'').match(/\.([a-z0-9]{1,8})$/i); return m ? `.${m[1].toLowerCase()}` : ''; }
-
   async function upload(files, opts){
   opts = opts || {};
   const list = Array.from(files || []); if(!list.length) return;

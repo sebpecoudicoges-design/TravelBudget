@@ -317,6 +317,7 @@ Critere ferme : le boot initial est stabilise, les domaines lourds sont charges 
 - [x] Maintenir `public/projet.html`, l'APK et Git a chaque livraison.
 - [x] Demarrer la suppression de code mort : anciens helpers Trip/Sport sans appels retires, 261 lignes nettes supprimees, contrats anti-retour ajoutes.
 - [ ] Continuer la suppression de code mort sur Dashboard, Settings, Analyse et Documents avec mesure avant/apres.
+  - [x] Nettoyer Analyse/Documents : `_referenceDailyForDate` et `extFromName` retires, Analyse 88.50 -> 88.16 KiB et Documents 75.40 -> 75.32 KiB, contrat anti-retour ajoute.
 
 ## Indicateurs
 
