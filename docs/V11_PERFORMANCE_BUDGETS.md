@@ -12,23 +12,23 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.297` :
+Snapshot `10.5.298` :
 
-- Boot legacy : 869.5 / 1500 KiB.
+- Boot legacy : 869.8 / 1500 KiB.
 - Analyse : 159.4 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
-- Dashboard + Settings : 357.6 / 360 KiB.
+- Dashboard + Settings : 358.1 / 360 KiB.
 - Trip : 317.7 / 340 KiB.
 - Sport : 439.9 / 450 KiB.
 - Nutrition : 187.0 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 113.1 / 115 KiB.
-- Bundle Vite JS initial : 250.4 / 260 KiB.
+- Bundle Vite JS initial : 250.8 / 260 KiB.
 - Bundle Vite JS lazy : 397.2 / 400 KiB.
-- Bundle Vite JS total : 647.5 / 650 KiB.
+- Bundle Vite JS total : 647.9 / 650 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
-- JS principal gzip : 71.2 / 110 KiB.
+- JS principal gzip : 71.3 / 110 KiB.
 
 ## Budgets actuels
 
@@ -87,6 +87,8 @@ En 10.5.295, les actions wallet Dashboard quittent les `onclick` inline des cart
 En 10.5.296, les actions d'onboarding Dashboard quittent a leur tour les `onclick` inline. Guide, Masquer, Reglages, Aide, Creation wallet et Ajout transaction passent par un routeur delegue unique et des hooks `data-*`. Le lot ajoute un peu de code de routage, Dashboard + Settings passe de 356.2 a 357.1 KiB et le JS initial de 250.3 a 250.4 KiB, tous plafonds verts.
 
 En 10.5.297, le FX manuel Settings retire le `prompt()` navigateur pour ajouter une devise. Le panneau integre un champ ISO3, une validation avec notice utilisateur et conserve les actions Ajouter/Modifier/Supprimer. Dashboard + Settings passe de 357.1 a 357.6 KiB ; le JS initial reste a 250.4 KiB et tous les plafonds restent verts.
+
+En 10.5.298, les actions de l'overview Voyage Settings quittent les `onclick` inline pour des hooks `data-settings-action` et une delegation testee. Nouveau voyage, Supprimer voyage et Ajouter periode restent exposes via les fonctions existantes. Dashboard + Settings passe de 357.6 a 358.1 KiB et le JS initial de 250.4 a 250.8 KiB ; tous les plafonds restent verts, mais ce domaine doit etre reduit au prochain lot.
 
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 

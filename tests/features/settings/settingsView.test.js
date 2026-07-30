@@ -933,6 +933,12 @@ describe('Settings view helpers', () => {
     expect(html).toContain('<option value="AU" selected>Australie</option>');
     expect(html).toContain('Repas');
     expect(html).toContain('25 AUD');
+    expect(html).toContain('data-settings-action="create-voyage"');
+    expect(html).toContain('data-settings-action="delete-voyage"');
+    expect(html).toContain('data-settings-action="create-period"');
     expect(html).toContain('id="tb-inline-save-travel"');
+    expect(html).not.toContain('onclick="createVoyagePrompt()');
+    expect(html).not.toContain('onclick="deleteActiveVoyage()');
+    expect(html).not.toContain('onclick="createPeriodPrompt()');
   });
 });

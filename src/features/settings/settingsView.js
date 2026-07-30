@@ -533,9 +533,9 @@ export function renderSettingsTravelOverview({
               </div>
               ${postRows.length ? `<div class="tb-mini-post-grid tb-mini-post-grid--travel">${postRows.map((post) => `<div class="tb-mini-post"><span>${esc(post.label)}</span><strong>${esc(post.amount)}</strong></div>`).join('')}</div>` : ''}
               <div class="row" style="justify-content:flex-end; margin-top:14px; gap:10px;">
-                <button class="btn" onclick="createVoyagePrompt()">+ ${esc(st('Nouveau voyage', 'New trip'))}</button>
-                <button class="btn danger" onclick="deleteActiveVoyage()">${esc(st('Supprimer voyage', 'Delete trip'))}</button>
-                <button class="btn" onclick="createPeriodPrompt()">+ ${esc(st('Ajouter période', 'Add period'))}</button>
+                <button class="btn" type="button" data-settings-action="create-voyage">+ ${esc(st('Nouveau voyage', 'New trip'))}</button>
+                <button class="btn danger" type="button" data-settings-action="delete-voyage">${esc(st('Supprimer voyage', 'Delete trip'))}</button>
+                <button class="btn" type="button" data-settings-action="create-period">+ ${esc(st('Ajouter période', 'Add period'))}</button>
                 <button class="btn primary" id="tb-inline-save-travel">${esc(st('Enregistrer le voyage', 'Save trip'))}</button>
               </div>
             </div>

@@ -199,6 +199,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire le rendu des cartes Periode Settings : entete, recap, edition budget/devise, reference pays et actions passent dans `settingsView.js`.
   - [x] Remplacer les actions inline d'onboarding Dashboard par des hooks `data-*` routes dans un gestionnaire delegue teste.
   - [x] Remplacer le prompt navigateur du FX manuel Settings par une saisie ISO integree au panneau et une validation utilisateur propre.
+  - [x] Remplacer les actions inline de l'overview Voyage Settings par des hooks `data-settings-action` et un branchement delegue teste.
   - [x] Supprimer l'ancien rendu FX manuel inline `renderManualFxBox`, remplace par le panneau Settings deja extrait et teste.
   - [x] Extraire le rendu Reference de periode Settings : pays, recommandation, prevu, ecart, postes et actions passent dans `settingsView.js`.
   - [x] Extraire l'overview Voyage Settings : resume voyage, reference, cadence, champs editables et postes quittent `14_settings_periods_ui.js`.

@@ -26,6 +26,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodReference');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsBudgetReferenceState');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsTravelOverview');
+    expect(legacy).toContain("event.target?.closest?.('[data-settings-action]')");
     expect(legacy).toContain('window.TBSettingsView?.renderCreateVoyageModalBody');
     expect(legacy).toContain('window.TBSettingsView?.renderCreatePeriodModalBody');
     expect(legacy).toContain('window.TBSettingsView?.getBudgetSegmentDeleteReadiness');

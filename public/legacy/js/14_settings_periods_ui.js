@@ -453,6 +453,12 @@ function renderSettings(){
       syncPairs.forEach(([a,b])=>{ const A=overview.querySelector('#'+a), B=document.getElementById(b); if(A&&B){ A.oninput=()=>{ B.value=A.value; }; B.value=A.value; } });
       const saveBtn = overview.querySelector('#tb-inline-save-travel');
       if (saveBtn) saveBtn.onclick = ()=>safeCall('Enregistrer le voyage', ()=>saveSettings());
+      overview.onclick = (event) => {
+        const action = event.target?.closest?.('[data-settings-action]')?.getAttribute('data-settings-action');
+        if (action === 'create-voyage') return window.createVoyagePrompt?.();
+        if (action === 'delete-voyage') return window.deleteActiveVoyage?.();
+        if (action === 'create-period') return window.createPeriodPrompt?.();
+      };
     }
   } catch(_) {}
 
