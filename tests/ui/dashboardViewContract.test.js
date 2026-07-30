@@ -31,6 +31,9 @@ describe('dashboard view extraction contract', () => {
     const matches = legacy.match(/function renderOnboardingPanel/g) || [];
     expect(matches).toHaveLength(1);
     expect(legacy).toContain('window.TBDashboardView?.renderDashboardOnboardingPanel');
+    expect(legacy).toContain('function _bindDashboardActions');
+    expect(legacy).toContain('actionKey: "open-settings"');
+    expect(legacy).toContain('actionKey: "add-transaction"');
     expect(legacy).not.toContain('Crée un <b>wallet</b>');
     expect(legacy).not.toContain('steps.join("<br/>")');
     expect(legacy).not.toContain('grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:12px;');
@@ -70,7 +73,10 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).not.toContain('btn.onclick = () => openWalletTypesFix()');
     const view = fs.readFileSync('src/features/dashboard/dashboardView.js', 'utf8');
     expect(view).toContain('data-dashboard-action="create-wallet"');
+    expect(view).toContain('data-dashboard-action="guided-tour"');
+    expect(view).toContain('data-dashboard-action="open-settings"');
     expect(view).toContain('data-wallet-action="tx-expense"');
+    expect(view).not.toContain('onclick=');
     expect(view).not.toContain('onclick="createWallet()"');
     expect(view).not.toContain("onclick=\"openTxModal('expense'");
     expect(view).not.toContain('onclick="adjustWalletBalance');

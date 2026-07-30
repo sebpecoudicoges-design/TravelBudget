@@ -38,8 +38,8 @@ describe('Dashboard view helpers', () => {
   it('renders the onboarding checklist with stable dashboard actions', () => {
     const html = renderDashboardOnboardingPanel({
       rows: [
-        { ok: true, text: 'Période OK', action: "showView('settings')", label: 'Regler' },
-        { ok: false, text: 'Créer wallet', action: 'createWallet()', label: 'Wallet' },
+        { ok: true, text: 'Période OK', actionKey: 'open-settings', label: 'Regler' },
+        { ok: false, text: 'Créer wallet', actionKey: 'create-wallet', label: 'Wallet' },
       ],
       done: 1,
       total: 2,
@@ -48,11 +48,13 @@ describe('Dashboard view helpers', () => {
 
     expect(html).toContain('Base a configurer');
     expect(html).toContain('1/2');
-    expect(html).toContain('tbStartGuidedTour');
-    expect(html).toContain('hideOnboardingPanel()');
+    expect(html).toContain('data-dashboard-action="guided-tour"');
+    expect(html).toContain('data-dashboard-tour="dashboard"');
+    expect(html).toContain('data-dashboard-action="hide-onboarding"');
     expect(html).toContain('Période OK');
     expect(html).toContain('Créer wallet');
-    expect(html).toContain('onclick="createWallet()"');
+    expect(html).toContain('data-dashboard-action="create-wallet"');
+    expect(html).not.toContain('onclick=');
     expect(html).toContain('Wallet');
   });
 
@@ -64,8 +66,9 @@ describe('Dashboard view helpers', () => {
 
     expect(html).toContain('wallet.empty.title');
     expect(html).toContain('wallet.empty.body');
-    expect(html).toContain("showView('settings')");
-    expect(html).toContain("showView('help')");
+    expect(html).toContain('data-dashboard-action="open-settings"');
+    expect(html).toContain('data-dashboard-action="open-help"');
+    expect(html).not.toContain('onclick=');
     expect(html).toContain('onboarding.step.wallet');
     expect(html).toContain('onboarding.step.period');
     expect(html).toContain('onboarding.step.tx');

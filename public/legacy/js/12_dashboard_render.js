@@ -7,6 +7,34 @@ function hideOnboardingPanel() {
   if (el) el.style.display = "none";
 }
 
+function _runDashboardAction(action, source) {
+  if (action === "guided-tour" && typeof tbStartGuidedTour === "function") return tbStartGuidedTour({ mode: source?.getAttribute?.("data-dashboard-tour") || "dashboard" });
+  if (action === "hide-onboarding") return hideOnboardingPanel();
+  if (action === "open-settings" && typeof showView === "function") return showView("settings");
+  if (action === "open-help" && typeof showView === "function") return showView("help");
+  if (action === "create-wallet") {
+    if (typeof createWallet === "function") return createWallet();
+    if (typeof showView === "function") return showView("dashboard");
+  }
+  if (action === "internal-transfer" && typeof openInternalTransferModal === "function") return openInternalTransferModal();
+  if (action === "toggle-archived-wallets") return toggleArchivedWallets();
+  if (action === "fix-wallet-types") return openWalletTypesFix();
+  if (action === "add-transaction") {
+    if (typeof openTxModal === "function") return openTxModal("expense", null);
+    if (typeof showView === "function") return showView("transactions");
+  }
+}
+
+function _bindDashboardActions(root) {
+  if (!root) return;
+  root.onclick = (event) => {
+    const btn = event.target?.closest?.("[data-dashboard-action]");
+    const action = btn?.getAttribute?.("data-dashboard-action");
+    if (!action) return;
+    _runDashboardAction(action, btn);
+  };
+}
+
 function renderOnboardingPanel() {
   const panel = document.getElementById("onboarding-panel");
   const body = document.getElementById("onboarding-panel-body");
@@ -27,9 +55,9 @@ function renderOnboardingPanel() {
   const hasSettings = !!(window.state && Array.isArray(state.settings) && state.settings.length);
 
   const rows = [
-    { ok: hasSegments || hasSettings, text: tbT ? tbT("onboarding.step.period") : "Set trip and period.", action: "showView('settings')", label: tbT ? tbT("onboarding.action.period") : "Set trip" },
-    { ok: wallets.length > 0, text: tbT ? tbT("onboarding.step.wallet") : "Create a wallet.", action: "if(typeof createWallet==='function')createWallet();else showView('dashboard')", label: tbT ? tbT("onboarding.action.wallet") : "Create wallet" },
-    { ok: txs.length > 0, text: tbT ? tbT("onboarding.step.tx") : "Add a first transaction.", action: "if(typeof openTxModal==='function')openTxModal('expense',null);else showView('transactions')", label: tbT ? tbT("onboarding.action.tx") : "Add transaction" }
+    { ok: hasSegments || hasSettings, text: tbT ? tbT("onboarding.step.period") : "Set trip and period.", actionKey: "open-settings", label: tbT ? tbT("onboarding.action.period") : "Set trip" },
+    { ok: wallets.length > 0, text: tbT ? tbT("onboarding.step.wallet") : "Create a wallet.", actionKey: "create-wallet", label: tbT ? tbT("onboarding.action.wallet") : "Create wallet" },
+    { ok: txs.length > 0, text: tbT ? tbT("onboarding.step.tx") : "Add a first transaction.", actionKey: "add-transaction", label: tbT ? tbT("onboarding.action.tx") : "Add transaction" }
   ];
   const done = rows.filter(r => r.ok).length;
   if (done === rows.length) {
@@ -54,6 +82,7 @@ function renderOnboardingPanel() {
       return key;
     }),
   }) || "";
+  _bindDashboardActions(body);
 }
 
 /* =========================
@@ -143,13 +172,7 @@ actions.innerHTML = window.TBDashboardView?.renderWalletActions?.({
   esc: escapeHTML,
 }) || "";
 container.appendChild(actions);
-actions.onclick = (event) => {
-  const action = event.target?.closest?.("[data-dashboard-action]")?.getAttribute("data-dashboard-action");
-  if (action === "create-wallet") return createWallet();
-  if (action === "internal-transfer" && typeof openInternalTransferModal === "function") return openInternalTransferModal();
-  if (action === "toggle-archived-wallets") return toggleArchivedWallets();
-  if (action === "fix-wallet-types") return openWalletTypesFix();
-};
+_bindDashboardActions(actions);
 const kpiHost = document.getElementById("kpis-container");
 if (kpiHost && typeof renderKpis === "function") {
   try { renderKpis(); } catch (_) {}
@@ -175,6 +198,7 @@ if (!wallets.length) {
   ob.style.marginTop = "10px";
   ob.innerHTML = window.TBDashboardView?.renderWalletQuickOnboarding?.({ t: T }) || "";
   container.appendChild(ob);
+  _bindDashboardActions(ob);
 }
 
   // Wallets list (draggable reorder)

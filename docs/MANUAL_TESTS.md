@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.295`.
-- Bilan : 7 parcours `ok`, 51 parcours `à faire`.
+- Version à valider : `10.5.296`.
+- Bilan : 7 parcours `ok`, 52 parcours `à faire`.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -77,6 +77,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 57 | 10.5.293 | Trip : entrées partagées | Dans **Partager**, ouvrir **+ Entrée partagée**. Créer une entrée source externe à redistribuer, vérifier que les balances se comportent comme un remboursement partagé. Puis créer une entrée source participant avec **Non dû en retour**. | Les deux entrées restent positives en historique et créent des transactions Budget `income`. L'entrée redistribuée modifie les balances Trip ; l'entrée non due apparaît dans l'analyse mais ne crée aucune dette entre participants. | `TB BUILD 10.5.293` ; aucun `Uncaught`, colonne `kind` présente, aucun revenu traité comme `expense`. | à faire |
 | 58 | 10.5.294 | Trip : formulaire dépense / entrée | Dans **Partager**, ouvrir **+ Dépense partagée** puis basculer le type sur **Entrée / revenu partagé**. Revenir ensuite sur **Dépense partagée**. Ouvrir aussi directement **+ Entrée partagée** sur mobile. | Les champs **Source entrée** et **Balance Trip** apparaissent seulement en mode entrée. Le libellé participant devient **Reçu par** et le bouton devient **Ajouter entrée** ; en mode dépense, ils redeviennent **Payé par** et **Ajouter dépense**. | `TB BUILD 10.5.294` ; aucun `Uncaught`, aucune entrée affichée avec un bouton ou libellé de dépense. | à faire |
 | 59 | 10.5.295 | Dashboard : actions wallet | Sur Dashboard, utiliser les boutons **+ Wallet**, **Transfert interne**, afficher/masquer les wallets archivés, puis sur une carte wallet tester **Dépense**, **Revenu**, **Modifier**, **Ajuster**, **Archiver/Désarchiver** sans forcément valider les modales. | Les mêmes fenêtres/actions s'ouvrent qu'avant. Les boutons wallet fonctionnent via hooks `data-*` et ne dépendent plus de `onclick` inline dans les cartes. | `TB BUILD 10.5.295` ; aucun `Uncaught`, aucun bouton wallet inactif. | à faire |
+| 60 | 10.5.296 | Dashboard : onboarding | Sur Dashboard, afficher le panneau d'onboarding ou un état wallet vide. Cliquer **Guide**, **Masquer**, **Réglages**, **Aide**, **Créer wallet** et **Ajouter transaction** selon les boutons visibles. | Les mêmes actions s'ouvrent qu'avant. Le rendu Dashboard ne contient plus de `onclick` inline pour l'onboarding ; les boutons passent par hooks `data-*`. | `TB BUILD 10.5.296` ; aucun `Uncaught`, aucun bouton onboarding inactif. | à faire |
 
 ## À ajouter à chaque livraison
 

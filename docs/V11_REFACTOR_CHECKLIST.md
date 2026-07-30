@@ -197,6 +197,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Extraire les handlers Compte Settings : hydratation profil, WhatsApp, santé, devise, mode UI, reset mot de passe, notifications et seuil cashflow passent dans `settingsAccountController.js`.
   - [x] Extraire le rendu FX manuel Settings : normalisation des taux, badges, tableau, actions stables et etat vide passent dans `settingsView.js`.
   - [x] Extraire le rendu des cartes Periode Settings : entete, recap, edition budget/devise, reference pays et actions passent dans `settingsView.js`.
+  - [x] Remplacer les actions inline d'onboarding Dashboard par des hooks `data-*` routes dans un gestionnaire delegue teste.
   - [x] Supprimer l'ancien rendu FX manuel inline `renderManualFxBox`, remplace par le panneau Settings deja extrait et teste.
   - [x] Extraire le rendu Reference de periode Settings : pays, recommandation, prevu, ecart, postes et actions passent dans `settingsView.js`.
   - [x] Extraire l'overview Voyage Settings : resume voyage, reference, cadence, champs editables et postes quittent `14_settings_periods_ui.js`.

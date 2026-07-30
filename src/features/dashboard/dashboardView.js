@@ -48,8 +48,8 @@ export function renderDashboardOnboardingPanel({
         <div class="pill" style="display:inline-flex;font-weight:900;">${esc(tr('onboarding.progress', { done: rowDone, total: rowTotal }))}</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn primary" type="button" onclick="if(typeof tbStartGuidedTour==='function')tbStartGuidedTour({mode:'dashboard'});">${esc(tr('onboarding.action.guide'))}</button>
-        <button class="btn" type="button" onclick="hideOnboardingPanel()">${esc(tr('onboarding.hide'))}</button>
+        <button class="btn primary" type="button" data-dashboard-action="guided-tour" data-dashboard-tour="dashboard">${esc(tr('onboarding.action.guide'))}</button>
+        <button class="btn" type="button" data-dashboard-action="hide-onboarding">${esc(tr('onboarding.hide'))}</button>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:12px;">
@@ -61,7 +61,7 @@ export function renderDashboardOnboardingPanel({
             <span style="width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:950;background:${isOk ? 'rgba(16,185,129,.18)' : 'rgba(37,99,235,.12)'};color:${isOk ? '#047857' : '#1d4ed8'};">${isOk ? '&#10003;' : '&bull;'}</span>
             <div style="min-width:0;flex:1;">
               <div style="font-weight:800;line-height:1.3;">${esc(row?.text || '')}</div>
-              ${isOk ? '' : `<button class="btn" type="button" style="margin-top:10px;padding:7px 10px;font-size:12px;" onclick="${esc(row?.action || '')}">${esc(row?.label || '')}</button>`}
+              ${isOk ? '' : `<button class="btn" type="button" style="margin-top:10px;padding:7px 10px;font-size:12px;" data-dashboard-action="${esc(row?.actionKey || row?.action || '')}">${esc(row?.label || '')}</button>`}
             </div>
           </div>
         </div>`;
@@ -91,8 +91,8 @@ export function renderWalletQuickOnboarding({
     <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
       <div style="font-weight:600;">${esc(tr('onboarding.title'))}</div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn" type="button" onclick="showView('settings')">${esc(tr('nav.settings'))}</button>
-        <button class="btn" type="button" onclick="showView('help')">${esc(tr('nav.help'))}</button>
+        <button class="btn" type="button" data-dashboard-action="open-settings">${esc(tr('nav.settings'))}</button>
+        <button class="btn" type="button" data-dashboard-action="open-help">${esc(tr('nav.help'))}</button>
       </div>
     </div>
     <div style="margin-top:8px;" class="muted">
