@@ -4,6 +4,7 @@ import fs from 'node:fs';
 describe('settings view extraction contract', () => {
   const main = fs.readFileSync('src/main.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/14_settings_periods_ui.js', 'utf8');
+  const index = fs.readFileSync('index.html', 'utf8');
 
   it('exposes the Settings view module to the legacy runtime', () => {
     expect(main).toContain("import * as settingsView from './features/settings/settingsView.js'");
@@ -27,6 +28,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsBudgetReferenceState');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsTravelOverview');
     expect(legacy).toContain("event.target?.closest?.('[data-settings-action]')");
+    expect(legacy).toContain("if (action === 'save-travel') return window.saveSettings?.()");
     expect(legacy).toContain('window.TBSettingsView?.renderCreateVoyageModalBody');
     expect(legacy).toContain('window.TBSettingsView?.renderCreatePeriodModalBody');
     expect(legacy).toContain('window.TBSettingsView?.getBudgetSegmentDeleteReadiness');
@@ -88,6 +90,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('function _tbSettingsDecoratePanels');
     expect(legacy).not.toContain('function _tbBudgetRefSummaryHtml');
     expect(legacy).not.toContain('function _tbBudgetRefRenderSkeleton');
+    expect(legacy).not.toContain('button[onclick*="saveSettings"]');
     expect(legacy).not.toContain('travelHost.innerHTML = `<div class="muted">Mode hors ligne');
     expect(legacy).not.toContain('travelHost.innerHTML = `<div class="muted">Référence budget en cours de synchronisation');
     expect(legacy).not.toContain('travelHost.innerHTML = `<div class="muted">Budget de référence indisponible');
@@ -102,5 +105,16 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('Couleur hexadécimale optionnelle');
     expect(legacy).toContain('Modifier sous-catégorie ·');
     expect(legacy).not.toContain("const mappingStatus = (value === '__unmapped__' || value === '__inherit__')");
+  });
+
+  it('keeps the static Settings fallback free of inline travel actions', () => {
+    expect(index).toContain('data-settings-action="create-voyage"');
+    expect(index).toContain('data-settings-action="delete-voyage"');
+    expect(index).toContain('data-settings-action="create-period"');
+    expect(index).toContain('data-settings-action="save-travel"');
+    expect(index).not.toContain('onclick="createVoyagePrompt()"');
+    expect(index).not.toContain('onclick="deleteActiveVoyage()"');
+    expect(index).not.toContain('onclick="createPeriodPrompt()"');
+    expect(index).not.toContain('onclick="saveSettings()"');
   });
 });

@@ -936,9 +936,11 @@ describe('Settings view helpers', () => {
     expect(html).toContain('data-settings-action="create-voyage"');
     expect(html).toContain('data-settings-action="delete-voyage"');
     expect(html).toContain('data-settings-action="create-period"');
+    expect(html).toContain('data-settings-action="save-travel"');
     expect(html).toContain('id="tb-inline-save-travel"');
     expect(html).not.toContain('onclick="createVoyagePrompt()');
     expect(html).not.toContain('onclick="deleteActiveVoyage()');
     expect(html).not.toContain('onclick="createPeriodPrompt()');
+    expect(html).not.toContain('onclick="saveSettings()');
   });
 });

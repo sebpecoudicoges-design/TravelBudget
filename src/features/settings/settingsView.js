@@ -536,7 +536,7 @@ export function renderSettingsTravelOverview({
                 <button class="btn" type="button" data-settings-action="create-voyage">+ ${esc(st('Nouveau voyage', 'New trip'))}</button>
                 <button class="btn danger" type="button" data-settings-action="delete-voyage">${esc(st('Supprimer voyage', 'Delete trip'))}</button>
                 <button class="btn" type="button" data-settings-action="create-period">+ ${esc(st('Ajouter période', 'Add period'))}</button>
-                <button class="btn primary" id="tb-inline-save-travel">${esc(st('Enregistrer le voyage', 'Save trip'))}</button>
+                <button class="btn primary" id="tb-inline-save-travel" type="button" data-settings-action="save-travel">${esc(st('Enregistrer le voyage', 'Save trip'))}</button>
               </div>
             </div>
           </div>

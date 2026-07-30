@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="BudgetPacker">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.298";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.299";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -4335,10 +4335,10 @@
             </div></div>
 
           <div class="row" style="justify-content:flex-end;">
-            <button class="btn" onclick="createVoyagePrompt()">+ Nouveau voyage</button>
-            <button class="btn danger" onclick="deleteActiveVoyage()">Supprimer voyage</button>
-            <button class="btn" onclick="createPeriodPrompt()">+ Ajouter période</button>
-            <button class="btn primary" onclick="saveSettings()">Enregistrer le voyage</button>
+            <button class="btn" data-settings-action="create-voyage">+ Nouveau voyage</button>
+            <button class="btn danger" data-settings-action="delete-voyage">Supprimer voyage</button>
+            <button class="btn" data-settings-action="create-period">+ Ajouter période</button>
+            <button class="btn primary" data-settings-action="save-travel">Enregistrer le voyage</button>
           </div>
 
           <div id="tb-travel-budget-reference-inline" style="margin-top:14px;"></div>
