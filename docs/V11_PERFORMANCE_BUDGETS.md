@@ -12,12 +12,12 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.299` :
+Snapshot `10.5.300` :
 
-- Boot legacy : 869.5 / 1500 KiB.
+- Boot legacy : 869.4 / 1500 KiB.
 - Analyse : 159.4 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
-- Dashboard + Settings : 357.8 / 360 KiB.
+- Dashboard + Settings : 357.7 / 360 KiB.
 - Trip : 317.7 / 340 KiB.
 - Sport : 439.9 / 450 KiB.
 - Nutrition : 187.0 / 235 KiB.
@@ -26,7 +26,7 @@ Snapshot `10.5.299` :
 - Documents : 113.1 / 115 KiB.
 - Bundle Vite JS initial : 250.8 / 260 KiB.
 - Bundle Vite JS lazy : 397.2 / 400 KiB.
-- Bundle Vite JS total : 647.9 / 650 KiB.
+- Bundle Vite JS total : 648.0 / 650 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
 - JS principal gzip : 71.3 / 110 KiB.
 
@@ -91,6 +91,8 @@ En 10.5.297, le FX manuel Settings retire le `prompt()` navigateur pour ajouter 
 En 10.5.298, les actions de l'overview Voyage Settings quittent les `onclick` inline pour des hooks `data-settings-action` et une delegation testee. Nouveau voyage, Supprimer voyage et Ajouter periode restent exposes via les fonctions existantes. Dashboard + Settings passe de 357.6 a 358.1 KiB et le JS initial de 250.4 a 250.8 KiB ; tous les plafonds restent verts, mais ce domaine doit etre reduit au prochain lot.
 
 En 10.5.299, le fallback HTML statique Settings Voyage s'aligne sur les memes hooks `data-settings-action`, y compris Enregistrer le voyage, et le dernier selecteur `button[onclick*="saveSettings"]` est retire. Boot legacy baisse de 869.8 a 869.5 KiB et Dashboard + Settings de 358.1 a 357.8 KiB. Le JS initial reste a 250.8 KiB.
+
+En 10.5.300, l'export global mort `window.deleteActivePeriod` est retire. La suppression de periode reste portee par les cartes periode et leur garde testee. Boot legacy baisse de 869.5 a 869.4 KiB et Dashboard + Settings de 357.8 a 357.7 KiB.
 
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 

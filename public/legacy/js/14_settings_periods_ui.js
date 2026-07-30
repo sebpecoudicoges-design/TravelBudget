@@ -2002,7 +2002,6 @@ try {
 } catch (_) {}
 window.saveSettings = ()=>safeCall("Enregistrer voyage", _saveSettingsImpl);
 window.createPeriodPrompt = ()=>safeCall("Ajouter période", _createPeriodPromptImpl);
-window.deleteActivePeriod = ()=>_tbToastOk("Suppression de période: utilise le bouton Supprimer sur une période.");
 window.createVoyagePrompt = ()=>safeCall("Ajouter voyage", _createVoyagePromptImpl);
 window.deleteActiveVoyage = ()=>safeCall("Supprimer voyage", _deleteActiveVoyageImpl);
 
