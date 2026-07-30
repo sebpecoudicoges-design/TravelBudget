@@ -4422,6 +4422,7 @@ toastOk("Participant ajouté.");
       const curHelp = _el("trip-exp-currency-help");
       if (!paidSel || !wSel || !curSel) return;
 
+      const isIncome = _normalizeTripEntryKind(_el("trip-exp-kind")?.value || tripState.editingExpenseDraft?.kind || "expense") === "income";
       const payer = members.find(m => m.id === paidSel.value) || null;
       const isMe = !!payer?.isMe;
       const wallets = _activeWallets();
@@ -4436,12 +4437,16 @@ toastOk("Participant ajouté.");
         curSel.innerHTML = _tripCurrencyOptionsHTML(currentCur);
         curSel.value = currentCur;
         curSel.disabled = false;
-        if (curHelp) curHelp.textContent = "Payé par un autre participant : choisis la devise dans la liste.";
+        if (curHelp) curHelp.textContent = isIncome
+          ? "Reçu par un autre participant : choisis la devise dans la liste."
+          : "Payé par un autre participant : choisis la devise dans la liste.";
         return;
       }
 
       if (!wallets.length) {
-        if (curHelp) curHelp.textContent = "Aucune wallet disponible : crée une wallet avant de saisir une dépense payée par toi.";
+        if (curHelp) curHelp.textContent = isIncome
+          ? "Aucune wallet disponible : crée une wallet avant de saisir une entrée reçue par toi."
+          : "Aucune wallet disponible : crée une wallet avant de saisir une dépense payée par toi.";
         return;
       }
 
@@ -4465,9 +4470,30 @@ toastOk("Participant ajouté.");
 
       if (curHelp) {
         curHelp.textContent = walletCur
-          ? `Payé par moi : devise imposée par la wallet sélectionnée (${walletCur}).`
-          : "Payé par moi : sélectionne une wallet pour imposer la devise.";
+          ? `${isIncome ? "Reçu par moi" : "Payé par moi"} : devise imposée par la wallet sélectionnée (${walletCur}).`
+          : `${isIncome ? "Reçu par moi" : "Payé par moi"} : sélectionne une wallet pour imposer la devise.`;
       }
+    }
+
+    function _syncExpenseKindUI() {
+      const kindSel = _el("trip-exp-kind");
+      const kind = _normalizeTripEntryKind(kindSel?.value || tripState.editingExpenseDraft?.kind || "expense");
+      const isIncome = kind === "income";
+      document.querySelectorAll(".trip-exp-income-only").forEach((node) => {
+        node.hidden = !isIncome;
+      });
+
+      const paidByLabel = _el("trip-exp-paidby-label");
+      if (paidByLabel) paidByLabel.textContent = isIncome ? "Reçu par" : _tripT("trip.expense.paid_by");
+
+      const submit = _el("trip-add-exp");
+      if (submit && !tripState.editingExpenseId) {
+        submit.textContent = isIncome
+          ? (submit.dataset.incomeLabel || "Ajouter entrée")
+          : (submit.dataset.expenseLabel || _tripT("trip.expense.add"));
+      }
+
+      _syncExpenseWalletUI();
     }
 
     // Split UI (equal / percent / amount)
@@ -4739,8 +4765,11 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
       };
     });
 
+    const kindSel = _el("trip-exp-kind");
+    if (kindSel) kindSel.onchange = _syncExpenseKindUI;
+
     const paidSel = _el("trip-exp-paidby");
-    if (paidSel) paidSel.onchange = _syncExpenseWalletUI;
+    if (paidSel) paidSel.onchange = _syncExpenseKindUI;
 
     const curInp = _el("trip-exp-currency");
     if (curInp) curInp.onchange = _syncExpenseWalletUI;
@@ -4748,7 +4777,7 @@ const amt = Number(_el("trip-exp-amount")?.value || 0);
     const walletSel = _el("trip-exp-wallet");
     if (walletSel) walletSel.onchange = _syncExpenseWalletUI;
 
-    _syncExpenseWalletUI();
+    _syncExpenseKindUI();
 
 
     // Settlement actions (only for transfers involving "me")

@@ -169,14 +169,14 @@ export function renderTripExpenseForm({
           <option value="income" ${kind === 'income' ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'Shared income' : 'Entree / revenu partage')}</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field trip-exp-income-only" ${kind === 'income' ? '' : 'hidden'}>
         <label>${escapeHTML(language === 'en' ? 'Income source' : 'Source entree')}</label>
         <select id="trip-exp-income-source">
           <option value="external" ${incomeSource === 'external' ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'External source' : 'Source externe')}</option>
           <option value="participant" ${incomeSource === 'participant' ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'Participant' : 'Participant')}</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field trip-exp-income-only" ${kind === 'income' ? '' : 'hidden'}>
         <label>${escapeHTML(language === 'en' ? 'Trip balance' : 'Balance Trip')}</label>
         <select id="trip-exp-income-due">
           <option value="yes" ${incomeDueBack ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'To redistribute' : 'A redistribuer')}</option>
@@ -184,7 +184,7 @@ export function renderTripExpenseForm({
         </select>
       </div>
       <div class="field">
-        <label>${escapeHTML(translate('trip.expense.paid_by'))}</label>
+        <label id="trip-exp-paidby-label">${escapeHTML(kind === 'income' ? (language === 'en' ? 'Received by' : 'Recu par') : translate('trip.expense.paid_by'))}</label>
         <select id="trip-exp-paidby">${memberOptions}</select>
       </div>
     </div>
@@ -255,7 +255,7 @@ export function renderTripExpenseForm({
     <div class="muted trip-expense-budget-hint">${escapeHTML(translate('trip.expense.budget_hint'))}</div>
     <div class="trip-expense-actions-row">
       ${editingExpenseId ? `<button class="btn" type="button" id="trip-cancel-edit-exp">${escapeHTML(translate('trip.expense.cancel_edit'))}</button>` : ''}
-      <button class="btn primary" id="trip-add-exp" ${submitDisabled}>${escapeHTML(editingExpenseId ? translate('trip.expense.save_edit') : translate('trip.expense.add'))}</button>
+      <button class="btn primary" id="trip-add-exp" data-expense-label="${escapeHTML(translate('trip.expense.add'))}" data-income-label="${escapeHTML(language === 'en' ? 'Add income' : 'Ajouter entree')}" ${submitDisabled}>${escapeHTML(editingExpenseId ? translate('trip.expense.save_edit') : (kind === 'income' ? (language === 'en' ? 'Add income' : 'Ajouter entree') : translate('trip.expense.add')))}</button>
     </div>`;
 
   return modal

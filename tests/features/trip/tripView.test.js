@@ -261,6 +261,8 @@ describe('Trip view', () => {
     expect(html).toContain('<option value="participant" selected>');
     expect(html).toContain('id="trip-exp-income-due"');
     expect(html).toContain('<option value="no" selected>');
+    expect(html).toContain('id="trip-exp-paidby-label">Received by');
+    expect(html).toContain('Add income');
     expect(html).toContain('trip-expense-form-grid--amount');
     expect(html).toContain('trip-expense-actions-row');
     expect(html).toContain('id="trip-exp-label"');
@@ -270,6 +272,29 @@ describe('Trip view', () => {
     expect(html).not.toContain('id="trip-add-exp" disabled');
     expect(html).not.toContain('min-width:220px');
     expect(html).not.toContain('max-width:160px');
+  });
+
+  it('hides income-only fields when the shared entry is an expense', () => {
+    const html = renderTripExpenseForm({
+      editingDraft: { kind: 'expense', label: 'Fuel', amount: 35, currency: 'AUD', date: '2026-07-05' },
+      trip: { id: 'trip-1', base_currency: 'AUD' },
+      canWrite: true,
+      memberOptions: '<option>Seb</option>',
+      walletOptions: '<option>Bank</option>',
+      categoryOptions: '<option>Transport</option>',
+      language: 'fr',
+      todayISO: '2026-07-05',
+      translate: (key) => ({
+        'trip.expense': 'Depense',
+        'trip.expense.paid_by': 'Paye par',
+        'trip.expense.add': 'Ajouter depense',
+      }[key] || key),
+      currencyOptionsHTML: (currency) => `<option>${currency}</option>`,
+    });
+
+    expect(html).toContain('class="field trip-exp-income-only" hidden');
+    expect(html).toContain('id="trip-exp-paidby-label">Paye par');
+    expect(html).toContain('Ajouter depense');
   });
 
   it('renders expense details with split, budget links and stable transaction hooks', () => {
@@ -318,7 +343,8 @@ describe('Trip view', () => {
       todayISO: '2026-07-05',
       translate: (key) => key,
     });
-    expect(html).toContain('id="trip-add-exp" disabled');
+    expect(html).toContain('id="trip-add-exp"');
+    expect(html).toContain('disabled>');
   });
 
   it('renders context help with stable action hooks and escaped copy', () => {

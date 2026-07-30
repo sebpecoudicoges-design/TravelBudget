@@ -12,21 +12,21 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.293` :
+Snapshot `10.5.294` :
 
 - Boot legacy : 867.2 / 1500 KiB.
 - Analyse : 159.4 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
 - Dashboard + Settings : 354.7 / 360 KiB.
-- Trip : 315.9 / 340 KiB.
+- Trip : 317.7 / 340 KiB.
 - Sport : 439.9 / 450 KiB.
 - Nutrition : 187.0 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 113.1 / 115 KiB.
-- Bundle Vite JS initial : 249.7 / 260 KiB.
+- Bundle Vite JS initial : 250.0 / 260 KiB.
 - Bundle Vite JS lazy : 397.2 / 400 KiB.
-- Bundle Vite JS total : 646.8 / 650 KiB.
+- Bundle Vite JS total : 647.2 / 650 KiB.
 - Bundle Vite CSS total : 7.8 / 8 KiB.
 - JS principal gzip : 71.2 / 110 KiB.
 
@@ -79,6 +79,8 @@ En 10.5.272, le panneau d'aide contextuelle Dashboard, devenu inatteignable, est
 En 10.5.273, les anciens helpers Dashboard `tbMoveDashboardHeroToTop` et `tbMountExistingKpisIntoHero`, sans appel dans le projet, sont supprimes. Le DOM Dashboard garde sa structure fixe, Dashboard + Settings descend a 354.7 KiB et le boot legacy a 874.2 KiB.
 
 En 10.5.293, l'ancien fallback `23_cashflow_chart.js` est supprime du depot. Il n'etait plus reference par `src/main.js`, les budgets, les tests ou les docs, et le cashflow actuel reste porte par `27_cashflow_curve.js` charge a la demande. Retrait : 115 lignes, 4.0 KiB source ; fichiers legacy : 59 -> 58 ; legacy total restant : 2069.3 KiB. La meme livraison ajoute les entrees Trip partagees sans nouveau fichier legacy : type `expense/income`, source externe ou participant, option `non du` pour ne pas modifier les balances. Le bundle initial mesure 249.7 KiB et reste sous plafond ; le plafond total distribue passe de 645 a 650 KiB pour absorber ce cas metier tout en conservant les budgets par domaine.
+
+En 10.5.294, le formulaire Trip d'entree partagee gagne la bascule UX complete : champs revenu masques en mode depense, libelle `Recu par`, bouton `Ajouter entree` et textes d'aide wallet adaptes. Trip passe de 315.9 a 317.7 KiB et le total JS de 646.8 a 647.2 KiB ; les plafonds restent inchanges.
 
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
