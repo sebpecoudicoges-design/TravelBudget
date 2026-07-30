@@ -237,6 +237,8 @@ describe('Settings view helpers', () => {
     expect(html).toContain('data-act="mf-toggle"');
     expect(html).toContain('data-manual-fx-list');
     expect(html).toContain('data-manual-fx-arrow');
+    expect(html).toContain('data-manual-fx-input');
+    expect(html).toContain('maxlength="3"');
     expect(html).toContain('data-act="mf-add"');
     expect(html).toContain('data-act="mf-edit" data-cur="USD"');
     expect(html).toContain('data-act="mf-del" data-cur="AUD"');

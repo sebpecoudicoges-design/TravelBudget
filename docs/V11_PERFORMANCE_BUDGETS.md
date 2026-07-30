@@ -12,12 +12,12 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.296` :
+Snapshot `10.5.297` :
 
-- Boot legacy : 869.3 / 1500 KiB.
+- Boot legacy : 869.5 / 1500 KiB.
 - Analyse : 159.4 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
-- Dashboard + Settings : 357.1 / 360 KiB.
+- Dashboard + Settings : 357.6 / 360 KiB.
 - Trip : 317.7 / 340 KiB.
 - Sport : 439.9 / 450 KiB.
 - Nutrition : 187.0 / 235 KiB.
@@ -85,6 +85,8 @@ En 10.5.294, le formulaire Trip d'entree partagee gagne la bascule UX complete :
 En 10.5.295, les actions wallet Dashboard quittent les `onclick` inline des cartes pour passer par des hooks `data-*` et une delegation d'evenements testee. Le lot augmente legerement la source Dashboard + Settings de 354.7 a 356.2 KiB et le JS initial de 250.0 a 250.3 KiB, mais garde tous les plafonds verts et prepare une extraction plus propre des handlers Dashboard.
 
 En 10.5.296, les actions d'onboarding Dashboard quittent a leur tour les `onclick` inline. Guide, Masquer, Reglages, Aide, Creation wallet et Ajout transaction passent par un routeur delegue unique et des hooks `data-*`. Le lot ajoute un peu de code de routage, Dashboard + Settings passe de 356.2 a 357.1 KiB et le JS initial de 250.3 a 250.4 KiB, tous plafonds verts.
+
+En 10.5.297, le FX manuel Settings retire le `prompt()` navigateur pour ajouter une devise. Le panneau integre un champ ISO3, une validation avec notice utilisateur et conserve les actions Ajouter/Modifier/Supprimer. Dashboard + Settings passe de 357.1 a 357.6 KiB ; le JS initial reste a 250.4 KiB et tous les plafonds restent verts.
 
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 

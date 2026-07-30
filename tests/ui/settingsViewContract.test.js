@@ -21,6 +21,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsAccountPanel');
     expect(legacy).toContain('window.TBSettingsView?.normalizeManualFxRates');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsManualFxPanel');
+    expect(legacy).toContain("manualPanel.querySelector('[data-manual-fx-input]')");
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodCard');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodReference');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsBudgetReferenceState');
@@ -52,6 +53,8 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('function renderManualFxBox');
     expect(legacy).not.toContain('function tbManualFxAdd');
     expect(legacy).not.toContain('function tbManualFxDel');
+    expect(legacy).not.toContain('prompt("Devise (ISO3) ?"');
+    expect(legacy).not.toContain('alert("Devise invalide');
     expect(legacy).not.toContain('tb-period-compare tb-period-compare--minimal');
     expect(legacy).not.toContain('tb-v11-travel-hero tb-v11-travel-hero--minimal');
     expect(legacy).not.toContain('<div class="tb-subcat-row">');

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `51fff820fee5371511ae6e18ab903a86246d4c2a`
-> Empreinte du snapshot : `7bdfa8c61634bc98e9580ae6b8b815a6848865734d5c99da0ebc4635a41b8ec6`
-> Généré le : `2026-07-30T10:23:49.353Z`
+> Commit analysé : `16f24c6399d0334f3d1edeab7567ad19b19e7a9b`
+> Empreinte du snapshot : `ee2da791f88d63e2da6ed60bccb45de7b13acb85ffc36c09e3d9fd96ba9c3781`
+> Généré le : `2026-07-30T10:36:14.924Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.296` |
+| Version | `10.5.297` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 57 |
 | Modules core | 25 |
 | Modules data | 7 |
 | Modules features | 40 |
 | Fichiers de tests | 108 |
-| Migrations Supabase | 93 |
+| Migrations Supabase | 92 |
 | Fonctions Edge | 11 |
 | Projet Android présent | Oui |
 
@@ -525,7 +525,6 @@ Modules :
 - `supabase/migrations/20260723184600_sport_mobility_assessments.sql`
 - `supabase/migrations/20260725234344_account_data_requests.sql`
 - `supabase/migrations/20260729103843_trip_shared_income_entries.sql`
-- `supabase/migrations/20260730101537_add_tamar_valley_all_natural_yogurt.sql`
 
 ## Android et budgets de modules
 

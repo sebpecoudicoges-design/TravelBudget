@@ -289,8 +289,9 @@ export function renderSettingsManualFxPanel({
           <b>${tr('settings.fx.title')}</b>
           <span class="muted">${tr('settings.fx.subtitle')}</span>
         </div>
-        <div style="display:flex; align-items:center; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;" data-manual-fx-control>
           ${statusBadge}
+          <input data-manual-fx-input type="text" maxlength="3" inputmode="latin-prose" placeholder="AUD" aria-label="${tr('settings.fx.currency')}" style="width:72px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; text-transform:uppercase; font-weight:800;">
           <button class="btn" data-act="mf-add" title="${tr('settings.fx.add_title')}">${tr('settings.fx.add')}</button><span class="tb-recurring-arrow" data-manual-fx-arrow>›</span>
         </div>
       </div>

@@ -602,12 +602,13 @@ function renderSettings(){
     }) || "";
     (manualHost || host).appendChild(manualPanel);
 
+    const mfCurrencyInput = manualPanel.querySelector('[data-manual-fx-input]');
     const _mfAskCur = () => {
-      const raw = prompt("Devise (ISO3) ?", "");
-      if (raw === null) return null;
+      const raw = mfCurrencyInput ? mfCurrencyInput.value : "";
       const c = String(raw||"").trim().toUpperCase();
       if (!c || !/^[A-Z]{3}$/.test(c) || c === "EUR") {
-        alert("Devise invalide (ISO3, ex: LAK, VND). EUR interdit.");
+        _settingsValidationNotice("Devise invalide (ISO3, ex: LAK, VND). EUR interdit.");
+        try { mfCurrencyInput?.focus?.(); } catch (_) {}
         return null;
       }
       return c;
@@ -618,12 +619,13 @@ function renderSettings(){
       const c = _mfAskCur();
       if (!c) return;
       window.tbFxPromptManualRate(c, "Taux perso");
+      if (mfCurrencyInput) mfCurrencyInput.value = "";
       renderSettings();
     });
 
     const mfToggle = manualPanel.querySelector('[data-act="mf-toggle"]');
     const mfList = manualPanel.querySelector('[data-manual-fx-list]');
-    if (mfToggle && mfList) { const arrow = manualPanel.querySelector('[data-manual-fx-arrow]'); mfToggle.onclick = (ev)=>{ if (ev.target && ev.target.closest('[data-act="mf-add"]')) return; const open = (mfList.style.display === 'none'); mfList.style.display = open ? '' : 'none'; if (arrow) arrow.textContent = open ? '⌄' : '›'; }; }
+    if (mfToggle && mfList) { const arrow = manualPanel.querySelector('[data-manual-fx-arrow]'); mfToggle.onclick = (ev)=>{ if (ev.target && ev.target.closest('[data-manual-fx-control]')) return; const open = (mfList.style.display === 'none'); mfList.style.display = open ? '' : 'none'; if (arrow) arrow.textContent = open ? '⌄' : '›'; }; }
 
     manualPanel.querySelectorAll('[data-act="mf-edit"]').forEach(btn=>{
       btn.onclick = ()=>safeCall("Modifier taux manuel", ()=>{
