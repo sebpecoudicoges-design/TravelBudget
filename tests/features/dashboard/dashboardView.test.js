@@ -79,15 +79,15 @@ describe('Dashboard view helpers', () => {
     });
     const compact = renderWalletActions({ showArchivedWallets: false, missingTypeCount: 0, t });
 
-    expect(html).toContain('onclick="createWallet()"');
-    expect(html).toContain('openInternalTransferModal()');
+    expect(html).toContain('data-dashboard-action="create-wallet"');
+    expect(html).toContain('data-dashboard-action="internal-transfer"');
     expect(html).toContain('transactions.action.internal_transfer');
-    expect(html).toContain('toggleArchivedWallets()');
+    expect(html).toContain('data-dashboard-action="toggle-archived-wallets"');
     expect(html).toContain('wallet.action.hide_archived');
-    expect(html).toContain('openWalletTypesFix()');
+    expect(html).toContain('data-dashboard-action="fix-wallet-types"');
     expect(html).toContain('Corriger types (2)');
     expect(compact).toContain('wallet.action.show_archived');
-    expect(compact).not.toContain('openWalletTypesFix()');
+    expect(compact).not.toContain('data-dashboard-action="fix-wallet-types"');
   });
 
   it('exposes wallet dialog styles outside the legacy file', () => {
@@ -117,9 +117,10 @@ describe('Dashboard view helpers', () => {
     expect(html).toContain('42.50 AUD');
     expect(html).toContain('width:63%;');
     expect(html).toContain('<div data-recent-row>Lunch</div>');
-    expect(html).toContain("openTxModal('expense','wallet-1')");
-    expect(html).toContain("openTxModal('income','wallet-1')");
-    expect(html).toContain("adjustWalletBalance('wallet-1')");
+    expect(html).toContain('data-wallet-action="tx-expense"');
+    expect(html).toContain('data-wallet-action="tx-income"');
+    expect(html).toContain('data-wallet-action="adjust"');
+    expect(html).toContain('data-wallet-id="wallet-1"');
     expect(html).toContain('data-wallet-archive-action="archive"');
   });
 

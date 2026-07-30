@@ -143,6 +143,13 @@ actions.innerHTML = window.TBDashboardView?.renderWalletActions?.({
   esc: escapeHTML,
 }) || "";
 container.appendChild(actions);
+actions.onclick = (event) => {
+  const action = event.target?.closest?.("[data-dashboard-action]")?.getAttribute("data-dashboard-action");
+  if (action === "create-wallet") return createWallet();
+  if (action === "internal-transfer" && typeof openInternalTransferModal === "function") return openInternalTransferModal();
+  if (action === "toggle-archived-wallets") return toggleArchivedWallets();
+  if (action === "fix-wallet-types") return openWalletTypesFix();
+};
 const kpiHost = document.getElementById("kpis-container");
 if (kpiHost && typeof renderKpis === "function") {
   try { renderKpis(); } catch (_) {}
@@ -205,10 +212,23 @@ if (!wallets.length) {
       barPct,
       t: T,
     }) || "";
-    const archiveAction = div.querySelector("[data-wallet-archive-action]");
-    if (archiveAction) archiveAction.onclick = () => w.archived ? unarchiveWallet(w.id) : archiveWallet(w.id);
     listEl.appendChild(div);
   }
+
+  listEl.onclick = (event) => {
+    const btn = event.target?.closest?.("[data-wallet-action],[data-wallet-archive-action]");
+    if (!btn) return;
+    const walletId = btn.getAttribute("data-wallet-id");
+    const action = btn.getAttribute("data-wallet-action");
+    const archiveAction = btn.getAttribute("data-wallet-archive-action");
+    if (archiveAction === "archive") return archiveWallet(walletId);
+    if (archiveAction === "unarchive") return unarchiveWallet(walletId);
+    if (action === "tx-expense" && typeof openTxModal === "function") return openTxModal("expense", walletId);
+    if (action === "tx-income" && typeof openTxModal === "function") return openTxModal("income", walletId);
+    if (action === "edit") return editWallet(walletId);
+    if (action === "adjust" && typeof adjustWalletBalance === "function") return adjustWalletBalance(walletId);
+    if (action === "delete") return deleteWallet(walletId);
+  };
 
   // Enable drag & drop reorder
   try { if (typeof enableWalletsReorderDrag === "function") enableWalletsReorderDrag(listEl); } catch (e) {}

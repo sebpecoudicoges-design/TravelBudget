@@ -113,10 +113,10 @@ export function renderWalletActions({
   const tr = typeof t === 'function' ? t : fallbackT;
   const missing = Number(missingTypeCount) || 0;
   return `
-  <button class="btn primary" onclick="createWallet()">+ Wallet</button>
-  <button class="btn" type="button" onclick="openInternalTransferModal()">↔ ${esc(tr('transactions.action.internal_transfer'))}</button>
-  <button class="btn" type="button" onclick="toggleArchivedWallets()">${esc(showArchivedWallets ? tr('wallet.action.hide_archived') : tr('wallet.action.show_archived'))}</button>
-  ${missing > 0 ? `<button class="btn" type="button" onclick="openWalletTypesFix()">⚙ Corriger types (${esc(String(missing))})</button>` : ''}`;
+  <button class="btn primary" type="button" data-dashboard-action="create-wallet">+ Wallet</button>
+  <button class="btn" type="button" data-dashboard-action="internal-transfer">↔ ${esc(tr('transactions.action.internal_transfer'))}</button>
+  <button class="btn" type="button" data-dashboard-action="toggle-archived-wallets">${esc(showArchivedWallets ? tr('wallet.action.hide_archived') : tr('wallet.action.show_archived'))}</button>
+  ${missing > 0 ? `<button class="btn" type="button" data-dashboard-action="fix-wallet-types">⚙ Corriger types (${esc(String(missing))})</button>` : ''}`;
 }
 
 export function getWalletDialogStyles() {
@@ -158,17 +158,17 @@ export function renderWalletCard({
   const pct = Math.max(0, Math.min(100, Number(barPct) || 0));
   const actionButtons = archived
     ? `
-      <button class="btn" onclick="editWallet('${esc(id)}')">&#9998; ${esc(tr('wallet.action.edit'))}</button>
-      <button class="btn" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" onclick="deleteWallet('${esc(id)}')">&#128465; ${esc(tr('wallet.action.delete'))}</button>
-      <button class="btn" type="button" data-wallet-archive-action="unarchive">${esc(tr('wallet.action.unarchive'))}</button>
+      <button class="btn" type="button" data-wallet-action="edit" data-wallet-id="${esc(id)}">&#9998; ${esc(tr('wallet.action.edit'))}</button>
+      <button class="btn" type="button" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" data-wallet-action="delete" data-wallet-id="${esc(id)}">&#128465; ${esc(tr('wallet.action.delete'))}</button>
+      <button class="btn" type="button" data-wallet-archive-action="unarchive" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.unarchive'))}</button>
     `
     : `
-      <button class="btn primary" onclick="openTxModal('expense','${esc(id)}')">${esc(tr('wallet.action.add_expense'))}</button>
-      <button class="btn" onclick="openTxModal('income','${esc(id)}')">${esc(tr('wallet.action.add_income'))}</button>
-      <button class="btn" onclick="editWallet('${esc(id)}')">&#9998; ${esc(tr('wallet.action.edit'))}</button>
-      <button class="btn" onclick="adjustWalletBalance('${esc(id)}')">&#9881; ${esc(tr('wallet.action.adjust'))}</button>
-      <button class="btn" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" onclick="deleteWallet('${esc(id)}')">&#128465; ${esc(tr('wallet.action.delete'))}</button>
-      <button class="btn" type="button" data-wallet-archive-action="archive">${esc(tr('wallet.action.archive'))}</button>
+      <button class="btn primary" type="button" data-wallet-action="tx-expense" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.add_expense'))}</button>
+      <button class="btn" type="button" data-wallet-action="tx-income" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.add_income'))}</button>
+      <button class="btn" type="button" data-wallet-action="edit" data-wallet-id="${esc(id)}">&#9998; ${esc(tr('wallet.action.edit'))}</button>
+      <button class="btn" type="button" data-wallet-action="adjust" data-wallet-id="${esc(id)}">&#9881; ${esc(tr('wallet.action.adjust'))}</button>
+      <button class="btn" type="button" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" data-wallet-action="delete" data-wallet-id="${esc(id)}">&#128465; ${esc(tr('wallet.action.delete'))}</button>
+      <button class="btn" type="button" data-wallet-archive-action="archive" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.archive'))}</button>
     `;
 
   return `
