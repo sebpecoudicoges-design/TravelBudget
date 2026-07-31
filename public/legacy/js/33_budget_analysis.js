@@ -1334,8 +1334,8 @@ categoryTxMap, subcategoryTxMap
     const ratioText = (current, total) => `${_fmtMoney(current, model.base)} / ${_fmtMoney(total, model.base)}`;
     const deltaBudgetPct = signedPct(model.spentToToday, model.targetToToday);
     const deltaReferencePct = signedPct(model.spentToToday, model.totalReferenceElapsed);
-    const deltaBudgetTone = deltaBudgetPct > 0 ? _themeBad() : (deltaBudgetPct < 0 ? _themeGood() : _themeMuted());
-    const deltaReferenceTone = deltaReferencePct > 0 ? _themeBad() : (deltaReferencePct < 0 ? _themeGood() : _themeMuted());
+    const deltaBudgetTone = deltaBudgetPct > 0 ? _theme('bad') : (deltaBudgetPct < 0 ? _theme('good') : _theme('muted'));
+    const deltaReferenceTone = deltaReferencePct > 0 ? _theme('bad') : (deltaReferencePct < 0 ? _theme('good') : _theme('muted'));
     const deltaBudgetAmount = _safeNum(model.spentToToday) - _safeNum(model.targetToToday);
     const deltaReferenceAmount = _safeNum(model.spentToToday) - _safeNum(model.totalReferenceElapsed);
     const isEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
@@ -1525,22 +1525,17 @@ function _openTxDrilldown(kind, key, model){
   };
   window.addEventListener('keydown', onKey);
 }
-  function _themeText(){ return getComputedStyle(document.body).getPropertyValue('--text').trim() || '#e5e7eb'; }
-  function _themeMuted(){ return getComputedStyle(document.body).getPropertyValue('--muted').trim() || '#94a3b8'; }
-  function _themeGrid(){ return getComputedStyle(document.body).getPropertyValue('--gridline').trim() || 'rgba(148,163,184,.18)'; }
-  function _themeAccent(){ return getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#3b82f6'; }
-  function _themeGood(){ return getComputedStyle(document.body).getPropertyValue('--good').trim() || '#22c55e'; }
-  function _themeWarn(){ return getComputedStyle(document.body).getPropertyValue('--warn').trim() || '#f59e0b'; }
-  function _themeBad(){ return getComputedStyle(document.body).getPropertyValue('--bad').trim() || '#ef4444'; }
+  const THEME_FALLBACKS = { text:'#e5e7eb', muted:'#94a3b8', grid:'rgba(148,163,184,.18)', accent:'#3b82f6', good:'#22c55e', warn:'#f59e0b', bad:'#ef4444' };
+  function _theme(name){ return getComputedStyle(document.body).getPropertyValue(`--${name === 'grid' ? 'gridline' : name}`).trim() || THEME_FALLBACKS[name] || '#94a3b8'; }
   function _analysisChartTheme(){
     return {
-      text: _themeText(),
-      muted: _themeMuted(),
-      grid: _themeGrid(),
-      accent: _themeAccent(),
-      good: _themeGood(),
-      warn: _themeWarn(),
-      bad: _themeBad(),
+      text: _theme('text'),
+      muted: _theme('muted'),
+      grid: _theme('grid'),
+      accent: _theme('accent'),
+      good: _theme('good'),
+      warn: _theme('warn'),
+      bad: _theme('bad'),
     };
   }
   function _ensureChart(name, id){
@@ -1615,7 +1610,7 @@ function _openTxDrilldown(kind, key, model){
   host.innerHTML = window.TBAnalysisView?.renderAnalysisSubcategoryBreakdown?.({
     model,
     formatCurrency: _fmtMoney,
-    accent: _themeAccent(),
+    accent: _theme('accent'),
   }) || '';
 
   if (!(model.subcategorySeries || []).length) return;

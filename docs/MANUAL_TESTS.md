@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.302`.
-- Bilan : 7 parcours `ok`, 58 parcours `à faire`.
+- Version à valider : `10.5.303`.
+- Bilan : 7 parcours `ok`, 59 parcours `à faire`.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -84,6 +84,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 64 | 10.5.300 | Réglages : suppression période | Ouvrir **Réglages > Voyage**, vérifier qu'une période se supprime uniquement depuis sa carte période et que le haut du panneau Voyage ne propose pas d'ancien bouton global de suppression période. | Le wrapper legacy `deleteActivePeriod` n'est plus exposé. La suppression passe par le parcours carte période actuel, avec la garde "au moins une période requise". | `TB BUILD 10.5.300` ; aucun `deleteActivePeriod is not defined`, aucun bouton global obsolète. | à faire |
 | 65 | 10.5.301 | Documents : rendu principal | Ouvrir **Documents**, utiliser recherche, tri, changement de dossier et ouvrir un aperçu de document si disponible. | Le rendu reste porté par `renderDocuments/ensureLoaded`; l'ancien export debug `tbDocumentsRenderOnly` n'est plus nécessaire. | `TB BUILD 10.5.301` ; aucun `tbDocumentsRenderOnly is not defined`, aucun écran Documents vide. | à faire |
 | 66 | 10.5.302 | Réglages : initialisation | Ouvrir **Réglages**, attendre la fin du chargement, puis vérifier **Voyage** et **Catégories**. | Le hook d'initialisation reste actif même sans nom interne `_tbSettingsInit`; les panneaux se rendent après `tb:afterLoad`. | `TB BUILD 10.5.302` ; aucun `_tbSettingsInit is not defined`, aucun écran Réglages vide. | à faire |
+| 67 | 10.5.303 | Analyse : couleurs graphiques | Ouvrir **Analyse**, vérifier les cartes, graphiques trajectoire/catégories et le détail par clic sur catégorie si disponible. | Les couleurs restent identiques malgré la consolidation des helpers thème. | `TB BUILD 10.5.303` ; aucun `_themeText is not defined`, aucun graphique blanc ou erreur ECharts. | à faire |
 
 ## À ajouter à chaque livraison
 

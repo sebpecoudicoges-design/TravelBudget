@@ -99,6 +99,9 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).not.toContain("legend: { top: 6");
     expect(legacy).not.toContain("roseType: 'area'");
     expect(legacy).not.toContain('visualMap: { min: 0');
+    expect(legacy).not.toContain('function _themeText');
+    expect(legacy).not.toContain('function _themeMuted');
+    expect(legacy).toContain('function _theme(name)');
   });
 
   it('recovers from stale empty Analysis filters after lazy loading', () => {
