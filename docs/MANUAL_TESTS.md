@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.300`.
-- Bilan : 7 parcours `ok`, 56 parcours `à faire`.
+- Version à valider : `10.5.301`.
+- Bilan : 7 parcours `ok`, 57 parcours `à faire`.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -82,6 +82,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 62 | 10.5.298 | Réglages : actions voyage | Ouvrir **Réglages > Voyage**, utiliser **Nouveau voyage**, **Supprimer voyage** et **Ajouter période** en annulant les modales/actions si besoin. | Les boutons répondent comme avant mais passent par hooks `data-settings-action` dans la vue Settings, sans `onclick` inline dans le module extrait. | `TB BUILD 10.5.298` ; aucun `Uncaught`, aucun bouton Voyage inactif. | à faire |
 | 63 | 10.5.299 | Réglages : fallback voyage | Depuis un chargement frais, ouvrir **Réglages > Voyage** très tôt après le boot puis tester **Nouveau voyage**, **Supprimer voyage**, **Ajouter période** et **Enregistrer le voyage** en annulant si besoin. | Le fallback HTML statique et la vue moderne utilisent les mêmes hooks `data-settings-action`, sans `onclick` inline. Les boutons restent actifs même avant remplacement complet du rendu. | `TB BUILD 10.5.299` ; aucun `Uncaught`, aucun bouton Voyage ou Enregistrer inactif. | à faire |
 | 64 | 10.5.300 | Réglages : suppression période | Ouvrir **Réglages > Voyage**, vérifier qu'une période se supprime uniquement depuis sa carte période et que le haut du panneau Voyage ne propose pas d'ancien bouton global de suppression période. | Le wrapper legacy `deleteActivePeriod` n'est plus exposé. La suppression passe par le parcours carte période actuel, avec la garde "au moins une période requise". | `TB BUILD 10.5.300` ; aucun `deleteActivePeriod is not defined`, aucun bouton global obsolète. | à faire |
+| 65 | 10.5.301 | Documents : rendu principal | Ouvrir **Documents**, utiliser recherche, tri, changement de dossier et ouvrir un aperçu de document si disponible. | Le rendu reste porté par `renderDocuments/ensureLoaded`; l'ancien export debug `tbDocumentsRenderOnly` n'est plus nécessaire. | `TB BUILD 10.5.301` ; aucun `tbDocumentsRenderOnly is not defined`, aucun écran Documents vide. | à faire |
 
 ## À ajouter à chaque livraison
 

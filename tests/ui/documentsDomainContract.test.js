@@ -34,6 +34,7 @@ describe('documents domain legacy contract', () => {
     expect(source).not.toContain('<div class="tb-doc-sidebar-head">');
     expect(source).not.toContain('<div class="tb-doc-dropzone"');
     expect(source).not.toContain('<div class="tb-doc-hero">');
+    expect(source).not.toContain('window.tbDocumentsRenderOnly');
   });
 
   it('keeps batch document actions on the current modal flow without duplicate legacy prompts', () => {

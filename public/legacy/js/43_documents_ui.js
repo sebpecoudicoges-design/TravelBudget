@@ -1613,7 +1613,6 @@ async function openDocumentAssetsModal(docId, message){
 
 
   window.renderDocuments = function renderDocuments(){ ensureLoaded(); };
-  window.tbDocumentsRenderOnly = renderShell;
   try {
     window.tbOnLangChange = window.tbOnLangChange || [];
     if(!window.__tbDocumentsLangBound){
