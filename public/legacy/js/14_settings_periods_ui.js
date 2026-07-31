@@ -2006,7 +2006,7 @@ window.createVoyagePrompt = ()=>safeCall("Ajouter voyage", _createVoyagePromptIm
 window.deleteActiveVoyage = ()=>safeCall("Supprimer voyage", _deleteActiveVoyageImpl);
 
 // initial boot hook
-(async function _tbSettingsInit(){
+(async function(){
   try{
     // only run after supabase load is done (state.periods etc)
     if(typeof window.addEventListener==="function"){

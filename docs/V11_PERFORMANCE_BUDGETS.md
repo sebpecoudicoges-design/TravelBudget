@@ -12,7 +12,7 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.301` :
+Snapshot `10.5.302` :
 
 - Boot legacy : 869.4 / 1500 KiB.
 - Analyse : 159.4 / 160 KiB.
@@ -95,6 +95,8 @@ En 10.5.299, le fallback HTML statique Settings Voyage s'aligne sur les memes ho
 En 10.5.300, l'export global mort `window.deleteActivePeriod` est retire. La suppression de periode reste portee par les cartes periode et leur garde testee. Boot legacy baisse de 869.5 a 869.4 KiB et Dashboard + Settings de 357.8 a 357.7 KiB.
 
 En 10.5.301, l'export debug Documents `window.tbDocumentsRenderOnly` est retire. Le rendu Documents reste porte par `renderDocuments/ensureLoaded` et les contrats Documents couvrent le non-retour. Documents baisse de 113.1 a 113.0 KiB ; les autres budgets restent stables.
+
+En 10.5.302, l'IIFE d'initialisation Settings perd son nom interne `_tbSettingsInit`, jamais appele ni reference. Le hook `tb:afterLoad` reste identique ; les budgets restent stables a l'arrondi : boot legacy 869.4 KiB et Dashboard + Settings 357.7 KiB.
 
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 

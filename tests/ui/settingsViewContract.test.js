@@ -92,6 +92,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('function _tbBudgetRefRenderSkeleton');
     expect(legacy).not.toContain('button[onclick*="saveSettings"]');
     expect(legacy).not.toContain('window.deleteActivePeriod');
+    expect(legacy).not.toContain('function _tbSettingsInit');
     expect(legacy).not.toContain('Suppression de période: utilise le bouton Supprimer sur une période.');
     expect(legacy).not.toContain('travelHost.innerHTML = `<div class="muted">Mode hors ligne');
     expect(legacy).not.toContain('travelHost.innerHTML = `<div class="muted">Référence budget en cours de synchronisation');
