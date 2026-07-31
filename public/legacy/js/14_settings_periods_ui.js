@@ -25,6 +25,12 @@ function _tbISO(d){
   try{ return new Date(d).toISOString().slice(0,10); }catch(_){ return null; }
 }
 
+function _tbSettingsIsEnglish(){
+  return typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
+}
+function _tbSettingsLang(){ return _tbSettingsIsEnglish() ? 'en' : 'fr'; }
+function _tbSettingsTxt(fr, en){ return _tbSettingsIsEnglish() ? en : fr; }
+
 // Normalize a budget segment row coming either from:
 // - state.budgetSegments (already normalized by loadFromSupabase)
 // - raw Supabase rows (snake_case)
@@ -404,8 +410,7 @@ function renderSettings(){
         ['Transport', travelDefault?.recommended_transport_daily_amount],
         ['Activités', travelDefault?.recommended_activities_daily_amount],
       ].filter((x)=>Number.isFinite(Number(x[1])) && Number(x[1])>0);
-      const settingsEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
-      const st = (fr, en) => settingsEn ? en : fr;
+      const st = _tbSettingsTxt;
       overview.innerHTML = window.TBSettingsView?.renderSettingsTravelOverview?.({
         travelName: String(_tbGetActiveTravelRow()?.name || ''),
         segmentCount: segCount,
@@ -430,7 +435,7 @@ function renderSettings(){
           label,
           amount: _tbBudgetRefFmtAmount(val,recoCur,2),
         })),
-        lang: settingsEn ? 'en' : 'fr',
+        lang: _tbSettingsLang(),
         esc: escapeHTML,
       }) || '';
       const sel = overview.querySelector('#tb-inline-travel-select');
@@ -682,8 +687,7 @@ function renderSettings(){
         const resolved = (cache && cache.segmentResolved) ? (cache.segmentResolved[String(seg.id)] || null) : null;
         const resolvedCountry = _tbPickResolvedCountry(resolved, override, travel);
         const fxMeta = _tbManualFxMeta(cur);
-        const periodEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
-        const pt = (fr, en) => periodEn ? en : fr;
+        const pt = _tbSettingsTxt;
         wrap.innerHTML = window.TBSettingsView?.renderSettingsPeriodCard?.({
           segment: { ...seg, start: _tbISO(seg.start), end: _tbISO(seg.end) },
           currency: cur,
@@ -697,7 +701,7 @@ function renderSettings(){
           resolvedCountry,
           countryOptionsHtml: _tbBudgetRefCountryOptions(resolvedCountry.country_code, resolvedCountry.region_code),
           helpHtml: typeof tbHelp==='function' ? tbHelp(pt('Montant dédié aux nuits passées en transport.', 'Amount dedicated to nights spent in transport.')) : '',
-          lang: periodEn ? 'en' : 'fr',
+          lang: _tbSettingsLang(),
           t: T,
           esc: escapeHTML,
         }) || "";
@@ -1047,7 +1051,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       travelHost.innerHTML = window.TBSettingsView?.renderSettingsBudgetReferenceState?.({
         state: 'offline',
         esc: escapeHTML,
-        t: (fr, en) => (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? en : fr,
+        t: _tbSettingsTxt,
       }) || `<div class="muted">Mode hors ligne : référence budget en lecture locale indisponible.</div>`;
       return;
     }
@@ -1117,8 +1121,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
         ['Transport', resolved?.recommended_transport_daily_amount],
         ['Activités', resolved?.recommended_activities_daily_amount],
       ].filter((x)=>Number.isFinite(Number(x[1])) && Number(x[1])>0);
-      const refEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
-      const rt = (fr, en) => refEn ? en : fr;
+      const rt = _tbSettingsTxt;
       const modeText = override ? rt('Personnalise', 'Custom') : (travel?.country_code ? rt('Herite', 'Inherited') : rt('A definir', 'To define'));
       const plannedBaseAmount = Number(_tbTryConvert(seg.dailyBudgetBase, seg.baseCurrency || '', localBaseCur) || 0);
       const referenceBaseAmount = Number(_tbTryConvert(resolved?.recommended_daily_amount, resolved?.currency_code || 'EUR', localBaseCur) || 0);
@@ -1150,7 +1153,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
           label: postLabel(label),
           amount: _tbBudgetRefFmtAmount(val, resolved?.currency_code || 'EUR', 2),
         })),
-        lang: refEn ? 'en' : 'fr',
+        lang: _tbSettingsLang(),
         esc: escapeHTML,
       }) || '';
       _tbBudgetRefWireSegmentMode(wrap);
@@ -1198,7 +1201,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       travelHost.innerHTML = window.TBSettingsView?.renderSettingsBudgetReferenceState?.({
         state: 'syncing',
         esc: escapeHTML,
-        t: (fr, en) => (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? en : fr,
+        t: _tbSettingsTxt,
       }) || `<div class="muted">Référence budget en cours de synchronisation.</div>`;
       return;
     }
@@ -1207,7 +1210,7 @@ window.tbRenderBudgetReferenceUI = async function tbRenderBudgetReferenceUI(){
       state: 'unavailable',
       error: err?.message || String(err),
       esc: escapeHTML,
-      t: (fr, en) => (typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en') ? en : fr,
+      t: _tbSettingsTxt,
     }) || `<div class="muted">Budget de référence indisponible. ${escapeHTML(err?.message || String(err))}</div>`;
   }
 };

@@ -104,6 +104,8 @@ En 10.5.304, les appels repetes au loader `TBLoadDashboardWalletRules` sont fact
 
 En 10.5.305, la detection de langue Analyse est centralisee dans `_analysisIsEnglish()`. Les rendus progression et insights ne recopient plus l'expression `tbGetLang`, avec un contrat anti-retour. Les budgets restent verts : Analyse 159.0 / 160 KiB, boot legacy 869.1 / 1500 KiB et JS total 648.0 / 650 KiB.
 
+En 10.5.306, la detection de langue Settings est centralisee dans `_tbSettingsIsEnglish()`, `_tbSettingsLang()` et `_tbSettingsTxt()`. Les blocs Voyage, Periodes et Reference budget ne recopient plus `tbGetLang`. `14_settings_periods_ui.js` descend a 117.02 KiB ; Dashboard + Settings mesure 357.0 / 360 KiB, boot legacy 868.7 / 1500 KiB et JS total 648.0 / 650 KiB.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

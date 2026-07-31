@@ -110,6 +110,18 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain("const mappingStatus = (value === '__unmapped__' || value === '__inherit__')");
   });
 
+  it('centralizes Settings language detection in one legacy helper', () => {
+    const inlineLanguageChecks = legacy.match(/typeof window\.tbGetLang === 'function' && window\.tbGetLang\(\) === 'en'/g) || [];
+    expect(legacy).toContain('function _tbSettingsIsEnglish()');
+    expect(legacy).toContain('function _tbSettingsLang()');
+    expect(legacy).toContain('function _tbSettingsTxt(fr, en)');
+    expect(inlineLanguageChecks).toHaveLength(1);
+    expect(legacy).not.toContain('const settingsEn = typeof window.tbGetLang');
+    expect(legacy).not.toContain('const periodEn = typeof window.tbGetLang');
+    expect(legacy).not.toContain('const refEn = typeof window.tbGetLang');
+    expect(legacy).not.toContain("t: (fr, en) => (typeof window.tbGetLang === 'function'");
+  });
+
   it('keeps the static Settings fallback free of inline travel actions', () => {
     expect(index).toContain('data-settings-action="create-voyage"');
     expect(index).toContain('data-settings-action="delete-voyage"');
