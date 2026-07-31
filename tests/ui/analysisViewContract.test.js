@@ -119,4 +119,11 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).toContain('const withTx = ids.find(id => _analysisTravelTxCount(id));');
     expect(legacy).toContain('const wantedTravel = _pickAnalysisTravelId(travels, filters.travelId);');
   });
+
+  it('centralizes Analysis language detection in the legacy shell', () => {
+    const inlineLanguageChecks = legacy.match(/typeof window\.tbGetLang === 'function' && window\.tbGetLang\(\) === 'en'/g) || [];
+    expect(legacy).toContain('function _analysisIsEnglish()');
+    expect(inlineLanguageChecks).toHaveLength(1);
+    expect(legacy.match(/_analysisIsEnglish\(\)/g) || []).toHaveLength(3);
+  });
 });

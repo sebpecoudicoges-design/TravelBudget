@@ -102,6 +102,8 @@ En 10.5.303, les sept helpers theme Analyse sont remplaces par un lookup unique 
 
 En 10.5.304, les appels repetes au loader `TBLoadDashboardWalletRules` sont factorises dans `_loadDashboardWalletRules()`. Les dialogues creation/edition, correction de type, archivage et suppression gardent le meme comportement, avec un seul point de chargement teste. Dashboard + Settings baisse de 357.7 a 357.3 KiB et le boot legacy de 869.4 a 869.1 KiB.
 
+En 10.5.305, la detection de langue Analyse est centralisee dans `_analysisIsEnglish()`. Les rendus progression et insights ne recopient plus l'expression `tbGetLang`, avec un contrat anti-retour. Les budgets restent verts : Analyse 159.0 / 160 KiB, boot legacy 869.1 / 1500 KiB et JS total 648.0 / 650 KiB.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

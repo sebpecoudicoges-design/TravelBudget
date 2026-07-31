@@ -18,6 +18,7 @@
   function _safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
   function _norm(s){ return String(s || '').trim(); }
   function _upper(s){ return _norm(s).toUpperCase(); }
+  function _analysisIsEnglish(){ return typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en'; }
   function _normKey(s){
     const core = window.TBCore?.budgetAnalysisRules;
     if (core?.normalizeAnalysisKey) return core.normalizeAnalysisKey(s);
@@ -1338,7 +1339,7 @@ categoryTxMap, subcategoryTxMap
     const deltaReferenceTone = deltaReferencePct > 0 ? _theme('bad') : (deltaReferencePct < 0 ? _theme('good') : _theme('muted'));
     const deltaBudgetAmount = _safeNum(model.spentToToday) - _safeNum(model.targetToToday);
     const deltaReferenceAmount = _safeNum(model.spentToToday) - _safeNum(model.totalReferenceElapsed);
-    const isEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
+    const isEn = _analysisIsEnglish();
     const trA = (fr, en) => isEn ? en : fr;
     const dayWord = trA('jours', 'days');
 
@@ -1673,7 +1674,7 @@ function _openTxDrilldown(kind, key, model){
   function _renderInsights(model){
     const host = _el('analysis-insights');
     if (!host) return;
-    const isEn = typeof window.tbGetLang === 'function' && window.tbGetLang() === 'en';
+    const isEn = _analysisIsEnglish();
     const analysisView = window.TBAnalysisView;
     host.innerHTML = analysisView?.renderAnalysisInsights?.({
       model,
