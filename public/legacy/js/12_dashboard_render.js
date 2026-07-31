@@ -136,6 +136,14 @@ function _walletRecentTransactionsHTML(walletId, today, T) {
   }) || "";
 }
 
+async function _loadDashboardWalletRules() {
+  try {
+    if (typeof window.TBLoadDashboardWalletRules === "function") {
+      await window.TBLoadDashboardWalletRules();
+    }
+  } catch (_) {}
+}
+
 /* =========================
    Dashboard render
    ========================= */
@@ -409,7 +417,7 @@ function tbOpenWalletDialog() {
   return new Promise(async (resolve) => {
     // inject styles once
     tbEnsureWalletDlgStyles();
-    try { if (typeof window.TBLoadDashboardWalletRules === "function") await window.TBLoadDashboardWalletRules(); } catch (_) {}
+    await _loadDashboardWalletRules();
 
     const backdrop = document.createElement("div");
     backdrop.className = "tb-dlg-backdrop";
@@ -488,7 +496,7 @@ function tbOpenWalletEditDialog(wallet) {
     const w = wallet || {};
     // ensure styles exist without opening the create dialog
     tbEnsureWalletDlgStyles();
-    try { if (typeof window.TBLoadDashboardWalletRules === "function") await window.TBLoadDashboardWalletRules(); } catch (_) {}
+    await _loadDashboardWalletRules();
 
     const back = document.createElement("div");
     back.className = "tb-dlg-backdrop";
@@ -535,7 +543,7 @@ async function openWalletTypesFix() {
   if (!missing.length) return alert("Tous les wallets ont déjà un type.");
 
   tbEnsureWalletDlgStyles();
-  try { if (typeof window.TBLoadDashboardWalletRules === "function") await window.TBLoadDashboardWalletRules(); } catch (_) {}
+  await _loadDashboardWalletRules();
 
   const back = document.createElement("div");
   back.className = "tb-dlg-backdrop";
@@ -621,7 +629,7 @@ async function archiveWallet(walletId) {
     const w = (state.wallets || []).find(x => String(x.id) === String(walletId));
     if (!w) return;
     if (!confirm(`${(window.tbT ? tbT("wallet.action.archive") : "Archiver")} "${w.name} (${w.currency})" ?`)) return;
-    try { if (typeof window.TBLoadDashboardWalletRules === "function") await window.TBLoadDashboardWalletRules(); } catch (_) {}
+    await _loadDashboardWalletRules();
     const { error } = await sb
       .from(TB_CONST.TABLES.wallets)
       .update(window.TBDashboardWalletRules?.buildWalletArchivePatch?.({ archived: true }) || { archived: true, archived_at: new Date().toISOString() })
@@ -636,7 +644,7 @@ async function archiveWallet(walletId) {
 
 async function unarchiveWallet(walletId) {
   try {
-    try { if (typeof window.TBLoadDashboardWalletRules === "function") await window.TBLoadDashboardWalletRules(); } catch (_) {}
+    await _loadDashboardWalletRules();
     const { error } = await sb
       .from(TB_CONST.TABLES.wallets)
       .update(window.TBDashboardWalletRules?.buildWalletArchivePatch?.({ archived: false }) || { archived: false, archived_at: null })
@@ -685,7 +693,7 @@ async function deleteWallet(walletId) {
       .limit(1);
 
     if (tErr) throw tErr;
-    try { if (typeof window.TBLoadDashboardWalletRules === "function") await window.TBLoadDashboardWalletRules(); } catch (_) {}
+    await _loadDashboardWalletRules();
     const readiness = window.TBDashboardWalletRules?.canDeleteWallet?.({ transactions: tx || [] });
     if (!readiness?.ok) return alert(readiness?.error || "Impossible de supprimer ce wallet.");
 

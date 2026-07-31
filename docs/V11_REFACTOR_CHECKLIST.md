@@ -330,6 +330,7 @@ Critere ferme : le boot initial est stabilise, les domaines lourds sont charges 
   - [x] Retirer l'export debug Documents `tbDocumentsRenderOnly`, sans appel dans le projet : Documents 113.1 -> 113.0 KiB, contrat anti-retour ajoute.
   - [x] Anonymiser l'IIFE d'initialisation Settings `_tbSettingsInit`, nom interne sans appel : budgets stables a l'arrondi, contrat anti-retour ajoute.
   - [x] Condenser les helpers theme Analyse en lookup unique `_theme(name)` : Analyse 159.4 -> 159.0 KiB, contrat anti-retour ajoute.
+  - [x] Factoriser le chargement des regles wallet Dashboard dans `_loadDashboardWalletRules()` : Dashboard + Settings 357.7 -> 357.3 KiB et boot legacy 869.4 -> 869.1 KiB, contrat anti-retour ajoute.
 - [x] Retirer l'ancien fallback `23_cashflow_chart.js` : moteur Apex cashflow remplace par `27_cashflow_curve.js`, fichier sans reference supprime, 115 lignes et 4.0 KiB retires du depot, fichiers legacy 59 -> 58.
 - [x] Ajouter les entrees Trip partagees : meme formulaire que les depenses, type `income`, source externe ou participant, option `non du` pour creer un revenu Budget sans dette Trip artificielle.
 - [x] Remplacer les actions wallet Dashboard inline par des hooks `data-*` et une delegation d'evenements testee, afin de preparer la suite du decoupage sans changer l'UX.

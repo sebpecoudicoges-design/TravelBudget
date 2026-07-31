@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.303`.
-- Bilan : 7 parcours `ok`, 59 parcours `à faire`.
+- Version à valider : `10.5.304`.
+- Bilan : 7 parcours `ok`, 60 parcours `à faire`.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -85,6 +85,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 65 | 10.5.301 | Documents : rendu principal | Ouvrir **Documents**, utiliser recherche, tri, changement de dossier et ouvrir un aperçu de document si disponible. | Le rendu reste porté par `renderDocuments/ensureLoaded`; l'ancien export debug `tbDocumentsRenderOnly` n'est plus nécessaire. | `TB BUILD 10.5.301` ; aucun `tbDocumentsRenderOnly is not defined`, aucun écran Documents vide. | à faire |
 | 66 | 10.5.302 | Réglages : initialisation | Ouvrir **Réglages**, attendre la fin du chargement, puis vérifier **Voyage** et **Catégories**. | Le hook d'initialisation reste actif même sans nom interne `_tbSettingsInit`; les panneaux se rendent après `tb:afterLoad`. | `TB BUILD 10.5.302` ; aucun `_tbSettingsInit is not defined`, aucun écran Réglages vide. | à faire |
 | 67 | 10.5.303 | Analyse : couleurs graphiques | Ouvrir **Analyse**, vérifier les cartes, graphiques trajectoire/catégories et le détail par clic sur catégorie si disponible. | Les couleurs restent identiques malgré la consolidation des helpers thème. | `TB BUILD 10.5.303` ; aucun `_themeText is not defined`, aucun graphique blanc ou erreur ECharts. | à faire |
+| 68 | 10.5.304 | Dashboard : wallets | Ouvrir **Dashboard**, créer/éditer un wallet si possible, puis tester archiver/désarchiver ou ouvrir le correcteur de type wallet. | Les actions wallets restent identiques malgré la factorisation du chargement des règles. | `TB BUILD 10.5.304` ; aucun `_loadDashboardWalletRules is not defined`, aucun dialogue wallet vide. | à faire |
 
 ## À ajouter à chaque livraison
 

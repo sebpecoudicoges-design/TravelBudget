@@ -112,6 +112,8 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).toContain('window.TBDashboardWalletRules?.canDeleteWallet');
     expect(legacy).toContain('window.TBDashboardWalletRules?.normalizeWalletTypeUpdates');
     expect(legacy).toContain('tbEnsureWalletDlgStyles();');
+    expect(legacy).toContain('async function _loadDashboardWalletRules()');
+    expect(legacy.match(/await window\.TBLoadDashboardWalletRules\(\);/g) || []).toHaveLength(1);
     expect(legacy).not.toContain('tbOpenWalletDialog().then(() => {});');
     expect(legacy).not.toContain('.tb-dlg-backdrop{position:fixed');
     expect(legacy).not.toContain('<input id="tbWName" type="text"');
