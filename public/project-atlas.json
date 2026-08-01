@@ -1,14 +1,14 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "version": "10.5.309",
-  "commit": "bfe88aa310e44bdad3196dd6c5d79d369e55154d",
-  "generatedAt": "2026-08-01T05:32:02.115Z",
+  "version": "10.5.310",
+  "commit": "528d22cae447d66ff84c42cd869f2ec18f2a4e0f",
+  "generatedAt": "2026-08-01T05:44:53.232Z",
   "counts": {
     "screens": 15,
     "criticalFeatures": 10,
-    "tests": 109,
+    "tests": 111,
     "migrations": 92,
-    "featureModules": 40,
+    "featureModules": 41,
     "coreModules": 25,
     "dataModules": 7,
     "edgeFunctions": 11
@@ -23,6 +23,7 @@
     "nutrition",
     "settings",
     "sport",
+    "transactions",
     "trip",
     "work"
   ],

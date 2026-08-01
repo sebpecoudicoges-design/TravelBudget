@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "bfe88aa310e44bdad3196dd6c5d79d369e55154d",
-  "snapshotFingerprint": "165d964e80c597cf7b3795c1ebb2c855f2ec9cc031332e226768c33d363f4ea3",
-  "generatedAt": "2026-08-01T05:32:02.115Z",
+  "commit": "528d22cae447d66ff84c42cd869f2ec18f2a4e0f",
+  "snapshotFingerprint": "f0b0f05bcdfa633bea5f32c7061e8dd3df30612d25d3acfdb7e360c084497942",
+  "generatedAt": "2026-08-01T05:44:53.232Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.309"
+    "version": "10.5.310"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -183,6 +183,7 @@
     "nutrition",
     "settings",
     "sport",
+    "transactions",
     "trip",
     "work"
   ],
@@ -221,6 +222,7 @@
     "src/features/sport/sportTimerController.js",
     "src/features/sport/sportTimerView.js",
     "src/features/sport/sportView.js",
+    "src/features/transactions/transactionView.js",
     "src/features/trip/tripDocumentView.js",
     "src/features/trip/tripExpenseDetailView.js",
     "src/features/trip/tripRecapView.js",
@@ -292,6 +294,7 @@
     "tests/features/sport/sportTimerController.test.js",
     "tests/features/sport/sportTimerPersistence.test.js",
     "tests/features/sport/sportViews.test.js",
+    "tests/features/transactions/transactionView.test.js",
     "tests/features/trip/tripStore.test.js",
     "tests/features/trip/tripView.test.js",
     "tests/features/work/workView.test.js",
@@ -332,6 +335,7 @@
     "tests/ui/standaloneHealthNavigation.test.js",
     "tests/ui/syntaxLintContract.test.js",
     "tests/ui/transactionModalContract.test.js",
+    "tests/ui/transactionsViewContract.test.js",
     "tests/ui/tripDomainContract.test.js",
     "tests/ui/tripModalContract.test.js",
     "tests/ui/versionSyncContract.test.js",
@@ -374,6 +378,7 @@
     "tests/ui/sportViewsContract.test.js",
     "tests/ui/syntaxLintContract.test.js",
     "tests/ui/transactionModalContract.test.js",
+    "tests/ui/transactionsViewContract.test.js",
     "tests/ui/tripDomainContract.test.js",
     "tests/ui/tripModalContract.test.js",
     "tests/ui/versionSyncContract.test.js",

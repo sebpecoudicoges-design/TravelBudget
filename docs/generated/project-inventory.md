@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `bfe88aa310e44bdad3196dd6c5d79d369e55154d`
-> Empreinte du snapshot : `165d964e80c597cf7b3795c1ebb2c855f2ec9cc031332e226768c33d363f4ea3`
-> Généré le : `2026-08-01T05:32:02.115Z`
+> Commit analysé : `528d22cae447d66ff84c42cd869f2ec18f2a4e0f`
+> Empreinte du snapshot : `f0b0f05bcdfa633bea5f32c7061e8dd3df30612d25d3acfdb7e360c084497942`
+> Généré le : `2026-08-01T05:44:53.232Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.309` |
+| Version | `10.5.310` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 57 |
 | Modules core | 25 |
 | Modules data | 7 |
-| Modules features | 40 |
-| Fichiers de tests | 109 |
+| Modules features | 41 |
+| Fichiers de tests | 111 |
 | Migrations Supabase | 92 |
 | Fonctions Edge | 11 |
 | Projet Android présent | Oui |
@@ -210,6 +210,7 @@ Domaines :
 - `nutrition`
 - `settings`
 - `sport`
+- `transactions`
 - `trip`
 - `work`
 
@@ -249,6 +250,7 @@ Modules :
 - `src/features/sport/sportTimerController.js`
 - `src/features/sport/sportTimerView.js`
 - `src/features/sport/sportView.js`
+- `src/features/transactions/transactionView.js`
 - `src/features/trip/tripDocumentView.js`
 - `src/features/trip/tripExpenseDetailView.js`
 - `src/features/trip/tripRecapView.js`
@@ -294,6 +296,7 @@ Modules :
 - `tests/ui/sportViewsContract.test.js`
 - `tests/ui/syntaxLintContract.test.js`
 - `tests/ui/transactionModalContract.test.js`
+- `tests/ui/transactionsViewContract.test.js`
 - `tests/ui/tripDomainContract.test.js`
 - `tests/ui/tripModalContract.test.js`
 - `tests/ui/versionSyncContract.test.js`
@@ -370,6 +373,7 @@ Modules :
 - `tests/features/sport/sportTimerController.test.js`
 - `tests/features/sport/sportTimerPersistence.test.js`
 - `tests/features/sport/sportViews.test.js`
+- `tests/features/transactions/transactionView.test.js`
 - `tests/features/trip/tripStore.test.js`
 - `tests/features/trip/tripView.test.js`
 - `tests/features/work/workView.test.js`
@@ -410,6 +414,7 @@ Modules :
 - `tests/ui/standaloneHealthNavigation.test.js`
 - `tests/ui/syntaxLintContract.test.js`
 - `tests/ui/transactionModalContract.test.js`
+- `tests/ui/transactionsViewContract.test.js`
 - `tests/ui/tripDomainContract.test.js`
 - `tests/ui/tripModalContract.test.js`
 - `tests/ui/versionSyncContract.test.js`
