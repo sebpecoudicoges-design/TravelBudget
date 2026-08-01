@@ -138,6 +138,8 @@ En 10.5.321, Aide gagne un demarrage rapide persistant et un diagnostic explicat
 
 En 10.5.322, Settings Compte remplace quatre sauvegardes visibles par une action globale pre-validee et retire le panneau Notifications mobile duplique avec son controleur mort. Dashboard + Settings baisse a 361.1 / 365 KiB, l initial a 253.8 / 260 KiB, le lazy a 416.2 / 420 KiB et le total JS a 670.0 / 675 KiB. La grille premium responsive porte le CSS a 33.8 KiB ; son plafond passe au palier entier immediat de 34 KiB.
 
+En 10.5.323, Settings Voyages/periodes ajoute une barre d action responsive et un champ monetaire avec devise separee. Dashboard + Settings reste sous plafond a 364.3 / 365 KiB, l initial a 255.1 / 260 KiB, le lazy a 416.2 / 420 KiB et le total JS a 671.3 / 675 KiB. Le CSS atteint 35.0 KiB ; son plafond passe au palier entier immediat de 35 KiB.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="BudgetPacker">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.322";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.323";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -4369,6 +4369,10 @@
           <div class="muted" style="margin-bottom:10px;">
             Chaque période rassemble dates, devise, budget/jour et référence pays. Ouvre seulement la période à ajuster.</div>
 
+          <div id="tb-period-actions" class="tb-settings-periods-toolbar">
+            <span>Découpe le voyage en périodes avec leur propre devise et budget quotidien.</span>
+            <button class="btn primary" type="button" data-settings-action="create-period">+ Ajouter une période</button>
+          </div>
           <div id="seg-list"></div>
           <div id="manual-fx-box" style="margin-top:12px;"></div>
         </div>

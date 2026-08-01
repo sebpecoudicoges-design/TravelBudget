@@ -5,6 +5,7 @@ import {
   getSettingsPanelState,
   getBudgetSegmentDeleteReadiness,
   normalizeManualFxRates,
+  parseSettingsMoneyInput,
   renderCreatePeriodModalBody,
   renderCreateVoyageModalBody,
   renderSettingsAccountPanel,
@@ -12,8 +13,10 @@ import {
   renderSettingsHero,
   renderSettingsManualFxPanel,
   renderSettingsPeriodCard,
+  renderSettingsPeriodsToolbar,
   renderSettingsPeriodReference,
   renderSettingsTravelOverview,
+  resolveSettingsNightTransportBudget,
   setSettingsPanelState,
 } from '../../../src/features/settings/settingsView.js';
 import {
@@ -71,6 +74,20 @@ describe('Settings view helpers', () => {
     };
     return dict[key] || key;
   };
+
+  it('accepts localized money inputs with an optional currency suffix', () => {
+    expect(parseSettingsMoneyInput('400 EUR')).toBe(400);
+    expect(parseSettingsMoneyInput('1 250,50 AUD')).toBe(1250.5);
+    expect(parseSettingsMoneyInput('85.25')).toBe(85.25);
+    expect(parseSettingsMoneyInput('EUR 400')).toBeNaN();
+  });
+
+  it('uses the stored night transport value, then the daily estimate, then blank', () => {
+    expect(resolveSettingsNightTransportBudget({ storedValue: 320, localValue: 200, dailyBudget: 90 })).toBe(320);
+    expect(resolveSettingsNightTransportBudget({ storedValue: null, localValue: null, dailyBudget: 90 })).toBe(90);
+    expect(resolveSettingsNightTransportBudget({ storedValue: null, localValue: 0, dailyBudget: 90 })).toBeNull();
+    expect(resolveSettingsNightTransportBudget({ storedValue: null, localValue: null, dailyBudget: null })).toBeNull();
+  });
 
   const state = {
     activeTravelId: 'travel-1',
@@ -788,7 +805,7 @@ describe('Settings view helpers', () => {
       countryLabel: 'Australie',
       localAmountMain: '85 AUD',
       rateDisplay: '1.78',
-      nightTransportBudget: '20 AUD',
+      nightTransportBudget: 20,
       fxNeedsUpdate: true,
       override: { travel_profile: 'couple', travel_style: 'comfort', adult_count: 2, child_count: 1 },
       resolvedCountry: { country_code: 'AU', region_code: 'QLD' },
@@ -805,6 +822,9 @@ describe('Settings view helpers', () => {
     expect(html).toContain('data-br-inline-seg-id="seg-1"');
     expect(html).toContain('data-k="start_date" value="2026-07-01"');
     expect(html).toContain('data-k="daily_budget_base" value="85"');
+    expect(html).toContain('data-k="night_transport_budget" inputmode="decimal" value="20"');
+    expect(html).toContain('<span>AUD</span>');
+    expect(html).toContain('Budget quotidien estimé par défaut');
     expect(html).toContain('data-br="seg-mode"');
     expect(html).toContain('<option value="custom" selected>');
     expect(html).toContain('data-br="seg-country"');
@@ -820,7 +840,7 @@ describe('Settings view helpers', () => {
       countryLabel: 'United States',
       localAmountMain: '100 USD',
       rateDisplay: '—',
-      nightTransportBudget: '0 USD',
+      nightTransportBudget: null,
       override: null,
       resolvedCountry: { country_code: 'US', region_code: '' },
       lang: 'en',
@@ -833,6 +853,14 @@ describe('Settings view helpers', () => {
     expect(html).toContain('display:none;');
     expect(html).toContain('Save');
     expect(html).toContain('Delete');
+    expect(html).toContain('value=""');
+  });
+
+  it('renders the add-period action inside the periods section', () => {
+    const html = renderSettingsPeriodsToolbar({ lang: 'fr' });
+    expect(html).toContain('class="tb-settings-periods-toolbar"');
+    expect(html).toContain('data-settings-action="create-period"');
+    expect(html).toContain('Ajouter une période');
   });
 
   it('renders a period reference summary with posts and edit actions', () => {

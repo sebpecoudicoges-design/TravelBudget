@@ -19,7 +19,9 @@ function tbGetNightCoveredExtraForDate(dateStr) {
   try { map = JSON.parse(localStorage.getItem('travelbudget_night_transport_budget_v1') || '{}') || {}; } catch (_) {}
   const raw = segId ? map[segId] : null;
   const n = Number(raw);
-  return { amount: Number.isFinite(n) && n > 0 ? n : 400, currency: cur, segId };
+  if (segId && Object.prototype.hasOwnProperty.call(map, segId) && n === 0) return { amount: null, currency: cur, segId };
+  const dailyBudget = Number(seg?.dailyBudgetBase ?? seg?.daily_budget_base);
+  return { amount: Number.isFinite(n) && n > 0 ? n : (Number.isFinite(dailyBudget) && dailyBudget > 0 ? dailyBudget : null), currency: cur, segId };
 }
 
 

@@ -7,6 +7,7 @@ describe('settings view extraction contract', () => {
   const index = fs.readFileSync('index.html', 'utf8');
   const view = fs.readFileSync('src/features/settings/settingsView.js', 'utf8');
   const accountController = fs.readFileSync('src/features/settings/settingsAccountController.js', 'utf8');
+  const allocations = fs.readFileSync('public/legacy/js/06_allocations.js', 'utf8');
   const premiumTheme = fs.readFileSync('src/ui/premium-theme.css', 'utf8');
 
   it('exposes the Settings view module to the legacy runtime', () => {
@@ -27,6 +28,8 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsManualFxPanel');
     expect(legacy).toContain("manualPanel.querySelector('[data-manual-fx-input]')");
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodCard');
+    expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodsToolbar');
+    expect(legacy).toContain('window.TBSettingsView?.parseSettingsMoneyInput');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsPeriodReference');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsBudgetReferenceState');
     expect(legacy).toContain('window.TBSettingsView?.renderSettingsTravelOverview');
@@ -97,6 +100,7 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('window.deleteActivePeriod');
     expect(legacy).not.toContain('function _tbSettingsInit');
     expect(legacy).not.toContain('Suppression de période: utilise le bouton Supprimer sur une période.');
+    expect(legacy).not.toContain('return Number.isFinite(n) && n > 0 ? n : 400');
     expect(legacy).not.toContain('travelHost.innerHTML = `<div class="muted">Mode hors ligne');
     expect(legacy).not.toContain('travelHost.innerHTML = `<div class="muted">Référence budget en cours de synchronisation');
     expect(legacy).not.toContain('travelHost.innerHTML = `<div class="muted">Budget de référence indisponible');
@@ -129,11 +133,22 @@ describe('settings view extraction contract', () => {
     expect(index).toContain('data-settings-action="create-voyage"');
     expect(index).toContain('data-settings-action="delete-voyage"');
     expect(index).toContain('data-settings-action="create-period"');
+    expect(index).toContain('id="tb-period-actions"');
     expect(index).toContain('data-settings-action="save-travel"');
     expect(index).not.toContain('onclick="createVoyagePrompt()"');
     expect(index).not.toContain('onclick="deleteActiveVoyage()"');
     expect(index).not.toContain('onclick="createPeriodPrompt()"');
     expect(index).not.toContain('onclick="saveSettings()"');
+  });
+
+  it('keeps expected Settings refusals out of the technical error bus', () => {
+    expect(legacy).toContain('_settingsValidationNotice("Suppression refusée : transactions liées au voyage.")');
+    expect(legacy).not.toContain('throw new Error("Suppression refusée : transactions liées au voyage.")');
+    expect(legacy).toContain('if (!saved) return;');
+    expect(view).toContain('class="tb-settings-money-field"');
+    expect(premiumTheme).toContain('.tb-settings-periods-toolbar');
+    expect(premiumTheme).toContain('.tb-settings-money-field');
+    expect(allocations).toContain("Object.prototype.hasOwnProperty.call(map, segId) && n === 0");
   });
 
   it('keeps one visible account save action and removes the duplicate notification panel', () => {

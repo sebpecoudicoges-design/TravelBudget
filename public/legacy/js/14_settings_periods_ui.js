@@ -13,6 +13,9 @@ function _tbToastOk(msg){ try{ if(typeof toastOk==="function") return toastOk(ms
 }
 
 function _tbParseNum(v){
+  if (typeof window.TBSettingsView?.parseSettingsMoneyInput === "function") {
+    return window.TBSettingsView.parseSettingsMoneyInput(v);
+  }
   if(v===null||v===undefined) return NaN;
   const s = String(v).replace(/\u00A0/g,' ').trim().replace(/\s+/g,'');
   if(!s) return NaN;
@@ -81,17 +84,24 @@ function _tbGetNightTransportBudget(segId){
   const key = String(segId || '');
   const seg = (state?.budgetSegments || []).find(x => String(x.id) === key) || null;
   const sqlVal = Number(seg?.transportNightBudget ?? seg?.transport_night_budget ?? seg?.night_transport_budget);
-  if (Number.isFinite(sqlVal) && sqlVal > 0) return sqlVal;
   const map = _tbNightTransportBudgetMap();
-  const n = Number(map[key]);
-  return Number.isFinite(n) && n > 0 ? n : 400;
+  const localVal = map[key];
+  const dailyBudget = seg?.dailyBudgetBase ?? seg?.daily_budget_base;
+  if (typeof window.TBSettingsView?.resolveSettingsNightTransportBudget === "function") {
+    return window.TBSettingsView.resolveSettingsNightTransportBudget({ storedValue: sqlVal, localValue: localVal, dailyBudget });
+  }
+  for (const value of [sqlVal, localVal, dailyBudget]) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
 }
 function _tbSetNightTransportBudget(segId, amount){
   const key = String(segId || '');
   if (!key) return;
   const map = _tbNightTransportBudgetMap();
   const n = Number(amount);
-  map[key] = Number.isFinite(n) && n > 0 ? n : 400;
+  map[key] = Number.isFinite(n) && n > 0 ? n : 0;
   try { localStorage.setItem('travelbudget_night_transport_budget_v1', JSON.stringify(map)); } catch (_) {}
 }
 
@@ -553,6 +563,17 @@ function renderSettings(){
   // segments area
   const host = document.getElementById("seg-list");
   if(host){
+    const periodActions = document.getElementById('tb-period-actions');
+    if (periodActions) {
+      periodActions.innerHTML = window.TBSettingsView?.renderSettingsPeriodsToolbar?.({
+        lang: _tbSettingsLang(),
+        esc: escapeHTML,
+      }) || '';
+      periodActions.onclick = (event) => {
+        const action = event.target?.closest?.('[data-settings-action]')?.getAttribute('data-settings-action');
+        if (action === 'create-period') return window.createPeriodPrompt?.();
+      };
+    }
     host.innerHTML = "";
     host.classList.add("tb-period-stack");
 
@@ -690,7 +711,7 @@ function renderSettings(){
           countryLabel: resolved?.country_name || resolved?.country_code || override?.country_name || override?.country_code || travel?.country_name || travel?.country_code || "—",
           localAmountMain: localDual.main,
           rateDisplay,
-          nightTransportBudget: _tbBudgetRefFmtAmount(_tbGetNightTransportBudget(seg.id), cur, 0),
+          nightTransportBudget: _tbGetNightTransportBudget(seg.id),
           fxNeedsUpdate: !!fxMeta.stale,
           override,
           resolvedCountry,
@@ -714,7 +735,8 @@ function renderSettings(){
         const cancelBtn = wrap.querySelector('[data-act="edit-cancel"]');
         if (cancelBtn) cancelBtn.onclick = ()=>{ wrap.classList.remove('is-editing'); };
         wrap.querySelector('[data-act="save"]').onclick = ()=>safeCall("Save période", async ()=>{ 
-          await saveBudgetSegment(seg.id, wrap); 
+          const saved = await saveBudgetSegment(seg.id, wrap);
+          if (!saved) return;
           const mode = String(wrap.querySelector('[data-br="seg-mode"]')?.value || 'inherit');
           const s2 = _tbGetSB();
           if(mode !== 'custom'){
@@ -1385,11 +1407,12 @@ async function _deleteActiveVoyageImpl(){
   if(!s) throw new Error("Supabase non prêt.");
 
   const tid = String(state?.activeTravelId || "");
-  if (!tid) throw new Error("Voyage non sélectionné.");
+  if (!tid) { _settingsValidationNotice("Voyage non sélectionné."); return false; }
 
   // sécurité projet : ne jamais supprimer le vrai voyage actif utilisateur
   if (tid === "d6c3e70a-d31f-4647-91e8-e12830d0c00d") {
-    throw new Error("Suppression refusée : ce voyage est protégé.");
+    _settingsValidationNotice("Suppression refusée : ce voyage est protégé.");
+    return false;
   }
 
   const t = _tbGetActiveTravelRow();
@@ -1411,7 +1434,8 @@ La suppression n'est autorisée que si le voyage n'a ni transactions, ni échéa
 
     if (error) throw error;
     if (Number(count || 0) > 0) {
-      throw new Error("Suppression refusée : transactions liées au voyage.");
+      _settingsValidationNotice("Suppression refusée : transactions liées au voyage.");
+      return false;
     }
   }
 
@@ -1425,7 +1449,8 @@ La suppression n'est autorisée que si le voyage n'a ni transactions, ni échéa
 
     if (error) throw error;
     if (Number(count || 0) > 0) {
-      throw new Error("Suppression refusée : échéances périodiques liées au voyage.");
+      _settingsValidationNotice("Suppression refusée : échéances périodiques liées au voyage.");
+      return false;
     }
   }
 
@@ -1440,7 +1465,8 @@ La suppression n'est autorisée que si le voyage n'a ni transactions, ni échéa
 
     const usedWallet = (wallets || []).some(w => Math.abs(Number(w?.balance || 0)) > 0.0000001);
     if (usedWallet) {
-      throw new Error("Suppression refusée : wallets liés au voyage avec solde non nul.");
+      _settingsValidationNotice("Suppression refusée : wallets liés au voyage avec solde non nul.");
+      return false;
     }
   }
 
@@ -1578,10 +1604,10 @@ async function _createPeriodPromptImpl(){
       const end = document.getElementById("tb-pend")?.value;
       const cur = (document.getElementById("tb-pcur")?.value || "").trim().toUpperCase();
       const bud = _tbParseNum(document.getElementById("tb-pbud")?.value);
-      if(!start||!end||start>end) throw new Error("Dates invalides.");
-      if(start < vStart || end > vEnd) throw new Error("Hors bornes du voyage.");
-      if(!cur) throw new Error("Devise requise.");
-      if(!Number.isFinite(bud) || bud < 0) throw new Error("Budget/jour invalide.");
+      if(!start||!end||start>end) { _settingsValidationNotice("Dates invalides."); return; }
+      if(start < vStart || end > vEnd) { _settingsValidationNotice("La période doit rester dans les dates du voyage."); return; }
+      if(!cur) { _settingsValidationNotice("Devise requise."); return; }
+      if(!Number.isFinite(bud) || bud < 0) { _settingsValidationNotice("Budget/jour invalide."); return; }
 
       await _tbInsertSegmentInsideExisting(uid, pid, start, end, cur, bud);
 
@@ -1734,12 +1760,13 @@ async function saveBudgetSegment(segId, wrapEl){
   const newEnd = getVal("end_date");
   const newCur = (getVal("base_currency")||"").trim().toUpperCase();
   const newBud = _tbParseNum(getVal("daily_budget_base"));
-  const newNightTransportBudget = _tbParseNum(getVal("night_transport_budget"));
+  const nightTransportRaw = getVal("night_transport_budget");
+  const newNightTransportBudget = String(nightTransportRaw ?? '').trim() === '' ? null : _tbParseNum(nightTransportRaw);
 
-  if(!newStart||!newEnd||newStart>newEnd) throw new Error("Dates invalides.");
-    if(!newCur) throw new Error("Devise requise.");
-  if(!Number.isFinite(newBud) || newBud < 0) throw new Error("Budget/jour invalide.");
-  if(!Number.isFinite(newNightTransportBudget) || newNightTransportBudget < 0) throw new Error("Nuit transport invalide.");
+  if(!newStart||!newEnd||newStart>newEnd) { _settingsValidationNotice("Dates invalides."); return false; }
+  if(!newCur) { _settingsValidationNotice("Devise requise."); return false; }
+  if(!Number.isFinite(newBud) || newBud < 0) { _settingsValidationNotice("Budget/jour invalide."); return false; }
+  if(newNightTransportBudget !== null && (!Number.isFinite(newNightTransportBudget) || newNightTransportBudget < 0)) { _settingsValidationNotice("Nuit transport invalide."); return false; }
 
 // FX Option A: Auto is source of truth. If currency is not provided by auto FX, require a manual fallback.
 const autoOk = (typeof window.tbFxIsAutoAvailable==="function") ? window.tbFxIsAutoAvailable(newCur) : false;
@@ -1826,6 +1853,7 @@ if(!autoOk){
   _tbAssertSegmentsIntegrity("after refreshSegmentsForActivePeriod");
   renderSettings();
   _tbToastOk("Période enregistrée.");
+  return true;
 }
 
 async function _tbFetchSeg(id){

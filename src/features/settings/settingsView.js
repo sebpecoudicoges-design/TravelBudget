@@ -13,6 +13,33 @@ function fallbackT(key, vars) {
   return out;
 }
 
+export function parseSettingsMoneyInput(value) {
+  if (value === null || value === undefined) return Number.NaN;
+  const normalized = String(value)
+    .replace(/\u00a0/g, ' ')
+    .trim()
+    .replace(/\s+/g, '')
+    .toUpperCase();
+  if (!normalized) return Number.NaN;
+  const match = normalized.match(/^([-+]?\d+(?:[.,]\d+)?)(?:[A-Z]{3}|[€$£¥])?$/u);
+  return match ? Number(match[1].replace(',', '.')) : Number.NaN;
+}
+
+export function resolveSettingsNightTransportBudget({
+  storedValue,
+  localValue,
+  dailyBudget,
+} = {}) {
+  const stored = parseSettingsMoneyInput(storedValue);
+  if (Number.isFinite(stored) && stored > 0) return stored;
+  if (localValue === 0 || String(localValue ?? '').trim() === '0') return null;
+  for (const value of [localValue, dailyBudget]) {
+    const parsed = parseSettingsMoneyInput(value);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return null;
+}
+
 function activeTravel(state = {}) {
   return (state.travels || []).find((travel) => String(travel?.id || '') === String(state.activeTravelId || '')) || null;
 }
@@ -384,7 +411,7 @@ export function renderSettingsPeriodCard({
                   <div class="field field--span-2"><label>${esc(pt('Fin', 'End'))}</label><input type="date" data-k="end_date" value="${esc(end)}" /></div>
                   <div class="field field--span-2"><label>${esc(pt('Devise', 'Currency'))}</label><input data-k="base_currency" value="${esc(cur)}" /></div>
                   <div class="field field--span-2"><label>${esc(pt('Budget / jour', 'Budget / day'))}</label><input data-k="daily_budget_base" value="${esc(dailyBudget ?? "")}" /></div>
-                  <div class="field field--span-2"><label>${esc(pt('Nuit transport', 'Night transport'))} ${helpHtml || ''}</label><input data-k="night_transport_budget" value="${esc(nightTransportBudget)}" /></div>
+                  <div class="field field--span-2"><label>${esc(pt('Nuit transport', 'Night transport'))} ${helpHtml || ''}</label><div class="tb-settings-money-field"><input data-k="night_transport_budget" inputmode="decimal" value="${esc(nightTransportBudget ?? '')}" /><span>${esc(cur)}</span></div><small class="muted">${esc(pt('Budget quotidien estimé par défaut ; laisse vide si non applicable.', 'Estimated daily budget by default; leave blank if not applicable.'))}</small></div>
                   <div class="field field--span-2"><label>${esc(pt('Mode', 'Mode'))}</label><select data-br="seg-mode"><option value="inherit" ${activeOverride ? '' : 'selected'}>${esc(pt('Hériter du voyage', 'Inherit from trip'))}</option><option value="custom" ${activeOverride ? 'selected' : ''}>${esc(pt('Personnaliser', 'Customize'))}</option></select></div>
                   <div class="field field--span-2" data-br="seg-custom" style="display:${activeOverride ? '' : 'none'};"><label>${esc(pt('Pays', 'Country'))}</label><select data-br="seg-country" data-selected-country="${esc(String(resolved.country_code || ""))}" data-selected-region="${esc(String(resolved.region_code || ""))}">${countryOptionsHtml || ''}</select></div>
                   <div class="field field--span-2" data-br="seg-custom" style="display:${activeOverride ? '' : 'none'};"><label>${esc(pt('Profil', 'Profile'))}</label><select data-br="seg-profile"><option value="solo" ${profile === "solo" ? "selected" : ""}>Solo</option><option value="couple" ${profile === "couple" ? "selected" : ""}>Couple</option><option value="family" ${profile === "family" ? "selected" : ""}>${esc(pt('Famille', 'Family'))}</option></select></div>
@@ -401,6 +428,16 @@ export function renderSettingsPeriodCard({
             </div>
           </div>
         `;
+}
+
+export function renderSettingsPeriodsToolbar({ lang = 'fr', esc = defaultEsc } = {}) {
+  const isEn = String(lang || '').toLowerCase() === 'en';
+  const pt = (fr, en) => (isEn ? en : fr);
+  return `
+    <div class="tb-settings-periods-toolbar">
+      <span>${esc(pt('Découpe le voyage en périodes avec leur propre devise et budget quotidien.', 'Split the trip into periods with their own currency and daily budget.'))}</span>
+      <button class="btn primary" type="button" data-settings-action="create-period">+ ${esc(pt('Ajouter une période', 'Add period'))}</button>
+    </div>`;
 }
 
 export function renderSettingsPeriodReference({
