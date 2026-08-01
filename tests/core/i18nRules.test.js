@@ -53,6 +53,16 @@ describe('i18n dictionaries', () => {
     expect(dicts.en['transactions.bulk.error.none']).toBeTruthy();
   });
 
+  it('keeps treated French labels free of broken replacement characters', () => {
+    const dicts = loadDictionaries();
+
+    expect(dicts.fr['documents.folder.unclassified']).toBe('Non classé');
+    expect(dicts.fr['documents.sort.name_asc']).toBe('Nom A → Z');
+    expect(dicts.fr['settings.account.mode.advanced']).toBe('Avancé');
+    expect(dicts.fr['trip.history.search_placeholder']).toBe('Libellé, montant, participant…');
+    expect(dicts.en['documents.sort.name_asc']).toBe('Name A → Z');
+  });
+
   it('keeps the English dictionary outside the boot i18n file', () => {
     const boot = fs.readFileSync('public/legacy/js/00_i18n.js', 'utf8');
     const english = fs.readFileSync('public/legacy/js/00_i18n_en.js', 'utf8');

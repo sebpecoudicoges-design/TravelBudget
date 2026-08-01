@@ -89,13 +89,23 @@ function tbHideBootOverlay() {
   } catch (_) {}
 }
 
-function tbFinalizeDashboardFirstPaint(reason) {
+let _tbDashboardFirstPaintTimer = null;
+function tbFinalizeDashboardFirstPaint(reason, attempt) {
   const view = String(window.activeView || (typeof activeView === "string" ? activeView : "") || "dashboard");
   if (!window.sbUser || view !== "dashboard") return false;
   try { window.tbRenderDashboardCritical?.(reason || "boot:final-paint", { cashflow: false }); } catch (_) {}
   try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
   try { window.tbEnsureCashflowCurve?.(reason || "boot:final-paint"); } catch (_) {}
-  return true;
+  const walletsReady = !!document.getElementById("wallets-container")?.childElementCount;
+  const budgetReady = !!document.getElementById("daily-budget-container")?.childElementCount;
+  const cashflowReady = !!document.getElementById("solde-projection-container")?.childElementCount;
+  const ready = walletsReady && budgetReady && cashflowReady;
+  const nextAttempt = Number(attempt || 0) + 1;
+  if (!ready && nextAttempt < 20) {
+    clearTimeout(_tbDashboardFirstPaintTimer);
+    _tbDashboardFirstPaintTimer = setTimeout(() => tbFinalizeDashboardFirstPaint(reason || "boot:readiness", nextAttempt), 250);
+  }
+  return ready;
 }
 window.tbFinalizeDashboardFirstPaint = tbFinalizeDashboardFirstPaint;
 
@@ -320,7 +330,7 @@ window.onload = async function () {
     } catch (_) {}
     try {
       const schedule = window.requestAnimationFrame || ((callback) => setTimeout(callback, 0));
-      schedule(() => schedule(() => tbFinalizeDashboardFirstPaint("boot:after-gate")));
+      schedule(() => schedule(() => tbFinalizeDashboardFirstPaint("boot:after-gate", 0)));
     } catch (_) {}
     try {
       if (window.TB_PERF && TB_PERF.enabled) {

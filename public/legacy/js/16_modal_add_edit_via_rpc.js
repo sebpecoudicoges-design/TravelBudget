@@ -424,6 +424,14 @@ function _txGetLockState(tx) {
   if (window.Core?.transactionGuards?.getTransactionLockState) {
     return window.Core.transactionGuards.getTransactionLockState(tx, { walletAdjustmentCategory: categoryName });
   }
+  if (tx?.isInternal || tx?.is_internal || tx?.internalTransferId || tx?.internal_transfer_id) {
+    return {
+      locked: true,
+      readonly: true,
+      kind: "internal_transfer",
+      reason: _txModalText("Mouvement interne : modification verrouillée. Utilise l'action Transfert interne depuis le Dashboard.", "Internal transfer: editing is locked. Use the Internal transfer action from the Dashboard.")
+    };
+  }
   if (_txIsWalletAdjustment(tx)) {
     return {
       locked: true,
@@ -1107,18 +1115,6 @@ async function saveModal() {
         }
         if (_txIsTripLinked(current)) {
           throw new Error("Transaction liee a Trip verrouillee : modifie la depense depuis l'onglet Trip.");
-          // Locked fields for Trip-linked payment transaction: prevent breaking 1:1 coherence.
-          if (walletId !== current.walletId) throw new Error("Transaction liée à Trip : changement de wallet interdit.");
-          if (type !== current.type) throw new Error("Transaction liée à Trip : changement de type interdit.");
-          if (Math.abs(Number(amount) - Number(current.amount)) > 0.0001)
-            throw new Error("Transaction liée à Trip : changement de montant interdit (modifie la dépense Trip à la place).");
-          const currentBudgetStart = current.budgetDateStart || current.budget_date_start || current.dateStart;
-          const currentBudgetEnd = current.budgetDateEnd || current.budget_date_end || current.dateEnd || current.dateStart;
-          if (String(cashDate) !== String(current.dateStart) || String(budgetStart) !== String(currentBudgetStart) || String(budgetEnd) !== String(currentBudgetEnd)) {
-            throw new Error("Transaction liée à Trip : changement de dates interdit.");
-          }
-          if (!!payNow !== !!current.payNow) throw new Error("Transaction liée à Trip : changement pay_now interdit.");
-          if (!!outOfBudget !== !!current.outOfBudget) throw new Error("Transaction liée à Trip : flag out_of_budget géré automatiquement.");
         }
 
         // Ensure FX conversion is available for tx currency -> segment/base currency.

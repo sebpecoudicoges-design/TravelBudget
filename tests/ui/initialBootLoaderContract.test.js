@@ -42,9 +42,14 @@ describe('initial boot loader contract', () => {
 
   it('forces a deterministic Dashboard paint after boot render gating is released', () => {
     const boot = read('public/legacy/js/20_boot.js');
-    expect(boot).toContain('function tbFinalizeDashboardFirstPaint(reason)');
+    expect(boot).toContain('function tbFinalizeDashboardFirstPaint(reason, attempt)');
     expect(boot).toContain('window.tbRenderDashboardCritical?.(reason || "boot:final-paint", { cashflow: false })');
-    expect(boot).toContain('schedule(() => schedule(() => tbFinalizeDashboardFirstPaint("boot:after-gate")))');
-    expect(boot.indexOf('window.__TB_BOOTING = false')).toBeLessThan(boot.indexOf('tbFinalizeDashboardFirstPaint("boot:after-gate")'));
+    expect(boot).toContain('document.getElementById("wallets-container")?.childElementCount');
+    expect(boot).toContain('document.getElementById("daily-budget-container")?.childElementCount');
+    expect(boot).toContain('document.getElementById("solde-projection-container")?.childElementCount');
+    expect(boot).toContain('nextAttempt < 20');
+    expect(boot).toContain('nextAttempt), 250)');
+    expect(boot).toContain('schedule(() => schedule(() => tbFinalizeDashboardFirstPaint("boot:after-gate", 0)))');
+    expect(boot.indexOf('window.__TB_BOOTING = false')).toBeLessThan(boot.indexOf('tbFinalizeDashboardFirstPaint("boot:after-gate", 0)'));
   });
 });

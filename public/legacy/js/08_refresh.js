@@ -94,7 +94,7 @@ window.tbEnsureActiveTravelTransactions = async function tbEnsureActiveTravelTra
     window.state.transactions = (window.state.transactions || []).filter((tx) => String(tx?.travel_id || tx?.travelId || "") !== tid).concat(mapped);
     window.__tbDeferredDataLoadedForTravel = tid;
     if (isAnalysis) window.__tbAnalysisTransactionsHydratedForTravel = tid;
-    console.info("[TB] active travel transactions loaded", { reason, travelId: tid, before: txCount, count: mapped.length });
+    _tbRefreshLog("active travel transactions loaded", { reason, travelId: tid, before: txCount, count: mapped.length });
     return true;
     })();
     return await window.__tbActiveTravelTransactionsInFlight[tid];

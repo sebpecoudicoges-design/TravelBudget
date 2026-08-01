@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isInternalTransferTransaction,
   isNightCoveredEligibleCategory,
   isTripLinkedTransaction,
   isWalletAdjustmentTransaction,
@@ -108,5 +109,13 @@ describe('transaction rules core', () => {
     expect(isWalletAdjustmentTransaction({ label: 'Ajustement wallet - Cash' })).toBe(true);
     expect(isWalletAdjustmentTransaction({ label: 'Ajustement wallet - Cash' }, { walletAdjustmentCategory: 'Ajustement wallet' })).toBe(true);
     expect(isWalletAdjustmentTransaction({ category: 'Repas', label: 'Lunch' })).toBe(false);
+  });
+
+  it('detects internal transfers from normalized and database fields', () => {
+    expect(isInternalTransferTransaction({ isInternal: true })).toBe(true);
+    expect(isInternalTransferTransaction({ is_internal: true })).toBe(true);
+    expect(isInternalTransferTransaction({ internalTransferId: 'transfer-1' })).toBe(true);
+    expect(isInternalTransferTransaction({ internal_transfer_id: 'transfer-1' })).toBe(true);
+    expect(isInternalTransferTransaction({ category: 'Repas' })).toBe(false);
   });
 });

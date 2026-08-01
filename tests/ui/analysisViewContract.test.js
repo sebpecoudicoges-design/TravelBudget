@@ -75,6 +75,14 @@ describe('Analysis view extraction contract', () => {
     expect(legacy).not.toContain('analysis-stat--cash-only"');
   });
 
+  it('builds pure cashflow only from received income and paid expenses', () => {
+    expect(legacy).toContain('const { real: incomeReal, planned: incomePlanned } = _incomeSplit(incomeTxs);');
+    expect(legacy).toContain('if (_txAnalysisPaid(tx)) paidSpent += alloc.amount;');
+    expect(legacy).toContain('incomeReal.forEach(tx => {');
+    expect(legacy).toContain('if (!_txAnalysisPaid(tx)) return;');
+    expect(legacy).toContain('deltaReal: incomeRealAmount - paidSpent');
+  });
+
   it('keeps the Analysis unpaid panel delegated out of the legacy file', () => {
     expect(legacy).toContain('progressView?.renderAnalysisUnpaidBlock');
     expect(filterView).toContain('renderAnalysisUnpaidBlock');

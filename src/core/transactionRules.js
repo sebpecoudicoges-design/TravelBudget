@@ -118,6 +118,10 @@ export function isTripLinkedTransaction(tx) {
   );
 }
 
+export function isInternalTransferTransaction(tx) {
+  return !!(tx?.isInternal || tx?.is_internal || tx?.internalTransferId || tx?.internal_transfer_id);
+}
+
 export function isWalletAdjustmentTransaction(tx, options = {}) {
   const categoryName = String(options.walletAdjustmentCategory || 'Ajustement wallet').trim().toLowerCase();
   const category = String(tx?.category || '').trim().toLowerCase();

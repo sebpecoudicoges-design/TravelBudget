@@ -21,6 +21,17 @@ describe('transaction guards', () => {
     expect(lock.kind).toBe('trip_linked');
   });
 
+  it('locks internal transfers before the generic edit RPC', () => {
+    const tx = { id: 'tx-internal', internalTransferId: 'transfer-1' };
+    const lock = getTransactionLockState(tx);
+
+    expect(lock.locked).toBe(true);
+    expect(lock.readonly).toBe(true);
+    expect(lock.kind).toBe('internal_transfer');
+    expect(lock.reason).toContain('Transfert interne');
+    expect(validateTransactionAction(tx, 'edit').ok).toBe(false);
+  });
+
   it('allows normal transaction edits when payload is valid', () => {
     const tx = normalizeTransactionInput({
       type: 'expense',

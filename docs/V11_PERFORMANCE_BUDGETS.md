@@ -132,6 +132,8 @@ En 10.5.318, la page Projet publique et l ecran de chargement adoptent le system
 
 En 10.5.319, le domaine Tests conserve les cycles traites avec dates, notes et version, ajoute les filtres A tester/Sans test/Archives et autorise un retest actif sans ecraser l historique. Sa source mesure 35.3 / 36 KiB. Le nouveau rendu date des archives porte le lazy a 416.6 / 420 KiB, le total JS a 672.1 / 675 KiB et le CSS a 29.4 / 30 KiB ; les plafonds sont ajustes au palier entier suivant, tandis que l initial reste stable a 255.4 / 260 KiB. Cautions quitte en parallele le runtime et son script legacy est supprime.
 
+En 10.5.320, le lot groupe de retours ajoute une relance bornee au premier rendu Dashboard et centralise la detection des transferts internes dans les gardes du coeur. Le code mort situe apres le verrou Trip est retire. Tous les plafonds restent inchanges et verts : Dashboard + Settings 364.4 / 365 KiB, Analyse 159.0 / 160 KiB, initial JS 255.8 / 260 KiB, lazy 416.6 / 420 KiB, total JS 672.4 / 675 KiB et CSS 29.4 / 30 KiB.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

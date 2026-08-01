@@ -289,7 +289,8 @@ describe('legacy domain loader', () => {
     expect(refresh).toContain('window.sbUser || window.__tbUser');
     expect(refresh).toContain('sbc.from(TB_CONST.TABLES.transactions)');
     expect(refresh).toContain('window.state.transactions = (window.state.transactions || []).filter');
-    expect(refresh).toContain('active travel transactions loaded');
+    expect(refresh).toContain('_tbRefreshLog("active travel transactions loaded"');
+    expect(refresh).not.toContain('console.info("[TB] active travel transactions loaded"');
     expect(analysis).toContain('await window.tbEnsureActiveTravelTransactions?.("analysis", travelSel.value');
   });
 

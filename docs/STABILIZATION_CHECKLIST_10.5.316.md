@@ -16,15 +16,15 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.319`.
+- Version cible de campagne : `10.5.320`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
-- 8 resultats et 3 revues de module traites sont archives avec date de test, date de traitement, version et note.
-- 2 retests cibles restent ouverts : premier affichage Dashboard et theme sombre de la page Projet.
+- 11 resultats et 6 revues de module traites sont archives avec date de test, date de traitement, version et note.
+- 3 retests cibles restent ouverts : premier affichage Dashboard, transactions protegees et recap/historique Trip.
 - A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
 ## Socle transversal
 
-- [ ] Corriger les textes francais corrompus (`Libell?`, `avanc?`, `R?f?rence`, `Non class?`, `A ? B`).
+- [x] Corriger les textes francais corrompus reperes (`Libell?`, `avanc?`, `R?f?rence`, `Non class?`, `A ? B`) et ajouter un contrat i18n.
 - [ ] Remplacer les rejets metier `Uncaught (in promise)` par un message utilisateur explicite.
 - [ ] Verifier l hydratation Nutrition/KPI sans ouverture prealable du module.
 - [ ] Corriger l apercu documentaire et la politique CSP sans autorisation trop large.
@@ -40,6 +40,7 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 - [x] Ajouter les contrats clair/sombre, re-rendu courbe et garde online wallet.
 - [x] Verifier 1440 px et 390 px, clair et sombre.
 - [x] Forcer un rendu final apres la levee du verrou de boot pour afficher wallets, budget journalier et courbe sans changer de module.
+- [x] Relancer ce rendu de facon bornee tant que les trois conteneurs critiques ne sont pas hydrates.
 - [ ] Faire retester Dashboard avant de le rouvrir.
 
 Artefact de retest : `travelbudget-10.5.317-20260801-193954-debug.apk`.
@@ -61,8 +62,8 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 
 ## Chantier 2 - Transactions
 
-- [ ] Bloquer l edition des mouvements internes avant l appel RPC.
-- [ ] Expliquer que la modification passe par les actions de transfert wallet.
+- [x] Bloquer l edition des mouvements internes avant l appel RPC.
+- [x] Expliquer que la modification passe par les actions de transfert wallet.
 - [ ] Decider si `Immobilisation / Immo` devient une categorie par defaut.
 - [ ] Retester les filtres, le cycle CRUD et les transactions protegees.
 
@@ -78,13 +79,14 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 
 ## Chantier 4 - Analyse
 
-- [ ] Retirer le log `active travel transactions loaded` hors mode debug.
-- [ ] Prouver que Tresorerie pure utilise seulement les flux reels.
-- [ ] Ajouter un contrat distinguant reel, prevision et budget.
+- [x] Retirer le log `active travel transactions loaded` hors mode debug.
+- [x] Prouver que Tresorerie pure utilise seulement les flux reels.
+- [x] Ajouter un contrat distinguant encaissements reels, paiements reels et flux planifies.
 - [ ] Retester puis rouvrir Analyse.
 
 ## Chantier 5 - Trip / Partage
 
+- [x] Corriger le placeholder francais de recherche de l historique (`Libelle, montant, participant`).
 - [ ] Selectionner Moi par defaut dans Paye par / Recu par.
 - [ ] Autoriser un libelle vide avec valeur de secours explicite.
 - [ ] Simplifier l audit des liens et distinguer visuellement les anomalies.

@@ -1,4 +1,5 @@
 import {
+  isInternalTransferTransaction,
   isTripLinkedTransaction,
   isWalletAdjustmentTransaction,
   validateTransactionInput,
@@ -6,6 +7,15 @@ import {
 
 export function getTransactionLockState(tx, options = {}) {
   if (!tx) return { locked: false, readonly: false, kind: null, reason: null };
+
+  if (isInternalTransferTransaction(tx)) {
+    return {
+      locked: true,
+      readonly: true,
+      kind: 'internal_transfer',
+      reason: "Mouvement interne : modification verrouillee. Utilise l'action Transfert interne depuis le Dashboard.",
+    };
+  }
 
   if (isWalletAdjustmentTransaction(tx, options)) {
     return {

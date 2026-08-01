@@ -29,4 +29,12 @@ describe('transaction shared modal migration', () => {
     expect(source).not.toContain('#modal button.btn.primary');
     expect(pwa).not.toContain('#modal .modal-actions');
   });
+
+  it('shows internal transfers as readonly before any generic mutation', () => {
+    expect(source).toContain('kind: "internal_transfer"');
+    expect(source).toContain('if (lockState.readonly)');
+    expect(source).toContain('_setTxModalReadOnly(true, lockState.reason)');
+    expect(source).toContain('Transfert interne depuis le Dashboard');
+    expect(source).not.toContain('Locked fields for Trip-linked payment transaction');
+  });
 });
