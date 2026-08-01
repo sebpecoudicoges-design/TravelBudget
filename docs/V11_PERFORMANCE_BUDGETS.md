@@ -12,7 +12,7 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.310` :
+Snapshot `10.5.311` :
 
 - Boot legacy : 871.3 / 1500 KiB.
 - Analyse : 159.0 / 160 KiB.
@@ -27,7 +27,7 @@ Snapshot `10.5.310` :
 - Initial JS : 254.3 / 260 KiB.
 - Lazy JS : 397.3 / 400 KiB.
 - JS total : 651.6 / 655 KiB.
-- CSS total : 22.0 / 22 KiB.
+- CSS total : 21.9 / 22 KiB.
 - Main JS gzip : 72.2 / 110 KiB.
 
 ## Budgets actuels
@@ -113,6 +113,8 @@ En 10.5.308, le chantier 6 ajoute la checklist de refonte visuelle par lots et c
 En 10.5.309, le rendu onboarding Dashboard retire ses styles inline lourds au profit de classes premium courtes dans `premium-theme.css`. Les actions existantes restent portees par `data-dashboard-action`. Dashboard + Settings baisse de 363.5 a 363.3 / 365 KiB, l'initial JS de 253.5 a 253.3 / 260 KiB, et le CSS reste juste dans le plafond a 22.0 / 22 KiB.
 
 En 10.5.310, le panneau d'aide Transactions quitte le HTML inline legacy vers `transactionView.js`. Les actions Aide/Masquer passent par des hooks `data-tx-*`, sans `onclick` inline. Boot legacy baisse de 872.0 a 871.3 KiB ; l'initial JS passe de 253.3 a 254.3 / 260 KiB car la vue est exposee par le bridge Vite. Le CSS reste stable a 22.0 / 22 KiB et tous les budgets restent verts.
+
+En 10.5.311, le style premium des boutons Archiver wallet retire `margin-top:auto` sur `.tb-wallet-archive-btn`. Les boutons restent dans la colonne d'actions de leur carte wallet, sans ligne blanche separee entre les cartes. Les budgets restent identiques cote JS ; le CSS dist baisse legerement a 21.9 / 22 KiB.
 
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 

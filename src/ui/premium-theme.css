@@ -169,7 +169,6 @@ body:not(.theme-dark) .tb-wallet-action-col .btn {
 }
 
 body:not(.theme-dark) .tb-wallet-archive-btn {
-  margin-top: auto;
   border-style: dashed;
   background: #fffaf6;
   color: var(--tb-muted);

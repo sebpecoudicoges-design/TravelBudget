@@ -31,4 +31,10 @@ describe('visual system contract', () => {
     expect(rules).toContain('À 390 px');
     expect(theme).toContain('@media (max-width: 600px)');
   });
+
+  it('keeps wallet archive actions inside the wallet action column', () => {
+    const archiveRule = theme.match(/body:not\(\.theme-dark\) \.tb-wallet-archive-btn \{[\s\S]*?\n\}/)?.[0] || '';
+    expect(archiveRule).toContain('border-style: dashed');
+    expect(archiveRule).not.toContain('margin-top: auto');
+  });
 });

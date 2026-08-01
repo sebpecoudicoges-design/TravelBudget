@@ -27,6 +27,7 @@ Source obligatoire : [`VISUAL_SYSTEM.md`](VISUAL_SYSTEM.md).
 - [x] Moderniser Dashboard/KPI sans retirer wallets, budget journalier, projection ni convertisseur.
 - [x] Verrouiller les tests de contrat visuel.
 - [x] Nettoyer l'onboarding Dashboard : styles inline lourds remplaces par classes premium, actions `data-dashboard-action` conservees, mobile 390 px couvert par contrat.
+- [x] Corriger le placement des boutons Archiver wallet dans chaque carte Dashboard, avec contrat CSS anti-retour.
 
 ### Lot 2 - Transactions
 
