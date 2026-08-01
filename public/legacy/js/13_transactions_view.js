@@ -509,30 +509,13 @@ function _txEnsureHelpUI() {
   try { if (window.tbUxIsDismissed && window.tbUxIsDismissed('transactions_overview')) return; } catch (_) {}
   const wrap = document.createElement('div');
   wrap.setAttribute('data-tb-help', 'transactions-overview');
-  wrap.className = 'hint';
-  wrap.style.padding = '10px';
-  wrap.style.border = '1px solid rgba(0,0,0,.10)';
-  wrap.style.borderRadius = '12px';
-  wrap.style.background = 'rgba(0,0,0,.03)';
-  wrap.style.marginBottom = '10px';
-  wrap.innerHTML = `
-    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
-      <div style="min-width:260px; flex:1;">
-        <div style="font-weight:700; margin-bottom:6px;">${_txT("transactions.help.title")}</div>
-        <div class="muted">
-          <div>- ${_txT("transactions.help.paid")}</div>
-          <div>- ${_txT("transactions.help.unpaid")}</div>
-          <div>- ${_txT("transactions.help.out")}</div>
-        </div>
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn" type="button" onclick="showView('help')">${_txT("nav.help")}</button>
-        <button class="btn" type="button" data-tx-help-close="1">${_txT("transactions.help.hide")}</button>
-      </div>
-    </div>`;
+  wrap.className = 'hint tb-tx-help';
+  wrap.innerHTML = window.TBTransactionView?.renderTransactionsHelpPanel?.({ t: _txT }) || '';
   const firstField = anchor.closest('.row') || anchor.closest('.field') || anchor;
   if (firstField && firstField.parentElement) firstField.parentElement.insertBefore(wrap, firstField);
   else host.insertBefore(wrap, host.firstChild);
+  const openHelp = wrap.querySelector('[data-tx-action="open-help"]');
+  if (openHelp) openHelp.onclick = () => { if (typeof showView === 'function') showView('help'); };
   const close = wrap.querySelector('[data-tx-help-close]');
   if (close) close.onclick = () => { try { if (window.tbUxDismiss) window.tbUxDismiss('transactions_overview'); } catch(_) {} wrap.remove(); };
 }

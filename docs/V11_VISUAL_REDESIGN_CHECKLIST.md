@@ -31,10 +31,11 @@ Source obligatoire : [`VISUAL_SYSTEM.md`](VISUAL_SYSTEM.md).
 ### Lot 2 - Transactions
 
 - [ ] Inventorier liste, filtres, bulk actions, modales ajout/edition, paiement, statut et factures.
+- [x] Premier lot : panneau aide Transactions extrait vers vue pure, actions hook-based, pas de CSS specifique ajoute.
 - [ ] Rendre les filtres plus lisibles sans masquer les criteres avances.
 - [ ] Harmoniser les cartes/lignes transaction avec montant, devise, statut, date et budget.
 - [ ] Verifier mobile : pas de debordement horizontal, actions accessibles.
-- [ ] Ajouter test contrat Transactions premium.
+- [x] Ajouter test contrat Transactions premium.
 
 ### Lot 3 - Analyse
 

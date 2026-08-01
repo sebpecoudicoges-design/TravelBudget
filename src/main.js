@@ -3,6 +3,7 @@ import './ui/premium-theme.css';
 import { registerPwa } from './app/pwa.js';
 import * as budgetAnalysisRules from './core/budgetAnalysisRules.js';
 import * as dashboardView from './features/dashboard/dashboardView.js';
+import * as transactionView from './features/transactions/transactionView.js';
 import * as settingsView from './features/settings/settingsView.js';
 
 window.TB_VERSION = typeof __TB_VERSION__ !== 'undefined'
@@ -16,6 +17,10 @@ window.TBCore = {
 window.TBDashboardView = {
   ...(window.TBDashboardView || {}),
   ...dashboardView,
+};
+window.TBTransactionView = {
+  ...(window.TBTransactionView || {}),
+  ...transactionView,
 };
 window.TBLoadDashboardWalletRules = window.TBLoadDashboardWalletRules || (async () => {
   const mod = await import('./features/dashboard/dashboardWalletRules.js');

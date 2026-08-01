@@ -336,6 +336,7 @@ Critere ferme : le boot initial est stabilise, les domaines lourds sont charges 
   - [x] Installer le systeme visuel premium V1 : charte `VISUAL_SYSTEM`, consigne `AGENTS`, theme partage, navigation groupee, Dashboard et KPI modernises sans retirer wallets, budget journalier, projection ni convertisseur.
   - [x] Creer la checklist de refonte visuelle par lots et corriger le formulaire Trip depense/entree : Source entree et Balance Trip sont forces caches en mode depense, meme sur mobile.
   - [x] Nettoyer l'onboarding Dashboard : styles inline lourds retires de `dashboardView.js`, classes premium `tb-ob-*`, Dashboard + Settings 363.5 -> 363.3 KiB et contrat anti-retour.
+  - [x] Extraire le panneau d'aide Transactions vers `transactionView.js` : HTML inline et `onclick showView('help')` retires, boot legacy 872.0 -> 871.3 KiB, contrat anti-retour.
 - [x] Retirer l'ancien fallback `23_cashflow_chart.js` : moteur Apex cashflow remplace par `27_cashflow_curve.js`, fichier sans reference supprime, 115 lignes et 4.0 KiB retires du depot, fichiers legacy 59 -> 58.
 - [x] Ajouter les entrees Trip partagees : meme formulaire que les depenses, type `income`, source externe ou participant, option `non du` pour creer un revenu Budget sans dette Trip artificielle.
 - [x] Remplacer les actions wallet Dashboard inline par des hooks `data-*` et une delegation d'evenements testee, afin de preparer la suite du decoupage sans changer l'UX.

@@ -12,9 +12,9 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.309` :
+Snapshot `10.5.310` :
 
-- Boot legacy : 872.0 / 1500 KiB.
+- Boot legacy : 871.3 / 1500 KiB.
 - Analyse : 159.0 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
 - Dashboard + Settings : 363.3 / 365 KiB.
@@ -24,11 +24,11 @@ Snapshot `10.5.309` :
 - Travail : 57.1 / 90 KiB.
 - Assets : 117.8 / 125 KiB.
 - Documents : 113.0 / 115 KiB.
-- Initial JS : 253.3 / 260 KiB.
+- Initial JS : 254.3 / 260 KiB.
 - Lazy JS : 397.3 / 400 KiB.
-- JS total : 650.6 / 655 KiB.
+- JS total : 651.6 / 655 KiB.
 - CSS total : 22.0 / 22 KiB.
-- Main JS gzip : 72.1 / 110 KiB.
+- Main JS gzip : 72.2 / 110 KiB.
 
 ## Budgets actuels
 
@@ -111,6 +111,8 @@ En 10.5.307, le systeme visuel premium V1 devient officiel : `VISUAL_SYSTEM.md`,
 En 10.5.308, le chantier 6 ajoute la checklist de refonte visuelle par lots et corrige le formulaire Trip depense/entree. Les champs `Source entree` et `Balance Trip` sont forces caches en mode depense partagee, y compris lorsque les regles mobile imposent des grilles. Trip mesure 317.9 / 340 KiB et le JS total 651.4 / 655 KiB.
 
 En 10.5.309, le rendu onboarding Dashboard retire ses styles inline lourds au profit de classes premium courtes dans `premium-theme.css`. Les actions existantes restent portees par `data-dashboard-action`. Dashboard + Settings baisse de 363.5 a 363.3 / 365 KiB, l'initial JS de 253.5 a 253.3 / 260 KiB, et le CSS reste juste dans le plafond a 22.0 / 22 KiB.
+
+En 10.5.310, le panneau d'aide Transactions quitte le HTML inline legacy vers `transactionView.js`. Les actions Aide/Masquer passent par des hooks `data-tx-*`, sans `onclick` inline. Boot legacy baisse de 872.0 a 871.3 KiB ; l'initial JS passe de 253.3 a 254.3 / 260 KiB car la vue est exposee par le bridge Vite. Le CSS reste stable a 22.0 / 22 KiB et tous les budgets restent verts.
 
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
