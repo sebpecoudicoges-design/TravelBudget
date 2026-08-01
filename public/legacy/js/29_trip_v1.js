@@ -4481,6 +4481,8 @@ toastOk("Participant ajouté.");
       const isIncome = kind === "income";
       document.querySelectorAll(".trip-exp-income-only").forEach((node) => {
         node.hidden = !isIncome;
+        if (isIncome) node.style.removeProperty("display");
+        else node.style.setProperty("display", "none", "important");
       });
 
       const paidByLabel = _el("trip-exp-paidby-label");

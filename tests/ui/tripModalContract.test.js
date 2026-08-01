@@ -47,4 +47,11 @@ describe('Trip shared modal migration', () => {
     expect(sharedCss).toContain('.tb-trip-expense-modal .trip-split-table thead');
     expect(sharedCss).toContain('position: sticky');
   });
+
+  it('forces income-only controls hidden in expense mode despite strong mobile grid rules', () => {
+    expect(tripView).toContain('hidden style="display:none!important;"');
+    expect(source).toContain('node.hidden = !isIncome;');
+    expect(source).toContain('node.style.setProperty("display", "none", "important");');
+    expect(source).toContain('node.style.removeProperty("display");');
+  });
 });

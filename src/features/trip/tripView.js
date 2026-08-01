@@ -169,14 +169,14 @@ export function renderTripExpenseForm({
           <option value="income" ${kind === 'income' ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'Shared income' : 'Entree / revenu partage')}</option>
         </select>
       </div>
-      <div class="field trip-exp-income-only" ${kind === 'income' ? '' : 'hidden'}>
+      <div class="field trip-exp-income-only" ${kind === 'income' ? '' : 'hidden style="display:none!important;"'}>
         <label>${escapeHTML(language === 'en' ? 'Income source' : 'Source entree')}</label>
         <select id="trip-exp-income-source">
           <option value="external" ${incomeSource === 'external' ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'External source' : 'Source externe')}</option>
           <option value="participant" ${incomeSource === 'participant' ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'Participant' : 'Participant')}</option>
         </select>
       </div>
-      <div class="field trip-exp-income-only" ${kind === 'income' ? '' : 'hidden'}>
+      <div class="field trip-exp-income-only" ${kind === 'income' ? '' : 'hidden style="display:none!important;"'}>
         <label>${escapeHTML(language === 'en' ? 'Trip balance' : 'Balance Trip')}</label>
         <select id="trip-exp-income-due">
           <option value="yes" ${incomeDueBack ? 'selected' : ''}>${escapeHTML(language === 'en' ? 'To redistribute' : 'A redistribuer')}</option>

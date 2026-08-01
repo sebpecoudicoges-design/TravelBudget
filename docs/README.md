@@ -10,6 +10,7 @@ Cette page est la porte d'entrée de la documentation. Elle oriente vers les sou
 | Connaître les budgets de taille | [Budgets de performance](V11_PERFORMANCE_BUDGETS.md) |
 | Utiliser les composants UI partagés | [Composants UI V11](V11_UI_COMPONENTS.md) |
 | Respecter l’identité et les règles graphiques | [Système visuel officiel](VISUAL_SYSTEM.md) |
+| Piloter la refonte visuelle par lots | [Checklist refonte visuelle](V11_VISUAL_REDESIGN_CHECKLIST.md) |
 | Comprendre le rôle et les limites de l’Atlas | [Project Atlas](PROJECT_ATLAS.md) |
 | Voir les composants réellement présents | [Inventaire généré](generated/project-inventory.md) |
 | Modifier une fonction critique | [Fiches fonctionnelles](features/) |

@@ -292,7 +292,7 @@ describe('Trip view', () => {
       currencyOptionsHTML: (currency) => `<option>${currency}</option>`,
     });
 
-    expect(html).toContain('class="field trip-exp-income-only" hidden');
+    expect(html).toContain('class="field trip-exp-income-only" hidden style="display:none!important;"');
     expect(html).toContain('id="trip-exp-paidby-label">Paye par');
     expect(html).toContain('Ajouter depense');
   });
