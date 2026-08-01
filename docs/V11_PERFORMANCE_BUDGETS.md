@@ -12,7 +12,7 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.314` :
+Snapshot `10.5.315` :
 
 - Boot legacy : 871.3 / 1500 KiB.
 - Analyse : 159.0 / 160 KiB.
@@ -121,6 +121,8 @@ En 10.5.312, le panneau filtres principal de Transactions retire son style inlin
 En 10.5.313, le champ Recherche des filtres Transactions quitte l'attribut `style="min-width:220px"` et le layout s'appuie sur la classe explicite `.tx-filter-search`, y compris en rendu mobile Capacitor. Les IDs et hooks restent inchanges. Le plafond CSS passe de 22 a 23 KiB pour absorber la base premium mesuree a 22.2 KiB, avec surveillance maintenue.
 
 En 10.5.314, les derniers fallbacks HTML Documents pour shell, dossiers, cartes, apercu, infos, partage, batch, transactions et assets passent par le helper unique `docView(...)`. Le legacy ne porte plus de templates concurrents pour ces rendus extraits ; `43_documents_ui.js` passe de 75.28 a 74.09 KiB et le domaine Documents reste vert a 111.8 / 115 KiB.
+
+En 10.5.315, le chantier 6 est clos : la recherche de code mort devient une regle permanente dans `AGENTS.md` et la checklist V11. Aucun nouveau code runtime n'est ajoute par ce lot ; le prochain chantier officiel devient la preparation Play Store avec `docs/PLAY_STORE_READINESS.md` et un AAB de controle produit localement par `npm run android:bundle-check`.
 
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 

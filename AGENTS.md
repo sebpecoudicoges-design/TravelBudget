@@ -9,5 +9,6 @@ Règles prioritaires :
 - utiliser en priorité les tokens et composants de `src/ui/premium-theme.css` ;
 - vérifier les thèmes clair et sombre ainsi que les largeurs 1440 px et 390 px ;
 - maintenir ou ajouter les tests de contrat visuel et fonctionnel avant de considérer la modification terminée.
+- lors de toute intervention sur un fichier ou domaine, chercher le code mort directement lié au périmètre touché ; le supprimer seulement après vérification des appels et avec un contrat anti-retour quand c'est pertinent.
 
 Une maquette est une direction visuelle, pas une autorisation de supprimer les comportements absents de son aperçu.

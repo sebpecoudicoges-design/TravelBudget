@@ -7,9 +7,10 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Conserver la migration progressive Vite + modules ES.
 - [x] Mesurer l'existant avant de supprimer : 59 scripts legacy, environ 2,5 Mo de JavaScript.
 - [x] Ne plus ajouter de nouvelle regle metier dans `public/legacy/js`.
-- [ ] Chaque extraction doit avoir des tests avant suppression du code historique.
-- [ ] Une seule source de verite par calcul, synchronisation ou format de donnee.
+- [x] Chaque extraction doit avoir des tests avant suppression du code historique.
+- [x] Une seule source de verite par calcul, synchronisation ou format de donnee.
   - [x] Aligner les calories d'activite KPI sur le loader transversal Sport/Travail deja utilise par Nutrition.
+- [x] Regle permanente : quand un fichier ou domaine est modifie, chercher le code mort directement lie au perimetre touche, le supprimer seulement si les appels sont absents et ajouter/maintenir un contrat anti-retour.
 - [x] Mettre a jour cette checklist a chaque lot livre.
 - [x] Ajouter a chaque livraison une verification utilisateur simple : ecran a ouvrir, action a faire, resultat attendu, console attendue si pertinent.
 - [x] Remplacer la liste brute des APK de `public/projet.html` par une fresque chronologique interactive, detaillee et filtrable.
@@ -190,7 +191,7 @@ Critere ferme : les domaines Trip, Sport, Nutrition, Travail et Patrimoine ont u
   - [x] Sortir FX Decision du boot : `34_fx_decision.js` charge avec Analyse et possede un budget dedie.
   - [x] Stabiliser le changement manuel de voyage Settings : le voyage choisi reste actif apres refresh, meme si un autre voyage contient la date du jour.
   - [x] Sortir Inbox / A traiter du boot : `44_inbox_ui.js` charge a l'ouverture de l'onglet, avec onglet HTML stable et budget dedie.
-- [ ] Decouper les gros bundles par domaine.
+- [x] Decouper les gros bundles par domaine.
   - [x] Extraire la carte document vers `documentView.js`, chargee avec le domaine Documents, avec tests de rendu et loader lazy.
   - [x] Extraire le shell visuel Settings : hero, resumes de cartes et accordéons quittent `14_settings_periods_ui.js` vers `src/features/settings/settingsView.js`.
   - [x] Extraire le rendu du panneau Compte Settings : profil, santé, devise, mode UI, seuil cashflow et raccourcis notifications quittent le template inline legacy.
@@ -321,7 +322,7 @@ Critere ferme : le boot initial est stabilise, les domaines lourds sont charges 
 - [x] Retirer un fichier legacy uniquement quand son remplacement est valide.
 - [x] Maintenir `public/projet.html`, l'APK et Git a chaque livraison.
 - [x] Demarrer la suppression de code mort : anciens helpers Trip/Sport sans appels retires, 261 lignes nettes supprimees, contrats anti-retour ajoutes.
-- [ ] Continuer la suppression de code mort sur Dashboard, Settings, Analyse et Documents avec mesure avant/apres.
+- [x] Continuer la suppression de code mort sur Dashboard, Settings, Analyse et Documents avec mesure avant/apres ; chantier clos en 10.5.315 et transforme en regle permanente de travail.
   - [x] Nettoyer Analyse/Documents : `_referenceDailyForDate` et `extFromName` retires, Analyse 88.50 -> 88.16 KiB et Documents 75.40 -> 75.32 KiB, contrat anti-retour ajoute.
   - [x] Retirer l'ancien script de contexte voyage `06_travel_context.js` du boot : fichier sans appel supprime, boot legacy 875.8 -> 874.7 KiB, contrat anti-retour ajoute.
   - [x] Retirer l'ancien helper `31_wallet_balance.js` du boot : soldes wallet portes par les regles centrales, boot legacy 874.7 -> 874.2 KiB et JS initial 246.3 -> 246.2 KiB.

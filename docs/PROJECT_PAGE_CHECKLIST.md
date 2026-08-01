@@ -30,6 +30,7 @@ Cette checklist accompagne la page publique `public/projet.html`. Les cases inte
 - [x] APK de test versionnée disponible.
 - [x] Permissions Android limitées à Internet et notifications.
 - [x] Ajouter un workflow reproductible pour produire et vérifier l’Android App Bundle.
+- [x] Formaliser le chantier Play Store dans `docs/PLAY_STORE_READINESS.md`.
 - [ ] Produire et signer un Android App Bundle de production avec la keystore Play Store.
 - [ ] Préparer icône, bannière et captures Play Store finales.
 - [ ] Ajouter l’URL Play Store dès que la fiche est publiée.
@@ -43,4 +44,4 @@ Cette checklist accompagne la page publique `public/projet.html`. Les cases inte
 - [x] Ajouter une vérification automatique des liens publics.
 - [x] Mettre à jour la checklist à chaque publication majeure.
 
-Dernière révision : 27 juillet 2026.
+Dernière révision : 1 août 2026.
