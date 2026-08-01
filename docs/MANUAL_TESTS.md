@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.313`.
-- Bilan : 7 parcours `ok`, 69 parcours `à faire`.
+- Version à valider : `10.5.314`.
+- Bilan : 7 parcours `ok`, 70 parcours `à faire`.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -95,6 +95,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 75 | 10.5.311 | Dashboard : boutons Archiver wallet | Ouvrir **Dashboard** avec plusieurs wallets actifs, dont la base AUD si possible. Vérifier chaque carte wallet sur desktop et mobile. | Le bouton **Archiver** reste dans la colonne d'actions de son wallet, sous Supprimer, sans ligne blanche séparée entre les cartes. | `TB BUILD 10.5.311` ; aucun `Uncaught`, aucun bouton Archiver hors carte. | à faire |
 | 76 | 10.5.312 | Transactions : panneau filtres premium | Ouvrir **Transactions** sur desktop puis mobile. Utiliser au moins la recherche, le wallet, la catégorie et les dates. | Le panneau filtres garde tous ses champs, le style reste premium sans débordement, et la liste se met à jour comme avant. | `TB BUILD 10.5.312` ; aucun `Uncaught`, aucun champ filtre inactif. | à faire |
 | 77 | 10.5.313 | Transactions : recherche filtre sans style fragile | Ouvrir **Transactions** sur desktop puis mobile. Utiliser la recherche, le wallet, la catégorie et les dates. | Le champ Recherche reste large sur desktop, pleine largeur sur mobile, tous les filtres répondent et aucun débordement horizontal n'apparaît. | `TB BUILD 10.5.313` ; aucun `Uncaught`, aucun champ filtre inactif. | à faire |
+| 78 | 10.5.314 | Documents : rendus sans fallback legacy | Ouvrir **Documents**, vérifier dossiers, recherche, tri, aperçu, infos, partage sélectionné, déplacement sélectionné, ajout de tag, liens transactions et liens assets si disponibles. | Les rendus restent identiques, toutes les modales s'ouvrent via la vue Documents moderne et aucun template legacy de secours ne masque un module absent. | `TB BUILD 10.5.314` ; aucun `Uncaught`, aucun module `documentView` manquant, aucun écran Documents vide. | à faire |
 
 ## À ajouter à chaque livraison
 

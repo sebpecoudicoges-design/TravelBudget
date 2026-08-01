@@ -12,7 +12,7 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.313` :
+Snapshot `10.5.314` :
 
 - Boot legacy : 871.3 / 1500 KiB.
 - Analyse : 159.0 / 160 KiB.
@@ -23,7 +23,7 @@ Snapshot `10.5.313` :
 - Nutrition : 187.0 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
 - Assets : 117.8 / 125 KiB.
-- Documents : 113.0 / 115 KiB.
+- Documents : 111.8 / 115 KiB.
 - Initial JS : 254.3 / 260 KiB.
 - Lazy JS : 397.3 / 400 KiB.
 - JS total : 651.6 / 655 KiB.
@@ -119,6 +119,8 @@ En 10.5.311, le style premium des boutons Archiver wallet retire `margin-top:aut
 En 10.5.312, le panneau filtres principal de Transactions retire son style inline de `index.html`. Le rendu premium est porte par `.tx-workspace-card` dans `premium-theme.css`, tandis que les champs et hooks existants (`f-from`, `f-wallet`, `f-category`, `f-q`, etc.) restent inchanges. Les budgets restent verts : boot legacy 871.3 / 1500 KiB, Dashboard + Settings 363.3 / 365 KiB, Initial JS 254.3 / 260 KiB, JS total 651.6 / 655 KiB et CSS total 21.9 / 22 KiB.
 
 En 10.5.313, le champ Recherche des filtres Transactions quitte l'attribut `style="min-width:220px"` et le layout s'appuie sur la classe explicite `.tx-filter-search`, y compris en rendu mobile Capacitor. Les IDs et hooks restent inchanges. Le plafond CSS passe de 22 a 23 KiB pour absorber la base premium mesuree a 22.2 KiB, avec surveillance maintenue.
+
+En 10.5.314, les derniers fallbacks HTML Documents pour shell, dossiers, cartes, apercu, infos, partage, batch, transactions et assets passent par le helper unique `docView(...)`. Le legacy ne porte plus de templates concurrents pour ces rendus extraits ; `43_documents_ui.js` passe de 75.28 a 74.09 KiB et le domaine Documents reste vert a 111.8 / 115 KiB.
 
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 

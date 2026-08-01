@@ -29,6 +29,7 @@
   function key(name, fallback){ return (window.TB_CONST && window.TB_CONST.LS_KEYS && window.TB_CONST.LS_KEYS[name]) || fallback || name; }
   function fmtDate(v){ if(!v) return '-'; try { return new Date(v).toLocaleDateString('fr-FR'); } catch(_) { return String(v).slice(0,10); } }
   function fmtSize(bytes){ const n = Number(bytes||0); if(!n) return '-'; if(n < 1024) return `${n} o`; if(n < 1024*1024) return `${Math.round(n/102.4)/10} Ko`; return `${Math.round(n/1024/102.4)/10} Mo`; }
+  function docView(name, ...args){ return window.UI?.documentView?.[name]?.(...args) || ''; }
   function fmtExpiry(v){
   if(!v) return '';
   try{
@@ -674,18 +675,17 @@ function setSelectedSort(v){
         })),
       };
     });
-  return window.UI?.documentView?.renderDocumentFolders?.({
+  return docView('renderDocumentFolders', {
     folders: rows,
     allCount: (CACHE.documents||[]).length,
     selectedFolderId: CACHE.selectedFolderId || '',
     esc,
     tr,
-  }) || `<div class="tb-doc-sidebar"><strong>${esc(tr('documents.folders'))}</strong></div>`;
+  });
 }
 
   function renderDocCard(d){
-  const view = window.UI?.documentView;
-  if(view?.renderDocumentCard) return view.renderDocumentCard(d, {
+  return docView('renderDocumentCard', d, {
     folders: CACHE.folders || [],
     linkCounts: CACHE.linkCounts || {},
     bucket: BUCKET,
@@ -699,7 +699,6 @@ function setSelectedSort(v){
     isImg,
     isSelected,
   });
-  return `<article class="tb-doc-card" data-doc-id="${esc(d.id)}"><div class="tb-doc-name">${esc(d.name || d.original_filename || 'Document')}</div></article>`;
 }
 
   function renderMain(){
@@ -723,7 +722,7 @@ function setSelectedSort(v){
     return new Date(b.created_at||0) - new Date(a.created_at||0);
   });
 
-  return window.UI?.documentView?.renderDocumentMain?.({
+  return docView('renderDocumentMain', {
     folderName: folder ? folder.name : '',
     documentCount: docs.length,
     sort,
@@ -742,7 +741,7 @@ function setSelectedSort(v){
     esc,
     tr,
     atxt,
-  }) || `<div class="tb-doc-main"><div class="tb-doc-grid">${docs.map(renderDocCard).join('')}</div></div>`;
+  });
 }
 
   function renderShell(){
@@ -751,12 +750,12 @@ function setSelectedSort(v){
     el.className = 'card tb-doc-shell';
     const foldersHtml = renderFolders();
     const mainHtml = renderMain();
-    el.innerHTML = window.UI?.documentView?.renderDocumentShell?.({
+    el.innerHTML = docView('renderDocumentShell', {
       foldersHtml,
       mainHtml,
       esc,
       tr,
-    }) || `${foldersHtml}${mainHtml}`;
+    });
     setTimeout(hydrateImageThumbs, 0);
   }
 
@@ -881,9 +880,9 @@ function setSelectedSort(v){
       const wrap = document.createElement('div');
       wrap.className = 'tb-doc-preview-backdrop';
       wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
-      wrap.innerHTML = window.UI?.documentView?.renderDocumentPreviewModal?.({
+      wrap.innerHTML = docView('renderDocumentPreviewModal', {
         name, url, body, esc, tr
-      }) || `<div class="tb-doc-preview"><div class="tb-doc-preview-body">${body}</div></div>`;
+      });
       document.body.appendChild(wrap);
     }catch(e){ alert(e.message || String(e)); }
   }
@@ -1007,7 +1006,7 @@ function openInfoModal(doc){
   wrap.className = 'tb-doc-modal-backdrop';
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
 
-  wrap.innerHTML = window.UI?.documentView?.renderDocumentInfoModal?.({
+  wrap.innerHTML = docView('renderDocumentInfoModal', {
     doc,
     currentTags,
     currentExpiry,
@@ -1016,7 +1015,7 @@ function openInfoModal(doc){
     folderOptionsHtml: folderOptionsHTML(doc.folder_id || ''),
     esc,
     tr
-  }) || `<div class="tb-doc-modal"><h3>${esc(tr('documents.modal.info_title'))}</h3></div>`;
+  });
 
   document.body.appendChild(wrap);
 }
@@ -1102,11 +1101,11 @@ async function shareSelected(){
   const wrap = document.createElement('div');
   wrap.className = 'tb-doc-modal-backdrop';
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
-  wrap.innerHTML = window.UI?.documentView?.renderDocumentShareModal?.({
+  wrap.innerHTML = docView('renderDocumentShareModal', {
     count: docs.length,
     esc,
     tr,
-  }) || `<div class="tb-doc-modal"><h3>${esc(tr('documents.share.title', { count: docs.length }))}</h3></div>`;
+  });
   document.body.appendChild(wrap);
 }
 
@@ -1141,14 +1140,14 @@ async function generateShareLinksSelected(){
     const wrap = document.querySelector('.tb-doc-modal-backdrop') || document.createElement('div');
     wrap.className = 'tb-doc-modal-backdrop';
     wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
-    wrap.innerHTML = window.UI?.documentView?.renderDocumentShareResultModal?.({
+    wrap.innerHTML = docView('renderDocumentShareResultModal', {
       count: links.length,
       duration,
       bodyText,
       links,
       esc,
       tr,
-    }) || `<div class="tb-doc-modal"><textarea class="input tb-doc-share-body" readonly>${esc(bodyText)}</textarea></div>`;
+    });
     if(!wrap.parentNode) document.body.appendChild(wrap);
   }catch(e){
     setActionMessage('');
@@ -1168,12 +1167,12 @@ async function moveSelected(){
   const wrap = document.createElement('div');
   wrap.className = 'tb-doc-modal-backdrop';
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
-  wrap.innerHTML = window.UI?.documentView?.renderDocumentMoveSelectedModal?.({
+  wrap.innerHTML = docView('renderDocumentMoveSelectedModal', {
     count: docs.length,
     folderOptions,
     esc,
     tr,
-  }) || `<div class="tb-doc-modal"><select id="tb-doc-batch-folder" class="input">${folderOptions.map(([id,label]) => `<option value="${esc(id)}">${esc(label)}</option>`).join('')}</select></div>`;
+  });
   document.body.appendChild(wrap);
 }
 
@@ -1220,12 +1219,12 @@ async function addTagSelected(){
   const wrap = document.createElement('div');
   wrap.className = 'tb-doc-modal-backdrop';
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
-  wrap.innerHTML = window.UI?.documentView?.renderDocumentAddTagSelectedModal?.({
+  wrap.innerHTML = docView('renderDocumentAddTagSelectedModal', {
     count: docs.length,
     tags,
     esc,
     tr,
-  }) || `<div class="tb-doc-modal"><input id="tb-doc-batch-tag" class="input" /></div>`;
+  });
   document.body.appendChild(wrap);
   setTimeout(()=>document.getElementById('tb-doc-batch-tag')?.focus(), 0);
 }
@@ -1481,7 +1480,7 @@ function renderDocumentTransactionsModal(doc, links, message, tripLinks = []){
   wrap.className = 'tb-doc-modal-backdrop';
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
 
-  wrap.innerHTML = window.UI?.documentView?.renderDocumentTransactionsModal?.({
+  wrap.innerHTML = docView('renderDocumentTransactionsModal', {
     doc,
     links: links || [],
     tripLinks: tripLinks || [],
@@ -1494,7 +1493,7 @@ function renderDocumentTransactionsModal(doc, links, message, tripLinks = []){
     tripExpenseLabel,
     esc,
     tr,
-  }) || '';
+  });
 
   if(!wrap.parentNode) document.body.appendChild(wrap);
 }
@@ -1584,7 +1583,7 @@ function renderDocumentAssetsModal(doc, links, assets, message){
   wrap.id = 'tb-doc-asset-modal';
   wrap.className = 'tb-doc-modal-backdrop';
   wrap.onclick = (e)=>{ if(e.target === wrap) wrap.remove(); };
-  wrap.innerHTML = window.UI?.documentView?.renderDocumentAssetsModal?.({
+  wrap.innerHTML = docView('renderDocumentAssetsModal', {
     doc,
     links: links || [],
     assets: assets || [],
@@ -1594,7 +1593,7 @@ function renderDocumentAssetsModal(doc, links, assets, message){
     esc,
     tr,
     atxt,
-  }) || '';
+  });
   if(!wrap.parentNode) document.body.appendChild(wrap);
 }
 

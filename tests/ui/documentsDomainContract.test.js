@@ -14,8 +14,8 @@ describe('documents domain legacy contract', () => {
 
     expect(view).toContain('export function renderDocumentTransactionsModal');
     expect(view).toContain('export function renderDocumentAssetsModal');
-    expect(source).toContain('window.UI?.documentView?.renderDocumentTransactionsModal');
-    expect(source).toContain('window.UI?.documentView?.renderDocumentAssetsModal');
+    expect(source).toContain("docView('renderDocumentTransactionsModal'");
+    expect(source).toContain("docView('renderDocumentAssetsModal'");
     expect(source).not.toContain('<strong>Dépenses Trip liées</strong>');
     expect(source).not.toContain('candidates.length ? candidates.map(tx =>');
     expect(source).not.toContain('candidates.length ? candidates.map(a =>');
@@ -28,11 +28,13 @@ describe('documents domain legacy contract', () => {
     expect(view).toContain('export function renderDocumentFolders');
     expect(view).toContain('export function renderDocumentMain');
     expect(view).toContain('export function renderDocumentShell');
-    expect(source).toContain('window.UI?.documentView?.renderDocumentFolders');
-    expect(source).toContain('window.UI?.documentView?.renderDocumentMain');
-    expect(source).toContain('window.UI?.documentView?.renderDocumentShell');
+    expect(source).toContain("docView('renderDocumentFolders'");
+    expect(source).toContain("docView('renderDocumentMain'");
+    expect(source).toContain("docView('renderDocumentShell'");
     expect(source).not.toContain('<div class="tb-doc-sidebar-head">');
+    expect(source).not.toContain('<div class="tb-doc-sidebar"><strong>');
     expect(source).not.toContain('<div class="tb-doc-dropzone"');
+    expect(source).not.toContain('<div class="tb-doc-main"><div class="tb-doc-grid">');
     expect(source).not.toContain('<div class="tb-doc-hero">');
     expect(source).not.toContain('window.tbDocumentsRenderOnly');
   });
@@ -45,10 +47,10 @@ describe('documents domain legacy contract', () => {
     expect(view).toContain('export function renderDocumentShareResultModal');
     expect(view).toContain('export function renderDocumentMoveSelectedModal');
     expect(view).toContain('export function renderDocumentAddTagSelectedModal');
-    expect(source).toContain('window.UI?.documentView?.renderDocumentShareModal');
-    expect(source).toContain('window.UI?.documentView?.renderDocumentShareResultModal');
-    expect(source).toContain('window.UI?.documentView?.renderDocumentMoveSelectedModal');
-    expect(source).toContain('window.UI?.documentView?.renderDocumentAddTagSelectedModal');
+    expect(source).toContain("docView('renderDocumentShareModal'");
+    expect(source).toContain("docView('renderDocumentShareResultModal'");
+    expect(source).toContain("docView('renderDocumentMoveSelectedModal'");
+    expect(source).toContain("docView('renderDocumentAddTagSelectedModal'");
     expect(occurrences(source, /async function shareSelected\(/g)).toBe(1);
     expect(occurrences(source, /async function moveSelected\(/g)).toBe(1);
     expect(occurrences(source, /async function addTagSelected\(/g)).toBe(1);
@@ -61,6 +63,8 @@ describe('documents domain legacy contract', () => {
     expect(source).not.toContain('<label for="tb-doc-share-duration">');
     expect(source).not.toContain('<label for="tb-doc-batch-folder">');
     expect(source).not.toContain('<label for="tb-doc-batch-tag">');
+    expect(source).not.toContain('<select id="tb-doc-batch-folder"');
+    expect(source).not.toContain('<input id="tb-doc-batch-tag"');
   });
 
   it('delegates preview and metadata modals to documentView', () => {
@@ -69,9 +73,11 @@ describe('documents domain legacy contract', () => {
 
     expect(view).toContain('export function renderDocumentPreviewModal');
     expect(view).toContain('export function renderDocumentInfoModal');
-    expect(source).toContain('window.UI?.documentView?.renderDocumentPreviewModal');
-    expect(source).toContain('window.UI?.documentView?.renderDocumentInfoModal');
+    expect(source).toContain("docView('renderDocumentPreviewModal'");
+    expect(source).toContain("docView('renderDocumentInfoModal'");
     expect(source).not.toContain('<div class="tb-doc-preview"><div class="tb-doc-preview-head">');
+    expect(source).not.toContain('<div class="tb-doc-preview"><div class="tb-doc-preview-body">');
+    expect(source).not.toContain('<div class="tb-doc-modal"><h3>');
     expect(source).not.toContain('<input id="tb-doc-info-tags"');
     expect(source).not.toContain('<textarea id="tb-doc-info-notes"');
   });
