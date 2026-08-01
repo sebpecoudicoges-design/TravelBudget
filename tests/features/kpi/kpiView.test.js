@@ -53,6 +53,13 @@ describe('KPI view helpers', () => {
     expect(html).toContain('2026-07-15');
   });
 
+  it('renders the converter as a swipeable two-currency control', () => {
+    const html = renderKpiFxCalculator({ title: 'Convertisseur' });
+    expect(html).toContain('id="kpiFxSwipeArea"');
+    expect(html).toContain('id="kpiFxCalcSwap"');
+    expect(html).toContain('Glissez ↔ pour intervertir');
+  });
+
   it('renders the active travel option with escaped value and label', () => {
     const html = renderKpiTravelOption({
       value: 'trip-<1>',

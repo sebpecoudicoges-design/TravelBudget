@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   renderDashboardOnboardingPanel,
+  renderDashboardOverview,
   renderDailyBudgetControls,
   renderDailyBudgetDay,
   getWalletDialogStyles,
@@ -34,6 +35,31 @@ describe('Dashboard view helpers', () => {
     };
     return dict[key] || key;
   };
+
+  it('renders the premium overview from live dashboard values', () => {
+    const html = renderDashboardOverview({
+      firstName: 'Sébastien',
+      travelName: 'Australie',
+      dateLabel: 'samedi 1 août',
+      syncLabel: 'Synchronisé à 11:12',
+      budgetToday: 128,
+      dailyBudget: 178,
+      baseCurrency: 'AUD',
+      activeWallets: 4,
+      daysRemaining: 23,
+      transactionCount: 146,
+    });
+
+    expect(html).toContain('Bonjour Sébastien');
+    expect(html).toContain('Vue d’ensemble');
+    expect(html).toContain('128 <small>AUD</small>');
+    expect(html).toContain('width:72%');
+    expect(html).toContain('data-dashboard-action="add-transaction"');
+    expect(html).toContain('data-dashboard-action="open-analysis"');
+    expect(html).not.toContain('Devises du voyage');
+    expect(html).not.toContain('tb-currency-switcher');
+    expect(html).not.toContain('onclick=');
+  });
 
   it('renders the onboarding checklist with stable dashboard actions', () => {
     const html = renderDashboardOnboardingPanel({
@@ -125,6 +151,7 @@ describe('Dashboard view helpers', () => {
     expect(html).toContain('data-wallet-action="adjust"');
     expect(html).toContain('data-wallet-id="wallet-1"');
     expect(html).toContain('data-wallet-archive-action="archive"');
+    expect(html).toContain('class="btn tb-wallet-archive-btn"');
   });
 
   it('renders an archived wallet without transaction or adjustment actions', () => {
@@ -209,6 +236,8 @@ describe('Dashboard view helpers', () => {
     expect(html).toContain('id="db-prev"');
     expect(html).toContain('id="db-today"');
     expect(html).toContain('id="db-next"');
+    expect(html).toContain('←');
+    expect(html).toContain('→');
     expect(html).toContain('id="db-mode"');
     expect(html).toContain('value="segment"');
     expect(html).toContain('value="voyage"');

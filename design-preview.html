@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TravelBudget — proposition premium</title>
+  <link rel="stylesheet" href="./src/ui/premium-theme.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .wrap { max-width: 1440px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 14px 20px; }
+    header { grid-column: 1 / -1; min-height: 68px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 22px; }
+    .brand h1 { position: relative; margin: 0; min-height: 40px; padding-left: 52px; display: flex; align-items: center; font-size: 20px; }
+    .brand h1::before { content: ""; position: absolute; left: 0; width: 38px; height: 38px; border-radius: 13px; }
+    .brand .sub { padding-left: 52px; color: var(--muted); font-size: 11px; }
+    .top-actions, .dashboard-hero-actions { display: flex; align-items: center; gap: 8px; }
+    .btn { min-height: 38px; padding: 0 14px; cursor: default; }
+    .app-tabs { align-self: start; position: sticky; top: 20px; display: flex; flex-direction: column; padding: 18px 10px; border: 1px solid var(--border); border-radius: 22px; }
+    .app-tabs .tab { display: flex; align-items: center; min-height: 36px; padding: 0 11px; border-left: 3px solid transparent; border-radius: 10px; color: var(--muted); font-size: 12px; font-weight: 750; }
+    .app-tabs .tab::before { content: ""; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%; background: #dac8bb; }
+    .app-tabs .tab.active { border-left-color: var(--tb-coral); background: #fff1e8; color: var(--tb-coral-strong); }
+    .app-tabs .tab.active::before { background: var(--tb-coral); }
+    .preview-icon { width:27px; height:27px; display:inline-grid; place-items:center; flex:0 0 27px; border-radius:9px; background:#f5ede7; font-family:"Segoe UI Emoji",sans-serif; font-size:15px; line-height:1; }
+    main { min-width: 0; display: grid; gap: 14px; }
+    .dashboard-hero-card { display: grid; }
+    .kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 10px; }
+    .kpi-mini-card { min-height: 118px; padding: 16px; border: 1px solid var(--border); border-radius: 18px; }
+    .kpi-mini-card span { color: var(--muted); font-size: 10px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+    .kpi-mini-card strong { display: block; margin: 15px 0 8px; color: var(--text); font-size: 25px; letter-spacing: -.04em; }
+    .kpi-mini-card small { color: var(--muted); }
+    .dashboard-grid-main { display: grid; grid-template-columns: 1.1fr .9fr; gap: 14px; }
+    .dashboard-panel { padding: 18px; border: 1px solid var(--border); border-radius: 22px; }
+    .dashboard-panel > h2 { margin: 0 0 16px; font-size: 18px; }
+    .wallet-row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 14px 0; border-top: 1px solid var(--border); }
+    .wallet-row:first-of-type { border-top: 0; }
+    .wallet-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: var(--tb-coral-soft); color: var(--tb-coral-strong); font-weight: 900; }
+    .wallet-row b, .wallet-row small { display: block; }
+    .wallet-row small { margin-top: 3px; color: var(--muted); }
+    .wallet-row strong { color: var(--text); }
+    .wallet-demo-card { padding:16px; display:grid; grid-template-columns:minmax(0,1fr) 150px; gap:16px; border:1px solid var(--border); border-radius:18px; background:#fff; }
+    .wallet-demo-card h3 { margin:0 0 6px; font-size:16px; }
+    .wallet-demo-card p { margin:0 0 12px; color:var(--muted); font-size:13px; }
+    .wallet-demo-tx { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; padding:7px 0; border-top:1px solid #f5e8dd; font-size:11px; }
+    .wallet-demo-tx b { font-size:12px; }
+    .wallet-demo-tx strong.expense { color:#c83e4d; }
+    .wallet-demo-tx strong.income { color:#168b68; }
+    .wallet-demo-actions { padding-left:12px; display:flex; flex-direction:column; gap:7px; border-left:1px solid var(--border); }
+    .wallet-demo-actions .btn { width:100%; min-height:32px; padding:0 8px; font-size:11px; }
+    .wallet-demo-actions .archive { margin-top:auto; border-style:dashed; color:var(--muted); background:#fffaf6; }
+    .day-row { display: grid; grid-template-columns: 74px 1fr auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--border); }
+    .day-row:first-of-type { border-top: 0; }
+    .day-row span { color: var(--muted); font-size: 12px; }
+    .day-track { height: 7px; overflow: hidden; border-radius: 99px; background: #f5e8dd; }
+    .day-track i { display: block; height: 100%; border-radius: inherit; background: var(--tb-lagoon); }
+    .day-demo-card { margin-top:10px; padding:14px; border:1px solid var(--border); border-radius:18px; background:#fff; }
+    .day-demo-head { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    .day-demo-head span { padding:6px 10px; border-radius:999px; background:#e2f5f3; color:#168b87; font-size:11px; font-weight:800; }
+    .day-demo-meta { margin:8px 0; display:flex; justify-content:space-between; color:var(--muted); font-size:11px; }
+    .day-demo-details { padding-top:8px; border-top:1px solid #f5e8dd; color:var(--muted); font-size:11px; line-height:1.55; }
+    .watch { padding: 18px 20px; border: 1px solid rgba(242,184,75,.34); border-radius: 20px; background: #fff8df; }
+    .watch b { display: block; margin-bottom: 7px; color: #916617; }
+    .watch p { margin: 0; color: #715c32; font-size: 13px; }
+    .projection-panel { padding: 20px; display: grid; grid-template-columns: minmax(0, .7fr) minmax(280px, 1.3fr); gap: 20px; align-items: center; border: 1px solid var(--border); border-radius: 22px; background: #fff; box-shadow: var(--tb-shadow); }
+    .projection-panel h2 { margin: 0 0 8px; font-size: 18px; }
+    .projection-panel p { margin: 0; color: var(--muted); font-size: 12px; }
+    .projection-value { margin-top: 16px; font-size: 30px; font-weight: 850; letter-spacing: -.04em; }
+    .projection-visual { min-width:0; }
+    .projection-controls { display:flex; justify-content:flex-end; gap:7px; margin-bottom:7px; flex-wrap:wrap; }
+    .projection-controls span { padding:6px 9px; border:1px solid var(--border); border-radius:10px; background:#fff; color:var(--muted); font-size:10px; font-weight:750; }
+    .projection-chart { width:100%; height:126px; border-radius:16px; background:linear-gradient(180deg,#f5fffd,#fff); }
+    .projection-meta { margin-top:7px; display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); font-size:10px; }
+    .converter-row { display:grid; grid-template-columns:1fr auto 1fr; gap:6px; align-items:center; touch-action:pan-y; }
+    .converter-row span { min-width:0; padding:7px 8px; border:1px solid var(--border); border-radius:9px; background:#fffaf6; color:var(--text); font-size:11px; }
+    .converter-row .btn { width:34px; min-height:32px; padding:0; }
+    .week-nav { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:-4px 0 12px; padding:10px; border:1px solid var(--border); border-radius:14px; background:#fffaf6; }
+    .week-nav div { display:flex; gap:6px; }
+    .week-nav .btn { min-height:32px; padding:0 10px; font-size:11px; }
+    .week-nav small { color:var(--muted); font-weight:750; }
+    @media (max-width: 900px) { .wrap { grid-template-columns: minmax(0, 1fr); } header { grid-column: 1; min-width: 0; flex-wrap: wrap; } .top-actions { flex-wrap: wrap; } .app-tabs { min-width: 0; max-width: 100%; flex-direction: row; overflow: auto; } main { width: 100%; min-width: 0; } .tab-group-label { display: none; } .kpi-strip, .dashboard-grid-main { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 600px) { .wrap { padding: 12px; } .brand { width: 100%; } .brand h1, .brand .sub { padding-left: 48px; } .top-actions { width: 100%; margin-top: 10px; } .top-actions .btn { flex: 1 1 auto; } .kpi-strip, .dashboard-grid-main, .projection-panel, .wallet-demo-card { grid-template-columns: 1fr; } .wallet-demo-actions { padding:12px 0 0; border-left:0; border-top:1px solid var(--border); } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand"><h1>Travel Budget</h1><div class="sub">Carnet de bord financier</div></div>
+      <div class="top-actions"><button class="btn">FR</button><button class="btn">Synchronisé</button><button class="btn primary">+ Transaction</button></div>
+    </header>
+
+    <nav class="app-tabs">
+      <div class="tab-group-label">Vue d’ensemble</div><div class="tab active"><span class="preview-icon">🧭</span>Dashboard</div>
+      <div class="tab-group-label">Finances</div><div class="tab"><span class="preview-icon">💳</span>Transactions</div><div class="tab"><span class="preview-icon">📊</span>Analyse</div><div class="tab"><span class="preview-icon">💎</span>Patrimoine</div><div class="tab"><span class="preview-icon">🛡️</span>Cautions</div>
+      <div class="tab-group-label">Quotidien</div><div class="tab"><span class="preview-icon">🏋️</span>Sport</div><div class="tab"><span class="preview-icon">🍎</span>Alimentation</div><div class="tab"><span class="preview-icon">💼</span>Travail</div>
+      <div class="tab-group-label">Ressources</div><div class="tab"><span class="preview-icon">📁</span>Documents</div><div class="tab"><span class="preview-icon">📥</span>À traiter</div><div class="tab"><span class="preview-icon">✈️</span>Partage</div><div class="tab"><span class="preview-icon">⚙️</span>Paramètres</div>
+    </nav>
+
+    <main>
+      <section class="dashboard-hero-card tb-premium-overview">
+        <div class="dashboard-hero-copy">
+          <div class="tb-overview-greeting">Bonjour Sébastien</div>
+          <div class="tb-route-title"><span></span><small>Vue d’ensemble</small></div>
+          <h2 class="dashboard-hero-title">Votre budget reste sous contrôle aujourd’hui.</h2>
+          <p class="dashboard-hero-text">Australie · Une lecture claire de votre marge, de votre rythme et des prochaines décisions.</p>
+          <div class="dashboard-hero-actions"><button class="btn primary">Ajouter une dépense</button><button class="btn secondary">Voir l’analyse</button></div>
+        </div>
+        <div class="tb-overview-budget">
+          <div class="tb-overview-budget-head"><span>Disponible aujourd’hui</span><span>72 %</span></div>
+          <strong>128 <small>AUD</small></strong>
+          <div class="tb-overview-progress"><i style="width:72%"></i></div>
+          <p>sur 178 AUD prévus pour la journée</p>
+        </div>
+        <div class="dashboard-hero-focus">
+          <article class="dashboard-focus-card tb-focus-coral"><span class="dashboard-focus-label">Budget quotidien</span><strong class="dashboard-focus-value">178 AUD</strong><span class="dashboard-focus-meta">Votre cap de référence</span></article>
+          <article class="dashboard-focus-card tb-focus-lagoon"><span class="dashboard-focus-label">Wallets actifs</span><strong class="dashboard-focus-value">4</strong><span class="dashboard-focus-meta">Sources suivies</span></article>
+          <article class="dashboard-focus-card tb-focus-blue"><span class="dashboard-focus-label">Jours restants</span><strong class="dashboard-focus-value">23</strong><span class="dashboard-focus-meta">Dans la période active</span></article>
+          <article class="dashboard-focus-card tb-focus-green"><span class="dashboard-focus-label">Mouvements</span><strong class="dashboard-focus-value">146</strong><span class="dashboard-focus-meta">Dans le voyage actuel</span></article>
+        </div>
+        <div class="tb-overview-meta"><span>Samedi 1 août</span><span>Synchronisé à 11:12</span></div>
+      </section>
+
+      <section class="kpi-strip">
+        <article class="kpi-mini-card"><span>Budget disponible</span><strong>1 280 AUD</strong><small>72 % restant</small></article>
+        <article class="kpi-mini-card"><span>Total wallets</span><strong>6 886 AUD</strong><small>Solde actuel consolidé</small></article>
+        <article class="kpi-mini-card"><span>Total wallets fin de période</span><strong>9 240 AUD</strong><small style="color:var(--tb-success)">Projection au 12 octobre</small></article>
+        <article class="kpi-mini-card"><span>FX période / compte</span><strong style="font-size:20px">1 EUR = 1,78 AUD</strong><small>AUD actuel vs EUR du compte</small></article>
+        <article class="kpi-mini-card kpi-fx-swipe-card" data-preview-converter><span>Convertisseur</span><strong style="font-size:19px" data-preview-converter-value>100 EUR → 178 AUD</strong><div class="converter-row kpi-fx-row"><span data-preview-from>EUR</span><button class="btn" data-preview-swap aria-label="Intervertir les devises">↔</button><span data-preview-to>AUD</span></div><div class="kpi-fx-result"><small>Glissez ↔ pour intervertir</small></div></article>
+      </section>
+
+      <section class="projection-panel">
+        <div><div class="dashboard-card-kicker">Projection &amp; trésorerie</div><h2>Solde et trajectoire</h2><p>Projection basée sur votre budget journalier</p><div class="projection-value">2 640 AUD</div></div>
+        <div class="projection-visual"><div class="projection-controls"><span>Période complète</span><span>☑ Dépenses à payer</span><span>☑ Entrées à recevoir</span><span>Catégories</span><span>Reset zoom</span></div><svg class="projection-chart" viewBox="0 0 680 126" preserveAspectRatio="none" aria-label="Projection de trésorerie"><g stroke="#e9dfd6" stroke-width="1"><path d="M0 28H680M0 63H680M0 98H680"/></g><g fill="#f2b84b" opacity=".72"><rect x="18" y="78" width="7" height="28"/><rect x="42" y="92" width="7" height="14"/><rect x="71" y="65" width="7" height="41"/><rect x="112" y="89" width="7" height="17"/><rect x="158" y="47" width="7" height="59"/></g><path d="M0 54 L48 63 L93 70 L138 67 L180 72 L225 48 L270 43 L315 36 L360 30 L405 26 L450 22 L495 18 L540 15 L585 12 L630 9 L680 6" fill="none" stroke="#23b5af" stroke-width="4"/><path d="M0 54 L48 63 L93 70 L138 67 L180 72 L225 54 L270 50 L315 43" fill="none" stroke="#4c8eda" stroke-width="4"/></svg><div class="projection-meta"><span>Devise courbe : <b>AUD</b></span><span>Budget/jour : <b>178 AUD</b></span><span>Solde wallets : <b>6 886 AUD</b></span></div></div>
+      </section>
+
+      <section class="dashboard-grid-main">
+        <article class="dashboard-panel"><h2>Wallets</h2>
+          <div class="wallet-demo-card"><div><h3>Cash voyage (AUD)</h3><p>Solde : <b>460 AUD</b> · disponible aujourd’hui : <b>128 AUD</b></p><div class="wallet-demo-tx"><div><b>Course Woolworths</b><br><small>Aujourd’hui · Payé</small></div><strong class="expense">−42 AUD</strong></div><div class="wallet-demo-tx"><div><b>Mouvement interne</b><br><small>Hier · Payé</small></div><strong class="income">+100 AUD</strong></div><div class="wallet-demo-tx"><div><b>Transport</b><br><small>Hier · Payé</small></div><strong class="expense">−18 AUD</strong></div><div class="day-track" style="margin-top:10px"><i style="width:72%"></i></div></div><div class="wallet-demo-actions"><button class="btn primary">+ Dépense</button><button class="btn">+ Entrée</button><button class="btn">✎ Modifier</button><button class="btn">⚙ Ajuster solde</button><button class="btn archive">Archiver</button></div></div>
+        </article>
+        <article class="dashboard-panel"><h2>Budget journalier</h2>
+          <div class="week-nav tb-daily-budget-toolbar"><div class="tb-daily-budget-nav"><button class="btn" data-preview-week="prev">← Semaine</button><button class="btn" id="db-today" data-preview-week="today">Aujourd’hui</button><button class="btn" data-preview-week="next">Semaine →</button></div><small data-preview-week-label>27 juil. → 2 août · AUD</small></div>
+          <div class="day-demo-card"><div class="day-demo-head"><b>Aujourd’hui · 1 août</b><span>● 128 AUD</span></div><div class="day-demo-meta"><span>Budget utilisé : <b>50 AUD</b></span><span>Objectif : <b>178 AUD</b></span></div><div class="day-demo-details">• Course Woolworths : 42 AUD<br>• Café : 8 AUD</div></div>
+          <div class="day-demo-card"><div class="day-demo-head"><b>Dimanche · 2 août</b><span style="background:#fff2cf;color:#9b6a13">● 162 AUD</span></div><div class="day-demo-meta"><span>Budget utilisé : <b>16 AUD</b></span><span>Objectif : <b>178 AUD</b></span></div><div class="day-demo-details">• Transport : 12 AUD<br>• Café : 4 AUD</div></div>
+        </article>
+      </section>
+      <aside class="watch"><b>À surveiller</b><p>Deux dépenses importantes sont prévues cette semaine. Votre moyenne de protéines est sous l’objectif depuis trois jours.</p></aside>
+    </main>
+  </div>
+  <script>
+    const converter = document.querySelector('[data-preview-converter]');
+    const swapPreviewCurrencies = () => {
+      const from = converter.querySelector('[data-preview-from]');
+      const to = converter.querySelector('[data-preview-to]');
+      const previous = from.textContent;
+      from.textContent = to.textContent;
+      to.textContent = previous;
+      converter.querySelector('[data-preview-converter-value]').textContent = from.textContent === 'EUR' ? '100 EUR → 178 AUD' : '178 AUD → 100 EUR';
+    };
+    converter.querySelector('[data-preview-swap]').addEventListener('click', swapPreviewCurrencies);
+    let converterTouchX = null;
+    converter.addEventListener('touchstart', (event) => { converterTouchX = event.touches[0]?.clientX ?? null; }, { passive: true });
+    converter.addEventListener('touchend', (event) => {
+      const endX = event.changedTouches[0]?.clientX;
+      if (converterTouchX !== null && Number.isFinite(endX) && Math.abs(endX - converterTouchX) >= 48) swapPreviewCurrencies();
+      converterTouchX = null;
+    }, { passive: true });
+    const demoWeeks = ['20 juil. → 26 juil. · AUD', '27 juil. → 2 août · AUD', '3 août → 9 août · AUD'];
+    let demoWeek = 1;
+    document.querySelectorAll('[data-preview-week]').forEach((button) => {
+      button.addEventListener('click', () => {
+        demoWeek = button.dataset.previewWeek === 'today' ? 1 : Math.max(0, Math.min(2, demoWeek + (button.dataset.previewWeek === 'next' ? 1 : -1)));
+        document.querySelector('[data-preview-week-label]').textContent = demoWeeks[demoWeek];
+      });
+    });
+  </script>
+</body>
+</html>

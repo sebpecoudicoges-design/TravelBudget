@@ -135,7 +135,7 @@ export function renderKpiFxCalculator({
   esc = defaultEsc,
 } = {}) {
   const safe = typeof esc === 'function' ? esc : defaultEsc;
-  return `<div class="kpi-mini-card"><div class="muted kpi-mini-title">${safe(title)}</div><div class="kpi-fx-row"><input id="kpiFxCalcAmount" class="kpi-input kpi-fx-amount" type="number" inputmode="decimal" placeholder="0" /><select id="kpiFxCalcFrom" class="kpi-input"></select><button id="kpiFxCalcSwap" class="kpi-input" type="button" title="Intervertir les devises" aria-label="Intervertir les devises" style="cursor:pointer;">↔</button><select id="kpiFxCalcTo" class="kpi-input"></select></div><div class="muted" style="font-size:12px;margin-top:8px;"><span id="kpiFxCalcOut">—</span></div></div>`;
+  return `<div class="kpi-mini-card kpi-fx-swipe-card"><div class="muted kpi-mini-title">${safe(title)}</div><div class="kpi-fx-row" id="kpiFxSwipeArea" aria-label="Convertisseur, glisser horizontalement pour intervertir les devises"><input id="kpiFxCalcAmount" class="kpi-input kpi-fx-amount" type="number" inputmode="decimal" placeholder="0" /><select id="kpiFxCalcFrom" class="kpi-input"></select><button id="kpiFxCalcSwap" class="kpi-input" type="button" title="Intervertir les devises" aria-label="Intervertir les devises" style="cursor:pointer;">↔</button><select id="kpiFxCalcTo" class="kpi-input"></select></div><div class="kpi-fx-result"><span id="kpiFxCalcOut">—</span><small>Glissez ↔ pour intervertir</small></div></div>`;
 }
 
 export function renderKpiTodayDetails({

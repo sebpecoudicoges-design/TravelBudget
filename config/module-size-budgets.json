@@ -4,8 +4,8 @@
   "dist": {
     "initialJsMaxKiB": 260,
     "lazyJsMaxKiB": 400,
-    "totalJsMaxKiB": 650,
-    "totalCssMaxKiB": 8,
+    "totalJsMaxKiB": 655,
+    "totalCssMaxKiB": 22,
     "mainJsGzipMaxKiB": 110
   },
   "sourceGroups": [
@@ -83,7 +83,7 @@
     },
     {
       "name": "dashboard-settings",
-      "maxKiB": 360,
+      "maxKiB": 365,
       "paths": [
         "public/legacy/js/11_kpi_render_micro_animation.js",
         "public/legacy/js/11_kpi_controller.js",

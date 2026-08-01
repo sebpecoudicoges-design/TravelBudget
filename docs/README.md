@@ -9,7 +9,8 @@ Cette page est la porte d'entrée de la documentation. Elle oriente vers les sou
 | Voir l'avancement du refactoring | [Checklist V11](V11_REFACTOR_CHECKLIST.md) |
 | Connaître les budgets de taille | [Budgets de performance](V11_PERFORMANCE_BUDGETS.md) |
 | Utiliser les composants UI partagés | [Composants UI V11](V11_UI_COMPONENTS.md) |
-| Comprendre le rôle et les limites de l'Atlas | [Project Atlas](PROJECT_ATLAS.md) |
+| Respecter l’identité et les règles graphiques | [Système visuel officiel](VISUAL_SYSTEM.md) |
+| Comprendre le rôle et les limites de l’Atlas | [Project Atlas](PROJECT_ATLAS.md) |
 | Voir les composants réellement présents | [Inventaire généré](generated/project-inventory.md) |
 | Modifier une fonction critique | [Fiches fonctionnelles](features/) |
 | Comprendre une décision structurante | [Décisions d'architecture](ARCHITECTURE_DECISIONS.md) |

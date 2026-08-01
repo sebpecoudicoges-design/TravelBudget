@@ -780,18 +780,19 @@ function renderKPI() {
     ? getDailyBudgetInfoForDate(displayDateISO)
     : { remaining: getDailyBudgetForDate(displayDateISO), daily: state.period.dailyBudgetBase, baseCurrency: state.period.baseCurrency };
   const base = String(infoToday.baseCurrency || state.period.baseCurrency || "EUR").toUpperCase();
+  const accountBaseCurrency = String(state?.user?.baseCurrency || "EUR").toUpperCase();
 
-  // FX KPI: 1€ expressed in current base currency (of display date segment)
+  // FX KPI: account base currency expressed in the current period currency.
   let fxRateText = "—";
   try {
     const rates = (typeof fxRatesForSegment === "function" && typeof getBudgetSegmentForDate === "function")
       ? fxRatesForSegment(getBudgetSegmentForDate(displayDateISO))
       : (typeof window.fxGetEurRates === "function" ? window.fxGetEurRates() : {});
-    if (base === "EUR") {
-      fxRateText = "1€ = 1.00 EUR";
+    if (base === accountBaseCurrency) {
+      fxRateText = `1 ${accountBaseCurrency} = 1.000 ${base}`;
     } else if (typeof window.fxConvert === "function") {
-      const v = window.fxConvert(1, "EUR", base, rates);
-      if (v !== null && isFinite(v)) fxRateText = `1€ = ${Number(v).toFixed(3)} ${base}`;
+      const v = window.fxConvert(1, accountBaseCurrency, base, rates);
+      if (v !== null && isFinite(v)) fxRateText = `1 ${accountBaseCurrency} = ${Number(v).toFixed(3)} ${base}`;
     }
   } catch (_) {}
 
@@ -801,7 +802,7 @@ function renderKPI() {
   const kpiScope = (localStorage.getItem("travelbudget_kpi_projection_scope_v1") || "segment");
   const displayCur = base;              // for "Aujourd'hui" / budget KPIs (segment currency of display day)
   // Account base currency: controls display for Total wallets + Projection (not segment-dependent)
-  const displayCurPivot = String((state?.user?.baseCurrency) || "EUR").toUpperCase();
+  const displayCurPivot = accountBaseCurrency;
 
   function _toEUR(amount, cur, dateISO) {
     const a = Number(amount) || 0;
@@ -1078,15 +1079,15 @@ const driver = "Dépenses";
   const kpiCardsHTML = window.TBKpiView?.renderKpiCards?.({
     cards: [
       { title: T("kpi.available_budget"), valueHtml: `${budgetToday.toFixed(0)} <span class="muted kpi-mini-unit">${escapeHTML(base)}</span>`, footerHtml: escapeHTML(T("kpi.today")) },
-      { title: "Total wallets", valueHtml: `${escapeHTML(fmtKPICompact(walletTotalEUR))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: `≈ ${escapeHTML(fmtKPICompact(walletTotalBase))} ${escapeHTML(displayCur)}` },
+      { title: _lang === "en" ? "Wallet total" : "Total wallets", valueHtml: `${escapeHTML(fmtKPICompact(walletTotalEUR))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: `≈ ${escapeHTML(fmtKPICompact(walletTotalBase))} ${escapeHTML(displayCur)}` },
       { title: "Sport fait", valueHtml: `${Math.round(activityToday.sportKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.sportCount)} séance(s)` },
       { title: "Travail fait", valueHtml: `${Math.round(activityToday.workKcal)} <span class="muted kpi-mini-unit">kcal</span>`, footerHtml: `${Math.round(activityToday.workMinutes / 60 * 10) / 10}h · ${Math.round(activityToday.workCount)} journée(s)` },
-      { title: T("kpi.fx_period"), valueHtml: escapeHTML(fxRateText), footerHtml: escapeHTML(T("kpi.fx_period_hint")), compact: true },
+      { title: _lang === "en" ? "Period / account FX" : "FX période / compte", valueHtml: escapeHTML(fxRateText), footerHtml: `${escapeHTML(base)} vs ${escapeHTML(displayCurPivot)}`, compact: true },
     ],
     healthToday,
     healthActions,
     pendingToggle: {
-      card: { title: T("kpi.period_end"), valueHtml: `${escapeHTML(fmtKPICompact(projEndDisplay))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: escapeHTML(T("kpi.projection")) },
+      card: { title: _lang === "en" ? "Wallet total at period end" : "Total wallets fin de période", valueHtml: `${escapeHTML(fmtKPICompact(projEndDisplay))} <span class="muted kpi-mini-unit">${escapeHTML(displayCurPivot)}</span>`, footerHtml: escapeHTML(T("kpi.projection")) },
       toggle: {
         includeUnpaid,
         label: T("kpi.include_pending"),

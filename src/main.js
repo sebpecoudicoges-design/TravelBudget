@@ -1,4 +1,5 @@
 import './app/bridge.js';
+import './ui/premium-theme.css';
 import { registerPwa } from './app/pwa.js';
 import * as budgetAnalysisRules from './core/budgetAnalysisRules.js';
 import * as dashboardView from './features/dashboard/dashboardView.js';

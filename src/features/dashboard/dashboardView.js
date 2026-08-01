@@ -29,6 +29,81 @@ function renderWalletTypeOptions({
   return opts.map(([key, label]) => `<option value="${esc(key)}"${value === key ? ' selected' : ''}>${esc(label)}</option>`).join('');
 }
 
+export function renderDashboardOverview({
+  firstName = '',
+  travelName = '',
+  dateLabel = '',
+  syncLabel = '',
+  budgetToday = 0,
+  dailyBudget = 0,
+  baseCurrency = 'EUR',
+  activeWallets = 0,
+  daysRemaining = 0,
+  transactionCount = 0,
+  esc = defaultEsc,
+} = {}) {
+  const safe = typeof esc === 'function' ? esc : defaultEsc;
+  const currency = String(baseCurrency || 'EUR').toUpperCase();
+  const remaining = Number(budgetToday) || 0;
+  const daily = Number(dailyBudget) || 0;
+  const pct = daily > 0 ? Math.max(0, Math.min(100, (remaining / daily) * 100)) : 0;
+  const first = String(firstName || '').trim();
+  const journey = String(travelName || '').trim();
+  const status = remaining >= 0
+    ? 'Votre budget reste sous contrôle aujourd’hui.'
+    : 'Le budget du jour demande votre attention.';
+
+  return `
+    <section class="dashboard-hero-card tb-premium-overview" aria-labelledby="dashboard-overview-title">
+      <div class="dashboard-hero-copy">
+        <div class="tb-overview-greeting">Bonjour${first ? ` ${safe(first)}` : ''}</div>
+        <div class="tb-route-title"><span aria-hidden="true"></span><small>Vue d’ensemble</small></div>
+        <h2 id="dashboard-overview-title" class="dashboard-hero-title">${safe(status)}</h2>
+        <p class="dashboard-hero-text">${journey ? `${safe(journey)} · ` : ''}Une lecture claire de votre marge, de votre rythme et des prochaines décisions.</p>
+        <div class="dashboard-hero-actions">
+          <button class="btn primary" type="button" data-dashboard-action="add-transaction">Ajouter une dépense</button>
+          <button class="btn secondary" type="button" data-dashboard-action="open-analysis">Voir l’analyse</button>
+        </div>
+      </div>
+
+      <div class="tb-overview-budget" aria-label="Budget disponible aujourd’hui">
+        <div class="tb-overview-budget-head">
+          <span>Disponible aujourd’hui</span>
+          <span>${Math.round(pct)} %</span>
+        </div>
+        <strong>${safe(remaining.toLocaleString('fr-FR', { maximumFractionDigits: 0 }))} <small>${safe(currency)}</small></strong>
+        <div class="tb-overview-progress" aria-hidden="true"><i style="width:${pct.toFixed(0)}%"></i></div>
+        <p>sur ${safe(daily.toLocaleString('fr-FR', { maximumFractionDigits: 0 }))} ${safe(currency)} prévus pour la journée</p>
+      </div>
+
+      <div class="dashboard-hero-focus">
+        <article class="dashboard-focus-card tb-focus-coral">
+          <span class="dashboard-focus-label">Budget quotidien</span>
+          <strong class="dashboard-focus-value">${safe(daily.toLocaleString('fr-FR', { maximumFractionDigits: 0 }))} ${safe(currency)}</strong>
+          <span class="dashboard-focus-meta">Votre cap de référence</span>
+        </article>
+        <article class="dashboard-focus-card tb-focus-lagoon">
+          <span class="dashboard-focus-label">Wallets actifs</span>
+          <strong class="dashboard-focus-value">${safe(String(activeWallets))}</strong>
+          <span class="dashboard-focus-meta">Sources suivies</span>
+        </article>
+        <article class="dashboard-focus-card tb-focus-blue">
+          <span class="dashboard-focus-label">Jours restants</span>
+          <strong class="dashboard-focus-value">${safe(String(Math.max(0, Number(daysRemaining) || 0)))}</strong>
+          <span class="dashboard-focus-meta">Dans la période active</span>
+        </article>
+        <article class="dashboard-focus-card tb-focus-green">
+          <span class="dashboard-focus-label">Mouvements</span>
+          <strong class="dashboard-focus-value">${safe(String(Math.max(0, Number(transactionCount) || 0)))}</strong>
+          <span class="dashboard-focus-meta">Dans le voyage actuel</span>
+        </article>
+      </div>
+
+      <div class="tb-overview-meta"><span>${safe(dateLabel)}</span><span>${safe(syncLabel)}</span></div>
+    </section>
+  `;
+}
+
 export function renderDashboardOnboardingPanel({
   rows = [],
   done = 0,
@@ -160,7 +235,7 @@ export function renderWalletCard({
     ? `
       <button class="btn" type="button" data-wallet-action="edit" data-wallet-id="${esc(id)}">&#9998; ${esc(tr('wallet.action.edit'))}</button>
       <button class="btn" type="button" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" data-wallet-action="delete" data-wallet-id="${esc(id)}">&#128465; ${esc(tr('wallet.action.delete'))}</button>
-      <button class="btn" type="button" data-wallet-archive-action="unarchive" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.unarchive'))}</button>
+      <button class="btn tb-wallet-archive-btn" type="button" data-wallet-archive-action="unarchive" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.unarchive'))}</button>
     `
     : `
       <button class="btn primary" type="button" data-wallet-action="tx-expense" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.add_expense'))}</button>
@@ -168,7 +243,7 @@ export function renderWalletCard({
       <button class="btn" type="button" data-wallet-action="edit" data-wallet-id="${esc(id)}">&#9998; ${esc(tr('wallet.action.edit'))}</button>
       <button class="btn" type="button" data-wallet-action="adjust" data-wallet-id="${esc(id)}">&#9881; ${esc(tr('wallet.action.adjust'))}</button>
       <button class="btn" type="button" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" data-wallet-action="delete" data-wallet-id="${esc(id)}">&#128465; ${esc(tr('wallet.action.delete'))}</button>
-      <button class="btn" type="button" data-wallet-archive-action="archive" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.archive'))}</button>
+      <button class="btn tb-wallet-archive-btn" type="button" data-wallet-archive-action="archive" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.archive'))}</button>
     `;
 
   return `
@@ -332,13 +407,13 @@ export function renderDailyBudgetControls({
 } = {}) {
   const tr = typeof t === 'function' ? t : fallbackT;
   return `
-    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between;">
-      <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-        <button class="btn" id="db-prev">${esc(tr('common.previous'))}</button>
+    <div class="tb-daily-budget-toolbar">
+      <div class="tb-daily-budget-nav" aria-label="Navigation hebdomadaire">
+        <button class="btn" id="db-prev">← ${esc(tr('common.previous'))}</button>
         <button class="btn" id="db-today">${esc(tr('kpi.today'))}</button>
-        <button class="btn" id="db-next">${esc(tr('common.next'))}</button>
+        <button class="btn" id="db-next">${esc(tr('common.next'))} →</button>
       </div>
-      <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+      <div class="tb-daily-budget-range">
         <span class="muted" style="font-size:12px;">${esc(tr('dashboard.daily.display'))} :</span>
         <select class="input" id="db-mode" style="min-width:170px;">
           <option value="segment">${esc(tr('dashboard.daily.current_period'))}</option>

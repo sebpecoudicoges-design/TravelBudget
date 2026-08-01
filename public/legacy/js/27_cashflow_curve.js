@@ -1021,7 +1021,7 @@ try {
     // UI
     container.innerHTML = `
       <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap;">
+        <div class="tb-cashflow-toolbar">
           <div>
             <h2>${escapeHTML(T("cashflow.title"))}</h2>
             <div class="muted" style="margin-top:4px;">
@@ -1029,7 +1029,7 @@ try {
             </div>
           </div>
 
-          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <div class="tb-cashflow-actions">
             <span class="muted" data-cf-scope style="padding:6px 8px;border:1px solid rgba(0,0,0,0.10);border-radius:10px; font-size:12px;">${escapeHTML(T("analysis.filter.scope"))}: ${escapeHTML(scopeLabel)}</span>
                         <label class="muted" style="display:flex; gap:6px; align-items:center;">
               <input type="checkbox" id="cf-pending-exp" ${includePendingExpenses ? "checked" : ""}/>

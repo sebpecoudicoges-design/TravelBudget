@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.306`.
-- Bilan : 7 parcours `ok`, 62 parcours `à faire`.
+- Version à valider : `10.5.307`.
+- Bilan : 7 parcours `ok`, 63 parcours `à faire`.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -88,6 +88,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 68 | 10.5.304 | Dashboard : wallets | Ouvrir **Dashboard**, créer/éditer un wallet si possible, puis tester archiver/désarchiver ou ouvrir le correcteur de type wallet. | Les actions wallets restent identiques malgré la factorisation du chargement des règles. | `TB BUILD 10.5.304` ; aucun `_loadDashboardWalletRules is not defined`, aucun dialogue wallet vide. | à faire |
 | 69 | 10.5.305 | Analyse : langue et libellés | Ouvrir **Analyse**, passer FR/EN si possible depuis Réglages > Compte, revenir sur Analyse et vérifier les cartes, insights et graphiques. | Les libellés restent dans la bonne langue malgré la centralisation du helper de langue. Les graphiques restent rendus. | `TB BUILD 10.5.305` ; aucun `_analysisIsEnglish is not defined`, aucun écran Analyse bloqué. | à faire |
 | 70 | 10.5.306 | Réglages : langue centralisée | Ouvrir **Réglages**, vérifier le bloc Voyage, les cartes Périodes et Budget de référence. Si possible, passer la langue en anglais puis revenir en français. | Les textes Voyage/Périodes/Référence restent dans la bonne langue et les boutons Réglages répondent comme avant. | `TB BUILD 10.5.306` ; aucun `_tbSettingsIsEnglish is not defined`, aucun `_tbSettingsTxt is not defined`, aucun écran Réglages bloqué. | à faire |
+| 71 | 10.5.307 | Système visuel premium : Dashboard/KPI | Ouvrir **Dashboard** sur desktop/mobile, vérifier navigation, hero, wallets détaillés, Archiver, budget journalier semaine, projection, KPI financiers et convertisseur ↔/swipe. | Toutes les actions restent disponibles, aucun bloc **Devises du voyage**, thème clair/sombre lisible, pas de débordement horizontal. | `TB BUILD 10.5.307` ; aucun `Uncaught`, aucun bouton wallet/KPI inactif, aucun overflow horizontal à 390 px. | à faire |
 
 ## À ajouter à chaque livraison
 

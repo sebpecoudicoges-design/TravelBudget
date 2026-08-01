@@ -4,11 +4,68 @@ import fs from 'node:fs';
 describe('dashboard view extraction contract', () => {
   const main = fs.readFileSync('src/main.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/12_dashboard_render.js', 'utf8');
+  const index = fs.readFileSync('index.html', 'utf8');
+  const cashflow = fs.readFileSync('public/legacy/js/27_cashflow_curve.js', 'utf8');
+  const kpiView = fs.readFileSync('src/features/kpi/kpiView.js', 'utf8');
+  const kpiLegacy = fs.readFileSync('public/legacy/js/11_kpi_render_micro_animation.js', 'utf8');
+
+  it('keeps a clear colored emoji for every dashboard module tab', () => {
+    const moduleIcons = {
+      dashboard: '🧭', transactions: '💳', analysis: '📊', assets: '💎', cautions: '🛡️',
+      sport: '🏋️', nutrition: '🍎', work: '💼', documents: '📁', inbox: '📥',
+      notifications: '🔔', help: '❓', trip: '✈️', settings: '⚙️', members: '👥',
+    };
+    Object.entries(moduleIcons).forEach(([id, icon]) => {
+      expect(index).toContain(`id="tab-${id}"`);
+      expect(index).toContain(`data-icon="${icon}"`);
+    });
+    expect(index).toContain('<span class="tab-label" data-t="nav.dashboard">Dashboard</span>');
+  });
+
+  it('removes the redundant dashboard analysis banner while preserving projection and converter controls', () => {
+    expect(index).not.toContain('<div class="dashboard-analysis-row"');
+    expect(index).not.toContain('Lire les écarts, pas seulement les soldes');
+    expect(index).toContain('id="solde-projection-container"');
+    expect(cashflow).toContain('id="cf-pending-exp"');
+    expect(cashflow).toContain('id="cf-pending-inc"');
+    expect(cashflow).toContain('id="cf-reset-zoom"');
+    expect(cashflow).toContain('class="cashflow-cats"');
+    expect(kpiView).toContain('id="kpiFxCalcAmount"');
+    expect(kpiView).toContain('id="kpiFxCalcSwap"');
+    expect(kpiView).toContain('id="kpiFxCalcFrom"');
+    expect(kpiView).toContain('id="kpiFxCalcTo"');
+  });
 
   it('exposes the Dashboard view module to the legacy runtime', () => {
     expect(main).toContain("import * as dashboardView from './features/dashboard/dashboardView.js'");
     expect(main).toContain('window.TBDashboardView');
     expect(main).toContain('...dashboardView');
+  });
+
+  it('keeps currency swipe on the converter, weekly navigation and the three finance KPIs explicit', () => {
+    expect(legacy).not.toContain('currency-prev');
+    expect(legacy).not.toContain('select-currency');
+    expect(kpiView).toContain('id="kpiFxSwipeArea"');
+    expect(kpiView).toContain('Glissez ↔ pour intervertir');
+    expect(kpiLegacy).toContain('bindKpiInteractions');
+    expect(kpiLegacy).toContain('const accountBaseCurrency');
+    expect(kpiLegacy).toContain('Total wallets fin de période');
+    expect(kpiLegacy).toContain('FX période / compte');
+    expect(kpiLegacy).toContain('window.fxConvert(1, accountBaseCurrency, base, rates)');
+  });
+
+  it('preserves every useful dashboard action while the visual layout changes', () => {
+    const dashboardView = fs.readFileSync('src/features/dashboard/dashboardView.js', 'utf8');
+    [
+      'create-wallet', 'internal-transfer', 'toggle-archived-wallets', 'fix-wallet-types',
+      'tx-expense', 'tx-income', 'edit', 'adjust', 'delete',
+    ].forEach((action) => expect(dashboardView).toContain(`data-${action.startsWith('tx-') || ['edit', 'adjust', 'delete'].includes(action) ? 'wallet' : 'dashboard'}-action="${action}"`));
+    expect(dashboardView).toContain('data-wallet-archive-action="archive"');
+    expect(dashboardView).toContain('data-wallet-archive-action="unarchive"');
+    ['db-prev', 'db-today', 'db-next', 'db-mode'].forEach((id) => expect(dashboardView).toContain(`id="${id}"`));
+    ['kpiPeriodSelect', 'kpiScopeSelect', 'kpiRangeApply', 'kpiIncludeUnpaidToggle', 'kpiFxCalcSwap'].forEach((id) => expect(kpiView).toContain(`id="${id}"`));
+    ['cf-pending-exp', 'cf-pending-inc', 'cf-reset-zoom'].forEach((id) => expect(cashflow).toContain(`id="${id}"`));
+    expect(cashflow).toContain('class="cashflow-cats"');
   });
 
   it('loads Dashboard daily budget state on demand instead of booting it eagerly', () => {

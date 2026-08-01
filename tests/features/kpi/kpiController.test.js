@@ -152,6 +152,7 @@ describe('KPI controller', () => {
     const from = fakeElement();
     const to = fakeElement();
     const swap = fakeElement();
+    const swipe = fakeElement();
     const out = fakeElement();
     const storage = fakeStorage({
       travelbudget_fx_calc_amount_v1: '10',
@@ -165,6 +166,7 @@ describe('KPI controller', () => {
         '#kpiFxCalcFrom': from,
         '#kpiFxCalcTo': to,
         '#kpiFxCalcSwap': swap,
+        '#kpiFxSwipeArea': swipe,
         '#kpiFxCalcOut': out,
       }),
       state: {
@@ -185,6 +187,11 @@ describe('KPI controller', () => {
     swap.click();
     expect(from.value).toBe('AUD');
     expect(to.value).toBe('EUR');
+
+    swipe.fire('touchstart', { touches: [{ clientX: 260, clientY: 100 }] });
+    swipe.fire('touchend', { changedTouches: [{ clientX: 120, clientY: 108 }] });
+    expect(from.value).toBe('EUR');
+    expect(to.value).toBe('AUD');
   });
 
   it('binds all KPI interactions through one legacy bridge call', () => {
@@ -199,6 +206,7 @@ describe('KPI controller', () => {
       '#kpiFxCalcFrom': fakeElement(),
       '#kpiFxCalcTo': fakeElement(),
       '#kpiFxCalcSwap': fakeElement(),
+      '#kpiFxSwipeArea': fakeElement(),
       '#kpiFxCalcOut': fakeElement(),
       '#kpiIncludeUnpaidToggle': fakeElement(),
     };

@@ -12,6 +12,7 @@ function _runDashboardAction(action, source) {
   if (action === "hide-onboarding") return hideOnboardingPanel();
   if (action === "open-settings" && typeof showView === "function") return showView("settings");
   if (action === "open-help" && typeof showView === "function") return showView("help");
+  if (action === "open-analysis" && typeof showView === "function") return showView("analysis");
   if (action === "create-wallet") {
     if (typeof createWallet === "function") return createWallet();
     if (typeof showView === "function") return showView("dashboard");
@@ -166,6 +167,39 @@ const allWallets = Array.isArray(state.wallets) ? state.wallets : [];
 const showArchivedWallets = !!window.__tbShowArchivedWallets;
 const wallets = allWallets.filter(w => showArchivedWallets || w.archived !== true);
 const missingType = wallets.filter(w => !String(w?.type || "").trim());
+const hero = document.getElementById("dashboard-hero-shell");
+if (hero) {
+  const now = new Date();
+  const today = toLocalISODate(now);
+  const info = (typeof getDailyBudgetInfoForDate === "function")
+    ? getDailyBudgetInfoForDate(today)
+    : { remaining: 0, daily: state?.period?.dailyBudgetBase || 0, baseCurrency: state?.period?.baseCurrency || "EUR" };
+  const end = new Date(`${String(state?.period?.end || today).slice(0, 10)}T12:00:00`);
+  const daysRemaining = Number.isFinite(end.getTime()) ? Math.ceil((end.getTime() - now.getTime()) / 86400000) : 0;
+  const currentTx = (Array.isArray(state?.transactions) ? state.transactions : []).filter((tx) => {
+    const travelId = tx?.travelId || tx?.travel_id || null;
+    return !state?.activeTravelId || travelId === state.activeTravelId;
+  });
+  const meta = sbUser?.user_metadata || {};
+  const displayName = String(meta.full_name || meta.name || sbUser?.email || "").split(/[\s@]+/)[0];
+  const activeTravel = (Array.isArray(state?.travels) ? state.travels : []).find((row) => String(row?.id) === String(state?.activeTravelId));
+  const travelName = activeTravel?.name || activeTravel?.title || "";
+  const locale = ((window.tbGetLang && window.tbGetLang()) || "fr").startsWith("en") ? "en-AU" : "fr-FR";
+  hero.innerHTML = window.TBDashboardView?.renderDashboardOverview?.({
+    firstName: displayName,
+    travelName,
+    dateLabel: new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(now),
+    syncLabel: `Synchronisé à ${new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(now)}`,
+    budgetToday: Number(info?.remaining) || 0,
+    dailyBudget: Number(info?.daily) || Number(state?.period?.dailyBudgetBase) || 0,
+    baseCurrency: info?.baseCurrency || state?.period?.baseCurrency || "EUR",
+    activeWallets: wallets.filter((wallet) => wallet?.archived !== true).length,
+    daysRemaining,
+    transactionCount: currentTx.length,
+    esc: escapeHTML,
+  }) || "";
+  _bindDashboardActions(hero);
+}
 // Actions
 const actions = document.createElement("div");
 actions.className = "tb-wallet-actions";

@@ -150,6 +150,7 @@ function bindKpiFxCalculator({
   const fromEl = host.querySelector?.('#kpiFxCalcFrom');
   const toEl = host.querySelector?.('#kpiFxCalcTo');
   const swapEl = host.querySelector?.('#kpiFxCalcSwap');
+  const swipeEl = host.querySelector?.('#kpiFxSwipeArea');
   const outputEl = host.querySelector?.('#kpiFxCalcOut');
   if (!amountEl || !fromEl || !toEl || !outputEl || amountEl.dataset.bound) return false;
   amountEl.dataset.bound = '1';
@@ -210,14 +211,34 @@ function bindKpiFxCalculator({
 
   [amountEl, fromEl, toEl].forEach((el) => el.addEventListener('input', compute));
   [amountEl, fromEl, toEl].forEach((el) => el.addEventListener('change', compute));
+  const swapCurrencies = () => {
+    const from = fromEl.value;
+    fromEl.value = toEl.value;
+    toEl.value = from;
+    compute();
+  };
   if (swapEl && !swapEl.dataset.bound) {
     swapEl.dataset.bound = '1';
-    swapEl.addEventListener('click', () => {
-      const from = fromEl.value;
-      fromEl.value = toEl.value;
-      toEl.value = from;
-      compute();
-    });
+    swapEl.addEventListener('click', swapCurrencies);
+  }
+  if (swipeEl && !swipeEl.dataset.bound) {
+    swipeEl.dataset.bound = '1';
+    let touchStartX = null;
+    let touchStartY = null;
+    swipeEl.addEventListener('touchstart', (event) => {
+      const touch = event?.touches?.[0];
+      touchStartX = touch ? Number(touch.clientX) : null;
+      touchStartY = touch ? Number(touch.clientY) : null;
+    }, { passive: true });
+    swipeEl.addEventListener('touchend', (event) => {
+      const touch = event?.changedTouches?.[0];
+      if (!touch || touchStartX === null || touchStartY === null) return;
+      const deltaX = Number(touch.clientX) - touchStartX;
+      const deltaY = Number(touch.clientY) - touchStartY;
+      touchStartX = null;
+      touchStartY = null;
+      if (Math.abs(deltaX) >= 48 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25) swapCurrencies();
+    }, { passive: true });
   }
   compute();
   return true;

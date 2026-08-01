@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="BudgetPacker">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.306";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.307";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -3880,6 +3880,25 @@
     </form>
   </template>
 
+  <!-- Shared module iconography -->
+  <svg class="tb-icon-sprite" aria-hidden="true" width="0" height="0">
+    <symbol id="tb-icon-dashboard" viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z"/></symbol>
+    <symbol id="tb-icon-transactions" viewBox="0 0 24 24"><path d="M7 7h13m0 0-3-3m3 3-3 3M17 17H4m0 0 3 3m-3-3 3-3"/></symbol>
+    <symbol id="tb-icon-analysis" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></symbol>
+    <symbol id="tb-icon-assets" viewBox="0 0 24 24"><path d="m3 10 9-6 9 6M5 10v8m5-8v8m4-8v8m5-8v8M3 20h18"/></symbol>
+    <symbol id="tb-icon-cautions" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.3 7 10 4.1-1.7 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="tb-icon-sport" viewBox="0 0 24 24"><path d="M6 9v6m12-6v6M3 10v4m18-4v4M6 12h12"/></symbol>
+    <symbol id="tb-icon-nutrition" viewBox="0 0 24 24"><path d="M12 8c-1.8-2.2-5.8-2-7.2.6C2.6 12.7 6.4 21 12 21s9.4-8.3 7.2-12.4C17.8 6 13.8 5.8 12 8Z"/><path d="M12 8c0-2.5 1.4-4.3 4-5"/></symbol>
+    <symbol id="tb-icon-work" viewBox="0 0 24 24"><path d="M4 7h16v12H4V7Zm5 0V4h6v3m-11 5h16"/></symbol>
+    <symbol id="tb-icon-documents" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6V3Z"/><path d="M14 3v5h5M9 13h6m-6 4h6"/></symbol>
+    <symbol id="tb-icon-inbox" viewBox="0 0 24 24"><path d="M4 5h16l2 10h-6l-2 3h-4l-2-3H2L4 5Z"/></symbol>
+    <symbol id="tb-icon-notifications" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/></symbol>
+    <symbol id="tb-icon-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.5 2.1c-.9.5-1.3 1-1.3 2M12 17h.01"/></symbol>
+    <symbol id="tb-icon-trip" viewBox="0 0 24 24"><path d="m3 11 18-7-7 18-3-8-8-3Z"/><path d="m11 14 5-5"/></symbol>
+    <symbol id="tb-icon-settings" viewBox="0 0 24 24"><path d="M4 6h10m4 0h2M4 12h2m4 0h10M4 18h7m4 0h5"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></symbol>
+    <symbol id="tb-icon-members" viewBox="0 0 24 24"><path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-1a3 3 0 1 0 0-6m-8 9c-4 0-6 2-6 5v2h12v-2c0-3-2-5-6-5Zm8-1c3 0 5 2 5 5v2h-5"/></symbol>
+  </svg>
+
   <!-- App -->
   <div id="app-root">
     <div class="wrap">
@@ -3905,21 +3924,25 @@
 
       <div id="kpi" class="card premium-kpi-shell"></div>
       <div class="tabs app-tabs">
-        <div id="tab-dashboard" class="tab active" onclick="showView('dashboard')" data-t="nav.dashboard">Dashboard</div>
-        <div id="tab-transactions" class="tab" onclick="showView('transactions')" data-t="nav.transactions">Transactions</div>
-        <div id="tab-settings" class="tab" onclick="showView('settings')" data-t="nav.settings">Settings</div>
-        <div id="tab-analysis" class="tab" onclick="showView('analysis')" data-t="nav.analysis">Analyse</div>
-        <div id="tab-assets" class="tab" onclick="showView('assets')" data-t="nav.assets">Patrimoine</div>
-        <div id="tab-cautions" class="tab" onclick="showView('cautions')" data-t="nav.cautions">Cautions</div>
-        <div id="tab-documents" class="tab" onclick="showView('documents')">Documents</div>
-        <div id="tab-inbox" class="tab" onclick="showView('inbox')"><span class="tb-inbox-tab-label">À traiter</span></div>
-        <div id="tab-sport" class="tab" onclick="showView('sport')">Sport</div>
-        <div id="tab-work" class="tab" onclick="showView('work')">Travail</div>
-        <div id="tab-nutrition" class="tab" onclick="showView('nutrition')">Alimentation</div>
-        <div id="tab-notifications" class="tab" onclick="showView('notifications')">Notifications</div>
-        <div id="tab-help" class="tab" onclick="showView('help')" data-t="nav.help">Aide</div>
-        <div id="tab-trip" class="tab" onclick="showView('trip')" data-t="nav.trip">Partage</div>
-        <div id="tab-members" class="tab" style="display:none" onclick="showView('members')" data-t="nav.members">Membres</div>
+        <div class="tab-group-label">Vue d’ensemble</div>
+        <div id="tab-dashboard" class="tab active" data-icon="🧭" onclick="showView('dashboard')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-dashboard"></use></svg><span class="tab-label" data-t="nav.dashboard">Dashboard</span></div>
+        <div class="tab-group-label">Finances</div>
+        <div id="tab-transactions" class="tab" data-icon="💳" onclick="showView('transactions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-transactions"></use></svg><span class="tab-label" data-t="nav.transactions">Transactions</span></div>
+        <div id="tab-analysis" class="tab" data-icon="📊" onclick="showView('analysis')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-analysis"></use></svg><span class="tab-label" data-t="nav.analysis">Analyse</span></div>
+        <div id="tab-assets" class="tab" data-icon="💎" onclick="showView('assets')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-assets"></use></svg><span class="tab-label" data-t="nav.assets">Patrimoine</span></div>
+        <div id="tab-cautions" class="tab" data-icon="🛡️" onclick="showView('cautions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-cautions"></use></svg><span class="tab-label" data-t="nav.cautions">Cautions</span></div>
+        <div class="tab-group-label">Quotidien</div>
+        <div id="tab-sport" class="tab" data-icon="🏋️" onclick="showView('sport')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-sport"></use></svg><span class="tab-label">Sport</span></div>
+        <div id="tab-nutrition" class="tab" data-icon="🍎" onclick="showView('nutrition')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-nutrition"></use></svg><span class="tab-label">Alimentation</span></div>
+        <div id="tab-work" class="tab" data-icon="💼" onclick="showView('work')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-work"></use></svg><span class="tab-label">Travail</span></div>
+        <div class="tab-group-label">Ressources</div>
+        <div id="tab-documents" class="tab" data-icon="📁" onclick="showView('documents')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-documents"></use></svg><span class="tab-label">Documents</span></div>
+        <div id="tab-inbox" class="tab" data-icon="📥" onclick="showView('inbox')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-inbox"></use></svg><span class="tab-label tb-inbox-tab-label">À traiter</span></div>
+        <div id="tab-notifications" class="tab" data-icon="🔔" onclick="showView('notifications')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-notifications"></use></svg><span class="tab-label">Notifications</span></div>
+        <div id="tab-help" class="tab" data-icon="❓" onclick="showView('help')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-help"></use></svg><span class="tab-label" data-t="nav.help">Aide</span></div>
+        <div id="tab-trip" class="tab" data-icon="✈️" onclick="showView('trip')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-trip"></use></svg><span class="tab-label" data-t="nav.trip">Partage</span></div>
+        <div id="tab-settings" class="tab" data-icon="⚙️" onclick="showView('settings')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-settings"></use></svg><span class="tab-label" data-t="nav.settings">Settings</span></div>
+        <div id="tab-members" class="tab" data-icon="👥" style="display:none" onclick="showView('members')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-members"></use></svg><span class="tab-label" data-t="nav.members">Membres</span></div>
       </div>
 
       <!-- DASHBOARD -->
@@ -3944,20 +3967,6 @@
           <div class="card dashboard-panel dashboard-panel--budget">
             <h2 data-t="dashboard.daily_budget">Budget journalier</h2>
             <div id="daily-budget-container" style="display:flex; flex-direction:column; gap:10px;"></div>
-          </div>
-        </div>
-
-        <div class="dashboard-analysis-row" style="margin-top:12px;">
-          <div class="card dashboard-panel dashboard-panel--categories dashboard-analysis-cta">
-            <div class="dashboard-card-kicker" data-t="dashboard.analysis.kicker">Analyse dédiée</div>
-            <h2 data-t="dashboard.analysis.title">Lire les écarts, pas seulement les soldes</h2>
-            <div class="dashboard-analysis-cta-copy">
-              <p class="muted" data-t="dashboard.analysis.body">Le dashboard reste centré sur l’état actuel. L’espace Analyse porte la trajectoire, les catégories, la cadence et les écarts budget vs réel.</p>
-              <div class="dashboard-analysis-cta-actions">
-                <button class="btn primary" onclick="showView('analysis')" data-t="dashboard.analysis.open">Ouvrir Analyse</button>
-                <button class="btn" onclick="showView('trip')" data-t="dashboard.analysis.trip">Voir Partage</button>
-              </div>
-            </div>
           </div>
         </div>
 

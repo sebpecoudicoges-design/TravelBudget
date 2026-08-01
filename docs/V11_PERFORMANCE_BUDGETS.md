@@ -12,16 +12,23 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.303` :
+Snapshot `10.5.307` :
 
-- Boot legacy : 869.4 / 1500 KiB.
+- Boot legacy : 872.0 / 1500 KiB.
 - Analyse : 159.0 / 160 KiB.
 - Inbox : 110.5 / 112 KiB.
-- Dashboard + Settings : 357.7 / 360 KiB.
+- Dashboard + Settings : 364.1 / 365 KiB.
 - Trip : 317.7 / 340 KiB.
 - Sport : 439.9 / 450 KiB.
 - Nutrition : 187.0 / 235 KiB.
 - Travail : 57.1 / 90 KiB.
+- Assets : 117.8 / 125 KiB.
+- Documents : 113.0 / 115 KiB.
+- Initial JS : 254.1 / 260 KiB.
+- Lazy JS : 397.3 / 400 KiB.
+- JS total : 651.3 / 655 KiB.
+- CSS total : 21.0 / 22 KiB.
+- Main JS gzip : 72.2 / 110 KiB.
 - Patrimoine : 117.8 / 125 KiB.
 - Documents : 113.0 / 115 KiB.
 - Bundle Vite JS initial : 250.8 / 260 KiB.
@@ -105,6 +112,8 @@ En 10.5.304, les appels repetes au loader `TBLoadDashboardWalletRules` sont fact
 En 10.5.305, la detection de langue Analyse est centralisee dans `_analysisIsEnglish()`. Les rendus progression et insights ne recopient plus l'expression `tbGetLang`, avec un contrat anti-retour. Les budgets restent verts : Analyse 159.0 / 160 KiB, boot legacy 869.1 / 1500 KiB et JS total 648.0 / 650 KiB.
 
 En 10.5.306, la detection de langue Settings est centralisee dans `_tbSettingsIsEnglish()`, `_tbSettingsLang()` et `_tbSettingsTxt()`. Les blocs Voyage, Periodes et Reference budget ne recopient plus `tbGetLang`. `14_settings_periods_ui.js` descend a 117.02 KiB ; Dashboard + Settings mesure 357.0 / 360 KiB, boot legacy 868.7 / 1500 KiB et JS total 648.0 / 650 KiB.
+
+En 10.5.307, le systeme visuel premium V1 devient officiel : `VISUAL_SYSTEM.md`, `AGENTS.md`, theme partage, navigation groupee, Dashboard et KPI modernises. Les fonctionnalites conservees sont explicites : wallets detailles, archiver/desarchiver, budget journalier semaine, projection et convertisseur. Les plafonds evoluent pour integrer cette base visuelle : Dashboard + Settings 364.1 / 365 KiB, JS total 651.3 / 655 KiB et CSS total 21.0 / 22 KiB.
 
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 

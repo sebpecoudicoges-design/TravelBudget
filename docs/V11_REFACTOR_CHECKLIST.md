@@ -333,6 +333,7 @@ Critere ferme : le boot initial est stabilise, les domaines lourds sont charges 
   - [x] Factoriser le chargement des regles wallet Dashboard dans `_loadDashboardWalletRules()` : Dashboard + Settings 357.7 -> 357.3 KiB et boot legacy 869.4 -> 869.1 KiB, contrat anti-retour ajoute.
   - [x] Centraliser la detection de langue Analyse dans `_analysisIsEnglish()` : deux appels inline retires des rendus, Analyse stable a 159.0 KiB et contrat anti-retour ajoute.
   - [x] Centraliser la detection de langue Settings dans `_tbSettingsIsEnglish()` / `_tbSettingsTxt()` : Voyage, Periodes et Reference budget ne recopient plus `tbGetLang`, `14_settings_periods_ui.js` 117.02 KiB et Dashboard + Settings 357.0 / 360 KiB.
+  - [x] Installer le systeme visuel premium V1 : charte `VISUAL_SYSTEM`, consigne `AGENTS`, theme partage, navigation groupee, Dashboard et KPI modernises sans retirer wallets, budget journalier, projection ni convertisseur.
 - [x] Retirer l'ancien fallback `23_cashflow_chart.js` : moteur Apex cashflow remplace par `27_cashflow_curve.js`, fichier sans reference supprime, 115 lignes et 4.0 KiB retires du depot, fichiers legacy 59 -> 58.
 - [x] Ajouter les entrees Trip partagees : meme formulaire que les depenses, type `income`, source externe ou participant, option `non du` pour creer un revenu Budget sans dette Trip artificielle.
 - [x] Remplacer les actions wallet Dashboard inline par des hooks `data-*` et une delegation d'evenements testee, afin de preparer la suite du decoupage sans changer l'UX.
