@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.319`.
 
 ## Objectif
 
@@ -23,6 +23,9 @@ Le role est lu depuis `public.profiles.role`. Le verrou d interface ne remplace 
 5. Ajouter une note en cas d ecart : appareil, resultat reel, console et capture si utile.
 6. Repondre a tous les scenarios obligatoires.
 7. Terminer le module avec **tout est OK** ou **avec problemes**.
+8. Une fois le retour traite, l archiver : sa date de test, sa date de traitement, la version et les notes restent consultables.
+
+Les filtres **Actifs**, **A tester**, **Sans test** et **Archives** distinguent la file de travail des modules qui n ont rien a executer. **Afficher les tests archives** ouvre l historique sans recreer de tache.
 
 Les resultats sont sauvegardes dans Supabase et restent rattaches au compte testeur.
 
@@ -37,19 +40,23 @@ Les resultats sont sauvegardes dans Supabase et restent rattaches au compte test
 7. Alimentation
 8. Travail
 9. Patrimoine
-10. Cautions
-11. Documents
-12. A traiter
-13. Notifications
-14. Aide
+10. Documents
+11. A traiter
+12. Notifications
+13. Aide
+14. Interface generale
+
+Cautions est retire de l application depuis `10.5.319`. Le module de campagne est archive et reste visible avec le filtre **Archives** ; ses donnees metier historiques soldees sont conservees.
 
 ## Donnees Supabase
 
 - `app_test_campaigns` : campagne active et version cible.
 - `app_test_modules` : ordre et statut global des modules.
 - `app_test_scenarios` : instructions et resultats attendus.
-- `app_test_results` : reponse et note du testeur par scenario.
-- `app_test_module_reviews` : decision finale du testeur par module.
+- `app_test_results` : reponse et note du testeur par scenario, dates de test/traitement et archivage.
+- `app_test_module_reviews` : decision finale du testeur par module, traitement et archivage.
+
+Les resultats actifs utilisent un index unique partiel : archiver un resultat libere le scenario pour un retest sans perdre son historique.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

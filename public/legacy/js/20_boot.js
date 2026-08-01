@@ -89,6 +89,16 @@ function tbHideBootOverlay() {
   } catch (_) {}
 }
 
+function tbFinalizeDashboardFirstPaint(reason) {
+  const view = String(window.activeView || (typeof activeView === "string" ? activeView : "") || "dashboard");
+  if (!window.sbUser || view !== "dashboard") return false;
+  try { window.tbRenderDashboardCritical?.(reason || "boot:final-paint", { cashflow: false }); } catch (_) {}
+  try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
+  try { window.tbEnsureCashflowCurve?.(reason || "boot:final-paint"); } catch (_) {}
+  return true;
+}
+window.tbFinalizeDashboardFirstPaint = tbFinalizeDashboardFirstPaint;
+
 window.onload = async function () {
   try { if (window.tbApplyI18nDom) tbApplyI18nDom(); } catch (_) {}
 
@@ -307,6 +317,10 @@ window.onload = async function () {
         window.__TB_BOOT_NEEDS_CASHFLOW = false;
         window.tbRequestCashflowRender("boot-release");
       }
+    } catch (_) {}
+    try {
+      const schedule = window.requestAnimationFrame || ((callback) => setTimeout(callback, 0));
+      schedule(() => schedule(() => tbFinalizeDashboardFirstPaint("boot:after-gate")));
     } catch (_) {}
     try {
       if (window.TB_PERF && TB_PERF.enabled) {

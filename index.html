@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="BudgetPacker">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.318";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.319";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -1119,7 +1119,7 @@
     .auth-box h2{ font-size:22px; letter-spacing:-.02em; }
     .auth-msg{ font-size:13px; line-height:1.5; }
     .tb-tx-shared-modal .modal-grid{ gap:12px; }
-    #view-dashboard, #view-transactions, #view-settings, #view-help, #view-trip, #view-members, #view-assets, #view-cautions, #view-documents{ display:flex; flex-direction:column; gap:18px; }
+    #view-dashboard, #view-transactions, #view-settings, #view-help, #view-trip, #view-members, #view-assets, #view-documents{ display:flex; flex-direction:column; gap:18px; }
     .dashboard-panel{ min-height:100%; }
     .dashboard-panel h2{ margin-bottom:16px; }
     #view-transactions .toolbar-card,
@@ -3308,7 +3308,6 @@
       .wrap > #view-settings,
       .wrap > #view-analysis,
       .wrap > #view-assets,
-      .wrap > #view-cautions,
       .wrap > #view-documents,
       .wrap > #view-help,
       .wrap > #view-trip,
@@ -3891,7 +3890,6 @@
     <symbol id="tb-icon-transactions" viewBox="0 0 24 24"><path d="M7 7h13m0 0-3-3m3 3-3 3M17 17H4m0 0 3 3m-3-3 3-3"/></symbol>
     <symbol id="tb-icon-analysis" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></symbol>
     <symbol id="tb-icon-assets" viewBox="0 0 24 24"><path d="m3 10 9-6 9 6M5 10v8m5-8v8m4-8v8m5-8v8M3 20h18"/></symbol>
-    <symbol id="tb-icon-cautions" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.3 7 10 4.1-1.7 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></symbol>
     <symbol id="tb-icon-sport" viewBox="0 0 24 24"><path d="M6 9v6m12-6v6M3 10v4m18-4v4M6 12h12"/></symbol>
     <symbol id="tb-icon-nutrition" viewBox="0 0 24 24"><path d="M12 8c-1.8-2.2-5.8-2-7.2.6C2.6 12.7 6.4 21 12 21s9.4-8.3 7.2-12.4C17.8 6 13.8 5.8 12 8Z"/><path d="M12 8c0-2.5 1.4-4.3 4-5"/></symbol>
     <symbol id="tb-icon-work" viewBox="0 0 24 24"><path d="M4 7h16v12H4V7Zm5 0V4h6v3m-11 5h16"/></symbol>
@@ -3935,7 +3933,6 @@
         <div id="tab-transactions" class="tab" data-icon="💳" onclick="showView('transactions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-transactions"></use></svg><span class="tab-label" data-t="nav.transactions">Transactions</span></div>
         <div id="tab-analysis" class="tab" data-icon="📊" onclick="showView('analysis')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-analysis"></use></svg><span class="tab-label" data-t="nav.analysis">Analyse</span></div>
         <div id="tab-assets" class="tab" data-icon="💎" onclick="showView('assets')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-assets"></use></svg><span class="tab-label" data-t="nav.assets">Patrimoine</span></div>
-        <div id="tab-cautions" class="tab" data-icon="🛡️" onclick="showView('cautions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-cautions"></use></svg><span class="tab-label" data-t="nav.cautions">Cautions</span></div>
         <div class="tab-group-label">Quotidien</div>
         <div id="tab-sport" class="tab" data-icon="🏋️" onclick="showView('sport')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-sport"></use></svg><span class="tab-label">Sport</span></div>
         <div id="tab-nutrition" class="tab" data-icon="🍎" onclick="showView('nutrition')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-nutrition"></use></svg><span class="tab-label">Alimentation</span></div>
@@ -3995,10 +3992,6 @@
         <div id="assets-root" class="card"></div>
       </div>
 
-      <!-- CAUTIONS -->
-      <div id="view-cautions" class="hidden">
-        <div id="cautions-root" class="card"></div>
-      </div>
 
       <!-- DOCUMENTS -->
       <div id="view-documents" class="hidden">
@@ -4810,7 +4803,6 @@
       body.tb-capacitor-app.tb-mobile-nav-open #tab-settings::before{background:#64748b!important;box-shadow:0 0 0 3px rgba(100,116,139,.14)!important;}
       body.tb-capacitor-app.tb-mobile-nav-open #tab-analysis::before{background:#8b5cf6!important;box-shadow:0 0 0 3px rgba(139,92,246,.13)!important;}
       body.tb-capacitor-app.tb-mobile-nav-open #tab-assets::before{background:#f59e0b!important;box-shadow:0 0 0 3px rgba(245,158,11,.14)!important;}
-      body.tb-capacitor-app.tb-mobile-nav-open #tab-cautions::before{background:#10b981!important;box-shadow:0 0 0 3px rgba(16,185,129,.14)!important;}
       body.tb-capacitor-app.tb-mobile-nav-open #tab-documents::before{background:#06b6d4!important;box-shadow:0 0 0 3px rgba(6,182,212,.14)!important;}
       body.tb-capacitor-app.tb-mobile-nav-open #tab-inbox::before{background:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.13)!important;}
       body.tb-capacitor-app.tb-mobile-nav-open #tab-sport::before{background:#22c55e!important;box-shadow:0 0 0 3px rgba(34,197,94,.13)!important;}

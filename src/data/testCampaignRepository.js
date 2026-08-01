@@ -20,7 +20,7 @@ export function createTestCampaignRepository(client) {
 
       const [modulesRes, scenariosRes, resultsRes, reviewsRes] = await Promise.all([
         client.from('app_test_modules')
-          .select('id,campaign_id,module_key,title,description,instructions,sort_order,status')
+          .select('id,campaign_id,module_key,title,description,instructions,sort_order,status,archived_at,archive_reason')
           .eq('campaign_id', campaign.id)
           .order('sort_order', { ascending: true }),
         client.from('app_test_scenarios')
@@ -28,11 +28,11 @@ export function createTestCampaignRepository(client) {
           .eq('campaign_id', campaign.id)
           .order('sort_order', { ascending: true }),
         client.from('app_test_results')
-          .select('id,scenario_id,status,notes,completed_at,updated_at')
+          .select('id,scenario_id,status,notes,completed_at,treated_at,archived_at,treated_version,treatment_notes,updated_at')
           .eq('campaign_id', campaign.id)
           .eq('user_id', userId),
         client.from('app_test_module_reviews')
-          .select('id,module_id,status,notes,completed_at,updated_at')
+          .select('id,module_id,status,notes,completed_at,treated_at,archived_at,treated_version,treatment_notes,updated_at')
           .eq('campaign_id', campaign.id)
           .eq('user_id', userId),
       ]);
@@ -47,6 +47,13 @@ export function createTestCampaignRepository(client) {
     },
 
     async saveScenarioResult({ campaignId, scenarioId, userId, status, notes }) {
+      const existing = unwrap(await client
+        .from('app_test_results')
+        .select('id')
+        .eq('scenario_id', scenarioId)
+        .eq('user_id', userId)
+        .is('archived_at', null)
+        .maybeSingle(), null);
       const payload = {
         campaign_id: campaignId,
         scenario_id: scenarioId,
@@ -56,14 +63,22 @@ export function createTestCampaignRepository(client) {
         completed_at: status === 'pending' ? null : new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      return unwrap(await client
-        .from('app_test_results')
-        .upsert(payload, { onConflict: 'scenario_id,user_id' })
-        .select('id,scenario_id,status,notes,completed_at,updated_at')
+      const request = existing?.id
+        ? client.from('app_test_results').update(payload).eq('id', existing.id)
+        : client.from('app_test_results').insert(payload);
+      return unwrap(await request
+        .select('id,scenario_id,status,notes,completed_at,treated_at,archived_at,treated_version,treatment_notes,updated_at')
         .single(), null);
     },
 
     async saveModuleReview({ campaignId, moduleId, userId, status, notes }) {
+      const existing = unwrap(await client
+        .from('app_test_module_reviews')
+        .select('id')
+        .eq('module_id', moduleId)
+        .eq('user_id', userId)
+        .is('archived_at', null)
+        .maybeSingle(), null);
       const payload = {
         campaign_id: campaignId,
         module_id: moduleId,
@@ -73,10 +88,43 @@ export function createTestCampaignRepository(client) {
         completed_at: status === 'in_progress' ? null : new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      return unwrap(await client
-        .from('app_test_module_reviews')
-        .upsert(payload, { onConflict: 'module_id,user_id' })
-        .select('id,module_id,status,notes,completed_at,updated_at')
+      const request = existing?.id
+        ? client.from('app_test_module_reviews').update(payload).eq('id', existing.id)
+        : client.from('app_test_module_reviews').insert(payload);
+      return unwrap(await request
+        .select('id,module_id,status,notes,completed_at,treated_at,archived_at,treated_version,treatment_notes,updated_at')
+        .single(), null);
+    },
+
+    async archiveScenarioResult({ resultId, userId, treatedVersion, treatmentNotes }) {
+      const now = new Date().toISOString();
+      return unwrap(await client.from('app_test_results')
+        .update({
+          treated_at: now,
+          archived_at: now,
+          treated_version: String(treatedVersion || '').trim() || null,
+          treatment_notes: String(treatmentNotes || '').trim() || null,
+          updated_at: now,
+        })
+        .eq('id', resultId)
+        .eq('user_id', userId)
+        .select('id,scenario_id,status,notes,completed_at,treated_at,archived_at,treated_version,treatment_notes,updated_at')
+        .single(), null);
+    },
+
+    async archiveModuleReview({ reviewId, userId, treatedVersion, treatmentNotes }) {
+      const now = new Date().toISOString();
+      return unwrap(await client.from('app_test_module_reviews')
+        .update({
+          treated_at: now,
+          archived_at: now,
+          treated_version: String(treatedVersion || '').trim() || null,
+          treatment_notes: String(treatmentNotes || '').trim() || null,
+          updated_at: now,
+        })
+        .eq('id', reviewId)
+        .eq('user_id', userId)
+        .select('id,module_id,status,notes,completed_at,treated_at,archived_at,treated_version,treatment_notes,updated_at')
         .single(), null);
     },
   };

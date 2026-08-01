@@ -16,12 +16,11 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- 47 scenarios au total, dont 2 ajoutes en `10.5.318` pour l interface generale.
-- 23 `OK`.
-- 16 `Pas OK`, dont 3 correspondant a la decision de supprimer Cautions.
-- 3 scenarios A traiter laisses `A refaire` volontairement.
-- 3 scenarios Notifications non commences volontairement.
-- Modules les plus proches de la validation : Analyse, Alimentation et Aide.
+- Version cible de campagne : `10.5.319`.
+- 14 modules actifs et Cautions archive apres retrait de son interface.
+- 8 resultats et 3 revues de module traites sont archives avec date de test, date de traitement, version et note.
+- 2 retests cibles restent ouverts : premier affichage Dashboard et theme sombre de la page Projet.
+- A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
 ## Socle transversal
 
@@ -40,6 +39,7 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 - [x] Conserver wallets, budget journalier, KPI, projection et convertisseur.
 - [x] Ajouter les contrats clair/sombre, re-rendu courbe et garde online wallet.
 - [x] Verifier 1440 px et 390 px, clair et sombre.
+- [x] Forcer un rendu final apres la levee du verrou de boot pour afficher wallets, budget journalier et courbe sans changer de module.
 - [ ] Faire retester Dashboard avant de le rouvrir.
 
 Artefact de retest : `travelbudget-10.5.317-20260801-193954-debug.apk`.
@@ -53,6 +53,9 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 - [x] Supprimer le JavaScript, les traductions et les styles devenus morts avec ces deux blocs.
 - [x] Moderniser l ecran de chargement en conservant version, progression, phases et disparition a 100 %.
 - [x] Ajouter les variantes sombre, desktop et mobile ainsi que les contrats anti-retour.
+- [x] Laisser le choix clair, sombre ou systeme et memoriser la preference de la page Projet.
+- [x] Adapter au sombre les heroes, bandeaux, en-tetes de section, panneaux modules et appel final.
+- [x] Archiver les deux tests 10.5.318 traites et recreer uniquement le retest du hero sombre.
 - [x] Ajouter deux scenarios dans l onglet Tests sans modifier les resultats existants.
 - [ ] Faire valider ce lot par le testeur depuis le module Interface generale.
 
@@ -121,11 +124,19 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 
 ## Chantier 10 - Cautions
 
-- [ ] Inventorier les appels depuis navigation, Transactions, Documents, Inbox et notifications.
-- [ ] Verifier les donnees existantes avant retrait.
-- [ ] Archiver ou migrer les donnees si necessaire.
-- [ ] Retirer interface, lazy-load, tests et documentation.
-- [ ] Ajouter un contrat empechant le retour du module.
+- [x] Inventorier les appels depuis navigation, Transactions, Documents, Inbox et notifications.
+- [x] Verifier les donnees existantes : 5 cautions, toutes soldees, conservees pour historique/export/suppression de compte.
+- [x] Archiver le module et ses retours de campagne sans supprimer les donnees metier historiques.
+- [x] Retirer l interface, la navigation, le lazy-load et le script UI devenus morts.
+- [x] Ajouter un contrat empechant le retour du module visible ou chargeable.
+
+## Suivi et archives de tests
+
+- [x] Conserver separement date du test (`tested_at`) et date de traitement (`treated_at`).
+- [x] Archiver un resultat ou une revue sans effacer sa note ni son auteur.
+- [x] Autoriser un nouveau retest actif apres archivage du resultat precedent.
+- [x] Filtrer les modules actifs, a tester, sans test et archives.
+- [x] Afficher ou masquer l historique des tests archives.
 
 ## Chantier 11 - Documents
 

@@ -39,4 +39,12 @@ describe('initial boot loader contract', () => {
     expect(index).not.toContain('@keyframes tbBootSweep');
     expect(boot).not.toContain('repeating-linear-gradient(90deg');
   });
+
+  it('forces a deterministic Dashboard paint after boot render gating is released', () => {
+    const boot = read('public/legacy/js/20_boot.js');
+    expect(boot).toContain('function tbFinalizeDashboardFirstPaint(reason)');
+    expect(boot).toContain('window.tbRenderDashboardCritical?.(reason || "boot:final-paint", { cashflow: false })');
+    expect(boot).toContain('schedule(() => schedule(() => tbFinalizeDashboardFirstPaint("boot:after-gate")))');
+    expect(boot.indexOf('window.__TB_BOOTING = false')).toBeLessThan(boot.indexOf('tbFinalizeDashboardFirstPaint("boot:after-gate")'));
+  });
 });

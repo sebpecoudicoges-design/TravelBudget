@@ -10,27 +10,49 @@ export function normalizeModuleReviewStatus(status) {
 }
 
 export function buildCampaignState(payload = {}) {
-  const resultsByScenario = new Map((payload.results || []).map((row) => [String(row.scenario_id), row]));
-  const reviewsByModule = new Map((payload.reviews || []).map((row) => [String(row.module_id), row]));
+  const resultsByScenario = new Map();
+  for (const row of payload.results || []) {
+    const key = String(row.scenario_id);
+    if (!resultsByScenario.has(key)) resultsByScenario.set(key, []);
+    resultsByScenario.get(key).push(row);
+  }
+  const reviewsByModule = new Map();
+  for (const row of payload.reviews || []) {
+    const key = String(row.module_id);
+    if (!reviewsByModule.has(key)) reviewsByModule.set(key, []);
+    reviewsByModule.get(key).push(row);
+  }
   const scenariosByModule = new Map();
   for (const scenario of payload.scenarios || []) {
     const key = String(scenario.module_id || '');
     if (!scenariosByModule.has(key)) scenariosByModule.set(key, []);
+    const rows = resultsByScenario.get(String(scenario.id)) || [];
+    const activeResult = rows.find((row) => !row.archived_at);
+    const archives = rows.filter((row) => !!row.archived_at)
+      .sort((a, b) => String(b.archived_at).localeCompare(String(a.archived_at)));
     scenariosByModule.get(key).push({
       ...scenario,
-      result: resultsByScenario.get(String(scenario.id)) || { status: 'pending', notes: '' },
+      result: activeResult || { status: 'pending', notes: '' },
+      archives,
+      testRequired: !!activeResult || archives.length === 0,
     });
   }
-  const modules = (payload.modules || []).map((module) => ({
-    ...module,
-    scenarios: scenariosByModule.get(String(module.id)) || [],
-    review: reviewsByModule.get(String(module.id)) || { status: 'in_progress', notes: '' },
-  }));
+  const modules = (payload.modules || []).map((module) => {
+    const reviews = reviewsByModule.get(String(module.id)) || [];
+    return {
+      ...module,
+      scenarios: scenariosByModule.get(String(module.id)) || [],
+      review: reviews.find((row) => !row.archived_at) || { status: 'in_progress', notes: '' },
+      reviewArchives: reviews.filter((row) => !!row.archived_at)
+        .sort((a, b) => String(b.archived_at).localeCompare(String(a.archived_at))),
+    };
+  });
   return { campaign: payload.campaign || null, modules };
 }
 
 export function moduleProgress(module) {
-  const scenarios = Array.isArray(module?.scenarios) ? module.scenarios : [];
+  const allScenarios = Array.isArray(module?.scenarios) ? module.scenarios : [];
+  const scenarios = allScenarios.filter((item) => item.testRequired !== false);
   const required = scenarios.filter((item) => item.required !== false);
   const completed = scenarios.filter((item) => normalizeTestStatus(item?.result?.status) !== 'pending');
   const requiredCompleted = required.filter((item) => normalizeTestStatus(item?.result?.status) !== 'pending');
@@ -43,11 +65,28 @@ export function moduleProgress(module) {
     issues: issues.length,
     percent: scenarios.length ? Math.round((completed.length / scenarios.length) * 100) : 0,
     canComplete: requiredCompleted.length === required.length,
+    archived: allScenarios.reduce((count, item) => count + (item.archives?.length || 0), 0),
   };
 }
 
+export function moduleNeedsTesting(module) {
+  if (module?.archived_at) return false;
+  return (module?.scenarios || []).some((scenario) => (
+    scenario.testRequired !== false && normalizeTestStatus(scenario?.result?.status) === 'pending'
+  ));
+}
+
+export function filterCampaignModules(modules = [], mode = 'active') {
+  if (mode === 'archived') return modules.filter((module) => !!module.archived_at);
+  const active = modules.filter((module) => !module.archived_at);
+  if (mode === 'todo') return active.filter(moduleNeedsTesting);
+  if (mode === 'no_tests') return active.filter((module) => !moduleNeedsTesting(module));
+  return active;
+}
+
 export function campaignProgress(modules = []) {
-  const totals = modules.reduce((acc, module) => {
+  const activeModules = modules.filter((module) => !module?.archived_at);
+  const totals = activeModules.reduce((acc, module) => {
     const progress = moduleProgress(module);
     acc.total += progress.total;
     acc.completed += progress.completed;
@@ -57,7 +96,7 @@ export function campaignProgress(modules = []) {
   }, { total: 0, completed: 0, issues: 0, modulesCompleted: 0 });
   return {
     ...totals,
-    modulesTotal: modules.length,
+    modulesTotal: activeModules.length,
     percent: totals.total ? Math.round((totals.completed / totals.total) * 100) : 0,
   };
 }

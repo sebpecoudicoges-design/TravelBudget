@@ -127,9 +127,6 @@ const LEGACY_DOMAIN_SCRIPTS = {
     '/legacy/js/41_assets_core.js',
     '/legacy/js/42_assets_ui.js',
   ],
-  cautions: [
-    '/legacy/js/46_cautions_ui.js',
-  ],
   documents: [
     '/legacy/js/43_documents_ui.js',
   ],

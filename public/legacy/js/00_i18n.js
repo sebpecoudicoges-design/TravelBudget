@@ -39,7 +39,6 @@
       "nav.settings": "Settings",
       "nav.analysis": "Analyse",
       "nav.assets": "Patrimoine",
-      "nav.cautions": "Cautions",
       "nav.trip": "Partage",
       "nav.members": "Membres",
 

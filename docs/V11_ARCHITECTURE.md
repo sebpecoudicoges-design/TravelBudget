@@ -30,7 +30,9 @@ Les contrats sont dans `tests/ui/*DomainContract.test.js`. Toute nouvelle extrac
 - `work` : `47_work_ui.js`, `50_work_career_ui.js`
 - `trip` : `29_trip_v1.js`, `30_members_admin.js`
 - `sport` : `45_sport_ui.js`
-- `assets`, `documents`, `cautions`, `notifications`, `help`
+- `assets`, `documents`, `notifications`, `help`
+
+Le domaine UI `cautions` est retire en `10.5.319` apres verification de ses 5 enregistrements historiques, tous soldes. La table metier reste conservee pour l export et la suppression de compte, mais aucun onglet ni runtime Cautions n est charge.
 
 Le contrat est dans `tests/ui/legacyDomainLoader.test.js`.
 

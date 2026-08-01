@@ -101,18 +101,18 @@ describe('legacy domain loader', () => {
     expect(navigation).toContain('renderAssets("navigation:lazy")');
   });
 
-  it('keeps Cautions out of boot and lazy-loads it before rendering the Cautions view', () => {
+  it('keeps the retired Cautions module out of boot, lazy domains and navigation', () => {
     const bootList = main.slice(main.indexOf('const BOOT_LEGACY_SCRIPTS'), main.indexOf('const OPTIONAL_SCRIPTS'));
     const domains = main.slice(main.indexOf('const LEGACY_DOMAIN_SCRIPTS'), main.indexOf('const legacyDomainPromises'));
 
     expect(bootList).not.toContain('/legacy/js/46_cautions_ui.js');
-    expect(domains).toContain('cautions:');
-    expect(domains).toContain('/legacy/js/46_cautions_ui.js');
-    expect(navigation).toContain('window.tbLoadLegacyDomain("cautions")');
-    expect(navigation).toContain('renderCautions("navigation:lazy")');
-    expect(index).toContain('id="tab-cautions"');
-    expect(index).toContain('id="view-cautions"');
-    expect(index).toContain('id="cautions-root"');
+    expect(domains).not.toContain('cautions:');
+    expect(domains).not.toContain('/legacy/js/46_cautions_ui.js');
+    expect(navigation).not.toContain('window.tbLoadLegacyDomain("cautions")');
+    expect(navigation).not.toContain('renderCautions');
+    expect(index).not.toContain('id="tab-cautions"');
+    expect(index).not.toContain('id="view-cautions"');
+    expect(index).not.toContain('id="cautions-root"');
   });
 
   it('keeps Documents out of boot and lazy-loads it before rendering the Documents view', () => {

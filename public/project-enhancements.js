@@ -15,6 +15,32 @@
   };
   const money = (value) => `${Math.round(value).toLocaleString(lang() === "fr" ? "fr-FR" : "en-US")} EUR`;
 
+  function bindProjectTheme() {
+    const theme = window.tbProjectTheme;
+    if (!theme) return;
+    const buttons = [...document.querySelectorAll("[data-project-theme]")];
+    const refresh = () => {
+      const preference = document.documentElement.dataset.theme || "system";
+      buttons.forEach((button) => {
+        const active = button.dataset.projectTheme === preference;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+    };
+    buttons.forEach((button) => button.addEventListener("click", () => {
+      const preference = button.dataset.projectTheme || "system";
+      try { localStorage.setItem(theme.key, preference); } catch (_) { /* keep the in-page choice functional */ }
+      theme.apply(preference);
+      refresh();
+    }));
+    const syncSystemTheme = () => {
+      if ((document.documentElement.dataset.theme || "system") === "system") theme.apply("system");
+    };
+    if (theme.darkMedia.addEventListener) theme.darkMedia.addEventListener("change", syncSystemTheme);
+    else theme.darkMedia.addListener?.(syncSystemTheme);
+    refresh();
+  }
+
   const journeys = {
     fr: {
       month: {
@@ -236,5 +262,6 @@
     }
   }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
 
+  bindProjectTheme();
   renderAll();
 })();

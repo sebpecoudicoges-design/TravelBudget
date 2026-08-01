@@ -13,7 +13,7 @@ describe('dashboard view extraction contract', () => {
 
   it('keeps a clear colored emoji for every dashboard module tab', () => {
     const moduleIcons = {
-      dashboard: '🧭', transactions: '💳', analysis: '📊', assets: '💎', cautions: '🛡️',
+      dashboard: '🧭', transactions: '💳', analysis: '📊', assets: '💎',
       sport: '🏋️', nutrition: '🍎', work: '💼', documents: '📁', inbox: '📥',
       notifications: '🔔', help: '❓', trip: '✈️', settings: '⚙️', members: '👥',
     };

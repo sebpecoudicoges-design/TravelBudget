@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `cc133ceea1fa5cb12ccdd58b611b4e4da59eb920`
-> Empreinte du snapshot : `41d02942178d3a4adac846c0ef9128e974a8f0f03be1030b54525920fb669d4b`
-> Généré le : `2026-08-01T10:13:31.208Z`
+> Commit analysé : `c441f37f0d1b9ae991fb3e3c014cb49277217757`
+> Empreinte du snapshot : `f11627f521d82f8ee51cc369121593bf75e8846be028896ef200c7890b01f55f`
+> Généré le : `2026-08-01T10:58:31.143Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.318` |
-| Écrans déclarés | 17 |
-| Scripts legacy référencés | 57 |
+| Version | `10.5.319` |
+| Écrans déclarés | 16 |
+| Scripts legacy référencés | 56 |
 | Modules core | 26 |
 | Modules data | 8 |
 | Modules features | 44 |
 | Fichiers de tests | 117 |
-| Migrations Supabase | 95 |
+| Migrations Supabase | 96 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -52,7 +52,6 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 - `analysis`
 - `assets`
-- `cautions`
 - `dashboard`
 - `documents`
 - `help`
@@ -72,7 +71,6 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 - `analysis`
 - `assets`
-- `cautions`
 - `dashboard`
 - `documents`
 - `help`
@@ -92,7 +90,6 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `analysis`
 - `assets`
 - `cashflow`
-- `cautions`
 - `documents`
 - `help`
 - `inbox`
@@ -153,7 +150,6 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `public/legacy/js/43_documents_ui.js`
 - `public/legacy/js/44_inbox_ui.js`
 - `public/legacy/js/45_sport_ui.js`
-- `public/legacy/js/46_cautions_ui.js`
 - `public/legacy/js/47_work_ui.js`
 - `public/legacy/js/48_nutrition_ui.js`
 - `public/legacy/js/49_notifications_ui.js`
@@ -553,6 +549,7 @@ Modules :
 - `supabase/migrations/20260801070338_module_test_campaign.sql`
 - `supabase/migrations/20260801071652_tighten_test_campaign_grants.sql`
 - `supabase/migrations/20260801095640_update_interface_test_campaign.sql`
+- `supabase/migrations/20260801103314_archive_treated_test_feedback.sql`
 
 ## Android et budgets de modules
 

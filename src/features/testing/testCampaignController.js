@@ -1,10 +1,12 @@
 import { createTestCampaignRepository } from '../../data/testCampaignRepository.js';
-import { buildCampaignState, validateModuleCompletion } from './testCampaignRules.js';
+import { buildCampaignState, filterCampaignModules, validateModuleCompletion } from './testCampaignRules.js';
 import { renderCampaignError, renderTestCampaign } from './testCampaignView.js';
 
 let campaignState = null;
 let selectedModuleId = '';
 let boundRoot = null;
+let moduleFilter = 'active';
+let showArchived = false;
 
 function getClient() {
   return window.__TB_SB__ || window.sb;
@@ -26,16 +28,17 @@ function feedback(root, message, isError = false) {
 }
 
 function render(root) {
-  root.innerHTML = renderTestCampaign(campaignState, { selectedModuleId });
+  root.innerHTML = renderTestCampaign(campaignState, { selectedModuleId, moduleFilter, showArchived });
 }
 
 async function reload(root) {
   const repository = createTestCampaignRepository(getClient());
   const payload = await repository.loadActiveCampaign(getUserId());
   campaignState = payload ? buildCampaignState(payload) : { campaign: null, modules: [] };
-  if (!selectedModuleId || !campaignState.modules.some((item) => String(item.id) === String(selectedModuleId))) {
-    const firstIncomplete = campaignState.modules.find((item) => !String(item?.review?.status || '').startsWith('completed'));
-    selectedModuleId = String(firstIncomplete?.id || campaignState.modules[0]?.id || '');
+  const visibleModules = filterCampaignModules(campaignState.modules, moduleFilter);
+  if (!selectedModuleId || !visibleModules.some((item) => String(item.id) === String(selectedModuleId))) {
+    const firstIncomplete = visibleModules.find((item) => !String(item?.review?.status || '').startsWith('completed'));
+    selectedModuleId = String(firstIncomplete?.id || visibleModules[0]?.id || '');
   }
   render(root);
 }
@@ -88,6 +91,43 @@ async function finishModule(root, status) {
   }
 }
 
+async function archiveScenario(root, card) {
+  const scenarioId = card?.dataset?.testScenario;
+  const scenario = currentModule()?.scenarios?.find((item) => String(item.id) === String(scenarioId));
+  if (!scenario?.result?.id) return;
+  try {
+    const repository = createTestCampaignRepository(getClient());
+    await repository.archiveScenarioResult({
+      resultId: scenario.result.id,
+      userId: getUserId(),
+      treatedVersion: campaignState.campaign.app_version,
+      treatmentNotes: 'Retour relu et traite.',
+    });
+    await reload(root);
+    feedback(root, 'Test archive avec ses dates de test et de traitement.');
+  } catch (error) {
+    feedback(root, error?.message || String(error), true);
+  }
+}
+
+async function archiveReview(root) {
+  const module = currentModule();
+  if (!module?.review?.id) return;
+  try {
+    const repository = createTestCampaignRepository(getClient());
+    await repository.archiveModuleReview({
+      reviewId: module.review.id,
+      userId: getUserId(),
+      treatedVersion: campaignState.campaign.app_version,
+      treatmentNotes: 'Relecture du module traitee.',
+    });
+    await reload(root);
+    feedback(root, 'Relecture du module archivee.');
+  } catch (error) {
+    feedback(root, error?.message || String(error), true);
+  }
+}
+
 function bind(root) {
   if (boundRoot === root) return;
   boundRoot = root;
@@ -121,8 +161,31 @@ function bind(root) {
       await saveScenario(root, card, scenario?.result?.status || 'pending');
       return;
     }
+    const archiveResult = event.target.closest('[data-test-archive-result]');
+    if (archiveResult) {
+      await archiveScenario(root, archiveResult.closest('[data-test-scenario]'));
+      return;
+    }
+    const archiveReviewButton = event.target.closest('[data-test-archive-review]');
+    if (archiveReviewButton) {
+      await archiveReview(root);
+      return;
+    }
     const finish = event.target.closest('[data-test-finish]');
     if (finish) await finishModule(root, finish.dataset.testFinish);
+  });
+  root.addEventListener('change', (event) => {
+    if (event.target.matches('[data-test-module-filter]')) {
+      moduleFilter = event.target.value || 'active';
+      const visible = filterCampaignModules(campaignState?.modules || [], moduleFilter);
+      selectedModuleId = String(visible[0]?.id || '');
+      render(root);
+      return;
+    }
+    if (event.target.matches('[data-test-show-archived]')) {
+      showArchived = !!event.target.checked;
+      render(root);
+    }
   });
 }
 

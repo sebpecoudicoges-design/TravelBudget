@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "cc133ceea1fa5cb12ccdd58b611b4e4da59eb920",
-  "snapshotFingerprint": "41d02942178d3a4adac846c0ef9128e974a8f0f03be1030b54525920fb669d4b",
-  "generatedAt": "2026-08-01T10:13:31.208Z",
+  "commit": "c441f37f0d1b9ae991fb3e3c014cb49277217757",
+  "snapshotFingerprint": "f11627f521d82f8ee51cc369121593bf75e8846be028896ef200c7890b01f55f",
+  "generatedAt": "2026-08-01T10:58:31.143Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.318"
+    "version": "10.5.319"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -33,7 +33,6 @@
   "screens": [
     "analysis",
     "assets",
-    "cautions",
     "dashboard",
     "documents",
     "help",
@@ -52,7 +51,6 @@
   "navigationTabs": [
     "analysis",
     "assets",
-    "cautions",
     "dashboard",
     "documents",
     "help",
@@ -117,7 +115,6 @@
     "public/legacy/js/43_documents_ui.js",
     "public/legacy/js/44_inbox_ui.js",
     "public/legacy/js/45_sport_ui.js",
-    "public/legacy/js/46_cautions_ui.js",
     "public/legacy/js/47_work_ui.js",
     "public/legacy/js/48_nutrition_ui.js",
     "public/legacy/js/49_notifications_ui.js",
@@ -130,7 +127,6 @@
     "analysis",
     "assets",
     "cashflow",
-    "cautions",
     "documents",
     "help",
     "inbox",
@@ -501,7 +497,8 @@
     "supabase/migrations/20260729103843_trip_shared_income_entries.sql",
     "supabase/migrations/20260801070338_module_test_campaign.sql",
     "supabase/migrations/20260801071652_tighten_test_campaign_grants.sql",
-    "supabase/migrations/20260801095640_update_interface_test_campaign.sql"
+    "supabase/migrations/20260801095640_update_interface_test_campaign.sql",
+    "supabase/migrations/20260801103314_archive_treated_test_feedback.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

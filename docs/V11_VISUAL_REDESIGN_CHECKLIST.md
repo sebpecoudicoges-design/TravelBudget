@@ -29,6 +29,7 @@ Source obligatoire : [`VISUAL_SYSTEM.md`](VISUAL_SYSTEM.md).
 - [x] Nettoyer l'onboarding Dashboard : styles inline lourds remplaces par classes premium, actions `data-dashboard-action` conservees, mobile 390 px couvert par contrat.
 - [x] Corriger le placement des boutons Archiver wallet dans chaque carte Dashboard, avec contrat CSS anti-retour.
 - [x] Aligner la page Projet publique et l ecran de chargement sur la palette premium, avec clair/sombre, desktop/mobile et retrait des anciens panneaux de suivi internes.
+- [x] Ajouter a la page Projet un choix clair/sombre/systeme persistant et adapter tous ses heroes au theme sombre.
 
 ### Lot 2 - Transactions
 
@@ -57,7 +58,9 @@ Source obligatoire : [`VISUAL_SYSTEM.md`](VISUAL_SYSTEM.md).
 - [ ] Conserver les balances, remboursements, source externe/participant et option non due.
 - [x] Ajouter test contrat Trip premium.
 
-### Lot 5 - Patrimoine et Cautions
+### Lot 5 - Patrimoine
+
+Cautions est retire de l interface en `10.5.319` ; ses 5 lignes historiques soldees restent conservees cote donnees uniquement.
 
 - [ ] Inventorier assets, amortissement, transactions liees, depenses annexes, documents, proprietaires et ventes.
 - [ ] Rendre visible inclusion/exclusion budget et cout amorti prorata possession.

@@ -3,9 +3,9 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 260,
-    "lazyJsMaxKiB": 415,
-    "totalJsMaxKiB": 670,
-    "totalCssMaxKiB": 28,
+    "lazyJsMaxKiB": 420,
+    "totalJsMaxKiB": 675,
+    "totalCssMaxKiB": 30,
     "mainJsGzipMaxKiB": 110
   },
   "sourceGroups": [
@@ -102,7 +102,7 @@
     },
     {
       "name": "testing-domain",
-      "maxKiB": 35,
+      "maxKiB": 36,
       "paths": [
         "src/core/moduleAccessRules.js",
         "src/data/testCampaignRepository.js",

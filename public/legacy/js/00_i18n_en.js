@@ -30,7 +30,6 @@
       "nav.settings": "Settings",
       "nav.analysis": "Analysis",
       "nav.assets": "Assets",
-      "nav.cautions": "Deposits",
       "nav.trip": "Split",
       "nav.members": "Members",
 

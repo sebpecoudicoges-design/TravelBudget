@@ -12,7 +12,6 @@ function setActiveTab(view) {
     ["settings", "tab-settings", "view-settings"],
     ["analysis", "tab-analysis", "view-analysis"],
     ["assets", "tab-assets", "view-assets"],
-    ["cautions", "tab-cautions", "view-cautions"],
     ["documents", "tab-documents", "view-documents"],
     ["inbox", "tab-inbox", "view-inbox"],
     ["sport", "tab-sport", "view-sport"],
@@ -83,19 +82,6 @@ function showView(view) {
       }).catch((e) => {
         console.error("[TB] Assets lazy load failed", e);
         alert(`Patrimoine indisponible : ${e?.message || e}`);
-      });
-    }
-  }
-  if (view === "cautions") {
-    if (typeof window.renderCautions === "function") window.renderCautions("navigation");
-    else if (typeof window.tbLoadLegacyDomain === "function") {
-      const root = document.getElementById("cautions-root");
-      if (root) root.innerHTML = `<div class="muted">Chargement cautions...</div>`;
-      window.tbLoadLegacyDomain("cautions").then(() => {
-        if ((window.activeView || activeView) === "cautions" && typeof window.renderCautions === "function") window.renderCautions("navigation:lazy");
-      }).catch((e) => {
-        console.error("[TB] Cautions lazy load failed", e);
-        alert(`Cautions indisponibles : ${e?.message || e}`);
       });
     }
   }
@@ -237,7 +223,7 @@ function syncTabsForRole() {
     ? window.TBModuleAccess.roleUiState(role)
     : { isAdmin: role === "admin", isTester: role === "test", canPreviewModules: role === "admin" || role === "test", canUseTestCampaign: role === "admin" || role === "test", isRestricted: role !== "admin" && role !== "test" };
   const moduleTabs = [
-    'dashboard','transactions','analysis','assets','cautions','sport','nutrition','work','documents','inbox','notifications','trip'
+    'dashboard','transactions','analysis','assets','sport','nutrition','work','documents','inbox','notifications','trip'
   ];
   try {
     document.body.classList.toggle("tb-role-admin", roleState.isAdmin);

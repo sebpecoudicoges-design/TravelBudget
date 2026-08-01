@@ -5,6 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>BudgetPacker - Pilotage budget, objectifs et documents</title>
   <meta name="description" content="Demo publique interactive de BudgetPacker : pilotage budget, analyse des taux, conversions, documents, patrimoine, sport, alimentation et objectifs." />
+  <script>
+    (() => {
+      const key = "budgetpacker_project_theme_v1";
+      const allowed = new Set(["system", "light", "dark"]);
+      let saved = null;
+      try { saved = localStorage.getItem(key); } catch (_) { /* preference storage can be unavailable */ }
+      const preference = allowed.has(saved) ? saved : "system";
+      const darkMedia = window.matchMedia("(prefers-color-scheme: dark)");
+      const apply = (nextPreference = preference) => {
+        const resolved = nextPreference === "system" ? (darkMedia.matches ? "dark" : "light") : nextPreference;
+        document.documentElement.dataset.theme = nextPreference;
+        document.documentElement.dataset.themeResolved = resolved;
+      };
+      window.tbProjectTheme = { key, apply, darkMedia };
+      apply(preference);
+    })();
+  </script>
   <style>
     :root {
       color-scheme: light;
@@ -100,6 +117,32 @@
       border-radius: 999px;
       background: rgba(255,255,255,.9);
       box-shadow: 0 14px 34px rgba(15, 23, 42, .10);
+    }
+    .theme-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--tb-line);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--tb-surface) 92%, transparent);
+      box-shadow: 0 14px 34px rgba(15, 23, 42, .10);
+    }
+    .theme-btn {
+      min-width: 38px;
+      min-height: 38px;
+      padding: 0 9px;
+      border: 0;
+      border-radius: 999px;
+      color: var(--tb-muted);
+      background: transparent;
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .theme-btn.active {
+      color: #fff;
+      background: linear-gradient(135deg, var(--tb-coral-strong), var(--tb-coral));
     }
     .floating-lang {
       position: fixed;
@@ -1220,37 +1263,65 @@
     .cta p { margin: 0; color: #cbd5e1; line-height: 1.55; }
     footer { padding: 28px 0 42px; color: var(--muted); text-align: center; font-size: 13px; }
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        color-scheme: dark;
-        --tb-canvas: #111e23;
-        --tb-surface: #192a31;
-        --tb-surface-soft: #233840;
-        --tb-ink: #f4f7f5;
-        --tb-muted: #b0c0c4;
-        --tb-line: #38505a;
-        --tb-shadow: 0 18px 46px rgba(0, 0, 0, .24);
-      }
-      header { background: color-mix(in srgb, var(--tb-canvas) 90%, transparent); }
-      .nav-links { color: var(--tb-muted); }
-      .nav-links a:hover { background: var(--tb-surface-soft); }
-      .lang-switch,
-      .metric,
-      .trust-item,
-      .auth-entry,
-      .product-frame,
-      .mock-bar,
-      .panel,
-      .feed-row,
-      .release-card,
-      .release-empty,
-      .tech-card,
-      .tech-panel { background: var(--tb-surface); border-color: var(--tb-line); }
-      .mock-app { background: var(--tb-canvas); border-color: var(--tb-line); }
-      .lead { color: var(--tb-muted); }
-      .eyebrow { background: var(--tb-surface); }
-      .bar { background: var(--tb-surface-soft); }
+    :root[data-theme-resolved="dark"] {
+      color-scheme: dark;
+      --tb-canvas: #111e23;
+      --tb-surface: #192a31;
+      --tb-surface-soft: #233840;
+      --tb-ink: #f4f7f5;
+      --tb-muted: #b0c0c4;
+      --tb-line: #38505a;
+      --tb-shadow: 0 18px 46px rgba(0, 0, 0, .24);
     }
+    :root[data-theme-resolved="dark"] header { background: color-mix(in srgb, var(--tb-canvas) 90%, transparent); }
+    :root[data-theme-resolved="dark"] .nav-links { color: var(--tb-muted); }
+    :root[data-theme-resolved="dark"] .nav-links a:hover { background: var(--tb-surface-soft); }
+    :root[data-theme-resolved="dark"] .lang-switch,
+    :root[data-theme-resolved="dark"] .theme-switch,
+    :root[data-theme-resolved="dark"] .metric,
+    :root[data-theme-resolved="dark"] .trust-item,
+    :root[data-theme-resolved="dark"] .auth-entry,
+    :root[data-theme-resolved="dark"] .product-frame,
+    :root[data-theme-resolved="dark"] .mock-bar,
+    :root[data-theme-resolved="dark"] .panel,
+    :root[data-theme-resolved="dark"] .feed-row,
+    :root[data-theme-resolved="dark"] .control-card,
+    :root[data-theme-resolved="dark"] .result-card,
+    :root[data-theme-resolved="dark"] .module-card,
+    :root[data-theme-resolved="dark"] .workflow-card,
+    :root[data-theme-resolved="dark"] .app-card,
+    :root[data-theme-resolved="dark"] .case-card,
+    :root[data-theme-resolved="dark"] .range-line,
+    :root[data-theme-resolved="dark"] .kpi,
+    :root[data-theme-resolved="dark"] .proof,
+    :root[data-theme-resolved="dark"] .release-filter,
+    :root[data-theme-resolved="dark"] .release-spotlight,
+    :root[data-theme-resolved="dark"] .release-card,
+    :root[data-theme-resolved="dark"] .release-empty,
+    :root[data-theme-resolved="dark"] .tech-card,
+    :root[data-theme-resolved="dark"] .tech-panel { background: var(--tb-surface); border-color: var(--tb-line); }
+    :root[data-theme-resolved="dark"] .mock-app { background: var(--tb-canvas); border-color: var(--tb-line); }
+    :root[data-theme-resolved="dark"] .lead { color: var(--tb-muted); }
+    :root[data-theme-resolved="dark"] .eyebrow { background: var(--tb-surface); }
+    :root[data-theme-resolved="dark"] .bar { background: var(--tb-surface-soft); }
+    :root[data-theme-resolved="dark"] .hero > div:first-child,
+    :root[data-theme-resolved="dark"] .section-head,
+    :root[data-theme-resolved="dark"] .cash-heading,
+    :root[data-theme-resolved="dark"] .lab-head,
+    :root[data-theme-resolved="dark"] .release-pulse-head,
+    :root[data-theme-resolved="dark"] .trust-head { color: var(--tb-ink); }
+    :root[data-theme-resolved="dark"] .project-strip,
+    :root[data-theme-resolved="dark"] .module-panel,
+    :root[data-theme-resolved="dark"] .cta { border-color: var(--tb-line); }
+    :root[data-theme-resolved="dark"] .project-strip {
+      background: linear-gradient(135deg, color-mix(in srgb, var(--tb-coral) 10%, transparent), color-mix(in srgb, var(--tb-lagoon) 10%, transparent)), var(--tb-surface);
+    }
+    :root[data-theme-resolved="dark"] .mock-side,
+    :root[data-theme-resolved="dark"] .project-badge,
+    :root[data-theme-resolved="dark"] .lang-btn.active { background: #102229; color: #fff; border-color: var(--tb-line); }
+    :root[data-theme-resolved="dark"] .release-filter { color: var(--tb-ink); }
+    :root[data-theme-resolved="dark"] .release-filter.active { color: #fff; background: linear-gradient(135deg, #102229, var(--tb-coral)); }
+    :root[data-theme-resolved="dark"] .release-card::before { background: var(--tb-canvas); }
 
     @media (max-width: 960px) {
       .nav-links { display: none; }
@@ -1345,6 +1416,11 @@
         <a href="/privacy.html" data-i18n="nav.privacy">Confidentialite</a>
       </nav>
       <div class="nav-actions">
+        <div class="theme-switch" role="group" aria-label="Theme de la page">
+          <button class="theme-btn" type="button" data-project-theme="light" title="Theme clair" aria-label="Theme clair">☀️</button>
+          <button class="theme-btn" type="button" data-project-theme="system" title="Theme du systeme" aria-label="Theme du systeme">◐</button>
+          <button class="theme-btn" type="button" data-project-theme="dark" title="Theme sombre" aria-label="Theme sombre">🌙</button>
+        </div>
         <div class="lang-switch" aria-label="Language">
           <button class="lang-btn active" type="button" data-lang="fr">FR</button>
           <button class="lang-btn" type="button" data-lang="en">EN</button>
@@ -1417,7 +1493,6 @@
               <button type="button" data-mock-module="analysis">Analysis</button>
               <button type="button" data-mock-module="assets">Assets</button>
               <button type="button" data-mock-module="documents">Documents</button>
-              <button type="button" data-mock-module="cautions">Cautions</button>
               <button type="button" data-mock-module="sport">Sport</button>
               <button type="button" data-mock-module="split">Split</button>
             </aside>
@@ -1507,7 +1582,7 @@
       <div class="shell">
         <div class="section-head">
           <h2 data-i18n="modules.title">Les modules couvrent le pilotage personnel complet.</h2>
-          <p data-i18n="modules.lead">Budget, conversions, documents, cautions, patrimoine, sport, alimentation, sommeil et notifications : chaque brique nourrit les autres au lieu de rester isolee.</p>
+          <p data-i18n="modules.lead">Budget, conversions, documents, patrimoine, sport, alimentation, sommeil et notifications : chaque brique nourrit les autres au lieu de rester isolee.</p>
         </div>
         <div class="case-grid" aria-label="Cas d'usage principaux">
           <article class="case-card"><strong data-i18n="case.one.kicker">Cashflow</strong><h3 data-i18n="case.one.title">Savoir ce qu'il reste vraiment</h3><p data-i18n="case.one.body">Wallets, transactions, budget journalier et projections donnent une lecture rapide de la tresorerie.</p></article>
@@ -1519,7 +1594,6 @@
             <button class="tab-btn active" type="button" data-module="dashboard">Dashboard</button>
             <button class="tab-btn" type="button" data-module="transactions">Transactions</button>
             <button class="tab-btn" type="button" data-module="documents">Documents</button>
-            <button class="tab-btn" type="button" data-module="cautions">Cautions</button>
             <button class="tab-btn" type="button" data-module="sport">Sport</button>
             <button class="tab-btn" type="button" data-module="nutrition">Alimentation</button>
             <button class="tab-btn" type="button" data-module="sleep">Sommeil</button>
@@ -1639,6 +1713,7 @@
           <div class="release-spotlight" id="releaseSpotlight"></div>
           <div class="release-timeline" id="releaseTimeline" aria-live="polite"></div>
           <div class="release-list" id="releaseSource" hidden>
+            <div class="release-row"><strong>10.5.319</strong><span data-i18n="release.105319">Stabilisation : choix clair/sombre/systeme sur la page Projet, premier rendu Dashboard fiabilise, Cautions retire de l interface et retours traites archives avec leurs dates.</span></div>
             <div class="release-row"><strong>10.5.318</strong><span data-i18n="release.105318">Interface generale : la page Projet adopte la palette corail/lagon, retire ses panneaux de suivi internes et l ecran de chargement devient plus clair, rassurant et compatible theme sombre.</span></div>
             <div class="release-row"><strong>10.5.317</strong><span data-i18n="release.105317">Stabilisation Dashboard : le Hero premium respecte maintenant le theme sombre, la courbe se recree au changement de theme et les mutations wallet reverifient la connexion avant Supabase.</span></div>
             <div class="release-row"><strong>10.5.316</strong><span data-i18n="release.105316">Stabilisation : les modules sont figes pour les utilisateurs standards. Le nouveau role test donne acces aux modules et a une campagne integree de 45 scenarios avec resultat OK, Pas OK, notes et cloture par module.</span></div>
@@ -2084,7 +2159,7 @@
           "demo.salary": "Montant source", "demo.keep": "Reserve a garder", "demo.rate": "Taux cible simule",
           "demo.convert": "A convertir", "demo.eur": "Equivalent cible", "demo.buffer": "Reserve",
           "modules.title": "Les modules couvrent le pilotage personnel complet.",
-          "modules.lead": "Budget, conversions, documents, cautions, patrimoine, sport, alimentation, sommeil et notifications : chaque brique nourrit les autres au lieu de rester isolee.",
+          "modules.lead": "Budget, conversions, documents, patrimoine, sport, alimentation, sommeil et notifications : chaque brique nourrit les autres au lieu de rester isolee.",
           "case.one.kicker": "Cashflow", "case.one.title": "Savoir ce qu'il reste vraiment", "case.one.body": "Wallets, transactions, budget journalier et projections donnent une lecture rapide de la tresorerie.",
           "case.two.kicker": "Conversions", "case.two.title": "Decider quand convertir", "case.two.body": "Le suivi des taux sert a arbitrer les conversions, pas a raconter un scenario pays unique.",
           "case.three.kicker": "Objectifs", "case.three.title": "Relier energie et charge", "case.three.body": "Alimentation, sommeil, sport et travail alimentent Nutrition sans creer de module separe.",
@@ -2099,6 +2174,7 @@
           "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
           "app.apk.body.105317": "APK debug 10.5.317 prete pour le retest Dashboard.",
           "app.version.title.105317": "Dashboard", "app.version.body.105317": "Chantier 1 corrige, retest utilisateur attendu.",
+          "release.105319": "Stabilisation : choix clair/sombre/systeme sur la page Projet, premier rendu Dashboard fiabilise, Cautions retire de l interface et retours traites archives avec leurs dates.",
           "release.105318": "Interface generale : la page Projet adopte la palette corail/lagon, retire ses panneaux de suivi internes et l ecran de chargement devient plus clair, rassurant et compatible theme sombre.",
           "release.105317": "Stabilisation Dashboard : le Hero premium respecte maintenant le theme sombre, la courbe se recree au changement de theme et les mutations wallet reverifient la connexion avant Supabase.",
           "app.cta.body.105317": "Telecharge l'APK versionnee 10.5.317 depuis Supabase Storage pour retester Dashboard.", "app.cta.button.105317": "Telecharger l'APK 10.5.317",
@@ -2263,7 +2339,7 @@
           "demo.salary": "Source amount", "demo.keep": "Reserve to keep", "demo.rate": "Simulated target rate",
           "demo.convert": "To convert", "demo.eur": "Target equivalent", "demo.buffer": "Reserve",
           "modules.title": "Modules cover full personal steering.",
-          "modules.lead": "Budget, conversions, documents, deposits, assets, sport, nutrition, sleep and notifications: each block feeds the others instead of staying isolated.",
+          "modules.lead": "Budget, conversions, documents, assets, sport, nutrition, sleep and notifications: each block feeds the others instead of staying isolated.",
           "case.one.kicker": "Cashflow", "case.one.title": "Know what is really left", "case.one.body": "Wallets, transactions, daily budget and projections give a fast read of cashflow.",
           "case.two.kicker": "Conversions", "case.two.title": "Decide when to convert", "case.two.body": "Rate tracking helps arbitrate conversions; it is not a single-country travel story.",
           "case.three.kicker": "Goals", "case.three.title": "Connect energy and load", "case.three.body": "Nutrition, sleep, sport and work feed Nutrition without creating a separate module.",
@@ -2278,6 +2354,7 @@
           "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
           "app.apk.body.105317": "Debug APK 10.5.317 is ready for the Dashboard retest.",
           "app.version.title.105317": "Dashboard", "app.version.body.105317": "Chantier 1 fixed, user retest pending.",
+          "release.105319": "Stabilization: light, dark and system choices on the Project page, reliable first Dashboard render, Cautions removed from the interface, and treated feedback archived with its dates.",
           "release.105318": "General interface: the Project page adopts the coral and lagoon palette, removes internal tracking panels, and the loading screen becomes clearer, reassuring and dark-mode compatible.",
           "release.105317": "Dashboard stabilization: the premium Hero now follows dark mode, the cashflow chart is recreated when the theme changes, and wallet mutations recheck connectivity before Supabase.",
           "app.cta.body.105317": "Download versioned APK 10.5.317 from Supabase Storage to retest Dashboard.", "app.cta.button.105317": "Download APK 10.5.317",
@@ -2444,7 +2521,6 @@
           dashboard: ["Dashboard", "Vue cashflow, budget quotidien, rentrees attendues et projections pour savoir ou tu en es vraiment.", ["Solde multi-wallet", "Budget restant", "Courbe de tresorerie"]],
           transactions: ["Transactions", "Creation, filtres, categories, factures liees, mouvements internes et protections pour les lignes Trip ou wallet.", ["Verrouillages metier", "Bulk classification", "Factures liees"]],
           documents: ["Documents", "Hub transversal pour factures, contrats, garanties, tags, sous-dossiers et partages temporaires.", ["Tags proposes", "Liens financiers", "Partage public"]],
-          cautions: ["Cautions", "Suivi des cautions payees, remboursements attendus, ecarts, commentaires et justificatifs rattaches.", ["A recuperer", "Remboursements lies", "Dossiers preuves"]],
           sport: ["Sport", "Construis une seance simple, lance un timer guide ou un circuit AMRAP, estime les kcal et garde l'historique.", ["Circuit / AMRAP", "Kcal estimees", "Historique"]],
           nutrition: ["Alimentation", "Compare le consomme au besoin reel, avec repas par moment, eau bue, macros et historique.", ["Anneau kcal", "Timeline repas", "Eau + macros"]],
           sleep: ["Sommeil", "Saisie simple rattachee a la nuit precedente, objectif visible et historique en barres.", ["Nuit precedente", "Objectif 7h30", "Historique"]],
@@ -2457,7 +2533,6 @@
           dashboard: ["Dashboard", "Cashflow, daily budget, expected income and projections to understand where you really stand.", ["Multi-wallet balance", "Remaining budget", "Cash curve"]],
           transactions: ["Transactions", "Creation, filters, categories, linked invoices, internal transfers and safeguards for Trip or wallet rows.", ["Business locks", "Bulk classification", "Linked invoices"]],
           documents: ["Documents", "Cross-module hub for invoices, contracts, warranties, tags, subfolders and temporary sharing.", ["Suggested tags", "Financial links", "Public sharing"]],
-          cautions: ["Deposits", "Track paid deposits, expected refunds, differences, comments and attached proof files.", ["To recover", "Linked refunds", "Proof folders"]],
           sport: ["Sport", "Build a simple workout, start a guided timer or AMRAP circuit, estimate kcal and keep history.", ["Circuit / AMRAP", "Estimated kcal", "History"]],
           nutrition: ["Nutrition", "Compare consumed food against real needs, with meal moments, drunk water, macros and history.", ["Kcal ring", "Meal timeline", "Water + macros"]],
           sleep: ["Sleep", "Simple entry attached to the previous night, visible target and bar history.", ["Previous night", "7.5h target", "History"]],
@@ -2473,7 +2548,6 @@
           dashboard: [["Cash net", "3 470 EUR"], ["Budget/jour", "100 EUR"], ["A payer", "280 EUR"], ["La courbe combine solde reel, sorties futures et revenus attendus."]],
           transactions: [["Transactions", "1 045"], ["A classer", "25"], ["Factures liees", "128"], ["Les lignes Trip et mouvements internes restent protegees dans leur module source."]],
           documents: [["Documents", "91"], ["Factures", "6"], ["Liens actifs", "34"], ["Chaque fichier peut etre tagge, range et relie a une transaction ou un asset."]],
-          cautions: [["En cours", "90 EUR"], ["Docs lies", "2"], ["Ecart", "A suivre"], ["Le module relie la caution payee, les revenus de retour, les commentaires et les justificatifs."]],
           sport: [["Circuit", "4 tours"], ["Exercices", "12+"], ["Kcal", "est."], ["Reps, repos, abdos/core et AMRAP gardent une estimation de temps et kcal."]],
           nutrition: [["Besoin", "a l'heure"], ["Eau", "2 000 ml"], ["Repas", "5 moments"], ["Les repas, macros et eau bue alimentent le KPI Sante sans recharger la page."]],
           sleep: [["Objectif", "7h30"], ["Nuit", "J-1"], ["Historique", "barres"], ["Le sommeil est rattache a la nuit precedente pour expliquer correctement le jour courant."]],
@@ -2486,7 +2560,6 @@
           dashboard: [["Net cash", "3,470 EUR"], ["Daily budget", "100 EUR"], ["To pay", "280 EUR"], ["The curve combines current balance, future outflows and expected income."]],
           transactions: [["Transactions", "1,045"], ["To classify", "25"], ["Linked invoices", "128"], ["Trip and internal transfer rows stay protected in their source module."]],
           documents: [["Documents", "91"], ["Invoices", "6"], ["Active links", "34"], ["Each file can be tagged, filed and linked to a transaction or asset."]],
-          cautions: [["Open", "90 EUR"], ["Linked docs", "2"], ["Difference", "To review"], ["The module links the paid deposit, refund income, comments and proof files."]],
           sport: [["Circuit", "4 rounds"], ["Exercises", "12+"], ["Kcal", "est."], ["Reps, rest, abs/core and AMRAP keep estimated time and kcal."]],
           nutrition: [["Need", "by time"], ["Water", "2,000 ml"], ["Meals", "5 moments"], ["Meals, macros and drunk water feed the Health KPI without page reload."]],
           sleep: [["Target", "7.5h"], ["Night", "D-1"], ["History", "bars"], ["Sleep is attached to the previous night to explain the current day correctly."]],
@@ -2533,13 +2606,6 @@
             signal: "6 factures",
             rows: [["Facture voiture.pdf", "Asset lie"], ["Bulletin de paie.pdf", "Tag propose"], ["Contrat travail.pdf", "Partageable"]],
             chips: ["Tags", "Dossiers", "Liens"]
-          },
-          cautions: {
-            title: "Cautions",
-            cash: "90 EUR",
-            signal: "Non soldee",
-            rows: [["Caution logement", "Payee"], ["Retour attendu", "A rapprocher"], ["Justificatifs", "2 documents"]],
-            chips: ["Ecart", "Commentaire", "Dossier"]
           },
           sport: {
             title: "Sport",
@@ -2591,13 +2657,6 @@
             signal: "6 invoices",
             rows: [["Car invoice.pdf", "Asset linked"], ["Payslip.pdf", "Suggested tag"], ["Work contract.pdf", "Shareable"]],
             chips: ["Tags", "Folders", "Links"]
-          },
-          cautions: {
-            title: "Deposits",
-            cash: "90 EUR",
-            signal: "Unsettled",
-            rows: [["Housing deposit", "Paid"], ["Expected return", "To match"], ["Proof files", "2 documents"]],
-            chips: ["Difference", "Comment", "Folder"]
           },
           sport: {
             title: "Sport",

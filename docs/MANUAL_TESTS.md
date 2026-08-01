@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.318`.
-- Campagne active : 15 modules et 47 scénarios condensés dans l'onglet **Tests** de l'application.
+- Version à valider : `10.5.319`.
+- Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
@@ -16,6 +16,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Voir `docs/MODULE_TEST_CAMPAIGN.md` pour les rôles, l'ordre et les critères de fin.
 - Chantier 1 Dashboard corrige en `10.5.317` : Hero sombre, re-rendu de la courbe au changement de theme et verification online avant mutation wallet. Le scenario Dashboard reste a refaire par le testeur avant reouverture.
 - Interface generale `10.5.318` : page Projet alignee sur les tokens corail/lagon, blocs admins/checklist publique retires, lien proprietaire Pecloud ajoute et ecran de chargement premium clarifie. Deux scenarios dedies sont ajoutes a l onglet Tests sans effacer les retours precedents.
+- Stabilisation `10.5.319` : choix de theme clair/sombre/systeme sur la page Projet, adaptation sombre de ses heroes, rendu force des wallets, budgets journaliers et courbe au premier chargement Dashboard, retrait du module Cautions et archivage date des retours traites. Les retests actifs portent sur le premier affichage Dashboard et le theme sombre Projet.
+- Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés
 

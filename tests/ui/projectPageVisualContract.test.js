@@ -12,8 +12,25 @@ describe('public project page visual contract', () => {
     expect(page).toContain('--tb-canvas: #fff9f2');
     expect(page).toContain('--tb-coral: #ff6b4a');
     expect(page).toContain('--tb-lagoon: #23b5af');
-    expect(page).toContain('@media (prefers-color-scheme: dark)');
+    expect(page).toContain('window.matchMedia("(prefers-color-scheme: dark)")');
+    expect(page).toContain(':root[data-theme-resolved="dark"]');
+    expect(page).toContain('data-project-theme="light"');
+    expect(page).toContain('data-project-theme="system"');
+    expect(page).toContain('data-project-theme="dark"');
+    expect(page).toContain('budgetpacker_project_theme_v1');
+    expect(page).toContain(':root[data-theme-resolved="dark"] .project-strip');
+    expect(page).toContain(':root[data-theme-resolved="dark"] .control-card');
+    expect(page).toContain(':root[data-theme-resolved="dark"] .release-spotlight');
+    expect(page).toContain(':root[data-theme-resolved="dark"] .mock-side');
+    expect(page).toContain(':root[data-theme-resolved="dark"] .lang-btn.active');
     expect(page).toContain('@media (max-width: 620px)');
+  });
+
+  it('keeps the retired Cautions module out of current Project page demos', () => {
+    const page = read('public/projet.html');
+    expect(page).not.toContain('data-mock-module="cautions"');
+    expect(page).not.toContain('data-module="cautions"');
+    expect(page).not.toContain('cautions: ["Cautions"');
   });
 
   it('does not restore the removed admin test or release checklist sections', () => {

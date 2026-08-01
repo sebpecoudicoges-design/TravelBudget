@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCampaignState,
   campaignProgress,
+  filterCampaignModules,
+  moduleNeedsTesting,
   moduleProgress,
   validateModuleCompletion,
 } from '../../../src/features/testing/testCampaignRules.js';
@@ -46,5 +48,33 @@ describe('test campaign rules', () => {
       issues: 1,
       percent: 67,
     });
+  });
+
+  it('keeps archived test cycles while exposing only the active retest result', () => {
+    const state = buildCampaignState({
+      campaign: { id: 'campaign-1' },
+      modules: [{ id: 'module-1' }, { id: 'module-archived', archived_at: '2026-08-01T10:00:00Z' }],
+      scenarios: [{ id: 'scenario-1', module_id: 'module-1' }],
+      results: [
+        { id: 'old', scenario_id: 'scenario-1', status: 'not_ok', completed_at: '2026-08-01T09:00:00Z', archived_at: '2026-08-01T10:00:00Z' },
+        { id: 'retest', scenario_id: 'scenario-1', status: 'pending', archived_at: null },
+      ],
+    });
+    expect(state.modules[0].scenarios[0].result.id).toBe('retest');
+    expect(state.modules[0].scenarios[0].archives).toHaveLength(1);
+    expect(moduleNeedsTesting(state.modules[0])).toBe(true);
+    expect(filterCampaignModules(state.modules, 'todo')).toHaveLength(1);
+    expect(filterCampaignModules(state.modules, 'archived')[0].id).toBe('module-archived');
+  });
+
+  it('classifies a module with only treated archives as having no test to perform', () => {
+    const state = buildCampaignState({
+      modules: [{ id: 'module-1' }],
+      scenarios: [{ id: 'scenario-1', module_id: 'module-1' }],
+      results: [{ id: 'old', scenario_id: 'scenario-1', status: 'ok', archived_at: '2026-08-01T10:00:00Z' }],
+    });
+    expect(state.modules[0].scenarios[0].testRequired).toBe(false);
+    expect(moduleNeedsTesting(state.modules[0])).toBe(false);
+    expect(filterCampaignModules(state.modules, 'no_tests')).toHaveLength(1);
   });
 });
