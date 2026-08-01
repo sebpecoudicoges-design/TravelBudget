@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "a6f37e6fe5862d292db9269530eef743cfa18fef",
-  "snapshotFingerprint": "f3152c79d72cdb53b97b2cd5cc66160c0c5a84ce7309b642f8056c6a375cc159",
-  "generatedAt": "2026-08-01T11:17:49.756Z",
+  "commit": "c2c5e7d24e81901a9c1eb4da860c26866e024cba",
+  "snapshotFingerprint": "be3c1b4f2e9b8c164f9513b32b2fa2883244e0e5071689d2c924a4ca9825164b",
+  "generatedAt": "2026-08-01T11:36:25.798Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.320"
+    "version": "10.5.321"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -319,6 +319,7 @@
     "tests/ui/dashboardViewContract.test.js",
     "tests/ui/documentsDomainContract.test.js",
     "tests/ui/errorBusContract.test.js",
+    "tests/ui/helpViewContract.test.js",
     "tests/ui/inboxDomainContract.test.js",
     "tests/ui/initialBootLoaderContract.test.js",
     "tests/ui/kpiRangePickerContract.test.js",
@@ -366,6 +367,7 @@
     "tests/ui/dashboardViewContract.test.js",
     "tests/ui/documentsDomainContract.test.js",
     "tests/ui/errorBusContract.test.js",
+    "tests/ui/helpViewContract.test.js",
     "tests/ui/inboxDomainContract.test.js",
     "tests/ui/initialBootLoaderContract.test.js",
     "tests/ui/kpiRangePickerContract.test.js",
@@ -499,7 +501,8 @@
     "supabase/migrations/20260801071652_tighten_test_campaign_grants.sql",
     "supabase/migrations/20260801095640_update_interface_test_campaign.sql",
     "supabase/migrations/20260801103314_archive_treated_test_feedback.sql",
-    "supabase/migrations/20260801111219_archive_grouped_feedback_10_5_320.sql"
+    "supabase/migrations/20260801111519_archive_grouped_feedback_10_5_320.sql",
+    "supabase/migrations/20260801113508_archive_help_documents_project_10_5_321.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

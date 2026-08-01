@@ -240,6 +240,22 @@
     doSearch(true);
   }
 
+  const HELP_SETUP_STORAGE_KEY = "tb_help_quick_setup_v1";
+  const HELP_SETUP_OPEN_KEY = "tb_help_quick_setup_open_v1";
+
+  function _helpSetupStored() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(HELP_SETUP_STORAGE_KEY) || "{}");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function _saveHelpSetupStored(rows) {
+    try { localStorage.setItem(HELP_SETUP_STORAGE_KEY, JSON.stringify(rows || {})); } catch (_) {}
+  }
+
   function renderQuickSetup(root) {
     let setup = document.getElementById("help-quick-setup");
     if (!setup) {
@@ -256,18 +272,52 @@
     const periods = Array.isArray(s.budgetSegments) ? s.budgetSegments : [];
     const docs = Array.isArray(s.documents) ? s.documents : [];
     const assets = Array.isArray(s.assets) ? s.assets : [];
-    const row = (ok, label, view) => `<div style="display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,0,0,.05);"><span>${ok ? "✅" : "⬜"} ${_esc(label)}</span><button class="btn" type="button" onclick="showView('${_esc(view)}')">${_esc(view === "trip" ? _t("help.action.open_trip") : view === "settings" ? _t("help.action.open_settings") : view === "dashboard" ? _t("help.action.open_dashboard") : view === "transactions" ? _t("assistant.action.transactions") : view === "analysis" ? _t("assistant.action.analysis") : view === "documents" ? _t("assistant.action.documents") : view === "assets" ? _t("assistant.action.assets") : view)}</button></div>`;
-    setup.innerHTML = `
-      <div class="hint" style="padding:12px; border:1px solid rgba(0,0,0,.08); border-radius:14px; background:rgba(0,0,0,.02);">
-        <div style="font-weight:700; margin-bottom:8px;">${_esc(_t("help.quick_start.title"))}</div>
-        <div class="muted" style="margin-bottom:8px;">${_esc(_t("help.quick_start.body"))}</div>
-        ${row(periods.length > 0, _t("help.quick_start.periods"), "settings")}
-        ${row(wallets.length > 0, _t("help.quick_start.wallets"), "dashboard")}
-        ${row(txs.length > 0, _t("help.quick_start.transactions"), "transactions")}
-        ${row(trips.length > 0, _t("help.quick_start.trip"), "trip")}
-        ${row(docs.length > 0, _t("help.quick_start.documents"), "documents")}
-        ${row(assets.length > 0, _t("help.quick_start.assets"), "assets")}
+    const stored = _helpSetupStored();
+    const steps = [
+      ["periods", periods.length > 0, _t("help.quick_start.periods"), "settings"],
+      ["wallets", wallets.length > 0, _t("help.quick_start.wallets"), "dashboard"],
+      ["transactions", txs.length > 0, _t("help.quick_start.transactions"), "transactions"],
+      ["trip", trips.length > 0, _t("help.quick_start.trip"), "trip"],
+      ["documents", docs.length > 0, _t("help.quick_start.documents"), "documents"],
+      ["assets", assets.length > 0, _t("help.quick_start.assets"), "assets"],
+    ];
+    const complete = steps.filter(([key, automatic]) => automatic || stored[key] === true).length;
+    const actionLabel = (view) => view === "trip" ? _t("help.action.open_trip") : view === "settings" ? _t("help.action.open_settings") : view === "dashboard" ? _t("help.action.open_dashboard") : view === "transactions" ? _t("assistant.action.transactions") : view === "documents" ? _t("assistant.action.documents") : view === "assets" ? _t("assistant.action.assets") : view;
+    const row = (key, automatic, label, view) => {
+      const checked = automatic || stored[key] === true;
+      return `<div class="tb-help-setup-row${checked ? " is-ok" : ""}">
+        <label class="tb-help-setup-check"><input type="checkbox" data-help-setup-key="${_esc(key)}" ${checked ? "checked" : ""}><span>${_esc(label)}</span></label>
+        <button class="btn" type="button" data-help-setup-view="${_esc(view)}">${_esc(actionLabel(view))}</button>
       </div>`;
+    };
+    let open = true;
+    try { open = localStorage.getItem(HELP_SETUP_OPEN_KEY) !== "0"; } catch (_) {}
+    setup.innerHTML = `
+      <details class="tb-help-setup-card" ${open ? "open" : ""}>
+        <summary><span><strong>${_esc(_t("help.quick_start.title"))}</strong><small>${complete}/${steps.length}</small></span><span class="tb-help-setup-toggle">⌄</span></summary>
+        <div class="muted tb-help-setup-copy">${_esc(_t("help.quick_start.body"))}</div>
+        ${steps.map((step) => row(...step)).join("")}
+      </details>`;
+    if (!setup.__tbBound) {
+      setup.__tbBound = true;
+      setup.addEventListener("change", (event) => {
+        const input = event.target?.closest?.("[data-help-setup-key]");
+        if (!input) return;
+        const next = _helpSetupStored();
+        next[input.getAttribute("data-help-setup-key") || ""] = !!input.checked;
+        _saveHelpSetupStored(next);
+        renderQuickSetup(root);
+      });
+      setup.addEventListener("click", (event) => {
+        const button = event.target?.closest?.("[data-help-setup-view]");
+        if (button && typeof window.showView === "function") window.showView(button.getAttribute("data-help-setup-view") || "dashboard");
+      });
+      setup.addEventListener("toggle", (event) => {
+        if (event.target?.matches?.(".tb-help-setup-card")) {
+          try { localStorage.setItem(HELP_SETUP_OPEN_KEY, event.target.open ? "1" : "0"); } catch (_) {}
+        }
+      }, true);
+    }
   }
 
   function _diagPlatform() {
@@ -319,6 +369,7 @@
     const l = _lang();
     const tx = (fr, en) => l === "en" ? en : fr;
     const d = _diagRows();
+    const supportHref = `mailto:seb.pecoud.icoges@gmail.com?subject=${encodeURIComponent(`[TravelBudget ${d.version}] Support diagnostic`)}`;
     const recent = d.logs.slice(-4).reverse();
     const pendingActionLabel = (item) => {
       const kind = String(item?.kind || "");
@@ -357,8 +408,13 @@
           <button class="btn" type="button" data-diag-clear-failed>${_esc(tx("Retirer erreurs action", "Remove failed actions"))}</button>
           <button class="btn danger" type="button" data-diag-clear-trip>${_esc(tx("Vider conflits Trip", "Clear Trip conflicts"))}</button>
           <button class="btn" type="button" data-diag-export>${_esc(tx("Exporter logs", "Export logs"))}</button>
+          <a class="btn" href="${_esc(supportHref)}">${_esc(tx("Contacter le support", "Contact support"))}</a>
           <button class="btn" type="button" data-diag-clear>${_esc(tx("Vider logs locaux", "Clear local logs"))}</button>
         </div>
+        <details class="tb-help-diag-help">
+          <summary>${_esc(tx("À quoi sert ce diagnostic ?", "What is this diagnostic for?"))}</summary>
+          <p>${_esc(tx("Il indique la version, la plateforme, la connexion et les actions encore en attente sur cet appareil. En cas de problème, exporte les logs puis joins-les au message envoyé au support. Les boutons de nettoyage agissent seulement sur les files locales de cet appareil.", "It shows the version, platform, connection and actions still pending on this device. If a problem occurs, export the logs and attach them to your support message. Cleanup buttons only affect local queues on this device."))}</p>
+        </details>
         <div style="margin-bottom:12px;">
           <div class="muted" style="font-size:12px;font-weight:800;margin-bottom:6px;">${_esc(tx("Actions en attente", "Pending actions"))}</div>
           ${d.pendingActions.length ? d.pendingActions.map((item) => `

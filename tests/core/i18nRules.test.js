@@ -60,7 +60,9 @@ describe('i18n dictionaries', () => {
     expect(dicts.fr['documents.sort.name_asc']).toBe('Nom A → Z');
     expect(dicts.fr['settings.account.mode.advanced']).toBe('Avancé');
     expect(dicts.fr['trip.history.search_placeholder']).toBe('Libellé, montant, participant…');
+    expect(dicts.fr['help.quick_start.trip']).toBe('Utiliser Partage si tu dépenses à plusieurs');
     expect(dicts.en['documents.sort.name_asc']).toBe('Name A → Z');
+    expect(dicts.en['help.quick_start.transactions']).toBe('Enter a first transaction');
   });
 
   it('keeps the English dictionary outside the boot i18n file', () => {

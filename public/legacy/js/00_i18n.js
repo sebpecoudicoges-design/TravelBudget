@@ -157,7 +157,7 @@
       "help.quick_start.periods": "Vérifier le voyage, les périodes et le budget",
       "help.quick_start.wallets": "Créer au moins une wallet",
       "help.quick_start.transactions": "Saisir une première transaction",
-      "help.quick_start.trip": "Utiliser Partage si tu d?penses ? plusieurs",
+      "help.quick_start.trip": "Utiliser Partage si tu dépenses à plusieurs",
       "help.quick_start.documents": "Ajouter tes documents importants",
       "help.quick_start.assets": "Ajouter tes biens dans Patrimoine",
       "help.guide.create_trip.title": "Créer ton voyage",

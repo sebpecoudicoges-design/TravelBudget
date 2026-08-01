@@ -128,12 +128,12 @@ export function renderDocumentFolders({
           <button class="tb-doc-folder${String(child.id) === selected ? ' active' : ''}"
             type="button"
             onclick="window.tbDocumentsSelectFolder('${esc(child.id)}')">
-            <span>${esc(child.name)}</span>
+            <span class="tb-doc-folder-label"><span class="tb-doc-folder-glyph" aria-hidden="true">›</span><span>${esc(child.name)}</span></span>
             <small>${esc(child.count || 0)}</small>
           </button>
           <div class="tb-doc-folder-tools">
-            <button class="tb-doc-folder-icon" type="button" title="${esc(tr('documents.folder.rename'))}" onclick="window.tbDocumentsRenameFolder('${esc(child.id)}')">Edit</button>
-            <button class="tb-doc-folder-icon danger" type="button" title="${esc(tr('documents.folder.delete'))}" onclick="window.tbDocumentsDeleteFolder('${esc(child.id)}')">Del</button>
+            <button class="tb-doc-folder-icon" type="button" aria-label="${esc(tr('documents.folder.rename'))}" title="${esc(tr('documents.folder.rename'))}" onclick="window.tbDocumentsRenameFolder('${esc(child.id)}')">✎</button>
+            <button class="tb-doc-folder-icon danger" type="button" aria-label="${esc(tr('documents.folder.delete'))}" title="${esc(tr('documents.folder.delete'))}" onclick="window.tbDocumentsDeleteFolder('${esc(child.id)}')">×</button>
           </div>
         </div>
       `).join('');
@@ -144,32 +144,32 @@ export function renderDocumentFolders({
         <button class="tb-doc-folder${String(folder.id) === selected ? ' active' : ''}"
           type="button"
           onclick="window.tbDocumentsSelectFolder('${esc(folder.id)}')">
-          <span>${esc(folder.name)}</span>
+          <span class="tb-doc-folder-label"><span class="tb-doc-folder-glyph" aria-hidden="true">◆</span><span>${esc(folder.name)}</span></span>
           <small>${esc(folder.count || 0)}</small>
         </button>
         <div class="tb-doc-folder-tools">
-          <button class="tb-doc-folder-icon" type="button" title="${esc(tr('documents.folder.subfolder'))}" onclick="window.tbDocumentsCreateSubFolder('${esc(folder.id)}')">+</button>
-          <button class="tb-doc-folder-icon" type="button" title="${esc(tr('documents.folder.rename'))}" onclick="window.tbDocumentsRenameFolder('${esc(folder.id)}')">Edit</button>
-          <button class="tb-doc-folder-icon danger" type="button" title="${esc(tr('documents.folder.delete'))}" onclick="window.tbDocumentsDeleteFolder('${esc(folder.id)}')">Del</button>
+          <button class="tb-doc-folder-icon" type="button" aria-label="${esc(tr('documents.folder.subfolder'))}" title="${esc(tr('documents.folder.subfolder'))}" onclick="window.tbDocumentsCreateSubFolder('${esc(folder.id)}')">+</button>
+          <button class="tb-doc-folder-icon" type="button" aria-label="${esc(tr('documents.folder.rename'))}" title="${esc(tr('documents.folder.rename'))}" onclick="window.tbDocumentsRenameFolder('${esc(folder.id)}')">✎</button>
+          <button class="tb-doc-folder-icon danger" type="button" aria-label="${esc(tr('documents.folder.delete'))}" title="${esc(tr('documents.folder.delete'))}" onclick="window.tbDocumentsDeleteFolder('${esc(folder.id)}')">×</button>
         </div>
       </div>
       ${childRows}
     `;
   }).join('');
 
-  return `<div class="tb-doc-sidebar">
+  return `<aside class="tb-doc-sidebar" aria-label="${esc(tr('documents.folders'))}">
     <div class="tb-doc-sidebar-head">
-      <strong>${esc(tr('documents.folders'))}</strong>
+      <div class="tb-doc-sidebar-title"><span class="tb-doc-sidebar-mark" aria-hidden="true">▤</span><span><small>${esc(tr('documents.kicker'))}</small><strong>${esc(tr('documents.folders'))}</strong></span></div>
       <button class="btn" type="button" onclick="window.tbDocumentsCreateFolder()">${esc(tr('documents.folder.create'))}</button>
     </div>
 
     <button class="tb-doc-folder${selected ? '' : ' active'}" type="button" onclick="window.tbDocumentsSelectFolder('')">
-      <span>${esc(tr('documents.folder.all'))}</span>
+      <span class="tb-doc-folder-label"><span class="tb-doc-folder-glyph" aria-hidden="true">●</span><span>${esc(tr('documents.folder.all'))}</span></span>
       <small>${esc(allCount)}</small>
     </button>
 
-    ${folderRows}
-  </div>`;
+    <nav class="tb-doc-folder-list">${folderRows}</nav>
+  </aside>`;
 }
 
 export function renderDocumentMain({

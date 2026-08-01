@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `a6f37e6fe5862d292db9269530eef743cfa18fef`
-> Empreinte du snapshot : `f3152c79d72cdb53b97b2cd5cc66160c0c5a84ce7309b642f8056c6a375cc159`
-> Généré le : `2026-08-01T11:17:49.756Z`
+> Commit analysé : `c2c5e7d24e81901a9c1eb4da860c26866e024cba`
+> Empreinte du snapshot : `be3c1b4f2e9b8c164f9513b32b2fa2883244e0e5071689d2c924a4ca9825164b`
+> Généré le : `2026-08-01T11:36:25.798Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.320` |
+| Version | `10.5.321` |
 | Écrans déclarés | 16 |
 | Scripts legacy référencés | 56 |
 | Modules core | 26 |
 | Modules data | 8 |
 | Modules features | 44 |
-| Fichiers de tests | 117 |
-| Migrations Supabase | 97 |
+| Fichiers de tests | 118 |
+| Migrations Supabase | 98 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -278,6 +278,7 @@ Modules :
 - `tests/ui/dashboardViewContract.test.js`
 - `tests/ui/documentsDomainContract.test.js`
 - `tests/ui/errorBusContract.test.js`
+- `tests/ui/helpViewContract.test.js`
 - `tests/ui/inboxDomainContract.test.js`
 - `tests/ui/initialBootLoaderContract.test.js`
 - `tests/ui/kpiRangePickerContract.test.js`
@@ -400,6 +401,7 @@ Modules :
 - `tests/ui/dashboardViewContract.test.js`
 - `tests/ui/documentsDomainContract.test.js`
 - `tests/ui/errorBusContract.test.js`
+- `tests/ui/helpViewContract.test.js`
 - `tests/ui/inboxDomainContract.test.js`
 - `tests/ui/initialBootLoaderContract.test.js`
 - `tests/ui/kpiRangePickerContract.test.js`
@@ -550,7 +552,8 @@ Modules :
 - `supabase/migrations/20260801071652_tighten_test_campaign_grants.sql`
 - `supabase/migrations/20260801095640_update_interface_test_campaign.sql`
 - `supabase/migrations/20260801103314_archive_treated_test_feedback.sql`
-- `supabase/migrations/20260801111219_archive_grouped_feedback_10_5_320.sql`
+- `supabase/migrations/20260801111519_archive_grouped_feedback_10_5_320.sql`
+- `supabase/migrations/20260801113508_archive_help_documents_project_10_5_321.sql`
 
 ## Android et budgets de modules
 

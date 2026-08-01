@@ -16,10 +16,10 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.320`.
+- Version cible de campagne : `10.5.321`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
-- 11 resultats et 6 revues de module traites sont archives avec date de test, date de traitement, version et note.
-- 3 retests cibles restent ouverts : premier affichage Dashboard, transactions protegees et recap/historique Trip.
+- 18 resultats et 9 revues de module traites sont archives avec date de test, date de traitement, version et note.
+- 5 retests cibles restent ouverts : premier affichage Dashboard, transactions protegees, recap/historique Trip, Aide navigation/mobile et Documents import/classement.
 - A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
 ## Socle transversal
@@ -142,15 +142,15 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 
 ## Chantier 11 - Documents
 
-- [ ] Corriger les textes francais.
-- [ ] Moderniser le bandeau lateral sans perdre les commandes.
+- [x] Corriger les textes francais.
+- [x] Moderniser le bandeau lateral sans perdre les commandes.
 - [ ] Verifier l apercu et les liens metier apres la correction CSP.
 
 ## Chantier 12 - Aide
 
-- [ ] Expliquer le diagnostic technique avec une aide utilisateur.
-- [ ] Ajouter une voie de contact support.
-- [ ] Corriger le masquage et la persistance de Demarrage rapide.
+- [x] Expliquer le diagnostic technique avec une aide utilisateur.
+- [x] Ajouter une voie de contact support.
+- [x] Corriger le masquage et la persistance de Demarrage rapide.
 
 ## Tests differes volontairement
 

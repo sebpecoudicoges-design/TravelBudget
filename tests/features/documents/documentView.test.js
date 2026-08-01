@@ -128,6 +128,12 @@ describe('document view', () => {
     expect(html).toContain('Factures');
     expect(html).toContain("window.tbDocumentsSelectFolder('child-1')");
     expect(html).toContain('tb-doc-folder active');
+    expect(html).toContain('<aside class="tb-doc-sidebar"');
+    expect(html).toContain('tb-doc-sidebar-mark');
+    expect(html).toContain('tb-doc-folder-glyph');
+    expect(html).toContain('aria-label="documents.folder.rename"');
+    expect(html).not.toContain('>Edit</button>');
+    expect(html).not.toContain('>Del</button>');
   });
 
   it('renders main document area with filters, batch actions and cards', () => {
