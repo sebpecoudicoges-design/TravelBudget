@@ -1,17 +1,17 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "version": "10.5.315",
-  "commit": "cdf2cb6ff67ac31a84380b253ca028fdee26df38",
-  "generatedAt": "2026-08-01T06:46:02.779Z",
+  "version": "10.5.316",
+  "commit": "cc6ead5ed7abb5e8cea24e551c7122e3c3ae8b01",
+  "generatedAt": "2026-08-01T07:39:58.948Z",
   "counts": {
-    "screens": 15,
+    "screens": 17,
     "criticalFeatures": 10,
-    "tests": 111,
-    "migrations": 92,
-    "featureModules": 41,
-    "coreModules": 25,
-    "dataModules": 7,
-    "edgeFunctions": 11
+    "tests": 116,
+    "migrations": 94,
+    "featureModules": 44,
+    "coreModules": 26,
+    "dataModules": 8,
+    "edgeFunctions": 12
   },
   "domains": [
     "analysis",
@@ -23,6 +23,7 @@
     "nutrition",
     "settings",
     "sport",
+    "testing",
     "transactions",
     "trip",
     "work"

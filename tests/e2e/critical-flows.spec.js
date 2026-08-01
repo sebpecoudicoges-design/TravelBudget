@@ -87,11 +87,69 @@ test('lazy-loads a domain tab and preserves mobile layout access', async ({ page
   await page.goto('/?freeze=1');
   await expectBootShell(page);
 
-  await page.evaluate(() => window.showView('nutrition'));
+  await page.evaluate(() => {
+    window.sbRole = 'test';
+    window.syncTabsForRole();
+    window.showView('nutrition');
+  });
   await expect(page.locator('#tab-nutrition')).toHaveClass(/active/);
   await expect(page.locator('#view-nutrition')).not.toHaveClass(/hidden/);
   await expect.poll(() => page.evaluate(() => typeof window.renderNutrition)).toBe('function');
   await expect(page.locator('#nutrition-root')).toHaveCount(1);
   await expect.poll(() => page.locator('#nutrition-root').evaluate((node) => node.textContent.length)).toBeGreaterThan(20);
   await expect.poll(() => page.evaluate(() => window.activeView)).toBe('nutrition');
+});
+
+test('locks standard accounts while testers keep module and campaign access', async ({ page }) => {
+  await page.goto('/?freeze=1');
+  await expectBootShell(page);
+
+  await page.evaluate(() => {
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('app-root').style.display = 'block';
+    window.sbRole = 'user';
+    window.syncTabsForRole();
+    window.showView('dashboard');
+  });
+  await expect(page.locator('#view-validation')).not.toHaveClass(/hidden/);
+  await expect(page.locator('#tab-dashboard')).toBeHidden();
+  await expect(page.locator('#tab-settings')).toBeVisible();
+
+  await page.evaluate(() => {
+    window.sbRole = 'test';
+    window.syncTabsForRole();
+  });
+  await expect(page.locator('#tab-dashboard')).toBeVisible();
+  await expect(page.locator('#tab-testing')).toBeVisible();
+  await expect(page.locator('#tab-members')).toBeHidden();
+});
+
+test('keeps the tester checklist usable at 390px in light and dark themes', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/?freeze=1');
+  await expectBootShell(page);
+  await page.evaluate(async () => {
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('app-root').style.display = 'block';
+    window.sbRole = 'test';
+    window.syncTabsForRole();
+    window.setActiveTab('testing');
+    const { renderTestCampaign } = await import('/src/features/testing/testCampaignView.js');
+    document.getElementById('testing-root').innerHTML = renderTestCampaign({
+      campaign: { id: 'campaign', title: 'Stabilisation', description: 'Validation module par module', app_version: '10.5.316' },
+      modules: [{
+        id: 'dashboard', module_key: 'dashboard', title: 'Dashboard', description: 'Wallets et KPI', instructions: 'Tester le parcours complet.',
+        scenarios: [{ id: 'scenario', title: 'Mobile', instructions: 'Ouvrir et controler.', expected_result: 'Aucun debordement.', required: true, result: { status: 'pending', notes: '' } }],
+        review: { status: 'in_progress', notes: '' },
+      }],
+    });
+  });
+  await expect(page.locator('[data-test-result="ok"]')).toBeVisible();
+  await expect(page.locator('[data-test-result="not_ok"]')).toBeVisible();
+  await expect(page.locator('[data-test-notes]')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+  await page.evaluate(() => document.body.classList.add('theme-dark'));
+  await expect(page.locator('.tb-test-scenario')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

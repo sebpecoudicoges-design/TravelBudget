@@ -1,8 +1,10 @@
 # Retours tests membres admins
 
-Objectif : centraliser les retours de test avant de cloturer une version APK.
+Objectif : conserver les anciens retours de test avant la campagne integree `10.5.316`.
 
-Statut global : a finir
+Depuis `10.5.316`, les retours actifs sont saisis dans l onglet **Tests** et persistes dans Supabase. Ce fichier reste une archive et un espace de notes exceptionnelles admin.
+
+Statut global : remplace par la campagne integree
 
 ## Mode d'emploi
 

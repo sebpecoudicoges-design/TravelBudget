@@ -124,6 +124,8 @@ En 10.5.314, les derniers fallbacks HTML Documents pour shell, dossiers, cartes,
 
 En 10.5.315, le chantier 6 est clos : la recherche de code mort devient une regle permanente dans `AGENTS.md` et la checklist V11. Aucun nouveau code runtime n'est ajoute par ce lot ; le prochain chantier officiel devient la preparation Play Store avec `docs/PLAY_STORE_READINESS.md` et un AAB de controle produit localement par `npm run android:bundle-check`.
 
+En 10.5.316, la campagne de stabilisation ajoute un domaine `testing` charge a la demande : garde centrale des modules, scenarios Supabase, resultats OK/Pas OK, notes et cloture par module. Le bundle initial reste sous son plafond a environ 255.5 / 260 KiB. Le nouveau chunk lazy mesure environ 12.4 KiB ; les plafonds lazy, JS total et CSS passent respectivement a 415, 670 et 28 KiB, avec un budget source dedie `testing-domain` de 35 KiB pour isoler toute regression future de ce chantier.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

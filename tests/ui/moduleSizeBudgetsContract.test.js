@@ -13,6 +13,7 @@ describe('module size budgets', () => {
       'inbox-domain',
       'analysis-domain',
       'dashboard-settings',
+      'testing-domain',
       'trip-domain',
       'sport-domain',
       'nutrition-domain',

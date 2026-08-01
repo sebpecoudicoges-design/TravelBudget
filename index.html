@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="BudgetPacker">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.315";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.316";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -3940,6 +3940,7 @@
         <div id="tab-help" class="tab" data-icon="❓" onclick="showView('help')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-help"></use></svg><span class="tab-label" data-t="nav.help">Aide</span></div>
         <div id="tab-trip" class="tab" data-icon="✈️" onclick="showView('trip')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-trip"></use></svg><span class="tab-label" data-t="nav.trip">Partage</span></div>
         <div id="tab-settings" class="tab" data-icon="⚙️" onclick="showView('settings')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-settings"></use></svg><span class="tab-label" data-t="nav.settings">Settings</span></div>
+        <div id="tab-testing" class="tab" data-icon="🧪" style="display:none" onclick="showView('testing')"><span class="tab-icon" aria-hidden="true">🧪</span><span class="tab-label">Tests</span></div>
         <div id="tab-members" class="tab" data-icon="👥" style="display:none" onclick="showView('members')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-members"></use></svg><span class="tab-label" data-t="nav.members">Membres</span></div>
       </div>
 
@@ -3968,6 +3969,18 @@
           </div>
         </div>
 
+      </div>
+
+      <div id="view-validation" class="hidden">
+        <section class="card tb-validation-shell" role="status">
+          <span class="tb-test-kicker">Stabilisation en cours</span>
+          <h2>TravelBudget est en campagne de validation</h2>
+          <p>Les modules sont temporairement reserves aux administrateurs et aux testeurs pendant leur verification module par module. Ton compte et l aide restent accessibles.</p>
+          <div class="row" style="justify-content:center;gap:10px;">
+            <button class="btn primary" type="button" onclick="showView('settings')">Ouvrir mon compte</button>
+            <button class="btn" type="button" onclick="showView('help')">Ouvrir l aide</button>
+          </div>
+        </section>
       </div>
 
       <!-- ASSETS / PATRIMOINE -->
@@ -4477,6 +4490,10 @@
       </div>
 
       <!-- MEMBERS (ADMIN) -->
+      <div id="view-testing" class="hidden">
+        <div id="testing-root"></div>
+      </div>
+
       <div id="view-members" class="hidden">
         <div id="members-root"></div>
       </div>

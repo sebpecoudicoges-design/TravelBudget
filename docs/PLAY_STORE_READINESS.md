@@ -2,9 +2,11 @@
 
 Objectif : passer de l'APK de test a une publication Google Play propre, sans perdre la tracabilite deja installee dans le projet.
 
+Statut : **en attente de la campagne de stabilisation module par module ouverte en `10.5.316`**. Les acquis AAB et conformite sont conserves ; la soumission reprend apres validation des modules critiques.
+
 ## Etat actuel
 
-- Version web/app courante : `10.5.315`.
+- Version web/app courante : `10.5.316`.
 - Package Android : `com.travelbudget.app`.
 - Version Android derivee de `package.json`.
 - APK de test publie via Supabase Storage.

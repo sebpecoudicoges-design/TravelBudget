@@ -20,8 +20,10 @@ function setActiveTab(view) {
     ["nutrition", "tab-nutrition", "view-nutrition"],
     ["notifications", "tab-notifications", "view-notifications"],
     ["trip", "tab-trip", "view-trip"],
+    ["testing", "tab-testing", "view-testing"],
     ["members", "tab-members", "view-members"],
     ["help", "tab-help", "view-help"],
+    ["validation", null, "view-validation"],
   ];
   for (const [name, tabId, viewId] of tabs) {
     const tab = document.getElementById(tabId);
@@ -33,7 +35,9 @@ function setActiveTab(view) {
 function showView(view) {
   try { if (typeof window.tbApplyUiModeToDocument === "function") window.tbApplyUiModeToDocument(); } catch (_) {}
   if (view === "health") view = "nutrition";
-  if (view === "members" && String(window.sbRole || "").trim().toLowerCase() !== "admin") view = "dashboard";
+  const access = window.TBModuleAccess;
+  if (access && typeof access.resolveAppView === "function") view = access.resolveAppView(view, window.sbRole);
+  if (view === "members" && String(window.sbRole || "").trim().toLowerCase() !== "admin") view = "validation";
   activeView = view;
   try { if (typeof window !== "undefined") window.activeView = view; } catch (_) {}
   try { if (window.tbBus && typeof window.tbBus.emit === "function") window.tbBus.emit("view:changed", { view }); } catch (_) {}
@@ -207,6 +211,9 @@ function showView(view) {
       });
     }
   }
+  if (view === "testing") {
+    if (typeof window.renderTestCampaignApp === "function") window.renderTestCampaignApp("navigation");
+  }
   if (view === "help") {
     if (typeof renderHelpFaq === "function") renderHelpFaq();
     else if (typeof window.tbLoadLegacyDomain === "function") {
@@ -225,10 +232,28 @@ function showView(view) {
 
 
 function syncTabsForRole() {
-  const isAdmin = String(window.sbRole || "").trim().toLowerCase() === "admin";
-  const tab = document.getElementById('tab-members');
-  try { document.body.classList.toggle("tb-role-admin", isAdmin); } catch (_) {}
-  if (tab) tab.style.display = isAdmin ? 'flex' : 'none';
-  // if user is not admin and is currently on members view, bounce to dashboard
-  if (!isAdmin && (typeof activeView !== 'undefined') && activeView === 'members') showView('dashboard');
+  const role = String(window.sbRole || "").trim().toLowerCase();
+  const roleState = window.TBModuleAccess?.roleUiState
+    ? window.TBModuleAccess.roleUiState(role)
+    : { isAdmin: role === "admin", isTester: role === "test", canPreviewModules: role === "admin" || role === "test", canUseTestCampaign: role === "admin" || role === "test", isRestricted: role !== "admin" && role !== "test" };
+  const moduleTabs = [
+    'dashboard','transactions','analysis','assets','cautions','sport','nutrition','work','documents','inbox','notifications','trip'
+  ];
+  try {
+    document.body.classList.toggle("tb-role-admin", roleState.isAdmin);
+    document.body.classList.toggle("tb-role-test", roleState.isTester);
+    document.body.classList.toggle("tb-role-restricted", roleState.isRestricted);
+    document.body.dataset.tbRole = roleState.role || role || 'user';
+  } catch (_) {}
+  moduleTabs.forEach((name) => {
+    const tab = document.getElementById(`tab-${name}`);
+    if (tab) tab.style.display = roleState.canPreviewModules ? 'flex' : 'none';
+  });
+  const testingTab = document.getElementById('tab-testing');
+  if (testingTab) testingTab.style.display = roleState.canUseTestCampaign ? 'flex' : 'none';
+  const membersTab = document.getElementById('tab-members');
+  if (membersTab) membersTab.style.display = roleState.isAdmin ? 'flex' : 'none';
+  if (!roleState.canPreviewModules && typeof activeView !== 'undefined' && !['settings', 'help', 'validation'].includes(activeView)) {
+    showView('validation');
+  }
 }

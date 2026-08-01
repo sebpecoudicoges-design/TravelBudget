@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `cdf2cb6ff67ac31a84380b253ca028fdee26df38`
-> Empreinte du snapshot : `f2bc5774d29b5d5631b68477a05827bc255215d4d8804d474ece620f44ef8b9c`
-> Généré le : `2026-08-01T06:46:02.779Z`
+> Commit analysé : `cc6ead5ed7abb5e8cea24e551c7122e3c3ae8b01`
+> Empreinte du snapshot : `0aaf2d937b40f693081ad448bd687a4b58870c2b04a0aa8252019651cdd36356`
+> Généré le : `2026-08-01T07:39:58.948Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,15 +11,15 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.315` |
-| Écrans déclarés | 15 |
+| Version | `10.5.316` |
+| Écrans déclarés | 17 |
 | Scripts legacy référencés | 57 |
-| Modules core | 25 |
-| Modules data | 7 |
-| Modules features | 41 |
-| Fichiers de tests | 111 |
-| Migrations Supabase | 92 |
-| Fonctions Edge | 11 |
+| Modules core | 26 |
+| Modules data | 8 |
+| Modules features | 44 |
+| Fichiers de tests | 116 |
+| Migrations Supabase | 94 |
+| Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
 ## Scripts npm
@@ -62,8 +62,10 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `nutrition`
 - `settings`
 - `sport`
+- `testing`
 - `transactions`
 - `trip`
+- `validation`
 - `work`
 
 ## Onglets de navigation déclarés
@@ -80,6 +82,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `nutrition`
 - `settings`
 - `sport`
+- `testing`
 - `transactions`
 - `trip`
 - `work`
@@ -172,6 +175,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `src/core/fxDecisionRules.js`
 - `src/core/fxRules.js`
 - `src/core/inboxRules.js`
+- `src/core/moduleAccessRules.js`
 - `src/core/money.js`
 - `src/core/notificationRules.js`
 - `src/core/nutritionRules.js`
@@ -195,6 +199,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 - `src/data/sportRepository.js`
 - `src/data/storageQuota.js`
 - `src/data/supabaseRepository.js`
+- `src/data/testCampaignRepository.js`
 - `src/data/tripRepository.js`
 
 ## Domaines et modules src/features
@@ -210,6 +215,7 @@ Domaines :
 - `nutrition`
 - `settings`
 - `sport`
+- `testing`
 - `transactions`
 - `trip`
 - `work`
@@ -250,6 +256,9 @@ Modules :
 - `src/features/sport/sportTimerController.js`
 - `src/features/sport/sportTimerView.js`
 - `src/features/sport/sportView.js`
+- `src/features/testing/testCampaignController.js`
+- `src/features/testing/testCampaignRules.js`
+- `src/features/testing/testCampaignView.js`
 - `src/features/transactions/transactionView.js`
 - `src/features/trip/tripDocumentView.js`
 - `src/features/trip/tripExpenseDetailView.js`
@@ -295,6 +304,7 @@ Modules :
 - `tests/ui/sportTimerControllerContract.test.js`
 - `tests/ui/sportViewsContract.test.js`
 - `tests/ui/syntaxLintContract.test.js`
+- `tests/ui/testCampaignContract.test.js`
 - `tests/ui/transactionModalContract.test.js`
 - `tests/ui/transactionsViewContract.test.js`
 - `tests/ui/tripDomainContract.test.js`
@@ -321,6 +331,7 @@ Modules :
 - `tests/core/fxRules.test.js`
 - `tests/core/i18nRules.test.js`
 - `tests/core/inboxRules.test.js`
+- `tests/core/moduleAccessRules.test.js`
 - `tests/core/money.test.js`
 - `tests/core/notificationRules.test.js`
 - `tests/core/nutritionRules.test.js`
@@ -342,6 +353,7 @@ Modules :
 - `tests/data/sportRepository.test.js`
 - `tests/data/storageQuota.test.js`
 - `tests/data/supabaseRepository.test.js`
+- `tests/data/testCampaignRepository.test.js`
 - `tests/data/tripRepository.test.js`
 - `tests/e2e/critical-flows.spec.js`
 - `tests/features/analysis/analysisChartOptions.test.js`
@@ -373,6 +385,8 @@ Modules :
 - `tests/features/sport/sportTimerController.test.js`
 - `tests/features/sport/sportTimerPersistence.test.js`
 - `tests/features/sport/sportViews.test.js`
+- `tests/features/testing/testCampaignRules.test.js`
+- `tests/features/testing/testCampaignView.test.js`
 - `tests/features/transactions/transactionView.test.js`
 - `tests/features/trip/tripStore.test.js`
 - `tests/features/trip/tripView.test.js`
@@ -413,6 +427,7 @@ Modules :
 - `tests/ui/sportViewsContract.test.js`
 - `tests/ui/standaloneHealthNavigation.test.js`
 - `tests/ui/syntaxLintContract.test.js`
+- `tests/ui/testCampaignContract.test.js`
 - `tests/ui/transactionModalContract.test.js`
 - `tests/ui/transactionsViewContract.test.js`
 - `tests/ui/tripDomainContract.test.js`
@@ -429,6 +444,7 @@ Modules :
 - `admin-generate-invite-link`
 - `admin-generate-recovery-link`
 - `admin-invite`
+- `admin-set-user-role`
 - `admin-wipe-user`
 - `dispatch-mobile-notifications`
 - `export-account-data`
@@ -532,6 +548,8 @@ Modules :
 - `supabase/migrations/20260723184600_sport_mobility_assessments.sql`
 - `supabase/migrations/20260725234344_account_data_requests.sql`
 - `supabase/migrations/20260729103843_trip_shared_income_entries.sql`
+- `supabase/migrations/20260801070338_module_test_campaign.sql`
+- `supabase/migrations/20260801071652_tighten_test_campaign_grants.sql`
 
 ## Android et budgets de modules
 
@@ -547,6 +565,7 @@ Modules :
 - `docs/ADMIN_TEST_RETURNS.md`
 - `docs/ARCHITECTURE_DECISIONS.md`
 - `docs/MANUAL_TESTS.md`
+- `docs/MODULE_TEST_CAMPAIGN.md`
 - `docs/PLAY_STORE_READINESS.md`
 - `docs/PROJECT_ATLAS.md`
 - `docs/PROJECT_PAGE_CHECKLIST.md`

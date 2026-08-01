@@ -6,12 +6,14 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.315`.
-- Bilan : 7 parcours `ok`, 71 parcours `à faire`.
+- Version à valider : `10.5.316`.
+- Campagne active : 14 modules et 45 scénarios condensés dans l'onglet **Tests** de l'application.
+- Premier module : **Dashboard**.
+- Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
-- Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
-- Consigner les anomalies et retours détaillés dans `docs/ADMIN_TEST_RETURNS.md`.
+- Pour la campagne actuelle, exécuter les scénarios affichés dans l'application et y saisir directement `OK`, `Pas OK` et les notes.
+- Voir `docs/MODULE_TEST_CAMPAIGN.md` pour les rôles, l'ordre et les critères de fin.
 
 ## Parcours de régression condensés
 

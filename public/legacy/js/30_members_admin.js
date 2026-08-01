@@ -193,6 +193,8 @@ function renderUsers() {
           <div style="font-size:12px;opacity:.6;">Created: ${_escapeHtml(u.created_at || "")}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn" onclick="adminSetUserRole('${_escapeHtml(u.id)}','test')">Passer testeur</button>
+          <button class="btn" onclick="adminSetUserRole('${_escapeHtml(u.id)}','user')">Retirer testeur</button>
           <button class="btn danger" onclick="adminWipeUser('${_escapeHtml(u.id)}','${_escapeHtml(u.email || "")}')">Vider compte</button>
         </div>
       </div>
@@ -264,6 +266,16 @@ Tape EXACTEMENT ${word} pour confirmer :`
     await adminRefreshUsers();
 
     console.log("[MembersAdmin] adminWipeUser:done");
+  });
+}
+
+async function adminSetUserRole(userId, role) {
+  const label = role === "test" ? "Passer ce compte en testeur ?" : "Retirer le role testeur de ce compte ?";
+  if (!confirm(label)) return;
+  await guard("Modifier role utilisateur", async () => {
+    const out = await callEdge("admin-set-user-role", { targetUserId: userId, role });
+    _setStatus(out?.profile?.role === "test" ? "Compte passe en testeur." : "Role testeur retire.");
+    await adminRefreshUsers();
   });
 }
 

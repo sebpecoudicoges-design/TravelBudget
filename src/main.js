@@ -1,7 +1,9 @@
 import './app/bridge.js';
 import './ui/premium-theme.css';
+import './features/testing/testCampaign.css';
 import { registerPwa } from './app/pwa.js';
 import * as budgetAnalysisRules from './core/budgetAnalysisRules.js';
+import * as moduleAccessRules from './core/moduleAccessRules.js';
 import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as transactionView from './features/transactions/transactionView.js';
 import * as settingsView from './features/settings/settingsView.js';
@@ -18,6 +20,14 @@ window.TBDashboardView = {
   ...(window.TBDashboardView || {}),
   ...dashboardView,
 };
+window.TBModuleAccess = {
+  ...(window.TBModuleAccess || {}),
+  ...moduleAccessRules,
+};
+window.renderTestCampaignApp = window.renderTestCampaignApp || (async (reason = 'navigation') => {
+  const mod = await import('./features/testing/testCampaignController.js');
+  return mod.renderTestCampaignApp(reason);
+});
 window.TBTransactionView = {
   ...(window.TBTransactionView || {}),
   ...transactionView,

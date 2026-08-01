@@ -1,4 +1,4 @@
-window.TB_VERSION = window.TB_VERSION || "10.5.315";
+window.TB_VERSION = window.TB_VERSION || "10.5.316";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
 try { if (!window.__tbBuildLogged) { window.__tbBuildLogged = true; console.info(`TB BUILD ${window.TB_VERSION}`); } } catch (_) {}
@@ -21,6 +21,11 @@ try {
 (function () {
   const TABLES = Object.freeze({
     profiles: "profiles",
+    app_test_campaigns: "app_test_campaigns",
+    app_test_modules: "app_test_modules",
+    app_test_scenarios: "app_test_scenarios",
+    app_test_results: "app_test_results",
+    app_test_module_reviews: "app_test_module_reviews",
     mobile_notification_campaigns: "mobile_notification_campaigns",
     mobile_notification_deliveries: "mobile_notification_deliveries",
     notification_templates: "notification_templates",

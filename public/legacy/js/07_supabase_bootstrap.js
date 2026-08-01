@@ -657,7 +657,7 @@ async function _tbEnsureBootstrapImpl(opts = {}) {
     state.user.whatsappPhone = prof.whatsapp_phone_e164 || state.user.whatsappPhone || "";
   }
 
-  // 1) Ensure profile row exists (role default: 'user')
+  // 1) Ensure profile row exists. The server owns the role default and clients cannot set it.
   // expose role globally for navigation/admin UI
   window.sbRole = (prof && prof.role) ? String(prof.role).trim().toLowerCase() : 'user';
   try {
@@ -669,7 +669,6 @@ async function _tbEnsureBootstrapImpl(opts = {}) {
       {
         id: sbUser.id,
         email: sbUser.email || null,
-        role: "user",
       },
     ]);
     if (insErr) throw insErr;
