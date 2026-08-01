@@ -20,4 +20,17 @@ describe('test campaign view', () => {
     expect(html).toContain('data-test-finish="completed_ok"');
     expect(html).toContain('data-test-open-module="dashboard"');
   });
+
+  it('labels the public project page action explicitly', () => {
+    const html = renderTestCampaign({
+      campaign: { id: 'campaign-1', title: 'Interface', app_version: '10.5.318' },
+      modules: [{
+        id: 'module-project', module_key: 'project', title: 'Interface generale', instructions: 'Review',
+        scenarios: [], review: { status: 'in_progress', notes: '' },
+      }],
+    });
+
+    expect(html).toContain('data-test-open-module="project"');
+    expect(html).toContain('Ouvrir la page Projet');
+  });
 });

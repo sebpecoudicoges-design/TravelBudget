@@ -69,7 +69,7 @@ export function renderTestCampaign(state, options = {}) {
             <h3>${esc(selected?.title || '')}</h3>
             <p>${esc(selected?.description || '')}</p>
           </div>
-          <button type="button" class="btn" data-test-open-module="${esc(selected?.module_key || '')}">Ouvrir le module</button>
+          <button type="button" class="btn" data-test-open-module="${esc(selected?.module_key || '')}">${selected?.module_key === 'project' ? 'Ouvrir la page Projet' : 'Ouvrir le module'}</button>
         </header>
         <div class="tb-test-instructions"><strong>Instructions generales</strong><span>${esc(selected?.instructions || 'Realise les scenarios dans l ordre et note tout ecart observe.')}</span></div>
         <div class="tb-test-progress"><span style="width:${progress.percent}%"></span></div>

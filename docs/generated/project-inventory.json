@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "359fc3bfc370de15f9ed24449a4e58ef21d915fe",
-  "snapshotFingerprint": "449ef20c284d5f354fc8a8e00dc5453de0b8e74b0f88621e921f5ce8ac05b050",
-  "generatedAt": "2026-08-01T09:44:46.958Z",
+  "commit": "cc133ceea1fa5cb12ccdd58b611b4e4da59eb920",
+  "snapshotFingerprint": "41d02942178d3a4adac846c0ef9128e974a8f0f03be1030b54525920fb669d4b",
+  "generatedAt": "2026-08-01T10:13:31.208Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.317"
+    "version": "10.5.318"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -331,6 +331,7 @@
     "tests/ui/legacyDomainLoader.test.js",
     "tests/ui/moduleSizeBudgetsContract.test.js",
     "tests/ui/nutritionDomainContract.test.js",
+    "tests/ui/projectPageVisualContract.test.js",
     "tests/ui/publicLinksContract.test.js",
     "tests/ui/recurringRulesSubcategoriesContract.test.js",
     "tests/ui/settingsModalContract.test.js",
@@ -376,6 +377,7 @@
     "tests/ui/legacyBusinessRulesContract.test.js",
     "tests/ui/moduleSizeBudgetsContract.test.js",
     "tests/ui/nutritionDomainContract.test.js",
+    "tests/ui/projectPageVisualContract.test.js",
     "tests/ui/publicLinksContract.test.js",
     "tests/ui/recurringRulesSubcategoriesContract.test.js",
     "tests/ui/settingsModalContract.test.js",
@@ -498,7 +500,8 @@
     "supabase/migrations/20260725234344_account_data_requests.sql",
     "supabase/migrations/20260729103843_trip_shared_income_entries.sql",
     "supabase/migrations/20260801070338_module_test_campaign.sql",
-    "supabase/migrations/20260801071652_tighten_test_campaign_grants.sql"
+    "supabase/migrations/20260801071652_tighten_test_campaign_grants.sql",
+    "supabase/migrations/20260801095640_update_interface_test_campaign.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

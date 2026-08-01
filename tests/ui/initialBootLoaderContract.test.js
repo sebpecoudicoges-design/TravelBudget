@@ -15,6 +15,8 @@ describe('initial boot loader contract', () => {
     expect(index).toContain('id="tb-boot-version"');
     expect(index).toContain('Version TB');
     expect(index).toContain('window.TB_VERSION');
+    expect(index).toContain('Préparation de votre espace');
+    expect(index).toContain('Vos données restent dans votre espace privé');
   });
 
   it('forces 100% before hiding and exposes staged boot progress', () => {
@@ -27,13 +29,14 @@ describe('initial boot loader contract', () => {
     expect(boot).toContain('tbShowBootOverlay("Chargement des transactions, wallets et graphiques…", 72, "sync")');
   });
 
-  it('keeps the complete futuristic skin in index.html instead of duplicating it in legacy boot', () => {
+  it('keeps the premium coral and lagoon skin in index.html without restoring the old tech grid', () => {
     const index = read('index.html');
     const boot = read('public/legacy/js/20_boot.js');
 
-    expect(index).toContain('@keyframes tbBootSweep');
-    expect(index).toContain('repeating-linear-gradient(90deg');
-    expect(boot).not.toContain('@keyframes tbBootSweep');
+    expect(index).toContain('@keyframes tbBootBreathe');
+    expect(index).toContain('var(--tb-coral,#ff6b4a)');
+    expect(index).toContain('var(--tb-lagoon,#23b5af)');
+    expect(index).not.toContain('@keyframes tbBootSweep');
     expect(boot).not.toContain('repeating-linear-gradient(90deg');
   });
 });

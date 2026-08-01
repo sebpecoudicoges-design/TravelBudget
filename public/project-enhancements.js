@@ -3,7 +3,6 @@
     journey: "month",
     journeyStep: 0,
     lab: "transaction",
-    checklistFilter: "all",
   };
 
   const lang = () => document.documentElement.lang === "en" ? "en" : "fr";
@@ -213,85 +212,6 @@
     }).join("");
   }
 
-  const checklistItems = {
-    fr: [
-      ["cash", "product", true, "Cash Pulse et Atlas interactifs", "Les deux visualisations sont integrees et responsives."],
-      ["journeys", "product", true, "Parcours narratifs", "Mois, voyage et sante sont explorables etape par etape."],
-      ["labs", "product", true, "Mini-demos produit", "Transaction, Trip, Sport et Nutrition sont manipulables."],
-      ["user-review", "product", false, "Relecture par deux utilisateurs", "Faire noter comprehension, confiance et points de friction."],
-      ["privacy", "privacy", true, "Politique FR/EN", "La page couvre donnees, prestataires, conservation et droits."],
-      ["deletion-link", "privacy", true, "Suppression accessible", "Le parcours externe est lie depuis les reglages et le projet."],
-      ["deletion-test", "privacy", false, "Test de suppression complet", "Executer la demande sur un compte de demonstration."],
-      ["data-safety", "privacy", false, "Formulaire Data safety", "Reporter les traitements exactement dans Google Play Console."],
-      ["legal-review", "privacy", false, "Relecture juridique", "Faire valider la politique avant publication publique."],
-      ["apk", "android", true, "APK de test versionnee", "Le telechargement direct reste disponible sur la page."],
-      ["permissions", "android", true, "Permissions minimales", "Internet et notifications uniquement."],
-      ["aab", "android", false, "AAB de production signe", "Generer la version destinee au Play Store."],
-      ["store-assets", "android", false, "Assets Play Store", "Finaliser icone, banniere et captures d'ecran."],
-      ["closed-test", "android", false, "Test ferme termine", "Centraliser les retours et traiter les blocages."],
-      ["build", "quality", true, "Build et syntaxe valides", "Vite, lint et tests cibles passent."],
-      ["atlas-docs", "quality", true, "Inventaire Atlas regenerable", "La source publique suit docs/generated/project-inventory.json."],
-      ["devices", "quality", false, "Validation appareils reels", "Verifier telephone, tablette et desktop."],
-      ["links", "quality", false, "Liens publics controles", "Verifier Privacy, APK et futurs liens Store."],
-    ],
-    en: [
-      ["cash", "product", true, "Interactive Cash Pulse and Atlas", "Both visualizations are integrated and responsive."],
-      ["journeys", "product", true, "Narrative journeys", "Month, trip and health can be explored step by step."],
-      ["labs", "product", true, "Product mini-demos", "Transaction, Trip, Sport and Nutrition can be manipulated."],
-      ["user-review", "product", false, "Review by two users", "Collect notes on clarity, trust and friction."],
-      ["privacy", "privacy", true, "FR/EN privacy policy", "The page covers data, providers, retention and rights."],
-      ["deletion-link", "privacy", true, "Accessible deletion path", "The external path is linked from Settings and the project page."],
-      ["deletion-test", "privacy", false, "End-to-end deletion test", "Run the request on a demonstration account."],
-      ["data-safety", "privacy", false, "Data safety form", "Declare processing exactly in Google Play Console."],
-      ["legal-review", "privacy", false, "Legal review", "Have the policy reviewed before public release."],
-      ["apk", "android", true, "Versioned test APK", "Direct download remains available on the page."],
-      ["permissions", "android", true, "Minimal permissions", "Internet and notifications only."],
-      ["aab", "android", false, "Signed production AAB", "Generate the version intended for Play Store."],
-      ["store-assets", "android", false, "Play Store assets", "Finalize icon, feature graphic and screenshots."],
-      ["closed-test", "android", false, "Closed test completed", "Centralize feedback and resolve blockers."],
-      ["build", "quality", true, "Build and syntax validated", "Vite, lint and targeted tests pass."],
-      ["atlas-docs", "quality", true, "Regenerable Atlas inventory", "The public source follows docs/generated/project-inventory.json."],
-      ["devices", "quality", false, "Real-device validation", "Check phone, tablet and desktop."],
-      ["links", "quality", false, "Public links checked", "Verify Privacy, APK and future Store links."],
-    ],
-  };
-  const checklistStorageKey = "budgetpacker_project_checklist_v1";
-
-  function savedChecklist() {
-    try { return JSON.parse(localStorage.getItem(checklistStorageKey) || "{}"); } catch (_) { return {}; }
-  }
-  function saveChecklist(value) {
-    try { localStorage.setItem(checklistStorageKey, JSON.stringify(value)); } catch (_) {}
-  }
-
-  function renderChecklist() {
-    const filters = document.getElementById("checklistFilters");
-    const grid = document.getElementById("checklistGrid");
-    if (!filters || !grid) return;
-    const locale = lang();
-    const labels = locale === "fr" ? { all: "Tout", product: "Produit", privacy: "Confidentialite", android: "Android", quality: "Qualite" } : { all: "All", product: "Product", privacy: "Privacy", android: "Android", quality: "Quality" };
-    const saved = savedChecklist();
-    const items = checklistItems[locale];
-    const completed = items.filter(([id,, defaultDone]) => Object.prototype.hasOwnProperty.call(saved, id) ? !!saved[id] : defaultDone).length;
-    const percent = Math.round(completed / items.length * 100);
-    const label = document.getElementById("checklistProgressLabel");
-    const bar = document.getElementById("checklistProgressBar");
-    if (label) label.textContent = `${percent}% · ${completed}/${items.length}`;
-    if (bar) bar.style.width = `${percent}%`;
-    filters.innerHTML = Object.entries(labels).map(([key, text]) => `<button class="checklist-filter${state.checklistFilter === key ? " active" : ""}" type="button" data-checklist-filter="${key}">${esc(text)}</button>`).join("");
-    grid.innerHTML = items.filter(([, category]) => state.checklistFilter === "all" || category === state.checklistFilter).map(([id, category, defaultDone, title, description]) => {
-      const done = Object.prototype.hasOwnProperty.call(saved, id) ? !!saved[id] : defaultDone;
-      return `<label class="checklist-item${done ? " done" : ""}"><input type="checkbox" data-checklist-id="${esc(id)}" ${done ? "checked" : ""}/><span><strong>${esc(title)}</strong><span>${esc(description)}</span></span><em>${esc(labels[category])}</em></label>`;
-    }).join("");
-    filters.querySelectorAll("[data-checklist-filter]").forEach((button) => button.addEventListener("click", () => { state.checklistFilter = button.dataset.checklistFilter; renderChecklist(); }));
-    grid.querySelectorAll("[data-checklist-id]").forEach((checkbox) => checkbox.addEventListener("change", () => {
-      const next = savedChecklist();
-      next[checkbox.dataset.checklistId] = checkbox.checked;
-      saveChecklist(next);
-      renderChecklist();
-    }));
-  }
-
   function connectTrustLinks() {
     const source = document.querySelector('a[href*="app-downloads/apk"]');
     const target = document.getElementById("trustApkLink");
@@ -304,14 +224,8 @@
     renderJourneys();
     renderProductLab();
     renderReleasePulse();
-    renderChecklist();
     connectTrustLinks();
   }
-
-  document.getElementById("checklistReset")?.addEventListener("click", () => {
-    try { localStorage.removeItem(checklistStorageKey); } catch (_) {}
-    renderChecklist();
-  });
 
   let previousLanguage = lang();
   new MutationObserver(() => {

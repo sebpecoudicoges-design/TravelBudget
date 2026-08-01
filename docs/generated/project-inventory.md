@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `359fc3bfc370de15f9ed24449a4e58ef21d915fe`
-> Empreinte du snapshot : `449ef20c284d5f354fc8a8e00dc5453de0b8e74b0f88621e921f5ce8ac05b050`
-> Généré le : `2026-08-01T09:44:46.958Z`
+> Commit analysé : `cc133ceea1fa5cb12ccdd58b611b4e4da59eb920`
+> Empreinte du snapshot : `41d02942178d3a4adac846c0ef9128e974a8f0f03be1030b54525920fb669d4b`
+> Généré le : `2026-08-01T10:13:31.208Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.317` |
+| Version | `10.5.318` |
 | Écrans déclarés | 17 |
 | Scripts legacy référencés | 57 |
 | Modules core | 26 |
 | Modules data | 8 |
 | Modules features | 44 |
-| Fichiers de tests | 116 |
-| Migrations Supabase | 94 |
+| Fichiers de tests | 117 |
+| Migrations Supabase | 95 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -289,6 +289,7 @@ Modules :
 - `tests/ui/legacyBusinessRulesContract.test.js`
 - `tests/ui/moduleSizeBudgetsContract.test.js`
 - `tests/ui/nutritionDomainContract.test.js`
+- `tests/ui/projectPageVisualContract.test.js`
 - `tests/ui/publicLinksContract.test.js`
 - `tests/ui/recurringRulesSubcategoriesContract.test.js`
 - `tests/ui/settingsModalContract.test.js`
@@ -411,6 +412,7 @@ Modules :
 - `tests/ui/legacyDomainLoader.test.js`
 - `tests/ui/moduleSizeBudgetsContract.test.js`
 - `tests/ui/nutritionDomainContract.test.js`
+- `tests/ui/projectPageVisualContract.test.js`
 - `tests/ui/publicLinksContract.test.js`
 - `tests/ui/recurringRulesSubcategoriesContract.test.js`
 - `tests/ui/settingsModalContract.test.js`
@@ -550,6 +552,7 @@ Modules :
 - `supabase/migrations/20260729103843_trip_shared_income_entries.sql`
 - `supabase/migrations/20260801070338_module_test_campaign.sql`
 - `supabase/migrations/20260801071652_tighten_test_campaign_grants.sql`
+- `supabase/migrations/20260801095640_update_interface_test_campaign.sql`
 
 ## Android et budgets de modules
 

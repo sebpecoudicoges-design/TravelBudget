@@ -163,6 +163,26 @@ test('keeps the Dashboard hero premium in light and dark themes at 1440px and 39
   await expect.poll(() => hero.evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(' ').length)).toBe(1);
 });
 
+test('keeps the public Project page premium and uncluttered at 1440px and 390px', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/projet.html');
+
+  await expect(page.locator('h1')).toContainText('BudgetPacker');
+  await expect(page.locator('#admin-tests')).toHaveCount(0);
+  await expect(page.locator('#checklist')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Pecloud' })).toHaveAttribute('href', 'https://pecloud.fr/');
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--tb-coral').trim())).toBe('#ff6b4a');
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--tb-canvas').trim())).toBe('#111e23');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expect(page.getByRole('link', { name: 'Ouvrir la demo' })).toBeVisible();
+});
+
 test('keeps the tester checklist usable at 390px in light and dark themes', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/?freeze=1');
@@ -175,7 +195,7 @@ test('keeps the tester checklist usable at 390px in light and dark themes', asyn
     window.setActiveTab('testing');
     const { renderTestCampaign } = await import('/src/features/testing/testCampaignView.js');
     document.getElementById('testing-root').innerHTML = renderTestCampaign({
-      campaign: { id: 'campaign', title: 'Stabilisation', description: 'Validation module par module', app_version: '10.5.316' },
+      campaign: { id: 'campaign', title: 'Stabilisation', description: 'Validation module par module', app_version: '10.5.318' },
       modules: [{
         id: 'dashboard', module_key: 'dashboard', title: 'Dashboard', description: 'Wallets et KPI', instructions: 'Tester le parcours complet.',
         scenarios: [{ id: 'scenario', title: 'Mobile', instructions: 'Ouvrir et controler.', expected_result: 'Aucun debordement.', required: true, result: { status: 'pending', notes: '' } }],

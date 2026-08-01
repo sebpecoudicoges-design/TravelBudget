@@ -128,6 +128,8 @@ En 10.5.316, la campagne de stabilisation ajoute un domaine `testing` charge a l
 
 En 10.5.317, le chantier 1 Dashboard ajoute les variantes sombres explicites du Hero premium et force le re-rendu ApexCharts lorsque le theme change. Le CSS dist reste sous son plafond a environ 27.5 / 28 KiB ; JS initial 255.5 / 260 KiB et JS total 664.9 / 670 KiB restent stables.
 
+En 10.5.318, la page Projet publique et l ecran de chargement adoptent le systeme visuel premium. Les anciens panneaux Membres admins et Checklist publique quittent HTML, traductions, CSS et JavaScript. Le domaine Tests gagne l ouverture de la page Projet et mesure 23.0 / 35 KiB ; initial JS 255.5 / 260 KiB, lazy 409.5 / 415 KiB, total JS 665.0 / 670 KiB et CSS 27.5 / 28 KiB restent sous plafond.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.317`.
-- Campagne active : 14 modules et 45 scénarios condensés dans l'onglet **Tests** de l'application.
+- Version à valider : `10.5.318`.
+- Campagne active : 15 modules et 47 scénarios condensés dans l'onglet **Tests** de l'application.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
@@ -15,6 +15,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Pour la campagne actuelle, exécuter les scénarios affichés dans l'application et y saisir directement `OK`, `Pas OK` et les notes.
 - Voir `docs/MODULE_TEST_CAMPAIGN.md` pour les rôles, l'ordre et les critères de fin.
 - Chantier 1 Dashboard corrige en `10.5.317` : Hero sombre, re-rendu de la courbe au changement de theme et verification online avant mutation wallet. Le scenario Dashboard reste a refaire par le testeur avant reouverture.
+- Interface generale `10.5.318` : page Projet alignee sur les tokens corail/lagon, blocs admins/checklist publique retires, lien proprietaire Pecloud ajoute et ecran de chargement premium clarifie. Deux scenarios dedies sont ajoutes a l onglet Tests sans effacer les retours precedents.
 
 ## Parcours de régression condensés
 

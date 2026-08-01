@@ -101,6 +101,10 @@ function bind(root) {
     const openButton = event.target.closest('[data-test-open-module]');
     if (openButton) {
       const target = openButton.dataset.testOpenModule;
+      if (target === 'project') {
+        window.open('/projet.html', '_blank', 'noopener');
+        return;
+      }
       if (target && typeof window.showView === 'function') window.showView(target);
       return;
     }

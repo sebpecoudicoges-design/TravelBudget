@@ -16,7 +16,7 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- 45 scenarios au total.
+- 47 scenarios au total, dont 2 ajoutes en `10.5.318` pour l interface generale.
 - 23 `OK`.
 - 16 `Pas OK`, dont 3 correspondant a la decision de supprimer Cautions.
 - 3 scenarios A traiter laisses `A refaire` volontairement.
@@ -44,6 +44,17 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 Artefact de retest : `travelbudget-10.5.317-20260801-193954-debug.apk`.
 SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
+
+## Lot transversal - Interface generale
+
+- [x] Aligner la page Projet sur les tokens officiels corail, lagon, ivoire et bleu petrole.
+- [x] Supprimer de la page Projet les blocs Membres admins - tests a faire et Checklist de mise en ligne.
+- [x] Ajouter l attribution proprietaire Pecloud et le lien externe securise vers `https://pecloud.fr/`.
+- [x] Supprimer le JavaScript, les traductions et les styles devenus morts avec ces deux blocs.
+- [x] Moderniser l ecran de chargement en conservant version, progression, phases et disparition a 100 %.
+- [x] Ajouter les variantes sombre, desktop et mobile ainsi que les contrats anti-retour.
+- [x] Ajouter deux scenarios dans l onglet Tests sans modifier les resultats existants.
+- [ ] Faire valider ce lot par le testeur depuis le module Interface generale.
 
 ## Chantier 2 - Transactions
 

@@ -28,6 +28,7 @@ Source obligatoire : [`VISUAL_SYSTEM.md`](VISUAL_SYSTEM.md).
 - [x] Verrouiller les tests de contrat visuel.
 - [x] Nettoyer l'onboarding Dashboard : styles inline lourds remplaces par classes premium, actions `data-dashboard-action` conservees, mobile 390 px couvert par contrat.
 - [x] Corriger le placement des boutons Archiver wallet dans chaque carte Dashboard, avec contrat CSS anti-retour.
+- [x] Aligner la page Projet publique et l ecran de chargement sur la palette premium, avec clair/sombre, desktop/mobile et retrait des anciens panneaux de suivi internes.
 
 ### Lot 2 - Transactions
 
