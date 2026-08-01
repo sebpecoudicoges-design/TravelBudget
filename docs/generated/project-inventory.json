@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "49db5dfdea4d89473009c3b0195c0c8c26cdb85b",
-  "snapshotFingerprint": "fa28d7f61f54f3d44c44d524a3226fcef84e0f25fec729e8e4ac5aa9e154572b",
-  "generatedAt": "2026-08-01T03:08:55.605Z",
+  "commit": "2812d35ea03fc023eb87d34b8e8ca59aa588dd3a",
+  "snapshotFingerprint": "330a46a8dc7d8d22e8c44a7d70c4feae26ce8ac93309899252c657d06eebb9ca",
+  "generatedAt": "2026-08-01T04:17:10.214Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.307"
+    "version": "10.5.308"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -513,6 +513,7 @@
     "docs/V11_PERFORMANCE_BUDGETS.md",
     "docs/V11_REFACTOR_CHECKLIST.md",
     "docs/V11_UI_COMPONENTS.md",
+    "docs/V11_VISUAL_REDESIGN_CHECKLIST.md",
     "docs/VISUAL_SYSTEM.md",
     "docs/deployment_settings_checklist.md"
   ],
