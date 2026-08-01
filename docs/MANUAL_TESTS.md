@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.308`.
-- Bilan : 7 parcours `ok`, 64 parcours `à faire`.
+- Version à valider : `10.5.309`.
+- Bilan : 7 parcours `ok`, 65 parcours `à faire`.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -90,6 +90,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 70 | 10.5.306 | Réglages : langue centralisée | Ouvrir **Réglages**, vérifier le bloc Voyage, les cartes Périodes et Budget de référence. Si possible, passer la langue en anglais puis revenir en français. | Les textes Voyage/Périodes/Référence restent dans la bonne langue et les boutons Réglages répondent comme avant. | `TB BUILD 10.5.306` ; aucun `_tbSettingsIsEnglish is not defined`, aucun `_tbSettingsTxt is not defined`, aucun écran Réglages bloqué. | à faire |
 | 71 | 10.5.307 | Système visuel premium : Dashboard/KPI | Ouvrir **Dashboard** sur desktop/mobile, vérifier navigation, hero, wallets détaillés, Archiver, budget journalier semaine, projection, KPI financiers et convertisseur ↔/swipe. | Toutes les actions restent disponibles, aucun bloc **Devises du voyage**, thème clair/sombre lisible, pas de débordement horizontal. | `TB BUILD 10.5.307` ; aucun `Uncaught`, aucun bouton wallet/KPI inactif, aucun overflow horizontal à 390 px. | à faire |
 | 72 | 10.5.308 | Trip : formulaire dépense / entrée | Dans **Partager**, ouvrir **+ Dépense partagée** sur mobile et desktop. Vérifier le type **Dépense partagée**, puis basculer sur **Entrée / revenu partagé** et revenir sur dépense. | En dépense, **Source entrée** et **Balance Trip** sont invisibles. En entrée, ils réapparaissent. Le libellé passe bien de **Payé par** à **Reçu par**, puis revient. | `TB BUILD 10.5.308` ; aucun `Uncaught`, aucun champ entrée visible en mode dépense. | à faire |
+| 73 | 10.5.309 | Dashboard : onboarding premium | Ouvrir **Dashboard** avec un compte ou environnement où l'onboarding wallet/période peut apparaître, puis tester mobile 390 px si possible. | Les cartes onboarding restent lisibles, les boutons Guide/Masquer/Settings/Aide fonctionnent, aucune carte ne déborde et le style reste cohérent avec le thème premium. | `TB BUILD 10.5.309` ; aucun `Uncaught`, aucun bouton onboarding inactif, aucun overflow horizontal. | à faire |
 
 ## À ajouter à chaque livraison
 

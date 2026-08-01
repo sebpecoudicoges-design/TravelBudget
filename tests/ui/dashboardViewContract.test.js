@@ -8,6 +8,8 @@ describe('dashboard view extraction contract', () => {
   const cashflow = fs.readFileSync('public/legacy/js/27_cashflow_curve.js', 'utf8');
   const kpiView = fs.readFileSync('src/features/kpi/kpiView.js', 'utf8');
   const kpiLegacy = fs.readFileSync('public/legacy/js/11_kpi_render_micro_animation.js', 'utf8');
+  const dashboardView = fs.readFileSync('src/features/dashboard/dashboardView.js', 'utf8');
+  const premiumTheme = fs.readFileSync('src/ui/premium-theme.css', 'utf8');
 
   it('keeps a clear colored emoji for every dashboard module tab', () => {
     const moduleIcons = {
@@ -94,6 +96,18 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).not.toContain('Crée un <b>wallet</b>');
     expect(legacy).not.toContain('steps.join("<br/>")');
     expect(legacy).not.toContain('grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:12px;');
+  });
+
+  it('keeps dashboard onboarding visuals in the premium theme instead of inline styles', () => {
+    expect(dashboardView).toContain('class="tb-ob-head"');
+    expect(dashboardView).toContain('class="tb-ob-grid"');
+    expect(dashboardView).toContain('tb-ob-mini');
+    expect(dashboardView).not.toContain('display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:12px;');
+    expect(dashboardView).not.toContain('border:1px solid ${isOk');
+    expect(dashboardView).not.toContain('style="margin-top:10px;padding:7px 10px;font-size:12px;"');
+    expect(premiumTheme).toContain('.tb-ob-grid');
+    expect(premiumTheme).toContain('.tb-ob-step.is-ok');
+    expect(premiumTheme).toContain('.tb-ob-head');
   });
 
   it('keeps dead dashboard help removed while wallet empty states stay delegated', () => {

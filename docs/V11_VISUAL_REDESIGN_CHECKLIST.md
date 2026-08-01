@@ -26,6 +26,7 @@ Source obligatoire : [`VISUAL_SYSTEM.md`](VISUAL_SYSTEM.md).
 - [x] Moderniser la navigation en groupes sans retirer les onglets.
 - [x] Moderniser Dashboard/KPI sans retirer wallets, budget journalier, projection ni convertisseur.
 - [x] Verrouiller les tests de contrat visuel.
+- [x] Nettoyer l'onboarding Dashboard : styles inline lourds remplaces par classes premium, actions `data-dashboard-action` conservees, mobile 390 px couvert par contrat.
 
 ### Lot 2 - Transactions
 
@@ -46,10 +47,10 @@ Source obligatoire : [`VISUAL_SYSTEM.md`](VISUAL_SYSTEM.md).
 ### Lot 4 - Trip / Partage
 
 - [ ] Inventorier recap, historique, depense partagee, entree partagee, split montant, documents et liens budget.
-- [ ] Clarifier le formulaire depense/entree : champs specifiques visibles seulement dans le bon mode.
+- [x] Clarifier le formulaire depense/entree : champs specifiques visibles seulement dans le bon mode.
 - [ ] Adapter toutes les modales au format mobile.
 - [ ] Conserver les balances, remboursements, source externe/participant et option non due.
-- [ ] Ajouter test contrat Trip premium.
+- [x] Ajouter test contrat Trip premium.
 
 ### Lot 5 - Patrimoine et Cautions
 

@@ -117,32 +117,32 @@ export function renderDashboardOnboardingPanel({
   const rowDone = Number(done) || list.filter((row) => row?.ok).length;
 
   return `
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+    <div class="tb-ob-head">
       <div>
-        <div class="muted" style="margin-bottom:6px;">${esc(tr('onboarding.subtitle'))}</div>
-        <div class="pill" style="display:inline-flex;font-weight:900;">${esc(tr('onboarding.progress', { done: rowDone, total: rowTotal }))}</div>
+        <div class="muted tb-ob-sub">${esc(tr('onboarding.subtitle'))}</div>
+        <div class="pill tb-ob-progress">${esc(tr('onboarding.progress', { done: rowDone, total: rowTotal }))}</div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div class="tb-ob-actions">
         <button class="btn primary" type="button" data-dashboard-action="guided-tour" data-dashboard-tour="dashboard">${esc(tr('onboarding.action.guide'))}</button>
         <button class="btn" type="button" data-dashboard-action="hide-onboarding">${esc(tr('onboarding.hide'))}</button>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:12px;">
+    <div class="tb-ob-grid">
       ${list.map((row) => {
         const isOk = !!row?.ok;
         return `
-        <div style="border:1px solid ${isOk ? 'rgba(16,185,129,.28)' : 'rgba(148,163,184,.25)'};background:${isOk ? 'rgba(16,185,129,.08)' : 'rgba(255,255,255,.62)'};border-radius:16px;padding:12px;">
-          <div style="display:flex;gap:8px;align-items:flex-start;">
-            <span style="width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:950;background:${isOk ? 'rgba(16,185,129,.18)' : 'rgba(37,99,235,.12)'};color:${isOk ? '#047857' : '#1d4ed8'};">${isOk ? '&#10003;' : '&bull;'}</span>
-            <div style="min-width:0;flex:1;">
-              <div style="font-weight:800;line-height:1.3;">${esc(row?.text || '')}</div>
-              ${isOk ? '' : `<button class="btn" type="button" style="margin-top:10px;padding:7px 10px;font-size:12px;" data-dashboard-action="${esc(row?.actionKey || row?.action || '')}">${esc(row?.label || '')}</button>`}
+        <div class="tb-ob-step ${isOk ? 'is-ok' : 'is-pending'}">
+          <div class="tb-ob-row">
+            <span class="tb-ob-icon">${isOk ? '&#10003;' : '&bull;'}</span>
+            <div class="tb-ob-body">
+              <div class="tb-ob-title">${esc(row?.text || '')}</div>
+              ${isOk ? '' : `<button class="btn tb-ob-btn" type="button" data-dashboard-action="${esc(row?.actionKey || row?.action || '')}">${esc(row?.label || '')}</button>`}
             </div>
           </div>
         </div>`;
       }).join('')}
     </div>
-    <div style="margin-top:10px; opacity:.82;" class="muted">${esc(tr('onboarding.tip'))}</div>
+    <div class="muted tb-ob-tip">${esc(tr('onboarding.tip'))}</div>
   `;
 }
 
@@ -163,18 +163,18 @@ export function renderWalletQuickOnboarding({
 } = {}) {
   const tr = typeof t === 'function' ? t : fallbackT;
   return `
-    <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
-      <div style="font-weight:600;">${esc(tr('onboarding.title'))}</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <div class="tb-ob-head">
+      <div class="tb-ob-title">${esc(tr('onboarding.title'))}</div>
+      <div class="tb-ob-actions">
         <button class="btn" type="button" data-dashboard-action="open-settings">${esc(tr('nav.settings'))}</button>
         <button class="btn" type="button" data-dashboard-action="open-help">${esc(tr('nav.help'))}</button>
       </div>
     </div>
-    <div style="margin-top:8px;" class="muted">
+    <div class="muted tb-ob-mini">
       <div>${esc(tr('onboarding.step.wallet'))}</div>
       <div>${esc(tr('onboarding.step.period'))}</div>
       <div>${esc(tr('onboarding.step.tx'))}</div>
-      <div style="margin-top:6px;">${esc(tr('onboarding.tip'))}</div>
+      <div class="tb-ob-tipline">${esc(tr('onboarding.tip'))}</div>
     </div>
   `;
 }
