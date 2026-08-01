@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "df1a20d52b0af51a89dd636a9f69d907aa4e599e",
-  "snapshotFingerprint": "51d46510914b3c88385dbad54c7beca9f421e5c271e3f00aa6e70c679db87582",
-  "generatedAt": "2026-07-31T08:34:36.567Z",
+  "commit": "49db5dfdea4d89473009c3b0195c0c8c26cdb85b",
+  "snapshotFingerprint": "fa28d7f61f54f3d44c44d524a3226fcef84e0f25fec729e8e4ac5aa9e154572b",
+  "generatedAt": "2026-08-01T03:08:55.605Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.306"
+    "version": "10.5.307"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -335,6 +335,7 @@
     "tests/ui/tripDomainContract.test.js",
     "tests/ui/tripModalContract.test.js",
     "tests/ui/versionSyncContract.test.js",
+    "tests/ui/visualSystemContract.test.js",
     "tests/ui/workCareerModalContract.test.js",
     "tests/ui/workDomainContract.test.js"
   ],
@@ -376,6 +377,7 @@
     "tests/ui/tripDomainContract.test.js",
     "tests/ui/tripModalContract.test.js",
     "tests/ui/versionSyncContract.test.js",
+    "tests/ui/visualSystemContract.test.js",
     "tests/ui/workCareerModalContract.test.js",
     "tests/ui/workDomainContract.test.js"
   ],
@@ -511,6 +513,7 @@
     "docs/V11_PERFORMANCE_BUDGETS.md",
     "docs/V11_REFACTOR_CHECKLIST.md",
     "docs/V11_UI_COMPONENTS.md",
+    "docs/VISUAL_SYSTEM.md",
     "docs/deployment_settings_checklist.md"
   ],
   "criticalFeatures": [

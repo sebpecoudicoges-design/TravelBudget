@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `df1a20d52b0af51a89dd636a9f69d907aa4e599e`
-> Empreinte du snapshot : `51d46510914b3c88385dbad54c7beca9f421e5c271e3f00aa6e70c679db87582`
-> Généré le : `2026-07-31T08:34:36.567Z`
+> Commit analysé : `49db5dfdea4d89473009c3b0195c0c8c26cdb85b`
+> Empreinte du snapshot : `fa28d7f61f54f3d44c44d524a3226fcef84e0f25fec729e8e4ac5aa9e154572b`
+> Généré le : `2026-08-01T03:08:55.605Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,13 +11,13 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.306` |
+| Version | `10.5.307` |
 | Écrans déclarés | 15 |
 | Scripts legacy référencés | 57 |
 | Modules core | 25 |
 | Modules data | 7 |
 | Modules features | 40 |
-| Fichiers de tests | 108 |
+| Fichiers de tests | 109 |
 | Migrations Supabase | 92 |
 | Fonctions Edge | 11 |
 | Projet Android présent | Oui |
@@ -297,6 +297,7 @@ Modules :
 - `tests/ui/tripDomainContract.test.js`
 - `tests/ui/tripModalContract.test.js`
 - `tests/ui/versionSyncContract.test.js`
+- `tests/ui/visualSystemContract.test.js`
 - `tests/ui/workCareerModalContract.test.js`
 - `tests/ui/workDomainContract.test.js`
 
@@ -412,6 +413,7 @@ Modules :
 - `tests/ui/tripDomainContract.test.js`
 - `tests/ui/tripModalContract.test.js`
 - `tests/ui/versionSyncContract.test.js`
+- `tests/ui/visualSystemContract.test.js`
 - `tests/ui/workCareerModalContract.test.js`
 - `tests/ui/workDomainContract.test.js`
 
@@ -548,6 +550,7 @@ Modules :
 - `docs/V11_PERFORMANCE_BUDGETS.md`
 - `docs/V11_REFACTOR_CHECKLIST.md`
 - `docs/V11_UI_COMPONENTS.md`
+- `docs/VISUAL_SYSTEM.md`
 - `docs/deployment_settings_checklist.md`
 
 ## Matrice d'impact déclarée
