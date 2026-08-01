@@ -16,10 +16,10 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.321`.
+- Version cible de campagne : `10.5.322`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
-- 18 resultats et 9 revues de module traites sont archives avec date de test, date de traitement, version et note.
-- 5 retests cibles restent ouverts : premier affichage Dashboard, transactions protegees, recap/historique Trip, Aide navigation/mobile et Documents import/classement.
+- 19 resultats et 9 revues de module traites sont archives avec date de test, date de traitement, version et note.
+- 6 retests cibles restent ouverts : premier affichage Dashboard, transactions protegees, recap/historique Trip, Aide navigation/mobile, Documents import/classement et Settings Compte/preferences.
 - A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
 ## Socle transversal
@@ -69,9 +69,9 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 
 ## Chantier 3 - Settings
 
-- [ ] Aligner email, WhatsApp, naissance et poids.
-- [ ] Unifier ou clarifier les sauvegardes du compte.
-- [ ] Retirer l encart Notification mobile demande.
+- [x] Aligner email, WhatsApp, naissance, poids, taille, devise et mode dans une grille responsive.
+- [x] Unifier les sauvegardes du compte avec une validation complete avant la premiere ecriture.
+- [x] Retirer l encart Notification mobile redondant ; le module Notifications dedie reste disponible.
 - [ ] Ajouter une periode depuis la section Periodes.
 - [ ] Corriger les champs numeriques contenant une devise, dont `400 EUR`.
 - [ ] Gerer proprement les refus de suppression voyage/periode.

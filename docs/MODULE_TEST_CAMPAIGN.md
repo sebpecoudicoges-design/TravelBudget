@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.321`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.322`.
 
 ## Objectif
 

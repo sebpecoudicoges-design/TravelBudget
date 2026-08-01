@@ -596,6 +596,8 @@
       "settings.account.mode.simple": "Simple",
       "settings.account.mode.advanced": "Avancé",
       "settings.account.save": "Enregistrer",
+      "settings.account.save_all": "Tout enregistrer",
+      "settings.account.save_all_help": "Compte, santé, devise, mode et seuil de trésorerie.",
       "settings.account.save_mode": "Enregistrer mode",
       "settings.account.reset_password": "Reset mot de passe",
       "settings.account.cashflow_threshold": "Seuil courbe trésorerie",

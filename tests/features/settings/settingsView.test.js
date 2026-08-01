@@ -130,7 +130,6 @@ describe('Settings view helpers', () => {
       savedBodyHeight: '162',
       thresholdDisplay: '820',
       thresholdEur: 500,
-      notificationPrefs: { healthMealReminders: true },
       simpleMode: true,
       t,
     });
@@ -146,8 +145,11 @@ describe('Settings view helpers', () => {
     expect(html).toContain('<option value="simple" selected>');
     expect(html).toContain('id="tb-user-cfthr"');
     expect(html).toContain('value="820"');
-    expect(html).toContain('id="tb-notif-health" type="checkbox" checked');
-    expect(html).toContain('id="tb-notif-open-manager"');
+    expect(html).toContain('tb-settings-account-grid');
+    expect(html).toContain('id="tb-user-account-save"');
+    expect(html).toContain('tb-settings-account-proxies');
+    expect(html).not.toContain('Notifications mobile');
+    expect(html).not.toContain('id="tb-notif-open-manager"');
   });
 
   it('renders create voyage and period modal bodies with stable fields', () => {

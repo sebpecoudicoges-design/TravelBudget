@@ -488,9 +488,6 @@ function renderSettings(){
         ? window.safeFxConvert(thrEur, "EUR", cur, null)
         : (typeof window.fxConvert === "function" ? window.fxConvert(thrEur, "EUR", cur) : null);
       const thrDisp = (thrInBase === null || !Number.isFinite(thrInBase)) ? "" : String(Math.round(thrInBase));
-      const notifPrefs = (typeof window.tbGetNotificationPrefs === "function")
-        ? window.tbGetNotificationPrefs()
-        : { inbox:true, trip:true, dailyBudget:false, morningBudget:false, eveningSummary:false, serverPush:true, lowBudget:true, localDevice:false };
       const birthDateKey = TB_CONST?.LS_KEYS?.body_birthdate || "travelbudget_body_birthdate_v1";
       const bodyWeightKey = TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1";
       const bodyHeightKey = TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1";
@@ -512,7 +509,6 @@ function renderSettings(){
         savedBodyHeight,
         thresholdDisplay: thrDisp,
         thresholdEur: thrEur,
-        notificationPrefs: notifPrefs,
         simpleMode: (typeof window.tbIsSimpleMode === 'function' && window.tbIsSimpleMode()),
         t: T,
         esc: escapeHTML,
@@ -527,7 +523,6 @@ function renderSettings(){
         constants: TB_CONST,
         thresholdKey: THR_KEY,
         currency: cur,
-        notificationPrefs: notifPrefs,
         safeCall,
         getSupabase: () => {
           try {

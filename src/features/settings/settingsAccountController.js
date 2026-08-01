@@ -64,28 +64,30 @@ export function isValidWhatsappPhone(value) {
   return !phone || /^\+[1-9]\d{6,14}$/.test(phone);
 }
 
-export function buildSettingsNotificationPrefs({
-  box,
-  notificationPrefs = {},
-  timezone = '',
+export function validateSettingsAccountDraft({
+  whatsapp = '',
+  birthDate = '',
+  weightKg = '',
+  heightCm = '',
+  baseCurrency = '',
+  uiMode = '',
+  cashflowThreshold = '',
 } = {}) {
-  const prefs = notificationPrefs || {};
-  return {
-    inbox: prefs.inbox !== false,
-    trip: prefs.trip !== false,
-    lowBudget: prefs.lowBudget !== false,
-    localDevice: true,
-    serverPush: true,
-    emojis: prefs.emojis !== false,
-    motivationalTone: true,
-    sportReminder: true,
-    workReminder: true,
-    healthMealReminders: box?.querySelector?.('#tb-notif-health')?.checked === true,
-    morningBudget: true,
-    eveningSummary: true,
-    dailyBudget: true,
-    timezone,
-  };
+  const phone = normalizeWhatsappPhone(whatsapp);
+  const birth = String(birthDate || '').slice(0, 10);
+  const weight = Number(String(weightKg).replace(',', '.'));
+  const height = Number(String(heightCm).replace(',', '.'));
+  const currency = String(baseCurrency || '').trim().toUpperCase();
+  const mode = String(uiMode || '').trim().toLowerCase();
+  const threshold = Number(cashflowThreshold);
+  if (!isValidWhatsappPhone(phone)) return { ok: false, reason: 'Format WhatsApp invalide.' };
+  if (birth && !/^\d{4}-\d{2}-\d{2}$/.test(birth)) return { ok: false, reason: 'Date de naissance invalide.' };
+  if (!Number.isFinite(weight) || weight <= 0) return { ok: false, reason: 'Poids invalide.' };
+  if (!Number.isFinite(height) || height < 60) return { ok: false, reason: 'Taille invalide.' };
+  if (!/^[A-Z]{3}$/.test(currency)) return { ok: false, reason: 'Devise invalide (ISO3 attendu).' };
+  if (!['simple', 'advanced'].includes(mode)) return { ok: false, reason: 'Mode d’interface invalide.' };
+  if (!Number.isFinite(threshold) || threshold <= 0) return { ok: false, reason: 'Seuil invalide.' };
+  return { ok: true, reason: '', phone, birthDate: birth, weightKg: weight, heightCm: height, baseCurrency: currency, uiMode: mode, cashflowThreshold: threshold };
 }
 
 export function bindSettingsAccountPanel({
@@ -94,7 +96,6 @@ export function bindSettingsAccountPanel({
   constants = {},
   thresholdKey,
   currency = 'EUR',
-  notificationPrefs = {},
   safeCall = (_label, fn) => fn(),
   getSupabase,
   isOffline = () => false,
@@ -115,7 +116,6 @@ export function bindSettingsAccountPanel({
   const bodyWeightKey = constants?.LS_KEYS?.sport_body_weight || 'travelbudget_sport_body_weight_v1';
   const bodyHeightKey = constants?.LS_KEYS?.sport_body_height || 'travelbudget_sport_body_height_v1';
   const uiModeKey = constants?.LS_KEYS?.ui_mode || 'travelbudget_ui_mode_v1';
-  const notifPrefsKey = constants?.LS_KEYS?.notification_prefs || 'travelbudget_notification_prefs_v1';
   const thresholdStorageKey = thresholdKey || constants?.LS_KEYS?.cashflow_threshold_eur || 'travelbudget_cashflow_threshold_eur_v1';
 
   const render = (reason) => {
@@ -239,9 +239,7 @@ export function bindSettingsAccountPanel({
     }
   })();
 
-  const btnWhatsapp = box.querySelector('#tb-user-whatsapp-save');
-  if (btnWhatsapp) {
-    btnWhatsapp.onclick = () => safeCall('Enregistrer numero WhatsApp', async () => {
+  const saveWhatsapp = async ({ notify = true } = {}) => {
       if (offline()) throw new Error('Mode hors ligne : reconnecte-toi pour enregistrer WhatsApp.');
       const raw = getValue(box, '#tb-account-whatsapp');
       const phone = normalizeWhatsappPhone(raw);
@@ -256,13 +254,12 @@ export function bindSettingsAccountPanel({
       if (error) throw error;
       setValue(box, '#tb-account-whatsapp', phone);
       rememberAccount(u, phone);
-      alertFn('Numero WhatsApp enregistre.');
-    });
-  }
+      if (notify) alertFn('Numero WhatsApp enregistre.');
+  };
+  const btnWhatsapp = box.querySelector('#tb-user-whatsapp-save');
+  if (btnWhatsapp) btnWhatsapp.onclick = () => safeCall('Enregistrer numero WhatsApp', () => saveWhatsapp());
 
-  const btnBirthDate = box.querySelector('#tb-user-birthdate-save');
-  if (btnBirthDate) {
-    btnBirthDate.onclick = () => safeCall('Enregistrer profil santé', async () => {
+  const saveHealthProfile = async ({ notify = true, shouldRender = true } = {}) => {
       if (offline()) throw new Error('Mode hors ligne : reconnecte-toi pour enregistrer le profil santé.');
       const s = getSb();
       const u = (await s.auth.getUser()).data?.user;
@@ -284,30 +281,29 @@ export function bindSettingsAccountPanel({
       if (error) throw error;
       rememberAccount(u, state?.profile?.whatsapp_phone_e164 || state?.user?.whatsappPhone || '', raw);
       rememberBodyProfile(weightKg, heightCm);
-      render('settings:body_profile');
-      alertFn('Profil santé enregistré.');
-    });
-  }
+      if (shouldRender) render('settings:body_profile');
+      if (notify) alertFn('Profil santé enregistré.');
+  };
+  const btnBirthDate = box.querySelector('#tb-user-birthdate-save');
+  if (btnBirthDate) btnBirthDate.onclick = () => safeCall('Enregistrer profil santé', () => saveHealthProfile());
 
-  const btnSave = box.querySelector('#tb-user-basecur-save');
-  if (btnSave) {
-    btnSave.onclick = () => safeCall('Enregistrer devise de base', async () => {
+  const saveBaseCurrency = async ({ shouldRender = true } = {}) => {
       const s = getSb();
       const value = String(getValue(box, '#tb-user-basecur')).trim().toUpperCase();
       if (!value || !/^[A-Z]{3}$/.test(value)) throw new Error('Devise invalide (ISO3 attendu)');
       const u = (await s.auth.getUser()).data?.user;
       const uid = u?.id;
       if (!uid) throw new Error('Non authentifié');
-      await s.from(tableSettings).upsert({ user_id: uid, base_currency: value }, { onConflict: 'user_id' });
+      const { error } = await s.from(tableSettings).upsert({ user_id: uid, base_currency: value }, { onConflict: 'user_id' });
+      if (error) throw error;
       if (!state.user) state.user = {};
       state.user.baseCurrency = value;
-      render('settings:base_currency');
-    });
-  }
+      if (shouldRender) render('settings:base_currency');
+  };
+  const btnSave = box.querySelector('#tb-user-basecur-save');
+  if (btnSave) btnSave.onclick = () => safeCall('Enregistrer devise de base', () => saveBaseCurrency());
 
-  const btnMode = box.querySelector('#tb-user-uimode-save');
-  if (btnMode) {
-    btnMode.onclick = () => safeCall('Enregistrer mode d’interface', async () => {
+  const saveUiMode = async ({ shouldRender = true } = {}) => {
       const s = getSb();
       const modeRaw = String(getValue(box, '#tb-user-uimode') || 'advanced').trim().toLowerCase();
       const mode = (typeof windowRef?.tbNormalizeUiMode === 'function') ? windowRef.tbNormalizeUiMode(modeRaw) : (modeRaw === 'simple' ? 'simple' : 'advanced');
@@ -327,9 +323,10 @@ export function bindSettingsAccountPanel({
       state.user.uiMode = mode;
       try { if (typeof windowRef?.tbApplyUiModeToDocument === 'function') windowRef.tbApplyUiModeToDocument(); } catch (_) {}
       syncTabsForRole();
-      render(remoteSaved ? 'settings:ui_mode' : 'settings:ui_mode:local');
-    });
-  }
+      if (shouldRender) render(remoteSaved ? 'settings:ui_mode' : 'settings:ui_mode:local');
+  };
+  const btnMode = box.querySelector('#tb-user-uimode-save');
+  if (btnMode) btnMode.onclick = () => safeCall('Enregistrer mode d’interface', () => saveUiMode());
 
   const btnReset = box.querySelector('#tb-user-resetpwd');
   if (btnReset) {
@@ -431,81 +428,44 @@ export function bindSettingsAccountPanel({
     });
   }
 
-  const readNotificationForm = () => buildSettingsNotificationPrefs({
-    box,
-    notificationPrefs,
-    timezone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (_) { return ''; } })(),
-  });
-
-  const btnNotifSave = box.querySelector('#tb-notif-save');
-  if (btnNotifSave) {
-    btnNotifSave.onclick = () => safeCall('Enregistrer notifications', async () => {
-      const prefs = readNotificationForm();
-      if (prefs.localDevice && typeof windowRef?.tbRequestLocalNotificationPermission === 'function') {
-        const permission = await windowRef.tbRequestLocalNotificationPermission();
-        if (permission === 'denied') throw new Error('Notifications refusées par le téléphone/navigateur.');
-      }
-      if (typeof windowRef?.tbSaveNotificationPrefs === 'function') await windowRef.tbSaveNotificationPrefs(prefs);
-      else {
-        if (!state.user) state.user = {};
-        state.user.notificationPrefs = prefs;
-        try { LS?.setItem?.(notifPrefsKey, JSON.stringify(prefs)); } catch (_) {}
-      }
-      if (prefs.dailyBudget && prefs.localDevice && typeof windowRef?.tbScheduleDailyBudgetLocalNotification === 'function') {
-        await windowRef.tbScheduleDailyBudgetLocalNotification();
-      }
-      if (prefs.healthMealReminders && prefs.localDevice && typeof windowRef?.tbScheduleHealthMealLocalNotifications === 'function') {
-        await windowRef.tbScheduleHealthMealLocalNotifications();
-      }
-      alertFn('Préférences notifications enregistrées.');
-    });
-  }
-
-  const btnNotifManager = box.querySelector('#tb-notif-open-manager');
-  if (btnNotifManager) {
-    btnNotifManager.onclick = () => {
-      try { if (typeof windowRef?.showView === 'function') windowRef.showView('notifications'); } catch (_) {}
-    };
-  }
-
-  const btnNotifTest = box.querySelector('#tb-notif-test');
-  if (btnNotifTest) {
-    btnNotifTest.onclick = () => safeCall('Tester notification', async () => {
-      const prefs = readNotificationForm();
-      if (typeof windowRef?.tbSaveNotificationPrefs === 'function') await windowRef.tbSaveNotificationPrefs(prefs);
-      else if (typeof windowRef?.tbRememberNotificationPrefs === 'function') windowRef.tbRememberNotificationPrefs(prefs);
-      const msg = (typeof windowRef?.tbTriggerDailyBudgetNotificationTest === 'function') ? await windowRef.tbTriggerDailyBudgetNotificationTest() : null;
-      const status = box.querySelector('#tb-notif-test-status');
-      if (status) status.textContent = msg?.localDelivered
-        ? "Test envoyé. Dis-moi ensuite si tu l'as reçue."
-        : "Test ajouté au centre de notifications. Si rien n'apparait sur mobile, vérifie l'autorisation Android.";
-    });
-  }
-
-  [
-    ['#tb-notif-test-yes', 'Parfait, le téléphone reçoit bien les notifications.'],
-    ['#tb-notif-test-no', "Noté. On vérifiera l'autorisation Android, le token mobile et l'envoi serveur."],
-  ].forEach(([selector, message]) => {
-    const btn = box.querySelector(selector);
-    if (!btn) return;
-    btn.onclick = () => {
-      try { LS?.setItem?.('travelbudget_notification_last_test_v1', JSON.stringify({ selector, at: new Date().toISOString() })); } catch (_) {}
-      const status = box.querySelector('#tb-notif-test-status');
-      if (status) status.textContent = message;
-    };
-  });
-
+  const saveCashflowThreshold = async ({ shouldRender = true } = {}) => {
+    const value = Number(getValue(box, '#tb-user-cfthr'));
+    if (!Number.isFinite(value) || value <= 0) throw new Error('Seuil invalide');
+    const eur = (typeof windowRef?.safeFxConvert === 'function')
+      ? windowRef.safeFxConvert(value, currency, 'EUR', null)
+      : (typeof windowRef?.fxConvert === 'function' ? windowRef.fxConvert(value, currency, 'EUR') : null);
+    if (eur === null || !Number.isFinite(eur) || eur <= 0) throw new Error('Conversion FX impossible');
+    try { LS?.setItem?.(thresholdStorageKey, String(Math.round(eur))); } catch (_) {}
+    if (shouldRender) render('settings:cashflow_threshold');
+  };
   const btnThreshold = box.querySelector('#tb-user-cfthr-save');
-  if (btnThreshold) {
-    btnThreshold.onclick = () => safeCall('Enregistrer seuil trésorerie', async () => {
-      const value = Number(getValue(box, '#tb-user-cfthr'));
-      if (!Number.isFinite(value) || value <= 0) throw new Error('Seuil invalide');
-      const eur = (typeof windowRef?.safeFxConvert === 'function')
-        ? windowRef.safeFxConvert(value, currency, 'EUR', null)
-        : (typeof windowRef?.fxConvert === 'function' ? windowRef.fxConvert(value, currency, 'EUR') : null);
-      if (eur === null || !Number.isFinite(eur) || eur <= 0) throw new Error('Conversion FX impossible');
-      try { LS?.setItem?.(thresholdStorageKey, String(Math.round(eur))); } catch (_) {}
-      render('settings:cashflow_threshold');
+  if (btnThreshold) btnThreshold.onclick = () => safeCall('Enregistrer seuil trésorerie', () => saveCashflowThreshold());
+
+  const btnAccountSave = box.querySelector('#tb-user-account-save');
+  if (btnAccountSave) {
+    btnAccountSave.onclick = () => safeCall('Tout enregistrer', async () => {
+      const draft = validateSettingsAccountDraft({
+        whatsapp: getValue(box, '#tb-account-whatsapp'),
+        birthDate: getValue(box, '#tb-account-birthdate'),
+        weightKg: getValue(box, '#tb-account-body-weight'),
+        heightCm: getValue(box, '#tb-account-body-height'),
+        baseCurrency: getValue(box, '#tb-user-basecur'),
+        uiMode: getValue(box, '#tb-user-uimode'),
+        cashflowThreshold: getValue(box, '#tb-user-cfthr'),
+      });
+      if (!draft.ok) throw new Error(draft.reason || 'Compte invalide.');
+      btnAccountSave.disabled = true;
+      try {
+        await saveWhatsapp({ notify: false });
+        await saveHealthProfile({ notify: false, shouldRender: false });
+        await saveBaseCurrency({ shouldRender: false });
+        await saveUiMode({ shouldRender: false });
+        await saveCashflowThreshold({ shouldRender: false });
+        render('settings:account_all');
+        alertFn('Compte et préférences enregistrés.');
+      } finally {
+        btnAccountSave.disabled = false;
+      }
     });
   }
 }

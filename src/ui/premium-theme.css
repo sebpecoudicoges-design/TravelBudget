@@ -639,6 +639,39 @@ body:not(.theme-dark) .dashboard-card-kicker { color: #168b87; }
 .tb-ob-mini { margin-top: 8px; }
 .tb-ob-tipline { margin-top: 6px; }
 
+.tb-settings-account-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.tb-settings-account-grid .field { min-width: 0; }
+.tb-settings-account-grid input,
+.tb-settings-account-grid select { width: 100%; min-height: 42px; }
+.tb-settings-account-savebar,
+.tb-settings-account-tools,
+.tb-settings-account-advanced { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tb-settings-account-savebar {
+  justify-content: space-between;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255,107,74,.18);
+  border-radius: var(--tb-radius-md);
+  background: var(--tb-surface-soft);
+}
+.tb-settings-account-savebar > div { display: grid; gap: 2px; }
+.tb-settings-account-tools { margin-top: 12px; }
+.tb-settings-account-advanced {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--tb-line);
+  border-radius: var(--tb-radius-md);
+  background: var(--tb-surface-soft);
+}
+.tb-settings-account-advanced .field { flex: 0 1 240px; }
+body.theme-dark .tb-settings-account-savebar,
+body.theme-dark .tb-settings-account-advanced { background: rgba(255,255,255,.04); }
+
 .tb-help-setup-card,
 .tb-help-diag-help {
   border: 1px solid var(--tb-line);
@@ -739,6 +772,13 @@ body.theme-dark .tb-doc-sidebar { background: rgba(255,255,255,.04) !important; 
 }
 
 @media (max-width: 600px) {
+  .tb-settings-account-grid { grid-template-columns: 1fr; }
+  .tb-settings-account-savebar { align-items: stretch; }
+  .tb-settings-account-savebar .btn { width: 100%; }
+  .tb-settings-account-tools { align-items: stretch; flex-direction: column; }
+  .tb-settings-account-tools .btn { width: 100%; text-align: center; }
+  .tb-settings-account-advanced { align-items: stretch; flex-direction: column; }
+  .tb-settings-account-advanced .field { flex-basis: auto; width: 100%; }
   .tb-help-setup-row { align-items: stretch; flex-direction: column; }
   .tb-help-setup-row .btn { width: 100%; }
   .tb-ob-head {

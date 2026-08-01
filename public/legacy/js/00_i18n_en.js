@@ -586,6 +586,8 @@
       "settings.account.mode.simple": "Simple",
       "settings.account.mode.advanced": "Advanced",
       "settings.account.save": "Save",
+      "settings.account.save_all": "Save everything",
+      "settings.account.save_all_help": "Account, health, currency, mode and cashflow threshold.",
       "settings.account.save_mode": "Save mode",
       "settings.account.reset_password": "Reset password",
       "settings.account.cashflow_threshold": "Seuil courbe trésorerie",

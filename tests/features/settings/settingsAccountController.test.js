@@ -3,11 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   accountExportFilename,
   bindSettingsAccountPanel,
-  buildSettingsNotificationPrefs,
   collectLocalAccountData,
   formatDeletionStatus,
   isValidWhatsappPhone,
   normalizeWhatsappPhone,
+  validateSettingsAccountDraft,
 } from '../../../src/features/settings/settingsAccountController.js';
 
 function makeBox(fields = {}) {
@@ -29,23 +29,15 @@ describe('Settings account controller', () => {
     expect(isValidWhatsappPhone('')).toBe(true);
   });
 
-  it('builds notification preferences from stable account hooks', () => {
-    const box = makeBox({ '#tb-notif-health': { checked: true } });
-    const prefs = buildSettingsNotificationPrefs({
-      box,
-      notificationPrefs: { inbox: false, trip: true, emojis: false },
-      timezone: 'Australia/Brisbane',
-    });
-
-    expect(prefs).toMatchObject({
-      inbox: false,
-      trip: true,
-      emojis: false,
-      localDevice: true,
-      dailyBudget: true,
-      healthMealReminders: true,
-      timezone: 'Australia/Brisbane',
-    });
+  it('validates the whole account form before the first remote write', () => {
+    expect(validateSettingsAccountDraft({
+      whatsapp: '+33 6 12 34 56 78', birthDate: '1997-06-22', weightKg: '59,2', heightCm: '162',
+      baseCurrency: 'aud', uiMode: 'advanced', cashflowThreshold: '820',
+    })).toMatchObject({ ok: true, phone: '+33612345678', baseCurrency: 'AUD', weightKg: 59.2 });
+    expect(validateSettingsAccountDraft({
+      whatsapp: '0612345678', birthDate: '1997-06-22', weightKg: '59', heightCm: '162',
+      baseCurrency: 'AUD', uiMode: 'advanced', cashflowThreshold: '820',
+    })).toEqual({ ok: false, reason: 'Format WhatsApp invalide.' });
   });
 
   it('exports only Travel Budget device data and keeps structured values', () => {
@@ -84,11 +76,15 @@ describe('Settings account controller', () => {
       '#tb-account-birthdate': { value: '1997-06-22' },
       '#tb-account-body-weight': { value: '59' },
       '#tb-account-body-height': { value: '162' },
+      '#tb-user-basecur': { value: 'AUD' },
+      '#tb-user-uimode': { value: 'advanced' },
       '#tb-user-whatsapp-save': {},
+      '#tb-user-birthdate-save': {},
+      '#tb-user-basecur-save': {},
+      '#tb-user-uimode-save': {},
+      '#tb-user-account-save': {},
       '#tb-user-cfthr': { value: '820' },
       '#tb-user-cfthr-save': {},
-      '#tb-notif-health': { checked: false },
-      '#tb-notif-save': {},
     });
     const sb = {
       auth: { getUser: async () => ({ data: { user: { id: 'user-1', email: 'seb@example.com' } } }) },
@@ -111,7 +107,6 @@ describe('Settings account controller', () => {
         LS_KEYS: { cashflow_threshold_eur: 'threshold-eur' },
       },
       currency: 'AUD',
-      notificationPrefs: {},
       safeCall: async (_label, fn) => fn(),
       getSupabase: () => sb,
       isOffline: () => false,
@@ -122,7 +117,8 @@ describe('Settings account controller', () => {
       },
       windowRef: {
         safeFxConvert: (value, from, to) => (from === 'AUD' && to === 'EUR' ? value / 2 : value),
-        tbSaveNotificationPrefs: async (prefs) => calls.push(['notif', prefs]),
+        tbNormalizeUiMode: (value) => value,
+        tbApplyUiModeToDocument: () => calls.push(['mode-applied']),
       },
       navigatorRef: { onLine: true },
       requestRenderAll: (reason) => calls.push(['render', reason]),
@@ -130,12 +126,11 @@ describe('Settings account controller', () => {
       consoleRef: { warn: () => {} },
     });
 
-    await box.querySelector('#tb-user-whatsapp-save').onclick();
-    await box.querySelector('#tb-user-cfthr-save').onclick();
-    await box.querySelector('#tb-notif-save').onclick();
+    await box.querySelector('#tb-user-account-save').onclick();
 
     expect(calls).toContainEqual(['update', 'profiles', { whatsapp_phone_e164: '+33612345678' }]);
     expect(storage.get('threshold-eur')).toBe('410');
-    expect(calls.some((call) => call[0] === 'notif' && call[1].dailyBudget === true)).toBe(true);
+    expect(calls).toContainEqual(['render', 'settings:account_all']);
+    expect(calls).toContainEqual(['alert', 'Compte et préférences enregistrés.']);
   });
 });

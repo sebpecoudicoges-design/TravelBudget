@@ -5,6 +5,9 @@ describe('settings view extraction contract', () => {
   const main = fs.readFileSync('src/main.js', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/14_settings_periods_ui.js', 'utf8');
   const index = fs.readFileSync('index.html', 'utf8');
+  const view = fs.readFileSync('src/features/settings/settingsView.js', 'utf8');
+  const accountController = fs.readFileSync('src/features/settings/settingsAccountController.js', 'utf8');
+  const premiumTheme = fs.readFileSync('src/ui/premium-theme.css', 'utf8');
 
   it('exposes the Settings view module to the legacy runtime', () => {
     expect(main).toContain("import * as settingsView from './features/settings/settingsView.js'");
@@ -131,5 +134,18 @@ describe('settings view extraction contract', () => {
     expect(index).not.toContain('onclick="deleteActiveVoyage()"');
     expect(index).not.toContain('onclick="createPeriodPrompt()"');
     expect(index).not.toContain('onclick="saveSettings()"');
+  });
+
+  it('keeps one visible account save action and removes the duplicate notification panel', () => {
+    expect(view).toContain('id="tb-user-account-save"');
+    expect(view).toContain('class="tb-settings-account-proxies" hidden');
+    expect(view).not.toContain('Notifications mobile');
+    expect(view).not.toContain('id="tb-notif-open-manager"');
+    expect(accountController).toContain("btnAccountSave.onclick = () => safeCall('Tout enregistrer'");
+    expect(accountController).not.toContain('buildSettingsNotificationPrefs');
+    expect(accountController).not.toContain("box.querySelector('#tb-notif-save')");
+    expect(premiumTheme).toContain('.tb-settings-account-grid');
+    expect(premiumTheme).toContain('grid-template-columns: repeat(3, minmax(0, 1fr))');
+    expect(premiumTheme).toContain('@media (max-width: 600px)');
   });
 });
