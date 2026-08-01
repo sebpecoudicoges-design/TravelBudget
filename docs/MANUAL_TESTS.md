@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.311`.
-- Bilan : 7 parcours `ok`, 67 parcours `à faire`.
+- Version à valider : `10.5.312`.
+- Bilan : 7 parcours `ok`, 68 parcours `à faire`.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
 - Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Exécuter en priorité les parcours 1 à 3, qui couvrent la dernière version, les KPI et les wallets.
@@ -93,6 +93,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 | 73 | 10.5.309 | Dashboard : onboarding premium | Ouvrir **Dashboard** avec un compte ou environnement où l'onboarding wallet/période peut apparaître, puis tester mobile 390 px si possible. | Les cartes onboarding restent lisibles, les boutons Guide/Masquer/Settings/Aide fonctionnent, aucune carte ne déborde et le style reste cohérent avec le thème premium. | `TB BUILD 10.5.309` ; aucun `Uncaught`, aucun bouton onboarding inactif, aucun overflow horizontal. | à faire |
 | 74 | 10.5.310 | Transactions : panneau aide premium | Ouvrir **Transactions** desktop/mobile, vérifier que le panneau d'aide s'affiche si non masqué, cliquer **Aide**, puis **Masquer**. | Le panneau reste lisible, le bouton Aide ouvre la vue Aide, Masquer retire le panneau, aucune carte ne déborde. | `TB BUILD 10.5.310` ; aucun `Uncaught`, aucun bouton aide inactif, aucun overflow horizontal. | à faire |
 | 75 | 10.5.311 | Dashboard : boutons Archiver wallet | Ouvrir **Dashboard** avec plusieurs wallets actifs, dont la base AUD si possible. Vérifier chaque carte wallet sur desktop et mobile. | Le bouton **Archiver** reste dans la colonne d'actions de son wallet, sous Supprimer, sans ligne blanche séparée entre les cartes. | `TB BUILD 10.5.311` ; aucun `Uncaught`, aucun bouton Archiver hors carte. | à faire |
+| 76 | 10.5.312 | Transactions : panneau filtres premium | Ouvrir **Transactions** sur desktop puis mobile. Utiliser au moins la recherche, le wallet, la catégorie et les dates. | Le panneau filtres garde tous ses champs, le style reste premium sans débordement, et la liste se met à jour comme avant. | `TB BUILD 10.5.312` ; aucun `Uncaught`, aucun champ filtre inactif. | à faire |
 
 ## À ajouter à chaque livraison
 

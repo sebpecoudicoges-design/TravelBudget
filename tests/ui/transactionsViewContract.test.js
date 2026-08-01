@@ -3,8 +3,10 @@ import fs from 'node:fs';
 
 describe('transactions view extraction contract', () => {
   const main = fs.readFileSync('src/main.js', 'utf8');
+  const index = fs.readFileSync('index.html', 'utf8');
   const legacy = fs.readFileSync('public/legacy/js/13_transactions_view.js', 'utf8');
   const view = fs.readFileSync('src/features/transactions/transactionView.js', 'utf8');
+  const theme = fs.readFileSync('src/ui/premium-theme.css', 'utf8');
 
   it('exposes the Transactions view module to the legacy runtime', () => {
     expect(main).toContain("import * as transactionView from './features/transactions/transactionView.js'");
@@ -22,5 +24,16 @@ describe('transactions view extraction contract', () => {
     expect(view).toContain('class="tb-ob-head"');
     expect(view).toContain('class="tb-ob-actions"');
     expect(view).not.toContain('onclick=');
+  });
+
+  it('keeps the Transactions filter workspace styled by the premium theme', () => {
+    expect(index).toContain('class="card toolbar-card tx-filters-card tx-workspace-card"');
+    expect(index).not.toContain('class="card toolbar-card tx-filters-card tx-workspace-card" style=');
+    expect(index).toContain('id="f-from"');
+    expect(index).toContain('id="f-wallet"');
+    expect(index).toContain('id="f-category"');
+    expect(index).toContain('id="f-q"');
+    expect(theme).toContain('body:not(.theme-dark) .tx-workspace-card');
+    expect(theme).toContain('backdrop-filter: blur(14px)');
   });
 });

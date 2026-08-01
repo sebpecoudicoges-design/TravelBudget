@@ -210,6 +210,15 @@ body:not(.theme-dark) #kpi .kpi-fx-row .kpi-input {
   background: #fffaf6;
 }
 
+body:not(.theme-dark) .tx-workspace-card {
+  margin-bottom: 18px;
+  border-color: var(--tb-line) !important;
+  border-radius: 22px !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46)) !important;
+  box-shadow: 0 20px 40px rgba(2,6,23,.06) !important;
+  backdrop-filter: blur(14px);
+}
+
 body:not(.theme-dark) .tb-wallet-actions,
 body:not(.theme-dark) .tb-daily-budget-toolbar,
 body:not(.theme-dark) .tb-cashflow-actions {
