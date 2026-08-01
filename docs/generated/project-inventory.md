@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `cc6ead5ed7abb5e8cea24e551c7122e3c3ae8b01`
-> Empreinte du snapshot : `0aaf2d937b40f693081ad448bd687a4b58870c2b04a0aa8252019651cdd36356`
-> Généré le : `2026-08-01T07:39:58.948Z`
+> Commit analysé : `359fc3bfc370de15f9ed24449a4e58ef21d915fe`
+> Empreinte du snapshot : `449ef20c284d5f354fc8a8e00dc5453de0b8e74b0f88621e921f5ce8ac05b050`
+> Généré le : `2026-08-01T09:44:46.958Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,7 +11,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.316` |
+| Version | `10.5.317` |
 | Écrans déclarés | 17 |
 | Scripts legacy référencés | 57 |
 | Modules core | 26 |
@@ -570,6 +570,7 @@ Modules :
 - `docs/PROJECT_ATLAS.md`
 - `docs/PROJECT_PAGE_CHECKLIST.md`
 - `docs/README.md`
+- `docs/STABILIZATION_CHECKLIST_10.5.316.md`
 - `docs/V11_ARCHITECTURE.md`
 - `docs/V11_DATA_LAYER.md`
 - `docs/V11_PERFORMANCE_BUDGETS.md`

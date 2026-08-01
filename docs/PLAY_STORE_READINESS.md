@@ -6,7 +6,7 @@ Statut : **en attente de la campagne de stabilisation module par module ouverte 
 
 ## Etat actuel
 
-- Version web/app courante : `10.5.316`.
+- Version web/app courante : `10.5.317`.
 - Package Android : `com.travelbudget.app`.
 - Version Android derivee de `package.json`.
 - APK de test publie via Supabase Storage.

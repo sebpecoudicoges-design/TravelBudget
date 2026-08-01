@@ -1583,7 +1583,7 @@
             </div>
             <canvas id="atlasCanvas" aria-hidden="true"></canvas>
             <div class="atlas-core" aria-label="Coeur de l'Atlas">
-              <div><span>PROJECT</span><strong>ATLAS</strong><small id="atlasVersion">V11 / 10.5.316</small></div>
+              <div><span>PROJECT</span><strong>ATLAS</strong><small id="atlasVersion">V11 / 10.5.317</small></div>
             </div>
             <div class="atlas-nodes" id="atlasNodes"></div>
           </div>
@@ -1600,7 +1600,7 @@
               <div class="atlas-fact"><strong id="atlasTests">101</strong><span data-i18n="atlas.tests">Fichiers de tests</span></div>
               <div class="atlas-fact"><strong id="atlasMigrations">90</strong><span data-i18n="atlas.migrations">Migrations</span></div>
             </div>
-            <div class="atlas-source" id="atlasSource">public/project-atlas.json // snapshot 10.5.316</div>
+            <div class="atlas-source" id="atlasSource">public/project-atlas.json // snapshot 10.5.317</div>
           </aside>
         </div>
       </div>
@@ -1613,9 +1613,9 @@
           <p data-i18n="app.lead">La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.</p>
         </div>
         <div class="app-grid">
-          <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105316">APK debug 10.5.316 prete pour la campagne de tests modules.</p></article>
+          <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105317">APK debug 10.5.317 prete pour le retest Dashboard.</p></article>
           <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.</p></article>
-          <article class="app-card"><strong>10.5.316</strong><h3 data-i18n="app.version.title.105316">Stabilisation</h3><p data-i18n="app.version.body.105316">Campagne module par module ouverte.</p></article>
+          <article class="app-card"><strong>10.5.317</strong><h3 data-i18n="app.version.title.105317">Dashboard</h3><p data-i18n="app.version.body.105317">Chantier 1 corrige, retest utilisateur attendu.</p></article>
         </div>
         <div class="release-pulse">
           <div class="release-pulse-head">
@@ -1634,6 +1634,7 @@
           <div class="release-spotlight" id="releaseSpotlight"></div>
           <div class="release-timeline" id="releaseTimeline" aria-live="polite"></div>
           <div class="release-list" id="releaseSource" hidden>
+            <div class="release-row"><strong>10.5.317</strong><span data-i18n="release.105317">Stabilisation Dashboard : le Hero premium respecte maintenant le theme sombre, la courbe se recree au changement de theme et les mutations wallet reverifient la connexion avant Supabase.</span></div>
             <div class="release-row"><strong>10.5.316</strong><span data-i18n="release.105316">Stabilisation : les modules sont figes pour les utilisateurs standards. Le nouveau role test donne acces aux modules et a une campagne integree de 45 scenarios avec resultat OK, Pas OK, notes et cloture par module.</span></div>
             <div class="release-row"><strong>10.5.315</strong><span data-i18n="release.105315">Cloture V11 : le chantier 6 est ferme, la recherche de code mort devient une regle permanente de travail et le chantier Play Store s'ouvre avec readiness documentee, AAB de controle et tests manuels dedies.</span></div>
             <div class="release-row"><strong>10.5.314</strong><span data-i18n="release.105314">Documents : les derniers fallbacks HTML legacy disparaissent au profit du helper unique docView(...). Shell, dossiers, cartes, aperçu, infos, partage, batch, transactions et assets utilisent la vue Documents moderne ; 43_documents_ui.js baisse à 74.09 KiB.</span></div>
@@ -1988,9 +1989,9 @@
         <div class="cta">
           <div>
             <h2 data-i18n="app.cta.title">App Android en test interne.</h2>
-            <p data-i18n="app.cta.body.105316">Telecharge l'APK versionnee 10.5.316 depuis Supabase Storage pour lancer la campagne module par module.</p>
+            <p data-i18n="app.cta.body.105317">Telecharge l'APK versionnee 10.5.317 depuis Supabase Storage pour retester Dashboard.</p>
           </div>
-          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.316-20260801-173525-debug.apk" download data-i18n="app.cta.button.105316">Telecharger l'APK 10.5.316</a>
+          <a class="btn primary" href="https://obznbrzarhvmlbprcfie.supabase.co/storage/v1/object/public/app-downloads/apk/travelbudget-10.5.317-20260801-193954-debug.apk" download data-i18n="app.cta.button.105317">Telecharger l'APK 10.5.317</a>
         </div>
       </div>
     </section>
@@ -2125,6 +2126,10 @@
           "atlas.title": "L'Atlas vivant du projet.", "atlas.lead": "Explore les dix fonctions critiques, leurs domaines et les impacts a verifier avant chaque evolution.", "atlas.status": "Architecture V11 indexee", "atlas.impacts": "Impacts a verifier", "atlas.screens": "Ecrans", "atlas.critical": "Fonctions critiques", "atlas.tests": "Fichiers de tests", "atlas.migrations": "Migrations",
           "app.title": "App Android de test, lien direct et version lisible.",
           "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
+          "app.apk.body.105317": "APK debug 10.5.317 prete pour le retest Dashboard.",
+          "app.version.title.105317": "Dashboard", "app.version.body.105317": "Chantier 1 corrige, retest utilisateur attendu.",
+          "release.105317": "Stabilisation Dashboard : le Hero premium respecte maintenant le theme sombre, la courbe se recree au changement de theme et les mutations wallet reverifient la connexion avant Supabase.",
+          "app.cta.body.105317": "Telecharge l'APK versionnee 10.5.317 depuis Supabase Storage pour retester Dashboard.", "app.cta.button.105317": "Telecharger l'APK 10.5.317",
           "app.apk.body.105316": "APK debug 10.5.316 prete pour la campagne de tests modules.",
           "app.version.title.105316": "Stabilisation", "app.version.body.105316": "Campagne module par module ouverte.",
           "release.105316": "Stabilisation : les modules sont figes pour les utilisateurs standards. Le nouveau role test donne acces aux modules et a une campagne integree de 45 scenarios avec resultat OK, Pas OK, notes et cloture par module.",
@@ -2300,6 +2305,10 @@
           "atlas.title": "The project's living Atlas.", "atlas.lead": "Explore ten critical capabilities, their domains and the impacts to verify before every change.", "atlas.status": "V11 architecture indexed", "atlas.impacts": "Impacts to verify", "atlas.screens": "Screens", "atlas.critical": "Critical capabilities", "atlas.tests": "Test files", "atlas.migrations": "Migrations",
           "app.title": "Android test app, direct link and readable version.",
           "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
+          "app.apk.body.105317": "Debug APK 10.5.317 is ready for the Dashboard retest.",
+          "app.version.title.105317": "Dashboard", "app.version.body.105317": "Chantier 1 fixed, user retest pending.",
+          "release.105317": "Dashboard stabilization: the premium Hero now follows dark mode, the cashflow chart is recreated when the theme changes, and wallet mutations recheck connectivity before Supabase.",
+          "app.cta.body.105317": "Download versioned APK 10.5.317 from Supabase Storage to retest Dashboard.", "app.cta.button.105317": "Download APK 10.5.317",
           "app.apk.body.105316": "Debug APK 10.5.316 is ready for the module testing campaign.",
           "app.version.title.105316": "Stabilization", "app.version.body.105316": "The module-by-module campaign is open.",
           "release.105316": "Stabilization: modules are frozen for standard users. The new test role can access modules and an integrated 45-scenario campaign with OK, Not OK, notes and per-module completion.",

@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "cc6ead5ed7abb5e8cea24e551c7122e3c3ae8b01",
-  "snapshotFingerprint": "0aaf2d937b40f693081ad448bd687a4b58870c2b04a0aa8252019651cdd36356",
-  "generatedAt": "2026-08-01T07:39:58.948Z",
+  "commit": "359fc3bfc370de15f9ed24449a4e58ef21d915fe",
+  "snapshotFingerprint": "449ef20c284d5f354fc8a8e00dc5453de0b8e74b0f88621e921f5ce8ac05b050",
+  "generatedAt": "2026-08-01T09:44:46.958Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.316"
+    "version": "10.5.317"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -533,6 +533,7 @@
     "docs/PROJECT_ATLAS.md",
     "docs/PROJECT_PAGE_CHECKLIST.md",
     "docs/README.md",
+    "docs/STABILIZATION_CHECKLIST_10.5.316.md",
     "docs/V11_ARCHITECTURE.md",
     "docs/V11_DATA_LAYER.md",
     "docs/V11_PERFORMANCE_BUDGETS.md",

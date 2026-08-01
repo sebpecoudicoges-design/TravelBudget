@@ -145,6 +145,18 @@ async function _loadDashboardWalletRules() {
   } catch (_) {}
 }
 
+async function _dashboardRequireOnline(reason) {
+  const offline = (typeof window.tbShouldUseOfflineMode === "function")
+    ? await window.tbShouldUseOfflineMode(`dashboard:${reason || "wallet"}`)
+    : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) || (navigator && navigator.onLine === false));
+  if (!offline) return true;
+  const english = String((window.tbGetLang && window.tbGetLang()) || "fr").toLowerCase().startsWith("en");
+  alert(english
+    ? "Offline mode: reconnect before changing a wallet. Your current data remains available."
+    : "Mode hors ligne : reconnecte-toi avant de modifier un wallet. Tes donnees actuelles restent disponibles.");
+  return false;
+}
+
 /* =========================
    Dashboard render
    ========================= */
@@ -603,6 +615,7 @@ async function openWalletTypesFix() {
 
   dlg.querySelector("#tbWFixApply").onclick = async () => {
     try {
+      if (!(await _dashboardRequireOnline("wallet-types"))) return;
       const updates = [];
       dlg.querySelectorAll("select[data-wid]").forEach(sel => {
         const wid = sel.getAttribute("data-wid");
@@ -639,6 +652,7 @@ async function editWallet(walletId) {
     if (!data) return;
     const patch = window.TBDashboardWalletRules?.buildWalletEditPatch?.(data);
     if (!patch?.ok) return alert(patch?.error || "Wallet invalide.");
+    if (!(await _dashboardRequireOnline("wallet-edit"))) return;
 
     const { error } = await sb
       .from(TB_CONST.TABLES.wallets)
@@ -663,6 +677,7 @@ async function archiveWallet(walletId) {
     const w = (state.wallets || []).find(x => String(x.id) === String(walletId));
     if (!w) return;
     if (!confirm(`${(window.tbT ? tbT("wallet.action.archive") : "Archiver")} "${w.name} (${w.currency})" ?`)) return;
+    if (!(await _dashboardRequireOnline("wallet-archive"))) return;
     await _loadDashboardWalletRules();
     const { error } = await sb
       .from(TB_CONST.TABLES.wallets)
@@ -678,6 +693,7 @@ async function archiveWallet(walletId) {
 
 async function unarchiveWallet(walletId) {
   try {
+    if (!(await _dashboardRequireOnline("wallet-unarchive"))) return;
     await _loadDashboardWalletRules();
     const { error } = await sb
       .from(TB_CONST.TABLES.wallets)
@@ -704,6 +720,7 @@ async function createWallet() {
       periodId: state?.period?.id || null,
     });
     if (!row?.ok) return alert(row?.error || "Wallet invalide.");
+    if (!(await _dashboardRequireOnline("wallet-create"))) return;
 
     const { error } = await sb.from(TB_CONST.TABLES.wallets).insert([row.value]);
     if (error) throw error;
@@ -719,6 +736,7 @@ async function deleteWallet(walletId) {
   try {
     const w = (state.wallets || []).find(x => x.id === walletId);
     if (!w) return;
+    if (!(await _dashboardRequireOnline("wallet-delete"))) return;
 
     const { data: tx, error: tErr } = await sb
       .from(TB_CONST.TABLES.transactions)

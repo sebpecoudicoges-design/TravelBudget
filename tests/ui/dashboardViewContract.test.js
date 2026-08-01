@@ -128,6 +128,24 @@ describe('dashboard view extraction contract', () => {
     expect(legacy).not.toContain('oldParent.style.display = "none"');
   });
 
+  it('keeps the premium Dashboard hero and cashflow chart synchronized with dark mode', () => {
+    expect(premiumTheme).toContain('body.theme-dark .tb-premium-overview');
+    expect(premiumTheme).toContain('body.theme-dark .tb-overview-budget');
+    expect(premiumTheme).toContain('body.theme-dark .tb-premium-overview .dashboard-focus-card');
+    expect(cashflow).toContain('const chartTheme = document.body.classList.contains("theme-dark") ? "dark" : "light";');
+    expect(cashflow).toContain('`${_cashflowCacheKey()}|theme:${__theme}`');
+    expect(cashflow).toContain('"|theme:" + theme');
+    expect(cashflow).toContain('tooltip: {\n        theme: chartTheme,');
+    expect(cashflow).not.toContain('const sName =');
+  });
+
+  it('rechecks Supabase reachability before every Dashboard wallet mutation', () => {
+    expect(legacy).toContain('async function _dashboardRequireOnline(reason)');
+    expect(legacy).toContain('window.tbShouldUseOfflineMode(`dashboard:${reason || "wallet"}`)');
+    expect(legacy.match(/await _dashboardRequireOnline\("wallet-/g) || []).toHaveLength(6);
+    expect(legacy).toContain('Mode hors ligne : reconnecte-toi avant de modifier un wallet.');
+  });
+
   it('keeps wallet card rendering delegated to the Dashboard view module', () => {
     expect(legacy).toContain('window.TBDashboardView?.renderWalletActions');
     expect(legacy).toContain('window.TBDashboardView?.renderWalletCard');

@@ -124,6 +124,45 @@ test('locks standard accounts while testers keep module and campaign access', as
   await expect(page.locator('#tab-members')).toBeHidden();
 });
 
+test('keeps the Dashboard hero premium in light and dark themes at 1440px and 390px', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/?freeze=1');
+  await expectBootShell(page);
+  await page.evaluate(() => {
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('app-root').style.display = 'block';
+    window.sbRole = 'test';
+    window.syncTabsForRole();
+    document.body.classList.remove('theme-dark');
+    document.body.classList.add('theme-light');
+    window.renderWallets();
+    window.showView('dashboard');
+  });
+
+  const hero = page.locator('#dashboard-hero-shell .tb-premium-overview');
+  await expect(hero).toBeVisible();
+  const light = await hero.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { background: style.backgroundImage, areas: style.gridTemplateAreas, color: style.color };
+  });
+  expect(light.areas).toContain('copy budget');
+
+  await page.evaluate(() => window.applyTheme('dark'));
+  await expect.poll(() => hero.evaluate((node) => getComputedStyle(node).backgroundImage)).not.toBe(light.background);
+  const dark = await hero.evaluate((node) => {
+    const style = getComputedStyle(node);
+    const budget = getComputedStyle(node.querySelector('.tb-overview-budget'));
+    return { areas: style.gridTemplateAreas, color: style.color, budgetBackground: budget.backgroundColor };
+  });
+  expect(dark.areas).toContain('copy budget');
+  expect(dark.color).not.toBe(light.color);
+  expect(dark.budgetBackground).not.toBe('rgba(0, 0, 0, 0)');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expect.poll(() => hero.evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(' ').length)).toBe(1);
+});
+
 test('keeps the tester checklist usable at 390px in light and dark themes', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/?freeze=1');

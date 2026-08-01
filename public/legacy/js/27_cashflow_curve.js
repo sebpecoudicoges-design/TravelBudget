@@ -930,7 +930,8 @@ function buildSeries() {
     if (typeof window.activeView !== "undefined" && window.activeView !== "dashboard") return;
 // Dedup guard: avoid double render on first load / refresh if called twice rapidly with same scope
 try {
-  const __k = _cashflowCacheKey();
+  const __theme = document.body.classList.contains("theme-dark") ? "dark" : "light";
+  const __k = `${_cashflowCacheKey()}|theme:${__theme}`;
   const __now = Date.now();
   if (renderCashflowChart.__lastKey === __k && (__now - (renderCashflowChart.__lastTs || 0)) < 1200) {
     return;
@@ -1123,10 +1124,13 @@ const yaxis = (() => {
       });
     })();
 
+    const chartTheme = document.body.classList.contains("theme-dark") ? "dark" : "light";
     const options = {
       chart: {
         type: "line",
         height: 320,
+        background: "transparent",
+        foreColor: window.cssVar?.("--text", chartTheme === "dark" ? "#f1f5f9" : "#0f172a") || (chartTheme === "dark" ? "#f1f5f9" : "#0f172a"),
         toolbar: { show: true },
         zoom: { enabled: true }
       },
@@ -1146,14 +1150,12 @@ plotOptions: { bar: { columnWidth: "45%", borderRadius: 2 } },
 legend: { position: "bottom", horizontalAlign: "center" },
 dataLabels: { enabled: false },
       tooltip: {
+        theme: chartTheme,
         shared: true,
         intersect: false,
         y: {
           formatter: (v, opts) => {
             if (v === null || v === undefined) return "—";
-            const sName = opts && opts.w && opts.w.config && opts.w.config.series && opts.w.config.series[opts.seriesIndex]
-              ? String(opts.w.config.series[opts.seriesIndex].name || "")
-              : "";
             const cur = (opts && opts.w && opts.w.config && opts.w.config.series && opts.w.config.series[opts.seriesIndex] && opts.w.config.series[opts.seriesIndex].type === 'column') ? built.barCurrency : built.lineCurrency;
             return `${round2(v)} ${cur}`;
           }
@@ -1189,7 +1191,7 @@ dataLabels: { enabled: false },
         ])
       },
 
-      theme: { mode: document.body.classList.contains("theme-dark") ? "dark" : "light" }
+      theme: { mode: chartTheme }
     };
 
     const el = document.querySelector("#cashflowCurve");
@@ -1307,7 +1309,8 @@ dataLabels: { enabled: false },
     const seg = String(window.__TB_ACTIVE_SEGMENT_ID || "");
     const start = String(window.__TB_ACTIVE_START || "");
     const end = String(window.__TB_ACTIVE_END || "");
-    return rev + "|" + seg + "|" + start + "|" + end;
+    const theme = document.body.classList.contains("theme-dark") ? "dark" : "light";
+    return rev + "|" + seg + "|" + start + "|" + end + "|theme:" + theme;
   }
 
   window.tbRequestCashflowCurveRender = function tbRequestCashflowCurveRender(reason) {
