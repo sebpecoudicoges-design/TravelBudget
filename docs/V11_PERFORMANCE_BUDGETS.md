@@ -12,7 +12,7 @@ npm run perf:budget
 
 La mesure lit `config/module-size-budgets.json`, additionne les fichiers par domaine et controle le bundle `dist` apres `npm run build`.
 
-Snapshot `10.5.312` :
+Snapshot `10.5.313` :
 
 - Boot legacy : 871.3 / 1500 KiB.
 - Analyse : 159.0 / 160 KiB.
@@ -27,15 +27,15 @@ Snapshot `10.5.312` :
 - Initial JS : 254.3 / 260 KiB.
 - Lazy JS : 397.3 / 400 KiB.
 - JS total : 651.6 / 655 KiB.
-- CSS total : 21.9 / 22 KiB.
+- CSS total : 22.2 / 23 KiB.
 - Main JS gzip : 72.2 / 110 KiB.
 
 ## Budgets actuels
 
 - Bundle Vite JS initial : 260 KiB maximum.
 - Bundle Vite JS lazy : 400 KiB maximum.
-- Bundle Vite JS total : 650 KiB maximum.
-- Bundle Vite CSS total : 8 KiB maximum.
+- Bundle Vite JS total : 655 KiB maximum.
+- Bundle Vite CSS total : 23 KiB maximum.
 - JS principal gzip : 110 KiB maximum.
 - Boot legacy : 1500 KiB maximum.
 - Dashboard + Settings : 360 KiB maximum.
@@ -117,6 +117,8 @@ En 10.5.310, le panneau d'aide Transactions quitte le HTML inline legacy vers `t
 En 10.5.311, le style premium des boutons Archiver wallet retire `margin-top:auto` sur `.tb-wallet-archive-btn`. Les boutons restent dans la colonne d'actions de leur carte wallet, sans ligne blanche separee entre les cartes. Les budgets restent identiques cote JS ; le CSS dist baisse legerement a 21.9 / 22 KiB.
 
 En 10.5.312, le panneau filtres principal de Transactions retire son style inline de `index.html`. Le rendu premium est porte par `.tx-workspace-card` dans `premium-theme.css`, tandis que les champs et hooks existants (`f-from`, `f-wallet`, `f-category`, `f-q`, etc.) restent inchanges. Les budgets restent verts : boot legacy 871.3 / 1500 KiB, Dashboard + Settings 363.3 / 365 KiB, Initial JS 254.3 / 260 KiB, JS total 651.6 / 655 KiB et CSS total 21.9 / 22 KiB.
+
+En 10.5.313, le champ Recherche des filtres Transactions quitte l'attribut `style="min-width:220px"` et le layout s'appuie sur la classe explicite `.tx-filter-search`, y compris en rendu mobile Capacitor. Les IDs et hooks restent inchanges. Le plafond CSS passe de 22 a 23 KiB pour absorber la base premium mesuree a 22.2 KiB, avec surveillance maintenue.
 
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 

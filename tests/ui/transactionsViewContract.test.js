@@ -29,10 +29,14 @@ describe('transactions view extraction contract', () => {
   it('keeps the Transactions filter workspace styled by the premium theme', () => {
     expect(index).toContain('class="card toolbar-card tx-filters-card tx-workspace-card"');
     expect(index).not.toContain('class="card toolbar-card tx-filters-card tx-workspace-card" style=');
+    expect(index).not.toContain('.tx-filters-card .field[style*="min-width:220px"]');
     expect(index).toContain('id="f-from"');
     expect(index).toContain('id="f-wallet"');
     expect(index).toContain('id="f-category"');
     expect(index).toContain('id="f-q"');
+    expect(index).toContain('class="field tx-filter-search"');
+    expect(index).toContain('.tx-filters-card .tx-filter-search');
+    expect(index).toContain('body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card');
     expect(theme).toContain('body:not(.theme-dark) .tx-workspace-card');
     expect(theme).toContain('backdrop-filter: blur(14px)');
   });

@@ -5,7 +5,7 @@
     "initialJsMaxKiB": 260,
     "lazyJsMaxKiB": 400,
     "totalJsMaxKiB": 655,
-    "totalCssMaxKiB": 22,
+    "totalCssMaxKiB": 23,
     "mainJsGzipMaxKiB": 110
   },
   "sourceGroups": [

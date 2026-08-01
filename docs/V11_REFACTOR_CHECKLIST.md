@@ -339,6 +339,7 @@ Critere ferme : le boot initial est stabilise, les domaines lourds sont charges 
   - [x] Extraire le panneau d'aide Transactions vers `transactionView.js` : HTML inline et `onclick showView('help')` retires, boot legacy 872.0 -> 871.3 KiB, contrat anti-retour.
   - [x] Stabiliser les boutons Archiver des wallets Dashboard : retrait du `margin-top:auto` premium qui pouvait les sortir visuellement de leur carte.
   - [x] Sortir le style inline du panneau filtres Transactions vers le theme premium, sans changer les champs ni les hooks existants.
+  - [x] Remplacer le selecteur fragile du champ Recherche Transactions par la classe explicite `.tx-filter-search`, sans changer l'id `f-q` ni les filtres existants.
 - [x] Retirer l'ancien fallback `23_cashflow_chart.js` : moteur Apex cashflow remplace par `27_cashflow_curve.js`, fichier sans reference supprime, 115 lignes et 4.0 KiB retires du depot, fichiers legacy 59 -> 58.
 - [x] Ajouter les entrees Trip partagees : meme formulaire que les depenses, type `income`, source externe ou participant, option `non du` pour creer un revenu Budget sans dette Trip artificielle.
 - [x] Remplacer les actions wallet Dashboard inline par des hooks `data-*` et une delegation d'evenements testee, afin de preparer la suite du decoupage sans changer l'UX.

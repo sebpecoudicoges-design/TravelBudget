@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="BudgetPacker">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.312";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.313";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -2207,7 +2207,7 @@
       grid-column:span 2;
       min-width:0 !important;
     }
-    .tx-filters-card .field[style*="min-width:220px"]{
+    .tx-filters-card .tx-filter-search{
       grid-column:span 3;
     }
     .tx-list-card h2{
@@ -2673,8 +2673,7 @@
       .wallet-item > div:first-child > div:last-child{ width:100%; }
       .dashboard-analysis-cta{ grid-template-columns:1fr; }
       .tx-filters-card .row{ grid-template-columns:repeat(2,minmax(0,1fr)); }
-      .tx-filters-card .field,
-      .tx-filters-card .field[style*="min-width:220px"]{ grid-column:span 1; }
+      .tx-filters-card .field{ grid-column:span 1; }
       #tx-list > .card:first-child{
         position:relative;
         top:auto;
@@ -2690,8 +2689,7 @@
     }
     @media (max-width: 620px){
       .tx-filters-card .row{ grid-template-columns:1fr; }
-      .tx-filters-card .field,
-      .tx-filters-card .field[style*="min-width:220px"]{ grid-column:span 1; }
+      .tx-filters-card .field{ grid-column:span 1; }
       #tx-list > .card:first-child > div:nth-child(2){
         grid-template-columns:1fr;
       }
@@ -4282,7 +4280,7 @@
               </select>
             </div>
 
-            <div class="field" style="min-width:220px;">
+            <div class="field tx-filter-search">
               <label data-t="transactions.filters.search">Recherche</label>
               <input id="f-q" type="text" placeholder="Label / catégorie..." data-t-placeholder="transactions.filters.search_placeholder" />
             </div>
@@ -5055,7 +5053,7 @@
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field[data-tx-invoice-filter="1"]{
         display:none!important;
       }
-      body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .field:nth-child(11){
+      body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card > .row > .tx-filter-search{
         grid-column:1 / -1!important;
       }
       body.tb-capacitor-app[data-tb-view="transactions"] .tx-filters-card label{
