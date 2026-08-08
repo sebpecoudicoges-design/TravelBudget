@@ -56,13 +56,17 @@ export function sumNutrition(items = []) {
   }, { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, waterMl: 0 });
 }
 
-export function energyBalance({ consumedKcal = 0, sportKcal = 0, workKcal = 0, bmr = 0 } = {}) {
-  const spent = Math.max(0, num(bmr, 0)) + Math.max(0, num(sportKcal, 0)) + Math.max(0, num(workKcal, 0));
+export function energyBalance({ consumedKcal = 0, sportKcal = 0, workKcal = 0, neatKcal = 0, tefKcal = 0, bmr = 0 } = {}) {
+  const spent = Math.max(0, num(bmr, 0))
+    + Math.max(0, num(neatKcal, 0))
+    + Math.max(0, num(sportKcal, 0))
+    + Math.max(0, num(workKcal, 0))
+    + Math.max(0, num(tefKcal, 0));
   const consumed = Math.max(0, num(consumedKcal, 0));
   return { consumedKcal: consumed, spentKcal: spent, balanceKcal: consumed - spent };
 }
 
-export function nutritionGoalTargets({ spentKcal = 0, weightKg = 70, mode = 'maintenance', surplusKcal = 0, deficitKcal = 0 } = {}) {
+export function nutritionGoalTargets({ spentKcal = 0, weightKg = 70, mode = 'maintenance', surplusKcal = 0, deficitKcal = 0, tefRatePct = 10 } = {}) {
   const modeRaw = str(mode, 'maintenance');
   const cleanMode = ['bulk', 'maintenance', 'cut'].includes(modeRaw) ? modeRaw : 'maintenance';
   const kg = Math.max(30, num(weightKg, 70));
@@ -73,7 +77,11 @@ export function nutritionGoalTargets({ spentKcal = 0, weightKg = 70, mode = 'mai
     ? Math.max(250, Math.min(500, Math.round(num(deficitKcal, 300))))
     : 0;
   const offsetKcal = cleanSurplus - cleanDeficit;
-  const targetKcal = Math.max(1200, Math.round(num(spentKcal, 0) + offsetKcal));
+  const cleanTefRatePct = Math.max(8, Math.min(12, num(tefRatePct, 10)));
+  const tefRate = cleanTefRatePct / 100;
+  const preTefTarget = Math.max(0, num(spentKcal, 0) + offsetKcal);
+  const targetKcal = Math.max(1200, Math.round(preTefTarget / (1 - tefRate)));
+  const tefKcal = Math.max(0, targetKcal - preTefTarget);
   const proteinPerKg = cleanMode === 'bulk' ? 1.8 : cleanMode === 'cut' ? 1.9 : 1.6;
   const fatPerKg = cleanMode === 'bulk' ? 0.9 : cleanMode === 'cut' ? 0.75 : 0.8;
   const protein = Math.max(70, Math.round(kg * proteinPerKg));
@@ -84,6 +92,8 @@ export function nutritionGoalTargets({ spentKcal = 0, weightKg = 70, mode = 'mai
     surplusKcal: cleanSurplus,
     deficitKcal: cleanDeficit,
     offsetKcal,
+    tefRatePct: cleanTefRatePct,
+    tefKcal,
     targetKcal,
     protein,
     proteinPerKg,

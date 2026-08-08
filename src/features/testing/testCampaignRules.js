@@ -10,6 +10,7 @@ export function normalizeModuleReviewStatus(status) {
 }
 
 export function buildCampaignState(payload = {}) {
+  const scenarioById = new Map((payload.scenarios || []).map((row) => [String(row.id), row]));
   const resultsByScenario = new Map();
   for (const row of payload.results || []) {
     const key = String(row.scenario_id);
@@ -26,15 +27,18 @@ export function buildCampaignState(payload = {}) {
   for (const scenario of payload.scenarios || []) {
     const key = String(scenario.module_id || '');
     if (!scenariosByModule.has(key)) scenariosByModule.set(key, []);
-    const rows = resultsByScenario.get(String(scenario.id)) || [];
-    const activeResult = rows.find((row) => !row.archived_at);
-    const archives = rows.filter((row) => !!row.archived_at)
-      .sort((a, b) => String(b.archived_at).localeCompare(String(a.archived_at)));
+    const rows = (resultsByScenario.get(String(scenario.id)) || [])
+      .sort((a, b) => Number(b.sequence_no || 0) - Number(a.sequence_no || 0)
+        || String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    const activeResult = rows.find((row) => !row.archived_at && !row.superseded_at);
+    const archives = rows.filter((row) => row.id !== activeResult?.id);
+    const parentScenario = scenarioById.get(String(scenario.parent_scenario_id || ''));
     scenariosByModule.get(key).push({
       ...scenario,
+      parentScenarioTitle: parentScenario?.title || '',
       result: activeResult || { status: 'pending', notes: '' },
       archives,
-      testRequired: !!activeResult || archives.length === 0,
+      testRequired: !scenario.closed_at && (!!activeResult || archives.length === 0),
     });
   }
   const modules = (payload.modules || []).map((module) => {
@@ -47,7 +51,7 @@ export function buildCampaignState(payload = {}) {
         .sort((a, b) => String(b.archived_at).localeCompare(String(a.archived_at))),
     };
   });
-  return { campaign: payload.campaign || null, modules };
+  return { campaign: payload.campaign || null, modules, viewerRole: payload.viewerRole || '' };
 }
 
 export function moduleProgress(module) {

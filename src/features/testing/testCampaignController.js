@@ -91,20 +91,34 @@ async function finishModule(root, status) {
   }
 }
 
-async function archiveScenario(root, card) {
+async function appendScenarioFeedback(root, card) {
   const scenarioId = card?.dataset?.testScenario;
   const scenario = currentModule()?.scenarios?.find((item) => String(item.id) === String(scenarioId));
-  if (!scenario?.result?.id) return;
+  if (!scenario || scenario.closed_at) return;
   try {
     const repository = createTestCampaignRepository(getClient());
-    await repository.archiveScenarioResult({
-      resultId: scenario.result.id,
-      userId: getUserId(),
+    await repository.appendScenarioFeedback({ scenarioId });
+    await reload(root);
+    feedback(root, 'Nouveau retour ajoute a la suite de l historique.');
+  } catch (error) {
+    feedback(root, error?.message || String(error), true);
+  }
+}
+
+async function closeScenario(root, card) {
+  const scenarioId = card?.dataset?.testScenario;
+  const scenario = currentModule()?.scenarios?.find((item) => String(item.id) === String(scenarioId));
+  if (!scenario?.result?.id || campaignState?.viewerRole !== 'admin') return;
+  if (!window.confirm('Clore ce test pour tous les testeurs ? Son historique restera visible.')) return;
+  try {
+    const repository = createTestCampaignRepository(getClient());
+    await repository.closeScenarioGlobally({
+      scenarioId,
       treatedVersion: campaignState.campaign.app_version,
-      treatmentNotes: 'Retour relu et traite.',
+      treatmentNotes: 'Retour relu, traite et clos pour tous les testeurs.',
     });
     await reload(root);
-    feedback(root, 'Test archive avec ses dates de test et de traitement.');
+    feedback(root, 'Test clos pour tous les testeurs.');
   } catch (error) {
     feedback(root, error?.message || String(error), true);
   }
@@ -161,9 +175,14 @@ function bind(root) {
       await saveScenario(root, card, scenario?.result?.status || 'pending');
       return;
     }
-    const archiveResult = event.target.closest('[data-test-archive-result]');
-    if (archiveResult) {
-      await archiveScenario(root, archiveResult.closest('[data-test-scenario]'));
+    const appendFeedback = event.target.closest('[data-test-add-feedback]');
+    if (appendFeedback) {
+      await appendScenarioFeedback(root, appendFeedback.closest('[data-test-scenario]'));
+      return;
+    }
+    const closeResult = event.target.closest('[data-test-close-result]');
+    if (closeResult) {
+      await closeScenario(root, closeResult.closest('[data-test-scenario]'));
       return;
     }
     const archiveReviewButton = event.target.closest('[data-test-archive-review]');

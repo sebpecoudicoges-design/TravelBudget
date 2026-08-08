@@ -470,6 +470,8 @@ export function renderNutritionShell({
   total = {},
   sportKcal = 0,
   workKcal = 0,
+  neatKcal = 0,
+  tefKcal = 0,
   goalCockpitHtml = '',
   quickAdd = {},
   hydrationPanelHtml = '',
@@ -518,12 +520,15 @@ export function renderNutritionShell({
         <div style="border:1px solid rgba(251,113,133,.35);border-radius:8px;padding:12px;background:rgba(251,113,133,.10);">${renderProgressBar({ label: langText('Lipides', 'Fat', t), current: total.fat, target: fatTarget, unit: 'g', esc })}</div>
         <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);grid-column:1/-1;">
           <div class="muted" style="font-size:12px;">${esc(langText('Besoin calcule', 'Calculated need', t))}</div>
-          <strong>${Math.round(num(base.bmr, 0))} ${esc(langText('base', 'base', t))} + ${Math.round(num(sportKcal, 0))} sport + ${Math.round(num(workKcal, 0))} ${esc(langText('travail', 'work', t))}${num(goalTargets.offsetKcal, 0) ? ` ${num(goalTargets.offsetKcal, 0) > 0 ? '+' : '-'} ${Math.abs(Math.round(num(goalTargets.offsetKcal, 0)))} ${esc(langText('objectif', 'goal', t))}` : ''} = ${Math.round(num(needsKcal, 0))} kcal</strong>
+          <strong>${Math.round(num(base.bmr, 0))} ${esc(langText('base', 'base', t))} + ${Math.round(num(neatKcal, 0))} NEAT + ${Math.round(num(sportKcal, 0))} sport + ${Math.round(num(workKcal, 0))} ${esc(langText('travail', 'work', t))} + ${Math.round(num(tefKcal, 0))} TEF${num(goalTargets.offsetKcal, 0) ? ` ${num(goalTargets.offsetKcal, 0) > 0 ? '+' : '-'} ${Math.abs(Math.round(num(goalTargets.offsetKcal, 0)))} ${esc(langText('objectif', 'goal', t))}` : ''} = ${Math.round(num(needsKcal, 0))} kcal</strong>
+          <div class="muted" style="font-size:12px;margin-top:6px;">${esc(langText('NEAT : activite quotidienne hors sport et hors travail saisi. Le travail a la ferme reste dans Travail. TEF : cout estime de la digestion.', 'NEAT: daily activity excluding sport and logged work. Farm work stays under Work. TEF: estimated digestion cost.', t))}</div>
           <div class="muted" style="font-size:12px;margin-top:6px;">${esc(langText('Hydratation : objectif 2 L en eau bue. Eau des aliments', 'Hydration: 2 L target from drunk water. Food water', t))} ${Math.round(num(foodWaterMl, 0))} ml.</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px;">
+          <div class="tb-nutrition-energy-settings" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px;">
             <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(langText('Objectif', 'Goal', t))}</span><select id="nutrition-goal-mode"><option value="bulk" ${goalTargets.mode === 'bulk' ? 'selected' : ''}>${esc(langText('Prise de masse douce', 'Lean bulk', t))}</option><option value="maintenance" ${goalTargets.mode === 'maintenance' ? 'selected' : ''}>${esc(langText('Maintien / recomposition', 'Maintenance / recomp', t))}</option><option value="cut" ${goalTargets.mode === 'cut' ? 'selected' : ''}>${esc(langText('Perte de gras douce', 'Gentle fat loss', t))}</option></select></label>
             <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(langText('Surplus kcal', 'Kcal surplus', t))}</span><select id="nutrition-goal-surplus" ${goalTargets.mode === 'bulk' ? '' : 'disabled'}><option value="300" ${goalTargets.surplusKcal === 300 ? 'selected' : ''}>+300</option><option value="350" ${goalTargets.surplusKcal === 350 ? 'selected' : ''}>+350</option><option value="400" ${goalTargets.surplusKcal === 400 ? 'selected' : ''}>+400</option><option value="500" ${goalTargets.surplusKcal === 500 ? 'selected' : ''}>+500</option></select></label>
             <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(langText('Deficit kcal', 'Kcal deficit', t))}</span><select id="nutrition-goal-deficit" ${goalTargets.mode === 'cut' ? '' : 'disabled'}><option value="250" ${goalTargets.deficitKcal === 250 ? 'selected' : ''}>-250</option><option value="300" ${goalTargets.deficitKcal === 300 ? 'selected' : ''}>-300</option><option value="400" ${goalTargets.deficitKcal === 400 ? 'selected' : ''}>-400</option><option value="500" ${goalTargets.deficitKcal === 500 ? 'selected' : ''}>-500</option></select></label>
+            <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(langText('NEAT quotidien (kcal)', 'Daily NEAT (kcal)', t))}</span><input id="nutrition-goal-neat" type="number" min="0" max="2000" step="25" value="${esc(String(num(goalSettings.neatKcal, 300)))}"></label>
+            <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">TEF</span><select id="nutrition-goal-tef"><option value="8" ${num(goalSettings.tefRatePct, 10) === 8 ? 'selected' : ''}>8 %</option><option value="10" ${num(goalSettings.tefRatePct, 10) === 10 ? 'selected' : ''}>10 %</option><option value="12" ${num(goalSettings.tefRatePct, 10) === 12 ? 'selected' : ''}>12 %</option></select></label>
             <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(langText('Poids cible', 'Target weight', t))}</span><input id="nutrition-goal-weight" type="number" min="35" max="180" step="0.1" value="${esc(String(num(goalSettings.targetWeightKg, 0)))}"></label>
             <label style="display:grid;gap:4px;"><span class="muted" style="font-size:12px;">${esc(langText('Rythme kg/sem.', 'Pace kg/week', t))}</span><input id="nutrition-goal-rate" type="number" min="0.1" max="0.8" step="0.05" value="${esc(String(num(goalSettings.weeklyRateKg, 0.25)))}"></label>
           </div>
@@ -558,7 +563,7 @@ export function renderNutritionShell({
             </div>
           </div>
           <div class="muted" style="margin-top:10px;">
-            ${esc(langText('Besoins calcules', 'Calculated needs', t))}: ${Math.round(num(base.bmr, 0))} ${esc(langText('base', 'base', t))} + ${Math.round(num(sportKcal, 0))} sport + ${Math.round(num(workKcal, 0))} ${esc(langText('travail', 'work', t))}${num(goalTargets.offsetKcal, 0) ? ` ${num(goalTargets.offsetKcal, 0) > 0 ? '+' : '-'} ${Math.abs(Math.round(num(goalTargets.offsetKcal, 0)))} ${esc(langText('objectif', 'goal', t))}` : ''}.
+            ${esc(langText('Besoins calcules', 'Calculated needs', t))}: ${Math.round(num(base.bmr, 0))} ${esc(langText('base', 'base', t))} + ${Math.round(num(neatKcal, 0))} NEAT + ${Math.round(num(sportKcal, 0))} sport + ${Math.round(num(workKcal, 0))} ${esc(langText('travail', 'work', t))} + ${Math.round(num(tefKcal, 0))} TEF${num(goalTargets.offsetKcal, 0) ? ` ${num(goalTargets.offsetKcal, 0) > 0 ? '+' : '-'} ${Math.abs(Math.round(num(goalTargets.offsetKcal, 0)))} ${esc(langText('objectif', 'goal', t))}` : ''}.
           </div>
         </div>
         <div class="tb-sport-stats" style="margin-bottom:12px;">
@@ -573,8 +578,10 @@ export function renderNutritionShell({
         <div class="muted" style="margin:-4px 0 12px;">
           ${esc(langText('Depense estimee', 'Estimated spend', t))}: ${Math.round(num(spentKcal, 0))} kcal =
           ${esc(langText('base', 'base', t))} ${Math.round(num(base.bmr, 0))}
+          + NEAT ${Math.round(num(neatKcal, 0))}
           + sport ${Math.round(num(sportKcal, 0))}
-          + ${esc(langText('travail', 'work', t))} ${Math.round(num(workKcal, 0))}.
+          + ${esc(langText('travail', 'work', t))} ${Math.round(num(workKcal, 0))}
+          + TEF ${Math.round(num(tefKcal, 0))}.
           ${esc(langText('Tu es', 'You are', t))} ${esc(balanceLabel)} ${Math.abs(Math.round(num(objectiveBalanceKcal, 0)))} kcal.
         </div>
         <div style="display:grid;gap:10px;margin-top:12px;">

@@ -5,9 +5,10 @@ describe('test campaign view', () => {
   it('renders instructions, decisions, notes and module completion controls', () => {
     const html = renderTestCampaign({
       campaign: { id: 'campaign-1', title: '<Campaign>', description: 'Test', app_version: '10.5.316' },
+      viewerRole: 'admin',
       modules: [{
         id: 'module-1', module_key: 'dashboard', title: 'Dashboard', instructions: 'Start here',
-        scenarios: [{ id: 'scenario-1', title: '<Load>', instructions: 'Open', expected_result: 'Works', required: true, result: { status: 'not_ok', notes: '<bug>' } }],
+        scenarios: [{ id: 'scenario-1', title: '<Load>', instructions: 'Open', expected_result: 'Works', required: true, parentScenarioTitle: 'Premier test', result: { id: 'result-1', status: 'not_ok', notes: '<bug>', sequence_no: 2 } }],
         review: { status: 'in_progress', notes: '' },
       }],
     });
@@ -17,6 +18,9 @@ describe('test campaign view', () => {
     expect(html).toContain('data-test-result="ok"');
     expect(html).toContain('data-test-result="not_ok"');
     expect(html).toContain('data-test-save-note');
+    expect(html).toContain('data-test-add-feedback');
+    expect(html).toContain('data-test-close-result');
+    expect(html).toContain('Decoule de');
     expect(html).toContain('data-test-finish="completed_ok"');
     expect(html).toContain('data-test-open-module="dashboard"');
   });

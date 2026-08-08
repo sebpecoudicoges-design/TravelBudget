@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "3dfbadaa4594080416893b0d9aa82b71dc1bf50c",
-  "snapshotFingerprint": "90e5f6d80dbca0e2fa166bb25b86340b93b4c7b47e4da5d6a3c3b05ff84fdcdd",
-  "generatedAt": "2026-08-01T12:43:15.309Z",
+  "commit": "9a0ece22f5349e98e3ed8698d6ad01a905a5d280",
+  "snapshotFingerprint": "b967868348254d15cb45034f9a5e34099ad755cd567c517c6e8e1bdd25ab7969",
+  "generatedAt": "2026-08-08T05:34:14.363Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.323"
+    "version": "10.5.324"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -504,7 +504,11 @@
     "supabase/migrations/20260801111519_archive_grouped_feedback_10_5_320.sql",
     "supabase/migrations/20260801113508_archive_help_documents_project_10_5_321.sql",
     "supabase/migrations/20260801115816_archive_settings_account_10_5_322.sql",
-    "supabase/migrations/20260801124047_archive_settings_travel_periods_10_5_323.sql"
+    "supabase/migrations/20260801124047_archive_settings_travel_periods_10_5_323.sql",
+    "supabase/migrations/20260808051754_test_feedback_lineage_global_closure.sql",
+    "supabase/migrations/20260808053006_enforce_global_test_closure.sql",
+    "supabase/migrations/20260808053103_fix_global_test_closure_policy_scope.sql",
+    "supabase/migrations/20260808053343_harden_append_test_feedback_invoker.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

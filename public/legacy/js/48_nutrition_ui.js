@@ -186,11 +186,13 @@
         mode,
         surplusKcal,
         deficitKcal,
+        neatKcal: Math.max(0, Math.min(2000, Math.round(n(raw.neatKcal, 300)))),
+        tefRatePct: Math.max(8, Math.min(12, n(raw.tefRatePct, 10))),
         targetWeightKg: Math.max(35, Math.min(180, n(raw.targetWeightKg, bodyWeight() + 3))),
         weeklyRateKg: Math.max(0.1, Math.min(0.8, n(raw.weeklyRateKg, 0.25))),
       };
     } catch (_) {
-      return { mode: "bulk", surplusKcal: 350, deficitKcal: 300, targetWeightKg: bodyWeight() + 3, weeklyRateKg: 0.25 };
+      return { mode: "bulk", surplusKcal: 350, deficitKcal: 300, neatKcal: 300, tefRatePct: 10, targetWeightKg: bodyWeight() + 3, weeklyRateKg: 0.25 };
     }
   }
   function saveNutritionGoal(next) {
@@ -198,6 +200,8 @@
     goal.mode = ["bulk", "maintenance", "cut"].includes(String(goal.mode || "")) ? String(goal.mode) : "maintenance";
     goal.surplusKcal = Math.max(300, Math.min(500, Math.round(n(goal.surplusKcal, 350))));
     goal.deficitKcal = Math.max(250, Math.min(500, Math.round(n(goal.deficitKcal, 300))));
+    goal.neatKcal = Math.max(0, Math.min(2000, Math.round(n(goal.neatKcal, 300))));
+    goal.tefRatePct = Math.max(8, Math.min(12, n(goal.tefRatePct, 10)));
     goal.targetWeightKg = Math.max(35, Math.min(180, Math.round(n(goal.targetWeightKg, bodyWeight() + 3) * 10) / 10));
     goal.weeklyRateKg = Math.max(0.1, Math.min(0.8, Math.round(n(goal.weeklyRateKg, 0.25) * 100) / 100));
     try { localStorage.setItem(nutritionGoalKey(), JSON.stringify(goal)); } catch (_) {}
@@ -223,6 +227,7 @@
       mode: goal.mode,
       surplusKcal: goal.surplusKcal,
       deficitKcal: goal.deficitKcal,
+      tefRatePct: goal.tefRatePct,
     });
     const spent = Math.max(0, n(spentKcal, 0));
     const offset = nutritionGoalOffset(goal);
@@ -1365,14 +1370,18 @@
     const foodWaterMl = Math.max(0, meals.reduce((sum, meal) => sum + n(meal.water_ml, 0), 0) - drinkWaterMl);
     const waterMl = drinkWaterMl;
     const base = baseline();
+    const nutritionGoal = loadNutritionGoal();
+    const neatKcal = Math.max(0, n(nutritionGoal.neatKcal, 300));
     const sportKcal = todaySportKcal();
     const workKcal = todayWorkKcal();
-    const balance = rules().energyBalance
-      ? rules().energyBalance({ consumedKcal: total.kcal, sportKcal, workKcal, bmr: base.bmr })
-      : { spentKcal: base.bmr + sportKcal + workKcal, balanceKcal: total.kcal - (base.bmr + sportKcal + workKcal) };
-    const spentKcal = Math.max(0, n(balance.spentKcal, base.bmr + sportKcal + workKcal));
+    const preTefSpentKcal = Math.max(0, base.bmr + neatKcal + sportKcal + workKcal);
     const kg = bodyWeight();
-    const goalTargets = nutritionGoalTargets(spentKcal, kg);
+    const goalTargets = nutritionGoalTargets(preTefSpentKcal, kg);
+    const tefKcal = Math.max(0, n(goalTargets.tefKcal, 0));
+    const balance = rules().energyBalance
+      ? rules().energyBalance({ consumedKcal: total.kcal, sportKcal, workKcal, neatKcal, tefKcal, bmr: base.bmr })
+      : { spentKcal: preTefSpentKcal + tefKcal, balanceKcal: total.kcal - (preTefSpentKcal + tefKcal) };
+    const spentKcal = Math.max(0, n(balance.spentKcal, preTefSpentKcal + tefKcal));
     const needsKcal = Math.max(0, n(goalTargets.targetKcal, spentKcal));
     const objectiveBalanceKcal = total.kcal - needsKcal;
     const balanceLabel = objectiveBalanceKcal >= 0 ? txt("au-dessus", "above") : txt("en-dessous", "below");
@@ -1405,7 +1414,6 @@
       : loadLocalMeals().length
         ? txt("Ajouts en attente", "Pending entries")
         : txt("A jour", "Up to date");
-    const nutritionGoal = loadNutritionGoal();
     root.innerHTML = view().renderNutritionShell?.({
       day,
       base,
@@ -1414,6 +1422,8 @@
       goalSettings: {
         targetWeightKg: n(nutritionGoal.targetWeightKg, bodyWeight() + 3),
         weeklyRateKg: n(nutritionGoal.weeklyRateKg, 0.25),
+        neatKcal,
+        tefRatePct: n(nutritionGoal.tefRatePct, 10),
       },
       syncPanelHtml: renderNutritionSyncPanel(),
       kcalRingColor,
@@ -1430,6 +1440,8 @@
       total,
       sportKcal,
       workKcal,
+      neatKcal,
+      tefKcal,
       goalCockpitHtml: goalCockpitHTML(nutritionGoal, goalTargets, week, total, sportKcal, workKcal),
       quickAdd: {
         editingItem,
@@ -1557,6 +1569,16 @@
     if (goalDeficit) goalDeficit.onchange = () => {
       saveNutritionGoal({ deficitKcal: n(goalDeficit.value, 300) });
       renderNutrition("goal-deficit");
+    };
+    const goalNeat = root.querySelector("#nutrition-goal-neat");
+    if (goalNeat) goalNeat.onchange = () => {
+      saveNutritionGoal({ neatKcal: n(goalNeat.value, 300) });
+      renderNutrition("goal-neat");
+    };
+    const goalTef = root.querySelector("#nutrition-goal-tef");
+    if (goalTef) goalTef.onchange = () => {
+      saveNutritionGoal({ tefRatePct: n(goalTef.value, 10) });
+      renderNutrition("goal-tef");
     };
     const goalWeight = root.querySelector("#nutrition-goal-weight");
     if (goalWeight) goalWeight.onchange = () => {

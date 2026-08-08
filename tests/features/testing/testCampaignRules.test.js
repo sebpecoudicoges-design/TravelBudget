@@ -77,4 +77,25 @@ describe('test campaign rules', () => {
     expect(moduleNeedsTesting(state.modules[0])).toBe(false);
     expect(filterCampaignModules(state.modules, 'no_tests')).toHaveLength(1);
   });
+
+  it('keeps feedback lineage and closes a scenario for every viewer', () => {
+    const state = buildCampaignState({
+      viewerRole: 'admin',
+      modules: [{ id: 'module-1' }],
+      scenarios: [
+        { id: 'parent', module_id: 'module-1', title: 'Objectif' },
+        { id: 'child', module_id: 'module-1', title: 'Retest', parent_scenario_id: 'parent', closed_at: '2026-08-08T05:00:00Z' },
+      ],
+      results: [
+        { id: 'first', scenario_id: 'child', status: 'not_ok', sequence_no: 1, superseded_at: '2026-08-08T04:00:00Z' },
+        { id: 'second', scenario_id: 'child', status: 'ok', sequence_no: 2 },
+      ],
+    });
+    const child = state.modules[0].scenarios[1];
+    expect(child.parentScenarioTitle).toBe('Objectif');
+    expect(child.result.id).toBe('second');
+    expect(child.archives[0].id).toBe('first');
+    expect(child.testRequired).toBe(false);
+    expect(state.viewerRole).toBe('admin');
+  });
 });

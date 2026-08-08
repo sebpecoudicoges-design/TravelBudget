@@ -795,6 +795,21 @@ body.theme-dark .tb-doc-sidebar { background: rgba(255,255,255,.04) !important; 
   }
 }
 
+.tb-nutrition-energy-settings > label { min-width: 0; }
+.tb-nutrition-energy-settings input,
+.tb-nutrition-energy-settings select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+body.theme-dark .tb-nutrition-energy-settings input,
+body.theme-dark .tb-nutrition-energy-settings select {
+  border-color: rgba(241, 245, 249, .14);
+  background: rgba(15, 23, 42, .64);
+  color: var(--text, #f8fafc);
+}
+
 @media (max-width: 900px) {
   .tb-premium-overview {
     grid-template-columns: 1fr;

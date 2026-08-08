@@ -4,8 +4,8 @@
   "dist": {
     "initialJsMaxKiB": 260,
     "lazyJsMaxKiB": 420,
-    "totalJsMaxKiB": 675,
-    "totalCssMaxKiB": 35,
+    "totalJsMaxKiB": 676,
+    "totalCssMaxKiB": 36,
     "mainJsGzipMaxKiB": 110
   },
   "sourceGroups": [
@@ -102,7 +102,7 @@
     },
     {
       "name": "testing-domain",
-      "maxKiB": 36,
+      "maxKiB": 39,
       "paths": [
         "src/core/moduleAccessRules.js",
         "src/data/testCampaignRepository.js",

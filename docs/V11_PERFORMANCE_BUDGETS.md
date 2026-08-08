@@ -140,6 +140,8 @@ En 10.5.322, Settings Compte remplace quatre sauvegardes visibles par une action
 
 En 10.5.323, Settings Voyages/periodes ajoute une barre d action responsive et un champ monetaire avec devise separee. Dashboard + Settings reste sous plafond a 364.3 / 365 KiB, l initial a 255.1 / 260 KiB, le lazy a 416.2 / 420 KiB et le total JS a 671.3 / 675 KiB. Le CSS atteint 35.0 KiB ; son plafond passe au palier entier immediat de 35 KiB.
 
+En 10.5.324, la campagne de tests conserve la filiation des retours et porte la cloture au niveau scenario ; son groupe atteint 38.6 KiB et son plafond passe au palier entier de 39 KiB. L ajout NEAT/TEF et les contraintes responsive portent le total JS a 675.1 / 676 KiB et le CSS a 35.6 / 36 KiB. L initial reste a 255.3 / 260 KiB et le lazy a 419.8 / 420 KiB.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

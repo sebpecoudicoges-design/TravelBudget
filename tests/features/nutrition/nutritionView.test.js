@@ -256,7 +256,7 @@ describe('Nutrition view helpers', () => {
       base: { bmr: 1624 },
       goalLabel: 'Prise de masse douce',
       goalTargets: { mode: 'bulk', offsetKcal: 350, surplusKcal: 350, deficitKcal: 300 },
-      goalSettings: { targetWeightKg: 62, weeklyRateKg: 0.25 },
+      goalSettings: { targetWeightKg: 62, weeklyRateKg: 0.25, neatKcal: 300, tefRatePct: 10 },
       syncPanelHtml: '<div id="nutrition-sync-pending">sync</div>',
       consumedKcal: 1089,
       needsKcal: 2400,
@@ -270,6 +270,8 @@ describe('Nutrition view helpers', () => {
       total: { kcal: 1089, protein: 43, carbs: 130, fat: 35 },
       sportKcal: 250,
       workKcal: 120,
+      neatKcal: 300,
+      tefKcal: 240,
       goalCockpitHtml: '<div id="goal-cockpit">objectif</div>',
       quickAdd: {
         syncBadge: 'A jour',
@@ -292,6 +294,10 @@ describe('Nutrition view helpers', () => {
     expect(html).toContain('id="nutrition-date"');
     expect(html).toContain('id="nutrition-refresh"');
     expect(html).toContain('id="nutrition-goal-mode"');
+    expect(html).toContain('id="nutrition-goal-neat"');
+    expect(html).toContain('id="nutrition-goal-tef"');
+    expect(html).toContain('300 NEAT');
+    expect(html).toContain('240 TEF');
     expect(html).toContain('id="nutrition-search"');
     expect(html).toContain('id="nutrition-sync-pending"');
     expect(html).toContain('data-nutrition-pick-type="lunch"');

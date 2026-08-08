@@ -44,10 +44,10 @@ describe('nutrition rules core', () => {
   });
 
   it('computes consumed versus daily spent calories', () => {
-    expect(energyBalance({ consumedKcal: 2200, sportKcal: 400, workKcal: 600, bmr: 1700 })).toEqual({
+    expect(energyBalance({ consumedKcal: 2200, sportKcal: 400, workKcal: 600, neatKcal: 300, tefKcal: 250, bmr: 1700 })).toEqual({
       consumedKcal: 2200,
-      spentKcal: 2700,
-      balanceKcal: -500,
+      spentKcal: 3250,
+      balanceKcal: -1050,
     });
   });
 
@@ -56,7 +56,9 @@ describe('nutrition rules core', () => {
       mode: 'bulk',
       surplusKcal: 350,
       offsetKcal: 350,
-      targetKcal: 2450,
+      targetKcal: 2722,
+      tefKcal: 272,
+      tefRatePct: 10,
       protein: 106,
       fat: 53,
     });
@@ -67,7 +69,8 @@ describe('nutrition rules core', () => {
       mode: 'cut',
       deficitKcal: 300,
       offsetKcal: -300,
-      targetKcal: 1800,
+      targetKcal: 2000,
+      tefKcal: 200,
       protein: 112,
       fat: 44,
     });

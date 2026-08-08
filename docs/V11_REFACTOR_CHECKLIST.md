@@ -331,6 +331,7 @@ Critere ferme : le boot initial est stabilise, les domaines lourds sont charges 
   - [x] Traiter en lot 10.5.321 dix cycles Projet, Aide et Documents : demarrage rapide persistant, diagnostic explicatif avec support et rail Documents premium ; archiver ces cycles et ouvrir uniquement deux retests cibles.
   - [x] Traiter en 10.5.322 le scenario Settings Compte/preferences : grille premium, sauvegarde globale pre-validee et retrait du panneau Notifications mobile duplique ; archiver uniquement ce scenario et ouvrir son retest.
   - [x] Traiter en 10.5.323 le scenario Settings Voyages/periodes : ajout depuis la section cible, montant Nuit transport normalise et refus de suppression sans bruit technique ; archiver uniquement ce scenario et ouvrir son retest.
+  - [x] Integrer en 10.5.324 NEAT et TEF aux besoins Nutrition sans double compter sport ou travail, relier les retests a leur historique et porter la cloture au niveau scenario pour tous les testeurs.
   - [x] Nettoyer Analyse/Documents : `_referenceDailyForDate` et `extFromName` retires, Analyse 88.50 -> 88.16 KiB et Documents 75.40 -> 75.32 KiB, contrat anti-retour ajoute.
   - [x] Retirer l'ancien script de contexte voyage `06_travel_context.js` du boot : fichier sans appel supprime, boot legacy 875.8 -> 874.7 KiB, contrat anti-retour ajoute.
   - [x] Retirer l'ancien helper `31_wallet_balance.js` du boot : soldes wallet portes par les regles centrales, boot legacy 874.7 -> 874.2 KiB et JS initial 246.3 -> 246.2 KiB.

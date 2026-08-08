@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.323`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.324`.
 
 ## Objectif
 
@@ -23,7 +23,8 @@ Le role est lu depuis `public.profiles.role`. Le verrou d interface ne remplace 
 5. Ajouter une note en cas d ecart : appareil, resultat reel, console et capture si utile.
 6. Repondre a tous les scenarios obligatoires.
 7. Terminer le module avec **tout est OK** ou **avec problemes**.
-8. Une fois le retour traite, l archiver : sa date de test, sa date de traitement, la version et les notes restent consultables.
+8. Si une nouvelle observation arrive, utiliser **Ajouter un nouveau retour** : elle suit le precedent sans l ecraser.
+9. Une fois le traitement valide, un admin utilise **Clore pour tous** ; dates, version et notes restent consultables.
 
 Les filtres **Actifs**, **A tester**, **Sans test** et **Archives** distinguent la file de travail des modules qui n ont rien a executer. **Afficher les tests archives** ouvre l historique sans recreer de tache.
 
@@ -52,13 +53,20 @@ Cautions est retire de l application depuis `10.5.319`. Le module de campagne es
 
 - `app_test_campaigns` : campagne active et version cible.
 - `app_test_modules` : ordre et statut global des modules.
-- `app_test_scenarios` : instructions et resultats attendus.
-- `app_test_results` : reponse et note du testeur par scenario, dates de test/traitement et archivage.
+- `app_test_scenarios` : instructions, filiation eventuelle et cloture globale.
+- `app_test_results` : episodes successifs de reponse et note du testeur, avec filiation et dates de test/traitement.
 - `app_test_module_reviews` : decision finale du testeur par module, traitement et archivage.
 
-Les resultats actifs utilisent un index unique partiel : archiver un resultat libere le scenario pour un retest sans perdre son historique.
+Les resultats actifs utilisent un index unique partiel : ajouter un retour remplace l episode editable, conserve le precedent dans l historique et relie les deux lignes.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
+
+## Historique et cloture
+
+- **Ajouter un nouveau retour** cree un episode relie au precedent sans ecraser les notes ni les dates.
+- Un scenario derive affiche le test parent dont il decoule.
+- **Clore pour tous** est reserve aux administrateurs : le scenario devient clos au niveau campagne et disparait des tests actifs de chaque testeur.
+- Les retours precedents, traites et scenarios clos restent consultables avec **Afficher les tests archives**.
 
 ## Reprise Play Store
 

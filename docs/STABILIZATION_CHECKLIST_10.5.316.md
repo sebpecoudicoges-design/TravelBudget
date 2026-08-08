@@ -16,7 +16,7 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.323`.
+- Version cible de campagne : `10.5.324`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
 - 20 resultats et 9 revues de module traites sont archives avec date de test, date de traitement, version et note.
 - 7 retests cibles restent ouverts : premier affichage Dashboard, transactions protegees, recap/historique Trip, Aide navigation/mobile, Documents import/classement, Settings Compte/preferences et Settings Voyages/periodes.

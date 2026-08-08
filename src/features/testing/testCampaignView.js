@@ -36,7 +36,7 @@ function dateLabel(value) {
 function renderArchive(archive, title) {
   const archiveStatus = archive.module_id ? reviewLabel(archive.status) : statusLabel(archive.status);
   return `<article class="tb-test-archive" data-test-archive-id="${esc(archive.id)}">
-    <header><div><strong>${esc(title)}</strong><small>${esc(archiveStatus)}</small></div><span>Archive traitee</span></header>
+    <header><div><strong>${esc(title)}</strong><small>${esc(archiveStatus)}${archive.sequence_no ? ` · retour ${esc(archive.sequence_no)}` : ''}</small></div><span>${archive.archived_at ? 'Archive traitee' : 'Retour precedent'}</span></header>
     <dl>
       <div><dt>Test effectue</dt><dd>${esc(dateLabel(archive.completed_at || archive.updated_at))}</dd></div>
       <div><dt>Traite</dt><dd>${esc(dateLabel(archive.treated_at))}</dd></div>
@@ -67,10 +67,12 @@ export function renderTestCampaign(state, options = {}) {
   const total = campaignProgress(allModules);
   const progress = moduleProgress(selected);
   const reviewStatus = normalizeModuleReviewStatus(selected?.review?.status);
+  const canCloseTests = state?.viewerRole === 'admin';
   const activeScenarios = (selected?.scenarios || []).filter((scenario) => scenario.testRequired !== false);
   const scenarioArchives = (selected?.scenarios || []).flatMap((scenario) => (
     (scenario.archives || []).map((archive) => ({ ...archive, scenarioTitle: scenario.title }))
   ));
+  const closedScenarios = (selected?.scenarios || []).filter((scenario) => !!scenario.closed_at);
 
   return `<div class="tb-test-campaign" data-test-campaign-id="${esc(campaign.id)}">
     <section class="tb-test-hero">
@@ -128,6 +130,7 @@ export function renderTestCampaign(state, options = {}) {
             const status = normalizeTestStatus(scenario?.result?.status);
             return `<article class="tb-test-scenario is-${esc(status)}" data-test-scenario="${esc(scenario.id)}">
               <header><span>${index + 1}</span><div><h4>${esc(scenario.title)}</h4><small>${esc(statusLabel(status))}${scenario.required === false ? ' · facultatif' : ''}</small></div></header>
+              ${scenario.parentScenarioTitle ? `<div class="tb-test-lineage">Decoule de : <strong>${esc(scenario.parentScenarioTitle)}</strong></div>` : ''}
               <p>${esc(scenario.instructions)}</p>
               <div class="tb-test-expected"><strong>Resultat attendu</strong><span>${esc(scenario.expected_result)}</span></div>
               <div class="tb-test-actions" role="group" aria-label="Resultat du test">
@@ -140,14 +143,16 @@ export function renderTestCampaign(state, options = {}) {
               </label>
               <div class="tb-test-save-row">
                 <button type="button" class="btn tb-test-save-note" data-test-save-note>Enregistrer la note</button>
-                ${scenario?.result?.id && status !== 'pending' ? '<button type="button" class="btn" data-test-archive-result>Archiver comme traite</button>' : ''}
+                ${scenario?.result?.id && status !== 'pending' ? '<button type="button" class="btn" data-test-add-feedback>Ajouter un nouveau retour</button>' : ''}
+                ${canCloseTests && scenario?.result?.id && status !== 'pending' ? '<button type="button" class="btn danger" data-test-close-result>Clore pour tous</button>' : ''}
               </div>
-              ${scenario?.result?.completed_at ? `<small class="tb-test-date">Test effectue le ${esc(dateLabel(scenario.result.completed_at))}</small>` : ''}
+              ${scenario?.result?.completed_at ? `<small class="tb-test-date">Retour ${esc(scenario.result.sequence_no || 1)} · test effectue le ${esc(dateLabel(scenario.result.completed_at))}</small>` : ''}
             </article>`;
           }).join('') || (selected.archived_at ? '' : '<div class="tb-ui-state tb-ui-state--empty"><strong>Aucun test a effectuer</strong><span>Les tests traites restent disponibles avec le filtre des archives.</span></div>')}
         </div>
 
         ${showArchived && scenarioArchives.length ? `<section class="tb-test-archives"><h4>Tests archives</h4>${scenarioArchives.map((archive) => renderArchive(archive, archive.scenarioTitle)).join('')}</section>` : ''}
+        ${showArchived && closedScenarios.length ? `<section class="tb-test-archives"><h4>Tests clos pour tous</h4>${closedScenarios.map((scenario) => `<article class="tb-test-archive"><header><div><strong>${esc(scenario.title)}</strong><small>Clos le ${esc(dateLabel(scenario.closed_at))}</small></div><span>Cloture globale</span></header><dl><div><dt>Version</dt><dd>${esc(scenario.closed_version || 'Non renseignee')}</dd></div></dl>${scenario.closure_notes ? `<p><strong>Traitement</strong>${esc(scenario.closure_notes)}</p>` : ''}</article>`).join('')}</section>` : ''}
         ${showArchived && selected.reviewArchives?.length ? `<section class="tb-test-archives"><h4>Relectures de module archivees</h4>${selected.reviewArchives.map((archive) => renderArchive(archive, selected.title)).join('')}</section>` : ''}
 
         ${selected.archived_at ? '' : `<footer class="tb-test-finish">
