@@ -641,13 +641,14 @@ body:not(.theme-dark) .dashboard-card-kicker { color: #168b87; }
 
 .tb-settings-account-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(160px, 240px));
   gap: 12px;
   align-items: start;
+  justify-content: start;
 }
 .tb-settings-account-grid .field { min-width: 0; }
 .tb-settings-account-grid input,
-.tb-settings-account-grid select { width: 100%; min-height: 42px; }
+.tb-settings-account-grid select { width: 100%; max-width: 100%; min-height: 42px; box-sizing: border-box; }
 .tb-settings-account-savebar,
 .tb-settings-account-tools,
 .tb-settings-account-advanced { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -671,6 +672,93 @@ body:not(.theme-dark) .dashboard-card-kicker { color: #168b87; }
 .tb-settings-account-advanced .field { flex: 0 1 240px; }
 body.theme-dark .tb-settings-account-savebar,
 body.theme-dark .tb-settings-account-advanced { background: rgba(255,255,255,.04); }
+
+.tb-help-popover {
+  position: fixed;
+  z-index: 12000;
+  width: min(320px, calc(100vw - 20px));
+  padding: 10px 12px;
+  border: 1px solid var(--tb-line);
+  border-radius: var(--tb-radius-sm);
+  background: var(--tb-surface);
+  color: var(--tb-ink);
+  box-shadow: var(--tb-shadow);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+.tb-help {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  padding: 0;
+  border: 1px solid var(--tb-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--tb-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1;
+  cursor: pointer;
+}
+.tb-help[aria-expanded="true"] { border-color: var(--tb-coral); color: var(--tb-coral-strong); opacity: 1; }
+body.theme-dark .tb-help-popover { background: #18242b; color: #f7fafb; border-color: rgba(255,255,255,.16); }
+
+.tb-feedback-host {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 12500;
+  display: grid;
+  gap: 8px;
+  width: min(380px, calc(100vw - 36px));
+  pointer-events: none;
+}
+.tb-feedback {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 10px;
+  border: 1px solid var(--tb-line);
+  border-left: 4px solid var(--tb-info);
+  border-radius: var(--tb-radius-sm);
+  background: var(--tb-surface);
+  color: var(--tb-ink);
+  box-shadow: var(--tb-shadow);
+  opacity: 0;
+  transform: translateX(24px);
+  transition: opacity .2s ease, transform .2s ease;
+  pointer-events: auto;
+}
+.tb-feedback.is-visible { opacity: 1; transform: translateX(0); }
+.tb-feedback--success { border-left-color: var(--tb-success); }
+.tb-feedback--warning { border-left-color: var(--tb-warning); }
+.tb-feedback--error { border-left-color: var(--tb-danger); }
+.tb-feedback__icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(76,142,218,.12);
+  color: var(--tb-info);
+  font-weight: 900;
+}
+.tb-feedback--success .tb-feedback__icon { background: rgba(53,168,107,.12); color: var(--tb-success); }
+.tb-feedback--warning .tb-feedback__icon { background: rgba(242,184,75,.16); color: #9a6500; }
+.tb-feedback--error .tb-feedback__icon { background: rgba(228,81,81,.12); color: var(--tb-danger); }
+.tb-feedback__copy { min-width: 0; overflow-wrap: anywhere; font-size: 13px; font-weight: 750; line-height: 1.4; }
+.tb-feedback__close { width: 28px; height: 28px; padding: 0; border: 0; background: transparent; color: var(--tb-muted); font-size: 20px; cursor: pointer; }
+body.theme-dark .tb-feedback { background: #18242b; color: #f7fafb; border-color: rgba(255,255,255,.16); }
+body.theme-dark .tb-feedback--success { border-left-color: var(--tb-success); }
+body.theme-dark .tb-feedback--warning { border-left-color: var(--tb-warning); }
+body.theme-dark .tb-feedback--error { border-left-color: var(--tb-danger); }
+
+@media (max-width: 900px) and (min-width: 601px) {
+  .tb-settings-account-grid { grid-template-columns: repeat(2, minmax(160px, 240px)); }
+}
 
 .tb-help-setup-card,
 .tb-help-diag-help {
@@ -781,6 +869,7 @@ body.theme-dark .tb-doc-sidebar { background: rgba(255,255,255,.04) !important; 
   .tb-settings-account-advanced .field { flex-basis: auto; width: 100%; }
   .tb-help-setup-row { align-items: stretch; flex-direction: column; }
   .tb-help-setup-row .btn { width: 100%; }
+  .tb-feedback-host { right: 10px; bottom: 10px; width: calc(100vw - 20px); }
   .tb-ob-head {
     align-items: stretch;
   }

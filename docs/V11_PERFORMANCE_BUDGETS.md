@@ -142,6 +142,8 @@ En 10.5.323, Settings Voyages/periodes ajoute une barre d action responsive et u
 
 En 10.5.324, la campagne de tests conserve la filiation des retours et porte la cloture au niveau scenario ; son groupe atteint 38.6 KiB et son plafond passe au palier entier de 39 KiB. L ajout NEAT/TEF et les contraintes responsive portent le total JS a 675.1 / 676 KiB et le CSS a 35.6 / 36 KiB. L initial reste a 255.3 / 260 KiB et le lazy a 419.8 / 420 KiB.
 
+En 10.5.325, le retour visuel partage rouge/vert est disponible des le boot et les aides contextuelles deviennent persistantes. L initial reste sous plafond a 257.1 / 260 KiB et le lazy a 419.8 / 420 KiB. Le total atteint 676.9 KiB et le CSS 38.2 KiB ; leurs plafonds passent aux paliers immediatement superieurs de 678 et 39 KiB, sans relever les limites initiale, lazy ou gzip.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

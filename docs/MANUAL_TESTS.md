@@ -6,7 +6,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.324`.
+- Version à valider : `10.5.325`.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
@@ -22,6 +22,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Settings Compte `10.5.322` : email, WhatsApp, naissance, poids, taille, devise et mode partagent une grille responsive. Une seule action **Tout enregistrer** valide le formulaire avant les ecritures et sauvegarde aussi le seuil de tresorerie. L encart Notifications mobile quitte Settings au profit du module Notifications dedie. Un retest cible Compte et preferences est ouvert.
 - Settings Voyages/periodes `10.5.323` : **Ajouter une periode** est disponible dans la section Periodes, les montants acceptent une devise suffixee sans la conserver dans le champ, Nuit transport reprend le budget quotidien estime ou reste vide, et les refus attendus de suppression affichent un message sans erreur console. Un retest cible est ouvert.
 - Nutrition et campagne de tests `10.5.324` : le besoin calorique detaille maintenant BMR, NEAT modifiable, sport, travail et TEF (8, 10 ou 12 %), sans inclure le travail agricole dans le NEAT. Le scenario **NEAT, travail et TEF** decoule explicitement de **Objectif et KPI**. Chaque testeur peut ajouter un nouveau retour a la suite du precedent ; seule une cloture admin ferme le scenario pour tous.
+- Stabilite UI et traitement global `10.5.325` : le Dashboard rejoue son entree apres le chargement initial, les aides `?` restent ouvertes, la grille Compte est compacte et les actions Transactions utilisent des bulles rouges/vertes partagees. Treize scenarios `OK` sans note et les quatre retours corriges sont clos pour tous ; quatre retests enfants conservent la filiation.
 - Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés

@@ -43,4 +43,17 @@ describe('tester campaign contract', () => {
     expect(edge).toContain('targetUserId === callerId');
     expect(config).toContain('[functions.admin-set-user-role]\nverify_jwt = true');
   });
+
+  it('closes handled and clean results globally while opening linked 10.5.325 retests', () => {
+    const migration = read('supabase/migrations/20260808064500_process_ui_stability_feedback_10_5_325.sql');
+
+    expect(migration).toContain("closed_version = coalesce(s.closed_version, '10.5.325')");
+    expect(migration).toContain("treated_version = coalesce(r.treated_version, '10.5.325')");
+    expect(migration.match(/'32500000-0000-4000-8000-00000000000[1-4]'/g)).toHaveLength(4);
+    expect(migration).toContain("'Retest premier chargement 10.5.325'");
+    expect(migration).toContain("'Retest notifications Transactions 10.5.325'");
+    expect(migration).toContain("'Retest grille Compte 10.5.325'");
+    expect(migration).toContain("'Retest aides persistantes 10.5.325'");
+    expect(migration).toContain("set app_version = '10.5.325'");
+  });
 });

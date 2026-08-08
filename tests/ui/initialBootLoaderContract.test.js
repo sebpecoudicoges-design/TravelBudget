@@ -52,4 +52,14 @@ describe('initial boot loader contract', () => {
     expect(boot).toContain('schedule(() => schedule(() => tbFinalizeDashboardFirstPaint("boot:after-gate", 0)))');
     expect(boot.indexOf('window.__TB_BOOTING = false')).toBeLessThan(boot.indexOf('tbFinalizeDashboardFirstPaint("boot:after-gate", 0)'));
   });
+
+  it('re-enters Dashboard once initial server data and lazy budget state are ready', () => {
+    const boot = read('public/legacy/js/20_boot.js');
+
+    expect(boot).toContain('async function tbHydrateDashboardAfterInitialData(reason)');
+    expect(boot).toContain('await window.TBLoadDashboardDailyBudgetState?.()');
+    expect(boot).toContain('showView("dashboard")');
+    expect(boot).toContain('await tbHydrateDashboardAfterInitialData("boot:post-refresh")');
+    expect(boot.indexOf('await refreshFromServer({ force: false })')).toBeLessThan(boot.indexOf('await tbHydrateDashboardAfterInitialData("boot:post-refresh")'));
+  });
 });

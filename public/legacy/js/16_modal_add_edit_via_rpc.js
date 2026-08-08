@@ -295,7 +295,11 @@ function openTxModal(type = "expense", walletId = null) {
 
 function openTxEditModal(txId) {
   const tx = state.transactions.find((t) => t.id === txId);
-  if (!tx) return alert(_txModalT("transactions.error.not_found"));
+  if (!tx) {
+    const message = _txModalT("transactions.error.not_found");
+    if (typeof toastWarn === "function") return toastWarn(message);
+    return alert(message);
+  }
 
   editingTxId = txId;
   _mountTxModal(_txModalT("transactions.modal.edit"), _txModalText("Sauvegarder", "Save"));
@@ -337,16 +341,22 @@ function openTxEditModal(txId) {
 
 function openTxDuplicateModal(txId) {
   const tx = state.transactions.find((t) => String(t.id) === String(txId));
-  if (!tx) return alert(_txModalT("transactions.error.not_found"));
+  if (!tx) {
+    const message = _txModalT("transactions.error.not_found");
+    if (typeof toastWarn === "function") return toastWarn(message);
+    return alert(message);
+  }
 
   const lockState = _txGetLockState(tx);
   if (lockState.locked) {
-    alert(lockState.reason || "Cette transaction ne peut pas être dupliquée.");
+    const message = lockState.reason || "Cette transaction ne peut pas être dupliquée.";
+    if (typeof toastWarn === "function") toastWarn(message); else alert(message);
     return;
   }
 
   if (tx.isInternal || tx.internal_transfer_id || tx.internalTransferId) {
-    alert("Les mouvements internes doivent être recréés depuis le bouton Transfert interne.");
+    const message = "Les mouvements internes doivent être recréés depuis le bouton Transfert interne.";
+    if (typeof toastWarn === "function") toastWarn(message); else alert(message);
     return;
   }
 
@@ -1030,6 +1040,7 @@ async function saveModal() {
   const btn = _txSaveButton();
   if (btn) btn.disabled = true;
 
+  const wasEditing = !!editingTxId;
   try {
     await window.tbWithBusy(async () => {
       await safeCall("Sauvegarde", async () => {
@@ -1236,6 +1247,7 @@ async function saveModal() {
         try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
       } else if (typeof window.tbAfterMutationRefresh === "function") await window.tbAfterMutationRefresh("tx:save");
       else await refreshFromServer();
+      try { if (typeof toastOk === "function") toastOk(wasEditing ? "Transaction modifiée." : "Transaction enregistrée."); } catch (_) {}
       });
     }, editingTxId ? "Mise à jour en cours…" : "Enregistrement en cours…");
   } finally {
@@ -1384,6 +1396,7 @@ async function deleteTx(txId) {
           if (typeof closeModal === "function") closeModal();
           if (typeof renderAll === "function") renderAll();
         } catch (_) {}
+        try { if (typeof toastOk === "function") toastOk("Suppression enregistrée hors ligne."); } catch (_) {}
         return;
       }
       const { error } = await sb.rpc("delete_transaction", { p_tx_id: txId });
@@ -1410,6 +1423,7 @@ async function deleteTx(txId) {
       try { if (typeof closeModal === "function") closeModal(); } catch (_) {}
       if (typeof window.tbAfterMutationRefresh === "function") await window.tbAfterMutationRefresh("tx:delete");
       else await refreshFromServer();
+      try { if (typeof toastOk === "function") toastOk("Transaction supprimée."); } catch (_) {}
     } finally {
       try { if (typeof window.tbBusyEnd === "function") window.tbBusyEnd(); } catch (_) {}
     }
@@ -1427,7 +1441,11 @@ async function markTxAsPaid(txId) {
             walletAdjustmentCategory: TB_CONST?.CATS?.wallet_adjustment || "Ajustement wallet",
           })
         : { ok: true };
-      if (!actionValidation.ok) throw new Error(_txModalT("transactions.safe.locked_mark_paid") || actionValidation.reason);
+      if (!actionValidation.ok) {
+        const message = _txModalT("transactions.safe.locked_mark_paid") || actionValidation.reason;
+        if (typeof toastWarn === "function") toastWarn(message); else alert(message);
+        return;
+      }
       if (tx.type !== "expense" && tx.type !== "income") throw new Error(_txModalT("transactions.safe.type_payable_only"));
       const txPayNow = (tx.pay_now !== undefined) ? !!tx.pay_now : !!tx.payNow;
       if (txPayNow) return;
@@ -1493,6 +1511,7 @@ async function markTxAsPaid(txId) {
         _txApplyOptimisticOfflineEdit(updateArgs, queueItem?.id);
         try { if (typeof closeModal === "function") closeModal(); } catch (_) {}
         try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
+        try { if (typeof toastOk === "function") toastOk("Transaction marquée comme payée hors ligne."); } catch (_) {}
         return true;
       };
 
@@ -1508,6 +1527,7 @@ async function markTxAsPaid(txId) {
 
       if (typeof window.tbAfterMutationRefresh === "function") await window.tbAfterMutationRefresh("tx:mark_paid");
       else await refreshFromServer();
+      try { if (typeof toastOk === "function") toastOk("Transaction marquée comme payée."); } catch (_) {}
     } finally {
       try { if (typeof window.tbBusyEnd === "function") window.tbBusyEnd(); } catch (_) {}
     }

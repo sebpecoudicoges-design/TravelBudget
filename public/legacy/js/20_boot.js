@@ -109,6 +109,18 @@ function tbFinalizeDashboardFirstPaint(reason, attempt) {
 }
 window.tbFinalizeDashboardFirstPaint = tbFinalizeDashboardFirstPaint;
 
+async function tbHydrateDashboardAfterInitialData(reason) {
+  const view = String(window.activeView || (typeof activeView === "string" ? activeView : "") || "dashboard");
+  if (view !== "dashboard") return false;
+  try { await window.TBLoadDashboardDailyBudgetState?.(); } catch (_) {}
+  try { if (typeof showView === "function") showView("dashboard"); } catch (_) {}
+  try { window.tbRenderDashboardCritical?.(reason || "boot:data-ready", { cashflow: false }); } catch (_) {}
+  try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
+  try { window.tbEnsureCashflowCurve?.(reason || "boot:data-ready"); } catch (_) {}
+  return tbFinalizeDashboardFirstPaint(reason || "boot:data-ready", 0);
+}
+window.tbHydrateDashboardAfterInitialData = tbHydrateDashboardAfterInitialData;
+
 window.onload = async function () {
   try { if (window.tbApplyI18nDom) tbApplyI18nDom(); } catch (_) {}
 
@@ -274,8 +286,7 @@ window.onload = async function () {
 
     try {
       if (typeof refreshFromServer === "function") await refreshFromServer({ force: false });
-      try { if (typeof window.tbRenderDashboardCritical === "function") window.tbRenderDashboardCritical("boot:post-refresh", { cashflow: false }); } catch (_) {}
-      try { if (typeof renderAll === "function") renderAll(); } catch (_) {}
+      try { await tbHydrateDashboardAfterInitialData("boot:post-refresh"); } catch (_) {}
       try { if (typeof window.tbRefreshTripInviteNotifications === "function") window.tbRefreshTripInviteNotifications(); } catch (_) {}
       setTimeout(() => {
         try {

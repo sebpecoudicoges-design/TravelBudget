@@ -61,9 +61,12 @@ function _txBulkSelectedCommonCategory() {
 function _txBulkSetMessage(message, type = 'warn') {
   const text = String(message || '').trim();
   try {
+    if (text) {
+      if (type === 'success' && typeof toastOk === 'function') toastOk(text);
+      else if (typeof toastWarn === 'function') toastWarn(text);
+    }
     const el = document.getElementById('tx-bulk-message');
     if (!el) {
-      if (text && typeof toastWarn === 'function') toastWarn(text);
       return;
     }
     el.textContent = text;

@@ -160,7 +160,9 @@ describe('settings view extraction contract', () => {
     expect(accountController).not.toContain('buildSettingsNotificationPrefs');
     expect(accountController).not.toContain("box.querySelector('#tb-notif-save')");
     expect(premiumTheme).toContain('.tb-settings-account-grid');
-    expect(premiumTheme).toContain('grid-template-columns: repeat(3, minmax(0, 1fr))');
+    expect(premiumTheme).toContain('grid-template-columns: repeat(3, minmax(160px, 240px))');
+    expect(premiumTheme).toContain('justify-content: start');
+    expect(premiumTheme).toContain('grid-template-columns: repeat(2, minmax(160px, 240px))');
     expect(premiumTheme).toContain('@media (max-width: 600px)');
   });
 });

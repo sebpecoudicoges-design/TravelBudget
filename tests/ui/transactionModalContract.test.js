@@ -37,4 +37,11 @@ describe('transaction shared modal migration', () => {
     expect(source).toContain('Transfert interne depuis le Dashboard');
     expect(source).not.toContain('Locked fields for Trip-linked payment transaction');
   });
+
+  it('confirms successful transaction mutations through the shared feedback service', () => {
+    expect(source).toContain('toastOk(wasEditing ? "Transaction modifiée." : "Transaction enregistrée.")');
+    expect(source).toContain('toastOk("Transaction supprimée.")');
+    expect(source).toContain('toastOk("Transaction marquée comme payée.")');
+    expect(source).toContain('if (typeof toastWarn === "function") toastWarn(message); else alert(message)');
+  });
 });

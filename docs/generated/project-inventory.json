@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "9a0ece22f5349e98e3ed8698d6ad01a905a5d280",
-  "snapshotFingerprint": "b967868348254d15cb45034f9a5e34099ad755cd567c517c6e8e1bdd25ab7969",
-  "generatedAt": "2026-08-08T05:34:14.363Z",
+  "commit": "2ab24c1ba00221cc86adb6486c996ed99cca1df2",
+  "snapshotFingerprint": "32784f1231784da106f8c7539afc76b4eb5bb4af547532e3782aeef2a5d5a70f",
+  "generatedAt": "2026-08-08T06:10:19.801Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.324"
+    "version": "10.5.325"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -319,6 +319,8 @@
     "tests/ui/dashboardViewContract.test.js",
     "tests/ui/documentsDomainContract.test.js",
     "tests/ui/errorBusContract.test.js",
+    "tests/ui/feedbackContract.test.js",
+    "tests/ui/helpPopoverContract.test.js",
     "tests/ui/helpViewContract.test.js",
     "tests/ui/inboxDomainContract.test.js",
     "tests/ui/initialBootLoaderContract.test.js",
@@ -367,6 +369,8 @@
     "tests/ui/dashboardViewContract.test.js",
     "tests/ui/documentsDomainContract.test.js",
     "tests/ui/errorBusContract.test.js",
+    "tests/ui/feedbackContract.test.js",
+    "tests/ui/helpPopoverContract.test.js",
     "tests/ui/helpViewContract.test.js",
     "tests/ui/inboxDomainContract.test.js",
     "tests/ui/initialBootLoaderContract.test.js",
@@ -508,7 +512,8 @@
     "supabase/migrations/20260808051754_test_feedback_lineage_global_closure.sql",
     "supabase/migrations/20260808053006_enforce_global_test_closure.sql",
     "supabase/migrations/20260808053103_fix_global_test_closure_policy_scope.sql",
-    "supabase/migrations/20260808053343_harden_append_test_feedback_invoker.sql"
+    "supabase/migrations/20260808053343_harden_append_test_feedback_invoker.sql",
+    "supabase/migrations/20260808064500_process_ui_stability_feedback_10_5_325.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

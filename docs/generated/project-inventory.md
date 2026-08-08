@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `9a0ece22f5349e98e3ed8698d6ad01a905a5d280`
-> Empreinte du snapshot : `b967868348254d15cb45034f9a5e34099ad755cd567c517c6e8e1bdd25ab7969`
-> Généré le : `2026-08-08T05:34:14.363Z`
+> Commit analysé : `2ab24c1ba00221cc86adb6486c996ed99cca1df2`
+> Empreinte du snapshot : `32784f1231784da106f8c7539afc76b4eb5bb4af547532e3782aeef2a5d5a70f`
+> Généré le : `2026-08-08T06:10:19.801Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.324` |
+| Version | `10.5.325` |
 | Écrans déclarés | 16 |
 | Scripts legacy référencés | 56 |
 | Modules core | 26 |
 | Modules data | 8 |
 | Modules features | 44 |
-| Fichiers de tests | 118 |
-| Migrations Supabase | 104 |
+| Fichiers de tests | 120 |
+| Migrations Supabase | 105 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -278,6 +278,8 @@ Modules :
 - `tests/ui/dashboardViewContract.test.js`
 - `tests/ui/documentsDomainContract.test.js`
 - `tests/ui/errorBusContract.test.js`
+- `tests/ui/feedbackContract.test.js`
+- `tests/ui/helpPopoverContract.test.js`
 - `tests/ui/helpViewContract.test.js`
 - `tests/ui/inboxDomainContract.test.js`
 - `tests/ui/initialBootLoaderContract.test.js`
@@ -401,6 +403,8 @@ Modules :
 - `tests/ui/dashboardViewContract.test.js`
 - `tests/ui/documentsDomainContract.test.js`
 - `tests/ui/errorBusContract.test.js`
+- `tests/ui/feedbackContract.test.js`
+- `tests/ui/helpPopoverContract.test.js`
 - `tests/ui/helpViewContract.test.js`
 - `tests/ui/inboxDomainContract.test.js`
 - `tests/ui/initialBootLoaderContract.test.js`
@@ -560,6 +564,7 @@ Modules :
 - `supabase/migrations/20260808053006_enforce_global_test_closure.sql`
 - `supabase/migrations/20260808053103_fix_global_test_closure_policy_scope.sql`
 - `supabase/migrations/20260808053343_harden_append_test_feedback_invoker.sql`
+- `supabase/migrations/20260808064500_process_ui_stability_feedback_10_5_325.sql`
 
 ## Android et budgets de modules
 

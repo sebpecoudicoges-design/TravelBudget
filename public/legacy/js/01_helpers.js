@@ -340,10 +340,58 @@ window.tbFxConvertForDateCached = tbFxConvertForDateCached;
    UI helpers (V6.6)
    ========================= */
 function tbHelp(text) {
-  // Lightweight tooltip using title attribute
   const t = escapeHTML(String(text || ""));
-  return `<span class="tb-help" title="${t}" aria-label="${t}">?</span>`;
+  return `<button type="button" class="tb-help" data-tb-help-text="${t}" aria-label="${t}" aria-expanded="false">?</button>`;
 }
+
+(function installPersistentHelpPopover() {
+  if (window.__tbPersistentHelpPopoverInstalled) return;
+  window.__tbPersistentHelpPopoverInstalled = true;
+  let trigger = null;
+  let popover = null;
+
+  function close() {
+    if (trigger) trigger.setAttribute("aria-expanded", "false");
+    if (popover) popover.remove();
+    trigger = null;
+    popover = null;
+  }
+
+  function place() {
+    if (!trigger || !popover) return;
+    const rect = trigger.getBoundingClientRect();
+    const maxLeft = Math.max(10, window.innerWidth - popover.offsetWidth - 10);
+    const left = Math.min(maxLeft, Math.max(10, rect.left + rect.width / 2 - popover.offsetWidth / 2));
+    const above = rect.top - popover.offsetHeight - 10;
+    const top = above >= 10 ? above : Math.min(window.innerHeight - popover.offsetHeight - 10, rect.bottom + 10);
+    popover.style.left = `${left}px`;
+    popover.style.top = `${Math.max(10, top)}px`;
+  }
+
+  function open(nextTrigger) {
+    close();
+    trigger = nextTrigger;
+    trigger.setAttribute("aria-expanded", "true");
+    popover = document.createElement("div");
+    popover.className = "tb-help-popover";
+    popover.setAttribute("role", "tooltip");
+    popover.textContent = trigger.getAttribute("data-tb-help-text") || trigger.getAttribute("aria-label") || "";
+    document.body.appendChild(popover);
+    place();
+  }
+
+  document.addEventListener("click", (event) => {
+    const next = event.target?.closest?.(".tb-help[data-tb-help-text]");
+    if (!next) return close();
+    event.preventDefault();
+    event.stopPropagation();
+    if (next === trigger) return close();
+    open(next);
+  });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") close(); });
+  window.addEventListener("resize", place);
+  window.addEventListener("scroll", place, true);
+})();
 
 
 ;/* =========================

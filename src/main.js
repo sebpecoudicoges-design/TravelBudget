@@ -7,6 +7,9 @@ import * as moduleAccessRules from './core/moduleAccessRules.js';
 import * as dashboardView from './features/dashboard/dashboardView.js';
 import * as transactionView from './features/transactions/transactionView.js';
 import * as settingsView from './features/settings/settingsView.js';
+import { installGlobalFeedback } from './ui/feedback.js';
+
+installGlobalFeedback();
 
 window.TB_VERSION = typeof __TB_VERSION__ !== 'undefined'
   ? __TB_VERSION__

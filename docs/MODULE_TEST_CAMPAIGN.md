@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.324`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.325`.
 
 ## Objectif
 
@@ -58,6 +58,8 @@ Cautions est retire de l application depuis `10.5.319`. Le module de campagne es
 - `app_test_module_reviews` : decision finale du testeur par module, traitement et archivage.
 
 Les resultats actifs utilisent un index unique partiel : ajouter un retour remplace l episode editable, conserve le precedent dans l historique et relie les deux lignes.
+
+En `10.5.325`, les scenarios deja valides sans reserve sont clos pour tous et quittent la file active. Quatre retests derives restent visibles : premier chargement Dashboard, notifications Transactions, grille Compte compacte et aides persistantes.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 
