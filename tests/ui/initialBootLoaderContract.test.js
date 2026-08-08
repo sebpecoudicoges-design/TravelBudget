@@ -62,4 +62,17 @@ describe('initial boot loader contract', () => {
     expect(boot).toContain('await tbHydrateDashboardAfterInitialData("boot:post-refresh")');
     expect(boot.indexOf('await refreshFromServer({ force: false })')).toBeLessThan(boot.indexOf('await tbHydrateDashboardAfterInitialData("boot:post-refresh")'));
   });
+
+  it('resolves the server-owned role before mounting the protected Dashboard', () => {
+    const boot = read('public/legacy/js/20_boot.js');
+    const bootstrapStart = boot.indexOf('const _bootstrapPromise = ensureBootstrap()');
+    const bootstrapReady = boot.indexOf('await _bootstrapPromise', bootstrapStart);
+    const dashboardMount = boot.indexOf('showView("dashboard")', bootstrapReady);
+    const firstRefresh = boot.indexOf('await refreshFromServer({ force: false })', dashboardMount);
+
+    expect(bootstrapStart).toBeGreaterThan(-1);
+    expect(bootstrapReady).toBeGreaterThan(bootstrapStart);
+    expect(dashboardMount).toBeGreaterThan(bootstrapReady);
+    expect(firstRefresh).toBeGreaterThan(dashboardMount);
+  });
 });

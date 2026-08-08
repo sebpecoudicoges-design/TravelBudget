@@ -56,4 +56,16 @@ describe('tester campaign contract', () => {
     expect(migration).toContain("'Retest aides persistantes 10.5.325'");
     expect(migration).toContain("set app_version = '10.5.325'");
   });
+
+  it('archives the validated retests and chains only the failed Dashboard retest in 10.5.326', () => {
+    const migration = read('supabase/migrations/20260808064543_process_dashboard_boot_retest_10_5_326.sql');
+
+    expect(migration).toContain("closed_version = coalesce(s.closed_version, '10.5.326')");
+    expect(migration).toContain("treated_version = coalesce(r.treated_version, '10.5.326')");
+    expect(migration).toContain("'32600000-0000-4000-8000-000000000001'::uuid");
+    expect(migration).toContain("parent.id");
+    expect(migration).toContain("'Retest role et premier Dashboard 10.5.326'");
+    expect(migration).toContain("set app_version = '10.5.326'");
+    expect(migration).not.toContain('Retest bouton Archiver 10.5.326');
+  });
 });

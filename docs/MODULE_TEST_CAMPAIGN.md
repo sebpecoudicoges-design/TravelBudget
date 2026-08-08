@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.325`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.326`.
 
 ## Objectif
 
@@ -60,6 +60,8 @@ Cautions est retire de l application depuis `10.5.319`. Le module de campagne es
 Les resultats actifs utilisent un index unique partiel : ajouter un retour remplace l episode editable, conserve le precedent dans l historique et relie les deux lignes.
 
 En `10.5.325`, les scenarios deja valides sans reserve sont clos pour tous et quittent la file active. Quatre retests derives restent visibles : premier chargement Dashboard, notifications Transactions, grille Compte compacte et aides persistantes.
+
+En `10.5.326`, les retests Notifications Transactions, grille Compte, aides persistantes et NEAT/TEF sont valides puis clos pour tous. Le retest Dashboard en echec est traite : le role serveur est maintenant resolu avant le montage de la premiere vue protegee. Un nouveau retest Dashboard enfant conserve la chaine complete.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

@@ -16,10 +16,10 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.325`.
+- Version cible de campagne : `10.5.326`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
-- 20 resultats et 9 revues de module traites sont archives avec date de test, date de traitement, version et note.
-- 7 retests cibles restent ouverts : premier affichage Dashboard, transactions protegees, recap/historique Trip, Aide navigation/mobile, Documents import/classement, Settings Compte/preferences et Settings Voyages/periodes.
+- 42 resultats et 9 revues de module traites sont archives avec date de test, date de traitement, version et note.
+- 20 scenarios restent ouverts, dont un seul retest derive actif : role et premier affichage Dashboard `10.5.326`. Les autres retours ouverts conservent leur scenario d origine.
 - A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
 ## Socle transversal
@@ -29,6 +29,7 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 - [ ] Verifier l hydratation Nutrition/KPI sans ouverture prealable du module.
 - [ ] Corriger l apercu documentaire et la politique CSP sans autorisation trop large.
 - [ ] Auditer les 13 liens Trip/Transactions incomplets avant toute reparation automatique.
+- [x] Conserver le bouton Archiver wallet dans sa carte et hors de la file active : son scenario est clos globalement et ses contrats fonctionnels restent verts.
 
 ## Chantier 1 - Dashboard
 

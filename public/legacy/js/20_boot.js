@@ -259,13 +259,20 @@ window.onload = async function () {
 
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:ensureBootstrap"); } catch (_) {}
     try { tbShowBootOverlay("Connexion et synchronisation…", 34, "data"); } catch (_) {}
-    // Launch bootstrap, then keep the boot overlay until the first useful refresh has hydrated
-    // dashboard-critical data (wallets, KPI, budget, analysis inputs).
+    // Resolve the server-owned role before choosing the first protected view. Otherwise a
+    // tester/admin session can briefly look like a standard user and be routed to Validation;
+    // the Dashboard then stays empty until a manual navigation forces another render.
     const _bootstrapPromise = ensureBootstrap();
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:ensureBootstrap"); } catch (_) {}
 
-    // ✅ IMPORTANT: afficher la vue AVANT refreshFromServer(),
-    // sinon renderKPI peut chercher des nodes qui n’existent pas encore
+    try {
+      await _bootstrapPromise;
+    } catch (e) {
+      console.warn("[Boot] ensureBootstrap failed:", e?.message || e);
+    }
+
+    // Keep the Dashboard DOM mounted before refreshFromServer(), but only after access
+    // resolution so showView() cannot redirect a legitimate tester/admin to Validation.
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:showView"); } catch (_) {}
     showView("dashboard");
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:showView"); } catch (_) {}
@@ -277,12 +284,6 @@ window.onload = async function () {
     // empty KPI/wallet/analyse panels until the app is killed and reopened.
     try { tbShowBootOverlay("Chargement des transactions, wallets et graphiques…", 72, "sync"); } catch (_) {}
     try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.mark("boot:refreshFromServer"); } catch (_) {}
-
-    try {
-      await _bootstrapPromise;
-    } catch (e) {
-      console.warn("[Boot] ensureBootstrap failed:", e?.message || e);
-    }
 
     try {
       if (typeof refreshFromServer === "function") await refreshFromServer({ force: false });
