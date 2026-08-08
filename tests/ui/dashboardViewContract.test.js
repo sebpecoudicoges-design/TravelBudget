@@ -171,6 +171,22 @@ describe('dashboard view extraction contract', () => {
     expect(view).not.toContain('onclick="adjustWalletBalance');
   });
 
+  it('keeps Archive inside a responsive wallet action panel in both themes', () => {
+    const view = fs.readFileSync('src/features/dashboard/dashboardView.js', 'utf8');
+    const premiumTheme = fs.readFileSync('src/ui/premium-theme.css', 'utf8');
+
+    expect(view).toContain('class="tb-wallet-card-layout"');
+    expect(view).toContain('class="tb-wallet-action-col"');
+    expect(view).toContain('class="btn tb-wallet-archive-btn"');
+    expect(premiumTheme).toContain('.wallet-item > .tb-wallet-card-layout');
+    expect(premiumTheme).toContain('grid-template-columns: minmax(0, 1fr) minmax(180px, 220px) !important');
+    expect(premiumTheme).toContain('body:not(.theme-dark) .tb-wallet-action-col');
+    expect(premiumTheme).toContain('body.theme-dark .tb-wallet-action-col');
+    expect(premiumTheme).toContain('.tb-wallet-action-col .tb-wallet-archive-btn');
+    expect(premiumTheme).toContain('grid-column: 1 / -1');
+    expect(premiumTheme).not.toContain('.tb-wallet-archive-btn {\n  margin-top: auto');
+  });
+
   it('keeps daily budget controls and day rows delegated', () => {
     expect(legacy).toContain('window.TBDashboardView?.renderDailyBudgetControls');
     expect(legacy).toContain('window.TBDashboardView?.renderDailyBudgetDay');

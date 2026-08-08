@@ -68,4 +68,16 @@ describe('tester campaign contract', () => {
     expect(migration).toContain("set app_version = '10.5.326'");
     expect(migration).not.toContain('Retest bouton Archiver 10.5.326');
   });
+
+  it('adds Immobilisation safely and reopens the real Wallet archive feedback in 10.5.327', () => {
+    const migration = read('supabase/migrations/20260808073835_add_immobilisation_and_wallet_archive_retest_10_5_327.sql');
+
+    expect(migration).toContain("(v_user_id, 'Immobilisation', '#64748b', 18)");
+    expect(migration).toContain("lower(c.name) = lower('Immobilisation')");
+    expect(migration).toContain("'Immobilisation', null, 'excluded', null");
+    expect(migration).toContain('revoke execute on function public.seed_default_categories_for_user() from public, anon');
+    expect(migration).toContain("'Retest Archiver dans la carte wallet 10.5.327'");
+    expect(migration).toContain("'Retest categorie Immobilisation 10.5.327'");
+    expect(migration).toContain("set app_version = '10.5.327'");
+  });
 });

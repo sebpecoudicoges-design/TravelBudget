@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "96aa2c1b28d368fc77eee282cf1d4fe10f594a97",
-  "snapshotFingerprint": "85ad9af17df28b4b25a3b7c80b702aae3b4fd68cfb9987ab81cff499ee78b12a",
-  "generatedAt": "2026-08-08T06:56:40.785Z",
+  "commit": "b76565ff86d06e3f2de482f0f469edcbb7d4d29b",
+  "snapshotFingerprint": "e3d9346a29fa304783c60131d79b33ffc99f7135b0ebeb1c2121d17585a397b1",
+  "generatedAt": "2026-08-08T07:47:11.334Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.326"
+    "version": "10.5.327"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -514,7 +514,8 @@
     "supabase/migrations/20260808053103_fix_global_test_closure_policy_scope.sql",
     "supabase/migrations/20260808053343_harden_append_test_feedback_invoker.sql",
     "supabase/migrations/20260808064500_process_ui_stability_feedback_10_5_325.sql",
-    "supabase/migrations/20260808064543_process_dashboard_boot_retest_10_5_326.sql"
+    "supabase/migrations/20260808064543_process_dashboard_boot_retest_10_5_326.sql",
+    "supabase/migrations/20260808073835_add_immobilisation_and_wallet_archive_retest_10_5_327.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

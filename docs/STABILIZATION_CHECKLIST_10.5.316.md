@@ -16,10 +16,10 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.326`.
+- Version cible de campagne : `10.5.327`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
-- 42 resultats et 9 revues de module traites sont archives avec date de test, date de traitement, version et note.
-- 20 scenarios restent ouverts, dont un seul retest derive actif : role et premier affichage Dashboard `10.5.326`. Les autres retours ouverts conservent leur scenario d origine.
+- 43 resultats et 9 revues de module traites sont archives avec date de test, date de traitement, version et note.
+- 21 scenarios restent ouverts, dont trois retests derives actifs : role et premier affichage Dashboard `10.5.326`, panneau Archiver Wallet et categorie Immobilisation `10.5.327`. Les autres retours ouverts conservent leur scenario d origine.
 - A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
 ## Socle transversal
@@ -29,7 +29,7 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 - [ ] Verifier l hydratation Nutrition/KPI sans ouverture prealable du module.
 - [ ] Corriger l apercu documentaire et la politique CSP sans autorisation trop large.
 - [ ] Auditer les 13 liens Trip/Transactions incomplets avant toute reparation automatique.
-- [x] Conserver le bouton Archiver wallet dans sa carte et hors de la file active : son scenario est clos globalement et ses contrats fonctionnels restent verts.
+- [x] Reprendre le retour Archiver wallet : remplacer la disposition inline par un panneau d actions explicitement contenu dans la carte, avec contrats desktop/mobile et clair/sombre.
 
 ## Chantier 1 - Dashboard
 
@@ -65,7 +65,7 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 
 - [x] Bloquer l edition des mouvements internes avant l appel RPC.
 - [x] Expliquer que la modification passe par les actions de transfert wallet.
-- [ ] Decider si `Immobilisation / Immo` devient une categorie par defaut.
+- [x] Ajouter `Immobilisation` aux categories par defaut, la retro-propager sans doublon et l exclure du mix analytique quotidien.
 - [ ] Retester les filtres, le cycle CRUD et les transactions protegees.
 
 ## Chantier 3 - Settings

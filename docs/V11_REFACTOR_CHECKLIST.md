@@ -30,6 +30,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Extraire les calculs KPI budget restant, impayes nets, wallets display et soldes Trip pivot vers `kpiProjectionRules.js`.
 - [x] Ajouter un espace de retours membres admins avec fichier stable `docs/ADMIN_TEST_RETURNS.md`.
 - [x] Ajouter le role `test`, le gel central des modules pour les comptes standards et une campagne Supabase integree avec scenarios, OK/Pas OK, notes et cloture par module.
+- [x] Reintegrer les actions Wallet dans un panneau interne responsive et ajouter Immobilisation aux categories par defaut avec retro-propagation et retests lies en `10.5.327`.
 
 ## Chantier 1 - Budget journalier et transactions
 

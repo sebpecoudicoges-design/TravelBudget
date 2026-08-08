@@ -234,7 +234,7 @@ export function renderWalletCard({
   const actionButtons = archived
     ? `
       <button class="btn" type="button" data-wallet-action="edit" data-wallet-id="${esc(id)}">&#9998; ${esc(tr('wallet.action.edit'))}</button>
-      <button class="btn" type="button" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" data-wallet-action="delete" data-wallet-id="${esc(id)}">&#128465; ${esc(tr('wallet.action.delete'))}</button>
+      <button class="btn tb-wallet-delete-btn" type="button" data-wallet-action="delete" data-wallet-id="${esc(id)}">&#128465; ${esc(tr('wallet.action.delete'))}</button>
       <button class="btn tb-wallet-archive-btn" type="button" data-wallet-archive-action="unarchive" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.unarchive'))}</button>
     `
     : `
@@ -242,13 +242,13 @@ export function renderWalletCard({
       <button class="btn" type="button" data-wallet-action="tx-income" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.add_income'))}</button>
       <button class="btn" type="button" data-wallet-action="edit" data-wallet-id="${esc(id)}">&#9998; ${esc(tr('wallet.action.edit'))}</button>
       <button class="btn" type="button" data-wallet-action="adjust" data-wallet-id="${esc(id)}">&#9881; ${esc(tr('wallet.action.adjust'))}</button>
-      <button class="btn" type="button" style="border:1px solid rgba(239,68,68,0.6); color: rgba(239,68,68,0.95);" data-wallet-action="delete" data-wallet-id="${esc(id)}">&#128465; ${esc(tr('wallet.action.delete'))}</button>
+      <button class="btn tb-wallet-delete-btn" type="button" data-wallet-action="delete" data-wallet-id="${esc(id)}">&#128465; ${esc(tr('wallet.action.delete'))}</button>
       <button class="btn tb-wallet-archive-btn" type="button" data-wallet-archive-action="archive" data-wallet-id="${esc(id)}">${esc(tr('wallet.action.archive'))}</button>
     `;
 
   return `
-    <div style="display:flex; justify-content:space-between; gap:18px; align-items:flex-start; flex-wrap:wrap;">
-      <div style="min-width:280px; flex:1 1 520px;">
+    <div class="tb-wallet-card-layout">
+      <div class="tb-wallet-card-main">
         <h3>${esc(name)} (${esc(currency)}) ${archived ? `<span class="pill">${esc(tr('wallet.archived'))}</span>` : ''}</h3>
         <p>${esc(tr('wallet.balance'))} : <strong style="color:var(--text);">${esc(balance)}</strong></p>
         ${isBase
@@ -263,7 +263,7 @@ export function renderWalletCard({
           <div class="muted" style="margin-top:6px;">${esc(tr('wallet.budget_level'))}</div>
         ` : ''}
       </div>
-      <div class="tb-wallet-action-col" style="display:flex; flex-direction:column; gap:8px; flex:0 0 200px;">
+      <div class="tb-wallet-action-col">
         ${actionButtons}
       </div>
     </div>

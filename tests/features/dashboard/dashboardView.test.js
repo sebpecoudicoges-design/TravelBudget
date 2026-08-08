@@ -152,6 +152,11 @@ describe('Dashboard view helpers', () => {
     expect(html).toContain('data-wallet-id="wallet-1"');
     expect(html).toContain('data-wallet-archive-action="archive"');
     expect(html).toContain('class="btn tb-wallet-archive-btn"');
+    expect(html).toContain('class="tb-wallet-card-layout"');
+    expect(html).toContain('class="tb-wallet-card-main"');
+    expect(html).toContain('class="tb-wallet-action-col"');
+    expect(html).toContain('class="btn tb-wallet-delete-btn"');
+    expect(html).not.toContain('style="border:1px solid rgba(239,68,68');
   });
 
   it('renders an archived wallet without transaction or adjustment actions', () => {
@@ -164,6 +169,7 @@ describe('Dashboard view helpers', () => {
 
     expect(html).toContain('wallet.archived');
     expect(html).toContain('data-wallet-archive-action="unarchive"');
+    expect(html).toContain('class="tb-wallet-card-layout"');
     expect(html).not.toContain("openTxModal('expense'");
     expect(html).not.toContain("openTxModal('income'");
     expect(html).not.toContain('adjustWalletBalance');

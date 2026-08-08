@@ -141,37 +141,75 @@ body:not(.theme-dark) .kpi-mini-card {
 .tab-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* Dashboard feature preservation: dense wallets, detailed days, full projection and converter. */
-body:not(.theme-dark) .wallet-item {
+.wallet-item {
   position: relative;
   overflow: hidden;
+}
+
+body:not(.theme-dark) .wallet-item {
   border-color: var(--tb-line) !important;
   background: #fff !important;
 }
 
-body:not(.theme-dark) .wallet-item > div:first-child {
+.wallet-item > .tb-wallet-card-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px) !important;
+  align-items: stretch !important;
+  gap: 18px;
   width: 100%;
   min-width: 0;
+  box-sizing: border-box;
+}
+
+.tb-wallet-card-main {
+  min-width: 0;
+}
+
+.tb-wallet-action-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: var(--tb-radius-sm);
+  box-sizing: border-box;
+}
+
+.tb-wallet-action-col .btn {
+  width: 100%;
   box-sizing: border-box;
 }
 
 body:not(.theme-dark) .tb-wallet-action-col {
-  align-self: stretch;
-  min-width: 0;
-  max-width: 220px;
-  padding-left: 12px;
-  border-left: 1px solid var(--tb-line);
-  box-sizing: border-box;
+  border-color: var(--tb-line);
+  background: var(--tb-surface-soft);
 }
 
-body:not(.theme-dark) .tb-wallet-action-col .btn {
-  width: 100%;
-  box-sizing: border-box;
+body.theme-dark .tb-wallet-action-col {
+  border-color: rgba(226, 232, 240, .14);
+  background: rgba(30, 41, 59, .72);
 }
 
 body:not(.theme-dark) .tb-wallet-archive-btn {
   border-style: dashed;
   background: #fffaf6;
   color: var(--tb-muted);
+}
+
+body.theme-dark .tb-wallet-archive-btn {
+  border-style: dashed;
+  border-color: rgba(226, 232, 240, .24);
+  background: rgba(15, 23, 42, .64);
+  color: var(--muted);
+}
+
+.tb-wallet-delete-btn {
+  border-color: var(--tb-danger) !important;
+  color: var(--tb-danger) !important;
 }
 
 body:not(.theme-dark) #daily-budget-container > .card:first-child {
@@ -921,11 +959,16 @@ body.theme-dark .tb-nutrition-energy-settings select {
   .tb-daily-budget-range #db-mode { flex: 1 1 170px; }
   .tb-cashflow-toolbar { align-items: stretch; }
   .tb-cashflow-actions { width: 100%; }
-  body:not(.theme-dark) .tb-wallet-action-col {
-    max-width: none;
-    padding: 12px 0 0;
-    border-left: 0;
-    border-top: 1px solid var(--tb-line);
+  .wallet-item > .tb-wallet-card-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px;
+  }
+  .tb-wallet-action-col {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tb-wallet-action-col .tb-wallet-archive-btn {
+    grid-column: 1 / -1;
   }
 }
 
