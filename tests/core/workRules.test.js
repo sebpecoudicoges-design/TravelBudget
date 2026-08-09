@@ -58,4 +58,15 @@ describe('work career rules', () => {
     const unassigned = summary.engagements.find((item) => !item.engagement);
     expect(unassigned.netHours).toBe(1);
   });
+
+  it('keeps received totals separated by currency', () => {
+    const summary = summarizeWorkCareer({
+      engagements: [{ id: 'farm', currency: 'AUD' }],
+      incomes: [
+        { engagement_id: 'farm', net_amount: 900, currency: 'AUD' },
+        { engagement_id: null, net_amount: 1443.3, currency: 'EUR' },
+      ],
+    });
+    expect(summary.totals.receivedByCurrency).toEqual({ AUD: 900, EUR: 1443.3 });
+  });
 });

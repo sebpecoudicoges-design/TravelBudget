@@ -33,6 +33,7 @@ export function workDayNetMinutes(day = {}) {
 }
 
 export function summarizeWorkCareer({ engagements = [], days = [], incomes = [] } = {}) {
+  const receivedByCurrency = {};
   const byEngagement = new Map();
   for (const engagement of engagements || []) {
     byEngagement.set(String(engagement.id), {
@@ -70,8 +71,11 @@ export function summarizeWorkCareer({ engagements = [], days = [], incomes = [] 
   }
   for (const income of incomes || []) {
     const target = bucket(income.engagement_id);
-    target.totalReceived += Math.max(0, num(income.net_amount, 0));
+    const amount = Math.max(0, num(income.net_amount, 0));
+    const currency = String(income.currency || target.engagement?.currency || 'AUD').trim().toUpperCase() || 'AUD';
+    target.totalReceived += amount;
     target.incomeEvents += 1;
+    receivedByCurrency[currency] = (receivedByCurrency[currency] || 0) + amount;
   }
 
   const all = [...byEngagement.values(), unassigned];
@@ -93,5 +97,6 @@ export function summarizeWorkCareer({ engagements = [], days = [], incomes = [] 
   totals.netHours = totals.netMinutes / 60;
   totals.workNetHours = totals.workNetMinutes / 60;
   totals.hourlyNet = totals.workNetHours > 0 ? totals.workReceived / totals.workNetHours : null;
+  totals.receivedByCurrency = receivedByCurrency;
   return { totals, engagements: visible };
 }

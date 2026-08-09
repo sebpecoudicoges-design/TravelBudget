@@ -97,11 +97,12 @@ Cautions est retire de l interface en `10.5.319` ; ses 5 lignes historiques sold
 
 ### Lot 8 - Travail
 
-- [ ] Inventorier missions, revenus, periodes, chomage, dossiers lies et fresque.
-- [ ] Clarifier heures nettes, montant gagne, taux horaire et chevauchements.
-- [ ] Conserver liaison dossiers et calculs metier.
+- [x] Inventorier missions, revenus, periodes, chomage, dossiers lies et fresque.
+- [x] Clarifier heures nettes, montant gagne par devise, taux horaire et periodes de revenu.
+- [x] Conserver et etendre la liaison dossiers aux missions, revenus et periodes.
 - [ ] Ajouter visuel semaine/rythme sans surcharger.
-- [ ] Ajouter test contrat Travail premium.
+- [x] Ajouter test contrat Travail premium et responsive.
+- [ ] Valider les trois retests Travail `10.5.333` en clair/sombre et 1440/390 px.
 
 ### Lot 9 - Documents, Parametres, Notifications
 

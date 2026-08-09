@@ -143,29 +143,16 @@ function renderCareerTimeline({
   }).join('')}</div>`;
 }
 
-function renderCareerFolders({ job, folders = [], links = [], esc = defaultEsc } = {}) {
-  return links
-    .filter((link) => String(link.engagement_id) === String(job?.id))
-    .map((link) => {
-      const folder = folders.find((row) => String(row.id) === String(link.folder_id));
-      return folder
-        ? `<div class="tb-career-folder"><span>${esc(folder.name)}</span><button class="btn small" data-career-unlink="${esc(link.id)}" type="button">x</button></div>`
-        : '';
-    })
-    .join('');
-}
-
 function renderCareerJobs({
   engagements = [],
   careerSummary = {},
-  folders = [],
-  links = [],
+  renderFolders = () => '',
   money = defaultMoney,
   shortDate = defaultShortDate,
   esc = defaultEsc,
   t,
 } = {}) {
-  const rows = Array.isArray(careerSummary.engagements) ? careerSummary.engagements : [];
+  const rows = careerSummary.engagements || [];
   return engagements.map((job) => {
     const item = rows.find((row) => String(row.engagement?.id) === String(job.id)) || { netHours: 0, totalReceived: 0, hourlyNet: null };
     const meta = [job.employer, job.role_title].filter(Boolean).join(' · ');
@@ -179,7 +166,7 @@ function renderCareerJobs({
         <span class="pill">${esc(money(item.totalReceived, job.currency))}</span>
         <span class="pill">${item.hourlyNet == null ? '--' : esc(money(item.hourlyNet, job.currency))}/h</span>
       </div>
-      ${renderCareerFolders({ job, folders, links, esc })}
+      ${renderFolders('job', job.id)}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
         <button class="btn small" data-career-edit-job="${esc(job.id)}" type="button">${esc(langText('Modifier', 'Edit', t))}</button>
         <button class="btn small" data-career-link-folder="${esc(job.id)}" type="button">${esc(langText('Lier un dossier', 'Link folder', t))}</button>
@@ -193,6 +180,7 @@ function renderCareerActivity({
   incomes = [],
   statuses = [],
   engagements = [],
+  renderFolders = () => '',
   money = defaultMoney,
   shortDate = defaultShortDate,
   esc = defaultEsc,
@@ -205,7 +193,7 @@ function renderCareerActivity({
       id: row.id,
       date: row.received_date,
       title: jobById(row.engagement_id)?.name || langText('Revenu hors mission', 'Unassigned income', t),
-      detail: money(row.net_amount, row.currency),
+      detail: `${money(row.net_amount, row.currency)} ${langText('net', 'net', t)}${row.gross_amount == null ? '' : ` · ${money(row.gross_amount, row.currency)} ${langText('brut', 'gross', t)}`}${row.period_start ? ` · ${shortDate(row.period_start)}${row.period_end ? ` - ${shortDate(row.period_end)}` : ''}` : ''}`,
     })),
     ...statuses.map((row) => ({
       kind: 'status',
@@ -219,12 +207,14 @@ function renderCareerActivity({
   if (!rows.length) return '';
   return `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
     <strong>${esc(langText('Revenus et périodes', 'Income and periods', t))}</strong>
-    ${rows.map((item) => `<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
-      <div><b>${esc(item.title)}</b><div class="muted">${esc(shortDate(item.date))} · ${esc(item.detail)}</div></div>
-      <div style="display:flex;gap:5px">
+    ${rows.map((item) => `<div class="tb-career-activity">
+      <div class="tb-career-activity-row"><div><b>${esc(item.title)}</b><div class="muted">${esc(shortDate(item.date))} · ${esc(item.detail)}</div></div>
+      <div class="tb-career-activity-actions">
         <button class="btn small" type="button" data-career-edit-${item.kind}="${esc(item.id)}">${esc(langText('Modifier', 'Edit', t))}</button>
+        <button class="btn small" type="button" data-career-link-folder-kind="${esc(item.kind)}" data-career-link-folder-id="${esc(item.id)}">${esc(langText('Lier un dossier', 'Link folder', t))}</button>
         <button class="btn small" type="button" data-career-delete-${item.kind}="${esc(item.id)}">x</button>
-      </div>
+      </div></div>
+      ${renderFolders(item.kind, item.id)}
     </div>`).join('')}
   </div>`;
 }
@@ -238,13 +228,13 @@ export function renderWorkCareerPanel({
   esc = defaultEsc,
   t,
 } = {}) {
-  const engagements = Array.isArray(data.engagements) ? data.engagements : [];
-  const statuses = Array.isArray(data.statuses) ? data.statuses : [];
-  const incomes = Array.isArray(data.incomes) ? data.incomes : [];
-  const folders = Array.isArray(data.folders) ? data.folders : [];
-  const links = Array.isArray(data.links) ? data.links : [];
+  const engagements = data.engagements || [];
+  const statuses = data.statuses || [];
+  const incomes = data.incomes || [];
+  const renderFolders = data.renderFolders || (() => '');
   const totals = careerSummary.totals || {};
   const currency = engagements[0]?.currency || 'AUD';
+  const received = Object.entries(totals.receivedByCurrency || {});
 
   return `<section class="tb-career">
     <div class="tb-career-head">
@@ -260,13 +250,13 @@ export function renderWorkCareerPanel({
     </div>
     ${data.error ? `<div class="tb-career-error">${esc(data.error)}</div>` : ''}
     <div class="tb-career-kpis">
-      <div class="tb-career-kpi"><small>${esc(langText('Net reçu', 'Net received', t))}</small><strong>${esc(money(totals.totalReceived || 0, currency))}</strong></div>
+      <div class="tb-career-kpi"><small>${esc(langText('Net reçu par devise', 'Net received by currency', t))}</small><strong>${received.length ? received.map(([code, amount]) => esc(money(amount, code))).join('<br>') : esc(money(totals.totalReceived || 0, currency))}</strong></div>
       <div class="tb-career-kpi"><small>${esc(langText('Heures nettes', 'Net hours', t))}</small><strong>${Math.round(num(totals.netHours, 0) * 10) / 10}h</strong></div>
       <div class="tb-career-kpi"><small>${esc(langText('Taux net réel', 'Actual net rate', t))}</small><strong>${totals.hourlyNet == null ? '--' : esc(money(totals.hourlyNet, currency))}/h</strong></div>
       <div class="tb-career-kpi"><small>${esc(langText('Missions', 'Jobs', t))}</small><strong>${engagements.length}</strong></div>
     </div>
     ${renderCareerTimeline({ engagements, statuses, today, shortDate, esc, t })}
-    <div class="tb-career-jobs">${renderCareerJobs({ engagements, careerSummary, folders, links, money, shortDate, esc, t })}</div>
-    ${renderCareerActivity({ incomes, statuses, engagements, money, shortDate, esc, t })}
+    <div class="tb-career-jobs">${renderCareerJobs({ engagements, careerSummary, renderFolders, money, shortDate, esc, t })}</div>
+    ${renderCareerActivity({ incomes, statuses, engagements, renderFolders, money, shortDate, esc, t })}
   </section>`;
 }

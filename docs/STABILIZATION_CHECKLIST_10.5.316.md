@@ -16,10 +16,10 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.332`.
+- Version cible de campagne : `10.5.333`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
 - 55 resultats et 15 revues de module traitees sont archives avec date de test, date de traitement, version et note.
-- 18 scenarios restent ouverts. Le nouveau retest audit Trip `10.5.332`, gestion Categories Settings `10.5.330` et les trois parcours Patrimoine `10.5.331` conservent leur filiation. Les autres retours ouverts gardent leur scenario d origine.
+- 19 scenarios restent ouverts. Les trois retests Travail `10.5.333`, le retest audit Trip `10.5.332`, gestion Categories Settings `10.5.330` et les trois parcours Patrimoine `10.5.331` conservent leur filiation. Les autres retours ouverts gardent leur scenario d origine.
 - Dashboard, Transactions et Analyse sont valides puis rouverts aux comptes standards ; les autres modules metier restent geles.
 - A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
@@ -115,10 +115,11 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 
 ## Chantier 8 - Travail
 
-- [ ] Corriger le passage FR/EN.
-- [ ] Retirer ou rendre informatif le BMR dans Travail.
-- [ ] Reproduire le scenario Revenu marque Pas OK sans note.
-- [ ] Permettre affichage, ajout et liaison des documents depuis Travail.
+- [x] Corriger le passage FR/EN.
+- [x] Retirer le BMR du module Travail.
+- [x] Corriger le scenario Revenu sans note en distinguant net, brut, periode et totaux par devise.
+- [x] Permettre affichage, ajout et liaison des documents depuis une mission, un revenu ou une periode.
+- [ ] Faire executer les trois retests descendants Travail `10.5.333` en clair/sombre et 1440/390 px.
 
 ## Chantier 9 - Patrimoine
 

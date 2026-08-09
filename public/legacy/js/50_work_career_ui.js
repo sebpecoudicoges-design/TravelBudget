@@ -1,6 +1,6 @@
 /* Work career V2: jobs, received income, status periods and Document folders. */
 (function () {
-  const DATA = { loaded:false, loading:false, engagements:[], incomes:[], statuses:[], folders:[], links:[], error:'' };
+  const DATA = { loaded:false, loading:false, engagements:[], incomes:[], statuses:[], folders:[], links:[], documents:[], error:'' };
   let careerModal = null;
   const $ = (sel, root=document) => root.querySelector(sel);
   const txt = (fr,en) => String(window.TB_LANG||'fr').toLowerCase()==='en' ? en : fr;
@@ -17,8 +17,8 @@
   function ensureStyles(){
     if ($('#tb-work-career-styles')) return;
     const style=document.createElement('style'); style.id='tb-work-career-styles'; style.textContent=`
-      .tb-career{border:1px solid rgba(14,165,233,.22);border-radius:8px;background:var(--panel2);padding:14px;margin:14px 0}.tb-career-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.tb-career-actions{display:flex;gap:7px;flex-wrap:wrap}.tb-career-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}.tb-career-kpi{padding:10px;border-radius:8px;background:var(--panel);border:1px solid var(--border)}.tb-career-kpi small{display:block;color:var(--muted);font-weight:750}.tb-career-kpi strong{display:block;font-size:20px;margin-top:3px}.tb-career-track{display:grid;grid-template-columns:130px 1fr;gap:10px;align-items:center;margin:7px 0}.tb-career-track-label{font-size:12px;font-weight:850;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tb-career-rail{position:relative;height:28px;border-radius:7px;background:rgba(148,163,184,.16);overflow:hidden}.tb-career-bar{position:absolute;top:4px;height:20px;min-width:4px;border-radius:6px;box-shadow:0 5px 12px rgba(15,23,42,.12)}.tb-career-jobs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.tb-career-job{border:1px solid var(--border);border-radius:8px;padding:11px;background:var(--panel)}.tb-career-job-top{display:flex;justify-content:space-between;gap:8px}.tb-career-job-stats{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.tb-career-folder{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 7px;border-radius:6px;background:var(--panel2);font-size:12px;margin-top:5px}.tb-career-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tb-career-form label{display:grid;gap:5px;font-size:12px;font-weight:800}.tb-career-form input,.tb-career-form select,.tb-career-form textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:7px;background:var(--panel2);color:inherit;padding:10px}.tb-career-form .wide{grid-column:1/-1}.tb-career-error{color:#be123c;font-size:12px;margin-top:10px}.tb-career-empty{padding:12px 0;color:var(--muted)}
-      @media(max-width:720px){.tb-career-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-career-jobs,.tb-career-form{grid-template-columns:1fr}.tb-career-track{grid-template-columns:85px 1fr}.tb-career-actions .btn{flex:1}.tb-work-grid{grid-template-columns:1fr!important}}
+      .tb-career{border:1px solid rgba(14,165,233,.22);border-radius:var(--tb-radius-lg,8px);background:var(--panel2);padding:14px;margin:14px 0}.tb-career-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.tb-career-actions,.tb-career-folder-actions,.tb-career-activity-actions{display:flex;gap:7px;flex-wrap:wrap}.tb-career-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}.tb-career-kpi{padding:10px;border-radius:var(--tb-radius-md,8px);background:var(--panel);border:1px solid var(--border)}.tb-career-kpi small{display:block;color:var(--muted);font-weight:750}.tb-career-kpi strong{display:block;font-size:20px;margin-top:3px}.tb-career-track{display:grid;grid-template-columns:130px 1fr;gap:10px;align-items:center;margin:7px 0}.tb-career-track-label{font-size:12px;font-weight:850;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tb-career-rail{position:relative;height:28px;border-radius:7px;background:rgba(148,163,184,.16);overflow:hidden}.tb-career-bar{position:absolute;top:4px;height:20px;min-width:4px;border-radius:6px;box-shadow:0 5px 12px rgba(15,23,42,.12)}.tb-career-jobs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.tb-career-job{border:1px solid var(--border);border-radius:var(--tb-radius-md,8px);padding:11px;background:var(--panel)}.tb-career-job-top,.tb-career-folder,.tb-career-activity-row{display:flex;justify-content:space-between;gap:8px}.tb-career-job-stats{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.tb-career-folder-group{margin-top:7px;padding:7px;border-radius:var(--tb-radius-md,8px);background:var(--panel2);border:1px solid var(--border)}.tb-career-folder{align-items:center;font-size:12px}.tb-career-documents{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.tb-career-activity{padding:8px 0;border-bottom:1px solid var(--border)}.tb-career-activity-row{align-items:center}.tb-career-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tb-career-form label{display:grid;gap:5px;font-size:12px;font-weight:800}.tb-career-form input,.tb-career-form select,.tb-career-form textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--tb-radius-md,7px);background:var(--panel2);color:inherit;padding:10px}.tb-career-form .wide{grid-column:1/-1}.tb-career-error{color:#be123c;font-size:12px;margin-top:10px}.tb-career-empty{padding:12px 0;color:var(--muted)}
+      @media(max-width:720px){.tb-career-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-career-jobs,.tb-career-form{grid-template-columns:1fr}.tb-career-track{grid-template-columns:85px 1fr}.tb-career-actions .btn{flex:1}.tb-career-folder,.tb-career-activity-row{align-items:flex-start;flex-direction:column}.tb-work-grid{grid-template-columns:1fr!important}}
     `; document.head.appendChild(style);
   }
 
@@ -27,15 +27,16 @@
     const c=sb(); if(!c||!uid()){ DATA.loaded=true; return; }
     DATA.loading=true; DATA.error='';
     try{
-      const [jobs,incomes,statuses,folders,links]=await Promise.all([
+      const [jobs,incomes,statuses,folders,links,documents]=await Promise.all([
         c.from(table('work_engagements')).select('*').eq('user_id',uid()).order('start_date',{ascending:false}),
         c.from(table('work_income_events')).select('*').eq('user_id',uid()).order('received_date',{ascending:false}),
         c.from(table('work_status_periods')).select('*').eq('user_id',uid()).order('start_date',{ascending:false}),
         c.from(table('document_folders')).select('id,name,parent_id').eq('user_id',uid()).order('name',{ascending:true}),
         c.from(table('work_document_folders')).select('*').eq('user_id',uid()),
+        c.from(table('documents')).select('id,folder_id,name,original_filename,mime_type,created_at').eq('user_id',uid()).order('created_at',{ascending:false}),
       ]);
-      const failed=[jobs,incomes,statuses,folders,links].find(x=>x.error); if(failed) throw failed.error;
-      DATA.engagements=jobs.data||[]; DATA.incomes=incomes.data||[]; DATA.statuses=statuses.data||[]; DATA.folders=folders.data||[]; DATA.links=links.data||[]; DATA.loaded=true;
+      const failed=[jobs,incomes,statuses,folders,links,documents].find(x=>x.error); if(failed) throw failed.error;
+      DATA.engagements=jobs.data||[]; DATA.incomes=incomes.data||[]; DATA.statuses=statuses.data||[]; DATA.folders=folders.data||[]; DATA.links=links.data||[]; DATA.documents=documents.data||[]; DATA.loaded=true;
     }catch(e){ DATA.error=e?.message||String(e); DATA.loaded=true; console.warn('[work-career] load failed',e); }
     finally{ DATA.loading=false; }
   }
@@ -43,10 +44,18 @@
   function summary(){
     return window.Core?.workRules?.summarizeWorkCareer?.({ engagements:DATA.engagements, days:window.state?.workDays||[], incomes:DATA.incomes }) || { totals:{netHours:0,totalReceived:0,hourlyNet:null,workDays:0},engagements:[] };
   }
+  function renderLinkedFolders(kind,ownerId){
+    const ownerColumn=kind==='income'?'income_event_id':kind==='status'?'status_period_id':'engagement_id';
+    return DATA.links.filter(link=>String(link[ownerColumn]||'')===String(ownerId||'')).map(link=>{
+      const folder=DATA.folders.find(row=>String(row.id)===String(link.folder_id));if(!folder)return '';
+      const documents=DATA.documents.filter(doc=>String(doc.folder_id||'')===String(folder.id));
+      return `<div class="tb-career-folder-group"><div class="tb-career-folder"><strong>📁 ${esc(folder.name)}</strong><div class="tb-career-folder-actions"><button class="btn small" data-career-open-folder="${esc(folder.id)}" type="button">${esc(txt('Ouvrir','Open'))}</button><button class="btn small" data-career-upload-folder="${esc(folder.id)}" type="button">+ ${esc(txt('Document','Document'))}</button><button class="btn small" data-career-unlink="${esc(link.id)}" type="button">${esc(txt('Délier','Unlink'))}</button></div></div><div class="tb-career-documents">${documents.length?documents.map(doc=>`<button class="btn small" data-career-open-document="${esc(doc.id)}" type="button">📎 ${esc(doc.name||doc.original_filename||txt('Document','Document'))}</button>`).join(''):`<span class="muted">${esc(txt('Aucun document dans ce dossier.','No document in this folder.'))}</span>`}</div></div>`;
+    }).join('');
+  }
   async function render(){
     ensureStyles(); const root=$('#work-career-root'); if(!root)return;
     if(!DATA.loaded&&!DATA.loading){root.innerHTML=`<div class="tb-career muted">${esc(txt('Chargement de la fresque...','Loading timeline...'))}</div>`;await load(); if(window.renderWork)window.renderWork('career-loaded');return;}
-    const s=summary(); root.innerHTML=window.UI?.workView?.renderWorkCareerPanel?.({data:DATA,careerSummary:s,today:today(),money,shortDate,esc,t:txt}) || ''; bind(root);
+    const s=summary(); root.innerHTML=window.UI?.workView?.renderWorkCareerPanel?.({data:{...DATA,renderFolders:renderLinkedFolders},careerSummary:s,today:today(),money,shortDate,esc,t:txt}) || ''; bind(root);
   }
 
   function modal(kind,row={}){
@@ -95,17 +104,25 @@
     closeModal();await load(true);window.renderWork?.('career-save');
   }
   function bindModal(handle){const form=$('[data-career-form]',handle?.root);if(!form)return;handle.root.querySelectorAll('[data-career-close]').forEach(x=>x.onclick=closeModal);form.onsubmit=async(ev)=>{ev.preventDefault();const error=$('.tb-career-error',form),submit=$('[data-career-submit]',handle.root),oldText=submit?.textContent||'';if(submit){submit.disabled=true;submit.textContent=txt('Enregistrement...','Saving...');}error.hidden=true;try{await saveForm(form);}catch(e){error.hidden=false;error.textContent=e?.message||String(e);if(submit){submit.disabled=false;submit.textContent=oldText;}}};}
-  async function linkFolder(jobId){
-    const available=DATA.folders.filter(folder=>!DATA.links.some(link=>String(link.engagement_id)===String(jobId)&&String(link.folder_id)===String(folder.id))); if(!available.length){alert(txt('Aucun dossier disponible. Crée-le d’abord dans Documents.','No folder available. Create one in Documents first.'));return;}
-    const names=available.map((x,i)=>`${i+1}. ${x.name}`).join('\n');const answer=prompt(`${txt('Numéro du dossier à lier','Folder number to link')}\n${names}`,'1');const folder=available[Number(answer)-1];if(!folder)return;const {error}=await sb().from(table('work_document_folders')).insert({user_id:uid(),engagement_id:jobId,folder_id:folder.id});if(error)throw error;await load(true);window.renderWork?.('career-folder');
+  async function linkFolder(kind,ownerId){
+    const ownerColumn=kind==='income'?'income_event_id':kind==='status'?'status_period_id':'engagement_id';
+    const available=DATA.folders.filter(folder=>!DATA.links.some(link=>String(link[ownerColumn]||'')===String(ownerId)&&String(link.folder_id)===String(folder.id))); if(!available.length){alert(txt('Aucun dossier disponible. Crée-le d’abord dans Documents.','No folder available. Create one in Documents first.'));return;}
+    const names=available.map((x,i)=>`${i+1}. ${x.name}`).join('\n');const answer=prompt(`${txt('Numéro du dossier à lier','Folder number to link')}\n${names}`,'1');const folder=available[Number(answer)-1];if(!folder)return;const payload={user_id:uid(),folder_id:folder.id,[ownerColumn]:ownerId};const {error}=await sb().from(table('work_document_folders')).insert(payload);if(error)throw error;await load(true);window.renderWork?.('career-folder');
   }
+  async function ensureDocuments(){if(typeof window.tbDocumentsPreview!=='function'&&typeof window.tbLoadLegacyDomain==='function')await window.tbLoadLegacyDomain('documents');}
+  async function openDocument(id){await ensureDocuments();if(typeof window.tbDocumentsPreview!=='function')throw new Error(txt('Aperçu de document indisponible.','Document preview unavailable.'));await window.tbDocumentsPreview(id);}
+  async function openFolder(folderId,upload=false){await ensureDocuments();if(typeof window.showView==='function')await window.showView('documents');window.tbDocumentsSelectFolder?.(folderId);if(upload)setTimeout(()=>document.getElementById('tb-doc-file-input')?.click(),0);}
   async function remove(tableName,id,confirmText){if(!confirm(confirmText))return;const {error}=await sb().from(table(tableName)).delete().eq('id',id).eq('user_id',uid());if(error)throw error;await load(true);window.renderWork?.('career-delete');}
   function bind(root){
     root.querySelectorAll('[data-career-open]').forEach(btn=>btn.onclick=()=>modal(btn.dataset.careerOpen));
     root.querySelectorAll('[data-career-edit-job]').forEach(btn=>btn.onclick=()=>modal('job',jobById(btn.dataset.careerEditJob)||{}));
     root.querySelectorAll('[data-career-delete-job]').forEach(btn=>btn.onclick=()=>remove('work_engagements',btn.dataset.careerDeleteJob,txt('Supprimer cette mission et ses revenus liés ?','Delete this job and its linked income?')).catch(e=>alert(e.message)));
-    root.querySelectorAll('[data-career-link-folder]').forEach(btn=>btn.onclick=()=>linkFolder(btn.dataset.careerLinkFolder).catch(e=>alert(e.message)));
+    root.querySelectorAll('[data-career-link-folder]').forEach(btn=>btn.onclick=()=>linkFolder('job',btn.dataset.careerLinkFolder).catch(e=>alert(e.message)));
+    root.querySelectorAll('[data-career-link-folder-kind]').forEach(btn=>btn.onclick=()=>linkFolder(btn.dataset.careerLinkFolderKind,btn.dataset.careerLinkFolderId).catch(e=>alert(e.message)));
     root.querySelectorAll('[data-career-unlink]').forEach(btn=>btn.onclick=()=>remove('work_document_folders',btn.dataset.careerUnlink,txt('Délier ce dossier ?','Unlink this folder?')).catch(e=>alert(e.message)));
+    root.querySelectorAll('[data-career-open-document]').forEach(btn=>btn.onclick=()=>openDocument(btn.dataset.careerOpenDocument).catch(e=>alert(e.message)));
+    root.querySelectorAll('[data-career-open-folder]').forEach(btn=>btn.onclick=()=>openFolder(btn.dataset.careerOpenFolder).catch(e=>alert(e.message)));
+    root.querySelectorAll('[data-career-upload-folder]').forEach(btn=>btn.onclick=()=>openFolder(btn.dataset.careerUploadFolder,true).catch(e=>alert(e.message)));
     root.querySelectorAll('[data-career-edit-income]').forEach(btn=>btn.onclick=()=>modal('income',DATA.incomes.find(x=>String(x.id)===String(btn.dataset.careerEditIncome))||{}));
     root.querySelectorAll('[data-career-delete-income]').forEach(btn=>btn.onclick=()=>remove('work_income_events',btn.dataset.careerDeleteIncome,txt('Supprimer ce revenu ?','Delete this income?')).catch(e=>alert(e.message)));
     root.querySelectorAll('[data-career-edit-status]').forEach(btn=>btn.onclick=()=>modal('status',DATA.statuses.find(x=>String(x.id)===String(btn.dataset.careerEditStatus))||{}));
@@ -114,5 +131,5 @@
   window.tbWorkCareerEngagements=()=>DATA.engagements.slice();
   window.renderWorkCareer=render;
   window.tbReloadWorkCareer=async()=>{await load(true);await render();};
-  window.addEventListener('tb:auth_scope_changed',()=>{DATA.loaded=false;DATA.engagements=[];DATA.incomes=[];DATA.statuses=[];DATA.links=[];});
+  window.addEventListener('tb:auth_scope_changed',()=>{DATA.loaded=false;DATA.engagements=[];DATA.incomes=[];DATA.statuses=[];DATA.folders=[];DATA.links=[];DATA.documents=[];});
 })();

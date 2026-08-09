@@ -35,13 +35,15 @@ describe('Work view helpers', () => {
     const html = renderWorkCareerPanel({
       data: {
         engagements: [{ id: 'job-1', name: 'Farm Eco-lodge', employer: 'Fruitful', start_date: '2026-06-08', currency: 'AUD', color: '#0ea5e9' }],
-        incomes: [{ id: 'inc-1', engagement_id: 'job-1', received_date: '2026-06-26', net_amount: 3379, currency: 'AUD' }],
+        incomes: [{ id: 'inc-1', engagement_id: 'job-1', received_date: '2026-06-26', period_start: '2026-06-08', period_end: '2026-06-21', net_amount: 3379, gross_amount: 4010, currency: 'AUD' }],
         statuses: [{ id: 'status-1', label: 'Chomage', start_date: '2026-06-01', end_date: '2026-06-07', color: '#94a3b8' }],
         folders: [{ id: 'folder-1', name: 'Contrats' }],
         links: [{ id: 'link-1', engagement_id: 'job-1', folder_id: 'folder-1' }],
+        documents: [{ id: 'doc-1', folder_id: 'folder-1', name: 'Contrat.pdf' }],
+        renderFolders: (kind, id) => kind === 'job' && id === 'job-1' ? '<div data-career-unlink="link-1">Contrats<button data-career-open-folder="folder-1"></button><button data-career-upload-folder="folder-1"></button><button data-career-open-document="doc-1">Contrat.pdf</button></div>' : '',
       },
       careerSummary: {
-        totals: { totalReceived: 3379, netHours: 115, hourlyNet: 29.38 },
+        totals: { totalReceived: 4822.3, receivedByCurrency: { AUD: 3379, EUR: 1443.3 }, netHours: 115, hourlyNet: 29.38 },
         engagements: [{ engagement: { id: 'job-1' }, netHours: 115, totalReceived: 3379, hourlyNet: 29.38 }],
       },
       today: '2026-07-01',
@@ -52,6 +54,7 @@ describe('Work view helpers', () => {
 
     expect(html).toContain('Parcours professionnel');
     expect(html).toContain('3379 AUD');
+    expect(html).toContain('1443 EUR');
     expect(html).toContain('115h');
     expect(html).toContain('29 AUD/h');
     expect(html).toContain('data-career-open="job"');
@@ -59,6 +62,12 @@ describe('Work view helpers', () => {
     expect(html).toContain('data-career-edit-income="inc-1"');
     expect(html).toContain('data-career-edit-status="status-1"');
     expect(html).toContain('data-career-unlink="link-1"');
+    expect(html).toContain('data-career-open-folder="folder-1"');
+    expect(html).toContain('data-career-upload-folder="folder-1"');
+    expect(html).toContain('data-career-open-document="doc-1"');
+    expect(html).toContain('data-career-link-folder-kind="income"');
+    expect(html).toContain('data-career-link-folder-kind="status"');
+    expect(html).toContain('Contrat.pdf');
     expect(html).toContain('Contrats');
   });
 });

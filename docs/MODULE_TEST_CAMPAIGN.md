@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.332`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.333`.
 
 ## Objectif
 
@@ -74,6 +74,8 @@ En `10.5.330`, le retour Settings Categories et la revue globale du module sont 
 En `10.5.331`, le retest Trip est valide sans note et clos globalement. Les trois retests Patrimoine `10.5.329` sont lus puis archives : la case budget explique brievement ses deux etats, **Lier ce document** rejoint le bloc des justificatifs et **Modifier les infos** attend le chargement reel du cache Documents. Trois nouveaux retests enfants conservent la filiation.
 
 En `10.5.332`, la revue Trip sur les liens incomplets est lue puis archivee : les alertes passent en rouge, le detail ne montre plus les types techniques ni les UUID, **Reparer** ouvre la modification de la depense et **Contacter le support** prepare le diagnostic. Un retest enfant prolonge **Recap, historique et documents**.
+
+En `10.5.333`, les retours Travail sont lus puis archives : changement FR/EN reactif, BMR retire de ce module, revenus detailles sans addition de devises incompatibles et dossiers Documents consultables, alimentables et liables aux missions, revenus ou periodes. Trois retests descendants conservent les notes et la filiation.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

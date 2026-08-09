@@ -66,36 +66,6 @@
   function bodyWeight() {
     try { return Number(window.tbReadScopedLocalStorage?.(window.TB_CONST?.LS_KEYS?.sport_body_weight || "travelbudget_sport_body_weight_v1", 70)) || 70; } catch (_) { return 70; }
   }
-  function bodyHeight() {
-    try { return Number(window.tbReadScopedLocalStorage?.(window.TB_CONST?.LS_KEYS?.sport_body_height || "travelbudget_sport_body_height_v1", 175)) || 175; } catch (_) { return 175; }
-  }
-  function bodyBirthDate() {
-    try { return localStorage.getItem(window.TB_CONST?.LS_KEYS?.body_birthdate || "travelbudget_body_birthdate_v1") || ""; } catch (_) { return ""; }
-  }
-  function ageFromBirthDate(v) {
-    if (window.Core?.bodyEnergyRules?.ageFromBirthDate) return window.Core.bodyEnergyRules.ageFromBirthDate(v);
-    const raw = String(v || "").trim();
-    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (!m) return 0;
-    const now = new Date();
-    let age = now.getFullYear() - Number(m[1]);
-    const month = Number(m[2]);
-    const day = Number(m[3]);
-    const currentMonth = now.getMonth() + 1;
-    if (currentMonth < month || (currentMonth === month && now.getDate() < day)) age -= 1;
-    return age > 0 && age < 130 ? age : 0;
-  }
-  function bodyAge() {
-    const fromBirthDate = ageFromBirthDate(bodyBirthDate());
-    if (fromBirthDate) return fromBirthDate;
-    try { return Number(localStorage.getItem(window.TB_CONST?.LS_KEYS?.body_age || "travelbudget_body_age_v1")) || 30; } catch (_) { return 30; }
-  }
-  function bodySex() {
-    try { return localStorage.getItem(window.TB_CONST?.LS_KEYS?.body_sex || "travelbudget_body_sex_v1") || "male"; } catch (_) { return "male"; }
-  }
-  function bodyBmr() {
-    try { return Number(localStorage.getItem(window.TB_CONST?.LS_KEYS?.body_bmr || "travelbudget_body_bmr_v1")) || 0; } catch (_) { return 0; }
-  }
   function presets() {
     return window.Core?.workRules?.WORK_ACTIVITY_PRESETS || [
       { key: "fruit_picking_vigorous", labelFr: "Fruit picking physique", labelEn: "Fruit picking vigorous", met: 4.5 },
@@ -112,19 +82,6 @@
     const netHours = Math.max(0, Number(hours || 0) - (Number(breaks || 0) / 60));
     return Math.max(0, (Number(met || 4.8) - 1) * bodyWeight() * netHours);
   }
-  function baseline() {
-    if (window.Core?.bodyEnergyRules?.resolveDailyBaselineKcal) {
-      return window.Core.bodyEnergyRules.resolveDailyBaselineKcal({
-        customBmr: bodyBmr(),
-        kg: bodyWeight(),
-        heightCm: bodyHeight(),
-        birthDate: bodyBirthDate(),
-        age: bodyAge(),
-        sex: bodySex(),
-      });
-    }
-    return { bmr: 0, bmi: 0, maintenanceKcal: 0, source: "estimated" };
-  }
   function ensureWorkShell() {
     const tabs = document.querySelector(".tabs") || document.querySelector(".app-tabs");
     if (tabs && !document.getElementById("tab-work")) {
@@ -137,6 +94,8 @@
       if (ref?.parentNode === tabs) tabs.insertBefore(tab, ref.nextSibling);
       else tabs.appendChild(tab);
     }
+    const tab = document.getElementById("tab-work");
+    if (tab) tab.textContent = txt("Travail", "Work");
     const wrap = document.querySelector(".wrap") || document.body;
     if (!document.getElementById("view-work")) {
       const view = document.createElement("div");
@@ -224,7 +183,6 @@
       }).catch(() => {});
     }
     const p = presets();
-    const b = baseline();
     const recent = CACHE.rows.slice(0, 12);
     const editing = CACHE.editId ? CACHE.rows.find(row => String(row.id || "") === String(CACHE.editId)) : null;
     const initialPresetKey = editing?.activity_key || p[0]?.key || "farm_harvest_moderate";
@@ -242,7 +200,6 @@
             <h2 style="margin:0;">${esc(txt("Travail physique", "Physical work"))}</h2>
             <div class="muted" style="margin-top:4px;">${esc(txt("Journées de travail séparées du sport, avec estimation MET.", "Work days kept separate from sport, estimated with MET."))}</div>
           </div>
-          <div class="pill">${Math.round(b.bmr || 0)} kcal BMR · IMC ${Math.round((b.bmi || 0) * 10) / 10}</div>
         </div>
         ${renderWorkVisual()}
         <div id="work-career-root"></div>
@@ -259,11 +216,9 @@
               <div class="field" style="flex:1;"><label>MET</label><input id="work-met" type="number" min="1" step="0.1" value="${esc(String(initialMet))}"></div>
               <div class="field" style="flex:1;"><label>RPE</label><input id="work-rpe" type="number" min="1" max="10" step="1" value="${esc(String(initialRpe))}"></div>
             </div>
-            <div class="field"><label>${esc(txt("BMR connu", "Known BMR"))}</label><input id="work-bmr" type="number" min="0" step="1" value="${esc(String(bodyBmr() || ""))}" placeholder="${esc(txt("Optionnel", "Optional"))}"></div>
             <div class="muted" style="font-size:12px;line-height:1.45;margin:-2px 0 8px;">
               <div><b>MET</b> : ${esc(txt("intensite metabolique de l'activite. Plus il est haut, plus les kcal montent.", "activity intensity. Higher means more kcal."))}</div>
               <div><b>RPE</b> : ${esc(txt("effort ressenti de 1 a 10, utile pour relire la journee.", "perceived effort from 1 to 10, useful for review."))}</div>
-              <div><b>BMR</b> : ${esc(txt("metabolisme basal connu. Optionnel, il remplace l'estimation par poids/taille/age.", "known basal metabolic rate. Optional; replaces the weight/height/age estimate."))}</div>
             </div>
             <div class="field"><label>${esc(txt("Notes", "Notes"))}</label><input id="work-notes" value="${esc(initialLabel)}"></div>
             <div class="pill" id="work-kcal-preview" style="margin-top:8px;">0 kcal</div>
@@ -298,7 +253,7 @@
     const type = root.querySelector("#work-type");
     const met = root.querySelector("#work-met");
     if (type && met) type.onchange = () => { met.value = type.selectedOptions?.[0]?.dataset?.met || "4.8"; updatePreview(root); };
-    ["#work-hours", "#work-breaks", "#work-met", "#work-bmr"].forEach(sel => {
+    ["#work-hours", "#work-breaks", "#work-met"].forEach(sel => {
       const el = root.querySelector(sel);
       if (el) el.oninput = () => updatePreview(root);
     });
@@ -336,10 +291,6 @@
     const hours = Number(root.querySelector("#work-hours")?.value || 0);
     const breakMinutes = Number(root.querySelector("#work-breaks")?.value || 0);
     const met = Number(root.querySelector("#work-met")?.value || preset?.met || 4.8);
-    const bmrValue = Number(root.querySelector("#work-bmr")?.value || 0);
-    try {
-      if (bmrValue > 0) localStorage.setItem(window.TB_CONST?.LS_KEYS?.body_bmr || "travelbudget_body_bmr_v1", String(Math.round(bmrValue)));
-    } catch (_) {}
     const row = {
       user_id: uid(),
       travel_id: activeTravelId(),
@@ -409,6 +360,8 @@
     await loadWorkDays({ force: true });
     return CACHE.rows.slice();
   };
+  window.tbOnLangChange = window.tbOnLangChange || [];
+  window.tbOnLangChange.push(() => { if ((window.activeView || "") === "work") renderWork("language"); else ensureWorkShell(); });
   window.addEventListener("tb:auth_scope_changed", () => { CACHE.loaded = false; CACHE.rows = []; });
   try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadWorkDays(); } catch (_) {} }); } catch (_) {}
   setTimeout(() => { try { if (uid()) loadWorkDays().catch(() => {}); } catch (_) {} }, 300);
