@@ -115,6 +115,9 @@ describe('Sport profile view', () => {
     expect(html).toContain('value="59"');
     expect(html).toContain('id="sport-body-bmi"');
     expect(html).toContain('id="sport-body-fat-mass"');
+    expect(html).toContain('Body fat = masse grasse %');
+    expect(html).toContain('restent modifiables');
+    expect(html).toContain('Masse graisseuse kg (depuis %)');
     expect(html).toContain('id="sport-body-protein-pct"');
     expect(html).toContain('id="sport-body-subfat"');
     expect(html).toContain('id="sport-body-after-toilet"');

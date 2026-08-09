@@ -50,6 +50,17 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('window.tbActivityKcalForDay(day)?.workKcal');
   });
 
+  it('hydrates Nutrition KPI rows without requiring a first visit to Nutrition', () => {
+    expect(bootstrap).toContain('window.tbEnsureNutritionKpiData');
+    expect(bootstrap).toContain('tables.nutrition_meals');
+    expect(bootstrap).toContain('tables.nutrition_meal_items');
+    expect(bootstrap).toContain('state.nutritionKpiDataLoaded = true');
+    expect(bootstrap).toContain('window.addEventListener("tb:auth_scope_changed"');
+    expect(bootstrap).toContain('index += 80');
+    const kpi = fs.readFileSync('public/legacy/js/11_kpi_render_micro_animation.js', 'utf8');
+    expect(kpi).toContain('window.tbEnsureNutritionKpiData({ reason: "kpi" })');
+  });
+
   it('bounds Nutrition recovery work and chunks remote item requests', () => {
     expect(legacy).toContain('const rows = allRows.slice(0, 25);');
     expect(legacy).toContain('index += 80');

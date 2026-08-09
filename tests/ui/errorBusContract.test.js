@@ -14,4 +14,11 @@ describe('error bus sync contract', () => {
     expect(source).toContain('_syncBlockedUntil = Date.now() + (5 * 60 * 1000)');
     expect(source).toContain('code === "42501"');
   });
+
+  it('never uploads persisted logs that belong to another account', () => {
+    expect(source).toContain('const storedRows = _readStored();');
+    expect(source).toContain('String(row.user_id) === String(currentUserId)');
+    expect(source).toContain('if (rows.length !== storedRows.length) _writeStored(rows);');
+    expect(source).toContain('_payload(row, currentUserId)');
+  });
 });

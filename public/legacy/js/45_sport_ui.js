@@ -342,6 +342,7 @@
       latest: latestBodyMeasurement(),
       today: todayISO(),
       weightKg: bodyWeight(),
+      heightCm: bodyHeight(),
     }) || null;
   }
   function openBodyMeasurementEditorByKey(day, source) {

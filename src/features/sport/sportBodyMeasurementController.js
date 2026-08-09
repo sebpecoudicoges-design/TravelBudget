@@ -30,9 +30,30 @@ export function latestBodyMeasurement(rows = []) {
     .sort((a, b) => String(b.measured_on || '').localeCompare(String(a.measured_on || '')))[0] || null;
 }
 
-export function buildBodyMeasurementEditor({ row, latest, today, weightKg } = {}) {
+function rounded(value) {
+  return Math.round(Number(value) * 10) / 10;
+}
+
+export function deriveBodyCompositionFields(input = {}, heightCm = 0) {
+  const weight = cleanOptionalNumber(input.weight_kg, 20, 350);
+  const heightM = cleanOptionalNumber(heightCm, 60, 250) / 100;
+  const fatPct = cleanOptionalNumber(input.body_fat_pct, 2, 70);
+  const waterPct = cleanOptionalNumber(input.body_water_pct, 20, 80);
+  const proteinPct = cleanOptionalNumber(input.protein_pct, 0, 40);
+  const derived = {};
+  if (weight && heightM) derived.bmi = rounded(weight / (heightM * heightM));
+  if (weight && fatPct != null) {
+    derived.fat_mass_kg = rounded(weight * fatPct / 100);
+    derived.lean_mass_kg = rounded(weight - derived.fat_mass_kg);
+  }
+  if (weight && waterPct != null) derived.body_water_kg = rounded(weight * waterPct / 100);
+  if (weight && proteinPct != null) derived.protein_mass_kg = rounded(weight * proteinPct / 100);
+  return derived;
+}
+
+export function buildBodyMeasurementEditor({ row, latest, today, weightKg, heightCm } = {}) {
   const source = row || latest || {};
-  return {
+  const editor = {
     id: row?.id || '',
     original_measured_on: row?.measured_on || '',
     original_source: row?.source || '',
@@ -67,6 +88,11 @@ export function buildBodyMeasurementEditor({ row, latest, today, weightKg } = {}
     dry_feet: source.dry_feet ?? true,
     notes: source.notes || '',
   };
+  const derived = deriveBodyCompositionFields(editor, heightCm);
+  Object.entries(derived).forEach(([key, value]) => {
+    if (editor[key] === '' || editor[key] == null) editor[key] = value;
+  });
+  return editor;
 }
 
 export function readBodyMeasurementFromDom({ root, today, userId, qualityFn } = {}) {

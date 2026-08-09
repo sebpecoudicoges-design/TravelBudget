@@ -91,7 +91,7 @@ describe('nutrition repository', () => {
       if (table === 'meals' && operation === 'select') return { data: null, error: null };
       if (table === 'meals' && operation === 'upsert') return { data: { id: 'meal-1' }, error: null };
       if (table === 'items' && operation === 'select') return { data: [], error: null };
-      if (table === 'items' && operation === 'insert') return { data: [], error: null };
+      if (table === 'items' && operation === 'upsert') return { data: [], error: null };
       return { data: [], error: null };
     });
     const repository = createNutritionRepository(client);
@@ -123,9 +123,38 @@ describe('nutrition repository', () => {
     });
     expect(client.calls).toContainEqual({
       table: 'items',
-      method: 'insert',
+      method: 'upsert',
       value: expect.objectContaining({ meal_id: 'meal-1', label: 'Muesli', grams: 45 }),
+      options: { ignoreDuplicates: true },
     });
+  });
+
+  it('treats an exact item conflict as an already synchronized local row', async () => {
+    const client = clientWith(({ table, operation }) => {
+      if (table === 'meals' && operation === 'select') return { data: { id: 'meal-1', label: 'Muesli' }, error: null };
+      if (table === 'items' && operation === 'select') return { data: [], error: null };
+      if (table === 'items' && operation === 'upsert') {
+        return { data: null, error: { code: '23505', message: 'nutrition_meal_items_exact_dedupe_idx' } };
+      }
+      return { data: [], error: null };
+    });
+    const repository = createNutritionRepository(client);
+    const row = makeLocalNutritionRow({
+      food: { key: 'muesli', name: 'Muesli' },
+      grams: 45,
+      nut: { kcal: 164 },
+      mealType: 'breakfast',
+      mealDate: '2026-07-10',
+      syncId: 'nutrition_muesli',
+      userId: 'user-1',
+    });
+
+    await expect(repository.syncLocalRow({
+      tables: { meals: 'meals', items: 'items' },
+      row,
+      userId: 'user-1',
+      fallbackDate: '2026-07-10',
+    })).resolves.toEqual({ mealId: 'meal-1', syncedItem: true });
   });
 
   it('keeps sync markers idempotent and classifies common sync errors', () => {

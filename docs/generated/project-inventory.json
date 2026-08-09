@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "336c1c241ceaa7f45520b3ee1db346fc7b417e12",
-  "snapshotFingerprint": "820f9de74d20047a73a28b4c53f08b864fdf9c1868ad54169dbee3b84bec4f8e",
-  "generatedAt": "2026-08-09T08:32:45.341Z",
+  "commit": "f7075b6a86cf5cd2557dc0288b416f7a6aa82910",
+  "snapshotFingerprint": "5cb5d6a18e6c652978c41bc8972f6ba363007055044998c36233ac75cf766a03",
+  "generatedAt": "2026-08-09T09:06:17.389Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.336"
+    "version": "10.5.337"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -528,7 +528,8 @@
     "supabase/migrations/20260809030346_process_sport_history_feedback_10_5_334.sql",
     "supabase/migrations/20260809031512_process_sport_timer_feedback_10_5_335.sql",
     "supabase/migrations/20260809082240_stabilize_error_logs_nutrition_10_5_336.sql",
-    "supabase/migrations/20260809083100_repair_nutrition_test_lineage_10_5_336.sql"
+    "supabase/migrations/20260809083100_repair_nutrition_test_lineage_10_5_336.sql",
+    "supabase/migrations/20260809085454_process_nutrition_profile_feedback_10_5_337.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

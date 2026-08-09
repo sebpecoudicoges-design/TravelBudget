@@ -100,6 +100,90 @@ window.tbEnsureActivityData = async function tbEnsureActivityData(options = {}) 
   return window.__TB_ACTIVITY_LOAD_PROMISE__;
 };
 
+function tbPublishNutritionKpiRows({ meals, items, sleep, reason } = {}) {
+  if (!window.state) window.state = {};
+  if (Array.isArray(meals)) window.state.nutritionMeals = meals;
+  if (Array.isArray(items)) window.state.nutritionMealItems = items;
+  if (Array.isArray(sleep)) {
+    window.state.nutritionSleep = sleep.reduce((rows, row) => {
+      const day = String(row?.sleep_date || "").slice(0, 10);
+      if (day) rows[day] = { hours: Number(row.hours) || 0, quality: String(row.quality || "ok"), updatedAt: row.updated_at || "" };
+      return rows;
+    }, {});
+  }
+  window.state.nutritionKpiDataLoaded = true;
+  try {
+    if (reason && typeof window.tbSaveOfflineSnapshot === "function") window.tbSaveOfflineSnapshot(`nutrition-kpi:${reason}`);
+  } catch (_) {}
+}
+
+window.tbEnsureNutritionKpiData = async function tbEnsureNutritionKpiData(options = {}) {
+  const force = !!options.force;
+  const reason = String(options.reason || "kpi");
+  if (!window.state) window.state = {};
+  if (window.__TB_NUTRITION_KPI_LOAD_PROMISE__ && !force) return window.__TB_NUTRITION_KPI_LOAD_PROMISE__;
+  if (!force && window.state.nutritionKpiDataLoaded === true
+    && Array.isArray(window.state.nutritionMeals)
+    && Array.isArray(window.state.nutritionMealItems)) {
+    return { loaded: false, cached: true };
+  }
+  const run = (async () => {
+    const client = window.sb;
+    const userId = window.sbUser?.id;
+    const tables = window.TB_CONST?.TABLES;
+    if (!client || !userId || !tables) return { loaded: false, skipped: true, reason: "missing-client" };
+    const shouldSkipNetwork = (typeof window.tbShouldUseOfflineMode === "function")
+      ? await window.tbShouldUseOfflineMode(`nutrition-kpi:${reason}`)
+      : ((typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode())
+        || (typeof navigator !== "undefined" && navigator.onLine === false));
+    if (shouldSkipNetwork) return { loaded: false, skipped: true, reason: "offline" };
+
+    const sinceDate = addDays(new Date(), -21).toISOString().slice(0, 10);
+    const [mealsResult, sleepResult] = await Promise.all([
+      client.from(tables.nutrition_meals)
+        .select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,created_at")
+        .eq("user_id", userId)
+        .gte("meal_date", sinceDate)
+        .order("meal_date", { ascending: false })
+        .order("created_at", { ascending: false }),
+      client.from(tables.nutrition_sleep)
+        .select("sleep_date,hours,quality,updated_at")
+        .eq("user_id", userId)
+        .gte("sleep_date", sinceDate)
+        .order("sleep_date", { ascending: false }),
+    ]);
+    if (mealsResult?.error) throw mealsResult.error;
+    if (sleepResult?.error) throw sleepResult.error;
+    const meals = mealsResult?.data || [];
+    const mealIds = meals.map(row => row.id).filter(Boolean);
+    const chunks = [];
+    for (let index = 0; index < mealIds.length; index += 80) chunks.push(mealIds.slice(index, index + 80));
+    const itemResults = await Promise.all(chunks.map(ids => client.from(tables.nutrition_meal_items)
+      .select("id,user_id,meal_id,food_key,label,grams,kcal,protein_g,carbs_g,fat_g,fiber_g,sort_order,created_at")
+      .in("meal_id", ids)
+      .order("sort_order", { ascending: true })));
+    const itemError = itemResults.find(result => result?.error)?.error;
+    if (itemError) throw itemError;
+    const items = itemResults.flatMap(result => result?.data || []);
+    tbPublishNutritionKpiRows({ meals, items, sleep: sleepResult?.data || [], reason });
+    try { window.dispatchEvent(new CustomEvent("tb:nutrition:kpi_data_loaded", { detail: { reason } })); } catch (_) {}
+    try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+    return { loaded: true, mealCount: meals.length, itemCount: items.length };
+  })();
+  window.__TB_NUTRITION_KPI_LOAD_PROMISE__ = run.finally(() => {
+    if (window.__TB_NUTRITION_KPI_LOAD_PROMISE__ === run) window.__TB_NUTRITION_KPI_LOAD_PROMISE__ = null;
+  });
+  return window.__TB_NUTRITION_KPI_LOAD_PROMISE__;
+};
+
+window.addEventListener("tb:auth_scope_changed", () => {
+  if (!window.state) return;
+  window.state.nutritionKpiDataLoaded = false;
+  window.state.nutritionMeals = [];
+  window.state.nutritionMealItems = [];
+  window.state.nutritionSleep = {};
+});
+
 window.tbActivityKcalForDay = function tbActivityKcalForDay(day) {
   const targetDay = String(day || "").slice(0, 10);
   const sportKcal = (Array.isArray(window.state?.sportSessions) ? window.state.sportSessions : [])

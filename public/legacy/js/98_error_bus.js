@@ -214,11 +214,10 @@
     return _readStored().filter((x) => x && !x.synced);
   }
 
-  function _payload(row) {
-    const currentUser = _user();
+  function _payload(row, currentUserId) {
     return {
       id: row.id,
-      user_id: row.user_id || currentUser.user_id || null,
+      user_id: row.user_id || currentUserId || null,
       email: null,
       version: row.version || null,
       build_label: row.build_label || null,
@@ -253,7 +252,10 @@
       if (navigator && navigator.onLine === false) return { ok: false, skipped: "offline" };
     } catch (_) {}
 
-    const rows = _readStored();
+    const currentUserId = _user().user_id;
+    const storedRows = _readStored();
+    const rows = storedRows.filter((row) => !row?.user_id || String(row.user_id) === String(currentUserId));
+    if (rows.length !== storedRows.length) _writeStored(rows);
     const todo = rows.filter((x) => x && !x.synced).slice(0, 25);
     if (!todo.length) return { ok: true, synced: 0 };
     if (!String(reason || "").includes("online") && !String(reason || "").includes("diagnostic")) {
@@ -264,7 +266,7 @@
     _syncing = true;
     _lastSyncAt = Date.now();
     try {
-      const payload = todo.map(_payload);
+      const payload = todo.map((row) => _payload(row, currentUserId));
       const errorLogTable = window.TB_CONST?.TABLES?.app_error_logs;
       if (!errorLogTable) throw new Error("Table app_error_logs indisponible");
       const { error } = await window.sb

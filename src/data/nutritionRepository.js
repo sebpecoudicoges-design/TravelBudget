@@ -263,7 +263,7 @@ export function createNutritionRepository(getClient) {
         fat_g: safeNumber(item.fat_g, 0),
         fiber_g: safeNumber(item.fiber_g, 0),
       };
-      return unwrap(await client.from(table).insert(payload));
+      return unwrap(await client.from(table).upsert(payload, { ignoreDuplicates: true }));
     },
 
     async syncLocalRow({ tables, row, userId, travelId, fallbackDate }) {
@@ -291,12 +291,16 @@ export function createNutritionRepository(getClient) {
           item: { ...item, label: itemLabel },
         });
         if (!duplicate) {
-          await this.insertMealItem({
-            table: tables.items,
-            userId,
-            mealId,
-            item: { ...item, label: itemLabel },
-          });
+          try {
+            await this.insertMealItem({
+              table: tables.items,
+              userId,
+              mealId,
+              item: { ...item, label: itemLabel },
+            });
+          } catch (error) {
+            if (!isDuplicateNutritionError(error)) throw error;
+          }
         }
       }
       return { mealId, syncedItem: Boolean(item) };

@@ -36,7 +36,8 @@ describe('Nutrition view helpers', () => {
 
   it('explains adjusted meal targets and simple meal suggestions', () => {
     expect(mealTargetNote({ kcal: 520, baseKcal: 450 }, { t })).toContain('+70 kcal');
-    expect(mealTargetNote({ kcal: 420, baseKcal: 450 }, { t })).toBe('Objectif standard.');
+    expect(mealTargetNote({ kcal: 420, baseKcal: 450 }, { t })).toContain('inclus dans l objectif calorique du jour');
+    expect(mealTargetNote({ kcal: 520, baseKcal: 450 }, { t })).toContain('sans changer l objectif du jour');
     expect(mealMomentSuggestion('lunch', { kcal: 200 }, 520, { protein: 40, waterMl: 1200 }, { protein: 95 }, { t }))
       .toContain('proteines');
   });
@@ -192,6 +193,7 @@ describe('Nutrition view helpers', () => {
     expect(html).toContain('Prise de masse douce');
     expect(html).toContain('+550');
     expect(html).toContain('450');
+    expect(html).not.toContain('<span>Proteines</span><strong>105g</strong>');
   });
 
   it('renders alcohol panel with standard-drink details and history hooks', () => {
@@ -301,6 +303,8 @@ describe('Nutrition view helpers', () => {
     expect(html).toContain('id="nutrition-search"');
     expect(html).toContain('id="nutrition-sync-pending"');
     expect(html).toContain('data-nutrition-pick-type="lunch"');
-    expect(html).toContain('1089 / 2400 kcal');
+    expect(html).toContain('<strong style="display:block;font-size:32px;line-height:1;">1089</strong>');
+    expect(html).toContain('<span class="muted">/ 2400 kcal</span>');
+    expect(html).not.toContain('Comparaison besoins / consomme');
   });
 });

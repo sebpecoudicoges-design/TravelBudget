@@ -42,10 +42,10 @@ export function renderProgressBar({ label, current = 0, target = 0, unit = '', e
 
 export function mealTargetNote(target = {}, { t } = {}) {
   const delta = Math.round(num(target.kcal, 0) - num(target.baseKcal, target.kcal));
-  if (Math.abs(delta) < 40) return langText('Objectif standard.', 'Standard target.', t);
+  if (Math.abs(delta) < 40) return langText('Objectif de ce repas, deja inclus dans l objectif calorique du jour.', 'This meal target is already included in the daily calorie target.', t);
   return delta > 0
-    ? langText(`Ajuste +${delta} kcal car les repas precedents etaient plus legers.`, `Adjusted +${delta} kcal because previous meals were lighter.`, t)
-    : langText(`Ajuste ${delta} kcal car les repas precedents etaient plus hauts.`, `Adjusted ${delta} kcal because previous meals were higher.`, t);
+    ? langText(`Objectif du repas reajuste de +${delta} kcal apres des repas plus legers, sans changer l objectif du jour.`, `Meal target adjusted by +${delta} kcal after lighter meals, without changing the daily target.`, t)
+    : langText(`Objectif du repas reajuste de ${delta} kcal apres des repas plus hauts, sans changer l objectif du jour.`, `Meal target adjusted by ${delta} kcal after higher meals, without changing the daily target.`, t);
 }
 
 export function mealMomentSuggestion(type, consumed = {}, targetKcal = 0, total = {}, macroTargets = {}, { t } = {}) {
@@ -316,12 +316,6 @@ export function renderGoalCockpit({
       <div><span>${esc(langText('Reste jour', 'Left today', t))}</span><strong>${kcalLeft >= 0 ? '+' : ''}${kcalLeft}</strong><small>kcal</small></div>
       <div><span>${esc(langText('Charge', 'Load', t))}</span><strong>${Math.round(num(sportKcal, 0) + num(workKcal, 0))}</strong><small>sport + ${esc(langText('travail', 'work', t))}</small></div>
     </div>
-    <div class="tb-nutrition-goal-kpis">
-      <div><span>${esc(langText('Proteines', 'Protein', t))}</span><strong>${Math.round(num(targets.protein, 0))}g</strong><small>${Math.round(num(targets.proteinPerKg, 0) * 10) / 10} g/kg</small></div>
-      <div><span>${esc(langText('Glucides', 'Carbs', t))}</span><strong>${Math.round(num(targets.carbs, 0))}g</strong><small>${esc(langText('ajustes par les kcal', 'adjusted by kcal', t))}</small></div>
-      <div><span>${esc(langText('Lipides', 'Fat', t))}</span><strong>${Math.round(num(targets.fat, 0))}g</strong><small>${Math.round(num(targets.fatPerKg, 0) * 10) / 10} g/kg</small></div>
-      <div><span>${esc(langText('Objectif', 'Target', t))}</span><strong>${Math.round(num(targets.targetKcal, 0))}</strong><small>kcal</small></div>
-    </div>
   </div>`;
 }
 
@@ -546,26 +540,6 @@ export function renderNutritionShell({
       </div>
       <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
         <h3 style="margin:0 0 10px;">${esc(langText('Jour selectionne', 'Selected day', t))} · ${esc(day)}</h3>
-        <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;background:rgba(15,23,42,.04);">
-          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;">
-            <div>
-              <div class="muted" style="font-size:12px;">${esc(langText('Comparaison besoins / consomme', 'Needs / consumed comparison', t))}</div>
-              <strong style="font-size:22px;">${Math.round(num(consumedKcal, 0))} / ${Math.round(num(needsKcal, 0))} kcal</strong>
-            </div>
-            <div class="pill">${esc(kcalTargetLabel)} ${Math.abs(Math.round(num(kcalDelta, 0)))} kcal</div>
-          </div>
-          <div style="display:grid;gap:10px;">
-            ${renderProgressBar({ label: 'kcal', current: consumedKcal, target: needsKcal, unit: '', esc })}
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
-              ${renderProgressBar({ label: langText('Proteines', 'Protein', t), current: total.protein, target: proteinTarget, unit: 'g', esc })}
-              ${renderProgressBar({ label: langText('Glucides', 'Carbs', t), current: total.carbs, target: carbsTarget, unit: 'g', esc })}
-              ${renderProgressBar({ label: langText('Lipides', 'Fat', t), current: total.fat, target: fatTarget, unit: 'g', esc })}
-            </div>
-          </div>
-          <div class="muted" style="margin-top:10px;">
-            ${esc(langText('Besoins calcules', 'Calculated needs', t))}: ${Math.round(num(base.bmr, 0))} ${esc(langText('base', 'base', t))} + ${Math.round(num(neatKcal, 0))} NEAT + ${Math.round(num(sportKcal, 0))} sport + ${Math.round(num(workKcal, 0))} ${esc(langText('travail', 'work', t))} + ${Math.round(num(tefKcal, 0))} TEF${num(goalTargets.offsetKcal, 0) ? ` ${num(goalTargets.offsetKcal, 0) > 0 ? '+' : '-'} ${Math.abs(Math.round(num(goalTargets.offsetKcal, 0)))} ${esc(langText('objectif', 'goal', t))}` : ''}.
-          </div>
-        </div>
         <div class="tb-sport-stats" style="margin-bottom:12px;">
           <div class="tb-sport-stat"><span>kcal</span><strong>${Math.round(num(total.kcal, 0))}</strong></div>
           <div class="tb-sport-stat"><span>${esc(langText('Proteines', 'Protein', t))}</span><strong>${formatMacro(total.protein)}</strong></div>

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildBodyMeasurementEditor,
+  deriveBodyCompositionFields,
   ensureBodyMeasurementsLoaded,
   latestBodyMeasurement,
   readBodyMeasurementFromDom,
@@ -63,13 +64,32 @@ describe('Sport body measurement controller', () => {
     expect(buildBodyMeasurementEditor({
       today: '2026-07-23',
       weightKg: 59,
+      heightCm: 162,
       latest: { weight_kg: 60, body_fat_pct: 15 },
     })).toMatchObject({
       measured_on: '2026-07-23',
       weight_kg: 60,
       body_fat_pct: 15,
+      bmi: 22.9,
+      fat_mass_kg: 9,
+      lean_mass_kg: 51,
       measurement_time: 'morning',
       after_toilet: true,
+    });
+  });
+
+  it('derives editable kg values from weight and scale percentages', () => {
+    expect(deriveBodyCompositionFields({
+      weight_kg: 60,
+      body_fat_pct: 15,
+      body_water_pct: 58,
+      protein_pct: 18,
+    }, 162)).toEqual({
+      bmi: 22.9,
+      fat_mass_kg: 9,
+      lean_mass_kg: 51,
+      body_water_kg: 34.8,
+      protein_mass_kg: 10.8,
     });
   });
 

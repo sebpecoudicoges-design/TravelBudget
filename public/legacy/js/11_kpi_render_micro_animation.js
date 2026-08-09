@@ -776,6 +776,20 @@ function renderKPI() {
         .catch(() => { window.__TB_KPI_ACTIVITY_LOADING__ = false; });
     }
   } catch (_) {}
+  try {
+    const hasNutrition = window.state?.nutritionKpiDataLoaded === true
+      && Array.isArray(window.state?.nutritionMeals)
+      && Array.isArray(window.state?.nutritionMealItems);
+    if (!hasNutrition && !window.__TB_KPI_NUTRITION_LOADING__ && typeof window.tbEnsureNutritionKpiData === "function") {
+      window.__TB_KPI_NUTRITION_LOADING__ = true;
+      window.tbEnsureNutritionKpiData({ reason: "kpi" })
+        .then((result) => {
+          window.__TB_KPI_NUTRITION_LOADING__ = false;
+          if (result?.loaded && typeof renderKPI === "function") renderKPI();
+        })
+        .catch(() => { window.__TB_KPI_NUTRITION_LOADING__ = false; });
+    }
+  } catch (_) {}
   const infoToday = (typeof getDailyBudgetInfoForDate === "function")
     ? getDailyBudgetInfoForDate(displayDateISO)
     : { remaining: getDailyBudgetForDate(displayDateISO), daily: state.period.dailyBudgetBase, baseCurrency: state.period.baseCurrency };

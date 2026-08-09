@@ -376,6 +376,7 @@ export function renderBodyMeasurementModal({ editor = null, api = {} } = {}) {
       <div class="tb-sport-modal tb-sport-body-modal">
         <h3>${h.esc(h.txt('Mesure impedancemetre', 'Body composition measurement'))}</h3>
         <div class="muted">${h.esc(h.txt('Saisie datee, enregistree en SQL si connecte, sinon gardee localement. 1 mesure par jour maximum.', 'Dated entry, saved in SQL when online, otherwise kept locally. One measurement per day max.'))}</div>
+        <div class="tb-sport-body-help">${h.esc(h.txt('Les noms varient selon les balances : Body fat = masse grasse %, Fat mass = masse graisseuse kg, Lean body mass = masse maigre, Body water = eau corporelle. IMC et valeurs kg liees a un pourcentage sont calcules si absents, puis restent modifiables.', 'Scale labels vary: Body fat = body fat %, Fat mass = fat mass kg, Lean body mass = lean mass, Body water = body water. BMI and kg values linked to a percentage are calculated when missing and remain editable.'))}</div>
         <div class="tb-sport-body-quality">
           <strong>${h.esc(h.txt('Qualite mesure', 'Measurement quality'))}: ${h.esc(quality.label)}</strong>
           <span>${quality.score}/100 · ${h.esc(h.txt('Reference = reveil, toilettes, avant boire/manger/sport, meme balance, sol dur, pieds secs.', 'Reference = waking, toilet, before drinking/eating/sport, same scale, hard floor, dry feet.'))}</span>
@@ -386,17 +387,17 @@ export function renderBodyMeasurementModal({ editor = null, api = {} } = {}) {
           ${bodyInput('sport-body-weight', h.txt('Poids kg', 'Weight kg'), editor.weight_kg, '0.1', h)}
           ${bodyInput('sport-body-bmi', 'IMC', editor.bmi, '0.1', h)}
           ${bodyInput('sport-body-fat', h.txt('Masse grasse %', 'Body fat %'), editor.body_fat_pct, '0.1', h)}
-          ${bodyInput('sport-body-fat-mass', h.txt('Masse graisseuse kg', 'Fat mass kg'), editor.fat_mass_kg, '0.1', h)}
+          ${bodyInput('sport-body-fat-mass', h.txt('Masse graisseuse kg (depuis %)', 'Fat mass kg (from %)'), editor.fat_mass_kg, '0.1', h)}
           ${bodyInput('sport-body-muscle', h.txt('Masse musculaire kg', 'Muscle mass kg'), editor.muscle_mass_kg, '0.1', h)}
-          ${bodyInput('sport-body-lean', h.txt('Masse maigre kg', 'Lean mass kg'), editor.lean_mass_kg, '0.1', h)}
+          ${bodyInput('sport-body-lean', h.txt('Masse maigre kg (poids - graisse)', 'Lean mass kg (weight - fat)'), editor.lean_mass_kg, '0.1', h)}
           ${bodyInput('sport-body-water', h.txt('Eau corporelle %', 'Body water %'), editor.body_water_pct, '0.1', h)}
-          ${bodyInput('sport-body-water-kg', h.txt('Eau corporelle kg', 'Body water kg'), editor.body_water_kg, '0.1', h)}
+          ${bodyInput('sport-body-water-kg', h.txt('Eau corporelle kg (depuis %)', 'Body water kg (from %)'), editor.body_water_kg, '0.1', h)}
           ${bodyInput('sport-body-bone', h.txt('Masse osseuse kg', 'Bone mass kg'), editor.bone_mass_kg, '0.1', h)}
           ${bodyInput('sport-body-visceral', h.txt('Graisse viscerale', 'Visceral fat'), editor.visceral_fat_rating, '0.1', h)}
           ${bodyInput('sport-body-bmr', 'BMR kcal', editor.bmr_kcal, '1', h)}
           ${bodyInput('sport-body-age', h.txt('Age metabolique', 'Metabolic age'), editor.metabolic_age, '1', h)}
           ${bodyInput('sport-body-protein-pct', h.txt('Proteines %', 'Protein %'), editor.protein_pct, '0.1', h)}
-          ${bodyInput('sport-body-protein-mass', h.txt('Masse proteique kg', 'Protein mass kg'), editor.protein_mass_kg, '0.1', h)}
+          ${bodyInput('sport-body-protein-mass', h.txt('Masse proteique kg (depuis %)', 'Protein mass kg (from %)'), editor.protein_mass_kg, '0.1', h)}
           ${bodyInput('sport-body-subfat', h.txt('Graisse sous-cutanee %', 'Subcutaneous fat %'), editor.subcutaneous_fat_pct, '0.1', h)}
           ${bodyInput('sport-body-ideal-weight', h.txt('Poids ideal kg', 'Ideal weight kg'), editor.ideal_weight_kg, '0.1', h)}
           <div class="tb-sport-field"><label>${h.esc(h.txt('Body Type', 'Body Type'))}</label><input id="sport-body-type" type="text" value="${h.esc(editor.body_type || '')}"></div>
