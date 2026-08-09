@@ -80,4 +80,15 @@ describe('tester campaign contract', () => {
     expect(migration).toContain("'Retest categorie Immobilisation 10.5.327'");
     expect(migration).toContain("set app_version = '10.5.327'");
   });
+
+  it('reopens validated finance modules and links the focused Trip retest in 10.5.328', () => {
+    const migration = read('supabase/migrations/20260808235452_reopen_validated_modules_and_trip_retest_10_5_328.sql');
+
+    expect(migration).toContain("and module_key in ('dashboard', 'transactions', 'analysis')");
+    expect(migration).toContain("set status = 'open'");
+    expect(migration).toContain("'32800000-0000-4000-8000-000000000001'::uuid");
+    expect(migration).toContain("'Retest saisie rapide Trip 10.5.328'");
+    expect(migration).toContain("parent.id");
+    expect(migration).toContain("set app_version = '10.5.328'");
+  });
 });

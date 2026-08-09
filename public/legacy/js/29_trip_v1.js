@@ -1134,16 +1134,16 @@ function _normalizeCurrency(cur) {
     }
 
     const date = String(input?.date || "").trim();
-    const label = String(input?.label || "").trim();
+    const kind = _normalizeTripEntryKind(input?.kind);
+    const label = String(input?.label || "").trim() || (kind === "income" ? "Entrée partagée" : "Dépense partagée");
     const amount = Number(input?.amount);
     const paidByMemberId = String(input?.paidByMemberId || "").trim();
     if (!date) throw new Error("Date requise.");
-    if (!label) throw new Error("Libellé requis.");
     if (!isFinite(amount) || amount <= 0) throw new Error("Montant invalide.");
     if (!paidByMemberId) throw new Error("Sélectionne qui a payé.");
     return {
       expenseId: input?.expenseId || null,
-      kind: _normalizeTripEntryKind(input?.kind),
+      kind,
       incomeSource: _normalizeTripIncomeSource(input?.incomeSource || input?.income_source),
       incomeDueBack: _tripIncomeDueBack(input?.incomeDueBack ?? input?.income_due_back),
       date,
@@ -3122,13 +3122,14 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     if (!members.length) throw new Error("Ajoute au moins un participant.");
 
     const amt = Number(amount);
-    if (!date || !label || !isFinite(amt) || amt <= 0) throw new Error("Date, libellé et montant (>0) requis.");
+    if (!date || !isFinite(amt) || amt <= 0) throw new Error("Date et montant (>0) requis.");
     if (!paidByMemberId) throw new Error("Sélectionne qui a payé.");
 
     const currentEx = (tripState.expenses || []).find(x => x.id === expenseId);
     if (!currentEx) throw new Error("Dépense introuvable.");
 
     const input = _normalizeTripExpenseForMutation({ expenseId, kind, incomeSource, incomeDueBack, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget });
+    label = input.label;
     const payer = members.find(m => m.id === input.paidByMemberId) || null;
     const wallet = input.walletId ? findWallet(input.walletId) : null;
     const cur = _normalizeCurrency(currency);
@@ -3163,6 +3164,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
   if (!paidByMemberId) throw new Error("Sélectionne qui a payé.");
 
   const input = _normalizeTripExpenseForMutation({ kind, incomeSource, incomeDueBack, date, label, amount, currency, paidByMemberId, walletId, category, subcategory, budgetDateStart, budgetDateEnd, outOfBudget });
+  label = input.label;
   const entryKind = input.kind;
   const cur = _normalizeCurrency(currency);
   const payer = members.find(m => m.id === paidByMemberId) || null;
@@ -3536,12 +3538,16 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
   }
 
   function _tripExpenseFormForQueue(form) {
+    const kind = _normalizeTripEntryKind(form?.kind);
+    const label = window.Core?.tripRules?.resolveTripEntryLabel
+      ? window.Core.tripRules.resolveTripEntryLabel(form?.label, kind)
+      : (String(form?.label || "").trim() || (kind === "income" ? "Entrée partagée" : "Dépense partagée"));
     return {
-      kind: _normalizeTripEntryKind(form?.kind),
+      kind,
       incomeSource: _normalizeTripIncomeSource(form?.incomeSource || form?.income_source),
       incomeDueBack: _tripIncomeDueBack(form?.incomeDueBack ?? form?.income_due_back),
       date: String(form?.date || "").slice(0, 10),
-      label: String(form?.label || "").trim(),
+      label,
       amount: Number(form?.amount || 0),
       currency: _normalizeCurrency(form?.currency),
       paidByMemberId: String(form?.paidByMemberId || ""),
@@ -3562,7 +3568,7 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
     if (!members.length) throw new Error("Ajoute au moins un participant.");
     const input = _normalizeTripExpenseForMutation(form);
     const amt = Number(input.amount);
-    if (!input.date || !input.label || !Number.isFinite(amt) || amt <= 0) throw new Error("Date, libelle et montant (>0) requis.");
+    if (!input.date || !Number.isFinite(amt) || amt <= 0) throw new Error("Date et montant (>0) requis.");
     const payer = members.find(m => m.id === input.paidByMemberId) || null;
     if (!payer) throw new Error("Selectionne qui a paye.");
     const wallet = input.walletId ? findWallet(input.walletId) : null;
@@ -3934,11 +3940,15 @@ async function _persistSettlementWithWallet({ walletId, walletCurrency, walletAm
         </div>`
       : "";
 
+    const selectedPayerId = window.Core?.tripRules?.resolveTripDefaultPayerId
+      ? window.Core.tripRules.resolveTripDefaultPayerId(members, editingDraft)
+      : String(editingDraft?.paidByMemberId || members.find((member) => member?.isMe)?.id || members[0]?.id || "");
     const memberOptions = members
       .map(m => {
         const meTag = m.isMe ? " (moi)" : "";
         const emailTag = m.email ? ` — ${escapeHTML(m.email)}` : "";
-        return `<option value="${m.id}">${escapeHTML(m.name)}${meTag}${emailTag}</option>`;
+        const selected = String(m.id) === String(selectedPayerId) ? " selected" : "";
+        return `<option value="${m.id}"${selected}>${escapeHTML(m.name)}${meTag}${emailTag}</option>`;
       })
       .join("");
 

@@ -16,10 +16,11 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.327`.
+- Version cible de campagne : `10.5.328`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
-- 43 resultats et 9 revues de module traites sont archives avec date de test, date de traitement, version et note.
-- 21 scenarios restent ouverts, dont trois retests derives actifs : role et premier affichage Dashboard `10.5.326`, panneau Archiver Wallet et categorie Immobilisation `10.5.327`. Les autres retours ouverts conservent leur scenario d origine.
+- 47 resultats et 12 revues de module traites sont archives avec date de test, date de traitement, version et note.
+- 18 scenarios restent ouverts, dont un seul retest derive actif : saisie rapide Trip `10.5.328`. Les autres retours ouverts conservent leur scenario d origine.
+- Dashboard, Transactions et Analyse sont valides puis rouverts aux comptes standards ; les autres modules metier restent geles.
 - A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
 ## Socle transversal
@@ -42,7 +43,7 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 - [x] Verifier 1440 px et 390 px, clair et sombre.
 - [x] Forcer un rendu final apres la levee du verrou de boot pour afficher wallets, budget journalier et courbe sans changer de module.
 - [x] Relancer ce rendu de facon bornee tant que les trois conteneurs critiques ne sont pas hydrates.
-- [ ] Faire retester Dashboard avant de le rouvrir.
+- [x] Faire retester Dashboard puis le rouvrir aux comptes standards en `10.5.328`.
 
 Artefact de retest : `travelbudget-10.5.317-20260801-193954-debug.apk`.
 SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
@@ -66,6 +67,7 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 - [x] Bloquer l edition des mouvements internes avant l appel RPC.
 - [x] Expliquer que la modification passe par les actions de transfert wallet.
 - [x] Ajouter `Immobilisation` aux categories par defaut, la retro-propager sans doublon et l exclure du mix analytique quotidien.
+- [x] Clore le retest Immobilisation et rouvrir Transactions aux comptes standards en `10.5.328`.
 - [ ] Retester les filtres, le cycle CRUD et les transactions protegees.
 
 ## Chantier 3 - Settings
@@ -88,8 +90,8 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 ## Chantier 5 - Trip / Partage
 
 - [x] Corriger le placeholder francais de recherche de l historique (`Libelle, montant, participant`).
-- [ ] Selectionner Moi par defaut dans Paye par / Recu par.
-- [ ] Autoriser un libelle vide avec valeur de secours explicite.
+- [x] Selectionner Moi par defaut dans Paye par / Recu par.
+- [x] Autoriser un libelle vide avec valeur de secours explicite.
 - [ ] Simplifier l audit des liens et distinguer visuellement les anomalies.
 - [ ] Proposer Reparer seulement quand l operation est sure, sinon Support.
 - [ ] Auditer les 13 liens existants.

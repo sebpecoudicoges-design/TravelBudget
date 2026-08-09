@@ -16,6 +16,8 @@ import {
   normalizeTripEntryKind,
   normalizeTripHistoryFilters,
   normalizeTripExpenseInput,
+  resolveTripDefaultPayerId,
+  resolveTripEntryLabel,
   normalizeTripIncomeSource,
   shouldTripIncomeAffectBalances,
   shouldAutoCashflowOnly,
@@ -91,11 +93,31 @@ describe('trip rules core', () => {
       budgetDateStart: '2026-05-07',
     });
 
-    expect(() => normalizeTripExpenseInput({
+    expect(normalizeTripExpenseInput({
       date: '2026-05-07',
       amount: 10,
       paidByMemberId: 'm1',
-    })).toThrow(/Libelle requis/);
+    })).toMatchObject({ label: 'Dépense partagée' });
+
+    expect(normalizeTripExpenseInput({
+      kind: 'income',
+      date: '2026-05-07',
+      amount: 10,
+      paidByMemberId: 'm1',
+    })).toMatchObject({ label: 'Entrée partagée' });
+  });
+
+  it('selects me by default while preserving an edited payer', () => {
+    const members = [{ id: 'guest' }, { id: 'me', isMe: true }];
+    expect(resolveTripDefaultPayerId(members)).toBe('me');
+    expect(resolveTripDefaultPayerId(members, { paidByMemberId: 'guest' })).toBe('guest');
+    expect(resolveTripDefaultPayerId([{ id: 'only' }])).toBe('only');
+  });
+
+  it('uses the same explicit fallback label online and offline', () => {
+    expect(resolveTripEntryLabel('', 'expense')).toBe('Dépense partagée');
+    expect(resolveTripEntryLabel('  ', 'income')).toBe('Entrée partagée');
+    expect(resolveTripEntryLabel(' Taxi ', 'expense')).toBe('Taxi');
   });
 
   it('normalizes shared income entries without negative stored amounts', () => {

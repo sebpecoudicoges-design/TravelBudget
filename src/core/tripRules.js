@@ -92,23 +92,33 @@ export function tripBalanceSign(entry = {}) {
   return shouldTripIncomeAffectBalances(entry) ? -1 : 0;
 }
 
+export function resolveTripDefaultPayerId(members = [], draft = null) {
+  const draftPayerId = String(draft?.paidByMemberId || draft?.paid_by_member_id || '').trim();
+  if (draftPayerId && members.some((member) => String(member?.id || '') === draftPayerId)) return draftPayerId;
+  return String(members.find((member) => member?.isMe)?.id || members[0]?.id || '');
+}
+
+export function resolveTripEntryLabel(label, kind = 'expense') {
+  return String(label || '').trim() || (normalizeTripEntryKind(kind) === 'income' ? 'Entrée partagée' : 'Dépense partagée');
+}
+
 export function normalizeTripExpenseInput(input = {}, options = {}) {
   const fallbackCurrency = options.fallbackCurrency || 'EUR';
   const amount = Number(input.amount);
   const date = String(input.date || '').trim();
-  const label = String(input.label || '').trim();
+  const kind = normalizeTripEntryKind(input.kind);
+  const label = resolveTripEntryLabel(input.label, kind);
   const paidByMemberId = String(input.paidByMemberId || '').trim();
   const budgetDateStart = String(input.budgetDateStart || date || '').trim();
   const budgetDateEnd = String(input.budgetDateEnd || budgetDateStart || date || '').trim();
 
   if (!date) throw new Error('Date requise.');
-  if (!label) throw new Error('Libelle requis.');
   if (!Number.isFinite(amount) || amount <= 0) throw new Error('Montant invalide.');
   if (!paidByMemberId) throw new Error('Selectionne qui a paye.');
 
   return {
     expenseId: input.expenseId || null,
-    kind: normalizeTripEntryKind(input.kind),
+    kind,
     incomeSource: normalizeTripIncomeSource(input.incomeSource || input.income_source),
     incomeDueBack: input.incomeDueBack === false || input.income_due_back === false ? false : true,
     date,

@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `b76565ff86d06e3f2de482f0f469edcbb7d4d29b`
-> Empreinte du snapshot : `e3d9346a29fa304783c60131d79b33ffc99f7135b0ebeb1c2121d17585a397b1`
-> Généré le : `2026-08-08T07:47:11.334Z`
+> Commit analysé : `89be5fcfc49b716c41a070962b44260ea52e22f2`
+> Empreinte du snapshot : `55730a00e219f13ce9ed74f5897c9cf261cd4a195979d6d67d2875b12783aff5`
+> Généré le : `2026-08-09T00:00:20.186Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.327` |
+| Version | `10.5.328` |
 | Écrans déclarés | 16 |
 | Scripts legacy référencés | 56 |
 | Modules core | 26 |
 | Modules data | 8 |
 | Modules features | 44 |
 | Fichiers de tests | 120 |
-| Migrations Supabase | 107 |
+| Migrations Supabase | 108 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -567,6 +567,7 @@ Modules :
 - `supabase/migrations/20260808064500_process_ui_stability_feedback_10_5_325.sql`
 - `supabase/migrations/20260808064543_process_dashboard_boot_retest_10_5_326.sql`
 - `supabase/migrations/20260808073835_add_immobilisation_and_wallet_archive_retest_10_5_327.sql`
+- `supabase/migrations/20260808235452_reopen_validated_modules_and_trip_retest_10_5_328.sql`
 
 ## Android et budgets de modules
 

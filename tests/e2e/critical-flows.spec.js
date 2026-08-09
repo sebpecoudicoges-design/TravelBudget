@@ -100,7 +100,7 @@ test('lazy-loads a domain tab and preserves mobile layout access', async ({ page
   await expect.poll(() => page.evaluate(() => window.activeView)).toBe('nutrition');
 });
 
-test('locks standard accounts while testers keep module and campaign access', async ({ page }) => {
+test('opens validated modules to standard accounts while testers keep full campaign access', async ({ page }) => {
   await page.goto('/?freeze=1');
   await expectBootShell(page);
 
@@ -111,8 +111,11 @@ test('locks standard accounts while testers keep module and campaign access', as
     window.syncTabsForRole();
     window.showView('dashboard');
   });
-  await expect(page.locator('#view-validation')).not.toHaveClass(/hidden/);
-  await expect(page.locator('#tab-dashboard')).toBeHidden();
+  await expect(page.locator('#view-dashboard')).not.toHaveClass(/hidden/);
+  await expect(page.locator('#tab-dashboard')).toBeVisible();
+  await expect(page.locator('#tab-transactions')).toBeVisible();
+  await expect(page.locator('#tab-analysis')).toBeVisible();
+  await expect(page.locator('#tab-sport')).toBeHidden();
   await expect(page.locator('#tab-settings')).toBeVisible();
 
   await page.evaluate(() => {

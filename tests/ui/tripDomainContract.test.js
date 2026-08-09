@@ -27,6 +27,8 @@ describe('Trip domain contract', () => {
   it('keeps mutation and budget rules in the core module', () => {
     const delegatedRules = [
       'normalizeTripExpenseInput',
+      'resolveTripDefaultPayerId',
+      'resolveTripEntryLabel',
       'computeTripSplitParts',
       'validateTripExpenseMutation',
       'buildTripExpenseRpcPayload',

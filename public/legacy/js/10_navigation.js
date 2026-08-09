@@ -225,6 +225,9 @@ function syncTabsForRole() {
   const moduleTabs = [
     'dashboard','transactions','analysis','assets','sport','nutrition','work','documents','inbox','notifications','trip'
   ];
+  const canAccessView = (name) => window.TBModuleAccess?.canAccessAppView
+    ? window.TBModuleAccess.canAccessAppView(name, role)
+    : (roleState.canPreviewModules || ['dashboard', 'transactions', 'analysis', 'settings', 'help', 'validation'].includes(name));
   try {
     document.body.classList.toggle("tb-role-admin", roleState.isAdmin);
     document.body.classList.toggle("tb-role-test", roleState.isTester);
@@ -233,13 +236,13 @@ function syncTabsForRole() {
   } catch (_) {}
   moduleTabs.forEach((name) => {
     const tab = document.getElementById(`tab-${name}`);
-    if (tab) tab.style.display = roleState.canPreviewModules ? 'flex' : 'none';
+    if (tab) tab.style.display = canAccessView(name) ? 'flex' : 'none';
   });
   const testingTab = document.getElementById('tab-testing');
   if (testingTab) testingTab.style.display = roleState.canUseTestCampaign ? 'flex' : 'none';
   const membersTab = document.getElementById('tab-members');
   if (membersTab) membersTab.style.display = roleState.isAdmin ? 'flex' : 'none';
-  if (!roleState.canPreviewModules && typeof activeView !== 'undefined' && !['settings', 'help', 'validation'].includes(activeView)) {
+  if (typeof activeView !== 'undefined' && !canAccessView(activeView)) {
     showView('validation');
   }
 }

@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.327`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.328`.
 
 ## Objectif
 
@@ -10,7 +10,7 @@ Figer temporairement les modules pour les comptes standards, puis les verifier e
 
 - `admin` : acces a tous les modules, a la campagne et a l administration Membres.
 - `test` : acces a tous les modules et a l espace Tests, sans acces aux fonctions reservees aux admins.
-- `user` / `member` : modules metier temporairement fermes ; Compte et Aide restent accessibles.
+- `user` / `member` : Dashboard, Transactions et Analyse sont rouverts apres validation ; les autres modules metier restent temporairement fermes. Compte et Aide restent accessibles.
 
 Le role est lu depuis `public.profiles.role`. Le verrou d interface ne remplace jamais les politiques RLS Supabase.
 
@@ -64,6 +64,8 @@ En `10.5.325`, les scenarios deja valides sans reserve sont clos pour tous et qu
 En `10.5.326`, les retests Notifications Transactions, grille Compte, aides persistantes et NEAT/TEF sont valides puis clos pour tous. Le retest Dashboard en echec est traite : le role serveur est maintenant resolu avant le montage de la premiere vue protegee. Un nouveau retest Dashboard enfant conserve la chaine complete.
 
 En `10.5.327`, le retour Transactions demandant une categorie Immobilisation est traite et archive. La categorie est ajoutee par defaut aux comptes existants et futurs, hors du mix analytique quotidien. Le retour visuel Wallet est rouvert dans un scenario enfant : le panneau Archiver/Desarchiver doit rester contenu dans chaque carte sur desktop et mobile, en clair comme en sombre.
+
+En `10.5.328`, les retests Dashboard et Transactions sont valides sans reserve, clos globalement et les modules Dashboard, Transactions et Analyse sont rouverts aux comptes standards. Le premier lot mineur restant traite la saisie Trip : Moi est preselectionne et un libelle vide recoit une valeur de secours. Un retest enfant conserve le retour Trip original.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

@@ -16,10 +16,12 @@ describe('module access rules', () => {
     }
   });
 
-  it('routes standard users to validation while preserving account and help', () => {
+  it('opens validated finance modules to standard users and keeps the others frozen', () => {
     expect(normalizeAppRole('member')).toBe('user');
-    expect(resolveAppView('dashboard', 'member')).toBe('validation');
-    expect(resolveAppView('transactions', 'user')).toBe('validation');
+    expect(resolveAppView('dashboard', 'member')).toBe('dashboard');
+    expect(resolveAppView('transactions', 'user')).toBe('transactions');
+    expect(resolveAppView('analysis', 'user')).toBe('analysis');
+    expect(resolveAppView('sport', 'user')).toBe('validation');
     expect(resolveAppView('settings', 'user')).toBe('settings');
     expect(resolveAppView('help', 'user')).toBe('help');
     expect(roleUiState('member')).toMatchObject({ isRestricted: true, canPreviewModules: false });

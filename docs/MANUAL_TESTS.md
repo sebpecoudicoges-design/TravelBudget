@@ -6,7 +6,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.327`.
+- Version à valider : `10.5.328`.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
@@ -25,6 +25,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Stabilite UI et traitement global `10.5.325` : le Dashboard rejoue son entree apres le chargement initial, les aides `?` restent ouvertes, la grille Compte est compacte et les actions Transactions utilisent des bulles rouges/vertes partagees. Treize scenarios `OK` sans note et les quatre retours corriges sont clos pour tous ; quatre retests enfants conservent la filiation.
 - Premier chargement Dashboard `10.5.326` : le role Supabase est resolu avant l ouverture de la premiere vue protegee, puis Dashboard est monte avant la synchronisation. Cela evite qu un compte testeur soit dirige vers Validation et laisse wallets, budget journalier ou courbe vides. Les quatre retests passes en `OK` sont clos ; seul le nouveau retest Dashboard lie reste a executer pour ce lot.
 - Wallet et Transactions `10.5.327` : les actions Wallet forment un panneau interne a leur carte sur desktop et une grille contenue sur mobile ; Archiver/Desarchiver occupe toute la largeur mobile. La categorie Immobilisation rejoint les valeurs par defaut sans doublon, y compris pour les comptes existants, et reste exclue du mix analytique quotidien. Deux retests enfants preservent l historique des retours traites.
+- Reouverture et saisie Trip `10.5.328` : Dashboard, Transactions et Analyse sont accessibles aux comptes standards apres cloture globale de leurs tests. Dans une nouvelle depense ou entree Trip, Moi est preselectionne et le champ Libelle peut rester vide ; la valeur de secours est Depense partagee ou Entree partagee. Un retest Trip lie reste a executer.
 - Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés
