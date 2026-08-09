@@ -50,6 +50,14 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('window.tbActivityKcalForDay(day)?.workKcal');
   });
 
+  it('bounds Nutrition recovery work and chunks remote item requests', () => {
+    expect(legacy).toContain('const rows = allRows.slice(0, 25);');
+    expect(legacy).toContain('index += 80');
+    expect(legacy).toContain('Promise.all(chunks.map(ids => c.from(table("nutrition_meal_items"))');
+    expect(legacy).toContain('upsertOptimisticNutritionRow(row, { publish: false })');
+    expect(legacy).toContain('publishNutrition("pending-merge")');
+  });
+
   it('keeps the extracted modules responsible for their domain surfaces', () => {
     expect(repository).toContain('async syncLocalRow');
     expect(repository).toContain('async upsertMeal');

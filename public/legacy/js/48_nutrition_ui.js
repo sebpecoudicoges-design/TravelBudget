@@ -452,13 +452,13 @@
       } : null,
     };
   }
-  function upsertOptimisticNutritionRow(row) {
+  function upsertOptimisticNutritionRow(row, options = {}) {
     try {
       if (!row?.meal) return;
       const store = nutritionStore();
       if (typeof store?.mergeOptimisticRow === "function") {
         store.mergeOptimisticRow(row);
-        publishNutrition("optimistic");
+        if (options.publish !== false) publishNutrition("optimistic");
         return;
       }
       const meal = Object.assign({}, row.meal, { localOnly: true, offlinePending: true });
@@ -468,7 +468,7 @@
       CACHE.meals.unshift(meal);
       if (item) CACHE.items.unshift(item);
       CACHE.loaded = true;
-      publishNutrition("optimistic");
+      if (options.publish !== false) publishNutrition("optimistic");
     } catch (_) {}
   }
   function confirmNutritionRow(localRow, remoteMeal, remoteItem) {
@@ -508,7 +508,9 @@
     } catch (_) {}
   }
   function mergePendingNutritionRowsIntoCache() {
-    loadLocalMeals().forEach(row => upsertOptimisticNutritionRow(row));
+    const rows = loadLocalMeals();
+    rows.forEach(row => upsertOptimisticNutritionRow(row, { publish: false }));
+    if (rows.length) publishNutrition("pending-merge");
   }
   function saveLocalNutritionRowOnce(row) {
     if (!row) return;
@@ -526,8 +528,9 @@
     const c = client();
     const userId = uid();
     if (!c || !userId || CACHE.syncingLocal) return 0;
-    const rows = loadLocalMeals();
-    if (!rows.length) return 0;
+    const allRows = loadLocalMeals();
+    if (!allRows.length) return 0;
+    const rows = allRows.slice(0, 25);
     const forceOnlineAttempt = options.forceOnline === true || reason === "manual";
     const offline = forceOnlineAttempt && navigator?.onLine !== false ? false : (typeof window.tbShouldUseOfflineMode === "function")
       ? await window.tbShouldUseOfflineMode(`nutrition:sync:${reason || "manual"}`)
@@ -541,7 +544,7 @@
     CACHE.syncPhase = "syncing";
     CACHE.syncStatus = txt("Synchronisation en cours...", "Syncing...");
     publishNutrition("sync-start");
-    const remaining = [];
+    const remaining = allRows.slice(rows.length);
     let synced = 0;
     try {
       for (const row of rows) {
@@ -938,12 +941,15 @@
           CACHE.meals = meals.data || [];
           const mealIds = CACHE.meals.map(row => row.id).filter(Boolean);
           if (mealIds.length) {
-            const items = await c.from(table("nutrition_meal_items"))
+            const chunks = [];
+            for (let index = 0; index < mealIds.length; index += 80) chunks.push(mealIds.slice(index, index + 80));
+            const itemResults = await Promise.all(chunks.map(ids => c.from(table("nutrition_meal_items"))
               .select("id,user_id,meal_id,food_key,label,grams,kcal,protein_g,carbs_g,fat_g,fiber_g,sort_order,created_at")
-              .in("meal_id", mealIds)
-              .order("sort_order", { ascending: true });
-            if (items.error) throw items.error;
-            CACHE.items = items.data || [];
+              .in("meal_id", ids)
+              .order("sort_order", { ascending: true })));
+            const itemError = itemResults.find(result => result.error)?.error;
+            if (itemError) throw itemError;
+            CACHE.items = itemResults.flatMap(result => result.data || []);
           } else {
             CACHE.items = [];
           }

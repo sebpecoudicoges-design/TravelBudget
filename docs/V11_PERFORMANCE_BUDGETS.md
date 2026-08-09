@@ -158,6 +158,8 @@ En 10.5.334, Sport corrige la colonne de progression demandee au premier chargem
 
 En 10.5.335, Sport remplace les deux minuteurs rendus simultanement par un choix Guide/Libre porte par le domaine legacy lazy. Le shell Vite ne recoit plus qu un slot minuteur, ce qui conserve les plafonds malgre le nouveau controle. Sport mesure 441.2 / 450 KiB, l initial 257.5 / 260 KiB, le lazy 420.0 / 420 KiB, le total JS 677.4 / 678 KiB et le CSS 39.0 / 39 KiB.
 
+En 10.5.336, Alimentation decoupe les lectures d items distants, borne une reprise locale a 25 lignes et publie les lignes en attente en un seul lot. Nutrition mesure 190.3 / 235 KiB ; l initial reste a 257.5 / 260 KiB, le lazy a 420.0 / 420 KiB, le total JS a 677.4 / 678 KiB et le CSS a 39.0 / 39 KiB.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

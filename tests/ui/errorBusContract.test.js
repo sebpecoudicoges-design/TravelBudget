@@ -8,4 +8,10 @@ describe('error bus sync contract', () => {
     expect(source).toContain('.upsert(payload, { onConflict: "id", ignoreDuplicates: true })');
     expect(source).not.toContain('.from("app_error_logs").insert(payload)');
   });
+
+  it('backs off after an authorization refusal instead of hammering the API', () => {
+    expect(source).toContain('if (Date.now() < _syncBlockedUntil)');
+    expect(source).toContain('_syncBlockedUntil = Date.now() + (5 * 60 * 1000)');
+    expect(source).toContain('code === "42501"');
+  });
 });

@@ -12,6 +12,7 @@
   const _lastPushByKey = new Map();
   let _syncing = false;
   let _lastSyncAt = 0;
+  let _syncBlockedUntil = 0;
   let _consoleInstalled = false;
 
   function _now() {
@@ -243,6 +244,7 @@
 
   async function sync(reason) {
     if (_syncing) return { ok: false, skipped: "syncing" };
+    if (Date.now() < _syncBlockedUntil) return { ok: false, skipped: "server-backoff" };
     if (Date.now() - _lastSyncAt < 1200) return { ok: false, skipped: "cooldown" };
     try {
       if (!window.sb || typeof window.sb.from !== "function") return { ok: false, skipped: "no-supabase" };
@@ -276,6 +278,11 @@
       return { ok: true, synced: todo.length };
     } catch (e) {
       // Do not recursively log logger failures; keep rows local until the table/RLS exists.
+      const status = Number(e?.status || e?.statusCode || 0);
+      const code = String(e?.code || "");
+      if (status === 401 || status === 403 || code === "42501" || code === "PGRST301") {
+        _syncBlockedUntil = Date.now() + (5 * 60 * 1000);
+      }
       return { ok: false, error: e?.message || String(e), reason };
     } finally {
       _syncing = false;

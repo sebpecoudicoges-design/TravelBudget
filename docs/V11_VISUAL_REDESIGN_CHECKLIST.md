@@ -91,6 +91,7 @@ Cautions est retire de l interface en `10.5.319` ; ses 5 lignes historiques sold
 - [ ] Faire executer le retest chargement/historique Sport `10.5.334`.
 - [x] Remplacer les deux minuteurs concurrents par un selecteur Guide/Libre qui ne rend que le parcours actif.
 - [ ] Faire executer le retest choix du minuteur Sport `10.5.335` en clair/sombre et 1440/390 px.
+- [ ] Faire executer le retest Alimentation web `10.5.336` en clair/sombre et 1440/390 px, avec historique charge et changements de module.
 
 ### Lot 7 - Alimentation
 
