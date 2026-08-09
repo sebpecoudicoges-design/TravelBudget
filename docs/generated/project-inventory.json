@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "32d48bf1948447001ef5c4acc0b7356bc8118837",
-  "snapshotFingerprint": "4e6beea882f3ed72daba81dde4374f974c4605f9fc91da6fb283a4df63a37d2b",
-  "generatedAt": "2026-08-09T00:52:58.122Z",
+  "commit": "d21bedbbe763c4b7ec28b50791adff125ba31a97",
+  "snapshotFingerprint": "f27292b7f58535ce1e21a81a510836623e49e0f869d31f9104f56d38fcc19c9f",
+  "generatedAt": "2026-08-09T01:12:35.591Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.330"
+    "version": "10.5.331"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -519,7 +519,8 @@
     "supabase/migrations/20260808235452_reopen_validated_modules_and_trip_retest_10_5_328.sql",
     "supabase/migrations/20260809001212_process_asset_feedback_10_5_329.sql",
     "supabase/migrations/20260809003033_settings_categories_feedback_10_5_330.sql",
-    "supabase/migrations/20260809005159_archive_settings_module_review_10_5_330.sql"
+    "supabase/migrations/20260809005159_archive_settings_module_review_10_5_330.sql",
+    "supabase/migrations/20260809010029_process_asset_retests_10_5_331.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

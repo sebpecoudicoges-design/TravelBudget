@@ -171,7 +171,7 @@ export function assetModalSpec({
     size,
     formId,
     contentHTML: `<form id="${formId}" ${formAttrs}>${contentHTML}</form>`,
-    actionsHTML: `${extraActionsHTML}<button class="btn" type="button" data-tb-asset-close>${esc(closeLabel || tr('documents.action.cancel'))}</button><button class="btn primary" type="submit" data-tb-asset-submit form="${formId}">${esc(submitLabel)}</button>`,
+    actionsHTML: `${extraActionsHTML}<button class="btn" type="button" data-tb-asset-close>${esc(closeLabel || tr('documents.action.cancel'))}</button>${submitLabel ? `<button class="btn primary" type="submit" data-tb-asset-submit form="${formId}">${esc(submitLabel)}</button>` : ''}`,
   };
 }
 
@@ -202,7 +202,7 @@ export function renderAssetEditorModalSpec({
   return assetModalSpec({
     key: 'editor',
     title: isEdit ? tr('assets.modal.edit_title') : tr('assets.modal.add_title'),
-    subtitle: t('Budget : coche "Inclure" pour compter l’amortissement mensuel. Les transactions d’achat se lient dans Docs & mouvements pour éviter le double comptage.', 'Budget: tick "Include" to count monthly depreciation. Purchase transactions are linked in Docs & movements to avoid double counting.'),
+    subtitle: t('Valeur, amortissement et budget.', 'Value, depreciation and budget.'),
     formAttrs: `data-tb-asset-form="${isEdit ? 'edit' : 'create'}" ${isEdit ? `data-asset-id="${esc(a.id)}"` : ''}`,
     submitLabel: isEdit ? tr('documents.action.save') : tr('assets.action.create_asset'),
     tr,
@@ -543,7 +543,6 @@ export function renderAssetDocumentsModalSpec({
     subtitle: asset.name || 'Asset',
     size: 'lg',
     formAttrs: `data-tb-asset-docs-form data-asset-id="${esc(asset.id)}"`,
-    submitLabel: tr('assets.links.link_document'),
     closeLabel: tr('documents.action.close'),
     extraActionsHTML: `<button class="btn" type="button" data-tb-asset-doc-upload="${esc(asset.id)}">+ ${esc(t('Ajouter un document', 'Add document'))}</button>`,
     tr,
@@ -554,6 +553,7 @@ export function renderAssetDocumentsModalSpec({
       ${movementsHtml}
 
       <h4 class="tb-asset-link-heading"><span>2</span>${esc(tr('assets.links.documents'))}</h4>
+      <div class="tb-asset-movement-head"><span>${esc(t('Justificatif sans effet budget direct.', 'Evidence has no direct budget effect.'))}</span></div>
       <div class="tb-asset-doc-list">
         ${(links || []).length ? links.map((link) => {
           const doc = (docs || []).find((item) => String(item.id || '') === String(link.document_id || ''));
@@ -592,6 +592,8 @@ export function renderAssetDocumentsModalSpec({
           </select>
         </label>
       </div>
+
+      <button class="btn primary" type="submit" data-tb-asset-submit>${esc(tr('assets.links.link_document'))}</button>
 
       <div class="tb-asset-modal-error" data-tb-asset-error role="alert" hidden></div>`,
   });

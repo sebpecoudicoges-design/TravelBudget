@@ -1021,7 +1021,8 @@ function openInfoModal(doc){
   document.body.appendChild(wrap);
 }
 
-function editMeta(id){
+async function editMeta(id){
+  await ensureLoaded();
   const doc = (CACHE.documents||[]).find(d=>String(d.id)===String(id));
   if(!doc) return;
   openInfoModal(doc);

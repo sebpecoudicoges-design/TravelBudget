@@ -120,4 +120,17 @@ describe('tester campaign contract', () => {
     expect(reviewMigration).toContain("treated_version, '10.5.330'");
     expect(reviewMigration).toContain('archived_at = coalesce');
   });
+
+  it('archives the successful Trip retest and chains all three Assets retests in 10.5.331', () => {
+    const migration = read('supabase/migrations/20260809010029_process_asset_retests_10_5_331.sql');
+
+    expect(migration).toContain("'32800000-0000-4000-8000-000000000001'::uuid");
+    expect(migration.match(/'32900000-0000-4000-8000-00000000000[1-3]'::uuid/g)?.length).toBeGreaterThanOrEqual(6);
+    expect(migration.match(/'33100000-0000-4000-8000-00000000000[1-3]'::uuid/g)).toHaveLength(3);
+    expect(migration).toContain('Retest etat budget Patrimoine 10.5.331');
+    expect(migration).toContain('Retest justificatifs et mouvements Patrimoine 10.5.331');
+    expect(migration).toContain('Retest modification document Patrimoine 10.5.331');
+    expect(migration).toContain("module.module_key = 'assets'");
+    expect(migration).toContain("set app_version = '10.5.331'");
+  });
 });

@@ -341,7 +341,7 @@
       "assets.group.lifecycle": "Lifecycle",
       "assets.action.depreciation_settings": "Set depreciation",
       "assets.form.budget_include": "Include monthly depreciation in budget",
-      "assets.form.budget_include_hint": "Checked: only the monthly amount reduces the budget. Unchecked: the asset stays tracked without budget impact.",
+      "assets.form.budget_include_hint": "Checked: depreciation included. Unchecked: depreciation excluded.",
       "assets.links.action": "Links and documents",
       "assets.links.title": "Linked documents and movements",
       "assets.links.link_document": "Link this document",

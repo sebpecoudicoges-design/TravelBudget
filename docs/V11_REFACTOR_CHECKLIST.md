@@ -34,6 +34,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Rouvrir Dashboard, Transactions et Analyse aux comptes standards, puis traiter le premier retour mineur Trip avec payeur Moi et libelle de secours en `10.5.328`.
 - [x] Traiter les trois retours Patrimoine, regrouper les liens et documents, clarifier l inclusion budget et ouvrir les retests relies en `10.5.329`.
 - [x] Traiter le retour Settings Categories en `10.5.330` : renommage propage, ordre persistant, couleurs guidees, suppression de sous-categorie et retest relie.
+- [x] Traiter les trois retests Patrimoine en `10.5.331` : aide budget concise, liaison documentaire replacee et chargement du cache avant modification.
 
 ## Chantier 1 - Budget journalier et transactions
 

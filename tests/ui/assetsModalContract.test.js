@@ -61,5 +61,11 @@ describe('assets shared modal migration', () => {
     expect(legacySource).not.toContain("showView('documents')");
     expect(legacySource).toContain('await window.tbDocumentsPreview?.(docId)');
     expect(legacySource).toContain('await window.tbDocumentsEditMeta?.(docId)');
+    expect(viewSource).toContain('Justificatif sans effet budget direct');
+  });
+
+  it('loads the document cache before opening metadata from Assets', () => {
+    const documentsSource = fs.readFileSync('public/legacy/js/43_documents_ui.js', 'utf8');
+    expect(documentsSource).toMatch(/async function editMeta\(id\)\{\s*await ensureLoaded\(\);/);
   });
 });

@@ -197,6 +197,10 @@ describe('Asset view helpers', () => {
     expect(docs.contentHTML).toContain('data-tb-asset-open-trip-expense="trip-1"');
     expect(docs.contentHTML).toContain('Modifier Trip');
     expect(docs.contentHTML).toContain('Sorti du budget pour éviter le double comptage.');
+    expect(docs.contentHTML).toContain('Justificatif sans effet budget direct');
+    expect(docs.contentHTML).toContain('class="btn primary" type="submit" data-tb-asset-submit');
+    expect(docs.contentHTML).toContain('assets.links.link_document');
+    expect(docs.actionsHTML).not.toContain('assets.links.link_document');
     expect(docs.actionsHTML).toContain('data-tb-asset-doc-upload="asset-1"');
     expect(docs.contentHTML).toContain('Facture.pdf');
   });

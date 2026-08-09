@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.330`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.331`.
 
 ## Objectif
 
@@ -70,6 +70,8 @@ En `10.5.328`, les retests Dashboard et Transactions sont valides sans reserve, 
 En `10.5.329`, les trois retours Patrimoine sont traites ensemble : effet de la case budget explique, commandes rangees par fonction, mouvements et documents reunis au meme niveau, apercu PDF autorise uniquement depuis Supabase et modification documentaire directe. Les notes originales, y compris le scenario marque OK, sont archivees avec leur date puis trois retests enfants conservent l histoire.
 
 En `10.5.330`, le retour Settings Categories et la revue globale du module sont traites et archives : erreurs explicites, renommage propage aux donnees liees, ordre des categories, selecteur de couleur coherent avec heritage et suppression confirmee des sous-categories. Le retest Categories existant est reutilise et relie au retour original.
+
+En `10.5.331`, le retest Trip est valide sans note et clos globalement. Les trois retests Patrimoine `10.5.329` sont lus puis archives : la case budget explique brievement ses deux etats, **Lier ce document** rejoint le bloc des justificatifs et **Modifier les infos** attend le chargement reel du cache Documents. Trois nouveaux retests enfants conservent la filiation.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

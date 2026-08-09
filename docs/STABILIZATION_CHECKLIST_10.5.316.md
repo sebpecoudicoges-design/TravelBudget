@@ -16,10 +16,10 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.330`.
+- Version cible de campagne : `10.5.331`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
-- 51 resultats et 13 revues de module traites sont archives avec date de test, date de traitement, version et note.
-- 18 scenarios restent ouverts, dont cinq retests derives actifs : saisie rapide Trip `10.5.328`, gestion Categories Settings `10.5.330` et les trois parcours Patrimoine `10.5.329`. Les autres retours ouverts conservent leur scenario d origine.
+- 55 resultats et 14 revues de module traites sont archives avec date de test, date de traitement, version et note.
+- 17 scenarios restent ouverts. Le retest Trip `10.5.328` est clos ; gestion Categories Settings `10.5.330` et les trois nouveaux parcours Patrimoine `10.5.331` conservent leur filiation. Les autres retours ouverts gardent leur scenario d origine.
 - Dashboard, Transactions et Analyse sont valides puis rouverts aux comptes standards ; les autres modules metier restent geles.
 - A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
@@ -127,7 +127,8 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 - [x] Conserver et expliciter la progression de l ajout documentaire.
 - [x] Permettre modification et apercu direct du document lie sans changer de module.
 - [x] Corriger l avertissement CSP sans autoriser toutes les frames externes.
-- [ ] Faire executer les trois retests Patrimoine `10.5.329` avant reouverture du module.
+- [x] Lire et traiter les trois retests Patrimoine `10.5.329` en `10.5.331` : aide budget concise, justificatifs regroupes et modification documentaire fiable.
+- [ ] Faire executer les trois retests Patrimoine descendants `10.5.331` avant reouverture du module.
 
 ## Chantier 10 - Cautions
 
@@ -149,7 +150,7 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 
 - [x] Corriger les textes francais.
 - [x] Moderniser le bandeau lateral sans perdre les commandes.
-- [ ] Verifier l apercu et les liens metier avec les retests Patrimoine `10.5.329`.
+- [ ] Verifier l apercu et les liens metier avec les retests Patrimoine `10.5.331`.
 
 ## Chantier 12 - Aide
 

@@ -74,7 +74,8 @@ Cautions est retire de l interface en `10.5.319` ; ses 5 lignes historiques sold
 - [x] Ameliorer recherche transaction/Trip par nom, montant, date et devise.
 - [x] Conserver les liens documents et mouvements existants.
 - [x] Ajouter test contrat Patrimoine premium.
-- [ ] Valider visuellement les trois retests `10.5.329` en clair/sombre et 1440/390 px avant reouverture ; le module reste masque aux comptes standards pendant ce lot.
+- [x] Lire et traiter les trois retests `10.5.329` en `10.5.331`.
+- [ ] Valider visuellement les trois retests descendants `10.5.331` en clair/sombre et 1440/390 px avant reouverture ; le module reste masque aux comptes standards pendant ce lot.
 
 ### Lot 6 - Sport
 

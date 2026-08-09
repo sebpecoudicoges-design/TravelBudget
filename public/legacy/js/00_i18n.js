@@ -351,7 +351,7 @@
       "assets.group.lifecycle": "Cycle de vie",
       "assets.action.depreciation_settings": "Regler l'amortissement",
       "assets.form.budget_include": "Inclure l'amortissement mensuel dans le budget",
-      "assets.form.budget_include_hint": "Coche : seul le montant mensuel reduit le budget. Decoche : l'asset reste suivi sans impact budget.",
+      "assets.form.budget_include_hint": "Coche : amortissement inclus. Decoche : amortissement exclu.",
       "assets.links.action": "Liens et documents",
       "assets.links.title": "Documents et mouvements lies",
       "assets.links.link_document": "Lier ce document",
