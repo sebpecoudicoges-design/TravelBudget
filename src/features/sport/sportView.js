@@ -12,7 +12,6 @@ export function renderSportShell({
   profileHTML = '',
   progressionHTML = '',
   builderHTML = '',
-  freeTimerHTML = '',
   timerHTML = '',
   historyHTML = '',
   escapeHTML = fallbackEscape,
@@ -32,7 +31,6 @@ export function renderSportShell({
         ${progressionHTML}
         <div class="tb-sport-grid">
           ${builderHTML}
-          ${freeTimerHTML}
           ${timerHTML}
         </div>
         ${historyHTML}

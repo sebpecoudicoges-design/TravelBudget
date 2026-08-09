@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.334`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.335`.
 
 ## Objectif
 
@@ -78,6 +78,8 @@ En `10.5.332`, la revue Trip sur les liens incomplets est lue puis archivee : le
 En `10.5.333`, les retours Travail sont lus puis archives : changement FR/EN reactif, BMR retire de ce module, revenus detailles sans addition de devises incompatibles et dossiers Documents consultables, alimentables et liables aux missions, revenus ou periodes. Trois retests descendants conservent les notes et la filiation.
 
 En `10.5.334`, le premier lot Sport traite ensemble les deux notes **Programme et edition** : la lecture de progression utilise la vraie colonne SQL `smoothed_1rm_kg`, et l historique garde sept seances detaillees avant de compacter les suivantes sans retirer leurs actions. Un retest descendant couvre premier chargement, console et historique.
+
+En `10.5.335`, le retour **Timer et fin de seance** est traite : le testeur choisit Guide ou Libre, un seul minuteur est rendu et le choix est verrouille pendant l activite. Le chrono libre n affiche plus la distance cible du catalogue comme une distance deja parcourue et l action de fin devient **Fini**. Le resultat est archive et un retest descendant preserve son histoire.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

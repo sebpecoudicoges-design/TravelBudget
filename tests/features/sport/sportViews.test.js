@@ -56,7 +56,6 @@ describe('Sport timer view', () => {
       profileHTML: '<section data-slot="profile"></section>',
       progressionHTML: '<section data-slot="progression"></section>',
       builderHTML: '<section data-slot="builder"></section>',
-      freeTimerHTML: '<section data-slot="free"></section>',
       timerHTML: '<section data-slot="timer"></section>',
       historyHTML: '<section data-slot="history"></section>',
       escapeHTML: api.escapeHTML,
@@ -68,6 +67,7 @@ describe('Sport timer view', () => {
     expect(html).toContain('45:00 - 320 kcal');
     expect(html).toContain('data-slot="stats"');
     expect(html).toContain('data-slot="builder"');
+    expect(html).toContain('data-slot="timer"');
     expect(html).toContain('data-slot="history"');
   });
 
@@ -150,6 +150,8 @@ describe('Sport timer view', () => {
     expect(running).toContain('90s');
     expect(running).toContain('id="sport-free-focus"');
     expect(running).toContain('id="sport-free-stop"');
+    expect(running).toContain('>Fini</button>');
+    expect(running).not.toContain('3 km');
     expect(running).toContain('id="sport-free-pause"');
     expect(running).toContain('id="sport-free-cancel"');
   });

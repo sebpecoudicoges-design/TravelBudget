@@ -89,6 +89,8 @@ Cautions est retire de l interface en `10.5.319` ; ses 5 lignes historiques sold
 - [x] Verifier historique clair/sombre en 1440/390 px sans debordement.
 - [x] Ajouter test contrat Sport premium pour la densite de l historique.
 - [ ] Faire executer le retest chargement/historique Sport `10.5.334`.
+- [x] Remplacer les deux minuteurs concurrents par un selecteur Guide/Libre qui ne rend que le parcours actif.
+- [ ] Faire executer le retest choix du minuteur Sport `10.5.335` en clair/sombre et 1440/390 px.
 
 ### Lot 7 - Alimentation
 

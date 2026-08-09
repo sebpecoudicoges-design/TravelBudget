@@ -110,6 +110,7 @@
     CACHE.timerBeepVolume = loadTimerPrefs().beepVolume;
     CACHE.timer = loadTimerState();
     CACHE.freeTimer = loadFreeTimerState();
+    CACHE.timerMode = CACHE.timer ? "guided" : CACHE.freeTimer ? "free" : "guided";
     if (CACHE.timer || CACHE.freeTimer) startTicker();
     CACHE.bodyMeasurements = loadBodyMeasurementsLocal();
     CACHE.bodyMeasurementsLoaded = false;
@@ -2401,6 +2402,17 @@
       api: sportViewApi(),
     }) || "";
   }
+  function renderTimerChoice() {
+    const free = CACHE.freeTimer || (!CACHE.timer && CACHE.timerMode === "free");
+    const locked = CACHE.timer || CACHE.freeTimer ? "disabled" : "";
+    return `<div class="tb-sport-timer-column">
+      <div class="tb-sport-timer-mode" role="group" aria-label="${txt("Choix du minuteur", "Timer choice")}">
+        <button class="btn small ${free ? "" : "active"}" type="button" data-sport-timer-mode="guided" aria-pressed="${free ? "false" : "true"}" ${locked}>${txt("Guide", "Guided")}</button>
+        <button class="btn small ${free ? "active" : ""}" type="button" data-sport-timer-mode="free" aria-pressed="${free ? "true" : "false"}" ${locked}>${txt("Libre", "Free")}</button>
+      </div>
+      ${free ? renderFreeTimer() : renderTimer()}
+    </div>`;
+  }
 
   function allVisibleSportSessions() {
     const remoteSessions = CACHE.sessions || [];
@@ -2652,8 +2664,7 @@
       profileHTML: renderSportProfileDashboard(),
       progressionHTML: renderExerciseProgressionAnalysis(),
       builderHTML: renderBuilder(),
-      freeTimerHTML: renderFreeTimer(),
-      timerHTML: renderTimer(),
+      timerHTML: renderTimerChoice(),
       historyHTML: renderHistory(),
       escapeHTML: esc,
     }) || "";
@@ -3015,6 +3026,13 @@
     });
     const start = root.querySelector("#sport-start");
     if (start) start.onclick = startTimer;
+    root.querySelectorAll("[data-sport-timer-mode]").forEach(btn => {
+      btn.onclick = () => {
+        if (CACHE.timer || CACHE.freeTimer) return;
+        CACHE.timerMode = btn.getAttribute("data-sport-timer-mode") === "free" ? "free" : "guided";
+        renderSport("timer-mode");
+      };
+    });
     root.querySelectorAll("#sport-mark-done,#sport-mark-done-builder").forEach(btn => {
       btn.onclick = completePlanWithoutTimer;
     });
@@ -3285,6 +3303,8 @@
 
   function startTimer() {
     if (!CACHE.plan.length) return;
+    if (CACHE.freeTimer) return;
+    CACHE.timerMode = "guided";
     saveBodyWeight(document.getElementById("sport-weight")?.value || bodyWeight());
     saveBodyHeight(document.getElementById("sport-height")?.value || bodyHeight());
     const seq = makeSequence();
@@ -3367,6 +3387,7 @@
     saveBodyWeight(document.getElementById("sport-weight")?.value || bodyWeight());
     saveBodyHeight(document.getElementById("sport-height")?.value || bodyHeight());
     CACHE.freeTimerExerciseKey = ex?.key || item.libraryKey || "";
+    CACHE.timerMode = "free";
     CACHE.freeTimer = normalizeFreeTimerState({
       item,
       startedAt: Date.now(),
@@ -3376,7 +3397,7 @@
       bodyHeightCm: bodyHeight(),
       resultReps: item.mode === "reps" ? n(item.targetReps, 0) : null,
       resultWeightKg: supportsExternalLoad(item) ? effectiveLoadKg(item, bodyWeight()) : 0,
-      resultDistanceM: n(item.distanceM, 0),
+      resultDistanceM: null,
     });
     requestWakeLock();
     saveFreeTimerState();

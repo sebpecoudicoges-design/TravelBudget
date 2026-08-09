@@ -6,7 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.334`.
+- Version à valider : `10.5.335`.
+- APK : `travelbudget-10.5.335-20260809-133024-debug.apk` (`7EB858F8264B09A7D80461DF33D2CFA1427BCC9BA3D6B0508B951D5F8C51E8EA`).
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
@@ -32,6 +33,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Trip `10.5.332` : les badges et panneaux Audit sont rouges. Le detail explique le probleme sans afficher `missing_*` ni UUID. **Reparer** ouvre la modification de la depense ; **Contacter le support** prepare un diagnostic sans envoi automatique. Le retest descend de **Recap, historique et documents**.
 - Travail `10.5.333` : basculer FR/EN sans quitter Travail, verifier l absence de BMR, conserver des revenus AUD et EUR avec net/brut/periode, puis lier et ouvrir/ajouter un document depuis une mission, un revenu et une periode. Les trois retests descendants sont disponibles dans l onglet Tests.
 - Sport `10.5.334` : depuis un chargement frais, ouvrir Sport avec la console visible puis Historique avec au moins neuf seances. Aucune requete 400 `smoothed_e1rm_kg` ne doit apparaitre ; les sept dernieres seances restent detaillees et les anciennes lignes gardent Refaire, Ajuster, Modifier date et Supprimer.
+- Sport `10.5.335` : alterner Guide et Libre et verifier qu un seul minuteur est visible. Lancer Course facile : aucune distance realisee ne doit apparaitre avant saisie. Utiliser **Fini**, saisir la distance, sauvegarder, puis verifier la seance dans l historique.
 - Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés

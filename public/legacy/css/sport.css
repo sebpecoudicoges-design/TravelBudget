@@ -8,6 +8,10 @@
 .tb-sport-stat span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:900;}
 .tb-sport-stat strong{display:block;margin-top:6px;font-size:22px;line-height:1;font-weight:950;color:#0f172a;}
 .tb-sport-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr);gap:14px;}
+.tb-sport-timer-column{display:grid;align-content:start;gap:10px;min-width:0;}
+.tb-sport-timer-mode{display:flex;gap:6px;padding:5px;border:1px solid var(--tb-line,rgba(148,163,184,.2));border-radius:var(--tb-radius-sm,12px);background:var(--tb-surface-soft,#fff1e3);}
+.tb-sport-timer-mode .btn{flex:1;min-height:40px;}
+.tb-sport-timer-mode .btn.active{border-color:var(--tb-coral,#ff6b4a);background:var(--tb-coral,#ff6b4a);color:#fff;}
 .tb-sport-card{border:1px solid rgba(148,163,184,.20);border-radius:22px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 14px 36px rgba(15,23,42,.06);padding:16px;}
 .tb-sport-card h3{margin:0 0 10px;font-size:18px;}
 .tb-sport-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;}

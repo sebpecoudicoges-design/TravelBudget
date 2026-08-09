@@ -156,6 +156,9 @@ describe('Sport domain contract', () => {
     expect(historyView).toContain('export function isTodaySession');
     expect(legacy).toContain('sportTimerView?.renderSportTimer');
     expect(legacy).toContain('sportView?.renderSportShell');
+    expect(legacy).toContain('function renderTimerChoice()');
+    expect(legacy).toContain('data-sport-timer-mode="guided"');
+    expect(legacy).toContain('data-sport-timer-mode="free"');
     expect(legacy).toContain('sportHistoryView?.renderSportHistory');
     expect(legacy).not.toContain('<div class="tb-sport-shell">');
     expect(legacy).not.toContain('<div class="tb-sport-grid">');

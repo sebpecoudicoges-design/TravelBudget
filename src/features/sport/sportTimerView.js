@@ -266,7 +266,7 @@ export function renderFreeTimer({
   const mode = String(selected?.mode || 'time');
   const load = h.n(running?.resultWeightKg ?? selected?.weightKg, 0);
   const reps = h.n(running?.resultReps ?? selected?.targetReps, 0);
-  const distance = h.n(running?.resultDistanceM ?? selected?.distanceM, 0);
+  const distance = h.n(running?.resultDistanceM, 0);
   const supportsLoad = h.supportsExternalLoad(selected);
   const activityLabel = h.labelActivity(selected?.activityKey || 'strength');
   const equipmentLabel = h.labelEquipment(selected?.equipment || '');
@@ -307,7 +307,7 @@ export function renderFreeTimer({
             <button class="btn primary" type="button" id="sport-free-start">${h.esc(h.txt('Demarrer chrono', 'Start timer'))}</button>
           </div>` : ''}
           ${running && !stopped ? `<div class="tb-sport-actions" style="justify-content:center;margin-top:12px;">
-            <button class="btn primary" type="button" id="sport-free-stop">${h.esc(h.txt('Arreter', 'Stop'))}</button>
+            <button class="btn primary" type="button" id="sport-free-stop">${h.esc(h.txt('Fini', 'Done'))}</button>
             <button class="btn" type="button" id="sport-free-pause">${h.esc(running.paused ? h.txt('Reprendre', 'Resume') : h.txt('Pause', 'Pause'))}</button>
             <button class="btn danger" type="button" id="sport-free-cancel">${h.esc(h.txt('Abandonner', 'Discard'))}</button>
           </div>` : ''}
