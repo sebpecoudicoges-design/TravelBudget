@@ -154,6 +154,8 @@ En 10.5.332, Trip rend l audit des liens lisible et actionnable en reutilisant s
 
 En 10.5.333, Travail separe les revenus par devise et etend les dossiers Documents aux missions, revenus et periodes. La composition documentaire reste dans le domaine legacy charge a la demande afin de ne pas depasser le bundle lazy ; aucun plafond n est releve. Travail mesure 58.4 / 90 KiB, l initial 257.4 / 260 KiB, le lazy 420.0 / 420 KiB, le total JS 677.5 / 678 KiB et le CSS 39.0 / 39 KiB.
 
+En 10.5.334, Sport corrige la colonne de progression demandee au premier chargement et compacte l historique apres les sept seances recentes. Le parametre mort `sessionId` du renderer de contenu est retire pour absorber le nouveau contrat visuel sans relever les plafonds. Sport mesure 440.0 / 450 KiB, l initial 257.4 / 260 KiB, le lazy 420.0 / 420 KiB, le total JS 677.5 / 678 KiB et le CSS 39.0 / 39 KiB.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

@@ -6,7 +6,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.333`.
+- Version à valider : `10.5.334`.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
@@ -31,6 +31,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Patrimoine `10.5.331` : la case budget indique clairement les deux etats **coche : inclus** et **decoche : exclu**. **Lier ce document** est place dans **Documents justificatifs** et un texte distingue le justificatif des mouvements directement lies, seuls capables de modifier l exclusion budget. Depuis un chargement frais, **Modifier les infos** attend le cache Documents et doit repondre au premier clic. Les trois retests enfants prolongent ceux de `10.5.329`.
 - Trip `10.5.332` : les badges et panneaux Audit sont rouges. Le detail explique le probleme sans afficher `missing_*` ni UUID. **Reparer** ouvre la modification de la depense ; **Contacter le support** prepare un diagnostic sans envoi automatique. Le retest descend de **Recap, historique et documents**.
 - Travail `10.5.333` : basculer FR/EN sans quitter Travail, verifier l absence de BMR, conserver des revenus AUD et EUR avec net/brut/periode, puis lier et ouvrir/ajouter un document depuis une mission, un revenu et une periode. Les trois retests descendants sont disponibles dans l onglet Tests.
+- Sport `10.5.334` : depuis un chargement frais, ouvrir Sport avec la console visible puis Historique avec au moins neuf seances. Aucune requete 400 `smoothed_e1rm_kg` ne doit apparaitre ; les sept dernieres seances restent detaillees et les anciennes lignes gardent Refaire, Ajuster, Modifier date et Supprimer.
 - Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés

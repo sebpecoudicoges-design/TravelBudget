@@ -120,6 +120,7 @@ describe('sport repository', () => {
     })).resolves.toEqual(rows);
 
     expect(client.calls).toEqual(expect.arrayContaining([
+      { table: 'metric_history', method: 'select', value: 'id,user_id,exercise_id,session_id,weight_kg,reps,estimated_1rm_kg,smoothed_1rm_kg,training_max_kg,reference_weight_kg,recommended_weight_kg,calculation_method,created_at' },
       { table: 'metric_history', method: 'eq', column: 'user_id', value: 'user-1' },
       { table: 'metric_history', method: 'order', column: 'created_at', options: { ascending: false } },
       { table: 'metric_history', method: 'limit', value: 120 },

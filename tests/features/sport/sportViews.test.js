@@ -218,6 +218,23 @@ describe('Sport history view', () => {
     expect(html).toContain('Synchro Supabase indisponible');
     expect(html).toContain('Aucune seance enregistree');
   });
+
+  it('keeps seven detailed workouts then compacts older sessions without losing actions', () => {
+    const sessions = Array.from({ length: 9 }, (_, index) => ({
+      id: `s${index + 1}`,
+      activity_type: 'strength',
+      started_at: `2026-07-${String(20 - index).padStart(2, '0')}T06:00:00`,
+      duration_seconds: 1800,
+      estimated_kcal: 250,
+    }));
+    const html = renderSportHistory({ sessions, api });
+
+    expect((html.match(/tb-sport-history-card--compact/g) || [])).toHaveLength(2);
+    expect(html).toContain('data-sport-edit-session="s8"');
+    expect(html).toContain('data-sport-edit-date="s9"');
+    expect(html).toContain('data-sport-delete-session="s9"');
+    expect(html).toContain('data-sport-repeat-session="s8"');
+  });
 });
 
 describe('Sport program view', () => {

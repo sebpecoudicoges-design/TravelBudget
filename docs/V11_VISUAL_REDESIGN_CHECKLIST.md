@@ -81,11 +81,14 @@ Cautions est retire de l interface en `10.5.319` ; ses 5 lignes historiques sold
 
 ### Lot 6 - Sport
 
-- [ ] Inventorier programme, timer, grand ecran, chrono libre, historique, ajuster, progression et profil.
+- [x] Inventorier programme, timer, grand ecran, chrono libre, historique, ajuster, progression et profil.
 - [ ] Garder le timer actif, lisible et sans reset visuel en plein ecran.
 - [ ] Rendre progression charges et analyse e1RM plus lisibles.
-- [ ] Verifier mobile et absence de veille/reprise bloquante si supportee.
-- [ ] Ajouter test contrat Sport premium.
+- [x] Garder sept cartes d historique detaillees puis compacter les anciennes sans perdre leurs actions.
+- [ ] Verifier absence de veille/reprise bloquante si supportee.
+- [x] Verifier historique clair/sombre en 1440/390 px sans debordement.
+- [x] Ajouter test contrat Sport premium pour la densite de l historique.
+- [ ] Faire executer le retest chargement/historique Sport `10.5.334`.
 
 ### Lot 7 - Alimentation
 

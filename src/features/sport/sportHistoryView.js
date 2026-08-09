@@ -93,7 +93,6 @@ export function renderSportWeekVisual({ sessions = [], api = {} }) {
 }
 
 export function renderSessionContent({
-  sessionId,
   plan = [],
   sets = [],
   api = {},
@@ -145,14 +144,15 @@ export function renderHistoryGrid({
   const visibleSessions = (sessions || []).slice(0, 20);
   const hiddenCount = Math.max(0, (sessions || []).length - visibleSessions.length);
   return `<div class="tb-sport-history" style="margin-top:10px;">
-      ${visibleSessions.length ? visibleSessions.map((session) => {
+      ${visibleSessions.length ? visibleSessions.map((session, index) => {
+        const compact = index >= 7;
         const sessionItems = session.localPlanCount
           ? new Array(session.localPlanCount).fill(null)
           : (items || []).filter((item) => String(item.session_id) === String(session.id));
         const itemIds = new Set(sessionItems.map((item) => String(item?.id || '')).filter(Boolean));
         const setCount = session.localSetCount || (sets || []).filter((set) => itemIds.has(String(set.item_id || ''))).length;
         const firstExercise = session.first_exercise || sessionItems.find(Boolean)?.exercise_name || '';
-        return `<div class="tb-sport-history-card">
+        return `<div class="tb-sport-history-card${compact ? ' tb-sport-history-card--compact' : ''}">
           <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
             <div style="font-weight:950;">${h.esc(h.labelActivity(session.activity_type || sessionItems[0]?.activity_key || 'strength'))}</div>
             <span class="tb-sport-chip">${h.esc(session.localOnly ? h.txt('local', 'local') : h.txt('sync', 'synced'))}</span>
@@ -166,8 +166,8 @@ export function renderHistoryGrid({
             <span class="tb-sport-chip">${setCount} ${h.esc(h.txt('series', 'sets'))}</span>
             ${session.perceived_effort ? `<span class="tb-sport-chip">RPE ${h.esc(String(session.perceived_effort))}/10</span>` : ''}
           </div>
-          ${session.mood_after ? `<div class="muted" style="margin-top:8px;">${h.esc(h.txt('Apres', 'After'))}: ${h.esc(session.mood_after)}</div>` : ''}
-          ${renderSessionContent({ sessionId: session.id, plan: planForSession(session.id), sets: doneSetsForSession(session.id), api })}
+          ${!compact && session.mood_after ? `<div class="muted" style="margin-top:8px;">${h.esc(h.txt('Apres', 'After'))}: ${h.esc(session.mood_after)}</div>` : ''}
+          ${compact ? '' : renderSessionContent({ plan: planForSession(session.id), sets: doneSetsForSession(session.id), api })}
           <div class="tb-sport-actions" style="margin-top:10px;">
             <button class="btn primary" type="button" data-sport-repeat-session="${h.esc(String(session.id || ''))}">${h.esc(h.txt('Refaire', 'Repeat'))}</button>
             <button class="btn" type="button" data-sport-edit-session="${h.esc(String(session.id || ''))}">${h.esc(h.txt('Ajuster', 'Adjust'))}</button>

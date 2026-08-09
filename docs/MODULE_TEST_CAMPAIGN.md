@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.333`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.334`.
 
 ## Objectif
 
@@ -76,6 +76,8 @@ En `10.5.331`, le retest Trip est valide sans note et clos globalement. Les troi
 En `10.5.332`, la revue Trip sur les liens incomplets est lue puis archivee : les alertes passent en rouge, le detail ne montre plus les types techniques ni les UUID, **Reparer** ouvre la modification de la depense et **Contacter le support** prepare le diagnostic. Un retest enfant prolonge **Recap, historique et documents**.
 
 En `10.5.333`, les retours Travail sont lus puis archives : changement FR/EN reactif, BMR retire de ce module, revenus detailles sans addition de devises incompatibles et dossiers Documents consultables, alimentables et liables aux missions, revenus ou periodes. Trois retests descendants conservent les notes et la filiation.
+
+En `10.5.334`, le premier lot Sport traite ensemble les deux notes **Programme et edition** : la lecture de progression utilise la vraie colonne SQL `smoothed_1rm_kg`, et l historique garde sept seances detaillees avant de compacter les suivantes sans retirer leurs actions. Un retest descendant couvre premier chargement, console et historique.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 
