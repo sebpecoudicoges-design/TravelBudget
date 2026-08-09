@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.328`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.329`.
 
 ## Objectif
 
@@ -66,6 +66,8 @@ En `10.5.326`, les retests Notifications Transactions, grille Compte, aides pers
 En `10.5.327`, le retour Transactions demandant une categorie Immobilisation est traite et archive. La categorie est ajoutee par defaut aux comptes existants et futurs, hors du mix analytique quotidien. Le retour visuel Wallet est rouvert dans un scenario enfant : le panneau Archiver/Desarchiver doit rester contenu dans chaque carte sur desktop et mobile, en clair comme en sombre.
 
 En `10.5.328`, les retests Dashboard et Transactions sont valides sans reserve, clos globalement et les modules Dashboard, Transactions et Analyse sont rouverts aux comptes standards. Le premier lot mineur restant traite la saisie Trip : Moi est preselectionne et un libelle vide recoit une valeur de secours. Un retest enfant conserve le retour Trip original.
+
+En `10.5.329`, les trois retours Patrimoine sont traites ensemble : effet de la case budget explique, commandes rangees par fonction, mouvements et documents reunis au meme niveau, apercu PDF autorise uniquement depuis Supabase et modification documentaire directe. Les notes originales, y compris le scenario marque OK, sont archivees avec leur date puis trois retests enfants conservent l histoire.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

@@ -32,6 +32,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Ajouter le role `test`, le gel central des modules pour les comptes standards et une campagne Supabase integree avec scenarios, OK/Pas OK, notes et cloture par module.
 - [x] Reintegrer les actions Wallet dans un panneau interne responsive et ajouter Immobilisation aux categories par defaut avec retro-propagation et retests lies en `10.5.327`.
 - [x] Rouvrir Dashboard, Transactions et Analyse aux comptes standards, puis traiter le premier retour mineur Trip avec payeur Moi et libelle de secours en `10.5.328`.
+- [x] Traiter les trois retours Patrimoine, regrouper les liens et documents, clarifier l inclusion budget et ouvrir les retests relies en `10.5.329`.
 
 ## Chantier 1 - Budget journalier et transactions
 

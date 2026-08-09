@@ -1064,7 +1064,9 @@ if(unlinkMovement){
   return;
 }
   
-  const openDoc = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-open-doc]'); if(openDoc){ ev.preventDefault(); const docId=openDoc.getAttribute('data-tb-asset-open-doc'); closeModal(); if(typeof showView==='function') showView('documents'); try{ if(typeof window.tbDocumentsPreview !== 'function' && typeof window.tbLoadLegacyDomain === 'function') await window.tbLoadLegacyDomain('documents'); window.tbDocumentsPreview?.(docId); }catch(_){} return; } const unlinkDoc = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-unlink-doc]'); if(unlinkDoc){ ev.preventDefault(); const form=unlinkDoc.closest('[data-tb-asset-docs-form]'); const aid=form?.getAttribute('data-asset-id')||''; if(confirm(atxt('Délier ce document ?', 'Unlink this document?'))){ try{ await unlinkAssetDocument(unlinkDoc.getAttribute('data-tb-asset-unlink-doc')); await renderAssets('asset-doc-unlinked'); await openAssetDocumentsModal(aid, atxt('Document délié.', 'Document unlinked.')); }catch(e){ alert(e && (e.message||e.code) || e); } } return; } const sellAsset = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-sell]');
+  const openDoc = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-open-doc]'); if(openDoc){ ev.preventDefault(); const docId=openDoc.getAttribute('data-tb-asset-open-doc'); try{ if(typeof window.tbDocumentsPreview !== 'function' && typeof window.tbLoadLegacyDomain === 'function') await window.tbLoadLegacyDomain('documents'); await window.tbDocumentsPreview?.(docId); }catch(e){ alert(e && (e.message||e.code) || e); } return; }
+  const editDoc = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-edit-doc]'); if(editDoc){ ev.preventDefault(); const docId=editDoc.getAttribute('data-tb-asset-edit-doc'); closeModal(); try{ if(typeof window.tbDocumentsEditMeta !== 'function' && typeof window.tbLoadLegacyDomain === 'function') await window.tbLoadLegacyDomain('documents'); await window.tbDocumentsEditMeta?.(docId); }catch(e){ alert(e && (e.message||e.code) || e); } return; }
+  const unlinkDoc = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-unlink-doc]'); if(unlinkDoc){ ev.preventDefault(); const form=unlinkDoc.closest('[data-tb-asset-docs-form]'); const aid=form?.getAttribute('data-asset-id')||''; if(confirm(atxt('Délier ce document ?', 'Unlink this document?'))){ try{ await unlinkAssetDocument(unlinkDoc.getAttribute('data-tb-asset-unlink-doc')); await renderAssets('asset-doc-unlinked'); await openAssetDocumentsModal(aid, atxt('Document délié.', 'Document unlinked.')); }catch(e){ alert(e && (e.message||e.code) || e); } } return; } const sellAsset = ev.target && ev.target.closest && ev.target.closest('[data-tb-asset-sell]');
 if(sellAsset){
   ev.preventDefault();
   openSellAssetModal(sellAsset.getAttribute('data-tb-asset-sell'));
@@ -1136,104 +1138,20 @@ async function addDocumentToAsset(assetId){
 .tb-asset-facts span{font-size:11px;color:#475569;background:#f8fafc;border:1px solid rgba(15,23,42,.08);border-radius:999px;padding:6px 9px}
 .tb-asset-facts strong{color:#0f172a}
 .tb-asset-facts span.done{background:#ecfdf5;color:#047857;border-color:rgba(4,120,87,.18);font-weight:900}
-.tb-asset-metrics em.depr{color:#ea580c}.tb-asset-progress{margin-top:16px}.tb-asset-progress div{display:flex;justify-content:space-between;color:#64748b;font-size:11px;margin-bottom:7px}.tb-asset-progress b{display:block;height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden}.tb-asset-progress i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#06b6d4,#8b5cf6)}.tb-asset-chart{height:86px;margin-top:14px;border-radius:18px;background:linear-gradient(180deg,#eef2f7,#e5eaf1);border:1px solid rgba(15,23,42,.07)}.tb-asset-owners{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tb-asset-owners span{font-size:11px;color:#334155;border:1px solid rgba(15,23,42,.10);border-radius:999px;padding:6px 9px;background:#f8fafc}.tb-asset-owner-warning{background:#fff7ed!important;color:#c2410c!important;border-color:rgba(194,65,12,.22)!important}.tb-asset-events{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.tb-asset-events span{font-size:11px;color:#64748b;background:#eef2ff;border:1px solid rgba(99,102,241,.16);border-radius:999px;padding:6px 9px}.tb-assets-help,.tb-asset-action-hint{border:1px solid rgba(14,165,233,.22);background:#ecfeff;color:#075985;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:800;line-height:1.35}.tb-assets-help{display:flex;justify-content:space-between;gap:10px;margin:0 0 14px}.tb-assets-help strong{font-size:13px;color:#0f172a}.tb-asset-action-hint{margin-top:12px}.tb-asset-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.tb-asset-actions button{border:1px solid rgba(15,23,42,.10);background:#fff;color:#0f172a;border-radius:12px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer}.tb-asset-actions button.primary{background:#0f172a;color:#fff;border-color:#0f172a}.tb-asset-actions button.primary.soft{background:#e0f2fe;color:#075985;border-color:rgba(14,165,233,.32)}.tb-asset-actions button.danger{color:#be123c;background:#fff1f2;border-color:rgba(225,29,72,.20)}
+.tb-asset-metrics em.depr{color:#ea580c}.tb-asset-progress{margin-top:16px}.tb-asset-progress div{display:flex;justify-content:space-between;color:#64748b;font-size:11px;margin-bottom:7px}.tb-asset-progress b{display:block;height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden}.tb-asset-progress i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#06b6d4,#8b5cf6)}.tb-asset-chart{height:86px;margin-top:14px;border-radius:18px;background:linear-gradient(180deg,#eef2f7,#e5eaf1);border:1px solid rgba(15,23,42,.07)}.tb-asset-owners{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tb-asset-owners span{font-size:11px;color:#334155;border:1px solid rgba(15,23,42,.10);border-radius:999px;padding:6px 9px;background:#f8fafc}.tb-asset-owner-warning{background:#fff7ed!important;color:#c2410c!important;border-color:rgba(194,65,12,.22)!important}.tb-asset-events{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.tb-asset-events span{font-size:11px;color:#64748b;background:#eef2ff;border:1px solid rgba(99,102,241,.16);border-radius:999px;padding:6px 9px}.tb-asset-actions{display:grid;gap:8px;margin-top:10px}.tb-asset-action-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:8px;border-top:1px solid var(--border,rgba(15,23,42,.08))}.tb-asset-action-group>span{min-width:118px;color:var(--muted,#64748b);font-size:11px;font-weight:900}.tb-asset-actions button{border:1px solid var(--border,rgba(15,23,42,.10));background:var(--panel,#fff);color:var(--text,#0f172a);border-radius:12px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer}.tb-asset-actions button.primary{background:var(--tb-coral,#ff6b4a);color:#fff;border-color:var(--tb-coral,#ff6b4a)}.tb-asset-actions button.danger{color:var(--tb-danger,#be123c);border-color:var(--tb-danger,#be123c)}
 .tb-asset-doc-list{display:grid;gap:8px;max-height:260px;overflow:auto}.tb-asset-doc-row{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid rgba(15,23,42,.08);border-radius:16px;background:#f8fafc;padding:10px}.tb-asset-doc-row strong{font-size:13px;color:#0f172a}.tb-asset-doc-row span{font-size:12px;color:#64748b}.tb-asset-doc-row>div:last-child{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.tb-asset-doc-row button{border:1px solid rgba(15,23,42,.10);background:#fff;color:#0f172a;border-radius:12px;padding:7px 9px;font-size:12px;font-weight:900;cursor:pointer}.tb-asset-doc-empty{border:1px dashed rgba(15,23,42,.16);border-radius:16px;background:#f8fafc;padding:12px;color:#64748b;font-size:13px}
-.tb-asset-doc-row.tree{
-  align-items:flex-start;
-}
-
-.tb-asset-doc-linked-tree{
-  margin-top:10px;
-  display:grid;
-  gap:6px;
-  padding:9px;
-  border-radius:14px;
-  background:#fff;
-  border:1px solid rgba(15,23,42,.08);
-}
-
-.tb-asset-doc-linked-tree strong{
-  font-size:11px;
-  color:#64748b;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-}
-
-.tb-asset-doc-linked-line{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  flex-wrap:wrap;
-}
-
-.tb-asset-doc-linked-line span{
-  font-size:11px;
-  font-weight:900;
-  color:#0891b2;
-  border:1px solid rgba(8,145,178,.16);
-  background:#e0f7fb;
-  border-radius:999px;
-  padding:4px 7px;
-}
-
-.tb-asset-doc-linked-line span.trip{
-  color:#7c3aed;
-  border-color:rgba(124,58,237,.18);
-  background:#ede9fe;
-}
-
-.tb-asset-doc-linked-line button{
-  border:0;
-  background:transparent;
-  color:#0f172a;
-  padding:0;
-  font-size:12px;
-  font-weight:800;
-  text-align:left;
-  cursor:pointer;
-}
-
-.tb-asset-doc-linked-line button:hover{
-  text-decoration:underline;
-}
-
-.tb-asset-doc-linked-empty{
-  margin-top:8px;
-  font-size:12px;
-  color:#94a3b8;
-}
+.tb-asset-doc-row.tree{align-items:flex-start}.tb-asset-doc-linked-tree{margin-top:10px;display:grid;gap:6px;padding:9px;border-radius:14px;background:#fff;border:1px solid rgba(15,23,42,.08)}.tb-asset-doc-linked-tree strong{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.08em}.tb-asset-doc-linked-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.tb-asset-doc-linked-line span{font-size:11px;font-weight:900;color:#0891b2;border:1px solid rgba(8,145,178,.16);background:#e0f7fb;border-radius:999px;padding:4px 7px}.tb-asset-doc-linked-line span.trip{color:#7c3aed;border-color:rgba(124,58,237,.18);background:#ede9fe}.tb-asset-doc-linked-line button{border:0;background:transparent;color:#0f172a;padding:0;font-size:12px;font-weight:800;text-align:left;cursor:pointer}.tb-asset-doc-linked-line button:hover{text-decoration:underline}.tb-asset-doc-linked-empty{margin-top:8px;font-size:12px;color:#94a3b8}
 .tb-asset-movement-panel{display:grid;gap:12px;border:1px solid rgba(14,165,233,.16);border-radius:18px;background:linear-gradient(180deg,#f0fdfa,#f8fafc);padding:12px;margin-bottom:14px}
 .tb-asset-movement-head{display:grid;gap:4px}.tb-asset-movement-head strong{font-size:14px;color:#0f172a}.tb-asset-movement-head span{font-size:12px;color:#64748b;line-height:1.35}.tb-asset-movement-list{display:grid;gap:8px}.tb-asset-movement-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border:1px solid rgba(15,23,42,.08);border-radius:14px;background:#fff;padding:10px}.tb-asset-movement-row div{display:grid;gap:3px}.tb-asset-movement-row strong{font-size:13px;color:#0f172a}.tb-asset-movement-row span,.tb-asset-movement-row em{font-size:12px;color:#64748b;font-style:normal}.tb-asset-movement-row em{color:#0f766e;font-weight:800}.tb-asset-movement-edit{display:grid!important;grid-template-columns:minmax(140px,1fr) minmax(180px,1.1fr);gap:8px;margin-top:7px}.tb-asset-movement-edit label{display:grid;gap:4px;font-size:11px;color:#64748b;font-weight:900}.tb-asset-movement-edit select{border:1px solid rgba(15,23,42,.12);border-radius:10px;background:#f8fafc;color:#0f172a;padding:7px 8px;font-size:12px}.tb-asset-movement-actions{display:flex!important;flex-wrap:wrap;justify-content:flex-end;gap:6px;min-width:130px}.tb-asset-movement-row button,.tb-asset-link-movement-btn{border:1px solid rgba(15,23,42,.10);background:#fff;color:#0f172a;border-radius:12px;padding:7px 9px;font-size:12px;font-weight:900;cursor:pointer}.tb-asset-link-movement-btn{justify-self:flex-start;background:#0f172a;color:#fff}
-.tb-asset-pnl{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-top:10px;
-  padding:10px 12px;
-  border-radius:14px;
-  background:#f8fafc;
-  border:1px solid rgba(15,23,42,.08);
-}
-
-.tb-asset-pnl span{
-  font-size:12px;
-  color:#64748b;
-  font-weight:800;
-}
-
-.tb-asset-pnl strong{
-  font-size:16px;
-}
-
-.pos{color:#16a34a;}
-.neg{color:#dc2626;}
+.tb-asset-pnl{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:10px 12px;border-radius:14px;background:#f8fafc;border:1px solid rgba(15,23,42,.08)}.tb-asset-pnl span{font-size:12px;color:#64748b;font-weight:800}.tb-asset-pnl strong{font-size:16px}.pos{color:#16a34a}.neg{color:#dc2626}
 
 .tb-assets-shared-modal .tb-ui-modal__body{background:var(--panel,#fff)}.tb-asset-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tb-asset-form-grid label{display:grid;gap:6px;color:var(--muted,#475569);font-size:12px;font-weight:800}.tb-asset-form-grid input,.tb-asset-form-grid select{width:100%;border:1px solid var(--border,rgba(15,23,42,.12));border-radius:8px;background:var(--panel2,#f8fafc);color:var(--text,#0f172a);padding:10px 11px;font-size:14px}.tb-asset-form-grid .tb-asset-check{display:flex;align-items:center;gap:9px;padding:10px 11px;border:1px solid rgba(14,165,233,.22);border-radius:8px;background:rgba(14,165,233,.07)}.tb-asset-form-grid .tb-asset-check input{width:18px;height:18px;margin:0}.tb-asset-budget-toggle{grid-column:1/-1}.tb-asset-budget-toggle span{display:grid;gap:3px}.tb-asset-budget-toggle small{font-size:12px;color:#64748b;line-height:1.35}.tb-asset-modal-error{margin-top:12px;border:1px solid rgba(225,29,72,.25);background:#fff1f2;color:#be123c;border-radius:8px;padding:10px;font-size:13px}.tb-asset-doc-message{border-color:rgba(8,145,178,.25);background:#ecfeff;color:#0e7490}.tb-owner-list{display:grid;gap:10px}.tb-owner-row{display:grid;grid-template-columns:1fr 130px 38px;gap:8px}.tb-owner-row input{border:1px solid var(--border,rgba(15,23,42,.12));border-radius:8px;background:var(--panel2,#f8fafc);color:var(--text,#0f172a);padding:10px 11px;font-size:14px}.tb-owner-row button,.tb-owner-add{border:0;border-radius:8px;background:var(--panel2,#f1f5f9);color:var(--text,#334155);font-weight:900;cursor:pointer}.tb-owner-add{margin-top:12px;padding:10px 12px}.tb-owner-total{margin-top:10px;font-size:13px;color:#be123c;font-weight:900}.tb-owner-total.ok{color:#0891b2}@media(max-width:720px){.tb-assets-head,.tb-assets-empty{flex-direction:column;align-items:stretch}.tb-asset-metrics,.tb-asset-form-grid,.tb-owner-row{grid-template-columns:1fr}.tb-assets-actions{align-items:flex-start}}
+.tb-asset-link-heading{display:flex;align-items:center;gap:8px;margin:16px 0 10px;color:var(--text);font-size:14px}.tb-asset-link-heading span{display:grid;place-items:center;width:26px;height:26px;border-radius:9px;background:var(--tb-coral);color:#fff;font-size:12px}.tb-asset-link-form{margin-top:14px}
+@media(max-width:600px){.tb-asset-action-group{align-items:stretch}.tb-asset-action-group>span{flex-basis:100%;min-width:0}.tb-asset-action-group button{min-height:40px}.tb-asset-movement-row{flex-direction:column}.tb-asset-movement-actions{justify-content:flex-start;min-width:0}.tb-asset-doc-row{align-items:stretch;flex-direction:column}.tb-asset-doc-row>div:last-child{justify-content:flex-start}}
   `; document.head.appendChild(st); }
 
   async function renderAssets(reason){ styles(); bindOnce(); const root = document.getElementById('assets-root') || document.getElementById('view-assets'); if(!root) return; root.innerHTML = `<div class="tb-assets-shell"><div class="tb-assets-head"><div><h2>${esc(tr('assets.title'))}</h2><p>${esc(tr('common.loading'))}</p></div></div></div>`; const data = await loadAssets(); const summary = data.empty ? '' : portfolioSummaryHtml(data.assets, data.owners);
-const help = `<div class="tb-assets-help"><strong>${esc(atxt('Patrimoine V2', 'Assets V2'))}</strong><span>${esc(atxt('Budget / amortissement modifie l’inclusion budget. Achats liés et Dépenses annexes ouvrent les transactions, Trip et documents liés à l’asset.', 'Budget / depreciation edits budget inclusion. Linked purchases and Annex expenses open transactions, Trip expenses and documents linked to the asset.'))}</span></div>`;
-const content = data.empty ? emptyState() : `${summary}${help}<div class="tb-assets-grid">${data.assets.map(a=>card(a,data.owners)).join('')}</div>`; const buildLabel = window.TB_BUILD_LABEL || 'V9'; root.innerHTML = `<div class="tb-assets-shell"><div class="tb-assets-head"><div><h2>${esc(tr('assets.title'))}</h2><p>${esc(tr('assets.subtitle'))} ${data.demo ? esc(tr('assets.demo_hint')) : ''}</p></div><div class="tb-assets-actions"><button class="tb-asset-add-btn" type="button" data-tb-asset-open>${esc(tr('assets.action.add'))}</button><div class="tb-assets-badge">${esc(buildLabel)} · Assets</div></div></div>${content}</div>`; if(!data.empty) setTimeout(()=>renderCharts(data.assets),0); }
+const content = data.empty ? emptyState() : `${summary}<div class="tb-assets-grid">${data.assets.map(a=>card(a,data.owners)).join('')}</div>`; const buildLabel = window.TB_BUILD_LABEL || 'V9'; root.innerHTML = `<div class="tb-assets-shell"><div class="tb-assets-head"><div><h2>${esc(tr('assets.title'))}</h2><p>${esc(tr('assets.subtitle'))} ${data.demo ? esc(tr('assets.demo_hint')) : ''}</p></div><div class="tb-assets-actions"><button class="tb-asset-add-btn" type="button" data-tb-asset-open>${esc(tr('assets.action.add'))}</button><div class="tb-assets-badge">${esc(buildLabel)} · Assets</div></div></div>${content}</div>`; if(!data.empty) setTimeout(()=>renderCharts(data.assets),0); }
   window.renderAssets = renderAssets;
   window.tbLoadAssets = loadAssets;
   window.tbAssetBudgetTransactionsForRange = assetBudgetRows;

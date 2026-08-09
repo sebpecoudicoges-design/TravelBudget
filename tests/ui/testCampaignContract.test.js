@@ -91,4 +91,17 @@ describe('tester campaign contract', () => {
     expect(migration).toContain("parent.id");
     expect(migration).toContain("set app_version = '10.5.328'");
   });
+
+  it('archives all three Assets notes and creates linked 10.5.329 retests', () => {
+    const migration = read('supabase/migrations/20260809001212_process_asset_feedback_10_5_329.sql');
+
+    expect(migration).toContain("'aeaa6419-581d-af42-669a-a4a5a0ae1c70'::uuid");
+    expect(migration).toContain("'24ad8b95-a412-e43d-8ce2-0b094838bce2'::uuid");
+    expect(migration).toContain("'557bab35-de8b-ccf8-45f3-5c0c5b51ca00'::uuid");
+    expect(migration.match(/'32900000-0000-4000-8000-00000000000[1-3]'::uuid/g)).toHaveLength(3);
+    expect(migration).toContain('Retest clarte cycle actif Patrimoine 10.5.329');
+    expect(migration).toContain('Retest liens financiers Patrimoine 10.5.329');
+    expect(migration).toContain('Retest documents Patrimoine 10.5.329');
+    expect(migration).toContain("set app_version = '10.5.329'");
+  });
 });

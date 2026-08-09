@@ -15,5 +15,6 @@ describe('CSP contract', () => {
     expect(netlify).toContain('Content-Security-Policy-Report-Only');
     expect(netlify).toContain('connect-src');
     expect(netlify).toContain('https://cdn.jsdelivr.net');
+    expect(netlify).toContain("frame-src 'self' blob: https://*.supabase.co");
   });
 });

@@ -872,6 +872,7 @@ function setSelectedSort(v){
   }
 
   async function preview(id){
+    await ensureLoaded();
     const doc = (CACHE.documents||[]).find(d=>String(d.id)===String(id)); if(!doc) return;
     try{
       const url = await signedUrl(doc);

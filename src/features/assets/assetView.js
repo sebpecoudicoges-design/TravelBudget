@@ -142,10 +142,11 @@ export function renderAssetCard({
     <div class="tb-asset-owners">${assetOwners.length ? assetOwners.map((row) => `<span>${esc(row.display_name)} · ${num(row.ownership_percent, 0)}%</span>`).join('') : `<span>${esc(tr('assets.card.ownership_missing'))}</span>`}${warning}</div>
     ${recent.length ? `<div class="tb-asset-events">${recent.map((event) => `<span>${esc(event.event_date || '')} · ${esc(eventLabel(event.event_type))} · ${esc(num(event.percent, 0))}%</span>`).join('')}</div>` : ''}
     ${sold ? `<div class="tb-asset-pnl"><span>${esc(tr('assets.card.realized_pnl'))}</span><strong class="${pnl >= 0 ? 'pos' : 'neg'}">${pnl >= 0 ? '+' : ''}${esc(money(pnl, asset.currency))}</strong></div>` : ''}
-    <div class="tb-asset-action-hint">${esc(t('Budget, achat initial, Trip et dépenses annexes se règlent ici.', 'Budget, purchase, Trip and annex expenses are handled here.'))}</div>
     <div class="tb-asset-actions">
-      <button type="button" class="primary" data-tb-asset-edit="${esc(asset.id)}">${esc(t('Budget / amortissement', 'Budget / depreciation'))}</button><button type="button" data-tb-asset-owners="${esc(asset.id)}">${esc(tr('assets.action.owners'))}</button><button type="button" data-tb-asset-transfer="${esc(asset.id)}">${esc(tr('assets.action.buy_sell'))}</button><button type="button" class="primary" data-tb-asset-docs="${esc(asset.id)}">${esc(t('Achats liés', 'Linked purchases'))} (${docsCount})</button><button type="button" class="primary soft" data-tb-asset-docs="${esc(asset.id)}">${esc(t('Dépenses annexes', 'Annex expenses'))}</button>
-      <button type="button" data-tb-asset-sell="${esc(asset.id)}">${esc(tr('assets.action.sell_asset'))}</button><button type="button" class="danger" data-tb-asset-archive="${esc(asset.id)}">${esc(tr('assets.action.archive'))}</button>
+      <div class="tb-asset-action-group"><span>${esc(tr('assets.group.value'))}</span><button type="button" class="primary" data-tb-asset-edit="${esc(asset.id)}">${esc(tr('assets.action.depreciation_settings'))}</button></div>
+      <div class="tb-asset-action-group"><span>${esc(tr('assets.group.ownership'))}</span><button type="button" data-tb-asset-owners="${esc(asset.id)}">${esc(tr('assets.action.owners'))}</button><button type="button" data-tb-asset-transfer="${esc(asset.id)}">${esc(tr('assets.action.buy_sell'))}</button><button type="button" data-tb-asset-sell="${esc(asset.id)}">${esc(tr('assets.action.sell_asset'))}</button></div>
+      <div class="tb-asset-action-group"><span>${esc(tr('assets.group.records'))}</span><button type="button" data-tb-asset-docs="${esc(asset.id)}">${esc(tr('assets.links.action'))} (${docsCount})</button></div>
+      <div class="tb-asset-action-group tb-asset-action-group--danger"><span>${esc(tr('assets.group.lifecycle'))}</span><button type="button" class="danger" data-tb-asset-archive="${esc(asset.id)}">${esc(tr('assets.action.archive'))}</button></div>
     </div>
   </section>`;
 }
@@ -158,6 +159,7 @@ export function assetModalSpec({
   contentHTML,
   submitLabel,
   extraActionsHTML = '',
+  closeLabel = '',
   size = 'lg',
   tr = (keyName) => keyName,
   esc = defaultEsc,
@@ -169,7 +171,7 @@ export function assetModalSpec({
     size,
     formId,
     contentHTML: `<form id="${formId}" ${formAttrs}>${contentHTML}</form>`,
-    actionsHTML: `${extraActionsHTML}<button class="btn" type="button" data-tb-asset-close>${esc(tr('documents.action.cancel'))}</button><button class="btn primary" type="submit" data-tb-asset-submit form="${formId}">${esc(submitLabel)}</button>`,
+    actionsHTML: `${extraActionsHTML}<button class="btn" type="button" data-tb-asset-close>${esc(closeLabel || tr('documents.action.cancel'))}</button><button class="btn primary" type="submit" data-tb-asset-submit form="${formId}">${esc(submitLabel)}</button>`,
   };
 }
 
@@ -214,7 +216,7 @@ export function renderAssetEditorModalSpec({
       <label>${esc(tr('assets.form.purchase_date'))}<input name="purchase_date" required type="date" value="${esc(a.purchase_date || now)}"></label>
       <label>${esc(tr('assets.form.depreciation_months'))}<input name="depreciation_months" required type="number" min="1" step="1" value="${esc(a.depreciation_months || 36)}"></label>
       ${isEdit ? '' : `<label>${esc(tr('assets.form.your_share'))}<input name="ownership_percent" required type="number" min="0" max="100" step="0.01" value="100"></label>`}
-      <label class="tb-asset-check tb-asset-budget-toggle"><input name="include_in_budget" type="checkbox" ${a.include_in_budget !== false ? 'checked' : ''}><span><strong>${esc(t('Inclure / exclure du budget', 'Include / exclude from budget'))}</strong><small>${esc(t('Compte uniquement l’amortissement mensuel, pas le prix d’achat complet.', 'Counts only monthly depreciation, not the full purchase price.'))}</small></span></label>
+      <label class="tb-asset-check tb-asset-budget-toggle"><input name="include_in_budget" type="checkbox" ${a.include_in_budget !== false ? 'checked' : ''}><span><strong>${esc(tr('assets.form.budget_include'))}</strong><small>${esc(tr('assets.form.budget_include_hint'))}</small></span></label>
       <label>${esc(t('Mode de calcul', 'Calculation mode'))}<select name="budget_method"><option value="linear" ${a.budget_method !== 'manual' ? 'selected' : ''}>${esc(t('Amortissement linéaire', 'Linear depreciation'))}</option><option value="manual" ${a.budget_method === 'manual' ? 'selected' : ''}>${esc(t('Montant mensuel manuel', 'Manual monthly amount'))}</option></select></label>
       <label>${esc(t('Montant mensuel manuel', 'Manual monthly amount'))}<input name="monthly_budget_override" type="number" min="0" step="0.01" value="${esc(a.monthly_budget_override ?? '')}" placeholder="0.00"></label>
       <label>${esc(t('Début dans le budget', 'Budget start'))}<input name="budget_start_date" type="date" value="${esc(a.budget_start_date || a.purchase_date || now)}"></label>
@@ -537,19 +539,22 @@ export function renderAssetDocumentsModalSpec({
 
   return assetModalSpec({
     key: 'documents',
-    title: t('Documents et mouvements liés', 'Linked documents and movements'),
+    title: tr('assets.links.title'),
     subtitle: asset.name || 'Asset',
     size: 'lg',
     formAttrs: `data-tb-asset-docs-form data-asset-id="${esc(asset.id)}"`,
-    submitLabel: t('Lier le document', 'Link document'),
+    submitLabel: tr('assets.links.link_document'),
+    closeLabel: tr('documents.action.close'),
     extraActionsHTML: `<button class="btn" type="button" data-tb-asset-doc-upload="${esc(asset.id)}">+ ${esc(t('Ajouter un document', 'Add document'))}</button>`,
     tr,
     esc,
     contentHTML: `${message ? `<div class="tb-asset-modal-error tb-asset-doc-message" data-tb-asset-doc-message>${esc(message)}</div>` : ''}
 
+      <h4 class="tb-asset-link-heading"><span>1</span>${esc(tr('assets.links.movements'))}</h4>
       ${movementsHtml}
 
-      <div class="tb-asset-doc-list" style="margin-top:16px;">
+      <h4 class="tb-asset-link-heading"><span>2</span>${esc(tr('assets.links.documents'))}</h4>
+      <div class="tb-asset-doc-list">
         ${(links || []).length ? links.map((link) => {
           const doc = (docs || []).find((item) => String(item.id || '') === String(link.document_id || ''));
           return `<div class="tb-asset-doc-row tree">
@@ -561,14 +566,15 @@ export function renderAssetDocumentsModalSpec({
             </div>
 
             <div>
-              <button type="button" data-tb-asset-open-doc="${esc(link.document_id)}">${esc(t('Ouvrir', 'Open'))}</button>
+              <button type="button" data-tb-asset-open-doc="${esc(link.document_id)}">${esc(tr('assets.links.preview'))}</button>
+              <button type="button" data-tb-asset-edit-doc="${esc(link.document_id)}">${esc(tr('assets.links.edit_details'))}</button>
               <button type="button" data-tb-asset-unlink-doc="${esc(link.id)}">${esc(t('Délier', 'Unlink'))}</button>
             </div>
           </div>`;
         }).join('') : `<div class="tb-asset-doc-empty">${esc(t('Aucun document lié.', 'No linked document.'))}</div>`}
       </div>
 
-      <div class="tb-asset-form-grid" style="margin-top:14px;">
+      <div class="tb-asset-form-grid tb-asset-link-form">
         <label>${esc(t('Ajouter un document existant', 'Add existing document'))}
           <select name="document_id" required>
             <option value="">${esc(t('Choisir un document', 'Choose a document'))}</option>

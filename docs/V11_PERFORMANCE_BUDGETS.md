@@ -144,6 +144,8 @@ En 10.5.324, la campagne de tests conserve la filiation des retours et porte la 
 
 En 10.5.325, le retour visuel partage rouge/vert est disponible des le boot et les aides contextuelles deviennent persistantes. L initial reste sous plafond a 257.1 / 260 KiB et le lazy a 419.8 / 420 KiB. Le total atteint 676.9 KiB et le CSS 38.2 KiB ; leurs plafonds passent aux paliers immediatement superieurs de 678 et 39 KiB, sans relever les limites initiale, lazy ou gzip.
 
+En 10.5.329, Patrimoine regroupe ses commandes et ses liens sans relever les plafonds. Les libelles bilingues nouveaux rejoignent les dictionnaires existants et le CSS embarque touche est compacte. Le domaine Assets mesure 118.4 / 125 KiB, l initial 257.3 / 260 KiB, le lazy 420.0 / 420 KiB, le total JS 677.3 / 678 KiB et le CSS 38.9 / 39 KiB.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

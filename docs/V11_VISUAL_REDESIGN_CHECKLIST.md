@@ -63,10 +63,11 @@ Source obligatoire : [`VISUAL_SYSTEM.md`](VISUAL_SYSTEM.md).
 Cautions est retire de l interface en `10.5.319` ; ses 5 lignes historiques soldees restent conservees cote donnees uniquement.
 
 - [ ] Inventorier assets, amortissement, transactions liees, depenses annexes, documents, proprietaires et ventes.
-- [ ] Rendre visible inclusion/exclusion budget et cout amorti prorata possession.
-- [ ] Ameliorer recherche transaction/Trip par nom, montant, date et devise.
-- [ ] Conserver les liens documents et mouvements existants.
-- [ ] Ajouter test contrat Patrimoine premium.
+- [x] Rendre visible inclusion/exclusion budget et cout amorti prorata possession.
+- [x] Ameliorer recherche transaction/Trip par nom, montant, date et devise.
+- [x] Conserver les liens documents et mouvements existants.
+- [x] Ajouter test contrat Patrimoine premium.
+- [ ] Valider visuellement les trois retests `10.5.329` en clair/sombre et 1440/390 px avant reouverture ; le module reste masque aux comptes standards pendant ce lot.
 
 ### Lot 6 - Sport
 

@@ -16,10 +16,10 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.328`.
+- Version cible de campagne : `10.5.329`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
-- 47 resultats et 12 revues de module traites sont archives avec date de test, date de traitement, version et note.
-- 18 scenarios restent ouverts, dont un seul retest derive actif : saisie rapide Trip `10.5.328`. Les autres retours ouverts conservent leur scenario d origine.
+- 50 resultats et 12 revues de module traites sont archives avec date de test, date de traitement, version et note.
+- 18 scenarios restent ouverts, dont quatre retests derives actifs : saisie rapide Trip `10.5.328` et les trois parcours Patrimoine `10.5.329`. Les autres retours ouverts conservent leur scenario d origine.
 - Dashboard, Transactions et Analyse sont valides puis rouverts aux comptes standards ; les autres modules metier restent geles.
 - A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
@@ -28,7 +28,7 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 - [x] Corriger les textes francais corrompus reperes (`Libell?`, `avanc?`, `R?f?rence`, `Non class?`, `A ? B`) et ajouter un contrat i18n.
 - [ ] Remplacer les rejets metier `Uncaught (in promise)` par un message utilisateur explicite.
 - [ ] Verifier l hydratation Nutrition/KPI sans ouverture prealable du module.
-- [ ] Corriger l apercu documentaire et la politique CSP sans autorisation trop large.
+- [x] Corriger l apercu documentaire et limiter `frame-src` aux contenus locaux, `blob:` et Supabase.
 - [ ] Auditer les 13 liens Trip/Transactions incomplets avant toute reparation automatique.
 - [x] Reprendre le retour Archiver wallet : remplacer la disposition inline par un panneau d actions explicitement contenu dans la carte, avec contrats desktop/mobile et clair/sombre.
 
@@ -120,12 +120,13 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 
 ## Chantier 9 - Patrimoine
 
-- [ ] Expliquer Inclure au budget et son effet.
-- [ ] Clarifier les actions sous les actifs.
-- [ ] Regrouper transactions et documents au meme niveau.
-- [ ] Afficher la progression de l ajout documentaire.
-- [ ] Permettre modification et apercu direct du document lie.
-- [ ] Corriger l avertissement CSP.
+- [x] Expliquer Inclure au budget et son effet coche ou decoche.
+- [x] Clarifier les actions sous les actifs en les rangeant par fonction.
+- [x] Regrouper transactions et documents au meme niveau dans une seule fenetre.
+- [x] Conserver et expliciter la progression de l ajout documentaire.
+- [x] Permettre modification et apercu direct du document lie sans changer de module.
+- [x] Corriger l avertissement CSP sans autoriser toutes les frames externes.
+- [ ] Faire executer les trois retests Patrimoine `10.5.329` avant reouverture du module.
 
 ## Chantier 10 - Cautions
 
@@ -147,7 +148,7 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 
 - [x] Corriger les textes francais.
 - [x] Moderniser le bandeau lateral sans perdre les commandes.
-- [ ] Verifier l apercu et les liens metier apres la correction CSP.
+- [ ] Verifier l apercu et les liens metier avec les retests Patrimoine `10.5.329`.
 
 ## Chantier 12 - Aide
 

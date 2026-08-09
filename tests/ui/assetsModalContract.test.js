@@ -51,4 +51,15 @@ describe('assets shared modal migration', () => {
     expect(viewSource).toContain('Modifier transaction');
     expect(viewSource).toContain('Modifier Trip');
   });
+
+  it('groups asset actions and keeps document work inside Assets', () => {
+    expect(viewSource.match(/data-tb-asset-docs=/g)).toHaveLength(1);
+    expect(viewSource).toContain('tb-asset-action-group');
+    expect(viewSource).toContain("tr('assets.links.action')");
+    expect(viewSource).toContain('tb-asset-link-heading');
+    expect(viewSource).toContain('data-tb-asset-edit-doc');
+    expect(legacySource).not.toContain("showView('documents')");
+    expect(legacySource).toContain('await window.tbDocumentsPreview?.(docId)');
+    expect(legacySource).toContain('await window.tbDocumentsEditMeta?.(docId)');
+  });
 });

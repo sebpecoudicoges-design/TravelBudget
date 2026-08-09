@@ -68,13 +68,13 @@ describe('Asset view helpers', () => {
     expect(html).toContain('28% assets.card.used');
     expect(html).toContain('Moi · 50%');
     expect(html).toContain('2026-07-01 · Achat de part · 10%');
-    expect(html).toContain('Budget / amortissement');
-    expect(html).toContain('Achats liés');
-    expect(html).toContain('Dépenses annexes');
-    expect(html).toContain('Budget, achat initial');
+    expect(html).toContain('assets.action.depreciation_settings');
+    expect(html).toContain('assets.links.action (1)');
+    expect(html.match(/data-tb-asset-docs=/g)).toHaveLength(1);
+    expect(html).toContain('assets.group.value');
     expect(html).toContain('data-tb-asset-edit="asset-1"');
     expect(html).toContain('data-tb-asset-docs="asset-1"');
-    expect(html).toContain('Achats liés (1)');
+    expect(html).toContain('assets.links.action (1)');
   });
 
   it('renders realized PnL for sold assets', () => {
@@ -116,8 +116,8 @@ describe('Asset view helpers', () => {
     expect(editor.contentHTML).toContain('data-tb-asset-form="edit"');
     expect(editor.contentHTML).toContain('data-asset-id="asset-1"');
     expect(editor.contentHTML).toContain('name="budget_day"');
-    expect(editor.contentHTML).toContain('Inclure / exclure du budget');
-    expect(editor.contentHTML).toContain('pas le prix d’achat complet');
+    expect(editor.contentHTML).toContain('assets.form.budget_include');
+    expect(editor.contentHTML).toContain('assets.form.budget_include_hint');
 
     const owners = renderAssetOwnersModalSpec({
       asset: { id: 'asset-1', name: 'Van' },
