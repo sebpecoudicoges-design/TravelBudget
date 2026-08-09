@@ -48,13 +48,13 @@ export function renderSettingsCategoriesList({
             : '__inherit__';
           const id = esc(String(row?.id || ''));
           const actions = isSql
-            ? `<button class="btn" onclick="moveSubcategory('${id}','up')">↑</button><button class="btn" onclick="moveSubcategory('${id}','down')">↓</button><button class="btn" onclick="editSubcategory('${id}')">Modifier</button><button class="btn" onclick="toggleSubcategoryActive('${id}',${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button>`
+            ? `<button class="btn" title="Monter" aria-label="Monter ${esc(subName)}" onclick="moveSubcategory('${id}','up')">↑</button><button class="btn" title="Descendre" aria-label="Descendre ${esc(subName)}" onclick="moveSubcategory('${id}','down')">↓</button><button class="btn" onclick="editSubcategory('${id}')">Modifier</button><button class="btn" onclick="toggleSubcategoryActive('${id}',${active ? 'false' : 'true'})">${active ? 'Désactiver' : 'Réactiver'}</button><button class="btn danger" onclick="deleteSubcategory('${id}')">Supprimer</button>`
             : `<button class="btn" onclick="importExistingSubcategory('${esc(name)}','${esc(subName)}')">Enregistrer</button>`;
           return `<div class="tb-subcat-row"><div class="tb-subcat-main"><strong>${esc(subName)}</strong><div class="tb-subcat-meta"><span class="tb-settings-pill ${active ? 'tb-settings-pill--positive' : ''}">${active ? 'Active' : 'Inactive'}</span><span class="tb-settings-pill">${sourceLabel}</span><span class="tb-settings-pill tb-advanced-only">${esc(subMapping.sourceLabel || 'À classer')}</span><span class="tb-advanced-only">${analyticStatusPillHtml(subMapping)}</span><span class="tb-advanced-only">${analyticUsagePillHtml(subUsage.txCount)}</span>${subColor ? `<span class="tb-subcat-color" title="${esc(subColor)}" style="background:${esc(subColor)}"></span>` : ''}</div><div class="muted tb-advanced-only" style="margin-top:6px">Analyse : ${esc(subMapping.mappingStatus === 'mapped' ? analyticFamilyLabel(subMapping.analyticFamily) : (subMapping.mappingStatus === 'excluded' ? 'Exclue' : 'À classer'))}</div></div><div class="tb-subcat-actions" style="align-items:flex-end;gap:6px"><select class="input tb-advanced-only" style="min-width:190px" onchange="saveAnalyticSubcategoryMapping('${esc(name)}','${esc(subName)}',this.value)">${analyticSelectOptions(subSelectValue, true)}</select><div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end">${actions}</div></div></div>`;
         }).join('')
       : '<div class="muted" style="padding:8px 0;">Aucune sous-catégorie.</div>';
 
-    return `<details class="tb-category-card" ${subRows.length ? '' : 'open'}><summary class="tb-category-head"><div class="tb-category-head-left"><span class="tb-category-swatch" style="background:${esc(col)}"></span><div><div class="tb-category-name">${esc(name)}</div><div class="tb-category-meta">${esc(String(subRows.length))} sous-catégorie${subRows.length > 1 ? 's' : ''} · ${esc(String(activeCount))} active${activeCount > 1 ? 's' : ''}${categoryUsageText}</div></div></div><div class="tb-category-head-actions"><button class="btn" type="button" onclick="event.preventDefault();event.stopPropagation();addSubcategory('${esc(name)}')">+ Sous-catégorie</button><button class="btn" type="button" onclick="event.preventDefault();event.stopPropagation();deleteCategory('${esc(name)}')">Supprimer</button></div></summary><div class="tb-category-body"><div class="tb-category-toolbar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span class="muted">Couleur</span><span class="tb-category-swatch" style="background:${esc(col)}"></span><input type="color" value="${esc(col)}" style="width:44px;height:30px;padding:0;border:none;background:transparent;cursor:pointer" onchange="setCategoryColor('${esc(name)}',this.value)" /><span class="tb-advanced-only">${analyticStatusPillHtml(categoryMapping)}</span><span class="tb-advanced-only">${analyticUsagePillHtml(categoryUsage.txCount)}</span><span class="tb-settings-pill tb-advanced-only">${esc(categoryMapping.sourceLabel || 'À classer')}</span></div><div class="tb-advanced-only" style="display:flex;gap:8px;align-items:center"><span class="muted">Analyse</span><select class="input" style="min-width:190px" onchange="saveAnalyticCategoryMapping('${esc(name)}',this.value)">${analyticSelectOptions(categorySelectValue, false)}</select></div></div><div class="tb-category-sublist">${subHtml}</div></div></details>`;
+    return `<details class="tb-category-card" ${subRows.length ? '' : 'open'}><summary class="tb-category-head"><div class="tb-category-head-left"><span class="tb-category-swatch" style="background:${esc(col)}"></span><div><div class="tb-category-name">${esc(name)}</div><div class="tb-category-meta">${esc(String(subRows.length))} sous-catégorie${subRows.length > 1 ? 's' : ''} · ${esc(String(activeCount))} active${activeCount > 1 ? 's' : ''}${categoryUsageText}</div></div></div><div class="tb-category-head-actions"><button class="btn" type="button" title="Monter" aria-label="Monter ${esc(name)}" onclick="event.preventDefault();event.stopPropagation();moveCategory('${esc(name)}','up')">↑</button><button class="btn" type="button" title="Descendre" aria-label="Descendre ${esc(name)}" onclick="event.preventDefault();event.stopPropagation();moveCategory('${esc(name)}','down')">↓</button><button class="btn" type="button" onclick="event.preventDefault();event.stopPropagation();editCategory('${esc(name)}')">Modifier</button><button class="btn" type="button" onclick="event.preventDefault();event.stopPropagation();addSubcategory('${esc(name)}')">+ Sous-catégorie</button><button class="btn danger" type="button" onclick="event.preventDefault();event.stopPropagation();deleteCategory('${esc(name)}')">Supprimer</button></div></summary><div class="tb-category-body"><div class="tb-category-toolbar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span class="muted">Couleur</span><span class="tb-category-swatch" style="background:${esc(col)}"></span><span class="tb-advanced-only">${analyticStatusPillHtml(categoryMapping)}</span><span class="tb-advanced-only">${analyticUsagePillHtml(categoryUsage.txCount)}</span><span class="tb-settings-pill tb-advanced-only">${esc(categoryMapping.sourceLabel || 'À classer')}</span></div><div class="tb-advanced-only" style="display:flex;gap:8px;align-items:center"><span class="muted">Analyse</span><select class="input" style="min-width:190px" onchange="saveAnalyticCategoryMapping('${esc(name)}',this.value)">${analyticSelectOptions(categorySelectValue, false)}</select></div></div><div class="tb-category-sublist">${subHtml}</div></div></details>`;
   }).join('');
   return simpleNote + (body || '<div class="muted">Aucune catégorie. Ajoute-en une ci-dessus.</div>');
 }
@@ -73,11 +73,14 @@ export function renderGuidedSubcategoryModalBody({
   category = '',
   name = '',
   color = '',
+  categoryColor = '#94a3b8',
   mapping = '__inherit__',
   analyticSelectOptions = () => '',
   esc = defaultEsc,
 } = {}) {
-  return `<div class="field"><label>Catégorie</label><input class="input" type="text" value="${esc(category)}" disabled /></div><div class="row"><div class="field" style="flex:1;min-width:220px"><label for="tb-subcat-create-name">Nom</label><input id="tb-subcat-create-name" class="input" type="text" placeholder="Ex: Visa" value="${esc(name)}" /></div><div class="field" style="min-width:160px"><label for="tb-subcat-create-color">Couleur optionnelle</label><input id="tb-subcat-create-color" class="input" type="text" placeholder="#94a3b8" value="${esc(color)}" /></div></div><div class="field"><label for="tb-subcat-create-mapping">Mapping analytique</label><select id="tb-subcat-create-mapping" class="input">${analyticSelectOptions(mapping || '__inherit__', true)}</select></div><div class="muted" style="margin-top:8px">Par défaut, héritage du mapping catégorie. Aucune règle SQL en héritage.</div>`;
+  const inheritsColor = !String(color || '').trim();
+  const pickerColor = inheritsColor ? categoryColor : color;
+  return `<div class="field"><label>Catégorie</label><input class="input" type="text" value="${esc(category)}" disabled /></div><div class="row"><div class="field" style="flex:1;min-width:220px"><label for="tb-subcat-create-name">Nom</label><input id="tb-subcat-create-name" class="input" type="text" placeholder="Ex: Visa" value="${esc(name)}" /></div><div class="field" style="min-width:180px"><label for="tb-subcat-create-color">Couleur</label><input id="tb-subcat-create-color" class="input" type="color" value="${esc(pickerColor || '#94a3b8')}" ${inheritsColor ? 'disabled' : ''} /><label class="tb-check-row" style="margin-top:6px"><input id="tb-subcat-color-inherit" type="checkbox" ${inheritsColor ? 'checked' : ''} onchange="document.getElementById('tb-subcat-create-color').disabled=this.checked" /> Hériter de la catégorie</label></div></div><div class="field"><label for="tb-subcat-create-mapping">Mapping analytique</label><select id="tb-subcat-create-mapping" class="input">${analyticSelectOptions(mapping || '__inherit__', true)}</select></div><div class="muted" style="margin-top:8px">Par défaut, couleur et analyse héritent de la catégorie.</div>`;
 }
 
 export function validateCategoryDraft({
@@ -102,21 +105,8 @@ export function prepareCategoryUpsertDraft({
   if (!readiness.ok) return readiness;
   const existingName = (Array.isArray(categories) ? categories : [])
     .find((category) => String(category || '').trim().toLowerCase() === readiness.name.toLowerCase()) || null;
+  if (existingName) return { ok: false, reason: 'Cette catégorie existe déjà.' };
   const timestamp = now();
-  if (existingName) {
-    return {
-      ok: true,
-      reason: '',
-      mode: 'update',
-      name: readiness.name,
-      existingName,
-      color: readiness.color,
-      payload: {
-        color: readiness.color,
-        updated_at: timestamp,
-      },
-    };
-  }
   return {
     ok: true,
     reason: '',
@@ -132,22 +122,6 @@ export function prepareCategoryUpsertDraft({
       created_at: timestamp,
       updated_at: timestamp,
     },
-  };
-}
-
-export function prepareCategoryDeleteDraft({
-  name = '',
-  categoryRows = [],
-} = {}) {
-  const category = String(name || '').trim();
-  if (!category) return { ok: false };
-  const categoryKey = category.toLowerCase();
-  const sqlRow = (Array.isArray(categoryRows) ? categoryRows : [])
-    .find((row) => String(row?.name || '').trim().toLowerCase() === categoryKey);
-  return {
-    ok: true,
-    category,
-    sqlCategoryId: sqlRow?.id || null,
   };
 }
 
@@ -223,7 +197,6 @@ export function prepareAnalyticMappingRuleDraft({
   subcategoryName = null,
   nextValue = '',
   userId = '',
-  now = () => new Date().toISOString(),
 } = {}) {
   const category = String(categoryName || '').trim();
   const subcategory = (subcategoryName === undefined || subcategoryName === null || String(subcategoryName || '').trim() === '')
@@ -250,15 +223,6 @@ export function prepareAnalyticMappingRuleDraft({
       p_subcategory_name: subcategory,
       p_mapping_status: mappingStatus,
       p_analytic_family: analyticFamily,
-    },
-    tablePayload: {
-      user_id: cleanUserId,
-      category_name: category,
-      subcategory_name: subcategory,
-      mapping_status: mappingStatus,
-      analytic_family: analyticFamily,
-      notes: null,
-      updated_at: now(),
     },
   };
 }
@@ -343,24 +307,6 @@ export function prepareSubcategoryMoveDraft({
     reason: '',
     updates,
     nextRows,
-  };
-}
-
-export function prepareSubcategoryActiveDraft({
-  id = '',
-  nextActive = false,
-  now = () => new Date().toISOString(),
-} = {}) {
-  const cleanId = String(id || '').trim();
-  if (!cleanId) return { ok: false, reason: 'Sous-catégorie introuvable.' };
-  return {
-    ok: true,
-    reason: '',
-    id: cleanId,
-    payload: {
-      is_active: !!nextActive,
-      updated_at: now(),
-    },
   };
 }
 

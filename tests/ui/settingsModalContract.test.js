@@ -46,5 +46,6 @@ describe('settings shared modal migration', () => {
       expect(categoriesView).toContain(`for="${id}"`);
       expect(categoriesView).toContain(`id="${id}"`);
     }
+    expect(categoriesView).toContain('id="tb-subcat-color-inherit"');
   });
 });

@@ -2187,46 +2187,11 @@ function _analyticUsagePillHtml(txCount) {
 }
 
 async function _deleteCategoryBundleViaRpc(categoryName) {
-  const deleteDraft = window.TBSettingsCategoriesView?.prepareCategoryDeleteDraft?.({
-    name: categoryName,
-    categoryRows: state?.categoriesRows || [],
-  });
-  const category = deleteDraft?.category || String(categoryName || '').trim();
-  if (deleteDraft && !deleteDraft.ok) throw new Error(deleteDraft.reason || 'Catégorie invalide.');
-  if (!deleteDraft && !category) throw new Error('Catégorie invalide.');
-  try {
-    const rpcName = TB_CONST?.RPCS?.delete_category_bundle || 'delete_category_bundle';
-    const { error } = await sb.rpc(rpcName, { p_category_name: category });
-    if (error) throw error;
-    return;
-  } catch (rpcErr) {
-    console.warn('[categories] delete bundle RPC unavailable, fallback to direct deletes', rpcErr?.message || rpcErr);
-  }
-
-  const { error: mapErr } = await sb
-    .from(TB_CONST.TABLES.analytic_category_mappings)
-    .delete()
-    .eq('user_id', sbUser.id)
-    .ilike('category_name', category);
-  if (mapErr) throw mapErr;
-
-  const { error: subErr } = await sb
-    .from(TB_CONST.TABLES.category_subcategories)
-    .delete()
-    .eq('user_id', sbUser.id)
-    .ilike('category_name', category);
-  if (subErr) throw subErr;
-
-  if (deleteDraft?.sqlCategoryId) {
-    const { error: delErr } = await sb
-      .from(TB_CONST.TABLES.categories)
-      .delete()
-      .eq('user_id', sbUser.id)
-      .eq('id', deleteDraft.sqlCategoryId);
-    if (delErr) throw delErr;
-  } else if (!deleteDraft?.sqlCategoryId && typeof setCategoryHidden === 'function') {
-    setCategoryHidden(category, true);
-  }
+  const category = String(categoryName || '').trim();
+  if (!category) throw new Error('Catégorie invalide.');
+  const rpcName = TB_CONST?.RPCS?.delete_category_bundle || 'delete_category_bundle';
+  const { error } = await sb.rpc(rpcName, { p_category_name: category });
+  if (error) throw error;
 }
 
 async function _saveAnalyticMappingRuleViaRpc(categoryName, subcategoryName, nextValue) {
@@ -2236,57 +2201,10 @@ async function _saveAnalyticMappingRuleViaRpc(categoryName, subcategoryName, nex
     nextValue,
     userId: sbUser.id,
   });
-  const category = draft?.category || String(categoryName || '').trim();
-  const subcategory = draft
-    ? draft.subcategory
-    : ((subcategoryName === undefined || subcategoryName === null || String(subcategoryName || '').trim() === '') ? null : String(subcategoryName || '').trim());
-  const value = draft?.value || String(nextValue || '').trim();
-  if (draft && !draft.ok) throw new Error(draft.reason || 'Catégorie invalide.');
-  if (!draft && !category) throw new Error('Catégorie invalide.');
-  const mappingStatus = draft?.mappingStatus || ((value === '__unmapped__' || value === '__inherit__') ? 'unmapped' : (value === '__excluded__' ? 'excluded' : 'mapped'));
-  const analyticFamily = draft ? draft.analyticFamily : (mappingStatus === 'mapped' ? value : null);
-  const rpcPayload = draft?.rpcPayload || {
-    p_user_id: sbUser.id,
-    p_category_name: category,
-    p_subcategory_name: subcategory,
-    p_mapping_status: mappingStatus,
-    p_analytic_family: analyticFamily,
-  };
-
-  try {
-    const rpcName = TB_CONST?.RPCS?.save_analytic_mapping_rule || 'save_analytic_mapping_rule';
-    const { error } = await sb.rpc(rpcName, rpcPayload);
-    if (error) throw error;
-    return;
-  } catch (rpcErr) {
-    console.warn('[analytic mapping] RPC unavailable, fallback to direct table write', rpcErr?.message || rpcErr);
-  }
-
-  const existing = _findAnalyticRule(category, subcategory);
-  if (mappingStatus === 'unmapped') {
-    if (existing?.id) {
-      const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).delete().eq('id', existing.id).eq('user_id', sbUser.id);
-      if (error) throw error;
-    }
-    return;
-  }
-
-  const payload = draft?.tablePayload || {
-    user_id: sbUser.id,
-    category_name: category,
-    subcategory_name: subcategory,
-    mapping_status: mappingStatus,
-    analytic_family: analyticFamily,
-    notes: null,
-    updated_at: new Date().toISOString(),
-  };
-  if (existing?.id) {
-    const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).update(payload).eq('id', existing.id).eq('user_id', sbUser.id);
-    if (error) throw error;
-  } else {
-    const { error } = await sb.from(TB_CONST.TABLES.analytic_category_mappings).insert([payload]);
-    if (error) throw error;
-  }
+  if (!draft?.ok) throw new Error(draft?.reason || 'Catégorie invalide.');
+  const rpcName = TB_CONST?.RPCS?.save_analytic_mapping_rule || 'save_analytic_mapping_rule';
+  const { error } = await sb.rpc(rpcName, draft.rpcPayload);
+  if (error) throw error;
 }
 
 function _openGuidedCategoryModal(defaults = {}) {
@@ -2326,6 +2244,7 @@ function _openGuidedSubcategoryModal(categoryName, defaults = {}) {
       category,
       name: defaults.name || '',
       color: defaults.color || '',
+      categoryColor: (typeof getCategoryColor === 'function' ? getCategoryColor(category) : '#94a3b8'),
       mapping: defaults.mapping || '__inherit__',
       analyticSelectOptions: _analyticSelectOptions,
       esc: escapeHTML,
@@ -2334,7 +2253,8 @@ function _openGuidedSubcategoryModal(categoryName, defaults = {}) {
       { label: 'Annuler', onClick: () => { modal.close(); resolve(null); } },
       { label: defaults.confirmLabel || 'Créer', className: 'btn primary', onClick: () => {
           const name = String(document.getElementById('tb-subcat-create-name')?.value || '').trim();
-          const color = String(document.getElementById('tb-subcat-create-color')?.value || '').trim();
+          const inheritsColor = !!document.getElementById('tb-subcat-color-inherit')?.checked;
+          const color = inheritsColor ? '' : String(document.getElementById('tb-subcat-create-color')?.value || '').trim();
           const mapping = String(document.getElementById('tb-subcat-create-mapping')?.value || '__inherit__').trim() || '__inherit__';
           modal.close();
           resolve({ name, color, mapping });
@@ -2460,19 +2380,8 @@ function addCategory() {
     const color = categoryDraft.color;
     const mapping = String(result?.mapping || '__unmapped__').trim() || '__unmapped__';
 
-    if (categoryDraft.mode === 'update') {
-      const { error: upErr } = await sb
-        .from(TB_CONST.TABLES.categories)
-        .update(categoryDraft.payload)
-        .eq("user_id", sbUser.id)
-        .eq("name", categoryDraft.existingName);
-      if (upErr) throw upErr;
-    } else {
-      const { error: insErr } = await sb
-        .from(TB_CONST.TABLES.categories)
-        .insert([categoryDraft.payload]);
-      if (insErr) throw insErr;
-    }
+    const { error: insErr } = await sb.from(TB_CONST.TABLES.categories).insert([categoryDraft.payload]);
+    if (insErr) throw insErr;
 
     if (typeof setCategoryHidden === "function") setCategoryHidden(name, false);
     await _saveAnalyticMappingRuleViaRpc(name, null, mapping);
@@ -2485,51 +2394,58 @@ function addCategory() {
 
 function deleteCategory(name) {
   safeCall("Delete category", async () => {
-    const deleteDraft = window.TBSettingsCategoriesView?.prepareCategoryDeleteDraft?.({
-      name,
-      categoryRows: state?.categoriesRows || [],
-    });
-    if (deleteDraft && !deleteDraft.ok) {
-      _settingsValidationNotice(deleteDraft.reason || 'Catégorie invalide.');
-      return;
-    }
-    if (!deleteDraft) {
-      _settingsValidationNotice('Module catégories indisponible.');
-      return;
-    }
-    if (!confirm(`Supprimer "${deleteDraft.category}" ?`)) return;
-    await _deleteCategoryBundleViaRpc(deleteDraft.category);
+    const category = String(name || '').trim();
+    if (!category) return _settingsValidationNotice('Catégorie invalide.');
+    if (!confirm(`Supprimer "${category}" ?`)) return;
+    await _deleteCategoryBundleViaRpc(category);
     await refreshFromServer();
     renderSettings();
   });
 }
 
-function setCategoryColor(name, color) {
-  safeCall("Set category color", async () => {
-    const categoryDraft = window.TBSettingsCategoriesView?.prepareCategoryUpsertDraft?.({
-      name,
-      color,
-      categories: state.categories || [],
-      userId: sbUser.id,
+function editCategory(currentName) {
+  return safeCall('Edit category', async () => {
+    const current = String(currentName || '').trim();
+    const currentMapping = _effectiveAnalyticMappingFor(current, null);
+    const mapping = currentMapping.mappingStatus === 'mapped'
+      ? String(currentMapping.analyticFamily || '').trim().toLowerCase()
+      : (currentMapping.mappingStatus === 'excluded' ? '__excluded__' : '__unmapped__');
+    const result = await _openGuidedCategoryModal({
+      name: current,
+      color: (typeof getCategoryColor === 'function' ? getCategoryColor(current) : '#94a3b8'),
+      mapping,
+      title: `Modifier catégorie · ${current}`,
+      confirmLabel: 'Enregistrer',
     });
-    if (categoryDraft && !categoryDraft.ok) {
-      _settingsValidationNotice(categoryDraft.reason || "Catégorie invalide.");
+    if (!result) return;
+    const readiness = window.TBSettingsCategoriesView?.validateCategoryDraft?.({ name: result.name, color: result.color });
+    const duplicate = (state.categories || []).some((name) => String(name).trim().toLowerCase() === readiness?.name?.toLowerCase() && String(name).trim().toLowerCase() !== current.toLowerCase());
+    if (!readiness?.ok || duplicate) {
+      _settingsValidationNotice(duplicate ? 'Une autre catégorie porte déjà ce nom.' : readiness?.reason || 'Catégorie invalide.');
       return;
     }
-    if (!categoryDraft) {
-      _settingsValidationNotice("Module catégories indisponible.");
-      return;
-    }
-    const { error: upErr } = await sb
-      .from(TB_CONST.TABLES.categories)
-      .update({ color: categoryDraft.color, updated_at: categoryDraft.payload.updated_at })
-      .eq("user_id", sbUser.id)
-      .eq("name", categoryDraft.existingName || categoryDraft.name);
-    if (upErr) throw upErr;
-
+    const rpcName = TB_CONST?.RPCS?.rename_category_bundle || 'rename_category_bundle';
+    const { error } = await sb.rpc(rpcName, { p_old_name: current, p_new_name: readiness.name, p_color: readiness.color });
+    if (error) throw error;
+    await _saveAnalyticMappingRuleViaRpc(readiness.name, null, result.mapping || '__unmapped__');
     await refreshFromServer();
     renderSettings();
   });
+}
+
+async function moveCategory(name, direction) {
+  const ordered = (state?.categoriesRows || []).filter((row) => row?.id);
+  const currentIndex = ordered.findIndex((row) => String(row.name).trim().toLowerCase() === String(name).trim().toLowerCase());
+  const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+  if (currentIndex < 0 || swapIndex < 0 || swapIndex >= ordered.length) return;
+  [ordered[currentIndex], ordered[swapIndex]] = [ordered[swapIndex], ordered[currentIndex]];
+  const updatedAt = new Date().toISOString();
+  for (const [index, row] of ordered.entries()) {
+    const { error } = await sb.from(TB_CONST.TABLES.categories).update({ sort_order: (index + 1) * 10, updated_at: updatedAt }).eq('id', row.id).eq('user_id', sbUser.id);
+    if (error) throw error;
+  }
+  await refreshFromServer();
+  renderSettings();
 }
 
 async function importExistingSubcategory(categoryName, subcategoryName) {
@@ -2655,6 +2571,24 @@ async function editSubcategory(id) {
   });
 }
 
+async function deleteSubcategory(id) {
+  return safeCall('Delete subcategory', async () => {
+    const row = (state?.categorySubcategories || []).find((candidate) => String(candidate?.id || '') === String(id || ''));
+    const category = String(row?.categoryName || row?.category_name || '').trim();
+    const name = String(row?.name || '').trim();
+    if (!row || !category || !name) {
+      _settingsValidationNotice('Sous-catégorie introuvable.');
+      return;
+    }
+    if (!confirm(`Supprimer la sous-catégorie "${name}" ? Les transactions existantes conservent leur libellé.`)) return;
+    const rpcName = TB_CONST?.RPCS?.delete_subcategory_bundle || 'delete_subcategory_bundle';
+    const { error } = await sb.rpc(rpcName, { p_category_name: category, p_subcategory_name: name });
+    if (error) throw error;
+    await refreshFromServer();
+    renderSettings();
+  });
+}
+
 
 async function moveSubcategory(id, direction) {
   const target = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).find((x) => String(x?.id) === String(id));
@@ -2671,54 +2605,22 @@ async function moveSubcategory(id, direction) {
   });
   if (!moveDraft?.ok) return;
 
-  const previousSnapshot = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).map((row) => ({
-    ...row,
-    sortOrder: row?.sortOrder,
-    sort_order: row?.sort_order,
-  }));
-
-  const nextSortById = new Map(moveDraft.nextRows.map((row) => [String(row?.id || ''), row]));
-  state.categorySubcategories = (Array.isArray(state?.categorySubcategories) ? state.categorySubcategories : []).map((row) => nextSortById.get(String(row?.id || '')) || row);
-
-  renderSettings();
-
-  try {
-    const nowIso = new Date().toISOString();
-    for (const row of moveDraft.updates) {
-      const { error } = await sb
-        .from(TB_CONST.TABLES.category_subcategories)
-        .update({ sort_order: row.sort_order, updated_at: nowIso })
-        .eq('id', row.id)
-        .eq('user_id', sbUser.id);
-
-      if (error) throw error;
-    }
-  } catch (e) {
-    state.categorySubcategories = previousSnapshot;
-    renderSettings();
-    throw e;
+  const nowIso = new Date().toISOString();
+  for (const row of moveDraft.updates) {
+    const { error } = await sb.from(TB_CONST.TABLES.category_subcategories).update({ sort_order: row.sort_order, updated_at: nowIso }).eq('id', row.id).eq('user_id', sbUser.id);
+    if (error) throw error;
   }
+  await refreshFromServer();
+  renderSettings();
 }
 
 async function toggleSubcategoryActive(id, nextActive) {
   return safeCall("Toggle subcategory", async () => {
-    const activeDraft = window.TBSettingsCategoriesView?.prepareSubcategoryActiveDraft?.({
-      id,
-      nextActive,
-    });
-    if (activeDraft && !activeDraft.ok) {
-      _settingsValidationNotice(activeDraft.reason || 'Sous-catégorie introuvable.');
-      return;
-    }
-    if (!activeDraft) {
-      _settingsValidationNotice('Module catégories indisponible.');
-      return;
-    }
-    const { error } = await sb
-      .from(TB_CONST.TABLES.category_subcategories)
-      .update(activeDraft.payload)
-      .eq('id', activeDraft.id)
-      .eq('user_id', sbUser.id);
+    const cleanId = String(id || '').trim();
+    if (!cleanId) return _settingsValidationNotice('Sous-catégorie introuvable.');
+    const { error } = await sb.from(TB_CONST.TABLES.category_subcategories)
+      .update({ is_active: !!nextActive, updated_at: new Date().toISOString() })
+      .eq('id', cleanId).eq('user_id', sbUser.id);
     if (error) throw error;
     await refreshFromServer();
     renderSettings();
@@ -2727,9 +2629,11 @@ async function toggleSubcategoryActive(id, nextActive) {
 
 window.addCategory = addCategory;
 window.deleteCategory = deleteCategory;
-window.setCategoryColor = setCategoryColor;
+window.editCategory = editCategory;
+window.moveCategory = moveCategory;
 window.addSubcategory = addSubcategory;
 window.editSubcategory = editSubcategory;
+window.deleteSubcategory = deleteSubcategory;
 window.toggleSubcategoryActive = toggleSubcategoryActive;
 window.moveSubcategory = moveSubcategory;
 window.importExistingSubcategory = importExistingSubcategory;

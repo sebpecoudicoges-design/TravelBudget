@@ -45,14 +45,14 @@ describe('settings view extraction contract', () => {
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderGuidedCategoryModalBody');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.renderGuidedSubcategoryModalBody');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareCategoryUpsertDraft');
-    expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareCategoryDeleteDraft');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.notifySettingsValidation');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareSubcategoryEditDraft');
+    expect(legacy).toContain("TB_CONST?.RPCS?.rename_category_bundle || 'rename_category_bundle'");
+    expect(legacy).toContain("TB_CONST?.RPCS?.delete_subcategory_bundle || 'delete_subcategory_bundle'");
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareAnalyticMappingRuleDraft');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareSubcategoryImportDraft');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareSubcategoryCreateDraft');
     expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareSubcategoryMoveDraft');
-    expect(legacy).toContain('window.TBSettingsCategoriesView?.prepareSubcategoryActiveDraft');
     expect(legacy).not.toContain('const cards = Array.from(view.querySelectorAll');
     expect(legacy).not.toContain('box.innerHTML = `');
     expect(legacy).not.toContain('const readNotificationForm = () =>');
@@ -75,9 +75,9 @@ describe('settings view extraction contract', () => {
     expect(legacy).not.toContain('const duplicate = existingRows.find');
     expect(legacy).not.toContain('const duplicateSql = existingRows.find');
     expect(legacy).not.toContain('existingRows.reduce');
-    expect(legacy).not.toContain('const swapIndex = direction ===');
+    expect(legacy).toContain("const swapIndex = direction === 'up'");
     expect(legacy).not.toContain('const updates = ordered.map');
-    expect(legacy).not.toContain('.update({ is_active: !!nextActive, updated_at: new Date().toISOString() })');
+    expect(legacy).toContain('.update({ is_active: !!nextActive, updated_at: new Date().toISOString() })');
     expect(legacy).not.toContain('const payload = editDraft?.payload ||');
     expect(legacy).not.toContain('currentName.toLowerCase() !== name.toLowerCase()');
     expect(legacy).toContain('function _settingsValidationNotice');

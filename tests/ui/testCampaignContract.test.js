@@ -104,4 +104,20 @@ describe('tester campaign contract', () => {
     expect(migration).toContain('Retest documents Patrimoine 10.5.329');
     expect(migration).toContain("set app_version = '10.5.329'");
   });
+
+  it('closes the Categories feedback with owner-scoped 10.5.330 RPCs and a linked retest', () => {
+    const migration = read('supabase/migrations/20260809003033_settings_categories_feedback_10_5_330.sql');
+
+    expect(migration).toContain('security invoker');
+    expect(migration).toContain('revoke all on function public.rename_category_bundle(text, text, text) from public, anon');
+    expect(migration).toContain('revoke all on function public.delete_subcategory_bundle(text, text) from public, anon');
+    expect(migration).toContain("auth.uid()");
+    expect(migration).toContain('Retest gestion Categories Settings 10.5.330');
+    expect(migration).toContain("set app_version = '10.5.330'");
+
+    const reviewMigration = read('supabase/migrations/20260809005159_archive_settings_module_review_10_5_330.sql');
+    expect(reviewMigration).toContain("module.module_key = 'settings'");
+    expect(reviewMigration).toContain("treated_version, '10.5.330'");
+    expect(reviewMigration).toContain('archived_at = coalesce');
+  });
 });

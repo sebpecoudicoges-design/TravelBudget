@@ -24,13 +24,11 @@ import {
   renderGuidedSubcategoryModalBody,
   renderSettingsCategoriesList,
   notifySettingsValidation,
-  prepareCategoryDeleteDraft,
   prepareCategoryUpsertDraft,
   prepareAnalyticMappingRuleDraft,
   prepareSubcategoryCreateDraft,
   prepareSubcategoryImportDraft,
   prepareSubcategoryMoveDraft,
-  prepareSubcategoryActiveDraft,
   prepareSubcategoryEditDraft,
   validateCategoryDraft,
   validateSubcategoryDraft,
@@ -302,6 +300,9 @@ describe('Settings view helpers', () => {
     expect(html).toContain("saveAnalyticCategoryMapping('Food',this.value)");
     expect(html).toContain("saveAnalyticSubcategoryMapping('Food','Restaurant',this.value)");
     expect(html).toContain("moveSubcategory('sub-1','up')");
+    expect(html).toContain("deleteSubcategory('sub-1')");
+    expect(html).toContain("moveCategory('Food','up')");
+    expect(html).toContain("editCategory('Food')");
     expect(html).toContain("importExistingSubcategory('Food','&lt;Detected&gt;')");
   });
 
@@ -327,6 +328,8 @@ describe('Settings view helpers', () => {
     expect(subcategoryHtml).toContain('tb-subcat-create-name');
     expect(subcategoryHtml).toContain('value="Food" disabled');
     expect(subcategoryHtml).toContain('value="Visa"');
+    expect(subcategoryHtml).toContain('type="color"');
+    expect(subcategoryHtml).toContain('id="tb-subcat-color-inherit"');
     expect(subcategoryHtml).toContain('<option data-inherit="true">__inherit__</option>');
   });
 
@@ -401,16 +404,8 @@ describe('Settings view helpers', () => {
       userId: 'user-1',
       now: () => '2026-07-19T04:00:00.000Z',
     })).toEqual({
-      ok: true,
-      reason: '',
-      mode: 'update',
-      name: 'Food',
-      existingName: 'food',
-      color: '#22c55e',
-      payload: {
-        color: '#22c55e',
-        updated_at: '2026-07-19T04:00:00.000Z',
-      },
+      ok: false,
+      reason: 'Cette catégorie existe déjà.',
     });
 
     expect(prepareCategoryUpsertDraft({
@@ -434,28 +429,6 @@ describe('Settings view helpers', () => {
         created_at: '2026-07-19T04:30:00.000Z',
         updated_at: '2026-07-19T04:30:00.000Z',
       },
-    });
-  });
-
-  it('prepares category delete confirmation and fallback decisions before legacy writes', () => {
-    expect(prepareCategoryDeleteDraft({ name: '' })).toEqual({ ok: false });
-
-    expect(prepareCategoryDeleteDraft({
-      name: ' Food ',
-      categoryRows: [{ id: 'cat-1', name: 'food' }],
-    })).toEqual({
-      ok: true,
-      category: 'Food',
-      sqlCategoryId: 'cat-1',
-    });
-
-    expect(prepareCategoryDeleteDraft({
-      name: 'Detected',
-      categoryRows: [{ id: 'cat-1', name: 'Food' }],
-    })).toMatchObject({
-      ok: true,
-      category: 'Detected',
-      sqlCategoryId: null,
     });
   });
 
@@ -555,7 +528,7 @@ describe('Settings view helpers', () => {
     });
   });
 
-  it('prepares analytic mapping RPC and table payloads before legacy writes', () => {
+  it('prepares analytic mapping RPC payloads before legacy writes', () => {
     expect(prepareAnalyticMappingRuleDraft({ categoryName: '' })).toEqual({
       ok: false,
       reason: 'Catégorie invalide.',
@@ -566,7 +539,6 @@ describe('Settings view helpers', () => {
       subcategoryName: ' Restaurant ',
       nextValue: 'transport',
       userId: 'user-1',
-      now: () => '2026-07-19T01:00:00.000Z',
     })).toEqual({
       ok: true,
       reason: '',
@@ -581,15 +553,6 @@ describe('Settings view helpers', () => {
         p_subcategory_name: 'Restaurant',
         p_mapping_status: 'mapped',
         p_analytic_family: 'transport',
-      },
-      tablePayload: {
-        user_id: 'user-1',
-        category_name: 'Food',
-        subcategory_name: 'Restaurant',
-        mapping_status: 'mapped',
-        analytic_family: 'transport',
-        notes: null,
-        updated_at: '2026-07-19T01:00:00.000Z',
       },
     });
 
@@ -757,40 +720,6 @@ describe('Settings view helpers', () => {
     });
   });
 
-  it('prepares subcategory active payloads before legacy writes', () => {
-    expect(prepareSubcategoryActiveDraft({ id: '' })).toEqual({
-      ok: false,
-      reason: 'Sous-catégorie introuvable.',
-    });
-
-    expect(prepareSubcategoryActiveDraft({
-      id: ' sub-1 ',
-      nextActive: true,
-      now: () => '2026-07-19T05:00:00.000Z',
-    })).toEqual({
-      ok: true,
-      reason: '',
-      id: 'sub-1',
-      payload: {
-        is_active: true,
-        updated_at: '2026-07-19T05:00:00.000Z',
-      },
-    });
-
-    expect(prepareSubcategoryActiveDraft({
-      id: 'sub-1',
-      nextActive: 0,
-      now: () => '2026-07-19T05:30:00.000Z',
-    })).toEqual({
-      ok: true,
-      reason: '',
-      id: 'sub-1',
-      payload: {
-        is_active: false,
-        updated_at: '2026-07-19T05:30:00.000Z',
-      },
-    });
-  });
 
   it('renders a period card with stable fields and actions', () => {
     const html = renderSettingsPeriodCard({

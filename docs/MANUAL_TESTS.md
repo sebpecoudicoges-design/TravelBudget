@@ -6,7 +6,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version à valider : `10.5.329`.
+- Version à valider : `10.5.330`.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
@@ -27,6 +27,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Wallet et Transactions `10.5.327` : les actions Wallet forment un panneau interne a leur carte sur desktop et une grille contenue sur mobile ; Archiver/Desarchiver occupe toute la largeur mobile. La categorie Immobilisation rejoint les valeurs par defaut sans doublon, y compris pour les comptes existants, et reste exclue du mix analytique quotidien. Deux retests enfants preservent l historique des retours traites.
 - Reouverture et saisie Trip `10.5.328` : Dashboard, Transactions et Analyse sont accessibles aux comptes standards apres cloture globale de leurs tests. Dans une nouvelle depense ou entree Trip, Moi est preselectionne et le champ Libelle peut rester vide ; la valeur de secours est Depense partagee ou Entree partagee. Un retest Trip lie reste a executer.
 - Patrimoine `10.5.329` : la carte range ses commandes par valeur, propriete, liens et cycle de vie ; la case budget explique son effet coche ou decoche. Une seule entree **Liens et documents** regroupe transactions, Trip et justificatifs dans deux sections numerotees. L apercu PDF et la modification des informations restent dans Patrimoine, avec une politique CSP limitee a Supabase. Trois retests enfants preservent les notes originales.
+- Settings Categories `10.5.330` : **Modifier** renomme une categorie et propage le nouveau nom aux transactions, regles recurrentes, depenses Trip, transferts et actifs concernes. Les fleches changent l ordre. Les sous-categories utilisent un selecteur de couleur avec heritage explicite et proposent une suppression confirmee sans modifier le libelle historique des transactions. Un retest enfant couvre le parcours complet.
 - Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés

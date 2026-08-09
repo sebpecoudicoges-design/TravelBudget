@@ -50,6 +50,13 @@ Source obligatoire : [`VISUAL_SYSTEM.md`](VISUAL_SYSTEM.md).
 - [ ] Verifier que les donnees remontent des l'ouverture sans double refresh inutile.
 - [ ] Ajouter test contrat Analyse premium.
 
+### Lot transversal - Settings Categories
+
+- [x] Regrouper les actions de chaque categorie dans sa carte : ordre, modifier, ajouter une sous-categorie et supprimer.
+- [x] Utiliser le selecteur natif pour les couleurs de categorie et sous-categorie, avec heritage explicite.
+- [x] Conserver les actions accessibles, la modale partagee et les contrats fonctionnels.
+- [ ] Valider le retest `10.5.330` en clair/sombre et 1440/390 px avant reouverture complete de Settings.
+
 ### Lot 4 - Trip / Partage
 
 - [ ] Inventorier recap, historique, depense partagee, entree partagee, split montant, documents et liens budget.

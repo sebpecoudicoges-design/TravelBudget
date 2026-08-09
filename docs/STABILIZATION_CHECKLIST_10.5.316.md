@@ -16,10 +16,10 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.329`.
+- Version cible de campagne : `10.5.330`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
-- 50 resultats et 12 revues de module traites sont archives avec date de test, date de traitement, version et note.
-- 18 scenarios restent ouverts, dont quatre retests derives actifs : saisie rapide Trip `10.5.328` et les trois parcours Patrimoine `10.5.329`. Les autres retours ouverts conservent leur scenario d origine.
+- 51 resultats et 13 revues de module traites sont archives avec date de test, date de traitement, version et note.
+- 18 scenarios restent ouverts, dont cinq retests derives actifs : saisie rapide Trip `10.5.328`, gestion Categories Settings `10.5.330` et les trois parcours Patrimoine `10.5.329`. Les autres retours ouverts conservent leur scenario d origine.
 - Dashboard, Transactions et Analyse sont valides puis rouverts aux comptes standards ; les autres modules metier restent geles.
 - A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
@@ -78,7 +78,8 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 - [x] Ajouter une periode depuis la section Periodes.
 - [x] Corriger les champs numeriques contenant une devise, dont `400 EUR`, et remplacer le defaut arbitraire par le budget quotidien estime ou une valeur vide.
 - [x] Gerer proprement les refus de suppression voyage/periode sans erreur console pour un refus metier attendu.
-- [ ] Completer renommage, ordre, couleur et cycle de vie des categories.
+- [x] Completer renommage, ordre, couleur et cycle de vie des categories en `10.5.330`, archiver le retour et reutiliser son retest lie.
+- [ ] Faire executer le retest gestion Categories `10.5.330` avant reouverture complete de Settings.
 
 ## Chantier 4 - Analyse
 
