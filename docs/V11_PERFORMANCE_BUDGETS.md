@@ -150,6 +150,8 @@ En 10.5.330, Settings Categories ajoute renommage propage, ordre et suppression 
 
 En 10.5.331, Patrimoine replace la liaison documentaire dans les justificatifs et fiabilise la modification des informations sans relever les plafonds. L option generique de modale et les styles specifiques devenus inutiles pendant le chantier sont retires. Assets mesure 118.4 / 125 KiB, l initial 257.3 / 260 KiB, le lazy 420.0 / 420 KiB, le total JS 677.3 / 678 KiB et le CSS 38.9 / 39 KiB.
 
+En 10.5.332, Trip rend l audit des liens lisible et actionnable en reutilisant ses cartes et actions existantes. Les selecteurs sont renforces pour ne pas etre ecrases par le theme clair ; aucun plafond n est releve. Trip mesure 321.0 / 340 KiB, l initial 257.3 / 260 KiB, le lazy 420.0 / 420 KiB, le total JS 677.3 / 678 KiB et le CSS 39.0 / 39 KiB.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

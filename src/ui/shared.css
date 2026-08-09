@@ -260,10 +260,10 @@
   flex-wrap: wrap;
 }
 
-.trip-link-audit-card {
-  margin-top: 12px;
-  border-color: rgba(245, 158, 11, .35) !important;
-  background: rgba(245, 158, 11, .08) !important;
+body:not(.theme-dark) .card.trip-link-audit-card,
+body.theme-dark .card.trip-link-audit-card {
+  border-color: rgba(228, 81, 81, .42) !important;
+  background: rgba(228, 81, 81, .08) !important;
 }
 
 .trip-link-audit-card-row {
@@ -274,7 +274,11 @@
   flex-wrap: wrap;
 }
 
-.trip-link-audit-card h2 { margin: 0 0 6px; }
+.trip-badge--audit {
+  color: var(--tb-danger) !important;
+  border-color: rgba(228, 81, 81, .48) !important;
+  background: rgba(228, 81, 81, .12) !important;
+}
 
 .trip-doc-linked-card { margin-bottom: 8px; }
 

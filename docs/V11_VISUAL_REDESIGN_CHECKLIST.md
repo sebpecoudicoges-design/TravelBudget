@@ -64,6 +64,8 @@ Source obligatoire : [`VISUAL_SYSTEM.md`](VISUAL_SYSTEM.md).
 - [ ] Adapter toutes les modales au format mobile.
 - [ ] Conserver les balances, remboursements, source externe/participant et option non due.
 - [x] Ajouter test contrat Trip premium.
+- [x] Passer les badges et panneaux d audit Trip sur le token danger, masquer les UUID et conserver des actions accessibles.
+- [ ] Valider le retest audit Trip `10.5.332` en clair/sombre et 1440/390 px.
 
 ### Lot 5 - Patrimoine
 

@@ -2499,6 +2499,17 @@ function _ensureExpenseDetailModal() {
   return modal;
 }
 
+function _tripAuditSupportHref(ex, issues) {
+  const version = String(window.TB_VERSION || window.__TB_BUILD || "dev");
+  const subject = `[TravelBudget ${version}] Audit Trip`;
+  const diagnostics = (issues || []).map((issue) => {
+    const tx = issue?.transactionId ? ` / tx ${issue.transactionId}` : "";
+    return `- ${issue?.type || "link_issue"}${tx}`;
+  }).join("\n");
+  const body = `Bonjour,\n\nJe souhaite faire verifier un lien Trip / Transactions.\nDepense : ${ex?.label || "—"}\nDate : ${ex?.date || "—"}\nIdentifiant : ${ex?.id || "—"}\n\nDiagnostic :\n${diagnostics || "indisponible"}`;
+  return `mailto:seb.pecoud.icoges@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 async function _openExpenseDetailModal({ ex, shares, members }) {
   const modal = _ensureExpenseDetailModal();
   _expDetailModalState = { expenseId: ex?.id || null };
@@ -2524,6 +2535,7 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
     round2: _round2,
     translate: _tripT,
     escapeHTML,
+    supportHref: _tripAuditSupportHref(ex, localLinkIssues),
   }) || `<div class="muted">Détail indisponible.</div>`;
   const bodyEl = modal.querySelector("#tripExpDetailBody");
   bodyEl.innerHTML = body;
@@ -2533,6 +2545,17 @@ async function _openExpenseDetailModal({ ex, shares, members }) {
       if (id && typeof window.tbOpenTransactionFromTrip === "function") window.tbOpenTransactionFromTrip(id);
     };
   });
+  const repairButton = bodyEl.querySelector("[data-trip-detail-repair]");
+  if (repairButton) repairButton.onclick = async () => {
+    try {
+      modal.querySelector("#tripExpDetailOk")?.click();
+      await _beginEditExpense(ex?.id);
+      setTimeout(() => { try { _el("trip-exp-label")?.focus(); } catch (_) {} }, 50);
+      toastOk("Fenêtre de réparation ouverte.");
+    } catch (error) {
+      toastWarn(error?.message || String(error));
+    }
+  };
 }
 
 
@@ -4008,7 +4031,7 @@ try {
           const linkedBadges = [
             ex.transactionId ? `<span class="trip-badge">${escapeHTML(_tripT("trip.linked.main_transaction"))}</span>` : '',
             hasShareBudgetLink ? `<span class="trip-badge">${escapeHTML(_tripT("trip.linked.share_transaction"))}</span>` : '',
-            linkIssueExpenseIds.has(String(ex.id || "")) ? `<span class="trip-badge" style="background:rgba(245,158,11,.18);border-color:rgba(245,158,11,.45);">Audit</span>` : ''
+            linkIssueExpenseIds.has(String(ex.id || "")) ? `<span class="trip-badge trip-badge--audit">Audit</span>` : ''
           ].filter(Boolean).join('');
           const resolvedCategory = _tripAnalysisCategoryKey(ex, tripTxMap);
           const resolvedSubcategory = String(ex.subcategory || '').trim();

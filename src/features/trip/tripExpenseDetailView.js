@@ -27,6 +27,7 @@ export function renderTripExpenseDetailContent({
   round2 = (value) => Math.round((Number(value) || 0) * 100) / 100,
   translate = (key) => key,
   escapeHTML = fallbackEscape,
+  supportHref = '',
 }) {
   const expense = ex || {};
   const shareRows = Array.isArray(shares) ? shares : [];
@@ -60,10 +61,7 @@ export function renderTripExpenseDetailContent({
     : '';
 
   const linkIssueHTML = issues.length
-    ? `<div style="margin-top:12px;padding:10px;border-radius:12px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.28);">
-         <div style="font-weight:800;margin-bottom:6px;">${escapeHTML(translate('trip.linked.audit_title'))}</div>
-         ${issues.map((issue) => `<div class="muted" style="font-size:12px;">${escapeHTML(issue?.type || 'link_issue')} • tx ${escapeHTML(String(issue?.transactionId || '—'))}</div>`).join('')}
-       </div>`
+    ? `<div class="card trip-link-audit-card"><strong>${escapeHTML(translate('trip.linked.audit_title'))}</strong><div class="muted">${escapeHTML(translate('trip.linked.audit_issue'))}</div><br><div class="trip-help-card-actions"><button class="btn small danger" type="button" data-trip-detail-repair="1">${escapeHTML(translate('trip.linked.audit_repair'))}</button>${supportHref ? `<a class="btn small" data-trip-detail-support="1" href="${escapeHTML(supportHref)}">${escapeHTML(translate('trip.linked.audit_support'))}</a>` : ''}</div></div>`
     : '';
 
   const mainTx = detail.walletTransaction || null;

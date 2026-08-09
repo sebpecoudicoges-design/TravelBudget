@@ -16,10 +16,10 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.331`.
+- Version cible de campagne : `10.5.332`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
-- 55 resultats et 14 revues de module traites sont archives avec date de test, date de traitement, version et note.
-- 17 scenarios restent ouverts. Le retest Trip `10.5.328` est clos ; gestion Categories Settings `10.5.330` et les trois nouveaux parcours Patrimoine `10.5.331` conservent leur filiation. Les autres retours ouverts gardent leur scenario d origine.
+- 55 resultats et 15 revues de module traitees sont archives avec date de test, date de traitement, version et note.
+- 18 scenarios restent ouverts. Le nouveau retest audit Trip `10.5.332`, gestion Categories Settings `10.5.330` et les trois parcours Patrimoine `10.5.331` conservent leur filiation. Les autres retours ouverts gardent leur scenario d origine.
 - Dashboard, Transactions et Analyse sont valides puis rouverts aux comptes standards ; les autres modules metier restent geles.
 - A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
@@ -29,7 +29,7 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 - [ ] Remplacer les rejets metier `Uncaught (in promise)` par un message utilisateur explicite.
 - [ ] Verifier l hydratation Nutrition/KPI sans ouverture prealable du module.
 - [x] Corriger l apercu documentaire et limiter `frame-src` aux contenus locaux, `blob:` et Supabase.
-- [ ] Auditer les 13 liens Trip/Transactions incomplets avant toute reparation automatique.
+- [x] Rendre les 13 liens Trip/Transactions incomplets identifiables sans exposer les UUID ; la reparation reste guidee et non automatique.
 - [x] Reprendre le retour Archiver wallet : remplacer la disposition inline par un panneau d actions explicitement contenu dans la carte, avec contrats desktop/mobile et clair/sombre.
 
 ## Chantier 1 - Dashboard
@@ -93,9 +93,10 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 - [x] Corriger le placeholder francais de recherche de l historique (`Libelle, montant, participant`).
 - [x] Selectionner Moi par defaut dans Paye par / Recu par.
 - [x] Autoriser un libelle vide avec valeur de secours explicite.
-- [ ] Simplifier l audit des liens et distinguer visuellement les anomalies.
-- [ ] Proposer Reparer seulement quand l operation est sure, sinon Support.
+- [x] Simplifier l audit des liens et distinguer visuellement les anomalies en rouge.
+- [x] Proposer Reparer comme ouverture guidee de la modification et preparer un contact Support avec diagnostic.
 - [ ] Auditer les 13 liens existants.
+- [ ] Faire executer le retest audit Trip `10.5.332` en clair/sombre et 1440/390 px.
 
 ## Chantier 6 - Sport
 

@@ -320,14 +320,26 @@ describe('Trip view', () => {
       walletNameById: () => '<Bank>',
       formatMoney: (amount, currency) => `${Number(amount).toFixed(0)} ${currency}`,
       round2: (value) => Math.round(Number(value) * 100) / 100,
-      translate: (key) => key === 'trip.linked.open_transaction' ? 'Open tx' : '<Audit>',
+      translate: (key) => ({
+        'trip.linked.open_transaction': 'Open tx',
+        'trip.linked.audit_title': '<Audit>',
+        'trip.linked.audit_issue': 'Readable issue',
+        'trip.linked.audit_repair': 'Repair',
+        'trip.linked.audit_support': 'Support',
+      }[key] || key),
+      supportHref: 'mailto:support@example.com?subject=%3CAudit%3E',
     });
 
     expect(html).toContain('&lt;Beer&gt;');
     expect(html).toContain('&lt;Alex&gt;');
     expect(html).toContain('&lt;Bank&gt;');
     expect(html).toContain('&lt;Trip&gt;');
-    expect(html).toContain('&lt;missing&gt;');
+    expect(html).toContain('Readable issue');
+    expect(html).toContain('data-trip-detail-repair="1"');
+    expect(html).toContain('data-trip-detail-support="1"');
+    expect(html).toContain('mailto:support@example.com?subject=%3CAudit%3E');
+    expect(html).not.toContain('&lt;missing&gt;');
+    expect(html).not.toContain('tx-x');
     expect(html).toContain('data-trip-detail-open-tx="tx-main"');
     expect(html).toContain('data-trip-detail-open-tx="tx-share"');
     expect(html).toContain('data-label="Participant"');
@@ -372,7 +384,7 @@ describe('Trip view', () => {
     expect(html).toContain('trip-link-audit-card');
     expect(html).toContain('&lt;Audit&gt;');
     expect(html).toContain('2 &lt;issues&gt;');
-    expect(html).toContain('<span class="trip-badge">2</span>');
+    expect(html).toContain('<span class="trip-badge trip-badge--audit">2</span>');
   });
 
   it('renders Trip analysis bars with category and participant balances', () => {

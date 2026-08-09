@@ -11,6 +11,7 @@ describe('Trip domain contract', () => {
   const documentView = fs.readFileSync('src/features/trip/tripDocumentView.js', 'utf8');
   const detailView = fs.readFileSync('src/features/trip/tripExpenseDetailView.js', 'utf8');
   const recapView = fs.readFileSync('src/features/trip/tripRecapView.js', 'utf8');
+  const sharedCss = fs.readFileSync('src/ui/shared.css', 'utf8');
   const main = fs.readFileSync('src/main.js', 'utf8');
 
   it('exposes Trip rules, repository, store and view through the bridge', () => {
@@ -99,6 +100,14 @@ describe('Trip domain contract', () => {
     expect(detailView).toContain('export function renderTripExpenseDetailContent');
     expect(main).toContain("import('./features/trip/tripExpenseDetailView.js')");
     expect(legacy).toContain('tripExpenseDetailView?.renderTripExpenseDetailContent');
+    expect(detailView).toContain('data-trip-detail-repair="1"');
+    expect(detailView).toContain('data-trip-detail-support="1"');
+    expect(detailView).not.toContain("issue?.type || 'link_issue'");
+    expect(legacy).toContain('_tripAuditSupportHref(ex, localLinkIssues)');
+    expect(legacy).toContain('trip-badge trip-badge--audit');
+    expect(sharedCss).toContain('body:not(.theme-dark) .card.trip-link-audit-card');
+    expect(sharedCss).toContain('body.theme-dark .card.trip-link-audit-card');
+    expect(sharedCss).toContain('color: var(--tb-danger) !important');
     expect(documentView).toContain('export function renderTripExpenseDocumentsContent');
     expect(main).toContain("import('./features/trip/tripDocumentView.js')");
     expect(main).not.toContain("'/legacy/js/29_trip_document_view.js'");
