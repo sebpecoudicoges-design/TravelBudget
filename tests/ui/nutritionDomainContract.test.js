@@ -9,6 +9,7 @@ describe('nutrition domain extraction contract', () => {
   const repository = fs.readFileSync('src/data/nutritionRepository.js', 'utf8');
   const store = fs.readFileSync('src/features/nutrition/nutritionStore.js', 'utf8');
   const view = fs.readFileSync('src/features/nutrition/nutritionView.js', 'utf8');
+  const offlineQueue = fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8');
 
   it('exposes repository, store and views through the modular bridge', () => {
     expect(bridge).toContain("import { createNutritionRepository } from '../data/nutritionRepository.js'");
@@ -75,6 +76,14 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('saveLocalNutritionRowsOnce(rows)');
     expect(legacy).toContain('rows.forEach(row => upsertOptimisticNutritionRow(row, { publish: false }))');
     expect(legacy).toContain('requestNutritionSync("meal-favorite")');
+    expect(legacy).toContain('if (loadLocalMeals().length) enqueueNutritionSync();');
+    expect(legacy).toContain('requestNutritionSync("online")');
+    expect(legacy).not.toContain('publishNutrition("save-local");\n        enqueueNutritionSync();');
+    expect(legacy).not.toContain('publishNutrition("meal-favorite-local");\n      enqueueNutritionSync();');
+    expect(offlineQueue).toContain('const needsGlobalRefresh = syncedKinds.some');
+    expect(offlineQueue).toContain('window.tbNutritionRefreshAfterSync');
+    expect(legacy).toContain('throw new Error("Nutrition sync incomplete: pending local rows remain")');
+    expect(offlineQueue).not.toContain('window.tbSportRefreshAfterSync');
     expect(legacy).not.toContain('renderNutrition("save-optimistic")');
     expect(legacy).not.toContain('syncLocalNutritionRows("meal-favorite", { forceOnline: true })');
     expect(view).toContain('id="nutrition-meal-favorites"');

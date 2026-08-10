@@ -396,6 +396,8 @@
       CACHE.nutritionSyncTimer = null;
       try {
         await syncLocalNutritionRows(reason || "mutation", { forceOnline: true });
+        if (loadLocalMeals().length) enqueueNutritionSync();
+        else discardNutritionQueue();
         await loadNutrition({ force: true });
         if ((window.activeView || "") === "nutrition") renderNutrition(`${reason || "mutation"}-sync`);
       } catch (_) {}
@@ -1809,7 +1811,6 @@
         saveLocalNutritionRowsOnce([localRow]);
         upsertOptimisticNutritionRow(localRow, { publish: false });
         publishNutrition("save-local");
-        enqueueNutritionSync();
         queuedLocalAddition = true;
       }
       if (!queuedLocalAddition) {
@@ -1857,7 +1858,6 @@
       saveLocalNutritionRowsOnce(rows);
       rows.forEach(row => upsertOptimisticNutritionRow(row, { publish: false }));
       publishNutrition("meal-favorite-local");
-      enqueueNutritionSync();
       renderNutrition("meal-favorite");
       requestNutritionSync("meal-favorite");
     } finally {
@@ -1987,8 +1987,16 @@
     else { CACHE.loaded = false; CACHE.meals = []; CACHE.items = []; }
   });
   try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadNutrition(); } catch (_) {} }); } catch (_) {}
-  try { window.addEventListener("tb:offline_state_changed", (ev) => { if (ev?.detail?.offline === false) syncLocalNutritionRows("online").then(() => loadNutrition({ force: true })).catch(() => {}); }); } catch (_) {}
-  window.tbNutritionSyncLocal = syncLocalNutritionRows;
+  try { window.addEventListener("tb:offline_state_changed", (ev) => { if (ev?.detail?.offline === false) requestNutritionSync("online"); }); } catch (_) {}
+  window.tbNutritionSyncLocal = async function tbNutritionSyncLocal(reason) {
+    const synced = await syncLocalNutritionRows(reason || "offline-queue");
+    if (loadLocalMeals().length) throw new Error("Nutrition sync incomplete: pending local rows remain");
+    return synced;
+  };
+  window.tbNutritionRefreshAfterSync = async function tbNutritionRefreshAfterSync() {
+    await loadNutrition({ force: true });
+    if ((window.activeView || "") === "nutrition") renderNutrition("offline-queue-sync");
+  };
   window.tbNutritionDiscardPending = discardAllLocalNutritionRows;
   setTimeout(() => { try { if (uid()) loadNutrition().catch(() => {}); } catch (_) {} }, 450);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ensureNutritionShell);

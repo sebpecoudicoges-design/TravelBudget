@@ -355,12 +355,14 @@
       if (!todo.length) return { ok: true, synced: 0 };
 
       syncing = true;
+      const syncedKinds = [];
       const result = await window.Data.flushMutationQueue({
         store: queueStore,
         run: runItem,
         force,
         isPermanentFailure: (item, error) => isPermanentFailure(item.kind, error),
         onSuccess: (item) => {
+          syncedKinds.push(String(item?.kind || ""));
           if (String(item?.kind || "").startsWith("transaction.")) cleanupOptimisticRows(item.id);
         },
         onPermanentFailure: (item) => {
@@ -374,7 +376,18 @@
       if (synced) {
         toastInfo(message(`${synced} action(s) hors ligne synchronisee(s).`, `${synced} offline action(s) synced.`));
         try {
-          if (typeof window.refreshFromServer === "function") await window.refreshFromServer({ force: true });
+          const needsGlobalRefresh = syncedKinds.some(kind => !["nutrition.sync_local", "sport.sync_local"].includes(kind));
+          if (needsGlobalRefresh && typeof window.refreshFromServer === "function") {
+            await window.refreshFromServer({ force: true });
+          } else {
+            if (syncedKinds.includes("nutrition.sync_local") && typeof window.tbNutritionRefreshAfterSync === "function") {
+              await window.tbNutritionRefreshAfterSync();
+            }
+            if (syncedKinds.includes("sport.sync_local")) {
+              if (typeof window.tbReloadSportHistory === "function") await window.tbReloadSportHistory();
+              if ((window.activeView || "") === "sport" && typeof window.renderSport === "function") window.renderSport("offline-queue-sync");
+            }
+          }
         } catch (_) {}
       }
       return { ok: failed === 0, synced, failed };
