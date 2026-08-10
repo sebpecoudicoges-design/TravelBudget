@@ -390,6 +390,17 @@
       }
     } catch (_) {}
   }
+  function requestNutritionSync(reason) {
+    try { clearTimeout(CACHE.nutritionSyncTimer); } catch (_) {}
+    CACHE.nutritionSyncTimer = setTimeout(async () => {
+      CACHE.nutritionSyncTimer = null;
+      try {
+        await syncLocalNutritionRows(reason || "mutation", { forceOnline: true });
+        await loadNutrition({ force: true });
+        if ((window.activeView || "") === "nutrition") renderNutrition(`${reason || "mutation"}-sync`);
+      } catch (_) {}
+    }, 80);
+  }
   function nutritionSyncMarker(syncId) {
     const repo = repository();
     if (typeof repo.nutritionSyncMarker === "function") return repo.nutritionSyncMarker(syncId);
@@ -523,6 +534,19 @@
     const rows = loadLocalMeals().filter(existing => localNutritionRowKey(existing, 0) !== key);
     rows.unshift(row);
     saveLocalMeals(rows);
+  }
+  function saveLocalNutritionRowsOnce(rows) {
+    const incoming = (Array.isArray(rows) ? rows : []).filter(Boolean);
+    if (!incoming.length) return [];
+    const repo = repository();
+    if (typeof repo.saveLocalNutritionRowsOnce === "function") {
+      return repo.saveLocalNutritionRowsOnce({ storage: localStorage, key: localMealKey(), rows: incoming });
+    }
+    const incomingKeys = new Set(incoming.map((row, index) => localNutritionRowKey(row, index)));
+    const current = loadLocalMeals().filter((row, index) => !incomingKeys.has(localNutritionRowKey(row, index)));
+    const next = [...incoming, ...current];
+    saveLocalMeals(next);
+    return next;
   }
   async function syncLocalNutritionRows(reason, options = {}) {
     const c = client();
@@ -708,7 +732,7 @@
     const mealType = String(type || currentMealType());
     const { items } = selectedRows();
     const rows = items.filter(item => String(itemMeal(item)?.meal_type || "meal") === mealType && item.food_key);
-    if (!rows.length) return;
+    if (!rows.length) return null;
     const favorite = {
       id: `meal_fav_${Date.now()}`,
       mealType,
@@ -722,6 +746,7 @@
     };
     const next = [favorite].concat(loadMealFavorites().filter(row => row.label !== favorite.label));
     saveMealFavorites(next);
+    return favorite;
   }
   function loadSleepRows() {
     const repo = repository();
@@ -1622,13 +1647,20 @@
     });
     root.querySelectorAll("[data-nutrition-save-meal-fav]").forEach(btn => {
       btn.onclick = () => {
-        saveFavoriteMealFromType(btn.getAttribute("data-nutrition-save-meal-fav"));
-        renderNutrition("meal-fav-save");
+        if (CACHE.savingFavoriteMeal) return;
+        CACHE.savingFavoriteMeal = true;
+        btn.disabled = true;
+        try {
+          if (saveFavoriteMealFromType(btn.getAttribute("data-nutrition-save-meal-fav"))) {
+            renderMealFavorites(root);
+          }
+        } finally {
+          CACHE.savingFavoriteMeal = false;
+          btn.disabled = false;
+        }
       };
     });
-    root.querySelectorAll("[data-nutrition-apply-meal-fav]").forEach(btn => {
-      btn.onclick = () => applyMealFavorite(btn.getAttribute("data-nutrition-apply-meal-fav"));
-    });
+    bindMealFavoriteButtons(root);
     const favorite = root.querySelector("#nutrition-toggle-favorite");
     if (favorite) favorite.onclick = () => {
       toggleFoodFavorite(selectedFood(root)?.key);
@@ -1702,12 +1734,28 @@
     }
     updateNutritionPreview(root);
   }
+  function renderMealFavorites(root) {
+    const host = root?.querySelector("#nutrition-meal-favorites");
+    if (!host) return;
+    const favorites = loadMealFavorites();
+    host.innerHTML = favorites.length
+      ? `<div class="tb-nutrition-chip-row" aria-label="${esc(txt("Repas favoris", "Favorite meals"))}">${favorites.slice(0, 6).map((fav, index) => mealFavoriteChipHTML(fav, index)).join("")}</div>`
+      : "";
+    bindMealFavoriteButtons(root);
+  }
+  function bindMealFavoriteButtons(root) {
+    root?.querySelectorAll("[data-nutrition-apply-meal-fav]").forEach(btn => {
+      btn.onclick = () => applyMealFavorite(btn.getAttribute("data-nutrition-apply-meal-fav"), btn);
+    });
+  }
   function startNutritionEdit(root, id) {
     CACHE.editingItemId = String(id || "");
     CACHE.foodQuery = "";
     renderNutrition("edit");
   }
   async function saveNutritionMeal(root) {
+    if (CACHE.savingMeal) return;
+    CACHE.savingMeal = true;
     const saveBtn = root?.querySelector("#nutrition-save");
     if (saveBtn) saveBtn.disabled = true;
     const food = selectedFood(root);
@@ -1720,6 +1768,7 @@
     const syncId = `nutrition_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     const mealType = selectedMealType(root);
     const localRow = makeLocalNutritionRow({ food, grams, nut, waterMl, mealType, syncId });
+    let queuedLocalAddition = false;
     try {
       if (c && uid() && CACHE.editingItemId) {
         const existing = CACHE.items.find(item => String(item.id || "") === String(CACHE.editingItemId));
@@ -1745,38 +1794,6 @@
         }).eq("id", CACHE.editingItemId).eq("user_id", uid());
         if (itemUpdate.error) throw itemUpdate.error;
         CACHE.editingItemId = "";
-      } else if (c && uid()) {
-        upsertOptimisticNutritionRow(localRow);
-        renderNutrition("save-optimistic");
-        const meal = await c.from(table("nutrition_meals")).insert({
-          user_id: uid(),
-          travel_id: activeTravelId(),
-          meal_date: selectedDateISO(),
-          meal_type: mealType,
-          label: food.name,
-          notes: notesWithNutritionSyncId("", syncId),
-          sync_id: syncId,
-          water_ml: waterMl,
-        }).select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,created_at,sync_id").single();
-        if (meal.error) throw meal.error;
-        let insertedItem = null;
-        if (grams > 0) {
-          const item = await c.from(table("nutrition_meal_items")).insert({
-            user_id: uid(),
-            meal_id: meal.data.id,
-            food_key: food.key,
-            label: food.name,
-            grams,
-            kcal: nut.kcal,
-            protein_g: nut.protein,
-            carbs_g: nut.carbs,
-            fat_g: nut.fat,
-            fiber_g: nut.fiber,
-          }).select("id,user_id,meal_id,food_key,label,grams,kcal,protein_g,carbs_g,fat_g,fiber_g,sort_order,created_at").single();
-          if (item.error) throw item.error;
-          insertedItem = item.data || null;
-        }
-        confirmNutritionRow(localRow, meal.data, insertedItem);
       } else if (CACHE.editingItemId) {
         const rows = loadLocalMeals();
         const edited = rows.map(row => {
@@ -1789,14 +1806,19 @@
         saveLocalMeals(edited);
         CACHE.editingItemId = "";
       } else {
-        saveLocalNutritionRowOnce(localRow);
-        upsertOptimisticNutritionRow(localRow);
+        saveLocalNutritionRowsOnce([localRow]);
+        upsertOptimisticNutritionRow(localRow, { publish: false });
+        publishNutrition("save-local");
         enqueueNutritionSync();
+        queuedLocalAddition = true;
       }
-      try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+      if (!queuedLocalAddition) {
+        try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+      }
       try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
       renderNutrition("save");
-      setTimeout(() => loadNutrition({ force: true }).then(() => {
+      if (queuedLocalAddition) requestNutritionSync("save");
+      else setTimeout(() => loadNutrition({ force: true }).then(() => {
         if ((window.activeView || "") === "nutrition") renderNutrition("save-refresh");
       }).catch(() => {}), 350);
     } catch (e) {
@@ -1809,28 +1831,39 @@
       }
       renderNutrition("save-error");
     } finally {
+      CACHE.savingMeal = false;
       try { if (saveBtn) saveBtn.disabled = false; } catch (_) {}
+      try { const currentSave = root?.querySelector("#nutrition-save"); if (currentSave) currentSave.disabled = false; } catch (_) {}
     }
   }
-  async function applyMealFavorite(index) {
+  function applyMealFavorite(index, trigger) {
+    if (CACHE.applyingFavoriteMeal) return;
+    CACHE.applyingFavoriteMeal = true;
+    if (trigger) trigger.disabled = true;
     const fav = loadMealFavorites()[Math.max(0, Math.round(n(index, 0)))];
-    if (!fav) return;
-    const type = rootMealTypeValue() || fav.mealType || currentMealType();
-    for (const entry of fav.items || []) {
-      const food = foodByKey(entry.foodKey);
-      if (!food) continue;
-      const grams = Math.max(0, n(entry.grams, food.servingGrams || 100));
-      const nut = nutritionForGrams(food, grams);
-      const syncId = `nutrition_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-      const localRow = makeLocalNutritionRow({ food, grams, nut, waterMl: n(nut.waterMl, 0), mealType: type, syncId });
-      saveLocalNutritionRowOnce(localRow);
-      upsertOptimisticNutritionRow(localRow);
+    try {
+      if (!fav) return;
+      const type = rootMealTypeValue() || fav.mealType || currentMealType();
+      const stamp = Date.now();
+      const rows = (fav.items || []).map((entry, index) => {
+        const food = foodByKey(entry.foodKey);
+        if (!food) return null;
+        const grams = Math.max(0, n(entry.grams, food.servingGrams || 100));
+        const nut = nutritionForGrams(food, grams);
+        const syncId = `nutrition_${stamp}_${index}_${Math.random().toString(16).slice(2)}`;
+        return makeLocalNutritionRow({ food, grams, nut, waterMl: n(nut.waterMl, 0), mealType: type, syncId });
+      }).filter(Boolean);
+      if (!rows.length) return;
+      saveLocalNutritionRowsOnce(rows);
+      rows.forEach(row => upsertOptimisticNutritionRow(row, { publish: false }));
+      publishNutrition("meal-favorite-local");
+      enqueueNutritionSync();
+      renderNutrition("meal-favorite");
+      requestNutritionSync("meal-favorite");
+    } finally {
+      CACHE.applyingFavoriteMeal = false;
+      if (trigger) trigger.disabled = false;
     }
-    enqueueNutritionSync();
-    renderNutrition("meal-favorite");
-    syncLocalNutritionRows("meal-favorite", { forceOnline: true }).then(() => {
-      loadNutrition({ force: true }).then(() => renderNutrition("meal-favorite-sync")).catch(() => {});
-    }).catch(() => {});
   }
   function rootMealTypeValue() {
     return String(document.getElementById("nutrition-type")?.value || CACHE.selectedMealType || "");

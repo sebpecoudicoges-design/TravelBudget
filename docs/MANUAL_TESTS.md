@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version web à valider : `10.5.336`.
-- APK : le dernier APK reste `travelbudget-10.5.335-20260809-133024-debug.apk` (`7EB858F8264B09A7D80461DF33D2CFA1427BCC9BA3D6B0508B951D5F8C51E8EA`) ; aucun APK 10.5.336 n'est produit pour ce correctif web.
+- Version web à valider : `10.5.338`.
+- APK : le dernier APK reste `travelbudget-10.5.337-20260809-191115-debug.apk` (`AAE38057DB3FF74DD972B9F443EAF8028B6D0DE9AF4A2A7BEC974DFFCA3B6624`) ; aucun APK 10.5.338 n'est produit pour ce correctif.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
@@ -34,7 +34,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Travail `10.5.333` : basculer FR/EN sans quitter Travail, verifier l absence de BMR, conserver des revenus AUD et EUR avec net/brut/periode, puis lier et ouvrir/ajouter un document depuis une mission, un revenu et une periode. Les trois retests descendants sont disponibles dans l onglet Tests.
 - Sport `10.5.334` : depuis un chargement frais, ouvrir Sport avec la console visible puis Historique avec au moins neuf seances. Aucune requete 400 `smoothed_e1rm_kg` ne doit apparaitre ; les sept dernieres seances restent detaillees et les anciennes lignes gardent Refaire, Ajuster, Modifier date et Supprimer.
 - Sport `10.5.335` : alterner Guide et Libre et verifier qu un seul minuteur est visible. Lancer Course facile : aucune distance realisee ne doit apparaitre avant saisie. Utiliser **Fini**, saisir la distance, sauvegarder, puis verifier la seance dans l historique.
-- Alimentation web `10.5.336` : ouvrir plusieurs jours d historique, ajouter un aliment et de l eau, puis changer plusieurs fois de module pendant et apres la synchronisation. La navigation doit rester reactive et la console ne doit plus afficher une rafale de `POST app_error_logs` en 403.
+- Alimentation web/mobile `10.5.338` : ajouter deux aliments successifs, enregistrer un repas comme favori, appliquer ce favori puis changer immediatement de module. Chaque clic doit repondre une fois, la navigation doit rester reactive et la synchronisation ne doit creer aucun doublon.
 - Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés

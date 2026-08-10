@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.336`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.338`.
 
 ## Objectif
 
@@ -82,6 +82,8 @@ En `10.5.334`, le premier lot Sport traite ensemble les deux notes **Programme e
 En `10.5.335`, le retour **Timer et fin de seance** est traite : le testeur choisit Guide ou Libre, un seul minuteur est rendu et le choix est verrouille pendant l activite. Le chrono libre n affiche plus la distance cible du catalogue comme une distance deja parcourue et l action de fin devient **Fini**. Le resultat est archive et un retest descendant preserve son histoire.
 
 En `10.5.336`, le retour web **Alimentation figee et journaux 403** est traite : les lectures d items sont decoupees, la reprise locale est bornee et publie un seul etat, tandis que l Error Bus dispose du droit d upsert limite au proprietaire et d un coupe-circuit de cinq minutes en cas de refus. Un retest descendant **Stabilite web Alimentation 10.5.336** est ouvert.
+
+En `10.5.338`, le gel encore constate sur web et mobile lors de l ajout d un aliment ou d un repas favori est traite : les ajouts passent par une ecriture locale groupee, un seul rendu immediat, des verrous anti-double action et une synchronisation Supabase differee. Le retest `10.5.336` est clos globalement et un descendant **Retest ajout et favoris Alimentation 10.5.338** conserve son histoire.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

@@ -175,7 +175,7 @@ export function renderQuickAddPanel({
       ${favs.map(food => foodChip(food, 'favorite')).join('')}
       ${recent.map(food => foodChip(food, 'recent')).join('')}
     </div>
-    ${mealFavorites.length ? `<div class="tb-nutrition-chip-row" aria-label="${esc(langText('Repas favoris', 'Favorite meals', t))}">${mealFavorites.slice(0, 6).map((fav, index) => mealFavoriteChip(fav, index)).join('')}</div>` : ''}
+    <div id="nutrition-meal-favorites">${mealFavorites.length ? `<div class="tb-nutrition-chip-row" aria-label="${esc(langText('Repas favoris', 'Favorite meals', t))}">${mealFavorites.slice(0, 6).map((fav, index) => mealFavoriteChip(fav, index)).join('')}</div>` : ''}</div>
     <div class="row tb-nutrition-form-row" style="gap:10px;">
       <div class="field" style="flex:1;"><label>${esc(langText('Mode', 'Mode', t))}</label><select id="nutrition-amount-mode"><option value="portion">${esc(langText('Portions', 'Servings', t))}</option><option value="grams">${esc(langText('Grammes', 'Grams', t))}</option></select></div>
       <div class="field" style="flex:1;"><label>${esc(langText('Quantite', 'Quantity', t))}</label><input id="nutrition-quantity" type="number" min="0" step="0.25" value="1"></div>

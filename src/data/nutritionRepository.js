@@ -152,11 +152,16 @@ export function makeLocalNutritionRow({
 }
 
 export function saveLocalNutritionRowOnce({ storage, key, row }) {
-  if (!row) return [];
-  const wanted = localNutritionRowKey(row, 0);
-  const rows = loadLocalNutritionRows({ storage, key })
-    .filter((existing) => localNutritionRowKey(existing, 0) !== wanted);
-  const next = [row, ...rows];
+  return saveLocalNutritionRowsOnce({ storage, key, rows: row ? [row] : [] });
+}
+
+export function saveLocalNutritionRowsOnce({ storage, key, rows }) {
+  const incoming = (Array.isArray(rows) ? rows : []).filter(Boolean);
+  if (!incoming.length) return loadLocalNutritionRows({ storage, key });
+  const incomingKeys = new Set(incoming.map((row, index) => localNutritionRowKey(row, index)));
+  const current = loadLocalNutritionRows({ storage, key })
+    .filter((existing, index) => !incomingKeys.has(localNutritionRowKey(existing, index)));
+  const next = [...incoming, ...current];
   saveLocalNutritionRows({ storage, key, rows: next });
   return next;
 }
@@ -200,6 +205,7 @@ export function createNutritionRepository(getClient) {
     notesWithNutritionSyncId,
     makeLocalNutritionRow,
     saveLocalNutritionRowOnce,
+    saveLocalNutritionRowsOnce,
     loadSleepRows,
     saveSleepRows,
     mergeSleepRows,

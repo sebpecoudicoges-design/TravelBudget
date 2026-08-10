@@ -7,6 +7,7 @@ import {
   makeLocalNutritionRow,
   notesWithNutritionSyncId,
   saveLocalNutritionRowOnce,
+  saveLocalNutritionRowsOnce,
 } from '../../src/data/nutritionRepository.js';
 
 function memoryStorage() {
@@ -84,6 +85,26 @@ describe('nutrition repository', () => {
     expect(repository.loadSleepRows({ storage, key: 'sleep' })).toEqual({
       '2026-07-09': { hours: 8.5, quality: 'good', updatedAt: 'remote' },
     });
+  });
+
+  it('persists a favorite meal batch with one storage write and stable deduplication', () => {
+    const storage = memoryStorage();
+    let writes = 0;
+    const countedStorage = {
+      ...storage,
+      setItem(key, value) { writes += 1; storage.setItem(key, value); },
+    };
+    const rows = ['a', 'b', 'c'].map(syncId => ({ syncId, meal: { sync_id: syncId } }));
+
+    saveLocalNutritionRowsOnce({ storage: countedStorage, key: 'local', rows });
+    saveLocalNutritionRowsOnce({ storage: countedStorage, key: 'local', rows: [{ ...rows[1], syncError: 'retry' }] });
+
+    expect(writes).toBe(2);
+    expect(JSON.parse(countedStorage.getItem('local'))).toEqual([
+      expect.objectContaining({ syncId: 'b', syncError: 'retry' }),
+      expect.objectContaining({ syncId: 'a' }),
+      expect.objectContaining({ syncId: 'c' }),
+    ]);
   });
 
   it('syncs a local meal row through the Supabase boundary once', async () => {

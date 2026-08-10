@@ -40,6 +40,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Demarrer Sport en `10.5.334` : corriger le contrat SQL de progression, conserver sept seances detaillees puis compacter les anciennes avec leurs actions, et ouvrir un retest descendant.
 - [x] Stabiliser le minuteur Sport en `10.5.335` : choix persistant Guide/Libre, un seul parcours visible, distance realisee vide avant saisie et action **Fini**, avec retest descendant.
 - [x] Stabiliser Alimentation web et l Error Bus en `10.5.336` : requetes d items decoupees, reprise locale bornee et groupee, upsert des journaux limite au proprietaire et coupe-circuit apres refus serveur.
+- [x] Stabiliser les mutations Alimentation web/mobile en `10.5.338` : ecriture locale groupee, rendu unique, verrous anti-double action, synchronisation differee et retest descendant.
 
 ## Chantier 1 - Budget journalier et transactions
 

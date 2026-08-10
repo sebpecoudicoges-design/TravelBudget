@@ -69,6 +69,17 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('publishNutrition("pending-merge")');
   });
 
+  it('keeps meal and favorite additions responsive through one local batch and deferred sync', () => {
+    expect(repository).toContain('export function saveLocalNutritionRowsOnce');
+    expect(legacy).toContain('saveLocalNutritionRowsOnce([localRow])');
+    expect(legacy).toContain('saveLocalNutritionRowsOnce(rows)');
+    expect(legacy).toContain('rows.forEach(row => upsertOptimisticNutritionRow(row, { publish: false }))');
+    expect(legacy).toContain('requestNutritionSync("meal-favorite")');
+    expect(legacy).not.toContain('renderNutrition("save-optimistic")');
+    expect(legacy).not.toContain('syncLocalNutritionRows("meal-favorite", { forceOnline: true })');
+    expect(view).toContain('id="nutrition-meal-favorites"');
+  });
+
   it('keeps the extracted modules responsible for their domain surfaces', () => {
     expect(repository).toContain('async syncLocalRow');
     expect(repository).toContain('async upsertMeal');
