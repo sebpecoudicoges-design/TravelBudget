@@ -390,18 +390,39 @@
       }
     } catch (_) {}
   }
+  function nutritionQuickAddHasFocus() {
+    const root = document.getElementById("nutrition-root");
+    const active = document.activeElement;
+    return Boolean(root && active && root.contains(active) && active.matches("input, select, textarea, [contenteditable='true']"));
+  }
+  function requestNutritionRefreshWhenIdle(reason, delay) {
+    try { clearTimeout(CACHE.nutritionRefreshTimer); } catch (_) {}
+    CACHE.nutritionRefreshTimer = setTimeout(async () => {
+      CACHE.nutritionRefreshTimer = null;
+      if (nutritionQuickAddHasFocus()) {
+        requestNutritionRefreshWhenIdle(reason, 700);
+        return;
+      }
+      try {
+        await loadNutrition({ force: true });
+        if ((window.activeView || "") === "nutrition") renderNutrition(`${reason || "mutation"}-sync`);
+      } catch (_) {}
+    }, Math.max(200, Number(delay || 450)));
+  }
   function requestNutritionSync(reason) {
+    if (!loadLocalMeals().length) return false;
     try { clearTimeout(CACHE.nutritionSyncTimer); } catch (_) {}
     CACHE.nutritionSyncTimer = setTimeout(async () => {
       CACHE.nutritionSyncTimer = null;
+      if (!loadLocalMeals().length) return;
       try {
         await syncLocalNutritionRows(reason || "mutation", { forceOnline: true });
         if (loadLocalMeals().length) enqueueNutritionSync();
         else discardNutritionQueue();
-        await loadNutrition({ force: true });
-        if ((window.activeView || "") === "nutrition") renderNutrition(`${reason || "mutation"}-sync`);
+        requestNutritionRefreshWhenIdle(reason || "mutation");
       } catch (_) {}
     }, 80);
+    return true;
   }
   function nutritionSyncMarker(syncId) {
     const repo = repository();
@@ -1987,13 +2008,17 @@
     else { CACHE.loaded = false; CACHE.meals = []; CACHE.items = []; }
   });
   try { document.addEventListener("tb:refresh:data_loaded", () => { try { window.tbReloadNutrition(); } catch (_) {} }); } catch (_) {}
-  try { window.addEventListener("tb:offline_state_changed", (ev) => { if (ev?.detail?.offline === false) requestNutritionSync("online"); }); } catch (_) {}
+  try { window.addEventListener("tb:offline_state_changed", (ev) => { if (ev?.detail?.offline === false && loadLocalMeals().length) requestNutritionSync("online"); }); } catch (_) {}
   window.tbNutritionSyncLocal = async function tbNutritionSyncLocal(reason) {
     const synced = await syncLocalNutritionRows(reason || "offline-queue");
     if (loadLocalMeals().length) throw new Error("Nutrition sync incomplete: pending local rows remain");
     return synced;
   };
   window.tbNutritionRefreshAfterSync = async function tbNutritionRefreshAfterSync() {
+    if (nutritionQuickAddHasFocus()) {
+      requestNutritionRefreshWhenIdle("offline-queue", 700);
+      return;
+    }
     await loadNutrition({ force: true });
     if ((window.activeView || "") === "nutrition") renderNutrition("offline-queue-sync");
   };

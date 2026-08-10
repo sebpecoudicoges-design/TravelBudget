@@ -42,6 +42,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Stabiliser Alimentation web et l Error Bus en `10.5.336` : requetes d items decoupees, reprise locale bornee et groupee, upsert des journaux limite au proprietaire et coupe-circuit apres refus serveur.
 - [x] Stabiliser les mutations Alimentation web/mobile en `10.5.338` : ecriture locale groupee, rendu unique, verrous anti-double action, synchronisation differee et retest descendant.
 - [x] Supprimer en `10.5.339` la concurrence entre synchronisation Nutrition directe et file hors ligne, puis limiter le rafraichissement de reprise au domaine concerne.
+- [x] Stabiliser en `10.5.340` la saisie Nutrition : transitions reseau reelles, garde sans attente locale et reconciliation differee pendant le focus.
 
 ## Chantier 1 - Budget journalier et transactions
 

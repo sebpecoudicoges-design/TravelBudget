@@ -205,10 +205,17 @@
   }
 
   function clearNetworkUnavailable() {
+    const wasUnavailable = Boolean(
+      window.__TB_OFFLINE_NETWORK__
+      || Date.now() < Number(networkUnavailableUntil || 0)
+      || document.documentElement.classList.contains("tb-supabase-offline")
+    );
     networkUnavailableUntil = 0;
     window.__TB_OFFLINE_NETWORK__ = null;
     try { document.documentElement.classList.remove("tb-supabase-offline"); } catch (_) {}
-    try { window.dispatchEvent(new CustomEvent("tb:offline_state_changed", { detail: { offline: false } })); } catch (_) {}
+    if (wasUnavailable) {
+      try { window.dispatchEvent(new CustomEvent("tb:offline_state_changed", { detail: { offline: false } })); } catch (_) {}
+    }
   }
 
   function isOfflineMode() {

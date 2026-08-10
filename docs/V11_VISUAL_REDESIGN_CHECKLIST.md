@@ -91,7 +91,7 @@ Cautions est retire de l interface en `10.5.319` ; ses 5 lignes historiques sold
 - [ ] Faire executer le retest chargement/historique Sport `10.5.334`.
 - [x] Remplacer les deux minuteurs concurrents par un selecteur Guide/Libre qui ne rend que le parcours actif.
 - [ ] Faire executer le retest choix du minuteur Sport `10.5.335` en clair/sombre et 1440/390 px.
-- [ ] Faire executer le retest synchro unique Alimentation `10.5.339` en clair/sombre, 1440/390 px et Android, avec clic puis changement de module apres la confirmation.
+- [ ] Faire executer le retest saisie stable Alimentation `10.5.340` en clair/sombre, 1440/390 px et Android, avec saisie lente puis nouvel ajout pendant la synchronisation.
 
 ### Lot 7 - Alimentation
 

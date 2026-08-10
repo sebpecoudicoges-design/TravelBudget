@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `45dbce872093d53c7b006f77201e42c3f35ecfca`
-> Empreinte du snapshot : `9626eedb4da001ad0f0aa782af82757c62fddf907927339b17b770110bfe4231`
-> Généré le : `2026-08-10T08:53:09.074Z`
+> Commit analysé : `e1396327c5d286378d1a2d7c3dd3ab47af3b97a6`
+> Empreinte du snapshot : `9940bf0e45654fb040e477d1eaa9e23160ca66e1b2cdca52bf2b655b28e4bd96`
+> Généré le : `2026-08-10T09:06:31.965Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.339` |
+| Version | `10.5.340` |
 | Écrans déclarés | 16 |
 | Scripts legacy référencés | 56 |
 | Modules core | 26 |
 | Modules data | 8 |
 | Modules features | 44 |
 | Fichiers de tests | 120 |
-| Migrations Supabase | 124 |
+| Migrations Supabase | 125 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -584,6 +584,7 @@ Modules :
 - `supabase/migrations/20260810082726_process_nutrition_freeze_feedback_10_5_338.sql`
 - `supabase/migrations/20260810084813_process_nutrition_sync_race_feedback_10_5_339.sql`
 - `supabase/migrations/20260810085057_repair_nutrition_test_lineage_10_5_339.sql`
+- `supabase/migrations/20260810090445_process_nutrition_input_reset_feedback_10_5_340.sql`
 
 ## Android et budgets de modules
 

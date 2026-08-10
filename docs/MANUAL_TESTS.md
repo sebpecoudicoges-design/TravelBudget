@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version web à valider : `10.5.339`.
-- APK : le dernier APK reste `travelbudget-10.5.337-20260809-191115-debug.apk` (`AAE38057DB3FF74DD972B9F443EAF8028B6D0DE9AF4A2A7BEC974DFFCA3B6624`) ; aucun APK 10.5.339 n'est produit pour ce correctif.
+- Version web à valider : `10.5.340`.
+- APK : le dernier APK reste `travelbudget-10.5.337-20260809-191115-debug.apk` (`AAE38057DB3FF74DD972B9F443EAF8028B6D0DE9AF4A2A7BEC974DFFCA3B6624`) ; aucun APK 10.5.340 n'est produit pour ce correctif.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
@@ -34,7 +34,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Travail `10.5.333` : basculer FR/EN sans quitter Travail, verifier l absence de BMR, conserver des revenus AUD et EUR avec net/brut/periode, puis lier et ouvrir/ajouter un document depuis une mission, un revenu et une periode. Les trois retests descendants sont disponibles dans l onglet Tests.
 - Sport `10.5.334` : depuis un chargement frais, ouvrir Sport avec la console visible puis Historique avec au moins neuf seances. Aucune requete 400 `smoothed_e1rm_kg` ne doit apparaitre ; les sept dernieres seances restent detaillees et les anciennes lignes gardent Refaire, Ajuster, Modifier date et Supprimer.
 - Sport `10.5.335` : alterner Guide et Libre et verifier qu un seul minuteur est visible. Lancer Course facile : aucune distance realisee ne doit apparaitre avant saisie. Utiliser **Fini**, saisir la distance, sauvegarder, puis verifier la seance dans l historique.
-- Alimentation web/mobile `10.5.339` : ajouter un aliment puis appliquer un repas favori, attendre la bulle de confirmation, cliquer une autre commande Alimentation et changer de module. Les clics doivent rester actifs, sans rafraichissement global ni doublon.
+- Alimentation web/mobile `10.5.340` : saisir lentement recherche, quantite et grammes, enregistrer, puis recommencer pendant la synchronisation. Aucun champ ne doit perdre sa valeur ou son focus et aucun reset ne doit reconstruire le formulaire.
 - Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés

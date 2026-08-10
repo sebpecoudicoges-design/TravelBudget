@@ -1694,7 +1694,7 @@
         <div class="app-grid">
           <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105337">APK debug 10.5.337 prete pour les retests Nutrition et Sport.</p></article>
           <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.</p></article>
-          <article class="app-card"><strong>10.5.339</strong><h3 data-i18n="app.version.title.105339">Synchronisation Nutrition unique</h3><p data-i18n="app.version.body.105339">Ajouts en ligne sans double file ni rafraichissement global concurrent apres la confirmation.</p></article>
+          <article class="app-card"><strong>10.5.340</strong><h3 data-i18n="app.version.title.105340">Saisie Nutrition stable</h3><p data-i18n="app.version.body.105340">Les sondes reseau et la reconciliation ne reconstruisent plus le formulaire pendant la saisie.</p></article>
         </div>
         <div class="release-pulse">
           <div class="release-pulse-head">
@@ -1713,6 +1713,7 @@
           <div class="release-spotlight" id="releaseSpotlight"></div>
           <div class="release-timeline" id="releaseTimeline" aria-live="polite"></div>
           <div class="release-list" id="releaseSource" hidden>
+            <div class="release-row"><strong>10.5.340</strong><span>Alimentation web/mobile : les controles Supabase reussis n emettent plus de faux retours en ligne, les synchronisations sans attente sont ignorees et la reconciliation attend que la saisie soit terminee. Le retour 10.5.339 est archive et un descendant cible recherche, quantite, grammes et nouvel ajout pendant la synchro. Aucun nouvel APK.</span></div>
             <div class="release-row"><strong>10.5.339</strong><span>Alimentation web/mobile : suppression de la double synchronisation directe et hors ligne qui precedait le gel apres les bulles. La file durable ne prend le relais que pour les lignes encore en attente et rafraichit seulement le domaine concerne. Le retour 10.5.338 est archive avec ses dates et un descendant cible le clic apres confirmation. Deux pesees des 8 et 10 aout sont ajoutees sans doublon. Aucun nouvel APK.</span></div>
             <div class="release-row"><strong>10.5.338</strong><span>Alimentation web/mobile : ajout d aliment et repas favori en ecriture locale groupee, rendu unique, verrous anti-double action et synchronisation Supabase differee. Le retest precedent est clos et un descendant cible les ajouts, favoris et changements de module. Aucun nouvel APK.</span></div>
             <div class="release-row"><strong>10.5.337</strong><span>Nutrition et Sport : synchronisation repas idempotente face aux doublons, journaux filtres par compte, KPI Nutrition precharges sans ouvrir Alimentation, resume duplique retire, objectifs repas explicites et mesures corporelles guidees avec calculs modifiables. Trois retours archives, trois retests descendants ouverts et APK debug publie.</span></div>
@@ -2193,7 +2194,7 @@
           "app.title": "App Android de test, lien direct et version lisible.",
           "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
           "app.apk.body.105337": "APK debug 10.5.337 prete pour les retests Nutrition et Sport.",
-          "app.version.title.105339": "Synchronisation Nutrition unique", "app.version.body.105339": "Ajouts en ligne sans double file ni rafraichissement global concurrent apres la confirmation.",
+          "app.version.title.105340": "Saisie Nutrition stable", "app.version.body.105340": "Les sondes reseau et la reconciliation ne reconstruisent plus le formulaire pendant la saisie.",
           "app.version.title.105337": "KPI et retours guides", "app.version.body.105337": "KPI Nutrition charges des le Dashboard, objectifs clarifies et mesures Sport accompagnees.",
           "app.version.title.105336": "Alimentation web", "app.version.body.105336": "Navigation et synchronisation stabilisees, journaux 403 corriges.",
           "app.version.title.105335": "Sport", "app.version.body.105335": "Choix Guide ou Libre, distance reelle et fin de chrono clarifies.",
@@ -2380,7 +2381,7 @@
           "app.title": "Android test app, direct link and readable version.",
           "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
           "app.apk.body.105337": "Debug APK 10.5.337 is ready for the Nutrition and Sport retests.",
-          "app.version.title.105339": "Single Nutrition sync", "app.version.body.105339": "Online additions no longer trigger a second offline queue or a competing full-app refresh after confirmation.",
+          "app.version.title.105340": "Stable Nutrition input", "app.version.body.105340": "Network probes and reconciliation no longer rebuild the form while the user is typing.",
           "app.version.title.105336": "Web Nutrition", "app.version.body.105336": "Navigation and synchronization stabilized, 403 log errors fixed.",
           "app.version.title.105335": "Sport", "app.version.body.105335": "Guided/free choice, actual distance and timer completion are clarified.",
           "release.105322": "Account Settings: aligned fields, pre-validated global save including the threshold, and redundant mobile Notifications panel removed.",
