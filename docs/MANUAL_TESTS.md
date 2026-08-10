@@ -6,8 +6,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version web à valider : `10.5.340`.
-- APK : le dernier APK reste `travelbudget-10.5.337-20260809-191115-debug.apk` (`AAE38057DB3FF74DD972B9F443EAF8028B6D0DE9AF4A2A7BEC974DFFCA3B6624`) ; aucun APK 10.5.340 n'est produit pour ce correctif.
+- Version web à valider : `10.5.341`.
+- APK : `travelbudget-10.5.341-20260810-192605-debug.apk` publie dans Supabase Storage ; SHA-256 `3CC0F8597939B3F47AD9F325AD21C0C5E9C5DC3319B4B408E26F023FCAEDE37D`.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
@@ -34,7 +34,8 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Travail `10.5.333` : basculer FR/EN sans quitter Travail, verifier l absence de BMR, conserver des revenus AUD et EUR avec net/brut/periode, puis lier et ouvrir/ajouter un document depuis une mission, un revenu et une periode. Les trois retests descendants sont disponibles dans l onglet Tests.
 - Sport `10.5.334` : depuis un chargement frais, ouvrir Sport avec la console visible puis Historique avec au moins neuf seances. Aucune requete 400 `smoothed_e1rm_kg` ne doit apparaitre ; les sept dernieres seances restent detaillees et les anciennes lignes gardent Refaire, Ajuster, Modifier date et Supprimer.
 - Sport `10.5.335` : alterner Guide et Libre et verifier qu un seul minuteur est visible. Lancer Course facile : aucune distance realisee ne doit apparaitre avant saisie. Utiliser **Fini**, saisir la distance, sauvegarder, puis verifier la seance dans l historique.
-- Alimentation web/mobile `10.5.340` : saisir lentement recherche, quantite et grammes, enregistrer, puis recommencer pendant la synchronisation. Aucun champ ne doit perdre sa valeur ou son focus et aucun reset ne doit reconstruire le formulaire.
+- Alimentation web/mobile `10.5.340` : retest confirme OK le 10/08/2026 et archive pour tous en `10.5.341`.
+- Sport composition `10.5.341` : dans **Sport > Profil > Evolution composition**, verifier les 12 dernieres mesures et les cinq series poids kg, graisse %, graisse kg, muscle % et muscle kg. Une masse musculaire kg absente doit rester absente, sans conversion depuis le pourcentage.
 - Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés

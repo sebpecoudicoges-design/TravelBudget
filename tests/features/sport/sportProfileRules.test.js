@@ -204,13 +204,17 @@ describe('Sport profile rules', () => {
 
   it('charts muscle percentage only when provided by the scale data', () => {
     const trend = buildBodyCompositionTrend([
-      { measured_on: '2026-07-24', weight_kg: 62.4, body_fat_pct: 22.5, muscle_mass_kg: 46.4 },
+      { measured_on: '2026-07-24', weight_kg: 62.4, body_fat_pct: 22.5, fat_mass_kg: 14, muscle_mass_kg: 46.4 },
       { measured_on: '2026-07-26', weight_kg: 63.85, body_fat_pct: 23, notes: 'Muscle squelettique: 49,6 %' },
     ]);
 
+    expect(trend[0].fatMassKg).toBe(14);
+    expect(trend[0].muscleMassKg).toBe(46.4);
     expect(trend[0].musclePct).toBe(0);
     expect(trend[0].musclePctSource).toBe('missing');
+    expect(trend[1].fatMassKg).toBe(14.7);
     expect(trend[1].musclePct).toBe(49.6);
+    expect(trend[1].muscleMassKg).toBe(0);
   });
 
   it('builds recent body measurement history for editing', () => {

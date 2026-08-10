@@ -310,13 +310,15 @@ export function buildBodyCompositionTrend(measurements = []) {
     date: String(row.measured_on || row.created_at || '').slice(0, 10),
     weightKg: roundOne(row.weight_kg),
     bodyFatPct: roundOne(row.body_fat_pct),
+    fatMassKg: roundOne(bodyMetric(row, 'fat_mass_kg')),
     musclePct: roundOne(bodyMusclePct(row)),
+    muscleMassKg: roundOne(row.muscle_mass_kg),
     musclePctSource: numberValue(row?.muscle_pct || row?.skeletal_muscle_pct || row?.skeletal_muscle_percent, 0) > 0 || /muscle\s+squelettique/i.test(String(row?.notes || ''))
       ? 'direct'
       : 'missing',
     qualityScore: numberValue(row.protocol_quality_score, 0) || null,
     qualityLabel: row.protocol_quality_label || '',
-  })).filter((row) => row.weightKg || row.bodyFatPct || row.musclePct);
+  })).filter((row) => row.weightKg || row.bodyFatPct || row.fatMassKg || row.musclePct || row.muscleMassKg);
 }
 
 export function buildBodyMeasurementHistory(measurements = []) {

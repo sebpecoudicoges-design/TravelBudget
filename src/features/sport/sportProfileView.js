@@ -110,8 +110,10 @@ function renderBodyTrendChart(trend = [], h) {
   if (!rows.length) return '';
   const series = [
     { key: 'weightKg', label: h.txt('Poids', 'Weight'), unit: 'kg', cls: 'weight' },
-    { key: 'bodyFatPct', label: h.txt('Graisse', 'Fat'), unit: '%', cls: 'fat' },
-    { key: 'musclePct', label: h.txt('Muscle', 'Muscle'), unit: '%', cls: 'muscle' },
+    { key: 'bodyFatPct', label: h.txt('Graisse %', 'Fat %'), unit: '%', cls: 'fat' },
+    { key: 'fatMassKg', label: h.txt('Graisse kg', 'Fat kg'), unit: 'kg', cls: 'fat' },
+    { key: 'musclePct', label: h.txt('Muscle %', 'Muscle %'), unit: '%', cls: 'muscle' },
+    { key: 'muscleMassKg', label: h.txt('Muscle kg', 'Muscle kg'), unit: 'kg', cls: 'muscle' },
   ].map((serie) => {
     const values = rows.map((row) => h.n(row[serie.key], 0)).filter((value) => value > 0);
     const min = values.length ? Math.min(...values) : 0;
@@ -125,7 +127,8 @@ function renderBodyTrendChart(trend = [], h) {
     return Math.max(12, Math.round(16 + ((v - serie.min) / (serie.max - serie.min)) * 42));
   };
   const latest = rows.at(-1) || {};
-  const hasMissingMuscle = rows.some((row) => !h.n(row.musclePct, 0));
+  const hasMissingMusclePct = rows.some((row) => !h.n(row.musclePct, 0));
+  const hasMissingMuscleKg = rows.some((row) => !h.n(row.muscleMassKg, 0));
   return `<div class="tb-sport-body-trend">
     <div class="tb-sport-body-trend-head">
       <strong>${h.esc(h.txt('Evolution composition', 'Composition trend'))}</strong>
@@ -148,7 +151,8 @@ function renderBodyTrendChart(trend = [], h) {
     <div class="tb-sport-body-trend-dates">
       <span>${h.esc(rows[0]?.date || '')}</span><span>${h.esc(rows.at(-1)?.date || '')}</span>
     </div>
-    ${hasMissingMuscle ? `<small class="tb-sport-body-trend-note">${h.esc(h.txt('Muscle % trace uniquement quand la balance le fournit directement ou dans la note.', 'Muscle % is charted only when the scale provides it directly or in the note.'))}</small>` : ''}
+    ${hasMissingMusclePct ? `<small class="tb-sport-body-trend-note">${h.esc(h.txt('Muscle % trace uniquement quand la balance le fournit directement ou dans la note.', 'Muscle % is charted only when the scale provides it directly or in the note.'))}</small>` : ''}
+    ${hasMissingMuscleKg ? `<small class="tb-sport-body-trend-note">${h.esc(h.txt('Muscle kg trace uniquement quand la mesure source le fournit, sans conversion artificielle depuis le pourcentage.', 'Muscle kg is charted only when provided by the source measurement, without an artificial conversion from percentage.'))}</small>` : ''}
   </div>`;
 }
 

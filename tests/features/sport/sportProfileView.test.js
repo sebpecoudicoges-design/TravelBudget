@@ -48,8 +48,8 @@ const data = {
       { key: 'body_fat_pct', label: 'Masse grasse', unit: '%', value: 23, delta: 0.5 },
     ],
     trend: [
-      { date: '2026-07-24', weightKg: 62.4, bodyFatPct: 22.5, musclePct: 0, musclePctSource: 'missing' },
-      { date: '2026-07-26', weightKg: 63.9, bodyFatPct: 23, musclePct: 49.6, musclePctSource: 'direct' },
+      { date: '2026-07-24', weightKg: 62.4, bodyFatPct: 22.5, fatMassKg: 14, musclePct: 0, muscleMassKg: 46.4, musclePctSource: 'missing' },
+      { date: '2026-07-26', weightKg: 63.9, bodyFatPct: 23, fatMassKg: 14.7, musclePct: 49.6, muscleMassKg: 0, musclePctSource: 'direct' },
     ],
     history: [
       { id: 'm2', date: '2026-07-26', source: 'impedance_scale', weightKg: 63.9, bodyFatPct: 23, muscleMassKg: 46.7, qualityLabel: 'Reference' },
@@ -81,8 +81,14 @@ describe('Sport profile view', () => {
     expect(html).toContain('Derniere mesure : 2026-07-07');
     expect(html).toContain('15%');
     expect(html).toContain('Evolution composition');
-    expect(html).toContain('Graisse');
+    expect(html).toContain('Graisse %');
+    expect(html).toContain('Graisse kg');
+    expect(html).toContain('Muscle %');
+    expect(html).toContain('Muscle kg');
+    expect(html).toContain('14.7kg');
+    expect(html).toContain('46.4kg');
     expect(html).toContain('Muscle % trace uniquement');
+    expect(html).toContain('sans conversion artificielle');
     expect(html).toContain('Pesées récentes');
     expect(html).toContain('data-sport-body-edit="2026-07-26"');
     expect(html).toContain('Modifier');
