@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.341`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.342`.
 
 ## Objectif
 
@@ -90,6 +90,8 @@ En `10.5.339`, le nouveau retour est lu et archive avec ses dates : le gel appar
 En `10.5.340`, le reset de la zone d ajout est traite et archive : les sondes Supabase reussies ne publient plus de faux retours en ligne, une synchro sans ligne locale est ignoree et le rechargement de reconciliation attend la fin de la saisie. Le descendant **Retest saisie stable Alimentation 10.5.340** prolonge le scenario `10.5.339`.
 
 En `10.5.341`, le retest Alimentation `10.5.340` est confirme OK et clos pour tous. Le retour Sport sur **Evolution composition** est archive avec ses dates : les 12 dernieres mesures affichent maintenant poids kg, graisse en % et kg, puis muscle en % et kg. Le descendant **Retest evolution composition kg 10.5.341** conserve la filiation avec les mesures corporelles guidees et interdit d inventer un muscle kg depuis un pourcentage.
+
+En `10.5.342`, quatre regressions sont traitees ensemble. Les anciennes regles CSS generiques Wallet sont retirees au profit du panneau d actions interne. Le scope KPI entre dans la cle de rendu de la courbe et les periodes explicites atteignent les regles de projection, dont **Tout le voyage**. Les ecouteurs de la modale Regles recurrentes sont poses apres son montage pour rendre sous-categorie, frequence, wallet et devise interactifs. Enfin, l evenement `SIGNED_IN` devient l unique proprietaire du bootstrap : refresh automatique et file hors ligne attendent la fin de cette transition. Quatre retests lies couvrent ces gestes et le retest Categories Settings deja valide est clos pour tous.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

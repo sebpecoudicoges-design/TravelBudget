@@ -188,7 +188,7 @@ export function resolveKpiRange(parsed = {}, refISO = '', {
   let endISO = String(parsed?.endISO || '');
   if (startISO && endISO) return { startISO, endISO };
   try {
-    if (typeof getBudgetSegmentForDate === 'function') {
+    if (parsed?.kind !== 'period' && typeof getBudgetSegmentForDate === 'function') {
       const seg = getBudgetSegmentForDate(refISO);
       if (seg) {
         startISO = String(seg.start || seg.start_date || '').slice(0, 10);

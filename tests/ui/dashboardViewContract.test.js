@@ -185,6 +185,17 @@ describe('dashboard view extraction contract', () => {
     expect(premiumTheme).toContain('.tb-wallet-action-col .tb-wallet-archive-btn');
     expect(premiumTheme).toContain('grid-column: 1 / -1');
     expect(premiumTheme).not.toContain('.tb-wallet-archive-btn {\n  margin-top: auto');
+    expect(index).not.toContain('.wallet-item > div:first-child');
+    expect(index).toContain('.wallet-item > .tb-wallet-card-layout > .tb-wallet-action-col');
+    expect(index).toContain('.tb-wallet-action-col .tb-wallet-archive-btn');
+  });
+
+  it('includes the selected KPI scope in cashflow scheduling and resolves explicit periods', () => {
+    expect(cashflow).toContain('localStorage.getItem(KPI_SCOPE_KEY)');
+    expect(cashflow).toContain('"|scope:" + kpiScope + "|theme:" + theme');
+    expect(kpiLegacy).toContain('function _kpiSegmentResolver(parsed)');
+    expect(kpiLegacy).toContain('getBudgetSegmentForDate: _kpiSegmentResolver(parsed)');
+    expect(kpiLegacy).toContain('"Tout le voyage"');
   });
 
   it('keeps daily budget controls and day rows delegated', () => {

@@ -44,6 +44,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Supprimer en `10.5.339` la concurrence entre synchronisation Nutrition directe et file hors ligne, puis limiter le rafraichissement de reprise au domaine concerne.
 - [x] Stabiliser en `10.5.340` la saisie Nutrition : transitions reseau reelles, garde sans attente locale et reconciliation differee pendant le focus.
 - [x] Completer en `10.5.341` la tendance Sport des 12 dernieres mesures avec graisse et muscle en kg, tout en conservant les pourcentages et sans extrapoler un muscle kg absent.
+- [x] Stabiliser en `10.5.342` Dashboard, Settings et authentification : scope KPI partage avec la courbe, periodes explicites, ecouteurs de modale apres montage et pipeline `SIGNED_IN` unique sans refresh concurrent.
 
 ## Chantier 1 - Budget journalier et transactions
 

@@ -790,23 +790,6 @@
       </div>
     `);
 
-    _rrBindFrequencyUi();
-    _rrBindSubcategoryUi(defaults.subcategory || "");
-    _rrBindBudgetPeriodUi();
-
-    const walletSel = document.getElementById("rr-wallet");
-    const curInp = document.getElementById("rr-currency");
-    let currencyManuallyEdited = false;
-    if (curInp) curInp.addEventListener("input", () => { currencyManuallyEdited = true; });
-    if (walletSel && curInp) {
-      walletSel.addEventListener("change", () => {
-        if (currencyManuallyEdited) return;
-        const opt = walletSel.options[walletSel.selectedIndex];
-        const cur = String(opt?.dataset?.cur || "").trim().toUpperCase();
-        if (cur) curInp.value = cur;
-      });
-    }
-
     modal.setActions([
       { label: rrT("recurring.action.cancel"), className: "btn", onClick: () => modal.close() },
       {
@@ -877,6 +860,22 @@
     ]);
 
     modal.open();
+    _rrBindFrequencyUi();
+    _rrBindSubcategoryUi(defaults.subcategory || "");
+    _rrBindBudgetPeriodUi();
+
+    const walletSel = document.getElementById("rr-wallet");
+    const curInp = document.getElementById("rr-currency");
+    let currencyManuallyEdited = false;
+    if (curInp) curInp.addEventListener("input", () => { currencyManuallyEdited = true; });
+    if (walletSel && curInp) {
+      walletSel.addEventListener("change", () => {
+        if (currencyManuallyEdited) return;
+        const opt = walletSel.options[walletSel.selectedIndex];
+        const cur = String(opt?.dataset?.cur || "").trim().toUpperCase();
+        if (cur) curInp.value = cur;
+      });
+    }
   };
 
   function _rrLsKey(travelId) {

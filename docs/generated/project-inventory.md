@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `3cb6470617378c14b406e99aae5cd314396f5149`
-> Empreinte du snapshot : `74430ae76bbb2d9da76aa338656001fa7f7f2fbe077ab3b48d1719ff7a7a021c`
-> Généré le : `2026-08-10T09:38:16.262Z`
+> Commit analysé : `ef971f532afe82629431bfc92a5c9f6ed1ff5094`
+> Empreinte du snapshot : `c93c6c7751bd3cb781b6eaf77c68fa60001176bd6b8d361b05ab635060b8f945`
+> Généré le : `2026-08-11T07:42:46.476Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.341` |
+| Version | `10.5.342` |
 | Écrans déclarés | 16 |
 | Scripts legacy référencés | 56 |
 | Modules core | 26 |
 | Modules data | 8 |
 | Modules features | 44 |
-| Fichiers de tests | 120 |
-| Migrations Supabase | 126 |
+| Fichiers de tests | 121 |
+| Migrations Supabase | 127 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -274,6 +274,7 @@ Modules :
 - `tests/ui/architectureDocsContract.test.js`
 - `tests/ui/assetsDomainContract.test.js`
 - `tests/ui/assetsModalContract.test.js`
+- `tests/ui/authTransitionContract.test.js`
 - `tests/ui/cspContract.test.js`
 - `tests/ui/dashboardViewContract.test.js`
 - `tests/ui/documentsDomainContract.test.js`
@@ -398,6 +399,7 @@ Modules :
 - `tests/ui/architectureDocsContract.test.js`
 - `tests/ui/assetsDomainContract.test.js`
 - `tests/ui/assetsModalContract.test.js`
+- `tests/ui/authTransitionContract.test.js`
 - `tests/ui/components.test.js`
 - `tests/ui/cspContract.test.js`
 - `tests/ui/dashboardViewContract.test.js`
@@ -586,6 +588,7 @@ Modules :
 - `supabase/migrations/20260810085057_repair_nutrition_test_lineage_10_5_339.sql`
 - `supabase/migrations/20260810090445_process_nutrition_input_reset_feedback_10_5_340.sql`
 - `supabase/migrations/20260810091944_process_sport_composition_kg_feedback_10_5_341.sql`
+- `supabase/migrations/20260811072637_process_dashboard_settings_auth_feedback_10_5_342.sql`
 
 ## Android et budgets de modules
 

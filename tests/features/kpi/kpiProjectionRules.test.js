@@ -10,6 +10,7 @@ import {
   pendingAmountText,
   pendingProjectionItems,
   projectedEndAmount,
+  resolveKpiHorizonEnd,
   resolveKpiRange,
   signPillClass,
   sumRemainingDailyBudget,
@@ -33,6 +34,21 @@ describe('KPI projection rules', () => {
       period: { start: '2026-07-01', end: '2026-07-31' },
       getBudgetSegmentForDate: () => ({ start: '2026-07-04', end: '2026-07-12' }),
     })).toEqual({ startISO: '2026-07-04', endISO: '2026-07-12' });
+    const segments = [
+      { id: 'seg-1', start: '2026-07-01', end: '2026-07-12' },
+      { id: 'seg-2', start: '2026-07-13', end: '2026-07-25' },
+    ];
+    expect(resolveKpiRange({ kind: 'seg', segId: 'seg-2' }, '2026-07-05', {
+      period: { start: '2026-07-01', end: '2026-07-31' },
+      getBudgetSegmentForDate: () => segments[1],
+    })).toEqual({ startISO: '2026-07-13', endISO: '2026-07-25' });
+    expect(resolveKpiRange({ kind: 'period' }, '2026-07-05', {
+      period: { start: '2026-07-01', end: '2026-07-31' },
+    })).toEqual({ startISO: '2026-07-01', endISO: '2026-07-31' });
+    expect(resolveKpiHorizonEnd('seg:seg-2', '2026-07-05', {
+      period: { end: '2026-07-31' },
+      getBudgetSegmentForDate: () => segments[1],
+    })).toBe('2026-07-25');
   });
 
   it('filters date ranges and trip net rows by linked period', () => {

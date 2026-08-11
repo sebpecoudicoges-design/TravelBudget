@@ -1309,8 +1309,10 @@ dataLabels: { enabled: false },
     const seg = String(window.__TB_ACTIVE_SEGMENT_ID || "");
     const start = String(window.__TB_ACTIVE_START || "");
     const end = String(window.__TB_ACTIVE_END || "");
+    let kpiScope = "segment";
+    try { kpiScope = String(localStorage.getItem(KPI_SCOPE_KEY) || "segment"); } catch (_) {}
     const theme = document.body.classList.contains("theme-dark") ? "dark" : "light";
-    return rev + "|" + seg + "|" + start + "|" + end + "|theme:" + theme;
+    return rev + "|" + seg + "|" + start + "|" + end + "|scope:" + kpiScope + "|theme:" + theme;
   }
 
   window.tbRequestCashflowCurveRender = function tbRequestCashflowCurveRender(reason) {

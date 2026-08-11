@@ -337,6 +337,11 @@
   }
 
   async function sync(reason) {
+    const syncReason = String(reason || "");
+    const explicit = ["manual", "diagnostic"].includes(syncReason);
+    if (!explicit && (window.__TB_BOOTING || window.__TB_AUTH_TRANSITION_ACTIVE__)) {
+      return { ok: false, skipped: "auth-transition" };
+    }
     if (syncing) return { ok: false, skipped: "already-syncing" };
     if (!acquireLock(reason)) return { ok: false, skipped: "locked" };
     let synced = 0;

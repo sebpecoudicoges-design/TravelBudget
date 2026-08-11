@@ -160,7 +160,7 @@ window.onload = async function () {
   await applyPalette(storedPalette, storedPreset, { persistLocal: true, persistRemote: false });
   try { if (window.TB_PERF && TB_PERF.enabled) TB_PERF.end("boot:palette"); } catch (_) {}
 
-  sb.auth.onAuthStateChange(async (_event, session) => {
+  sb.auth.onAuthStateChange((_event, session) => {
     const authEvent = String(_event || "").toUpperCase();
     const prevUid = sbUser?.id || "";
     sbUser = session?.user || null;
@@ -189,28 +189,34 @@ window.onload = async function () {
     );
     if (sameUserWakeEvent) return;
 
-    try {
-      tbShowBootOverlay("Changement de compte… synchronisation", 38, "sync");
-      showView("dashboard");
-      const authOffline = (typeof window.tbShouldUseOfflineMode === "function")
-        ? await window.tbShouldUseOfflineMode("auth-change")
-        : (navigator && navigator.onLine === false);
-      if (authOffline) {
-        if (typeof window.tbRestoreOfflineSnapshot === "function" && window.tbRestoreOfflineSnapshot("auth-change:offline")) {
-          try { if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("offline-auth-change"); else if (typeof renderAll === "function") renderAll(); } catch (_) {}
-          safeShowAuth(false);
-          return;
+    // Supabase auth callbacks must return before starting more Supabase work.
+    // Defer the transition so bootstrap/refresh cannot deadlock the auth event itself.
+    setTimeout(async () => {
+      window.__TB_AUTH_TRANSITION_ACTIVE__ = true;
+      try {
+        tbShowBootOverlay("Changement de compte… synchronisation", 38, "sync");
+        showView("dashboard");
+        const authOffline = (typeof window.tbShouldUseOfflineMode === "function")
+          ? await window.tbShouldUseOfflineMode("auth-change")
+          : (navigator && navigator.onLine === false);
+        if (authOffline) {
+          if (typeof window.tbRestoreOfflineSnapshot === "function" && window.tbRestoreOfflineSnapshot("auth-change:offline")) {
+            try { if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("offline-auth-change"); else if (typeof renderAll === "function") renderAll(); } catch (_) {}
+            safeShowAuth(false);
+            return;
+          }
         }
+        if (typeof ensureBootstrap === "function") await ensureBootstrap();
+        await refreshFromServer({ force: false });
+        try { if (typeof window.tbRefreshTripInviteNotifications === "function") window.tbRefreshTripInviteNotifications(); } catch (_) {}
+        safeShowAuth(false);
+      } catch (e) {
+        console.warn('[Boot] auth change refresh failed:', e?.message || e);
+      } finally {
+        try { tbHideBootOverlay(); } catch (_) {}
+        window.__TB_AUTH_TRANSITION_ACTIVE__ = false;
       }
-      if (typeof ensureBootstrap === "function") await ensureBootstrap();
-      await refreshFromServer({ force: false });
-      try { if (typeof window.tbRefreshTripInviteNotifications === "function") window.tbRefreshTripInviteNotifications(); } catch (_) {}
-      safeShowAuth(false);
-    } catch (e) {
-      console.warn('[Boot] auth change refresh failed:', e?.message || e);
-    } finally {
-      try { tbHideBootOverlay(); } catch (_) {}
-    }
+    }, 0);
   });
 
   const { data, error } = await sb.auth.getSession();
@@ -223,6 +229,10 @@ window.onload = async function () {
   if (!sbUser) {
     safeShowAuth(true, "Connecte-toi pour synchroniser.");
     try { tbHideBootOverlay(); } catch (_) {}
+    // The authentication screen is a completed boot state. A later SIGNED_IN event
+    // must be allowed to own the single bootstrap + refresh pipeline.
+    window.__TB_BOOTING = false;
+    window.__TB_BOOT_COMPLETED__ = true;
     return;
   }
 

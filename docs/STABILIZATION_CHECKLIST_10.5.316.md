@@ -16,10 +16,10 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.341`.
+- Version cible de campagne : `10.5.342`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
 - 60 resultats et 16 revues de module traitees sont archives avec date de test, date de traitement, version et note.
-- 19 scenarios restent ouverts. Le retest evolution composition kg `10.5.341`, les retests Sport chargement/historique `10.5.334` et choix du minuteur `10.5.335`, les trois retests Travail `10.5.333`, le retest audit Trip `10.5.332`, gestion Categories Settings `10.5.330` et les trois parcours Patrimoine `10.5.331` conservent leur filiation. Les autres retours ouverts gardent leur scenario d origine.
+- Le retest Categories Settings valide est clos globalement en `10.5.342`. Quatre retests sont ajoutes avec filiation : actions internes Wallet, scopes KPI/courbe, sous-categories des regles recurrentes et connexion sans gel. Les autres retours ouverts gardent leur scenario d origine.
 - Dashboard, Transactions et Analyse sont valides puis rouverts aux comptes standards ; les autres modules metier restent geles.
 - A traiter et Notifications restent volontairement non testes ; le filtre **Sans test** permet de les isoler.
 
@@ -79,7 +79,9 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 - [x] Corriger les champs numeriques contenant une devise, dont `400 EUR`, et remplacer le defaut arbitraire par le budget quotidien estime ou une valeur vide.
 - [x] Gerer proprement les refus de suppression voyage/periode sans erreur console pour un refus metier attendu.
 - [x] Completer renommage, ordre, couleur et cycle de vie des categories en `10.5.330`, archiver le retour et reutiliser son retest lie.
-- [ ] Faire executer le retest gestion Categories `10.5.330` avant reouverture complete de Settings.
+- [x] Clore globalement en `10.5.342` le retest gestion Categories `10.5.330`, valide par le testeur.
+- [x] Reposer en `10.5.342` les ecouteurs de la modale Regles recurrentes apres son montage afin de rendre sous-categorie, frequence, wallet et devise selectionnables.
+- [ ] Faire executer le retest sous-categorie des regles recurrentes `10.5.342`.
 
 ## Chantier 4 - Analyse
 

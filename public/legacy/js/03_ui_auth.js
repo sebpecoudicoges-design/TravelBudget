@@ -363,27 +363,16 @@ async function signIn() {
   if (!tbIsValidAuthEmail(email)) return showAuth(true, tbAuthText("Adresse email invalide.", "Invalid email address."));
 
   tbSetAuthBusy(true);
-  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
   tbSetAuthBusy(false);
   if (error) {
     tbAuthLogError("signInWithPassword", error, { emailDomain: email.split("@")[1] || "", emailLength: email.length, passwordLength: pass.length });
     return showAuth(true, tbFriendlyAuthError(error));
   }
 
-  sbUser = data.user;
-  window.sbUser = sbUser;
-
-  try {
-    tbSetAuthMessage(tbAuthText("Connexion reussie. Synchronisation...", "Signed in. Syncing..."), "success");
-    await ensureBootstrap();
-    await refreshFromServer();
-    try { if (typeof window.tbInitMobilePushNotifications === "function") await window.tbInitMobilePushNotifications(); } catch (_) {}
-    showAuth(false);
-    showView("dashboard");
-    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("03_ui_auth.js"); else if (typeof renderAll === "function") renderAll();
-  } catch (e) {
-    showAuth(true, `${tbAuthText("Erreur init", "Init error")}: ${e?.message || e}`);
-  }
+  // SIGNED_IN is the single owner of bootstrap + refresh in 20_boot.js.
+  // Running the same pipeline here queued a second full refresh during login.
+  tbSetAuthMessage(tbAuthText("Connexion reussie. Synchronisation...", "Signed in. Syncing..."), "success");
 }
 
 async function signUp() {
@@ -409,21 +398,8 @@ async function signUp() {
     return;
   }
 
-  sbUser = user;
-  window.sbUser = sbUser;
-
-  try {
-    tbSetAuthMessage(tbAuthText("Compte cree. Initialisation...", "Account created. Initializing..."), "success");
-    await ensureBootstrap();
-    await refreshFromServer();
-    try { if (typeof window.tbInitMobilePushNotifications === "function") await window.tbInitMobilePushNotifications(); } catch (_) {}
-    showAuth(false);
-    showView("dashboard");
-    if (typeof tbRequestRenderAll === "function") tbRequestRenderAll("03_ui_auth.js:signup");
-    else if (typeof renderAll === "function") renderAll();
-  } catch (e) {
-    showAuth(true, `${tbAuthText("Compte cree, mais l'initialisation a echoue", "Account created, but initialization failed")}: ${e?.message || e}`);
-  }
+  // The authenticated SIGNED_IN event owns initialization for session-bearing signups too.
+  tbSetAuthMessage(tbAuthText("Compte cree. Initialisation...", "Account created. Initializing..."), "success");
 }
 
 async function resetPassword() {

@@ -9,6 +9,8 @@ describe('Recurring rules subcategories contract', () => {
     expect(source).toContain('TB_CONST.TABLES.category_subcategories');
     expect(source).toContain('async function _rrEnsureSubcategoriesLoaded');
     expect(source.indexOf('await _rrEnsureSubcategoriesLoaded();')).toBeLessThan(source.indexOf('_rrBindSubcategoryUi(defaults.subcategory || "")'));
+    expect(source.indexOf('modal.open();')).toBeLessThan(source.indexOf('_rrBindSubcategoryUi(defaults.subcategory || "")'));
+    expect(source.indexOf('modal.open();')).toBeLessThan(source.indexOf('_rrBindFrequencyUi();'));
   });
 
   it('keeps a local fallback for subcategory options when deferred data is late', () => {

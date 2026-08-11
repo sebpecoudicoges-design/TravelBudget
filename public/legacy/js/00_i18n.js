@@ -93,7 +93,7 @@
       "cashflow.error": "Erreur cashflow:",
       "cashflow.no_data": "Pas de donnees :",
       "cashflow.categories_count": "Categories ({included}/{total})",
-      "cashflow.scope.whole_period": "Toute la periode",
+      "cashflow.scope.whole_period": "Tout le voyage",
       "cashflow.scope.selected_period": "Periode selectionnee",
       "cashflow.scope.current_segment": "Segment courant",
       "cashflow.subtitle": "Projection basee sur ton budget journalier.",

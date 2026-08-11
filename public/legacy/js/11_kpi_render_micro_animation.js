@@ -923,10 +923,23 @@ function renderKPI() {
     }
   }
 
+  function _kpiParseScope(raw) {
+    return window.TBKpiProjectionRules?.parseKpiScope?.(raw) || { kind: "segment", raw: String(raw || "segment") };
+  }
+
+  function _kpiSegmentResolver(parsed) {
+    const selected = parsed?.kind === "seg"
+      ? (state?.budgetSegments || []).find((segment) => String(segment?.id || "") === String(parsed.segId || ""))
+      : null;
+    if (selected) return () => selected;
+    return (typeof getBudgetSegmentForDate === "function") ? getBudgetSegmentForDate : null;
+  }
+
   function _kpiResolveHorizonEndISO(scope, todayISO) {
+    const parsed = _kpiParseScope(scope);
     return window.TBKpiProjectionRules?.resolveKpiHorizonEnd?.(scope, todayISO, {
       period: state?.period || {},
-      getBudgetSegmentForDate: (typeof getBudgetSegmentForDate === "function") ? getBudgetSegmentForDate : null,
+      getBudgetSegmentForDate: _kpiSegmentResolver(parsed),
     }) ?? state?.period?.end;
   }
   const _kpiHorizonEndISO = _kpiResolveHorizonEndISO(kpiScope, displayDateISO);
@@ -943,14 +956,10 @@ function renderKPI() {
   // - fixes ReferenceError: scopeOptionsHTML is not defined
   // - supports: segment / period / seg:<id> / range:<start>:<end>
   // =========================
-  function _kpiParseScope(raw) {
-    return window.TBKpiProjectionRules?.parseKpiScope?.(raw) || { kind: "segment", raw: String(raw || "segment") };
-  }
-
   function _kpiResolveRange(parsed, refISO) {
     return window.TBKpiProjectionRules?.resolveKpiRange?.(parsed, refISO, {
       period: state?.period || {},
-      getBudgetSegmentForDate: (typeof getBudgetSegmentForDate === "function") ? getBudgetSegmentForDate : null,
+      getBudgetSegmentForDate: _kpiSegmentResolver(parsed),
     }) || { startISO: String(state?.period?.start || "").slice(0,10), endISO: String(state?.period?.end || "").slice(0,10) };
   }
 
@@ -967,7 +976,7 @@ function renderKPI() {
   _segs.sort((a,b) => String(a.start||a.start_date||"").localeCompare(String(b.start||b.start_date||"")));
   const _lang = (window.tbGetLang && tbGetLang()) || "fr";
   const _labSeg = (_lang === "en") ? "Current segment" : "Segment courant";
-  const _labPeriod = (_lang === "en") ? "Whole period" : "Toute la période";
+  const _labPeriod = (_lang === "en") ? "Whole trip" : "Tout le voyage";
   const _labRange = (_lang === "en") ? "Date range…" : "Date à date…";
   const _labPer = (_lang === "en") ? "Period" : "Periode";
 

@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="BudgetPacker">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.341";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.342";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -2158,16 +2158,16 @@
       font-size:18px;
       letter-spacing:-.025em;
     }
-    .wallet-item > div:first-child{
+    .wallet-item > .tb-wallet-card-layout{
       display:grid !important;
       grid-template-columns:minmax(0,1fr) auto;
       align-items:start !important;
     }
-    .wallet-item > div:first-child > div:last-child{
+    .wallet-item > .tb-wallet-card-layout > .tb-wallet-action-col{
       min-width:0 !important;
       width:clamp(168px, 22vw, 220px);
     }
-    .wallet-item > div:first-child > div:last-child .btn{
+    .wallet-item > .tb-wallet-card-layout > .tb-wallet-action-col .btn{
       justify-content:center;
       min-height:36px;
       padding:8px 10px;
@@ -2675,8 +2675,8 @@
       .field{ min-width:min(100%, 168px); }
       .dashboard-grid-main{ grid-template-columns:1fr; }
       .tb-wallet-actions{ position:relative; top:auto; }
-      .wallet-item > div:first-child{ grid-template-columns:1fr; }
-      .wallet-item > div:first-child > div:last-child{ width:100%; }
+      .wallet-item > .tb-wallet-card-layout{ grid-template-columns:1fr; }
+      .wallet-item > .tb-wallet-card-layout > .tb-wallet-action-col{ width:100%; }
       .dashboard-analysis-cta{ grid-template-columns:1fr; }
       .tx-filters-card .row{ grid-template-columns:repeat(2,minmax(0,1fr)); }
       .tx-filters-card .field{ grid-column:span 1; }
@@ -4970,7 +4970,7 @@
         padding:14px!important;
         border-radius:18px!important;
       }
-      body.tb-capacitor-app.tb-view-dashboard .wallet-item > div:first-child{
+      body.tb-capacitor-app.tb-view-dashboard .wallet-item > .tb-wallet-card-layout{
         display:grid!important;
         grid-template-columns:1fr!important;
         gap:12px!important;
@@ -5012,6 +5012,9 @@
         font-size:12px!important;
       }
       body.tb-capacitor-app.tb-view-dashboard .tb-wallet-action-col .btn.primary{
+        grid-column:1 / -1!important;
+      }
+      body.tb-capacitor-app.tb-view-dashboard .tb-wallet-action-col .tb-wallet-archive-btn{
         grid-column:1 / -1!important;
       }
       body.tb-capacitor-app.tb-view-dashboard .dashboard-panel--budget{

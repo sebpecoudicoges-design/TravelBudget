@@ -293,6 +293,7 @@ async function _runRefreshFromServer(opts) {
 async function tbRefreshIfStale(reason, opts = {}) {
   try {
     if (!sbUser) return false;
+    if (window.__TB_BOOTING || window.__TB_AUTH_TRANSITION_ACTIVE__) return false;
     if (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode()) return false;
     if (typeof document !== "undefined" && document.hidden && !opts.force) return false;
     const now = Date.now();
@@ -346,7 +347,8 @@ async function refreshFromServer(opts = {}) {
   }
 
   if (_refreshInFlight) {
-    _refreshPending = true;
+    const coalesceOnly = Boolean(opts?.auto || window.__TB_BOOTING || window.__TB_AUTH_TRANSITION_ACTIVE__);
+    if (!coalesceOnly) _refreshPending = true;
     _tbRefreshLog("refreshFromServer:queued");
     return _refreshPromise || Promise.resolve();
   }

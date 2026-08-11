@@ -28,6 +28,7 @@ Source obligatoire : [`VISUAL_SYSTEM.md`](VISUAL_SYSTEM.md).
 - [x] Verrouiller les tests de contrat visuel.
 - [x] Nettoyer l'onboarding Dashboard : styles inline lourds remplaces par classes premium, actions `data-dashboard-action` conservees, mobile 390 px couvert par contrat.
 - [x] Corriger le placement des boutons Archiver wallet dans chaque carte Dashboard, avec contrat CSS anti-retour.
+- [x] Supprimer en `10.5.342` les selecteurs Wallet generiques concurrents et reverrouiller le panneau d actions interne sur desktop, mobile et Capacitor.
 - [x] Aligner la page Projet publique et l ecran de chargement sur la palette premium, avec clair/sombre, desktop/mobile et retrait des anciens panneaux de suivi internes.
 - [x] Ajouter a la page Projet un choix clair/sombre/systeme persistant et adapter tous ses heroes au theme sombre.
 
@@ -55,7 +56,7 @@ Source obligatoire : [`VISUAL_SYSTEM.md`](VISUAL_SYSTEM.md).
 - [x] Regrouper les actions de chaque categorie dans sa carte : ordre, modifier, ajouter une sous-categorie et supprimer.
 - [x] Utiliser le selecteur natif pour les couleurs de categorie et sous-categorie, avec heritage explicite.
 - [x] Conserver les actions accessibles, la modale partagee et les contrats fonctionnels.
-- [ ] Valider le retest `10.5.330` en clair/sombre et 1440/390 px avant reouverture complete de Settings.
+- [x] Clore globalement en `10.5.342` le retest Categories `10.5.330`, deja valide par le testeur.
 
 ### Lot 4 - Trip / Partage
 
