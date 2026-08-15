@@ -654,9 +654,10 @@ export function buildSportProfileRadarData({
 }
 
 export function normalizeExerciseProgressionKey(value) {
-  return normalizedSportProfileText(value)
+  const key = normalizedSportProfileText(value)
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
+  return ({ barbell_squat: 'barbell_back_squat', barbell_bench: 'barbell_bench_press' })[key] || key;
 }
 
 function estimatedProgressionOneRepMax(weightKg, reps) {
@@ -681,26 +682,40 @@ export function exerciseProgressionPriority(exerciseId = '') {
 
 export function buildExerciseProgressionAnalysis(rows = [], { selectedExercise = '', limitPerExercise = 60 } = {}) {
   const selected = normalizeExerciseProgressionKey(selectedExercise);
-  const grouped = new Map();
+  const groupedSessions = new Map();
   (rows || []).forEach((row) => {
-    const exerciseId = String(row?.exercise_id || row?.exerciseId || '').trim();
+    const exerciseId = String(row?.exercise_id || row?.exerciseId || row?.exercise_name || row?.exerciseName || '').trim();
     const key = normalizeExerciseProgressionKey(exerciseId);
     const value = numberValue(row?.estimated_1rm_kg ?? row?.estimated1rmKg, 0);
     const date = String(row?.created_at || row?.createdAt || row?.date || '').slice(0, 10);
     if (!key || value <= 0 || !date) return;
     if (selected && key !== selected) return;
+    const sessionId = String(row?.session_id || row?.sessionId || '').trim();
+    const sessionKey = `${key}:${sessionId || date}`;
     const item = {
       ...row,
       exercise_id: exerciseId,
       key,
+      session_id: sessionId || null,
       date,
       estimated_1rm_kg: Math.round(value * 10) / 10,
       weight_kg: numberValue(row?.weight_kg ?? row?.weightKg, 0),
       reps: Math.round(numberValue(row?.reps, 0)),
+      sets_count: Math.max(1, Math.round(numberValue(row?.sets_count ?? row?.setsCount, 1))),
     };
-    const list = grouped.get(key) || [];
+    const current = groupedSessions.get(sessionKey);
+    if (!current || item.estimated_1rm_kg > current.estimated_1rm_kg) {
+      groupedSessions.set(sessionKey, { ...current, ...item, sets_count: Math.max(current?.sets_count || 0, item.sets_count) });
+    } else if (current) {
+      current.sets_count = Math.max(current.sets_count || 0, item.sets_count);
+    }
+  });
+
+  const grouped = new Map();
+  groupedSessions.forEach((item) => {
+    const list = grouped.get(item.key) || [];
     list.push(item);
-    grouped.set(key, list);
+    grouped.set(item.key, list);
   });
 
   const exercises = Array.from(grouped.entries()).map(([key, list]) => {
@@ -720,6 +735,7 @@ export function buildExerciseProgressionAnalysis(rows = [], { selectedExercise =
       first,
       last,
       best,
+      sessionCount: sorted.length,
       delta: Math.round(delta * 10) / 10,
       deltaPct: first.estimated_1rm_kg ? Math.round((delta / first.estimated_1rm_kg) * 1000) / 10 : 0,
     };
@@ -744,26 +760,37 @@ export function buildExerciseProgressionRowsFromSessions({
     const sessionDate = String(session?.started_at || session?.startedAt || session?.created_at || session?.createdAt || '').slice(0, 10);
     const plan = planForSession(sessionId, session) || [];
     const sets = doneSetsForSession(sessionId, session) || [];
+    const bestByExercise = new Map();
     sets.forEach((set) => {
       const itemIndex = Math.max(0, Math.round(numberValue(set?.itemIndex ?? set?.item_index, 0)));
       const item = plan[itemIndex] || {};
-      const exerciseId = item.exerciseKey || item.exercise_key || item.libraryKey || item.library_key || item.exerciseName || item.exercise_name || item.activityKey || item.activity_key || '';
+      const exerciseId = item.exerciseKey || item.exercise_key || item.libraryKey || item.library_key
+        || item.exerciseName || item.exercise_name || item.activityKey || item.activity_key || '';
       const weightKg = numberValue(set?.weightKg ?? set?.weight_kg, 0);
       const reps = Math.round(numberValue(set?.reps, 0));
       const estimated = estimatedProgressionOneRepMax(weightKg, reps);
       const createdAt = set?.completedAt || set?.completed_at || session?.started_at || session?.startedAt || session?.created_at || session?.createdAt || '';
-      if (!exerciseId || !sessionDate || estimated <= 0) return;
-      rows.push({
-        id: `${sessionId || 'session'}_${itemIndex}_${set?.setIndex ?? set?.set_index ?? rows.length}`,
+      if (!exerciseId || !sessionDate || estimated <= 0 || set?.completed === false || set?.estimated === true) return;
+      const key = normalizeExerciseProgressionKey(exerciseId);
+      const current = bestByExercise.get(key);
+      const candidate = {
+        id: `${sessionId || 'session'}_${key}`,
         exercise_id: exerciseId,
         session_id: sessionId || null,
         weight_kg: weightKg,
         reps,
         estimated_1rm_kg: Math.round(estimated * 10) / 10,
-        calculation_method: 'epley_set_fallback',
+        sets_count: (current?.sets_count || 0) + 1,
+        calculation_method: 'epley_session_best_set',
         created_at: createdAt || `${sessionDate}T00:00:00.000Z`,
-      });
+      };
+      if (!current || candidate.estimated_1rm_kg > current.estimated_1rm_kg) {
+        bestByExercise.set(key, candidate);
+      } else {
+        current.sets_count += 1;
+      }
     });
+    rows.push(...bestByExercise.values());
   });
   return rows;
 }

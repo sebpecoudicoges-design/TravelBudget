@@ -291,20 +291,35 @@ export function renderExerciseProgressionAnalysis({ analysis = {}, selectedExerc
     : rows.map((row) => ({ key: row.key, label: row.label }));
   const selected = String(selectedExercise || analysis.selectedExercise || '');
   const visible = selected ? rows.filter((row) => String(row.key) === selected) : rows.slice(0, 6);
-  const maxValue = Math.max(1, ...visible.flatMap((row) => (row.rows || []).map((point) => h.n(point.estimated_1rm_kg, 0))));
-  const sparkline = (points = []) => {
-    const clean = points.slice(-12);
+  const trendChart = (points = [], label = '') => {
+    const clean = points.filter((point) => h.n(point.estimated_1rm_kg, 0) > 0);
     if (!clean.length) return '';
-    return clean.map((point, idx) => {
-      const height = Math.max(6, Math.round((h.n(point.estimated_1rm_kg, 0) / maxValue) * 54));
-      return `<i title="${h.esc(`${point.date} - ${h.n(point.estimated_1rm_kg, 0)} kg e1RM`)}" style="height:${height}px" data-idx="${idx}"></i>`;
+    const values = clean.map((point) => h.n(point.estimated_1rm_kg, 0));
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = Math.max(1, max - min);
+    const coords = clean.map((point, index) => ({
+      point,
+      x: clean.length === 1 ? 150 : 10 + (index / (clean.length - 1)) * 280,
+      y: 62 - ((h.n(point.estimated_1rm_kg, 0) - min) / range) * 48,
+    }));
+    const line = coords.map(({ x, y }) => `${Math.round(x * 10) / 10},${Math.round(y * 10) / 10}`).join(' ');
+    const area = `10,66 ${line} 290,66`;
+    const circles = coords.map(({ point, x, y }, index) => {
+      const marker = index === 0 ? ' first' : index === coords.length - 1 ? ' last' : '';
+      const tooltip = `${point.date} · ${h.n(point.estimated_1rm_kg, 0)} kg e1RM${h.n(point.weight_kg, 0) ? ` · ${h.n(point.weight_kg, 0)} kg x ${h.n(point.reps, 0)}` : ''}`;
+      return `<circle class="tb-sport-progress-dot${marker}" cx="${x}" cy="${y}" r="${marker ? 4 : 2.6}"><title>${h.esc(tooltip)}</title></circle>`;
     }).join('');
+    return `<svg class="tb-sport-progress-chart" viewBox="0 0 300 72" role="img" aria-label="${h.esc(`${label}: ${clean.length} seance(s), ${min} a ${max} kg e1RM`)}" preserveAspectRatio="none">
+      <line x1="10" y1="14" x2="290" y2="14"></line><line x1="10" y1="38" x2="290" y2="38"></line><line x1="10" y1="62" x2="290" y2="62"></line>
+      <polygon points="${area}"></polygon><polyline points="${line}"></polyline>${circles}
+    </svg>`;
   };
   return `<div class="tb-sport-card tb-sport-progress-card">
     <div class="tb-sport-card-head">
       <div>
         <h3>${h.esc(h.txt('Analyse progression charges', 'Load progression analysis'))}</h3>
-        <div class="muted">${h.esc(h.txt('e1RM estime par date, calcule avec Epley depuis les series chargees. Priorite aux gros mouvements.', 'Estimated e1RM by date, calculated with Epley from loaded sets. Main lifts first.'))}</div>
+        <div class="muted">${h.esc(h.txt('Un point par seance : le meilleur e1RM valide de la seance, calcule avec Epley. Chaque courbe utilise sa propre echelle.', 'One point per workout: its best valid Epley e1RM. Each chart uses its own scale.'))}</div>
       </div>
       <div class="tb-sport-progress-filter">
         <label>${h.esc(h.txt('Exercice', 'Exercise'))}</label>
@@ -317,26 +332,35 @@ export function renderExerciseProgressionAnalysis({ analysis = {}, selectedExerc
     ${visible.length ? `<div class="tb-sport-progress-list">
       ${visible.map((row) => {
         const last = row.last || {};
+        const first = row.first || {};
         const best = row.best || {};
         const positive = h.n(row.delta, 0) >= 0;
+        const direction = h.n(row.delta, 0) > 0 ? '↗' : h.n(row.delta, 0) < 0 ? '↘' : '→';
         return `<article class="tb-sport-progress-row">
           <div class="tb-sport-progress-main">
             <strong>${h.esc(progressionLabel(row.label))}</strong>
-            <span>${h.esc(h.txt('Dernier', 'Latest'))}: ${h.n(last.estimated_1rm_kg, 0)} kg · ${h.esc(h.txt('Meilleur', 'Best'))}: ${h.n(best.estimated_1rm_kg, 0)} kg</span>
-            <small>${h.esc((row.rows || []).length)} ${h.esc(h.txt('point(s)', 'point(s)'))} · ${h.esc(firstLastDate(row))}</small>
+            <div class="tb-sport-progress-kpis">
+              <span><small>${h.esc(h.txt('Depart', 'Start'))}</small><b>${h.n(first.estimated_1rm_kg, 0)} kg</b></span>
+              <span><small>${h.esc(h.txt('Derniere seance', 'Latest workout'))}</small><b>${h.n(last.estimated_1rm_kg, 0)} kg</b></span>
+              <span><small>${h.esc(h.txt('Record', 'Best'))}</small><b>${h.n(best.estimated_1rm_kg, 0)} kg</b></span>
+            </div>
+            <small>${h.esc(row.sessionCount || (row.rows || []).length)} ${h.esc(h.txt('seance(s)', 'workout(s)'))} · ${h.esc(firstLastDate(row))}</small>
           </div>
-          <div class="tb-sport-progress-bars">${sparkline(row.rows || [])}</div>
-          <div class="tb-sport-progress-delta ${positive ? 'up' : 'down'}">${positive ? '+' : ''}${h.n(row.delta, 0)} kg<br><small>${positive ? '+' : ''}${h.n(row.deltaPct, 0)}%</small></div>
+          <div class="tb-sport-progress-visual">
+            ${trendChart(row.rows || [], progressionLabel(row.label))}
+            <div class="tb-sport-progress-axis"><span>${h.esc(first.date || '')}</span><span>${h.esc(last.date || '')}</span></div>
+          </div>
+          <div class="tb-sport-progress-delta ${positive ? 'up' : 'down'}"><span>${direction}</span>${positive && h.n(row.delta, 0) > 0 ? '+' : ''}${h.n(row.delta, 0)} kg<br><small>${positive && h.n(row.deltaPct, 0) > 0 ? '+' : ''}${h.n(row.deltaPct, 0)}% ${h.esc(h.txt('depuis le depart', 'since start'))}</small></div>
         </article>`;
       }).join('')}
-    </div>` : `<div class="tb-sport-empty">${h.esc(h.txt('Pas encore assez de series chargees pour tracer une progression.', 'Not enough loaded sets yet to chart progression.'))}</div>`}
+    </div>` : `<div class="tb-sport-empty">${h.esc(h.txt('Pas encore assez de seances chargees pour tracer une progression.', 'Not enough loaded workouts yet to chart progression.'))}</div>`}
   </div>`;
 }
 
 function firstLastDate(row = {}) {
   const first = row.first?.date || '';
   const last = row.last?.date || '';
-  return first && last && first !== last ? `${first} -> ${last}` : (last || first || '');
+  return first && last && first !== last ? `${first} → ${last}` : (last || first || '');
 }
 
 function bodyInput(id, label, value, step, h) {

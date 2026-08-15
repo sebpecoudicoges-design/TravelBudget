@@ -161,6 +161,7 @@ describe('Sport profile view', () => {
           first: { date: '2026-07-01', estimated_1rm_kg: 72 },
           last: { date: '2026-07-08', estimated_1rm_kg: 76 },
           best: { date: '2026-07-08', estimated_1rm_kg: 76 },
+          sessionCount: 2,
           delta: 4,
           deltaPct: 5.6,
           rows: [
@@ -176,6 +177,11 @@ describe('Sport profile view', () => {
     expect(html).toContain('id="sport-progress-exercise"');
     expect(html).toContain('Barbell Bench Press');
     expect(html).toContain('+4 kg');
+    expect(html).toContain('Un point par seance');
+    expect(html).toContain('2 seance(s)');
+    expect(html).toContain('tb-sport-progress-chart');
+    expect(html).toContain('Derniere seance');
+    expect(html).not.toContain('point(s)');
   });
 
   it('keeps radar point generation deterministic', () => {

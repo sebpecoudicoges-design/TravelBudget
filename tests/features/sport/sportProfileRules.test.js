@@ -268,6 +268,20 @@ describe('Sport profile rules', () => {
     expect(filtered.exercises[0].best.estimated_1rm_kg).toBe(76);
   });
 
+  it('keeps one best e1RM point per canonical exercise and workout', () => {
+    const analysis = buildExerciseProgressionAnalysis([
+      { id: 'metric', session_id: 'session-1', exercise_id: 'barbell_back_squat', estimated_1rm_kg: 120, weight_kg: 100, reps: 6, created_at: '2026-08-10T06:40:00Z' },
+      { id: 'fallback-set-1', session_id: 'session-1', exercise_id: 'barbell_squat', estimated_1rm_kg: 116.7, weight_kg: 100, reps: 5, sets_count: 3, created_at: '2026-08-10T06:41:00Z' },
+      { id: 'fallback-set-2', session_id: 'session-1', exercise_id: 'barbell_back_squat', estimated_1rm_kg: 120, weight_kg: 100, reps: 6, sets_count: 3, created_at: '2026-08-10T06:42:00Z' },
+      { id: 'next', session_id: 'session-2', exercise_id: 'barbell_back_squat', estimated_1rm_kg: 123, weight_kg: 102.5, reps: 6, created_at: '2026-08-17T06:40:00Z' },
+    ]);
+
+    expect(analysis.exercises).toHaveLength(1);
+    expect(analysis.exercises[0].rows).toHaveLength(2);
+    expect(analysis.exercises[0]).toMatchObject({ sessionCount: 2, delta: 3 });
+    expect(analysis.exercises[0].rows[0]).toMatchObject({ session_id: 'session-1', estimated_1rm_kg: 120, sets_count: 3 });
+  });
+
   it('rebuilds e1RM progression rows from stored workout sets when metric history is empty', () => {
     const rows = buildExerciseProgressionRowsFromSessions({
       sessions: [{ id: 'session-1', started_at: '2026-07-10T06:00:00Z' }],
@@ -277,6 +291,7 @@ describe('Sport profile rules', () => {
       ],
       doneSetsForSession: () => [
         { itemIndex: 0, setIndex: 1, reps: 8, weightKg: 80, completedAt: '2026-07-10T06:10:00Z' },
+        { itemIndex: 0, setIndex: 2, reps: 6, weightKg: 100, completedAt: '2026-07-10T06:12:00Z' },
         { itemIndex: 1, setIndex: 1, reps: 6, weightKg: 60, completedAt: '2026-07-10T06:20:00Z' },
       ],
     });
@@ -285,8 +300,9 @@ describe('Sport profile rules', () => {
     expect(rows[0]).toMatchObject({
       exercise_id: 'barbell_back_squat',
       session_id: 'session-1',
-      estimated_1rm_kg: 101.3,
-      calculation_method: 'epley_set_fallback',
+      estimated_1rm_kg: 120,
+      sets_count: 2,
+      calculation_method: 'epley_session_best_set',
     });
   });
 });

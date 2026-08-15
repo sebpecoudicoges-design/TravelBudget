@@ -166,6 +166,8 @@ En 10.5.345, Sport separe Seance, Programme, Profil et progression, et Historiqu
 
 En 10.5.346, l identite canonique, la reprise de charge et l adaptation du programme restent dans le domaine Sport : 448.7 / 450 KiB. Les budgets de distribution restent inchanges : initial 257.9 / 260 KiB, lazy 420.6 / 421 KiB, total JS 678.5 / 679 KiB et CSS 43.3 / 44 KiB.
 
+En 10.5.347, l analyse Sport passe d une ligne par serie a un point par exercice et par seance, avec une courbe SVG locale et des reperes explicites. Sport atteint 451.8 KiB et le lazy 423.3 KiB. Un rebuild propre du commit 10.5.346 avec l environnement courant mesure deja l initial a 262.2 KiB et le total a 683.2 KiB; les plafonds sont donc recales aux paliers entiers mesures (Sport 455, initial 263, lazy 424, total 686), sans changement des plafonds CSS et gzip.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

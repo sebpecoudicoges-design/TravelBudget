@@ -49,6 +49,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Reprendre Alimentation en profondeur en `10.5.344` : quatre espaces internes accessibles, journal d hydratation horodate, recuperation Sommeil/Alcool, historique detaille et suppression du tableau Semaine active devenu mort.
   - [x] Reprendre Sport en profondeur en `10.5.345` : quatre espaces internes accessibles, Programme extrait de la construction de seance, navigation automatique vers Seance apres chargement et retrait du chemin `includeProgram` devenu mort.
   - [x] Unifier Sport en `10.5.346` autour de cles canoniques partagees par catalogue, historique et programme; reprendre la derniere charge sans regression implicite et propager la double progression a la variante programme source.
+  - [x] Refaire en `10.5.347` l analyse de progression Sport autour d un seul meilleur e1RM par exercice et par seance, avec tendance visuelle a echelle locale et indicateurs explicites.
 
 ## Chantier 1 - Budget journalier et transactions
 
