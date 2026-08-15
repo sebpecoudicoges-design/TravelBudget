@@ -17,6 +17,7 @@ export function createInitialNutritionState() {
     foodCategory: 'all',
     selectedMealType: '',
     selectedDate: '',
+    activeSection: 'today',
     expandedHistory: '',
     editingItemId: '',
   };
@@ -149,7 +150,7 @@ export function createNutritionStore(initialState = {}, options = {}) {
       return replace({ selectedDate: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '' });
     },
     setUiState(patch = {}) {
-      const allowed = ['foodQuery', 'foodCategory', 'selectedMealType', 'expandedHistory', 'editingItemId', 'syncStatus', 'syncPhase', 'error'];
+      const allowed = ['foodQuery', 'foodCategory', 'selectedMealType', 'activeSection', 'expandedHistory', 'editingItemId', 'syncStatus', 'syncPhase', 'error'];
       return replace(Object.fromEntries(allowed.filter(key => Object.prototype.hasOwnProperty.call(patch, key)).map(key => [key, patch[key]])));
     },
     selectedRows(day, toDay = value => String(value || '').slice(0, 10)) {

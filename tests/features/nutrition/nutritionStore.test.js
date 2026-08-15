@@ -85,5 +85,12 @@ describe('Nutrition store', () => {
     expect(store.state.loaded).toBe(false);
     expect(store.state.meals).toEqual([]);
     expect(store.state.foodCategory).toBe('all');
+    expect(store.state.activeSection).toBe('today');
+  });
+
+  it('keeps the active Nutrition space through domain UI state updates', () => {
+    const store = createNutritionStore();
+    store.setUiState({ activeSection: 'recovery' });
+    expect(store.state.activeSection).toBe('recovery');
   });
 });

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  NUTRITION_SECTIONS,
   buildWeekRows,
   goalSevenDayInsight,
   macroSummaryText,
   mealMomentSuggestion,
   mealTargetNote,
   progressPercent,
-  renderActiveWeekDashboard,
   renderAlcoholPanel,
   renderFoodChip,
   renderGoalCockpit,
@@ -16,11 +16,13 @@ import {
   renderMealFavoriteChip,
   renderMealTimeline,
   renderNutritionShell,
+  renderNutritionSectionTabs,
   renderNutritionSyncPanel,
   renderQuickAddPanel,
   renderSleepPanel,
+  shortNutritionDate,
   renderProgressBar,
-  summarizeActiveWeek,
+  normalizeNutritionSection,
 } from '../../../src/features/nutrition/nutritionView.js';
 
 describe('Nutrition view helpers', () => {
@@ -119,9 +121,18 @@ describe('Nutrition view helpers', () => {
   });
 
   it('renders hydration, sleep and weekly history panels', () => {
-    const hydration = renderHydrationPanel({ t });
+    const hydration = renderHydrationPanel({
+      waterEntries: [{ id: 'water-1', amountMl: 500, time: '08:35' }],
+      waterTime: '09:10',
+      totalWaterMl: 1250,
+      t,
+    });
     expect(hydration).toContain('id="nutrition-water-only"');
+    expect(hydration).toContain('id="nutrition-water-time"');
     expect(hydration).toContain('data-nutrition-water-quick="1000"');
+    expect(hydration).toContain('data-nutrition-water-delete="water-1"');
+    expect(hydration).toContain('08:35');
+    expect(hydration).toContain('1250 / 2000 ml');
 
     const sleep = renderSleepPanel({
       sleep: { hours: 8, quality: 'good' },
@@ -145,6 +156,19 @@ describe('Nutrition view helpers', () => {
     expect(history).toContain('Historique');
     expect(history).toContain('Dejeuner 650 kcal');
     expect(history).toContain('data-nutrition-history-date="2026-07-10"');
+  });
+
+  it('renders four accessible Nutrition spaces and normalizes invalid state', () => {
+    expect(NUTRITION_SECTIONS).toEqual(['today', 'meals', 'recovery', 'history']);
+    expect(normalizeNutritionSection('bad-value')).toBe('today');
+    expect(shortNutritionDate('2026-08-15')).toBe('15/08');
+    const html = renderNutritionSectionTabs('recovery', { t });
+    expect(html).toContain('role="tablist"');
+    expect(html).toContain('data-nutrition-section="today"');
+    expect(html).toContain('data-nutrition-section="meals"');
+    expect(html).toContain('data-nutrition-section="recovery"');
+    expect(html).toContain('data-nutrition-section="history"');
+    expect(html).toContain('id="nutrition-tab-recovery" aria-selected="true"');
   });
 
   it('renders the meal timeline with edit/delete actions and other entries', () => {
@@ -215,46 +239,10 @@ describe('Nutrition view helpers', () => {
     expect(html).toContain('1.3 verres');
   });
 
-  it('renders the active week dashboard without the legacy health page', () => {
-    const rows = [
-      {
-        row: { day: '2026-07-09' },
-        plan: { planned: true, code: 'A1', sessionName: 'Full body' },
-        kcal: 2100,
-        need: 2400,
-        water: 2000,
-        sleep: 8,
-        protein: 95,
-        sport: 300,
-        work: 150,
-        alcohol: 1,
-        score: 82,
-      },
-      {
-        row: { day: '2026-07-10' },
-        plan: { planned: false },
-        kcal: 1800,
-        need: 2300,
-        water: 1500,
-        sleep: 7,
-        protein: 80,
-        sport: 0,
-        work: 500,
-        alcohol: 0,
-        score: 70,
-      },
-    ];
-    expect(Math.round(summarizeActiveWeek(rows).avgScore)).toBe(76);
-    const html = renderActiveWeekDashboard({ rows, selectedDay: '2026-07-10', bodyWeight: 59, t });
-    expect(html).toContain('Semaine active');
-    expect(html).toContain('A1 Full body');
-    expect(html).toContain('data-health-date="2026-07-10"');
-    expect(html).toContain('650 kcal');
-  });
-
   it('renders the main Nutrition shell with stable hooks and delegated slots', () => {
     const html = renderNutritionShell({
       day: '2026-07-19',
+      activeSection: 'meals',
       base: { bmr: 1624 },
       goalLabel: 'Prise de masse douce',
       goalTargets: { mode: 'bulk', offsetKcal: 350, surplusKcal: 350, deficitKcal: 300 },
@@ -294,6 +282,10 @@ describe('Nutrition view helpers', () => {
       t,
     });
     expect(html).toContain('id="nutrition-date"');
+    expect(html).toContain('id="nutrition-panel-meals"');
+    expect(html).toContain('data-nutrition-panel="meals"');
+    expect(html).toContain('id="nutrition-panel-today"');
+    expect(html).toContain('data-nutrition-panel="today" hidden');
     expect(html).toContain('id="nutrition-refresh"');
     expect(html).toContain('id="nutrition-goal-mode"');
     expect(html).toContain('id="nutrition-goal-neat"');

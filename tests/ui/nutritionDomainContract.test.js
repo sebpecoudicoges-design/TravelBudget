@@ -11,6 +11,8 @@ describe('nutrition domain extraction contract', () => {
   const view = fs.readFileSync('src/features/nutrition/nutritionView.js', 'utf8');
   const offlineQueue = fs.readFileSync('public/legacy/js/00_offline_queue.js', 'utf8');
   const offlineState = fs.readFileSync('public/legacy/js/00_offline.js', 'utf8');
+  const premiumTheme = fs.readFileSync('src/ui/premium-theme.css', 'utf8');
+  const deepRefactorMigration = fs.readFileSync('supabase/migrations/20260815011706_nutrition_sections_and_hydration_time_10_5_344.sql', 'utf8');
 
   it('exposes repository, store and views through the modular bridge', () => {
     expect(bridge).toContain("import { createNutritionRepository } from '../data/nutritionRepository.js'");
@@ -35,8 +37,8 @@ describe('nutrition domain extraction contract', () => {
     expect(legacy).toContain('view().renderNutritionSyncPanel');
     expect(legacy).toContain('view().renderGoalCockpit');
     expect(legacy).toContain('view().renderAlcoholPanel');
-    expect(view).toContain('renderActiveWeekDashboard');
-    expect(legacy).not.toContain('view().renderActiveWeekDashboard');
+    expect(view).toContain('renderNutritionSectionTabs');
+    expect(view).not.toContain('renderActiveWeekDashboard');
   });
 
   it('hydrates Sport and Work activity calories without loading their UI domains first', () => {
@@ -110,10 +112,29 @@ describe('nutrition domain extraction contract', () => {
     expect(view).toContain('renderHistoryPanel');
     expect(view).toContain('renderHydrationPanel');
     expect(view).toContain('renderSleepPanel');
+    expect(view).toContain('data-nutrition-section');
+    expect(view).toContain('data-nutrition-water-delete');
+    expect(repository).toContain('consumed_time');
+    expect(legacy).toContain('deleteWaterEntry');
+    expect(legacy).toContain('.select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,consumed_time,created_at")');
     expect(view).toContain('renderGoalCockpit');
     expect(legacy).not.toContain('Synchro alimentation en attente", "Pending nutrition sync');
     expect(legacy).not.toContain('rows.slice(0, 8).map((row, index)');
     expect(legacy).not.toContain('<section class="tb-nutrition-shell">');
     expect(legacy).not.toContain('Comparaison besoins / consomme');
+  });
+
+  it('contracts the deep Nutrition spaces, responsive navigation and hydration lineage', () => {
+    expect(view).toContain("Object.freeze(['today', 'meals', 'recovery', 'history'])");
+    expect(view).toContain('role="tablist"');
+    expect(view).toContain('role="tabpanel"');
+    expect(legacy).toContain("['ArrowLeft', 'ArrowRight', 'Home', 'End']");
+    expect(premiumTheme).toContain('.tb-nutrition-section-tabs');
+    expect(premiumTheme).toContain('overflow-x: auto');
+    expect(premiumTheme).toContain('body.theme-dark .tb-nutrition-subcard');
+    expect(premiumTheme).toContain('@media (max-width: 460px)');
+    expect(deepRefactorMigration).toContain('add column if not exists consumed_time');
+    expect(deepRefactorMigration).toContain('nutrition_meals_user_day_consumed_time_idx');
+    expect(deepRefactorMigration).toContain('Retest journal hydratation 10.5.344');
   });
 });

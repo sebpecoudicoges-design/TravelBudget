@@ -937,6 +937,182 @@ body.theme-dark .tb-nutrition-energy-settings select {
   color: var(--text, #f8fafc);
 }
 
+.tb-nutrition-section-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 6px;
+  overflow-x: auto;
+  border: 1px solid var(--tb-line);
+  border-radius: var(--tb-radius-md);
+  background: var(--tb-surface-soft);
+  scrollbar-width: none;
+  touch-action: pan-y;
+}
+
+.tb-nutrition-section-tabs::-webkit-scrollbar { display: none; }
+
+.tb-nutrition-section-tab {
+  display: inline-flex;
+  flex: 1 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 8px 13px;
+  border: 1px solid transparent;
+  border-radius: var(--tb-radius-sm);
+  background: transparent;
+  color: var(--tb-muted);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tb-nutrition-section-tab:hover,
+.tb-nutrition-section-tab:focus-visible {
+  border-color: var(--tb-line);
+  color: var(--tb-ink);
+}
+
+.tb-nutrition-section-tab.active {
+  border-color: color-mix(in srgb, var(--tb-coral) 34%, var(--tb-line));
+  background: var(--tb-surface);
+  color: var(--tb-coral-strong);
+  box-shadow: 0 6px 18px rgba(32, 49, 58, .08);
+}
+
+.tb-nutrition-section-panel {
+  min-width: 0;
+  margin-top: 14px;
+}
+
+.tb-nutrition-section-panel[hidden] { display: none !important; }
+
+.tb-nutrition-recovery-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.tb-nutrition-recovery-layout .tb-nutrition-alcohol-card { grid-column: 1 / -1; }
+
+.tb-nutrition-subcard {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--tb-line);
+  border-radius: var(--tb-radius-md);
+  background: var(--tb-surface);
+}
+
+.tb-nutrition-alcohol-card {
+  border-color: color-mix(in srgb, var(--tb-nutrition-status, var(--tb-warning)) 38%, var(--tb-line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tb-nutrition-status, var(--tb-warning)) 8%, transparent), transparent), var(--tb-surface);
+}
+
+.tb-nutrition-subcard-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tb-nutrition-subcard-heading h3 { margin: 0; }
+.tb-nutrition-subcard-heading p { margin: 3px 0 0; color: var(--tb-muted); font-size: 12px; }
+.tb-nutrition-subcard-heading .pill { flex: 0 0 auto; white-space: nowrap; }
+
+.tb-nutrition-water-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, .5fr);
+  gap: 10px;
+}
+
+.tb-nutrition-hydration-card > #nutrition-water-only { width: 100%; }
+
+.tb-nutrition-water-log {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tb-line);
+}
+
+.tb-nutrition-water-log-title,
+.tb-nutrition-water-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tb-nutrition-water-log-title span { color: var(--tb-muted); font-size: 12px; }
+
+.tb-nutrition-water-entry {
+  min-height: 46px;
+  padding: 8px 10px;
+  border: 1px solid var(--tb-line);
+  border-radius: var(--tb-radius-sm);
+  background: var(--tb-surface-soft);
+}
+
+.tb-nutrition-water-entry > div { display: grid; gap: 2px; }
+.tb-nutrition-water-entry span { color: var(--tb-muted); font-size: 12px; }
+
+.tb-nutrition-history-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tb-nutrition-history-summary > div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--tb-line);
+  border-radius: var(--tb-radius-sm);
+  background: var(--tb-surface-soft);
+}
+
+.tb-nutrition-history-summary span,
+.tb-nutrition-history-summary strong { display: block; }
+.tb-nutrition-history-summary span { color: var(--tb-muted); font-size: 11px; }
+.tb-nutrition-history-summary strong { margin-top: 3px; }
+
+.tb-nutrition-history-meals { display: grid; gap: 7px; margin-top: 14px; }
+.tb-nutrition-history-meals .btn { display: flex; justify-content: space-between; gap: 10px; text-align: left; }
+.tb-nutrition-empty { padding: 12px; border: 1px dashed var(--tb-line); border-radius: var(--tb-radius-sm); color: var(--tb-muted); }
+
+body.theme-dark .tb-nutrition-section-tabs,
+body.theme-dark .tb-nutrition-water-entry,
+body.theme-dark .tb-nutrition-history-summary > div {
+  border-color: rgba(241, 245, 249, .14);
+  background: rgba(15, 23, 42, .52);
+}
+
+body.theme-dark .tb-nutrition-section-tab.active,
+body.theme-dark .tb-nutrition-subcard {
+  border-color: rgba(241, 245, 249, .14);
+  background: var(--panel2);
+  color: var(--text, #f8fafc);
+}
+
+@media (max-width: 860px) {
+  .tb-nutrition-section-tab { flex: 0 0 auto; }
+  .tb-nutrition-recovery-layout { grid-template-columns: 1fr; }
+  .tb-nutrition-recovery-layout .tb-nutrition-alcohol-card { grid-column: auto; }
+}
+
+@media (max-width: 460px) {
+  .tb-nutrition-section-tabs { margin-inline: -4px; padding: 5px; }
+  .tb-nutrition-section-tab { min-height: 40px; padding-inline: 10px; font-size: 12px; }
+  .tb-nutrition-water-form,
+  .tb-nutrition-history-summary { grid-template-columns: 1fr 1fr; }
+  .tb-nutrition-water-entry { align-items: stretch; flex-direction: column; }
+  .tb-nutrition-water-entry .btn { width: 100%; }
+}
+
 @media (max-width: 900px) {
   .tb-premium-overview {
     grid-template-columns: 1fr;

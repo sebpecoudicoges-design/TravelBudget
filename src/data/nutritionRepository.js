@@ -106,6 +106,7 @@ export function makeLocalNutritionRow({
   grams,
   nut,
   waterMl,
+  consumedTime,
   mealType,
   mealDate,
   label,
@@ -131,6 +132,7 @@ export function makeLocalNutritionRow({
       meal_type: mealType || 'meal',
       label: label || food?.name || 'Repas',
       water_ml: safeNumber(waterMl, 0),
+      consumed_time: consumedTime || null,
       notes: notesWithNutritionSyncId('', rowSyncId),
       created_at: createdAt,
     },
@@ -232,6 +234,7 @@ export function createNutritionRepository(getClient) {
         label: meal.label || 'Repas',
         notes: notesWithNutritionSyncId(meal.notes, syncId),
         water_ml: safeNumber(meal.water_ml, 0),
+        consumed_time: meal.consumed_time || null,
       };
       if (syncId) payload.sync_id = syncId;
       const query = syncId

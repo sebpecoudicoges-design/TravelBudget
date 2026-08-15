@@ -46,6 +46,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Completer en `10.5.341` la tendance Sport des 12 dernieres mesures avec graisse et muscle en kg, tout en conservant les pourcentages et sans extrapoler un muscle kg absent.
 - [x] Stabiliser en `10.5.342` Dashboard, Settings et authentification : scope KPI partage avec la courbe, periodes explicites, ecouteurs de modale apres montage et pipeline `SIGNED_IN` unique sans refresh concurrent.
 - [x] Reconciler en `10.5.343` les regles recurrentes par RPC atomique : conserver les echeances confirmees ou detachees, supprimer les projections obsoletes et realigner la premiere occurrence sur le jour choisi.
+- [x] Reprendre Alimentation en profondeur en `10.5.344` : quatre espaces internes accessibles, journal d hydratation horodate, recuperation Sommeil/Alcool, historique detaille et suppression du tableau Semaine active devenu mort.
 
 ## Chantier 1 - Budget journalier et transactions
 

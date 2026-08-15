@@ -4,7 +4,7 @@
    ========================= */
 (function () {
   const NUTRITION_STORE = window.Data?.nutritionStore || null;
-  const CACHE = NUTRITION_STORE?.state || { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], sleep: {}, localRows: [], error: "", syncStatus: "", syncPhase: "", foodQuery: "", foodCategory: "all", selectedMealType: "", selectedDate: "", expandedHistory: "", editingItemId: "" };
+  const CACHE = NUTRITION_STORE?.state || { loaded: false, loading: false, syncingLocal: false, foods: [], meals: [], items: [], sleep: {}, localRows: [], error: "", syncStatus: "", syncPhase: "", foodQuery: "", foodCategory: "all", selectedMealType: "", selectedDate: "", activeSection: "today", expandedHistory: "", editingItemId: "" };
   const FALLBACK_FOODS = [
     { key: "rice_cooked", name: "Riz cuit", servingGrams: 150, kcalPer100g: 130, proteinPer100g: 2.7, carbsPer100g: 28, fatPer100g: 0.3, fiberPer100g: 0.4 },
     { key: "rice_onion_zucchini", name: "Riz oignon courgette", servingGrams: 250, kcalPer100g: 112, proteinPer100g: 2.5, carbsPer100g: 22, fatPer100g: 1.8, fiberPer100g: 1.5 },
@@ -444,11 +444,11 @@
     if (base.includes(marker)) return base;
     return [base, marker].filter(Boolean).join(" ");
   }
-  function makeLocalNutritionRow({ food, grams, nut, waterMl, mealType, mealDate, label, syncId }) {
+  function makeLocalNutritionRow({ food, grams, nut, waterMl, consumedTime, mealType, mealDate, label, syncId }) {
     const repo = repository();
     if (typeof repo.makeLocalNutritionRow === "function") {
       return repo.makeLocalNutritionRow({
-        food, grams, nut, waterMl, mealType, mealDate: mealDate || selectedDateISO(), label, syncId,
+        food, grams, nut, waterMl, consumedTime, mealType, mealDate: mealDate || selectedDateISO(), label, syncId,
         userId: uid(), travelId: activeTravelId(),
       });
     }
@@ -467,6 +467,7 @@
         meal_type: mealType || "meal",
         label: label || food?.name || txt("Repas", "Meal"),
         water_ml: n(waterMl, 0),
+        consumed_time: consumedTime || null,
         notes: notesWithNutritionSyncId("", rowSyncId),
         created_at: new Date().toISOString(),
       },
@@ -854,18 +855,6 @@
       .tb-nutrition-goal-kpis span { display:block; color:var(--muted); font-size:10px; text-transform:uppercase; font-weight:900; }
       .tb-nutrition-goal-kpis strong { display:block; margin-top:4px; font-size:18px; line-height:1.05; }
       .tb-nutrition-goal-kpis small { display:block; margin-top:4px; color:var(--muted); font-size:11px; font-weight:750; }
-      .tb-health-weekboard { border:1px solid rgba(139,92,246,.18); border-radius:14px; padding:14px; background:linear-gradient(180deg,rgba(139,92,246,.08),rgba(56,189,248,.05)),var(--panel2); margin-top:14px; }
-      .tb-health-weekboard-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:10px; }
-      .tb-health-weekboard-kpis div { border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.06); padding:9px 10px; min-width:0; }
-      .tb-health-weekboard-kpis span { display:block; color:var(--muted); font-size:10px; text-transform:uppercase; font-weight:900; }
-      .tb-health-weekboard-kpis strong { display:block; margin-top:3px; font-size:15px; line-height:1.05; }
-      .tb-health-weekboard-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; align-items:stretch; }
-      .tb-health-weekboard-day { min-height:154px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.04); color:inherit; padding:9px 7px; display:grid; grid-template-rows:auto auto 1fr auto; gap:6px; text-align:left; cursor:pointer; min-width:0; }
-      .tb-health-weekboard-day.active { border-color:var(--accent); box-shadow:0 10px 28px rgba(37,99,235,.10); }
-      .tb-health-weekboard-day strong { font-size:12px; line-height:1.15; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-      .tb-health-weekboard-day small { font-size:10px; color:var(--muted); }
-      .tb-health-weekboard-bars { display:grid; grid-template-columns:repeat(8,1fr); gap:3px; align-items:end; min-height:62px; }
-      .tb-health-weekboard-bars i { display:block; min-height:6px; border-radius:7px 7px 3px 3px; }
       .tb-nutrition-shell button { min-width:0; }
       .tb-nutrition-shell .btn { white-space:normal; }
       @media (max-width: 860px) {
@@ -880,8 +869,6 @@
         .tb-nutrition-timeline-row { grid-template-columns:18px minmax(0,1fr); gap:8px; }
         .tb-nutrition-health-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .tb-nutrition-goal-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
-        .tb-health-weekboard-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
-        .tb-health-weekboard-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .tb-nutrition-shell .tb-sport-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
       }
       @media (max-width: 460px) {
@@ -891,7 +878,6 @@
         .tb-nutrition-shell .tb-sport-stats { grid-template-columns:1fr; }
         .tb-nutrition-week-grid button { padding:6px 3px !important; font-size:10px !important; }
         .tb-nutrition-goal-kpis { grid-template-columns:1fr; }
-        .tb-health-weekboard-kpis { grid-template-columns:1fr; }
       }
     `;
     document.head.appendChild(style);
@@ -980,7 +966,7 @@
           const selectedSince = offsetDateISO(selectedDateISO(), -1);
           const since = selectedSince < recentSince ? selectedSince : recentSince;
           const meals = await c.from(table("nutrition_meals"))
-            .select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,created_at")
+            .select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,consumed_time,created_at")
             .eq("user_id", uid())
             .gte("meal_date", since)
             .order("meal_date", { ascending: false })
@@ -1391,6 +1377,31 @@
     const label = String(meal.label || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     return !hasItem && (label === "eau" || label === "water");
   }
+  function currentLocalTimeHHMM(day) {
+    if (String(day || selectedDateISO()) !== todayISO()) return "12:00";
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  }
+  function waterEntryTime(meal) {
+    const explicit = String(meal?.consumed_time || "").match(/^(\d{2}):(\d{2})/);
+    if (explicit) return `${explicit[1]}:${explicit[2]}`;
+    const created = new Date(meal?.created_at || "");
+    if (!Number.isNaN(created.getTime())) {
+      return `${String(created.getHours()).padStart(2, "0")}:${String(created.getMinutes()).padStart(2, "0")}`;
+    }
+    return "--:--";
+  }
+  function waterEntriesForDay(meals, itemsForDay) {
+    return (meals || [])
+      .filter(meal => isWaterOnlyMeal(meal, itemsForDay))
+      .map(meal => ({
+        id: String(meal.id || ""),
+        amountMl: n(meal.water_ml, 0),
+        time: waterEntryTime(meal),
+        pending: Boolean(meal.localOnly || meal.offlinePending || String(meal.id || "").startsWith("local_meal_")),
+      }))
+      .sort((a, b) => String(b.time).localeCompare(String(a.time)));
+  }
   function renderNutrition(reason) {
     ensureNutritionShell();
     ensureNutritionStyles();
@@ -1423,6 +1434,7 @@
     const drinkWaterMl = meals.reduce((sum, meal) => sum + (isWaterOnlyMeal(meal, items) ? n(meal.water_ml, 0) : 0), 0);
     const foodWaterMl = Math.max(0, meals.reduce((sum, meal) => sum + n(meal.water_ml, 0), 0) - drinkWaterMl);
     const waterMl = drinkWaterMl;
+    const waterEntries = waterEntriesForDay(meals, items);
     const base = baseline();
     const nutritionGoal = loadNutritionGoal();
     const neatKcal = Math.max(0, n(nutritionGoal.neatKcal, 300));
@@ -1458,7 +1470,8 @@
     const sleep = sleepForDay(day);
     const sleepWeek = week.map(row => ({ day: row.day, ...sleepForDay(row.day) }));
     const sleepLabel = sleep.hours > 0 ? `${Math.round(sleep.hours * 10) / 10}h` : txt("non saisi", "not set");
-    const sleepNightLabel = sleep.nightDay ? sleep.nightDay.slice(5).replace("-", "/") : offsetDateISO(day, -1).slice(5).replace("-", "/");
+    const sleepNightDay = sleep.nightDay || offsetDateISO(day, -1);
+    const sleepNightLabel = /^\d{4}-\d{2}-\d{2}$/.test(sleepNightDay) ? `${sleepNightDay.slice(8, 10)}/${sleepNightDay.slice(5, 7)}` : sleepNightDay;
     const editingItem = CACHE.editingItemId ? items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
     const quickFoods = quickFoodRows();
     const mealFavorites = loadMealFavorites();
@@ -1470,6 +1483,7 @@
         : txt("A jour", "Up to date");
     root.innerHTML = view().renderNutritionShell?.({
       day,
+      activeSection: CACHE.activeSection || "today",
       base,
       goalLabel,
       goalTargets,
@@ -1509,7 +1523,13 @@
         renderFoodChip: (food, kind) => foodChipHTML(food, kind),
         renderMealFavoriteChip: (fav, index) => mealFavoriteChipHTML(fav, index),
       },
-      hydrationPanelHtml: view().renderHydrationPanel({ esc, t: txt }),
+      hydrationPanelHtml: view().renderHydrationPanel({
+        waterEntries,
+        waterTime: currentLocalTimeHHMM(day),
+        totalWaterMl: drinkWaterMl,
+        esc,
+        t: txt,
+      }),
       sleepPanelHtml: view().renderSleepPanel({ sleep, sleepLabel, sleepNightLabel, day, sleepWeek, offsetDateISO, esc, t: txt }),
       historyPanelHtml: view().renderHistoryPanel({ week, day, needsKcal, mealTypeLabel, esc, t: txt }),
       alcoholPanelHtml: view().renderAlcoholPanel({ alcoholJudge, alcoholToday, alcoholWeekTotal, alcoholDrinkingDays, week, day, esc, t: txt }),
@@ -1565,6 +1585,31 @@
   }
   function bindNutrition(root) {
     const editingItem = CACHE.editingItemId ? CACHE.items.find(item => String(item.id || "") === String(CACHE.editingItemId)) : null;
+    const sectionButtons = Array.from(root.querySelectorAll("[data-nutrition-section]"));
+    const activateSection = (section, focus = false) => {
+      const next = String(section || "today");
+      CACHE.activeSection = ["today", "meals", "recovery", "history"].includes(next) ? next : "today";
+      sectionButtons.forEach(btn => {
+        const selected = btn.getAttribute("data-nutrition-section") === CACHE.activeSection;
+        btn.classList.toggle("active", selected);
+        btn.setAttribute("aria-selected", selected ? "true" : "false");
+        if (selected && focus) btn.focus();
+      });
+      root.querySelectorAll("[data-nutrition-panel]").forEach(panel => {
+        panel.hidden = panel.getAttribute("data-nutrition-panel") !== CACHE.activeSection;
+      });
+    };
+    sectionButtons.forEach((btn, index) => {
+      btn.onclick = () => activateSection(btn.getAttribute("data-nutrition-section"));
+      btn.onkeydown = (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const nextIndex = event.key === 'Home' ? 0
+          : event.key === 'End' ? sectionButtons.length - 1
+            : (index + (event.key === 'ArrowRight' ? 1 : -1) + sectionButtons.length) % sectionButtons.length;
+        activateSection(sectionButtons[nextIndex]?.getAttribute("data-nutrition-section"), true);
+      };
+    });
     const search = root.querySelector("#nutrition-search");
     if (search) search.oninput = () => {
       CACHE.foodQuery = search.value || "";
@@ -1709,6 +1754,9 @@
         if (input) input.value = btn.getAttribute("data-nutrition-water-quick") || "250";
         saveWaterOnly(root);
       };
+    });
+    root.querySelectorAll("[data-nutrition-water-delete]").forEach(btn => {
+      btn.onclick = () => deleteWaterEntry(btn.getAttribute("data-nutrition-water-delete"));
     });
     root.querySelectorAll("[data-nutrition-history-date]").forEach(btn => {
       btn.onclick = async () => {
@@ -1893,10 +1941,11 @@
     const waterBtn = root?.querySelector("#nutrition-water-only");
     if (waterBtn) waterBtn.disabled = true;
     const water = n(root.querySelector("#nutrition-water-ml")?.value, 0) || 250;
+    const consumedTime = String(root.querySelector("#nutrition-water-time")?.value || currentLocalTimeHHMM()).slice(0, 5);
     const c = client();
     const syncId = `nutrition_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     const mealType = selectedMealType(root);
-    const localRow = makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, mealType, label: txt("Eau", "Water"), syncId });
+    const localRow = makeLocalNutritionRow({ food: { key: "water", name: txt("Eau", "Water") }, grams: 0, nut: {}, waterMl: water, consumedTime, mealType, label: txt("Eau", "Water"), syncId });
     try {
       if (c && uid()) {
         upsertOptimisticNutritionRow(localRow);
@@ -1910,7 +1959,8 @@
           notes: notesWithNutritionSyncId("", syncId),
           sync_id: syncId,
           water_ml: water,
-        }).select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,created_at,sync_id").single();
+          consumed_time: consumedTime,
+        }).select("id,user_id,travel_id,meal_date,meal_type,label,notes,water_ml,consumed_time,created_at,sync_id").single();
         if (meal.error) throw meal.error;
         confirmNutritionRow(localRow, meal.data, null);
       } else {
@@ -1918,7 +1968,6 @@
         upsertOptimisticNutritionRow(localRow);
         enqueueNutritionSync();
       }
-      await loadNutrition({ force: true });
       try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
       try { if (typeof window.tbSyncPreferenceDrivenNotifications === "function") window.tbSyncPreferenceDrivenNotifications(); } catch (_) {}
       renderNutrition("water-only");
@@ -1933,6 +1982,37 @@
       renderNutrition("water-error");
     } finally {
       try { if (waterBtn) waterBtn.disabled = false; } catch (_) {}
+    }
+  }
+  async function deleteWaterEntry(id) {
+    const key = String(id || "");
+    if (!key) return;
+    const meal = CACHE.meals.find(row => String(row?.id || "") === key);
+    if (!meal || !isWaterOnlyMeal(meal, CACHE.items)) return;
+    const previousMeals = CACHE.meals.slice();
+    CACHE.meals = CACHE.meals.filter(row => String(row?.id || "") !== key);
+    nutritionStore()?.replace?.({ meals: CACHE.meals });
+    publishNutrition("water-delete-optimistic");
+    renderNutrition("water-delete-optimistic");
+    try {
+      if (key.startsWith("local_meal_")) {
+        const rows = loadLocalMeals();
+        const localRow = rows.find(row => String(row?.meal?.id || "") === key);
+        if (localRow) discardLocalNutritionRow(nutritionSyncId(localRow));
+      } else {
+        const c = client();
+        if (!c || !uid()) throw new Error(txt("Supabase indisponible", "Supabase unavailable"));
+        const { error } = await c.from(table("nutrition_meals")).delete().eq("id", key).eq("user_id", uid());
+        if (error) throw error;
+      }
+      try { if (typeof window.renderKPI === "function") window.renderKPI(); } catch (_) {}
+      renderNutrition("water-delete");
+    } catch (e) {
+      CACHE.meals = previousMeals;
+      nutritionStore()?.replace?.({ meals: previousMeals });
+      CACHE.error = e?.message || String(e);
+      publishNutrition("water-delete-error");
+      renderNutrition("water-delete-error");
     }
   }
   async function saveSleep(root) {

@@ -33,12 +33,12 @@ Snapshot `10.5.315` :
 ## Budgets actuels
 
 - Bundle Vite JS initial : 260 KiB maximum.
-- Bundle Vite JS lazy : 400 KiB maximum.
-- Bundle Vite JS total : 655 KiB maximum.
-- Bundle Vite CSS total : 23 KiB maximum.
+- Bundle Vite JS lazy : 420 KiB maximum.
+- Bundle Vite JS total : 678 KiB maximum.
+- Bundle Vite CSS total : 44 KiB maximum.
 - JS principal gzip : 110 KiB maximum.
 - Boot legacy : 1500 KiB maximum.
-- Dashboard + Settings : 360 KiB maximum.
+- Dashboard + Settings : 365 KiB maximum.
 - Trip : 340 KiB maximum.
 - Sport : 450 KiB maximum.
 - Nutrition : 235 KiB maximum.
@@ -159,6 +159,8 @@ En 10.5.334, Sport corrige la colonne de progression demandee au premier chargem
 En 10.5.335, Sport remplace les deux minuteurs rendus simultanement par un choix Guide/Libre porte par le domaine legacy lazy. Le shell Vite ne recoit plus qu un slot minuteur, ce qui conserve les plafonds malgre le nouveau controle. Sport mesure 441.2 / 450 KiB, l initial 257.5 / 260 KiB, le lazy 420.0 / 420 KiB, le total JS 677.4 / 678 KiB et le CSS 39.0 / 39 KiB.
 
 En 10.5.336, Alimentation decoupe les lectures d items distants, borne une reprise locale a 25 lignes et publie les lignes en attente en un seul lot. Nutrition mesure 190.3 / 235 KiB ; l initial reste a 257.5 / 260 KiB, le lazy a 420.0 / 420 KiB, le total JS a 677.4 / 678 KiB et le CSS a 39.0 / 39 KiB.
+
+En 10.5.344, Alimentation est reorganisee en quatre espaces accessibles, responsives et compatibles clair/sombre. Le journal d hydratation horodate et supprimable ainsi que l historique explicite portent Nutrition a 193.6 / 235 KiB. L initial reste a 257.8 / 260 KiB, le lazy a 419.6 / 420 KiB et le total JS a 677.4 / 678 KiB. Le CSS atteint 43.3 KiB ; son plafond passe au palier entier de 44 KiB pour couvrir les nouveaux composants sans relever les budgets JavaScript.
 
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 

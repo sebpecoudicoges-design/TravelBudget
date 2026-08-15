@@ -16,6 +16,31 @@ function langText(fr, en, t) {
   return typeof t === 'function' ? t(fr, en) : fr;
 }
 
+export function shortNutritionDate(value) {
+  const day = String(value || '');
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? `${day.slice(8, 10)}/${day.slice(5, 7)}` : day;
+}
+
+export const NUTRITION_SECTIONS = Object.freeze(['today', 'meals', 'recovery', 'history']);
+
+export function normalizeNutritionSection(value) {
+  const section = String(value || '').trim().toLowerCase();
+  return NUTRITION_SECTIONS.includes(section) ? section : 'today';
+}
+
+export function renderNutritionSectionTabs(activeSection = 'today', { esc = defaultEsc, t } = {}) {
+  const active = normalizeNutritionSection(activeSection);
+  const sections = [
+    { key: 'today', icon: '◎', fr: "Aujourd'hui", en: 'Today' },
+    { key: 'meals', icon: '🍽️', fr: 'Repas', en: 'Meals' },
+    { key: 'recovery', icon: '💧', fr: 'Hydratation & récupération', en: 'Hydration & recovery' },
+    { key: 'history', icon: '↗', fr: 'Historique', en: 'History' },
+  ];
+  return `<nav class="tb-nutrition-section-tabs" role="tablist" aria-label="${esc(langText('Espaces Alimentation', 'Nutrition sections', t))}">
+    ${sections.map(section => `<button class="tb-nutrition-section-tab ${section.key === active ? 'active' : ''}" type="button" role="tab" id="nutrition-tab-${section.key}" aria-selected="${section.key === active ? 'true' : 'false'}" aria-controls="nutrition-panel-${section.key}" data-nutrition-section="${section.key}"><span aria-hidden="true">${section.icon}</span>${esc(langText(section.fr, section.en, t))}</button>`).join('')}
+  </nav>`;
+}
+
 export function formatMacro(value, unit = 'g') {
   return `${Math.round(num(value, 0) * 10) / 10}${unit}`;
 }
@@ -191,18 +216,32 @@ export function renderQuickAddPanel({
   </div>`;
 }
 
-export function renderHydrationPanel({ esc = defaultEsc, t } = {}) {
-  return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-    <h3 style="margin:0 0 10px;">${esc(langText('Hydratation', 'Hydration', t))}</h3>
-    <div class="field"><label>${esc(langText('Eau ml', 'Water ml', t))}</label><input id="nutrition-water-ml" type="number" min="0" step="50" value="250"></div>
+export function renderHydrationPanel({ waterEntries = [], waterTime = '12:00', totalWaterMl = 0, esc = defaultEsc, t } = {}) {
+  const entries = Array.isArray(waterEntries) ? waterEntries : [];
+  return `<section class="tb-nutrition-subcard tb-nutrition-hydration-card">
+    <div class="tb-nutrition-subcard-heading">
+      <div><h3>${esc(langText('Hydratation', 'Hydration', t))}</h3><p>${esc(langText('Chaque prise est horodatée et reste corrigeable.', 'Every drink is timestamped and can be corrected.', t))}</p></div>
+      <span class="pill">${Math.round(num(totalWaterMl, 0))} / 2000 ml</span>
+    </div>
+    <div class="tb-nutrition-water-form">
+      <div class="field"><label>${esc(langText('Quantité (ml)', 'Amount (ml)', t))}</label><input id="nutrition-water-ml" type="number" min="0" step="50" value="250"></div>
+      <div class="field"><label>${esc(langText('Heure', 'Time', t))}</label><input id="nutrition-water-time" type="time" value="${esc(waterTime)}"></div>
+    </div>
     <div class="tb-nutrition-water-grid">
       <button class="btn small" type="button" data-nutrition-water-quick="250">250</button>
       <button class="btn small" type="button" data-nutrition-water-quick="500">500</button>
       <button class="btn small" type="button" data-nutrition-water-quick="1000">1L</button>
       <button class="btn small" type="button" data-nutrition-water-quick="2000">2L</button>
     </div>
-    <button class="btn primary" id="nutrition-water-only" type="button" style="width:100%;">${esc(langText('Ajouter eau', 'Add water', t))}</button>
-  </div>`;
+    <button class="btn primary" id="nutrition-water-only" type="button">${esc(langText('Ajouter cette prise', 'Add this drink', t))}</button>
+    <div class="tb-nutrition-water-log" aria-label="${esc(langText("Prises d'eau du jour", "Today's water log", t))}">
+      <div class="tb-nutrition-water-log-title"><strong>${esc(langText("Journal du jour", "Today's log", t))}</strong><span>${entries.length} ${esc(langText('prise(s)', 'drink(s)', t))}</span></div>
+      ${entries.length ? entries.map(entry => `<div class="tb-nutrition-water-entry">
+        <div><strong>${esc(entry.time || '--:--')}</strong><span>${Math.round(num(entry.amountMl, 0))} ml${entry.pending ? ` · ${esc(langText('en attente', 'pending', t))}` : ''}</span></div>
+        <button class="btn small danger" type="button" data-nutrition-water-delete="${esc(entry.id || '')}" aria-label="${esc(langText(`Supprimer la prise de ${Math.round(num(entry.amountMl, 0))} ml à ${entry.time || ''}`, `Delete ${Math.round(num(entry.amountMl, 0))} ml drink at ${entry.time || ''}`, t))}">${esc(langText('Supprimer', 'Delete', t))}</button>
+      </div>`).join('') : `<div class="tb-nutrition-empty">${esc(langText("Aucune prise d'eau enregistrée pour cette date.", 'No water logged for this date.', t))}</div>`}
+    </div>
+  </section>`;
 }
 
 export function renderSleepPanel({
@@ -215,10 +254,10 @@ export function renderSleepPanel({
   esc = defaultEsc,
   t,
 } = {}) {
-  const dateLabel = String(day || '').slice(5).replace('-', '/');
-  return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;">
-      <h3 style="margin:0;">${esc(langText('Sommeil', 'Sleep', t))}</h3>
+  const dateLabel = shortNutritionDate(day);
+  return `<section class="tb-nutrition-subcard">
+    <div class="tb-nutrition-subcard-heading">
+      <div><h3>${esc(langText('Sommeil', 'Sleep', t))}</h3><p>${esc(langText('La nuit précédente alimente la récupération du jour sélectionné.', 'The previous night feeds the selected day recovery.', t))}</p></div>
       <span class="pill">${esc(sleepLabel)}</span>
     </div>
     <div class="muted" style="font-size:12px;margin:-4px 0 8px;">${esc(langText('Nuit du', 'Night of', t))} ${esc(sleepNightLabel)} → ${esc(dateLabel)}</div>
@@ -236,12 +275,12 @@ export function renderSleepPanel({
         const nightDay = row.nightDay || (typeof offsetDateISO === 'function' ? offsetDateISO(row.day, -1) : '');
         return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(langText('Nuit du', 'Night of', t))} ${esc(nightDay)} → ${esc(row.day)} · ${esc(label)} · objectif 7.5h" style="height:92px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${active ? 'border-color:var(--accent);' : ''}">
           <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,#8b5cf6,#38bdf8);"></span>
-          <small>${esc(String(row.day || '').slice(5).replace('-', '/'))}</small>
+          <small>${esc(shortNutritionDate(row.day))}</small>
         </button>`;
       }).join('')}
     </div>
-    <div class="muted" style="font-size:12px;margin-top:8px;">${esc(langText('La saisie est rattachee a la nuit precedente de la date selectionnee et remonte dans le KPI Sante.', 'The entry is attached to the previous night of the selected date and feeds the Health KPI.', t))}</div>
-  </div>`;
+    <div class="muted" style="font-size:12px;margin-top:8px;">${esc(langText('Cette mesure remonte aussi dans le KPI Santé.', 'This measure also feeds the Health KPI.', t))}</div>
+  </section>`;
 }
 
 export function renderHistoryPanel({
@@ -252,21 +291,34 @@ export function renderHistoryPanel({
   esc = defaultEsc,
   t,
 } = {}) {
-  return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(56,189,248,.08),rgba(15,23,42,.02)),var(--panel2);">
-    <h3 style="margin:0 0 10px;">${esc(langText('Historique', 'History', t))}</h3>
+  const rows = Array.isArray(week) ? week : [];
+  const selected = rows.find(row => row.day === day) || { day, kcal: 0, protein: 0, carbs: 0, fat: 0, waterMl: 0, alcoholDrinks: 0, typeRows: [] };
+  return `<section class="tb-nutrition-subcard tb-nutrition-history-card">
+    <div class="tb-nutrition-subcard-heading"><div><h3>${esc(langText('Historique sur 7 jours', '7-day history', t))}</h3><p>${esc(langText('Choisis un jour pour retrouver ses repas et ses repères.', 'Choose a day to review its meals and targets.', t))}</p></div><span class="pill">${esc(day)}</span></div>
     <div class="tb-nutrition-week-grid">
-      ${(Array.isArray(week) ? week : []).map(row => {
+      ${rows.map(row => {
         const height = Math.max(8, Math.min(74, progressPercent(row.kcal, needsKcal, 100) * 0.74));
         const active = row.day === day;
         const detail = (row.typeRows || []).map(typeRow => `${typeof mealTypeLabel === 'function' ? mealTypeLabel(typeRow.type) : typeRow.type} ${Math.round(num(typeRow.kcal, 0))} kcal`).join(' · ');
         return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(row.day)} · ${Math.round(num(row.kcal, 0))} kcal · ${Math.round(num(row.waterMl, 0))} ml${detail ? ` · ${esc(detail)}` : ''}" style="height:98px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${active ? 'border-color:var(--accent);' : ''}">
           <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,#22c55e,#38bdf8);"></span>
-          <small>${esc(String(row.day || '').slice(5).replace('-', '/'))}</small>
+          <small>${esc(shortNutritionDate(row.day))}</small>
         </button>`;
       }).join('')}
     </div>
-    <div class="muted" style="font-size:12px;">${esc(langText('Survole une barre pour le detail du jour.', 'Hover a bar for day details.', t))}</div>
-  </div>`;
+    <div class="tb-nutrition-history-summary">
+      <div><span>kcal</span><strong>${Math.round(num(selected.kcal, 0))}</strong></div>
+      <div><span>${esc(langText('Protéines', 'Protein', t))}</span><strong>${formatMacro(selected.protein)}</strong></div>
+      <div><span>${esc(langText('Glucides', 'Carbs', t))}</span><strong>${formatMacro(selected.carbs)}</strong></div>
+      <div><span>${esc(langText('Lipides', 'Fat', t))}</span><strong>${formatMacro(selected.fat)}</strong></div>
+      <div><span>${esc(langText('Eau', 'Water', t))}</span><strong>${Math.round(num(selected.waterMl, 0))} ml</strong></div>
+      <div><span>${esc(langText('Alcool', 'Alcohol', t))}</span><strong>${Math.round(num(selected.alcoholDrinks, 0) * 10) / 10}</strong></div>
+    </div>
+    <div class="tb-nutrition-history-meals">
+      <strong>${esc(langText('Répartition des repas', 'Meal breakdown', t))}</strong>
+      ${(selected.typeRows || []).length ? (selected.typeRows || []).map(typeRow => `<button class="btn" type="button" data-nutrition-history-type="${esc(selected.day)}::${esc(typeRow.type)}"><span>${esc(typeof mealTypeLabel === 'function' ? mealTypeLabel(typeRow.type) : typeRow.type)}</span><strong>${Math.round(num(typeRow.kcal, 0))} kcal</strong></button>`).join('') : `<div class="tb-nutrition-empty">${esc(langText('Aucun repas enregistré ce jour.', 'No meal logged for this day.', t))}</div>`}
+    </div>
+  </section>`;
 }
 
 export function macroSummaryText(targets = {}) {
@@ -331,11 +383,11 @@ export function renderAlcoholPanel({
 } = {}) {
   const color = alcoholJudge.color || '#22c55e';
   const entries = Array.isArray(alcoholToday.entries) ? alcoholToday.entries : [];
-  return `<div style="border:1px solid ${color}66;border-radius:8px;padding:12px;background:linear-gradient(180deg,${color}14,rgba(15,23,42,.02)),var(--panel2);">
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
+  return `<section class="tb-nutrition-subcard tb-nutrition-alcohol-card" style="--tb-nutrition-status:${color};">
+    <div class="tb-nutrition-subcard-heading">
       <div>
-        <h3 style="margin:0;">${esc(langText('Alcool', 'Alcohol', t))}</h3>
-        <div class="muted" style="font-size:12px;margin-top:3px;">${esc(langText('Repere: 2 verres/jour, 10/semaine, pas tous les jours.', 'Guide: 2 drinks/day, 10/week, not every day.', t))}</div>
+        <h3>${esc(langText('Alcool', 'Alcohol', t))}</h3>
+        <p>${esc(langText('Lecture informative des aliments alcoolisés ajoutés aux repas.', 'Informative view of alcoholic foods added to meals.', t))}</p>
       </div>
       <span class="pill" style="border-color:${color};color:${color};">${esc(alcoholJudge.label || '')}</span>
     </div>
@@ -352,7 +404,7 @@ export function renderAlcoholPanel({
         const detail = `${row.day} · ${Math.round(drinks * 10) / 10} verre(s) standard`;
         return `<button class="btn small" type="button" data-nutrition-history-date="${esc(row.day)}" title="${esc(detail)}" style="height:92px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:5px;${row.day === day ? `border-color:${barColor};` : ''}">
           <span style="width:100%;height:${height}px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,${barColor},#38bdf8);"></span>
-          <small>${esc(String(row.day || '').slice(5).replace('-', '/'))}</small>
+          <small>${esc(shortNutritionDate(row.day))}</small>
         </button>`;
       }).join('')}
     </div>
@@ -363,88 +415,12 @@ export function renderAlcoholPanel({
         <strong>${Math.round(num(entry.standardDrinks, 0) * 10) / 10} ${esc(langText('verres', 'drinks', t))}</strong>
       </div>`).join('')}
     </div>` : `<div class="muted">${esc(langText('Aucun aliment alcoolise lie au jour selectionne.', 'No alcoholic food linked to the selected day.', t))}</div>`}
-  </div>`;
-}
-
-export function summarizeActiveWeek(rows = []) {
-  const safeRows = Array.isArray(rows) ? rows : [];
-  const count = Math.max(1, safeRows.length);
-  return {
-    avgScore: safeRows.reduce((sum, row) => sum + num(row.score, 0), 0) / count,
-    avgKcal: safeRows.reduce((sum, row) => sum + num(row.kcal, 0), 0) / count,
-    avgNeed: safeRows.reduce((sum, row) => sum + num(row.need, 0), 0) / count,
-    avgProtein: safeRows.reduce((sum, row) => sum + num(row.protein, 0), 0) / count,
-    avgWater: safeRows.reduce((sum, row) => sum + num(row.water, 0), 0) / count,
-    avgSleep: safeRows.reduce((sum, row) => sum + num(row.sleep, 0), 0) / count,
-    sportTotal: safeRows.reduce((sum, row) => sum + num(row.sport, 0), 0),
-    workTotal: safeRows.reduce((sum, row) => sum + num(row.work, 0), 0),
-    alcoholTotal: safeRows.reduce((sum, row) => sum + num(row.alcohol, 0), 0),
-  };
-}
-
-export function renderActiveWeekDashboard({
-  rows = [],
-  selectedDay = '',
-  bodyWeight = 70,
-  esc = defaultEsc,
-  t,
-} = {}) {
-  const safeRows = Array.isArray(rows) ? rows : [];
-  const summary = summarizeActiveWeek(safeRows);
-  return `<div class="tb-health-weekboard">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;">
-        <div>
-          <h3 style="margin:0;">${esc(langText('Semaine active', 'Active week', t))}</h3>
-          <div class="muted" style="font-size:12px;">${esc(langText('Kcal, proteines, eau, sommeil, sport, travail, alcool et score au meme endroit.', 'Kcal, protein, water, sleep, sport, work, alcohol and score in one place.', t))}</div>
-        </div>
-        <span class="pill">${esc(langText('7 jours', '7 days', t))}</span>
-      </div>
-      <div class="tb-health-weekboard-kpis">
-        <div><span>${esc(langText('Score', 'Score', t))}</span><strong>${Math.round(summary.avgScore)}/100</strong></div>
-        <div><span>${esc(langText('Kcal', 'Kcal', t))}</span><strong>${Math.round(summary.avgKcal)} / ${Math.round(summary.avgNeed)}</strong></div>
-        <div><span>${esc(langText('Proteines', 'Protein', t))}</span><strong>${Math.round(summary.avgProtein)}g/j</strong></div>
-        <div><span>${esc(langText('Eau', 'Water', t))}</span><strong>${Math.round(summary.avgWater)}ml/j</strong></div>
-        <div><span>${esc(langText('Sommeil', 'Sleep', t))}</span><strong>${Math.round(summary.avgSleep * 10) / 10}h/j</strong></div>
-        <div><span>${esc(langText('Sport', 'Sport', t))}</span><strong>${Math.round(summary.sportTotal)} kcal</strong></div>
-        <div><span>${esc(langText('Travail', 'Work', t))}</span><strong>${Math.round(summary.workTotal)} kcal</strong></div>
-        <div><span>${esc(langText('Alcool', 'Alcohol', t))}</span><strong>${Math.round(summary.alcoholTotal * 10) / 10} verres</strong></div>
-      </div>
-      <div class="tb-health-weekboard-grid">
-        ${safeRows.map(({ row = {}, plan = {}, kcal = 0, need = 1, water = 0, sleep = 0, protein = 0, sport = 0, work = 0, alcohol = 0, score = 0 }) => {
-          const kcalPct = Math.max(0, Math.min(100, (num(kcal, 0) / Math.max(1, num(need, 0))) * 100));
-          const proteinPct = Math.max(0, Math.min(100, (num(protein, 0) / Math.max(70, num(bodyWeight, 70) * 1.35)) * 100));
-          const waterPct = Math.max(0, Math.min(100, (num(water, 0) / 2000) * 100));
-          const sleepPct = Math.max(0, Math.min(100, (num(sleep, 0) / 7.5) * 100));
-          const sportPct = Math.max(0, Math.min(100, (num(sport, 0) / 650) * 100));
-          const workPct = Math.max(0, Math.min(100, (num(work, 0) / 650) * 100));
-          const alcoholPct = Math.max(0, Math.min(100, (num(alcohol, 0) / 3) * 100));
-          const scorePct = Math.max(0, Math.min(100, num(score, 0)));
-          const plannedLabel = plan.planned ? `${plan.code || ''} ${plan.sessionName || ''}`.trim() : langText('Repos', 'Rest', t);
-          const day = String(row.day || '');
-          const detail = `${day} | ${plannedLabel} | score ${Math.round(num(score, 0))}/100 | kcal ${Math.round(num(kcal, 0))}/${Math.round(num(need, 0))} | proteines ${Math.round(num(protein, 0))}g | eau ${Math.round(num(water, 0))} ml | sommeil ${sleep ? Math.round(num(sleep, 0) * 10) / 10 : '-'}h | sport ${Math.round(num(sport, 0))} kcal | travail ${Math.round(num(work, 0))} kcal | alcool ${Math.round(num(alcohol, 0) * 10) / 10} verre(s)`;
-          return `<button class="tb-health-weekboard-day ${day === selectedDay ? 'active' : ''}" type="button" data-health-date="${esc(day)}" title="${esc(detail)}">
-            <span class="muted">${esc(day.slice(5).replace('-', '/'))}</span>
-            <strong>${esc(plannedLabel)}</strong>
-            <div class="tb-health-weekboard-bars">
-              <i style="height:${Math.max(6, scorePct * 0.56)}px;background:#0f172a;"></i>
-              <i style="height:${Math.max(6, kcalPct * 0.56)}px;background:#22c55e;"></i>
-              <i style="height:${Math.max(6, proteinPct * 0.56)}px;background:#14b8a6;"></i>
-              <i style="height:${Math.max(6, waterPct * 0.56)}px;background:#38bdf8;"></i>
-              <i style="height:${Math.max(6, sleepPct * 0.56)}px;background:#8b5cf6;"></i>
-              <i style="height:${Math.max(6, sportPct * 0.56)}px;background:#f59e0b;"></i>
-              <i style="height:${Math.max(6, workPct * 0.56)}px;background:#ef4444;"></i>
-              <i style="height:${Math.max(3, alcoholPct * 0.56)}px;background:#64748b;"></i>
-            </div>
-            <small>${Math.round(num(kcal, 0))} kcal · ${Math.round(num(score, 0))}/100</small>
-          </button>`;
-        }).join('')}
-      </div>
-      <div class="muted" style="font-size:11px;margin-top:8px;">${esc(langText('Barres : score, kcal, proteines, eau, sommeil, sport, travail, alcool.', 'Bars: score, kcal, protein, water, sleep, sport, work, alcohol.', t))}</div>
-    </div>`;
+  </section>`;
 }
 
 export function renderNutritionShell({
   day = '',
+  activeSection = 'today',
   base = {},
   goalLabel = '',
   goalTargets = {},
@@ -480,6 +456,7 @@ export function renderNutritionShell({
   esc = defaultEsc,
   t,
 } = {}) {
+  const active = normalizeNutritionSection(activeSection);
   return `<section class="tb-nutrition-shell">
     <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
       <div>
@@ -494,7 +471,9 @@ export function renderNutritionShell({
       </div>
     </div>
     ${syncPanelHtml}
-    <div class="tb-nutrition-top" style="margin-top:14px;">
+    ${renderNutritionSectionTabs(active, { esc, t })}
+    <div class="tb-nutrition-section-panel" id="nutrition-panel-today" role="tabpanel" aria-labelledby="nutrition-tab-today" data-nutrition-panel="today" ${active === 'today' ? '' : 'hidden'}>
+    <div class="tb-nutrition-top">
       <div style="border:1px solid var(--border);border-radius:8px;padding:14px;background:linear-gradient(145deg,rgba(34,197,94,.10),rgba(56,189,248,.08)),var(--panel2);display:grid;place-items:center;">
         <div style="width:min(210px,72vw);aspect-ratio:1;border-radius:50%;background:conic-gradient(${kcalRingColor} ${Math.max(0, Math.min(100, num(kcalPct, 0)))}%, rgba(148,163,184,.18) 0);display:grid;place-items:center;box-shadow:0 18px 44px rgba(15,23,42,.18);">
           <div style="width:68%;aspect-ratio:1;border-radius:50%;background:var(--panel2);display:grid;place-items:center;text-align:center;border:1px solid var(--border);">
@@ -530,13 +509,11 @@ export function renderNutritionShell({
         </div>
       </div>
     </div>
+    </div>
+    <div class="tb-nutrition-section-panel" id="nutrition-panel-meals" role="tabpanel" aria-labelledby="nutrition-tab-meals" data-nutrition-panel="meals" ${active === 'meals' ? '' : 'hidden'}>
     <div class="tb-nutrition-layout">
       <div style="display:flex;flex-direction:column;gap:12px;">
         ${renderQuickAddPanel({ ...quickAdd, esc, t })}
-        ${hydrationPanelHtml}
-        ${sleepPanelHtml}
-        ${historyPanelHtml}
-        ${alcoholPanelHtml}
       </div>
       <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
         <h3 style="margin:0 0 10px;">${esc(langText('Jour selectionne', 'Selected day', t))} · ${esc(day)}</h3>
@@ -563,6 +540,15 @@ export function renderNutritionShell({
           ${mealTimelineHtml}
         </div>
       </div>
+    </div>
+    </div>
+    <div class="tb-nutrition-section-panel tb-nutrition-recovery-layout" id="nutrition-panel-recovery" role="tabpanel" aria-labelledby="nutrition-tab-recovery" data-nutrition-panel="recovery" ${active === 'recovery' ? '' : 'hidden'}>
+      ${hydrationPanelHtml}
+      ${sleepPanelHtml}
+      ${alcoholPanelHtml}
+    </div>
+    <div class="tb-nutrition-section-panel" id="nutrition-panel-history" role="tabpanel" aria-labelledby="nutrition-tab-history" data-nutrition-panel="history" ${active === 'history' ? '' : 'hidden'}>
+      ${historyPanelHtml}
     </div>
   </section>`;
 }

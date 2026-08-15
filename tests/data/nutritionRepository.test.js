@@ -56,6 +56,7 @@ describe('nutrition repository', () => {
       nut: { kcal: 107, protein: 1.3, carbs: 27, fat: 0.4, fiber: 3 },
       mealType: 'morning_snack',
       mealDate: '2026-07-10',
+      consumedTime: '08:15',
       syncId: 'nutrition_fixed',
       userId: 'user-1',
       travelId: 'travel-1',
@@ -63,6 +64,7 @@ describe('nutrition repository', () => {
     });
     expect(localNutritionRowKey(row)).toBe('nutrition_fixed');
     expect(row.meal.notes).toContain('tb_sync:nutrition_fixed');
+    expect(row.meal.consumed_time).toBe('08:15');
 
     saveLocalNutritionRowOnce({ storage, key: 'local', row });
     saveLocalNutritionRowOnce({ storage, key: 'local', row: { ...row, syncError: 'retry' } });
@@ -122,6 +124,7 @@ describe('nutrition repository', () => {
       nut: { kcal: 164, protein: 4.5, carbs: 28, fat: 3.2, fiber: 3.6 },
       mealType: 'breakfast',
       mealDate: '2026-07-10',
+      consumedTime: '07:45',
       syncId: 'nutrition_muesli',
       userId: 'user-1',
       travelId: 'travel-1',
@@ -139,7 +142,7 @@ describe('nutrition repository', () => {
     expect(client.calls).toContainEqual({
       table: 'meals',
       method: 'upsert',
-      value: expect.objectContaining({ sync_id: 'nutrition_muesli', notes: 'tb_sync:nutrition_muesli' }),
+      value: expect.objectContaining({ sync_id: 'nutrition_muesli', notes: 'tb_sync:nutrition_muesli', consumed_time: '07:45' }),
       options: { onConflict: 'user_id,sync_id' },
     });
     expect(client.calls).toContainEqual({
