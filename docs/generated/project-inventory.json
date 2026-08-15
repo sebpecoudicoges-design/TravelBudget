@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "f9956d13441d18c2d91bd30b64109d3e371dbcf8",
-  "snapshotFingerprint": "ef46a747d37305624b8e568676685037712c30ad976cbb73aa127d57650d3a01",
-  "generatedAt": "2026-08-15T08:13:38.381Z",
+  "commit": "6bb4c2e18e21e0dd8a63187afa17383cd04c05f4",
+  "snapshotFingerprint": "23b7db2b592efd06b37a2ce7dd2d674cb4d57da8c7a8758202123a3fa46faab5",
+  "generatedAt": "2026-08-15T08:45:16.981Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.351"
+    "version": "10.5.352"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -564,7 +564,8 @@
     "supabase/migrations/20260815054038_subscription_tracking_and_bulk_link_10_5_350.sql",
     "supabase/migrations/20260815055028_harden_subscription_save_rpc_10_5_350.sql",
     "supabase/migrations/20260815074159_allow_safe_generated_subscription_relink_10_5_351.sql",
-    "supabase/migrations/20260815075831_extend_subscription_cash_summary_test_10_5_351.sql"
+    "supabase/migrations/20260815075831_extend_subscription_cash_summary_test_10_5_351.sql",
+    "supabase/migrations/20260815083326_allow_all_travel_subscription_links_10_5_352.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",
@@ -753,7 +754,8 @@
         "supabase/migrations/20260815054038_subscription_tracking_and_bulk_link_10_5_350.sql",
         "supabase/migrations/20260815055028_harden_subscription_save_rpc_10_5_350.sql",
         "supabase/migrations/20260815074159_allow_safe_generated_subscription_relink_10_5_351.sql",
-        "supabase/migrations/20260815075831_extend_subscription_cash_summary_test_10_5_351.sql"
+        "supabase/migrations/20260815075831_extend_subscription_cash_summary_test_10_5_351.sql",
+        "supabase/migrations/20260815083326_allow_all_travel_subscription_links_10_5_352.sql"
       ],
       "tests": [
         "tests/core/subscriptionRules.test.js",
@@ -765,7 +767,7 @@
         "tests/data/subscriptionsMigration.test.js"
       ],
       "validation": {
-        "commit": "f9956d1",
+        "commit": "6bb4c2e",
         "date": "2026-08-15",
         "verifiedBy": "Codex automated tests and visual review"
       },
