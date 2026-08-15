@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `ef971f532afe82629431bfc92a5c9f6ed1ff5094`
-> Empreinte du snapshot : `c93c6c7751bd3cb781b6eaf77c68fa60001176bd6b8d361b05ab635060b8f945`
-> Généré le : `2026-08-11T07:42:46.476Z`
+> Commit analysé : `5981e4671cac9eb8e88474d50326fe573af61ee7`
+> Empreinte du snapshot : `8ad4a094e36a81601a071d6eddad2eec1e3211fc279f307dbe1048af57d88ea8`
+> Généré le : `2026-08-15T00:40:17.417Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.342` |
+| Version | `10.5.343` |
 | Écrans déclarés | 16 |
 | Scripts legacy référencés | 56 |
 | Modules core | 26 |
 | Modules data | 8 |
 | Modules features | 44 |
-| Fichiers de tests | 121 |
-| Migrations Supabase | 127 |
+| Fichiers de tests | 122 |
+| Migrations Supabase | 130 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -351,6 +351,7 @@ Modules :
 - `tests/data/mutationQueueStore.test.js`
 - `tests/data/nutritionRepository.test.js`
 - `tests/data/recurringBudgetPeriodMigration.test.js`
+- `tests/data/recurringRuleReconciliationMigration.test.js`
 - `tests/data/sportRepository.test.js`
 - `tests/data/storageQuota.test.js`
 - `tests/data/supabaseRepository.test.js`
@@ -589,6 +590,9 @@ Modules :
 - `supabase/migrations/20260810090445_process_nutrition_input_reset_feedback_10_5_340.sql`
 - `supabase/migrations/20260810091944_process_sport_composition_kg_feedback_10_5_341.sql`
 - `supabase/migrations/20260811072637_process_dashboard_settings_auth_feedback_10_5_342.sql`
+- `supabase/migrations/20260815002750_reconcile_recurring_rule_updates.sql`
+- `supabase/migrations/20260815003430_process_recurring_rule_feedback_10_5_343.sql`
+- `supabase/migrations/20260815003657_restrict_recurring_reconcile_helpers.sql`
 
 ## Android et budgets de modules
 

@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.342`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.343`.
 
 ## Objectif
 
@@ -92,6 +92,8 @@ En `10.5.340`, le reset de la zone d ajout est traite et archive : les sondes Su
 En `10.5.341`, le retest Alimentation `10.5.340` est confirme OK et clos pour tous. Le retour Sport sur **Evolution composition** est archive avec ses dates : les 12 dernieres mesures affichent maintenant poids kg, graisse en % et kg, puis muscle en % et kg. Le descendant **Retest evolution composition kg 10.5.341** conserve la filiation avec les mesures corporelles guidees et interdit d inventer un muscle kg depuis un pourcentage.
 
 En `10.5.342`, quatre regressions sont traitees ensemble. Les anciennes regles CSS generiques Wallet sont retirees au profit du panneau d actions interne. Le scope KPI entre dans la cle de rendu de la courbe et les periodes explicites atteignent les regles de projection, dont **Tout le voyage**. Les ecouteurs de la modale Regles recurrentes sont poses apres son montage pour rendre sous-categorie, frequence, wallet et devise interactifs. Enfin, l evenement `SIGNED_IN` devient l unique proprietaire du bootstrap : refresh automatique et file hors ligne attendent la fin de cette transition. Quatre retests lies couvrent ces gestes et le retest Categories Settings deja valide est clos pour tous.
+
+En `10.5.343`, le retest de la modale Regles recurrentes revele un defaut de reconciliation : la cadence choisie etait bien stockee, mais les anciennes projections restaient a cote des nouvelles, et une echeance modifiee manuellement n etait pas toujours detachee. L edition devient une operation SQL atomique : les exceptions utilisateur sont protegees, seules les projections encore mutables sont remplacees, puis le premier jour applique l intervalle complet avant de s aligner sur le jour choisi. Les projections existantes sont reparees; la regle testee du lundi 17/08 produit bien les jeudis 03/09, 17/09, 01/10, etc. Un retest enfant conserve la filiation.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

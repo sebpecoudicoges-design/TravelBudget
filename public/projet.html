@@ -1694,7 +1694,7 @@
         <div class="app-grid">
           <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105341">APK debug 10.5.341 prete pour le retest Evolution composition Sport.</p></article>
           <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.</p></article>
-          <article class="app-card"><strong>10.5.342</strong><h3 data-i18n="app.version.title.105342">Stabilite des parcours essentiels</h3><p data-i18n="app.version.body.105342">Wallets, filtres Dashboard, regles recurrentes et connexion retrouvent une interaction deterministe.</p></article>
+          <article class="app-card"><strong>10.5.343</strong><h3 data-i18n="app.version.title.105343">Regles recurrentes fiables</h3><p data-i18n="app.version.body.105343">Les projections obsoletes disparaissent et les echeances personnalisees restent protegees.</p></article>
         </div>
         <div class="release-pulse">
           <div class="release-pulse-head">
@@ -1713,6 +1713,7 @@
           <div class="release-spotlight" id="releaseSpotlight"></div>
           <div class="release-timeline" id="releaseTimeline" aria-live="polite"></div>
           <div class="release-list" id="releaseSource" hidden>
+            <div class="release-row"><strong>10.5.343</strong><span>Settings : l edition d une regle recurrente devient atomique. Les echeances personnalisees sont detachees, seules les projections mutables sont remplacees et le premier jour applique l intervalle complet avant de s aligner sur le jour choisi. La base existante est reconciliee : la regle testee produit les jeudis 03/09, 17/09, 01/10, etc., sans anciens lundis. Un retest descendant est ouvert. Aucun nouvel APK pour ce lot.</span></div>
             <div class="release-row"><strong>10.5.342</strong><span>Stabilisation : les actions restent dans leurs cartes Wallet, les scopes Tout le voyage, periode et date a date pilotent ensemble KPI et courbe, les sous-categories des regles recurrentes redeviennent selectionnables et la connexion n execute plus deux initialisations concurrentes. Quatre retests lies sont ouverts. Aucun nouvel APK pour ce lot.</span></div>
             <div class="release-row"><strong>10.5.341</strong><span>Sport : Evolution composition conserve les 12 dernieres mesures et affiche cinq series distinctes : poids kg, graisse %, graisse kg, muscle % et muscle kg. Les masses absentes ne sont pas inventees. Le retest Alimentation 10.5.340 est confirme OK et clos pour tous; le retour mesures corporelles est archive avec un descendant cible. APK debug 10.5.341 publie.</span></div>
             <div class="release-row"><strong>10.5.340</strong><span>Alimentation web/mobile : les controles Supabase reussis n emettent plus de faux retours en ligne, les synchronisations sans attente sont ignorees et la reconciliation attend que la saisie soit terminee. Le retour 10.5.339 est archive et un descendant cible recherche, quantite, grammes et nouvel ajout pendant la synchro. Aucun nouvel APK.</span></div>
@@ -2196,6 +2197,7 @@
           "app.title": "App Android de test, lien direct et version lisible.",
           "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
           "app.apk.body.105341": "APK debug 10.5.341 prete pour le retest Evolution composition Sport.",
+          "app.version.title.105343": "Regles recurrentes fiables", "app.version.body.105343": "Les projections obsoletes disparaissent et les echeances personnalisees restent protegees.",
           "app.version.title.105342": "Stabilite des parcours essentiels", "app.version.body.105342": "Wallets, filtres Dashboard, regles recurrentes et connexion retrouvent une interaction deterministe.",
           "app.version.title.105341": "Composition Sport complete", "app.version.body.105341": "Les 12 dernieres mesures montrent graisse et muscle en kg et en pourcentage.",
           "app.version.title.105340": "Saisie Nutrition stable", "app.version.body.105340": "Les sondes reseau et la reconciliation ne reconstruisent plus le formulaire pendant la saisie.",
@@ -2385,6 +2387,7 @@
           "app.title": "Android test app, direct link and readable version.",
           "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
           "app.apk.body.105341": "Debug APK 10.5.341 is ready for the Sport composition trend retest.",
+          "app.version.title.105343": "Reliable recurring rules", "app.version.body.105343": "Obsolete projections disappear while customized occurrences remain protected.",
           "app.version.title.105342": "Core journey stability", "app.version.body.105342": "Wallets, Dashboard filters, recurring rules and sign-in are deterministic and interactive again.",
           "app.version.title.105340": "Stable Nutrition input", "app.version.body.105340": "Network probes and reconciliation no longer rebuild the form while the user is typing.",
           "app.version.title.105336": "Web Nutrition", "app.version.body.105336": "Navigation and synchronization stabilized, 403 log errors fixed.",

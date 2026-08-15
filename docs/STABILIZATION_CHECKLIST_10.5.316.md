@@ -16,7 +16,7 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.342`.
+- Version cible de campagne : `10.5.343`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
 - 60 resultats et 16 revues de module traitees sont archives avec date de test, date de traitement, version et note.
 - Le retest Categories Settings valide est clos globalement en `10.5.342`. Quatre retests sont ajoutes avec filiation : actions internes Wallet, scopes KPI/courbe, sous-categories des regles recurrentes et connexion sans gel. Les autres retours ouverts gardent leur scenario d origine.
@@ -81,7 +81,9 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 - [x] Completer renommage, ordre, couleur et cycle de vie des categories en `10.5.330`, archiver le retour et reutiliser son retest lie.
 - [x] Clore globalement en `10.5.342` le retest gestion Categories `10.5.330`, valide par le testeur.
 - [x] Reposer en `10.5.342` les ecouteurs de la modale Regles recurrentes apres son montage afin de rendre sous-categorie, frequence, wallet et devise selectionnables.
-- [ ] Faire executer le retest sous-categorie des regles recurrentes `10.5.342`.
+- [x] Faire executer le retest sous-categorie des regles recurrentes `10.5.342` : champs interactifs et valeurs enregistrees, mais ecart de reconciliation decouvert le 15/08/2026.
+- [x] Rendre atomique en `10.5.343` l edition d une regle, detacher les echeances personnalisees et remplacer uniquement les projections mutables.
+- [ ] Faire executer le retest descendant de reconciliation des regles recurrentes `10.5.343`.
 
 ## Chantier 4 - Analyse
 

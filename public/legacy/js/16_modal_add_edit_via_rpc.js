@@ -777,7 +777,7 @@ async function _updateTransactionDirectCompat(args) {
 
   const { data: currentRow, error: currentErr } = await s
     .from(TB_CONST.TABLES.transactions)
-    .select('id, fx_snapshot_at, fx_rate_snapshot, fx_source_snapshot, fx_base_currency_snapshot, fx_tx_currency_snapshot')
+    .select('id, generated_by_rule, recurring_instance_status, fx_snapshot_at, fx_rate_snapshot, fx_source_snapshot, fx_base_currency_snapshot, fx_tx_currency_snapshot')
     .eq('id', txId)
     .maybeSingle();
   if (currentErr) return { data: null, error: currentErr };
@@ -800,7 +800,7 @@ async function _updateTransactionDirectCompat(args) {
     updated_at: new Date().toISOString(),
   };
   if (currentRow?.generated_by_rule === true) {
-    payload.recurring_instance_status = payload.pay_now ? "confirmed" : (currentRow?.recurring_instance_status || "generated");
+    payload.recurring_instance_status = payload.pay_now ? "confirmed" : "detached";
   }
 
   const fxLocked = !!(currentRow?.fx_snapshot_at);
