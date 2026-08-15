@@ -5,7 +5,7 @@
   "impacts": { "wallet": "possible", "dailyBudget": "possible", "analysis": "required", "trip": "none", "offline": "required", "android": "required" },
   "files": ["src/core/subscriptionRules.js", "src/features/subscriptions/subscriptionView.js", "public/legacy/js/13_transactions_view.js", "public/legacy/js/15_recurring_rules_ui.js", "public/legacy/js/16_modal_add_edit_via_rpc.js", "supabase/migrations/20260815034127_subscriptions_module_10_5_349.sql", "supabase/migrations/20260815054038_subscription_tracking_and_bulk_link_10_5_350.sql", "supabase/migrations/20260815055028_harden_subscription_save_rpc_10_5_350.sql"],
   "tests": ["tests/core/subscriptionRules.test.js", "tests/features/subscriptions/subscriptionView.test.js", "tests/ui/subscriptionsModuleContract.test.js", "tests/data/subscriptionsMigration.test.js"],
-  "validation": { "commit": "f3407d46f198", "date": "2026-08-15", "verifiedBy": "Codex repository inspection" }
+  "validation": { "commit": "6d237ad", "date": "2026-08-15", "verifiedBy": "Codex automated tests and visual review" }
 }
 -->
 # budget.subscription — Abonnements
