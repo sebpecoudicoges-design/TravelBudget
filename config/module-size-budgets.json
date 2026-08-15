@@ -172,6 +172,7 @@
       "name": "work-domain",
       "maxKiB": 90,
       "paths": [
+        "public/legacy/css/work.css",
         "public/legacy/js/47_work_ui.js",
         "public/legacy/js/50_work_career_ui.js",
         "src/core/workRules.js",

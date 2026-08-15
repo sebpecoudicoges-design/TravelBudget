@@ -6,7 +6,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version web à valider : `10.5.347`.
+- Version web à valider : `10.5.348`.
 - APK : `travelbudget-10.5.341-20260810-192605-debug.apk` publie dans Supabase Storage ; SHA-256 `3CC0F8597939B3F47AD9F325AD21C0C5E9C5DC3319B4B408E26F023FCAEDE37D`.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
@@ -42,6 +42,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Sport `10.5.345` : parcourir **Seance**, **Programme**, **Profil et progression** puis **Historique** en clair/sombre et a 1440/390 px. Charger une favorite depuis Programme et refaire une seance depuis Historique : le plan doit revenir dans Seance sans perdre les actions, mesures, filtres ni minuteurs.
 - Sport `10.5.346` : verifier que Squat arriere/Squat barre/Barbell back squat et Developpe couche/Developpe couche barre partagent le meme historique. La seance B1 suivant le 3 x 6 a 100 kg doit proposer 102,5 kg, jamais 82,5 kg; Front squat et developpe prise serree restent distincts.
 - Sport `10.5.347` : dans Profil et progression, verifier qu un exercice ne produit qu un point par seance, fonde sur la meilleure serie valide. Controler les cartes Depart/Derniere seance/Record, les dates, la tendance et le filtre en clair/sombre a 1440/390 px.
+- Travail `10.5.348` : parcourir Aujourd hui, Parcours et Historique en clair/sombre a 1440/390 px. Verifier le rythme, le calcul kcal hors pause, missions/revenus/periodes/Documents, puis Modifier depuis l historique : le formulaire doit revenir pre-rempli dans Aujourd hui.
 - Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés

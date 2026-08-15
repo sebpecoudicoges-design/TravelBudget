@@ -14,14 +14,6 @@
   const shortDate = (v) => { const raw=String(v||'').slice(0,10); if(!raw)return ''; try{return new Intl.DateTimeFormat(String(window.TB_LANG||'fr')==='en'?'en-AU':'fr-FR',{day:'2-digit',month:'short',year:'2-digit'}).format(new Date(`${raw}T12:00:00`));}catch(_){return raw;} };
   const jobById = (id) => DATA.engagements.find(row=>String(row.id)===String(id));
 
-  function ensureStyles(){
-    if ($('#tb-work-career-styles')) return;
-    const style=document.createElement('style'); style.id='tb-work-career-styles'; style.textContent=`
-      .tb-career{border:1px solid rgba(14,165,233,.22);border-radius:var(--tb-radius-lg,8px);background:var(--panel2);padding:14px;margin:14px 0}.tb-career-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.tb-career-actions,.tb-career-folder-actions,.tb-career-activity-actions{display:flex;gap:7px;flex-wrap:wrap}.tb-career-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}.tb-career-kpi{padding:10px;border-radius:var(--tb-radius-md,8px);background:var(--panel);border:1px solid var(--border)}.tb-career-kpi small{display:block;color:var(--muted);font-weight:750}.tb-career-kpi strong{display:block;font-size:20px;margin-top:3px}.tb-career-track{display:grid;grid-template-columns:130px 1fr;gap:10px;align-items:center;margin:7px 0}.tb-career-track-label{font-size:12px;font-weight:850;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tb-career-rail{position:relative;height:28px;border-radius:7px;background:rgba(148,163,184,.16);overflow:hidden}.tb-career-bar{position:absolute;top:4px;height:20px;min-width:4px;border-radius:6px;box-shadow:0 5px 12px rgba(15,23,42,.12)}.tb-career-jobs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.tb-career-job{border:1px solid var(--border);border-radius:var(--tb-radius-md,8px);padding:11px;background:var(--panel)}.tb-career-job-top,.tb-career-folder,.tb-career-activity-row{display:flex;justify-content:space-between;gap:8px}.tb-career-job-stats{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.tb-career-folder-group{margin-top:7px;padding:7px;border-radius:var(--tb-radius-md,8px);background:var(--panel2);border:1px solid var(--border)}.tb-career-folder{align-items:center;font-size:12px}.tb-career-documents{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.tb-career-activity{padding:8px 0;border-bottom:1px solid var(--border)}.tb-career-activity-row{align-items:center}.tb-career-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tb-career-form label{display:grid;gap:5px;font-size:12px;font-weight:800}.tb-career-form input,.tb-career-form select,.tb-career-form textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--tb-radius-md,7px);background:var(--panel2);color:inherit;padding:10px}.tb-career-form .wide{grid-column:1/-1}.tb-career-error{color:#be123c;font-size:12px;margin-top:10px}.tb-career-empty{padding:12px 0;color:var(--muted)}
-      @media(max-width:720px){.tb-career-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tb-career-jobs,.tb-career-form{grid-template-columns:1fr}.tb-career-track{grid-template-columns:85px 1fr}.tb-career-actions .btn{flex:1}.tb-career-folder,.tb-career-activity-row{align-items:flex-start;flex-direction:column}.tb-work-grid{grid-template-columns:1fr!important}}
-    `; document.head.appendChild(style);
-  }
-
   async function load(force=false){
     if(DATA.loading || (DATA.loaded && !force)) return;
     const c=sb(); if(!c||!uid()){ DATA.loaded=true; return; }
@@ -53,7 +45,7 @@
     }).join('');
   }
   async function render(){
-    ensureStyles(); const root=$('#work-career-root'); if(!root)return;
+    const root=$('#work-career-root'); if(!root)return;
     if(!DATA.loaded&&!DATA.loading){root.innerHTML=`<div class="tb-career muted">${esc(txt('Chargement de la fresque...','Loading timeline...'))}</div>`;await load(); if(window.renderWork)window.renderWork('career-loaded');return;}
     const s=summary(); root.innerHTML=window.UI?.workView?.renderWorkCareerPanel?.({data:{...DATA,renderFolders:renderLinkedFolders},careerSummary:s,today:today(),money,shortDate,esc,t:txt}) || ''; bind(root);
   }

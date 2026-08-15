@@ -168,6 +168,8 @@ En 10.5.346, l identite canonique, la reprise de charge et l adaptation du progr
 
 En 10.5.347, l analyse Sport passe d une ligne par serie a un point par exercice et par seance, avec une courbe SVG locale et des reperes explicites. Sport atteint 451.8 KiB et le lazy 423.3 KiB. Un rebuild propre du commit 10.5.346 avec l environnement courant mesure deja l initial a 262.2 KiB et le total a 683.2 KiB; les plafonds sont donc recales aux paliers entiers mesures (Sport 455, initial 263, lazy 424, total 686), sans changement des plafonds CSS et gzip.
 
+En 10.5.348, Travail separe ses trois espaces et remplace le style runtime par `work.css`, desormais inclus dans la mesure du domaine. Work mesure 65.0 / 90 KiB. Le retrait du bloc CSS JavaScript compense une partie du nouveau rendu : initial 262.2 / 263 KiB, lazy 423.0 / 424 KiB, total 685.2 / 686 KiB et CSS Vite 43.3 / 44 KiB; aucun plafond n est releve.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

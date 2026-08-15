@@ -16,6 +16,20 @@ function langText(fr, en, t) {
   return typeof t === 'function' ? t(fr, en) : fr;
 }
 
+export function normalizeWorkSpace(value) {
+  return ['today', 'career', 'history'].includes(String(value || '')) ? String(value) : 'today';
+}
+
+export function renderWorkSectionTabs({ activeSpace = 'today', esc = defaultEsc, t } = {}) {
+  const active = normalizeWorkSpace(activeSpace);
+  const tabs = [
+    ['today', "Aujourd'hui", 'Today'],
+    ['career', 'Parcours', 'Career'],
+    ['history', 'Historique', 'History'],
+  ];
+  return `<nav class="tb-work-section-tabs" role="tablist" aria-label="${esc(langText('Espaces Travail', 'Work spaces', t))}">${tabs.map(([key, fr, en]) => `<button class="tb-work-section-tab" id="work-space-tab-${key}" type="button" role="tab" data-work-space="${key}" aria-controls="work-space-panel-${key}" aria-selected="${active === key}">${esc(langText(fr, en, t))}</button>`).join('')}</nav>`;
+}
+
 export function summarizeWorkWeek(rows = []) {
   const safeRows = Array.isArray(rows) ? rows : [];
   return {
@@ -46,39 +60,38 @@ export function renderWorkLoadPanel({
   const summary = summarizeWorkWeek(safeRows);
   const label = todayWorkLabel(today, { t });
   const mode = String(rhythm?.mode || 'weekend_rest');
-  return `<div style="border:1px solid rgba(14,165,233,.18);border-radius:18px;padding:12px;background:linear-gradient(135deg,rgba(14,165,233,.10),rgba(34,197,94,.08)),var(--panel2);margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+  return `<section class="tb-work-card tb-work-load">
+      <div class="tb-work-load-head">
         <div>
-          <h3 style="margin:0 0 4px;">${esc(langText('Rythme & charge', 'Rhythm & load', t))}</h3>
+          <h3>${esc(langText('Rythme & charge', 'Rhythm & load', t))}</h3>
           <div class="muted">${esc(label)}</div>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+        <div class="tb-work-load-kpis">
           <span class="pill">${Math.round(summary.kcal)} kcal</span>
           <span class="pill">${Math.round(summary.hours * 10) / 10}h</span>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;align-items:end;margin:12px 0 10px;">
+      <div class="tb-work-load-chart">
         ${safeRows.map(row => {
           const h = row.kcal ? Math.max(16, Math.min(86, (num(row.kcal, 0) / summary.maxKcal) * 86)) : 12;
-          const color = row.kcal ? 'linear-gradient(180deg,#22c55e,#0ea5e9)' : row.plannedRest ? 'linear-gradient(180deg,#cbd5e1,#94a3b8)' : 'linear-gradient(180deg,#fde68a,#f59e0b)';
           const title = `${row.day} | ${row.count ? `${Math.round(num(row.kcal, 0))} kcal, ${Math.round((num(row.minutes, 0) / 60) * 10) / 10}h` : row.plannedRest ? langText('Repos', 'Rest', t) : langText('Non saisi', 'Not logged', t)}${row.labels?.length ? ` | ${row.labels.join(', ')}` : ''}`;
           const dayLabel = typeof shortDay === 'function' ? shortDay(row.day) : String(row.day || '').slice(5);
-          return `<button type="button" title="${esc(title)}" style="border:0;background:transparent;padding:0;display:grid;gap:5px;align-items:end;color:inherit;">
-            <span style="height:${Math.round(h)}px;border-radius:10px 10px 5px 5px;background:${color};box-shadow:0 8px 18px rgba(15,23,42,.10);"></span>
-            <strong style="font-size:11px;">${esc(dayLabel)}</strong>
-            <span class="muted" style="font-size:10px;">${row.kcal ? Math.round(num(row.kcal, 0)) : row.plannedRest ? esc(langText('Repos', 'Rest', t)) : '-'}</span>
+          return `<button class="tb-work-load-day ${row.kcal ? 'has-work' : row.plannedRest ? 'is-rest' : 'is-missing'}" type="button" title="${esc(title)}" aria-label="${esc(title)}">
+            <span class="tb-work-load-bar" style="height:${Math.round(h)}px"></span>
+            <strong>${esc(dayLabel)}</strong>
+            <small class="muted">${row.kcal ? Math.round(num(row.kcal, 0)) : row.plannedRest ? esc(langText('Repos', 'Rest', t)) : '-'}</small>
           </button>`;
         }).join('')}
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <label class="muted" for="work-rhythm" style="font-weight:850;">${esc(langText('Rythme', 'Rhythm', t))}</label>
-        <select id="work-rhythm" style="border:1px solid var(--border);border-radius:999px;padding:8px 10px;background:var(--panel);font-weight:850;color:inherit;">
+      <div class="tb-work-load-controls">
+        <label class="muted" for="work-rhythm">${esc(langText('Rythme', 'Rhythm', t))}</label>
+        <select id="work-rhythm">
           <option value="weekend_rest" ${mode === 'weekend_rest' ? 'selected' : ''}>${esc(langText('Repos samedi/dimanche', 'Rest Saturday/Sunday', t))}</option>
           <option value="daily" ${mode === 'daily' ? 'selected' : ''}>${esc(langText('Travail possible tous les jours', 'Work can happen every day', t))}</option>
         </select>
         <button class="btn small" type="button" id="work-rest-today">${esc(langText("Repos aujourd'hui", 'Rest today', t))}</button>
       </div>
-    </div>`;
+    </section>`;
 }
 
 function defaultMoney(value, currency = 'AUD') {
@@ -159,7 +172,7 @@ function renderCareerJobs({
     return `<article class="tb-career-job">
       <div class="tb-career-job-top">
         <div><strong>${esc(job.name)}</strong><div class="muted">${esc(meta)}${meta ? ' · ' : ''}${esc(shortDate(job.start_date))}${job.end_date ? ` - ${esc(shortDate(job.end_date))}` : ''}</div></div>
-        <span style="width:10px;height:10px;border-radius:50%;background:${esc(job.color || '#0ea5e9')}"></span>
+        <span class="tb-career-color" style="background:${esc(job.color || '#0ea5e9')}"></span>
       </div>
       <div class="tb-career-job-stats">
         <span class="pill">${Math.round(num(item.netHours, 0) * 10) / 10}h</span>
@@ -167,7 +180,7 @@ function renderCareerJobs({
         <span class="pill">${item.hourlyNet == null ? '--' : esc(money(item.hourlyNet, job.currency))}/h</span>
       </div>
       ${renderFolders('job', job.id)}
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+      <div class="tb-career-job-actions">
         <button class="btn small" data-career-edit-job="${esc(job.id)}" type="button">${esc(langText('Modifier', 'Edit', t))}</button>
         <button class="btn small" data-career-link-folder="${esc(job.id)}" type="button">${esc(langText('Lier un dossier', 'Link folder', t))}</button>
         <button class="btn small" data-career-delete-job="${esc(job.id)}" type="button">${esc(langText('Supprimer', 'Delete', t))}</button>
@@ -205,7 +218,7 @@ function renderCareerActivity({
   ].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 12);
 
   if (!rows.length) return '';
-  return `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
+  return `<div class="tb-career-activity-group">
     <strong>${esc(langText('Revenus et périodes', 'Income and periods', t))}</strong>
     ${rows.map((item) => `<div class="tb-career-activity">
       <div class="tb-career-activity-row"><div><b>${esc(item.title)}</b><div class="muted">${esc(shortDate(item.date))} · ${esc(item.detail)}</div></div>
@@ -239,7 +252,7 @@ export function renderWorkCareerPanel({
   return `<section class="tb-career">
     <div class="tb-career-head">
       <div>
-        <h3 style="margin:0">${esc(langText('Parcours professionnel', 'Career', t))}</h3>
+        <h3>${esc(langText('Parcours professionnel', 'Career', t))}</h3>
         <div class="muted">${esc(langText('Temps travaillé, revenus reçus et périodes de transition.', 'Worked time, received income and transition periods.', t))}</div>
       </div>
       <div class="tb-career-actions">

@@ -7,6 +7,7 @@ describe('work domain extraction contract', () => {
   const work = fs.readFileSync('public/legacy/js/47_work_ui.js', 'utf8');
   const career = fs.readFileSync('public/legacy/js/50_work_career_ui.js', 'utf8');
   const view = fs.readFileSync('src/features/work/workView.js', 'utf8');
+  const css = fs.readFileSync('public/legacy/css/work.css', 'utf8');
 
   it('exposes Work rules at boot and lazy-loads the Work view before the domain legacy scripts', () => {
     expect(bridge).toContain("import * as workRules from '../core/workRules.js'");
@@ -36,6 +37,11 @@ describe('work domain extraction contract', () => {
     expect(view).toContain('data-career-link-folder');
     expect(career).toContain('data-career-open-document');
     expect(career).toContain('data-career-upload-folder');
+    expect(view).toContain("['today', \"Aujourd'hui\", 'Today']");
+    expect(view).toContain("['career', 'Parcours', 'Career']");
+    expect(view).toContain("['history', 'Historique', 'History']");
+    expect(work).toContain('renderWorkSectionTabs');
+    expect(work).toContain('CACHE.space = "today"');
   });
 
   it('keeps language refresh and prevents the removed Work BMR field from returning', () => {
@@ -45,10 +51,13 @@ describe('work domain extraction contract', () => {
     expect(work).not.toContain('function baseline');
   });
 
-  it('keeps Work panels on adaptive light and dark aliases', () => {
-    expect(career).toContain('background:var(--panel2)');
-    expect(career).toContain('background:var(--panel)');
-    expect(career).not.toContain('background:var(--tb-surface');
-    expect(career).not.toContain('border:1px solid var(--tb-line');
+  it('loads the Work stylesheet once and keeps responsive light/dark contracts outside runtime JS', () => {
+    expect(work).toContain('id = "tb-work-css"');
+    expect(work).toContain('link.href = "./legacy/css/work.css"');
+    expect(career).not.toContain('tb-work-career-styles');
+    expect(css).toContain('body.theme-dark .tb-work-shell');
+    expect(css).toContain('@media(max-width:620px)');
+    expect(css).toContain('.tb-work-section-panel[hidden]');
+    expect(css).toContain('var(--tb-surface');
   });
 });

@@ -16,7 +16,7 @@ Chaque module reste ferme aux comptes standards jusqu a ce que son lot respecte 
 
 ## Etat de la campagne
 
-- Version cible de campagne : `10.5.347`.
+- Version cible de campagne : `10.5.348`.
 - 14 modules actifs et Cautions archive apres retrait de son interface.
 - 60 resultats et 16 revues de module traitees sont archives avec date de test, date de traitement, version et note.
 - Le retest Categories Settings valide est clos globalement en `10.5.342`. Quatre retests sont ajoutes avec filiation : actions internes Wallet, scopes KPI/courbe, sous-categories des regles recurrentes et connexion sans gel. Les autres retours ouverts gardent leur scenario d origine.
@@ -128,6 +128,10 @@ SHA-256 : `E607988790BDDF27BB8E0E8FF0EB73BBF39674A5912E5ABDE95FE158BDCBB401`.
 - [x] Agreger en `10.5.347` la progression des charges par exercice canonique et par seance, depuis la meilleure serie valide.
 - [x] Remplacer les barres ambiguës par une courbe a echelle locale avec Depart, Derniere seance, Record, dates et evolution totale.
 - [ ] Faire executer les deux retests Sport `10.5.347` : comptage par seance et lisibilite clair/sombre a 1440/390 px.
+- [x] Reorganiser Travail en `10.5.348` autour des espaces Aujourd hui, Parcours et Historique sans retirer les commandes existantes.
+- [x] Ramener automatiquement une modification Historique vers le formulaire Aujourd hui et enrichir les lignes avec pause, MET, RPE et kcal.
+- [x] Remplacer le CSS Travail injecte a l execution et les styles structurels inline par une feuille dediee conforme aux themes clair/sombre.
+- [ ] Faire executer les quatre retests Travail `10.5.348` : espaces, journee/rythme, parcours et historique.
 
 ## Chantier 7 - Alimentation
 

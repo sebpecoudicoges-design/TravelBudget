@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { renderWorkCareerPanel, renderWorkLoadPanel, summarizeWorkWeek, todayWorkLabel } from '../../../src/features/work/workView.js';
+import { normalizeWorkSpace, renderWorkCareerPanel, renderWorkLoadPanel, renderWorkSectionTabs, summarizeWorkWeek, todayWorkLabel } from '../../../src/features/work/workView.js';
 
 describe('Work view helpers', () => {
   const t = (fr) => fr;
@@ -13,6 +13,17 @@ describe('Work view helpers', () => {
     expect(summarizeWorkWeek(rows)).toMatchObject({ kcal: 420, hours: 8, maxKcal: 420 });
     expect(todayWorkLabel(rows[1], { t })).toContain("Aujourd'hui");
     expect(todayWorkLabel(rows[0], { t })).toContain('Repos');
+  });
+
+  it('renders the three accessible work spaces and normalizes an invalid selection', () => {
+    const html = renderWorkSectionTabs({ activeSpace: 'career', t });
+    expect(html).toContain('role="tablist"');
+    expect(html).toContain('data-work-space="today"');
+    expect(html).toContain('data-work-space="career"');
+    expect(html).toContain('aria-selected="true">Parcours');
+    expect(html).toContain('data-work-space="history"');
+    expect(html).toContain('aria-controls="work-space-panel-career"');
+    expect(normalizeWorkSpace('unknown')).toBe('today');
   });
 
   it('renders the rhythm panel with stable hooks', () => {
@@ -29,6 +40,9 @@ describe('Work view helpers', () => {
     expect(html).toContain('id="work-rhythm"');
     expect(html).toContain('id="work-rest-today"');
     expect(html).toContain('420 kcal');
+    expect(html).toContain('tb-work-load-chart');
+    expect(html).toContain('tb-work-load-day has-work');
+    expect(html).not.toContain('background:linear-gradient(180deg,#22c55e');
   });
 
   it('renders the career panel with timeline, KPIs and stable action hooks', () => {

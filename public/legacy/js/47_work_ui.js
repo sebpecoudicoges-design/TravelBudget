@@ -4,7 +4,16 @@
    ========================= */
 (function () {
   const RHYTHM_KEY = "travelbudget_work_rhythm_v1";
-  const CACHE = { loaded: false, loading: false, rows: [], error: "", editId: "", rhythm: loadWorkRhythm() };
+  const CACHE = { loaded: false, loading: false, rows: [], error: "", editId: "", space: "today", rhythm: loadWorkRhythm() };
+
+  function ensureWorkStylesheet() {
+    if (document.getElementById("tb-work-css")) return;
+    const link = document.createElement("link");
+    link.id = "tb-work-css";
+    link.rel = "stylesheet";
+    link.href = "./legacy/css/work.css";
+    document.head.appendChild(link);
+  }
 
   function txt(fr, en) {
     try { return String(window.TB_LANG || "fr").toLowerCase() === "en" ? en : fr; } catch (_) { return fr; }
@@ -83,6 +92,7 @@
     return Math.max(0, (Number(met || 4.8) - 1) * bodyWeight() * netHours);
   }
   function ensureWorkShell() {
+    ensureWorkStylesheet();
     const tabs = document.querySelector(".tabs") || document.querySelector(".app-tabs");
     if (tabs && !document.getElementById("tab-work")) {
       const tab = document.createElement("div");
@@ -192,56 +202,55 @@
     const initialRpe = editing ? Number(editing.perceived_effort || 7) : 7;
     const initialDate = String(editing?.work_date || todayISO()).slice(0, 10);
     const initialLabel = editing ? String(editing.label || "") : "Avocado picking";
-    const today = todayISO();
+    const engagements = window.tbWorkCareerEngagements?.() || [];
+    const space = window.UI?.workView?.normalizeWorkSpace?.(CACHE.space) || "today";
+    const hidden = (key) => space === key ? "" : " hidden";
     root.innerHTML = `
       <section class="tb-work-shell">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+        <header class="tb-work-hero">
           <div>
-            <h2 style="margin:0;">${esc(txt("Travail physique", "Physical work"))}</h2>
-            <div class="muted" style="margin-top:4px;">${esc(txt("Journées de travail séparées du sport, avec estimation MET.", "Work days kept separate from sport, estimated with MET."))}</div>
+            <h2>${esc(txt("Travail", "Work"))}</h2>
+            <div class="muted">${esc(txt("Journées physiques, parcours professionnel, revenus et documents dans des espaces distincts.", "Physical days, career, income and documents in distinct spaces."))}</div>
           </div>
-        </div>
-        ${renderWorkVisual()}
-        <div id="work-career-root"></div>
-        <div class="tb-work-grid" style="display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:14px;margin-top:14px;">
-          <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-            <div class="field"><label>${esc(txt("Mission liée", "Linked job"))}</label><select id="work-engagement"><option value="">${esc(txt("Sans mission", "No job"))}</option>${(window.tbWorkCareerEngagements?.() || []).map(job => `<option value="${esc(job.id)}" ${String(editing?.engagement_id||'')===String(job.id)?'selected':''}>${esc(job.name || job.employer || txt('Mission','Job'))}</option>`).join('')}</select></div>
-            <div class="field"><label>${esc(txt("Date", "Date"))}</label><input id="work-date" type="date" value="${esc(initialDate)}"></div>
-            <div class="field"><label>${esc(txt("Type", "Type"))}</label><select id="work-type">${p.map(x => `<option value="${esc(x.key)}" data-met="${esc(String(x.met))}" ${String(x.key) === String(initialPresetKey) ? "selected" : ""}>${esc(labelPreset(x))} - MET ${esc(String(x.met))}</option>`).join("")}</select></div>
-            <div class="row" style="gap:10px;">
-              <div class="field" style="flex:1;"><label>${esc(txt("Duree h", "Hours"))}</label><input id="work-hours" type="number" min="0" step="0.25" value="${esc(String(Math.round(initialHours * 100) / 100))}"></div>
-              <div class="field" style="flex:1;"><label>${esc(txt("Pause min", "Break min"))}</label><input id="work-breaks" type="number" min="0" step="5" value="${esc(String(initialBreaks))}"></div>
-            </div>
-            <div class="row" style="gap:10px;">
-              <div class="field" style="flex:1;"><label>MET</label><input id="work-met" type="number" min="1" step="0.1" value="${esc(String(initialMet))}"></div>
-              <div class="field" style="flex:1;"><label>RPE</label><input id="work-rpe" type="number" min="1" max="10" step="1" value="${esc(String(initialRpe))}"></div>
-            </div>
-            <div class="muted" style="font-size:12px;line-height:1.45;margin:-2px 0 8px;">
+        </header>
+        ${window.UI?.workView?.renderWorkSectionTabs?.({ activeSpace: space, esc, t: txt }) || ""}
+        <div class="tb-work-section-panel" id="work-space-panel-today" role="tabpanel" aria-labelledby="work-space-tab-today" data-work-space-panel="today"${hidden("today")}>
+          ${renderWorkVisual()}
+          <div class="tb-work-card tb-work-entry">
+            <div><h3>${esc(editing ? txt("Modifier la journee", "Edit work day") : txt("Ajouter une journee", "Add a work day"))}</h3><div class="muted">${esc(txt("La dépense est calculée sur le temps actif, hors pause.", "Energy is calculated from active time, excluding breaks."))}</div></div>
+            <div class="tb-work-form"><div class="tb-work-fields">
+            <label class="tb-work-field wide">${esc(txt("Mission liée", "Linked job"))}<select id="work-engagement"><option value="">${esc(txt("Sans mission", "No job"))}</option>${engagements.map(job => `<option value="${esc(job.id)}" ${String(editing?.engagement_id||'')===String(job.id)?'selected':''}>${esc(job.name || job.employer || txt('Mission','Job'))}</option>`).join('')}</select></label>
+            <label class="tb-work-field">${esc(txt("Date", "Date"))}<input id="work-date" type="date" value="${esc(initialDate)}"></label>
+            <label class="tb-work-field">${esc(txt("Type", "Type"))}<select id="work-type">${p.map(x => `<option value="${esc(x.key)}" data-met="${esc(String(x.met))}" ${String(x.key) === String(initialPresetKey) ? "selected" : ""}>${esc(labelPreset(x))} - MET ${esc(String(x.met))}</option>`).join("")}</select></label>
+            <label class="tb-work-field">${esc(txt("Duree h", "Hours"))}<input id="work-hours" type="number" min="0" step="0.25" value="${esc(String(Math.round(initialHours * 100) / 100))}"></label>
+            <label class="tb-work-field">${esc(txt("Pause min", "Break min"))}<input id="work-breaks" type="number" min="0" step="5" value="${esc(String(initialBreaks))}"></label>
+            <label class="tb-work-field">MET<input id="work-met" type="number" min="1" step="0.1" value="${esc(String(initialMet))}"></label>
+            <label class="tb-work-field">RPE<input id="work-rpe" type="number" min="1" max="10" step="1" value="${esc(String(initialRpe))}"></label>
+            <label class="tb-work-field wide">${esc(txt("Notes", "Notes"))}<input id="work-notes" value="${esc(initialLabel)}"></label>
+            </div><div class="tb-work-help">
               <div><b>MET</b> : ${esc(txt("intensite metabolique de l'activite. Plus il est haut, plus les kcal montent.", "activity intensity. Higher means more kcal."))}</div>
               <div><b>RPE</b> : ${esc(txt("effort ressenti de 1 a 10, utile pour relire la journee.", "perceived effort from 1 to 10, useful for review."))}</div>
             </div>
-            <div class="field"><label>${esc(txt("Notes", "Notes"))}</label><input id="work-notes" value="${esc(initialLabel)}"></div>
-            <div class="pill" id="work-kcal-preview" style="margin-top:8px;">0 kcal</div>
-            <div style="display:flex;gap:8px;margin-top:10px;">
-              <button class="btn primary" id="work-save" type="button" style="flex:1;">${esc(editing ? txt("Mettre a jour", "Update") : txt("Ajouter la journee", "Add work day"))}</button>
+            <div class="tb-work-preview"><span>${esc(txt("Dépense estimée", "Estimated burn"))}</span><strong id="work-kcal-preview">0 kcal</strong></div>
+            <div class="tb-work-actions"><button class="btn primary" id="work-save" type="button">${esc(editing ? txt("Mettre a jour", "Update") : txt("Ajouter la journee", "Add work day"))}</button>
               ${editing ? `<button class="btn" id="work-cancel-edit" type="button">${esc(txt("Annuler", "Cancel"))}</button>` : ""}
-            </div>
+            </div></div>
           </div>
-          <div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--panel2);">
-            <h3 style="margin:0 0 10px;">${esc(txt("Historique travail", "Work history"))}</h3>
+        </div>
+        <div class="tb-work-section-panel" id="work-space-panel-career" role="tabpanel" aria-labelledby="work-space-tab-career" data-work-space-panel="career"${hidden("career")}><div id="work-career-root"></div></div>
+        <div class="tb-work-section-panel" id="work-space-panel-history" role="tabpanel" aria-labelledby="work-space-tab-history" data-work-space-panel="history"${hidden("history")}>
+          <div class="tb-work-card"><h3>${esc(txt("Historique des journées", "Work day history"))}</h3><div class="muted">${esc(txt("Les 12 dernières journées, avec temps, intensité et dépense estimée.", "The latest 12 work days, with time, intensity and estimated burn."))}</div>
             ${CACHE.loading ? `<div class="muted">${esc(txt("Chargement...", "Loading..."))}</div>` : ""}
             ${CACHE.error ? `<div class="muted">${esc(CACHE.error)}</div>` : ""}
-            ${recent.length ? recent.map(row => `
-              <div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--border);padding:9px 0;align-items:flex-start;">
-                <div><strong>${esc(row.label || "Travail")}</strong><div class="muted">${esc(String(row.work_date || "").slice(0,10))} · ${Math.round(Number(row.duration_minutes || 0) / 60 * 10) / 10}h · MET ${Number(row.met_value || 0)}</div></div>
-                <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+            <div class="tb-work-history">${recent.length ? recent.map(row => `
+              <article class="tb-work-history-row"><div class="tb-work-history-main"><strong>${esc(row.label || "Travail")}</strong><div class="tb-work-history-meta">${esc(String(row.work_date || "").slice(0,10))} · ${Math.round(Number(row.duration_minutes || 0) / 60 * 10) / 10}h · ${Math.round(Number(row.break_minutes || 0))} min ${esc(txt("pause", "break"))} · MET ${Number(row.met_value || 0)}${row.perceived_effort ? ` · RPE ${Number(row.perceived_effort)}` : ""}</div></div>
+                <div class="tb-work-history-side">
                   <strong>${Math.round(Number(row.estimated_kcal || 0))} kcal</strong>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+                  <div class="tb-work-actions">
                     <button class="btn small" type="button" data-work-edit="${esc(String(row.id || ""))}">${esc(txt("Modifier", "Edit"))}</button>
                     <button class="btn small" type="button" data-work-delete="${esc(String(row.id || ""))}">${esc(txt("Supprimer", "Delete"))}</button>
                   </div>
-                </div>
-              </div>`).join("") : `<div class="muted">${esc(txt("Aucune journée enregistrée.", "No work day saved."))}</div>`}
+                </div></article>`).join("") : `<div class="muted">${esc(txt("Aucune journée enregistrée.", "No work day saved."))}</div>`}</div>
           </div>
         </div>
       </section>`;
@@ -250,6 +259,9 @@
     setTimeout(() => { try { window.renderWorkCareer?.(); } catch (_) {} }, 0);
   }
   function bindWork(root) {
+    root.querySelectorAll("[data-work-space]").forEach((button) => {
+      button.onclick = () => { CACHE.space = String(button.dataset.workSpace || "today"); renderWork("space"); };
+    });
     const type = root.querySelector("#work-type");
     const met = root.querySelector("#work-met");
     if (type && met) type.onchange = () => { met.value = type.selectedOptions?.[0]?.dataset?.met || "4.8"; updatePreview(root); };
@@ -273,6 +285,7 @@
     root.querySelectorAll("[data-work-edit]").forEach((btn) => {
       btn.onclick = () => {
         CACHE.editId = String(btn.getAttribute("data-work-edit") || "");
+        CACHE.space = "today";
         renderWork("edit");
       };
     });
