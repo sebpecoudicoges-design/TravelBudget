@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.348`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.349`.
 
 ## Objectif
 
@@ -104,6 +104,8 @@ En `10.5.346`, Sport adopte une identite canonique par exercice : les synonymes 
 En `10.5.347`, l analyse des charges Sport agrege les series par exercice canonique et par seance. Un entrainement ne conserve que son meilleur e1RM valide; les cartes indiquent Depart, Derniere seance et Record, tandis que chaque courbe utilise une echelle locale pour rendre la tendance lisible. Deux retests ciblent le comptage par seance et le rendu clair/sombre a 1440/390 px.
 
 En `10.5.348`, Travail est reorganise en trois espaces accessibles : **Aujourd hui** pour le rythme, la semaine et la saisie; **Parcours** pour missions, revenus, periodes et Documents; **Historique** pour les 12 dernieres journees. Modifier une journee ramene automatiquement vers son formulaire. Les styles inline structurels et le bloc CSS injecte par le runtime sont retires au profit d une feuille dediee conforme au systeme visuel. Quatre retests couvrent navigation, journee/rythme, parcours et historique.
+
+En `10.5.349`, les regles recurrentes quittent Settings pour le module **Abonnements**. Vue d ensemble compare le montant prevu par les regles au reel paye sans melanger les devises; Echeances conserve les lignes generees, modifiees, payees ou rattachees manuellement; Regles garde creation, modification, pause, reprise et archivage. Le formulaire Transaction propose un rattachement compatible voyage/type/devise, tandis que les echeances generees conservent leur lien automatique. Quatre retests dedies sont ajoutes.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

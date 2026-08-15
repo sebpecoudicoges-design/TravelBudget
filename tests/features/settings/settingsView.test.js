@@ -108,7 +108,6 @@ describe('Settings view helpers', () => {
       pills: ['BudgetTravel'],
     });
     expect(getSettingsCardSummary({ id: 'tb-periods-card', state, t }).pills).toEqual(['2 periodes']);
-    expect(getSettingsCardSummary({ id: 'tb-recurring-card', state, t }).pills).toEqual(['1 regles']);
   });
 
   it('renders complete account export and cancellable deletion controls', () => {
@@ -133,7 +132,7 @@ describe('Settings view helpers', () => {
     expect(html).toContain('Reglages');
     expect(html).toContain('&lt;BudgetTravel&gt;');
     expect(html).toContain('2 periodes');
-    expect(html).toContain('1 regles');
+    expect(html).not.toContain('1 regles');
   });
 
   it('renders the account panel with stable inputs and selected preferences', () => {

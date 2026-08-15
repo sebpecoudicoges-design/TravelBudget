@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="BudgetPacker">
   <script>
-    window.TB_VERSION = window.__TB_BUILD = "10.5.348";
+    window.TB_VERSION = window.__TB_BUILD = "10.5.349";
     window.TB_BUILD_LABEL = "V" + window.TB_VERSION;
     console.warn("TB BUILD/TB VERSION " + window.TB_VERSION);
   </script>
@@ -3865,6 +3865,12 @@
         <input id="m-label" type="text" placeholder="Optionnel" />
       </div>
 
+      <div class="field" style="grid-column:1/-1;">
+        <label for="m-recurring-rule">Abonnement lié <span class="tb-help" title="Les échéances créées par une règle sont liées automatiquement. Pour une transaction manuelle, choisis ici l'abonnement correspondant.">?</span></label>
+        <select id="m-recurring-rule"><option value="">Aucun abonnement</option></select>
+        <small id="m-recurring-rule-help" class="muted">Optionnel pour une transaction créée manuellement.</small>
+      </div>
+
       <div class="field">
         <label for="m-paynow">Payé maintenant <span class="tb-help" title="Coché : impact immédiat sur le solde. Décoché : c'est à payer/recevoir plus tard (prévision).">?</span></label>
         <input id="m-paynow" type="checkbox" checked />
@@ -3888,6 +3894,7 @@
   <svg class="tb-icon-sprite" aria-hidden="true" width="0" height="0">
     <symbol id="tb-icon-dashboard" viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z"/></symbol>
     <symbol id="tb-icon-transactions" viewBox="0 0 24 24"><path d="M7 7h13m0 0-3-3m3 3-3 3M17 17H4m0 0 3 3m-3-3 3-3"/></symbol>
+    <symbol id="tb-icon-subscriptions" viewBox="0 0 24 24"><path d="M4 7h16v12H4V7Z"/><path d="M8 4v6m8-6v6M4 11h16m-12 4h3m2 0h3"/></symbol>
     <symbol id="tb-icon-analysis" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></symbol>
     <symbol id="tb-icon-assets" viewBox="0 0 24 24"><path d="m3 10 9-6 9 6M5 10v8m5-8v8m4-8v8m5-8v8M3 20h18"/></symbol>
     <symbol id="tb-icon-sport" viewBox="0 0 24 24"><path d="M6 9v6m12-6v6M3 10v4m18-4v4M6 12h12"/></symbol>
@@ -3931,6 +3938,7 @@
         <div id="tab-dashboard" class="tab active" data-icon="🧭" onclick="showView('dashboard')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-dashboard"></use></svg><span class="tab-label" data-t="nav.dashboard">Dashboard</span></div>
         <div class="tab-group-label">Finances</div>
         <div id="tab-transactions" class="tab" data-icon="💳" onclick="showView('transactions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-transactions"></use></svg><span class="tab-label" data-t="nav.transactions">Transactions</span></div>
+        <div id="tab-subscriptions" class="tab" data-icon="📅" onclick="showView('subscriptions')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-subscriptions"></use></svg><span class="tab-label">Abonnements</span></div>
         <div id="tab-analysis" class="tab" data-icon="📊" onclick="showView('analysis')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-analysis"></use></svg><span class="tab-label" data-t="nav.analysis">Analyse</span></div>
         <div id="tab-assets" class="tab" data-icon="💎" onclick="showView('assets')"><svg class="tab-icon" aria-hidden="true"><use href="#tb-icon-assets"></use></svg><span class="tab-label" data-t="nav.assets">Patrimoine</span></div>
         <div class="tab-group-label">Quotidien</div>
@@ -3988,6 +3996,10 @@
       </div>
 
       <!-- ASSETS / PATRIMOINE -->
+      <div id="view-subscriptions" class="hidden">
+        <div id="subscriptions-root"></div>
+      </div>
+
       <div id="view-assets" class="hidden">
         <div id="assets-root" class="card"></div>
       </div>

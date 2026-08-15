@@ -103,7 +103,6 @@ const BOOT_LEGACY_SCRIPTS = [
   '/legacy/js/16_modal_add_edit_via_rpc.js',
   '/legacy/js/13_transactions_view.js',
   '/legacy/js/14_settings_periods_ui.js',
-  '/legacy/js/15_recurring_rules_ui.js',
   '/legacy/js/15_wallet_adjust.js',
   '/legacy/js/17_internal_transfers.js',
   '/legacy/js/17_charts.js',
@@ -122,6 +121,9 @@ const LEGACY_DOMAIN_SCRIPTS = {
     '/legacy/js/33_analysis_drilldown_view.js',
     '/legacy/js/33_budget_analysis.js',
     '/legacy/js/34_fx_decision.js',
+  ],
+  subscriptions: [
+    '/legacy/js/15_recurring_rules_ui.js',
   ],
   cashflow: [
     '/legacy/js/27_cashflow_curve.js',
@@ -283,6 +285,18 @@ async function ensureDomainModules(domain) {
       window.UI.workView = {
         ...(window.UI.workView || {}),
         ...workView,
+      };
+    }
+    if (key === 'subscriptions') {
+      const [subscriptionRules, subscriptionView] = await Promise.all([
+        import('./core/subscriptionRules.js'),
+        import('./features/subscriptions/subscriptionView.js'),
+      ]);
+      window.Core = window.Core || {};
+      window.Core.subscriptionRules = subscriptionRules;
+      window.UI.subscriptionView = {
+        ...(window.UI.subscriptionView || {}),
+        ...subscriptionView,
       };
     }
     if (key === 'documents') {

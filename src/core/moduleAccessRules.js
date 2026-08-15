@@ -3,6 +3,7 @@ export const PRIVILEGED_MODULE_ROLES = Object.freeze(['admin', 'test']);
 export const ALWAYS_AVAILABLE_VIEWS = Object.freeze([
   'dashboard',
   'transactions',
+  'subscriptions',
   'analysis',
   'validation',
   'settings',

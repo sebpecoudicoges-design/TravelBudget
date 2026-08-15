@@ -9,6 +9,7 @@ function setActiveTab(view) {
   const tabs = [
     ["dashboard", "tab-dashboard", "view-dashboard"],
     ["transactions", "tab-transactions", "view-transactions"],
+    ["subscriptions", "tab-subscriptions", "view-subscriptions"],
     ["settings", "tab-settings", "view-settings"],
     ["analysis", "tab-analysis", "view-analysis"],
     ["assets", "tab-assets", "view-assets"],
@@ -44,6 +45,19 @@ function showView(view) {
   if (view === "transactions") {
     renderTransactions();
     try { if (typeof window.tbEnsureDeferredData === "function") window.tbEnsureDeferredData("transactions"); } catch (_) {}
+  }
+  if (view === "subscriptions") {
+    if (typeof window.renderRecurringRules === "function") window.renderRecurringRules("navigation");
+    else if (typeof window.tbLoadLegacyDomain === "function") {
+      const root = document.getElementById("subscriptions-root");
+      if (root) root.innerHTML = `<div class="card"><div class="muted">Chargement abonnements...</div></div>`;
+      window.tbLoadLegacyDomain("subscriptions").then(() => {
+        if ((window.activeView || activeView) === "subscriptions" && typeof window.renderRecurringRules === "function") window.renderRecurringRules("navigation:lazy");
+      }).catch((e) => {
+        console.error("[TB] Subscriptions lazy load failed", e);
+        alert(`Abonnements indisponibles : ${e?.message || e}`);
+      });
+    }
   }
   if (view === "settings") {
     renderSettings();
@@ -223,11 +237,11 @@ function syncTabsForRole() {
     ? window.TBModuleAccess.roleUiState(role)
     : { isAdmin: role === "admin", isTester: role === "test", canPreviewModules: role === "admin" || role === "test", canUseTestCampaign: role === "admin" || role === "test", isRestricted: role !== "admin" && role !== "test" };
   const moduleTabs = [
-    'dashboard','transactions','analysis','assets','sport','nutrition','work','documents','inbox','notifications','trip'
+    'dashboard','transactions','subscriptions','analysis','assets','sport','nutrition','work','documents','inbox','notifications','trip'
   ];
   const canAccessView = (name) => window.TBModuleAccess?.canAccessAppView
     ? window.TBModuleAccess.canAccessAppView(name, role)
-    : (roleState.canPreviewModules || ['dashboard', 'transactions', 'analysis', 'settings', 'help', 'validation'].includes(name));
+    : (roleState.canPreviewModules || ['dashboard', 'transactions', 'subscriptions', 'analysis', 'settings', 'help', 'validation'].includes(name));
   try {
     document.body.classList.toggle("tb-role-admin", roleState.isAdmin);
     document.body.classList.toggle("tb-role-test", roleState.isTester);

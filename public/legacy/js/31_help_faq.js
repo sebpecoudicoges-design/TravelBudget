@@ -546,8 +546,8 @@
       {
         kt: "help.guide.recurring.title",
         kb: "help.guide.recurring.body",
-        action: "settings",
-        target: "#recurring-root",
+        action: "subscriptions",
+        target: "#subscriptions-root",
         cmds: [
           { cmd: "recurring_create", label: tx("Nouvelle règle", "New rule") },
           { cmd: "recurring_list", label: tx("Voir règles", "View rules") }
@@ -747,14 +747,14 @@
       return;
     }
     if (c === "recurring_create") {
-      _afterView("settings", () => {
+      _afterView("subscriptions", () => {
         if (typeof window.openRecurringRuleModal === "function") window.openRecurringRuleModal();
-        else _highlightFirst(["#recurring-root", "#tb-recurring-card", "#view-settings"]);
+        else _highlightFirst(["#subscriptions-root", "#view-subscriptions"]);
       });
       return;
     }
     if (c === "recurring_list") {
-      _afterView("settings", () => _highlightFirst(["#recurring-root", "#tb-recurring-card", ".tb-recurring-stack", "#view-settings"]));
+      _afterView("subscriptions", () => _highlightFirst(["#subscriptions-root", ".tb-subscription-list", "#view-subscriptions"]));
       return;
     }
     if (c === "analysis_budget") {

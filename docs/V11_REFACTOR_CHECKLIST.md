@@ -51,6 +51,7 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
   - [x] Unifier Sport en `10.5.346` autour de cles canoniques partagees par catalogue, historique et programme; reprendre la derniere charge sans regression implicite et propager la double progression a la variante programme source.
   - [x] Refaire en `10.5.347` l analyse de progression Sport autour d un seul meilleur e1RM par exercice et par seance, avec tendance visuelle a echelle locale et indicateurs explicites.
   - [x] Reprendre Travail en profondeur en `10.5.348` : trois espaces accessibles, saisie et rythme regroupes, parcours professionnel preserve, historique detaille et retrait du CSS runtime devenu inutile.
+  - [x] Sortir les regles recurrentes de Settings en `10.5.349` : module Abonnements lazy, analyse prevu/reel, chronologie des echeances et liaison Transaction securisee.
 
 ## Chantier 1 - Budget journalier et transactions
 

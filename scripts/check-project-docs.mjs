@@ -13,6 +13,7 @@ const EXPECTED_IDS = [
   'analysis.budget-actual',
   'assets.movement',
   'budget.daily',
+  'budget.subscription',
   'budget.transaction',
   'nutrition.meal',
   'sport.session',

@@ -79,10 +79,6 @@ export function getSettingsCardSummary({
     const count = Array.isArray(state?.budgetSegments) ? state.budgetSegments.length : 0;
     return { kicker: tr('settings.card.periods'), summary: tr('settings.card.periods_summary', { count }), pills: [tr('settings.card.periods_count', { count })] };
   }
-  if (cardId === 'tb-recurring-card') {
-    const count = Array.isArray(state?.recurringRules) ? state.recurringRules.length : 0;
-    return { kicker: tr('settings.card.recurring'), summary: tr('settings.card.recurring_summary', { count }), pills: [tr('settings.card.recurring_count', { count })] };
-  }
   if (cardId.includes('palette')) return { kicker: tr('settings.card.palette'), summary: tr('settings.card.palette_summary'), pills: [tr('settings.card.visual')] };
   if (cardId.includes('categories')) return { kicker: tr('settings.card.categories'), summary: tr('settings.card.categories_summary'), pills: [tr('settings.card.classification')] };
 
@@ -97,7 +93,6 @@ export function renderSettingsHero({
   const tr = typeof t === 'function' ? t : fallbackT;
   const travel = activeTravel(state);
   const segCount = Array.isArray(state?.budgetSegments) ? state.budgetSegments.length : 0;
-  const rrCount = Array.isArray(state?.recurringRules) ? state.recurringRules.length : 0;
 
   return `
     <div>
@@ -107,7 +102,6 @@ export function renderSettingsHero({
     <div class="tb-settings-hero-chips">
       <span class="tb-settings-hero-chip">${esc(String(travel?.name || tr('analysis.trip.active')))}</span>
       <span class="tb-settings-hero-chip">${esc(tr('settings.card.periods_count', { count: segCount }))}</span>
-      <span class="tb-settings-hero-chip">${esc(tr('settings.card.recurring_count', { count: rrCount }))}</span>
     </div>`;
 }
 

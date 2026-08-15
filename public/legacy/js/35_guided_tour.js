@@ -206,8 +206,10 @@
         { view: "transactions", selectors: ["#tx-bulk-panel", "#tx-list", "#view-transactions .card"], title: "m_tx_bulk_t", body: "m_tx_bulk_b", action: "tx_bulk", actionLabel: "actionBulk" }
       ],
       settings: [
-        { view: "settings", selectors: ["#view-settings", "#settings-root"], title: "m_settings_trip_t", body: "m_settings_trip_b", action: "settings_trip", actionLabel: "actionSettings" },
-        { view: "settings", selectors: ["#recurring-root", "[data-settings-section='recurring']", "#view-settings"], title: "m_settings_rec_t", body: "m_settings_rec_b", action: "recurring_create", actionLabel: "actionRecurring" }
+        { view: "settings", selectors: ["#view-settings", "#settings-root"], title: "m_settings_trip_t", body: "m_settings_trip_b", action: "settings_trip", actionLabel: "actionSettings" }
+      ],
+      subscriptions: [
+        { view: "subscriptions", selectors: ["#subscriptions-root", "#view-subscriptions"], title: "m_settings_rec_t", body: "m_settings_rec_b", action: "recurring_create", actionLabel: "actionRecurring" }
       ],
       analysis: [
         { view: "analysis", selectors: ["#view-analysis", "#analysis-root"], title: "m_analysis_t", body: "m_analysis_b" },
@@ -443,9 +445,9 @@
       return;
     }
     if (action === "recurring_create") {
-      afterView("settings", () => {
+      afterView("subscriptions", () => {
         if (typeof window.openRecurringRuleModal === "function") window.openRecurringRuleModal();
-        else highlight(["#recurring-root", "#tb-recurring-card", "#view-settings"]);
+        else highlight(["#subscriptions-root", "#view-subscriptions"]);
       });
       return;
     }

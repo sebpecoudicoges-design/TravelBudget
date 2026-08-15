@@ -318,7 +318,7 @@ export function buildAssistantContextualInsights(state = {}, options = {}) {
       pushUnique(out, { level: 'warning', code: 'no_periods', view: 'settings', title: 'Periods', body: 'Create at least one period with dates, currency and daily budget.' });
     }
     if (!s.walletCount) pushUnique(out, global.find((x) => x.code === 'no_wallet'));
-    pushUnique(out, { level: 'info', code: 'settings_review', view: 'settings', title: 'Settings', body: 'Review base currency, UI mode, periods and recurring rules before relying on projections.' });
+    pushUnique(out, { level: 'info', code: 'settings_review', view: 'settings', title: 'Settings', body: 'Review base currency, UI mode and periods before relying on projections.' });
   } else {
     addByCode('cash_visible');
     addByCode('low_runway');

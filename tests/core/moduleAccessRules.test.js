@@ -20,6 +20,7 @@ describe('module access rules', () => {
     expect(normalizeAppRole('member')).toBe('user');
     expect(resolveAppView('dashboard', 'member')).toBe('dashboard');
     expect(resolveAppView('transactions', 'user')).toBe('transactions');
+    expect(resolveAppView('subscriptions', 'user')).toBe('subscriptions');
     expect(resolveAppView('analysis', 'user')).toBe('analysis');
     expect(resolveAppView('sport', 'user')).toBe('validation');
     expect(resolveAppView('settings', 'user')).toBe('settings');

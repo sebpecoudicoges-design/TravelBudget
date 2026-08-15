@@ -97,6 +97,42 @@ function fillModalSubcategorySelect(categoryName, selectedValue) {
   el.value = selected || "";
 }
 
+function fillModalRecurringSelect(selectedValue, currentTx) {
+  const select = document.getElementById("m-recurring-rule");
+  const help = document.getElementById("m-recurring-rule-help");
+  if (!select) return;
+  const selected = String(selectedValue || "").trim();
+  const type = String(document.getElementById("m-type")?.value || currentTx?.type || "").trim();
+  const walletId = String(document.getElementById("m-wallet")?.value || currentTx?.walletId || currentTx?.wallet_id || "").trim();
+  const wallet = (state?.wallets || []).find((row) => String(row?.id || "") === walletId);
+  const currency = String(wallet?.currency || currentTx?.currency || "").trim().toUpperCase();
+  const tid = String(state?.activeTravelId || currentTx?.travelId || currentTx?.travel_id || "").trim();
+  const rows = (state?.recurringRules || []).filter((rule) => {
+    if (rule?.archived) return false;
+    if (tid && String(rule?.travelId || rule?.travel_id || "") !== tid) return false;
+    if (type && String(rule?.type || "") !== type) return false;
+    if (currency && String(rule?.currency || "").toUpperCase() !== currency) return false;
+    return true;
+  });
+  select.innerHTML = `<option value="">Aucun abonnement</option>${rows.map((rule) => `<option value="${escapeHTML(rule.id)}">${escapeHTML(rule.label || rule.name || "Abonnement")} — ${escapeHTML(fmtMoney(Number(rule.amount || 0), rule.currency || currency))}</option>`).join("")}`;
+  if (selected && !rows.some((rule) => String(rule.id) === selected)) {
+    const rule = (state?.recurringRules || []).find((row) => String(row?.id || "") === selected);
+    select.insertAdjacentHTML("beforeend", `<option value="${escapeHTML(selected)}">${escapeHTML(rule?.label || "Règle liée")}</option>`);
+  }
+  select.value = selected;
+  const generated = !!(currentTx?.generatedByRule || currentTx?.generated_by_rule);
+  select.disabled = generated;
+  if (help) help.textContent = generated ? "Lien automatique : cette échéance a été créée par la règle." : "Optionnel : rattache cette transaction manuelle à une règle existante.";
+}
+
+function wireRecurringRuleLogic(currentTx) {
+  const selected = String(currentTx?.recurringRuleId || currentTx?.recurring_rule_id || "");
+  const refresh = () => fillModalRecurringSelect(document.getElementById("m-recurring-rule")?.value || selected, currentTx);
+  document.getElementById("m-type")?.addEventListener("change", refresh);
+  document.getElementById("m-wallet")?.addEventListener("change", refresh);
+  fillModalRecurringSelect(selected, currentTx);
+}
+
 function wireSubcategoryLogic(selectedValue) {
   const catEl = document.getElementById("m-category");
   const subEl = document.getElementById("m-subcategory");
@@ -290,6 +326,7 @@ function openTxModal(type = "expense", walletId = null) {
 
   wireSubcategoryLogic("");
   wireNightLogic();
+  wireRecurringRuleLogic(null);
 
 }
 
@@ -336,6 +373,7 @@ function openTxEditModal(txId) {
 
   wireSubcategoryLogic(tx.subcategory || "");
   wireNightLogic();
+  wireRecurringRuleLogic(tx);
 
 }
 
@@ -396,6 +434,7 @@ function openTxDuplicateModal(txId) {
 
   wireSubcategoryLogic(subcategory);
   wireNightLogic();
+  wireRecurringRuleLogic({ ...tx, generatedByRule: false });
 
 }
 
@@ -475,7 +514,7 @@ function _setTxModalLock(isLocked, reason) {
 }
 
 function _setTxModalReadOnly(isReadOnly, reason) {
-  const ids = ["m-type", "m-wallet", "m-amount", "m-category", "m-subcategory", "m-cash-date", "m-budget-start", "m-budget-end", "m-label", "m-paynow", "m-out", "m-night"];
+  const ids = ["m-type", "m-wallet", "m-amount", "m-category", "m-subcategory", "m-cash-date", "m-budget-start", "m-budget-end", "m-label", "m-recurring-rule", "m-paynow", "m-out", "m-night"];
   for (const id of ids) {
     const el = document.getElementById(id);
     if (el) el.disabled = !!isReadOnly;
@@ -914,6 +953,16 @@ async function _updateTransactionRpcCompat(args) {
 }
 window._txUpdateTransactionRpcCompat = _updateTransactionRpcCompat;
 
+async function _txLinkToRecurringRule(transactionId, recurringRuleId) {
+  const client = _tbGetSB();
+  if (!client) throw new Error("Supabase non prêt.");
+  const { error } = await client.rpc(TB_CONST.RPCS.link_transaction_to_recurring_rule || "link_transaction_to_recurring_rule", {
+    p_transaction_id: transactionId,
+    p_recurring_rule_id: recurringRuleId || null,
+  });
+  if (error) throw error;
+}
+
 function _txCashDelta(tx) {
   if (!tx) return 0;
   const payNow = tx.pay_now !== undefined ? !!tx.pay_now : (tx.payNow !== undefined ? !!tx.payNow : true);
@@ -1054,6 +1103,7 @@ async function saveModal() {
       const budgetEnd = document.getElementById("m-budget-end").value || budgetStart;
       const label = (document.getElementById("m-label").value || "").trim() || category;
       const payNow = document.getElementById("m-paynow").checked;
+      const recurringRuleId = String(document.getElementById("m-recurring-rule")?.value || "").trim() || null;
       let outOfBudget = document.getElementById("m-out").checked;
       const nightCovered = document.getElementById("m-night").checked;
 
@@ -1118,6 +1168,11 @@ async function saveModal() {
       const offlineNow = (typeof window.tbShouldUseOfflineMode === "function")
         ? await window.tbShouldUseOfflineMode(editingTxId ? "tx:edit" : "tx:create")
         : (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode());
+      const currentRecurringRuleId = String(currentTx?.recurringRuleId || currentTx?.recurring_rule_id || "").trim() || null;
+      const generatedByRule = !!(currentTx?.generatedByRule || currentTx?.generated_by_rule);
+      if (offlineNow && !generatedByRule && recurringRuleId !== currentRecurringRuleId) {
+        throw new Error("Le rattachement à un abonnement nécessite une connexion. Réessaie une fois en ligne.");
+      }
 
       if (editingTxId) {
         const current = currentTx;
@@ -1179,6 +1234,9 @@ async function saveModal() {
         } else {
           const { data, error } = await _updateTransactionRpcCompat(updateArgs);
           if (error) throw error;
+          if (!generatedByRule && recurringRuleId !== currentRecurringRuleId) {
+            await _txLinkToRecurringRule(editingTxId, recurringRuleId);
+          }
         }
       } else {
         // Ensure FX conversion is available for tx currency -> segment/base currency.
@@ -1238,6 +1296,7 @@ async function saveModal() {
             rpcArgs
           );
           if (error) throw error;
+          if (recurringRuleId) await _txLinkToRecurringRule(data, recurringRuleId);
         }
       }
 

@@ -3,9 +3,9 @@
   "notes": "Budgets en KiB. Ils servent a detecter les regressions de taille et a prioriser les extractions V11.",
   "dist": {
     "initialJsMaxKiB": 263,
-    "lazyJsMaxKiB": 424,
-    "totalJsMaxKiB": 686,
-    "totalCssMaxKiB": 44,
+    "lazyJsMaxKiB": 435,
+    "totalJsMaxKiB": 697,
+    "totalCssMaxKiB": 50,
     "mainJsGzipMaxKiB": 110
   },
   "sourceGroups": [
@@ -42,7 +42,6 @@
         "public/legacy/js/16_modal_add_edit_via_rpc.js",
         "public/legacy/js/13_transactions_view.js",
         "public/legacy/js/14_settings_periods_ui.js",
-        "public/legacy/js/15_recurring_rules_ui.js",
         "public/legacy/js/15_wallet_adjust.js",
         "public/legacy/js/17_internal_transfers.js",
         "public/legacy/js/17_charts.js",
@@ -52,6 +51,15 @@
         "public/legacy/js/99_doctor.js",
         "public/legacy/js/20_boot.js",
         "public/legacy/js/21_dashboard_drag.js"
+      ]
+    },
+    {
+      "name": "subscriptions-domain",
+      "maxKiB": 56,
+      "paths": [
+        "public/legacy/js/15_recurring_rules_ui.js",
+        "src/core/subscriptionRules.js",
+        "src/features/subscriptions/subscriptionView.js"
       ]
     },
     {

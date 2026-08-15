@@ -19,6 +19,7 @@ Les domaines suivants ont un contrat de separation :
 - Patrimoine : `assetRules`, `assetView`.
 - Trip : `tripRules`, `tripRepository`, `tripStore`, `tripView`.
 - Sport : `sportRules`, `sportLibraryRules`, `sportRepository`, `sportStore`, `sportCatalog`, programme, timer, historique, sandbox et profil.
+- Abonnements : `subscriptionRules`, `subscriptionView` et orchestration legacy dédiée.
 
 Les contrats sont dans `tests/ui/*DomainContract.test.js`. Toute nouvelle extraction doit ajouter ou etendre un test avant suppression de code legacy.
 
@@ -31,6 +32,7 @@ Les contrats sont dans `tests/ui/*DomainContract.test.js`. Toute nouvelle extrac
 - `trip` : `29_trip_v1.js`, `30_members_admin.js`
 - `sport` : `45_sport_ui.js`
 - `assets`, `documents`, `notifications`, `help`
+- `subscriptions` : `subscriptionRules`, `subscriptionView`, puis `15_recurring_rules_ui.js`
 
 Le domaine UI `cautions` est retire en `10.5.319` apres verification de ses 5 enregistrements historiques, tous soldes. La table metier reste conservee pour l export et la suppression de compte, mais aucun onglet ni runtime Cautions n est charge.
 

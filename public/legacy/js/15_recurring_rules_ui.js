@@ -15,11 +15,6 @@
     return window.supabase || window.sb || null;
   }
 
-  function _rrFmtDate(v) {
-    if (!v) return "—";
-    try { return String(v).slice(0, 10); } catch (_) { return "—"; }
-  }
-
   function _rrParseISODate(iso) {
     const s = String(iso || "");
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
@@ -283,6 +278,8 @@
   }
 
   function _rrComputeFirstDueDate(ruleType, startDate, weekday, monthday, intervalCount = 1) {
+    const pure = window.Core?.subscriptionRules?.computeFirstSubscriptionDueDate;
+    if (typeof pure === "function") return pure({ ruleType, startDate, weekday, monthday, intervalCount });
     const start = _rrDateToUTCDate(startDate);
     if (!start) return startDate;
 
@@ -313,14 +310,14 @@
 
       if (candidateDay >= d) return _rrISOFromParts(y, m, candidateDay);
 
-      const next = new Date(Date.UTC(y, m, 1));
+      const next = new Date(Date.UTC(y, (m - 1) + Math.max(1, Number(intervalCount || 1)), 1));
       const ny = next.getUTCFullYear();
       const nm = next.getUTCMonth() + 1;
       const ndim = _rrDaysInMonth(ny, nm);
       return _rrISOFromParts(ny, nm, Math.min(md, ndim));
     }
 
-    if (ruleType === "yearly") return startDate;
+    if (ruleType === "monthly" || ruleType === "yearly") return startDate;
     return startDate;
   }
 
@@ -333,16 +330,6 @@
     if (type === "every_x_months") return every === 1 ? rrT("recurring.freq.monthly_label") : rrT("recurring.freq.every_months", { count: every });
     if (type === "yearly") return every === 1 ? rrT("recurring.freq.yearly_label") : rrT("recurring.freq.every_years", { count: every });
     return type || "—";
-  }
-
-  function _rrStatus(rule) {
-    if (rule?.archived) return rrT("recurring.status.archived");
-    if (rule?.isActive === false || rule?.is_active === false) return rrT("recurring.status.paused");
-    return rrT("recurring.status.active");
-  }
-
-  function _rrIsActive(rule) {
-    return !(rule?.archived || rule?.isActive === false || rule?.is_active === false);
   }
 
   function _rrBindAddButton(host) {
@@ -359,33 +346,8 @@
     return (state?.wallets || []).filter((w) => String(w?.travelId || w?.travel_id || "") === tid);
   }
 
-  function _rrEnsureSettingsBox() {
-    const view = document.getElementById("view-settings");
-    if (!view) return null;
-
-    let box = document.getElementById("tb-recurring-card");
-    if (box) {
-      const title = box.querySelector("h2");
-      if (title) title.textContent = rrT("recurring.title");
-      return box.querySelector("#tb-recurring-box");
-    }
-
-    const card = document.createElement("div");
-    card.className = "card tb-settings-card tb-settings-card--recurring";
-    card.id = "tb-recurring-card";
-    card.style.marginBottom = "12px";
-    card.innerHTML = `
-      <h2>${escapeHTML(rrT("recurring.title"))}</h2>
-      <div id="tb-recurring-box"></div>
-    `;
-
-    const paletteCard = document.getElementById("tb-account-card")?.nextElementSibling?.nextElementSibling;
-    if (paletteCard && paletteCard.parentNode === view) view.insertBefore(card, paletteCard);
-    else view.appendChild(card);
-
-    const btn = card.querySelector("#tb-recurring-add-btn");
-    if (btn) btn.onclick = () => safeCall(rrT("recurring.modal.new"), window.openRecurringRuleModal);
-    return card.querySelector("#tb-recurring-box");
+  function _rrEnsureSubscriptionsBox() {
+    return document.getElementById("subscriptions-root");
   }
 
   async function _rrCreateRule(payload) {
@@ -534,6 +496,8 @@
     const weekdayWrap = document.getElementById("rr-weekday-wrap");
     const monthdayWrap = document.getElementById("rr-monthday-wrap");
     const help = document.getElementById("rr-frequency-help");
+    const preview = document.getElementById("rr-schedule-preview");
+    const startDate = document.getElementById("rr-start-date");
     if (!ruleType || !interval || !weekdayWrap || !monthdayWrap || !help) return;
 
     const apply = () => {
@@ -552,10 +516,17 @@
       } else {
         help.textContent = "";
       }
+      if (preview) {
+        const first = _rrComputeFirstDueDate(type, startDate?.value || "", document.getElementById("rr-weekday")?.value, document.getElementById("rr-monthday")?.value, interval.value);
+        preview.innerHTML = `<strong>Première échéance calculée : ${escapeHTML(first || "—")}</strong><span>La date de début est une borne; le jour choisi détermine la première échéance.</span>`;
+      }
     };
 
     ruleType.addEventListener("change", apply);
     interval.addEventListener("input", apply);
+    startDate?.addEventListener("change", apply);
+    document.getElementById("rr-weekday")?.addEventListener("change", apply);
+    document.getElementById("rr-monthday")?.addEventListener("input", apply);
     apply();
   }
 
@@ -723,6 +694,7 @@
           <input id="rr-monthday" type="number" min="1" max="31" placeholder="1-31" value="${escapeHTML(defaults.monthday)}" />
         </div>
         <div class="field field--span-2"><div class="muted" id="rr-frequency-help" style="margin-top:-2px;"></div></div>
+        <div class="field field--span-2"><div class="tb-recurring-schedule-preview" id="rr-schedule-preview" role="status"></div></div>
         <div class="tb-modal-section"><div class="tb-modal-section-title">${escapeHTML(rrT("recurring.section.dates"))}</div></div>
         <div class="field field--span-3">
           <label>${escapeHTML(rrT("recurring.label.start"))}</label>
@@ -830,88 +802,65 @@
     }
   };
 
-  function _rrLsKey(travelId) {
-    return `tb_recurring_open_${String(travelId || state?.activeTravelId || '')}`;
-  }
-
-  function _rrGetOpenMap(travelId) {
-    try { return JSON.parse(localStorage.getItem(_rrLsKey(travelId)) || '{}') || {}; } catch (_) { return {}; }
-  }
-
-  function _rrSetOpenState(travelId, ruleId, isOpen) {
-    try {
-      const map = _rrGetOpenMap(travelId);
-      map[String(ruleId || '')] = !!isOpen;
-      localStorage.setItem(_rrLsKey(travelId), JSON.stringify(map));
-    } catch (_) {}
-  }
-
   window.renderRecurringRules = function renderRecurringRules() {
-    const host = _rrEnsureSettingsBox();
-    if (!host) return;
+    const host = _rrEnsureSubscriptionsBox();
+    const view = window.UI?.subscriptionView;
+    const rulesCore = window.Core?.subscriptionRules;
+    if (!host || typeof view?.renderSubscriptionsModule !== "function" || typeof rulesCore?.buildSubscriptionAnalysis !== "function") return;
     const tid = String(state?.activeTravelId || "");
-    const rows = (state?.recurringRules || [])
-      .filter((r) => String(r?.travelId || r?.travel_id || "") === tid)
-      .filter((r) => !r?.archived)
-      .slice()
-      .sort((a, b) => String(a?.nextDueAt || a?.next_due_at || "").localeCompare(String(b?.nextDueAt || b?.next_due_at || "")));
-
-    if (!rows.length) {
-      host.innerHTML = `
-        <div class="tb-recurring-stack tb-recurring-stack--lines">
-          <div class="tb-recurring-global-head" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 0 6px; flex-wrap:wrap;">
-            <div class="muted">${escapeHTML(rrT("recurring.empty"))}</div>
-            <button class="btn primary" id="tb-recurring-add-btn" type="button">${escapeHTML(rrT("recurring.action.new"))}</button>
-          </div>
-        </div>
-      `;
-      _rrBindAddButton(host);
-      return;
-    }
-    const listOpen = !!(window.__tbRecurringListOpenByTravel && window.__tbRecurringListOpenByTravel[tid]);
-    host.innerHTML = `
-      <div class="tb-recurring-stack tb-recurring-stack--lines">
-        <div class="tb-recurring-global-head" style="display:flex; align-items:stretch; justify-content:space-between; gap:12px; padding:0 0 6px;">
-          <button type="button" class="tb-recurring-global-toggle" data-rr-act="toggle-list" style="display:flex; align-items:center; justify-content:space-between; gap:12px; border:0; background:transparent; padding:0; cursor:pointer; flex:1 1 auto; width:100%; text-align:left;">
-            <span style="display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0;">
-              <span class="tb-settings-pill tb-settings-pill--positive">${escapeHTML(rrT("recurring.active_count", { count: rows.length }))}</span>
-              <span class="muted">${escapeHTML(rrT(listOpen ? "recurring.toggle_hint.close" : "recurring.toggle_hint.open"))}</span>
-            </span>
-            <span class="tb-recurring-arrow" aria-hidden="true">${listOpen ? '⌄' : '›'}</span>
-          </button>
-          <button class="btn primary" id="tb-recurring-add-btn">${escapeHTML(rrT("recurring.action.new"))}</button>
-        </div>
-        <div class="tb-recurring-lines-body" style="display:${listOpen ? '' : 'none'};">
-        ${rows.map((r) => {
-          const walletName = String((state?.wallets || []).find(w=>String(w.id||'')===String(r.walletId||r.wallet_id||''))?.name || '—');
-          const cat = String(r.category||'').trim();
-          const sub = String(r.subcategory||'').trim();
-          return `
-          <div class="tb-recurring-item" data-rr-card="${escapeHTML(r.id)}">
-            <div class="tb-recurring-toggle" style="cursor:default;">
-              <div class="tb-recurring-main">
-                <div class="tb-recurring-title">${escapeHTML(r.label || r.name || "—")}</div>
-                <div class="tb-recurring-subtitle">${escapeHTML(fmtMoney(Number(r.amount || 0), r.currency || ""))} · ${escapeHTML(_rrFreqLabel(r))}</div>
-              </div>
-              <div class="tb-recurring-meta">
-                <span class="tb-recurring-meta-chip">${escapeHTML(_rrFmtDate(r.nextDueAt || r.next_due_at))}</span>
-                <span class="tb-recurring-meta-chip">${escapeHTML(walletName)}</span>
-                ${cat ? `<span class="tb-recurring-meta-chip">${escapeHTML(cat)}${sub?` · ${escapeHTML(sub)}`:''}</span>` : ``}
-                ${r.outOfBudget || r.out_of_budget ? `<span class="tb-settings-pill tb-settings-pill--warn">${escapeHTML(rrT("recurring.budget.out"))}</span>` : ``}
-                <span class="tb-settings-pill ${_rrIsActive(r) ? 'tb-settings-pill--positive' : ''}">${escapeHTML(_rrStatus(r))}</span>
-              </div>
-            </div>
-            <div class="tb-recurring-actions">
-              <button class="btn" data-rr-act="edit" data-rr-id="${escapeHTML(r.id)}">${escapeHTML(rrT("recurring.action.edit"))}</button>
-              ${_rrIsActive(r) ? `<button class="btn btn--warn" data-rr-act="pause" data-rr-id="${escapeHTML(r.id)}">${escapeHTML(rrT("recurring.action.pause"))}</button>` : `<button class="btn btn--positive" data-rr-act="resume" data-rr-id="${escapeHTML(r.id)}">${escapeHTML(rrT("recurring.action.resume"))}</button>`}
-              <button class="btn danger" data-rr-act="delete" data-rr-id="${escapeHTML(r.id)}">${escapeHTML(rrT("recurring.action.delete"))}</button>
-            </div>
-          </div>`;
-        }).join("")}
-        </div>
-      </div>
-    `;
+    const travel = (state?.travels || []).find((row) => String(row?.id || "") === tid) || state?.period || {};
+    const startFallback = String(travel?.start || travel?.start_date || travel?.dateStart || "").slice(0, 10);
+    const endFallback = String(travel?.end || travel?.end_date || travel?.dateEnd || "").slice(0, 10);
+    window.__tbSubscriptionsFilters = window.__tbSubscriptionsFilters || {};
+    const filters = window.__tbSubscriptionsFilters;
+    filters.tab = ["overview", "occurrences", "rules"].includes(filters.tab) ? filters.tab : "overview";
+    filters.startDate = filters.startDate || startFallback;
+    filters.endDate = filters.endDate || endFallback;
+    filters.type = ["all", "expense", "income"].includes(filters.type) ? filters.type : "all";
+    const analysis = rulesCore.buildSubscriptionAnalysis({
+      rules: state?.recurringRules || [],
+      transactions: state?.transactions || [],
+      travelId: tid,
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      today: _tbISO(new Date()),
+      type: filters.type,
+    });
+    host.innerHTML = view.renderSubscriptionsModule({
+      analysis,
+      tab: filters.tab,
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      type: filters.type,
+      helpers: {
+        frequencyLabel: _rrFreqLabel,
+        walletName: (rule) => String((state?.wallets || []).find((wallet) => String(wallet.id || "") === String(rule.walletId || rule.wallet_id || ""))?.name || "—"),
+      },
+    });
     _rrBindAddButton(host);
+    host.querySelector("#tb-recurring-add-btn-hero")?.addEventListener("click", () => safeCall(rrT("recurring.modal.new"), window.openRecurringRuleModal));
+    host.querySelectorAll("[data-subscription-tab]").forEach((button) => button.addEventListener("click", () => {
+      filters.tab = String(button.dataset.subscriptionTab || "overview");
+      window.renderRecurringRules();
+    }));
+    host.querySelector("#subscriptions-start")?.addEventListener("change", (event) => {
+      filters.startDate = event.currentTarget.value;
+      window.renderRecurringRules();
+    });
+    host.querySelector("#subscriptions-end")?.addEventListener("change", (event) => {
+      filters.endDate = event.currentTarget.value;
+      window.renderRecurringRules();
+    });
+    host.querySelector("#subscriptions-type")?.addEventListener("change", (event) => {
+      filters.type = event.currentTarget.value;
+      window.renderRecurringRules();
+    });
+    host.querySelectorAll("[data-subscription-open-transaction]").forEach((button) => button.addEventListener("click", () => {
+      const txId = String(button.dataset.subscriptionOpenTransaction || "");
+      if (typeof window.showView === "function") window.showView("transactions");
+      if (typeof window.openTxEditModal === "function") window.openTxEditModal(txId);
+      else if (typeof openTxEditModal === "function") openTxEditModal(txId);
+    }));
     host.querySelectorAll("[data-rr-act]").forEach((btn) => {
       btn.onclick = (ev) => safeCall(rrT("recurring.title"), async () => {
         const el = ev.currentTarget;
@@ -919,12 +868,6 @@
         const act = String(el?.dataset?.rrAct || "").trim();
         if (!act) throw new Error("Action introuvable.");
 
-        if (act === "toggle-list") {
-          window.__tbRecurringListOpenByTravel = window.__tbRecurringListOpenByTravel || {};
-          window.__tbRecurringListOpenByTravel[tid] = !window.__tbRecurringListOpenByTravel[tid];
-          window.renderRecurringRules();
-          return;
-        }
         if (!id) throw new Error("Règle introuvable.");
         if (act === "edit") {
           const rule = (state?.recurringRules || []).find((r) => String(r?.id || '') === id);

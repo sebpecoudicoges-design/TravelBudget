@@ -170,6 +170,8 @@ En 10.5.347, l analyse Sport passe d une ligne par serie a un point par exercice
 
 En 10.5.348, Travail separe ses trois espaces et remplace le style runtime par `work.css`, desormais inclus dans la mesure du domaine. Work mesure 65.0 / 90 KiB. Le retrait du bloc CSS JavaScript compense une partie du nouveau rendu : initial 262.2 / 263 KiB, lazy 423.0 / 424 KiB, total 685.2 / 686 KiB et CSS Vite 43.3 / 44 KiB; aucun plafond n est releve.
 
+En 10.5.349, Abonnements devient un domaine lazy autonome de 54.7 / 56 KiB, dont deux chunks Vite purs pour les regles et la vue. Le boot reste sous son plafond a 262.1 / 263 KiB. Le rendu et les styles responsive ajoutes portent le lazy a 434.0 / 435 KiB, le total JS a 696.0 / 697 KiB et le CSS a 49.7 / 50 KiB; les plafonds lazy, total et CSS sont releves uniquement du poids mesure de ce nouveau module.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.
