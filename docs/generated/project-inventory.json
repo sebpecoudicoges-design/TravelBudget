@@ -1,8 +1,8 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "5981e4671cac9eb8e88474d50326fe573af61ee7",
-  "snapshotFingerprint": "8ad4a094e36a81601a071d6eddad2eec1e3211fc279f307dbe1048af57d88ea8",
-  "generatedAt": "2026-08-15T00:40:17.417Z",
+  "commit": "ed45a83c961779c450c6acda9e47be9981acc2db",
+  "snapshotFingerprint": "d628689fbd7ccd39bf561872a4a2c4eea52f98dc7ec27e9d285ef03d372c96d9",
+  "generatedAt": "2026-08-15T01:10:24.155Z",
   "package": {
     "name": "travelbudget",
     "version": "10.5.343"
@@ -541,7 +541,8 @@
     "supabase/migrations/20260811072637_process_dashboard_settings_auth_feedback_10_5_342.sql",
     "supabase/migrations/20260815002750_reconcile_recurring_rule_updates.sql",
     "supabase/migrations/20260815003430_process_recurring_rule_feedback_10_5_343.sql",
-    "supabase/migrations/20260815003657_restrict_recurring_reconcile_helpers.sql"
+    "supabase/migrations/20260815003657_restrict_recurring_reconcile_helpers.sql",
+    "supabase/migrations/20260815010923_close_stale_sport_module_review_10_5_343.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

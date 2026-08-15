@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `5981e4671cac9eb8e88474d50326fe573af61ee7`
-> Empreinte du snapshot : `8ad4a094e36a81601a071d6eddad2eec1e3211fc279f307dbe1048af57d88ea8`
-> Généré le : `2026-08-15T00:40:17.417Z`
+> Commit analysé : `ed45a83c961779c450c6acda9e47be9981acc2db`
+> Empreinte du snapshot : `d628689fbd7ccd39bf561872a4a2c4eea52f98dc7ec27e9d285ef03d372c96d9`
+> Généré le : `2026-08-15T01:10:24.155Z`
 
 # Inventaire du projet TravelBudget
 
@@ -18,7 +18,7 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 | Modules data | 8 |
 | Modules features | 44 |
 | Fichiers de tests | 122 |
-| Migrations Supabase | 130 |
+| Migrations Supabase | 131 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -593,6 +593,7 @@ Modules :
 - `supabase/migrations/20260815002750_reconcile_recurring_rule_updates.sql`
 - `supabase/migrations/20260815003430_process_recurring_rule_feedback_10_5_343.sql`
 - `supabase/migrations/20260815003657_restrict_recurring_reconcile_helpers.sql`
+- `supabase/migrations/20260815010923_close_stale_sport_module_review_10_5_343.sql`
 
 ## Android et budgets de modules
 
