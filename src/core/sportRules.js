@@ -1,3 +1,5 @@
+import { canonicalSportExerciseKey } from './sportLibraryRules.js';
+
 export const SPORT_REST_MET = 1.3;
 
 function num(value, fallback = 0) {
@@ -196,6 +198,7 @@ export function buildSportPersistenceRows(summary = {}, context = {}) {
   const items = plan.map((item, index) => ({
     user_id: userId,
     session_id: sessionId,
+    exercise_key: canonicalSportExerciseKey(item) || null,
     activity_key: item.activityKey || item.activity_key || primaryActivity,
     exercise_name: item.exerciseName || item.exercise_name || item.label || primaryActivity,
     equipment: item.equipment || 'mixed',

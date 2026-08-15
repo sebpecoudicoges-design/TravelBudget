@@ -1,7 +1,7 @@
 > Fichier généré automatiquement. Ne pas modifier manuellement.
-> Commit analysé : `f61fde6e7a09ab838f3ebc447b1f57bd4f5ee745`
-> Empreinte du snapshot : `239fafde1845adc8023e2e29b00e3a2b36ec8d5d1c807bc2c737c39e26e7c31d`
-> Généré le : `2026-08-15T02:01:03.624Z`
+> Commit analysé : `2164f2a8db591fb27f83715d291dd6c8d595d633`
+> Empreinte du snapshot : `49db21fe86814c206e18570839108ee34344ad8fd2d803487c8d6fac7c41cd0c`
+> Généré le : `2026-08-15T02:49:53.399Z`
 
 # Inventaire du projet TravelBudget
 
@@ -11,14 +11,14 @@ Cet inventaire décrit uniquement des éléments détectables dans le dépôt. I
 
 | Élément | Valeur |
 |---|---:|
-| Version | `10.5.345` |
+| Version | `10.5.346` |
 | Écrans déclarés | 16 |
 | Scripts legacy référencés | 56 |
 | Modules core | 26 |
 | Modules data | 8 |
 | Modules features | 44 |
 | Fichiers de tests | 122 |
-| Migrations Supabase | 133 |
+| Migrations Supabase | 134 |
 | Fonctions Edge | 12 |
 | Projet Android présent | Oui |
 
@@ -596,6 +596,7 @@ Modules :
 - `supabase/migrations/20260815010923_close_stale_sport_module_review_10_5_343.sql`
 - `supabase/migrations/20260815011706_nutrition_sections_and_hydration_time_10_5_344.sql`
 - `supabase/migrations/20260815014936_sport_sections_10_5_345.sql`
+- `supabase/migrations/20260815023941_sport_canonical_exercises_progression_10_5_346.sql`
 
 ## Android et budgets de modules
 

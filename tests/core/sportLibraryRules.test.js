@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeSportExerciseLibraries, normalizeSportExerciseRow } from '../../src/core/sportLibraryRules.js';
+import { canonicalSportExerciseKey, latestCompletedExerciseLoad, mergeSportExerciseLibraries, normalizeSportExerciseRow, sameSportExercise } from '../../src/core/sportLibraryRules.js';
 
 describe('sport library rules core', () => {
   it('normalizes SQL sport exercise rows for the legacy builder', () => {
@@ -74,5 +74,41 @@ describe('sport library rules core', () => {
 
     expect(merged).toHaveLength(1);
     expect(merged[0]).toMatchObject({ key: 'pushup', fr: 'Pompes', reps: 15, sets: 4, rest: 45, source: 'sql' });
+  });
+
+  it('unifies true aliases while preserving technical variants', () => {
+    expect(canonicalSportExerciseKey({ exerciseName: 'Squat arrière', equipment: 'barbell' })).toBe('barbell_back_squat');
+    expect(canonicalSportExerciseKey({ key: 'barbell_squat' })).toBe('barbell_back_squat');
+    expect(canonicalSportExerciseKey({ exerciseName: 'Barbell back squat', equipment: 'barbell' })).toBe('barbell_back_squat');
+    expect(canonicalSportExerciseKey({ exerciseName: 'Développé couché barre', equipment: 'barbell' })).toBe('barbell_bench_press');
+    expect(sameSportExercise({ key: 'barbell_bench' }, { key: 'barbell_bench_press' })).toBe(true);
+    expect(sameSportExercise({ key: 'barbell_front_squat' }, { key: 'barbell_back_squat' })).toBe(false);
+    expect(canonicalSportExerciseKey({ exerciseName: 'Squat', equipment: 'bodyweight' })).not.toBe('barbell_back_squat');
+  });
+
+  it('merges duplicate catalog aliases into one canonical exercise', () => {
+    const merged = mergeSportExerciseLibraries([
+      { key: 'barbell_squat', fr: 'Squat barre', equipment: 'barbell', mode: 'reps' },
+      { key: 'barbell_back_squat', fr: 'Squat arriere', equipment: 'barbell', mode: 'reps' },
+    ], [
+      { key: 'barbell_back_squat', name_fr: 'Squat arriere', equipment: 'barbell', mode: 'reps' },
+    ]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]).toMatchObject({ key: 'barbell_back_squat', fr: 'Squat arriere' });
+  });
+
+  it('takes the heaviest load from the latest canonical workout, not an older maximum', () => {
+    const items = [
+      { id: 'old', session_id: 's1', exercise_name: 'Squat arrière', equipment: 'barbell' },
+      { id: 'latest', session_id: 's2', exercise_name: 'Barbell back squat', equipment: 'barbell' },
+    ];
+    const sets = [
+      { item_id: 'old', weight_kg: 105, completed_at: '2026-07-29T08:00:00Z' },
+      { item_id: 'latest', weight_kg: 95, completed_at: '2026-08-10T08:00:00Z' },
+      { item_id: 'latest', weight_kg: 100, completed_at: '2026-08-10T08:02:00Z' },
+    ];
+    expect(latestCompletedExerciseLoad({ key: 'barbell_squat' }, items, sets)).toMatchObject({
+      exerciseKey: 'barbell_back_squat', sessionId: 's2', weightKg: 100,
+    });
   });
 });

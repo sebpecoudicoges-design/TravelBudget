@@ -108,6 +108,20 @@ describe('sport repository', () => {
     expect(client.calls.some((call) => call.table === 'sport_program_exercises')).toBe(false);
   });
 
+  it('raises a program load floor and stores its canonical exercise key', async () => {
+    const client = clientWith(({ table, operation }) => {
+      if (table === 'program_exercises' && operation === 'select') return { data: [{ id: 'row-1', default_weight_kg: 82.5 }], error: null };
+      return { data: [], error: null };
+    });
+    const repository = createSportRepository(client);
+    await expect(repository.raiseProgramExerciseLoad({
+      table: 'program_exercises', programExerciseId: 'row-1', exerciseKey: 'barbell_back_squat', weightKg: 102.5,
+    })).resolves.toBe(true);
+    expect(client.calls).toEqual(expect.arrayContaining([
+      expect.objectContaining({ table: 'program_exercises', method: 'update', value: expect.objectContaining({ exercise_key: 'barbell_back_squat', default_weight_kg: 102.5 }) }),
+    ]));
+  });
+
   it('loads exercise metric history for progression charts', async () => {
     const rows = [{ id: 'hist-1', exercise_id: 'barbell_bench_press', estimated_1rm_kg: 76 }];
     const client = clientWith(({ table }) => ({ data: table === 'metric_history' ? rows : [], error: null }));

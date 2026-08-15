@@ -1,11 +1,11 @@
 {
   "_generatedWarning": "Fichier généré automatiquement. Ne pas modifier manuellement.",
-  "commit": "f61fde6e7a09ab838f3ebc447b1f57bd4f5ee745",
-  "snapshotFingerprint": "239fafde1845adc8023e2e29b00e3a2b36ec8d5d1c807bc2c737c39e26e7c31d",
-  "generatedAt": "2026-08-15T02:01:03.624Z",
+  "commit": "2164f2a8db591fb27f83715d291dd6c8d595d633",
+  "snapshotFingerprint": "49db21fe86814c206e18570839108ee34344ad8fd2d803487c8d6fac7c41cd0c",
+  "generatedAt": "2026-08-15T02:49:53.399Z",
   "package": {
     "name": "travelbudget",
-    "version": "10.5.345"
+    "version": "10.5.346"
   },
   "npmScripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -544,7 +544,8 @@
     "supabase/migrations/20260815003657_restrict_recurring_reconcile_helpers.sql",
     "supabase/migrations/20260815010923_close_stale_sport_module_review_10_5_343.sql",
     "supabase/migrations/20260815011706_nutrition_sections_and_hydration_time_10_5_344.sql",
-    "supabase/migrations/20260815014936_sport_sections_10_5_345.sql"
+    "supabase/migrations/20260815014936_sport_sections_10_5_345.sql",
+    "supabase/migrations/20260815023941_sport_canonical_exercises_progression_10_5_346.sql"
   ],
   "edgeFunctions": [
     "admin-generate-invite-link",

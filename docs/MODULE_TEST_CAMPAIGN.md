@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.345`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.346`.
 
 ## Objectif
 
@@ -98,6 +98,8 @@ En `10.5.343`, le retest de la modale Regles recurrentes revele un defaut de rec
 En `10.5.344`, le chantier profond Alimentation organise le module en quatre espaces accessibles : **Aujourd hui**, **Repas**, **Hydratation et recuperation** et **Historique**. Les commandes existantes restent disponibles, le journal d eau montre chaque prise avec heure et quantite, et Sommeil/Alcool sont regroupes dans une lecture de recuperation. La revue globale Alimentation est traitee puis archivee; quatre retests cibles couvrent navigation, hydratation, recuperation et historique.
 
 En `10.5.345`, Sport quitte la page unique tres longue pour quatre espaces internes accessibles : **Seance**, **Programme**, **Profil et progression** et **Historique**. Les hooks existants restent inchanges; charger une favorite, lancer la seance planifiee ou refaire une seance ramene automatiquement vers Seance. Quatre retests cibles couvrent navigation, passage Programme vers Seance, profil/progression et historique.
+
+En `10.5.346`, Sport adopte une identite canonique par exercice : les synonymes squat arriere/barbell back squat et developpe couche/barbell bench press partagent catalogue, historique et progression, sans fusionner les variantes techniques. La derniere charge validee devient un plancher sans baisse implicite et une double progression reussie adapte automatiquement la variante de programme concernee. Les anciennes seances sont rattachees aux cles canoniques; le B1 de squat valide a 100 kg passe ainsi a 102,5 kg.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

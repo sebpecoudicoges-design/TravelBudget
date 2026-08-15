@@ -84,6 +84,17 @@ describe('Sport domain contract', () => {
     expect(legacy).toContain('window.Core?.sportLibraryRules');
   });
 
+  it('keeps one canonical identity and one non-regressive load path across Sport', () => {
+    for (const token of ['canonicalSportExerciseKey', 'sameSportExercise', 'latestCompletedExerciseLoad']) {
+      expect(libraryRules).toContain(`export function ${token}`);
+    }
+    expect(rules).toContain('exercise_key: canonicalSportExerciseKey(item) || null');
+    expect(repository).toContain('async raiseProgramExerciseLoad');
+    expect(legacy).toContain('latestCompletedExerciseLoad?.(item, CACHE.items, CACHE.sets)');
+    expect(legacy).toContain('sportRepository().raiseProgramExerciseLoad');
+    expect(legacy).not.toContain('exercise_key: null');
+  });
+
   it('centralizes workout calculation and persistence row building in core rules', () => {
     for (const token of [
       'kcalFromMet',

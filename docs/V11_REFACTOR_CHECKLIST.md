@@ -47,7 +47,8 @@ Objectif : rendre le projet plus lisible, plus testable et plus rapide sans reec
 - [x] Stabiliser en `10.5.342` Dashboard, Settings et authentification : scope KPI partage avec la courbe, periodes explicites, ecouteurs de modale apres montage et pipeline `SIGNED_IN` unique sans refresh concurrent.
 - [x] Reconciler en `10.5.343` les regles recurrentes par RPC atomique : conserver les echeances confirmees ou detachees, supprimer les projections obsoletes et realigner la premiere occurrence sur le jour choisi.
 - [x] Reprendre Alimentation en profondeur en `10.5.344` : quatre espaces internes accessibles, journal d hydratation horodate, recuperation Sommeil/Alcool, historique detaille et suppression du tableau Semaine active devenu mort.
-- [x] Reprendre Sport en profondeur en `10.5.345` : quatre espaces internes accessibles, Programme extrait de la construction de seance, navigation automatique vers Seance apres chargement et retrait du chemin `includeProgram` devenu mort.
+  - [x] Reprendre Sport en profondeur en `10.5.345` : quatre espaces internes accessibles, Programme extrait de la construction de seance, navigation automatique vers Seance apres chargement et retrait du chemin `includeProgram` devenu mort.
+  - [x] Unifier Sport en `10.5.346` autour de cles canoniques partagees par catalogue, historique et programme; reprendre la derniere charge sans regression implicite et propager la double progression a la variante programme source.
 
 ## Chantier 1 - Budget journalier et transactions
 

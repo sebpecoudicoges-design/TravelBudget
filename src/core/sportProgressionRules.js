@@ -1,3 +1,5 @@
+import { canonicalSportExerciseKey } from './sportLibraryRules.js';
+
 function num(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -56,12 +58,14 @@ export function analyzeExerciseLoadProgression(input = {}) {
   const trainingMaxKg = (smoothedE1rmKg || latestE1rmKg) * tmPercentage;
   const allAtReference = successful.length >= plannedSets && successful.every((set) => set.weightKg === referenceWeightKg);
   const allAtTop = allAtReference && atReference.slice(0, plannedSets).every((set) => set.reps >= repMax);
-  let recommendedWeightKg = referenceWeightKg || num(input.currentProgramWeightKg ?? input.current_program_weight_kg);
+  const currentProgramWeightKg = num(input.currentProgramWeightKg ?? input.current_program_weight_kg);
+  const lastCompletedWeightKg = Math.max(0, num(input.lastCompletedWeightKg ?? input.last_completed_weight_kg));
+  let recommendedWeightKg = Math.max(referenceWeightKg, currentProgramWeightKg, lastCompletedWeightKg);
   let reasonCode = SPORT_RECOMMENDATION_CODES.NO_VALID_WORK_SET;
   let reasonText = 'Aucune serie de travail valide : conserver la charge actuelle.';
   if (referenceWeightKg) {
     if (allAtTop) {
-      recommendedWeightKg += incrementKg; reasonCode = SPORT_RECOMMENDATION_CODES.TOP_RANGE_ALL_SETS;
+      recommendedWeightKg = Math.max(recommendedWeightKg, referenceWeightKg + incrementKg); reasonCode = SPORT_RECOMMENDATION_CODES.TOP_RANGE_ALL_SETS;
       reasonText = `Haut de plage atteint sur ${plannedSets} serie(s) a ${referenceWeightKg} kg : augmenter de ${incrementKg} kg.`;
     } else if (atReference.length === 1 && atReference[0].reps >= repMax) {
       reasonCode = SPORT_RECOMMENDATION_CODES.TOP_RANGE_SINGLE_HEAVY_SET;
@@ -76,10 +80,13 @@ export function analyzeExerciseLoadProgression(input = {}) {
       reasonText = `${heaviestAttemptedWeightKg} kg essaye, mais sous le minimum de ${repMin} repetitions ; conserver ${referenceWeightKg} kg.`;
     }
   }
+  if (lastCompletedWeightKg > referenceWeightKg && recommendedWeightKg === lastCompletedWeightKg) {
+    reasonText += ` La derniere charge validee de ${lastCompletedWeightKg} kg reste le plancher, sans baisse automatique.`;
+  }
   const aggressive = trainingMaxKg > 0 && recommendedWeightKg > trainingMaxKg;
   if (exceptional || aggressive) { reasonCode = SPORT_RECOMMENDATION_CODES.EXCEPTIONAL_PERFORMANCE_CONFIRM; reasonText += ' Augmentation inhabituelle a confirmer.'; }
   return {
-    currentProgramWeightKg: num(input.currentProgramWeightKg ?? input.current_program_weight_kg), latestWeightKg: best?.weightKg || 0,
+    currentProgramWeightKg, lastCompletedWeightKg, latestWeightKg: best?.weightKg || 0,
     latestReps: best?.reps || 0, latestE1rmKg, bestRecentWeightKg: best?.weightKg || 0, bestRecentReps: best?.reps || 0,
     bestRecentE1rmKg: Math.max(latestE1rmKg, ...prior.map((value) => num(value))),
     smoothedE1rmKg, trainingMaxPercentage: tmPercentage, trainingMaxKg, heaviestAttemptedWeightKg, referenceWeightKg,
@@ -94,7 +101,7 @@ export function analyzeWorkoutLoadProgression(summary = {}, options = {}) {
   const doneSets = Array.isArray(summary.doneSets) ? summary.doneSets : [];
   return plan.map((item, itemIndex) => {
     if (String(item?.mode || 'reps') !== 'reps' || num(item?.weightKg ?? item?.default_weight_kg) <= 0) return null;
-    const exerciseKey = item?.exerciseKey || item?.exercise_key || '';
+    const exerciseKey = canonicalSportExerciseKey(item);
     const context = options?.byExerciseKey?.[exerciseKey] || {};
     return { itemIndex, exerciseKey, programExerciseId: item?.programExerciseId || item?.program_exercise_id || null,
       exerciseName: item?.exerciseName || item?.exercise_name || '', ...analyzeExerciseLoadProgression({
@@ -103,7 +110,7 @@ export function analyzeWorkoutLoadProgression(summary = {}, options = {}) {
         incrementKg: item?.incrementKg ?? item?.increment_kg ?? context.incrementKg ?? options.defaultIncrementKg,
         trainingMaxPercentage: item?.trainingMaxPercentage ?? item?.training_max_percentage ?? context.trainingMaxPercentage,
         currentProgramWeightKg: item?.weightKg ?? item?.default_weight_kg, recentSessionE1rms: context.recentSessionE1rms,
-        previousSmoothedE1rmKg: context.smoothedE1rmKg,
+        previousSmoothedE1rmKg: context.smoothedE1rmKg, lastCompletedWeightKg: context.lastCompletedWeightKg,
       }) };
   }).filter(Boolean);
 }
@@ -117,7 +124,7 @@ export function buildLoadProgressionPersistenceRows(analyses = [], context = {})
       best_recent_e1rm_kg:r.bestRecentE1rmKg||null, best_all_time_e1rm_kg:Math.max(num(r.bestAllTimeE1rmKg),num(r.latestE1rmKg))||null,
       smoothed_e1rm_kg:r.smoothedE1rmKg||null, training_max_percentage:r.trainingMaxPercentage, training_max_kg:r.trainingMaxKg||null,
       reference_weight_kg:r.referenceWeightKg||null, recommended_weight_kg:r.recommendedWeightKg||null, recommended_reps_min:r.recommendedRepsMin,
-      recommended_reps_max:r.recommendedRepsMax, recommendation_reason:r.reasonText, recommendation_status:'pending', calculated_at:at, updated_at:at })),
+      recommended_reps_max:r.recommendedRepsMax, recommendation_reason:r.reasonText, recommendation_status:r.autoApplied?'applied':'pending', calculated_at:at, updated_at:at })),
     history: valid.map((r) => ({ user_id:userId, exercise_id:r.exerciseKey, session_id:sessionId, weight_kg:r.latestWeightKg||null, reps:r.latestReps||null,
       estimated_1rm_kg:r.latestE1rmKg||null, smoothed_1rm_kg:r.smoothedE1rmKg||null, training_max_kg:r.trainingMaxKg||null,
       reference_weight_kg:r.referenceWeightKg||null, recommended_weight_kg:r.recommendedWeightKg||null, calculation_method:'epley', created_at:at })),
@@ -125,6 +132,7 @@ export function buildLoadProgressionPersistenceRows(analyses = [], context = {})
       source_session_id:sessionId, current_program_weight_kg:r.currentProgramWeightKg||null, heaviest_successful_weight_kg:r.referenceWeightKg||null,
       heaviest_attempted_weight_kg:r.heaviestAttemptedWeightKg||null, sets_at_heaviest_weight:r.setsAtReferenceWeight||0,
       recommended_weight_kg:r.recommendedWeightKg, increment_kg:r.incrementKg, reason_code:r.reasonCode, reason_text:r.reasonText,
-      confidence:r.confidence, status:'pending', created_at:at, updated_at:at })),
+      confidence:r.confidence, status:r.autoApplied?'applied':'pending', accepted_at:r.autoApplied?at:null, applied_at:r.autoApplied?at:null,
+      application_scope:r.autoApplied?'next_session':null, modification_source:r.autoApplied?'automatic_non_regression':null, created_at:at, updated_at:at })),
   };
 }

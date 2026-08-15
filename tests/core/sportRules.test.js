@@ -36,6 +36,23 @@ describe('sport rules core', () => {
     expect(partial).toMatchObject({ recommendedWeightKg: 90, reasonCode: 'KEEP_WEIGHT_BUILD_REPS' });
   });
 
+  it('never recommends less than the last completed canonical load', () => {
+    const result = analyzeExerciseLoadProgression({
+      sets: [], repMin: 4, repMax: 6, plannedSets: 3,
+      currentProgramWeightKg: 82.5, lastCompletedWeightKg: 100, incrementKg: 2.5,
+    });
+    expect(result).toMatchObject({ recommendedWeightKg: 100, lastCompletedWeightKg: 100 });
+  });
+
+  it('turns the validated 3 x 6 squat at 100 kg into 102.5 kg instead of the stale 82.5 kg program load', () => {
+    const result = analyzeExerciseLoadProgression({
+      sets: [{ weightKg: 100, reps: 6 }, { weightKg: 100, reps: 6 }, { weightKg: 100, reps: 6 }],
+      repMin: 4, repMax: 6, plannedSets: 3, incrementKg: 2.5,
+      currentProgramWeightKg: 82.5, lastCompletedWeightKg: 100,
+    });
+    expect(result).toMatchObject({ recommendedWeightKg: 102.5, reasonCode: 'TOP_RANGE_ALL_SETS' });
+  });
+
   it('does not promote a heaviest attempt below the minimum repetitions', () => {
     const result = analyzeExerciseLoadProgression({
       sets: [{ weightKg: 80, reps: 10 }, { weightKg: 85, reps: 8 }, { weightKg: 90, reps: 4 }],
@@ -209,7 +226,7 @@ describe('sport rules core', () => {
 
     expect(deferredRows).toEqual(rows);
     expect(rows.session).toMatchObject({ user_id: 'user-1', activity_type: 'strength', duration_seconds: 600, estimated_kcal: 120 });
-    expect(rows.items[0]).toMatchObject({ session_id: 'session-1', exercise_name: 'Bench', planned_sets: 1 });
+    expect(rows.items[0]).toMatchObject({ session_id: 'session-1', exercise_key: 'barbell_bench_press', exercise_name: 'Bench', planned_sets: 1 });
     expect(savedSets[0]).toMatchObject({ item_id: 'item-1', set_index: 1, reps: 10, weight_kg: 50 });
     expect(savedSets[0]).not.toHaveProperty('itemIndex');
   });

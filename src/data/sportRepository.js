@@ -24,7 +24,7 @@ export function createSportRepository(getClient) {
 
       const items = unwrap(await client
         .from(tables.items)
-        .select('id,user_id,session_id,activity_key,exercise_name,equipment,mode,target_reps,target_seconds,distance_m,planned_sets,rest_seconds,sort_order,met_value,notes')
+        .select('id,user_id,session_id,exercise_key,activity_key,exercise_name,equipment,mode,target_reps,target_seconds,distance_m,planned_sets,rest_seconds,sort_order,met_value,notes')
         .in('session_id', sessionIds)
         .order('sort_order', { ascending: true }));
       const itemIds = items.map((row) => row.id).filter(Boolean);
@@ -107,6 +107,22 @@ export function createSportRepository(getClient) {
         .order('created_at', { ascending: false })
         .limit(historyLimit));
       return { metrics, history };
+    },
+
+    async raiseProgramExerciseLoad({ table, programExerciseId, exerciseKey, weightKg }) {
+      const client = requireClient(getClient);
+      const nextWeight = Number(weightKg);
+      if (!programExerciseId || !Number.isFinite(nextWeight) || nextWeight <= 0) return false;
+      const rows = unwrap(await client.from(table)
+        .select('id,default_weight_kg')
+        .eq('id', programExerciseId)
+        .limit(1));
+      const currentWeight = Number(rows[0]?.default_weight_kg || 0);
+      const canonicalKey = String(exerciseKey || '').trim() || null;
+      const patch = { exercise_key: canonicalKey, updated_at: new Date().toISOString() };
+      if (nextWeight > currentWeight) patch.default_weight_kg = nextWeight;
+      unwrap(await client.from(table).update(patch).eq('id', programExerciseId));
+      return nextWeight > currentWeight;
     },
 
     async saveProgression({ tables, rows }) {

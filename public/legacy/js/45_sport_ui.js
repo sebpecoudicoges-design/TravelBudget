@@ -490,7 +490,8 @@
     return ["bodyweight", "dumbbell", "barbell", "plate", "kettlebell", "machine"].includes(equipment);
   }
   function exerciseLoadKey(item) {
-    return String(item?.exerciseName || item?.key || item?.activityKey || "exercise")
+    const canonical = sportLibraryRules()?.canonicalSportExerciseKey?.(item);
+    return String(canonical || item?.exerciseName || item?.key || item?.activityKey || "exercise")
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -506,8 +507,15 @@
   }
   function lastLoadForExercise(item, fallback) {
     if (!supportsExternalLoad(item)) return 0;
-    const value = Number(loadHistoryMap()[exerciseLoadKey(item)]);
-    return Number.isFinite(value) && value >= 0 ? value : Math.max(0, n(fallback, 0));
+    const rules = sportLibraryRules();
+    const history = rules?.latestCompletedExerciseLoad?.(item, CACHE.items, CACHE.sets);
+    const map = loadHistoryMap();
+    const canonicalKey = exerciseLoadKey(item);
+    const localValues = Object.entries(map).filter(([key]) => {
+      const normalized = rules?.canonicalSportExerciseKey?.({ exerciseName: key, equipment: item?.equipment });
+      return key === canonicalKey || (normalized && normalized === canonicalKey);
+    }).map(([, value]) => Number(value)).filter(value => Number.isFinite(value) && value >= 0);
+    return Math.max(0, n(fallback, 0), n(history?.weightKg, 0), ...localValues);
   }
   function rememberLoadForExercise(item, loadKg) {
     if (!supportsExternalLoad(item)) return;
@@ -868,14 +876,21 @@
     const a = catalogItem(activityKey || "strength");
     const mode = overrides?.mode || a.mode;
     const intensity = overrides?.intensity || "moderate";
+    const exerciseName = overrides?.exerciseName || (lang() === "en" ? a.en : a.fr);
+    const equipment = overrides?.equipment || a.equipment;
+    const exerciseKey = sportLibraryRules()?.canonicalSportExerciseKey?.({
+      exerciseKey: overrides?.exerciseKey || overrides?.exercise_key || "",
+      exerciseName,
+      equipment,
+    }) || "";
     return {
       tmpId: "tmp_" + Date.now() + "_" + Math.random().toString(16).slice(2),
       _sessionItemId: overrides?._sessionItemId || null,
-      exerciseKey: overrides?.exerciseKey || overrides?.exercise_key || "",
+      exerciseKey,
       programExerciseId: overrides?.programExerciseId || overrides?.program_exercise_id || null,
       activityKey: a.key,
-      exerciseName: overrides?.exerciseName || (lang() === "en" ? a.en : a.fr),
-      equipment: overrides?.equipment || a.equipment,
+      exerciseName,
+      equipment,
       mode,
       targetReps: mode === "reps" ? n(overrides?.targetReps, 10) : 0,
       repMin: mode === "reps" ? n(overrides?.repMin ?? overrides?.repsMin ?? overrides?.targetRepsMin, overrides?.targetReps || 0) : 0,
@@ -951,6 +966,7 @@
   function libraryToPlanItem(ex) {
     const load = programLoadForExercise(exerciseLabel(ex));
     return makePlanItem(ex.activityKey, {
+      exerciseKey: ex.key,
       exerciseName: exerciseLabel(ex),
       equipment: ex.equipment,
       mode: ex.mode,
@@ -1416,7 +1432,7 @@
     const timeMax = mode === "time" ? Math.max(timeMin || 1, Math.round(n(item?.timeMax, seconds || timeMin || 45))) : null;
     return {
       session_id: sessionId,
-      exercise_key: null,
+      exercise_key: sportLibraryRules()?.canonicalSportExerciseKey?.(item) || null,
       exercise_name: sessionExerciseName(item),
       activity_key: item?.activityKey || (mode === "time" ? "plank_core" : "strength"),
       equipment: item?.equipment || "mixed",
@@ -3219,6 +3235,7 @@
     }
     return sessionItems.map(item => makePlanItem(item.activity_key || "strength", {
       _sessionItemId: item.id || null,
+      exerciseKey: item.exercise_key || "",
       exerciseName: item.exercise_name || labelActivity(item.activity_key || "strength"),
       equipment: item.equipment || catalogItem(item.activity_key || "strength").equipment,
       mode: item.mode || "time",
@@ -3959,7 +3976,8 @@
   async function syncWorkoutLoadProgression(summary, sessionId, userId) {
     const rules = await window.Core?.loadSportProgressionRules?.();
     if (!rules?.analyzeWorkoutLoadProgression || !rules?.buildLoadProgressionPersistenceRows) return [];
-    const exerciseIds = [...new Set((summary?.plan || []).map(item => item?.exerciseKey).filter(Boolean))];
+    const libraryRules = sportLibraryRules();
+    const exerciseIds = [...new Set((summary?.plan || []).map(item => libraryRules?.canonicalSportExerciseKey?.(item)).filter(Boolean))];
     if (!exerciseIds.length) return [];
     const tables = {
       metrics: table("sport_exercise_metrics"),
@@ -3988,6 +4006,7 @@
         bestRecentIsCurrent: Date.now() - new Date(metric.calculated_at || 0).getTime() <= 90 * 86400000,
         trainingMaxPercentage: n(metric.training_max_percentage, 0) || 0.95,
         recentSessionE1rms: historyByExercise.get(String(key)) || [],
+        lastCompletedWeightKg: n(libraryRules?.latestCompletedExerciseLoad?.({ exerciseKey: key }, CACHE.items, CACHE.sets)?.weightKg, 0),
       };
     });
     const analyses = rules.analyzeWorkoutLoadProgression(summary, { byExerciseKey });
@@ -4000,6 +4019,16 @@
         row.bestRecentE1rmKg = previous.bestRecentE1rmKg;
       }
     });
+    const applied = await Promise.all(analyses.filter(row => row.programExerciseId && row.recommendedWeightKg > 0).map(async row => ({
+      row,
+      changed: await sportRepository().raiseProgramExerciseLoad({
+        table: table("sport_program_exercises"),
+        programExerciseId: row.programExerciseId,
+        exerciseKey: row.exerciseKey,
+        weightKg: row.recommendedWeightKg,
+      }),
+    })));
+    applied.forEach(({ row, changed }) => { row.autoApplied = changed; });
     const rows = rules.buildLoadProgressionPersistenceRows(analyses, { userId, sessionId });
     await sportRepository().saveProgression({ tables, rows });
     CACHE.loadRecommendations = await sportRepository().loadRecommendations({ table: tables.recommendations, userId, status: "pending" });

@@ -164,6 +164,8 @@ En 10.5.344, Alimentation est reorganisee en quatre espaces accessibles, respons
 
 En 10.5.345, Sport separe Seance, Programme, Profil et progression, et Historique dans le shell modulaire charge a la demande. Sport mesure 445.4 / 450 KiB et l initial reste a 257.9 / 260 KiB. Le lazy atteint 420.6 KiB et le total JS 678.5 KiB ; leurs plafonds passent aux paliers entiers de 421 et 679 KiB, sans relever le CSS ni le gzip principal.
 
+En 10.5.346, l identite canonique, la reprise de charge et l adaptation du programme restent dans le domaine Sport : 448.7 / 450 KiB. Les budgets de distribution restent inchanges : initial 257.9 / 260 KiB, lazy 420.6 / 421 KiB, total JS 678.5 / 679 KiB et CSS 43.3 / 44 KiB.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.
