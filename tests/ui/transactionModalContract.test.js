@@ -51,4 +51,11 @@ describe('transaction shared modal migration', () => {
     expect(source).toContain('if (recurringRuleChanged)');
     expect(source).not.toContain('select.disabled = generated');
   });
+
+  it('lists every travel subscription and warns instead of hiding different flows or currencies', () => {
+    expect(source).toContain('subscriptionRulesForTransaction');
+    expect(source).toContain('transactions.subscription.mismatch_confirm');
+    expect(source).toContain('tous les abonnements actifs du voyage sont proposés');
+    expect(source).not.toContain('if (!trackingOnly && type');
+  });
 });

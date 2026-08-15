@@ -46,6 +46,9 @@ describe('transactions view extraction contract', () => {
     expect(legacy).toContain('applyBulkTxSubscription');
     expect(legacy).toContain('link_transactions_to_recurring_rule');
     expect(legacy).toContain('generated_confirm');
+    expect(legacy).toContain('_txBulkSubscriptions');
+    expect(legacy).toContain('transactions.bulk.subscription.mismatch_confirm');
+    expect(legacy).not.toContain('_txBulkCompatibleSubscriptions');
     expect(legacy).not.toContain('generated_blocked');
   });
 });

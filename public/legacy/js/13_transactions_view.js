@@ -58,23 +58,22 @@ function _txBulkSelectedCommonCategory() {
   return categories.length === 1 ? categories[0] : '';
 }
 
-function _txBulkCompatibleSubscriptions() {
+function _txBulkSubscriptions() {
   const rows = _txBulkSelectedRows();
   const tid = String(state?.activeTravelId || '');
-  return (Array.isArray(state?.recurringRules) ? state.recurringRules : []).filter((rule) => {
-    if (rule?.archived || String(rule?.travelId || rule?.travel_id || '') !== tid) return false;
-    const trackingOnly = !!(rule?.trackingOnly ?? rule?.tracking_only);
-    if (trackingOnly || !rows.length) return true;
-    return rows.every((tx) => String(tx?.type || '').toLowerCase() === String(rule?.type || '').toLowerCase()
-      && String(tx?.currency || '').toUpperCase() === String(rule?.currency || '').toUpperCase());
-  });
+  const listRules = window.Core?.subscriptionRules?.subscriptionRulesForTransaction;
+  if (typeof listRules === 'function') return listRules(state?.recurringRules || [], rows[0] || {}, tid);
+  return (Array.isArray(state?.recurringRules) ? state.recurringRules : [])
+    .filter((rule) => !rule?.archived && (!tid || String(rule?.travelId || rule?.travel_id || '') === tid));
 }
 
 function _txBulkSubscriptionOptionsHtml() {
   const options = [`<option value="">${_txT('transactions.bulk.subscription.choose')}</option>`, `<option value="__unlink__">${_txT('transactions.bulk.subscription.unlink')}</option>`];
-  _txBulkCompatibleSubscriptions().forEach((rule) => {
+  _txBulkSubscriptions().forEach((rule) => {
     const mode = (rule?.trackingOnly ?? rule?.tracking_only) ? _txT('transactions.bulk.subscription.tracking') : _txT('transactions.bulk.subscription.automatic');
-    options.push(`<option value="${escapeHTML(rule.id)}">${escapeHTML(rule.label || rule.name || 'Abonnement')} — ${escapeHTML(mode)}</option>`);
+    const flow = String(rule?.type || '').toLowerCase() === 'income' ? 'Entrée' : 'Sortie';
+    const currency = String(rule?.currency || '').toUpperCase();
+    options.push(`<option value="${escapeHTML(rule.id)}">${escapeHTML(rule.label || rule.name || 'Abonnement')} — ${escapeHTML(`${flow} · ${currency || mode}`)}</option>`);
   });
   return options.join('');
 }
@@ -198,6 +197,12 @@ async function applyBulkTxSubscription() {
     const raw = String(document.getElementById('tx-bulk-subscription')?.value || '');
     if (!raw) return _txBulkSetMessage(_txT('transactions.bulk.subscription.choose_error'));
     const ruleId = raw === '__unlink__' ? null : raw;
+    const targetRule = ruleId ? (state?.recurringRules || []).find((rule) => String(rule?.id || '') === ruleId) : null;
+    const mismatchCount = targetRule ? selectedRows.filter((tx) => (
+      String(tx?.type || '').toLowerCase() !== String(targetRule?.type || '').toLowerCase()
+      || String(tx?.currency || '').toUpperCase() !== String(targetRule?.currency || '').toUpperCase()
+    )).length : 0;
+    if (mismatchCount && !confirm(_txT('transactions.bulk.subscription.mismatch_confirm', { count: mismatchCount }))) return;
     if (generatedRows.length && !confirm(_txT('transactions.bulk.subscription.generated_confirm', { count: generatedRows.length }))) return;
     if (typeof window.tbShouldUseOfflineMode === 'function' && await window.tbShouldUseOfflineMode('tx:bulk_subscription')) {
       return _txBulkSetMessage(_txT('transactions.bulk.subscription.online_required'));

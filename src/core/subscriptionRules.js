@@ -196,16 +196,19 @@ export function buildSubscriptionAnalysis({ rules = [], transactions = [], trave
   const plannedByFlowCurrency = {};
   const actualByFlowCurrency = {};
   for (const row of occurrences) {
-    const flow = text(row.rule?.type || row.type).toLowerCase() === 'income' ? 'income' : 'expense';
-    const currency = text(row.rule?.currency || row.currency).toUpperCase() || '—';
-    const flowCurrency = `${flow}:${currency}`;
     if (row.generated && row.status !== 'skipped') {
       addTotal(plannedByCurrency, row.rule?.currency || row.currency, row.rule?.amount ?? row.amount);
-      plannedByFlowCurrency[flowCurrency] = number(plannedByFlowCurrency[flowCurrency]) + number(row.rule?.amount ?? row.amount);
+      const plannedFlow = text(row.rule?.type || row.type).toLowerCase() === 'income' ? 'income' : 'expense';
+      const plannedCurrency = text(row.rule?.currency || row.currency).toUpperCase() || '—';
+      const plannedKey = `${plannedFlow}:${plannedCurrency}`;
+      plannedByFlowCurrency[plannedKey] = number(plannedByFlowCurrency[plannedKey]) + number(row.rule?.amount ?? row.amount);
     }
     if (row.paid && row.status !== 'skipped') {
       addTotal(actualByCurrency, row.currency || row.rule?.currency, row.amount);
-      actualByFlowCurrency[flowCurrency] = number(actualByFlowCurrency[flowCurrency]) + number(row.amount);
+      const actualFlow = text(row.type || row.rule?.type).toLowerCase() === 'income' ? 'income' : 'expense';
+      const actualCurrency = text(row.currency || row.rule?.currency).toUpperCase() || '—';
+      const actualKey = `${actualFlow}:${actualCurrency}`;
+      actualByFlowCurrency[actualKey] = number(actualByFlowCurrency[actualKey]) + number(row.amount);
     }
   }
   const currencies = [...new Set([...Object.keys(plannedByCurrency), ...Object.keys(actualByCurrency)])].sort();
@@ -248,13 +251,9 @@ export function buildSubscriptionAnalysis({ rules = [], transactions = [], trave
 
 export function subscriptionRulesForTransaction(rules = [], transaction = {}, travelId = '') {
   const wantedTravel = text(travelId || transaction?.travelId || transaction?.travel_id);
-  const type = text(transaction?.type).toLowerCase();
-  const currency = text(transaction?.currency).toUpperCase();
   return rules.filter((rule) => {
     if (rule?.archived) return false;
     if (wantedTravel && text(rule?.travelId || rule?.travel_id) !== wantedTravel) return false;
-    if (!isTrackingOnlySubscription(rule) && type && text(rule?.type).toLowerCase() !== type) return false;
-    if (!isTrackingOnlySubscription(rule) && currency && text(rule?.currency).toUpperCase() !== currency) return false;
     return true;
   });
 }

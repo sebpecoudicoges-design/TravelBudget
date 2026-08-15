@@ -107,15 +107,16 @@ function fillModalRecurringSelect(selectedValue, currentTx) {
   const wallet = (state?.wallets || []).find((row) => String(row?.id || "") === walletId);
   const currency = String(wallet?.currency || currentTx?.currency || "").trim().toUpperCase();
   const tid = String(state?.activeTravelId || currentTx?.travelId || currentTx?.travel_id || "").trim();
-  const rows = (state?.recurringRules || []).filter((rule) => {
-    if (rule?.archived) return false;
-    if (tid && String(rule?.travelId || rule?.travel_id || "") !== tid) return false;
+  const listRules = window.Core?.subscriptionRules?.subscriptionRulesForTransaction;
+  const rows = typeof listRules === "function"
+    ? listRules(state?.recurringRules || [], { ...currentTx, type, currency, travelId: tid }, tid)
+    : (state?.recurringRules || []).filter((rule) => !rule?.archived && (!tid || String(rule?.travelId || rule?.travel_id || "") === tid));
+  select.innerHTML = `<option value="">Aucun abonnement</option>${rows.map((rule) => {
     const trackingOnly = !!(rule?.trackingOnly ?? rule?.tracking_only);
-    if (!trackingOnly && type && String(rule?.type || "") !== type) return false;
-    if (!trackingOnly && currency && String(rule?.currency || "").toUpperCase() !== currency) return false;
-    return true;
-  });
-  select.innerHTML = `<option value="">Aucun abonnement</option>${rows.map((rule) => `<option value="${escapeHTML(rule.id)}">${escapeHTML(rule.label || rule.name || "Abonnement")} — ${(rule?.trackingOnly ?? rule?.tracking_only) ? "suivi manuel" : escapeHTML(fmtMoney(Number(rule.amount || 0), rule.currency || currency))}</option>`).join("")}`;
+    const flow = String(rule?.type || "expense").toLowerCase() === "income" ? "Entrée" : "Sortie";
+    const detail = trackingOnly ? `${flow} · suivi manuel` : `${flow} · ${fmtMoney(Number(rule.amount || 0), rule.currency || currency)}`;
+    return `<option value="${escapeHTML(rule.id)}">${escapeHTML(rule.label || rule.name || "Abonnement")} — ${escapeHTML(detail)}</option>`;
+  }).join("")}`;
   if (selected && !rows.some((rule) => String(rule.id) === selected)) {
     const rule = (state?.recurringRules || []).find((row) => String(row?.id || "") === selected);
     select.insertAdjacentHTML("beforeend", `<option value="${escapeHTML(selected)}">${escapeHTML(rule?.label || "Règle liée")}</option>`);
@@ -123,7 +124,12 @@ function fillModalRecurringSelect(selectedValue, currentTx) {
   select.value = selected;
   const generated = !!(currentTx?.generatedByRule || currentTx?.generated_by_rule);
   select.disabled = false;
-  if (help) help.textContent = generated ? "Lien automatique actuel. Tu peux le changer : une confirmation détachera cette échéance de sa règle d’origine." : "Optionnel : rattache cette transaction manuelle à une règle existante.";
+  const chosen = rows.find((rule) => String(rule?.id || "") === selected);
+  const differs = chosen && (String(chosen?.type || "").toLowerCase() !== type.toLowerCase()
+    || String(chosen?.currency || "").toUpperCase() !== currency);
+  if (help) help.textContent = differs
+    ? "Cet abonnement utilise un flux ou une devise différente. Il reste sélectionnable; une confirmation protégera ce choix."
+    : (generated ? "Lien automatique actuel. Tu peux le changer : une confirmation détachera cette échéance de sa règle d’origine." : "Optionnel : tous les abonnements actifs du voyage sont proposés.");
 }
 
 function wireRecurringRuleLogic(currentTx) {
@@ -131,6 +137,7 @@ function wireRecurringRuleLogic(currentTx) {
   const refresh = () => fillModalRecurringSelect(document.getElementById("m-recurring-rule")?.value || selected, currentTx);
   document.getElementById("m-type")?.addEventListener("change", refresh);
   document.getElementById("m-wallet")?.addEventListener("change", refresh);
+  document.getElementById("m-recurring-rule")?.addEventListener("change", refresh);
   fillModalRecurringSelect(selected, currentTx);
 }
 
@@ -1174,6 +1181,22 @@ async function saveModal() {
       const recurringRuleChanged = recurringRuleId !== currentRecurringRuleId;
       if (offlineNow && recurringRuleChanged) {
         throw new Error("Le rattachement à un abonnement nécessite une connexion. Réessaie une fois en ligne.");
+      }
+      const targetRecurringRule = recurringRuleId
+        ? (state?.recurringRules || []).find((rule) => String(rule?.id || "") === recurringRuleId)
+        : null;
+      if (recurringRuleChanged && targetRecurringRule) {
+        const targetType = String(targetRecurringRule?.type || "").toLowerCase();
+        const targetCurrency = String(targetRecurringRule?.currency || "").toUpperCase();
+        const transactionType = String(normalizedTx?.type || "").toLowerCase();
+        const transactionCurrency = String(wallet?.currency || "").toUpperCase();
+        if (targetType !== transactionType || targetCurrency !== transactionCurrency) {
+          const ruleName = String(targetRecurringRule?.label || targetRecurringRule?.name || "cet abonnement");
+          const message = window.tbT
+            ? window.tbT("transactions.subscription.mismatch_confirm", { rule: ruleName })
+            : `« ${ruleName} » utilise un flux ou une devise différente. Le lien est autorisé et l’analyse conservera les caractéristiques de la transaction. Continuer ?`;
+          if (!confirm(message)) return;
+        }
       }
       if (generatedByRule && recurringRuleChanged) {
         const currentRule = (state?.recurringRules || []).find((rule) => String(rule?.id || "") === String(currentRecurringRuleId || ""));

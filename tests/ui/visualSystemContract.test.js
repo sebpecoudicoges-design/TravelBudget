@@ -39,6 +39,14 @@ describe('visual system contract', () => {
   });
 
   it('keeps the desktop admin rail in one vertical column', () => {
-    expect(theme).toContain('.wrap > .app-tabs { flex-wrap: nowrap !important; }');
+    expect(theme).toContain('flex-wrap: nowrap !important');
+    expect(theme).toContain('max-height: calc(100vh - 108px)');
+    expect(theme).toContain('min-height: 30px');
+  });
+
+  it('renders subscription insights as compact rows on desktop', () => {
+    expect(theme).toContain('.tb-subscription-spotlights__grid{display:grid;grid-template-columns:1fr;gap:9px}');
+    expect(theme).toContain('grid-template-columns:minmax(180px,1fr) minmax(150px,.72fr) minmax(260px,1.15fr)');
+    expect(theme).toContain('padding:10px 13px');
   });
 });

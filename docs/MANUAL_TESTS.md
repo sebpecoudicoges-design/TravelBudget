@@ -6,13 +6,13 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version web à valider : `10.5.351`.
+- Version web à valider : `10.5.352`.
 - APK : `travelbudget-10.5.341-20260810-192605-debug.apk` publie dans Supabase Storage ; SHA-256 `3CC0F8597939B3F47AD9F325AD21C0C5E9C5DC3319B4B408E26F023FCAEDE37D`.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
 - Les lignes historiques ci-dessous restent une archive de traçabilité ; leur statut `à faire` n'est plus la file de travail active.
 - Retour corrigé à revalider : la page projet et la confidentialité doivent garder des liens publics valides avant création/soumission Play Store.
-- Les 34 scénarios historiques ont été regroupés en 8 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
+- Les 34 scénarios historiques ont été regroupés en 9 parcours de régression. La colonne **Versions couvertes** conserve la traçabilité des changements.
 - Pour la campagne actuelle, exécuter les scénarios affichés dans l'application et y saisir directement `OK`, `Pas OK` et les notes.
 - Voir `docs/MODULE_TEST_CAMPAIGN.md` pour les rôles, l'ordre et les critères de fin.
 - Chantier 1 Dashboard corrige en `10.5.317` : Hero sombre, re-rendu de la courbe au changement de theme et verification online avant mutation wallet. Le scenario Dashboard reste a refaire par le testeur avant reouverture.
@@ -44,6 +44,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Sport `10.5.347` : dans Profil et progression, verifier qu un exercice ne produit qu un point par seance, fonde sur la meilleure serie valide. Controler les cartes Depart/Derniere seance/Record, les dates, la tendance et le filtre en clair/sombre a 1440/390 px.
 - Travail `10.5.348` : parcourir Aujourd hui, Parcours et Historique en clair/sombre a 1440/390 px. Verifier le rythme, le calcul kcal hors pause, missions/revenus/periodes/Documents, puis Modifier depuis l historique : le formulaire doit revenir pre-rempli dans Aujourd hui.
 - Abonnements `10.5.351` : verifier Vue d ensemble, Echeances et Regles en clair/sombre a 1440/390 px. Le resume unique doit separer Entrees et Sorties et afficher Prevu, Paye/Encaisse et Difference; `1 050 AUD` prevus et `1 094 AUD` encaisses donnent `44 AUD`. Le bilan reel affiche Total depenses, Total revenus et leur difference revenus moins depenses. Tester Periode du voyage, Mois dernier, Semaine derniere puis des dates personnalisees : resume et lignes doivent suivre la meme plage. Les heroes par abonnement doivent etre compacts et nuances selon le flux. Ouvrir ensuite une echeance generee, changer son abonnement, lire la confirmation puis valider : elle devient manuelle et l ancienne regle ne doit plus la modifier. Refaire le geste en selection multiple, puis ouvrir le rail admin et confirmer que Membres reste en bas.
+- Abonnements `10.5.352` : depuis une transaction, sa modification et la selection multiple, verifier que toutes les regles actives du voyage remontent, meme si leur type ou leur devise differe. Dans ce cas, lire l avertissement avant de confirmer. Le prevu doit rester dans le flux et la devise de la regle, le reel dans ceux de la transaction. A 1440 px, les cartes par abonnement forment des lignes compactes; a 390 px elles restent lisibles sans debordement. Sur un ecran de 810 px de haut, Tests puis Membres doivent rester visibles en bas du rail admin.
 - Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés

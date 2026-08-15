@@ -8,6 +8,7 @@ describe('subscriptions migration', () => {
   const saveHardeningSql = fs.readFileSync('supabase/migrations/20260815055028_harden_subscription_save_rpc_10_5_350.sql', 'utf8');
   const relinkSql = fs.readFileSync('supabase/migrations/20260815074159_allow_safe_generated_subscription_relink_10_5_351.sql', 'utf8');
   const cashSummaryTestSql = fs.readFileSync('supabase/migrations/20260815075831_extend_subscription_cash_summary_test_10_5_351.sql', 'utf8');
+  const openLinkingSql = fs.readFileSync('supabase/migrations/20260815083326_allow_all_travel_subscription_links_10_5_352.sql', 'utf8');
 
   it('secures manual transaction linkage by ownership and domain compatibility', () => {
     expect(sql).toContain('create or replace function public.link_transaction_to_recurring_rule');
@@ -51,5 +52,14 @@ describe('subscriptions migration', () => {
     expect(cashSummaryTestSql).toContain("scenario.id = '35100000-0000-4000-8000-000000000002'::uuid");
     expect(cashSummaryTestSql).toContain('Total depenses, Total revenus et Difference');
     expect(cashSummaryTestSql).toContain('Mois dernier et Semaine derniere');
+  });
+
+  it('allows every owned travel subscription while preserving security boundaries', () => {
+    expect(openLinkingSql).toContain('security invoker');
+    expect(openLinkingSql).toContain('Transaction and subscription must belong to the same travel');
+    expect(openLinkingSql).toContain('from public, anon');
+    expect(openLinkingSql).not.toContain('must use the same type');
+    expect(openLinkingSql).not.toContain('must use the same currency');
+    expect(openLinkingSql).toContain('Liste complete des abonnements 10.5.352');
   });
 });

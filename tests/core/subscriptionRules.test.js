@@ -42,14 +42,14 @@ describe('subscription rules', () => {
     expect(analysis.paid).toHaveLength(2);
   });
 
-  it('only offers compatible rules to a manual transaction', () => {
+  it('offers every active subscription from the transaction travel', () => {
     const rules = [
       { id: 'ok', travelId: 't1', type: 'expense', currency: 'AUD' },
       { id: 'income', travelId: 't1', type: 'income', currency: 'AUD' },
       { id: 'eur', travelId: 't1', type: 'expense', currency: 'EUR' },
       { id: 'tracking', travelId: 't1', type: 'income', currency: 'EUR', trackingOnly: true },
     ];
-    expect(subscriptionRulesForTransaction(rules, { travelId: 't1', type: 'expense', currency: 'AUD' }).map((row) => row.id)).toEqual(['ok', 'tracking']);
+    expect(subscriptionRulesForTransaction(rules, { travelId: 't1', type: 'expense', currency: 'AUD' }).map((row) => row.id)).toEqual(['ok', 'income', 'eur', 'tracking']);
   });
 
   it('builds a per-subscription monthly average, lifetime spend and inferred next date', () => {
@@ -95,6 +95,18 @@ describe('subscription rules', () => {
       { type: 'income', currency: 'AUD', planned: 1050, actual: 1094, delta: 44 },
     ]);
     expect(analysis.actualTotals).toEqual([{ currency: 'AUD', expenses: 1000, income: 1094, delta: 94 }]);
+  });
+
+  it('keeps the transaction flow and currency when a linked rule differs', () => {
+    const analysis = buildSubscriptionAnalysis({
+      travelId: 't1', startDate: '2026-08-01', endDate: '2026-08-31', today: '2026-08-15',
+      rules: [{ id: 'foreign', travelId: 't1', type: 'expense', amount: 100, currency: 'USD' }],
+      transactions: [{ recurringRuleId: 'foreign', generatedByRule: true, occurrenceDate: '2026-08-02', payNow: true, type: 'expense', amount: 90, currency: 'AUD' }],
+    });
+    expect(analysis.flowComparison).toEqual([
+      { type: 'expense', currency: 'AUD', planned: 0, actual: 90, delta: 90 },
+      { type: 'expense', currency: 'USD', planned: 100, actual: 0, delta: -100 },
+    ]);
   });
 
   it('builds stable calendar ranges for the previous month and previous week', () => {

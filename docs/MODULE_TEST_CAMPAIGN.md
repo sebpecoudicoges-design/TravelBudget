@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.351`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.352`.
 
 ## Objectif
 
@@ -110,6 +110,8 @@ En `10.5.349`, les regles recurrentes quittent Settings pour le module **Abonnem
 En `10.5.350`, un abonnement peut etre cree avec son seul nom en **suivi manuel**, sans montant ni generation d echeance. Son hero resume moyenne mensuelle, total depense et prochaine echeance estimee. Transactions peut rattacher ou detacher atomiquement la selection courante, y compris **Tout selectionner**; les automatismes conservent les controles type/devise et les lignes generees restent intouchables par cette action. Deux descendants couvrent l analyse et le bulk, soit six retests Abonnements a faire.
 
 En `10.5.351`, Prevu, Reel et Difference sont reunis dans un seul resume qui ne compense jamais Entrees et Sorties. Le meme hero ajoute le bilan reel Total depenses, Total revenus et Difference, filtrable sur la periode du voyage, le mois civil precedent, la semaine civile precedente ou des dates personnalisees. Les heroes par abonnement deviennent plus compacts et utilisent une nuance corail pour les sorties, lagon pour les entrees. Une echeance generee peut changer d abonnement apres confirmation explicite; elle est alors detachee de son automatisme d origine et devient manuelle avant le rattachement. Le meme garde couvre la selection multiple. Le rail admin reste sur une colonne et garde Membres en bas. Deux descendants portent le total a huit retests Abonnements a faire.
+
+En `10.5.352`, les trois listes de rattachement Transaction partagent la meme source et affichent toutes les regles actives du voyage. Les differences de type ou devise restent possibles apres un avertissement explicite; l analyse conserve alors le flux et la devise de chaque transaction reelle sans contaminer le prevu de la regle. Les heroes par abonnement sont ramenes a des lignes de 73 px sur desktop et 159 px sur mobile. Tests et Membres restent visibles dans le rail admin initial. Un descendant porte le total a neuf retests Abonnements a faire.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 
