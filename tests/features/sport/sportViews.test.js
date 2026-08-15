@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { renderSportHistory } from '../../../src/features/sport/sportHistoryView.js';
 import { renderLoadRecommendations, renderPlannedSportWeek, renderProgramSettings, renderSessionEditorModal } from '../../../src/features/sport/sportProgramView.js';
 import { renderFinishWorkoutModal, renderFreeTimer, renderSportTimer } from '../../../src/features/sport/sportTimerView.js';
-import { renderSportShell } from '../../../src/features/sport/sportView.js';
+import { normalizeSportSection, renderSportSectionTabs, renderSportShell } from '../../../src/features/sport/sportView.js';
 
 const api = {
   translate: (fr) => fr,
@@ -55,6 +55,7 @@ describe('Sport timer view', () => {
       statsHTML: '<section data-slot="stats"></section>',
       profileHTML: '<section data-slot="profile"></section>',
       progressionHTML: '<section data-slot="progression"></section>',
+      programHTML: '<section data-slot="program"></section>',
       builderHTML: '<section data-slot="builder"></section>',
       timerHTML: '<section data-slot="timer"></section>',
       historyHTML: '<section data-slot="history"></section>',
@@ -66,9 +67,25 @@ describe('Sport timer view', () => {
     expect(html).toContain('Construis &lt;seance&gt;');
     expect(html).toContain('45:00 - 320 kcal');
     expect(html).toContain('data-slot="stats"');
+    expect(html).toContain('data-slot="program"');
     expect(html).toContain('data-slot="builder"');
     expect(html).toContain('data-slot="timer"');
     expect(html).toContain('data-slot="history"');
+    expect(html).toContain('role="tablist"');
+    expect(html).toContain('data-sport-panel="session"');
+    expect(html).toContain('data-sport-panel="program" hidden');
+    expect(html).toContain('data-sport-panel="profile" hidden');
+    expect(html).toContain('data-sport-panel="history" hidden');
+  });
+
+  it('renders four accessible Sport spaces and normalizes invalid sections', () => {
+    const html = renderSportSectionTabs({ activeSection: 'profile', escapeHTML: api.escapeHTML });
+
+    expect(normalizeSportSection('PROGRAM')).toBe('program');
+    expect(normalizeSportSection('unknown')).toBe('session');
+    expect(html.match(/role="tab"/g)).toHaveLength(4);
+    expect(html).toContain('data-sport-section="profile" aria-selected="true"');
+    expect(html).toContain('Profil &amp; progression');
   });
 
   it('renders the idle timer with disabled controls when no plan exists', () => {

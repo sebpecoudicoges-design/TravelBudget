@@ -24,6 +24,7 @@ describe('Sport domain contract', () => {
   const profileRules = fs.readFileSync('src/features/sport/sportProfileRules.js', 'utf8');
   const profileView = fs.readFileSync('src/features/sport/sportProfileView.js', 'utf8');
   const runtime = fs.readFileSync('src/features/sport/sportRuntime.js', 'utf8');
+  const sportCss = fs.readFileSync('public/legacy/css/sport.css', 'utf8');
 
   it('exposes Sport rules, data and store through the bridge while lazy-loading Sport views', () => {
     for (const token of [
@@ -197,5 +198,28 @@ describe('Sport domain contract', () => {
     for (const token of ['goalOptions', 'durationOptions', 'simpleExerciseOptions', 'formatOptions']) {
       expect(legacy).not.toContain(`function ${token}`);
     }
+  });
+
+  it('separates Sport into four accessible, responsive and dark-compatible spaces', () => {
+    for (const token of ['session', 'program', 'profile', 'history']) {
+      expect(sportView).toContain(`'${token}'`);
+    }
+    expect(sportView).toContain('id="sport-panel-${section}"');
+    expect(sportView).toContain("panel('session'");
+    expect(sportView).toContain("panel('program'");
+    expect(sportView).toContain("panel('profile'");
+    expect(sportView).toContain("panel('history'");
+    expect(sportView).toContain('export function normalizeSportSection');
+    expect(sportView).toContain('role="tablist"');
+    expect(sportView).toContain('data-sport-section=');
+    expect(legacy).toContain('root.querySelectorAll("[data-sport-section]")');
+    expect(legacy).toContain('event.key === "ArrowRight"');
+    expect(legacy).toContain('programHTML: renderSessionFavorites()');
+    expect(legacy).toContain('builderHTML: renderBuilder()');
+    expect(legacy).not.toContain('includeProgram');
+    expect(sportCss).toContain('.tb-sport-section-tabs');
+    expect(sportCss).toContain('touch-action:pan-y');
+    expect(sportCss).toContain('body.theme-dark .tb-sport-section-tabs');
+    expect(sportCss).toContain('.tb-sport-section-panel[hidden]');
   });
 });

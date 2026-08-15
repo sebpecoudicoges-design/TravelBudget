@@ -6,7 +6,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 
 ## Point actuel
 
-- Version web à valider : `10.5.344`.
+- Version web à valider : `10.5.345`.
 - APK : `travelbudget-10.5.341-20260810-192605-debug.apk` publie dans Supabase Storage ; SHA-256 `3CC0F8597939B3F47AD9F325AD21C0C5E9C5DC3319B4B408E26F023FCAEDE37D`.
 - Campagne active : 14 modules visibles et 1 module archivé. Les résultats traités restent consultables sans encombrer la file de retest.
 - Premier module : **Dashboard**.
@@ -39,6 +39,7 @@ Statuts : `à faire`, `ok`, `à revoir`.
 - Stabilisation Dashboard, Settings et connexion `10.5.342` : verifier que **Archiver/Desarchiver** reste dans chaque wallet, que les scopes **Tout le voyage**, periode et date a date recalculent ensemble KPI et courbe, puis qu une regle recurrente permet de choisir sa sous-categorie. Se deconnecter et se reconnecter : une seule synchronisation doit s executer et toute l interface doit rester cliquable.
 - Regles recurrentes `10.5.343` : personnaliser une echeance future non payee, puis modifier sa regle en **toutes les 2 semaines**, **jeudi**, a partir du lundi **17/08/2026**. L exception doit rester inchangee et les projections doivent etre uniquement les jeudis **03/09**, **17/09**, **01/10**, etc.; raccourcir la fin doit supprimer les projections devenues hors plage.
 - Alimentation `10.5.344` : parcourir les quatre espaces internes en clair/sombre et a 1440/390 px. Ajouter plusieurs prises d eau avec des heures differentes, en supprimer une, saisir le sommeil et verifier les reperes Alcool puis le detail Historique. Aucun changement d espace ne doit recharger la saisie ou perdre la date selectionnee.
+- Sport `10.5.345` : parcourir **Seance**, **Programme**, **Profil et progression** puis **Historique** en clair/sombre et a 1440/390 px. Charger une favorite depuis Programme et refaire une seance depuis Historique : le plan doit revenir dans Seance sans perdre les actions, mesures, filtres ni minuteurs.
 - Dans l onglet Tests, utiliser **A tester**, **Sans test** ou **Archives** ; l option **Afficher les tests archives** revele la date du test, la date de traitement, la version et la note de traitement.
 
 ## Parcours de régression condensés

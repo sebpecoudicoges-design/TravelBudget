@@ -3,6 +3,13 @@ import { createEntityStore } from '../../../src/data/entityStore.js';
 import { createSportStore } from '../../../src/features/sport/sportStore.js';
 
 describe('Sport store', () => {
+  it('starts in the Seance space and keeps the active section in domain state', () => {
+    const store = createSportStore();
+    expect(store.state.activeSection).toBe('session');
+    store.state.activeSection = 'history';
+    expect(store.snapshot().activeSection).toBe('history');
+  });
+
   it('keeps Sport state in entityStore and notifies domain subscribers', () => {
     const entityStore = createEntityStore();
     const store = createSportStore({}, { entityStore });

@@ -15,6 +15,7 @@ export function createInitialSportState() {
     timer: null,
     freeTimer: null,
     timerMode: 'guided',
+    activeSection: 'session',
     pendingSummary: null,
     wakeLock: null,
     localScope: '',

@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.344`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.345`.
 
 ## Objectif
 
@@ -96,6 +96,8 @@ En `10.5.342`, quatre regressions sont traitees ensemble. Les anciennes regles C
 En `10.5.343`, le retest de la modale Regles recurrentes revele un defaut de reconciliation : la cadence choisie etait bien stockee, mais les anciennes projections restaient a cote des nouvelles, et une echeance modifiee manuellement n etait pas toujours detachee. L edition devient une operation SQL atomique : les exceptions utilisateur sont protegees, seules les projections encore mutables sont remplacees, puis le premier jour applique l intervalle complet avant de s aligner sur le jour choisi. Les projections existantes sont reparees; la regle testee du lundi 17/08 produit bien les jeudis 03/09, 17/09, 01/10, etc. Un retest enfant conserve la filiation.
 
 En `10.5.344`, le chantier profond Alimentation organise le module en quatre espaces accessibles : **Aujourd hui**, **Repas**, **Hydratation et recuperation** et **Historique**. Les commandes existantes restent disponibles, le journal d eau montre chaque prise avec heure et quantite, et Sommeil/Alcool sont regroupes dans une lecture de recuperation. La revue globale Alimentation est traitee puis archivee; quatre retests cibles couvrent navigation, hydratation, recuperation et historique.
+
+En `10.5.345`, Sport quitte la page unique tres longue pour quatre espaces internes accessibles : **Seance**, **Programme**, **Profil et progression** et **Historique**. Les hooks existants restent inchanges; charger une favorite, lancer la seance planifiee ou refaire une seance ramene automatiquement vers Seance. Quatre retests cibles couvrent navigation, passage Programme vers Seance, profil/progression et historique.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

@@ -2233,7 +2233,6 @@
             <button class="btn" type="button" id="sport-clear">${esc(txt("Vider", "Clear"))}</button>
           </div>
         </div>
-        ${renderSessionFavorites()}
         <div class="tb-sport-simple" style="margin-top:12px;">
           <div class="tb-sport-simple-title">
             <div>
@@ -2664,9 +2663,11 @@
       statsHTML: sportStatsHTML(),
       profileHTML: renderSportProfileDashboard(),
       progressionHTML: renderExerciseProgressionAnalysis(),
+      programHTML: renderSessionFavorites(),
       builderHTML: renderBuilder(),
       timerHTML: renderTimerChoice(),
       historyHTML: renderHistory(),
+      activeSection: CACHE.activeSection,
       escapeHTML: esc,
     }) || "";
     bind(root);
@@ -2681,6 +2682,34 @@
   }
 
   function bind(root) {
+    const sectionTabs = Array.from(root.querySelectorAll("[data-sport-section]"));
+    const selectSection = (section, focus) => {
+      const active = window.UI?.sportView?.normalizeSportSection?.(section) || "session";
+      CACHE.activeSection = active;
+      sectionTabs.forEach(tab => {
+        const selected = tab.getAttribute("data-sport-section") === active;
+        tab.classList.toggle("active", selected);
+        tab.setAttribute("aria-selected", selected ? "true" : "false");
+        tab.tabIndex = selected ? 0 : -1;
+        if (selected && focus) tab.focus();
+      });
+      root.querySelectorAll("[data-sport-panel]").forEach(panel => {
+        panel.hidden = panel.getAttribute("data-sport-panel") !== active;
+      });
+    };
+    sectionTabs.forEach((tab, index) => {
+      tab.onclick = () => selectSection(tab.getAttribute("data-sport-section"), false);
+      tab.onkeydown = event => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        let next = index;
+        if (event.key === "ArrowLeft") next = (index - 1 + sectionTabs.length) % sectionTabs.length;
+        if (event.key === "ArrowRight") next = (index + 1) % sectionTabs.length;
+        if (event.key === "Home") next = 0;
+        if (event.key === "End") next = sectionTabs.length - 1;
+        selectSection(sectionTabs[next]?.getAttribute("data-sport-section"), true);
+      };
+    });
     const progressionExercise = root.querySelector("#sport-progress-exercise");
     if (progressionExercise) progressionExercise.onchange = () => {
       CACHE.progressionExerciseFilter = progressionExercise.value || "";
@@ -2852,12 +2881,16 @@
     });
     root.querySelectorAll("[data-sport-load-session-favorite]").forEach(btn => {
       btn.onclick = () => {
-        if (loadSessionFavorite(btn.getAttribute("data-sport-load-session-favorite"))) renderSport("session-favorite");
+        if (loadSessionFavorite(btn.getAttribute("data-sport-load-session-favorite"))) {
+          CACHE.activeSection = "session";
+          renderSport("session-favorite");
+        }
       };
     });
     root.querySelectorAll("[data-sport-start-planned-today]").forEach(btn => {
       btn.onclick = () => {
         if (!loadSessionFavorite(btn.getAttribute("data-sport-start-planned-today"))) return;
+        CACHE.activeSection = "session";
         savePlan();
         renderSport("planned-start");
         window.setTimeout(() => {
@@ -3134,7 +3167,10 @@
       btn.onclick = () => deleteSportSession(btn.getAttribute("data-sport-delete-session"));
     });
     root.querySelectorAll("[data-sport-repeat-session]").forEach(btn => {
-      btn.onclick = () => repeatSportSession(btn.getAttribute("data-sport-repeat-session"));
+      btn.onclick = () => {
+        CACHE.activeSection = "session";
+        repeatSportSession(btn.getAttribute("data-sport-repeat-session"));
+      };
     });
     root.querySelectorAll("[data-sport-edit-session]").forEach(btn => {
       btn.onclick = () => openSportSessionSandbox(btn.getAttribute("data-sport-edit-session"));
