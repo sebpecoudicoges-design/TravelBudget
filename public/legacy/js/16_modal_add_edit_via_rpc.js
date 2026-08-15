@@ -122,8 +122,8 @@ function fillModalRecurringSelect(selectedValue, currentTx) {
   }
   select.value = selected;
   const generated = !!(currentTx?.generatedByRule || currentTx?.generated_by_rule);
-  select.disabled = generated;
-  if (help) help.textContent = generated ? "Lien automatique : cette échéance a été créée par la règle." : "Optionnel : rattache cette transaction manuelle à une règle existante.";
+  select.disabled = false;
+  if (help) help.textContent = generated ? "Lien automatique actuel. Tu peux le changer : une confirmation détachera cette échéance de sa règle d’origine." : "Optionnel : rattache cette transaction manuelle à une règle existante.";
 }
 
 function wireRecurringRuleLogic(currentTx) {
@@ -1171,8 +1171,19 @@ async function saveModal() {
         : (typeof window.tbIsOfflineMode === "function" && window.tbIsOfflineMode());
       const currentRecurringRuleId = String(currentTx?.recurringRuleId || currentTx?.recurring_rule_id || "").trim() || null;
       const generatedByRule = !!(currentTx?.generatedByRule || currentTx?.generated_by_rule);
-      if (offlineNow && !generatedByRule && recurringRuleId !== currentRecurringRuleId) {
+      const recurringRuleChanged = recurringRuleId !== currentRecurringRuleId;
+      if (offlineNow && recurringRuleChanged) {
         throw new Error("Le rattachement à un abonnement nécessite une connexion. Réessaie une fois en ligne.");
+      }
+      if (generatedByRule && recurringRuleChanged) {
+        const currentRule = (state?.recurringRules || []).find((rule) => String(rule?.id || "") === String(currentRecurringRuleId || ""));
+        const nextRule = (state?.recurringRules || []).find((rule) => String(rule?.id || "") === String(recurringRuleId || ""));
+        const currentName = String(currentRule?.label || currentRule?.name || "la règle actuelle");
+        const nextName = String(nextRule?.label || nextRule?.name || "aucun abonnement");
+        const message = window.tbT
+          ? window.tbT("transactions.subscription.generated_change_confirm", { current: currentName, next: nextName })
+          : `Cette échéance a été générée par « ${currentName} ». La rattacher à « ${nextName} » la détachera définitivement de l’automatisme d’origine. Continuer ?`;
+        if (!confirm(message)) return;
       }
 
       if (editingTxId) {
@@ -1235,7 +1246,7 @@ async function saveModal() {
         } else {
           const { data, error } = await _updateTransactionRpcCompat(updateArgs);
           if (error) throw error;
-          if (!generatedByRule && recurringRuleId !== currentRecurringRuleId) {
+          if (recurringRuleChanged) {
             await _txLinkToRecurringRule(editingTxId, recurringRuleId);
           }
         }

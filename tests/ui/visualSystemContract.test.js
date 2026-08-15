@@ -37,4 +37,8 @@ describe('visual system contract', () => {
     expect(archiveRule).toContain('border-style: dashed');
     expect(archiveRule).not.toContain('margin-top: auto');
   });
+
+  it('keeps the desktop admin rail in one vertical column', () => {
+    expect(theme).toContain('.wrap > .app-tabs { flex-wrap: nowrap !important; }');
+  });
 });

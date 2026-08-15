@@ -61,6 +61,29 @@ function addMonths(iso, count) {
   return `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, '0')}-${String(target.getUTCDate()).padStart(2, '0')}`;
 }
 
+export function subscriptionDateRange({ preset = 'period', today = '', periodStart = '', periodEnd = '' } = {}) {
+  const selected = text(preset).toLowerCase();
+  const day = dateOnly(today) || new Date().toISOString().slice(0, 10);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (selected === 'custom' || !match) return { startDate: dateOnly(periodStart), endDate: dateOnly(periodEnd) };
+  const current = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  const format = (date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+  if (selected === 'last-month') {
+    const start = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() - 1, 1));
+    const end = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), 0));
+    return { startDate: format(start), endDate: format(end) };
+  }
+  if (selected === 'last-week') {
+    const daysSinceMonday = (current.getUTCDay() + 6) % 7;
+    const start = new Date(current);
+    start.setUTCDate(start.getUTCDate() - daysSinceMonday - 7);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 6);
+    return { startDate: format(start), endDate: format(end) };
+  }
+  return { startDate: dateOnly(periodStart), endDate: dateOnly(periodEnd) };
+}
+
 function plannedMonthlyAmount(rule) {
   const amount = number(rule?.amount);
   const every = Math.max(1, number(rule?.intervalCount ?? rule?.interval_count) || 1);
@@ -170,17 +193,40 @@ export function buildSubscriptionAnalysis({ rules = [], transactions = [], trave
 
   const plannedByCurrency = {};
   const actualByCurrency = {};
+  const plannedByFlowCurrency = {};
+  const actualByFlowCurrency = {};
   for (const row of occurrences) {
+    const flow = text(row.rule?.type || row.type).toLowerCase() === 'income' ? 'income' : 'expense';
+    const currency = text(row.rule?.currency || row.currency).toUpperCase() || '—';
+    const flowCurrency = `${flow}:${currency}`;
     if (row.generated && row.status !== 'skipped') {
       addTotal(plannedByCurrency, row.rule?.currency || row.currency, row.rule?.amount ?? row.amount);
+      plannedByFlowCurrency[flowCurrency] = number(plannedByFlowCurrency[flowCurrency]) + number(row.rule?.amount ?? row.amount);
     }
-    if (row.paid && row.status !== 'skipped') addTotal(actualByCurrency, row.currency || row.rule?.currency, row.amount);
+    if (row.paid && row.status !== 'skipped') {
+      addTotal(actualByCurrency, row.currency || row.rule?.currency, row.amount);
+      actualByFlowCurrency[flowCurrency] = number(actualByFlowCurrency[flowCurrency]) + number(row.amount);
+    }
   }
   const currencies = [...new Set([...Object.keys(plannedByCurrency), ...Object.keys(actualByCurrency)])].sort();
   const comparison = currencies.map((currency) => {
     const planned = number(plannedByCurrency[currency]);
     const actual = number(actualByCurrency[currency]);
     return { currency, planned, actual, delta: actual - planned };
+  });
+  const flowComparison = [...new Set([...Object.keys(plannedByFlowCurrency), ...Object.keys(actualByFlowCurrency)])]
+    .sort()
+    .map((key) => {
+      const [flow, currency] = key.split(':');
+      const planned = number(plannedByFlowCurrency[key]);
+      const actual = number(actualByFlowCurrency[key]);
+      return { type: flow, currency, planned, actual, delta: actual - planned };
+    });
+  const actualCurrencies = [...new Set(Object.keys(actualByFlowCurrency).map((key) => key.split(':')[1]))].sort();
+  const actualTotals = actualCurrencies.map((currency) => {
+    const expenses = number(actualByFlowCurrency[`expense:${currency}`]);
+    const income = number(actualByFlowCurrency[`income:${currency}`]);
+    return { currency, expenses, income, delta: income - expenses };
   });
 
   return {
@@ -189,6 +235,8 @@ export function buildSubscriptionAnalysis({ rules = [], transactions = [], trave
     pausedRules: scopedRules.filter((rule) => rule?.isActive === false || rule?.is_active === false),
     occurrences,
     comparison,
+    flowComparison,
+    actualTotals,
     paid: occurrences.filter((row) => row.status === 'paid'),
     upcoming: occurrences.filter((row) => row.status === 'upcoming' || row.status === 'linked'),
     overdue: occurrences.filter((row) => row.status === 'overdue'),

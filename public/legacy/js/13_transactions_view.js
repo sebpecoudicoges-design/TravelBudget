@@ -190,8 +190,7 @@ async function applyBulkTxSubscription() {
   try {
     const selectedRows = _txBulkSelectedRows();
     if (!selectedRows.length) return _txBulkSetMessage(_txT('transactions.bulk.error.none'));
-    const blocked = selectedRows.filter((tx) => tx?.generatedByRule || tx?.generated_by_rule);
-    if (blocked.length) return _txBulkSetMessage(_txT('transactions.bulk.subscription.generated_blocked', { count: blocked.length }));
+    const generatedRows = selectedRows.filter((tx) => tx?.generatedByRule || tx?.generated_by_rule);
     const lockedRows = _txBulkSelectedLockedRows();
     if (lockedRows.length) return _txBulkSetMessage(_txT('transactions.bulk.error.locked', { count: lockedRows.length }));
     const internalRows = selectedRows.filter((tx) => tx?.isInternal || tx?.internal_transfer_id || tx?.internalTransferId);
@@ -199,6 +198,7 @@ async function applyBulkTxSubscription() {
     const raw = String(document.getElementById('tx-bulk-subscription')?.value || '');
     if (!raw) return _txBulkSetMessage(_txT('transactions.bulk.subscription.choose_error'));
     const ruleId = raw === '__unlink__' ? null : raw;
+    if (generatedRows.length && !confirm(_txT('transactions.bulk.subscription.generated_confirm', { count: generatedRows.length }))) return;
     if (typeof window.tbShouldUseOfflineMode === 'function' && await window.tbShouldUseOfflineMode('tx:bulk_subscription')) {
       return _txBulkSetMessage(_txT('transactions.bulk.subscription.online_required'));
     }

@@ -174,6 +174,8 @@ En 10.5.349, Abonnements devient un domaine lazy autonome de 54.7 / 56 KiB, dont
 
 En 10.5.350, Abonnements ajoute le suivi manuel, l analyse par abonnement et le rattachement Transactions en masse. Le domaine mesure 62.0 / 63 KiB; l initial reste stable a 262.1 / 263 KiB. Les deux vues lazy passent a 437.9 / 439 KiB, le total JS a 699.9 / 701 KiB et le CSS a 51.8 / 52 KiB. Les plafonds suivent les paliers mesures avec moins de 1.2 KiB de marge, sans relever le boot ni le gzip principal.
 
+En 10.5.351, le calcul separe Entrees et Sorties, la vue fusionne Prevu/Reel/Difference, ajoute le bilan reel et ses plages rapides, puis nuance les cartes compactes. Le domaine mesure 67.6 / 69 KiB, le lazy 441.0 / 442 KiB, le total JS 703.1 / 704 KiB et le CSS 54.8 / 55 KiB. L initial reste a 262.1 / 263 KiB et le gzip principal a 74.8 / 110 KiB; les plafonds suivent uniquement les nouveaux contrats visibles.
+
 En 10.5.274, l'ancien alias `window.renderHealth` et son wrapper Nutrition sont supprimes. La navigation `health` continue de rediriger vers Alimentation, mais Nutrition ne conserve plus ce point d'entree legacy. Nutrition baisse de 187.5 a 187.2 KiB.
 
 En 10.5.275, les exports globaux Nutrition `tbSaveHealthGoal` et `tbHealthGoalTargets`, devenus sans appel, sont retires. `tbLoadHealthGoal` reste conserve pour les KPI. Nutrition baisse de 187.2 a 187.0 KiB.

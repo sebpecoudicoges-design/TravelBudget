@@ -44,4 +44,11 @@ describe('transaction shared modal migration', () => {
     expect(source).toContain('toastOk("Transaction marquée comme payée.")');
     expect(source).toContain('if (typeof toastWarn === "function") toastWarn(message); else alert(message)');
   });
+
+  it('allows a generated occurrence to change subscription only after a safety confirmation', () => {
+    expect(source).toContain('transactions.subscription.generated_change_confirm');
+    expect(source).toContain('if (!confirm(message)) return;');
+    expect(source).toContain('if (recurringRuleChanged)');
+    expect(source).not.toContain('select.disabled = generated');
+  });
 });

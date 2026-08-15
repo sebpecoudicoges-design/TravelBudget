@@ -1,6 +1,6 @@
 # TravelBudget - campagne de validation des modules
 
-Version de depart : `10.5.316`. Version cible actuelle : `10.5.350`.
+Version de depart : `10.5.316`. Version cible actuelle : `10.5.351`.
 
 ## Objectif
 
@@ -108,6 +108,8 @@ En `10.5.348`, Travail est reorganise en trois espaces accessibles : **Aujourd h
 En `10.5.349`, les regles recurrentes quittent Settings pour le module **Abonnements**. Vue d ensemble compare le montant prevu par les regles au reel paye sans melanger les devises; Echeances conserve les lignes generees, modifiees, payees ou rattachees manuellement; Regles garde creation, modification, pause, reprise et archivage. Le formulaire Transaction propose un rattachement compatible voyage/type/devise, tandis que les echeances generees conservent leur lien automatique. Quatre retests dedies sont ajoutes.
 
 En `10.5.350`, un abonnement peut etre cree avec son seul nom en **suivi manuel**, sans montant ni generation d echeance. Son hero resume moyenne mensuelle, total depense et prochaine echeance estimee. Transactions peut rattacher ou detacher atomiquement la selection courante, y compris **Tout selectionner**; les automatismes conservent les controles type/devise et les lignes generees restent intouchables par cette action. Deux descendants couvrent l analyse et le bulk, soit six retests Abonnements a faire.
+
+En `10.5.351`, Prevu, Reel et Difference sont reunis dans un seul resume qui ne compense jamais Entrees et Sorties. Le meme hero ajoute le bilan reel Total depenses, Total revenus et Difference, filtrable sur la periode du voyage, le mois civil precedent, la semaine civile precedente ou des dates personnalisees. Les heroes par abonnement deviennent plus compacts et utilisent une nuance corail pour les sorties, lagon pour les entrees. Une echeance generee peut changer d abonnement apres confirmation explicite; elle est alors detachee de son automatisme d origine et devient manuelle avant le rattachement. Le meme garde couvre la selection multiple. Le rail admin reste sur une colonne et garde Membres en bas. Deux descendants portent le total a huit retests Abonnements a faire.
 
 Les tables sont exposees uniquement aux utilisateurs authentifies autorises et protegees par RLS. Un testeur ne peut ecrire que ses propres resultats.
 

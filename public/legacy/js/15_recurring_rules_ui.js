@@ -816,6 +816,7 @@
     window.__tbSubscriptionsFilters = window.__tbSubscriptionsFilters || {};
     const filters = window.__tbSubscriptionsFilters;
     filters.tab = ["overview", "occurrences", "rules"].includes(filters.tab) ? filters.tab : "overview";
+    filters.rangePreset = ["period", "last-month", "last-week", "custom"].includes(filters.rangePreset) ? filters.rangePreset : "period";
     filters.startDate = filters.startDate || startFallback;
     filters.endDate = filters.endDate || endFallback;
     filters.type = ["all", "expense", "income"].includes(filters.type) ? filters.type : "all";
@@ -834,6 +835,7 @@
       startDate: filters.startDate,
       endDate: filters.endDate,
       type: filters.type,
+      rangePreset: filters.rangePreset,
       helpers: {
         frequencyLabel: _rrFreqLabel,
         walletName: (rule) => String((state?.wallets || []).find((wallet) => String(wallet.id || "") === String(rule.walletId || rule.wallet_id || ""))?.name || "—"),
@@ -846,15 +848,29 @@
       window.renderRecurringRules();
     }));
     host.querySelector("#subscriptions-start")?.addEventListener("change", (event) => {
+      filters.rangePreset = "custom";
       filters.startDate = event.currentTarget.value;
       window.renderRecurringRules();
     });
     host.querySelector("#subscriptions-end")?.addEventListener("change", (event) => {
+      filters.rangePreset = "custom";
       filters.endDate = event.currentTarget.value;
       window.renderRecurringRules();
     });
     host.querySelector("#subscriptions-type")?.addEventListener("change", (event) => {
       filters.type = event.currentTarget.value;
+      window.renderRecurringRules();
+    });
+    host.querySelector("#subscriptions-range")?.addEventListener("change", (event) => {
+      filters.rangePreset = event.currentTarget.value;
+      const range = rulesCore.subscriptionDateRange({
+        preset: filters.rangePreset,
+        today: _tbISO(new Date()),
+        periodStart: startFallback,
+        periodEnd: endFallback,
+      });
+      filters.startDate = range.startDate;
+      filters.endDate = range.endDate;
       window.renderRecurringRules();
     });
     host.querySelectorAll("[data-subscription-open-transaction]").forEach((button) => button.addEventListener("click", () => {

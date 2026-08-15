@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildSubscriptionAnalysis,
   computeFirstSubscriptionDueDate,
+  subscriptionDateRange,
   subscriptionOccurrenceStatus,
   subscriptionRulesForTransaction,
 } from '../../src/core/subscriptionRules.js';
@@ -75,5 +76,30 @@ describe('subscription rules', () => {
     });
     expect(analysis.rules.map((rule) => rule.id)).toEqual(['expense']);
     expect(analysis.comparison[0].planned).toBe(10);
+  });
+
+  it('never offsets planned and actual income against expenses', () => {
+    const analysis = buildSubscriptionAnalysis({
+      travelId: 't1', startDate: '2026-08-01', endDate: '2026-08-31', today: '2026-08-15',
+      rules: [
+        { id: 'rent', travelId: 't1', type: 'expense', amount: 1050, currency: 'AUD' },
+        { id: 'salary', travelId: 't1', type: 'income', amount: 1050, currency: 'AUD' },
+      ],
+      transactions: [
+        { recurringRuleId: 'rent', generatedByRule: true, occurrenceDate: '2026-08-01', payNow: true, amount: 1000, currency: 'AUD' },
+        { recurringRuleId: 'salary', generatedByRule: true, occurrenceDate: '2026-08-02', payNow: true, amount: 1094, currency: 'AUD' },
+      ],
+    });
+    expect(analysis.flowComparison).toEqual([
+      { type: 'expense', currency: 'AUD', planned: 1050, actual: 1000, delta: -50 },
+      { type: 'income', currency: 'AUD', planned: 1050, actual: 1094, delta: 44 },
+    ]);
+    expect(analysis.actualTotals).toEqual([{ currency: 'AUD', expenses: 1000, income: 1094, delta: 94 }]);
+  });
+
+  it('builds stable calendar ranges for the previous month and previous week', () => {
+    expect(subscriptionDateRange({ preset: 'last-month', today: '2026-08-15' })).toEqual({ startDate: '2026-07-01', endDate: '2026-07-31' });
+    expect(subscriptionDateRange({ preset: 'last-week', today: '2026-08-15' })).toEqual({ startDate: '2026-08-03', endDate: '2026-08-09' });
+    expect(subscriptionDateRange({ preset: 'period', today: '2026-08-15', periodStart: '2026-05-08', periodEnd: '2026-11-22' })).toEqual({ startDate: '2026-05-08', endDate: '2026-11-22' });
   });
 });
