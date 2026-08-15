@@ -58,6 +58,27 @@ function _txBulkSelectedCommonCategory() {
   return categories.length === 1 ? categories[0] : '';
 }
 
+function _txBulkCompatibleSubscriptions() {
+  const rows = _txBulkSelectedRows();
+  const tid = String(state?.activeTravelId || '');
+  return (Array.isArray(state?.recurringRules) ? state.recurringRules : []).filter((rule) => {
+    if (rule?.archived || String(rule?.travelId || rule?.travel_id || '') !== tid) return false;
+    const trackingOnly = !!(rule?.trackingOnly ?? rule?.tracking_only);
+    if (trackingOnly || !rows.length) return true;
+    return rows.every((tx) => String(tx?.type || '').toLowerCase() === String(rule?.type || '').toLowerCase()
+      && String(tx?.currency || '').toUpperCase() === String(rule?.currency || '').toUpperCase());
+  });
+}
+
+function _txBulkSubscriptionOptionsHtml() {
+  const options = [`<option value="">${_txT('transactions.bulk.subscription.choose')}</option>`, `<option value="__unlink__">${_txT('transactions.bulk.subscription.unlink')}</option>`];
+  _txBulkCompatibleSubscriptions().forEach((rule) => {
+    const mode = (rule?.trackingOnly ?? rule?.tracking_only) ? _txT('transactions.bulk.subscription.tracking') : _txT('transactions.bulk.subscription.automatic');
+    options.push(`<option value="${escapeHTML(rule.id)}">${escapeHTML(rule.label || rule.name || 'Abonnement')} — ${escapeHTML(mode)}</option>`);
+  });
+  return options.join('');
+}
+
 function _txBulkSetMessage(message, type = 'warn') {
   const text = String(message || '').trim();
   try {
@@ -160,6 +181,40 @@ async function applyBulkTxClassification() {
   } catch (e) {
     const msg = (typeof normalizeSbError === 'function') ? normalizeSbError(e) : (e?.message || String(e));
     console.warn('[transactions bulk]', msg);
+    _txBulkSetMessage(msg);
+  }
+}
+
+async function applyBulkTxSubscription() {
+  _txBulkSetMessage('');
+  try {
+    const selectedRows = _txBulkSelectedRows();
+    if (!selectedRows.length) return _txBulkSetMessage(_txT('transactions.bulk.error.none'));
+    const blocked = selectedRows.filter((tx) => tx?.generatedByRule || tx?.generated_by_rule);
+    if (blocked.length) return _txBulkSetMessage(_txT('transactions.bulk.subscription.generated_blocked', { count: blocked.length }));
+    const lockedRows = _txBulkSelectedLockedRows();
+    if (lockedRows.length) return _txBulkSetMessage(_txT('transactions.bulk.error.locked', { count: lockedRows.length }));
+    const internalRows = selectedRows.filter((tx) => tx?.isInternal || tx?.internal_transfer_id || tx?.internalTransferId);
+    if (internalRows.length) return _txBulkSetMessage(_txT('transactions.bulk.subscription.internal_blocked'));
+    const raw = String(document.getElementById('tx-bulk-subscription')?.value || '');
+    if (!raw) return _txBulkSetMessage(_txT('transactions.bulk.subscription.choose_error'));
+    const ruleId = raw === '__unlink__' ? null : raw;
+    if (typeof window.tbShouldUseOfflineMode === 'function' && await window.tbShouldUseOfflineMode('tx:bulk_subscription')) {
+      return _txBulkSetMessage(_txT('transactions.bulk.subscription.online_required'));
+    }
+    const rpcName = TB_CONST?.RPCS?.link_transactions_to_recurring_rule || 'link_transactions_to_recurring_rule';
+    const { error } = await sb.rpc(rpcName, {
+      p_transaction_ids: selectedRows.map((tx) => tx.id),
+      p_recurring_rule_id: ruleId,
+    });
+    if (error) throw error;
+    TB_TX_BULK.selectedIds.clear();
+    _txBulkSetMessage(_txT(ruleId ? 'transactions.bulk.subscription.success' : 'transactions.bulk.subscription.unlinked', { count: selectedRows.length }), 'success');
+    if (typeof window.tbAfterMutationRefresh === 'function') await window.tbAfterMutationRefresh('tx:bulk_subscription');
+    else await refreshFromServer();
+  } catch (e) {
+    const msg = (typeof normalizeSbError === 'function') ? normalizeSbError(e) : (e?.message || String(e));
+    console.warn('[transactions bulk subscription]', msg);
     _txBulkSetMessage(msg);
   }
 }
@@ -305,6 +360,7 @@ async function applyBulkTxDelete() {
 
 window.duplicateTx = duplicateTx;
 window.applyBulkTxDelete = applyBulkTxDelete;
+window.applyBulkTxSubscription = applyBulkTxSubscription;
 
 window._txBulkToggleOne = _txBulkToggleOne;
 window._txBulkToggleAll = _txBulkToggleAll;
@@ -1249,6 +1305,7 @@ if (isBudgetOnlyInternalTransferFee) return false;
     .concat(getCategories().map((c) => `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`))
     .join('');
   const bulkSubcategoryOptions = _txBulkSubcategoryOptionsHtml(bulkCommonCategory, '');
+  const bulkSubscriptionOptions = _txBulkSubscriptionOptionsHtml();
 
   const bulkToolbarHtml = `
     <div class="card tx-bulk-toolbar">
@@ -1269,9 +1326,14 @@ if (isBudgetOnlyInternalTransferFee) return false;
           <label>${_txT("transactions.bulk.new_subcategory")}</label>
           <select id="tx-bulk-subcategory">${bulkSubcategoryOptions}</select>
         </div>
+        <div class="field">
+          <label>${_txT("transactions.bulk.subscription.label")}</label>
+          <select id="tx-bulk-subscription">${bulkSubscriptionOptions}</select>
+        </div>
       </div>
       <div class="tx-bulk-actions">
         <button class="btn primary" type="button" onclick="applyBulkTxClassification()" ${bulkCount ? '' : 'disabled'}>${_txT("transactions.bulk.apply")}</button>
+        <button class="btn" type="button" onclick="applyBulkTxSubscription()" ${bulkCount ? '' : 'disabled'}>${_txT("transactions.bulk.subscription.apply")}</button>
         <button class="btn danger" type="button" onclick="applyBulkTxDelete()" ${bulkCount ? '' : 'disabled'}>
           ${_txT("transactions.bulk.delete")}
         </button>

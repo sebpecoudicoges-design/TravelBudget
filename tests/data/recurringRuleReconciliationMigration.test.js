@@ -10,6 +10,10 @@ describe('recurring rule reconciliation migration', () => {
     'supabase/migrations/20260815003657_restrict_recurring_reconcile_helpers.sql',
     'utf8',
   );
+  const subscriptionTrackingMigration = fs.readFileSync(
+    'supabase/migrations/20260815054038_subscription_tracking_and_bulk_link_10_5_350.sql',
+    'utf8',
+  );
   const recurringUi = fs.readFileSync('public/legacy/js/15_recurring_rules_ui.js', 'utf8');
   const transactionUi = fs.readFileSync('public/legacy/js/16_modal_add_edit_via_rpc.js', 'utf8');
 
@@ -42,7 +46,8 @@ describe('recurring rule reconciliation migration', () => {
     expect(migration).toContain('create or replace function public.recurring_update_rule_v2');
     expect(migration).toContain("v_uid uuid := auth.uid()");
     expect(migration).toContain('revoke all on function public.recurring_update_rule_v2');
-    expect(recurringUi).toContain('recurring_update_rule_v2');
+    expect(subscriptionTrackingMigration).toContain('public.recurring_update_rule_v2(');
+    expect(recurringUi).toContain('save_subscription_rule_v3');
     expect(recurringUi).not.toContain('_rrSyncGeneratedTransactions');
     expect(recurringUi).not.toContain('.from(TB_CONST.TABLES.recurring_rules)\n      .update(updatePayload)');
   });

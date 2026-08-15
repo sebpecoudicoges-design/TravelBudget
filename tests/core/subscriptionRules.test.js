@@ -46,8 +46,25 @@ describe('subscription rules', () => {
       { id: 'ok', travelId: 't1', type: 'expense', currency: 'AUD' },
       { id: 'income', travelId: 't1', type: 'income', currency: 'AUD' },
       { id: 'eur', travelId: 't1', type: 'expense', currency: 'EUR' },
+      { id: 'tracking', travelId: 't1', type: 'income', currency: 'EUR', trackingOnly: true },
     ];
-    expect(subscriptionRulesForTransaction(rules, { travelId: 't1', type: 'expense', currency: 'AUD' }).map((row) => row.id)).toEqual(['ok']);
+    expect(subscriptionRulesForTransaction(rules, { travelId: 't1', type: 'expense', currency: 'AUD' }).map((row) => row.id)).toEqual(['ok', 'tracking']);
+  });
+
+  it('builds a per-subscription monthly average, lifetime spend and inferred next date', () => {
+    const analysis = buildSubscriptionAnalysis({
+      rules: [{ id: 'netflix', travelId: 't1', label: 'Netflix', trackingOnly: true, type: 'expense', currency: 'AUD' }],
+      travelId: 't1', startDate: '2026-08-01', endDate: '2026-08-31', today: '2026-08-15',
+      transactions: [
+        { id: 'july', recurringRuleId: 'netflix', generatedByRule: false, occurrenceDate: '2026-07-10', payNow: true, amount: 20, currency: 'AUD' },
+        { id: 'august', recurringRuleId: 'netflix', generatedByRule: false, occurrenceDate: '2026-08-10', payNow: true, amount: 24, currency: 'AUD' },
+      ],
+    });
+    expect(analysis.occurrences).toHaveLength(1);
+    expect(analysis.ruleInsights[0].monthly).toEqual([{ currency: 'AUD', amount: 22, source: 'actual-average' }]);
+    expect(analysis.ruleInsights[0].totalSpent).toEqual([{ currency: 'AUD', amount: 44 }]);
+    expect(analysis.ruleInsights[0].nextDueAt).toBe('2026-09-10');
+    expect(analysis.ruleInsights[0].nextDueEstimated).toBe(true);
   });
 
   it('applies the flow filter to totals as well as rows', () => {

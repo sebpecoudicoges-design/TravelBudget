@@ -110,11 +110,12 @@ function fillModalRecurringSelect(selectedValue, currentTx) {
   const rows = (state?.recurringRules || []).filter((rule) => {
     if (rule?.archived) return false;
     if (tid && String(rule?.travelId || rule?.travel_id || "") !== tid) return false;
-    if (type && String(rule?.type || "") !== type) return false;
-    if (currency && String(rule?.currency || "").toUpperCase() !== currency) return false;
+    const trackingOnly = !!(rule?.trackingOnly ?? rule?.tracking_only);
+    if (!trackingOnly && type && String(rule?.type || "") !== type) return false;
+    if (!trackingOnly && currency && String(rule?.currency || "").toUpperCase() !== currency) return false;
     return true;
   });
-  select.innerHTML = `<option value="">Aucun abonnement</option>${rows.map((rule) => `<option value="${escapeHTML(rule.id)}">${escapeHTML(rule.label || rule.name || "Abonnement")} — ${escapeHTML(fmtMoney(Number(rule.amount || 0), rule.currency || currency))}</option>`).join("")}`;
+  select.innerHTML = `<option value="">Aucun abonnement</option>${rows.map((rule) => `<option value="${escapeHTML(rule.id)}">${escapeHTML(rule.label || rule.name || "Abonnement")} — ${(rule?.trackingOnly ?? rule?.tracking_only) ? "suivi manuel" : escapeHTML(fmtMoney(Number(rule.amount || 0), rule.currency || currency))}</option>`).join("")}`;
   if (selected && !rows.some((rule) => String(rule.id) === selected)) {
     const rule = (state?.recurringRules || []).find((row) => String(row?.id || "") === selected);
     select.insertAdjacentHTML("beforeend", `<option value="${escapeHTML(selected)}">${escapeHTML(rule?.label || "Règle liée")}</option>`);

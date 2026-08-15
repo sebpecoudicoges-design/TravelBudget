@@ -40,4 +40,11 @@ describe('transactions view extraction contract', () => {
     expect(theme).toContain('body:not(.theme-dark) .tx-workspace-card');
     expect(theme).toContain('backdrop-filter: blur(14px)');
   });
+
+  it('keeps bulk selection able to link or unlink a subscription atomically', () => {
+    expect(legacy).toContain('id="tx-bulk-subscription"');
+    expect(legacy).toContain('applyBulkTxSubscription');
+    expect(legacy).toContain('link_transactions_to_recurring_rule');
+    expect(legacy).toContain('generated_blocked');
+  });
 });

@@ -353,44 +353,21 @@
   async function _rrCreateRule(payload) {
     const s = _rrGetSB();
     if (!s) throw new Error("Supabase non prêt.");
-    const uid = await _tbAuthUid();
     const tid = String(state?.activeTravelId || "");
     if (!tid) throw new Error("Voyage actif requis.");
-
-    const insertPayload = {
-      user_id: uid,
-      travel_id: tid,
-      wallet_id: payload.wallet_id,
-      label: payload.label,
-      amount: payload.amount,
-      currency: payload.currency,
-      type: payload.type,
-      rule_type: payload.rule_type,
-      category: payload.category || null,
-      subcategory: payload.subcategory || null,
-      interval_count: payload.interval_count,
-      weekday: payload.weekday,
-      monthday: payload.monthday,
-      week_of_month: null,
-      start_date: payload.start_date,
-      next_due_at: payload.next_due_at || payload.start_date,
-      end_date: payload.end_date || null,
-      max_occurrences: payload.max_occurrences,
-      is_active: true,
-      archived: false,
-      out_of_budget: !!payload.out_of_budget
-    };
-
-    const { data, error } = await s.from(TB_CONST.TABLES.recurring_rules).insert(insertPayload).select("id").single();
+    const rpcName = TB_CONST?.RPCS?.save_subscription_rule_v3 || "save_subscription_rule_v3";
+    const { data, error } = await s.rpc(rpcName, {
+      p_rule_id: null, p_travel_id: tid, p_wallet_id: payload.wallet_id,
+      p_label: payload.label, p_tracking_only: !!payload.tracking_only,
+      p_type: payload.type, p_amount: payload.amount, p_currency: payload.currency,
+      p_category: payload.category || null, p_subcategory: payload.subcategory || null,
+      p_rule_type: payload.rule_type, p_interval_count: payload.interval_count,
+      p_weekday: payload.weekday, p_monthday: payload.monthday,
+      p_start_date: payload.start_date, p_end_date: payload.end_date || null,
+      p_max_occurrences: payload.max_occurrences, p_out_of_budget: !!payload.out_of_budget,
+    });
     if (error) throw error;
-
-    const newRuleId = String(data?.id || "");
-    if (!newRuleId) throw new Error("Règle créée sans id.");
-
-    const rpcName = TB_CONST?.RPCS?.recurring_generate_for_rule || "recurring_generate_for_rule";
-    const { error: genErr } = await s.rpc(rpcName, { p_rule_id: newRuleId });
-    if (genErr) throw genErr;
-    return newRuleId;
+    return String(data || "");
   }
 
   async function _rrPauseRule(ruleId) {
@@ -428,13 +405,14 @@
     const r = rule || {};
     return {
       label: String(r.label || r.name || "").trim(),
+      tracking_only: rule ? !!(r.trackingOnly ?? r.tracking_only) : true,
       type: String(r.type || "expense").trim() || "expense",
       amount: Number(r.amount || 0) || 0,
       currency: String(r.currency || fallbackCurrency || "EUR").trim().toUpperCase(),
       wallet_id: String(r.walletId || r.wallet_id || "").trim(),
       category: String(r.category || "").trim(),
       subcategory: String(r.subcategory || "").trim(),
-      rule_type: String(r.ruleType || r.rule_type || "every_x_months").trim() || "every_x_months",
+      rule_type: String(r.ruleType || r.rule_type || (rule ? "every_x_months" : "monthly")).trim() || "monthly",
       interval_count: Math.max(1, Number(r.intervalCount || r.interval_count || 1) || 1),
       weekday: (r.weekday === null || r.weekday === undefined) ? "1" : String(r.weekday),
       monthday: (r.monthday === null || r.monthday === undefined) ? "" : String(r.monthday),
@@ -451,24 +429,17 @@
     const rid = String(ruleId || "").trim();
     if (!_rrIsUuid(rid)) throw new Error("UUID de règle invalide.");
 
-    const rpcName = TB_CONST?.RPCS?.recurring_update_rule_v2 || "recurring_update_rule_v2";
+    const tid = String(state?.activeTravelId || "");
+    const rpcName = TB_CONST?.RPCS?.save_subscription_rule_v3 || "save_subscription_rule_v3";
     const { error } = await s.rpc(rpcName, {
-      p_rule_id: rid,
-      p_wallet_id: payload.wallet_id,
-      p_label: payload.label,
-      p_amount: payload.amount,
-      p_currency: payload.currency,
-      p_type: payload.type,
-      p_category: payload.category || null,
-      p_subcategory: payload.subcategory || null,
-      p_rule_type: payload.rule_type,
-      p_interval_count: payload.interval_count,
-      p_weekday: payload.weekday,
-      p_monthday: payload.monthday,
-      p_start_date: payload.start_date,
-      p_end_date: payload.end_date || null,
-      p_max_occurrences: payload.max_occurrences,
-      p_out_of_budget: !!payload.out_of_budget,
+      p_rule_id: rid, p_travel_id: tid, p_wallet_id: payload.wallet_id,
+      p_label: payload.label, p_tracking_only: !!payload.tracking_only,
+      p_type: payload.type, p_amount: payload.amount, p_currency: payload.currency,
+      p_category: payload.category || null, p_subcategory: payload.subcategory || null,
+      p_rule_type: payload.rule_type, p_interval_count: payload.interval_count,
+      p_weekday: payload.weekday, p_monthday: payload.monthday,
+      p_start_date: payload.start_date, p_end_date: payload.end_date || null,
+      p_max_occurrences: payload.max_occurrences, p_out_of_budget: !!payload.out_of_budget,
     });
     if (error) throw error;
     return rid;
@@ -528,6 +499,22 @@
     document.getElementById("rr-weekday")?.addEventListener("change", apply);
     document.getElementById("rr-monthday")?.addEventListener("input", apply);
     apply();
+  }
+
+  function _rrBindTrackingModeUi() {
+    const mode = document.getElementById("rr-tracking-mode");
+    const automaticFields = document.getElementById("rr-automatic-fields");
+    const help = document.getElementById("rr-mode-help");
+    if (!mode || !automaticFields) return;
+    const render = () => {
+      const trackingOnly = mode.value === "tracking";
+      automaticFields.hidden = trackingOnly;
+      if (help) help.textContent = trackingOnly
+        ? rrT("recurring.help.tracking")
+        : rrT("recurring.help.automatic");
+    };
+    mode.addEventListener("change", render);
+    render();
   }
 
   function _rrBindBudgetPeriodUi() {
@@ -628,6 +615,16 @@
           <input id="rr-label" value="${escapeHTML(defaults.label)}" placeholder="${escapeHTML(rrT("recurring.placeholder.name"))}" />
         </div>
         <div class="field field--span-2">
+          <label>${escapeHTML(rrT("recurring.label.mode"))}</label>
+          <select id="rr-tracking-mode">
+            <option value="tracking" ${defaults.tracking_only ? "selected" : ""}>${escapeHTML(rrT("recurring.mode.tracking"))}</option>
+            <option value="automatic" ${defaults.tracking_only ? "" : "selected"}>${escapeHTML(rrT("recurring.mode.automatic"))}</option>
+          </select>
+          <small class="muted" id="rr-mode-help"></small>
+        </div>
+        <div id="rr-automatic-fields" style="grid-column:1/-1;">
+        <div class="tb-modal-grid">
+        <div class="field field--span-2">
           <label>${escapeHTML(rrT("recurring.label.type"))}</label>
           <select id="rr-type">
             <option value="expense" ${defaults.type === "income" ? "" : "selected"}>${escapeHTML(rrT("recurring.type.expense"))}</option>
@@ -711,6 +708,8 @@
         <div class="field field--span-2">
           <div id="rr-budget-period-summary" class="muted" role="status"></div>
         </div>
+        </div>
+        </div>
       </div>
     `);
 
@@ -724,6 +723,7 @@
           _rrSubmitting = true;
           try {
             const label = String(document.getElementById("rr-label")?.value || "").trim();
+            const tracking_only = String(document.getElementById("rr-tracking-mode")?.value || "tracking") === "tracking";
             const type = String(document.getElementById("rr-type")?.value || "expense");
             const amount = Number(document.getElementById("rr-amount")?.value || 0);
             const currency = String(document.getElementById("rr-currency")?.value || "").trim().toUpperCase();
@@ -741,29 +741,30 @@
             const out_of_budget = (budget_mode === "out");
 
             if (!label) throw new Error("Nom requis.");
-            if (!(amount > 0)) throw new Error("Montant invalide.");
+            if (!tracking_only && !(amount > 0)) throw new Error("Saisis un montant supérieur à 0 pour générer les échéances.");
             if (!currency) throw new Error("Devise requise.");
             if (!wallet_id) throw new Error("Wallet requis.");
-            if (!category) throw new Error("Catégorie requise.");
-            if (!start_date) throw new Error("Date de début requise.");
-            if (end_date && end_date < start_date) throw new Error("La date de fin doit être ≥ à la date de début.");
+            if (!tracking_only && !category) throw new Error("Catégorie requise.");
+            if (!tracking_only && !start_date) throw new Error("Date de début requise.");
+            if (!tracking_only && end_date && end_date < start_date) throw new Error("La date de fin doit être ≥ à la date de début.");
             const coverage = window.Core?.recurringRules?.recurringPeriodCoverage?.({
               periods: state?.periods || [], travelId: state?.activeTravelId || "", startDate: start_date, endDate: end_date || start_date
             });
-            if (coverage && !coverage.covered) throw new Error("Les dates doivent appartenir aux périodes budget du voyage.");
+            if (!tracking_only && coverage && !coverage.covered) throw new Error("Les dates doivent appartenir aux périodes budget du voyage.");
 
             const weekday = (rule_type === "weekly") ? Number(weekdayRaw) : null;
             const monthday = (rule_type === "every_x_months") ? Number(monthdayRaw || 0) || null : null;
             const next_due_at = _rrComputeFirstDueDate(rule_type, start_date, weekday, monthday, interval_count);
 
             const payload = {
-              label, type, amount, currency, wallet_id,
+              label, tracking_only, type, amount: tracking_only ? 0 : amount, currency, wallet_id,
               category, subcategory: subcategory || null,
               rule_type, interval_count, weekday, monthday,
-              start_date, next_due_at,
-              end_date: end_date || null,
-              max_occurrences: maxOccRaw === "" ? null : Number(maxOccRaw),
-              out_of_budget
+              start_date: tracking_only ? today : start_date,
+              next_due_at: tracking_only ? null : next_due_at,
+              end_date: tracking_only ? null : (end_date || null),
+              max_occurrences: tracking_only || maxOccRaw === "" ? null : Number(maxOccRaw),
+              out_of_budget: tracking_only ? false : out_of_budget
             };
 
             if (isEditing) {
@@ -784,6 +785,7 @@
     ]);
 
     modal.open();
+    _rrBindTrackingModeUi();
     _rrBindFrequencyUi();
     _rrBindSubcategoryUi(defaults.subcategory || "");
     _rrBindBudgetPeriodUi();

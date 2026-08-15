@@ -7,6 +7,7 @@ describe('Abonnements module contract', () => {
   const navigation = fs.readFileSync('public/legacy/js/10_navigation.js', 'utf8');
   const recurring = fs.readFileSync('public/legacy/js/15_recurring_rules_ui.js', 'utf8');
   const transactionModal = fs.readFileSync('public/legacy/js/16_modal_add_edit_via_rpc.js', 'utf8');
+  const transactions = fs.readFileSync('public/legacy/js/13_transactions_view.js', 'utf8');
 
   it('owns a dedicated lazy financial view outside Settings', () => {
     expect(html).toContain('id="tab-subscriptions"');
@@ -24,5 +25,9 @@ describe('Abonnements module contract', () => {
     expect(transactionModal).toContain('fillModalRecurringSelect');
     expect(transactionModal).toContain('link_transaction_to_recurring_rule');
     expect(transactionModal).toContain('generatedByRule');
+    expect(recurring).toContain('id="rr-tracking-mode"');
+    expect(recurring).toContain('save_subscription_rule_v3');
+    expect(transactions).toContain('applyBulkTxSubscription');
+    expect(transactions).toContain('link_transactions_to_recurring_rule');
   });
 });

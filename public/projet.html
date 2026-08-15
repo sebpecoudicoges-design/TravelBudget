@@ -1695,7 +1695,7 @@
         <div class="app-grid">
           <article class="app-card"><strong>Mobile</strong><h3 data-i18n="app.apk.title">Build Android</h3><p data-i18n="app.apk.body.105341">APK debug 10.5.341 prete pour le retest Evolution composition Sport.</p></article>
           <article class="app-card"><strong>Offline</strong><h3 data-i18n="app.offline.title">Mode hors ligne</h3><p data-i18n="app.offline.body">Les donnees locales restent lisibles, les actions sensibles passent en file d'attente et le premier clic reste propre.</p></article>
-          <article class="app-card"><strong>10.5.349</strong><h3 data-i18n="app.version.title.105349">Abonnements sous controle</h3><p data-i18n="app.version.body.105349">Le prevu, le reel et l histoire de chaque echeance sont reunis.</p></article>
+          <article class="app-card"><strong>10.5.350</strong><h3 data-i18n="app.version.title.105350">Abonnements a la carte</h3><p data-i18n="app.version.body.105350">Nom seul ou automatisme complet, avec analyse et rattachement en masse.</p></article>
         </div>
         <div class="release-pulse">
           <div class="release-pulse-head">
@@ -1714,6 +1714,7 @@
           <div class="release-spotlight" id="releaseSpotlight"></div>
           <div class="release-timeline" id="releaseTimeline" aria-live="polite"></div>
           <div class="release-list" id="releaseSource" hidden>
+            <div class="release-row"><strong>10.5.350</strong><span>Abonnements : le 403 de creation est corrige a la source dans le trigger SQL. Un suivi manuel se cree maintenant avec son seul nom et ne genere aucune echeance; un automatisme conserve montant, rythme et projections. Chaque abonnement obtient un hero cout mensuel, total depense et prochaine echeance. Transactions peut rattacher ou detacher atomiquement les lignes selectionnees, y compris Tout selectionner, sans toucher aux echeances generees. Six retests sont ouverts. Aucun nouvel APK.</span></div>
             <div class="release-row"><strong>10.5.349</strong><span>Abonnements : les regles recurrentes quittent Settings pour un module financier autonome avec Vue d ensemble, Echeances et Regles. Le prevu est compare au reel paye par devise; les lignes creees, modifiees, payees ou liees manuellement restent tracables. Transactions peut rattacher ou delier une depense compatible, tandis que les echeances generees conservent leur lien automatique. Quatre retests sont ouverts. Aucun nouvel APK.</span></div>
             <div class="release-row"><strong>10.5.348</strong><span>Travail : le module est reorganise en trois espaces, Aujourd hui, Parcours et Historique. Rythme, semaine et saisie restent ensemble; missions, revenus, periodes et Documents conservent toutes leurs actions; l historique affiche pause, MET, RPE et kcal et Modifier revient au formulaire. Le CSS runtime est remplace par une feuille premium responsive. Quatre retests sont ouverts. Aucun nouvel APK.</span></div>
             <div class="release-row"><strong>10.5.347</strong><span>Sport : l analyse de progression conserve un seul point par exercice et par seance, correspondant au meilleur e1RM valide. Les cartes affichent Depart, Derniere seance et Record; la courbe a sa propre echelle, des dates et une evolution totale explicite. Deux retests sont ouverts. Aucun nouvel APK.</span></div>
@@ -2204,6 +2205,7 @@
           "app.title": "App Android de test, lien direct et version lisible.",
           "app.lead": "La page projet expose toujours le dernier APK versionne. Le workflow nettoie les assets avant build pour eviter les APK imbriques et les liens obsoletes.",
           "app.apk.body.105341": "APK debug 10.5.341 prete pour le retest Evolution composition Sport.",
+          "app.version.title.105350": "Abonnements a la carte", "app.version.body.105350": "Nom seul ou automatisme complet, avec analyse et rattachement en masse.",
           "app.version.title.105349": "Abonnements sous controle", "app.version.body.105349": "Le prevu, le reel et l histoire de chaque echeance sont reunis.",
           "app.version.title.105345": "Sport mieux organise", "app.version.body.105345": "Seance, Programme, Profil et Historique deviennent quatre espaces distincts.",
           "app.version.title.105344": "Alimentation mieux organisee", "app.version.body.105344": "Quatre espaces, un journal d eau horodate et une recuperation plus lisible.",
@@ -2397,6 +2399,7 @@
           "app.title": "Android test app, direct link and readable version.",
           "app.lead": "The project page always exposes the latest versioned APK. The workflow cleans assets before build to avoid nested APKs and stale links.",
           "app.apk.body.105341": "Debug APK 10.5.341 is ready for the Sport composition trend retest.",
+          "app.version.title.105350": "Flexible subscriptions", "app.version.body.105350": "Name-only tracking or full automation, with analysis and bulk linking.",
           "app.version.title.105349": "Subscriptions under control", "app.version.body.105349": "Forecast, actual payments and each occurrence history are brought together.",
           "app.version.title.105345": "Better organized Sport", "app.version.body.105345": "Workout, Program, Profile and History become four distinct spaces.",
           "app.version.title.105344": "Better organized nutrition", "app.version.body.105344": "Four spaces, a timestamped water log and clearer recovery tracking.",
@@ -2574,7 +2577,7 @@
         fr: {
           dashboard: ["Dashboard", "Vue cashflow, budget quotidien, rentrees attendues et projections pour savoir ou tu en es vraiment.", ["Solde multi-wallet", "Budget restant", "Courbe de tresorerie"]],
           transactions: ["Transactions", "Creation, filtres, categories, factures liees, mouvements internes et protections pour les lignes Trip ou wallet.", ["Verrouillages metier", "Bulk classification", "Factures liees"]],
-          subscriptions: ["Abonnements", "Compare les echeances prevues aux paiements reels et conserve les modifications ou liens manuels.", ["Prevu / reel", "Echeances tracables", "Regles"]],
+          subscriptions: ["Abonnements", "Suit un abonnement par son nom ou automatise ses echeances, puis explique son cout et ses paiements lies.", ["Analyse par abonnement", "Suivi manuel", "Liaison en masse"]],
           documents: ["Documents", "Hub transversal pour factures, contrats, garanties, tags, sous-dossiers et partages temporaires.", ["Tags proposes", "Liens financiers", "Partage public"]],
           sport: ["Sport", "Construis une seance simple, lance un timer guide ou un circuit AMRAP, estime les kcal et garde l'historique.", ["Circuit / AMRAP", "Kcal estimees", "Historique"]],
           nutrition: ["Alimentation", "Compare le consomme au besoin reel, avec repas par moment, eau bue, macros et historique.", ["Anneau kcal", "Timeline repas", "Eau + macros"]],
@@ -2587,7 +2590,7 @@
         en: {
           dashboard: ["Dashboard", "Cashflow, daily budget, expected income and projections to understand where you really stand.", ["Multi-wallet balance", "Remaining budget", "Cash curve"]],
           transactions: ["Transactions", "Creation, filters, categories, linked invoices, internal transfers and safeguards for Trip or wallet rows.", ["Business locks", "Bulk classification", "Linked invoices"]],
-          subscriptions: ["Subscriptions", "Compare expected occurrences with actual payments while keeping edits and manual links traceable.", ["Forecast / actual", "Traceable occurrences", "Rules"]],
+          subscriptions: ["Subscriptions", "Track a subscription by name or automate its occurrences, then explain its cost and linked payments.", ["Per-subscription analysis", "Manual tracking", "Bulk linking"]],
           documents: ["Documents", "Cross-module hub for invoices, contracts, warranties, tags, subfolders and temporary sharing.", ["Suggested tags", "Financial links", "Public sharing"]],
           sport: ["Sport", "Build a simple workout, start a guided timer or AMRAP circuit, estimate kcal and keep history.", ["Circuit / AMRAP", "Estimated kcal", "History"]],
           nutrition: ["Nutrition", "Compare consumed food against real needs, with meal moments, drunk water, macros and history.", ["Kcal ring", "Meal timeline", "Water + macros"]],
@@ -3271,7 +3274,7 @@
       const atlasCatalog = {
         fr: [
           { id: "budget.transaction", title: "Transactions", layer: "Domaine Budget", group: "budget", color: "#22d3ee", description: "Le point d'entree central des mouvements. Une evolution peut toucher les soldes, le budget journalier, l'analyse, Trip et la synchronisation.", impacts: ["Wallet", "Budget/jour", "Analyse", "Trip", "Offline", "Android"] },
-          { id: "budget.subscription", title: "Abonnements", layer: "Domaine Budget", group: "budget", color: "#fb7185", description: "Les regles recurrentes deviennent un module autonome qui compare le prevu au reel et conserve chaque echeance liee.", impacts: ["Wallet possible", "Budget/jour possible", "Analyse", "Offline", "Android"] },
+          { id: "budget.subscription", title: "Abonnements", layer: "Domaine Budget", group: "budget", color: "#fb7185", description: "Le suivi manuel ou automatique relie les transactions et explique cout mensuel, total depense et prochaine echeance.", impacts: ["Wallet possible", "Budget/jour possible", "Analyse", "Offline", "Android"] },
           { id: "budget.daily", title: "Budget journalier", layer: "Domaine Budget", group: "budget", color: "#38bdf8", description: "La lecture quotidienne relie periode, depenses reelles et projection. Son contrat traverse l'analyse et les vues mobiles.", impacts: ["Budget/jour", "Analyse", "Trip", "Offline", "Android"] },
           { id: "wallet.balance", title: "Solde wallet", layer: "Domaine Budget", group: "budget", color: "#2dd4bf", description: "Le solde consolide les mouvements reels sans absorber les projections. Il reste un pivot pour le cash et le mode hors ligne.", impacts: ["Wallet", "Offline", "Android", "Analyse possible"] },
           { id: "analysis.budget-actual", title: "Budget / reel", layer: "Domaine Analyse", group: "budget", color: "#60a5fa", description: "La comparaison explique l'ecart entre reference, reel paye et projection, avec une attention particuliere aux depenses Trip.", impacts: ["Budget/jour", "Analyse", "Trip", "Android"] },
@@ -3284,7 +3287,7 @@
         ],
         en: [
           { id: "budget.transaction", title: "Transactions", layer: "Budget domain", group: "budget", color: "#22d3ee", description: "The central entry point for money movements. A change can affect balances, daily budget, analysis, Trip and synchronization.", impacts: ["Wallet", "Daily budget", "Analysis", "Trip", "Offline", "Android"] },
-          { id: "budget.subscription", title: "Subscriptions", layer: "Budget domain", group: "budget", color: "#fb7185", description: "Recurring rules become a dedicated workspace comparing planned and actual cash flow while retaining every linked occurrence.", impacts: ["Wallet possible", "Daily budget possible", "Analysis", "Offline", "Android"] },
+          { id: "budget.subscription", title: "Subscriptions", layer: "Budget domain", group: "budget", color: "#fb7185", description: "Manual or automatic tracking links transactions and explains monthly cost, total spend and next due date.", impacts: ["Wallet possible", "Daily budget possible", "Analysis", "Offline", "Android"] },
           { id: "budget.daily", title: "Daily budget", layer: "Budget domain", group: "budget", color: "#38bdf8", description: "The daily view connects period, actual spending and projection. Its contract spans analysis and mobile views.", impacts: ["Daily budget", "Analysis", "Trip", "Offline", "Android"] },
           { id: "wallet.balance", title: "Wallet balance", layer: "Budget domain", group: "budget", color: "#2dd4bf", description: "The balance consolidates actual movements without absorbing projections. It remains a pivot for cash and offline mode.", impacts: ["Wallet", "Offline", "Android", "Analysis possible"] },
           { id: "analysis.budget-actual", title: "Budget / actual", layer: "Analysis domain", group: "budget", color: "#60a5fa", description: "The comparison explains gaps between reference, paid actuals and forecast, with special attention to Trip expenses.", impacts: ["Daily budget", "Analysis", "Trip", "Android"] },

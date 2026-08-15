@@ -1321,7 +1321,7 @@ const txPromise = (earlyTxPromise && String(storedActiveTravelId || "") === Stri
   try {
     const { data: rows, error } = await sb
       .from(TB_CONST.TABLES.recurring_rules)
-      .select("id,user_id,travel_id,wallet_id,label,type,amount,currency,category,subcategory,rule_type,interval_count,weekday,monthday,week_of_month,start_date,next_due_at,end_date,max_occurrences,is_active,archived,out_of_budget,generated_until,created_at,updated_at")
+      .select("id,user_id,travel_id,wallet_id,label,tracking_only,type,amount,currency,category,subcategory,rule_type,interval_count,weekday,monthday,week_of_month,start_date,next_due_at,end_date,max_occurrences,is_active,archived,out_of_budget,generated_until,created_at,updated_at")
       .eq("user_id", sbUser.id)
       .eq("travel_id", activeTravelId)
       .order("created_at", { ascending: true });
@@ -1744,6 +1744,7 @@ state.wallets = (w || []).map((x) => ({
 
   name: x.name || x.label || "",
   label: x.label || x.name || "",
+  trackingOnly: !!x.tracking_only,
 
   type: x.type || null,
   amount: (x.amount === null || x.amount === undefined) ? null : Number(x.amount),
@@ -1760,6 +1761,7 @@ state.wallets = (w || []).map((x) => ({
   archivedAt: x.archived_at || null,
 
   frequency: x.frequency || null,
+  ruleType: x.rule_type || null,
   intervalCount: x.interval_count || x.interval || null,
   weekday: x.weekday || null,
   monthday: x.monthday || null,

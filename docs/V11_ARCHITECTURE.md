@@ -19,7 +19,7 @@ Les domaines suivants ont un contrat de separation :
 - Patrimoine : `assetRules`, `assetView`.
 - Trip : `tripRules`, `tripRepository`, `tripStore`, `tripView`.
 - Sport : `sportRules`, `sportLibraryRules`, `sportRepository`, `sportStore`, `sportCatalog`, programme, timer, historique, sandbox et profil.
-- Abonnements : `subscriptionRules`, `subscriptionView` et orchestration legacy dédiée.
+- Abonnements : `subscriptionRules`, `subscriptionView` et orchestration legacy dédiée ; `tracking_only` sépare le suivi manuel des échéances automatiques, et les RPC bornent les liaisons unitaires ou en masse.
 
 Les contrats sont dans `tests/ui/*DomainContract.test.js`. Toute nouvelle extraction doit ajouter ou etendre un test avant suppression de code legacy.
 

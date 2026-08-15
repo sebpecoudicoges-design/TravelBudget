@@ -1,4 +1,4 @@
-window.TB_VERSION = window.TB_VERSION || "10.5.349";
+window.TB_VERSION = window.TB_VERSION || "10.5.350";
 window.TB_BUILD_LABEL = window.TB_BUILD_LABEL || `V${window.TB_VERSION}`;
 window.__TB_BUILD = window.TB_VERSION;
 try { if (!window.__tbBuildLogged) { window.__tbBuildLogged = true; console.info(`TB BUILD ${window.TB_VERSION}`); } } catch (_) {}
@@ -173,6 +173,8 @@ try {
     recurring_generate_for_rule: "recurring_generate_for_rule",
     recurring_update_rule_v2: "recurring_update_rule_v2",
     link_transaction_to_recurring_rule: "link_transaction_to_recurring_rule",
+    link_transactions_to_recurring_rule: "link_transactions_to_recurring_rule",
+    save_subscription_rule_v3: "save_subscription_rule_v3",
     recurring_delete_rule: "recurring_delete_rule",
     recurring_delete_rule_admin: "recurring_delete_rule_admin",
 
